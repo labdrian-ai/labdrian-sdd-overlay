@@ -141,71 +141,6 @@ func TestAProjectStatusStartedDuringARevisionWaitsForItAndSeesTheRevision(t *tes
 	}
 }
 
-// The lock order, pinned so that later work on install inherits it: the overlay
-// lock first, then the project lock, and released in the opposite order. Two verbs
-// that took them the other way round could each hold one and wait for the other;
-// with bounded waits that would be exit 2 for both, not a hang, but it would be a
-// failure nobody could retry their way out of.
-func TestInstallTakesTheOverlayLockBeforeTheProjectLockAndReleasesThemInReverse(t *testing.T) {
-	f := newInstallFixture(t)
-	locker := &recordingLocker{}
-
-	r := f.runAt("install", f.installArgs(), os.ReadFile, nil, locker)
-	if r.code != 0 {
-		t.Fatalf("exit %d, stderr=%q", r.code, r.stderr)
-	}
-
-	overlay := RegistryLockPath(f.reg)
-	want := []string{
-		"lock shared " + overlay,
-		"lockdir exclusive " + f.project,
-		"unlock " + f.project,
-		"unlock " + overlay,
-	}
-	if got := locker.log(); !reflect.DeepEqual(got, want) {
-		t.Errorf("lock events = %v, want %v", got, want)
-	}
-}
-
-// The order is a property of the planner, not of one verb: whatever a verb asks
-// for, every file (overlay) lock comes before every directory (project) lock.
-func TestLockRequestsAreAlwaysOverlayBeforeProject(t *testing.T) {
-	f := newInstallFixture(t)
-	root := t.TempDir()
-	cases := map[string][]string{
-		"add": nil, "remove": nil, "sync-manifest": nil, "approve": nil, "validate": nil,
-		"install":          f.installArgs(),
-		"adopt":            f.installArgs(),
-		"project-register": {"--project-root", root},
-		"project-revise":   {"--project-root", root},
-		"project-retire":   {"--project-root", root},
-		"project-status":   {"--project-root", root},
-		"list":             nil, "status": nil, "lint": nil,
-	}
-	multi := 0
-	for verb, args := range cases {
-		seenDir := false
-		installRoot := ""
-		if verb == "install" || verb == "adopt" {
-			installRoot = f.project
-		}
-		requests := lockRequestsFor(verb, args, installRoot)
-		for _, req := range requests {
-			if req.Dir {
-				seenDir = true
-			} else if seenDir {
-				t.Errorf("%s asks for the overlay lock %s after a project lock: %v", verb, req.Path, requests)
-			}
-		}
-		if len(requests) > 1 {
-			multi++
-		}
-	}
-	if multi == 0 {
-		t.Error("no verb asks for two locks, so this test checks nothing")
-	}
-}
-
 // ---- busy and failed project locks ------------------------------------------------------
 
 func TestSkillsCoreAt_ABusyProjectLockExits2AndTheProjectIsUntouched(t *testing.T) {
@@ -223,27 +158,6 @@ func TestSkillsCoreAt_ABusyProjectLockExits2AndTheProjectIsUntouched(t *testing.
 		}
 	}
 	e.assertNothingWritten(t)
-}
-
-// When install gets the overlay lock and then cannot get the project's, it lets go
-// of the overlay's, says the project is busy, and installs nothing.
-func TestInstallReleasesTheOverlayLockWhenTheProjectLockIsBusy(t *testing.T) {
-	f := newInstallFixture(t)
-	overlay := RegistryLockPath(f.reg)
-	locker := &recordingLocker{failOn: map[string]error{f.project: busyErr{f.project}}}
-
-	r := f.runAt("install", f.installArgs(), os.ReadFile, nil, locker)
-
-	if r.code != ExitBusy || !strings.Contains(r.stderr, "the project "+f.project) {
-		t.Errorf("exit %d, stderr %q, want exit 2 naming the project", r.code, r.stderr)
-	}
-	want := []string{"lock shared " + overlay, "refused exclusive " + f.project, "unlock " + overlay}
-	if got := locker.log(); !reflect.DeepEqual(got, want) {
-		t.Errorf("lock events = %v, want %v: the overlay lock must not be left held", got, want)
-	}
-	if _, err := os.Stat(filepath.Join(f.project, ".claude")); err == nil {
-		t.Error("install wrote into the project without its lock")
-	}
 }
 
 // A directory that cannot be locked at all (a filesystem that refuses) is a refusal,
@@ -353,4 +267,14 @@ func TestProjectLocksOfDifferentRootsDoNotExcludeEachOther(t *testing.T) {
 	if other.code != 0 || first.code != 0 || blocked {
 		t.Errorf("exits %d and %d, blocked %v (stderr %q, %q), want both to run without waiting for each other", first.code, other.code, blocked, first.stderr, other.stderr)
 	}
+}
+
+// indexOf is the position of the first event that is want, or -1.
+func indexOf(events []string, want string) int {
+	for i, e := range events {
+		if e == want {
+			return i
+		}
+	}
+	return -1
 }

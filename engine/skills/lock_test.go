@@ -29,12 +29,11 @@ func (e busyErr) Error() string { return "lock " + e.path + " is held by another
 func (busyErr) Busy() bool      { return true }
 
 // recordingLocker records every lock and unlock, in order, and can be told to
-// fail. It also tracks which paths are held right now.
+// fail.
 type recordingLocker struct {
 	osExists
 	mu     sync.Mutex
 	events []string
-	held   map[string]int
 	fail   error            // every lock fails with it
 	failOn map[string]error // the lock on this path or directory fails with it
 }
@@ -58,23 +57,12 @@ func (l *recordingLocker) take(kind, path string, mode LockMode) (func(), error)
 		l.events = append(l.events, fmt.Sprintf("refused %s %s", modeName(mode), path))
 		return nil, err
 	}
-	if l.held == nil {
-		l.held = map[string]int{}
-	}
-	l.held[path]++
 	l.events = append(l.events, fmt.Sprintf("%s %s %s", kind, modeName(mode), path))
 	return func() {
 		l.mu.Lock()
 		defer l.mu.Unlock()
-		l.held[path]--
 		l.events = append(l.events, fmt.Sprintf("unlock %s", path))
 	}, nil
-}
-
-func (l *recordingLocker) isHeld(path string) bool {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	return l.held[path] > 0
 }
 
 func (l *recordingLocker) log() []string {
@@ -365,39 +353,6 @@ func (f lockFixture) runAt(verb string, args []string, readFile readFileFn, now 
 	return runAtIn(inDir(f.project), verb, args, readFile, now, locker)
 }
 
-func (f lockFixture) flags() []string {
-	return []string{"--registry", f.reg, "--manifest", f.man, "--source-root", f.root}
-}
-
-func TestSkillsCoreAt_TakesTheRegistryLockByVerb(t *testing.T) {
-	for _, tc := range []struct {
-		verb  string
-		extra []string
-		mode  string
-		code  int
-	}{
-		{"install", []string{"--project-id", "p"}, "shared", 0},
-	} {
-		t.Run(tc.verb, func(t *testing.T) {
-			f := newLockFixture(t)
-			locker := &recordingLocker{}
-			want := []string{"lock " + tc.mode + " " + f.lockPath, "unlock " + f.lockPath}
-			if tc.verb == "install" {
-				// install writes into the working directory, so it also takes the
-				// project lock, second (see project_dirlock_test.go).
-				want = []string{"lock shared " + f.lockPath, "lockdir exclusive " + f.project, "unlock " + f.project, "unlock " + f.lockPath}
-			}
-			r := f.runAt(tc.verb, append(append([]string{}, tc.extra...), f.flags()...), os.ReadFile, nil, locker)
-			if r.code != tc.code {
-				t.Fatalf("exit %d, want %d; stderr=%q", r.code, tc.code, r.stderr)
-			}
-			if got := locker.log(); !reflect.DeepEqual(got, want) {
-				t.Errorf("lock events = %v, want %v", got, want)
-			}
-		})
-	}
-}
-
 func TestSkillsCoreAt_TakesNoLockForTheVerbsThatNeedNone(t *testing.T) {
 	f := newLockFixture(t)
 	for _, tc := range []struct {
@@ -412,173 +367,6 @@ func TestSkillsCoreAt_TakesNoLockForTheVerbsThatNeedNone(t *testing.T) {
 		if got := locker.log(); len(got) != 0 {
 			t.Errorf("verb %q took locks %v, want none", tc.verb, got)
 		}
-	}
-}
-
-func TestSkillsCoreAt_TheLockIsKeyedByTheRegistryTheVerbNames(t *testing.T) {
-	f := newLockFixture(t)
-	other := filepath.Join(f.dir, "other", "team.registry.yaml")
-	// A verb locks the registry it names, and only a registry that is there.
-	registry, err := os.ReadFile(f.reg)
-	if err != nil {
-		t.Fatal(err)
-	}
-	writeTestFile(t, other, string(registry))
-
-	first := func(l *recordingLocker) string {
-		if events := l.log(); len(events) > 0 {
-			return events[0]
-		}
-		return "(no lock event)"
-	}
-
-	locker := &recordingLocker{}
-	f.runAt("install", []string{"--registry", other, "--source-root", f.root, "--project-id", "p"}, os.ReadFile, nil, locker)
-	if got, want := first(locker), "lock shared "+filepath.Join(f.dir, "other", ".team.registry.yaml.lock"); got != want {
-		t.Errorf("first event = %q, want %q", got, want)
-	}
-
-	// No --registry: the default the verbs share, relative to the working directory,
-	// which here holds a registry.
-	chdirToATempDir(t)
-	writeTestFile(t, defaultRegistryPath, string(registry))
-	locker = &recordingLocker{}
-	f.runAt("install", []string{"--source-root", f.root, "--project-id", "p"}, os.ReadFile, nil, locker)
-	if got, want := first(locker), "lock shared .skills.registry.yaml.lock"; got != want {
-		t.Errorf("first event without --registry = %q, want %q", got, want)
-	}
-}
-
-// State is read after the lock is taken, never before: a read made before it can
-// be stale by the time the lock is granted.
-func TestSkillsCoreAt_EveryReadOfSharedStateHappensUnderTheLock(t *testing.T) {
-	for _, tc := range []struct {
-		verb  string
-		extra []string
-	}{
-		{"install", []string{"--project-id", "p"}},
-	} {
-		t.Run(tc.verb, func(t *testing.T) {
-			f := newLockFixture(t)
-			locker := &recordingLocker{}
-			var outside []string
-			readFile := func(name string) ([]byte, error) {
-				if !locker.isHeld(f.lockPath) {
-					outside = append(outside, name)
-				}
-				return os.ReadFile(name)
-			}
-			r := f.runAt(tc.verb, append(append([]string{}, tc.extra...), f.flags()...), readFile, nil, locker)
-			if r.code != 0 {
-				t.Fatalf("exit %d; stderr=%q", r.code, r.stderr)
-			}
-			if len(outside) != 0 {
-				t.Errorf("read %v before the lock was taken or after it was released", outside)
-			}
-		})
-	}
-}
-
-func TestSkillsCoreAt_TheLockIsReleasedWhenTheVerbRefuses(t *testing.T) {
-	f := newLockFixture(t)
-	writeTestFile(t, f.reg, "version: \"99\"\nskills: []\n") // a registry the verb refuses, under the lock
-	locker := &recordingLocker{}
-	r := f.runAt("install", append([]string{"--project-id", "p"}, f.flags()...), os.ReadFile, nil, locker)
-	if r.code != 1 {
-		t.Fatalf("exit %d, want 1; stderr=%q", r.code, r.stderr)
-	}
-	want := []string{"lock shared " + f.lockPath, "lockdir exclusive " + f.project, "unlock " + f.project, "unlock " + f.lockPath}
-	if got := locker.log(); !reflect.DeepEqual(got, want) {
-		t.Errorf("lock events = %v, want %v", got, want)
-	}
-}
-
-// ---- busy, failed, and missing locks -----------------------------------------------
-
-// A lock that stays taken past the bound is reported with exit 2 and a retry
-// message, and the verb does not run: the files are byte-for-byte as they were.
-func TestSkillsCoreAt_ABusyLockExits2WithARetryMessageAndChangesNothing(t *testing.T) {
-	for _, tc := range []struct {
-		verb  string
-		extra []string
-	}{
-		{"install", []string{"--project-id", "p"}},
-	} {
-		t.Run(tc.verb, func(t *testing.T) {
-			f := newLockFixture(t)
-			before := snapshotFiles(t, f.reg, f.man, ApprovalRecordPath(f.root, "existing"))
-			locker := &recordingLocker{fail: busyErr{f.lockPath}}
-
-			r := f.runAt(tc.verb, append(append([]string{}, tc.extra...), f.flags()...), os.ReadFile, nil, locker)
-
-			if r.code != ExitBusy || ExitBusy != 2 {
-				t.Errorf("exit %d (ExitBusy %d), want 2", r.code, ExitBusy)
-			}
-			if r.stdout != "" {
-				t.Errorf("stdout %q, want nothing on a busy lock", r.stdout)
-			}
-			for _, want := range []string{"skills " + tc.verb, "in progress", "retry", f.lockPath} {
-				if !strings.Contains(r.stderr, want) {
-					t.Errorf("stderr %q does not contain %q", r.stderr, want)
-				}
-			}
-			if after := snapshotFiles(t, f.reg, f.man, ApprovalRecordPath(f.root, "existing")); !reflect.DeepEqual(before, after) {
-				t.Errorf("a busy lock changed files:\nbefore %v\nafter  %v", before, after)
-			}
-			if entries, _ := filepath.Glob(filepath.Join(f.dir, ".tmp-skills-*")); len(entries) != 0 {
-				t.Errorf("a busy lock left temp files %v", entries)
-			}
-		})
-	}
-}
-
-// A lock that cannot be taken for any other reason is a refusal, exit 1: waiting
-// would not help, so the message must not tell the caller to retry.
-func TestSkillsCoreAt_ALockThatCannotBeTakenExits1AndDoesNotSayRetry(t *testing.T) {
-	f := newLockFixture(t)
-	before := snapshotFiles(t, f.reg, f.man)
-	locker := &recordingLocker{fail: fmt.Errorf("open %s: permission denied", f.lockPath)}
-
-	r := f.runAt("install", append([]string{"--project-id", "p"}, f.flags()...), os.ReadFile, nil, locker)
-
-	if r.code != 1 || r.stdout != "" {
-		t.Fatalf("exit %d, stdout %q, want exit 1 and nothing on stdout", r.code, r.stdout)
-	}
-	for _, want := range []string{"skills install", "cannot take the lock", "permission denied", f.lockPath} {
-		if !strings.Contains(r.stderr, want) {
-			t.Errorf("stderr %q does not contain %q", r.stderr, want)
-		}
-	}
-	if strings.Contains(r.stderr, "retry") {
-		t.Errorf("stderr %q tells the caller to retry a failure that will not clear", r.stderr)
-	}
-	if after := snapshotFiles(t, f.reg, f.man); !reflect.DeepEqual(before, after) {
-		t.Error("a failed lock changed files")
-	}
-}
-
-// A busy error that a caller wrapped is still a busy error.
-func TestSkillsCoreAt_RecognizesAWrappedBusyError(t *testing.T) {
-	f := newLockFixture(t)
-	locker := &recordingLocker{fail: fmt.Errorf("acquire: %w", busyErr{f.lockPath})}
-	if r := f.runAt("install", append([]string{"--project-id", "p"}, f.flags()...), os.ReadFile, nil, locker); r.code != ExitBusy {
-		t.Errorf("exit %d for a wrapped busy error, want %d; stderr=%q", r.code, ExitBusy, r.stderr)
-	}
-}
-
-// Without a locker the verbs that change shared state refuse rather than run
-// unserialized.
-func TestSkillsCoreAt_WithoutALockerTheLockingVerbsFailClosed(t *testing.T) {
-	f := newLockFixture(t)
-	before := snapshotFiles(t, f.reg, f.man)
-	for _, verb := range []string{"install", "adopt"} {
-		r := f.runAt(verb, append([]string{"--project-id", "p"}, f.flags()...), os.ReadFile, nil, nil)
-		if r.code != 1 || r.stdout != "" || !strings.Contains(r.stderr, "no lock is configured") {
-			t.Errorf("%s: exit %d, stdout %q, stderr %q, want exit 1 and a 'no lock is configured' refusal", verb, r.code, r.stdout, r.stderr)
-		}
-	}
-	if after := snapshotFiles(t, f.reg, f.man); !reflect.DeepEqual(before, after) {
-		t.Error("a verb ran without a lock")
 	}
 }
 

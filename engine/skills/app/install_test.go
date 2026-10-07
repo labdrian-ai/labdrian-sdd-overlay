@@ -721,3 +721,87 @@ func TestAdoptWritesTheLockAndNoSkillFile(t *testing.T) {
 		}
 	}
 }
+
+// ---- through the ports ---------------------------------------------------------------------
+
+// sourceTree is a SkillTree that answers what the test says and records what it was asked.
+type sourceTree struct {
+	skills.SkillTree
+	files []skills.SourceFile
+	asked []string
+}
+
+func (r *sourceTree) ReadSkillSource(dir string) ([]skills.SourceFile, error) {
+	r.asked = append(r.asked, dir)
+	return r.files, nil
+}
+
+// install copies the files the SkillTree says a skill has, whatever the directory holds.
+func TestInstallCopiesTheSourceTheTreeReads(t *testing.T) {
+	w := newInstallWorld(t, map[string]string{"SKILL.md": "on disk, which the tree does not read"})
+	tree := &sourceTree{files: []skills.SourceFile{{Rel: "SKILL.md", Data: []byte("what the tree read"), Mode: 0o644}}}
+	w.tree = tree
+
+	if _, err := w.install(); err != nil {
+		t.Fatal(err)
+	}
+	if got := projectFile(w, ".claude/skills/my-skill/SKILL.md"); got != "what the tree read" {
+		t.Errorf("installed SKILL.md = %q, want the bytes the tree read", got)
+	}
+	if want := filepath.Join(w.overlay, "my-skill"); len(tree.asked) != 1 || tree.asked[0] != want {
+		t.Errorf("the tree was asked %v, want [%q]", tree.asked, want)
+	}
+}
+
+// stagingProject is a ProjectFS that counts its calls and fails to stage a file in one directory.
+type stagingProject struct {
+	skills.ProjectFS
+	failDir string
+	n       map[string]int
+}
+
+func (s *stagingProject) WriteTemp(dir string, data []byte, perm fs.FileMode) (string, error) {
+	s.n["writetemp"]++
+	if dir == s.failDir {
+		return "", errors.New("create temp: no room")
+	}
+	return s.ProjectFS.WriteTemp(dir, data, perm)
+}
+
+func (s *stagingProject) Rename(oldPath, newPath string) error {
+	s.n["rename"]++
+	return s.ProjectFS.Rename(oldPath, newPath)
+}
+
+func (s *stagingProject) MkdirAll(dir string, perm fs.FileMode) error {
+	s.n["mkdirall"]++
+	return s.ProjectFS.MkdirAll(dir, perm)
+}
+
+// install writes through the ProjectFS it is given and words a failure to stage a file as it always
+// has: the verb's words, then 'writeProjectTemp: ', then the step the port says and the cause.
+func TestInstallWritesThroughTheProjectFileSystemAndWordsItsFailure(t *testing.T) {
+	w := newInstallWorld(t, map[string]string{"SKILL.md": "B"})
+	failing := &stagingProject{ProjectFS: w.project, failDir: filepath.Join(w.root, ".claude", "skills", "my-skill"), n: map[string]int{}}
+	w.project = failing
+
+	_, err := w.install()
+
+	var failed *ExecutionError
+	want := "skills install: staging \".claude/skills/my-skill/SKILL.md\": writeProjectTemp: create temp: no room"
+	if !errors.As(err, &failed) || err.Error() != want {
+		t.Errorf("install with a file system that fails: %v, want an *ExecutionError saying %q", err, want)
+	}
+	if _, err := os.Stat(failing.failDir); err == nil {
+		t.Error("something was installed although staging failed")
+	}
+
+	working := &stagingProject{ProjectFS: skillsfs.Project{}, n: map[string]int{}}
+	w.project = working
+	if _, err := w.install(); err != nil {
+		t.Fatal(err)
+	}
+	if working.n["writetemp"] == 0 || working.n["rename"] == 0 || working.n["mkdirall"] == 0 {
+		t.Errorf("install did not write through the file system it was given: %v", working.n)
+	}
+}

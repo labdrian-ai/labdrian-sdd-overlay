@@ -534,17 +534,164 @@ func TestInstallReleasesTheOverlayLockWhenTheProjectLockIsBusy(t *testing.T) {
 	}
 }
 
-func TestInstallWithoutALockerFailsClosed(t *testing.T) {
-	w := newInstallCLIWorld(t)
-	deps := w.deps(noopOverlayLocker{})
-	deps.Locker = nil
-	r := w.run(skillsInstall, deps, w.args("install")...)
-	if r.code() != 1 || r.stderr != "error: skills install: no lock is configured, so it will not run unserialized with the other skills commands\n" {
-		t.Errorf("exit %d, stderr %q", r.code(), r.stderr)
+func TestInstallAndAdoptWithoutALockerFailClosed(t *testing.T) {
+	for _, v := range installVerbs {
+		t.Run(v.name, func(t *testing.T) {
+			w := newInstallCLIWorld(t)
+			deps := w.deps(noopOverlayLocker{})
+			deps.Locker = nil
+			r := w.run(v.run, deps, w.args(v.name)...)
+			if want := "error: skills " + v.name + ": no lock is configured, so it will not run unserialized with the other skills commands\n"; r.code() != 1 || r.stdout != "" || r.stderr != want {
+				t.Errorf("exit %d, stdout %q, stderr %q, want %q", r.code(), r.stdout, r.stderr, want)
+			}
+			if _, err := os.Stat(filepath.Join(w.project, ".claude")); err == nil {
+				t.Error("the verb wrote without a lock")
+			}
+		})
 	}
-	if _, err := os.Stat(filepath.Join(w.project, ".claude")); err == nil {
-		t.Error("install wrote without a lock")
+}
+
+// A lock that stays taken past the bound is reported with exit 2 and a retry message, and the verb
+// does not run: the files are byte for byte as they were. A busy error that a caller wrapped is
+// still a busy error.
+func TestInstallAndAdoptWithABusyOverlayLockExit2WithARetryMessageAndChangeNothing(t *testing.T) {
+	for _, v := range installVerbs {
+		for name, busy := range map[string]error{"busy": busyFailure{}, "a wrapped busy error": fmt.Errorf("acquire: %w", busyFailure{})} {
+			t.Run(v.name+" "+name, func(t *testing.T) {
+				w := newInstallCLIWorld(t)
+				w.copyByHand(overlaySkillMD("proj"))
+				before := w.tree()
+				regBefore, _ := os.ReadFile(w.reg)
+				locker := &holdingLocker{failOn: map[string]error{w.lck: busy}}
+
+				r := w.run(v.run, w.deps(locker), w.args(v.name)...)
+
+				if r.code() != skills.ExitBusy || skills.ExitBusy != 2 || r.stdout != "" {
+					t.Errorf("exit %d (ExitBusy %d), stdout %q, want 2 and nothing on stdout", r.code(), skills.ExitBusy, r.stdout)
+				}
+				for _, want := range []string{"skills " + v.name, "in progress", "retry", w.lck} {
+					if !strings.Contains(r.stderr, want) {
+						t.Errorf("stderr %q does not contain %q", r.stderr, want)
+					}
+				}
+				if got, _ := os.ReadFile(w.reg); string(got) != string(regBefore) || !reflect.DeepEqual(before, w.tree()) {
+					t.Error("a busy lock changed files")
+				}
+			})
+		}
 	}
+}
+
+// A lock that cannot be taken for any other reason is a refusal, exit 1: waiting would not help, so
+// the message must not tell the caller to retry.
+func TestInstallAndAdoptWithAnOverlayLockThatCannotBeTakenExit1AndDoNotSayRetry(t *testing.T) {
+	for _, v := range installVerbs {
+		t.Run(v.name, func(t *testing.T) {
+			w := newInstallCLIWorld(t)
+			locker := &holdingLocker{fail: fmt.Errorf("open %s: permission denied", w.lck)}
+
+			r := w.run(v.run, w.deps(locker), w.args(v.name)...)
+
+			if r.code() != 1 || r.stdout != "" {
+				t.Fatalf("exit %d, stdout %q, want exit 1 and nothing on stdout", r.code(), r.stdout)
+			}
+			for _, want := range []string{"skills " + v.name, "cannot take the lock", "permission denied", w.lck} {
+				if !strings.Contains(r.stderr, want) {
+					t.Errorf("stderr %q does not contain %q", r.stderr, want)
+				}
+			}
+			if strings.Contains(r.stderr, "retry") {
+				t.Errorf("stderr %q tells the caller to retry a failure that will not clear", r.stderr)
+			}
+		})
+	}
+}
+
+// The locks are let go of when the verb refuses, whatever the reason.
+func TestInstallAndAdoptLetGoOfTheLocksWhenTheyRefuse(t *testing.T) {
+	for _, v := range installVerbs {
+		t.Run(v.name, func(t *testing.T) {
+			w := newInstallCLIWorld(t)
+			writeTestFile(t, w.reg, "version: \"99\"\nskills: []\n") // a registry the verb refuses, under the lock
+			locker := &holdingLocker{}
+
+			r := w.run(v.run, w.deps(locker), w.args(v.name)...)
+
+			if r.code() != 1 {
+				t.Fatalf("exit %d, want 1; stderr=%q", r.code(), r.stderr)
+			}
+			want := []string{"lock shared " + w.lck, "lockdir exclusive " + w.project, "unlock " + w.project, "unlock " + w.lck}
+			if got := locker.log(); !reflect.DeepEqual(got, want) {
+				t.Errorf("lock events = %v, want %v", got, want)
+			}
+		})
+	}
+}
+
+// State is read after the locks are taken and before they are let go of, never outside them: a read
+// made before can be stale by the time the lock is granted. Every port the use case reads through
+// is held to it.
+func TestInstallAndAdoptReadEverythingUnderTheLocks(t *testing.T) {
+	for _, v := range installVerbs {
+		t.Run(v.name, func(t *testing.T) {
+			w := newInstallCLIWorld(t)
+			if v.name == "adopt" {
+				w.copyByHand(overlaySkillMD("proj"))
+			}
+			locker := &holdingLocker{}
+			var outside []string
+			check := func(what string) {
+				if !locker.isHeld(w.lck) || !locker.isHeld(w.project) {
+					outside = append(outside, what)
+				}
+			}
+			deps := w.deps(locker)
+			deps.Registries = checkedRegistries{deps.Registries, check}
+			deps.ProjectLocks = checkedProjectLocks{deps.ProjectLocks, check}
+			deps.Tree = checkedTree{deps.Tree, check}
+			read := deps.ReadFile
+			deps.ReadFile = func(name string) ([]byte, error) { check("file " + name); return read(name) }
+
+			r := w.run(v.run, deps, w.args(v.name)...)
+
+			if r.code() != 0 {
+				t.Fatalf("exit %d; stderr=%q", r.code(), r.stderr)
+			}
+			if len(outside) != 0 {
+				t.Errorf("read %v before the locks were taken or after they were released", outside)
+			}
+		})
+	}
+}
+
+type checkedRegistries struct {
+	skills.RegistryRepository
+	check func(string)
+}
+
+func (c checkedRegistries) Load(location string) (skills.Registry, error) {
+	c.check("registry " + location)
+	return c.RegistryRepository.Load(location)
+}
+
+type checkedProjectLocks struct {
+	skills.ProjectLockStore
+	check func(string)
+}
+
+func (c checkedProjectLocks) ReadLock(root string) ([]byte, error) {
+	c.check("project lock " + root)
+	return c.ProjectLockStore.ReadLock(root)
+}
+
+type checkedTree struct {
+	skills.SkillTree
+	check func(string)
+}
+
+func (c checkedTree) ReadSkillSource(dir string) ([]skills.SourceFile, error) {
+	c.check("source " + dir)
+	return c.SkillTree.ReadSkillSource(dir)
 }
 
 // A composition root that forgot a port gets a refusal and nothing written, after the locks.
@@ -743,4 +890,23 @@ func indexOfEvent(events []string, want string) int {
 		}
 	}
 	return -1
+}
+
+// install and adopt are run by the program through the table of the adapter, not the dispatcher of
+// the domain, which does not know them: the verb is reached, takes the locks of the real locker on
+// the registry and the directory, and reads the registry, which admits nothing to this project.
+func TestInstallAndAdoptAreReachedThroughTheProgram(t *testing.T) {
+	w := newInstallCLIWorld(t)
+	for _, verb := range []string{"install", "adopt"} {
+		t.Run(verb, func(t *testing.T) {
+			var out, errOut strings.Builder
+			code := -1
+			// The working directory of the program is the one of the test, which holds no registry
+			// for this project, so the project named admits nothing and nothing is written.
+			runSkillsCore(verb, []string{verb, "--registry", w.reg, "--source-root", w.root, "--project-id", "nobody"}, &out, &errOut, func(c int) { code = c })
+			if code != 0 || out.String() != "no project-scoped skills admitted for project \"nobody\"\n" || errOut.String() != "" {
+				t.Errorf("exit %d, stdout %q, stderr %q", code, out.String(), errOut.String())
+			}
+		})
+	}
 }

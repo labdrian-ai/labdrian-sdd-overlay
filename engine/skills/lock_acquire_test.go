@@ -246,25 +246,25 @@ func TestReadConsistentlyDoesNotReadWhenTheLocksCannotBeTaken(t *testing.T) {
 	}
 }
 
-// The overlay lock a verb takes is said once, by OverlayLocks. The dispatcher takes it for
-// install and adopt, and these cases hold it equal to what the dispatcher asks. The verbs that run
-// behind a use case take it in their adapter (engine/cmd), and the dispatcher takes none for them;
-// that the adapter takes exactly what OverlayLocks says is held in engine/cmd
-// (TestOverlayVerbsTakeExactlyTheLocksThePolicySaysForThem), since only that package can run it.
-func TestOverlayLocksAreTheLocksTheDispatcherTakes(t *testing.T) {
+// The overlay lock a verb takes is said once, by OverlayLocks, and the adapters of the verbs that
+// run behind a use case take it (engine/cmd holds that they take exactly what it says:
+// TestOverlayVerbsTakeExactlyTheLocksThePolicySaysForThem and the tests of install and adopt),
+// since only that package can run an adapter. The dispatcher of this package takes none of them.
+func TestTheDispatcherTakesNoOverlayLock(t *testing.T) {
 	const registry = "/o/skills.registry.yaml"
-	for _, verb := range []string{"install", "adopt"} {
-		want := lockRequestsFor(verb, []string{verb, "--registry", registry}, "")
-		if got := OverlayLocks(verb, registry); len(got) != 1 || len(want) != 1 || got[0] != want[0] {
-			t.Errorf("%s: OverlayLocks = %+v, the dispatcher takes %+v", verb, got, want)
+	for _, verb := range []string{"install", "adopt", "add", "remove", "sync-manifest", "approve", "validate"} {
+		if got := lockRequestsFor(verb, []string{verb, "--registry", registry}); len(got) != 0 {
+			t.Errorf("%s: the dispatcher takes %+v, want none: the adapter of the use case takes the lock", verb, got)
 		}
 	}
 	for _, verb := range []string{"add", "remove", "sync-manifest", "approve"} {
-		if got := lockRequestsFor(verb, []string{verb, "--registry", registry}, ""); len(got) != 0 {
-			t.Errorf("%s: the dispatcher takes %+v, want none: the adapter of the use case takes the lock", verb, got)
-		}
 		if got := OverlayLocks(verb, registry); len(got) != 1 || got[0].Mode != LockExclusive || got[0].Path != "/o/.skills.registry.yaml.lock" {
 			t.Errorf("%s: OverlayLocks = %+v, want an exclusive lock on the lock file beside the registry", verb, got)
+		}
+	}
+	for _, verb := range []string{"install", "adopt"} {
+		if got := OverlayLocks(verb, registry); len(got) != 1 || got[0].Mode != LockShared || got[0].Rereads || got[0].Path != "/o/.skills.registry.yaml.lock" {
+			t.Errorf("%s: OverlayLocks = %+v, want a shared lock on the lock file beside the registry, that is not read again", verb, got)
 		}
 	}
 	for _, verb := range []string{"list", "status", "lint", "project-status", "nuke", ""} {
@@ -272,7 +272,6 @@ func TestOverlayLocksAreTheLocksTheDispatcherTakes(t *testing.T) {
 			t.Errorf("%s: OverlayLocks = %+v, want no overlay lock", verb, got)
 		}
 	}
-	// validate is run by a use case, not by the dispatcher, so the policy is only said here.
 	if got := OverlayLocks("validate", registry); got[0].Mode != LockShared || !got[0].Rereads || got[0].Path != "/o/.skills.registry.yaml.lock" {
 		t.Errorf("validate: %+v, want a shared lock on the lock file beside the registry that is read again if the file appears", got[0])
 	}

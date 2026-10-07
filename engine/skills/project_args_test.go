@@ -75,7 +75,7 @@ func TestEveryProjectVerbIsLockedOnItsOwnRoot(t *testing.T) {
 			t.Errorf("%s is not in projectArgSpecs", verb)
 			continue
 		}
-		requests := lockRequestsFor(verb, []string{verb, "--project-root", root}, "")
+		requests := lockRequestsFor(verb, []string{verb, "--project-root", root})
 		if len(requests) != 1 || !requests[0].Dir || requests[0].Path != root || requests[0].Mode != mode {
 			t.Errorf("%s: lock requests = %+v, want one %v lock on %s", verb, requests, modeName(mode), root)
 		}

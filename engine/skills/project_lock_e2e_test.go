@@ -17,6 +17,49 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/filelock"
 )
 
+// installFixture is the overlay of the tests that run the built program: a global skill approve
+// can target, and a project skill install copies.
+type installFixture struct {
+	dir, reg, man, root, project string
+}
+
+func newInstallFixture(t *testing.T) installFixture {
+	t.Helper()
+	dir := t.TempDir()
+	f := installFixture{
+		dir:     dir,
+		reg:     filepath.Join(dir, "skills.registry.yaml"),
+		man:     filepath.Join(dir, "overlay.manifest"),
+		root:    filepath.Join(dir, "skills"),
+		project: filepath.Join(t.TempDir(), "project"),
+	}
+	regBytes, err := serializeRegistry(buildRegistry([]struct {
+		id              string
+		scope           string
+		allowedProjects []string
+	}{
+		{"glob", "global", nil},
+		{"proj", "project", []string{"p"}},
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	writeTestFile(t, f.reg, string(regBytes))
+	writeTestFile(t, f.man, minimalManifest("glob", "proj"))
+	for _, id := range []string{"glob", "proj"} {
+		writeTestFile(t, filepath.Join(f.root, id, "SKILL.md"), lintCleanSkillMD(id))
+	}
+	writeValidApproval(t, f.root, "glob")
+	if err := os.MkdirAll(f.project, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	return f
+}
+
+func (f installFixture) installArgs() []string {
+	return []string{"--registry", f.reg, "--source-root", f.root, "--project-id", "p"}
+}
+
 // registerJob is one `skills project-register` of skill id into the project at root.
 func registerJob(t *testing.T, w lockE2E, root, registryPath, id string) func() e2eRun {
 	t.Helper()

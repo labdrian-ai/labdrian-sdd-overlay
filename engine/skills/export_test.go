@@ -176,7 +176,13 @@ func skillsCoreAtIn(cwd func() (string, error), verb string, args []string, read
 	SkillsCoreAt(verb, args, testDeps(cwd, readFile, registries, now, locker), stdout, stderr, exit)
 }
 
-// renderInstallCore runs 'install' in the directory cwdFn names, over the real tree.
-func renderInstallCore(args []string, registries RegistryRepository, cwdFn func() (string, error), stdout, stderr io.Writer, exit func(int)) {
-	RenderInstallCore(args, testDeps(nil, os.ReadFile, registries, nil, nil), cwdFn, stdout, stderr, exit)
+// writeTestFile writes content to path, making the directories above it.
+func writeTestFile(t *testing.T, path, content string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatalf("mkdir %q: %v", filepath.Dir(path), err)
+	}
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatalf("write %q: %v", path, err)
+	}
 }
