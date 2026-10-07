@@ -132,10 +132,32 @@ func TestADescendantOfAProgramThatHangsIsKilledAtItsDeadline(t *testing.T) {
 	}
 	holder.Close()
 
-	// The program said it was ready, and what it said has to be so: it is still running (hanging,
-	// not exited), and the descendant it started is alive and in its process group. Without this
-	// a program that wrote the line and ended, with no descendant ever started, would pass: the
-	// FIFO ends all the same.
+	requireAHangingProgramWithALiveDescendant(t, runnerDone, pidFile, groupFile)
+
+	kill()
+	if err := <-ran; !errors.Is(err, errRunTimedOut) {
+		t.Fatalf("runUnder() = %v, want errRunTimedOut", err)
+	}
+	select {
+	case err := <-ended:
+		if err != io.EOF {
+			t.Errorf("the FIFO ended with %v, want EOF: the program was to hold it open and say nothing", err)
+		}
+	case <-time.After(descendantGoneWait):
+		t.Error("the descendant of the program still held the FIFO after the program was killed")
+	}
+}
+
+// requireAHangingProgramWithALiveDescendant checks that what the program said when it said it was
+// ready is so: it is still running (hanging, not exited), and the descendant it started is alive and
+// in its process group. Without this a program that wrote the line and ended, with no descendant
+// ever started, would pass: the FIFO ends all the same.
+//
+// The files are complete when it is called: the script writes both pids before it writes the ready
+// line, one command after the other, and the test reads them only after that line. The program
+// cannot end between the checks either: it waits for the descendant, which only the test kills.
+func requireAHangingProgramWithALiveDescendant(t *testing.T, runnerDone <-chan struct{}, pidFile, groupFile string) {
+	t.Helper()
 	select {
 	case <-runnerDone:
 		t.Fatal("the program had ended when it was to hang, so what follows would prove nothing about a descendant")
@@ -150,19 +172,6 @@ func TestADescendantOfAProgramThatHangsIsKilledAtItsDeadline(t *testing.T) {
 	}
 	if got, err := syscall.Getpgid(pid); err != nil || got != group {
 		t.Fatalf("the descendant (pid %d) is in process group %d (%v), want the program's, %d", pid, got, err, group)
-	}
-
-	kill()
-	if err := <-ran; !errors.Is(err, errRunTimedOut) {
-		t.Fatalf("runUnder() = %v, want errRunTimedOut", err)
-	}
-	select {
-	case err := <-ended:
-		if err != io.EOF {
-			t.Errorf("the FIFO ended with %v, want EOF: the program was to hold it open and say nothing", err)
-		}
-	case <-time.After(descendantGoneWait):
-		t.Error("the descendant of the program still held the FIFO after the program was killed")
 	}
 }
 
