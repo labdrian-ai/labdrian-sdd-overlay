@@ -41,7 +41,8 @@ type AddPorts struct {
 }
 
 // AddResult is what add did, or how far it got: UnreadWarning says what the reader left out of
-// the registry it read, and is set even when add then refused.
+// the registry it read, and is set even when add then refused, except when the refusal is that
+// very thing (the refusal says it).
 type AddResult struct {
 	ID            string
 	UnreadWarning string
@@ -112,6 +113,11 @@ func AddSkill(p AddPorts, in AddInput) (AddResult, error) {
 	}
 	reg, warning, err := readRegistry(p.Registries, in.RegistryPath)
 	if err != nil {
+		return res, err
+	}
+	// A registry the reader left fields out of cannot be written back whole. The refusal says
+	// what was left out, so the warning that says it is not also set: a person is told once.
+	if err := reg.CheckWritable(); err != nil {
 		return res, err
 	}
 	res.UnreadWarning = warning

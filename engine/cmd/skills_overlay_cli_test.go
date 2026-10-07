@@ -559,13 +559,20 @@ func TestOverlayVerbsRefuseWhenAPortIsNotWired(t *testing.T) {
 
 // ---- the words of a refusal --------------------------------------------------------------
 
-func TestOverlayVerbsTellWhatTheReaderLeftOutBeforeTheyRefuse(t *testing.T) {
+// A registry the reader left fields out of is refused by the verbs that write it, and the refusal
+// says what was left out: it is not also told as a warning before the error.
+func TestOverlayVerbsTellWhatTheReaderLeftOutOnceInTheRefusal(t *testing.T) {
 	w := newOverlayWorld(t)
 	writeTestFile(t, w.reg, overlayRegistryOf("existing")+"unknownTopLevel: true\n")
 	r := w.run(skillsAdd, w.deps(noopOverlayLocker{}, os.ReadFile), append([]string{"add", "newbie"}, w.flags()...)...)
 	lines := strings.Split(strings.TrimSpace(r.stderr), "\n")
-	if r.code() != 1 || len(lines) != 2 || !strings.HasPrefix(lines[0], "warning: ") || !strings.Contains(lines[1], "the registry has fields this program does not read") {
-		t.Errorf("exit %d, stderr %q, want the warning and then the refusal", r.code(), r.stderr)
+	if r.code() != 1 || len(lines) != 1 || !strings.HasPrefix(lines[0], "error: ") ||
+		!strings.Contains(lines[0], "the registry has fields this program does not read") || !strings.Contains(lines[0], "unknownTopLevel") {
+		t.Errorf("exit %d, stderr %q, want one line, the refusal, that says which field was left out", r.code(), r.stderr)
+	}
+	r = w.run(skillsRemove, w.deps(noopOverlayLocker{}, os.ReadFile), append([]string{"remove", "existing"}, w.flags()...)...)
+	if lines := strings.Split(strings.TrimSpace(r.stderr), "\n"); r.code() != 1 || len(lines) != 1 || !strings.HasPrefix(lines[0], "error: ") {
+		t.Errorf("remove: exit %d, stderr %q, want one line, the refusal", r.code(), r.stderr)
 	}
 }
 

@@ -10,7 +10,6 @@ $ skills add gamma --registry <WORLD>/refused/b.yaml --manifest <WORLD>/overlay.
 exit: 1
 --- stdout ---
 --- stderr ---
-warning: registry fields left unread: line 7: unknown key "mirror" in source
 error: skills: the registry has fields this program does not read, and rewriting it would drop them: line 7: unknown key "mirror" in source
 
 # a registry of a version it does not know

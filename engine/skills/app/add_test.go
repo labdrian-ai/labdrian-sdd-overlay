@@ -264,16 +264,20 @@ func TestAddGoesOnPastAnAdvisoryLintWarning(t *testing.T) {
 }
 
 // A registry the reader left fields out of cannot be written back whole, so add refuses it, and
-// the result says what the reader left out even then: the CLI tells it before the refusal.
-func TestAddSaysWhatTheReaderLeftOutOfTheRegistryEvenWhenItRefuses(t *testing.T) {
+// the refusal says what the reader left out: the result carries no warning of the same fields, so
+// that a person is told once.
+func TestAddRefusesARegistryTheReaderLeftFieldsOutOfAndSaysWhatItLeftOutOnce(t *testing.T) {
 	o := newOverlay(t)
 	put(t, o.registry, registryYAML("existing")+"unknownTopLevel: true\n")
 	res, err := o.add(newStagedSpy(nil), "foo")
 	if err == nil || !strings.Contains(err.Error(), "the registry has fields this program does not read") {
 		t.Fatalf("err = %v, want the registry refused: writing it back would drop what was left out", err)
 	}
-	if res.UnreadWarning == "" {
-		t.Error("the result does not say what the reader left out")
+	if !strings.Contains(err.Error(), "unknownTopLevel") {
+		t.Errorf("err = %v, want it to say which field the reader left out", err)
+	}
+	if res.UnreadWarning != "" {
+		t.Errorf("the result warns %q of what the refusal already says", res.UnreadWarning)
 	}
 }
 
