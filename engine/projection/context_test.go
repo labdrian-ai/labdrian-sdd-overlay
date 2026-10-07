@@ -790,7 +790,9 @@ func TestProjectContextOfATypicalWorkflowIsNotTruncated(t *testing.T) {
 // TestProjectOfRealisticStatesSaysSomethingWithinTheBound runs Project over the states the CLI
 // produces: each has something to tell the session (the context of an open workflow, the note
 // of a closed one) and no warning, within the bound. How that is written for Claude Code is the
-// adapter's (engine/hookwire); the golden files of the hooks in engine/cmd pin the bytes.
+// adapter's (engine/hookwire); the same projections through the encoder are
+// TestTheContextOfEachRealisticStateSurvivesTheEncoder in engine/cmd, and the golden files of the
+// hooks there pin the bytes.
 func TestProjectOfRealisticStatesSaysSomethingWithinTheBound(t *testing.T) {
 	for _, status := range []workflow.Status{workflow.StatusCreated, workflow.StatusRunning, workflow.StatusPaused, workflow.StatusClosed} {
 		t.Run(string(status), func(t *testing.T) {
