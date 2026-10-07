@@ -190,6 +190,8 @@ const (
 	flagRef      = "--ref"
 	flagID       = "--id"
 	flagApprover = "--approver"
+	// flagProjectID names the project a directory is, when the person says so.
+	flagProjectID = "--project-id"
 )
 
 // skillsAddSpec is the command line of `skills add`: the registry, the manifest and the skills tree
@@ -241,4 +243,86 @@ var skillsApproveSpec = skillsFlagSpec{
 		}
 		return fmt.Sprintf("skills approve: flag %q: the label %q starts with \"-\", which would be read as a flag; choose a label that does not start with \"-\"", flag, value)
 	},
+}
+
+// skillsInstallSpec is the command line of `skills install` and of `skills adopt`, which read the
+// same flags: the registry that admits skills to projects, the tree they are read from, and the id
+// of the project; the manifest of the wrapper is taken and not read. A word that is no flag is not
+// read, and a "--" is dropped, as install always passed both unread.
+func skillsInstallSpec(verb string) skillsFlagSpec {
+	return skillsFlagSpec{
+		verb:           verb,
+		values:         []string{flagRegistry, flagSourceRoot, flagProjectID},
+		wrapper:        []string{flagManifest},
+		words:          -1,
+		skipDoubleDash: true,
+	}
+}
+
+// Flags of the verbs that work on a project.
+const (
+	flagProjectRoot  = "--project-root"
+	flagCandidate    = "--candidate"
+	flagReason       = "--reason"
+	flagAbsorbedInto = "--absorbed-into"
+	flagDryRun       = "--dry-run"
+)
+
+// The project verbs take every value of their flags as a value that is never a flag, so that a
+// missing value cannot swallow the flag after it (a mistyped `--candidate --dry-run` would otherwise
+// register for real while the person asked for a plan); the flags the wrapper appends are taken the
+// same way. `--` ends the options, so that a draft or an id that begins with a dash can be named,
+// and one word is read: a second is refused instead of dropped.
+
+// skillsProjectRegisterSpec is the command line of `skills project-register`: the project, the
+// candidate the draft comes from, the registry the identity check runs against, `--dry-run`, and
+// the draft as the one word.
+var skillsProjectRegisterSpec = skillsFlagSpec{
+	verb:              "project-register",
+	values:            []string{flagProjectRoot, flagRegistry, flagCandidate},
+	switches:          []string{flagDryRun},
+	wrapper:           []string{flagManifest, flagSourceRoot},
+	words:             1,
+	extraWord:         "skills project-register: unexpected extra argument %q (project-register accepts exactly one <draft-file>)",
+	endOfOptions:      true,
+	valueIsNeverAFlag: true,
+}
+
+// skillsProjectReviseSpec is the command line of `skills project-revise`: the same as register's.
+// --registry is accepted and not read: the revision needs no registry, but the wrapper appends one
+// to every verb.
+var skillsProjectReviseSpec = skillsFlagSpec{
+	verb:              "project-revise",
+	values:            []string{flagProjectRoot, flagRegistry, flagCandidate},
+	switches:          []string{flagDryRun},
+	wrapper:           []string{flagManifest, flagSourceRoot},
+	words:             1,
+	extraWord:         "skills project-revise: unexpected extra argument %q (project-revise accepts exactly one <draft-file>)",
+	endOfOptions:      true,
+	valueIsNeverAFlag: true,
+}
+
+// skillsProjectRetireSpec is the command line of `skills project-retire`: the project, the registry,
+// the reason and the skill it was absorbed into, `--dry-run`, and the id as the one word.
+var skillsProjectRetireSpec = skillsFlagSpec{
+	verb:              "project-retire",
+	values:            []string{flagProjectRoot, flagRegistry, flagReason, flagAbsorbedInto},
+	switches:          []string{flagDryRun},
+	wrapper:           []string{flagManifest, flagSourceRoot},
+	words:             1,
+	extraWord:         "skills project-retire: unexpected extra argument %q (project-retire accepts exactly one <id>)",
+	endOfOptions:      true,
+	valueIsNeverAFlag: true,
+}
+
+// skillsProjectStatusSpec is the command line of `skills project-status`: the project and the
+// registry, and an id as the one word.
+var skillsProjectStatusSpec = skillsFlagSpec{
+	verb:              "project-status",
+	values:            []string{flagProjectRoot, flagRegistry},
+	wrapper:           []string{flagManifest, flagSourceRoot},
+	words:             1,
+	extraWord:         "skills project-status: unexpected extra argument %q",
+	endOfOptions:      true,
+	valueIsNeverAFlag: true,
 }

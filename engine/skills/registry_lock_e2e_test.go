@@ -2,7 +2,7 @@ package skills
 
 // The overlay lock against the BUILT engine binary: separate OS processes,
 // started at the same moment, in fixtures under t.TempDir(). The in-process tests
-// in lock_test.go force each interleaving one at a time; these show that real
+// in the lock tests force each interleaving one at a time; these show that real
 // processes cannot reach any of them. They also show the busy path as a user sees
 // it (exit 2 after the bound, not a hang) and that a read-only verb leaves the real
 // repository tree exactly as it found it.
@@ -97,6 +97,42 @@ func (w lockE2E) engineIn(dir string, args ...string) e2eRun {
 
 func (w lockE2E) engine(args ...string) e2eRun { return w.engineIn(w.dir, args...) }
 
+// registryIDs are the ids of the registry at regPath, sorted, as the built engine reads them: it
+// asks `skills list`, which decodes the file with the registry reader of the program. This package
+// cannot import that reader (the adapter imports this package), and a scan of the lines of the file
+// would answer wrongly, or nothing, for a registry written with another indentation, quoted ids or
+// comments.
+func registryIDs(t *testing.T, bin, regPath string) []string {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, bin, "skills", "list", "--registry", regPath)
+	cmd.Dir = filepath.Dir(regPath)
+	cmd.Env = []string{"HOME=" + t.TempDir(), "XDG_STATE_HOME=" + t.TempDir(), "PATH=/usr/bin:/bin"}
+	var out, errBuf bytes.Buffer
+	cmd.Stdout, cmd.Stderr = &out, &errBuf
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("skills list --registry %s: %v\n%s", regPath, err, errBuf.String())
+	}
+	var ids []string
+	lines := strings.Split(strings.TrimRight(out.String(), "\n"), "\n")
+	if strings.TrimSpace(out.String()) == "" {
+		lines = nil
+	}
+	for _, line := range lines {
+		id, _, ok := strings.Cut(line, "\t")
+		if !ok {
+			t.Fatalf("skills list --registry %s: the line %q has no tab, so it is not the line of a skill:\n%s", regPath, line, out.String())
+		}
+		ids = append(ids, id)
+	}
+	if len(ids) == 0 {
+		t.Fatalf("skills list --registry %s listed no skill, so a comparison with the manifest would prove nothing:\n%s", regPath, out.String())
+	}
+	sort.Strings(ids)
+	return ids
+}
+
 // runAll starts every job at the same moment and waits for all of them.
 func runAll(jobs []func() e2eRun) []e2eRun {
 	results := make([]e2eRun, len(jobs))
@@ -163,7 +199,7 @@ func TestRegistryLockE2E_ConcurrentVerbsNeverLoseAnUpdate(t *testing.T) {
 		}
 		results := runAll(runs)
 
-		regIDs, manIDs := registryIDs(t, w.reg), manifestIDs(t, w.man)
+		regIDs, manIDs := registryIDs(t, w.bin, w.reg), manifestIDs(t, w.man)
 		if !reflect.DeepEqual(regIDs, manIDs) {
 			disagreements++
 		}

@@ -15,15 +15,15 @@ import (
 // This file closes the acceptance gap recorded in the archived change
 // 2026-09-21-procedural-memory-lifecycle: the retirement rollback-of-rollback
 // diagnostic branch (ExecuteProjectRetirePlan's `error: rollback incomplete:
-// <rel-path>`, project_register.go) was covered only by unit tests that
-// inject failures through the fakeProjectFS fake (project_register_test.go,
-// TestExecuteProjectRetireRollbackFailureReportsRelativePath), never through
+// <rel-path>`) was covered only by unit tests that
+// inject failures through the fakeProjectFS fake
+// (TestExecuteProjectRetireRollbackFailureReportsRelativePath), never through
 // the real `engine skills project-retire` binary against a real filesystem.
 // The tests below build that binary and drive it directly.
 //
 // Both tests use real directory permissions (chmod 0555, no write bit) as
 // the fault, because the ordering of ExecuteProjectRetirePlan
-// (project_register.go) makes a decoupled "delete fails but its own
+// makes a decoupled "delete fails but its own
 // restore later succeeds" fault impossible to construct with permissions
 // alone in one synchronous CLI run:
 //
@@ -32,14 +32,14 @@ import (
 //     directory, so a static permission that blocks the commit also blocks
 //     the initial stage -- no deletes are ever attempted (see
 //     TestProjectRetireRealCLI_RollbackSucceedsWhenLockStagingIsDenied);
-//   - rollback's restore() (project_register.go) retries the exact
+//   - rollback's restore() retries the exact
 //     same (WriteTemp, Rename) pair, in the exact same directory, that the
 //     forward delete just used. Whatever static condition made a target's
 //     Remove fail will therefore also make that target's own restore fail
 //     (see TestProjectRetireRealCLI_RollbackOfRollbackReportsIncompletePath).
 //
 // No env-var or hook seam exists in production for injecting a transient
-// fault (skills/skills.go hardcodes testProjectFS() for the real CLI), and
+// fault (the real CLI is wired to the real file system adapter), and
 // adding one would be a production-only backdoor, so these two real-fs
 // shapes are the complete, honest coverage available: a fault before any
 // mutation (full rollback, nothing to restore, tree untouched) and a fault
@@ -69,12 +69,12 @@ var retireE2EBinary struct {
 	out  []byte
 }
 
-// The shared engine binary is removed by TestMain (live_guard_test.go), which
+// The shared engine binary is removed by the TestMain of this package, which
 // also isolates HOME and the XDG state and config directories for the package.
 
 // buildRetireEngineBinary compiles the real engine binary once per package
 // run into an isolated temp directory, the same way
-// shelltest/overlay_pi_package_build_test.go builds it for its own e2e runs.
+// the shell tests build it for their own e2e runs.
 func buildRetireEngineBinary(t *testing.T) string {
 	t.Helper()
 	retireE2EBinary.once.Do(func() {
@@ -213,10 +213,9 @@ func (e retireE2EEnv) registerRealSkill(t *testing.T, id string) {
 
 // TestProjectRetireRealCLI_RollbackSucceedsWhenLockStagingIsDenied drives the
 // real CLI end to end: a real registration, then a real retirement whose
-// very first write (staging the updated lock in .labdrian/, project_
-// register.go:780-784, which always runs before any target delete is
+// very first write (staging the updated lock in .labdrian/, which always runs before any target delete is
 // attempted) is denied by a real directory-permission fault. Rollback then
-// has nothing attempted to undo (project_register.go), so it returns
+// has nothing attempted to undo, so it returns
 // the original cause directly rather than ErrRollbackIncomplete, and the
 // project tree is untouched -- the "rollback succeeds" shape of
 // ExecuteProjectRetirePlan's contract, exercised on a real filesystem.
@@ -262,12 +261,12 @@ func TestProjectRetireRealCLI_RollbackSucceedsWhenLockStagingIsDenied(t *testing
 // .claude/skills/<id>/ AND one under .agents/skills/<id>/, two independent
 // directories), then a real retirement where the .agents directory has its
 // write bit denied. The .claude target is removed and then genuinely
-// restored by rollback's restore() (project_register.go, real
+// restored by rollback's restore() (real
 // WriteTemp+Rename recreating the file from its captured backup); the
 // .agents target's removal fails against the denied directory and its own
 // restore attempt -- the exact same WriteTemp+Rename pair, in the exact same
 // still-denied directory -- fails too, so rollback prints `error: rollback
-// incomplete: <rel-path>` (project_register.go) naming it and the
+// incomplete: <rel-path>` naming it and the
 // process exits 1. This is the diagnostic branch the archived change's
 // verification left unexercised against a real binary and a real
 // filesystem.
@@ -319,9 +318,8 @@ func TestProjectRetireRealCLI_RollbackOfRollbackReportsIncompletePath(t *testing
 	if stdout != "" {
 		t.Errorf("a failed retirement must print no removed lines, got %q", stdout)
 	}
-	// The dedicated "error: rollback incomplete: <rel>" line (project_
-	// register.go:855) must name the repo-relative path. The wrapped cause
-	// on the line after it legitimately carries the real OS error, which
+	// The dedicated "error: rollback incomplete: <rel>" line must name the repo-relative path. The
+	// wrapped cause on the line after it legitimately carries the real OS error, which
 	// includes the absolute path the kernel reported -- that line is not the
 	// rollback-incomplete pointer under test.
 	want := "error: rollback incomplete: " + agentsRel + "\n"

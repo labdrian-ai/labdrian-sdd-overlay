@@ -298,3 +298,23 @@ func TestValidateOverlayListsTheSourceRootItIsGivenAsItWasGiven(t *testing.T) {
 		}
 	}
 }
+
+// A skill the baseline names, whose bytes are the pinned ones, passes with no record and is counted
+// as grandfathered; one byte more and it is unapproved. The baseline is the one the caller names.
+func TestValidateOverlayCountsAGrandfatheredSkillAndRefusesItOnceItsBytesChange(t *testing.T) {
+	w := newWorld(t)
+	delete(w.approved.records, "beta")
+	ports := w.ports()
+	ports.Baseline = func(id string) (string, bool) { return skills.SkillDigest([]byte("beta skill")), id == "beta" }
+
+	res, err := ValidateOverlay(ports, input())
+	if err != nil || !res.Passed() || res.Approvals.Grandfathered != 1 || res.Approvals.Approved != 1 {
+		t.Fatalf("ValidateOverlay = %+v, %v, want a pass with beta grandfathered", res, err)
+	}
+
+	w.approved.skillMD["beta"] = []byte("beta skill, changed")
+	res, err = ValidateOverlay(ports, input())
+	if err != nil || res.Passed() || len(res.Unapproved) != 1 || res.Unapproved[0].Class != skills.DivApprovalMissing {
+		t.Errorf("ValidateOverlay = %+v, %v, want beta unapproved once its bytes changed", res, err)
+	}
+}

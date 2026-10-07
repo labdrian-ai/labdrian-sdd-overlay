@@ -1,13 +1,11 @@
 package skills
 
-// The overlay lock: what SkillsCoreAt holds around a verb so that the registry,
+// The overlay lock: what the adapter of a verb holds around it so that the registry,
 // the manifest, the approval records, and the skill tree it reads never change
 // under it.
 
 import (
-	"errors"
 	"fmt"
-	"io"
 	"path/filepath"
 )
 
@@ -24,7 +22,7 @@ const (
 	LockShared
 )
 
-// Locker takes advisory locks on behalf of SkillsCoreAt, and tells whether a file is there. It
+// Locker takes advisory locks on behalf of the adapters of the verbs, and tells whether a file is there. It
 // is an interface, and this package does not implement it, because the implementation needs
 // system calls and a clock and this package's import allowlist (zero_fetch_test.go) admits
 // neither: engine/cmd passes one built on engine/filelock, and tests pass fakes.
@@ -119,11 +117,27 @@ func overlayLockRequest(verb, registryPath string, mode LockMode, rereads bool) 
 	return req
 }
 
-// OverlayLocks is the overlay lock verb takes on the registry at registryPath, as the verbs that
-// work on an overlay take it: exclusive for add, remove, sync-manifest and approve, shared for
-// validate, which reads again when the lock file appears during its read (ReadConsistently), and
-// shared for install and adopt. A verb that takes none (list, status, lint) gets no request.
-// Which verb needs which lock, and why, is explained at lockRequestsFor.
+// OverlayLocks is the overlay lock verb takes on the registry at registryPath, keyed by the registry
+// the verb reads (--registry, or the default every verb shares). A verb that takes none (list,
+// status, lint, the project verbs) gets no request.
+//
+//   - add, remove, sync-manifest, approve: exclusive. Each reads shared state, decides, and writes
+//     it back; two of them interleaved lose an update, and a reader in between sees the registry
+//     and the manifest disagree, because the pair is written as two renames. approve is here
+//     because a second approval of the same bytes must find the first one's record valid and
+//     leave it alone, and because install must never find an approval half written in a skill
+//     directory.
+//   - validate: shared. It compares the registry with the manifest and must not see the pair
+//     between its two renames. It reads files that must agree, and a shared lock on a lock file
+//     that does not exist yet holds nothing, so it is marked to read again when the file appears
+//     during its read (rereadsWhenTheLockFileAppears; ReadConsistently).
+//   - install, adopt: shared. They copy skill directories the writers above touch, and write
+//     nothing in the overlay, so shared is enough: any number of them run together, and a shared
+//     lock never creates the lock file, so both work on a read-only overlay. They read one atomic
+//     file, the registry, and a tree that no locked verb writes into except the approval record
+//     and the temporary file behind it, which they never copy, so they need not read again.
+//
+// A verb that needs the project lock too takes this one first (see ProjectLocks).
 func OverlayLocks(verb, registryPath string) []LockRequest {
 	switch verb {
 	case "add", "remove", "sync-manifest", "approve":
@@ -136,129 +150,25 @@ func OverlayLocks(verb, registryPath string) []LockRequest {
 	return nil
 }
 
-// lockRequestsFor lists, in the order they must be taken, the locks a verb needs.
+// ProjectLocks is the lock verb takes on the project whose root directory is root, as the verbs
+// that install into a project or keep its lock take it: exclusive for install, adopt,
+// project-register, project-revise and project-retire, shared for project-status. It is taken on
+// the directory itself, so that no file appears in the user's repository. A verb that works on no
+// project gets no request.
 //
-// Overlay lock, keyed by the registry the verb names (--registry, or the default
-// every verb shares):
-//
-//   - add, remove, sync-manifest, approve: exclusive. Each reads shared state,
-//     decides, and writes it back; two of them interleaved lose an update, and a
-//     reader in between sees the registry and the manifest disagree, because the
-//     pair is written as two renames. approve is here because a second approval of
-//     the same bytes must find the first one's record valid and leave it alone, and
-//     because install must never find an approval half written in a skill directory.
-//   - validate, install: shared. validate compares the registry with the manifest
-//     and must not see the pair between its two renames; install copies skill
-//     directories the writers above touch. Neither writes anything in the overlay,
-//     so shared is enough, any number of them run together, and a shared lock never
-//     creates the lock file, so both work on a read-only overlay. A shared lock on a
-//     lock file that does not exist yet holds nothing, and validate, which reads
-//     files that must agree, is marked to read again when the file appears during its
-//     read (rereadsWhenTheLockFileAppears; validate runs behind a use case, which takes
-//     this lock through OverlayLocks and ReadConsistently, and this function no longer
-//     lists it). install is not: it reads one atomic
-//     file, the registry, and a tree that no locked verb writes into except the
-//     approval record and the temporary file behind it, which it never copies.
-//   - list, status, lint: one atomic file or none, so none. They run behind use cases in
-//     skills/app and are not dispatched here.
-//
-// Project lock, keyed by the project root directory, taken on the directory itself
-// so that no file appears in the user's repository:
-//
-//   - project-register, project-revise, project-retire, install, adopt: exclusive.
-//     Each reads the project's lock file (.labdrian/procedural-skills.lock.json),
-//     decides, and writes it back together with the skill files it stages, so two of
-//     them on one root lose an update, or leave a skill written and unregistered.
-//     install is the same read-decide-write on the project's .claude/skills and
-//     .agents/skills, and adopt records what is there. A verb that finds no usable
-//     project root (the flag is missing, has no value, or is relative) takes no
-//     lock: it refuses before it reads or writes anything.
-//   - project-status: shared. It only reads, so any number run together, but it
-//     reads the lock file and then the skill files it lists, and between a revision's
-//     renames those disagree. Waiting for the writer is what keeps it from reporting
-//     a skill as human-owned for the moment it takes the writer to finish.
-//
-// The project root is read once, by the same code the verb reads it with:
-// parseProjectArgs for the project verbs, and for install the working directory,
-// which SkillsCoreAt resolves before it asks for any lock and hands to the verb as
-// installRoot, so that what is locked is what is written. A verb that cannot name a
-// usable root takes no lock.
-//
-// LOCK ORDER. A verb that needs both takes the overlay lock first and the project
-// lock second, and lets go in the opposite order. Every verb that holds two locks
-// must follow this, including the ones added later (install's ownership work
-// inherits it); the requests below are listed in that order, and
-// TestLockRequestsAreAlwaysOverlayBeforeProject fails if a verb asks for them the
-// other way round.
-//
-// Every read of shared state happens after the locks are held, in the verb itself,
-// so nothing decided before the lock is trusted after it.
-func lockRequestsFor(verb string, args []string, installRoot string) []LockRequest {
-	var requests []LockRequest
-	project := func(root string, mode LockMode) {
-		requests = append(requests, LockRequest{
-			Path:    filepath.Clean(root),
-			Dir:     true,
-			Mode:    mode,
-			Subject: "the project " + filepath.Clean(root),
-		})
-	}
+// A verb that needs both locks takes the overlay lock (OverlayLocks) first and the project lock
+// second, and lets go in the opposite order; the caller puts the requests in that order.
+func ProjectLocks(verb, root string) []LockRequest {
+	mode := LockExclusive
 	switch verb {
-	case "install", "adopt":
-		requests = append(requests, overlayLockRequest(verb, registryOfArgs(args), LockShared, false))
-		if installRoot != "" {
-			project(installRoot, LockExclusive)
-		}
-	case "project-register", "project-revise", "project-retire":
-		if root, ok := projectRootArg(verb, args); ok {
-			project(root, LockExclusive)
-		}
+	case "install", "adopt", "project-register", "project-revise", "project-retire":
 	case "project-status":
-		if root, ok := projectRootArg(verb, args); ok {
-			project(root, LockShared)
-		}
+		mode = LockShared
+	default:
+		return nil
 	}
-	return requests
-}
-
-// registryOfArgs is the registry install and adopt lock: the last --registry of their arguments, or
-// the default every verb shares. The flags that the wrapper appends take their value, so that the
-// value of one is not read as a flag, as it always was; install and adopt read their own flags
-// later, after the lock is held. It goes when these two verbs move behind a use case, which locks
-// through OverlayLocks.
-func registryOfArgs(args []string) string {
-	registryPath := defaultRegistryPath
-	for i := 0; i < len(args); i++ {
-		switch args[i] {
-		case "--registry":
-			if i+1 < len(args) {
-				registryPath = args[i+1]
-				i++
-			}
-		case "--manifest", "--source-root", "--repo", "--ref":
-			if i+1 < len(args) {
-				i++
-			}
-		}
-	}
-	return registryPath
-}
-
-// projectRootArg is the project root a project verb will use: what parseProjectArgs,
-// the parser the verb itself uses, reads from the arguments that follow the verb's
-// name. When the command line does not parse, or the root is missing or not
-// absolute, the verb is about to refuse before it reads or writes anything, so there
-// is nothing to lock.
-func projectRootArg(verb string, args []string) (string, bool) {
-	spec, ok := projectArgSpecs[verb]
-	if !ok {
-		return "", false
-	}
-	parsed, err := parseProjectArgs(spec, stripVerb(args, verb))
-	if err != nil || parsed.Root == "" || !filepath.IsAbs(parsed.Root) {
-		return "", false
-	}
-	return parsed.Root, true
+	clean := filepath.Clean(root)
+	return []LockRequest{{Path: clean, Dir: true, Mode: mode, Subject: "the project " + clean}}
 }
 
 // LockFailure says in which way the locks of a verb were refused.
@@ -392,23 +302,6 @@ func AcquireLocks(verb string, locker Locker, requests []LockRequest) (HeldLocks
 		unlocks = append(unlocks, unlock)
 	}
 	return HeldLocks{release: releaseAll, Provisional: provisional}, nil
-}
-
-// acquireLocks takes every lock the verb needs, in order, and returns the function
-// that releases them in reverse. When one cannot be taken it releases those it
-// holds, says why, calls exit (ExitBusy for a lock that stayed taken, 1 for one
-// that could not be taken at all), and reports false: the verb must not run.
-func acquireLocks(verb string, args []string, installRoot string, locker Locker, stderr io.Writer, exit func(int)) (release func(), ok bool) {
-	held, err := AcquireLocks(verb, locker, lockRequestsFor(verb, args, installRoot))
-	if err != nil {
-		var refusal *LockError
-		if errors.As(err, &refusal) {
-			fmt.Fprintf(stderr, "error: %v\n", refusal)
-			exit(refusal.ExitCode())
-		}
-		return nil, false
-	}
-	return held.Release, true
 }
 
 // rereadsWhenTheLockFileAppears is the answer to the one case a shared lock cannot

@@ -866,19 +866,27 @@ func runSkills(args []string) {
 	runSkillsWithStdin(args, os.Stdin, os.Stdout, os.Stderr, os.Exit)
 }
 
-// runSkillsCore is the testable core of the skills subcommand.
+// runSkillsCore is the testable core of the skills subcommand: the entry with the ports of the
+// program.
 func runSkillsCore(verb string, args []string, stdout, stderr io.Writer, exit func(int)) {
+	runSkillsCoreWith(newSkillsDeps(), verb, args, stdout, stderr, exit)
+}
+
+// runSkillsCoreWith is the entry of the skills subcommand over the ports it is given: it names the
+// verb the person typed, finds it in the table and runs it.
+func runSkillsCoreWith(deps skills.Deps, verb string, args []string, stdout, stderr io.Writer, exit func(int)) {
 	if verb == "" {
-		fmt.Fprintln(stderr, "error: skills requires a verb: list, status, validate, install, adopt, add, remove, sync-manifest, lint, approve, project-register, project-revise, project-status, project-retire")
+		fmt.Fprintf(stderr, "error: skills requires a verb: %s\n", skillsVerbList)
 		exit(1)
 		return
 	}
-	deps := newSkillsDeps()
-	if run, ok := skillsCLIVerbs[verb]; ok {
-		run(deps, args, stdout, stderr, exit)
+	run, ok := skillsCLIVerbs[verb]
+	if !ok {
+		fmt.Fprintf(stderr, "error: unknown skills verb %q (supported: %s)\n", verb, skillsVerbList)
+		exit(1)
 		return
 	}
-	skills.SkillsCoreAt(verb, args, deps, stdout, stderr, exit)
+	run(deps, args, stdout, stderr, exit)
 }
 
 // wallClockUTC is the production clock handed to the skills core: the current

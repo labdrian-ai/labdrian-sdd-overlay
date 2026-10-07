@@ -12,7 +12,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills/skillsfs"
 )
 
 // A writer asks the locker whether the registry is there before it asks for the lock: a lock
@@ -102,12 +102,9 @@ func TestAnApproveStartedDuringAnInstallWaitsForTheInstallToFinish(t *testing.T)
 	deps.Cwd = func() (string, error) { return project, nil }
 	deps.Identity = newProjectIdentity()
 	installDone := make(chan verbRun, 1)
+	deps.ProjectLocks = skillsfs.ProjectLocks{}
 	go func() {
-		var out, errOut strings.Builder
-		var r verbRun
-		skills.SkillsCoreAt("install", []string{"install", "--registry", w.reg, "--source-root", w.root, "--project-id", "p"}, deps, &out, &errOut, func(c int) { r.exits = append(r.exits, c) })
-		r.stdout, r.stderr = out.String(), errOut.String()
-		installDone <- r
+		installDone <- runSkillsVerb(skillsInstall, deps, "install", "--registry", w.reg, "--source-root", w.root, "--project-id", "p")
 	}()
 	<-gate.arrived
 	approved := runSkillsVerb(skillsApprove, w.deps(locker, os.ReadFile), append([]string{"approve", "--id", "existing", "--approver", "reviewer"}, w.flags()...)...)

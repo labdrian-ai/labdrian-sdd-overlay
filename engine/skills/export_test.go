@@ -1,104 +1,59 @@
 package skills
 
-// The tests of this package read registries through the YAML adapter, as the program does. The
-// adapter (engine/skills/registryyaml) imports this package, so a test file of package skills
-// cannot import it: Go refuses an import cycle in a test. The way round is the one this file and
-// registryyaml_hook_test.go make together. That file is in the external test package
-// skills_test, which may import the adapter, and registers it here when the test binary starts;
-// the helpers below hand it to the tests of this package. If it was not registered, every test
-// that needs a registry fails at once and says why.
+// What the tests of this package share. They reach no adapter: the adapters import this package,
+// so a test file of package skills cannot import them, and the tests that need the YAML file of a
+// registry are in the external test package (the adapter tests). The file system the
+// executors write through is stood in for here, by a ProjectFS made of os calls.
 
 import (
 	"bytes"
-	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"sort"
+	"strings"
 	"testing"
 )
 
-// yamlRepositoryOf builds the repository of the YAML adapter that reads through read.
-var yamlRepositoryOf func(read func(path string) ([]byte, error)) RegistryRepository
+// osProjectFS is the ProjectFS of a test: the files of a temporary directory, with the os calls a
+// real project file system makes. It is a double of the port, as the in-memory ones of the other
+// tests are. The adapter contract tests of the external package hold it to the real adapter on the
+// same calls.
+type osProjectFS struct{}
 
-// UseYAMLRegistries is how registryyaml_hook_test.go registers the adapter.
-func UseYAMLRegistries(of func(read func(path string) ([]byte, error)) RegistryRepository) {
-	yamlRepositoryOf = of
-}
+func (osProjectFS) Stat(name string) (fs.FileInfo, error)       { return os.Stat(name) }
+func (osProjectFS) ReadDir(name string) ([]fs.DirEntry, error)  { return os.ReadDir(name) }
+func (osProjectFS) MkdirAll(dir string, perm fs.FileMode) error { return os.MkdirAll(dir, perm) }
+func (osProjectFS) Rename(oldPath, newPath string) error        { return os.Rename(oldPath, newPath) }
+func (osProjectFS) Remove(name string) error                    { return os.Remove(name) }
+func (osProjectFS) ResolvePath(name string) (string, error)     { return resolvePathKeepingMissing(name) }
 
-// testRegistries is the registry repository of a test: the YAML adapter, reading files through
-// read (os.ReadFile, or the in-memory reader of the test).
-func testRegistries(read readFileFn) RegistryRepository {
-	if yamlRepositoryOf == nil {
-		panic("skills tests: the YAML adapter was not registered; see registryyaml_hook_test.go")
-	}
-	return yamlRepositoryOf(read)
-}
-
-// parseRegistry reads a registry from the bytes of its YAML file, as the program does: decoded by
-// the adapter and judged by the domain.
-func parseRegistry(data []byte) (Registry, error) {
-	return DecodeRegistry(testRegistries(nil), data)
-}
-
-// mustParseRegistry is parseRegistry for a registry that is known to be fine.
-func mustParseRegistry(t *testing.T, yaml string) Registry {
-	t.Helper()
-	reg, err := parseRegistry([]byte(yaml))
+// WriteTemp writes data to a fresh temporary file in dir, at the mode perm whatever the mask of the
+// process, and returns its path; the name begins with the prefix the copiers of a tree leave out.
+func (osProjectFS) WriteTemp(dir string, data []byte, perm fs.FileMode) (string, error) {
+	tmp, err := os.CreateTemp(dir, atomicTempPrefix+"*")
 	if err != nil {
-		t.Fatalf("the registry does not read: %v\n%s", err, yaml)
+		return "", err
 	}
-	return reg
-}
-
-// serializeRegistry is the YAML file of a registry, as the adapter writes it.
-func serializeRegistry(reg Registry) ([]byte, error) {
-	return testRegistries(nil).Encode(reg)
-}
-
-// The file system adapter (engine/skills/skillsfs) imports this package too, so the tests of
-// this package reach it the way they reach the YAML adapter: skillsfs_hook_test.go, in the
-// external test package, registers it here when the test binary starts. The helpers below are
-// the verbs and the functions of this package as the program wires them, so that a test that
-// needs a real directory says nothing of how it is walked.
-
-// osTree is the SkillTree of the real file system, registered by skillsfs_hook_test.go.
-var osTree SkillTree
-
-// UseOSTree is how skillsfs_hook_test.go registers the adapter.
-func UseOSTree(tree SkillTree) { osTree = tree }
-
-// testTree is the tree of a test: the file system adapter.
-func testTree() SkillTree {
-	if osTree == nil {
-		panic("skills tests: the file system adapter was not registered; see skillsfs_hook_test.go")
+	name := tmp.Name()
+	if _, err := tmp.Write(data); err != nil {
+		tmp.Close()
+		os.Remove(name)
+		return "", err
 	}
-	return osTree
-}
-
-// osProject is the ProjectFS of the real file system, registered by skillsfs_hook_test.go.
-var osProject ProjectFS
-
-// UseOSProject is how skillsfs_hook_test.go registers the adapter.
-func UseOSProject(project ProjectFS) { osProject = project }
-
-// testProjectFS is the project file system of a test: the file system adapter.
-func testProjectFS() ProjectFS {
-	if osProject == nil {
-		panic("skills tests: the file system adapter was not registered; see skillsfs_hook_test.go")
+	if err := tmp.Close(); err != nil {
+		os.Remove(name)
+		return "", err
 	}
-	return osProject
-}
-
-// testIdentity is the ProjectIdentity of a test: the id the person gave, and otherwise the name of
-// the directory, as the composition root chains them. It stands in for the adapters, which import
-// this package and so cannot be imported by its tests.
-type testIdentity struct{}
-
-func (testIdentity) Identify(q ProjectQuery) (ProjectID, bool, error) {
-	if q.Explicit != "" {
-		return q.Explicit, true, nil
+	if err := os.Chmod(name, perm); err != nil {
+		os.Remove(name)
+		return "", err
 	}
-	return ProjectID(filepath.Base(q.Dir)), true, nil
+	return name, nil
 }
+
+// testProjectFS is the project file system of a test.
+func testProjectFS() ProjectFS { return osProjectFS{} }
 
 // osExists gives a fake locker the answer of the file system to 'is this path there'.
 type osExists struct{}
@@ -108,8 +63,34 @@ func (osExists) Exists(path string) error {
 	return err
 }
 
-// scanSkillFiles lists the files of a skills tree on disk, as the program does.
-func scanSkillFiles(dir string) ([]string, error) { return testTree().ScanSkillFiles(dir) }
+// scanSkillFiles lists the files of a skills tree on disk the way the tree adapter does: every
+// regular file below dir as a slash-separated path relative to it, sorted, leaving out a name that
+// begins with a dot (a directory with it) and anything that is not a regular file. The adapter
+// contract tests of the external package hold it to the adapter on the same files.
+func scanSkillFiles(dir string) ([]string, error) {
+	var out []string
+	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if path == dir {
+			return nil
+		}
+		if strings.HasPrefix(d.Name(), ".") {
+			if d.IsDir() {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if d.Type().IsRegular() {
+			rel, _ := filepath.Rel(dir, path)
+			out = append(out, filepath.ToSlash(rel))
+		}
+		return nil
+	})
+	sort.Strings(out)
+	return out, err
+}
 
 // validateFile compares a registry with the manifest at path, as 'skills validate' does.
 func validateFile(reg Registry, path string) ([]Divergence, error) {
@@ -132,9 +113,9 @@ func loadManifestViewFile(path string) (ManifestView, error) {
 // fileApprovals is the ApprovalRecordStore of a test: the SKILL.md and the record are read from
 // the paths the domain names (SkillMDPath, ApprovalRecordPath) through read, which is os.ReadFile
 // or the in-memory reader of the test, so a reader that gates or counts reads sees these too.
-func fileApprovals(read readFileFn) ApprovalRecordStore { return readerApprovals{read} }
+func fileApprovals(read FileReader) ApprovalRecordStore { return readerApprovals{read} }
 
-type readerApprovals struct{ read readFileFn }
+type readerApprovals struct{ read FileReader }
 
 func (r readerApprovals) ReadSkill(sourceRoot, path string) ([]byte, error) {
 	return r.read(SkillMDPath(sourceRoot, path))
@@ -144,39 +125,26 @@ func (r readerApprovals) ReadRecord(sourceRoot, id string) ([]byte, error) {
 	return r.read(ApprovalRecordPath(sourceRoot, id))
 }
 
-// testDeps is the Deps of a test: the real file system, and what the test passes. cwd is the working
-// directory the test gives the verbs that install into one; nil wires none, and those verbs refuse,
-// so a test that does not say where it installs cannot install into the directory it runs in.
-func testDeps(cwd func() (string, error), readFile readFileFn, registries RegistryRepository, now func() string, locker Locker) Deps {
-	return Deps{
-		ReadFile:   readFile,
-		Approvals:  fileApprovals(readFile),
-		Registries: registries,
-		Tree:       testTree(),
-		Project:    testProjectFS(),
-		Cwd:        cwd,
-		Identity:   testIdentity{},
-		Now:        now,
-		Locker:     locker,
+// writeTestFile writes content to path, making the directories above it.
+func writeTestFile(t *testing.T, path, content string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatalf("mkdir %q: %v", filepath.Dir(path), err)
+	}
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatalf("write %q: %v", path, err)
 	}
 }
 
-// skillsCore runs a verb that needs neither the clock nor a lock.
-func skillsCore(verb string, args []string, readFile readFileFn, registries RegistryRepository, stdout, stderr io.Writer, exit func(int)) {
-	skillsCoreAt(verb, args, readFile, registries, nil, nil, stdout, stderr, exit)
-}
+// The registry fixtures of the end-to-end tests, for the external test package that holds them to
+// the encoder.
+const (
+	ProjectCLIRegistryFixture = projectCLIRegistry
+	InstallRegistryFixture    = installFixtureRegistry
+)
 
-// skillsCoreAt runs a verb with the Deps a test gives it: the real tree, and what it passes.
-func skillsCoreAt(verb string, args []string, readFile readFileFn, registries RegistryRepository, now func() string, locker Locker, stdout, stderr io.Writer, exit func(int)) {
-	skillsCoreAtIn(nil, verb, args, readFile, registries, now, locker, stdout, stderr, exit)
-}
+// The doubles of this package that stand in for an adapter, for the contract test that holds each
+// to the adapter it imitates.
+var ScanSkillFilesOfTheDouble = scanSkillFiles
 
-// skillsCoreAtIn is skillsCoreAt for a verb that installs into the directory cwd names.
-func skillsCoreAtIn(cwd func() (string, error), verb string, args []string, readFile readFileFn, registries RegistryRepository, now func() string, locker Locker, stdout, stderr io.Writer, exit func(int)) {
-	SkillsCoreAt(verb, args, testDeps(cwd, readFile, registries, now, locker), stdout, stderr, exit)
-}
-
-// renderInstallCore runs 'install' in the directory cwdFn names, over the real tree.
-func renderInstallCore(args []string, registries RegistryRepository, cwdFn func() (string, error), stdout, stderr io.Writer, exit func(int)) {
-	RenderInstallCore(args, testDeps(nil, os.ReadFile, registries, nil, nil), cwdFn, stdout, stderr, exit)
-}
+func ProjectFSOfTheDouble() ProjectFS { return testProjectFS() }

@@ -3,6 +3,7 @@ package projectidentity_test
 import (
 	"encoding/json"
 	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -216,7 +217,12 @@ func TestGitOriginSaysWhichDirectoryItCouldNotReadAndHowToGoOn(t *testing.T) {
 	if err == nil || ok || id != "" {
 		t.Fatalf("GitOrigin = %q, %v, %v, want an error", id, ok, err)
 	}
-	for _, want := range []string{below, "permission denied", "--project-id"} {
+	// The cause is told by the kind of error and not by the words of one system: the words of a
+	// refused permission differ between platforms.
+	if !errors.Is(err, fs.ErrPermission) {
+		t.Errorf("the error %q does not wrap fs.ErrPermission", err)
+	}
+	for _, want := range []string{below, "--project-id"} {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("the error %q does not say %q", err, want)
 		}
@@ -225,6 +231,37 @@ func TestGitOriginSaysWhichDirectoryItCouldNotReadAndHowToGoOn(t *testing.T) {
 	chained := projectidentity.Chain(projectidentity.Explicit{}, projectidentity.GitOrigin{}, projectidentity.DirectoryName{})
 	if id, ok, err := chained.Identify(skills.ProjectQuery{Dir: below, Explicit: "given"}); err != nil || !ok || id != "given" {
 		t.Errorf("Chain with --project-id = %q, %v, %v, want it answered as given", id, ok, err)
+	}
+}
+
+// The same refusal, reached in a way that does not depend on permissions, so that it is proved for
+// root too: a .git that links to itself cannot be looked at, whoever asks. The cause is kept, and
+// the way on is the same.
+func TestGitOriginSaysWhichDirectoryItCouldNotLookAtWhateverTheUser(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "project")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(".git", filepath.Join(dir, ".git")); err != nil {
+		t.Skipf("cannot make a symbolic link here: %v", err)
+	}
+
+	id, ok, err := projectidentity.GitOrigin{}.Identify(skills.ProjectQuery{Dir: dir})
+
+	if err == nil || ok || id != "" {
+		t.Fatalf("GitOrigin = %q, %v, %v, want an error", id, ok, err)
+	}
+	for _, want := range []string{dir, "--project-id"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("the error %q does not say %q", err, want)
+		}
+	}
+	var pathErr *fs.PathError
+	if errors.As(err, &pathErr) {
+		t.Errorf("the error %q carries the path error of the system twice", err)
+	}
+	if errors.Unwrap(err) == nil {
+		t.Errorf("the error %q does not keep its cause", err)
 	}
 }
 

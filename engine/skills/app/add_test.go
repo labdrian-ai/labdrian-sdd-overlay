@@ -376,3 +376,66 @@ func (b brokenStore) Decode(data []byte) (skills.Registry, error) {
 	}
 	return reg, err
 }
+
+// legacyBaseline grandfathers the skill id with the exact bytes it has now, as the fixed baseline
+// grandfathers the global skills that predate the approval record.
+func legacyBaseline(t *testing.T, o overlay, id string) skills.BaselineLookup {
+	t.Helper()
+	digest := skills.SkillDigest([]byte(read(t, filepath.Join(o.skills, id, "SKILL.md"))))
+	return func(candidate string) (string, bool) { return digest, candidate == id }
+}
+
+// A skill of the baseline needs no approval record while its bytes are the pinned ones: it is
+// registered with no record on disk, and the record is not written by add. The same rule as
+// validate, which counts it as grandfathered; the two cannot disagree.
+func TestAddRegistersAGrandfatheredSkillWithNoApprovalRecord(t *testing.T) {
+	o := newOverlay(t)
+	put(t, filepath.Join(o.skills, "legacy", "SKILL.md"), skillFor("legacy"))
+	ports := o.addPorts(newStagedSpy(nil))
+	ports.Baseline = legacyBaseline(t, o, "legacy")
+
+	res, err := AddSkill(ports, o.input("legacy"))
+
+	if err != nil || res.ID != "legacy" {
+		t.Fatalf("AddSkill = %+v, %v, want legacy added with no approval record", res, err)
+	}
+	if _, err := os.Stat(skills.ApprovalRecordPath(o.skills, "legacy")); err == nil {
+		t.Error("add wrote an approval record for a grandfathered skill")
+	}
+	o.is(t, registryYAML("existing")+strings.ReplaceAll(addedFoo, "foo", "legacy"), manifestOf("existing", "legacy"))
+}
+
+// The exemption is for the pinned bytes alone: one byte more and the skill needs a record like any
+// other, and the refusal says the file differs from the baseline.
+func TestAddRefusesAGrandfatheredSkillWhoseBytesChanged(t *testing.T) {
+	o := newOverlay(t)
+	put(t, filepath.Join(o.skills, "legacy", "SKILL.md"), skillFor("legacy"))
+	baseline := legacyBaseline(t, o, "legacy")
+	put(t, filepath.Join(o.skills, "legacy", "SKILL.md"), skillFor("legacy")+"\n")
+	ports := o.addPorts(newStagedSpy(nil))
+	ports.Baseline = baseline
+
+	_, err := AddSkill(ports, o.input("legacy"))
+
+	var refusal *NotApprovedError
+	if !errors.As(err, &refusal) || refusal.Class != skills.DivApprovalMissing || !strings.Contains(refusal.Detail, "differs from the grandfathered baseline") {
+		t.Fatalf("err = %v, want a *NotApprovedError saying the bytes differ from the baseline", err)
+	}
+	o.untouched(t)
+}
+
+// A skill that is not in the baseline needs its record whatever the baseline says of others.
+func TestAddRefusesASkillTheBaselineDoesNotNameWhenItHasNoRecord(t *testing.T) {
+	o := newOverlay(t)
+	put(t, filepath.Join(o.skills, "newcomer", "SKILL.md"), skillFor("newcomer"))
+	ports := o.addPorts(newStagedSpy(nil))
+	ports.Baseline = legacyBaseline(t, o, "foo")
+
+	_, err := AddSkill(ports, o.input("newcomer"))
+
+	var refusal *NotApprovedError
+	if !errors.As(err, &refusal) || refusal.Class != skills.DivApprovalMissing {
+		t.Fatalf("err = %v, want a *NotApprovedError", err)
+	}
+	o.untouched(t)
+}

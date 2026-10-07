@@ -15,10 +15,17 @@ import (
 // the file is not a usable skill (a truncated or corrupted merge, for example) and refuses a
 // baseline skill too.
 func BaselineLintDecision(id string, hard []error) (warnings []string, refused bool) {
+	return BaselineLintDecisionAgainst(FixedBaseline, id, hard)
+}
+
+// BaselineLintDecisionAgainst is BaselineLintDecision with the baseline the caller names; a nil
+// baseline is the fixed one.
+func BaselineLintDecisionAgainst(baseline BaselineLookup, id string, hard []error) (warnings []string, refused bool) {
+	baseline = baseline.OrFixed()
 	if len(hard) == 0 {
 		return nil, false
 	}
-	if _, inBaseline := baselineDigest(id); !inBaseline || !allLegacyBaselineFindings(hard) {
+	if _, inBaseline := baseline(id); !inBaseline || !allLegacyBaselineFindings(hard) {
 		return nil, true
 	}
 	for _, finding := range hard {

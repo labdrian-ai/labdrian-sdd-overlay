@@ -76,3 +76,19 @@ func baselineDigest(id string) (string, bool) {
 	}
 	return "", false
 }
+
+// BaselineLookup says whether a global skill is grandfathered, and with which SKILL.md digest.
+// The verbs that judge approval ask it, so that a test can name its own baseline without touching
+// the fixed one; the program asks FixedBaseline.
+type BaselineLookup func(id string) (digest string, ok bool)
+
+// FixedBaseline is the lookup of the baseline this package pins (ApprovalBaseline).
+func FixedBaseline(id string) (string, bool) { return baselineDigest(id) }
+
+// OrFixed is b, or the fixed baseline when b is nil.
+func (b BaselineLookup) OrFixed() BaselineLookup {
+	if b == nil {
+		return FixedBaseline
+	}
+	return b
+}

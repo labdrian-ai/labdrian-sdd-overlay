@@ -240,6 +240,8 @@ type holdingLocker struct {
 	events []string
 	held   map[string]int
 	fail   error
+	// failOn are the paths whose lock is refused, with the error of each.
+	failOn map[string]error
 	// unseen are the paths the locker says it cannot see, with what it says of each.
 	unseen map[string]error
 }
@@ -271,6 +273,10 @@ func (l *holdingLocker) take(kind, path string, mode skills.LockMode) (func(), e
 	if l.fail != nil {
 		l.events = append(l.events, fmt.Sprintf("refused %s %s", lockModeName(mode), path))
 		return nil, l.fail
+	}
+	if err := l.failOn[path]; err != nil {
+		l.events = append(l.events, fmt.Sprintf("refused %s %s", lockModeName(mode), path))
+		return nil, err
 	}
 	if l.held == nil {
 		l.held = map[string]int{}
@@ -310,6 +316,64 @@ func TestOverlayVerbsTakeTheExclusiveLockOfTheRegistryAndLetGoOfIt(t *testing.T)
 				t.Errorf("lock events = %v, want %v", locker.log(), want)
 			}
 		})
+	}
+}
+
+// The policy of which verb takes which overlay lock is said once, in skills.OverlayLocks, and an
+// adapter takes what it says: the locks an adapter asks of the locker are exactly the requests of
+// the policy for the same verb and registry, so that a verb whose adapter drifted from the policy
+// (approve names a registry it does not read, and takes no registry check for it) is caught.
+func TestOverlayVerbsTakeExactlyTheLocksThePolicySaysForThem(t *testing.T) {
+	for _, tc := range overlayVerbCases {
+		t.Run(tc.name, func(t *testing.T) {
+			w := newOverlayWorld(t)
+			locker := &holdingLocker{}
+			if r := w.run(tc.verb, w.deps(locker, os.ReadFile), tc.args(w)...); r.code() != 0 {
+				t.Fatalf("exit %d; stderr=%q", r.code(), r.stderr)
+			}
+			var want []string
+			for _, req := range skills.OverlayLocks(tc.name, w.reg) {
+				if req.Dir {
+					t.Fatalf("the policy asks a directory lock for %s", tc.name)
+				}
+				want = append(want, "lock "+lockModeName(req.Mode)+" "+req.Path)
+			}
+			var got []string
+			for _, event := range locker.log() {
+				if strings.HasPrefix(event, "lock") {
+					got = append(got, event)
+				}
+			}
+			if len(want) == 0 || !reflect.DeepEqual(got, want) {
+				t.Errorf("the adapter took %v, the policy of OverlayLocks says %v", got, want)
+			}
+		})
+	}
+}
+
+// approve takes a value that begins with a dash for the next flag, for the flags the wrapper
+// appends as much as for the ones a person types: the verb cannot tell the two apart, and a
+// `--manifest` typed with no value would otherwise swallow `--id`. The wrapper names its paths with
+// $OVERLAY_DIR, which is absolute unless a person sets it to a relative path that begins with a
+// dash. The old verb refused it the same way. A real invocation is refused, says which flag, asks
+// for no lock and writes nothing.
+func TestApproveRefusesAWrapperPathThatBeginsWithADashAndAsksForNoLock(t *testing.T) {
+	w := newOverlayWorld(t)
+	locker := &holdingLocker{}
+	before := w.snapshot()
+
+	r := w.run(skillsApprove, w.deps(locker, os.ReadFile),
+		"approve", "--id", "existing", "--approver", "reviewer", "--source-root", w.root, "--registry", w.reg, "--manifest", "-overlay/overlay.manifest")
+
+	want := "error: skills approve: flag \"--manifest\" requires a value; got flag token \"-overlay/overlay.manifest\"\n"
+	if r.code() != 1 || r.stdout != "" || r.stderr != want {
+		t.Errorf("exit %d, stdout %q, stderr %q, want exit 1 and %q", r.code(), r.stdout, r.stderr, want)
+	}
+	if got := locker.log(); len(got) != 0 {
+		t.Errorf("lock events = %v, want none", got)
+	}
+	if !reflect.DeepEqual(before, w.snapshot()) {
+		t.Error("a refused approve changed files")
 	}
 }
 

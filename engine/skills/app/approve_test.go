@@ -2,6 +2,7 @@ package app
 
 import (
 	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -170,6 +171,37 @@ func TestApproveRefusesASkillThatIsNotThereOrFailsTheHardLintAndWritesNothing(t 
 	}
 }
 
+// A SKILL.md that is not there and one that cannot be read are one refusal in the words of the
+// verb, and the refusal carries the cause, so that a person is told which of the two it is and a
+// caller can tell them apart with errors.Is.
+func TestApproveSaysWhetherTheSkillIsMissingOrCannotBeRead(t *testing.T) {
+	w := newApproveWorld(t, "my-skill")
+	for _, tc := range []struct {
+		name  string
+		cause error
+		is    error
+		words string
+	}{
+		{"missing", &fs.PathError{Op: "open", Path: "x", Err: fs.ErrNotExist}, fs.ErrNotExist, "file does not exist"},
+		{"unreadable", &fs.PathError{Op: "open", Path: "x", Err: fs.ErrPermission}, fs.ErrPermission, "permission denied"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ports := w.ports(newStagedSpy(nil), fixedClock(approvedAt))
+			ports.Files = func(string) ([]byte, error) { return nil, tc.cause }
+			_, err := ApproveSkill(ports, ApproveInput{ID: "my-skill", Approver: "reviewer", ApproverGiven: true, SourceRoot: w.root})
+			var refusal *ApproveRefusal
+			if !errors.As(err, &refusal) || !errors.Is(err, tc.is) {
+				t.Fatalf("err = %v, want an *ApproveRefusal whose cause is %v", err, tc.is)
+			}
+			for _, want := range []string{`skill "my-skill": SKILL.md not found or unreadable at`, tc.words} {
+				if !strings.Contains(err.Error(), want) {
+					t.Errorf("err = %q, want it to say %q", err, want)
+				}
+			}
+		})
+	}
+}
+
 // An existing record that cannot be read is refused, not overwritten blind.
 func TestApproveRefusesARecordThatCannotBeReadInsteadOfOverwritingIt(t *testing.T) {
 	w := newApproveWorld(t, "my-skill")
@@ -248,6 +280,34 @@ func TestApprovePutsBackWhatItStagedWhenItCannotWriteTheRecord(t *testing.T) {
 				if strings.HasPrefix(e.Name(), ".tmp-skills-") {
 					t.Errorf("the temporary file %s was left behind", e.Name())
 				}
+			}
+		})
+	}
+}
+
+// The baseline that decides which lint findings are warnings is the one the caller names: a skill
+// it names is approved with its legacy findings told as warnings, one it does not is refused.
+func TestApproveReadsWhichSkillsAreLegacyFromTheBaselineItIsGiven(t *testing.T) {
+	overBudget := skillFor("legacy-x") + strings.Repeat("Another line of the procedure, long enough to count.\n", 100)
+	for _, tc := range []struct {
+		name     string
+		baseline skills.BaselineLookup
+		refused  bool
+	}{
+		{"named", func(id string) (string, bool) { return "", id == "legacy-x" }, false},
+		{"not named", func(id string) (string, bool) { return "", false }, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			w := newApproveWorld(t, "legacy-x")
+			put(t, filepath.Join(w.root, "legacy-x", "SKILL.md"), overBudget)
+			ports := w.ports(newStagedSpy(nil), fixedClock(approvedAt))
+			ports.Baseline = tc.baseline
+
+			res, err := ApproveSkill(ports, ApproveInput{ID: "legacy-x", Approver: "reviewer", ApproverGiven: true, SourceRoot: w.root})
+
+			var lint *LintRefusal
+			if tc.refused != errors.As(err, &lint) || (!tc.refused && (err != nil || len(res.Warnings) == 0)) {
+				t.Errorf("ApproveSkill = %+v, %v, want refused=%v", res, err, tc.refused)
 			}
 		})
 	}

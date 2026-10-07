@@ -29,6 +29,8 @@ type ApprovePorts struct {
 	Approvals skills.ApprovalRecordStore
 	// Staged writes the record.
 	Staged skills.StagedWrites
+	// Baseline says which skills are grandfathered; nil is the baseline the domain pins.
+	Baseline skills.BaselineLookup
 	// Now returns the approval time as an RFC 3339 UTC timestamp (YYYY-MM-DDTHH:MM:SSZ). A nil Now
 	// refuses the approval: the verb never invents a timestamp.
 	Now func() string
@@ -114,7 +116,7 @@ func ApproveSkill(p ApprovePorts, in ApproveInput) (ApproveResult, error) {
 		return refuse(err, "skill %q: SKILL.md not found or unreadable at %q: %v", in.ID, skillPath, err)
 	}
 	hard, _ := skills.LintSkillFile(skillData)
-	warnings, refused := skills.BaselineLintDecision(in.ID, hard)
+	warnings, refused := skills.BaselineLintDecisionAgainst(p.Baseline.OrFixed(), in.ID, hard)
 	if refused {
 		return res, &LintRefusal{Findings: hard}
 	}

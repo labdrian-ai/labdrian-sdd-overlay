@@ -3,27 +3,21 @@ $ skills adopt --registry <WORLD>/overlay/skills.registry.yaml --source-root <WO
 exit: 1
 --- stdout ---
 --- stderr ---
-error: skills adopt: skill tidy-notes is not installed in this project (neither .claude/skills/tidy-notes nor .agents/skills/tidy-notes exists), so there is nothing to adopt; run `labdrian skills install --project-id demo`
-error: skills adopt: skill only-demo is not installed in this project (neither .claude/skills/only-demo nor .agents/skills/only-demo exists), so there is nothing to adopt; run `labdrian skills install --project-id demo`
-error: skills adopt: refused, so nothing was adopted
+error: skills adopt: unknown flag "--frobnicate"
 
 # a short flag
 $ skills adopt --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills -v (in demo)
 exit: 1
 --- stdout ---
 --- stderr ---
-error: skills adopt: skill tidy-notes is not installed in this project (neither .claude/skills/tidy-notes nor .agents/skills/tidy-notes exists), so there is nothing to adopt; run `labdrian skills install --project-id demo`
-error: skills adopt: skill only-demo is not installed in this project (neither .claude/skills/only-demo nor .agents/skills/only-demo exists), so there is nothing to adopt; run `labdrian skills install --project-id demo`
-error: skills adopt: refused, so nothing was adopted
+error: skills adopt: unknown flag "-v"
 
 # the equals form of a flag it reads
 $ skills adopt --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills --project-id=other (in demo)
 exit: 1
 --- stdout ---
 --- stderr ---
-error: skills adopt: skill tidy-notes is not installed in this project (neither .claude/skills/tidy-notes nor .agents/skills/tidy-notes exists), so there is nothing to adopt; run `labdrian skills install --project-id demo`
-error: skills adopt: skill only-demo is not installed in this project (neither .claude/skills/only-demo nor .agents/skills/only-demo exists), so there is nothing to adopt; run `labdrian skills install --project-id demo`
-error: skills adopt: refused, so nothing was adopted
+error: skills adopt: unknown flag "--project-id=other"
 
 # a word that is no flag
 $ skills adopt --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills extra (in demo)

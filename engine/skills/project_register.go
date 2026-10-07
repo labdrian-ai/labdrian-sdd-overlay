@@ -1083,6 +1083,17 @@ func projectCommitOrder(p ProjectPlan) []ProjectWrite {
 	return append(append(make([]ProjectWrite, 0, len(p.Writes)+1), p.Writes...), p.Lock)
 }
 
+// ProjectCommitOrder lists the writes of a registration or a revision in the order they are
+// committed: the skills in projectTargets order, then the lock last. These are the paths a person
+// is told ("plan:" before the write, "wrote:" after it) and feeds to git.
+func ProjectCommitOrder(p ProjectPlan) []ProjectWrite { return projectCommitOrder(p) }
+
+// ProjectRetireCommitOrder lists the writes of a retirement in the order they are committed: the
+// deletions, then the lock last.
+func ProjectRetireCommitOrder(p ProjectPlan) []ProjectWrite {
+	return append(append([]ProjectWrite(nil), p.DeleteWrites...), p.Lock)
+}
+
 // ExecuteProjectPlan performs one registration: it stages every planned file
 // as a same-directory temp, then renames the SKILL.md temps in projectTargets
 // order and the lock LAST. Any failure rolls the tree back to its pre-run

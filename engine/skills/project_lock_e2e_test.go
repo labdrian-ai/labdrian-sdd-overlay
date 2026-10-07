@@ -2,7 +2,7 @@ package skills
 
 // The project lock against the BUILT engine binary: real processes started at the
 // same moment against one project root, in fixtures under t.TempDir(). See
-// registry_lock_e2e_test.go for the environment they run in and for
+// the registry lock tests for the environment they run in and for
 // SKILLS_E2E_ENGINE_BINARY, which measures an older build with these same tests.
 
 import (
@@ -16,6 +16,38 @@ import (
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/filelock"
 )
+
+// installFixture is the overlay of the tests that run the built program: a global skill approve
+// can target, and a project skill install copies.
+type installFixture struct {
+	dir, reg, man, root, project string
+}
+
+func newInstallFixture(t *testing.T) installFixture {
+	t.Helper()
+	dir := t.TempDir()
+	f := installFixture{
+		dir:     dir,
+		reg:     filepath.Join(dir, "skills.registry.yaml"),
+		man:     filepath.Join(dir, "overlay.manifest"),
+		root:    filepath.Join(dir, "skills"),
+		project: filepath.Join(t.TempDir(), "project"),
+	}
+	writeTestFile(t, f.reg, installFixtureRegistry)
+	writeTestFile(t, f.man, minimalManifest("glob", "proj"))
+	for _, id := range []string{"glob", "proj"} {
+		writeTestFile(t, filepath.Join(f.root, id, "SKILL.md"), lintCleanSkillMD(id))
+	}
+	writeValidApproval(t, f.root, "glob")
+	if err := os.MkdirAll(f.project, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	return f
+}
+
+func (f installFixture) installArgs() []string {
+	return []string{"--registry", f.reg, "--source-root", f.root, "--project-id", "p"}
+}
 
 // registerJob is one `skills project-register` of skill id into the project at root.
 func registerJob(t *testing.T, w lockE2E, root, registryPath, id string) func() e2eRun {
@@ -50,7 +82,7 @@ func TestProjectLockE2E_ConcurrentRegistrationsAllLandInTheProjectLock(t *testin
 		results := runAll(jobs)
 
 		registered := map[string]bool{}
-		if data, err := os.ReadFile(projectLockFile(root)); err == nil {
+		if data, err := os.ReadFile(ProjectLockPath(root)); err == nil {
 			lock, perr := ParseProjectLock(data)
 			if perr != nil {
 				t.Fatalf("round %d: the project lock does not parse: %v\n%s", round, perr, data)
@@ -126,7 +158,7 @@ func TestProjectLockE2E_InstallsAndRegistrationsShareOneProjectWithoutLosingAnyt
 
 		registered := map[string]bool{}
 		installRecorded := false
-		if data, err := os.ReadFile(projectLockFile(f.project)); err == nil {
+		if data, err := os.ReadFile(ProjectLockPath(f.project)); err == nil {
 			lock, perr := ParseProjectLock(data)
 			if perr != nil {
 				t.Fatalf("round %d: the project lock does not parse: %v", round, perr)
@@ -165,7 +197,7 @@ func TestProjectLockE2E_InstallsAndRegistrationsShareOneProjectWithoutLosingAnyt
 				t.Errorf("round %d: an install exited 0 but its record is not in the project lock", round)
 			}
 		}
-		if reg, man := registryIDs(t, f.reg), manifestIDs(t, f.man); !reflect.DeepEqual(reg, man) {
+		if reg, man := registryIDs(t, bin, f.reg), manifestIDs(t, f.man); !reflect.DeepEqual(reg, man) {
 			t.Errorf("round %d: registry lists %v but the manifest lists %v", round, reg, man)
 		}
 	}
