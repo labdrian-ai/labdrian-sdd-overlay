@@ -78,3 +78,33 @@ $ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path 
 --- stderr ---
 gate-task: warning: contract frontmatter unparseable: malformed applies_to_phases: expected an inline list such as [a, b], got "" (passing through)
 
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# a language_context that is not a list
+--- stdin ---
+{"tool_input":{"description":"a sub-agent","prompt":"Do the phase.","subagent_type":"sdd-apply"},"tool_name":"Agent"}
+
+--- stdout ---
+{}
+--- stderr ---
+gate-task: warning: contract frontmatter unparseable: malformed language_context: expected an inline list such as [a, b], got "typescript" (passing through)
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# an activation_context that is not a list
+--- stdin ---
+{"tool_input":{"description":"a sub-agent","prompt":"Do the phase.","subagent_type":"sdd-apply"},"tool_name":"Agent"}
+
+--- stdout ---
+{}
+--- stderr ---
+gate-task: warning: contract frontmatter unparseable: malformed activation_context: expected an inline list such as [a, b], got "review" (passing through)
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# a context_operator
+--- stdin ---
+{"tool_input":{"description":"a sub-agent","prompt":"Do the phase.","subagent_type":"sdd-apply"},"tool_name":"Agent"}
+
+--- stdout ---
+{}
+--- stderr ---
+gate-task: warning: contract frontmatter unparseable: unsupported context_operator (passing through)
+

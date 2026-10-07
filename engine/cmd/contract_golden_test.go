@@ -297,6 +297,11 @@ func contractGoldenCases() []contractGoldenCase {
 				{"no applies_to_phases", contractDoc(fmExcluded, fmInject)},
 				{"an empty applies_to_phases list", contractDoc("applies_to_phases: []", fmInject)},
 				{"an applies_to_phases with no value", contractDoc("applies_to_phases:", fmInject)},
+				// A scope that reads and a context that does not: the gate reads both (ParseBoth), so
+				// the warning names the context's fault.
+				{"a language_context that is not a list", contractDoc(fmApplies, fmInject, "language_context: typescript")},
+				{"an activation_context that is not a list", contractDoc(fmApplies, fmInject, "activation_context: review")},
+				{"a context_operator", contractDoc(fmApplies, fmInject, "context_operator: prompt_contains")},
 			} {
 				w.files[contractFile] = c.content
 				w.gate(c.label, input, fileArgs...)
