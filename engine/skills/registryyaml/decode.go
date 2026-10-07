@@ -37,8 +37,10 @@ const MaxFileBytes = 4 << 20
 
 // MaxLineBytes is the longest line a registry may have, without its line break. A registry is
 // a short list of short lines, so the limit is far above any real one; it is the bound on what
-// the reader holds of a line, and a line over it is refused with its number.
-const MaxLineBytes = bufio.MaxScanTokenSize
+// the reader holds of a line, and a line over it is refused with its number. It is this
+// program's own number, 64 KiB, written out: the message and the CHANGELOG say 65536, so it is
+// not borrowed from the scanner's default, and the buffer below is set from it.
+const MaxLineBytes = 64 << 10
 
 // lineBreakBytes is the room a line break takes in the reader's buffer, so that a line of
 // exactly MaxLineBytes fits whether it ends in "\n" or "\r\n". The buffer is a little roomier
@@ -56,7 +58,7 @@ func errLineTooLong(lineNum int) error {
 func tokenize(r io.Reader) ([]tok, error) {
 	var tokens []tok
 	scanner := bufio.NewScanner(r)
-	scanner.Buffer(nil, MaxLineBytes+lineBreakBytes)
+	scanner.Buffer(make([]byte, 0, 4<<10), MaxLineBytes+lineBreakBytes)
 	lineNum := 0
 	seenContent := false
 	seenDocMarker := false
@@ -223,10 +225,14 @@ func keyColon(content string) int {
 	return -1
 }
 
-// isWholeQuotedScalar reports whether s is one quoted scalar and nothing else: a quote, text in
-// which that quote only appears escaped (\" in double quotes) or doubled (two single quotes in single quotes),
-// and the closing quote. `"a": "b"` starts and ends with a quote and is two scalars with a colon
-// between them, not one.
+// isWholeQuotedScalar reports whether s is one quoted scalar and nothing else: it opens with a
+// quote, closes with the same quote, and the opening quote does not occur between them except as
+// follows.
+//   - Double quotes: a quote inside is escaped with a backslash (\"), and a backslash escapes the
+//     character after it.
+//   - Single quotes: a quote inside is doubled (two single quotes).
+//
+// `"a": "b"` opens and closes with a quote but is two scalars with a colon between them.
 func isWholeQuotedScalar(s string) bool {
 	if !isQuotedScalar(s) {
 		return false

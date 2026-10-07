@@ -600,6 +600,9 @@ func escapeYAMLPath(path string) string {
 // in the words of the scanner the reader happens to be built on. A line of exactly the limit is
 // read, whichever way it ends.
 func TestALineOverTheLimitIsToldWithItsNumberAndTheLimit(t *testing.T) {
+	if registryyaml.MaxLineBytes != 65536 {
+		t.Fatalf("MaxLineBytes = %d: the message and the CHANGELOG say 65536", registryyaml.MaxLineBytes)
+	}
 	const head = "version: \"1\"\nskills:\n"
 	line := func(n int) string { return "  - id: " + strings.Repeat("x", n-len("  - id: ")) }
 
