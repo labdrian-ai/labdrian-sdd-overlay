@@ -1,9 +1,10 @@
 package main
 
-// The verbs that sit behind a use case are reached through the table of the program, which wires the
-// real adapters and the real locker (the project verbs through runSkillsCore itself): each verb the table names is the verb the
-// person typed, and what it tells is its own. The adapters themselves are tested one by one in
-// skills_install_cli_test.go and skills_project_cli_test.go.
+// The verbs that sit behind a use case are reached through the entry of the program, which finds
+// each verb in the table by the name the person typed and runs it over the real adapters and the
+// real locker; a test that needs a working directory gives the entry its own, and none changes the
+// directory of the process. What each verb tells is its own, and the adapters are tested one by one
+// in skills_install_cli_test.go and skills_project_cli_test.go.
 
 import (
 	"os"
@@ -14,29 +15,33 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
 )
 
-// throughTheProgram runs one command of `engine skills` as the program does.
+// throughTheProgram runs one command of `engine skills` through the entry of the program.
 func throughTheProgram(verb string, args []string) verbRun {
+	return throughTheEntry(newSkillsDeps(), verb, args)
+}
+
+// throughTheEntry is throughTheProgram over the ports it is given.
+func throughTheEntry(deps skills.Deps, verb string, args []string) verbRun {
 	var out, errOut strings.Builder
 	var r verbRun
-	runSkillsCore(verb, args, &out, &errOut, func(c int) { r.exits = append(r.exits, c) })
+	runSkillsCoreWith(deps, verb, args, &out, &errOut, func(c int) { r.exits = append(r.exits, c) })
 	r.stdout, r.stderr = out.String(), errOut.String()
 	return r
 }
 
-// throughTheTable runs a verb as the program does, by the name the table gives it and with the
-// adapters and the locker the program wires, except for the working directory, which is the one the
-// test names: a test must not change the directory of the process.
-func throughTheTable(verb, cwd string, args []string) verbRun {
+// throughTheProgramIn is throughTheProgram with the working directory the test names, so that a
+// test never changes the directory of the process.
+func throughTheProgramIn(cwd, verb string, args []string) verbRun {
 	deps := newSkillsDeps()
 	deps.Cwd = func() (string, error) { return cwd, nil }
-	return runSkillsVerb(skillsCLIVerbs[verb], deps, args...)
+	return throughTheEntry(deps, verb, args)
 }
 
 func TestInstallAndAdoptAreEachTheVerbTheTableNamesThem(t *testing.T) {
 	t.Run("install writes what the registry admits", func(t *testing.T) {
 		w := newInstallCLIWorld(t)
 
-		r := throughTheTable("install", w.project, w.args("install"))
+		r := throughTheProgramIn(w.project, "install", w.args("install"))
 
 		if r.code() != 0 || r.stdout != "installed: proj\n" || r.stderr != "" {
 			t.Errorf("exit %d, stdout %q, stderr %q, want installed: proj", r.code(), r.stdout, r.stderr)
@@ -50,7 +55,7 @@ func TestInstallAndAdoptAreEachTheVerbTheTableNamesThem(t *testing.T) {
 		w.copyByHand(overlaySkillMD("proj"))
 		before := w.tree()
 
-		r := throughTheTable("adopt", w.project, w.args("adopt"))
+		r := throughTheProgramIn(w.project, "adopt", w.args("adopt"))
 
 		if r.code() != 0 || r.stdout != "adopted: proj\n" || r.stderr != "" {
 			t.Errorf("exit %d, stdout %q, stderr %q, want adopted: proj", r.code(), r.stdout, r.stderr)

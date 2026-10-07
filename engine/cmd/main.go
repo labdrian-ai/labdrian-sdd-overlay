@@ -81,6 +81,7 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/reviewreceipt"
 	runtimepkg "github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/synctrigger"
 )
 
@@ -865,8 +866,15 @@ func runSkills(args []string) {
 	runSkillsWithStdin(args, os.Stdin, os.Stdout, os.Stderr, os.Exit)
 }
 
-// runSkillsCore is the testable core of the skills subcommand.
+// runSkillsCore is the testable core of the skills subcommand: the entry with the ports of the
+// program.
 func runSkillsCore(verb string, args []string, stdout, stderr io.Writer, exit func(int)) {
+	runSkillsCoreWith(newSkillsDeps(), verb, args, stdout, stderr, exit)
+}
+
+// runSkillsCoreWith is the entry of the skills subcommand over the ports it is given: it names the
+// verb the person typed, finds it in the table and runs it.
+func runSkillsCoreWith(deps skills.Deps, verb string, args []string, stdout, stderr io.Writer, exit func(int)) {
 	if verb == "" {
 		fmt.Fprintf(stderr, "error: skills requires a verb: %s\n", skillsVerbList)
 		exit(1)
@@ -878,7 +886,7 @@ func runSkillsCore(verb string, args []string, stdout, stderr io.Writer, exit fu
 		exit(1)
 		return
 	}
-	run(newSkillsDeps(), args, stdout, stderr, exit)
+	run(deps, args, stdout, stderr, exit)
 }
 
 // wallClockUTC is the production clock handed to the skills core: the current
