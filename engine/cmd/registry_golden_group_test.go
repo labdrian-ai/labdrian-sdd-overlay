@@ -12,7 +12,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"sync"
 	"syscall"
 	"testing"
 	"time"
@@ -30,7 +29,13 @@ import (
 // failure it is.
 //
 // Every way out of the test, a pass, a failed wait, a reader error or a t.Fatal, ends the same way,
-// in the cleanups registered right after each resource: nothing is left running, and no goroutine.
+// in the cleanups registered right after each resource: nothing is left running.
+//
+// A FIFO that was made blocking is never closed while a read of it may be pending: closing it then
+// blocks, and does not end the read. So each goroutine owns the file it reads, closes it itself
+// once its reads returned, and says so on a channel; a cleanup waits for that signal, bounded, and
+// reports a goroutine that outlives it instead of closing under it or hanging. Such a goroutine is
+// left blocked; the test has failed by then, and it ends when what holds the FIFO goes.
 func TestADescendantOfAProgramThatHangsIsKilledAtItsDeadline(t *testing.T) {
 	sh, err := exec.LookPath("sh")
 	if err != nil {
@@ -45,42 +50,44 @@ func TestADescendantOfAProgramThatHangsIsKilledAtItsDeadline(t *testing.T) {
 		}
 	}
 
-	// The goroutines of the test, waited for last.
-	var goroutines sync.WaitGroup
-	t.Cleanup(func() {
-		finished := make(chan struct{})
-		go func() { goroutines.Wait(); close(finished) }()
-		select {
-		case <-finished:
-		case <-time.After(descendantGoneWait):
-			t.Error("a goroutine of the test was still running at the end of it")
-		}
-	})
-
 	// The read end is open before the program starts, so the program's open for writing does not
-	// wait for a reader, and it is read blocking: the open itself must not wait for a writer.
-	// Closing it ends a read that is still waiting, so the goroutine that reads it returns.
+	// wait for a reader. The test holds a write end of its own until the program says it is ready:
+	// a read of a FIFO that has no writer yet ends at once, which is the end the test must not
+	// mistake for the death of the descendant.
 	reader := openFIFOForReading(t, fifo)
-	t.Cleanup(func() { reader.Close() })
+	holder, err := os.OpenFile(fifo, os.O_WRONLY, 0)
+	if err != nil {
+		reader.Close() // no read of it has started
+		t.Fatal(err)
+	}
+
+	// The goroutine that reads the FIFO owns the reader: it says the program is ready, then waits
+	// for the end (EOF, when the last writer is gone), and closes the file when its reads are over.
+	ready, ended, readerDone := make(chan error, 1), make(chan error, 1), make(chan struct{})
+	go func() {
+		defer close(readerDone)
+		defer reader.Close()
+		lines := bufio.NewReader(reader)
+		_, err := lines.ReadString('\n')
+		ready <- err
+		if err == nil {
+			_, err = lines.ReadByte()
+			ended <- err
+		}
+	}()
+	t.Cleanup(func() { awaitDone(t, readerDone, "the goroutine that reads the FIFO") })
 
 	// The witness is a second FIFO that only the cleanup reads, held open by the program and its
 	// descendant: it ends when they are gone whatever the test did on the way, which is the proof
-	// that nothing was left running even when the reader above failed.
+	// that nothing was left running even when the reader above failed. The cleanup owns the
+	// goroutine that reads it, and closes the file only once that read returned.
 	witness := openFIFOForReading(t, witnessFifo)
-	// The goroutine of the cleanup is counted here, in the same step as the cleanup is registered,
-	// and not inside it, so that the wait for the goroutines needs no particular place in the order
-	// of the cleanups to see it.
-	goroutines.Add(1)
 	t.Cleanup(func() {
-		gone := make(chan struct{})
-		go func() { defer goroutines.Done(); _, _ = witness.Read(make([]byte, 1)); close(gone) }()
-		select {
-		case <-gone:
-		case <-time.After(descendantGoneWait):
-			t.Error("the program or its descendant was still running at the end of the test")
+		witnessGone := make(chan struct{})
+		go func() { defer close(witnessGone); _, _ = witness.Read(make([]byte, 1)) }()
+		if awaitDone(t, witnessGone, "the program or its descendant") {
+			witness.Close()
 		}
-		// The one close: it is also what ends a read that is still waiting, so the goroutine returns.
-		witness.Close()
 	})
 
 	// Kill what the program started: the descendant by its pid when the program recorded it, and
@@ -93,45 +100,26 @@ func TestADescendantOfAProgramThatHangsIsKilledAtItsDeadline(t *testing.T) {
 			_ = syscall.Kill(-group, syscall.SIGKILL)
 		}
 	})
-
-	// The test holds a write end of its own until the program says it is ready: a read of a FIFO
-	// that has no writer yet ends at once, which is the end the test must not mistake for the
-	// death of the descendant.
-	holder, err := os.OpenFile(fifo, os.O_WRONLY, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
 	t.Cleanup(func() { holder.Close() })
-
-	ctx, kill := context.WithCancel(context.Background())
-	t.Cleanup(kill)
 
 	// fd 3 is the FIFO and fd 4 the witness, open in the program before it forks, so both hold them
 	// from the start. The program then writes its own pid and the descendant's to files and a line to
 	// the FIFO: that line is the readiness handshake. The test waits for it once, bounded, and only
 	// then kills the program, so the kill always reaches a program that holds the FIFO and has a
-	// descendant: without that, the read below would end at once because no writer ever existed, and
-	// the test would pass having tried nothing. A program that never says it is ready fails the test.
+	// descendant: without that, the read would end at once because no writer ever existed, and the
+	// test would pass having tried nothing. A program that never says it is ready fails the test.
 	script := `exec 3>"` + fifo + `" 4>"` + witnessFifo + `"; echo $$ > "` + groupFile + `"; ` +
 		`sleep 3600 & echo $! > "` + pidFile + `"; echo ready >&3; wait`
-	ran := make(chan error, 1)
-	goroutines.Add(1)
+	ctx, kill := context.WithCancel(context.Background())
+	ran, runnerDone := make(chan error, 1), make(chan struct{})
+	t.Cleanup(func() {
+		kill() // ends the program, and with it what it started
+		awaitDone(t, runnerDone, "the run of the program")
+	})
 	go func() {
-		defer goroutines.Done()
+		defer close(runnerDone)
 		_, _, _, err := runUnder(ctx, sh, dir, nil, []string{"-c", script})
 		ran <- err
-	}()
-	ready, ended := make(chan error, 1), make(chan error, 1)
-	goroutines.Add(1)
-	go func() {
-		defer goroutines.Done()
-		lines := bufio.NewReader(reader)
-		_, err := lines.ReadString('\n')
-		ready <- err
-		if err == nil {
-			_, err = lines.ReadByte() // ends when the last writer is gone
-			ended <- err
-		}
 	}()
 
 	select {
@@ -155,6 +143,19 @@ func TestADescendantOfAProgramThatHangsIsKilledAtItsDeadline(t *testing.T) {
 		}
 	case <-time.After(descendantGoneWait):
 		t.Error("the descendant of the program still held the FIFO after the program was killed")
+	}
+}
+
+// awaitDone waits for done to be closed, at most descendantGoneWait, and reports what it was
+// waiting for when that is not enough. It says whether done was closed.
+func awaitDone(t *testing.T, done <-chan struct{}, what string) bool {
+	t.Helper()
+	select {
+	case <-done:
+		return true
+	case <-time.After(descendantGoneWait):
+		t.Errorf("%s was still running at the end of the test", what)
+		return false
 	}
 }
 
