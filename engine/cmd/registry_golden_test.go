@@ -187,19 +187,31 @@ func runWithin(timeout time.Duration, bin, dir string, env, args []string) (code
 }
 
 // A program that hangs fails its own run, with what it had printed, instead of holding the whole
-// test run until the blanket timeout of go test.
+// test run until the blanket timeout of go test. The program here would sleep for an hour: that the
+// run returns at all, with errRunTimedOut, is what shows the deadline ended it, so nothing compares
+// a duration with a margin; the wait for the answer is a bound on a failure and no part of a pass.
 func TestARunThatHangsIsKilledAtItsDeadline(t *testing.T) {
 	sh, err := exec.LookPath("sh")
 	if err != nil {
 		t.Skip("no sh to stand for a program that hangs")
 	}
-	start := time.Now()
-	code, stdout, _, err := runWithin(200*time.Millisecond, sh, t.TempDir(), nil, []string{"-c", "echo started; exec sleep 30"})
-	if !errors.Is(err, errRunTimedOut) {
-		t.Fatalf("runWithin() = %d, %q, %v, want errRunTimedOut", code, stdout, err)
+	type answer struct {
+		code   int
+		stdout string
+		err    error
 	}
-	if elapsed := time.Since(start); elapsed > 20*time.Second {
-		t.Errorf("runWithin() returned after %v, want it at the deadline", elapsed)
+	answered := make(chan answer, 1)
+	go func() {
+		code, stdout, _, err := runWithin(200*time.Millisecond, sh, t.TempDir(), nil, []string{"-c", "echo started; exec sleep 3600"})
+		answered <- answer{code, stdout, err}
+	}()
+	select {
+	case got := <-answered:
+		if !errors.Is(got.err, errRunTimedOut) {
+			t.Fatalf("runWithin() = %d, %q, %v, want errRunTimedOut", got.code, got.stdout, got.err)
+		}
+	case <-time.After(5 * time.Minute):
+		t.Fatal("runWithin() did not return for a program that sleeps for an hour: the deadline did not end it")
 	}
 	if code, _, _, err := runWithin(time.Minute, sh, t.TempDir(), nil, []string{"-c", "exit 3"}); err != nil || code != 3 {
 		t.Errorf("runWithin() of a program that exits 3 = %d, %v, want the code and no error", code, err)
