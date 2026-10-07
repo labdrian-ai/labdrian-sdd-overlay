@@ -50,8 +50,9 @@ func (DirectoryName) Identify(q skills.ProjectQuery) (skills.ProjectID, bool, er
 // the config, so a main checkout and every worktree of it answer alike.
 //
 // It has no answer where there is no repository, no config, no origin, or an origin with no host
-// to key on (a path on the machine). A file it cannot read is an error: the source could not tell,
-// and a chain must not go on to name the project by something less than what the repository says.
+// to key on (a path on the machine). A file it cannot read, a .git file that holds no gitdir line,
+// and a directory it cannot look into are errors: the source could not tell, and a chain must not
+// go on to name the project by something less than what the repository says.
 type GitOrigin struct{}
 
 // Identify is skills.ProjectIdentity.
@@ -87,7 +88,10 @@ func commonGitDir(dir string) (string, bool, error) {
 		case err == nil:
 			return commonDirOfPointer(dotGit, cur)
 		case !os.IsNotExist(err):
-			return "", false, fmt.Errorf("inspecting %s: %w", dotGit, unwrapPathError(err))
+			// The search goes through every directory above dir, so the one it names is the one
+			// that stopped it. Naming the project is the way past it: the chain asks the person's
+			// id first and then never looks.
+			return "", false, fmt.Errorf("cannot look for a git repository in %s (%w); give --project-id to name the project without looking", cur, unwrapPathError(err))
 		}
 		parent := filepath.Dir(cur)
 		if parent == cur {
@@ -108,7 +112,7 @@ func commonDirOfPointer(gitFile, root string) (string, bool, error) {
 	rest, ok := strings.CutPrefix(strings.TrimSpace(string(raw)), "gitdir:")
 	gitDir := strings.TrimSpace(rest)
 	if !ok || gitDir == "" {
-		return "", false, nil
+		return "", false, fmt.Errorf("%s is a file and holds no \"gitdir:\" line, so it names no git directory", gitFile)
 	}
 	if !filepath.IsAbs(gitDir) {
 		gitDir = filepath.Join(root, gitDir)

@@ -211,6 +211,26 @@ func projectIdentityCases() []registryGoldenCase {
 			w.runIn("demo", w.identityArgs("adopt")...)
 			w.runIn("demo", w.identityArgs("adopt", "--project-id", "demo")...)
 		}},
+		{"install-refuses-a-git-file-that-is-no-pointer", func(w *registryWorld) {
+			w.identityWorld()
+			w.put("demo/.git", "this is not a git file\n")
+			w.label("a .git that is a file and holds no gitdir line: the repository cannot be read, and the directory name is not used in its place")
+			w.runIn("demo", w.identityArgs("install")...)
+			w.runIn("demo", w.identityArgs("adopt")...)
+			w.tree("demo")
+			w.label("naming the project goes past it")
+			w.runIn("demo", w.identityArgs("install", "--project-id", "demo")...)
+		}},
+		{"install-says-how-to-go-on-when-the-repository-cannot-be-looked-for", func(w *registryWorld) {
+			w.identityWorld()
+			w.mkdir("demo")
+			w.symlink(".git", "demo/.git")
+			w.label("a .git that cannot be inspected (a link to itself): the directory is named, and --project-id is the way on")
+			w.runIn("demo", w.identityArgs("install")...)
+			w.tree("demo")
+			w.label("naming the project goes past it")
+			w.runIn("demo", w.identityArgs("install", "--project-id", "demo")...)
+		}},
 		{"project-verbs-read-no-project-id", func(w *registryWorld) {
 			w.put("overlay/"+worldRegistry, registryOf("unrelated"))
 			w.repository("project", origin)

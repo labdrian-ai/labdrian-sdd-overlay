@@ -33,6 +33,20 @@ type skillsFlagSpec struct {
 	// endOfOptions makes a bare "--" end the flags: every word after it is a word, even one that
 	// begins with a dash.
 	endOfOptions bool
+	// skipDoubleDash makes a bare "--" be dropped, and the flags after it still flags: the way
+	// the verbs that always let it pass unread (add, remove, sync-manifest) took it. The labdrian
+	// wrapper appends its flags after the arguments of the verb, so a "--" that ended the flags
+	// would turn the registry the wrapper names into a word and leave the verb on its defaults.
+	skipDoubleDash bool
+	// valueIsNeverAFlag makes a value flag refuse a value that begins with a dash, because it is
+	// far more likely to be the next flag than a value; the flag is refused too when it is the
+	// last word and has no value at all. Without it a flag takes whatever follows it. It applies
+	// to the flags the wrapper appends as well.
+	valueIsNeverAFlag bool
+	// dashValue, when it is set, words the refusal of a value that begins with a dash for the
+	// flag it names, for a flag whose values are free text (an approver label); it returns "" for
+	// the other flags, which are refused in the generic words.
+	dashValue func(flag, value string) string
 }
 
 // skillsArgs is a command line split by a skillsFlagSpec.
@@ -71,17 +85,27 @@ func (s skillsFlagSpec) parse(args []string) (skillsArgs, error) {
 			case s.endOfOptions && arg == "--":
 				endOfOptions = true
 				continue
-			case contains(s.values, arg):
-				if i+1 < len(args) {
-					out.values[arg] = args[i+1]
+			case s.skipDoubleDash && arg == "--":
+				continue
+			case containsFlag(s.values, arg):
+				value, taken, err := s.takeValue(args, i)
+				if err != nil {
+					return skillsArgs{}, err
+				}
+				if taken {
+					out.values[arg] = value
 					i++
 				}
 				continue
-			case contains(s.switches, arg):
+			case containsFlag(s.switches, arg):
 				out.switches[arg] = true
 				continue
-			case contains(s.wrapper, arg):
-				if i+1 < len(args) {
+			case containsFlag(s.wrapper, arg):
+				_, taken, err := s.takeValue(args, i)
+				if err != nil {
+					return skillsArgs{}, err
+				}
+				if taken {
 					i++
 				}
 				continue
@@ -97,7 +121,30 @@ func (s skillsFlagSpec) parse(args []string) (skillsArgs, error) {
 	return out, nil
 }
 
-func contains(list []string, s string) bool {
+// takeValue is the value of the flag at args[i], and whether there is one to take. A flag that is
+// the last word has none, and the verbs always left it unset; with valueIsNeverAFlag it is refused.
+func (s skillsFlagSpec) takeValue(args []string, i int) (value string, taken bool, err error) {
+	flag := args[i]
+	if i+1 >= len(args) {
+		if s.valueIsNeverAFlag {
+			return "", false, &skillsUsageError{fmt.Sprintf("skills %s: flag %q requires a value", s.verb, flag)}
+		}
+		return "", false, nil
+	}
+	value = args[i+1]
+	if s.valueIsNeverAFlag && strings.HasPrefix(value, "-") {
+		if s.dashValue != nil {
+			if message := s.dashValue(flag, value); message != "" {
+				return "", false, &skillsUsageError{message}
+			}
+		}
+		return "", false, &skillsUsageError{fmt.Sprintf("skills %s: flag %q requires a value; got flag token %q", s.verb, flag, value)}
+	}
+	return value, true, nil
+}
+
+// containsFlag reports whether the word is one of the flags a spec names.
+func containsFlag(list []string, s string) bool {
 	for _, item := range list {
 		if item == s {
 			return true
@@ -136,3 +183,62 @@ var skillsLintSpec = skillsFlagSpec{
 // skillsValidateSpec is the command line of `skills validate`: the registry, the manifest and the
 // source root it checks, in any order, and any words that are no flag, which it does not read.
 var skillsValidateSpec = skillsFlagSpec{verb: "validate", values: []string{flagRegistry, flagManifest, flagSourceRoot}, words: -1}
+
+// Flags of the verbs that write.
+const (
+	flagRepo     = "--repo"
+	flagRef      = "--ref"
+	flagID       = "--id"
+	flagApprover = "--approver"
+)
+
+// skillsAddSpec is the command line of `skills add`: the registry, the manifest and the skills tree
+// it works in, the repository and ref of an external skill, and the id, which is the first word
+// (a later word is not read). "--" ends the flags, as it always passed unread.
+var skillsAddSpec = skillsFlagSpec{
+	verb:           "add",
+	values:         []string{flagRegistry, flagManifest, flagSourceRoot, flagRepo, flagRef},
+	words:          -1,
+	skipDoubleDash: true,
+}
+
+// skillsRemoveSpec is the command line of `skills remove`: the registry and the manifest, the
+// source root of the wrapper taken and not read, and the id as the first word.
+var skillsRemoveSpec = skillsFlagSpec{
+	verb:           "remove",
+	values:         []string{flagRegistry, flagManifest},
+	wrapper:        []string{flagSourceRoot},
+	words:          -1,
+	skipDoubleDash: true,
+}
+
+// skillsSyncSpec is the command line of `skills sync-manifest`: the registry and the manifest, the
+// source root of the wrapper taken and not read, and no word it reads.
+var skillsSyncSpec = skillsFlagSpec{
+	verb:           "sync-manifest",
+	values:         []string{flagRegistry, flagManifest},
+	wrapper:        []string{flagSourceRoot},
+	words:          -1,
+	skipDoubleDash: true,
+}
+
+// skillsApproveSpec is the command line of `skills approve`: the skill, the approver and the skills
+// tree, the registry whose lock it takes (it reads nothing from it), and the manifest of the
+// wrapper, taken and not read. A value is never a
+// flag, and there is no word and no end of options: approve takes no positional argument, so "--"
+// would have nothing to protect and is refused as the unknown flag it is.
+var skillsApproveSpec = skillsFlagSpec{
+	verb:              "approve",
+	values:            []string{flagID, flagApprover, flagSourceRoot, flagRegistry},
+	wrapper:           []string{flagManifest},
+	words:             0,
+	extraWord:         "skills approve: unexpected argument %q (approve takes --id, not a positional)",
+	valueIsNeverAFlag: true,
+	// A label is free text, and the one value where a leading dash is at all plausible.
+	dashValue: func(flag, value string) string {
+		if flag != flagApprover {
+			return ""
+		}
+		return fmt.Sprintf("skills approve: flag %q: the label %q starts with \"-\", which would be read as a flag; choose a label that does not start with \"-\"", flag, value)
+	},
+}

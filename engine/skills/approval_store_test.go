@@ -1,10 +1,8 @@
 package skills
 
 import (
-	"bytes"
 	"errors"
 	"io/fs"
-	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -108,20 +106,5 @@ func TestReadApprovalStatusAsksTheStoreForTheRecordOnly(t *testing.T) {
 	}
 	if strings.Join(store.asked, "|") != "record alpha" {
 		t.Errorf("the store was asked %v, want the record of alpha and nothing else", store.asked)
-	}
-}
-
-func TestTheVerbsThatJudgeApprovalRefuseWithoutAStoreWired(t *testing.T) {
-	registry := filepath.Join(t.TempDir(), "skills.registry.yaml")
-	writeTestFile(t, registry, "version: \"1\"\nskills:\n")
-	for _, verb := range []string{"add", "approve"} {
-		deps := testDeps(nil, func(string) ([]byte, error) { return nil, errors.New("must not be read") }, testRegistries(nil), nil, noopLocker{})
-		deps.Approvals = nil
-		var out, errOut bytes.Buffer
-		code := -1
-		SkillsCoreAt(verb, []string{verb, "--registry", registry, "--source-root", "/o/skills"}, deps, &out, &errOut, func(c int) { code = c })
-		if want := "error: skills " + verb + ": no approval record store is wired, so it cannot tell whether a skill is approved\n"; code != 1 || errOut.String() != want || out.Len() != 0 {
-			t.Errorf("%s: exit %d, stdout %q, stderr %q, want exit 1 and %q", verb, code, out.String(), errOut.String(), want)
-		}
 	}
 }

@@ -1,7 +1,6 @@
 package skills
 
 import (
-	"bytes"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -289,30 +288,6 @@ func TestCheckApprovals_AnUnreadableRecordIsUnverifiableNotAbsent(t *testing.T) 
 
 // ---- skills add ---------------------------------------------------------------
 
-func setupFixtureWithoutApprovals(t *testing.T, dir, regContent, mfContent string, ids []string) (regPath, mfPath, root string) {
-	t.Helper()
-	regPath, mfPath, root = setupFixture(t, dir, regContent, mfContent, ids)
-	for _, id := range ids {
-		if err := os.Remove(ApprovalRecordPath(root, id)); err != nil {
-			t.Fatalf("remove fixture record for %q: %v", id, err)
-		}
-	}
-	return regPath, mfPath, root
-}
-
-type addRun struct {
-	stdout, stderr string
-	code           int
-}
-
-func runAdd(t *testing.T, regPath, mfPath, root, id string) addRun {
-	t.Helper()
-	var out, errBuf bytes.Buffer
-	code := -1
-	AddCore([]string{"--registry", regPath, "--manifest", mfPath, "--source-root", root, id}, os.ReadFile, fileApprovals(os.ReadFile), testRegistries(os.ReadFile), os.Stat, testProjectFS(), &out, &errBuf, func(c int) { code = c })
-	return addRun{out.String(), errBuf.String(), code}
-}
-
 func snapshotFiles(t *testing.T, paths ...string) map[string]string {
 	t.Helper()
 	out := map[string]string{}
@@ -324,139 +299,6 @@ func snapshotFiles(t *testing.T, paths ...string) map[string]string {
 		out[p] = string(b)
 	}
 	return out
-}
-
-func TestAddCore_RefusesAGlobalSkillWithoutAValidApproval(t *testing.T) {
-	tests := []struct {
-		name  string
-		setup func(t *testing.T, root string)
-		state string
-	}{
-		{"absent record", func(t *testing.T, root string) {}, "no approval record"},
-		{"stale record", func(t *testing.T, root string) {
-			writeValidApproval(t, root, "newbie")
-			writeTestFile(t, filepath.Join(root, "newbie", "SKILL.md"), lintCleanSkillMD("newbie")+"\nedited after approval\n")
-		}, "stale"},
-		{"malformed record", func(t *testing.T, root string) {
-			writeTestFile(t, ApprovalRecordPath(root, "newbie"), `{"version":1}`)
-		}, "malformed"},
-		{"record approving another skill", func(t *testing.T, root string) {
-			writeValidApproval(t, root, "existing")
-			b, _ := os.ReadFile(ApprovalRecordPath(root, "existing"))
-			writeTestFile(t, ApprovalRecordPath(root, "newbie"), string(b))
-		}, "malformed"},
-	}
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			setBaselineForTest(t, nil)
-			dir := t.TempDir()
-			regPath, mfPath, root := setupFixtureWithoutApprovals(t, dir, minimalRegistry("existing"), minimalManifest("existing"), []string{"existing", "newbie"})
-			tc.setup(t, root)
-			before := snapshotFiles(t, regPath, mfPath)
-
-			r := runAdd(t, regPath, mfPath, root, "newbie")
-
-			if r.code != 1 {
-				t.Fatalf("exit = %d, want 1; stderr=%q", r.code, r.stderr)
-			}
-			for _, want := range []string{`"newbie"`, tc.state, approveCommandFor + "newbie --approver"} {
-				if !strings.Contains(r.stderr, want) {
-					t.Errorf("stderr %q does not contain %q", r.stderr, want)
-				}
-			}
-			if r.stdout != "" {
-				t.Errorf("a refusal prints nothing on stdout, got %q", r.stdout)
-			}
-			after := snapshotFiles(t, regPath, mfPath)
-			for p, b := range before {
-				if after[p] != b {
-					t.Errorf("%s changed on a refused add", p)
-				}
-			}
-			entries, _ := filepath.Glob(filepath.Join(dir, ".tmp-skills-*"))
-			if len(entries) != 0 {
-				t.Errorf("a refused add must leave no temp files: %v", entries)
-			}
-		})
-	}
-}
-
-func TestAddCore_AcceptsAGlobalSkillWithAMatchingRecord(t *testing.T) {
-	setBaselineForTest(t, nil)
-	dir := t.TempDir()
-	regPath, mfPath, root := setupFixtureWithoutApprovals(t, dir, minimalRegistry("existing"), minimalManifest("existing"), []string{"existing", "newbie"})
-	writeValidApproval(t, root, "newbie")
-
-	r := runAdd(t, regPath, mfPath, root, "newbie")
-	if r.code != 0 {
-		t.Fatalf("exit = %d; stderr=%q", r.code, r.stderr)
-	}
-	if !strings.Contains(r.stdout, "added: newbie") {
-		t.Errorf("stdout = %q", r.stdout)
-	}
-	mf, _ := os.ReadFile(mfPath)
-	if !strings.Contains(string(mf), "newbie/SKILL.md") {
-		t.Errorf("manifest missing the new row: %q", mf)
-	}
-}
-
-func TestAddCore_ChangingTheFileAfterApprovalInvalidatesTheRecord(t *testing.T) {
-	setBaselineForTest(t, nil)
-	dir := t.TempDir()
-	regPath, mfPath, root := setupFixtureWithoutApprovals(t, dir, minimalRegistry("existing"), minimalManifest("existing"), []string{"existing", "newbie"})
-	writeValidApproval(t, root, "newbie")
-	// One appended byte, still lint-clean.
-	writeTestFile(t, filepath.Join(root, "newbie", "SKILL.md"), lintCleanSkillMD("newbie")+"\n")
-
-	r := runAdd(t, regPath, mfPath, root, "newbie")
-	if r.code != 1 || !strings.Contains(r.stderr, "stale") {
-		t.Fatalf("exit=%d stderr=%q, want a refusal naming a stale record", r.code, r.stderr)
-	}
-}
-
-func TestAddCore_GrandfatheredBytesNeedNoRecord(t *testing.T) {
-	dir := t.TempDir()
-	regPath, mfPath, root := setupFixtureWithoutApprovals(t, dir, minimalRegistry("existing"), minimalManifest("existing"), []string{"existing", "legacy"})
-	original, _ := os.ReadFile(filepath.Join(root, "legacy", "SKILL.md"))
-	setBaselineForTest(t, []ApprovalBaselineEntry{{ID: "legacy", SHA256: SkillDigest(original)}})
-
-	// Same rule as validate: re-adding a removed baseline skill with its
-	// grandfathered bytes introduces nothing new to approve.
-	if r := runAdd(t, regPath, mfPath, root, "legacy"); r.code != 0 {
-		t.Fatalf("exit = %d; stderr=%q", r.code, r.stderr)
-	}
-}
-
-func TestAddCore_AnUnreadableRecordRefuses(t *testing.T) {
-	setBaselineForTest(t, nil)
-	dir := t.TempDir()
-	regPath, mfPath, root := setupFixtureWithoutApprovals(t, dir, minimalRegistry("existing"), minimalManifest("existing"), []string{"existing", "newbie"})
-	if err := os.MkdirAll(ApprovalRecordPath(root, "newbie"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	before := snapshotFiles(t, regPath, mfPath)
-	r := runAdd(t, regPath, mfPath, root, "newbie")
-	if r.code != 1 || !strings.Contains(r.stderr, "approval record") {
-		t.Fatalf("exit=%d stderr=%q, want a refusal naming the approval record", r.code, r.stderr)
-	}
-	for p, b := range snapshotFiles(t, regPath, mfPath) {
-		if before[p] != b {
-			t.Errorf("%s changed on a refused add", p)
-		}
-	}
-}
-
-func TestAddCore_LintFailureStillWinsOverTheApprovalGate(t *testing.T) {
-	// The hard lint runs first, so a skill that is both unlintable and
-	// unapproved is told about the lint finding, which is the actionable one.
-	setBaselineForTest(t, nil)
-	dir := t.TempDir()
-	regPath, mfPath, root := setupFixtureWithoutApprovals(t, dir, minimalRegistry("existing"), minimalManifest("existing"), []string{"existing", "newbie"})
-	writeTestFile(t, filepath.Join(root, "newbie", "SKILL.md"), "no frontmatter\n")
-	r := runAdd(t, regPath, mfPath, root, "newbie")
-	if r.code != 1 || !strings.Contains(r.stderr, "[lint:") || strings.Contains(r.stderr, "APPROVAL") {
-		t.Fatalf("exit=%d stderr=%q, want the lint finding only", r.code, r.stderr)
-	}
 }
 
 // ---- the baseline --------------------------------------------------------------

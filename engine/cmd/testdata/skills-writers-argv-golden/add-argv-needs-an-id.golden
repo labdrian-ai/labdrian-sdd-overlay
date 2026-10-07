@@ -1,0 +1,35 @@
+# nothing
+$ skills add
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills add requires an <id> argument
+
+# the flags of the wrapper and no id
+$ skills add --registry <WORLD>/skills.registry.yaml --manifest <WORLD>/overlay.manifest --source-root <WORLD>/skills
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills add requires an <id> argument
+
+# an empty id
+$ skills add 
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills add requires an <id> argument
+
+--- skills.registry.yaml ---
+version: "1"
+skills:
+  - id: alpha
+    path: alpha
+    source:
+      type: custom
+    install:
+      defaultScope: global
+      targets:
+        - claude
+    lifecycle:
+      updateStrategy: overlay-only
+

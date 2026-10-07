@@ -1,0 +1,119 @@
+# an unknown flag before the id
+$ skills add --frobnicate foo
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills add: unknown flag "--frobnicate"
+
+--- skills.registry.yaml ---
+version: "1"
+skills:
+  - id: alpha
+    path: alpha
+    source:
+      type: custom
+    install:
+      defaultScope: global
+      targets:
+        - claude
+    lifecycle:
+      updateStrategy: overlay-only
+
+# an unknown flag after the id
+$ skills add foo --frobnicate
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills add: unknown flag "--frobnicate"
+
+--- skills.registry.yaml ---
+version: "1"
+skills:
+  - id: alpha
+    path: alpha
+    source:
+      type: custom
+    install:
+      defaultScope: global
+      targets:
+        - claude
+    lifecycle:
+      updateStrategy: overlay-only
+
+# a short flag before the id
+$ skills add -v foo
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills add: unknown flag "-v"
+
+# a short flag after the id
+$ skills add foo -v
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills add: unknown flag "-v"
+
+--- skills.registry.yaml ---
+version: "1"
+skills:
+  - id: alpha
+    path: alpha
+    source:
+      type: custom
+    install:
+      defaultScope: global
+      targets:
+        - claude
+    lifecycle:
+      updateStrategy: overlay-only
+
+# the equals form of a flag it reads
+$ skills add --registry=<WORLD>/skills.registry.yaml foo
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills add: unknown flag "--registry=<WORLD>/skills.registry.yaml"
+
+--- skills.registry.yaml ---
+version: "1"
+skills:
+  - id: alpha
+    path: alpha
+    source:
+      type: custom
+    install:
+      defaultScope: global
+      targets:
+        - claude
+    lifecycle:
+      updateStrategy: overlay-only
+
+# a flag of install
+$ skills add --project-id p foo
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills add: unknown flag "--project-id"
+
+--- skills.registry.yaml ---
+version: "1"
+skills:
+  - id: alpha
+    path: alpha
+    source:
+      type: custom
+    install:
+      defaultScope: global
+      targets:
+        - claude
+    lifecycle:
+      updateStrategy: overlay-only
+
+# an unknown flag and no id
+$ skills add --frobnicate
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills add: unknown flag "--frobnicate"
+

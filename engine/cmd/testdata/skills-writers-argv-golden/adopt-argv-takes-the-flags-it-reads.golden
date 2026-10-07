@@ -1,0 +1,59 @@
+# nothing installed to adopt
+$ skills adopt --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills adopt: skill tidy-notes is not installed in this project (neither .claude/skills/tidy-notes nor .agents/skills/tidy-notes exists), so there is nothing to adopt; run `labdrian skills install --project-id demo`
+error: skills adopt: skill only-demo is not installed in this project (neither .claude/skills/only-demo nor .agents/skills/only-demo exists), so there is nothing to adopt; run `labdrian skills install --project-id demo`
+error: skills adopt: refused, so nothing was adopted
+
+# --project-id
+$ skills adopt --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills --project-id other (in demo)
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills adopt: skill tidy-notes is not installed in this project (neither .claude/skills/tidy-notes nor .agents/skills/tidy-notes exists), so there is nothing to adopt; run `labdrian skills install --project-id other`
+error: skills adopt: refused, so nothing was adopted
+
+# the flags in another order
+$ skills adopt --source-root <WORLD>/overlay/skills --registry <WORLD>/overlay/skills.registry.yaml (in demo)
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills adopt: skill tidy-notes is not installed in this project (neither .claude/skills/tidy-notes nor .agents/skills/tidy-notes exists), so there is nothing to adopt; run `labdrian skills install --project-id demo`
+error: skills adopt: skill only-demo is not installed in this project (neither .claude/skills/only-demo nor .agents/skills/only-demo exists), so there is nothing to adopt; run `labdrian skills install --project-id demo`
+error: skills adopt: refused, so nothing was adopted
+
+# the flags of the wrapper, which are taken and not read
+$ skills adopt --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills --manifest <WORLD>/overlay/overlay.manifest (in demo)
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills adopt: skill tidy-notes is not installed in this project (neither .claude/skills/tidy-notes nor .agents/skills/tidy-notes exists), so there is nothing to adopt; run `labdrian skills install --project-id demo`
+error: skills adopt: skill only-demo is not installed in this project (neither .claude/skills/only-demo nor .agents/skills/only-demo exists), so there is nothing to adopt; run `labdrian skills install --project-id demo`
+error: skills adopt: refused, so nothing was adopted
+
+# --project-id twice
+$ skills adopt --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills --project-id stranger --project-id other (in demo)
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills adopt: skill tidy-notes is not installed in this project (neither .claude/skills/tidy-notes nor .agents/skills/tidy-notes exists), so there is nothing to adopt; run `labdrian skills install --project-id other`
+error: skills adopt: refused, so nothing was adopted
+
+# --project-id as the last word
+$ skills adopt --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills --project-id (in demo)
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills adopt: skill tidy-notes is not installed in this project (neither .claude/skills/tidy-notes nor .agents/skills/tidy-notes exists), so there is nothing to adopt; run `labdrian skills install --project-id demo`
+error: skills adopt: skill only-demo is not installed in this project (neither .claude/skills/only-demo nor .agents/skills/only-demo exists), so there is nothing to adopt; run `labdrian skills install --project-id demo`
+error: skills adopt: refused, so nothing was adopted
+
+# --registry as the last word: the default is read
+$ skills adopt --source-root <WORLD>/overlay/skills --registry (in demo)
+exit: 1
+--- stdout ---
+--- stderr ---
+error: reading registry "skills.registry.yaml": open skills.registry.yaml: no such file or directory
+

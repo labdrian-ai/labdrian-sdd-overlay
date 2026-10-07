@@ -365,27 +365,6 @@ func (f lockFixture) runAt(verb string, args []string, readFile readFileFn, now 
 	return runAtIn(inDir(f.project), verb, args, readFile, now, locker)
 }
 
-// withSkillsFor is withSkills for the one verb that needs an unregistered skill
-// on disk: every other verb's fixture must stay a clean validate target.
-func (f lockFixture) withSkillsFor(t *testing.T, verb string, ids ...string) lockFixture {
-	t.Helper()
-	if verb == "add" {
-		return f.withSkills(t, ids...)
-	}
-	return f
-}
-
-// withSkills puts approved, lint-clean skills on disk that are not registered, for
-// the add tests. A fixture that has any of them is not a clean validate target.
-func (f lockFixture) withSkills(t *testing.T, ids ...string) lockFixture {
-	t.Helper()
-	for _, id := range ids {
-		writeTestFile(t, filepath.Join(f.root, id, "SKILL.md"), lintCleanSkillMD(id))
-		writeValidApproval(t, f.root, id)
-	}
-	return f
-}
-
 func (f lockFixture) flags() []string {
 	return []string{"--registry", f.reg, "--manifest", f.man, "--source-root", f.root}
 }
@@ -397,14 +376,10 @@ func TestSkillsCoreAt_TakesTheRegistryLockByVerb(t *testing.T) {
 		mode  string
 		code  int
 	}{
-		{"add", []string{"newbie"}, "exclusive", 0},
-		{"remove", []string{"existing"}, "exclusive", 0},
-		{"sync-manifest", nil, "exclusive", 0},
-		{"approve", []string{"--id", "existing", "--approver", "reviewer"}, "exclusive", 0},
 		{"install", []string{"--project-id", "p"}, "shared", 0},
 	} {
 		t.Run(tc.verb, func(t *testing.T) {
-			f := newLockFixture(t).withSkillsFor(t, tc.verb, "newbie")
+			f := newLockFixture(t)
 			locker := &recordingLocker{}
 			want := []string{"lock " + tc.mode + " " + f.lockPath, "unlock " + f.lockPath}
 			if tc.verb == "install" {
@@ -412,7 +387,7 @@ func TestSkillsCoreAt_TakesTheRegistryLockByVerb(t *testing.T) {
 				// project lock, second (see project_dirlock_test.go).
 				want = []string{"lock shared " + f.lockPath, "lockdir exclusive " + f.project, "unlock " + f.project, "unlock " + f.lockPath}
 			}
-			r := f.runAt(tc.verb, append(append([]string{}, tc.extra...), f.flags()...), os.ReadFile, fixedClock(approveFixedNow), locker)
+			r := f.runAt(tc.verb, append(append([]string{}, tc.extra...), f.flags()...), os.ReadFile, nil, locker)
 			if r.code != tc.code {
 				t.Fatalf("exit %d, want %d; stderr=%q", r.code, tc.code, r.stderr)
 			}
@@ -443,8 +418,7 @@ func TestSkillsCoreAt_TakesNoLockForTheVerbsThatNeedNone(t *testing.T) {
 func TestSkillsCoreAt_TheLockIsKeyedByTheRegistryTheVerbNames(t *testing.T) {
 	f := newLockFixture(t)
 	other := filepath.Join(f.dir, "other", "team.registry.yaml")
-	// A writer locks the registry it names, and only a registry that is there: see
-	// TestAWriterWithoutARegistryLocksNothing.
+	// A verb locks the registry it names, and only a registry that is there.
 	registry, err := os.ReadFile(f.reg)
 	if err != nil {
 		t.Fatal(err)
@@ -459,8 +433,8 @@ func TestSkillsCoreAt_TheLockIsKeyedByTheRegistryTheVerbNames(t *testing.T) {
 	}
 
 	locker := &recordingLocker{}
-	f.runAt("sync-manifest", []string{"--registry", other, "--manifest", f.man}, os.ReadFile, nil, locker)
-	if got, want := first(locker), "lock exclusive "+filepath.Join(f.dir, "other", ".team.registry.yaml.lock"); got != want {
+	f.runAt("install", []string{"--registry", other, "--source-root", f.root, "--project-id", "p"}, os.ReadFile, nil, locker)
+	if got, want := first(locker), "lock shared "+filepath.Join(f.dir, "other", ".team.registry.yaml.lock"); got != want {
 		t.Errorf("first event = %q, want %q", got, want)
 	}
 
@@ -469,8 +443,8 @@ func TestSkillsCoreAt_TheLockIsKeyedByTheRegistryTheVerbNames(t *testing.T) {
 	chdirToATempDir(t)
 	writeTestFile(t, defaultRegistryPath, string(registry))
 	locker = &recordingLocker{}
-	f.runAt("sync-manifest", []string{"--manifest", f.man}, os.ReadFile, nil, locker)
-	if got, want := first(locker), "lock exclusive .skills.registry.yaml.lock"; got != want {
+	f.runAt("install", []string{"--source-root", f.root, "--project-id", "p"}, os.ReadFile, nil, locker)
+	if got, want := first(locker), "lock shared .skills.registry.yaml.lock"; got != want {
 		t.Errorf("first event without --registry = %q, want %q", got, want)
 	}
 }
@@ -482,14 +456,10 @@ func TestSkillsCoreAt_EveryReadOfSharedStateHappensUnderTheLock(t *testing.T) {
 		verb  string
 		extra []string
 	}{
-		{"add", []string{"newbie"}},
-		{"remove", []string{"existing"}},
-		{"sync-manifest", nil},
-		{"approve", []string{"--id", "existing", "--approver", "reviewer"}},
 		{"install", []string{"--project-id", "p"}},
 	} {
 		t.Run(tc.verb, func(t *testing.T) {
-			f := newLockFixture(t).withSkillsFor(t, tc.verb, "newbie")
+			f := newLockFixture(t)
 			locker := &recordingLocker{}
 			var outside []string
 			readFile := func(name string) ([]byte, error) {
@@ -498,7 +468,7 @@ func TestSkillsCoreAt_EveryReadOfSharedStateHappensUnderTheLock(t *testing.T) {
 				}
 				return os.ReadFile(name)
 			}
-			r := f.runAt(tc.verb, append(append([]string{}, tc.extra...), f.flags()...), readFile, fixedClock(approveFixedNow), locker)
+			r := f.runAt(tc.verb, append(append([]string{}, tc.extra...), f.flags()...), readFile, nil, locker)
 			if r.code != 0 {
 				t.Fatalf("exit %d; stderr=%q", r.code, r.stderr)
 			}
@@ -511,12 +481,13 @@ func TestSkillsCoreAt_EveryReadOfSharedStateHappensUnderTheLock(t *testing.T) {
 
 func TestSkillsCoreAt_TheLockIsReleasedWhenTheVerbRefuses(t *testing.T) {
 	f := newLockFixture(t)
+	writeTestFile(t, f.reg, "version: \"99\"\nskills: []\n") // a registry the verb refuses, under the lock
 	locker := &recordingLocker{}
-	r := f.runAt("remove", append([]string{"never-registered"}, f.flags()...), os.ReadFile, nil, locker)
+	r := f.runAt("install", append([]string{"--project-id", "p"}, f.flags()...), os.ReadFile, nil, locker)
 	if r.code != 1 {
 		t.Fatalf("exit %d, want 1; stderr=%q", r.code, r.stderr)
 	}
-	want := []string{"lock exclusive " + f.lockPath, "unlock " + f.lockPath}
+	want := []string{"lock shared " + f.lockPath, "lockdir exclusive " + f.project, "unlock " + f.project, "unlock " + f.lockPath}
 	if got := locker.log(); !reflect.DeepEqual(got, want) {
 		t.Errorf("lock events = %v, want %v", got, want)
 	}
@@ -531,18 +502,14 @@ func TestSkillsCoreAt_ABusyLockExits2WithARetryMessageAndChangesNothing(t *testi
 		verb  string
 		extra []string
 	}{
-		{"add", []string{"newbie"}},
-		{"remove", []string{"existing"}},
-		{"sync-manifest", nil},
-		{"approve", []string{"--id", "existing", "--approver", "reviewer"}},
 		{"install", []string{"--project-id", "p"}},
 	} {
 		t.Run(tc.verb, func(t *testing.T) {
-			f := newLockFixture(t).withSkillsFor(t, tc.verb, "newbie")
+			f := newLockFixture(t)
 			before := snapshotFiles(t, f.reg, f.man, ApprovalRecordPath(f.root, "existing"))
 			locker := &recordingLocker{fail: busyErr{f.lockPath}}
 
-			r := f.runAt(tc.verb, append(append([]string{}, tc.extra...), f.flags()...), os.ReadFile, fixedClock(approveFixedNow), locker)
+			r := f.runAt(tc.verb, append(append([]string{}, tc.extra...), f.flags()...), os.ReadFile, nil, locker)
 
 			if r.code != ExitBusy || ExitBusy != 2 {
 				t.Errorf("exit %d (ExitBusy %d), want 2", r.code, ExitBusy)
@@ -568,16 +535,16 @@ func TestSkillsCoreAt_ABusyLockExits2WithARetryMessageAndChangesNothing(t *testi
 // A lock that cannot be taken for any other reason is a refusal, exit 1: waiting
 // would not help, so the message must not tell the caller to retry.
 func TestSkillsCoreAt_ALockThatCannotBeTakenExits1AndDoesNotSayRetry(t *testing.T) {
-	f := newLockFixture(t).withSkills(t, "newbie")
+	f := newLockFixture(t)
 	before := snapshotFiles(t, f.reg, f.man)
 	locker := &recordingLocker{fail: fmt.Errorf("open %s: permission denied", f.lockPath)}
 
-	r := f.runAt("add", append([]string{"newbie"}, f.flags()...), os.ReadFile, nil, locker)
+	r := f.runAt("install", append([]string{"--project-id", "p"}, f.flags()...), os.ReadFile, nil, locker)
 
 	if r.code != 1 || r.stdout != "" {
 		t.Fatalf("exit %d, stdout %q, want exit 1 and nothing on stdout", r.code, r.stdout)
 	}
-	for _, want := range []string{"skills add", "cannot take the lock", "permission denied", f.lockPath} {
+	for _, want := range []string{"skills install", "cannot take the lock", "permission denied", f.lockPath} {
 		if !strings.Contains(r.stderr, want) {
 			t.Errorf("stderr %q does not contain %q", r.stderr, want)
 		}
@@ -594,7 +561,7 @@ func TestSkillsCoreAt_ALockThatCannotBeTakenExits1AndDoesNotSayRetry(t *testing.
 func TestSkillsCoreAt_RecognizesAWrappedBusyError(t *testing.T) {
 	f := newLockFixture(t)
 	locker := &recordingLocker{fail: fmt.Errorf("acquire: %w", busyErr{f.lockPath})}
-	if r := f.runAt("sync-manifest", f.flags(), os.ReadFile, nil, locker); r.code != ExitBusy {
+	if r := f.runAt("install", append([]string{"--project-id", "p"}, f.flags()...), os.ReadFile, nil, locker); r.code != ExitBusy {
 		t.Errorf("exit %d for a wrapped busy error, want %d; stderr=%q", r.code, ExitBusy, r.stderr)
 	}
 }
@@ -602,10 +569,10 @@ func TestSkillsCoreAt_RecognizesAWrappedBusyError(t *testing.T) {
 // Without a locker the verbs that change shared state refuse rather than run
 // unserialized.
 func TestSkillsCoreAt_WithoutALockerTheLockingVerbsFailClosed(t *testing.T) {
-	f := newLockFixture(t).withSkills(t, "newbie")
+	f := newLockFixture(t)
 	before := snapshotFiles(t, f.reg, f.man)
-	for _, verb := range []string{"add", "remove", "sync-manifest", "approve", "install", "adopt"} {
-		r := f.runAt(verb, append([]string{"newbie"}, f.flags()...), os.ReadFile, fixedClock(approveFixedNow), nil)
+	for _, verb := range []string{"install", "adopt"} {
+		r := f.runAt(verb, append([]string{"--project-id", "p"}, f.flags()...), os.ReadFile, nil, nil)
 		if r.code != 1 || r.stdout != "" || !strings.Contains(r.stderr, "no lock is configured") {
 			t.Errorf("%s: exit %d, stdout %q, stderr %q, want exit 1 and a 'no lock is configured' refusal", verb, r.code, r.stdout, r.stderr)
 		}
@@ -641,136 +608,3 @@ func TestSkillsCoreAt_WithoutALockerTheProjectVerbsFailClosed(t *testing.T) {
 }
 
 // ---- the interleavings the lock exists to prevent ----------------------------------
-
-// Two adds that both read the registry before either wrote used to leave only one
-// of them registered although both exited 0. The gate parks the first reader after
-// it has read, so the second cannot help reading the same registry unless the lock
-// keeps it out.
-func TestConcurrentAddsBothLandInTheRegistryAndTheManifest(t *testing.T) {
-	f := newLockFixture(t).withSkills(t, "alpha", "beta")
-	gate := newReadGate(t, f.reg)
-	locker := &exclusionLocker{blocked: gate.release}
-	add := func(id string) func() coreRun {
-		return func() coreRun {
-			return f.runAt("add", append([]string{id}, f.flags()...), gate.readFile, nil, locker)
-		}
-	}
-
-	results := runConcurrently(add("alpha"), add("beta"))
-
-	for i, r := range results {
-		if r.code != 0 {
-			t.Errorf("add #%d: exit %d, stderr=%q", i, r.code, r.stderr)
-		}
-	}
-	want := []string{"alpha", "beta", "existing"}
-	if got := registryIDs(t, f.reg); !reflect.DeepEqual(got, want) {
-		t.Errorf("registry lists %v, want %v: an add that exited 0 was lost", got, want)
-	}
-	if got := manifestIDs(t, f.man); !reflect.DeepEqual(got, want) {
-		t.Errorf("manifest lists %v, want %v", got, want)
-	}
-}
-
-func TestConcurrentRemovesBothLeaveTheRegistryAndTheManifest(t *testing.T) {
-	dir := t.TempDir()
-	reg, man, root := setupFixture(t, dir, minimalRegistry("keep", "one", "two"), minimalManifest("keep", "one", "two"), []string{"keep", "one", "two"})
-	gate := newReadGate(t, reg)
-	locker := &exclusionLocker{blocked: gate.release}
-	flags := []string{"--registry", reg, "--manifest", man, "--source-root", root}
-	remove := func(id string) func() coreRun {
-		return func() coreRun {
-			return runAt("remove", append([]string{id}, flags...), gate.readFile, nil, locker)
-		}
-	}
-
-	results := runConcurrently(remove("one"), remove("two"))
-
-	for i, r := range results {
-		if r.code != 0 {
-			t.Errorf("remove #%d: exit %d, stderr=%q", i, r.code, r.stderr)
-		}
-	}
-	want := []string{"keep"}
-	if got := registryIDs(t, reg); !reflect.DeepEqual(got, want) {
-		t.Errorf("registry lists %v, want %v: a remove that exited 0 was undone", got, want)
-	}
-	if got := manifestIDs(t, man); !reflect.DeepEqual(got, want) {
-		t.Errorf("manifest lists %v, want %v", got, want)
-	}
-}
-
-// sync-manifest regenerates the manifest from the registry it read; an add that
-// lands between that read and its write must not be erased from the manifest.
-//
-// The sync parks after reading the registry. Then the add runs: without a lock it
-// completes and the sync is released afterwards to write from the registry it
-// read; with one, the add has to wait for the sync, which releases the sync.
-func TestSyncManifestDoesNotEraseAConcurrentAdd(t *testing.T) {
-	f := newLockFixture(t).withSkills(t, "alpha")
-	gate := newReadGate(t, f.reg)
-	locker := &exclusionLocker{blocked: gate.release}
-
-	syncDone := make(chan coreRun, 1)
-	go func() { syncDone <- f.runAt("sync-manifest", f.flags(), gate.readFile, nil, locker) }()
-	<-gate.arrived
-	added := f.runAt("add", append([]string{"alpha"}, f.flags()...), os.ReadFile, nil, locker)
-	gate.release()
-	synced := <-syncDone
-
-	for name, r := range map[string]coreRun{"add": added, "sync-manifest": synced} {
-		if r.code != 0 {
-			t.Errorf("%s: exit %d, stderr=%q", name, r.code, r.stderr)
-		}
-	}
-	reg, man := registryIDs(t, f.reg), manifestIDs(t, f.man)
-	if !reflect.DeepEqual(reg, man) {
-		t.Errorf("registry lists %v but the manifest lists %v", reg, man)
-	}
-	if want := []string{"alpha", "existing"}; !reflect.DeepEqual(reg, want) {
-		t.Errorf("registry lists %v, want %v", reg, want)
-	}
-}
-
-// Two approvals of the same bytes: the second must find the first one's record
-// valid and leave it alone, so the original approver stays the record of who
-// approved these bytes. Both used to read "no record" and both wrote one.
-func TestConcurrentApprovalsOfTheSameBytesKeepTheFirstApprover(t *testing.T) {
-	e := newApproveEnv(t, "my-skill")
-	reg := filepath.Join(filepath.Dir(e.root), "skills.registry.yaml")
-	gate := newReadGate(t, e.recordPath())
-	locker := &exclusionLocker{blocked: gate.release}
-	approve := func(approver string) func() coreRun {
-		return func() coreRun {
-			args := []string{"--id", e.id, "--approver", approver, "--source-root", e.root, "--registry", reg}
-			return runAt("approve", args, gate.readFile, fixedClock(approveFixedNow), locker)
-		}
-	}
-
-	results := runConcurrently(approve("alice"), approve("bob"))
-
-	approvers := []string{"alice", "bob"}
-	winner, unchanged := "", 0
-	for i, r := range results {
-		if r.code != 0 {
-			t.Errorf("approve by %s: exit %d, stderr=%q", approvers[i], r.code, r.stderr)
-		}
-		switch {
-		case strings.HasPrefix(r.stdout, "approved: "):
-			if winner != "" {
-				t.Errorf("both approvals reported 'approved:'; the second must be 'unchanged:' (stdouts %q)", []string{results[0].stdout, results[1].stdout})
-			}
-			winner = approvers[i]
-		case strings.HasPrefix(r.stdout, "unchanged: "):
-			unchanged++
-		default:
-			t.Errorf("approve by %s printed %q", approvers[i], r.stdout)
-		}
-	}
-	if winner == "" || unchanged != 1 {
-		t.Fatalf("outcomes: winner %q, unchanged %d, want exactly one of each", winner, unchanged)
-	}
-	if got := readRecord(t, e.recordPath()).Approver; got != winner {
-		t.Errorf("the record names %q, want the approver whose approval was reported, %q", got, winner)
-	}
-}

@@ -1,0 +1,27 @@
+# --id twice: the second is the one approved
+$ skills approve --id absent --id bar --approver fixture-reviewer --source-root <WORLD>/skills
+exit: 0
+--- stdout ---
+approved: bar
+sha256: 6612bbb153249a211d16211157812175b436b32de50fb866836c58fe15b85ead
+record: <WORLD>/skills/bar/.approval.json
+--- stderr ---
+
+# --approver twice
+$ skills approve --id bar --approver first --approver second --source-root <WORLD>/skills
+exit: 0
+--- stdout ---
+approved: bar
+sha256: 6612bbb153249a211d16211157812175b436b32de50fb866836c58fe15b85ead
+record: <WORLD>/skills/bar/.approval.json
+--- stderr ---
+
+# --source-root twice
+$ skills approve --id bar --approver fixture-reviewer --source-root <WORLD>/absent --source-root <WORLD>/skills
+exit: 0
+--- stdout ---
+approved: bar
+sha256: 6612bbb153249a211d16211157812175b436b32de50fb866836c58fe15b85ead
+record: <WORLD>/skills/bar/.approval.json
+--- stderr ---
+

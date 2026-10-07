@@ -63,40 +63,6 @@ func (f installFixture) installArgs() []string {
 	return []string{"--registry", f.reg, "--source-root", f.root, "--project-id", "p"}
 }
 
-func (f installFixture) approveArgs() []string {
-	return []string{"--id", "glob", "--approver", "reviewer", "--source-root", f.root, "--registry", f.reg}
-}
-
-// An approve that starts while an install is copying waits for it: the install is
-// parked after it read the registry, holding the shared lock, and the approve can
-// only be granted once the install has released it.
-func TestAnApproveStartedDuringAnInstallWaitsForTheInstallToFinish(t *testing.T) {
-	f := newInstallFixture(t)
-	gate := newReadGate(t, f.reg)
-	locker := &exclusionLocker{blocked: gate.release}
-
-	installDone := make(chan coreRun, 1)
-	go func() { installDone <- f.runAt("install", f.installArgs(), gate.readFile, nil, locker) }()
-	<-gate.arrived
-	approved := f.runAt("approve", f.approveArgs(), os.ReadFile, fixedClock(approveFixedNow), locker)
-	gate.release()
-	installed := <-installDone
-
-	for name, r := range map[string]coreRun{"install": installed, "approve": approved} {
-		if r.code != 0 {
-			t.Errorf("%s: exit %d, stderr=%q", name, r.code, r.stderr)
-		}
-	}
-	if _, err := os.Stat(filepath.Join(f.project, ".claude", "skills", "proj", "SKILL.md")); err != nil {
-		t.Errorf("the project skill was not installed: %v", err)
-	}
-	events := locker.events()
-	released, granted := indexOf(events, "released shared .skills.registry.yaml.lock"), indexOf(events, "granted exclusive .skills.registry.yaml.lock")
-	if released < 0 || granted < 0 || released > granted {
-		t.Errorf("lock events %v: the approve was granted its exclusive lock before the install released its shared one", events)
-	}
-}
-
 // Two installs into different projects do not exclude each other (they only read
 // the overlay), so a slow one never makes another wait.
 func TestTwoInstallsIntoDifferentProjectsShareTheOverlayLock(t *testing.T) {

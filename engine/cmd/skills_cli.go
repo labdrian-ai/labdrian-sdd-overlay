@@ -27,9 +27,13 @@ type skillsVerb func(deps skills.Deps, args []string, stdout, stderr io.Writer, 
 // still run by skills.SkillsCoreAt. A verb that has moved takes no lock here only because it
 // needs none: the ones that do are moved with the locks they take.
 var skillsCLIVerbs = map[string]skillsVerb{
-	"list":     skillsList,
-	"status":   skillsStatus,
-	"validate": skillsValidate,
+	"list":          skillsList,
+	"status":        skillsStatus,
+	"validate":      skillsValidate,
+	"add":           skillsAdd,
+	"remove":        skillsRemove,
+	"sync-manifest": skillsSync,
+	"approve":       skillsApprove,
 	"lint": func(deps skills.Deps, args []string, stdout, stderr io.Writer, exit func(int)) {
 		skillsLint(deps, withoutVerb(args, "lint"), stdout, stderr, exit)
 	},

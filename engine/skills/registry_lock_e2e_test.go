@@ -254,7 +254,7 @@ func TestRegistryLockE2E_ConcurrentApprovalsKeepTheFirstApprover(t *testing.T) {
 			t.Errorf("round %d: winner %q, unchanged %d, want one approved and %d unchanged", round, winner, unchanged, len(approvers)-1)
 			continue
 		}
-		if got := readRecord(t, ApprovalRecordPath(w.root, "solo")).Approver; got != winner {
+		if got := recordApprover(t, ApprovalRecordPath(w.root, "solo")); got != winner {
 			t.Errorf("round %d: the record names %q, want %q, whose approval was reported", round, got, winner)
 		}
 	}
@@ -384,4 +384,18 @@ func treeListing(t *testing.T, dirs ...string) []string {
 	}
 	sort.Strings(out)
 	return out
+}
+
+// recordApprover is who the approval record at path names.
+func recordApprover(t *testing.T, path string) string {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read record %q: %v", path, err)
+	}
+	rec, err := ParseApprovalRecord(data)
+	if err != nil {
+		t.Fatalf("record on disk does not parse: %v\n%s", err, data)
+	}
+	return rec.Approver
 }

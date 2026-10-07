@@ -134,10 +134,10 @@ func TestGitOriginHasNoAnswerWhereThereIsNoOrigin(t *testing.T) {
 	localOrigin := mainCheckout(t, originConfig("/srv/git/demo.git"))
 	noConfig := filepath.Join(t.TempDir(), "demo")
 	put(t, filepath.Join(noConfig, ".git", "HEAD"), "ref: refs/heads/main\n")
-	notAPointer := filepath.Join(t.TempDir(), "demo")
-	put(t, filepath.Join(notAPointer, ".git"), "this is not a git file\n")
+	stalePointer := filepath.Join(t.TempDir(), "demo")
+	put(t, filepath.Join(stalePointer, ".git"), "gitdir: "+filepath.Join(t.TempDir(), "gone")+"\n")
 
-	for name, dir := range map[string]string{"a directory that is no repository": plain, "a repository with no origin": noOrigin, "an origin with no host": localOrigin, "a git directory with no config": noConfig, ".git a file that points nowhere": notAPointer} {
+	for name, dir := range map[string]string{"a directory that is no repository": plain, "a repository with no origin": noOrigin, "an origin with no host": localOrigin, "a git directory with no config": noConfig, ".git a pointer to a git directory that is gone": stalePointer} {
 		if id, ok := identify(t, projectidentity.GitOrigin{}, skills.ProjectQuery{Dir: dir}); ok || id != "" {
 			t.Errorf("%s: GitOrigin = %q, %v, want no answer", name, id, ok)
 		}
@@ -163,6 +163,68 @@ func TestGitOriginSaysItCannotTellWhenTheConfigCannotBeRead(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), config) {
 		t.Errorf("the error %q does not name %s", err, config)
+	}
+}
+
+// A .git that is a file and holds no gitdir line is a repository the source could not read, not a
+// directory that is no repository: it is an error that names the file, as an unreadable one is,
+// and the chain does not go on to name the project by the directory.
+func TestGitOriginSaysItCannotTellWhenTheGitFileIsNoPointer(t *testing.T) {
+	for name, content := range map[string]string{
+		"text that is no pointer":    "this is not a git file\n",
+		"an empty file":              "",
+		"a gitdir line with no path": "gitdir:\n",
+		"a path with no gitdir key":  "/srv/git/demo.git\n",
+	} {
+		t.Run(name, func(t *testing.T) {
+			dir := filepath.Join(t.TempDir(), "demo")
+			gitFile := filepath.Join(dir, ".git")
+			put(t, gitFile, content)
+
+			id, ok, err := projectidentity.GitOrigin{}.Identify(skills.ProjectQuery{Dir: dir})
+			if err == nil || ok || id != "" {
+				t.Fatalf("GitOrigin = %q, %v, %v, want an error", id, ok, err)
+			}
+			if !strings.Contains(err.Error(), gitFile) {
+				t.Errorf("the error %q does not name %s", err, gitFile)
+			}
+			chained := projectidentity.Chain(projectidentity.GitOrigin{}, projectidentity.DirectoryName{})
+			if id, ok, err := chained.Identify(skills.ProjectQuery{Dir: dir}); err == nil || ok || id != "" {
+				t.Errorf("Chain = %q, %v, %v, want the error, not the name of the directory", id, ok, err)
+			}
+		})
+	}
+}
+
+// A .git directory whose existence cannot be told, because a directory above it cannot be read, is
+// an error that names the directory and says how to go on, which is to name the project.
+func TestGitOriginSaysWhichDirectoryItCouldNotReadAndHowToGoOn(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("a directory without permissions does not stop root")
+	}
+	locked := filepath.Join(t.TempDir(), "locked")
+	below := filepath.Join(locked, "project")
+	if err := os.MkdirAll(below, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(locked, 0); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chmod(locked, 0o755) })
+
+	id, ok, err := projectidentity.GitOrigin{}.Identify(skills.ProjectQuery{Dir: below})
+	if err == nil || ok || id != "" {
+		t.Fatalf("GitOrigin = %q, %v, %v, want an error", id, ok, err)
+	}
+	for _, want := range []string{below, "permission denied", "--project-id"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("the error %q does not say %q", err, want)
+		}
+	}
+	// A person who names the project does not need to look.
+	chained := projectidentity.Chain(projectidentity.Explicit{}, projectidentity.GitOrigin{}, projectidentity.DirectoryName{})
+	if id, ok, err := chained.Identify(skills.ProjectQuery{Dir: below, Explicit: "given"}); err != nil || !ok || id != "given" {
+		t.Errorf("Chain with --project-id = %q, %v, %v, want it answered as given", id, ok, err)
 	}
 }
 

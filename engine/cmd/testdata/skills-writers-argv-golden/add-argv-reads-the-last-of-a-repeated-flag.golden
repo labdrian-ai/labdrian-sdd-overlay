@@ -1,0 +1,55 @@
+# --source-root twice: the second is the one read
+$ skills add --source-root <WORLD>/absent --source-root <WORLD>/skills foo
+exit: 0
+--- stdout ---
+added: foo
+--- stderr ---
+
+# --registry twice: the second is the one written
+$ skills add --registry <WORLD>/absent.yaml --registry <WORLD>/skills.registry.yaml foo
+exit: 0
+--- stdout ---
+added: foo
+--- stderr ---
+
+# --repo twice
+$ skills add --repo https://example.test/first.git --repo https://example.test/foo.git foo
+exit: 0
+--- stdout ---
+added: foo
+--- stderr ---
+
+--- skills.registry.yaml ---
+version: "1"
+skills:
+  - id: alpha
+    path: alpha
+    source:
+      type: custom
+    install:
+      defaultScope: global
+      targets:
+        - claude
+    lifecycle:
+      updateStrategy: overlay-only
+  - id: foo
+    path: foo
+    source:
+      type: external
+      repo: https://example.test/foo.git
+    install:
+      defaultScope: global
+      targets:
+        - claude
+        - opencode
+        - codex
+    lifecycle:
+      updateStrategy: overlay-only
+
+# the first --source-root is the one read: it holds no skill
+$ skills add --source-root <WORLD>/skills --source-root <WORLD>/absent foo
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skill "foo": SKILL.md not found at "<WORLD>/absent/foo/SKILL.md": stat <WORLD>/absent/foo/SKILL.md: no such file or directory
+

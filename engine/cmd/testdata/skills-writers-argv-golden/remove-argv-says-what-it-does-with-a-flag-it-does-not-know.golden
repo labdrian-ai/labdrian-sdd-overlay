@@ -1,0 +1,70 @@
+# an unknown flag before the id
+$ skills remove --frobnicate alpha
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills remove: unknown flag "--frobnicate"
+
+--- skills.registry.yaml ---
+version: "1"
+skills:
+  - id: alpha
+    path: alpha
+    source:
+      type: custom
+    install:
+      defaultScope: global
+      targets:
+        - claude
+    lifecycle:
+      updateStrategy: overlay-only
+
+# an unknown flag after the id
+$ skills remove alpha --frobnicate
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills remove: unknown flag "--frobnicate"
+
+--- skills.registry.yaml ---
+version: "1"
+skills:
+  - id: alpha
+    path: alpha
+    source:
+      type: custom
+    install:
+      defaultScope: global
+      targets:
+        - claude
+    lifecycle:
+      updateStrategy: overlay-only
+
+# a short flag before the id
+$ skills remove -v alpha
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills remove: unknown flag "-v"
+
+# the equals form of a flag it reads
+$ skills remove --registry=<WORLD>/skills.registry.yaml alpha
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills remove: unknown flag "--registry=<WORLD>/skills.registry.yaml"
+
+--- skills.registry.yaml ---
+version: "1"
+skills:
+  - id: alpha
+    path: alpha
+    source:
+      type: custom
+    install:
+      defaultScope: global
+      targets:
+        - claude
+    lifecycle:
+      updateStrategy: overlay-only
+

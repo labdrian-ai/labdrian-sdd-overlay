@@ -1,0 +1,36 @@
+# the flags it reads
+$ skills approve --id bar --approver fixture-reviewer --source-root <WORLD>/skills
+exit: 0
+--- stdout ---
+approved: bar
+sha256: 6612bbb153249a211d16211157812175b436b32de50fb866836c58fe15b85ead
+record: <WORLD>/skills/bar/.approval.json
+--- stderr ---
+
+# the flags in another order
+$ skills approve --source-root <WORLD>/skills --approver fixture-reviewer --id bar
+exit: 0
+--- stdout ---
+approved: bar
+sha256: 6612bbb153249a211d16211157812175b436b32de50fb866836c58fe15b85ead
+record: <WORLD>/skills/bar/.approval.json
+--- stderr ---
+
+# the flags of the wrapper, which it takes and ignores
+$ skills approve --id bar --approver fixture-reviewer --source-root <WORLD>/skills --registry <WORLD>/skills.registry.yaml --manifest <WORLD>/overlay.manifest
+exit: 0
+--- stdout ---
+approved: bar
+sha256: 6612bbb153249a211d16211157812175b436b32de50fb866836c58fe15b85ead
+record: <WORLD>/skills/bar/.approval.json
+--- stderr ---
+
+# an approver label that is a sentence
+$ skills approve --id bar --approver A Reviewer --source-root <WORLD>/skills
+exit: 0
+--- stdout ---
+approved: bar
+sha256: 6612bbb153249a211d16211157812175b436b32de50fb866836c58fe15b85ead
+record: <WORLD>/skills/bar/.approval.json
+--- stderr ---
+

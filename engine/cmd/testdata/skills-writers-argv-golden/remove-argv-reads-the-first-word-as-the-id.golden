@@ -1,0 +1,50 @@
+# nothing
+$ skills remove
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills remove requires an <id> argument
+
+# a second word
+$ skills remove alpha beta
+exit: 0
+--- stdout ---
+removed: alpha
+--- stderr ---
+
+--- skills.registry.yaml ---
+version: "1"
+skills:
+
+# the other word first
+$ skills remove beta alpha
+exit: 1
+--- stdout ---
+--- stderr ---
+error: id "beta": not found in registry
+
+# -- before the id
+$ skills remove -- alpha
+exit: 0
+--- stdout ---
+removed: alpha
+--- stderr ---
+
+--- skills.registry.yaml ---
+version: "1"
+skills:
+
+# -- before the id, and the flags of the wrapper after it: they are still flags
+$ skills remove -- alpha --registry <WORLD>/skills.registry.yaml --manifest <WORLD>/absent.manifest
+exit: 1
+--- stdout ---
+--- stderr ---
+error: reading manifest "<WORLD>/absent.manifest": open <WORLD>/absent.manifest: no such file or directory
+
+# an empty id
+$ skills remove 
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills remove requires an <id> argument
+

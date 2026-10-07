@@ -1,0 +1,140 @@
+# an unknown flag
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills --frobnicate (in demo)
+exit: 0
+--- stdout ---
+installed: tidy-notes
+installed: only-demo
+--- stderr ---
+
+--- tree of demo ---
+.agents/
+.agents/skills/
+.agents/skills/only-demo/
+.agents/skills/only-demo/SKILL.md (296 bytes)
+.agents/skills/tidy-notes/
+.agents/skills/tidy-notes/SKILL.md (298 bytes)
+.agents/skills/tidy-notes/references/
+.agents/skills/tidy-notes/references/notes.md (31 bytes)
+.claude/
+.claude/skills/
+.claude/skills/only-demo/
+.claude/skills/only-demo/SKILL.md (296 bytes)
+.claude/skills/tidy-notes/
+.claude/skills/tidy-notes/SKILL.md (298 bytes)
+.claude/skills/tidy-notes/references/
+.claude/skills/tidy-notes/references/notes.md (31 bytes)
+.labdrian/
+.labdrian/procedural-skills.lock.json (605 bytes)
+
+# an unknown flag before the others
+$ skills install --frobnicate --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 0
+--- stdout ---
+installed: tidy-notes
+installed: only-demo
+--- stderr ---
+
+--- tree of demo ---
+.agents/
+.agents/skills/
+.agents/skills/only-demo/
+.agents/skills/only-demo/SKILL.md (296 bytes)
+.agents/skills/tidy-notes/
+.agents/skills/tidy-notes/SKILL.md (298 bytes)
+.agents/skills/tidy-notes/references/
+.agents/skills/tidy-notes/references/notes.md (31 bytes)
+.claude/
+.claude/skills/
+.claude/skills/only-demo/
+.claude/skills/only-demo/SKILL.md (296 bytes)
+.claude/skills/tidy-notes/
+.claude/skills/tidy-notes/SKILL.md (298 bytes)
+.claude/skills/tidy-notes/references/
+.claude/skills/tidy-notes/references/notes.md (31 bytes)
+.labdrian/
+.labdrian/procedural-skills.lock.json (605 bytes)
+
+# a short flag
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills -v (in demo)
+exit: 0
+--- stdout ---
+installed: tidy-notes
+installed: only-demo
+--- stderr ---
+
+--- tree of demo ---
+.agents/
+.agents/skills/
+.agents/skills/only-demo/
+.agents/skills/only-demo/SKILL.md (296 bytes)
+.agents/skills/tidy-notes/
+.agents/skills/tidy-notes/SKILL.md (298 bytes)
+.agents/skills/tidy-notes/references/
+.agents/skills/tidy-notes/references/notes.md (31 bytes)
+.claude/
+.claude/skills/
+.claude/skills/only-demo/
+.claude/skills/only-demo/SKILL.md (296 bytes)
+.claude/skills/tidy-notes/
+.claude/skills/tidy-notes/SKILL.md (298 bytes)
+.claude/skills/tidy-notes/references/
+.claude/skills/tidy-notes/references/notes.md (31 bytes)
+.labdrian/
+.labdrian/procedural-skills.lock.json (605 bytes)
+
+# the equals form of a flag it reads
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills --project-id=other (in demo)
+exit: 0
+--- stdout ---
+installed: tidy-notes
+installed: only-demo
+--- stderr ---
+
+--- tree of demo ---
+.agents/
+.agents/skills/
+.agents/skills/only-demo/
+.agents/skills/only-demo/SKILL.md (296 bytes)
+.agents/skills/tidy-notes/
+.agents/skills/tidy-notes/SKILL.md (298 bytes)
+.agents/skills/tidy-notes/references/
+.agents/skills/tidy-notes/references/notes.md (31 bytes)
+.claude/
+.claude/skills/
+.claude/skills/only-demo/
+.claude/skills/only-demo/SKILL.md (296 bytes)
+.claude/skills/tidy-notes/
+.claude/skills/tidy-notes/SKILL.md (298 bytes)
+.claude/skills/tidy-notes/references/
+.claude/skills/tidy-notes/references/notes.md (31 bytes)
+.labdrian/
+.labdrian/procedural-skills.lock.json (605 bytes)
+
+# a flag of add
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills --repo https://example.test/foo.git (in demo)
+exit: 0
+--- stdout ---
+installed: tidy-notes
+installed: only-demo
+--- stderr ---
+
+--- tree of demo ---
+.agents/
+.agents/skills/
+.agents/skills/only-demo/
+.agents/skills/only-demo/SKILL.md (296 bytes)
+.agents/skills/tidy-notes/
+.agents/skills/tidy-notes/SKILL.md (298 bytes)
+.agents/skills/tidy-notes/references/
+.agents/skills/tidy-notes/references/notes.md (31 bytes)
+.claude/
+.claude/skills/
+.claude/skills/only-demo/
+.claude/skills/only-demo/SKILL.md (296 bytes)
+.claude/skills/tidy-notes/
+.claude/skills/tidy-notes/SKILL.md (298 bytes)
+.claude/skills/tidy-notes/references/
+.claude/skills/tidy-notes/references/notes.md (31 bytes)
+.labdrian/
+.labdrian/procedural-skills.lock.json (605 bytes)
+

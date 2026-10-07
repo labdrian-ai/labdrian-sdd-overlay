@@ -1,0 +1,30 @@
+# an unknown flag
+$ skills sync-manifest --frobnicate
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills sync-manifest: unknown flag "--frobnicate"
+
+--- overlay.manifest ---
+ghost/SKILL.md custom
+
+# a short flag
+$ skills sync-manifest -v
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills sync-manifest: unknown flag "-v"
+
+--- overlay.manifest ---
+ghost/SKILL.md custom
+
+# the equals form of a flag it reads
+$ skills sync-manifest --manifest=<WORLD>/overlay.manifest
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills sync-manifest: unknown flag "--manifest=<WORLD>/overlay.manifest"
+
+--- overlay.manifest ---
+ghost/SKILL.md custom
+

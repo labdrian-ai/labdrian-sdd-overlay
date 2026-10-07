@@ -1,0 +1,46 @@
+# no flags
+$ skills remove alpha
+exit: 0
+--- stdout ---
+removed: alpha
+--- stderr ---
+
+--- skills.registry.yaml ---
+version: "1"
+skills:
+
+# every flag of the wrapper, before the id
+$ skills remove --registry <WORLD>/skills.registry.yaml --manifest <WORLD>/overlay.manifest --source-root <WORLD>/skills alpha
+exit: 0
+--- stdout ---
+removed: alpha
+--- stderr ---
+
+# the id first, the flags after it
+$ skills remove alpha --manifest <WORLD>/overlay.manifest --registry <WORLD>/skills.registry.yaml
+exit: 0
+--- stdout ---
+removed: alpha
+--- stderr ---
+
+# the flags of add, which remove does not read
+$ skills remove --repo https://example.test/foo.git --ref v1 alpha
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills remove: unknown flag "--repo"
+
+--- skills.registry.yaml ---
+version: "1"
+skills:
+  - id: alpha
+    path: alpha
+    source:
+      type: custom
+    install:
+      defaultScope: global
+      targets:
+        - claude
+    lifecycle:
+      updateStrategy: overlay-only
+

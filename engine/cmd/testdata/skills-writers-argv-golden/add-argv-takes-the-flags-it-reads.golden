@@ -1,0 +1,116 @@
+# no flags: the registry, the manifest and the source root of the working directory
+$ skills add foo
+exit: 0
+--- stdout ---
+added: foo
+--- stderr ---
+
+--- skills.registry.yaml ---
+version: "1"
+skills:
+  - id: alpha
+    path: alpha
+    source:
+      type: custom
+    install:
+      defaultScope: global
+      targets:
+        - claude
+    lifecycle:
+      updateStrategy: overlay-only
+  - id: foo
+    path: foo
+    source:
+      type: custom
+    install:
+      defaultScope: global
+      targets:
+        - claude
+        - opencode
+        - codex
+    lifecycle:
+      updateStrategy: overlay-only
+
+# every flag, before the id
+$ skills add --registry <WORLD>/skills.registry.yaml --manifest <WORLD>/overlay.manifest --source-root <WORLD>/skills foo
+exit: 0
+--- stdout ---
+added: foo
+--- stderr ---
+
+# the id first, the flags after it
+$ skills add foo --source-root <WORLD>/skills --registry <WORLD>/skills.registry.yaml
+exit: 0
+--- stdout ---
+added: foo
+--- stderr ---
+
+# --repo and --ref make the entry external
+$ skills add --repo https://example.test/foo.git --ref v1 foo
+exit: 0
+--- stdout ---
+added: foo
+--- stderr ---
+
+--- skills.registry.yaml ---
+version: "1"
+skills:
+  - id: alpha
+    path: alpha
+    source:
+      type: custom
+    install:
+      defaultScope: global
+      targets:
+        - claude
+    lifecycle:
+      updateStrategy: overlay-only
+  - id: foo
+    path: foo
+    source:
+      type: external
+      repo: https://example.test/foo.git
+      ref: v1
+    install:
+      defaultScope: global
+      targets:
+        - claude
+        - opencode
+        - codex
+    lifecycle:
+      updateStrategy: overlay-only
+
+# --repo without --ref
+$ skills add --repo https://example.test/foo.git foo
+exit: 0
+--- stdout ---
+added: foo
+--- stderr ---
+
+--- skills.registry.yaml ---
+version: "1"
+skills:
+  - id: alpha
+    path: alpha
+    source:
+      type: custom
+    install:
+      defaultScope: global
+      targets:
+        - claude
+    lifecycle:
+      updateStrategy: overlay-only
+  - id: foo
+    path: foo
+    source:
+      type: external
+      repo: https://example.test/foo.git
+    install:
+      defaultScope: global
+      targets:
+        - claude
+        - opencode
+        - codex
+    lifecycle:
+      updateStrategy: overlay-only
+
