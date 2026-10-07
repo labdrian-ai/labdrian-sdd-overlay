@@ -287,6 +287,42 @@ func TestParseContextNeedsAFrontmatterAndNothingElse(t *testing.T) {
 	}
 }
 
+// ParseBoth is Parse and ParseContext over one split of the frontmatter: for every document
+// it returns what the two return, and the error of the scope first, then the context's.
+func TestParseBothIsParseAndParseContext(t *testing.T) {
+	documents := map[string]string{
+		"both":                  doc("applies_to_phases: [sdd-apply]", "excluded_phases: [sdd-propose]", "language_context: [go]", "activation_context: [review]"),
+		"scope only":            doc("applies_to_phases: [sdd-apply]"),
+		"no frontmatter":        "no frontmatter here",
+		"no scope":              doc("language_context: [go]"),
+		"malformed scope":       doc("applies_to_phases: sdd-apply", "language_context: [go"),
+		"malformed context":     doc("applies_to_phases: [sdd-apply]", "language_context: go"),
+		"an operator":           doc("applies_to_phases: [sdd-apply]", "context_operator: prompt_contains"),
+		"both malformed":        doc("applies_to_phases: sdd-apply", "language_context: go"),
+		"no scope and operator": doc("context_operator: prompt_contains"),
+	}
+	for name, content := range documents {
+		t.Run(name, func(t *testing.T) {
+			gotScope, gotContext, gotErr := contract.ParseBoth(content)
+			wantScope, scopeErr := contract.Parse(content)
+			wantContext, contextErr := contract.ParseContext(content)
+			wantErr := scopeErr
+			if wantErr == nil {
+				wantErr = contextErr
+			}
+			if !reflect.DeepEqual(gotErr, wantErr) {
+				t.Fatalf("ParseBoth error = %v, want %v", gotErr, wantErr)
+			}
+			if wantErr != nil {
+				wantScope, wantContext = contract.Contract{}, contract.Context{}
+			}
+			if !reflect.DeepEqual(gotScope, wantScope) || !reflect.DeepEqual(gotContext, wantContext) {
+				t.Errorf("ParseBoth = %#v and %#v, want %#v and %#v", gotScope, gotContext, wantScope, wantContext)
+			}
+		})
+	}
+}
+
 func TestPhaseMembership(t *testing.T) {
 	c := contract.Contract{AppliesTo: []string{"sdd-tasks", "sdd-apply"}, Excluded: []string{"sdd-propose"}}
 	for phase, wantApplies := range map[string]bool{"sdd-tasks": true, "sdd-apply": true, "sdd-propose": false, "sdd-explore": false, "": false, "SDD-APPLY": false} {

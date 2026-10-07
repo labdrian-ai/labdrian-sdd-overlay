@@ -1580,11 +1580,7 @@ func gateTaskCore(args []string, stdin io.Reader, stdout io.Writer, stderr io.Wr
 	// Item 2: emit a stderr diagnostic when the contract frontmatter is broken so
 	// wiring mistakes with a corrupt contract are immediately visible. stdout stays
 	// pass-through '{}' and exit 0 (fail-safe contract UNCHANGED). The gate reads both parses.
-	_, err = contract.Parse(contractContent)
-	if err == nil {
-		_, err = contract.ParseContext(contractContent)
-	}
-	if err != nil {
+	if _, _, err = contract.ParseBoth(contractContent); err != nil {
 		fmt.Fprintf(stderr, "gate-task: warning: contract frontmatter unparseable: %v (passing through)\n", err)
 	}
 

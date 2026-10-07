@@ -101,11 +101,7 @@ func Rewrite(call Call, cfg Config) (string, bool) {
 // reports false when the contract cannot be read, so that contract is skipped and every
 // other is still applied.
 func evaluateContract(prompt, subagentType string, managed ContractConfig, workContext *WorkContext) (string, bool) {
-	c, err := contract.Parse(managed.Content)
-	if err != nil {
-		return prompt, false
-	}
-	needs, err := contract.ParseContext(managed.Content)
+	c, needs, err := contract.ParseBoth(managed.Content)
 	if err != nil {
 		return prompt, false
 	}

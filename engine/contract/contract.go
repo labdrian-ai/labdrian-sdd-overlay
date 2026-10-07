@@ -5,7 +5,7 @@
 // names no file, no process and no other package of the engine.
 //
 // There is one parse of the phase scope of the document (Parse), one of its context
-// (ParseContext) and one parse of a list (parseList). A reader parses only what it reads: the
+// (ParseContext), ParseBoth for the reader of both, and one parse of a list (parseList). A reader parses only what it reads: the
 // propagator that scopes a row of the skill registry and the status verb that checks a contract
 // read the scope; the gate reads the scope and the context, and so does the OpenCode adapter
 // for every contract but the unconditional minimalism one. A malformed context breaks the
@@ -139,7 +139,42 @@ func Parse(content string) (Contract, error) {
 	if err != nil {
 		return Contract{}, err
 	}
+	return parseScope(lines)
+}
 
+// ParseContext reads the context a document's frontmatter describes. It fails, with the zero
+// Context, when the document has no frontmatter, when a list of the context is not an inline
+// list, or when it names a context_operator. It does not read the phase scope (Parse does).
+func ParseContext(content string) (Context, error) {
+	lines, err := frontmatterLines(content)
+	if err != nil {
+		return Context{}, err
+	}
+	return parseContext(lines)
+}
+
+// ParseBoth reads the phase scope and the context of a document, as Parse and ParseContext
+// would, and splits its frontmatter once. It is for the reader that needs both, which would
+// otherwise find the frontmatter twice. It fails with what Parse fails with, and when the
+// scope is readable, with what ParseContext fails with; the zero values come with the error.
+func ParseBoth(content string) (Contract, Context, error) {
+	lines, err := frontmatterLines(content)
+	if err != nil {
+		return Contract{}, Context{}, err
+	}
+	c, err := parseScope(lines)
+	if err != nil {
+		return Contract{}, Context{}, err
+	}
+	needs, err := parseContext(lines)
+	if err != nil {
+		return Contract{}, Context{}, err
+	}
+	return c, needs, nil
+}
+
+// parseScope is Parse over the lines of the frontmatter.
+func parseScope(lines []string) (Contract, error) {
 	var c Contract
 	lists := map[string]*[]string{
 		keyAppliesTo: &c.AppliesTo,
@@ -168,15 +203,8 @@ func Parse(content string) (Contract, error) {
 	return c, nil
 }
 
-// ParseContext reads the context a document's frontmatter describes. It fails, with the zero
-// Context, when the document has no frontmatter, when a list of the context is not an inline
-// list, or when it names a context_operator. It does not read the phase scope (Parse does).
-func ParseContext(content string) (Context, error) {
-	lines, err := frontmatterLines(content)
-	if err != nil {
-		return Context{}, err
-	}
-
+// parseContext is ParseContext over the lines of the frontmatter.
+func parseContext(lines []string) (Context, error) {
 	var c Context
 	for _, line := range lines {
 		key, value, found := strings.Cut(strings.TrimSpace(line), ":")
