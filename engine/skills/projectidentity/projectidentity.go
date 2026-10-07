@@ -51,8 +51,14 @@ func (DirectoryName) Identify(q skills.ProjectQuery) (skills.ProjectID, bool, er
 //
 // It has no answer where there is no repository, no config, no origin, or an origin with no host
 // to key on (a path on the machine). A file it cannot read, a .git file that holds no gitdir line,
+// a pointer that leads to no git directory (a worktree or a submodule that moved or was removed)
 // and a directory it cannot look into are errors: the source could not tell, and a chain must not
 // go on to name the project by something less than what the repository says.
+//
+// A pointer is trusted only as far as the directory it names is a git directory, which has a HEAD:
+// a .git file in a repository one has only checked out cannot make the program read the config of
+// a directory that is no repository's. Git itself follows the same pointers and checks the same
+// thing.
 type GitOrigin struct{}
 
 // Identify is skills.ProjectIdentity.
@@ -117,6 +123,9 @@ func commonDirOfPointer(gitFile, root string) (string, bool, error) {
 	if !filepath.IsAbs(gitDir) {
 		gitDir = filepath.Join(root, gitDir)
 	}
+	if err := requireGitDir(gitFile, gitDir); err != nil {
+		return "", false, err
+	}
 	pointer := filepath.Join(gitDir, "commondir")
 	raw, err = os.ReadFile(pointer)
 	switch {
@@ -132,7 +141,26 @@ func commonDirOfPointer(gitFile, root string) (string, bool, error) {
 	if !filepath.IsAbs(target) {
 		target = filepath.Join(gitDir, target)
 	}
-	return filepath.Clean(target), true, nil
+	target = filepath.Clean(target)
+	if err := requireGitDir(gitFile, target); err != nil {
+		return "", false, err
+	}
+	return target, true, nil
+}
+
+// requireGitDir says why dir, which the pointer file names, cannot be the git directory it is
+// followed to: it is not one (a git directory has a HEAD, and one that is gone has none), or it
+// cannot be looked at. The way on is the same as for a directory that cannot be searched: name the
+// project.
+func requireGitDir(pointerFile, dir string) error {
+	info, err := os.Stat(filepath.Join(dir, "HEAD"))
+	switch {
+	case err == nil && !info.IsDir():
+		return nil
+	case err == nil || os.IsNotExist(err):
+		return fmt.Errorf("%s points to %s, which is not a git directory (it has no HEAD; was the worktree or the repository moved or removed?); give --project-id to name the project", pointerFile, dir)
+	}
+	return fmt.Errorf("%s points to %s, which cannot be looked at (%w); give --project-id to name the project", pointerFile, dir, unwrapPathError(err))
 }
 
 // unwrapPathError is the error of the file system behind the path an *os.PathError names, for a
