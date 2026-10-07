@@ -1,12 +1,14 @@
 package registryyaml_test
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills/registryyaml"
 )
 
 // readTestFixture reads a YAML fixture from testdata/<name>.yaml.
@@ -592,4 +594,32 @@ func escapeYAMLPath(path string) string {
 		return `""`
 	}
 	return path
+}
+
+// A line longer than the reader can take is told as that, with its number and the limit, and not
+// in the words of the scanner the reader happens to be built on. A line of exactly the limit is
+// read, whichever way it ends.
+func TestALineOverTheLimitIsToldWithItsNumberAndTheLimit(t *testing.T) {
+	const head = "version: \"1\"\nskills:\n"
+	line := func(n int) string { return "  - id: " + strings.Repeat("x", n-len("  - id: ")) }
+
+	_, err := readRegistry(head + line(registryyaml.MaxLineBytes+1) + "\n")
+	want := fmt.Sprintf("line 3 is longer than the %d bytes a line of a registry may have", registryyaml.MaxLineBytes)
+	if err == nil || err.Error() != want {
+		t.Fatalf("a line one byte over the limit: error = %v, want %q", err, want)
+	}
+
+	// A line far over the limit, which the reader does not even hold whole, is told the same way.
+	_, err = readRegistry(head + line(registryyaml.MaxLineBytes*3) + "\n")
+	if err == nil || err.Error() != want {
+		t.Fatalf("a line three times the limit: error = %v, want %q", err, want)
+	}
+
+	// Up to the limit it is the rules of the registry, and not the size, that refuse an id so long.
+	for name, ending := range map[string]string{"LF": "\n", "CRLF": "\r\n", "no line break": ""} {
+		_, err := readRegistry(head + line(registryyaml.MaxLineBytes) + ending)
+		if err != nil && strings.Contains(err.Error(), "longer than") {
+			t.Errorf("a line of exactly %d bytes ending with %s: error = %v, want it read", registryyaml.MaxLineBytes, name, err)
+		}
+	}
 }

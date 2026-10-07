@@ -2,6 +2,7 @@ package registryyaml
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -28,12 +29,34 @@ type tok struct {
 	lineNum int
 }
 
+// MaxFileBytes is the largest registry file the program reads: 4 MiB, about four hundred times the
+// registry of this repository. The adapter does not read files (its composition root hands it the
+// way to), so the bound is the root's to apply when it reads, and this is where the format says
+// what it is.
+const MaxFileBytes = 4 << 20
+
+// MaxLineBytes is the longest line a registry may have, without its line break. A registry is
+// a short list of short lines, so the limit is far above any real one; it is the bound on what
+// the reader holds of a line, and a line over it is refused with its number.
+const MaxLineBytes = bufio.MaxScanTokenSize
+
+// lineBreakBytes is the room a line break takes in the reader's buffer, so that a line of
+// exactly MaxLineBytes fits whether it ends in "\n" or "\r\n". The buffer is a little roomier
+// than the limit for that; the limit itself is checked on the line, once it is read.
+const lineBreakBytes = len("\r\n")
+
+// errLineTooLong is the refusal of the line numbered lineNum, which is over MaxLineBytes.
+func errLineTooLong(lineNum int) error {
+	return fmt.Errorf("line %d is longer than the %d bytes a line of a registry may have", lineNum, MaxLineBytes)
+}
+
 // tokenize scans the reader line-by-line, checks for forbidden constructs,
 // and emits a flat []tok slice. Any out-of-subset construct causes an
 // immediate line-numbered error.
 func tokenize(r io.Reader) ([]tok, error) {
 	var tokens []tok
 	scanner := bufio.NewScanner(r)
+	scanner.Buffer(nil, MaxLineBytes+lineBreakBytes)
 	lineNum := 0
 	seenContent := false
 	seenDocMarker := false
@@ -41,6 +64,9 @@ func tokenize(r io.Reader) ([]tok, error) {
 	for scanner.Scan() {
 		lineNum++
 		line := scanner.Text()
+		if len(line) > MaxLineBytes {
+			return nil, errLineTooLong(lineNum)
+		}
 
 		// Reject tabs anywhere in the line; the constraint targets indentation.
 		if strings.ContainsRune(line, '\t') {
@@ -98,6 +124,9 @@ func tokenize(r io.Reader) ([]tok, error) {
 	}
 
 	if err := scanner.Err(); err != nil {
+		if errors.Is(err, bufio.ErrTooLong) {
+			return nil, errLineTooLong(lineNum + 1)
+		}
 		return nil, fmt.Errorf("skills: read error: %w", err)
 	}
 

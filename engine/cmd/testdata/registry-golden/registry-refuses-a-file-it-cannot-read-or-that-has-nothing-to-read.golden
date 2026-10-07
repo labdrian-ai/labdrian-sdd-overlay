@@ -73,5 +73,5 @@ $ skills list --registry <WORLD>/docs/08.yaml
 exit: 1
 --- stdout ---
 --- stderr ---
-error: parsing registry: skills: read error: bufio.Scanner: token too long
+error: parsing registry: line 1 is longer than the 65536 bytes a line of a registry may have
 
