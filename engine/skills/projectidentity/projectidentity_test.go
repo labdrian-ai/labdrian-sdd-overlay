@@ -263,17 +263,25 @@ func TestGitOriginSaysItCannotTellWhenTheHeadCannotBeLookedAt(t *testing.T) {
 			t.Errorf("the error %q does not say %q", err, want)
 		}
 	}
-	// The real file system, where a HEAD that links to itself cannot be looked at whoever asks.
+}
+
+// The real file system, where a HEAD that links to itself cannot be looked at whoever asks: the
+// same refusal as the injected one above, reached without a seam where symlinks are supported.
+func TestGitOriginSaysItCannotTellWhenTheHeadLinksToItself(t *testing.T) {
+	base := t.TempDir()
+	dir := filepath.Join(base, "demo")
 	loop := filepath.Join(base, "loop")
 	if err := os.MkdirAll(loop, 0o755); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.Symlink("HEAD", filepath.Join(loop, "HEAD")); err != nil {
-		return
+		t.Skipf("no symlinks to make a HEAD that links to itself: %v", err)
 	}
 	put(t, filepath.Join(dir, ".git"), "gitdir: "+loop+"\n")
-	if _, _, err := (projectidentity.GitOrigin{}).Identify(skills.ProjectQuery{Dir: dir}); err == nil || !strings.Contains(err.Error(), "whose HEAD cannot be looked at") {
-		t.Errorf("a HEAD that links to itself: error = %v, want it to say the HEAD cannot be looked at", err)
+
+	_, _, err := projectidentity.GitOrigin{}.Identify(skills.ProjectQuery{Dir: dir})
+	if err == nil || !strings.Contains(err.Error(), "whose HEAD cannot be looked at") || !strings.Contains(err.Error(), "--project-id") {
+		t.Errorf("error = %v, want it to say the HEAD cannot be looked at and how to go on", err)
 	}
 }
 
