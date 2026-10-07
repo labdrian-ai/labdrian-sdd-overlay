@@ -654,6 +654,7 @@ func receiptGoldenCases() []receiptGoldenCase {
 			try("a key twice: the last one wins", `{"tool_name":"Bash","tool_input":{"command":"ls","command":`+ack+`}}`)
 			try("white space around the object", " \n"+`{"tool_name":"Bash","tool_input":{"command":`+ack+`}}`+"\n ")
 			try("the phrase inside a longer command, as a look-alike", `{"tool_name":"Bash","tool_input":{"command":"echo \"`+acknowledgeCommand+`\" >> log"}}`)
+			try("the phrase inside a heredoc: the match is the text, so it is caught", `{"tool_name":"Bash","tool_input":{"command":"bash <<'EOF'\n`+acknowledgeCommand+`\nEOF"}}`)
 			try("tool_input a string", `{"tool_name":"Bash","tool_input":`+ack+`}`)
 			try("tool_input an array", `{"tool_name":"Bash","tool_input":[`+ack+`]}`)
 			try("tool_input null", `{"tool_name":"Bash","tool_input":null}`)
