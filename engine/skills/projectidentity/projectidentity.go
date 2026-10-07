@@ -149,18 +149,23 @@ func commonDirOfPointer(gitFile, root string) (string, bool, error) {
 }
 
 // requireGitDir says why dir, which the pointer file names, cannot be the git directory it is
-// followed to: it is not one (a git directory has a HEAD, and one that is gone has none), or it
-// cannot be looked at. The way on is the same as for a directory that cannot be searched: name the
-// project.
+// followed to, in the words of the case: its HEAD is missing (the directory is gone or was never
+// a git directory), its HEAD is a directory, or its HEAD cannot be looked at. Each refuses, and each
+// gives the way on, which is to name the project.
 func requireGitDir(pointerFile, dir string) error {
-	info, err := os.Stat(filepath.Join(dir, "HEAD"))
+	head := filepath.Join(dir, "HEAD")
+	info, err := os.Stat(head)
+	const wayOn = "give --project-id to name the project"
 	switch {
-	case err == nil && !info.IsDir():
+	case err == nil && info.IsDir():
+		return fmt.Errorf("%s points to %s, which is not a git directory (its HEAD is a directory); %s", pointerFile, dir, wayOn)
+	case err == nil:
 		return nil
-	case err == nil || os.IsNotExist(err):
-		return fmt.Errorf("%s points to %s, which is not a git directory (it has no HEAD; was the worktree or the repository moved or removed?); give --project-id to name the project", pointerFile, dir)
+	case os.IsNotExist(err):
+		return fmt.Errorf("%s points to %s, which is not a git directory (it has no HEAD; was the worktree or the repository moved or removed?); %s", pointerFile, dir, wayOn)
+	default:
+		return fmt.Errorf("%s points to %s, whose HEAD cannot be looked at (%w); %s", pointerFile, dir, unwrapPathError(err), wayOn)
 	}
-	return fmt.Errorf("%s points to %s, which cannot be looked at (%w); give --project-id to name the project", pointerFile, dir, unwrapPathError(err))
 }
 
 // unwrapPathError is the error of the file system behind the path an *os.PathError names, for a

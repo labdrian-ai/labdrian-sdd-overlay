@@ -154,6 +154,12 @@ func TestGitOriginHasNoAnswerWhereThereIsNoOrigin(t *testing.T) {
 // to name the project, and the chain does not go on to name it by the directory.
 func TestGitOriginSaysItCannotTellWhenAPointerLeadsToNoGitDirectory(t *testing.T) {
 	hostileConfig := originConfig("https://github.com/evil/trap.git")
+	// Each case says its own reason, not another's.
+	wantReason := map[string]string{
+		"the git directory is gone":    "it has no HEAD",
+		"the HEAD is a directory":      "its HEAD is a directory",
+		"the HEAD cannot be looked at": "whose HEAD cannot be looked at",
+	}
 	for name, build := range map[string]func(t *testing.T) (dir, gitFile, named string){
 		"the git directory is gone": func(t *testing.T) (string, string, string) {
 			dir := filepath.Join(t.TempDir(), "demo")
@@ -178,6 +184,29 @@ func TestGitOriginSaysItCannotTellWhenAPointerLeadsToNoGitDirectory(t *testing.T
 			put(t, filepath.Join(notGit, "config"), hostileConfig)
 			put(t, filepath.Join(dir, ".git"), "gitdir: "+gitDir+"\n")
 			return dir, filepath.Join(dir, ".git"), notGit
+		},
+		"the HEAD is a directory": func(t *testing.T) (string, string, string) {
+			dir := filepath.Join(t.TempDir(), "demo")
+			gitDir := filepath.Join(t.TempDir(), "gitdir")
+			if err := os.MkdirAll(filepath.Join(gitDir, "HEAD"), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			put(t, filepath.Join(gitDir, "config"), hostileConfig)
+			put(t, filepath.Join(dir, ".git"), "gitdir: "+gitDir+"\n")
+			return dir, filepath.Join(dir, ".git"), gitDir
+		},
+		"the HEAD cannot be looked at": func(t *testing.T) (string, string, string) {
+			dir := filepath.Join(t.TempDir(), "demo")
+			gitDir := filepath.Join(t.TempDir(), "gitdir")
+			// A HEAD that links to itself cannot be looked at, whoever asks (root included).
+			if err := os.MkdirAll(gitDir, 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.Symlink("HEAD", filepath.Join(gitDir, "HEAD")); err != nil {
+				t.Skipf("no symlink: %v", err)
+			}
+			put(t, filepath.Join(dir, ".git"), "gitdir: "+gitDir+"\n")
+			return dir, filepath.Join(dir, ".git"), gitDir
 		},
 		"the common directory is gone": func(t *testing.T) (string, string, string) {
 			base := t.TempDir()
@@ -204,6 +233,9 @@ func TestGitOriginSaysItCannotTellWhenAPointerLeadsToNoGitDirectory(t *testing.T
 			chained := projectidentity.Chain(projectidentity.GitOrigin{}, projectidentity.DirectoryName{})
 			if id, ok, err := chained.Identify(skills.ProjectQuery{Dir: dir}); err == nil || ok || id != "" {
 				t.Errorf("Chain = %q, %v, %v, want the error, not the name of the directory", id, ok, err)
+			}
+			if want := wantReason[name]; want != "" && !strings.Contains(err.Error(), want) {
+				t.Errorf("the error %q does not say %q", err, want)
 			}
 			// A person who names the project does not need to look.
 			withTheID := projectidentity.Chain(projectidentity.Explicit{}, projectidentity.GitOrigin{}, projectidentity.DirectoryName{})
