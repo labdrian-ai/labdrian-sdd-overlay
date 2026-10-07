@@ -14,8 +14,9 @@
 // "applies_to_phases: sdd-tasks, sdd-apply" was taken as two phases and "[sdd-tasks" as one.
 //
 // The frontmatter is read the way the contracts in use have always been read, and that is
-// kept: the text between the first two "---" delimiters, which are found by text and not
-// by line; one "key: value" per line, with white space around the key and the value ignored;
+// kept: the lines between the first two delimiter lines, a delimiter being a line that is
+// "---" and nothing else (a "---" inside a value, in a longer run of dashes or after other
+// text on its line is part of the frontmatter, not its end); one "key: value" per line, with white space around the key and the value ignored;
 // the later of two lines for a key wins; the body after the frontmatter is not read.
 package contract
 
@@ -122,13 +123,26 @@ func (e *MalformedListError) Error() string {
 	return fmt.Sprintf("malformed %s: expected an inline list such as [a, b], got %q", e.Key, e.Value)
 }
 
-// frontmatterLines is the lines of the frontmatter of content, or ErrNoFrontmatter.
+// frontmatterLines is the lines of the frontmatter of content, or ErrNoFrontmatter: the lines
+// between the first two delimiter lines.
 func frontmatterLines(content string) ([]string, error) {
-	parts := strings.SplitN(content, frontmatterDelimiter, 3)
-	if len(parts) < 3 {
+	lines := strings.Split(content, "\n")
+	opening := slices.IndexFunc(lines, isDelimiter)
+	if opening < 0 {
 		return nil, ErrNoFrontmatter
 	}
-	return strings.Split(parts[1], "\n"), nil
+	body := lines[opening+1:]
+	closing := slices.IndexFunc(body, isDelimiter)
+	if closing < 0 {
+		return nil, ErrNoFrontmatter
+	}
+	return body[:closing], nil
+}
+
+// isDelimiter reports whether line is a delimiter: "---" and nothing else. White space at
+// the end of the line, which includes the CR of a CRLF ending, is not something else.
+func isDelimiter(line string) bool {
+	return strings.TrimRight(line, " \t\r") == frontmatterDelimiter
 }
 
 // Parse reads the phase scope a document's frontmatter describes. It fails, with the zero

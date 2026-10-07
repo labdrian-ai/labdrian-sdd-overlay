@@ -322,7 +322,7 @@ func contractGoldenCases() []contractGoldenCase {
 				{"CRLF line endings", "---\r\napplies_to_phases: [sdd-apply]\r\nexcluded_phases: [sdd-propose]\r\n---\r\n# c\r\n"},
 				{"a later key wins over an earlier one", contractDoc("applies_to_phases: [sdd-tasks]", "applies_to_phases: [sdd-apply]")},
 				{"a preamble before the delimiters", "preamble text\n---\napplies_to_phases: [sdd-apply]\n---\nbody\n"},
-				{"a delimiter inside a value ends the frontmatter there", contractDoc("injection_point: \"## a --- b\"", "applies_to_phases: [sdd-apply]")},
+				{"a delimiter inside a value is part of the value", contractDoc("injection_point: \"## a --- b\"", "applies_to_phases: [sdd-apply]")},
 				{"spaces around items", contractDoc("applies_to_phases: [ sdd-apply ,  sdd-tasks ]")},
 				{"an empty item between commas", contractDoc("applies_to_phases: [sdd-apply, , sdd-tasks]")},
 				{"a key that merely starts with the name", contractDoc("applies_to_phases_extra: [sdd-apply]", "applies_to_phases: [sdd-tasks]")},
