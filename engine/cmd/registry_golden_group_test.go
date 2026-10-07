@@ -46,11 +46,27 @@ func TestADescendantOfAProgramThatHangsIsKilledAtItsDeadline(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// fd 3 is the FIFO, open in the program before it forks, so both hold it from the start.
+	// fd 3 is the FIFO, open in the program before it forks, so both hold it from the start. The
+	// pid file is written after that, so that it exists is the proof that the program got as far as
+	// holding the FIFO and starting the descendant before it was killed: without it the read below
+	// would end at once because no writer ever existed, and the test would pass having tried
+	// nothing. A program that is slow to start (a loaded machine) is given a longer deadline, and
+	// one that never starts it fails the test.
 	script := `exec 3>"` + fifo + `"; sleep 3600 & echo $! > "` + pidFile + `"; wait`
-	_, _, _, err = runWithin(500*time.Millisecond, sh, dir, nil, []string{"-c", script})
-	if !errors.Is(err, errRunTimedOut) {
-		t.Fatalf("runWithin() = %v, want errRunTimedOut", err)
+	started := false
+	for _, deadline := range []time.Duration{500 * time.Millisecond, 2 * time.Second, 8 * time.Second} {
+		_ = os.Remove(pidFile)
+		_, _, _, err = runWithin(deadline, sh, dir, nil, []string{"-c", script})
+		if !errors.Is(err, errRunTimedOut) {
+			t.Fatalf("runWithin() = %v, want errRunTimedOut", err)
+		}
+		if _, statErr := os.Stat(pidFile); statErr == nil {
+			started = true
+			break
+		}
+	}
+	if !started {
+		t.Fatal("the program did not start its descendant before its deadline, so nothing was proved about it")
 	}
 
 	gone := make(chan error, 1)
