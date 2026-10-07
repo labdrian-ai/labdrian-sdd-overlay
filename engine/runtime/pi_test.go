@@ -455,6 +455,26 @@ func TestPiAdapter_StatusPartialOnUnprovenEntry(t *testing.T) {
 	}
 }
 
+// What the status finds unproven is told once in the line a person reads: the message names each
+// entry, and the line that prints the result does not list the same entries again after it.
+func TestPiAdapter_StatusTellsEachUnprovenEntryOnce(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	overlayRoot, registryPath := piFixtureOverlay(t)
+	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
+	buildPiPackage(t, overlayRoot, registryPath, destDir)
+
+	result := engineRuntime.NewPiAdapterWithPaths(fileRegistries, overlayRoot, registryPath, destDir).Status()
+	if result.Status != engineRuntime.CapabilityPartial {
+		t.Fatalf("Status = %s, want partial", result)
+	}
+	line := result.String()
+	for _, entry := range []string{"listed in ~/.pi/agent/settings.json packages", "longterm-mem registered in mcp.json", "GADU.md linked at"} {
+		if n := strings.Count(line, entry); n != 1 {
+			t.Errorf("the status line names %q %d times, want once:\n%s", entry, n, line)
+		}
+	}
+}
+
 // writePiSettingsListing writes a scratch ~/.pi/agent/settings.json that
 // lists destDir as an installed package, so isPiPackageListed proves the
 // "listed" entry (mirrors what a real `pi install <destDir>` would do).
