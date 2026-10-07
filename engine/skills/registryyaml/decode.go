@@ -42,6 +42,10 @@ const MaxFileBytes = 4 << 20
 // not borrowed from the scanner's default, and the buffer below is set from it.
 const MaxLineBytes = 64 << 10
 
+// initialLineBuffer is the size the scanner's buffer starts at: registry lines are short, so it
+// starts small and only grows, up to MaxLineBytes, for a line that needs it.
+const initialLineBuffer = 4 << 10
+
 // lineBreakBytes is the room a line break takes in the reader's buffer, so that a line of
 // exactly MaxLineBytes fits whether it ends in "\n" or "\r\n". The buffer is a little roomier
 // than the limit for that; the limit itself is checked on the line, once it is read.
@@ -58,7 +62,7 @@ func errLineTooLong(lineNum int) error {
 func tokenize(r io.Reader) ([]tok, error) {
 	var tokens []tok
 	scanner := bufio.NewScanner(r)
-	scanner.Buffer(make([]byte, 0, 4<<10), MaxLineBytes+lineBreakBytes)
+	scanner.Buffer(make([]byte, 0, initialLineBuffer), MaxLineBytes+lineBreakBytes)
 	lineNum := 0
 	seenContent := false
 	seenDocMarker := false

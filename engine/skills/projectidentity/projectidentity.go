@@ -17,6 +17,7 @@ package projectidentity
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -59,11 +60,23 @@ func (DirectoryName) Identify(q skills.ProjectQuery) (skills.ProjectID, bool, er
 // a .git file in a repository one has only checked out cannot make the program read the config of
 // a directory that is no repository's. Git itself follows the same pointers and checks the same
 // thing.
-type GitOrigin struct{}
+type GitOrigin struct {
+	// Stat looks at a file or directory of the repository, and is os.Stat when it is nil: the
+	// seam through which a test makes a stat fail in the way a platform's would, without a
+	// directory that only some systems can build.
+	Stat func(path string) (fs.FileInfo, error)
+}
+
+func (g GitOrigin) stat(path string) (fs.FileInfo, error) {
+	if g.Stat != nil {
+		return g.Stat(path)
+	}
+	return os.Stat(path)
+}
 
 // Identify is skills.ProjectIdentity.
-func (GitOrigin) Identify(q skills.ProjectQuery) (skills.ProjectID, bool, error) {
-	commonDir, found, err := commonGitDir(q.Dir)
+func (g GitOrigin) Identify(q skills.ProjectQuery) (skills.ProjectID, bool, error) {
+	commonDir, found, err := g.commonGitDir(q.Dir)
 	if err != nil || !found {
 		return "", false, err
 	}
@@ -84,15 +97,15 @@ func (GitOrigin) Identify(q skills.ProjectQuery) (skills.ProjectID, bool, error)
 
 // commonGitDir finds the git directory that holds the config of the repository dir is in, and
 // reports false when dir is in none.
-func commonGitDir(dir string) (string, bool, error) {
+func (g GitOrigin) commonGitDir(dir string) (string, bool, error) {
 	for cur := dir; ; {
 		dotGit := filepath.Join(cur, ".git")
-		info, err := os.Stat(dotGit)
+		info, err := g.stat(dotGit)
 		switch {
 		case err == nil && info.IsDir():
 			return dotGit, true, nil
 		case err == nil:
-			return commonDirOfPointer(dotGit, cur)
+			return g.commonDirOfPointer(dotGit, cur)
 		case !os.IsNotExist(err):
 			// The search goes through every directory above dir, so the one it names is the one
 			// that stopped it. Naming the project is the way past it: the chain asks the person's
@@ -110,7 +123,7 @@ func commonGitDir(dir string) (string, bool, error) {
 // commonDirOfPointer follows the .git file of a linked worktree or a submodule: its gitdir line
 // names the git directory of the worktree, and the commondir file in that directory, relative to
 // it, names the shared one. Without a commondir file the git directory is the shared one.
-func commonDirOfPointer(gitFile, root string) (string, bool, error) {
+func (g GitOrigin) commonDirOfPointer(gitFile, root string) (string, bool, error) {
 	raw, err := os.ReadFile(gitFile)
 	if err != nil {
 		return "", false, fmt.Errorf("reading %s: %w", gitFile, unwrapPathError(err))
@@ -123,7 +136,7 @@ func commonDirOfPointer(gitFile, root string) (string, bool, error) {
 	if !filepath.IsAbs(gitDir) {
 		gitDir = filepath.Join(root, gitDir)
 	}
-	if err := requireGitDir(gitFile, gitDir); err != nil {
+	if err := g.requireGitDir(gitFile, gitDir); err != nil {
 		return "", false, err
 	}
 	pointer := filepath.Join(gitDir, "commondir")
@@ -142,20 +155,19 @@ func commonDirOfPointer(gitFile, root string) (string, bool, error) {
 		target = filepath.Join(gitDir, target)
 	}
 	target = filepath.Clean(target)
-	if err := requireGitDir(gitFile, target); err != nil {
+	if err := g.requireGitDir(gitFile, target); err != nil {
 		return "", false, err
 	}
 	return target, true, nil
 }
 
+// wayOn is how every refusal of a pointer ends: the project can be named without looking.
+const wayOn = "give --project-id to name the project"
+
 // requireGitDir says why dir, which the pointer file names, cannot be the git directory it is
-// followed to, in the words of the case: its HEAD is missing (the directory is gone or was never
-// a git directory), its HEAD is a directory, or its HEAD cannot be looked at. Each refuses, and each
-// gives the way on, which is to name the project.
-func requireGitDir(pointerFile, dir string) error {
-	head := filepath.Join(dir, "HEAD")
-	info, err := os.Stat(head)
-	const wayOn = "give --project-id to name the project"
+// followed to, by what its HEAD is: missing, a directory, or not to be looked at.
+func (g GitOrigin) requireGitDir(pointerFile, dir string) error {
+	info, err := g.stat(filepath.Join(dir, "HEAD"))
 	switch {
 	case err == nil && info.IsDir():
 		return fmt.Errorf("%s points to %s, which is not a git directory (its HEAD is a directory); %s", pointerFile, dir, wayOn)

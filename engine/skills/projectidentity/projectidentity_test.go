@@ -156,9 +156,8 @@ func TestGitOriginSaysItCannotTellWhenAPointerLeadsToNoGitDirectory(t *testing.T
 	hostileConfig := originConfig("https://github.com/evil/trap.git")
 	// Each case says its own reason, not another's.
 	wantReason := map[string]string{
-		"the git directory is gone":    "it has no HEAD",
-		"the HEAD is a directory":      "its HEAD is a directory",
-		"the HEAD cannot be looked at": "whose HEAD cannot be looked at",
+		"the git directory is gone": "it has no HEAD",
+		"the HEAD is a directory":   "its HEAD is a directory",
 	}
 	for name, build := range map[string]func(t *testing.T) (dir, gitFile, named string){
 		"the git directory is gone": func(t *testing.T) (string, string, string) {
@@ -192,19 +191,6 @@ func TestGitOriginSaysItCannotTellWhenAPointerLeadsToNoGitDirectory(t *testing.T
 				t.Fatal(err)
 			}
 			put(t, filepath.Join(gitDir, "config"), hostileConfig)
-			put(t, filepath.Join(dir, ".git"), "gitdir: "+gitDir+"\n")
-			return dir, filepath.Join(dir, ".git"), gitDir
-		},
-		"the HEAD cannot be looked at": func(t *testing.T) (string, string, string) {
-			dir := filepath.Join(t.TempDir(), "demo")
-			gitDir := filepath.Join(t.TempDir(), "gitdir")
-			// A HEAD that links to itself cannot be looked at, whoever asks (root included).
-			if err := os.MkdirAll(gitDir, 0o755); err != nil {
-				t.Fatal(err)
-			}
-			if err := os.Symlink("HEAD", filepath.Join(gitDir, "HEAD")); err != nil {
-				t.Skipf("no symlink: %v", err)
-			}
 			put(t, filepath.Join(dir, ".git"), "gitdir: "+gitDir+"\n")
 			return dir, filepath.Join(dir, ".git"), gitDir
 		},
@@ -243,6 +229,51 @@ func TestGitOriginSaysItCannotTellWhenAPointerLeadsToNoGitDirectory(t *testing.T
 				t.Errorf("Chain with --project-id = %q, %v, %v, want it answered as given", id, ok, err)
 			}
 		})
+	}
+}
+
+// A HEAD that cannot be looked at is told as that, whatever the system says: the stat is injected,
+// so the test does not depend on how a platform refuses one. The error is kept, and the way on is
+// the same as for any pointer that leads nowhere.
+func TestGitOriginSaysItCannotTellWhenTheHeadCannotBeLookedAt(t *testing.T) {
+	base := t.TempDir()
+	dir := filepath.Join(base, "demo")
+	gitDir := filepath.Join(base, "gitdir")
+	put(t, filepath.Join(gitDir, "HEAD"), "ref: refs/heads/main\n")
+	put(t, filepath.Join(gitDir, "config"), originConfig("https://github.com/acme/demo.git"))
+	gitFile := filepath.Join(dir, ".git")
+	put(t, gitFile, "gitdir: "+gitDir+"\n")
+	denied := &fs.PathError{Op: "stat", Path: filepath.Join(gitDir, "HEAD"), Err: fs.ErrPermission}
+	source := projectidentity.GitOrigin{Stat: func(path string) (fs.FileInfo, error) {
+		if path == filepath.Join(gitDir, "HEAD") {
+			return nil, denied
+		}
+		return os.Stat(path)
+	}}
+
+	id, ok, err := source.Identify(skills.ProjectQuery{Dir: dir})
+	if err == nil || ok || id != "" {
+		t.Fatalf("GitOrigin = %q, %v, %v, want an error", id, ok, err)
+	}
+	if !errors.Is(err, fs.ErrPermission) {
+		t.Errorf("the error %q does not wrap fs.ErrPermission", err)
+	}
+	for _, want := range []string{gitFile, gitDir, "whose HEAD cannot be looked at", "--project-id"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("the error %q does not say %q", err, want)
+		}
+	}
+	// The real file system, where a HEAD that links to itself cannot be looked at whoever asks.
+	loop := filepath.Join(base, "loop")
+	if err := os.MkdirAll(loop, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("HEAD", filepath.Join(loop, "HEAD")); err != nil {
+		return
+	}
+	put(t, filepath.Join(dir, ".git"), "gitdir: "+loop+"\n")
+	if _, _, err := (projectidentity.GitOrigin{}).Identify(skills.ProjectQuery{Dir: dir}); err == nil || !strings.Contains(err.Error(), "whose HEAD cannot be looked at") {
+		t.Errorf("a HEAD that links to itself: error = %v, want it to say the HEAD cannot be looked at", err)
 	}
 }
 
