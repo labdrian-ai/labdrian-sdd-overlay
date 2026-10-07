@@ -115,10 +115,19 @@ func registryIDs(t *testing.T, bin, regPath string) []string {
 		t.Fatalf("skills list --registry %s: %v\n%s", regPath, err, errBuf.String())
 	}
 	var ids []string
-	for _, line := range strings.Split(strings.TrimRight(out.String(), "\n"), "\n") {
-		if id, _, ok := strings.Cut(line, "\t"); ok {
-			ids = append(ids, id)
+	lines := strings.Split(strings.TrimRight(out.String(), "\n"), "\n")
+	if strings.TrimSpace(out.String()) == "" {
+		lines = nil
+	}
+	for _, line := range lines {
+		id, _, ok := strings.Cut(line, "\t")
+		if !ok {
+			t.Fatalf("skills list --registry %s: the line %q has no tab, so it is not the line of a skill:\n%s", regPath, line, out.String())
 		}
+		ids = append(ids, id)
+	}
+	if len(ids) == 0 {
+		t.Fatalf("skills list --registry %s listed no skill, so a comparison with the manifest would prove nothing:\n%s", regPath, out.String())
 	}
 	sort.Strings(ids)
 	return ids

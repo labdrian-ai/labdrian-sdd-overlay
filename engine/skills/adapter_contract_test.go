@@ -6,7 +6,6 @@ package skills_test
 // double is told here, not by a domain test that quietly tests a stale copy.
 
 import (
-	"io/fs"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -116,5 +115,3 @@ func TestTheProjectFSDoubleResolvesAPathAsTheProjectAdapterDoes(t *testing.T) {
 		t.Errorf("the adapter resolves to %q, the double to %q, want %q", fromAdapter, fromDouble, want)
 	}
 }
-
-var _ fs.FileInfo = nil

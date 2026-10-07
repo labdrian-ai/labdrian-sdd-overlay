@@ -1,12 +1,11 @@
 package main
 
-// The verbs that sit behind a use case are reached through the entry of the program, runSkillsCore,
-// which wires the real adapters and the real locker: each verb the table names is the verb the
+// The verbs that sit behind a use case are reached through the table of the program, which wires the
+// real adapters and the real locker (the project verbs through runSkillsCore itself): each verb the table names is the verb the
 // person typed, and what it tells is its own. The adapters themselves are tested one by one in
 // skills_install_cli_test.go and skills_project_cli_test.go.
 
 import (
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -24,25 +23,20 @@ func throughTheProgram(verb string, args []string) verbRun {
 	return r
 }
 
-// inDirectory makes dir the working directory of the process until the test ends.
-func inDirectory(t *testing.T, dir string) {
-	t.Helper()
-	old, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Chdir(dir); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = os.Chdir(old) })
+// throughTheTable runs a verb as the program does, by the name the table gives it and with the
+// adapters and the locker the program wires, except for the working directory, which is the one the
+// test names: a test must not change the directory of the process.
+func throughTheTable(verb, cwd string, args []string) verbRun {
+	deps := newSkillsDeps()
+	deps.Cwd = func() (string, error) { return cwd, nil }
+	return runSkillsVerb(skillsCLIVerbs[verb], deps, args...)
 }
 
 func TestInstallAndAdoptAreEachTheVerbTheTableNamesThem(t *testing.T) {
 	t.Run("install writes what the registry admits", func(t *testing.T) {
 		w := newInstallCLIWorld(t)
-		inDirectory(t, w.project)
 
-		r := throughTheProgram("install", w.args("install"))
+		r := throughTheTable("install", w.project, w.args("install"))
 
 		if r.code() != 0 || r.stdout != "installed: proj\n" || r.stderr != "" {
 			t.Errorf("exit %d, stdout %q, stderr %q, want installed: proj", r.code(), r.stdout, r.stderr)
@@ -54,10 +48,9 @@ func TestInstallAndAdoptAreEachTheVerbTheTableNamesThem(t *testing.T) {
 	t.Run("adopt records what is already there and writes nothing", func(t *testing.T) {
 		w := newInstallCLIWorld(t)
 		w.copyByHand(overlaySkillMD("proj"))
-		inDirectory(t, w.project)
 		before := w.tree()
 
-		r := throughTheProgram("adopt", w.args("adopt"))
+		r := throughTheTable("adopt", w.project, w.args("adopt"))
 
 		if r.code() != 0 || r.stdout != "adopted: proj\n" || r.stderr != "" {
 			t.Errorf("exit %d, stdout %q, stderr %q, want adopted: proj", r.code(), r.stdout, r.stderr)
@@ -137,5 +130,3 @@ func TestEveryProjectVerbExits2WhenTheProjectLockStaysTaken(t *testing.T) {
 		})
 	}
 }
-
-var _ io.Writer = (*strings.Builder)(nil)
