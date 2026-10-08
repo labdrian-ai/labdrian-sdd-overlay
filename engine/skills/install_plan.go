@@ -6,11 +6,10 @@ package skills
 // proof is the install record in the project lock (ProjectInstallEntry): the files
 // install wrote and the SHA-256 of each, checked against what is on disk now, which
 // is EvaluateOwnership's rule, extended from one SKILL.md to a tree of files. The
-// containment rules are the shared ones: resolveWritePath for every destination, so a
+// containment rules are the shared ones: writeGuard.destination for every destination, so a
 // symlinked .claude cannot aim a write out of the project or into its own skills/.
 
 import (
-	"bytes"
 	"fmt"
 	"io/fs"
 	"path/filepath"
@@ -105,8 +104,7 @@ func (p InstallPlan) verb() string {
 // the project root, the shared containment rules, and the lock as it is.
 type planContext struct {
 	in          InstallInput
-	root        string
-	resolver    RegisterInput
+	guard       writeGuard
 	lock        ProjectLock
 	procedural  map[string]bool
 	recordIndex map[string]int
@@ -123,7 +121,7 @@ func newPlanContext(in InstallInput) (*planContext, []string) {
 		return nil, []string{fmt.Sprintf("skills %s: the project directory %q is not an absolute path", verb, in.ProjectRoot)}
 	}
 	root := filepath.Clean(in.ProjectRoot)
-	c := &planContext{in: in, root: root, resolver: RegisterInput{ProjectRoot: root, ResolvePath: in.ResolvePath}, lock: ProjectLock{Version: 1}}
+	c := &planContext{in: in, guard: writeGuard{root: root, resolve: in.ResolvePath}, lock: ProjectLock{Version: 1}}
 	if in.LockExists {
 		parsed, err := ParseProjectLock(in.LockData)
 		if err != nil {
@@ -188,7 +186,7 @@ func (c *planContext) lockWrite(installs []ProjectInstallEntry) (ProjectWrite, [
 	if err != nil {
 		return ProjectWrite{}, []string{fmt.Sprintf("skills %s: %v", verb, err)}
 	}
-	lockAbs, _, err := resolveWritePath(c.resolver, c.root, ProjectLockRelPath)
+	lockAbs, _, err := c.guard.destination(ProjectLockRelPath)
 	if err != nil {
 		return ProjectWrite{}, []string{fmt.Sprintf("skills %s: destination %s: %v", verb, ProjectLockRelPath, err)}
 	}
@@ -294,172 +292,4 @@ func sameRecord(a, b ProjectInstallEntry) bool {
 		}
 	}
 	return true
-}
-
-// planSkill plans one skill across the runtime directories. ok is false when it
-// added refusals; its writes and deletes must then be dropped.
-func planSkill(c *planContext, sk InstallSkill, record *ProjectInstallEntry, refusals *[]string) (writes, deletes []ProjectWrite, dirs []string, ok bool) {
-	in, resolver, root := c.in, c.resolver, c.root
-	before := len(*refusals)
-	refuse := func(format string, a ...any) {
-		*refusals = append(*refusals, fmt.Sprintf("skills %s: "+format, append([]any{in.verb()}, a...)...))
-	}
-
-	recorded := map[string]string{}
-	if record != nil {
-		for _, f := range record.Files {
-			recorded[f.Path] = f.SHA256
-		}
-	}
-	wanted := make(map[string]bool, len(sk.Files))
-	for _, f := range sk.Files {
-		wanted[f.Rel] = true
-	}
-	var dropped []string
-	for p := range recorded {
-		if !wanted[p] {
-			dropped = append(dropped, p)
-		}
-	}
-	sort.Strings(dropped)
-
-	aliased := map[string]string{}
-	for _, target := range projectTargets {
-		dirRel := target.Dir + "/" + sk.ID
-		dirAbs, resolvedDir, err := resolveWritePath(resolver, root, dirRel)
-		if err != nil {
-			refuse("destination %s: %v", dirRel, err)
-			continue
-		}
-		if other, dup := aliased[resolvedDir]; dup {
-			refuse("%s and %s resolve to the same directory, so one install would silently overwrite the other", other, dirRel)
-			continue
-		}
-		aliased[resolvedDir] = dirRel
-
-		info, err := in.Stat(dirAbs)
-		exists := err == nil
-		switch {
-		case err != nil && !isAbsent(err):
-			refuse("cannot inspect %s: %v", dirRel, err)
-			continue
-		case exists && !info.IsDir():
-			refuse("%s exists and is not a directory", dirRel)
-			continue
-		}
-		dirs = append(dirs, dirAbs)
-
-		if record == nil && exists {
-			refuse("%s already exists and was not installed by skills install (it has no install record in %s); if it is exactly the current skill, run `labdrian skills adopt --project-id %s` to take ownership of it, otherwise move it away",
-				dirRel, ProjectLockRelPath, in.ProjectID)
-			continue
-		}
-
-		// What is on disk now, for every recorded file, checked against its record.
-		current := map[string][]byte{}
-		var modes = map[string]fs.FileMode{}
-		if record != nil && exists {
-			for _, f := range record.Files {
-				rel := dirRel + "/" + f.Path
-				abs, _, err := resolveWritePath(resolver, root, rel)
-				if err != nil {
-					refuse("destination %s: %v", rel, err)
-					continue
-				}
-				data, mode, status := readInstalled(in, abs)
-				switch status {
-				case fileMissing:
-					continue
-				case fileNotRegular:
-					refuse("%s is not a regular file, although skills install wrote a file there; move it away and run install again", rel)
-					continue
-				case fileUnreadable:
-					refuse("cannot read %s", rel)
-					continue
-				}
-				if HashSkill(data) != f.SHA256 {
-					refuse("%s was edited since skills install wrote it (its bytes no longer match the install record); restore it or move it away, then run install again", rel)
-					continue
-				}
-				current[f.Path] = data
-				modes[f.Path] = mode
-			}
-		}
-
-		for _, f := range sk.Files {
-			rel := dirRel + "/" + f.Rel
-			abs, _, err := resolveWritePath(resolver, root, rel)
-			if err != nil {
-				refuse("destination %s: %v", rel, err)
-				continue
-			}
-			if _, isRecorded := recorded[f.Rel]; isRecorded && exists {
-				cur, present := current[f.Rel]
-				switch {
-				case !present:
-					// Recorded and gone: someone deleted it, and install writes it again.
-					writes = append(writes, ProjectWrite{Rel: rel, Abs: abs, Data: f.Data, Mode: f.Mode})
-				case bytes.Equal(cur, f.Data):
-					// Already what the source holds: not written.
-				default:
-					writes = append(writes, ProjectWrite{Rel: rel, Abs: abs, Data: f.Data, Mode: f.Mode, Backup: cloneProjectBytes(cur)})
-				}
-				continue
-			}
-			if exists {
-				// Not recorded. If anything is there, it is not ours to overwrite.
-				if _, err := in.Stat(abs); err == nil {
-					refuse("%s exists but is not recorded as installed by skills install, and the source now wants to write it; move it away and run install again", rel)
-					continue
-				} else if !isAbsent(err) {
-					refuse("cannot inspect %s: %v", rel, err)
-					continue
-				}
-			}
-			writes = append(writes, ProjectWrite{Rel: rel, Abs: abs, Data: f.Data, Mode: f.Mode})
-		}
-
-		for _, p := range dropped {
-			cur, present := current[p]
-			if !present {
-				continue
-			}
-			rel := dirRel + "/" + p
-			abs, _, err := resolveWritePath(resolver, root, rel)
-			if err != nil {
-				refuse("destination %s: %v", rel, err)
-				continue
-			}
-			deletes = append(deletes, ProjectWrite{Rel: rel, Abs: abs, Mode: modes[p], Backup: cloneProjectBytes(cur)})
-		}
-	}
-	return writes, deletes, dirs, len(*refusals) == before
-}
-
-type installedFile int
-
-const (
-	fileReadable installedFile = iota
-	fileMissing
-	fileNotRegular
-	fileUnreadable
-)
-
-// readInstalled reads one file of an installed skill through the planner's probes.
-func readInstalled(in InstallInput, abs string) ([]byte, fs.FileMode, installedFile) {
-	info, err := in.Stat(abs)
-	if err != nil {
-		if isAbsent(err) {
-			return nil, 0, fileMissing
-		}
-		return nil, 0, fileUnreadable
-	}
-	if !info.Mode().IsRegular() {
-		return nil, 0, fileNotRegular
-	}
-	data, err := in.ReadFile(abs)
-	if err != nil {
-		return nil, 0, fileUnreadable
-	}
-	return data, info.Mode().Perm(), fileReadable
 }

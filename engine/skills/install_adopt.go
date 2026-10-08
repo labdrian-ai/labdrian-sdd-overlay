@@ -116,7 +116,7 @@ func checkAdoptable(c *planContext, sk InstallSkill, refusals *[]string) (presen
 	aliased := map[string]string{}
 	for _, target := range projectTargets {
 		dirRel := target.Dir + "/" + sk.ID
-		dirAbs, resolvedDir, err := resolveWritePath(c.resolver, c.root, dirRel)
+		dirAbs, resolvedDir, err := c.guard.destination(dirRel)
 		if err != nil {
 			refuse("destination %s: %v", dirRel, err)
 			continue

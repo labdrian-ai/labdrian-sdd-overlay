@@ -78,14 +78,35 @@ func SyncManifest(reg Registry, manifest []byte) ([]byte, ChangeReport, error) {
 	if err != nil {
 		return nil, ChangeReport{}, fmt.Errorf("sync: reading original manifest: %w", err)
 	}
+	report := changesFromManifest(reg, origMV)
 
+	before, after, anchorFound := partitionAroundAnchor(string(manifest))
+	newText := assembleManifest(before, skillBlock(reg), after, anchorFound)
+
+	// A buggy regen must NEVER reach disk. If Diff is non-empty, we return an
+	// error — SyncCore will exit 1 without touching overlay.manifest.
+	if err := checkRegeneration(reg, newText); err != nil {
+		return nil, ChangeReport{}, err
+	}
+
+	// Byte no-op.
+	if bytes.Equal(newText, manifest) {
+		return manifest, ChangeReport{}, nil
+	}
+
+	return newText, report, nil
+}
+
+// changesFromManifest is what a sync changes: the registry paths the original manifest lacks
+// (Added), the manifest dirs the registry lacks (Dropped), and the dirs present in both whose tag
+// does not agree with the registry, or whose rows conflict (Retagged).
+func changesFromManifest(reg Registry, origMV ManifestView) ChangeReport {
 	// Index registry by path for O(1) lookups.
 	regMap := make(map[string]Entry, len(reg.Skills))
 	for _, e := range reg.Skills {
 		regMap[e.Path] = e
 	}
 
-	// ── Build ChangeReport ─────────────────────────────────────────────────────
 	var report ChangeReport
 
 	// Added: in registry but absent from original manifest.
@@ -112,51 +133,55 @@ func SyncManifest(reg Registry, manifest []byte) ([]byte, ChangeReport, error) {
 			report.Retagged = append(report.Retagged, dir)
 		}
 	}
+	return report
+}
 
-	// ── Partition lines ────────────────────────────────────────────────────────
+// partitionAroundAnchor splits the manifest into the lines that are not skill rows, before and
+// after the first skill row (the anchor), and says whether there was one. Every skill row is
+// dropped: the block is rebuilt from the registry.
+func partitionAroundAnchor(manifest string) (before, after []string, anchorFound bool) {
 	// strings.Split on a \n-terminated file always yields a trailing "" element.
-	rawLines := strings.Split(string(manifest), "\n")
-
-	var preservedBefore, preservedAfter []string
-	anchorFound := false
-
-	for _, line := range rawLines {
+	for _, line := range strings.Split(manifest, "\n") {
 		if _, ok := isSkillRow(line); ok {
-			if !anchorFound {
-				anchorFound = true
-			}
-			// Skip every original skill row; the block is rebuilt from the registry.
+			anchorFound = true
+			continue
+		}
+		if anchorFound {
+			after = append(after, line)
 		} else {
-			if !anchorFound {
-				preservedBefore = append(preservedBefore, line)
-			} else {
-				preservedAfter = append(preservedAfter, line)
-			}
+			before = append(before, line)
 		}
 	}
+	return before, after, anchorFound
+}
 
-	// ── Build skill block ──────────────────────────────────────────────────────
-	skillBlock := make([]string, 0, len(reg.Skills))
+// skillBlock is the skill rows of the registry, in registry order.
+func skillBlock(reg Registry) []string {
+	block := make([]string, 0, len(reg.Skills))
 	for _, e := range reg.Skills {
-		skillBlock = append(skillBlock, e.Path+"/SKILL.md "+registryTag(e))
+		block = append(block, e.Path+"/SKILL.md "+registryTag(e))
 	}
+	return block
+}
 
-	// ── Assemble output lines ──────────────────────────────────────────────────
+// assembleManifest puts the block where the anchor was, or after every preserved line when the
+// manifest had no skill row, and ends the text with exactly one newline.
+func assembleManifest(before, block, after []string, anchorFound bool) []byte {
 	var outLines []string
 
 	if anchorFound {
-		outLines = append(outLines, preservedBefore...)
-		outLines = append(outLines, skillBlock...)
-		outLines = append(outLines, preservedAfter...)
+		outLines = append(outLines, before...)
+		outLines = append(outLines, block...)
+		outLines = append(outLines, after...)
 	} else {
 		// No anchor: strip trailing "" artifacts (trailing newline from split) from
-		// preservedBefore so we don't emit a blank line before the skill block.
-		pb := preservedBefore
+		// before so we don't emit a blank line before the skill block.
+		pb := before
 		for len(pb) > 0 && pb[len(pb)-1] == "" {
 			pb = pb[:len(pb)-1]
 		}
 		outLines = append(outLines, pb...)
-		outLines = append(outLines, skillBlock...)
+		outLines = append(outLines, block...)
 	}
 
 	// Normalise to exactly one trailing newline:
@@ -166,23 +191,18 @@ func SyncManifest(reg Registry, manifest []byte) ([]byte, ChangeReport, error) {
 	}
 	outLines = append(outLines, "")
 
-	newText := []byte(strings.Join(outLines, "\n"))
+	return []byte(strings.Join(outLines, "\n"))
+}
 
-	// ── Post-condition self-check ──────────────────────────────────────────────
-	// A buggy regen must NEVER reach disk. If Diff is non-empty, we return an
-	// error — SyncCore will exit 1 without touching overlay.manifest.
-	mv2, err := loadManifestViewReader(bytes.NewReader(newText))
+// checkRegeneration is the post-condition: the regenerated manifest parses, and its Diff against
+// the registry is empty.
+func checkRegeneration(reg Registry, newText []byte) error {
+	mv, err := loadManifestViewReader(bytes.NewReader(newText))
 	if err != nil {
-		return nil, ChangeReport{}, fmt.Errorf("sync: post-condition parse: %w", err)
+		return fmt.Errorf("sync: post-condition parse: %w", err)
 	}
-	if divs := Diff(reg, mv2); len(divs) > 0 {
-		return nil, ChangeReport{}, fmt.Errorf("sync: post-condition failed: %v", divs)
+	if divs := Diff(reg, mv); len(divs) > 0 {
+		return fmt.Errorf("sync: post-condition failed: %v", divs)
 	}
-
-	// ── Byte no-op ─────────────────────────────────────────────────────────────
-	if bytes.Equal(newText, manifest) {
-		return manifest, ChangeReport{}, nil
-	}
-
-	return newText, report, nil
+	return nil
 }

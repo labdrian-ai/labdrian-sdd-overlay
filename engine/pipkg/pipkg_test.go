@@ -514,6 +514,28 @@ func TestPipkgBuild_OverlapAndStaleDirSafety(t *testing.T) {
 	}
 }
 
+// TestPipkgBuild_RefusesADestinationBehindADanglingSymlink: a destination whose ancestry holds a
+// symlink with no target yet cannot be told apart from one inside the overlay root, because
+// creating it would create the target. The overlap check therefore cannot decide, and the build
+// refuses rather than guess; nothing is created through the link.
+func TestPipkgBuild_RefusesADestinationBehindADanglingSymlink(t *testing.T) {
+	overlayRoot, registryPath := fixtureOverlay(t)
+	notYet := filepath.Join(overlayRoot, "not-yet")
+	link := filepath.Join(t.TempDir(), "dangling")
+	if err := os.Symlink(notYet, link); err != nil {
+		t.Fatal(err)
+	}
+	dest := filepath.Join(link, "labdrian-pi")
+
+	err := pipkg.Build(fileRegistries, overlayRoot, registryPath, dest)
+	if err == nil || !strings.Contains(err.Error(), "resolving destination") {
+		t.Fatalf("Build(dest behind a dangling symlink) = %v, want a refusal that says the destination could not be resolved", err)
+	}
+	if _, statErr := os.Lstat(notYet); !os.IsNotExist(statErr) {
+		t.Errorf("nothing may be created through the link, but %s exists (err=%v)", notYet, statErr)
+	}
+}
+
 // runWithTimeout fails unless fn returns within 5s and its error mentions want.
 func runWithTimeout(t *testing.T, fn func() error, want string) {
 	t.Helper()

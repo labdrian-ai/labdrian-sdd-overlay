@@ -68,6 +68,7 @@ var rings = map[string]archguard.Ring{
 	"jsonstrict":                archguard.Domain,
 	"memoryscope":               archguard.Domain,
 	"pathguard":                 archguard.Domain,
+	"pathguard/fsresolve":       archguard.Adapter,
 	"pipkg":                     archguard.Adapter,
 	"prespec":                   archguard.Domain,
 	"projection":                archguard.Domain,
@@ -107,14 +108,7 @@ var rings = map[string]archguard.Ring{
 // known ones are not listed below and are owed to their units all the same:
 //
 //   - cmd: skillsLockWait and the other global seams of main.go (H31)
-var knownDebt = archguard.Debt{
-	// pathguard: the file system half (symlink resolution) moves to
-	// pathguard/fsresolve, leaving the pure containment rules.
-	"pathguard": {
-		"os":                         "H22",
-		"path/filepath.EvalSymlinks": "H22",
-	},
-}
+var knownDebt = archguard.Debt{}
 
 // TestArchitectureFollowsTheDependencyRule is the fitness function: it fails on
 // a package without a ring, on a violation that is not known debt, and on debt

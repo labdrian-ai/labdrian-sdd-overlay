@@ -385,17 +385,25 @@ func TestAWriteThatFailsLeavesTheProjectAsItWasAndTheErrorIsAnExecutionError(t *
 	sameTree(t, before, w.snapshot())
 }
 
-// The executor says what it could not put back on its own stream; the use case does not print it,
-// it hands it over, in the order it was said.
-func TestTheReportOfTheExecutorTravelsWithTheError(t *testing.T) {
+// The executor names what it could not put back in the error it returns; the use case does not
+// print it, it hands it over typed, in the order the rollback found it.
+func TestThePathsARollbackCouldNotRestoreTravelWithTheError(t *testing.T) {
 	w := newInstallWorld(t, map[string]string{"SKILL.md": "content"})
 	w.project = &failingProject{ProjectFS: skillsfs.Project{}, failRename: true, failRemoveRollback: true}
 
 	_, err := w.install()
 
 	var failed *ExecutionError
-	if !errors.As(err, &failed) || !errors.Is(err, skills.ErrRollbackIncomplete) || !strings.Contains(failed.Report, "error: rollback incomplete: ") {
-		t.Fatalf("err = %v, want an *ExecutionError that carries ErrRollbackIncomplete and the paths the executor reported", err)
+	if !errors.As(err, &failed) || !errors.Is(err, skills.ErrRollbackIncomplete) {
+		t.Fatalf("err = %v, want an *ExecutionError that carries ErrRollbackIncomplete", err)
+	}
+	if len(failed.Unrestored) == 0 {
+		t.Errorf("Unrestored is empty, want the repo-relative paths the rollback could not restore")
+	}
+	for _, rel := range failed.Unrestored {
+		if filepath.IsAbs(rel) || strings.HasPrefix(rel, "/") {
+			t.Errorf("Unrestored holds %q, want repo-relative paths", rel)
+		}
 	}
 }
 

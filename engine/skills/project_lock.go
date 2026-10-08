@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/pathguard"
 )
 
 // ProceduralAuthor is the fixed metadata.author value stamped into every
@@ -601,7 +603,7 @@ func EvaluateOwnership(root string, e ProjectLockEntry, readFile func(string) ([
 		if err != nil {
 			return Ownership{Reason: "unresolved-target " + target}
 		}
-		if !withinRoot(filepath.Clean(resolvedRoot), filepath.Clean(resolved)) {
+		if !pathguard.WithinRoot(filepath.Clean(resolvedRoot), filepath.Clean(resolved)) {
 			return Ownership{Reason: "escapes-root " + target}
 		}
 		data, err := readFile(abs)
@@ -643,9 +645,10 @@ func EvaluateOwnership(root string, e ProjectLockEntry, readFile func(string) ([
 // names root itself rather than a path strictly below it (".", "./" and
 // "././" all clean to ".", which resolves to root and would hand a directory
 // to readFile — review-slice-3a-ii-round-2, SEC-3). That last case needs no
-// branch of its own: withinRoot is strictly-below, so it refuses root itself. The ".." check is explicit and precedes the containment
-// test because filepath.Join cleans "../.." away, so a target could resolve
-// back inside root while still meaning something the lock never recorded.
+// branch of its own: pathguard.WithinRoot is strictly-below, so it refuses
+// root itself. The ".." check is explicit and precedes the containment test
+// because filepath.Join cleans "../.." away, so a target could resolve back
+// inside root while still meaning something the lock never recorded.
 //
 // This guard is LEXICAL ONLY: it cannot see a symlink, so a target whose
 // directory components leave root through one still passes here. Resolved
@@ -663,13 +666,13 @@ func resolveTarget(root, target string) (string, bool) {
 	}
 	cleanRoot := filepath.Clean(root)
 	abs := filepath.Clean(filepath.Join(cleanRoot, filepath.FromSlash(target)))
-	if !withinRoot(cleanRoot, abs) {
+	if !pathguard.WithinRoot(cleanRoot, abs) {
 		return "", false
 	}
 	return abs, true
 }
 
-// withinRoot moved to pathguard.go in slice 3b-i so PlanInstall's R-055
+// The containment test is pathguard.WithinRoot, so PlanInstall's R-055
 // guard, resolveTarget's lexical guard, EvaluateOwnership's resolved check
-// and the project-register write path all share one definition. It keeps its
-// strictly-below semantics unchanged.
+// and the project-register write path all share one definition: strictly
+// below the root.

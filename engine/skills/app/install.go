@@ -1,7 +1,6 @@
 package app
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -173,35 +172,17 @@ func runPlanned(verb string, plan func(skills.InstallInput) (skills.InstallPlan,
 	}
 	res.UnreadWarning = warning
 
-	ops, err := skills.PlanInstall(reg, projectID, in.SourceRoot, root)
-	if errors.Is(err, skills.ErrNoSourceRoot) {
-		return res, &SourceRootRequiredError{Verb: verb}
-	}
+	ops, err := admittedSources(verb, reg, projectID, in.SourceRoot, root)
 	if err != nil {
-		return res, &PlanError{Verb: verb, Err: err}
+		return res, err
 	}
 	if len(ops) == 0 {
 		res.NoneAdmitted = true
 		return res, nil
 	}
-
-	// Every source must be there before any is read (R-053).
-	var missing []skills.CopyOp
-	for _, op := range ops {
-		if info, err := p.Project.Stat(op.Src); err != nil || !info.IsDir() {
-			missing = append(missing, op)
-		}
-	}
-	if len(missing) > 0 {
-		return res, &SourcesMissingError{Missing: missing}
-	}
-	sources := make([]skills.InstallSkill, 0, len(ops))
-	for _, op := range ops {
-		files, err := p.Tree.ReadSkillSource(op.Src)
-		if err != nil {
-			return res, &SourceReadError{ID: op.SkillID, Dir: op.Src, Err: err}
-		}
-		sources = append(sources, skills.InstallSkill{ID: op.SkillID, Files: files})
+	sources, err := readSources(p, ops)
+	if err != nil {
+		return res, err
 	}
 
 	// The lock is optional: the first install in a project creates it.
@@ -224,12 +205,49 @@ func runPlanned(verb string, plan func(skills.InstallInput) (skills.InstallPlan,
 	if len(refusals) > 0 {
 		return res, &PlanRefusal{Verb: verb, Reasons: refusals}
 	}
-	var report bytes.Buffer
-	if err := skills.ExecuteInstallPlan(planned, root, p.Project, &report); err != nil {
-		return res, &ExecutionError{Err: err, Report: report.String()}
+	if err := skills.ExecuteInstallPlan(planned, root, p.Project); err != nil {
+		return res, executionFailure(err)
 	}
 	res.Skills, res.Notes = planned.Skills, planned.Notes
 	return res, nil
+}
+
+// admittedSources is what the registry admits to the project: the copies the install would make.
+// A planner that refuses a path is a *PlanError; an admitted skill with no source root to read it
+// from is a *SourceRootRequiredError.
+func admittedSources(verb string, reg skills.Registry, projectID skills.ProjectID, sourceRoot, root string) ([]skills.CopyOp, error) {
+	ops, err := skills.PlanInstall(reg, projectID, sourceRoot, root)
+	if errors.Is(err, skills.ErrNoSourceRoot) {
+		return nil, &SourceRootRequiredError{Verb: verb}
+	}
+	if err != nil {
+		return nil, &PlanError{Verb: verb, Err: err}
+	}
+	return ops, nil
+}
+
+// readSources reads the source of every skill the copies name. Every source must be there before
+// any is read (R-053): the ones that are not are a *SourcesMissingError, and the first that cannot
+// be read is a *SourceReadError.
+func readSources(p InstallPorts, ops []skills.CopyOp) ([]skills.InstallSkill, error) {
+	var missing []skills.CopyOp
+	for _, op := range ops {
+		if info, err := p.Project.Stat(op.Src); err != nil || !info.IsDir() {
+			missing = append(missing, op)
+		}
+	}
+	if len(missing) > 0 {
+		return nil, &SourcesMissingError{Missing: missing}
+	}
+	sources := make([]skills.InstallSkill, 0, len(ops))
+	for _, op := range ops {
+		files, err := p.Tree.ReadSkillSource(op.Src)
+		if err != nil {
+			return nil, &SourceReadError{ID: op.SkillID, Dir: op.Src, Err: err}
+		}
+		sources = append(sources, skills.InstallSkill{ID: op.SkillID, Files: files})
+	}
+	return sources, nil
 }
 
 // identify asks the identity port which project dir is, with the id the person gave.

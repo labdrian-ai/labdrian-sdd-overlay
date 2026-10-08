@@ -9,6 +9,7 @@ import (
 	"runtime"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/pathguard"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/pathguard/fsresolve"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/shaper"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/statestore"
 )
@@ -116,7 +117,7 @@ func (s ContainedSource) ReadContained(worktreeRoot, relPath, label string) ([]b
 	if err != nil {
 		return nil, fmt.Errorf("could not prove containment of %q: %w", relPath, err)
 	}
-	resolvedRoot, err := pathguard.ResolvePathKeepingMissing(worktreeRoot)
+	resolvedRoot, err := fsresolve.KeepingMissing(worktreeRoot)
 	if err != nil {
 		return nil, fmt.Errorf("could not prove containment of %q: %w", relPath, err)
 	}

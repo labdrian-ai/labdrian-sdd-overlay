@@ -17,7 +17,6 @@ package skills
 // and nothing is written unless every target of every skill passes.
 
 import (
-	"bytes"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -25,6 +24,8 @@ import (
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/pathguard/fsresolve"
 )
 
 // ownFixture is a project directory that install plans and executes against.
@@ -64,7 +65,7 @@ func (f *ownFixture) input(skills ...InstallSkill) InstallInput {
 		Skills:      skills,
 		ReadFile:    os.ReadFile,
 		Stat:        os.Stat,
-		ResolvePath: resolvePathKeepingMissing,
+		ResolvePath: fsresolve.KeepingMissing,
 		ReadDir:     os.ReadDir,
 	}
 	data, err := os.ReadFile(filepath.Join(f.root, filepath.FromSlash(ProjectLockRelPath)))
@@ -88,9 +89,8 @@ func (f *ownFixture) install(skills ...InstallSkill) InstallPlan {
 	if len(refusals) != 0 {
 		f.t.Fatalf("install refused: %v", refusals)
 	}
-	var errOut bytes.Buffer
-	if err := ExecuteInstallPlan(plan, f.root, testProjectFS(), &errOut); err != nil {
-		f.t.Fatalf("install failed: %v (stderr %q)", err, errOut.String())
+	if err := ExecuteInstallPlan(plan, f.root, testProjectFS()); err != nil {
+		f.t.Fatalf("install failed: %v", err)
 	}
 	return plan
 }
@@ -226,8 +226,7 @@ func TestInstall_ASecondInstallOfTheSameSourceWritesNothingAndSaysSo(t *testing.
 	if len(plan.Writes) != 0 || len(plan.Deletes) != 0 || plan.Lock.Rel != "" {
 		t.Errorf("the plan has %d writes, %d deletes, lock %q; want none", len(plan.Writes), len(plan.Deletes), plan.Lock.Rel)
 	}
-	var errOut bytes.Buffer
-	if err := ExecuteInstallPlan(plan, f.root, testProjectFS(), &errOut); err != nil {
+	if err := ExecuteInstallPlan(plan, f.root, testProjectFS()); err != nil {
 		t.Fatal(err)
 	}
 	assertSameTree(t, before, f.snapshot())
@@ -611,5 +610,33 @@ func TestInstall_KeepsTheProceduralEntriesOfTheSameLock(t *testing.T) {
 	lock := f.lock()
 	if len(lock.Skills) != 1 || lock.Skills[0].ID != "tidy" || !reflect.DeepEqual(installIDs(lock), []string{"pdf"}) {
 		t.Errorf("lock = %+v, want the procedural entry and the install record", lock)
+	}
+}
+
+// TestPlanInstallRefusesDestinationEqualToSkillsRoot is TQ-3: the deliberate
+// tightening the containment extraction carried (a dst EQUAL to the skills root
+// was admitted by the old inline prefix check and is refused by the shared
+// strictly-below pathguard.WithinRoot) had no test at the PlanInstall level,
+// only at the helper level. install_test.go is the untouched regression net,
+// so this lives here.
+func TestPlanInstallRefusesDestinationEqualToSkillsRoot(t *testing.T) {
+	reg := Registry{Version: "1", Skills: []Entry{{
+		ID:   ".",
+		Path: "skills/whatever",
+		Install: Install{
+			DefaultScope:    "project",
+			AllowedProjects: []string{"proj"},
+		},
+	}}}
+
+	ops, err := PlanInstall(reg, "proj", "/overlay", "/target-repo")
+	if err == nil {
+		t.Fatalf("expected a refusal for a destination equal to the skills root, got %d ops", len(ops))
+	}
+	if !strings.Contains(err.Error(), "escapes target skills root") {
+		t.Errorf("refusal %q does not name the target-root branch", err.Error())
+	}
+	if ops != nil {
+		t.Errorf("a refusal must return no ops, got %v", ops)
 	}
 }

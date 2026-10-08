@@ -1436,7 +1436,7 @@ func TestResolveTarget_ContainmentGuard(t *testing.T) {
 
 // TestResolveTarget_DotTargetGuard is the witness for the strictly-below half
 // of the containment check (SEC-3): ".", "./" and "././" all clean to ".",
-// which resolves to root itself. Deleting withinRoot's `p != cleanRoot`
+// which resolves to root itself. Deleting pathguard.WithinRoot's `p != cleanRoot`
 // clause alone turns this test (and its EvaluateOwnership counterpart) red.
 func TestResolveTarget_DotTargetGuard(t *testing.T) {
 	root := t.TempDir()

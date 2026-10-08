@@ -11,6 +11,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -426,9 +427,9 @@ func TestProjectRetireRefusesASkillThePersonEditedAndASkillThatIsNotThere(t *tes
 	}
 }
 
-// A retirement that cannot be put back says so in the error that carries what the executor reported,
+// A retirement that cannot be put back says so in the error, which names what could not be restored
 // and says nothing was removed.
-func TestProjectRetireThatCannotBePutBackCarriesTheReportAndIsRollbackIncomplete(t *testing.T) {
+func TestProjectRetireThatCannotBePutBackNamesWhatItCouldNotRestoreAndIsRollbackIncomplete(t *testing.T) {
 	w := newRegisteredWorld(t)
 	first := w.target("claude")
 	w.project = &breakingProject{ProjectFS: skillsfs.Project{}, failRemove: first, failRename: first}
@@ -436,8 +437,11 @@ func TestProjectRetireThatCannotBePutBackCarriesTheReportAndIsRollbackIncomplete
 	res, err := w.retire(tidyID, false)
 
 	var failed *ExecutionError
-	if !errors.As(err, &failed) || !errors.Is(err, skills.ErrRollbackIncomplete) || !strings.Contains(failed.Report, "error: rollback incomplete: ") || len(res.Removed) != 0 {
-		t.Fatalf("ProjectRetire = %+v, %v, want an *ExecutionError that is rollback incomplete and names what it could not restore", res, err)
+	if !errors.As(err, &failed) || !errors.Is(err, skills.ErrRollbackIncomplete) || len(res.Removed) != 0 {
+		t.Fatalf("ProjectRetire = %+v, %v, want an *ExecutionError that is rollback incomplete", res, err)
+	}
+	if want := []string{".claude/skills/" + tidyID + "/SKILL.md"}; !slices.Equal(failed.Unrestored, want) {
+		t.Errorf("Unrestored = %q, want the repo-relative path %q that could not be put back", failed.Unrestored, want)
 	}
 }
 
