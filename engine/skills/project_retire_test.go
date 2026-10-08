@@ -272,3 +272,54 @@ func TestExecuteProjectRetireRollbackFailureReportsRelativePath(t *testing.T) {
 		t.Errorf("the error names %q as not restored, want exactly the repo-relative %q", got, first.Rel)
 	}
 }
+
+// TestPlanProjectRetireRefusesTargetsThatResolveToOneFile: two targets of the skill, or a target and
+// the lock, that name one physical file cannot both be removed and restored. The retirement is
+// refused, naming both.
+func TestPlanProjectRetireRefusesTargetsThatResolveToOneFile(t *testing.T) {
+	f := newProjectRetirementFixture(t, "tidy-worktree")
+	if _, err := PlanProjectRetire(f.input()); err != nil {
+		t.Fatalf("precondition: the input must retire cleanly, got %v", err)
+	}
+	cases := []struct {
+		name     string
+		path, as string
+		want     []string
+	}{
+		{"two_targets", f.targets[1], f.targets[0], []string{projectTargets[0].Dir, projectTargets[1].Dir}},
+		{"target_and_lock", f.lockPath, f.targets[0], []string{projectTargets[0].Dir, ProjectLockRelPath}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			in := f.input()
+			in.ResolvePath = resolvingAsOneFile(tc.path, tc.as)
+
+			plan, err := PlanProjectRetire(in)
+			if err == nil || !strings.HasPrefix(err.Error(), "project-retire: targets ") || !strings.HasSuffix(err.Error(), "resolve to the same file") {
+				t.Fatalf("PlanProjectRetire = %+v, %v, want a project-retire refusal that says the targets resolve to the same file", plan, err)
+			}
+			for _, want := range tc.want {
+				if !strings.Contains(err.Error(), want) {
+					t.Errorf("refusal %q does not name %q", err, want)
+				}
+			}
+		})
+	}
+}
+
+// TestPlanProjectRetireKeepsTheModeTheLockHasNow: the retirement rewrites the lock at the mode it
+// has on disk, not at the mode a registration writes, so a lock a project keeps private stays so.
+func TestPlanProjectRetireKeepsTheModeTheLockHasNow(t *testing.T) {
+	f := newProjectRetirementFixture(t, "tidy-worktree")
+	if err := os.Chmod(f.lockPath, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	plan, err := PlanProjectRetire(f.input())
+	if err != nil {
+		t.Fatalf("unexpected retirement refusal: %v", err)
+	}
+	if plan.Lock.Mode != 0o600 {
+		t.Errorf("the planned lock has mode %04o, want the 0600 it has now", plan.Lock.Mode)
+	}
+}

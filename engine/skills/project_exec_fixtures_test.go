@@ -3,6 +3,7 @@ package skills
 import (
 	"errors"
 	"fmt"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/pathguard/fsresolve"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -227,5 +228,17 @@ func failPartialMkdir(want string, err error) func(*fakeProjectFS, string, strin
 		}
 		f.after = true
 		return err
+	}
+}
+
+// resolvingAsOneFile is a resolver that follows links as the file system does, except that it
+// resolves path as it resolves as: two destinations that name one physical file, without a link
+// the test would have to build.
+func resolvingAsOneFile(path, as string) func(string) (string, error) {
+	return func(p string) (string, error) {
+		if p == path {
+			p = as
+		}
+		return fsresolve.KeepingMissing(p)
 	}
 }

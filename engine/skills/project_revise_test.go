@@ -211,3 +211,37 @@ func TestExecuteProjectRevisePlan_RollbackRestoresBackups(t *testing.T) {
 	}
 	assertSameTree(t, before, snapshotTree(t, f.root))
 }
+
+// TestPlanProjectRevise_RefusesDestinationsThatResolveToOneFile: two targets of the skill, or a
+// target and the lock, that name one physical file would overwrite each other. The revision is
+// refused, naming both.
+func TestPlanProjectRevise_RefusesDestinationsThatResolveToOneFile(t *testing.T) {
+	f := newProjectRevisionFixture(t, "tidy-worktree")
+	if _, err := PlanProjectRevise(f.input()); err != nil {
+		t.Fatalf("precondition: the input must plan cleanly, got %v", err)
+	}
+	cases := []struct {
+		name         string
+		path, as     string
+		wantNameBoth []string
+	}{
+		{"two_targets", f.second, f.first, []string{projectTargets[0].Dir, projectTargets[1].Dir}},
+		{"target_and_lock", f.lockPath, f.first, []string{projectTargets[0].Dir, ProjectLockRelPath}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			in := f.input()
+			in.ResolvePath = resolvingAsOneFile(tc.path, tc.as)
+
+			plan, err := PlanProjectRevise(in)
+			if err == nil || !strings.HasPrefix(err.Error(), "project-revise: destinations ") || !strings.Contains(err.Error(), "resolve to the same file") {
+				t.Fatalf("PlanProjectRevise = %+v, %v, want a project-revise refusal that says the destinations resolve to the same file", plan, err)
+			}
+			for _, want := range tc.wantNameBoth {
+				if !strings.Contains(err.Error(), want) {
+					t.Errorf("refusal %q does not name %q", err, want)
+				}
+			}
+		})
+	}
+}

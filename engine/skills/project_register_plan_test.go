@@ -1095,3 +1095,21 @@ func TestPlanProjectRegister_RefusesAliasedTargets(t *testing.T) {
 		t.Errorf("a refusal must return the zero plan, got %+v", plan)
 	}
 }
+
+// TestPlanProjectRegister_RefusesALockThatAliasesASkillFile: the lock is a destination like any
+// other, so a lock that resolves to a file a skill is written to would be overwritten by it (or
+// overwrite it). The plan is refused, naming the lock.
+func TestPlanProjectRegister_RefusesALockThatAliasesASkillFile(t *testing.T) {
+	in := registerInput(t, "tidy-worktree")
+	skillFile := filepath.Join(in.ProjectRoot, projectTargets[0].Dir, "tidy-worktree", projectSkillFileName)
+	lockFile := filepath.Join(in.ProjectRoot, filepath.FromSlash(ProjectLockRelPath))
+	if _, err := PlanProjectRegister(in); err != nil {
+		t.Fatalf("precondition: the input must plan cleanly, got %v", err)
+	}
+	in.ResolvePath = resolvingAsOneFile(lockFile, skillFile)
+
+	plan, err := PlanProjectRegister(in)
+	if err == nil || !strings.Contains(err.Error(), "resolve to the same file") || !strings.Contains(err.Error(), ProjectLockRelPath) {
+		t.Fatalf("PlanProjectRegister = %+v, %v, want a refusal that names the lock and says the destinations resolve to the same file", plan, err)
+	}
+}
