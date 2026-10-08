@@ -1,6 +1,9 @@
 package runtime_test
 
 import (
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"os"
 	"path/filepath"
 	"sort"
@@ -186,4 +189,59 @@ func TestThePiFactoryWithoutAHomeSaysSoAndGuessesNone(t *testing.T) {
 	if msg := adapter.Status().Message; !strings.Contains(msg, "cannot resolve home directory") {
 		t.Fatalf("Status() without a home = %q, want it to say the home cannot be resolved", msg)
 	}
+}
+
+// notRuntimeTargets are the Target constants that name something other than a runtime: a request
+// for every registered runtime, and the label of the longterm-mem component's aggregate result.
+var notRuntimeTargets = map[string]bool{"TargetAll": true, "TargetLongtermMem": true}
+
+// TestEveryTargetConstantIsACapabilityTarget reads the source of the package: a constant of type
+// Target is either listed in notRuntimeTargets or defined as a name of the capability vocabulary
+// (capability.TargetX), never as a string of its own. A runtime added here by a literal would
+// otherwise be a second vocabulary that nothing registers and nothing declares.
+func TestEveryTargetConstantIsACapabilityTarget(t *testing.T) {
+	fset := token.NewFileSet()
+	seen := 0
+	for _, path := range nonTestGoFiles(t, ".") {
+		file, err := parser.ParseFile(fset, path, nil, parser.SkipObjectResolution)
+		if err != nil {
+			t.Fatalf("parse %s: %v", path, err)
+		}
+		for _, decl := range file.Decls {
+			gen, ok := decl.(*ast.GenDecl)
+			if !ok || gen.Tok != token.CONST {
+				continue
+			}
+			for _, spec := range gen.Specs {
+				vs := spec.(*ast.ValueSpec)
+				if typ, ok := vs.Type.(*ast.Ident); !ok || typ.Name != "Target" {
+					continue
+				}
+				for i, name := range vs.Names {
+					if notRuntimeTargets[name.Name] {
+						continue
+					}
+					seen++
+					sel, ok := vs.Values[i].(*ast.SelectorExpr)
+					if pkg, isIdent := selectorBase(sel); !ok || !isIdent || pkg != "capability" {
+						t.Errorf("%s: %s is not defined from the capability vocabulary; define it as capability.Target..., or list it in notRuntimeTargets if it is not a runtime", filepath.Base(path), name.Name)
+					}
+				}
+			}
+		}
+	}
+	if seen == 0 {
+		t.Fatal("no runtime Target constants found; the source scan is broken")
+	}
+}
+
+func selectorBase(sel *ast.SelectorExpr) (string, bool) {
+	if sel == nil {
+		return "", false
+	}
+	id, ok := sel.X.(*ast.Ident)
+	if !ok {
+		return "", false
+	}
+	return id.Name, true
 }
