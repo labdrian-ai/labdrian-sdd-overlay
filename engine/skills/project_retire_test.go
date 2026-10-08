@@ -1,7 +1,9 @@
 package skills
 
 import (
+	"bytes"
 	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -375,13 +377,14 @@ func TestExecuteProjectRetireLockThatCannotBeInspectedBeforeTheCommitIsLeftAlone
 	}
 	before := snapshotTree(t, f.root)
 
-	fsys := newFakeProjectFS(func(f *fakeProjectFS, op, path string) error {
+	fsys := &lockRecordingFS{fakeProjectFS: newFakeProjectFS(nil), lock: plan.Lock}
+	fsys.fail = func(f *fakeProjectFS, op, path string) error {
 		// The targets are removed by now: this is the look at the lock before its commit.
 		if op == "stat" && path == plan.Lock.Abs && f.n["remove"] > 0 {
 			return errInjected
 		}
 		return nil
-	})
+	}
 	err = ExecuteProjectRetirePlan(plan, fsys)
 	if !errors.Is(err, errInjected) || errors.Is(err, ErrRollbackIncomplete) {
 		t.Fatalf("error = %v, want the injected failure and a complete rollback", err)
@@ -395,13 +398,35 @@ func TestExecuteProjectRetireLockThatCannotBeInspectedBeforeTheCommitIsLeftAlone
 			t.Errorf("the lock was renamed onto (%q) although it could not be inspected first", entry)
 		}
 	}
-	staged := 0
-	for _, entry := range fsys.log {
-		if strings.HasPrefix(entry, "writetemp "+filepath.Dir(plan.Lock.Abs)) {
-			staged++
-		}
+	if len(fsys.stagedLocks) != 1 {
+		t.Fatalf("the new lock was staged %d times, want once", len(fsys.stagedLocks))
 	}
-	if staged != 1 {
-		t.Errorf("the lock directory was written %d times, want once (the staging): no restore of the lock was due", staged)
+	if _, statErr := os.Lstat(fsys.stagedLocks[0]); !os.IsNotExist(statErr) {
+		t.Errorf("the staged lock %q is still there after the rollback (stat error = %v)", fsys.stagedLocks[0], statErr)
 	}
+	if len(fsys.restoredLocks) != 0 {
+		t.Errorf("the old lock was written back (%v) although its rename never ran", fsys.restoredLocks)
+	}
+}
+
+// lockRecordingFS is the fake file system that also tells which temp files held the lock: the one
+// that stages the new lock (its bytes are the planned ones) and the one that would put the old lock
+// back (its bytes are the plan's backup). The temp files are told by what they hold, not by where
+// they are, so no other temp file in the directory is counted.
+type lockRecordingFS struct {
+	*fakeProjectFS
+	lock                       ProjectWrite
+	stagedLocks, restoredLocks []string
+}
+
+func (f *lockRecordingFS) WriteTemp(dir string, data []byte, perm fs.FileMode) (string, error) {
+	tmp, err := f.fakeProjectFS.WriteTemp(dir, data, perm)
+	switch {
+	case err != nil:
+	case bytes.Equal(data, f.lock.Data):
+		f.stagedLocks = append(f.stagedLocks, tmp)
+	case bytes.Equal(data, f.lock.Backup):
+		f.restoredLocks = append(f.restoredLocks, tmp)
+	}
+	return tmp, err
 }
