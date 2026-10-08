@@ -362,3 +362,46 @@ func TestExecuteProjectRetireRollbackRestoresTheModeTheLockHasAtCommit(t *testin
 		t.Errorf("the restored lock has mode %04o, want the 0600 it had at the commit", got)
 	}
 }
+
+// TestExecuteProjectRetireLockThatCannotBeInspectedBeforeTheCommitIsLeftAlone: the lock is looked at
+// right before its rename, to learn the mode a rollback would restore. If that fails, the rename
+// never ran: the retirement returns that error, the removed targets are put back, the old lock is
+// not touched (no rename onto it, no rewrite of it) and the staged lock is gone.
+func TestExecuteProjectRetireLockThatCannotBeInspectedBeforeTheCommitIsLeftAlone(t *testing.T) {
+	f := newProjectRetirementFixture(t, "tidy-worktree")
+	plan, err := PlanProjectRetire(f.input())
+	if err != nil {
+		t.Fatalf("plan retirement: %v", err)
+	}
+	before := snapshotTree(t, f.root)
+
+	fsys := newFakeProjectFS(func(f *fakeProjectFS, op, path string) error {
+		// The targets are removed by now: this is the look at the lock before its commit.
+		if op == "stat" && path == plan.Lock.Abs && f.n["remove"] > 0 {
+			return errInjected
+		}
+		return nil
+	})
+	err = ExecuteProjectRetirePlan(plan, fsys)
+	if !errors.Is(err, errInjected) || errors.Is(err, ErrRollbackIncomplete) {
+		t.Fatalf("error = %v, want the injected failure and a complete rollback", err)
+	}
+	if !strings.Contains(err.Error(), "project-retire: inspecting") {
+		t.Errorf("error = %q, want it worded as the inspection before the commit", err)
+	}
+	assertSameTree(t, before, snapshotTree(t, f.root))
+	for _, entry := range fsys.log {
+		if entry == "rename "+plan.Lock.Abs {
+			t.Errorf("the lock was renamed onto (%q) although it could not be inspected first", entry)
+		}
+	}
+	staged := 0
+	for _, entry := range fsys.log {
+		if strings.HasPrefix(entry, "writetemp "+filepath.Dir(plan.Lock.Abs)) {
+			staged++
+		}
+	}
+	if staged != 1 {
+		t.Errorf("the lock directory was written %d times, want once (the staging): no restore of the lock was due", staged)
+	}
+}

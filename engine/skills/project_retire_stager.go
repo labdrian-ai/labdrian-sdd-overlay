@@ -66,8 +66,9 @@ func (s *projectRetireStager) removeTargets() error {
 }
 
 // commitLock renames the staged lock over the old one. The lock is the commit marker. Its real mode
-// is read first, because that is the mode a rollback restores it at. The attempt is recorded before Rename because a filesystem wrapper can report an error after the rename
-// landed.
+// is read first, because that is the mode a rollback restores it at; if it cannot be read, nothing
+// was attempted on the lock and the rollback leaves it alone. The attempt is recorded before Rename
+// because a filesystem wrapper can report an error after the rename landed.
 func (s *projectRetireStager) commitLock() error {
 	mode, err := modeBeforeCommit(s.fsys, projectRetireVerb, s.lock)
 	if err != nil {
