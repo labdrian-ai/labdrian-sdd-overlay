@@ -140,14 +140,15 @@ func (a PiAdapter) Status() LifecycleResult {
 	} else if report, err := pipkg.Check(a.registries, a.overlayRoot, a.registryPath, a.destDir, piDeployOptions()); err != nil {
 		problems = append(problems, "in sync ("+err.Error()+"; "+report.Disclosure()+")")
 	}
-	if !isPiPackageListed(a.home, a.destDir) {
+	settings := readPiSettings(a.home)
+	if !settings.listsPackage(a.destDir) {
 		problems = append(problems, "listed in ~/.pi/agent/settings.json packages (not listed; run: pi install "+a.destDir+")")
 	}
 	if !isPiMcpRegistered(a.destDir) {
 		problems = append(problems, "longterm-mem registered in mcp.json (not registered; run: longterm-mem register --target pi)")
 	}
 	if home := a.home; home != "" {
-		switch subagentRunnerState(home) {
+		switch settings.subagentRunner() {
 		case subagentRunnerNative, subagentRunnerLegacy:
 			// proven
 		case subagentRunnerConflict:
@@ -279,37 +280,6 @@ func runPiCommand(bin, verb, path string) error {
 	return nil
 }
 
-// isPiPackageListed reports whether destDir is present in
-// ~/.pi/agent/settings.json's "packages" array (read-only probe).
-func isPiPackageListed(home, destDir string) bool {
-	if home == "" {
-		return false
-	}
-	raw, err := os.ReadFile(filepath.Join(home, ".pi", "agent", "settings.json"))
-	if err != nil {
-		return false
-	}
-	var settings struct {
-		Packages []string `json:"packages"`
-	}
-	if json.Unmarshal(raw, &settings) != nil {
-		return false
-	}
-	want := filepath.Clean(destDir)
-	settingsDir := filepath.Join(home, ".pi", "agent")
-	for _, p := range settings.Packages {
-		// Pi resolves relative package entries against the settings file's
-		// directory (packages.md); `pi install <abs>` records them that way.
-		if !filepath.IsAbs(p) {
-			p = filepath.Join(settingsDir, p)
-		}
-		if filepath.Clean(p) == want {
-			return true
-		}
-	}
-	return false
-}
-
 // subagentsExtensionPackage is the fixed argv target R-012 installs when
 // neither accepted package is already present.
 const subagentsExtensionPackage = "npm:pi-subagents-j0k3r"
@@ -333,39 +303,16 @@ func hasAcceptedSubagentsPrefix(entry string) bool {
 	return false
 }
 
-// isSubagentsExtensionListed reports whether ~/.pi/agent/settings.json's
-// "packages" array already lists either accepted Subagents extension name
-// (read-only probe; mirrors isPiPackageListed's parse, without the
-// destDir-relative resolution a package path needs).
-func isSubagentsExtensionListed(home string) bool {
-	raw, err := os.ReadFile(filepath.Join(home, ".pi", "agent", "settings.json"))
-	if err != nil {
-		return false
-	}
-	var settings struct {
-		Packages []string `json:"packages"`
-	}
-	if json.Unmarshal(raw, &settings) != nil {
-		return false
-	}
-	for _, p := range settings.Packages {
-		if hasAcceptedSubagentsPrefix(p) {
-			return true
-		}
-	}
-	return false
-}
-
 // ensureSubagentsExtension installs pi-subagents-j0k3r via a FIXED argv
 // (verb, package) when neither accepted package name is already listed
 // (R-012). Always returns a human-readable disclosure/status note; never
 // fails Install as a whole on an install error -- the caller folds the
 // note into its own message instead.
-func ensureSubagentsExtension(bin, home string) string {
+func ensureSubagentsExtension(bin string, settings piSettings) string {
 	if os.Getenv(subagentsSkipEnv) == "1" {
 		return "Pi Subagents extension check skipped (" + subagentsSkipEnv + "=1)."
 	}
-	if isSubagentsExtensionListed(home) {
+	if settings.listsSubagentsExtension() {
 		return "Pi Subagents extension already installed."
 	}
 	disclosure := "installing third-party Pi extension pi-subagents-j0k3r (npm) required for GADU dispatch."
@@ -429,63 +376,6 @@ func parsePiVersion(s string) (piVersion, bool) {
 	return piVersion{major: major, minor: minor, patch: patch}, true
 }
 
-// installedGentlePiVersion reads the installed gentle-pi package's own
-// package.json under <home>/.pi/agent/npm/node_modules/gentle-pi (the path
-// verified live 2026-09-13) and returns its "version" field, or "" when it
-// cannot be read or parsed. Used only when settings.json lists an
-// unversioned "npm:gentle-pi" entry.
-func installedGentlePiVersion(home string) string {
-	raw, err := os.ReadFile(filepath.Join(home, ".pi", "agent", "npm", "node_modules", "gentle-pi", "package.json"))
-	if err != nil {
-		return ""
-	}
-	var pkg struct {
-		Version string `json:"version"`
-	}
-	if json.Unmarshal(raw, &pkg) != nil {
-		return ""
-	}
-	return pkg.Version
-}
-
-// nativeSubagentsAvailable is a read-only probe (R-012 revised) reporting
-// whether ~/.pi/agent/settings.json's "packages" array lists "npm:gentle-pi"
-// at a version >= minNativeSubagentsVersion -- the version whose native
-// subagent_* tools replace the third-party Subagents extension. An
-// unversioned "npm:gentle-pi" entry resolves the installed version from
-// gentle-pi's own package.json. Absent, unparseable, or below the minimum
-// version all report false.
-func nativeSubagentsAvailable(home string) bool {
-	raw, err := os.ReadFile(filepath.Join(home, ".pi", "agent", "settings.json"))
-	if err != nil {
-		return false
-	}
-	var settings struct {
-		Packages []string `json:"packages"`
-	}
-	if json.Unmarshal(raw, &settings) != nil {
-		return false
-	}
-	for _, p := range settings.Packages {
-		if p != gentlePiPackagePrefix && !strings.HasPrefix(p, gentlePiPackagePrefix+"@") {
-			continue
-		}
-		versionStr := strings.TrimPrefix(strings.TrimPrefix(p, gentlePiPackagePrefix), "@")
-		if versionStr == "" {
-			versionStr = installedGentlePiVersion(home)
-		}
-		if versionStr == "" {
-			return false
-		}
-		v, ok := parsePiVersion(versionStr)
-		if !ok {
-			return false
-		}
-		return !v.lessThan(minNativeSubagentsVersion)
-	}
-	return false
-}
-
 // subagentRunnerState is subagentRunnerState's result: exactly one of
 // native (gentle-pi's own subagent_* tools, gentle-pi >= 2.6.0), legacy
 // (the third-party pi-subagents-j0k3r/pi-subagents extension, no native
@@ -502,22 +392,6 @@ const (
 	subagentRunnerAbsent   subagentRunner = "absent"
 )
 
-// subagentRunnerState reports which dispatch runner(s) are proven present.
-func subagentRunnerState(home string) subagentRunner {
-	native := nativeSubagentsAvailable(home)
-	legacy := isSubagentsExtensionListed(home)
-	switch {
-	case native && legacy:
-		return subagentRunnerConflict
-	case native:
-		return subagentRunnerNative
-	case legacy:
-		return subagentRunnerLegacy
-	default:
-		return subagentRunnerAbsent
-	}
-}
-
 // ensureSubagentRunner decides GADU's Pi dispatch runner at install time
 // (R-012 revised): when gentle-pi's native subagent_* tools are available
 // (>= 2.6.0), the obsolete pi-subagents-j0k3r/pi-subagents extension is
@@ -532,13 +406,14 @@ func ensureSubagentRunner(bin, home string) string {
 	if os.Getenv(subagentsSkipEnv) == "1" {
 		return "Pi Subagents extension check skipped (" + subagentsSkipEnv + "=1)."
 	}
-	if nativeSubagentsAvailable(home) {
-		if isSubagentsExtensionListed(home) {
+	settings := readPiSettings(home)
+	if settings.nativeSubagents() {
+		if settings.listsSubagentsExtension() {
 			return "gentle-pi native subagents (>= 2.6.0) detected; the installed pi-subagents-j0k3r/pi-subagents extension conflicts with gentle-pi's native subagent tools and must be removed (it is not overlay-owned, so run this yourself): pi remove npm:pi-subagents-j0k3r."
 		}
 		return "gentle-pi native subagents (>= 2.6.0) detected; skipping the legacy Pi Subagents extension install."
 	}
-	return ensureSubagentsExtension(bin, home)
+	return ensureSubagentsExtension(bin, settings)
 }
 
 // gaduLinkPath returns the overlay-owned GADU agent link location.
