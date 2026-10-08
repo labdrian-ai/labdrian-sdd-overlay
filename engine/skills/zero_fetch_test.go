@@ -47,14 +47,6 @@ var allowedImports = map[string]bool{
 	jsonstrictImport: true,
 }
 
-// pathguardDebtImports is what engine/pathguard imports beyond allowedImports: the file system
-// half of its symlink resolution, owed to Phase 9 unit H22 (pathguard/fsresolve), which leaves
-// the containment rules pure. engine/skills itself imports none of it: allowedImports is its
-// list, and TestZeroFetchImportAllowlist holds the package to it.
-var pathguardDebtImports = map[string]string{
-	"os": "H22",
-}
-
 // jsonstrictImportExtras is what engine/jsonstrict imports beyond allowedImports: the UTF-8 check,
 // pure like the rest of the standard library it uses.
 var jsonstrictImportExtras = map[string]bool{
@@ -170,9 +162,6 @@ func TestZeroFetchCoversPathguardImports(t *testing.T) {
 			base := filepath.Base(filename)
 			for _, imp := range file.Imports {
 				path := strings.Trim(imp.Path.Value, `"`)
-				if _, owed := pathguardDebtImports[path]; owed {
-					continue
-				}
 				if path == pathguardImport || !allowedImports[path] {
 					t.Errorf("engine/pathguard imports %q in %s; it may import only allowlisted stdlib packages", path, base)
 				}
