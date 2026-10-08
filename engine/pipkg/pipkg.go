@@ -266,6 +266,28 @@ type Options struct {
 	DeployRef string
 }
 
+// Packages is the package builder the Pi adapter holds: Build and Check over one registry reader
+// and the Options of the run, both fixed when the composition root makes it. The adapter asks
+// for the two verbs and knows neither the reader nor the deploy ref.
+type Packages struct {
+	// Registries is how the skills registry the package is built from is read.
+	Registries skills.RegistryRepository
+	// Options are the choices of the caller that Check cannot make for itself.
+	Options Options
+}
+
+// Build writes the package; see Build.
+func (p Packages) Build(overlayRoot, registryPath, destDir string) error {
+	return Build(p.Registries, overlayRoot, registryPath, destDir)
+}
+
+// Check compares the package against its sources; see Check. Its first result is the disclosure
+// of what it compared against, which Check owes the caller whether or not it found drift.
+func (p Packages) Check(overlayRoot, registryPath, destDir string) (disclosure string, err error) {
+	report, err := Check(p.Registries, overlayRoot, registryPath, destDir, p.Options)
+	return report.Disclosure(), err
+}
+
 // Check regenerates the package into a temp dir and diffs it, file by file,
 // against destDir. Returns a CheckReport disclosing the comparison basis,
 // and a non-nil, drift-naming error when destDir is missing, has extra
