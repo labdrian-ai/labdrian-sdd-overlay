@@ -57,7 +57,9 @@ type LongtermMemAdapter struct {
 // NewLongtermMemAdapter builds a LongtermMemAdapter. A stateDir or binaryPath left empty is the
 // default the Config implies (cfg.DefaultStateDir, and the binary under the state dir that results),
 // and the runtimes' config files are the ones under cfg.Home; cfg.ConfigRoot plays no part, the
-// component spans three runtimes and has no single root to give.
+// component spans three runtimes and has no single root to give. A binaryPath left empty is the one
+// under the DEFAULT state dir even when a stateDir is given: a caller that overrides the state dir
+// derives the binary from it (LongtermMemBinaryPathForStateDir), as the command line does.
 func NewLongtermMemAdapter(cfg Config, stateDir, binaryPath string) LongtermMemAdapter {
 	if stateDir == "" {
 		stateDir = cfg.DefaultStateDir()

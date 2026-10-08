@@ -75,6 +75,9 @@ func (c Config) OpenCodeRoot() string { return firstNonEmpty(c.ConfigRoot, c.Def
 
 // PiPackageDir is where the Pi package is built and installed from: <base>/pi/labdrian-pi, the
 // base being the --config-root when one was given, else $STATE_DIR, else the default state dir.
+// Unlike the other roots it is never empty: without a home and without either override it is the
+// relative pi/labdrian-pi, the path it has always had in that case, and the adapter then finds
+// nothing built there.
 func (c Config) PiPackageDir() string {
 	base := firstNonEmpty(c.ConfigRoot, c.StateDir, c.DefaultStateDir())
 	return filepath.Join(base, "pi", "labdrian-pi")

@@ -13,9 +13,6 @@ import (
 	engineRuntime "github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime"
 )
 
-// piFixtureOverlay writes a minimal overlay tree (one pi-targeted skill,
-// agents/GADU.md, a matching registry) and returns its root and registry
-// path, for exercising PiAdapter's pipkg wiring (task 2.4).
 // newPiAdapterAt builds the Pi adapter over the given build paths and the home of this test
 // process, which TestMain points at a temporary directory: the tests below read and write the
 // ~/.pi files the adapter reads under that same home.
@@ -30,6 +27,9 @@ func newPiAdapterAt(t *testing.T, overlayRoot, registryPath, destDir string) eng
 	})
 }
 
+// piFixtureOverlay writes a minimal overlay tree (one pi-targeted skill,
+// agents/GADU.md, a matching registry) and returns its root and registry
+// path, for exercising PiAdapter's pipkg wiring (task 2.4).
 func piFixtureOverlay(t *testing.T) (overlayRoot, registryPath string) {
 	t.Helper()
 	root := t.TempDir()
@@ -119,8 +119,9 @@ func TestPiAdapter_ApplyInstallSyncCheck_WiredToPipkg(t *testing.T) {
 }
 
 // TestPiAdapter_ApplyWithoutOverlayRoot_StaysHonestlyUnsupported guards the
-// path of the registry-built adapter (exercised by TestPiFromTheRegistryWithNoOverlayDirIsHonestlyUnsupported): with OVERLAY_DIR unset, wiring the
-// pipkg calls must not fabricate success.
+// path of the registry-built adapter, which
+// TestPiFromTheRegistryWithNoOverlayDirIsHonestlyUnsupported exercises: with
+// OVERLAY_DIR unset, wiring the pipkg calls must not fabricate success.
 func TestPiAdapter_ApplyWithoutOverlayRoot_StaysHonestlyUnsupported(t *testing.T) {
 	adapter := newPiAdapterAt(t, "", "", t.TempDir())
 	for _, result := range []engineRuntime.LifecycleResult{adapter.Apply(), adapter.Install(), adapter.SyncCheck()} {
