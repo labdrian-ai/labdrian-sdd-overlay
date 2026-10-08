@@ -207,27 +207,10 @@ func TestEveryTargetConstantIsACapabilityTarget(t *testing.T) {
 		if err != nil {
 			t.Fatalf("parse %s: %v", path, err)
 		}
-		for _, decl := range file.Decls {
-			gen, ok := decl.(*ast.GenDecl)
-			if !ok || gen.Tok != token.CONST {
-				continue
-			}
-			for _, spec := range gen.Specs {
-				vs := spec.(*ast.ValueSpec)
-				if typ, ok := vs.Type.(*ast.Ident); !ok || typ.Name != "Target" {
-					continue
-				}
-				for i, name := range vs.Names {
-					if notRuntimeTargets[name.Name] {
-						continue
-					}
-					seen++
-					sel, ok := vs.Values[i].(*ast.SelectorExpr)
-					if pkg, isIdent := selectorBase(sel); !ok || !isIdent || pkg != "capability" {
-						t.Errorf("%s: %s is not defined from the capability vocabulary; define it as capability.Target..., or list it in notRuntimeTargets if it is not a runtime", filepath.Base(path), name.Name)
-					}
-				}
-			}
+		n, problems := targetConstantProblems(file)
+		seen += n
+		for _, problem := range problems {
+			t.Errorf("%s: %s", filepath.Base(path), problem)
 		}
 	}
 	if seen == 0 {
@@ -235,13 +218,86 @@ func TestEveryTargetConstantIsACapabilityTarget(t *testing.T) {
 	}
 }
 
-func selectorBase(sel *ast.SelectorExpr) (string, bool) {
-	if sel == nil {
-		return "", false
+// TestTargetConstantScanNamesWhatItCannotJudge feeds the scan source it must refuse without
+// panicking: a literal, a constant with no value of its own (a bare declaration, or one that
+// repeats the previous line), and a value that is not capability.X.
+func TestTargetConstantScanNamesWhatItCannotJudge(t *testing.T) {
+	const src = `package runtime
+const (
+	TargetGood  Target = capability.TargetClaude
+	TargetLit   Target = "codex"
+	TargetOther Target = other.TargetPi
+	TargetImplicit
+	TargetAll Target = "all"
+)
+const TargetBare Target
+`
+	file, err := parser.ParseFile(token.NewFileSet(), "scan.go", src, parser.SkipObjectResolution)
+	if err != nil {
+		t.Fatal(err)
 	}
-	id, ok := sel.X.(*ast.Ident)
-	if !ok {
-		return "", false
+	n, problems := targetConstantProblems(file)
+	if n != 5 {
+		t.Errorf("scanned %d runtime constants, want 5 (TargetAll is not one)", n)
 	}
-	return id.Name, true
+	for _, name := range []string{"TargetLit", "TargetOther", "TargetImplicit", "TargetBare"} {
+		found := false
+		for _, problem := range problems {
+			found = found || strings.HasPrefix(problem, name+" ")
+		}
+		if !found {
+			t.Errorf("no problem reported for %s; got %q", name, problems)
+		}
+	}
+	for _, problem := range problems {
+		if strings.HasPrefix(problem, "TargetGood ") || strings.HasPrefix(problem, "TargetAll ") {
+			t.Errorf("a valid constant was reported: %s", problem)
+		}
+	}
+}
+
+// targetConstantProblems judges the Target constants of one file. It returns how many runtime
+// constants it looked at and one message, beginning with the constant's name, for each that is not
+// defined as capability.X.
+func targetConstantProblems(file *ast.File) (scanned int, problems []string) {
+	for _, decl := range file.Decls {
+		gen, ok := decl.(*ast.GenDecl)
+		if !ok || gen.Tok != token.CONST {
+			continue
+		}
+		// A spec without a type repeats the previous line's type and expression, so the type is
+		// the one the group last named: Go's implicit repetition.
+		var lastType ast.Expr
+		for _, spec := range gen.Specs {
+			vs := spec.(*ast.ValueSpec)
+			typ := vs.Type
+			if typ != nil || len(vs.Values) > 0 {
+				lastType = typ
+			} else {
+				typ = lastType
+			}
+			if id, ok := typ.(*ast.Ident); !ok || id.Name != "Target" {
+				continue
+			}
+			for i, name := range vs.Names {
+				if notRuntimeTargets[name.Name] {
+					continue
+				}
+				scanned++
+				if i >= len(vs.Values) {
+					problems = append(problems, name.Name+" has no value of its own; define it explicitly as capability.Target...")
+					continue
+				}
+				sel, ok := vs.Values[i].(*ast.SelectorExpr)
+				if !ok {
+					problems = append(problems, name.Name+" is not defined from the capability vocabulary; define it as capability.Target..., or list it in notRuntimeTargets if it is not a runtime")
+					continue
+				}
+				if pkg, ok := sel.X.(*ast.Ident); !ok || pkg.Name != "capability" {
+					problems = append(problems, name.Name+" is not defined from the capability vocabulary; define it as capability.Target..., or list it in notRuntimeTargets if it is not a runtime")
+				}
+			}
+		}
+	}
+	return scanned, problems
 }
