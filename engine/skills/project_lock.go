@@ -645,9 +645,10 @@ func EvaluateOwnership(root string, e ProjectLockEntry, readFile func(string) ([
 // names root itself rather than a path strictly below it (".", "./" and
 // "././" all clean to ".", which resolves to root and would hand a directory
 // to readFile — review-slice-3a-ii-round-2, SEC-3). That last case needs no
-// branch of its own: pathguard.WithinRoot is strictly-below, so it refuses root itself. The ".." check is explicit and precedes the containment
-// test because filepath.Join cleans "../.." away, so a target could resolve
-// back inside root while still meaning something the lock never recorded.
+// branch of its own: pathguard.WithinRoot is strictly-below, so it refuses
+// root itself. The ".." check is explicit and precedes the containment test
+// because filepath.Join cleans "../.." away, so a target could resolve back
+// inside root while still meaning something the lock never recorded.
 //
 // This guard is LEXICAL ONLY: it cannot see a symlink, so a target whose
 // directory components leave root through one still passes here. Resolved
