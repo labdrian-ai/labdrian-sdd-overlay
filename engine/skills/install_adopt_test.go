@@ -7,7 +7,6 @@ package skills
 // file differs.
 
 import (
-	"bytes"
 	"os"
 	"path/filepath"
 	"strings"
@@ -36,9 +35,8 @@ func (f *ownFixture) adopt(skills ...InstallSkill) InstallPlan {
 	if len(refusals) != 0 {
 		f.t.Fatalf("adopt refused: %v", refusals)
 	}
-	var errOut bytes.Buffer
-	if err := ExecuteInstallPlan(plan, f.root, testProjectFS(), &errOut); err != nil {
-		f.t.Fatalf("adopt failed: %v (stderr %q)", err, errOut.String())
+	if err := ExecuteInstallPlan(plan, f.root, testProjectFS()); err != nil {
+		f.t.Fatalf("adopt failed: %v", err)
 	}
 	return plan
 }

@@ -89,8 +89,8 @@ func projectPorts(deps skills.Deps) app.ProjectPorts {
 }
 
 // refuseProject says why a project verb stopped, and exits 1. A registry that cannot be used is told
-// with the path of the registry in it, and what the executor reported while it put files back is told
-// before the error that follows it.
+// with the path of the registry in it, and what a rollback could not put back is told before the
+// error that follows it.
 func refuseProject(err error, stderr io.Writer, exit func(int)) {
 	var (
 		registry *app.RegistryError
@@ -101,10 +101,16 @@ func refuseProject(err error, stderr io.Writer, exit func(int)) {
 		refuseRegistry(err, true, stderr, exit)
 		return
 	case errors.As(err, &failed):
-		fmt.Fprint(stderr, failed.Report)
+		tellUnrestored(stderr, failed)
 	}
 	fmt.Fprintf(stderr, "error: %v\n", err)
 	exit(1)
+}
+
+// tellUnrestored prints, one to a line, every path that a rollback could not put back, repo-relative
+// so that each is usable as a git pathspec.
+func tellUnrestored(stderr io.Writer, failed *app.ExecutionError) {
+	tellPaths(stderr, "error: rollback incomplete: ", failed.Unrestored)
 }
 
 // tellPaths prints one line for each path: the prefix and the path, repo-relative with forward

@@ -2,7 +2,6 @@ package skills
 
 import (
 	"fmt"
-	"io"
 	"path/filepath"
 	"strings"
 )
@@ -10,11 +9,11 @@ import (
 // ExecuteProjectRetirePlan removes the planned target files and commits the
 // lock update last. A failure after any target removal restores every target
 // already reached from its captured bytes before returning the original cause;
-// a failure during that rollback returns ErrRollbackIncomplete and emits one
-// repo-relative pointer per path it could not restore. The lock temp is staged
+// a failure during that rollback returns a *RollbackIncompleteError that names, repo-relative,
+// every path it could not restore. The lock temp is staged
 // before the first delete, so no deletion can become visible without a lock
 // update that can either be committed or rolled back.
-func ExecuteProjectRetirePlan(p ProjectPlan, fsys ProjectFS, stdout, stderr io.Writer) error {
+func ExecuteProjectRetirePlan(p ProjectPlan, fsys ProjectFS) error {
 	if fsys == nil {
 		return fmt.Errorf("project-retire: no filesystem was injected")
 	}
@@ -46,7 +45,7 @@ func ExecuteProjectRetirePlan(p ProjectPlan, fsys ProjectFS, stdout, stderr io.W
 	tmp, err := writeProjectTemp(fsys, filepath.Dir(p.Lock.Abs), p.Lock.Data, p.Lock.Mode)
 	s.lockTemp = tmp
 	if err != nil {
-		return s.rollback(stderr, fmt.Errorf("project-retire: staging lock: %w", err))
+		return s.rollback(fmt.Errorf("project-retire: staging lock: %w", err))
 	}
 
 	for i, w := range p.DeleteWrites {
@@ -55,7 +54,7 @@ func ExecuteProjectRetirePlan(p ProjectPlan, fsys ProjectFS, stdout, stderr io.W
 		// window as well as ordinary successful removals.
 		s.attempted[i] = true
 		if err := fsys.Remove(w.Abs); err != nil {
-			return s.rollback(stderr, fmt.Errorf("project-retire: removing %q: %w", w.Rel, err))
+			return s.rollback(fmt.Errorf("project-retire: removing %q: %w", w.Rel, err))
 		}
 	}
 
@@ -63,13 +62,9 @@ func ExecuteProjectRetirePlan(p ProjectPlan, fsys ProjectFS, stdout, stderr io.W
 	// a filesystem wrapper can report an error after the rename landed.
 	s.lockAttempted = true
 	if err := fsys.Rename(s.lockTemp, p.Lock.Abs); err != nil {
-		return s.rollback(stderr, fmt.Errorf("project-retire: committing lock: %w", err))
+		return s.rollback(fmt.Errorf("project-retire: committing lock: %w", err))
 	}
 	s.lockTemp = ""
-
-	for _, w := range p.DeleteWrites {
-		fmt.Fprintf(stdout, "removed: %s\n", w.Rel)
-	}
 	return nil
 }
 
@@ -77,8 +72,8 @@ func ExecuteProjectRetirePlan(p ProjectPlan, fsys ProjectFS, stdout, stderr io.W
 // executor. Revision writes carry backups for every target and the lock, so
 // the existing temp -> ordered rename -> rollback implementation already
 // provides the required mid-revision recovery without a second write path.
-func ExecuteProjectRevisePlan(p ProjectPlan, fsys ProjectFS, stdout, stderr io.Writer) error {
-	return ExecuteProjectPlan(p, fsys, stdout, stderr)
+func ExecuteProjectRevisePlan(p ProjectPlan, fsys ProjectFS) error {
+	return ExecuteProjectPlan(p, fsys)
 }
 
 // projectPlanRoot recovers the project root from the plan. design.md fixes
@@ -113,14 +108,14 @@ func projectPlanRoot(p ProjectPlan) (string, error) {
 // Cross-directory atomicity is not available on POSIX (design.md,
 // alternatives). The git commit is the real atomic unit; this function's job
 // is to leave either the full planned set or the pre-run state behind.
-func ExecuteProjectPlan(p ProjectPlan, fsys ProjectFS, stdout, stderr io.Writer) error {
+func ExecuteProjectPlan(p ProjectPlan, fsys ProjectFS) error {
 	// Retirement uses the same public executor seam as registration and
 	// revision when called by a future CLI, but needs delete-specific rollback
 	// state. Keep the dedicated implementation behind this dispatch so callers
 	// that already know only ExecuteProjectPlan still receive atomic retirement
 	// behavior.
 	if len(p.DeleteWrites) > 0 || len(p.Deletes) > 0 {
-		return ExecuteProjectRetirePlan(p, fsys, stdout, stderr)
+		return ExecuteProjectRetirePlan(p, fsys)
 	}
 
 	root, err := projectPlanRoot(p)
@@ -133,17 +128,7 @@ func ExecuteProjectPlan(p ProjectPlan, fsys ProjectFS, stdout, stderr io.Writer)
 	}
 
 	s := newProjectStager(projectRegisterVerb, fsys, root, order, nil)
-	if err := s.stageAndCommit(stderr); err != nil {
-		return err
-	}
-
-	// Reported only once the whole set is committed: a `wrote:` line for a file
-	// that a later failure rolls back would be a lie, and the agent uses these
-	// lines as a git pathspec.
-	for _, w := range order {
-		fmt.Fprintf(stdout, "wrote: %s\n", w.Rel)
-	}
-	return nil
+	return s.stageAndCommit()
 }
 
 // projectRegisterVerb is how the project verbs word a failure of the executor they

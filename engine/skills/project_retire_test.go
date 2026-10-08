@@ -1,7 +1,6 @@
 package skills
 
 import (
-	"bytes"
 	"errors"
 	"os"
 	"path/filepath"
@@ -30,9 +29,8 @@ func newProjectRetirementFixture(t *testing.T, id string) projectRetirementFixtu
 	if err != nil {
 		t.Fatalf("plan initial registration: %v", err)
 	}
-	var stdout, stderr bytes.Buffer
-	if err := ExecuteProjectPlan(plan, newFakeProjectFS(nil), &stdout, &stderr); err != nil {
-		t.Fatalf("execute initial registration: %v (stderr %q)", err, stderr.String())
+	if err := ExecuteProjectPlan(plan, newFakeProjectFS(nil)); err != nil {
+		t.Fatalf("execute initial registration: %v", err)
 	}
 	lockData, err := os.ReadFile(plan.Lock.Abs)
 	if err != nil {
@@ -84,12 +82,8 @@ func TestPlanAndExecuteProjectRetireRemovesTargetsAndLockEntry(t *testing.T) {
 		t.Fatal("retirement must capture the existing lock for rollback")
 	}
 
-	var stdout, stderr bytes.Buffer
-	if err := ExecuteProjectRetirePlan(plan, newFakeProjectFS(nil), &stdout, &stderr); err != nil {
-		t.Fatalf("execute retirement: %v (stderr %q)", err, stderr.String())
-	}
-	if stderr.Len() != 0 {
-		t.Errorf("successful retirement printed stderr: %q", stderr.String())
+	if err := ExecuteProjectRetirePlan(plan, newFakeProjectFS(nil)); err != nil {
+		t.Fatalf("execute retirement: %v", err)
 	}
 	for _, target := range f.targets {
 		if _, err := os.Stat(target); !os.IsNotExist(err) {
@@ -107,10 +101,19 @@ func TestPlanAndExecuteProjectRetireRemovesTargetsAndLockEntry(t *testing.T) {
 	if len(lock.Skills) != 0 {
 		t.Fatalf("lock after retirement contains %d entries, want none: %+v", len(lock.Skills), lock.Skills)
 	}
-	for _, rel := range plan.Deletes {
-		if !strings.Contains(stdout.String(), "removed: "+rel+"\n") {
-			t.Errorf("stdout = %q, want removed line for %q", stdout.String(), rel)
+	// What a person is told afterwards is the commit order of the retirement: the removals, then
+	// the lock.
+	committed := ProjectRetireCommitOrder(plan)
+	if len(committed) != len(plan.Deletes)+1 {
+		t.Fatalf("ProjectRetireCommitOrder lists %d writes, want the %d removals and the lock", len(committed), len(plan.Deletes))
+	}
+	for i, rel := range plan.Deletes {
+		if committed[i].Rel != rel {
+			t.Errorf("ProjectRetireCommitOrder[%d] = %q, want %q", i, committed[i].Rel, rel)
 		}
+	}
+	if last := committed[len(committed)-1]; last.Rel != ProjectLockRelPath {
+		t.Errorf("ProjectRetireCommitOrder ends with %q, want the lock %q", last.Rel, ProjectLockRelPath)
 	}
 }
 
@@ -224,8 +227,7 @@ func TestExecuteProjectRetireRollbackRestoresPreRetirementTree(t *testing.T) {
 		}
 		return nil
 	})
-	var stdout, stderr bytes.Buffer
-	err = ExecuteProjectRetirePlan(plan, fsys, &stdout, &stderr)
+	err = ExecuteProjectRetirePlan(plan, fsys)
 	if err == nil {
 		t.Fatal("injected mid-retirement failure must fail")
 	}
@@ -233,13 +235,7 @@ func TestExecuteProjectRetireRollbackRestoresPreRetirementTree(t *testing.T) {
 		t.Errorf("error %v does not carry injected cause", err)
 	}
 	if errors.Is(err, ErrRollbackIncomplete) {
-		t.Fatalf("retirement rollback must succeed: %v (stderr %q)", err, stderr.String())
-	}
-	if stdout.Len() != 0 {
-		t.Errorf("failed retirement printed removed lines: %q", stdout.String())
-	}
-	if stderr.Len() != 0 {
-		t.Errorf("successful retirement rollback printed stderr: %q", stderr.String())
+		t.Fatalf("retirement rollback must succeed: %v", err)
 	}
 	assertSameTree(t, before, snapshotTree(t, f.root))
 }
@@ -262,22 +258,17 @@ func TestExecuteProjectRetireRollbackFailureReportsRelativePath(t *testing.T) {
 		}
 		return nil
 	})
-	var stdout, stderr bytes.Buffer
-	err = ExecuteProjectRetirePlan(plan, fsys, &stdout, &stderr)
+	err = ExecuteProjectRetirePlan(plan, fsys)
 	if err == nil {
 		t.Fatal("a rollback failure must fail the retirement")
 	}
 	if !errors.Is(err, ErrRollbackIncomplete) {
 		t.Fatalf("error %v must report incomplete rollback", err)
 	}
-	want := "error: rollback incomplete: " + first.Rel + "\n"
-	if !strings.Contains(stderr.String(), want) {
-		t.Errorf("stderr = %q, want %q", stderr.String(), want)
+	if !strings.HasPrefix(err.Error(), "project-register: rollback incomplete: "+first.Rel+" (after ") {
+		t.Errorf("error = %q, want it worded as project-register always worded it, naming %q", err, first.Rel)
 	}
-	if strings.Contains(stderr.String(), f.root) {
-		t.Errorf("stderr = %q contains an absolute path", stderr.String())
-	}
-	if stdout.Len() != 0 {
-		t.Errorf("failed retirement printed removed lines: %q", stdout.String())
+	if got := unrestoredBy(err); len(got) != 1 || got[0] != first.Rel {
+		t.Errorf("the error names %q as not restored, want exactly the repo-relative %q", got, first.Rel)
 	}
 }

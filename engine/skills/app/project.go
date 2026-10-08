@@ -1,10 +1,8 @@
 package app
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
-	"io"
 	"io/fs"
 	"path"
 
@@ -22,11 +20,23 @@ func (e *ProjectLockReadError) Error() string {
 func (e *ProjectLockReadError) Unwrap() error { return e.Err }
 
 // ExecutionError is a plan that could not be carried out: the files it staged and renamed were put
-// back as far as they could be. Report is what the executor said while it did so, in its own words
-// (the paths a rollback could not restore, one to a line), and is told before the error itself.
+// back as far as they could be. Unrestored is every path that could not be (repo-relative, in the
+// order the rollback found them) and is empty when everything was; the adapter tells them before
+// the error itself.
 type ExecutionError struct {
-	Err    error
-	Report string
+	Err        error
+	Unrestored []string
+}
+
+// executionFailure is the ExecutionError of err, the failure of an executor of the domain: the
+// paths its rollback could not restore are the ones its typed error names.
+func executionFailure(err error) *ExecutionError {
+	failure := &ExecutionError{Err: err}
+	var incomplete *skills.RollbackIncompleteError
+	if errors.As(err, &incomplete) {
+		failure.Unrestored = incomplete.Unrestored
+	}
+	return failure
 }
 
 func (e *ExecutionError) Error() string { return e.Err.Error() }
@@ -181,12 +191,11 @@ func ProjectRegister(p ProjectPorts, in ProjectRegisterInput) (ProjectRegisterRe
 	return res, nil
 }
 
-// executeProject carries a plan out through the executor of the domain, which reports what it could
-// not put back on a stream of its own: the report goes into the error, not to a terminal.
-func executeProject(plan skills.ProjectPlan, fsys skills.ProjectFS, execute func(skills.ProjectPlan, skills.ProjectFS, io.Writer, io.Writer) error) error {
-	var report bytes.Buffer
-	if err := execute(plan, fsys, io.Discard, &report); err != nil {
-		return &ExecutionError{Err: err, Report: report.String()}
+// executeProject carries a plan out through the executor of the domain. What the executor could not
+// put back is in the error it returns; this hands it over typed, and prints nothing.
+func executeProject(plan skills.ProjectPlan, fsys skills.ProjectFS, execute func(skills.ProjectPlan, skills.ProjectFS) error) error {
+	if err := execute(plan, fsys); err != nil {
+		return executionFailure(err)
 	}
 	return nil
 }

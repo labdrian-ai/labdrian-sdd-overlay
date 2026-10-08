@@ -33,9 +33,8 @@ func newProjectRevisionFixture(t *testing.T, id string) projectRevisionFixture {
 	if err != nil {
 		t.Fatalf("plan initial registration: %v", err)
 	}
-	var stdout, stderr bytes.Buffer
-	if err := ExecuteProjectPlan(plan, newFakeProjectFS(nil), &stdout, &stderr); err != nil {
-		t.Fatalf("execute initial registration: %v (stderr %q)", err, stderr.String())
+	if err := ExecuteProjectPlan(plan, newFakeProjectFS(nil)); err != nil {
+		t.Fatalf("execute initial registration: %v", err)
 	}
 
 	oldSkill, err := os.ReadFile(plan.Writes[0].Abs)
@@ -164,9 +163,8 @@ func TestPlanProjectRevise_HashMatchBumpsRevisionAndHash(t *testing.T) {
 		t.Error("revision lock write must capture the old lock bytes")
 	}
 
-	var stdout, stderr bytes.Buffer
-	if err := ExecuteProjectRevisePlan(plan, newFakeProjectFS(nil), &stdout, &stderr); err != nil {
-		t.Fatalf("execute revision: %v (stderr %q)", err, stderr.String())
+	if err := ExecuteProjectRevisePlan(plan, newFakeProjectFS(nil)); err != nil {
+		t.Fatalf("execute revision: %v", err)
 	}
 	gotLock, err := os.ReadFile(f.lockPath)
 	if err != nil {
@@ -206,17 +204,10 @@ func TestExecuteProjectRevisePlan_RollbackRestoresBackups(t *testing.T) {
 		}
 		return nil
 	})
-	var stdout, stderr bytes.Buffer
-	if err := ExecuteProjectRevisePlan(plan, fsys, &stdout, &stderr); err == nil {
+	if err := ExecuteProjectRevisePlan(plan, fsys); err == nil {
 		t.Fatal("injected mid-revision failure must fail")
 	} else if errors.Is(err, ErrRollbackIncomplete) {
-		t.Fatalf("revision rollback must succeed: %v (stderr %q)", err, stderr.String())
-	}
-	if stdout.Len() != 0 {
-		t.Errorf("failed revision must not report wrote lines: %q", stdout.String())
-	}
-	if stderr.Len() != 0 {
-		t.Errorf("successful revision rollback must be silent: %q", stderr.String())
+		t.Fatalf("revision rollback must succeed: %v", err)
 	}
 	assertSameTree(t, before, snapshotTree(t, f.root))
 }

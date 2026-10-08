@@ -1,7 +1,6 @@
 package skills
 
 import (
-	"io"
 	"path/filepath"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/pathguard"
@@ -22,8 +21,9 @@ import (
 // installed skill are pruned. They are not part of the rollback, so they are not
 // touched until nothing can be rolled back any more.
 //
-// It prints nothing: what to say about each skill is the caller's.
-func ExecuteInstallPlan(p InstallPlan, root string, fsys ProjectFS, stderr io.Writer) error {
+// It prints nothing: what to say about each skill is the caller's, and what a failed rollback
+// could not restore is in the error (RollbackIncompleteError).
+func ExecuteInstallPlan(p InstallPlan, root string, fsys ProjectFS) error {
 	order := make([]ProjectWrite, 0, len(p.Writes)+len(p.Deletes)+1)
 	deleting := make([]bool, 0, cap(order))
 	for _, w := range p.Writes {
@@ -47,7 +47,7 @@ func ExecuteInstallPlan(p InstallPlan, root string, fsys ProjectFS, stderr io.Wr
 		return err
 	}
 	s := newProjectStager(verb, fsys, root, order, deleting)
-	if err := s.stageAndCommit(stderr); err != nil {
+	if err := s.stageAndCommit(); err != nil {
 		return err
 	}
 	pruneEmptyDirs(fsys, p)

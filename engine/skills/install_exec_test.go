@@ -6,10 +6,10 @@ package skills
 // one before the run: bytes, permission bits, and directories.
 
 import (
-	"bytes"
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -53,10 +53,9 @@ func failOnce(op, want string, err error, lands bool) func(*fakeProjectFS, strin
 func TestExecuteInstallPlan_CommitsWritesThenRemovalsThenTheLockLast(t *testing.T) {
 	f, plan, _ := updateScenario(t)
 	fsys := newFakeProjectFS(nil)
-	var stderr bytes.Buffer
 
-	if err := ExecuteInstallPlan(plan, f.root, fsys, &stderr); err != nil {
-		t.Fatalf("%v (stderr %q)", err, stderr.String())
+	if err := ExecuteInstallPlan(plan, f.root, fsys); err != nil {
+		t.Fatalf("%v", err)
 	}
 
 	var committed []string
@@ -122,9 +121,8 @@ func TestExecuteInstallPlan_ALoneFailureAnywhereRestoresTheTreeExactly(t *testin
 	} {
 		t.Run(name, func(t *testing.T) {
 			f, plan, before := updateScenario(t)
-			var stderr bytes.Buffer
 
-			err := ExecuteInstallPlan(plan, f.root, newFakeProjectFS(inject(f)), &stderr)
+			err := ExecuteInstallPlan(plan, f.root, newFakeProjectFS(inject(f)))
 
 			if err == nil || !strings.Contains(err.Error(), "injected failure") {
 				t.Fatalf("error = %v, want the injected failure", err)
@@ -159,9 +157,8 @@ func TestExecuteInstallPlan_AFailedFirstInstallLeavesNothingBehind(t *testing.T)
 				t.Fatal(refusals)
 			}
 			before := f.snapshot()
-			var stderr bytes.Buffer
 
-			if err := ExecuteInstallPlan(plan, f.root, newFakeProjectFS(fail(f)), &stderr); err == nil {
+			if err := ExecuteInstallPlan(plan, f.root, newFakeProjectFS(fail(f))); err == nil {
 				t.Fatal("the install succeeded")
 			}
 
@@ -194,15 +191,14 @@ func TestExecuteInstallPlan_ReportsARollbackThatCouldNotFinish(t *testing.T) {
 		}
 		return nil
 	})
-	var stderr bytes.Buffer
 
-	err := ExecuteInstallPlan(plan, f.root, fsys, &stderr)
+	err := ExecuteInstallPlan(plan, f.root, fsys)
 
 	if !isRollbackIncomplete(err) {
 		t.Fatalf("error = %v, want a rollback-incomplete error", err)
 	}
-	if !strings.Contains(stderr.String(), ".claude/skills/pdf/SKILL.md") {
-		t.Errorf("stderr %q does not name the path that could not be restored", stderr.String())
+	if !slices.Contains(unrestoredBy(err), ".claude/skills/pdf/SKILL.md") {
+		t.Errorf("the error names %q as not restored, want it to include the path that could not be restored", unrestoredBy(err))
 	}
 }
 
@@ -218,9 +214,8 @@ func TestExecuteInstallPlan_RefusesAPathThatAppearedAfterThePlanWasBuilt(t *test
 	}
 	f.write(".agents/skills/pdf/SKILL.md", "appeared meanwhile\n")
 	before := f.snapshot()
-	var stderr bytes.Buffer
 
-	err := ExecuteInstallPlan(plan, f.root, testProjectFS(), &stderr)
+	err := ExecuteInstallPlan(plan, f.root, testProjectFS())
 
 	if err == nil || !strings.Contains(err.Error(), ".agents/skills/pdf/SKILL.md") || !strings.Contains(err.Error(), "skills install") {
 		t.Fatalf("error = %v, want a refusal naming the path, worded for install", err)
@@ -262,7 +257,7 @@ func TestExecuteInstallPlan_WordsEveryFailureForTheVerbThatRanIt(t *testing.T) {
 			}
 			f.write(appeared, "appeared meanwhile\n")
 
-			err := ExecuteInstallPlan(p, f.root, testProjectFS(), &bytes.Buffer{})
+			err := ExecuteInstallPlan(p, f.root, testProjectFS())
 
 			if err == nil || !strings.HasPrefix(err.Error(), mine) || !strings.Contains(err.Error(), appeared) {
 				t.Fatalf("error = %v, want a refusal that starts %q and names %s", err, mine, appeared)
@@ -282,7 +277,7 @@ func TestExecuteInstallPlan_WordsEveryFailureForTheVerbThatRanIt(t *testing.T) {
 				return nil
 			})
 
-			err := ExecuteInstallPlan(p, f.root, fsys, &bytes.Buffer{})
+			err := ExecuteInstallPlan(p, f.root, fsys)
 
 			if !isRollbackIncomplete(err) {
 				t.Fatalf("error = %v, want a rollback-incomplete error", err)
@@ -300,7 +295,7 @@ func TestExecuteInstallPlan_WordsEveryFailureForTheVerbThatRanIt(t *testing.T) {
 func TestExecuteInstallPlan_AnEmptyPlanTouchesNothing(t *testing.T) {
 	f := newOwnFixture(t)
 	fsys := newFakeProjectFS(nil)
-	if err := ExecuteInstallPlan(InstallPlan{}, f.root, fsys, &bytes.Buffer{}); err != nil {
+	if err := ExecuteInstallPlan(InstallPlan{}, f.root, fsys); err != nil {
 		t.Fatal(err)
 	}
 	if len(fsys.log) != 0 {

@@ -148,7 +148,7 @@ func refuseInstall(verb, did string, err error, stderr io.Writer, exit func(int)
 		}
 		fmt.Fprintf(stderr, "error: skills %s: refused, so nothing was %s\n", verb, did)
 	case errors.As(err, &failed):
-		fmt.Fprint(stderr, failed.Report)
+		tellUnrestored(stderr, failed)
 		fmt.Fprintf(stderr, "error: %v\n", err)
 	default:
 		fmt.Fprintf(stderr, "error: %v\n", err)

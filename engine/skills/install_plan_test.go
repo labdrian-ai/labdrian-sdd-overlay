@@ -17,7 +17,6 @@ package skills
 // and nothing is written unless every target of every skill passes.
 
 import (
-	"bytes"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -90,9 +89,8 @@ func (f *ownFixture) install(skills ...InstallSkill) InstallPlan {
 	if len(refusals) != 0 {
 		f.t.Fatalf("install refused: %v", refusals)
 	}
-	var errOut bytes.Buffer
-	if err := ExecuteInstallPlan(plan, f.root, testProjectFS(), &errOut); err != nil {
-		f.t.Fatalf("install failed: %v (stderr %q)", err, errOut.String())
+	if err := ExecuteInstallPlan(plan, f.root, testProjectFS()); err != nil {
+		f.t.Fatalf("install failed: %v", err)
 	}
 	return plan
 }
@@ -228,8 +226,7 @@ func TestInstall_ASecondInstallOfTheSameSourceWritesNothingAndSaysSo(t *testing.
 	if len(plan.Writes) != 0 || len(plan.Deletes) != 0 || plan.Lock.Rel != "" {
 		t.Errorf("the plan has %d writes, %d deletes, lock %q; want none", len(plan.Writes), len(plan.Deletes), plan.Lock.Rel)
 	}
-	var errOut bytes.Buffer
-	if err := ExecuteInstallPlan(plan, f.root, testProjectFS(), &errOut); err != nil {
+	if err := ExecuteInstallPlan(plan, f.root, testProjectFS()); err != nil {
 		t.Fatal(err)
 	}
 	assertSameTree(t, before, f.snapshot())

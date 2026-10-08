@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 	"syscall"
 	"testing"
@@ -19,10 +20,9 @@ import (
 func TestExecuteProjectPlan_WritesEveryTargetAndLockLast(t *testing.T) {
 	p, _ := executablePlan(t, "tidy-worktree")
 	fsys := newFakeProjectFS(nil)
-	var stdout, stderr bytes.Buffer
 
-	if err := ExecuteProjectPlan(p, fsys, &stdout, &stderr); err != nil {
-		t.Fatalf("unexpected execution failure: %v (stderr %q)", err, stderr.String())
+	if err := ExecuteProjectPlan(p, fsys); err != nil {
+		t.Fatalf("unexpected execution failure: %v", err)
 	}
 
 	order := planOrder(p)
@@ -62,15 +62,16 @@ func TestExecuteProjectPlan_WritesEveryTargetAndLockLast(t *testing.T) {
 		}
 	}
 
-	var wantOut strings.Builder
-	for _, w := range order {
-		fmt.Fprintf(&wantOut, "wrote: %s\n", w.Rel)
+	// What a person is told afterwards, once the whole set is committed, is the commit order of
+	// the plan: the same paths, the lock last.
+	committed := ProjectCommitOrder(p)
+	if len(committed) != len(order) {
+		t.Fatalf("ProjectCommitOrder lists %d writes, want %d", len(committed), len(order))
 	}
-	if stdout.String() != wantOut.String() {
-		t.Errorf("stdout = %q, want %q", stdout.String(), wantOut.String())
-	}
-	if stderr.Len() != 0 {
-		t.Errorf("a successful run must print nothing to stderr, got %q", stderr.String())
+	for i, w := range order {
+		if committed[i].Rel != w.Rel {
+			t.Errorf("ProjectCommitOrder[%d] = %q, want %q", i, committed[i].Rel, w.Rel)
+		}
 	}
 }
 
@@ -144,8 +145,7 @@ func TestExecuteProjectPlan_RollbackLeavesThePreRunTreeUnchanged(t *testing.T) {
 			before := snapshotTree(t, root)
 
 			fsys := newFakeProjectFS(failAt(pt.op, pt.path, errInjected))
-			var stdout, stderr bytes.Buffer
-			err := ExecuteProjectPlan(p, fsys, &stdout, &stderr)
+			err := ExecuteProjectPlan(p, fsys)
 			if err == nil {
 				t.Fatalf("an injected %s failure must fail the execution", pt.op)
 			}
@@ -153,13 +153,7 @@ func TestExecuteProjectPlan_RollbackLeavesThePreRunTreeUnchanged(t *testing.T) {
 				t.Errorf("error %v does not carry the injected cause", err)
 			}
 			if errors.Is(err, ErrRollbackIncomplete) {
-				t.Errorf("rollback itself must succeed here, got %v (stderr %q)", err, stderr.String())
-			}
-			if stderr.Len() != 0 {
-				t.Errorf("a successful rollback prints nothing to stderr, got %q", stderr.String())
-			}
-			if stdout.Len() != 0 {
-				t.Errorf("a failed run must report no `wrote:` line, got %q", stdout.String())
+				t.Errorf("rollback itself must succeed here, got %v", err)
 			}
 			assertSameTree(t, before, snapshotTree(t, root))
 		})
@@ -230,12 +224,8 @@ func TestExecuteProjectPlan_RollbackRestoresAPreExistingLock(t *testing.T) {
 	before := snapshotTree(t, root)
 
 	fsys := newFakeProjectFS(failAfterRename(p.Lock.Abs, errInjected))
-	var stdout, stderr bytes.Buffer
-	if err := ExecuteProjectPlan(p, fsys, &stdout, &stderr); err == nil {
+	if err := ExecuteProjectPlan(p, fsys); err == nil {
 		t.Fatal("a rename that reports failure must fail the execution")
-	}
-	if stderr.Len() != 0 {
-		t.Errorf("a successful rollback prints nothing to stderr, got %q", stderr.String())
 	}
 
 	got, err := os.ReadFile(lockAbs)
@@ -296,12 +286,8 @@ func TestExecuteProjectPlan_RollbackLeavesAnUntouchedDestinationAlone(t *testing
 
 	order := planOrder(p)
 	fsys := newFakeProjectFS(failAt("rename", order[0].Abs, errInjected))
-	var stdout, stderr bytes.Buffer
-	if err := ExecuteProjectPlan(p, fsys, &stdout, &stderr); err == nil {
+	if err := ExecuteProjectPlan(p, fsys); err == nil {
 		t.Fatal("an injected rename failure must fail the execution")
-	}
-	if stderr.Len() != 0 {
-		t.Errorf("a successful rollback prints nothing to stderr, got %q", stderr.String())
 	}
 	if got := inodeOf(t, lockAbs); got != beforeIno {
 		t.Errorf("the lock was rewritten (inode %d -> %d) although this run never renamed over it", beforeIno, got)
@@ -336,8 +322,7 @@ func TestExecuteProjectPlan_RollbackRemovesALockItCreated(t *testing.T) {
 	before := snapshotTree(t, root)
 
 	fsys := newFakeProjectFS(failAfterRename(p.Lock.Abs, errInjected))
-	var stdout, stderr bytes.Buffer
-	if err := ExecuteProjectPlan(p, fsys, &stdout, &stderr); err == nil {
+	if err := ExecuteProjectPlan(p, fsys); err == nil {
 		t.Fatal("a rename that reports failure must fail the execution")
 	}
 	if _, err := os.Stat(p.Lock.Abs); !os.IsNotExist(err) {
@@ -365,20 +350,15 @@ func TestExecuteProjectPlan_RollbackOfRollback(t *testing.T) {
 		}
 		return nil
 	})
-	var stdout, stderr bytes.Buffer
-	err := ExecuteProjectPlan(p, fsys, &stdout, &stderr)
+	err := ExecuteProjectPlan(p, fsys)
 	if err == nil {
 		t.Fatal("a failed rollback must fail the execution")
 	}
 	if !errors.Is(err, ErrRollbackIncomplete) {
 		t.Errorf("error %v must be recognisable as an incomplete rollback", err)
 	}
-	want := "error: rollback incomplete: " + order[0].Rel + "\n"
-	if !strings.Contains(stderr.String(), want) {
-		t.Errorf("stderr = %q, want it to contain %q", stderr.String(), want)
-	}
-	if stdout.Len() != 0 {
-		t.Errorf("a failed run must report no `wrote:` line, got %q", stdout.String())
+	if got := unrestoredBy(err); len(got) != 1 || got[0] != order[0].Rel {
+		t.Errorf("the error names %q as not restored, want exactly %q", got, order[0].Rel)
 	}
 	// The pointer must be honest: that path really is still there.
 	if _, statErr := os.Stat(filepath.Join(root, filepath.FromSlash(order[0].Rel))); statErr != nil {
@@ -400,8 +380,7 @@ func TestExecuteProjectPlan_RefusesAliasedDestinations(t *testing.T) {
 	}
 	before := snapshotTree(t, root)
 
-	var stdout, stderr bytes.Buffer
-	err := ExecuteProjectPlan(p, newFakeProjectFS(nil), &stdout, &stderr)
+	err := ExecuteProjectPlan(p, newFakeProjectFS(nil))
 	if err == nil {
 		t.Fatal("expected a refusal for two destinations resolving to one file")
 	}
@@ -423,8 +402,7 @@ func TestExecuteProjectPlan_RollbackRemovesDirectoriesAPartialMkdirCreated(t *te
 	before := snapshotTree(t, root)
 
 	fsys := newFakeProjectFS(failPartialMkdir(leaf, errInjected))
-	var stdout, stderr bytes.Buffer
-	err := ExecuteProjectPlan(p, fsys, &stdout, &stderr)
+	err := ExecuteProjectPlan(p, fsys)
 	if err == nil {
 		t.Fatal("an injected mkdir failure must fail the execution")
 	}
@@ -432,10 +410,7 @@ func TestExecuteProjectPlan_RollbackRemovesDirectoriesAPartialMkdirCreated(t *te
 		t.Errorf("error %v does not carry the injected cause", err)
 	}
 	if errors.Is(err, ErrRollbackIncomplete) {
-		t.Errorf("rollback itself must succeed here, got %v (stderr %q)", err, stderr.String())
-	}
-	if stdout.Len() != 0 {
-		t.Errorf("a failed run must report no `wrote:` line, got %q", stdout.String())
+		t.Errorf("rollback itself must succeed here, got %v", err)
 	}
 	assertSameTree(t, before, snapshotTree(t, root))
 }
@@ -467,16 +442,12 @@ func TestExecuteProjectPlan_RefusesADestinationThatAppearedAfterPlanning(t *test
 	}
 	before := snapshotTree(t, root)
 
-	var stdout, stderr bytes.Buffer
-	err := ExecuteProjectPlan(p, newFakeProjectFS(nil), &stdout, &stderr)
+	err := ExecuteProjectPlan(p, newFakeProjectFS(nil))
 	if err == nil {
 		t.Fatal("expected a refusal for a destination that appeared after planning")
 	}
 	if !strings.Contains(err.Error(), "already exists") {
 		t.Errorf("refusal %q does not name the reason", err.Error())
-	}
-	if stdout.Len() != 0 {
-		t.Errorf("a refused run must report no `wrote:` line, got %q", stdout.String())
 	}
 	assertSameTree(t, before, snapshotTree(t, root))
 }
@@ -499,8 +470,7 @@ func TestExecuteProjectPlan_RefusesALexicalSkillsTreeDestination(t *testing.T) {
 	p.Writes[0].Abs = filepath.Join(root, filepath.FromSlash(rel))
 	before := snapshotTree(t, root)
 
-	var stdout, stderr bytes.Buffer
-	err := ExecuteProjectPlan(p, newFakeProjectFS(nil), &stdout, &stderr)
+	err := ExecuteProjectPlan(p, newFakeProjectFS(nil))
 	if err == nil {
 		t.Fatal("expected a refusal for a destination lexically under the project's skills/ tree")
 	}
@@ -510,9 +480,6 @@ func TestExecuteProjectPlan_RefusesALexicalSkillsTreeDestination(t *testing.T) {
 	// more precise wording is what this test pins.
 	if !strings.Contains(err.Error(), "lies under skills/") {
 		t.Errorf("refusal %q is not the lexical decision-(f) refusal", err.Error())
-	}
-	if stdout.Len() != 0 {
-		t.Errorf("a refused run must report no `wrote:` line, got %q", stdout.String())
 	}
 	assertSameTree(t, before, snapshotTree(t, root))
 }
@@ -531,16 +498,12 @@ func TestExecuteProjectPlan_RefusesADestinationResolvingIntoTheSkillsTree(t *tes
 	}
 	before := snapshotTree(t, root)
 
-	var stdout, stderr bytes.Buffer
-	err := ExecuteProjectPlan(p, newFakeProjectFS(nil), &stdout, &stderr)
+	err := ExecuteProjectPlan(p, newFakeProjectFS(nil))
 	if err == nil {
 		t.Fatal("expected a refusal for a destination resolving into the project's own skills/ tree")
 	}
 	if !strings.Contains(err.Error(), "skills/ tree") {
 		t.Errorf("refusal %q does not name decision (f)", err.Error())
-	}
-	if stdout.Len() != 0 {
-		t.Errorf("a refused run must report no `wrote:` line, got %q", stdout.String())
 	}
 	assertSameTree(t, before, snapshotTree(t, root))
 }
@@ -565,17 +528,12 @@ func TestExecuteProjectPlan_RollbackIncompleteReportsRepoRelativePaths(t *testin
 			}
 			return nil
 		})
-		var stdout, stderr bytes.Buffer
-		err := ExecuteProjectPlan(p, fsys, &stdout, &stderr)
+		err := ExecuteProjectPlan(p, fsys)
 		if !errors.Is(err, ErrRollbackIncomplete) {
-			t.Fatalf("error %v must be recognisable as an incomplete rollback (stderr %q)", err, stderr.String())
+			t.Fatalf("error %v must be recognisable as an incomplete rollback", err)
 		}
-		want := "error: rollback incomplete: " + path.Dir(order[1].Rel) + "\n"
-		if !strings.Contains(stderr.String(), want) {
-			t.Errorf("stderr = %q, want it to contain %q", stderr.String(), want)
-		}
-		if strings.Contains(stderr.String(), root) {
-			t.Errorf("stderr = %q, want a repo-relative path, not one carrying the absolute root", stderr.String())
+		if got, want := unrestoredBy(err), []string{path.Dir(order[1].Rel)}; !slices.Equal(got, want) {
+			t.Errorf("the error names %q as not restored, want the repo-relative %q (no absolute root %q)", got, want, root)
 		}
 		if _, statErr := os.Stat(stuck); statErr != nil {
 			t.Errorf("the reported directory must be the one actually left behind: %v", statErr)
@@ -598,10 +556,9 @@ func TestExecuteProjectPlan_RollbackIncompleteReportsRepoRelativePaths(t *testin
 			}
 			return nil
 		})
-		var stdout, stderr bytes.Buffer
-		err := ExecuteProjectPlan(p, fsys, &stdout, &stderr)
+		err := ExecuteProjectPlan(p, fsys)
 		if !errors.Is(err, ErrRollbackIncomplete) {
-			t.Fatalf("error %v must be recognisable as an incomplete rollback (stderr %q)", err, stderr.String())
+			t.Fatalf("error %v must be recognisable as an incomplete rollback", err)
 		}
 		if leftover == "" {
 			t.Fatal("no leftover temp removal was ever attempted, so this test proves nothing")
@@ -610,15 +567,37 @@ func TestExecuteProjectPlan_RollbackIncompleteReportsRepoRelativePaths(t *testin
 		if rerr != nil {
 			t.Fatalf("rel %q: %v", leftover, rerr)
 		}
-		want := "error: rollback incomplete: " + filepath.ToSlash(rel) + "\n"
-		if !strings.Contains(stderr.String(), want) {
-			t.Errorf("stderr = %q, want it to contain %q", stderr.String(), want)
-		}
-		if strings.Contains(stderr.String(), root) {
-			t.Errorf("stderr = %q, want a repo-relative path, not one carrying the absolute root", stderr.String())
+		if got, want := unrestoredBy(err), []string{filepath.ToSlash(rel)}; !slices.Equal(got, want) {
+			t.Errorf("the error names %q as not restored, want the repo-relative %q (no absolute root %q)", got, want, root)
 		}
 		if _, statErr := os.Stat(leftover); statErr != nil {
 			t.Errorf("the reported temp must be the one actually left behind: %v", statErr)
 		}
 	})
+}
+
+// TestAnIncompleteRollbackIsWordedForTheVerbAndNamesEveryPathAndTheCause pins the text and the
+// identity of the typed result: the verb that ran the executor, every path it could not restore in
+// the order it found them, and the failure that made it roll back; the sentinel is found in it, and
+// the cause is told, not unwrapped.
+func TestAnIncompleteRollbackIsWordedForTheVerbAndNamesEveryPathAndTheCause(t *testing.T) {
+	err := error(&RollbackIncompleteError{
+		Verb:       "skills install",
+		Unrestored: []string{".claude/skills/a/SKILL.md", ".agents/skills/a"},
+		Cause:      errInjected,
+	})
+
+	want := "skills install: rollback incomplete: .claude/skills/a/SKILL.md, .agents/skills/a (after injected failure)"
+	if err.Error() != want {
+		t.Errorf("Error() = %q, want %q", err.Error(), want)
+	}
+	if !errors.Is(err, ErrRollbackIncomplete) {
+		t.Error("the error must be recognisable as ErrRollbackIncomplete")
+	}
+	if errors.Is(err, errInjected) {
+		t.Error("the cause is told in the text and not unwrapped")
+	}
+	if !errors.Is(err, ErrRollbackIncomplete) || ErrRollbackIncomplete.Error() != "project-register: rollback incomplete" {
+		t.Errorf("the sentinel reads %q, want the text it always had", ErrRollbackIncomplete.Error())
+	}
 }

@@ -1,8 +1,8 @@
 package skills
 
 import (
+	"errors"
 	"fmt"
-	"io"
 	"io/fs"
 	"path"
 	"path/filepath"
@@ -29,8 +29,9 @@ func newProjectStager(verb string, fsys ProjectFS, root string, order []ProjectW
 func (s *projectStager) isDelete(i int) bool { return i < len(s.deleting) && s.deleting[i] }
 
 // stageAndCommit stages every write and commits the whole order, rolling the tree
-// back to its pre-run state on any failure. It prints nothing.
-func (s *projectStager) stageAndCommit(stderr io.Writer) error {
+// back to its pre-run state on any failure. It prints nothing: what a failed rollback could not
+// restore is in the error it returns.
+func (s *projectStager) stageAndCommit() error {
 	fsys, order := s.fsys, s.order
 
 	// Stage: create each target directory, recording which ones this run
@@ -42,11 +43,11 @@ func (s *projectStager) stageAndCommit(stderr io.Writer) error {
 		}
 		dir := filepath.Dir(w.Abs)
 		if err := s.mkdirAll(dir); err != nil {
-			return s.rollback(stderr, fmt.Errorf("%s: creating %q: %w", s.verb, path.Dir(w.Rel), err))
+			return s.rollback(fmt.Errorf("%s: creating %q: %w", s.verb, path.Dir(w.Rel), err))
 		}
 		tmp, err := writeProjectTemp(fsys, dir, w.Data, w.Mode)
 		if err != nil {
-			return s.rollback(stderr, fmt.Errorf("%s: staging %q: %w", s.verb, w.Rel, err))
+			return s.rollback(fmt.Errorf("%s: staging %q: %w", s.verb, w.Rel, err))
 		}
 		s.temps[i] = tmp
 	}
@@ -63,7 +64,7 @@ func (s *projectStager) stageAndCommit(stderr io.Writer) error {
 		if w.Backup != nil {
 			info, err := fsys.Stat(w.Abs)
 			if err != nil {
-				return s.rollback(stderr, fmt.Errorf("%s: inspecting %q before committing over it: %w", s.verb, w.Rel, err))
+				return s.rollback(fmt.Errorf("%s: inspecting %q before committing over it: %w", s.verb, w.Rel, err))
 			}
 			s.preMode[i] = info.Mode().Perm()
 		}
@@ -75,12 +76,12 @@ func (s *projectStager) stageAndCommit(stderr io.Writer) error {
 		s.attempted[i] = true
 		if s.isDelete(i) {
 			if err := fsys.Remove(w.Abs); err != nil {
-				return s.rollback(stderr, fmt.Errorf("%s: removing %q: %w", s.verb, w.Rel, err))
+				return s.rollback(fmt.Errorf("%s: removing %q: %w", s.verb, w.Rel, err))
 			}
 			continue
 		}
 		if err := fsys.Rename(s.temps[i], w.Abs); err != nil {
-			return s.rollback(stderr, fmt.Errorf("%s: committing %q: %w", s.verb, w.Rel, err))
+			return s.rollback(fmt.Errorf("%s: committing %q: %w", s.verb, w.Rel, err))
 		}
 		s.temps[i] = ""
 	}
@@ -91,18 +92,25 @@ func (s *projectStager) stageAndCommit(stderr io.Writer) error {
 // do: the run failed AND the rollback could not fully undo it. The CLI maps a
 // non-nil return from ExecuteProjectPlan to exit 1; this sentinel is what lets
 // it (and a test) tell an honest "nothing happened" from "look at these paths".
-var ErrRollbackIncomplete = fmt.Errorf("project-register: rollback incomplete")
+var ErrRollbackIncomplete = errors.New(projectRegisterVerb + ": rollback incomplete")
 
-// rollbackIncompleteError is ErrRollbackIncomplete worded for the verb that ran the
-// executor, with the paths left and the cause as its detail. errors.Is finds the
-// sentinel in it. For "project-register" the text is the sentinel's, unchanged.
-type rollbackIncompleteError struct{ verb, detail string }
-
-func (e rollbackIncompleteError) Error() string {
-	return e.verb + ": rollback incomplete: " + e.detail
+// RollbackIncompleteError is ErrRollbackIncomplete worded for the verb that ran the executor, and
+// the typed result of an execution that failed and could not put everything back: Unrestored is
+// every path the rollback could not restore, repo-relative and slash-separated (usable as a git
+// pathspec), in the order the rollback found them, and Cause is the failure that made it roll
+// back. errors.Is finds the sentinel in it; Cause is told, not unwrapped. The executor prints
+// nothing: the caller says Unrestored where it likes.
+type RollbackIncompleteError struct {
+	Verb       string
+	Unrestored []string
+	Cause      error
 }
 
-func (e rollbackIncompleteError) Is(target error) bool { return target == ErrRollbackIncomplete }
+func (e *RollbackIncompleteError) Error() string {
+	return e.Verb + ": rollback incomplete: " + strings.Join(e.Unrestored, ", ") + " (after " + e.Cause.Error() + ")"
+}
+
+func (e *RollbackIncompleteError) Is(target error) bool { return target == ErrRollbackIncomplete }
 
 // projectStager records what one execution has done so far, which is exactly
 // what rollback needs: the directories this run created and the temps it
@@ -161,7 +169,7 @@ func (s *projectStager) mkdirAll(dir string) error {
 // because a rename that reports an error may still have landed (an NFS or
 // wrapper reality). Restoring or removing a destination that was never touched
 // is a no-op, so the wider sweep costs nothing and closes that window.
-func (s *projectStager) rollback(stderr io.Writer, cause error) error {
+func (s *projectStager) rollback(cause error) error {
 	var bad []string
 
 	// 1. Every destination this run reached the rename for, newest first:
@@ -233,10 +241,7 @@ func (s *projectStager) rollback(stderr io.Writer, cause error) error {
 	}
 
 	if len(bad) > 0 {
-		for _, rel := range bad {
-			fmt.Fprintf(stderr, "error: rollback incomplete: %s\n", rel)
-		}
-		return rollbackIncompleteError{verb: s.verb, detail: fmt.Sprintf("%s (after %v)", strings.Join(bad, ", "), cause)}
+		return &RollbackIncompleteError{Verb: s.verb, Unrestored: bad, Cause: cause}
 	}
 	return cause
 }

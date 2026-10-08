@@ -1,10 +1,7 @@
 package skills
 
 import (
-	"fmt"
-	"io"
 	"path/filepath"
-	"strings"
 )
 
 // projectRetireStager holds the state needed to undo a retirement. Delete
@@ -21,7 +18,7 @@ type projectRetireStager struct {
 	attempted     []bool
 }
 
-func (s *projectRetireStager) rollback(stderr io.Writer, cause error) error {
+func (s *projectRetireStager) rollback(cause error) error {
 	var bad []string
 
 	// Restore target files in reverse order so a partially completed delete
@@ -51,10 +48,8 @@ func (s *projectRetireStager) rollback(stderr io.Writer, cause error) error {
 	}
 
 	if len(bad) != 0 {
-		for _, rel := range bad {
-			fmt.Fprintf(stderr, "error: rollback incomplete: %s\n", rel)
-		}
-		return fmt.Errorf("%w: %s (after %v)", ErrRollbackIncomplete, strings.Join(bad, ", "), cause)
+		// Worded as it always was, for project-register, although this is a retirement.
+		return &RollbackIncompleteError{Verb: projectRegisterVerb, Unrestored: bad, Cause: cause}
 	}
 	return cause
 }

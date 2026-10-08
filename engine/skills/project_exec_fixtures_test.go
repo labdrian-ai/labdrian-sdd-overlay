@@ -1,6 +1,7 @@
 package skills
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -187,6 +188,16 @@ func (f *fakeProjectFS) ResolvePath(name string) (string, error) {
 		return "", err
 	}
 	return f.real.ResolvePath(name)
+}
+
+// unrestoredBy is the paths a failed execution says it could not put back, as the typed error
+// tells them (repo-relative, one per path); nil where the failure was not an incomplete rollback.
+func unrestoredBy(err error) []string {
+	var incomplete *RollbackIncompleteError
+	if errors.As(err, &incomplete) {
+		return incomplete.Unrestored
+	}
+	return nil
 }
 
 // failAt returns a `fail` func that fails EVERY call of op whose path equals

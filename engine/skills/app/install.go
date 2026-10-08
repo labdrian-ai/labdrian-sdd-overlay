@@ -1,7 +1,6 @@
 package app
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -224,9 +223,8 @@ func runPlanned(verb string, plan func(skills.InstallInput) (skills.InstallPlan,
 	if len(refusals) > 0 {
 		return res, &PlanRefusal{Verb: verb, Reasons: refusals}
 	}
-	var report bytes.Buffer
-	if err := skills.ExecuteInstallPlan(planned, root, p.Project, &report); err != nil {
-		return res, &ExecutionError{Err: err, Report: report.String()}
+	if err := skills.ExecuteInstallPlan(planned, root, p.Project); err != nil {
+		return res, executionFailure(err)
 	}
 	res.Skills, res.Notes = planned.Skills, planned.Notes
 	return res, nil
