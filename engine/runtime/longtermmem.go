@@ -9,9 +9,9 @@ import (
 )
 
 // TargetLongtermMem is the pseudo-target used for the longterm-mem
-// component's aggregate LifecycleResult. It is intentionally NOT part of
-// ParseTarget/ExpandTarget's domain: --target selects one of
-// claude/opencode/codex/all for the runtime-parity adapters, while
+// component's aggregate LifecycleResult. It is intentionally NOT a runtime
+// of the registry (it is no capability target): --target selects one of
+// the registered runtimes or all for the runtime-parity adapters, while
 // --component longterm-mem is an orthogonal CLI axis (D4) whose single
 // adapter call always spans all three runtimes internally.
 const TargetLongtermMem Target = "longterm-mem"

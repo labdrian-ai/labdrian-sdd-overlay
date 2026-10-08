@@ -157,48 +157,6 @@ func HasExactHeader(prompt, injectionHeader string) bool {
 	return false
 }
 
-func ParseTarget(raw string) (Target, error) {
-	switch Target(strings.TrimSpace(raw)) {
-	case TargetClaude:
-		return TargetClaude, nil
-	case TargetOpenCode:
-		return TargetOpenCode, nil
-	case TargetCodex:
-		return TargetCodex, nil
-	case TargetPi:
-		return TargetPi, nil
-	case TargetAll:
-		return TargetAll, nil
-	default:
-		return "", fmt.Errorf("unknown target %q", raw)
-	}
-}
-
-func ExpandTarget(target Target) []Target {
-	if target != TargetAll {
-		return []Target{target}
-	}
-	return []Target{TargetClaude, TargetOpenCode, TargetCodex, TargetPi}
-}
-
-// NewFoundationAdapter returns the adapter of target for the targets that read no registry:
-// Claude, OpenCode and Codex, and, for any other target, the foundation that reports every
-// action unsupported. Pi builds a package from the skills registry and is built with
-// NewPiAdapter, which is given the way to read it; this function never builds it, so a caller
-// that forgot the registry gets the honest "unsupported" and not an adapter with no registry.
-func NewFoundationAdapter(target Target) Adapter {
-	if target == TargetOpenCode {
-		return NewOpenCodeAdapter(DefaultOpenCodeConfigRoot())
-	}
-	if target == TargetClaude {
-		return NewClaudeAdapter(DefaultClaudeConfigRoot())
-	}
-	if target == TargetCodex {
-		return NewCodexAdapter(DefaultCodexConfigRoot())
-	}
-	return foundationAdapter{target: target}
-}
-
 func DefaultClaudeConfigRoot() string {
 	if home := strings.TrimSpace(os.Getenv("HOME")); home != "" {
 		return filepath.Join(home, ".claude")
@@ -207,21 +165,4 @@ func DefaultClaudeConfigRoot() string {
 		return filepath.Join(home, ".claude")
 	}
 	return ""
-}
-
-type foundationAdapter struct {
-	target Target
-}
-
-func (a foundationAdapter) Target() Target             { return a.target }
-func (a foundationAdapter) Apply() LifecycleResult     { return a.result(ActionApply) }
-func (a foundationAdapter) Install() LifecycleResult   { return a.result(ActionInstall) }
-func (a foundationAdapter) Status() LifecycleResult    { return a.result(ActionStatus) }
-func (a foundationAdapter) SyncCheck() LifecycleResult { return a.result(ActionSyncCheck) }
-func (a foundationAdapter) Update() LifecycleResult    { return a.result(ActionUpdate) }
-func (a foundationAdapter) Rollback() LifecycleResult  { return a.result(ActionRollback) }
-func (a foundationAdapter) Uninstall() LifecycleResult { return a.result(ActionUninstall) }
-
-func (a foundationAdapter) result(action Action) LifecycleResult {
-	return NewLifecycleResult(a.target, action, CapabilityUnsupported, "runtime adapter foundation present; target implementation is scheduled for a later PR slice", nil)
 }
