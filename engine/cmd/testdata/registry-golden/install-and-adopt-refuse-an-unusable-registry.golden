@@ -25,7 +25,7 @@ $ skills install --registry <WORLD>/refused/installd.yaml --source-root <WORLD>/
 exit: 1
 --- stdout ---
 --- stderr ---
-error: parsing registry: skills: entry "alpha": install.targets contains invalid value "vim"; must be one of: claude, opencode, codex, pi
+error: parsing registry: skills: entry "alpha": install.targets contains invalid value "vim"; must be one of: claude, codex, pi, opencode
 
 # adopt: a registry that is not there
 $ skills adopt --registry <WORLD>/refused/adopta.yaml --source-root <WORLD>/overlay/skills (in demo)
@@ -54,7 +54,7 @@ $ skills adopt --registry <WORLD>/refused/adoptd.yaml --source-root <WORLD>/over
 exit: 1
 --- stdout ---
 --- stderr ---
-error: parsing registry: skills: entry "alpha": install.targets contains invalid value "vim"; must be one of: claude, opencode, codex, pi
+error: parsing registry: skills: entry "alpha": install.targets contains invalid value "vim"; must be one of: claude, codex, pi, opencode
 
 --- tree of demo ---
 (empty)

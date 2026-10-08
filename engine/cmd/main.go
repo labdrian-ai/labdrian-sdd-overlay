@@ -473,13 +473,22 @@ func runRuntimeCore(args []string, stdout io.Writer, stderr io.Writer, exit func
 		return
 	}
 
-	action, target, configRoot, component, stateDir, err := parseRuntimeArgs(args)
+	registry, err := newRuntimeRegistry(newWarningRegistryRepository(stderr))
+	if err != nil {
+		fmt.Fprintln(stderr, "error:", err)
+		exit(1)
+		return
+	}
+
+	action, target, configRoot, component, stateDir, err := parseRuntimeArgs(args, registry)
 	if err != nil {
 		fmt.Fprintln(stderr, err)
 		usage()
 		exit(1)
 		return
 	}
+
+	cfg := runtimeConfigFromEnv(os.Getenv, os.UserHomeDir)
 
 	if component == componentLongtermMem {
 		// D4 parse-time refusal: update is rejected here, BEFORE any
@@ -502,7 +511,7 @@ func runRuntimeCore(args []string, stdout io.Writer, stderr io.Writer, exit func
 		// empty stateDir yields an empty binary path here, which
 		// NewLongtermMemAdapter fills in with the same default it fills
 		// stateDir with — so the un-overridden case is unchanged.
-		adapter := runtimepkg.NewLongtermMemAdapter(stateDir, runtimepkg.LongtermMemBinaryPathForStateDir(stateDir))
+		adapter := runtimepkg.NewLongtermMemAdapter(cfg, stateDir, runtimepkg.LongtermMemBinaryPathForStateDir(stateDir))
 		result := runtimeLifecycleResult(adapter, action)
 		fmt.Fprintln(stdout, result.String())
 		if action == "status" {
@@ -521,17 +530,23 @@ func runRuntimeCore(args []string, stdout io.Writer, stderr io.Writer, exit func
 		return
 	}
 
-	targets := runtimepkg.ExpandTarget(target)
+	cfg.ConfigRoot = configRoot
+	targets := registry.Expand(target)
+
+	// Every adapter is built before the first one acts, so a target the registry cannot build
+	// stops the command before anything has been done, never half way through `all`.
+	adapters, err := buildRuntimeAdapters(registry, targets, cfg)
+	if err != nil {
+		fmt.Fprintln(stderr, "error:", err)
+		exit(1)
+		return
+	}
 
 	failed := false
-	allTargets := len(targets) > 1
+	allTargets := len(adapters) > 1
 
-	for _, current := range targets {
-		targetRoot := configRoot
-		if current == runtimepkg.TargetOpenCode && targetRoot == "" {
-			targetRoot = runtimepkg.DefaultOpenCodeConfigRoot()
-		}
-		adapter := runtimeAdapterForTarget(current, targetRoot, stderr)
+	for _, adapter := range adapters {
+		current := adapter.Target()
 		result := runtimeLifecycleResult(adapter, action)
 		fmt.Fprintln(stdout, result.String())
 		// Pi now has a real Status() implementation (pi-lifecycle, slice
@@ -570,24 +585,8 @@ func runRuntimeCore(args []string, stdout io.Writer, stderr io.Writer, exit func
 	exit(0)
 }
 
-func runtimeAdapterForTarget(target runtimepkg.Target, configRoot string, stderr io.Writer) runtimepkg.Adapter {
-	if target == runtimepkg.TargetOpenCode {
-		return runtimepkg.NewOpenCodeAdapter(configRoot)
-	}
-	if target == runtimepkg.TargetClaude {
-		return runtimepkg.NewClaudeAdapter(configRoot)
-	}
-	if target == runtimepkg.TargetCodex {
-		return runtimepkg.NewCodexAdapter(configRoot)
-	}
-	if target == runtimepkg.TargetPi {
-		return runtimepkg.NewPiAdapter(newWarningRegistryRepository(stderr))
-	}
-	return runtimepkg.NewFoundationAdapter(target)
-}
-
 // parseRuntimeArgs parses minimal runtime subcommand arguments.
-func parseRuntimeArgs(args []string) (action string, target runtimepkg.Target, configRoot, component, stateDir string, err error) {
+func parseRuntimeArgs(args []string, registry *runtimepkg.Registry) (action string, target runtimepkg.Target, configRoot, component, stateDir string, err error) {
 	if len(args) == 0 {
 		return "", "", "", "", "", fmt.Errorf("error: runtime requires an action")
 	}
@@ -606,7 +605,7 @@ func parseRuntimeArgs(args []string) (action string, target runtimepkg.Target, c
 			if i >= len(args) {
 				return "", "", "", "", "", fmt.Errorf("error: --target requires a value")
 			}
-			target, err = runtimepkg.ParseTarget(args[i])
+			target, err = registry.Parse(args[i])
 			if err != nil {
 				return "", "", "", "", "", err
 			}

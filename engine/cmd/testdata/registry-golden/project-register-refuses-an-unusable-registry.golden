@@ -30,7 +30,7 @@ $ skills project-register --project-root <WORLD>/project --candidate procedural/
 exit: 1
 --- stdout ---
 --- stderr ---
-error: parsing registry "<WORLD>/refused/d.yaml": skills: entry "alpha": install.targets contains invalid value "vim"; must be one of: claude, opencode, codex, pi
+error: parsing registry "<WORLD>/refused/d.yaml": skills: entry "alpha": install.targets contains invalid value "vim"; must be one of: claude, codex, pi, opencode
 
 --- tree of project ---
 .agents/

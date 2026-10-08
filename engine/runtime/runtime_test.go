@@ -21,42 +21,6 @@ injection_point: "## Skills to load before work"
 # Minimalism Contract
 `
 
-func TestParseTargetAcceptsKnownTargetsAndAll(t *testing.T) {
-	tests := []struct {
-		name string
-		raw  string
-		want engineRuntime.Target
-	}{
-		{name: "claude", raw: "claude", want: engineRuntime.TargetClaude},
-		{name: "opencode", raw: "opencode", want: engineRuntime.TargetOpenCode},
-		{name: "codex", raw: "codex", want: engineRuntime.TargetCodex},
-		{name: "pi", raw: "pi", want: engineRuntime.TargetPi},
-		{name: "all", raw: "all", want: engineRuntime.TargetAll},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := engineRuntime.ParseTarget(tt.raw)
-			if err != nil {
-				t.Fatalf("ParseTarget(%q): %v", tt.raw, err)
-			}
-			if got != tt.want {
-				t.Fatalf("ParseTarget(%q) = %q, want %q", tt.raw, got, tt.want)
-			}
-		})
-	}
-}
-
-func TestParseTargetRejectsUnknownTarget(t *testing.T) {
-	_, err := engineRuntime.ParseTarget("future-cli")
-	if err == nil {
-		t.Fatal("ParseTarget should reject unknown targets")
-	}
-	if !strings.Contains(err.Error(), "future-cli") {
-		t.Fatalf("error should name rejected target, got %q", err)
-	}
-}
-
 func TestCapabilityStatusValuesAreStable(t *testing.T) {
 	tests := []struct {
 		name string
@@ -155,29 +119,14 @@ func TestPromptHelpersHandleExistingHeaderAndDefaultHeader(t *testing.T) {
 	}
 }
 
-// TestExpandTarget_Pi pins Pi's inclusion in --target all's aggregation
-// (R-001, R-008): "all" must expand to all four real runtime targets, and a
-// single explicit target must still expand to itself only.
-func TestExpandTarget_Pi(t *testing.T) {
-	expanded := engineRuntime.ExpandTarget(engineRuntime.TargetAll)
-	wantTargets := []engineRuntime.Target{
-		engineRuntime.TargetClaude, engineRuntime.TargetOpenCode,
-		engineRuntime.TargetCodex, engineRuntime.TargetPi,
+// TestPiFromTheRegistryWithNoOverlayDirIsHonestlyUnsupported: a Pi adapter built from a Config
+// that names no OVERLAY_DIR and a state dir with nothing built in it reports every action
+// unsupported (R-001, R-008), never a fabricated success.
+func TestPiFromTheRegistryWithNoOverlayDirIsHonestlyUnsupported(t *testing.T) {
+	adapter, err := shippedRegistry(t).New(engineRuntime.TargetPi, engineRuntime.Config{StateDir: t.TempDir()})
+	if err != nil {
+		t.Fatal(err)
 	}
-	if len(expanded) != len(wantTargets) {
-		t.Fatalf("ExpandTarget(all) length = %d, want %d (%v)", len(expanded), len(wantTargets), expanded)
-	}
-	for i, want := range wantTargets {
-		if expanded[i] != want {
-			t.Fatalf("ExpandTarget(all)[%d] = %q, want %q", i, expanded[i], want)
-		}
-	}
-
-	if single := engineRuntime.ExpandTarget(engineRuntime.TargetPi); len(single) != 1 || single[0] != engineRuntime.TargetPi {
-		t.Fatalf("ExpandTarget(pi) = %#v, want [pi]", single)
-	}
-
-	var adapter engineRuntime.Adapter = engineRuntime.NewPiAdapter(fileRegistries)
 	if adapter.Target() != engineRuntime.TargetPi {
 		t.Fatalf("PiAdapter.Target() = %q, want %q", adapter.Target(), engineRuntime.TargetPi)
 	}
@@ -198,7 +147,10 @@ func TestExpandTarget_Pi(t *testing.T) {
 // pre-pi-lifecycle stub-wording test): an unbuilt package now reports its
 // own concrete reason instead of a "scheduled for a later slice" placeholder.
 func TestPiAdapter_UnbuiltDefaultReportsConcreteReasons(t *testing.T) {
-	adapter := engineRuntime.NewPiAdapter(fileRegistries)
+	adapter, err := shippedRegistry(t).New(engineRuntime.TargetPi, engineRuntime.Config{StateDir: t.TempDir()})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	for _, result := range []engineRuntime.LifecycleResult{adapter.Status(), adapter.Uninstall()} {
 		if !strings.Contains(result.Message, "not built") {
@@ -212,55 +164,33 @@ func TestPiAdapter_UnbuiltDefaultReportsConcreteReasons(t *testing.T) {
 	}
 }
 
-func TestExpandTargetAndFoundationAdapters(t *testing.T) {
-	expanded := engineRuntime.ExpandTarget(engineRuntime.TargetAll)
-	wantTargets := []engineRuntime.Target{engineRuntime.TargetClaude, engineRuntime.TargetOpenCode, engineRuntime.TargetCodex, engineRuntime.TargetPi}
-	if len(expanded) != len(wantTargets) {
-		t.Fatalf("ExpandTarget(all) length = %d, want %d", len(expanded), len(wantTargets))
-	}
-	for i, want := range wantTargets {
-		if expanded[i] != want {
-			t.Fatalf("ExpandTarget(all)[%d] = %q, want %q", i, expanded[i], want)
-		}
-	}
-	if single := engineRuntime.ExpandTarget(engineRuntime.TargetCodex); len(single) != 1 || single[0] != engineRuntime.TargetCodex {
-		t.Fatalf("ExpandTarget(codex) = %#v", single)
-	}
+// TestClaudeAndCodexFromTheRegistryInAnEmptyHome: the adapters the registry builds from a Config
+// whose home holds nothing report what the adapters of an empty machine always reported: Claude
+// has no settings file, Codex has a root and no manifest.
+func TestClaudeAndCodexFromTheRegistryInAnEmptyHome(t *testing.T) {
+	registry := shippedRegistry(t)
+	cfg := engineRuntime.Config{Home: t.TempDir()}
 
-	t.Setenv("HOME", t.TempDir())
-	claude := engineRuntime.NewFoundationAdapter(engineRuntime.TargetClaude)
+	claude, err := registry.New(engineRuntime.TargetClaude, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if _, ok := claude.(engineRuntime.ClaudeAdapter); !ok {
-		t.Fatalf("NewFoundationAdapter(claude) should return ClaudeAdapter foundation")
+		t.Fatalf("New(claude) = %T, want a ClaudeAdapter", claude)
 	}
-	if claude.Target() != engineRuntime.TargetClaude || claude.Status().Status != engineRuntime.CapabilityUnsupported {
-		t.Fatalf("Claude foundation status should be unsupported in an empty HOME sandbox, got target=%q status=%q", claude.Target(), claude.Status().Status)
+	if claude.Status().Status != engineRuntime.CapabilityUnsupported {
+		t.Fatalf("Claude status should be unsupported in an empty home, got %q", claude.Status().Status)
 	}
 
-	codex := engineRuntime.NewFoundationAdapter(engineRuntime.TargetCodex)
+	codex, err := registry.New(engineRuntime.TargetCodex, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if _, ok := codex.(engineRuntime.CodexAdapter); !ok {
-		t.Fatalf("NewFoundationAdapter(codex) should return CodexAdapter foundation")
+		t.Fatalf("New(codex) = %T, want a CodexAdapter", codex)
 	}
-	if codex.Target() != engineRuntime.TargetCodex || codex.Status().Status != engineRuntime.CapabilityPartial {
-		t.Fatalf("Codex foundation status should be partial in an empty HOME sandbox, got target=%q status=%q", codex.Target(), codex.Status().Status)
-	}
-
-	// Pi reads the skills registry and is built with NewPiAdapter, which is given the way to read
-	// it; the foundation never stands in for it, it reports the target unsupported.
-	pi := engineRuntime.NewFoundationAdapter(engineRuntime.TargetPi)
-	if _, ok := pi.(engineRuntime.PiAdapter); ok {
-		t.Fatalf("NewFoundationAdapter(pi) returned a PiAdapter built with no registry")
-	}
-	if result := pi.Apply(); result.Target != engineRuntime.TargetPi || result.Status != engineRuntime.CapabilityUnsupported {
-		t.Fatalf("NewFoundationAdapter(pi).Apply() = %#v, want the pi target reported unsupported", result)
-	}
-
-	unknown := engineRuntime.NewFoundationAdapter(engineRuntime.Target("future"))
-	for _, result := range []engineRuntime.LifecycleResult{
-		unknown.Apply(), unknown.Install(), unknown.Status(), unknown.SyncCheck(), unknown.Update(), unknown.Rollback(), unknown.Uninstall(),
-	} {
-		if result.Target != engineRuntime.Target("future") || result.Status != engineRuntime.CapabilityUnsupported {
-			t.Fatalf("unexpected fallback adapter result: %#v", result)
-		}
+	if codex.Status().Status != engineRuntime.CapabilityPartial {
+		t.Fatalf("Codex status should be partial in an empty home, got %q", codex.Status().Status)
 	}
 }
 

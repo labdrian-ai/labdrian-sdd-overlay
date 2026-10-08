@@ -19,42 +19,36 @@ import (
 type PiAdapter struct {
 	target       Target
 	registries   skills.RegistryRepository
+	home         string
 	overlayRoot  string
 	registryPath string
 	destDir      string
 }
 
-// NewPiAdapter constructs the Pi adapter, resolving its build paths from
-// OVERLAY_DIR/STATE_DIR (empty when unset — every wired method then
-// honestly reports CapabilityUnsupported rather than fabricating success).
-// registries is how it reads the skills registry the package is built from.
-func NewPiAdapter(registries skills.RegistryRepository) PiAdapter {
-	return NewPiAdapterWithPaths(registries, os.Getenv("OVERLAY_DIR"), "", "")
+// PiPaths are the places the Pi adapter works in. The composition root resolves them (see
+// Config); the adapter reads no environment.
+type PiPaths struct {
+	// Home is the home directory whose ~/.pi/agent the `pi` CLI keeps its settings in. When it
+	// is empty the adapter reports what it needs it for as unproven, never a guessed location.
+	Home string
+	// OverlayRoot is the overlay checkout the package is built from. When it is empty every
+	// method that builds honestly reports CapabilityUnsupported rather than fabricating success.
+	OverlayRoot string
+	// RegistryPath is the skills registry the package is built from; empty means
+	// "<OverlayRoot>/skills.registry.yaml" when OverlayRoot is set.
+	RegistryPath string
+	// DestDir is where the package is built and installed from.
+	DestDir string
 }
 
-// NewPiAdapterWithPaths constructs the Pi adapter with explicit build
-// paths. An empty registryPath defaults to "<overlayRoot>/skills.registry.yaml"
-// when overlayRoot is set; an empty destDir defaults to
-// DefaultPiPackageDir(os.Getenv("STATE_DIR")).
-func NewPiAdapterWithPaths(registries skills.RegistryRepository, overlayRoot, registryPath, destDir string) PiAdapter {
-	if registryPath == "" && overlayRoot != "" {
-		registryPath = filepath.Join(overlayRoot, "skills.registry.yaml")
+// NewPiAdapter constructs the Pi adapter over paths. registries is how it reads the skills
+// registry the package is built from.
+func NewPiAdapter(registries skills.RegistryRepository, paths PiPaths) PiAdapter {
+	registryPath := paths.RegistryPath
+	if registryPath == "" && paths.OverlayRoot != "" {
+		registryPath = filepath.Join(paths.OverlayRoot, "skills.registry.yaml")
 	}
-	if destDir == "" {
-		destDir = DefaultPiPackageDir(os.Getenv("STATE_DIR"))
-	}
-	return PiAdapter{target: TargetPi, registries: registries, overlayRoot: overlayRoot, registryPath: registryPath, destDir: destDir}
-}
-
-// DefaultPiPackageDir returns "<stateDir>/pi/labdrian-pi", defaulting
-// stateDir to "$HOME/.labdrian-overlay" when empty.
-func DefaultPiPackageDir(stateDir string) string {
-	if stateDir == "" {
-		if home, err := os.UserHomeDir(); err == nil && home != "" {
-			stateDir = filepath.Join(home, ".labdrian-overlay")
-		}
-	}
-	return filepath.Join(stateDir, "pi", "labdrian-pi")
+	return PiAdapter{target: TargetPi, registries: registries, home: paths.Home, overlayRoot: paths.OverlayRoot, registryPath: registryPath, destDir: paths.DestDir}
 }
 
 // piNoDiscoveryFlagsDisclosure is a STATIC note (R-007) — never a runtime-
@@ -102,8 +96,8 @@ func (a PiAdapter) Install() LifecycleResult {
 // link problem is reported inline, honestly, but the package install
 // itself already succeeded by the time this runs.
 func (a PiAdapter) installGaduSubagent(bin string) string {
-	home, err := os.UserHomeDir()
-	if err != nil || home == "" {
+	home := a.home
+	if home == "" {
 		return "GADU Pi subagent wiring skipped: cannot resolve home directory."
 	}
 
@@ -146,13 +140,13 @@ func (a PiAdapter) Status() LifecycleResult {
 	} else if report, err := pipkg.Check(a.registries, a.overlayRoot, a.registryPath, a.destDir); err != nil {
 		problems = append(problems, "in sync ("+err.Error()+"; "+report.Disclosure()+")")
 	}
-	if !isPiPackageListed(a.destDir) {
+	if !isPiPackageListed(a.home, a.destDir) {
 		problems = append(problems, "listed in ~/.pi/agent/settings.json packages (not listed; run: pi install "+a.destDir+")")
 	}
 	if !isPiMcpRegistered(a.destDir) {
 		problems = append(problems, "longterm-mem registered in mcp.json (not registered; run: longterm-mem register --target pi)")
 	}
-	if home, err := os.UserHomeDir(); err == nil && home != "" {
+	if home := a.home; home != "" {
 		switch subagentRunnerState(home) {
 		case subagentRunnerNative, subagentRunnerLegacy:
 			// proven
@@ -202,7 +196,7 @@ func (a PiAdapter) Uninstall() LifecycleResult {
 	}
 
 	var linkNote string
-	if home, err := os.UserHomeDir(); err == nil && home != "" {
+	if home := a.home; home != "" {
 		if err := unlinkGaduAgent(home, a.destDir); err != nil {
 			linkNote = " " + err.Error() + "."
 		} else {
@@ -281,9 +275,8 @@ func runPiCommand(bin, verb, path string) error {
 
 // isPiPackageListed reports whether destDir is present in
 // ~/.pi/agent/settings.json's "packages" array (read-only probe).
-func isPiPackageListed(destDir string) bool {
-	home, err := os.UserHomeDir()
-	if err != nil || home == "" {
+func isPiPackageListed(home, destDir string) bool {
+	if home == "" {
 		return false
 	}
 	raw, err := os.ReadFile(filepath.Join(home, ".pi", "agent", "settings.json"))

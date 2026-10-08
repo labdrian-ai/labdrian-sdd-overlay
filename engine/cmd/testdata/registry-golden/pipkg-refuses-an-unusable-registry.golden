@@ -30,7 +30,7 @@ $ pipkg build --overlay-root <WORLD>/overlay --registry <WORLD>/refused/buildd.y
 exit: 1
 --- stdout ---
 --- stderr ---
-pipkg build: pipkg: parsing registry: skills: entry "alpha": install.targets contains invalid value "vim"; must be one of: claude, opencode, codex, pi
+pipkg build: pipkg: parsing registry: skills: entry "alpha": install.targets contains invalid value "vim"; must be one of: claude, codex, pi, opencode
 
 # the package of the registry the checks below are over, read whole
 $ pipkg build --overlay-root <WORLD>/overlay --registry <WORLD>/refused/whole.yaml --dest-dir <WORLD>/out/labdrian-pi
@@ -70,7 +70,7 @@ exit: 1
 --- stdout ---
 pipkg check: compared against the worktree (overlay root is not a git repository)
 --- stderr ---
-pipkg check: pipkg: parsing registry: skills: entry "alpha": install.targets contains invalid value "vim"; must be one of: claude, opencode, codex, pi
+pipkg check: pipkg: parsing registry: skills: entry "alpha": install.targets contains invalid value "vim"; must be one of: claude, codex, pi, opencode
 
 # and the package that was built is as it was (its registry has one skill, for claude only, so no skill directory is projected to Pi)
 --- tree of out ---

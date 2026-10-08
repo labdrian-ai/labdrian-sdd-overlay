@@ -4,6 +4,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -14,149 +15,311 @@ import (
 	engineRuntime "github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime"
 )
 
-// pseudoTargets is the explicit registry of Target constants that are
-// deliberately not runtimes. Each labels something other than a runtime the
-// engine installs into, sits outside ParseTarget's and ExpandTarget's domain,
-// and so needs no capability declaration.
-//
-// The registry is what makes the check below total. A Target constant must be
-// either a runtime (in ExpandTarget(TargetAll), and therefore declared) or a
-// listed pseudo-target; a new constant that is neither fails the test, so
-// adding a runtime cannot skip its declaration, and adding a pseudo-target is a
-// conscious edit here.
-var pseudoTargets = map[string]string{
-	string(engineRuntime.TargetLongtermMem): "label of the longterm-mem component's aggregate LifecycleResult (longtermmem.go)",
+// shippedRegistry registers every runtime this package ships, the way the composition root does.
+func shippedRegistry(t *testing.T) *engineRuntime.Registry {
+	t.Helper()
+	r := engineRuntime.NewRegistry()
+	for _, register := range []func(*engineRuntime.Registry) error{
+		engineRuntime.RegisterClaude,
+		engineRuntime.RegisterOpenCode,
+		engineRuntime.RegisterCodex,
+		func(r *engineRuntime.Registry) error { return engineRuntime.RegisterPi(r, fileRegistries) },
+	} {
+		if err := register(r); err != nil {
+			t.Fatalf("register a shipped runtime: %v", err)
+		}
+	}
+	return r
 }
 
-// runtimeTargetConstants returns, sorted, the value of every constant of type
-// Target declared in the production files of this package, except TargetAll
-// (a request for every target, not a target). It reads the source instead of
-// listing the constants by hand, so a Target added in any file is seen here
-// the moment it is declared.
-func runtimeTargetConstants(t *testing.T) []string {
+// TestShippedRuntimesAreExactlyTheDeclaredTargets keeps the vocabulary total in both directions:
+// a target capability declares has an adapter this package registers, and an adapter this package
+// registers is a declared target. Adding a runtime to one and not the other fails here, so a
+// fifth runtime cannot ship without stating what it supports.
+func TestShippedRuntimesAreExactlyTheDeclaredTargets(t *testing.T) {
+	var registered []string
+	for _, target := range shippedRegistry(t).Targets() {
+		registered = append(registered, string(target))
+	}
+	sort.Strings(registered)
+
+	declared := capability.Targets()
+	sort.Strings(declared)
+
+	if strings.Join(registered, ",") != strings.Join(declared, ",") {
+		t.Fatalf("registered runtimes = %v, declared targets = %v; they must be the same set", registered, declared)
+	}
+}
+
+// TestALabelThatIsNotARuntimeIsNotATarget: the longterm-mem component labels its own aggregate
+// result and is selected by --component, never by --target, so no registry holds it and no
+// capability declares it.
+func TestALabelThatIsNotARuntimeIsNotATarget(t *testing.T) {
+	name := string(engineRuntime.TargetLongtermMem)
+	if _, err := shippedRegistry(t).Parse(name); err == nil {
+		t.Errorf("Parse(%q) accepted a label that is not a runtime", name)
+	}
+	if _, err := capability.Declare(name); err == nil {
+		t.Errorf("capability declares %q, which is not a runtime", name)
+	}
+}
+
+// TestEveryRuntimeBuildsItsOwnAdapter: each Register function binds the factory of its own
+// runtime, and the factory takes the directory the adapter works in from the Config.
+func TestEveryRuntimeBuildsItsOwnAdapter(t *testing.T) {
+	r := shippedRegistry(t)
+	for _, target := range r.Targets() {
+		adapter, err := r.New(target, engineRuntime.Config{ConfigRoot: t.TempDir()})
+		if err != nil {
+			t.Fatalf("New(%q): %v", target, err)
+		}
+		if adapter.Target() != target {
+			t.Errorf("New(%q).Target() = %q", target, adapter.Target())
+		}
+	}
+}
+
+func TestTheClaudeFactoryWorksInTheConfigRoot(t *testing.T) {
+	root := t.TempDir()
+	adapter, err := shippedRegistry(t).New(engineRuntime.TargetClaude, engineRuntime.Config{ConfigRoot: root})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result := adapter.Install(); result.Status != engineRuntime.CapabilityRestartRequired {
+		t.Fatalf("Install() = %#v", result)
+	}
+	if got := parseClaudeSettingsFile(t, filepath.Join(root, "settings.json")); got["hooks"] == nil {
+		t.Fatalf("no hooks were written under the config root %s", root)
+	}
+}
+
+func TestThePiFactoryBuildsUnderTheConfigRootNotInIt(t *testing.T) {
+	root := t.TempDir()
+	want := filepath.Join(root, "pi", "labdrian-pi")
+	adapter, err := shippedRegistry(t).New(engineRuntime.TargetPi, engineRuntime.Config{ConfigRoot: root})
+	if err != nil {
+		t.Fatal(err)
+	}
+	result := adapter.Status()
+	if result.Status != engineRuntime.CapabilityUnsupported || !strings.Contains(result.Message, "package is not built at "+want+" ") {
+		t.Fatalf("Status() = %#v, want it to look for the package at %s, under the config root", result, want)
+	}
+}
+
+// TestPiUninstallUnderASharedConfigRootLeavesTheOtherRuntimesFilesAlone: the config root may be
+// the one the other runtimes keep their settings in (`--target all --config-root X`). Removing
+// the Pi package removes its own directory, pi/labdrian-pi, and nothing else of the root.
+func TestPiUninstallUnderASharedConfigRootLeavesTheOtherRuntimesFilesAlone(t *testing.T) {
+	root := t.TempDir()
+	foreign := filepath.Join(root, "settings.json")
+	if err := os.WriteFile(foreign, []byte(`{"theme":"dark"}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	pkg := filepath.Join(root, "pi", "labdrian-pi")
+	if err := os.MkdirAll(pkg, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(pkg, "package.json"), []byte("{}"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("LABDRIAN_PI_BIN", writeStubPiScript(t, filepath.Join(t.TempDir(), "argv.txt")))
+
+	adapter, err := shippedRegistry(t).New(engineRuntime.TargetPi, engineRuntime.Config{Home: t.TempDir(), ConfigRoot: root})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result := adapter.Uninstall(); result.Status != engineRuntime.CapabilitySupported {
+		t.Fatalf("Uninstall() = %#v, want supported", result)
+	}
+	if _, err := os.Stat(pkg); !os.IsNotExist(err) {
+		t.Errorf("the package directory %s is still there: %v", pkg, err)
+	}
+	if got, err := os.ReadFile(foreign); err != nil || string(got) != `{"theme":"dark"}` {
+		t.Errorf("a file of the shared config root was touched: %q, %v", got, err)
+	}
+}
+
+// builtPiPackage makes a config root holding a directory that looks like a built Pi package:
+// Status gates on its package.json before it reads anything else. It returns the root and the
+// package directory.
+func builtPiPackage(t *testing.T) (root, dest string) {
 	t.Helper()
+	root = t.TempDir()
+	dest = filepath.Join(root, "pi", "labdrian-pi")
+	if err := os.MkdirAll(dest, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dest, "package.json"), []byte("{}"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return root, dest
+}
+
+// TestThePiFactoryReadsPiSettingsUnderTheConfigHome: the ~/.pi/agent files the status proves
+// against are the ones under Config.Home, not under whatever home the process has.
+func TestThePiFactoryReadsPiSettingsUnderTheConfigHome(t *testing.T) {
+	root, dest := builtPiPackage(t)
+	home := t.TempDir()
+	agent := filepath.Join(home, ".pi", "agent")
+	if err := os.MkdirAll(agent, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	settings := `{"packages": [` + strconv.Quote(dest) + `]}`
+	if err := os.WriteFile(filepath.Join(agent, "settings.json"), []byte(settings), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	adapter, err := shippedRegistry(t).New(engineRuntime.TargetPi, engineRuntime.Config{Home: home, ConfigRoot: root})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if msg := adapter.Status().Message; strings.Contains(msg, "settings.json packages (not listed") {
+		t.Fatalf("the package is listed in the settings under the config home, yet Status says it is not: %q", msg)
+	}
+}
+
+// TestThePiFactoryWithoutAHomeSaysSoAndGuessesNone: no home is reported as unproven, never
+// replaced by the home of the process.
+func TestThePiFactoryWithoutAHomeSaysSoAndGuessesNone(t *testing.T) {
+	root, _ := builtPiPackage(t)
+	adapter, err := shippedRegistry(t).New(engineRuntime.TargetPi, engineRuntime.Config{ConfigRoot: root})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if msg := adapter.Status().Message; !strings.Contains(msg, "cannot resolve home directory") {
+		t.Fatalf("Status() without a home = %q, want it to say the home cannot be resolved", msg)
+	}
+}
+
+// notRuntimeTargets are the Target constants that name something other than a runtime: a request
+// for every registered runtime, and the label of the longterm-mem component's aggregate result.
+var notRuntimeTargets = map[string]bool{"TargetAll": true, "TargetLongtermMem": true}
+
+// TestEveryTargetConstantIsACapabilityTarget reads the source of the package: a constant of type
+// Target is either listed in notRuntimeTargets or defined as a name of the capability vocabulary
+// (capability.TargetX), never as a string of its own. A runtime added here by a literal would
+// otherwise be a second vocabulary that nothing registers and nothing declares.
+func TestEveryTargetConstantIsACapabilityTarget(t *testing.T) {
 	fset := token.NewFileSet()
-	var values []string
+	seen := 0
 	for _, path := range nonTestGoFiles(t, ".") {
 		file, err := parser.ParseFile(fset, path, nil, parser.SkipObjectResolution)
 		if err != nil {
 			t.Fatalf("parse %s: %v", path, err)
 		}
-		for _, decl := range file.Decls {
-			gen, ok := decl.(*ast.GenDecl)
-			if !ok || gen.Tok != token.CONST {
+		n, problems := targetConstantProblems(file)
+		seen += n
+		for _, problem := range problems {
+			t.Errorf("%s: %s", filepath.Base(path), problem)
+		}
+	}
+	if seen == 0 {
+		t.Fatal("no runtime Target constants found; the source scan is broken")
+	}
+}
+
+// TestTargetConstantScanNamesWhatItCannotJudge feeds the scan source it must refuse without
+// panicking: a literal, a constant with no value of its own (a bare declaration, or one that
+// repeats the previous line), and a value that is not capability.X.
+func TestTargetConstantScanNamesWhatItCannotJudge(t *testing.T) {
+	const src = `package runtime
+const (
+	TargetGood  Target = capability.TargetClaude
+	TargetLit   Target = "codex"
+	TargetOther Target = other.TargetPi
+	TargetImplicit
+	TargetAll Target = "all"
+)
+const TargetBare Target
+
+// Go wants as many values as names: the scan names the constant that has none, and the spec that
+// has too many.
+const TargetA, TargetB Target = capability.TargetClaude
+const TargetC Target = capability.TargetCodex, capability.TargetPi
+
+// An untyped spec, and the ones that repeat it, are not Target constants.
+const (
+	TargetTyped Target = capability.TargetPi
+	Counter0           = iota
+	Counter1
+)
+`
+	file, err := parser.ParseFile(token.NewFileSet(), "scan.go", src, parser.SkipObjectResolution)
+	if err != nil {
+		t.Fatal(err)
+	}
+	n, problems := targetConstantProblems(file)
+	if n != 9 {
+		t.Errorf("scanned %d runtime constants, want 9 (TargetAll, Counter0 and Counter1 are not)", n)
+	}
+	for _, name := range []string{"TargetLit", "TargetOther", "TargetImplicit", "TargetBare", "TargetB", "TargetC"} {
+		found := false
+		for _, problem := range problems {
+			found = found || strings.HasPrefix(problem, name+" ")
+		}
+		if !found {
+			t.Errorf("no problem reported for %s; got %q", name, problems)
+		}
+	}
+	for _, problem := range problems {
+		for _, accepted := range []string{"TargetGood ", "TargetAll ", "TargetA ", "TargetTyped ", "Counter0 ", "Counter1 "} {
+			if strings.HasPrefix(problem, accepted) {
+				t.Errorf("a constant Go accepts, or that is not a Target, was reported: %s", problem)
+			}
+		}
+	}
+}
+
+// isCapabilityName says whether expr is a name taken from the capability package: capability.X.
+func isCapabilityName(expr ast.Expr) bool {
+	sel, ok := expr.(*ast.SelectorExpr)
+	if !ok {
+		return false
+	}
+	pkg, ok := sel.X.(*ast.Ident)
+	return ok && pkg.Name == "capability"
+}
+
+// targetConstantProblems judges the Target constants of one file. It returns how many runtime
+// constants it looked at and one message, beginning with the constant's name, for each that is not
+// defined as capability.X.
+func targetConstantProblems(file *ast.File) (scanned int, problems []string) {
+	for _, decl := range file.Decls {
+		gen, ok := decl.(*ast.GenDecl)
+		if !ok || gen.Tok != token.CONST {
+			continue
+		}
+		// A spec without a type repeats the previous line's type and expression, so the type is
+		// the one the group last named: Go's implicit repetition.
+		var lastType ast.Expr
+		for _, spec := range gen.Specs {
+			vs := spec.(*ast.ValueSpec)
+			typ := vs.Type
+			if typ != nil || len(vs.Values) > 0 {
+				lastType = typ
+			} else {
+				typ = lastType
+			}
+			if id, ok := typ.(*ast.Ident); !ok || id.Name != "Target" {
 				continue
 			}
-			for _, spec := range gen.Specs {
-				valueSpec := spec.(*ast.ValueSpec)
-				if typ, ok := valueSpec.Type.(*ast.Ident); !ok || typ.Name != "Target" {
+			for i, name := range vs.Names {
+				if notRuntimeTargets[name.Name] {
 					continue
 				}
-				for i, expr := range valueSpec.Values {
-					lit, ok := expr.(*ast.BasicLit)
-					if !ok || lit.Kind != token.STRING {
-						t.Fatalf("%s: constant %s of type Target is not a string literal; extend runtimeTargetConstants before adding it", filepath.Base(path), valueSpec.Names[i].Name)
-					}
-					value, err := strconv.Unquote(lit.Value)
-					if err != nil {
-						t.Fatalf("%s: constant %s: %v", filepath.Base(path), valueSpec.Names[i].Name, err)
-					}
-					if value != string(engineRuntime.TargetAll) {
-						values = append(values, value)
-					}
+				scanned++
+				if i >= len(vs.Values) {
+					problems = append(problems, name.Name+" has no value of its own; define it explicitly as capability.Target...")
+					continue
 				}
+				if !isCapabilityName(vs.Values[i]) {
+					problems = append(problems, name.Name+" is not defined from the capability vocabulary; define it as capability.Target..., or list it in notRuntimeTargets if it is not a runtime")
+				}
+			}
+			if len(vs.Values) > len(vs.Names) {
+				problems = append(problems, vs.Names[0].Name+" is declared with more values than names; give each constant the one value of its own")
 			}
 		}
 	}
-	sort.Strings(values)
-	return values
-}
-
-// absentFrom returns the members of want that are not in have.
-func absentFrom(want, have []string) []string {
-	present := make(map[string]bool, len(have))
-	for _, h := range have {
-		present[h] = true
-	}
-	var absent []string
-	for _, w := range want {
-		if !present[w] {
-			absent = append(absent, w)
-		}
-	}
-	return absent
-}
-
-// TestCapabilityTargetsMatchRuntimeTargets is the registry check that keeps
-// declarations total: every runtime.Target has a capability declaration, and
-// every declared target is a runtime.Target. Adding a Target constant without
-// declaring it fails here (and so does declaring a target the runtime package
-// does not know), so a fifth runtime cannot ship without stating what it
-// supports. It lives in this package so the TestMain isolation applies.
-func TestCapabilityTargetsMatchRuntimeTargets(t *testing.T) {
-	constants := runtimeTargetConstants(t)
-	if len(constants) == 0 {
-		t.Fatal("no Target constants found in engine/runtime; the source scan is broken")
-	}
-
-	// Runtimes are the constants that are not registered pseudo-targets.
-	var runtimes []string
-	for _, c := range constants {
-		if _, pseudo := pseudoTargets[c]; !pseudo {
-			runtimes = append(runtimes, c)
-		}
-	}
-
-	var expanded []string
-	for _, target := range engineRuntime.ExpandTarget(engineRuntime.TargetAll) {
-		expanded = append(expanded, string(target))
-	}
-	sort.Strings(expanded)
-
-	declared := capability.Targets()
-	sort.Strings(declared)
-
-	// Every Target constant is a runtime that "--target all" covers, or a
-	// registered pseudo-target. A constant that is neither is a runtime the
-	// CLI does not expand yet, or a label nobody registered.
-	if stray := absentFrom(runtimes, expanded); len(stray) > 0 {
-		t.Errorf("Target constant(s) %q are neither in ExpandTarget(TargetAll) nor registered in pseudoTargets: a new runtime must be added to ParseTarget, ExpandTarget, capability.Targets(), and the table in capability/declarations.go; a label that is not a runtime belongs in pseudoTargets", strings.Join(stray, ", "))
-	}
-	if stray := absentFrom(expanded, runtimes); len(stray) > 0 {
-		t.Errorf("ExpandTarget(TargetAll) returns %q, which is not a runtime Target constant", strings.Join(stray, ", "))
-	}
-
-	// Total in both directions: no runtime without a declaration, and no
-	// declaration for a target that is not a runtime.
-	if missing := absentFrom(runtimes, declared); len(missing) > 0 {
-		t.Errorf("runtime.Target %q has no capability declaration: add it to capability.Targets() and to the table in capability/declarations.go", strings.Join(missing, ", "))
-	}
-	if extra := absentFrom(declared, runtimes); len(extra) > 0 {
-		t.Errorf("capability declares %q, which is not a runtime.Target", strings.Join(extra, ", "))
-	}
-
-	// A pseudo-target must still exist, must stay outside the CLI's target
-	// domain, and must not be declared.
-	for name, why := range pseudoTargets {
-		if len(absentFrom([]string{name}, constants)) > 0 {
-			t.Errorf("pseudoTargets lists %q (%s) but no such Target constant exists; remove the stale entry", name, why)
-		}
-		if parsed, err := engineRuntime.ParseTarget(name); err == nil {
-			t.Errorf("pseudo-target %q is accepted by ParseTarget as %q; if it is now a runtime, remove it from pseudoTargets and declare it", name, parsed)
-		}
-		if _, err := capability.Declare(name); err == nil {
-			t.Errorf("pseudo-target %q has a capability declaration; a pseudo-target is not a runtime", name)
-		}
-	}
-
-	// Every runtime round-trips through both packages' APIs.
-	for _, name := range runtimes {
-		parsed, err := engineRuntime.ParseTarget(name)
-		if err != nil || string(parsed) != name {
-			t.Errorf("runtime.ParseTarget(%q) = %q, %v; want the same target back", name, parsed, err)
-		}
-		if _, err := capability.Declare(name); err != nil {
-			t.Errorf("capability.Declare(%q): %v", name, err)
-		}
-	}
+	return scanned, problems
 }

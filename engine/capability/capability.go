@@ -89,9 +89,10 @@ const (
 	Unsupported Status = "unsupported"
 )
 
-// The runtime targets a declaration can describe. They are plain strings, not
-// runtime.Target values, so this package does not depend on engine/runtime; a
-// test in engine/runtime pins that the two sets stay equal.
+// The runtime targets a declaration can describe. This is the one vocabulary of
+// runtimes: engine/runtime registers adapters under these names and refuses any
+// other, and engine/skills accepts these names in a registry entry. They are
+// plain strings, not runtime.Target values, so this package depends on neither.
 const (
 	TargetClaude   = "claude"
 	TargetCodex    = "codex"
@@ -108,6 +109,17 @@ func Targets() []string {
 	out := make([]string, len(targetOrder))
 	copy(out, targetOrder[:])
 	return out
+}
+
+// IsTarget says whether name is one of the declared runtime targets, spelled
+// exactly: no trimming and no case folding.
+func IsTarget(name string) bool {
+	for _, t := range targetOrder {
+		if t == name {
+			return true
+		}
+	}
+	return false
 }
 
 // Claim is one statement about one capability: its status, the tests that

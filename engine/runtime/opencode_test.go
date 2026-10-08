@@ -413,27 +413,6 @@ func TestOpenCodeAdapterRejectsUnresolvedOrRelativeConfigRoot(t *testing.T) {
 	}
 }
 
-func TestDefaultOpenCodeConfigRootUsesXDGConfigHome(t *testing.T) {
-	home := t.TempDir()
-	t.Setenv("HOME", home)
-	xdg := filepath.Join(t.TempDir(), "xdg-config")
-	t.Setenv("XDG_CONFIG_HOME", xdg)
-	want := filepath.Join(xdg, "opencode")
-	if got := engineRuntime.DefaultOpenCodeConfigRoot(); got != want {
-		t.Fatalf("DefaultOpenCodeConfigRoot() = %q, want %q", got, want)
-	}
-}
-
-func TestDefaultOpenCodeConfigRootIgnoresRelativeXDGConfigHome(t *testing.T) {
-	home := t.TempDir()
-	t.Setenv("HOME", home)
-	t.Setenv("XDG_CONFIG_HOME", filepath.Join("relative", "xdg"))
-	want := filepath.Join(home, ".config", "opencode")
-	if got := engineRuntime.DefaultOpenCodeConfigRoot(); got != want {
-		t.Fatalf("DefaultOpenCodeConfigRoot() = %q, want %q", got, want)
-	}
-}
-
 func TestOpenCodeLifecycleAliasesAndStatusFailureModes(t *testing.T) {
 	root := t.TempDir()
 	adapter := engineRuntime.NewOpenCodeAdapter(root)

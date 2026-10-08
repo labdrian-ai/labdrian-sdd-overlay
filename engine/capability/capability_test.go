@@ -46,6 +46,19 @@ func TestTargetsReturnsACopy(t *testing.T) {
 	}
 }
 
+func TestIsTargetAcceptsExactlyTheDeclaredRuntimes(t *testing.T) {
+	for _, target := range capability.Targets() {
+		if !capability.IsTarget(target) {
+			t.Errorf("IsTarget(%q) = false, want true: it is in Targets()", target)
+		}
+	}
+	for _, other := range []string{"", "all", "Claude", " claude", "claude ", "cursor", "longterm-mem"} {
+		if capability.IsTarget(other) {
+			t.Errorf("IsTarget(%q) = true, want false: it is not a declared runtime", other)
+		}
+	}
+}
+
 func TestStatusVocabularyWireValues(t *testing.T) {
 	for _, tt := range []struct {
 		status capability.Status

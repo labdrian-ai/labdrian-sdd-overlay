@@ -4,5 +4,5 @@ exit: 1
 --- stdout ---
 pipkg check: compared against main (<SHA12>); package built from unrecorded
 --- stderr ---
-pipkg check: pipkg: parsing registry: skills: entry "alpha": install.targets contains invalid value "vim"; must be one of: claude, opencode, codex, pi
+pipkg check: pipkg: parsing registry: skills: entry "alpha": install.targets contains invalid value "vim"; must be one of: claude, codex, pi, opencode
 

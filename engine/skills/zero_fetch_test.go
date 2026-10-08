@@ -22,30 +22,77 @@ import (
 // unreadable store from an unusable registry with errors.As, so an adapter that wraps its
 // error still answers. It is pure and reaches nothing the list exists to keep out.
 //
-// The module-internal exceptions are pathguardImport, a pure path-containment helper, and
+// The module-internal exceptions are pathguardImport, a pure path-containment helper,
 // jsonstrictImport (Phase 9, H19), the strict JSON checks the two records the domain reads are
-// decoded through. Their own imports are held to this same allowlist by
-// TestZeroFetchCoversPathguardImports and TestZeroFetchCoversJsonstrictImports, so the exceptions
-// cannot widen the transitive surface of engine/skills.
-var allowedImports = map[string]bool{
-	"bufio":          true,
-	"bytes":          true,
-	"crypto/sha256":  true,
-	"encoding/hex":   true,
-	"encoding/json":  true,
-	"errors":         true,
-	"fmt":            true,
-	"io":             true,
-	"io/fs":          true,
-	"path":           true,
-	"path/filepath":  true,
-	"reflect":        true,
-	"regexp":         true,
-	"sort":           true,
-	"strings":        true,
+// decoded through, and capabilityImport (Phase 9, H23), the one vocabulary of runtime targets a
+// registry entry names. Their own imports are held to this same allowlist by
+// TestZeroFetchCoversPathguardImports, TestZeroFetchCoversJsonstrictImports and
+// TestZeroFetchCoversCapabilityImports, so the exceptions cannot widen the transitive surface of
+// engine/skills.
+var allowedImports = importSet(stdlibImports, internalImports)
+
+// stdlibImports are the standard library packages engine/skills may import. To allow another one,
+// add it here (and to the count in TestZeroFetchAllowlistExcludesExecAndNet) after reviewer approval.
+var stdlibImports = []string{
+	"bufio",
+	"bytes",
+	"crypto/sha256",
+	"encoding/hex",
+	"encoding/json",
+	"errors",
+	"fmt",
+	"io",
+	"io/fs",
+	"path",
+	"path/filepath",
+	"reflect",
+	"regexp",
+	"sort",
+	"strings",
+}
+
+// internalImports are the module-internal packages engine/skills may import, each exempted from
+// the git-package ban by exact match. The transitive cover tests below refuse all of them in the
+// packages they cover, so a package that is itself allowed cannot bring in another one. They are
+// listed here and nowhere else: allowedImports is built from this set. To allow another one, add
+// its constant and one line here, and its count in TestZeroFetchAllowlistExcludesExecAndNet.
+var internalImports = map[string]bool{
 	pathguardImport:  true,
 	jsonstrictImport: true,
+	capabilityImport: true,
 }
+
+// wantStdlibImports and wantInternalImports are how many of each the lists above hold, and the
+// counts the test checks: a change to either list changes its number here, in the same commit, and
+// so passes through the reviewer approval the guard exists to force.
+const (
+	wantStdlibImports   = 15
+	wantInternalImports = 3
+)
+
+// importSet is the union of a list of imports and a set of them.
+func importSet(list []string, set map[string]bool) map[string]bool {
+	out := make(map[string]bool, len(list)+len(set))
+	for _, imp := range list {
+		out[imp] = true
+	}
+	for imp := range set {
+		out[imp] = true
+	}
+	return out
+}
+
+// capabilityImportExtras is what engine/capability imports beyond allowedImports: the character
+// classes of its identifier checks, pure like the rest of the standard library it uses.
+var capabilityImportExtras = map[string]bool{
+	"unicode":      true,
+	"unicode/utf8": true,
+}
+
+// capabilityImport is the third module-internal package engine/skills may import: the vocabulary
+// of runtime targets (H23), which a registry entry's install.targets is validated against. Like
+// the other two it is exempted from the git-package ban by exact match, never by prefix.
+const capabilityImport = "github.com/labdrian-ai/labdrian-sdd-overlay/engine/capability"
 
 // jsonstrictImportExtras is what engine/jsonstrict imports beyond allowedImports: the UTF-8 check,
 // pure like the rest of the standard library it uses.
@@ -117,7 +164,7 @@ func TestZeroFetchAllowlistExcludesExecAndNet(t *testing.T) {
 			t.Errorf("allowedImports must never contain %q", imp)
 		case imp == "net" || strings.HasPrefix(imp, "net/"):
 			t.Errorf("allowedImports must never contain the net package %q", imp)
-		case imp != pathguardImport && imp != jsonstrictImport && strings.Contains(imp, "git"):
+		case !internalImports[imp] && strings.Contains(imp, "git"):
 			t.Errorf("allowedImports must never contain a git-related package %q", imp)
 		}
 	}
@@ -128,10 +175,24 @@ func TestZeroFetchAllowlistExcludesExecAndNet(t *testing.T) {
 			t.Errorf("expected %q in allowedImports after the project-lock-ownership widening", want)
 		}
 	}
-	// 15 stdlib packages (errors is the one the registry port added, os the one Phase 9 unit H17
-	// took away) plus the reviewer-approved pathguardImport and jsonstrictImport exceptions.
-	if len(allowedImports) != 17 {
-		t.Errorf("len(allowedImports) = %d, want 17 — widen it only after reviewer approval", len(allowedImports))
+	// The allowlist is the standard library packages plus the module-internal exceptions, counted
+	// apart so that neither figure is the other's remainder. errors is the stdlib package the
+	// registry port added, os the one Phase 9 unit H17 took away.
+	if len(stdlibImports) != wantStdlibImports {
+		t.Errorf("%d standard library packages in stdlibImports, want %d — widen it only after reviewer approval", len(stdlibImports), wantStdlibImports)
+	}
+	if len(internalImports) != wantInternalImports {
+		t.Errorf("%d module-internal imports, want %d — widen it only after reviewer approval", len(internalImports), wantInternalImports)
+	}
+	// allowedImports is built from the two lists, so the union can hide only a package named in
+	// both, or twice: the overlap check names it, and the size check catches either.
+	for _, imp := range stdlibImports {
+		if internalImports[imp] {
+			t.Errorf("%q is in both stdlibImports and internalImports", imp)
+		}
+	}
+	if len(allowedImports) != len(stdlibImports)+len(internalImports) {
+		t.Errorf("allowedImports has %d entries, want %d + %d: two entries of the lists are the same package", len(allowedImports), len(stdlibImports), len(internalImports))
 	}
 	if allowedImports["os"] {
 		t.Error(`"os" is in allowedImports: engine/skills reaches the file system through its ports (Phase 9 unit H17), and engine/skills/skillsfs is the one place that imports os`)
@@ -162,7 +223,7 @@ func TestZeroFetchCoversPathguardImports(t *testing.T) {
 			base := filepath.Base(filename)
 			for _, imp := range file.Imports {
 				path := strings.Trim(imp.Path.Value, `"`)
-				if path == pathguardImport || !allowedImports[path] {
+				if internalImports[path] || !allowedImports[path] {
 					t.Errorf("engine/pathguard imports %q in %s; it may import only allowlisted stdlib packages", path, base)
 				}
 			}
@@ -195,7 +256,7 @@ func TestZeroFetchCoversJsonstrictImports(t *testing.T) {
 				if jsonstrictImportExtras[path] {
 					continue
 				}
-				if path == jsonstrictImport || path == pathguardImport || !allowedImports[path] {
+				if internalImports[path] || !allowedImports[path] {
 					t.Errorf("engine/jsonstrict imports %q in %s; it may import only allowlisted stdlib packages", path, base)
 				}
 			}
@@ -203,5 +264,38 @@ func TestZeroFetchCoversJsonstrictImports(t *testing.T) {
 	}
 	if totalFiles == 0 {
 		t.Fatal("no production .go files found under ../jsonstrict; the transitive guard walk may be broken")
+	}
+}
+
+// TestZeroFetchCoversCapabilityImports is TestZeroFetchCoversJsonstrictImports for capabilityImport:
+// every import in the production files of engine/capability must be an allowlisted stdlib package
+// or one of its pure extras, so nothing else can reach engine/skills transitively through it.
+func TestZeroFetchCoversCapabilityImports(t *testing.T) {
+	fset := token.NewFileSet()
+	pkgs, err := parser.ParseDir(fset, filepath.Join("..", "capability"), func(fi fs.FileInfo) bool {
+		return !strings.HasSuffix(fi.Name(), "_test.go")
+	}, parser.ImportsOnly)
+	if err != nil {
+		t.Fatalf("go/parser.ParseDir(../capability): %v", err)
+	}
+
+	totalFiles := 0
+	for _, pkg := range pkgs {
+		for filename, file := range pkg.Files {
+			totalFiles++
+			base := filepath.Base(filename)
+			for _, imp := range file.Imports {
+				path := strings.Trim(imp.Path.Value, `"`)
+				if capabilityImportExtras[path] {
+					continue
+				}
+				if internalImports[path] || !allowedImports[path] {
+					t.Errorf("engine/capability imports %q in %s; it may import only allowlisted stdlib packages", path, base)
+				}
+			}
+		}
+	}
+	if totalFiles == 0 {
+		t.Fatal("no production .go files found under ../capability; the transitive guard walk may be broken")
 	}
 }

@@ -18,6 +18,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/capability"
 )
 
 // stubRegistries is a RegistryRepository whose answers are given by the test.
@@ -106,8 +108,8 @@ func TestValidateRefusesWhatARegistryMayNotHold(t *testing.T) {
 		"a core upstream with no owner":          {with(func(e *Entry) { e.Source = Source{Type: SourceCore, Upstream: &Upstream{}} }), `skills: entry "alpha": source.upstream.owner must not be empty`},
 		"projects on a global skill":             {with(func(e *Entry) { e.Install.AllowedProjects = []string{"demo"} }), `skills: entry "alpha": allowedProjects is only valid for project-scoped entries`},
 		"no targets":                             {with(func(e *Entry) { e.Install.Targets = nil }), `skills: entry "alpha": install.targets must not be empty (R-007)`},
-		"a target that does not exist":           {with(func(e *Entry) { e.Install.Targets = []string{"claude", "vim"} }), `skills: entry "alpha": install.targets contains invalid value "vim"; must be one of: claude, opencode, codex, pi`},
-		"a target in capitals":                   {with(func(e *Entry) { e.Install.Targets = []string{"Claude"} }), `skills: entry "alpha": install.targets contains invalid value "Claude"; must be one of: claude, opencode, codex, pi`},
+		"a target that does not exist":           {with(func(e *Entry) { e.Install.Targets = []string{"claude", "vim"} }), `skills: entry "alpha": install.targets contains invalid value "vim"; must be one of: claude, codex, pi, opencode`},
+		"a target in capitals":                   {with(func(e *Entry) { e.Install.Targets = []string{"Claude"} }), `skills: entry "alpha": install.targets contains invalid value "Claude"; must be one of: claude, codex, pi, opencode`},
 		"no update strategy":                     {with(func(e *Entry) { e.Lifecycle.UpdateStrategy = "" }), `skills: entry "alpha": lifecycle.updateStrategy "" is not valid; must be 'vendor-merge' or 'overlay-only'`},
 		"an update strategy that does not exist": {with(func(e *Entry) { e.Lifecycle.UpdateStrategy = "rolling" }), `skills: entry "alpha": lifecycle.updateStrategy "rolling" is not valid; must be 'vendor-merge' or 'overlay-only'`},
 		// New in the domain: the adapter of a file words this with the line it is on, and refuses it
@@ -331,9 +333,6 @@ func TestTheVocabularyOfARegistryIsTheOneItHasAlwaysHad(t *testing.T) {
 			t.Errorf("%s is %q, want %q", name, tc.got, tc.want)
 		}
 	}
-	if got := fmt.Sprint(RegistryTargets()); got != "[claude opencode codex pi]" {
-		t.Errorf("RegistryTargets() = %s, want the four runtimes in the order the refusals list them", got)
-	}
 }
 
 // --- what the reader left out ---------------------------------------------------------------
@@ -393,31 +392,22 @@ func TestAddEntryAndRemoveEntryRefuseARegistryThatLeftFieldsOut(t *testing.T) {
 	}
 }
 
-// The targets a registry may name and the targets a refusal lists are one list: an entry that
-// names any target RegistryTargets lists is accepted, and one that names another is refused in
-// words that list exactly those.
+// The targets a registry may name are the runtimes capability declares, and a refusal lists
+// exactly those, in capability's order: skills keeps no list of runtimes of its own.
 func TestTheTargetsARefusalListsAreTheTargetsThatAreAccepted(t *testing.T) {
-	for _, target := range RegistryTargets() {
+	for _, target := range capability.Targets() {
 		e := validEntry("a")
 		e.Install.Targets = []string{target}
 		if err := registryOfEntries(e).Validate(); err != nil {
-			t.Errorf("Validate() with the target %q = %v, want it accepted: it is in RegistryTargets()", target, err)
+			t.Errorf("Validate() with the target %q = %v, want it accepted: capability declares it", target, err)
 		}
 	}
 	e := validEntry("a")
 	e.Install.Targets = []string{"claude", "windsurf"}
 	err := registryOfEntries(e).Validate()
-	want := `skills: entry "a": install.targets contains invalid value "windsurf"; must be one of: ` + strings.Join(RegistryTargets(), ", ")
+	want := `skills: entry "a": install.targets contains invalid value "windsurf"; must be one of: ` + strings.Join(capability.Targets(), ", ")
 	if err == nil || err.Error() != want {
 		t.Errorf("Validate() with the target \"windsurf\" = %v, want %q", err, want)
-	}
-}
-
-func TestRegistryTargetsHandsOutAListOfItsOwn(t *testing.T) {
-	first := RegistryTargets()
-	first[0] = "changed"
-	if got := RegistryTargets()[0]; got != "claude" {
-		t.Errorf("RegistryTargets()[0] = %q after a caller changed the list it was given, want \"claude\"", got)
 	}
 }
 

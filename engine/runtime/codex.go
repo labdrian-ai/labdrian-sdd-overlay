@@ -28,26 +28,11 @@ type CodexAdapter struct {
 	root   string
 }
 
+// NewCodexAdapter builds the Codex adapter over root, the directory its manifest lives in. An
+// empty root is an adapter that reports it cannot work: the caller resolves the default (see
+// Config.CodexRoot), the adapter does not look for one.
 func NewCodexAdapter(root string) CodexAdapter {
-	if root == "" {
-		root = DefaultCodexConfigRoot()
-	}
 	return CodexAdapter{target: TargetCodex, root: root}
-}
-
-func DefaultCodexConfigRoot() string {
-	if dir := strings.TrimSpace(os.Getenv("CODEX_HOME")); dir != "" {
-		clean := filepath.Clean(dir)
-		if filepath.IsAbs(clean) {
-			return clean
-		}
-	}
-
-	if home, err := os.UserHomeDir(); err == nil && home != "" {
-		return filepath.Join(home, ".codex")
-	}
-
-	return ""
 }
 
 func (a CodexAdapter) Target() Target         { return a.target }

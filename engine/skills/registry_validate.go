@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/capability"
 )
 
 // The vocabulary of a registry: the words its fields take. The domain owns it; an adapter that
@@ -19,24 +21,6 @@ const (
 	SourceCustom   = "custom"
 	SourceExternal = "external"
 )
-
-// registryTargets are the runtimes a skill can be projected to, in the order a refusal lists them.
-// They are the one list: what an entry may name is what a refusal says it may name.
-var registryTargets = []string{"claude", "opencode", "codex", "pi"}
-
-// RegistryTargets are the runtimes a skill can be projected to, in the order a refusal lists them.
-// Each call returns a list of its own.
-func RegistryTargets() []string { return append([]string(nil), registryTargets...) }
-
-// isRegistryTarget says whether a skill can be projected to the runtime.
-func isRegistryTarget(target string) bool {
-	for _, t := range registryTargets {
-		if t == target {
-			return true
-		}
-	}
-	return false
-}
 
 var (
 	validSourceTypes      = map[string]bool{SourceCore: true, SourceCustom: true, SourceExternal: true}
@@ -115,8 +99,8 @@ func validateEntry(e *Entry) error {
 		return fmt.Errorf("skills: entry %q: install.targets must not be empty (R-007)", e.ID)
 	}
 	for _, target := range e.Install.Targets {
-		if !isRegistryTarget(target) {
-			return fmt.Errorf("skills: entry %q: install.targets contains invalid value %q; must be one of: %s", e.ID, target, strings.Join(registryTargets, ", "))
+		if !capability.IsTarget(target) {
+			return fmt.Errorf("skills: entry %q: install.targets contains invalid value %q; must be one of: %s", e.ID, target, strings.Join(capability.Targets(), ", "))
 		}
 	}
 	if !validUpdateStrategies[e.Lifecycle.UpdateStrategy] {

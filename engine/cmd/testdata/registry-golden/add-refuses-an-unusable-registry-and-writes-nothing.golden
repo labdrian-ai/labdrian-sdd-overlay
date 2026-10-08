@@ -24,7 +24,7 @@ $ skills add gamma --registry <WORLD>/refused/d.yaml --manifest <WORLD>/overlay.
 exit: 1
 --- stdout ---
 --- stderr ---
-error: parsing registry: skills: entry "alpha": install.targets contains invalid value "vim"; must be one of: claude, opencode, codex, pi
+error: parsing registry: skills: entry "alpha": install.targets contains invalid value "vim"; must be one of: claude, codex, pi, opencode
 
 --- overlay.manifest ---
 # the overlay manifest

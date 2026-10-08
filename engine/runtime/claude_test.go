@@ -94,10 +94,12 @@ func TestClaudeUninstallRemovesOwnedHooksAndReturnsUnhealthyStatus(t *testing.T)
 	}
 }
 
-func TestClaudeDefaultRootUsesHOMEWhenRootNotProvided(t *testing.T) {
+func TestClaudeDefaultRootIsUnderTheConfigHomeWhenNoRootIsGiven(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("HOME", home)
-	adapter := engineRuntime.NewClaudeAdapter("")
+	adapter, err := shippedRegistry(t).New(engineRuntime.TargetClaude, engineRuntime.Config{Home: home})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if result := adapter.Install(); result.Status != engineRuntime.CapabilityRestartRequired {
 		t.Fatalf("Install() = %#v", result)
@@ -110,9 +112,11 @@ func TestClaudeDefaultRootUsesHOMEWhenRootNotProvided(t *testing.T) {
 
 func TestClaudeExplicitRootIsolatedFromDefaultHOME(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("HOME", home)
 	explicitRoot := filepath.Join(t.TempDir(), "explicit-claude-root")
-	adapter := engineRuntime.NewClaudeAdapter(explicitRoot)
+	adapter, err := shippedRegistry(t).New(engineRuntime.TargetClaude, engineRuntime.Config{Home: home, ConfigRoot: explicitRoot})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if result := adapter.Install(); result.Status != engineRuntime.CapabilityRestartRequired {
 		t.Fatalf("Install() = %#v", result)

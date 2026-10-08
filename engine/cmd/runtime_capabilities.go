@@ -76,7 +76,7 @@ func parseCapabilitiesArgs(args []string) (target string, code int, err error) {
 				return "", 1, fmt.Errorf("--target requires a value")
 			}
 			i++
-			// Trimmed like runtime.ParseTarget trims the same flag on the
+			// Trimmed like Registry.Parse trims the same flag on the
 			// lifecycle actions.
 			target = strings.TrimSpace(args[i])
 		case strings.HasPrefix(a, "-"):
