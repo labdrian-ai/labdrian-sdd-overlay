@@ -231,16 +231,28 @@ const (
 	TargetAll Target = "all"
 )
 const TargetBare Target
+
+// Go wants as many values as names: the scan names the constant that has none, and the spec that
+// has too many.
+const TargetA, TargetB Target = capability.TargetClaude
+const TargetC Target = capability.TargetCodex, capability.TargetPi
+
+// An untyped spec, and the ones that repeat it, are not Target constants.
+const (
+	TargetTyped Target = capability.TargetPi
+	Counter0           = iota
+	Counter1
+)
 `
 	file, err := parser.ParseFile(token.NewFileSet(), "scan.go", src, parser.SkipObjectResolution)
 	if err != nil {
 		t.Fatal(err)
 	}
 	n, problems := targetConstantProblems(file)
-	if n != 5 {
-		t.Errorf("scanned %d runtime constants, want 5 (TargetAll is not one)", n)
+	if n != 9 {
+		t.Errorf("scanned %d runtime constants, want 9 (TargetAll, Counter0 and Counter1 are not)", n)
 	}
-	for _, name := range []string{"TargetLit", "TargetOther", "TargetImplicit", "TargetBare"} {
+	for _, name := range []string{"TargetLit", "TargetOther", "TargetImplicit", "TargetBare", "TargetB", "TargetC"} {
 		found := false
 		for _, problem := range problems {
 			found = found || strings.HasPrefix(problem, name+" ")
@@ -250,10 +262,22 @@ const TargetBare Target
 		}
 	}
 	for _, problem := range problems {
-		if strings.HasPrefix(problem, "TargetGood ") || strings.HasPrefix(problem, "TargetAll ") {
-			t.Errorf("a valid constant was reported: %s", problem)
+		for _, accepted := range []string{"TargetGood ", "TargetAll ", "TargetA ", "TargetTyped ", "Counter0 ", "Counter1 "} {
+			if strings.HasPrefix(problem, accepted) {
+				t.Errorf("a constant Go accepts, or that is not a Target, was reported: %s", problem)
+			}
 		}
 	}
+}
+
+// isCapabilityName says whether expr is a name taken from the capability package: capability.X.
+func isCapabilityName(expr ast.Expr) bool {
+	sel, ok := expr.(*ast.SelectorExpr)
+	if !ok {
+		return false
+	}
+	pkg, ok := sel.X.(*ast.Ident)
+	return ok && pkg.Name == "capability"
 }
 
 // targetConstantProblems judges the Target constants of one file. It returns how many runtime
@@ -288,14 +312,12 @@ func targetConstantProblems(file *ast.File) (scanned int, problems []string) {
 					problems = append(problems, name.Name+" has no value of its own; define it explicitly as capability.Target...")
 					continue
 				}
-				sel, ok := vs.Values[i].(*ast.SelectorExpr)
-				if !ok {
-					problems = append(problems, name.Name+" is not defined from the capability vocabulary; define it as capability.Target..., or list it in notRuntimeTargets if it is not a runtime")
-					continue
-				}
-				if pkg, ok := sel.X.(*ast.Ident); !ok || pkg.Name != "capability" {
+				if !isCapabilityName(vs.Values[i]) {
 					problems = append(problems, name.Name+" is not defined from the capability vocabulary; define it as capability.Target..., or list it in notRuntimeTargets if it is not a runtime")
 				}
+			}
+			if len(vs.Values) > len(vs.Names) {
+				problems = append(problems, vs.Names[0].Name+" is declared with more values than names; give each constant the one value of its own")
 			}
 		}
 	}
