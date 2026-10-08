@@ -46,6 +46,9 @@ import (
 //     from .git/config without running git, the name of the directory) and the chain that asks them
 //     in order. The rule that reduces a remote url to a name is the identity module's, shared with
 //     longterm-mem (D2); the order of the chain is the composition root's.
+//   - execrunner is the adapter of the CommandRunner port the Pi adapter owns (H24): it looks a
+//     program up on the PATH and runs it with a fixed argument vector and a deadline. It is
+//     the one place in the module that starts the CLI of a runtime.
 //   - installer, shelltest, capabilitytest, shaper/shapertest (the documents the shaper's
 //     tests share), reviewreceipt/receipttest (the review documents the receipt capture's
 //     tests share) and this guard (the module root) are test-only.
@@ -58,6 +61,7 @@ var rings = map[string]archguard.Ring{
 	"capabilitytest":            archguard.Support,
 	"cmd":                       archguard.Root,
 	"contract":                  archguard.Domain,
+	"execrunner":                archguard.Adapter,
 	"filelock":                  archguard.Adapter,
 	"gadu":                      archguard.Adapter,
 	"gate":                      archguard.Domain,
