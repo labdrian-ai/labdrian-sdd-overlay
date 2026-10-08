@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/pathguard"
 )
 
 // ProjectTarget is one runtime-visible directory a project-tier procedural
@@ -223,7 +225,7 @@ func underSkillsDir(rel string) bool {
 //  8. No lock entry already has this id.
 //  9. No target directory <root>/<dir>/<id> exists; one that does, with no
 //     lock entry claiming it, is a "foreign skill" refusal.
-//  10. Every destination passes withinRoot AND resolvedWithinRoot.
+//  10. Every destination passes pathguard.WithinRoot AND pathguard.ResolvedWithinRootUsing.
 //  11. No destination lies under <root>/skills/.
 //
 // Step 10 also covers every target string already recorded in the lock
@@ -279,10 +281,10 @@ func PlanProjectRegister(in RegisterInput) (ProjectPlan, error) {
 	if !filepath.IsAbs(draft) {
 		return ProjectPlan{}, fmt.Errorf("project-register: the <draft-file> argument %q must be an absolute path", in.DraftPath)
 	}
-	if withinRoot(root, draft) {
+	if pathguard.WithinRoot(root, draft) {
 		return ProjectPlan{}, fmt.Errorf("project-register: draft %q must lie outside the project root %q", in.DraftPath, root)
 	}
-	if inside, err := resolvedWithinRootUsing(in.ResolvePath, root, draft); err != nil {
+	if inside, err := pathguard.ResolvedWithinRootUsing(in.ResolvePath, root, draft); err != nil {
 		return ProjectPlan{}, fmt.Errorf("project-register: resolving draft %q: %v", in.DraftPath, err)
 	} else if inside {
 		return ProjectPlan{}, fmt.Errorf("project-register: draft %q resolves inside the project root %q and must lie outside it", in.DraftPath, root)
@@ -470,10 +472,10 @@ func PlanProjectRevise(in ReviseInput) (ProjectPlan, error) {
 	if !filepath.IsAbs(draft) {
 		return ProjectPlan{}, fmt.Errorf("project-revise: the <draft-file> argument %q must be an absolute path", in.DraftPath)
 	}
-	if withinRoot(root, draft) {
+	if pathguard.WithinRoot(root, draft) {
 		return ProjectPlan{}, fmt.Errorf("project-revise: draft %q must lie outside the project root %q", in.DraftPath, root)
 	}
-	if inside, err := resolvedWithinRootUsing(in.ResolvePath, root, draft); err != nil {
+	if inside, err := pathguard.ResolvedWithinRootUsing(in.ResolvePath, root, draft); err != nil {
 		return ProjectPlan{}, fmt.Errorf("project-revise: resolving draft %q: %v", in.DraftPath, err)
 	} else if inside {
 		return ProjectPlan{}, fmt.Errorf("project-revise: draft %q resolves inside the project root %q and must lie outside it", in.DraftPath, root)
@@ -882,7 +884,7 @@ func ExecuteProjectRevisePlan(p ProjectPlan, fsys ProjectFS, stdout, stderr io.W
 // resolveWritePath turns one repo-relative, slash-separated destination into
 // an absolute path under root, proving containment in BOTH steps: the lexical
 // guard (resolveTarget — no empty, absolute or ".."-carrying target, nothing
-// naming root itself) and then the resolved guard (resolvedWithinRootUsing,
+// naming root itself) and then the resolved guard (pathguard.ResolvedWithinRootUsing,
 // which refuses a destination reached through a symlinked `.claude` or
 // `.agents` pointing out of the project). It also applies decision (f): no
 // destination under <root>/skills/.
@@ -901,7 +903,7 @@ func resolveWritePath(in RegisterInput, root, rel string) (string, string, error
 	if !ok {
 		return "", "", fmt.Errorf("escapes the project root")
 	}
-	inside, err := resolvedWithinRootUsing(in.ResolvePath, root, abs)
+	inside, err := pathguard.ResolvedWithinRootUsing(in.ResolvePath, root, abs)
 	if err != nil {
 		return "", "", fmt.Errorf("could not be resolved: %v", err)
 	}
@@ -916,7 +918,7 @@ func resolveWritePath(in RegisterInput, root, rel string) (string, string, error
 	// own source tree (review round 2, SEC-1). Resolving both sides through the
 	// same injected resolver is the only check that sees it.
 	// EFF-1 (review round 2, carried to slice 3b-ii): this block used to call
-	// resolvedWithinRootUsing — which resolves BOTH its arguments — and then
+	// pathguard.ResolvedWithinRootUsing — which resolves BOTH its arguments — and then
 	// resolve the same two paths again for the equality comparison, four
 	// resolutions for two paths. Resolving each side ONCE and deriving both
 	// halves from the results is the same decision, unchanged: strictly-below
@@ -932,13 +934,13 @@ func resolveWritePath(in RegisterInput, root, rel string) (string, string, error
 		return "", "", fmt.Errorf("could not be resolved: %v", err)
 	}
 	if resolvedSkills == "" || resolvedDest == "" {
-		// resolvedWithinRootUsing refuses an empty resolution explicitly
-		// (review round 2, COV-4) because withinRoot("", p) is true for every
+		// pathguard.ResolvedWithinRootUsing refuses an empty resolution explicitly
+		// (review round 2, COV-4) because pathguard.WithinRoot("", p) is true for every
 		// absolute path; folding its work in here inherits that obligation.
 		return "", "", fmt.Errorf("could not be resolved: the resolver returned an empty path")
 	}
 	cleanSkills, cleanDest := filepath.Clean(resolvedSkills), filepath.Clean(resolvedDest)
-	if withinRoot(cleanSkills, cleanDest) || cleanDest == cleanSkills {
+	if pathguard.WithinRoot(cleanSkills, cleanDest) || cleanDest == cleanSkills {
 		return "", "", errDestResolvesUnderSkillsDir
 	}
 	return abs, cleanDest, nil
@@ -1270,7 +1272,7 @@ type projectStager struct {
 // nothing at all.
 func (s *projectStager) mkdirAll(dir string) error {
 	var missing []string
-	for cur := filepath.Clean(dir); withinRoot(s.root, cur); cur = filepath.Dir(cur) {
+	for cur := filepath.Clean(dir); pathguard.WithinRoot(s.root, cur); cur = filepath.Dir(cur) {
 		if _, err := s.fsys.Stat(cur); err == nil {
 			break
 		} else if !isAbsent(err) {
@@ -1448,7 +1450,7 @@ func checkProjectDestinations(verb string, fsys ProjectFS, root string, order []
 		if want := filepath.Join(root, filepath.FromSlash(w.Rel)); abs != want {
 			return fail("write %q resolves to %q, want %q", w.Rel, abs, want)
 		}
-		if !withinRoot(root, abs) {
+		if !pathguard.WithinRoot(root, abs) {
 			return fail("destination %q escapes the project root", w.Rel)
 		}
 		resolved, err := fsys.ResolvePath(abs)
@@ -1459,13 +1461,13 @@ func checkProjectDestinations(verb string, fsys ProjectFS, root string, order []
 			return fail("the resolver returned an empty path for destination %q", w.Rel)
 		}
 		resolved = filepath.Clean(resolved)
-		if !withinRoot(resolvedRoot, resolved) {
+		if !pathguard.WithinRoot(resolvedRoot, resolved) {
 			return fail("destination %q escapes the project root through a symlink", w.Rel)
 		}
 		if underSkillsDir(w.Rel) {
 			return fail("destination %q %v", w.Rel, errDestUnderSkillsDir)
 		}
-		if withinRoot(resolvedSkills, resolved) || resolved == resolvedSkills {
+		if pathguard.WithinRoot(resolvedSkills, resolved) || resolved == resolvedSkills {
 			return fail("destination %q %v", w.Rel, errDestResolvesUnderSkillsDir)
 		}
 		if other, ok := seen[resolved]; ok {

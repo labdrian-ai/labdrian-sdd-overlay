@@ -3,6 +3,8 @@ package skills
 import (
 	"io"
 	"path/filepath"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/pathguard"
 )
 
 // ExecuteInstallPlan carries out a plan from PlanInstallOwnership, all or nothing.
@@ -57,17 +59,17 @@ func ExecuteInstallPlan(p InstallPlan, root string, fsys ProjectFS, stderr io.Wr
 // itself, and never a directory that still holds anything. It is best effort: a
 // directory that cannot be removed is left, which is harmless.
 //
-// "Inside" is strict, and that is what keeps a skill directory: withinRoot is false
+// "Inside" is strict, and that is what keeps a skill directory: pathguard.WithinRoot is false
 // for the root itself, so a directory equal to a skill directory is not inside any
 // skill and the walk up from a removed file stops there. The function depends on
-// that property of withinRoot (pathguard.WithinRoot's "p != cleanRoot"), not on the
+// that property of pathguard.WithinRoot ("p != cleanRoot"), not on the
 // plan: a plan never empties a skill directory, because every skill keeps its
 // SKILL.md, but this does not rely on it. TestPruneEmptyDirs_NeverRemovesASkillDirectoryItself
 // builds the plans that would.
 func pruneEmptyDirs(fsys ProjectFS, p InstallPlan) {
 	insideASkill := func(dir string) bool {
 		for _, skillDir := range p.Dirs {
-			if withinRoot(filepath.Clean(skillDir), filepath.Clean(dir)) {
+			if pathguard.WithinRoot(filepath.Clean(skillDir), filepath.Clean(dir)) {
 				return true
 			}
 		}

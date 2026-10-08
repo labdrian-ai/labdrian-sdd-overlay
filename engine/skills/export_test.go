@@ -13,6 +13,8 @@ import (
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/pathguard/fsresolve"
 )
 
 // osProjectFS is the ProjectFS of a test: the files of a temporary directory, with the os calls a
@@ -26,7 +28,7 @@ func (osProjectFS) ReadDir(name string) ([]fs.DirEntry, error)  { return os.Read
 func (osProjectFS) MkdirAll(dir string, perm fs.FileMode) error { return os.MkdirAll(dir, perm) }
 func (osProjectFS) Rename(oldPath, newPath string) error        { return os.Rename(oldPath, newPath) }
 func (osProjectFS) Remove(name string) error                    { return os.Remove(name) }
-func (osProjectFS) ResolvePath(name string) (string, error)     { return resolvePathKeepingMissing(name) }
+func (osProjectFS) ResolvePath(name string) (string, error)     { return fsresolve.KeepingMissing(name) }
 
 // WriteTemp writes data to a fresh temporary file in dir, at the mode perm whatever the mask of the
 // process, and returns its path; the name begins with the prefix the copiers of a tree leave out.

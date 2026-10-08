@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io/fs"
 	"path/filepath"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/pathguard"
 )
 
 // CopyOp is one skill to install: where its source tree is and where the first
@@ -29,8 +31,8 @@ var ErrNoSourceRoot = errors.New("no source root is given to read the admitted s
 // sequence that would place Dst outside <targetRoot>/.claude/skills/ or
 // Src outside sourceRoot (R-055).
 func PlanInstall(reg Registry, projectID ProjectID, sourceRoot, targetRoot string) ([]CopyOp, error) {
-	// Pre-compute clean containment roots for traversal checks. withinRoot
-	// (pathguard.go) requires already-cleaned arguments.
+	// Pre-compute clean containment roots for traversal checks. pathguard.WithinRoot
+	// requires already-cleaned arguments.
 	srcRoot := filepath.Clean(sourceRoot)
 	dstRoot := filepath.Clean(filepath.Join(targetRoot, ".claude", "skills"))
 
@@ -45,14 +47,14 @@ func PlanInstall(reg Registry, projectID ProjectID, sourceRoot, targetRoot strin
 		dst := filepath.Clean(filepath.Join(targetRoot, ".claude", "skills", e.ID))
 
 		// R-055: reject traversal in both src and dst (fail-loud, pure).
-		// The containment test itself is withinRoot (pathguard.go), shared
+		// The containment test itself is pathguard.WithinRoot, shared
 		// with resolveTarget and EvaluateOwnership; the two branches keep one
 		// message each so a test can prove which one it reached
 		// (review-d89971d41a526146 precedent).
-		if !withinRoot(srcRoot, src) {
+		if !pathguard.WithinRoot(srcRoot, src) {
 			return nil, fmt.Errorf("skill %q: path %q escapes source root — possible traversal", e.ID, e.Path)
 		}
-		if !withinRoot(dstRoot, dst) {
+		if !pathguard.WithinRoot(dstRoot, dst) {
 			return nil, fmt.Errorf("skill %q: id %q escapes target skills root — possible traversal", e.ID, e.ID)
 		}
 

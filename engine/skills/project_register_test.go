@@ -12,6 +12,9 @@ import (
 	"strings"
 	"syscall"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/pathguard"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/pathguard/fsresolve"
 )
 
 // --- fixtures -------------------------------------------------------------
@@ -65,7 +68,7 @@ func registerInput(t *testing.T, id string) RegisterInput {
 		CandidateKey: testCandidateKey,
 		Registry:     Registry{Version: "1"},
 		Stat:         os.Stat,
-		ResolvePath:  resolvePathKeepingMissing,
+		ResolvePath:  fsresolve.KeepingMissing,
 	}
 }
 
@@ -546,7 +549,7 @@ func TestProjectTargetsMatchContractTable(t *testing.T) {
 // TestPlanProjectRegister_RefusesRelativeDraftPath is the write-path half of
 // the "draft must lie outside the project root" guard (review round 3, F2 /
 // PLAN-1 / SPEC-1). A RELATIVE draft path defeated that guard entirely:
-// filepath.Clean does not absolutize, so the lexical withinRoot comparison
+// filepath.Clean does not absolutize, so the lexical pathguard.WithinRoot comparison
 // against an absolute root was always false and the resolver returned an
 // equally relative path that compared false too — a draft physically sitting
 // inside the project root was ACCEPTED and planned. The planner is pure and
@@ -613,7 +616,7 @@ func TestPlanProjectRegister_RefusesDraftResolvingInsideRoot(t *testing.T) {
 	in.DraftPath = draft
 
 	// Precondition: the lexical guard alone admits this draft.
-	if withinRoot(filepath.Clean(in.ProjectRoot), filepath.Clean(draft)) {
+	if pathguard.WithinRoot(filepath.Clean(in.ProjectRoot), filepath.Clean(draft)) {
 		t.Fatal("precondition: the lexical guard was expected to admit the symlinked draft")
 	}
 
@@ -628,7 +631,7 @@ func TestPlanProjectRegister_RefusesDraftResolvingInsideRoot(t *testing.T) {
 
 // TestPlanProjectRegister_RefusesDanglingSymlinkedTargetDir covers F1: a
 // DANGLING symlink at <root>/.claude defeated the resolved containment guard.
-// resolvePathKeepingMissing read the ENOENT from filepath.EvalSymlinks as
+// fsresolve.KeepingMissing read the ENOENT from filepath.EvalSymlinks as
 // "this component merely does not exist yet" and kept it literal, so the link
 // was never followed and containment was decided on a path that only LOOKED
 // contained. The live-symlink case (in the refusal table) was refused
@@ -1036,7 +1039,7 @@ func TestPlanProjectRegister_RefusesLockTargetWithDotDotSegments(t *testing.T) {
 	in := registerInput(t, "tidy-worktree")
 	root := filepath.Clean(in.ProjectRoot)
 	joined := filepath.Clean(filepath.Join(root, filepath.FromSlash(target)))
-	if !withinRoot(root, joined) {
+	if !pathguard.WithinRoot(root, joined) {
 		t.Fatalf("precondition: %q was expected to normalize back inside the root", joined)
 	}
 
@@ -1997,7 +2000,7 @@ func (f projectRevisionFixture) input() ReviseInput {
 		ReadFile:     os.ReadFile,
 		ReadDir:      os.ReadDir,
 		Stat:         os.Stat,
-		ResolvePath:  resolvePathKeepingMissing,
+		ResolvePath:  fsresolve.KeepingMissing,
 	}
 }
 
@@ -2191,7 +2194,7 @@ func (f projectRetirementFixture) input() RetireInput {
 		ReadFile:    os.ReadFile,
 		ReadDir:     os.ReadDir,
 		Stat:        os.Stat,
-		ResolvePath: resolvePathKeepingMissing,
+		ResolvePath: fsresolve.KeepingMissing,
 	}
 }
 

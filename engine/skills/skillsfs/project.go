@@ -5,7 +5,7 @@ import (
 	"io/fs"
 	"os"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/pathguard"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/pathguard/fsresolve"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
 )
 
@@ -68,8 +68,8 @@ func (Project) Remove(name string) error { return os.Remove(name) }
 
 // ResolvePath returns name with every link in its existing ancestry resolved, keeping the
 // components that do not exist as they are written. It resolves a path exactly as the planners
-// of the domain did (pathguard.ResolvePathKeepingMissing), so that the proof made at the moment of
+// of the domain did (fsresolve.KeepingMissing), so that the proof made at the moment of
 // writing is the proof made when the plan was built.
 func (Project) ResolvePath(name string) (string, error) {
-	return pathguard.ResolvePathKeepingMissing(name)
+	return fsresolve.KeepingMissing(name)
 }

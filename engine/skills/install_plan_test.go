@@ -25,6 +25,8 @@ import (
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/pathguard/fsresolve"
 )
 
 // ownFixture is a project directory that install plans and executes against.
@@ -64,7 +66,7 @@ func (f *ownFixture) input(skills ...InstallSkill) InstallInput {
 		Skills:      skills,
 		ReadFile:    os.ReadFile,
 		Stat:        os.Stat,
-		ResolvePath: resolvePathKeepingMissing,
+		ResolvePath: fsresolve.KeepingMissing,
 		ReadDir:     os.ReadDir,
 	}
 	data, err := os.ReadFile(filepath.Join(f.root, filepath.FromSlash(ProjectLockRelPath)))
@@ -611,5 +613,33 @@ func TestInstall_KeepsTheProceduralEntriesOfTheSameLock(t *testing.T) {
 	lock := f.lock()
 	if len(lock.Skills) != 1 || lock.Skills[0].ID != "tidy" || !reflect.DeepEqual(installIDs(lock), []string{"pdf"}) {
 		t.Errorf("lock = %+v, want the procedural entry and the install record", lock)
+	}
+}
+
+// TestPlanInstallRefusesDestinationEqualToSkillsRoot is TQ-3: the deliberate
+// tightening the containment extraction carried (a dst EQUAL to the skills root
+// was admitted by the old inline prefix check and is refused by the shared
+// strictly-below pathguard.WithinRoot) had no test at the PlanInstall level,
+// only at the helper level. install_test.go is the untouched regression net,
+// so this lives here.
+func TestPlanInstallRefusesDestinationEqualToSkillsRoot(t *testing.T) {
+	reg := Registry{Version: "1", Skills: []Entry{{
+		ID:   ".",
+		Path: "skills/whatever",
+		Install: Install{
+			DefaultScope:    "project",
+			AllowedProjects: []string{"proj"},
+		},
+	}}}
+
+	ops, err := PlanInstall(reg, "proj", "/overlay", "/target-repo")
+	if err == nil {
+		t.Fatalf("expected a refusal for a destination equal to the skills root, got %d ops", len(ops))
+	}
+	if !strings.Contains(err.Error(), "escapes target skills root") {
+		t.Errorf("refusal %q does not name the target-root branch", err.Error())
+	}
+	if ops != nil {
+		t.Errorf("a refusal must return no ops, got %v", ops)
 	}
 }
