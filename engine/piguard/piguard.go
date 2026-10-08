@@ -83,8 +83,8 @@ func (g *Guard) Close() {
 	g.dir = ""
 }
 
-// Verdict is the message a TestMain prints, and the exit code it should return, when the run
-// started the guard; ok is true when nothing did.
+// Verdict is the message a TestMain prints when the run started the guard, which then fails the
+// run; ok is true, and the message empty, when nothing did.
 func (g *Guard) Verdict() (message string, ok bool) {
 	if !g.Started() {
 		return "", true

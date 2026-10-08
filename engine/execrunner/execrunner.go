@@ -1,6 +1,8 @@
 // Package execrunner is the process adapter of the CommandRunner port the runtime adapters own:
 // it looks a program up on the PATH of the process and runs it with a fixed argument vector.
-// It is the one place in the module that starts the CLI of a runtime (today, `pi`).
+// It is the one place in the module that starts the CLI of a runtime (today, `pi`). The
+// composition root wires it into the Pi adapter (cmd, runRuntime); the adapter and its tests see
+// only the port, and no test imports this package.
 package execrunner
 
 import (

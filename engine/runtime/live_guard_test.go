@@ -2,14 +2,10 @@ package runtime_test
 
 import (
 	"fmt"
-	"go/ast"
-	"go/parser"
-	"go/token"
 	"os"
 	"os/exec"
 	"path/filepath"
 	goruntime "runtime"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -65,56 +61,9 @@ func TestLiveGuard_IsolatesHomeAndPi(t *testing.T) {
 	}
 }
 
-// TestNoTestOfThisPackageStartsTheRealCLI reads the source of the tests: the Pi adapter is
-// driven through a fake CommandRunner, so a test that imports the process adapter, or runs or
-// runs `pi` itself, is a test that can reach the CLI of the machine with the PATH of the run.
+// TestNoTestOfThisPackageStartsTheRealCLI reads the source of the tests: they drive the code under test with a fake CommandRunner,
+// so a test that imports the process adapter, or runs `pi` itself, can reach the CLI of the
+// machine with the PATH of the run. The scan is piguard's, shared with the other packages.
 func TestNoTestOfThisPackageStartsTheRealCLI(t *testing.T) {
-	files, err := filepath.Glob("*_test.go")
-	if err != nil || len(files) == 0 {
-		t.Fatalf("no test files found: %v", err)
-	}
-	fset := token.NewFileSet()
-	for _, path := range files {
-		file, err := parser.ParseFile(fset, path, nil, parser.SkipObjectResolution)
-		if err != nil {
-			t.Fatalf("parse %s: %v", path, err)
-		}
-		for _, spec := range file.Imports {
-			if p, err := strconv.Unquote(spec.Path.Value); err == nil && strings.HasSuffix(p, "/engine/execrunner") {
-				t.Errorf("%s imports %s: the process adapter starts real programs with the PATH of the run; hand the adapter a fake CommandRunner", path, p)
-			}
-		}
-		ast.Inspect(file, func(n ast.Node) bool {
-			call, ok := n.(*ast.CallExpr)
-			if !ok || len(call.Args) == 0 {
-				return true
-			}
-			sel, ok := call.Fun.(*ast.SelectorExpr)
-			if !ok {
-				return true
-			}
-			if pkg, ok := sel.X.(*ast.Ident); !ok || pkg.Name != "exec" {
-				return true
-			}
-			// exec.Command(name, ...) and exec.CommandContext(ctx, name, ...) start a program;
-			// looking one up (exec.LookPath, which the guard test above does) starts nothing.
-			nameArg := 0
-			switch sel.Sel.Name {
-			case "Command":
-			case "CommandContext":
-				nameArg = 1
-			default:
-				return true
-			}
-			if nameArg >= len(call.Args) {
-				return true
-			}
-			if lit, ok := call.Args[nameArg].(*ast.BasicLit); ok && lit.Kind == token.STRING {
-				if name, err := strconv.Unquote(lit.Value); err == nil && name == "pi" {
-					t.Errorf("%s:%d: exec.%s(%q) starts the real CLI", path, fset.Position(call.Pos()).Line, sel.Sel.Name, name)
-				}
-			}
-			return true
-		})
-	}
+	piguard.CheckTestSources(t, ".")
 }
