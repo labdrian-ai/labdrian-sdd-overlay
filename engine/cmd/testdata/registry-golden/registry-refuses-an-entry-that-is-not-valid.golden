@@ -143,21 +143,21 @@ $ skills list --registry <WORLD>/docs/21.yaml
 exit: 1
 --- stdout ---
 --- stderr ---
-error: parsing registry: skills: entry "alpha": install.targets contains invalid value "vim"; must be one of: claude, opencode, codex, pi
+error: parsing registry: skills: entry "alpha": install.targets contains invalid value "vim"; must be one of: claude, codex, pi, opencode
 
 # a target in capitals
 $ skills list --registry <WORLD>/docs/22.yaml
 exit: 1
 --- stdout ---
 --- stderr ---
-error: parsing registry: skills: entry "alpha": install.targets contains invalid value "Claude"; must be one of: claude, opencode, codex, pi
+error: parsing registry: skills: entry "alpha": install.targets contains invalid value "Claude"; must be one of: claude, codex, pi, opencode
 
 # an empty target
 $ skills list --registry <WORLD>/docs/23.yaml
 exit: 1
 --- stdout ---
 --- stderr ---
-error: parsing registry: skills: entry "alpha": install.targets contains invalid value ""; must be one of: claude, opencode, codex, pi
+error: parsing registry: skills: entry "alpha": install.targets contains invalid value ""; must be one of: claude, codex, pi, opencode
 
 # no lifecycle
 $ skills list --registry <WORLD>/docs/24.yaml

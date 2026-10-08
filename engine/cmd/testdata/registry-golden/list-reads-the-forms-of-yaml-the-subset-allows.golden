@@ -17,7 +17,7 @@ $ skills list --registry <WORLD>/docs/03.yaml
 exit: 1
 --- stdout ---
 --- stderr ---
-error: parsing registry: skills: entry "alpha": install.targets contains invalid value "cla # ude"; must be one of: claude, opencode, codex, pi
+error: parsing registry: skills: entry "alpha": install.targets contains invalid value "cla # ude"; must be one of: claude, codex, pi, opencode
 
 # white space after a value is not part of it
 $ skills list --registry <WORLD>/docs/04.yaml

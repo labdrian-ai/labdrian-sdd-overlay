@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/capability"
 )
 
 // slugRe matches valid skill identifiers: lowercase alphanumeric, may contain
@@ -51,7 +53,7 @@ func AddEntry(reg Registry, id, repo, ref string) (Registry, error) {
 		Source: src,
 		Install: Install{
 			DefaultScope:    "global",
-			Targets:         []string{"claude", "opencode", "codex"},
+			Targets:         []string{capability.TargetClaude, capability.TargetOpenCode, capability.TargetCodex},
 			AllowedProjects: nil, // must be nil, not []string{} — ADR-8, ADR-7
 		},
 		Lifecycle: Lifecycle{
