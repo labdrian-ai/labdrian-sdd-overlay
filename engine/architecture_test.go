@@ -68,6 +68,7 @@ var rings = map[string]archguard.Ring{
 	"jsonstrict":                archguard.Domain,
 	"memoryscope":               archguard.Domain,
 	"pathguard":                 archguard.Domain,
+	"pathguard/fsresolve":       archguard.Adapter,
 	"pipkg":                     archguard.Adapter,
 	"prespec":                   archguard.Domain,
 	"projection":                archguard.Domain,

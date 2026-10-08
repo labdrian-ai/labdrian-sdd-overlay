@@ -107,6 +107,12 @@ func ResolvedWithinRoot(root, p string) (bool, error) {
 	return ResolvedWithinRootUsing(ResolvePathKeepingMissing, root, p)
 }
 
+// Resolver is the port a resolved containment proof asks the file system through:
+// it returns what path names once every link in it is followed, or an error
+// when that cannot be told. The domain owns the question; an adapter
+// (pathguard/fsresolve) answers it against a real file system.
+type Resolver func(path string) (string, error)
+
 // ResolvedWithinRootUsing is ResolvedWithinRoot with the resolver injected,
 // for callers that must perform no filesystem access of their own, and any
 // test that needs to control every path the guard sees. ResolvedWithinRoot is
@@ -120,7 +126,7 @@ func ResolvedWithinRoot(root, p string) (bool, error) {
 // depth: they no longer stand alone between the caller and a fail-open
 // containment answer, but they keep the failure visible as an error instead
 // of a bare false.
-func ResolvedWithinRootUsing(resolve func(string) (string, error), root, p string) (bool, error) {
+func ResolvedWithinRootUsing(resolve Resolver, root, p string) (bool, error) {
 	resolvedRoot, err := resolve(root)
 	if err != nil {
 		return false, err
