@@ -50,6 +50,16 @@ var allowedImports = map[string]bool{
 	capabilityImport: true,
 }
 
+// internalImports are the module-internal packages engine/skills may import, each exempted from
+// the git-package ban by exact match. The transitive cover tests below refuse all of them in the
+// packages they cover, so a package that is itself allowed cannot bring in another one; adding a
+// module-internal import means adding it here and its constant above, and nothing else.
+var internalImports = map[string]bool{
+	pathguardImport:  true,
+	jsonstrictImport: true,
+	capabilityImport: true,
+}
+
 // capabilityImportExtras is what engine/capability imports beyond allowedImports: the character
 // classes of its identifier checks, pure like the rest of the standard library it uses.
 var capabilityImportExtras = map[string]bool{
@@ -132,7 +142,7 @@ func TestZeroFetchAllowlistExcludesExecAndNet(t *testing.T) {
 			t.Errorf("allowedImports must never contain %q", imp)
 		case imp == "net" || strings.HasPrefix(imp, "net/"):
 			t.Errorf("allowedImports must never contain the net package %q", imp)
-		case imp != pathguardImport && imp != jsonstrictImport && imp != capabilityImport && strings.Contains(imp, "git"):
+		case !internalImports[imp] && strings.Contains(imp, "git"):
 			t.Errorf("allowedImports must never contain a git-related package %q", imp)
 		}
 	}
@@ -143,11 +153,20 @@ func TestZeroFetchAllowlistExcludesExecAndNet(t *testing.T) {
 			t.Errorf("expected %q in allowedImports after the project-lock-ownership widening", want)
 		}
 	}
-	// 15 stdlib packages (errors is the one the registry port added, os the one Phase 9 unit H17
-	// took away) plus the reviewer-approved pathguardImport, jsonstrictImport and capabilityImport
-	// exceptions.
-	if len(allowedImports) != 18 {
-		t.Errorf("len(allowedImports) = %d, want 18 — widen it only after reviewer approval", len(allowedImports))
+	// The allowlist is the standard library packages plus the module-internal exceptions, counted
+	// apart so that neither figure is the other's remainder. errors is the stdlib package the
+	// registry port added, os the one Phase 9 unit H17 took away.
+	internal := 0
+	for imp := range allowedImports {
+		if internalImports[imp] {
+			internal++
+		}
+	}
+	if stdlib := len(allowedImports) - internal; stdlib != 15 {
+		t.Errorf("%d standard library packages in allowedImports, want 15 — widen it only after reviewer approval", stdlib)
+	}
+	if internal != len(internalImports) {
+		t.Errorf("allowedImports holds %d of the %d internalImports; every module-internal exception is in both", internal, len(internalImports))
 	}
 	if allowedImports["os"] {
 		t.Error(`"os" is in allowedImports: engine/skills reaches the file system through its ports (Phase 9 unit H17), and engine/skills/skillsfs is the one place that imports os`)
@@ -178,7 +197,7 @@ func TestZeroFetchCoversPathguardImports(t *testing.T) {
 			base := filepath.Base(filename)
 			for _, imp := range file.Imports {
 				path := strings.Trim(imp.Path.Value, `"`)
-				if path == pathguardImport || path == capabilityImport || !allowedImports[path] {
+				if internalImports[path] || !allowedImports[path] {
 					t.Errorf("engine/pathguard imports %q in %s; it may import only allowlisted stdlib packages", path, base)
 				}
 			}
@@ -211,7 +230,7 @@ func TestZeroFetchCoversJsonstrictImports(t *testing.T) {
 				if jsonstrictImportExtras[path] {
 					continue
 				}
-				if path == jsonstrictImport || path == pathguardImport || path == capabilityImport || !allowedImports[path] {
+				if internalImports[path] || !allowedImports[path] {
 					t.Errorf("engine/jsonstrict imports %q in %s; it may import only allowlisted stdlib packages", path, base)
 				}
 			}
@@ -244,7 +263,7 @@ func TestZeroFetchCoversCapabilityImports(t *testing.T) {
 				if capabilityImportExtras[path] {
 					continue
 				}
-				if path == capabilityImport || path == pathguardImport || path == jsonstrictImport || !allowedImports[path] {
+				if internalImports[path] || !allowedImports[path] {
 					t.Errorf("engine/capability imports %q in %s; it may import only allowlisted stdlib packages", path, base)
 				}
 			}
