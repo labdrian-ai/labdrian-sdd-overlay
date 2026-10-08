@@ -9,22 +9,27 @@ import (
 	"testing"
 )
 
-// configVariables are the environment variables the composition root reads once and hands the
-// adapters in a Config or in the options of an adapter. No adapter reads them, and none asks the
-// system for the home directory. LABDRIAN_PI_BIN, which used to name the `pi` to run, is here too:
-// the Pi adapter finds its CLI through the CommandRunner port, and the variable is read by no one.
-var configVariables = map[string]bool{
-	"HOME": true, "XDG_CONFIG_HOME": true, "CODEX_HOME": true, "OVERLAY_DIR": true, "STATE_DIR": true,
-	"LABDRIAN_PI_SKIP_SUBAGENTS": true, "LABDRIAN_PI_DEPLOY_REF": true, "LABDRIAN_PI_BIN": true,
+// environmentReadsAllowed are the reads of the environment engine/runtime still makes, each with
+// the work unit that removes it. Every other read -- of the variables the composition root hands
+// down in a Config or in the options of an adapter (HOME, XDG_CONFIG_HOME, CODEX_HOME,
+// OVERLAY_DIR, STATE_DIR, LABDRIAN_PI_SKIP_SUBAGENTS, LABDRIAN_PI_DEPLOY_REF), of
+// LABDRIAN_PI_BIN, which used to name the `pi` to run, or of a name the scan cannot resolve --
+// fails the scan. The list only shrinks: an entry whose read is gone fails it too.
+var environmentReadsAllowed = map[string]string{
+	"opencode.go:LABDRIAN_OVERLAY_DIR": "the contract lookup of the OpenCode plugin (H26)",
 }
 
-// TestAdaptersTakeTheirDirectoriesFromConfigAndNotFromTheEnvironment reads the source of the
-// package: a call to os.UserHomeDir, or to os.Getenv/os.LookupEnv of a variable the composition root hands down,
-// is a second place that decides what a home is, and the one that made --config-root differ
-// between runtimes.
-func TestAdaptersTakeTheirDirectoriesFromConfigAndNotFromTheEnvironment(t *testing.T) {
+// TestAdaptersReadNoEnvironment reads the source of the package: a call to os.UserHomeDir,
+// os.Environ, or os.Getenv/os.LookupEnv, whatever it is given (a literal, a named constant of the
+// package, or anything else), is a place that decides what the configuration of a run is. The
+// composition root reads it once and hands the adapters a Config and their options; a read in the
+// package is a second place, and the one that made --config-root differ between runtimes.
+func TestAdaptersReadNoEnvironment(t *testing.T) {
 	fset := token.NewFileSet()
-	for _, path := range nonTestGoFiles(t, ".") {
+	used := map[string]bool{}
+	files := nonTestGoFiles(t, ".")
+	constants := packageStringConstants(t, fset, files)
+	for _, path := range files {
 		file, err := parser.ParseFile(fset, path, nil, parser.SkipObjectResolution)
 		if err != nil {
 			t.Fatalf("parse %s: %v", path, err)
@@ -46,19 +51,78 @@ func TestAdaptersTakeTheirDirectoriesFromConfigAndNotFromTheEnvironment(t *testi
 			switch sel.Sel.Name {
 			case "UserHomeDir":
 				t.Errorf("%s: os.UserHomeDir() decides a home the adapter should have been given in its Config", where)
+			case "Environ":
+				t.Errorf("%s: os.Environ() reads the whole environment the adapter should have been given in its Config", where)
 			case "Getenv", "LookupEnv":
-				if len(call.Args) != 1 {
+				name, known := "", false
+				if len(call.Args) == 1 {
+					name, known = stringValue(call.Args[0], constants)
+				}
+				if !known {
+					t.Errorf("%s: os.%s reads a variable the scan cannot name; the adapter should have been given it in its Config", where, sel.Sel.Name)
 					return true
 				}
-				lit, ok := call.Args[0].(*ast.BasicLit)
-				if !ok || lit.Kind != token.STRING {
+				key := filepath.Base(path) + ":" + name
+				if _, ok := environmentReadsAllowed[key]; ok {
+					used[key] = true
 					return true
 				}
-				if name, err := strconv.Unquote(lit.Value); err == nil && configVariables[name] {
-					t.Errorf("%s: os.%s(%q) reads a variable the adapter should have been given in its Config", where, sel.Sel.Name, name)
-				}
+				t.Errorf("%s: os.%s(%q) reads a variable the adapter should have been given in its Config or its options", where, sel.Sel.Name, name)
 			}
 			return true
 		})
 	}
+	for key, unit := range environmentReadsAllowed {
+		if !used[key] {
+			t.Errorf("%s is allowed to read the environment (%s) but no longer does; remove it from environmentReadsAllowed", key, unit)
+		}
+	}
+}
+
+// packageStringConstants maps the name of every package-level string constant declared with a
+// literal in the given files to its value, so a read through a named constant is read by name.
+func packageStringConstants(t *testing.T, fset *token.FileSet, paths []string) map[string]string {
+	t.Helper()
+	constants := map[string]string{}
+	for _, path := range paths {
+		file, err := parser.ParseFile(fset, path, nil, parser.SkipObjectResolution)
+		if err != nil {
+			t.Fatalf("parse %s: %v", path, err)
+		}
+		for _, decl := range file.Decls {
+			gen, ok := decl.(*ast.GenDecl)
+			if !ok || gen.Tok != token.CONST {
+				continue
+			}
+			for _, spec := range gen.Specs {
+				vs := spec.(*ast.ValueSpec)
+				for i, name := range vs.Names {
+					if i >= len(vs.Values) {
+						continue
+					}
+					if lit, ok := vs.Values[i].(*ast.BasicLit); ok && lit.Kind == token.STRING {
+						if value, err := strconv.Unquote(lit.Value); err == nil {
+							constants[name.Name] = value
+						}
+					}
+				}
+			}
+		}
+	}
+	return constants
+}
+
+// stringValue is the value of expr when it is a string literal or a named constant of the package.
+func stringValue(expr ast.Expr, constants map[string]string) (string, bool) {
+	switch e := expr.(type) {
+	case *ast.BasicLit:
+		if e.Kind == token.STRING {
+			value, err := strconv.Unquote(e.Value)
+			return value, err == nil
+		}
+	case *ast.Ident:
+		value, ok := constants[e.Name]
+		return value, ok
+	}
+	return "", false
 }
