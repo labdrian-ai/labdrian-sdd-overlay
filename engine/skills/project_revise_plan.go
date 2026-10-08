@@ -3,9 +3,6 @@ package skills
 import (
 	"fmt"
 	"path/filepath"
-	"strings"
-
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/pathguard"
 )
 
 // PlanProjectRevise plans an in-place project-tier revision. It first finds the
@@ -19,108 +16,98 @@ import (
 // and the lock as backups. ExecuteProjectPlan then supplies the same staged
 // temp-file, ordered rename, and rollback behavior used by registration.
 func PlanProjectRevise(in ReviseInput) (ProjectPlan, error) {
-	if in.ReadFile == nil || in.ReadDir == nil || in.Stat == nil {
-		return ProjectPlan{}, fmt.Errorf("project-revise: read, directory, and stat probes are required")
+	if err := requireReviseProbes(in); err != nil {
+		return ProjectPlan{}, err
 	}
-	if in.ResolvePath == nil {
-		return ProjectPlan{}, fmt.Errorf("project-revise: no symlink resolver was injected")
-	}
-	if !filepath.IsAbs(in.ProjectRoot) {
-		return ProjectPlan{}, fmt.Errorf("project-revise: --project-root %q must be absolute", in.ProjectRoot)
-	}
-	root := filepath.Clean(in.ProjectRoot)
-	info, err := in.Stat(root)
+	root, err := requireProjectRoot(projectReviseVerb, in.ProjectRoot, in.Stat)
 	if err != nil {
-		return ProjectPlan{}, fmt.Errorf("project-revise: --project-root %q must exist: %v", in.ProjectRoot, err)
+		return ProjectPlan{}, err
 	}
-	if !info.IsDir() {
-		return ProjectPlan{}, fmt.Errorf("project-revise: --project-root %q must be a directory", in.ProjectRoot)
+	if err := requireDraftOutsideRoot(projectReviseVerb, in.DraftPath, root, in.ResolvePath); err != nil {
+		return ProjectPlan{}, err
 	}
-
-	draft := filepath.Clean(in.DraftPath)
-	if !filepath.IsAbs(draft) {
-		return ProjectPlan{}, fmt.Errorf("project-revise: the <draft-file> argument %q must be an absolute path", in.DraftPath)
+	if err := requireNoCarriageReturn(projectReviseVerb, in.DraftPath, in.DraftData); err != nil {
+		return ProjectPlan{}, err
 	}
-	if pathguard.WithinRoot(root, draft) {
-		return ProjectPlan{}, fmt.Errorf("project-revise: draft %q must lie outside the project root %q", in.DraftPath, root)
-	}
-	if inside, err := pathguard.ResolvedWithinRootUsing(in.ResolvePath, root, draft); err != nil {
-		return ProjectPlan{}, fmt.Errorf("project-revise: resolving draft %q: %v", in.DraftPath, err)
-	} else if inside {
-		return ProjectPlan{}, fmt.Errorf("project-revise: draft %q resolves inside the project root %q and must lie outside it", in.DraftPath, root)
-	}
-	if strings.ContainsRune(string(in.DraftData), '\r') {
-		return ProjectPlan{}, fmt.Errorf("project-revise: draft %q must not contain carriage returns", in.DraftPath)
-	}
-
-	frontmatter, _, err := SplitSkillFile(in.DraftData)
+	frontmatter, err := readDraftFrontmatter(projectReviseVerb, in.DraftData)
 	if err != nil {
-		return ProjectPlan{}, fmt.Errorf("project-revise: draft frontmatter: %v", err)
-	}
-	if err := checkFrontmatterAllowlist(frontmatter); err != nil {
-		return ProjectPlan{}, fmt.Errorf("%s", strings.Replace(err.Error(), "project-register:", "project-revise:", 1))
+		return ProjectPlan{}, err
 	}
 	id := parseFrontmatterFields(frontmatter).Name
-	if id == "" {
-		return ProjectPlan{}, fmt.Errorf("project-revise: the draft frontmatter declares no name, so the skill id is empty")
-	}
-	if !slugRe.MatchString(id) {
-		return ProjectPlan{}, fmt.Errorf("project-revise: id %q does not match the skill identifier pattern", id)
-	}
-	if got := NormalizeSlug(id); got != id {
-		return ProjectPlan{}, fmt.Errorf("project-revise: id %q is not normalized, want %q", id, got)
+	if err := checkSkillID(projectReviseVerb, id); err != nil {
+		return ProjectPlan{}, err
 	}
 	if err := ValidateCandidateKey(in.CandidateKey); err != nil {
-		return ProjectPlan{}, fmt.Errorf("project-revise: %v", err)
+		return ProjectPlan{}, fmt.Errorf("%s: %v", projectReviseVerb, err)
 	}
-	if !in.LockExists {
-		return ProjectPlan{}, fmt.Errorf("project-revise: skill %q is human-owned (not-in-lock)", id)
-	}
-	lock, err := ParseProjectLock(in.LockData)
+	lock, entryIndex, entry, err := requireRecordedSkill(projectReviseVerb, in.LockExists, in.LockData, id)
 	if err != nil {
-		return ProjectPlan{}, fmt.Errorf("project-revise: %v", err)
+		return ProjectPlan{}, err
 	}
-
-	entryIndex := -1
-	var entry ProjectLockEntry
-	for i, candidate := range lock.Skills {
-		if candidate.ID == id {
-			entryIndex = i
-			entry = candidate
-			break
-		}
-	}
-	if entryIndex < 0 {
-		return ProjectPlan{}, fmt.Errorf("project-revise: skill %q is human-owned (not-in-lock)", id)
-	}
-
-	ownership := EvaluateOwnership(root, entry, in.ReadFile, in.ReadDir, in.ResolvePath)
-	if !ownership.AgentOwned {
-		return ProjectPlan{}, fmt.Errorf("project-revise: skill %q is human-owned (%s)", id, ownership.Reason)
+	probes := ownershipProbes{readFile: in.ReadFile, readDir: in.ReadDir, resolvePath: in.ResolvePath}
+	if err := requireAgentOwned(projectReviseVerb, root, id, entry, probes); err != nil {
+		return ProjectPlan{}, err
 	}
 
 	// This is deliberately the same preparation call used by registration:
 	// provenance stamp, hard lint on the stamped bytes, then hash.
 	stamped, sum, err := prepareProjectSkill(in.DraftData, in.CandidateKey)
 	if err != nil {
-		return ProjectPlan{}, fmt.Errorf("project-revise: %v", err)
+		return ProjectPlan{}, fmt.Errorf("%s: %v", projectReviseVerb, err)
 	}
 
-	registerInput := RegisterInput{ProjectRoot: root, ResolvePath: in.ResolvePath}
+	guard := writeGuard{root: root, resolve: in.ResolvePath}
+	writes, seen, err := planReviseTargets(guard, in.ReadFile, entry, stamped)
+	if err != nil {
+		return ProjectPlan{}, err
+	}
+	revised := entry
+	revised.Revision++
+	revised.SHA256 = sum
+	revised.Targets = append([]string(nil), entry.Targets...)
+	lockWrite, err := planReviseLock(guard, seen, in.LockData, lock, entryIndex, revised)
+	if err != nil {
+		return ProjectPlan{}, err
+	}
+
+	return ProjectPlan{
+		ID:       id,
+		SHA256:   sum,
+		Revision: revised.Revision,
+		Writes:   writes,
+		Lock:     lockWrite,
+	}, nil
+}
+
+// requireReviseProbes refuses a planner that was given nothing to look at the file system with.
+func requireReviseProbes(in ReviseInput) error {
+	if in.ReadFile == nil || in.ReadDir == nil || in.Stat == nil {
+		return fmt.Errorf("%s: read, directory, and stat probes are required", projectReviseVerb)
+	}
+	if in.ResolvePath == nil {
+		return fmt.Errorf("%s: no symlink resolver was injected", projectReviseVerb)
+	}
+	return nil
+}
+
+// planReviseTargets plans the new bytes of every target the lock records for the skill, each with
+// the bytes it holds now as its backup. It also returns, per RESOLVED destination, the target that
+// reached it, so the lock cannot alias a skill file.
+func planReviseTargets(guard writeGuard, readFile func(string) ([]byte, error), entry ProjectLockEntry, stamped []byte) ([]ProjectWrite, map[string]string, error) {
 	seen := make(map[string]string, len(entry.Targets)+1)
 	writes := make([]ProjectWrite, 0, len(entry.Targets))
 	for _, target := range entry.Targets {
-		abs, resolved, err := resolveWritePath(registerInput, root, target)
+		abs, resolved, err := guard.destination(target)
 		if err != nil {
-			return ProjectPlan{}, fmt.Errorf("project-revise: destination %q: %v", target, err)
+			return nil, nil, fmt.Errorf("%s: destination %q: %v", projectReviseVerb, target, err)
 		}
 		if other, ok := seen[resolved]; ok {
-			return ProjectPlan{}, fmt.Errorf("project-revise: destinations %q and %q resolve to the same file, so one would silently overwrite the other", other, target)
+			return nil, nil, fmt.Errorf("%s: destinations %q and %q resolve to the same file, so one would silently overwrite the other", projectReviseVerb, other, target)
 		}
 		seen[resolved] = target
-		backup, err := in.ReadFile(abs)
+		backup, err := readFile(abs)
 		if err != nil {
-			return ProjectPlan{}, fmt.Errorf("project-revise: reading existing target %q: %v", target, err)
+			return nil, nil, fmt.Errorf("%s: reading existing target %q: %v", projectReviseVerb, target, err)
 		}
 		writes = append(writes, ProjectWrite{
 			Rel:    filepath.ToSlash(target),
@@ -130,35 +117,30 @@ func PlanProjectRevise(in ReviseInput) (ProjectPlan, error) {
 			Backup: cloneProjectBytes(backup),
 		})
 	}
+	return writes, seen, nil
+}
 
-	lockAbs, resolvedLock, err := resolveWritePath(registerInput, root, ProjectLockRelPath)
+// planReviseLock is the lock with the entry at entryIndex replaced by its revision. It passes the
+// same guard as any destination and may not alias a skill file.
+func planReviseLock(guard writeGuard, seen map[string]string, lockData []byte, lock ProjectLock, entryIndex int, revised ProjectLockEntry) (ProjectWrite, error) {
+	lockAbs, resolvedLock, err := guard.destination(ProjectLockRelPath)
 	if err != nil {
-		return ProjectPlan{}, fmt.Errorf("project-revise: destination %q: %v", ProjectLockRelPath, err)
+		return ProjectWrite{}, fmt.Errorf("%s: destination %q: %v", projectReviseVerb, ProjectLockRelPath, err)
 	}
 	if other, ok := seen[resolvedLock]; ok {
-		return ProjectPlan{}, fmt.Errorf("project-revise: destinations %q and %q resolve to the same file, so one would silently overwrite the other", other, ProjectLockRelPath)
+		return ProjectWrite{}, fmt.Errorf("%s: destinations %q and %q resolve to the same file, so one would silently overwrite the other", projectReviseVerb, other, ProjectLockRelPath)
 	}
 
-	entry.Revision++
-	entry.SHA256 = sum
-	entry.Targets = append([]string(nil), entry.Targets...)
-	lock.Skills[entryIndex] = entry
-	lockData, err := SerializeProjectLock(lock)
+	lock.Skills[entryIndex] = revised
+	revisedData, err := SerializeProjectLock(lock)
 	if err != nil {
-		return ProjectPlan{}, fmt.Errorf("project-revise: %v", err)
+		return ProjectWrite{}, fmt.Errorf("%s: %v", projectReviseVerb, err)
 	}
-
-	return ProjectPlan{
-		ID:       id,
-		SHA256:   sum,
-		Revision: entry.Revision,
-		Writes:   writes,
-		Lock: ProjectWrite{
-			Rel:    ProjectLockRelPath,
-			Abs:    lockAbs,
-			Data:   lockData,
-			Mode:   ProjectFileMode,
-			Backup: cloneProjectBytes(in.LockData),
-		},
+	return ProjectWrite{
+		Rel:    ProjectLockRelPath,
+		Abs:    lockAbs,
+		Data:   revisedData,
+		Mode:   ProjectFileMode,
+		Backup: cloneProjectBytes(lockData),
 	}, nil
 }

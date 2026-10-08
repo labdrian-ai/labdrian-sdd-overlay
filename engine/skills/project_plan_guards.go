@@ -58,55 +58,64 @@ func underSkillsDir(rel string) bool {
 	return clean == projectSourceSkillsDir || strings.HasPrefix(clean, projectSourceSkillsDir+"/")
 }
 
-// resolveWritePath turns one repo-relative, slash-separated destination into
-// an absolute path under root, proving containment in BOTH steps: the lexical
+// writeGuard is the one shared write guard (tasks.md 3b-i.5a): it proves, for one project root,
+// that a destination may be written. Fresh destinations and lock-recorded targets, in every verb
+// that plans a write, go through it. The resolver is injected, so the planners stay pure and a
+// test controls every path the guard sees.
+type writeGuard struct {
+	root    string
+	resolve pathguard.Resolver
+}
+
+// destination turns one repo-relative, slash-separated destination into
+// an absolute path under the root, proving containment in BOTH steps: the lexical
 // guard (resolveTarget — no empty, absolute or ".."-carrying target, nothing
 // naming root itself) and then the resolved guard (pathguard.ResolvedWithinRootUsing,
 // which refuses a destination reached through a symlinked `.claude` or
 // `.agents` pointing out of the project). It also applies decision (f): no
 // destination under <root>/skills/.
 //
-// This is the one shared write guard tasks.md 3b-i.5a asks for: fresh
-// destinations and lock-recorded targets both go through it.
-//
 // It returns the absolute destination AND its RESOLVED, cleaned form, so the
 // caller can detect two distinct destinations that name one physical file
 // without resolving anything a second time (ALIAS-1).
-func resolveWritePath(in RegisterInput, root, rel string) (string, string, error) {
+func (g writeGuard) destination(rel string) (string, string, error) {
 	if underSkillsDir(rel) {
 		return "", "", errDestUnderSkillsDir
 	}
-	abs, ok := resolveTarget(root, rel)
+	abs, ok := resolveTarget(g.root, rel)
 	if !ok {
 		return "", "", fmt.Errorf("escapes the project root")
 	}
-	inside, err := pathguard.ResolvedWithinRootUsing(in.ResolvePath, root, abs)
+	inside, err := pathguard.ResolvedWithinRootUsing(g.resolve, g.root, abs)
 	if err != nil {
 		return "", "", fmt.Errorf("could not be resolved: %v", err)
 	}
 	if !inside {
 		return "", "", fmt.Errorf("escapes the project root through a symlink")
 	}
-	// Decision (f), applied to the RESOLVED destination. Proving the
-	// destination is inside the root never proves it is OUTSIDE <root>/skills,
-	// and underSkillsDir above only ever saw the repo-relative string: with
-	// `<root>/.claude/skills` a symlink to `<root>/skills`, the registration
-	// was accepted and its bytes would have landed physically in the project's
-	// own source tree (review round 2, SEC-1). Resolving both sides through the
-	// same injected resolver is the only check that sees it.
-	// EFF-1 (review round 2, carried to slice 3b-ii): this block used to call
-	// pathguard.ResolvedWithinRootUsing — which resolves BOTH its arguments — and then
-	// resolve the same two paths again for the equality comparison, four
-	// resolutions for two paths. Resolving each side ONCE and deriving both
-	// halves from the results is the same decision, unchanged: strictly-below
-	// containment (review round 2, SEC-1) OR explicit equality with skills/
-	// itself (review round 3, PLAN-3), because the strictly-below helper admits
-	// the destination that IS skills/.
-	resolvedSkills, err := in.ResolvePath(filepath.Join(root, projectSourceSkillsDir))
+	return g.refuseTheProjectsOwnSkills(abs)
+}
+
+// refuseTheProjectsOwnSkills is decision (f), applied to the RESOLVED destination. Proving the
+// destination is inside the root never proves it is OUTSIDE <root>/skills, and underSkillsDir
+// above only ever saw the repo-relative string: with `<root>/.claude/skills` a symlink to
+// `<root>/skills`, the registration was accepted and its bytes would have landed physically in
+// the project's own source tree (review round 2, SEC-1). Resolving both sides through the same
+// injected resolver is the only check that sees it.
+//
+// EFF-1 (review round 2, carried to slice 3b-ii): this used to call
+// pathguard.ResolvedWithinRootUsing — which resolves BOTH its arguments — and then resolve the
+// same two paths again for the equality comparison, four resolutions for two paths. Resolving
+// each side ONCE and deriving both halves from the results is the same decision, unchanged:
+// strictly-below containment (review round 2, SEC-1) OR explicit equality with skills/ itself
+// (review round 3, PLAN-3), because the strictly-below helper admits the destination that IS
+// skills/.
+func (g writeGuard) refuseTheProjectsOwnSkills(abs string) (string, string, error) {
+	resolvedSkills, err := g.resolve(filepath.Join(g.root, projectSourceSkillsDir))
 	if err != nil {
 		return "", "", fmt.Errorf("could not be resolved: %v", err)
 	}
-	resolvedDest, err := in.ResolvePath(abs)
+	resolvedDest, err := g.resolve(abs)
 	if err != nil {
 		return "", "", fmt.Errorf("could not be resolved: %v", err)
 	}
@@ -141,7 +150,7 @@ var errDestResolvesUnderSkillsDir = fmt.Errorf("resolves into the project's own 
 // allowedFrontmatterKeys (validate step 4). Indented lines are children of a
 // block (metadata's author/version, a folded description) and are not
 // top-level keys.
-func checkFrontmatterAllowlist(frontmatter string) error {
+func checkFrontmatterAllowlist(verb, frontmatter string) error {
 	for _, line := range strings.Split(frontmatter, "\n") {
 		// Defence in depth, shadowed by the splitKeyValue check below: a blank
 		// line carries no "key:" and is dropped there anyway, so deleting this
@@ -159,23 +168,19 @@ func checkFrontmatterAllowlist(frontmatter string) error {
 			continue
 		}
 		if !allowedFrontmatterKeys[key] {
-			return fmt.Errorf("project-register: frontmatter key %q is not allowed (allowed: name, description, license, metadata); a procedural skill must not pre-approve tools", key)
+			return fmt.Errorf("%s: frontmatter key %q is not allowed (allowed: name, description, license, metadata); a procedural skill must not pre-approve tools", verb, key)
 		}
 	}
 	return nil
 }
 
-// checkRegisterIdentity applies design.md's Identity rules to the skill id
-// taken from the frontmatter name: non-empty, already normalized
-// (NormalizeSlug is the single definition, so this also bounds the id at 48
-// bytes with no consecutive, leading or trailing hyphens — which satisfies
-// Pi's name rule), matching slugRe, and not matching an overlay registry
-// skill. A registry match means the identity belongs to the global tier and
-// is handled through Disposition: extend:<id> on the human path, never
-// shadowed by a project copy.
-func checkRegisterIdentity(id string, reg Registry) error {
+// checkSkillID applies design.md's Identity rules to the skill id taken from the frontmatter name:
+// non-empty, matching slugRe, and already normalized (NormalizeSlug is the single definition, so
+// this also bounds the id at 48 bytes with no consecutive, leading or trailing hyphens — which
+// satisfies Pi's name rule).
+func checkSkillID(verb, id string) error {
 	if id == "" {
-		return fmt.Errorf("project-register: the draft frontmatter declares no name, so the skill id is empty")
+		return fmt.Errorf("%s: the draft frontmatter declares no name, so the skill id is empty", verb)
 	}
 	// The pattern check runs BEFORE the normalization check. Behind the
 	// normalization check it was unreachable — NormalizeSlug's output always
@@ -186,13 +191,24 @@ func checkRegisterIdentity(id string, reg Registry) error {
 	// that match the pattern yet still differ from their normal form
 	// ("a--b", "a-").
 	if !slugRe.MatchString(id) {
-		return fmt.Errorf("project-register: id %q does not match the skill identifier pattern", id)
+		return fmt.Errorf("%s: id %q does not match the skill identifier pattern", verb, id)
 	}
 	if got := NormalizeSlug(id); got != id {
-		return fmt.Errorf("project-register: id %q is not normalized, want %q", id, got)
+		return fmt.Errorf("%s: id %q is not normalized, want %q", verb, id, got)
+	}
+	return nil
+}
+
+// checkRegisterIdentity applies the Identity rules of checkSkillID to a skill being registered,
+// and refuses an id that matches an overlay registry skill. A registry match means the identity
+// belongs to the global tier and is handled through Disposition: extend:<id> on the human path,
+// never shadowed by a project copy.
+func checkRegisterIdentity(id string, reg Registry) error {
+	if err := checkSkillID(projectRegisterVerb, id); err != nil {
+		return err
 	}
 	if matched, skillPath := MatchCandidate(reg, id); matched {
-		return fmt.Errorf("project-register: id %q matches the overlay registry skill %q; extend it on the human path instead of shadowing it", id, skillPath)
+		return fmt.Errorf("%s: id %q matches the overlay registry skill %q; extend it on the human path instead of shadowing it", projectRegisterVerb, id, skillPath)
 	}
 	return nil
 }

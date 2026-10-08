@@ -33,100 +33,111 @@ func VerifyAbsorbedInto(target string, registry Registry, lock ProjectLock) erro
 // symmetrically. The plan is pure: all filesystem facts arrive through the
 // injected probes.
 func PlanProjectRetire(in RetireInput) (ProjectPlan, error) {
-	if in.ReadFile == nil || in.ReadDir == nil || in.Stat == nil {
-		return ProjectPlan{}, fmt.Errorf("project-retire: read, directory, and stat probes are required")
+	if err := requireRetireProbes(in); err != nil {
+		return ProjectPlan{}, err
 	}
-	if in.ResolvePath == nil {
-		return ProjectPlan{}, fmt.Errorf("project-retire: no symlink resolver was injected")
-	}
-	if !filepath.IsAbs(in.ProjectRoot) {
-		return ProjectPlan{}, fmt.Errorf("project-retire: --project-root %q must be absolute", in.ProjectRoot)
-	}
-	root := filepath.Clean(in.ProjectRoot)
-	info, err := in.Stat(root)
+	root, err := requireProjectRoot(projectRetireVerb, in.ProjectRoot, in.Stat)
 	if err != nil {
-		return ProjectPlan{}, fmt.Errorf("project-retire: --project-root %q must exist: %v", in.ProjectRoot, err)
-	}
-	if !info.IsDir() {
-		return ProjectPlan{}, fmt.Errorf("project-retire: --project-root %q must be a directory", in.ProjectRoot)
+		return ProjectPlan{}, err
 	}
 	if in.ID == "" {
-		return ProjectPlan{}, fmt.Errorf("project-retire: skill id must not be empty")
+		return ProjectPlan{}, fmt.Errorf("%s: skill id must not be empty", projectRetireVerb)
 	}
-	if !in.LockExists {
-		return ProjectPlan{}, fmt.Errorf("project-retire: skill %q is human-owned (not-in-lock)", in.ID)
-	}
-
-	lock, err := ParseProjectLock(in.LockData)
+	lock, entryIndex, entry, err := requireRecordedSkill(projectRetireVerb, in.LockExists, in.LockData, in.ID)
 	if err != nil {
-		return ProjectPlan{}, fmt.Errorf("project-retire: %v", err)
+		return ProjectPlan{}, err
 	}
-	entryIndex := -1
-	var entry ProjectLockEntry
-	for i, candidate := range lock.Skills {
-		if candidate.ID == in.ID {
-			entryIndex = i
-			entry = candidate
-			break
-		}
-	}
-	if entryIndex < 0 {
-		return ProjectPlan{}, fmt.Errorf("project-retire: skill %q is human-owned (not-in-lock)", in.ID)
-	}
-
-	ownership := EvaluateOwnership(root, entry, in.ReadFile, in.ReadDir, in.ResolvePath)
-	if !ownership.AgentOwned {
-		return ProjectPlan{}, fmt.Errorf("project-retire: skill %q is human-owned (%s)", in.ID, ownership.Reason)
+	probes := ownershipProbes{readFile: in.ReadFile, readDir: in.ReadDir, resolvePath: in.ResolvePath}
+	if err := requireAgentOwned(projectRetireVerb, root, in.ID, entry, probes); err != nil {
+		return ProjectPlan{}, err
 	}
 	if err := VerifyAbsorbedInto(in.AbsorbedInto, in.Registry, lock); err != nil {
-		return ProjectPlan{}, fmt.Errorf("project-retire: %v", err)
+		return ProjectPlan{}, fmt.Errorf("%s: %v", projectRetireVerb, err)
 	}
 
-	registerInput := RegisterInput{ProjectRoot: root, ResolvePath: in.ResolvePath}
+	guard := writeGuard{root: root, resolve: in.ResolvePath}
+	deleteWrites, seen, err := planRetireDeletions(guard, in, entry)
+	if err != nil {
+		return ProjectPlan{}, err
+	}
+	lockWrite, err := planRetireLock(guard, in, lock, entryIndex, seen)
+	if err != nil {
+		return ProjectPlan{}, err
+	}
+
+	return ProjectPlan{
+		ID:           in.ID,
+		Revision:     entry.Revision,
+		AbsorbedInto: in.AbsorbedInto,
+		Deletes:      relsOf(deleteWrites),
+		DeleteWrites: deleteWrites,
+		Lock:         lockWrite,
+	}, nil
+}
+
+// requireRetireProbes refuses a planner that was given nothing to look at the file system with.
+func requireRetireProbes(in RetireInput) error {
+	if in.ReadFile == nil || in.ReadDir == nil || in.Stat == nil {
+		return fmt.Errorf("%s: read, directory, and stat probes are required", projectRetireVerb)
+	}
+	if in.ResolvePath == nil {
+		return fmt.Errorf("%s: no symlink resolver was injected", projectRetireVerb)
+	}
+	return nil
+}
+
+// planRetireDeletions plans the removal of every target the lock records for the skill, each with
+// the bytes it holds now as its backup and the mode it has now. A target that is a directory is
+// refused. It also returns, per RESOLVED destination, the target that reached it, so the lock
+// cannot alias a skill file.
+func planRetireDeletions(guard writeGuard, in RetireInput, entry ProjectLockEntry) ([]ProjectWrite, map[string]string, error) {
 	seen := make(map[string]string, len(entry.Targets)+1)
 	deleteWrites := make([]ProjectWrite, 0, len(entry.Targets))
-	deletes := make([]string, 0, len(entry.Targets))
 	for _, target := range entry.Targets {
-		abs, resolved, err := resolveWritePath(registerInput, root, target)
+		abs, resolved, err := guard.destination(target)
 		if err != nil {
-			return ProjectPlan{}, fmt.Errorf("project-retire: target %q: %v", target, err)
+			return nil, nil, fmt.Errorf("%s: target %q: %v", projectRetireVerb, target, err)
 		}
 		if other, ok := seen[resolved]; ok {
-			return ProjectPlan{}, fmt.Errorf("project-retire: targets %q and %q resolve to the same file", other, target)
+			return nil, nil, fmt.Errorf("%s: targets %q and %q resolve to the same file", projectRetireVerb, other, target)
 		}
 		seen[resolved] = target
 
 		data, err := in.ReadFile(abs)
 		if err != nil {
-			return ProjectPlan{}, fmt.Errorf("project-retire: reading target %q: %v", target, err)
+			return nil, nil, fmt.Errorf("%s: reading target %q: %v", projectRetireVerb, target, err)
 		}
 		info, err := in.Stat(abs)
 		if err != nil {
-			return ProjectPlan{}, fmt.Errorf("project-retire: inspecting target %q: %v", target, err)
+			return nil, nil, fmt.Errorf("%s: inspecting target %q: %v", projectRetireVerb, target, err)
 		}
 		if info.IsDir() {
-			return ProjectPlan{}, fmt.Errorf("project-retire: target %q is a directory", target)
+			return nil, nil, fmt.Errorf("%s: target %q is a directory", projectRetireVerb, target)
 		}
-		rel := filepath.ToSlash(target)
-		deletes = append(deletes, rel)
 		deleteWrites = append(deleteWrites, ProjectWrite{
-			Rel:    rel,
+			Rel:    filepath.ToSlash(target),
 			Abs:    abs,
 			Mode:   info.Mode().Perm(),
 			Backup: cloneProjectBytes(data),
 		})
 	}
+	return deleteWrites, seen, nil
+}
 
-	lockAbs, resolvedLock, err := resolveWritePath(registerInput, root, ProjectLockRelPath)
+// planRetireLock is the lock without the retired entry. It passes the same guard as any
+// destination, may not alias a skill file, and must exist: it stays in the plan, empty if the
+// skill was the last, so a later git revert can restore it symmetrically.
+func planRetireLock(guard writeGuard, in RetireInput, lock ProjectLock, entryIndex int, seen map[string]string) (ProjectWrite, error) {
+	lockAbs, resolvedLock, err := guard.destination(ProjectLockRelPath)
 	if err != nil {
-		return ProjectPlan{}, fmt.Errorf("project-retire: lock destination: %v", err)
+		return ProjectWrite{}, fmt.Errorf("%s: lock destination: %v", projectRetireVerb, err)
 	}
 	if other, ok := seen[resolvedLock]; ok {
-		return ProjectPlan{}, fmt.Errorf("project-retire: targets %q and %q resolve to the same file", other, ProjectLockRelPath)
+		return ProjectWrite{}, fmt.Errorf("%s: targets %q and %q resolve to the same file", projectRetireVerb, other, ProjectLockRelPath)
 	}
 	lockInfo, err := in.Stat(lockAbs)
 	if err != nil {
-		return ProjectPlan{}, fmt.Errorf("project-retire: inspecting project lock: %v", err)
+		return ProjectWrite{}, fmt.Errorf("%s: inspecting project lock: %v", projectRetireVerb, err)
 	}
 
 	remaining := make([]ProjectLockEntry, 0, len(lock.Skills)-1)
@@ -135,21 +146,13 @@ func PlanProjectRetire(in RetireInput) (ProjectPlan, error) {
 	lock.Skills = remaining
 	lockData, err := SerializeProjectLock(lock)
 	if err != nil {
-		return ProjectPlan{}, fmt.Errorf("project-retire: %v", err)
+		return ProjectWrite{}, fmt.Errorf("%s: %v", projectRetireVerb, err)
 	}
-
-	return ProjectPlan{
-		ID:           in.ID,
-		Revision:     entry.Revision,
-		AbsorbedInto: in.AbsorbedInto,
-		Deletes:      deletes,
-		DeleteWrites: deleteWrites,
-		Lock: ProjectWrite{
-			Rel:    ProjectLockRelPath,
-			Abs:    lockAbs,
-			Data:   lockData,
-			Mode:   lockInfo.Mode().Perm(),
-			Backup: cloneProjectBytes(in.LockData),
-		},
+	return ProjectWrite{
+		Rel:    ProjectLockRelPath,
+		Abs:    lockAbs,
+		Data:   lockData,
+		Mode:   lockInfo.Mode().Perm(),
+		Backup: cloneProjectBytes(in.LockData),
 	}, nil
 }

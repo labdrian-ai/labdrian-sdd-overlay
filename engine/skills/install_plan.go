@@ -6,7 +6,7 @@ package skills
 // proof is the install record in the project lock (ProjectInstallEntry): the files
 // install wrote and the SHA-256 of each, checked against what is on disk now, which
 // is EvaluateOwnership's rule, extended from one SKILL.md to a tree of files. The
-// containment rules are the shared ones: resolveWritePath for every destination, so a
+// containment rules are the shared ones: writeGuard.destination for every destination, so a
 // symlinked .claude cannot aim a write out of the project or into its own skills/.
 
 import (
@@ -105,8 +105,7 @@ func (p InstallPlan) verb() string {
 // the project root, the shared containment rules, and the lock as it is.
 type planContext struct {
 	in          InstallInput
-	root        string
-	resolver    RegisterInput
+	guard       writeGuard
 	lock        ProjectLock
 	procedural  map[string]bool
 	recordIndex map[string]int
@@ -123,7 +122,7 @@ func newPlanContext(in InstallInput) (*planContext, []string) {
 		return nil, []string{fmt.Sprintf("skills %s: the project directory %q is not an absolute path", verb, in.ProjectRoot)}
 	}
 	root := filepath.Clean(in.ProjectRoot)
-	c := &planContext{in: in, root: root, resolver: RegisterInput{ProjectRoot: root, ResolvePath: in.ResolvePath}, lock: ProjectLock{Version: 1}}
+	c := &planContext{in: in, guard: writeGuard{root: root, resolve: in.ResolvePath}, lock: ProjectLock{Version: 1}}
 	if in.LockExists {
 		parsed, err := ParseProjectLock(in.LockData)
 		if err != nil {
@@ -188,7 +187,7 @@ func (c *planContext) lockWrite(installs []ProjectInstallEntry) (ProjectWrite, [
 	if err != nil {
 		return ProjectWrite{}, []string{fmt.Sprintf("skills %s: %v", verb, err)}
 	}
-	lockAbs, _, err := resolveWritePath(c.resolver, c.root, ProjectLockRelPath)
+	lockAbs, _, err := c.guard.destination(ProjectLockRelPath)
 	if err != nil {
 		return ProjectWrite{}, []string{fmt.Sprintf("skills %s: destination %s: %v", verb, ProjectLockRelPath, err)}
 	}
@@ -299,7 +298,7 @@ func sameRecord(a, b ProjectInstallEntry) bool {
 // planSkill plans one skill across the runtime directories. ok is false when it
 // added refusals; its writes and deletes must then be dropped.
 func planSkill(c *planContext, sk InstallSkill, record *ProjectInstallEntry, refusals *[]string) (writes, deletes []ProjectWrite, dirs []string, ok bool) {
-	in, resolver, root := c.in, c.resolver, c.root
+	in, guard := c.in, c.guard
 	before := len(*refusals)
 	refuse := func(format string, a ...any) {
 		*refusals = append(*refusals, fmt.Sprintf("skills %s: "+format, append([]any{in.verb()}, a...)...))
@@ -326,7 +325,7 @@ func planSkill(c *planContext, sk InstallSkill, record *ProjectInstallEntry, ref
 	aliased := map[string]string{}
 	for _, target := range projectTargets {
 		dirRel := target.Dir + "/" + sk.ID
-		dirAbs, resolvedDir, err := resolveWritePath(resolver, root, dirRel)
+		dirAbs, resolvedDir, err := guard.destination(dirRel)
 		if err != nil {
 			refuse("destination %s: %v", dirRel, err)
 			continue
@@ -361,7 +360,7 @@ func planSkill(c *planContext, sk InstallSkill, record *ProjectInstallEntry, ref
 		if record != nil && exists {
 			for _, f := range record.Files {
 				rel := dirRel + "/" + f.Path
-				abs, _, err := resolveWritePath(resolver, root, rel)
+				abs, _, err := guard.destination(rel)
 				if err != nil {
 					refuse("destination %s: %v", rel, err)
 					continue
@@ -388,7 +387,7 @@ func planSkill(c *planContext, sk InstallSkill, record *ProjectInstallEntry, ref
 
 		for _, f := range sk.Files {
 			rel := dirRel + "/" + f.Rel
-			abs, _, err := resolveWritePath(resolver, root, rel)
+			abs, _, err := guard.destination(rel)
 			if err != nil {
 				refuse("destination %s: %v", rel, err)
 				continue
@@ -425,7 +424,7 @@ func planSkill(c *planContext, sk InstallSkill, record *ProjectInstallEntry, ref
 				continue
 			}
 			rel := dirRel + "/" + p
-			abs, _, err := resolveWritePath(resolver, root, rel)
+			abs, _, err := guard.destination(rel)
 			if err != nil {
 				refuse("destination %s: %v", rel, err)
 				continue
