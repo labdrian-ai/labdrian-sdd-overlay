@@ -1,16 +1,13 @@
 package runtime
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
-
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/pipkg"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
 )
 
 // PiAdapter is the runtime adapter for the Pi CLI (via gentle-pi). It NEVER
@@ -18,7 +15,9 @@ import (
 // the `pi` CLI does, via the install/remove subprocess calls below.
 type PiAdapter struct {
 	target       Target
-	registries   skills.RegistryRepository
+	commands     CommandRunner
+	packages     PackageBuilder
+	options      PiOptions
 	home         string
 	overlayRoot  string
 	registryPath string
@@ -41,14 +40,14 @@ type PiPaths struct {
 	DestDir string
 }
 
-// NewPiAdapter constructs the Pi adapter over paths. registries is how it reads the skills
-// registry the package is built from.
-func NewPiAdapter(registries skills.RegistryRepository, paths PiPaths) PiAdapter {
+// NewPiAdapter constructs the Pi adapter over its ports, paths and options. It starts no process
+// and builds no package but through the ports, and reads no environment.
+func NewPiAdapter(ports PiPorts, paths PiPaths, options PiOptions) PiAdapter {
 	registryPath := paths.RegistryPath
 	if registryPath == "" && paths.OverlayRoot != "" {
 		registryPath = filepath.Join(paths.OverlayRoot, "skills.registry.yaml")
 	}
-	return PiAdapter{target: TargetPi, registries: registries, home: paths.Home, overlayRoot: paths.OverlayRoot, registryPath: registryPath, destDir: paths.DestDir}
+	return PiAdapter{target: TargetPi, commands: ports.Commands, packages: ports.Packages, options: options, home: paths.Home, overlayRoot: paths.OverlayRoot, registryPath: registryPath, destDir: paths.DestDir}
 }
 
 // piNoDiscoveryFlagsDisclosure is a STATIC note (R-007) — never a runtime-
@@ -72,15 +71,15 @@ func (a PiAdapter) Install() LifecycleResult {
 	if a.overlayRoot == "" {
 		return a.stub(ActionInstall)
 	}
-	if err := pipkg.Build(a.registries, a.overlayRoot, a.registryPath, a.destDir); err != nil {
+	if err := a.packages.Build(a.overlayRoot, a.registryPath, a.destDir); err != nil {
 		return NewLifecycleResult(a.target, ActionInstall, CapabilityUnsupported, err.Error(), nil)
 	}
-	bin, err := resolvePiBinary()
+	bin, err := a.commands.LookPath("pi")
 	if err != nil {
 		return NewLifecycleResult(a.target, ActionInstall, CapabilityPartial,
 			"labdrian-pi package built at "+a.destDir+"; run: pi install "+a.destDir, nil)
 	}
-	if err := runPiCommand(bin, "install", a.destDir); err != nil {
+	if err := a.runPi(bin, "install", a.destDir); err != nil {
 		return NewLifecycleResult(a.target, ActionInstall, CapabilityPartial,
 			"labdrian-pi package built at "+a.destDir+" but `pi install` failed: "+err.Error(), nil)
 	}
@@ -102,7 +101,7 @@ func (a PiAdapter) installGaduSubagent(bin string) string {
 	}
 
 	var parts []string
-	parts = append(parts, ensureSubagentRunner(bin, home))
+	parts = append(parts, a.ensureSubagentRunner(bin, home))
 
 	if err := linkGaduAgent(home, a.destDir); err != nil {
 		parts = append(parts, err.Error()+".")
@@ -116,12 +115,12 @@ func (a PiAdapter) SyncCheck() LifecycleResult {
 	if a.overlayRoot == "" {
 		return a.stub(ActionSyncCheck)
 	}
-	report, err := pipkg.Check(a.registries, a.overlayRoot, a.registryPath, a.destDir, piDeployOptions())
+	disclosure, err := a.packages.Check(a.overlayRoot, a.registryPath, a.destDir)
 	if err != nil {
-		return NewLifecycleResult(a.target, ActionSyncCheck, CapabilityPartial, err.Error()+" ("+report.Disclosure()+")", nil)
+		return NewLifecycleResult(a.target, ActionSyncCheck, CapabilityPartial, err.Error()+" ("+disclosure+")", nil)
 	}
 	return NewLifecycleResult(a.target, ActionSyncCheck, CapabilitySupported,
-		"labdrian-pi package matches the current manifest ("+report.Disclosure()+")", nil)
+		"labdrian-pi package matches the current manifest ("+disclosure+")", nil)
 }
 
 // Status reports per-entry proof: built, in sync, listed in
@@ -137,8 +136,8 @@ func (a PiAdapter) Status() LifecycleResult {
 	var problems []string
 	if a.overlayRoot == "" {
 		problems = append(problems, "in sync (OVERLAY_DIR unset; cannot verify the build matches the current manifest)")
-	} else if report, err := pipkg.Check(a.registries, a.overlayRoot, a.registryPath, a.destDir, piDeployOptions()); err != nil {
-		problems = append(problems, "in sync ("+err.Error()+"; "+report.Disclosure()+")")
+	} else if disclosure, err := a.packages.Check(a.overlayRoot, a.registryPath, a.destDir); err != nil {
+		problems = append(problems, "in sync ("+err.Error()+"; "+disclosure+")")
 	}
 	settings := readPiSettings(a.home)
 	if !settings.listsPackage(a.destDir) {
@@ -205,12 +204,12 @@ func (a PiAdapter) Uninstall() LifecycleResult {
 		}
 	}
 
-	bin, err := resolvePiBinary()
+	bin, err := a.commands.LookPath("pi")
 	if err != nil {
 		return NewLifecycleResult(a.target, ActionUninstall, CapabilityPartial,
 			"pi CLI not found on PATH; cannot run `pi remove "+a.destDir+"` ("+err.Error()+")."+linkNote, nil)
 	}
-	if err := runPiCommand(bin, "remove", a.destDir); err != nil {
+	if err := a.runPi(bin, "remove", a.destDir); err != nil {
 		return NewLifecycleResult(a.target, ActionUninstall, CapabilityPartial,
 			"`pi remove "+a.destDir+"` failed: "+err.Error()+"."+linkNote, nil)
 	}
@@ -237,7 +236,7 @@ func (a PiAdapter) build(action Action) LifecycleResult {
 	if a.overlayRoot == "" {
 		return a.stub(action)
 	}
-	if err := pipkg.Build(a.registries, a.overlayRoot, a.registryPath, a.destDir); err != nil {
+	if err := a.packages.Build(a.overlayRoot, a.registryPath, a.destDir); err != nil {
 		return NewLifecycleResult(a.target, action, CapabilityPartial, err.Error(), nil)
 	}
 	return NewLifecycleResult(a.target, action, CapabilityPartial,
@@ -254,26 +253,13 @@ func (a PiAdapter) stub(action Action) LifecycleResult {
 	return NewLifecycleResult(a.target, action, CapabilityUnsupported, msg, nil)
 }
 
-// piDeployOptions carries the deploy ref the environment names to pipkg.Check, which no longer
-// reads it. It stands here only until the Pi adapter takes its package builder through a port.
-func piDeployOptions() pipkg.Options {
-	return pipkg.Options{DeployRef: strings.TrimSpace(os.Getenv("LABDRIAN_PI_DEPLOY_REF"))}
-}
-
-// resolvePiBinary returns the pi CLI to invoke. LABDRIAN_PI_BIN overrides
-// discovery (tests use it, so they never touch a real `pi` a developer
-// machine may have on PATH); production resolves via exec.LookPath("pi").
-func resolvePiBinary() (string, error) {
-	if override := strings.TrimSpace(os.Getenv("LABDRIAN_PI_BIN")); override != "" {
-		return override, nil
-	}
-	return exec.LookPath("pi")
-}
-
-// runPiCommand execs bin with a FIXED argv (verb, path), never a shell
-// string, so no path content is ever shell-interpreted.
-func runPiCommand(bin, verb, path string) error {
-	out, err := exec.Command(bin, verb, path).CombinedOutput()
+// runPi runs the pi CLI at bin with a FIXED argv (verb, path), never a shell string, so no path
+// content is ever shell-interpreted, under the deadline of the options. A failure carries what
+// the command printed.
+func (a PiAdapter) runPi(bin, verb, path string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), a.options.commandTimeout())
+	defer cancel()
+	out, err := a.commands.Run(ctx, bin, verb, path)
 	if err != nil {
 		return fmt.Errorf("%w (output: %s)", err, strings.TrimSpace(string(out)))
 	}
@@ -284,9 +270,11 @@ func runPiCommand(bin, verb, path string) error {
 // neither accepted package is already present.
 const subagentsExtensionPackage = "npm:pi-subagents-j0k3r"
 
-// subagentsSkipEnv opts out of the extension probe/install entirely (R-012)
-// -- for environments that manage the Subagents extension separately.
-const subagentsSkipEnv = "LABDRIAN_PI_SKIP_SUBAGENTS"
+// subagentsSkipSetting is how the person turned off the extension probe/install (R-012) -- for
+// environments that manage the Subagents extension separately -- quoted back in the note the
+// adapter returns. The composition root reads that setting once (PiOptions.SkipSubagents); the
+// adapter reads no environment.
+const subagentsSkipSetting = "LABDRIAN_PI_SKIP_SUBAGENTS=1"
 
 // subagentsAcceptedPackagePrefixes are the two package names gentle-pi's
 // Subagents extension ships under (D11); either satisfies R-012.
@@ -308,15 +296,12 @@ func hasAcceptedSubagentsPrefix(entry string) bool {
 // (R-012). Always returns a human-readable disclosure/status note; never
 // fails Install as a whole on an install error -- the caller folds the
 // note into its own message instead.
-func ensureSubagentsExtension(bin string, settings piSettings) string {
-	if os.Getenv(subagentsSkipEnv) == "1" {
-		return "Pi Subagents extension check skipped (" + subagentsSkipEnv + "=1)."
-	}
+func (a PiAdapter) ensureSubagentsExtension(bin string, settings piSettings) string {
 	if settings.listsSubagentsExtension() {
 		return "Pi Subagents extension already installed."
 	}
 	disclosure := "installing third-party Pi extension pi-subagents-j0k3r (npm) required for GADU dispatch."
-	if err := runPiCommand(bin, "install", subagentsExtensionPackage); err != nil {
+	if err := a.runPi(bin, "install", subagentsExtensionPackage); err != nil {
 		return disclosure + " `pi install " + subagentsExtensionPackage + "` failed: " + err.Error() + "."
 	}
 	return disclosure + " Ran `pi install " + subagentsExtensionPackage + "`."
@@ -402,9 +387,9 @@ const (
 // overlay never removes a package it does not own. Only when native
 // support is unavailable does this fall back to the legacy extension
 // install path unchanged.
-func ensureSubagentRunner(bin, home string) string {
-	if os.Getenv(subagentsSkipEnv) == "1" {
-		return "Pi Subagents extension check skipped (" + subagentsSkipEnv + "=1)."
+func (a PiAdapter) ensureSubagentRunner(bin, home string) string {
+	if a.options.SkipSubagents {
+		return "Pi Subagents extension check skipped (" + subagentsSkipSetting + ")."
 	}
 	settings := readPiSettings(home)
 	if settings.nativeSubagents() {
@@ -413,7 +398,7 @@ func ensureSubagentRunner(bin, home string) string {
 		}
 		return "gentle-pi native subagents (>= 2.6.0) detected; skipping the legacy Pi Subagents extension install."
 	}
-	return ensureSubagentsExtension(bin, settings)
+	return a.ensureSubagentsExtension(bin, settings)
 }
 
 // gaduLinkPath returns the overlay-owned GADU agent link location.

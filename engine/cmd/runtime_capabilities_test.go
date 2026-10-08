@@ -29,7 +29,7 @@ func runCapabilitiesTest(args ...string) capabilitiesRun {
 	var out, errBuf bytes.Buffer
 	code := -1
 	exited := false
-	runRuntimeCore(append([]string{"capabilities"}, args...), &out, &errBuf, func(c int) {
+	runRuntimeCore(noPi(), append([]string{"capabilities"}, args...), &out, &errBuf, func(c int) {
 		if !exited {
 			code = c
 			exited = true
@@ -189,7 +189,7 @@ func TestRuntimeCapabilitiesRefusals(t *testing.T) {
 func TestRuntimeCapabilitiesReportsFailedStdoutWrite(t *testing.T) {
 	var errBuf bytes.Buffer
 	var codes []int
-	runRuntimeCore([]string{"capabilities"}, failingMemoryWriter{}, &errBuf, func(c int) {
+	runRuntimeCore(noPi(), []string{"capabilities"}, failingMemoryWriter{}, &errBuf, func(c int) {
 		codes = append(codes, c)
 	})
 	if !reflect.DeepEqual(codes, []int{1}) {
@@ -305,7 +305,7 @@ func TestRuntimeCapabilitiesSourceImportsNoFilesystemOrAdapters(t *testing.T) {
 func TestRuntimeActionErrorNamesCapabilities(t *testing.T) {
 	var out, errBuf bytes.Buffer
 	code := -1
-	runRuntimeCore([]string{"--target", "claude"}, &out, &errBuf, func(c int) {
+	runRuntimeCore(noPi(), []string{"--target", "claude"}, &out, &errBuf, func(c int) {
 		if code == -1 {
 			code = c
 		}

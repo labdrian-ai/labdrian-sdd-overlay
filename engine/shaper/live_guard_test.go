@@ -8,8 +8,9 @@ import (
 )
 
 // TestMain isolates every state and config location this package could
-// resolve, so no test can reach the real user store or a real Pi binary even
-// if it forgets its own overrides.
+// resolve, so no test can reach the real user store even if it forgets its
+// own overrides. (The package starts no `pi`; the Pi adapter's own tests carry
+// the guard for the CLI.)
 func TestMain(m *testing.M) {
 	os.Exit(runIsolated(m))
 }
@@ -25,7 +26,6 @@ func runIsolated(m *testing.M) int {
 		"HOME":             filepath.Join(dir, "home"),
 		"XDG_STATE_HOME":   filepath.Join(dir, "state"),
 		"XDG_CONFIG_HOME":  filepath.Join(dir, "config"),
-		"LABDRIAN_PI_BIN":  filepath.Join(dir, "fake-pi-not-present"),
 		"LABDRIAN_TESTING": "1",
 	} {
 		if err := os.Setenv(key, value); err != nil {

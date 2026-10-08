@@ -12,18 +12,28 @@ import (
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/capability"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/pipkg"
 	engineRuntime "github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime"
 )
 
-// shippedRegistry registers every runtime this package ships, the way the composition root does.
+// shippedRegistry registers every runtime this package ships, the way the composition root does,
+// with a Pi that runs its commands through a fake nobody looks at.
 func shippedRegistry(t *testing.T) *engineRuntime.Registry {
+	t.Helper()
+	return shippedRegistryWith(t, &fakeCommands{})
+}
+
+// shippedRegistryWith is shippedRegistry with the CommandRunner the test watches.
+func shippedRegistryWith(t *testing.T, commands engineRuntime.CommandRunner) *engineRuntime.Registry {
 	t.Helper()
 	r := engineRuntime.NewRegistry()
 	for _, register := range []func(*engineRuntime.Registry) error{
 		engineRuntime.RegisterClaude,
 		engineRuntime.RegisterOpenCode,
 		engineRuntime.RegisterCodex,
-		func(r *engineRuntime.Registry) error { return engineRuntime.RegisterPi(r, fileRegistries) },
+		func(r *engineRuntime.Registry) error {
+			return engineRuntime.RegisterPi(r, engineRuntime.PiPorts{Commands: commands, Packages: pipkg.Packages{Registries: fileRegistries}})
+		},
 	} {
 		if err := register(r); err != nil {
 			t.Fatalf("register a shipped runtime: %v", err)
@@ -122,14 +132,17 @@ func TestPiUninstallUnderASharedConfigRootLeavesTheOtherRuntimesFilesAlone(t *te
 	if err := os.WriteFile(filepath.Join(pkg, "package.json"), []byte("{}"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv("LABDRIAN_PI_BIN", writeStubPiScript(t, filepath.Join(t.TempDir(), "argv.txt")))
+	commands := &fakeCommands{}
 
-	adapter, err := shippedRegistry(t).New(engineRuntime.TargetPi, engineRuntime.Config{Home: t.TempDir(), ConfigRoot: root})
+	adapter, err := shippedRegistryWith(t, commands).New(engineRuntime.TargetPi, engineRuntime.Config{Home: t.TempDir(), ConfigRoot: root})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if result := adapter.Uninstall(); result.Status != engineRuntime.CapabilitySupported {
 		t.Fatalf("Uninstall() = %#v, want supported", result)
+	}
+	if got := commands.invocations(); len(got) != 1 || got[0][0] != "remove" || got[0][1] != pkg {
+		t.Errorf("the commands run = %v, want a single `pi remove %s`", got, pkg)
 	}
 	if _, err := os.Stat(pkg); !os.IsNotExist(err) {
 		t.Errorf("the package directory %s is still there: %v", pkg, err)

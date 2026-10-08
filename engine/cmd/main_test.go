@@ -3318,7 +3318,7 @@ func TestComponentFlag_LongtermMemRefusesUpdateRollback(t *testing.T) {
 	var outBuf, errBuf bytes.Buffer
 	exitCode := -1
 
-	runRuntimeCore(
+	runRuntimeCore(noPi(),
 		[]string{"update", "--component", "longterm-mem", "--state-dir", stateDir},
 		&outBuf,
 		&errBuf,
@@ -3345,7 +3345,7 @@ func TestComponentFlag_LongtermMemRefusesUpdateRollback(t *testing.T) {
 	t.Run("rollback action does not exist at all", func(t *testing.T) {
 		var out2, err2 bytes.Buffer
 		exit2 := -1
-		runRuntimeCore(
+		runRuntimeCore(noPi(),
 			[]string{"rollback", "--component", "longterm-mem", "--state-dir", stateDir},
 			&out2, &err2, func(code int) { exit2 = code },
 		)
@@ -3387,7 +3387,7 @@ func TestComponentFlag_LongtermMemLifecycleExitCodes(t *testing.T) {
 
 			var outBuf, errBuf bytes.Buffer
 			exitCode := -1
-			runRuntimeCore(
+			runRuntimeCore(noPi(),
 				[]string{tc.action, "--component", "longterm-mem", "--state-dir", stateDir},
 				&outBuf, &errBuf, func(code int) { exitCode = code },
 			)
@@ -3440,7 +3440,7 @@ func TestComponentFlag_LongtermMemDefaultsStateDir(t *testing.T) {
 
 	var outBuf, errBuf bytes.Buffer
 	exitCode := -1
-	runRuntimeCore(
+	runRuntimeCore(noPi(),
 		[]string{"status", "--component", "longterm-mem"},
 		&outBuf, &errBuf, func(code int) { exitCode = code },
 	)
@@ -3468,7 +3468,7 @@ func TestComponentFlag_DefaultIsRuntimeParity(t *testing.T) {
 	var outBuf, errBuf bytes.Buffer
 	exitCode := -1
 
-	runRuntimeCore(
+	runRuntimeCore(noPi(),
 		[]string{"status", "--target", "claude", "--config-root", configRoot},
 		&outBuf,
 		&errBuf,

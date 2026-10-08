@@ -10,13 +10,16 @@ import (
 )
 
 // configVariables are the environment variables the composition root reads once and hands the
-// adapters in a Config. No adapter reads them, and none asks the system for the home directory.
+// adapters in a Config or in the options of an adapter. No adapter reads them, and none asks the
+// system for the home directory. LABDRIAN_PI_BIN, which used to name the `pi` to run, is here too:
+// the Pi adapter finds its CLI through the CommandRunner port, and the variable is read by no one.
 var configVariables = map[string]bool{
 	"HOME": true, "XDG_CONFIG_HOME": true, "CODEX_HOME": true, "OVERLAY_DIR": true, "STATE_DIR": true,
+	"LABDRIAN_PI_SKIP_SUBAGENTS": true, "LABDRIAN_PI_DEPLOY_REF": true, "LABDRIAN_PI_BIN": true,
 }
 
 // TestAdaptersTakeTheirDirectoriesFromConfigAndNotFromTheEnvironment reads the source of the
-// package: a call to os.UserHomeDir, or to os.Getenv/os.LookupEnv of a variable Config carries,
+// package: a call to os.UserHomeDir, or to os.Getenv/os.LookupEnv of a variable the composition root hands down,
 // is a second place that decides what a home is, and the one that made --config-root differ
 // between runtimes.
 func TestAdaptersTakeTheirDirectoriesFromConfigAndNotFromTheEnvironment(t *testing.T) {

@@ -220,7 +220,7 @@ func TestRuntimeProbeExitsOneWhenTheReportCannotBeWritten(t *testing.T) {
 func TestRuntimeProbeIsDispatchedFromTheRuntimeVerb(t *testing.T) {
 	var out, errBuf bytes.Buffer
 	code := -1
-	runRuntimeCore([]string{"probe", "--target", "pi"}, &out, &errBuf, func(c int) {
+	runRuntimeCore(noPi(), []string{"probe", "--target", "pi"}, &out, &errBuf, func(c int) {
 		if code == -1 {
 			code = c
 		}

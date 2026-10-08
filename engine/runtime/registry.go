@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/capability"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
 )
 
 // Factory builds the adapter of one runtime from the configuration the composition root resolved.
@@ -103,10 +102,19 @@ func RegisterOpenCode(r *Registry) error {
 	return r.Register(TargetOpenCode, func(cfg Config) Adapter { return NewOpenCodeAdapter(cfg.OpenCodeRoot()) })
 }
 
-// RegisterPi registers the Pi runtime, whose package is built from the skills registry that
-// registries reads.
-func RegisterPi(r *Registry, registries skills.RegistryRepository) error {
+// RegisterPi registers the Pi runtime, which reaches the `pi` CLI and the package builder only
+// through ports. It refuses ports with a nil member: an adapter built without them would fail at
+// the first lifecycle step it runs, long after the program was wired.
+func RegisterPi(r *Registry, ports PiPorts) error {
+	if ports.Commands == nil {
+		return fmt.Errorf("runtime %q registered with no command runner", TargetPi)
+	}
+	if ports.Packages == nil {
+		return fmt.Errorf("runtime %q registered with no package builder", TargetPi)
+	}
 	return r.Register(TargetPi, func(cfg Config) Adapter {
-		return NewPiAdapter(registries, PiPaths{Home: cfg.Home, OverlayRoot: cfg.OverlayDir, DestDir: cfg.PiPackageDir()})
+		return NewPiAdapter(ports,
+			PiPaths{Home: cfg.Home, OverlayRoot: cfg.OverlayDir, DestDir: cfg.PiPackageDir()},
+			PiOptions{SkipSubagents: cfg.PiSkipSubagents})
 	})
 }

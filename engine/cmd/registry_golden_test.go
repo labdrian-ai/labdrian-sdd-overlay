@@ -68,8 +68,9 @@ func newRegistryWorld(t *testing.T) *registryWorld {
 	t.Helper()
 	w := &registryWorld{t: t, bin: reviewReceiptBinary(t), dir: t.TempDir(), names: map[string]string{}, env: goldenEnvironment()}
 	w.name(w.dir, "<WORLD>")
-	// No case runs a Pi that is installed on the machine, or reads the home of the machine.
-	w.setenv("LABDRIAN_PI_BIN", filepath.Join(w.dir, "no-pi"))
+	// No case runs a Pi that is installed on the machine: the PATH of the test run, which the
+	// program inherits, holds a refusing `pi` in front of any real one (TestMain), and the run
+	// fails if a case started it. None reads the home of the machine either.
 	w.setenv("HOME", filepath.Join(w.dir, "home"))
 	if real, err := filepath.EvalSymlinks(w.dir); err == nil {
 		w.name(real, "<WORLD>")
