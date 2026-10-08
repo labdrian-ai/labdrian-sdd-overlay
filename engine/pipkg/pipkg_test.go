@@ -322,21 +322,21 @@ func TestPipkgCheck_DetectsDrift(t *testing.T) {
 	overlayRoot, registryPath := fixtureOverlay(t)
 	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
 
-	if _, err := pipkg.Check(fileRegistries, overlayRoot, registryPath, destDir); err == nil {
+	if _, err := pipkg.Check(fileRegistries, overlayRoot, registryPath, destDir, pipkg.Options{}); err == nil {
 		t.Fatal("Check must fail when the package has never been built")
 	}
 
 	if err := pipkg.Build(fileRegistries, overlayRoot, registryPath, destDir); err != nil {
 		t.Fatalf("Build: %v", err)
 	}
-	_, checkErr := pipkg.Check(fileRegistries, overlayRoot, registryPath, destDir)
+	_, checkErr := pipkg.Check(fileRegistries, overlayRoot, registryPath, destDir, pipkg.Options{})
 	if checkErr != nil {
 		t.Errorf("Check must report no drift right after Build, got: %v", checkErr)
 	}
 
 	// A source edit changes what the build would produce → drift.
 	writeFile(t, filepath.Join(overlayRoot, "skills", "pi-skill", "SKILL.md"), "---\nname: pi-skill\n---\nchanged body\n")
-	_, err := pipkg.Check(fileRegistries, overlayRoot, registryPath, destDir)
+	_, err := pipkg.Check(fileRegistries, overlayRoot, registryPath, destDir, pipkg.Options{})
 	if err == nil {
 		t.Fatal("Check must detect drift after a source edit")
 	}
@@ -355,7 +355,7 @@ func TestPipkgCheck_ModeDrift(t *testing.T) {
 	if err := pipkg.Build(fileRegistries, overlayRoot, registryPath, destDir); err != nil {
 		t.Fatalf("Build: %v", err)
 	}
-	if _, err := pipkg.Check(fileRegistries, overlayRoot, registryPath, destDir); err != nil {
+	if _, err := pipkg.Check(fileRegistries, overlayRoot, registryPath, destDir, pipkg.Options{}); err != nil {
 		t.Fatalf("Check must report no drift right after Build, got: %v", err)
 	}
 
@@ -364,7 +364,7 @@ func TestPipkgCheck_ModeDrift(t *testing.T) {
 		t.Fatalf("chmod: %v", err)
 	}
 
-	_, err := pipkg.Check(fileRegistries, overlayRoot, registryPath, destDir)
+	_, err := pipkg.Check(fileRegistries, overlayRoot, registryPath, destDir, pipkg.Options{})
 	if err == nil {
 		t.Fatal("Check must detect mode-only drift (0644 -> 0755)")
 	}
@@ -392,7 +392,7 @@ func TestPipkgCheck_SymlinkedDestRootRefused(t *testing.T) {
 		t.Skipf("symlink unsupported in this environment: %v", err)
 	}
 
-	_, err := pipkg.Check(fileRegistries, overlayRoot, registryPath, linkedDest)
+	_, err := pipkg.Check(fileRegistries, overlayRoot, registryPath, linkedDest, pipkg.Options{})
 	if err == nil || !strings.Contains(err.Error(), "symlink") {
 		t.Errorf("Check(destDir=symlink) = %v, want symlink refusal", err)
 	}
@@ -565,13 +565,16 @@ func TestPipkgRefusesSpecialFiles(t *testing.T) {
 	}
 	dstFifo := filepath.Join(destDir, "pipe")
 	syscall.Mkfifo(dstFifo, 0644)
-	runWithTimeout(t, func() error { _, err := pipkg.Check(fileRegistries, overlayRoot, registryPath, destDir); return err }, "non-regular")
+	runWithTimeout(t, func() error {
+		_, err := pipkg.Check(fileRegistries, overlayRoot, registryPath, destDir, pipkg.Options{})
+		return err
+	}, "non-regular")
 	os.Remove(dstFifo)
 	link := filepath.Join(destDir, "link.json")
 	if err := os.Symlink(filepath.Join(destDir, "package.json"), link); err != nil {
 		t.Skipf("symlink unsupported: %v", err)
 	}
-	if _, err := pipkg.Check(fileRegistries, overlayRoot, registryPath, destDir); err == nil || !strings.Contains(err.Error(), "symlink") {
+	if _, err := pipkg.Check(fileRegistries, overlayRoot, registryPath, destDir, pipkg.Options{}); err == nil || !strings.Contains(err.Error(), "symlink") {
 		t.Errorf("Check = %v, want symlink error", err)
 	}
 }
@@ -606,7 +609,7 @@ func TestPipkgBuild_PreservesRegisteredMcpJSON(t *testing.T) {
 		t.Errorf("mcp.json after rebuild = %s, want the registered bytes preserved unchanged:\n%s", got, registered)
 	}
 
-	if _, err := pipkg.Check(fileRegistries, overlayRoot, registryPath, destDir); err != nil {
+	if _, err := pipkg.Check(fileRegistries, overlayRoot, registryPath, destDir, pipkg.Options{}); err != nil {
 		t.Errorf("Check must not report drift for a registered mcp.json, got: %v", err)
 	}
 }
@@ -630,7 +633,7 @@ func TestPipkgCheck_IgnoresMcpJSONBak(t *testing.T) {
 		t.Fatalf("simulating jsonInstall's .bak: %v", err)
 	}
 
-	if _, err := pipkg.Check(fileRegistries, overlayRoot, registryPath, destDir); err != nil {
+	if _, err := pipkg.Check(fileRegistries, overlayRoot, registryPath, destDir, pipkg.Options{}); err != nil {
 		t.Errorf("Check must not report drift for a registration-owned mcp.json.bak, got: %v", err)
 	}
 }

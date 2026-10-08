@@ -424,7 +424,7 @@ func runPipkgCore(args []string, stdout, stderr io.Writer, exit func(int)) {
 		return
 	}
 
-	report, err := pipkg.Check(newWarningRegistryRepository(stderr), overlayRoot, registryPath, destDir)
+	report, err := pipkg.Check(newWarningRegistryRepository(stderr), overlayRoot, registryPath, destDir, pipkgOptionsFromEnv(os.Getenv))
 	if d := report.Disclosure(); d != "" {
 		fmt.Fprintf(stdout, "pipkg check: %s\n", d)
 	}

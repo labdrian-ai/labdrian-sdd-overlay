@@ -107,7 +107,7 @@ func TestCheckTellsWhatTheRepositoryItIsGivenCannotBeBuiltFromInTheWordsBuildUse
 		"a store that cannot be read": {&fakeRegistries{err: &skills.RegistryReadError{Err: cause}}, "pipkg: opening registry: " + cause.Error()},
 	} {
 		t.Run(name, func(t *testing.T) {
-			_, err := pipkg.Check(tc.fake, overlayRoot, registryPath, built)
+			_, err := pipkg.Check(tc.fake, overlayRoot, registryPath, built, pipkg.Options{})
 			if err == nil || err.Error() != tc.want {
 				t.Errorf("Check() = %v, want %q", err, tc.want)
 			}
@@ -143,7 +143,7 @@ func TestBuildTellsWhatTheReaderLeftOutOnlyInItsRefusalAndCheckOnlyInItsWarning(
 		t.Errorf("Build warned %q before refusing with the same words", stderr.String())
 	}
 
-	if _, err := pipkg.Check(repo, overlayRoot, registryPath, built); err != nil {
+	if _, err := pipkg.Check(repo, overlayRoot, registryPath, built, pipkg.Options{}); err != nil {
 		t.Fatal(err)
 	}
 	if want := "warning: registry fields left unread: line 3: unknown key \"color\" in skill entry\n"; stderr.String() != want {
@@ -181,7 +181,7 @@ func TestBuildRefusesARegistryTheReaderLeftFieldsOutOfAndWritesNothing(t *testin
 	reg.Unread = []string{`line 3: unknown key "color" in skill entry`}
 	partial := &fakeRegistries{reg: reg}
 
-	if _, err := pipkg.Check(partial, overlayRoot, registryPath, built); err != nil {
+	if _, err := pipkg.Check(partial, overlayRoot, registryPath, built, pipkg.Options{}); err != nil {
 		t.Errorf("Check() = %v, want a check over a registry read in part to go on as it did", err)
 	}
 

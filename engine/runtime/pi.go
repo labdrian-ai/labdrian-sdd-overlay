@@ -116,7 +116,7 @@ func (a PiAdapter) SyncCheck() LifecycleResult {
 	if a.overlayRoot == "" {
 		return a.stub(ActionSyncCheck)
 	}
-	report, err := pipkg.Check(a.registries, a.overlayRoot, a.registryPath, a.destDir)
+	report, err := pipkg.Check(a.registries, a.overlayRoot, a.registryPath, a.destDir, piDeployOptions())
 	if err != nil {
 		return NewLifecycleResult(a.target, ActionSyncCheck, CapabilityPartial, err.Error()+" ("+report.Disclosure()+")", nil)
 	}
@@ -137,7 +137,7 @@ func (a PiAdapter) Status() LifecycleResult {
 	var problems []string
 	if a.overlayRoot == "" {
 		problems = append(problems, "in sync (OVERLAY_DIR unset; cannot verify the build matches the current manifest)")
-	} else if report, err := pipkg.Check(a.registries, a.overlayRoot, a.registryPath, a.destDir); err != nil {
+	} else if report, err := pipkg.Check(a.registries, a.overlayRoot, a.registryPath, a.destDir, piDeployOptions()); err != nil {
 		problems = append(problems, "in sync ("+err.Error()+"; "+report.Disclosure()+")")
 	}
 	if !isPiPackageListed(a.home, a.destDir) {
@@ -251,6 +251,12 @@ func (a PiAdapter) stub(action Action) LifecycleResult {
 		msg = "pi lifecycle rollback cannot rebuild without OVERLAY_DIR set"
 	}
 	return NewLifecycleResult(a.target, action, CapabilityUnsupported, msg, nil)
+}
+
+// piDeployOptions carries the deploy ref the environment names to pipkg.Check, which no longer
+// reads it. It stands here only until the Pi adapter takes its package builder through a port.
+func piDeployOptions() pipkg.Options {
+	return pipkg.Options{DeployRef: strings.TrimSpace(os.Getenv("LABDRIAN_PI_DEPLOY_REF"))}
 }
 
 // resolvePiBinary returns the pi CLI to invoke. LABDRIAN_PI_BIN overrides
