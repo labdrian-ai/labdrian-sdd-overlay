@@ -28,9 +28,9 @@ func newRuntimeRegistry(registries skills.RegistryRepository) (*runtimepkg.Regis
 
 // runtimeConfigFromEnv reads the environment the runtime adapters depend on, once, and hands it
 // down as a value. The home is $HOME without surrounding space, else the one the system names
-// for the user, else empty: an adapter never guesses where a home is. configRoot is the
-// --config-root the caller gave, empty when none.
-func runtimeConfigFromEnv(getenv func(string) string, userHomeDir func() (string, error), configRoot string) runtimepkg.Config {
+// for the user, else empty: an adapter never guesses where a home is. The caller sets ConfigRoot
+// when the command line gave a --config-root.
+func runtimeConfigFromEnv(getenv func(string) string, userHomeDir func() (string, error)) runtimepkg.Config {
 	home := strings.TrimSpace(getenv("HOME"))
 	if home == "" {
 		if dir, err := userHomeDir(); err == nil {
@@ -43,6 +43,5 @@ func runtimeConfigFromEnv(getenv func(string) string, userHomeDir func() (string
 		CodexHome:     getenv("CODEX_HOME"),
 		OverlayDir:    getenv("OVERLAY_DIR"),
 		StateDir:      getenv("STATE_DIR"),
-		ConfigRoot:    configRoot,
 	}
 }

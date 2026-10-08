@@ -14,10 +14,10 @@ type ClaudeAdapter struct {
 	root   string
 }
 
+// NewClaudeAdapter builds the Claude adapter over root, the directory its settings live in. An
+// empty root is an adapter that reports it cannot work: the caller resolves the default (see
+// Config.ClaudeRoot), the adapter does not look for one.
 func NewClaudeAdapter(root string) ClaudeAdapter {
-	if root == "" {
-		root = DefaultClaudeConfigRoot()
-	}
 	return ClaudeAdapter{target: TargetClaude, root: root}
 }
 

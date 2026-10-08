@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 // TargetLongtermMem is the pseudo-target used for the longterm-mem
@@ -55,33 +54,24 @@ type LongtermMemAdapter struct {
 	CodexConfigPath    string
 }
 
-// NewLongtermMemAdapter builds a LongtermMemAdapter with real OS defaults
-// for any argument left empty.
-func NewLongtermMemAdapter(stateDir, binaryPath string) LongtermMemAdapter {
+// NewLongtermMemAdapter builds a LongtermMemAdapter. A stateDir or binaryPath left empty is the
+// default the Config implies (cfg.DefaultStateDir, and the binary under the state dir that results),
+// and the runtimes' config files are the ones under cfg.Home; cfg.ConfigRoot plays no part, the
+// component spans three runtimes and has no single root to give.
+func NewLongtermMemAdapter(cfg Config, stateDir, binaryPath string) LongtermMemAdapter {
 	if stateDir == "" {
-		stateDir = DefaultLongtermMemStateDir()
+		stateDir = cfg.DefaultStateDir()
 	}
 	if binaryPath == "" {
-		binaryPath = DefaultLongtermMemBinaryPath()
+		binaryPath = LongtermMemBinaryPathForStateDir(cfg.DefaultStateDir())
 	}
 	return LongtermMemAdapter{
 		StateDir:           stateDir,
 		BinaryPath:         binaryPath,
-		ClaudeConfigPath:   DefaultClaudeMCPConfigPath(),
-		OpenCodeConfigPath: defaultOpenCodeMCPConfigPath(),
-		CodexConfigPath:    defaultCodexMCPConfigPath(),
+		ClaudeConfigPath:   claudeMCPConfigPath(cfg),
+		OpenCodeConfigPath: openCodeMCPConfigPath(cfg),
+		CodexConfigPath:    codexMCPConfigPath(cfg),
 	}
-}
-
-// DefaultLongtermMemStateDir returns ~/.labdrian-overlay, the same root that
-// hosts D5's vaults.json, so every overlay-owned cross-runtime record lives
-// in one place.
-func DefaultLongtermMemStateDir() string {
-	home := resolveHome()
-	if home == "" {
-		return ""
-	}
-	return filepath.Join(home, ".labdrian-overlay")
 }
 
 // LongtermMemBinaryPathForStateDir returns the binary path a given state
@@ -108,54 +98,30 @@ func LongtermMemBinaryPathForStateDir(stateDir string) string {
 	return filepath.Join(stateDir, "bin", "longterm-mem")
 }
 
-// DefaultLongtermMemBinaryPath returns the fixed, documented persistent
-// install path from the longterm-mem-install spec — the state-dir-derived
-// path above for the DEFAULT state dir, so the default and the overridden
-// case cannot drift apart.
-func DefaultLongtermMemBinaryPath() string {
-	return LongtermMemBinaryPathForStateDir(DefaultLongtermMemStateDir())
+// claudeMCPConfigPath is ~/.claude.json, the Claude Code MCP server registry. This is a DIFFERENT
+// file than ClaudeAdapter's settings.json (hooks); ~/.claude.json is a sibling of ~/.claude/, not
+// a file inside it. Empty without a home.
+func claudeMCPConfigPath(cfg Config) string {
+	return underHome(cfg.Home, ".claude.json")
 }
 
-// DefaultClaudeMCPConfigPath returns ~/.claude.json — the Claude Code MCP
-// server registry. This is a DIFFERENT file than ClaudeAdapter's
-// settings.json (hooks); ~/.claude.json is a sibling of ~/.claude/, not a
-// file inside it.
-func DefaultClaudeMCPConfigPath() string {
-	home := resolveHome()
-	if home == "" {
-		return ""
-	}
-	return filepath.Join(home, ".claude.json")
-}
-
-// defaultOpenCodeMCPConfigPath reuses the same root resolution the
-// runtime-parity OpenCodeAdapter already uses (10a.9: genuinely shared,
+// openCodeMCPConfigPath reuses the root the OpenCodeAdapter works in (10a.9: genuinely shared,
 // since both need "where does opencode's global config live").
-func defaultOpenCodeMCPConfigPath() string {
-	root := DefaultOpenCodeConfigRoot()
+func openCodeMCPConfigPath(cfg Config) string {
+	root := cfg.DefaultOpenCodeRoot()
 	if root == "" {
 		return ""
 	}
 	return filepath.Join(root, "opencode.json")
 }
 
-// defaultCodexMCPConfigPath reuses CodexAdapter's root resolution (10a.9).
-func defaultCodexMCPConfigPath() string {
-	root := DefaultCodexConfigRoot()
+// codexMCPConfigPath reuses the root the CodexAdapter works in (10a.9).
+func codexMCPConfigPath(cfg Config) string {
+	root := cfg.DefaultCodexRoot()
 	if root == "" {
 		return ""
 	}
 	return filepath.Join(root, "config.toml")
-}
-
-func resolveHome() string {
-	if home := strings.TrimSpace(os.Getenv("HOME")); home != "" {
-		return home
-	}
-	if home, err := os.UserHomeDir(); err == nil && home != "" {
-		return home
-	}
-	return ""
 }
 
 func (a LongtermMemAdapter) Target() Target         { return TargetLongtermMem }

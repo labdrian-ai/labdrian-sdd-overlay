@@ -7,11 +7,13 @@ import (
 )
 
 // TestMain isolates every test in this package from the developer's live
-// machine: the Pi adapter's default constructor reads HOME, STATE_DIR and
-// OVERLAY_DIR from the environment and its Install/Uninstall shell out to
-// a real `pi` CLI, which once removed a freshly installed labdrian-pi
-// package during `go test ./...`. Individual tests may still override
-// these with t.Setenv.
+// machine: the Pi adapter's Install/Uninstall shell out to a real `pi` CLI,
+// which once removed a freshly installed labdrian-pi package during
+// `go test ./...`, and the helpers of these tests read the home of the
+// process. The adapters read no environment since they take a Config, but
+// the guard stays: HOME, STATE_DIR and OVERLAY_DIR are pinned and
+// LABDRIAN_PI_BIN names a binary that does not exist. Individual tests may
+// still override these with t.Setenv.
 func TestMain(m *testing.M) {
 	home, err := os.MkdirTemp("", "engine-test-home-*")
 	if err != nil {

@@ -3,8 +3,6 @@ package runtime
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/capability"
@@ -155,14 +153,4 @@ func HasExactHeader(prompt, injectionHeader string) bool {
 		}
 	}
 	return false
-}
-
-func DefaultClaudeConfigRoot() string {
-	if home := strings.TrimSpace(os.Getenv("HOME")); home != "" {
-		return filepath.Join(home, ".claude")
-	}
-	if home, err := os.UserHomeDir(); err == nil && home != "" {
-		return filepath.Join(home, ".claude")
-	}
-	return ""
 }

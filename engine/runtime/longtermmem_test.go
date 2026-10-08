@@ -34,7 +34,7 @@ func newLongtermMemFixture(t *testing.T) longtermMemFixture {
 }
 
 func (f longtermMemFixture) adapter() engineRuntime.LongtermMemAdapter {
-	a := engineRuntime.NewLongtermMemAdapter(f.stateDir, f.binaryPath)
+	a := engineRuntime.NewLongtermMemAdapter(engineRuntime.Config{}, f.stateDir, f.binaryPath)
 	a.ClaudeConfigPath = f.claudePath
 	a.OpenCodeConfigPath = f.openCodePath
 	a.CodexConfigPath = f.codexPath
@@ -559,5 +559,55 @@ func TestLongtermMemAdapter_UpdateAndRollbackRefused(t *testing.T) {
 	regPath := filepath.Join(f.stateDir, "longterm-mem-registration.json")
 	if _, err := os.Stat(regPath); !os.IsNotExist(err) {
 		t.Fatalf("Update()/Rollback() must not perform any write; found registration.json at %s (err=%v)", regPath, err)
+	}
+}
+
+func TestNewLongtermMemAdapterDefaultsFollowTheConfig(t *testing.T) {
+	xdg := t.TempDir()
+	codexHome := t.TempDir()
+	cfg := engineRuntime.Config{Home: "/home/p", XDGConfigHome: xdg, CodexHome: codexHome, ConfigRoot: "/ignored"}
+
+	a := engineRuntime.NewLongtermMemAdapter(cfg, "", "")
+
+	for name, c := range map[string]struct{ got, want string }{
+		"state dir": {a.StateDir, "/home/p/.labdrian-overlay"},
+		"binary":    {a.BinaryPath, "/home/p/.labdrian-overlay/bin/longterm-mem"},
+		"claude":    {a.ClaudeConfigPath, "/home/p/.claude.json"},
+		"opencode":  {a.OpenCodeConfigPath, filepath.Join(xdg, "opencode", "opencode.json")},
+		"codex":     {a.CodexConfigPath, filepath.Join(codexHome, "config.toml")},
+	} {
+		if filepath.ToSlash(c.got) != filepath.ToSlash(c.want) {
+			t.Errorf("%s = %q, want %q (the component has no single --config-root to take)", name, c.got, c.want)
+		}
+	}
+}
+
+func TestNewLongtermMemAdapterGivenPathsWinOverTheConfig(t *testing.T) {
+	a := engineRuntime.NewLongtermMemAdapter(engineRuntime.Config{Home: "/home/p"}, "/s", "/s/bin/lm")
+	if a.StateDir != "/s" || a.BinaryPath != "/s/bin/lm" {
+		t.Errorf("StateDir, BinaryPath = %q, %q, want the ones given", a.StateDir, a.BinaryPath)
+	}
+}
+
+// TestNewLongtermMemAdapterLeavesTheBinaryToTheDefaultStateDirWhenOnlyTheStateDirIsGiven pins what
+// the adapter has always done: the binary default does not follow a state dir given on its own;
+// the caller that overrides the state dir derives the binary from it
+// (LongtermMemBinaryPathForStateDir), as the command line does.
+func TestNewLongtermMemAdapterLeavesTheBinaryToTheDefaultStateDirWhenOnlyTheStateDirIsGiven(t *testing.T) {
+	a := engineRuntime.NewLongtermMemAdapter(engineRuntime.Config{Home: "/home/p"}, "/s", "")
+	if got := filepath.ToSlash(a.BinaryPath); got != "/home/p/.labdrian-overlay/bin/longterm-mem" {
+		t.Errorf("BinaryPath = %q, want the one under the default state dir", got)
+	}
+}
+
+func TestNewLongtermMemAdapterWithoutAHomeHasNoDefaultPaths(t *testing.T) {
+	a := engineRuntime.NewLongtermMemAdapter(engineRuntime.Config{}, "", "")
+	for name, got := range map[string]string{
+		"state dir": a.StateDir, "binary": a.BinaryPath,
+		"claude": a.ClaudeConfigPath, "opencode": a.OpenCodeConfigPath, "codex": a.CodexConfigPath,
+	} {
+		if got != "" {
+			t.Errorf("%s = %q without a home, want none", name, got)
+		}
 	}
 }

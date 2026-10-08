@@ -488,6 +488,8 @@ func runRuntimeCore(args []string, stdout io.Writer, stderr io.Writer, exit func
 		return
 	}
 
+	cfg := runtimeConfigFromEnv(os.Getenv, os.UserHomeDir)
+
 	if component == componentLongtermMem {
 		// D4 parse-time refusal: update is rejected here, BEFORE any
 		// LongtermMemAdapter is even constructed — never after running one
@@ -509,7 +511,7 @@ func runRuntimeCore(args []string, stdout io.Writer, stderr io.Writer, exit func
 		// empty stateDir yields an empty binary path here, which
 		// NewLongtermMemAdapter fills in with the same default it fills
 		// stateDir with — so the un-overridden case is unchanged.
-		adapter := runtimepkg.NewLongtermMemAdapter(stateDir, runtimepkg.LongtermMemBinaryPathForStateDir(stateDir))
+		adapter := runtimepkg.NewLongtermMemAdapter(cfg, stateDir, runtimepkg.LongtermMemBinaryPathForStateDir(stateDir))
 		result := runtimeLifecycleResult(adapter, action)
 		fmt.Fprintln(stdout, result.String())
 		if action == "status" {
@@ -528,7 +530,7 @@ func runRuntimeCore(args []string, stdout io.Writer, stderr io.Writer, exit func
 		return
 	}
 
-	cfg := runtimeConfigFromEnv(os.Getenv, os.UserHomeDir, configRoot)
+	cfg.ConfigRoot = configRoot
 	targets := registry.Expand(target)
 
 	failed := false

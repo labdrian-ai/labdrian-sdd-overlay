@@ -1,8 +1,10 @@
 package runtime_test
 
 import (
+	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -97,5 +99,54 @@ func TestThePiFactoryBuildsInTheConfigRootAsThePackageDirectory(t *testing.T) {
 	result := adapter.Status()
 	if result.Status != engineRuntime.CapabilityUnsupported || !strings.Contains(result.Message, "package is not built at "+root+" ") {
 		t.Fatalf("Status() = %#v, want it to look for the package at the config root %s", result, root)
+	}
+}
+
+// builtPiPackage makes a directory that looks like a built Pi package: Status gates on its
+// package.json before it reads anything else.
+func builtPiPackage(t *testing.T) string {
+	t.Helper()
+	dest := filepath.Join(t.TempDir(), "labdrian-pi")
+	if err := os.MkdirAll(dest, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dest, "package.json"), []byte("{}"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return dest
+}
+
+// TestThePiFactoryReadsPiSettingsUnderTheConfigHome: the ~/.pi/agent files the status proves
+// against are the ones under Config.Home, not under whatever home the process has.
+func TestThePiFactoryReadsPiSettingsUnderTheConfigHome(t *testing.T) {
+	dest := builtPiPackage(t)
+	home := t.TempDir()
+	agent := filepath.Join(home, ".pi", "agent")
+	if err := os.MkdirAll(agent, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	settings := `{"packages": [` + strconv.Quote(dest) + `]}`
+	if err := os.WriteFile(filepath.Join(agent, "settings.json"), []byte(settings), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	adapter, err := shippedRegistry(t).New(engineRuntime.TargetPi, engineRuntime.Config{Home: home, ConfigRoot: dest})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if msg := adapter.Status().Message; strings.Contains(msg, "settings.json packages (not listed") {
+		t.Fatalf("the package is listed in the settings under the config home, yet Status says it is not: %q", msg)
+	}
+}
+
+// TestThePiFactoryWithoutAHomeSaysSoAndGuessesNone: no home is reported as unproven, never
+// replaced by the home of the process.
+func TestThePiFactoryWithoutAHomeSaysSoAndGuessesNone(t *testing.T) {
+	adapter, err := shippedRegistry(t).New(engineRuntime.TargetPi, engineRuntime.Config{ConfigRoot: builtPiPackage(t)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if msg := adapter.Status().Message; !strings.Contains(msg, "cannot resolve home directory") {
+		t.Fatalf("Status() without a home = %q, want it to say the home cannot be resolved", msg)
 	}
 }

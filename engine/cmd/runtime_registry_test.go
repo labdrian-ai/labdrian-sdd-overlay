@@ -94,11 +94,11 @@ func TestRuntimeConfigFromEnv(t *testing.T) {
 	failing := func() (string, error) { return "", errors.New("no home") }
 	profile := func() (string, error) { return "/from/profile", nil }
 
-	t.Run("reads each value once and trims the home", func(t *testing.T) {
-		got := runtimeConfigFromEnv(env, failing, "/given")
+	t.Run("reads each value once, trims the home and leaves ConfigRoot to the command line", func(t *testing.T) {
+		got := runtimeConfigFromEnv(env, failing)
 		want := runtimepkg.Config{
 			Home: "/home/p", XDGConfigHome: "/xdg", CodexHome: "/codex",
-			OverlayDir: "/overlay", StateDir: "/state", ConfigRoot: "/given",
+			OverlayDir: "/overlay", StateDir: "/state",
 		}
 		if got != want {
 			t.Errorf("runtimeConfigFromEnv = %+v, want %+v", got, want)
@@ -108,7 +108,7 @@ func TestRuntimeConfigFromEnv(t *testing.T) {
 	t.Run("a blank HOME falls back to the user's profile directory", func(t *testing.T) {
 		environ["HOME"] = "   "
 		defer func() { environ["HOME"] = "  /home/p  " }()
-		if got := runtimeConfigFromEnv(env, profile, "").Home; got != "/from/profile" {
+		if got := runtimeConfigFromEnv(env, profile).Home; got != "/from/profile" {
 			t.Errorf("Home = %q, want the profile directory", got)
 		}
 	})
@@ -116,7 +116,7 @@ func TestRuntimeConfigFromEnv(t *testing.T) {
 	t.Run("a home that cannot be determined stays empty", func(t *testing.T) {
 		environ["HOME"] = ""
 		defer func() { environ["HOME"] = "  /home/p  " }()
-		if got := runtimeConfigFromEnv(env, failing, "").Home; got != "" {
+		if got := runtimeConfigFromEnv(env, failing).Home; got != "" {
 			t.Errorf("Home = %q, want none: an unknown home is not a place to guess", got)
 		}
 	})

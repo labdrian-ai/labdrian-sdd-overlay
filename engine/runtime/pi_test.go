@@ -16,6 +16,20 @@ import (
 // piFixtureOverlay writes a minimal overlay tree (one pi-targeted skill,
 // agents/GADU.md, a matching registry) and returns its root and registry
 // path, for exercising PiAdapter's pipkg wiring (task 2.4).
+// newPiAdapterAt builds the Pi adapter over the given build paths and the home of this test
+// process, which TestMain points at a temporary directory: the tests below read and write the
+// ~/.pi files the adapter reads under that same home.
+func newPiAdapterAt(t *testing.T, overlayRoot, registryPath, destDir string) engineRuntime.PiAdapter {
+	t.Helper()
+	home, err := os.UserHomeDir()
+	if err != nil {
+		t.Fatalf("os.UserHomeDir: %v", err)
+	}
+	return engineRuntime.NewPiAdapter(fileRegistries, engineRuntime.PiPaths{
+		Home: home, OverlayRoot: overlayRoot, RegistryPath: registryPath, DestDir: destDir,
+	})
+}
+
 func piFixtureOverlay(t *testing.T) (overlayRoot, registryPath string) {
 	t.Helper()
 	root := t.TempDir()
@@ -83,7 +97,7 @@ func TestPiAdapter_ApplyInstallSyncCheck_WiredToPipkg(t *testing.T) {
 	recorder := filepath.Join(t.TempDir(), "argv.txt")
 	t.Setenv("LABDRIAN_PI_BIN", writeStubPiScript(t, recorder))
 
-	adapter := engineRuntime.NewPiAdapterWithPaths(fileRegistries, overlayRoot, registryPath, destDir)
+	adapter := newPiAdapterAt(t, overlayRoot, registryPath, destDir)
 
 	applyResult := adapter.Apply()
 	if applyResult.Status == engineRuntime.CapabilityUnsupported {
@@ -105,10 +119,10 @@ func TestPiAdapter_ApplyInstallSyncCheck_WiredToPipkg(t *testing.T) {
 }
 
 // TestPiAdapter_ApplyWithoutOverlayRoot_StaysHonestlyUnsupported guards the
-// path of NewPiAdapter (exercised by TestPiFromTheRegistryWithNoOverlayDirIsHonestlyUnsupported): with OVERLAY_DIR unset, wiring the
+// path of the registry-built adapter (exercised by TestPiFromTheRegistryWithNoOverlayDirIsHonestlyUnsupported): with OVERLAY_DIR unset, wiring the
 // pipkg calls must not fabricate success.
 func TestPiAdapter_ApplyWithoutOverlayRoot_StaysHonestlyUnsupported(t *testing.T) {
-	adapter := engineRuntime.NewPiAdapterWithPaths(fileRegistries, "", "", t.TempDir())
+	adapter := newPiAdapterAt(t, "", "", t.TempDir())
 	for _, result := range []engineRuntime.LifecycleResult{adapter.Apply(), adapter.Install(), adapter.SyncCheck()} {
 		if result.Status != engineRuntime.CapabilityUnsupported {
 			t.Fatalf("%s with empty overlayRoot must stay unsupported, got: %s", result.Action, result)
@@ -363,7 +377,7 @@ func newBuiltPiAdapterWithStub(t *testing.T) (adapter engineRuntime.PiAdapter, d
 	buildPiPackage(t, overlayRoot, registryPath, destDir)
 	recorder = filepath.Join(t.TempDir(), "argv.txt")
 	t.Setenv("LABDRIAN_PI_BIN", writeStubPiScript(t, recorder))
-	return engineRuntime.NewPiAdapterWithPaths(fileRegistries, overlayRoot, registryPath, destDir), destDir, recorder
+	return newPiAdapterAt(t, overlayRoot, registryPath, destDir), destDir, recorder
 }
 
 // readRecordedInvocations reads a writeStubPiScript recorder file and
@@ -422,7 +436,7 @@ func TestPiAdapter_InstallNoShellInjection(t *testing.T) {
 	recorder := filepath.Join(t.TempDir(), "argv.txt")
 	t.Setenv("LABDRIAN_PI_BIN", writeStubPiScript(t, recorder))
 
-	adapter := engineRuntime.NewPiAdapterWithPaths(fileRegistries, overlayRoot, registryPath, destDir)
+	adapter := newPiAdapterAt(t, overlayRoot, registryPath, destDir)
 	result := adapter.Install()
 	if result.Status == engineRuntime.CapabilityUnsupported {
 		t.Fatalf("Install with a stub pi on PATH must not be unsupported, got: %s", result)
@@ -445,7 +459,7 @@ func TestPiAdapter_StatusPartialOnUnprovenEntry(t *testing.T) {
 	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
 	buildPiPackage(t, overlayRoot, registryPath, destDir)
 
-	adapter := engineRuntime.NewPiAdapterWithPaths(fileRegistries, overlayRoot, registryPath, destDir)
+	adapter := newPiAdapterAt(t, overlayRoot, registryPath, destDir)
 	result := adapter.Status()
 	if result.Status != engineRuntime.CapabilityPartial {
 		t.Fatalf("Status on a built-but-unlisted package = %s, want partial", result)
@@ -463,7 +477,7 @@ func TestPiAdapter_StatusTellsEachUnprovenEntryOnce(t *testing.T) {
 	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
 	buildPiPackage(t, overlayRoot, registryPath, destDir)
 
-	result := engineRuntime.NewPiAdapterWithPaths(fileRegistries, overlayRoot, registryPath, destDir).Status()
+	result := newPiAdapterAt(t, overlayRoot, registryPath, destDir).Status()
 	if result.Status != engineRuntime.CapabilityPartial {
 		t.Fatalf("Status = %s, want partial", result)
 	}
@@ -523,7 +537,7 @@ func TestPiAdapter_StatusAcceptsRelativePackageListing(t *testing.T) {
 	writePiMcpRegistration(t, destDir, true)
 	writeGaduLinkCurrent(t, home, destDir)
 	settingsPath := filepath.Join(home, ".pi", "agent", "settings.json")
-	adapter := engineRuntime.NewPiAdapterWithPaths(fileRegistries, overlayRoot, registryPath, destDir)
+	adapter := newPiAdapterAt(t, overlayRoot, registryPath, destDir)
 
 	mustWrite(t, settingsPath, `{"packages":["../../.labdrian-overlay/pi/labdrian-pi","npm:pi-subagents-j0k3r"]}`)
 	if result := adapter.Status(); result.Status != engineRuntime.CapabilitySupported {
@@ -608,7 +622,7 @@ func TestPiAdapter_StatusTriangulatesAllOwnedEntries(t *testing.T) {
 				writeGaduLinkCurrent(t, home, destDir)
 			}
 
-			adapter := engineRuntime.NewPiAdapterWithPaths(fileRegistries, overlayRoot, registryPath, destDir)
+			adapter := newPiAdapterAt(t, overlayRoot, registryPath, destDir)
 			result := adapter.Status()
 			if result.Status != c.wantStatus {
 				t.Fatalf("Status = %s, want %s", result, c.wantStatus)
@@ -623,7 +637,7 @@ func TestPiAdapter_StatusTriangulatesAllOwnedEntries(t *testing.T) {
 // TestPiAdapter_StatusDisclosesNoExtensionsNoSkills (task 5.2): always
 // discloses the --no-extensions/--no-skills bypass and their -ne/-ns aliases.
 func TestPiAdapter_StatusDisclosesNoExtensionsNoSkills(t *testing.T) {
-	adapter := engineRuntime.NewPiAdapterWithPaths(fileRegistries, "", "", filepath.Join(t.TempDir(), "labdrian-pi"))
+	adapter := newPiAdapterAt(t, "", "", filepath.Join(t.TempDir(), "labdrian-pi"))
 	result := adapter.Status()
 	if !strings.Contains(result.Message, "--no-extensions") || !strings.Contains(result.Message, "--no-skills") {
 		t.Fatalf("Status must always disclose --no-extensions/--no-skills, got %q", result.Message)
@@ -1011,7 +1025,7 @@ func TestStatus_ReportsUnprovenSubagentsAndGaduLinkEntries(t *testing.T) {
 	writePiMcpRegistration(t, destDir, true)
 	// Neither the Subagents extension nor the GADU link exist yet.
 
-	adapter := engineRuntime.NewPiAdapterWithPaths(fileRegistries, overlayRoot, registryPath, destDir)
+	adapter := newPiAdapterAt(t, overlayRoot, registryPath, destDir)
 	result := adapter.Status()
 	if result.Status != engineRuntime.CapabilityPartial {
 		t.Fatalf("Status = %s, want partial", result)
@@ -1067,7 +1081,7 @@ func TestPiAdapter_StatusFlagsExtensionConflictWithNativeSubagents(t *testing.T)
 	writePiMcpRegistration(t, destDir, true)
 	writeGaduLinkCurrent(t, home, destDir)
 
-	adapter := engineRuntime.NewPiAdapterWithPaths(fileRegistries, overlayRoot, registryPath, destDir)
+	adapter := newPiAdapterAt(t, overlayRoot, registryPath, destDir)
 	result := adapter.Status()
 	if result.Status != engineRuntime.CapabilityPartial {
 		t.Fatalf("Status with both native and legacy subagent runners installed = %s, want partial", result)
@@ -1090,7 +1104,7 @@ func TestPiAdapter_StatusSupportedWithNativeSubagents(t *testing.T) {
 	writePiMcpRegistration(t, destDir, true)
 	writeGaduLinkCurrent(t, home, destDir)
 
-	adapter := engineRuntime.NewPiAdapterWithPaths(fileRegistries, overlayRoot, registryPath, destDir)
+	adapter := newPiAdapterAt(t, overlayRoot, registryPath, destDir)
 	result := adapter.Status()
 	if result.Status != engineRuntime.CapabilitySupported {
 		t.Fatalf("Status with native subagents + link + package + mcp all proven = %s, want supported", result)
@@ -1167,7 +1181,7 @@ func TestInstall_RejectsAmbiguousGaduFrontmatter(t *testing.T) {
 		t.Fatalf("UserHomeDir: %v", err)
 	}
 
-	adapter := engineRuntime.NewPiAdapterWithPaths(fileRegistries, overlayRoot, registryPath, destDir)
+	adapter := newPiAdapterAt(t, overlayRoot, registryPath, destDir)
 	result := adapter.Install()
 	if !strings.Contains(result.Message, "frontmatter") {
 		t.Fatalf("Install message must name the frontmatter error, got %q", result.Message)
@@ -1198,7 +1212,7 @@ func TestInstall_AcceptsProviderPrefixedModel(t *testing.T) {
 		t.Fatalf("UserHomeDir: %v", err)
 	}
 
-	adapter := engineRuntime.NewPiAdapterWithPaths(fileRegistries, overlayRoot, registryPath, destDir)
+	adapter := newPiAdapterAt(t, overlayRoot, registryPath, destDir)
 	result := adapter.Install()
 	if strings.Contains(result.Message, "frontmatter") {
 		t.Fatalf("Install must accept a provider-prefixed model id, got %q", result.Message)

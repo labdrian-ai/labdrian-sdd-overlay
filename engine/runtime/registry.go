@@ -107,6 +107,6 @@ func RegisterOpenCode(r *Registry) error {
 // registries reads.
 func RegisterPi(r *Registry, registries skills.RegistryRepository) error {
 	return r.Register(TargetPi, func(cfg Config) Adapter {
-		return NewPiAdapterWithPaths(registries, cfg.OverlayDir, "", cfg.PiPackageDir())
+		return NewPiAdapter(registries, PiPaths{Home: cfg.Home, OverlayRoot: cfg.OverlayDir, DestDir: cfg.PiPackageDir()})
 	})
 }

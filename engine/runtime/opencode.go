@@ -206,20 +206,10 @@ type openCodeActiveMarker struct {
 	ConfigRoot             string `json:"config_root"`
 }
 
+// NewOpenCodeAdapter builds the OpenCode adapter over root, the directory its plugin is installed
+// into (see Config.OpenCodeRoot for the default the caller resolves).
 func NewOpenCodeAdapter(root string) OpenCodeAdapter {
 	return OpenCodeAdapter{root: root}
-}
-
-func DefaultOpenCodeConfigRoot() string {
-	if dir := strings.TrimSpace(os.Getenv("XDG_CONFIG_HOME")); dir != "" {
-		if filepath.IsAbs(dir) {
-			return filepath.Join(dir, "opencode")
-		}
-	}
-	if home, err := os.UserHomeDir(); err == nil && home != "" {
-		return filepath.Join(home, ".config", "opencode")
-	}
-	return ""
 }
 
 func OpenCodePluginHash() string {

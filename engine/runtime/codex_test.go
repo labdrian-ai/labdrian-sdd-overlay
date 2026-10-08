@@ -10,37 +10,7 @@ import (
 	engineRuntime "github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime"
 )
 
-func TestDefaultCodexConfigRootPrefersCODEXHomeWhenAbsolute(t *testing.T) {
-	home := t.TempDir()
-	codeXHome := t.TempDir()
-	t.Setenv("HOME", home)
-	t.Setenv("CODEX_HOME", codeXHome)
-
-	if got := engineRuntime.DefaultCodexConfigRoot(); got != codeXHome {
-		t.Fatalf("DefaultCodexConfigRoot() = %q, want %q", got, codeXHome)
-	}
-}
-
-func TestDefaultCodexConfigRootFallsBackToHomeWhenCODEXHomeUnsetOrRelative(t *testing.T) {
-	home := t.TempDir()
-	t.Setenv("HOME", home)
-	t.Setenv("CODEX_HOME", "")
-
-	want := filepath.Join(home, ".codex")
-	if got := engineRuntime.DefaultCodexConfigRoot(); got != want {
-		t.Fatalf("DefaultCodexConfigRoot() = %q, want %q", got, want)
-	}
-
-	t.Setenv("CODEX_HOME", filepath.Join("relative", "codex"))
-	if got := engineRuntime.DefaultCodexConfigRoot(); got != want {
-		t.Fatalf("DefaultCodexConfigRoot() with relative CODEX_HOME = %q, want %q", got, want)
-	}
-}
-
 func TestCodexAdapterRejectsUnresolvedOrRelativeRoot(t *testing.T) {
-	t.Setenv("CODEX_HOME", "")
-	t.Setenv("HOME", "")
-
 	if result := engineRuntime.NewCodexAdapter("").Status(); result.Status != engineRuntime.CapabilityUnsupported {
 		t.Fatalf("NewCodexAdapter(\"\").Status() = %#v, want unsupported for unresolved root", result)
 	}
