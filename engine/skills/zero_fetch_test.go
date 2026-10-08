@@ -29,35 +29,49 @@ import (
 // TestZeroFetchCoversPathguardImports, TestZeroFetchCoversJsonstrictImports and
 // TestZeroFetchCoversCapabilityImports, so the exceptions cannot widen the transitive surface of
 // engine/skills.
-var allowedImports = map[string]bool{
-	"bufio":          true,
-	"bytes":          true,
-	"crypto/sha256":  true,
-	"encoding/hex":   true,
-	"encoding/json":  true,
-	"errors":         true,
-	"fmt":            true,
-	"io":             true,
-	"io/fs":          true,
-	"path":           true,
-	"path/filepath":  true,
-	"reflect":        true,
-	"regexp":         true,
-	"sort":           true,
-	"strings":        true,
+var allowedImports = importSet(stdlibImports, internalImports)
+
+// stdlibImports are the standard library packages engine/skills may import. To allow another one,
+// add it here (and to the count in TestZeroFetchAllowlistExcludesExecAndNet) after reviewer approval.
+var stdlibImports = []string{
+	"bufio",
+	"bytes",
+	"crypto/sha256",
+	"encoding/hex",
+	"encoding/json",
+	"errors",
+	"fmt",
+	"io",
+	"io/fs",
+	"path",
+	"path/filepath",
+	"reflect",
+	"regexp",
+	"sort",
+	"strings",
+}
+
+// internalImports are the module-internal packages engine/skills may import, each exempted from
+// the git-package ban by exact match. The transitive cover tests below refuse all of them in the
+// packages they cover, so a package that is itself allowed cannot bring in another one. They are
+// listed here and nowhere else: allowedImports is built from this set. To allow another one, add
+// its constant and one line here, and its count in TestZeroFetchAllowlistExcludesExecAndNet.
+var internalImports = map[string]bool{
 	pathguardImport:  true,
 	jsonstrictImport: true,
 	capabilityImport: true,
 }
 
-// internalImports are the module-internal packages engine/skills may import, each exempted from
-// the git-package ban by exact match. The transitive cover tests below refuse all of them in the
-// packages they cover, so a package that is itself allowed cannot bring in another one; adding a
-// module-internal import means adding it here and its constant above, and nothing else.
-var internalImports = map[string]bool{
-	pathguardImport:  true,
-	jsonstrictImport: true,
-	capabilityImport: true,
+// importSet is the union of a list of imports and a set of them.
+func importSet(list []string, set map[string]bool) map[string]bool {
+	out := make(map[string]bool, len(list)+len(set))
+	for _, imp := range list {
+		out[imp] = true
+	}
+	for imp := range set {
+		out[imp] = true
+	}
+	return out
 }
 
 // capabilityImportExtras is what engine/capability imports beyond allowedImports: the character
@@ -156,17 +170,11 @@ func TestZeroFetchAllowlistExcludesExecAndNet(t *testing.T) {
 	// The allowlist is the standard library packages plus the module-internal exceptions, counted
 	// apart so that neither figure is the other's remainder. errors is the stdlib package the
 	// registry port added, os the one Phase 9 unit H17 took away.
-	internal := 0
-	for imp := range allowedImports {
-		if internalImports[imp] {
-			internal++
-		}
-	}
-	if stdlib := len(allowedImports) - internal; stdlib != 15 {
+	if stdlib := len(allowedImports) - len(internalImports); stdlib != 15 {
 		t.Errorf("%d standard library packages in allowedImports, want 15 — widen it only after reviewer approval", stdlib)
 	}
-	if internal != len(internalImports) {
-		t.Errorf("allowedImports holds %d of the %d internalImports; every module-internal exception is in both", internal, len(internalImports))
+	if len(internalImports) != 3 {
+		t.Errorf("%d module-internal imports, want 3 (pathguard, jsonstrict, capability) — widen it only after reviewer approval", len(internalImports))
 	}
 	if allowedImports["os"] {
 		t.Error(`"os" is in allowedImports: engine/skills reaches the file system through its ports (Phase 9 unit H17), and engine/skills/skillsfs is the one place that imports os`)
