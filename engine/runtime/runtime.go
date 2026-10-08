@@ -7,16 +7,19 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/capability"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/contract"
 )
 
 type Target string
 
+// The runtimes are the ones capability declares: their names are its, so there is one list of
+// them. TargetAll is not a runtime but a request for every registered one.
 const (
-	TargetClaude   Target = "claude"
-	TargetOpenCode Target = "opencode"
-	TargetCodex    Target = "codex"
-	TargetPi       Target = "pi"
+	TargetClaude   Target = capability.TargetClaude
+	TargetOpenCode Target = capability.TargetOpenCode
+	TargetCodex    Target = capability.TargetCodex
+	TargetPi       Target = capability.TargetPi
 	TargetAll      Target = "all"
 )
 
