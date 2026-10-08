@@ -62,12 +62,12 @@ var internalImports = map[string]bool{
 	capabilityImport: true,
 }
 
-// wantStdlibImports and wantInternalImports are how many of each the lists above hold. They are
-// the only place the counts are written: a change to either list changes its number here, in the
-// same commit, and so passes through the reviewer approval the guard exists to force.
+// wantStdlibImports and wantInternalImports are how many of each the lists above hold, and the
+// counts the test checks: a change to either list changes its number here, in the same commit, and
+// so passes through the reviewer approval the guard exists to force.
 const (
 	wantStdlibImports   = 15
-	wantInternalImports = 3 // pathguard, jsonstrict, capability
+	wantInternalImports = 3
 )
 
 // importSet is the union of a list of imports and a set of them.
@@ -184,19 +184,11 @@ func TestZeroFetchAllowlistExcludesExecAndNet(t *testing.T) {
 	if len(internalImports) != wantInternalImports {
 		t.Errorf("%d module-internal imports, want %d — widen it only after reviewer approval", len(internalImports), wantInternalImports)
 	}
-	// The union must be able to hide nothing: the two lists share no entry, every entry of each is
-	// in allowedImports, and allowedImports holds nothing else.
+	// allowedImports is built from the two lists, so the union can hide only a package named in
+	// both, or twice: the overlap check names it, and the size check catches either.
 	for _, imp := range stdlibImports {
 		if internalImports[imp] {
 			t.Errorf("%q is in both stdlibImports and internalImports", imp)
-		}
-		if !allowedImports[imp] {
-			t.Errorf("%q is in stdlibImports but not in allowedImports", imp)
-		}
-	}
-	for imp := range internalImports {
-		if !allowedImports[imp] {
-			t.Errorf("%q is in internalImports but not in allowedImports", imp)
 		}
 	}
 	if len(allowedImports) != len(stdlibImports)+len(internalImports) {
