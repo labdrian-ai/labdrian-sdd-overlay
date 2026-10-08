@@ -13,16 +13,18 @@ import (
 	runtimepkg "github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime"
 )
 
-// TestRunRuntimeCore_ConfigRootIsThePiPackageDirectory: --config-root reaches Pi like it reaches
-// the other runtimes, as the directory the package is built in. It used to be dropped for Pi, so
-// `status --target pi --config-root X` looked in the default package directory and not in X.
-func TestRunRuntimeCore_ConfigRootIsThePiPackageDirectory(t *testing.T) {
-	pkgDir := filepath.Join(t.TempDir(), "labdrian-pi")
+// TestRunRuntimeCore_ConfigRootReachesPi: --config-root reaches Pi like it reaches the other
+// runtimes, as the directory its package is kept under (pi/labdrian-pi in it). It used to be
+// dropped for Pi, so `status --target pi --config-root X` looked in the default package directory
+// and not under X.
+func TestRunRuntimeCore_ConfigRootReachesPi(t *testing.T) {
+	root := t.TempDir()
+	pkgDir := filepath.Join(root, "pi", "labdrian-pi")
 
 	var outBuf, errBuf bytes.Buffer
 	exitCode := -1
 	runRuntimeCore(
-		[]string{"status", "--target", "pi", "--config-root", pkgDir},
+		[]string{"status", "--target", "pi", "--config-root", root},
 		&outBuf, &errBuf, func(code int) { exitCode = code },
 	)
 
@@ -30,12 +32,13 @@ func TestRunRuntimeCore_ConfigRootIsThePiPackageDirectory(t *testing.T) {
 		t.Fatalf("status of an unbuilt Pi package should exit 1, got %d\nstdout=%q\nstderr=%q", exitCode, outBuf.String(), errBuf.String())
 	}
 	if want := "labdrian-pi package is not built at " + pkgDir + " "; !strings.Contains(outBuf.String(), want) {
-		t.Fatalf("status should look for the Pi package at the --config-root %s; got %q", pkgDir, outBuf.String())
+		t.Fatalf("status should look for the Pi package under the --config-root, at %s; got %q", pkgDir, outBuf.String())
 	}
 }
 
 // TestRunRuntimeCore_ConfigRootReachesPiInTheAllForm: the same for `--target all`, whose Pi line
-// names the given directory too.
+// names the package under the given directory too, though the other three runtimes work in the
+// directory itself.
 func TestRunRuntimeCore_ConfigRootReachesPiInTheAllForm(t *testing.T) {
 	root := filepath.Join(t.TempDir(), "shared-root")
 
@@ -51,8 +54,9 @@ func TestRunRuntimeCore_ConfigRootReachesPiInTheAllForm(t *testing.T) {
 			piLine = line
 		}
 	}
-	if !strings.Contains(piLine, "package is not built at "+root+" ") {
-		t.Fatalf("the Pi line of status --target all should name the --config-root %s; got %q", root, piLine)
+	want := filepath.Join(root, "pi", "labdrian-pi")
+	if !strings.Contains(piLine, "package is not built at "+want+" ") {
+		t.Fatalf("the Pi line of status --target all should name the package under the --config-root, %s; got %q", want, piLine)
 	}
 }
 

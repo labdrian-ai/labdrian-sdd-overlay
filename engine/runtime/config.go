@@ -26,9 +26,11 @@ type Config struct {
 	// StateDir is $STATE_DIR as set: where the overlay keeps what it deploys.
 	StateDir string
 	// ConfigRoot is the --config-root the caller gave, empty when it gave none. It names the
-	// directory an adapter keeps its state in: the config directory of Claude, Codex and
-	// OpenCode, and the built package directory of Pi (the same meaning it has for
-	// `longterm-mem register --target pi`).
+	// directory an adapter keeps its files in: the config directory of Claude, Codex and
+	// OpenCode, and, for Pi, the directory that holds the package, pi/labdrian-pi, the way
+	// StateDir does. Pi's package never sits in the root itself: the same root may be given to
+	// every runtime (`--target all`), and building or removing the package replaces its whole
+	// directory, which must not be the one the other runtimes keep their settings in.
 	ConfigRoot string
 }
 
@@ -71,17 +73,11 @@ func (c Config) CodexRoot() string { return firstNonEmpty(c.ConfigRoot, c.Defaul
 // OpenCodeRoot is the directory the OpenCode adapter installs its plugin into.
 func (c Config) OpenCodeRoot() string { return firstNonEmpty(c.ConfigRoot, c.DefaultOpenCodeRoot()) }
 
-// PiPackageDir is where the Pi package is built and installed from:
-// <state dir>/pi/labdrian-pi, the state dir being $STATE_DIR or, without it, the default one.
+// PiPackageDir is where the Pi package is built and installed from: <base>/pi/labdrian-pi, the
+// base being the --config-root when one was given, else $STATE_DIR, else the default state dir.
 func (c Config) PiPackageDir() string {
-	if c.ConfigRoot != "" {
-		return c.ConfigRoot
-	}
-	state := c.StateDir
-	if state == "" {
-		state = c.DefaultStateDir()
-	}
-	return filepath.Join(state, "pi", "labdrian-pi")
+	base := firstNonEmpty(c.ConfigRoot, c.StateDir, c.DefaultStateDir())
+	return filepath.Join(base, "pi", "labdrian-pi")
 }
 
 // underHome joins elems under home, and is empty when there is no home.

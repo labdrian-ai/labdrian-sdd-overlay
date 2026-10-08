@@ -87,14 +87,18 @@ func TestTheStateDirOverridesTheDefaultOfThePiPackage(t *testing.T) {
 }
 
 // TestConfigRootNamesTheDirectoryEveryRuntimeWorksIn: --config-root replaces the default root of
-// each runtime, and for Pi it is the package directory, as it is for `longterm-mem register`.
+// each runtime; for Pi it replaces the state dir, so the package is under it at pi/labdrian-pi and
+// never in the root itself, which every runtime may share.
 func TestConfigRootNamesTheDirectoryEveryRuntimeWorksIn(t *testing.T) {
 	cfg := engineRuntime.Config{Home: "/home/x", XDGConfigHome: "/xdg", CodexHome: "/ch", StateDir: "/s", ConfigRoot: "/given"}
 	for name, got := range map[string]string{
-		"claude": cfg.ClaudeRoot(), "codex": cfg.CodexRoot(), "opencode": cfg.OpenCodeRoot(), "pi": cfg.PiPackageDir(),
+		"claude": cfg.ClaudeRoot(), "codex": cfg.CodexRoot(), "opencode": cfg.OpenCodeRoot(),
 	} {
 		if got != "/given" {
 			t.Errorf("%s root = %q with --config-root /given, want it", name, got)
 		}
+	}
+	if got := filepath.ToSlash(cfg.PiPackageDir()); got != "/given/pi/labdrian-pi" {
+		t.Errorf("pi package dir = %q with --config-root /given, want it under the root, at pi/labdrian-pi (and not the StateDir /s)", got)
 	}
 }

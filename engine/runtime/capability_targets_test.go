@@ -90,36 +90,72 @@ func TestTheClaudeFactoryWorksInTheConfigRoot(t *testing.T) {
 	}
 }
 
-func TestThePiFactoryBuildsInTheConfigRootAsThePackageDirectory(t *testing.T) {
-	root := filepath.Join(t.TempDir(), "labdrian-pi")
+func TestThePiFactoryBuildsUnderTheConfigRootNotInIt(t *testing.T) {
+	root := t.TempDir()
+	want := filepath.Join(root, "pi", "labdrian-pi")
 	adapter, err := shippedRegistry(t).New(engineRuntime.TargetPi, engineRuntime.Config{ConfigRoot: root})
 	if err != nil {
 		t.Fatal(err)
 	}
 	result := adapter.Status()
-	if result.Status != engineRuntime.CapabilityUnsupported || !strings.Contains(result.Message, "package is not built at "+root+" ") {
-		t.Fatalf("Status() = %#v, want it to look for the package at the config root %s", result, root)
+	if result.Status != engineRuntime.CapabilityUnsupported || !strings.Contains(result.Message, "package is not built at "+want+" ") {
+		t.Fatalf("Status() = %#v, want it to look for the package at %s, under the config root", result, want)
 	}
 }
 
-// builtPiPackage makes a directory that looks like a built Pi package: Status gates on its
-// package.json before it reads anything else.
-func builtPiPackage(t *testing.T) string {
+// TestPiUninstallUnderASharedConfigRootLeavesTheOtherRuntimesFilesAlone: the config root may be
+// the one the other runtimes keep their settings in (`--target all --config-root X`). Removing
+// the Pi package removes its own directory, pi/labdrian-pi, and nothing else of the root.
+func TestPiUninstallUnderASharedConfigRootLeavesTheOtherRuntimesFilesAlone(t *testing.T) {
+	root := t.TempDir()
+	foreign := filepath.Join(root, "settings.json")
+	if err := os.WriteFile(foreign, []byte(`{"theme":"dark"}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	pkg := filepath.Join(root, "pi", "labdrian-pi")
+	if err := os.MkdirAll(pkg, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(pkg, "package.json"), []byte("{}"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("LABDRIAN_PI_BIN", writeStubPiScript(t, filepath.Join(t.TempDir(), "argv.txt")))
+
+	adapter, err := shippedRegistry(t).New(engineRuntime.TargetPi, engineRuntime.Config{Home: t.TempDir(), ConfigRoot: root})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result := adapter.Uninstall(); result.Status != engineRuntime.CapabilitySupported {
+		t.Fatalf("Uninstall() = %#v, want supported", result)
+	}
+	if _, err := os.Stat(pkg); !os.IsNotExist(err) {
+		t.Errorf("the package directory %s is still there: %v", pkg, err)
+	}
+	if got, err := os.ReadFile(foreign); err != nil || string(got) != `{"theme":"dark"}` {
+		t.Errorf("a file of the shared config root was touched: %q, %v", got, err)
+	}
+}
+
+// builtPiPackage makes a config root holding a directory that looks like a built Pi package:
+// Status gates on its package.json before it reads anything else. It returns the root and the
+// package directory.
+func builtPiPackage(t *testing.T) (root, dest string) {
 	t.Helper()
-	dest := filepath.Join(t.TempDir(), "labdrian-pi")
+	root = t.TempDir()
+	dest = filepath.Join(root, "pi", "labdrian-pi")
 	if err := os.MkdirAll(dest, 0o755); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(dest, "package.json"), []byte("{}"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	return dest
+	return root, dest
 }
 
 // TestThePiFactoryReadsPiSettingsUnderTheConfigHome: the ~/.pi/agent files the status proves
 // against are the ones under Config.Home, not under whatever home the process has.
 func TestThePiFactoryReadsPiSettingsUnderTheConfigHome(t *testing.T) {
-	dest := builtPiPackage(t)
+	root, dest := builtPiPackage(t)
 	home := t.TempDir()
 	agent := filepath.Join(home, ".pi", "agent")
 	if err := os.MkdirAll(agent, 0o755); err != nil {
@@ -130,7 +166,7 @@ func TestThePiFactoryReadsPiSettingsUnderTheConfigHome(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	adapter, err := shippedRegistry(t).New(engineRuntime.TargetPi, engineRuntime.Config{Home: home, ConfigRoot: dest})
+	adapter, err := shippedRegistry(t).New(engineRuntime.TargetPi, engineRuntime.Config{Home: home, ConfigRoot: root})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -142,7 +178,8 @@ func TestThePiFactoryReadsPiSettingsUnderTheConfigHome(t *testing.T) {
 // TestThePiFactoryWithoutAHomeSaysSoAndGuessesNone: no home is reported as unproven, never
 // replaced by the home of the process.
 func TestThePiFactoryWithoutAHomeSaysSoAndGuessesNone(t *testing.T) {
-	adapter, err := shippedRegistry(t).New(engineRuntime.TargetPi, engineRuntime.Config{ConfigRoot: builtPiPackage(t)})
+	root, _ := builtPiPackage(t)
+	adapter, err := shippedRegistry(t).New(engineRuntime.TargetPi, engineRuntime.Config{ConfigRoot: root})
 	if err != nil {
 		t.Fatal(err)
 	}
