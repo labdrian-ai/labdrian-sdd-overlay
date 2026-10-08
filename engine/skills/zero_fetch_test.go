@@ -62,6 +62,14 @@ var internalImports = map[string]bool{
 	capabilityImport: true,
 }
 
+// wantStdlibImports and wantInternalImports are how many of each the lists above hold. They are
+// the only place the counts are written: a change to either list changes its number here, in the
+// same commit, and so passes through the reviewer approval the guard exists to force.
+const (
+	wantStdlibImports   = 15
+	wantInternalImports = 3 // pathguard, jsonstrict, capability
+)
+
 // importSet is the union of a list of imports and a set of them.
 func importSet(list []string, set map[string]bool) map[string]bool {
 	out := make(map[string]bool, len(list)+len(set))
@@ -170,11 +178,29 @@ func TestZeroFetchAllowlistExcludesExecAndNet(t *testing.T) {
 	// The allowlist is the standard library packages plus the module-internal exceptions, counted
 	// apart so that neither figure is the other's remainder. errors is the stdlib package the
 	// registry port added, os the one Phase 9 unit H17 took away.
-	if stdlib := len(allowedImports) - len(internalImports); stdlib != 15 {
-		t.Errorf("%d standard library packages in allowedImports, want 15 — widen it only after reviewer approval", stdlib)
+	if len(stdlibImports) != wantStdlibImports {
+		t.Errorf("%d standard library packages in stdlibImports, want %d — widen it only after reviewer approval", len(stdlibImports), wantStdlibImports)
 	}
-	if len(internalImports) != 3 {
-		t.Errorf("%d module-internal imports, want 3 (pathguard, jsonstrict, capability) — widen it only after reviewer approval", len(internalImports))
+	if len(internalImports) != wantInternalImports {
+		t.Errorf("%d module-internal imports, want %d — widen it only after reviewer approval", len(internalImports), wantInternalImports)
+	}
+	// The union must be able to hide nothing: the two lists share no entry, every entry of each is
+	// in allowedImports, and allowedImports holds nothing else.
+	for _, imp := range stdlibImports {
+		if internalImports[imp] {
+			t.Errorf("%q is in both stdlibImports and internalImports", imp)
+		}
+		if !allowedImports[imp] {
+			t.Errorf("%q is in stdlibImports but not in allowedImports", imp)
+		}
+	}
+	for imp := range internalImports {
+		if !allowedImports[imp] {
+			t.Errorf("%q is in internalImports but not in allowedImports", imp)
+		}
+	}
+	if len(allowedImports) != len(stdlibImports)+len(internalImports) {
+		t.Errorf("allowedImports has %d entries, want %d + %d: two entries of the lists are the same package", len(allowedImports), len(stdlibImports), len(internalImports))
 	}
 	if allowedImports["os"] {
 		t.Error(`"os" is in allowedImports: engine/skills reaches the file system through its ports (Phase 9 unit H17), and engine/skills/skillsfs is the one place that imports os`)
