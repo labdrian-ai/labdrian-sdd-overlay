@@ -123,3 +123,22 @@ func TestRunStartsNothingAfterTheDeadline(t *testing.T) {
 		t.Error("the program ran although its context was already over")
 	}
 }
+
+// A grandchild that keeps the output pipes open must not hold Run past the deadline: the shell
+// below is stopped at 200ms, but the sleep it started still holds the pipes for twenty seconds,
+// and Run gives up on them after the grace period instead of waiting for it.
+func TestRunDoesNotWaitForAGrandchildHoldingThePipes(t *testing.T) {
+	bin := fakeBinary(t, "pi", `/bin/sleep 20 &
+wait`)
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+
+	started := time.Now()
+	_, err := New().Run(ctx, bin)
+	if err == nil {
+		t.Fatal("Run reported success for a program stopped at its deadline")
+	}
+	if elapsed := time.Since(started); elapsed > 10*time.Second {
+		t.Errorf("Run took %v: it waited for the grandchild that kept the pipes open", elapsed)
+	}
+}
