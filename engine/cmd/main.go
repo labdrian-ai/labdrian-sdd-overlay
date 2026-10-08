@@ -473,7 +473,14 @@ func runRuntimeCore(args []string, stdout io.Writer, stderr io.Writer, exit func
 		return
 	}
 
-	action, target, configRoot, component, stateDir, err := parseRuntimeArgs(args)
+	registry, err := newRuntimeRegistry(newWarningRegistryRepository(stderr))
+	if err != nil {
+		fmt.Fprintln(stderr, "error:", err)
+		exit(1)
+		return
+	}
+
+	action, target, configRoot, component, stateDir, err := parseRuntimeArgs(args, registry)
 	if err != nil {
 		fmt.Fprintln(stderr, err)
 		usage()
@@ -521,17 +528,19 @@ func runRuntimeCore(args []string, stdout io.Writer, stderr io.Writer, exit func
 		return
 	}
 
-	targets := runtimepkg.ExpandTarget(target)
+	cfg := runtimeConfigFromEnv(os.Getenv, os.UserHomeDir, configRoot)
+	targets := registry.Expand(target)
 
 	failed := false
 	allTargets := len(targets) > 1
 
 	for _, current := range targets {
-		targetRoot := configRoot
-		if current == runtimepkg.TargetOpenCode && targetRoot == "" {
-			targetRoot = runtimepkg.DefaultOpenCodeConfigRoot()
+		adapter, err := registry.New(current, cfg)
+		if err != nil {
+			fmt.Fprintln(stderr, "error:", err)
+			exit(1)
+			return
 		}
-		adapter := runtimeAdapterForTarget(current, targetRoot, stderr)
 		result := runtimeLifecycleResult(adapter, action)
 		fmt.Fprintln(stdout, result.String())
 		// Pi now has a real Status() implementation (pi-lifecycle, slice
@@ -570,24 +579,8 @@ func runRuntimeCore(args []string, stdout io.Writer, stderr io.Writer, exit func
 	exit(0)
 }
 
-func runtimeAdapterForTarget(target runtimepkg.Target, configRoot string, stderr io.Writer) runtimepkg.Adapter {
-	if target == runtimepkg.TargetOpenCode {
-		return runtimepkg.NewOpenCodeAdapter(configRoot)
-	}
-	if target == runtimepkg.TargetClaude {
-		return runtimepkg.NewClaudeAdapter(configRoot)
-	}
-	if target == runtimepkg.TargetCodex {
-		return runtimepkg.NewCodexAdapter(configRoot)
-	}
-	if target == runtimepkg.TargetPi {
-		return runtimepkg.NewPiAdapter(newWarningRegistryRepository(stderr))
-	}
-	return runtimepkg.NewFoundationAdapter(target)
-}
-
 // parseRuntimeArgs parses minimal runtime subcommand arguments.
-func parseRuntimeArgs(args []string) (action string, target runtimepkg.Target, configRoot, component, stateDir string, err error) {
+func parseRuntimeArgs(args []string, registry *runtimepkg.Registry) (action string, target runtimepkg.Target, configRoot, component, stateDir string, err error) {
 	if len(args) == 0 {
 		return "", "", "", "", "", fmt.Errorf("error: runtime requires an action")
 	}
@@ -606,7 +599,7 @@ func parseRuntimeArgs(args []string) (action string, target runtimepkg.Target, c
 			if i >= len(args) {
 				return "", "", "", "", "", fmt.Errorf("error: --target requires a value")
 			}
-			target, err = runtimepkg.ParseTarget(args[i])
+			target, err = registry.Parse(args[i])
 			if err != nil {
 				return "", "", "", "", "", err
 			}
