@@ -376,6 +376,11 @@ func TestExecuteProjectRetireLockThatCannotBeInspectedBeforeTheCommitIsLeftAlone
 		t.Fatalf("plan retirement: %v", err)
 	}
 	before := snapshotTree(t, f.root)
+	// The recording file system tells the staged lock from a restored one by their bytes, so the
+	// two must be there and differ, or a restore would be counted as a staging.
+	if len(plan.Lock.Data) == 0 || len(plan.Lock.Backup) == 0 || bytes.Equal(plan.Lock.Data, plan.Lock.Backup) {
+		t.Fatalf("the planned lock (%d bytes) and its backup (%d bytes) must both be there and differ", len(plan.Lock.Data), len(plan.Lock.Backup))
+	}
 
 	fsys := &lockRecordingFS{fakeProjectFS: newFakeProjectFS(nil), lock: plan.Lock}
 	fsys.fail = func(f *fakeProjectFS, op, path string) error {
@@ -412,7 +417,8 @@ func TestExecuteProjectRetireLockThatCannotBeInspectedBeforeTheCommitIsLeftAlone
 // lockRecordingFS is the fake file system that also tells which temp files held the lock: the one
 // that stages the new lock (its bytes are the planned ones) and the one that would put the old lock
 // back (its bytes are the plan's backup). The temp files are told by what they hold, not by where
-// they are, so no other temp file in the directory is counted.
+// they are, so no other temp file in the directory is counted. Its user checks first that the two
+// byte sets are there and differ.
 type lockRecordingFS struct {
 	*fakeProjectFS
 	lock                       ProjectWrite
