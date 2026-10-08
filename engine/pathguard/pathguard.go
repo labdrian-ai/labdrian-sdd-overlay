@@ -38,27 +38,34 @@ func WithinRoot(cleanRoot, p string) bool {
 type Resolver func(path string) (string, error)
 
 // ResolvedWithinRootUsing is the non-lexical half of a containment proof: it
-// resolves both root and p through the resolver and re-applies WithinRoot
-// between the RESOLVED paths. With a resolver that follows links it refuses a
-// destination reached through a symlinked directory pointing outside the
-// root, the case a lexical-only guard admits because such a path names no
-// "..". The resolver is injected so the caller performs no file system access
-// of its own, and a test controls every path the guard sees;
-// fsresolve.ResolvedWithinRoot is the production binding.
+// resolves root and p through the resolver, then applies WithinRoot to the
+// RESOLVED paths. With a resolver that follows links it refuses a destination
+// reached through a symlinked directory that points outside the root, the case
+// a lexical-only guard admits because such a path names no "..".
 //
-// Callers owe themselves BOTH steps: the lexical guard (WithinRoot) first,
-// then this one. This check is also a point-in-time proof; a check-then-act
-// writer must still re-establish containment at creation time, since a
-// component can become a symlink in between.
+// The checks run in this order, and each failure is named with the check that
+// produces it:
 //
-// Both failure modes here are refused explicitly rather than allowed to fall
-// through to WithinRoot: a root that resolves to nothing — because the
-// resolver errored and its zero value was used, or because it handed back an
-// empty string with no error at all — yields an error, not a verdict.
-// WithinRoot itself refuses an empty root, so these checks are defence in
-// depth: they no longer stand alone between the caller and a fail-open
-// containment answer, but they keep the failure visible as an error instead
-// of a bare false.
+//  1. The resolver fails on root: its error is returned unchanged.
+//  2. The resolver fails on p: its error is returned unchanged.
+//  3. The resolver returns an empty path for root or for p with no error: an
+//     error is returned, not a verdict. Without this check an empty resolved
+//     root would reach step 4, and the empty-root rule of WithinRoot would
+//     answer false, a bare refusal that hides the failure. The check is
+//     defence in depth behind WithinRoot, and it keeps the failure visible.
+//  4. Otherwise the answer is WithinRoot of the two cleaned resolved paths: true
+//     only when the resolved p is strictly below the resolved root. This is the
+//     only path that returns a verdict; steps 1 to 3 always return an error and
+//     false.
+//
+// The resolver is injected so the caller performs no file system access of its
+// own and a test controls every path the guard sees; fsresolve.ResolvedWithinRoot
+// is the production binding.
+//
+// Callers owe themselves BOTH steps: the lexical guard (WithinRoot) first, then
+// this one. The proof is also a point in time: a check-then-act writer must
+// still re-establish containment when it creates the file, since a component
+// can become a symlink in between.
 func ResolvedWithinRootUsing(resolve Resolver, root, p string) (bool, error) {
 	resolvedRoot, err := resolve(root)
 	if err != nil {
