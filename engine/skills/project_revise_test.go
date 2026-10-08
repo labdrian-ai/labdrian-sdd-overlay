@@ -245,3 +245,20 @@ func TestPlanProjectRevise_RefusesDestinationsThatResolveToOneFile(t *testing.T)
 		})
 	}
 }
+
+// TestPlanProjectRevise_RefusesACandidateKeyOfTheWrongShape: a key that is safe to stamp into the
+// frontmatter but is none of the two shapes of a candidate is refused before the lock is read, and
+// the refusal is worded for the verb.
+func TestPlanProjectRevise_RefusesACandidateKeyOfTheWrongShape(t *testing.T) {
+	f := newProjectRevisionFixture(t, "tidy-worktree")
+	in := f.input()
+	in.CandidateKey = "procedural/candidates/nope/tidy-worktree"
+
+	plan, err := PlanProjectRevise(in)
+	if err == nil || !strings.HasPrefix(err.Error(), "project-revise: validate candidate key: ") {
+		t.Fatalf("PlanProjectRevise = %+v, %v, want a project-revise refusal of the candidate key", plan, err)
+	}
+	if plan.Lock.Rel != "" || len(plan.Writes) != 0 {
+		t.Errorf("a refusal must return the zero plan, got %+v", plan)
+	}
+}
