@@ -32,12 +32,16 @@ func (s *projectStager) isDelete(i int) bool { return i < len(s.deleting) && s.d
 // back to its pre-run state on any failure. It prints nothing: what a failed rollback could not
 // restore is in the error it returns.
 func (s *projectStager) stageAndCommit() error {
-	fsys, order := s.fsys, s.order
+	if err := s.stage(); err != nil {
+		return err
+	}
+	return s.commit()
+}
 
-	// Stage: create each target directory, recording which ones this run
-	// created, and write every SKILL.md and the new lock to a same-directory
-	// temp at mode 0644. A removal has nothing to stage.
-	for i, w := range order {
+// stage creates each target directory, recording which ones this run created, and writes every
+// SKILL.md and the new lock to a same-directory temp at mode 0644. A removal has nothing to stage.
+func (s *projectStager) stage() error {
+	for i, w := range s.order {
 		if s.isDelete(i) {
 			continue
 		}
@@ -45,46 +49,58 @@ func (s *projectStager) stageAndCommit() error {
 		if err := s.mkdirAll(dir); err != nil {
 			return s.rollback(fmt.Errorf("%s: creating %q: %w", s.verb, path.Dir(w.Rel), err))
 		}
-		tmp, err := writeProjectTemp(fsys, dir, w.Data, w.Mode)
+		tmp, err := writeProjectTemp(s.fsys, dir, w.Data, w.Mode)
 		if err != nil {
 			return s.rollback(fmt.Errorf("%s: staging %q: %w", s.verb, w.Rel, err))
 		}
 		s.temps[i] = tmp
 	}
+	return nil
+}
 
-	// Commit: rename the SKILL.md temps in projectTargets order, the lock last.
-	// (An install also removes files, in its place in the order.)
-	for i, w := range order {
-		// The destination's REAL mode, read immediately before it is renamed
-		// over, is the only thing that can put it back the way it was. The
-		// planned Mode cannot: it is always ProjectFileMode, so a lock the
-		// project keeps at 0600 came back at 0644 after a failed run and the
-		// headline guarantee — byte-identical, including file modes — was false
-		// (review round 4, D1).
-		if w.Backup != nil {
-			info, err := fsys.Stat(w.Abs)
-			if err != nil {
-				return s.rollback(fmt.Errorf("%s: inspecting %q before committing over it: %w", s.verb, w.Rel, err))
-			}
-			s.preMode[i] = info.Mode().Perm()
+// commit renames the SKILL.md temps in projectTargets order, the lock last. (An install also
+// removes files, in its place in the order.)
+func (s *projectStager) commit() error {
+	for i, w := range s.order {
+		if err := s.commitOne(i, w); err != nil {
+			return s.rollback(err)
 		}
-		// Recorded BEFORE the call, not after it: a rename that reports an error
-		// may still have landed, and rollback must sweep the destinations this
-		// run reached for. It must equally leave alone the ones it never reached
-		// — restoring identical bytes over an untouched file still replaces it,
-		// with a new inode and the planned mode (review round 4, D1).
-		s.attempted[i] = true
-		if s.isDelete(i) {
-			if err := fsys.Remove(w.Abs); err != nil {
-				return s.rollback(fmt.Errorf("%s: removing %q: %w", s.verb, w.Rel, err))
-			}
-			continue
-		}
-		if err := fsys.Rename(s.temps[i], w.Abs); err != nil {
-			return s.rollback(fmt.Errorf("%s: committing %q: %w", s.verb, w.Rel, err))
-		}
-		s.temps[i] = ""
 	}
+	return nil
+}
+
+// commitOne commits the write at order[i]: it records what rollback needs, and then renames or
+// removes. A failure is returned worded for the verb; the caller rolls back.
+func (s *projectStager) commitOne(i int, w ProjectWrite) error {
+	// The destination's REAL mode, read immediately before it is renamed
+	// over, is the only thing that can put it back the way it was. The
+	// planned Mode cannot: it is always ProjectFileMode, so a lock the
+	// project keeps at 0600 came back at 0644 after a failed run and the
+	// headline guarantee — byte-identical, including file modes — was false
+	// (review round 4, D1).
+	if w.Backup != nil {
+		info, err := s.fsys.Stat(w.Abs)
+		if err != nil {
+			return fmt.Errorf("%s: inspecting %q before committing over it: %w", s.verb, w.Rel, err)
+		}
+		s.preMode[i] = info.Mode().Perm()
+	}
+	// Recorded BEFORE the call, not after it: a rename that reports an error
+	// may still have landed, and rollback must sweep the destinations this
+	// run reached for. It must equally leave alone the ones it never reached
+	// — restoring identical bytes over an untouched file still replaces it,
+	// with a new inode and the planned mode (review round 4, D1).
+	s.attempted[i] = true
+	if s.isDelete(i) {
+		if err := s.fsys.Remove(w.Abs); err != nil {
+			return fmt.Errorf("%s: removing %q: %w", s.verb, w.Rel, err)
+		}
+		return nil
+	}
+	if err := s.fsys.Rename(s.temps[i], w.Abs); err != nil {
+		return fmt.Errorf("%s: committing %q: %w", s.verb, w.Rel, err)
+	}
+	s.temps[i] = ""
 	return nil
 }
 
@@ -170,18 +186,26 @@ func (s *projectStager) mkdirAll(dir string) error {
 // wrapper reality). Restoring or removing a destination that was never touched
 // is a no-op, so the wider sweep costs nothing and closes that window.
 func (s *projectStager) rollback(cause error) error {
-	var bad []string
+	bad := s.restoreReachedDestinations()
+	bad = append(bad, s.removeLeftoverTemps()...)
+	bad = append(bad, s.removeCreatedDirectories()...)
+	if len(bad) > 0 {
+		return &RollbackIncompleteError{Verb: s.verb, Unrestored: bad, Cause: cause}
+	}
+	return cause
+}
 
-	// 1. Every destination this run reached the rename for, newest first:
-	// restore the bytes it captured at plan time AT THE MODE IT REALLY HAD, or
-	// remove it when it is a genuinely new file.
-	//
-	// It sweeps every write whose rename was ATTEMPTED rather than only those
-	// that succeeded, because a rename that reports an error may still have
-	// landed (an NFS or wrapper reality). It stops at the ones that were never
-	// attempted, because those were never touched: rewriting them restored
-	// nothing and changed two things it had no business changing, the inode and
-	// the mode (review round 4, D1).
+// restoreReachedDestinations is the first step of a rollback: every destination this run reached
+// the rename for, newest first: restore the bytes it captured at plan time AT THE MODE IT REALLY
+// HAD, or remove it when it is a genuinely new file.
+//
+// It sweeps every write whose rename was ATTEMPTED rather than only those
+// that succeeded, because a rename that reports an error may still have
+// landed (an NFS or wrapper reality). It stops at the ones that were never
+// attempted, because those were never touched: rewriting them restored
+// nothing and changed two things it had no business changing, the inode and
+// the mode (review round 4, D1).
+func (s *projectStager) restoreReachedDestinations() (bad []string) {
 	for i := len(s.order) - 1; i >= 0; i-- {
 		if !s.attempted[i] {
 			continue
@@ -211,8 +235,11 @@ func (s *projectStager) rollback(cause error) error {
 			bad = append(bad, w.Rel)
 		}
 	}
+	return bad
+}
 
-	// 2. Leftover temps.
+// removeLeftoverTemps is the second step: the temps that were staged and never renamed away.
+func (s *projectStager) removeLeftoverTemps() (bad []string) {
 	for _, tmp := range s.temps {
 		if tmp == "" {
 			continue
@@ -221,8 +248,12 @@ func (s *projectStager) rollback(cause error) error {
 			bad = append(bad, s.rel(tmp))
 		}
 	}
+	return bad
+}
 
-	// 3. Directories this run created, deepest first and only if empty.
+// removeCreatedDirectories is the third step: the directories this run created, deepest first and
+// only if empty.
+func (s *projectStager) removeCreatedDirectories() (bad []string) {
 	for _, dir := range s.createdDeepestFirst() {
 		entries, err := s.fsys.ReadDir(dir)
 		if err != nil {
@@ -239,11 +270,7 @@ func (s *projectStager) rollback(cause error) error {
 			bad = append(bad, s.rel(dir))
 		}
 	}
-
-	if len(bad) > 0 {
-		return &RollbackIncompleteError{Verb: s.verb, Unrestored: bad, Cause: cause}
-	}
-	return cause
+	return bad
 }
 
 // remove deletes p, treating "it is already gone" as success: rollback sweeps

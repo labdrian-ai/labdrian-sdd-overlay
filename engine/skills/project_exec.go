@@ -10,62 +10,40 @@ import (
 // lock update last. A failure after any target removal restores every target
 // already reached from its captured bytes before returning the original cause;
 // a failure during that rollback returns a *RollbackIncompleteError that names, repo-relative,
-// every path it could not restore. The lock temp is staged
-// before the first delete, so no deletion can become visible without a lock
-// update that can either be committed or rolled back.
+// every path it could not restore. The lock temp is staged before the first delete, so no
+// deletion can become visible without a lock update that can either be committed or rolled back.
 func ExecuteProjectRetirePlan(p ProjectPlan, fsys ProjectFS) error {
+	root, err := checkRetirementIsExecutable(p, fsys)
+	if err != nil {
+		return err
+	}
+	return newProjectRetireStager(fsys, root, p).run()
+}
+
+// checkRetirementIsExecutable refuses a plan that was not produced by PlanProjectRetire or that no
+// longer holds, and returns the project root it recovers from the plan. The destinations are
+// re-proved at the moment of writing; that is worded as it always was, for project-register,
+// although this is a retirement.
+func checkRetirementIsExecutable(p ProjectPlan, fsys ProjectFS) (string, error) {
 	if fsys == nil {
-		return fmt.Errorf("project-retire: no filesystem was injected")
+		return "", fmt.Errorf("%s: no filesystem was injected", projectRetireVerb)
 	}
 	root, err := projectPlanRoot(p)
 	if err != nil {
-		return err
+		return "", err
 	}
 	if len(p.DeleteWrites) == 0 {
-		return fmt.Errorf("project-retire: the plan carries no target deletions")
+		return "", fmt.Errorf("%s: the plan carries no target deletions", projectRetireVerb)
 	}
 	if p.Lock.Backup == nil {
-		return fmt.Errorf("project-retire: the plan carries no existing lock backup")
+		return "", fmt.Errorf("%s: the plan carries no existing lock backup", projectRetireVerb)
 	}
 	order := append([]ProjectWrite(nil), p.DeleteWrites...)
 	order = append(order, p.Lock)
-	// Worded as it always was, for project-register, although this is a retirement.
 	if err := checkProjectDestinations(projectRegisterVerb, fsys, root, order); err != nil {
-		return err
+		return "", err
 	}
-
-	s := &projectRetireStager{
-		fsys:      fsys,
-		root:      root,
-		deletes:   p.DeleteWrites,
-		lock:      p.Lock,
-		attempted: make([]bool, len(p.DeleteWrites)),
-	}
-
-	tmp, err := writeProjectTemp(fsys, filepath.Dir(p.Lock.Abs), p.Lock.Data, p.Lock.Mode)
-	s.lockTemp = tmp
-	if err != nil {
-		return s.rollback(fmt.Errorf("project-retire: staging lock: %w", err))
-	}
-
-	for i, w := range p.DeleteWrites {
-		// A remove wrapper may delete the file and still report an error. Mark
-		// the call before invoking it so rollback covers that check-then-act
-		// window as well as ordinary successful removals.
-		s.attempted[i] = true
-		if err := fsys.Remove(w.Abs); err != nil {
-			return s.rollback(fmt.Errorf("project-retire: removing %q: %w", w.Rel, err))
-		}
-	}
-
-	// The lock is the commit marker. Record the attempt before Rename because
-	// a filesystem wrapper can report an error after the rename landed.
-	s.lockAttempted = true
-	if err := fsys.Rename(s.lockTemp, p.Lock.Abs); err != nil {
-		return s.rollback(fmt.Errorf("project-retire: committing lock: %w", err))
-	}
-	s.lockTemp = ""
-	return nil
+	return root, nil
 }
 
 // ExecuteProjectRevisePlan intentionally delegates to the registration
