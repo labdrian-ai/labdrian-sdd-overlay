@@ -2,6 +2,7 @@ package skills
 
 import (
 	"fmt"
+	"io/fs"
 	"path/filepath"
 )
 
@@ -15,6 +16,7 @@ type projectRetireStager struct {
 	lock          ProjectWrite
 	lockTemp      string
 	lockAttempted bool
+	lockPreMode   fs.FileMode // the lock's real mode, read right before its commit
 	attempted     []bool
 }
 
@@ -63,10 +65,15 @@ func (s *projectRetireStager) removeTargets() error {
 	return nil
 }
 
-// commitLock renames the staged lock over the old one. The lock is the commit marker. The attempt
-// is recorded before Rename because a filesystem wrapper can report an error after the rename
+// commitLock renames the staged lock over the old one. The lock is the commit marker. Its real mode
+// is read first, because that is the mode a rollback restores it at. The attempt is recorded before Rename because a filesystem wrapper can report an error after the rename
 // landed.
 func (s *projectRetireStager) commitLock() error {
+	mode, err := modeBeforeCommit(s.fsys, projectRetireVerb, s.lock)
+	if err != nil {
+		return s.rollback(err)
+	}
+	s.lockPreMode = mode
 	s.lockAttempted = true
 	if err := s.fsys.Rename(s.lockTemp, s.lock.Abs); err != nil {
 		return s.rollback(fmt.Errorf("%s: committing lock: %w", projectRetireVerb, err))
@@ -108,7 +115,9 @@ func (s *projectRetireStager) restoreTargets() (bad []string) {
 // have landed the new lock already. The staged lock that was never renamed is removed.
 func (s *projectRetireStager) restoreLock() (bad []string) {
 	if s.lockAttempted {
-		if err := s.restore(s.lock); err != nil {
+		restored := s.lock
+		restored.Mode = s.lockPreMode
+		if err := s.restore(restored); err != nil {
 			bad = append(bad, s.lock.Rel)
 		}
 	}

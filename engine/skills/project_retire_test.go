@@ -323,3 +323,42 @@ func TestPlanProjectRetireKeepsTheModeTheLockHasNow(t *testing.T) {
 		t.Errorf("the planned lock has mode %04o, want the 0600 it has now", plan.Lock.Mode)
 	}
 }
+
+// TestExecuteProjectRetireRollbackRestoresTheModeTheLockHasAtCommit: the mode the lock had when the
+// plan was built is a fact as old as the plan. A person may change it before the retirement runs,
+// and a rollback must put the lock back as it was found at the moment of the commit, as a failed
+// registration does.
+func TestExecuteProjectRetireRollbackRestoresTheModeTheLockHasAtCommit(t *testing.T) {
+	f := newProjectRetirementFixture(t, "tidy-worktree")
+	plan, err := PlanProjectRetire(f.input())
+	if err != nil {
+		t.Fatalf("plan retirement: %v", err)
+	}
+	if plan.Lock.Mode == 0o600 {
+		t.Fatal("precondition: the plan must have been built while the lock was not 0600")
+	}
+	if err := os.Chmod(f.lockPath, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	commits := 0
+	fsys := newFakeProjectFS(func(_ *fakeProjectFS, op, path string) error {
+		if op == "rename" && path == plan.Lock.Abs {
+			if commits++; commits == 1 { // the commit; the rollback's own rename goes through
+				return errInjected
+			}
+		}
+		return nil
+	})
+	err = ExecuteProjectRetirePlan(plan, fsys)
+	if !errors.Is(err, errInjected) || errors.Is(err, ErrRollbackIncomplete) {
+		t.Fatalf("error = %v, want the injected failure and a complete rollback", err)
+	}
+	info, statErr := os.Stat(f.lockPath)
+	if statErr != nil {
+		t.Fatalf("the lock must be back: %v", statErr)
+	}
+	if got := info.Mode().Perm(); got != 0o600 {
+		t.Errorf("the restored lock has mode %04o, want the 0600 it had at the commit", got)
+	}
+}

@@ -79,11 +79,11 @@ func (s *projectStager) commitOne(i int, w ProjectWrite) error {
 	// headline guarantee — byte-identical, including file modes — was false
 	// (review round 4, D1).
 	if w.Backup != nil {
-		info, err := s.fsys.Stat(w.Abs)
+		mode, err := modeBeforeCommit(s.fsys, s.verb, w)
 		if err != nil {
-			return fmt.Errorf("%s: inspecting %q before committing over it: %w", s.verb, w.Rel, err)
+			return err
 		}
-		s.preMode[i] = info.Mode().Perm()
+		s.preMode[i] = mode
 	}
 	// Recorded BEFORE the call, not after it: a rename that reports an error
 	// may still have landed, and rollback must sweep the destinations this
@@ -102,6 +102,17 @@ func (s *projectStager) commitOne(i int, w ProjectWrite) error {
 	}
 	s.temps[i] = ""
 	return nil
+}
+
+// modeBeforeCommit is the REAL mode of the destination of w, read now, immediately before it is
+// renamed over. Registration, revision, install and retirement all restore a destination at this
+// mode and not at the one the plan recorded, which is as old as the plan.
+func modeBeforeCommit(fsys ProjectFS, verb string, w ProjectWrite) (fs.FileMode, error) {
+	info, err := fsys.Stat(w.Abs)
+	if err != nil {
+		return 0, fmt.Errorf("%s: inspecting %q before committing over it: %w", verb, w.Rel, err)
+	}
+	return info.Mode().Perm(), nil
 }
 
 // ErrRollbackIncomplete marks the one outcome that leaves the operator work to
