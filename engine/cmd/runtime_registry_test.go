@@ -125,3 +125,28 @@ func TestRuntimeConfigFromEnv(t *testing.T) {
 		}
 	})
 }
+
+// TestBuildRuntimeAdapters_BuildsAllOrNone: a target the registry cannot build is the error and no
+// adapter is handed back, so a command over `all` never acts on the first targets and then stops.
+func TestBuildRuntimeAdapters_BuildsAllOrNone(t *testing.T) {
+	reg, err := newRuntimeRegistry(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg := runtimepkg.Config{Home: t.TempDir()}
+
+	got, err := buildRuntimeAdapters(reg, reg.Expand(runtimepkg.TargetAll), cfg)
+	if err != nil || len(got) != 4 {
+		t.Fatalf("buildRuntimeAdapters(all) = %d adapters, %v, want 4", len(got), err)
+	}
+	for i, target := range reg.Expand(runtimepkg.TargetAll) {
+		if got[i].Target() != target {
+			t.Errorf("adapter %d answers for %q, want %q: the order of the targets is kept", i, got[i].Target(), target)
+		}
+	}
+
+	got, err = buildRuntimeAdapters(reg, []runtimepkg.Target{runtimepkg.TargetClaude, "future"}, cfg)
+	if err == nil || !strings.Contains(err.Error(), "not registered") || got != nil {
+		t.Fatalf("buildRuntimeAdapters(claude, future) = %v, %v, want no adapter and a not-registered error", got, err)
+	}
+}

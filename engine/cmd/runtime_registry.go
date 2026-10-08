@@ -26,6 +26,20 @@ func newRuntimeRegistry(registries skills.RegistryRepository) (*runtimepkg.Regis
 	return r, nil
 }
 
+// buildRuntimeAdapters builds the adapter of every target, or none: the first target the registry
+// cannot build is the error.
+func buildRuntimeAdapters(registry *runtimepkg.Registry, targets []runtimepkg.Target, cfg runtimepkg.Config) ([]runtimepkg.Adapter, error) {
+	adapters := make([]runtimepkg.Adapter, 0, len(targets))
+	for _, target := range targets {
+		adapter, err := registry.New(target, cfg)
+		if err != nil {
+			return nil, err
+		}
+		adapters = append(adapters, adapter)
+	}
+	return adapters, nil
+}
+
 // runtimeConfigFromEnv reads the environment the runtime adapters depend on, once, and hands it
 // down as a value. The home is $HOME without surrounding space, else the one the system names
 // for the user, else empty: an adapter never guesses where a home is. The caller sets ConfigRoot

@@ -533,16 +533,20 @@ func runRuntimeCore(args []string, stdout io.Writer, stderr io.Writer, exit func
 	cfg.ConfigRoot = configRoot
 	targets := registry.Expand(target)
 
-	failed := false
-	allTargets := len(targets) > 1
+	// Every adapter is built before the first one acts, so a target the registry cannot build
+	// stops the command before anything has been done, never half way through `all`.
+	adapters, err := buildRuntimeAdapters(registry, targets, cfg)
+	if err != nil {
+		fmt.Fprintln(stderr, "error:", err)
+		exit(1)
+		return
+	}
 
-	for _, current := range targets {
-		adapter, err := registry.New(current, cfg)
-		if err != nil {
-			fmt.Fprintln(stderr, "error:", err)
-			exit(1)
-			return
-		}
+	failed := false
+	allTargets := len(adapters) > 1
+
+	for _, adapter := range adapters {
+		current := adapter.Target()
 		result := runtimeLifecycleResult(adapter, action)
 		fmt.Fprintln(stdout, result.String())
 		// Pi now has a real Status() implementation (pi-lifecycle, slice
