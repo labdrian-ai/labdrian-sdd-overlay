@@ -49,6 +49,8 @@ import (
 //   - execrunner is the adapter of the CommandRunner port the Pi adapter owns (H24): it looks a
 //     program up on the PATH and runs it with a fixed argument vector and a deadline. It is
 //     the one place in the module that starts the CLI of a runtime.
+//   - piguard is test support: the `pi` that refuses to run, put first on the PATH of a test
+//     run by a TestMain, so nothing started by accident reaches the real CLI.
 //   - installer, shelltest, capabilitytest, shaper/shapertest (the documents the shaper's
 //     tests share), reviewreceipt/receipttest (the review documents the receipt capture's
 //     tests share) and this guard (the module root) are test-only.
@@ -73,6 +75,7 @@ var rings = map[string]archguard.Ring{
 	"memoryscope":               archguard.Domain,
 	"pathguard":                 archguard.Domain,
 	"pathguard/fsresolve":       archguard.Adapter,
+	"piguard":                   archguard.Support,
 	"pipkg":                     archguard.Adapter,
 	"prespec":                   archguard.Domain,
 	"projection":                archguard.Domain,
