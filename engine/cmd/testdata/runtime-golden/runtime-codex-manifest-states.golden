@@ -1,0 +1,197 @@
+# install codex
+$ runtime install --target codex
+exit: 0
+--- stdout ---
+[codex] install: restart_required — Codex lifecycle manifest installed; restart long-running Codex processes to pick up updates
+--- stderr ---
+
+# the manifest the install wrote
+# status codex
+$ runtime status --target codex
+exit: 1
+--- stdout ---
+[codex] status: partial — Codex lifecycle manifest is present and managed, but activation/reload state is unverified — reasons: activation/reload proof unavailable until Codex session lifecycle integration is implemented
+--- stderr ---
+
+# update codex
+$ runtime update --target codex
+exit: 0
+--- stdout ---
+[codex] update: restart_required — Codex lifecycle manifest updated; restart long-running Codex processes to pick up updates
+--- stderr ---
+
+# uninstall codex
+$ runtime uninstall --target codex
+exit: 0
+--- stdout ---
+[codex] uninstall: restart_required — Codex lifecycle manifest removed; restart long-running Codex processes
+--- stderr ---
+
+# not JSON
+# status codex
+$ runtime status --target codex
+exit: 1
+--- stdout ---
+[codex] status: partial — failed to read Codex manifest: invalid character 'n' looking for beginning of object key string
+--- stderr ---
+
+# update codex
+$ runtime update --target codex
+exit: 1
+--- stdout ---
+[codex] update: partial — cannot validate existing Codex manifest for update at "<WORLD>/home/.codex/labdrian-runtime-lifecycle.json": invalid character 'n' looking for beginning of object key string
+--- stderr ---
+
+# uninstall codex
+$ runtime uninstall --target codex
+exit: 1
+--- stdout ---
+[codex] uninstall: partial — cannot validate existing Codex manifest for uninstall at "<WORLD>/home/.codex/labdrian-runtime-lifecycle.json": invalid character 'n' looking for beginning of object key string
+--- stderr ---
+
+# empty
+# status codex
+$ runtime status --target codex
+exit: 1
+--- stdout ---
+[codex] status: partial — failed to read Codex manifest: unexpected end of JSON input
+--- stderr ---
+
+# update codex
+$ runtime update --target codex
+exit: 1
+--- stdout ---
+[codex] update: partial — cannot validate existing Codex manifest for update at "<WORLD>/home/.codex/labdrian-runtime-lifecycle.json": unexpected end of JSON input
+--- stderr ---
+
+# uninstall codex
+$ runtime uninstall --target codex
+exit: 1
+--- stdout ---
+[codex] uninstall: partial — cannot validate existing Codex manifest for uninstall at "<WORLD>/home/.codex/labdrian-runtime-lifecycle.json": unexpected end of JSON input
+--- stderr ---
+
+# null
+# status codex
+$ runtime status --target codex
+exit: 1
+--- stdout ---
+[codex] status: partial — manifest managed_by mismatch: ""
+--- stderr ---
+
+# update codex
+$ runtime update --target codex
+exit: 1
+--- stdout ---
+[codex] update: partial — cannot mutate existing Codex manifest for update at "<WORLD>/home/.codex/labdrian-runtime-lifecycle.json" (must be managed by "labdrian-sdd-overlay"): manifest managed_by mismatch: ""
+--- stderr ---
+
+# uninstall codex
+$ runtime uninstall --target codex
+exit: 1
+--- stdout ---
+[codex] uninstall: partial — cannot mutate existing Codex manifest for uninstall at "<WORLD>/home/.codex/labdrian-runtime-lifecycle.json" (must be managed by "labdrian-sdd-overlay"): manifest managed_by mismatch: ""
+--- stderr ---
+
+# managed by someone else
+# status codex
+$ runtime status --target codex
+exit: 1
+--- stdout ---
+[codex] status: partial — manifest managed_by mismatch: "somebody-else"
+--- stderr ---
+
+# update codex
+$ runtime update --target codex
+exit: 1
+--- stdout ---
+[codex] update: partial — cannot mutate existing Codex manifest for update at "<WORLD>/home/.codex/labdrian-runtime-lifecycle.json" (must be managed by "labdrian-sdd-overlay"): manifest managed_by mismatch: "somebody-else"
+--- stderr ---
+
+# uninstall codex
+$ runtime uninstall --target codex
+exit: 1
+--- stdout ---
+[codex] uninstall: partial — cannot mutate existing Codex manifest for uninstall at "<WORLD>/home/.codex/labdrian-runtime-lifecycle.json" (must be managed by "labdrian-sdd-overlay"): manifest managed_by mismatch: "somebody-else"
+--- stderr ---
+
+# another version
+# status codex
+$ runtime status --target codex
+exit: 1
+--- stdout ---
+[codex] status: partial — Codex lifecycle manifest is present and managed, but activation/reload state is unverified — reasons: activation/reload proof unavailable until Codex session lifecycle integration is implemented
+--- stderr ---
+
+# update codex
+$ runtime update --target codex
+exit: 0
+--- stdout ---
+[codex] update: restart_required — Codex lifecycle manifest updated; restart long-running Codex processes to pick up updates
+--- stderr ---
+
+# uninstall codex
+$ runtime uninstall --target codex
+exit: 0
+--- stdout ---
+[codex] uninstall: restart_required — Codex lifecycle manifest removed; restart long-running Codex processes
+--- stderr ---
+
+# another config root
+# status codex
+$ runtime status --target codex
+exit: 1
+--- stdout ---
+[codex] status: partial — manifest config_root "/elsewhere<WORLD>/home/.codex" does not match resolved root "<WORLD>/home/.codex"
+--- stderr ---
+
+# update codex
+$ runtime update --target codex
+exit: 1
+--- stdout ---
+[codex] update: partial — cannot mutate existing Codex manifest for update at "<WORLD>/home/.codex/labdrian-runtime-lifecycle.json" (must be managed by "labdrian-sdd-overlay"): manifest config_root "/elsewhere<WORLD>/home/.codex" does not match resolved root "<WORLD>/home/.codex"
+--- stderr ---
+
+# uninstall codex
+$ runtime uninstall --target codex
+exit: 1
+--- stdout ---
+[codex] uninstall: partial — cannot mutate existing Codex manifest for uninstall at "<WORLD>/home/.codex/labdrian-runtime-lifecycle.json" (must be managed by "labdrian-sdd-overlay"): manifest config_root "/elsewhere<WORLD>/home/.codex" does not match resolved root "<WORLD>/home/.codex"
+--- stderr ---
+
+# no fields
+# status codex
+$ runtime status --target codex
+exit: 1
+--- stdout ---
+[codex] status: partial — manifest managed_by mismatch: ""
+--- stderr ---
+
+# update codex
+$ runtime update --target codex
+exit: 1
+--- stdout ---
+[codex] update: partial — cannot mutate existing Codex manifest for update at "<WORLD>/home/.codex/labdrian-runtime-lifecycle.json" (must be managed by "labdrian-sdd-overlay"): manifest managed_by mismatch: ""
+--- stderr ---
+
+# uninstall codex
+$ runtime uninstall --target codex
+exit: 1
+--- stdout ---
+[codex] uninstall: partial — cannot mutate existing Codex manifest for uninstall at "<WORLD>/home/.codex/labdrian-runtime-lifecycle.json" (must be managed by "labdrian-sdd-overlay"): manifest managed_by mismatch: ""
+--- stderr ---
+
+# a directory where the manifest should be
+$ runtime status --target codex
+exit: 1
+--- stdout ---
+[codex] status: partial — failed to read Codex manifest: read <WORLD>/home/.codex/labdrian-runtime-lifecycle.json: is a directory
+--- stderr ---
+
+# install over it
+$ runtime install --target codex
+exit: 1
+--- stdout ---
+[codex] install: partial — cannot validate existing Codex manifest for install at "<WORLD>/home/.codex/labdrian-runtime-lifecycle.json": read <WORLD>/home/.codex/labdrian-runtime-lifecycle.json: is a directory
+--- stderr ---
+

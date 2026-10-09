@@ -1,0 +1,135 @@
+# install claude
+$ runtime install --target claude
+exit: 0
+--- stdout ---
+[claude] install: restart_required — Claude lifecycle hooks installed; restart Claude to load hook changes
+--- stderr ---
+
+# the complete install
+$ runtime status --target claude
+exit: 0
+--- stdout ---
+[claude] status: supported — Claude lifecycle hooks are installed and owned
+--- stderr ---
+
+# no SessionEnd entry
+$ runtime status --target claude
+exit: 1
+--- stdout ---
+[claude] status: partial — Claude lifecycle hooks are not fully owned/installed in <WORLD>/home/.claude/settings.json; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+--- stderr ---
+
+# no review-receipt entry
+$ runtime status --target claude
+exit: 1
+--- stdout ---
+[claude] status: partial — Claude lifecycle hooks are not fully owned/installed in <WORLD>/home/.claude/settings.json; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+--- stderr ---
+
+# no deny rule
+$ runtime status --target claude
+exit: 1
+--- stdout ---
+[claude] status: partial — Claude lifecycle hooks are not fully owned/installed in <WORLD>/home/.claude/settings.json; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+--- stderr ---
+
+# hooks disabled
+$ runtime status --target claude
+exit: 1
+--- stdout ---
+[claude] status: partial — Claude lifecycle hooks are not fully owned/installed in <WORLD>/home/.claude/settings.json; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+--- stderr ---
+
+# no shaper guard entries
+$ runtime status --target claude
+exit: 1
+--- stdout ---
+[claude] status: partial — Claude lifecycle hooks are not fully owned/installed in <WORLD>/home/.claude/settings.json; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+--- stderr ---
+
+# no projection entries
+$ runtime status --target claude
+exit: 1
+--- stdout ---
+[claude] status: partial — Claude lifecycle hooks are not fully owned/installed in <WORLD>/home/.claude/settings.json; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+--- stderr ---
+
+# no approve guard entries
+$ runtime status --target claude
+exit: 1
+--- stdout ---
+[claude] status: partial — Claude lifecycle hooks are not fully owned/installed in <WORLD>/home/.claude/settings.json; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+--- stderr ---
+
+# no gate-task entries
+$ runtime status --target claude
+exit: 1
+--- stdout ---
+[claude] status: partial — Claude lifecycle hooks are not fully owned/installed in <WORLD>/home/.claude/settings.json; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+--- stderr ---
+
+# no hooks at all
+$ runtime status --target claude
+exit: 1
+--- stdout ---
+[claude] status: partial — Claude lifecycle hooks are not fully owned/installed in <WORLD>/home/.claude/settings.json; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+--- stderr ---
+
+# update brings the missing entry back
+$ runtime update --target claude
+exit: 0
+--- stdout ---
+[claude] update: restart_required — Claude lifecycle hooks updated; restart Claude to load hook changes
+--- stderr ---
+
+# status after it
+$ runtime status --target claude
+exit: 0
+--- stdout ---
+[claude] status: supported — Claude lifecycle hooks are installed and owned
+--- stderr ---
+
+# install into settings that have entries of their own
+$ runtime install --target claude
+exit: 0
+--- stdout ---
+[claude] install: restart_required — Claude lifecycle hooks installed; restart Claude to load hook changes
+--- stderr ---
+
+# uninstall leaves them
+$ runtime uninstall --target claude
+exit: 0
+--- stdout ---
+[claude] uninstall: restart_required — Claude lifecycle hooks removed; restart Claude to unload stale hook processes
+--- stderr ---
+
+--- home/.claude/settings.json ---
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "echo mine",
+            "type": "command"
+          }
+        ],
+        "matcher": "Bash"
+      }
+    ]
+  },
+  "model": "x",
+  "permissions": {
+    "deny": [
+      "Bash(rm *)"
+    ]
+  }
+}
+
+# status after uninstalling
+$ runtime status --target claude
+exit: 1
+--- stdout ---
+[claude] status: partial — Claude lifecycle hooks are not fully owned/installed in <WORLD>/home/.claude/settings.json; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+--- stderr ---
+

@@ -1,0 +1,140 @@
+# runtime 
+$ runtime
+exit: 1
+--- stdout ---
+--- stderr ---
+error: runtime requires an action
+<USAGE>
+
+# runtime --target claude
+$ runtime --target claude
+exit: 1
+--- stdout ---
+--- stderr ---
+error: runtime requires an action: status | install | update | uninstall | capabilities
+<USAGE>
+
+# runtime -x
+$ runtime -x
+exit: 1
+--- stdout ---
+--- stderr ---
+error: runtime requires an action: status | install | update | uninstall | capabilities
+<USAGE>
+
+# runtime restart
+$ runtime restart
+exit: 1
+--- stdout ---
+--- stderr ---
+error: unknown runtime action "restart"
+<USAGE>
+
+# runtime rollback
+$ runtime rollback
+exit: 1
+--- stdout ---
+--- stderr ---
+error: unknown runtime action "rollback"
+<USAGE>
+
+# runtime status --target
+$ runtime status --target
+exit: 1
+--- stdout ---
+--- stderr ---
+error: --target requires a value
+<USAGE>
+
+# runtime status --target vim
+$ runtime status --target vim
+exit: 1
+--- stdout ---
+--- stderr ---
+unknown target "vim"
+<USAGE>
+
+# runtime status --config-root
+$ runtime status --config-root
+exit: 1
+--- stdout ---
+--- stderr ---
+error: --config-root requires a value
+<USAGE>
+
+# runtime status --state-dir
+$ runtime status --state-dir
+exit: 1
+--- stdout ---
+--- stderr ---
+error: --state-dir requires a value
+<USAGE>
+
+# runtime status --component
+$ runtime status --component
+exit: 1
+--- stdout ---
+--- stderr ---
+error: --component requires a value
+<USAGE>
+
+# runtime status --component nonsense
+$ runtime status --component nonsense
+exit: 1
+--- stdout ---
+--- stderr ---
+error: unknown --component "nonsense" (expected "runtime-parity" or "longterm-mem")
+<USAGE>
+
+# runtime status --unknown
+$ runtime status --unknown
+exit: 1
+--- stdout ---
+--- stderr ---
+error: unknown flag "--unknown"
+<USAGE>
+
+# runtime status extra
+$ runtime status extra
+exit: 1
+--- stdout ---
+--- stderr ---
+error: unexpected runtime argument "extra"
+<USAGE>
+
+# runtime status --target claude extra
+$ runtime status --target claude extra
+exit: 1
+--- stdout ---
+--- stderr ---
+error: unexpected runtime argument "extra"
+<USAGE>
+
+# runtime update --component longterm-mem
+$ runtime update --component longterm-mem
+exit: 1
+--- stdout ---
+--- stderr ---
+error: longterm-mem does not support the 'update' action; reinstall instead (--component longterm-mem install)
+
+# runtime status --component runtime-parity --component longterm-mem --component runtime-parity --target claude
+$ runtime status --component runtime-parity --component longterm-mem --component runtime-parity --target claude
+exit: 1
+--- stdout ---
+[claude] status: unsupported — Claude settings file not found at <WORLD>/home/.claude/settings.json
+--- stderr ---
+
+# runtime capabilities --bogus
+$ runtime capabilities --bogus
+exit: 1
+--- stdout ---
+--- stderr ---
+error: runtime capabilities: unknown flag "--bogus"
+
+# runtime probe --bogus
+$ runtime probe --bogus
+exit: 1
+--- stdout ---
+--- stderr ---
+error: runtime probe: unknown flag "--bogus"
+

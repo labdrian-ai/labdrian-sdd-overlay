@@ -1,0 +1,185 @@
+# with no --target the runtime is opencode
+$ runtime status
+exit: 1
+--- stdout ---
+[opencode] status: unsupported — OpenCode plugin not installed
+--- stderr ---
+
+# status claude
+$ runtime status --target claude
+exit: 1
+--- stdout ---
+[claude] status: unsupported — Claude settings file not found at <WORLD>/home/.claude/settings.json
+--- stderr ---
+
+# status codex
+$ runtime status --target codex
+exit: 1
+--- stdout ---
+[codex] status: partial — Codex lifecycle manifest not found at <WORLD>/home/.codex/labdrian-runtime-lifecycle.json
+--- stderr ---
+
+# status opencode
+$ runtime status --target opencode
+exit: 1
+--- stdout ---
+[opencode] status: unsupported — OpenCode plugin not installed
+--- stderr ---
+
+# status pi
+$ runtime status --target pi
+exit: 1
+--- stdout ---
+[pi] status: unsupported — labdrian-pi package is not built at <WORLD>/home/.labdrian-overlay/pi/labdrian-pi (run: labdrian-overlay apply --target pi). 'pi --no-extensions' disables the before_agent_start contract-gate extension for that session, and 'pi --no-skills' disables skill discovery, for that session only; neither flag's use is detected at runtime (short aliases: -ne and -ns)
+--- stderr ---
+
+# status all
+$ runtime status --target all
+exit: 1
+--- stdout ---
+[claude] status: unsupported — Claude settings file not found at <WORLD>/home/.claude/settings.json
+[opencode] status: unsupported — OpenCode plugin not installed
+[codex] status: partial — Codex lifecycle manifest not found at <WORLD>/home/.codex/labdrian-runtime-lifecycle.json
+[pi] status: unsupported — labdrian-pi package is not built at <WORLD>/home/.labdrian-overlay/pi/labdrian-pi (run: labdrian-overlay apply --target pi). 'pi --no-extensions' disables the before_agent_start contract-gate extension for that session, and 'pi --no-skills' disables skill discovery, for that session only; neither flag's use is detected at runtime (short aliases: -ne and -ns)
+--- stderr ---
+
+# a target is trimmed and the case matters
+$ runtime status --target  claude 
+exit: 1
+--- stdout ---
+[claude] status: unsupported — Claude settings file not found at <WORLD>/home/.claude/settings.json
+--- stderr ---
+
+# a target in capitals is not one
+$ runtime status --target Claude
+exit: 1
+--- stdout ---
+--- stderr ---
+unknown target "Claude"
+Usage:
+  engine propagate --registry <path> (--contract-file <path> [--contract-path <str>] | --embedded-contract <name>) [--require-registry]
+  engine gate-task (--contract-file <path> | --embedded-contract <name>) [--contract-path <str>]
+  engine merge-settings --settings <path> --hook-command <binary-path>
+  engine uninstall-hooks --settings <path> --hook-command <binary-path>
+  engine status
+  engine prespec <verb>  (verbs: rank, lint, readiness, brief)
+  engine runtime <action> [--target claude|opencode|codex|pi|all] [--config-root <path>]
+                          [--component runtime-parity|longterm-mem] [--state-dir <path>]
+    action: status | install | update | uninstall
+    --target: opencode (default), claude, codex, pi, or all (--component runtime-parity only)
+    --component: runtime-parity (default, the --target adapters above), or longterm-mem
+      (a single component spanning claude+opencode+codex; no update/rollback action)
+    --state-dir: registration.json directory for --component longterm-mem (default ~/.labdrian-overlay)
+  engine runtime capabilities [--target claude|codex|pi|opencode|all]
+    read-only: prints, as JSON, what each runtime adapter declares it supports (default --target all);
+    every supported or partial claim names the tests that prove it, every partial or unsupported claim
+    states its limit, and untested appears only for a runtime that cannot be exercised on this machine
+    reads no configuration, HOME, or file; exit 0 success, 2 unknown --target value, 1 usage error including an unknown flag
+  engine runtime probe [--target claude|codex|pi|all]
+    read-only, stat only: prints, as JSON, whether each selected runtime's credentials file is present (default
+    --target all) and whether the Engram database, the longterm-mem registration record, and the gentle-ai binary
+    on PATH are present, from the real HOME and PATH; it never opens or reads a file and never runs a program, so
+    a present credentials file does not prove the runtime is authenticated; exit 0 success, 2 unknown --target value,
+    1 usage error including an unknown flag
+  OVERLAY_DIR=<repo-root> gentle-ai-overlay gadu-generate [--check]
+  engine pipkg build|check --overlay-root <path> --registry <path> --dest-dir <path>
+    build: writes the labdrian-pi package tree to --dest-dir
+    check: reports drift between --dest-dir and the current manifest; exit 1 on drift
+  engine skills <verb>   (verbs: list, status, validate, install, adopt, add, remove, sync-manifest, lint, approve, project-register, project-revise, project-status, project-retire)
+    list          [--registry <path>]                                                      print sorted registry entries
+    status        [--registry <path>]                                                      print count summary (total/core/custom)
+    validate      [--registry <path>] [--manifest <path>] --source-root <path>              cross-check registry vs manifest and skills/ on disk; exit 1 on divergence
+    install       [--registry <path>] [--source-root <path>] [--project-id <id>]           install project-scoped skills into <cwd>/.claude/skills/ and <cwd>/.agents/skills/, replacing only what it installed and left unmodified
+                  install records each file it writes (with its SHA-256) in the project lock. It refuses, naming the path, a hand-edited file or a directory it did not install,
+                  reports every refusal, and then writes nothing for any skill. A second install with no source change prints "unchanged: <id>" and writes nothing.
+    adopt         [--registry <path>] [--source-root <path>] [--project-id <id>]           record skill directories already in the project as installed, only when they are exactly the current source;
+                  nothing is adopted silently: a directory stays foreign to install until skills adopt records it. adopt writes the project lock and no skill file
+    add           <id> [--registry <path>] [--manifest <path>] [--source-root <path>] [--repo <url>] [--ref <sha>]  register a skill
+    remove        <id> [--registry <path>] [--manifest <path>]                             unregister a skill from registry and manifest
+    sync-manifest [--registry <path>] [--manifest <path>]                                  regenerate */SKILL.md rows from registry
+    lint          <path> | --rules                                                         lint a SKILL.md file, or print the rule table; exit 1 on any hard error
+    approve       --id <id> --approver <label> --source-root <path>                        record a human approval of skills/<id>/SKILL.md, bound to the digest of its exact bytes
+                  a skill that fails the hard lint is refused, except a baseline skill (a grandfathered global skill, which predates the lint budget and will be rewritten in a later feature):
+                  for those, a size or description finding is printed as a "warning:" line on stderr, the approval is still recorded, and the exit is 0;
+                  any other hard finding, such as a missing front matter, refuses a baseline skill too
+    project-register --project-root <abs> --candidate <key> [--dry-run] [--registry <path>] <draft-file>
+                                                                                           register a project-tier procedural skill; --dry-run prints the plan and writes nothing
+    project-revise   --project-root <abs> --candidate <key> [--dry-run] [--registry <path>] <draft-file>
+                                                                                           revise an agent-owned project skill; --dry-run prints the plan and writes nothing
+    project-status   --project-root <abs> [--registry <path>] [<id>]
+                                                                                           report project-tier ownership and global supersession
+    project-retire   --project-root <abs> [--dry-run] [--reason <reason>] [--absorbed-into <id>] [--registry <path>] <id>
+                                                                                           retire an agent-owned project skill; --dry-run prints the removal plan
+    locking: add, remove, sync-manifest and approve hold an exclusive lock, and validate and install a shared one, on .skills.registry.yaml.lock beside the registry
+    (created by the first write, never removed, git-ignored; shared holders never create it). A lock taken for 2 seconds means another skills command is in progress:
+    the verb changes nothing and reports it with exit 2 (retry); exit 1 is unchanged (the verb ran or was refused, or the lock could not be created)
+    project lock: project-register, project-revise, project-retire, install and adopt also take an exclusive lock on the project root directory itself (--project-root, or
+    the working directory for install and adopt), so no file is created in the project; a busy one is exit 2 too, and a filesystem that cannot lock a directory refuses the verb (exit 1).
+    A verb that holds both takes the overlay lock first, then the project lock, so install and adopt can wait up to twice the lock bound (2 seconds each) when both are busy;
+    project-status takes a shared lock on the project. A writer refuses, with nothing locked, when the registry it would lock does not exist
+  engine skills guard-hook
+    internal Claude Code PreToolUse hook command (install-hooks installs it; on an existing install, re-run install-hooks and restart Claude Code to load it):
+    reads the hook JSON on stdin and denies the agent running 'skills approve' (approval is a human step) or writing a skill's .approval.json record with
+    Write, Edit, MultiEdit, or NotebookEdit. A denial is {"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny",
+    "permissionDecisionReason":...}} with exit 0; an allow prints nothing. A speed bump, not a security boundary: it matches the command text and the file name,
+    so it can be bypassed and can deny text that only spells the invocation. It never blocks on an error (unusable input is an allow): exit 0 always, 1 usage error
+  engine sync-trigger --event session-end|archive --cwd <path> [--state-dir <path>]
+    always exits 0 to its caller; detaches a bounded longterm-mem sync and logs its outcome
+  engine review-receipt capture --cwd <repo> [--change <name>]
+    persists every surviving approved review receipt to openspec/changes/<change>/review-receipts/
+    --change resolves ambiguity when more than one active change exists; omit it to auto-detect
+  engine review-receipt hook --cwd <repo>
+    fail-closed PreToolUse Bash hook: reads tool_input JSON from stdin, captures before
+    'gentle-ai review acknowledge-approved', denies (exit 2) on ambiguity or capture failure
+  engine shaper assess --root <abs> --handoff <rel> --goal <rel> [--view]
+    read-only readiness assessment; exit 0 ready, 3 draft, 2 invalid, 1 usage or internal error
+    --view prints exactly the rendered clearance view bytes the Pi dialog displays
+  engine shaper clearance record --root <abs> --handoff <rel> --goal <rel> --stdin
+    stores a human clearance decision read only from stdin after re-deriving and checking its binding
+    not a signature: any process running as the same OS user, including any installed Pi extension, can forge one
+  engine shaper guard-hook
+    Claude Code PreToolUse deny guard for clearance recording and the clearance store (exit 2 denies; a speed bump)
+  engine memory plan --profile <name> [--goal <path>] [--goal-directive <path>] [--handoff-directive <path>]
+    read-only: resolves a workflow profile's default memory directive, narrows it with an optional
+    Goal-supplied then handoff-supplied directive, and prints the resulting query plan as JSON
+    exit 0 plan resolved, 2 refused/invalid input, 1 usage or output error; it never queries or writes memory
+  engine workflow create --project <id> --workflow <id> --goal <path> --profile <name> [--role-chain <id>]
+  engine workflow start|pause|resume|status --project <id> --workflow <id>
+  engine workflow stage  --project <id> --workflow <id> --stage <name>
+  engine workflow verify --project <id> --workflow <id> --goal <path>
+  engine workflow close  --project <id> --workflow <id> --outcome completed|abandoned [--reason <text>]
+    Phase 6 standalone workflow lifecycle: local bookkeeping under $XDG_STATE_HOME/labdrian/workflows/;
+    no verb requires Gentle AI, gentle-pi, a runtime, memory, or auth (an unavailable dependency is
+    recorded on the event, and a dependency is recorded available only when its file or binary is seen by stat,
+    never opened, run, or trusted). --goal is re-read from disk at both create and verify;
+    no path is ever persisted. exit 0 success, 2 refused/invalid (illegal transition, verify failure,
+    non-owned state), 1 usage error
+  engine workflow bind --project <id> --workflow <id>
+  engine workflow unbind
+  engine workflow binding
+    Phase 7 session binding: records which workflow the git repository containing the working directory
+    follows, in $XDG_STATE_HOME/labdrian/bindings/<repo-key>.json. The key is the SHA-256 of the git common directory,
+    so every worktree of a repository shares one binding. bind needs an existing, owned, not closed workflow;
+    it refuses to replace a binding to a workflow that is still active or whose log cannot be read (unbind first)
+    and replaces a stale one (closed, gone, corrupt, or not ours). unbind is idempotent and prints {"removed": true|false}. binding is read-only:
+    it prints the binding's classification and, when owned, the bound workflow's classification and status.
+    exit 0 success, 2 refused/invalid (no git repository, a workflow that cannot be bound, a binding file that is not ours
+    or cannot be used (foreign, malformed, unavailable), another bind or unbind in progress (busy), a binding another
+    process changed meanwhile), 1 usage error
+  engine projection hook --event UserPromptSubmit|PreToolUse
+    internal Claude Code hook command (install-hooks installs it; on an existing install, re-run install-hooks and restart Claude Code to load it): reads the hook JSON on stdin and prints at most one JSON object.
+    UserPromptSubmit prints {"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","additionalContext":...},"systemMessage":...}, which puts the
+    workflow the repository is bound to (see workflow bind) into the session: id, profile, status, stages, and the memory plan;
+    the binding to a closed workflow is removed, and the note says whether it was removed, left alone, or the removal failed.
+    PreToolUse gates a tool call against the bound workflow and never writes: it denies Write, Edit, MultiEdit, and NotebookEdit while the
+    workflow is paused (never Bash, never a read), and denies a longterm-mem query whose project differs from the memory plan's project
+    (every query when the plan has no project); it never touches get, promote, Engram tools, or any write. A denial is
+    {"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":...}} with exit 0; an allow prints
+    nothing (or only a systemMessage warning) and never permissionDecision allow.
+    silent (no output at all) when the repository is not bound, the input is not a usable hook input, or the directory is not in a
+    repository; on UserPromptSubmit a bound workflow that cannot be followed, or a binding store that cannot be read, gives one warning and
+    nothing is projected (PreToolUse allows quietly). read-only otherwise. exit 0 always (it never blocks a prompt or a tool call), 1 usage error
+
+Embedded contracts: anti-generic-design
+status exit codes: 0 ok, 1 hard failure, 2 degraded
+

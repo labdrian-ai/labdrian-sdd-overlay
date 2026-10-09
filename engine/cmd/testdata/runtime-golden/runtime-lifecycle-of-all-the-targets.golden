@@ -1,0 +1,141 @@
+# install claude
+$ runtime install --target claude
+exit: 0
+--- stdout ---
+[claude] install: restart_required — Claude lifecycle hooks installed; restart Claude to load hook changes
+--- stderr ---
+
+# install codex
+$ runtime install --target codex
+exit: 0
+--- stdout ---
+[codex] install: restart_required — Codex lifecycle manifest installed; restart long-running Codex processes to pick up updates
+--- stderr ---
+
+# install opencode
+$ runtime install --target opencode
+exit: 1
+--- stdout ---
+[opencode] install: partial — OpenCode prompt config could not be derived from the contracts: could not locate skills/_shared/minimalism-contract.md; set LABDRIAN_OVERLAY_DIR
+--- stderr ---
+
+# install pi
+$ runtime install --target pi
+exit: 1
+--- stdout ---
+[pi] install: unsupported — pi package delivery (pipkg build/install) cannot run without OVERLAY_DIR set
+--- stderr ---
+
+# install all
+$ runtime install --target all
+exit: 1
+--- stdout ---
+[claude] install: restart_required — Claude lifecycle hooks installed; restart Claude to load hook changes
+[opencode] install: partial — OpenCode prompt config could not be derived from the contracts: could not locate skills/_shared/minimalism-contract.md; set LABDRIAN_OVERLAY_DIR
+[codex] install: restart_required — Codex lifecycle manifest installed; restart long-running Codex processes to pick up updates
+[pi] install: unsupported — pi package delivery (pipkg build/install) cannot run without OVERLAY_DIR set
+--- stderr ---
+
+# status all after installing: codex alone is partial and opencode and pi are not installed
+$ runtime status --target all
+exit: 1
+--- stdout ---
+[claude] status: supported — Claude lifecycle hooks are installed and owned
+[opencode] status: unsupported — OpenCode plugin not installed
+[codex] status: partial — Codex lifecycle manifest is present and managed, but activation/reload state is unverified — reasons: activation/reload proof unavailable until Codex session lifecycle integration is implemented
+[pi] status: unsupported — labdrian-pi package is not built at <WORLD>/home/.labdrian-overlay/pi/labdrian-pi (run: labdrian-overlay apply --target pi). 'pi --no-extensions' disables the before_agent_start contract-gate extension for that session, and 'pi --no-skills' disables skill discovery, for that session only; neither flag's use is detected at runtime (short aliases: -ne and -ns)
+--- stderr ---
+
+# update claude
+$ runtime update --target claude
+exit: 0
+--- stdout ---
+[claude] update: restart_required — Claude lifecycle hooks updated; restart Claude to load hook changes
+--- stderr ---
+
+# update codex
+$ runtime update --target codex
+exit: 0
+--- stdout ---
+[codex] update: restart_required — Codex lifecycle manifest updated; restart long-running Codex processes to pick up updates
+--- stderr ---
+
+# update opencode
+$ runtime update --target opencode
+exit: 1
+--- stdout ---
+[opencode] update: partial — OpenCode prompt config could not be derived from the contracts: could not locate skills/_shared/minimalism-contract.md; set LABDRIAN_OVERLAY_DIR
+--- stderr ---
+
+# update pi
+$ runtime update --target pi
+exit: 1
+--- stdout ---
+[pi] update: unsupported — pi package delivery (pipkg build/install) cannot run without OVERLAY_DIR set
+--- stderr ---
+
+# update all
+$ runtime update --target all
+exit: 1
+--- stdout ---
+[claude] update: restart_required — Claude lifecycle hooks updated; restart Claude to load hook changes
+[opencode] update: partial — OpenCode prompt config could not be derived from the contracts: could not locate skills/_shared/minimalism-contract.md; set LABDRIAN_OVERLAY_DIR
+[codex] update: restart_required — Codex lifecycle manifest updated; restart long-running Codex processes to pick up updates
+[pi] update: unsupported — pi package delivery (pipkg build/install) cannot run without OVERLAY_DIR set
+--- stderr ---
+
+# uninstall claude
+$ runtime uninstall --target claude
+exit: 0
+--- stdout ---
+[claude] uninstall: restart_required — Claude lifecycle hooks removed; restart Claude to unload stale hook processes
+--- stderr ---
+
+# uninstall codex
+$ runtime uninstall --target codex
+exit: 0
+--- stdout ---
+[codex] uninstall: restart_required — Codex lifecycle manifest removed; restart long-running Codex processes
+--- stderr ---
+
+# uninstall opencode
+$ runtime uninstall --target opencode
+exit: 0
+--- stdout ---
+[opencode] uninstall: restart_required — OpenCode plugin bridge removed; restart OpenCode to unload any already loaded plugin. Active marker remains at <WORLD>/home/.config/opencode/labdrian-runtime-parity.active.json; remove it only after OpenCode is fully stopped/restarted
+--- stderr ---
+
+# uninstall pi
+$ runtime uninstall --target pi
+exit: 1
+--- stdout ---
+[pi] uninstall: unsupported — labdrian-pi package is not built at <WORLD>/home/.labdrian-overlay/pi/labdrian-pi; nothing to uninstall
+--- stderr ---
+
+# uninstall all
+$ runtime uninstall --target all
+exit: 1
+--- stdout ---
+[claude] uninstall: restart_required — Claude lifecycle hooks removed; restart Claude to unload stale hook processes
+[opencode] uninstall: restart_required — OpenCode plugin bridge removed; restart OpenCode to unload any already loaded plugin. Active marker remains at <WORLD>/home/.config/opencode/labdrian-runtime-parity.active.json; remove it only after OpenCode is fully stopped/restarted
+[codex] uninstall: restart_required — Codex lifecycle manifest removed; restart long-running Codex processes
+[pi] uninstall: unsupported — labdrian-pi package is not built at <WORLD>/home/.labdrian-overlay/pi/labdrian-pi; nothing to uninstall
+--- stderr ---
+
+# status all after uninstalling
+$ runtime status --target all
+exit: 1
+--- stdout ---
+[claude] status: partial — Claude lifecycle hooks are not fully owned/installed in <WORLD>/home/.claude/settings.json; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+[opencode] status: unsupported — OpenCode plugin not installed
+[codex] status: partial — Codex lifecycle manifest not found at <WORLD>/home/.codex/labdrian-runtime-lifecycle.json
+[pi] status: unsupported — labdrian-pi package is not built at <WORLD>/home/.labdrian-overlay/pi/labdrian-pi (run: labdrian-overlay apply --target pi). 'pi --no-extensions' disables the before_agent_start contract-gate extension for that session, and 'pi --no-skills' disables skill discovery, for that session only; neither flag's use is detected at runtime (short aliases: -ne and -ns)
+--- stderr ---
+
+# what is left
+--- tree of home ---
+.claude/
+.claude/settings.json
+.claude/settings.json.bak
+.codex/
+
