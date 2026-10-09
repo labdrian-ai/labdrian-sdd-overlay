@@ -1,0 +1,16 @@
+# nothing is installed: every hard check fails, the registry of a project that has none is quiet
+$ status
+exit: 1
+--- stdout ---
+[FAIL] binary: <WORLD>/home/.claude/bin/gentle-ai-overlay — not found
+[FAIL] hook: UserPromptSubmit (propagate) — <WORLD>/home/.claude/settings.json absent or empty
+[FAIL] hook: PreToolUse matcher="Agent" (gate-task) — <WORLD>/home/.claude/settings.json absent or empty
+[WARN] hook: SessionEnd (sync-trigger) — <WORLD>/home/.claude/settings.json absent or empty; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+[WARN] hook: PreToolUse matcher="Bash" (review-receipt) — <WORLD>/home/.claude/settings.json absent or empty; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+[WARN] guard: shaper clearance record (PreToolUse + permissions.deny) — <WORLD>/home/.claude/settings.json absent or empty; clearance recording is unguarded (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+[WARN] hooks: projection (UserPromptSubmit + PreToolUse gates) — <WORLD>/home/.claude/settings.json absent or empty; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[WARN] guard: skills approve (PreToolUse Bash + file tools) — <WORLD>/home/.claude/settings.json absent or empty; the agent can run skills approve unguarded (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[FAIL] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md — not found
+[OK  ] registry: <WORLD>/.atl/skill-registry.md — not present (project may not use the overlay)
+--- stderr ---
+
