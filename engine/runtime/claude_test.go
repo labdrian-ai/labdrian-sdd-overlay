@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	engineRuntime "github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime/core"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings"
 )
 
@@ -15,7 +16,7 @@ func TestClaudeInstallWritesLifecycleHooksAndReportsSupportedStatus(t *testing.T
 	root := t.TempDir()
 	adapter := engineRuntime.NewClaudeAdapter(root)
 
-	if result := adapter.Install(); result.Status != engineRuntime.CapabilityRestartRequired {
+	if result := adapter.Install(); result.Status != core.CapabilityRestartRequired {
 		t.Fatalf("Install() = %#v", result)
 	}
 
@@ -27,7 +28,7 @@ func TestClaudeInstallWritesLifecycleHooksAndReportsSupportedStatus(t *testing.T
 	hookCommand := filepath.Join(root, "bin", "gentle-ai-overlay")
 
 	status := adapter.Status()
-	if status.Status != engineRuntime.CapabilitySupported {
+	if status.Status != core.CapabilitySupported {
 		t.Fatalf("Status() after install = %#v", status)
 	}
 	if !strings.Contains(status.Message, "installed and owned") {
@@ -53,11 +54,11 @@ func TestClaudeUpdateRefreshesLifecycleAndKeepsSupportedStatus(t *testing.T) {
 	root := t.TempDir()
 	adapter := engineRuntime.NewClaudeAdapter(root)
 
-	if result := adapter.Install(); result.Status != engineRuntime.CapabilityRestartRequired {
+	if result := adapter.Install(); result.Status != core.CapabilityRestartRequired {
 		t.Fatalf("Install() = %#v", result)
 	}
 
-	if result := adapter.Update(); result.Status != engineRuntime.CapabilityRestartRequired {
+	if result := adapter.Update(); result.Status != core.CapabilityRestartRequired {
 		t.Fatalf("Update() = %#v", result)
 	}
 
@@ -65,7 +66,7 @@ func TestClaudeUpdateRefreshesLifecycleAndKeepsSupportedStatus(t *testing.T) {
 	// Merger.Install()/Update() path — Update() keeps the (minimalism+design)
 	// lifecycle state "supported" without any test-fixture workaround.
 	status := adapter.Status()
-	if status.Status != engineRuntime.CapabilitySupported {
+	if status.Status != core.CapabilitySupported {
 		t.Fatalf("Status() after update should remain supported, got %#v", status)
 	}
 }
@@ -73,16 +74,16 @@ func TestClaudeUpdateRefreshesLifecycleAndKeepsSupportedStatus(t *testing.T) {
 func TestClaudeUninstallRemovesOwnedHooksAndReturnsUnhealthyStatus(t *testing.T) {
 	root := t.TempDir()
 	adapter := engineRuntime.NewClaudeAdapter(root)
-	if result := adapter.Install(); result.Status != engineRuntime.CapabilityRestartRequired {
+	if result := adapter.Install(); result.Status != core.CapabilityRestartRequired {
 		t.Fatalf("Install() = %#v", result)
 	}
 
-	if result := adapter.Uninstall(); result.Status != engineRuntime.CapabilityRestartRequired {
+	if result := adapter.Uninstall(); result.Status != core.CapabilityRestartRequired {
 		t.Fatalf("Uninstall() = %#v", result)
 	}
 
 	status := adapter.Status()
-	if status.Status != engineRuntime.CapabilityUnsupported && status.Status != engineRuntime.CapabilityPartial {
+	if status.Status != core.CapabilityUnsupported && status.Status != core.CapabilityPartial {
 		t.Fatalf("Status() after uninstall = %#v", status)
 	}
 
@@ -96,12 +97,12 @@ func TestClaudeUninstallRemovesOwnedHooksAndReturnsUnhealthyStatus(t *testing.T)
 
 func TestClaudeDefaultRootIsUnderTheConfigHomeWhenNoRootIsGiven(t *testing.T) {
 	home := t.TempDir()
-	adapter, err := shippedRegistry(t).New(engineRuntime.TargetClaude, engineRuntime.Config{Home: home})
+	adapter, err := shippedRegistry(t).New(core.TargetClaude, core.Config{Home: home})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if result := adapter.Install(); result.Status != engineRuntime.CapabilityRestartRequired {
+	if result := adapter.Install(); result.Status != core.CapabilityRestartRequired {
 		t.Fatalf("Install() = %#v", result)
 	}
 
@@ -113,12 +114,12 @@ func TestClaudeDefaultRootIsUnderTheConfigHomeWhenNoRootIsGiven(t *testing.T) {
 func TestClaudeExplicitRootIsolatedFromDefaultHOME(t *testing.T) {
 	home := t.TempDir()
 	explicitRoot := filepath.Join(t.TempDir(), "explicit-claude-root")
-	adapter, err := shippedRegistry(t).New(engineRuntime.TargetClaude, engineRuntime.Config{Home: home, ConfigRoot: explicitRoot})
+	adapter, err := shippedRegistry(t).New(core.TargetClaude, core.Config{Home: home, ConfigRoot: explicitRoot})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if result := adapter.Install(); result.Status != engineRuntime.CapabilityRestartRequired {
+	if result := adapter.Install(); result.Status != core.CapabilityRestartRequired {
 		t.Fatalf("Install() = %#v", result)
 	}
 
@@ -136,7 +137,7 @@ func TestClaudeStatusRequiresFullLifecycleState(t *testing.T) {
 	hookCommand := filepath.Join(root, "bin", "gentle-ai-overlay")
 	adapter := engineRuntime.NewClaudeAdapter(root)
 
-	if result := adapter.Install(); result.Status != engineRuntime.CapabilityRestartRequired {
+	if result := adapter.Install(); result.Status != core.CapabilityRestartRequired {
 		t.Fatalf("Install() = %#v", result)
 	}
 
@@ -159,7 +160,7 @@ func TestClaudeStatusRequiresFullLifecycleState(t *testing.T) {
 	}
 
 	status := adapter.Status()
-	if status.Status != engineRuntime.CapabilityPartial {
+	if status.Status != core.CapabilityPartial {
 		t.Fatalf("status should be partial when design hooks are missing, got %#v", status)
 	}
 }
@@ -198,7 +199,7 @@ func TestClaudeStatusPartialMessageNamesRemediationCommands(t *testing.T) {
 	}
 
 	status := adapter.Status()
-	if status.Status != engineRuntime.CapabilityPartial {
+	if status.Status != core.CapabilityPartial {
 		t.Fatalf("status should be partial when the SessionEnd family is missing, got %#v", status)
 	}
 	if !strings.Contains(status.Message, "labdrian uninstall-hooks") || !strings.Contains(status.Message, "labdrian install-hooks") {
@@ -215,12 +216,12 @@ func TestClaudeStatusFailsWhenSettingsIsMalformed(t *testing.T) {
 
 	adapter := engineRuntime.NewClaudeAdapter(root)
 	status := adapter.Status()
-	if status.Status != engineRuntime.CapabilityUnsupported {
+	if status.Status != core.CapabilityUnsupported {
 		t.Fatalf("Status() with malformed settings should be unsupported, got %#v", status)
 	}
 
 	install := adapter.Install()
-	if install.Status != engineRuntime.CapabilityPartial {
+	if install.Status != core.CapabilityPartial {
 		t.Fatalf("Install() with malformed settings should be partial, got %#v", install)
 	}
 
