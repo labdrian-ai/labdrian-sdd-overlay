@@ -16,7 +16,7 @@ import (
 // minimalismFamily is the minimalism-contract pair: the UserPromptSubmit entry that propagates
 // the contract into the project's registry, and the PreToolUse/Agent entry that injects its path
 // into sub-agent prompts. An installed entry is kept as it is (keepingOne), so an older command
-// line stays until the owner decides how an installed entry is upgraded.
+// line stays until the owner decides how an installed entry is upgraded (C7).
 var minimalismFamily = hookFamily{
 	identity: LabdrianMinimalismIdentity,
 	specs: []hookSpec{

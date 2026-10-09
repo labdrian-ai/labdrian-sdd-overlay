@@ -4,9 +4,9 @@ import (
 	"testing"
 )
 
-// installedFamilies is every family the overlay installs, by name, for the tests that hold them to
-// the same rules.
-func installedFamilies() map[string]hookFamily {
+// namedFamilies is every family the overlay installs, by name, for the tests that hold them to the
+// same rules. TestNamedFamiliesAreTheInstalledOnes keeps it complete.
+func namedFamilies() map[string]hookFamily {
 	return map[string]hookFamily{
 		"minimalism": minimalismFamily,
 		"design":     designFamily,
@@ -22,7 +22,7 @@ func installedFamilies() map[string]hookFamily {
 // sits under and the matcher it carries (none when the spec has none). A family whose spec and
 // builder drift apart reports one thing and writes another.
 func TestEverySpecDescribesTheEntryItsFamilyBuilds(t *testing.T) {
-	for name, family := range installedFamilies() {
+	for name, family := range namedFamilies() {
 		for _, spec := range family.specs {
 			entry := family.build(toyBinary, spec)
 			matcher, has := entry["matcher"]
@@ -40,7 +40,7 @@ func TestEverySpecDescribesTheEntryItsFamilyBuilds(t *testing.T) {
 // family was built for and carries the family's identity, so an install can be undone and a second
 // install adds nothing.
 func TestEveryEntryAFamilyBuildsIsOwnedByIt(t *testing.T) {
-	for name, family := range installedFamilies() {
+	for name, family := range namedFamilies() {
 		for _, spec := range family.specs {
 			if entry := family.build(toyBinary, spec); !family.owns(entry, toyBinary) {
 				t.Errorf("%s %s %q: the entry it builds is not recognized as its own: %v", name, spec.event, spec.matcher, entry)
@@ -53,7 +53,7 @@ func TestEveryEntryAFamilyBuildsIsOwnedByIt(t *testing.T) {
 // differ only by identity, and an entry that both claimed would be removed or kept for the wrong
 // reason.
 func TestNoEntryIsOwnedByTwoFamilies(t *testing.T) {
-	families := installedFamilies()
+	families := namedFamilies()
 	for builder, family := range families {
 		for _, spec := range family.specs {
 			entry := family.build(toyBinary, spec)
@@ -73,7 +73,7 @@ func TestNoEntryIsOwnedByTwoFamilies(t *testing.T) {
 // upkeep without this table changing.
 func TestAKeepingFamilyLeavesAnInstalledEntryWithAnOlderCommandAsItIs(t *testing.T) {
 	keeping := map[string]bool{"minimalism": true, "design": true, "sync": true, "receipt": true, "shaper": true, "projection": false, "approve": false}
-	for name, family := range installedFamilies() {
+	for name, family := range namedFamilies() {
 		if (family.upkeep != repairing) != keeping[name] {
 			t.Errorf("%s: keeping = %v, want %v", name, family.upkeep != repairing, keeping[name])
 		}
@@ -98,5 +98,23 @@ func TestAKeepingFamilyLeavesAnInstalledEntryWithAnOlderCommandAsItIs(t *testing
 				t.Errorf("merge() changed the events: %v", hooks)
 			}
 		})
+	}
+}
+
+// The table above is the list of installed families by name; it must be that list, so a family
+// added to Merge cannot escape the tests that hold every family to the same rules.
+func TestNamedFamiliesAreTheInstalledOnes(t *testing.T) {
+	named := namedFamilies()
+	if len(named) != len(installedFamilies) {
+		t.Fatalf("%d families are named and %d are installed", len(named), len(installedFamilies))
+	}
+	for _, installed := range installedFamilies {
+		found := false
+		for _, family := range named {
+			found = found || family.identity == installed.identity
+		}
+		if !found {
+			t.Errorf("the family with identity %q is installed and not named in the tests", installed.identity)
+		}
 	}
 }

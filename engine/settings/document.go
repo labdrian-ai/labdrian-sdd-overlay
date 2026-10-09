@@ -60,7 +60,7 @@ func (d *Document) Merge(hookCommand string) (changed bool, err error) {
 	if d.root == nil {
 		return false, ErrNotAnObject
 	}
-	return owner{hookCommand}.mergeHooks(d.root), nil
+	return mergeHooks(d.root, hookCommand), nil
 }
 
 // Remove takes out exactly the entries the overlay owns for the binary at hookCommand, and the
@@ -70,7 +70,7 @@ func (d *Document) Remove(hookCommand string) (changed bool, err error) {
 	if hookCommand == "" {
 		return false, ErrEmptyHookCommand
 	}
-	return owner{hookCommand}.removeHooks(d.root), nil // a null document has nothing to find
+	return removeHooks(d.root, hookCommand), nil // a null document has nothing to find
 }
 
 // Bytes is the document as it is written: the keys sorted, two spaces of indentation, no trailing

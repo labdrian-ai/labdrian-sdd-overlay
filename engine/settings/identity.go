@@ -30,3 +30,9 @@ const (
 	// security boundary.
 	ShaperClearanceDenyRule = "Bash(*" + guardmarkers.Command + "*)"
 )
+
+// embeddedDesignName is the engine-owned managed contract that propagates the
+// anti-generic-design guard (countering the model's default "Claude/SaaS
+// look" design bias). It rides the same propagate/gate-task machinery as the
+// minimalism contract but writes a DISTINCT registry block.
+const embeddedDesignName = "anti-generic-design"

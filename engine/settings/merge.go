@@ -2,66 +2,69 @@ package settings
 
 import "strings"
 
-// owner is the binary path whose entries the functions below add and remove. Every entry the
-// overlay writes is told from anyone else's by that path together with the token of its family,
-// so the path is the one thing a merge needs besides the object it works on.
-type owner struct{ hookCommand string }
+// installedFamilies are the families Merge puts in settings.json, in install order. The order is
+// the order of the entries a fresh install writes under one event, so it is part of the file's
+// bytes; a family added here goes after the ones that exist.
+var installedFamilies = []hookFamily{
+	minimalismFamily,
+	designFamily,
+	syncTriggerFamily,
+	reviewReceiptFamily,
+	shaperGuardFamily,
+	projectionFamily,
+	approveGuardFamily,
+}
 
-// embeddedDesignName is the engine-owned managed contract that propagates the
-// anti-generic-design guard (countering the model's default "Claude/SaaS
-// look" design bias). It rides the same propagate/gate-task machinery as the
-// minimalism contract but writes a DISTINCT registry block.
-const embeddedDesignName = "anti-generic-design"
-
-// mergeHooks inserts our hook entries if not already present. Returns true if
-// any change was made. It installs TWO pairs: the minimalism-contract pair
-// and the anti-generic-design pair. Each pair is deduped by its own identity
-// so both coexist.
+// retiredFamilies are the hook pairs this overlay used to install and no longer does
+// (skill-discovery-safety, review-projection-contract: both dropped because gentle-ai now covers
+// them natively). Merge never writes them, but Remove still finds them so uninstall stays idempotent
+// for a machine that installed them under an older version of this overlay: without them, a stale
+// entry from a pre-upgrade install would be recognized by no family and left behind. A retired
+// family has an identity and nothing else.
 //
-// Identity matching in this file is entirely name-based
-// (isMinimalismEntry / isDesignEntry), not a generic marker or
-// command-prefix scan: dropping a contract's support means dropping its
-// identity const, its isXEntry predicate, and its builder functions, and
-// mergeHooks simply stops writing that pair. Because that alone would also
-// stop Uninstall from ever recognizing a pair it no longer installs,
-// removeHooks additionally matches the fixed legacyIdentities list below —
-// see its doc comment for why that is a deliberate backward-compat
-// exception, not a general-purpose mechanism.
-func (m owner) mergeHooks(root map[string]interface{}) bool {
+// This is a deliberate, fixed, hand-maintained list, not a generic marker or command-prefix scan.
+// Retiring a family is exactly the moment its identity belongs here instead of in installedFamilies.
+// TestRemoveHooksCleansUpLegacySafetyAndProjectionEntries pins that a stale entry using each of
+// these tokens is still removed.
+var retiredFamilies = []hookFamily{
+	{identity: "--embedded-contract skill-discovery-safety"},
+	{identity: "--embedded-contract review-projection-contract"},
+}
+
+// ownedByAFamily reports whether a hook entry belongs to any family, installed or retired, for the
+// binary at hookCommand. Identity is the family's shape, the binary path together with its token,
+// not merely any entry that references the same binary path.
+func ownedByAFamily(e interface{}, hookCommand string) bool {
+	for _, families := range [][]hookFamily{installedFamilies, retiredFamilies} {
+		for _, family := range families {
+			if family.owns(e, hookCommand) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// mergeHooks inserts our hook entries if not already present. Returns true if any change was made.
+// Each family is put in place as its upkeep says, so a family that keeps what is installed adds
+// only what is missing and one that repairs makes itself exact; the permissions.deny backstop of
+// the shaper clearance guard is added beside them.
+//
+// Identity matching is entirely by family (hookFamily.owns): dropping a family's support means
+// moving it from installedFamilies to retiredFamilies, and Merge simply stops writing it while
+// Remove still finds it.
+func mergeHooks(root map[string]interface{}, hookCommand string) bool {
 	hooks := ensureHooksMap(root)
 	changed := false
-
-	// The minimalism-contract pair, the anti-generic-design pair, the SessionEnd sync-trigger entry
-	// and the PreToolUse/Bash review-receipt entry, each deduped by its own identity so they
-	// coexist.
-	for _, family := range []hookFamily{minimalismFamily, designFamily, syncTriggerFamily, reviewReceiptFamily} {
-		if family.merge(hooks, m.hookCommand) {
+	for _, family := range installedFamilies {
+		if family.merge(hooks, hookCommand) {
 			changed = true
 		}
 	}
-
-	// The shaper clearance guard: two PreToolUse entries, and the permissions.deny backstop. A speed
-	// bump, not a security boundary.
-	if shaperGuardFamily.merge(hooks, m.hookCommand) {
-		changed = true
-	}
+	// A speed bump, not a security boundary.
 	if addClearanceDenyRule(root) {
 		changed = true
 	}
-
-	// Projection family (identity: binary path + projection token): the
-	// UserPromptSubmit context projection and the two PreToolUse gates.
-	if m.mergeProjection(hooks) {
-		changed = true
-	}
-
-	// Approve guard family (identity: binary path + approve guard token): the
-	// two PreToolUse entries that deny the agent running skills approve or
-	// writing the approval record. A speed bump, not a security boundary.
-	if m.mergeApproveGuard(hooks) {
-		changed = true
-	}
-
 	root["hooks"] = hooks
 	return changed
 }
@@ -83,46 +86,13 @@ func addClearanceDenyRule(root map[string]interface{}) bool {
 	return true
 }
 
-// legacyIdentities are the --embedded-contract identity tokens of hook pairs
-// this overlay used to install and no longer does (skill-discovery-safety,
-// review-projection-contract — both dropped because gentle-ai now covers
-// them natively). mergeHooks never writes these anymore, but removeHooks
-// still matches them so Uninstall stays idempotent for a machine that
-// installed them under an older version of this overlay: without this list,
-// a stale entry from a pre-upgrade install would no longer be recognized by
-// any isXEntry predicate and Uninstall would silently leave it behind.
-//
-// This is a deliberate, fixed, hand-maintained list — not a generic
-// marker/command-prefix scan. Retiring a contract's dedicated isXEntry
-// predicate and builder functions is exactly the moment its identity token
-// belongs here instead. TestRemoveHooksCleansUpLegacySafetyAndProjectionEntries
-// (settings_test.go) pins that a stale entry using each of these tokens is
-// still removed.
-var legacyIdentities = []string{
-	"--embedded-contract skill-discovery-safety",
-	"--embedded-contract review-projection-contract",
-}
-
-// isLegacyEntry reports whether a hook entry is a leftover from a retired
-// contract pair: it references our binary AND one of legacyIdentities.
-func (m owner) isLegacyEntry(e interface{}) bool {
-	for _, identity := range legacyIdentities {
-		if entryContainsBinary(e, m.hookCommand) && entryContainsBinary(e, identity) {
-			return true
-		}
-	}
-	return false
-}
-
 // removeHooks removes our hook entries. Returns true if any change was made.
-// Identity is Labdrian-owned entry shape: our minimalism, design, or
-// sync-trigger entries, the review-receipt, shaper guard, projection, and
-// approve guard entries, plus any stale entry matching legacyIdentities (see
-// its doc comment), not merely any entry that happens to reference the same
-// binary path. SessionEnd is scanned alongside UserPromptSubmit/PreToolUse
+// Identity is Labdrian-owned entry shape: an entry of any family, installed or
+// retired (ownedByAFamily), not merely any entry that happens to reference the
+// same binary path. SessionEnd is scanned alongside UserPromptSubmit/PreToolUse
 // so an owned sync-trigger entry there is removed the same way; Stop is
 // never scanned because nothing owned is ever installed there.
-func (m owner) removeHooks(root map[string]interface{}) bool {
+func removeHooks(root map[string]interface{}, hookCommand string) bool {
 	hooks, ok := root["hooks"].(map[string]interface{})
 	if !ok {
 		return false
@@ -136,7 +106,7 @@ func (m owner) removeHooks(root map[string]interface{}) bool {
 		}
 		var filtered []interface{}
 		for _, e := range entries {
-			if minimalismFamily.owns(e, m.hookCommand) || designFamily.owns(e, m.hookCommand) || syncTriggerFamily.owns(e, m.hookCommand) || reviewReceiptFamily.owns(e, m.hookCommand) || shaperGuardFamily.owns(e, m.hookCommand) || m.isProjectionEntry(e) || m.isApproveGuardEntry(e) || m.isLegacyEntry(e) {
+			if ownedByAFamily(e, hookCommand) {
 				changed = true
 				continue
 			}
@@ -225,13 +195,4 @@ func entryContainsBinary(e interface{}, hookCommand string) bool {
 		}
 	}
 	return false
-}
-
-// appendHook appends entry to hooks[key], creating the slice if absent.
-func appendHook(hooks map[string]interface{}, key string, entry map[string]interface{}) {
-	var entries []interface{}
-	if existing, ok := hooks[key].([]interface{}); ok {
-		entries = existing
-	}
-	hooks[key] = append(entries, entry)
 }
