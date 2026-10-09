@@ -9,14 +9,21 @@ import (
 	"testing"
 )
 
+// environmentRead names one place that reads a variable: the file of the package and the variable.
+// A struct, not a joined string, so no variable name can be mistaken for part of the file.
+type environmentRead struct {
+	file     string
+	variable string
+}
+
 // environmentReadsAllowed are the reads of the environment engine/runtime still makes, each with
 // the work unit that removes it. Every other read -- of the variables the composition root hands
 // down in a Config or in the options of an adapter (HOME, XDG_CONFIG_HOME, CODEX_HOME,
 // OVERLAY_DIR, STATE_DIR, LABDRIAN_PI_SKIP_SUBAGENTS, LABDRIAN_PI_DEPLOY_REF), of
 // LABDRIAN_PI_BIN, which used to name the `pi` to run, or of a name the scan cannot resolve --
 // fails the scan. The list only shrinks: an entry whose read is gone fails it too.
-var environmentReadsAllowed = map[string]string{
-	"opencode.go:LABDRIAN_OVERLAY_DIR": "the contract lookup of the OpenCode plugin (H26)",
+var environmentReadsAllowed = map[environmentRead]string{
+	{file: "opencode.go", variable: "LABDRIAN_OVERLAY_DIR"}: "the contract lookup of the OpenCode plugin (H26)",
 }
 
 // TestAdaptersReadNoEnvironment reads the source of the package: a call to os.UserHomeDir,
@@ -26,7 +33,7 @@ var environmentReadsAllowed = map[string]string{
 // package is a second place, and the one that made --config-root differ between runtimes.
 func TestAdaptersReadNoEnvironment(t *testing.T) {
 	fset := token.NewFileSet()
-	used := map[string]bool{}
+	used := map[environmentRead]bool{}
 	files := nonTestGoFiles(t, ".")
 	constants := packageStringConstants(t, fset, files)
 	for _, path := range files {
@@ -62,7 +69,7 @@ func TestAdaptersReadNoEnvironment(t *testing.T) {
 					t.Errorf("%s: os.%s reads a variable the scan cannot name; the adapter should have been given it in its Config", where, sel.Sel.Name)
 					return true
 				}
-				key := filepath.Base(path) + ":" + name
+				key := environmentRead{file: filepath.Base(path), variable: name}
 				if _, ok := environmentReadsAllowed[key]; ok {
 					used[key] = true
 					return true
@@ -74,13 +81,17 @@ func TestAdaptersReadNoEnvironment(t *testing.T) {
 	}
 	for key, unit := range environmentReadsAllowed {
 		if !used[key] {
-			t.Errorf("%s is allowed to read the environment (%s) but no longer does; remove it from environmentReadsAllowed", key, unit)
+			t.Errorf("%s no longer reads %s although environmentReadsAllowed lists it (%s); remove the entry", key.file, key.variable, unit)
 		}
 	}
 }
 
 // packageStringConstants maps the name of every package-level string constant declared with a
 // literal in the given files to its value, so a read through a named constant is read by name.
+// It is a map of the package, so a constant of the same name declared inside a function would be
+// read as the package one: the scan does not follow shadowing. No file of the package does that,
+// and a function-level constant that read the environment under a package name would be found
+// by a reader of the diff, not by this scan.
 func packageStringConstants(t *testing.T, fset *token.FileSet, paths []string) map[string]string {
 	t.Helper()
 	constants := map[string]string{}

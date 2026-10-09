@@ -63,9 +63,10 @@ func TestLiveGuard_PiOnThePathIsTheGuard(t *testing.T) {
 	}
 }
 
-// TestNoTestOfThisPackageUsesTheProcessAdapter reads the source of the tests: they drive the code under test with a fake CommandRunner,
-// so a test that imports the process adapter, or runs `pi` itself, can reach the CLI of the
-// machine with the PATH of the run. The scan is piguard's, shared with the other packages.
+// TestNoTestOfThisPackageUsesTheProcessAdapter reads the source of the tests. They drive the code
+// under test with a fake CommandRunner, so a test that imports the process adapter, or runs `pi`
+// itself, can reach the CLI of the machine with the PATH of the run. The scan is piguard's,
+// shared with the other packages.
 func TestNoTestOfThisPackageUsesTheProcessAdapter(t *testing.T) {
 	piguard.CheckTestSources(t, ".")
 }
