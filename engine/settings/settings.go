@@ -28,7 +28,6 @@
 package settings
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -108,12 +107,6 @@ func ResolveClaudeHookCommandPath(configRoot string) (string, error) {
 	return filepath.Join(configRoot, "bin", "gentle-ai-overlay"), nil
 }
 
-// errEmptyHookCommand is returned by Install and Uninstall when the merger was
-// built without a binary path. Every entry is recognized as ours by that path,
-// so with none there is nothing to tell our entries from anyone else's, and
-// acting could rewrite or remove foreign hooks.
-var errEmptyHookCommand = errors.New("settings: the hook command is empty; without the binary path our entries cannot be told from foreign ones (nothing was changed)")
-
 // NewMerger returns a Merger that will merge hooks into settingsPath using
 // hookCommand as the unique identity (binary path substring) for our entries.
 func NewMerger(settingsPath, hookCommand string) *Merger {
@@ -123,318 +116,83 @@ func NewMerger(settingsPath, hookCommand string) *Merger {
 	}
 }
 
-// Install adds our two hook entries to settings.json if they are not already
+// Install adds our hook entries to settings.json if they are not already
 // present. It creates the file if absent, and backs up the original to
 // settings.json.bak before any overwrite. The write is atomic (temp file +
 // rename). Returns an error — and leaves the original untouched — if the
 // existing file contains invalid JSON.
 func (m *Merger) Install() error {
 	if m.hookCommand == "" {
-		return errEmptyHookCommand
+		return ErrEmptyHookCommand
 	}
-	root, err := m.loadOrEmpty()
+	doc, err := m.loadOrEmpty()
 	if err != nil {
 		return err
 	}
 
-	changed := m.mergeHooks(root)
+	changed, err := doc.Merge(m.hookCommand)
+	if err != nil {
+		return fmt.Errorf("settings: %s contains invalid JSON (not modified): %w", m.settingsPath, err)
+	}
 	if !changed {
 		return nil
 	}
 
-	return m.writeAtomic(root)
+	return m.writeAtomic(doc)
 }
 
-// Uninstall removes our two hook entries from settings.json. If the file is
+// Uninstall removes our hook entries from settings.json. If the file is
 // absent, it is a no-op. Leaves all other keys and hooks intact.
 func (m *Merger) Uninstall() error {
 	if m.hookCommand == "" {
-		return errEmptyHookCommand
+		return ErrEmptyHookCommand
 	}
 	if _, err := os.Stat(m.settingsPath); os.IsNotExist(err) {
 		return nil
 	}
 
-	root, err := m.loadOrEmpty()
+	doc, err := m.loadOrEmpty()
 	if err != nil {
 		return err
 	}
 
-	changed := m.removeHooks(root)
+	changed, err := doc.Remove(m.hookCommand)
+	if err != nil {
+		return err
+	}
 	if !changed {
 		return nil
 	}
 
-	return m.writeAtomic(root)
+	return m.writeAtomic(doc)
 }
 
 // loadOrEmpty reads and parses settings.json. If the file does not exist, it
-// returns an empty map (which will be written as a new file). If the file
+// returns an empty document (which will be written as a new file). If the file
 // exists but contains invalid JSON, it returns an error without modifying
 // anything.
-func (m *Merger) loadOrEmpty() (map[string]interface{}, error) {
+func (m *Merger) loadOrEmpty() (Document, error) {
 	data, err := os.ReadFile(m.settingsPath)
 	if os.IsNotExist(err) {
-		return map[string]interface{}{}, nil
+		return Empty(), nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("settings: read %s: %w", m.settingsPath, err)
+		return Document{}, fmt.Errorf("settings: read %s: %w", m.settingsPath, err)
 	}
 
-	var root map[string]interface{}
-	if err := json.Unmarshal(data, &root); err != nil {
-		return nil, fmt.Errorf("settings: %s contains invalid JSON (not modified): %w", m.settingsPath, err)
-	}
-	return root, nil
-}
-
-// embeddedDesignName is the engine-owned managed contract that propagates the
-// anti-generic-design guard (countering the model's default "Claude/SaaS
-// look" design bias). It rides the same propagate/gate-task machinery as the
-// minimalism contract but writes a DISTINCT registry block.
-const embeddedDesignName = "anti-generic-design"
-
-// designIdentity is the distinguishing token used to dedup/remove the design
-// hook entries independently of the minimalism entries. Both pairs reference
-// the same binary path, so the binary substring alone is NOT a unique
-// identity — we also key on this token (the --embedded-contract argument) so
-// the second pair installs instead of being collapsed as a duplicate.
-const designIdentity = "--embedded-contract " + embeddedDesignName
-
-// mergeHooks inserts our hook entries if not already present. Returns true if
-// any change was made. It installs TWO pairs: the minimalism-contract pair
-// and the anti-generic-design pair. Each pair is deduped by its own identity
-// so both coexist.
-//
-// Identity matching in this file is entirely name-based
-// (isMinimalismEntry / isDesignEntry), not a generic marker or
-// command-prefix scan: dropping a contract's support means dropping its
-// identity const, its isXEntry predicate, and its builder functions, and
-// mergeHooks simply stops writing that pair. Because that alone would also
-// stop Uninstall from ever recognizing a pair it no longer installs,
-// removeHooks additionally matches the fixed legacyIdentities list below —
-// see its doc comment for why that is a deliberate backward-compat
-// exception, not a general-purpose mechanism.
-func (m *Merger) mergeHooks(root map[string]interface{}) bool {
-	hooks := ensureHooksMap(root)
-	changed := false
-
-	// Minimalism-contract pair (identity: binary path, scoped to the entry that
-	// does NOT carry the design token).
-	if !hasEntryMatching(hooks, "UserPromptSubmit", m.isMinimalismEntry) {
-		appendHook(hooks, "UserPromptSubmit", m.buildUserPromptSubmitEntry())
-		changed = true
-	}
-	if !hasEntryMatching(hooks, "PreToolUse", m.isMinimalismEntry) {
-		appendHook(hooks, "PreToolUse", m.buildPreToolUseEntry())
-		changed = true
-	}
-
-	// Anti-generic-design pair (identity: binary path + designIdentity).
-	if !hasEntryMatching(hooks, "UserPromptSubmit", m.isDesignEntry) {
-		appendHook(hooks, "UserPromptSubmit", m.buildDesignUserPromptSubmitEntry())
-		changed = true
-	}
-	if !hasEntryMatching(hooks, "PreToolUse", m.isDesignEntry) {
-		appendHook(hooks, "PreToolUse", m.buildDesignPreToolUseEntry())
-		changed = true
-	}
-
-	// SessionEnd sync-trigger entry (identity: binary path + sync-trigger
-	// token). Never installs anything on Stop — SessionEnd fires once per
-	// session, Stop fires per turn.
-	if !hasEntryMatching(hooks, "SessionEnd", m.isSyncTriggerEntry) {
-		appendHook(hooks, "SessionEnd", m.buildSyncTriggerSessionEndEntry())
-		changed = true
-	}
-
-	// PreToolUse/Bash review-receipt entry (identity: binary path +
-	// review-receipt token). Fail-closed hook: captures approved review
-	// receipts before an acknowledge-approved invocation burns them.
-	if !hasEntryMatching(hooks, "PreToolUse", m.isReviewReceiptEntry) {
-		appendHook(hooks, "PreToolUse", m.buildReviewReceiptPreToolUseEntry())
-		changed = true
-	}
-
-	// PreToolUse shaper clearance guard entries (identity: binary path +
-	// shaper guard token), one for Bash and one for the file tools, plus the
-	// permissions.deny backstop. A speed bump, not a security boundary.
-	for _, matcher := range []string{"Bash", ShaperGuardFileToolMatcher} {
-		if !hasEntryMatching(hooks, "PreToolUse", shaperGuardMatcher(m.hookCommand, matcher)) {
-			appendHook(hooks, "PreToolUse", m.buildShaperGuardPreToolUseEntry(matcher))
-			changed = true
-		}
-	}
-	if !hasDenyRule(root, ShaperClearanceDenyRule) {
-		perms, ok := root["permissions"].(map[string]interface{})
-		if !ok {
-			perms = map[string]interface{}{}
-			root["permissions"] = perms
-		}
-		deny, _ := perms["deny"].([]interface{})
-		perms["deny"] = append(deny, ShaperClearanceDenyRule)
-		changed = true
-	}
-
-	// Projection family (identity: binary path + projection token): the
-	// UserPromptSubmit context projection and the two PreToolUse gates.
-	if m.mergeProjection(hooks) {
-		changed = true
-	}
-
-	// Approve guard family (identity: binary path + approve guard token): the
-	// two PreToolUse entries that deny the agent running skills approve or
-	// writing the approval record. A speed bump, not a security boundary.
-	if m.mergeApproveGuard(hooks) {
-		changed = true
-	}
-
-	root["hooks"] = hooks
-	return changed
-}
-
-// isShaperGuardEntry reports whether a hook entry is one of our shaper
-// clearance guard entries.
-func (m *Merger) isShaperGuardEntry(e interface{}) bool {
-	return entryContainsBinary(e, m.hookCommand) && entryContainsBinary(e, LabdrianShaperGuardIdentity)
-}
-
-// minimalismIdentity is the distinguishing token for the minimalism-contract
-// hook entries. Using a positive token (the --contract-file argument) keeps
-// the identity symmetric with isDesignEntry and avoids collapsing a second
-// contract into the minimalism identity via NOT-logic.
-const minimalismIdentity = "minimalism-contract.md"
-
-// isMinimalismEntry reports whether a hook entry is our minimalism-contract
-// entry: it references our binary AND the minimalism identity token.
-func (m *Merger) isMinimalismEntry(e interface{}) bool {
-	return entryContainsBinary(e, m.hookCommand) && entryContainsBinary(e, minimalismIdentity)
-}
-
-// isDesignEntry reports whether a hook entry is our anti-generic-design entry:
-// it references our binary AND the design token.
-func (m *Merger) isDesignEntry(e interface{}) bool {
-	return entryContainsBinary(e, m.hookCommand) && entryContainsBinary(e, designIdentity)
-}
-
-// isSyncTriggerEntry reports whether a hook entry is our SessionEnd
-// sync-trigger entry: it references our binary AND the sync-trigger token.
-func (m *Merger) isSyncTriggerEntry(e interface{}) bool {
-	return entryContainsBinary(e, m.hookCommand) && entryContainsBinary(e, LabdrianSyncTriggerIdentity)
-}
-
-// isReviewReceiptEntry reports whether a hook entry is our PreToolUse/Bash
-// review-receipt entry: it references our binary AND the review-receipt
-// identity token.
-func (m *Merger) isReviewReceiptEntry(e interface{}) bool {
-	return entryContainsBinary(e, m.hookCommand) && entryContainsBinary(e, LabdrianReviewReceiptIdentity)
-}
-
-// legacyIdentities are the --embedded-contract identity tokens of hook pairs
-// this overlay used to install and no longer does (skill-discovery-safety,
-// review-projection-contract — both dropped because gentle-ai now covers
-// them natively). mergeHooks never writes these anymore, but removeHooks
-// still matches them so Uninstall stays idempotent for a machine that
-// installed them under an older version of this overlay: without this list,
-// a stale entry from a pre-upgrade install would no longer be recognized by
-// any isXEntry predicate and Uninstall would silently leave it behind.
-//
-// This is a deliberate, fixed, hand-maintained list — not a generic
-// marker/command-prefix scan. Retiring a contract's dedicated isXEntry
-// predicate and builder functions is exactly the moment its identity token
-// belongs here instead. TestRemoveHooksCleansUpLegacySafetyAndProjectionEntries
-// (settings_test.go) pins that a stale entry using each of these tokens is
-// still removed.
-var legacyIdentities = []string{
-	"--embedded-contract skill-discovery-safety",
-	"--embedded-contract review-projection-contract",
-}
-
-// isLegacyEntry reports whether a hook entry is a leftover from a retired
-// contract pair: it references our binary AND one of legacyIdentities.
-func (m *Merger) isLegacyEntry(e interface{}) bool {
-	for _, identity := range legacyIdentities {
-		if entryContainsBinary(e, m.hookCommand) && entryContainsBinary(e, identity) {
-			return true
-		}
-	}
-	return false
-}
-
-// removeHooks removes our hook entries. Returns true if any change was made.
-// Identity is Labdrian-owned entry shape: our minimalism, design, or
-// sync-trigger entries, the review-receipt, shaper guard, projection, and
-// approve guard entries, plus any stale entry matching legacyIdentities (see
-// its doc comment), not merely any entry that happens to reference the same
-// binary path. SessionEnd is scanned alongside UserPromptSubmit/PreToolUse
-// so an owned sync-trigger entry there is removed the same way; Stop is
-// never scanned because nothing owned is ever installed there.
-func (m *Merger) removeHooks(root map[string]interface{}) bool {
-	hooks, ok := root["hooks"].(map[string]interface{})
-	if !ok {
-		return false
-	}
-
-	changed := false
-	for _, key := range []string{"UserPromptSubmit", "PreToolUse", "SessionEnd"} {
-		entries, ok := hooks[key].([]interface{})
-		if !ok {
-			continue
-		}
-		var filtered []interface{}
-		for _, e := range entries {
-			if m.isMinimalismEntry(e) || m.isDesignEntry(e) || m.isSyncTriggerEntry(e) || m.isReviewReceiptEntry(e) || m.isShaperGuardEntry(e) || m.isProjectionEntry(e) || m.isApproveGuardEntry(e) || m.isLegacyEntry(e) {
-				changed = true
-				continue
-			}
-			filtered = append(filtered, e)
-		}
-		if len(filtered) == 0 {
-			// Remove the key entirely rather than writing null or an empty
-			// array — avoids structural noise in the emitted JSON.
-			delete(hooks, key)
-		} else {
-			hooks[key] = filtered
-		}
-	}
-
-	if perms, ok := root["permissions"].(map[string]interface{}); ok {
-		if deny, ok := perms["deny"].([]interface{}); ok {
-			var kept []interface{}
-			for _, r := range deny {
-				if r == ShaperClearanceDenyRule {
-					changed = true
-					continue
-				}
-				kept = append(kept, r)
-			}
-			if len(kept) == 0 {
-				delete(perms, "deny")
-			} else {
-				perms["deny"] = kept
-			}
-			if len(perms) == 0 {
-				delete(root, "permissions")
-			}
-		}
-	}
-
-	root["hooks"] = hooks
-	return changed
-}
-
-// writeAtomic serializes root to a temp file, validates it parses back,
-// copies the original to .bak if it exists, then renames the temp into place.
-func (m *Merger) writeAtomic(root map[string]interface{}) error {
-	data, err := json.MarshalIndent(root, "", "  ")
+	doc, err := Parse(data)
 	if err != nil {
-		return fmt.Errorf("settings: marshal: %w", err)
+		return Document{}, fmt.Errorf("settings: %s contains invalid JSON (not modified): %w", m.settingsPath, err)
 	}
+	return doc, nil
+}
 
-	// Validate the serialized output parses cleanly before touching any files.
-	var validate interface{}
-	if err := json.Unmarshal(data, &validate); err != nil {
-		return fmt.Errorf("settings: merged JSON failed validation (not written): %w", err)
+// writeAtomic serializes doc to a temp file, copies the original to .bak if it
+// exists, then renames the temp into place.
+func (m *Merger) writeAtomic(doc Document) error {
+	data, err := doc.Bytes()
+	if err != nil {
+		return err
 	}
 
 	dir := filepath.Dir(m.settingsPath)
@@ -468,66 +226,6 @@ func (m *Merger) writeAtomic(root map[string]interface{}) error {
 		return fmt.Errorf("settings: rename temp to %s: %w", m.settingsPath, err)
 	}
 	return nil
-}
-
-// ensureHooksMap retrieves or creates the "hooks" map in root.
-func ensureHooksMap(root map[string]interface{}) map[string]interface{} {
-	if h, ok := root["hooks"].(map[string]interface{}); ok {
-		return h
-	}
-	h := map[string]interface{}{}
-	root["hooks"] = h
-	return h
-}
-
-// hasEntryMatching reports whether hooks[key] already contains an entry for
-// which the predicate returns true. Used to dedup each of our hook pairs by its
-// own identity so adding a second pair does not collapse into the first.
-func hasEntryMatching(hooks map[string]interface{}, key string, match func(interface{}) bool) bool {
-	entries, ok := hooks[key].([]interface{})
-	if !ok {
-		return false
-	}
-	for _, e := range entries {
-		if match(e) {
-			return true
-		}
-	}
-	return false
-}
-
-// entryContainsBinary returns true if the hook entry (an outer object) contains
-// hookCommand as a substring in any of its inner hooks[].command strings.
-func entryContainsBinary(e interface{}, hookCommand string) bool {
-	em, ok := e.(map[string]interface{})
-	if !ok {
-		return false
-	}
-	innerHooks, ok := em["hooks"].([]interface{})
-	if !ok {
-		return false
-	}
-	for _, ih := range innerHooks {
-		ihm, ok := ih.(map[string]interface{})
-		if !ok {
-			continue
-		}
-		if cmdStr, ok := ihm["command"].(string); ok {
-			if strings.Contains(cmdStr, hookCommand) {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-// appendHook appends entry to hooks[key], creating the slice if absent.
-func appendHook(hooks map[string]interface{}, key string, entry map[string]interface{}) {
-	var entries []interface{}
-	if existing, ok := hooks[key].([]interface{}); ok {
-		entries = existing
-	}
-	hooks[key] = append(entries, entry)
 }
 
 // copyFile copies src to dst, creating dst if it does not exist.

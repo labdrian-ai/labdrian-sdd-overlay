@@ -27,7 +27,7 @@ import (
 //
 // This ensures the hook exits 0 even if the binary is absent, so no Agent
 // call is ever blocked by a missing binary.
-func (m *Merger) buildUserPromptSubmitEntry() map[string]interface{} {
+func (m owner) buildUserPromptSubmitEntry() map[string]interface{} {
 	// CLAUDE_PROJECT_DIR is the env var Claude Code sets for hooks to point at
 	// the project root. The :- fallback to "." keeps the command functional
 	// when the env var is absent (e.g. local testing), but the primary path
@@ -58,7 +58,7 @@ func (m *Merger) buildUserPromptSubmitEntry() map[string]interface{} {
 // path line in the Agent prompt will be this absolute path.
 //
 // Missing-binary safety: same guard pattern as UserPromptSubmit.
-func (m *Merger) buildPreToolUseEntry() map[string]interface{} {
+func (m owner) buildPreToolUseEntry() map[string]interface{} {
 	cmd := fmt.Sprintf(
 		`command -v %s &>/dev/null && %s gate-task --contract-file ~/.claude/skills/_shared/minimalism-contract.md --contract-path "$HOME/.claude/skills/_shared/minimalism-contract.md" || true`,
 		m.hookCommand, m.hookCommand,
@@ -79,7 +79,7 @@ func (m *Merger) buildPreToolUseEntry() map[string]interface{} {
 // identity.
 //
 // Same missing-binary guard as the minimalism entry.
-func (m *Merger) buildDesignUserPromptSubmitEntry() map[string]interface{} {
+func (m owner) buildDesignUserPromptSubmitEntry() map[string]interface{} {
 	cmd := fmt.Sprintf(
 		`command -v %s &>/dev/null && %s propagate --registry "${CLAUDE_PROJECT_DIR:-.}/.atl/skill-registry.md" --embedded-contract %s || true`,
 		m.hookCommand, m.hookCommand, embeddedDesignName,
@@ -99,7 +99,7 @@ func (m *Merger) buildDesignUserPromptSubmitEntry() map[string]interface{} {
 // any cwd can resolve it.
 //
 // Same missing-binary guard and matcher="Agent" as the minimalism entry.
-func (m *Merger) buildDesignPreToolUseEntry() map[string]interface{} {
+func (m owner) buildDesignPreToolUseEntry() map[string]interface{} {
 	cmd := fmt.Sprintf(
 		`command -v %s &>/dev/null && %s gate-task --embedded-contract %s --contract-path "$HOME/.claude/skills/_shared/anti-generic-design.md" || true`,
 		m.hookCommand, m.hookCommand, embeddedDesignName,
@@ -136,7 +136,7 @@ func (m *Merger) buildDesignPreToolUseEntry() map[string]interface{} {
 // POSIX ">/dev/null 2>&1" rather than the bash-only "&>/dev/null" -- Claude
 // Code invokes hooks via "sh -c" (dash on most systems), where "&>" is not
 // a redirection operator and the guard would be silently inert.
-func (m *Merger) buildSyncTriggerSessionEndEntry() map[string]interface{} {
+func (m owner) buildSyncTriggerSessionEndEntry() map[string]interface{} {
 	cmd := fmt.Sprintf(
 		`command -v %s >/dev/null 2>&1 && %s %s --event session-end --cwd "${CLAUDE_PROJECT_DIR:-$PWD}" || true`,
 		m.hookCommand, m.hookCommand, LabdrianSyncTriggerIdentity,
@@ -165,7 +165,7 @@ func (m *Merger) buildSyncTriggerSessionEndEntry() map[string]interface{} {
 // installation" guard as every other entry); once the binary is found, its
 // own exit code — 0 (allow) or 2 (deny) for the verdict of reviewreceipt.Service.CheckCommand — is the
 // command's exit code, unmasked by "|| true".
-func (m *Merger) buildReviewReceiptPreToolUseEntry() map[string]interface{} {
+func (m owner) buildReviewReceiptPreToolUseEntry() map[string]interface{} {
 	cmd := fmt.Sprintf(
 		`command -v %s >/dev/null 2>&1 || exit 0; %s %s hook --cwd "${CLAUDE_PROJECT_DIR:-$PWD}"`,
 		m.hookCommand, m.hookCommand, LabdrianReviewReceiptIdentity,
@@ -190,7 +190,7 @@ func (m *Merger) buildReviewReceiptPreToolUseEntry() map[string]interface{} {
 // removed binary neither disables the guard nor blocks every tool call. The
 // fallback does not collapse whitespace. Both paths match text only: this
 // guard is a speed bump, not a security boundary.
-func (m *Merger) buildShaperGuardPreToolUseEntry(matcher string) map[string]interface{} {
+func (m owner) buildShaperGuardPreToolUseEntry(matcher string) map[string]interface{} {
 	cmd := fmt.Sprintf(
 		`command -v %s >/dev/null 2>&1 || { case "$(cat)" in *'%s'*|*'%s'*) echo 'labdrian shaper clearance guard: gentle-ai-overlay is missing; denying a clearance record or store access (a speed bump, not a security boundary)' >&2; exit 2;; esac; exit 0; }; %s %s`,
 		m.hookCommand, guardmarkers.Command, guardmarkers.Store, m.hookCommand, LabdrianShaperGuardIdentity,
