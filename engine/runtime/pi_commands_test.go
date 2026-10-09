@@ -10,6 +10,7 @@ import (
 	"time"
 
 	engineRuntime "github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime/core"
 )
 
 // What the Pi adapter asks of the CommandRunner port: which lifecycle steps run `pi` at all, the
@@ -91,7 +92,7 @@ func TestPiAdapter_ACommandThatMissesItsDeadlineIsAPartialInstall(t *testing.T) 
 	}
 
 	result := adapter.Install()
-	if result.Status != engineRuntime.CapabilityPartial {
+	if result.Status != core.CapabilityPartial {
 		t.Fatalf("Install = %s, want partial", result)
 	}
 	for _, want := range []string{"but `pi install` failed", "context deadline exceeded"} {
@@ -110,7 +111,7 @@ func TestPiAdapter_AFailingCommandCarriesWhatItPrinted(t *testing.T) {
 	commands.fail = func(args []string) error { return errors.New("exit status 1") }
 
 	result := adapter.Uninstall()
-	if result.Status != engineRuntime.CapabilityPartial {
+	if result.Status != core.CapabilityPartial {
 		t.Fatalf("Uninstall = %s, want partial", result)
 	}
 	if want := "`pi remove " + destDir + "` failed: exit status 1 (output: no such package)."; !strings.Contains(result.Message, want) {
@@ -131,7 +132,7 @@ func TestPiAdapter_AFailingExtensionInstallIsToldInline(t *testing.T) {
 		return nil
 	}
 	result := adapter.Install()
-	if result.Status != engineRuntime.CapabilityRestartRequired {
+	if result.Status != core.CapabilityRestartRequired {
 		t.Fatalf("Install = %s, want restart_required: the package install succeeded", result)
 	}
 	if !strings.Contains(result.Message, "`pi install npm:pi-subagents-j0k3r` failed: npm exploded") {
@@ -144,7 +145,7 @@ func TestPiAdapter_WithoutPiInstallStaysPartialWithTheHint(t *testing.T) {
 	commands.missing = true
 
 	result := adapter.Install()
-	if result.Status != engineRuntime.CapabilityPartial {
+	if result.Status != core.CapabilityPartial {
 		t.Fatalf("Install without pi = %s, want partial", result)
 	}
 	if want := "labdrian-pi package built at " + destDir + "; run: pi install " + destDir; result.Message != want {
@@ -160,7 +161,7 @@ func TestPiAdapter_WithoutPiUninstallLeavesThePackageAndSaysWhy(t *testing.T) {
 	commands.missing = true
 
 	result := adapter.Uninstall()
-	if result.Status != engineRuntime.CapabilityPartial {
+	if result.Status != core.CapabilityPartial {
 		t.Fatalf("Uninstall without pi = %s, want partial", result)
 	}
 	if !strings.Contains(result.Message, "pi CLI not found on PATH; cannot run `pi remove "+destDir+"`") {
@@ -181,7 +182,7 @@ func TestRegisterPiRefusesMissingPorts(t *testing.T) {
 		"neither":     {},
 	} {
 		t.Run(name, func(t *testing.T) {
-			if err := engineRuntime.RegisterPi(engineRuntime.NewRegistry(), ports); err == nil {
+			if err := engineRuntime.RegisterPi(core.NewRegistry(), ports); err == nil {
 				t.Fatal("RegisterPi accepted ports with a nil member")
 			}
 		})
@@ -196,14 +197,14 @@ func TestThePiFactoryTakesTheSkipFromTheConfig(t *testing.T) {
 		home := t.TempDir()
 		writePiSettingsPackages(t, home, nil)
 		commands := &fakeCommands{}
-		adapter, err := shippedRegistryWith(t, commands).New(engineRuntime.TargetPi, engineRuntime.Config{
+		adapter, err := shippedRegistryWith(t, commands).New(core.TargetPi, core.Config{
 			Home: home, OverlayDir: overlayRoot, StateDir: t.TempDir(), PiSkipSubagents: skip,
 		})
 		if err != nil {
 			t.Fatal(err)
 		}
 		result := adapter.Install()
-		if result.Status == engineRuntime.CapabilityUnsupported {
+		if result.Status == core.CapabilityUnsupported {
 			t.Fatalf("skip=%v: Install = %s", skip, result)
 		}
 		installedExtension := false

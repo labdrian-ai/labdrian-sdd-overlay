@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime/core"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
 )
 
@@ -17,7 +18,7 @@ import (
 // writes ~/.pi/agent/settings.json or ~/.pi/agent/mcp.json itself — only
 // the `pi` CLI does, via the install/remove subprocess calls below.
 type PiAdapter struct {
-	target       Target
+	target       core.Target
 	commands     CommandRunner
 	packages     PackageBuilder
 	options      PiOptions
@@ -50,7 +51,7 @@ func NewPiAdapter(ports PiPorts, paths PiPaths, options PiOptions) PiAdapter {
 	if registryPath == "" && paths.OverlayRoot != "" {
 		registryPath = filepath.Join(paths.OverlayRoot, "skills.registry.yaml")
 	}
-	return PiAdapter{target: TargetPi, commands: ports.Commands, packages: ports.Packages, options: options, home: paths.Home, overlayRoot: paths.OverlayRoot, registryPath: registryPath, destDir: paths.DestDir}
+	return PiAdapter{target: core.TargetPi, commands: ports.Commands, packages: ports.Packages, options: options, home: paths.Home, overlayRoot: paths.OverlayRoot, registryPath: registryPath, destDir: paths.DestDir}
 }
 
 // piNoDiscoveryFlagsDisclosure is a STATIC note (R-007) — never a runtime-
@@ -58,11 +59,11 @@ func NewPiAdapter(ports PiPorts, paths PiPaths, options PiOptions) PiAdapter {
 // documents the short aliases -ne and -ns.
 const piNoDiscoveryFlagsDisclosure = "'pi --no-extensions' disables the before_agent_start contract-gate extension for that session, and 'pi --no-skills' disables skill discovery, for that session only; neither flag's use is detected at runtime (short aliases: -ne and -ns)"
 
-func (a PiAdapter) Target() Target { return a.target }
+func (a PiAdapter) Target() core.Target { return a.target }
 
 // Apply mirrors OpenCodeAdapter's Apply/Install identity (a package target
 // has no separate "apply without installing" concept).
-func (a PiAdapter) Apply() LifecycleResult { return a.Install() }
+func (a PiAdapter) Apply() core.LifecycleResult { return a.Install() }
 
 // Install builds the package then, when `pi` is resolvable, runs
 // `pi install <destDir>` with a FIXED argv (never a shell string). Without
@@ -70,25 +71,25 @@ func (a PiAdapter) Apply() LifecycleResult { return a.Install() }
 // package install succeeds, it also ensures the Pi Subagents extension
 // (R-012) and links the overlay-owned GADU.md agent (R-013/R-014) so GADU
 // is dispatchable as a real Pi subagent, not merely a relayed persona.
-func (a PiAdapter) Install() LifecycleResult {
+func (a PiAdapter) Install() core.LifecycleResult {
 	if a.overlayRoot == "" {
-		return a.stub(ActionInstall)
+		return a.stub(core.ActionInstall)
 	}
 	if err := a.packages.Build(a.overlayRoot, a.registryPath, a.destDir); err != nil {
-		return NewLifecycleResult(a.target, ActionInstall, CapabilityUnsupported, err.Error(), nil)
+		return core.NewLifecycleResult(a.target, core.ActionInstall, core.CapabilityUnsupported, err.Error(), nil)
 	}
 	bin, err := a.commands.LookPath("pi")
 	if err != nil {
-		return NewLifecycleResult(a.target, ActionInstall, CapabilityPartial,
+		return core.NewLifecycleResult(a.target, core.ActionInstall, core.CapabilityPartial,
 			"labdrian-pi package built at "+a.destDir+"; run: pi install "+a.destDir, nil)
 	}
 	if err := a.runPi(bin, "install", a.destDir); err != nil {
-		return NewLifecycleResult(a.target, ActionInstall, CapabilityPartial,
+		return core.NewLifecycleResult(a.target, core.ActionInstall, core.CapabilityPartial,
 			"labdrian-pi package built at "+a.destDir+" but `pi install` failed: "+err.Error(), nil)
 	}
 
 	notes := []string{a.installGaduSubagent(bin)}
-	return NewLifecycleResult(a.target, ActionInstall, CapabilityRestartRequired,
+	return core.NewLifecycleResult(a.target, core.ActionInstall, core.CapabilityRestartRequired,
 		"ran `pi install "+a.destDir+"`; start a new Pi session to load it. "+strings.Join(notes, " "), nil)
 }
 
@@ -114,15 +115,15 @@ func (a PiAdapter) installGaduSubagent(bin string) string {
 	return strings.Join(parts, " ")
 }
 
-func (a PiAdapter) SyncCheck() LifecycleResult {
+func (a PiAdapter) SyncCheck() core.LifecycleResult {
 	if a.overlayRoot == "" {
-		return a.stub(ActionSyncCheck)
+		return a.stub(core.ActionSyncCheck)
 	}
 	disclosure, err := a.packages.Check(a.overlayRoot, a.registryPath, a.destDir)
 	if err != nil {
-		return NewLifecycleResult(a.target, ActionSyncCheck, CapabilityPartial, err.Error()+" ("+disclosure+")", nil)
+		return core.NewLifecycleResult(a.target, core.ActionSyncCheck, core.CapabilityPartial, err.Error()+" ("+disclosure+")", nil)
 	}
-	return NewLifecycleResult(a.target, ActionSyncCheck, CapabilitySupported,
+	return core.NewLifecycleResult(a.target, core.ActionSyncCheck, core.CapabilitySupported,
 		"labdrian-pi package matches the current manifest ("+disclosure+")", nil)
 }
 
@@ -130,9 +131,9 @@ func (a PiAdapter) SyncCheck() LifecycleResult {
 // ~/.pi/agent/settings.json, and longterm-mem MCP-registered in mcp.json
 // (read-only). All proven -> supported; built but unproven -> partial,
 // naming each entry; never built -> unsupported.
-func (a PiAdapter) Status() LifecycleResult {
+func (a PiAdapter) Status() core.LifecycleResult {
 	if !a.piPackageBuilt() {
-		return NewLifecycleResult(a.target, ActionStatus, CapabilityUnsupported,
+		return core.NewLifecycleResult(a.target, core.ActionStatus, core.CapabilityUnsupported,
 			"labdrian-pi package is not built at "+a.destDir+" (run: labdrian-overlay apply --target pi). "+piNoDiscoveryFlagsDisclosure, nil)
 	}
 
@@ -174,17 +175,17 @@ func (a PiAdapter) Status() LifecycleResult {
 	}
 
 	if len(problems) == 0 {
-		return NewLifecycleResult(a.target, ActionStatus, CapabilitySupported,
+		return core.NewLifecycleResult(a.target, core.ActionStatus, core.CapabilitySupported,
 			"labdrian-pi package is built, in sync, listed in ~/.pi/agent/settings.json, longterm-mem is registered in its mcp.json, a subagent runner (gentle-pi native subagents or the legacy Pi Subagents extension) is available, and GADU.md is linked. "+piNoDiscoveryFlagsDisclosure, nil)
 	}
 	// The message names each unproven entry. They are not also passed as reasons: the line that
 	// prints a result would tell them a second time after the message.
-	return NewLifecycleResult(a.target, ActionStatus, CapabilityPartial,
+	return core.NewLifecycleResult(a.target, core.ActionStatus, core.CapabilityPartial,
 		"labdrian-pi status is unproven: "+strings.Join(problems, "; ")+". "+piNoDiscoveryFlagsDisclosure, nil)
 }
 
-func (a PiAdapter) Update() LifecycleResult   { return a.build(ActionUpdate) }
-func (a PiAdapter) Rollback() LifecycleResult { return a.build(ActionRollback) }
+func (a PiAdapter) Update() core.LifecycleResult   { return a.build(core.ActionUpdate) }
+func (a PiAdapter) Rollback() core.LifecycleResult { return a.build(core.ActionRollback) }
 
 // Uninstall removes the overlay-owned GADU.md link first (R-016 — ownership
 // proven by Readlink equality; a foreign entry at the same path is left
@@ -192,9 +193,9 @@ func (a PiAdapter) Rollback() LifecycleResult { return a.build(ActionRollback) }
 // (A2 — NOT `pi uninstall`), then removes the built package directory.
 // `pi remove` owns settings.json cleanup; this adapter never opens it or
 // mcp.json directly, and never uninstalls the Subagents extension package.
-func (a PiAdapter) Uninstall() LifecycleResult {
+func (a PiAdapter) Uninstall() core.LifecycleResult {
 	if !a.piPackageBuilt() {
-		return NewLifecycleResult(a.target, ActionUninstall, CapabilityUnsupported,
+		return core.NewLifecycleResult(a.target, core.ActionUninstall, core.CapabilityUnsupported,
 			"labdrian-pi package is not built at "+a.destDir+"; nothing to uninstall", nil)
 	}
 
@@ -209,18 +210,18 @@ func (a PiAdapter) Uninstall() LifecycleResult {
 
 	bin, err := a.commands.LookPath("pi")
 	if err != nil {
-		return NewLifecycleResult(a.target, ActionUninstall, CapabilityPartial,
+		return core.NewLifecycleResult(a.target, core.ActionUninstall, core.CapabilityPartial,
 			"pi CLI not found on PATH; cannot run `pi remove "+a.destDir+"` ("+err.Error()+")."+linkNote, nil)
 	}
 	if err := a.runPi(bin, "remove", a.destDir); err != nil {
-		return NewLifecycleResult(a.target, ActionUninstall, CapabilityPartial,
+		return core.NewLifecycleResult(a.target, core.ActionUninstall, core.CapabilityPartial,
 			"`pi remove "+a.destDir+"` failed: "+err.Error()+"."+linkNote, nil)
 	}
 	if err := os.RemoveAll(a.destDir); err != nil {
-		return NewLifecycleResult(a.target, ActionUninstall, CapabilityPartial,
+		return core.NewLifecycleResult(a.target, core.ActionUninstall, core.CapabilityPartial,
 			"ran `pi remove "+a.destDir+"` but could not remove the package directory: "+err.Error()+"."+linkNote, nil)
 	}
-	return NewLifecycleResult(a.target, ActionUninstall, CapabilitySupported,
+	return core.NewLifecycleResult(a.target, core.ActionUninstall, core.CapabilitySupported,
 		"removed via `pi remove "+a.destDir+"`; package directory deleted."+linkNote, nil)
 }
 
@@ -235,25 +236,25 @@ func (a PiAdapter) piPackageBuilt() bool {
 // build runs pipkg.Build for Update/Rollback: unsupported without an
 // overlayRoot, partial (never fabricated supported) either way otherwise —
 // a rebuild alone cannot prove Status's per-entry proof.
-func (a PiAdapter) build(action Action) LifecycleResult {
+func (a PiAdapter) build(action core.Action) core.LifecycleResult {
 	if a.overlayRoot == "" {
 		return a.stub(action)
 	}
 	if err := a.packages.Build(a.overlayRoot, a.registryPath, a.destDir); err != nil {
-		return NewLifecycleResult(a.target, action, CapabilityPartial, err.Error(), nil)
+		return core.NewLifecycleResult(a.target, action, core.CapabilityPartial, err.Error(), nil)
 	}
-	return NewLifecycleResult(a.target, action, CapabilityPartial,
+	return core.NewLifecycleResult(a.target, action, core.CapabilityPartial,
 		"labdrian-pi package rebuilt at "+a.destDir+"; run: pi install "+a.destDir, nil)
 }
 
 // stub reports an honest CapabilityUnsupported when the action cannot run
 // without an overlayRoot (OVERLAY_DIR unset).
-func (a PiAdapter) stub(action Action) LifecycleResult {
+func (a PiAdapter) stub(action core.Action) core.LifecycleResult {
 	msg := "pi package delivery (pipkg build/install) cannot run without OVERLAY_DIR set"
-	if action == ActionRollback {
+	if action == core.ActionRollback {
 		msg = "pi lifecycle rollback cannot rebuild without OVERLAY_DIR set"
 	}
-	return NewLifecycleResult(a.target, action, CapabilityUnsupported, msg, nil)
+	return core.NewLifecycleResult(a.target, action, core.CapabilityUnsupported, msg, nil)
 }
 
 // runPi runs the pi CLI at bin with a FIXED argv (verb, path), never a shell string, so no path
