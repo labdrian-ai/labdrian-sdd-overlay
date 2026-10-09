@@ -31,28 +31,13 @@ func (m owner) mergeHooks(root map[string]interface{}) bool {
 	hooks := ensureHooksMap(root)
 	changed := false
 
-	// The minimalism-contract pair and the anti-generic-design pair, each deduped by its own
-	// identity so both coexist.
-	for _, family := range []hookFamily{minimalismFamily, designFamily} {
+	// The minimalism-contract pair, the anti-generic-design pair, the SessionEnd sync-trigger entry
+	// and the PreToolUse/Bash review-receipt entry, each deduped by its own identity so they
+	// coexist.
+	for _, family := range []hookFamily{minimalismFamily, designFamily, syncTriggerFamily, reviewReceiptFamily} {
 		if family.merge(hooks, m.hookCommand) {
 			changed = true
 		}
-	}
-
-	// SessionEnd sync-trigger entry (identity: binary path + sync-trigger
-	// token). Never installs anything on Stop — SessionEnd fires once per
-	// session, Stop fires per turn.
-	if !hasEntryMatching(hooks, "SessionEnd", m.isSyncTriggerEntry) {
-		appendHook(hooks, "SessionEnd", m.buildSyncTriggerSessionEndEntry())
-		changed = true
-	}
-
-	// PreToolUse/Bash review-receipt entry (identity: binary path +
-	// review-receipt token). Fail-closed hook: captures approved review
-	// receipts before an acknowledge-approved invocation burns them.
-	if !hasEntryMatching(hooks, "PreToolUse", m.isReviewReceiptEntry) {
-		appendHook(hooks, "PreToolUse", m.buildReviewReceiptPreToolUseEntry())
-		changed = true
 	}
 
 	// PreToolUse shaper clearance guard entries (identity: binary path +
@@ -96,19 +81,6 @@ func (m owner) mergeHooks(root map[string]interface{}) bool {
 // clearance guard entries.
 func (m owner) isShaperGuardEntry(e interface{}) bool {
 	return entryContainsBinary(e, m.hookCommand) && entryContainsBinary(e, LabdrianShaperGuardIdentity)
-}
-
-// isSyncTriggerEntry reports whether a hook entry is our SessionEnd
-// sync-trigger entry: it references our binary AND the sync-trigger token.
-func (m owner) isSyncTriggerEntry(e interface{}) bool {
-	return entryContainsBinary(e, m.hookCommand) && entryContainsBinary(e, LabdrianSyncTriggerIdentity)
-}
-
-// isReviewReceiptEntry reports whether a hook entry is our PreToolUse/Bash
-// review-receipt entry: it references our binary AND the review-receipt
-// identity token.
-func (m owner) isReviewReceiptEntry(e interface{}) bool {
-	return entryContainsBinary(e, m.hookCommand) && entryContainsBinary(e, LabdrianReviewReceiptIdentity)
 }
 
 // legacyIdentities are the --embedded-contract identity tokens of hook pairs
@@ -164,7 +136,7 @@ func (m owner) removeHooks(root map[string]interface{}) bool {
 		}
 		var filtered []interface{}
 		for _, e := range entries {
-			if minimalismFamily.owns(e, m.hookCommand) || designFamily.owns(e, m.hookCommand) || m.isSyncTriggerEntry(e) || m.isReviewReceiptEntry(e) || m.isShaperGuardEntry(e) || m.isProjectionEntry(e) || m.isApproveGuardEntry(e) || m.isLegacyEntry(e) {
+			if minimalismFamily.owns(e, m.hookCommand) || designFamily.owns(e, m.hookCommand) || syncTriggerFamily.owns(e, m.hookCommand) || reviewReceiptFamily.owns(e, m.hookCommand) || m.isShaperGuardEntry(e) || m.isProjectionEntry(e) || m.isApproveGuardEntry(e) || m.isLegacyEntry(e) {
 				changed = true
 				continue
 			}

@@ -155,6 +155,24 @@ func buildDesignPreToolUseEntry(hookCommand string) map[string]interface{} {
 	}
 }
 
+// syncTriggerFamily is the single SessionEnd entry that runs the sync-trigger at session close.
+// Nothing is ever installed on Stop: SessionEnd fires once per session, Stop fires per turn.
+var syncTriggerFamily = hookFamily{
+	identity: LabdrianSyncTriggerIdentity,
+	specs:    []hookSpec{{event: "SessionEnd"}},
+	build:    buildSyncTriggerSessionEndEntry,
+	upkeep:   keepingOne,
+}
+
+// reviewReceiptFamily is the single PreToolUse/Bash entry that captures review receipts before an
+// acknowledge-approved invocation burns them.
+var reviewReceiptFamily = hookFamily{
+	identity: LabdrianReviewReceiptIdentity,
+	specs:    []hookSpec{{event: "PreToolUse", matcher: "Bash"}},
+	build:    buildReviewReceiptPreToolUseEntry,
+	upkeep:   keepingOne,
+}
+
 // buildSyncTriggerSessionEndEntry returns the SessionEnd entry that invokes
 // the shared sync-trigger runner at session close.
 //
@@ -178,10 +196,10 @@ func buildDesignPreToolUseEntry(hookCommand string) map[string]interface{} {
 // POSIX ">/dev/null 2>&1" rather than the bash-only "&>/dev/null" -- Claude
 // Code invokes hooks via "sh -c" (dash on most systems), where "&>" is not
 // a redirection operator and the guard would be silently inert.
-func (m owner) buildSyncTriggerSessionEndEntry() map[string]interface{} {
+func buildSyncTriggerSessionEndEntry(hookCommand string, _ hookSpec) map[string]interface{} {
 	cmd := fmt.Sprintf(
 		`command -v %s >/dev/null 2>&1 && %s %s --event session-end --cwd "${CLAUDE_PROJECT_DIR:-$PWD}" || true`,
-		m.hookCommand, m.hookCommand, LabdrianSyncTriggerIdentity,
+		hookCommand, hookCommand, LabdrianSyncTriggerIdentity,
 	)
 	return map[string]interface{}{
 		"hooks": []interface{}{map[string]interface{}{
@@ -207,10 +225,10 @@ func (m owner) buildSyncTriggerSessionEndEntry() map[string]interface{} {
 // installation" guard as every other entry); once the binary is found, its
 // own exit code — 0 (allow) or 2 (deny) for the verdict of reviewreceipt.Service.CheckCommand — is the
 // command's exit code, unmasked by "|| true".
-func (m owner) buildReviewReceiptPreToolUseEntry() map[string]interface{} {
+func buildReviewReceiptPreToolUseEntry(hookCommand string, _ hookSpec) map[string]interface{} {
 	cmd := fmt.Sprintf(
 		`command -v %s >/dev/null 2>&1 || exit 0; %s %s hook --cwd "${CLAUDE_PROJECT_DIR:-$PWD}"`,
-		m.hookCommand, m.hookCommand, LabdrianReviewReceiptIdentity,
+		hookCommand, hookCommand, LabdrianReviewReceiptIdentity,
 	)
 	return map[string]interface{}{
 		"matcher": "Bash",

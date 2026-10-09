@@ -10,6 +10,8 @@ func installedFamilies() map[string]hookFamily {
 	return map[string]hookFamily{
 		"minimalism": minimalismFamily,
 		"design":     designFamily,
+		"sync":       syncTriggerFamily,
+		"receipt":    reviewReceiptFamily,
 		"projection": projectionFamily,
 		"approve":    approveGuardFamily,
 	}
@@ -60,5 +62,40 @@ func TestNoEntryIsOwnedByTwoFamilies(t *testing.T) {
 				}
 			}
 		}
+	}
+}
+
+// An entry of a keeping family that an older version of the overlay wrote, with another command
+// line, is left exactly as it is: installing again neither rewrites it nor adds a second one.
+// (Upgrading installed entries in place is a separate decision, C7.) The projection and approve
+// guard families repair; which family does which is stated here, so a family cannot change its
+// upkeep without this table changing.
+func TestAKeepingFamilyLeavesAnInstalledEntryWithAnOlderCommandAsItIs(t *testing.T) {
+	keeping := map[string]bool{"minimalism": true, "design": true, "sync": true, "receipt": true, "projection": false, "approve": false}
+	for name, family := range installedFamilies() {
+		if (family.upkeep != repairing) != keeping[name] {
+			t.Errorf("%s: keeping = %v, want %v", name, family.upkeep != repairing, keeping[name])
+		}
+		if !keeping[name] {
+			continue
+		}
+		t.Run(name, func(t *testing.T) {
+			hooks := map[string]interface{}{}
+			for _, spec := range family.specs {
+				entry := family.build(toyBinary, spec)
+				inner := entry["hooks"].([]interface{})[0].(map[string]interface{})
+				inner["command"] = inner["command"].(string) + " --an-older-flag"
+				existing, _ := hooks[spec.event].([]interface{})
+				hooks[spec.event] = append(existing, entry)
+			}
+			before := len(hooks)
+
+			if family.merge(hooks, toyBinary) {
+				t.Errorf("merge() rewrote or added an entry although the family is installed: %v", hooks)
+			}
+			if len(hooks) != before {
+				t.Errorf("merge() changed the events: %v", hooks)
+			}
+		})
 	}
 }
