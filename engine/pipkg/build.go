@@ -242,9 +242,11 @@ func checkSkillNameMatchesPath(src, entryPath string) error {
 // words the build has always used for what it cannot find.
 func skillName(data []byte) (string, error) {
 	fm, err := skills.ReadFrontmatter(data)
-	var fault *skills.FrontmatterError
-	if errors.As(err, &fault) {
-		if fault.Fault == skills.NoClosingFence {
+	if err != nil {
+		// ReadFrontmatter fails only for a missing fence (a *FrontmatterError); anything it
+		// might return later is not read as a frontmatter either.
+		var fault *skills.FrontmatterError
+		if errors.As(err, &fault) && fault.Fault == skills.NoClosingFence {
 			return "", fmt.Errorf("SKILL.md frontmatter is not terminated")
 		}
 		return "", fmt.Errorf("SKILL.md has no frontmatter block")

@@ -107,7 +107,13 @@ func TestRunPipkgCore_MissingVerbFailsLoud(t *testing.T) {
 // recordingSource is a SourceRepo that says nothing is a repository and remembers it was asked.
 type recordingSource struct {
 	pipkg.NoRepository
-	asked int
+	asked   int
+	commits int
+}
+
+func (r *recordingSource) HasCommit(dir, ref string) (bool, error) {
+	r.commits++
+	return r.NoRepository.HasCommit(dir, ref)
 }
 
 func (r *recordingSource) HasChanges(dir string, paths ...string) (bool, error) {
@@ -137,5 +143,25 @@ func TestRuntimeInstallPiAsksGitThroughTheSourceItIsGiven(t *testing.T) {
 	runRuntimeCore(&scriptedPiCommands{}, source, []string{"install", "--target", "pi"}, &out, &errOut, func(int) {})
 	if source.asked == 0 {
 		t.Errorf("the Pi package build never asked the source about the overlay; stdout=%q stderr=%q", out.String(), errOut.String())
+	}
+}
+
+// The build reads the deploy ref along with the rest of the options, but nothing in a build uses
+// it: only the check compares against a ref. So a ref in the environment, even one the adapter
+// would refuse, neither changes the build nor makes it ask git which commit the ref names.
+func TestRunPipkgCore_BuildIgnoresTheDeployRef(t *testing.T) {
+	overlayRoot, registryPath := pipkgFixtureOverlay(t)
+	t.Setenv("LABDRIAN_PI_DEPLOY_REF", "--output=/nonexistent/never")
+	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
+	source := &recordingSource{}
+
+	var outBuf, errBuf bytes.Buffer
+	code := -1
+	runPipkgCore(source, []string{"build", "--overlay-root", overlayRoot, "--registry", registryPath, "--dest-dir", destDir}, &outBuf, &errBuf, func(c int) { code = c })
+	if code != 0 {
+		t.Fatalf("pipkg build exited %d, stderr=%q", code, errBuf.String())
+	}
+	if source.commits != 0 {
+		t.Errorf("the build asked git about %d ref(s); only the check compares against one", source.commits)
 	}
 }

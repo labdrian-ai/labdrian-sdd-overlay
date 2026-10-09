@@ -25,10 +25,14 @@ import (
 //     overlayRoot instead of any git export.
 //
 // Stale reports whether the deployed package is out of date: BuiltFrom is
-// a locally resolvable commit that differs from DeployRef's tip. A stale
-// package means committed source changes since the last Build are not
-// deployed, even though the deployed content still matches DeployRef's
-// tree at build time -- Check treats this as drift in its own right.
+// a full commit id that is a proper ancestor of DeployRef's tip, so commits
+// landed on the deploy ref since the last Build. A package built from a
+// commit that is ahead of the tip, or on another line of history (a
+// feature-branch checkout), is not stale; any content it differs in is
+// caught by the file-level diff. A stale package means committed source
+// changes since the last Build are not deployed, even though the deployed
+// content may still match DeployRef's tree -- Check treats this as drift in
+// its own right.
 type CheckReport struct {
 	Basis     string
 	DeployRef string
@@ -67,10 +71,12 @@ var builtFromPattern = regexp.MustCompile(`^[0-9a-f]{40}$`)
 // Compare regenerates the package into a temp dir and diffs it, file by file,
 // against destDir. Returns a CheckReport disclosing the comparison basis,
 // and a non-nil, drift-naming error when destDir is missing, has extra
-// files, is missing files, or has changed content.
+// files, is missing files, or has changed content. Packages.Check is this
+// operation reduced to the disclosure line, which is the shape the Pi
+// adapter's port wants; the CheckReport is what the tests read.
 //
 // The comparison source is resolved by resolveComparisonSource (R-006):
-// Check compares the deployed package against the DEPLOY ref's exported
+// Compare compares the deployed package against the DEPLOY ref's exported
 // tree (main, or its origin/main / HEAD fallback), never against the
 // recorded labdrian.builtFrom commit -- comparing against builtFrom let
 // committed source changes made after the last Build go undetected as
@@ -106,13 +112,14 @@ func (p Packages) Compare(overlayRoot, registryPath, destDir string) (CheckRepor
 	}
 	defer os.RemoveAll(tmpDir)
 
-	// versionRoot is always the ORIGINAL overlayRoot, never sourceRoot: a
-	// git-archive export has no .git directory, so it cannot resolve tag
-	// history itself. Using overlayRoot (which has full history) plus the
-	// resolved buildRev keeps the comparison's package.json "version"
-	// field consistent with what a real Build at that ref would have
-	// produced, exactly the same reasoning as builtFrom being normalized
-	// out of the diff, but here fixing the input instead of the output.
+	// The provenance root (buildInto's fourth argument) is always the ORIGINAL
+	// overlayRoot, never sourceRoot: a git-archive export has no .git directory,
+	// so it cannot resolve tag history itself. Using overlayRoot (which has full
+	// history) plus the resolved buildRev makes the comparison's package.json
+	// "version" the one a Build whose provenance is that ref would write -- the
+	// newest v* tag reachable from it. That is the same reasoning as builtFrom
+	// being normalized out of the diff, but here fixing the input instead of
+	// the output.
 	if err := p.buildInto(sourceRoot, reg, tmpDir, overlayRoot, buildRev); err != nil {
 		return report, fmt.Errorf("pipkg: regenerating for check: %w", err)
 	}

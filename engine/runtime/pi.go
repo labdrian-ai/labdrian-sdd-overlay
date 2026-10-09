@@ -473,9 +473,11 @@ func GaduLinkStateForTest(linkPath, expectedTarget string) string {
 // at its top level.
 func validateGaduFrontmatter(content string) error {
 	fm, err := skills.ReadFrontmatter([]byte(content))
-	var fault *skills.FrontmatterError
-	if errors.As(err, &fault) {
-		if fault.Fault == skills.NoClosingFence {
+	if err != nil {
+		// ReadFrontmatter fails only for a missing fence (a *FrontmatterError); anything it
+		// might return later is not read as a frontmatter either.
+		var fault *skills.FrontmatterError
+		if errors.As(err, &fault) && fault.Fault == skills.NoClosingFence {
 			return fmt.Errorf("gadu frontmatter: missing closing --- delimiter")
 		}
 		return fmt.Errorf("gadu frontmatter: missing opening --- delimiter")

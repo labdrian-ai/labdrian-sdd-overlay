@@ -146,9 +146,11 @@ func readBuiltFrom(destDir string) string {
 // exportGitTree exports skills/, agents/, and skills.registry.yaml at rev
 // from the overlayRoot git repository into a fresh temp directory, as the
 // archive the SourceRepo hands back, returning that directory and a
-// cleanup func. rev MUST already be a value this package trusts as a git
-// ref (a validated 40-hex SHA, or the fixed literal "main") -- never
-// attacker-controlled input, since it is passed directly as a git argument.
+// cleanup func. rev is the deploy ref resolveComparisonSource chose: main,
+// origin/main, HEAD, or the ref Options.DeployRef names, so it can come
+// from the environment of the run. It is not trusted: the SourceRepo
+// adapter refuses a ref that starts with a dash and hands every ref to git
+// after --end-of-options, so it cannot be read as an option.
 // The archive is read whole before it is extracted, so a git that fails
 // leaves nothing in the directory and a failure to extract is only
 // reported when git succeeded.
