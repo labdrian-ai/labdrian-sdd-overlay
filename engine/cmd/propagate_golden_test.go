@@ -158,6 +158,8 @@ func propagateGoldenCases() []propagateCase {
 	var cases []propagateCase
 	cases = append(cases, propagateAbsentCases()...)
 	cases = append(cases, propagateEmptyCases()...)
+	cases = append(cases, propagateMixedReadCases()...)
+	cases = append(cases, propagateFailureCases()...)
 	return cases
 }
 

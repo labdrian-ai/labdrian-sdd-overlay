@@ -1,0 +1,37 @@
+$ propagate --contract-file /virtual/skills/_shared/contract.md
+# no registry flag
+--- io ---
+exit: 1
+--- stdout ---
+--- stderr ---
+error: --registry is required
+--- registry unchanged ---
+
+$ propagate --registry /virtual/project/.atl/skill-registry.md
+# no contract source
+--- io ---
+exit: 1
+--- stdout ---
+--- stderr ---
+error: --contract-file is required
+--- registry unchanged ---
+
+$ propagate --registry /virtual/project/.atl/skill-registry.md --embedded-contract no-such-contract
+# an unknown embedded contract
+--- io ---
+exit: 1
+--- stdout ---
+--- stderr ---
+error: unknown embedded contract "no-such-contract"
+--- registry unchanged ---
+
+$ propagate --registry /virtual/project/.atl/skill-registry.md --contract-file /virtual/missing.md
+# a contract file that is missing
+--- io ---
+read /virtual/missing.md -> error: open /virtual/missing.md: file does not exist
+exit: 1
+--- stdout ---
+--- stderr ---
+error: reading contract file: open /virtual/missing.md: file does not exist
+--- registry unchanged ---
+
