@@ -2,155 +2,72 @@
 package runtime
 
 import (
-	"fmt"
-	"strings"
-
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/capability"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/contract"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime/core"
 )
 
-type Target string
+// Transitional: the vocabulary, the Adapter port and the prompt rules now live in runtime/core.
+// The names below forward to it so the adapters, the command and the tests can be switched one
+// family at a time; the commit that has switched the last of them deletes this file.
 
-// The runtimes are the ones capability declares: their names are its, so there is one list of
-// them. TargetAll is not a runtime but a request for every registered one.
+type Target = core.Target
+
+// The runtimes are written from the capability vocabulary, as the core writes them, so the scan
+// of this package that every Target constant is a capability name keeps reading something.
 const (
 	TargetClaude   Target = capability.TargetClaude
 	TargetOpenCode Target = capability.TargetOpenCode
 	TargetCodex    Target = capability.TargetCodex
 	TargetPi       Target = capability.TargetPi
-	TargetAll      Target = "all"
+	TargetAll      Target = core.TargetAll
 )
 
-type CapabilityStatus string
+type CapabilityStatus = core.CapabilityStatus
 
 const (
-	CapabilitySupported       CapabilityStatus = "supported"
-	CapabilityPartial         CapabilityStatus = "partial"
-	CapabilityUnsupported     CapabilityStatus = "unsupported"
-	CapabilityRestartRequired CapabilityStatus = "restart_required"
+	CapabilitySupported       = core.CapabilitySupported
+	CapabilityPartial         = core.CapabilityPartial
+	CapabilityUnsupported     = core.CapabilityUnsupported
+	CapabilityRestartRequired = core.CapabilityRestartRequired
 )
 
-type Action string
+type Action = core.Action
 
 const (
-	ActionApply     Action = "apply"
-	ActionInstall   Action = "install"
-	ActionStatus    Action = "status"
-	ActionSyncCheck Action = "sync-check"
-	ActionUpdate    Action = "update"
-	ActionRollback  Action = "rollback"
-	ActionUninstall Action = "uninstall"
+	ActionApply     = core.ActionApply
+	ActionInstall   = core.ActionInstall
+	ActionStatus    = core.ActionStatus
+	ActionSyncCheck = core.ActionSyncCheck
+	ActionUpdate    = core.ActionUpdate
+	ActionRollback  = core.ActionRollback
+	ActionUninstall = core.ActionUninstall
 )
 
-type LifecycleResult struct {
-	Target  Target
-	Action  Action
-	Status  CapabilityStatus
-	Message string
-	Reasons []string
-}
+type LifecycleResult = core.LifecycleResult
 
-func (r LifecycleResult) String() string {
-	base := ""
-	if r.Message == "" {
-		base = fmt.Sprintf("[%s] %s: %s", r.Target, r.Action, r.Status)
-	} else {
-		base = fmt.Sprintf("[%s] %s: %s — %s", r.Target, r.Action, r.Status, r.Message)
-	}
-	if len(r.Reasons) == 0 {
-		return base
-	}
-	return base + " — reasons: " + strings.Join(r.Reasons, "; ")
-}
+type Adapter = core.Adapter
 
 func NewLifecycleResult(target Target, action Action, status CapabilityStatus, message string, reasons []string) LifecycleResult {
-	return LifecycleResult{Target: target, Action: action, Status: status, Message: message, Reasons: reasons}
-}
-
-type Adapter interface {
-	Target() Target
-	Apply() LifecycleResult
-	Install() LifecycleResult
-	Status() LifecycleResult
-	SyncCheck() LifecycleResult
-	Update() LifecycleResult
-	Rollback() LifecycleResult
-	Uninstall() LifecycleResult
+	return core.NewLifecycleResult(target, action, status, message, reasons)
 }
 
 func MutatePrompt(prompt, phase, contractPath string, c contract.Contract) (string, bool) {
-	switch {
-	case c.AppliesToPhase(phase):
-		mutated := InjectPrompt(prompt, contractPath, c.Header())
-		return mutated, mutated != prompt
-	case c.ExcludesPhase(phase):
-		mutated := StripPrompt(prompt, contractPath)
-		return mutated, mutated != prompt
-	default:
-		return prompt, false
-	}
+	return core.MutatePrompt(prompt, phase, contractPath, c)
 }
 
 func InjectPrompt(prompt, contractPath, injectionHeader string) string {
-	entry := CanonicalEntry(contractPath)
-	if HasExactEntry(prompt, contractPath) {
-		return prompt
-	}
-	if HasExactHeader(prompt, injectionHeader) {
-		lines := strings.Split(prompt, "\n")
-		out := make([]string, 0, len(lines)+1)
-		for _, line := range lines {
-			out = append(out, line)
-			if strings.TrimSpace(line) == injectionHeader {
-				out = append(out, entry)
-			}
-		}
-		return strings.Join(out, "\n")
-	}
-	sep := "\n"
-	if !strings.HasSuffix(prompt, "\n") {
-		sep = "\n\n"
-	} else if !strings.HasSuffix(prompt, "\n\n") {
-		sep = "\n"
-	}
-	return prompt + sep + injectionHeader + "\n" + entry + "\n"
+	return core.InjectPrompt(prompt, contractPath, injectionHeader)
 }
 
-func StripPrompt(prompt, contractPath string) string {
-	if !HasExactEntry(prompt, contractPath) {
-		return prompt
-	}
-	entry := CanonicalEntry(contractPath)
-	lines := strings.Split(prompt, "\n")
-	out := make([]string, 0, len(lines))
-	for _, line := range lines {
-		if strings.TrimSpace(line) == entry {
-			continue
-		}
-		out = append(out, line)
-	}
-	return strings.Join(out, "\n")
-}
+func StripPrompt(prompt, contractPath string) string { return core.StripPrompt(prompt, contractPath) }
 
-func CanonicalEntry(contractPath string) string {
-	return contractPath
-}
+func CanonicalEntry(contractPath string) string { return core.CanonicalEntry(contractPath) }
 
 func HasExactEntry(prompt, contractPath string) bool {
-	entry := CanonicalEntry(contractPath)
-	for _, line := range strings.Split(prompt, "\n") {
-		if strings.TrimSpace(line) == entry {
-			return true
-		}
-	}
-	return false
+	return core.HasExactEntry(prompt, contractPath)
 }
 
 func HasExactHeader(prompt, injectionHeader string) bool {
-	for _, line := range strings.Split(prompt, "\n") {
-		if strings.TrimSpace(line) == injectionHeader {
-			return true
-		}
-	}
-	return false
+	return core.HasExactHeader(prompt, injectionHeader)
 }
