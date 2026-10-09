@@ -558,11 +558,10 @@ func checkHomePathLeak(fm parsedFrontmatter, body string) []string {
 // called (see LintSkillFile).
 func SplitSkillFile(data []byte) (frontmatter, body string, err error) {
 	frontmatter, body, fault := splitFences(data)
-	switch fault {
-	case NoOpeningFence:
-		return "", "", &LintError{Rule: "frontmatter-fence", Msg: "file does not start with a `---` frontmatter fence"}
-	case NoClosingFence:
-		return "", "", &LintError{Rule: "frontmatter-fence", Msg: "file has no closing `---` frontmatter fence"}
+	if fault != 0 {
+		// The words are the fault's own, so the lint rule and ReadFrontmatter's error
+		// cannot say different things, and a fault added later is an error here too.
+		return "", "", &LintError{Rule: "frontmatter-fence", Msg: fault.String()}
 	}
 	return frontmatter, body, nil
 }

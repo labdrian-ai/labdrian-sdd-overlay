@@ -75,11 +75,18 @@ func ReadFrontmatter(data []byte) (Frontmatter, error) {
 		if strings.TrimSpace(line) == "" {
 			continue
 		}
-		indented := strings.HasPrefix(line, " ") || strings.HasPrefix(line, "\t")
-		if indented || strings.HasPrefix(line, "-") {
-			if len(fm.entries) > 0 && strings.HasPrefix(strings.TrimSpace(line), "-") {
+		// A line that starts with a dash is a list item of the key above it, whether it is
+		// indented or not (YAML allows `tools:` followed by `- a` at the margin). A key
+		// cannot start with a dash, so no key is lost to this branch.
+		if strings.HasPrefix(strings.TrimSpace(line), "-") {
+			if len(fm.entries) > 0 {
 				fm.entries[len(fm.entries)-1].Items++
 			}
+			continue
+		}
+		// Any other indented line is the body of the key above it, which this reader does
+		// not look into.
+		if strings.HasPrefix(line, " ") || strings.HasPrefix(line, "\t") {
 			continue
 		}
 		key, value, ok := splitKeyValue(line)

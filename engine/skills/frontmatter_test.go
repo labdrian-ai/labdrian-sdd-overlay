@@ -131,3 +131,14 @@ func TestReadFrontmatterAgreesWithSplitSkillFileOnWhatIsFrontmatter(t *testing.T
 		}
 	}
 }
+
+// The lint rule says what ReadFrontmatter's error says: both take their words from the fault.
+func TestSplitSkillFileSaysWhatTheFaultSays(t *testing.T) {
+	for fault, input := range map[FrontmatterFault]string{NoOpeningFence: "no fence\n", NoClosingFence: "---\nname: a\n"} {
+		_, _, err := SplitSkillFile([]byte(input))
+		var lint *LintError
+		if !errors.As(err, &lint) || lint.Rule != "frontmatter-fence" || lint.Msg != fault.String() {
+			t.Errorf("fault %v: err = %v, want a frontmatter-fence lint error saying %q", fault, err, fault.String())
+		}
+	}
+}
