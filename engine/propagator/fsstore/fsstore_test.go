@@ -134,6 +134,33 @@ func TestWriteIntoAMissingDirectoryFailsWithTheSystemsError(t *testing.T) {
 	}
 }
 
+// A registry that is a symlink is replaced by a regular file, as it always was: the rename
+// overwrites the link and leaves its target as it was.
+func TestWriteReplacesASymlinkedRegistryAndLeavesItsTarget(t *testing.T) {
+	dir := t.TempDir()
+	target := filepath.Join(dir, "real.md")
+	link := filepath.Join(dir, "skill-registry.md")
+	if err := os.WriteFile(target, []byte("target"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("real.md", link); err != nil {
+		t.Skipf("no symlinks here: %v", err)
+	}
+	if err := (fsstore.Registry{}).Write(link, []byte("new")); err != nil {
+		t.Fatal(err)
+	}
+	info, err := os.Lstat(link)
+	if err != nil || info.Mode()&os.ModeSymlink != 0 {
+		t.Fatalf("the registry is still a symlink: %v, %v", info, err)
+	}
+	if got, _ := os.ReadFile(link); string(got) != "new" {
+		t.Errorf("registry = %q, want new", got)
+	}
+	if got, _ := os.ReadFile(target); string(got) != "target" {
+		t.Errorf("the target = %q, want it untouched", got)
+	}
+}
+
 // A write that fails after the temporary file exists (here the rename, because a directory stands
 // where the registry should be) removes the temporary file and leaves what was there.
 func TestAWriteThatFailsLateLeavesNoTemporaryFile(t *testing.T) {
