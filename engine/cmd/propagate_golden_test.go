@@ -161,6 +161,7 @@ func propagateGoldenCases() []propagateCase {
 	cases = append(cases, propagateMixedReadCases()...)
 	cases = append(cases, propagateFailureCases()...)
 	cases = append(cases, propagateWriteCases()...)
+	cases = append(cases, propagateVerifyCases()...)
 	return cases
 }
 
