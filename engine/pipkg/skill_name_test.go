@@ -5,8 +5,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/pipkg"
 )
 
 // buildWithSkillFile builds a package whose only pi skill, named pi-skill, has the given
@@ -15,7 +13,7 @@ func buildWithSkillFile(t *testing.T, content string) error {
 	t.Helper()
 	overlayRoot, registryPath := fixtureOverlay(t)
 	writeFile(t, filepath.Join(overlayRoot, "skills", "pi-skill", "SKILL.md"), content)
-	return pipkg.Build(fileRegistries, overlayRoot, registryPath, filepath.Join(t.TempDir(), "labdrian-pi"))
+	return packagesOf(fileRegistries).Build(overlayRoot, registryPath, filepath.Join(t.TempDir(), "labdrian-pi"))
 }
 
 // What a SKILL.md must say for the build to ship it, and the words of the refusal when it does
@@ -55,7 +53,7 @@ func TestBuildReportsASkillWithoutASkillFile(t *testing.T) {
 	if err := os.Remove(filepath.Join(overlayRoot, "skills", "pi-skill", "SKILL.md")); err != nil {
 		t.Fatal(err)
 	}
-	err := pipkg.Build(fileRegistries, overlayRoot, registryPath, filepath.Join(t.TempDir(), "labdrian-pi"))
+	err := packagesOf(fileRegistries).Build(overlayRoot, registryPath, filepath.Join(t.TempDir(), "labdrian-pi"))
 	if err == nil || !strings.Contains(err.Error(), "reading SKILL.md") {
 		t.Fatalf("Build error = %v, want it to say it could not read SKILL.md", err)
 	}

@@ -28,7 +28,7 @@ import (
 // touching the registered content, and the only one this atomic
 // stage/rename/replace shape (swap) permits: destDir is wholesale replaced
 // by tmpDir, so anything not copied into tmpDir first is lost.
-func Build(registries skills.RegistryRepository, overlayRoot, registryPath, destDir string) error {
+func (p Packages) Build(overlayRoot, registryPath, destDir string) error {
 	if err := checkNoOverlap(overlayRoot, destDir); err != nil {
 		return err
 	}
@@ -36,7 +36,7 @@ func Build(registries skills.RegistryRepository, overlayRoot, registryPath, dest
 	// A build refuses a registry the reader did not read whole and says what was left out in the
 	// refusal, so it reads without the repository's warning, which would say it before. (Check
 	// goes on with such a registry and keeps the warning.)
-	reg, err := loadRegistry(skills.WithoutUnreadWarning(registries), registryPath)
+	reg, err := loadRegistry(skills.WithoutUnreadWarning(p.Registries), registryPath)
 	if err != nil {
 		return err
 	}
@@ -62,7 +62,7 @@ func Build(registries skills.RegistryRepository, overlayRoot, registryPath, dest
 		return fmt.Errorf("pipkg: setting build root permissions: %w", err)
 	}
 
-	if err := buildInto(overlayRoot, reg, tmpDir, overlayRoot, resolveBuildRev(overlayRoot)); err != nil {
+	if err := p.buildInto(overlayRoot, reg, tmpDir, overlayRoot, p.resolveBuildRev(overlayRoot)); err != nil {
 		return err
 	}
 	if err := preserveIfExists(destDir, tmpDir, mcpConfigFileName); err != nil {
@@ -103,7 +103,7 @@ func preserveIfExists(destDir, tmpDir, name string) error {
 // "" means provenanceRoot is not a git repo (or HEAD is unresolvable),
 // yielding the same "0.0.0-dev" / omitted-labdrian fallback as before
 // R-005.
-func buildInto(overlayRoot string, reg skills.Registry, dir string, provenanceRoot, rev string) error {
+func (p Packages) buildInto(overlayRoot string, reg skills.Registry, dir string, provenanceRoot, rev string) error {
 	skillsDir := filepath.Join(dir, "skills")
 	if err := os.MkdirAll(skillsDir, 0755); err != nil {
 		return fmt.Errorf("pipkg: creating skills dir: %w", err)
@@ -173,7 +173,7 @@ func buildInto(overlayRoot string, reg skills.Registry, dir string, provenanceRo
 	// pre-R-005 behavior.
 	manifest := packageManifest{
 		Name:    "labdrian-pi",
-		Version: resolvePackageVersion(provenanceRoot, rev),
+		Version: p.resolvePackageVersion(provenanceRoot, rev),
 		Pi: piField{
 			Skills:     []string{"./skills"},
 			Agents:     []string{"./agents"},

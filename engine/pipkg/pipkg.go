@@ -52,25 +52,25 @@ type Options struct {
 	DeployRef string
 }
 
-// Packages is the package builder the Pi adapter holds: Build and Check over one registry reader
-// and the Options of the run, both fixed when the composition root makes it. The adapter asks
-// for the two verbs and knows neither the reader nor the deploy ref.
+// Packages is the package builder: Build and Check over the ports it needs and the Options of the
+// run, all fixed when the composition root makes it. The Pi adapter holds one and asks for the
+// verbs, knowing neither the reader, nor git, nor the deploy ref. The builder starts no process
+// and reads no environment: git is asked through Source and the choices of the run are Options.
 type Packages struct {
 	// Registries is how the skills registry the package is built from is read.
 	Registries skills.RegistryRepository
+	// Source is the git repository the overlay is checked out from. A tree that is not under
+	// version control is NoRepository{}.
+	Source SourceRepo
 	// Options are the choices of the caller that Check cannot make for itself.
 	Options Options
 }
 
-// Build writes the package; see Build.
-func (p Packages) Build(overlayRoot, registryPath, destDir string) error {
-	return Build(p.Registries, overlayRoot, registryPath, destDir)
-}
-
-// Check compares the package against its sources; see Check. Its first result is the disclosure
-// of what it compared against, which Check owes the caller whether or not it found drift.
+// Check compares the package against its sources; see Compare. Its first result is the
+// disclosure of what it compared against, which Check owes the caller whether or not it found
+// drift.
 func (p Packages) Check(overlayRoot, registryPath, destDir string) (disclosure string, err error) {
-	report, err := Check(p.Registries, overlayRoot, registryPath, destDir, p.Options)
+	report, err := p.Compare(overlayRoot, registryPath, destDir)
 	return report.Disclosure(), err
 }
 

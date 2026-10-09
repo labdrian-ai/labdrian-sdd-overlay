@@ -1,11 +1,10 @@
 package pipkg
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 )
@@ -41,17 +40,17 @@ import (
 // history): the resolved deploy ref for "deploy" (git describe accepts a
 // branch name), or overlayRoot's current HEAD for "worktree" (matching
 // Check's pre-R-005 behavior exactly).
-func resolveComparisonSource(overlayRoot, registryPath, destDir string, opts Options) (report CheckReport, sourceRoot, sourceRegistry, buildRev string, cleanup func(), err error) {
+func (p Packages) resolveComparisonSource(overlayRoot, registryPath, destDir string) (report CheckReport, sourceRoot, sourceRegistry, buildRev string, cleanup func(), err error) {
 	noopCleanup := func() {}
-	if exec.Command("git", "-C", overlayRoot, "rev-parse", "--is-inside-work-tree").Run() != nil {
-		return CheckReport{Basis: "worktree"}, overlayRoot, registryPath, resolveBuildRev(overlayRoot), noopCleanup, nil
+	if !p.Source.IsWorkTree(overlayRoot) {
+		return CheckReport{Basis: "worktree"}, overlayRoot, registryPath, p.resolveBuildRev(overlayRoot), noopCleanup, nil
 	}
 
 	builtFrom := readBuiltFrom(destDir)
 	// R3-001: an absent builtFrom because Build ran against a dirty tree
 	// can only be reproduced by comparing against that same live tree --
 	// any git export would reproduce the last commit instead.
-	if builtFrom == "" && isSourceDirty(overlayRoot) {
+	if builtFrom == "" && p.isSourceDirty(overlayRoot) {
 		return CheckReport{Basis: "dirty"}, overlayRoot, registryPath, "", noopCleanup, nil
 	}
 
@@ -63,21 +62,20 @@ func resolveComparisonSource(overlayRoot, registryPath, destDir string, opts Opt
 	// request, a feature-branch shelltest) name the ref it deploys from; the
 	// disclosure always prints whichever ref won, so an override never hides.
 	candidates := []string{"main", "origin/main", "HEAD"}
-	if override := strings.TrimSpace(opts.DeployRef); override != "" {
+	if override := strings.TrimSpace(p.Options.DeployRef); override != "" {
 		candidates = append([]string{override}, candidates...)
 	}
 	deployRef := "main"
 	for _, candidate := range candidates {
-		if exec.Command("git", "-C", overlayRoot, "cat-file", "-e", candidate+"^{commit}").Run() == nil {
+		if p.Source.HasCommit(overlayRoot, candidate) {
 			deployRef = candidate
 			break
 		}
 	}
-	tipOut, tipErr := exec.Command("git", "-C", overlayRoot, "rev-parse", deployRef).Output()
+	tip, tipErr := p.Source.Resolve(overlayRoot, deployRef)
 	if tipErr != nil {
 		return CheckReport{}, "", "", "", noopCleanup, fmt.Errorf("pipkg: resolving %s: %w", deployRef, tipErr)
 	}
-	tip := strings.TrimSpace(string(tipOut))
 
 	// Stale: builtFrom is a resolvable commit strictly BEHIND the deploy
 	// ref's tip (a proper ancestor): commits landed on the deploy ref since
@@ -86,9 +84,9 @@ func resolveComparisonSource(overlayRoot, registryPath, destDir string, opts Opt
 	// ref (a feature-branch checkout, #315) is not stale; any content it
 	// differs in is caught by the file-level diff, never by this flag.
 	stale := builtFrom != "" && builtFromPattern.MatchString(builtFrom) && builtFrom != tip &&
-		exec.Command("git", "-C", overlayRoot, "merge-base", "--is-ancestor", builtFrom, tip).Run() == nil
+		p.Source.IsAncestor(overlayRoot, builtFrom, tip)
 
-	root, deployCleanup, exportErr := exportGitTree(overlayRoot, deployRef)
+	root, deployCleanup, exportErr := p.exportGitTree(overlayRoot, deployRef)
 	if exportErr != nil {
 		return CheckReport{}, "", "", "", noopCleanup, fmt.Errorf("pipkg: exporting %s for comparison: %w", deployRef, exportErr)
 	}
@@ -122,12 +120,15 @@ func readBuiltFrom(destDir string) string {
 }
 
 // exportGitTree exports skills/, agents/, and skills.registry.yaml at rev
-// from the overlayRoot git repository into a fresh temp directory via `git
-// archive`, returning that directory and a cleanup func. rev MUST already
-// be a value this package trusts as a git ref (a validated 40-hex SHA, or
-// the fixed literal "main") -- never attacker-controlled input, since it is
-// passed directly as a git argument.
-func exportGitTree(overlayRoot, rev string) (string, func(), error) {
+// from the overlayRoot git repository into a fresh temp directory, as the
+// archive the SourceRepo hands back, returning that directory and a
+// cleanup func. rev MUST already be a value this package trusts as a git
+// ref (a validated 40-hex SHA, or the fixed literal "main") -- never
+// attacker-controlled input, since it is passed directly as a git argument.
+// The archive is read whole before it is extracted, so a git that fails
+// leaves nothing in the directory and a failure to extract is only
+// reported when git succeeded.
+func (p Packages) exportGitTree(overlayRoot, rev string) (string, func(), error) {
 	tmp, err := os.MkdirTemp("", "labdrian-pi-source-*")
 	if err != nil {
 		return "", func() {}, fmt.Errorf("pipkg: creating temp source dir: %w", err)
@@ -140,33 +141,17 @@ func exportGitTree(overlayRoot, rev string) (string, func(), error) {
 	// files at rev makes the whole archive command fail, so only include it
 	// when rev actually has that path -- otherwise comparing against a
 	// deploy ref that predates it would break every Check call.
-	if exec.Command("git", "-C", overlayRoot, "cat-file", "-e", rev+":pi").Run() == nil {
+	if p.Source.HasPath(overlayRoot, rev, "pi") {
 		paths = append(paths, "pi")
 	}
-	cmd := exec.Command("git", append([]string{"-C", overlayRoot, "archive", "--format=tar", rev, "--"}, paths...)...)
-	stdout, err := cmd.StdoutPipe()
+	archive, err := p.Source.Export(overlayRoot, rev, paths)
 	if err != nil {
 		cleanup()
-		return "", func() {}, fmt.Errorf("pipkg: preparing git archive: %w", err)
+		return "", func() {}, fmt.Errorf("pipkg: %w", err)
 	}
-	var stderr strings.Builder
-	cmd.Stderr = &stderr
-	if err := cmd.Start(); err != nil {
+	if err := extractTar(bytes.NewReader(archive), tmp); err != nil {
 		cleanup()
-		return "", func() {}, fmt.Errorf("pipkg: starting git archive: %w", err)
-	}
-	extractErr := extractTar(stdout, tmp)
-	// R3-002: extractTar can return before the stream is exhausted; drain
-	// any remainder or git blocks forever on a full stdout pipe below.
-	_, _ = io.Copy(io.Discard, stdout)
-	waitErr := cmd.Wait()
-	if waitErr != nil {
-		cleanup()
-		return "", func() {}, fmt.Errorf("pipkg: git archive %s: %w (%s)", rev, waitErr, strings.TrimSpace(stderr.String()))
-	}
-	if extractErr != nil {
-		cleanup()
-		return "", func() {}, fmt.Errorf("pipkg: extracting git archive %s: %w", rev, extractErr)
+		return "", func() {}, fmt.Errorf("pipkg: extracting git archive %s: %w", rev, err)
 	}
 	return tmp, cleanup, nil
 }

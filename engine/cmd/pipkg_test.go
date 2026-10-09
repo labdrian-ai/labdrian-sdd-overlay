@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/pipkg"
 )
 
 // pipkgFixtureOverlay writes a minimal overlay tree exercising the 'pipkg
@@ -52,7 +54,7 @@ func TestRunPipkgCore_BuildThenCheck(t *testing.T) {
 
 	var outBuf, errBuf bytes.Buffer
 	exitCode := -1
-	runPipkgCore(
+	runPipkgCore(noGit(),
 		[]string{"build", "--overlay-root", overlayRoot, "--registry", registryPath, "--dest-dir", destDir},
 		&outBuf, &errBuf, func(code int) { exitCode = code },
 	)
@@ -66,7 +68,7 @@ func TestRunPipkgCore_BuildThenCheck(t *testing.T) {
 	outBuf.Reset()
 	errBuf.Reset()
 	exitCode = -1
-	runPipkgCore(
+	runPipkgCore(noGit(),
 		[]string{"check", "--overlay-root", overlayRoot, "--registry", registryPath, "--dest-dir", destDir},
 		&outBuf, &errBuf, func(code int) { exitCode = code },
 	)
@@ -81,7 +83,7 @@ func TestRunPipkgCore_CheckReportsDriftBeforeBuild(t *testing.T) {
 
 	var outBuf, errBuf bytes.Buffer
 	exitCode := -1
-	runPipkgCore(
+	runPipkgCore(noGit(),
 		[]string{"check", "--overlay-root", overlayRoot, "--registry", registryPath, "--dest-dir", destDir},
 		&outBuf, &errBuf, func(code int) { exitCode = code },
 	)
@@ -96,8 +98,44 @@ func TestRunPipkgCore_CheckReportsDriftBeforeBuild(t *testing.T) {
 func TestRunPipkgCore_MissingVerbFailsLoud(t *testing.T) {
 	var outBuf, errBuf bytes.Buffer
 	exitCode := -1
-	runPipkgCore([]string{}, &outBuf, &errBuf, func(code int) { exitCode = code })
+	runPipkgCore(noGit(), []string{}, &outBuf, &errBuf, func(code int) { exitCode = code })
 	if exitCode != 1 {
 		t.Fatalf("pipkg with no verb should exit 1, got %d", exitCode)
+	}
+}
+
+// recordingSource is a SourceRepo that says nothing is a repository and remembers it was asked.
+type recordingSource struct {
+	pipkg.NoRepository
+	asked int
+}
+
+func (r *recordingSource) HasChanges(dir string, paths ...string) (bool, error) {
+	r.asked++
+	return r.NoRepository.HasChanges(dir, paths...)
+}
+
+// The builder asks git through the source the command is given, for the build and for the check.
+func TestRunPipkgCore_AsksGitThroughTheSourceItIsGiven(t *testing.T) {
+	overlayRoot, registryPath := pipkgFixtureOverlay(t)
+	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
+	source := &recordingSource{}
+
+	var outBuf, errBuf bytes.Buffer
+	runPipkgCore(source, []string{"build", "--overlay-root", overlayRoot, "--registry", registryPath, "--dest-dir", destDir}, &outBuf, &errBuf, func(int) {})
+	if source.asked == 0 {
+		t.Errorf("pipkg build never asked the source about the overlay; stderr=%q", errBuf.String())
+	}
+}
+
+// The Pi runtime builds its package asking git through the source the command is given.
+func TestRuntimeInstallPiAsksGitThroughTheSourceItIsGiven(t *testing.T) {
+	piOverlayWorld(t)
+	source := &recordingSource{}
+
+	var out, errOut bytes.Buffer
+	runRuntimeCore(&scriptedPiCommands{}, source, []string{"install", "--target", "pi"}, &out, &errOut, func(int) {})
+	if source.asked == 0 {
+		t.Errorf("the Pi package build never asked the source about the overlay; stdout=%q stderr=%q", out.String(), errOut.String())
 	}
 }

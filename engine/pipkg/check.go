@@ -7,8 +7,6 @@ import (
 	"regexp"
 	"sort"
 	"strings"
-
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
 )
 
 // CheckReport discloses which git state Check actually compared the
@@ -66,7 +64,7 @@ func (r CheckReport) Disclosure() string {
 // never reach a git subprocess argv).
 var builtFromPattern = regexp.MustCompile(`^[0-9a-f]{40}$`)
 
-// Check regenerates the package into a temp dir and diffs it, file by file,
+// Compare regenerates the package into a temp dir and diffs it, file by file,
 // against destDir. Returns a CheckReport disclosing the comparison basis,
 // and a non-nil, drift-naming error when destDir is missing, has extra
 // files, is missing files, or has changed content.
@@ -82,7 +80,7 @@ var builtFromPattern = regexp.MustCompile(`^[0-9a-f]{40}$`)
 // labdrian.builtFrom field is normalized out of the content comparison
 // (via stripBuiltFrom) so recording a different (but still correct) ref
 // never counts as file-level drift by itself.
-func Check(registries skills.RegistryRepository, overlayRoot, registryPath, destDir string, opts Options) (CheckReport, error) {
+func (p Packages) Compare(overlayRoot, registryPath, destDir string) (CheckReport, error) {
 	got, err := listFiles(destDir)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -91,13 +89,13 @@ func Check(registries skills.RegistryRepository, overlayRoot, registryPath, dest
 		return CheckReport{}, fmt.Errorf("pipkg: reading built package: %w", err)
 	}
 
-	report, sourceRoot, sourceRegistry, buildRev, cleanup, err := resolveComparisonSource(overlayRoot, registryPath, destDir, opts)
+	report, sourceRoot, sourceRegistry, buildRev, cleanup, err := p.resolveComparisonSource(overlayRoot, registryPath, destDir)
 	if err != nil {
 		return CheckReport{}, err
 	}
 	defer cleanup()
 
-	reg, err := loadRegistry(registries, sourceRegistry)
+	reg, err := loadRegistry(p.Registries, sourceRegistry)
 	if err != nil {
 		return report, err
 	}
@@ -115,7 +113,7 @@ func Check(registries skills.RegistryRepository, overlayRoot, registryPath, dest
 	// field consistent with what a real Build at that ref would have
 	// produced, exactly the same reasoning as builtFrom being normalized
 	// out of the diff, but here fixing the input instead of the output.
-	if err := buildInto(sourceRoot, reg, tmpDir, overlayRoot, buildRev); err != nil {
+	if err := p.buildInto(sourceRoot, reg, tmpDir, overlayRoot, buildRev); err != nil {
 		return report, fmt.Errorf("pipkg: regenerating for check: %w", err)
 	}
 

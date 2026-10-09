@@ -12,7 +12,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/pipkg"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
 )
 
@@ -43,7 +42,7 @@ func TestBuildReadsTheRegistryThroughTheRepositoryItIsGiven(t *testing.T) {
 	}}}}
 	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
 
-	if err := pipkg.Build(fake, overlayRoot, "no/such/file.yaml", destDir); err != nil {
+	if err := packagesOf(fake).Build(overlayRoot, "no/such/file.yaml", destDir); err != nil {
 		t.Fatalf("Build() = %v, want it to build from what the repository returned", err)
 	}
 	if len(fake.loaded) != 1 || fake.loaded[0] != "no/such/file.yaml" {
@@ -64,7 +63,7 @@ func TestBuildRefusesWhatTheDomainRefusesWhateverTheAdapterRead(t *testing.T) {
 		Install:   skills.Install{DefaultScope: skills.ScopeGlobal, Targets: []string{"pi"}},
 		Lifecycle: skills.Lifecycle{UpdateStrategy: "overlay-only"},
 	}}}}
-	err := pipkg.Build(fake, overlayRoot, registryPath, filepath.Join(t.TempDir(), "labdrian-pi"))
+	err := packagesOf(fake).Build(overlayRoot, registryPath, filepath.Join(t.TempDir(), "labdrian-pi"))
 	if err == nil || !strings.Contains(err.Error(), `pipkg: parsing registry: skills: entry "x": path "../outside" must not contain a ".." component`) {
 		t.Errorf("Build() = %v, want the refusal of the domain's rule, worded as a parse failure of the registry", err)
 	}
@@ -75,7 +74,7 @@ func TestBuildTellsAStoreThatCannotBeReadAsOneThatCouldNotBeOpened(t *testing.T)
 	overlayRoot, registryPath := fixtureOverlay(t)
 	cause := &fs.PathError{Op: "open", Path: registryPath, Err: fs.ErrNotExist}
 	fake := &fakeRegistries{err: &skills.RegistryReadError{Err: cause}}
-	err := pipkg.Build(fake, overlayRoot, registryPath, filepath.Join(t.TempDir(), "labdrian-pi"))
+	err := packagesOf(fake).Build(overlayRoot, registryPath, filepath.Join(t.TempDir(), "labdrian-pi"))
 	if err == nil || err.Error() != "pipkg: opening registry: "+cause.Error() {
 		t.Errorf("Build() = %v, want %q", err, "pipkg: opening registry: "+cause.Error())
 	}
@@ -91,7 +90,7 @@ func TestBuildTellsAStoreThatCannotBeReadAsOneThatCouldNotBeOpened(t *testing.T)
 func TestCheckTellsWhatTheRepositoryItIsGivenCannotBeBuiltFromInTheWordsBuildUses(t *testing.T) {
 	overlayRoot, registryPath := fixtureOverlay(t)
 	built := filepath.Join(t.TempDir(), "built", "labdrian-pi")
-	if err := pipkg.Build(fileRegistries, overlayRoot, registryPath, built); err != nil {
+	if err := packagesOf(fileRegistries).Build(overlayRoot, registryPath, built); err != nil {
 		t.Fatal(err)
 	}
 	cause := &fs.PathError{Op: "open", Path: registryPath, Err: fs.ErrNotExist}
@@ -107,7 +106,7 @@ func TestCheckTellsWhatTheRepositoryItIsGivenCannotBeBuiltFromInTheWordsBuildUse
 		"a store that cannot be read": {&fakeRegistries{err: &skills.RegistryReadError{Err: cause}}, "pipkg: opening registry: " + cause.Error()},
 	} {
 		t.Run(name, func(t *testing.T) {
-			_, err := pipkg.Check(tc.fake, overlayRoot, registryPath, built, pipkg.Options{})
+			_, err := packagesOf(tc.fake).Compare(overlayRoot, registryPath, built)
 			if err == nil || err.Error() != tc.want {
 				t.Errorf("Check() = %v, want %q", err, tc.want)
 			}
@@ -124,7 +123,7 @@ func TestCheckTellsWhatTheRepositoryItIsGivenCannotBeBuiltFromInTheWordsBuildUse
 func TestBuildTellsWhatTheReaderLeftOutOnlyInItsRefusalAndCheckOnlyInItsWarning(t *testing.T) {
 	overlayRoot, registryPath := fixtureOverlay(t)
 	built := filepath.Join(t.TempDir(), "built", "labdrian-pi")
-	if err := pipkg.Build(fileRegistries, overlayRoot, registryPath, built); err != nil {
+	if err := packagesOf(fileRegistries).Build(overlayRoot, registryPath, built); err != nil {
 		t.Fatal(err)
 	}
 	reg, err := skills.ReadRegistry(fileRegistries, registryPath)
@@ -135,7 +134,7 @@ func TestBuildTellsWhatTheReaderLeftOutOnlyInItsRefusalAndCheckOnlyInItsWarning(
 	var stderr strings.Builder
 	repo := skills.WarnOfUnread(&fakeRegistries{reg: reg}, &stderr)
 
-	err = pipkg.Build(repo, overlayRoot, registryPath, built)
+	err = packagesOf(repo).Build(overlayRoot, registryPath, built)
 	if err == nil || !strings.Contains(err.Error(), `unknown key "color"`) {
 		t.Errorf("Build() = %v, want the refusal to say what was left out", err)
 	}
@@ -143,7 +142,7 @@ func TestBuildTellsWhatTheReaderLeftOutOnlyInItsRefusalAndCheckOnlyInItsWarning(
 		t.Errorf("Build warned %q before refusing with the same words", stderr.String())
 	}
 
-	if _, err := pipkg.Check(repo, overlayRoot, registryPath, built, pipkg.Options{}); err != nil {
+	if _, err := packagesOf(repo).Compare(overlayRoot, registryPath, built); err != nil {
 		t.Fatal(err)
 	}
 	if want := "warning: registry fields left unread: line 3: unknown key \"color\" in skill entry\n"; stderr.String() != want {
@@ -157,7 +156,7 @@ func TestBuildTellsWhatTheReaderLeftOutOnlyInItsRefusalAndCheckOnlyInItsWarning(
 func TestARegistryThatIsADirectoryIsAStoreThatCannotBeRead(t *testing.T) {
 	overlayRoot, _ := fixtureOverlay(t)
 	dir := t.TempDir()
-	err := pipkg.Build(fileRegistries, overlayRoot, dir, filepath.Join(t.TempDir(), "labdrian-pi"))
+	err := packagesOf(fileRegistries).Build(overlayRoot, dir, filepath.Join(t.TempDir(), "labdrian-pi"))
 	if err == nil || !strings.HasPrefix(err.Error(), "pipkg: opening registry: ") || !strings.Contains(err.Error(), "is a directory") {
 		t.Errorf("Build() = %v, want pipkg: opening registry: ... is a directory", err)
 	}
@@ -171,7 +170,7 @@ func TestARegistryThatIsADirectoryIsAStoreThatCannotBeRead(t *testing.T) {
 func TestBuildRefusesARegistryTheReaderLeftFieldsOutOfAndWritesNothing(t *testing.T) {
 	overlayRoot, registryPath := fixtureOverlay(t)
 	built := filepath.Join(t.TempDir(), "built", "labdrian-pi")
-	if err := pipkg.Build(fileRegistries, overlayRoot, registryPath, built); err != nil {
+	if err := packagesOf(fileRegistries).Build(overlayRoot, registryPath, built); err != nil {
 		t.Fatal(err)
 	}
 	reg, err := skills.ReadRegistry(fileRegistries, registryPath)
@@ -181,7 +180,7 @@ func TestBuildRefusesARegistryTheReaderLeftFieldsOutOfAndWritesNothing(t *testin
 	reg.Unread = []string{`line 3: unknown key "color" in skill entry`}
 	partial := &fakeRegistries{reg: reg}
 
-	if _, err := pipkg.Check(partial, overlayRoot, registryPath, built, pipkg.Options{}); err != nil {
+	if _, err := packagesOf(partial).Compare(overlayRoot, registryPath, built); err != nil {
 		t.Errorf("Check() = %v, want a check over a registry read in part to go on as it did", err)
 	}
 
@@ -191,7 +190,7 @@ func TestBuildRefusesARegistryTheReaderLeftFieldsOutOfAndWritesNothing(t *testin
 	const want = `pipkg: skills: the registry has fields this program does not read, and a package built from it would be built from a partial read: line 3: unknown key "color" in skill entry`
 	before := listTree(t, built)
 
-	if err := pipkg.Build(partial, overlayRoot, registryPath, built); err == nil || err.Error() != want {
+	if err := packagesOf(partial).Build(overlayRoot, registryPath, built); err == nil || err.Error() != want {
 		t.Errorf("Build() over a package that is there = %v, want %q", err, want)
 	}
 	if after := listTree(t, built); after != before {
@@ -199,7 +198,7 @@ func TestBuildRefusesARegistryTheReaderLeftFieldsOutOfAndWritesNothing(t *testin
 	}
 
 	fresh := filepath.Join(t.TempDir(), "parent", "labdrian-pi")
-	if err := pipkg.Build(partial, overlayRoot, registryPath, fresh); err == nil || err.Error() != want {
+	if err := packagesOf(partial).Build(overlayRoot, registryPath, fresh); err == nil || err.Error() != want {
 		t.Errorf("Build() into a new place = %v, want %q", err, want)
 	}
 	if _, err := os.Stat(filepath.Dir(fresh)); !errors.Is(err, fs.ErrNotExist) {

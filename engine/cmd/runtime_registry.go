@@ -11,8 +11,9 @@ import (
 
 // newRuntimeRegistry is the one place the runtimes the program ships are named. The order is the
 // order `--target all` acts on them in. Pi reaches its CLI through commands and builds its package
-// from the skills registry that registries reads, under the pipkg options of the run.
-func newRuntimeRegistry(registries skills.RegistryRepository, commands runtimepkg.CommandRunner, packages pipkg.Options) (*runtimepkg.Registry, error) {
+// from the skills registry that registries reads, asking git about the overlay through source,
+// under the pipkg options of the run.
+func newRuntimeRegistry(registries skills.RegistryRepository, commands runtimepkg.CommandRunner, source pipkg.SourceRepo, packages pipkg.Options) (*runtimepkg.Registry, error) {
 	r := runtimepkg.NewRegistry()
 	for _, register := range []func(*runtimepkg.Registry) error{
 		runtimepkg.RegisterClaude,
@@ -21,7 +22,7 @@ func newRuntimeRegistry(registries skills.RegistryRepository, commands runtimepk
 		func(r *runtimepkg.Registry) error {
 			return runtimepkg.RegisterPi(r, runtimepkg.PiPorts{
 				Commands: commands,
-				Packages: pipkg.Packages{Registries: registries, Options: packages},
+				Packages: pipkg.Packages{Registries: registries, Source: source, Options: packages},
 			})
 		},
 	} {
