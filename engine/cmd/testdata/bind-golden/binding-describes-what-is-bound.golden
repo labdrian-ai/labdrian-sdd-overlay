@@ -1,0 +1,90 @@
+$ workflow binding
+# nothing is bound (in <REPO>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "absent"
+}
+--- stderr ---
+
+$ workflow bind --project proj-1 --workflow wf-1
+# binds (in <REPO>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-1",
+    "bound_at": "<TIME>"
+  }
+}
+--- stderr ---
+
+$ workflow binding
+# the workflow is paused (in <REPO>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-1",
+    "bound_at": "<TIME>"
+  },
+  "workflow": {
+    "classification": "owned",
+    "status": "paused"
+  }
+}
+--- stderr ---
+
+$ workflow binding
+# the workflow is closed (in <REPO>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-1",
+    "bound_at": "<TIME>"
+  },
+  "workflow": {
+    "classification": "owned",
+    "status": "closed"
+  }
+}
+--- stderr ---
+
+$ workflow binding
+# from a directory inside the repository (in <REPO>/a/b)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-1",
+    "bound_at": "<TIME>"
+  },
+  "workflow": {
+    "classification": "owned",
+    "status": "closed"
+  }
+}
+--- stderr ---
+

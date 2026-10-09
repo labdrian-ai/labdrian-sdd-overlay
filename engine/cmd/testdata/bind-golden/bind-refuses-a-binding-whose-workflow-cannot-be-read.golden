@@ -1,0 +1,46 @@
+$ workflow bind --project proj-1 --workflow wf-1
+# bound to a running workflow (in <REPO>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-1",
+    "bound_at": "<TIME>"
+  }
+}
+--- stderr ---
+
+$ workflow binding
+# binding reports the workflow as unavailable (in <REPO>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-1",
+    "bound_at": "<TIME>"
+  },
+  "workflow": {
+    "classification": "unavailable",
+    "detail": "workflow store: \"<STATE>/labdrian/workflows/proj-1/wf-1.jsonl\" is not a regular file"
+  }
+}
+--- stderr ---
+
+$ workflow bind --project proj-1 --workflow wf-next
+# another workflow is refused, the log may still be active (in <REPO>)
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+error: workflow bind: this repository is bound to workflow "wf-1" of project "proj-1", whose log cannot be read (workflow store: "<STATE>/labdrian/workflows/proj-1/wf-1.jsonl" is not a regular file), so it may still be active; fix the problem, or run 'workflow unbind' first to bind another
+

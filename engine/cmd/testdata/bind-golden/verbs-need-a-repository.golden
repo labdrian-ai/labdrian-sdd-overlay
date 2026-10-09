@@ -1,0 +1,48 @@
+$ workflow bind --project proj-1 --workflow wf-1
+# bind outside every repository (in <OUTSIDE>)
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+error: workflow bind: binding needs a git repository to key on: no .git was found at or above the working directory
+
+$ workflow unbind
+# unbind outside every repository (in <OUTSIDE>)
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+error: workflow unbind: binding needs a git repository to key on: no .git was found at or above the working directory
+
+$ workflow binding
+# binding outside every repository (in <OUTSIDE>)
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+error: workflow binding: binding needs a git repository to key on: no .git was found at or above the working directory
+
+$ workflow binding
+# binding with an unknown working directory (in no directory)
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+error: workflow binding: binding needs a git repository to key on: no .git was found at or above the working directory
+
+$ workflow bind --project proj-1 --workflow wf-1
+# bind with a relative working directory (in repo)
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+error: workflow bind: binding needs a git repository to key on: no .git was found at or above the working directory
+
+$ workflow bind --project proj-1
+# a bad command line is reported before the repository is looked for (in <OUTSIDE>)
+--- exit ---
+1
+--- stdout ---
+--- stderr ---
+error: workflow bind: --workflow is required
+

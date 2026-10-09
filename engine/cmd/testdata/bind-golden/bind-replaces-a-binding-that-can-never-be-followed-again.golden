@@ -1,0 +1,195 @@
+$ workflow bind --project proj-1 --workflow wf-closed
+# bound to a workflow that is later closed (in <REPO>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-closed",
+    "bound_at": "<TIME>"
+  }
+}
+--- stderr ---
+
+$ workflow binding
+# binding reports the workflow as closed (in <REPO>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-closed",
+    "bound_at": "<TIME>"
+  },
+  "workflow": {
+    "classification": "owned",
+    "status": "closed"
+  }
+}
+--- stderr ---
+
+$ workflow bind --project proj-1 --workflow wf-new
+# replaced by the next one (in <REPO>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-new",
+    "bound_at": "<TIME>"
+  }
+}
+--- stderr ---
+
+$ workflow unbind
+# unbind (in <REPO>)
+--- exit ---
+0
+--- stdout ---
+{
+  "removed": true
+}
+--- stderr ---
+
+$ workflow bind --project proj-1 --workflow wf-gone
+# bound to a workflow whose log is later removed (in <REPO>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-gone",
+    "bound_at": "<TIME>"
+  }
+}
+--- stderr ---
+
+$ workflow binding
+# binding reports the workflow as absent (in <REPO>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-gone",
+    "bound_at": "<TIME>"
+  },
+  "workflow": {
+    "classification": "absent"
+  }
+}
+--- stderr ---
+
+$ workflow bind --project proj-1 --workflow wf-new
+# replaced by the next one (in <REPO>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-new",
+    "bound_at": "<TIME>"
+  }
+}
+--- stderr ---
+
+$ workflow unbind
+# unbind (in <REPO>)
+--- exit ---
+0
+--- stdout ---
+{
+  "removed": true
+}
+--- stderr ---
+
+$ workflow bind --project proj-1 --workflow wf-drifted
+# bound to a workflow whose log later drifts (in <REPO>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-drifted",
+    "bound_at": "<TIME>"
+  }
+}
+--- stderr ---
+
+$ workflow binding
+# binding reports the workflow as drifted (in <REPO>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-drifted",
+    "bound_at": "<TIME>"
+  },
+  "workflow": {
+    "classification": "drifted",
+    "detail": "workflow: verify events: event 1 prev_digest \"<DIGEST>\" does not match event 0 digest \"<DIGEST>\""
+  }
+}
+--- stderr ---
+
+$ workflow bind --project proj-1 --workflow wf-new
+# replaced by the next one (in <REPO>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-new",
+    "bound_at": "<TIME>"
+  }
+}
+--- stderr ---
+
+# after the replacements: the binding store
+labdrian/bindings drwx------
+labdrian/bindings/<KEY>.json -rw-------
+{
+  "version": 1,
+  "repo_key": "<KEY>",
+  "project_id": "proj-1",
+  "workflow_id": "wf-new",
+  "bound_at": "<TIME>"
+}
+labdrian/bindings/<KEY>.lock -rw-------

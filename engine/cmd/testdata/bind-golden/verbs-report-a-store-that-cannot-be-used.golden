@@ -1,0 +1,27 @@
+$ workflow bind --project proj-1 --workflow wf-1
+# bind (in <REPO>)
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+error: workflow bind: projection store: refusing to change the binding: the on-disk state is unavailable: store component "<STATE>/labdrian/bindings" is not a directory
+
+$ workflow unbind
+# unbind (in <REPO>)
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+error: workflow unbind: projection store: refusing to change the binding: the on-disk state is unavailable: store component "<STATE>/labdrian/bindings" is not a directory
+
+$ workflow binding
+# binding (in <REPO>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "unavailable",
+  "detail": "store component \"<STATE>/labdrian/bindings\" is not a directory"
+}
+--- stderr ---
+

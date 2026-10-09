@@ -1,0 +1,138 @@
+$ workflow unbind
+# unbind with nothing bound removes nothing (in <REPO>)
+--- exit ---
+0
+--- stdout ---
+{
+  "removed": false
+}
+--- stderr ---
+
+$ workflow bind --project proj-1 --workflow wf-1
+# binds a running workflow (in <REPO>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-1",
+    "bound_at": "<TIME>"
+  }
+}
+--- stderr ---
+
+$ workflow binding
+# binding names it and the workflow (in <REPO>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-1",
+    "bound_at": "<TIME>"
+  },
+  "workflow": {
+    "classification": "owned",
+    "status": "running"
+  }
+}
+--- stderr ---
+
+$ workflow bind --project proj-1 --workflow wf-1
+# binding the same workflow again changes nothing, bound_at included (in <REPO>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-1",
+    "bound_at": "<TIME>"
+  }
+}
+--- stderr ---
+
+# the binding file is byte for byte the first one: true
+# after binding twice: the binding store
+labdrian/bindings drwx------
+labdrian/bindings/<KEY>.json -rw-------
+{
+  "version": 1,
+  "repo_key": "<KEY>",
+  "project_id": "proj-1",
+  "workflow_id": "wf-1",
+  "bound_at": "<TIME>"
+}
+labdrian/bindings/<KEY>.lock -rw-------
+$ workflow unbind
+# unbind removes the binding (in <REPO>)
+--- exit ---
+0
+--- stdout ---
+{
+  "removed": true
+}
+--- stderr ---
+
+$ workflow unbind
+# unbind a second time removes nothing (in <REPO>)
+--- exit ---
+0
+--- stdout ---
+{
+  "removed": false
+}
+--- stderr ---
+
+# after unbinding: the binding store
+labdrian/bindings drwx------
+labdrian/bindings/<KEY>.lock -rw-------
+$ workflow bind --project proj-1 --workflow wf-2
+# binds a created workflow (in <REPO>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-2",
+    "bound_at": "<TIME>"
+  }
+}
+--- stderr ---
+
+$ workflow binding
+# binding shows its status (in <REPO>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-2",
+    "bound_at": "<TIME>"
+  },
+  "workflow": {
+    "classification": "owned",
+    "status": "created"
+  }
+}
+--- stderr ---
+
