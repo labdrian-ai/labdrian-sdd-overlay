@@ -57,7 +57,7 @@ func TestProjectionOwnershipNeedsTheBinaryPathAndTheIdentity(t *testing.T) {
 		"UserPromptSubmit": []interface{}{foreignMentioningTheIdentity()},
 	}}
 	path := writeSettingsDoc(t, doc)
-	m := buildMerger(t, path)
+	m := installerFor(t, path)
 
 	if err := m.Install(); err != nil {
 		t.Fatal(err)
@@ -88,7 +88,7 @@ func containsEntry(t *testing.T, entries []interface{}, want interface{}) bool {
 
 // TestProjectionOwnershipIsASubstringOfTheHookCommand pins a limit every hook
 // family shares: an entry is ours when its command contains the binary path
-// given to the merger and the family's identity token. A binary path so short
+// given to the installer and the family's identity token. A binary path so short
 // that it occurs in a foreign command claims that command, so a caller must
 // pass the real, full path (the merge-settings and uninstall-hooks verbs
 // require --hook-command). The test exists so that changing the rule is a
@@ -103,7 +103,7 @@ func TestProjectionOwnershipIsASubstringOfTheHookCommand(t *testing.T) {
 	if parts := settings.MissingProjectionHookParts(parseJSON(t, path), "o"); !strings.Contains(strings.Join(parts, "|"), "drifted") {
 		t.Fatalf("a one-letter hook command did not claim the foreign entry: %v", parts)
 	}
-	if err := newMerger(path, "o").Uninstall(); err != nil {
+	if err := newSettingsInstaller(path, "o").Uninstall(); err != nil {
 		t.Fatal(err)
 	}
 	if hooks, _ := parseJSON(t, path)["hooks"].(map[string]interface{}); hooks["UserPromptSubmit"] != nil {
@@ -134,14 +134,14 @@ func TestAnEmptyHookCommandClaimsNothing(t *testing.T) {
 		}
 	})
 
-	for name, act := range map[string]func(*merger) error{
-		"Install":   func(m *merger) error { return m.Install() },
-		"Uninstall": func(m *merger) error { return m.Uninstall() },
+	for name, act := range map[string]func(*settingsInstaller) error{
+		"Install":   func(m *settingsInstaller) error { return m.Install() },
+		"Uninstall": func(m *settingsInstaller) error { return m.Uninstall() },
 	} {
 		t.Run(name, func(t *testing.T) {
 			path := writeSettingsDoc(t, doc)
 			before := readFileBytes(t, path)
-			err := act(newMerger(path, ""))
+			err := act(newSettingsInstaller(path, ""))
 			if err == nil {
 				t.Fatalf("%s with an empty hook command returned nil, want an error", name)
 			}
@@ -215,7 +215,7 @@ func TestInstallOverMalformedHooksReplacesOnlyTheUnusableValue(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			path := writeSettingsDoc(t, root)
 			original := readFileBytes(t, path)
-			m := buildMerger(t, path)
+			m := installerFor(t, path)
 
 			if err := m.Uninstall(); err != nil {
 				t.Fatalf("Uninstall: %v", err)

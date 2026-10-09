@@ -146,7 +146,7 @@ func TestApproveGuardCommand_RunsUnderShWithoutEverBlocking(t *testing.T) {
 	install := func(t *testing.T, bin string) string {
 		t.Helper()
 		path := filepath.Join(t.TempDir(), "settings.json")
-		if err := newMerger(path, bin).Install(); err != nil {
+		if err := newSettingsInstaller(path, bin).Install(); err != nil {
 			t.Fatal(err)
 		}
 		for _, e := range approveGuardEntriesFor(parseJSON(t, path), bin) {
@@ -241,7 +241,7 @@ func TestApproveGuardFamilyPreservesForeignEntriesByteForByte(t *testing.T) {
 	if err := os.WriteFile(path, []byte(doc), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	m := buildMerger(t, path)
+	m := installerFor(t, path)
 	check := func(stage string) {
 		t.Helper()
 		root := parseJSON(t, path)
@@ -480,11 +480,11 @@ func TestApproveGuardWithAnEmptyHookCommandClaimsNothing(t *testing.T) {
 	}
 	path := writeSettingsDoc(t, doc)
 	before := readFileBytes(t, path)
-	for name, act := range map[string]func(*merger) error{
-		"Install":   func(m *merger) error { return m.Install() },
-		"Uninstall": func(m *merger) error { return m.Uninstall() },
+	for name, act := range map[string]func(*settingsInstaller) error{
+		"Install":   func(m *settingsInstaller) error { return m.Install() },
+		"Uninstall": func(m *settingsInstaller) error { return m.Uninstall() },
 	} {
-		if err := act(newMerger(path, "")); err == nil {
+		if err := act(newSettingsInstaller(path, "")); err == nil {
 			t.Errorf("%s with an empty hook command returned nil, want an error", name)
 		}
 		if !bytes.Equal(readFileBytes(t, path), before) {

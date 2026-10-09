@@ -19,26 +19,27 @@ import (
 // binary path. It is NOT the real ~/.claude/bin path — tests are isolated.
 const testHookCommand = "/home/testuser/.claude/bin/gentle-ai-overlay"
 
-// merger is the pair these tests used to build with settings.NewMerger: one settings file and the
-// binary its hooks run. It is the test's single entry point into the package, over the Installer.
-type merger struct{ settingsPath, hookCommand string }
+// settingsInstaller binds one settings file and the binary its hooks run to the stateless Installer,
+// so a test says m.Install() and not Installer{}.Install(path, binary) every time. It is test code
+// only; the production type is Installer.
+type settingsInstaller struct{ settingsPath, hookCommand string }
 
-func newMerger(settingsPath, hookCommand string) *merger {
-	return &merger{settingsPath: settingsPath, hookCommand: hookCommand}
+func newSettingsInstaller(settingsPath, hookCommand string) *settingsInstaller {
+	return &settingsInstaller{settingsPath: settingsPath, hookCommand: hookCommand}
 }
 
-func (m *merger) Install() error {
+func (m *settingsInstaller) Install() error {
 	return settingsfile.Installer{}.Install(m.settingsPath, m.hookCommand)
 }
 
-func (m *merger) Uninstall() error {
+func (m *settingsInstaller) Uninstall() error {
 	return settingsfile.Installer{}.Uninstall(m.settingsPath, m.hookCommand)
 }
 
-// buildMerger creates a merger pointed at the given settings path with the test binary path.
-func buildMerger(t *testing.T, settingsPath string) *merger { //nolint:unparam
+// installerFor creates a settingsInstaller pointed at the given settings path with the test binary path.
+func installerFor(t *testing.T, settingsPath string) *settingsInstaller { //nolint:unparam
 	t.Helper()
-	return newMerger(settingsPath, testHookCommand)
+	return newSettingsInstaller(settingsPath, testHookCommand)
 }
 
 // parseJSON is a test helper that parses a JSON file and returns the raw map.
@@ -214,7 +215,7 @@ func containsHookWithCommand(root map[string]interface{}, hookKey, cmd string) b
 func TestMerge_AbsentFile_CreatesWithBothHooks(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "settings.json")
-	m := buildMerger(t, path)
+	m := installerFor(t, path)
 
 	if err := m.Install(); err != nil {
 		t.Fatalf("Install on absent file: %v", err)
@@ -246,7 +247,7 @@ func TestMerge_ExistingKeys_Preserved(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	m := buildMerger(t, path)
+	m := installerFor(t, path)
 	if err := m.Install(); err != nil {
 		t.Fatalf("Install with existing keys: %v", err)
 	}
@@ -274,7 +275,7 @@ func TestMerge_ExistingKeys_Preserved(t *testing.T) {
 func TestMerge_Idempotent(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "settings.json")
-	m := buildMerger(t, path)
+	m := installerFor(t, path)
 
 	if err := m.Install(); err != nil {
 		t.Fatalf("first Install: %v", err)
@@ -320,7 +321,7 @@ func TestMerge_MalformedSettings_ErrorAndUntouched(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	m := buildMerger(t, path)
+	m := installerFor(t, path)
 	err := m.Install()
 	if err == nil {
 		t.Fatal("Install on malformed JSON: expected error, got nil")
@@ -346,7 +347,7 @@ func TestMerge_AtomicWrite_BackupCreated(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	m := buildMerger(t, path)
+	m := installerFor(t, path)
 	if err := m.Install(); err != nil {
 		t.Fatalf("Install: %v", err)
 	}
@@ -366,7 +367,7 @@ func TestMerge_AtomicWrite_BackupCreated(t *testing.T) {
 func TestUninstall_RemovesOurHooks_LeavesRest(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "settings.json")
-	m := buildMerger(t, path)
+	m := installerFor(t, path)
 
 	// Install first to have something to uninstall.
 	// Pre-existing third-party hook uses old "command" shape at outer level.
@@ -423,7 +424,7 @@ func TestUninstall_RemovesOurHooks_LeavesRest(t *testing.T) {
 func TestUninstall_PreservesSameBinaryThirdPartyHooksWithoutLabdrianIdentity(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "settings.json")
-	m := buildMerger(t, path)
+	m := installerFor(t, path)
 
 	thirdPartyCommand := testHookCommand + " --third-party-tool-hook"
 	thirdPartyCommandWithPath := testHookCommand + " --other-arg"
@@ -505,7 +506,7 @@ func TestUninstall_PreservesSameBinaryThirdPartyHooksWithoutLabdrianIdentity(t *
 func TestRemoveHooksCleansUpLegacySafetyAndProjectionEntries(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "settings.json")
-	m := buildMerger(t, path)
+	m := installerFor(t, path)
 
 	legacySafetyCommand := testHookCommand + " --embedded-contract skill-discovery-safety"
 	legacyProjectionCommand := testHookCommand + " --embedded-contract review-projection-contract"
@@ -564,7 +565,7 @@ func TestRemoveHooksCleansUpLegacySafetyAndProjectionEntries(t *testing.T) {
 func TestUninstall_Idempotent(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "settings.json")
-	m := buildMerger(t, path)
+	m := installerFor(t, path)
 
 	if err := m.Install(); err != nil {
 		t.Fatalf("Install: %v", err)
@@ -583,7 +584,7 @@ func TestUninstall_Idempotent(t *testing.T) {
 func TestUninstall_AbsentFile_NoOp(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "nonexistent.json")
-	m := buildMerger(t, path)
+	m := installerFor(t, path)
 
 	if err := m.Uninstall(); err != nil {
 		t.Fatalf("Uninstall on absent file: expected no error, got %v", err)
@@ -611,7 +612,7 @@ func TestMerge_ExistingHooksUnderSameKey_Preserved(t *testing.T) {
 	data, _ := json.Marshal(initial)
 	os.WriteFile(path, data, 0644)
 
-	m := buildMerger(t, path)
+	m := installerFor(t, path)
 	if err := m.Install(); err != nil {
 		t.Fatalf("Install: %v", err)
 	}
@@ -635,7 +636,7 @@ func TestMerge_ExistingHooksUnderSameKey_Preserved(t *testing.T) {
 func TestMerge_OutputIsValidJSON(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "settings.json")
-	m := buildMerger(t, path)
+	m := installerFor(t, path)
 
 	if err := m.Install(); err != nil {
 		t.Fatalf("Install: %v", err)
@@ -661,7 +662,7 @@ func TestMerge_OutputIsValidJSON(t *testing.T) {
 func TestUninstall_EmptiedHookKey_IsRemoved(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "settings.json")
-	m := buildMerger(t, path)
+	m := installerFor(t, path)
 
 	// Install so both hook keys exist with our entry as the sole occupant.
 	if err := m.Install(); err != nil {
@@ -704,7 +705,7 @@ func TestUninstall_EmptiedHookKey_IsRemoved(t *testing.T) {
 func TestUninstall_EmptiedKey_OtherEntriesPreserved(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "settings.json")
-	m := buildMerger(t, path)
+	m := installerFor(t, path)
 
 	// Start with a settings file that has a third-party entry under
 	// UserPromptSubmit (old "command" outer shape), then install, then uninstall.
@@ -765,7 +766,7 @@ func TestUninstall_EmptiedKey_OtherEntriesPreserved(t *testing.T) {
 func TestUninstall_CountIsZeroAfterInstall(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "settings.json")
-	m := buildMerger(t, path)
+	m := installerFor(t, path)
 
 	if err := m.Install(); err != nil {
 		t.Fatalf("Install: %v", err)
@@ -810,7 +811,7 @@ func TestUninstall_CountIsZeroAfterInstall(t *testing.T) {
 func TestBuildUserPromptSubmitEntry_RegistryPathIsRobust(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "settings.json")
-	m := buildMerger(t, path)
+	m := installerFor(t, path)
 
 	if err := m.Install(); err != nil {
 		t.Fatalf("Install: %v", err)
@@ -890,7 +891,7 @@ func TestBuildUserPromptSubmitEntry_RegistryPathIsRobust(t *testing.T) {
 func TestSchema_PreToolUse_MatcherIsAgent(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "settings.json")
-	m := buildMerger(t, path)
+	m := installerFor(t, path)
 
 	if err := m.Install(); err != nil {
 		t.Fatalf("Install: %v", err)
@@ -961,7 +962,7 @@ func TestSchema_PreToolUse_MatcherIsAgent(t *testing.T) {
 func TestSchema_UserPromptSubmit_NoOuterKeys(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "settings.json")
-	m := buildMerger(t, path)
+	m := installerFor(t, path)
 
 	if err := m.Install(); err != nil {
 		t.Fatalf("Install: %v", err)
@@ -1013,7 +1014,7 @@ func TestSchema_UserPromptSubmit_NoOuterKeys(t *testing.T) {
 func TestSchema_InstallTwice_Idempotent(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "settings.json")
-	m := buildMerger(t, path)
+	m := installerFor(t, path)
 
 	if err := m.Install(); err != nil {
 		t.Fatalf("first Install: %v", err)
@@ -1039,7 +1040,7 @@ func TestSchema_InstallTwice_Idempotent(t *testing.T) {
 func TestInstall_DoesNotEnableOOQualityHookIdentityByDefault(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "settings.json")
-	m := buildMerger(t, path)
+	m := installerFor(t, path)
 
 	if err := m.Install(); err != nil {
 		t.Fatalf("Install: %v", err)
@@ -1056,7 +1057,7 @@ func TestInstall_DoesNotEnableOOQualityHookIdentityByDefault(t *testing.T) {
 func TestSchema_Uninstall_RemovesByBinarySubstring(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "settings.json")
-	m := buildMerger(t, path)
+	m := installerFor(t, path)
 
 	if err := m.Install(); err != nil {
 		t.Fatalf("Install: %v", err)
@@ -1086,7 +1087,7 @@ func TestSchema_Uninstall_RemovesByBinarySubstring(t *testing.T) {
 // buildRootWithPairs builds a raw settings root map carrying exactly the
 // requested set of Labdrian-owned hook pairs (minimalism, design), each
 // present in both UserPromptSubmit and PreToolUse. This mirrors the on-disk
-// hook entry shape without depending on Merger.Install(), so any partial
+// hook entry shape without depending on Installer.Install(), so any partial
 // pre-upgrade state can be represented for the direct
 // HasSupportedClaudeLifecycleState and upgrade-path tests.
 func buildRootWithPairs(hookCommand string, includeMinimalism, includeDesign bool) map[string]interface{} {
@@ -1142,7 +1143,7 @@ func TestHasSupportedClaudeLifecycleState_RequiresDesignPair(t *testing.T) {
 }
 
 // withSyncTriggerFamily adds a SessionEnd sync-trigger entry, shaped like
-// Merger's real builder output, to root's hooks map and returns root. Used to
+// the real builders' output, to root's hooks map and returns root. Used to
 // compose a root built via buildRootWithPairs (which only knows about the
 // UserPromptSubmit/PreToolUse pairs) with the third owned family.
 func withSyncTriggerFamily(root map[string]interface{}, hookCommand string) map[string]interface{} {
@@ -1166,7 +1167,7 @@ func withSyncTriggerFamily(root map[string]interface{}, hookCommand string) map[
 }
 
 // withReviewReceiptFamily adds a PreToolUse/Bash review-receipt entry,
-// shaped like Merger's real builder output, to root's hooks map and returns
+// shaped like the real builders' output, to root's hooks map and returns
 // root. Used to compose a root with the fourth owned family.
 func withReviewReceiptFamily(root map[string]interface{}, hookCommand string) map[string]interface{} {
 	hooks, ok := root["hooks"].(map[string]interface{})
@@ -1274,7 +1275,7 @@ func extractCommand(t *testing.T, entry map[string]interface{}) string {
 func TestBuildSyncTriggerSessionEndEntry_UsesPwdFallbackAndPosixGuard(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "settings.json")
-	m := buildMerger(t, path)
+	m := installerFor(t, path)
 	if err := m.Install(); err != nil {
 		t.Fatalf("Install: %v", err)
 	}
@@ -1356,7 +1357,7 @@ func TestInstall_UpgradesOnePairToTwo_PreservesExisting(t *testing.T) {
 	origMinimalismPrompt := findEntry(t, before, "UserPromptSubmit", testHookCommand, settings.LabdrianMinimalismIdentity)
 	origMinimalismPreTool := findEntry(t, before, "PreToolUse", testHookCommand, settings.LabdrianMinimalismIdentity)
 
-	m := buildMerger(t, path)
+	m := installerFor(t, path)
 	if err := m.Install(); err != nil {
 		t.Fatalf("Install on pre-existing minimalism-only fixture: %v", err)
 	}
@@ -1420,7 +1421,7 @@ func TestInstall_UpgradesTwoFamiliesToThree_PreservesExisting(t *testing.T) {
 	origMinimalismPrompt := findEntry(t, before, "UserPromptSubmit", testHookCommand, settings.LabdrianMinimalismIdentity)
 	origDesignPreTool := findEntry(t, before, "PreToolUse", testHookCommand, settings.LabdrianDesignIdentity)
 
-	m := buildMerger(t, path)
+	m := installerFor(t, path)
 	if err := m.Install(); err != nil {
 		t.Fatalf("Install on pre-existing two-family fixture: %v", err)
 	}
@@ -1494,7 +1495,7 @@ func TestMerge_AddsSessionEndSyncTrigger_CoexistsWithForeign(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	m := buildMerger(t, path)
+	m := installerFor(t, path)
 	if err := m.Install(); err != nil {
 		t.Fatalf("Install: %v", err)
 	}
@@ -1543,7 +1544,7 @@ func TestUninstall_RemovesSessionEndSyncTrigger_LeavesForeign(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	m := buildMerger(t, path)
+	m := installerFor(t, path)
 	if err := m.Install(); err != nil {
 		t.Fatalf("Install: %v", err)
 	}

@@ -54,10 +54,10 @@ func mustJSON(t *testing.T, v interface{}) string {
 	return string(b)
 }
 
-func installFresh(t *testing.T) (string, *merger) {
+func installFresh(t *testing.T) (string, *settingsInstaller) {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "settings.json")
-	m := buildMerger(t, path)
+	m := installerFor(t, path)
 	if err := m.Install(); err != nil {
 		t.Fatalf("Install: %v", err)
 	}
@@ -156,7 +156,7 @@ func TestProjectionFamilyPreservesForeignEntriesByteForByte(t *testing.T) {
 	if err := os.WriteFile(path, []byte(doc), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	m := buildMerger(t, path)
+	m := installerFor(t, path)
 
 	check := func(stage string) {
 		t.Helper()
@@ -395,7 +395,7 @@ func withProjectionFamily(root map[string]interface{}, hookCommand string) map[s
 	}
 	defer os.RemoveAll(tmp)
 	p := filepath.Join(tmp, "settings.json")
-	if err := newMerger(p, hookCommand).Install(); err != nil {
+	if err := newSettingsInstaller(p, hookCommand).Install(); err != nil {
 		panic(err)
 	}
 	data, _ := os.ReadFile(p)
