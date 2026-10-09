@@ -466,6 +466,8 @@ Per-class degradation warnings (sources disagree); the Phase 8 non-blocking find
   - **Verification (from `engine/`).** `gofmt -l .` empty; `go vet ./...` clean; `staticcheck ./...` clean; `GOPROXY=off go test -count=1 ./...` all packages ok (44 s); `go test -race ./propagator/... ./cmd/... ./execrunner/... ./settings/...` ok; `GOOS=darwin go build ./...` and `GOOS=windows go build ./propagator/...` ok; the architecture test passes with `knownDebt` empty.
   - **What is left.** The three `cmd` tests that depend on the temp path (above); the `atomicfile` unification decision; `R4-pid-reuse-window` remains a bound. Next is H29.
 
+  - **Review of the fix round (`440bebc..3c254bb`, `review-77b5078dc7b1659f`): approved with one suggestion and no warning, carried to batch 24** (`R2-prod-doc-names-test-helper`, `cmd/propagate.go:123-126`), with group A's three.
+
 ## Next step
 
 Batch 23 did H28 (Phase E, first unit). Next is H29 (`gitfs` RepoLocator, `BindWorkflow`, `projection.HookService`). Open: C7 (quoting and the in-place upgrade of installed hook entries, Q1), the `atomicfile` unification decision for the propagate adapter, and the three `cmd` tests that depend on the temp path (see the batch 23 entry).
