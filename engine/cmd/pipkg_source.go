@@ -1,19 +1,41 @@
 package main
 
 import (
+	"strings"
+
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/execrunner"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/pipkg"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/pipkg/gitsource"
 )
 
+// repositoryLocatingVariables are the variables that tell git which repository to act on. A hook,
+// a wrapper or a script that runs in some repository sets them, and `git -C <overlay>` would then
+// read that repository instead of the overlay's own and compare a package against the wrong
+// tree. The owner decided (2026-10-09, batch 20) that the git the package builder runs does not
+// inherit them and sees everything else of the process environment.
+var repositoryLocatingVariables = map[string]bool{
+	"GIT_DIR": true, "GIT_WORK_TREE": true, "GIT_INDEX_FILE": true, "GIT_OBJECT_DIRECTORY": true,
+	"GIT_ALTERNATE_OBJECT_DIRECTORIES": true, "GIT_COMMON_DIR": true, "GIT_NAMESPACE": true,
+	"GIT_PREFIX": true,
+}
+
 // pipkgGitOptions are the two choices the program makes for the git the package builder asks
-// about its overlay, both the ones that held before the builder had a port for git: git runs
-// under the environment of the process, handed down whole, and under no deadline. They are
-// decisions of the composition root and live here, in one place, so that changing either is a
-// change to this function (a cleaner environment, a time limit) and to nothing the builder does.
-// environ is the process environment as the entry point read it.
+// about its overlay. Git runs under the environment of the process without the variables that
+// locate a repository (repositoryLocatingVariables), in the order the process had it, and under
+// no deadline, as before the builder had a port for git (the deadline is a decision the owner has
+// not made). Both live here, in one place, so that changing either is a change to this function
+// and to nothing the builder does. environ is the process environment as the entry point read
+// it; an empty one stays empty, never nil, because the adapter reads nil as "the environment of
+// the process".
 func pipkgGitOptions(environ []string) gitsource.Options {
-	return gitsource.Options{Env: environ}
+	kept := make([]string, 0, len(environ))
+	for _, entry := range environ {
+		name, _, _ := strings.Cut(entry, "=")
+		if !repositoryLocatingVariables[name] {
+			kept = append(kept, entry)
+		}
+	}
+	return gitsource.Options{Env: kept}
 }
 
 // pipkgGitMaxOutput bounds what the program holds of one stream of one git call. The only large
