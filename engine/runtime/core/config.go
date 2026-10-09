@@ -68,6 +68,13 @@ func (c Config) DefaultStateDir() string {
 	return underHome(c.Home, ".labdrian-overlay")
 }
 
+// DefaultClaudeMCPConfig is ~/.claude.json, the Claude Code MCP server registry, or empty without
+// a home. It is a different file from the settings.json under ClaudeRoot (hooks): a sibling of
+// ~/.claude, not a file inside it, and --config-root does not move it.
+func (c Config) DefaultClaudeMCPConfig() string {
+	return underHome(c.Home, ".claude.json")
+}
+
 // ClaudeRoot is the directory the Claude adapter keeps its settings in.
 func (c Config) ClaudeRoot() string { return firstNonEmpty(c.ConfigRoot, c.DefaultClaudeRoot()) }
 

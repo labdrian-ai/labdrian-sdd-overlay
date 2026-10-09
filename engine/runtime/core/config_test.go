@@ -15,6 +15,8 @@ func TestDefaultRootsAreUnderTheHome(t *testing.T) {
 		"opencode": {cfg.DefaultOpenCodeRoot(), "/home/x/.config/opencode"},
 		"state":    {cfg.DefaultStateDir(), "/home/x/.labdrian-overlay"},
 		"pi":       {cfg.PiPackageDir(), "/home/x/.labdrian-overlay/pi/labdrian-pi"},
+		// A sibling of ~/.claude, not a file inside it.
+		"claude MCP registry": {cfg.DefaultClaudeMCPConfig(), "/home/x/.claude.json"},
 	} {
 		if filepath.ToSlash(c.got) != c.want {
 			t.Errorf("%s root = %q, want %q", name, c.got, c.want)
@@ -25,13 +27,14 @@ func TestDefaultRootsAreUnderTheHome(t *testing.T) {
 func TestWithoutAHomeThereIsNoDefaultRoot(t *testing.T) {
 	var cfg core.Config
 	for name, got := range map[string]string{
-		"claude":     cfg.DefaultClaudeRoot(),
-		"codex":      cfg.DefaultCodexRoot(),
-		"opencode":   cfg.DefaultOpenCodeRoot(),
-		"state":      cfg.DefaultStateDir(),
-		"claude()":   cfg.ClaudeRoot(),
-		"codex()":    cfg.CodexRoot(),
-		"opencode()": cfg.OpenCodeRoot(),
+		"claude":              cfg.DefaultClaudeRoot(),
+		"codex":               cfg.DefaultCodexRoot(),
+		"opencode":            cfg.DefaultOpenCodeRoot(),
+		"state":               cfg.DefaultStateDir(),
+		"claude MCP registry": cfg.DefaultClaudeMCPConfig(),
+		"claude()":            cfg.ClaudeRoot(),
+		"codex()":             cfg.CodexRoot(),
+		"opencode()":          cfg.OpenCodeRoot(),
 	} {
 		if got != "" {
 			t.Errorf("%s root = %q without a home, want none", name, got)

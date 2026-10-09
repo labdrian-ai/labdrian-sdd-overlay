@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	engineRuntime "github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime/core"
 )
 
 // TestLongtermMemAdapter_StatusMatrix is the substance of 10a.1: the status
@@ -15,7 +16,7 @@ func TestLongtermMemAdapter_StatusMatrix(t *testing.T) {
 	cases := []struct {
 		name       string
 		state      engineRuntime.LongtermMemComponentState
-		wantStatus engineRuntime.CapabilityStatus
+		wantStatus core.CapabilityStatus
 		wantReason string
 	}{
 		{
@@ -23,7 +24,7 @@ func TestLongtermMemAdapter_StatusMatrix(t *testing.T) {
 			state: engineRuntime.LongtermMemComponentState{
 				RootResolvable: true, BinaryPresent: true, RecordPresent: true, EntryPresent: true, FingerprintMatch: true,
 			},
-			wantStatus: engineRuntime.CapabilitySupported,
+			wantStatus: core.CapabilitySupported,
 			wantReason: "",
 		},
 		{
@@ -31,7 +32,7 @@ func TestLongtermMemAdapter_StatusMatrix(t *testing.T) {
 			state: engineRuntime.LongtermMemComponentState{
 				RootResolvable: true, BinaryPresent: true, RecordPresent: true, EntryPresent: false,
 			},
-			wantStatus: engineRuntime.CapabilityPartial,
+			wantStatus: core.CapabilityPartial,
 			wantReason: engineRuntime.LongtermMemReasonRecordWithoutEntry,
 		},
 		{
@@ -39,7 +40,7 @@ func TestLongtermMemAdapter_StatusMatrix(t *testing.T) {
 			state: engineRuntime.LongtermMemComponentState{
 				RootResolvable: true, BinaryPresent: true, RecordPresent: false, EntryPresent: true,
 			},
-			wantStatus: engineRuntime.CapabilityPartial,
+			wantStatus: core.CapabilityPartial,
 			wantReason: engineRuntime.LongtermMemReasonEntryWithoutRecord,
 		},
 		{
@@ -47,7 +48,7 @@ func TestLongtermMemAdapter_StatusMatrix(t *testing.T) {
 			state: engineRuntime.LongtermMemComponentState{
 				RootResolvable: true, BinaryPresent: true, RecordPresent: true, EntryPresent: true, FingerprintMatch: false,
 			},
-			wantStatus: engineRuntime.CapabilityPartial,
+			wantStatus: core.CapabilityPartial,
 			wantReason: engineRuntime.LongtermMemReasonFingerprintDrift,
 		},
 		{
@@ -55,7 +56,7 @@ func TestLongtermMemAdapter_StatusMatrix(t *testing.T) {
 			state: engineRuntime.LongtermMemComponentState{
 				RootResolvable: true, BinaryPresent: false, RecordPresent: true, EntryPresent: true, FingerprintMatch: true,
 			},
-			wantStatus: engineRuntime.CapabilityPartial,
+			wantStatus: core.CapabilityPartial,
 			wantReason: engineRuntime.LongtermMemReasonMissingBinary,
 		},
 		{
@@ -63,7 +64,7 @@ func TestLongtermMemAdapter_StatusMatrix(t *testing.T) {
 			state: engineRuntime.LongtermMemComponentState{
 				RootResolvable: false,
 			},
-			wantStatus: engineRuntime.CapabilityUnsupported,
+			wantStatus: core.CapabilityUnsupported,
 			wantReason: engineRuntime.LongtermMemReasonConfigRootUnresolvable,
 		},
 		{
@@ -75,7 +76,7 @@ func TestLongtermMemAdapter_StatusMatrix(t *testing.T) {
 			state: engineRuntime.LongtermMemComponentState{
 				RootResolvable: true, BinaryPresent: true, RuntimePresent: false,
 			},
-			wantStatus: engineRuntime.CapabilitySupported,
+			wantStatus: core.CapabilitySupported,
 			wantReason: engineRuntime.LongtermMemReasonRuntimeNotInstalled,
 		},
 		{
@@ -87,7 +88,7 @@ func TestLongtermMemAdapter_StatusMatrix(t *testing.T) {
 			state: engineRuntime.LongtermMemComponentState{
 				RootResolvable: true, BinaryPresent: true, RuntimePresent: true,
 			},
-			wantStatus: engineRuntime.CapabilitySupported,
+			wantStatus: core.CapabilitySupported,
 			wantReason: engineRuntime.LongtermMemReasonNotRegistered,
 		},
 	}
@@ -109,7 +110,7 @@ func TestLongtermMemAdapter_StatusMatrix(t *testing.T) {
 	// could never pass while silently collapsing all four into one.
 	seen := map[string]bool{}
 	for _, tc := range cases {
-		if tc.wantStatus != engineRuntime.CapabilityPartial {
+		if tc.wantStatus != core.CapabilityPartial {
 			continue
 		}
 		if seen[tc.wantReason] {

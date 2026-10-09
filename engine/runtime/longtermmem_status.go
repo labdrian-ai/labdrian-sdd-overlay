@@ -1,5 +1,9 @@
 package runtime
 
+import (
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime/core"
+)
+
 // Reasons reported by the longterm-mem status matrix. Each is a distinct,
 // named cause so an operator reading a result knows exactly what it means
 // instead of just that something is — see design.md D4 and R-014.
@@ -58,29 +62,29 @@ type LongtermMemComponentState struct {
 // signals, because it is the one part of the component with no I/O at all:
 // a decision table that can be reviewed and exhaustively tested on its own
 // terms, without a filesystem fixture in sight.
-func EvaluateLongtermMemComponentStatus(s LongtermMemComponentState) (CapabilityStatus, string) {
+func EvaluateLongtermMemComponentStatus(s LongtermMemComponentState) (core.CapabilityStatus, string) {
 	if !s.RootResolvable {
-		return CapabilityUnsupported, LongtermMemReasonConfigRootUnresolvable
+		return core.CapabilityUnsupported, LongtermMemReasonConfigRootUnresolvable
 	}
 	if !s.BinaryPresent {
-		return CapabilityPartial, LongtermMemReasonMissingBinary
+		return core.CapabilityPartial, LongtermMemReasonMissingBinary
 	}
 	switch {
 	case s.RecordPresent && !s.EntryPresent:
-		return CapabilityPartial, LongtermMemReasonRecordWithoutEntry
+		return core.CapabilityPartial, LongtermMemReasonRecordWithoutEntry
 	case !s.RecordPresent && s.EntryPresent:
-		return CapabilityPartial, LongtermMemReasonEntryWithoutRecord
+		return core.CapabilityPartial, LongtermMemReasonEntryWithoutRecord
 	case s.RecordPresent && s.EntryPresent && !s.FingerprintMatch:
-		return CapabilityPartial, LongtermMemReasonFingerprintDrift
+		return core.CapabilityPartial, LongtermMemReasonFingerprintDrift
 	case s.RecordPresent && s.EntryPresent && s.FingerprintMatch:
-		return CapabilitySupported, ""
+		return core.CapabilitySupported, ""
 	case !s.RuntimePresent:
 		// No record, no entry, and no config file: this runtime is simply
 		// not on this machine.
-		return CapabilitySupported, LongtermMemReasonRuntimeNotInstalled
+		return core.CapabilitySupported, LongtermMemReasonRuntimeNotInstalled
 	default:
 		// No record and no entry, but the runtime IS here: longterm-mem was
 		// never registered with it.
-		return CapabilitySupported, LongtermMemReasonNotRegistered
+		return core.CapabilitySupported, LongtermMemReasonNotRegistered
 	}
 }
