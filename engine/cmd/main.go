@@ -490,7 +490,7 @@ func runRuntimeCore(commands runtimepkg.CommandRunner, source pipkg.SourceRepo, 
 		return
 	}
 
-	action, target, configRoot, component, stateDir, err := parseRuntimeArgs(args, registry)
+	opts, err := parseRuntimeArgs(args, registry)
 	if err != nil {
 		fmt.Fprintln(stderr, err)
 		usage()
@@ -500,48 +500,13 @@ func runRuntimeCore(commands runtimepkg.CommandRunner, source pipkg.SourceRepo, 
 
 	cfg := runtimeConfigFromEnv(os.Getenv, os.UserHomeDir)
 
-	if component == componentLongtermMem {
-		// D4 parse-time refusal: update is rejected here, BEFORE any
-		// LongtermMemAdapter is even constructed — never after running one
-		// and reporting a failing status. "rollback" needs no separate
-		// guard: it is not a recognized action at all (see the action-name
-		// validation in parseRuntimeArgs below), so it is already rejected
-		// at the exact same point, before any adapter call.
-		if action == "update" {
-			fmt.Fprintln(stderr, "error: longterm-mem does not support the 'update' action; reinstall instead (--component longterm-mem install)")
-			exit(1)
-			return
-		}
-		// The binary path is DERIVED from --state-dir, never resolved
-		// independently from HOME: the overlay entrypoint deploys the
-		// binary at "$STATE_DIR/bin/longterm-mem" and registers MCP
-		// entries naming that exact path, so an adapter that resolved it
-		// from HOME under an overridden state dir reported a deployed
-		// binary as missing and a genuinely owned entry as unmanaged. An
-		// empty stateDir yields an empty binary path here, which
-		// NewLongtermMemAdapter fills in with the same default it fills
-		// stateDir with — so the un-overridden case is unchanged.
-		adapter := runtimepkg.NewLongtermMemAdapter(cfg, stateDir, runtimepkg.LongtermMemBinaryPathForStateDir(stateDir))
-		result := runtimeLifecycleResult(adapter, action)
-		fmt.Fprintln(stdout, result.String())
-		if action == "status" {
-			if result.Status != runtimecore.CapabilitySupported {
-				exit(1)
-				return
-			}
-			exit(0)
-			return
-		}
-		if result.Status == runtimecore.CapabilityUnsupported || result.Status == runtimecore.CapabilityPartial {
-			exit(1)
-			return
-		}
-		exit(0)
+	if opts.Component == componentLongtermMem {
+		runLongtermMemComponent(opts, cfg, stdout, stderr, exit)
 		return
 	}
 
-	cfg.ConfigRoot = configRoot
-	targets := registry.Expand(target)
+	cfg.ConfigRoot = opts.ConfigRoot
+	targets := registry.Expand(opts.Target)
 
 	// Every adapter is built before the first one acts, so a target the registry cannot build
 	// stops the command before anything has been done, never half way through `all`.
@@ -552,109 +517,137 @@ func runRuntimeCore(commands runtimepkg.CommandRunner, source pipkg.SourceRepo, 
 		return
 	}
 
-	failed := false
-	allTargets := len(adapters) > 1
-
+	// Each target acts and is reported before the next one acts. Pi has a real Status(), so it is
+	// reported and aggregated like every other target: an honestly unsupported Pi fails
+	// `status --target all` just as an honestly unsupported claude, opencode or codex would
+	// (W-03 -- there is no "Pi is exempt" status-only carve-out). What fails a run is
+	// runtimecore.AggregateStatus's.
+	results := make([]runtimecore.LifecycleResult, 0, len(adapters))
 	for _, adapter := range adapters {
-		current := adapter.Target()
-		result := runtimeLifecycleResult(adapter, action)
+		result := runtimecore.Perform(adapter, opts.Action)
 		fmt.Fprintln(stdout, result.String())
-		// Pi now has a real Status() implementation (pi-lifecycle, slice
-		// 5), so it is reported and aggregated exactly like every other
-		// target: an honestly unsupported Pi fails `status --target all`
-		// just as an honestly unsupported claude/opencode/codex would
-		// (W-03 — there is no more "Pi is exempt" status-only carve-out).
-		actionFailed := false
-		switch action {
-		case "status":
-			switch {
-			case result.Status == runtimecore.CapabilityRestartRequired:
-				actionFailed = true
-			case result.Status == runtimecore.CapabilityUnsupported:
-				actionFailed = true
-			case result.Status == runtimecore.CapabilityPartial && !(allTargets && current == runtimecore.TargetCodex):
-				actionFailed = true
-			}
-		default:
-			switch result.Status {
-			case runtimecore.CapabilityPartial:
-				actionFailed = true
-			case runtimecore.CapabilityUnsupported:
-				actionFailed = true
-			}
-		}
-		if actionFailed {
-			failed = true
-		}
+		results = append(results, result)
 	}
 
-	if failed {
+	if runtimecore.AggregateStatus(opts.Action, results) {
 		exit(1)
 		return
 	}
 	exit(0)
 }
 
-// parseRuntimeArgs parses minimal runtime subcommand arguments.
-func parseRuntimeArgs(args []string, registry *runtimecore.Registry) (action string, target runtimecore.Target, configRoot, component, stateDir string, err error) {
-	if len(args) == 0 {
-		return "", "", "", "", "", fmt.Errorf("error: runtime requires an action")
+// runLongtermMemComponent runs the action of 'runtime --component longterm-mem': one component
+// that spans claude, opencode and codex, acted on as a whole and not as a target of the registry.
+func runLongtermMemComponent(opts runtimeOptions, cfg runtimecore.Config, stdout, stderr io.Writer, exit func(int)) {
+	// D4 parse-time refusal: update is rejected here, BEFORE any
+	// LongtermMemAdapter is even constructed — never after running one
+	// and reporting a failing status. "rollback" needs no separate
+	// guard: it is not a recognized action at all (see the action-name
+	// validation in parseRuntimeArgs below), so it is already rejected
+	// at the exact same point, before any adapter call.
+	if opts.Action == runtimecore.ActionUpdate {
+		fmt.Fprintln(stderr, "error: longterm-mem does not support the 'update' action; reinstall instead (--component longterm-mem install)")
+		exit(1)
+		return
 	}
-	action = args[0]
+	// The binary path is DERIVED from --state-dir, never resolved
+	// independently from HOME: the overlay entrypoint deploys the
+	// binary at "$STATE_DIR/bin/longterm-mem" and registers MCP
+	// entries naming that exact path, so an adapter that resolved it
+	// from HOME under an overridden state dir reported a deployed
+	// binary as missing and a genuinely owned entry as unmanaged. An
+	// empty stateDir yields an empty binary path here, which
+	// NewLongtermMemAdapter fills in with the same default it fills
+	// stateDir with — so the un-overridden case is unchanged.
+	adapter := runtimepkg.NewLongtermMemAdapter(cfg, opts.StateDir, runtimepkg.LongtermMemBinaryPathForStateDir(opts.StateDir))
+	result := runtimecore.Perform(adapter, opts.Action)
+	fmt.Fprintln(stdout, result.String())
+	if runtimecore.ComponentFailed(opts.Action, result) {
+		exit(1)
+		return
+	}
+	exit(0)
+}
+
+// runtimeOptions is what the command line of 'runtime <action>' asks for. The zero value of a
+// field means the flag was not given; Target and Component carry their defaults after parsing.
+type runtimeOptions struct {
+	// Action is one of status, install, update and uninstall.
+	Action runtimecore.Action
+	// Target is the runtime acted on, or all of them (--component runtime-parity only).
+	Target runtimecore.Target
+	// ConfigRoot, when it is not empty, is the one directory every runtime works in (--config-root).
+	ConfigRoot string
+	// Component is componentRuntimeParity or componentLongtermMem.
+	Component string
+	// StateDir is the state directory of the longterm-mem component (--state-dir).
+	StateDir string
+}
+
+// parseRuntimeArgs reads the command line of 'runtime <action>' into its options. The flags are
+// read, and the first one that cannot be used ends the parse, before the action is judged. On an
+// error the options are empty.
+func parseRuntimeArgs(args []string, registry *runtimecore.Registry) (runtimeOptions, error) {
+	if len(args) == 0 {
+		return runtimeOptions{}, fmt.Errorf("error: runtime requires an action")
+	}
+	action := args[0]
 	if strings.HasPrefix(action, "-") {
-		return "", "", "", "", "", fmt.Errorf("error: runtime requires an action: status | install | update | uninstall | capabilities")
+		return runtimeOptions{}, fmt.Errorf("error: runtime requires an action: status | install | update | uninstall | capabilities")
 	}
 
-	target = runtimecore.TargetOpenCode
-	component = componentRuntimeParity
+	opts := runtimeOptions{Target: runtimecore.TargetOpenCode, Component: componentRuntimeParity}
 	for i := 1; i < len(args); i++ {
 		a := args[i]
 		switch a {
 		case "--target":
 			i++
 			if i >= len(args) {
-				return "", "", "", "", "", fmt.Errorf("error: --target requires a value")
+				return runtimeOptions{}, fmt.Errorf("error: --target requires a value")
 			}
-			target, err = registry.Parse(args[i])
+			target, err := registry.Parse(args[i])
 			if err != nil {
-				return "", "", "", "", "", err
+				return runtimeOptions{}, err
 			}
+			opts.Target = target
 		case "--config-root":
 			i++
 			if i >= len(args) {
-				return "", "", "", "", "", fmt.Errorf("error: --config-root requires a value")
+				return runtimeOptions{}, fmt.Errorf("error: --config-root requires a value")
 			}
-			configRoot = args[i]
+			opts.ConfigRoot = args[i]
 		case "--component":
 			i++
 			if i >= len(args) {
-				return "", "", "", "", "", fmt.Errorf("error: --component requires a value")
+				return runtimeOptions{}, fmt.Errorf("error: --component requires a value")
 			}
 			switch args[i] {
 			case componentRuntimeParity, componentLongtermMem:
-				component = args[i]
+				opts.Component = args[i]
 			default:
-				return "", "", "", "", "", fmt.Errorf("error: unknown --component %q (expected %q or %q)", args[i], componentRuntimeParity, componentLongtermMem)
+				return runtimeOptions{}, fmt.Errorf("error: unknown --component %q (expected %q or %q)", args[i], componentRuntimeParity, componentLongtermMem)
 			}
 		case "--state-dir":
 			i++
 			if i >= len(args) {
-				return "", "", "", "", "", fmt.Errorf("error: --state-dir requires a value")
+				return runtimeOptions{}, fmt.Errorf("error: --state-dir requires a value")
 			}
-			stateDir = args[i]
+			opts.StateDir = args[i]
 		default:
 			if strings.HasPrefix(a, "--") {
-				return "", "", "", "", "", fmt.Errorf("error: unknown flag %q", a)
+				return runtimeOptions{}, fmt.Errorf("error: unknown flag %q", a)
 			}
-			return "", "", "", "", "", fmt.Errorf("error: unexpected runtime argument %q", a)
+			return runtimeOptions{}, fmt.Errorf("error: unexpected runtime argument %q", a)
 		}
 	}
 
-	if action != "status" && action != "install" && action != "update" && action != "uninstall" {
-		return "", "", "", "", "", fmt.Errorf("error: unknown runtime action %q", action)
+	switch runtimecore.Action(action) {
+	case runtimecore.ActionStatus, runtimecore.ActionInstall, runtimecore.ActionUpdate, runtimecore.ActionUninstall:
+		opts.Action = runtimecore.Action(action)
+	default:
+		return runtimeOptions{}, fmt.Errorf("error: unknown runtime action %q", action)
 	}
-
-	return action, target, configRoot, component, stateDir, nil
+	return opts, nil
 }
 
 // ---------------------------------------------------------------------------
@@ -855,21 +848,6 @@ func runReviewReceiptHook(args []string) {
 	reply := hookwire.ExitReply{Block: verdict.Deny, Message: verdict.Reason}
 	_, _ = os.Stderr.Write(reply.MessageLine())
 	os.Exit(reply.Code())
-}
-
-func runtimeLifecycleResult(adapter runtimecore.Adapter, action string) runtimecore.LifecycleResult {
-	switch action {
-	case "status":
-		return adapter.Status()
-	case "install":
-		return adapter.Install()
-	case "update":
-		return adapter.Update()
-	case "uninstall":
-		return adapter.Uninstall()
-	default:
-		return runtimecore.NewLifecycleResult(adapter.Target(), "status", runtimecore.CapabilityUnsupported, "unknown runtime action", nil)
-	}
 }
 
 // runSkills implements the 'skills <verb>' subcommand.
