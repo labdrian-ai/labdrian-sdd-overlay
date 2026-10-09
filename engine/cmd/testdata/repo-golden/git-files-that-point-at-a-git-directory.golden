@@ -37,6 +37,16 @@ $ workflow binding
 }
 --- stderr ---
 
+$ workflow unbind
+# a pointer: unbind (in <CHECKOUT>)
+--- exit ---
+0
+--- stdout ---
+{
+  "removed": true
+}
+--- stderr ---
+
 # a pointer without a line break: the workflow records worktree_root="<CHECKOUT>" git_head=<40 of c>
 $ workflow bind --project proj-1 --workflow wf-2
 # a pointer without a line break: bind (in <CHECKOUT>)
@@ -73,6 +83,16 @@ $ workflow binding
     "classification": "owned",
     "status": "running"
   }
+}
+--- stderr ---
+
+$ workflow unbind
+# a pointer without a line break: unbind (in <CHECKOUT>)
+--- exit ---
+0
+--- stdout ---
+{
+  "removed": true
 }
 --- stderr ---
 
@@ -115,6 +135,16 @@ $ workflow binding
 }
 --- stderr ---
 
+$ workflow unbind
+# a pointer with spaces around it: unbind (in <CHECKOUT>)
+--- exit ---
+0
+--- stdout ---
+{
+  "removed": true
+}
+--- stderr ---
+
 # a pointer with a carriage return: the workflow records worktree_root="<CHECKOUT>" git_head=<40 of c>
 $ workflow bind --project proj-1 --workflow wf-4
 # a pointer with a carriage return: bind (in <CHECKOUT>)
@@ -151,6 +181,16 @@ $ workflow binding
     "classification": "owned",
     "status": "running"
   }
+}
+--- stderr ---
+
+$ workflow unbind
+# a pointer with a carriage return: unbind (in <CHECKOUT>)
+--- exit ---
+0
+--- stdout ---
+{
+  "removed": true
 }
 --- stderr ---
 
@@ -193,6 +233,16 @@ $ workflow binding
 }
 --- stderr ---
 
+$ workflow unbind
+# a pointer with no space after the colon: unbind (in <CHECKOUT>)
+--- exit ---
+0
+--- stdout ---
+{
+  "removed": true
+}
+--- stderr ---
+
 # a pointer to a path relative to the checkout: the workflow records worktree_root="<CHECKOUT>" git_head=<40 of c>
 $ workflow bind --project proj-1 --workflow wf-6
 # a pointer to a path relative to the checkout: bind (in <CHECKOUT>)
@@ -232,6 +282,16 @@ $ workflow binding
 }
 --- stderr ---
 
+$ workflow unbind
+# a pointer to a path relative to the checkout: unbind (in <CHECKOUT>)
+--- exit ---
+0
+--- stdout ---
+{
+  "removed": true
+}
+--- stderr ---
+
 # a pointer to a path that needs cleaning: the workflow records worktree_root="<CHECKOUT>" git_head=<40 of c>
 $ workflow bind --project proj-1 --workflow wf-7
 # a pointer to a path that needs cleaning: bind (in <CHECKOUT>)
@@ -268,6 +328,16 @@ $ workflow binding
     "classification": "owned",
     "status": "running"
   }
+}
+--- stderr ---
+
+$ workflow unbind
+# a pointer to a path that needs cleaning: unbind (in <CHECKOUT>)
+--- exit ---
+0
+--- stdout ---
+{
+  "removed": true
 }
 --- stderr ---
 

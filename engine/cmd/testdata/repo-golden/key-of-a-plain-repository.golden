@@ -37,6 +37,16 @@ $ workflow binding
 }
 --- stderr ---
 
+$ workflow unbind
+# at the root: unbind (in <REPO>)
+--- exit ---
+0
+--- stdout ---
+{
+  "removed": true
+}
+--- stderr ---
+
 # in a directory inside it: the workflow records worktree_root="<REPO>" git_head=<40 of a>
 $ workflow bind --project proj-1 --workflow wf-2
 # in a directory inside it: bind (in <REPO>/a/b/c)
@@ -73,6 +83,16 @@ $ workflow binding
     "classification": "owned",
     "status": "running"
   }
+}
+--- stderr ---
+
+$ workflow unbind
+# in a directory inside it: unbind (in <REPO>/a/b/c)
+--- exit ---
+0
+--- stdout ---
+{
+  "removed": true
 }
 --- stderr ---
 
@@ -115,6 +135,16 @@ $ workflow binding
 }
 --- stderr ---
 
+$ workflow unbind
+# through a symbolic link to the repository: unbind (in <ALIAS>)
+--- exit ---
+0
+--- stdout ---
+{
+  "removed": true
+}
+--- stderr ---
+
 # through a symbolic link, from a directory inside it: the workflow records worktree_root="<ALIAS>" git_head=<40 of a>
 $ workflow bind --project proj-1 --workflow wf-4
 # through a symbolic link, from a directory inside it: bind (in <ALIAS>/a/b)
@@ -151,6 +181,16 @@ $ workflow binding
     "classification": "owned",
     "status": "running"
   }
+}
+--- stderr ---
+
+$ workflow unbind
+# through a symbolic link, from a directory inside it: unbind (in <ALIAS>/a/b)
+--- exit ---
+0
+--- stdout ---
+{
+  "removed": true
 }
 --- stderr ---
 

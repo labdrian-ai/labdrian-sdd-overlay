@@ -21,8 +21,8 @@ import (
 // .git directory, a .git file that points at another, a worktree that names its common
 // directory), and the program is never given git.
 
-// hash is the key the design specifies for the path of a git common directory that cannot be
-// resolved: the digest of the cleaned path itself.
+// hashOfPath is the key the design specifies for the path of a git common directory that cannot
+// be resolved: the digest of the cleaned path itself.
 func hashOfPath(path string) string {
 	sum := sha256.Sum256([]byte(filepath.Clean(path)))
 	return hex.EncodeToString(sum[:])
@@ -58,9 +58,9 @@ func (w *repoWorld) probe(label, cwd string) {
 	w.provenance(label, "proj-1", wf)
 	w.run(label+": bind", cwd, "bind", "--project", "proj-1", "--workflow", wf)
 	w.run(label+": binding", cwd, "binding")
-	if r := runWorkflowTest([]string{"unbind"}, cwd); r.code != 0 && !strings.Contains(r.stderr, "needs a git repository") {
-		w.t.Fatalf("unbind after the probe: exit %d, stderr %q", r.code, r.stderr)
-	}
+	// The unbind is recorded too: where there is a repository it removes the binding that was just
+	// made, and where there is none it says so.
+	w.run(label+": unbind", cwd, "unbind")
 }
 
 // provenance records the worktree root and HEAD the first event of a workflow holds.

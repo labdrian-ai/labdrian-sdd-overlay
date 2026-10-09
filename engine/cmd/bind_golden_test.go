@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"testing"
 )
@@ -28,7 +29,10 @@ import (
 //
 // The verbs run in process, as the commands do (the same cores 'main' calls, with the exit
 // function recorded and the streams captured), against a state home and hand-made repositories
-// under directories with neutral names. No case runs git.
+// under directories with neutral names. No case runs git. The store listing records the permission
+// bits as the platform writes them (drwx------, -rw-------), so the files are those of a Unix
+// system with the program's own modes, as the rest of this package's tests are (they take file
+// locks with syscall.Flock).
 var updateBindGolden = flag.Bool("update-bind-golden", false, "rewrite the golden files of the binding verbs")
 var updateRepoGolden = flag.Bool("update-repo-golden", false, "rewrite the golden files of the finding of a repository")
 
@@ -177,8 +181,13 @@ func (w *repoWorld) storeFiles(label string) {
 // run as <TIME>, the other digests as <DIGEST>, and every control character shown as \xNN.
 func (w *repoWorld) text() string {
 	out := w.replace(w.b.String())
-	for key, label := range w.keys {
-		out = strings.ReplaceAll(out, key, label)
+	keys := make([]string, 0, len(w.keys))
+	for key := range w.keys {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys) // a map has no order, and a transcript must not depend on one
+	for _, key := range keys {
+		out = strings.ReplaceAll(out, key, w.keys[key])
 	}
 	return visibleControls(digests.ReplaceAllString(goldenTime.ReplaceAllString(out, "<TIME>"), "<DIGEST>"))
 }
@@ -234,7 +243,12 @@ func checkRepoGoldenCases(t *testing.T, dir string, cases []repoGoldenCase, upda
 	}
 	entries, err := os.ReadDir(filepath.Join("testdata", dir))
 	if err != nil {
-		t.Skipf("no golden files yet: %v", err)
+		// A directory that was deleted or misnamed must fail, not skip. Only the recording itself
+		// (every case just wrote its file) may find it missing.
+		if update && os.IsNotExist(err) {
+			return
+		}
+		t.Fatalf("the golden directory testdata/%s cannot be read: %v", dir, err)
 	}
 	for _, e := range entries {
 		if name := strings.TrimSuffix(e.Name(), ".golden"); !seen[name] {

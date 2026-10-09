@@ -37,6 +37,16 @@ $ workflow binding
 }
 --- stderr ---
 
+$ workflow unbind
+# a .git that is a link to a git directory: unbind (in <CHECKOUT to a directory>)
+--- exit ---
+0
+--- stdout ---
+{
+  "removed": true
+}
+--- stderr ---
+
 # a .git that is a link to a pointer file: the workflow records worktree_root="<CHECKOUT to a file>" git_head=<40 of d>
 $ workflow bind --project proj-1 --workflow wf-2
 # a .git that is a link to a pointer file: bind (in <CHECKOUT to a file>)
@@ -73,6 +83,16 @@ $ workflow binding
     "classification": "owned",
     "status": "running"
   }
+}
+--- stderr ---
+
+$ workflow unbind
+# a .git that is a link to a pointer file: unbind (in <CHECKOUT to a file>)
+--- exit ---
+0
+--- stdout ---
+{
+  "removed": true
 }
 --- stderr ---
 

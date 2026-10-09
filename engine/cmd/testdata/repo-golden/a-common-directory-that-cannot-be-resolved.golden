@@ -37,6 +37,16 @@ $ workflow binding
 }
 --- stderr ---
 
+$ workflow unbind
+# a commondir that names a directory that does not exist: unbind (in <CHECKOUT>)
+--- exit ---
+0
+--- stdout ---
+{
+  "removed": true
+}
+--- stderr ---
+
 # an empty commondir: the git directory is its own common directory: the workflow records worktree_root="<CHECKOUT blank>" git_head=<40 of e>
 $ workflow bind --project proj-1 --workflow wf-2
 # an empty commondir: the git directory is its own common directory: bind (in <CHECKOUT blank>)
@@ -73,6 +83,16 @@ $ workflow binding
     "classification": "owned",
     "status": "running"
   }
+}
+--- stderr ---
+
+$ workflow unbind
+# an empty commondir: the git directory is its own common directory: unbind (in <CHECKOUT blank>)
+--- exit ---
+0
+--- stdout ---
+{
+  "removed": true
 }
 --- stderr ---
 
