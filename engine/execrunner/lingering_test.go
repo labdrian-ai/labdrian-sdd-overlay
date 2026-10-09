@@ -77,6 +77,14 @@ func stopRecordedProcess(t *testing.T, pidFile string) {
 // stopRecordedProcessWith is stopRecordedProcess with the lister named. A lister that cannot be
 // run fails the test: the id could not be checked, so the process is neither stopped nor known to
 // be gone, and saying nothing would leave it running unseen.
+//
+// The command line is read and the process is killed in two steps, and an id could be handed to
+// another process between them. The window is the time between two system calls, and it opens
+// only if the grandchild has died and been reaped in it, the id space has come round to that id,
+// and the new process runs exactly lingeringCommand, a line no program but the fake programs of
+// these tests has. Closing it needs a handle on the process (a pidfd), which the systems these
+// tests run on do not all have, so the exact match of the command line is the guard and the
+// bound stays as it is.
 func stopRecordedProcessWith(t reporter, lister, pidFile string) {
 	t.Helper()
 	raw, err := os.ReadFile(pidFile)
@@ -206,7 +214,7 @@ type reports struct{ messages []string }
 
 func (*reports) Helper() {}
 func (r *reports) Errorf(format string, args ...any) {
-	r.messages = append(r.messages, strings.TrimSpace(format))
+	r.messages = append(r.messages, strings.TrimSpace(fmt.Sprintf(format, args...)))
 }
 
 // A lister that cannot be run is not "no such process": the recorded id is then neither stopped
@@ -220,8 +228,20 @@ func TestStopRecordedProcessSaysWhenItCannotListProcesses(t *testing.T) {
 
 	stopRecordedProcessWith(r, filepath.Join(t.TempDir(), "no-such-ps"), pidFile)
 
-	if len(r.messages) != 1 || !strings.Contains(r.messages[0], "was not stopped") {
-		t.Fatalf("reports = %q, want one saying the process was not stopped", r.messages)
+	wantReported(t, r, "process 1 (recorded in "+pidFile+") was not stopped")
+}
+
+// wantReported fails the test unless r holds exactly one report and it names what the test would
+// have failed with: the process, the file it was recorded in, and that it was not stopped.
+func wantReported(t *testing.T, r *reports, parts ...string) {
+	t.Helper()
+	if len(r.messages) != 1 {
+		t.Fatalf("reports = %q, want exactly one", r.messages)
+	}
+	for _, part := range parts {
+		if !strings.Contains(r.messages[0], part) {
+			t.Errorf("report %q does not say %q", r.messages[0], part)
+		}
 	}
 }
 
@@ -242,17 +262,15 @@ func TestStopRecordedProcessSaysWhenTheListerFailsForAnotherReason(t *testing.T)
 
 	stopRecordedProcessWith(r, lister, pidFile)
 
-	if len(r.messages) != 1 || !strings.Contains(r.messages[0], "was not stopped") {
-		t.Fatalf("reports = %q, want one saying the process was not stopped", r.messages)
-	}
+	wantReported(t, r, "process 1 (recorded in "+pidFile+") was not stopped", "ps: cannot read /proc")
 }
 
 // A recorded id with no process behind it is not an error: the grandchild is simply gone.
 func TestStopRecordedProcessIsQuietAboutAnIdWithNoProcess(t *testing.T) {
 	requireProcessLister(t)
+	pid := idOfAProcessThatHasEnded(t)
 	pidFile := filepath.Join(t.TempDir(), "sleep.pid")
-	// Above the largest id Linux hands out (pid_max is at most 4194304), so nothing runs with it.
-	if err := os.WriteFile(pidFile, []byte("4194304\n"), 0o600); err != nil {
+	if err := os.WriteFile(pidFile, []byte(strconv.Itoa(pid)+"\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	r := &reports{}
@@ -262,4 +280,25 @@ func TestStopRecordedProcessIsQuietAboutAnIdWithNoProcess(t *testing.T) {
 	if len(r.messages) != 0 {
 		t.Fatalf("reports = %q, want none for an id with no process", r.messages)
 	}
+}
+
+// idOfAProcessThatHasEnded starts a process, waits for it, and returns its id: an id the system
+// has just given back, with no fixed number to assume anything about the largest id of a machine.
+// The lister must say nothing runs under it, so a pass of the test is not vacuous; an id that was
+// handed to another process in the moment between skips the test, since it says nothing then.
+func idOfAProcessThatHasEnded(t *testing.T) int {
+	t.Helper()
+	ended := exec.Command("/bin/sh", "-c", "exit 0")
+	if err := ended.Run(); err != nil {
+		t.Skipf("cannot run a shell to get an id that ends: %v", err)
+	}
+	pid := ended.Process.Pid
+	command, err := commandOf(processLister, pid)
+	if err != nil {
+		t.Fatalf("cannot read the command line of process %d: %v", pid, err)
+	}
+	if command != "" {
+		t.Skipf("the id %d of the ended process was taken again by %q", pid, command)
+	}
+	return pid
 }
