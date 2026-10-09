@@ -13,18 +13,26 @@ import (
 	engineRuntime "github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime"
 )
 
-// newPiAdapterAt builds the Pi adapter over the given build paths and the home of this test
-// process, which TestMain points at a temporary directory: the tests below read and write the
-// ~/.pi files the adapter reads under that same home.
+// newPiAdapterAt builds the Pi adapter over the given build paths, the home of this test process,
+// which TestMain points at a temporary directory (the tests below read and write the ~/.pi files
+// the adapter reads under that same home), and a fake CommandRunner nobody looks at.
 func newPiAdapterAt(t *testing.T, overlayRoot, registryPath, destDir string) engineRuntime.PiAdapter {
+	t.Helper()
+	return newPiAdapterWith(t, &fakeCommands{}, engineRuntime.PiOptions{}, overlayRoot, registryPath, destDir)
+}
+
+// newPiAdapterWith is newPiAdapterAt with the commands the test watches and the options it sets.
+func newPiAdapterWith(t *testing.T, commands engineRuntime.CommandRunner, options engineRuntime.PiOptions, overlayRoot, registryPath, destDir string) engineRuntime.PiAdapter {
 	t.Helper()
 	home, err := os.UserHomeDir()
 	if err != nil {
 		t.Fatalf("os.UserHomeDir: %v", err)
 	}
-	return engineRuntime.NewPiAdapter(fileRegistries, engineRuntime.PiPaths{
-		Home: home, OverlayRoot: overlayRoot, RegistryPath: registryPath, DestDir: destDir,
-	})
+	return engineRuntime.NewPiAdapter(
+		engineRuntime.PiPorts{Commands: commands, Packages: pipkg.Packages{Registries: fileRegistries}},
+		engineRuntime.PiPaths{Home: home, OverlayRoot: overlayRoot, RegistryPath: registryPath, DestDir: destDir},
+		options,
+	)
 }
 
 // piFixtureOverlay writes a minimal overlay tree (one pi-targeted skill,
@@ -67,25 +75,6 @@ func mustWrite(t *testing.T, path, content string) {
 	}
 }
 
-// writeStubPiScript writes a fake `pi` APPENDING every argv it received
-// (one arg per line, invocations separated by a blank line) to
-// recorderPath, then exits 0 — Install now makes up to two `pi`
-// invocations (package install, then the Subagents extension install), so
-// a single-shot overwrite would lose the first one. Every test exercising
-// Install/Uninstall MUST set LABDRIAN_PI_BIN to one via t.Setenv — a
-// developer machine may have a real `pi` on PATH, and an unstubbed test
-// would shell out to it and mutate the real ~/.pi/agent/settings.json.
-func writeStubPiScript(t *testing.T, recorderPath string) string {
-	t.Helper()
-	scriptPath := filepath.Join(t.TempDir(), "pi-stub.sh")
-	quoted := "'" + strings.ReplaceAll(recorderPath, "'", `'\''`) + "'"
-	script := "#!/bin/sh\nprintf '%s\\n' \"$@\" >> " + quoted + "\nprintf '\\n' >> " + quoted + "\nexit 0\n"
-	if err := os.WriteFile(scriptPath, []byte(script), 0755); err != nil {
-		t.Fatalf("write stub pi script: %v", err)
-	}
-	return scriptPath
-}
-
 // TestPiAdapter_ApplyInstallSyncCheck_WiredToPipkg pins task 2.4: with real
 // overlay/registry/dest paths, Apply/Install build the package via pipkg and
 // SyncCheck reports it as drift-free right after.
@@ -93,9 +82,6 @@ func TestPiAdapter_ApplyInstallSyncCheck_WiredToPipkg(t *testing.T) {
 	t.Setenv("HOME", t.TempDir()) // Install now also links ~/.pi/agent/agents/GADU.md
 	overlayRoot, registryPath := piFixtureOverlay(t)
 	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
-
-	recorder := filepath.Join(t.TempDir(), "argv.txt")
-	t.Setenv("LABDRIAN_PI_BIN", writeStubPiScript(t, recorder))
 
 	adapter := newPiAdapterAt(t, overlayRoot, registryPath, destDir)
 
@@ -363,63 +349,51 @@ func buildPiPackage(t *testing.T, overlayRoot, registryPath, destDir string) {
 	}
 }
 
-// newBuiltPiAdapterWithStub builds a real package at a fresh destDir and
-// returns an adapter for it plus the destDir and a writeStubPiScript
-// recorder path already set as LABDRIAN_PI_BIN. It also isolates HOME to a
-// fresh t.TempDir(): Install/Uninstall now touch
-// ~/.pi/agent/agents/GADU.md (R-013/R-016), and sharing TestMain's one
-// process-wide HOME across every caller of this helper would let one
+// newBuiltPiAdapterWithStub builds a real package at a fresh destDir and returns an adapter for it
+// plus the destDir and the fake CommandRunner the adapter runs `pi` through. It also isolates HOME
+// to a fresh t.TempDir(): Install/Uninstall touch ~/.pi/agent/agents/GADU.md (R-013/R-016), and
+// sharing TestMain's one process-wide HOME across every caller of this helper would let one
 // test's GADU link leak into the next test's assertions.
-func newBuiltPiAdapterWithStub(t *testing.T) (adapter engineRuntime.PiAdapter, destDir, recorder string) {
+func newBuiltPiAdapterWithStub(t *testing.T) (adapter engineRuntime.PiAdapter, destDir string, commands *fakeCommands) {
+	t.Helper()
+	return newBuiltPiAdapterWithOptions(t, engineRuntime.PiOptions{})
+}
+
+// newBuiltPiAdapterWithOptions is newBuiltPiAdapterWithStub with the options the test sets.
+func newBuiltPiAdapterWithOptions(t *testing.T, options engineRuntime.PiOptions) (adapter engineRuntime.PiAdapter, destDir string, commands *fakeCommands) {
 	t.Helper()
 	t.Setenv("HOME", t.TempDir())
 	overlayRoot, registryPath := piFixtureOverlay(t)
 	destDir = filepath.Join(t.TempDir(), "labdrian-pi")
 	buildPiPackage(t, overlayRoot, registryPath, destDir)
-	recorder = filepath.Join(t.TempDir(), "argv.txt")
-	t.Setenv("LABDRIAN_PI_BIN", writeStubPiScript(t, recorder))
-	return newPiAdapterAt(t, overlayRoot, registryPath, destDir), destDir, recorder
+	commands = &fakeCommands{}
+	return newPiAdapterWith(t, commands, options, overlayRoot, registryPath, destDir), destDir, commands
 }
 
-// readRecordedInvocations reads a writeStubPiScript recorder file and
-// returns one []string per `pi` invocation (argv elements in order).
-func readRecordedInvocations(t *testing.T, recorderPath string) [][]string {
+// readRecordedInvocations returns one []string per `pi` invocation (argv elements in order).
+func readRecordedInvocations(t *testing.T, commands *fakeCommands) [][]string {
 	t.Helper()
-	data, err := os.ReadFile(recorderPath)
-	if err != nil {
-		return nil
-	}
-	var invocations [][]string
-	for _, block := range strings.Split(string(data), "\n\n") {
-		block = strings.TrimRight(block, "\n")
-		if block == "" {
-			continue
-		}
-		invocations = append(invocations, strings.Split(block, "\n"))
-	}
-	return invocations
+	return commands.invocations()
 }
 
-// readRecordedArgv returns the FIRST `pi` invocation's argv (one element
-// per line) -- Install may make a second invocation (the Subagents
-// extension install) that most existing single-invocation assertions don't
-// care about.
-func readRecordedArgv(t *testing.T, recorderPath string) []string {
+// readRecordedArgv returns the FIRST `pi` invocation's argv -- Install may make a second
+// invocation (the Subagents extension install) that most existing single-invocation assertions
+// don't care about.
+func readRecordedArgv(t *testing.T, commands *fakeCommands) []string {
 	t.Helper()
-	invocations := readRecordedInvocations(t, recorderPath)
+	invocations := readRecordedInvocations(t, commands)
 	if len(invocations) == 0 {
 		return nil
 	}
 	return invocations[0]
 }
 
-// readAllRecordedTokens flattens every argv element across every `pi`
-// invocation, for assertions about whether a particular call happened at
-// all rather than about invocation order.
-func readAllRecordedTokens(t *testing.T, recorderPath string) []string {
+// readAllRecordedTokens flattens every argv element across every `pi` invocation, for assertions
+// about whether a particular call happened at all rather than about invocation order.
+func readAllRecordedTokens(t *testing.T, commands *fakeCommands) []string {
 	t.Helper()
 	var all []string
-	for _, invocation := range readRecordedInvocations(t, recorderPath) {
+	for _, invocation := range readRecordedInvocations(t, commands) {
 		all = append(all, invocation...)
 	}
 	return all
@@ -434,16 +408,14 @@ func TestPiAdapter_InstallNoShellInjection(t *testing.T) {
 	destDir := filepath.Join(t.TempDir(), `labdrian-pi; $(touch injected); \`)
 	buildPiPackage(t, overlayRoot, registryPath, destDir)
 
-	recorder := filepath.Join(t.TempDir(), "argv.txt")
-	t.Setenv("LABDRIAN_PI_BIN", writeStubPiScript(t, recorder))
-
-	adapter := newPiAdapterAt(t, overlayRoot, registryPath, destDir)
+	commands := &fakeCommands{}
+	adapter := newPiAdapterWith(t, commands, engineRuntime.PiOptions{}, overlayRoot, registryPath, destDir)
 	result := adapter.Install()
 	if result.Status == engineRuntime.CapabilityUnsupported {
 		t.Fatalf("Install with a stub pi on PATH must not be unsupported, got: %s", result)
 	}
 
-	got := readRecordedArgv(t, recorder)
+	got := readRecordedArgv(t, commands)
 	if len(got) != 2 || got[0] != "install" || got[1] != destDir {
 		t.Fatalf("recorded argv = %#v, want [\"install\", %q] (fixed argv, no shell interpretation)", got, destDir)
 	}
@@ -785,11 +757,10 @@ func TestSubagentsExtension_Noop(t *testing.T) {
 	}
 }
 
-// TestSubagentsExtension_SkipEnv (task 5.1): LABDRIAN_PI_SKIP_SUBAGENTS=1
-// skips the extension probe/install entirely, even when absent.
-func TestSubagentsExtension_SkipEnv(t *testing.T) {
-	t.Setenv("LABDRIAN_PI_SKIP_SUBAGENTS", "1")
-	adapter, _, recorder := newBuiltPiAdapterWithStub(t)
+// TestSubagentsExtension_SkipOption (task 5.1): PiOptions.SkipSubagents skips the extension
+// probe/install entirely, even when absent.
+func TestSubagentsExtension_SkipOption(t *testing.T) {
+	adapter, _, commands := newBuiltPiAdapterWithOptions(t, engineRuntime.PiOptions{SkipSubagents: true})
 	home, err := os.UserHomeDir()
 	if err != nil {
 		t.Fatalf("UserHomeDir: %v", err)
@@ -803,10 +774,31 @@ func TestSubagentsExtension_SkipEnv(t *testing.T) {
 	if !strings.Contains(result.Message, "LABDRIAN_PI_SKIP_SUBAGENTS=1") {
 		t.Fatalf("Install must disclose the skip, got %q", result.Message)
 	}
-	for _, argv := range readAllRecordedTokens(t, recorder) {
+	for _, argv := range readAllRecordedTokens(t, commands) {
 		if strings.Contains(argv, "pi-subagents") {
-			t.Fatalf("skip env must prevent any pi-subagents install call, recorded argv contained %q", argv)
+			t.Fatalf("the skip option must prevent any pi-subagents install call, recorded argv contained %q", argv)
 		}
+	}
+}
+
+// The skip is the option of the adapter and nothing else: the variable the composition root reads
+// it from does not reach an adapter built without the option.
+func TestSubagentsExtension_SkipVariableAloneDoesNothing(t *testing.T) {
+	t.Setenv("LABDRIAN_PI_SKIP_SUBAGENTS", "1")
+	adapter, _, commands := newBuiltPiAdapterWithStub(t)
+	home, err := os.UserHomeDir()
+	if err != nil {
+		t.Fatalf("UserHomeDir: %v", err)
+	}
+	writePiSettingsPackages(t, home, nil)
+
+	adapter.Install()
+	var installed bool
+	for _, argv := range readAllRecordedTokens(t, commands) {
+		installed = installed || strings.Contains(argv, "pi-subagents")
+	}
+	if !installed {
+		t.Fatal("an adapter built without SkipSubagents honoured the environment variable")
 	}
 }
 
@@ -1175,8 +1167,6 @@ func TestInstall_RejectsAmbiguousGaduFrontmatter(t *testing.T) {
 		"---\nname: GADU\ndescription: test\ntools: '*'\ntools:\n  - Read\n---\nbody\n")
 	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
 	buildPiPackage(t, overlayRoot, registryPath, destDir)
-	recorder := filepath.Join(t.TempDir(), "argv.txt")
-	t.Setenv("LABDRIAN_PI_BIN", writeStubPiScript(t, recorder))
 	home, err := os.UserHomeDir()
 	if err != nil {
 		t.Fatalf("UserHomeDir: %v", err)
@@ -1206,8 +1196,6 @@ func TestInstall_AcceptsProviderPrefixedModel(t *testing.T) {
 		"---\nname: GADU\ndescription: test\nmodel: pi-claude-cli/claude-sonnet-5\ntools: '*'\n---\nbody\n")
 	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
 	buildPiPackage(t, overlayRoot, registryPath, destDir)
-	recorder := filepath.Join(t.TempDir(), "argv.txt")
-	t.Setenv("LABDRIAN_PI_BIN", writeStubPiScript(t, recorder))
 	home, err := os.UserHomeDir()
 	if err != nil {
 		t.Fatalf("UserHomeDir: %v", err)

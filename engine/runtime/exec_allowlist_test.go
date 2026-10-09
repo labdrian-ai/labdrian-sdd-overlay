@@ -16,29 +16,15 @@ import (
 // isolation of this package is not needed for them, only inherited.
 //
 // The policy is Decision 3 of the Phase 7 design: no os/exec in any new Phase
-// 7 code, enforced statically, with the existing Pi adapter as the one named
-// exception. It is modelled on engine/skills' zero-fetch import allowlist.
+// 7 code, enforced statically. The one exception it named, the Pi adapter, is
+// gone: the adapter reaches the `pi` CLI through the CommandRunner port, whose
+// process adapter is engine/execrunner (H24). It is modelled on engine/skills'
+// zero-fetch import allowlist.
 
 const (
 	engineModulePath  = "github.com/labdrian-ai/labdrian-sdd-overlay/engine"
 	longtermMemModule = "github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem"
 )
-
-// execImportAllowed names the only non-test files of engine/runtime that may
-// import os/exec, each with the reason it is allowed.
-//
-// pi.go is the named Decision 3 exception. PiAdapter shells out to the pi CLI
-// with a fixed argv (pi install, pi remove) and cannot do otherwise: the CLI
-// owns ~/.pi/agent/settings.json. That boundary has already caused an
-// incident: a test that reached it without a stub ran a real `pi remove` and
-// deleted a live labdrian-pi package during `go test ./...`. It is why every
-// test in this package runs under the TestMain guard in live_guard_test.go,
-// with LABDRIAN_PI_BIN pointing at a path that does not exist. Pi installation
-// is deliberately not refactored in Phase 7; the exception stays explicit and
-// bounded to this one file.
-var execImportAllowed = map[string]string{
-	"pi.go": "Decision 3 exception: the Pi CLI adapter runs pi install and pi remove with a fixed argv",
-}
 
 // phase7Sources lists, relative to the engine root, the production files of
 // Phase 7 code: a glob per package directory and an explicit filename for each
@@ -65,7 +51,7 @@ var phase7Sources = []string{
 func forbiddenPhase7Import(path string) string {
 	switch {
 	case path == "os/exec":
-		return "starts subprocesses; Decision 3 forbids os/exec in Phase 7 code (the named Pi exception is engine/runtime/pi.go)"
+		return "starts subprocesses; Decision 3 forbids os/exec in Phase 7 code (the one place the module starts the CLI of a runtime is engine/execrunner)"
 	case path == "net" || strings.HasPrefix(path, "net/"):
 		return "network access; Phase 7 code makes no network calls"
 	case path == longtermMemModule || strings.HasPrefix(path, longtermMemModule+"/"):
@@ -73,7 +59,7 @@ func forbiddenPhase7Import(path string) string {
 	case strings.Contains(path, "gentle-ai") || strings.Contains(path, "gentle-pi"):
 		return "depends on Gentle AI or gentle-pi, which Phase 7 code must not import"
 	case path == engineModulePath+"/runtime":
-		return "imports engine/runtime, whose Pi adapter imports os/exec; Phase 7 packages sit below it (runtime may import them, never the reverse)"
+		return "imports engine/runtime, the home of the runtime adapters; Phase 7 packages sit below it (runtime may import them, never the reverse)"
 	}
 	return ""
 }
@@ -158,7 +144,7 @@ func TestPhase7ForbiddenImports(t *testing.T) {
 		{"github.com/Gentleman-Programming/gentle-ai", true},
 		{"github.com/Gentleman-Programming/gentle-ai/internal/review", true},
 		{"example.com/vendor/gentle-pi/client", true},
-		// engine/runtime carries the Pi adapter's os/exec dependency.
+		// engine/runtime is the home of the runtime adapters, above the Phase 7 packages.
 		{"github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime", true},
 
 		// Allowed: the standard library a declaration package needs...
@@ -211,38 +197,20 @@ func TestPhase7ImportViolationsNameTheFileAndTheImport(t *testing.T) {
 	}
 }
 
-// TestRuntimeExecAllowlist pins that within engine/runtime the only
-// production file that imports os/exec is the one named in execImportAllowed.
-// It also fails when the exception goes stale (pi.go stops importing os/exec),
-// so the allowlist cannot outlive the reason it records.
-func TestRuntimeExecAllowlist(t *testing.T) {
+// TestRuntimeImportsNoExec pins that no production file of engine/runtime imports os/exec. The
+// Pi adapter, the one file that did, now starts `pi` through the CommandRunner port; a file that
+// brings os/exec back puts a process the tests cannot fake in the package whose tests must never
+// reach a real CLI.
+func TestRuntimeImportsNoExec(t *testing.T) {
 	files := nonTestGoFiles(t, ".")
 	if len(files) == 0 {
-		t.Fatal("no production .go files found in engine/runtime; the allowlist walk is broken")
+		t.Fatal("no production .go files found in engine/runtime; the walk is broken")
 	}
-
-	allowed := make([]string, 0, len(execImportAllowed))
-	for name := range execImportAllowed {
-		allowed = append(allowed, name)
-	}
-	sort.Strings(allowed)
-
-	importers := make(map[string]bool)
 	for _, file := range files {
-		name := filepath.Base(file)
 		for _, imp := range importsOf(t, file) {
-			if imp != "os/exec" {
-				continue
+			if imp == "os/exec" {
+				t.Errorf("engine/runtime/%s imports os/exec; runtime reaches a process only through a port (CommandRunner), whose adapter is engine/execrunner", filepath.Base(file))
 			}
-			importers[name] = true
-			if _, ok := execImportAllowed[name]; !ok {
-				t.Errorf("engine/runtime/%s imports os/exec; within engine/runtime only %s may (Decision 3). Widen execImportAllowed only after reviewer approval, with the reason", name, strings.Join(allowed, ", "))
-			}
-		}
-	}
-	for _, name := range allowed {
-		if !importers[name] {
-			t.Errorf("engine/runtime/%s is allowlisted to import os/exec but no longer does; remove the stale exception from execImportAllowed", name)
 		}
 	}
 }

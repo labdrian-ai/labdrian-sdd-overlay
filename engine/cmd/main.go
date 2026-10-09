@@ -72,6 +72,7 @@ import (
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/assets"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/contract"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/execrunner"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/filelock"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gadu"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gate"
@@ -424,7 +425,7 @@ func runPipkgCore(args []string, stdout, stderr io.Writer, exit func(int)) {
 		return
 	}
 
-	report, err := pipkg.Check(newWarningRegistryRepository(stderr), overlayRoot, registryPath, destDir)
+	report, err := pipkg.Check(newWarningRegistryRepository(stderr), overlayRoot, registryPath, destDir, pipkgOptionsFromEnv(os.Getenv))
 	if d := report.Disclosure(); d != "" {
 		fmt.Fprintf(stdout, "pipkg check: %s\n", d)
 	}
@@ -444,7 +445,7 @@ func runPipkgCore(args []string, stdout, stderr io.Writer, exit func(int)) {
 // runRuntime implements the 'runtime <action>' subcommand.
 // Supported actions: status, install, update, uninstall.
 func runRuntime(args []string) {
-	runRuntimeCore(args, os.Stdout, os.Stderr, os.Exit)
+	runRuntimeCore(execrunner.New(), args, os.Stdout, os.Stderr, os.Exit)
 }
 
 // componentRuntimeParity and componentLongtermMem are the two values
@@ -455,8 +456,10 @@ const (
 	componentLongtermMem   = "longterm-mem"
 )
 
-// runRuntimeCore is the testable core for the 'runtime' subcommand.
-func runRuntimeCore(args []string, stdout io.Writer, stderr io.Writer, exit func(int)) {
+// runRuntimeCore is the testable core for the 'runtime' subcommand. commands is how the Pi
+// adapter starts the `pi` CLI: the process adapter in the program, a fake in a test, so no test of
+// the command can reach a real `pi`.
+func runRuntimeCore(commands runtimepkg.CommandRunner, args []string, stdout io.Writer, stderr io.Writer, exit func(int)) {
 	// capabilities is declarative and read-only: it never constructs an
 	// adapter, resolves a config root, or reads HOME, so it is dispatched
 	// before the lifecycle flags are parsed and shares none of their
@@ -473,7 +476,7 @@ func runRuntimeCore(args []string, stdout io.Writer, stderr io.Writer, exit func
 		return
 	}
 
-	registry, err := newRuntimeRegistry(newWarningRegistryRepository(stderr))
+	registry, err := newRuntimeRegistry(newWarningRegistryRepository(stderr), commands, pipkgOptionsFromEnv(os.Getenv))
 	if err != nil {
 		fmt.Fprintln(stderr, "error:", err)
 		exit(1)

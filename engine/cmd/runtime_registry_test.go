@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/capability"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/pipkg"
 	runtimepkg "github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime"
 )
 
@@ -23,7 +24,7 @@ func TestRunRuntimeCore_ConfigRootReachesPi(t *testing.T) {
 
 	var outBuf, errBuf bytes.Buffer
 	exitCode := -1
-	runRuntimeCore(
+	runRuntimeCore(noPi(),
 		[]string{"status", "--target", "pi", "--config-root", root},
 		&outBuf, &errBuf, func(code int) { exitCode = code },
 	)
@@ -43,7 +44,7 @@ func TestRunRuntimeCore_ConfigRootReachesPiInTheAllForm(t *testing.T) {
 	root := filepath.Join(t.TempDir(), "shared-root")
 
 	var outBuf, errBuf bytes.Buffer
-	runRuntimeCore(
+	runRuntimeCore(noPi(),
 		[]string{"status", "--target", "all", "--config-root", root},
 		&outBuf, &errBuf, func(int) {},
 	)
@@ -64,7 +65,7 @@ func TestRunRuntimeCore_ConfigRootReachesPiInTheAllForm(t *testing.T) {
 // program ships is the capability vocabulary, so a target declared and never registered, or the
 // reverse, fails here; and `all` acts on the runtimes in the order they have always been acted on.
 func TestNewRuntimeRegistry_RegistersTheDeclaredRuntimesInTheOrderAllExpandsTo(t *testing.T) {
-	reg, err := newRuntimeRegistry(nil)
+	reg, err := newRuntimeRegistry(nil, noPi(), pipkg.Options{})
 	if err != nil {
 		t.Fatalf("newRuntimeRegistry: %v", err)
 	}
@@ -109,6 +110,16 @@ func TestRuntimeConfigFromEnv(t *testing.T) {
 		}
 	})
 
+	t.Run("only the exact value 1 turns the Subagents extension off", func(t *testing.T) {
+		for value, want := range map[string]bool{"1": true, "": false, "0": false, "true": false, " 1": false, "yes": false} {
+			environ["LABDRIAN_PI_SKIP_SUBAGENTS"] = value
+			if got := runtimeConfigFromEnv(env, failing).PiSkipSubagents; got != want {
+				t.Errorf("LABDRIAN_PI_SKIP_SUBAGENTS=%q: PiSkipSubagents = %v, want %v", value, got, want)
+			}
+		}
+		delete(environ, "LABDRIAN_PI_SKIP_SUBAGENTS")
+	})
+
 	t.Run("a blank HOME falls back to the user's profile directory", func(t *testing.T) {
 		environ["HOME"] = "   "
 		defer func() { environ["HOME"] = "  /home/p  " }()
@@ -129,7 +140,7 @@ func TestRuntimeConfigFromEnv(t *testing.T) {
 // TestBuildRuntimeAdapters_BuildsAllOrNone: a target the registry cannot build is the error and no
 // adapter is handed back, so a command over `all` never acts on the first targets and then stops.
 func TestBuildRuntimeAdapters_BuildsAllOrNone(t *testing.T) {
-	reg, err := newRuntimeRegistry(nil)
+	reg, err := newRuntimeRegistry(nil, noPi(), pipkg.Options{})
 	if err != nil {
 		t.Fatal(err)
 	}

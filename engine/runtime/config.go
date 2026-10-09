@@ -25,6 +25,10 @@ type Config struct {
 	OverlayDir string
 	// StateDir is $STATE_DIR as set: where the overlay keeps what it deploys.
 	StateDir string
+	// PiSkipSubagents is true when the person turned off the probe and the install of the Pi
+	// Subagents extension ($LABDRIAN_PI_SKIP_SUBAGENTS=1), for environments that manage it
+	// separately. Only the Pi adapter reads it.
+	PiSkipSubagents bool
 	// ConfigRoot is the --config-root the caller gave, empty when it gave none. It names the
 	// directory an adapter keeps its files in: the config directory of Claude, Codex and
 	// OpenCode, and, for Pi, the directory that holds the package, pi/labdrian-pi, the way

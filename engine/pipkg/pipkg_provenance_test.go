@@ -87,7 +87,7 @@ func TestCheck_RefBasis(t *testing.T) {
 		t.Fatalf("Build: %v", err)
 	}
 
-	report, err := pipkg.Check(fileRegistries, overlayRoot, registryPath, destDir)
+	report, err := pipkg.Check(fileRegistries, overlayRoot, registryPath, destDir, pipkg.Options{})
 	if err != nil {
 		t.Fatalf("Check right after Build must report no drift, got: %v", err)
 	}
@@ -98,7 +98,7 @@ func TestCheck_RefBasis(t *testing.T) {
 	// Uncommitted working-tree edit: comparing against the committed
 	// deploy ref must NOT report drift caused by an uncommitted edit.
 	writeFile(t, filepath.Join(overlayRoot, "skills", "pi-skill", "SKILL.md"), "---\nname: pi-skill\n---\nuncommitted edit\n")
-	report, err = pipkg.Check(fileRegistries, overlayRoot, registryPath, destDir)
+	report, err = pipkg.Check(fileRegistries, overlayRoot, registryPath, destDir, pipkg.Options{})
 	if err != nil {
 		t.Errorf("Check must ignore an uncommitted source edit, got: %v", err)
 	}
@@ -114,7 +114,7 @@ func TestCheck_RefBasis(t *testing.T) {
 	if err := os.WriteFile(deployed, []byte("tampered\n"), 0644); err != nil {
 		t.Fatalf("tamper with deployed file: %v", err)
 	}
-	_, err = pipkg.Check(fileRegistries, overlayRoot, registryPath, destDir)
+	_, err = pipkg.Check(fileRegistries, overlayRoot, registryPath, destDir, pipkg.Options{})
 	if err == nil {
 		t.Fatal("Check must report drift once the deployed package diverges from main's export")
 	}
@@ -140,7 +140,7 @@ func TestCheck_StaleAfterCommittedSourceChange(t *testing.T) {
 	runGit(t, overlayRoot, "add", "-A")
 	runGit(t, overlayRoot, "commit", "-q", "-m", "edit pi-skill")
 
-	report, err := pipkg.Check(fileRegistries, overlayRoot, registryPath, destDir)
+	report, err := pipkg.Check(fileRegistries, overlayRoot, registryPath, destDir, pipkg.Options{})
 	if err == nil {
 		t.Fatal("Check must report drift for a stale deployed package")
 	}
@@ -169,7 +169,7 @@ func TestCheck_FeatureBranchDoesNotFalseDrift(t *testing.T) {
 	runGit(t, overlayRoot, "add", "-A")
 	runGit(t, overlayRoot, "commit", "-q", "-m", "unrelated feature-branch edit")
 
-	report, err := pipkg.Check(fileRegistries, overlayRoot, registryPath, destDir)
+	report, err := pipkg.Check(fileRegistries, overlayRoot, registryPath, destDir, pipkg.Options{})
 	if err != nil {
 		t.Errorf("Check must still compare against main, not the checked-out feature branch, got: %v", err)
 	}
@@ -200,7 +200,7 @@ func TestCheck_MainFallback(t *testing.T) {
 	unresolvable := strings.Repeat("f", 40)
 	corruptBuiltFrom(t, destDir, unresolvable)
 
-	report, err := pipkg.Check(fileRegistries, overlayRoot, registryPath, destDir)
+	report, err := pipkg.Check(fileRegistries, overlayRoot, registryPath, destDir, pipkg.Options{})
 	if err != nil {
 		t.Errorf("Check must still succeed (no real drift) comparing against main, got: %v", err)
 	}
@@ -225,7 +225,7 @@ func TestCheck_NonGitRoot(t *testing.T) {
 		t.Fatalf("Build: %v", err)
 	}
 
-	report, err := pipkg.Check(fileRegistries, overlayRoot, registryPath, destDir)
+	report, err := pipkg.Check(fileRegistries, overlayRoot, registryPath, destDir, pipkg.Options{})
 	if err != nil {
 		t.Fatalf("Check: %v", err)
 	}
@@ -250,7 +250,7 @@ func TestCheck_RejectsNonHexBuiltFrom(t *testing.T) {
 
 	for _, malicious := range []string{"--upload-pack=evil", "not-hex-at-all", ""} {
 		corruptBuiltFrom(t, destDir, malicious)
-		report, err := pipkg.Check(fileRegistries, overlayRoot, registryPath, destDir)
+		report, err := pipkg.Check(fileRegistries, overlayRoot, registryPath, destDir, pipkg.Options{})
 		if err != nil {
 			t.Errorf("Check(builtFrom=%q) must compare against main cleanly, got: %v", malicious, err)
 		}
@@ -326,7 +326,7 @@ func TestBuiltFrom_DirtyTreeNotRecorded(t *testing.T) {
 		t.Errorf("labdrian.builtFrom = %q, want absent for a dirty source tree", manifest.Labdrian.BuiltFrom)
 	}
 
-	report, err := pipkg.Check(fileRegistries, overlayRoot, registryPath, destDir)
+	report, err := pipkg.Check(fileRegistries, overlayRoot, registryPath, destDir, pipkg.Options{})
 	if err != nil {
 		t.Errorf("Check must report no drift right after a dirty-tree Build, got: %v", err)
 	}
@@ -364,7 +364,7 @@ func TestExportGitTree_DrainsPipeOnExtractionError(t *testing.T) {
 
 	done := make(chan error, 1)
 	go func() {
-		_, err := pipkg.Check(fileRegistries, overlayRoot, registryPath, destDir)
+		_, err := pipkg.Check(fileRegistries, overlayRoot, registryPath, destDir, pipkg.Options{})
 		done <- err
 	}()
 	select {
@@ -394,7 +394,7 @@ func TestCheck_MainFallbackWithoutMainBranch(t *testing.T) {
 	}
 	corruptBuiltFrom(t, destDir, "0000000000000000000000000000000000000000")
 
-	report, err := pipkg.Check(fileRegistries, overlayRoot, registryPath, destDir)
+	report, err := pipkg.Check(fileRegistries, overlayRoot, registryPath, destDir, pipkg.Options{})
 	if err != nil {
 		t.Fatalf("Check without a local main branch must fall back, got: %v", err)
 	}
@@ -403,10 +403,10 @@ func TestCheck_MainFallbackWithoutMainBranch(t *testing.T) {
 	}
 }
 
-// TestCheck_DeployRefOverride: LABDRIAN_PI_DEPLOY_REF names the deploy ref
-// for checkouts that do not deploy from main (CI on a pull request, a
-// feature-branch shelltest); the disclosure still names the ref used.
-func TestCheck_DeployRefOverride(t *testing.T) {
+// TestCheck_DeployRefOption: Options.DeployRef names the deploy ref for checkouts that do not
+// deploy from main (CI on a pull request, a feature-branch shelltest); the disclosure still
+// names the ref used.
+func TestCheck_DeployRefOption(t *testing.T) {
 	overlayRoot, registryPath, _ := gitFixtureOverlay(t)
 	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
 	runGit(t, overlayRoot, "checkout", "-q", "-b", "feature")
@@ -416,14 +416,45 @@ func TestCheck_DeployRefOverride(t *testing.T) {
 	writeFile(t, filepath.Join(overlayRoot, "skills", "pi-skill", "SKILL.md"), "---\nname: pi-skill\n---\nfeature edit\n")
 	runGit(t, overlayRoot, "add", "-A")
 	runGit(t, overlayRoot, "commit", "-q", "-m", "feature edit")
-	t.Setenv("LABDRIAN_PI_DEPLOY_REF", "feature")
 
-	report, err := pipkg.Check(fileRegistries, overlayRoot, registryPath, destDir)
+	report, err := pipkg.Check(fileRegistries, overlayRoot, registryPath, destDir, pipkg.Options{DeployRef: "feature"})
 	if err == nil || !strings.Contains(err.Error(), "SKILL.md") {
-		t.Fatalf("Check with the override must compare against feature and report the edit as drift, got err=%v", err)
+		t.Fatalf("Check with the option must compare against feature and report the edit as drift, got err=%v", err)
 	}
 	if report.DeployRef != "feature" || !strings.Contains(report.Disclosure(), "feature") {
 		t.Fatalf("expected DeployRef=feature disclosed, got %q / %q", report.DeployRef, report.Disclosure())
+	}
+}
+
+// TestCheck_DeployRefOptionIsTrimmed: a ref with surrounding space from a caller that did not
+// trim it names the ref, as the override always did.
+func TestCheck_DeployRefOptionIsTrimmed(t *testing.T) {
+	overlayRoot, registryPath, _ := gitFixtureOverlay(t)
+	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
+	runGit(t, overlayRoot, "checkout", "-q", "-b", "feature")
+	if err := pipkg.Build(fileRegistries, overlayRoot, registryPath, destDir); err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	report, _ := pipkg.Check(fileRegistries, overlayRoot, registryPath, destDir, pipkg.Options{DeployRef: "  feature \n"})
+	if report.DeployRef != "feature" {
+		t.Fatalf("DeployRef = %q, want the trimmed feature", report.DeployRef)
+	}
+}
+
+// TestCheck_ReadsNoEnvironment: Check takes the deploy ref from its Options and from nothing
+// else; the variable the composition root used to leave to Check is not read by the package.
+func TestCheck_ReadsNoEnvironment(t *testing.T) {
+	overlayRoot, registryPath, _ := gitFixtureOverlay(t)
+	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
+	runGit(t, overlayRoot, "checkout", "-q", "-b", "feature")
+	if err := pipkg.Build(fileRegistries, overlayRoot, registryPath, destDir); err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	t.Setenv("LABDRIAN_PI_DEPLOY_REF", "feature")
+
+	report, _ := pipkg.Check(fileRegistries, overlayRoot, registryPath, destDir, pipkg.Options{})
+	if report.DeployRef == "feature" {
+		t.Fatalf("Check compared against %q, which only the environment named", report.DeployRef)
 	}
 }
 
@@ -443,7 +474,7 @@ func TestCheck_BuildOnFeatureBranchIsNotStale(t *testing.T) {
 		t.Fatalf("Build: %v", err)
 	}
 
-	report, err := pipkg.Check(fileRegistries, overlayRoot, registryPath, destDir)
+	report, err := pipkg.Check(fileRegistries, overlayRoot, registryPath, destDir, pipkg.Options{})
 	if err != nil {
 		t.Fatalf("Check after a feature-branch build with identical sources must be clean, got: %v", err)
 	}

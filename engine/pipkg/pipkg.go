@@ -255,6 +255,39 @@ func (r CheckReport) Disclosure() string {
 // never reach a git subprocess argv).
 var builtFromPattern = regexp.MustCompile(`^[0-9a-f]{40}$`)
 
+// Options are the choices of the caller that Check cannot make for itself. The composition root
+// reads whatever configuration names them, once, and hands them down: the package reads no
+// environment variable.
+type Options struct {
+	// DeployRef names the ref Check compares the package against, tried before main,
+	// origin/main and HEAD, for a checkout that does not deploy from main (CI on a pull request,
+	// a feature-branch shelltest). Surrounding space is ignored and empty means no preference.
+	// The disclosure always prints whichever ref won, so an override never hides.
+	DeployRef string
+}
+
+// Packages is the package builder the Pi adapter holds: Build and Check over one registry reader
+// and the Options of the run, both fixed when the composition root makes it. The adapter asks
+// for the two verbs and knows neither the reader nor the deploy ref.
+type Packages struct {
+	// Registries is how the skills registry the package is built from is read.
+	Registries skills.RegistryRepository
+	// Options are the choices of the caller that Check cannot make for itself.
+	Options Options
+}
+
+// Build writes the package; see Build.
+func (p Packages) Build(overlayRoot, registryPath, destDir string) error {
+	return Build(p.Registries, overlayRoot, registryPath, destDir)
+}
+
+// Check compares the package against its sources; see Check. Its first result is the disclosure
+// of what it compared against, which Check owes the caller whether or not it found drift.
+func (p Packages) Check(overlayRoot, registryPath, destDir string) (disclosure string, err error) {
+	report, err := Check(p.Registries, overlayRoot, registryPath, destDir, p.Options)
+	return report.Disclosure(), err
+}
+
 // Check regenerates the package into a temp dir and diffs it, file by file,
 // against destDir. Returns a CheckReport disclosing the comparison basis,
 // and a non-nil, drift-naming error when destDir is missing, has extra
@@ -271,7 +304,7 @@ var builtFromPattern = regexp.MustCompile(`^[0-9a-f]{40}$`)
 // labdrian.builtFrom field is normalized out of the content comparison
 // (via stripBuiltFrom) so recording a different (but still correct) ref
 // never counts as file-level drift by itself.
-func Check(registries skills.RegistryRepository, overlayRoot, registryPath, destDir string) (CheckReport, error) {
+func Check(registries skills.RegistryRepository, overlayRoot, registryPath, destDir string, opts Options) (CheckReport, error) {
 	got, err := listFiles(destDir)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -280,7 +313,7 @@ func Check(registries skills.RegistryRepository, overlayRoot, registryPath, dest
 		return CheckReport{}, fmt.Errorf("pipkg: reading built package: %w", err)
 	}
 
-	report, sourceRoot, sourceRegistry, buildRev, cleanup, err := resolveComparisonSource(overlayRoot, registryPath, destDir)
+	report, sourceRoot, sourceRegistry, buildRev, cleanup, err := resolveComparisonSource(overlayRoot, registryPath, destDir, opts)
 	if err != nil {
 		return CheckReport{}, err
 	}
@@ -449,7 +482,7 @@ func stripBuiltFrom(data []byte) []byte {
 // history): the resolved deploy ref for "deploy" (git describe accepts a
 // branch name), or overlayRoot's current HEAD for "worktree" (matching
 // Check's pre-R-005 behavior exactly).
-func resolveComparisonSource(overlayRoot, registryPath, destDir string) (report CheckReport, sourceRoot, sourceRegistry, buildRev string, cleanup func(), err error) {
+func resolveComparisonSource(overlayRoot, registryPath, destDir string, opts Options) (report CheckReport, sourceRoot, sourceRegistry, buildRev string, cleanup func(), err error) {
 	noopCleanup := func() {}
 	if exec.Command("git", "-C", overlayRoot, "rev-parse", "--is-inside-work-tree").Run() != nil {
 		return CheckReport{Basis: "worktree"}, overlayRoot, registryPath, resolveBuildRev(overlayRoot), noopCleanup, nil
@@ -467,11 +500,11 @@ func resolveComparisonSource(overlayRoot, registryPath, destDir string) (report 
 	// "main"; fall back through the refs that can exist and disclose the
 	// one used. This -- never builtFrom -- is the comparison target
 	// (R3-001): cmd_apply always deploys from main.
-	// LABDRIAN_PI_DEPLOY_REF lets a checkout that is not main (CI on a pull
+	// Options.DeployRef lets a checkout that is not main (CI on a pull
 	// request, a feature-branch shelltest) name the ref it deploys from; the
 	// disclosure always prints whichever ref won, so an override never hides.
 	candidates := []string{"main", "origin/main", "HEAD"}
-	if override := strings.TrimSpace(os.Getenv("LABDRIAN_PI_DEPLOY_REF")); override != "" {
+	if override := strings.TrimSpace(opts.DeployRef); override != "" {
 		candidates = append([]string{override}, candidates...)
 	}
 	deployRef := "main"
