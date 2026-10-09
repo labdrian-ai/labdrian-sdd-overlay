@@ -29,7 +29,7 @@ func newPiAdapterWith(t *testing.T, commands engineRuntime.CommandRunner, option
 		t.Fatalf("os.UserHomeDir: %v", err)
 	}
 	return engineRuntime.NewPiAdapter(
-		engineRuntime.PiPorts{Commands: commands, Packages: pipkg.Packages{Registries: fileRegistries}},
+		engineRuntime.PiPorts{Commands: commands, Packages: newPiPackages()},
 		engineRuntime.PiPaths{Home: home, OverlayRoot: overlayRoot, RegistryPath: registryPath, DestDir: destDir},
 		options,
 	)
@@ -341,11 +341,11 @@ console.log(JSON.stringify(result));
 	}
 }
 
-// buildPiPackage builds destDir via pipkg.Build, failing the test on error.
+// buildPiPackage builds destDir via the package builder, failing the test on error.
 func buildPiPackage(t *testing.T, overlayRoot, registryPath, destDir string) {
 	t.Helper()
-	if err := pipkg.Build(fileRegistries, overlayRoot, registryPath, destDir); err != nil {
-		t.Fatalf("pipkg.Build: %v", err)
+	if err := newPiPackages().Build(overlayRoot, registryPath, destDir); err != nil {
+		t.Fatalf("Build: %v", err)
 	}
 }
 

@@ -1,7 +1,6 @@
 package skills
 
 import (
-	"bytes"
 	"fmt"
 	"regexp"
 	"strings"
@@ -558,26 +557,12 @@ func checkHomePathLeak(fm parsedFrontmatter, body string) []string {
 // opening or closing `---` fence fails here, before LintSkill is ever
 // called (see LintSkillFile).
 func SplitSkillFile(data []byte) (frontmatter, body string, err error) {
-	data = bytes.TrimPrefix(data, utf8BOM)
-	lines := strings.Split(string(data), "\n")
-
-	if len(lines) == 0 || !isFenceLine(lines[0]) {
-		return "", "", &LintError{Rule: "frontmatter-fence", Msg: "file does not start with a `---` frontmatter fence"}
+	frontmatter, body, fault := splitFences(data)
+	if fault != 0 {
+		// The words are the fault's own, so the lint rule and ReadFrontmatter's error
+		// cannot say different things, and a fault added later is an error here too.
+		return "", "", &LintError{Rule: "frontmatter-fence", Msg: fault.String()}
 	}
-
-	closeIdx := -1
-	for i := 1; i < len(lines); i++ {
-		if isFenceLine(lines[i]) {
-			closeIdx = i
-			break
-		}
-	}
-	if closeIdx == -1 {
-		return "", "", &LintError{Rule: "frontmatter-fence", Msg: "file has no closing `---` frontmatter fence"}
-	}
-
-	frontmatter = strings.Join(lines[1:closeIdx], "\n")
-	body = strings.Join(lines[closeIdx+1:], "\n")
 	return frontmatter, body, nil
 }
 

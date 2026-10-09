@@ -11,9 +11,11 @@ import (
 )
 
 // newPiPackages is the package builder of the tests: the real one, over the registry files of the
-// test. It builds into temporary directories and runs no process of the Pi CLI.
+// test and a source that is not a repository (the overlays of these tests are plain directories,
+// and no test of this package starts git). It builds into temporary directories and runs no
+// process of the Pi CLI.
 func newPiPackages() engineRuntime.PackageBuilder {
-	return pipkg.Packages{Registries: fileRegistries}
+	return pipkg.Packages{Registries: fileRegistries, Source: pipkg.NoRepository{}}
 }
 
 // fakeCommands is the CommandRunner every test of the Pi adapter hands it: it starts no process.

@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -124,12 +126,18 @@ func TestRunStartsNothingAfterTheDeadline(t *testing.T) {
 	}
 }
 
-// A grandchild that keeps the output pipes open must not hold Run past the deadline: the shell
-// below is stopped at 200ms, but the sleep it started still holds the pipes for twenty seconds,
-// and Run gives up on them after the grace period instead of waiting for it.
+// A grandchild that keeps the output pipes open must not hold Run past its grace period: the
+// shell below is stopped at 200ms, but the sleep it started still holds the pipes for thirty
+// seconds, and Run gives up on them after killGrace instead of waiting for it. The bound is the
+// grace period plus a margin for a loaded machine, far under the sleep, so a Run that waited for
+// the pipes (no WaitDelay) is caught, and one that waited past the grace is too. The sleep is
+// stopped when the test ends, so no process outlives it.
 func TestRunDoesNotWaitForAGrandchildHoldingThePipes(t *testing.T) {
-	bin := fakeBinary(t, "pi", `/bin/sleep 20 &
+	pidFile := filepath.Join(t.TempDir(), "sleep.pid")
+	bin := fakeBinary(t, "pi", `/bin/sleep 30 &
+echo $! > '`+pidFile+`'
 wait`)
+	t.Cleanup(func() { stopRecordedProcess(t, pidFile) })
 	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 	defer cancel()
 
@@ -138,7 +146,169 @@ wait`)
 	if err == nil {
 		t.Fatal("Run reported success for a program stopped at its deadline")
 	}
-	if elapsed := time.Since(started); elapsed > 10*time.Second {
-		t.Errorf("Run took %v: it waited for the grandchild that kept the pipes open", elapsed)
+	if bound := killGrace + 5*time.Second; time.Since(started) > bound {
+		t.Errorf("Run took %v, want it back within %v: it waited for the grandchild that kept the pipes open", time.Since(started), bound)
+	}
+}
+
+// stopRecordedProcess kills the process whose id a script wrote to pidFile, if it is still there.
+func stopRecordedProcess(t *testing.T, pidFile string) {
+	t.Helper()
+	raw, err := os.ReadFile(pidFile)
+	if err != nil {
+		return
+	}
+	pid, err := strconv.Atoi(strings.TrimSpace(string(raw)))
+	if err != nil {
+		t.Errorf("pid file %s holds %q", pidFile, raw)
+		return
+	}
+	if proc, err := os.FindProcess(pid); err == nil {
+		_ = proc.Kill()
+	}
+}
+
+func TestOutputReturnsTheTwoStreamsApart(t *testing.T) {
+	bin := fakeBinary(t, "git", `printf 'out'; printf 'err' >&2`)
+	stdout, stderr, err := New().Output(context.Background(), nil, bin)
+	if err != nil {
+		t.Fatalf("Output: %v", err)
+	}
+	if string(stdout) != "out" || string(stderr) != "err" {
+		t.Errorf("stdout=%q stderr=%q, want them apart: out and err", stdout, stderr)
+	}
+}
+
+func TestOutputKeepsWhatAFailingProgramPrinted(t *testing.T) {
+	bin := fakeBinary(t, "git", `printf 'partial'; printf 'why' >&2; exit 3`)
+	stdout, stderr, err := New().Output(context.Background(), nil, bin)
+	var exit *exec.ExitError
+	if !errors.As(err, &exit) || exit.ExitCode() != 3 {
+		t.Fatalf("err = %v, want an *exec.ExitError with code 3", err)
+	}
+	if string(stdout) != "partial" || string(stderr) != "why" {
+		t.Errorf("stdout=%q stderr=%q, want what the program printed before it failed", stdout, stderr)
+	}
+}
+
+// The environment given is the whole environment of the program: nothing of the process leaks
+// into it, which is what lets a caller decide which variables a program sees.
+func TestOutputGivesTheProgramExactlyTheEnvironmentItIsHanded(t *testing.T) {
+	bin := fakeBinary(t, "git", `printf '%s|%s|%s' "${ASKED-unset}" "${LEAK-unset}" "${HOME-unset}"`)
+	t.Setenv("LEAK", "from the process")
+	t.Setenv("HOME", "/leaked-home")
+
+	stdout, _, err := New().Output(context.Background(), []string{"ASKED=yes"}, bin)
+	if err != nil {
+		t.Fatalf("Output: %v", err)
+	}
+	if string(stdout) != "yes|unset|unset" {
+		t.Errorf("the program saw %q, want only the variable it was handed", stdout)
+	}
+}
+
+// With no environment given, the program gets the one of the process, as exec.Command does.
+func TestOutputWithoutAnEnvironmentInheritsTheProcessOne(t *testing.T) {
+	bin := fakeBinary(t, "git", `printf '%s' "${INHERITED-unset}"`)
+	t.Setenv("INHERITED", "yes")
+
+	stdout, _, err := New().Output(context.Background(), nil, bin)
+	if err != nil {
+		t.Fatalf("Output: %v", err)
+	}
+	if string(stdout) != "yes" {
+		t.Errorf("the program saw %q, want the environment of the process", stdout)
+	}
+}
+
+func TestOutputStopsAtTheDeadlineAndSaysWhy(t *testing.T) {
+	bin := fakeBinary(t, "git", `exec /bin/sleep 30`)
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+
+	started := time.Now()
+	_, _, err := New().Output(ctx, nil, bin)
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("err = %v, want it to wrap context.DeadlineExceeded", err)
+	}
+	if elapsed := time.Since(started); elapsed > killGrace+5*time.Second {
+		t.Errorf("Output took %v: it did not stop the program at its deadline", elapsed)
+	}
+}
+
+// Output gives up on a grandchild that holds the pipes after the deadline, like Run.
+func TestOutputDoesNotWaitForAGrandchildHoldingThePipes(t *testing.T) {
+	pidFile := filepath.Join(t.TempDir(), "sleep.pid")
+	bin := fakeBinary(t, "git", `/bin/sleep 30 &
+echo $! > '`+pidFile+`'
+wait`)
+	t.Cleanup(func() { stopRecordedProcess(t, pidFile) })
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+
+	started := time.Now()
+	if _, _, err := New().Output(ctx, nil, bin); err == nil {
+		t.Fatal("Output reported success for a program stopped at its deadline")
+	}
+	if bound := killGrace + 5*time.Second; time.Since(started) > bound {
+		t.Errorf("Output took %v, want it back within %v", time.Since(started), bound)
+	}
+}
+
+// ---- a bound on what Output holds in memory ----
+
+func TestOutputStopsAProgramThatPrintsMoreThanTheBound(t *testing.T) {
+	bin := fakeBinary(t, "git", `i=0; while [ $i -lt 2000 ]; do printf '0123456789'; i=$((i+1)); done`)
+
+	// 1005 is not a multiple of the ten bytes a write carries, so an exact cut falls inside one.
+	stdout, _, err := New().WithMaxOutput(1005).Output(context.Background(), nil, bin)
+	if !errors.Is(err, ErrOutputTooLarge) {
+		t.Fatalf("err = %v, want ErrOutputTooLarge", err)
+	}
+	want := strings.Repeat("0123456789", 101)[:1005]
+	if string(stdout) != want {
+		t.Errorf("held %d bytes, want exactly the first 1005 of the output", len(stdout))
+	}
+}
+
+func TestOutputBoundsStandardErrorToo(t *testing.T) {
+	bin := fakeBinary(t, "git", `i=0; while [ $i -lt 2000 ]; do printf 'xxxxxxxxxx' >&2; i=$((i+1)); done`)
+	_, stderr, err := New().WithMaxOutput(1005).Output(context.Background(), nil, bin)
+	if !errors.Is(err, ErrOutputTooLarge) || string(stderr) != strings.Repeat("x", 1005) {
+		t.Fatalf("err = %v, held %d bytes of stderr, want ErrOutputTooLarge and exactly 1005", err, len(stderr))
+	}
+}
+
+func TestOutputUnderTheBoundAndWithoutOneIsUnchanged(t *testing.T) {
+	bin := fakeBinary(t, "git", `printf 'twelve bytes'`)
+	for name, runner := range map[string]Runner{"under": New().WithMaxOutput(12), "none": New()} {
+		stdout, _, err := runner.Output(context.Background(), nil, bin)
+		if err != nil || string(stdout) != "twelve bytes" {
+			t.Errorf("%s: stdout=%q err=%v, want the output whole", name, stdout, err)
+		}
+	}
+}
+
+// A program that goes on after its output is refused is stopped, not waited for.
+func TestOutputStopsAProgramThatKeepsRunningAfterTheBound(t *testing.T) {
+	bin := fakeBinary(t, "git", `trap '' PIPE
+i=0; while [ $i -lt 600 ]; do printf xxxxxxxxxx; i=$((i+1)); done
+exec /bin/sleep 30`)
+	started := time.Now()
+	_, _, err := New().WithMaxOutput(1000).Output(context.Background(), nil, bin)
+	if !errors.Is(err, ErrOutputTooLarge) {
+		t.Fatalf("err = %v, want ErrOutputTooLarge", err)
+	}
+	if bound := killGrace + 5*time.Second; time.Since(started) > bound {
+		t.Errorf("Output took %v, want it back within %v: the program was waited for", time.Since(started), bound)
+	}
+}
+
+func TestMaxOutputReportsTheBound(t *testing.T) {
+	if got := New().MaxOutput(); got != 0 {
+		t.Errorf("New().MaxOutput() = %d, want 0 (none)", got)
+	}
+	if got := New().WithMaxOutput(42).MaxOutput(); got != 42 {
+		t.Errorf("MaxOutput() = %d, want 42", got)
 	}
 }

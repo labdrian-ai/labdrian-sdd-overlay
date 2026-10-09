@@ -355,14 +355,15 @@ func runGaduGenerate(args []string) {
 
 // runPipkg implements the 'pipkg build|check' subcommand.
 func runPipkg(args []string) {
-	runPipkgCore(args, os.Stdout, os.Stderr, os.Exit)
+	runPipkgCore(newPipkgSource(os.Environ()), args, os.Stdout, os.Stderr, os.Exit)
 }
 
 // runPipkgCore is the testable core of the pipkg subcommand: 'build' writes
 // the labdrian-pi package tree, 'check' reports drift against it. Requires
 // --overlay-root, --registry, and --dest-dir. Fails LOUD on a missing verb
-// or missing flag (ADR-4).
-func runPipkgCore(args []string, stdout, stderr io.Writer, exit func(int)) {
+// or missing flag (ADR-4). source is how the builder asks git about the overlay: the git of the
+// machine in the program, a fake or pipkg.NoRepository in a test.
+func runPipkgCore(source pipkg.SourceRepo, args []string, stdout, stderr io.Writer, exit func(int)) {
 	if len(args) == 0 {
 		fmt.Fprintln(stderr, "error: pipkg requires a verb: build, check")
 		exit(1)
@@ -414,8 +415,13 @@ func runPipkgCore(args []string, stdout, stderr io.Writer, exit func(int)) {
 		return
 	}
 
+	packages := pipkg.Packages{
+		Registries: newWarningRegistryRepository(stderr),
+		Source:     source,
+		Options:    pipkgOptionsFromEnv(os.Getenv),
+	}
 	if verb == "build" {
-		if err := pipkg.Build(newWarningRegistryRepository(stderr), overlayRoot, registryPath, destDir); err != nil {
+		if err := packages.Build(overlayRoot, registryPath, destDir); err != nil {
 			fmt.Fprintf(stderr, "pipkg build: %v\n", err)
 			exit(1)
 			return
@@ -425,9 +431,9 @@ func runPipkgCore(args []string, stdout, stderr io.Writer, exit func(int)) {
 		return
 	}
 
-	report, err := pipkg.Check(newWarningRegistryRepository(stderr), overlayRoot, registryPath, destDir, pipkgOptionsFromEnv(os.Getenv))
-	if d := report.Disclosure(); d != "" {
-		fmt.Fprintf(stdout, "pipkg check: %s\n", d)
+	disclosure, err := packages.Check(overlayRoot, registryPath, destDir)
+	if disclosure != "" {
+		fmt.Fprintf(stdout, "pipkg check: %s\n", disclosure)
 	}
 	if err != nil {
 		fmt.Fprintf(stderr, "pipkg check: %v\n", err)
@@ -445,7 +451,7 @@ func runPipkgCore(args []string, stdout, stderr io.Writer, exit func(int)) {
 // runRuntime implements the 'runtime <action>' subcommand.
 // Supported actions: status, install, update, uninstall.
 func runRuntime(args []string) {
-	runRuntimeCore(execrunner.New(), args, os.Stdout, os.Stderr, os.Exit)
+	runRuntimeCore(execrunner.New(), newPipkgSource(os.Environ()), args, os.Stdout, os.Stderr, os.Exit)
 }
 
 // componentRuntimeParity and componentLongtermMem are the two values
@@ -458,8 +464,9 @@ const (
 
 // runRuntimeCore is the testable core for the 'runtime' subcommand. commands is how the Pi
 // adapter starts the `pi` CLI: the process adapter in the program, a fake in a test, so no test of
-// the command can reach a real `pi`.
-func runRuntimeCore(commands runtimepkg.CommandRunner, args []string, stdout io.Writer, stderr io.Writer, exit func(int)) {
+// the command can reach a real `pi`. source is how the Pi package builder asks git about the
+// overlay: the git of the machine in the program, pipkg.NoRepository in a test.
+func runRuntimeCore(commands runtimepkg.CommandRunner, source pipkg.SourceRepo, args []string, stdout io.Writer, stderr io.Writer, exit func(int)) {
 	// capabilities is declarative and read-only: it never constructs an
 	// adapter, resolves a config root, or reads HOME, so it is dispatched
 	// before the lifecycle flags are parsed and shares none of their
@@ -476,7 +483,7 @@ func runRuntimeCore(commands runtimepkg.CommandRunner, args []string, stdout io.
 		return
 	}
 
-	registry, err := newRuntimeRegistry(newWarningRegistryRepository(stderr), commands, pipkgOptionsFromEnv(os.Getenv))
+	registry, err := newRuntimeRegistry(newWarningRegistryRepository(stderr), commands, source, pipkgOptionsFromEnv(os.Getenv))
 	if err != nil {
 		fmt.Fprintln(stderr, "error:", err)
 		exit(1)

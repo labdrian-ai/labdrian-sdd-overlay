@@ -1978,8 +1978,9 @@ write_fake_slow_engine() {
   cat > "$path" <<STUB
 #!/usr/bin/env bash
 echo "\$\$" > "$pid_path"
-sleep 30
-exit 0
+# exec, so the recorded pid is the sleeping process itself and killing it leaves nothing behind:
+# a bash that merely ran sleep would die and leave the sleep alive for the thirty seconds.
+exec sleep 30
 STUB
   chmod +x "$path"
 }
@@ -2028,7 +2029,22 @@ case_sync_trigger_does_not_block_on_a_wedged_engine() {
     fail "the wedged engine process was not left running detached after sync-trigger returned" "pid=$engine_pid $out"
     return
   fi
+  # The stub must be one process: a child of it would outlive the kill below.
+  if command -v pgrep >/dev/null 2>&1 && pgrep -P "$engine_pid" >/dev/null 2>&1; then
+    kill -9 "$engine_pid" 2>/dev/null || true
+    fail "the wedged engine stub spawned a child, which would outlive the kill" "pid=$engine_pid"
+    return
+  fi
   kill -9 "$engine_pid" 2>/dev/null || true
+  waited=0
+  while kill -0 "$engine_pid" 2>/dev/null && [[ $waited -lt 20 ]]; do
+    sleep 0.1
+    waited=$((waited + 1))
+  done
+  if kill -0 "$engine_pid" 2>/dev/null; then
+    fail "the wedged engine process is still alive after it was killed" "pid=$engine_pid"
+    return
+  fi
 
   pass "sync-trigger returns immediately and never waits on the engine, even when it is wedged"
 }

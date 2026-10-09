@@ -25,7 +25,7 @@ func TestRunRuntimeCore_OpenCodeStatusReportsMissingPlugin(t *testing.T) {
 	var outBuf, errBuf bytes.Buffer
 	exitCode := -1
 
-	runRuntimeCore(noPi(),
+	runRuntimeCore(noPi(), noGit(),
 		[]string{"status", "--target", "opencode", "--config-root", configRoot},
 		&outBuf,
 		&errBuf,
@@ -51,7 +51,7 @@ func TestRunRuntimeCore_OpenCodeInstallWritesPluginAndConfigWithoutHOME(t *testi
 	var outBuf, errBuf bytes.Buffer
 	exitCode := -1
 
-	runRuntimeCore(noPi(),
+	runRuntimeCore(noPi(), noGit(),
 		[]string{"install", "--target", "opencode", "--config-root", configRoot},
 		&outBuf,
 		&errBuf,
@@ -120,7 +120,7 @@ func TestRunRuntimeCore_OpenCodeStatusRequiresRestartWhenPluginIsInstalled(t *te
 
 	var installOut, installErr bytes.Buffer
 	installExitCode := -1
-	runRuntimeCore(noPi(),
+	runRuntimeCore(noPi(), noGit(),
 		[]string{"install", "--target", "opencode", "--config-root", configRoot},
 		&installOut,
 		&installErr,
@@ -132,7 +132,7 @@ func TestRunRuntimeCore_OpenCodeStatusRequiresRestartWhenPluginIsInstalled(t *te
 
 	var outBuf, errBuf bytes.Buffer
 	exitCode := -1
-	runRuntimeCore(noPi(),
+	runRuntimeCore(noPi(), noGit(),
 		[]string{"status", "--target", "opencode", "--config-root", configRoot},
 		&outBuf,
 		&errBuf,
@@ -168,7 +168,7 @@ func TestRunRuntimeCore_ClaudeUpdateAndUninstallPreserveLegacyBehavior(t *testin
 
 	var installOut, installErr bytes.Buffer
 	installExitCode := -1
-	runRuntimeCore(noPi(),
+	runRuntimeCore(noPi(), noGit(),
 		[]string{"install", "--target", "claude", "--config-root", configRoot},
 		&installOut,
 		&installErr,
@@ -180,7 +180,7 @@ func TestRunRuntimeCore_ClaudeUpdateAndUninstallPreserveLegacyBehavior(t *testin
 
 	var updateOut, updateErr bytes.Buffer
 	updateExitCode := -1
-	runRuntimeCore(noPi(),
+	runRuntimeCore(noPi(), noGit(),
 		[]string{"update", "--target", "claude", "--config-root", configRoot},
 		&updateOut,
 		&updateErr,
@@ -201,7 +201,7 @@ func TestRunRuntimeCore_ClaudeUpdateAndUninstallPreserveLegacyBehavior(t *testin
 	if err := os.WriteFile(filepath.Join(configRoot, "settings.json"), []byte(`{"other":true}`), 0o644); err != nil {
 		t.Fatalf("write pre-existing claude settings fixture: %v", err)
 	}
-	runRuntimeCore(noPi(),
+	runRuntimeCore(noPi(), noGit(),
 		[]string{"uninstall", "--target", "claude", "--config-root", configRoot},
 		&uninstallOut,
 		&uninstallErr,
@@ -226,7 +226,7 @@ func TestRunRuntimeCore_OpenCodeUpdateAndUninstallPreserveLegacyBehavior(t *test
 
 	var installOut, installErr bytes.Buffer
 	installExitCode := -1
-	runRuntimeCore(noPi(),
+	runRuntimeCore(noPi(), noGit(),
 		[]string{"install", "--target", "opencode", "--config-root", configRoot},
 		&installOut,
 		&installErr,
@@ -238,7 +238,7 @@ func TestRunRuntimeCore_OpenCodeUpdateAndUninstallPreserveLegacyBehavior(t *test
 
 	var updateOut, updateErr bytes.Buffer
 	updateExitCode := -1
-	runRuntimeCore(noPi(),
+	runRuntimeCore(noPi(), noGit(),
 		[]string{"update", "--target", "opencode", "--config-root", configRoot},
 		&updateOut,
 		&updateErr,
@@ -256,7 +256,7 @@ func TestRunRuntimeCore_OpenCodeUpdateAndUninstallPreserveLegacyBehavior(t *test
 
 	var uninstallOut, uninstallErr bytes.Buffer
 	uninstallExitCode := -1
-	runRuntimeCore(noPi(),
+	runRuntimeCore(noPi(), noGit(),
 		[]string{"uninstall", "--target", "opencode", "--config-root", configRoot},
 		&uninstallOut,
 		&uninstallErr,
@@ -283,7 +283,7 @@ func TestRunRuntimeCore_RejectsUnknownRuntimeFlags(t *testing.T) {
 	var outBuf, errBuf bytes.Buffer
 	exitCode := -1
 
-	runRuntimeCore(noPi(),
+	runRuntimeCore(noPi(), noGit(),
 		[]string{"status", "--config-rooot", "/tmp/ignored-root"},
 		&outBuf,
 		&errBuf,
@@ -315,7 +315,7 @@ func TestRunRuntimeCore_ReportsNonOpenCodeTargetAsLifecycleResult(t *testing.T) 
 	var outBuf, errBuf bytes.Buffer
 	exitCode := -1
 
-	runRuntimeCore(noPi(),
+	runRuntimeCore(noPi(), noGit(),
 		[]string{"status", "--target", "claude", "--config-root", configRoot},
 		&outBuf,
 		&errBuf,
@@ -343,7 +343,7 @@ func TestRunRuntimeCore_AllTargetsRunsCodexLifecycleTogether(t *testing.T) {
 	var outBuf, errBuf bytes.Buffer
 	exitCode := -1
 
-	runRuntimeCore(noPi(),
+	runRuntimeCore(noPi(), noGit(),
 		[]string{"install", "--target", "all", "--config-root", configRoot},
 		&outBuf,
 		&errBuf,
@@ -392,7 +392,7 @@ func TestRunRuntimeCore_PiExplicitTargetReportsUnsupportedHonestly(t *testing.T)
 
 	var outBuf, errBuf bytes.Buffer
 	exitCode := -1
-	runRuntimeCore(noPi(),
+	runRuntimeCore(noPi(), noGit(),
 		[]string{"status", "--target", "pi"},
 		&outBuf, &errBuf,
 		func(code int) { exitCode = code },
@@ -430,7 +430,7 @@ func TestRunRuntimeCore_AllTargetsIncludesPiWithoutMaskingOtherFailures(t *testi
 
 	var outBuf, errBuf bytes.Buffer
 	exitCode := -1
-	runRuntimeCore(noPi(),
+	runRuntimeCore(noPi(), noGit(),
 		[]string{"status", "--target", "all"},
 		&outBuf, &errBuf,
 		func(code int) { exitCode = code },
@@ -469,14 +469,14 @@ func TestRunRuntimeCore_AllTargetsNonStatusActionsFailWhenPiUnsupported(t *testi
 			// update/uninstall exercise their normal per-target path
 			// rather than failing for an unrelated reason.
 			var setupOut, setupErr bytes.Buffer
-			runRuntimeCore(noPi(),
+			runRuntimeCore(noPi(), noGit(),
 				[]string{"install", "--target", "all", "--config-root", configRoot},
 				&setupOut, &setupErr, func(int) {},
 			)
 
 			var outBuf, errBuf bytes.Buffer
 			exitCode := -1
-			runRuntimeCore(noPi(),
+			runRuntimeCore(noPi(), noGit(),
 				[]string{action, "--target", "all", "--config-root", configRoot},
 				&outBuf, &errBuf,
 				func(code int) { exitCode = code },
@@ -504,7 +504,7 @@ func TestRunRuntimeCore_ClaudeDefaultsToHOMEWhenConfigRootNotProvided(t *testing
 	var outBuf, errBuf bytes.Buffer
 	exitCode := -1
 
-	runRuntimeCore(noPi(),
+	runRuntimeCore(noPi(), noGit(),
 		[]string{"install", "--target", "claude"},
 		&outBuf,
 		&errBuf,
@@ -529,7 +529,7 @@ func TestRunRuntimeCore_ClaudeExplicitConfigRootIsolatedFromHOME(t *testing.T) {
 	var outBuf, errBuf bytes.Buffer
 	exitCode := -1
 
-	runRuntimeCore(noPi(),
+	runRuntimeCore(noPi(), noGit(),
 		[]string{"install", "--target", "claude", "--config-root", explicitRoot},
 		&outBuf,
 		&errBuf,
@@ -558,7 +558,7 @@ func TestRunRuntimeCore_CodexInstallUsesCODEXHomeOrConfigRoot(t *testing.T) {
 
 	var outBuf, errBuf bytes.Buffer
 	exitCode := -1
-	runRuntimeCore(noPi(),
+	runRuntimeCore(noPi(), noGit(),
 		[]string{"install", "--target", "codex"},
 		&outBuf,
 		&errBuf,
@@ -575,7 +575,7 @@ func TestRunRuntimeCore_CodexInstallUsesCODEXHomeOrConfigRoot(t *testing.T) {
 
 	var overrideOut, overrideErr bytes.Buffer
 	overrideExit := -1
-	runRuntimeCore(noPi(),
+	runRuntimeCore(noPi(), noGit(),
 		[]string{"install", "--target", "codex", "--config-root", overrideRoot},
 		&overrideOut,
 		&overrideErr,
@@ -607,7 +607,7 @@ func TestRunRuntimeCore_CodexStatusWithoutManifestIsPartial(t *testing.T) {
 	var outBuf, errBuf bytes.Buffer
 	exitCode := -1
 
-	runRuntimeCore(noPi(),
+	runRuntimeCore(noPi(), noGit(),
 		[]string{"status", "--target", "codex"},
 		&outBuf,
 		&errBuf,
@@ -640,7 +640,7 @@ func TestRunRuntimeCore_AllTargetsStatusFailsWhenPiIsHonestlyUnsupported(t *test
 	t.Setenv("LABDRIAN_OVERLAY_DIR", overlayRoot)
 
 	var setupOut, setupErr bytes.Buffer
-	runRuntimeCore(noPi(),
+	runRuntimeCore(noPi(), noGit(),
 		[]string{"install", "--target", "all", "--config-root", configRoot},
 		&setupOut, &setupErr, func(int) {},
 	)
@@ -655,7 +655,7 @@ func TestRunRuntimeCore_AllTargetsStatusFailsWhenPiIsHonestlyUnsupported(t *test
 
 	var outBuf, errBuf bytes.Buffer
 	exitCode := -1
-	runRuntimeCore(noPi(),
+	runRuntimeCore(noPi(), noGit(),
 		[]string{"status", "--target", "all", "--config-root", configRoot},
 		&outBuf, &errBuf,
 		func(code int) { exitCode = code },
@@ -686,7 +686,7 @@ func TestRunRuntimeCore_AllTargetsStatusAllowsCodexPartialWithoutFailing(t *test
 
 	var installOut, installErr bytes.Buffer
 	installExit := -1
-	runRuntimeCore(noPi(),
+	runRuntimeCore(noPi(), noGit(),
 		[]string{"install", "--target", "all", "--config-root", configRoot},
 		&installOut,
 		&installErr,
@@ -718,7 +718,7 @@ func TestRunRuntimeCore_AllTargetsStatusAllowsCodexPartialWithoutFailing(t *test
 
 	var outBuf, errBuf bytes.Buffer
 	exitCode := -1
-	runRuntimeCore(noPi(),
+	runRuntimeCore(noPi(), noGit(),
 		[]string{"status", "--target", "all", "--config-root", configRoot},
 		&outBuf,
 		&errBuf,
@@ -771,7 +771,7 @@ func TestRunRuntimeCore_AllTargetsStatusFailsWhenClaudeOrOpenCodeFails(t *testin
 
 	var outBuf, errBuf bytes.Buffer
 	exitCode := -1
-	runRuntimeCore(noPi(),
+	runRuntimeCore(noPi(), noGit(),
 		[]string{"status", "--target", "all"},
 		&outBuf,
 		&errBuf,

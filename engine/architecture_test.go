@@ -49,6 +49,10 @@ import (
 //   - execrunner is the adapter of the CommandRunner port the Pi adapter owns (H24): it looks a
 //     program up on the PATH and runs it with a fixed argument vector and a deadline. It is
 //     the one place in the module that starts the CLI of a runtime.
+//   - pipkg/gitsource is the adapter of the package builder's SourceRepo port (H25): it asks the
+//     git of the machine through a Runner (execrunner), under the environment and the deadline
+//     the composition root hands it. pipkg itself stays an adapter (it writes the package tree);
+//     the port is the part of it that is not the file system.
 //   - piguard is test support: the `pi` that refuses to run, put first on the PATH of a test
 //     run by a TestMain, so nothing started by accident reaches the real CLI.
 //   - installer, shelltest, capabilitytest, shaper/shapertest (the documents the shaper's
@@ -77,6 +81,7 @@ var rings = map[string]archguard.Ring{
 	"pathguard/fsresolve":       archguard.Adapter,
 	"piguard":                   archguard.Support,
 	"pipkg":                     archguard.Adapter,
+	"pipkg/gitsource":           archguard.Adapter,
 	"prespec":                   archguard.Domain,
 	"projection":                archguard.Domain,
 	"projection/fsstore":        archguard.Adapter,

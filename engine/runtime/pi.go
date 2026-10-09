@@ -3,11 +3,14 @@ package runtime
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
 )
 
 // PiAdapter is the runtime adapter for the Pi CLI (via gentle-pi). It NEVER
@@ -464,50 +467,33 @@ func GaduLinkStateForTest(linkPath, expectedTarget string) string {
 // `tools` field declared BOTH as an inline scalar and a YAML list. `name`
 // and `description` are required (the extension falls back to the
 // filename/a generic description otherwise, which is not what GADU wants);
-// `model` is optional and unconstrained (R-014).
+// `model` is optional and unconstrained (R-014). The file is read with
+// skills.ReadFrontmatter, the reader the skills lint and the package build
+// use, so the three agree on where the frontmatter is and which keys are
+// at its top level.
 func validateGaduFrontmatter(content string) error {
-	lines := strings.Split(content, "\n")
-	if len(lines) == 0 || strings.TrimSpace(lines[0]) != "---" {
+	fm, err := skills.ReadFrontmatter([]byte(content))
+	if err != nil {
+		// ReadFrontmatter fails only for a missing fence (a *FrontmatterError); anything it
+		// might return later is not read as a frontmatter either.
+		var fault *skills.FrontmatterError
+		if errors.As(err, &fault) && fault.Fault == skills.NoClosingFence {
+			return fmt.Errorf("gadu frontmatter: missing closing --- delimiter")
+		}
 		return fmt.Errorf("gadu frontmatter: missing opening --- delimiter")
 	}
 	var name, description string
-	var toolsInline, toolsList, closed bool
-	var currentKey string
-	for _, line := range lines[1:] {
-		trimmed := strings.TrimSpace(line)
-		if trimmed == "---" {
-			closed = true
-			break
-		}
-		if trimmed == "" {
-			continue
-		}
-		if strings.HasPrefix(trimmed, "-") {
-			if currentKey == "tools" {
-				toolsList = true
-			}
-			continue
-		}
-		key, value, ok := strings.Cut(trimmed, ":")
-		if !ok {
-			continue
-		}
-		key = strings.TrimSpace(key)
-		value = strings.TrimSpace(value)
-		currentKey = key
-		switch key {
+	var toolsInline, toolsList bool
+	for _, entry := range fm.Entries() {
+		switch entry.Key {
 		case "name":
-			name = value
+			name = entry.Value
 		case "description":
-			description = value
+			description = entry.Value
 		case "tools":
-			if value != "" {
-				toolsInline = true
-			}
+			toolsInline = toolsInline || entry.Value != ""
+			toolsList = toolsList || entry.Items > 0
 		}
-	}
-	if !closed {
-		return fmt.Errorf("gadu frontmatter: missing closing --- delimiter")
 	}
 	if name == "" {
 		return fmt.Errorf("gadu frontmatter: missing required 'name'")

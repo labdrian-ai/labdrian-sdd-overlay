@@ -43,7 +43,7 @@ func TestRunRuntimeCore_LongtermMemStateDirDerivesBinaryPath(t *testing.T) {
 
 	var outBuf, errBuf bytes.Buffer
 	exitCode := -1
-	runRuntimeCore(noPi(),
+	runRuntimeCore(noPi(), noGit(),
 		[]string{"status", "--component", "longterm-mem", "--state-dir", stateDir},
 		&outBuf,
 		&errBuf,
@@ -85,7 +85,7 @@ func TestRunRuntimeCore_LongtermMemStateDirEntryIsOwned(t *testing.T) {
 
 	var outBuf, errBuf bytes.Buffer
 	exitCode := -1
-	runRuntimeCore(noPi(),
+	runRuntimeCore(noPi(), noGit(),
 		[]string{"install", "--component", "longterm-mem", "--state-dir", stateDir},
 		&outBuf,
 		&errBuf,

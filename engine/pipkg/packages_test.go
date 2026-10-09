@@ -15,7 +15,7 @@ import (
 func TestPackagesBuildThenCheckReportsNoDrift(t *testing.T) {
 	overlayRoot, registryPath := fixtureOverlay(t)
 	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
-	packages := pipkg.Packages{Registries: fileRegistries}
+	packages := packagesOf(fileRegistries)
 
 	if err := packages.Build(overlayRoot, registryPath, destDir); err != nil {
 		t.Fatalf("Build: %v", err)
@@ -35,7 +35,7 @@ func TestPackagesBuildThenCheckReportsNoDrift(t *testing.T) {
 func TestPackagesCheckReportsDriftAndStillDiscloses(t *testing.T) {
 	overlayRoot, registryPath := fixtureOverlay(t)
 	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
-	packages := pipkg.Packages{Registries: fileRegistries}
+	packages := packagesOf(fileRegistries)
 	if err := packages.Build(overlayRoot, registryPath, destDir); err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -55,15 +55,15 @@ func TestPackagesCheckUsesItsOptions(t *testing.T) {
 	overlayRoot, registryPath, _ := gitFixtureOverlay(t)
 	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
 	runGit(t, overlayRoot, "checkout", "-q", "-b", "feature")
-	if err := (pipkg.Packages{Registries: fileRegistries}).Build(overlayRoot, registryPath, destDir); err != nil {
+	if err := packagesOf(fileRegistries).Build(overlayRoot, registryPath, destDir); err != nil {
 		t.Fatalf("Build: %v", err)
 	}
 
-	disclosure, _ := pipkg.Packages{Registries: fileRegistries, Options: pipkg.Options{DeployRef: "feature"}}.Check(overlayRoot, registryPath, destDir)
+	disclosure, _ := packagesOf(fileRegistries, pipkg.Options{DeployRef: "feature"}).Check(overlayRoot, registryPath, destDir)
 	if !strings.Contains(disclosure, "compared against feature (") {
 		t.Errorf("disclosure = %q, want it to name the feature ref the Options asked for", disclosure)
 	}
-	disclosure, _ = pipkg.Packages{Registries: fileRegistries}.Check(overlayRoot, registryPath, destDir)
+	disclosure, _ = packagesOf(fileRegistries).Check(overlayRoot, registryPath, destDir)
 	if strings.Contains(disclosure, "compared against feature (") {
 		t.Errorf("disclosure = %q, want the default ref when the Options name none", disclosure)
 	}

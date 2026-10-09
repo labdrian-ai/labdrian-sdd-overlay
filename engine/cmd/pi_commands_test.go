@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"sync"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/pipkg"
 )
 
 // fakePiCommands is the CommandRunner of every test of this package: none of them can start a
@@ -28,6 +30,11 @@ func (f *fakePiCommands) Run(_ context.Context, bin string, args ...string) ([]b
 
 // noPi is what a test that is not about the commands of the Pi adapter hands the cores.
 func noPi() *fakePiCommands { return &fakePiCommands{} }
+
+// noGit is the git of a test of the command: the overlays these tests build are plain
+// directories, so nothing is a repository and git is never started (the tests of cmd import no
+// process adapter).
+func noGit() pipkg.SourceRepo { return pipkg.NoRepository{} }
 
 // scriptedPiCommands is fakePiCommands whose runs succeed, so a test can watch a whole lifecycle
 // step reach the port.

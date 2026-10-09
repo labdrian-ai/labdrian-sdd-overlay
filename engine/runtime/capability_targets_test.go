@@ -12,7 +12,6 @@ import (
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/capability"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/pipkg"
 	engineRuntime "github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime"
 )
 
@@ -32,7 +31,7 @@ func shippedRegistryWith(t *testing.T, commands engineRuntime.CommandRunner) *en
 		engineRuntime.RegisterOpenCode,
 		engineRuntime.RegisterCodex,
 		func(r *engineRuntime.Registry) error {
-			return engineRuntime.RegisterPi(r, engineRuntime.PiPorts{Commands: commands, Packages: pipkg.Packages{Registries: fileRegistries}})
+			return engineRuntime.RegisterPi(r, engineRuntime.PiPorts{Commands: commands, Packages: newPiPackages()})
 		},
 	} {
 		if err := register(r); err != nil {
