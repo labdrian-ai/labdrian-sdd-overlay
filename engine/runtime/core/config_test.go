@@ -105,3 +105,10 @@ func TestConfigRootNamesTheDirectoryEveryRuntimeWorksIn(t *testing.T) {
 		t.Errorf("pi package dir = %q with --config-root /given, want it under the root, at pi/labdrian-pi (and not the StateDir /s)", got)
 	}
 }
+
+// The name is the one people set and scripts export; changing it is a change of interface.
+func TestTheOverlayVariableKeepsItsName(t *testing.T) {
+	if core.LabdrianOverlayDirVariable != "LABDRIAN_OVERLAY_DIR" {
+		t.Errorf("LabdrianOverlayDirVariable = %q, want LABDRIAN_OVERLAY_DIR", core.LabdrianOverlayDirVariable)
+	}
+}

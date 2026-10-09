@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/assets"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime/core"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime/opencodeprompt"
 )
 
@@ -18,7 +19,7 @@ func (a OpenCodeAdapter) promptConfig() (opencodeprompt.PromptConfig, error) {
 
 // overlayContracts is the ContractSource over an overlay checkout on disk, plus the guard the
 // program embeds. The checkout is the directory the composition root was given
-// (OpenCodeOptions.OverlayDir), or, when it was given none, the nearest directory above the
+// (OpenCodeOptions.OverlayDir, from the variable core.LabdrianOverlayDirVariable names), or, when it was given none, the nearest directory above the
 // working directory that holds the minimalism contract.
 type overlayContracts struct {
 	overlayDir string
@@ -40,8 +41,9 @@ func (c *overlayContracts) resolve() (string, error) {
 	return root, nil
 }
 
-// path is where the contract known as name (a slash path relative to the overlay) is on disk.
-func (c *overlayContracts) path(root, name string) string {
+// contractFile is where the contract known as name (a slash path relative to the overlay) is on
+// disk under root.
+func contractFile(root, name string) string {
 	return filepath.Join(root, filepath.FromSlash(name))
 }
 
@@ -50,7 +52,7 @@ func (c *overlayContracts) Minimalism() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	content, err := os.ReadFile(c.path(root, opencodeprompt.MinimalismContractPath))
+	content, err := os.ReadFile(contractFile(root, opencodeprompt.MinimalismContractPath))
 	if err != nil {
 		return "", err
 	}
@@ -66,7 +68,7 @@ func (c *overlayContracts) OOQuality() (string, bool, error) {
 	if err != nil {
 		return "", false, err
 	}
-	content, err := os.ReadFile(c.path(root, opencodeprompt.OOQualityContractPath))
+	content, err := os.ReadFile(contractFile(root, opencodeprompt.OOQualityContractPath))
 	if err != nil {
 		if os.IsNotExist(err) {
 			return "", false, nil
@@ -84,7 +86,7 @@ func locateOverlay(configured string) (string, error) {
 		if filepath.IsAbs(root) {
 			return root, nil
 		}
-		return "", fmt.Errorf("LABDRIAN_OVERLAY_DIR must be absolute, got %q", root)
+		return "", fmt.Errorf("%s must be absolute, got %q", core.LabdrianOverlayDirVariable, root)
 	}
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -100,5 +102,5 @@ func locateOverlay(configured string) (string, error) {
 			break
 		}
 	}
-	return "", fmt.Errorf("could not locate %s; set LABDRIAN_OVERLAY_DIR", opencodeprompt.MinimalismContractPath)
+	return "", fmt.Errorf("could not locate %s; set %s", opencodeprompt.MinimalismContractPath, core.LabdrianOverlayDirVariable)
 }

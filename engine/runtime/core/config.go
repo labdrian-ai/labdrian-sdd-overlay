@@ -5,6 +5,11 @@ import (
 	"strings"
 )
 
+// LabdrianOverlayDirVariable is the name of the environment variable that Config.LabdrianOverlayDir
+// is read from. The composition root reads it by this name and the OpenCode adapter quotes it in
+// the messages it gives, so the two cannot drift apart.
+const LabdrianOverlayDirVariable = "LABDRIAN_OVERLAY_DIR"
+
 // Config is what a runtime adapter is given about the machine it runs on. The composition root
 // reads the environment once and fills it; an adapter never reads the environment itself, so the
 // same adapter can be pointed at a temporary directory by a test or at another machine's layout
