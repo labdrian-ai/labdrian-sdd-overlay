@@ -4,6 +4,8 @@ package settingsfile_test
 
 import (
 	"encoding/json"
+	"flag"
+	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -119,12 +121,24 @@ const goldenRoot = "/opt/labdrian-golden"
 // use), at most about 60 KB, and the cases of all of them are replayed.
 const goldenDir = "testdata/golden-v1"
 
-// The number of cases and steps the files hold. A file lost from the directory, or emptied, changes
-// them, so a replay that passes cannot be a replay of less than was recorded.
-const (
-	goldenCaseCount = 156
-	goldenStepCount = 468
-)
+// goldenManifest records, for each file of goldenDir, the number of cases and steps it holds (156
+// cases and 468 steps in all when it was written, the day the recording was split into files). A
+// file lost from the directory, emptied or cut changes what the directory holds and no longer
+// matches its entry, so a replay that passes cannot be a replay of less than was recorded. A file
+// added on purpose is added to the manifest by running
+//
+//	go test ./settings/settingsfile -run TestTheGoldenFilesHoldWhatWasRecorded -update-golden-manifest
+//
+// and the diff of the manifest is read before it is committed, as the diff of the data is.
+const goldenManifest = "testdata/golden-v1.manifest.json"
+
+var updateGoldenManifest = flag.Bool("update-golden-manifest", false, "rewrite the manifest of the golden files")
+
+// goldenCount is what one golden file holds.
+type goldenCount struct {
+	Cases int `json:"cases"`
+	Steps int `json:"steps"`
+}
 
 func goldenFiles(t *testing.T) []string {
 	t.Helper()
@@ -355,19 +369,92 @@ func TestSettingsJSONIsWhatTheProgramWroteBeforeH27(t *testing.T) {
 // The files are the ones that were recorded, all of them read: the cases and steps add up, and none
 // is empty, so a lost or emptied file fails here and not by shrinking the replay.
 func TestTheGoldenFilesHoldWhatWasRecorded(t *testing.T) {
-	cases, steps := 0, 0
+	held := map[string]goldenCount{}
 	for _, file := range goldenFiles(t) {
 		doc := readGoldenDocument(t, file)
-		if len(doc.Cases) == 0 {
-			t.Errorf("%s holds no case", file)
-		}
+		count := goldenCount{Cases: len(doc.Cases)}
 		for _, c := range doc.Cases {
-			cases++
-			steps += len(c.Steps)
+			count.Steps += len(c.Steps)
+		}
+		held[filepath.Base(file)] = count
+	}
+	if *updateGoldenManifest {
+		raw, err := json.MarshalIndent(held, "", " ")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(goldenManifest, append(raw, '\n'), 0o644); err != nil {
+			t.Fatal(err)
 		}
 	}
-	if cases != goldenCaseCount || steps != goldenStepCount {
-		t.Errorf("the golden files hold %d cases and %d steps, want %d and %d", cases, steps, goldenCaseCount, goldenStepCount)
+	raw, err := os.ReadFile(goldenManifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var recorded map[string]goldenCount
+	if err := json.Unmarshal(raw, &recorded); err != nil {
+		t.Fatalf("%s: %v", goldenManifest, err)
+	}
+	for _, problem := range manifestProblems(recorded, held) {
+		t.Error(problem)
+	}
+}
+
+// manifestProblems says where the files a directory holds differ from the manifest: a file the
+// manifest names and the directory lacks, a file the directory has and the manifest does not
+// name, a file with no case, and a file whose cases or steps are not the recorded number. The
+// answer is in the order of the names, so a failure reads the same on every run.
+func manifestProblems(recorded, held map[string]goldenCount) []string {
+	names := map[string]bool{}
+	for name := range recorded {
+		names[name] = true
+	}
+	for name := range held {
+		names[name] = true
+	}
+	sorted := make([]string, 0, len(names))
+	for name := range names {
+		sorted = append(sorted, name)
+	}
+	sort.Strings(sorted)
+
+	var problems []string
+	for _, name := range sorted {
+		want, isRecorded := recorded[name]
+		got, isHeld := held[name]
+		switch {
+		case !isHeld:
+			problems = append(problems, name+" is in the manifest and not in the directory")
+		case !isRecorded:
+			problems = append(problems, name+" is in the directory and not in the manifest")
+		case got.Cases == 0:
+			problems = append(problems, name+" holds no case")
+		case got != want:
+			problems = append(problems, fmt.Sprintf("%s holds %d cases and %d steps, the manifest has %d and %d",
+				name, got.Cases, got.Steps, want.Cases, want.Steps))
+		}
+	}
+	return problems
+}
+
+func TestManifestProblemsNamesEachWayAFileDiffers(t *testing.T) {
+	recorded := map[string]goldenCount{"a.json": {2, 6}, "b.json": {1, 3}, "c.json": {4, 12}, "d.json": {1, 1}}
+	held := map[string]goldenCount{"a.json": {2, 6}, "c.json": {4, 11}, "d.json": {0, 0}, "e.json": {1, 1}}
+	want := []string{
+		"b.json is in the manifest and not in the directory",
+		"c.json holds 4 cases and 11 steps, the manifest has 4 and 12",
+		"d.json holds no case",
+		"e.json is in the directory and not in the manifest",
+	}
+	got := manifestProblems(recorded, held)
+	if strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Errorf("problems\n got: %q\nwant: %q", got, want)
+	}
+	if problems := manifestProblems(recorded, recorded); len(problems) != 0 {
+		t.Errorf("a directory that is the manifest has problems: %q", problems)
+	}
+	if problems := manifestProblems(map[string]goldenCount{"a.json": {2, 6}}, map[string]goldenCount{"a.json": {3, 6}}); len(problems) != 1 {
+		t.Errorf("a file with another number of cases and the same steps has problems %q, want one", problems)
 	}
 }
 
