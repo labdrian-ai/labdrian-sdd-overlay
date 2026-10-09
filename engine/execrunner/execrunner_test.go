@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -124,12 +125,18 @@ func TestRunStartsNothingAfterTheDeadline(t *testing.T) {
 	}
 }
 
-// A grandchild that keeps the output pipes open must not hold Run past the deadline: the shell
-// below is stopped at 200ms, but the sleep it started still holds the pipes for twenty seconds,
-// and Run gives up on them after the grace period instead of waiting for it.
+// A grandchild that keeps the output pipes open must not hold Run past its grace period: the
+// shell below is stopped at 200ms, but the sleep it started still holds the pipes for thirty
+// seconds, and Run gives up on them after killGrace instead of waiting for it. The bound is the
+// grace period plus a margin for a loaded machine, far under the sleep, so a Run that waited for
+// the pipes (no WaitDelay) is caught, and one that waited past the grace is too. The sleep is
+// stopped when the test ends, so no process outlives it.
 func TestRunDoesNotWaitForAGrandchildHoldingThePipes(t *testing.T) {
-	bin := fakeBinary(t, "pi", `/bin/sleep 20 &
+	pidFile := filepath.Join(t.TempDir(), "sleep.pid")
+	bin := fakeBinary(t, "pi", `/bin/sleep 30 &
+echo $! > '`+pidFile+`'
 wait`)
+	t.Cleanup(func() { stopRecordedProcess(t, pidFile) })
 	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 	defer cancel()
 
@@ -138,7 +145,24 @@ wait`)
 	if err == nil {
 		t.Fatal("Run reported success for a program stopped at its deadline")
 	}
-	if elapsed := time.Since(started); elapsed > 10*time.Second {
-		t.Errorf("Run took %v: it waited for the grandchild that kept the pipes open", elapsed)
+	if bound := killGrace + 5*time.Second; time.Since(started) > bound {
+		t.Errorf("Run took %v, want it back within %v: it waited for the grandchild that kept the pipes open", time.Since(started), bound)
+	}
+}
+
+// stopRecordedProcess kills the process whose id a script wrote to pidFile, if it is still there.
+func stopRecordedProcess(t *testing.T, pidFile string) {
+	t.Helper()
+	raw, err := os.ReadFile(pidFile)
+	if err != nil {
+		return
+	}
+	pid, err := strconv.Atoi(strings.TrimSpace(string(raw)))
+	if err != nil {
+		t.Errorf("pid file %s holds %q", pidFile, raw)
+		return
+	}
+	if proc, err := os.FindProcess(pid); err == nil {
+		_ = proc.Kill()
 	}
 }
