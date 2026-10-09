@@ -69,6 +69,9 @@ import (
 //     write back and weighs what each pass found. It answers with a typed Outcome and typed errors,
 //     over the RegistryStore and ContractSource ports it owns; it takes no lock, prints nothing and
 //     exits nowhere.
+//   - propagator/fsstore is the adapter of that RegistryStore (H28): it reads the registry file and
+//     writes it through a temporary file and a rename. The words a person reads and the lock are the
+//     command's, in cmd.
 //   - piguard is test support: the `pi` that refuses to run, put first on the PATH of a test
 //     run by a TestMain, so nothing started by accident reaches the real CLI.
 //   - installer, shelltest, capabilitytest, shaper/shapertest (the documents the shaper's
@@ -104,6 +107,7 @@ var rings = map[string]archguard.Ring{
 	"projection/fsstore":        archguard.Adapter,
 	"propagator":                archguard.Domain,
 	"propagator/app":            archguard.Application,
+	"propagator/fsstore":        archguard.Adapter,
 	"reviewreceipt":             archguard.Domain,
 	"reviewreceipt/fsstore":     archguard.Adapter,
 	"reviewreceipt/receipttest": archguard.Support,
