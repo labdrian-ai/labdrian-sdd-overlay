@@ -3,12 +3,14 @@
 package settingsfile_test
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 	"syscall"
 	"testing"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/atomicfile"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings/settingsfile"
 )
 
@@ -243,6 +245,91 @@ func TestUninstallThroughALinkThatHoldsOurHooksRewritesTheTarget(t *testing.T) {
 	}
 }
 
+// OWNER DECISION 2 OF 2026-10-09. The backup is written by atomicfile: whole or not at all, and at
+// the mode of the file it keeps. Before, it was a copy written in place at 0644 (less the umask),
+// so the backup of a 0600 settings.json was readable by everyone.
+func TestBackupHasTheModeOfTheFileItKeeps(t *testing.T) {
+	for _, mode := range []os.FileMode{0o600, 0o640, 0o644} {
+		t.Run(mode.String(), func(t *testing.T) {
+			_, path := edgeWorld(t)
+			if err := os.WriteFile(path, []byte(`{"model":"x"}`), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.Chmod(path, mode); err != nil {
+				t.Fatal(err)
+			}
+
+			if err := (settingsfile.Installer{}).Install(path, binary); err != nil {
+				t.Fatalf("Install() = %v", err)
+			}
+
+			if got := readText(t, path+".bak"); got != `{"model":"x"}` {
+				t.Errorf("the backup holds %q, want the original", got)
+			}
+			if got := lstatMode(t, path+".bak").Perm(); got != mode {
+				t.Errorf("the backup has mode %v, want the original's %v", got, mode)
+			}
+			if got := lstatMode(t, path).Perm(); got != 0o600 {
+				t.Errorf("the new file has mode %v, want 0600", got)
+			}
+		})
+	}
+}
+
+// A backup name that is a link is refused: writing through it would put the old settings wherever
+// the link points. Nothing is changed.
+func TestABackupNameThatIsALinkIsRefusedAndNothingIsWrittenThroughIt(t *testing.T) {
+	dir, path := edgeWorld(t)
+	if err := os.WriteFile(path, []byte(`{"model":"x"}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	elsewhere := filepath.Join(dir, "elsewhere")
+	if err := os.WriteFile(elsewhere, []byte("keep me\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(elsewhere, path+".bak"); err != nil {
+		t.Skipf("no symlinks here: %v", err)
+	}
+
+	err := settingsfile.Installer{}.Install(path, binary)
+
+	if !errors.Is(err, atomicfile.ErrSymlink) {
+		t.Fatalf("Install() = %v, want atomicfile.ErrSymlink", err)
+	}
+	if got := readText(t, elsewhere); got != "keep me\n" {
+		t.Errorf("the file the backup name links to was written through: %q", got)
+	}
+	if got := readText(t, path); got != `{"model":"x"}` {
+		t.Errorf("settings.json was changed although its backup was refused: %q", got)
+	}
+	if names := namesIn(t, dir); names != "elsewhere settings.json settings.json.bak" {
+		t.Errorf("the directory holds %q, want no temporary file", names)
+	}
+}
+
+// A read-only backup is replaced, not refused: the old backup is swapped out whole, as the file
+// itself is. (Before, the in-place write failed with permission denied.)
+func TestAReadOnlyBackupIsReplacedAtTheModeOfTheOriginal(t *testing.T) {
+	_, path := edgeWorld(t)
+	if err := os.WriteFile(path, []byte(`{"model":"x"}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path+".bak", []byte("old backup\n"), 0o444); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := (settingsfile.Installer{}).Install(path, binary); err != nil {
+		t.Fatalf("Install() = %v", err)
+	}
+
+	if got := readText(t, path+".bak"); got != `{"model":"x"}` {
+		t.Errorf("the backup holds %q, want the original", got)
+	}
+	if got := lstatMode(t, path+".bak").Perm(); got != 0o600 {
+		t.Errorf("the backup has mode %v, want 0600", got)
+	}
+}
+
 // A backup that cannot be written stops the install before the file is replaced, and the staged
 // temporary file does not stay behind.
 func TestInstallLeavesTheFileAloneWhenTheBackupNameIsADirectory(t *testing.T) {
@@ -256,7 +343,7 @@ func TestInstallLeavesTheFileAloneWhenTheBackupNameIsADirectory(t *testing.T) {
 
 	err := settingsfile.Installer{}.Install(path, binary)
 
-	if err == nil || !strings.HasPrefix(err.Error(), "settings: backup to ") {
+	if err == nil || !strings.HasPrefix(err.Error(), "settings: replace ") {
 		t.Fatalf("Install() = %v, want a backup error", err)
 	}
 	if got := readText(t, path); got != `{"model":"x"}` {

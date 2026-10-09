@@ -2,13 +2,14 @@
 // machine. It is the file half of the settings package: settings.Document is the content and the
 // rules for the hook entries, this package is where the bytes come from and go to.
 //
-// A write is what it has always been, on atomicfile: the new content is staged in the same
-// directory, the file it replaces is copied to settings.json.bak, and the staged file is renamed
+// A write is on atomicfile: the new content is staged in the directory of the file it replaces, the
+// file it replaces is kept as <file>.bak by atomicfile's own backup (whole or not at all, at the mode
+// the file had, and refused when the backup name is a symbolic link), and the staged file is renamed
 // into place, so a reader sees all of the old file or all of the new and a failure leaves the
-// original untouched. The file written is 0600 whatever the one it replaces was, and the backup is
-// 0644 (less the umask), written in place. A settings.json that is a symbolic link is followed: the
-// file it names is read and replaced, the link stays, and the backup sits next to that file (see
-// File.resolve).
+// original untouched. The file written is 0600 whatever the one it replaces was. A settings.json
+// that is a symbolic link is followed: the file it names is read and replaced, the link stays, and
+// the backup sits next to that file (see File.resolve). The backup needs a no-follow open, which
+// atomicfile has on linux and darwin only; elsewhere a write fails before it changes anything.
 //
 // SAFETY: nothing here chooses a path. The caller passes the settings file, and tests use
 // t.TempDir(), so the live ~/.claude/settings.json is never named by this package.
@@ -27,9 +28,6 @@ import (
 // writeMode is the permission bits of the settings.json this package writes. The file it replaces
 // may have had others; a rename never carries them over.
 const writeMode = 0o600
-
-// backupMode is the permission bits asked for the backup, before the umask.
-const backupMode = 0o644
 
 // tempPattern names the temporary file a write stages in the directory of settings.json.
 const tempPattern = ".settings-*.json.tmp"
@@ -92,10 +90,10 @@ func (f File) Read() (doc settings.Document, found bool, err error) {
 }
 
 // Write puts doc at the path, or at the file the path is a link to (see resolve). The directory
-// must exist. If a file is there, its content is first copied to <file>.bak, next to it, and a
-// backup that cannot be written stops the write with the original untouched. The new file is staged
-// in the directory of the file it replaces, so the rename never crosses a file system and the link
-// is never touched.
+// must exist. If a file is there, it is kept first as <file>.bak, next to it, at its own mode; a
+// backup that cannot be made, or whose name is a symbolic link, stops the write with the original
+// untouched. The new file is staged in the directory of the file it replaces, so the rename never
+// crosses a file system and the link is never touched.
 func (f File) Write(doc settings.Document) error {
 	data, err := doc.Bytes()
 	if err != nil {
@@ -106,29 +104,14 @@ func (f File) Write(doc settings.Document) error {
 		return err
 	}
 
-	staged, err := atomicfile.Stage(filepath.Dir(target), data, atomicfile.Options{Perm: writeMode, TempPattern: tempPattern})
+	staged, err := atomicfile.Stage(filepath.Dir(target), data, atomicfile.Options{Perm: writeMode, Backup: true, TempPattern: tempPattern})
 	if err != nil {
 		return fmt.Errorf("settings: create temp: %w", err)
 	}
 	defer staged.Discard()
 
-	if _, err := os.Stat(target); err == nil {
-		backup := target + ".bak"
-		if err := copyFile(target, backup); err != nil {
-			return fmt.Errorf("settings: backup to %s: %w", backup, err)
-		}
-	}
 	if err := staged.Replace(target); err != nil {
-		return fmt.Errorf("settings: rename temp to %s: %w", target, err)
+		return fmt.Errorf("settings: replace %s: %w", target, err)
 	}
 	return nil
-}
-
-// copyFile copies src to dst, creating dst if it does not exist.
-func copyFile(src, dst string) error {
-	data, err := os.ReadFile(src)
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(dst, data, backupMode)
 }

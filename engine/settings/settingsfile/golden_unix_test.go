@@ -64,7 +64,7 @@ var (
 // (the old program said `settings: create temp: open <path>: <reason>`, the adapter says
 // `settings: create temp: atomicfile: create temporary file: open <path>: <reason>`). The reason, the
 // words the system gave after the last colon, is.
-var failureWording = []string{"settings: create temp: ", "settings: backup to ", "settings: rename temp to "}
+var failureWording = []string{"settings: create temp: "}
 
 // sameFailure reports whether a failure the adapter reports is the one the program recorded: the
 // same words, or the same opening and the same reason.
@@ -79,6 +79,30 @@ func sameFailure(want, got string) bool {
 		}
 	}
 	return false
+}
+
+// backupAfter is the backup a step must leave. A step that wrote settings.json (its content changed)
+// kept the file it replaced, so the backup holds the content of the file before the step at that
+// file's mode. One that wrote nothing leaves the backup it found, with the mode it had (kept); the
+// recording shows 0o644 for every backup, which is what is no longer true.
+func backupAfter(before goldenState, kept *goldenFile, after goldenState) *goldenFile {
+	if after.Bak == nil {
+		return nil
+	}
+	if before.Settings != nil && after.Settings != nil &&
+		after.Settings.Blob != before.Settings.Blob && after.Bak.Blob == before.Settings.Blob {
+		return &goldenFile{Blob: after.Bak.Blob, Mode: before.Settings.Mode}
+	}
+	if kept != nil && kept.Blob == after.Bak.Blob {
+		return kept
+	}
+	return after.Bak
+}
+
+// keepsAReadOnlyBackup reports whether a case starts with a backup its owner cannot write, the
+// recording of which is a refusal that no longer happens.
+func keepsAReadOnlyBackup(c goldenCase) bool {
+	return c.Before.Bak != nil && modeBits(c.Before.Bak.Mode)&0o200 == 0
 }
 
 // goldenDir holds the recorded files: each is a document of its own (cases and the texts they
@@ -239,6 +263,12 @@ func dirFiles(t *testing.T, dir string) []string {
 	return names
 }
 
+// OWNER DECISION 2 OF 2026-10-09 changes two things the recording holds, and this file says so in
+// code and leaves the recorded data as it was: the backup is written by atomicfile at the mode of
+// the file it keeps (the recording has 0o644 whatever the file's mode was), and a read-only backup
+// is replaced (the recording has a refusal). backupAfter gives the backup a step must leave, and
+// keepsAReadOnlyBackup names the cases whose recorded refusal no longer applies.
+//
 // The recorded modes (0o664 for a starting file the recording made, 0o600 for one the program wrote)
 // are set on the starting files explicitly, under the umask fixedUmask sets, so the replay does not
 // depend on the umask of whoever runs it. The cases pin what the program did, quirks included (a
@@ -261,6 +291,9 @@ func TestSettingsJSONIsWhatTheProgramWroteBeforeH27(t *testing.T) {
 			if rootDefeatsBackupProtection(os.Geteuid(), c) {
 				t.Skip("root writes through a read-only backup, so the refusal the case records cannot happen")
 			}
+			if keepsAReadOnlyBackup(c) {
+				t.Skip("recorded: a read-only backup stopped the write; since owner decision 2 it is replaced (TestAReadOnlyBackupIsReplacedAtTheModeOfTheOriginal)")
+			}
 			world := t.TempDir()
 			claude := filepath.Join(world, "home", ".claude")
 			path := filepath.Join(claude, "settings.json")
@@ -274,6 +307,7 @@ func TestSettingsJSONIsWhatTheProgramWroteBeforeH27(t *testing.T) {
 			installer := settingsfile.Installer{}
 			hookCommand := strings.ReplaceAll(golden.HookCommand, "$W", world)
 
+			previous, kept := c.Before, c.Before.Bak
 			for n, step := range c.Steps {
 				var err error
 				switch step.Op {
@@ -297,7 +331,9 @@ func TestSettingsJSONIsWhatTheProgramWroteBeforeH27(t *testing.T) {
 				}
 				label := "step " + strconv.Itoa(n) + " (" + step.Op + ")"
 				checkGoldenFile(t, golden, world, label+" settings.json", path, step.After.Settings)
-				checkGoldenFile(t, golden, world, label+" settings.json.bak", path+".bak", step.After.Bak)
+				kept = backupAfter(previous, kept, step.After)
+				checkGoldenFile(t, golden, world, label+" settings.json.bak", path+".bak", kept)
+				previous = step.After
 				if got := dirFiles(t, claude); strings.Join(got, "|") != strings.Join(step.After.DirFiles, "|") {
 					t.Errorf("%s: the directory holds %q, the program left %q", label, got, step.After.DirFiles)
 				}
@@ -334,7 +370,7 @@ func TestSameFailurePinsTheReasonAndNotTheWordsBetween(t *testing.T) {
 		{"identical", old, true},
 		{"the adapter's words between", "settings: create temp: atomicfile: create temporary file: open /d/.settings-N.json.tmp: permission denied", true},
 		{"another reason", "settings: create temp: atomicfile: create temporary file: open /d/.settings-N.json.tmp: no such file or directory", false},
-		{"another opening", "settings: backup to /d/x.bak: open /d/x.bak: permission denied", false},
+		{"another opening", "settings: replace /d/x: permission denied", false},
 		{"no opening of the three", "something else: permission denied", false},
 	}
 	for _, c := range cases {
@@ -380,6 +416,33 @@ func TestNoTestOfThisPackageRunsInParallel(t *testing.T) {
 		}
 		if strings.Contains(string(data), call) {
 			t.Errorf("%s runs a test in parallel; fixedUmask would race with it", file)
+		}
+	}
+}
+
+func TestBackupAfterFollowsTheModeOfTheFileItKept(t *testing.T) {
+	file := func(blob, mode string) *goldenFile { return &goldenFile{Blob: blob, Mode: mode} }
+	state := func(settings, bak *goldenFile) goldenState { return goldenState{Settings: settings, Bak: bak} }
+	recorded := file("old", "0o644")
+
+	cases := []struct {
+		name         string
+		before, post goldenState
+		kept         *goldenFile
+		want         *goldenFile
+	}{
+		{"a write keeps the file it replaced at its mode",
+			state(file("old", "0o664"), nil), state(file("new", "0o600"), recorded), nil, file("old", "0o664")},
+		{"a step that wrote nothing leaves the backup it found",
+			state(file("new", "0o600"), file("old", "0o664")), state(file("new", "0o600"), recorded), file("old", "0o664"), file("old", "0o664")},
+		{"no backup stays none", state(nil, nil), state(file("new", "0o600"), nil), nil, nil},
+		{"a backup the recording shows and nothing explains is taken as recorded",
+			state(nil, nil), state(file("new", "0o600"), recorded), nil, recorded},
+	}
+	for _, c := range cases {
+		got := backupAfter(c.before, c.kept, c.post)
+		if (got == nil) != (c.want == nil) || (got != nil && *got != *c.want) {
+			t.Errorf("%s: backupAfter = %v, want %v", c.name, got, c.want)
 		}
 	}
 }
