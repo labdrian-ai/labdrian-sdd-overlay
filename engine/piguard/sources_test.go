@@ -135,3 +135,28 @@ func TestCheckTestSourcesStatesItsLimits(t *testing.T) {
 		})
 	}
 }
+
+// A constant declared inside a function is not read, and a name is looked up in the constants of
+// the package whatever the scope, so a local constant that shadows a package one with another
+// value is read as the package one (see the doc of CheckTestSources). Both directions are
+// pinned, so a scan that learns scopes shows up as a test to rewrite.
+func TestCheckTestSourcesReadsAShadowedConstantAsThePackageOne(t *testing.T) {
+	cases := []struct {
+		name, packageValue, localValue string
+		reported                       bool
+	}{
+		{"the local one is pi and the package one is not: missed", "git", "pi", false},
+		{"the package one is pi and the local one is not: reported", "pi", "git", true},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			body := "const bin = \"" + c.packageValue + "\"\nfunc f() { const bin = \"" + c.localValue + "\"; _ = exec.Command(bin) }\n"
+			dir := writeTests(t, map[string]string{"a_test.go": "package a\nimport \"os/exec\"\n" + body})
+			r := &recordingT{}
+			piguard.CheckTestSources(r, dir)
+			if got := len(r.errors) != 0; got != c.reported {
+				t.Fatalf("reported = %v (%v), want %v: the scan reads the package constant whatever the scope", got, r.errors, c.reported)
+			}
+		})
+	}
+}
