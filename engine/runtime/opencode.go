@@ -65,6 +65,10 @@ func (a OpenCodeAdapter) install(action core.Action) core.LifecycleResult {
 	if err != nil {
 		return a.result(action, core.CapabilityPartial, "OpenCode prompt config could not be derived from the contracts: "+err.Error())
 	}
+	promptHash, err := opencodeprompt.Hash(promptConfig)
+	if err != nil {
+		return a.result(action, core.CapabilityPartial, "OpenCode prompt config could not be hashed: "+err.Error())
+	}
 	cfg := openCodeConfig{
 		PluginPath:        a.pluginPath(),
 		InstalledHash:     OpenCodePluginHash(),
@@ -73,7 +77,7 @@ func (a OpenCodeAdapter) install(action core.Action) core.LifecycleResult {
 		PluginConfigRoot:  a.root,
 		PluginConfigScope: "global-opencode-config",
 		PromptConfig:      promptConfig,
-		PromptConfigHash:  opencodeprompt.Hash(promptConfig),
+		PromptConfigHash:  promptHash,
 	}
 	if err := a.writeConfig(cfg); err != nil {
 		return a.result(action, core.CapabilityPartial, err.Error())

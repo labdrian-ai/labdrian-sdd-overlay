@@ -11,6 +11,16 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime/opencodeprompt"
 )
 
+// mustHash is the hash of a config that can be written.
+func mustHash(t *testing.T, config opencodeprompt.PromptConfig) string {
+	t.Helper()
+	hash, err := opencodeprompt.Hash(config)
+	if err != nil {
+		t.Fatalf("Hash: %v", err)
+	}
+	return hash
+}
+
 func derived(t *testing.T) opencodeprompt.PromptConfig {
 	t.Helper()
 	config, err := opencodeprompt.Derive(fullSource())
@@ -41,7 +51,7 @@ func TestHashIsTheSHA256OfTheJSONTheConfigIsWrittenAs(t *testing.T) {
 		t.Fatal(err)
 	}
 	sum := sha256.Sum256(data)
-	if got, want := opencodeprompt.Hash(config), hex.EncodeToString(sum[:]); got != want {
+	if got, want := mustHash(t, config), hex.EncodeToString(sum[:]); got != want {
 		t.Errorf("Hash = %q, want %q", got, want)
 	}
 }
@@ -50,21 +60,21 @@ func TestHashChangesWithAnyContract(t *testing.T) {
 	a := derived(t)
 	b := derived(t)
 	b.Contracts[2].ActivationContext = []string{"something else"}
-	if opencodeprompt.Hash(a) == opencodeprompt.Hash(b) {
+	if mustHash(t, a) == mustHash(t, b) {
 		t.Error("two configs that differ in a contract have the same hash")
 	}
 }
 
 func TestACurrentConfigVerifiesAfterAWriteAndARead(t *testing.T) {
 	current := derived(t)
-	if err := opencodeprompt.Verify(reload(t, current), opencodeprompt.Hash(current), current); err != nil {
+	if err := opencodeprompt.Verify(reload(t, current), mustHash(t, current), current); err != nil {
 		t.Fatalf("Verify of the config as recorded = %v, want nil", err)
 	}
 }
 
 func TestAStaleConfigIsAMismatchThatNamesTheField(t *testing.T) {
 	current := derived(t)
-	hash := opencodeprompt.Hash(current)
+	hash := mustHash(t, current)
 	str := func(s string) *string { return &s }
 	cases := map[string]struct {
 		change func(*opencodeprompt.PromptConfig)
@@ -108,7 +118,7 @@ func TestAStaleConfigIsAMismatchThatNamesTheField(t *testing.T) {
 func TestARecordedHashThatIsNotCurrentIsAMismatchToo(t *testing.T) {
 	current := derived(t)
 	err := opencodeprompt.Verify(reload(t, current), "0000", current)
-	want := `prompt_config_hash "0000" is not current "` + opencodeprompt.Hash(current) + `"`
+	want := `prompt_config_hash "0000" is not current "` + mustHash(t, current) + `"`
 	if err == nil || err.Error() != want {
 		t.Fatalf("Verify = %v, want %q", err, want)
 	}
@@ -206,7 +216,7 @@ func TestTheContextOperatorIsComparedByPresenceAndValue(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := opencodeprompt.Verify(tc.recorded, opencodeprompt.Hash(tc.current), tc.current)
+			err := opencodeprompt.Verify(tc.recorded, mustHash(t, tc.current), tc.current)
 			if tc.same && err != nil {
 				t.Errorf("Verify = %v, want nil: the operator is the same", err)
 			}
@@ -223,14 +233,45 @@ func TestTheMismatchOfAContextOperatorShowsBothSides(t *testing.T) {
 	recorded, current := derived(t), derived(t)
 	recorded.ContextOperator, recorded.ContextOperatorPresent = &or, true
 	current.ContextOperatorPresent = true
-	err := opencodeprompt.Verify(recorded, opencodeprompt.Hash(current), current)
+	err := opencodeprompt.Verify(recorded, mustHash(t, current), current)
 	want := `prompt_config.context_operator "or" is not current null`
 	if err == nil || err.Error() != want {
 		t.Fatalf("Verify = %v, want %q", err, want)
 	}
 	recorded.ContextOperatorPresent = false
-	err = opencodeprompt.Verify(recorded, opencodeprompt.Hash(current), current)
+	err = opencodeprompt.Verify(recorded, mustHash(t, current), current)
 	if want := `prompt_config.context_operator <absent> is not current null`; err == nil || err.Error() != want {
 		t.Fatalf("Verify = %v, want %q", err, want)
+	}
+}
+
+// A recorded hash that is empty is not the hash of anything: it never verifies, however the
+// current config looks. (Hash used to answer "" for a config it could not write, so a record made
+// from that answer would have verified.)
+func TestAnEmptyRecordedHashIsAMismatch(t *testing.T) {
+	current := derived(t)
+	err := opencodeprompt.Verify(reload(t, current), "", current)
+	if err == nil || !opencodeprompt.IsMismatch(err) {
+		t.Fatalf("Verify with an empty recorded hash = %v, want a mismatch", err)
+	}
+}
+
+// When the current config is itself empty in a field, the recorded one is not blamed for being
+// empty: the two agree, and a config that Derive could never have built is not Verify's to judge.
+func TestARecordedFieldThatIsEmptyLikeTheCurrentOneIsNotBlamed(t *testing.T) {
+	current := opencodeprompt.PromptConfig{}
+	if err := opencodeprompt.Verify(current, mustHash(t, current), current); err != nil {
+		t.Fatalf("Verify of two empty configs = %v, want nil", err)
+	}
+}
+
+// The empty recorded field is still named when the current one has a value.
+func TestAnEmptyRecordedFieldIsNamedWhenTheCurrentOneIsNot(t *testing.T) {
+	current := derived(t)
+	recorded := reload(t, current)
+	recorded.InjectionPoint = ""
+	err := opencodeprompt.Verify(recorded, mustHash(t, current), current)
+	if err == nil || err.Error() != "prompt_config.injection_point is empty" {
+		t.Fatalf("Verify = %v, want %q", err, "prompt_config.injection_point is empty")
 	}
 }

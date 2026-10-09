@@ -8,15 +8,19 @@ import (
 	"fmt"
 )
 
-// Hash fingerprints the config: the hex SHA-256 of the JSON it is written as, or "" for a config
-// that cannot be written.
-func Hash(config PromptConfig) string {
-	data, err := json.Marshal(config)
+// Hash fingerprints the config: the hex SHA-256 of the JSON it is written as. A config that
+// cannot be written has no hash, and the error says so; there is no empty hash to record.
+func Hash(config PromptConfig) (string, error) {
+	return hashOf(json.Marshal(config))
+}
+
+// hashOf is the hash of data, or the error that stopped data from being produced.
+func hashOf(data []byte, err error) (string, error) {
 	if err != nil {
-		return ""
+		return "", err
 	}
 	sum := sha256.Sum256(data)
-	return hex.EncodeToString(sum[:])
+	return hex.EncodeToString(sum[:]), nil
 }
 
 // MismatchError says that a recorded prompt config is not the current one: it is stale, or it was
@@ -38,12 +42,23 @@ func IsMismatch(err error) bool {
 
 // Verify says whether recorded, with the hash that was recorded beside it, is the current config.
 // It returns a MismatchError naming the first thing that differs, the hash last, and nil when
-// nothing does.
+// nothing does. The one other error is not a mismatch: the current config cannot be hashed, so
+// nothing can be said to be current.
 func Verify(recorded PromptConfig, recordedHash string, current PromptConfig) error {
+	return verifyWith(Hash, recorded, recordedHash, current)
+}
+
+// verifyWith is Verify over the function that hashes the current config, so the failure of that
+// function can be exercised without a config that cannot be written.
+func verifyWith(hash func(PromptConfig) (string, error), recorded PromptConfig, recordedHash string, current PromptConfig) error {
 	if err := validate(recorded, current); err != nil {
 		return MismatchError{Err: err}
 	}
-	if expected := Hash(current); recordedHash != expected {
+	expected, err := hash(current)
+	if err != nil {
+		return fmt.Errorf("hashing the current prompt config: %w", err)
+	}
+	if recordedHash != expected {
 		return MismatchError{Err: fmt.Errorf("prompt_config_hash %q is not current %q", recordedHash, expected)}
 	}
 	return nil
@@ -52,10 +67,12 @@ func Verify(recorded PromptConfig, recordedHash string, current PromptConfig) er
 // validate compares the fields of got with those of want in the order a person would expect them
 // reported, and names the first that differs.
 func validate(got, want PromptConfig) error {
-	if got.ContractPath == "" {
+	// An empty field is named only when the current one is not: two empty fields agree, and the
+	// recorded config is not blamed for what the current one lacks too.
+	if got.ContractPath == "" && want.ContractPath != "" {
 		return fmt.Errorf("prompt_config.contract_path is empty")
 	}
-	if got.InjectionPoint == "" {
+	if got.InjectionPoint == "" && want.InjectionPoint != "" {
 		return fmt.Errorf("prompt_config.injection_point is empty")
 	}
 	if !equalStringSlices(got.IncludedPhases, want.IncludedPhases) {
