@@ -78,6 +78,28 @@ func TestPromptHelpersHandleExistingHeaderAndDefaultHeader(t *testing.T) {
 	}
 }
 
+// With no header in the prompt, the header and the path are appended after a blank line, however
+// the prompt ends: a prompt with no final newline gets one blank line, one that ends in a newline
+// gets the one blank line the newline leaves, and one that already ends in a blank line is not
+// trimmed (the separator is a single newline). The outputs are pinned as they are.
+func TestInjectPromptAppendsTheHeaderAfterABlankLineWhateverThePromptEndsWith(t *testing.T) {
+	const path, header = "skills/_shared/minimalism-contract.md", "## Skills to load before work"
+	tail := header + "\n" + path + "\n"
+	cases := []struct{ name, prompt, want string }{
+		{"no final newline", "Do work.", "Do work.\n\n" + tail},
+		{"one final newline", "Do work.\n", "Do work.\n\n" + tail},
+		{"a final blank line", "Do work.\n\n", "Do work.\n\n\n" + tail},
+		{"an empty prompt", "", "\n\n" + tail},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := core.InjectPrompt(tc.prompt, path, header); got != tc.want {
+				t.Errorf("InjectPrompt(%q) = %q, want %q", tc.prompt, got, tc.want)
+			}
+		})
+	}
+}
+
 func hasExactLine(text, line string) bool {
 	for _, candidate := range strings.Split(text, "\n") {
 		if strings.TrimSpace(candidate) == line {

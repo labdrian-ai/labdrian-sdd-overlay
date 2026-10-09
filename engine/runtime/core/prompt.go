@@ -46,11 +46,11 @@ func InjectPrompt(prompt, contractPath, injectionHeader string) string {
 		}
 		return strings.Join(out, "\n")
 	}
+	// A prompt that ends in a newline needs one more to leave a blank line; one that does not
+	// needs two.
 	sep := "\n"
 	if !strings.HasSuffix(prompt, "\n") {
 		sep = "\n\n"
-	} else if !strings.HasSuffix(prompt, "\n\n") {
-		sep = "\n"
 	}
 	return prompt + sep + injectionHeader + "\n" + entry + "\n"
 }
