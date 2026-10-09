@@ -81,8 +81,10 @@ func (s HookService) OnPrompt(req PromptRequest) PromptOutcome {
 	}
 	result := s.project(input)
 	if result.Unbind && binding.Classification == projection.ClassificationOwned {
-		// Only a binding of ours that was read: the domain asks for a removal only for one, and a
-		// policy that asks for it for another has read nothing to remove. Only the binding that was read, and only best effort: a fresh binding made since stays,
+		// Only a binding of ours that was read is removed: the domain asks for a removal only for
+		// one, and a policy that asks for it for another has read nothing to remove.
+		//
+		// The removal is best effort and compares first: a fresh binding made since the read stays,
 		// and a failure to remove this one is not the prompt's problem (the next prompt sees the
 		// closed workflow again and retries). What happened goes into the note, so it never claims
 		// a removal that did not take place.
