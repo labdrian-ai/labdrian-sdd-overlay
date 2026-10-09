@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -164,5 +165,92 @@ func stopRecordedProcess(t *testing.T, pidFile string) {
 	}
 	if proc, err := os.FindProcess(pid); err == nil {
 		_ = proc.Kill()
+	}
+}
+
+func TestOutputReturnsTheTwoStreamsApart(t *testing.T) {
+	bin := fakeBinary(t, "git", `printf 'out'; printf 'err' >&2`)
+	stdout, stderr, err := New().Output(context.Background(), nil, bin)
+	if err != nil {
+		t.Fatalf("Output: %v", err)
+	}
+	if string(stdout) != "out" || string(stderr) != "err" {
+		t.Errorf("stdout=%q stderr=%q, want them apart: out and err", stdout, stderr)
+	}
+}
+
+func TestOutputKeepsWhatAFailingProgramPrinted(t *testing.T) {
+	bin := fakeBinary(t, "git", `printf 'partial'; printf 'why' >&2; exit 3`)
+	stdout, stderr, err := New().Output(context.Background(), nil, bin)
+	var exit *exec.ExitError
+	if !errors.As(err, &exit) || exit.ExitCode() != 3 {
+		t.Fatalf("err = %v, want an *exec.ExitError with code 3", err)
+	}
+	if string(stdout) != "partial" || string(stderr) != "why" {
+		t.Errorf("stdout=%q stderr=%q, want what the program printed before it failed", stdout, stderr)
+	}
+}
+
+// The environment given is the whole environment of the program: nothing of the process leaks
+// into it, which is what lets a caller decide which variables a program sees.
+func TestOutputGivesTheProgramExactlyTheEnvironmentItIsHanded(t *testing.T) {
+	bin := fakeBinary(t, "git", `printf '%s|%s|%s' "${ASKED-unset}" "${LEAK-unset}" "${HOME-unset}"`)
+	t.Setenv("LEAK", "from the process")
+	t.Setenv("HOME", "/leaked-home")
+
+	stdout, _, err := New().Output(context.Background(), []string{"ASKED=yes"}, bin)
+	if err != nil {
+		t.Fatalf("Output: %v", err)
+	}
+	if string(stdout) != "yes|unset|unset" {
+		t.Errorf("the program saw %q, want only the variable it was handed", stdout)
+	}
+}
+
+// With no environment given, the program gets the one of the process, as exec.Command does.
+func TestOutputWithoutAnEnvironmentInheritsTheProcessOne(t *testing.T) {
+	bin := fakeBinary(t, "git", `printf '%s' "${INHERITED-unset}"`)
+	t.Setenv("INHERITED", "yes")
+
+	stdout, _, err := New().Output(context.Background(), nil, bin)
+	if err != nil {
+		t.Fatalf("Output: %v", err)
+	}
+	if string(stdout) != "yes" {
+		t.Errorf("the program saw %q, want the environment of the process", stdout)
+	}
+}
+
+func TestOutputStopsAtTheDeadlineAndSaysWhy(t *testing.T) {
+	bin := fakeBinary(t, "git", `exec /bin/sleep 30`)
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+
+	started := time.Now()
+	_, _, err := New().Output(ctx, nil, bin)
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("err = %v, want it to wrap context.DeadlineExceeded", err)
+	}
+	if elapsed := time.Since(started); elapsed > killGrace+5*time.Second {
+		t.Errorf("Output took %v: it did not stop the program at its deadline", elapsed)
+	}
+}
+
+// Output gives up on a grandchild that holds the pipes after the deadline, like Run.
+func TestOutputDoesNotWaitForAGrandchildHoldingThePipes(t *testing.T) {
+	pidFile := filepath.Join(t.TempDir(), "sleep.pid")
+	bin := fakeBinary(t, "git", `/bin/sleep 30 &
+echo $! > '`+pidFile+`'
+wait`)
+	t.Cleanup(func() { stopRecordedProcess(t, pidFile) })
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+
+	started := time.Now()
+	if _, _, err := New().Output(ctx, nil, bin); err == nil {
+		t.Fatal("Output reported success for a program stopped at its deadline")
+	}
+	if bound := killGrace + 5*time.Second; time.Since(started) > bound {
+		t.Errorf("Output took %v, want it back within %v", time.Since(started), bound)
 	}
 }
