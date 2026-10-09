@@ -34,6 +34,7 @@ const (
 var phase7Sources = []string{
 	"capability/*.go",
 	"projection/*.go",
+	"projection/app/*.go",
 	"projection/fsstore/*.go",
 	"cmd/projection_hook.go",
 	"cmd/runtime_capabilities.go",

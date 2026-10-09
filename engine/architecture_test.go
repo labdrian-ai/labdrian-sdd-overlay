@@ -72,6 +72,12 @@ import (
 //   - propagator/fsstore is the adapter of that RegistryStore (H28): it reads the registry file and
 //     writes it through a temporary file and a rename. The words a person reads and the lock are the
 //     command's, in cmd.
+//   - projection/app holds the use cases of the session binding and of the projection hook (H29):
+//     BindWorkflow (bind, unbind and describe a repository's binding) and HookService (what the
+//     prompt hook projects and what the tool-call gate allows), over the RepoLocator and
+//     BindingStore ports of projection and the WorkflowReader and Clock it owns. It answers with
+//     typed values and typed refusals, decodes no hook input, prints nothing and takes no time from
+//     the machine.
 //   - gitfs is the adapter of the projection domain's RepoLocator port (H29): it finds the repository
 //     a directory belongs to, and the worktree and HEAD a workflow records, by reading the files of
 //     the repository with no subprocess. It shares with gitprov only what a pointer file names.
@@ -108,6 +114,7 @@ var rings = map[string]archguard.Ring{
 	"pipkg/gitsource":           archguard.Adapter,
 	"prespec":                   archguard.Domain,
 	"projection":                archguard.Domain,
+	"projection/app":            archguard.Application,
 	"projection/fsstore":        archguard.Adapter,
 	"propagator":                archguard.Domain,
 	"propagator/app":            archguard.Application,
