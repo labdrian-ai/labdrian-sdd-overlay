@@ -27,7 +27,7 @@ func TestClaudeInstallWritesLifecycleHooksAndReportsSupportedStatus(t *testing.T
 		t.Fatalf("Install() = %#v", result)
 	}
 
-	// mergeHooks installs both pairs (minimalism, design) via the real
+	// settings.Document.Merge installs both pairs (minimalism, design) via the real
 	// settings file adapter (Phase 4, PR-3 of the
 	// anti-generic-design-runtime-wiring chain) — no test-fixture workaround
 	// needed anymore.
@@ -69,7 +69,7 @@ func TestClaudeUpdateRefreshesLifecycleAndKeepsSupportedStatus(t *testing.T) {
 		t.Fatalf("Update() = %#v", result)
 	}
 
-	// mergeHooks installs both pairs (minimalism, design) via the real
+	// settings.Document.Merge installs both pairs (minimalism, design) via the real
 	// settings file adapter's Install path — Update() keeps the (minimalism+design)
 	// lifecycle state "supported" without any test-fixture workaround.
 	status := adapter.Status()

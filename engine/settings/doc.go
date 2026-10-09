@@ -23,6 +23,11 @@
 //
 // There are no outer "type" or "command" keys.
 //
+// Where the rest of what used to be in this package went: the file (read, backup, atomic write,
+// links) is settings/settingsfile; the rules for the Claude root (it must be named and absolute;
+// settings.json and bin/gentle-ai-overlay under it) are the Claude adapter's, in runtime
+// (ClaudeAdapter.configPaths), the only code that has a root.
+//
 // The package imports nothing outside the pure standard library and guardmarkers, so it can be
 // tested, and reasoned about, without a file system.
 package settings

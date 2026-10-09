@@ -99,14 +99,22 @@ func TestModuleReachFollowsImportsThroughOtherPackages(t *testing.T) {
 // it and the plan of H27 still counts it.
 func TestSettingsDoesNotReachTheShaperOrGit(t *testing.T) {
 	const modulePath = "github.com/labdrian-ai/labdrian-sdd-overlay/engine"
+	forbidden := []string{"shaper", "gitprov"}
+	for _, name := range forbidden {
+		// A forbidden package that is renamed or moved would make the check pass for nothing: each
+		// name must still be a package of the module.
+		if files, _ := filepath.Glob(filepath.Join(name, "*.go")); len(files) == 0 {
+			t.Errorf("%q is not a package of the module any more: rename it in this test", name)
+		}
+	}
 	for _, start := range []string{"settings", "settings/settingsfile"} {
 		reached, err := moduleReach(".", modulePath, start)
 		if err != nil {
 			t.Fatal(err)
 		}
 		for pkg := range reached {
-			for _, forbidden := range []string{"shaper", "gitprov"} {
-				if pkg == forbidden || strings.HasPrefix(pkg, forbidden+"/") {
+			for _, name := range forbidden {
+				if pkg == name || strings.HasPrefix(pkg, name+"/") {
 					t.Errorf("%s reaches %s: the words of the guard are guardmarkers', not the package that decides with them", start, pkg)
 				}
 			}
