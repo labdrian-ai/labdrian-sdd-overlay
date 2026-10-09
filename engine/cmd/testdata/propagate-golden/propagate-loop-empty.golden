@@ -1,0 +1,45 @@
+$ propagate --registry /virtual/project/.atl/skill-registry.md --contract-file /virtual/skills/_shared/contract.md
+# empty on every attempt
+--- io ---
+read /virtual/skills/_shared/contract.md -> 213 bytes
+read /virtual/project/.atl/skill-registry.md -> 0 bytes
+read /virtual/skills/_shared/contract.md -> 213 bytes
+read /virtual/project/.atl/skill-registry.md -> 0 bytes
+read /virtual/skills/_shared/contract.md -> 213 bytes
+read /virtual/project/.atl/skill-registry.md -> 0 bytes
+exit: 1
+--- stdout ---
+--- stderr ---
+error: the registry at /virtual/project/.atl/skill-registry.md read empty on all 3 attempts — refusing to propagate
+--- registry unchanged ---
+
+$ propagate --registry /virtual/project/.atl/skill-registry.md --contract-file /virtual/skills/_shared/contract.md
+# white space on every attempt
+--- io ---
+read /virtual/skills/_shared/contract.md -> 213 bytes
+read /virtual/project/.atl/skill-registry.md -> 4 bytes
+read /virtual/skills/_shared/contract.md -> 213 bytes
+read /virtual/project/.atl/skill-registry.md -> 4 bytes
+read /virtual/skills/_shared/contract.md -> 213 bytes
+read /virtual/project/.atl/skill-registry.md -> 4 bytes
+exit: 1
+--- stdout ---
+--- stderr ---
+error: the registry at /virtual/project/.atl/skill-registry.md read empty on all 3 attempts — refusing to propagate
+--- registry unchanged ---
+
+$ propagate --registry /virtual/project/.atl/skill-registry.md --contract-file /virtual/skills/_shared/contract.md --require-registry
+# empty, with the registry required
+--- io ---
+read /virtual/skills/_shared/contract.md -> 213 bytes
+read /virtual/project/.atl/skill-registry.md -> 0 bytes
+read /virtual/skills/_shared/contract.md -> 213 bytes
+read /virtual/project/.atl/skill-registry.md -> 0 bytes
+read /virtual/skills/_shared/contract.md -> 213 bytes
+read /virtual/project/.atl/skill-registry.md -> 0 bytes
+exit: 1
+--- stdout ---
+--- stderr ---
+error: the registry at /virtual/project/.atl/skill-registry.md read empty on all 3 attempts — refusing to propagate
+--- registry unchanged ---
+

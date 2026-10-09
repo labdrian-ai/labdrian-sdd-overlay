@@ -1,0 +1,15 @@
+$ propagate --registry /virtual/project/.atl/skill-registry.md --contract-file /virtual/skills/_shared/contract.md
+# absent, then empty twice: the registry exists, so the run fails
+--- io ---
+read /virtual/skills/_shared/contract.md -> 213 bytes
+read /virtual/project/.atl/skill-registry.md -> error: open /virtual/project/.atl/skill-registry.md: file does not exist
+read /virtual/skills/_shared/contract.md -> 213 bytes
+read /virtual/project/.atl/skill-registry.md -> 0 bytes
+read /virtual/skills/_shared/contract.md -> 213 bytes
+read /virtual/project/.atl/skill-registry.md -> 0 bytes
+exit: 1
+--- stdout ---
+--- stderr ---
+error: the registry at /virtual/project/.atl/skill-registry.md was in an inconsistent state across 3 attempts — refusing to propagate
+--- registry unchanged ---
+

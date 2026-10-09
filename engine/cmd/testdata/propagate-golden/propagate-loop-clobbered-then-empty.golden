@@ -1,0 +1,34 @@
+$ propagate --registry /virtual/project/.atl/skill-registry.md --contract-file /virtual/skills/_shared/contract.md
+# the write is lost, then the registry is empty twice: it existed, so the run fails
+--- io ---
+read /virtual/skills/_shared/contract.md -> 213 bytes
+read /virtual/project/.atl/skill-registry.md -> 343 bytes
+write /virtual/project/.atl/skill-registry.md (681 bytes, -rw-r--r--) -> ok
+read /virtual/project/.atl/skill-registry.md -> 46 bytes
+read /virtual/skills/_shared/contract.md -> 213 bytes
+read /virtual/project/.atl/skill-registry.md -> 0 bytes
+read /virtual/skills/_shared/contract.md -> 213 bytes
+read /virtual/project/.atl/skill-registry.md -> 0 bytes
+exit: 1
+--- stdout ---
+--- stderr ---
+error: the registry at /virtual/project/.atl/skill-registry.md was in an inconsistent state across 3 attempts — refusing to propagate
+--- registry after ---
+# Skill Registry
+
+### Shared Contracts
+
+| Artifact | Path | Description |
+|----------|------|-------------|
+| pre-sdd-contracts | skills/_shared/pre-sdd-contracts.md | Shared contracts |
+<!-- BEGIN: some-other-scope (auto-generated) -->
+| other | skills/_shared/other.md | Foreign row |
+<!-- END: some-other-scope -->
+<!-- BEGIN: minimalism-contract-scope (auto-generated) -->
+| minimalism-contract | skills/_shared/minimalism-contract.md | Inject ONLY into sdd-tasks and sdd-apply sub-agent prompts under '## Skills to load before work'. Do NOT inject into sdd-propose/sdd-spec/sdd-design/sdd-verify/sdd-archive. |
+<!-- END: minimalism-contract-scope -->
+
+### Other section
+
+text
+

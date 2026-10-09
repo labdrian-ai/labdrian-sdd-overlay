@@ -1,0 +1,26 @@
+$ propagate --registry /virtual/project/.atl/skill-registry.md --contract-file /virtual/skills/_shared/contract.md
+# no registry: three reads, then a clean no-op
+--- io ---
+read /virtual/skills/_shared/contract.md -> 213 bytes
+read /virtual/project/.atl/skill-registry.md -> error: open /virtual/project/.atl/skill-registry.md: file does not exist
+read /virtual/skills/_shared/contract.md -> 213 bytes
+read /virtual/project/.atl/skill-registry.md -> error: open /virtual/project/.atl/skill-registry.md: file does not exist
+read /virtual/skills/_shared/contract.md -> 213 bytes
+read /virtual/project/.atl/skill-registry.md -> error: open /virtual/project/.atl/skill-registry.md: file does not exist
+exit: none
+--- stdout ---
+propagate: registry not found at /virtual/project/.atl/skill-registry.md — project does not use the overlay (no-op)
+--- stderr ---
+--- registry unchanged ---
+
+$ propagate --registry /virtual/project/.atl/skill-registry.md --contract-file /virtual/skills/_shared/contract.md --require-registry
+# no registry, one is required: the first read fails, no retry
+--- io ---
+read /virtual/skills/_shared/contract.md -> 213 bytes
+read /virtual/project/.atl/skill-registry.md -> error: open /virtual/project/.atl/skill-registry.md: file does not exist
+exit: 1
+--- stdout ---
+--- stderr ---
+error: registry required but not found at /virtual/project/.atl/skill-registry.md (--require-registry)
+--- registry unchanged ---
+

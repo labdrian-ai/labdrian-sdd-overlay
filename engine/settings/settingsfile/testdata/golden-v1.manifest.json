@@ -1,0 +1,46 @@
+{
+ "golden-01.json": {
+  "cases": 14,
+  "steps": 42
+ },
+ "golden-02.json": {
+  "cases": 16,
+  "steps": 48
+ },
+ "golden-03.json": {
+  "cases": 18,
+  "steps": 54
+ },
+ "golden-04.json": {
+  "cases": 15,
+  "steps": 46
+ },
+ "golden-05.json": {
+  "cases": 11,
+  "steps": 32
+ },
+ "golden-06.json": {
+  "cases": 12,
+  "steps": 36
+ },
+ "golden-07.json": {
+  "cases": 15,
+  "steps": 46
+ },
+ "golden-08.json": {
+  "cases": 9,
+  "steps": 26
+ },
+ "golden-09.json": {
+  "cases": 28,
+  "steps": 84
+ },
+ "golden-10.json": {
+  "cases": 12,
+  "steps": 36
+ },
+ "golden-11.json": {
+  "cases": 6,
+  "steps": 18
+ }
+}

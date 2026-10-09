@@ -1,0 +1,30 @@
+$ propagate --registry /virtual/project/.atl/skill-registry.md --contract-file /virtual/skills/_shared/contract.md
+# the contract cannot be read
+--- io ---
+read /virtual/skills/_shared/contract.md -> error: permission denied
+exit: 1
+--- stdout ---
+--- stderr ---
+error: reading contract file: permission denied
+--- registry unchanged ---
+
+$ propagate --registry /virtual/project/.atl/skill-registry.md --contract-file /virtual/skills/_shared/contract.md
+# the contract has no frontmatter
+--- io ---
+read /virtual/skills/_shared/contract.md -> 19 bytes
+exit: 1
+--- stdout ---
+--- stderr ---
+error: contract file has no YAML frontmatter (expected content between --- delimiters)
+--- registry unchanged ---
+
+$ propagate --registry /virtual/project/.atl/skill-registry.md --contract-file /virtual/skills/_shared/contract.md
+# the contract applies to no phase
+--- io ---
+read /virtual/skills/_shared/contract.md -> 66 bytes
+exit: 1
+--- stdout ---
+--- stderr ---
+error: contract frontmatter missing or empty applies_to_phases: cannot derive scope without knowing which phases to inject into
+--- registry unchanged ---
+

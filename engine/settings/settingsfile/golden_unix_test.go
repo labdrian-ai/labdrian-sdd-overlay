@@ -4,6 +4,8 @@ package settingsfile_test
 
 import (
 	"encoding/json"
+	"flag"
+	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -61,22 +63,25 @@ var (
 )
 
 // failureWording lists the openings of the errors that report a failure of the file system. The
-// words between the opening and the reason are not pinned: they name the package that made the call
+// words between the opening and the rest are not pinned: they name the package that made the call
 // (the old program said `settings: create temp: open <path>: <reason>`, the adapter says
-// `settings: create temp: atomicfile: create temporary file: open <path>: <reason>`). The reason, the
-// words the system gave after the last colon, is.
+// `settings: create temp: atomicfile: create temporary file: open <path>: <reason>`). The rest, the
+// call that failed, the file and the reason the system gave, is: it is what the old message said
+// after its opening, and the new one must end with it.
 var failureWording = []string{"settings: create temp: "}
 
 // sameFailure reports whether a failure the adapter reports is the one the program recorded: the
-// same words, or the same opening and the same reason.
+// same words, or the same opening and, after any words of the adapter's own, the same ending. A
+// reason that holds ": " itself, or a message with no separator at all, is compared whole, because
+// the ending is everything the old message said after its opening and not the text after some
+// separator.
 func sameFailure(want, got string) bool {
 	if want == got {
 		return true
 	}
-	reason := func(message string) string { return message[strings.LastIndex(message, ": ")+2:] }
 	for _, opening := range failureWording {
 		if strings.HasPrefix(want, opening) && strings.HasPrefix(got, opening) {
-			return reason(want) == reason(got)
+			return strings.HasSuffix(got, ": "+strings.TrimPrefix(want, opening))
 		}
 	}
 	return false
@@ -119,12 +124,24 @@ const goldenRoot = "/opt/labdrian-golden"
 // use), at most about 60 KB, and the cases of all of them are replayed.
 const goldenDir = "testdata/golden-v1"
 
-// The number of cases and steps the files hold. A file lost from the directory, or emptied, changes
-// them, so a replay that passes cannot be a replay of less than was recorded.
-const (
-	goldenCaseCount = 156
-	goldenStepCount = 468
-)
+// goldenManifest records, for each file of goldenDir, the number of cases and steps it holds (156
+// cases and 468 steps in all when it was written, the day the recording was split into files). A
+// file lost from the directory, emptied or cut changes what the directory holds and no longer
+// matches its entry, so a replay that passes cannot be a replay of less than was recorded. A file
+// added on purpose is added to the manifest by running
+//
+//	go test ./settings/settingsfile -run TestTheGoldenFilesHoldWhatWasRecorded -update-golden-manifest
+//
+// and the diff of the manifest is read before it is committed, as the diff of the data is.
+const goldenManifest = "testdata/golden-v1.manifest.json"
+
+var updateGoldenManifest = flag.Bool("update-golden-manifest", false, "rewrite the manifest of the golden files")
+
+// goldenCount is what one golden file holds.
+type goldenCount struct {
+	Cases int `json:"cases"`
+	Steps int `json:"steps"`
+}
 
 func goldenFiles(t *testing.T) []string {
 	t.Helper()
@@ -232,6 +249,21 @@ func readGoldenFile(t *testing.T, path string) (text string, mode os.FileMode, p
 		t.Fatal(err)
 	}
 	return string(data), info.Mode().Perm(), true
+}
+
+// checkNothingNamesTheWorld fails when one of the files holds the directory of the replay. The
+// world is where the test runs and its name may carry the name of the test, so a file that names it
+// would hold, in a command, text the program tells its entries by that only this run has. The
+// expected text is built on goldenRoot and the comparison is exact, so this is already true when
+// the files match; the check says it in so many words, and a file that leaks fails with that
+// reason and not as a difference of bytes.
+func checkNothingNamesTheWorld(t *testing.T, label, world string, paths ...string) {
+	t.Helper()
+	for _, path := range paths {
+		if text, _, present := readGoldenFile(t, path); present && strings.Contains(text, world) {
+			t.Errorf("%s: %s holds the directory of the replay, %s, so its commands depend on where the test runs", label, path, world)
+		}
+	}
 }
 
 func checkGoldenFile(t *testing.T, doc goldenDocument, root, label, path string, want *goldenFile) {
@@ -343,6 +375,7 @@ func TestSettingsJSONIsWhatTheProgramWroteBeforeH27(t *testing.T) {
 				checkGoldenFile(t, golden, goldenRoot, label+" settings.json", path, step.After.Settings)
 				kept = backupAfter(previous, kept, step.After)
 				checkGoldenFile(t, golden, goldenRoot, label+" settings.json.bak", path+".bak", kept)
+				checkNothingNamesTheWorld(t, label, world, path, path+".bak")
 				previous = step.After
 				if got := dirFiles(t, claude); strings.Join(got, "|") != strings.Join(step.After.DirFiles, "|") {
 					t.Errorf("%s: the directory holds %q, the program left %q", label, got, step.After.DirFiles)
@@ -355,37 +388,118 @@ func TestSettingsJSONIsWhatTheProgramWroteBeforeH27(t *testing.T) {
 // The files are the ones that were recorded, all of them read: the cases and steps add up, and none
 // is empty, so a lost or emptied file fails here and not by shrinking the replay.
 func TestTheGoldenFilesHoldWhatWasRecorded(t *testing.T) {
-	cases, steps := 0, 0
+	held := map[string]goldenCount{}
 	for _, file := range goldenFiles(t) {
 		doc := readGoldenDocument(t, file)
-		if len(doc.Cases) == 0 {
-			t.Errorf("%s holds no case", file)
-		}
+		count := goldenCount{Cases: len(doc.Cases)}
 		for _, c := range doc.Cases {
-			cases++
-			steps += len(c.Steps)
+			count.Steps += len(c.Steps)
+		}
+		held[filepath.Base(file)] = count
+	}
+	if *updateGoldenManifest {
+		raw, err := json.MarshalIndent(held, "", " ")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(goldenManifest, append(raw, '\n'), 0o644); err != nil {
+			t.Fatal(err)
 		}
 	}
-	if cases != goldenCaseCount || steps != goldenStepCount {
-		t.Errorf("the golden files hold %d cases and %d steps, want %d and %d", cases, steps, goldenCaseCount, goldenStepCount)
+	raw, err := os.ReadFile(goldenManifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var recorded map[string]goldenCount
+	if err := json.Unmarshal(raw, &recorded); err != nil {
+		t.Fatalf("%s: %v", goldenManifest, err)
+	}
+	for _, problem := range manifestProblems(recorded, held) {
+		t.Error(problem)
 	}
 }
 
-func TestSameFailurePinsTheReasonAndNotTheWordsBetween(t *testing.T) {
+// manifestProblems says where the files a directory holds differ from the manifest: a file the
+// manifest names and the directory lacks, a file the directory has and the manifest does not
+// name, a file with no case, and a file whose cases or steps are not the recorded number. The
+// answer is in the order of the names, so a failure reads the same on every run.
+func manifestProblems(recorded, held map[string]goldenCount) []string {
+	names := map[string]bool{}
+	for name := range recorded {
+		names[name] = true
+	}
+	for name := range held {
+		names[name] = true
+	}
+	sorted := make([]string, 0, len(names))
+	for name := range names {
+		sorted = append(sorted, name)
+	}
+	sort.Strings(sorted)
+
+	var problems []string
+	for _, name := range sorted {
+		want, isRecorded := recorded[name]
+		got, isHeld := held[name]
+		switch {
+		case !isHeld:
+			problems = append(problems, name+" is in the manifest and not in the directory")
+		case !isRecorded:
+			problems = append(problems, name+" is in the directory and not in the manifest")
+		case got.Cases == 0:
+			problems = append(problems, name+" holds no case")
+		case got != want:
+			problems = append(problems, fmt.Sprintf("%s holds %d cases and %d steps, the manifest has %d and %d",
+				name, got.Cases, got.Steps, want.Cases, want.Steps))
+		}
+	}
+	return problems
+}
+
+func TestManifestProblemsNamesEachWayAFileDiffers(t *testing.T) {
+	recorded := map[string]goldenCount{"a.json": {2, 6}, "b.json": {1, 3}, "c.json": {4, 12}, "d.json": {1, 1}}
+	held := map[string]goldenCount{"a.json": {2, 6}, "c.json": {4, 11}, "d.json": {0, 0}, "e.json": {1, 1}}
+	want := []string{
+		"b.json is in the manifest and not in the directory",
+		"c.json holds 4 cases and 11 steps, the manifest has 4 and 12",
+		"d.json holds no case",
+		"e.json is in the directory and not in the manifest",
+	}
+	got := manifestProblems(recorded, held)
+	if strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Errorf("problems\n got: %q\nwant: %q", got, want)
+	}
+	if problems := manifestProblems(recorded, recorded); len(problems) != 0 {
+		t.Errorf("a directory that is the manifest has problems: %q", problems)
+	}
+	if problems := manifestProblems(map[string]goldenCount{"a.json": {2, 6}}, map[string]goldenCount{"a.json": {3, 6}}); len(problems) != 1 {
+		t.Errorf("a file with another number of cases and the same steps has problems %q, want one", problems)
+	}
+}
+
+func TestSameFailurePinsTheEndingAndNotTheWordsBetween(t *testing.T) {
 	old := "settings: create temp: open /d/.settings-N.json.tmp: permission denied"
 	cases := []struct {
-		name, got string
-		want      bool
+		name, want, got string
+		same            bool
 	}{
-		{"identical", old, true},
-		{"the adapter's words between", "settings: create temp: atomicfile: create temporary file: open /d/.settings-N.json.tmp: permission denied", true},
-		{"another reason", "settings: create temp: atomicfile: create temporary file: open /d/.settings-N.json.tmp: no such file or directory", false},
-		{"another opening", "settings: replace /d/x: permission denied", false},
-		{"no opening of the three", "something else: permission denied", false},
+		{"identical", old, old, true},
+		{"the adapter's words between", old, "settings: create temp: atomicfile: create temporary file: open /d/.settings-N.json.tmp: permission denied", true},
+		{"another reason", old, "settings: create temp: atomicfile: create temporary file: open /d/.settings-N.json.tmp: no such file or directory", false},
+		{"the same reason of another file", old, "settings: create temp: atomicfile: create temporary file: open /e/.settings-N.json.tmp: permission denied", false},
+		{"the same reason of another call", old, "settings: create temp: atomicfile: create temporary file: mkdir /d/.settings-N.json.tmp: permission denied", false},
+		{"only the reason", old, "settings: create temp: permission denied", false},
+		{"another opening", old, "settings: replace /d/x: permission denied", false},
+		{"no opening of the three", old, "something else: permission denied", false},
+		{"a reason that holds the separator", "settings: create temp: open /d/t: bad: thing", "settings: create temp: atomicfile: open /d/t: bad: thing", true},
+		{"a reason that holds the separator, cut", "settings: create temp: open /d/t: bad: thing", "settings: create temp: atomicfile: open /d/t: other: thing", false},
+		{"a message with no separator after its opening", "settings: create temp: boom", "settings: create temp: atomicfile: boom", true},
+		{"a message with no separator, another word", "settings: create temp: boom", "settings: create temp: atomicfile: bang", false},
+		{"an ending that is part of a longer word", "settings: create temp: boom", "settings: create temp: atomicfile: kaboom", false},
 	}
 	for _, c := range cases {
-		if got := sameFailure(old, c.got); got != c.want {
-			t.Errorf("%s: sameFailure = %v, want %v", c.name, got, c.want)
+		if got := sameFailure(c.want, c.got); got != c.same {
+			t.Errorf("%s: sameFailure = %v, want %v", c.name, got, c.same)
 		}
 	}
 }

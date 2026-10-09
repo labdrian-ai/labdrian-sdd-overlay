@@ -1,0 +1,12 @@
+$ propagate --registry /virtual/project/.atl/skill-registry.md --contract-file /virtual/skills/_shared/contract.md
+# the write fails: forwarded, no retry
+--- io ---
+read /virtual/skills/_shared/contract.md -> 213 bytes
+read /virtual/project/.atl/skill-registry.md -> 343 bytes
+write /virtual/project/.atl/skill-registry.md (681 bytes, -rw-r--r--) -> error: no space left on device
+exit: 1
+--- stdout ---
+--- stderr ---
+error: writing registry: no space left on device
+--- registry unchanged ---
+

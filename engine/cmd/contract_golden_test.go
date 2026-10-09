@@ -34,6 +34,13 @@ import (
 //
 // and read the diff before committing it.
 //
+// Phase 9 unit H28 turned the loop of 'propagate' into a use case, and 'propagate' is recorded
+// here through the whole loop, as the command runs it. The one transcript that changed is the
+// registry that is empty or all white space (propagate-registry-states): the single pass the
+// driver used to run said "registry exists but is empty", and the command, which runs the loop,
+// has always said "the registry at <path> read empty on all 3 attempts" (see the propagate
+// goldens, recorded from the command before the move). Every other transcript is the same bytes.
+//
 // The verbs run in process over an in-memory file system, except 'runtime install', which
 // is given a temporary overlay and configuration root. Each case is its own subtest.
 var updateContractGolden = flag.Bool("update-contract-golden", false, "rewrite the golden files of the contract-reading verbs")
@@ -133,8 +140,8 @@ func (w *contractWorld) gateMatrix(args ...string) {
 	w.gate("sdd-explore, in neither list", agentInput("sdd-explore", promptWithEntry), args...)
 }
 
-// propagate records one run of 'propagate'. The registry is written back into the
-// in-memory file system, and printed when it changed.
+// propagate records one run of 'propagate', the loop and all. The registry is written back into
+// the in-memory file system, and printed when it changed.
 func (w *contractWorld) propagate(label string, args ...string) {
 	w.t.Helper()
 	var stdout, stderr bytes.Buffer
@@ -144,7 +151,7 @@ func (w *contractWorld) propagate(label string, args ...string) {
 		w.files[path] = string(data)
 		return nil
 	}
-	runPropagateCore(args, &stdout, &stderr, w.readFile, writeFile, func(code int) { exitCode = code })
+	runPropagateFuncs(args, &stdout, &stderr, w.readFile, writeFile, func(code int) { exitCode = code })
 	exit := "none"
 	if exitCode >= 0 {
 		exit = fmt.Sprint(exitCode)
