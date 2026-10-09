@@ -2,22 +2,19 @@ package runtime
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime/core"
 )
 
 // PiAdapter is the runtime adapter for the Pi CLI (via gentle-pi). It NEVER
 // writes ~/.pi/agent/settings.json or ~/.pi/agent/mcp.json itself — only
 // the `pi` CLI does, via the install/remove subprocess calls below.
 type PiAdapter struct {
-	target       Target
+	target       core.Target
 	commands     CommandRunner
 	packages     PackageBuilder
 	options      PiOptions
@@ -50,7 +47,7 @@ func NewPiAdapter(ports PiPorts, paths PiPaths, options PiOptions) PiAdapter {
 	if registryPath == "" && paths.OverlayRoot != "" {
 		registryPath = filepath.Join(paths.OverlayRoot, "skills.registry.yaml")
 	}
-	return PiAdapter{target: TargetPi, commands: ports.Commands, packages: ports.Packages, options: options, home: paths.Home, overlayRoot: paths.OverlayRoot, registryPath: registryPath, destDir: paths.DestDir}
+	return PiAdapter{target: core.TargetPi, commands: ports.Commands, packages: ports.Packages, options: options, home: paths.Home, overlayRoot: paths.OverlayRoot, registryPath: registryPath, destDir: paths.DestDir}
 }
 
 // piNoDiscoveryFlagsDisclosure is a STATIC note (R-007) — never a runtime-
@@ -58,11 +55,11 @@ func NewPiAdapter(ports PiPorts, paths PiPaths, options PiOptions) PiAdapter {
 // documents the short aliases -ne and -ns.
 const piNoDiscoveryFlagsDisclosure = "'pi --no-extensions' disables the before_agent_start contract-gate extension for that session, and 'pi --no-skills' disables skill discovery, for that session only; neither flag's use is detected at runtime (short aliases: -ne and -ns)"
 
-func (a PiAdapter) Target() Target { return a.target }
+func (a PiAdapter) Target() core.Target { return a.target }
 
 // Apply mirrors OpenCodeAdapter's Apply/Install identity (a package target
 // has no separate "apply without installing" concept).
-func (a PiAdapter) Apply() LifecycleResult { return a.Install() }
+func (a PiAdapter) Apply() core.LifecycleResult { return a.Install() }
 
 // Install builds the package then, when `pi` is resolvable, runs
 // `pi install <destDir>` with a FIXED argv (never a shell string). Without
@@ -70,25 +67,25 @@ func (a PiAdapter) Apply() LifecycleResult { return a.Install() }
 // package install succeeds, it also ensures the Pi Subagents extension
 // (R-012) and links the overlay-owned GADU.md agent (R-013/R-014) so GADU
 // is dispatchable as a real Pi subagent, not merely a relayed persona.
-func (a PiAdapter) Install() LifecycleResult {
+func (a PiAdapter) Install() core.LifecycleResult {
 	if a.overlayRoot == "" {
-		return a.stub(ActionInstall)
+		return a.stub(core.ActionInstall)
 	}
 	if err := a.packages.Build(a.overlayRoot, a.registryPath, a.destDir); err != nil {
-		return NewLifecycleResult(a.target, ActionInstall, CapabilityUnsupported, err.Error(), nil)
+		return core.NewLifecycleResult(a.target, core.ActionInstall, core.CapabilityUnsupported, err.Error(), nil)
 	}
 	bin, err := a.commands.LookPath("pi")
 	if err != nil {
-		return NewLifecycleResult(a.target, ActionInstall, CapabilityPartial,
+		return core.NewLifecycleResult(a.target, core.ActionInstall, core.CapabilityPartial,
 			"labdrian-pi package built at "+a.destDir+"; run: pi install "+a.destDir, nil)
 	}
 	if err := a.runPi(bin, "install", a.destDir); err != nil {
-		return NewLifecycleResult(a.target, ActionInstall, CapabilityPartial,
+		return core.NewLifecycleResult(a.target, core.ActionInstall, core.CapabilityPartial,
 			"labdrian-pi package built at "+a.destDir+" but `pi install` failed: "+err.Error(), nil)
 	}
 
 	notes := []string{a.installGaduSubagent(bin)}
-	return NewLifecycleResult(a.target, ActionInstall, CapabilityRestartRequired,
+	return core.NewLifecycleResult(a.target, core.ActionInstall, core.CapabilityRestartRequired,
 		"ran `pi install "+a.destDir+"`; start a new Pi session to load it. "+strings.Join(notes, " "), nil)
 }
 
@@ -114,15 +111,15 @@ func (a PiAdapter) installGaduSubagent(bin string) string {
 	return strings.Join(parts, " ")
 }
 
-func (a PiAdapter) SyncCheck() LifecycleResult {
+func (a PiAdapter) SyncCheck() core.LifecycleResult {
 	if a.overlayRoot == "" {
-		return a.stub(ActionSyncCheck)
+		return a.stub(core.ActionSyncCheck)
 	}
 	disclosure, err := a.packages.Check(a.overlayRoot, a.registryPath, a.destDir)
 	if err != nil {
-		return NewLifecycleResult(a.target, ActionSyncCheck, CapabilityPartial, err.Error()+" ("+disclosure+")", nil)
+		return core.NewLifecycleResult(a.target, core.ActionSyncCheck, core.CapabilityPartial, err.Error()+" ("+disclosure+")", nil)
 	}
-	return NewLifecycleResult(a.target, ActionSyncCheck, CapabilitySupported,
+	return core.NewLifecycleResult(a.target, core.ActionSyncCheck, core.CapabilitySupported,
 		"labdrian-pi package matches the current manifest ("+disclosure+")", nil)
 }
 
@@ -130,9 +127,9 @@ func (a PiAdapter) SyncCheck() LifecycleResult {
 // ~/.pi/agent/settings.json, and longterm-mem MCP-registered in mcp.json
 // (read-only). All proven -> supported; built but unproven -> partial,
 // naming each entry; never built -> unsupported.
-func (a PiAdapter) Status() LifecycleResult {
+func (a PiAdapter) Status() core.LifecycleResult {
 	if !a.piPackageBuilt() {
-		return NewLifecycleResult(a.target, ActionStatus, CapabilityUnsupported,
+		return core.NewLifecycleResult(a.target, core.ActionStatus, core.CapabilityUnsupported,
 			"labdrian-pi package is not built at "+a.destDir+" (run: labdrian-overlay apply --target pi). "+piNoDiscoveryFlagsDisclosure, nil)
 	}
 
@@ -174,17 +171,17 @@ func (a PiAdapter) Status() LifecycleResult {
 	}
 
 	if len(problems) == 0 {
-		return NewLifecycleResult(a.target, ActionStatus, CapabilitySupported,
+		return core.NewLifecycleResult(a.target, core.ActionStatus, core.CapabilitySupported,
 			"labdrian-pi package is built, in sync, listed in ~/.pi/agent/settings.json, longterm-mem is registered in its mcp.json, a subagent runner (gentle-pi native subagents or the legacy Pi Subagents extension) is available, and GADU.md is linked. "+piNoDiscoveryFlagsDisclosure, nil)
 	}
 	// The message names each unproven entry. They are not also passed as reasons: the line that
 	// prints a result would tell them a second time after the message.
-	return NewLifecycleResult(a.target, ActionStatus, CapabilityPartial,
+	return core.NewLifecycleResult(a.target, core.ActionStatus, core.CapabilityPartial,
 		"labdrian-pi status is unproven: "+strings.Join(problems, "; ")+". "+piNoDiscoveryFlagsDisclosure, nil)
 }
 
-func (a PiAdapter) Update() LifecycleResult   { return a.build(ActionUpdate) }
-func (a PiAdapter) Rollback() LifecycleResult { return a.build(ActionRollback) }
+func (a PiAdapter) Update() core.LifecycleResult   { return a.build(core.ActionUpdate) }
+func (a PiAdapter) Rollback() core.LifecycleResult { return a.build(core.ActionRollback) }
 
 // Uninstall removes the overlay-owned GADU.md link first (R-016 — ownership
 // proven by Readlink equality; a foreign entry at the same path is left
@@ -192,9 +189,9 @@ func (a PiAdapter) Rollback() LifecycleResult { return a.build(ActionRollback) }
 // (A2 — NOT `pi uninstall`), then removes the built package directory.
 // `pi remove` owns settings.json cleanup; this adapter never opens it or
 // mcp.json directly, and never uninstalls the Subagents extension package.
-func (a PiAdapter) Uninstall() LifecycleResult {
+func (a PiAdapter) Uninstall() core.LifecycleResult {
 	if !a.piPackageBuilt() {
-		return NewLifecycleResult(a.target, ActionUninstall, CapabilityUnsupported,
+		return core.NewLifecycleResult(a.target, core.ActionUninstall, core.CapabilityUnsupported,
 			"labdrian-pi package is not built at "+a.destDir+"; nothing to uninstall", nil)
 	}
 
@@ -209,18 +206,18 @@ func (a PiAdapter) Uninstall() LifecycleResult {
 
 	bin, err := a.commands.LookPath("pi")
 	if err != nil {
-		return NewLifecycleResult(a.target, ActionUninstall, CapabilityPartial,
+		return core.NewLifecycleResult(a.target, core.ActionUninstall, core.CapabilityPartial,
 			"pi CLI not found on PATH; cannot run `pi remove "+a.destDir+"` ("+err.Error()+")."+linkNote, nil)
 	}
 	if err := a.runPi(bin, "remove", a.destDir); err != nil {
-		return NewLifecycleResult(a.target, ActionUninstall, CapabilityPartial,
+		return core.NewLifecycleResult(a.target, core.ActionUninstall, core.CapabilityPartial,
 			"`pi remove "+a.destDir+"` failed: "+err.Error()+"."+linkNote, nil)
 	}
 	if err := os.RemoveAll(a.destDir); err != nil {
-		return NewLifecycleResult(a.target, ActionUninstall, CapabilityPartial,
+		return core.NewLifecycleResult(a.target, core.ActionUninstall, core.CapabilityPartial,
 			"ran `pi remove "+a.destDir+"` but could not remove the package directory: "+err.Error()+"."+linkNote, nil)
 	}
-	return NewLifecycleResult(a.target, ActionUninstall, CapabilitySupported,
+	return core.NewLifecycleResult(a.target, core.ActionUninstall, core.CapabilitySupported,
 		"removed via `pi remove "+a.destDir+"`; package directory deleted."+linkNote, nil)
 }
 
@@ -235,25 +232,25 @@ func (a PiAdapter) piPackageBuilt() bool {
 // build runs pipkg.Build for Update/Rollback: unsupported without an
 // overlayRoot, partial (never fabricated supported) either way otherwise —
 // a rebuild alone cannot prove Status's per-entry proof.
-func (a PiAdapter) build(action Action) LifecycleResult {
+func (a PiAdapter) build(action core.Action) core.LifecycleResult {
 	if a.overlayRoot == "" {
 		return a.stub(action)
 	}
 	if err := a.packages.Build(a.overlayRoot, a.registryPath, a.destDir); err != nil {
-		return NewLifecycleResult(a.target, action, CapabilityPartial, err.Error(), nil)
+		return core.NewLifecycleResult(a.target, action, core.CapabilityPartial, err.Error(), nil)
 	}
-	return NewLifecycleResult(a.target, action, CapabilityPartial,
+	return core.NewLifecycleResult(a.target, action, core.CapabilityPartial,
 		"labdrian-pi package rebuilt at "+a.destDir+"; run: pi install "+a.destDir, nil)
 }
 
 // stub reports an honest CapabilityUnsupported when the action cannot run
 // without an overlayRoot (OVERLAY_DIR unset).
-func (a PiAdapter) stub(action Action) LifecycleResult {
+func (a PiAdapter) stub(action core.Action) core.LifecycleResult {
 	msg := "pi package delivery (pipkg build/install) cannot run without OVERLAY_DIR set"
-	if action == ActionRollback {
+	if action == core.ActionRollback {
 		msg = "pi lifecycle rollback cannot rebuild without OVERLAY_DIR set"
 	}
-	return NewLifecycleResult(a.target, action, CapabilityUnsupported, msg, nil)
+	return core.NewLifecycleResult(a.target, action, core.CapabilityUnsupported, msg, nil)
 }
 
 // runPi runs the pi CLI at bin with a FIXED argv (verb, path), never a shell string, so no path
@@ -267,313 +264,4 @@ func (a PiAdapter) runPi(bin, verb, path string) error {
 		return fmt.Errorf("%w (output: %s)", err, strings.TrimSpace(string(out)))
 	}
 	return nil
-}
-
-// subagentsExtensionPackage is the fixed argv target R-012 installs when
-// neither accepted package is already present.
-const subagentsExtensionPackage = "npm:pi-subagents-j0k3r"
-
-// subagentsSkipSetting is how the person turned off the extension probe/install (R-012) -- for
-// environments that manage the Subagents extension separately -- quoted back in the note the
-// adapter returns. The composition root reads that setting once (PiOptions.SkipSubagents); the
-// adapter reads no environment.
-const subagentsSkipSetting = "LABDRIAN_PI_SKIP_SUBAGENTS=1"
-
-// subagentsAcceptedPackagePrefixes are the two package names gentle-pi's
-// Subagents extension ships under (D11); either satisfies R-012.
-var subagentsAcceptedPackagePrefixes = []string{"npm:pi-subagents-j0k3r", "npm:pi-subagents"}
-
-// hasAcceptedSubagentsPrefix reports whether entry is one of the accepted
-// package names, with or without an "@version" suffix.
-func hasAcceptedSubagentsPrefix(entry string) bool {
-	for _, prefix := range subagentsAcceptedPackagePrefixes {
-		if entry == prefix || strings.HasPrefix(entry, prefix+"@") {
-			return true
-		}
-	}
-	return false
-}
-
-// ensureSubagentsExtension installs pi-subagents-j0k3r via a FIXED argv
-// (verb, package) when neither accepted package name is already listed
-// (R-012). Always returns a human-readable disclosure/status note; never
-// fails Install as a whole on an install error -- the caller folds the
-// note into its own message instead.
-func (a PiAdapter) ensureSubagentsExtension(bin string, settings piSettings) string {
-	if settings.listsSubagentsExtension() {
-		return "Pi Subagents extension already installed."
-	}
-	disclosure := "installing third-party Pi extension pi-subagents-j0k3r (npm) required for GADU dispatch."
-	if err := a.runPi(bin, "install", subagentsExtensionPackage); err != nil {
-		return disclosure + " `pi install " + subagentsExtensionPackage + "` failed: " + err.Error() + "."
-	}
-	return disclosure + " Ran `pi install " + subagentsExtensionPackage + "`."
-}
-
-// gentlePiPackagePrefix is the fixed package name gentle-pi's own npm
-// entry is listed under in ~/.pi/agent/settings.json.
-const gentlePiPackagePrefix = "npm:gentle-pi"
-
-// minNativeSubagentsVersion is the first gentle-pi release whose README
-// documents the native subagent_* tools replacing the third-party
-// pi-subagents-j0k3r/pi-subagents extension (verified live 2026-09-13
-// against gentle-pi 2.6.0, README.md line 782).
-var minNativeSubagentsVersion = piVersion{major: 2, minor: 6, patch: 0}
-
-// piVersion is a minimal major.minor.patch comparator -- enough to compare
-// gentle-pi's semver-ish version strings without pulling in a full semver
-// dependency. Any unparseable suffix past the numeric patch (a prerelease
-// tag, say) is ignored.
-type piVersion struct {
-	major, minor, patch int
-}
-
-// lessThan reports whether v is strictly older than o.
-func (v piVersion) lessThan(o piVersion) bool {
-	if v.major != o.major {
-		return v.major < o.major
-	}
-	if v.minor != o.minor {
-		return v.minor < o.minor
-	}
-	return v.patch < o.patch
-}
-
-// parsePiVersion parses a "major.minor.patch[...]" string, ignoring any
-// non-numeric suffix on the patch component (e.g. "2.6.0-rc.1" parses as
-// 2.6.0). Returns ok=false when major/minor/patch cannot be parsed as
-// integers.
-func parsePiVersion(s string) (piVersion, bool) {
-	parts := strings.SplitN(strings.TrimSpace(s), ".", 3)
-	if len(parts) < 3 {
-		return piVersion{}, false
-	}
-	patchStr := parts[2]
-	for i, r := range patchStr {
-		if r < '0' || r > '9' {
-			patchStr = patchStr[:i]
-			break
-		}
-	}
-	major, errMajor := strconv.Atoi(parts[0])
-	minor, errMinor := strconv.Atoi(parts[1])
-	patch, errPatch := strconv.Atoi(patchStr)
-	if errMajor != nil || errMinor != nil || errPatch != nil {
-		return piVersion{}, false
-	}
-	return piVersion{major: major, minor: minor, patch: patch}, true
-}
-
-// subagentRunnerState is subagentRunnerState's result: exactly one of
-// native (gentle-pi's own subagent_* tools, gentle-pi >= 2.6.0), legacy
-// (the third-party pi-subagents-j0k3r/pi-subagents extension, no native
-// support detected), conflict (BOTH installed -- the exact state that
-// silently broke dispatch on a live machine 2026-09-13, since installing
-// the obsolete extension leaves gentle-pi's native tools unregistered), or
-// absent (neither installed).
-type subagentRunner string
-
-const (
-	subagentRunnerNative   subagentRunner = "native"
-	subagentRunnerLegacy   subagentRunner = "legacy"
-	subagentRunnerConflict subagentRunner = "conflict"
-	subagentRunnerAbsent   subagentRunner = "absent"
-)
-
-// ensureSubagentRunner decides GADU's Pi dispatch runner at install time
-// (R-012 revised): when gentle-pi's native subagent_* tools are available
-// (>= 2.6.0), the obsolete pi-subagents-j0k3r/pi-subagents extension is
-// NEVER installed -- installing it would leave gentle-pi's native tools
-// unregistered (verified live 2026-09-13, gentle-pi README.md line 782).
-// If that obsolete extension is already listed alongside native support,
-// the conflict is disclosed with the exact removal command, but the
-// overlay never removes a package it does not own. Only when native
-// support is unavailable does this fall back to the legacy extension
-// install path unchanged.
-func (a PiAdapter) ensureSubagentRunner(bin, home string) string {
-	if a.options.SkipSubagents {
-		return "Pi Subagents extension check skipped (" + subagentsSkipSetting + ")."
-	}
-	settings := readPiSettings(home)
-	if settings.nativeSubagents() {
-		if settings.listsSubagentsExtension() {
-			return "gentle-pi native subagents (>= 2.6.0) detected; the installed pi-subagents-j0k3r/pi-subagents extension conflicts with gentle-pi's native subagent tools and must be removed (it is not overlay-owned, so run this yourself): pi remove npm:pi-subagents-j0k3r."
-		}
-		return "gentle-pi native subagents (>= 2.6.0) detected; skipping the legacy Pi Subagents extension install."
-	}
-	return a.ensureSubagentsExtension(bin, settings)
-}
-
-// gaduLinkPath returns the overlay-owned GADU agent link location.
-func gaduLinkPath(home string) string {
-	return filepath.Join(home, ".pi", "agent", "agents", "GADU.md")
-}
-
-// gaduSourcePath returns the package's own generated agents/GADU.md -- the
-// STABLE symlink target across `swap` rebuilds (only the inode changes,
-// design D10).
-func gaduSourcePath(destDir string) string {
-	return filepath.Join(destDir, "agents", "GADU.md")
-}
-
-// gaduLink is gaduLinkState's result: exactly one of missing/current/
-// stale/conflict (D13 -- collapsing these into a single boolean was
-// rejected as it hides which failure mode is present).
-type gaduLink string
-
-const (
-	gaduLinkMissing  gaduLink = "missing"
-	gaduLinkCurrent  gaduLink = "current"
-	gaduLinkStale    gaduLink = "stale"
-	gaduLinkConflict gaduLink = "conflict"
-)
-
-// gaduLinkState reports linkPath's ownership/state relative to
-// expectedTarget. Ownership is proven ONLY by os.Readlink equality with
-// expectedTarget, never by file contents or a side record: missing (no
-// entry), current (our symlink, target resolves), stale (our symlink, but
-// its target no longer exists -- e.g. destDir was rebuilt from scratch),
-// or conflict (a pre-existing regular file, or a symlink pointing
-// elsewhere) -- a conflict is reported and left untouched, never
-// overwritten.
-func gaduLinkState(linkPath, expectedTarget string) gaduLink {
-	info, err := os.Lstat(linkPath)
-	if err != nil {
-		return gaduLinkMissing
-	}
-	if info.Mode()&os.ModeSymlink == 0 {
-		return gaduLinkConflict
-	}
-	target, err := os.Readlink(linkPath)
-	if err != nil || filepath.Clean(target) != filepath.Clean(expectedTarget) {
-		return gaduLinkConflict
-	}
-	if _, err := os.Stat(expectedTarget); err != nil {
-		return gaduLinkStale
-	}
-	return gaduLinkCurrent
-}
-
-// GaduLinkStateForTest exposes gaduLinkState to engine/runtime's external
-// test package (runtime_test), which cannot see the unexported gaduLink
-// type or constants. Test-only surface.
-func GaduLinkStateForTest(linkPath, expectedTarget string) string {
-	return string(gaduLinkState(linkPath, expectedTarget))
-}
-
-// validateGaduFrontmatter mirrors just enough of pi-subagents-j0k3r's own
-// frontmatter parser (config.ts parseFrontmatterWithIssues) to catch the
-// one failure mode that silently drops the subagent at dispatch time: a
-// `tools` field declared BOTH as an inline scalar and a YAML list. `name`
-// and `description` are required (the extension falls back to the
-// filename/a generic description otherwise, which is not what GADU wants);
-// `model` is optional and unconstrained (R-014). The file is read with
-// skills.ReadFrontmatter, the reader the skills lint and the package build
-// use, so the three agree on where the frontmatter is and which keys are
-// at its top level.
-func validateGaduFrontmatter(content string) error {
-	fm, err := skills.ReadFrontmatter([]byte(content))
-	if err != nil {
-		// ReadFrontmatter fails only for a missing fence (a *FrontmatterError); anything it
-		// might return later is not read as a frontmatter either.
-		var fault *skills.FrontmatterError
-		if errors.As(err, &fault) && fault.Fault == skills.NoClosingFence {
-			return fmt.Errorf("gadu frontmatter: missing closing --- delimiter")
-		}
-		return fmt.Errorf("gadu frontmatter: missing opening --- delimiter")
-	}
-	var name, description string
-	var toolsInline, toolsList bool
-	for _, entry := range fm.Entries() {
-		switch entry.Key {
-		case "name":
-			name = entry.Value
-		case "description":
-			description = entry.Value
-		case "tools":
-			toolsInline = toolsInline || entry.Value != ""
-			toolsList = toolsList || entry.Items > 0
-		}
-	}
-	if name == "" {
-		return fmt.Errorf("gadu frontmatter: missing required 'name'")
-	}
-	if description == "" {
-		return fmt.Errorf("gadu frontmatter: missing required 'description'")
-	}
-	if toolsInline && toolsList {
-		return fmt.Errorf("gadu frontmatter: 'tools' declared both as an inline scalar and a YAML list; choose one")
-	}
-	return nil
-}
-
-// linkGaduAgent verifies the package's agents/GADU.md frontmatter (R-014),
-// then symlinks it at ~/.pi/agent/agents/GADU.md (R-013). A pre-existing
-// regular file or a symlink pointing elsewhere is a conflict, reported and
-// left untouched -- never overwritten. A stale link (ours, but its target
-// no longer exists) is recreated.
-func linkGaduAgent(home, destDir string) error {
-	target := gaduSourcePath(destDir)
-	content, err := os.ReadFile(target)
-	if err != nil {
-		return fmt.Errorf("gadu link: package agents/GADU.md not found at %s: %w", target, err)
-	}
-	if err := validateGaduFrontmatter(string(content)); err != nil {
-		return err
-	}
-
-	linkPath := gaduLinkPath(home)
-	switch gaduLinkState(linkPath, target) {
-	case gaduLinkCurrent:
-		return nil
-	case gaduLinkConflict:
-		return fmt.Errorf("gadu link: %s exists and is not the overlay-owned symlink; leaving it untouched", linkPath)
-	case gaduLinkStale:
-		if err := os.Remove(linkPath); err != nil {
-			return fmt.Errorf("gadu link: removing stale link: %w", err)
-		}
-	}
-	if err := os.MkdirAll(filepath.Dir(linkPath), 0755); err != nil {
-		return fmt.Errorf("gadu link: creating agents dir: %w", err)
-	}
-	if err := os.Symlink(target, linkPath); err != nil {
-		return fmt.Errorf("gadu link: creating symlink: %w", err)
-	}
-	return nil
-}
-
-// unlinkGaduAgent removes ~/.pi/agent/agents/GADU.md ONLY when it is the
-// overlay-owned symlink (Readlink equality against destDir's agents/
-// GADU.md). Never touches a conflicting entry or any other file in that
-// directory, and never removes the Subagents extension package itself
-// (R-016).
-func unlinkGaduAgent(home, destDir string) error {
-	linkPath := gaduLinkPath(home)
-	target := gaduSourcePath(destDir)
-	switch gaduLinkState(linkPath, target) {
-	case gaduLinkMissing:
-		return nil
-	case gaduLinkConflict:
-		return fmt.Errorf("gadu link: %s is not the overlay-owned symlink; leaving it untouched", linkPath)
-	default: // current or stale -- still ours
-		return os.Remove(linkPath)
-	}
-}
-
-// isPiMcpRegistered reports whether destDir/mcp.json exists, parses, and
-// carries an mcpServers.longterm-mem entry -- the proof `longterm-mem
-// register --target pi` ran (read-only probe; never written here).
-func isPiMcpRegistered(destDir string) bool {
-	raw, err := os.ReadFile(filepath.Join(destDir, "mcp.json"))
-	if err != nil {
-		return false
-	}
-	var mcp struct {
-		MCPServers map[string]json.RawMessage `json:"mcpServers"`
-	}
-	if json.Unmarshal(raw, &mcp) != nil {
-		return false
-	}
-	_, ok := mcp.MCPServers["longterm-mem"]
-	return ok
 }

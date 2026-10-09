@@ -1,9 +1,14 @@
-package runtime
+package core
 
 import (
 	"path/filepath"
 	"strings"
 )
+
+// LabdrianOverlayDirVariable is the name of the environment variable that Config.LabdrianOverlayDir
+// is read from. The composition root reads it by this name and the OpenCode adapter quotes it in
+// the messages it gives, so the two cannot drift apart.
+const LabdrianOverlayDirVariable = "LABDRIAN_OVERLAY_DIR"
 
 // Config is what a runtime adapter is given about the machine it runs on. The composition root
 // reads the environment once and fills it; an adapter never reads the environment itself, so the
@@ -23,6 +28,11 @@ type Config struct {
 	CodexHome string
 	// OverlayDir is $OVERLAY_DIR as set: the overlay checkout the Pi package is built from.
 	OverlayDir string
+	// LabdrianOverlayDir is $LABDRIAN_OVERLAY_DIR as set, not trimmed or judged: the overlay
+	// checkout whose skills/_shared contracts the OpenCode plugin carries. It is a different
+	// variable from OverlayDir. Only the OpenCode adapter reads it, and reports a value that is not
+	// an absolute path; empty means the checkout above the working directory.
+	LabdrianOverlayDir string
 	// StateDir is $STATE_DIR as set: where the overlay keeps what it deploys.
 	StateDir string
 	// PiSkipSubagents is true when the person turned off the probe and the install of the Pi
@@ -66,6 +76,13 @@ func (c Config) DefaultOpenCodeRoot() string {
 // empty without a home.
 func (c Config) DefaultStateDir() string {
 	return underHome(c.Home, ".labdrian-overlay")
+}
+
+// DefaultClaudeMCPConfig is ~/.claude.json, the Claude Code MCP server registry, or empty without
+// a home. It is a different file from the settings.json under ClaudeRoot (hooks): a sibling of
+// ~/.claude, not a file inside it, and --config-root does not move it.
+func (c Config) DefaultClaudeMCPConfig() string {
+	return underHome(c.Home, ".claude.json")
 }
 
 // ClaudeRoot is the directory the Claude adapter keeps its settings in.

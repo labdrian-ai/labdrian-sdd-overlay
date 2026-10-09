@@ -81,6 +81,7 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/propagator"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/reviewreceipt"
 	runtimepkg "github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime"
+	runtimecore "github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime/core"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/synctrigger"
@@ -525,14 +526,14 @@ func runRuntimeCore(commands runtimepkg.CommandRunner, source pipkg.SourceRepo, 
 		result := runtimeLifecycleResult(adapter, action)
 		fmt.Fprintln(stdout, result.String())
 		if action == "status" {
-			if result.Status != runtimepkg.CapabilitySupported {
+			if result.Status != runtimecore.CapabilitySupported {
 				exit(1)
 				return
 			}
 			exit(0)
 			return
 		}
-		if result.Status == runtimepkg.CapabilityUnsupported || result.Status == runtimepkg.CapabilityPartial {
+		if result.Status == runtimecore.CapabilityUnsupported || result.Status == runtimecore.CapabilityPartial {
 			exit(1)
 			return
 		}
@@ -568,18 +569,18 @@ func runRuntimeCore(commands runtimepkg.CommandRunner, source pipkg.SourceRepo, 
 		switch action {
 		case "status":
 			switch {
-			case result.Status == runtimepkg.CapabilityRestartRequired:
+			case result.Status == runtimecore.CapabilityRestartRequired:
 				actionFailed = true
-			case result.Status == runtimepkg.CapabilityUnsupported:
+			case result.Status == runtimecore.CapabilityUnsupported:
 				actionFailed = true
-			case result.Status == runtimepkg.CapabilityPartial && !(allTargets && current == runtimepkg.TargetCodex):
+			case result.Status == runtimecore.CapabilityPartial && !(allTargets && current == runtimecore.TargetCodex):
 				actionFailed = true
 			}
 		default:
 			switch result.Status {
-			case runtimepkg.CapabilityPartial:
+			case runtimecore.CapabilityPartial:
 				actionFailed = true
-			case runtimepkg.CapabilityUnsupported:
+			case runtimecore.CapabilityUnsupported:
 				actionFailed = true
 			}
 		}
@@ -596,7 +597,7 @@ func runRuntimeCore(commands runtimepkg.CommandRunner, source pipkg.SourceRepo, 
 }
 
 // parseRuntimeArgs parses minimal runtime subcommand arguments.
-func parseRuntimeArgs(args []string, registry *runtimepkg.Registry) (action string, target runtimepkg.Target, configRoot, component, stateDir string, err error) {
+func parseRuntimeArgs(args []string, registry *runtimecore.Registry) (action string, target runtimecore.Target, configRoot, component, stateDir string, err error) {
 	if len(args) == 0 {
 		return "", "", "", "", "", fmt.Errorf("error: runtime requires an action")
 	}
@@ -605,7 +606,7 @@ func parseRuntimeArgs(args []string, registry *runtimepkg.Registry) (action stri
 		return "", "", "", "", "", fmt.Errorf("error: runtime requires an action: status | install | update | uninstall | capabilities")
 	}
 
-	target = runtimepkg.TargetOpenCode
+	target = runtimecore.TargetOpenCode
 	component = componentRuntimeParity
 	for i := 1; i < len(args); i++ {
 		a := args[i]
@@ -857,7 +858,7 @@ func runReviewReceiptHook(args []string) {
 	os.Exit(reply.Code())
 }
 
-func runtimeLifecycleResult(adapter runtimepkg.Adapter, action string) runtimepkg.LifecycleResult {
+func runtimeLifecycleResult(adapter runtimecore.Adapter, action string) runtimecore.LifecycleResult {
 	switch action {
 	case "status":
 		return adapter.Status()
@@ -868,7 +869,7 @@ func runtimeLifecycleResult(adapter runtimepkg.Adapter, action string) runtimepk
 	case "uninstall":
 		return adapter.Uninstall()
 	default:
-		return runtimepkg.NewLifecycleResult(adapter.Target(), "status", runtimepkg.CapabilityUnsupported, "unknown runtime action", nil)
+		return runtimecore.NewLifecycleResult(adapter.Target(), "status", runtimecore.CapabilityUnsupported, "unknown runtime action", nil)
 	}
 }
 

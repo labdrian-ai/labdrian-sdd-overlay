@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime/core"
 )
 
 // TargetLongtermMem is the pseudo-target used for the longterm-mem
@@ -13,7 +15,7 @@ import (
 // the registered runtimes or all for the runtime-parity adapters, while
 // --component longterm-mem is an orthogonal CLI axis (D4) whose single
 // adapter call always spans all three runtimes internally.
-const TargetLongtermMem Target = "longterm-mem"
+const TargetLongtermMem core.Target = "longterm-mem"
 
 // The status matrix this adapter feeds -- LongtermMemComponentState,
 // EvaluateLongtermMemComponentStatus and the named partial reasons -- lives
@@ -60,7 +62,7 @@ type LongtermMemAdapter struct {
 // component spans three runtimes and has no single root to give. A binaryPath left empty is the one
 // under the DEFAULT state dir even when a stateDir is given: a caller that overrides the state dir
 // derives the binary from it (LongtermMemBinaryPathForStateDir), as the command line does.
-func NewLongtermMemAdapter(cfg Config, stateDir, binaryPath string) LongtermMemAdapter {
+func NewLongtermMemAdapter(cfg core.Config, stateDir, binaryPath string) LongtermMemAdapter {
 	if stateDir == "" {
 		stateDir = cfg.DefaultStateDir()
 	}
@@ -70,7 +72,7 @@ func NewLongtermMemAdapter(cfg Config, stateDir, binaryPath string) LongtermMemA
 	return LongtermMemAdapter{
 		StateDir:           stateDir,
 		BinaryPath:         binaryPath,
-		ClaudeConfigPath:   claudeMCPConfigPath(cfg),
+		ClaudeConfigPath:   cfg.DefaultClaudeMCPConfig(),
 		OpenCodeConfigPath: openCodeMCPConfigPath(cfg),
 		CodexConfigPath:    codexMCPConfigPath(cfg),
 	}
@@ -100,16 +102,9 @@ func LongtermMemBinaryPathForStateDir(stateDir string) string {
 	return filepath.Join(stateDir, "bin", "longterm-mem")
 }
 
-// claudeMCPConfigPath is ~/.claude.json, the Claude Code MCP server registry. This is a DIFFERENT
-// file than ClaudeAdapter's settings.json (hooks); ~/.claude.json is a sibling of ~/.claude/, not
-// a file inside it. Empty without a home.
-func claudeMCPConfigPath(cfg Config) string {
-	return underHome(cfg.Home, ".claude.json")
-}
-
 // openCodeMCPConfigPath reuses the root the OpenCodeAdapter works in (10a.9: genuinely shared,
 // since both need "where does opencode's global config live").
-func openCodeMCPConfigPath(cfg Config) string {
+func openCodeMCPConfigPath(cfg core.Config) string {
 	root := cfg.DefaultOpenCodeRoot()
 	if root == "" {
 		return ""
@@ -118,7 +113,7 @@ func openCodeMCPConfigPath(cfg Config) string {
 }
 
 // codexMCPConfigPath reuses the root the CodexAdapter works in (10a.9).
-func codexMCPConfigPath(cfg Config) string {
+func codexMCPConfigPath(cfg core.Config) string {
 	root := cfg.DefaultCodexRoot()
 	if root == "" {
 		return ""
@@ -126,8 +121,8 @@ func codexMCPConfigPath(cfg Config) string {
 	return filepath.Join(root, "config.toml")
 }
 
-func (a LongtermMemAdapter) Target() Target         { return TargetLongtermMem }
-func (a LongtermMemAdapter) Apply() LifecycleResult { return a.Install() }
+func (a LongtermMemAdapter) Target() core.Target         { return TargetLongtermMem }
+func (a LongtermMemAdapter) Apply() core.LifecycleResult { return a.Install() }
 
 // Install records the component's registration and reports a per-runtime
 // status (R-014 scenario: "Install records registration and reports
@@ -135,7 +130,7 @@ func (a LongtermMemAdapter) Apply() LifecycleResult { return a.Install() }
 // under StateDir. It never writes to any runtime's own config file — that
 // belongs to the module-owned "register" step that runs before this
 // (D4 data flow: build → register → engine record).
-func (a LongtermMemAdapter) Install() LifecycleResult {
+func (a LongtermMemAdapter) Install() core.LifecycleResult {
 	targets := a.observeAllTargets()
 
 	reg := longtermMemRegistration{
@@ -171,30 +166,30 @@ func (a LongtermMemAdapter) Install() LifecycleResult {
 		}
 	}
 	if err := a.writeRegistration(reg); err != nil {
-		return a.aggregateResult(ActionInstall, nil, fmt.Sprintf("registration could not be recorded: %v", err))
+		return a.aggregateResult(core.ActionInstall, nil, fmt.Sprintf("registration could not be recorded: %v", err))
 	}
 
 	results := a.evaluateAll(targets, &reg)
-	return a.aggregateResult(ActionInstall, results, "")
+	return a.aggregateResult(core.ActionInstall, results, "")
 }
 
 // Status reports the per-runtime status directly from the existing
 // registration record and read-only config inspection — no build step, no
 // write (R-014 scenario: "Status and uninstall report without requiring a
 // build").
-func (a LongtermMemAdapter) Status() LifecycleResult {
+func (a LongtermMemAdapter) Status() core.LifecycleResult {
 	targets := a.observeAllTargets()
 	reg, err := a.readRegistration()
 	if err != nil {
-		return a.aggregateResult(ActionStatus, nil, fmt.Sprintf("registration could not be read: %v", err))
+		return a.aggregateResult(core.ActionStatus, nil, fmt.Sprintf("registration could not be read: %v", err))
 	}
 	results := a.evaluateAll(targets, reg)
-	return a.aggregateResult(ActionStatus, results, "")
+	return a.aggregateResult(core.ActionStatus, results, "")
 }
 
-func (a LongtermMemAdapter) SyncCheck() LifecycleResult {
+func (a LongtermMemAdapter) SyncCheck() core.LifecycleResult {
 	result := a.Status()
-	result.Action = ActionSyncCheck
+	result.Action = core.ActionSyncCheck
 	return result
 }
 
@@ -220,17 +215,17 @@ func (a LongtermMemAdapter) SyncCheck() LifecycleResult {
 // This says nothing about what a SUBSEQUENT status reports; that is the
 // separate constraint runtime-lifecycle's "Claude uninstall removes owned
 // lifecycle state" scenario places on status, not on uninstall's own result.
-func (a LongtermMemAdapter) Uninstall() LifecycleResult {
+func (a LongtermMemAdapter) Uninstall() core.LifecycleResult {
 	path := a.registrationPath()
 	if path == "" {
-		return NewLifecycleResult(TargetLongtermMem, ActionUninstall, CapabilityUnsupported,
+		return core.NewLifecycleResult(TargetLongtermMem, core.ActionUninstall, core.CapabilityUnsupported,
 			LongtermMemReasonConfigRootUnresolvable+": state dir could not be resolved; set HOME", nil)
 	}
 
 	removed := true
 	if err := os.Remove(path); err != nil {
 		if !os.IsNotExist(err) {
-			return NewLifecycleResult(TargetLongtermMem, ActionUninstall, CapabilityUnsupported,
+			return core.NewLifecycleResult(TargetLongtermMem, core.ActionUninstall, core.CapabilityUnsupported,
 				fmt.Sprintf("registration could not be removed: %v", err), nil)
 		}
 		removed = false
@@ -240,7 +235,7 @@ func (a LongtermMemAdapter) Uninstall() LifecycleResult {
 	if !removed {
 		message = "longterm-mem registration was already absent"
 	}
-	return NewLifecycleResult(TargetLongtermMem, ActionUninstall, CapabilitySupported,
+	return core.NewLifecycleResult(TargetLongtermMem, core.ActionUninstall, core.CapabilitySupported,
 		message, a.remainingObservationLines())
 }
 
@@ -253,7 +248,7 @@ func (a LongtermMemAdapter) Uninstall() LifecycleResult {
 func (a LongtermMemAdapter) remainingObservationLines() []string {
 	targets := a.observeAllTargets()
 	lines := make([]string, 0, 3)
-	for _, name := range []Target{TargetClaude, TargetOpenCode, TargetCodex} {
+	for _, name := range []core.Target{core.TargetClaude, core.TargetOpenCode, core.TargetCodex} {
 		obs := targets[string(name)]
 		lines = append(lines, string(name)+": "+remainingObservation(obs))
 	}
@@ -276,24 +271,24 @@ func remainingObservation(obs longtermMemObservation) string {
 // scenario "No update or rollback surface is offered"). No file is read or
 // written — the refusal happens before any adapter I/O, matching the
 // CLI-layer parse-time refusal in cmd/main.go.
-func (a LongtermMemAdapter) Update() LifecycleResult {
-	return NewLifecycleResult(TargetLongtermMem, ActionUpdate, CapabilityUnsupported,
+func (a LongtermMemAdapter) Update() core.LifecycleResult {
+	return core.NewLifecycleResult(TargetLongtermMem, core.ActionUpdate, core.CapabilityUnsupported,
 		"longterm-mem does not support update; reinstall to pick up a new binary or registration",
 		[]string{"capability not offered: use install to re-record the current state"})
 }
 
 // Rollback refuses explicitly for the same reason as Update — see above.
-func (a LongtermMemAdapter) Rollback() LifecycleResult {
-	return NewLifecycleResult(TargetLongtermMem, ActionRollback, CapabilityUnsupported,
+func (a LongtermMemAdapter) Rollback() core.LifecycleResult {
+	return core.NewLifecycleResult(TargetLongtermMem, core.ActionRollback, core.CapabilityUnsupported,
 		"longterm-mem does not support rollback; uninstall then reinstall instead",
 		[]string{"capability not offered: no versioned rollback surface exists"})
 }
 
 // --- observation to status (10a.1) ---
 
-func (a LongtermMemAdapter) evaluateAll(targets map[string]longtermMemObservation, reg *longtermMemRegistration) map[string]LifecycleResult {
-	results := map[string]LifecycleResult{}
-	for _, name := range []Target{TargetClaude, TargetOpenCode, TargetCodex} {
+func (a LongtermMemAdapter) evaluateAll(targets map[string]longtermMemObservation, reg *longtermMemRegistration) map[string]core.LifecycleResult {
+	results := map[string]core.LifecycleResult{}
+	for _, name := range []core.Target{core.TargetClaude, core.TargetOpenCode, core.TargetCodex} {
 		obs := targets[string(name)]
 		var record longtermMemTargetRecord
 		recordPresent := false
@@ -313,7 +308,7 @@ func (a LongtermMemAdapter) evaluateAll(targets map[string]longtermMemObservatio
 		if reason != "" {
 			message += " — " + reason
 		}
-		results[string(name)] = NewLifecycleResult(name, ActionStatus, status, message, nil)
+		results[string(name)] = core.NewLifecycleResult(name, core.ActionStatus, status, message, nil)
 	}
 	return results
 }
@@ -322,14 +317,14 @@ func (a LongtermMemAdapter) evaluateAll(targets map[string]longtermMemObservatio
 // the Adapter interface's single-result contract: the overall status is the
 // worst of the three (unsupported > partial > supported), and every
 // per-runtime line is preserved verbatim in Reasons so nothing is lost.
-func (a LongtermMemAdapter) aggregateResult(action Action, perTarget map[string]LifecycleResult, overrideMessage string) LifecycleResult {
+func (a LongtermMemAdapter) aggregateResult(action core.Action, perTarget map[string]core.LifecycleResult, overrideMessage string) core.LifecycleResult {
 	if overrideMessage != "" {
-		return NewLifecycleResult(TargetLongtermMem, action, CapabilityUnsupported, overrideMessage, nil)
+		return core.NewLifecycleResult(TargetLongtermMem, action, core.CapabilityUnsupported, overrideMessage, nil)
 	}
 
-	overall := CapabilitySupported
+	overall := core.CapabilitySupported
 	var reasons []string
-	for _, name := range []Target{TargetClaude, TargetOpenCode, TargetCodex} {
+	for _, name := range []core.Target{core.TargetClaude, core.TargetOpenCode, core.TargetCodex} {
 		result, ok := perTarget[string(name)]
 		if !ok {
 			continue
@@ -337,14 +332,14 @@ func (a LongtermMemAdapter) aggregateResult(action Action, perTarget map[string]
 		reasons = append(reasons, result.Message)
 		overall = worseLongtermMemStatus(overall, result.Status)
 	}
-	return NewLifecycleResult(TargetLongtermMem, action, overall, "longterm-mem per-runtime status", reasons)
+	return core.NewLifecycleResult(TargetLongtermMem, action, overall, "longterm-mem per-runtime status", reasons)
 }
 
-func worseLongtermMemStatus(a, b CapabilityStatus) CapabilityStatus {
-	rank := map[CapabilityStatus]int{
-		CapabilitySupported:   0,
-		CapabilityPartial:     1,
-		CapabilityUnsupported: 2,
+func worseLongtermMemStatus(a, b core.CapabilityStatus) core.CapabilityStatus {
+	rank := map[core.CapabilityStatus]int{
+		core.CapabilitySupported:   0,
+		core.CapabilityPartial:     1,
+		core.CapabilityUnsupported: 2,
 	}
 	if rank[b] > rank[a] {
 		return b

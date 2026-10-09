@@ -499,7 +499,7 @@ func contractGoldenCases() []contractGoldenCase {
 			w.opencodeInstall("no frontmatter here", "")
 			w.opencodeInstall(contractDoc(fmExcluded, fmInject), "")
 		}},
-		{"runtime-opencode-skips-an-oo-contract-it-cannot-use", func(w *contractWorld) {
+		{"runtime-opencode-refuses-an-oo-contract-it-cannot-use", func(w *contractWorld) {
 			valid := contractDoc(fmApplies, fmExcluded, fmInject)
 			w.opencodeInstall(valid, "no frontmatter here")
 			w.opencodeInstall(valid, contractDoc(fmExcluded, fmInject, "language_context: [typescript]"))
@@ -515,17 +515,17 @@ func contractGoldenCases() []contractGoldenCase {
 			w.opencodeInstall(contractDoc(fmApplies, fmExcluded, fmInject, "language_context: typescript"), "")
 			w.opencodeInstall(contractDoc(fmApplies, fmExcluded, fmInject, "context_operator: prompt_contains"), "")
 		}},
-		{"runtime-opencode-phases-without-brackets-accepted-today", func(w *contractWorld) {
+		{"runtime-opencode-refuses-phases-without-brackets", func(w *contractWorld) {
 			w.opencodeInstall(contractDoc("applies_to_phases: sdd-tasks, sdd-apply", fmExcluded, fmInject), "")
 		}},
-		{"runtime-opencode-oo-phases-without-brackets-accepted-today", func(w *contractWorld) {
+		{"runtime-opencode-refuses-oo-phases-without-brackets", func(w *contractWorld) {
 			valid := contractDoc(fmApplies, fmExcluded, fmInject)
 			w.opencodeInstall(valid, contractDoc("applies_to_phases: sdd-design, sdd-apply", "excluded_phases: sdd-propose", fmInject, "language_context: [typescript]"))
 		}},
 		{"runtime-opencode-phases-quoted-items-accepted-today", func(w *contractWorld) {
 			w.opencodeInstall(contractDoc(`applies_to_phases: ["sdd-tasks", 'sdd-apply']`, `excluded_phases: ["sdd-propose"]`, fmInject), "")
 		}},
-		{"runtime-opencode-excluded-with-no-value-accepted-today", func(w *contractWorld) {
+		{"runtime-opencode-refuses-excluded-with-no-value", func(w *contractWorld) {
 			w.opencodeInstall(contractDoc(fmApplies, "excluded_phases:", fmInject), "")
 		}},
 	}

@@ -1,14 +1,14 @@
 $ runtime install --target opencode --config-root <CONFIG>
 exit: 1
 --- stdout ---
-[opencode] install: partial — OpenCode prompt config could not be derived from minimalism-contract frontmatter: contract file has no YAML frontmatter (expected content between --- delimiters)
+[opencode] install: partial — OpenCode prompt config could not be derived from the contracts: skills/_shared/minimalism-contract.md: contract file has no YAML frontmatter (expected content between --- delimiters)
 --- stderr ---
 --- prompt_config ---
 (no configuration written)
 $ runtime install --target opencode --config-root <CONFIG>
 exit: 1
 --- stdout ---
-[opencode] install: partial — OpenCode prompt config could not be derived from minimalism-contract frontmatter: contract frontmatter missing or empty applies_to_phases: cannot derive scope without knowing which phases to inject into
+[opencode] install: partial — OpenCode prompt config could not be derived from the contracts: skills/_shared/minimalism-contract.md: contract frontmatter missing or empty applies_to_phases: cannot derive scope without knowing which phases to inject into
 --- stderr ---
 --- prompt_config ---
 (no configuration written)

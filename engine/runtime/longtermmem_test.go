@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	engineRuntime "github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime/core"
 )
 
 // longtermMemFixture builds a self-contained set of temp paths for one
@@ -34,7 +35,7 @@ func newLongtermMemFixture(t *testing.T) longtermMemFixture {
 }
 
 func (f longtermMemFixture) adapter() engineRuntime.LongtermMemAdapter {
-	a := engineRuntime.NewLongtermMemAdapter(engineRuntime.Config{}, f.stateDir, f.binaryPath)
+	a := engineRuntime.NewLongtermMemAdapter(core.Config{}, f.stateDir, f.binaryPath)
 	a.ClaudeConfigPath = f.claudePath
 	a.OpenCodeConfigPath = f.openCodePath
 	a.CodexConfigPath = f.codexPath
@@ -172,7 +173,7 @@ func TestLongtermMemAdapter_AbsentRuntimeIsNotADefect(t *testing.T) {
 
 	a := f.adapter()
 	install := a.Install()
-	if install.Status != engineRuntime.CapabilitySupported {
+	if install.Status != core.CapabilitySupported {
 		t.Fatalf("Install() on a machine running only Claude Code = %v, want supported; reasons=%v", install.Status, install.Reasons)
 	}
 	for _, target := range []string{"opencode", "codex"} {
@@ -183,7 +184,7 @@ func TestLongtermMemAdapter_AbsentRuntimeIsNotADefect(t *testing.T) {
 	}
 
 	status := a.Status()
-	if status.Status != engineRuntime.CapabilitySupported {
+	if status.Status != core.CapabilitySupported {
 		t.Fatalf("Status() after that install = %v, want supported; reasons=%v", status.Status, status.Reasons)
 	}
 }
@@ -225,7 +226,7 @@ func TestLongtermMemAdapter_PresentRuntimeWithoutEntryIsNotADefect(t *testing.T)
 	f.writeCodexConfigWithoutEntry(t)
 
 	result := f.adapter().Status()
-	if result.Status != engineRuntime.CapabilitySupported {
+	if result.Status != core.CapabilitySupported {
 		t.Fatalf("Status() with three installed-but-unregistered runtimes = %v, want supported; reasons=%v", result.Status, result.Reasons)
 	}
 	for _, target := range []string{"claude", "opencode", "codex"} {
@@ -272,7 +273,7 @@ func TestLongtermMemAdapter_RecordWithoutEntryStillReportsDrift(t *testing.T) {
 	f.writeClaudeEntry(t)
 
 	a := f.adapter()
-	if install := a.Install(); install.Status != engineRuntime.CapabilitySupported {
+	if install := a.Install(); install.Status != core.CapabilitySupported {
 		t.Fatalf("Install() with a real claude entry = %v, want supported; reasons=%v", install.Status, install.Reasons)
 	}
 
@@ -280,7 +281,7 @@ func TestLongtermMemAdapter_RecordWithoutEntryStillReportsDrift(t *testing.T) {
 	f.writeClaudeConfigWithoutEntry(t)
 
 	status := a.Status()
-	if status.Status != engineRuntime.CapabilityPartial {
+	if status.Status != core.CapabilityPartial {
 		t.Fatalf("Status() after the recorded entry vanished = %v, want partial; reasons=%v", status.Status, status.Reasons)
 	}
 	line := reasonFor(t, status.Reasons, "claude")
@@ -310,7 +311,7 @@ func TestLongtermMemAdapter_ForeignEntryIsNeverAdoptedAsOurOwn(t *testing.T) {
 
 	a := f.adapter()
 	install := a.Install()
-	if install.Status != engineRuntime.CapabilityPartial {
+	if install.Status != core.CapabilityPartial {
 		t.Fatalf("Install() over three foreign entries = %v, want partial — adopting them silently is the A2 defect; reasons=%v", install.Status, install.Reasons)
 	}
 
@@ -332,7 +333,7 @@ func TestLongtermMemAdapter_ForeignEntryIsNeverAdoptedAsOurOwn(t *testing.T) {
 	// And a second run must not launder it either: status reads the record
 	// back and must still report the same unmanaged entry.
 	status := a.Status()
-	if status.Status != engineRuntime.CapabilityPartial {
+	if status.Status != core.CapabilityPartial {
 		t.Fatalf("Status() after that install = %v, want partial; reasons=%v", status.Status, status.Reasons)
 	}
 }
@@ -356,7 +357,7 @@ func TestLongtermMemAdapter_UninstallReportsItsOwnVerdict(t *testing.T) {
 		a.Install()
 
 		result := a.Uninstall()
-		if result.Status != engineRuntime.CapabilitySupported {
+		if result.Status != core.CapabilitySupported {
 			t.Fatalf("Uninstall() after a healthy install = %v, want supported; message=%q reasons=%v", result.Status, result.Message, result.Reasons)
 		}
 		regPath := filepath.Join(f.stateDir, "longterm-mem-registration.json")
@@ -369,7 +370,7 @@ func TestLongtermMemAdapter_UninstallReportsItsOwnVerdict(t *testing.T) {
 		f := newLongtermMemFixture(t)
 		// Nothing was ever installed: the requested end state already holds.
 		result := f.adapter().Uninstall()
-		if result.Status != engineRuntime.CapabilitySupported {
+		if result.Status != core.CapabilitySupported {
 			t.Fatalf("Uninstall() with no registration = %v, want supported (the end state holds); message=%q reasons=%v", result.Status, result.Message, result.Reasons)
 		}
 	})
@@ -378,7 +379,7 @@ func TestLongtermMemAdapter_UninstallReportsItsOwnVerdict(t *testing.T) {
 		a := newLongtermMemFixture(t).adapter()
 		a.StateDir = ""
 		result := a.Uninstall()
-		if result.Status != engineRuntime.CapabilityUnsupported {
+		if result.Status != core.CapabilityUnsupported {
 			t.Fatalf("Uninstall() with an unresolvable state dir = %v, want unsupported; message=%q", result.Status, result.Message)
 		}
 	})
@@ -400,7 +401,7 @@ func TestLongtermMemAdapter_UninstallReportsItsOwnVerdict(t *testing.T) {
 		// The lines are INFORMATION about what remains, not complaints:
 		// a successful uninstall must never describe itself as partial.
 		for _, line := range result.Reasons {
-			if strings.Contains(line, string(engineRuntime.CapabilityPartial)) {
+			if strings.Contains(line, string(core.CapabilityPartial)) {
 				t.Fatalf("Uninstall() reason %q reads as a status complaint; the lines must describe what was observed, not re-run the install-health matrix", line)
 			}
 		}
@@ -421,7 +422,7 @@ func TestLongtermMemAdapter_InstallRecordsRegistrationAndReportsStatus(t *testin
 
 	result := f.adapter().Install()
 
-	if result.Status != engineRuntime.CapabilitySupported {
+	if result.Status != core.CapabilitySupported {
 		t.Fatalf("Install() status = %v (message=%q, reasons=%v), want supported", result.Status, result.Message, result.Reasons)
 	}
 	for _, target := range []string{"claude", "opencode", "codex"} {
@@ -481,7 +482,7 @@ func TestLongtermMemAdapter_StatusAndUninstallRequireNoBuild(t *testing.T) {
 	// missing-binary reason; Status() must match it exactly without needing
 	// a build step to succeed or fail differently.
 	installResult := a.Install()
-	if installResult.Status != engineRuntime.CapabilityPartial {
+	if installResult.Status != core.CapabilityPartial {
 		t.Fatalf("Install() without a binary should be partial, got %v", installResult.Status)
 	}
 	if !containsReason(installResult.Reasons, engineRuntime.LongtermMemReasonMissingBinary) {
@@ -489,7 +490,7 @@ func TestLongtermMemAdapter_StatusAndUninstallRequireNoBuild(t *testing.T) {
 	}
 
 	statusResult := a.Status()
-	if statusResult.Status != engineRuntime.CapabilityPartial {
+	if statusResult.Status != core.CapabilityPartial {
 		t.Fatalf("Status() = %v, want partial (missing binary), got reasons %v", statusResult.Status, statusResult.Reasons)
 	}
 	if !containsReason(statusResult.Reasons, engineRuntime.LongtermMemReasonMissingBinary) {
@@ -507,7 +508,7 @@ func TestLongtermMemAdapter_StatusAndUninstallRequireNoBuild(t *testing.T) {
 	// install-health matrix, whose `supported` row describes a LIVE
 	// installation and so could never be reached after a successful
 	// removal. See TestLongtermMemAdapter_UninstallReportsItsOwnVerdict.
-	if uninstallResult.Status != engineRuntime.CapabilitySupported {
+	if uninstallResult.Status != core.CapabilitySupported {
 		t.Fatalf("Uninstall() = %v, want supported (it removed what it owns, with no build step); got reasons %v", uninstallResult.Status, uninstallResult.Reasons)
 	}
 }
@@ -532,7 +533,7 @@ func TestLongtermMemAdapter_UpdateAndRollbackRefused(t *testing.T) {
 	a := f.adapter()
 
 	updateResult := a.Update()
-	if updateResult.Status != engineRuntime.CapabilityUnsupported {
+	if updateResult.Status != core.CapabilityUnsupported {
 		t.Fatalf("Update() status = %v, want unsupported (explicit refusal)", updateResult.Status)
 	}
 	if updateResult.Message == "" {
@@ -543,7 +544,7 @@ func TestLongtermMemAdapter_UpdateAndRollbackRefused(t *testing.T) {
 	}
 
 	rollbackResult := a.Rollback()
-	if rollbackResult.Status != engineRuntime.CapabilityUnsupported {
+	if rollbackResult.Status != core.CapabilityUnsupported {
 		t.Fatalf("Rollback() status = %v, want unsupported (explicit refusal)", rollbackResult.Status)
 	}
 	if rollbackResult.Message == "" {
@@ -565,7 +566,7 @@ func TestLongtermMemAdapter_UpdateAndRollbackRefused(t *testing.T) {
 func TestNewLongtermMemAdapterDefaultsFollowTheConfig(t *testing.T) {
 	xdg := t.TempDir()
 	codexHome := t.TempDir()
-	cfg := engineRuntime.Config{Home: "/home/p", XDGConfigHome: xdg, CodexHome: codexHome, ConfigRoot: "/ignored"}
+	cfg := core.Config{Home: "/home/p", XDGConfigHome: xdg, CodexHome: codexHome, ConfigRoot: "/ignored"}
 
 	a := engineRuntime.NewLongtermMemAdapter(cfg, "", "")
 
@@ -583,7 +584,7 @@ func TestNewLongtermMemAdapterDefaultsFollowTheConfig(t *testing.T) {
 }
 
 func TestNewLongtermMemAdapterGivenPathsWinOverTheConfig(t *testing.T) {
-	a := engineRuntime.NewLongtermMemAdapter(engineRuntime.Config{Home: "/home/p"}, "/s", "/s/bin/lm")
+	a := engineRuntime.NewLongtermMemAdapter(core.Config{Home: "/home/p"}, "/s", "/s/bin/lm")
 	if a.StateDir != "/s" || a.BinaryPath != "/s/bin/lm" {
 		t.Errorf("StateDir, BinaryPath = %q, %q, want the ones given", a.StateDir, a.BinaryPath)
 	}
@@ -594,14 +595,14 @@ func TestNewLongtermMemAdapterGivenPathsWinOverTheConfig(t *testing.T) {
 // the caller that overrides the state dir derives the binary from it
 // (LongtermMemBinaryPathForStateDir), as the command line does.
 func TestNewLongtermMemAdapterLeavesTheBinaryToTheDefaultStateDirWhenOnlyTheStateDirIsGiven(t *testing.T) {
-	a := engineRuntime.NewLongtermMemAdapter(engineRuntime.Config{Home: "/home/p"}, "/s", "")
+	a := engineRuntime.NewLongtermMemAdapter(core.Config{Home: "/home/p"}, "/s", "")
 	if got := filepath.ToSlash(a.BinaryPath); got != "/home/p/.labdrian-overlay/bin/longterm-mem" {
 		t.Errorf("BinaryPath = %q, want the one under the default state dir", got)
 	}
 }
 
 func TestNewLongtermMemAdapterWithoutAHomeHasNoDefaultPaths(t *testing.T) {
-	a := engineRuntime.NewLongtermMemAdapter(engineRuntime.Config{}, "", "")
+	a := engineRuntime.NewLongtermMemAdapter(core.Config{}, "", "")
 	for name, got := range map[string]string{
 		"state dir": a.StateDir, "binary": a.BinaryPath,
 		"claude": a.ClaudeConfigPath, "opencode": a.OpenCodeConfigPath, "codex": a.CodexConfigPath,

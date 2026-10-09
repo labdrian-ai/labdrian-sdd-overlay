@@ -11,6 +11,7 @@ import (
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/pipkg"
 	engineRuntime "github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime/core"
 )
 
 // newPiAdapterAt builds the Pi adapter over the given build paths, the home of this test process,
@@ -86,7 +87,7 @@ func TestPiAdapter_ApplyInstallSyncCheck_WiredToPipkg(t *testing.T) {
 	adapter := newPiAdapterAt(t, overlayRoot, registryPath, destDir)
 
 	applyResult := adapter.Apply()
-	if applyResult.Status == engineRuntime.CapabilityUnsupported {
+	if applyResult.Status == core.CapabilityUnsupported {
 		t.Fatalf("Apply with real paths must not be unsupported, got: %s", applyResult)
 	}
 	if _, err := os.Stat(filepath.Join(destDir, "package.json")); err != nil {
@@ -94,12 +95,12 @@ func TestPiAdapter_ApplyInstallSyncCheck_WiredToPipkg(t *testing.T) {
 	}
 
 	installResult := adapter.Install()
-	if installResult.Status == engineRuntime.CapabilityUnsupported {
+	if installResult.Status == core.CapabilityUnsupported {
 		t.Fatalf("Install with real paths must not be unsupported, got: %s", installResult)
 	}
 
 	syncResult := adapter.SyncCheck()
-	if syncResult.Status != engineRuntime.CapabilitySupported {
+	if syncResult.Status != core.CapabilitySupported {
 		t.Fatalf("SyncCheck right after a build must report supported (no drift), got: %s", syncResult)
 	}
 }
@@ -110,8 +111,8 @@ func TestPiAdapter_ApplyInstallSyncCheck_WiredToPipkg(t *testing.T) {
 // OVERLAY_DIR unset, wiring the pipkg calls must not fabricate success.
 func TestPiAdapter_ApplyWithoutOverlayRoot_StaysHonestlyUnsupported(t *testing.T) {
 	adapter := newPiAdapterAt(t, "", "", t.TempDir())
-	for _, result := range []engineRuntime.LifecycleResult{adapter.Apply(), adapter.Install(), adapter.SyncCheck()} {
-		if result.Status != engineRuntime.CapabilityUnsupported {
+	for _, result := range []core.LifecycleResult{adapter.Apply(), adapter.Install(), adapter.SyncCheck()} {
+		if result.Status != core.CapabilityUnsupported {
 			t.Fatalf("%s with empty overlayRoot must stay unsupported, got: %s", result.Action, result)
 		}
 	}
@@ -272,8 +273,8 @@ console.log(JSON.stringify({ valid, malformed }));
 	}
 
 	expected := gateBasePrompt
-	expected = engineRuntime.InjectPrompt(expected, minimalismPath, gateHeader)
-	expected = engineRuntime.InjectPrompt(expected, antiGenericPath, gateHeader)
+	expected = core.InjectPrompt(expected, minimalismPath, gateHeader)
+	expected = core.InjectPrompt(expected, antiGenericPath, gateHeader)
 
 	for _, key := range []string{"tasks", "apply", "tasksAgain"} {
 		got := results.Valid[key]
@@ -287,16 +288,16 @@ console.log(JSON.stringify({ valid, malformed }));
 		}
 	}
 
-	malformedEntry := engineRuntime.CanonicalEntry(malformedMinimalismPath)
-	otherEntry := engineRuntime.CanonicalEntry(malformedAntiGenericPath)
+	malformedEntry := core.CanonicalEntry(malformedMinimalismPath)
+	otherEntry := core.CanonicalEntry(malformedAntiGenericPath)
 	got := results.Malformed["tasks"]
 	if got.SystemPrompt == nil {
 		t.Fatal("malformed frontmatter must not abort the handler (fail-safe, never throw)")
 	}
-	if !engineRuntime.HasExactEntry(*got.SystemPrompt, malformedAntiGenericPath) {
+	if !core.HasExactEntry(*got.SystemPrompt, malformedAntiGenericPath) {
 		t.Errorf("valid contract %q must still be injected alongside a malformed sibling, got:\n%s", otherEntry, *got.SystemPrompt)
 	}
-	if engineRuntime.HasExactEntry(*got.SystemPrompt, malformedMinimalismPath) {
+	if core.HasExactEntry(*got.SystemPrompt, malformedMinimalismPath) {
 		t.Errorf("contract with malformed frontmatter %q must never be injected, got:\n%s", malformedEntry, *got.SystemPrompt)
 	}
 }
@@ -336,7 +337,7 @@ console.log(JSON.stringify(result));
 	if !strings.Contains(got, "gentle-pi's own preflight prompt fragment") {
 		t.Errorf("gate must preserve gentle-pi's own contribution, got:\n%s", got)
 	}
-	if !engineRuntime.HasExactEntry(got, minimalismPath) || !engineRuntime.HasExactEntry(got, antiGenericPath) {
+	if !core.HasExactEntry(got, minimalismPath) || !core.HasExactEntry(got, antiGenericPath) {
 		t.Errorf("gate must still inject both contract path lines on top of gentle-pi's prompt, got:\n%s", got)
 	}
 }
@@ -411,7 +412,7 @@ func TestPiAdapter_InstallNoShellInjection(t *testing.T) {
 	commands := &fakeCommands{}
 	adapter := newPiAdapterWith(t, commands, engineRuntime.PiOptions{}, overlayRoot, registryPath, destDir)
 	result := adapter.Install()
-	if result.Status == engineRuntime.CapabilityUnsupported {
+	if result.Status == core.CapabilityUnsupported {
 		t.Fatalf("Install with a stub pi on PATH must not be unsupported, got: %s", result)
 	}
 
@@ -434,7 +435,7 @@ func TestPiAdapter_StatusPartialOnUnprovenEntry(t *testing.T) {
 
 	adapter := newPiAdapterAt(t, overlayRoot, registryPath, destDir)
 	result := adapter.Status()
-	if result.Status != engineRuntime.CapabilityPartial {
+	if result.Status != core.CapabilityPartial {
 		t.Fatalf("Status on a built-but-unlisted package = %s, want partial", result)
 	}
 	if !strings.Contains(result.Message, "listed in ~/.pi/agent/settings.json") {
@@ -451,7 +452,7 @@ func TestPiAdapter_StatusTellsEachUnprovenEntryOnce(t *testing.T) {
 	buildPiPackage(t, overlayRoot, registryPath, destDir)
 
 	result := newPiAdapterAt(t, overlayRoot, registryPath, destDir).Status()
-	if result.Status != engineRuntime.CapabilityPartial {
+	if result.Status != core.CapabilityPartial {
 		t.Fatalf("Status = %s, want partial", result)
 	}
 	line := result.String()
@@ -513,11 +514,11 @@ func TestPiAdapter_StatusAcceptsRelativePackageListing(t *testing.T) {
 	adapter := newPiAdapterAt(t, overlayRoot, registryPath, destDir)
 
 	mustWrite(t, settingsPath, `{"packages":["../../.labdrian-overlay/pi/labdrian-pi","npm:pi-subagents-j0k3r"]}`)
-	if result := adapter.Status(); result.Status != engineRuntime.CapabilitySupported {
+	if result := adapter.Status(); result.Status != core.CapabilitySupported {
 		t.Fatalf("Status with a relative listing resolved against ~/.pi/agent = %s, want supported", result)
 	}
 	mustWrite(t, settingsPath, `{"packages":["../../elsewhere/labdrian-pi","npm:pi-subagents-j0k3r"]}`)
-	if result := adapter.Status(); result.Status == engineRuntime.CapabilitySupported {
+	if result := adapter.Status(); result.Status == core.CapabilitySupported {
 		t.Fatalf("Status must not accept a relative listing that resolves elsewhere, got %s", result)
 	}
 }
@@ -547,21 +548,21 @@ func TestPiAdapter_StatusTriangulatesAllOwnedEntries(t *testing.T) {
 		mcpRegistered      bool
 		subagentsInstalled bool
 		gaduLinked         bool
-		wantStatus         engineRuntime.CapabilityStatus
+		wantStatus         core.CapabilityStatus
 		wantContains       string
 	}{
 		{
 			name:          "listed but MCP unregistered stays partial and names the register command",
 			listed:        true,
 			mcpRegistered: false,
-			wantStatus:    engineRuntime.CapabilityPartial,
+			wantStatus:    core.CapabilityPartial,
 			wantContains:  "longterm-mem register --target pi",
 		},
 		{
 			name:          "unlisted and MCP unregistered stays partial",
 			listed:        false,
 			mcpRegistered: false,
-			wantStatus:    engineRuntime.CapabilityPartial,
+			wantStatus:    core.CapabilityPartial,
 			wantContains:  "listed in ~/.pi/agent/settings.json",
 		},
 		{
@@ -570,7 +571,7 @@ func TestPiAdapter_StatusTriangulatesAllOwnedEntries(t *testing.T) {
 			mcpRegistered:      true,
 			subagentsInstalled: true,
 			gaduLinked:         true,
-			wantStatus:         engineRuntime.CapabilitySupported,
+			wantStatus:         core.CapabilitySupported,
 			wantContains:       "longterm-mem is registered in its mcp.json",
 		},
 	}
@@ -625,7 +626,7 @@ func TestPiAdapter_StatusDisclosesNoExtensionsNoSkills(t *testing.T) {
 func TestPiAdapter_UninstallUsesRemoveNotUninstall(t *testing.T) {
 	adapter, destDir, recorder := newBuiltPiAdapterWithStub(t)
 	result := adapter.Uninstall()
-	if result.Status != engineRuntime.CapabilitySupported {
+	if result.Status != core.CapabilitySupported {
 		t.Fatalf("Uninstall with a stub pi on PATH must report supported, got: %s", result)
 	}
 
@@ -652,7 +653,7 @@ func TestPiAdapter_UninstallNeverTouchesGentlePiFiles(t *testing.T) {
 	mustWrite(t, mcpPath, string(mcpContent))
 
 	adapter, _, _ := newBuiltPiAdapterWithStub(t)
-	if result := adapter.Uninstall(); result.Status != engineRuntime.CapabilitySupported {
+	if result := adapter.Uninstall(); result.Status != core.CapabilitySupported {
 		t.Fatalf("Uninstall = %s, want supported", result)
 	}
 
@@ -704,7 +705,7 @@ func TestSubagentsExtension_InstallWhenAbsent(t *testing.T) {
 	writePiSettingsPackages(t, home, nil)
 
 	result := adapter.Install()
-	if result.Status == engineRuntime.CapabilityUnsupported {
+	if result.Status == core.CapabilityUnsupported {
 		t.Fatalf("Install must not be unsupported, got: %s", result)
 	}
 	if !strings.Contains(result.Message, "third-party Pi extension pi-subagents-j0k3r (npm)") {
@@ -744,7 +745,7 @@ func TestSubagentsExtension_Noop(t *testing.T) {
 			writePiSettingsPackages(t, home, []string{c.listing})
 
 			result := adapter.Install()
-			if result.Status == engineRuntime.CapabilityUnsupported {
+			if result.Status == core.CapabilityUnsupported {
 				t.Fatalf("Install must not be unsupported, got: %s", result)
 			}
 
@@ -768,7 +769,7 @@ func TestSubagentsExtension_SkipOption(t *testing.T) {
 	writePiSettingsPackages(t, home, nil)
 
 	result := adapter.Install()
-	if result.Status == engineRuntime.CapabilityUnsupported {
+	if result.Status == core.CapabilityUnsupported {
 		t.Fatalf("Install must not be unsupported, got: %s", result)
 	}
 	if !strings.Contains(result.Message, "LABDRIAN_PI_SKIP_SUBAGENTS=1") {
@@ -802,79 +803,6 @@ func TestSubagentsExtension_SkipVariableAloneDoesNothing(t *testing.T) {
 	}
 }
 
-// gaduLinkFixture builds a real package (with agents/GADU.md) at a fresh
-// destDir under a scratch HOME, returning the paths gaduLinkState needs.
-func gaduLinkFixture(t *testing.T) (home, destDir, linkPath, targetPath string) {
-	t.Helper()
-	home = t.TempDir()
-	t.Setenv("HOME", home)
-	overlayRoot, registryPath := piFixtureOverlay(t)
-	destDir = filepath.Join(t.TempDir(), "labdrian-pi")
-	buildPiPackage(t, overlayRoot, registryPath, destDir)
-	linkPath = filepath.Join(home, ".pi", "agent", "agents", "GADU.md")
-	targetPath = filepath.Join(destDir, "agents", "GADU.md")
-	return home, destDir, linkPath, targetPath
-}
-
-// TestGaduLinkState_Matrix (task 5.2): missing/current/stale/conflict, both
-// for a plain conflicting file and a symlink pointing elsewhere.
-func TestGaduLinkState_Matrix(t *testing.T) {
-	t.Run("missing", func(t *testing.T) {
-		_, _, linkPath, targetPath := gaduLinkFixture(t)
-		if got := engineRuntime.GaduLinkStateForTest(linkPath, targetPath); got != "missing" {
-			t.Fatalf("gaduLinkState = %q, want missing", got)
-		}
-	})
-	t.Run("current", func(t *testing.T) {
-		_, _, linkPath, targetPath := gaduLinkFixture(t)
-		if err := os.MkdirAll(filepath.Dir(linkPath), 0755); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.Symlink(targetPath, linkPath); err != nil {
-			t.Fatal(err)
-		}
-		if got := engineRuntime.GaduLinkStateForTest(linkPath, targetPath); got != "current" {
-			t.Fatalf("gaduLinkState = %q, want current", got)
-		}
-	})
-	t.Run("stale (broken target)", func(t *testing.T) {
-		_, _, linkPath, targetPath := gaduLinkFixture(t)
-		if err := os.MkdirAll(filepath.Dir(linkPath), 0755); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.Symlink(targetPath, linkPath); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.Remove(targetPath); err != nil {
-			t.Fatal(err)
-		}
-		if got := engineRuntime.GaduLinkStateForTest(linkPath, targetPath); got != "stale" {
-			t.Fatalf("gaduLinkState = %q, want stale", got)
-		}
-	})
-	t.Run("conflict (regular file)", func(t *testing.T) {
-		_, _, linkPath, targetPath := gaduLinkFixture(t)
-		mustWrite(t, linkPath, "gentle-pi's own managed GADU.md\n")
-		if got := engineRuntime.GaduLinkStateForTest(linkPath, targetPath); got != "conflict" {
-			t.Fatalf("gaduLinkState = %q, want conflict", got)
-		}
-	})
-	t.Run("conflict (symlink elsewhere)", func(t *testing.T) {
-		_, _, linkPath, targetPath := gaduLinkFixture(t)
-		elsewhere := filepath.Join(t.TempDir(), "elsewhere.md")
-		mustWrite(t, elsewhere, "not ours\n")
-		if err := os.MkdirAll(filepath.Dir(linkPath), 0755); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.Symlink(elsewhere, linkPath); err != nil {
-			t.Fatal(err)
-		}
-		if got := engineRuntime.GaduLinkStateForTest(linkPath, targetPath); got != "conflict" {
-			t.Fatalf("gaduLinkState = %q, want conflict", got)
-		}
-	})
-}
-
 // TestGaduLink_SurvivesOverwrite (task 5.3): a gentle-pi-style overwrite of
 // its OWN managed files in the same directory must never touch our symlink
 // -- ownership is per-file (Readlink equality), not directory-scoped.
@@ -884,7 +812,7 @@ func TestGaduLink_SurvivesOverwrite(t *testing.T) {
 	if err != nil {
 		t.Fatalf("UserHomeDir: %v", err)
 	}
-	if result := adapter.Install(); result.Status == engineRuntime.CapabilityUnsupported {
+	if result := adapter.Install(); result.Status == core.CapabilityUnsupported {
 		t.Fatalf("Install must not be unsupported, got: %s", result)
 	}
 	linkPath := filepath.Join(home, ".pi", "agent", "agents", "GADU.md")
@@ -917,7 +845,7 @@ func TestUninstall_OwnedLinkOnly(t *testing.T) {
 	if err != nil {
 		t.Fatalf("UserHomeDir: %v", err)
 	}
-	if result := adapter.Install(); result.Status == engineRuntime.CapabilityUnsupported {
+	if result := adapter.Install(); result.Status == core.CapabilityUnsupported {
 		t.Fatalf("Install must not be unsupported, got: %s", result)
 	}
 	linkPath := filepath.Join(home, ".pi", "agent", "agents", "GADU.md")
@@ -926,7 +854,7 @@ func TestUninstall_OwnedLinkOnly(t *testing.T) {
 	}
 
 	result := adapter.Uninstall()
-	if result.Status != engineRuntime.CapabilitySupported {
+	if result.Status != core.CapabilitySupported {
 		t.Fatalf("Uninstall = %s, want supported", result)
 	}
 	if _, err := os.Lstat(linkPath); !os.IsNotExist(err) {
@@ -954,7 +882,7 @@ func TestUninstall_LeavesForeignGaduFileUntouched(t *testing.T) {
 	foreignContent := []byte("gentle-pi's own GADU.md\n")
 	mustWrite(t, linkPath, string(foreignContent))
 
-	if result := adapter.Uninstall(); result.Status == engineRuntime.CapabilityUnsupported {
+	if result := adapter.Uninstall(); result.Status == core.CapabilityUnsupported {
 		t.Fatalf("Uninstall must not be unsupported, got: %s", result)
 	}
 	assertFileUnchanged(t, linkPath, foreignContent)
@@ -971,7 +899,7 @@ func TestInstall_WiresSubagentsExtensionAndGaduLink(t *testing.T) {
 	}
 	writePiMcpRegistration(t, destDir, true)
 
-	if result := adapter.Install(); result.Status == engineRuntime.CapabilityUnsupported {
+	if result := adapter.Install(); result.Status == core.CapabilityUnsupported {
 		t.Fatalf("Install must not be unsupported, got: %s", result)
 	}
 
@@ -1000,7 +928,7 @@ func TestInstall_WiresSubagentsExtensionAndGaduLink(t *testing.T) {
 	// would have left it.
 	writePiSettingsPackages(t, home, []string{destDir, "npm:pi-subagents-j0k3r"})
 	status := adapter.Status()
-	if status.Status != engineRuntime.CapabilitySupported {
+	if status.Status != core.CapabilitySupported {
 		t.Fatalf("Status with every entry proven = %s, want supported", status)
 	}
 }
@@ -1020,7 +948,7 @@ func TestStatus_ReportsUnprovenSubagentsAndGaduLinkEntries(t *testing.T) {
 
 	adapter := newPiAdapterAt(t, overlayRoot, registryPath, destDir)
 	result := adapter.Status()
-	if result.Status != engineRuntime.CapabilityPartial {
+	if result.Status != core.CapabilityPartial {
 		t.Fatalf("Status = %s, want partial", result)
 	}
 	if !strings.Contains(result.Message, "Subagents extension") {
@@ -1045,7 +973,7 @@ func TestPiAdapter_InstallSkipsExtensionWhenGentlePiNative(t *testing.T) {
 	writePiSettingsPackages(t, home, []string{"npm:gentle-pi@2.6.0"})
 
 	result := adapter.Install()
-	if result.Status == engineRuntime.CapabilityUnsupported {
+	if result.Status == core.CapabilityUnsupported {
 		t.Fatalf("Install must not be unsupported, got: %s", result)
 	}
 	if !strings.Contains(result.Message, "native subagents") {
@@ -1076,7 +1004,7 @@ func TestPiAdapter_StatusFlagsExtensionConflictWithNativeSubagents(t *testing.T)
 
 	adapter := newPiAdapterAt(t, overlayRoot, registryPath, destDir)
 	result := adapter.Status()
-	if result.Status != engineRuntime.CapabilityPartial {
+	if result.Status != core.CapabilityPartial {
 		t.Fatalf("Status with both native and legacy subagent runners installed = %s, want partial", result)
 	}
 	if !strings.Contains(result.Message, "pi remove npm:pi-subagents-j0k3r") {
@@ -1099,7 +1027,7 @@ func TestPiAdapter_StatusSupportedWithNativeSubagents(t *testing.T) {
 
 	adapter := newPiAdapterAt(t, overlayRoot, registryPath, destDir)
 	result := adapter.Status()
-	if result.Status != engineRuntime.CapabilitySupported {
+	if result.Status != core.CapabilitySupported {
 		t.Fatalf("Status with native subagents + link + package + mcp all proven = %s, want supported", result)
 	}
 }
@@ -1119,7 +1047,7 @@ func TestPiAdapter_InstallSkipsExtensionWhenGentlePiNative_Unversioned(t *testin
 		`{"name":"gentle-pi","version":"2.6.0"}`)
 
 	result := adapter.Install()
-	if result.Status == engineRuntime.CapabilityUnsupported {
+	if result.Status == core.CapabilityUnsupported {
 		t.Fatalf("Install must not be unsupported, got: %s", result)
 	}
 	for _, argv := range readAllRecordedTokens(t, recorder) {
@@ -1141,7 +1069,7 @@ func TestPiAdapter_InstallUsesLegacyExtensionWhenGentlePiBelowNativeVersion(t *t
 	writePiSettingsPackages(t, home, []string{"npm:gentle-pi@2.5.0"})
 
 	result := adapter.Install()
-	if result.Status == engineRuntime.CapabilityUnsupported {
+	if result.Status == core.CapabilityUnsupported {
 		t.Fatalf("Install must not be unsupported, got: %s", result)
 	}
 

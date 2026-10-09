@@ -133,11 +133,7 @@ func TestRunStartsNothingAfterTheDeadline(t *testing.T) {
 // the pipes (no WaitDelay) is caught, and one that waited past the grace is too. The sleep is
 // stopped when the test ends, so no process outlives it.
 func TestRunDoesNotWaitForAGrandchildHoldingThePipes(t *testing.T) {
-	pidFile := filepath.Join(t.TempDir(), "sleep.pid")
-	bin := fakeBinary(t, "pi", `/bin/sleep 30 &
-echo $! > '`+pidFile+`'
-wait`)
-	t.Cleanup(func() { stopRecordedProcess(t, pidFile) })
+	bin := fakeBinary(t, "pi", lingeringGrandchild(t))
 	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 	defer cancel()
 
@@ -146,12 +142,36 @@ wait`)
 	if err == nil {
 		t.Fatal("Run reported success for a program stopped at its deadline")
 	}
-	if bound := killGrace + 5*time.Second; time.Since(started) > bound {
-		t.Errorf("Run took %v, want it back within %v: it waited for the grandchild that kept the pipes open", time.Since(started), bound)
+	if elapsed, bound := time.Since(started), killGrace+5*time.Second; elapsed > bound {
+		t.Errorf("Run took %v, want it back within %v: it waited for the grandchild that kept the pipes open", elapsed, bound)
 	}
 }
 
-// stopRecordedProcess kills the process whose id a script wrote to pidFile, if it is still there.
+// lingeringCommand is the command line of the grandchild the fake programs below leave holding
+// the output pipes. The duration is unlike any other the tests use, so stopRecordedProcess can
+// tell it from an unrelated process that reused its id.
+const lingeringCommand = "/bin/sleep 29.5"
+
+// processLister reads the command line of a process by its id. It is named by path because the PATH
+// of these tests is empty (main_test.go).
+const processLister = "/bin/ps"
+
+// lingeringGrandchild returns the body of a fake program that starts a grandchild holding the
+// output pipes for about thirty seconds and then waits for it, and registers the cleanup that
+// stops the grandchild when the test ends. The grandchild writes its own id before it becomes the
+// sleep, so a program stopped before it started leaves no sleep behind and no id to follow.
+func lingeringGrandchild(t *testing.T) string {
+	t.Helper()
+	pidFile := filepath.Join(t.TempDir(), "sleep.pid")
+	t.Cleanup(func() { stopRecordedProcess(t, pidFile) })
+	return `/bin/sh -c 'echo $$ > "$1"; exec ` + lingeringCommand + `' sh '` + pidFile + `' &
+wait`
+}
+
+// stopRecordedProcess kills the process whose id a script wrote to pidFile, if it is still the
+// grandchild the script started. The id is followed only when the command line of the process is
+// lingeringCommand: an id that has been reused by another process is left alone, and so is one
+// whose command line cannot be read.
 func stopRecordedProcess(t *testing.T, pidFile string) {
 	t.Helper()
 	raw, err := os.ReadFile(pidFile)
@@ -163,9 +183,94 @@ func stopRecordedProcess(t *testing.T, pidFile string) {
 		t.Errorf("pid file %s holds %q", pidFile, raw)
 		return
 	}
+	if commandOf(pid) != lingeringCommand {
+		return
+	}
 	if proc, err := os.FindProcess(pid); err == nil {
 		_ = proc.Kill()
 	}
+}
+
+// commandOf is the command line of the process pid, or "" when there is none or it cannot be read.
+// A process that has been killed but not yet waited for shows as defunct, not as its command.
+func commandOf(pid int) string {
+	out, err := exec.Command(processLister, "-p", strconv.Itoa(pid), "-o", "args=").Output()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(out))
+}
+
+// A process that is not the grandchild of a test is never killed through a recorded id, whatever
+// the id says: here the id is that of a live sleep with another command line.
+func TestStopRecordedProcessLeavesAnotherProcessAlone(t *testing.T) {
+	other := exec.Command("/bin/sleep", "28.5")
+	if err := other.Start(); err != nil {
+		t.Skipf("cannot start a sleep: %v", err)
+	}
+	t.Cleanup(func() { _ = other.Process.Kill(); _ = other.Wait() })
+	waitForCommand(t, other.Process.Pid, "/bin/sleep 28.5") // the lister works, so a pass is not vacuous
+	pidFile := filepath.Join(t.TempDir(), "sleep.pid")
+	if err := os.WriteFile(pidFile, []byte(strconv.Itoa(other.Process.Pid)+"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	stopRecordedProcess(t, pidFile)
+
+	if got := commandOf(other.Process.Pid); got != "/bin/sleep 28.5" {
+		t.Errorf("the process of another command line was stopped: it reads %q", got)
+	}
+}
+
+// The grandchild of a test, found by its command line, is killed.
+func TestStopRecordedProcessKillsTheGrandchildItRecorded(t *testing.T) {
+	dir := t.TempDir()
+	pidFile := filepath.Join(dir, "sleep.pid")
+	script := filepath.Join(dir, "start.sh")
+	body := "#!/bin/sh\necho $$ > \"$1\"\nexec " + lingeringCommand + "\n"
+	if err := os.WriteFile(script, []byte(body), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	child := exec.Command(script, pidFile)
+	if err := child.Start(); err != nil {
+		t.Skipf("cannot start the grandchild: %v", err)
+	}
+	t.Cleanup(func() { _ = child.Process.Kill(); _ = child.Wait() })
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		if raw, err := os.ReadFile(pidFile); err == nil && len(raw) > 0 {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("the grandchild did not record its id")
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	waitForCommand(t, child.Process.Pid, lingeringCommand)
+
+	stopRecordedProcess(t, pidFile)
+
+	done := make(chan error, 1)
+	go func() { done <- child.Wait() }()
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Error("the recorded grandchild was not stopped")
+	}
+}
+
+// waitForCommand waits until the process pid has become the command line want: the script
+// replaces itself with the sleep a moment after it wrote its id.
+func waitForCommand(t *testing.T, pid int, want string) {
+	t.Helper()
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		if commandOf(pid) == want {
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatalf("process %d never became %q", pid, want)
 }
 
 func TestOutputReturnsTheTwoStreamsApart(t *testing.T) {
@@ -238,11 +343,7 @@ func TestOutputStopsAtTheDeadlineAndSaysWhy(t *testing.T) {
 
 // Output gives up on a grandchild that holds the pipes after the deadline, like Run.
 func TestOutputDoesNotWaitForAGrandchildHoldingThePipes(t *testing.T) {
-	pidFile := filepath.Join(t.TempDir(), "sleep.pid")
-	bin := fakeBinary(t, "git", `/bin/sleep 30 &
-echo $! > '`+pidFile+`'
-wait`)
-	t.Cleanup(func() { stopRecordedProcess(t, pidFile) })
+	bin := fakeBinary(t, "git", lingeringGrandchild(t))
 	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 	defer cancel()
 
@@ -250,8 +351,8 @@ wait`)
 	if _, _, err := New().Output(ctx, nil, bin); err == nil {
 		t.Fatal("Output reported success for a program stopped at its deadline")
 	}
-	if bound := killGrace + 5*time.Second; time.Since(started) > bound {
-		t.Errorf("Output took %v, want it back within %v", time.Since(started), bound)
+	if elapsed, bound := time.Since(started), killGrace+5*time.Second; elapsed > bound {
+		t.Errorf("Output took %v, want it back within %v", elapsed, bound)
 	}
 }
 
@@ -299,8 +400,8 @@ exec /bin/sleep 30`)
 	if !errors.Is(err, ErrOutputTooLarge) {
 		t.Fatalf("err = %v, want ErrOutputTooLarge", err)
 	}
-	if bound := killGrace + 5*time.Second; time.Since(started) > bound {
-		t.Errorf("Output took %v, want it back within %v: the program was waited for", time.Since(started), bound)
+	if elapsed, bound := time.Since(started), killGrace+5*time.Second; elapsed > bound {
+		t.Errorf("Output took %v, want it back within %v: the program was waited for", elapsed, bound)
 	}
 }
 

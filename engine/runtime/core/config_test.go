@@ -1,20 +1,22 @@
-package runtime_test
+package core_test
 
 import (
 	"path/filepath"
 	"testing"
 
-	engineRuntime "github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime/core"
 )
 
 func TestDefaultRootsAreUnderTheHome(t *testing.T) {
-	cfg := engineRuntime.Config{Home: "/home/x"}
+	cfg := core.Config{Home: "/home/x"}
 	for name, c := range map[string]struct{ got, want string }{
 		"claude":   {cfg.DefaultClaudeRoot(), "/home/x/.claude"},
 		"codex":    {cfg.DefaultCodexRoot(), "/home/x/.codex"},
 		"opencode": {cfg.DefaultOpenCodeRoot(), "/home/x/.config/opencode"},
 		"state":    {cfg.DefaultStateDir(), "/home/x/.labdrian-overlay"},
 		"pi":       {cfg.PiPackageDir(), "/home/x/.labdrian-overlay/pi/labdrian-pi"},
+		// A sibling of ~/.claude, not a file inside it.
+		"claude MCP registry": {cfg.DefaultClaudeMCPConfig(), "/home/x/.claude.json"},
 	} {
 		if filepath.ToSlash(c.got) != c.want {
 			t.Errorf("%s root = %q, want %q", name, c.got, c.want)
@@ -23,15 +25,16 @@ func TestDefaultRootsAreUnderTheHome(t *testing.T) {
 }
 
 func TestWithoutAHomeThereIsNoDefaultRoot(t *testing.T) {
-	var cfg engineRuntime.Config
+	var cfg core.Config
 	for name, got := range map[string]string{
-		"claude":     cfg.DefaultClaudeRoot(),
-		"codex":      cfg.DefaultCodexRoot(),
-		"opencode":   cfg.DefaultOpenCodeRoot(),
-		"state":      cfg.DefaultStateDir(),
-		"claude()":   cfg.ClaudeRoot(),
-		"codex()":    cfg.CodexRoot(),
-		"opencode()": cfg.OpenCodeRoot(),
+		"claude":              cfg.DefaultClaudeRoot(),
+		"codex":               cfg.DefaultCodexRoot(),
+		"opencode":            cfg.DefaultOpenCodeRoot(),
+		"state":               cfg.DefaultStateDir(),
+		"claude MCP registry": cfg.DefaultClaudeMCPConfig(),
+		"claude()":            cfg.ClaudeRoot(),
+		"codex()":             cfg.CodexRoot(),
+		"opencode()":          cfg.OpenCodeRoot(),
 	} {
 		if got != "" {
 			t.Errorf("%s root = %q without a home, want none", name, got)
@@ -55,7 +58,7 @@ func TestCodexHomeWinsOnlyWhenAbsolute(t *testing.T) {
 		"unset":             {"", "/home/x/.codex"},
 	}
 	for name, c := range cases {
-		got := engineRuntime.Config{Home: "/home/x", CodexHome: c.codexHome}.DefaultCodexRoot()
+		got := core.Config{Home: "/home/x", CodexHome: c.codexHome}.DefaultCodexRoot()
 		if filepath.ToSlash(got) != filepath.ToSlash(c.want) {
 			t.Errorf("%s: DefaultCodexRoot() = %q, want %q", name, got, c.want)
 		}
@@ -72,7 +75,7 @@ func TestXDGConfigHomeWinsOnlyWhenAbsolute(t *testing.T) {
 		"unset":    {"", "/home/x/.config/opencode"},
 	}
 	for name, c := range cases {
-		got := engineRuntime.Config{Home: "/home/x", XDGConfigHome: c.xdg}.DefaultOpenCodeRoot()
+		got := core.Config{Home: "/home/x", XDGConfigHome: c.xdg}.DefaultOpenCodeRoot()
 		if filepath.ToSlash(got) != filepath.ToSlash(c.want) {
 			t.Errorf("%s: DefaultOpenCodeRoot() = %q, want %q", name, got, c.want)
 		}
@@ -80,7 +83,7 @@ func TestXDGConfigHomeWinsOnlyWhenAbsolute(t *testing.T) {
 }
 
 func TestTheStateDirOverridesTheDefaultOfThePiPackage(t *testing.T) {
-	cfg := engineRuntime.Config{Home: "/home/x", StateDir: "/srv/state"}
+	cfg := core.Config{Home: "/home/x", StateDir: "/srv/state"}
 	if got := filepath.ToSlash(cfg.PiPackageDir()); got != "/srv/state/pi/labdrian-pi" {
 		t.Errorf("PiPackageDir() = %q, want it under the state dir", got)
 	}
@@ -90,7 +93,7 @@ func TestTheStateDirOverridesTheDefaultOfThePiPackage(t *testing.T) {
 // each runtime; for Pi it replaces the state dir, so the package is under it at pi/labdrian-pi and
 // never in the root itself, which every runtime may share.
 func TestConfigRootNamesTheDirectoryEveryRuntimeWorksIn(t *testing.T) {
-	cfg := engineRuntime.Config{Home: "/home/x", XDGConfigHome: "/xdg", CodexHome: "/ch", StateDir: "/s", ConfigRoot: "/given"}
+	cfg := core.Config{Home: "/home/x", XDGConfigHome: "/xdg", CodexHome: "/ch", StateDir: "/s", ConfigRoot: "/given"}
 	for name, got := range map[string]string{
 		"claude": cfg.ClaudeRoot(), "codex": cfg.CodexRoot(), "opencode": cfg.OpenCodeRoot(),
 	} {
@@ -100,5 +103,12 @@ func TestConfigRootNamesTheDirectoryEveryRuntimeWorksIn(t *testing.T) {
 	}
 	if got := filepath.ToSlash(cfg.PiPackageDir()); got != "/given/pi/labdrian-pi" {
 		t.Errorf("pi package dir = %q with --config-root /given, want it under the root, at pi/labdrian-pi (and not the StateDir /s)", got)
+	}
+}
+
+// The name is the one people set and scripts export; changing it is a change of interface.
+func TestTheOverlayVariableKeepsItsName(t *testing.T) {
+	if core.LabdrianOverlayDirVariable != "LABDRIAN_OVERLAY_DIR" {
+		t.Errorf("LabdrianOverlayDirVariable = %q, want LABDRIAN_OVERLAY_DIR", core.LabdrianOverlayDirVariable)
 	}
 }

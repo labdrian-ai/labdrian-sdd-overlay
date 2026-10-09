@@ -1,0 +1,7 @@
+$ runtime install --target opencode --config-root <CONFIG>
+exit: 1
+--- stdout ---
+[opencode] install: partial — OpenCode prompt config could not be derived from the contracts: skills/_shared/minimalism-contract.md: malformed applies_to_phases: expected an inline list such as [a, b], got "sdd-tasks, sdd-apply"
+--- stderr ---
+--- prompt_config ---
+(no configuration written)

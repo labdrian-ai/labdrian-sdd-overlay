@@ -11,7 +11,7 @@ import (
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/capability"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/pipkg"
-	runtimepkg "github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime"
+	runtimecore "github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime/core"
 )
 
 // TestRunRuntimeCore_ConfigRootReachesPi: --config-root reaches Pi like it reaches the other
@@ -70,8 +70,8 @@ func TestNewRuntimeRegistry_RegistersTheDeclaredRuntimesInTheOrderAllExpandsTo(t
 		t.Fatalf("newRuntimeRegistry: %v", err)
 	}
 
-	wantOrder := []runtimepkg.Target{runtimepkg.TargetClaude, runtimepkg.TargetOpenCode, runtimepkg.TargetCodex, runtimepkg.TargetPi}
-	if got := reg.Expand(runtimepkg.TargetAll); !reflect.DeepEqual(got, wantOrder) {
+	wantOrder := []runtimecore.Target{runtimecore.TargetClaude, runtimecore.TargetOpenCode, runtimecore.TargetCodex, runtimecore.TargetPi}
+	if got := reg.Expand(runtimecore.TargetAll); !reflect.DeepEqual(got, wantOrder) {
 		t.Errorf("Expand(all) = %v, want %v", got, wantOrder)
 	}
 
@@ -94,6 +94,9 @@ func TestRuntimeConfigFromEnv(t *testing.T) {
 		"CODEX_HOME":      "/codex",
 		"OVERLAY_DIR":     "/overlay",
 		"STATE_DIR":       "/state",
+		// A different variable from OVERLAY_DIR: the checkout the OpenCode plugin's contracts are
+		// read from. It is handed down as set; the adapter judges it.
+		"LABDRIAN_OVERLAY_DIR": "  relative/overlay  ",
 	}
 	env := func(k string) string { return environ[k] }
 	failing := func() (string, error) { return "", errors.New("no home") }
@@ -101,9 +104,9 @@ func TestRuntimeConfigFromEnv(t *testing.T) {
 
 	t.Run("reads each value once, trims the home and leaves ConfigRoot to the command line", func(t *testing.T) {
 		got := runtimeConfigFromEnv(env, failing)
-		want := runtimepkg.Config{
+		want := runtimecore.Config{
 			Home: "/home/p", XDGConfigHome: "/xdg", CodexHome: "/codex",
-			OverlayDir: "/overlay", StateDir: "/state",
+			OverlayDir: "/overlay", StateDir: "/state", LabdrianOverlayDir: "  relative/overlay  ",
 		}
 		if got != want {
 			t.Errorf("runtimeConfigFromEnv = %+v, want %+v", got, want)
@@ -144,19 +147,19 @@ func TestBuildRuntimeAdapters_BuildsAllOrNone(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cfg := runtimepkg.Config{Home: t.TempDir()}
+	cfg := runtimecore.Config{Home: t.TempDir()}
 
-	got, err := buildRuntimeAdapters(reg, reg.Expand(runtimepkg.TargetAll), cfg)
+	got, err := buildRuntimeAdapters(reg, reg.Expand(runtimecore.TargetAll), cfg)
 	if err != nil || len(got) != 4 {
 		t.Fatalf("buildRuntimeAdapters(all) = %d adapters, %v, want 4", len(got), err)
 	}
-	for i, target := range reg.Expand(runtimepkg.TargetAll) {
+	for i, target := range reg.Expand(runtimecore.TargetAll) {
 		if got[i].Target() != target {
 			t.Errorf("adapter %d answers for %q, want %q: the order of the targets is kept", i, got[i].Target(), target)
 		}
 	}
 
-	got, err = buildRuntimeAdapters(reg, []runtimepkg.Target{runtimepkg.TargetClaude, "future"}, cfg)
+	got, err = buildRuntimeAdapters(reg, []runtimecore.Target{runtimecore.TargetClaude, "future"}, cfg)
 	if err == nil || !strings.Contains(err.Error(), "not registered") || got != nil {
 		t.Fatalf("buildRuntimeAdapters(claude, future) = %v, %v, want no adapter and a not-registered error", got, err)
 	}

@@ -38,8 +38,8 @@ engine/skills/skills_test.go managed
 engine/skills/status_test.go managed
 engine/skills/validate_test.go managed
 engine/skills/zero_fetch_test.go managed
-engine/runtime/runtime.go managed
-engine/runtime/runtime_test.go managed
+engine/runtime/core/lifecycle.go managed
+engine/runtime/core/lifecycle_test.go managed
 engine/runtime/claude.go managed
 engine/runtime/claude_test.go managed
 engine/runtime/codex.go managed

@@ -8,15 +8,16 @@ import (
 	"testing"
 
 	engineRuntime "github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime/core"
 )
 
 func TestCodexAdapterRejectsUnresolvedOrRelativeRoot(t *testing.T) {
-	if result := engineRuntime.NewCodexAdapter("").Status(); result.Status != engineRuntime.CapabilityUnsupported {
+	if result := engineRuntime.NewCodexAdapter("").Status(); result.Status != core.CapabilityUnsupported {
 		t.Fatalf("NewCodexAdapter(\"\").Status() = %#v, want unsupported for unresolved root", result)
 	}
 
 	relative := filepath.Join("relative", "codex")
-	if result := engineRuntime.NewCodexAdapter(relative).Status(); result.Status != engineRuntime.CapabilityUnsupported {
+	if result := engineRuntime.NewCodexAdapter(relative).Status(); result.Status != core.CapabilityUnsupported {
 		t.Fatalf("NewCodexAdapter(relative).Status() = %#v, want unsupported for relative root", result)
 	}
 }
@@ -33,7 +34,7 @@ func TestCodexInstallWritesManifestAndPreservesUnrelatedFiles(t *testing.T) {
 		t.Fatalf("write unrelated file: %v", err)
 	}
 
-	if result := adapter.Install(); result.Status != engineRuntime.CapabilityRestartRequired {
+	if result := adapter.Install(); result.Status != core.CapabilityRestartRequired {
 		t.Fatalf("Install() = %#v", result)
 	}
 
@@ -66,7 +67,7 @@ func TestCodexUpdateRefreshesManagedManifest(t *testing.T) {
 	}
 
 	adapter := engineRuntime.NewCodexAdapter(root)
-	if result := adapter.Update(); result.Status != engineRuntime.CapabilityRestartRequired {
+	if result := adapter.Update(); result.Status != core.CapabilityRestartRequired {
 		t.Fatalf("Update() = %#v", result)
 	}
 
@@ -106,7 +107,7 @@ func TestCodexInstallRejectsUnownedOrMalformedExistingManifest(t *testing.T) {
 			}
 
 			result := engineRuntime.NewCodexAdapter(root).Install()
-			if result.Status != engineRuntime.CapabilityPartial {
+			if result.Status != core.CapabilityPartial {
 				t.Fatalf("Install() = %#v", result)
 			}
 
@@ -151,7 +152,7 @@ func TestCodexUpdateRejectsUnownedOrMalformedManifest(t *testing.T) {
 			}
 
 			result := engineRuntime.NewCodexAdapter(root).Update()
-			if result.Status != engineRuntime.CapabilityPartial {
+			if result.Status != core.CapabilityPartial {
 				t.Fatalf("Update() = %#v", result)
 			}
 
@@ -173,12 +174,12 @@ func TestCodexStatusReportsPartialWithActivationUncertainty(t *testing.T) {
 	root := t.TempDir()
 	adapter := engineRuntime.NewCodexAdapter(root)
 
-	if result := adapter.Install(); result.Status != engineRuntime.CapabilityRestartRequired {
+	if result := adapter.Install(); result.Status != core.CapabilityRestartRequired {
 		t.Fatalf("Install() = %#v", result)
 	}
 
 	status := adapter.Status()
-	if status.Status != engineRuntime.CapabilityPartial {
+	if status.Status != core.CapabilityPartial {
 		t.Fatalf("Status() after install = %#v", status)
 	}
 	if !strings.Contains(strings.ToLower(status.Message), "activation") {
@@ -212,7 +213,7 @@ func TestCodexUninstallRemovesManifestWithoutTouchingUnrelatedFiles(t *testing.T
 
 	adapter := engineRuntime.NewCodexAdapter(root)
 	result := adapter.Uninstall()
-	if result.Status != engineRuntime.CapabilityRestartRequired {
+	if result.Status != core.CapabilityRestartRequired {
 		t.Fatalf("Uninstall() = %#v", result)
 	}
 	if _, err := os.Stat(manifestPath); !os.IsNotExist(err) {
@@ -250,7 +251,7 @@ func TestCodexUninstallRejectsUnownedOrMalformedManifest(t *testing.T) {
 			}
 
 			result := engineRuntime.NewCodexAdapter(root).Uninstall()
-			if result.Status != engineRuntime.CapabilityPartial {
+			if result.Status != core.CapabilityPartial {
 				t.Fatalf("Uninstall() = %#v", result)
 			}
 
@@ -273,7 +274,7 @@ func TestCodexStatusClassifiesMissingOrInvalidManifestAsPartial(t *testing.T) {
 	adapter := engineRuntime.NewCodexAdapter(root)
 
 	status := adapter.Status()
-	if status.Status != engineRuntime.CapabilityPartial {
+	if status.Status != core.CapabilityPartial {
 		t.Fatalf("Status() without manifest = %#v, want partial", status)
 	}
 
@@ -282,7 +283,7 @@ func TestCodexStatusClassifiesMissingOrInvalidManifestAsPartial(t *testing.T) {
 		t.Fatalf("write invalid manifest: %v", err)
 	}
 	status = adapter.Status()
-	if status.Status != engineRuntime.CapabilityPartial {
+	if status.Status != core.CapabilityPartial {
 		t.Fatalf("Status() with invalid manifest = %#v, want partial", status)
 	}
 }
@@ -295,7 +296,7 @@ func TestCodexMutationFailureIsSafeAndDoesNotClobberRootFile(t *testing.T) {
 
 	adapter := engineRuntime.NewCodexAdapter(rootFile)
 	result := adapter.Install()
-	if result.Status != engineRuntime.CapabilityPartial {
+	if result.Status != core.CapabilityPartial {
 		t.Fatalf("Install() with non-directory root = %#v, want partial", result)
 	}
 

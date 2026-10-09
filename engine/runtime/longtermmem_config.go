@@ -6,6 +6,8 @@ import (
 	"os"
 	"regexp"
 	"strings"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime/core"
 )
 
 // longtermMemObservation is what LongtermMemAdapter can determine about one
@@ -36,9 +38,9 @@ type longtermMemObservation struct {
 func (a LongtermMemAdapter) observeAllTargets() map[string]longtermMemObservation {
 	binaryPresent := a.binaryExecutable()
 	return map[string]longtermMemObservation{
-		string(TargetClaude):   a.observeClaude(binaryPresent),
-		string(TargetOpenCode): a.observeOpenCode(binaryPresent),
-		string(TargetCodex):    a.observeCodex(binaryPresent),
+		string(core.TargetClaude):   a.observeClaude(binaryPresent),
+		string(core.TargetOpenCode): a.observeOpenCode(binaryPresent),
+		string(core.TargetCodex):    a.observeCodex(binaryPresent),
 	}
 }
 

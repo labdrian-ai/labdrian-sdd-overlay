@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime/core"
 )
 
 const codexManifestFile = "labdrian-runtime-lifecycle.json"
@@ -24,7 +26,7 @@ type codexManifest struct {
 // CodexAdapter is the runtime adapter for the Codex CLI.
 // It owns only one manifest file so unrelated user state is preserved.
 type CodexAdapter struct {
-	target Target
+	target core.Target
 	root   string
 }
 
@@ -32,22 +34,22 @@ type CodexAdapter struct {
 // empty root is an adapter that reports it cannot work: the caller resolves the default (see
 // Config.CodexRoot), the adapter does not look for one.
 func NewCodexAdapter(root string) CodexAdapter {
-	return CodexAdapter{target: TargetCodex, root: root}
+	return CodexAdapter{target: core.TargetCodex, root: root}
 }
 
-func (a CodexAdapter) Target() Target         { return a.target }
-func (a CodexAdapter) Apply() LifecycleResult { return a.Install() }
+func (a CodexAdapter) Target() core.Target         { return a.target }
+func (a CodexAdapter) Apply() core.LifecycleResult { return a.Install() }
 
-func (a CodexAdapter) Install() LifecycleResult {
+func (a CodexAdapter) Install() core.LifecycleResult {
 	if err := a.validateRootForMutation("Codex config root"); err != nil {
-		return a.result(ActionInstall, statusForRootError(err), err.Error())
+		return a.result(core.ActionInstall, statusForRootError(err), err.Error())
 	}
 
 	if err := a.ensureManifestSafeForMutation("install"); err != nil {
 		if os.IsNotExist(err) {
 			// missing manifest is safe for initialization
 		} else {
-			return a.result(ActionInstall, CapabilityPartial, err.Error())
+			return a.result(core.ActionInstall, core.CapabilityPartial, err.Error())
 		}
 	}
 
@@ -58,35 +60,35 @@ func (a CodexAdapter) Install() LifecycleResult {
 	}
 
 	if err := a.writeManifest(manifest); err != nil {
-		return a.result(ActionInstall, CapabilityPartial, err.Error())
+		return a.result(core.ActionInstall, core.CapabilityPartial, err.Error())
 	}
 
-	return a.result(ActionInstall, CapabilityRestartRequired, "Codex lifecycle manifest installed; restart long-running Codex processes to pick up updates")
+	return a.result(core.ActionInstall, core.CapabilityRestartRequired, "Codex lifecycle manifest installed; restart long-running Codex processes to pick up updates")
 }
 
-func (a CodexAdapter) Status() LifecycleResult { return a.status() }
+func (a CodexAdapter) Status() core.LifecycleResult { return a.status() }
 
-func (a CodexAdapter) SyncCheck() LifecycleResult {
+func (a CodexAdapter) SyncCheck() core.LifecycleResult {
 	result := a.Status()
-	result.Action = ActionSyncCheck
+	result.Action = core.ActionSyncCheck
 	return result
 }
 
-func (a CodexAdapter) Update() LifecycleResult {
+func (a CodexAdapter) Update() core.LifecycleResult {
 	if err := a.validateRootForMutation("Codex config root"); err != nil {
-		return a.result(ActionUpdate, statusForRootError(err), err.Error())
+		return a.result(core.ActionUpdate, statusForRootError(err), err.Error())
 	}
 
 	if err := a.ensureManifestSafeForMutation("update"); err != nil {
 		if !os.IsNotExist(err) {
-			return a.result(ActionUpdate, CapabilityPartial, err.Error())
+			return a.result(core.ActionUpdate, core.CapabilityPartial, err.Error())
 		}
 	}
 
 	manifest, err := a.readManifest()
 	if err != nil {
 		if !os.IsNotExist(err) {
-			return a.result(ActionUpdate, CapabilityPartial, "failed to read existing Codex manifest: "+err.Error())
+			return a.result(core.ActionUpdate, core.CapabilityPartial, "failed to read existing Codex manifest: "+err.Error())
 		}
 		manifest = codexManifest{}
 	}
@@ -98,59 +100,59 @@ func (a CodexAdapter) Update() LifecycleResult {
 	manifest.ConfigRoot = a.root
 
 	if err := a.writeManifest(manifest); err != nil {
-		return a.result(ActionUpdate, CapabilityPartial, err.Error())
+		return a.result(core.ActionUpdate, core.CapabilityPartial, err.Error())
 	}
 
-	return a.result(ActionUpdate, CapabilityRestartRequired, "Codex lifecycle manifest updated; restart long-running Codex processes to pick up updates")
+	return a.result(core.ActionUpdate, core.CapabilityRestartRequired, "Codex lifecycle manifest updated; restart long-running Codex processes to pick up updates")
 }
 
-func (a CodexAdapter) Rollback() LifecycleResult { return a.Uninstall() }
+func (a CodexAdapter) Rollback() core.LifecycleResult { return a.Uninstall() }
 
-func (a CodexAdapter) Uninstall() LifecycleResult {
+func (a CodexAdapter) Uninstall() core.LifecycleResult {
 	if err := a.validateRootForMutation("Codex config root"); err != nil {
-		return a.result(ActionUninstall, statusForRootError(err), err.Error())
+		return a.result(core.ActionUninstall, statusForRootError(err), err.Error())
 	}
 
 	if err := a.ensureManifestSafeForMutation("uninstall"); err != nil {
 		if !os.IsNotExist(err) {
-			return a.result(ActionUninstall, CapabilityPartial, err.Error())
+			return a.result(core.ActionUninstall, core.CapabilityPartial, err.Error())
 		}
 	}
 
 	manifestPath := filepath.Join(a.root, codexManifestFile)
 	if err := os.Remove(manifestPath); err != nil && !os.IsNotExist(err) {
-		return a.result(ActionUninstall, CapabilityPartial, "could not remove Codex lifecycle manifest: "+err.Error())
+		return a.result(core.ActionUninstall, core.CapabilityPartial, "could not remove Codex lifecycle manifest: "+err.Error())
 	}
 
-	return a.result(ActionUninstall, CapabilityRestartRequired, "Codex lifecycle manifest removed; restart long-running Codex processes")
+	return a.result(core.ActionUninstall, core.CapabilityRestartRequired, "Codex lifecycle manifest removed; restart long-running Codex processes")
 }
 
-func (a CodexAdapter) status() LifecycleResult {
+func (a CodexAdapter) status() core.LifecycleResult {
 	if err := a.validateRoot(); err != nil {
-		return a.result(ActionStatus, CapabilityUnsupported, err.Error())
+		return a.result(core.ActionStatus, core.CapabilityUnsupported, err.Error())
 	}
 
 	manifest, err := a.readManifest()
 	if err != nil {
 		if os.IsNotExist(err) {
-			return a.result(ActionStatus, CapabilityPartial, "Codex lifecycle manifest not found at "+filepath.Join(a.root, codexManifestFile))
+			return a.result(core.ActionStatus, core.CapabilityPartial, "Codex lifecycle manifest not found at "+filepath.Join(a.root, codexManifestFile))
 		}
-		return a.result(ActionStatus, CapabilityPartial, "failed to read Codex manifest: "+err.Error())
+		return a.result(core.ActionStatus, core.CapabilityPartial, "failed to read Codex manifest: "+err.Error())
 	}
 
 	if err := validateCodexManifest(manifest, a.root); err != nil {
-		return a.result(ActionStatus, CapabilityPartial, err.Error())
+		return a.result(core.ActionStatus, core.CapabilityPartial, err.Error())
 	}
 
-	return a.resultWithReasons(ActionStatus, CapabilityPartial, "Codex lifecycle manifest is present and managed, but activation/reload state is unverified", []string{"activation/reload proof unavailable until Codex session lifecycle integration is implemented"})
+	return a.resultWithReasons(core.ActionStatus, core.CapabilityPartial, "Codex lifecycle manifest is present and managed, but activation/reload state is unverified", []string{"activation/reload proof unavailable until Codex session lifecycle integration is implemented"})
 }
 
-func (a CodexAdapter) result(action Action, status CapabilityStatus, message string) LifecycleResult {
-	return NewLifecycleResult(a.target, action, status, message, nil)
+func (a CodexAdapter) result(action core.Action, status core.CapabilityStatus, message string) core.LifecycleResult {
+	return core.NewLifecycleResult(a.target, action, status, message, nil)
 }
 
-func (a CodexAdapter) resultWithReasons(action Action, status CapabilityStatus, message string, reasons []string) LifecycleResult {
-	return NewLifecycleResult(a.target, action, status, message, reasons)
+func (a CodexAdapter) resultWithReasons(action core.Action, status core.CapabilityStatus, message string, reasons []string) core.LifecycleResult {
+	return core.NewLifecycleResult(a.target, action, status, message, reasons)
 }
 
 func (a CodexAdapter) manifestPath() string {
@@ -292,11 +294,11 @@ func (a CodexAdapter) validateRootForMutation(field string) error {
 	return nil
 }
 
-func statusForRootError(err error) CapabilityStatus {
+func statusForRootError(err error) core.CapabilityStatus {
 	errMsg := err.Error()
 	if strings.HasPrefix(errMsg, "Codex config root could not be resolved") ||
 		strings.HasPrefix(errMsg, "Codex config root must be absolute") {
-		return CapabilityUnsupported
+		return core.CapabilityUnsupported
 	}
-	return CapabilityPartial
+	return core.CapabilityPartial
 }

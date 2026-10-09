@@ -57,6 +57,10 @@ type cappedBuffer struct {
 	over   bool
 }
 
+// Write keeps as much of p as the bound leaves room for. When that is all of p it returns len(p)
+// and no error. When it is less, it keeps the part that fits, stops the program, and returns the
+// number of bytes kept with ErrOutputTooLarge, which is what io.Writer asks of a short write: the
+// copy from the pipe sees the error and the count, and the caller sees `over`.
 func (c *cappedBuffer) Write(p []byte) (int, error) {
 	if c.max > 0 && int64(c.buf.Len()+len(p)) > c.max {
 		room := int(c.max) - c.buf.Len()

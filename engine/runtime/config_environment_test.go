@@ -9,31 +9,16 @@ import (
 	"testing"
 )
 
-// environmentRead names one place that reads a variable: the file of the package and the variable.
-// A struct, not a joined string, so no variable name can be mistaken for part of the file.
-type environmentRead struct {
-	file     string
-	variable string
-}
-
-// environmentReadsAllowed are the reads of the environment engine/runtime still makes, each with
-// the work unit that removes it. Every other read -- of the variables the composition root hands
-// down in a Config or in the options of an adapter (HOME, XDG_CONFIG_HOME, CODEX_HOME,
-// OVERLAY_DIR, STATE_DIR, LABDRIAN_PI_SKIP_SUBAGENTS, LABDRIAN_PI_DEPLOY_REF), of
-// LABDRIAN_PI_BIN, which used to name the `pi` to run, or of a name the scan cannot resolve --
-// fails the scan. The list only shrinks: an entry whose read is gone fails it too.
-var environmentReadsAllowed = map[environmentRead]string{
-	{file: "opencode.go", variable: "LABDRIAN_OVERLAY_DIR"}: "the contract lookup of the OpenCode plugin (H26)",
-}
-
 // TestAdaptersReadNoEnvironment reads the source of the package: a call to os.UserHomeDir,
 // os.Environ, or os.Getenv/os.LookupEnv, whatever it is given (a literal, a named constant of the
 // package, or anything else), is a place that decides what the configuration of a run is. The
-// composition root reads it once and hands the adapters a Config and their options; a read in the
-// package is a second place, and the one that made --config-root differ between runtimes.
+// composition root reads it once and hands the adapters a Config and their options (HOME,
+// XDG_CONFIG_HOME, CODEX_HOME, OVERLAY_DIR, LABDRIAN_OVERLAY_DIR, STATE_DIR,
+// LABDRIAN_PI_SKIP_SUBAGENTS, LABDRIAN_PI_DEPLOY_REF); a read in the package is a second place, and
+// the one that made --config-root differ between runtimes. There is no exception: the last one,
+// the OpenCode contract lookup, moved to the composition root with H26.
 func TestAdaptersReadNoEnvironment(t *testing.T) {
 	fset := token.NewFileSet()
-	used := map[environmentRead]bool{}
 	files := nonTestGoFiles(t, ".")
 	constants := packageStringConstants(t, fset, files)
 	for _, path := range files {
@@ -69,20 +54,10 @@ func TestAdaptersReadNoEnvironment(t *testing.T) {
 					t.Errorf("%s: os.%s reads a variable the scan cannot name; the adapter should have been given it in its Config", where, sel.Sel.Name)
 					return true
 				}
-				key := environmentRead{file: filepath.Base(path), variable: name}
-				if _, ok := environmentReadsAllowed[key]; ok {
-					used[key] = true
-					return true
-				}
 				t.Errorf("%s: os.%s(%q) reads a variable the adapter should have been given in its Config or its options", where, sel.Sel.Name, name)
 			}
 			return true
 		})
-	}
-	for key, unit := range environmentReadsAllowed {
-		if !used[key] {
-			t.Errorf("%s no longer reads %s although environmentReadsAllowed lists it (%s); remove the entry", key.file, key.variable, unit)
-		}
 	}
 }
 

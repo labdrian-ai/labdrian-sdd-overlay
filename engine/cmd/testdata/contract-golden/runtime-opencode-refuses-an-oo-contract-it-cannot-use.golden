@@ -1,0 +1,35 @@
+$ runtime install --target opencode --config-root <CONFIG>
+exit: 1
+--- stdout ---
+[opencode] install: partial — OpenCode prompt config could not be derived from the contracts: skills/_shared/oo-quality-contract.md: contract file has no YAML frontmatter (expected content between --- delimiters)
+--- stderr ---
+--- prompt_config ---
+(no configuration written)
+$ runtime install --target opencode --config-root <CONFIG>
+exit: 1
+--- stdout ---
+[opencode] install: partial — OpenCode prompt config could not be derived from the contracts: skills/_shared/oo-quality-contract.md: contract frontmatter missing or empty applies_to_phases: cannot derive scope without knowing which phases to inject into
+--- stderr ---
+--- prompt_config ---
+(no configuration written)
+$ runtime install --target opencode --config-root <CONFIG>
+exit: 1
+--- stdout ---
+[opencode] install: partial — OpenCode prompt config could not be derived from the contracts: skills/_shared/oo-quality-contract.md: malformed language_context: expected an inline list such as [a, b], got "typescript"
+--- stderr ---
+--- prompt_config ---
+(no configuration written)
+$ runtime install --target opencode --config-root <CONFIG>
+exit: 1
+--- stdout ---
+[opencode] install: partial — OpenCode prompt config could not be derived from the contracts: skills/_shared/oo-quality-contract.md: malformed activation_context: expected an inline list such as [a, b], got "review"
+--- stderr ---
+--- prompt_config ---
+(no configuration written)
+$ runtime install --target opencode --config-root <CONFIG>
+exit: 1
+--- stdout ---
+[opencode] install: partial — OpenCode prompt config could not be derived from the contracts: skills/_shared/oo-quality-contract.md: unsupported context_operator
+--- stderr ---
+--- prompt_config ---
+(no configuration written)
