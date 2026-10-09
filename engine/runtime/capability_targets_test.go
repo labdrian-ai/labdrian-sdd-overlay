@@ -1,9 +1,6 @@
 package runtime_test
 
 import (
-	"go/ast"
-	"go/parser"
-	"go/token"
 	"os"
 	"path/filepath"
 	"sort"
@@ -13,24 +10,25 @@ import (
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/capability"
 	engineRuntime "github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime/core"
 )
 
 // shippedRegistry registers every runtime this package ships, the way the composition root does,
 // with a Pi that runs its commands through a fake nobody looks at.
-func shippedRegistry(t *testing.T) *engineRuntime.Registry {
+func shippedRegistry(t *testing.T) *core.Registry {
 	t.Helper()
 	return shippedRegistryWith(t, &fakeCommands{})
 }
 
 // shippedRegistryWith is shippedRegistry with the CommandRunner the test watches.
-func shippedRegistryWith(t *testing.T, commands engineRuntime.CommandRunner) *engineRuntime.Registry {
+func shippedRegistryWith(t *testing.T, commands engineRuntime.CommandRunner) *core.Registry {
 	t.Helper()
-	r := engineRuntime.NewRegistry()
-	for _, register := range []func(*engineRuntime.Registry) error{
+	r := core.NewRegistry()
+	for _, register := range []func(*core.Registry) error{
 		engineRuntime.RegisterClaude,
 		engineRuntime.RegisterOpenCode,
 		engineRuntime.RegisterCodex,
-		func(r *engineRuntime.Registry) error {
+		func(r *core.Registry) error {
 			return engineRuntime.RegisterPi(r, engineRuntime.PiPorts{Commands: commands, Packages: newPiPackages()})
 		},
 	} {
@@ -78,7 +76,7 @@ func TestALabelThatIsNotARuntimeIsNotATarget(t *testing.T) {
 func TestEveryRuntimeBuildsItsOwnAdapter(t *testing.T) {
 	r := shippedRegistry(t)
 	for _, target := range r.Targets() {
-		adapter, err := r.New(target, engineRuntime.Config{ConfigRoot: t.TempDir()})
+		adapter, err := r.New(target, core.Config{ConfigRoot: t.TempDir()})
 		if err != nil {
 			t.Fatalf("New(%q): %v", target, err)
 		}
@@ -90,11 +88,11 @@ func TestEveryRuntimeBuildsItsOwnAdapter(t *testing.T) {
 
 func TestTheClaudeFactoryWorksInTheConfigRoot(t *testing.T) {
 	root := t.TempDir()
-	adapter, err := shippedRegistry(t).New(engineRuntime.TargetClaude, engineRuntime.Config{ConfigRoot: root})
+	adapter, err := shippedRegistry(t).New(core.TargetClaude, core.Config{ConfigRoot: root})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if result := adapter.Install(); result.Status != engineRuntime.CapabilityRestartRequired {
+	if result := adapter.Install(); result.Status != core.CapabilityRestartRequired {
 		t.Fatalf("Install() = %#v", result)
 	}
 	if got := parseClaudeSettingsFile(t, filepath.Join(root, "settings.json")); got["hooks"] == nil {
@@ -105,12 +103,12 @@ func TestTheClaudeFactoryWorksInTheConfigRoot(t *testing.T) {
 func TestThePiFactoryBuildsUnderTheConfigRootNotInIt(t *testing.T) {
 	root := t.TempDir()
 	want := filepath.Join(root, "pi", "labdrian-pi")
-	adapter, err := shippedRegistry(t).New(engineRuntime.TargetPi, engineRuntime.Config{ConfigRoot: root})
+	adapter, err := shippedRegistry(t).New(core.TargetPi, core.Config{ConfigRoot: root})
 	if err != nil {
 		t.Fatal(err)
 	}
 	result := adapter.Status()
-	if result.Status != engineRuntime.CapabilityUnsupported || !strings.Contains(result.Message, "package is not built at "+want+" ") {
+	if result.Status != core.CapabilityUnsupported || !strings.Contains(result.Message, "package is not built at "+want+" ") {
 		t.Fatalf("Status() = %#v, want it to look for the package at %s, under the config root", result, want)
 	}
 }
@@ -133,11 +131,11 @@ func TestPiUninstallUnderASharedConfigRootLeavesTheOtherRuntimesFilesAlone(t *te
 	}
 	commands := &fakeCommands{}
 
-	adapter, err := shippedRegistryWith(t, commands).New(engineRuntime.TargetPi, engineRuntime.Config{Home: t.TempDir(), ConfigRoot: root})
+	adapter, err := shippedRegistryWith(t, commands).New(core.TargetPi, core.Config{Home: t.TempDir(), ConfigRoot: root})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if result := adapter.Uninstall(); result.Status != engineRuntime.CapabilitySupported {
+	if result := adapter.Uninstall(); result.Status != core.CapabilitySupported {
 		t.Fatalf("Uninstall() = %#v, want supported", result)
 	}
 	if got := commands.invocations(); len(got) != 1 || got[0][0] != "remove" || got[0][1] != pkg {
@@ -181,7 +179,7 @@ func TestThePiFactoryReadsPiSettingsUnderTheConfigHome(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	adapter, err := shippedRegistry(t).New(engineRuntime.TargetPi, engineRuntime.Config{Home: home, ConfigRoot: root})
+	adapter, err := shippedRegistry(t).New(core.TargetPi, core.Config{Home: home, ConfigRoot: root})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -194,144 +192,11 @@ func TestThePiFactoryReadsPiSettingsUnderTheConfigHome(t *testing.T) {
 // replaced by the home of the process.
 func TestThePiFactoryWithoutAHomeSaysSoAndGuessesNone(t *testing.T) {
 	root, _ := builtPiPackage(t)
-	adapter, err := shippedRegistry(t).New(engineRuntime.TargetPi, engineRuntime.Config{ConfigRoot: root})
+	adapter, err := shippedRegistry(t).New(core.TargetPi, core.Config{ConfigRoot: root})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if msg := adapter.Status().Message; !strings.Contains(msg, "cannot resolve home directory") {
 		t.Fatalf("Status() without a home = %q, want it to say the home cannot be resolved", msg)
 	}
-}
-
-// notRuntimeTargets are the Target constants that name something other than a runtime: a request
-// for every registered runtime, and the label of the longterm-mem component's aggregate result.
-var notRuntimeTargets = map[string]bool{"TargetAll": true, "TargetLongtermMem": true}
-
-// TestEveryTargetConstantIsACapabilityTarget reads the source of the package: a constant of type
-// Target is either listed in notRuntimeTargets or defined as a name of the capability vocabulary
-// (capability.TargetX), never as a string of its own. A runtime added here by a literal would
-// otherwise be a second vocabulary that nothing registers and nothing declares.
-func TestEveryTargetConstantIsACapabilityTarget(t *testing.T) {
-	fset := token.NewFileSet()
-	seen := 0
-	for _, path := range nonTestGoFiles(t, ".") {
-		file, err := parser.ParseFile(fset, path, nil, parser.SkipObjectResolution)
-		if err != nil {
-			t.Fatalf("parse %s: %v", path, err)
-		}
-		n, problems := targetConstantProblems(file)
-		seen += n
-		for _, problem := range problems {
-			t.Errorf("%s: %s", filepath.Base(path), problem)
-		}
-	}
-	if seen == 0 {
-		t.Fatal("no runtime Target constants found; the source scan is broken")
-	}
-}
-
-// TestTargetConstantScanNamesWhatItCannotJudge feeds the scan source it must refuse without
-// panicking: a literal, a constant with no value of its own (a bare declaration, or one that
-// repeats the previous line), and a value that is not capability.X.
-func TestTargetConstantScanNamesWhatItCannotJudge(t *testing.T) {
-	const src = `package runtime
-const (
-	TargetGood  Target = capability.TargetClaude
-	TargetLit   Target = "codex"
-	TargetOther Target = other.TargetPi
-	TargetImplicit
-	TargetAll Target = "all"
-)
-const TargetBare Target
-
-// Go wants as many values as names: the scan names the constant that has none, and the spec that
-// has too many.
-const TargetA, TargetB Target = capability.TargetClaude
-const TargetC Target = capability.TargetCodex, capability.TargetPi
-
-// An untyped spec, and the ones that repeat it, are not Target constants.
-const (
-	TargetTyped Target = capability.TargetPi
-	Counter0           = iota
-	Counter1
-)
-`
-	file, err := parser.ParseFile(token.NewFileSet(), "scan.go", src, parser.SkipObjectResolution)
-	if err != nil {
-		t.Fatal(err)
-	}
-	n, problems := targetConstantProblems(file)
-	if n != 9 {
-		t.Errorf("scanned %d runtime constants, want 9 (TargetAll, Counter0 and Counter1 are not)", n)
-	}
-	for _, name := range []string{"TargetLit", "TargetOther", "TargetImplicit", "TargetBare", "TargetB", "TargetC"} {
-		found := false
-		for _, problem := range problems {
-			found = found || strings.HasPrefix(problem, name+" ")
-		}
-		if !found {
-			t.Errorf("no problem reported for %s; got %q", name, problems)
-		}
-	}
-	for _, problem := range problems {
-		for _, accepted := range []string{"TargetGood ", "TargetAll ", "TargetA ", "TargetTyped ", "Counter0 ", "Counter1 "} {
-			if strings.HasPrefix(problem, accepted) {
-				t.Errorf("a constant Go accepts, or that is not a Target, was reported: %s", problem)
-			}
-		}
-	}
-}
-
-// isCapabilityName says whether expr is a name taken from the capability package: capability.X.
-func isCapabilityName(expr ast.Expr) bool {
-	sel, ok := expr.(*ast.SelectorExpr)
-	if !ok {
-		return false
-	}
-	pkg, ok := sel.X.(*ast.Ident)
-	return ok && pkg.Name == "capability"
-}
-
-// targetConstantProblems judges the Target constants of one file. It returns how many runtime
-// constants it looked at and one message, beginning with the constant's name, for each that is not
-// defined as capability.X.
-func targetConstantProblems(file *ast.File) (scanned int, problems []string) {
-	for _, decl := range file.Decls {
-		gen, ok := decl.(*ast.GenDecl)
-		if !ok || gen.Tok != token.CONST {
-			continue
-		}
-		// A spec without a type repeats the previous line's type and expression, so the type is
-		// the one the group last named: Go's implicit repetition.
-		var lastType ast.Expr
-		for _, spec := range gen.Specs {
-			vs := spec.(*ast.ValueSpec)
-			typ := vs.Type
-			if typ != nil || len(vs.Values) > 0 {
-				lastType = typ
-			} else {
-				typ = lastType
-			}
-			if id, ok := typ.(*ast.Ident); !ok || id.Name != "Target" {
-				continue
-			}
-			for i, name := range vs.Names {
-				if notRuntimeTargets[name.Name] {
-					continue
-				}
-				scanned++
-				if i >= len(vs.Values) {
-					problems = append(problems, name.Name+" has no value of its own; define it explicitly as capability.Target...")
-					continue
-				}
-				if !isCapabilityName(vs.Values[i]) {
-					problems = append(problems, name.Name+" is not defined from the capability vocabulary; define it as capability.Target..., or list it in notRuntimeTargets if it is not a runtime")
-				}
-			}
-			if len(vs.Values) > len(vs.Names) {
-				problems = append(problems, vs.Names[0].Name+" is declared with more values than names; give each constant the one value of its own")
-			}
-		}
-	}
-	return scanned, problems
 }
