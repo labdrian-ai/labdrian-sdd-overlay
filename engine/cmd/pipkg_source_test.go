@@ -5,10 +5,10 @@ import (
 	"testing"
 )
 
-// repositoryLocatingVariables are the variables that tell git which repository to act on. The
-// owner decided (2026-10-09, batch 20, decision 1) that the git the package builder runs does not
-// inherit them: `git -C <overlay>` must read the overlay's own repository, not the one a hook or
-// a wrapper that set them is in. The list is pinned here so a change to it is a decision.
+// decidedRepositoryLocatingVariables is the owner's decision of 2026-10-09 (batch 20, decision 1)
+// written out a second time, by hand, on purpose: the production map repositoryLocatingVariables
+// must hold exactly these names, so changing that map without changing this list fails a test and
+// makes the change a visible decision.
 var decidedRepositoryLocatingVariables = []string{
 	"GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_OBJECT_DIRECTORY",
 	"GIT_ALTERNATE_OBJECT_DIRECTORIES", "GIT_COMMON_DIR", "GIT_NAMESPACE", "GIT_PREFIX",
@@ -72,5 +72,11 @@ func TestGitEnvironmentIsFilteredByName(t *testing.T) {
 func TestGitRunsUnderNoDeadline(t *testing.T) {
 	if got := pipkgGitOptions([]string{"PATH=/usr/bin"}).Timeout; got != 0 {
 		t.Errorf("git runs under a deadline of %v, want none", got)
+	}
+}
+
+func TestTheGitOfThePackageBuilderIsBoundedByPipkgGitMaxOutput(t *testing.T) {
+	if got := pipkgGitRunner().MaxOutput(); got != pipkgGitMaxOutput {
+		t.Errorf("pipkgGitRunner().MaxOutput() = %d, want pipkgGitMaxOutput (%d)", got, pipkgGitMaxOutput)
 	}
 }
