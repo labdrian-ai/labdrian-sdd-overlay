@@ -99,7 +99,7 @@ func TestModuleReachFollowsImportsThroughOtherPackages(t *testing.T) {
 // it and the plan of H27 still counts it.
 func TestSettingsDoesNotReachTheShaperOrGit(t *testing.T) {
 	const modulePath = "github.com/labdrian-ai/labdrian-sdd-overlay/engine"
-	for _, start := range []string{"settings"} {
+	for _, start := range []string{"settings", "settings/settingsfile"} {
 		reached, err := moduleReach(".", modulePath, start)
 		if err != nil {
 			t.Fatal(err)

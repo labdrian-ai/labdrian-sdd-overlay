@@ -102,6 +102,7 @@ var rings = map[string]archguard.Ring{
 	"runtime/core":              archguard.Domain,
 	"runtime/opencodeprompt":    archguard.Domain,
 	"settings":                  archguard.Adapter,
+	"settings/settingsfile":     archguard.Adapter,
 	"shaper":                    archguard.Domain,
 	"shaper/fsadapter":          archguard.Adapter,
 	"shaper/shapertest":         archguard.Support,
