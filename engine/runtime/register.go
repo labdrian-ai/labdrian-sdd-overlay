@@ -10,9 +10,14 @@ import (
 // Registry, its Factory and the Config a factory is handed are the core's (runtime/core); what
 // belongs here is knowing which adapter answers to which target.
 
-// RegisterClaude registers the Claude runtime.
-func RegisterClaude(r *core.Registry) error {
-	return r.Register(core.TargetClaude, func(cfg core.Config) core.Adapter { return NewClaudeAdapter(cfg.ClaudeRoot()) })
+// RegisterClaude registers the Claude runtime, which reaches the hooks of its settings.json only
+// through the port. It refuses a nil one: an adapter built without it would fail at the first
+// lifecycle step it runs, long after the program was wired.
+func RegisterClaude(r *core.Registry, hooks HookInstaller) error {
+	if hooks == nil {
+		return fmt.Errorf("runtime %q registered with no hook installer", core.TargetClaude)
+	}
+	return r.Register(core.TargetClaude, func(cfg core.Config) core.Adapter { return NewClaudeAdapter(cfg.ClaudeRoot(), hooks) })
 }
 
 // RegisterCodex registers the Codex runtime.

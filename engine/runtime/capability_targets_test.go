@@ -11,6 +11,7 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/capability"
 	engineRuntime "github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime/core"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings/settingsfile"
 )
 
 // shippedRegistry registers every runtime this package ships, the way the composition root does,
@@ -25,7 +26,7 @@ func shippedRegistryWith(t *testing.T, commands engineRuntime.CommandRunner) *co
 	t.Helper()
 	r := core.NewRegistry()
 	for _, register := range []func(*core.Registry) error{
-		engineRuntime.RegisterClaude,
+		func(r *core.Registry) error { return engineRuntime.RegisterClaude(r, settingsfile.Installer{}) },
 		engineRuntime.RegisterOpenCode,
 		engineRuntime.RegisterCodex,
 		func(r *core.Registry) error {

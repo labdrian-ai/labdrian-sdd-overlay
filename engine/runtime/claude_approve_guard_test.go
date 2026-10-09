@@ -5,7 +5,6 @@ import (
 	"strings"
 	"testing"
 
-	engineRuntime "github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime/core"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings"
 )
@@ -31,7 +30,7 @@ func approveGuardCommands(root map[string]interface{}, hookCommand string) map[s
 
 func TestClaudeInstallWritesTheApproveGuard(t *testing.T) {
 	root := t.TempDir()
-	adapter := engineRuntime.NewClaudeAdapter(root)
+	adapter := newClaudeAdapter(root)
 	hookCommand := filepath.Join(root, "bin", "gentle-ai-overlay")
 
 	if result := adapter.Install(); result.Status != core.CapabilityRestartRequired {
@@ -55,7 +54,7 @@ func TestClaudeStatusIsPartialUntilInstallHooksIsRerunForTheApproveGuard(t *test
 	root := t.TempDir()
 	settingsPath := filepath.Join(root, "settings.json")
 	hookCommand := filepath.Join(root, "bin", "gentle-ai-overlay")
-	adapter := engineRuntime.NewClaudeAdapter(root)
+	adapter := newClaudeAdapter(root)
 	if result := adapter.Install(); result.Status != core.CapabilityRestartRequired {
 		t.Fatalf("Install() = %#v", result)
 	}
@@ -83,7 +82,7 @@ func TestClaudeStatusIsPartialUntilInstallHooksIsRerunForTheApproveGuard(t *test
 func TestClaudeStatusIsPartialWhenAnApproveGuardEntryDrifted(t *testing.T) {
 	root := t.TempDir()
 	settingsPath := filepath.Join(root, "settings.json")
-	adapter := engineRuntime.NewClaudeAdapter(root)
+	adapter := newClaudeAdapter(root)
 	if result := adapter.Install(); result.Status != core.CapabilityRestartRequired {
 		t.Fatalf("Install() = %#v", result)
 	}
@@ -111,7 +110,7 @@ func TestClaudeUninstallRemovesTheApproveGuardAndKeepsForeignEntries(t *testing.
 	root := t.TempDir()
 	settingsPath := filepath.Join(root, "settings.json")
 	hookCommand := filepath.Join(root, "bin", "gentle-ai-overlay")
-	adapter := engineRuntime.NewClaudeAdapter(root)
+	adapter := newClaudeAdapter(root)
 	foreign := map[string]interface{}{"matcher": settings.ApproveGuardBashMatcher, "hooks": []interface{}{map[string]interface{}{"type": "command", "command": "/opt/other/bash-guard"}}}
 	writeClaudeSettings(t, settingsPath, map[string]interface{}{"hooks": map[string]interface{}{"PreToolUse": []interface{}{foreign}}})
 

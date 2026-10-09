@@ -83,6 +83,7 @@ import (
 	runtimepkg "github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime"
 	runtimecore "github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime/core"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings/settingsfile"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/synctrigger"
 )
@@ -484,7 +485,7 @@ func runRuntimeCore(commands runtimepkg.CommandRunner, source pipkg.SourceRepo, 
 		return
 	}
 
-	registry, err := newRuntimeRegistry(newWarningRegistryRepository(stderr), commands, source, pipkgOptionsFromEnv(os.Getenv))
+	registry, err := newRuntimeRegistry(newWarningRegistryRepository(stderr), settingsfile.Installer{}, commands, source, pipkgOptionsFromEnv(os.Getenv))
 	if err != nil {
 		fmt.Fprintln(stderr, "error:", err)
 		exit(1)
