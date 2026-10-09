@@ -58,16 +58,6 @@ func buildProjectionEntry(hookCommand string, s hookSpec) map[string]interface{}
 	return entry
 }
 
-func (m *Merger) isProjectionEntry(e interface{}) bool {
-	return projectionFamily.owns(e, m.hookCommand)
-}
-
-// mergeProjection makes the projection family exactly the desired entries; see
-// hookFamily.merge.
-func (m *Merger) mergeProjection(hooks map[string]interface{}) bool {
-	return projectionFamily.merge(hooks, m.hookCommand)
-}
-
 // MissingProjectionHookParts names every part of the projection family that is
 // missing or has drifted in root, in a fixed order, and returns nil when the
 // family is exactly what Install writes; see hookFamily.missingParts.

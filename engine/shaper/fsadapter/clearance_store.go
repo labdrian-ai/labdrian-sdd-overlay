@@ -15,7 +15,7 @@ import (
 var _ shaper.ClearanceStore = ClearanceStore{}
 
 // storeComponents are the fixed directories under the state home. They are the path
-// shaper.GuardStoreMarker names, and a test keeps the two equal.
+// guardmarkers.Store names, and a test keeps the two equal.
 var storeComponents = []string{"labdrian", "shaper-clearance"}
 
 // ErrUnsupportedPlatform: the running platform has no store support.

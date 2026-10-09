@@ -51,7 +51,7 @@ var ErrClearanceNotFound = errors.New("clearance store: no clearance record for 
 // holds bytes; whether a stored record clears anything is for Verify, which callers run on
 // what Get returns. The store is not a signature, and nothing about it stops a process
 // running as the same OS user from forging a record: the runtime deny guards (see
-// GuardStoreMarker) only keep the model out.
+// guardmarkers.Store) only keep the model out.
 type ClearanceStore interface {
 	// Path returns where the record for one key is, or would be, kept, as text for a
 	// person to read in a report, without touching the store. The key is refused if

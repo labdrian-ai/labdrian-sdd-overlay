@@ -12,6 +12,7 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/capability"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/pipkg"
 	runtimecore "github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime/core"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings/settingsfile"
 )
 
 // TestRunRuntimeCore_ConfigRootReachesPi: --config-root reaches Pi like it reaches the other
@@ -65,7 +66,7 @@ func TestRunRuntimeCore_ConfigRootReachesPiInTheAllForm(t *testing.T) {
 // program ships is the capability vocabulary, so a target declared and never registered, or the
 // reverse, fails here; and `all` acts on the runtimes in the order they have always been acted on.
 func TestNewRuntimeRegistry_RegistersTheDeclaredRuntimesInTheOrderAllExpandsTo(t *testing.T) {
-	reg, err := newRuntimeRegistry(nil, noPi(), noGit(), pipkg.Options{})
+	reg, err := newRuntimeRegistry(nil, settingsfile.Installer{}, noPi(), noGit(), pipkg.Options{})
 	if err != nil {
 		t.Fatalf("newRuntimeRegistry: %v", err)
 	}
@@ -143,7 +144,7 @@ func TestRuntimeConfigFromEnv(t *testing.T) {
 // TestBuildRuntimeAdapters_BuildsAllOrNone: a target the registry cannot build is the error and no
 // adapter is handed back, so a command over `all` never acts on the first targets and then stops.
 func TestBuildRuntimeAdapters_BuildsAllOrNone(t *testing.T) {
-	reg, err := newRuntimeRegistry(nil, noPi(), noGit(), pipkg.Options{})
+	reg, err := newRuntimeRegistry(nil, settingsfile.Installer{}, noPi(), noGit(), pipkg.Options{})
 	if err != nil {
 		t.Fatal(err)
 	}

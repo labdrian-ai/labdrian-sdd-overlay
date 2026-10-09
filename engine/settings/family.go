@@ -7,12 +7,11 @@ import (
 
 // hookFamily is a set of hook entries this overlay owns as a unit: the entries
 // are told apart from every other entry in settings.json by the installed
-// binary path together with one identity token in their command, and each is
-// exactly the entry this version writes for its spec. Install repairs the
-// family to exactly that set, uninstall removes exactly that set, and the status
-// helpers report what is missing or has drifted. The projection family and the
-// approve guard family share this one implementation, so their merge and their
-// status check cannot disagree with each other or with the other family's.
+// binary path together with one identity token in their command. Install puts
+// them in place as the family's upkeep says, uninstall removes exactly the
+// entries that carry the identity, and the status helpers report what is missing
+// or has drifted. Every family the overlay installs is one of these, so their
+// merge and their removal cannot disagree with each other.
 type hookFamily struct {
 	// identity is the dedup/uninstall token: a command is the family's when it
 	// contains the binary path and this token.
@@ -21,7 +20,27 @@ type hookFamily struct {
 	specs []hookSpec
 	// build returns the settings entry this version writes for one spec.
 	build func(hookCommand string, s hookSpec) map[string]interface{}
+	// upkeep says what Install does with an entry of the family already in the file. The zero
+	// value is repairing.
+	upkeep upkeep
 }
+
+// upkeep is how Install treats the entries of a family that are already in settings.json.
+type upkeep int
+
+const (
+	// repairing makes the family exactly the entries this version writes: a missing entry is
+	// appended and an owned entry that differs from what this version writes, or repeats one, is
+	// replaced. A machine that installed an older command line gets the current one.
+	repairing upkeep = iota
+	// keepingOne appends an entry only when the family has none under that event, whatever the
+	// entry says: an owned entry is never rewritten, so an older command line stays as it was
+	// installed. A family with two specs under one event cannot use it.
+	keepingOne
+	// keepingOnePerMatcher is keepingOne for a family with several entries under one event: an
+	// entry is missing unless an owned entry under the event carries the spec's matcher.
+	keepingOnePerMatcher
+)
 
 // hookSpec is one entry of a family: the event key it sits under and, when it
 // has one, the tool matcher.
@@ -66,7 +85,14 @@ func (f hookFamily) specsFor(event string) []hookSpec {
 // to tell our entries from foreign ones (every command contains the empty
 // string), so no entry is ours.
 func (f hookFamily) owns(e interface{}, hookCommand string) bool {
-	return hookCommand != "" && entryContainsBinary(e, hookCommand) && entryContainsBinary(e, f.identity)
+	return hookCommand != "" && f.carries(e, hookCommand)
+}
+
+// carries is owns without the guard against an empty binary path: the entry references the binary
+// and the family's identity token. The status helpers answer by it for whatever path they are
+// given; install and uninstall refuse an empty path before they get here.
+func (f hookFamily) carries(e interface{}, hookCommand string) bool {
+	return entryContainsBinary(e, hookCommand) && entryContainsBinary(e, f.identity)
 }
 
 // matchingSpec returns the index of the spec whose exact entry equals e, or -1.
@@ -121,6 +147,9 @@ func (f hookFamily) classify(entries []interface{}, hookCommand string, specs []
 // hold hooks, so, as in every other family, it is replaced (the original stays
 // in settings.json.bak). Returns true if anything changed.
 func (f hookFamily) merge(hooks map[string]interface{}, hookCommand string) bool {
+	if f.upkeep != repairing {
+		return f.mergeMissing(hooks, hookCommand)
+	}
 	changed := false
 	for _, event := range f.events() {
 		specs := f.specsFor(event)
@@ -147,6 +176,43 @@ func (f hookFamily) merge(hooks map[string]interface{}, hookCommand string) bool
 		}
 	}
 	return changed
+}
+
+// mergeMissing appends the entries the family has none of and touches nothing else: an owned entry
+// is kept as it is, whatever it says, and a foreign one is never read past the identity check. A
+// hook list that is not an array cannot hold hooks and is replaced, as in repairing. Returns true
+// if anything changed.
+func (f hookFamily) mergeMissing(hooks map[string]interface{}, hookCommand string) bool {
+	changed := false
+	for _, event := range f.events() {
+		entries, _ := hooks[event].([]interface{})
+		for _, s := range f.specsFor(event) {
+			if f.holds(entries, hookCommand, s) {
+				continue
+			}
+			entries = append(entries, f.build(hookCommand, s))
+			hooks[event] = entries
+			changed = true
+		}
+	}
+	return changed
+}
+
+// holds reports whether an entry of the family, under the list it is given, answers a spec under
+// the family's upkeep: an owned entry, and for keepingOnePerMatcher one with the spec's matcher.
+func (f hookFamily) holds(entries []interface{}, hookCommand string, s hookSpec) bool {
+	for _, e := range entries {
+		if !f.carries(e, hookCommand) {
+			continue
+		}
+		if f.upkeep == keepingOnePerMatcher {
+			if em, ok := e.(map[string]interface{}); !ok || em["matcher"] != s.matcher {
+				continue
+			}
+		}
+		return true
+	}
+	return false
 }
 
 // missingParts names every part of the family that is missing or has drifted in

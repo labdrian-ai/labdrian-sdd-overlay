@@ -10,18 +10,25 @@ import (
 	engineRuntime "github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime/core"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings/settingsfile"
 )
+
+// newClaudeAdapter is the Claude adapter over root with the real settings file adapter, so the
+// tests below see the bytes the adapter leaves in a temporary directory.
+func newClaudeAdapter(root string) engineRuntime.ClaudeAdapter {
+	return engineRuntime.NewClaudeAdapter(root, settingsfile.Installer{})
+}
 
 func TestClaudeInstallWritesLifecycleHooksAndReportsSupportedStatus(t *testing.T) {
 	root := t.TempDir()
-	adapter := engineRuntime.NewClaudeAdapter(root)
+	adapter := newClaudeAdapter(root)
 
 	if result := adapter.Install(); result.Status != core.CapabilityRestartRequired {
 		t.Fatalf("Install() = %#v", result)
 	}
 
-	// mergeHooks installs both pairs (minimalism, design) via the real
-	// Merger.Install() path (Phase 4, PR-3 of the
+	// settings.Document.Merge installs both pairs (minimalism, design) via the real
+	// settings file adapter (Phase 4, PR-3 of the
 	// anti-generic-design-runtime-wiring chain) — no test-fixture workaround
 	// needed anymore.
 	settingsPath := filepath.Join(root, "settings.json")
@@ -52,7 +59,7 @@ func TestClaudeInstallWritesLifecycleHooksAndReportsSupportedStatus(t *testing.T
 
 func TestClaudeUpdateRefreshesLifecycleAndKeepsSupportedStatus(t *testing.T) {
 	root := t.TempDir()
-	adapter := engineRuntime.NewClaudeAdapter(root)
+	adapter := newClaudeAdapter(root)
 
 	if result := adapter.Install(); result.Status != core.CapabilityRestartRequired {
 		t.Fatalf("Install() = %#v", result)
@@ -62,8 +69,8 @@ func TestClaudeUpdateRefreshesLifecycleAndKeepsSupportedStatus(t *testing.T) {
 		t.Fatalf("Update() = %#v", result)
 	}
 
-	// mergeHooks installs both pairs (minimalism, design) via the real
-	// Merger.Install()/Update() path — Update() keeps the (minimalism+design)
+	// settings.Document.Merge installs both pairs (minimalism, design) via the real
+	// settings file adapter's Install path — Update() keeps the (minimalism+design)
 	// lifecycle state "supported" without any test-fixture workaround.
 	status := adapter.Status()
 	if status.Status != core.CapabilitySupported {
@@ -73,7 +80,7 @@ func TestClaudeUpdateRefreshesLifecycleAndKeepsSupportedStatus(t *testing.T) {
 
 func TestClaudeUninstallRemovesOwnedHooksAndReturnsUnhealthyStatus(t *testing.T) {
 	root := t.TempDir()
-	adapter := engineRuntime.NewClaudeAdapter(root)
+	adapter := newClaudeAdapter(root)
 	if result := adapter.Install(); result.Status != core.CapabilityRestartRequired {
 		t.Fatalf("Install() = %#v", result)
 	}
@@ -135,7 +142,7 @@ func TestClaudeStatusRequiresFullLifecycleState(t *testing.T) {
 	root := t.TempDir()
 	settingsPath := filepath.Join(root, "settings.json")
 	hookCommand := filepath.Join(root, "bin", "gentle-ai-overlay")
-	adapter := engineRuntime.NewClaudeAdapter(root)
+	adapter := newClaudeAdapter(root)
 
 	if result := adapter.Install(); result.Status != core.CapabilityRestartRequired {
 		t.Fatalf("Install() = %#v", result)
@@ -172,7 +179,7 @@ func TestClaudeStatusRequiresFullLifecycleState(t *testing.T) {
 // "not fully owned/installed".
 func TestClaudeStatusPartialMessageNamesRemediationCommands(t *testing.T) {
 	root := t.TempDir()
-	adapter := engineRuntime.NewClaudeAdapter(root)
+	adapter := newClaudeAdapter(root)
 
 	// Fresh root: no settings.json at all is CapabilityUnsupported, not
 	// CapabilityPartial, so seed a two-family (no SessionEnd) fixture
@@ -183,8 +190,7 @@ func TestClaudeStatusPartialMessageNamesRemediationCommands(t *testing.T) {
 	if err := os.MkdirAll(filepath.Dir(settingsPath), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	merger := settings.NewMerger(settingsPath, hookCommand)
-	if err := merger.Install(); err != nil {
+	if err := (settingsfile.Installer{}).Install(settingsPath, hookCommand); err != nil {
 		t.Fatalf("seed Install: %v", err)
 	}
 
@@ -214,7 +220,7 @@ func TestClaudeStatusFailsWhenSettingsIsMalformed(t *testing.T) {
 		t.Fatalf("write malformed settings fixture: %v", err)
 	}
 
-	adapter := engineRuntime.NewClaudeAdapter(root)
+	adapter := newClaudeAdapter(root)
 	status := adapter.Status()
 	if status.Status != core.CapabilityUnsupported {
 		t.Fatalf("Status() with malformed settings should be unsupported, got %#v", status)
@@ -339,7 +345,7 @@ func dropEntriesWithIdentity(root map[string]interface{}, key, hookCommand, iden
 }
 
 // NOTE (Phase 4, PR-3): the injectDesignHookPair test-fixture workaround that
-// previously lived here has been removed now that Merger.mergeHooks installs
+// previously lived here has been removed now that the settings merge installs
 // the real anti-generic-design pair — tests exercise the real Install()/
 // Update() path end-to-end (see TestClaudeInstallWritesLifecycleHooksAndReportsSupportedStatus,
 // TestClaudeUpdateRefreshesLifecycleAndKeepsSupportedStatus above).

@@ -8,8 +8,9 @@
 // of the OpenCode plugin from the text of the contracts, which the OpenCode adapter reads.
 //
 // The ports that only one adapter uses stay with that adapter: the Pi adapter's CommandRunner and
-// PackageBuilder are declared in pi_ports.go, which is why a caller finds them in this package and
-// the lifecycle vocabulary in runtime/core.
+// PackageBuilder are declared in pi_ports.go and the Claude adapter's HookInstaller is declared in
+// claude_ports.go, which is why a caller finds them in this package and the lifecycle vocabulary in
+// runtime/core.
 //
 // The adapters read no environment: the composition root (cmd) reads it once into a core.Config and
 // the options of each adapter, builds a core.Registry, and registers the runtimes it ships.

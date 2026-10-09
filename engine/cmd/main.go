@@ -83,6 +83,7 @@ import (
 	runtimepkg "github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime"
 	runtimecore "github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime/core"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings/settingsfile"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/synctrigger"
 )
@@ -484,7 +485,7 @@ func runRuntimeCore(commands runtimepkg.CommandRunner, source pipkg.SourceRepo, 
 		return
 	}
 
-	registry, err := newRuntimeRegistry(newWarningRegistryRepository(stderr), commands, source, pipkgOptionsFromEnv(os.Getenv))
+	registry, err := newRuntimeRegistry(newWarningRegistryRepository(stderr), settingsfile.Installer{}, commands, source, pipkgOptionsFromEnv(os.Getenv))
 	if err != nil {
 		fmt.Fprintln(stderr, "error:", err)
 		exit(1)
@@ -1655,8 +1656,7 @@ func runMergeSettings(args []string) {
 		os.Exit(1)
 	}
 
-	m := settings.NewMerger(settingsPath, hookCommand)
-	if err := m.Install(); err != nil {
+	if err := (settingsfile.Installer{}).Install(settingsPath, hookCommand); err != nil {
 		fmt.Fprintf(os.Stderr, "error: merge-settings: %v\n", err)
 		os.Exit(1)
 	}
@@ -1677,8 +1677,7 @@ func runUninstallHooks(args []string) {
 		os.Exit(1)
 	}
 
-	m := settings.NewMerger(settingsPath, hookCommand)
-	if err := m.Uninstall(); err != nil {
+	if err := (settingsfile.Installer{}).Uninstall(settingsPath, hookCommand); err != nil {
 		fmt.Fprintf(os.Stderr, "error: uninstall-hooks: %v\n", err)
 		os.Exit(1)
 	}

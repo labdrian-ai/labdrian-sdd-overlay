@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/guardmarkers"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/shaper"
 )
 
@@ -87,12 +88,12 @@ func TestClearanceStoreResolvesTheDecidedPath(t *testing.T) {
 }
 
 // The clearance deny guards of the runtimes refuse any path that contains
-// shaper.GuardStoreMarker. They can only guard the store where it really is, so the
-// layout this adapter keeps and the marker the domain publishes to the guards are one
+// guardmarkers.Store. They can only guard the store where it really is, so the
+// layout this adapter keeps and the marker published to the guards are one
 // and the same, and a record's path is one the guards match.
 func TestTheStoreLayoutIsTheOneTheDenyGuardsMatch(t *testing.T) {
-	if want := filepath.Join(storeComponents...); shaper.GuardStoreMarker != want {
-		t.Fatalf("shaper.GuardStoreMarker = %q, want the store path segment %q", shaper.GuardStoreMarker, want)
+	if want := filepath.Join(storeComponents...); guardmarkers.Store != want {
+		t.Fatalf("guardmarkers.Store = %q, want the store path segment %q", guardmarkers.Store, want)
 	}
 	s, _ := newTestStore(t)
 	path, err := s.Path("p", "g", hex64("a"))

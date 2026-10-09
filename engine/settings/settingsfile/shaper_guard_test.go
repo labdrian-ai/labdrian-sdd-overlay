@@ -1,4 +1,4 @@
-package settings_test
+package settingsfile_test
 
 import (
 	"os"
@@ -58,7 +58,7 @@ func TestInstall_AddsShaperGuardHooksAndDenyRuleIdempotently(t *testing.T) {
 	if err := os.WriteFile(path, []byte(`{"permissions":{"deny":["Bash(rm -rf /)"],"allow":["Bash(ls)"]}}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	m := buildMerger(t, path)
+	m := installerFor(t, path)
 	for i := 0; i < 2; i++ {
 		if err := m.Install(); err != nil {
 			t.Fatalf("Install #%d: %v", i+1, err)
@@ -111,7 +111,7 @@ func TestShaperClearanceDenyRuleIsTheDecidedBackstop(t *testing.T) {
 
 func TestHasShaperClearanceGuard_RequiresEveryPart(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "settings.json")
-	if err := buildMerger(t, path).Install(); err != nil {
+	if err := installerFor(t, path).Install(); err != nil {
 		t.Fatal(err)
 	}
 	full := parseJSON(t, path)
@@ -169,7 +169,7 @@ func TestShaperGuardCommand_MissingBinaryStillDeniesMarkersButAllowsOthers(t *te
 	}
 	missing := filepath.Join(t.TempDir(), "gentle-ai-overlay")
 	path := filepath.Join(t.TempDir(), "settings.json")
-	if err := settings.NewMerger(path, missing).Install(); err != nil {
+	if err := newSettingsInstaller(path, missing).Install(); err != nil {
 		t.Fatal(err)
 	}
 	entries := shaperGuardEntries(t, parseJSON(t, path))
@@ -198,7 +198,7 @@ func TestShaperGuardCommand_PresentBinaryExitCodeIsUnmasked(t *testing.T) {
 		t.Fatal(err)
 	}
 	path := filepath.Join(t.TempDir(), "settings.json")
-	if err := settings.NewMerger(path, bin).Install(); err != nil {
+	if err := newSettingsInstaller(path, bin).Install(); err != nil {
 		t.Fatal(err)
 	}
 	command := extractCommand(t, shaperGuardEntries(t, parseJSON(t, path))["Bash"])

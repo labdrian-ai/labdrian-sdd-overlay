@@ -71,19 +71,6 @@ func buildApproveGuardEntry(hookCommand string, s hookSpec) map[string]interface
 	}
 }
 
-// isApproveGuardEntry reports whether a hook entry belongs to the approve guard
-// family: the Merger-level name every other entry kind is reached through (see
-// isProjectionEntry), so the uninstall filter and the merge read alike.
-func (m *Merger) isApproveGuardEntry(e interface{}) bool {
-	return approveGuardFamily.owns(e, m.hookCommand)
-}
-
-// mergeApproveGuard makes the approve guard family exactly the desired entries;
-// see hookFamily.merge.
-func (m *Merger) mergeApproveGuard(hooks map[string]interface{}) bool {
-	return approveGuardFamily.merge(hooks, m.hookCommand)
-}
-
 // MissingApproveGuardParts names every part of the approve guard that is missing
 // or has drifted in root, in a fixed order, and returns nil when the guard is
 // exactly what Install writes and hooks are not globally disabled; see
