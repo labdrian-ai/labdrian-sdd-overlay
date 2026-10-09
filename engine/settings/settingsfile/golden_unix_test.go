@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"testing"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings/settingsfile"
 )
 
@@ -105,6 +106,15 @@ func keepsAReadOnlyBackup(c goldenCase) bool {
 	return c.Before.Bak != nil && modeBits(c.Before.Bak.Mode)&0o200 == 0
 }
 
+// goldenRoot stands for `$W` in the recorded texts: the root the recording's hook command lived
+// under (<root>/home/.claude/bin/gentle-ai-overlay). It is a fixed name, not the temporary
+// directory of the replay, because the hook command is what the program tells its own entries by:
+// the identity tokens (`review-receipt`, `sync-trigger`, ...) are substrings of the entries' commands,
+// and a directory named after the case or the test, as t.TempDir() makes it on a Go that does not
+// shorten the name, carries a token into every command and makes the program see entries that are
+// not there. Only the messages of errors, which name the real files, use the real directory.
+const goldenRoot = "/opt/labdrian-golden"
+
 // goldenDir holds the recorded files: each is a document of its own (cases and the texts they
 // use), at most about 60 KB, and the cases of all of them are replayed.
 const goldenDir = "testdata/golden-v1"
@@ -191,7 +201,7 @@ func modeOf(t *testing.T, text string) os.FileMode {
 	return os.FileMode(bits)
 }
 
-func writeGoldenFile(t *testing.T, doc goldenDocument, world, path string, file *goldenFile) {
+func writeGoldenFile(t *testing.T, doc goldenDocument, root, path string, file *goldenFile) {
 	t.Helper()
 	if file == nil {
 		return
@@ -200,7 +210,7 @@ func writeGoldenFile(t *testing.T, doc goldenDocument, world, path string, file 
 	if !ok {
 		t.Fatalf("blob %q is not in the golden", file.Blob)
 	}
-	if err := os.WriteFile(path, []byte(strings.ReplaceAll(text, "$W", world)), 0o600); err != nil {
+	if err := os.WriteFile(path, []byte(strings.ReplaceAll(text, "$W", root)), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.Chmod(path, modeOf(t, file.Mode)); err != nil {
@@ -224,7 +234,7 @@ func readGoldenFile(t *testing.T, path string) (text string, mode os.FileMode, p
 	return string(data), info.Mode().Perm(), true
 }
 
-func checkGoldenFile(t *testing.T, doc goldenDocument, world, label, path string, want *goldenFile) {
+func checkGoldenFile(t *testing.T, doc goldenDocument, root, label, path string, want *goldenFile) {
 	t.Helper()
 	text, mode, present := readGoldenFile(t, path)
 	if want == nil {
@@ -237,7 +247,7 @@ func checkGoldenFile(t *testing.T, doc goldenDocument, world, label, path string
 		t.Errorf("%s is missing", label)
 		return
 	}
-	if wantText := strings.ReplaceAll(doc.Blobs[want.Blob], "$W", world); text != wantText {
+	if wantText := strings.ReplaceAll(doc.Blobs[want.Blob], "$W", root); text != wantText {
 		t.Errorf("%s differs from what the program wrote:\n got: %q\nwant: %q", label, text, wantText)
 	}
 	if wantMode := modeOf(t, want.Mode); mode != wantMode {
@@ -302,10 +312,10 @@ func TestSettingsJSONIsWhatTheProgramWroteBeforeH27(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
-			writeGoldenFile(t, golden, world, path, c.Before.Settings)
-			writeGoldenFile(t, golden, world, path+".bak", c.Before.Bak)
+			writeGoldenFile(t, golden, goldenRoot, path, c.Before.Settings)
+			writeGoldenFile(t, golden, goldenRoot, path+".bak", c.Before.Bak)
 			installer := settingsfile.Installer{}
-			hookCommand := strings.ReplaceAll(golden.HookCommand, "$W", world)
+			hookCommand := strings.ReplaceAll(golden.HookCommand, "$W", goldenRoot)
 
 			previous, kept := c.Before, c.Before.Bak
 			for n, step := range c.Steps {
@@ -330,9 +340,9 @@ func TestSettingsJSONIsWhatTheProgramWroteBeforeH27(t *testing.T) {
 					}
 				}
 				label := "step " + strconv.Itoa(n) + " (" + step.Op + ")"
-				checkGoldenFile(t, golden, world, label+" settings.json", path, step.After.Settings)
+				checkGoldenFile(t, golden, goldenRoot, label+" settings.json", path, step.After.Settings)
 				kept = backupAfter(previous, kept, step.After)
-				checkGoldenFile(t, golden, world, label+" settings.json.bak", path+".bak", kept)
+				checkGoldenFile(t, golden, goldenRoot, label+" settings.json.bak", path+".bak", kept)
 				previous = step.After
 				if got := dirFiles(t, claude); strings.Join(got, "|") != strings.Join(step.After.DirFiles, "|") {
 					t.Errorf("%s: the directory holds %q, the program left %q", label, got, step.After.DirFiles)
@@ -443,6 +453,21 @@ func TestBackupAfterFollowsTheModeOfTheFileItKept(t *testing.T) {
 		got := backupAfter(c.before, c.kept, c.post)
 		if (got == nil) != (c.want == nil) || (got != nil && *got != *c.want) {
 			t.Errorf("%s: backupAfter = %v, want %v", c.name, got, c.want)
+		}
+	}
+}
+
+// The root stands in for the recording's directory, and the program tells its entries by substrings
+// of their commands: a root that held an identity token would be read as part of every entry.
+func TestTheGoldenRootCarriesNoIdentityToken(t *testing.T) {
+	for _, token := range []string{
+		settings.LabdrianMinimalismIdentity, settings.LabdrianDesignIdentity, settings.LabdrianSyncTriggerIdentity,
+		settings.LabdrianReviewReceiptIdentity, settings.LabdrianShaperGuardIdentity,
+		settings.LabdrianProjectionIdentity, settings.LabdrianApproveGuardIdentity,
+		"skill-discovery-safety", "review-projection-contract",
+	} {
+		if strings.Contains(goldenRoot, token) {
+			t.Errorf("goldenRoot %q contains the identity token %q", goldenRoot, token)
 		}
 	}
 }
