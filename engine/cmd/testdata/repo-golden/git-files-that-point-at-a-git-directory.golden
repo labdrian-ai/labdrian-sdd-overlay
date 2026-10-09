@@ -1,0 +1,273 @@
+# a pointer: the workflow records worktree_root="<CHECKOUT>" git_head=<40 of c>
+$ workflow bind --project proj-1 --workflow wf-1
+# a pointer: bind (in <CHECKOUT>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY gitdir>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-1",
+    "bound_at": "<TIME>"
+  }
+}
+--- stderr ---
+
+$ workflow binding
+# a pointer: binding (in <CHECKOUT>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY gitdir>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-1",
+    "bound_at": "<TIME>"
+  },
+  "workflow": {
+    "classification": "owned",
+    "status": "running"
+  }
+}
+--- stderr ---
+
+# a pointer without a line break: the workflow records worktree_root="<CHECKOUT>" git_head=<40 of c>
+$ workflow bind --project proj-1 --workflow wf-2
+# a pointer without a line break: bind (in <CHECKOUT>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY gitdir>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-2",
+    "bound_at": "<TIME>"
+  }
+}
+--- stderr ---
+
+$ workflow binding
+# a pointer without a line break: binding (in <CHECKOUT>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY gitdir>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-2",
+    "bound_at": "<TIME>"
+  },
+  "workflow": {
+    "classification": "owned",
+    "status": "running"
+  }
+}
+--- stderr ---
+
+# a pointer with spaces around it: the workflow records worktree_root="<CHECKOUT>" git_head=<40 of c>
+$ workflow bind --project proj-1 --workflow wf-3
+# a pointer with spaces around it: bind (in <CHECKOUT>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY gitdir>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-3",
+    "bound_at": "<TIME>"
+  }
+}
+--- stderr ---
+
+$ workflow binding
+# a pointer with spaces around it: binding (in <CHECKOUT>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY gitdir>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-3",
+    "bound_at": "<TIME>"
+  },
+  "workflow": {
+    "classification": "owned",
+    "status": "running"
+  }
+}
+--- stderr ---
+
+# a pointer with a carriage return: the workflow records worktree_root="<CHECKOUT>" git_head=<40 of c>
+$ workflow bind --project proj-1 --workflow wf-4
+# a pointer with a carriage return: bind (in <CHECKOUT>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY gitdir>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-4",
+    "bound_at": "<TIME>"
+  }
+}
+--- stderr ---
+
+$ workflow binding
+# a pointer with a carriage return: binding (in <CHECKOUT>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY gitdir>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-4",
+    "bound_at": "<TIME>"
+  },
+  "workflow": {
+    "classification": "owned",
+    "status": "running"
+  }
+}
+--- stderr ---
+
+# a pointer with no space after the colon: the workflow records worktree_root="<CHECKOUT>" git_head=<40 of c>
+$ workflow bind --project proj-1 --workflow wf-5
+# a pointer with no space after the colon: bind (in <CHECKOUT>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY gitdir>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-5",
+    "bound_at": "<TIME>"
+  }
+}
+--- stderr ---
+
+$ workflow binding
+# a pointer with no space after the colon: binding (in <CHECKOUT>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY gitdir>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-5",
+    "bound_at": "<TIME>"
+  },
+  "workflow": {
+    "classification": "owned",
+    "status": "running"
+  }
+}
+--- stderr ---
+
+# a pointer to a path relative to the checkout: the workflow records worktree_root="<CHECKOUT>" git_head=<40 of c>
+$ workflow bind --project proj-1 --workflow wf-6
+# a pointer to a path relative to the checkout: bind (in <CHECKOUT>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY gitdir>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-6",
+    "bound_at": "<TIME>"
+  }
+}
+--- stderr ---
+
+$ workflow binding
+# a pointer to a path relative to the checkout: binding (in <CHECKOUT>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY gitdir>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-6",
+    "bound_at": "<TIME>"
+  },
+  "workflow": {
+    "classification": "owned",
+    "status": "running"
+  }
+}
+--- stderr ---
+
+# a pointer to a path that needs cleaning: the workflow records worktree_root="<CHECKOUT>" git_head=<40 of c>
+$ workflow bind --project proj-1 --workflow wf-7
+# a pointer to a path that needs cleaning: bind (in <CHECKOUT>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY gitdir>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-7",
+    "bound_at": "<TIME>"
+  }
+}
+--- stderr ---
+
+$ workflow binding
+# a pointer to a path that needs cleaning: binding (in <CHECKOUT>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY gitdir>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-7",
+    "bound_at": "<TIME>"
+  },
+  "workflow": {
+    "classification": "owned",
+    "status": "running"
+  }
+}
+--- stderr ---
+

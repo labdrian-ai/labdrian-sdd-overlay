@@ -44,6 +44,8 @@ type repoWorld struct {
 	state string
 	goals string
 	keys  map[string]string
+	// probed counts the workflows the probes of the case have created, so each has its own.
+	probed int
 }
 
 // neutralDir makes a directory under the system temporary directory whose name carries no word
