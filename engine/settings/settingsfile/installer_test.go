@@ -11,6 +11,9 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings/settingsfile"
 )
 
+// binary is the hook command the tests install for.
+const binary = "/opt/h/bin"
+
 func write(t *testing.T, path, content string) {
 	t.Helper()
 	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {

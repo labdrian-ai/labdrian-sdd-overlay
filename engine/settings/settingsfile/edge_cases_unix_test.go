@@ -14,8 +14,6 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings/settingsfile"
 )
 
-const binary = "/opt/h/bin"
-
 // The cases below are the ones the golden file cannot set up: a file that is not a plain file.
 // Each pins what the program did before H27, except where it says it does not.
 
@@ -122,6 +120,26 @@ func TestUninstallThroughALinkThatHoldsNothingOfOursChangesNothing(t *testing.T)
 	}
 	if lstatMode(t, path)&os.ModeSymlink == 0 {
 		t.Error("the link was replaced")
+	}
+}
+
+// Uninstall through a link that does hold our hooks has a file to write, and is refused like install.
+func TestUninstallThroughALinkThatHoldsOurHooksIsRefused(t *testing.T) {
+	dir, path := edgeWorld(t)
+	target := filepath.Join(dir, "dotfiles.json")
+	if err := (settingsfile.Installer{}).Install(target, binary); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(target, path); err != nil {
+		t.Skipf("no symlinks here: %v", err)
+	}
+	before := readText(t, target)
+
+	if err := (settingsfile.Installer{}).Uninstall(path, binary); !errors.Is(err, atomicfile.ErrSymlink) {
+		t.Fatalf("Uninstall() = %v, want atomicfile.ErrSymlink", err)
+	}
+	if got := readText(t, target); got != before {
+		t.Error("the target of the link was changed")
 	}
 }
 
