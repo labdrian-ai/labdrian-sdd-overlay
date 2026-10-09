@@ -12,6 +12,7 @@ func installedFamilies() map[string]hookFamily {
 		"design":     designFamily,
 		"sync":       syncTriggerFamily,
 		"receipt":    reviewReceiptFamily,
+		"shaper":     shaperGuardFamily,
 		"projection": projectionFamily,
 		"approve":    approveGuardFamily,
 	}
@@ -71,7 +72,7 @@ func TestNoEntryIsOwnedByTwoFamilies(t *testing.T) {
 // guard families repair; which family does which is stated here, so a family cannot change its
 // upkeep without this table changing.
 func TestAKeepingFamilyLeavesAnInstalledEntryWithAnOlderCommandAsItIs(t *testing.T) {
-	keeping := map[string]bool{"minimalism": true, "design": true, "sync": true, "receipt": true, "projection": false, "approve": false}
+	keeping := map[string]bool{"minimalism": true, "design": true, "sync": true, "receipt": true, "shaper": true, "projection": false, "approve": false}
 	for name, family := range installedFamilies() {
 		if (family.upkeep != repairing) != keeping[name] {
 			t.Errorf("%s: keeping = %v, want %v", name, family.upkeep != repairing, keeping[name])

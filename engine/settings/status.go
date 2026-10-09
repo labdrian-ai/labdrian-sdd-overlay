@@ -69,9 +69,10 @@ func HasShaperClearanceGuard(root map[string]interface{}, hookCommand string) bo
 func MissingShaperClearanceGuardParts(root map[string]interface{}, hookCommand string) []string {
 	var missing []string
 	hooks, _ := root["hooks"].(map[string]interface{})
-	for _, matcher := range []string{"Bash", ShaperGuardFileToolMatcher} {
-		if hooks == nil || !hasEntryMatching(hooks, "PreToolUse", shaperGuardMatcher(hookCommand, matcher)) {
-			missing = append(missing, `PreToolUse matcher="`+matcher+`" guard hook`)
+	for _, spec := range shaperGuardFamily.specs {
+		entries, _ := hooks[spec.event].([]interface{})
+		if !shaperGuardFamily.holds(entries, hookCommand, spec) {
+			missing = append(missing, `PreToolUse matcher="`+spec.matcher+`" guard hook`)
 		}
 	}
 	if !hasDenyRule(root, ShaperClearanceDenyRule) {
@@ -81,15 +82,6 @@ func MissingShaperClearanceGuardParts(root map[string]interface{}, hookCommand s
 		missing = append(missing, "hooks enabled (disableAllHooks is true)")
 	}
 	return missing
-}
-
-// shaperGuardMatcher matches our shaper guard entry for one matcher.
-func shaperGuardMatcher(hookCommand, matcher string) func(interface{}) bool {
-	return func(e interface{}) bool {
-		em, ok := e.(map[string]interface{})
-		return ok && em["matcher"] == matcher &&
-			entryContainsBinary(e, hookCommand) && entryContainsBinary(e, LabdrianShaperGuardIdentity)
-	}
 }
 
 func hasDenyRule(root map[string]interface{}, rule string) bool {

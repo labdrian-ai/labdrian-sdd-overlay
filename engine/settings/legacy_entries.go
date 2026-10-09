@@ -239,6 +239,20 @@ func buildReviewReceiptPreToolUseEntry(hookCommand string, _ hookSpec) map[strin
 	}
 }
 
+// shaperGuardFamily is the shaper clearance deny guard: one PreToolUse entry for Bash and one for the
+// file tools. Each is kept per matcher (keepingOnePerMatcher), because both run the same binary with
+// the same verb and differ only by the tools they watch. The permissions.deny rule that backs them
+// up is not an entry of the hooks and is merged and removed beside the family (see denyRule).
+var shaperGuardFamily = hookFamily{
+	identity: LabdrianShaperGuardIdentity,
+	specs: []hookSpec{
+		{event: "PreToolUse", matcher: "Bash"},
+		{event: "PreToolUse", matcher: ShaperGuardFileToolMatcher},
+	},
+	build:  buildShaperGuardPreToolUseEntry,
+	upkeep: keepingOnePerMatcher,
+}
+
 // buildShaperGuardPreToolUseEntry returns one PreToolUse entry of the shaper
 // clearance deny guard. Once the binary is found, its own exit code, 0
 // (allow) or 2 (deny) from the shaper guard hook (shaper.DecideGuard), is the command's exit code.
@@ -250,13 +264,13 @@ func buildReviewReceiptPreToolUseEntry(hookCommand string, _ hookSpec) map[strin
 // removed binary neither disables the guard nor blocks every tool call. The
 // fallback does not collapse whitespace. Both paths match text only: this
 // guard is a speed bump, not a security boundary.
-func (m owner) buildShaperGuardPreToolUseEntry(matcher string) map[string]interface{} {
+func buildShaperGuardPreToolUseEntry(hookCommand string, s hookSpec) map[string]interface{} {
 	cmd := fmt.Sprintf(
 		`command -v %s >/dev/null 2>&1 || { case "$(cat)" in *'%s'*|*'%s'*) echo 'labdrian shaper clearance guard: gentle-ai-overlay is missing; denying a clearance record or store access (a speed bump, not a security boundary)' >&2; exit 2;; esac; exit 0; }; %s %s`,
-		m.hookCommand, guardmarkers.Command, guardmarkers.Store, m.hookCommand, LabdrianShaperGuardIdentity,
+		hookCommand, guardmarkers.Command, guardmarkers.Store, hookCommand, LabdrianShaperGuardIdentity,
 	)
 	return map[string]interface{}{
-		"matcher": matcher,
+		"matcher": s.matcher,
 		"hooks": []interface{}{map[string]interface{}{
 			"type":    "command",
 			"command": cmd,

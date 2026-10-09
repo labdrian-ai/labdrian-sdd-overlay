@@ -85,7 +85,14 @@ func (f hookFamily) specsFor(event string) []hookSpec {
 // to tell our entries from foreign ones (every command contains the empty
 // string), so no entry is ours.
 func (f hookFamily) owns(e interface{}, hookCommand string) bool {
-	return hookCommand != "" && entryContainsBinary(e, hookCommand) && entryContainsBinary(e, f.identity)
+	return hookCommand != "" && f.carries(e, hookCommand)
+}
+
+// carries is owns without the guard against an empty binary path: the entry references the binary
+// and the family's identity token. The status helpers answer by it for whatever path they are
+// given; install and uninstall refuse an empty path before they get here.
+func (f hookFamily) carries(e interface{}, hookCommand string) bool {
+	return entryContainsBinary(e, hookCommand) && entryContainsBinary(e, f.identity)
 }
 
 // matchingSpec returns the index of the spec whose exact entry equals e, or -1.
@@ -195,7 +202,7 @@ func (f hookFamily) mergeMissing(hooks map[string]interface{}, hookCommand strin
 // the family's upkeep: an owned entry, and for keepingOnePerMatcher one with the spec's matcher.
 func (f hookFamily) holds(entries []interface{}, hookCommand string, s hookSpec) bool {
 	for _, e := range entries {
-		if !f.owns(e, hookCommand) {
+		if !f.carries(e, hookCommand) {
 			continue
 		}
 		if f.upkeep == keepingOnePerMatcher {

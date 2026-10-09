@@ -40,23 +40,12 @@ func (m owner) mergeHooks(root map[string]interface{}) bool {
 		}
 	}
 
-	// PreToolUse shaper clearance guard entries (identity: binary path +
-	// shaper guard token), one for Bash and one for the file tools, plus the
-	// permissions.deny backstop. A speed bump, not a security boundary.
-	for _, matcher := range []string{"Bash", ShaperGuardFileToolMatcher} {
-		if !hasEntryMatching(hooks, "PreToolUse", shaperGuardMatcher(m.hookCommand, matcher)) {
-			appendHook(hooks, "PreToolUse", m.buildShaperGuardPreToolUseEntry(matcher))
-			changed = true
-		}
+	// The shaper clearance guard: two PreToolUse entries, and the permissions.deny backstop. A speed
+	// bump, not a security boundary.
+	if shaperGuardFamily.merge(hooks, m.hookCommand) {
+		changed = true
 	}
-	if !hasDenyRule(root, ShaperClearanceDenyRule) {
-		perms, ok := root["permissions"].(map[string]interface{})
-		if !ok {
-			perms = map[string]interface{}{}
-			root["permissions"] = perms
-		}
-		deny, _ := perms["deny"].([]interface{})
-		perms["deny"] = append(deny, ShaperClearanceDenyRule)
+	if addClearanceDenyRule(root) {
 		changed = true
 	}
 
@@ -77,10 +66,21 @@ func (m owner) mergeHooks(root map[string]interface{}) bool {
 	return changed
 }
 
-// isShaperGuardEntry reports whether a hook entry is one of our shaper
-// clearance guard entries.
-func (m owner) isShaperGuardEntry(e interface{}) bool {
-	return entryContainsBinary(e, m.hookCommand) && entryContainsBinary(e, LabdrianShaperGuardIdentity)
+// addClearanceDenyRule puts ShaperClearanceDenyRule in permissions.deny, creating the permissions
+// object and the list if they are not there (a permissions value that is not an object is replaced).
+// Returns true if the rule was added.
+func addClearanceDenyRule(root map[string]interface{}) bool {
+	if hasDenyRule(root, ShaperClearanceDenyRule) {
+		return false
+	}
+	perms, ok := root["permissions"].(map[string]interface{})
+	if !ok {
+		perms = map[string]interface{}{}
+		root["permissions"] = perms
+	}
+	deny, _ := perms["deny"].([]interface{})
+	perms["deny"] = append(deny, ShaperClearanceDenyRule)
+	return true
 }
 
 // legacyIdentities are the --embedded-contract identity tokens of hook pairs
@@ -136,7 +136,7 @@ func (m owner) removeHooks(root map[string]interface{}) bool {
 		}
 		var filtered []interface{}
 		for _, e := range entries {
-			if minimalismFamily.owns(e, m.hookCommand) || designFamily.owns(e, m.hookCommand) || syncTriggerFamily.owns(e, m.hookCommand) || reviewReceiptFamily.owns(e, m.hookCommand) || m.isShaperGuardEntry(e) || m.isProjectionEntry(e) || m.isApproveGuardEntry(e) || m.isLegacyEntry(e) {
+			if minimalismFamily.owns(e, m.hookCommand) || designFamily.owns(e, m.hookCommand) || syncTriggerFamily.owns(e, m.hookCommand) || reviewReceiptFamily.owns(e, m.hookCommand) || shaperGuardFamily.owns(e, m.hookCommand) || m.isProjectionEntry(e) || m.isApproveGuardEntry(e) || m.isLegacyEntry(e) {
 				changed = true
 				continue
 			}
