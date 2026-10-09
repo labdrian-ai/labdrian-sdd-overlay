@@ -2,6 +2,7 @@ package pipkg
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -209,17 +210,16 @@ func resolveGaduAgentSource(overlayRoot string) string {
 
 // checkSkillNameMatchesPath reads <src>/SKILL.md and requires its
 // frontmatter `name:` field to equal filepath.Base(entryPath) (R-004,
-// D4). It scans only the line-oriented frontmatter block (between the
-// opening and closing "---" delimiters) for a top-level "name:" key,
-// deliberately not a general YAML parser -- validateEntry in
-// engine/skills stays filesystem-free by design, so this filesystem-aware
-// check lives here instead.
+// D4). The frontmatter is read by skills.ReadFrontmatter, the same reader
+// the lint uses, which is deliberately not a general YAML parser --
+// validateEntry in engine/skills stays filesystem-free by design, so this
+// filesystem-aware check lives here instead.
 func checkSkillNameMatchesPath(src, entryPath string) error {
 	data, err := os.ReadFile(filepath.Join(src, "SKILL.md"))
 	if err != nil {
 		return fmt.Errorf("reading SKILL.md: %w", err)
 	}
-	name, err := frontmatterName(string(data))
+	name, err := skillName(data)
 	if err != nil {
 		return err
 	}
@@ -230,29 +230,22 @@ func checkSkillNameMatchesPath(src, entryPath string) error {
 	return nil
 }
 
-// frontmatterName extracts the `name:` value from a SKILL.md's YAML
-// frontmatter block (the text between the first two "---" delimiter
-// lines). It is a minimal, line-oriented scan -- not a YAML parser -- and
-// returns an error if no frontmatter block or no name key is found.
-func frontmatterName(content string) (string, error) {
-	lines := strings.Split(content, "\n")
-	if len(lines) == 0 || strings.TrimSpace(lines[0]) != "---" {
+// skillName is the `name` a SKILL.md declares at the top level of its frontmatter, said in the
+// words the build has always used for what it cannot find.
+func skillName(data []byte) (string, error) {
+	fm, err := skills.ReadFrontmatter(data)
+	var fault *skills.FrontmatterError
+	if errors.As(err, &fault) {
+		if fault.Fault == skills.NoClosingFence {
+			return "", fmt.Errorf("SKILL.md frontmatter is not terminated")
+		}
 		return "", fmt.Errorf("SKILL.md has no frontmatter block")
 	}
-	for _, line := range lines[1:] {
-		trimmed := strings.TrimSpace(line)
-		if trimmed == "---" {
-			return "", fmt.Errorf("SKILL.md frontmatter has no %q field", "name")
-		}
-		rest, ok := strings.CutPrefix(trimmed, "name:")
-		if !ok {
-			continue
-		}
-		name := strings.TrimSpace(rest)
-		name = strings.Trim(name, `"'`)
-		return name, nil
+	entry, ok := fm.Entry("name")
+	if !ok {
+		return "", fmt.Errorf("SKILL.md frontmatter has no %q field", "name")
 	}
-	return "", fmt.Errorf("SKILL.md frontmatter is not terminated")
+	return entry.Text(), nil
 }
 
 // checkNoOverlap refuses a destDir that equals, is inside, or contains
