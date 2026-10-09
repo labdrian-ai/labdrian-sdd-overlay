@@ -17,8 +17,7 @@ import (
 
 func edgeWorld(t *testing.T) (dir, path string) {
 	t.Helper()
-	previous := syscall.Umask(0o022)
-	t.Cleanup(func() { syscall.Umask(previous) })
+	fixedUmask(t)
 	dir = t.TempDir()
 	return dir, filepath.Join(dir, "settings.json")
 }

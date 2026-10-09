@@ -60,17 +60,22 @@ var (
 )
 
 // failureWording lists the openings of the errors that report a failure of the file system. The
-// words after them come from the system call or from the package that made it, and are not part of
-// what the cases pin.
+// words between the opening and the reason are not pinned: they name the package that made the call
+// (the old program said `settings: create temp: open <path>: <reason>`, the adapter says
+// `settings: create temp: atomicfile: create temporary file: open <path>: <reason>`). The reason, the
+// words the system gave after the last colon, is.
 var failureWording = []string{"settings: create temp: ", "settings: backup to ", "settings: rename temp to "}
 
+// sameFailure reports whether a failure the adapter reports is the one the program recorded: the
+// same words, or the same opening and the same reason.
 func sameFailure(want, got string) bool {
 	if want == got {
 		return true
 	}
+	reason := func(message string) string { return message[strings.LastIndex(message, ": ")+2:] }
 	for _, opening := range failureWording {
 		if strings.HasPrefix(want, opening) && strings.HasPrefix(got, opening) {
-			return true
+			return reason(want) == reason(got)
 		}
 	}
 	return false
@@ -80,22 +85,40 @@ func sameFailure(want, got string) bool {
 // use), at most about 60 KB, and the cases of all of them are replayed.
 const goldenDir = "testdata/golden-v1"
 
-func loadGolden(t *testing.T) goldenDocument {
+// The number of cases and steps the files hold. A file lost from the directory, or emptied, changes
+// them, so a replay that passes cannot be a replay of less than was recorded.
+const (
+	goldenCaseCount = 156
+	goldenStepCount = 468
+)
+
+func goldenFiles(t *testing.T) []string {
 	t.Helper()
 	files, err := filepath.Glob(filepath.Join(goldenDir, "*.json"))
 	if err != nil || len(files) == 0 {
 		t.Fatalf("no golden file in %s: %v", goldenDir, err)
 	}
+	return files
+}
+
+func readGoldenDocument(t *testing.T, file string) goldenDocument {
+	t.Helper()
+	raw, err := os.ReadFile(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var doc goldenDocument
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		t.Fatalf("%s: %v", file, err)
+	}
+	return doc
+}
+
+func loadGolden(t *testing.T) goldenDocument {
+	t.Helper()
 	merged := goldenDocument{Blobs: map[string]string{}}
-	for _, file := range files {
-		raw, err := os.ReadFile(file)
-		if err != nil {
-			t.Fatal(err)
-		}
-		var doc goldenDocument
-		if err := json.Unmarshal(raw, &doc); err != nil {
-			t.Fatalf("%s: %v", file, err)
-		}
+	for _, file := range goldenFiles(t) {
+		doc := readGoldenDocument(t, file)
 		merged.RecordedFrom, merged.HookCommand = doc.RecordedFrom, doc.HookCommand
 		for key, text := range doc.Blobs {
 			if previous, ok := merged.Blobs[key]; ok && previous != text {
@@ -106,6 +129,33 @@ func loadGolden(t *testing.T) goldenDocument {
 		merged.Cases = append(merged.Cases, doc.Cases...)
 	}
 	return merged
+}
+
+// fixedUmask sets the umask the recorded modes were made under (022) for the length of the test and
+// restores it. The umask belongs to the process, so a test that sets it must not run beside another:
+// TestNoTestOfThisPackageRunsInParallel keeps that true.
+func fixedUmask(t *testing.T) {
+	t.Helper()
+	previous := syscall.Umask(0o022)
+	t.Cleanup(func() { syscall.Umask(previous) })
+}
+
+// rootDefeatsBackupProtection reports whether a case relies on a backup that its owner cannot write
+// (a .bak of mode 0444): for root the open succeeds, so the recorded refusal does not happen and the
+// case says nothing about the adapter.
+func rootDefeatsBackupProtection(euid int, c goldenCase) bool {
+	if euid != 0 || c.Before.Bak == nil {
+		return false
+	}
+	return modeBits(c.Before.Bak.Mode)&0o200 == 0
+}
+
+func modeBits(text string) uint64 {
+	bits, err := strconv.ParseUint(text, 0, 32)
+	if err != nil {
+		return 0
+	}
+	return bits
 }
 
 func modeOf(t *testing.T, text string) os.FileMode {
@@ -189,20 +239,28 @@ func dirFiles(t *testing.T, dir string) []string {
 	return names
 }
 
+// The recorded modes (0o664 for a starting file the recording made, 0o600 for one the program wrote)
+// are set on the starting files explicitly, under the umask fixedUmask sets, so the replay does not
+// depend on the umask of whoever runs it. The cases pin what the program did, quirks included (a
+// backup overwritten on each change, 0600 for the file and 0644 for its backup): a change that
+// fixes one is a decision, and changes the file with its reason.
+//
 // TestSettingsJSONIsWhatTheProgramWroteBeforeH27 replays the cases recorded from the program as it
 // was before settings was split (testdata/golden-v1): the same starting file, the same calls, and
 // after each one the bytes of settings.json, its mode, its backup and its mode, the names left in
 // the directory, and whether the call failed with the same words. It runs the file adapter; the
 // Merger it replaced (settings, before the adapter existed) passed the same file.
 func TestSettingsJSONIsWhatTheProgramWroteBeforeH27(t *testing.T) {
-	previous := syscall.Umask(0o022)
-	t.Cleanup(func() { syscall.Umask(previous) })
+	fixedUmask(t)
 	golden := loadGolden(t)
 	if len(golden.Cases) == 0 {
 		t.Fatal("the golden holds no case")
 	}
 	for _, c := range golden.Cases {
 		t.Run(c.Name, func(t *testing.T) {
+			if rootDefeatsBackupProtection(os.Geteuid(), c) {
+				t.Skip("root writes through a read-only backup, so the refusal the case records cannot happen")
+			}
 			world := t.TempDir()
 			claude := filepath.Join(world, "home", ".claude")
 			path := filepath.Join(claude, "settings.json")
@@ -245,5 +303,83 @@ func TestSettingsJSONIsWhatTheProgramWroteBeforeH27(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// The files are the ones that were recorded, all of them read: the cases and steps add up, and none
+// is empty, so a lost or emptied file fails here and not by shrinking the replay.
+func TestTheGoldenFilesHoldWhatWasRecorded(t *testing.T) {
+	cases, steps := 0, 0
+	for _, file := range goldenFiles(t) {
+		doc := readGoldenDocument(t, file)
+		if len(doc.Cases) == 0 {
+			t.Errorf("%s holds no case", file)
+		}
+		for _, c := range doc.Cases {
+			cases++
+			steps += len(c.Steps)
+		}
+	}
+	if cases != goldenCaseCount || steps != goldenStepCount {
+		t.Errorf("the golden files hold %d cases and %d steps, want %d and %d", cases, steps, goldenCaseCount, goldenStepCount)
+	}
+}
+
+func TestSameFailurePinsTheReasonAndNotTheWordsBetween(t *testing.T) {
+	old := "settings: create temp: open /d/.settings-N.json.tmp: permission denied"
+	cases := []struct {
+		name, got string
+		want      bool
+	}{
+		{"identical", old, true},
+		{"the adapter's words between", "settings: create temp: atomicfile: create temporary file: open /d/.settings-N.json.tmp: permission denied", true},
+		{"another reason", "settings: create temp: atomicfile: create temporary file: open /d/.settings-N.json.tmp: no such file or directory", false},
+		{"another opening", "settings: backup to /d/x.bak: open /d/x.bak: permission denied", false},
+		{"no opening of the three", "something else: permission denied", false},
+	}
+	for _, c := range cases {
+		if got := sameFailure(old, c.got); got != c.want {
+			t.Errorf("%s: sameFailure = %v, want %v", c.name, got, c.want)
+		}
+	}
+}
+
+func TestRootDefeatsOnlyABackupItsOwnerCannotWrite(t *testing.T) {
+	readOnly := goldenCase{Before: goldenState{Bak: &goldenFile{Mode: "0o444"}}}
+	writable := goldenCase{Before: goldenState{Bak: &goldenFile{Mode: "0o644"}}}
+	none := goldenCase{}
+	for _, c := range []struct {
+		name string
+		euid int
+		c    goldenCase
+		want bool
+	}{
+		{"root, read-only backup", 0, readOnly, true},
+		{"not root, read-only backup", 1000, readOnly, false},
+		{"root, writable backup", 0, writable, false},
+		{"root, no backup", 0, none, false},
+	} {
+		if got := rootDefeatsBackupProtection(c.euid, c.c); got != c.want {
+			t.Errorf("%s: %v, want %v", c.name, got, c.want)
+		}
+	}
+}
+
+// fixedUmask changes a setting of the whole process, so no test of this package may run beside
+// another. This scan keeps it true: it fails on a test that asks for it.
+func TestNoTestOfThisPackageRunsInParallel(t *testing.T) {
+	files, err := filepath.Glob("*_test.go")
+	if err != nil || len(files) == 0 {
+		t.Fatalf("no test file found: %v", err)
+	}
+	call := "t.Para" + "llel("
+	for _, file := range files {
+		data, err := os.ReadFile(file)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if strings.Contains(string(data), call) {
+			t.Errorf("%s runs a test in parallel; fixedUmask would race with it", file)
+		}
 	}
 }
