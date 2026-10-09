@@ -5,8 +5,8 @@ engine/gate/gate.go managed
 engine/gate/gate_test.go managed
 engine/cmd/main.go managed
 engine/cmd/main_test.go managed
-engine/settings/settings.go managed
-engine/settings/settings_test.go managed
+engine/settings/document.go managed
+engine/settings/settingsfile/settings_test.go managed
 engine/skills/types.go managed
 engine/skills/registryyaml/decode.go managed
 engine/skills/manifest.go managed

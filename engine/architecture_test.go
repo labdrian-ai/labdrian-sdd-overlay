@@ -59,6 +59,11 @@ import (
 //     git of the machine through a Runner (execrunner), under the environment and the deadline
 //     the composition root hands it. pipkg itself stays an adapter (it writes the package tree);
 //     the port is the part of it that is not the file system.
+//   - settings is a domain package (H27): the Document that merges and removes the hook entries of
+//     Claude Code's settings.json over bytes, and the helpers that say which families a decoded
+//     settings object holds. It imports guardmarkers and the pure standard library, no file.
+//   - settings/settingsfile is the adapter of that model (H27): it reads and writes the file on
+//     atomicfile, and answers the HookInstaller port the Claude runtime adapter owns.
 //   - piguard is test support: the `pi` that refuses to run, put first on the PATH of a test
 //     run by a TestMain, so nothing started by accident reaches the real CLI.
 //   - installer, shelltest, capabilitytest, shaper/shapertest (the documents the shaper's
@@ -101,7 +106,7 @@ var rings = map[string]archguard.Ring{
 	"runtime":                   archguard.Adapter,
 	"runtime/core":              archguard.Domain,
 	"runtime/opencodeprompt":    archguard.Domain,
-	"settings":                  archguard.Adapter,
+	"settings":                  archguard.Domain,
 	"settings/settingsfile":     archguard.Adapter,
 	"shaper":                    archguard.Domain,
 	"shaper/fsadapter":          archguard.Adapter,

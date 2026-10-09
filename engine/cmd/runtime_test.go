@@ -13,7 +13,7 @@ import (
 )
 
 // NOTE (Phase 4, PR-3): the injectDesignHookPair test-fixture workaround that
-// previously lived here has been removed now that Merger.mergeHooks installs
+// previously lived here has been removed now that the settings merge installs
 // the real anti-generic-design pair — TestRunRuntimeCore_AllTargetsStatusAllowsCodexPartialWithoutFailing
 // below exercises the real Install() path end-to-end.
 
@@ -702,7 +702,7 @@ func TestRunRuntimeCore_AllTargetsStatusAllowsCodexPartialWithoutFailing(t *test
 	}
 
 	// mergeHooks installs the anti-generic-design pair via the real
-	// Merger.Install() path above (Phase 4, PR-3) — Claude's status is
+	// Claude adapter install above (Phase 4, PR-3) — Claude's status is
 	// "supported" without any test-fixture workaround, keeping this test
 	// isolated to the codex partial-status exemption it is actually verifying.
 
