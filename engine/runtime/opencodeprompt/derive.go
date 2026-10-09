@@ -4,33 +4,31 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/contract"
 )
 
-// contractRole says what a contract is to the plugin, which decides what happens when its text
-// does not parse.
-type contractRole int
+// MalformedContractError says that the text of the contract at Path does not parse. It names the
+// file, so a person can open it, and wraps the parse error, so a caller can still tell what is
+// wrong with it.
+type MalformedContractError struct {
+	// Path is the contract as the prompt config knows it (skills/_shared/...).
+	Path string
+	// Err is what the contract parser said.
+	Err error
+}
 
-const (
-	// requiredContract is one the plugin is not complete without: the anti-generic-design guard,
-	// which the program embeds, and, outside onMalformed, the minimalism contract.
-	requiredContract contractRole = iota
-	// optionalContract is one the overlay may or may not ship: the oo-quality contract.
-	optionalContract
-)
+func (e *MalformedContractError) Error() string { return e.Path + ": " + e.Err.Error() }
+
+// Unwrap lets errors.Is and errors.As reach the parse error.
+func (e *MalformedContractError) Unwrap() error { return e.Err }
 
 // onMalformed is what the loader does with a contract whose frontmatter does not parse, and the
-// one place that says so. It returns the error that abandons the whole prompt config, or nil to
-// leave the contract out and go on.
+// one place that says so: it returns the error that abandons the whole prompt config. Every
+// contract is treated alike, the optional one too.
 //
-// As it stands, a required contract abandons the config and an optional one is dropped without a
-// word, so a plugin can ship without its oo-quality guard and nothing says why. (The minimalism
-// contract is outside this function: the top-level fields are its, so Derive cannot go on without
-// it.) That asymmetry is carried over from the loader as it was; whether it should stay is the owner's decision
-// (R3-opencode-secondary-contract-silent-drop, deferred to H26 in batch 8), and taking it is a
-// change to this function and to the cases in policy_internal_test.go, nothing else.
-func onMalformed(role contractRole, parseErr error) error {
-	if role == requiredContract {
-		return parseErr
-	}
-	return nil
+// That is the owner's decision of 2026-10-09 (R3-opencode-secondary-contract-silent-drop, deferred
+// to H26 in batch 8). Before it, an optional contract that did not parse was dropped without a
+// word, so a plugin could ship without its oo-quality guard and nothing said why. A different
+// decision is a change to this function and to the test in policy_internal_test.go, nothing else.
+func onMalformed(path string, parseErr error) error {
+	return &MalformedContractError{Path: path, Err: parseErr}
 }
 
 // Derive builds the prompt config from the contracts the source gives: the minimalism contract,
@@ -39,22 +37,21 @@ func onMalformed(role contractRole, parseErr error) error {
 // has one. The unconditional contracts keep that order whatever the optional file holds.
 //
 // The source is asked in that order and no further after a failure. A source that cannot read a
-// contract fails Derive with its own error; a contract that cannot be parsed follows onMalformed.
+// contract fails Derive with its own error; a contract that cannot be parsed fails it with the
+// error of onMalformed, whichever contract it is.
 func Derive(source ContractSource) (PromptConfig, error) {
 	text, err := source.Minimalism()
 	if err != nil {
 		return PromptConfig{}, err
 	}
-	// The minimalism contract fills the top-level fields, so there is no config to build without
-	// it: a malformed one ends Derive whatever onMalformed says of the others.
 	doc, err := contract.Parse(text)
 	if err != nil {
-		return PromptConfig{}, err
+		return PromptConfig{}, onMalformed(MinimalismContractPath, err)
 	}
 	minimalism := entryFor(MinimalismContractPath, doc, contract.Context{})
 	contracts := []ContractConfig{minimalism}
 
-	contracts, err = withContract(contracts, requiredContract, AntiGenericDesignPath, source.AntiGenericDesign())
+	contracts, err = withContract(contracts, AntiGenericDesignPath, source.AntiGenericDesign())
 	if err != nil {
 		return PromptConfig{}, err
 	}
@@ -63,7 +60,7 @@ func Derive(source ContractSource) (PromptConfig, error) {
 		return PromptConfig{}, err
 	}
 	if present {
-		contracts, err = withContract(contracts, optionalContract, OOQualityContractPath, ooText)
+		contracts, err = withContract(contracts, OOQualityContractPath, ooText)
 		if err != nil {
 			return PromptConfig{}, err
 		}
@@ -77,15 +74,12 @@ func Derive(source ContractSource) (PromptConfig, error) {
 	}, nil
 }
 
-// withContract adds the entry for the contract at path to contracts, or leaves it out when its
-// text does not parse and onMalformed says to go on.
-func withContract(contracts []ContractConfig, role contractRole, path, text string) ([]ContractConfig, error) {
+// withContract adds the entry for the contract at path to contracts, or fails when its text does
+// not parse.
+func withContract(contracts []ContractConfig, path, text string) ([]ContractConfig, error) {
 	doc, needs, err := contract.ParseBoth(text)
 	if err != nil {
-		if abort := onMalformed(role, err); abort != nil {
-			return nil, abort
-		}
-		return contracts, nil
+		return nil, onMalformed(path, err)
 	}
 	return append(contracts, entryFor(path, doc, needs)), nil
 }

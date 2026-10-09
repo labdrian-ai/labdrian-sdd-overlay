@@ -1,7 +1,7 @@
 $ runtime install --target opencode --config-root <CONFIG>
 exit: 1
 --- stdout ---
-[opencode] install: partial — OpenCode prompt config could not be derived from minimalism-contract frontmatter: malformed excluded_phases: expected an inline list such as [a, b], got ""
+[opencode] install: partial — OpenCode prompt config could not be derived from the contracts: skills/_shared/minimalism-contract.md: malformed excluded_phases: expected an inline list such as [a, b], got ""
 --- stderr ---
 --- prompt_config ---
 (no configuration written)

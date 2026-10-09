@@ -111,3 +111,38 @@ func TestOpenCodeWithoutAnyOverlayAsksForOne(t *testing.T) {
 		t.Fatalf("Install() = %#v, want a refusal that says %q", result, want)
 	}
 }
+
+// A plugin installed from contracts that were valid, whose optional contract has since been
+// spoiled, can no longer be proven current: Status says the prompt config cannot be derived and
+// names the file, where it used to say the config was stale (the contract was dropped from the
+// current config, so the recorded one differed).
+func TestOpenCodeStatusNamesAContractThatHasBecomeMalformed(t *testing.T) {
+	overlay := t.TempDir()
+	shared := filepath.Join(overlay, "skills", "_shared")
+	if err := os.MkdirAll(shared, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"minimalism-contract.md", "oo-quality-contract.md"} {
+		content, err := os.ReadFile(filepath.Join(shippedOverlay(t), "skills", "_shared", name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(shared, name), content, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	adapter := engineRuntime.NewOpenCodeAdapter(t.TempDir(), engineRuntime.OpenCodeOptions{OverlayDir: overlay})
+	if result := adapter.Install(); result.Status != core.CapabilityRestartRequired {
+		t.Fatalf("Install() = %#v", result)
+	}
+	if err := os.WriteFile(filepath.Join(shared, "oo-quality-contract.md"), []byte("no frontmatter here"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	result := adapter.Status()
+
+	want := "current prompt_config could not be derived: skills/_shared/oo-quality-contract.md: "
+	if result.Status != core.CapabilityPartial || !strings.Contains(result.Message, want) {
+		t.Fatalf("Status() = %#v, want partial and a message that says %q", result, want)
+	}
+}

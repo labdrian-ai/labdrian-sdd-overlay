@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/contract"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime/opencodeprompt"
 )
 
@@ -150,45 +151,61 @@ func TestDeriveWithoutTheOptionalContractHasTwo(t *testing.T) {
 	}
 }
 
-// ---- the decision the owner has not taken yet ----
+// ---- a malformed contract ----
 //
-// A malformed contract the plugin cannot do without aborts the whole prompt config; a malformed
-// optional one is dropped without a word. The two tests below pin the two branches of the
-// behavior as it is, and the third pins the one function a different decision would change.
+// The owner decided (2026-10-09, H26) that a contract whose frontmatter does not parse aborts the
+// whole prompt config, whichever contract it is, and that the error names the file. Until then an
+// optional contract was dropped in silence, and the config was built without it.
 
-func TestAMalformedRequiredContractAbortsTheWholePromptConfig(t *testing.T) {
-	cases := map[string]func(*fakeSource){
-		"the minimalism contract": func(s *fakeSource) { s.minimalism = malformedText },
-		"the anti-generic guard":  func(s *fakeSource) { s.antiGeneric = malformedText },
-		"a minimalism contract that has a malformed list": func(s *fakeSource) {
+func TestAMalformedContractAbortsTheWholePromptConfigAndNamesTheFile(t *testing.T) {
+	cases := map[string]struct {
+		spoil func(*fakeSource)
+		path  string
+	}{
+		"the minimalism contract": {func(s *fakeSource) { s.minimalism = malformedText }, "skills/_shared/minimalism-contract.md"},
+		"the anti-generic guard":  {func(s *fakeSource) { s.antiGeneric = malformedText }, "skills/_shared/anti-generic-design.md"},
+		"the oo-quality contract": {func(s *fakeSource) { s.ooQuality = malformedText }, "skills/_shared/oo-quality-contract.md"},
+		"a minimalism contract with a malformed list": {func(s *fakeSource) {
 			s.minimalism = "---\napplies_to_phases: [a][b]\n---\n"
-		},
+		}, "skills/_shared/minimalism-contract.md"},
+		"an oo-quality contract with a malformed context list": {func(s *fakeSource) {
+			s.ooQuality = "---\napplies_to_phases: [sdd-apply]\nlanguage_context: typescript\n---\n"
+		}, "skills/_shared/oo-quality-contract.md"},
 	}
-	for name, spoil := range cases {
+	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
 			source := fullSource()
-			spoil(source)
+			tc.spoil(source)
 			config, err := opencodeprompt.Derive(source)
 			if err == nil {
-				t.Fatalf("Derive built %+v from a malformed contract, want the parse error", config)
+				t.Fatalf("Derive built %+v from a malformed contract, want an error", config)
 			}
 			if len(config.Contracts) != 0 || config.ContractPath != "" {
 				t.Errorf("an aborted Derive returned a config (%+v)", config)
+			}
+			var malformed *opencodeprompt.MalformedContractError
+			if !errors.As(err, &malformed) || malformed.Path != tc.path {
+				t.Fatalf("Derive = %v, want a *MalformedContractError for %s", err, tc.path)
+			}
+			if !strings.HasPrefix(err.Error(), tc.path+": ") {
+				t.Errorf("message = %q, want it to begin with the file, %q", err.Error(), tc.path+": ")
+			}
+			if malformed.Err == nil || !strings.HasSuffix(err.Error(), malformed.Err.Error()) {
+				t.Errorf("message = %q, want it to end with the parse error (%v)", err.Error(), malformed.Err)
 			}
 		})
 	}
 }
 
-func TestAMalformedOptionalContractIsDroppedInSilence(t *testing.T) {
+// The parse error stays reachable behind the file name, so a caller can still tell a list that is
+// malformed from a frontmatter that is missing.
+func TestTheParseErrorOfAMalformedContractIsStillReachable(t *testing.T) {
 	source := fullSource()
-	source.ooQuality = malformedText
-	config, err := opencodeprompt.Derive(source)
-	if err != nil {
-		t.Fatalf("Derive = %v, want the malformed optional contract dropped without an error", err)
-	}
-	want := []string{"skills/_shared/minimalism-contract.md", "skills/_shared/anti-generic-design.md"}
-	if got := paths(config); !reflect.DeepEqual(got, want) {
-		t.Errorf("contracts = %v, want %v: the malformed one is left out", got, want)
+	source.ooQuality = "---\napplies_to_phases: [sdd-apply]\nlanguage_context: typescript\n---\n"
+	_, err := opencodeprompt.Derive(source)
+	var list *contract.MalformedListError
+	if !errors.As(err, &list) {
+		t.Fatalf("Derive = %v, want the list error of the contract package behind the file name", err)
 	}
 }
 

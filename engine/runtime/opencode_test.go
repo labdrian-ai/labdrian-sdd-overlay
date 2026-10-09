@@ -119,7 +119,10 @@ func TestOpenCodeInstallWritesPromptConfigFromMinimalismContract(t *testing.T) {
 	}
 }
 
-func TestOpenCodeInstallSkipsOOContractWithMalformedOrUnsupportedContextMetadata(t *testing.T) {
+// The owner decided (2026-10-09, H26) that a contract the plugin cannot use aborts the install,
+// the optional one too: nothing is written, and the message names the file and the parse error.
+// Until then the optional contract was dropped and the install went on without it.
+func TestOpenCodeInstallRefusesAnOOContractWithMalformedOrUnsupportedContextMetadata(t *testing.T) {
 	overlayRoot := t.TempDir()
 	sharedDir := filepath.Join(overlayRoot, "skills", "_shared")
 	if err := os.MkdirAll(sharedDir, 0o755); err != nil {
@@ -173,14 +176,24 @@ context_operator: prompt_contains
 			}
 			root := t.TempDir()
 			adapter := engineRuntime.NewOpenCodeAdapter(root, engineRuntime.OpenCodeOptions{OverlayDir: overlayRoot})
-			if result := adapter.Install(); result.Status != core.CapabilityRestartRequired {
-				t.Fatalf("Install() = %#v", result)
-			}
 
-			config := readOpenCodeConfig(t, root)
-			contracts := config["prompt_config"].(map[string]any)["contracts"].([]any)
-			if hasPromptContract(contracts, "skills/_shared/oo-quality-contract.md") {
-				t.Fatalf("malformed or unsupported OO contract should be skipped, got %#v", contracts)
+			result := adapter.Install()
+
+			if result.Status != core.CapabilityPartial {
+				t.Fatalf("Install() = %#v, want partial: a contract the plugin cannot use aborts the install", result)
+			}
+			for _, want := range []string{"prompt config could not be derived", "skills/_shared/oo-quality-contract.md: "} {
+				if !strings.Contains(result.Message, want) {
+					t.Errorf("message = %q, want it to say %q", result.Message, want)
+				}
+			}
+			for _, written := range []string{
+				filepath.Join(root, "plugins", "labdrian-runtime-parity.js"),
+				filepath.Join(root, "labdrian-runtime-parity.json"),
+			} {
+				if _, err := os.Stat(written); !os.IsNotExist(err) {
+					t.Errorf("%s was written although the install aborted (stat err: %v)", written, err)
+				}
 			}
 		})
 	}

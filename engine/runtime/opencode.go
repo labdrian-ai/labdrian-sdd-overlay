@@ -63,7 +63,7 @@ func (a OpenCodeAdapter) install(action core.Action) core.LifecycleResult {
 	}
 	promptConfig, err := a.promptConfig()
 	if err != nil {
-		return a.result(action, core.CapabilityPartial, "OpenCode prompt config could not be derived from minimalism-contract frontmatter: "+err.Error())
+		return a.result(action, core.CapabilityPartial, "OpenCode prompt config could not be derived from the contracts: "+err.Error())
 	}
 	cfg := openCodeConfig{
 		PluginPath:        a.pluginPath(),

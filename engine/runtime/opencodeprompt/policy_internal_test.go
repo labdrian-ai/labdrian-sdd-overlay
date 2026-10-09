@@ -5,17 +5,23 @@ import (
 	"testing"
 )
 
-// onMalformed is the one place the owner's pending decision lives (H26,
+// onMalformed is the one place the owner's decision of 2026-10-09 lives (H26,
 // R3-opencode-secondary-contract-silent-drop): what the loader does with a contract whose
-// frontmatter does not parse. The outcome of Derive follows from it alone, so a different
-// decision is a change to this function and to these two cases.
-func TestOnMalformedAbortsForARequiredContractAndDropsAnOptionalOne(t *testing.T) {
+// frontmatter does not parse. The outcome of Derive follows from it alone, so a different decision
+// is a change to this function and to this test.
+func TestOnMalformedAbortsAndNamesTheContract(t *testing.T) {
 	parseErr := errors.New("no frontmatter")
 
-	if got := onMalformed(requiredContract, parseErr); !errors.Is(got, parseErr) {
-		t.Errorf("onMalformed(required) = %v, want the parse error: the whole prompt config is abandoned", got)
+	got := onMalformed("skills/_shared/oo-quality-contract.md", parseErr)
+
+	if got == nil {
+		t.Fatal("onMalformed = nil, want the contract to abort the whole prompt config")
 	}
-	if got := onMalformed(optionalContract, parseErr); got != nil {
-		t.Errorf("onMalformed(optional) = %v, want nil: the contract is dropped in silence", got)
+	var malformed *MalformedContractError
+	if !errors.As(got, &malformed) || malformed.Path != "skills/_shared/oo-quality-contract.md" || !errors.Is(got, parseErr) {
+		t.Errorf("onMalformed = %v, want a *MalformedContractError that names the file and wraps the parse error", got)
+	}
+	if want := "skills/_shared/oo-quality-contract.md: no frontmatter"; got.Error() != want {
+		t.Errorf("message = %q, want %q", got.Error(), want)
 	}
 }
