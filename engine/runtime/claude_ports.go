@@ -1,7 +1,5 @@
 package runtime
 
-import "reflect"
-
 // HookInstaller is how the Claude adapter reaches the hooks in Claude Code's settings.json. The
 // adapter owns the port; the settings file adapter (engine/settings/settingsfile) answers it, and
 // the composition root wires the two. A test of the adapter hands it a fake, or the real installer
@@ -22,17 +20,4 @@ type HookInstaller interface {
 	// for the binary at hookCommand. An error means the file could not be read or parsed, and is
 	// the one the system or the JSON decoder reported.
 	Inspect(path, hookCommand string) (found, owned bool, err error)
-}
-
-// missing reports whether the port is absent: an untyped nil, or a nil pointer, map, slice, func or
-// channel that implements it, whose methods could not be called.
-func missing(hooks HookInstaller) bool {
-	if hooks == nil {
-		return true
-	}
-	switch value := reflect.ValueOf(hooks); value.Kind() {
-	case reflect.Ptr, reflect.Map, reflect.Slice, reflect.Func, reflect.Chan:
-		return value.IsNil()
-	}
-	return false
 }
