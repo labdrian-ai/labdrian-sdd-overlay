@@ -10,10 +10,11 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
-	"regexp"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/repotest"
 )
 
 // locator is the adapter under test; it has no state.
@@ -21,12 +22,7 @@ var locator Locator
 
 func writeFixtureFile(t *testing.T, path, content string) {
 	t.Helper()
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-		t.Fatalf("os.MkdirAll(%q) = %v, want nil", filepath.Dir(path), err)
-	}
-	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
-		t.Fatalf("os.WriteFile(%q) = %v, want nil", path, err)
-	}
+	repotest.WriteFile(t, path, content)
 }
 
 func TestProvenanceRejectsRelativeOrEmptyCwd(t *testing.T) {
@@ -115,7 +111,7 @@ func TestProvenanceLinkedWorktreeGitfile(t *testing.T) {
 	}
 }
 
-// TestObserveProvenanceLinkedWorktreeSymbolicRefUsesCommonDir mirrors the
+// TestProvenanceLinkedWorktreeSymbolicRefUsesCommonDir mirrors the
 // layout `git worktree add` creates: the worktree's gitdir holds a symbolic
 // HEAD and a commondir file, while the branch ref (loose or packed) lives in
 // the main repository's .git.
@@ -208,7 +204,7 @@ func TestProvenanceUnresolvableSymbolicRefYieldsEmptyHead(t *testing.T) {
 	}
 }
 
-// TestObserveProvenanceFollowsSymlinkedGitDirectory covers the decision
+// TestProvenanceFollowsSymlinkedGitDirectory covers the decision
 // that a symlinked .git IS followed, matching git's own behavior: git
 // itself does not care whether .git is a plain directory or a symlink to
 // one, so this helper must not either.
@@ -230,7 +226,7 @@ func TestProvenanceFollowsSymlinkedGitDirectory(t *testing.T) {
 	}
 }
 
-// TestObserveProvenanceFollowsSymlinkedGitfile covers a symlink named .git
+// TestProvenanceFollowsSymlinkedGitfile covers a symlink named .git
 // that itself points at a gitdir-pointer FILE (rather than a directory),
 // the shape a hand-rolled or unusual worktree tool might produce.
 func TestProvenanceFollowsSymlinkedGitfile(t *testing.T) {
@@ -253,7 +249,7 @@ func TestProvenanceFollowsSymlinkedGitfile(t *testing.T) {
 	}
 }
 
-// TestObserveProvenanceGitdirPointerRelativeToBase covers readGitdirPointer's
+// TestProvenanceGitdirPointerRelativeToBase covers readGitdirPointer's
 // relative-target branch: the common on-disk shape `git worktree add`
 // actually produces, where the "gitdir:" line names a path relative to the
 // worktree root rather than an absolute one.
@@ -314,54 +310,24 @@ func strPtr(s string) *string { return &s }
 
 // --- Locator.RepoKey and commonDir ---------------------------------------------
 
-var repoKeyShape = regexp.MustCompile(`^[0-9a-f]{64}$`)
-
-// wantRepoKey is the key the design specifies for a git common directory: the
-// lowercase hex SHA-256 of its symlink-resolved path. The tests compute it
-// independently of Locator.RepoKey, from the fixture they built.
 func wantRepoKey(t *testing.T, commonDir string) string {
 	t.Helper()
-	resolved, err := filepath.EvalSymlinks(commonDir)
-	if err != nil {
-		t.Fatalf("filepath.EvalSymlinks(%q) = %v, want nil", commonDir, err)
-	}
-	sum := sha256.Sum256([]byte(resolved))
-	return hex.EncodeToString(sum[:])
+	return repotest.WantKey(t, commonDir)
 }
 
-// fixtureRepo builds a hand-made plain repository (a .git directory with a
-// HEAD) named name under a fresh temporary directory, and returns its root.
 func fixtureRepo(t *testing.T, name string) string {
 	t.Helper()
-	root := filepath.Join(t.TempDir(), name)
-	writeFixtureFile(t, filepath.Join(root, ".git", "HEAD"), strings.Repeat("a", 40)+"\n")
-	return root
+	return repotest.Repo(t, name)
 }
 
-// fixtureLinkedWorktree adds a linked worktree called name to the repository
-// at mainRoot, in the layout `git worktree add` creates: the worktree's .git
-// file points at .git/worktrees/<name>, whose commondir file leads back to the
-// main .git. It returns the worktree root.
 func fixtureLinkedWorktree(t *testing.T, mainRoot, name string) string {
 	t.Helper()
-	worktreeGitDir := filepath.Join(mainRoot, ".git", "worktrees", name)
-	writeFixtureFile(t, filepath.Join(worktreeGitDir, "HEAD"), strings.Repeat("b", 40)+"\n")
-	writeFixtureFile(t, filepath.Join(worktreeGitDir, "commondir"), "../..\n")
-	worktree := filepath.Join(t.TempDir(), name)
-	writeFixtureFile(t, filepath.Join(worktree, ".git"), "gitdir: "+worktreeGitDir+"\n")
-	return worktree
+	return repotest.LinkedWorktree(t, mainRoot, name)
 }
 
 func mustRepoKey(t *testing.T, cwd string) string {
 	t.Helper()
-	key, ok := locator.RepoKey(cwd)
-	if !ok {
-		t.Fatalf("locator.RepoKey(%q) = _, false, want a key", cwd)
-	}
-	if !repoKeyShape.MatchString(key) {
-		t.Fatalf("locator.RepoKey(%q) = %q, want 64 lowercase hex characters", cwd, key)
-	}
-	return key
+	return repotest.MustKey(t, locator, cwd)
 }
 
 func TestRepoKeyIsTheDigestOfTheGitDirectory(t *testing.T) {
@@ -382,7 +348,7 @@ func TestRepoKeyWalksUpFromASubdirectory(t *testing.T) {
 	}
 }
 
-// TestObserveRepoKeyLinkedWorktreesShareTheRepositoryKey is the point of the
+// TestRepoKeyLinkedWorktreesShareTheRepositoryKey is the point of the
 // key: every worktree of one repository must resolve to one binding, so the
 // key is the digest of the common directory, not of each worktree's own git
 // directory.
@@ -417,7 +383,7 @@ func TestRepoKeyDiffersBetweenRepositories(t *testing.T) {
 	}
 }
 
-// TestObserveRepoKeyIsTheSameThroughASymlinkedSpelling covers a repository
+// TestRepoKeyIsTheSameThroughASymlinkedSpelling covers a repository
 // reached through a symlink, for both the plain checkout and a linked
 // worktree whose gitdir pointer was written through the symlink.
 func TestRepoKeyIsTheSameThroughASymlinkedSpelling(t *testing.T) {
@@ -449,7 +415,7 @@ func TestRepoKeyIsTheSameThroughASymlinkedSpelling(t *testing.T) {
 	}
 }
 
-// TestObserveRepoKeyFallsBackToTheCleanedPathWhenSymlinksCannotBeResolved
+// TestRepoKeyFallsBackToTheCleanedPathWhenSymlinksCannotBeResolved
 // covers a commondir that names a directory that does not exist: the symlinks
 // cannot be resolved, so the key is the digest of the cleaned path, and it is
 // still deterministic.
@@ -547,7 +513,7 @@ func TestCommonDir(t *testing.T) {
 	}
 }
 
-// TestObserveRepoKeyNeverResolvesARelativeCwdAgainstTheProcessDirectory pins
+// TestRepoKeyNeverResolvesARelativeCwdAgainstTheProcessDirectory pins
 // why a relative cwd is refused outright: were it walked, "." would silently
 // mean whatever repository the process happens to be standing in. The test
 // stands the process in a repository to make that visible.

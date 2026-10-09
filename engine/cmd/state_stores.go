@@ -21,8 +21,9 @@ import (
 
 // This file is where the file-backed stores of the domain are built: the workflow
 // event log, the role handoff chain, the session binding store and the shaper's
-// clearance store, and the finder of the repository a directory belongs to. Each adapter is handed the state home and reads no environment
-// variable, so the composition root is the one place that learns where the state lives
+// clearance store, and the finder of the repository a directory belongs to. Each adapter is
+// handed the state home and reads no environment variable, so the composition root is the
+// one place that learns where the state lives
 // ($XDG_STATE_HOME, or $HOME/.local/state; see statestore.Home). A home that cannot be
 // resolved is reported in the words each store has always used for it, with the store's
 // name in front. The shaper's contained source is built here too: it keeps no state, so it
