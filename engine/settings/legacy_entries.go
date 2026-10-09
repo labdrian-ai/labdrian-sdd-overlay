@@ -13,6 +13,48 @@ import (
 // guard. Each entry is the exact JSON shape Claude Code reads, and the command inside it is the
 // text an installed settings.json holds, so a change here is a change to every machine's file.
 
+// minimalismFamily is the minimalism-contract pair: the UserPromptSubmit entry that propagates
+// the contract into the project's registry, and the PreToolUse/Agent entry that injects its path
+// into sub-agent prompts. An installed entry is kept as it is (keepingOne), so an older command
+// line stays until the owner decides how an installed entry is upgraded.
+var minimalismFamily = hookFamily{
+	identity: LabdrianMinimalismIdentity,
+	specs: []hookSpec{
+		{event: "UserPromptSubmit"},
+		{event: "PreToolUse", matcher: "Agent"},
+	},
+	build:  buildMinimalismEntry,
+	upkeep: keepingOne,
+}
+
+// buildMinimalismEntry returns the entry of the minimalism family for one spec.
+func buildMinimalismEntry(hookCommand string, s hookSpec) map[string]interface{} {
+	if s.event == "UserPromptSubmit" {
+		return buildUserPromptSubmitEntry(hookCommand)
+	}
+	return buildPreToolUseEntry(hookCommand)
+}
+
+// designFamily is the anti-generic-design pair, shaped like the minimalism pair and told apart from
+// it by its own identity, because both pairs run the same binary.
+var designFamily = hookFamily{
+	identity: LabdrianDesignIdentity,
+	specs: []hookSpec{
+		{event: "UserPromptSubmit"},
+		{event: "PreToolUse", matcher: "Agent"},
+	},
+	build:  buildDesignEntry,
+	upkeep: keepingOne,
+}
+
+// buildDesignEntry returns the entry of the design family for one spec.
+func buildDesignEntry(hookCommand string, s hookSpec) map[string]interface{} {
+	if s.event == "UserPromptSubmit" {
+		return buildDesignUserPromptSubmitEntry(hookCommand)
+	}
+	return buildDesignPreToolUseEntry(hookCommand)
+}
+
 // buildUserPromptSubmitEntry returns the hook entry for propagate.
 // The hook runs 'gentle-ai-overlay propagate' to ensure the scoped block
 // exists in the current project's .atl/skill-registry.md.
@@ -27,14 +69,14 @@ import (
 //
 // This ensures the hook exits 0 even if the binary is absent, so no Agent
 // call is ever blocked by a missing binary.
-func (m owner) buildUserPromptSubmitEntry() map[string]interface{} {
+func buildUserPromptSubmitEntry(hookCommand string) map[string]interface{} {
 	// CLAUDE_PROJECT_DIR is the env var Claude Code sets for hooks to point at
 	// the project root. The :- fallback to "." keeps the command functional
 	// when the env var is absent (e.g. local testing), but the primary path
 	// is always anchored to the project root when Claude Code fires the hook.
 	cmd := fmt.Sprintf(
 		`command -v %s &>/dev/null && %s propagate --registry "${CLAUDE_PROJECT_DIR:-.}/.atl/skill-registry.md" --contract-file ~/.claude/skills/_shared/minimalism-contract.md || true`,
-		m.hookCommand, m.hookCommand,
+		hookCommand, hookCommand,
 	)
 	return map[string]interface{}{
 		"hooks": []interface{}{map[string]interface{}{
@@ -58,10 +100,10 @@ func (m owner) buildUserPromptSubmitEntry() map[string]interface{} {
 // path line in the Agent prompt will be this absolute path.
 //
 // Missing-binary safety: same guard pattern as UserPromptSubmit.
-func (m owner) buildPreToolUseEntry() map[string]interface{} {
+func buildPreToolUseEntry(hookCommand string) map[string]interface{} {
 	cmd := fmt.Sprintf(
 		`command -v %s &>/dev/null && %s gate-task --contract-file ~/.claude/skills/_shared/minimalism-contract.md --contract-path "$HOME/.claude/skills/_shared/minimalism-contract.md" || true`,
-		m.hookCommand, m.hookCommand,
+		hookCommand, hookCommand,
 	)
 	return map[string]interface{}{
 		"matcher": "Agent",
@@ -79,10 +121,10 @@ func (m owner) buildPreToolUseEntry() map[string]interface{} {
 // identity.
 //
 // Same missing-binary guard as the minimalism entry.
-func (m owner) buildDesignUserPromptSubmitEntry() map[string]interface{} {
+func buildDesignUserPromptSubmitEntry(hookCommand string) map[string]interface{} {
 	cmd := fmt.Sprintf(
 		`command -v %s &>/dev/null && %s propagate --registry "${CLAUDE_PROJECT_DIR:-.}/.atl/skill-registry.md" --embedded-contract %s || true`,
-		m.hookCommand, m.hookCommand, embeddedDesignName,
+		hookCommand, hookCommand, embeddedDesignName,
 	)
 	return map[string]interface{}{
 		"hooks": []interface{}{map[string]interface{}{
@@ -99,10 +141,10 @@ func (m owner) buildDesignUserPromptSubmitEntry() map[string]interface{} {
 // any cwd can resolve it.
 //
 // Same missing-binary guard and matcher="Agent" as the minimalism entry.
-func (m owner) buildDesignPreToolUseEntry() map[string]interface{} {
+func buildDesignPreToolUseEntry(hookCommand string) map[string]interface{} {
 	cmd := fmt.Sprintf(
 		`command -v %s &>/dev/null && %s gate-task --embedded-contract %s --contract-path "$HOME/.claude/skills/_shared/anti-generic-design.md" || true`,
-		m.hookCommand, m.hookCommand, embeddedDesignName,
+		hookCommand, hookCommand, embeddedDesignName,
 	)
 	return map[string]interface{}{
 		"matcher": "Agent",

@@ -13,13 +13,6 @@ type owner struct{ hookCommand string }
 // minimalism contract but writes a DISTINCT registry block.
 const embeddedDesignName = "anti-generic-design"
 
-// designIdentity is the distinguishing token used to dedup/remove the design
-// hook entries independently of the minimalism entries. Both pairs reference
-// the same binary path, so the binary substring alone is NOT a unique
-// identity — we also key on this token (the --embedded-contract argument) so
-// the second pair installs instead of being collapsed as a duplicate.
-const designIdentity = "--embedded-contract " + embeddedDesignName
-
 // mergeHooks inserts our hook entries if not already present. Returns true if
 // any change was made. It installs TWO pairs: the minimalism-contract pair
 // and the anti-generic-design pair. Each pair is deduped by its own identity
@@ -38,25 +31,12 @@ func (m owner) mergeHooks(root map[string]interface{}) bool {
 	hooks := ensureHooksMap(root)
 	changed := false
 
-	// Minimalism-contract pair (identity: binary path, scoped to the entry that
-	// does NOT carry the design token).
-	if !hasEntryMatching(hooks, "UserPromptSubmit", m.isMinimalismEntry) {
-		appendHook(hooks, "UserPromptSubmit", m.buildUserPromptSubmitEntry())
-		changed = true
-	}
-	if !hasEntryMatching(hooks, "PreToolUse", m.isMinimalismEntry) {
-		appendHook(hooks, "PreToolUse", m.buildPreToolUseEntry())
-		changed = true
-	}
-
-	// Anti-generic-design pair (identity: binary path + designIdentity).
-	if !hasEntryMatching(hooks, "UserPromptSubmit", m.isDesignEntry) {
-		appendHook(hooks, "UserPromptSubmit", m.buildDesignUserPromptSubmitEntry())
-		changed = true
-	}
-	if !hasEntryMatching(hooks, "PreToolUse", m.isDesignEntry) {
-		appendHook(hooks, "PreToolUse", m.buildDesignPreToolUseEntry())
-		changed = true
+	// The minimalism-contract pair and the anti-generic-design pair, each deduped by its own
+	// identity so both coexist.
+	for _, family := range []hookFamily{minimalismFamily, designFamily} {
+		if family.merge(hooks, m.hookCommand) {
+			changed = true
+		}
 	}
 
 	// SessionEnd sync-trigger entry (identity: binary path + sync-trigger
@@ -116,24 +96,6 @@ func (m owner) mergeHooks(root map[string]interface{}) bool {
 // clearance guard entries.
 func (m owner) isShaperGuardEntry(e interface{}) bool {
 	return entryContainsBinary(e, m.hookCommand) && entryContainsBinary(e, LabdrianShaperGuardIdentity)
-}
-
-// minimalismIdentity is the distinguishing token for the minimalism-contract
-// hook entries. Using a positive token (the --contract-file argument) keeps
-// the identity symmetric with isDesignEntry and avoids collapsing a second
-// contract into the minimalism identity via NOT-logic.
-const minimalismIdentity = "minimalism-contract.md"
-
-// isMinimalismEntry reports whether a hook entry is our minimalism-contract
-// entry: it references our binary AND the minimalism identity token.
-func (m owner) isMinimalismEntry(e interface{}) bool {
-	return entryContainsBinary(e, m.hookCommand) && entryContainsBinary(e, minimalismIdentity)
-}
-
-// isDesignEntry reports whether a hook entry is our anti-generic-design entry:
-// it references our binary AND the design token.
-func (m owner) isDesignEntry(e interface{}) bool {
-	return entryContainsBinary(e, m.hookCommand) && entryContainsBinary(e, designIdentity)
 }
 
 // isSyncTriggerEntry reports whether a hook entry is our SessionEnd
@@ -202,7 +164,7 @@ func (m owner) removeHooks(root map[string]interface{}) bool {
 		}
 		var filtered []interface{}
 		for _, e := range entries {
-			if m.isMinimalismEntry(e) || m.isDesignEntry(e) || m.isSyncTriggerEntry(e) || m.isReviewReceiptEntry(e) || m.isShaperGuardEntry(e) || m.isProjectionEntry(e) || m.isApproveGuardEntry(e) || m.isLegacyEntry(e) {
+			if minimalismFamily.owns(e, m.hookCommand) || designFamily.owns(e, m.hookCommand) || m.isSyncTriggerEntry(e) || m.isReviewReceiptEntry(e) || m.isShaperGuardEntry(e) || m.isProjectionEntry(e) || m.isApproveGuardEntry(e) || m.isLegacyEntry(e) {
 				changed = true
 				continue
 			}
