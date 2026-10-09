@@ -18,7 +18,6 @@ import (
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gitprov"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/hookwire"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/shaper"
 )
 
@@ -459,25 +458,4 @@ func runShaperGuardHook(stdin io.Reader, stderr io.Writer, exit func(int)) {
 	reply := hookwire.ExitReply{Block: verdict.Deny, Message: verdict.Reason}
 	_, _ = stderr.Write(reply.MessageLine())
 	exit(reply.Code())
-}
-
-// checkShaperClearanceGuard reports whether the Claude Code shaper clearance
-// deny guard (both PreToolUse entries and the permissions.deny backstop) is
-// installed. A missing part is WARN/degraded with the same remediation as
-// the other post-upgrade hook families. Even installed, the guard is a
-// speed bump, not a security boundary.
-func checkShaperClearanceGuard(root map[string]interface{}, settingsErr error, settingsPath string) checkResult {
-	label := "guard: shaper clearance record (PreToolUse + permissions.deny)"
-	if settingsErr != nil {
-		return checkResult{label: label, ok: false, note: "cannot read " + settingsPath + ": " + settingsErr.Error()}
-	}
-	const limit = "the guard is a speed bump, not a security boundary"
-	if root == nil {
-		return checkResult{label: label, ok: true, degraded: true, note: settingsPath + " absent or empty; clearance recording is unguarded (" + limit + "); " + remediationNote}
-	}
-	if missing := settings.MissingShaperClearanceGuardParts(root, binaryIdentity); len(missing) > 0 {
-		return checkResult{label: label, ok: true, degraded: true,
-			note: "missing " + strings.Join(missing, ", ") + "; clearance recording is unguarded against the model (" + limit + "); " + remediationNote}
-	}
-	return checkResult{label: label, ok: true, note: "installed; " + limit}
 }
