@@ -63,22 +63,25 @@ var (
 )
 
 // failureWording lists the openings of the errors that report a failure of the file system. The
-// words between the opening and the reason are not pinned: they name the package that made the call
+// words between the opening and the rest are not pinned: they name the package that made the call
 // (the old program said `settings: create temp: open <path>: <reason>`, the adapter says
-// `settings: create temp: atomicfile: create temporary file: open <path>: <reason>`). The reason, the
-// words the system gave after the last colon, is.
+// `settings: create temp: atomicfile: create temporary file: open <path>: <reason>`). The rest, the
+// call that failed, the file and the reason the system gave, is: it is what the old message said
+// after its opening, and the new one must end with it.
 var failureWording = []string{"settings: create temp: "}
 
 // sameFailure reports whether a failure the adapter reports is the one the program recorded: the
-// same words, or the same opening and the same reason.
+// same words, or the same opening and, after any words of the adapter's own, the same ending. A
+// reason that holds ": " itself, or a message with no separator at all, is compared whole, because
+// the ending is everything the old message said after its opening and not the text after some
+// separator.
 func sameFailure(want, got string) bool {
 	if want == got {
 		return true
 	}
-	reason := func(message string) string { return message[strings.LastIndex(message, ": ")+2:] }
 	for _, opening := range failureWording {
 		if strings.HasPrefix(want, opening) && strings.HasPrefix(got, opening) {
-			return reason(want) == reason(got)
+			return strings.HasSuffix(got, ": "+strings.TrimPrefix(want, opening))
 		}
 	}
 	return false
@@ -248,6 +251,21 @@ func readGoldenFile(t *testing.T, path string) (text string, mode os.FileMode, p
 	return string(data), info.Mode().Perm(), true
 }
 
+// checkNothingNamesTheWorld fails when one of the files holds the directory of the replay. The
+// world is where the test runs and its name may carry the name of the test, so a file that names it
+// would hold, in a command, text the program tells its entries by that only this run has. The
+// expected text is built on goldenRoot and the comparison is exact, so this is already true when
+// the files match; the check says it in so many words, and a file that leaks fails with that
+// reason and not as a difference of bytes.
+func checkNothingNamesTheWorld(t *testing.T, label, world string, paths ...string) {
+	t.Helper()
+	for _, path := range paths {
+		if text, _, present := readGoldenFile(t, path); present && strings.Contains(text, world) {
+			t.Errorf("%s: %s holds the directory of the replay, %s, so its commands depend on where the test runs", label, path, world)
+		}
+	}
+}
+
 func checkGoldenFile(t *testing.T, doc goldenDocument, root, label, path string, want *goldenFile) {
 	t.Helper()
 	text, mode, present := readGoldenFile(t, path)
@@ -357,6 +375,7 @@ func TestSettingsJSONIsWhatTheProgramWroteBeforeH27(t *testing.T) {
 				checkGoldenFile(t, golden, goldenRoot, label+" settings.json", path, step.After.Settings)
 				kept = backupAfter(previous, kept, step.After)
 				checkGoldenFile(t, golden, goldenRoot, label+" settings.json.bak", path+".bak", kept)
+				checkNothingNamesTheWorld(t, label, world, path, path+".bak")
 				previous = step.After
 				if got := dirFiles(t, claude); strings.Join(got, "|") != strings.Join(step.After.DirFiles, "|") {
 					t.Errorf("%s: the directory holds %q, the program left %q", label, got, step.After.DirFiles)
@@ -458,21 +477,29 @@ func TestManifestProblemsNamesEachWayAFileDiffers(t *testing.T) {
 	}
 }
 
-func TestSameFailurePinsTheReasonAndNotTheWordsBetween(t *testing.T) {
+func TestSameFailurePinsTheEndingAndNotTheWordsBetween(t *testing.T) {
 	old := "settings: create temp: open /d/.settings-N.json.tmp: permission denied"
 	cases := []struct {
-		name, got string
-		want      bool
+		name, want, got string
+		same            bool
 	}{
-		{"identical", old, true},
-		{"the adapter's words between", "settings: create temp: atomicfile: create temporary file: open /d/.settings-N.json.tmp: permission denied", true},
-		{"another reason", "settings: create temp: atomicfile: create temporary file: open /d/.settings-N.json.tmp: no such file or directory", false},
-		{"another opening", "settings: replace /d/x: permission denied", false},
-		{"no opening of the three", "something else: permission denied", false},
+		{"identical", old, old, true},
+		{"the adapter's words between", old, "settings: create temp: atomicfile: create temporary file: open /d/.settings-N.json.tmp: permission denied", true},
+		{"another reason", old, "settings: create temp: atomicfile: create temporary file: open /d/.settings-N.json.tmp: no such file or directory", false},
+		{"the same reason of another file", old, "settings: create temp: atomicfile: create temporary file: open /e/.settings-N.json.tmp: permission denied", false},
+		{"the same reason of another call", old, "settings: create temp: atomicfile: create temporary file: mkdir /d/.settings-N.json.tmp: permission denied", false},
+		{"only the reason", old, "settings: create temp: permission denied", false},
+		{"another opening", old, "settings: replace /d/x: permission denied", false},
+		{"no opening of the three", old, "something else: permission denied", false},
+		{"a reason that holds the separator", "settings: create temp: open /d/t: bad: thing", "settings: create temp: atomicfile: open /d/t: bad: thing", true},
+		{"a reason that holds the separator, cut", "settings: create temp: open /d/t: bad: thing", "settings: create temp: atomicfile: open /d/t: other: thing", false},
+		{"a message with no separator after its opening", "settings: create temp: boom", "settings: create temp: atomicfile: boom", true},
+		{"a message with no separator, another word", "settings: create temp: boom", "settings: create temp: atomicfile: bang", false},
+		{"an ending that is part of a longer word", "settings: create temp: boom", "settings: create temp: atomicfile: kaboom", false},
 	}
 	for _, c := range cases {
-		if got := sameFailure(old, c.got); got != c.want {
-			t.Errorf("%s: sameFailure = %v, want %v", c.name, got, c.want)
+		if got := sameFailure(c.want, c.got); got != c.same {
+			t.Errorf("%s: sameFailure = %v, want %v", c.name, got, c.same)
 		}
 	}
 }
