@@ -25,16 +25,16 @@ func gaduSourcePath(destDir string) string {
 	return filepath.Join(destDir, "agents", "GADU.md")
 }
 
-// gaduLink is gaduLinkState's result: exactly one of missing/current/
-// stale/conflict (D13 -- collapsing these into a single boolean was
-// rejected as it hides which failure mode is present).
-type gaduLink string
+// gaduLinkStatus is gaduLinkState's result, the state of the link and not the link: exactly one
+// of missing/current/stale/conflict (D13 -- collapsing these into a single boolean was rejected as
+// it hides which failure mode is present).
+type gaduLinkStatus string
 
 const (
-	gaduLinkMissing  gaduLink = "missing"
-	gaduLinkCurrent  gaduLink = "current"
-	gaduLinkStale    gaduLink = "stale"
-	gaduLinkConflict gaduLink = "conflict"
+	gaduLinkMissing  gaduLinkStatus = "missing"
+	gaduLinkCurrent  gaduLinkStatus = "current"
+	gaduLinkStale    gaduLinkStatus = "stale"
+	gaduLinkConflict gaduLinkStatus = "conflict"
 )
 
 // gaduLinkState reports linkPath's ownership/state relative to
@@ -45,7 +45,7 @@ const (
 // or conflict (a pre-existing regular file, or a symlink pointing
 // elsewhere) -- a conflict is reported and left untouched, never
 // overwritten.
-func gaduLinkState(linkPath, expectedTarget string) gaduLink {
+func gaduLinkState(linkPath, expectedTarget string) gaduLinkStatus {
 	info, err := os.Lstat(linkPath)
 	if err != nil {
 		return gaduLinkMissing

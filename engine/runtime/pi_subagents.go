@@ -104,7 +104,8 @@ func parsePiVersion(s string) (piVersion, bool) {
 	return piVersion{major: major, minor: minor, patch: patch}, true
 }
 
-// subagentRunnerState is subagentRunnerState's result: exactly one of
+// subagentRunner is which dispatch runner the Pi settings prove present (piSettings.subagentRunner,
+// read by Status): exactly one of
 // native (gentle-pi's own subagent_* tools, gentle-pi >= 2.6.0), legacy
 // (the third-party pi-subagents-j0k3r/pi-subagents extension, no native
 // support detected), conflict (BOTH installed -- the exact state that
