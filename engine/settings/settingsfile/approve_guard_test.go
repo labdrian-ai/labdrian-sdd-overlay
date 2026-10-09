@@ -1,4 +1,4 @@
-package settings_test
+package settingsfile_test
 
 // Tests for the approve guard family: the two PreToolUse entries that run
 // 'skills guard-hook', which denies the agent running `skills approve` and
@@ -146,7 +146,7 @@ func TestApproveGuardCommand_RunsUnderShWithoutEverBlocking(t *testing.T) {
 	install := func(t *testing.T, bin string) string {
 		t.Helper()
 		path := filepath.Join(t.TempDir(), "settings.json")
-		if err := settings.NewMerger(path, bin).Install(); err != nil {
+		if err := newMerger(path, bin).Install(); err != nil {
 			t.Fatal(err)
 		}
 		for _, e := range approveGuardEntriesFor(parseJSON(t, path), bin) {
@@ -480,11 +480,11 @@ func TestApproveGuardWithAnEmptyHookCommandClaimsNothing(t *testing.T) {
 	}
 	path := writeSettingsDoc(t, doc)
 	before := readFileBytes(t, path)
-	for name, act := range map[string]func(*settings.Merger) error{
-		"Install":   func(m *settings.Merger) error { return m.Install() },
-		"Uninstall": func(m *settings.Merger) error { return m.Uninstall() },
+	for name, act := range map[string]func(*merger) error{
+		"Install":   func(m *merger) error { return m.Install() },
+		"Uninstall": func(m *merger) error { return m.Uninstall() },
 	} {
-		if err := act(settings.NewMerger(path, "")); err == nil {
+		if err := act(newMerger(path, "")); err == nil {
 			t.Errorf("%s with an empty hook command returned nil, want an error", name)
 		}
 		if !bytes.Equal(readFileBytes(t, path), before) {

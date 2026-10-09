@@ -190,7 +190,7 @@ func dirFiles(t *testing.T, dir string) []string {
 }
 
 // TestSettingsJSONIsWhatTheProgramWroteBeforeH27 replays the cases recorded from the program as it
-// was before settings was split (settingsfile/testdata/golden-v1): the same starting file, the same calls, and
+// was before settings was split (testdata/golden-v1): the same starting file, the same calls, and
 // after each one the bytes of settings.json, its mode, its backup and its mode, the names left in
 // the directory, and whether the call failed with the same words. It runs the file adapter; the
 // Merger it replaced passed the same file.

@@ -1,4 +1,4 @@
-package settings_test
+package settingsfile_test
 
 import (
 	"encoding/json"
@@ -54,7 +54,7 @@ func mustJSON(t *testing.T, v interface{}) string {
 	return string(b)
 }
 
-func installFresh(t *testing.T) (string, *settings.Merger) {
+func installFresh(t *testing.T) (string, *merger) {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "settings.json")
 	m := buildMerger(t, path)
@@ -395,7 +395,7 @@ func withProjectionFamily(root map[string]interface{}, hookCommand string) map[s
 	}
 	defer os.RemoveAll(tmp)
 	p := filepath.Join(tmp, "settings.json")
-	if err := settings.NewMerger(p, hookCommand).Install(); err != nil {
+	if err := newMerger(p, hookCommand).Install(); err != nil {
 		panic(err)
 	}
 	data, _ := os.ReadFile(p)

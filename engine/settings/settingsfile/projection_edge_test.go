@@ -1,4 +1,4 @@
-package settings_test
+package settingsfile_test
 
 // Edge cases of the projection family's ownership rule and of settings files
 // whose hooks are not shaped as Claude Code expects. Everything runs against
@@ -103,7 +103,7 @@ func TestProjectionOwnershipIsASubstringOfTheHookCommand(t *testing.T) {
 	if parts := settings.MissingProjectionHookParts(parseJSON(t, path), "o"); !strings.Contains(strings.Join(parts, "|"), "drifted") {
 		t.Fatalf("a one-letter hook command did not claim the foreign entry: %v", parts)
 	}
-	if err := settings.NewMerger(path, "o").Uninstall(); err != nil {
+	if err := newMerger(path, "o").Uninstall(); err != nil {
 		t.Fatal(err)
 	}
 	if hooks, _ := parseJSON(t, path)["hooks"].(map[string]interface{}); hooks["UserPromptSubmit"] != nil {
@@ -134,14 +134,14 @@ func TestAnEmptyHookCommandClaimsNothing(t *testing.T) {
 		}
 	})
 
-	for name, act := range map[string]func(*settings.Merger) error{
-		"Install":   func(m *settings.Merger) error { return m.Install() },
-		"Uninstall": func(m *settings.Merger) error { return m.Uninstall() },
+	for name, act := range map[string]func(*merger) error{
+		"Install":   func(m *merger) error { return m.Install() },
+		"Uninstall": func(m *merger) error { return m.Uninstall() },
 	} {
 		t.Run(name, func(t *testing.T) {
 			path := writeSettingsDoc(t, doc)
 			before := readFileBytes(t, path)
-			err := act(settings.NewMerger(path, ""))
+			err := act(newMerger(path, ""))
 			if err == nil {
 				t.Fatalf("%s with an empty hook command returned nil, want an error", name)
 			}

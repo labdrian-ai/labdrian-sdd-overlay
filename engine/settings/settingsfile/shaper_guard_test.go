@@ -1,4 +1,4 @@
-package settings_test
+package settingsfile_test
 
 import (
 	"os"
@@ -169,7 +169,7 @@ func TestShaperGuardCommand_MissingBinaryStillDeniesMarkersButAllowsOthers(t *te
 	}
 	missing := filepath.Join(t.TempDir(), "gentle-ai-overlay")
 	path := filepath.Join(t.TempDir(), "settings.json")
-	if err := settings.NewMerger(path, missing).Install(); err != nil {
+	if err := newMerger(path, missing).Install(); err != nil {
 		t.Fatal(err)
 	}
 	entries := shaperGuardEntries(t, parseJSON(t, path))
@@ -198,7 +198,7 @@ func TestShaperGuardCommand_PresentBinaryExitCodeIsUnmasked(t *testing.T) {
 		t.Fatal(err)
 	}
 	path := filepath.Join(t.TempDir(), "settings.json")
-	if err := settings.NewMerger(path, bin).Install(); err != nil {
+	if err := newMerger(path, bin).Install(); err != nil {
 		t.Fatal(err)
 	}
 	command := extractCommand(t, shaperGuardEntries(t, parseJSON(t, path))["Bash"])

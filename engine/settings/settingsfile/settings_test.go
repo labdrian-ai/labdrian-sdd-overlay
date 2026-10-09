@@ -1,6 +1,6 @@
-// Package settings_test exercises the merge-settings and uninstall-hooks logic
-// using fixture-based temp dirs. Tests NEVER touch the live ~/.claude/settings.json.
-package settings_test
+// These tests exercise the merge-settings and uninstall-hooks logic through the settings file
+// adapter, using fixture-based temp dirs. Tests NEVER touch the live ~/.claude/settings.json.
+package settingsfile_test
 
 import (
 	"encoding/json"
@@ -12,17 +12,33 @@ import (
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings/settingsfile"
 )
 
 // hookCommand is the unique identifier used in tests to represent the deployed
 // binary path. It is NOT the real ~/.claude/bin path — tests are isolated.
 const testHookCommand = "/home/testuser/.claude/bin/gentle-ai-overlay"
 
-// buildMerger creates a Merger pointed at the given settings path with the
-// test binary path. This is the test's single entry point into the package.
-func buildMerger(t *testing.T, settingsPath string) *settings.Merger { //nolint:unparam
+// merger is the pair these tests used to build with settings.NewMerger: one settings file and the
+// binary its hooks run. It is the test's single entry point into the package, over the Installer.
+type merger struct{ settingsPath, hookCommand string }
+
+func newMerger(settingsPath, hookCommand string) *merger {
+	return &merger{settingsPath: settingsPath, hookCommand: hookCommand}
+}
+
+func (m *merger) Install() error {
+	return settingsfile.Installer{}.Install(m.settingsPath, m.hookCommand)
+}
+
+func (m *merger) Uninstall() error {
+	return settingsfile.Installer{}.Uninstall(m.settingsPath, m.hookCommand)
+}
+
+// buildMerger creates a merger pointed at the given settings path with the test binary path.
+func buildMerger(t *testing.T, settingsPath string) *merger { //nolint:unparam
 	t.Helper()
-	return settings.NewMerger(settingsPath, testHookCommand)
+	return newMerger(settingsPath, testHookCommand)
 }
 
 // parseJSON is a test helper that parses a JSON file and returns the raw map.
