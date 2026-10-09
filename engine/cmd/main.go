@@ -1656,8 +1656,7 @@ func runMergeSettings(args []string) {
 		os.Exit(1)
 	}
 
-	m := settings.NewMerger(settingsPath, hookCommand)
-	if err := m.Install(); err != nil {
+	if err := (settingsfile.Installer{}).Install(settingsPath, hookCommand); err != nil {
 		fmt.Fprintf(os.Stderr, "error: merge-settings: %v\n", err)
 		os.Exit(1)
 	}
@@ -1678,8 +1677,7 @@ func runUninstallHooks(args []string) {
 		os.Exit(1)
 	}
 
-	m := settings.NewMerger(settingsPath, hookCommand)
-	if err := m.Uninstall(); err != nil {
+	if err := (settingsfile.Installer{}).Uninstall(settingsPath, hookCommand); err != nil {
 		fmt.Fprintf(os.Stderr, "error: uninstall-hooks: %v\n", err)
 		os.Exit(1)
 	}
