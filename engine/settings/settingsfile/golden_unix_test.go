@@ -141,7 +141,7 @@ const goldenDir = "testdata/golden-v1"
 // editing the manifest by hand.
 const goldenManifest = "testdata/golden-v1.manifest.json"
 
-var updateGoldenManifest = flag.Bool("update-golden-manifest", false, "rewrite the manifest of the golden files")
+var updateGoldenManifest = flag.Bool(updateManifestFlag, false, "rewrite the manifest of the golden files")
 
 // goldenCount is what one golden file holds.
 type goldenCount struct {
@@ -404,30 +404,58 @@ func TestTheGoldenFilesHoldWhatWasRecorded(t *testing.T) {
 		held[filepath.Base(file)] = count
 	}
 	if *updateGoldenManifest {
-		// Rewriting the manifest from the directory and then comparing the directory with it
-		// could never fail, so a file lost or cut since the last recording would be recorded as
-		// normal. The update therefore only accepts what adds to the record; a loss on purpose is
-		// made by editing the manifest by hand, where the diff shows it.
-		if recorded, ok := readGoldenManifest(t); ok {
-			if losses := manifestLosses(recorded, held); len(losses) > 0 {
-				t.Fatalf("-update-golden-manifest would record a loss, and did not write the manifest:\n%s", strings.Join(losses, "\n"))
-			}
-		}
-		raw, err := json.MarshalIndent(held, "", " ")
-		if err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(goldenManifest, append(raw, '\n'), 0o644); err != nil {
+		if err := updateManifest(goldenManifest, held); err != nil {
 			t.Fatal(err)
 		}
 	}
-	recorded, ok := readGoldenManifest(t)
-	if !ok {
-		t.Fatalf("%s does not exist", goldenManifest)
+	problems, err := checkManifest(goldenManifest, held)
+	if err != nil {
+		t.Fatal(err)
 	}
-	for _, problem := range manifestProblems(recorded, held) {
+	for _, problem := range problems {
 		t.Error(problem)
 	}
+}
+
+// updateManifestFlag is the name of the flag that rewrites the manifest, written once for the flag
+// and for the messages that tell a person to use it.
+const updateManifestFlag = "update-golden-manifest"
+
+// updateManifest records held as the manifest at path. Rewriting the manifest from the directory
+// and then comparing the directory with it could never fail, so a file lost or cut since the last
+// recording would be recorded as normal. The update therefore only accepts what adds to the record:
+// when the directory holds less than the manifest says it writes nothing and returns the loss; a
+// loss on purpose is made by editing the manifest by hand, where the diff shows it. A path with no
+// manifest yet is created.
+func updateManifest(path string, held map[string]goldenCount) error {
+	recorded, ok, err := readManifest(path)
+	if err != nil {
+		return err
+	}
+	if ok {
+		if losses := manifestLosses(recorded, held); len(losses) > 0 {
+			return fmt.Errorf("-%s would record a loss, and did not write the manifest:\n%s", updateManifestFlag, strings.Join(losses, "\n"))
+		}
+	}
+	raw, err := json.MarshalIndent(held, "", " ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, append(raw, '\n'), 0o644)
+}
+
+// checkManifest says where the files held differ from the manifest at path. A manifest that does
+// not exist is a problem that names the flag that creates it; one that cannot be read or parsed is
+// an error.
+func checkManifest(path string, held map[string]goldenCount) ([]string, error) {
+	recorded, ok, err := readManifest(path)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		return []string{fmt.Sprintf("%s does not exist; run the test with -%s to create it from the files held", path, updateManifestFlag)}, nil
+	}
+	return manifestProblems(recorded, held), nil
 }
 
 // manifestProblems says where the files a directory holds differ from the manifest: a file the
@@ -467,22 +495,21 @@ func manifestProblems(recorded, held map[string]goldenCount) []string {
 	return problems
 }
 
-// readGoldenManifest reads the manifest. It is false only when the file does not exist; any other
-// failure to read or parse it ends the test.
-func readGoldenManifest(t *testing.T) (map[string]goldenCount, bool) {
-	t.Helper()
-	raw, err := os.ReadFile(goldenManifest)
+// readManifest reads the manifest at path. The boolean is false only when the file does not exist;
+// any other failure to read or parse it is an error.
+func readManifest(path string) (map[string]goldenCount, bool, error) {
+	raw, err := os.ReadFile(path)
 	if errors.Is(err, fs.ErrNotExist) {
-		return nil, false
+		return nil, false, nil
 	}
 	if err != nil {
-		t.Fatal(err)
+		return nil, false, err
 	}
 	var recorded map[string]goldenCount
 	if err := json.Unmarshal(raw, &recorded); err != nil {
-		t.Fatalf("%s: %v", goldenManifest, err)
+		return nil, false, fmt.Errorf("%s: %w", path, err)
 	}
-	return recorded, true
+	return recorded, true, nil
 }
 
 // manifestLosses says what a directory has lost against a recorded manifest: a recorded file it
@@ -526,6 +553,95 @@ func TestManifestLossesNamesWhatTheDirectoryHasLostAndNothingItAdds(t *testing.T
 	}
 	if got := manifestLosses(recorded, recorded); len(got) != 0 {
 		t.Errorf("a directory that is the manifest has losses: %q", got)
+	}
+}
+
+// writeManifest puts a manifest of the given counts in a directory of its own and returns its path.
+func writeManifest(t *testing.T, counts map[string]goldenCount) string {
+	t.Helper()
+	raw, err := json.MarshalIndent(counts, "", " ")
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(t.TempDir(), "m.json")
+	if err := os.WriteFile(path, append(raw, '\n'), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+func TestUpdatingTheManifestRefusesALossAndLeavesTheFileAsItWas(t *testing.T) {
+	path := writeManifest(t, map[string]goldenCount{"a.json": {2, 6}, "b.json": {1, 3}})
+	before, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = updateManifest(path, map[string]goldenCount{"a.json": {2, 6}, "c.json": {5, 9}})
+	if err == nil {
+		t.Fatal("the update recorded a directory that lost b.json")
+	}
+	if !strings.Contains(err.Error(), "would record a loss") || !strings.Contains(err.Error(), "b.json is in the manifest and not in the directory") {
+		t.Errorf("the refusal does not name the loss: %v", err)
+	}
+	after, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(after) != string(before) {
+		t.Errorf("the manifest was written although the update refused:\n%s", after)
+	}
+}
+
+func TestUpdatingTheManifestRecordsWhatTheDirectoryAdds(t *testing.T) {
+	path := writeManifest(t, map[string]goldenCount{"a.json": {2, 6}})
+	held := map[string]goldenCount{"a.json": {3, 9}, "b.json": {1, 1}}
+	if err := updateManifest(path, held); err != nil {
+		t.Fatal(err)
+	}
+	recorded, ok, err := readManifest(path)
+	if err != nil || !ok {
+		t.Fatalf("reading the updated manifest: %v (found %v)", err, ok)
+	}
+	if problems := manifestProblems(recorded, held); len(problems) != 0 {
+		t.Errorf("the updated manifest is not what the directory holds: %q", problems)
+	}
+}
+
+func TestUpdatingTheManifestCreatesItWhenThereIsNone(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "m.json")
+	held := map[string]goldenCount{"a.json": {2, 6}}
+	if err := updateManifest(path, held); err != nil {
+		t.Fatal(err)
+	}
+	recorded, ok, err := readManifest(path)
+	if err != nil || !ok || recorded["a.json"] != (goldenCount{2, 6}) {
+		t.Errorf("created manifest = %v (found %v, error %v)", recorded, ok, err)
+	}
+}
+
+func TestAMissingManifestSaysWhichFlagCreatesIt(t *testing.T) {
+	missing := filepath.Join(t.TempDir(), "m.json")
+	problems, err := checkManifest(missing, map[string]goldenCount{"a.json": {2, 6}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(problems) != 1 || !strings.Contains(problems[0], "does not exist") || !strings.Contains(problems[0], "-update-golden-manifest") {
+		t.Errorf("problems for a missing manifest = %q, want one that says it does not exist and names -update-golden-manifest", problems)
+	}
+}
+
+func TestACheckedManifestThatMatchesHasNoProblemAndAMalformedOneIsAnError(t *testing.T) {
+	counts := map[string]goldenCount{"a.json": {2, 6}}
+	problems, err := checkManifest(writeManifest(t, counts), counts)
+	if err != nil || len(problems) != 0 {
+		t.Errorf("a matching manifest: problems %q, error %v", problems, err)
+	}
+	bad := filepath.Join(t.TempDir(), "m.json")
+	if err := os.WriteFile(bad, []byte("{not json"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := checkManifest(bad, counts); err == nil {
+		t.Error("a manifest that is not JSON was read without an error")
 	}
 }
 
