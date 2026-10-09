@@ -538,7 +538,14 @@ func TestTheProjectionHooksNameWhatIsMissingOrDriftedAndAskForARestart(t *testin
 
 func TestTheApproveGuardNamesWhatIsMissingOrDriftedAndTheLimitOfAGuard(t *testing.T) {
 	for name, strip := range map[string]func(root map[string]interface{}){
-		"missing":        func(root map[string]interface{}) { dropHooks(root, "PreToolUse", "skills guard-hook") },
+		"missing": func(root map[string]interface{}) { dropHooks(root, "PreToolUse", "skills guard-hook") },
+		"drifted: the matcher of the file tools guard was changed": func(root map[string]interface{}) {
+			for _, e := range root["hooks"].(map[string]interface{})["PreToolUse"].([]interface{}) {
+				if em := e.(map[string]interface{}); strings.Contains(commandsOf(e), settings.LabdrianApproveGuardIdentity) && em["matcher"] == settings.ApproveGuardFileToolMatcher {
+					em["matcher"] = "Write"
+				}
+			}
+		},
 		"hooks disabled": func(root map[string]interface{}) { root["disableAllHooks"] = true },
 	} {
 		t.Run(name, func(t *testing.T) {
