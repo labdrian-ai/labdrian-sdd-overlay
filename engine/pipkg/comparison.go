@@ -42,16 +42,30 @@ import (
 // Check's pre-R-005 behavior exactly).
 func (p Packages) resolveComparisonSource(overlayRoot, registryPath, destDir string) (report CheckReport, sourceRoot, sourceRegistry, buildRev string, cleanup func(), err error) {
 	noopCleanup := func() {}
-	if !p.Source.IsWorkTree(overlayRoot) {
-		return CheckReport{Basis: "worktree"}, overlayRoot, registryPath, p.resolveBuildRev(overlayRoot), noopCleanup, nil
+	inside, err := p.Source.IsWorkTree(overlayRoot)
+	if err != nil {
+		return CheckReport{}, "", "", "", noopCleanup, asked(err)
+	}
+	if !inside {
+		buildRev, err := p.resolveBuildRev(overlayRoot)
+		if err != nil {
+			return CheckReport{}, "", "", "", noopCleanup, err
+		}
+		return CheckReport{Basis: "worktree"}, overlayRoot, registryPath, buildRev, noopCleanup, nil
 	}
 
 	builtFrom := readBuiltFrom(destDir)
 	// R3-001: an absent builtFrom because Build ran against a dirty tree
 	// can only be reproduced by comparing against that same live tree --
 	// any git export would reproduce the last commit instead.
-	if builtFrom == "" && p.isSourceDirty(overlayRoot) {
-		return CheckReport{Basis: "dirty"}, overlayRoot, registryPath, "", noopCleanup, nil
+	if builtFrom == "" {
+		dirty, err := p.isSourceDirty(overlayRoot)
+		if err != nil {
+			return CheckReport{}, "", "", "", noopCleanup, err
+		}
+		if dirty {
+			return CheckReport{Basis: "dirty"}, overlayRoot, registryPath, "", noopCleanup, nil
+		}
 	}
 
 	// A pull-request checkout in CI is a detached HEAD with no local
@@ -67,7 +81,11 @@ func (p Packages) resolveComparisonSource(overlayRoot, registryPath, destDir str
 	}
 	deployRef := "main"
 	for _, candidate := range candidates {
-		if p.Source.HasCommit(overlayRoot, candidate) {
+		has, err := p.Source.HasCommit(overlayRoot, candidate)
+		if err != nil {
+			return CheckReport{}, "", "", "", noopCleanup, asked(err)
+		}
+		if has {
 			deployRef = candidate
 			break
 		}
@@ -83,8 +101,14 @@ func (p Packages) resolveComparisonSource(overlayRoot, registryPath, destDir str
 	// still matches. A build that is ahead of or diverged from the deploy
 	// ref (a feature-branch checkout, #315) is not stale; any content it
 	// differs in is caught by the file-level diff, never by this flag.
-	stale := builtFrom != "" && builtFromPattern.MatchString(builtFrom) && builtFrom != tip &&
-		p.Source.IsAncestor(overlayRoot, builtFrom, tip)
+	stale := false
+	if builtFrom != "" && builtFromPattern.MatchString(builtFrom) && builtFrom != tip {
+		behind, err := p.Source.IsAncestor(overlayRoot, builtFrom, tip)
+		if err != nil {
+			return CheckReport{}, "", "", "", noopCleanup, asked(err)
+		}
+		stale = behind
+	}
 
 	root, deployCleanup, exportErr := p.exportGitTree(overlayRoot, deployRef)
 	if exportErr != nil {
@@ -141,7 +165,12 @@ func (p Packages) exportGitTree(overlayRoot, rev string) (string, func(), error)
 	// files at rev makes the whole archive command fail, so only include it
 	// when rev actually has that path -- otherwise comparing against a
 	// deploy ref that predates it would break every Check call.
-	if p.Source.HasPath(overlayRoot, rev, "pi") {
+	hasPi, err := p.Source.HasPath(overlayRoot, rev, "pi")
+	if err != nil {
+		cleanup()
+		return "", func() {}, asked(err)
+	}
+	if hasPi {
 		paths = append(paths, "pi")
 	}
 	archive, err := p.Source.Export(overlayRoot, rev, paths)

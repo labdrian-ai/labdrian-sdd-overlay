@@ -30,24 +30,38 @@ type fakeRepo struct {
 	tagErr      error
 	exportBytes func(paths []string) []byte
 	exportErr   error
+	// predicateErr is what the yes-or-no questions return as their error; onlyFailing, when it
+	// is set, limits it to the question of that name.
+	predicateErr error
+	onlyFailing  string
+}
+
+func (f *fakeRepo) errFor(question string) error {
+	if f.onlyFailing != "" && f.onlyFailing != question {
+		return nil
+	}
+	return f.predicateErr
 }
 
 func (f *fakeRepo) note(format string, args ...any) {
 	f.log = append(f.log, fmt.Sprintf(format, args...))
 }
 
-func (f *fakeRepo) IsWorkTree(dir string) bool { f.note("IsWorkTree"); return f.worktree }
-func (f *fakeRepo) HasCommit(dir, ref string) bool {
+func (f *fakeRepo) IsWorkTree(dir string) (bool, error) {
+	f.note("IsWorkTree")
+	return f.worktree, f.errFor("IsWorkTree")
+}
+func (f *fakeRepo) HasCommit(dir, ref string) (bool, error) {
 	f.note("HasCommit %s", ref)
-	return f.commits[ref]
+	return f.commits[ref], f.errFor("HasCommit")
 }
-func (f *fakeRepo) HasPath(dir, rev, path string) bool {
+func (f *fakeRepo) HasPath(dir, rev, path string) (bool, error) {
 	f.note("HasPath %s %s", rev, path)
-	return f.paths[path]
+	return f.paths[path], f.errFor("HasPath")
 }
-func (f *fakeRepo) IsAncestor(dir, a, d string) bool {
+func (f *fakeRepo) IsAncestor(dir, a, d string) (bool, error) {
 	f.note("IsAncestor %s %s", a, d)
-	return f.ancestor
+	return f.ancestor, f.errFor("IsAncestor")
 }
 func (f *fakeRepo) Resolve(dir, ref string) (string, error) {
 	f.note("Resolve %s", ref)
@@ -303,8 +317,15 @@ func TestCompareSaysWhyGitCouldNotGiveTheTree(t *testing.T) {
 
 func TestNoRepositoryAnswersNoToEverything(t *testing.T) {
 	var repo pipkg.SourceRepo = pipkg.NoRepository{}
-	if repo.IsWorkTree("/x") || repo.HasCommit("/x", "main") || repo.HasPath("/x", "main", "pi") || repo.IsAncestor("/x", "a", "b") {
-		t.Error("a predicate answered yes")
+	for name, ask := range map[string]func() (bool, error){
+		"IsWorkTree": func() (bool, error) { return repo.IsWorkTree("/x") },
+		"HasCommit":  func() (bool, error) { return repo.HasCommit("/x", "main") },
+		"HasPath":    func() (bool, error) { return repo.HasPath("/x", "main", "pi") },
+		"IsAncestor": func() (bool, error) { return repo.IsAncestor("/x", "a", "b") },
+	} {
+		if ok, err := ask(); ok || err != nil {
+			t.Errorf("%s = %v, %v, want no and no error", name, ok, err)
+		}
 	}
 	if _, err := repo.Resolve("/x", "HEAD"); !errors.Is(err, pipkg.ErrNoRepository) {
 		t.Errorf("Resolve err = %v, want ErrNoRepository", err)
@@ -333,5 +354,69 @@ func TestAStatusGitCannotGiveIsACleanTree(t *testing.T) {
 	raw, _ := os.ReadFile(filepath.Join(destDir, "package.json"))
 	if !strings.Contains(string(raw), `"builtFrom": "`+fakeTip+`"`) {
 		t.Errorf("package.json = %s, want the commit recorded", raw)
+	}
+}
+
+// ---- a git that could not answer is not a git that answered no ----
+
+// unavailableErr is the error of a git that was stopped at a deadline: it says it is not an answer.
+type unavailableErr struct{}
+
+func (unavailableErr) Error() string     { return "context deadline exceeded" }
+func (unavailableErr) Unavailable() bool { return true }
+
+func TestBuildSurfacesAGitThatCouldNotAnswer(t *testing.T) {
+	cases := map[string]*fakeRepo{
+		"the status times out":  {changesErr: unavailableErr{}, resolve: map[string]string{"HEAD": fakeTip}},
+		"HEAD cannot be read":   {resolveErr: unavailableErr{}},
+		"the tag lookup is cut": {resolve: map[string]string{"HEAD": fakeTip}, tagErr: unavailableErr{}},
+	}
+	for name, repo := range cases {
+		t.Run(name, func(t *testing.T) {
+			overlayRoot, registryPath := fixtureOverlay(t)
+			destDir := filepath.Join(t.TempDir(), "labdrian-pi")
+			err := (pipkg.Packages{Registries: fileRegistries, Source: repo}).Build(overlayRoot, registryPath, destDir)
+			if err == nil || !strings.Contains(err.Error(), "git could not answer") {
+				t.Fatalf("Build error = %v, want it to say git could not answer", err)
+			}
+			if _, statErr := os.Stat(destDir); statErr == nil {
+				t.Error("a package was written although git could not say which commit it is of")
+			}
+		})
+	}
+}
+
+func TestCompareSurfacesAQuestionGitCouldNotAnswer(t *testing.T) {
+	overlayRoot, registryPath := fixtureOverlay(t)
+	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
+	if err := (pipkg.Packages{Registries: fileRegistries, Source: pipkg.NoRepository{}}).Build(overlayRoot, registryPath, destDir); err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	repo := &fakeRepo{predicateErr: unavailableErr{}}
+	_, err := (pipkg.Packages{Registries: fileRegistries, Source: repo}).Compare(overlayRoot, registryPath, destDir)
+	if err == nil || !strings.Contains(err.Error(), "pipkg: asking git: context deadline exceeded") {
+		t.Fatalf("Compare error = %v, want the timeout surfaced instead of a comparison with the worktree", err)
+	}
+}
+
+// Each yes-or-no question is surfaced where it is asked, not only the first.
+func TestEveryYesOrNoQuestionSurfacesItsError(t *testing.T) {
+	overlayRoot, registryPath := fixtureOverlay(t)
+	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
+	if err := (pipkg.Packages{Registries: fileRegistries, Source: &fakeRepo{resolve: map[string]string{"HEAD": "fedcba9876543210fedcba9876543210fedcba98"}, tagErr: errors.New("none")}}).Build(overlayRoot, registryPath, destDir); err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	for _, question := range []string{"HasCommit", "IsAncestor", "HasPath"} {
+		t.Run(question, func(t *testing.T) {
+			repo := deployingRepo(t, overlayRoot)
+			repo.paths = map[string]bool{}
+			repo.ancestor = true
+			repo.onlyFailing = question
+			repo.predicateErr = unavailableErr{}
+			_, err := (pipkg.Packages{Registries: fileRegistries, Source: repo}).Compare(overlayRoot, registryPath, destDir)
+			if err == nil || !strings.Contains(err.Error(), "pipkg: asking git: ") {
+				t.Fatalf("Compare error = %v, want %s's failure surfaced", err, question)
+			}
+		})
 	}
 }

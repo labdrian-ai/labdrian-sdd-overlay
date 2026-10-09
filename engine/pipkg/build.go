@@ -62,7 +62,11 @@ func (p Packages) Build(overlayRoot, registryPath, destDir string) error {
 		return fmt.Errorf("pipkg: setting build root permissions: %w", err)
 	}
 
-	if err := p.buildInto(overlayRoot, reg, tmpDir, overlayRoot, p.resolveBuildRev(overlayRoot)); err != nil {
+	rev, err := p.resolveBuildRev(overlayRoot)
+	if err != nil {
+		return err
+	}
+	if err := p.buildInto(overlayRoot, reg, tmpDir, overlayRoot, rev); err != nil {
 		return err
 	}
 	if err := preserveIfExists(destDir, tmpDir, mcpConfigFileName); err != nil {
@@ -171,9 +175,13 @@ func (p Packages) buildInto(overlayRoot string, reg skills.Registry, dir string,
 	// (design D5). rev == "" (provenanceRoot not a git repo, or HEAD
 	// unresolvable) leaves Labdrian nil (omitempty), exactly the
 	// pre-R-005 behavior.
+	version, err := p.resolvePackageVersion(provenanceRoot, rev)
+	if err != nil {
+		return err
+	}
 	manifest := packageManifest{
 		Name:    "labdrian-pi",
-		Version: p.resolvePackageVersion(provenanceRoot, rev),
+		Version: version,
 		Pi: piField{
 			Skills:     []string{"./skills"},
 			Agents:     []string{"./agents"},

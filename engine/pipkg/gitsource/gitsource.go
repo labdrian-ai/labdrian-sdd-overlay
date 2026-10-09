@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os/exec"
 	"strings"
 	"time"
 )
@@ -47,45 +48,111 @@ func (r Repo) run(dir string, args ...string) (stdout, stderr []byte, err error)
 		ctx, cancel = context.WithTimeout(ctx, r.options.Timeout)
 		defer cancel()
 	}
-	return r.runner.Output(ctx, r.options.Env, "git", append([]string{"-C", dir}, args...)...)
+	stdout, stderr, err = r.runner.Output(ctx, r.options.Env, "git", append([]string{"-C", dir}, args...)...)
+	return stdout, stderr, classify(err)
 }
 
-// succeeds is whether git exits 0 for the arguments.
-func (r Repo) succeeds(dir string, args ...string) bool {
+// InvalidRefError is a ref that starts with a dash. git would read it as an option (an
+// `--output=<file>` given to `git archive` writes that file), so the adapter refuses it before it
+// runs git. The ref is named so the person who typed it can find it.
+type InvalidRefError struct {
+	Ref string
+}
+
+func (e *InvalidRefError) Error() string {
+	return fmt.Sprintf("git ref %q starts with %q and would be read as an option", e.Ref, "-")
+}
+
+// refs refuses the first of the refs that starts with a dash. An empty ref is not one.
+func refs(candidates ...string) error {
+	for _, ref := range candidates {
+		if strings.HasPrefix(ref, "-") {
+			return &InvalidRefError{Ref: ref}
+		}
+	}
+	return nil
+}
+
+// unavailableError marks a failure after which git has not answered: it was stopped at the
+// deadline, killed by a signal, or could not be started for a reason other than not being
+// installed. The package builder surfaces it instead of building as for an unversioned tree.
+type unavailableError struct{ err error }
+
+func (e *unavailableError) Error() string     { return e.err.Error() }
+func (e *unavailableError) Unwrap() error     { return e.err }
+func (e *unavailableError) Unavailable() bool { return true }
+
+// classify marks the failures that are not an answer. An exit status of git is one (the
+// predicates read it as "no"), and so is git not being installed, which has always meant the
+// tree is not under version control. Anything else is "could not answer".
+func classify(err error) error {
+	if err == nil || errors.Is(err, exec.ErrNotFound) {
+		return err
+	}
+	var exit interface{ ExitCode() int }
+	if errors.As(err, &exit) && exit.ExitCode() >= 0 {
+		return err
+	}
+	return &unavailableError{err: err}
+}
+
+// answers is whether git exits 0 for the arguments: yes on 0, no on an exit status or when git
+// is not installed, and an error, marked unavailable, when git could not answer.
+func (r Repo) answers(dir string, args ...string) (bool, error) {
 	_, _, err := r.run(dir, args...)
-	return err == nil
+	if err == nil {
+		return true, nil
+	}
+	var unavailable *unavailableError
+	if errors.As(err, &unavailable) {
+		return false, err
+	}
+	return false, nil
 }
 
 // IsWorkTree reports whether dir is inside the working tree of a repository.
-func (r Repo) IsWorkTree(dir string) bool {
-	return r.succeeds(dir, "rev-parse", "--is-inside-work-tree")
+func (r Repo) IsWorkTree(dir string) (bool, error) {
+	return r.answers(dir, "rev-parse", "--is-inside-work-tree")
 }
 
 // HasCommit reports whether ref names a commit.
-func (r Repo) HasCommit(dir, ref string) bool {
-	return r.succeeds(dir, "cat-file", "-e", ref+"^{commit}")
+func (r Repo) HasCommit(dir, ref string) (bool, error) {
+	if err := refs(ref); err != nil {
+		return false, err
+	}
+	return r.answers(dir, "cat-file", "-e", "--end-of-options", ref+"^{commit}")
 }
 
 // HasPath reports whether the tree of rev holds path.
-func (r Repo) HasPath(dir, rev, path string) bool {
-	return r.succeeds(dir, "cat-file", "-e", rev+":"+path)
+func (r Repo) HasPath(dir, rev, path string) (bool, error) {
+	if err := refs(rev); err != nil {
+		return false, err
+	}
+	return r.answers(dir, "cat-file", "-e", "--end-of-options", rev+":"+path)
 }
 
 // IsAncestor reports whether ancestor is reachable from descendant.
-func (r Repo) IsAncestor(dir, ancestor, descendant string) bool {
-	return r.succeeds(dir, "merge-base", "--is-ancestor", ancestor, descendant)
+func (r Repo) IsAncestor(dir, ancestor, descendant string) (bool, error) {
+	if err := refs(ancestor, descendant); err != nil {
+		return false, err
+	}
+	return r.answers(dir, "merge-base", "--is-ancestor", "--end-of-options", ancestor, descendant)
 }
 
 // Resolve is the id of the commit ref names.
 func (r Repo) Resolve(dir, ref string) (string, error) {
-	out, _, err := r.run(dir, "rev-parse", ref)
+	if err := refs(ref); err != nil {
+		return "", err
+	}
+	out, _, err := r.run(dir, "rev-parse", "--verify", "--end-of-options", ref)
 	if err != nil {
 		return "", err
 	}
 	return strings.TrimSpace(string(out)), nil
 }
 
-// HasChanges reports whether any of paths has an uncommitted change, tracked or untracked.
+// HasChanges reports whether any of paths has an uncommitted change, tracked or untracked. The
+// paths follow `--`, which is their terminator.
 func (r Repo) HasChanges(dir string, paths ...string) (bool, error) {
 	args := append([]string{"status", "--porcelain", "--untracked-files=all", "--"}, paths...)
 	out, _, err := r.run(dir, args...)
@@ -96,11 +163,14 @@ func (r Repo) HasChanges(dir string, paths ...string) (bool, error) {
 }
 
 // LatestTag is the newest tag matching pattern that is reachable from rev (the checked-out
-// commit when rev is empty).
+// commit when rev is empty). The pattern is the value of --match.
 func (r Repo) LatestTag(dir, rev, pattern string) (string, error) {
+	if err := refs(rev); err != nil {
+		return "", err
+	}
 	args := []string{"describe", "--tags", "--abbrev=0", "--match", pattern}
 	if rev != "" {
-		args = append(args, rev)
+		args = append(args, "--end-of-options", rev)
 	}
 	out, _, err := r.run(dir, args...)
 	if err != nil {
@@ -111,8 +181,12 @@ func (r Repo) LatestTag(dir, rev, pattern string) (string, error) {
 
 // Export is a tar archive of paths as they are at rev. A failure of git is reported with what it
 // said on standard error; a failure to start it, or to finish before the deadline, is told apart.
+// The paths follow the rev, so they are pathspecs and cannot be read as options.
 func (r Repo) Export(dir, rev string, paths []string) ([]byte, error) {
-	args := append([]string{"archive", "--format=tar", rev, "--"}, paths...)
+	if err := refs(rev); err != nil {
+		return nil, err
+	}
+	args := append([]string{"archive", "--format=tar", "--end-of-options", rev}, paths...)
 	out, stderr, err := r.run(dir, args...)
 	if err == nil {
 		return out, nil

@@ -8,20 +8,27 @@ import "errors"
 // that runs git is an adapter (pipkg/gitsource) the composition root hands in, so the builder
 // starts no process and reads no environment.
 //
-// Every method takes the directory of the overlay and speaks of refs and paths as git does. A
-// question that can only be answered yes or no answers no when git cannot be asked at all (not
-// installed, not a repository, a deadline): the builder treats an overlay it cannot ask the same
-// way whatever the reason, as a tree that is not under version control.
+// Every method takes the directory of the overlay and speaks of refs and paths as git does.
+//
+// The four questions that have a yes or a no (IsWorkTree, HasCommit, HasPath, IsAncestor) return
+// it as a value: git answering no, or not being installed (a machine without git has a tree that
+// is not under version control), is a false and no error. They return an error only when git
+// could not be asked (stopped at a deadline, killed by a signal, not startable) or the adapter
+// refused a ref, and the builder surfaces any such error rather than build as if the overlay had
+// no history. The methods that return a value (Resolve, HasChanges, LatestTag, Export) report
+// every failure as an error, as git does for an unknown ref or a tag that is not there; the
+// failures that are not an answer carry an `Unavailable() bool` method in their chain that
+// returns true, and the builder surfaces those and reads the others as "there is none".
 type SourceRepo interface {
 	// IsWorkTree reports whether dir is inside the working tree of a repository.
-	IsWorkTree(dir string) bool
+	IsWorkTree(dir string) (bool, error)
 	// HasCommit reports whether ref names a commit.
-	HasCommit(dir, ref string) bool
+	HasCommit(dir, ref string) (bool, error)
 	// HasPath reports whether the tree of rev holds path.
-	HasPath(dir, rev, path string) bool
+	HasPath(dir, rev, path string) (bool, error)
 	// IsAncestor reports whether ancestor is reachable from descendant, a commit being its own
 	// ancestor.
-	IsAncestor(dir, ancestor, descendant string) bool
+	IsAncestor(dir, ancestor, descendant string) (bool, error)
 	// Resolve is the id of the commit ref names, without surrounding space.
 	Resolve(dir, ref string) (string, error)
 	// HasChanges reports whether any of paths has an uncommitted change, tracked or untracked.
@@ -34,6 +41,13 @@ type SourceRepo interface {
 	Export(dir, rev string, paths []string) ([]byte, error)
 }
 
+// couldNotAnswer is whether err says git was not asked successfully, as against git having
+// answered no (see SourceRepo).
+func couldNotAnswer(err error) bool {
+	var marked interface{ Unavailable() bool }
+	return errors.As(err, &marked) && marked.Unavailable()
+}
+
 // ErrNoRepository is what NoRepository answers to every question that has a value.
 var ErrNoRepository = errors.New("not a git repository")
 
@@ -44,11 +58,11 @@ var ErrNoRepository = errors.New("not a git repository")
 // the worktree.
 type NoRepository struct{}
 
-func (NoRepository) IsWorkTree(string) bool                 { return false }
-func (NoRepository) HasCommit(string, string) bool          { return false }
-func (NoRepository) HasPath(string, string, string) bool    { return false }
-func (NoRepository) IsAncestor(string, string, string) bool { return false }
-func (NoRepository) Resolve(string, string) (string, error) { return "", ErrNoRepository }
+func (NoRepository) IsWorkTree(string) (bool, error)                 { return false, nil }
+func (NoRepository) HasCommit(string, string) (bool, error)          { return false, nil }
+func (NoRepository) HasPath(string, string, string) (bool, error)    { return false, nil }
+func (NoRepository) IsAncestor(string, string, string) (bool, error) { return false, nil }
+func (NoRepository) Resolve(string, string) (string, error)          { return "", ErrNoRepository }
 func (NoRepository) HasChanges(string, ...string) (bool, error) {
 	return false, ErrNoRepository
 }

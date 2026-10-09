@@ -52,15 +52,15 @@ func TestEveryCallAsksGitAboutTheDirectoryItWasGiven(t *testing.T) {
 		run  func(r gitsource.Repo)
 		want string
 	}{
-		"IsWorkTree":                          {func(r gitsource.Repo) { r.IsWorkTree("/o") }, "-C /o rev-parse --is-inside-work-tree"},
-		"HasCommit":                           {func(r gitsource.Repo) { r.HasCommit("/o", "main") }, "-C /o cat-file -e main^{commit}"},
-		"HasPath":                             {func(r gitsource.Repo) { r.HasPath("/o", "abc", "pi") }, "-C /o cat-file -e abc:pi"},
-		"IsAncestor":                          {func(r gitsource.Repo) { r.IsAncestor("/o", "a", "b") }, "-C /o merge-base --is-ancestor a b"},
-		"Resolve":                             {func(r gitsource.Repo) { _, _ = r.Resolve("/o", "HEAD") }, "-C /o rev-parse HEAD"},
+		"IsWorkTree":                          {func(r gitsource.Repo) { _, _ = r.IsWorkTree("/o") }, "-C /o rev-parse --is-inside-work-tree"},
+		"HasCommit":                           {func(r gitsource.Repo) { _, _ = r.HasCommit("/o", "main") }, "-C /o cat-file -e --end-of-options main^{commit}"},
+		"HasPath":                             {func(r gitsource.Repo) { _, _ = r.HasPath("/o", "abc", "pi") }, "-C /o cat-file -e --end-of-options abc:pi"},
+		"IsAncestor":                          {func(r gitsource.Repo) { _, _ = r.IsAncestor("/o", "a", "b") }, "-C /o merge-base --is-ancestor --end-of-options a b"},
+		"Resolve":                             {func(r gitsource.Repo) { _, _ = r.Resolve("/o", "HEAD") }, "-C /o rev-parse --verify --end-of-options HEAD"},
 		"HasChanges":                          {func(r gitsource.Repo) { _, _ = r.HasChanges("/o", "skills", "agents") }, "-C /o status --porcelain --untracked-files=all -- skills agents"},
-		"LatestTag":                           {func(r gitsource.Repo) { _, _ = r.LatestTag("/o", "abc", "v*") }, "-C /o describe --tags --abbrev=0 --match v* abc"},
+		"LatestTag":                           {func(r gitsource.Repo) { _, _ = r.LatestTag("/o", "abc", "v*") }, "-C /o describe --tags --abbrev=0 --match v* --end-of-options abc"},
 		"LatestTag at the checked-out commit": {func(r gitsource.Repo) { _, _ = r.LatestTag("/o", "", "v*") }, "-C /o describe --tags --abbrev=0 --match v*"},
-		"Export":                              {func(r gitsource.Repo) { _, _ = r.Export("/o", "abc", []string{"skills", "pi"}) }, "-C /o archive --format=tar abc -- skills pi"},
+		"Export":                              {func(r gitsource.Repo) { _, _ = r.Export("/o", "abc", []string{"skills", "pi"}) }, "-C /o archive --format=tar --end-of-options abc skills pi"},
 	}
 	for name, c := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -79,13 +79,13 @@ func TestEveryCallAsksGitAboutTheDirectoryItWasGiven(t *testing.T) {
 func TestTheEnvironmentOfTheOptionsIsTheOneGitIsHanded(t *testing.T) {
 	runner := &fakeRunner{}
 	repo := gitsource.New(runner, gitsource.Options{Env: []string{"PATH=/bin", "HOME=/h"}})
-	repo.IsWorkTree("/o")
+	_, _ = repo.IsWorkTree("/o")
 	if got := strings.Join(runner.calls[0].env, ","); got != "PATH=/bin,HOME=/h" {
 		t.Errorf("env = %q, want the one of the options", got)
 	}
 
 	runner = &fakeRunner{}
-	gitsource.New(runner, gitsource.Options{}).IsWorkTree("/o")
+	_, _ = gitsource.New(runner, gitsource.Options{}).IsWorkTree("/o")
 	if runner.calls[0].env != nil {
 		t.Errorf("env = %v, want nil (the environment of the process) when the options name none", runner.calls[0].env)
 	}
@@ -93,32 +93,15 @@ func TestTheEnvironmentOfTheOptionsIsTheOneGitIsHanded(t *testing.T) {
 
 func TestNoTimeoutMeansNoDeadlineAndATimeoutIsOne(t *testing.T) {
 	runner := &fakeRunner{}
-	gitsource.New(runner, gitsource.Options{}).IsWorkTree("/o")
+	_, _ = gitsource.New(runner, gitsource.Options{}).IsWorkTree("/o")
 	if runner.calls[0].hadDeadline {
 		t.Error("a call had a deadline although the options set none")
 	}
 
 	runner = &fakeRunner{}
-	gitsource.New(runner, gitsource.Options{Timeout: time.Minute}).IsWorkTree("/o")
+	_, _ = gitsource.New(runner, gitsource.Options{Timeout: time.Minute}).IsWorkTree("/o")
 	if !runner.calls[0].hadDeadline || runner.calls[0].remaining > time.Minute || runner.calls[0].remaining < 50*time.Second {
 		t.Errorf("deadline in %v (set: %v), want about a minute", runner.calls[0].remaining, runner.calls[0].hadDeadline)
-	}
-}
-
-func TestAQuestionGitCannotAnswerIsNo(t *testing.T) {
-	runner := &fakeRunner{err: errors.New("git is not installed")}
-	repo := gitsource.New(runner, gitsource.Options{})
-	if repo.IsWorkTree("/o") || repo.HasCommit("/o", "main") || repo.HasPath("/o", "abc", "pi") || repo.IsAncestor("/o", "a", "b") {
-		t.Error("a predicate answered yes although git failed")
-	}
-	if _, err := repo.Resolve("/o", "HEAD"); err == nil {
-		t.Error("Resolve hid the failure of git")
-	}
-	if _, err := repo.HasChanges("/o", "skills"); err == nil {
-		t.Error("HasChanges hid the failure of git")
-	}
-	if _, err := repo.LatestTag("/o", "", "v*"); err == nil {
-		t.Error("LatestTag hid the failure of git")
 	}
 }
 
@@ -224,19 +207,26 @@ func TestAgainstARealRepository(t *testing.T) {
 	git("commit", "-q", "-am", "second")
 	second := git("rev-parse", "HEAD")
 
-	if !repo.IsWorkTree(dir) || !repo.IsWorkTree(filepath.Join(dir, "skills")) {
+	yes := func(ok bool, err error) bool {
+		t.Helper()
+		if err != nil {
+			t.Fatalf("a question git can answer returned an error: %v", err)
+		}
+		return ok
+	}
+	if !yes(repo.IsWorkTree(dir)) || !yes(repo.IsWorkTree(filepath.Join(dir, "skills"))) {
 		t.Error("IsWorkTree said no for a repository and for a directory inside it")
 	}
-	if repo.IsWorkTree(t.TempDir()) {
+	if yes(repo.IsWorkTree(t.TempDir())) {
 		t.Error("IsWorkTree said yes for a directory that is not in a repository")
 	}
-	if !repo.HasCommit(dir, "HEAD") || !repo.HasCommit(dir, first) || repo.HasCommit(dir, "no-such-ref") {
+	if !yes(repo.HasCommit(dir, "HEAD")) || !yes(repo.HasCommit(dir, first)) || yes(repo.HasCommit(dir, "no-such-ref")) {
 		t.Error("HasCommit does not tell a commit from a name that is none")
 	}
-	if !repo.HasPath(dir, first, "agents") || repo.HasPath(dir, first, "pi") {
+	if !yes(repo.HasPath(dir, first, "agents")) || yes(repo.HasPath(dir, first, "pi")) {
 		t.Error("HasPath does not tell a path the commit holds from one it does not")
 	}
-	if !repo.IsAncestor(dir, first, second) || repo.IsAncestor(dir, second, first) || !repo.IsAncestor(dir, second, second) {
+	if !yes(repo.IsAncestor(dir, first, second)) || yes(repo.IsAncestor(dir, second, first)) || !yes(repo.IsAncestor(dir, second, second)) {
 		t.Error("IsAncestor is wrong for a parent, a child and a commit with itself")
 	}
 	if got, err := repo.Resolve(dir, "HEAD"); err != nil || got != second {
@@ -311,5 +301,184 @@ func TestARepositoryVariableOfTheProcessDoesNotReachGit(t *testing.T) {
 	got, err := repo.Resolve(dir, "HEAD")
 	if err != nil || got != want {
 		t.Errorf("Resolve = %q, %v, want %q: a GIT_DIR of the process reached git through the options' environment", got, err, want)
+	}
+}
+
+// ---- a ref is never an option ----
+
+var refCalls = map[string]func(r gitsource.Repo, ref string) error{
+	"HasCommit":         func(r gitsource.Repo, ref string) error { _, err := r.HasCommit("/o", ref); return err },
+	"HasPath":           func(r gitsource.Repo, ref string) error { _, err := r.HasPath("/o", ref, "pi"); return err },
+	"IsAncestor first":  func(r gitsource.Repo, ref string) error { _, err := r.IsAncestor("/o", ref, "main"); return err },
+	"IsAncestor second": func(r gitsource.Repo, ref string) error { _, err := r.IsAncestor("/o", "main", ref); return err },
+	"Resolve":           func(r gitsource.Repo, ref string) error { _, err := r.Resolve("/o", ref); return err },
+	"LatestTag":         func(r gitsource.Repo, ref string) error { _, err := r.LatestTag("/o", ref, "v*"); return err },
+	"Export": func(r gitsource.Repo, ref string) error {
+		_, err := r.Export("/o", ref, []string{"skills"})
+		return err
+	},
+}
+
+func TestARefThatStartsWithADashIsRefusedAndGitIsNotRun(t *testing.T) {
+	for name, call := range refCalls {
+		t.Run(name, func(t *testing.T) {
+			runner := &fakeRunner{}
+			err := call(gitsource.New(runner, gitsource.Options{}), "--output=/tmp/pwned")
+			var invalid *gitsource.InvalidRefError
+			if !errors.As(err, &invalid) || invalid.Ref != "--output=/tmp/pwned" {
+				t.Fatalf("err = %v, want an *InvalidRefError naming the ref", err)
+			}
+			if !strings.Contains(err.Error(), `"--output=/tmp/pwned"`) {
+				t.Errorf("err = %q, want it to name the ref", err)
+			}
+			if len(runner.calls) != 0 {
+				t.Errorf("git was run %d time(s) for a ref it would read as an option: %v", len(runner.calls), runner.calls)
+			}
+		})
+	}
+}
+
+// An empty rev is how LatestTag says "the checked-out commit", not a ref to refuse.
+func TestAnEmptyRevForLatestTagIsNotARef(t *testing.T) {
+	runner := &fakeRunner{stdout: "v1\n"}
+	if _, err := gitsource.New(runner, gitsource.Options{}).LatestTag("/o", "", "v*"); err != nil || len(runner.calls) != 1 {
+		t.Fatalf("err = %v, calls = %d, want the call to be made", err, len(runner.calls))
+	}
+}
+
+// Every ref reaches git after --end-of-options, so a ref the check above missed still could not
+// be read as an option. git 2.24 (2019) is the first that knows it; the git of this machine and
+// of the CI image are newer.
+func TestEveryRefFollowsTheOptionTerminator(t *testing.T) {
+	for name, call := range refCalls {
+		t.Run(name, func(t *testing.T) {
+			runner := &fakeRunner{}
+			_ = call(gitsource.New(runner, gitsource.Options{}), "feature")
+			args := runner.calls[0].args
+			terminator, ref := -1, -1
+			for i, a := range args {
+				if a == "--end-of-options" {
+					terminator = i
+				}
+				if strings.Contains(a, "feature") {
+					ref = i
+				}
+			}
+			if terminator < 0 || ref < terminator {
+				t.Errorf("argv %v: the ref must come after --end-of-options", args)
+			}
+		})
+	}
+}
+
+// The hostile case end to end, against a real git: the archive of a ref that reads as --output
+// writes nothing.
+func TestAnOutputOptionDisguisedAsARefWritesNoFile(t *testing.T) {
+	repo, dir, git := realRepo(t)
+	write(t, filepath.Join(dir, "skills", "a"), "x\n")
+	git("add", "-A")
+	git("commit", "-q", "-m", "one")
+	target := filepath.Join(t.TempDir(), "pwned")
+
+	if _, err := repo.Export(dir, "--output="+target, []string{"skills"}); err == nil {
+		t.Fatal("Export accepted a ref that is an option")
+	}
+	if _, err := os.Stat(target); err == nil {
+		t.Fatal("git wrote the file the option named")
+	}
+}
+
+// ---- "git answered no" is not "git could not answer" ----
+
+// shellRunner runs a shell script in place of git, through the real process adapter, so the
+// errors the adapter classifies are the ones the operating system produces.
+type shellRunner struct{ script string }
+
+func (s shellRunner) Output(ctx context.Context, env []string, _ string, _ ...string) ([]byte, []byte, error) {
+	return execrunner.New().Output(ctx, env, "/bin/sh", "-c", s.script)
+}
+
+// missingRunner asks for a git that is not on the PATH.
+type missingRunner struct{}
+
+func (missingRunner) Output(ctx context.Context, env []string, _ string, _ ...string) ([]byte, []byte, error) {
+	return execrunner.New().Output(ctx, env, "git-that-does-not-exist-9f3a", "x")
+}
+
+type unavailable interface{ Unavailable() bool }
+
+func isUnavailable(err error) bool {
+	var u unavailable
+	return errors.As(err, &u) && u.Unavailable()
+}
+
+func predicates(repo gitsource.Repo) map[string]func() (bool, error) {
+	return map[string]func() (bool, error){
+		"IsWorkTree": func() (bool, error) { return repo.IsWorkTree("/o") },
+		"HasCommit":  func() (bool, error) { return repo.HasCommit("/o", "main") },
+		"HasPath":    func() (bool, error) { return repo.HasPath("/o", "main", "pi") },
+		"IsAncestor": func() (bool, error) { return repo.IsAncestor("/o", "a", "b") },
+	}
+}
+
+func TestANonZeroExitOfGitIsAnAnswerOfNo(t *testing.T) {
+	for name, ask := range predicates(gitsource.New(shellRunner{"exit 1"}, gitsource.Options{})) {
+		t.Run(name, func(t *testing.T) {
+			if ok, err := ask(); ok || err != nil {
+				t.Fatalf("= %v, %v, want no answer of yes and no error", ok, err)
+			}
+		})
+	}
+}
+
+func TestAGitThatIsNotInstalledIsAnAnswerOfNo(t *testing.T) {
+	for name, ask := range predicates(gitsource.New(missingRunner{}, gitsource.Options{})) {
+		t.Run(name, func(t *testing.T) {
+			if ok, err := ask(); ok || err != nil {
+				t.Fatalf("= %v, %v, want no and no error: a machine without git builds unversioned", ok, err)
+			}
+		})
+	}
+	if _, err := gitsource.New(missingRunner{}, gitsource.Options{}).Resolve("/o", "HEAD"); err == nil || isUnavailable(err) {
+		t.Errorf("Resolve err = %v, want a plain failure that is not marked unavailable", err)
+	}
+}
+
+func TestAGitThatCouldNotAnswerIsAnError(t *testing.T) {
+	cases := map[string]struct {
+		runner  gitsource.Runner
+		options gitsource.Options
+	}{
+		"killed by a signal":  {shellRunner{"kill -9 $$"}, gitsource.Options{}},
+		"stopped at deadline": {shellRunner{"exec /bin/sleep 30"}, gitsource.Options{Timeout: 100 * time.Millisecond}},
+	}
+	for name, c := range cases {
+		for pname, ask := range predicates(gitsource.New(c.runner, c.options)) {
+			t.Run(name+"/"+pname, func(t *testing.T) {
+				ok, err := ask()
+				if ok || err == nil || !isUnavailable(err) {
+					t.Fatalf("= %v, %v, want an error marked unavailable", ok, err)
+				}
+			})
+		}
+	}
+	// The same failures from the methods that return values carry the mark too.
+	repo := gitsource.New(shellRunner{"kill -9 $$"}, gitsource.Options{})
+	if _, err := repo.Resolve("/o", "HEAD"); !isUnavailable(err) {
+		t.Errorf("Resolve err = %v, want it marked unavailable", err)
+	}
+	if _, err := repo.HasChanges("/o", "skills"); !isUnavailable(err) {
+		t.Errorf("HasChanges err = %v, want it marked unavailable", err)
+	}
+	if _, err := repo.LatestTag("/o", "", "v*"); !isUnavailable(err) {
+		t.Errorf("LatestTag err = %v, want it marked unavailable", err)
+	}
+	if _, err := repo.Export("/o", "main", []string{"skills"}); !isUnavailable(err) {
+		t.Errorf("Export err = %v, want it marked unavailable", err)
+	}
+	// And an exit status of git is not marked.
+	repo = gitsource.New(shellRunner{"exit 128"}, gitsource.Options{})
+	if _, err := repo.Resolve("/o", "nope"); err == nil || isUnavailable(err) {
+		t.Errorf("Resolve err = %v, want a plain failure for an exit status", err)
 	}
 }
