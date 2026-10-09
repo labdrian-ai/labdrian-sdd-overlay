@@ -482,3 +482,31 @@ func TestAGitThatCouldNotAnswerIsAnError(t *testing.T) {
 		t.Errorf("Resolve err = %v, want a plain failure for an exit status", err)
 	}
 }
+
+// A program that prints more than the bound of the process adapter is not an answer of git: the
+// adapter reports it as one that could not answer, with the reason in the chain.
+func TestAnOutputOverTheBoundIsAGitThatCouldNotAnswer(t *testing.T) {
+	runner := execrunnerWithBound{script: `i=0; while [ $i -lt 500 ]; do printf '0123456789'; i=$((i+1)); done`, max: 100}
+	repo := gitsource.New(runner, gitsource.Options{})
+
+	_, err := repo.Export("/o", "main", []string{"skills"})
+	if !errors.Is(err, execrunner.ErrOutputTooLarge) || !isUnavailable(err) {
+		t.Fatalf("Export err = %v, want ErrOutputTooLarge in the chain and marked unavailable", err)
+	}
+	if _, err := repo.Resolve("/o", "main"); !errors.Is(err, execrunner.ErrOutputTooLarge) || !isUnavailable(err) {
+		t.Errorf("Resolve err = %v, want the same", err)
+	}
+	if ok, err := repo.HasCommit("/o", "main"); ok || !errors.Is(err, execrunner.ErrOutputTooLarge) {
+		t.Errorf("HasCommit = %v, %v, want an error, not a no", ok, err)
+	}
+}
+
+// execrunnerWithBound runs a shell script through the real process adapter under a bound.
+type execrunnerWithBound struct {
+	script string
+	max    int64
+}
+
+func (e execrunnerWithBound) Output(ctx context.Context, env []string, _ string, _ ...string) ([]byte, []byte, error) {
+	return execrunner.New().WithMaxOutput(e.max).Output(ctx, env, "/bin/sh", "-c", e.script)
+}

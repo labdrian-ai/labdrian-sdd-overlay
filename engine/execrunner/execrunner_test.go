@@ -258,22 +258,24 @@ wait`)
 // ---- a bound on what Output holds in memory ----
 
 func TestOutputStopsAProgramThatPrintsMoreThanTheBound(t *testing.T) {
-	bin := fakeBinary(t, "git", `i=0; while [ $i -lt 2000 ]; do printf 'xxxxxxxxxx'; i=$((i+1)); done`)
+	bin := fakeBinary(t, "git", `i=0; while [ $i -lt 2000 ]; do printf '0123456789'; i=$((i+1)); done`)
 
-	stdout, _, err := New().WithMaxOutput(1000).Output(context.Background(), nil, bin)
+	// 1005 is not a multiple of the ten bytes a write carries, so an exact cut falls inside one.
+	stdout, _, err := New().WithMaxOutput(1005).Output(context.Background(), nil, bin)
 	if !errors.Is(err, ErrOutputTooLarge) {
 		t.Fatalf("err = %v, want ErrOutputTooLarge", err)
 	}
-	if len(stdout) > 1000 {
-		t.Errorf("held %d bytes, want no more than the bound of 1000", len(stdout))
+	want := strings.Repeat("0123456789", 101)[:1005]
+	if string(stdout) != want {
+		t.Errorf("held %d bytes, want exactly the first 1005 of the output", len(stdout))
 	}
 }
 
 func TestOutputBoundsStandardErrorToo(t *testing.T) {
 	bin := fakeBinary(t, "git", `i=0; while [ $i -lt 2000 ]; do printf 'xxxxxxxxxx' >&2; i=$((i+1)); done`)
-	_, stderr, err := New().WithMaxOutput(1000).Output(context.Background(), nil, bin)
-	if !errors.Is(err, ErrOutputTooLarge) || len(stderr) > 1000 {
-		t.Fatalf("err = %v, held %d bytes of stderr, want ErrOutputTooLarge and at most 1000", err, len(stderr))
+	_, stderr, err := New().WithMaxOutput(1005).Output(context.Background(), nil, bin)
+	if !errors.Is(err, ErrOutputTooLarge) || string(stderr) != strings.Repeat("x", 1005) {
+		t.Fatalf("err = %v, held %d bytes of stderr, want ErrOutputTooLarge and exactly 1005", err, len(stderr))
 	}
 }
 
@@ -299,5 +301,14 @@ exec /bin/sleep 30`)
 	}
 	if bound := killGrace + 5*time.Second; time.Since(started) > bound {
 		t.Errorf("Output took %v, want it back within %v: the program was waited for", time.Since(started), bound)
+	}
+}
+
+func TestMaxOutputReportsTheBound(t *testing.T) {
+	if got := New().MaxOutput(); got != 0 {
+		t.Errorf("New().MaxOutput() = %d, want 0 (none)", got)
+	}
+	if got := New().WithMaxOutput(42).MaxOutput(); got != 42 {
+		t.Errorf("MaxOutput() = %d, want 42", got)
 	}
 }

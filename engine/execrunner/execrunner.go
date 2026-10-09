@@ -35,15 +35,21 @@ type Runner struct {
 func New() Runner { return Runner{} }
 
 // WithMaxOutput is the runner with a bound, in bytes, on what Output holds of each stream: a
-// program that prints more is stopped and Output returns ErrOutputTooLarge. Zero is no bound,
+// program that prints more is stopped and Output returns ErrOutputTooLarge with the stream cut
+// at exactly the bound. Zero is no bound,
 // which is what New returns. Run, which returns a combined stream, is not bounded.
 func (r Runner) WithMaxOutput(n int64) Runner {
 	r.maxOutput = n
 	return r
 }
 
+// MaxOutput is the bound WithMaxOutput set, in bytes; zero is none.
+func (r Runner) MaxOutput() int64 { return r.maxOutput }
+
 // cappedBuffer collects what a program prints up to a bound and stops the program when it goes
-// over, so a runaway output cannot fill memory.
+// over, so a runaway output cannot fill memory. The cut is exact: a write that crosses the bound
+// is accepted up to the bound and refused for the rest, so what is held when Output fails is a
+// prefix of the output that is exactly the bound long.
 type cappedBuffer struct {
 	buf    bytes.Buffer
 	max    int64
@@ -53,9 +59,11 @@ type cappedBuffer struct {
 
 func (c *cappedBuffer) Write(p []byte) (int, error) {
 	if c.max > 0 && int64(c.buf.Len()+len(p)) > c.max {
+		room := int(c.max) - c.buf.Len()
+		c.buf.Write(p[:room]) // a bytes.Buffer write does not fail
 		c.over = true
 		c.cancel()
-		return 0, ErrOutputTooLarge
+		return room, ErrOutputTooLarge
 	}
 	return c.buf.Write(p)
 }

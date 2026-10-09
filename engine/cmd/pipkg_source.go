@@ -21,9 +21,13 @@ func pipkgGitOptions(environ []string) gitsource.Options {
 // grow a hundredfold and stops a runaway before it fills memory.
 const pipkgGitMaxOutput = 256 << 20
 
+// pipkgGitRunner is the process adapter git is started through, bounded by pipkgGitMaxOutput.
+func pipkgGitRunner() execrunner.Runner {
+	return execrunner.New().WithMaxOutput(pipkgGitMaxOutput)
+}
+
 // newPipkgSource is the git of the machine as the SourceRepo of the package builder: the
-// process adapter starts it (bounded by pipkgGitMaxOutput), the adapter of the port asks it,
-// under pipkgGitOptions.
+// process adapter starts it, the adapter of the port asks it, under pipkgGitOptions.
 func newPipkgSource(environ []string) pipkg.SourceRepo {
-	return gitsource.New(execrunner.New().WithMaxOutput(pipkgGitMaxOutput), pipkgGitOptions(environ))
+	return gitsource.New(pipkgGitRunner(), pipkgGitOptions(environ))
 }
