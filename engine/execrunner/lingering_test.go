@@ -2,6 +2,7 @@ package execrunner
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -100,15 +101,18 @@ func stopRecordedProcessWith(t reporter, lister, pidFile string) {
 	}
 }
 
-// commandOf is the command line of the process pid, or "" when there is no such process. A process
-// that has been killed but not yet waited for shows as defunct, not as its command. An error
-// means the lister itself could not be run, which says nothing about the process.
+// commandOf is the command line of the process pid, or "" when there is no such process: ps says so
+// by exiting 1 with nothing printed. A process that has been killed but not yet waited for shows as
+// defunct, not as its command. An error means the lister could not say: it could not be run, or it
+// ran and failed for another reason (no /proc, no permission), which says nothing about the process.
 func commandOf(lister string, pid int) (string, error) {
 	out, err := exec.Command(lister, "-p", strconv.Itoa(pid), "-o", "args=").Output()
 	var exit *exec.ExitError
 	switch {
+	case errors.As(err, &exit) && exit.ExitCode() == 1 && len(out) == 0:
+		return "", nil
 	case errors.As(err, &exit):
-		return "", nil // ps exits with 1 when no process has the id
+		return "", fmt.Errorf("%s exited %d: %s", lister, exit.ExitCode(), strings.TrimSpace(string(exit.Stderr)))
 	case err != nil:
 		return "", err
 	}
@@ -215,6 +219,28 @@ func TestStopRecordedProcessSaysWhenItCannotListProcesses(t *testing.T) {
 	r := &reports{}
 
 	stopRecordedProcessWith(r, filepath.Join(t.TempDir(), "no-such-ps"), pidFile)
+
+	if len(r.messages) != 1 || !strings.Contains(r.messages[0], "was not stopped") {
+		t.Fatalf("reports = %q, want one saying the process was not stopped", r.messages)
+	}
+}
+
+// A lister that runs and fails for a reason other than "no such process" (ps exits 1 for that one
+// and prints nothing) has not said the process is gone: it must be reported, or the sleep is left
+// running unseen.
+func TestStopRecordedProcessSaysWhenTheListerFailsForAnotherReason(t *testing.T) {
+	dir := t.TempDir()
+	lister := filepath.Join(dir, "ps")
+	if err := os.WriteFile(lister, []byte("#!/bin/sh\necho 'ps: cannot read /proc' >&2\nexit 2\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	pidFile := filepath.Join(dir, "sleep.pid")
+	if err := os.WriteFile(pidFile, []byte("1\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	r := &reports{}
+
+	stopRecordedProcessWith(r, lister, pidFile)
 
 	if len(r.messages) != 1 || !strings.Contains(r.messages[0], "was not stopped") {
 		t.Fatalf("reports = %q, want one saying the process was not stopped", r.messages)
