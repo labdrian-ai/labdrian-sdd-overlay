@@ -1,7 +1,10 @@
 package main
 
 // The cases of the registry that is absent or empty, one kind of read on every attempt or a read that
-// recovers. The reads that change kind are in propagate_golden_failure_cases_test.go.
+// recovers. The other cases of the loop are in propagate_golden_failure_cases_test.go (reads that
+// change kind, the runs that fail), propagate_golden_write_cases_test.go (writes, a foreign writer
+// that undoes one) and propagate_golden_verify_cases_test.go (the read-back); the driver and the
+// scripting helpers (failure, writeErrors, afterWrite) are in propagate_golden_test.go.
 
 func propagateAbsentCases() []propagateCase {
 	return []propagateCase{
