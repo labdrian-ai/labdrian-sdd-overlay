@@ -81,6 +81,13 @@ import (
 //   - gitfs is the adapter of the projection domain's RepoLocator port (H29): it finds the repository
 //     a directory belongs to, and the worktree and HEAD a workflow records, by reading the files of
 //     the repository with no subprocess. It shares with gitprov only what a pointer file names.
+//   - status holds the use case of `engine status`, the doctor of an installation (H30): the checks
+//     of the binary, the hooks and guards in Claude's settings.json, the contract and the registry
+//     of the project, over the Files and SettingsSource ports it owns. It answers with a Report of
+//     typed Checks; the home and the directory are in its Request, it prints nothing and exits
+//     nowhere. The line a person reads and the exit code are the command's, in cmd.
+//   - status/fsfiles is the adapter of status's Files port (H30): the file system of the machine.
+//     The adapter of its SettingsSource port is settings/settingsfile.Reader.
 //   - repotest is test support: the hand-made repositories the tests of gitfs and cmd share.
 //   - piguard is test support: the `pi` that refuses to run, put first on the PATH of a test
 //     run by a TestMain, so nothing started by accident reaches the real CLI.
@@ -141,6 +148,8 @@ var rings = map[string]archguard.Ring{
 	"skills/registryyaml":       archguard.Adapter,
 	"skills/skillsfs":           archguard.Adapter,
 	"statestore":                archguard.Adapter,
+	"status":                    archguard.Application,
+	"status/fsfiles":            archguard.Adapter,
 	"synctrigger":               archguard.Adapter,
 	"workflow":                  archguard.Domain,
 	"workflow/filelog":          archguard.Adapter,
