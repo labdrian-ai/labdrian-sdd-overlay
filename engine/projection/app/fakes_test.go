@@ -98,6 +98,11 @@ type memoryBindings struct {
 	beforeReplace func()
 	afterBind     func()
 	beforeRemoval func()
+	// beforeBind runs just before Bind judges.
+	beforeBind func()
+
+	// removals counts the calls of UnbindIfUnchanged.
+	removals int
 }
 
 func newBindings() *memoryBindings { return &memoryBindings{files: map[string][]byte{}} }
@@ -129,6 +134,9 @@ func (s *memoryBindings) put(key string, b projection.Binding) {
 func (s *memoryBindings) bound(key string) projection.Binding { return s.read(key).Binding }
 
 func (s *memoryBindings) Bind(key, project, id string, now time.Time, replace bool) error {
+	if s.beforeBind != nil {
+		s.beforeBind()
+	}
 	write, err := projection.AdmitBind(s.read(key), projection.NewBinding(key, project, id, now), replace)
 	if err != nil {
 		return err
@@ -172,6 +180,7 @@ func (s *memoryBindings) Unbind(key string) (bool, error) {
 }
 
 func (s *memoryBindings) UnbindIfUnchanged(key string, expected projection.Binding) (bool, error) {
+	s.removals++
 	if s.beforeRemoval != nil {
 		s.beforeRemoval()
 	}

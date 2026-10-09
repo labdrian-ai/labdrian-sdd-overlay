@@ -240,6 +240,24 @@ func TestBindReplacesOnlyTheBindingItJudgedStale(t *testing.T) {
 	}
 }
 
+func TestBindRefusesABindingThatAppearsBetweenTheCheckAndTheWrite(t *testing.T) {
+	w := newBindWorld()
+	w.workflows.put("proj-1", "wf-1", owned(workflow.StatusRunning))
+	rival := projection.NewBinding(repoKey, "proj-1", "wf-other", firstInstant.Add(time.Second))
+	// Nothing is bound when Bind looks, and another process binds a different workflow before it writes.
+	w.bindings.beforeBind = func() { w.bindings.put(repoKey, rival) }
+
+	_, err := w.bind("proj-1", "wf-1")
+
+	var stored *app.BindingStoreError
+	if !errors.As(err, &stored) || !errors.Is(err, projection.ErrAlreadyBound) {
+		t.Fatalf("Bind = %v, want a *BindingStoreError holding projection.ErrAlreadyBound", err)
+	}
+	if now := w.bindings.bound(repoKey); now != rival {
+		t.Errorf("the store holds %+v, want the rival's binding %+v left alone", now, rival)
+	}
+}
+
 func TestBindSaysWhenTheBindingChangedBetweenTheCheckAndTheWrite(t *testing.T) {
 	w := newBindWorld()
 	w.workflows.put("proj-1", "wf-1", owned(workflow.StatusRunning))

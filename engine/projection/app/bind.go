@@ -54,13 +54,14 @@ func (s BindWorkflow) Bind(req BindRequest) (projection.Binding, error) {
 		return projection.Binding{}, err
 	}
 
-	// stale is the binding judged stale below, or nil when there is nothing to replace. The
-	// judgment and the replacement are two steps, and the window between them is closed by
-	// replacing only that exact binding.
 	current, err := s.Bindings.Load(repoKey)
 	if err != nil {
 		return projection.Binding{}, &BindingStoreError{Err: err}
 	}
+	// stale is the binding judged stale, or nil when there is nothing to replace. The judgment
+	// and the replacement are two steps, and the window between them is closed by replacing only
+	// that exact binding; with nothing to replace, the write refuses a binding that has appeared
+	// since (projection.ErrAlreadyBound).
 	stale, err := s.judgeCurrent(current, req)
 	if err != nil {
 		return projection.Binding{}, err

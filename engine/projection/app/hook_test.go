@@ -30,6 +30,18 @@ func newHookWorld(status workflow.Status) *hookWorld {
 	return w
 }
 
+// closedProjection is what the domain projects for the bound workflow once it is closed, before
+// the removal of the binding is told: the words of its notes are the domain's, so the tests ask the
+// domain for them.
+func closedProjection() projection.ProjectionResult {
+	return projection.Project(projection.ProjectionInput{
+		Binding:  projection.Loaded{Classification: projection.ClassificationOwned, Binding: projection.NewBinding(repoKey, "proj-1", "wf-1", firstInstant)},
+		Workflow: ptr(closed()),
+	})
+}
+
+func ptr[T any](v T) *T { return &v }
+
 func prompt(inputDir, processDir string) app.PromptRequest {
 	return app.PromptRequest{InputDir: inputDir, ProcessDir: processDir}
 }
@@ -65,10 +77,14 @@ func TestOnPromptProjectsTheWorkflowTheRepositoryFollows(t *testing.T) {
 	if got.Kind != app.PromptProjection || got.Result.Warning != "" {
 		t.Fatalf("OnPrompt = %+v, want a projection with no warning", got)
 	}
-	for _, want := range []string{"workflow: wf-1 (project: proj-1)", "status: running"} {
-		if !strings.Contains(got.Result.Context, want) {
-			t.Errorf("the context does not say %q:\n%s", want, got.Result.Context)
-		}
+	// What the context says is the domain's: the service must hand over exactly the projection of
+	// the binding and the workflow it read, whatever words the domain uses.
+	want := projection.Project(projection.ProjectionInput{
+		Binding:  projection.Loaded{Classification: projection.ClassificationOwned, Binding: w.bindings.bound(repoKey)},
+		Workflow: ptr(owned(workflow.StatusRunning)),
+	})
+	if got.Result != want {
+		t.Errorf("the projection is not the domain's:\n got: %+v\nwant: %+v", got.Result, want)
 	}
 	if len(w.workflows.asked) != 1 || w.workflows.asked[0] != "proj-1/wf-1" {
 		t.Errorf("the workflow store was asked about %v, want proj-1/wf-1 once", w.workflows.asked)
@@ -124,8 +140,8 @@ func TestOnPromptRemovesTheBindingOfAClosedWorkflowAndSaysSo(t *testing.T) {
 
 	got := w.service.OnPrompt(prompt(repoDir, ""))
 
-	if !got.Result.Unbind || !strings.Contains(got.Result.Context, "binding to it was removed") {
-		t.Fatalf("OnPrompt = %+v, want a note that the binding was removed", got)
+	if want := closedProjection().AfterUnbind(true, nil); !got.Result.Unbind || got.Result != want {
+		t.Fatalf("OnPrompt = %+v, want the domain's note for a binding that was removed, %+v", got, want)
 	}
 	if loaded := w.bindings.read(repoKey); loaded.Classification != projection.ClassificationAbsent {
 		t.Errorf("the store holds %v, want the binding removed", loaded.Classification)
@@ -140,8 +156,8 @@ func TestOnPromptLeavesABindingThatChangedAfterItWasRead(t *testing.T) {
 
 	got := w.service.OnPrompt(prompt(repoDir, ""))
 
-	if !strings.Contains(got.Result.Context, "had already changed, so it was left alone") {
-		t.Fatalf("OnPrompt = %+v, want a note that the binding was left alone", got)
+	if want := closedProjection().AfterUnbind(false, projection.ErrBindingChanged); got.Result != want {
+		t.Fatalf("OnPrompt = %+v, want the domain's note for a binding that changed, %+v", got, want)
 	}
 	if stored := w.bindings.bound(repoKey); stored != fresh {
 		t.Errorf("the store holds %+v, want the fresh binding %+v kept", stored, fresh)
@@ -155,11 +171,33 @@ func TestOnPromptSaysWhenTheBindingCouldNotBeRemoved(t *testing.T) {
 
 	got := w.service.OnPrompt(prompt(repoDir, ""))
 
-	if !strings.Contains(got.Result.Context, "failed") || !strings.Contains(got.Result.Context, "disk full") || !strings.Contains(got.Result.Context, "labdrian workflow unbind") {
-		t.Fatalf("OnPrompt = %+v, want a note that the removal failed, why, and how to finish it", got)
+	if want := closedProjection().AfterUnbind(false, errors.New("disk full")); got.Result != want {
+		t.Fatalf("OnPrompt = %+v, want the domain's note for a removal that failed, %+v", got, want)
 	}
 	if loaded := w.bindings.read(repoKey); loaded.Classification != projection.ClassificationOwned {
 		t.Errorf("the store holds %v, want the binding kept", loaded.Classification)
+	}
+}
+
+func TestOnPromptRemovesNothingWhenThereIsNoBindingOfOurs(t *testing.T) {
+	// The domain asks for a removal only of a workflow it read, so this takes a policy that asks for
+	// one anyway: with a binding that is not ours there is nothing the service read to remove.
+	w := newHookWorld(workflow.StatusRunning)
+	w.bindings.files[repoKey] = []byte(`{"version": 2}`)
+	w.service.Project = func(projection.ProjectionInput) projection.ProjectionResult {
+		return projection.ProjectionResult{Unbind: true, Warning: "from the policy"}
+	}
+
+	got := w.service.OnPrompt(prompt(repoDir, ""))
+
+	if w.bindings.removals != 0 {
+		t.Errorf("the store was asked to remove a binding %d times, want 0", w.bindings.removals)
+	}
+	if got.Kind != app.PromptProjection || got.Result.Warning != "from the policy" {
+		t.Errorf("OnPrompt = %+v, want the policy's answer passed through", got)
+	}
+	if string(w.bindings.files[repoKey]) != `{"version": 2}` {
+		t.Errorf("the file was changed to %q", w.bindings.files[repoKey])
 	}
 }
 

@@ -16,11 +16,15 @@ type HookService struct {
 	Bindings projection.BindingStore
 	// Workflows reads the workflow a binding names.
 	Workflows WorkflowReader
-	// EditTools are the names of the tools that edit a file, which the gate denies while the
-	// workflow is paused. The caller says which; with none, the gate denies no edit.
+	// EditTools are the names of the tools that edit a file. They decide which tools the gate looks
+	// at (projection.GateRelevant: these and a longterm-mem query; any other tool is answered
+	// without reading either store) and which it denies while the workflow is paused. The caller
+	// says which; with none, the gate denies no edit.
 	EditTools []string
 	// Project and Gate are the policies the service asks. They are fields so that a test can wrap
-	// them; a nil one is the domain's (projection.Project, projection.Gate).
+	// them. A nil one is the domain's (projection.Project, projection.Gate): the service falls
+	// back to it in its own methods project and gate, so the zero value of the field is the
+	// production policy.
 	Project func(projection.ProjectionInput) projection.ProjectionResult
 	Gate    func(projection.GateInput) projection.GateResult
 }
@@ -76,8 +80,9 @@ func (s HookService) OnPrompt(req PromptRequest) PromptOutcome {
 		input.Workflow = &w
 	}
 	result := s.project(input)
-	if result.Unbind {
-		// Only the binding that was read, and only best effort: a fresh binding made since stays,
+	if result.Unbind && binding.Classification == projection.ClassificationOwned {
+		// Only a binding of ours that was read: the domain asks for a removal only for one, and a
+		// policy that asks for it for another has read nothing to remove. Only the binding that was read, and only best effort: a fresh binding made since stays,
 		// and a failure to remove this one is not the prompt's problem (the next prompt sees the
 		// closed workflow again and retries). What happened goes into the note, so it never claims
 		// a removal that did not take place.
