@@ -12,6 +12,7 @@ import (
 	"time"
 
 	engineRuntime "github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime/core"
 )
 
 const basePromptFixture = "line 1\n## Skills to load before work\nline 2"
@@ -21,8 +22,8 @@ func TestOpenCodeInstallWritesPluginConfigAndRestartRequiredStatus(t *testing.T)
 	adapter := engineRuntime.NewOpenCodeAdapter(root)
 
 	install := adapter.Install()
-	if install.Status != engineRuntime.CapabilityRestartRequired {
-		t.Fatalf("Install status = %q, want %q", install.Status, engineRuntime.CapabilityRestartRequired)
+	if install.Status != core.CapabilityRestartRequired {
+		t.Fatalf("Install status = %q, want %q", install.Status, core.CapabilityRestartRequired)
 	}
 
 	pluginPath := filepath.Join(root, "plugins", "labdrian-runtime-parity.js")
@@ -51,7 +52,7 @@ func TestOpenCodeInstallWritesPluginConfigAndRestartRequiredStatus(t *testing.T)
 	}
 
 	status := adapter.Status()
-	if status.Status != engineRuntime.CapabilityRestartRequired {
+	if status.Status != core.CapabilityRestartRequired {
 		t.Fatalf("Status after install = %q, want restart_required; message: %s", status.Status, status.Message)
 	}
 	if !strings.Contains(status.Message, "restart") {
@@ -62,7 +63,7 @@ func TestOpenCodeInstallWritesPluginConfigAndRestartRequiredStatus(t *testing.T)
 func TestOpenCodeStatusSupportedWhenActiveMarkerMatchesHash(t *testing.T) {
 	root := t.TempDir()
 	adapter := engineRuntime.NewOpenCodeAdapter(root)
-	if result := adapter.Install(); result.Status != engineRuntime.CapabilityRestartRequired {
+	if result := adapter.Install(); result.Status != core.CapabilityRestartRequired {
 		t.Fatalf("Install status = %q", result.Status)
 	}
 	activeMarker := filepath.Join(root, "labdrian-runtime-parity.active.json")
@@ -73,7 +74,7 @@ func TestOpenCodeStatusSupportedWhenActiveMarkerMatchesHash(t *testing.T) {
 	}
 
 	status := adapter.Status()
-	if status.Status != engineRuntime.CapabilitySupported {
+	if status.Status != core.CapabilitySupported {
 		t.Fatalf("Status after active marker = %q, want supported; message: %s", status.Status, status.Message)
 	}
 	if !strings.Contains(status.Message, engineRuntime.OpenCodePluginHash()) {
@@ -84,7 +85,7 @@ func TestOpenCodeStatusSupportedWhenActiveMarkerMatchesHash(t *testing.T) {
 func TestOpenCodeInstallWritesPromptConfigFromMinimalismContract(t *testing.T) {
 	root := t.TempDir()
 	adapter := engineRuntime.NewOpenCodeAdapter(root)
-	if result := adapter.Install(); result.Status != engineRuntime.CapabilityRestartRequired {
+	if result := adapter.Install(); result.Status != core.CapabilityRestartRequired {
 		t.Fatalf("Install() = %#v", result)
 	}
 
@@ -173,7 +174,7 @@ context_operator: prompt_contains
 			t.Setenv("LABDRIAN_OVERLAY_DIR", overlayRoot)
 			root := t.TempDir()
 			adapter := engineRuntime.NewOpenCodeAdapter(root)
-			if result := adapter.Install(); result.Status != engineRuntime.CapabilityRestartRequired {
+			if result := adapter.Install(); result.Status != core.CapabilityRestartRequired {
 				t.Fatalf("Install() = %#v", result)
 			}
 
@@ -192,7 +193,7 @@ func TestOpenCodeInstallDoesNotWritePluginWhenPromptConfigCannotBeDerived(t *tes
 	adapter := engineRuntime.NewOpenCodeAdapter(root)
 
 	result := adapter.Install()
-	if result.Status != engineRuntime.CapabilityPartial || !strings.Contains(result.Message, "prompt config could not be derived") {
+	if result.Status != core.CapabilityPartial || !strings.Contains(result.Message, "prompt config could not be derived") {
 		t.Fatalf("Install() should fail before writing plugin when prompt config is unavailable, got %#v", result)
 	}
 	pluginPath := filepath.Join(root, "plugins", "labdrian-runtime-parity.js")
@@ -208,12 +209,12 @@ func TestOpenCodeInstallDoesNotWritePluginWhenPromptConfigCannotBeDerived(t *tes
 func TestOpenCodeUninstallRemovesPluginAndConfig(t *testing.T) {
 	root := t.TempDir()
 	adapter := engineRuntime.NewOpenCodeAdapter(root)
-	if result := adapter.Install(); result.Status != engineRuntime.CapabilityRestartRequired {
+	if result := adapter.Install(); result.Status != core.CapabilityRestartRequired {
 		t.Fatalf("Install() = %#v", result)
 	}
 
 	result := adapter.Uninstall()
-	if result.Status != engineRuntime.CapabilityRestartRequired {
+	if result.Status != core.CapabilityRestartRequired {
 		t.Fatalf("Uninstall status = %q, want restart_required", result.Status)
 	}
 	for _, path := range []string{
@@ -229,18 +230,18 @@ func TestOpenCodeUninstallRemovesPluginAndConfig(t *testing.T) {
 func TestOpenCodeStatusAfterUninstallHonorsActiveMarker(t *testing.T) {
 	root := t.TempDir()
 	adapter := engineRuntime.NewOpenCodeAdapter(root)
-	if result := adapter.Install(); result.Status != engineRuntime.CapabilityRestartRequired {
+	if result := adapter.Install(); result.Status != core.CapabilityRestartRequired {
 		t.Fatalf("Install() = %#v", result)
 	}
 	activeMarker := filepath.Join(root, "labdrian-runtime-parity.active.json")
 	writeMatchingActiveMarker(t, root)
-	if result := adapter.Uninstall(); result.Status != engineRuntime.CapabilityRestartRequired {
+	if result := adapter.Uninstall(); result.Status != core.CapabilityRestartRequired {
 		t.Fatalf("Uninstall() = %#v", result)
 	}
-	if result := adapter.Status(); result.Status != engineRuntime.CapabilityRestartRequired || !strings.Contains(result.Message, "restart OpenCode to unload") {
+	if result := adapter.Status(); result.Status != core.CapabilityRestartRequired || !strings.Contains(result.Message, "restart OpenCode to unload") {
 		t.Fatalf("Status() after uninstall with active marker should require restart, got %#v", result)
 	}
-	if result := adapter.Uninstall(); result.Status != engineRuntime.CapabilityRestartRequired || !strings.Contains(result.Message, activeMarker) {
+	if result := adapter.Uninstall(); result.Status != core.CapabilityRestartRequired || !strings.Contains(result.Message, activeMarker) {
 		t.Fatalf("second uninstall should keep restart guidance, got %#v", result)
 	}
 	if _, err := os.Stat(activeMarker); err != nil {
@@ -250,7 +251,7 @@ func TestOpenCodeStatusAfterUninstallHonorsActiveMarker(t *testing.T) {
 	if err := os.Remove(activeMarker); err != nil {
 		t.Fatalf("manual post-restart marker cleanup: %v", err)
 	}
-	if result := adapter.Status(); result.Status != engineRuntime.CapabilityUnsupported {
+	if result := adapter.Status(); result.Status != core.CapabilityUnsupported {
 		t.Fatalf("Status() after manual marker cleanup should be unsupported, got %#v", result)
 	}
 }
@@ -258,7 +259,7 @@ func TestOpenCodeStatusAfterUninstallHonorsActiveMarker(t *testing.T) {
 func TestOpenCodeInstallUpdatePreservesLoadedMarkerUntilRestart(t *testing.T) {
 	root := t.TempDir()
 	adapter := engineRuntime.NewOpenCodeAdapter(root)
-	if result := adapter.Install(); result.Status != engineRuntime.CapabilityRestartRequired {
+	if result := adapter.Install(); result.Status != core.CapabilityRestartRequired {
 		t.Fatalf("initial Install() = %#v", result)
 	}
 	writeMatchingActiveMarker(t, root)
@@ -269,14 +270,14 @@ func TestOpenCodeInstallUpdatePreservesLoadedMarkerUntilRestart(t *testing.T) {
 	}
 	beforeRefresh := readActiveMarkerJSON(t, activeMarker)
 
-	if result := adapter.Install(); result.Status != engineRuntime.CapabilityRestartRequired {
+	if result := adapter.Install(); result.Status != core.CapabilityRestartRequired {
 		t.Fatalf("refresh install = %#v", result)
 	}
 	afterRefresh := readActiveMarkerJSON(t, activeMarker)
 	if !sameJSONIdentity(beforeRefresh, afterRefresh) {
 		t.Fatalf("refresh should preserve active marker identity; before=%#v after=%#v", beforeRefresh, afterRefresh)
 	}
-	if result := adapter.Status(); result.Status != engineRuntime.CapabilityRestartRequired || !strings.Contains(result.Message, "restart") {
+	if result := adapter.Status(); result.Status != core.CapabilityRestartRequired || !strings.Contains(result.Message, "restart") {
 		t.Fatalf("stale active marker after refresh should require restart, got %#v", result)
 	}
 }
@@ -284,11 +285,11 @@ func TestOpenCodeInstallUpdatePreservesLoadedMarkerUntilRestart(t *testing.T) {
 func TestOpenCodeStatusRejectsTamperedPromptConfig(t *testing.T) {
 	root := t.TempDir()
 	adapter := engineRuntime.NewOpenCodeAdapter(root)
-	if result := adapter.Install(); result.Status != engineRuntime.CapabilityRestartRequired {
+	if result := adapter.Install(); result.Status != core.CapabilityRestartRequired {
 		t.Fatalf("Install() = %#v", result)
 	}
 	writeMatchingActiveMarker(t, root)
-	if result := adapter.Status(); result.Status != engineRuntime.CapabilitySupported {
+	if result := adapter.Status(); result.Status != core.CapabilitySupported {
 		t.Fatalf("baseline status should be supported, got %#v", result)
 	}
 
@@ -336,10 +337,10 @@ func TestOpenCodeStatusRejectsTamperedPromptConfig(t *testing.T) {
 			promptConfig := config["prompt_config"].(map[string]any)
 			tt.tamper(promptConfig)
 			writeJSONFile(t, configPath, config)
-			if result := adapter.Status(); result.Status != engineRuntime.CapabilityRestartRequired || !strings.Contains(result.Message, "prompt_config") {
+			if result := adapter.Status(); result.Status != core.CapabilityRestartRequired || !strings.Contains(result.Message, "prompt_config") {
 				t.Fatalf("tampered prompt config should require restart, got %#v", result)
 			}
-			if result := adapter.Install(); result.Status != engineRuntime.CapabilityRestartRequired {
+			if result := adapter.Install(); result.Status != core.CapabilityRestartRequired {
 				t.Fatalf("reinstall after tamper = %#v", result)
 			}
 			writeMatchingActiveMarker(t, root)
@@ -350,7 +351,7 @@ func TestOpenCodeStatusRejectsTamperedPromptConfig(t *testing.T) {
 func TestOpenCodeStatusRejectsMalformedNestedContractContextMetadata(t *testing.T) {
 	root := t.TempDir()
 	adapter := engineRuntime.NewOpenCodeAdapter(root)
-	if result := adapter.Install(); result.Status != engineRuntime.CapabilityRestartRequired {
+	if result := adapter.Install(); result.Status != core.CapabilityRestartRequired {
 		t.Fatalf("Install() = %#v", result)
 	}
 	writeMatchingActiveMarker(t, root)
@@ -362,7 +363,7 @@ func TestOpenCodeStatusRejectsMalformedNestedContractContextMetadata(t *testing.
 	writeJSONFile(t, configPath, config)
 
 	result := adapter.Status()
-	if result.Status != engineRuntime.CapabilityPartial {
+	if result.Status != core.CapabilityPartial {
 		t.Fatalf("malformed nested context metadata should invalidate status, got %#v", result)
 	}
 	if !strings.Contains(result.Message, "config missing or invalid") {
@@ -388,7 +389,7 @@ func TestOpenCodeAdapterDoesNotPolluteCallerWorkingDirectory(t *testing.T) {
 	t.Cleanup(func() { _ = os.Chdir(oldWD) })
 
 	adapter := engineRuntime.NewOpenCodeAdapter(configRoot)
-	if result := adapter.Install(); result.Status != engineRuntime.CapabilityRestartRequired {
+	if result := adapter.Install(); result.Status != core.CapabilityRestartRequired {
 		t.Fatalf("Install() = %#v", result)
 	}
 	if _, err := os.Stat(filepath.Join(callerCWD, ".opencode")); !os.IsNotExist(err) {
@@ -404,10 +405,10 @@ func TestOpenCodeAdapterRejectsUnresolvedOrRelativeConfigRoot(t *testing.T) {
 		engineRuntime.NewOpenCodeAdapter(""),
 		engineRuntime.NewOpenCodeAdapter(filepath.Join("relative", "opencode")),
 	} {
-		if result := adapter.Install(); result.Status != engineRuntime.CapabilityUnsupported || !strings.Contains(result.Message, "OpenCode config root") {
+		if result := adapter.Install(); result.Status != core.CapabilityUnsupported || !strings.Contains(result.Message, "OpenCode config root") {
 			t.Fatalf("Install() should reject unsafe root, got %#v", result)
 		}
-		if result := adapter.Status(); result.Status != engineRuntime.CapabilityUnsupported || !strings.Contains(result.Message, "OpenCode config root") {
+		if result := adapter.Status(); result.Status != core.CapabilityUnsupported || !strings.Contains(result.Message, "OpenCode config root") {
 			t.Fatalf("Status() should reject unsafe root, got %#v", result)
 		}
 	}
@@ -417,33 +418,33 @@ func TestOpenCodeLifecycleAliasesAndStatusFailureModes(t *testing.T) {
 	root := t.TempDir()
 	adapter := engineRuntime.NewOpenCodeAdapter(root)
 
-	if adapter.Target() != engineRuntime.TargetOpenCode {
+	if adapter.Target() != core.TargetOpenCode {
 		t.Fatalf("Target() = %q, want opencode", adapter.Target())
 	}
-	if result := adapter.Apply(); result.Action != engineRuntime.ActionInstall || result.Status != engineRuntime.CapabilityRestartRequired {
+	if result := adapter.Apply(); result.Action != core.ActionInstall || result.Status != core.CapabilityRestartRequired {
 		t.Fatalf("Apply() should map to install and require restart, got %#v", result)
 	}
-	if result := adapter.SyncCheck(); result.Action != engineRuntime.ActionSyncCheck || result.Status != engineRuntime.CapabilityRestartRequired {
+	if result := adapter.SyncCheck(); result.Action != core.ActionSyncCheck || result.Status != core.CapabilityRestartRequired {
 		t.Fatalf("SyncCheck() should report restart-required, got %#v", result)
 	}
-	if result := adapter.Update(); result.Action != engineRuntime.ActionUpdate || result.Status != engineRuntime.CapabilityRestartRequired {
+	if result := adapter.Update(); result.Action != core.ActionUpdate || result.Status != core.CapabilityRestartRequired {
 		t.Fatalf("Update() should reinstall and require restart, got %#v", result)
 	}
-	if result := adapter.Rollback(); result.Action != engineRuntime.ActionRollback || result.Status != engineRuntime.CapabilityRestartRequired {
+	if result := adapter.Rollback(); result.Action != core.ActionRollback || result.Status != core.CapabilityRestartRequired {
 		t.Fatalf("Rollback() should remove plugin bridge, got %#v", result)
 	}
-	if result := adapter.Status(); result.Status != engineRuntime.CapabilityUnsupported {
+	if result := adapter.Status(); result.Status != core.CapabilityUnsupported {
 		t.Fatalf("Status() after rollback = %q, want unsupported", result.Status)
 	}
 
-	if result := adapter.Install(); result.Status != engineRuntime.CapabilityRestartRequired {
+	if result := adapter.Install(); result.Status != core.CapabilityRestartRequired {
 		t.Fatalf("Install() = %#v", result)
 	}
 	pluginPath := filepath.Join(root, "plugins", "labdrian-runtime-parity.js")
 	if err := os.WriteFile(pluginPath, []byte("changed plugin source"), 0o644); err != nil {
 		t.Fatalf("modify plugin: %v", err)
 	}
-	if result := adapter.Status(); result.Status != engineRuntime.CapabilityRestartRequired || !strings.Contains(result.Message, "artifact changed") {
+	if result := adapter.Status(); result.Status != core.CapabilityRestartRequired || !strings.Contains(result.Message, "artifact changed") {
 		t.Fatalf("Status() should report artifact hash mismatch restart requirement, got %#v", result)
 	}
 }

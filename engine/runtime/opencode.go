@@ -12,6 +12,7 @@ import (
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/assets"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/contract"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime/core"
 )
 
 const openCodePluginFile = "labdrian-runtime-parity.js"
@@ -217,37 +218,37 @@ func OpenCodePluginHash() string {
 	return hex.EncodeToString(sum[:])
 }
 
-func (a OpenCodeAdapter) Target() Target             { return TargetOpenCode }
-func (a OpenCodeAdapter) Apply() LifecycleResult     { return a.Install() }
-func (a OpenCodeAdapter) Install() LifecycleResult   { return a.install(ActionInstall) }
-func (a OpenCodeAdapter) Status() LifecycleResult    { return a.status(ActionStatus) }
-func (a OpenCodeAdapter) SyncCheck() LifecycleResult { return a.status(ActionSyncCheck) }
-func (a OpenCodeAdapter) Update() LifecycleResult    { return a.install(ActionUpdate) }
-func (a OpenCodeAdapter) Rollback() LifecycleResult  { return a.uninstall(ActionRollback) }
-func (a OpenCodeAdapter) Uninstall() LifecycleResult { return a.uninstall(ActionUninstall) }
+func (a OpenCodeAdapter) Target() core.Target             { return core.TargetOpenCode }
+func (a OpenCodeAdapter) Apply() core.LifecycleResult     { return a.Install() }
+func (a OpenCodeAdapter) Install() core.LifecycleResult   { return a.install(core.ActionInstall) }
+func (a OpenCodeAdapter) Status() core.LifecycleResult    { return a.status(core.ActionStatus) }
+func (a OpenCodeAdapter) SyncCheck() core.LifecycleResult { return a.status(core.ActionSyncCheck) }
+func (a OpenCodeAdapter) Update() core.LifecycleResult    { return a.install(core.ActionUpdate) }
+func (a OpenCodeAdapter) Rollback() core.LifecycleResult  { return a.uninstall(core.ActionRollback) }
+func (a OpenCodeAdapter) Uninstall() core.LifecycleResult { return a.uninstall(core.ActionUninstall) }
 
-func (a OpenCodeAdapter) uninstall(action Action) LifecycleResult {
+func (a OpenCodeAdapter) uninstall(action core.Action) core.LifecycleResult {
 	if err := a.validateRoot(); err != nil {
-		return a.result(action, CapabilityUnsupported, err.Error())
+		return a.result(action, core.CapabilityUnsupported, err.Error())
 	}
 	pluginErr := os.Remove(a.pluginPath())
 	configErr := os.Remove(a.configPath())
 	if pluginErr != nil && !os.IsNotExist(pluginErr) {
-		return a.result(action, CapabilityPartial, pluginErr.Error())
+		return a.result(action, core.CapabilityPartial, pluginErr.Error())
 	}
 	if configErr != nil && !os.IsNotExist(configErr) {
-		return a.result(action, CapabilityPartial, configErr.Error())
+		return a.result(action, core.CapabilityPartial, configErr.Error())
 	}
-	return a.result(action, CapabilityRestartRequired, "OpenCode plugin bridge removed; restart OpenCode to unload any already loaded plugin. Active marker remains at "+a.activeMarkerPath()+"; remove it only after OpenCode is fully stopped/restarted")
+	return a.result(action, core.CapabilityRestartRequired, "OpenCode plugin bridge removed; restart OpenCode to unload any already loaded plugin. Active marker remains at "+a.activeMarkerPath()+"; remove it only after OpenCode is fully stopped/restarted")
 }
 
-func (a OpenCodeAdapter) install(action Action) LifecycleResult {
+func (a OpenCodeAdapter) install(action core.Action) core.LifecycleResult {
 	if err := a.validateRoot(); err != nil {
-		return a.result(action, CapabilityUnsupported, err.Error())
+		return a.result(action, core.CapabilityUnsupported, err.Error())
 	}
 	promptConfig, err := loadOpenCodePromptConfig()
 	if err != nil {
-		return a.result(action, CapabilityPartial, "OpenCode prompt config could not be derived from minimalism-contract frontmatter: "+err.Error())
+		return a.result(action, core.CapabilityPartial, "OpenCode prompt config could not be derived from minimalism-contract frontmatter: "+err.Error())
 	}
 	cfg := openCodeConfig{
 		PluginPath:        a.pluginPath(),
@@ -260,66 +261,66 @@ func (a OpenCodeAdapter) install(action Action) LifecycleResult {
 		PromptConfigHash:  promptConfigHash(promptConfig),
 	}
 	if err := a.writeConfig(cfg); err != nil {
-		return a.result(action, CapabilityPartial, err.Error())
+		return a.result(action, core.CapabilityPartial, err.Error())
 	}
 	if err := os.MkdirAll(filepath.Dir(a.pluginPath()), 0o755); err != nil {
-		return a.result(action, CapabilityUnsupported, err.Error())
+		return a.result(action, core.CapabilityUnsupported, err.Error())
 	}
 	if err := os.WriteFile(a.pluginPath(), []byte(openCodePluginSource), 0o644); err != nil {
-		return a.result(action, CapabilityUnsupported, err.Error())
+		return a.result(action, core.CapabilityUnsupported, err.Error())
 	}
-	return a.result(action, CapabilityRestartRequired, "OpenCode plugin changed; restart OpenCode to load version "+cfg.InstalledVersion)
+	return a.result(action, core.CapabilityRestartRequired, "OpenCode plugin changed; restart OpenCode to load version "+cfg.InstalledVersion)
 }
 
-func (a OpenCodeAdapter) status(action Action) LifecycleResult {
+func (a OpenCodeAdapter) status(action core.Action) core.LifecycleResult {
 	if err := a.validateRoot(); err != nil {
-		return a.result(action, CapabilityUnsupported, err.Error())
+		return a.result(action, core.CapabilityUnsupported, err.Error())
 	}
 	plugin, err := os.ReadFile(a.pluginPath())
 	if err != nil {
 		if os.IsNotExist(err) {
 			if active, activeErr := a.readActiveMarker(); activeErr == nil && active.ActiveVersion != "" {
-				return a.result(action, CapabilityRestartRequired, "OpenCode plugin removed but active marker remains for "+active.ActiveVersion+"; restart OpenCode to unload the plugin")
+				return a.result(action, core.CapabilityRestartRequired, "OpenCode plugin removed but active marker remains for "+active.ActiveVersion+"; restart OpenCode to unload the plugin")
 			} else if activeErr != nil && a.activeMarkerExists() {
-				return a.result(action, CapabilityRestartRequired, "OpenCode plugin removed but active marker at "+a.activeMarkerPath()+" is unreadable or invalid; restart OpenCode and perform manual cleanup only after the plugin is unloaded")
+				return a.result(action, core.CapabilityRestartRequired, "OpenCode plugin removed but active marker at "+a.activeMarkerPath()+" is unreadable or invalid; restart OpenCode and perform manual cleanup only after the plugin is unloaded")
 			}
 		}
-		return a.result(action, CapabilityUnsupported, "OpenCode plugin not installed")
+		return a.result(action, core.CapabilityUnsupported, "OpenCode plugin not installed")
 	}
 	cfg, err := a.readConfig()
 	if err != nil {
 		if isPromptConfigMismatch(err) {
-			return a.result(action, CapabilityRestartRequired, "OpenCode prompt_config is stale or tampered; reinstall/update and restart OpenCode: "+err.Error())
+			return a.result(action, core.CapabilityRestartRequired, "OpenCode prompt_config is stale or tampered; reinstall/update and restart OpenCode: "+err.Error())
 		}
-		return a.result(action, CapabilityPartial, "OpenCode config missing or invalid: "+err.Error())
+		return a.result(action, core.CapabilityPartial, "OpenCode config missing or invalid: "+err.Error())
 	}
 	currentHash := hashString(string(plugin))
 	if cfg.InstalledHash != currentHash {
-		return a.result(action, CapabilityRestartRequired, "OpenCode plugin artifact changed; restart OpenCode after reinstall")
+		return a.result(action, core.CapabilityRestartRequired, "OpenCode plugin artifact changed; restart OpenCode after reinstall")
 	}
 	active, err := a.readActiveMarker()
 	if err != nil {
-		return a.result(action, CapabilityRestartRequired, "OpenCode restart required to load plugin version "+cfg.InstalledVersion)
+		return a.result(action, core.CapabilityRestartRequired, "OpenCode restart required to load plugin version "+cfg.InstalledVersion)
 	}
 	if a.activeMarkerOlderThanInstalledConfig() {
-		return a.result(action, CapabilityRestartRequired, "OpenCode active marker predates installed plugin/config; restart OpenCode to load current runtime bridge")
+		return a.result(action, core.CapabilityRestartRequired, "OpenCode active marker predates installed plugin/config; restart OpenCode to load current runtime bridge")
 	}
 	if active.ActiveVersion != cfg.InstalledVersion {
-		return a.result(action, CapabilityRestartRequired, "OpenCode active plugin version mismatch; restart OpenCode to load "+cfg.InstalledVersion)
+		return a.result(action, core.CapabilityRestartRequired, "OpenCode active plugin version mismatch; restart OpenCode to load "+cfg.InstalledVersion)
 	}
 	if active.ActiveHash != currentHash {
-		return a.result(action, CapabilityRestartRequired, "OpenCode active plugin hash mismatch; restart OpenCode to load current plugin")
+		return a.result(action, core.CapabilityRestartRequired, "OpenCode active plugin hash mismatch; restart OpenCode to load current plugin")
 	}
 	if active.ActivePromptConfigHash != cfg.PromptConfigHash {
-		return a.result(action, CapabilityRestartRequired, "OpenCode active prompt config mismatch; restart OpenCode to load current prompt config")
+		return a.result(action, core.CapabilityRestartRequired, "OpenCode active prompt config mismatch; restart OpenCode to load current prompt config")
 	}
 	if active.PluginPath != cfg.PluginPath {
-		return a.result(action, CapabilityRestartRequired, "OpenCode active plugin path mismatch; restart OpenCode to load "+cfg.PluginPath)
+		return a.result(action, core.CapabilityRestartRequired, "OpenCode active plugin path mismatch; restart OpenCode to load "+cfg.PluginPath)
 	}
 	if active.ConfigRoot != "" && active.ConfigRoot != cfg.PluginConfigRoot {
-		return a.result(action, CapabilityRestartRequired, "OpenCode active config root mismatch; restart OpenCode to load "+cfg.PluginConfigRoot)
+		return a.result(action, core.CapabilityRestartRequired, "OpenCode active config root mismatch; restart OpenCode to load "+cfg.PluginConfigRoot)
 	}
-	return a.result(action, CapabilitySupported, "OpenCode plugin active with version "+cfg.InstalledVersion+" and hash "+currentHash)
+	return a.result(action, core.CapabilitySupported, "OpenCode plugin active with version "+cfg.InstalledVersion+" and hash "+currentHash)
 }
 
 func (a OpenCodeAdapter) writeConfig(cfg openCodeConfig) error {
@@ -442,8 +443,8 @@ func (a OpenCodeAdapter) validateRoot() error {
 	return nil
 }
 
-func (a OpenCodeAdapter) result(action Action, status CapabilityStatus, message string) LifecycleResult {
-	return NewLifecycleResult(TargetOpenCode, action, status, message, nil)
+func (a OpenCodeAdapter) result(action core.Action, status core.CapabilityStatus, message string) core.LifecycleResult {
+	return core.NewLifecycleResult(core.TargetOpenCode, action, status, message, nil)
 }
 
 func loadOpenCodePromptConfig() (openCodePromptConfig, error) {
