@@ -19,7 +19,7 @@ $ propagate --registry /virtual/project/.atl/skill-registry.md --contract-file /
 exit: 1
 --- stdout ---
 --- stderr ---
-error: registry exists but is empty — refusing to propagate over it
+error: the registry at /virtual/project/.atl/skill-registry.md read empty on all 3 attempts — refusing to propagate
 --- registry unchanged ---
 
 $ propagate --registry /virtual/project/.atl/skill-registry.md --contract-file /virtual/skills/_shared/contract.md
@@ -27,6 +27,6 @@ $ propagate --registry /virtual/project/.atl/skill-registry.md --contract-file /
 exit: 1
 --- stdout ---
 --- stderr ---
-error: registry exists but is empty — refusing to propagate over it
+error: the registry at /virtual/project/.atl/skill-registry.md read empty on all 3 attempts — refusing to propagate
 --- registry unchanged ---
 

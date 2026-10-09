@@ -73,7 +73,6 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/assets"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/contract"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/execrunner"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/filelock"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gadu"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gate"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/hookwire"
@@ -948,57 +947,6 @@ func atomicWriteFile(path string, data []byte, perm os.FileMode) error {
 		return err
 	}
 	return os.Rename(tmpPath, path)
-}
-
-// acquireRegistryLock takes an exclusive advisory lock on lockPath (a sidecar
-// file next to the registry) through engine/filelock, waiting up to
-// filelock.DefaultWait for a holder to let go and then failing with a
-// *filelock.BusyError. It serializes the read-modify-write cycle across
-// concurrent propagate processes (both contract hooks fire on every
-// UserPromptSubmit), and the bound means a hung holder costs the next prompt two
-// seconds and an error, not its whole session. Returns a release func.
-//
-// The kernel releases the lock on process exit, so an os.Exit inside the core
-// (which skips defers) can never leave the lock held.
-func acquireRegistryLock(lockPath string) (release func(), err error) {
-	return filelock.Acquire(lockPath, filelock.Options{})
-}
-
-// registryPathFromArgs extracts the cleaned --registry value, empty if absent.
-// Used by runPropagate to know which sidecar lock to take before the core runs;
-// the core re-parses args itself and stays lock-free (hermetic for unit tests).
-func registryPathFromArgs(args []string) string {
-	// Keep the LAST occurrence to match runPropagateCore's parser, so the
-	// sidecar lock always guards the same file the core reads and writes.
-	path := ""
-	for i := 0; i < len(args); i++ {
-		if args[i] == "--registry" && i+1 < len(args) {
-			path = filepath.Clean(args[i+1])
-		}
-	}
-	return path
-}
-
-// runPropagate implements the 'propagate' subcommand.
-// Fails LOUD on any error (exits 1).
-//
-// Concurrency safety (two layers, plus the empty-registry guard in the core):
-//  1. an exclusive flock on <registry>.lock serializes the read-modify-write
-//     against the sibling propagate process spawned by the other contract hook;
-//     it waits up to filelock.DefaultWait for a holder, then exits 1 naming the
-//     lock instead of waiting for as long as the holder lives;
-//  2. the registry write itself is atomic (temp file + rename), so even a
-//     reader outside the lock can never observe a truncated/empty registry.
-func runPropagate(args []string) {
-	if registryPath := registryPathFromArgs(args); registryPath != "" {
-		release, err := acquireRegistryLock(registryPath + ".lock")
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "error: acquiring registry lock: %v\n", err)
-			os.Exit(1)
-		}
-		defer release()
-	}
-	runPropagateVerified(args, os.Stdout, os.Stderr, os.ReadFile, atomicWriteFile, os.Exit)
 }
 
 // emptyRegistryErrMsg is the exact stderr line runPropagateCore prints when a

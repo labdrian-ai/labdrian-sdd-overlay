@@ -125,7 +125,7 @@ func (w *propagateWorld) propagate(label string, args ...string) {
 	exitCode := -1
 	before, hadRegistry := w.files[registryFile]
 	w.calls.Reset()
-	runPropagateVerified(args, &stdout, &stderr, w.readFile, w.writeFile, func(code int) { exitCode = code })
+	runPropagateFuncs(args, &stdout, &stderr, w.readFile, w.writeFile, func(code int) { exitCode = code })
 	exit := "none"
 	if exitCode >= 0 {
 		exit = fmt.Sprint(exitCode)
