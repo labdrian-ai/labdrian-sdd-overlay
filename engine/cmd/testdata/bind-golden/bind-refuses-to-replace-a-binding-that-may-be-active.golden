@@ -1,0 +1,115 @@
+$ workflow bind --project proj-1 --workflow wf-created
+# bound to a created workflow (in <REPO>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-created",
+    "bound_at": "<TIME>"
+  }
+}
+--- stderr ---
+
+$ workflow bind --project proj-1 --workflow wf-next
+# another workflow is refused while it is created (in <REPO>)
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+error: workflow bind: this repository is already bound to workflow "wf-created" of project "proj-1" (status: created); run 'workflow unbind' first to bind another
+
+$ workflow unbind
+# unbind frees the repository (in <REPO>)
+--- exit ---
+0
+--- stdout ---
+{
+  "removed": true
+}
+--- stderr ---
+
+$ workflow bind --project proj-1 --workflow wf-running
+# bound to a running workflow (in <REPO>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-running",
+    "bound_at": "<TIME>"
+  }
+}
+--- stderr ---
+
+$ workflow bind --project proj-1 --workflow wf-next
+# another workflow is refused while it is running (in <REPO>)
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+error: workflow bind: this repository is already bound to workflow "wf-running" of project "proj-1" (status: running); run 'workflow unbind' first to bind another
+
+$ workflow unbind
+# unbind frees the repository (in <REPO>)
+--- exit ---
+0
+--- stdout ---
+{
+  "removed": true
+}
+--- stderr ---
+
+$ workflow bind --project proj-1 --workflow wf-paused
+# bound to a paused workflow (in <REPO>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-paused",
+    "bound_at": "<TIME>"
+  }
+}
+--- stderr ---
+
+$ workflow bind --project proj-1 --workflow wf-next
+# another workflow is refused while it is paused (in <REPO>)
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+error: workflow bind: this repository is already bound to workflow "wf-paused" of project "proj-1" (status: paused); run 'workflow unbind' first to bind another
+
+$ workflow unbind
+# unbind frees the repository (in <REPO>)
+--- exit ---
+0
+--- stdout ---
+{
+  "removed": true
+}
+--- stderr ---
+
+$ workflow binding
+# the repository is free (in <REPO>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "absent"
+}
+--- stderr ---
+

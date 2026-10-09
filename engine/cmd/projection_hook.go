@@ -9,12 +9,14 @@ package main
 //
 // UserPromptSubmit puts into the session the workflow the repository is bound to
 // (see workflow bind): the decision is engine/projection's Project, a pure
-// function of the binding and the workflow state, and this file only reads those
-// two from disk, calls it, and says the result (engine/hookwire reads the input and
-// writes the answer; hook_translate.go maps between it and the policy). PreToolUse
-// gates a tool call against the same two: engine/projection's Gate denies the
-// file-edit tools while the workflow is paused and checks a longterm-mem query's
-// project against the workflow's memory plan. The contract with Claude Code:
+// function of the binding and the workflow state, and the reading of those two
+// is the use case's (engine/projection/app, HookService); this file decodes the
+// input, calls the use case, and says the result (engine/hookwire reads the input
+// and writes the answer; hook_translate.go maps between it and the policy).
+// PreToolUse gates a tool call against the same two: engine/projection's Gate
+// denies the file-edit tools while the workflow is paused and checks a
+// longterm-mem query's project against the workflow's memory plan. The contract
+// with Claude Code:
 //
 //   - stdout is empty, or exactly one JSON object that begins with '{'.
 //     UserPromptSubmit: {"hookSpecificOutput":{"hookEventName":"UserPromptSubmit",
@@ -46,7 +48,8 @@ package main
 // exception: when the bound workflow is closed it removes the binding, best effort, only if it is still the binding it read. The
 // note it prints says what the removal did: removed, failed (and that
 // 'labdrian workflow unbind' finishes it), or left alone. It runs no subprocess and makes no network call:
-// the repository is found by walking the filesystem, as the binding verbs do.
+// the repository is found by walking the filesystem, as the binding verbs do
+// (engine/gitfs).
 
 import (
 	"fmt"
@@ -56,21 +59,24 @@ import (
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/hookwire"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection/app"
 )
 
-// beforeHookUnbind is a test seam, nil outside tests. The hook calls it after it
-// decided to remove the binding of a closed workflow and before it does: the
+// beforeHookUnbind is a test seam, nil outside tests. The binding store of the
+// hook calls it (seamedBindings) after the hook decided to remove the binding of
+// a closed workflow and before it does: the
 // window in which another process can bind the next workflow, which
 // projection.Store.UnbindIfUnchanged must then refuse to remove.
 var beforeHookUnbind func()
 
-// onGateStoreAccess is a test seam, nil outside tests. The gate calls it at the
-// moment it goes to the binding and workflow stores, so a test can prove that a
-// tool the gate never checks is answered without touching them.
+// onGateStoreAccess is a test seam, nil outside tests. The binding store of the
+// gate calls it (seamedBindings) at the moment it goes to the stores, so a test
+// can prove that a tool the gate never checks is answered without touching them.
 var onGateStoreAccess func()
 
-// beforeGateDecision is a test seam, nil outside tests. The gate calls it before
-// it decides, so a test can make the gate panic where a bug in it would.
+// beforeGateDecision is a test seam, nil outside tests. The gate policy of the
+// hook (newGateHook) calls it before it decides, so a test can make the gate
+// panic where a bug in it would.
 var beforeGateDecision func()
 
 // runProjection implements the 'projection <action>' subcommand.
@@ -185,11 +191,13 @@ func warningOutput(event, warning string) []byte {
 }
 
 // userPromptSubmit does the hook's work and returns what it prints on stdout,
-// which is nothing whenever there is nothing to say. Each step that fails before
-// the binding store is asked (input that cannot be read or used, a directory
-// outside every repository) ends in silence: there is nothing to be loyal to. A
-// store that cannot be opened or read is different, because the repository may
-// well be bound, so it gets one warning.
+// which is nothing whenever there is nothing to say. It decodes the input and
+// says the answer of the use case (engine/projection/app, HookService.OnPrompt),
+// which does the rest. Each step that fails before the binding store is asked
+// (input that cannot be read or used, a directory outside every repository) ends
+// in silence: there is nothing to be loyal to. A store that cannot be opened or
+// read is different, because the repository may well be bound, so it gets one
+// warning.
 func userPromptSubmit(stdin io.Reader, processCwd string) []byte {
 	// One byte past the cap is enough for the decoder to see the input is over
 	// it, and no more of an endless input is ever read.
@@ -206,61 +214,28 @@ func userPromptSubmit(stdin io.Reader, processCwd string) []byte {
 	if in.Event != "" && in.Event != hookwire.EventUserPromptSubmit {
 		return nil
 	}
-	repoKey, ok := hookRepoKey(in.Cwd, processCwd)
-	if !ok {
-		return nil
-	}
-	bindings, err := newBindingStore()
-	if err != nil {
-		return warningOutput(hookwire.EventUserPromptSubmit, projection.StoreWarning(err))
-	}
-	binding, err := bindings.Load(repoKey)
-	if err != nil {
-		return warningOutput(hookwire.EventUserPromptSubmit, projection.StoreWarning(err))
-	}
-
-	input := projection.ProjectionInput{Binding: binding}
-	if binding.Classification == projection.ClassificationOwned {
-		w := loadWorkflow(binding.Binding.ProjectID, binding.Binding.WorkflowID)
-		input.Workflow = &w
-	}
-	result := projection.Project(input)
-	if result.Unbind {
-		if beforeHookUnbind != nil {
-			beforeHookUnbind()
+	outcome := newPromptHook().OnPrompt(app.PromptRequest{InputDir: in.Cwd, ProcessDir: processCwd})
+	switch outcome.Kind {
+	case app.PromptWarning:
+		return warningOutput(hookwire.EventUserPromptSubmit, outcome.Warning)
+	case app.PromptProjection:
+		out, err := promptReply(outcome.Result).Encode()
+		if err != nil {
+			return nil
 		}
-		// Only the binding that was read, and only best effort: a fresh binding
-		// made since stays, and a failure to remove this one is not the prompt's
-		// problem (the next prompt sees the closed workflow again and retries).
-		// What happened goes into the note, so it never claims a removal that
-		// did not take place.
-		removed, unbindErr := bindings.UnbindIfUnchanged(repoKey, binding.Binding)
-		result = result.AfterUnbind(removed, unbindErr)
+		return out
 	}
-	out, err := promptReply(result).Encode()
-	if err != nil {
-		return nil
-	}
-	return out
-}
-
-// hookRepoKey finds the repository key of the session: the input's cwd when it
-// has one, else the process's. It is false when neither is inside a repository.
-func hookRepoKey(inputCwd, processCwd string) (string, bool) {
-	cwd := inputCwd
-	if cwd == "" {
-		cwd = processCwd
-	}
-	return observeRepoKey(cwd)
+	return nil
 }
 
 // preToolUse does the PreToolUse gate's work and returns what it prints on
-// stdout: a denial, a warning, or nothing. Every step that cannot go on ends in
-// silence and so in an allow: unusable input, another event's input, a directory
-// outside every repository, a binding store that cannot be opened or read, a
-// binding or workflow that cannot be followed. The gate runs on every tool call,
-// and the prompt hook already warns about those, so it does not repeat the
-// warning. It reads and never writes.
+// stdout: a denial, a warning, or nothing. It decodes the input and says the
+// answer of the use case (HookService.OnToolCall). Every step that cannot go on
+// ends in silence and so in an allow: unusable input, another event's input, a
+// directory outside every repository, a binding store that cannot be opened or
+// read, a binding or workflow that cannot be followed. The gate runs on every
+// tool call, and the prompt hook already warns about those, so it does not
+// repeat the warning. It reads and never writes.
 func preToolUse(stdin io.Reader, processCwd string) []byte {
 	data, err := io.ReadAll(io.LimitReader(stdin, hookwire.MaxEnvelopeBytes+1))
 	if err != nil {
@@ -273,38 +248,15 @@ func preToolUse(stdin io.Reader, processCwd string) []byte {
 	if in.Event != "" && in.Event != hookwire.EventPreToolUse {
 		return nil
 	}
-	// Relevance comes first, from the tool name alone: the gate runs on every
-	// tool call, and only a file-edit tool or a longterm-mem query is ever checked
-	// against the workflow. Any other tool is allowed here, without reading the
-	// binding or the workflow log.
-	if !projection.GateRelevant(gatedEditTools(), in.Tool) {
+	// The use case decides relevance first, from the tool name alone: the gate
+	// runs on every tool call, and only a file-edit tool or a longterm-mem query
+	// is ever checked against the workflow. Any other tool is allowed there,
+	// without reading the binding or the workflow log.
+	outcome := newGateHook().OnToolCall(app.ToolCallRequest{InputDir: in.Cwd, ProcessDir: processCwd, Call: gateCall(in)})
+	if !outcome.Decided {
 		return nil
 	}
-	repoKey, ok := hookRepoKey(in.Cwd, processCwd)
-	if !ok {
-		return nil
-	}
-	if onGateStoreAccess != nil {
-		onGateStoreAccess()
-	}
-	bindings, err := newBindingStore()
-	if err != nil {
-		return nil
-	}
-	binding, err := bindings.Load(repoKey)
-	if err != nil {
-		return nil
-	}
-
-	gateInput := projection.GateInput{Binding: binding, EditTools: gatedEditTools(), Call: gateCall(in)}
-	if binding.Classification == projection.ClassificationOwned {
-		w := loadWorkflow(binding.Binding.ProjectID, binding.Binding.WorkflowID)
-		gateInput.Workflow = &w
-	}
-	if beforeGateDecision != nil {
-		beforeGateDecision()
-	}
-	out, err := gateReply(projection.Gate(gateInput)).Encode()
+	out, err := gateReply(outcome.Result).Encode()
 	if err != nil {
 		return nil
 	}

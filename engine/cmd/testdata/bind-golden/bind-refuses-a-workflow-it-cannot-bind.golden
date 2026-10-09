@@ -1,0 +1,52 @@
+$ workflow bind --project proj-1 --workflow wf-none
+# a workflow that does not exist (in <REPO>)
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+error: workflow bind: workflow "wf-none" of project "proj-1" does not exist; create it first
+
+$ workflow bind --project proj-1 --workflow wf-closed
+# a closed workflow (in <REPO>)
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+error: workflow bind: workflow "wf-closed" of project "proj-1" is closed (abandoned); a closed workflow cannot be followed
+
+$ workflow bind --project proj-1 --workflow wf-drifted
+# a workflow whose log drifted (in <REPO>)
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+error: workflow bind: workflow "wf-drifted" of project "proj-1" is not owned (drifted): workflow: verify events: event 1 prev_digest "<DIGEST>" does not match event 0 digest "<DIGEST>"
+
+$ workflow bind --project no spaces --workflow wf-1
+# a project id that is not valid (in <REPO>)
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+error: workflow bind: project_id "no spaces" contains a character outside the allowed set [A-Za-z0-9._-]
+
+$ workflow bind --project proj-1 --workflow ../wf
+# a workflow id that is not valid (in <REPO>)
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+error: workflow bind: workflow_id "../wf" contains a character outside the allowed set [A-Za-z0-9._-]
+
+$ workflow binding
+# nothing was bound (in <REPO>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "absent"
+}
+--- stderr ---
+
+# after the refusals: the binding store
+<no binding store>

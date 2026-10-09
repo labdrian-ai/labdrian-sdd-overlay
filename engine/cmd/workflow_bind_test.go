@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -13,6 +14,7 @@ import (
 	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection/app"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow"
 )
 
@@ -357,7 +359,7 @@ func TestWorkflowBindReplacesAStaleBinding(t *testing.T) {
 		{"the bound workflow log drifted", func(t *testing.T, e bindEnv) {
 			driftWorkflowLog(t, e.workflowLog("proj-1", "wf-1"))
 			// The case must exercise the drifted classification, not another one.
-			if got := loadWorkflow("proj-1", "wf-1").Classification; got != workflow.ClassificationDrifted {
+			if got := (workflowReader{}).Load("proj-1", "wf-1").Classification; got != workflow.ClassificationDrifted {
 				t.Fatalf("test bug: the tampered log classifies as %q, want drifted", got)
 			}
 		}},
@@ -465,15 +467,37 @@ func TestWorkflowBindDoesNotReplaceABindingThatChangedAfterItWasJudgedStale(t *t
 	}
 }
 
-// TestVerifyStoredAcceptsOnlyTheRequestedBinding pins the read-back after Bind,
-// which another process may have followed with a bind of its own.
-func TestVerifyStoredAcceptsOnlyTheRequestedBinding(t *testing.T) {
-	requested := projection.Binding{ProjectID: "proj-1", WorkflowID: "wf-1"}
-	for _, stored := range []projection.Binding{requested, {ProjectID: "proj-1", WorkflowID: "wf-2"}, {ProjectID: "proj-2", WorkflowID: "wf-1"}} {
-		want := fmt.Sprintf("changed concurrently: it now names workflow %q of project %q", stored.WorkflowID, stored.ProjectID)
-		if err := verifyStored(stored, "proj-1", "wf-1"); (err == nil) != (stored == requested) || (err != nil && !strings.Contains(err.Error(), want)) {
-			t.Errorf("verifyStored(%+v) = %v, want an error naming what is stored, and none for the requested binding", stored, err)
-		}
+// TestBindingRefusalSaysEachRefusalInTheWordsOfTheVerbs pins the words of every typed refusal of
+// the use case, and what a person is told to run next. The decisions behind them are the use
+// case's (engine/projection/app); the words are this command's.
+func TestBindingRefusalSaysEachRefusalInTheWordsOfTheVerbs(t *testing.T) {
+	bound := projection.Binding{ProjectID: "proj-1", WorkflowID: "wf-1"}
+	tests := []struct {
+		name string
+		err  error
+		want string
+	}{
+		{"no repository", &app.NoRepositoryError{}, errNoRepository},
+		{"an identifier that is not valid", &app.InvalidIdentifierError{Err: errors.New(`project_id "a b" contains a character outside the allowed set`)}, `project_id "a b" contains a character outside the allowed set`},
+		{"a workflow that does not exist", &app.WorkflowAbsentError{ProjectID: "p", WorkflowID: "w"}, `workflow "w" of project "p" does not exist; create it first`},
+		{"a workflow that is not owned", &app.WorkflowNotOwnedError{ProjectID: "p", WorkflowID: "w", Classification: workflow.ClassificationDrifted, Detail: "event 1 does not follow"}, `workflow "w" of project "p" is not owned (drifted): event 1 does not follow`},
+		{"a closed workflow", &app.WorkflowClosedError{ProjectID: "p", WorkflowID: "w", Outcome: workflow.OutcomeAbandoned}, `workflow "w" of project "p" is closed (abandoned); a closed workflow cannot be followed`},
+		{"a binding to a live workflow", &app.BoundToLiveWorkflowError{Bound: bound, Status: workflow.StatusPaused}, `this repository is already bound to workflow "wf-1" of project "proj-1" (status: paused); run 'workflow unbind' first to bind another`},
+		{"a binding to a workflow that cannot be read", &app.BoundToUnreadableWorkflowError{Bound: bound, Detail: "permission denied"}, `this repository is bound to workflow "wf-1" of project "proj-1", whose log cannot be read (permission denied), so it may still be active; fix the problem, or run 'workflow unbind' first to bind another`},
+		{"a binding that cannot be read back", &app.ReadBackError{Classification: projection.ClassificationMalformed, Detail: "binding file is empty"}, `the binding could not be read back (malformed): binding file is empty`},
+		{"a binding changed while the verb ran", &app.ChangedConcurrentlyError{Found: projection.Binding{ProjectID: "proj-1", WorkflowID: "wf-2"}, ProjectID: "proj-1", WorkflowID: "wf-1"}, `the binding was changed concurrently: it now names workflow "wf-2" of project "proj-1", not the requested workflow "wf-1" of project "proj-1"`},
+		{"a binding that changed after it was judged stale", &app.BindingStoreError{Err: fmt.Errorf("%w: it was removed", projection.ErrBindingChanged)}, `projection store: the binding changed since it was read: it was removed; run 'workflow binding' to see what is bound now, then retry`},
+		{"a binding that appeared between the check and the write", &app.BindingStoreError{Err: fmt.Errorf("%w: it is bound to workflow %q of project %q", projection.ErrAlreadyBound, "wf-2", "proj-2")}, `projection store: the repository is already bound to a different workflow: it is bound to workflow "wf-2" of project "proj-2"; run 'workflow unbind' first to bind another`},
+		{"a store that failed", &app.BindingStoreError{Err: projection.ErrBindingBusy}, projection.ErrBindingBusy.Error()},
+		{"a store that refused a file that is not ours", &app.BindingStoreError{Err: projection.ErrRefuseForeignBinding}, projection.ErrRefuseForeignBinding.Error()},
+		{"an error of no type of the use case", errors.New("something else"), "something else"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := bindingRefusal(tt.err); got != tt.want {
+				t.Fatalf("bindingRefusal() =\n %q\nwant\n %q", got, tt.want)
+			}
+		})
 	}
 }
 

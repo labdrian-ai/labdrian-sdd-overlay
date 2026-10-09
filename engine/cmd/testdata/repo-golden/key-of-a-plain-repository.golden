@@ -1,0 +1,196 @@
+# at the root: the workflow records worktree_root="<REPO>" git_head=<40 of a>
+$ workflow bind --project proj-1 --workflow wf-1
+# at the root: bind (in <REPO>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-1",
+    "bound_at": "<TIME>"
+  }
+}
+--- stderr ---
+
+$ workflow binding
+# at the root: binding (in <REPO>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-1",
+    "bound_at": "<TIME>"
+  },
+  "workflow": {
+    "classification": "owned",
+    "status": "running"
+  }
+}
+--- stderr ---
+
+$ workflow unbind
+# at the root: unbind (in <REPO>)
+--- exit ---
+0
+--- stdout ---
+{
+  "removed": true
+}
+--- stderr ---
+
+# in a directory inside it: the workflow records worktree_root="<REPO>" git_head=<40 of a>
+$ workflow bind --project proj-1 --workflow wf-2
+# in a directory inside it: bind (in <REPO>/a/b/c)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-2",
+    "bound_at": "<TIME>"
+  }
+}
+--- stderr ---
+
+$ workflow binding
+# in a directory inside it: binding (in <REPO>/a/b/c)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-2",
+    "bound_at": "<TIME>"
+  },
+  "workflow": {
+    "classification": "owned",
+    "status": "running"
+  }
+}
+--- stderr ---
+
+$ workflow unbind
+# in a directory inside it: unbind (in <REPO>/a/b/c)
+--- exit ---
+0
+--- stdout ---
+{
+  "removed": true
+}
+--- stderr ---
+
+# through a symbolic link to the repository: the workflow records worktree_root="<ALIAS>" git_head=<40 of a>
+$ workflow bind --project proj-1 --workflow wf-3
+# through a symbolic link to the repository: bind (in <ALIAS>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-3",
+    "bound_at": "<TIME>"
+  }
+}
+--- stderr ---
+
+$ workflow binding
+# through a symbolic link to the repository: binding (in <ALIAS>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-3",
+    "bound_at": "<TIME>"
+  },
+  "workflow": {
+    "classification": "owned",
+    "status": "running"
+  }
+}
+--- stderr ---
+
+$ workflow unbind
+# through a symbolic link to the repository: unbind (in <ALIAS>)
+--- exit ---
+0
+--- stdout ---
+{
+  "removed": true
+}
+--- stderr ---
+
+# through a symbolic link, from a directory inside it: the workflow records worktree_root="<ALIAS>" git_head=<40 of a>
+$ workflow bind --project proj-1 --workflow wf-4
+# through a symbolic link, from a directory inside it: bind (in <ALIAS>/a/b)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-4",
+    "bound_at": "<TIME>"
+  }
+}
+--- stderr ---
+
+$ workflow binding
+# through a symbolic link, from a directory inside it: binding (in <ALIAS>/a/b)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-4",
+    "bound_at": "<TIME>"
+  },
+  "workflow": {
+    "classification": "owned",
+    "status": "running"
+  }
+}
+--- stderr ---
+
+$ workflow unbind
+# through a symbolic link, from a directory inside it: unbind (in <ALIAS>/a/b)
+--- exit ---
+0
+--- stdout ---
+{
+  "removed": true
+}
+--- stderr ---
+

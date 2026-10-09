@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gitfs"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gitprov"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection/fsstore"
@@ -20,8 +21,9 @@ import (
 
 // This file is where the file-backed stores of the domain are built: the workflow
 // event log, the role handoff chain, the session binding store and the shaper's
-// clearance store. Each adapter is handed the state home and reads no environment
-// variable, so the composition root is the one place that learns where the state lives
+// clearance store, and the finder of the repository a directory belongs to. Each adapter is
+// handed the state home and reads no environment variable, so the composition root is the
+// one place that learns where the state lives
 // ($XDG_STATE_HOME, or $HOME/.local/state; see statestore.Home). A home that cannot be
 // resolved is reported in the words each store has always used for it, with the store's
 // name in front. The shaper's contained source is built here too: it keeps no state, so it
@@ -94,6 +96,11 @@ func newClearanceStore() (shaper.ClearanceStore, error) {
 	}
 	return store, nil
 }
+
+// newRepoLocator builds the adapter that finds the git repository a directory belongs to by
+// reading its files, with no subprocess: the answer of the projection domain's RepoLocator port,
+// and the worktree and HEAD a workflow records as provenance.
+func newRepoLocator() gitfs.Locator { return gitfs.Locator{} }
 
 // newContainedSource builds the shaper's source of the handoff and Goal files: the
 // file-backed adapter, with the production behavior of the read (no test hook).

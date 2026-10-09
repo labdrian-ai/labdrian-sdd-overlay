@@ -1,0 +1,88 @@
+$ workflow bind
+# a command line the verb does not understand (in <REPO>)
+--- exit ---
+1
+--- stdout ---
+--- stderr ---
+error: workflow bind: --project is required
+
+$ workflow bind --project p
+# a command line the verb does not understand (in <REPO>)
+--- exit ---
+1
+--- stdout ---
+--- stderr ---
+error: workflow bind: --workflow is required
+
+$ workflow bind --workflow w
+# a command line the verb does not understand (in <REPO>)
+--- exit ---
+1
+--- stdout ---
+--- stderr ---
+error: workflow bind: --project is required
+
+$ workflow bind --project
+# a command line the verb does not understand (in <REPO>)
+--- exit ---
+1
+--- stdout ---
+--- stderr ---
+error: workflow bind: --project requires a value
+
+$ workflow bind --project p --workflow w --goal g.json
+# a command line the verb does not understand (in <REPO>)
+--- exit ---
+1
+--- stdout ---
+--- stderr ---
+error: workflow bind: unknown flag "--goal"
+
+$ workflow bind --project p --workflow w stray
+# a command line the verb does not understand (in <REPO>)
+--- exit ---
+1
+--- stdout ---
+--- stderr ---
+error: workflow bind: unexpected argument "stray"
+
+$ workflow bind --project p --project q --workflow w
+# a command line the verb does not understand (in <REPO>)
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+error: workflow bind: workflow "w" of project "q" does not exist; create it first
+
+$ workflow unbind --project p
+# a command line the verb does not understand (in <REPO>)
+--- exit ---
+1
+--- stdout ---
+--- stderr ---
+error: workflow unbind: unknown flag "--project"
+
+$ workflow unbind stray
+# a command line the verb does not understand (in <REPO>)
+--- exit ---
+1
+--- stdout ---
+--- stderr ---
+error: workflow unbind: unexpected argument "stray"
+
+$ workflow binding --json
+# a command line the verb does not understand (in <REPO>)
+--- exit ---
+1
+--- stdout ---
+--- stderr ---
+error: workflow binding: unknown flag "--json"
+
+$ workflow binding stray
+# a command line the verb does not understand (in <REPO>)
+--- exit ---
+1
+--- stdout ---
+--- stderr ---
+error: workflow binding: unexpected argument "stray"
+

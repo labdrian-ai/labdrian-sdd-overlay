@@ -2,13 +2,13 @@ package runtime
 
 import "reflect"
 
-// missing reports whether a port is absent: an untyped nil, or a value of a nilable kind (a
-// pointer, map, slice, func or channel) that is nil, whose methods could not be relied on. A nil
-// pointer that implements the port passes `hooks == nil` and then fails on its first call, which is
-// what the check is for.
+// missing reports whether the HookInstaller port it is given is absent: an untyped nil, or a value
+// of a nilable kind (a pointer, map, slice, func or channel) that is nil, whose methods could not be
+// relied on. A nil pointer that implements the port passes `hooks == nil` and then fails on its
+// first call, which is what the check is for.
 //
-// It lives beside the adapters and not in the port's file because both the Claude adapter
-// (claude.go) and the registration (register.go) ask the same question of the same port.
+// It answers for that one port: its parameter is a HookInstaller, so it is not a check for any
+// port.
 //
 // The kinds are the ones reflect.Value.IsNil accepts and a Go value can have without being an
 // interface. reflect.ValueOf unwraps an interface, so Interface is never the kind of the value it

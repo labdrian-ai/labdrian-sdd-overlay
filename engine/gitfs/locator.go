@@ -1,25 +1,28 @@
-package main
-
-// observeProvenance best-effort discovers the workflow.Provenance for a
-// working directory by walking up the filesystem looking for a .git entry
-// and reading HEAD, without running the git binary or any other
-// subprocess. Every step fails soft: anything missing, unreadable, or
-// unexpected leaves the corresponding field empty rather than failing the
-// caller's operation, matching Decision 6 (provenance is audit-only, never
-// a lookup key, and never blocks a lifecycle operation).
+// Package gitfs finds the git repository a directory belongs to by reading the files of the
+// repository, without running the git binary or any other subprocess. It is the adapter of the
+// projection domain's RepoLocator port (Phase 9 unit H29), and it also tells the workflow what
+// worktree and HEAD a command was run in, which the workflow records as provenance.
 //
-// This deliberately duplicates none of engine/gitprov's logic: gitprov
-// shells out to the real git binary (by design, to get git's own answer),
-// which the workflow lifecycle commands must never do (no subprocesses).
+// It deliberately does not share engine/gitprov's way of asking: gitprov shells out to the real
+// git binary (by design, to get git's own answer, and it fails closed on every ambiguity), which
+// the workflow lifecycle commands and the hooks must never do (no subprocesses). The two share
+// what a pointer file names (gitprov.PointerTarget) and nothing else: this reader is lenient on
+// purpose, because provenance is audit-only and never blocks an operation, and because the key of
+// a binding must not change for a repository that has one.
+//
+// Every step fails soft: anything missing, unreadable, or unexpected leaves the corresponding
+// answer empty rather than failing the caller's operation (Decision 6 of the workflow design:
+// provenance is audit-only, never a lookup key, and never blocks a lifecycle operation).
+package gitfs
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gitprov"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow"
 )
 
@@ -27,18 +30,51 @@ import (
 // id, the same shape workflow.Provenance.GitHead requires.
 var hexObjectID = regexp.MustCompile(`^(?:[0-9a-f]{40}|[0-9a-f]{64})$`)
 
-// observeProvenance returns the best-effort Provenance for cwd. cwd should
-// be absolute (os.Getwd()'s result); a relative or empty cwd yields an
-// empty Provenance, since WorktreeRoot must be absolute or empty.
-func observeProvenance(cwd string) workflow.Provenance {
-	if cwd == "" || !filepath.IsAbs(cwd) {
+// Locator reads repositories from the file system. The zero value is ready to use. It answers
+// projection.RepoLocator.
+type Locator struct{}
+
+var _ projection.RepoLocator = Locator{}
+
+// Provenance returns the best-effort workflow.Provenance for dir: the worktree root that holds it
+// and what HEAD resolves to. dir should be absolute (os.Getwd()'s result); a relative or empty
+// dir yields an empty Provenance, since WorktreeRoot must be absolute or empty.
+func (Locator) Provenance(dir string) workflow.Provenance {
+	if dir == "" || !filepath.IsAbs(dir) {
 		return workflow.Provenance{}
 	}
-	root, gitDir, ok := findGitDir(filepath.Clean(cwd))
+	root, gitDir, ok := findGitDir(filepath.Clean(dir))
 	if !ok {
 		return workflow.Provenance{}
 	}
 	return workflow.Provenance{WorktreeRoot: root, GitHead: resolveHead(gitDir)}
+}
+
+// RepoKey returns the key that identifies the repository containing dir, and whether there is
+// one: projection.RepoKeyOf the absolute git common directory, with its symbolic links resolved.
+// That is the .git directory itself for a normal checkout and the directory a linked worktree's
+// commondir file names, so every worktree of one repository, and every symlinked spelling of its
+// path, yields the same key. If the symlinks cannot be resolved for any reason (the directory
+// does not exist, a permission error, a symlink loop), the path as it is gets the key. That is
+// deterministic for a given spelling of the path, but the key then depends on that spelling: two
+// paths to the same repository, one of which cannot be resolved, would get different keys and so
+// different bindings.
+//
+// It needs an absolute dir; a relative or empty dir, no repository above dir, or an unusable
+// .git entry yields ("", false).
+func (Locator) RepoKey(dir string) (string, bool) {
+	if dir == "" || !filepath.IsAbs(dir) {
+		return "", false
+	}
+	_, gitDir, ok := findGitDir(filepath.Clean(dir))
+	if !ok {
+		return "", false
+	}
+	common := commonDir(gitDir)
+	if resolved, err := filepath.EvalSymlinks(common); err == nil {
+		common = resolved
+	}
+	return projection.RepoKeyOf(common), true
 }
 
 // findGitDir walks up from start looking for a .git entry: a directory (a
@@ -117,23 +153,21 @@ func classifyGitEntry(candidate, base string, info os.FileInfo) (gitDir string, 
 
 // readGitdirPointer reads a ".git" file's single "gitdir: <path>" line and
 // resolves it (relative to base when not already absolute) to an existing
-// directory.
+// directory. The whitespace around the line and around the path is not part of
+// either; what the path means is gitprov.PointerTarget's.
 func readGitdirPointer(path, base string) (string, bool) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return "", false
 	}
 	line := strings.TrimSpace(string(data))
-	target, found := strings.CutPrefix(line, "gitdir:")
+	rest, found := strings.CutPrefix(line, "gitdir:")
 	if !found {
 		return "", false
 	}
-	target = strings.TrimSpace(target)
-	if target == "" {
+	target, ok := gitprov.PointerTarget(strings.TrimSpace(rest), "", base)
+	if !ok {
 		return "", false
-	}
-	if !filepath.IsAbs(target) {
-		target = filepath.Join(base, target)
 	}
 	target = filepath.Clean(target)
 	if st, err := os.Stat(target); err != nil || !st.IsDir() {
@@ -208,37 +242,6 @@ func commonDir(gitDir string) string {
 		common = filepath.Join(gitDir, common)
 	}
 	return filepath.Clean(common)
-}
-
-// observeRepoKey returns the key that identifies the repository containing
-// cwd, and whether there is one: the lowercase hex SHA-256 of the cleaned,
-// symlink-resolved absolute git common directory. That is the .git directory
-// itself for a normal checkout and the directory a linked worktree's commondir
-// file names, so every worktree of one repository, and every symlinked
-// spelling of its path, yields the same key. If the symlinks cannot be
-// resolved for any reason (the directory does not exist, a permission error,
-// a symlink loop), the cleaned path is hashed instead. That is deterministic
-// for a given spelling of the path, but the key then depends on that spelling:
-// two paths to the same repository, one of which cannot be resolved, would get
-// different keys and so different bindings.
-//
-// Like observeProvenance it walks the filesystem by hand, runs no subprocess,
-// and needs an absolute cwd; a relative or empty cwd, no repository above cwd,
-// or an unusable .git entry yields ("", false).
-func observeRepoKey(cwd string) (string, bool) {
-	if cwd == "" || !filepath.IsAbs(cwd) {
-		return "", false
-	}
-	_, gitDir, ok := findGitDir(filepath.Clean(cwd))
-	if !ok {
-		return "", false
-	}
-	common := commonDir(gitDir)
-	if resolved, err := filepath.EvalSymlinks(common); err == nil {
-		common = resolved
-	}
-	sum := sha256.Sum256([]byte(filepath.Clean(common)))
-	return hex.EncodeToString(sum[:]), true
 }
 
 // lookupRef resolves ref to an object id from dir's loose ref file or, when

@@ -1,0 +1,93 @@
+$ workflow bind --project proj-1 --workflow wf-1
+# binds the workflow from the main worktree (in <MAIN>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-1",
+    "bound_at": "<TIME>"
+  }
+}
+--- stderr ---
+
+$ projection hook --event UserPromptSubmit
+# the prompt in the main worktree (stdin {"hook_event_name":"UserPromptSubmit","cwd":"<MAIN>"}, in <OUTSIDE>)
+--- exit ---
+[0]
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","additionalContext":"labdrian workflow projection: this repository follows the workflow below. Its state is read from the workflow log on disk, not from this session.\nworkflow: wf-1 (project: proj-1)\nprofile: standalone-minimal\nstatus: running\ngoal: goal-1 (digest 3fa80a4c34f1)\ncurrent stage: none yet\nnext stage: authorize\nmemory plan (read-only: it executes no query and grants no memory write): scope=none sources=none project_id=none goal_id=none write=none\nomitted filters: project_id, goal_id\ncapability limits (claude): dispatch=partial, cancellation=partial, authentication=partial, memory-enforcement=partial, skills=partial\nprogress commands: labdrian workflow stage --project proj-1 --workflow wf-1 --stage <name>; labdrian workflow verify --project proj-1 --workflow wf-1 --goal <goal file>; labdrian workflow close --project proj-1 --workflow wf-1 --outcome completed|abandoned\nstages recorded (0): none"}}
+--- stderr ---
+
+$ projection hook --event UserPromptSubmit
+# the prompt in a linked worktree (stdin {"hook_event_name":"UserPromptSubmit","cwd":"<WORKTREE>"}, in <OUTSIDE>)
+--- exit ---
+[0]
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","additionalContext":"labdrian workflow projection: this repository follows the workflow below. Its state is read from the workflow log on disk, not from this session.\nworkflow: wf-1 (project: proj-1)\nprofile: standalone-minimal\nstatus: running\ngoal: goal-1 (digest 3fa80a4c34f1)\ncurrent stage: none yet\nnext stage: authorize\nmemory plan (read-only: it executes no query and grants no memory write): scope=none sources=none project_id=none goal_id=none write=none\nomitted filters: project_id, goal_id\ncapability limits (claude): dispatch=partial, cancellation=partial, authentication=partial, memory-enforcement=partial, skills=partial\nprogress commands: labdrian workflow stage --project proj-1 --workflow wf-1 --stage <name>; labdrian workflow verify --project proj-1 --workflow wf-1 --goal <goal file>; labdrian workflow close --project proj-1 --workflow wf-1 --outcome completed|abandoned\nstages recorded (0): none"}}
+--- stderr ---
+
+$ projection hook --event UserPromptSubmit
+# the prompt in a directory inside a linked worktree (stdin {"hook_event_name":"UserPromptSubmit","cwd":"<WORKTREE>/src/pkg"}, in <OUTSIDE>)
+--- exit ---
+[0]
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","additionalContext":"labdrian workflow projection: this repository follows the workflow below. Its state is read from the workflow log on disk, not from this session.\nworkflow: wf-1 (project: proj-1)\nprofile: standalone-minimal\nstatus: running\ngoal: goal-1 (digest 3fa80a4c34f1)\ncurrent stage: none yet\nnext stage: authorize\nmemory plan (read-only: it executes no query and grants no memory write): scope=none sources=none project_id=none goal_id=none write=none\nomitted filters: project_id, goal_id\ncapability limits (claude): dispatch=partial, cancellation=partial, authentication=partial, memory-enforcement=partial, skills=partial\nprogress commands: labdrian workflow stage --project proj-1 --workflow wf-1 --stage <name>; labdrian workflow verify --project proj-1 --workflow wf-1 --goal <goal file>; labdrian workflow close --project proj-1 --workflow wf-1 --outcome completed|abandoned\nstages recorded (0): none"}}
+--- stderr ---
+
+$ projection hook --event UserPromptSubmit
+# the prompt with no directory in the input falls back to the process directory (stdin {"hook_event_name":"UserPromptSubmit"}, in <WORKTREE>)
+--- exit ---
+[0]
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","additionalContext":"labdrian workflow projection: this repository follows the workflow below. Its state is read from the workflow log on disk, not from this session.\nworkflow: wf-1 (project: proj-1)\nprofile: standalone-minimal\nstatus: running\ngoal: goal-1 (digest 3fa80a4c34f1)\ncurrent stage: none yet\nnext stage: authorize\nmemory plan (read-only: it executes no query and grants no memory write): scope=none sources=none project_id=none goal_id=none write=none\nomitted filters: project_id, goal_id\ncapability limits (claude): dispatch=partial, cancellation=partial, authentication=partial, memory-enforcement=partial, skills=partial\nprogress commands: labdrian workflow stage --project proj-1 --workflow wf-1 --stage <name>; labdrian workflow verify --project proj-1 --workflow wf-1 --goal <goal file>; labdrian workflow close --project proj-1 --workflow wf-1 --outcome completed|abandoned\nstages recorded (0): none"}}
+--- stderr ---
+
+$ projection hook --event UserPromptSubmit
+# the prompt outside every repository says nothing (stdin {"hook_event_name":"UserPromptSubmit","cwd":"<OUTSIDE>"}, in <MAIN>)
+--- exit ---
+[0]
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event UserPromptSubmit
+# the prompt in a checkout whose .git cannot be used says nothing (stdin {"hook_event_name":"UserPromptSubmit","cwd":"<INNER>"}, in <MAIN>)
+--- exit ---
+[0]
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event UserPromptSubmit
+# the prompt with a relative directory in the input uses the process directory, the decoder drops the relative one (stdin {"hook_event_name":"UserPromptSubmit","cwd":"relative/dir"}, in <MAIN>)
+--- exit ---
+[0]
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","additionalContext":"labdrian workflow projection: this repository follows the workflow below. Its state is read from the workflow log on disk, not from this session.\nworkflow: wf-1 (project: proj-1)\nprofile: standalone-minimal\nstatus: running\ngoal: goal-1 (digest 3fa80a4c34f1)\ncurrent stage: none yet\nnext stage: authorize\nmemory plan (read-only: it executes no query and grants no memory write): scope=none sources=none project_id=none goal_id=none write=none\nomitted filters: project_id, goal_id\ncapability limits (claude): dispatch=partial, cancellation=partial, authentication=partial, memory-enforcement=partial, skills=partial\nprogress commands: labdrian workflow stage --project proj-1 --workflow wf-1 --stage <name>; labdrian workflow verify --project proj-1 --workflow wf-1 --goal <goal file>; labdrian workflow close --project proj-1 --workflow wf-1 --outcome completed|abandoned\nstages recorded (0): none"}}
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# an edit in a linked worktree of a paused workflow is denied (stdin {"hook_event_name":"PreToolUse","tool_name":"Edit","cwd":"<WORKTREE>"}, in <OUTSIDE>)
+--- exit ---
+[0]
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian: workflow wf-1 of project proj-1 is paused, so Edit is denied: a paused workflow is not to be advanced. Resume it with 'labdrian workflow resume --project proj-1 --workflow wf-1', or stop following it with 'labdrian workflow unbind'."}}
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# an edit outside every repository is allowed (stdin {"hook_event_name":"PreToolUse","tool_name":"Edit","cwd":"<OUTSIDE>"}, in <MAIN>)
+--- exit ---
+[0]
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# an edit in a checkout whose .git cannot be used is allowed (stdin {"hook_event_name":"PreToolUse","tool_name":"Edit","cwd":"<INNER>"}, in <MAIN>)
+--- exit ---
+[0]
+--- stdout ---
+--- stderr ---
+

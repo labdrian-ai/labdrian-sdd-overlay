@@ -1,8 +1,8 @@
-package main
+package gitfs
 
 // Fixture repos here are hand-built plain directories and files, never a
-// real git repository and never the git binary: observeProvenance must work
-// (or fail soft) without one.
+// real git repository and never the git binary: the Locator must work (or
+// fail soft) without one.
 
 import (
 	"crypto/sha256"
@@ -10,37 +10,36 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
-	"regexp"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/repotest"
 )
+
+// locator is the adapter under test; it has no state.
+var locator Locator
 
 func writeFixtureFile(t *testing.T, path, content string) {
 	t.Helper()
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-		t.Fatalf("os.MkdirAll(%q) = %v, want nil", filepath.Dir(path), err)
-	}
-	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
-		t.Fatalf("os.WriteFile(%q) = %v, want nil", path, err)
-	}
+	repotest.WriteFile(t, path, content)
 }
 
-func TestObserveProvenanceRejectsRelativeOrEmptyCwd(t *testing.T) {
+func TestProvenanceRejectsRelativeOrEmptyCwd(t *testing.T) {
 	for _, cwd := range []string{"", "relative/path", "."} {
-		p := observeProvenance(cwd)
+		p := locator.Provenance(cwd)
 		if p.WorktreeRoot != "" || p.GitHead != "" {
-			t.Fatalf("observeProvenance(%q) = %+v, want empty Provenance", cwd, p)
+			t.Fatalf("locator.Provenance(%q) = %+v, want empty Provenance", cwd, p)
 		}
 	}
 }
 
-func TestObserveProvenanceDetachedHead(t *testing.T) {
+func TestProvenanceDetachedHead(t *testing.T) {
 	root := t.TempDir()
 	head := strings.Repeat("a", 40)
 	writeFixtureFile(t, filepath.Join(root, ".git", "HEAD"), head+"\n")
 
-	p := observeProvenance(root)
+	p := locator.Provenance(root)
 	if p.WorktreeRoot != root {
 		t.Fatalf("WorktreeRoot = %q, want %q", p.WorktreeRoot, root)
 	}
@@ -49,7 +48,7 @@ func TestObserveProvenanceDetachedHead(t *testing.T) {
 	}
 }
 
-func TestObserveProvenanceWalksUpFromSubdirectory(t *testing.T) {
+func TestProvenanceWalksUpFromSubdirectory(t *testing.T) {
 	root := t.TempDir()
 	head := strings.Repeat("b", 64)
 	writeFixtureFile(t, filepath.Join(root, ".git", "HEAD"), head+"\n")
@@ -58,7 +57,7 @@ func TestObserveProvenanceWalksUpFromSubdirectory(t *testing.T) {
 		t.Fatalf("os.MkdirAll() = %v, want nil", err)
 	}
 
-	p := observeProvenance(sub)
+	p := locator.Provenance(sub)
 	if p.WorktreeRoot != root {
 		t.Fatalf("WorktreeRoot = %q, want %q (found by walking up from %q)", p.WorktreeRoot, root, sub)
 	}
@@ -67,19 +66,19 @@ func TestObserveProvenanceWalksUpFromSubdirectory(t *testing.T) {
 	}
 }
 
-func TestObserveProvenanceSymbolicRefResolvedFromLooseRefFile(t *testing.T) {
+func TestProvenanceSymbolicRefResolvedFromLooseRefFile(t *testing.T) {
 	root := t.TempDir()
 	head := strings.Repeat("c", 40)
 	writeFixtureFile(t, filepath.Join(root, ".git", "HEAD"), "ref: refs/heads/main\n")
 	writeFixtureFile(t, filepath.Join(root, ".git", "refs", "heads", "main"), head+"\n")
 
-	p := observeProvenance(root)
+	p := locator.Provenance(root)
 	if p.GitHead != head {
 		t.Fatalf("GitHead = %q, want %q (resolved from the loose ref file)", p.GitHead, head)
 	}
 }
 
-func TestObserveProvenanceSymbolicRefResolvedFromPackedRefs(t *testing.T) {
+func TestProvenanceSymbolicRefResolvedFromPackedRefs(t *testing.T) {
 	root := t.TempDir()
 	head := strings.Repeat("d", 40)
 	writeFixtureFile(t, filepath.Join(root, ".git", "HEAD"), "ref: refs/heads/main\n")
@@ -90,20 +89,20 @@ func TestObserveProvenanceSymbolicRefResolvedFromPackedRefs(t *testing.T) {
 			head+" refs/heads/main\n"+
 			"^"+strings.Repeat("f", 40)+"\n")
 
-	p := observeProvenance(root)
+	p := locator.Provenance(root)
 	if p.GitHead != head {
 		t.Fatalf("GitHead = %q, want %q (resolved from packed-refs)", p.GitHead, head)
 	}
 }
 
-func TestObserveProvenanceLinkedWorktreeGitfile(t *testing.T) {
+func TestProvenanceLinkedWorktreeGitfile(t *testing.T) {
 	worktree := filepath.Join(t.TempDir(), "worktree")
 	actualGitDir := filepath.Join(t.TempDir(), "main-repo", ".git", "worktrees", "worktree")
 	head := strings.Repeat("1", 40)
 	writeFixtureFile(t, filepath.Join(actualGitDir, "HEAD"), head+"\n")
 	writeFixtureFile(t, filepath.Join(worktree, ".git"), "gitdir: "+actualGitDir+"\n")
 
-	p := observeProvenance(worktree)
+	p := locator.Provenance(worktree)
 	if p.WorktreeRoot != worktree {
 		t.Fatalf("WorktreeRoot = %q, want %q (this worktree's own root, not the main repo)", p.WorktreeRoot, worktree)
 	}
@@ -112,11 +111,11 @@ func TestObserveProvenanceLinkedWorktreeGitfile(t *testing.T) {
 	}
 }
 
-// TestObserveProvenanceLinkedWorktreeSymbolicRefUsesCommonDir mirrors the
+// TestProvenanceLinkedWorktreeSymbolicRefUsesCommonDir mirrors the
 // layout `git worktree add` creates: the worktree's gitdir holds a symbolic
 // HEAD and a commondir file, while the branch ref (loose or packed) lives in
 // the main repository's .git.
-func TestObserveProvenanceLinkedWorktreeSymbolicRefUsesCommonDir(t *testing.T) {
+func TestProvenanceLinkedWorktreeSymbolicRefUsesCommonDir(t *testing.T) {
 	for _, packed := range []bool{false, true} {
 		root := t.TempDir()
 		mainGit := filepath.Join(root, "main-repo", ".git")
@@ -132,48 +131,48 @@ func TestObserveProvenanceLinkedWorktreeSymbolicRefUsesCommonDir(t *testing.T) {
 		}
 		writeFixtureFile(t, filepath.Join(worktree, ".git"), "gitdir: "+worktreeGitDir+"\n")
 
-		if p := observeProvenance(worktree); p.GitHead != head {
+		if p := locator.Provenance(worktree); p.GitHead != head {
 			t.Errorf("packed=%v: GitHead = %q, want %q resolved through commondir", packed, p.GitHead, head)
 		}
 	}
 }
 
-func TestObserveProvenanceMissingGitYieldsEmpty(t *testing.T) {
+func TestProvenanceMissingGitYieldsEmpty(t *testing.T) {
 	dir := t.TempDir()
-	p := observeProvenance(dir)
+	p := locator.Provenance(dir)
 	if p.WorktreeRoot != "" || p.GitHead != "" {
-		t.Fatalf("observeProvenance(%q) = %+v, want empty Provenance (no .git anywhere above it)", dir, p)
+		t.Fatalf("locator.Provenance(%q) = %+v, want empty Provenance (no .git anywhere above it)", dir, p)
 	}
 }
 
-func TestObserveProvenanceMalformedGitfileYieldsEmpty(t *testing.T) {
+func TestProvenanceMalformedGitfileYieldsEmpty(t *testing.T) {
 	root := t.TempDir()
 	writeFixtureFile(t, filepath.Join(root, ".git"), "not a gitdir pointer\n")
 
-	p := observeProvenance(root)
+	p := locator.Provenance(root)
 	if p.WorktreeRoot != "" || p.GitHead != "" {
-		t.Fatalf("observeProvenance() = %+v, want empty Provenance for a malformed .git file", p)
+		t.Fatalf("locator.Provenance() = %+v, want empty Provenance for a malformed .git file", p)
 	}
 }
 
-func TestObserveProvenanceGitfilePointingNowhereYieldsEmpty(t *testing.T) {
+func TestProvenanceGitfilePointingNowhereYieldsEmpty(t *testing.T) {
 	root := t.TempDir()
 	writeFixtureFile(t, filepath.Join(root, ".git"), "gitdir: "+filepath.Join(root, "does-not-exist")+"\n")
 
-	p := observeProvenance(root)
+	p := locator.Provenance(root)
 	if p.WorktreeRoot != "" || p.GitHead != "" {
-		t.Fatalf("observeProvenance() = %+v, want empty Provenance when the gitdir target does not exist", p)
+		t.Fatalf("locator.Provenance() = %+v, want empty Provenance when the gitdir target does not exist", p)
 	}
 }
 
-func TestObserveProvenanceUnreadableHeadYieldsEmptyHeadOnly(t *testing.T) {
+func TestProvenanceUnreadableHeadYieldsEmptyHeadOnly(t *testing.T) {
 	root := t.TempDir()
 	// .git exists as a directory but HEAD is missing entirely.
 	if err := os.MkdirAll(filepath.Join(root, ".git"), 0o700); err != nil {
 		t.Fatalf("os.MkdirAll() = %v, want nil", err)
 	}
 
-	p := observeProvenance(root)
+	p := locator.Provenance(root)
 	if p.WorktreeRoot != root {
 		t.Fatalf("WorktreeRoot = %q, want %q (the worktree is still observed even without HEAD)", p.WorktreeRoot, root)
 	}
@@ -182,21 +181,21 @@ func TestObserveProvenanceUnreadableHeadYieldsEmptyHeadOnly(t *testing.T) {
 	}
 }
 
-func TestObserveProvenanceHeadNotHexYieldsEmptyHead(t *testing.T) {
+func TestProvenanceHeadNotHexYieldsEmptyHead(t *testing.T) {
 	root := t.TempDir()
 	writeFixtureFile(t, filepath.Join(root, ".git", "HEAD"), "garbage\n")
 
-	p := observeProvenance(root)
+	p := locator.Provenance(root)
 	if p.GitHead != "" {
 		t.Fatalf("GitHead = %q, want empty for a HEAD that is neither a hex object id nor a ref line", p.GitHead)
 	}
 }
 
-func TestObserveProvenanceUnresolvableSymbolicRefYieldsEmptyHead(t *testing.T) {
+func TestProvenanceUnresolvableSymbolicRefYieldsEmptyHead(t *testing.T) {
 	root := t.TempDir()
 	writeFixtureFile(t, filepath.Join(root, ".git", "HEAD"), "ref: refs/heads/does-not-exist\n")
 
-	p := observeProvenance(root)
+	p := locator.Provenance(root)
 	if p.WorktreeRoot != root {
 		t.Fatalf("WorktreeRoot = %q, want %q", p.WorktreeRoot, root)
 	}
@@ -205,11 +204,11 @@ func TestObserveProvenanceUnresolvableSymbolicRefYieldsEmptyHead(t *testing.T) {
 	}
 }
 
-// TestObserveProvenanceFollowsSymlinkedGitDirectory covers the decision
+// TestProvenanceFollowsSymlinkedGitDirectory covers the decision
 // that a symlinked .git IS followed, matching git's own behavior: git
 // itself does not care whether .git is a plain directory or a symlink to
 // one, so this helper must not either.
-func TestObserveProvenanceFollowsSymlinkedGitDirectory(t *testing.T) {
+func TestProvenanceFollowsSymlinkedGitDirectory(t *testing.T) {
 	root := t.TempDir()
 	actual := filepath.Join(t.TempDir(), "actual-git-dir")
 	head := strings.Repeat("3", 40)
@@ -218,7 +217,7 @@ func TestObserveProvenanceFollowsSymlinkedGitDirectory(t *testing.T) {
 		t.Skipf("os.Symlink() = %v, symlinks unsupported here", err)
 	}
 
-	p := observeProvenance(root)
+	p := locator.Provenance(root)
 	if p.WorktreeRoot != root {
 		t.Fatalf("WorktreeRoot = %q, want %q", p.WorktreeRoot, root)
 	}
@@ -227,10 +226,10 @@ func TestObserveProvenanceFollowsSymlinkedGitDirectory(t *testing.T) {
 	}
 }
 
-// TestObserveProvenanceFollowsSymlinkedGitfile covers a symlink named .git
+// TestProvenanceFollowsSymlinkedGitfile covers a symlink named .git
 // that itself points at a gitdir-pointer FILE (rather than a directory),
 // the shape a hand-rolled or unusual worktree tool might produce.
-func TestObserveProvenanceFollowsSymlinkedGitfile(t *testing.T) {
+func TestProvenanceFollowsSymlinkedGitfile(t *testing.T) {
 	root := t.TempDir()
 	actualGitDir := filepath.Join(t.TempDir(), "main-repo", ".git", "worktrees", "worktree")
 	head := strings.Repeat("4", 40)
@@ -241,7 +240,7 @@ func TestObserveProvenanceFollowsSymlinkedGitfile(t *testing.T) {
 		t.Skipf("os.Symlink() = %v, symlinks unsupported here", err)
 	}
 
-	p := observeProvenance(root)
+	p := locator.Provenance(root)
 	if p.WorktreeRoot != root {
 		t.Fatalf("WorktreeRoot = %q, want %q", p.WorktreeRoot, root)
 	}
@@ -250,11 +249,11 @@ func TestObserveProvenanceFollowsSymlinkedGitfile(t *testing.T) {
 	}
 }
 
-// TestObserveProvenanceGitdirPointerRelativeToBase covers readGitdirPointer's
+// TestProvenanceGitdirPointerRelativeToBase covers readGitdirPointer's
 // relative-target branch: the common on-disk shape `git worktree add`
 // actually produces, where the "gitdir:" line names a path relative to the
 // worktree root rather than an absolute one.
-func TestObserveProvenanceGitdirPointerRelativeToBase(t *testing.T) {
+func TestProvenanceGitdirPointerRelativeToBase(t *testing.T) {
 	root := t.TempDir()
 	worktree := filepath.Join(root, "wt")
 	actualGitDir := filepath.Join(root, "main-repo", ".git", "worktrees", "wt")
@@ -266,7 +265,7 @@ func TestObserveProvenanceGitdirPointerRelativeToBase(t *testing.T) {
 	}
 	writeFixtureFile(t, filepath.Join(worktree, ".git"), "gitdir: "+rel+"\n")
 
-	p := observeProvenance(worktree)
+	p := locator.Provenance(worktree)
 	if p.WorktreeRoot != worktree {
 		t.Fatalf("WorktreeRoot = %q, want %q", p.WorktreeRoot, worktree)
 	}
@@ -309,66 +308,36 @@ func TestRefDirsLooksInTheGitDirectoryThenItsCommonDirectory(t *testing.T) {
 
 func strPtr(s string) *string { return &s }
 
-// --- observeRepoKey and commonDir ---------------------------------------------
+// --- Locator.RepoKey and commonDir ---------------------------------------------
 
-var repoKeyShape = regexp.MustCompile(`^[0-9a-f]{64}$`)
-
-// wantRepoKey is the key the design specifies for a git common directory: the
-// lowercase hex SHA-256 of its symlink-resolved path. The tests compute it
-// independently of observeRepoKey, from the fixture they built.
 func wantRepoKey(t *testing.T, commonDir string) string {
 	t.Helper()
-	resolved, err := filepath.EvalSymlinks(commonDir)
-	if err != nil {
-		t.Fatalf("filepath.EvalSymlinks(%q) = %v, want nil", commonDir, err)
-	}
-	sum := sha256.Sum256([]byte(resolved))
-	return hex.EncodeToString(sum[:])
+	return repotest.WantKey(t, commonDir)
 }
 
-// fixtureRepo builds a hand-made plain repository (a .git directory with a
-// HEAD) named name under a fresh temporary directory, and returns its root.
 func fixtureRepo(t *testing.T, name string) string {
 	t.Helper()
-	root := filepath.Join(t.TempDir(), name)
-	writeFixtureFile(t, filepath.Join(root, ".git", "HEAD"), strings.Repeat("a", 40)+"\n")
-	return root
+	return repotest.Repo(t, name)
 }
 
-// fixtureLinkedWorktree adds a linked worktree called name to the repository
-// at mainRoot, in the layout `git worktree add` creates: the worktree's .git
-// file points at .git/worktrees/<name>, whose commondir file leads back to the
-// main .git. It returns the worktree root.
 func fixtureLinkedWorktree(t *testing.T, mainRoot, name string) string {
 	t.Helper()
-	worktreeGitDir := filepath.Join(mainRoot, ".git", "worktrees", name)
-	writeFixtureFile(t, filepath.Join(worktreeGitDir, "HEAD"), strings.Repeat("b", 40)+"\n")
-	writeFixtureFile(t, filepath.Join(worktreeGitDir, "commondir"), "../..\n")
-	worktree := filepath.Join(t.TempDir(), name)
-	writeFixtureFile(t, filepath.Join(worktree, ".git"), "gitdir: "+worktreeGitDir+"\n")
-	return worktree
+	return repotest.LinkedWorktree(t, mainRoot, name)
 }
 
 func mustRepoKey(t *testing.T, cwd string) string {
 	t.Helper()
-	key, ok := observeRepoKey(cwd)
-	if !ok {
-		t.Fatalf("observeRepoKey(%q) = _, false, want a key", cwd)
-	}
-	if !repoKeyShape.MatchString(key) {
-		t.Fatalf("observeRepoKey(%q) = %q, want 64 lowercase hex characters", cwd, key)
-	}
-	return key
+	return repotest.MustKey(t, locator, cwd)
 }
 
-func TestObserveRepoKeyIsTheDigestOfTheGitDirectory(t *testing.T) {
+func TestRepoKeyIsTheDigestOfTheGitDirectory(t *testing.T) {
 	root := fixtureRepo(t, "repo")
 	if got, want := mustRepoKey(t, root), wantRepoKey(t, filepath.Join(root, ".git")); got != want {
-		t.Fatalf("observeRepoKey() = %q, want the SHA-256 of the .git directory, %q", got, want)
+		t.Fatalf("locator.RepoKey() = %q, want the SHA-256 of the .git directory, %q", got, want)
 	}
 }
 
-func TestObserveRepoKeyWalksUpFromASubdirectory(t *testing.T) {
+func TestRepoKeyWalksUpFromASubdirectory(t *testing.T) {
 	root := fixtureRepo(t, "repo")
 	sub := filepath.Join(root, "a", "b")
 	if err := os.MkdirAll(sub, 0o700); err != nil {
@@ -379,11 +348,11 @@ func TestObserveRepoKeyWalksUpFromASubdirectory(t *testing.T) {
 	}
 }
 
-// TestObserveRepoKeyLinkedWorktreesShareTheRepositoryKey is the point of the
+// TestRepoKeyLinkedWorktreesShareTheRepositoryKey is the point of the
 // key: every worktree of one repository must resolve to one binding, so the
 // key is the digest of the common directory, not of each worktree's own git
 // directory.
-func TestObserveRepoKeyLinkedWorktreesShareTheRepositoryKey(t *testing.T) {
+func TestRepoKeyLinkedWorktreesShareTheRepositoryKey(t *testing.T) {
 	root := fixtureRepo(t, "main-repo")
 	first := fixtureLinkedWorktree(t, root, "wt1")
 	second := fixtureLinkedWorktree(t, root, "wt2")
@@ -396,7 +365,7 @@ func TestObserveRepoKeyLinkedWorktreesShareTheRepositoryKey(t *testing.T) {
 	}
 }
 
-func TestObserveRepoKeyFollowsAnAbsoluteCommondir(t *testing.T) {
+func TestRepoKeyFollowsAnAbsoluteCommondir(t *testing.T) {
 	root := fixtureRepo(t, "main-repo")
 	worktree := fixtureLinkedWorktree(t, root, "wt")
 	writeFixtureFile(t, filepath.Join(root, ".git", "worktrees", "wt", "commondir"), filepath.Join(root, ".git")+"\n")
@@ -406,7 +375,7 @@ func TestObserveRepoKeyFollowsAnAbsoluteCommondir(t *testing.T) {
 	}
 }
 
-func TestObserveRepoKeyDiffersBetweenRepositories(t *testing.T) {
+func TestRepoKeyDiffersBetweenRepositories(t *testing.T) {
 	a := mustRepoKey(t, fixtureRepo(t, "repo"))
 	b := mustRepoKey(t, fixtureRepo(t, "repo")) // same name, different parent directory
 	if a == b {
@@ -414,10 +383,10 @@ func TestObserveRepoKeyDiffersBetweenRepositories(t *testing.T) {
 	}
 }
 
-// TestObserveRepoKeyIsTheSameThroughASymlinkedSpelling covers a repository
+// TestRepoKeyIsTheSameThroughASymlinkedSpelling covers a repository
 // reached through a symlink, for both the plain checkout and a linked
 // worktree whose gitdir pointer was written through the symlink.
-func TestObserveRepoKeyIsTheSameThroughASymlinkedSpelling(t *testing.T) {
+func TestRepoKeyIsTheSameThroughASymlinkedSpelling(t *testing.T) {
 	root := fixtureRepo(t, "real-repo")
 	if err := os.MkdirAll(filepath.Join(root, "sub"), 0o700); err != nil {
 		t.Fatal(err)
@@ -446,11 +415,11 @@ func TestObserveRepoKeyIsTheSameThroughASymlinkedSpelling(t *testing.T) {
 	}
 }
 
-// TestObserveRepoKeyFallsBackToTheCleanedPathWhenSymlinksCannotBeResolved
+// TestRepoKeyFallsBackToTheCleanedPathWhenSymlinksCannotBeResolved
 // covers a commondir that names a directory that does not exist: the symlinks
 // cannot be resolved, so the key is the digest of the cleaned path, and it is
 // still deterministic.
-func TestObserveRepoKeyFallsBackToTheCleanedPathWhenSymlinksCannotBeResolved(t *testing.T) {
+func TestRepoKeyFallsBackToTheCleanedPathWhenSymlinksCannotBeResolved(t *testing.T) {
 	worktree := filepath.Join(t.TempDir(), "wt")
 	gitDir := filepath.Join(t.TempDir(), "gitdir")
 	writeFixtureFile(t, filepath.Join(gitDir, "HEAD"), strings.Repeat("d", 40)+"\n")
@@ -465,7 +434,7 @@ func TestObserveRepoKeyFallsBackToTheCleanedPathWhenSymlinksCannotBeResolved(t *
 	}
 }
 
-func TestObserveRepoKeyOfAGitDirectoryWithoutCommondirIsItsOwn(t *testing.T) {
+func TestRepoKeyOfAGitDirectoryWithoutCommondirIsItsOwn(t *testing.T) {
 	// The shape of a submodule: .git is a file pointing at a git directory that
 	// has no commondir, so that directory is its own common directory.
 	worktree := filepath.Join(t.TempDir(), "sub")
@@ -478,7 +447,7 @@ func TestObserveRepoKeyOfAGitDirectoryWithoutCommondirIsItsOwn(t *testing.T) {
 	}
 }
 
-func TestObserveRepoKeyTreatsAnEmptyCommondirAsNone(t *testing.T) {
+func TestRepoKeyTreatsAnEmptyCommondirAsNone(t *testing.T) {
 	worktree := filepath.Join(t.TempDir(), "wt")
 	gitDir := filepath.Join(t.TempDir(), "gitdir")
 	writeFixtureFile(t, filepath.Join(gitDir, "HEAD"), strings.Repeat("f", 40)+"\n")
@@ -490,7 +459,7 @@ func TestObserveRepoKeyTreatsAnEmptyCommondirAsNone(t *testing.T) {
 	}
 }
 
-func TestObserveRepoKeyReportsNotOKWithoutARepository(t *testing.T) {
+func TestRepoKeyReportsNotOKWithoutARepository(t *testing.T) {
 	tests := []struct {
 		name string
 		cwd  func(t *testing.T) string
@@ -512,8 +481,8 @@ func TestObserveRepoKeyReportsNotOKWithoutARepository(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if key, ok := observeRepoKey(tt.cwd(t)); ok || key != "" {
-				t.Fatalf("observeRepoKey() = %q, %v, want \"\", false", key, ok)
+			if key, ok := locator.RepoKey(tt.cwd(t)); ok || key != "" {
+				t.Fatalf("locator.RepoKey() = %q, %v, want \"\", false", key, ok)
 			}
 		})
 	}
@@ -544,11 +513,11 @@ func TestCommonDir(t *testing.T) {
 	}
 }
 
-// TestObserveRepoKeyNeverResolvesARelativeCwdAgainstTheProcessDirectory pins
+// TestRepoKeyNeverResolvesARelativeCwdAgainstTheProcessDirectory pins
 // why a relative cwd is refused outright: were it walked, "." would silently
 // mean whatever repository the process happens to be standing in. The test
 // stands the process in a repository to make that visible.
-func TestObserveRepoKeyNeverResolvesARelativeCwdAgainstTheProcessDirectory(t *testing.T) {
+func TestRepoKeyNeverResolvesARelativeCwdAgainstTheProcessDirectory(t *testing.T) {
 	root := fixtureRepo(t, "repo")
 	previous, err := os.Getwd()
 	if err != nil {
@@ -560,8 +529,8 @@ func TestObserveRepoKeyNeverResolvesARelativeCwdAgainstTheProcessDirectory(t *te
 	t.Cleanup(func() { os.Chdir(previous) })
 
 	for _, cwd := range []string{".", "", "./"} {
-		if key, ok := observeRepoKey(cwd); ok || key != "" {
-			t.Errorf("observeRepoKey(%q) = %q, %v, want \"\", false while the process stands in a repository", cwd, key, ok)
+		if key, ok := locator.RepoKey(cwd); ok || key != "" {
+			t.Errorf("locator.RepoKey(%q) = %q, %v, want \"\", false while the process stands in a repository", cwd, key, ok)
 		}
 	}
 	// Control: the same repository, named absolutely, does resolve.

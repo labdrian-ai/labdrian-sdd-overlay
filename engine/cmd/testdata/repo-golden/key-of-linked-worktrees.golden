@@ -1,0 +1,245 @@
+# the main worktree: the workflow records worktree_root="<MAIN>" git_head=<40 of a>
+$ workflow bind --project proj-1 --workflow wf-1
+# the main worktree: bind (in <MAIN>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-1",
+    "bound_at": "<TIME>"
+  }
+}
+--- stderr ---
+
+$ workflow binding
+# the main worktree: binding (in <MAIN>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-1",
+    "bound_at": "<TIME>"
+  },
+  "workflow": {
+    "classification": "owned",
+    "status": "running"
+  }
+}
+--- stderr ---
+
+$ workflow unbind
+# the main worktree: unbind (in <MAIN>)
+--- exit ---
+0
+--- stdout ---
+{
+  "removed": true
+}
+--- stderr ---
+
+# a linked worktree with a relative commondir: the workflow records worktree_root="<WORKTREE relative>" git_head=<40 of b>
+$ workflow bind --project proj-1 --workflow wf-2
+# a linked worktree with a relative commondir: bind (in <WORKTREE relative>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-2",
+    "bound_at": "<TIME>"
+  }
+}
+--- stderr ---
+
+$ workflow binding
+# a linked worktree with a relative commondir: binding (in <WORKTREE relative>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-2",
+    "bound_at": "<TIME>"
+  },
+  "workflow": {
+    "classification": "owned",
+    "status": "running"
+  }
+}
+--- stderr ---
+
+$ workflow unbind
+# a linked worktree with a relative commondir: unbind (in <WORKTREE relative>)
+--- exit ---
+0
+--- stdout ---
+{
+  "removed": true
+}
+--- stderr ---
+
+# a linked worktree with an absolute commondir: the workflow records worktree_root="<WORKTREE absolute>" git_head=<40 of b>
+$ workflow bind --project proj-1 --workflow wf-3
+# a linked worktree with an absolute commondir: bind (in <WORKTREE absolute>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-3",
+    "bound_at": "<TIME>"
+  }
+}
+--- stderr ---
+
+$ workflow binding
+# a linked worktree with an absolute commondir: binding (in <WORKTREE absolute>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-3",
+    "bound_at": "<TIME>"
+  },
+  "workflow": {
+    "classification": "owned",
+    "status": "running"
+  }
+}
+--- stderr ---
+
+$ workflow unbind
+# a linked worktree with an absolute commondir: unbind (in <WORKTREE absolute>)
+--- exit ---
+0
+--- stdout ---
+{
+  "removed": true
+}
+--- stderr ---
+
+# a linked worktree with a commondir that needs cleaning: the workflow records worktree_root="<WORKTREE unclean>" git_head=<40 of b>
+$ workflow bind --project proj-1 --workflow wf-4
+# a linked worktree with a commondir that needs cleaning: bind (in <WORKTREE unclean>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-4",
+    "bound_at": "<TIME>"
+  }
+}
+--- stderr ---
+
+$ workflow binding
+# a linked worktree with a commondir that needs cleaning: binding (in <WORKTREE unclean>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-4",
+    "bound_at": "<TIME>"
+  },
+  "workflow": {
+    "classification": "owned",
+    "status": "running"
+  }
+}
+--- stderr ---
+
+$ workflow unbind
+# a linked worktree with a commondir that needs cleaning: unbind (in <WORKTREE unclean>)
+--- exit ---
+0
+--- stdout ---
+{
+  "removed": true
+}
+--- stderr ---
+
+# a directory inside a linked worktree: the workflow records worktree_root="<WORKTREE relative>" git_head=<40 of b>
+$ workflow bind --project proj-1 --workflow wf-5
+# a directory inside a linked worktree: bind (in <WORKTREE relative>/src)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-5",
+    "bound_at": "<TIME>"
+  }
+}
+--- stderr ---
+
+$ workflow binding
+# a directory inside a linked worktree: binding (in <WORKTREE relative>/src)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-5",
+    "bound_at": "<TIME>"
+  },
+  "workflow": {
+    "classification": "owned",
+    "status": "running"
+  }
+}
+--- stderr ---
+
+$ workflow unbind
+# a directory inside a linked worktree: unbind (in <WORKTREE relative>/src)
+--- exit ---
+0
+--- stdout ---
+{
+  "removed": true
+}
+--- stderr ---
+

@@ -417,12 +417,26 @@ func readPointer(path, prefix, base string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	target, ok := PointerTarget(line, prefix, base)
+	if !ok {
+		return "", fmt.Errorf("%s: malformed pointer %q", path, line)
+	}
+	return target, nil
+}
+
+// PointerTarget is what a pointer file's line names: the text after prefix, which must be there
+// and must not be empty, with a relative path taken relative to base. It is the one place that
+// says what "a pointer names a path" means, so the readers of such files agree on it: this
+// package's, which insist that the line is exact and check where it leads, and the lenient one
+// of engine/gitfs, which strips the whitespace around the line first. What a reader does to the
+// line before, and to the target after, is its own.
+func PointerTarget(line, prefix, base string) (string, bool) {
 	target, ok := strings.CutPrefix(line, prefix)
 	if !ok || target == "" {
-		return "", fmt.Errorf("%s: malformed pointer %q", path, line)
+		return "", false
 	}
 	if !filepath.IsAbs(target) {
 		target = filepath.Join(base, target)
 	}
-	return target, nil
+	return target, true
 }

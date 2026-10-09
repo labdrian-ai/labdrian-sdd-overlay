@@ -1,0 +1,225 @@
+# no gitdir line (inside a repository that has a .git of its own): the workflow records worktree_root="" git_head=""
+$ workflow bind --project proj-1 --workflow wf-1
+# no gitdir line (inside a repository that has a .git of its own): bind (in <INNER>)
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+error: workflow bind: binding needs a git repository to key on: no .git was found at or above the working directory
+
+$ workflow binding
+# no gitdir line (inside a repository that has a .git of its own): binding (in <INNER>)
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+error: workflow binding: binding needs a git repository to key on: no .git was found at or above the working directory
+
+$ workflow unbind
+# no gitdir line (inside a repository that has a .git of its own): unbind (in <INNER>)
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+error: workflow unbind: binding needs a git repository to key on: no .git was found at or above the working directory
+
+# an empty file (inside a repository that has a .git of its own): the workflow records worktree_root="" git_head=""
+$ workflow bind --project proj-1 --workflow wf-2
+# an empty file (inside a repository that has a .git of its own): bind (in <INNER>)
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+error: workflow bind: binding needs a git repository to key on: no .git was found at or above the working directory
+
+$ workflow binding
+# an empty file (inside a repository that has a .git of its own): binding (in <INNER>)
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+error: workflow binding: binding needs a git repository to key on: no .git was found at or above the working directory
+
+$ workflow unbind
+# an empty file (inside a repository that has a .git of its own): unbind (in <INNER>)
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+error: workflow unbind: binding needs a git repository to key on: no .git was found at or above the working directory
+
+# a gitdir line with no path (inside a repository that has a .git of its own): the workflow records worktree_root="" git_head=""
+$ workflow bind --project proj-1 --workflow wf-3
+# a gitdir line with no path (inside a repository that has a .git of its own): bind (in <INNER>)
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+error: workflow bind: binding needs a git repository to key on: no .git was found at or above the working directory
+
+$ workflow binding
+# a gitdir line with no path (inside a repository that has a .git of its own): binding (in <INNER>)
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+error: workflow binding: binding needs a git repository to key on: no .git was found at or above the working directory
+
+$ workflow unbind
+# a gitdir line with no path (inside a repository that has a .git of its own): unbind (in <INNER>)
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+error: workflow unbind: binding needs a git repository to key on: no .git was found at or above the working directory
+
+# a gitdir line with only spaces (inside a repository that has a .git of its own): the workflow records worktree_root="" git_head=""
+$ workflow bind --project proj-1 --workflow wf-4
+# a gitdir line with only spaces (inside a repository that has a .git of its own): bind (in <INNER>)
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+error: workflow bind: binding needs a git repository to key on: no .git was found at or above the working directory
+
+$ workflow binding
+# a gitdir line with only spaces (inside a repository that has a .git of its own): binding (in <INNER>)
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+error: workflow binding: binding needs a git repository to key on: no .git was found at or above the working directory
+
+$ workflow unbind
+# a gitdir line with only spaces (inside a repository that has a .git of its own): unbind (in <INNER>)
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+error: workflow unbind: binding needs a git repository to key on: no .git was found at or above the working directory
+
+# a path that does not exist (inside a repository that has a .git of its own): the workflow records worktree_root="" git_head=""
+$ workflow bind --project proj-1 --workflow wf-5
+# a path that does not exist (inside a repository that has a .git of its own): bind (in <INNER>)
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+error: workflow bind: binding needs a git repository to key on: no .git was found at or above the working directory
+
+$ workflow binding
+# a path that does not exist (inside a repository that has a .git of its own): binding (in <INNER>)
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+error: workflow binding: binding needs a git repository to key on: no .git was found at or above the working directory
+
+$ workflow unbind
+# a path that does not exist (inside a repository that has a .git of its own): unbind (in <INNER>)
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+error: workflow unbind: binding needs a git repository to key on: no .git was found at or above the working directory
+
+# a path that is a file (inside a repository that has a .git of its own): the workflow records worktree_root="" git_head=""
+$ workflow bind --project proj-1 --workflow wf-6
+# a path that is a file (inside a repository that has a .git of its own): bind (in <INNER>)
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+error: workflow bind: binding needs a git repository to key on: no .git was found at or above the working directory
+
+$ workflow binding
+# a path that is a file (inside a repository that has a .git of its own): binding (in <INNER>)
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+error: workflow binding: binding needs a git repository to key on: no .git was found at or above the working directory
+
+$ workflow unbind
+# a path that is a file (inside a repository that has a .git of its own): unbind (in <INNER>)
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+error: workflow unbind: binding needs a git repository to key on: no .git was found at or above the working directory
+
+# a pointer followed by another line (inside a repository that has a .git of its own): the workflow records worktree_root="" git_head=""
+$ workflow bind --project proj-1 --workflow wf-7
+# a pointer followed by another line (inside a repository that has a .git of its own): bind (in <INNER>)
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+error: workflow bind: binding needs a git repository to key on: no .git was found at or above the working directory
+
+$ workflow binding
+# a pointer followed by another line (inside a repository that has a .git of its own): binding (in <INNER>)
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+error: workflow binding: binding needs a git repository to key on: no .git was found at or above the working directory
+
+$ workflow unbind
+# a pointer followed by another line (inside a repository that has a .git of its own): unbind (in <INNER>)
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+error: workflow unbind: binding needs a git repository to key on: no .git was found at or above the working directory
+
+# a capital G (inside a repository that has a .git of its own): the workflow records worktree_root="" git_head=""
+$ workflow bind --project proj-1 --workflow wf-8
+# a capital G (inside a repository that has a .git of its own): bind (in <INNER>)
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+error: workflow bind: binding needs a git repository to key on: no .git was found at or above the working directory
+
+$ workflow binding
+# a capital G (inside a repository that has a .git of its own): binding (in <INNER>)
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+error: workflow binding: binding needs a git repository to key on: no .git was found at or above the working directory
+
+$ workflow unbind
+# a capital G (inside a repository that has a .git of its own): unbind (in <INNER>)
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+error: workflow unbind: binding needs a git repository to key on: no .git was found at or above the working directory
+
+# a .git that is a broken symbolic link: the workflow records worktree_root="" git_head=""
+$ workflow bind --project proj-1 --workflow wf-9
+# a .git that is a broken symbolic link: bind (in <INNER>)
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+error: workflow bind: binding needs a git repository to key on: no .git was found at or above the working directory
+
+$ workflow binding
+# a .git that is a broken symbolic link: binding (in <INNER>)
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+error: workflow binding: binding needs a git repository to key on: no .git was found at or above the working directory
+
+$ workflow unbind
+# a .git that is a broken symbolic link: unbind (in <INNER>)
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+error: workflow unbind: binding needs a git repository to key on: no .git was found at or above the working directory
+

@@ -1,0 +1,97 @@
+$ workflow binding
+# binding reports a foreign file (in <REPO>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "foreign",
+  "detail": "binding file is not a binding we recognize: parse binding: unknown binding field \"other\""
+}
+--- stderr ---
+
+$ workflow bind --project proj-1 --workflow wf-1
+# bind refuses a foreign file (in <REPO>)
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+error: workflow bind: projection store: refusing to change the binding: the on-disk file is foreign: binding file is not a binding we recognize: parse binding: unknown binding field "other"
+
+$ workflow unbind
+# unbind refuses a foreign file (in <REPO>)
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+error: workflow unbind: projection store: refusing to change the binding: the on-disk file is foreign: binding file is not a binding we recognize: parse binding: unknown binding field "other"
+
+# a foreign file is left as it was: the binding store
+labdrian/bindings drwx------
+labdrian/bindings/<KEY>.json -rw-------
+{"version": 2, "other": true}
+[no line break at the end]
+labdrian/bindings/<KEY>.lock -rw-------
+$ workflow binding
+# binding reports a malformed file (in <REPO>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "malformed",
+  "detail": "binding file is not one valid JSON document (invalid syntax, or data after the document)"
+}
+--- stderr ---
+
+$ workflow bind --project proj-1 --workflow wf-1
+# bind refuses a malformed file (in <REPO>)
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+error: workflow bind: projection store: refusing to change the binding: the on-disk file is malformed: binding file is not one valid JSON document (invalid syntax, or data after the document)
+
+$ workflow unbind
+# unbind refuses a malformed file (in <REPO>)
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+error: workflow unbind: projection store: refusing to change the binding: the on-disk file is malformed: binding file is not one valid JSON document (invalid syntax, or data after the document)
+
+# a malformed file is left as it was: the binding store
+labdrian/bindings drwx------
+labdrian/bindings/<KEY>.json -rw-------
+this is not a binding
+[no line break at the end]
+labdrian/bindings/<KEY>.lock -rw-------
+$ workflow binding
+# binding reports an empty file (in <REPO>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "malformed",
+  "detail": "binding file is empty"
+}
+--- stderr ---
+
+$ workflow bind --project proj-1 --workflow wf-1
+# bind refuses an empty file (in <REPO>)
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+error: workflow bind: projection store: refusing to change the binding: the on-disk file is malformed: binding file is empty
+
+$ workflow unbind
+# unbind refuses an empty file (in <REPO>)
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+error: workflow unbind: projection store: refusing to change the binding: the on-disk file is malformed: binding file is empty
+
+# an empty file is left as it was: the binding store
+labdrian/bindings drwx------
+labdrian/bindings/<KEY>.json -rw-------
+labdrian/bindings/<KEY>.lock -rw-------

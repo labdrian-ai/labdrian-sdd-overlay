@@ -4,8 +4,10 @@ package settingsfile_test
 
 import (
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -132,7 +134,11 @@ const goldenDir = "testdata/golden-v1"
 //
 //	go test ./settings/settingsfile -run TestTheGoldenFilesHoldWhatWasRecorded -update-golden-manifest
 //
-// and the diff of the manifest is read before it is committed, as the diff of the data is.
+// and the diff of the manifest is read before it is committed, as the diff of the data is. The
+// update takes only what adds to the record (a file, more cases, more steps): it refuses, and
+// writes nothing, when the directory holds less than the manifest says, because it would then
+// record the loss as normal and the check could not fail. A loss made on purpose is made by
+// editing the manifest by hand.
 const goldenManifest = "testdata/golden-v1.manifest.json"
 
 var updateGoldenManifest = flag.Bool("update-golden-manifest", false, "rewrite the manifest of the golden files")
@@ -398,6 +404,15 @@ func TestTheGoldenFilesHoldWhatWasRecorded(t *testing.T) {
 		held[filepath.Base(file)] = count
 	}
 	if *updateGoldenManifest {
+		// Rewriting the manifest from the directory and then comparing the directory with it
+		// could never fail, so a file lost or cut since the last recording would be recorded as
+		// normal. The update therefore only accepts what adds to the record; a loss on purpose is
+		// made by editing the manifest by hand, where the diff shows it.
+		if recorded, ok := readGoldenManifest(t); ok {
+			if losses := manifestLosses(recorded, held); len(losses) > 0 {
+				t.Fatalf("-update-golden-manifest would record a loss, and did not write the manifest:\n%s", strings.Join(losses, "\n"))
+			}
+		}
 		raw, err := json.MarshalIndent(held, "", " ")
 		if err != nil {
 			t.Fatal(err)
@@ -406,13 +421,9 @@ func TestTheGoldenFilesHoldWhatWasRecorded(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	raw, err := os.ReadFile(goldenManifest)
-	if err != nil {
-		t.Fatal(err)
-	}
-	var recorded map[string]goldenCount
-	if err := json.Unmarshal(raw, &recorded); err != nil {
-		t.Fatalf("%s: %v", goldenManifest, err)
+	recorded, ok := readGoldenManifest(t)
+	if !ok {
+		t.Fatalf("%s does not exist", goldenManifest)
 	}
 	for _, problem := range manifestProblems(recorded, held) {
 		t.Error(problem)
@@ -454,6 +465,68 @@ func manifestProblems(recorded, held map[string]goldenCount) []string {
 		}
 	}
 	return problems
+}
+
+// readGoldenManifest reads the manifest. It is false only when the file does not exist; any other
+// failure to read or parse it ends the test.
+func readGoldenManifest(t *testing.T) (map[string]goldenCount, bool) {
+	t.Helper()
+	raw, err := os.ReadFile(goldenManifest)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, false
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	var recorded map[string]goldenCount
+	if err := json.Unmarshal(raw, &recorded); err != nil {
+		t.Fatalf("%s: %v", goldenManifest, err)
+	}
+	return recorded, true
+}
+
+// manifestLosses says what a directory has lost against a recorded manifest: a recorded file it
+// lacks or holds without a case, and a file that holds fewer cases or fewer steps than were
+// recorded. What the directory adds is not a loss. The answer is in the order of the names.
+func manifestLosses(recorded, held map[string]goldenCount) []string {
+	sorted := make([]string, 0, len(recorded))
+	for name := range recorded {
+		sorted = append(sorted, name)
+	}
+	sort.Strings(sorted)
+
+	var losses []string
+	for _, name := range sorted {
+		want := recorded[name]
+		got, isHeld := held[name]
+		switch {
+		case !isHeld:
+			losses = append(losses, name+" is in the manifest and not in the directory")
+		case got.Cases == 0:
+			losses = append(losses, name+" holds no case")
+		case got.Cases < want.Cases || got.Steps < want.Steps:
+			losses = append(losses, fmt.Sprintf("%s holds %d cases and %d steps, the manifest has %d and %d",
+				name, got.Cases, got.Steps, want.Cases, want.Steps))
+		}
+	}
+	return losses
+}
+
+func TestManifestLossesNamesWhatTheDirectoryHasLostAndNothingItAdds(t *testing.T) {
+	recorded := map[string]goldenCount{"a.json": {2, 6}, "b.json": {1, 3}, "c.json": {4, 12}, "d.json": {1, 1}, "f.json": {2, 4}, "g.json": {2, 4}}
+	held := map[string]goldenCount{"a.json": {2, 6}, "c.json": {4, 11}, "d.json": {0, 0}, "e.json": {1, 1}, "f.json": {3, 9}, "g.json": {1, 8}}
+	want := []string{
+		"b.json is in the manifest and not in the directory",
+		"c.json holds 4 cases and 11 steps, the manifest has 4 and 12",
+		"d.json holds no case",
+		"g.json holds 1 cases and 8 steps, the manifest has 2 and 4",
+	}
+	if got := manifestLosses(recorded, held); strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Errorf("losses\n got: %q\nwant: %q", got, want)
+	}
+	if got := manifestLosses(recorded, recorded); len(got) != 0 {
+		t.Errorf("a directory that is the manifest has losses: %q", got)
+	}
 }
 
 func TestManifestProblemsNamesEachWayAFileDiffers(t *testing.T) {

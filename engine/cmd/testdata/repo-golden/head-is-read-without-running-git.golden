@@ -1,0 +1,19 @@
+# a detached HEAD of 40 hexadecimal digits: the workflow records worktree_root="<REPO 1>" git_head=<40 of a>
+# a detached HEAD of 64 hexadecimal digits: the workflow records worktree_root="<REPO 2>" git_head=<64 of b>
+# a detached HEAD in capitals: the workflow records worktree_root="<REPO 3>" git_head=""
+# a detached HEAD of 41 digits: the workflow records worktree_root="<REPO 4>" git_head=""
+# a branch with a loose ref: the workflow records worktree_root="<REPO 5>" git_head=<40 of c>
+# a branch with a packed ref: the workflow records worktree_root="<REPO 6>" git_head=<40 of d>
+# a loose ref that wins over a packed one: the workflow records worktree_root="<REPO 7>" git_head=<40 of e>
+# a loose ref that holds no object name, with a packed one: the workflow records worktree_root="<REPO 8>" git_head=""
+# a branch that has no ref: the workflow records worktree_root="<REPO 9>" git_head=""
+# a ref with two dots: the workflow records worktree_root="<REPO 10>" git_head=""
+# an absolute ref: the workflow records worktree_root="<REPO 11>" git_head=""
+# an empty ref: the workflow records worktree_root="<REPO 12>" git_head=""
+# a HEAD that is neither: the workflow records worktree_root="<REPO 13>" git_head=""
+# a git directory with no HEAD: the workflow records worktree_root="<REPO 14>" git_head=""
+# a linked worktree whose branch lives in the common directory: the workflow records worktree_root="<WORKTREE>" git_head=<40 of 9>
+# a linked worktree with a ref of its own: its git directory is looked in first: the workflow records worktree_root="<WORKTREE other>" git_head=<40 of 8>
+# a directory outside every repository: the workflow records worktree_root="" git_head=""
+# an unknown working directory: the workflow records worktree_root="" git_head=""
+# a relative working directory: the workflow records worktree_root="" git_head=""

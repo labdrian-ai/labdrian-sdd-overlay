@@ -1,0 +1,98 @@
+# a commondir that names a directory that does not exist: the workflow records worktree_root="<CHECKOUT>" git_head=<40 of e>
+$ workflow bind --project proj-1 --workflow wf-1
+# a commondir that names a directory that does not exist: bind (in <CHECKOUT>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY of the path as written>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-1",
+    "bound_at": "<TIME>"
+  }
+}
+--- stderr ---
+
+$ workflow binding
+# a commondir that names a directory that does not exist: binding (in <CHECKOUT>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY of the path as written>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-1",
+    "bound_at": "<TIME>"
+  },
+  "workflow": {
+    "classification": "owned",
+    "status": "running"
+  }
+}
+--- stderr ---
+
+$ workflow unbind
+# a commondir that names a directory that does not exist: unbind (in <CHECKOUT>)
+--- exit ---
+0
+--- stdout ---
+{
+  "removed": true
+}
+--- stderr ---
+
+# an empty commondir: the git directory is its own common directory: the workflow records worktree_root="<CHECKOUT blank>" git_head=<40 of e>
+$ workflow bind --project proj-1 --workflow wf-2
+# an empty commondir: the git directory is its own common directory: bind (in <CHECKOUT blank>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY blank>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-2",
+    "bound_at": "<TIME>"
+  }
+}
+--- stderr ---
+
+$ workflow binding
+# an empty commondir: the git directory is its own common directory: binding (in <CHECKOUT blank>)
+--- exit ---
+0
+--- stdout ---
+{
+  "classification": "owned",
+  "binding": {
+    "version": 1,
+    "repo_key": "<KEY blank>",
+    "project_id": "proj-1",
+    "workflow_id": "wf-2",
+    "bound_at": "<TIME>"
+  },
+  "workflow": {
+    "classification": "owned",
+    "status": "running"
+  }
+}
+--- stderr ---
+
+$ workflow unbind
+# an empty commondir: the git directory is its own common directory: unbind (in <CHECKOUT blank>)
+--- exit ---
+0
+--- stdout ---
+{
+  "removed": true
+}
+--- stderr ---
+
