@@ -19,7 +19,7 @@ const basePromptFixture = "line 1\n## Skills to load before work\nline 2"
 
 func TestOpenCodeInstallWritesPluginConfigAndRestartRequiredStatus(t *testing.T) {
 	root := t.TempDir()
-	adapter := engineRuntime.NewOpenCodeAdapter(root)
+	adapter := engineRuntime.NewOpenCodeAdapter(root, engineRuntime.OpenCodeOptions{})
 
 	install := adapter.Install()
 	if install.Status != core.CapabilityRestartRequired {
@@ -62,7 +62,7 @@ func TestOpenCodeInstallWritesPluginConfigAndRestartRequiredStatus(t *testing.T)
 
 func TestOpenCodeStatusSupportedWhenActiveMarkerMatchesHash(t *testing.T) {
 	root := t.TempDir()
-	adapter := engineRuntime.NewOpenCodeAdapter(root)
+	adapter := engineRuntime.NewOpenCodeAdapter(root, engineRuntime.OpenCodeOptions{})
 	if result := adapter.Install(); result.Status != core.CapabilityRestartRequired {
 		t.Fatalf("Install status = %q", result.Status)
 	}
@@ -84,7 +84,7 @@ func TestOpenCodeStatusSupportedWhenActiveMarkerMatchesHash(t *testing.T) {
 
 func TestOpenCodeInstallWritesPromptConfigFromMinimalismContract(t *testing.T) {
 	root := t.TempDir()
-	adapter := engineRuntime.NewOpenCodeAdapter(root)
+	adapter := engineRuntime.NewOpenCodeAdapter(root, engineRuntime.OpenCodeOptions{})
 	if result := adapter.Install(); result.Status != core.CapabilityRestartRequired {
 		t.Fatalf("Install() = %#v", result)
 	}
@@ -171,9 +171,8 @@ context_operator: prompt_contains
 			if err := os.WriteFile(filepath.Join(sharedDir, "oo-quality-contract.md"), []byte(tt.ooContent), 0o644); err != nil {
 				t.Fatalf("write OO contract: %v", err)
 			}
-			t.Setenv("LABDRIAN_OVERLAY_DIR", overlayRoot)
 			root := t.TempDir()
-			adapter := engineRuntime.NewOpenCodeAdapter(root)
+			adapter := engineRuntime.NewOpenCodeAdapter(root, engineRuntime.OpenCodeOptions{OverlayDir: overlayRoot})
 			if result := adapter.Install(); result.Status != core.CapabilityRestartRequired {
 				t.Fatalf("Install() = %#v", result)
 			}
@@ -189,8 +188,7 @@ context_operator: prompt_contains
 
 func TestOpenCodeInstallDoesNotWritePluginWhenPromptConfigCannotBeDerived(t *testing.T) {
 	root := t.TempDir()
-	t.Setenv("LABDRIAN_OVERLAY_DIR", t.TempDir())
-	adapter := engineRuntime.NewOpenCodeAdapter(root)
+	adapter := engineRuntime.NewOpenCodeAdapter(root, engineRuntime.OpenCodeOptions{OverlayDir: t.TempDir()})
 
 	result := adapter.Install()
 	if result.Status != core.CapabilityPartial || !strings.Contains(result.Message, "prompt config could not be derived") {
@@ -208,7 +206,7 @@ func TestOpenCodeInstallDoesNotWritePluginWhenPromptConfigCannotBeDerived(t *tes
 
 func TestOpenCodeUninstallRemovesPluginAndConfig(t *testing.T) {
 	root := t.TempDir()
-	adapter := engineRuntime.NewOpenCodeAdapter(root)
+	adapter := engineRuntime.NewOpenCodeAdapter(root, engineRuntime.OpenCodeOptions{})
 	if result := adapter.Install(); result.Status != core.CapabilityRestartRequired {
 		t.Fatalf("Install() = %#v", result)
 	}
@@ -229,7 +227,7 @@ func TestOpenCodeUninstallRemovesPluginAndConfig(t *testing.T) {
 
 func TestOpenCodeStatusAfterUninstallHonorsActiveMarker(t *testing.T) {
 	root := t.TempDir()
-	adapter := engineRuntime.NewOpenCodeAdapter(root)
+	adapter := engineRuntime.NewOpenCodeAdapter(root, engineRuntime.OpenCodeOptions{})
 	if result := adapter.Install(); result.Status != core.CapabilityRestartRequired {
 		t.Fatalf("Install() = %#v", result)
 	}
@@ -258,7 +256,7 @@ func TestOpenCodeStatusAfterUninstallHonorsActiveMarker(t *testing.T) {
 
 func TestOpenCodeInstallUpdatePreservesLoadedMarkerUntilRestart(t *testing.T) {
 	root := t.TempDir()
-	adapter := engineRuntime.NewOpenCodeAdapter(root)
+	adapter := engineRuntime.NewOpenCodeAdapter(root, engineRuntime.OpenCodeOptions{})
 	if result := adapter.Install(); result.Status != core.CapabilityRestartRequired {
 		t.Fatalf("initial Install() = %#v", result)
 	}
@@ -284,7 +282,7 @@ func TestOpenCodeInstallUpdatePreservesLoadedMarkerUntilRestart(t *testing.T) {
 
 func TestOpenCodeStatusRejectsTamperedPromptConfig(t *testing.T) {
 	root := t.TempDir()
-	adapter := engineRuntime.NewOpenCodeAdapter(root)
+	adapter := engineRuntime.NewOpenCodeAdapter(root, engineRuntime.OpenCodeOptions{})
 	if result := adapter.Install(); result.Status != core.CapabilityRestartRequired {
 		t.Fatalf("Install() = %#v", result)
 	}
@@ -350,7 +348,7 @@ func TestOpenCodeStatusRejectsTamperedPromptConfig(t *testing.T) {
 
 func TestOpenCodeStatusRejectsMalformedNestedContractContextMetadata(t *testing.T) {
 	root := t.TempDir()
-	adapter := engineRuntime.NewOpenCodeAdapter(root)
+	adapter := engineRuntime.NewOpenCodeAdapter(root, engineRuntime.OpenCodeOptions{})
 	if result := adapter.Install(); result.Status != core.CapabilityRestartRequired {
 		t.Fatalf("Install() = %#v", result)
 	}
@@ -378,7 +376,6 @@ func TestOpenCodeAdapterDoesNotPolluteCallerWorkingDirectory(t *testing.T) {
 	if err != nil {
 		t.Fatalf("resolve repo root: %v", err)
 	}
-	t.Setenv("LABDRIAN_OVERLAY_DIR", repoRoot)
 	oldWD, err := os.Getwd()
 	if err != nil {
 		t.Fatalf("get wd: %v", err)
@@ -388,7 +385,7 @@ func TestOpenCodeAdapterDoesNotPolluteCallerWorkingDirectory(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = os.Chdir(oldWD) })
 
-	adapter := engineRuntime.NewOpenCodeAdapter(configRoot)
+	adapter := engineRuntime.NewOpenCodeAdapter(configRoot, engineRuntime.OpenCodeOptions{OverlayDir: repoRoot})
 	if result := adapter.Install(); result.Status != core.CapabilityRestartRequired {
 		t.Fatalf("Install() = %#v", result)
 	}
@@ -402,8 +399,8 @@ func TestOpenCodeAdapterDoesNotPolluteCallerWorkingDirectory(t *testing.T) {
 
 func TestOpenCodeAdapterRejectsUnresolvedOrRelativeConfigRoot(t *testing.T) {
 	for _, adapter := range []engineRuntime.OpenCodeAdapter{
-		engineRuntime.NewOpenCodeAdapter(""),
-		engineRuntime.NewOpenCodeAdapter(filepath.Join("relative", "opencode")),
+		engineRuntime.NewOpenCodeAdapter("", engineRuntime.OpenCodeOptions{}),
+		engineRuntime.NewOpenCodeAdapter(filepath.Join("relative", "opencode"), engineRuntime.OpenCodeOptions{}),
 	} {
 		if result := adapter.Install(); result.Status != core.CapabilityUnsupported || !strings.Contains(result.Message, "OpenCode config root") {
 			t.Fatalf("Install() should reject unsafe root, got %#v", result)
@@ -416,7 +413,7 @@ func TestOpenCodeAdapterRejectsUnresolvedOrRelativeConfigRoot(t *testing.T) {
 
 func TestOpenCodeLifecycleAliasesAndStatusFailureModes(t *testing.T) {
 	root := t.TempDir()
-	adapter := engineRuntime.NewOpenCodeAdapter(root)
+	adapter := engineRuntime.NewOpenCodeAdapter(root, engineRuntime.OpenCodeOptions{})
 
 	if adapter.Target() != core.TargetOpenCode {
 		t.Fatalf("Target() = %q, want opencode", adapter.Target())

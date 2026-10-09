@@ -23,6 +23,11 @@ type Config struct {
 	CodexHome string
 	// OverlayDir is $OVERLAY_DIR as set: the overlay checkout the Pi package is built from.
 	OverlayDir string
+	// LabdrianOverlayDir is $LABDRIAN_OVERLAY_DIR as set, not trimmed or judged: the overlay
+	// checkout whose skills/_shared contracts the OpenCode plugin carries. It is a different
+	// variable from OverlayDir. Only the OpenCode adapter reads it, and reports a value that is not
+	// an absolute path; empty means the checkout above the working directory.
+	LabdrianOverlayDir string
 	// StateDir is $STATE_DIR as set: where the overlay keeps what it deploys.
 	StateDir string
 	// PiSkipSubagents is true when the person turned off the probe and the install of the Pi

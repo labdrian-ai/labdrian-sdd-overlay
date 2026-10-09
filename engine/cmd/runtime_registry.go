@@ -69,6 +69,8 @@ func runtimeConfigFromEnv(getenv func(string) string, userHomeDir func() (string
 		CodexHome:     getenv("CODEX_HOME"),
 		OverlayDir:    getenv("OVERLAY_DIR"),
 		StateDir:      getenv("STATE_DIR"),
+		// The checkout the OpenCode plugin's contracts are read from; the adapter judges it.
+		LabdrianOverlayDir: getenv("LABDRIAN_OVERLAY_DIR"),
 		// Only the exact value 1 turns the probe off, as it always has.
 		PiSkipSubagents: getenv(piSkipSubagentsVariable) == "1",
 	}

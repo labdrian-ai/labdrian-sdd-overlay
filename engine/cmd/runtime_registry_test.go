@@ -94,6 +94,9 @@ func TestRuntimeConfigFromEnv(t *testing.T) {
 		"CODEX_HOME":      "/codex",
 		"OVERLAY_DIR":     "/overlay",
 		"STATE_DIR":       "/state",
+		// A different variable from OVERLAY_DIR: the checkout the OpenCode plugin's contracts are
+		// read from. It is handed down as set; the adapter judges it.
+		"LABDRIAN_OVERLAY_DIR": "  relative/overlay  ",
 	}
 	env := func(k string) string { return environ[k] }
 	failing := func() (string, error) { return "", errors.New("no home") }
@@ -103,7 +106,7 @@ func TestRuntimeConfigFromEnv(t *testing.T) {
 		got := runtimeConfigFromEnv(env, failing)
 		want := runtimecore.Config{
 			Home: "/home/p", XDGConfigHome: "/xdg", CodexHome: "/codex",
-			OverlayDir: "/overlay", StateDir: "/state",
+			OverlayDir: "/overlay", StateDir: "/state", LabdrianOverlayDir: "  relative/overlay  ",
 		}
 		if got != want {
 			t.Errorf("runtimeConfigFromEnv = %+v, want %+v", got, want)

@@ -22,7 +22,9 @@ func RegisterCodex(r *core.Registry) error {
 
 // RegisterOpenCode registers the OpenCode runtime.
 func RegisterOpenCode(r *core.Registry) error {
-	return r.Register(core.TargetOpenCode, func(cfg core.Config) core.Adapter { return NewOpenCodeAdapter(cfg.OpenCodeRoot()) })
+	return r.Register(core.TargetOpenCode, func(cfg core.Config) core.Adapter {
+		return NewOpenCodeAdapter(cfg.OpenCodeRoot(), OpenCodeOptions{OverlayDir: cfg.LabdrianOverlayDir})
+	})
 }
 
 // RegisterPi registers the Pi runtime, which reaches the `pi` CLI and the package builder only

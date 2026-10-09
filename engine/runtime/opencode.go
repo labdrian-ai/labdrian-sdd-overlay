@@ -1,221 +1,36 @@
 package runtime
 
 import (
-	"crypto/sha256"
-	_ "embed"
-	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/assets"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/contract"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime/core"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime/opencodeprompt"
 )
 
-const openCodePluginFile = "labdrian-runtime-parity.js"
-const openCodeConfigFile = "labdrian-runtime-parity.json"
-const openCodeActiveFile = "labdrian-runtime-parity.active.json"
-
-const OpenCodePluginVersion = "2026-07-08-runtime-parity-4"
-
-//go:embed labdrian-runtime-parity-plugin.mjs
-var openCodePluginSource string
-
+// OpenCodeAdapter installs the runtime-parity plugin into the OpenCode config directory and
+// reports whether OpenCode is running it. The plugin carries the prompt config derived from the
+// overlay's contracts (opencodeprompt); the adapter writes the plugin and its records and reads
+// them back.
 type OpenCodeAdapter struct {
-	root string
+	root    string
+	options OpenCodeOptions
 }
 
-type openCodeConfig struct {
-	// InstalledHash is the plugin artifact hash last written by the adapter.
-	// InstalledVersion is the deterministic plugin version last installed.
-	PluginPath        string               `json:"plugin_path"`
-	InstalledHash     string               `json:"installed_hash"`
-	InstalledVersion  string               `json:"installed_version"`
-	ActivationMarker  string               `json:"activation_marker"`
-	PluginConfigRoot  string               `json:"plugin_config_root"`
-	PluginConfigScope string               `json:"plugin_config_scope"`
-	PromptConfig      openCodePromptConfig `json:"prompt_config"`
-	PromptConfigHash  string               `json:"prompt_config_hash"`
-}
-
-type openCodePromptConfig struct {
-	ContractPath           string                   `json:"contract_path"`
-	IncludedPhases         []string                 `json:"included_phases"`
-	ExcludedPhases         []string                 `json:"excluded_phases"`
-	InjectionPoint         string                   `json:"injection_point"`
-	LanguageContext        []string                 `json:"language_context,omitempty"`
-	ActivationContext      []string                 `json:"activation_context,omitempty"`
-	ContextOperator        *string                  `json:"context_operator,omitempty"`
-	ContextOperatorPresent bool                     `json:"-"`
-	Contracts              []openCodeContractConfig `json:"contracts,omitempty"`
-}
-
-type openCodeContractConfig struct {
-	ContractPath           string   `json:"contract_path"`
-	IncludedPhases         []string `json:"included_phases"`
-	ExcludedPhases         []string `json:"excluded_phases"`
-	InjectionPoint         string   `json:"injection_point"`
-	LanguageContext        []string `json:"language_context,omitempty"`
-	ActivationContext      []string `json:"activation_context,omitempty"`
-	ContextOperator        *string  `json:"context_operator,omitempty"`
-	ContextOperatorPresent bool     `json:"-"`
-}
-
-func (c openCodePromptConfig) MarshalJSON() ([]byte, error) {
-	contextOperator, err := marshalContextOperator(c.ContextOperator, c.ContextOperatorPresent)
-	if err != nil {
-		return nil, err
-	}
-	type promptConfigJSON struct {
-		ContractPath      string                   `json:"contract_path"`
-		IncludedPhases    []string                 `json:"included_phases"`
-		ExcludedPhases    []string                 `json:"excluded_phases"`
-		InjectionPoint    string                   `json:"injection_point"`
-		LanguageContext   []string                 `json:"language_context,omitempty"`
-		ActivationContext []string                 `json:"activation_context,omitempty"`
-		ContextOperator   json.RawMessage          `json:"context_operator,omitempty"`
-		Contracts         []openCodeContractConfig `json:"contracts,omitempty"`
-	}
-	return json.Marshal(promptConfigJSON{
-		ContractPath:      c.ContractPath,
-		IncludedPhases:    c.IncludedPhases,
-		ExcludedPhases:    c.ExcludedPhases,
-		InjectionPoint:    c.InjectionPoint,
-		LanguageContext:   c.LanguageContext,
-		ActivationContext: c.ActivationContext,
-		ContextOperator:   contextOperator,
-		Contracts:         c.Contracts,
-	})
-}
-
-func (c *openCodePromptConfig) UnmarshalJSON(data []byte) error {
-	type promptConfigJSON struct {
-		ContractPath      string                   `json:"contract_path"`
-		IncludedPhases    []string                 `json:"included_phases"`
-		ExcludedPhases    []string                 `json:"excluded_phases"`
-		InjectionPoint    string                   `json:"injection_point"`
-		LanguageContext   []string                 `json:"language_context,omitempty"`
-		ActivationContext []string                 `json:"activation_context,omitempty"`
-		ContextOperator   *string                  `json:"context_operator,omitempty"`
-		Contracts         []openCodeContractConfig `json:"contracts,omitempty"`
-	}
-	var raw map[string]json.RawMessage
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return err
-	}
-	var decoded promptConfigJSON
-	if err := json.Unmarshal(data, &decoded); err != nil {
-		return err
-	}
-	*c = openCodePromptConfig{
-		ContractPath:           decoded.ContractPath,
-		IncludedPhases:         decoded.IncludedPhases,
-		ExcludedPhases:         decoded.ExcludedPhases,
-		InjectionPoint:         decoded.InjectionPoint,
-		LanguageContext:        decoded.LanguageContext,
-		ActivationContext:      decoded.ActivationContext,
-		ContextOperator:        decoded.ContextOperator,
-		ContextOperatorPresent: hasJSONKey(raw, "context_operator"),
-		Contracts:              decoded.Contracts,
-	}
-	return nil
-}
-
-func (c openCodeContractConfig) MarshalJSON() ([]byte, error) {
-	contextOperator, err := marshalContextOperator(c.ContextOperator, c.ContextOperatorPresent)
-	if err != nil {
-		return nil, err
-	}
-	type contractConfigJSON struct {
-		ContractPath      string          `json:"contract_path"`
-		IncludedPhases    []string        `json:"included_phases"`
-		ExcludedPhases    []string        `json:"excluded_phases"`
-		InjectionPoint    string          `json:"injection_point"`
-		LanguageContext   []string        `json:"language_context,omitempty"`
-		ActivationContext []string        `json:"activation_context,omitempty"`
-		ContextOperator   json.RawMessage `json:"context_operator,omitempty"`
-	}
-	return json.Marshal(contractConfigJSON{
-		ContractPath:      c.ContractPath,
-		IncludedPhases:    c.IncludedPhases,
-		ExcludedPhases:    c.ExcludedPhases,
-		InjectionPoint:    c.InjectionPoint,
-		LanguageContext:   c.LanguageContext,
-		ActivationContext: c.ActivationContext,
-		ContextOperator:   contextOperator,
-	})
-}
-
-func (c *openCodeContractConfig) UnmarshalJSON(data []byte) error {
-	type contractConfigJSON struct {
-		ContractPath      string   `json:"contract_path"`
-		IncludedPhases    []string `json:"included_phases"`
-		ExcludedPhases    []string `json:"excluded_phases"`
-		InjectionPoint    string   `json:"injection_point"`
-		LanguageContext   []string `json:"language_context,omitempty"`
-		ActivationContext []string `json:"activation_context,omitempty"`
-		ContextOperator   *string  `json:"context_operator,omitempty"`
-	}
-	var raw map[string]json.RawMessage
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return err
-	}
-	var decoded contractConfigJSON
-	if err := json.Unmarshal(data, &decoded); err != nil {
-		return err
-	}
-	*c = openCodeContractConfig{
-		ContractPath:           decoded.ContractPath,
-		IncludedPhases:         decoded.IncludedPhases,
-		ExcludedPhases:         decoded.ExcludedPhases,
-		InjectionPoint:         decoded.InjectionPoint,
-		LanguageContext:        decoded.LanguageContext,
-		ActivationContext:      decoded.ActivationContext,
-		ContextOperator:        decoded.ContextOperator,
-		ContextOperatorPresent: hasJSONKey(raw, "context_operator"),
-	}
-	return nil
-}
-
-func marshalContextOperator(value *string, present bool) (json.RawMessage, error) {
-	if !present {
-		return nil, nil
-	}
-	if value == nil {
-		return json.RawMessage("null"), nil
-	}
-	encoded, err := json.Marshal(*value)
-	if err != nil {
-		return nil, err
-	}
-	return json.RawMessage(encoded), nil
-}
-
-func hasJSONKey(raw map[string]json.RawMessage, key string) bool {
-	_, ok := raw[key]
-	return ok
-}
-
-type openCodeActiveMarker struct {
-	ActiveVersion          string `json:"active_version"`
-	ActiveHash             string `json:"active_hash"`
-	ActivePromptConfigHash string `json:"active_prompt_config_hash"`
-	PluginPath             string `json:"plugin_path"`
-	ConfigRoot             string `json:"config_root"`
+// OpenCodeOptions are the choices the composition root hands the OpenCode adapter.
+type OpenCodeOptions struct {
+	// OverlayDir is the overlay checkout whose skills/_shared contracts the plugin carries, as the
+	// environment gave it ($LABDRIAN_OVERLAY_DIR; see core.Config.LabdrianOverlayDir). Empty means
+	// the nearest checkout above the working directory.
+	OverlayDir string
 }
 
 // NewOpenCodeAdapter builds the OpenCode adapter over root, the directory its plugin is installed
-// into (see Config.OpenCodeRoot for the default the caller resolves).
-func NewOpenCodeAdapter(root string) OpenCodeAdapter {
-	return OpenCodeAdapter{root: root}
-}
-
-func OpenCodePluginHash() string {
-	sum := sha256.Sum256([]byte(openCodePluginSource))
-	return hex.EncodeToString(sum[:])
+// into (see core.Config.OpenCodeRoot for the default the caller resolves). It reads no
+// environment.
+func NewOpenCodeAdapter(root string, options OpenCodeOptions) OpenCodeAdapter {
+	return OpenCodeAdapter{root: root, options: options}
 }
 
 func (a OpenCodeAdapter) Target() core.Target             { return core.TargetOpenCode }
@@ -246,7 +61,7 @@ func (a OpenCodeAdapter) install(action core.Action) core.LifecycleResult {
 	if err := a.validateRoot(); err != nil {
 		return a.result(action, core.CapabilityUnsupported, err.Error())
 	}
-	promptConfig, err := loadOpenCodePromptConfig()
+	promptConfig, err := a.promptConfig()
 	if err != nil {
 		return a.result(action, core.CapabilityPartial, "OpenCode prompt config could not be derived from minimalism-contract frontmatter: "+err.Error())
 	}
@@ -258,7 +73,7 @@ func (a OpenCodeAdapter) install(action core.Action) core.LifecycleResult {
 		PluginConfigRoot:  a.root,
 		PluginConfigScope: "global-opencode-config",
 		PromptConfig:      promptConfig,
-		PromptConfigHash:  promptConfigHash(promptConfig),
+		PromptConfigHash:  opencodeprompt.Hash(promptConfig),
 	}
 	if err := a.writeConfig(cfg); err != nil {
 		return a.result(action, core.CapabilityPartial, err.Error())
@@ -289,7 +104,7 @@ func (a OpenCodeAdapter) status(action core.Action) core.LifecycleResult {
 	}
 	cfg, err := a.readConfig()
 	if err != nil {
-		if isPromptConfigMismatch(err) {
+		if opencodeprompt.IsMismatch(err) {
 			return a.result(action, core.CapabilityRestartRequired, "OpenCode prompt_config is stale or tampered; reinstall/update and restart OpenCode: "+err.Error())
 		}
 		return a.result(action, core.CapabilityPartial, "OpenCode config missing or invalid: "+err.Error())
@@ -323,85 +138,6 @@ func (a OpenCodeAdapter) status(action core.Action) core.LifecycleResult {
 	return a.result(action, core.CapabilitySupported, "OpenCode plugin active with version "+cfg.InstalledVersion+" and hash "+currentHash)
 }
 
-func (a OpenCodeAdapter) writeConfig(cfg openCodeConfig) error {
-	if err := os.MkdirAll(filepath.Dir(a.configPath()), 0o755); err != nil {
-		return err
-	}
-	data, err := json.MarshalIndent(cfg, "", "  ")
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(a.configPath(), data, 0o644)
-}
-
-func (a OpenCodeAdapter) readConfig() (openCodeConfig, error) {
-	data, err := os.ReadFile(a.configPath())
-	if err != nil {
-		return openCodeConfig{}, err
-	}
-	var cfg openCodeConfig
-	if err := json.Unmarshal(data, &cfg); err != nil {
-		return openCodeConfig{}, err
-	}
-	if cfg.InstalledHash == "" {
-		return openCodeConfig{}, fmt.Errorf("installed_hash is empty")
-	}
-	if cfg.InstalledVersion == "" {
-		return openCodeConfig{}, fmt.Errorf("installed_version is empty")
-	}
-	if cfg.InstalledVersion != OpenCodePluginVersion {
-		return openCodeConfig{}, fmt.Errorf("installed_version %q is not current %q", cfg.InstalledVersion, OpenCodePluginVersion)
-	}
-	if cfg.InstalledHash != OpenCodePluginHash() {
-		return openCodeConfig{}, fmt.Errorf("installed_hash is not current plugin hash")
-	}
-	if cfg.PluginPath != a.pluginPath() {
-		return openCodeConfig{}, fmt.Errorf("plugin_path does not match configured OpenCode root")
-	}
-	if cfg.PluginConfigRoot != "" && cfg.PluginConfigRoot != a.root {
-		return openCodeConfig{}, fmt.Errorf("plugin_config_root does not match configured OpenCode root")
-	}
-	expectedPromptConfig, err := loadOpenCodePromptConfig()
-	if err != nil {
-		return openCodeConfig{}, fmt.Errorf("current prompt_config could not be derived: %w", err)
-	}
-	if err := validatePromptConfig(cfg.PromptConfig, expectedPromptConfig); err != nil {
-		return openCodeConfig{}, promptConfigMismatchError{err: err}
-	}
-	expectedHash := promptConfigHash(expectedPromptConfig)
-	if cfg.PromptConfigHash != expectedHash {
-		return openCodeConfig{}, promptConfigMismatchError{err: fmt.Errorf("prompt_config_hash %q is not current %q", cfg.PromptConfigHash, expectedHash)}
-	}
-	return cfg, nil
-}
-
-func (a OpenCodeAdapter) readActiveMarker() (openCodeActiveMarker, error) {
-	data, err := os.ReadFile(a.activeMarkerPath())
-	if err != nil {
-		return openCodeActiveMarker{}, err
-	}
-	var marker openCodeActiveMarker
-	if err := json.Unmarshal(data, &marker); err != nil {
-		return openCodeActiveMarker{}, err
-	}
-	if marker.ActiveVersion == "" {
-		return openCodeActiveMarker{}, fmt.Errorf("active_version is empty")
-	}
-	if marker.ActiveHash == "" {
-		return openCodeActiveMarker{}, fmt.Errorf("active_hash is empty")
-	}
-	if marker.ActivePromptConfigHash == "" {
-		return openCodeActiveMarker{}, fmt.Errorf("active_prompt_config_hash is empty")
-	}
-	if marker.PluginPath == "" {
-		return openCodeActiveMarker{}, fmt.Errorf("plugin_path is empty")
-	}
-	if marker.ConfigRoot == "" {
-		return openCodeActiveMarker{}, fmt.Errorf("config_root is empty")
-	}
-	return marker, nil
-}
-
 func (a OpenCodeAdapter) pluginPath() string {
 	return filepath.Join(a.root, "plugins", openCodePluginFile)
 }
@@ -412,25 +148,6 @@ func (a OpenCodeAdapter) configPath() string {
 
 func (a OpenCodeAdapter) activeMarkerPath() string {
 	return filepath.Join(a.root, openCodeActiveFile)
-}
-
-func (a OpenCodeAdapter) activeMarkerExists() bool {
-	_, err := os.Stat(a.activeMarkerPath())
-	return err == nil
-}
-
-func (a OpenCodeAdapter) activeMarkerOlderThanInstalledConfig() bool {
-	marker, err := os.Stat(a.activeMarkerPath())
-	if err != nil {
-		return false
-	}
-	for _, path := range []string{a.pluginPath(), a.configPath()} {
-		info, err := os.Stat(path)
-		if err == nil && marker.ModTime().Before(info.ModTime()) {
-			return true
-		}
-	}
-	return false
 }
 
 func (a OpenCodeAdapter) validateRoot() error {
@@ -445,209 +162,4 @@ func (a OpenCodeAdapter) validateRoot() error {
 
 func (a OpenCodeAdapter) result(action core.Action, status core.CapabilityStatus, message string) core.LifecycleResult {
 	return core.NewLifecycleResult(core.TargetOpenCode, action, status, message, nil)
-}
-
-func loadOpenCodePromptConfig() (openCodePromptConfig, error) {
-	contractPath := filepath.Join("skills", "_shared", "minimalism-contract.md")
-	root, err := overlayRoot()
-	if err != nil {
-		return openCodePromptConfig{}, err
-	}
-	content, err := os.ReadFile(filepath.Join(root, contractPath))
-	if err != nil {
-		return openCodePromptConfig{}, err
-	}
-	doc, err := contract.Parse(string(content))
-	if err != nil {
-		return openCodePromptConfig{}, err
-	}
-	// The minimalism contract is unconditional in OpenCode: it has no context to hand to the plugin.
-	minimalism := openCodeContract(contractPath, doc, contract.Context{})
-	contracts := []openCodeContractConfig{minimalism}
-	// The anti-generic-design guard rides the embedded asset for the same
-	// reason the minimalism contract above does: the generic-AI-look hazard is
-	// runtime-agnostic, so an OpenCode user generating UI must get it too.
-	// Without this append the contract deployed to disk on OpenCode was never
-	// read by anything — present, aligned, IN_SYNC, and inert. It is appended
-	// before the OPTIONAL oo-quality contract so the unconditional contracts
-	// keep a stable order regardless of that file.
-	design, err := openCodeContractFromContent(filepath.Join("skills", "_shared", "anti-generic-design.md"), assets.AntiGenericDesign)
-	if err != nil {
-		return openCodePromptConfig{}, err
-	}
-	contracts = append(contracts, design)
-	ooPath := filepath.Join("skills", "_shared", "oo-quality-contract.md")
-	ooContent, err := os.ReadFile(filepath.Join(root, ooPath))
-	if err != nil {
-		if !os.IsNotExist(err) {
-			return openCodePromptConfig{}, err
-		}
-	} else {
-		oo, err := openCodeContractFromContent(ooPath, string(ooContent))
-		if err == nil {
-			contracts = append(contracts, oo)
-		}
-	}
-	return openCodePromptConfig{
-		ContractPath:   minimalism.ContractPath,
-		IncludedPhases: minimalism.IncludedPhases,
-		ExcludedPhases: minimalism.ExcludedPhases,
-		InjectionPoint: minimalism.InjectionPoint,
-		Contracts:      contracts,
-	}, nil
-}
-
-func openCodeContractFromContent(path, content string) (openCodeContractConfig, error) {
-	doc, needs, err := contract.ParseBoth(content)
-	if err != nil {
-		return openCodeContractConfig{}, err
-	}
-	return openCodeContract(path, doc, needs), nil
-}
-
-// openCodeContract is the plugin's entry for the contract at path: its scope doc, its context needs.
-func openCodeContract(path string, doc contract.Contract, needs contract.Context) openCodeContractConfig {
-	return openCodeContractConfig{
-		ContractPath:      filepath.ToSlash(path),
-		IncludedPhases:    doc.AppliesTo,
-		ExcludedPhases:    doc.Excluded,
-		InjectionPoint:    doc.Header(),
-		LanguageContext:   needs.LanguageContext,
-		ActivationContext: needs.ActivationContext,
-		ContextOperator:   nil,
-	}
-}
-
-type promptConfigMismatchError struct {
-	err error
-}
-
-func (e promptConfigMismatchError) Error() string { return e.err.Error() }
-
-func isPromptConfigMismatch(err error) bool {
-	_, ok := err.(promptConfigMismatchError)
-	return ok
-}
-
-func promptConfigHash(config openCodePromptConfig) string {
-	data, err := json.Marshal(config)
-	if err != nil {
-		return ""
-	}
-	return hashString(string(data))
-}
-
-func validatePromptConfig(got, want openCodePromptConfig) error {
-	if got.ContractPath == "" {
-		return fmt.Errorf("prompt_config.contract_path is empty")
-	}
-	if got.InjectionPoint == "" {
-		return fmt.Errorf("prompt_config.injection_point is empty")
-	}
-	if !equalStringSlices(got.IncludedPhases, want.IncludedPhases) {
-		return fmt.Errorf("prompt_config.included_phases %v is not current %v", got.IncludedPhases, want.IncludedPhases)
-	}
-	if !equalStringSlices(got.ExcludedPhases, want.ExcludedPhases) {
-		return fmt.Errorf("prompt_config.excluded_phases %v is not current %v", got.ExcludedPhases, want.ExcludedPhases)
-	}
-	if got.ContractPath != want.ContractPath {
-		return fmt.Errorf("prompt_config.contract_path %q is not current %q", got.ContractPath, want.ContractPath)
-	}
-	if got.InjectionPoint != want.InjectionPoint {
-		return fmt.Errorf("prompt_config.injection_point %q is not current %q", got.InjectionPoint, want.InjectionPoint)
-	}
-	if !equalStringSlices(got.LanguageContext, want.LanguageContext) {
-		return fmt.Errorf("prompt_config.language_context %v is not current %v", got.LanguageContext, want.LanguageContext)
-	}
-	if !equalStringSlices(got.ActivationContext, want.ActivationContext) {
-		return fmt.Errorf("prompt_config.activation_context %v is not current %v", got.ActivationContext, want.ActivationContext)
-	}
-	if !equalOptionalString(got.ContextOperator, got.ContextOperatorPresent, want.ContextOperator, want.ContextOperatorPresent) {
-		return fmt.Errorf("prompt_config.context_operator %s is not current %s", formatOptionalString(got.ContextOperator, got.ContextOperatorPresent), formatOptionalString(want.ContextOperator, want.ContextOperatorPresent))
-	}
-	if !equalContractConfigs(got.Contracts, want.Contracts) {
-		return fmt.Errorf("prompt_config.contracts is not current")
-	}
-	return nil
-}
-
-func equalContractConfigs(a, b []openCodeContractConfig) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i].ContractPath != b[i].ContractPath || a[i].InjectionPoint != b[i].InjectionPoint ||
-			!equalStringSlices(a[i].IncludedPhases, b[i].IncludedPhases) ||
-			!equalStringSlices(a[i].ExcludedPhases, b[i].ExcludedPhases) ||
-			!equalStringSlices(a[i].LanguageContext, b[i].LanguageContext) ||
-			!equalStringSlices(a[i].ActivationContext, b[i].ActivationContext) ||
-			!equalOptionalString(a[i].ContextOperator, a[i].ContextOperatorPresent, b[i].ContextOperator, b[i].ContextOperatorPresent) {
-			return false
-		}
-	}
-	return true
-}
-
-func equalOptionalString(a *string, aPresent bool, b *string, bPresent bool) bool {
-	if aPresent != bPresent {
-		return false
-	}
-	if !aPresent {
-		return true
-	}
-	if a == nil || b == nil {
-		return a == nil && b == nil
-	}
-	return *a == *b
-}
-
-func formatOptionalString(value *string, present bool) string {
-	if !present {
-		return "<absent>"
-	}
-	if value == nil {
-		return "null"
-	}
-	return fmt.Sprintf("%q", *value)
-}
-
-func equalStringSlices(a, b []string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
-}
-
-func overlayRoot() (string, error) {
-	if root := strings.TrimSpace(os.Getenv("LABDRIAN_OVERLAY_DIR")); root != "" {
-		if filepath.IsAbs(root) {
-			return root, nil
-		}
-		return "", fmt.Errorf("LABDRIAN_OVERLAY_DIR must be absolute, got %q", root)
-	}
-	cwd, err := os.Getwd()
-	if err != nil {
-		return "", err
-	}
-	for dir := cwd; ; dir = filepath.Dir(dir) {
-		candidate := filepath.Join(dir, "skills", "_shared", "minimalism-contract.md")
-		if _, err := os.Stat(candidate); err == nil {
-			return dir, nil
-		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			break
-		}
-	}
-	return "", fmt.Errorf("could not locate skills/_shared/minimalism-contract.md; set LABDRIAN_OVERLAY_DIR")
-}
-
-func hashString(value string) string {
-	sum := sha256.Sum256([]byte(value))
-	return hex.EncodeToString(sum[:])
 }
