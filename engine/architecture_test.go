@@ -13,9 +13,11 @@ import (
 //
 // Where the document leaves a package open the choice is made here:
 //
-//   - runtime is an adapter: today it holds the concrete runtime adapters, and
-//     the pure core (Target vocabulary, Adapter port, prompt rules) becomes
-//     runtime/core, a domain package, in H26.
+//   - runtime is an adapter: it holds the concrete runtime adapters (Claude, Codex,
+//     OpenCode, Pi, longterm-mem) and the registration of each, and reaches the
+//     machine's files. runtime/core is its pure core, a domain package (H26): the
+//     Target vocabulary, the Adapter port, the Registry, the Config the composition
+//     root fills, and the prompt rules.
 //   - pathguard, capability, projection, workflow and the like are domain
 //     packages because their pure half is the part that stays; the file system
 //     half is debt below.
@@ -92,6 +94,7 @@ var rings = map[string]archguard.Ring{
 	"roles":                     archguard.Domain,
 	"roles/filechain":           archguard.Adapter,
 	"runtime":                   archguard.Adapter,
+	"runtime/core":              archguard.Domain,
 	"settings":                  archguard.Adapter,
 	"shaper":                    archguard.Domain,
 	"shaper/fsadapter":          archguard.Adapter,
