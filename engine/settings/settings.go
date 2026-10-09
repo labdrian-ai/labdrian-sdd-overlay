@@ -35,7 +35,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/shaper"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/guardmarkers"
 )
 
 // ClaudeRuntimeConfigRoot is the default root validator for Claude runtime path
@@ -76,7 +76,7 @@ const (
 	// holding in every permission mode, including bypassPermissions. Like
 	// the hook, it matches command text only: it is a speed bump, not a
 	// security boundary.
-	ShaperClearanceDenyRule = "Bash(*" + shaper.GuardCommandMarker + "*)"
+	ShaperClearanceDenyRule = "Bash(*" + guardmarkers.Command + "*)"
 )
 
 // ValidateClaudeConfigRoot validates that root is non-empty and absolute.
@@ -808,7 +808,7 @@ func (m *Merger) buildReviewReceiptPreToolUseEntry() map[string]interface{} {
 func (m *Merger) buildShaperGuardPreToolUseEntry(matcher string) map[string]interface{} {
 	cmd := fmt.Sprintf(
 		`command -v %s >/dev/null 2>&1 || { case "$(cat)" in *'%s'*|*'%s'*) echo 'labdrian shaper clearance guard: gentle-ai-overlay is missing; denying a clearance record or store access (a speed bump, not a security boundary)' >&2; exit 2;; esac; exit 0; }; %s %s`,
-		m.hookCommand, shaper.GuardCommandMarker, shaper.GuardStoreMarker, m.hookCommand, LabdrianShaperGuardIdentity,
+		m.hookCommand, guardmarkers.Command, guardmarkers.Store, m.hookCommand, LabdrianShaperGuardIdentity,
 	)
 	return map[string]interface{}{
 		"matcher": matcher,

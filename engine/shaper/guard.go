@@ -3,17 +3,9 @@ package shaper
 import (
 	"fmt"
 	"strings"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/guardmarkers"
 )
-
-// GuardCommandMarker is the clearance record entry point the runtime deny
-// guards refuse to let a model run. It is matched anywhere in a command
-// after whitespace is collapsed.
-const GuardCommandMarker = "shaper clearance record"
-
-// GuardStoreMarker is the clearance store path segment the runtime deny
-// guards refuse to let a model touch. It is the fixed store directory under
-// the state home.
-const GuardStoreMarker = "labdrian/shaper-clearance"
 
 // guardDenyMessage explains a refusal to the model. The guards match text
 // only, so they are speed bumps and not a security boundary.
@@ -28,7 +20,7 @@ const guardDenyMessage = "labdrian shaper clearance guard: recording a clearance
 // still evade it.
 func GuardMatches(text string) bool {
 	normalized := strings.Join(strings.Fields(strings.ReplaceAll(text, "\\\n", " ")), " ")
-	return strings.Contains(normalized, GuardCommandMarker) || strings.Contains(text, GuardStoreMarker)
+	return strings.Contains(normalized, guardmarkers.Command) || strings.Contains(text, guardmarkers.Store)
 }
 
 // GuardCall is the tool call the clearance guard decides about: the command a shell tool is
@@ -56,8 +48,8 @@ type GuardVerdict struct {
 // store. Everything else is allowed.
 func DecideGuard(call GuardCall) GuardVerdict {
 	if GuardMatches(call.Command) ||
-		strings.Contains(call.FilePath, GuardStoreMarker) ||
-		strings.Contains(call.NotebookPath, GuardStoreMarker) {
+		strings.Contains(call.FilePath, guardmarkers.Store) ||
+		strings.Contains(call.NotebookPath, guardmarkers.Store) {
 		return GuardVerdict{Deny: true, Reason: guardDenyMessage}
 	}
 	return GuardVerdict{}

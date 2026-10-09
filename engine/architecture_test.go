@@ -81,6 +81,7 @@ var rings = map[string]archguard.Ring{
 	"goal":                      archguard.Domain,
 	"hookwire":                  archguard.Adapter,
 	"installer":                 archguard.Support,
+	"guardmarkers":              archguard.Domain,
 	"jsonstrict":                archguard.Domain,
 	"memoryscope":               archguard.Domain,
 	"pathguard":                 archguard.Domain,

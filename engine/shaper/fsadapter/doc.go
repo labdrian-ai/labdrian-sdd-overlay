@@ -13,7 +13,7 @@
 // and they do not change here:
 // <state home>/labdrian/shaper-clearance/<project_id>/<goal_id>/<handoff_sha256>.json, the
 // record's own bytes exactly as offered, files 0600 in directories of mode 0700. The
-// runtime deny guards refuse any path that contains shaper.GuardStoreMarker, which is this
+// runtime deny guards refuse any path that contains guardmarkers.Store, which is this
 // layout's fixed directory, and a test pins the two to each other. testdata holds a
 // sequence of states recorded from the version that kept this code in the shaper package,
 // and the tests read them, extend them, and write them again, byte for byte.
