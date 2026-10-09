@@ -251,7 +251,7 @@ func hookRepoKey(inputCwd, processCwd string) (string, bool) {
 	if cwd == "" {
 		cwd = processCwd
 	}
-	return observeRepoKey(cwd)
+	return newRepoLocator().RepoKey(cwd)
 }
 
 // preToolUse does the PreToolUse gate's work and returns what it prints on

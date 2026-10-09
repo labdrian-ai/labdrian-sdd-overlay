@@ -72,6 +72,9 @@ import (
 //   - propagator/fsstore is the adapter of that RegistryStore (H28): it reads the registry file and
 //     writes it through a temporary file and a rename. The words a person reads and the lock are the
 //     command's, in cmd.
+//   - gitfs is the adapter of the projection domain's RepoLocator port (H29): it finds the repository
+//     a directory belongs to, and the worktree and HEAD a workflow records, by reading the files of
+//     the repository with no subprocess. It shares with gitprov only what a pointer file names.
 //   - piguard is test support: the `pi` that refuses to run, put first on the PATH of a test
 //     run by a TestMain, so nothing started by accident reaches the real CLI.
 //   - installer, shelltest, capabilitytest, shaper/shapertest (the documents the shaper's
@@ -90,6 +93,7 @@ var rings = map[string]archguard.Ring{
 	"filelock":                  archguard.Adapter,
 	"gadu":                      archguard.Adapter,
 	"gate":                      archguard.Domain,
+	"gitfs":                     archguard.Adapter,
 	"gitprov":                   archguard.Adapter,
 	"goal":                      archguard.Domain,
 	"hookwire":                  archguard.Adapter,

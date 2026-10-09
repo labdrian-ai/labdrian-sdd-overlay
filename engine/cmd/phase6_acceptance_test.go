@@ -504,7 +504,7 @@ func TestPhase6Acceptance_ForeignState(t *testing.T) {
 
 // phase6BuildWorktreeFixture hand-builds a linked-worktree pair sharing one
 // git dir (never a real git repository or the git binary -- see
-// workflow_provenance_test.go's own fixtures), and returns the two
+// repo_fixtures_test.go's own fixtures), and returns the two
 // worktree roots plus the HEAD each one resolves to.
 func phase6BuildWorktreeFixture(t *testing.T, root string) (worktreeA, worktreeB, headA, headB string) {
 	t.Helper()

@@ -4,13 +4,15 @@ package main
 // binding. A binding records which workflow the git repository containing the
 // working directory follows. It lives outside the repository, in
 // $XDG_STATE_HOME/labdrian/bindings/<repo-key>.json, where the repo key is the
-// SHA-256 of the repository's git common directory (see observeRepoKey), so
-// every worktree of a repository, and every symlinked spelling of its path,
-// shares one binding. The record and its store are engine/projection's.
+// SHA-256 of the repository's git common directory (projection.RepoKeyOf, found
+// by engine/gitfs), so every worktree of a repository, and every symlinked
+// spelling of its path, shares one binding. The record and its store are
+// engine/projection's.
 //
 // A binding is a pointer. These verbs never append to the workflow's log, and
 // they run no subprocess: the repository is found by walking the filesystem, as
-// observeProvenance does. binding is strictly read-only.
+// the workflow verbs find the provenance they record. binding is strictly
+// read-only.
 //
 // Exit codes are those of the other workflow verbs: 0 success, 2 refused or
 // invalid, 1 usage error (including an unknown flag) or a failed write of the
@@ -171,7 +173,7 @@ func runWorkflowBind(args []string, cwd string, stdout, stderr io.Writer, exit f
 		exit(1)
 		return
 	}
-	repoKey, ok := observeRepoKey(cwd)
+	repoKey, ok := newRepoLocator().RepoKey(cwd)
 	if !ok {
 		refuseBinding(stderr, exit, "bind", "%s", errNoRepository)
 		return
@@ -290,7 +292,7 @@ func runWorkflowUnbind(args []string, cwd string, stdout, stderr io.Writer, exit
 		exit(1)
 		return
 	}
-	repoKey, ok := observeRepoKey(cwd)
+	repoKey, ok := newRepoLocator().RepoKey(cwd)
 	if !ok {
 		refuseBinding(stderr, exit, "unbind", "%s", errNoRepository)
 		return
@@ -321,7 +323,7 @@ func runWorkflowBinding(args []string, cwd string, stdout, stderr io.Writer, exi
 		exit(1)
 		return
 	}
-	repoKey, ok := observeRepoKey(cwd)
+	repoKey, ok := newRepoLocator().RepoKey(cwd)
 	if !ok {
 		refuseBinding(stderr, exit, "binding", "%s", errNoRepository)
 		return

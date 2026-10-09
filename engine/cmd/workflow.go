@@ -16,7 +16,7 @@ package main
 // touching any workflow's log.
 //
 // Provenance (worktree root, git HEAD) is observed without running git or
-// any other subprocess; see observeProvenance in workflow_provenance.go.
+// any other subprocess; see engine/gitfs.
 // --goal is read fresh from disk at both create and verify: the CLI never
 // persists a Goal file path, so verify always re-reads the file the caller
 // points it at (Decision 3: verify's Goal digest check is only meaningful
@@ -38,7 +38,7 @@ import (
 
 // runWorkflow implements the 'workflow <verb>' subcommand.
 func runWorkflow(args []string) {
-	cwd, _ := os.Getwd() // best-effort; "" makes observeProvenance report empty provenance.
+	cwd, _ := os.Getwd() // best-effort; "" makes the locator report empty provenance.
 	runWorkflowCore(args, cwd, os.Stdout, os.Stderr, os.Exit)
 }
 
@@ -200,7 +200,7 @@ func newWorkflowLifecycle(cwd, goalFile string, stderr io.Writer) (workflow.Life
 		return workflow.Lifecycle{}, err
 	}
 	profiles := workflow.ProfileCatalogFunc(workflowprofile.Resolve)
-	lc, err := workflow.NewLifecycle(store, profiles, time.Now, observeProvenance(cwd), pathGoalReader{path: goalFile}, chains, workflowProber())
+	lc, err := workflow.NewLifecycle(store, profiles, time.Now, newRepoLocator().Provenance(cwd), pathGoalReader{path: goalFile}, chains, workflowProber())
 	if err != nil {
 		return workflow.Lifecycle{}, err
 	}
