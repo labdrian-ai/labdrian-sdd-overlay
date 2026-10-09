@@ -28,7 +28,9 @@ func (s funcStore) Write(path string, content []byte) error {
 }
 
 // runPropagateFuncs runs the command over a registry made of the two functions. The reader serves
-// the contract file as well, as the one file system a test has.
+// the contract file as well, as the one file system a test has. A test prefers it when a registry
+// of closures is all it needs; one that needs the real file store or a fake of the port itself
+// calls propagateCommand, which this only wraps.
 func runPropagateFuncs(
 	args []string,
 	stdout io.Writer,

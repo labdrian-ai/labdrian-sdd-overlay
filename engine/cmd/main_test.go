@@ -2404,9 +2404,9 @@ func TestPropagateLoop_VerificationReadErrorReportedDistinctly(t *testing.T) {
 			return []byte(testContractContent), nil
 		}
 		registryReadCount++
-		// Odd calls are the pass's own decisive read (must succeed
-		// so it proceeds to write on every attempt); even calls are the
-		// wrapper's post-write verification read (which fails every time).
+		// Odd calls are a pass's own decisive read (must succeed so it
+		// proceeds to write on every attempt); even calls are the loop's
+		// post-write read-back (which fails every time).
 		if registryReadCount%2 == 1 {
 			return []byte(minimalRegistry), nil
 		}
@@ -2547,9 +2547,9 @@ func TestPropagateLoop_HardErrorPassesThroughWithoutRetry(t *testing.T) {
 
 // TestPropagateLoop_RetriesEmptyRegistryThenSucceeds models a foreign
 // writer's mid-rewrite producing a transient torn/empty read on the FIRST
-// attempt, then a valid registry on the second. Before this task's wiring,
-// core's exit(1) on the empty read was forwarded immediately as a hard
-// failure — this test fails today for that reason (R-002).
+// attempt, then a valid registry on the second. The loop must treat the
+// Empty outcome as a read to retry, not as a failure to forward at once
+// (R-002): the first attempt finds the registry Empty, the second writes.
 func TestPropagateLoop_RetriesEmptyRegistryThenSucceeds(t *testing.T) {
 	const registryPath = "/fake/registry.md"
 	const contractFilePath = "/fake/contract.md"
@@ -2648,9 +2648,9 @@ func TestPropagateLoop_EmptyRegistryExhaustsAttemptsFailsLoud(t *testing.T) {
 // TestPropagateLoop_RetriesTransientAbsentThenSucceeds models a
 // foreign writer's unlink-then-recreate window: the registry read fails
 // os.ErrNotExist on the FIRST attempt, then succeeds with valid content on
-// the second — with no --require-registry flag. Before this task's wiring,
-// an absent read with no write was forwarded as a false-success no-op
-// immediately — this test fails today for that reason (R-003).
+// the second — with no --require-registry flag. The loop must treat the
+// Absent outcome as a read to retry, not as the no-op answer at once (R-003):
+// the first attempt finds the registry Absent, the second writes.
 func TestPropagateLoop_RetriesTransientAbsentThenSucceeds(t *testing.T) {
 	const registryPath = "/fake/registry.md"
 	const contractFilePath = "/fake/contract.md"
@@ -2784,8 +2784,8 @@ func TestPropagateLoop_HardFailureStillNoRetry(t *testing.T) {
 	if exitCode != 1 {
 		t.Fatalf("expected exit 1 for broken frontmatter, got exit=%d", exitCode)
 	}
-	// Broken frontmatter fails before the registry is ever read (core
-	// validates the contract first), so this proves zero READ retries: the
+	// Broken frontmatter fails before the registry is ever read (a pass
+	// reads and parses the contract first), so this proves zero READ retries: the
 	// loop must not have looped back around trying to "recover" from this
 	// hard failure by re-reading anything.
 	if registryReads != 0 {
@@ -2915,7 +2915,7 @@ func TestPropagateLoop_InterleavedReadRaceThenWriteRaceWithinBudget(t *testing.T
 	// Pin the exact number of attempts consumed: attempt 1's single torn/empty
 	// read (1), attempt 2's initial read plus its clobbered verify read (2),
 	// attempt 3's initial read plus its clean verify read (2) — 5 total,
-	// leaving zero margin against app.MaxAttempts (3 core attempts).
+	// leaving zero margin against app.MaxAttempts (3 attempts).
 	const wantRegistryReads = 5
 	if registryReads != wantRegistryReads {
 		t.Errorf("expected exactly %d registry reads (attempt1 initial torn read; attempt2 initial+clobbered verify; attempt3 initial+clean verify), got %d", wantRegistryReads, registryReads)
@@ -2974,10 +2974,9 @@ func TestPropagateLoop_EmptyRegistryExhaustsAfterMixedAbsentThenEmpty(t *testing
 }
 
 // TestPropagateLoop_AbsentExhaustsAfterEarlierEmptyPrefersFailLoud
-// proves the complementary mixed case: an earlier attempt classified as
-// the Empty outcome (direct proof the registry file exists, just torn),
-// while the LAST attempt (the one that triggers exhaustion) classifies as
-// the Absent outcome. Before this fix, exhausting on the absent branch
+// proves the complementary mixed case: an earlier attempt found the Empty
+// outcome (direct proof the registry file exists, just torn), while the LAST
+// attempt (the one that triggers exhaustion) found the Absent outcome. Before this fix, exhausting on the absent branch
 // silently returned the exit-0 no-op, discarding the earlier proof that this
 // project DOES use the overlay. This test pins the corrected behavior:
 // exhaustion must prefer the fail-loud empty-registry outcome instead.
@@ -3046,8 +3045,8 @@ func TestPropagateLoop_ExhaustsAfterEarlierWriteClobberedPrefersFailLoud(t *test
 		}
 		registryReads++
 		if registryReads == 1 {
-			// Attempt 1's initial read inside core: a valid, unscoped
-			// registry, so core decides to write.
+			// Attempt 1's initial read: a valid, unscoped registry, so the
+			// pass decides to write.
 			return []byte(minimalRegistry), nil
 		}
 		// Attempt 1's post-write verification read, and every subsequent
@@ -3096,11 +3095,10 @@ func TestPropagateLoop_ExhaustsAfterEarlierWriteClobberedPrefersFailLoud(t *test
 // content (wrote=true) but is clobbered back to a torn/empty (not absent)
 // registry before verification, and every subsequent attempt reads torn/empty
 // too — so the run exhausts on the Empty outcome, not the Absent outcome.
-// sawAbsentRegistry is never set in this run (the registry is never
-// classified absent), so the Empty outcome exhaustion branch's mixed-
-// sequence condition (`sawAbsentRegistry || sawWrote`) is only true because
-// of sawWrote — this test proves that disjunct is genuinely exercised, not
-// just the sawAbsentRegistry side already covered by the absent-branch test.
+// No pass finds the registry Absent in this run, so the mixed-sequence
+// condition of the Empty exhaustion (evidence of an Absent pass or of a
+// write) is only true because of the write — this test proves that term is
+// genuinely exercised, not just the Absent side covered by the absent test.
 func TestPropagateLoop_EmptyRegistryExhaustsAfterEarlierWriteClobberedPrefersFailLoud(t *testing.T) {
 	const registryPath = "/fake/registry.md"
 	const contractFilePath = "/fake/contract.md"
@@ -3112,8 +3110,8 @@ func TestPropagateLoop_EmptyRegistryExhaustsAfterEarlierWriteClobberedPrefersFai
 		}
 		registryReads++
 		if registryReads == 1 {
-			// Attempt 1's initial read inside core: a valid, unscoped
-			// registry, so core decides to write.
+			// Attempt 1's initial read: a valid, unscoped registry, so the
+			// pass decides to write.
 			return []byte(minimalRegistry), nil
 		}
 		// Attempt 1's post-write verification read, and every subsequent
