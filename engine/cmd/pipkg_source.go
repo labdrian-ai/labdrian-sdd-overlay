@@ -23,11 +23,11 @@ var repositoryLocatingVariables = map[string]bool{
 // pipkgGitOptions are the two choices the program makes for the git the package builder asks
 // about its overlay. Git runs under the environment of the process without the variables that
 // locate a repository (repositoryLocatingVariables), in the order the process had it, and under
-// pipkgGitTimeout per call. Both live here, in one place, so that changing either is a change to
-// this function and to nothing the builder does. environ is the process environment as the entry point read
-// it; an empty one stays empty, never nil, because the adapter reads nil as "the environment of
-// the process".
-func pipkgGitOptions(environ []string) gitsource.Options {
+// the timeout given per call, which production sets to pipkgGitTimeout (newPipkgSource) and a test
+// sets to something short, so no package variable is touched. environ is the process environment
+// as the entry point read it; an empty one stays empty, never nil, because the adapter reads nil
+// as "the environment of the process".
+func pipkgGitOptions(environ []string, timeout time.Duration) gitsource.Options {
 	kept := make([]string, 0, len(environ))
 	for _, entry := range environ {
 		name, _, _ := strings.Cut(entry, "=")
@@ -35,7 +35,7 @@ func pipkgGitOptions(environ []string) gitsource.Options {
 			kept = append(kept, entry)
 		}
 	}
-	return gitsource.Options{Env: kept, Timeout: pipkgGitTimeout}
+	return gitsource.Options{Env: kept, Timeout: timeout}
 }
 
 // pipkgGitTimeout stops one git call that runs longer (owner decision 2 of batch 20, 2026-10-09).
@@ -55,7 +55,15 @@ func pipkgGitRunner() execrunner.Runner {
 }
 
 // newPipkgSource is the git of the machine as the SourceRepo of the package builder: the
-// process adapter starts it, the adapter of the port asks it, under pipkgGitOptions.
+// process adapter starts it, the adapter of the port asks it, under pipkgGitOptions and the
+// deadline the owner decided, pipkgGitTimeout.
 func newPipkgSource(environ []string) pipkg.SourceRepo {
-	return gitsource.New(pipkgGitRunner(), pipkgGitOptions(environ))
+	return newPipkgSourceWithin(environ, pipkgGitTimeout)
+}
+
+// newPipkgSourceWithin is newPipkgSource under another deadline per git call. It is the one
+// place the runner and the options meet, so a test that hands it a short deadline proves that the
+// deadline reaches the runner and stops a git that hangs.
+func newPipkgSourceWithin(environ []string, timeout time.Duration) pipkg.SourceRepo {
+	return gitsource.New(pipkgGitRunner(), pipkgGitOptions(environ, timeout))
 }
