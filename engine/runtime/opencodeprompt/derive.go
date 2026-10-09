@@ -7,6 +7,13 @@ import (
 // MalformedContractError says that the text of the contract at Path does not parse. It names the
 // file, so a person can open it, and wraps the parse error, so a caller can still tell what is
 // wrong with it.
+//
+// Every contract that does not parse ends Derive with this error, the optional one too. That is
+// the owner's decision of 2026-10-09 (R3-opencode-secondary-contract-silent-drop, deferred to H26
+// in batch 8). Before it, an optional contract that did not parse was dropped without a word, so a
+// plugin could ship without its oo-quality guard and nothing said why. No branch decides anything
+// now: the two places that parse a contract return this error, and a different decision is a
+// change to those two places and to the tests in derive_test.go.
 type MalformedContractError struct {
 	// Path is the contract as the prompt config knows it (skills/_shared/...).
 	Path string
@@ -19,26 +26,14 @@ func (e *MalformedContractError) Error() string { return e.Path + ": " + e.Err.E
 // Unwrap lets errors.Is and errors.As reach the parse error.
 func (e *MalformedContractError) Unwrap() error { return e.Err }
 
-// onMalformed is what the loader does with a contract whose frontmatter does not parse, and the
-// one place that says so: it returns the error that abandons the whole prompt config. Every
-// contract is treated alike, the optional one too.
-//
-// That is the owner's decision of 2026-10-09 (R3-opencode-secondary-contract-silent-drop, deferred
-// to H26 in batch 8). Before it, an optional contract that did not parse was dropped without a
-// word, so a plugin could ship without its oo-quality guard and nothing said why. A different
-// decision is a change to this function and to the test in policy_internal_test.go, nothing else.
-func onMalformed(path string, parseErr error) error {
-	return &MalformedContractError{Path: path, Err: parseErr}
-}
-
 // Derive builds the prompt config from the contracts the source gives: the minimalism contract,
 // which fills the top-level fields and is unconditional in OpenCode (it has no context to hand
 // the plugin), then the anti-generic-design guard, then the oo-quality contract when the overlay
 // has one. The unconditional contracts keep that order whatever the optional file holds.
 //
 // The source is asked in that order and no further after a failure. A source that cannot read a
-// contract fails Derive with its own error; a contract that cannot be parsed fails it with the
-// error of onMalformed, whichever contract it is.
+// contract fails Derive with its own error; a contract that cannot be parsed fails it with a
+// *MalformedContractError, whichever contract it is.
 func Derive(source ContractSource) (PromptConfig, error) {
 	text, err := source.Minimalism()
 	if err != nil {
@@ -46,7 +41,7 @@ func Derive(source ContractSource) (PromptConfig, error) {
 	}
 	doc, err := contract.Parse(text)
 	if err != nil {
-		return PromptConfig{}, onMalformed(MinimalismContractPath, err)
+		return PromptConfig{}, &MalformedContractError{Path: MinimalismContractPath, Err: err}
 	}
 	minimalism := entryFor(MinimalismContractPath, doc, contract.Context{})
 	contracts := []ContractConfig{minimalism}
@@ -79,7 +74,7 @@ func Derive(source ContractSource) (PromptConfig, error) {
 func withContract(contracts []ContractConfig, path, text string) ([]ContractConfig, error) {
 	doc, needs, err := contract.ParseBoth(text)
 	if err != nil {
-		return nil, onMalformed(path, err)
+		return nil, &MalformedContractError{Path: path, Err: err}
 	}
 	return append(contracts, entryFor(path, doc, needs)), nil
 }
