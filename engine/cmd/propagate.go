@@ -119,11 +119,6 @@ func runPropagate(args []string) {
 // propagateCommand is the testable core of the command: the registry store, the reader of the
 // contract file and the exit are handed in, so a test can run every branch without a file system.
 // It does not take the lock; runPropagate does, before this runs.
-//
-// Which entry a test calls: a test that needs the real file store, or its own fake of the port, calls
-// propagateCommand; a test that scripts a registry with two plain functions (the goldens and most of
-// the command's tests) calls runPropagateFuncs (propagate_helpers_test.go), which only wraps them
-// into a RegistryStore and calls this.
 func propagateCommand(
 	args []string,
 	stdout io.Writer,
