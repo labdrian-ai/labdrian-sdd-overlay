@@ -139,3 +139,21 @@ func installedGentlePiVersion(home string) string {
 	}
 	return pkg.Version
 }
+
+// isPiMcpRegistered reports whether destDir/mcp.json exists, parses, and
+// carries an mcpServers.longterm-mem entry -- the proof `longterm-mem
+// register --target pi` ran (read-only probe; never written here).
+func isPiMcpRegistered(destDir string) bool {
+	raw, err := os.ReadFile(filepath.Join(destDir, "mcp.json"))
+	if err != nil {
+		return false
+	}
+	var mcp struct {
+		MCPServers map[string]json.RawMessage `json:"mcpServers"`
+	}
+	if json.Unmarshal(raw, &mcp) != nil {
+		return false
+	}
+	_, ok := mcp.MCPServers["longterm-mem"]
+	return ok
+}
