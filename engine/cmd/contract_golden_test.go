@@ -515,7 +515,7 @@ func contractGoldenCases() []contractGoldenCase {
 			w.opencodeInstall(contractDoc(fmApplies, fmExcluded, fmInject, "language_context: typescript"), "")
 			w.opencodeInstall(contractDoc(fmApplies, fmExcluded, fmInject, "context_operator: prompt_contains"), "")
 		}},
-		{"runtime-opencode-phases-without-brackets-accepted-today", func(w *contractWorld) {
+		{"runtime-opencode-refuses-phases-without-brackets", func(w *contractWorld) {
 			w.opencodeInstall(contractDoc("applies_to_phases: sdd-tasks, sdd-apply", fmExcluded, fmInject), "")
 		}},
 		{"runtime-opencode-refuses-oo-phases-without-brackets", func(w *contractWorld) {
@@ -525,7 +525,7 @@ func contractGoldenCases() []contractGoldenCase {
 		{"runtime-opencode-phases-quoted-items-accepted-today", func(w *contractWorld) {
 			w.opencodeInstall(contractDoc(`applies_to_phases: ["sdd-tasks", 'sdd-apply']`, `excluded_phases: ["sdd-propose"]`, fmInject), "")
 		}},
-		{"runtime-opencode-excluded-with-no-value-accepted-today", func(w *contractWorld) {
+		{"runtime-opencode-refuses-excluded-with-no-value", func(w *contractWorld) {
 			w.opencodeInstall(contractDoc(fmApplies, "excluded_phases:", fmInject), "")
 		}},
 	}
