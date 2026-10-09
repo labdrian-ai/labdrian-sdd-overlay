@@ -10,6 +10,12 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
 )
 
+// Two packages are imported here, and the split is deliberate: runtimecore (runtime/core) holds the
+// vocabulary and the ports of the lifecycle that every runtime shares (Target, Adapter,
+// LifecycleResult, Registry, Config); runtimepkg (runtime) holds the adapters, the Register
+// functions, and the ports that only one adapter uses, such as the Pi adapter's CommandRunner and
+// PackageBuilder, which the adapter owns (H24).
+
 // newRuntimeRegistry is the one place the runtimes the program ships are named. The order is the
 // order `--target all` acts on them in. Pi reaches its CLI through commands and builds its package
 // from the skills registry that registries reads, asking git about the overlay through source,
