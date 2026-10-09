@@ -2,6 +2,8 @@ package main
 
 import (
 	"errors"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -89,6 +91,28 @@ func TestLazyBindingsAnswersEveryOperationWithTheReasonTheStoreCouldNotBeOpened(
 	}
 	if opened != 1 {
 		t.Errorf("the store was opened %d times, want once: the failure is kept", opened)
+	}
+}
+
+func TestLazyBindingsOpensTheStoreOnceWhenSeveralGoroutinesAskAtTheSameTime(t *testing.T) {
+	var opened atomic.Int32
+	lazy := &lazyBindings{open: func() (projection.BindingStore, error) {
+		opened.Add(1)
+		return &recordingBindings{}, nil
+	}}
+
+	var wg sync.WaitGroup
+	for i := 0; i < 16; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_, _ = lazy.get()
+		}()
+	}
+	wg.Wait()
+
+	if opened.Load() != 1 {
+		t.Fatalf("the store was opened %d times, want once", opened.Load())
 	}
 }
 

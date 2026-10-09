@@ -489,6 +489,8 @@ func TestBindingRefusalSaysEachRefusalInTheWordsOfTheVerbs(t *testing.T) {
 		{"a binding that changed after it was judged stale", &app.BindingStoreError{Err: fmt.Errorf("%w: it was removed", projection.ErrBindingChanged)}, `projection store: the binding changed since it was read: it was removed; run 'workflow binding' to see what is bound now, then retry`},
 		{"a binding that appeared between the check and the write", &app.BindingStoreError{Err: fmt.Errorf("%w: it is bound to workflow %q of project %q", projection.ErrAlreadyBound, "wf-2", "proj-2")}, `projection store: the repository is already bound to a different workflow: it is bound to workflow "wf-2" of project "proj-2"; run 'workflow unbind' first to bind another`},
 		{"a store that failed", &app.BindingStoreError{Err: projection.ErrBindingBusy}, projection.ErrBindingBusy.Error()},
+		{"a store that refused a file that is not ours", &app.BindingStoreError{Err: projection.ErrRefuseForeignBinding}, projection.ErrRefuseForeignBinding.Error()},
+		{"an error of no type of the use case", errors.New("something else"), "something else"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
