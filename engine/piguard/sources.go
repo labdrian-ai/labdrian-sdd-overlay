@@ -33,14 +33,17 @@ type Reporter interface {
 // What the scan reads is syntax, and it says what it cannot see. It finds the call under the name
 // the file gave os/exec (`exec` or an alias), and the program named by a string literal or by a
 // string constant declared with a literal at the top of a file of dir. It does not follow a
-// variable, a function result, a constant declared inside a function, a dot import, or a program
-// built by joining strings: those are the limits that TestCheckTestSourcesStatesItsLimits pins,
-// so a change that widens the scan shows up as a test to rewrite, not as a silent gap. A constant
-// declared inside a function is not read at all, and a name is looked up in the constants of the
-// whole package without regard to scope, so a function-level constant that shadows a package-level
-// one with another value is read as the package-level one: the scan can report a start that is
-// not one, or miss one (TestCheckTestSourcesReadsAShadowedConstantAsThePackageOne pins both). The first line of defence is the PATH of the run, whose `pi`
-// refuses to run (Install); this scan is the second.
+// variable, a function result, a dot import, or a program built by joining strings; and it does
+// not read a constant declared inside a function, whose name is looked up in the constants of the
+// whole package without regard to scope. A function-level constant that shadows a package-level
+// one with another value is therefore read as the package-level one, so the scan can report a
+// start that is not one, or miss one. TestCheckTestSourcesStatesItsLimits pins a variable, a
+// function result, a constant in a function and joined strings, and
+// TestCheckTestSourcesReadsAShadowedConstantAsThePackageOne pins the shadowing, so a change that
+// widens the scan shows up as a test to rewrite, not as a silent gap.
+//
+// The first line of defence is the PATH of the run, whose `pi` refuses to run (Install); this
+// scan is the second.
 func CheckTestSources(t Reporter, dir string) {
 	t.Helper()
 	files, err := filepath.Glob(filepath.Join(dir, "*_test.go"))
