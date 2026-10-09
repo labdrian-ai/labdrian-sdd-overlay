@@ -14,7 +14,7 @@ import (
 // through the port. It refuses a nil one: an adapter built without it would fail at the first
 // lifecycle step it runs, long after the program was wired.
 func RegisterClaude(r *core.Registry, hooks HookInstaller) error {
-	if hooks == nil {
+	if missing(hooks) {
 		return fmt.Errorf("runtime %q registered with no hook installer", core.TargetClaude)
 	}
 	return r.Register(core.TargetClaude, func(cfg core.Config) core.Adapter { return NewClaudeAdapter(cfg.ClaudeRoot(), hooks) })

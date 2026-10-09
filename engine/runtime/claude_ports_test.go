@@ -124,10 +124,38 @@ func TestClaudeAdapterWithoutAUsableRootNeverReachesThePort(t *testing.T) {
 	}
 }
 
+// An adapter built with no port, by a caller that did not go through RegisterClaude, answers every
+// step with a result that says so, where it used to panic on the first call. A typed nil (a nil
+// pointer that implements the port) is no port either.
+func TestClaudeAdapterWithoutAHookInstallerSaysSoInsteadOfPanicking(t *testing.T) {
+	var typedNil *nilInstaller
+	for name, hooks := range map[string]engineRuntime.HookInstaller{"nil": nil, "typed nil": typedNil} {
+		adapter := engineRuntime.NewClaudeAdapter(t.TempDir(), hooks)
+		for _, result := range []core.LifecycleResult{adapter.Install(), adapter.Update(), adapter.Status(), adapter.Uninstall()} {
+			if result.Status != core.CapabilityUnsupported || !strings.Contains(result.Message, "hook installer") {
+				t.Errorf("%s port, %s = %q %q, want unsupported saying there is no hook installer", name, result.Action, result.Status, result.Message)
+			}
+		}
+	}
+}
+
+// nilInstaller is a HookInstaller whose methods would dereference their receiver.
+type nilInstaller struct{ calls int }
+
+func (n *nilInstaller) Install(string, string) error   { n.calls++; return nil }
+func (n *nilInstaller) Uninstall(string, string) error { n.calls++; return nil }
+func (n *nilInstaller) Inspect(string, string) (bool, bool, error) {
+	n.calls++
+	return false, false, nil
+}
+
 // RegisterClaude takes the Claude runtime only with its port, so an adapter never fails at its
 // first lifecycle step.
 func TestRegisterClaudeRefusesAMissingHookInstaller(t *testing.T) {
-	if err := engineRuntime.RegisterClaude(core.NewRegistry(), nil); err == nil {
-		t.Fatal("RegisterClaude accepted a nil HookInstaller")
+	var typedNil *nilInstaller
+	for name, hooks := range map[string]engineRuntime.HookInstaller{"nil": nil, "typed nil": typedNil} {
+		if err := engineRuntime.RegisterClaude(core.NewRegistry(), hooks); err == nil {
+			t.Errorf("RegisterClaude accepted a %s HookInstaller", name)
+		}
 	}
 }

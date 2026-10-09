@@ -102,8 +102,12 @@ func (a ClaudeAdapter) status() core.LifecycleResult {
 
 // configPaths resolves the settings file and the hook command from the Claude root: the file is
 // <root>/settings.json and the binary its hooks run is <root>/bin/gentle-ai-overlay. A root that
-// is blank or not absolute names neither.
+// is blank or not absolute names neither, and an adapter built without its hook installer cannot
+// work at all.
 func (a ClaudeAdapter) configPaths() (settingsPath, hookCommand string, err error) {
+	if missing(a.hooks) {
+		return "", "", errors.New("Claude hook installer is not set; the adapter was built without one")
+	}
 	if strings.TrimSpace(a.root) == "" {
 		return "", "", errors.New("Claude config root could not be resolved; set HOME")
 	}
