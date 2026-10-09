@@ -10,6 +10,7 @@ package execrunner
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"os/exec"
 	"time"
@@ -20,12 +21,44 @@ import (
 // deadline that has already expired.
 const killGrace = 2 * time.Second
 
-// Runner starts programs of the machine. It holds no state; New exists so a caller names the
-// adapter it wires.
-type Runner struct{}
+// ErrOutputTooLarge is what Output returns when a program prints more on either stream than the
+// bound the runner was given, after it has stopped the program.
+var ErrOutputTooLarge = errors.New("output is larger than the bound")
+
+// Runner starts programs of the machine. It holds no state of a run; New exists so a caller names
+// the adapter it wires.
+type Runner struct {
+	maxOutput int64
+}
 
 // New returns the process adapter.
 func New() Runner { return Runner{} }
+
+// WithMaxOutput is the runner with a bound, in bytes, on what Output holds of each stream: a
+// program that prints more is stopped and Output returns ErrOutputTooLarge. Zero is no bound,
+// which is what New returns. Run, which returns a combined stream, is not bounded.
+func (r Runner) WithMaxOutput(n int64) Runner {
+	r.maxOutput = n
+	return r
+}
+
+// cappedBuffer collects what a program prints up to a bound and stops the program when it goes
+// over, so a runaway output cannot fill memory.
+type cappedBuffer struct {
+	buf    bytes.Buffer
+	max    int64
+	cancel context.CancelFunc
+	over   bool
+}
+
+func (c *cappedBuffer) Write(p []byte) (int, error) {
+	if c.max > 0 && int64(c.buf.Len()+len(p)) > c.max {
+		c.over = true
+		c.cancel()
+		return 0, ErrOutputTooLarge
+	}
+	return c.buf.Write(p)
+}
 
 // LookPath is the path of the program name on the PATH of the process.
 func (Runner) LookPath(name string) (string, error) { return exec.LookPath(name) }
@@ -48,17 +81,24 @@ func (Runner) Run(ctx context.Context, bin string, args ...string) ([]byte, erro
 // output and on standard error apart, even when it failed, because a caller that parses the
 // first must not find the second in it. env is the whole environment of the program: nothing of
 // the process is added to it. A nil env gives the program the environment of the process, as
-// exec.Command does. The program is stopped when ctx ends, and the error then wraps the reason.
-func (Runner) Output(ctx context.Context, env []string, bin string, args ...string) (stdout, stderr []byte, err error) {
+// exec.Command does. The program is stopped when ctx ends, and the error then wraps the reason;
+// it is stopped too when it prints more than the bound of WithMaxOutput on a stream.
+func (r Runner) Output(ctx context.Context, env []string, bin string, args ...string) (stdout, stderr []byte, err error) {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 	cmd := exec.CommandContext(ctx, bin, args...)
 	cmd.Env = env
 	cmd.WaitDelay = killGrace
-	var out, errOut bytes.Buffer
-	cmd.Stdout = &out
-	cmd.Stderr = &errOut
+	out := &cappedBuffer{max: r.maxOutput, cancel: cancel}
+	errOut := &cappedBuffer{max: r.maxOutput, cancel: cancel}
+	cmd.Stdout = out
+	cmd.Stderr = errOut
 	err = cmd.Run()
-	if err != nil && ctx.Err() != nil {
+	switch {
+	case out.over || errOut.over:
+		err = fmt.Errorf("%w (%d bytes at most)", ErrOutputTooLarge, r.maxOutput)
+	case err != nil && ctx.Err() != nil:
 		err = fmt.Errorf("%w (%v)", ctx.Err(), err)
 	}
-	return out.Bytes(), errOut.Bytes(), err
+	return out.buf.Bytes(), errOut.buf.Bytes(), err
 }

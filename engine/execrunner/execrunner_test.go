@@ -254,3 +254,50 @@ wait`)
 		t.Errorf("Output took %v, want it back within %v", time.Since(started), bound)
 	}
 }
+
+// ---- a bound on what Output holds in memory ----
+
+func TestOutputStopsAProgramThatPrintsMoreThanTheBound(t *testing.T) {
+	bin := fakeBinary(t, "git", `i=0; while [ $i -lt 2000 ]; do printf 'xxxxxxxxxx'; i=$((i+1)); done`)
+
+	stdout, _, err := New().WithMaxOutput(1000).Output(context.Background(), nil, bin)
+	if !errors.Is(err, ErrOutputTooLarge) {
+		t.Fatalf("err = %v, want ErrOutputTooLarge", err)
+	}
+	if len(stdout) > 1000 {
+		t.Errorf("held %d bytes, want no more than the bound of 1000", len(stdout))
+	}
+}
+
+func TestOutputBoundsStandardErrorToo(t *testing.T) {
+	bin := fakeBinary(t, "git", `i=0; while [ $i -lt 2000 ]; do printf 'xxxxxxxxxx' >&2; i=$((i+1)); done`)
+	_, stderr, err := New().WithMaxOutput(1000).Output(context.Background(), nil, bin)
+	if !errors.Is(err, ErrOutputTooLarge) || len(stderr) > 1000 {
+		t.Fatalf("err = %v, held %d bytes of stderr, want ErrOutputTooLarge and at most 1000", err, len(stderr))
+	}
+}
+
+func TestOutputUnderTheBoundAndWithoutOneIsUnchanged(t *testing.T) {
+	bin := fakeBinary(t, "git", `printf 'twelve bytes'`)
+	for name, runner := range map[string]Runner{"under": New().WithMaxOutput(12), "none": New()} {
+		stdout, _, err := runner.Output(context.Background(), nil, bin)
+		if err != nil || string(stdout) != "twelve bytes" {
+			t.Errorf("%s: stdout=%q err=%v, want the output whole", name, stdout, err)
+		}
+	}
+}
+
+// A program that goes on after its output is refused is stopped, not waited for.
+func TestOutputStopsAProgramThatKeepsRunningAfterTheBound(t *testing.T) {
+	bin := fakeBinary(t, "git", `trap '' PIPE
+i=0; while [ $i -lt 600 ]; do printf xxxxxxxxxx; i=$((i+1)); done
+exec /bin/sleep 30`)
+	started := time.Now()
+	_, _, err := New().WithMaxOutput(1000).Output(context.Background(), nil, bin)
+	if !errors.Is(err, ErrOutputTooLarge) {
+		t.Fatalf("err = %v, want ErrOutputTooLarge", err)
+	}
+	if bound := killGrace + 5*time.Second; time.Since(started) > bound {
+		t.Errorf("Output took %v, want it back within %v: the program was waited for", time.Since(started), bound)
+	}
+}

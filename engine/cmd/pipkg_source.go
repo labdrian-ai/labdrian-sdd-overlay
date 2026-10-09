@@ -16,8 +16,14 @@ func pipkgGitOptions(environ []string) gitsource.Options {
 	return gitsource.Options{Env: environ}
 }
 
+// pipkgGitMaxOutput bounds what the program holds of one stream of one git call. The only large
+// answer is the archive of the sources, about 1 MiB for this overlay; 256 MiB leaves it room to
+// grow a hundredfold and stops a runaway before it fills memory.
+const pipkgGitMaxOutput = 256 << 20
+
 // newPipkgSource is the git of the machine as the SourceRepo of the package builder: the
-// process adapter starts it, the adapter of the port asks it, under pipkgGitOptions.
+// process adapter starts it (bounded by pipkgGitMaxOutput), the adapter of the port asks it,
+// under pipkgGitOptions.
 func newPipkgSource(environ []string) pipkg.SourceRepo {
-	return gitsource.New(execrunner.New(), pipkgGitOptions(environ))
+	return gitsource.New(execrunner.New().WithMaxOutput(pipkgGitMaxOutput), pipkgGitOptions(environ))
 }
