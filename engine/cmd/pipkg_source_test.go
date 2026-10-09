@@ -3,6 +3,7 @@ package main
 import (
 	"strings"
 	"testing"
+	"time"
 )
 
 // decidedRepositoryLocatingVariables is the owner's decision of 2026-10-09 (batch 20, decision 1)
@@ -66,12 +67,12 @@ func TestGitEnvironmentIsFilteredByName(t *testing.T) {
 	}
 }
 
-// Git runs under no deadline, as before the builder had a port for it (decision 2 of batch 20 is
-// held by the owner). Changing it is a behavior change: a test that fails here is a reminder of
-// that, not of a bug.
-func TestGitRunsUnderNoDeadline(t *testing.T) {
-	if got := pipkgGitOptions([]string{"PATH=/usr/bin"}).Timeout; got != 0 {
-		t.Errorf("git runs under a deadline of %v, want none", got)
+// Git runs under a deadline of two minutes per call (owner decision 2 of batch 20, 2026-10-09):
+// every call is local and takes milliseconds, the heaviest (status and archive) seconds, so a git
+// that runs past it is stuck, and it is reported as a git that could not answer.
+func TestGitRunsUnderTheDecidedDeadline(t *testing.T) {
+	if got := pipkgGitOptions([]string{"PATH=/usr/bin"}).Timeout; got != 2*time.Minute {
+		t.Errorf("git runs under a deadline of %v, want 2m0s", got)
 	}
 }
 

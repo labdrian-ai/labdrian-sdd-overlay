@@ -2,6 +2,7 @@ package main
 
 import (
 	"strings"
+	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/execrunner"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/pipkg"
@@ -22,9 +23,8 @@ var repositoryLocatingVariables = map[string]bool{
 // pipkgGitOptions are the two choices the program makes for the git the package builder asks
 // about its overlay. Git runs under the environment of the process without the variables that
 // locate a repository (repositoryLocatingVariables), in the order the process had it, and under
-// no deadline, as before the builder had a port for git (the deadline is a decision the owner has
-// not made). Both live here, in one place, so that changing either is a change to this function
-// and to nothing the builder does. environ is the process environment as the entry point read
+// pipkgGitTimeout per call. Both live here, in one place, so that changing either is a change to
+// this function and to nothing the builder does. environ is the process environment as the entry point read
 // it; an empty one stays empty, never nil, because the adapter reads nil as "the environment of
 // the process".
 func pipkgGitOptions(environ []string) gitsource.Options {
@@ -35,8 +35,14 @@ func pipkgGitOptions(environ []string) gitsource.Options {
 			kept = append(kept, entry)
 		}
 	}
-	return gitsource.Options{Env: kept}
+	return gitsource.Options{Env: kept, Timeout: pipkgGitTimeout}
 }
+
+// pipkgGitTimeout stops one git call that runs longer (owner decision 2 of batch 20, 2026-10-09).
+// Every call is local and takes milliseconds, the heaviest (status and archive of a large tree)
+// seconds; a git past two minutes is stuck, and the builder reports it as a git that could not
+// answer instead of hanging.
+const pipkgGitTimeout = 2 * time.Minute
 
 // pipkgGitMaxOutput bounds what the program holds of one stream of one git call. The only large
 // answer is the archive of the sources, about 1 MiB for this overlay; 256 MiB leaves it room to
