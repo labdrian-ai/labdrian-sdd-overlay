@@ -6,6 +6,7 @@ import (
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/pipkg"
 	runtimepkg "github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime"
+	runtimecore "github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime/core"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
 )
 
@@ -13,13 +14,13 @@ import (
 // order `--target all` acts on them in. Pi reaches its CLI through commands and builds its package
 // from the skills registry that registries reads, asking git about the overlay through source,
 // under the pipkg options of the run.
-func newRuntimeRegistry(registries skills.RegistryRepository, commands runtimepkg.CommandRunner, source pipkg.SourceRepo, packages pipkg.Options) (*runtimepkg.Registry, error) {
-	r := runtimepkg.NewRegistry()
-	for _, register := range []func(*runtimepkg.Registry) error{
+func newRuntimeRegistry(registries skills.RegistryRepository, commands runtimepkg.CommandRunner, source pipkg.SourceRepo, packages pipkg.Options) (*runtimecore.Registry, error) {
+	r := runtimecore.NewRegistry()
+	for _, register := range []func(*runtimecore.Registry) error{
 		runtimepkg.RegisterClaude,
 		runtimepkg.RegisterOpenCode,
 		runtimepkg.RegisterCodex,
-		func(r *runtimepkg.Registry) error {
+		func(r *runtimecore.Registry) error {
 			return runtimepkg.RegisterPi(r, runtimepkg.PiPorts{
 				Commands: commands,
 				Packages: pipkg.Packages{Registries: registries, Source: source, Options: packages},
@@ -35,8 +36,8 @@ func newRuntimeRegistry(registries skills.RegistryRepository, commands runtimepk
 
 // buildRuntimeAdapters builds the adapter of every target, or none: the first target the registry
 // cannot build is the error.
-func buildRuntimeAdapters(registry *runtimepkg.Registry, targets []runtimepkg.Target, cfg runtimepkg.Config) ([]runtimepkg.Adapter, error) {
-	adapters := make([]runtimepkg.Adapter, 0, len(targets))
+func buildRuntimeAdapters(registry *runtimecore.Registry, targets []runtimecore.Target, cfg runtimecore.Config) ([]runtimecore.Adapter, error) {
+	adapters := make([]runtimecore.Adapter, 0, len(targets))
 	for _, target := range targets {
 		adapter, err := registry.New(target, cfg)
 		if err != nil {
@@ -55,14 +56,14 @@ const piSkipSubagentsVariable = "LABDRIAN_PI_SKIP_SUBAGENTS"
 // down as a value. The home is $HOME without surrounding space, else the one the system names
 // for the user, else empty: an adapter never guesses where a home is. The caller sets ConfigRoot
 // when the command line gave a --config-root.
-func runtimeConfigFromEnv(getenv func(string) string, userHomeDir func() (string, error)) runtimepkg.Config {
+func runtimeConfigFromEnv(getenv func(string) string, userHomeDir func() (string, error)) runtimecore.Config {
 	home := strings.TrimSpace(getenv("HOME"))
 	if home == "" {
 		if dir, err := userHomeDir(); err == nil {
 			home = dir
 		}
 	}
-	return runtimepkg.Config{
+	return runtimecore.Config{
 		Home:          home,
 		XDGConfigHome: getenv("XDG_CONFIG_HOME"),
 		CodexHome:     getenv("CODEX_HOME"),
