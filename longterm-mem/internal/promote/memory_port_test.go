@@ -71,7 +71,8 @@ func TestSync_ReadsTheLiveObservationsThroughItsMemoryPort(t *testing.T) {
 
 func TestSync_AFailingMemoryPortIsTheRunsError(t *testing.T) {
 	broken := errors.New("memory store offline")
-	deps := Deps{Memory: &fakeMemory{listErr: broken}, Writer: &Writer{VaultRoot: t.TempDir(), Pages: pagesIn(t.TempDir()), Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Clock: &fakeClock{at: testInstant}}}
+	root := t.TempDir()
+	deps := Deps{Memory: &fakeMemory{listErr: broken}, Writer: &Writer{VaultRoot: root, Pages: pagesIn(root), Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Clock: &fakeClock{at: testInstant}}}
 
 	if _, err := Sync(context.Background(), deps, "labdrian-sdd-overlay"); !errors.Is(err, broken) {
 		t.Fatalf("Sync = %v, want an error that wraps the port's own", err)

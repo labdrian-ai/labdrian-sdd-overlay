@@ -98,7 +98,8 @@ func TestPromote_AsksTheAllocatorWithTheCallersContext(t *testing.T) {
 	type key struct{}
 	ctx := context.WithValue(t.Context(), key{}, "the caller's")
 	allocator := &countingAddresses{AddressAllocator: staticAddress(testAddress)}
-	w := &Writer{VaultRoot: t.TempDir(), Pages: pagesIn(t.TempDir()), Store: PrecedenceStore{}, Precedence: &memPrecedence{}, AddressMap: &memAddressMap{}, Addresses: allocator, Clock: &fakeClock{at: testInstant}}
+	root := t.TempDir()
+	w := &Writer{VaultRoot: root, Pages: pagesIn(root), Store: PrecedenceStore{}, Precedence: &memPrecedence{}, AddressMap: &memAddressMap{}, Addresses: allocator, Clock: &fakeClock{at: testInstant}}
 	obs := memory.Observation{ID: 704, Type: "decision", Title: "Context", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1, Pinned: true}
 
 	if _, err := w.Promote(ctx, obs, false); err != nil {

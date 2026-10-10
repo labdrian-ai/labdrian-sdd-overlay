@@ -158,7 +158,8 @@ func TestPromote_AnAddressTheMapCannotRecordMeansNothingIsWritten(t *testing.T) 
 // to, at the instant its clock gave.
 func TestPromote_EntersTheNewPageInTheAddressMap(t *testing.T) {
 	addresses := &memAddressMap{}
-	w := &Writer{VaultRoot: t.TempDir(), Pages: pagesIn(t.TempDir()), Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Addresses: staticAddress(testAddress), AddressMap: addresses, Clock: &fakeClock{at: testInstant}}
+	root := t.TempDir()
+	w := &Writer{VaultRoot: root, Pages: pagesIn(root), Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Addresses: staticAddress(testAddress), AddressMap: addresses, Clock: &fakeClock{at: testInstant}}
 	obs := memory.Observation{ID: 705, Type: "decision", Title: "Recorded", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1, Pinned: true}
 
 	result, err := w.Promote(t.Context(), obs, false)
@@ -182,7 +183,8 @@ func TestLintPage_ChecksTheAddressMapItIsHanded(t *testing.T) {
 	}
 	addressMapDetails := func(addresses AddressMapReader) []string {
 		var details []string
-		for _, d := range LintPage(page, t.TempDir(), pagesIn(t.TempDir()), addresses) {
+		root := t.TempDir()
+		for _, d := range LintPage(page, root, pagesIn(root), addresses) {
 			if d.Rule == "address-map" {
 				details = append(details, d.Detail)
 			}

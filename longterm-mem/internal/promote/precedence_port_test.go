@@ -56,7 +56,8 @@ func TestPromote_RefusesATypedNilPrecedenceRepository(t *testing.T) {
 // Sync is refused the same way, before it lists a thing.
 func TestSync_RefusesAWriterWithoutAPrecedenceRepository(t *testing.T) {
 	mem := &fakeMemory{}
-	deps := Deps{Memory: mem, Writer: &Writer{VaultRoot: t.TempDir(), Pages: pagesIn(t.TempDir()), Store: PrecedenceStore{}, Clock: &fakeClock{at: testInstant}}}
+	root := t.TempDir()
+	deps := Deps{Memory: mem, Writer: &Writer{VaultRoot: root, Pages: pagesIn(root), Store: PrecedenceStore{}, Clock: &fakeClock{at: testInstant}}}
 
 	if _, err := Sync(t.Context(), deps, "labdrian-sdd-overlay"); !errors.Is(err, errNoPrecedenceRepository) {
 		t.Fatalf("Sync = %v, want errNoPrecedenceRepository", err)
@@ -67,7 +68,8 @@ func TestSync_RefusesAWriterWithoutAPrecedenceRepository(t *testing.T) {
 // repository and refuses without it before it patches a page: a patched page whose new fingerprint was
 // never recorded reads as a human's edit from then on.
 func TestPropagate_RefusesAWriterWithoutAPrecedenceRepository(t *testing.T) {
-	deps := Deps{Memory: &fakeMemory{}, Writer: &Writer{VaultRoot: t.TempDir(), Pages: pagesIn(t.TempDir()), Store: PrecedenceStore{}}}
+	root := t.TempDir()
+	deps := Deps{Memory: &fakeMemory{}, Writer: &Writer{VaultRoot: root, Pages: pagesIn(root), Store: PrecedenceStore{}}}
 
 	if _, err := Propagate(t.Context(), deps, "labdrian-sdd-overlay"); !errors.Is(err, errNoPrecedenceRepository) {
 		t.Fatalf("Propagate = %v, want errNoPrecedenceRepository", err)
