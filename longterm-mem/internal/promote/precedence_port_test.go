@@ -127,3 +127,57 @@ func TestPropagate_ReportsAPrecedenceStoreThatCannotBePersisted(t *testing.T) {
 		t.Fatalf("Propagate = %v, want the persistence failure", err)
 	}
 }
+
+// UsePrecedence pairs the two handles on the precedence store: the Writer saves the store it loaded from the
+// repository it saves through, because one call sets both. The composition root has no way to wire a store
+// loaded from one vault to a repository of another.
+func TestWriter_UsePrecedenceLoadsTheStoreFromTheRepositoryItSavesThrough(t *testing.T) {
+	repo := &memPrecedence{persisted: PrecedenceStore{"c-000042": {BodyHash: "b", FrontmatterHash: "f", PromotedRevision: 2}}}
+	w := &Writer{}
+
+	if err := w.UsePrecedence(repo); err != nil {
+		t.Fatalf("UsePrecedence = %v, want nil", err)
+	}
+	if entry, ok := w.Store.Get("c-000042"); !ok || entry.PromotedRevision != 2 {
+		t.Errorf("Store = %+v, want the store the repository holds", w.Store)
+	}
+	w.Store.Set("c-000043", PrecedenceEntry{BodyHash: "b2", FrontmatterHash: "f2"})
+	if err := w.Precedence.SavePrecedence(w.Store); err != nil {
+		t.Fatalf("SavePrecedence: %v", err)
+	}
+	if repo.saves != 1 || len(repo.persisted) != 2 {
+		t.Errorf("repo saves = %d, persisted = %+v, want the one save of the writer's store to have landed in the repository it was loaded from", repo.saves, repo.persisted)
+	}
+}
+
+// A repository that cannot be read leaves the Writer as it was, and the cause reaches the caller as it came:
+// a Writer half wired to a store it could not load would save an empty one over the file it failed to read.
+func TestWriter_UsePrecedenceKeepsTheWriterWhenTheStoreCannotBeLoaded(t *testing.T) {
+	w := &Writer{}
+	err := w.UsePrecedence(&memPrecedence{loadErr: errTestLoad})
+	if !errors.Is(err, errTestLoad) {
+		t.Fatalf("UsePrecedence = %v, want the load failure", err)
+	}
+	if w.Store != nil || w.Precedence != nil {
+		t.Errorf("Store = %+v, Precedence = %v, want the Writer untouched by a failed load", w.Store, w.Precedence)
+	}
+}
+
+// No repository is the same refusal a Writer built without one gets, typed nil included.
+func TestWriter_UsePrecedenceRefusesAMissingRepository(t *testing.T) {
+	var typedNil *memPrecedence
+	for name, repo := range map[string]PrecedenceRepository{"absent": nil, "typed nil": typedNil} {
+		t.Run(name, func(t *testing.T) {
+			w := &Writer{}
+			if err := w.UsePrecedence(repo); !errors.Is(err, errNoPrecedenceRepository) {
+				t.Fatalf("UsePrecedence = %v, want errNoPrecedenceRepository", err)
+			}
+			if w.Store != nil || w.Precedence != nil {
+				t.Errorf("Store = %+v, Precedence = %v, want the Writer untouched", w.Store, w.Precedence)
+			}
+		})
+	}
+}
+
+// errTestLoad is the failure a repository that cannot be read answers.
+var errTestLoad = errors.New("the precedence store cannot be loaded")

@@ -33,9 +33,12 @@ type Writer struct {
 	// pages of lost provenance.
 	Store PrecedenceStore
 	// Precedence persists Store: the Writer saves through it after every
-	// promotion that wrote a page, and the composition root loads Store
-	// from it. A Writer without one is refused by Promote, Sync and
-	// Propagate before they write anything.
+	// promotion that wrote a page. Store and Precedence are one pairing,
+	// the store a repository holds and the repository it is saved
+	// through, and UsePrecedence sets both from one repository so the
+	// composition root cannot wire a store loaded from one vault to the
+	// repository of another. A Writer without a repository is refused by
+	// Promote, Sync and Propagate before they write anything.
 	Precedence PrecedenceRepository
 	// Addresses hands out the address of each new page. It is asked only
 	// when a promotion needs a fresh address: re-promoting a page that
@@ -47,6 +50,24 @@ type Writer struct {
 	// refused by Promote and Sync before they touch the vault. Propagate
 	// patches pages in place and never reads the time, so it asks for none.
 	Clock Clock
+}
+
+// UsePrecedence wires the Writer to repo: it loads the precedence store from
+// repo and keeps repo as the repository the store is saved through, so the
+// two handles on the store are paired by construction. A repository that is
+// missing, or cannot be loaded, leaves the Writer as it was; the load
+// failure reaches the caller as it came.
+func (w *Writer) UsePrecedence(repo PrecedenceRepository) error {
+	if memory.IsMissing(repo) {
+		return errNoPrecedenceRepository
+	}
+	store, err := repo.LoadPrecedence()
+	if err != nil {
+		return err
+	}
+	w.Store = store
+	w.Precedence = repo
+	return nil
 }
 
 // checkPorts reports the first port the Writer needs and was not handed.
