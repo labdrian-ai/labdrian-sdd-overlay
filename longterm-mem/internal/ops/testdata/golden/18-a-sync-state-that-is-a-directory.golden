@@ -1,0 +1,40 @@
+--- doctor ---
+{
+  "project": "labdrian-sdd-overlay",
+  "checks": [
+    {
+      "name": "vault-config-resolvable",
+      "status": "PASS"
+    },
+    {
+      "name": "address-map-integrity",
+      "status": "PASS"
+    },
+    {
+      "name": "wiki-registration-consistency",
+      "status": "PASS"
+    },
+    {
+      "name": "precedence-sidecar-consistency",
+      "status": "PASS"
+    },
+    {
+      "name": "runtime-prerequisites",
+      "status": "PASS"
+    },
+    {
+      "name": "embedding-index-present",
+      "status": "PASS"
+    },
+    {
+      "name": "embedding-index-fresh",
+      "status": "PASS"
+    },
+    {
+      "name": "embedding-backend-reachable",
+      "status": "PASS"
+    }
+  ]
+}
+--- status ---
+error: ops: read <vault>/.vault-meta/longterm-mem-sync-state.json: read <vault>/.vault-meta/longterm-mem-sync-state.json: is a directory

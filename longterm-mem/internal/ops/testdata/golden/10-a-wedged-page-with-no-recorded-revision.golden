@@ -1,0 +1,47 @@
+--- doctor ---
+{
+  "project": "labdrian-sdd-overlay",
+  "checks": [
+    {
+      "name": "vault-config-resolvable",
+      "status": "PASS"
+    },
+    {
+      "name": "address-map-integrity",
+      "status": "PASS"
+    },
+    {
+      "name": "wiki-registration-consistency",
+      "status": "PASS"
+    },
+    {
+      "name": "precedence-sidecar-consistency",
+      "status": "FAIL",
+      "detail": ".raw/.longterm-mem-manifest.json records no usable promoted revision (0) for c-000042 and no longer matches that page, so every promotion of it is refused and nothing in the promotion path can repair the entry"
+    },
+    {
+      "name": "runtime-prerequisites",
+      "status": "PASS"
+    },
+    {
+      "name": "embedding-index-present",
+      "status": "PASS"
+    },
+    {
+      "name": "embedding-index-fresh",
+      "status": "PASS"
+    },
+    {
+      "name": "embedding-backend-reachable",
+      "status": "PASS"
+    }
+  ]
+}
+--- status ---
+{
+  "project": "labdrian-sdd-overlay",
+  "engram_reachable": true,
+  "vault_provisioned": false,
+  "last_sync_completed_at": "never",
+  "embedding_index_built_at": "2026-01-01T00:00:00Z"
+}
