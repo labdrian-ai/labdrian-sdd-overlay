@@ -357,7 +357,11 @@ func nextStage(profileName string, recorded []string) string {
 // plan and the PreToolUse gate enforces it, so both call this function, and can
 // never disagree about which project is permitted.
 func resolvePlan(profileName, projectID, goalID string) (memoryscope.Plan, error) {
-	directive, err := memoryscope.DefaultFor(profileName)
+	profile, err := workflowprofile.Resolve(profileName)
+	if err != nil {
+		return memoryscope.Plan{}, err
+	}
+	directive, err := memoryscope.DefaultFor(profile)
 	if err != nil {
 		return memoryscope.Plan{}, err
 	}

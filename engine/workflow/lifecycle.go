@@ -54,7 +54,7 @@ var (
 
 // gentleAIReviewCapability is the capability name recorded when a Workflow
 // Profile's review policy relies on Gentle AI's native review (receipt-
-// driven development, "RDD"). See gentleReviewProfiles.
+// driven development, "RDD"). See workflowprofile.WorkflowProfile.ReliesOnGentleReview.
 const gentleAIReviewCapability = "gentle-ai-review"
 
 // GoalReader loads the current bytes of one Goal, by project and goal id, so
@@ -293,7 +293,8 @@ func (l Lifecycle) commit(projectID, workflowID string, loaded Loaded, event Wor
 // observationsFor probes, and returns as Observations, every dependency a
 // Workflow Profile declares: its default memory sources
 // (memoryscope.DefaultFor), named "memory:<source>", plus
-// gentleAIReviewCapability when profileReliesOnGentleReview. Every
+// gentleAIReviewCapability when the profile ReliesOnGentleReview. Both are
+// typed data of the profile the catalog returns, never a function of its name. Every
 // dependency this Lifecycle does not positively confirm through l.prober is
 // recorded unavailable; it never blocks the operation and is never
 // recorded as available on its own authority (see DependencyProber). A
@@ -306,7 +307,7 @@ func (l Lifecycle) observationsFor(profileName string) ([]Observation, error) {
 	if err != nil {
 		return nil, fmt.Errorf("workflow lifecycle: %w", err)
 	}
-	directive, err := memoryscope.DefaultFor(profile.Name)
+	directive, err := memoryscope.DefaultFor(profile)
 	if err != nil {
 		return nil, fmt.Errorf("workflow lifecycle: %w", err)
 	}
@@ -314,7 +315,7 @@ func (l Lifecycle) observationsFor(profileName string) ([]Observation, error) {
 	for _, source := range directive.Sources {
 		capabilities = append(capabilities, "memory:"+string(source))
 	}
-	if profileReliesOnGentleReview(profile) {
+	if profile.ReliesOnGentleReview {
 		capabilities = append(capabilities, gentleAIReviewCapability)
 	}
 
@@ -368,27 +369,6 @@ func (l Lifecycle) probe(capabilities []string) ([]Observation, error) {
 	case <-ctx.Done():
 		return nil, fmt.Errorf("dependency prober did not return within %s: %w", l.probeTimeout, ctx.Err())
 	}
-}
-
-// gentleReviewProfiles lists the built-in Workflow Profiles whose
-// review_policy inherits Gentle AI's receipt-driven development (RDD) review:
-// odd, sdd, maintenance, and incident-recovery. standalone-minimal declares
-// "no Gentle/RDD dependency" and is excluded. The list is explicit rather
-// than derived from the policy prose, so rewording a policy cannot silently
-// change which observations a workflow records;
-// TestGentleReviewProfilesMatchReviewPolicies fails when the prose and this
-// list disagree.
-var gentleReviewProfiles = map[string]bool{
-	"odd":               true,
-	"sdd":               true,
-	"maintenance":       true,
-	"incident-recovery": true,
-}
-
-// profileReliesOnGentleReview reports whether profile inherits Gentle AI's
-// RDD review, per gentleReviewProfiles.
-func profileReliesOnGentleReview(profile workflowprofile.WorkflowProfile) bool {
-	return gentleReviewProfiles[profile.Name]
 }
 
 // goalDigest returns the SHA-256 hex digest of g's canonical Marshal

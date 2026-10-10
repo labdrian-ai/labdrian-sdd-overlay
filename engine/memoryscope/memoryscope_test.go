@@ -151,8 +151,9 @@ func TestParseDirectiveRejectsInvalidRecords(t *testing.T) {
 func TestEverySourceAndScopeIsReachableFromSomeDefault(t *testing.T) {
 	reachedSources := map[Source]bool{}
 	reachedScopes := map[Scope]bool{}
-	for name, d := range profileDefaults {
-		if _, err := DefaultFor(name); err != nil {
+	for _, name := range builtinProfileNames {
+		d, err := DefaultFor(builtinProfile(t, name))
+		if err != nil {
 			t.Fatalf("DefaultFor(%q) error = %v, want nil", name, err)
 		}
 		reachedScopes[d.Scope] = true
@@ -172,6 +173,17 @@ func TestEverySourceAndScopeIsReachableFromSomeDefault(t *testing.T) {
 	}
 }
 
+var builtinProfileNames = []string{"odd", "sdd", "standalone-minimal", "maintenance", "incident-recovery"}
+
+func builtinProfile(t *testing.T, name string) workflowprofile.WorkflowProfile {
+	t.Helper()
+	profile, err := workflowprofile.Resolve(name)
+	if err != nil {
+		t.Fatalf("workflowprofile.Resolve(%q) error = %v, want nil", name, err)
+	}
+	return profile
+}
+
 func TestDefaultForKnownProfiles(t *testing.T) {
 	tests := []struct {
 		profile     string
@@ -186,7 +198,7 @@ func TestDefaultForKnownProfiles(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.profile, func(t *testing.T) {
-			d, err := DefaultFor(tt.profile)
+			d, err := DefaultFor(builtinProfile(t, tt.profile))
 			if err != nil {
 				t.Fatalf("DefaultFor(%q) error = %v, want nil", tt.profile, err)
 			}
@@ -208,63 +220,58 @@ func TestDefaultForKnownProfiles(t *testing.T) {
 	}
 }
 
-// Every non-Engram source a profile's default grants must be named by that
-// profile's own workflowprofile.MemoryPolicy prose, so a default's read
-// ceiling is derived from the policy text rather than independently
-// interpreted.
-func TestDefaultSourcesAreNamedByProfileMemoryPolicy(t *testing.T) {
-	sourceAliases := map[Source]string{
-		SourceLongtermMem:      "long-term memory",
-		SourceProceduralSkills: "procedural skills",
+// The default is the typed data of the profile it is given, not what the catalog holds under the
+// profile's name: a profile that is called "odd" and declares a narrower memory default gets that
+// narrower directive. (That every non-Engram source a built-in default grants is named by the
+// profile's memory_policy prose is checked where the profiles are declared, in workflowprofile.)
+func TestDefaultForReadsTheProfilesOwnTypedData(t *testing.T) {
+	profile := builtinProfile(t, "odd")
+	profile.MemoryDefault = workflowprofile.MemoryDefault{Scope: workflowprofile.MemoryScopeGoal, Sources: []workflowprofile.MemorySource{workflowprofile.MemorySourceProceduralSkills}}
+
+	d, err := DefaultFor(profile)
+
+	if err != nil {
+		t.Fatalf("DefaultFor error = %v, want nil", err)
 	}
-	for name, d := range profileDefaults {
-		t.Run(name, func(t *testing.T) {
-			profile, err := workflowprofile.Resolve(name)
-			if err != nil {
-				t.Fatalf("workflowprofile.Resolve(%q) error = %v, want nil", name, err)
-			}
-			for _, s := range d.Sources {
-				alias, ok := sourceAliases[s]
-				if !ok {
-					continue // SourceEngram needs no alias check.
-				}
-				if !strings.Contains(profile.MemoryPolicy, alias) {
-					t.Errorf("profile %q grants source %q by default, but its memory_policy %q does not name %q", name, s, profile.MemoryPolicy, alias)
-				}
+	if d.Scope != ScopeGoal || len(d.Sources) != 1 || d.Sources[0] != SourceProceduralSkills {
+		t.Errorf("DefaultFor = %+v, want scope goal and only procedural-skills, as the profile declares", d)
+	}
+}
+
+// A profile that declares no memory default, or one the directive rules refuse, has no default: it
+// is refused with the profile named, and nothing is granted in its place.
+func TestDefaultForRefusesAProfileWhoseMemoryDefaultIsNotADirective(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		def     workflowprofile.MemoryDefault
+		wantErr string
+	}{
+		{"none declared", workflowprofile.MemoryDefault{}, "scope"},
+		{"an unknown scope", workflowprofile.MemoryDefault{Scope: "team", Sources: []workflowprofile.MemorySource{}}, "scope"},
+		{"an unknown source", workflowprofile.MemoryDefault{Scope: workflowprofile.MemoryScopeGoal, Sources: []workflowprofile.MemorySource{"notes"}}, "unknown source"},
+		{"a duplicate source", workflowprofile.MemoryDefault{Scope: workflowprofile.MemoryScopeGoal, Sources: []workflowprofile.MemorySource{"engram", "engram"}}, "duplicate source"},
+		{"sources at scope none", workflowprofile.MemoryDefault{Scope: workflowprofile.MemoryScopeNone, Sources: []workflowprofile.MemorySource{"engram"}}, "empty sources"},
+		{"sources not declared", workflowprofile.MemoryDefault{Scope: workflowprofile.MemoryScopeGoal}, "non-null"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := DefaultFor(workflowprofile.WorkflowProfile{Name: "custom-profile", MemoryDefault: tc.def})
+			if err == nil || !strings.Contains(err.Error(), tc.wantErr) || !strings.Contains(err.Error(), "custom-profile") {
+				t.Errorf("DefaultFor error = %v, want one naming custom-profile and containing %q", err, tc.wantErr)
 			}
 		})
 	}
 }
 
-func TestDefaultForUnknownProfileRefuses(t *testing.T) {
-	if _, err := DefaultFor("nonexistent-profile"); err == nil {
-		t.Fatal("DefaultFor(nonexistent-profile) error = nil, want an error")
+// The directive is the caller's own: changing its sources changes nothing in the profile it came from.
+func TestTheDefaultIsDetachedFromTheProfile(t *testing.T) {
+	profile := builtinProfile(t, "odd")
+	d, err := DefaultFor(profile)
+	if err != nil {
+		t.Fatal(err)
 	}
-}
-
-// DefaultFor's second refusal branch fires when workflowprofile.Resolve
-// accepts a profile name but profileDefaults has drifted and no longer
-// registers a default for it. Simulate the drift in-package by temporarily
-// deleting a real, workflowprofile-accepted entry.
-func TestDefaultForRefusesWhenProfileDefaultsDrifts(t *testing.T) {
-	const profile = "sdd"
-	// A local copy keeps the package-level table untouched, so this test
-	// stays safe if sibling tests ever run in parallel.
-	drifted := make(map[string]Directive, len(profileDefaults))
-	for name, d := range profileDefaults {
-		drifted[name] = d
-	}
-	delete(drifted, profile)
-
-	_, err := defaultFrom(drifted, profile)
-	if err == nil {
-		t.Fatal("defaultFrom error = nil, want an error naming the drifted profile")
-	}
-	if !strings.Contains(err.Error(), profile) {
-		t.Errorf("defaultFrom error = %q, want it to name profile %q", err.Error(), profile)
-	}
-	if _, ok := profileDefaults[profile]; !ok {
-		t.Errorf("profileDefaults[%q] was mutated by the drift simulation", profile)
+	d.Sources[0] = SourceProceduralSkills
+	if profile.MemoryDefault.Sources[0] != workflowprofile.MemorySourceEngram {
+		t.Errorf("the profile's sources became %v through the directive", profile.MemoryDefault.Sources)
 	}
 }
 
