@@ -1,0 +1,132 @@
+args: promote --project golden-project --id 1
+exit: 0
+--- stdout ---
+longterm-mem: promoted c-000901 (created)
+--- stderr ---
+args: sync --project golden-project
+exit: 0
+--- stdout ---
+longterm-mem: sync promoted 1 observation(s), patched 0 page(s)
+--- stderr ---
+--- vault ---
+=== .allocator-counter (-rw-r--r--) ===
+902
+=== .raw/ (directory -rwxr-xr-x) ===
+=== .raw/.longterm-mem-manifest.json (-rw-------) ===
+{
+  "c-000901": {
+    "body_hash": "43c0c8b5ce7879c8a5268caa403a48eb2d07c43d4dd3a978053c14797ca3e98d",
+    "frontmatter_hash": "1b21326f72b961a3fbb0960a4364c0fba15144fd63a59f907350fd1e30a3a65b",
+    "promoted_revision": 1
+  },
+  "c-000902": {
+    "body_hash": "70afa7604aeb5073bd50562c32fa0b91859333766ee7be33b869d338f6ccc784",
+    "frontmatter_hash": "906bc83202434ae3445991d6b0a38182691609456c3c620a9f515748d055bbcd",
+    "promoted_revision": 1
+  }
+}
+=== .raw/.manifest.json (-rw-------) ===
+{
+  "address_map": {
+    "wiki/memory/c-000901.md": "c-000901",
+    "wiki/memory/c-000902.md": "c-000902"
+  },
+  "created": "<today>",
+  "sources": {},
+  "version": 1
+}
+=== .vault-meta/ (directory -rwxr-xr-x) ===
+=== .vault-meta/.longterm-mem-provisioned (-rw-r--r--) ===
+<now>
+=== .vault-meta/longterm-mem-sync-state.json (-rw-------) ===
+{
+  "schema": 1,
+  "last_sync_completed_at": "<now>"
+}
+=== bin/ (directory -rwxr-xr-x) ===
+=== bin/setup-retrieve.sh (-rwxr-xr-x) ===
+#!/bin/sh
+exit 0
+=== scripts/ (directory -rwxr-xr-x) ===
+=== scripts/allocate-address.sh (-rwxr-xr-x) ===
+#!/bin/sh
+n=900
+[ -f .allocator-counter ] && read n < .allocator-counter
+n=$((n+1))
+echo "$n" > .allocator-counter
+printf 'c-%06d\n' "$n"
+=== scripts/bm25-index.py (-rwxr-xr-x) ===
+
+=== scripts/contextual-prefix.py (-rwxr-xr-x) ===
+
+=== wiki/ (directory -rwxr-xr-x) ===
+=== wiki/index.md (-rw-------) ===
+<!-- longterm-mem:begin -->
+- [[c-000901|Pinned Decision]]
+- [[c-000902|Curated Note]]
+<!-- longterm-mem:end -->
+
+=== wiki/log.md (-rw-------) ===
+## [<today>] promote | Curated Note
+
+[[c-000902|Curated Note]]
+
+## [<today>] promote | Pinned Decision
+
+[[c-000901|Pinned Decision]]
+
+=== wiki/memory/ (directory -rwxr-xr-x) ===
+=== wiki/memory/c-000901.md (-rw-------) ===
+---
+type: concept
+title: "Pinned Decision"
+address: c-000901
+aliases:
+  - "Pinned Decision"
+created: <today>
+updated: <today>
+tags:
+  - "memory"
+  - "decision"
+status: mature
+related: []
+sources: []
+engram_id: 1
+engram_sync_id: sync-1
+engram_type: decision
+engram_revision: 1
+project: golden-project
+---
+# Pinned Decision
+
+A decision somebody pinned.
+
+---
+Promoted from Engram observation 1, revision 1.
+=== wiki/memory/c-000902.md (-rw-------) ===
+---
+type: concept
+title: "Curated Note"
+address: c-000902
+aliases:
+  - "Curated Note"
+created: <today>
+updated: <today>
+tags:
+  - "memory"
+  - "decision"
+status: developing
+related: []
+sources: []
+engram_id: 2
+engram_sync_id: sync-2
+engram_type: decision
+engram_revision: 1
+project: golden-project
+---
+# Curated Note
+
+A note with a curated topic key.
+
+---
+Promoted from Engram observation 2, revision 1.

@@ -2,14 +2,12 @@ package promote
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 )
@@ -62,66 +60,6 @@ type addressFunc func(context.Context) (string, error)
 
 func (f addressFunc) NextAddress(ctx context.Context) (string, error) { return f(ctx) }
 
-// readAddressMap reads back .raw/.manifest.json's address_map.
-func readAddressMap(t *testing.T, vaultRoot string) map[string]string {
-	t.Helper()
-	data, err := os.ReadFile(filepath.Join(vaultRoot, ".raw", ".manifest.json"))
-	if err != nil {
-		t.Fatalf("read manifest: %v", err)
-	}
-	var m struct {
-		AddressMap map[string]string `json:"address_map"`
-	}
-	if err := json.Unmarshal(data, &m); err != nil {
-		t.Fatalf("parse manifest: %v", err)
-	}
-	return m.AddressMap
-}
-
-// TestAllocateAddress_FirstPromotionAllocatesNewAddress: R-028 scenario 1.
-func TestAllocateAddress_FirstPromotionAllocatesNewAddress(t *testing.T) {
-	vaultRoot := t.TempDir()
-
-	address, err := allocateAddress(t.Context(), vaultRoot, "labdrian-sdd-overlay", 101, staticAddress(testAddress), testInstant)
-	if err != nil {
-		t.Fatalf("allocateAddress: %v", err)
-	}
-	if address != "c-000042" {
-		t.Fatalf("address = %q, want %q", address, "c-000042")
-	}
-
-	addressMap := readAddressMap(t, vaultRoot)
-	wantPath := "wiki/memory/c-000042.md"
-	if got := addressMap[wantPath]; got != "c-000042" {
-		t.Fatalf("address_map[%q] = %q, want %q (full map: %+v)", wantPath, got, "c-000042", addressMap)
-	}
-}
-
-// TestAllocateAddress_SeedsANewManifestWithTheDayItIsGiven (Phase 9, L2): a vault
-// with no manifest yet gets one whose created date is the day the caller's
-// clock gave, not a day read from the machine.
-func TestAllocateAddress_SeedsANewManifestWithTheDayItIsGiven(t *testing.T) {
-	vaultRoot := t.TempDir()
-
-	if _, err := allocateAddress(t.Context(), vaultRoot, "labdrian-sdd-overlay", 101, staticAddress(testAddress), time.Date(2026, 8, 5, 12, 0, 0, 0, time.UTC)); err != nil {
-		t.Fatalf("allocateAddress: %v", err)
-	}
-
-	data, err := os.ReadFile(filepath.Join(vaultRoot, ".raw", ".manifest.json"))
-	if err != nil {
-		t.Fatalf("read manifest: %v", err)
-	}
-	var m struct {
-		Created string `json:"created"`
-	}
-	if err := json.Unmarshal(data, &m); err != nil {
-		t.Fatalf("parse manifest: %v", err)
-	}
-	if m.Created != "2026-08-05" {
-		t.Fatalf("created = %q, want 2026-08-05 (the day allocateAddress was given)", m.Created)
-	}
-}
-
 // TestAllocateAddress_RePromotionReusesExistingAddress: R-028 scenario 2. The
 // allocator is counted, and reuse must never ask it: a re-promotion that
 // spent an address would burn the vault's counter on every sync.
@@ -142,7 +80,7 @@ func TestAllocateAddress_RePromotionReusesExistingAddress(t *testing.T) {
 	}
 
 	allocator := &countingAddresses{AddressAllocator: staticAddress(testAddress)}
-	address, err := allocateAddress(t.Context(), vaultRoot, "labdrian-sdd-overlay", 101, allocator, testInstant)
+	address, err := allocateAddress(t.Context(), vaultRoot, "labdrian-sdd-overlay", 101, allocator, &memAddressMap{}, testInstant)
 	if err != nil {
 		t.Fatalf("allocateAddress: %v", err)
 	}
@@ -152,9 +90,6 @@ func TestAllocateAddress_RePromotionReusesExistingAddress(t *testing.T) {
 	if allocator.asked != 0 {
 		t.Fatalf("the allocator was asked %d time(s) for a page that already has an address", allocator.asked)
 	}
-	if _, err := os.Stat(filepath.Join(vaultRoot, ".raw", ".manifest.json")); !os.IsNotExist(err) {
-		t.Fatalf("a reused address wrote the manifest (stat err = %v)", err)
-	}
 }
 
 // The context a promotion is called with is the one the allocator is asked with, so a caller that cancels
@@ -163,7 +98,7 @@ func TestPromote_AsksTheAllocatorWithTheCallersContext(t *testing.T) {
 	type key struct{}
 	ctx := context.WithValue(t.Context(), key{}, "the caller's")
 	allocator := &countingAddresses{AddressAllocator: staticAddress(testAddress)}
-	w := &Writer{VaultRoot: t.TempDir(), Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Addresses: allocator, Clock: &fakeClock{at: testInstant}}
+	w := &Writer{VaultRoot: t.TempDir(), Store: PrecedenceStore{}, Precedence: &memPrecedence{}, AddressMap: &memAddressMap{}, Addresses: allocator, Clock: &fakeClock{at: testInstant}}
 	obs := memory.Observation{ID: 704, Type: "decision", Title: "Context", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1, Pinned: true}
 
 	if _, err := w.Promote(ctx, obs, false); err != nil {
@@ -174,14 +109,12 @@ func TestPromote_AsksTheAllocatorWithTheCallersContext(t *testing.T) {
 	}
 }
 
-// The allocator is the one place an address comes from, and what it says
-// goes into the manifest as it said it. A failure of the allocator is
-// promotion's failure, in promotion's words, and records nothing.
+// The allocator is the one place an address comes from. A failure of the allocator is promotion's failure,
+// in promotion's words (that it records nothing is TestAllocateAddress_NothingAllocatedRecordsNothing).
 func TestAllocateAddress_AnAllocatorFailureIsPromotionsAndRecordsNothing(t *testing.T) {
-	vaultRoot := t.TempDir()
 	boom := errors.New("the counter is locked")
 
-	address, err := allocateAddress(t.Context(), vaultRoot, "labdrian-sdd-overlay", 101, failingAddresses{err: boom}, testInstant)
+	address, err := allocateAddress(t.Context(), t.TempDir(), "labdrian-sdd-overlay", 101, failingAddresses{err: boom}, &memAddressMap{}, testInstant)
 	if !errors.Is(err, boom) {
 		t.Fatalf("allocateAddress = (%q, %v), want the allocator's own error", address, err)
 	}
@@ -190,9 +123,6 @@ func TestAllocateAddress_AnAllocatorFailureIsPromotionsAndRecordsNothing(t *test
 	}
 	if address != "" {
 		t.Errorf("address = %q alongside an error, want none", address)
-	}
-	if _, statErr := os.Stat(filepath.Join(vaultRoot, ".raw", ".manifest.json")); !os.IsNotExist(statErr) {
-		t.Errorf("a failed allocation wrote the manifest (stat err = %v)", statErr)
 	}
 }
 
@@ -207,7 +137,7 @@ func TestPromote_NoAddressMeansNothingIsWritten(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			vaultRoot := t.TempDir()
 			store := PrecedenceStore{}
-			w := &Writer{VaultRoot: vaultRoot, Store: store, Precedence: &memPrecedence{}, Addresses: addresses, Clock: &fakeClock{at: testInstant}}
+			w := &Writer{VaultRoot: vaultRoot, Store: store, Precedence: &memPrecedence{}, AddressMap: &memAddressMap{}, Addresses: addresses, Clock: &fakeClock{at: testInstant}}
 			obs := memory.Observation{ID: 704, Type: "decision", Title: "No Address", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1, Pinned: true}
 
 			result, err := w.Promote(t.Context(), obs, false)
@@ -227,27 +157,13 @@ func TestPromote_NoAddressMeansNothingIsWritten(t *testing.T) {
 	}
 }
 
-// An allocator that answers no error and no address has allocated nothing,
-// and "" must not become a page at wiki/memory/.md.
-func TestAllocateAddress_AnEmptyAddressIsRefusedAndRecordsNothing(t *testing.T) {
-	vaultRoot := t.TempDir()
-
-	address, err := allocateAddress(t.Context(), vaultRoot, "labdrian-sdd-overlay", 101, failingAddresses{}, testInstant)
-	if err == nil {
-		t.Fatalf("allocateAddress = %q, nil error, want an error for an empty address", address)
-	}
-	if _, statErr := os.Stat(filepath.Join(vaultRoot, ".raw", ".manifest.json")); !os.IsNotExist(statErr) {
-		t.Errorf("an empty address wrote the manifest (stat err = %v)", statErr)
-	}
-}
-
 // The allocator is a port the caller wires. One that is missing is named, but only when an address is
 // actually needed: a page that already has one is re-promoted without it.
 func TestAllocateAddress_AMissingAllocatorIsRefusedOnlyWhenOneIsNeeded(t *testing.T) {
 	t.Run("a new page needs one", func(t *testing.T) {
 		vaultRoot := t.TempDir()
 		for name, allocator := range map[string]AddressAllocator{"absent": nil, "a nil pointer": (*sequentialAddresses)(nil), "a nil function": addressFunc(nil)} {
-			if address, err := allocateAddress(t.Context(), vaultRoot, "labdrian-sdd-overlay", 101, allocator, testInstant); !errors.Is(err, errNoAddressAllocator) {
+			if address, err := allocateAddress(t.Context(), vaultRoot, "labdrian-sdd-overlay", 101, allocator, &memAddressMap{}, testInstant); !errors.Is(err, errNoAddressAllocator) {
 				t.Errorf("%s: allocateAddress = (%q, %v), want errNoAddressAllocator", name, address, err)
 			}
 		}
@@ -262,57 +178,11 @@ func TestAllocateAddress_AMissingAllocatorIsRefusedOnlyWhenOneIsNeeded(t *testin
 		if err := os.WriteFile(filepath.Join(memoryDir, "c-000099.md"), []byte(page), 0o644); err != nil {
 			t.Fatalf("write the promoted page: %v", err)
 		}
-		address, err := allocateAddress(t.Context(), vaultRoot, "labdrian-sdd-overlay", 101, nil, testInstant)
+		address, err := allocateAddress(t.Context(), vaultRoot, "labdrian-sdd-overlay", 101, nil, nil, testInstant)
 		if err != nil || address != "c-000099" {
 			t.Fatalf("allocateAddress = (%q, %v), want the page's own address without an allocator", address, err)
 		}
 	})
-}
-
-// TestAllocateAddress_RecordAddressPreservesForeignManifestFields: the manifest
-// is wiki-ingest-owned (D7); recordAddress may only touch address_map. A
-// producer field this package does not know must survive a fresh
-// allocation, and keys absent from the live file must not be fabricated
-// (findings R1-manifest-field-drop, R4-manifest-unknown-field-loss).
-func TestAllocateAddress_RecordAddressPreservesForeignManifestFields(t *testing.T) {
-	vaultRoot := t.TempDir()
-
-	rawDir := filepath.Join(vaultRoot, ".raw")
-	if err := os.MkdirAll(rawDir, 0o755); err != nil {
-		t.Fatalf("mkdir %s: %v", rawDir, err)
-	}
-	live := `{"version": 7, "ingest_options": {"dedupe": true}, "address_map": {"wiki/memory/c-000001.md": "c-000001"}}`
-	if err := os.WriteFile(filepath.Join(rawDir, ".manifest.json"), []byte(live), 0o644); err != nil {
-		t.Fatalf("write manifest: %v", err)
-	}
-
-	if _, err := allocateAddress(t.Context(), vaultRoot, "labdrian-sdd-overlay", 101, staticAddress(testAddress), testInstant); err != nil {
-		t.Fatalf("allocateAddress: %v", err)
-	}
-
-	data, err := os.ReadFile(filepath.Join(rawDir, ".manifest.json"))
-	if err != nil {
-		t.Fatalf("read manifest back: %v", err)
-	}
-	var m map[string]any
-	if err := json.Unmarshal(data, &m); err != nil {
-		t.Fatalf("parse manifest back: %v", err)
-	}
-	if got := m["version"]; got != float64(7) {
-		t.Errorf("version = %v, want 7 (must not be reset)", got)
-	}
-	if _, ok := m["ingest_options"]; !ok {
-		t.Errorf("ingest_options was dropped; foreign fields must survive (manifest: %s)", data)
-	}
-	for _, key := range []string{"created", "description", "sources"} {
-		if _, ok := m[key]; ok {
-			t.Errorf("%q was fabricated into a manifest that did not carry it (manifest: %s)", key, data)
-		}
-	}
-	addressMap := readAddressMap(t, vaultRoot)
-	if addressMap["wiki/memory/c-000001.md"] != "c-000001" || addressMap["wiki/memory/c-000042.md"] != "c-000042" {
-		t.Errorf("address_map = %+v, want the prior entry retained and the new one added", addressMap)
-	}
 }
 
 // TestAllocateAddress_ReuseWithoutAddressFails: a page matching this engram_id +
@@ -332,7 +202,7 @@ func TestAllocateAddress_ReuseWithoutAddressFails(t *testing.T) {
 		t.Fatalf("write pre-promoted page: %v", err)
 	}
 
-	address, err := allocateAddress(t.Context(), vaultRoot, "labdrian-sdd-overlay", 101, staticAddress(testAddress), testInstant)
+	address, err := allocateAddress(t.Context(), vaultRoot, "labdrian-sdd-overlay", 101, staticAddress(testAddress), &memAddressMap{}, testInstant)
 	if err == nil {
 		t.Fatalf("allocateAddress = (%q, nil), want an error for a matched page without an address", address)
 	}

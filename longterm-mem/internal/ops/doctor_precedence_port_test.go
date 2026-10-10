@@ -10,6 +10,7 @@ import (
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/ops/testdata"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultfs"
 )
 
 // fakePrecedence is a PrecedenceReader that answers a store, or an error, without a file behind it.
@@ -39,6 +40,7 @@ func portDoctorDeps(t *testing.T, reader PrecedenceReader) (DoctorDeps, promote.
 	return DoctorDeps{
 		VaultRoot:             vaultRoot,
 		Precedence:            reader,
+		AddressMap:            vaultfs.New(vaultRoot),
 		PrerequisitePresent:   func(string) bool { return true },
 		StateDir:              stateDir,
 		LiveObservationIDs:    func(string) ([]int64, error) { return liveIDs, nil },

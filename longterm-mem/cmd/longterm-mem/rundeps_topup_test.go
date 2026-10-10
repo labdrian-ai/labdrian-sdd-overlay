@@ -89,7 +89,7 @@ func TestBuildIndexForQuery_InvalidatesCacheOnlyOnSuccess(t *testing.T) {
 	t.Setenv("LONGTERM_MEM_STATE_DIR", stateDir)
 
 	var invalidated []string
-	buildFn := buildIndexForQuery(store, func(dir string) { invalidated = append(invalidated, dir) })
+	buildFn := buildIndexForQuery(store, testEmbedClient, func(dir string) { invalidated = append(invalidated, dir) })
 
 	if err := buildFn(context.Background(), project, "test-model", 3, 2000); err != nil {
 		t.Fatalf("buildIndexForQuery with nothing to embed: %v", err)

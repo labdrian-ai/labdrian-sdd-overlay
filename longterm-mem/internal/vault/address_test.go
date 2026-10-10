@@ -123,6 +123,31 @@ func TestAddressAllocatorRefusesOutputOfMoreThanOneLine(t *testing.T) {
 	}
 }
 
+// shellQuote is s as one word of a POSIX shell script: in single quotes, with each single quote in s closed,
+// escaped and reopened. A fixture that writes a path into a script goes through it, so a path with a space or
+// a quote in it is still one argument.
+func shellQuote(s string) string {
+	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
+}
+
+// cancelWhenFileAppears calls cancel as soon as path exists, and stops watching when ctx ends. The watcher is
+// awaited when the test ends, so none outlives it.
+func cancelWhenFileAppears(t *testing.T, ctx context.Context, path string, cancel context.CancelFunc) {
+	t.Helper()
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for ctx.Err() == nil {
+			if _, err := os.Stat(path); err == nil {
+				cancel()
+				return
+			}
+			time.Sleep(5 * time.Millisecond)
+		}
+	}()
+	t.Cleanup(func() { <-done })
+}
+
 // A script that hangs is stopped by the adapter's own timeout when the caller set no deadline: the call
 // returns, with the script killed, and the error says the deadline passed. The timeout is the field the
 // test shortens; the production bound is the same code path with allocateTimeout in it.
@@ -168,31 +193,27 @@ func TestAddressAllocatorStopsWhenTheCallersContextEnds(t *testing.T) {
 // An explicit cancellation is not a deadline, and it ends the allocation the same way: the script is
 // killed and the error is context.Canceled, not "exited 124".
 func TestAddressAllocatorStopsWhenTheCallerCancels(t *testing.T) {
-	root := t.TempDir()
+	// The root has a space and a quote in its name: the script text must carry the marker path quoted.
+	root := filepath.Join(t.TempDir(), "it's a vault")
 	// The script says it is running before it hangs, and the caller cancels only once it has said so:
 	// the cancellation reaches a live script, not one that has yet to start, whatever the machine's
 	// speed. The outer deadline keeps a script that never starts from hanging the test, and it would
 	// surface as DeadlineExceeded, not as the Canceled this test expects.
 	marker := filepath.Join(root, "running")
-	writeAllocator(t, root, "#!/bin/sh\n: > "+marker+"\nexec sleep 30\n")
+	writeAllocator(t, root, "#!/bin/sh\n: > "+shellQuote(marker)+"\nexec sleep 30\n")
 	bounded, stop := context.WithTimeout(t.Context(), 10*time.Second)
 	defer stop()
 	ctx, cancel := context.WithCancel(bounded)
 	defer cancel()
-	go func() {
-		for bounded.Err() == nil {
-			if _, err := os.Stat(marker); err == nil {
-				cancel()
-				return
-			}
-			time.Sleep(5 * time.Millisecond)
-		}
-	}()
+	cancelWhenFileAppears(t, bounded, marker, cancel)
 
 	started := time.Now()
 	address, err := AddressAllocator{Root: root}.NextAddress(ctx)
 	if elapsed := time.Since(started); elapsed > 10*time.Second {
 		t.Errorf("NextAddress took %v: the script was not killed when the caller cancelled", elapsed)
+	}
+	if bounded.Err() != nil {
+		t.Fatalf("the script never wrote %s within the outer deadline (%v): the cancellation was never sent", marker, bounded.Err())
 	}
 	if !errors.Is(err, context.Canceled) {
 		t.Fatalf("NextAddress = (%q, %v), want an error that is context.Canceled", address, err)

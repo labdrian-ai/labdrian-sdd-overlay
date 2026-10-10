@@ -1,0 +1,41 @@
+args: promote --project golden-project --id 1
+exit: 1
+--- stdout ---
+--- stderr ---
+longterm-mem: promote: promote: parse <vault>/.raw/.manifest.json: invalid character 'n' looking for beginning of object key string
+args: sync --project golden-project
+exit: 1
+--- stdout ---
+longterm-mem: sync promoted 0 observation(s), patched 0 page(s)
+--- stderr ---
+longterm-mem: sync: promote: sync: 2 observations failed, first is 1: promote: parse <vault>/.raw/.manifest.json: invalid character 'n' looking for beginning of object key string
+--- vault ---
+=== .allocator-counter (-rw-r--r--) ===
+903
+=== .raw/ (directory -rwxr-xr-x) ===
+=== .raw/.manifest.json (-rw-r--r--) ===
+{not json
+=== .vault-meta/ (directory -rwxr-xr-x) ===
+=== .vault-meta/.longterm-mem-provisioned (-rw-r--r--) ===
+<now>
+=== .vault-meta/longterm-mem-sync-state.json (-rw-------) ===
+{
+  "schema": 1,
+  "last_sync_completed_at": "<now>"
+}
+=== bin/ (directory -rwxr-xr-x) ===
+=== bin/setup-retrieve.sh (-rwxr-xr-x) ===
+#!/bin/sh
+exit 0
+=== scripts/ (directory -rwxr-xr-x) ===
+=== scripts/allocate-address.sh (-rwxr-xr-x) ===
+#!/bin/sh
+n=900
+[ -f .allocator-counter ] && read n < .allocator-counter
+n=$((n+1))
+echo "$n" > .allocator-counter
+printf 'c-%06d\n' "$n"
+=== scripts/bm25-index.py (-rwxr-xr-x) ===
+
+=== scripts/contextual-prefix.py (-rwxr-xr-x) ===
+

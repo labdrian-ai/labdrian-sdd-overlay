@@ -305,6 +305,17 @@ func TestSavePrecedenceReportsASidecarItCannotReplace(t *testing.T) {
 	}
 }
 
+// throughTheSidecar is msg as far as the end of the path of the vault's precedence sidecar, which the error of a
+// failed replace must name.
+func throughTheSidecar(t *testing.T, msg, root string) string {
+	t.Helper()
+	i := strings.Index(msg, sidecarPath(root))
+	if i < 0 {
+		t.Fatalf("error %q does not name the sidecar %s", msg, sidecarPath(root))
+	}
+	return msg[:i+len(sidecarPath(root))]
+}
+
 // The adapter names no consumer: left to itself its errors begin with what failed, and the prefix a command's output
 // has always carried is the composition root's to ask for, through WithErrorPrefix. A prefix is added once, to
 // the failure of a load, a parse, a marshal and a replace alike, and the cause stays reachable.
@@ -340,14 +351,14 @@ func TestErrorsCarryNoPrefixUnlessOneIsAskedFor(t *testing.T) {
 		if strings.HasPrefix(plain.Error(), "promote: ") {
 			t.Errorf("unprefixed error %q carries a consumer's name", plain)
 		}
-		// The temporary file's name differs from one call to the next, so the two are compared as far as the
-		// file they name.
-		stable := len(plain.Error())
-		if i := strings.Index(plain.Error(), sidecarPath(root)); i >= 0 {
-			stable = i + len(sidecarPath(root))
+		behindThePrefix, prefixedAsAsked := strings.CutPrefix(prefixed.Error(), "promote: ")
+		if !prefixedAsAsked {
+			t.Fatalf("prefixed error %q does not begin with the prefix", prefixed)
 		}
-		if got, want := strings.TrimPrefix(prefixed.Error(), "promote: "), plain.Error(); !strings.HasPrefix(got, want[:stable]) || got == prefixed.Error() {
-			t.Errorf("prefixed error %q is not %q behind the prefix", prefixed, want[:stable])
+		// The temporary file's name differs from one call to the next, so the two are compared as far as the
+		// sidecar they name.
+		if got, want := throughTheSidecar(t, behindThePrefix, root), throughTheSidecar(t, plain.Error(), root); got != want {
+			t.Errorf("prefixed error %q is not %q behind the prefix", got, want)
 		}
 		if errors.Unwrap(prefixed) == nil {
 			t.Errorf("the prefixed error %q does not wrap the failure it reports", prefixed)

@@ -125,6 +125,7 @@ func TestDoctor(t *testing.T) {
 		return DoctorDeps{
 			VaultRoot:           vaultRoot,
 			Precedence:          vaultfs.New(vaultRoot),
+			AddressMap:          vaultfs.New(vaultRoot),
 			PrerequisitePresent: func(string) bool { return true },
 			StateDir:            stateDir,
 			LiveObservationIDs:  func(string) ([]int64, error) { return liveIDs, nil },
@@ -457,13 +458,12 @@ func TestDoctor_UnreadablePageDoesNotHideEveryOtherPage(t *testing.T) {
 	// non-directory but fails ReadFile, deterministically and regardless
 	// of the uid the test runs as.
 	dangling := filepath.Join(vaultRoot, "wiki", "memory", "c-000888.md")
-	if err := os.Symlink(filepath.Join(vaultRoot, "wiki", "memory", "nonexistent-target.md"), dangling); err != nil {
-		t.Fatalf("create dangling symlink: %v", err)
-	}
+	symlinkOrSkip(t, filepath.Join(vaultRoot, "wiki", "memory", "nonexistent-target.md"), dangling)
 
 	deps := DoctorDeps{
 		VaultRoot:             vaultRoot,
 		Precedence:            vaultfs.New(vaultRoot),
+		AddressMap:            vaultfs.New(vaultRoot),
 		PrerequisitePresent:   func(name string) bool { return true },
 		StateDir:              t.TempDir(),
 		LiveObservationIDs:    func(string) ([]int64, error) { return nil, nil },

@@ -55,7 +55,7 @@ type embedConfig struct {
 // persist the resulting index under <state-dir>/index/<project>/
 // (vecindex.Dir). It never builds lazily from a query path (R-069) --
 // this is the only production caller of vecindex.Build.
-func cmdIndexEmbeddings(project string, cfg embedConfig) int {
+func (c commands) cmdIndexEmbeddings(project string, cfg embedConfig) int {
 	stateDir := defaultStateDir()
 	if stateDir == "" {
 		fmt.Fprintln(os.Stderr, "longterm-mem: index: could not resolve the state directory; set HOME or LONGTERM_MEM_STATE_DIR")
@@ -78,7 +78,7 @@ func cmdIndexEmbeddings(project string, cfg embedConfig) int {
 		return exitEngramUnavailable
 	}
 
-	client, err := embed.NewClient(embed.Config{
+	client, err := c.newEmbedClient(embed.Config{
 		Endpoint:    cfg.Endpoint,
 		Model:       cfg.Model,
 		AllowRemote: cfg.AllowRemote,

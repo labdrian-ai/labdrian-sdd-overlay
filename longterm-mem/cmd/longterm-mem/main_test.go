@@ -1218,9 +1218,12 @@ func TestCLI_NoResidualProcessAfterAnySubcommand(t *testing.T) {
 		"LONGTERM_MEM_ENGRAM_DB="+dbPath,
 	)
 
+	// doctor is not among them: it starts no vault subprocess (its prerequisite check only looks the
+	// interpreter up), and the real binary it would run here probes the embedding backend at the default
+	// endpoint, which is the embedding server of whoever runs the tests. The doctor is run by the other tests
+	// of this package, in the process, against a backend of the test binary's own.
 	subcommands := [][]string{
 		{"status", "--project", "cli-residual-project"},
-		{"doctor", "--project", "cli-residual-project"},
 		{"index", "--project", "cli-residual-project"},
 		{"query", "--project", "cli-residual-project", "hello"},
 		{"promote", "--project", "cli-residual-project", "--id", strconv.FormatInt(id, 10)},

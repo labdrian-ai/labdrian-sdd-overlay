@@ -45,6 +45,11 @@ type Writer struct {
 	// already exists reuses its own and never reaches it. A promotion that
 	// needs one with none wired is refused before anything is written.
 	Addresses AddressAllocator
+	// AddressMap is where each new page is entered in the vault's address map
+	// once it has an address. Like Addresses it is asked only when a promotion
+	// needs a fresh address, and a promotion that needs it with none wired is
+	// refused before the allocator is asked, so no address is spent on it.
+	AddressMap AddressMapRecorder
 	// Clock dates the pages, the promotion log and the sync-state record.
 	// The composition root wires a real one; a Writer without one is
 	// refused by Promote and Sync before they touch the vault. Propagate
@@ -145,7 +150,7 @@ func (w *Writer) Promote(ctx context.Context, obs memory.Observation, explicit b
 		return Result{}, err
 	}
 
-	address, err := allocateAddress(ctx, w.VaultRoot, obs.Project, int(obs.ID), w.Addresses, utc(w.Clock))
+	address, err := allocateAddress(ctx, w.VaultRoot, obs.Project, int(obs.ID), w.Addresses, w.AddressMap, utc(w.Clock))
 	if err != nil {
 		return Result{}, err
 	}

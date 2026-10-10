@@ -63,6 +63,7 @@ func TestCmdDoctor_DocumentedCheckCountMatchesOpsDoctor(t *testing.T) {
 	report, err := ops.Doctor(context.Background(), ops.DoctorDeps{
 		VaultRoot:             vaultRoot,
 		Precedence:            vaultfs.New(vaultRoot),
+		AddressMap:            vaultfs.New(vaultRoot),
 		PrerequisitePresent:   func(string) bool { return true },
 		StateDir:              t.TempDir(),
 		LiveObservationIDs:    func(string) ([]int64, error) { return nil, nil },
@@ -112,6 +113,7 @@ func TestCmdDoctor_PrintsEveryCheckOpsDoctorReturns(t *testing.T) {
 	report, err := ops.Doctor(context.Background(), ops.DoctorDeps{
 		VaultRoot:             vaultRoot,
 		Precedence:            vaultfs.New(vaultRoot),
+		AddressMap:            vaultfs.New(vaultRoot),
 		PrerequisitePresent:   func(string) bool { return true },
 		StateDir:              t.TempDir(),
 		LiveObservationIDs:    func(string) ([]int64, error) { return nil, nil },

@@ -21,16 +21,34 @@ import (
 // process; cmd_mcp.go's cmdMCP builds its own deps per call via queryDeps
 // directly, passing a client and load cache it constructs once for the
 // whole MCP session, rather than calling runQuery).
-func runQuery(ctx context.Context, store *engram.Store, vaultRoot string, req query.Request) (query.Result, error) {
-	deps := queryDeps(store, vaultRoot, freshEmbedFunc(), nil, nil)
+func runQuery(ctx context.Context, store *engram.Store, vaultRoot string, newClient embedClientFactory, req query.Request) (query.Result, error) {
+	deps := queryDeps(store, vaultRoot, queryWiring{newClient: newClient, embed: freshEmbedFunc(newClient)})
 	return query.Run(ctx, deps, req)
+}
+
+// queryWiring is what a surface decides about the embedding side of a query, each part under its own name
+// because the parts answer different steps and a positional list of them is easy to mis-order.
+//
+// The two clients are not redundant: embed answers the query's own embedding (the embedding arm, one call
+// per query), and newClient builds the client of the bounded top-up (buildIndexForQuery), which asks for
+// the model the existing index was built under and so cannot be the one client a session holds for its
+// default model.
+type queryWiring struct {
+	// newClient builds the embedding client of the top-up build.
+	newClient embedClientFactory
+	// embed embeds the query text.
+	embed query.EmbedFunc
+	// loadIndex loads an embedding index; nil defaults to vecindex.Load, and the MCP session sets its cache's.
+	loadIndex func(dir string) (*vecindex.Index, error)
+	// invalidateIndex forgets a cached index after a top-up wrote a fresh one; nil when nothing is cached.
+	invalidateIndex func(dir string)
 }
 
 // freshEmbedFunc builds a new embed.Client on every call it makes -- the
 // CLI's own one-query-per-process convention, unchanged by this issue.
-func freshEmbedFunc() query.EmbedFunc {
+func freshEmbedFunc(newClient embedClientFactory) query.EmbedFunc {
 	return func(ctx context.Context, text string) ([]float32, error) {
-		client, err := embed.NewClient(embed.Config{Model: vecindex.DefaultModel})
+		client, err := newClient(embed.Config{Model: vecindex.DefaultModel})
 		if err != nil {
 			return nil, err
 		}
@@ -51,18 +69,20 @@ func freshEmbedFunc() query.EmbedFunc {
 // does name the source (over the MCP tool's own `sources` field) reach it
 // without a second construction path to keep in sync.
 //
-// embedFn and loadIndex are supplied by the caller rather than constructed
-// here, because the CLI (one query per process) and the MCP server (many
-// queries per session) want different lifetimes for both: runQuery builds
-// a fresh embed.Client and leaves loadIndex nil (vecindex.Load) on every
-// call, while cmdMCP builds one embed.Client and one *vecindex.LoadCache
-// for the whole session and passes them here on every call. invalidateIndex
-// is nil for the CLI (nothing to invalidate) and loadCache.Invalidate for
-// the MCP server, so a bounded top-up (embedarm.go) that writes a fresh
-// index is immediately visible to the very query that triggered it,
-// rather than served stale from the cache until an unrelated mtime/size
-// change happens to be noticed.
-func queryDeps(store *engram.Store, vaultRoot string, embedFn query.EmbedFunc, loadIndex func(dir string) (*vecindex.Index, error), invalidateIndex func(dir string)) query.Deps {
+// wiring is supplied by the caller rather than constructed here, because
+// the CLI (one query per process) and the MCP server (many queries per
+// session) want different lifetimes for its parts: runQuery builds a fresh
+// embed.Client per embedding and leaves loadIndex nil (vecindex.Load) on
+// every call, while cmdMCP builds one embed.Client and one
+// *vecindex.LoadCache for the whole session and passes them on every call.
+// wiring.newClient is the factory the commands were wired with, so that no
+// query reaches an embedding backend its caller did not choose.
+// invalidateIndex is nil for the CLI (nothing to invalidate) and
+// loadCache.Invalidate for the MCP server, so a bounded top-up (embedarm.go)
+// that writes a fresh index is immediately visible to the very query that
+// triggered it, rather than served stale from the cache until an unrelated
+// mtime/size change happens to be noticed.
+func queryDeps(store *engram.Store, vaultRoot string, wiring queryWiring) query.Deps {
 	runner := &vault.Runner{Root: vaultRoot}
 	return query.Deps{
 		Memory: store,
@@ -71,9 +91,9 @@ func queryDeps(store *engram.Store, vaultRoot string, embedFn query.EmbedFunc, l
 		},
 		ResolveLink: query.NoLinkResolver,
 		StateDir:    defaultStateDir(),
-		Embed:       embedFn,
-		BuildIndex:  buildIndexForQuery(store, invalidateIndex),
-		LoadIndex:   loadIndex,
+		Embed:       wiring.embed,
+		BuildIndex:  buildIndexForQuery(store, wiring.newClient, wiring.invalidateIndex),
+		LoadIndex:   wiring.loadIndex,
 	}
 }
 
@@ -91,13 +111,13 @@ func queryDeps(store *engram.Store, vaultRoot string, embedFn query.EmbedFunc, l
 // failed one, since nothing changed on disk for a load cache to need to
 // forget. A nil invalidateIndex (the CLI path, which caches nothing) is
 // simply skipped.
-func buildIndexForQuery(store *engram.Store, invalidateIndex func(dir string)) func(ctx context.Context, project, model string, dimension, inputLimit int) error {
+func buildIndexForQuery(store *engram.Store, newClient embedClientFactory, invalidateIndex func(dir string)) func(ctx context.Context, project, model string, dimension, inputLimit int) error {
 	return func(ctx context.Context, project, model string, dimension, inputLimit int) error {
 		rows, err := observationRowsForIndex(store, project)
 		if err != nil {
 			return err
 		}
-		client, err := embed.NewClient(embed.Config{Model: model})
+		client, err := newClient(embed.Config{Model: model})
 		if err != nil {
 			return err
 		}
@@ -129,6 +149,23 @@ func observationRowsForIndex(store *engram.Store, project string) ([]vecindex.Ro
 	return rows, nil
 }
 
+// newPromoteWriter is the Writer of the vault at vaultRoot, as every command
+// that promotes (promote, the MCP promote tool, sync) uses it: the vault's
+// address allocator, the wall clock in UTC, and the vault file system adapter
+// its precedence store is loaded from and saved through and its address map
+// is recorded in. It is the one
+// construction, so two commands cannot come to wire a Writer differently; a
+// precedence sidecar that cannot be loaded is the error, as the repository
+// reported it.
+func newPromoteWriter(vaultRoot string) (*promote.Writer, error) {
+	vaultFiles := openVault(vaultRoot)
+	writer := &promote.Writer{VaultRoot: vaultRoot, Addresses: vault.AddressAllocator{Root: vaultRoot}, AddressMap: vaultFiles, Clock: utcClock{}}
+	if err := writer.UsePrecedence(vaultFiles); err != nil {
+		return nil, err
+	}
+	return writer, nil
+}
+
 // runPromote builds a Writer for vaultRoot and calls
 // promote.ExplicitPromote against store (task 8b.11): the one
 // construction+call path cmdPromote (the CLI promote subcommand) and
@@ -136,8 +173,8 @@ func observationRowsForIndex(store *engram.Store, project string) ([]vecindex.Ro
 // extraction so R-012 and R-032 genuinely share one code path rather than
 // two callers separately reconstructing the same Writer.
 func runPromote(ctx context.Context, store *engram.Store, vaultRoot string, engramID int64) (promote.Result, error) {
-	writer := &promote.Writer{VaultRoot: vaultRoot, Addresses: vault.AddressAllocator{Root: vaultRoot}, Clock: utcClock{}}
-	if err := writer.UsePrecedence(openVault(vaultRoot)); err != nil {
+	writer, err := newPromoteWriter(vaultRoot)
+	if err != nil {
 		return promote.Result{}, err
 	}
 	return promote.ExplicitPromote(ctx, writer, store.ObservationByID, engramID)

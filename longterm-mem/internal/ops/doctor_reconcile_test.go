@@ -58,6 +58,7 @@ func TestDoctorAndReconcile_CloseTheLoopOnARevisionZeroPage(t *testing.T) {
 	deps := DoctorDeps{
 		VaultRoot:             vaultRoot,
 		Precedence:            vaultfs.New(vaultRoot),
+		AddressMap:            vaultfs.New(vaultRoot),
 		PrerequisitePresent:   func(string) bool { return true },
 		StateDir:              t.TempDir(),
 		LiveObservationIDs:    func(string) ([]int64, error) { return nil, nil },

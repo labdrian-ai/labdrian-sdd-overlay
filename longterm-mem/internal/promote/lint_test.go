@@ -1,7 +1,6 @@
 package promote
 
 import (
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,23 +9,6 @@ import (
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 )
-
-// writeManifest writes a minimal .raw/.manifest.json carrying addressMap,
-// the address_map consistency rule's on-disk source (D6/D7).
-func writeManifest(t *testing.T, vaultRoot string, addressMap map[string]string) {
-	t.Helper()
-	dir := filepath.Join(vaultRoot, ".raw")
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatalf("mkdir %s: %v", dir, err)
-	}
-	data, err := json.Marshal(map[string]any{"address_map": addressMap})
-	if err != nil {
-		t.Fatalf("marshal manifest: %v", err)
-	}
-	if err := os.WriteFile(filepath.Join(dir, ".manifest.json"), data, 0o644); err != nil {
-		t.Fatalf("write manifest: %v", err)
-	}
-}
 
 // writeIndexWithLink writes a minimal wiki/index.md containing an inbound
 // wikilink to address, the inbound-index-link rule's on-disk source.
@@ -53,10 +35,10 @@ func TestLintPage_FreshlyPromotedPagePasses(t *testing.T) {
 		t.Fatalf("EmitPage: %v", err)
 	}
 
-	writeManifest(t, vaultRoot, map[string]string{page.Path: page.Address})
+	addresses := &memAddressMap{entries: AddressMap{page.Path: page.Address}}
 	writeIndexWithLink(t, vaultRoot, page.Address)
 
-	if diags := LintPage(page, vaultRoot); len(diags) != 0 {
+	if diags := LintPage(page, vaultRoot, addresses); len(diags) != 0 {
 		t.Fatalf("LintPage() = %+v, want no diagnostics for a freshly promoted, registered page", diags)
 	}
 }
@@ -88,11 +70,11 @@ func TestLintPage_DanglingWikilinkIsFlagged(t *testing.T) {
 		t.Fatalf("write resolving target: %v", err)
 	}
 
-	writeManifest(t, vaultRoot, map[string]string{page.Path: page.Address})
+	addresses := &memAddressMap{entries: AddressMap{page.Path: page.Address}}
 	writeIndexWithLink(t, vaultRoot, page.Address)
 
 	var wikilinkDiags []Diagnostic
-	for _, d := range LintPage(page, vaultRoot) {
+	for _, d := range LintPage(page, vaultRoot, addresses) {
 		if d.Rule == "wikilink-resolvability" {
 			wikilinkDiags = append(wikilinkDiags, d)
 		}
@@ -121,9 +103,9 @@ func TestLintPage_UnregisteredPageIsFlagged(t *testing.T) {
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
 	}
-	writeManifest(t, vaultRoot, map[string]string{})
+	addresses := &memAddressMap{entries: AddressMap{}}
 
-	diags := LintPage(page, vaultRoot)
+	diags := LintPage(page, vaultRoot, addresses)
 	rules := map[string]bool{}
 	for _, d := range diags {
 		rules[d.Rule] = true
@@ -136,9 +118,43 @@ func TestLintPage_UnregisteredPageIsFlagged(t *testing.T) {
 	}
 }
 
-// The words of the three diagnostics that name a vault file are what an operator reads in the doctor's output.
-// The files come from the layout now, so a change of path there must not silently change them, and this
-// test says what they read today.
+// CheckInboundIndexLink is the catalog rule alone, for a caller (the doctor's registration check) that has
+// no use for the other rules and so none for the readers they need. It answers what LintPage answers for that
+// rule, in each state the catalog can be in.
+func TestCheckInboundIndexLink_AnswersWhatLintPageAnswersForThatRule(t *testing.T) {
+	obs := memory.Observation{ID: 44, Type: "decision", Title: "Named", Content: "Body.", Project: "labdrian-sdd-overlay"}
+	page, err := EmitPage(obs, "c-000044", nil, time.Date(2026, 8, 30, 0, 0, 0, 0, time.UTC))
+	if err != nil {
+		t.Fatalf("EmitPage: %v", err)
+	}
+	for name, setup := range map[string]func(t *testing.T, vaultRoot string){
+		"a catalog that is missing":          func(t *testing.T, vaultRoot string) {},
+		"a catalog with no link to the page": func(t *testing.T, vaultRoot string) { writeIndexWithLink(t, vaultRoot, "c-000099") },
+		"a catalog that links to the page":   func(t *testing.T, vaultRoot string) { writeIndexWithLink(t, vaultRoot, "c-000044") },
+	} {
+		t.Run(name, func(t *testing.T) {
+			vaultRoot := t.TempDir()
+			setup(t, vaultRoot)
+			var want []Diagnostic
+			for _, d := range LintPage(page, vaultRoot, &memAddressMap{}) {
+				if d.Rule == "inbound-index-link" {
+					want = append(want, d)
+				}
+			}
+			got, ok := CheckInboundIndexLink(page, vaultRoot)
+			if ok != (len(want) == 0) {
+				t.Fatalf("CheckInboundIndexLink ok = %v, but LintPage reports %+v", ok, want)
+			}
+			if !ok && (len(want) != 1 || got != want[0]) {
+				t.Errorf("CheckInboundIndexLink = %+v, want %+v", got, want)
+			}
+		})
+	}
+}
+
+// The words of the diagnostics that name the catalog are what an operator reads in the doctor's output. The
+// file comes from the layout, so a change of path there must not silently change them, and this test says what
+// they read today. The one that names the address map is pinned by TestLintPage_ChecksTheAddressMapItIsHanded.
 func TestLintPage_NamesTheVaultFilesItReportsOn(t *testing.T) {
 	clock := &fakeClock{at: time.Date(2026, 8, 30, 0, 0, 0, 0, time.UTC)}
 	obs := memory.Observation{ID: 44, Type: "decision", Title: "Named", Content: "Body.", Project: "labdrian-sdd-overlay"}
@@ -148,7 +164,7 @@ func TestLintPage_NamesTheVaultFilesItReportsOn(t *testing.T) {
 	}
 	detailsOf := func(vaultRoot, rule string) []string {
 		var details []string
-		for _, d := range LintPage(page, vaultRoot) {
+		for _, d := range LintPage(page, vaultRoot, &memAddressMap{}) {
 			if d.Rule == rule {
 				details = append(details, d.Detail)
 			}
@@ -169,15 +185,5 @@ func TestLintPage_NamesTheVaultFilesItReportsOn(t *testing.T) {
 		vaultRoot := t.TempDir()
 		writeIndexWithLink(t, vaultRoot, "c-000099")
 		want(t, detailsOf(vaultRoot, "inbound-index-link"), "wiki/index.md has no link to c-000044")
-	})
-	t.Run("an address manifest that is not JSON", func(t *testing.T) {
-		vaultRoot := t.TempDir()
-		if err := os.MkdirAll(filepath.Join(vaultRoot, ".raw"), 0o755); err != nil {
-			t.Fatalf("mkdir: %v", err)
-		}
-		if err := os.WriteFile(filepath.Join(vaultRoot, ".raw", ".manifest.json"), []byte("{not json"), 0o644); err != nil {
-			t.Fatalf("write manifest: %v", err)
-		}
-		want(t, detailsOf(vaultRoot, "address-map"), ".raw/.manifest.json is not valid JSON")
 	})
 }

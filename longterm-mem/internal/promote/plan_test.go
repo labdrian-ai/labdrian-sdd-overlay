@@ -45,7 +45,7 @@ func TestPlan_WritesNothingAndPredictsWhatSyncThenDoes(t *testing.T) {
 		ID: ids[2], Type: "decision", Title: "Already Current", Content: "Body three.", Project: "p", RevisionCount: 3,
 	}, "c-000900")
 
-	w := &Writer{VaultRoot: vaultRoot, Store: precedence, Precedence: &memPrecedence{}, Clock: clock, Addresses: addresses}
+	w := &Writer{VaultRoot: vaultRoot, Store: precedence, Precedence: &memPrecedence{}, Clock: clock, AddressMap: &memAddressMap{}, Addresses: addresses}
 	deps := Deps{Memory: store, Writer: w}
 
 	before := vaultSnapshot(t, vaultRoot)
@@ -164,7 +164,7 @@ func TestPlan_CountsThePagesPropagateWouldPatch(t *testing.T) {
 		ID: ids[1], Type: "decision", Title: "New Decision", Content: "New body.", Project: "p", RevisionCount: 1,
 	}, "c-000002")
 
-	deps := Deps{Memory: store, Writer: &Writer{VaultRoot: vaultRoot, Store: precedence, Precedence: &memPrecedence{}, Clock: clock, Addresses: addresses}}
+	deps := Deps{Memory: store, Writer: &Writer{VaultRoot: vaultRoot, Store: precedence, Precedence: &memPrecedence{}, Clock: clock, AddressMap: &memAddressMap{}, Addresses: addresses}}
 
 	before := vaultSnapshot(t, vaultRoot)
 
@@ -224,7 +224,7 @@ func TestPlan_OneBrokenObservationIsReportedOnce(t *testing.T) {
 		t.Fatalf("write broken page: %v", err)
 	}
 
-	deps := Deps{Memory: store, Writer: &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Clock: clock, Addresses: addresses}}
+	deps := Deps{Memory: store, Writer: &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Clock: clock, AddressMap: &memAddressMap{}, Addresses: addresses}}
 	plan, err := Plan(context.Background(), deps, "p")
 	if err != nil {
 		t.Fatalf("Plan: %v", err)

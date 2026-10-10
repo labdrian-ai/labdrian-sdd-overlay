@@ -54,8 +54,8 @@ func cmdSync(args []string) int {
 	defer store.Close()
 	declareDegradedEngram(store, "sync")
 
-	writer := &promote.Writer{VaultRoot: vaultRoot, Addresses: vault.AddressAllocator{Root: vaultRoot}, Clock: utcClock{}}
-	if err := writer.UsePrecedence(openVault(vaultRoot)); err != nil {
+	writer, err := newPromoteWriter(vaultRoot)
+	if err != nil {
 		fmt.Fprintf(os.Stderr, "longterm-mem: sync: %v\n", err)
 		return exitInternal
 	}

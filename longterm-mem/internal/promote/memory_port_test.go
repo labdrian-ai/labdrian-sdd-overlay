@@ -50,7 +50,7 @@ func TestSync_ReadsTheLiveObservationsThroughItsMemoryPort(t *testing.T) {
 	process := memory.Observation{ID: 12, Type: "discovery", Title: "Process note", Content: "Not curated.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "sdd/some-change/progress"}
 	mem := &fakeMemory{live: []memory.Observation{curated, process}}
 
-	report, err := Sync(context.Background(), Deps{Memory: mem, Writer: &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Clock: clock, Addresses: staticAddress(testAddress)}}, "labdrian-sdd-overlay")
+	report, err := Sync(context.Background(), Deps{Memory: mem, Writer: &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Clock: clock, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress)}}, "labdrian-sdd-overlay")
 	if err != nil {
 		t.Fatalf("Sync: %v", err)
 	}
