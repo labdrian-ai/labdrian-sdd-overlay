@@ -47,7 +47,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/repohistory"
 )
 
@@ -214,7 +214,7 @@ func ClassifyPaths(repoRoot string, paths []string) (map[string]repohistory.Path
 
 // Detect reports which of observations the repository at repoRoot
 // disagrees with.
-func Detect(repoRoot string, observations []engram.Observation) ([]Finding, error) {
+func Detect(repoRoot string, observations []memory.Observation) ([]Finding, error) {
 	tree, err := indexTree(repoRoot)
 	if err != nil {
 		return nil, err
@@ -253,7 +253,7 @@ func Detect(repoRoot string, observations []engram.Observation) ([]Finding, erro
 // findings applies the rule to already-gathered facts. It is separated from
 // the gathering so the rule can be tested against facts that are awkward to
 // build on disk -- an unknown path carrying a recent date above all.
-func findings(observations []engram.Observation, perObs map[int64][]string, facts map[string]repohistory.PathFact) []Finding {
+func findings(observations []memory.Observation, perObs map[int64][]string, facts map[string]repohistory.PathFact) []Finding {
 	var out []Finding
 	for _, o := range observations {
 		written, ok := observationTime(o)
@@ -283,7 +283,7 @@ func findings(observations []engram.Observation, perObs map[int64][]string, fact
 // observationTime parses when an observation was last written. Engram
 // writes its timestamps through datetime('now'), so they arrive as SQLite
 // TEXT rather than RFC 3339.
-func observationTime(o engram.Observation) (time.Time, bool) {
+func observationTime(o memory.Observation) (time.Time, bool) {
 	for _, raw := range []string{o.UpdatedAt, o.CreatedAt} {
 		raw = strings.TrimSpace(raw)
 		if raw == "" {

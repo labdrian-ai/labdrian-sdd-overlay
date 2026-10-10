@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/repohistory"
 )
 
@@ -14,7 +14,7 @@ import (
 // deletion is evidence of removal, and inferring one from "something
 // happened, later" is exactly how a live memory gets marked dead.
 func TestFindings_UnknownIsNeverAReportedRemovalEvenWhenRecent(t *testing.T) {
-	obs := []engram.Observation{{ID: 1, Title: "t", UpdatedAt: "2026-01-01 00:00:00"}}
+	obs := []memory.Observation{{ID: 1, Title: "t", UpdatedAt: "2026-01-01 00:00:00"}}
 	facts := map[string]repohistory.PathFact{
 		"a/b.go": {
 			Path:   "a/b.go",

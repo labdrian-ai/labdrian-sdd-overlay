@@ -120,7 +120,6 @@ var knownDebt = archguard.Debt{
 
 	// staleness: reads the repository through a RepoEvidence port.
 	"internal/staleness": {
-		"internal/engram":       "L1",
 		"internal/repohistory":  "L6",
 		"os":                    "L6",
 		"path/filepath.WalkDir": "L6",

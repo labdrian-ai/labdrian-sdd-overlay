@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/repohistory"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/staleness"
 )
@@ -90,7 +90,7 @@ func TestClassifyPaths_UsesTreeAndHistory(t *testing.T) {
 func TestDetect_APathRemovedAfterTheMemoryWasWritten(t *testing.T) {
 	repo := fixture(t)
 
-	got := detect(t, repo, engram.Observation{
+	got := detect(t, repo, memory.Observation{
 		ID: 1, Title: "how gone.go works",
 		Content:   "**Where**: gone.go\n",
 		UpdatedAt: "2026-01-01 00:00:00",
@@ -110,7 +110,7 @@ func TestDetect_APathRemovedAfterTheMemoryWasWritten(t *testing.T) {
 func TestDetect_APathRemovedBeforeTheMemoryIsNotStale(t *testing.T) {
 	repo := fixture(t)
 
-	got := detect(t, repo, engram.Observation{
+	got := detect(t, repo, memory.Observation{
 		ID: 2, Title: "we removed gone.go on purpose",
 		Content:   "**Where**: gone.go\n",
 		UpdatedAt: "2030-01-01 00:00:00",
@@ -131,7 +131,7 @@ func TestDetect_APathRecordedUnderAnotherRootIsAlive(t *testing.T) {
 	// the recorded path, and only resolving it against the tree by suffix
 	// shows the file is alive -- without that step this is a false report
 	// of a removal, which is the finding that gets a live memory deleted.
-	got := detect(t, repo, engram.Observation{
+	got := detect(t, repo, memory.Observation{
 		ID: 3, Title: "about a file recorded without its module prefix",
 		Content:   "**Where**: moved-root.go\n",
 		UpdatedAt: "2026-01-01 00:00:00",
@@ -146,7 +146,7 @@ func TestDetect_APathRecordedUnderAnotherRootIsAlive(t *testing.T) {
 func TestDetect_ARenameIsReportedAsMovedNotRemoved(t *testing.T) {
 	repo := fixture(t)
 
-	got := detect(t, repo, engram.Observation{
+	got := detect(t, repo, memory.Observation{
 		ID: 4, Title: "about a moved file",
 		Content:   "**Where**: pkg/moved.go\n",
 		UpdatedAt: "2026-01-01 00:00:00",
@@ -168,7 +168,7 @@ func TestDetect_ARenameIsReportedAsMovedNotRemoved(t *testing.T) {
 func TestDetect_APathThisRepositoryNeverHadIsIgnored(t *testing.T) {
 	repo := fixture(t)
 
-	got := detect(t, repo, engram.Observation{
+	got := detect(t, repo, memory.Observation{
 		ID: 5, Title: "about gentle-ai's code",
 		Content:   "**Where**: internal/cli/review_facade.go\n",
 		UpdatedAt: "2026-01-01 00:00:00",
@@ -178,7 +178,7 @@ func TestDetect_APathThisRepositoryNeverHadIsIgnored(t *testing.T) {
 	}
 }
 
-func detect(t *testing.T, repo string, obs ...engram.Observation) []staleness.Finding {
+func detect(t *testing.T, repo string, obs ...memory.Observation) []staleness.Finding {
 	t.Helper()
 	got, err := staleness.Detect(repo, obs)
 	if err != nil {
