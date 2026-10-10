@@ -1,0 +1,60 @@
+args: query --project goldenproj --json the and of
+exit: 0
+--- stdout ---
+{
+  "project": "goldenproj",
+  "query": "the and of",
+  "vault_status": "not_requested",
+  "results": [
+    {
+      "sources": [
+        "engram-fts"
+      ],
+      "rank": 1,
+      "engram_id": 7,
+      "title": "Policy with multibyte head",
+      "snippet": "ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú the policy marker word zebracorn éééééééééééééééééééééééééééééééé…",
+      "snippet_truncated": true,
+      "full_length": 483
+    },
+    {
+      "sources": [
+        "engram-fts"
+      ],
+      "rank": 2,
+      "engram_id": 3,
+      "title": "Dragonscale layout",
+      "snippet": "reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del p…",
+      "snippet_truncated": true,
+      "full_length": 2599
+    },
+    {
+      "sources": [
+        "engram-fts"
+      ],
+      "rank": 3,
+      "engram_id": 1,
+      "title": "Canonical identity of the register writer",
+      "snippet": "The canonical identity rule: the register writer sorts its keys.\n**Where**: internal/old/gone.go, moved.go\nisolation marker here.",
+      "full_length": 129
+    },
+    {
+      "sources": [
+        "engram-fts"
+      ],
+      "rank": 4,
+      "engram_id": 2,
+      "title": "Fixed register writer key order",
+      "snippet": "Fixed the register writer sorting its keys; what conventions apply when editing the register writer.",
+      "full_length": 100
+    }
+  ],
+  "diagnostics": [
+    {
+      "code": "search_widened",
+      "detail": "no observation matched every term of this query, so it was retried matching any one of them: these rows answer part of the query, not all of it"
+    }
+  ],
+  "coverage": null
+}
+--- stderr ---

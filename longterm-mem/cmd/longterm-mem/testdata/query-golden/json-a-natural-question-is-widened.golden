@@ -1,0 +1,28 @@
+args: query --project goldenproj --json what conventions apply when editing the register writer
+exit: 0
+--- stdout ---
+{
+  "project": "goldenproj",
+  "query": "what conventions apply when editing the register writer",
+  "vault_status": "not_requested",
+  "results": [
+    {
+      "sources": [
+        "engram-fts"
+      ],
+      "rank": 1,
+      "engram_id": 2,
+      "title": "Fixed register writer key order",
+      "snippet": "Fixed the register writer sorting its keys; what conventions apply when editing the register writer.",
+      "full_length": 100
+    }
+  ],
+  "diagnostics": [
+    {
+      "code": "search_stopwords_dropped",
+      "detail": "these terms were not searched, as words too common to narrow anything down: what, when, the"
+    }
+  ],
+  "coverage": null
+}
+--- stderr ---
