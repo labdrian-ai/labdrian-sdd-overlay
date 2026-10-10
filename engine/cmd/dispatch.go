@@ -39,7 +39,7 @@ func run(p process, d deps, args []string) {
 	case "review-receipt":
 		runReviewReceipt(p, d, rest)
 	case "shaper":
-		runShaper(rest)
+		runShaper(p, d, rest)
 	case "roles":
 		runRoles(p, rest)
 	case "memory":

@@ -48,6 +48,22 @@ func environmentOf(vars map[string]string) func(string) string {
 	return func(name string) string { return vars[name] }
 }
 
+// main says once whether the process runs inside a gentle-pi agent child, from the one variable
+// that tells it, and only the value 1 does.
+func TestProductionDepsResolvesTheAgentChildFromTheEnvironment(t *testing.T) {
+	for _, tc := range []struct {
+		value string
+		want  bool
+	}{{"1", true}, {"0", false}, {"true", false}, {"", false}} {
+		t.Run("value "+tc.value, func(t *testing.T) {
+			t.Setenv(agentChildVariable, tc.value)
+			if got := productionDeps().agentChild; got != tc.want {
+				t.Errorf("agentChild = %v with %s=%q, want %v", got, agentChildVariable, tc.value, tc.want)
+			}
+		})
+	}
+}
+
 func TestTestDepsIsTheDepsOfTheProgram(t *testing.T) {
 	d := testDeps()
 	if d.getenv == nil || d.environ == nil || d.userHomeDir == nil {

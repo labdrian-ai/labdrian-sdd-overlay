@@ -40,4 +40,15 @@ type deps struct {
 	getenv      func(string) string
 	environ     func() []string
 	userHomeDir func() (string, error)
+	// agentChild says that the process runs inside a gentle-pi agent child, where no human
+	// answers a dialog. main resolves it once from the environment (agentChildVariable), so
+	// that no command reads that variable deep inside itself.
+	agentChild bool
 }
+
+// agentChildVariable is the environment variable a gentle-pi agent child runs with, set to
+// agentChildValue.
+const (
+	agentChildVariable = "GENTLE_PI_AGENTS_CHILD"
+	agentChildValue    = "1"
+)

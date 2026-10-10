@@ -12,7 +12,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -25,13 +24,13 @@ import (
 const shaperAuthorityNote = "Readiness is evidence only and grants no execution authority; it never permits or dispatches work."
 
 // runShaper implements the 'shaper <verb>' subcommand.
-func runShaper(args []string) {
-	runShaperCore(args, os.Stdin, os.Stdout, os.Stderr, os.Exit)
+func runShaper(p process, d deps, args []string) {
+	runShaperCore(d, args, p.stdin, p.stdout, p.stderr, p.exit)
 }
 
 // runShaperCore is the testable core of the shaper subcommand. Every exit(n)
 // is followed by a return, because tests inject a non-terminating exit.
-func runShaperCore(args []string, stdin io.Reader, stdout, stderr io.Writer, exit func(int)) {
+func runShaperCore(d deps, args []string, stdin io.Reader, stdout, stderr io.Writer, exit func(int)) {
 	if len(args) == 0 {
 		fmt.Fprintln(stderr, "error: shaper requires a verb: assess, clearance, guard-hook")
 		exit(1)
@@ -46,7 +45,7 @@ func runShaperCore(args []string, stdin io.Reader, stdout, stderr io.Writer, exi
 			exit(1)
 			return
 		}
-		runShaperClearanceRecord(args[2:], stdin, stdout, stderr, exit)
+		runShaperClearanceRecord(d, args[2:], stdin, stdout, stderr, exit)
 	case "guard-hook":
 		runShaperGuardHook(stdin, stderr, exit)
 	default:
@@ -332,7 +331,7 @@ func writeShaperAssessment(stdout, stderr io.Writer, a shaper.Assessment, report
 // decision is read only from stdin; the Subject, flags, and presented view
 // are re-derived from disk, and any mismatch is refused under Verify's
 // binding rules before the immutable store is written.
-func runShaperClearanceRecord(args []string, stdin io.Reader, stdout, stderr io.Writer, exit func(int)) {
+func runShaperClearanceRecord(d deps, args []string, stdin io.Reader, stdout, stderr io.Writer, exit func(int)) {
 	fail := func(format string, a ...any) {
 		fmt.Fprintf(stderr, "error: shaper clearance record: "+format+"\n", a...)
 		exit(1)
@@ -346,7 +345,7 @@ func runShaperClearanceRecord(args []string, stdin io.Reader, stdout, stderr io.
 		fail("--stdin is required: the clearance decision is accepted only on stdin, never from argv")
 		return
 	}
-	if os.Getenv("GENTLE_PI_AGENTS_CHILD") == "1" {
+	if d.agentChild {
 		fail("refusing inside a gentle-pi agent child (GENTLE_PI_AGENTS_CHILD=1): no human answers its dialogs")
 		return
 	}

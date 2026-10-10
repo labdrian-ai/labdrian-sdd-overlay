@@ -65,7 +65,7 @@ func (w *hookWorld) shaperGuardReader(label string, stdin io.Reader, stdinNote s
 	w.t.Helper()
 	var stdout, stderr bytes.Buffer
 	var exits []int
-	runShaperCore([]string{"guard-hook"}, stdin, &stdout, &stderr, func(c int) { exits = append(exits, c) })
+	runShaperCore(testDeps(), []string{"guard-hook"}, stdin, &stdout, &stderr, func(c int) { exits = append(exits, c) })
 	w.record("shaper guard-hook", label, stdinNote, exits, stdout.String(), stderr.String())
 }
 
