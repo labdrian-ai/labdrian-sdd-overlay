@@ -1,0 +1,63 @@
+$ workflow status --project proj-1 --workflow wf-1
+exit: 0
+--- stdout ---
+{
+  "classification": "owned",
+  "status": "running",
+  "profile": "odd",
+  "goal_id": "goal-1",
+  "goal_digest": "3fa80a4c34f1198a2fe03c95ecaaab97721dd5a94dce91612f2612b4208e54ac",
+  "stages": [],
+  "last_verified_seq": -1,
+  "profile_drift": {
+    "kind": "changed",
+    "profile": "odd",
+    "recorded_digest": "65510e9c1c6db20dadad8983940833499818852db6263b9068d62c6f18ad70fb",
+    "current_digest": "aace8511bad17f40f8a722b5dc1e944f4526dbb66483add3967b09cebec1101a",
+    "fields": [
+      "checks",
+      "relies_on_gentle_review"
+    ]
+  }
+}
+--- stderr ---
+
+$ workflow verify --project proj-1 --workflow wf-1 --goal <GOAL>
+exit: 0
+--- stdout ---
+{
+  "classification": "owned",
+  "status": "running",
+  "profile": "odd",
+  "goal_id": "goal-1",
+  "goal_digest": "3fa80a4c34f1198a2fe03c95ecaaab97721dd5a94dce91612f2612b4208e54ac",
+  "stages": [],
+  "last_verified_seq": 2
+}
+--- stderr ---
+warning: workflow verify: profile drift: the built-in profile "odd" differs from the one this workflow recorded (changed: checks, relies_on_gentle_review); the workflow goes on from the recorded profile
+
+$ workflow status --project proj-1 --workflow wf-1
+exit: 0
+--- stdout ---
+{
+  "classification": "owned",
+  "status": "running",
+  "profile": "odd",
+  "goal_id": "goal-1",
+  "goal_digest": "3fa80a4c34f1198a2fe03c95ecaaab97721dd5a94dce91612f2612b4208e54ac",
+  "stages": [],
+  "last_verified_seq": 2,
+  "profile_drift": {
+    "kind": "changed",
+    "profile": "odd",
+    "recorded_digest": "65510e9c1c6db20dadad8983940833499818852db6263b9068d62c6f18ad70fb",
+    "current_digest": "aace8511bad17f40f8a722b5dc1e944f4526dbb66483add3967b09cebec1101a",
+    "fields": [
+      "checks",
+      "relies_on_gentle_review"
+    ]
+  }
+}
+--- stderr ---
+
