@@ -45,7 +45,11 @@ const (
 	exitVaultSubprocessFailed = 5
 	// exitRegistrationConflict: an artifact already occupies the target
 	// location and longterm-mem cannot prove it wrote it, so it refused
-	// and changed nothing.
+	// and changed nothing. A page of the vault that cannot be read is the
+	// same refusal: it may be the page of an observation, so no second page
+	// is made for it, and promote and sync leave that observation alone and
+	// answer this code (sync only when nothing failed, and after it did
+	// everything else it could).
 	exitRegistrationConflict = 6
 	// exitNotFound: the named observation does not exist.
 	exitNotFound = 7

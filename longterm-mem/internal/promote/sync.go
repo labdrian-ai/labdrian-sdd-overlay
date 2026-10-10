@@ -3,6 +3,7 @@ package promote
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"time"
@@ -44,6 +45,13 @@ type SyncReport struct {
 	Promoted []Result
 	Skipped  int
 	Failed   []SyncFailure
+	// Withheld lists the observations the run left alone because it could not tell whether they already have a
+	// page: no readable page carries them and a page could not be read. Nothing was written for them, no
+	// address was taken, and a later run decides them once the unreadable pages are repaired or removed. It is
+	// not a failure and costs the run nothing else.
+	Withheld []int64
+	// Unreadable names every page of the vault the run could not read and skipped.
+	Unreadable []UnreadablePage
 }
 
 // SyncFailure is one observation Sync could not process, kept per
@@ -70,6 +78,16 @@ type SyncFailure struct {
 // rebuilt, the sync-state record never written, and each retry failing
 // identically. Sync still returns a non-nil error when anything failed,
 // so a partially successful run can never be mistaken for a clean one.
+//
+// A page of the vault that cannot be read is not one of those failures. It is
+// skipped and named (SyncReport.Unreadable), as the doctor names it, and the
+// run goes on: an observation that a readable page carries is promoted as
+// ever, and an observation that no readable page carries while a page could
+// not be read is left alone (SyncReport.Withheld), because the unreadable page
+// may be its own and a new page would be a second one. Nothing is written for
+// it and no address is taken; a later run decides it once the page is repaired
+// or removed. A pages directory that cannot be listed at all stays what it was,
+// the failure of every observation.
 func Sync(ctx context.Context, deps Deps, project string) (SyncReport, error) {
 	if err := deps.Writer.checkPorts(); err != nil {
 		return SyncReport{}, fmt.Errorf("promote: sync: %w", err)
@@ -79,21 +97,29 @@ func Sync(ctx context.Context, deps Deps, project string) (SyncReport, error) {
 		return SyncReport{}, fmt.Errorf("promote: sync: list observations for %q: %w", project, err)
 	}
 
-	var report SyncReport
+	report := SyncReport{Unreadable: UnreadablePages(deps.Writer.Pages)}
 	for _, obs := range observations {
 		decision, err := decidePromotion(deps.Writer.Pages, project, obs)
 		if err != nil {
 			report.Failed = append(report.Failed, SyncFailure{ObservationID: obs.ID, Err: err})
 			continue
 		}
-		if !decision {
+		switch decision {
+		case promotionNotNeeded:
 			report.Skipped++
+			continue
+		case promotionWithheld:
+			report.Withheld = append(report.Withheld, obs.ID)
 			continue
 		}
 
 		result, err := deps.Writer.Promote(ctx, obs, false)
 		if err != nil {
 			report.Failed = append(report.Failed, SyncFailure{ObservationID: obs.ID, Err: err})
+			continue
+		}
+		if result.Action.Kind == ActionSkippedUnreadablePages {
+			report.Withheld = append(report.Withheld, obs.ID)
 			continue
 		}
 		report.Promoted = append(report.Promoted, result)
@@ -111,24 +137,41 @@ func Sync(ctx context.Context, deps Deps, project string) (SyncReport, error) {
 	return report, failureError("sync", report.Failed)
 }
 
+// promotionDecision is what a run does about one observation.
+type promotionDecision int
+
+const (
+	// promotionNotNeeded: the observation is ineligible, or its page is already current. Nothing is written.
+	promotionNotNeeded promotionDecision = iota
+	// promotionNeeded: the run writes a page for the observation.
+	promotionNeeded
+	// promotionWithheld: no readable page carries the observation and a page could not be read, so it cannot be
+	// told whether the observation is promoted. Nothing is written, and it is not a failure.
+	promotionWithheld
+)
+
 // decidePromotion answers the one question Sync asks of each observation:
 // would this run write a page for it? It is extracted so Plan and Sync
 // cannot drift apart -- a dry run that predicts from its own copy of this
 // walk is a preview that stops describing the run the moment either copy
 // changes, and an operator only finds out by running the thing the preview
 // existed to let them avoid.
-func decidePromotion(pages PageReader, project string, obs memory.Observation) (bool, error) {
+func decidePromotion(pages PageReader, project string, obs memory.Observation) (promotionDecision, error) {
 	if !Eligible(obs, false) {
-		return false, nil
+		return promotionNotNeeded, nil
 	}
 	promoted, ok, err := findPromotedPage(pages, project, int(obs.ID))
+	var unknown *unreadablePagesError
+	if errors.As(err, &unknown) {
+		return promotionWithheld, nil
+	}
 	if err != nil {
-		return false, fmt.Errorf("check promoted state: %w", err)
+		return promotionNotNeeded, fmt.Errorf("check promoted state: %w", err)
 	}
 	if ok && promoted.Revision >= obs.RevisionCount {
-		return false, nil
+		return promotionNotNeeded, nil
 	}
-	return true, nil
+	return promotionNeeded, nil
 }
 
 // SyncPlan is what a Sync run WOULD do, computed without writing anything.
@@ -156,6 +199,11 @@ type SyncPlan struct {
 	WouldPatch int
 	// PatchAddresses names the pages WouldPatch counts, in the same order.
 	PatchAddresses []string
+	// Withheld lists the observations either pass would leave alone for want of a page that can be told from
+	// the unreadable ones (see SyncReport.Withheld), each once.
+	Withheld []int64
+	// Unreadable names every page of the vault the run would skip because it cannot be read.
+	Unreadable []UnreadablePage
 }
 
 // Plan reports what a `sync` run would do for project, writing nothing at
@@ -172,29 +220,52 @@ func Plan(ctx context.Context, deps Deps, project string) (SyncPlan, error) {
 		return SyncPlan{}, fmt.Errorf("promote: plan: list observations for %q: %w", project, err)
 	}
 
-	var plan SyncPlan
+	plan := SyncPlan{Unreadable: UnreadablePages(deps.Writer.Pages)}
 	for _, obs := range observations {
-		promote, err := decidePromotion(deps.Writer.Pages, project, obs)
+		decision, err := decidePromotion(deps.Writer.Pages, project, obs)
 		if err != nil {
 			plan.Failed = append(plan.Failed, SyncFailure{ObservationID: obs.ID, Err: err})
 			continue
 		}
-		if !promote {
+		switch decision {
+		case promotionNotNeeded:
 			plan.Skipped++
-			continue
+		case promotionWithheld:
+			plan.Withheld = append(plan.Withheld, obs.ID)
+		case promotionNeeded:
+			plan.WouldPromote++
+			plan.Titles = append(plan.Titles, obs.Title)
 		}
-		plan.WouldPromote++
-		plan.Titles = append(plan.Titles, obs.Title)
 	}
 
-	addresses, patchFailures, err := patchCandidates(deps, project)
+	patches, err := patchCandidates(deps, project)
 	if err != nil {
 		return SyncPlan{}, err
 	}
-	plan.PatchAddresses = addresses
-	plan.WouldPatch = len(addresses)
-	plan.Failed = mergeFailures(plan.Failed, patchFailures)
+	plan.PatchAddresses = patches.addresses
+	plan.WouldPatch = len(patches.addresses)
+	plan.Failed = mergeFailures(plan.Failed, patches.failed)
+	plan.Withheld = mergeWithheld(plan.Withheld, patches.withheld)
 	return plan, nil
+}
+
+// mergeWithheld joins the two passes' lists of observations left alone, each observation once, in the order
+// first met: both passes ask the same page lookup of the same observation, so one unreadable page withholds an
+// observation from both, and it is one observation.
+func mergeWithheld(first, second []int64) []int64 {
+	seen := make(map[int64]bool, len(first))
+	for _, id := range first {
+		seen[id] = true
+	}
+	merged := first
+	for _, id := range second {
+		if seen[id] {
+			continue
+		}
+		seen[id] = true
+		merged = append(merged, id)
+	}
+	return merged
 }
 
 // mergeFailures joins the two passes' failure lists, dropping an entry the

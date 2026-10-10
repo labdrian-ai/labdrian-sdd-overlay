@@ -1,6 +1,10 @@
 package promote
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+	"strings"
+)
 
 // PageExistence is the port through which the page check asks whether the page promoted under an address is
 // there: the one question its wikilink rule puts to the pages.
@@ -47,6 +51,41 @@ type PageRepository interface {
 	// there; a page that exists keeps its mode and a link to it is written through, because the vault is the
 	// user's own and shared with other tools; a page it creates is readable by its owner alone.
 	WritePage(address, content string) error
+}
+
+// UnreadablePage is a page of the vault that could not be read: a link to nothing, a link to a directory, a file
+// the process may not open. Its frontmatter is unknown, so it is not known which observation, if any, it is the
+// page of.
+type UnreadablePage struct {
+	// File is the page's base filename, as the messages name it.
+	File string
+	// Err is why the read failed, in the file system's own words.
+	Err error
+}
+
+// String names the page in the words the doctor uses for the same page.
+func (p UnreadablePage) String() string {
+	return fmt.Sprintf("promoted page %s could not be read: %v", p.File, p.Err)
+}
+
+// describePages joins the pages' descriptions, in the order given.
+func describePages(pages []UnreadablePage) string {
+	described := make([]string, len(pages))
+	for i, page := range pages {
+		described[i] = page.String()
+	}
+	return strings.Join(described, "; ")
+}
+
+// unreadablePagesError is what the lookup of an observation's page answers when no readable page carries the
+// observation and some page could not be read: the observation may already have a page, the unreadable one, and
+// nothing can tell. It is not a failure of the observation; promotion leaves the observation alone (Writer.Promote
+// reports it as ActionSkippedUnreadablePages, Sync and Plan list it as withheld) rather than make a second page
+// for it at a new address.
+type unreadablePagesError struct{ pages []UnreadablePage }
+
+func (e *unreadablePagesError) Error() string {
+	return "promote: no readable page belongs to this observation, but a page that could not be read may: " + describePages(e.pages)
 }
 
 // errNoPageRepository is what a promotion answers when its Writer was built without a PageRepository: a port

@@ -79,8 +79,13 @@ func cmdPromote(args []string) int {
 	// untagged-entry refusal). The diagnostic goes to stderr, where a
 	// caller reading stdout for the promoted address finds nothing to
 	// mistake for one.
-	if result.Action.Kind == promote.ActionSkippedLocalEdit {
-		fmt.Printf("longterm-mem: refused %s (%s)\n", result.Page.Address, result.Action.Kind)
+	//
+	// The same holds for an observation left alone because a page of the
+	// vault could not be read and no readable page is its own: it may
+	// already have a page, the unreadable one, so promotion made no second
+	// page for it. There is no page to name, so the observation is.
+	if line, refused := refusalLine(result, *id); refused {
+		fmt.Println(line)
 		if result.Action.Diagnostic != nil {
 			fmt.Fprintf(os.Stderr, "longterm-mem: promote: %s\n", result.Action.Diagnostic.Detail)
 		}
@@ -89,6 +94,20 @@ func cmdPromote(args []string) int {
 
 	fmt.Printf("longterm-mem: promoted %s (%s)\n", result.Page.Address, result.Action.Kind)
 	return exitOK
+}
+
+// refusalLine is the line a promotion that wrote nothing prints on stdout, and whether it was a refusal at all.
+// A refused edit names the page it left alone; an observation left alone for a page that could not be read has
+// no page, so it names the observation.
+func refusalLine(result promote.Result, observationID int64) (string, bool) {
+	switch result.Action.Kind {
+	case promote.ActionSkippedLocalEdit:
+		return fmt.Sprintf("longterm-mem: refused %s (%s)", result.Page.Address, result.Action.Kind), true
+	case promote.ActionSkippedUnreadablePages:
+		return fmt.Sprintf("longterm-mem: refused observation %d (%s)", observationID, result.Action.Kind), true
+	default:
+		return "", false
+	}
 }
 
 // cmdPromoteReconcile implements `longterm-mem promote reconcile --project P

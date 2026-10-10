@@ -171,11 +171,12 @@ func TestScanPromotedPagesReadsEveryListedPageOnceAndKeepsTheMatches(t *testing.
 		"c-000004": carries(7, "q", "c-000004"),
 	})
 
-	matches, err := scanPromotedPages(pages, 7)
+	scan, err := scanPromotedPages(pages, 7)
 	if err != nil {
 		t.Fatalf("scanPromotedPages: %v", err)
 	}
 
+	matches := scan.matches
 	if len(matches) != 2 || matches[0].File != "c-000001.md" || matches[1].File != "c-000004.md" || matches[1].Project != "q" {
 		t.Fatalf("matches = %+v, want c-000001.md then c-000004.md (project q)", matches)
 	}
@@ -187,7 +188,9 @@ func TestScanPromotedPagesReadsEveryListedPageOnceAndKeepsTheMatches(t *testing.
 }
 
 // The scan's failures name what failed in the words promotion has always used, around the cause the port gave.
-func TestScanPromotedPagesNamesWhatItCouldNotListOrRead(t *testing.T) {
+// A page that cannot be read is not among them: it is skipped and named, not a failure of the scan
+// (TestScanPromotedPagesSkipsAPageItCannotReadAndNamesIt), since the owner's decision of 2026-10-10.
+func TestScanPromotedPagesNamesWhatItCouldNotList(t *testing.T) {
 	t.Run("list", func(t *testing.T) {
 		pages := newMemPages(nil)
 		pages.listErr = errTestPages
@@ -195,16 +198,6 @@ func TestScanPromotedPagesNamesWhatItCouldNotListOrRead(t *testing.T) {
 		_, err := scanPromotedPages(pages, 7)
 
 		if want := "promote: list " + pages.PagesLocation() + ": boom"; err == nil || err.Error() != want {
-			t.Fatalf("error = %v, want %q", err, want)
-		}
-	})
-	t.Run("read", func(t *testing.T) {
-		pages := newMemPages(map[string]string{"c-000001": "x", "c-000002": "y"})
-		pages.readErrs = map[string]error{"c-000002": errTestPages}
-
-		_, err := scanPromotedPages(pages, 7)
-
-		if want := "promote: read c-000002.md: boom"; err == nil || err.Error() != want {
 			t.Fatalf("error = %v, want %q", err, want)
 		}
 	})

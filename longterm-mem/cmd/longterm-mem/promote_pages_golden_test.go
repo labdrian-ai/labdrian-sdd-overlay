@@ -18,8 +18,12 @@ import (
 // files that are not pages; and with the pages directory itself a file, a link, a link to nothing. After the
 // commands of a scenario they hold each command's exit code, stdout and stderr and every file of the vault, with
 // its mode and, for a link, where it points, character for character. They were recorded from the program as it
-// stood before the pages moved behind a port (Phase 9, L3 slice 3), and that change must not alter one byte of
-// them.
+// stood before the pages moved behind a port (Phase 9, L3 slice 3), and that change did not alter one byte of
+// them. Two were re-recorded afterwards, by the owner's decision of 2026-10-10: 04 and 05, a page that is a link
+// to nothing or to a directory, which used to make every promotion and every sync fail for every observation and
+// now is skipped and named, as the doctor names it, while the observations that no readable page is the page of
+// are left alone (exit 6, nothing written for them). 12, the pages directory that is itself a file, stays a hard
+// error as it was.
 //
 // A page that cannot be read because of its mode is not a scenario: a test run as the superuser reads it, so its
 // output would depend on who ran the test. A link to nothing and a link to a directory cannot be read by anyone,

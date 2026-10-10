@@ -177,6 +177,13 @@ func (w *Writer) Promote(ctx context.Context, obs memory.Observation, explicit b
 	}
 
 	address, err := allocateAddress(ctx, w.Pages, obs.Project, int(obs.ID), w.Addresses, w.AddressMap, utc(w.Clock))
+	var unknown *unreadablePagesError
+	if errors.As(err, &unknown) {
+		// A page that could not be read may be this observation's own. Taking an address and writing a page
+		// would make it a second one, so nothing is taken and nothing is written: the observation is reported
+		// as left alone, with the pages that kept it from being decided.
+		return Result{Action: unreadablePagesAction(obs.ID, unknown)}, nil
+	}
 	if err != nil {
 		return Result{}, err
 	}

@@ -1,15 +1,17 @@
 args: promote --project golden-project --id 1
-exit: 1
+exit: 6
 --- stdout ---
+longterm-mem: refused observation 1 (skipped_unreadable_pages)
 --- stderr ---
-longterm-mem: promote: promote: read c-000901.md: read <vault>/wiki/memory/c-000901.md: is a directory
+longterm-mem: promote: observation 1 was not promoted: no readable page belongs to it, but a page that could not be read may: promoted page c-000901.md could not be read: read <vault>/wiki/memory/c-000901.md: is a directory; nothing was written for it
 args: sync --project golden-project
-exit: 1
+exit: 6
 --- stdout ---
 longterm-mem: sync promoted 0 observation(s), patched 0 page(s)
 --- stderr ---
-longterm-mem: sync: promote: sync: 2 observations failed, first is 1: check promoted state: promote: read c-000901.md: read <vault>/wiki/memory/c-000901.md: is a directory
-promote: propagate: 4 observations failed, first is 1: check promoted state: promote: read c-000901.md: read <vault>/wiki/memory/c-000901.md: is a directory
+longterm-mem: sync: warning: promoted page c-000901.md could not be read: read <vault>/wiki/memory/c-000901.md: is a directory; it was skipped
+longterm-mem: sync: warning: 2 observation(s) left alone, nothing was written for them: no readable page belongs to them, and a page that could not be read may (observations 1, 2)
+longterm-mem: sync: warning: 4 observation(s) left alone, nothing was patched for them: no readable page belongs to them, and a page that could not be read may (observations 1, 2, 3, 4)
 --- vault ---
 === .allocator-counter (-rw-r--r--) ===
 901

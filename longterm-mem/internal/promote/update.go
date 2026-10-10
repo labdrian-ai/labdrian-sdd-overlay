@@ -34,12 +34,18 @@ const (
 	// from what longterm-mem itself last wrote there (R-030): the
 	// content update was skipped and Diagnostic names the page.
 	ActionSkippedLocalEdit
+	// ActionSkippedUnreadablePages means no readable page belongs to the observation and a page could not be
+	// read, so it cannot be told whether the observation already has a page: nothing was written for it, no
+	// address was taken, and Diagnostic names the pages that could not be read. It is a skip like
+	// ActionSkippedLocalEdit, and the Result carries no page.
+	ActionSkippedUnreadablePages
 )
 
 // Action reports the outcome of one promotion write.
 type Action struct {
 	Kind ActionKind
-	// Diagnostic is set only when Kind == ActionSkippedLocalEdit.
+	// Diagnostic is set only when Kind is one of the skips, ActionSkippedLocalEdit or
+	// ActionSkippedUnreadablePages.
 	Diagnostic *Diagnostic
 }
 
@@ -57,6 +63,8 @@ func (k ActionKind) String() string {
 		return "updated"
 	case ActionSkippedLocalEdit:
 		return "skipped_local_edit"
+	case ActionSkippedUnreadablePages:
+		return "skipped_unreadable_pages"
 	default:
 		return "unknown"
 	}
@@ -482,6 +490,19 @@ func skippedAction(existingPath, address, reason string) Action {
 		Diagnostic: &Diagnostic{
 			Rule:   "local-edit-precedence",
 			Detail: fmt.Sprintf("%s (address %s) %s; content update skipped", existingPath, address, reason),
+		},
+	}
+}
+
+// unreadablePagesAction is the skip of an observation that no readable page carries while a page could not be
+// read: it names the observation and every page that could not be read, and says nothing was written.
+func unreadablePagesAction(observationID int64, unknown *unreadablePagesError) Action {
+	return Action{
+		Kind: ActionSkippedUnreadablePages,
+		Diagnostic: &Diagnostic{
+			Rule: "unreadable-pages",
+			Detail: fmt.Sprintf("observation %d was not promoted: no readable page belongs to it, but a page that could not be read may: %s; nothing was written for it",
+				observationID, describePages(unknown.pages)),
 		},
 	}
 }

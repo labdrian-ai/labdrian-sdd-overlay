@@ -107,12 +107,23 @@ type promotedPage struct {
 // it. One permanently unpromotable observation, on account of a page in a
 // project it has nothing to do with, is reason enough. The page is a real
 // defect; doctor is what names it, for the project it belongs to.
+//
+// A page that cannot be read is skipped, as the scan skips it, but it is not
+// nothing: its frontmatter is unknown, so it may be this observation's page.
+// A readable page that carries the observation settles the lookup, whatever
+// else cannot be read (the unreadable page cannot also be its page, or the
+// observation would have two). When no readable page does and some page could
+// not be read, the lookup is neither "promoted" nor "not promoted": it answers
+// an *unreadablePagesError, and the observation is left alone by its caller
+// (Writer.Promote, Sync, Plan, Propagate), because the answer "not promoted"
+// would have it written again at a new address beside a page that may be its
+// own.
 func findPromotedPage(pages PageReader, project string, engramID int) (promotedPage, bool, error) {
-	matches, err := scanPromotedPages(pages, engramID)
+	scan, err := scanPromotedPages(pages, engramID)
 	if err != nil {
 		return promotedPage{}, false, err
 	}
-	for _, match := range matches {
+	for _, match := range scan.matches {
 		if match.Project != project {
 			continue
 		}
@@ -121,6 +132,9 @@ func findPromotedPage(pages PageReader, project string, engramID int) (promotedP
 			return promotedPage{}, false, err
 		}
 		return page, true, nil
+	}
+	if len(scan.unreadable) > 0 {
+		return promotedPage{}, false, &unreadablePagesError{pages: scan.unreadable}
 	}
 	return promotedPage{}, false, nil
 }
@@ -150,14 +164,16 @@ func findPromotedPage(pages PageReader, project string, engramID int) (promotedP
 // refuses. Revision is not read for a moved page (supersession patches
 // status and related only), so an unparseable engram_revision on one is
 // not consulted either; that corruption still fails closed for the project
-// that owns the page.
+// that owns the page. A page that cannot be read has no known engram_id or
+// address, so it is not among the moved pages: it cannot be superseded
+// because it cannot be patched, and the doctor names it.
 func findMovedPages(pages PageReader, project string, engramID int) ([]promotedPage, error) {
-	matches, err := scanPromotedPages(pages, engramID)
+	scan, err := scanPromotedPages(pages, engramID)
 	if err != nil {
 		return nil, err
 	}
 	var moved []promotedPage
-	for _, match := range matches {
+	for _, match := range scan.matches {
 		if match.Project == project || match.Address == "" {
 			continue
 		}
@@ -165,6 +181,28 @@ func findMovedPages(pages PageReader, project string, engramID int) ([]promotedP
 	}
 	return moved, nil
 }
+
+// pageScan is what one pass over the pages found: the pages that carry the engram_id asked for, and the pages
+// that could not be read at all.
+type pageScan struct {
+	matches    []promotedPageMatch
+	unreadable []UnreadablePage
+}
+
+// UnreadablePages names every page of the vault that could not be read, in the order the port lists them. It is
+// what a sync run reports as skipped. A vault whose pages cannot be listed at all, and a reader that was not
+// wired, have no page to name: those are the failure of each lookup, as they have always been.
+func UnreadablePages(pages PageReader) []UnreadablePage {
+	scan, err := scanPromotedPages(pages, noEngramID)
+	if err != nil {
+		return nil
+	}
+	return scan.unreadable
+}
+
+// noEngramID is the engram_id of no observation (Engram's start at 1), for the pass over the pages that wants
+// only the pages it could not read.
+const noEngramID = 0
 
 // promotedPageMatch is one wiki/memory/ page whose frontmatter carries the
 // scanned engram_id, with its fields still unvalidated. Validation is
@@ -214,25 +252,34 @@ func (m promotedPageMatch) resolve() (promotedPage, error) {
 // scanPromotedPages reads every page of the vault once, through pages, and
 // returns each one whose frontmatter carries engramID, in the order pages
 // lists them, whatever project each was promoted under. A vault with no pages
-// directory means nothing has been promoted yet. Only I/O failures error
-// here; a matched page's own corruption is the caller's to judge, because it
-// may only fail the lookup that selects that page.
-func scanPromotedPages(pages PageReader, engramID int) ([]promotedPageMatch, error) {
+// directory means nothing has been promoted yet. A matched page's own
+// corruption is the caller's to judge, because it may only fail the lookup
+// that selects that page.
+//
+// A page that cannot be read is skipped and kept apart, in pageScan.unreadable,
+// as the doctor skips and names it: one link to nothing among the pages must
+// not stop the promotion of every other observation. Only a pages directory
+// that cannot be listed (or a reader that was not wired) errors here, because
+// there is then no per-page result to salvage. What an unreadable page means
+// for an observation is findPromotedPage's to say.
+func scanPromotedPages(pages PageReader, engramID int) (pageScan, error) {
 	if memory.IsMissing(pages) {
-		return nil, errNoPageReader
+		return pageScan{}, errNoPageReader
 	}
 	addresses, err := pages.ListPages()
 	if err != nil {
-		return nil, fmt.Errorf("promote: list %s: %w", pages.PagesLocation(), err)
+		return pageScan{}, fmt.Errorf("promote: list %s: %w", pages.PagesLocation(), err)
 	}
 
 	wantID := strconv.Itoa(engramID)
 	var found []promotedPageMatch
+	var unreadable []UnreadablePage
 	for _, address := range addresses {
 		file := address + ".md"
 		content, err := pages.ReadPage(address)
 		if err != nil {
-			return nil, fmt.Errorf("promote: read %s: %w", file, err)
+			unreadable = append(unreadable, UnreadablePage{File: file, Err: err})
+			continue
 		}
 		block, ok := frontmatterBlock(content)
 		if !ok {
@@ -250,7 +297,7 @@ func scanPromotedPages(pages PageReader, engramID int) ([]promotedPageMatch, err
 			RawRevision: strings.TrimSpace(fields[engramRevisionField]),
 		})
 	}
-	return found, nil
+	return pageScan{matches: found, unreadable: unreadable}, nil
 }
 
 // frontmatterBlock isolates the leading `---\n...\n---\n` frontmatter block
