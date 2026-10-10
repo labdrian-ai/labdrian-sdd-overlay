@@ -134,6 +134,21 @@ func observationRowsForIndex(store *engram.Store, project string) ([]vecindex.Ro
 	return rows, nil
 }
 
+// newPromoteWriter is the Writer of the vault at vaultRoot, as every command
+// that promotes (promote, the MCP promote tool, sync) uses it: the vault's
+// address allocator, the wall clock in UTC, and the vault file system adapter
+// its precedence store is loaded from and saved through. It is the one
+// construction, so two commands cannot come to wire a Writer differently; a
+// precedence sidecar that cannot be loaded is the error, as the repository
+// reported it.
+func newPromoteWriter(vaultRoot string) (*promote.Writer, error) {
+	writer := &promote.Writer{VaultRoot: vaultRoot, Addresses: vault.AddressAllocator{Root: vaultRoot}, Clock: utcClock{}}
+	if err := writer.UsePrecedence(openVault(vaultRoot)); err != nil {
+		return nil, err
+	}
+	return writer, nil
+}
+
 // runPromote builds a Writer for vaultRoot and calls
 // promote.ExplicitPromote against store (task 8b.11): the one
 // construction+call path cmdPromote (the CLI promote subcommand) and
@@ -141,8 +156,8 @@ func observationRowsForIndex(store *engram.Store, project string) ([]vecindex.Ro
 // extraction so R-012 and R-032 genuinely share one code path rather than
 // two callers separately reconstructing the same Writer.
 func runPromote(ctx context.Context, store *engram.Store, vaultRoot string, engramID int64) (promote.Result, error) {
-	writer := &promote.Writer{VaultRoot: vaultRoot, Addresses: vault.AddressAllocator{Root: vaultRoot}, Clock: utcClock{}}
-	if err := writer.UsePrecedence(openVault(vaultRoot)); err != nil {
+	writer, err := newPromoteWriter(vaultRoot)
+	if err != nil {
 		return promote.Result{}, err
 	}
 	return promote.ExplicitPromote(ctx, writer, store.ObservationByID, engramID)
