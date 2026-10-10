@@ -53,6 +53,12 @@ type failingAddresses struct {
 
 func (a failingAddresses) NextAddress(context.Context) (string, error) { return a.address, a.err }
 
+// addressFunc is an AddressAllocator that is a function, with a value receiver: a nil one is a port that
+// is not there although no pointer is nil.
+type addressFunc func(context.Context) (string, error)
+
+func (f addressFunc) NextAddress(ctx context.Context) (string, error) { return f(ctx) }
+
 // readAddressMap reads back .raw/.manifest.json's address_map.
 func readAddressMap(t *testing.T, vaultRoot string) map[string]string {
 	t.Helper()
@@ -69,8 +75,8 @@ func readAddressMap(t *testing.T, vaultRoot string) map[string]string {
 	return m.AddressMap
 }
 
-// TestAllocate_FirstPromotionAllocatesNewAddress: R-028 scenario 1.
-func TestAllocate_FirstPromotionAllocatesNewAddress(t *testing.T) {
+// TestAllocateAddress_FirstPromotionAllocatesNewAddress: R-028 scenario 1.
+func TestAllocateAddress_FirstPromotionAllocatesNewAddress(t *testing.T) {
 	vaultRoot := t.TempDir()
 
 	address, err := allocateAddress(t.Context(), vaultRoot, "labdrian-sdd-overlay", 101, staticAddress(testAddress), testInstant)
@@ -88,10 +94,10 @@ func TestAllocate_FirstPromotionAllocatesNewAddress(t *testing.T) {
 	}
 }
 
-// TestAllocate_SeedsANewManifestWithTheDayItIsGiven (Phase 9, L2): a vault
+// TestAllocateAddress_SeedsANewManifestWithTheDayItIsGiven (Phase 9, L2): a vault
 // with no manifest yet gets one whose created date is the day the caller's
 // clock gave, not a day read from the machine.
-func TestAllocate_SeedsANewManifestWithTheDayItIsGiven(t *testing.T) {
+func TestAllocateAddress_SeedsANewManifestWithTheDayItIsGiven(t *testing.T) {
 	vaultRoot := t.TempDir()
 
 	if _, err := allocateAddress(t.Context(), vaultRoot, "labdrian-sdd-overlay", 101, staticAddress(testAddress), time.Date(2026, 8, 5, 12, 0, 0, 0, time.UTC)); err != nil {
@@ -109,14 +115,14 @@ func TestAllocate_SeedsANewManifestWithTheDayItIsGiven(t *testing.T) {
 		t.Fatalf("parse manifest: %v", err)
 	}
 	if m.Created != "2026-08-05" {
-		t.Fatalf("created = %q, want 2026-08-05 (the day Allocate was given)", m.Created)
+		t.Fatalf("created = %q, want 2026-08-05 (the day allocateAddress was given)", m.Created)
 	}
 }
 
-// TestAllocate_RePromotionReusesExistingAddress: R-028 scenario 2. The
+// TestAllocateAddress_RePromotionReusesExistingAddress: R-028 scenario 2. The
 // allocator is counted, and reuse must never ask it: a re-promotion that
 // spent an address would burn the vault's counter on every sync.
-func TestAllocate_RePromotionReusesExistingAddress(t *testing.T) {
+func TestAllocateAddress_RePromotionReusesExistingAddress(t *testing.T) {
 	vaultRoot := t.TempDir()
 
 	memoryDir := filepath.Join(vaultRoot, "wiki", "memory")
@@ -168,7 +174,7 @@ func TestPromote_AsksTheAllocatorWithTheCallersContext(t *testing.T) {
 // The allocator is the one place an address comes from, and what it says
 // goes into the manifest as it said it. A failure of the allocator is
 // promotion's failure, in promotion's words, and records nothing.
-func TestAllocate_AnAllocatorFailureIsPromotionsAndRecordsNothing(t *testing.T) {
+func TestAllocateAddress_AnAllocatorFailureIsPromotionsAndRecordsNothing(t *testing.T) {
 	vaultRoot := t.TempDir()
 	boom := errors.New("the counter is locked")
 
@@ -220,7 +226,7 @@ func TestPromote_NoAddressMeansNothingIsWritten(t *testing.T) {
 
 // An allocator that answers no error and no address has allocated nothing,
 // and "" must not become a page at wiki/memory/.md.
-func TestAllocate_AnEmptyAddressIsRefusedAndRecordsNothing(t *testing.T) {
+func TestAllocateAddress_AnEmptyAddressIsRefusedAndRecordsNothing(t *testing.T) {
 	vaultRoot := t.TempDir()
 
 	address, err := allocateAddress(t.Context(), vaultRoot, "labdrian-sdd-overlay", 101, failingAddresses{}, testInstant)
@@ -234,10 +240,10 @@ func TestAllocate_AnEmptyAddressIsRefusedAndRecordsNothing(t *testing.T) {
 
 // The allocator is a port the caller wires. One that is missing is named, but only when an address is
 // actually needed: a page that already has one is re-promoted without it.
-func TestAllocate_AMissingAllocatorIsRefusedOnlyWhenOneIsNeeded(t *testing.T) {
+func TestAllocateAddress_AMissingAllocatorIsRefusedOnlyWhenOneIsNeeded(t *testing.T) {
 	t.Run("a new page needs one", func(t *testing.T) {
 		vaultRoot := t.TempDir()
-		for name, allocator := range map[string]AddressAllocator{"absent": nil, "a nil pointer": (*sequentialAddresses)(nil)} {
+		for name, allocator := range map[string]AddressAllocator{"absent": nil, "a nil pointer": (*sequentialAddresses)(nil), "a nil function": addressFunc(nil)} {
 			if address, err := allocateAddress(t.Context(), vaultRoot, "labdrian-sdd-overlay", 101, allocator, testInstant); !errors.Is(err, errNoAddressAllocator) {
 				t.Errorf("%s: allocateAddress = (%q, %v), want errNoAddressAllocator", name, address, err)
 			}
@@ -260,12 +266,12 @@ func TestAllocate_AMissingAllocatorIsRefusedOnlyWhenOneIsNeeded(t *testing.T) {
 	})
 }
 
-// TestAllocate_RecordAddressPreservesForeignManifestFields: the manifest
+// TestAllocateAddress_RecordAddressPreservesForeignManifestFields: the manifest
 // is wiki-ingest-owned (D7); recordAddress may only touch address_map. A
 // producer field this package does not know must survive a fresh
 // allocation, and keys absent from the live file must not be fabricated
 // (findings R1-manifest-field-drop, R4-manifest-unknown-field-loss).
-func TestAllocate_RecordAddressPreservesForeignManifestFields(t *testing.T) {
+func TestAllocateAddress_RecordAddressPreservesForeignManifestFields(t *testing.T) {
 	vaultRoot := t.TempDir()
 
 	rawDir := filepath.Join(vaultRoot, ".raw")
@@ -306,13 +312,13 @@ func TestAllocate_RecordAddressPreservesForeignManifestFields(t *testing.T) {
 	}
 }
 
-// TestAllocate_ReuseWithoutAddressFails: a page matching this engram_id +
+// TestAllocateAddress_ReuseWithoutAddressFails: a page matching this engram_id +
 // project whose frontmatter carries no address must fail the promotion,
 // mirroring the fresh path's "produced no address" guard, never succeed
 // with an empty address (findings R2/R3/R4 reuse-empty-address). No
 // allocator fixture exists: silently falling through to a fresh
 // allocation for an already-promoted page would error too.
-func TestAllocate_ReuseWithoutAddressFails(t *testing.T) {
+func TestAllocateAddress_ReuseWithoutAddressFails(t *testing.T) {
 	vaultRoot := t.TempDir()
 	memoryDir := filepath.Join(vaultRoot, "wiki", "memory")
 	if err := os.MkdirAll(memoryDir, 0o755); err != nil {
@@ -325,7 +331,7 @@ func TestAllocate_ReuseWithoutAddressFails(t *testing.T) {
 
 	address, err := allocateAddress(t.Context(), vaultRoot, "labdrian-sdd-overlay", 101, staticAddress(testAddress), testInstant)
 	if err == nil {
-		t.Fatalf("Allocate = (%q, nil), want an error for a matched page without an address", address)
+		t.Fatalf("allocateAddress = (%q, nil), want an error for a matched page without an address", address)
 	}
 	if !strings.Contains(err.Error(), "c-000099.md") {
 		t.Fatalf("error %q does not name the offending page c-000099.md", err)

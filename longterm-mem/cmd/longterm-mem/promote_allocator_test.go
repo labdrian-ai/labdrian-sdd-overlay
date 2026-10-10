@@ -8,6 +8,38 @@ import (
 	"testing"
 )
 
+// The success path of the same wiring: the address the vault's script prints is the address of the page
+// the command writes, and the command says so. (TestPromoteGolden pins the same path over a whole
+// scenario; this one names the wiring and fails on it alone.)
+func TestCmdPromote_PromotesAtTheAddressTheVaultsScriptPrints(t *testing.T) {
+	vaultRoot := t.TempDir()
+	scripts := filepath.Join(vaultRoot, "scripts")
+	if err := os.MkdirAll(scripts, 0o755); err != nil {
+		t.Fatalf("mkdir %s: %v", scripts, err)
+	}
+	if err := os.WriteFile(filepath.Join(scripts, "allocate-address.sh"), []byte("#!/bin/sh\necho c-000777\n"), 0o755); err != nil {
+		t.Fatalf("write the allocator fixture: %v", err)
+	}
+	dbPath, id := promoteFixtureDB(t, "Gets An Address", "cmd-promote-project")
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("LONGTERM_MEM_VAULT", vaultRoot)
+	t.Setenv("LONGTERM_MEM_ENGRAM_DB", dbPath)
+	t.Setenv("LONGTERM_MEM_VAULTS_FILE", "")
+	t.Chdir(t.TempDir())
+
+	code, stdout, stderr := runCaptured(t, []string{"promote", "--project", "cmd-promote-project", "--id", strconv.FormatInt(id, 10)})
+
+	if code != exitOK {
+		t.Fatalf("exit = %d, want %d; stderr = %q", code, exitOK, stderr)
+	}
+	if want := "longterm-mem: promoted c-000777 (created)\n"; stdout != want {
+		t.Errorf("stdout = %q, want %q", stdout, want)
+	}
+	if _, err := os.Stat(filepath.Join(vaultRoot, "wiki", "memory", "c-000777.md")); err != nil {
+		t.Errorf("the page is not at the address the script printed: %v", err)
+	}
+}
+
 // The command wires the vault's allocator into promotion (Phase 9, L2), and what an operator reads when
 // that allocator cannot give an address is the same as before the wiring moved: the exit code, the
 // script, its exit status and what it said. The wording below was recorded from the program as it stood

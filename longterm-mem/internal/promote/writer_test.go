@@ -64,7 +64,7 @@ func TestWriter_Promote_UpdatesExistingPage(t *testing.T) {
 	seedPrecedence(store, first)
 
 	// findPromotedPage (address.go) reuses the same page for the same
-	// engram_id/project, so Allocate needs no allocator script fixture
+	// engram_id/project, so allocateAddress needs no allocator script fixture
 	// here -- reuse must never invoke the subprocess.
 	w := &Writer{VaultRoot: vaultRoot, Store: store, Clock: clock}
 

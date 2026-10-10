@@ -1306,7 +1306,7 @@ func TestBlankFrontmatterListSection_AbsentKeyIsNotInserted(t *testing.T) {
 // refusal is a skip, the skip suppresses the Save, the entry stays at the old
 // revision, and every later revision repeats it.
 //
-// The project subcase pins the comparator, not a reachable wedge: Allocate
+// The project subcase pins the comparator, not a reachable wedge: allocateAddress
 // reuses an existing page's address only when the on-disk project AND
 // engram_id both match (address.go's findPromotedPage), so an observation
 // moved to another project is handed a FRESH address and UpdateInPlace never
@@ -1318,7 +1318,7 @@ func TestUpdate_InterruptedUpdateWhoseObservationChangedDescriptiveFieldsReconci
 		apply func(*memory.Observation)
 	}{
 		{name: "sync id backfilled", apply: func(o *memory.Observation) { o.SyncID = "sync-abc123" }},
-		{name: "project differs (comparator only; not reachable via Allocate)", apply: func(o *memory.Observation) { o.Project = "some-other-project" }},
+		{name: "project differs (comparator only; not reachable via allocateAddress)", apply: func(o *memory.Observation) { o.Project = "some-other-project" }},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			vaultRoot := t.TempDir()
