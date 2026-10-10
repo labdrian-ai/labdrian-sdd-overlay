@@ -83,8 +83,10 @@ var errNoAddressMapReader = errors.New("ops: no address map reader was wired")
 // PageReader is the port through which Doctor reads the promoted pages of the vault it inspects: the notes in
 // the pages directory, one file each, named by their address. The package owns it, asks for the read half
 // only (a diagnostic never writes), and is satisfied by the vault file system adapter and by
-// promote.PageReader alike. Its failures are the file system's own, untouched: the checks word them around
-// the page they concern.
+// promote.PageReader alike. It is a subset of promote.PageReader's methods, not a second vocabulary: what
+// promotion adds (PageLocation, the name of one page in its messages) is promotion's alone, and the
+// subset is held at compile time by a test (doctor_pages_port_test.go), so the two cannot drift apart by hand.
+// Its failures are the file system's own, untouched: the checks word them around the page they concern.
 type PageReader interface {
 	// ListPages returns the address of every page in the vault, in the order of the directory. A vault with
 	// no pages directory has no pages, which is (nil, nil); a directory that cannot be listed is an error.
@@ -176,6 +178,11 @@ type DoctorReport struct {
 // Doctor itself only returns a non-nil error for a condition outside any
 // single check's own reporting (there is none today; every failure mode
 // this slice defines is expressed as a Check, not a Doctor-level error).
+//
+// The three checks that judge the promoted pages take their arguments in one order: the pages, then the vault
+// root while the check still reads a file of it itself (the catalog and the log, until the next slice puts
+// them behind ports), then the other port it needs. A transposition does not compile: the three are
+// different types.
 func Doctor(ctx context.Context, deps DoctorDeps, project string) (DoctorReport, error) {
 	return DoctorReport{
 		Project: project,

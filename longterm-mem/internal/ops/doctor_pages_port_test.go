@@ -14,6 +14,13 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultfs"
 )
 
+// The port the doctor owns is a subset of the one promotion owns, and the file system adapter satisfies it: a
+// method of either that drifts from the other stops this file building.
+var (
+	_ PageReader = promote.PageReader(nil)
+	_ PageReader = (*vaultfs.Vault)(nil)
+)
+
 // fakePages is a PageReader that answers the pages it was given, in the order it was given them, without a
 // file behind them; it can also fail on demand.
 type fakePages struct {

@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/ops/testdata"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultfs"
 )
 
@@ -249,7 +250,36 @@ func goldenScenarios() []goldenScenario {
 			}
 			symlinkOrSkip(t, "../notes/absent", filepath.Join(root, "wiki", "memory"))
 		}},
+		// 32, 34 and 35 (a link to another page, a page with no frontmatter, an empty page) are one golden, and
+		// that is what they pin: the doctor takes a page's address from its name, and reads its content only
+		// against the hashes the precedence sidecar records for it, so where the sidecar has no entry for the
+		// page the content is not consulted and the three states cannot differ. These two give the page an entry
+		// that records no usable revision and the hashes of the healthy page, which is what makes the content
+		// matter: followed to the healthy page the link matches the entry, a page with no frontmatter does not.
+		{name: "40-a-page-that-is-a-link-to-a-page-the-sidecar-entry-matches", build: func(t *testing.T, root string) {
+			recordEntryMatchingTheHealthyPage(t, root, "c-000043")
+			symlinkOrSkip(t, goldenAddress+".md", filepath.Join(root, "wiki", "memory", "c-000043.md"))
+		}},
+		{name: "41-a-page-with-no-frontmatter-where-the-sidecar-entry-expects-the-healthy-page", build: func(t *testing.T, root string) {
+			recordEntryMatchingTheHealthyPage(t, root, "c-000043")
+			writeGoldenFile(t, root, "wiki/memory/c-000043.md", "Just text, no frontmatter.\n")
+		}},
 	}
+}
+
+// recordEntryMatchingTheHealthyPage gives the page promoted under address a precedence entry that records no
+// promoted revision and the hashes of the healthy page's frontmatter and body.
+func recordEntryMatchingTheHealthyPage(t *testing.T, root, address string) {
+	t.Helper()
+	raw, err := os.ReadFile(filepath.Join(root, "wiki", "memory", goldenAddress+".md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	parts := strings.SplitN(string(raw), "---\n", 3)
+	if len(parts) != 3 {
+		t.Fatalf("the healthy page has no frontmatter block to take the hashes of")
+	}
+	testdata.WritePrecedenceEntry(t, root, promote.Page{Address: address, Frontmatter: "---\n" + parts[1] + "---\n", Body: parts[2]})
 }
 
 // buildGoldenVault fills root with the healthy vault: one promoted page, its address-map entry, its
