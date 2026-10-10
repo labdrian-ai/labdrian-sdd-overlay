@@ -47,10 +47,7 @@ func TestIsMissingTellsAPortThatIsNotThereFromOneThatIs(t *testing.T) {
 // when something was assigned to it, and a nil pointer assigned to it is the case a plain comparison
 // with nil does not see.
 func TestIsMissingSeesThroughAnInterfaceVariable(t *testing.T) {
-	var held namer = (*fakePort)(nil)
-	if held == nil {
-		t.Fatal("the premise failed: an interface holding a nil pointer compares non-nil")
-	}
+	var held namer = (*fakePort)(nil) // non-nil as an interface, nil behind it
 	if !memory.IsMissing(held) {
 		t.Error("IsMissing did not see the nil pointer behind the interface")
 	}
