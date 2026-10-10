@@ -7,11 +7,13 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 )
 
-// ObservationLookup resolves one Engram observation by id, a function seam
+// ObservationLookup resolves one observation of the memory model
+// (memory.Observation, owned by internal/memory) by id, a function seam
 // (matching this package's Deps convention elsewhere) so ExplicitPromote
 // never depends on a concrete store: production callers (cmd_promote.go,
-// the MCP promote tool via cmd_mcp.go) wire it to the Engram adapter's
-// ObservationByID, and tests wire it to a fake.
+// the MCP promote tool via cmd_mcp.go) wire it to internal/engram's
+// Store.ObservationByID, which returns that same type, and tests wire it to
+// a fake.
 type ObservationLookup func(id int64) (memory.Observation, bool, error)
 
 // ErrObservationNotFound is ExplicitPromote's error when lookup reports no

@@ -113,10 +113,16 @@ const (
 	// "nothing is superseded", which is the reading that lets an abandoned
 	// decision pass as current.
 	DiagnosticRelationsUnreadable = "relations_unreadable"
-	// DiagnosticEngramDegradedSnapshot reports that Engram is being read
-	// through the Engram adapter's immutable=1 fallback: the results come from a
-	// point-in-time snapshot taken when the connection was opened, not
-	// from the live database.
+	// DiagnosticEngramDegradedSnapshot reports that the memory behind
+	// Deps.Memory says it is degraded (DegradationReporter.Degraded). The
+	// one implementation is internal/engram's Store, wired by
+	// cmd/longterm-mem, which falls back to SQLite's immutable=1 read when
+	// its primary read-only connection cannot be established: the results
+	// come from a point-in-time snapshot taken when the connection was
+	// opened, not from the live database. The diagnostic's code and text
+	// name Engram and immutable=1 on purpose: they are what the user sees
+	// and what the operator can act on, and are part of the output that
+	// must not change.
 	//
 	// It matters most where the connection outlives the call. The MCP
 	// server opens Engram once for a whole session (cmd_mcp.go), so a
