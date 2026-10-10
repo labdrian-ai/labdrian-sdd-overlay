@@ -2,6 +2,7 @@ package vaultfs
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -21,10 +22,14 @@ func (e corruptManifest) Is(target error) bool {
 	return target == promote.ErrAddressMapCorrupt
 }
 
+// errManifestNull is what a manifest that holds the JSON null is not: an object.
+var errManifestNull = errors.New("the manifest is the JSON null, not an object")
+
 // LoadAddressMap reads the address map out of the vault's manifest, the file wiki-ingest keeps and this
-// module extends. A manifest with no address_map, or JSON null, has an empty map. One that cannot be read
-// (absent, a directory) is an error that names the file and is not the error for a corrupt one; one that
-// can be read and is not an address map is, for every way it can fail to be one.
+// module extends. A manifest with no address_map has an empty map. One that cannot be read (absent, a
+// directory) is an error that names the file and is not the error for a corrupt one; one that can be read
+// and is not an address map is, for every way it can fail to be one, a manifest that is the JSON null
+// among them.
 //
 // The errors say "read" or "parse" and name the file, behind the Vault's error prefix if it has one.
 func (v *Vault) LoadAddressMap() (promote.AddressMap, error) {
@@ -33,11 +38,15 @@ func (v *Vault) LoadAddressMap() (promote.AddressMap, error) {
 	if err != nil {
 		return nil, v.fail(fmt.Errorf("read %s: %w", full, err))
 	}
-	var manifest struct {
+	// A pointer, so that a manifest that is the JSON null can be told from an object: it decodes to nil.
+	var manifest *struct {
 		AddressMap map[string]string `json:"address_map"`
 	}
 	if err := json.Unmarshal(data, &manifest); err != nil {
 		return nil, v.fail(corruptManifest{fmt.Errorf("parse %s: %w", full, err)})
+	}
+	if manifest == nil {
+		return nil, v.fail(corruptManifest{fmt.Errorf("parse %s: %w", full, errManifestNull)})
 	}
 	return manifest.AddressMap, nil
 }
@@ -57,12 +66,14 @@ func (v *Vault) RecordAddress(path, address string, createdAt time.Time) error {
 	full := v.layout.Path(vaultlayout.AddressManifestFile)
 	manifest := map[string]json.RawMessage{}
 
-	// A manifest that holds JSON null decodes to a nil map, and the write of address_map below then panics.
-	// That is how the code this was moved from has always behaved; the batch 32 ledger records it for the
-	// owner's decision, and this move does not change it.
 	if data, err := os.ReadFile(full); err == nil {
 		if err := json.Unmarshal(data, &manifest); err != nil {
 			return v.fail(fmt.Errorf("parse %s: %w", full, err))
+		}
+		// JSON null decodes to a nil map, which cannot be written to. It is not an object, so it is not a
+		// manifest this module can extend: refused as every other file that is not one is, and left as it was.
+		if manifest == nil {
+			return v.fail(fmt.Errorf("parse %s: %w", full, errManifestNull))
 		}
 	} else if os.IsNotExist(err) {
 		manifest["version"] = json.RawMessage("1")
@@ -72,6 +83,9 @@ func (v *Vault) RecordAddress(path, address string, createdAt time.Time) error {
 		return v.fail(fmt.Errorf("read %s: %w", full, err))
 	}
 
+	// Known gap: an address_map that is itself JSON null decodes to a nil map and the write below panics,
+	// while LoadAddressMap reads the same file as an empty map. Which of the two it is has not been decided,
+	// so it is not guessed at here.
 	addressMap := map[string]string{}
 	if raw, ok := manifest["address_map"]; ok {
 		if err := json.Unmarshal(raw, &addressMap); err != nil {

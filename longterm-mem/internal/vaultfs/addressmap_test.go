@@ -232,6 +232,8 @@ func TestRecordAddressRefusesAManifestItCannotUnderstand(t *testing.T) {
 		"not json":                        {"{not json", "parse %s: "},
 		"empty":                           {"", "parse %s: "},
 		"an array":                        {"[]", "parse %s: "},
+		"JSON null":                       {"null", "parse %s: "},
+		"JSON null with white space":      {" null\n", "parse %s: "},
 		"an address_map that is a string": {`{"address_map":"nope"}`, "parse %s address_map: "},
 		"an address_map of numbers":       {`{"address_map":{"a":1}}`, "parse %s address_map: "},
 	} {
@@ -316,10 +318,10 @@ func TestLoadAddressMapReturnsTheEntriesOfTheManifest(t *testing.T) {
 	}
 }
 
-// A manifest that holds no address map, or holds JSON null, is a manifest with nothing in its map: not an
-// error, and not a failure to read.
+// A manifest that holds no address map, or an address_map of JSON null, is a manifest with nothing in its
+// map: not an error, and not a failure to read.
 func TestLoadAddressMapOfAManifestWithNoEntriesIsEmpty(t *testing.T) {
-	for name, content := range map[string]string{"no address_map": `{"version":1}`, "null": "null", "an empty map": `{"address_map":{}}`} {
+	for name, content := range map[string]string{"no address_map": `{"version":1}`, "an address_map of null": `{"address_map":null}`, "an empty map": `{"address_map":{}}`} {
 		t.Run(name, func(t *testing.T) {
 			root := t.TempDir()
 			writeManifest(t, root, content, 0o644)
@@ -376,6 +378,8 @@ func TestLoadAddressMapOfACorruptManifestIsErrAddressMapCorrupt(t *testing.T) {
 		"not json":                        "{not json",
 		"empty":                           "",
 		"an array":                        "[]",
+		"JSON null":                       "null",
+		"JSON null with white space":      " null\n",
 		"an address_map that is a string": `{"address_map":"nope"}`,
 		"a value that is not a string":    `{"address_map":{"wiki/memory/c-000042.md":42}}`,
 	} {

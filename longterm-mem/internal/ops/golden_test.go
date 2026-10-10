@@ -155,6 +155,9 @@ func goldenScenarios() []goldenScenario {
 		{name: "24-a-manifest-without-an-address-map", build: func(t *testing.T, root string) {
 			writeGoldenFile(t, root, ".raw/.manifest.json", `{"version":1}`)
 		}},
+		// Re-recorded after the owner's decision of 2026-10-10: a manifest that is the JSON null is not an
+		// object, so the doctor reads it as it reads any file that is not one (the output of scenario 19), where
+		// it used to read it as an empty map. It is the one golden of the address map that changed.
 		{name: "25-a-manifest-that-is-null", build: func(t *testing.T, root string) {
 			writeGoldenFile(t, root, ".raw/.manifest.json", "null")
 		}},

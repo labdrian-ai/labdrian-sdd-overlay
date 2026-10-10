@@ -9,7 +9,7 @@
     {
       "name": "address-map-integrity",
       "status": "FAIL",
-      "detail": "address c-000042 has no address_map entry"
+      "detail": ".raw/.manifest.json is not valid JSON"
     },
     {
       "name": "wiki-registration-consistency",

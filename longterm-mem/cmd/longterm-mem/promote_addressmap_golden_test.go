@@ -19,7 +19,8 @@ import (
 // symbolic link, a dangling link. After the two commands of a scenario they hold the exit code, stdout and
 // stderr and every file of the vault, with its mode and, for a link, where it points, character for
 // character. They were recorded from the program as it stood before the address map moved behind a port
-// (Phase 9, L3 slice 2), and that change must not alter one byte of them.
+// (Phase 9, L3 slice 2), and that change must not alter one byte of them. The one scenario added since, a
+// manifest that is the JSON null, was recorded after the owner's decision about it.
 //
 // Two kinds of text in them come from outside the program: the operating system's words for an error ("is a
 // directory", "no such file or directory"), which Linux and macOS spell alike (CI runs on Linux; the module
@@ -115,6 +116,12 @@ func addressMapScenarios() []addressMapScenario {
 			symlinkOrSkip(t, "../notes/absent.json", filepath.Join(root, ".raw", ".manifest.json"))
 		}},
 		{name: "11-no-manifest-and-no-raw-directory", seed: func(t *testing.T, root string) {}},
+		// Recorded after the owner's decision of 2026-10-10: a manifest that is the JSON null is not an object, so
+		// it is unparseable like any other file that is not one. Before it, promote and sync panicked here
+		// (assignment to entry in nil map, exit 2), so no golden of the earlier program exists for it.
+		{name: "12-a-manifest-that-is-json-null", seed: func(t *testing.T, root string) {
+			writeManifest(t, root, "null", 0o644)
+		}},
 	}
 }
 
