@@ -80,6 +80,24 @@ type AddressMapReader interface {
 // built without an AddressMapReader and there is a promoted page to check.
 var errNoAddressMapReader = errors.New("ops: no address map reader was wired")
 
+// PageReader is the port through which Doctor reads the promoted pages of the vault it inspects: the notes in
+// the pages directory, one file each, named by their address. The package owns it, asks for the read half
+// only (a diagnostic never writes), and is satisfied by the vault file system adapter and by
+// promote.PageReader alike. Its failures are the file system's own, untouched: the checks word them around
+// the page they concern.
+type PageReader interface {
+	// ListPages returns the address of every page in the vault, in the order of the directory. A vault with
+	// no pages directory has no pages, which is (nil, nil); a directory that cannot be listed is an error.
+	ListPages() ([]string, error)
+	// ReadPage returns the whole content of the page promoted under address, following a link to it.
+	ReadPage(address string) (string, error)
+	// PageExists reports whether the page promoted under address is there; the page check asks it of the
+	// pages a page links to.
+	PageExists(address string) (bool, error)
+	// PagesLocation names the pages directory, for the messages that tell what could not be listed.
+	PagesLocation() string
+}
+
 // loadPrecedence reads the precedence store through reader, or says that
 // there is none to read through.
 func loadPrecedence(reader PrecedenceReader) (promote.PrecedenceStore, error) {
