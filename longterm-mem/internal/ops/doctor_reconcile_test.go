@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/ops/testdata"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
 )
@@ -28,7 +28,7 @@ func TestDoctorAndReconcile_CloseTheLoopOnARevisionZeroPage(t *testing.T) {
 	const project = "labdrian-sdd-overlay"
 	vaultRoot := t.TempDir()
 
-	obs := engram.Observation{ID: 610, Type: "decision", Title: "Never Revised", Content: "V1 body.", Project: project, RevisionCount: 0, Pinned: true}
+	obs := memory.Observation{ID: 610, Type: "decision", Title: "Never Revised", Content: "V1 body.", Project: project, RevisionCount: 0, Pinned: true}
 	page, err := promote.EmitPage(obs, address, nil)
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)

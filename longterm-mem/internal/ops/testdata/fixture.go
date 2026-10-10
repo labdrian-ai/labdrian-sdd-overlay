@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
 )
 
@@ -42,7 +42,7 @@ func WriteSyncState(t *testing.T, vaultRoot, completedAt string) {
 // production).
 func WritePromotedPage(t *testing.T, vaultRoot, address, title string) promote.Page {
 	t.Helper()
-	obs := engram.Observation{ID: 1, Type: "decision", Title: title, Content: "Body content.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
+	obs := memory.Observation{ID: 1, Type: "decision", Title: title, Content: "Body content.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
 	page, err := promote.EmitPage(obs, address, nil)
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)

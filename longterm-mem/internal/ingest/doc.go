@@ -17,7 +17,7 @@ const (
 	// arm — only the provenance trailer falls outside that window, by
 	// design (see design.md's "trailer goes after the body" decision).
 	DefaultMaxChunkBytes = 1600
-	// DefaultMinChunkBytes is engram.SnippetBudget: the floor at which a
+	// DefaultMinChunkBytes is memory.SnippetBudget: the floor at which a
 	// chunk is still at most one rendered snippet, four times
 	// query.MinSnippetBudget (120).
 	DefaultMinChunkBytes = 480
