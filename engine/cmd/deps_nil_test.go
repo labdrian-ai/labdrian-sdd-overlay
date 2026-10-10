@@ -28,32 +28,97 @@ func (absentEverywhereFS) Stat(string) (fs.FileInfo, error)  { return nil, fs.Er
 // says what was missing, so a change in what a nil environment means is seen here.
 func TestACommandRunOverAZeroDepsReadsNoEnvironmentAndEndsAsItShould(t *testing.T) {
 	root := t.TempDir()
-	// wantExits is every exit the command called, in order; none means it returned without one.
+	// The expected lines are the program's own words for what was missing (the phrase that names it,
+	// not the whole message), so they change when what a command says about a nil environment
+	// changes, which is what this test is for; the paths in a message are not part of them.
 	for _, tc := range []struct {
-		name      string
-		run       func(p *capturedProcess)
+		name string
+		run  func(p *capturedProcess)
+		// wantExits is every exit the command called, in order. None (nil) means it returned
+		// without calling exit at all; {0} means it called exit(0), a deliberate clean exit (the
+		// sync-trigger usage error and the probe report are reported with exit 0 by design).
 		wantExits []int
 		stream    func(p *capturedProcess) string // the stream the line is on
 		want      string
 	}{
-		{"status", func(p *capturedProcess) { runStatus(p.process, deps{}) }, []int{1}, stdoutOf, "[FAIL] binary: .claude/bin/gentle-ai-overlay — not found"},
-		{"gadu-generate", func(p *capturedProcess) { runGaduGenerate(p.process, deps{}, nil) }, []int{1}, stderrOf, "OVERLAY_DIR is not set"},
-		{"sync-trigger", func(p *capturedProcess) { runSyncTriggerCore(deps{}, []string{"--event", "bogus"}, &p.err, p.exit) }, []int{0}, stderrOf, `sync-trigger: error:usage event="bogus" cwd=""`},
-		{"runtime probe", func(p *capturedProcess) { runRuntimeProbe(deps{}, nil, &p.out, &p.err, p.exit) }, []int{0}, stdoutOf, "the home directory is unknown, so the Engram database file was not looked for"},
-		{"runtime status", func(p *capturedProcess) {
-			runRuntimeCore(deps{}, noPi(), noGit(), []string{"status", "--target", "claude", "--config-root", root}, &p.out, &p.err, p.exit)
-		}, []int{1}, stdoutOf, "[claude] status: unsupported — Claude settings file not found"},
-		{"pipkg", func(p *capturedProcess) {
-			runPipkgCore(deps{}, noGit(), []string{"build", "--overlay-root", root, "--registry", root + "/r.yaml", "--dest-dir", root + "/d"}, &p.out, &p.err, p.exit)
-		}, []int{1}, stderrOf, "overlaps overlay root"},
-		{"runtime wrapper", func(p *capturedProcess) {
-			runRuntime(p.process, deps{}, []string{"status", "--target", "claude", "--config-root", root})
-		}, []int{1}, stdoutOf, "[claude] status: unsupported — Claude settings file not found"},
-		{"pipkg wrapper", func(p *capturedProcess) { runPipkg(p.process, deps{}, []string{"bogus"}) }, []int{1}, stderrOf, `unknown pipkg verb "bogus"`},
-		{"skills list", func(p *capturedProcess) {
-			runSkillsCore(deps{}, "list", []string{"list", "--registry", root + "/absent.yaml"}, &p.out, &p.err, p.exit)
-		}, []int{1}, stderrOf, "reading registry"},
-		{"review-receipt", func(p *capturedProcess) { runReviewReceiptCapture(p.process, deps{}, []string{"--cwd", root}) }, nil, stdoutOf, "review-receipt capture: no active change; nothing to capture"},
+		{
+			name:      "status",
+			run:       func(p *capturedProcess) { runStatus(p.process, deps{}) },
+			wantExits: []int{1},
+			stream:    stdoutOf,
+			want:      "[FAIL] binary: .claude/bin/gentle-ai-overlay — not found",
+		},
+		{
+			name:      "gadu-generate",
+			run:       func(p *capturedProcess) { runGaduGenerate(p.process, deps{}, nil) },
+			wantExits: []int{1},
+			stream:    stderrOf,
+			want:      "OVERLAY_DIR is not set",
+		},
+		{
+			name:      "sync-trigger",
+			run:       func(p *capturedProcess) { runSyncTriggerCore(deps{}, []string{"--event", "bogus"}, &p.err, p.exit) },
+			wantExits: []int{0},
+			stream:    stderrOf,
+			want:      `sync-trigger: error:usage event="bogus" cwd=""`,
+		},
+		{
+			name:      "runtime probe",
+			run:       func(p *capturedProcess) { runRuntimeProbe(deps{}, nil, &p.out, &p.err, p.exit) },
+			wantExits: []int{0},
+			stream:    stdoutOf,
+			want:      "the home directory is unknown, so the Engram database file was not looked for",
+		},
+		{
+			name: "runtime status",
+			run: func(p *capturedProcess) {
+				runRuntimeCore(deps{}, noPi(), noGit(), []string{"status", "--target", "claude", "--config-root", root}, &p.out, &p.err, p.exit)
+			},
+			wantExits: []int{1},
+			stream:    stdoutOf,
+			want:      "[claude] status: unsupported — Claude settings file not found",
+		},
+		{
+			name: "pipkg",
+			run: func(p *capturedProcess) {
+				runPipkgCore(deps{}, noGit(), []string{"build", "--overlay-root", root, "--registry", root + "/r.yaml", "--dest-dir", root + "/d"}, &p.out, &p.err, p.exit)
+			},
+			wantExits: []int{1},
+			stream:    stderrOf,
+			want:      "overlaps overlay root",
+		},
+		{
+			name: "runtime wrapper",
+			run: func(p *capturedProcess) {
+				runRuntime(p.process, deps{}, []string{"status", "--target", "claude", "--config-root", root})
+			},
+			wantExits: []int{1},
+			stream:    stdoutOf,
+			want:      "[claude] status: unsupported — Claude settings file not found",
+		},
+		{
+			name:      "pipkg wrapper",
+			run:       func(p *capturedProcess) { runPipkg(p.process, deps{}, []string{"bogus"}) },
+			wantExits: []int{1},
+			stream:    stderrOf,
+			want:      `unknown pipkg verb "bogus"`,
+		},
+		{
+			name: "skills list",
+			run: func(p *capturedProcess) {
+				runSkillsCore(deps{}, "list", []string{"list", "--registry", root + "/absent.yaml"}, &p.out, &p.err, p.exit)
+			},
+			wantExits: []int{1},
+			stream:    stderrOf,
+			want:      "reading registry",
+		},
+		{
+			name:      "review-receipt",
+			run:       func(p *capturedProcess) { runReviewReceiptCapture(p.process, deps{}, []string{"--cwd", root}) },
+			wantExits: nil,
+			stream:    stdoutOf,
+			want:      "review-receipt capture: no active change; nothing to capture",
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			p := newCapturedProcess()
