@@ -24,7 +24,7 @@ const vaultsFileEnvVar = "LONGTERM_MEM_VAULTS_FILE"
 // interrupted partway through. A failing rebuild step is reported as a
 // failure, never a false success (R-025), via exit code 5
 // (vault_subprocess_failed).
-func cmdIndex(args []string) int {
+func (c commands) cmdIndex(args []string) int {
 	fs := flag.NewFlagSet("index", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
 	project := fs.String("project", "", projectFlagUsage)
@@ -48,7 +48,7 @@ func cmdIndex(args []string) int {
 	}
 
 	if *embeddings {
-		return cmdIndexEmbeddings(resolvedProject, embedConfig{
+		return c.cmdIndexEmbeddings(resolvedProject, embedConfig{
 			Endpoint:    *embedEndpoint,
 			Model:       *embedModel,
 			Dimension:   *embedDimension,

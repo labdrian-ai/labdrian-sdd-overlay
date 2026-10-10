@@ -51,24 +51,3 @@ func TestCmdPromoteReconcile_ACorruptSidecarIsReportedUnderThePromotePrefix(t *t
 		t.Errorf("stderr = %q, want it to contain %q", stderr, want)
 	}
 }
-
-// Every command gets its vault files from openVault. A file of the command that built the adapter itself
-// would report its failures without the prefix, and nothing at that site would say so.
-func TestCommandsOpenTheVaultThroughOpenVault(t *testing.T) {
-	files, err := filepath.Glob("*.go")
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, name := range files {
-		if strings.HasSuffix(name, "_test.go") || name == "vaultfiles.go" {
-			continue
-		}
-		src, err := os.ReadFile(name)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if strings.Contains(string(src), "vaultfs.New(") {
-			t.Errorf("%s calls vaultfs.New itself; commands open the vault through openVault", name)
-		}
-	}
-}

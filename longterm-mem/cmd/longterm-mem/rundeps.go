@@ -21,16 +21,16 @@ import (
 // process; cmd_mcp.go's cmdMCP builds its own deps per call via queryDeps
 // directly, passing a client and load cache it constructs once for the
 // whole MCP session, rather than calling runQuery).
-func runQuery(ctx context.Context, store *engram.Store, vaultRoot string, req query.Request) (query.Result, error) {
-	deps := queryDeps(store, vaultRoot, freshEmbedFunc(), nil, nil)
+func runQuery(ctx context.Context, store *engram.Store, vaultRoot string, newClient embedClientFactory, req query.Request) (query.Result, error) {
+	deps := queryDeps(store, vaultRoot, newClient, freshEmbedFunc(newClient), nil, nil)
 	return query.Run(ctx, deps, req)
 }
 
 // freshEmbedFunc builds a new embed.Client on every call it makes -- the
 // CLI's own one-query-per-process convention, unchanged by this issue.
-func freshEmbedFunc() query.EmbedFunc {
+func freshEmbedFunc(newClient embedClientFactory) query.EmbedFunc {
 	return func(ctx context.Context, text string) ([]float32, error) {
-		client, err := embed.NewClient(embed.Config{Model: vecindex.DefaultModel})
+		client, err := newClient(embed.Config{Model: vecindex.DefaultModel})
 		if err != nil {
 			return nil, err
 		}
@@ -51,6 +51,11 @@ func freshEmbedFunc() query.EmbedFunc {
 // does name the source (over the MCP tool's own `sources` field) reach it
 // without a second construction path to keep in sync.
 //
+// newClient is the factory of the embedding clients the bounded top-up
+// builds (buildIndexForQuery); the commands hand it the one they were wired
+// with, so that no query reaches an embedding backend its caller did not
+// choose.
+//
 // embedFn and loadIndex are supplied by the caller rather than constructed
 // here, because the CLI (one query per process) and the MCP server (many
 // queries per session) want different lifetimes for both: runQuery builds
@@ -62,7 +67,7 @@ func freshEmbedFunc() query.EmbedFunc {
 // index is immediately visible to the very query that triggered it,
 // rather than served stale from the cache until an unrelated mtime/size
 // change happens to be noticed.
-func queryDeps(store *engram.Store, vaultRoot string, embedFn query.EmbedFunc, loadIndex func(dir string) (*vecindex.Index, error), invalidateIndex func(dir string)) query.Deps {
+func queryDeps(store *engram.Store, vaultRoot string, newClient embedClientFactory, embedFn query.EmbedFunc, loadIndex func(dir string) (*vecindex.Index, error), invalidateIndex func(dir string)) query.Deps {
 	runner := &vault.Runner{Root: vaultRoot}
 	return query.Deps{
 		Memory: store,
@@ -72,7 +77,7 @@ func queryDeps(store *engram.Store, vaultRoot string, embedFn query.EmbedFunc, l
 		ResolveLink: query.NoLinkResolver,
 		StateDir:    defaultStateDir(),
 		Embed:       embedFn,
-		BuildIndex:  buildIndexForQuery(store, invalidateIndex),
+		BuildIndex:  buildIndexForQuery(store, newClient, invalidateIndex),
 		LoadIndex:   loadIndex,
 	}
 }
@@ -91,13 +96,13 @@ func queryDeps(store *engram.Store, vaultRoot string, embedFn query.EmbedFunc, l
 // failed one, since nothing changed on disk for a load cache to need to
 // forget. A nil invalidateIndex (the CLI path, which caches nothing) is
 // simply skipped.
-func buildIndexForQuery(store *engram.Store, invalidateIndex func(dir string)) func(ctx context.Context, project, model string, dimension, inputLimit int) error {
+func buildIndexForQuery(store *engram.Store, newClient embedClientFactory, invalidateIndex func(dir string)) func(ctx context.Context, project, model string, dimension, inputLimit int) error {
 	return func(ctx context.Context, project, model string, dimension, inputLimit int) error {
 		rows, err := observationRowsForIndex(store, project)
 		if err != nil {
 			return err
 		}
-		client, err := embed.NewClient(embed.Config{Model: model})
+		client, err := newClient(embed.Config{Model: model})
 		if err != nil {
 			return err
 		}

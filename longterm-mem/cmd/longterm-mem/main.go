@@ -9,13 +9,13 @@ import (
 )
 
 func main() {
-	os.Exit(run(os.Args[1:]))
+	os.Exit(productionCommands().run(os.Args[1:]))
 }
 
 // run dispatches the requested subcommand and returns the process exit code.
 // Exit codes follow the contract in design.md, named in exit_codes.go; run
 // itself only ever produces exitUsage.
-func run(args []string) int {
+func (c commands) run(args []string) int {
 	if len(args) == 0 {
 		usage()
 		return exitUsage
@@ -23,9 +23,9 @@ func run(args []string) int {
 
 	switch args[0] {
 	case "index":
-		return cmdIndex(args[1:])
+		return c.cmdIndex(args[1:])
 	case "query":
-		return cmdQuery(args[1:])
+		return c.cmdQuery(args[1:])
 	case "sync":
 		return cmdSync(args[1:])
 	case "status":
@@ -35,11 +35,11 @@ func run(args []string) int {
 	case "skills-stale":
 		return cmdSkillsStale(args[1:])
 	case "doctor":
-		return cmdDoctor(args[1:])
+		return c.cmdDoctor(args[1:])
 	case "promote":
 		return cmdPromote(args[1:])
 	case "mcp":
-		return cmdMCP(args[1:])
+		return c.cmdMCP(args[1:])
 	case "register":
 		return cmdRegister(args[1:])
 	case "unregister":

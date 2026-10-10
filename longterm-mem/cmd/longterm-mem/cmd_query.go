@@ -27,7 +27,7 @@ const unsetTopN = -1
 // needs no dedicated guard: flag.Parse already rejects a leading-dash
 // positional as an unrecognized flag (exit 2) unless "--" precedes it, at
 // which point it is stdlib's own literal positional arg (2b-2 advisory).
-func cmdQuery(args []string) int {
+func (c commands) cmdQuery(args []string) int {
 	fs := flag.NewFlagSet("query", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
 	project := fs.String("project", "", projectFlagUsage)
@@ -70,7 +70,7 @@ func cmdQuery(args []string) int {
 		requestedTop = *top
 	}
 
-	result, err := runQuery(context.Background(), store, vaultRoot, query.Request{
+	result, err := runQuery(context.Background(), store, vaultRoot, c.newEmbedClient, query.Request{
 		Project: resolvedProject, Query: rest[0], Top: requestedTop,
 		ExcludeTypes: splitTypes(*excludeTypes),
 	})

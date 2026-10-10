@@ -40,7 +40,7 @@ import (
 // exitInternal (1). A caller therefore reads 9 as "your vault has a named
 // problem, go read the report" and 1 as "doctor could not tell you
 // anything".
-func cmdDoctor(args []string) int {
+func (c commands) cmdDoctor(args []string) int {
 	fs := flag.NewFlagSet("doctor", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
 	project := fs.String("project", "", projectFlagUsage)
@@ -88,7 +88,7 @@ func cmdDoctor(args []string) int {
 			return ids, nil
 		},
 		EmbeddingBackendCheck: func(ctx context.Context) error {
-			client, err := embed.NewClient(embed.Config{Model: vecindex.DefaultModel})
+			client, err := c.newEmbedClient(embed.Config{Model: vecindex.DefaultModel})
 			if err != nil {
 				return err
 			}

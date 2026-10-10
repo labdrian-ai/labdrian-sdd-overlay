@@ -29,7 +29,7 @@ import (
 // resolution; the Engram connection is opened once and shared across the
 // whole session, mirroring how a long-lived MCP server should not reopen
 // a read-only database on every call.
-func cmdMCP(args []string) int {
+func (c commands) cmdMCP(args []string) int {
 	fs := flag.NewFlagSet("mcp", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
 	if err := fs.Parse(args); err != nil {
@@ -55,7 +55,7 @@ func cmdMCP(args []string) int {
 	// calls. embedClient.Embed and loadCache.Load are safe for concurrent
 	// use (http.Client and LoadCache's own mutex, respectively), matching
 	// how store is already shared across the whole session below.
-	embedClient, err := embed.NewClient(embed.Config{Model: vecindex.DefaultModel})
+	embedClient, err := c.newEmbedClient(embed.Config{Model: vecindex.DefaultModel})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "longterm-mem: mcp: %v\n", err)
 		return exitInternal
@@ -76,7 +76,7 @@ func cmdMCP(args []string) int {
 			if err != nil {
 				return query.Result{}, err
 			}
-			qdeps := queryDeps(store, vaultRoot, embedClient.Embed, loadCache.Load, loadCache.Invalidate)
+			qdeps := queryDeps(store, vaultRoot, c.newEmbedClient, embedClient.Embed, loadCache.Load, loadCache.Invalidate)
 			return query.Run(ctx, qdeps, req)
 		},
 		// Get reads one observation whole, through the same read-only
