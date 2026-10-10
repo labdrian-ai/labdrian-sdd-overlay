@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -19,6 +20,12 @@ import (
 // stderr and every file of the vault, with its mode and, for a link, where it points, character for
 // character. They were recorded from the program as it stood before the address map moved behind a port
 // (Phase 9, L3 slice 2), and that change must not alter one byte of them.
+//
+// Two kinds of text in them come from outside the program: the operating system's words for an error ("is a
+// directory", "no such file or directory"), which Linux and macOS spell alike (CI runs on Linux; the module
+// does not build for Windows), and the wording of encoding/json's decode errors, which belongs to the Go
+// toolchain. TestGoldenPinsTheJSONErrorsOfTheToolchain names the second: a toolchain that words them
+// differently fails that test first, and the goldens then need re-recording for that reason alone.
 //
 // To rewrite them after a change that is MEANT to alter the output:
 //
@@ -44,6 +51,15 @@ func writeManifest(t *testing.T, root, content string, mode os.FileMode) {
 	}
 	if err := os.Chmod(path, mode); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// symlinkOrSkip makes newname a symbolic link to oldname, and skips the test on a file system that cannot make
+// one: a scenario about links is about a state the file system must be able to hold.
+func symlinkOrSkip(t *testing.T, oldname, newname string) {
+	t.Helper()
+	if err := os.Symlink(oldname, newname); err != nil {
+		t.Skipf("this file system cannot make a symbolic link: %v", err)
 	}
 }
 
@@ -90,17 +106,13 @@ func addressMapScenarios() []addressMapScenario {
 			if err := os.MkdirAll(filepath.Join(root, ".raw"), 0o755); err != nil {
 				t.Fatal(err)
 			}
-			if err := os.Symlink("../notes/manifest.json", filepath.Join(root, ".raw", ".manifest.json")); err != nil {
-				t.Fatal(err)
-			}
+			symlinkOrSkip(t, "../notes/manifest.json", filepath.Join(root, ".raw", ".manifest.json"))
 		}},
 		{name: "10-a-manifest-that-is-a-link-to-nothing", seed: func(t *testing.T, root string) {
 			if err := os.MkdirAll(filepath.Join(root, ".raw"), 0o755); err != nil {
 				t.Fatal(err)
 			}
-			if err := os.Symlink("../notes/absent.json", filepath.Join(root, ".raw", ".manifest.json")); err != nil {
-				t.Fatal(err)
-			}
+			symlinkOrSkip(t, "../notes/absent.json", filepath.Join(root, ".raw", ".manifest.json"))
 		}},
 		{name: "11-no-manifest-and-no-raw-directory", seed: func(t *testing.T, root string) {}},
 	}
@@ -155,6 +167,26 @@ func renderVaultWithModes(t *testing.T, root string) string {
 		}
 	}
 	return b.String()
+}
+
+// The decode errors the goldens print are the toolchain's, not the program's. If this test fails after a Go
+// upgrade, the goldens that quote them (05, 06 and 07) have changed for that reason and for no other.
+func TestGoldenPinsTheJSONErrorsOfTheToolchain(t *testing.T) {
+	var asObject map[string]json.RawMessage
+	var asStrings map[string]string
+	for _, c := range []struct {
+		name  string
+		err   error
+		quote string
+	}{
+		{"an array where the manifest is an object", json.Unmarshal([]byte("[]"), &asObject), "json: cannot unmarshal array into Go value of type map[string]json.RawMessage"},
+		{"a string where address_map is an object", json.Unmarshal([]byte(`"nope"`), &asStrings), "json: cannot unmarshal string into Go value of type map[string]string"},
+		{"a number where an address is a string", json.Unmarshal([]byte(`{"a":1}`), &asStrings), "json: cannot unmarshal number into Go value of type string"},
+	} {
+		if c.err == nil || c.err.Error() != c.quote {
+			t.Errorf("%s: encoding/json says %v, where the goldens quote %q", c.name, c.err, c.quote)
+		}
+	}
 }
 
 func TestPromoteAddressMapGolden(t *testing.T) {
