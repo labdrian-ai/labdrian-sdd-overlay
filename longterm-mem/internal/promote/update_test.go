@@ -471,6 +471,7 @@ func TestActionKind_String(t *testing.T) {
 		kind ActionKind
 		want string
 	}{
+		{ActionNone, "none"},
 		{ActionCreated, "created"},
 		{ActionUpdated, "updated"},
 		{ActionSkippedLocalEdit, "skipped_local_edit"},
@@ -480,6 +481,21 @@ func TestActionKind_String(t *testing.T) {
 		if got := tt.kind.String(); got != tt.want {
 			t.Errorf("ActionKind(%d).String() = %q, want %q", tt.kind, got, tt.want)
 		}
+	}
+}
+
+// TestAction_TheZeroValueMeansNothingWasDone (Phase 9, L2): an Action nobody
+// filled in used to read as ActionCreated, the first iota, so a value that
+// was never set silently claimed a write. The zero value is ActionNone now,
+// and a kind that does something has to be named.
+func TestAction_TheZeroValueMeansNothingWasDone(t *testing.T) {
+	var action Action
+	if action.Kind != ActionNone {
+		t.Fatalf("the zero Action has Kind %v, want ActionNone", action.Kind)
+	}
+	var kind ActionKind
+	if kind == ActionCreated || kind == ActionUpdated || kind == ActionSkippedLocalEdit {
+		t.Fatalf("the zero ActionKind %v is a kind that does something", kind)
 	}
 }
 

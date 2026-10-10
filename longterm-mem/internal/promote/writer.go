@@ -43,7 +43,8 @@ type Result struct {
 // promoted, through UpdateInPlace (ActionUpdated, or ActionSkippedLocalEdit
 // per R-030). explicit is forwarded to Eligible, matching the explicit
 // promote surface's override semantics (R-007); an ineligible obs is left
-// untouched and reports a zero Result with no error, since ineligibility
+// untouched and reports a Result with no page and ActionNone (the zero
+// Result) and no error, since ineligibility
 // is a normal skip a scanning caller (sync) must not treat as a failure.
 // Every promotion that actually wrote a page persists the precedence
 // sidecar; a create persists it BEFORE publishing the page, since a

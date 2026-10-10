@@ -18,11 +18,11 @@ import (
 // no-op -- is the entire cost for none of the benefit, on a surface (MCP)
 // a client can call in a loop.
 //
-// The ineligible case is the trap, and it is why the guard cannot be a
-// bare switch on Action.Kind: Writer.Promote reports an ineligible
-// observation as a ZERO promote.Result, and a zero Action.Kind is
-// ActionCreated, the first iota. Reading the kind alone therefore answers
-// "created" for a promotion that touched no file at all.
+// The ineligible case is the one to watch: Writer.Promote reports an
+// ineligible observation as a ZERO promote.Result. The zero Action.Kind is
+// ActionNone, so reading the kind alone answers "nothing was written" for a
+// promotion that touched no file. It used to be ActionCreated, the first
+// iota, and a guard on the page address stood in front of the switch.
 func TestReindexAfterPromote_KeysOffTheOutcomeNotTheCall(t *testing.T) {
 	page := promote.Page{Address: "c-000001", Path: "wiki/memory/c-000001.md"}
 
@@ -49,6 +49,12 @@ func TestReindexAfterPromote_KeysOffTheOutcomeNotTheCall(t *testing.T) {
 		{
 			name:        "an ineligible no-op rebuilds nothing",
 			result:      promote.Result{},
+			wantRebuild: 0,
+		},
+		{
+			// The kind says nothing was done; a page address beside it does not turn that into a write.
+			name:        "an unset action rebuilds nothing, whatever page it sits beside",
+			result:      promote.Result{Page: page},
 			wantRebuild: 0,
 		},
 	} {

@@ -177,17 +177,12 @@ func reindexAfterPromote(ctx context.Context, result promote.Result, rebuild fun
 // promotionWrotePage reports whether result describes a promotion that put
 // bytes on disk.
 //
-// The Page.Address guard is not redundant with the switch, and removing it
-// is the trap this function exists to close: Writer.Promote reports an
-// INELIGIBLE observation as a zero promote.Result, and a zero
-// promote.ActionKind is promote.ActionCreated -- the first iota. A bare
-// switch on the kind therefore answers "created" for a promotion that
-// touched no file at all. A real write always carries the address of the
-// page it wrote.
+// The kind alone answers it. Writer.Promote reports an INELIGIBLE observation
+// as a zero promote.Result, and the zero promote.ActionKind is
+// promote.ActionNone, so a promotion that touched no file never reads as a
+// write. (It used to be promote.ActionCreated, the first iota, and a guard
+// on the page address stood in front of the switch to catch that.)
 func promotionWrotePage(result promote.Result) bool {
-	if result.Page.Address == "" {
-		return false
-	}
 	switch result.Action.Kind {
 	case promote.ActionCreated, promote.ActionUpdated:
 		return true

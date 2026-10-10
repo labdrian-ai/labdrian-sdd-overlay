@@ -14,9 +14,13 @@ import (
 type ActionKind int
 
 const (
+	// ActionNone means nothing was done: the zero value, so an Action nobody
+	// filled in (the Action that comes back beside an error, or the Result of
+	// an observation that was not eligible) can never read as a write.
+	ActionNone ActionKind = iota
 	// ActionCreated means a brand-new page was written (Writer.Promote
 	// only; UpdateInPlace never returns this).
-	ActionCreated ActionKind = iota
+	ActionCreated
 	// ActionUpdated means the on-disk page and the precedence store
 	// entry for its address were refreshed with freshly rendered
 	// content.
@@ -37,9 +41,11 @@ type Action struct {
 // String renders k as the plain string both cmd_promote.go's CLI output
 // and the MCP promote tool's PromoteOut.Action render over the wire
 // (task 8b.11): one source of truth instead of two callers separately
-// mapping ActionKind's int encoding to the same three names.
+// mapping ActionKind's int encoding to the same names.
 func (k ActionKind) String() string {
 	switch k {
+	case ActionNone:
+		return "none"
 	case ActionCreated:
 		return "created"
 	case ActionUpdated:

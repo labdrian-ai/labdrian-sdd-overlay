@@ -186,6 +186,31 @@ func TestPromote_ExplicitCallOverridesAutomaticEligibility(t *testing.T) {
 	}
 }
 
+// TestPromote_AnIneligibleObservationReportsNoActionAndWritesNothing: an
+// observation that is not eligible is a normal skip for a scanning caller,
+// and the Result says so in its own words (ActionNone, no page) rather than
+// by being an unset struct. Nothing is written to the vault.
+func TestPromote_AnIneligibleObservationReportsNoActionAndWritesNothing(t *testing.T) {
+	vaultRoot := t.TempDir()
+	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}}
+	obs := memory.Observation{ID: 602, Type: "discovery", Title: "Not Curated", Content: "Never automatically eligible.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
+
+	result, err := w.Promote(obs, false)
+	if err != nil {
+		t.Fatalf("Promote: %v", err)
+	}
+	if result.Action.Kind != ActionNone || result.Page.Address != "" {
+		t.Fatalf("Promote = %+v, want ActionNone and no page for an ineligible observation", result)
+	}
+	entries, err := os.ReadDir(vaultRoot)
+	if err != nil {
+		t.Fatalf("read the vault: %v", err)
+	}
+	if len(entries) != 0 {
+		t.Fatalf("an ineligible observation wrote %d entries into the vault", len(entries))
+	}
+}
+
 // TestPromote_InvalidObservationIdRejected (task 8b.5, R-032): an invalid
 // or nonexistent observation id must be rejected with a clear,
 // distinguishable error, never a silent no-op that leaves the caller
