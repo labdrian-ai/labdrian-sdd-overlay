@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 )
 
 // wedgedLegacyPage builds the exact state doctor's precedence-sidecar check
@@ -18,12 +18,12 @@ import (
 // It returns the vault root, the page's address, and the observation the
 // page was rendered from, so a caller can drive a LATER revision through
 // UpdateInPlace afterwards.
-func wedgedLegacyPage(t *testing.T, id int64, address string) (vaultRoot string, obs engram.Observation) {
+func wedgedLegacyPage(t *testing.T, id int64, address string) (vaultRoot string, obs memory.Observation) {
 	t.Helper()
 	vaultRoot = t.TempDir()
 	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
 
-	obs = engram.Observation{ID: id, Type: "decision", Title: "Wedged Legacy", Content: "V1 body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
+	obs = memory.Observation{ID: id, Type: "decision", Title: "Wedged Legacy", Content: "V1 body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
 	first, err := EmitPage(obs, address, nil)
 	if err != nil {
 		t.Fatalf("EmitPage (v1): %v", err)
@@ -136,7 +136,7 @@ func TestReconcile_AdoptsAPageWithNoEntryAtAll(t *testing.T) {
 	vaultRoot := t.TempDir()
 	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
 
-	obs := engram.Observation{ID: 602, Type: "decision", Title: "Untracked", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 4}
+	obs := memory.Observation{ID: 602, Type: "decision", Title: "Untracked", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 4}
 	page, err := EmitPage(obs, address, nil)
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
@@ -173,7 +173,7 @@ func TestReconcile_RefusesAPageThatIsNotWedged(t *testing.T) {
 		vaultRoot := t.TempDir()
 		fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
 
-		obs := engram.Observation{ID: 603, Type: "decision", Title: "Healthy", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 2}
+		obs := memory.Observation{ID: 603, Type: "decision", Title: "Healthy", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 2}
 		page, err := EmitPage(obs, address, nil)
 		if err != nil {
 			t.Fatalf("EmitPage: %v", err)
@@ -199,7 +199,7 @@ func TestReconcile_RefusesAPageThatIsNotWedged(t *testing.T) {
 		vaultRoot := t.TempDir()
 		fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
 
-		obs := engram.Observation{ID: 604, Type: "decision", Title: "Edited By Hand", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 2}
+		obs := memory.Observation{ID: 604, Type: "decision", Title: "Edited By Hand", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 2}
 		page, err := EmitPage(obs, address, nil)
 		if err != nil {
 			t.Fatalf("EmitPage: %v", err)
@@ -243,7 +243,7 @@ func TestReconcile_RefusesAPageWithNoUsableRevision(t *testing.T) {
 	vaultRoot := t.TempDir()
 	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
 
-	obs := engram.Observation{ID: 605, Type: "decision", Title: "No Revision", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 2}
+	obs := memory.Observation{ID: 605, Type: "decision", Title: "No Revision", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 2}
 	page, err := EmitPage(obs, address, nil)
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)

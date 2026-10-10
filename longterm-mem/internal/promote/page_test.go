@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 )
 
 var update = flag.Bool("update", false, "update golden files")
@@ -44,7 +44,7 @@ func TestQuoteYAML_EscapesBackslashes(t *testing.T) {
 func TestEmitPage_TypeMappedOntoVaultEnum(t *testing.T) {
 	fixedNow(t, time.Date(2026, 8, 30, 0, 0, 0, 0, time.UTC))
 
-	obs := engram.Observation{
+	obs := memory.Observation{
 		ID: 101, SyncID: "sync-101", Type: "decision", Title: "Widget Decision",
 		Content: "We decided to ship the widget.", Project: "labdrian-sdd-overlay",
 		RevisionCount: 1, Pinned: true,
@@ -79,7 +79,7 @@ func TestEmitPage_RelatedLinksResolve(t *testing.T) {
 		t.Fatalf("write %s: %v", otherPath, err)
 	}
 
-	obs := engram.Observation{ID: 102, Type: "discovery", Title: "Follow-up Discovery", Content: "Details.", Project: "labdrian-sdd-overlay", RevisionCount: 3}
+	obs := memory.Observation{ID: 102, Type: "discovery", Title: "Follow-up Discovery", Content: "Details.", Project: "labdrian-sdd-overlay", RevisionCount: 3}
 	related := []Link{{Address: "c-000099", Title: "Other Page"}}
 
 	page, err := EmitPage(obs, "c-000102", related)
@@ -100,7 +100,7 @@ func TestEmitPage_RelatedLinksResolve(t *testing.T) {
 func TestEmitPage_FilenameSurvivesRetitle(t *testing.T) {
 	fixedNow(t, time.Date(2026, 8, 30, 0, 0, 0, 0, time.UTC))
 
-	obs := engram.Observation{ID: 103, Type: "pattern", Title: "Original Title", Content: "Body.", Project: "labdrian-sdd-overlay"}
+	obs := memory.Observation{ID: 103, Type: "pattern", Title: "Original Title", Content: "Body.", Project: "labdrian-sdd-overlay"}
 	first, err := EmitPage(obs, "c-000103", nil)
 	if err != nil {
 		t.Fatalf("EmitPage (original title): %v", err)
@@ -125,7 +125,7 @@ func TestEmitPage_FilenameSurvivesRetitle(t *testing.T) {
 func TestEmitPage_MatchesGolden(t *testing.T) {
 	fixedNow(t, time.Date(2026, 8, 30, 0, 0, 0, 0, time.UTC))
 
-	obs := engram.Observation{
+	obs := memory.Observation{
 		ID: 200, SyncID: "sync-200", Type: "architecture", Title: "Read-Only Store",
 		Content: "The store opens Engram read-only.", Project: "labdrian-sdd-overlay",
 		RevisionCount: 2, Pinned: false,
