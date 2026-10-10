@@ -8,6 +8,7 @@ import (
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultfs"
 )
 
 // vaultWithUnrecordedPage writes one promoted page under a fresh vault and
@@ -53,9 +54,9 @@ func TestCmdPromoteReconcile_AdoptsTheNamedAddress(t *testing.T) {
 		t.Fatalf("promote reconcile exited %d, want 0", exit)
 	}
 
-	store, err := promote.LoadPrecedenceStore(vaultRoot)
+	store, err := vaultfs.New(vaultRoot).LoadPrecedence()
 	if err != nil {
-		t.Fatalf("LoadPrecedenceStore: %v", err)
+		t.Fatalf("LoadPrecedence: %v", err)
 	}
 	entry, ok := store.Get(address)
 	if !ok {
@@ -105,9 +106,9 @@ func TestCmdPromoteReconcile_RefusesEveryBulkForm(t *testing.T) {
 			// The refusal has to change nothing: a bulk invocation that
 			// adopted even one page would be the mass adoption by
 			// instalments.
-			store, err := promote.LoadPrecedenceStore(vaultRoot)
+			store, err := vaultfs.New(vaultRoot).LoadPrecedence()
 			if err != nil {
-				t.Fatalf("LoadPrecedenceStore: %v", err)
+				t.Fatalf("LoadPrecedence: %v", err)
 			}
 			if len(store) != 0 {
 				t.Fatalf("a refused bulk reconcile still wrote %d sidecar entr(ies)", len(store))

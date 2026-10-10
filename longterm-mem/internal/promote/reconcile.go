@@ -6,6 +6,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultlayout"
 )
 
 // ErrPageNotFound is Reconcile's error when the named address has no
@@ -115,7 +118,10 @@ type ReconcileOutcome struct {
 //     change what would be destroyed. The remedy is the human's: keep the
 //     edit (and leave the page refused), or fold it into Engram and let the
 //     ordinary promotion path rewrite the page.
-func Reconcile(vaultRoot, project, address string) (ReconcileOutcome, error) {
+func Reconcile(vaultRoot, project, address string, precedence PrecedenceRepository) (ReconcileOutcome, error) {
+	if memory.IsMissing(precedence) {
+		return ReconcileOutcome{}, errNoPrecedenceRepository
+	}
 	// The address is checked against the allocator's own shape BEFORE it
 	// touches the filesystem, because it is used twice: as a path segment
 	// and as the sidecar key. addressPattern (lint.go) is the same
@@ -137,10 +143,10 @@ func Reconcile(vaultRoot, project, address string) (ReconcileOutcome, error) {
 	// frontmatter-identity check below, so the key stays one that describes
 	// its own content.
 	if !addressPattern.MatchString(address) {
-		return ReconcileOutcome{}, fmt.Errorf("%w: %q does not match %s, so it names neither a page under %s nor a key any promotion looks up", ErrInvalidAddress, address, addressPattern, pagePathPrefix)
+		return ReconcileOutcome{}, fmt.Errorf("%w: %q does not match %s, so it names neither a page under %s nor a key any promotion looks up", ErrInvalidAddress, address, addressPattern, vaultlayout.PagesDir)
 	}
 
-	rel := filepath.Join(pagePathPrefix, address+".md")
+	rel := filepath.Join(vaultlayout.PagesDir, address+".md")
 	full := filepath.Join(vaultRoot, rel)
 	raw, err := os.ReadFile(full)
 	if err != nil {
@@ -172,7 +178,7 @@ func Reconcile(vaultRoot, project, address string) (ReconcileOutcome, error) {
 		return ReconcileOutcome{}, fmt.Errorf("%w: %s belongs to project %q, not %q", ErrNotThatPage, full, got, project)
 	}
 
-	store, err := LoadPrecedenceStore(vaultRoot)
+	store, err := precedence.LoadPrecedence()
 	if err != nil {
 		return ReconcileOutcome{}, err
 	}
@@ -182,7 +188,7 @@ func Reconcile(vaultRoot, project, address string) (ReconcileOutcome, error) {
 	case tracked && entry.MatchesPage(string(raw)):
 		return ReconcileOutcome{Address: address, Path: rel, PromotedRevision: entry.PromotedRevision}, nil
 	case tracked && entry.PromotedRevision > 0:
-		return ReconcileOutcome{}, fmt.Errorf("%w: %s records revision %d for %s and the page no longer matches it; promotion adopts such a page only when the page's own engram_revision stands above %d (which only longterm-mem's own writes advance) and otherwise refuses it to keep the edit, and reconcile does not override that refusal", ErrLocalEditPreserved, precedenceManifestRelPath, entry.PromotedRevision, address, entry.PromotedRevision)
+		return ReconcileOutcome{}, fmt.Errorf("%w: %s records revision %d for %s and the page no longer matches it; promotion adopts such a page only when the page's own engram_revision stands above %d (which only longterm-mem's own writes advance) and otherwise refuses it to keep the edit, and reconcile does not override that refusal", ErrLocalEditPreserved, vaultlayout.PrecedenceFile, entry.PromotedRevision, address, entry.PromotedRevision)
 	}
 
 	// The revision is read off the PAGE, never supplied by the caller: the
@@ -214,7 +220,7 @@ func Reconcile(vaultRoot, project, address string) (ReconcileOutcome, error) {
 		FrontmatterHash:  hashText(fmBlock),
 		PromotedRevision: revision,
 	})
-	if err := store.Save(vaultRoot); err != nil {
+	if err := precedence.SavePrecedence(store); err != nil {
 		return ReconcileOutcome{}, err
 	}
 	return ReconcileOutcome{Address: address, Path: rel, Adopted: true, PromotedRevision: revision}, nil

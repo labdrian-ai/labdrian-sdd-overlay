@@ -9,7 +9,9 @@ import (
 	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/embed"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultlayout"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vecindex"
 )
 
@@ -42,31 +44,34 @@ const (
 // scripts/bm25-index.py.
 const requiredPrerequisite = "python3"
 
-// promotedPagesDir is the vault-relative directory promoted pages live
-// under, mirroring promote's own (unexported) pagePathPrefix constant
-// (D7: wiki/memory/<address>.md).
-const promotedPagesDir = "wiki/memory"
-
-// logRelPath mirrors promote's own (unexported) logMdRelPath constant
-// (register.go): the vault's append-only promotion log, the on-disk
-// source the wiki-registration-consistency check's log half reads. The
-// catalog half (wiki/index.md) needs no equivalent constant here -- it is
-// checked entirely through promote.LintPage's reused inbound-index-link
-// rule, which already knows that path.
-const logRelPath = "wiki/log.md"
-
-// precedenceSidecarRelPath mirrors promote's own (unexported)
-// precedenceManifestRelPath constant (store.go): longterm-mem's
-// last-written-by-us fingerprint file, named in this check's details so an
-// operator reading a FAIL knows which file to look at. The file itself is
-// read through promote.LoadPrecedenceStore, never parsed here.
-const precedenceSidecarRelPath = ".raw/.longterm-mem-manifest.json"
-
 // Check is one named diagnostic's result.
 type Check struct {
 	Name   string `json:"name"`
 	Status string `json:"status"`
 	Detail string `json:"detail,omitempty"`
+}
+
+// PrecedenceReader is the port through which Doctor reads the precedence
+// store of the vault it inspects: longterm-mem's record of what it last wrote
+// for each promoted page. The package owns it, asks for the read half only
+// (a diagnostic never writes), and is satisfied by the vault file system
+// adapter and by promote.PrecedenceRepository alike.
+type PrecedenceReader interface {
+	LoadPrecedence() (promote.PrecedenceStore, error)
+}
+
+// errNoPrecedenceReader is what the precedence check reports when Doctor was
+// built without a PrecedenceReader: a port the caller forgot to wire is
+// named, and only that check fails.
+var errNoPrecedenceReader = errors.New("ops: no precedence reader was wired")
+
+// loadPrecedence reads the precedence store through reader, or says that
+// there is none to read through.
+func loadPrecedence(reader PrecedenceReader) (promote.PrecedenceStore, error) {
+	if memory.IsMissing(reader) {
+		return nil, errNoPrecedenceReader
+	}
+	return reader.LoadPrecedence()
 }
 
 // DoctorDeps are Doctor's dependencies (function-seam convention matching
@@ -76,6 +81,11 @@ type Check struct {
 type DoctorDeps struct {
 	// VaultRoot is the (possibly unresolvable) vault path Doctor inspects.
 	VaultRoot string
+	// Precedence reads the vault's precedence store for the
+	// precedence-sidecar-consistency check. Production wires the vault file
+	// system adapter over VaultRoot. Required: without it that check fails
+	// and says so.
+	Precedence PrecedenceReader
 	// PrerequisitePresent reports whether name is present as a runtime
 	// prerequisite. Production wires vault.PrerequisitePresent (R-021: no
 	// direct os/exec import outside internal/vault/runner.go). Required.
@@ -126,7 +136,7 @@ func Doctor(ctx context.Context, deps DoctorDeps, project string) (DoctorReport,
 			checkVaultConfigResolvable(deps.VaultRoot),
 			checkAddressMapIntegrity(deps.VaultRoot),
 			checkWikiRegistrationConsistency(deps.VaultRoot),
-			checkPrecedenceSidecarConsistency(deps.VaultRoot),
+			checkPrecedenceSidecarConsistency(deps.VaultRoot, deps.Precedence),
 			checkRuntimePrerequisites(deps),
 			checkEmbeddingIndexPresent(deps, project),
 			checkEmbeddingIndexFresh(deps, project),
@@ -193,7 +203,7 @@ func checkWikiRegistrationConsistency(vaultRoot string) Check {
 		return Check{Name: CheckWikiRegistrationConsistency, Status: CheckFailed, Detail: err.Error()}
 	}
 
-	logData, logErr := os.ReadFile(filepath.Join(vaultRoot, logRelPath))
+	logData, logErr := os.ReadFile(filepath.Join(vaultRoot, vaultlayout.LogFile))
 
 	details := append([]string(nil), unreadable...)
 	for _, page := range pages {
@@ -203,7 +213,7 @@ func checkWikiRegistrationConsistency(vaultRoot string) Check {
 			}
 		}
 		if logErr != nil || !strings.Contains(string(logData), "[["+page.Address) {
-			details = append(details, fmt.Sprintf("wiki/log.md has no entry for %s", page.Address))
+			details = append(details, fmt.Sprintf("%s has no entry for %s", vaultlayout.LogFile, page.Address))
 		}
 	}
 	if len(details) > 0 {
@@ -257,26 +267,26 @@ func checkWikiRegistrationConsistency(vaultRoot string) Check {
 // but it is a standing refusal, and this check stays quiet about it
 // precisely because flagging it would report every page a human has ever
 // touched as broken.
-func checkPrecedenceSidecarConsistency(vaultRoot string) Check {
+func checkPrecedenceSidecarConsistency(vaultRoot string, precedence PrecedenceReader) Check {
 	pages, unreadable, err := loadPromotedPages(vaultRoot)
 	if err != nil {
 		return Check{Name: CheckPrecedenceSidecarConsistency, Status: CheckFailed, Detail: err.Error()}
 	}
 
-	store, storeErr := promote.LoadPrecedenceStore(vaultRoot)
+	store, storeErr := loadPrecedence(precedence)
 
 	details := append([]string(nil), unreadable...)
 	for _, page := range pages {
 		if storeErr != nil {
-			details = append(details, fmt.Sprintf("%s could not be read, so %s has no provable provenance: %v", precedenceSidecarRelPath, page.Address, storeErr))
+			details = append(details, fmt.Sprintf("%s could not be read, so %s has no provable provenance: %v", vaultlayout.PrecedenceFile, page.Address, storeErr))
 			continue
 		}
 		entry, tracked := store.Get(page.Address)
 		switch {
 		case !tracked:
-			details = append(details, fmt.Sprintf("%s has no entry for %s, so longterm-mem cannot prove it wrote that page", precedenceSidecarRelPath, page.Address))
+			details = append(details, fmt.Sprintf("%s has no entry for %s, so longterm-mem cannot prove it wrote that page", vaultlayout.PrecedenceFile, page.Address))
 		case entry.PromotedRevision <= 0 && !entry.MatchesPage(page.Frontmatter):
-			details = append(details, fmt.Sprintf("%s records no usable promoted revision (%d) for %s and no longer matches that page, so every promotion of it is refused and nothing in the promotion path can repair the entry", precedenceSidecarRelPath, entry.PromotedRevision, page.Address))
+			details = append(details, fmt.Sprintf("%s records no usable promoted revision (%d) for %s and no longer matches that page, so every promotion of it is refused and nothing in the promotion path can repair the entry", vaultlayout.PrecedenceFile, entry.PromotedRevision, page.Address))
 		}
 	}
 	if len(details) > 0 {
@@ -392,7 +402,7 @@ func checkEmbeddingBackendReachable(ctx context.Context, deps DoctorDeps) Check 
 // package's own contract forbids. Only a directory that cannot be listed
 // at all -- where there is no per-page result to salvage -- is an error.
 func loadPromotedPages(vaultRoot string) (pages []promote.Page, unreadable []string, err error) {
-	dir := filepath.Join(vaultRoot, promotedPagesDir)
+	dir := filepath.Join(vaultRoot, vaultlayout.PagesDir)
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -413,7 +423,7 @@ func loadPromotedPages(vaultRoot string) (pages []promote.Page, unreadable []str
 		}
 		pages = append(pages, promote.Page{
 			Address:     address,
-			Path:        promotedPagesDir + "/" + entry.Name(),
+			Path:        vaultlayout.PagesDir + "/" + entry.Name(),
 			Frontmatter: string(data),
 		})
 	}

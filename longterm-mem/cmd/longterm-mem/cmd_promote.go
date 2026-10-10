@@ -152,7 +152,7 @@ func cmdPromoteReconcile(args []string) int {
 		return vaultExitCode(err)
 	}
 
-	outcome, err := promote.Reconcile(vaultRoot, resolvedProject, address)
+	outcome, err := promote.Reconcile(vaultRoot, resolvedProject, address, openVault(vaultRoot))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "longterm-mem: promote reconcile: %v\n", err)
 		switch {

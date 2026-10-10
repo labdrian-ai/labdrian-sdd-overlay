@@ -54,8 +54,8 @@ func cmdSync(args []string) int {
 	defer store.Close()
 	declareDegradedEngram(store, "sync")
 
-	precedence, err := promote.LoadPrecedenceStore(vaultRoot)
-	if err != nil {
+	writer := &promote.Writer{VaultRoot: vaultRoot, Addresses: vault.AddressAllocator{Root: vaultRoot}, Clock: utcClock{}}
+	if err := writer.UsePrecedence(openVault(vaultRoot)); err != nil {
 		fmt.Fprintf(os.Stderr, "longterm-mem: sync: %v\n", err)
 		return exitInternal
 	}
@@ -71,7 +71,7 @@ func cmdSync(args []string) int {
 	var rebuildErr error
 	deps := promote.Deps{
 		Memory: store,
-		Writer: &promote.Writer{VaultRoot: vaultRoot, Store: precedence, Addresses: vault.AddressAllocator{Root: vaultRoot}, Clock: utcClock{}},
+		Writer: writer,
 		RebuildIndex: func(ctx context.Context) error {
 			rebuildErr = vault.Rebuild(ctx, runner, false)
 			return rebuildErr

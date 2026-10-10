@@ -62,6 +62,7 @@ func cmdDoctor(args []string) int {
 
 	deps := ops.DoctorDeps{
 		VaultRoot:           vaultRoot,
+		Precedence:          openVault(vaultRoot),
 		PrerequisitePresent: vault.PrerequisitePresent,
 		// StateDir/LiveObservationIDs/EmbeddingBackendCheck back the three
 		// embedding-index checks (R-064). This command takes no

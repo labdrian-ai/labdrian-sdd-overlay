@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultlayout"
 )
 
 // fakeClock is the Clock of a test: it says the time it was given, and a test moves it to say a later
@@ -45,7 +46,7 @@ func TestEmitPage_DatesThePageInUTCWhateverZoneTheClockSpeaks(t *testing.T) {
 func TestPromote_DatesTheNewPageAndTheLogWithTheWritersClock(t *testing.T) {
 	vaultRoot := t.TempDir()
 	clock := &fakeClock{at: time.Date(2026, 9, 3, 22, 0, 0, 0, time.UTC)}
-	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Addresses: staticAddress(testAddress), Clock: clock}
+	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Addresses: staticAddress(testAddress), Clock: clock}
 	obs := memory.Observation{ID: 703, Type: "decision", Title: "Dated", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1, Pinned: true}
 
 	result, err := w.Promote(t.Context(), obs, false)
@@ -100,7 +101,7 @@ func TestSync_RefusesAWriterWithoutAClockBeforeTouchingAnything(t *testing.T) {
 	if _, err := Sync(t.Context(), deps, "labdrian-sdd-overlay"); err == nil {
 		t.Fatal("Sync = nil error, want a writer without a clock refused")
 	}
-	if _, err := os.Stat(filepath.Join(vaultRoot, syncStateRelPath)); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(vaultRoot, vaultlayout.SyncStateFile)); !os.IsNotExist(err) {
 		t.Errorf("the sync-state record exists after a refused run (stat err = %v)", err)
 	}
 }
@@ -121,7 +122,7 @@ func TestPropagate_NeedsNoClock(t *testing.T) {
 	seedPromotedPage(t, vaultRoot, precedence, memory.Observation{ID: ids[0], Type: "decision", Title: "Old Decision", Content: "Old body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}, "c-000001")
 	seedPromotedPage(t, vaultRoot, precedence, memory.Observation{ID: ids[1], Type: "decision", Title: "New Decision", Content: "New body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}, "c-000002")
 
-	w := &Writer{VaultRoot: vaultRoot, Store: precedence}
+	w := &Writer{VaultRoot: vaultRoot, Store: precedence, Precedence: &memPrecedence{}}
 	report, err := Propagate(t.Context(), Deps{Memory: store, Writer: w}, "labdrian-sdd-overlay")
 	if err != nil {
 		t.Fatalf("Propagate: %v", err)

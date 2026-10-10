@@ -47,6 +47,12 @@ func TestOnlyTheCompositionRootImportsTheEngramAdapter(t *testing.T) {
 // vendor, hidden and underscore directories (the go tool's own rule), and any directory below root that
 // holds a go.mod (another module). A file it cannot parse is an error, not a skip.
 func adapterImporters(root string) ([]string, error) {
+	return importersOf(root, engramAdapter, adapterDir)
+}
+
+// importersOf is adapterImporters for any adapter: the production Go files that import adapterImport and are
+// neither part of the composition root nor of adapterPackage, the directory of the adapter itself.
+func importersOf(root, adapterImport, adapterPackage string) ([]string, error) {
 	var found []string
 	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -64,7 +70,7 @@ func adapterImporters(root string) ([]string, error) {
 			return nil
 		}
 		dir := filepath.ToSlash(filepath.Dir(rel))
-		if within(dir, compositionRoot) || within(dir, adapterDir) {
+		if within(dir, compositionRoot) || within(dir, adapterPackage) {
 			return nil
 		}
 		file, err := parser.ParseFile(token.NewFileSet(), path, nil, parser.ImportsOnly)
@@ -76,7 +82,7 @@ func adapterImporters(root string) ([]string, error) {
 			if err != nil {
 				return err
 			}
-			if imported == engramAdapter {
+			if imported == adapterImport {
 				found = append(found, rel)
 			}
 		}

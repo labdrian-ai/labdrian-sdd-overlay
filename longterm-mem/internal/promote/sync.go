@@ -8,11 +8,8 @@ import (
 	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultlayout"
 )
-
-// syncStateRelPath is the vault-relative sync-state record R-031 requires
-// (Anchors: "<vault>/.vault-meta/longterm-mem-sync-state.json", schema 1).
-const syncStateRelPath = ".vault-meta/longterm-mem-sync-state.json"
 
 // syncStateSchema is the sync-state record's schema version.
 const syncStateSchema = 1
@@ -247,7 +244,7 @@ func failureError(op string, failed []SyncFailure) error {
 	return fmt.Errorf("promote: %s: %d observations failed, first is %d: %w", op, len(failed), first.ObservationID, first.Err)
 }
 
-// syncStateRecord is syncStateRelPath's decoded/encoded form.
+// syncStateRecord is vaultlayout.SyncStateFile's decoded/encoded form.
 type syncStateRecord struct {
 	Schema              int    `json:"schema"`
 	LastSyncCompletedAt string `json:"last_sync_completed_at"`
@@ -262,6 +259,6 @@ func writeSyncState(vaultRoot string, completedAt time.Time) error {
 	if err != nil {
 		return fmt.Errorf("marshal sync-state record: %w", err)
 	}
-	full := filepath.Join(vaultRoot, syncStateRelPath)
+	full := filepath.Join(vaultRoot, vaultlayout.SyncStateFile)
 	return writeFileAtomic(full, append(data, '\n'))
 }

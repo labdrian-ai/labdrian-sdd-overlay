@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultlayout"
 )
 
 // Diagnostic is one LintPage finding.
@@ -96,7 +98,7 @@ func parseFrontmatterFields(raw string) map[string]string {
 // page.Path. A missing manifest (address allocation is slice 5) passes --
 // there is nothing yet to be inconsistent with.
 func checkAddressMap(page Page, vaultRoot string) (Diagnostic, bool) {
-	data, err := os.ReadFile(filepath.Join(vaultRoot, ".raw", ".manifest.json"))
+	data, err := os.ReadFile(filepath.Join(vaultRoot, vaultlayout.AddressManifestFile))
 	if err != nil {
 		return Diagnostic{}, true
 	}
@@ -104,7 +106,7 @@ func checkAddressMap(page Page, vaultRoot string) (Diagnostic, bool) {
 		AddressMap map[string]string `json:"address_map"`
 	}
 	if err := json.Unmarshal(data, &manifest); err != nil {
-		return Diagnostic{Rule: "address-map", Detail: ".raw/.manifest.json is not valid JSON"}, false
+		return Diagnostic{Rule: "address-map", Detail: vaultlayout.AddressManifestFile + " is not valid JSON"}, false
 	}
 	for path, addr := range manifest.AddressMap {
 		if addr != page.Address {
@@ -124,7 +126,7 @@ func checkAddressMap(page Page, vaultRoot string) (Diagnostic, bool) {
 func checkWikilinksResolve(page Page, vaultRoot string) []Diagnostic {
 	var diags []Diagnostic
 	for _, m := range wikilinkPattern.FindAllStringSubmatch(page.Frontmatter+page.Body, -1) {
-		target := filepath.Join(vaultRoot, pagePathPrefix, m[1]+".md")
+		target := filepath.Join(vaultRoot, vaultlayout.PagesDir, m[1]+".md")
 		if _, err := os.Stat(target); err != nil {
 			diags = append(diags, Diagnostic{Rule: "wikilink-resolvability", Detail: fmt.Sprintf("%s does not resolve to an existing file", m[0])})
 		}
@@ -135,12 +137,12 @@ func checkWikilinksResolve(page Page, vaultRoot string) []Diagnostic {
 // checkInboundIndexLink reports the inbound-index.md-link rule: wiki/
 // index.md must exist and contain a wikilink to page.Address.
 func checkInboundIndexLink(page Page, vaultRoot string) (Diagnostic, bool) {
-	data, err := os.ReadFile(filepath.Join(vaultRoot, "wiki", "index.md"))
+	data, err := os.ReadFile(filepath.Join(vaultRoot, vaultlayout.IndexFile))
 	if err != nil {
-		return Diagnostic{Rule: "inbound-index-link", Detail: "wiki/index.md is missing"}, false
+		return Diagnostic{Rule: "inbound-index-link", Detail: vaultlayout.IndexFile + " is missing"}, false
 	}
 	if !strings.Contains(string(data), "[["+page.Address) {
-		return Diagnostic{Rule: "inbound-index-link", Detail: fmt.Sprintf("wiki/index.md has no link to %s", page.Address)}, false
+		return Diagnostic{Rule: "inbound-index-link", Detail: fmt.Sprintf("%s has no link to %s", vaultlayout.IndexFile, page.Address)}, false
 	}
 	return Diagnostic{}, true
 }

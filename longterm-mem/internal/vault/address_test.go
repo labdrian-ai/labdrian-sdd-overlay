@@ -164,3 +164,63 @@ func TestAddressAllocatorStopsWhenTheCallersContextEnds(t *testing.T) {
 		t.Errorf("error %q does not say what was being done", err)
 	}
 }
+
+// An explicit cancellation is not a deadline, and it ends the allocation the same way: the script is
+// killed and the error is context.Canceled, not "exited 124".
+func TestAddressAllocatorStopsWhenTheCallerCancels(t *testing.T) {
+	root := t.TempDir()
+	// The script says it is running before it hangs, and the caller cancels only once it has said so:
+	// the cancellation reaches a live script, not one that has yet to start, whatever the machine's
+	// speed. The outer deadline keeps a script that never starts from hanging the test, and it would
+	// surface as DeadlineExceeded, not as the Canceled this test expects.
+	marker := filepath.Join(root, "running")
+	writeAllocator(t, root, "#!/bin/sh\n: > "+marker+"\nexec sleep 30\n")
+	bounded, stop := context.WithTimeout(t.Context(), 10*time.Second)
+	defer stop()
+	ctx, cancel := context.WithCancel(bounded)
+	defer cancel()
+	go func() {
+		for bounded.Err() == nil {
+			if _, err := os.Stat(marker); err == nil {
+				cancel()
+				return
+			}
+			time.Sleep(5 * time.Millisecond)
+		}
+	}()
+
+	started := time.Now()
+	address, err := AddressAllocator{Root: root}.NextAddress(ctx)
+	if elapsed := time.Since(started); elapsed > 10*time.Second {
+		t.Errorf("NextAddress took %v: the script was not killed when the caller cancelled", elapsed)
+	}
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("NextAddress = (%q, %v), want an error that is context.Canceled", address, err)
+	}
+	if address != "" {
+		t.Errorf("address = %q alongside an error, want none", address)
+	}
+	if _, statErr := os.Stat(marker); statErr != nil {
+		t.Errorf("the script never ran (%v): the cancellation was not delivered to a live script", statErr)
+	}
+}
+
+// A script that exits 124 by itself, with its context still live, is an ordinary failure: 124 is the code
+// the runner reports for a killed script, but only the context says that one was.
+func TestAddressAllocatorTreatsAnExit124WithALiveContextAsAnOrdinaryFailure(t *testing.T) {
+	root := t.TempDir()
+	writeAllocator(t, root, "#!/bin/sh\necho 'gave up by itself' >&2\nexit 124\n")
+
+	address, err := AddressAllocator{Root: root}.NextAddress(t.Context())
+	if err == nil {
+		t.Fatalf("NextAddress = %q, nil error, want the failure of the script", address)
+	}
+	if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
+		t.Errorf("error %v claims the context ended; it did not", err)
+	}
+	for _, want := range []string{"exited 124", "gave up by itself"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("error %q does not mention %q", err, want)
+		}
+	}
+}

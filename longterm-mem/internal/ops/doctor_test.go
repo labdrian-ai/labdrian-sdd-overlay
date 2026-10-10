@@ -10,7 +10,7 @@ import (
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/embed"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/ops/testdata"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultfs"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vecindex"
 )
 
@@ -34,9 +34,10 @@ func checkStatus(t *testing.T, checks []Check, name string) Check {
 // the fully recorded shape every promotion writes today.
 func recordPrecedenceRevision(t *testing.T, vaultRoot, address string, revision int) {
 	t.Helper()
-	store, err := promote.LoadPrecedenceStore(vaultRoot)
+	repo := vaultfs.New(vaultRoot)
+	store, err := repo.LoadPrecedence()
 	if err != nil {
-		t.Fatalf("LoadPrecedenceStore: %v", err)
+		t.Fatalf("LoadPrecedence: %v", err)
 	}
 	entry, ok := store.Get(address)
 	if !ok {
@@ -44,8 +45,8 @@ func recordPrecedenceRevision(t *testing.T, vaultRoot, address string, revision 
 	}
 	entry.PromotedRevision = revision
 	store.Set(address, entry)
-	if err := store.Save(vaultRoot); err != nil {
-		t.Fatalf("PrecedenceStore.Save: %v", err)
+	if err := repo.SavePrecedence(store); err != nil {
+		t.Fatalf("SavePrecedence: %v", err)
 	}
 }
 
@@ -123,6 +124,7 @@ func TestDoctor(t *testing.T) {
 		stateDir, liveIDs := newHealthyEmbeddingDeps(t)
 		return DoctorDeps{
 			VaultRoot:           vaultRoot,
+			Precedence:          vaultfs.New(vaultRoot),
 			PrerequisitePresent: func(string) bool { return true },
 			StateDir:            stateDir,
 			LiveObservationIDs:  func(string) ([]int64, error) { return liveIDs, nil },
@@ -136,6 +138,7 @@ func TestDoctor(t *testing.T) {
 		deps, vaultRoot := newHealthyDeps(t)
 		badRoot := filepath.Join(vaultRoot, "does-not-exist")
 		deps.VaultRoot = badRoot
+		deps.Precedence = vaultfs.New(badRoot)
 
 		report, err := Doctor(context.Background(), deps, "labdrian-sdd-overlay")
 		if err != nil {
@@ -460,6 +463,7 @@ func TestDoctor_UnreadablePageDoesNotHideEveryOtherPage(t *testing.T) {
 
 	deps := DoctorDeps{
 		VaultRoot:             vaultRoot,
+		Precedence:            vaultfs.New(vaultRoot),
 		PrerequisitePresent:   func(name string) bool { return true },
 		StateDir:              t.TempDir(),
 		LiveObservationIDs:    func(string) ([]int64, error) { return nil, nil },

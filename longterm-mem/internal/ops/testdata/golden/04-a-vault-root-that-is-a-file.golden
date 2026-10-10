@@ -1,0 +1,44 @@
+--- doctor ---
+{
+  "project": "labdrian-sdd-overlay",
+  "checks": [
+    {
+      "name": "vault-config-resolvable",
+      "status": "FAIL",
+      "detail": "<vault>/file is not a directory"
+    },
+    {
+      "name": "address-map-integrity",
+      "status": "FAIL",
+      "detail": "ops: list promoted pages in <vault>/file/wiki/memory: open <vault>/file/wiki/memory: not a directory"
+    },
+    {
+      "name": "wiki-registration-consistency",
+      "status": "FAIL",
+      "detail": "ops: list promoted pages in <vault>/file/wiki/memory: open <vault>/file/wiki/memory: not a directory"
+    },
+    {
+      "name": "precedence-sidecar-consistency",
+      "status": "FAIL",
+      "detail": "ops: list promoted pages in <vault>/file/wiki/memory: open <vault>/file/wiki/memory: not a directory"
+    },
+    {
+      "name": "runtime-prerequisites",
+      "status": "PASS"
+    },
+    {
+      "name": "embedding-index-present",
+      "status": "PASS"
+    },
+    {
+      "name": "embedding-index-fresh",
+      "status": "PASS"
+    },
+    {
+      "name": "embedding-backend-reachable",
+      "status": "PASS"
+    }
+  ]
+}
+--- status ---
+error: ops: read <vault>/file/.vault-meta/longterm-mem-sync-state.json: open <vault>/file/.vault-meta/longterm-mem-sync-state.json: not a directory

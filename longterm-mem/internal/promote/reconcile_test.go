@@ -15,10 +15,10 @@ import (
 // promoted revision (a vault promoted before the store recorded one) whose
 // page has ALSO diverged from that entry's fingerprints.
 //
-// It returns the vault root, the page's address, and the observation the
+// It returns the vault root, the repository holding the legacy sidecar, and the observation the
 // page was rendered from, so a caller can drive a LATER revision through
 // UpdateInPlace afterwards.
-func wedgedLegacyPage(t *testing.T, id int64, address string) (vaultRoot string, obs memory.Observation) {
+func wedgedLegacyPage(t *testing.T, id int64, address string) (vaultRoot string, repo *memPrecedence, obs memory.Observation) {
 	t.Helper()
 	vaultRoot = t.TempDir()
 	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
@@ -33,8 +33,8 @@ func wedgedLegacyPage(t *testing.T, id int64, address string) (vaultRoot string,
 	// The legacy entry: content fingerprints, no recorded revision.
 	legacy := entryFor(first)
 	legacy.PromotedRevision = 0
-	store := PrecedenceStore{address: legacy}
-	if err := store.Save(vaultRoot); err != nil {
+	repo = &memPrecedence{}
+	if err := repo.SavePrecedence(PrecedenceStore{address: legacy}); err != nil {
 		t.Fatalf("seed legacy sidecar: %v", err)
 	}
 
@@ -51,7 +51,7 @@ func wedgedLegacyPage(t *testing.T, id int64, address string) (vaultRoot string,
 	if err := os.WriteFile(existingPath, []byte(diverged.Frontmatter+diverged.Body), 0o644); err != nil {
 		t.Fatalf("simulate the diverged page: %v", err)
 	}
-	return vaultRoot, obs
+	return vaultRoot, repo, obs
 }
 
 // TestReconcile_AdoptsAWedgedLegacyPageAndLeavesTheWedgedState is the
@@ -69,7 +69,7 @@ func wedgedLegacyPage(t *testing.T, id int64, address string) (vaultRoot string,
 // update, exactly like any normally-recorded page.
 func TestReconcile_AdoptsAWedgedLegacyPageAndLeavesTheWedgedState(t *testing.T) {
 	const address = "c-000601"
-	vaultRoot, obs := wedgedLegacyPage(t, 601, address)
+	vaultRoot, repo, obs := wedgedLegacyPage(t, 601, address)
 
 	// Precondition: the page really is wedged today. Without this the test
 	// could pass against a vault that was never stuck.
@@ -82,9 +82,9 @@ func TestReconcile_AdoptsAWedgedLegacyPageAndLeavesTheWedgedState(t *testing.T) 
 	}
 	existingPath := filepath.Join(vaultRoot, next.Path)
 
-	before, err := LoadPrecedenceStore(vaultRoot)
+	before, err := repo.LoadPrecedence()
 	if err != nil {
-		t.Fatalf("LoadPrecedenceStore (before): %v", err)
+		t.Fatalf("LoadPrecedence (before): %v", err)
 	}
 	action, err := UpdateInPlace(before, next, existingPath)
 	if err != nil {
@@ -94,7 +94,7 @@ func TestReconcile_AdoptsAWedgedLegacyPageAndLeavesTheWedgedState(t *testing.T) 
 		t.Fatalf("fixture is not wedged: UpdateInPlace answered %v before reconcile, want ActionSkippedLocalEdit", action.Kind)
 	}
 
-	outcome, err := Reconcile(vaultRoot, "labdrian-sdd-overlay", address)
+	outcome, err := Reconcile(vaultRoot, "labdrian-sdd-overlay", address, repo)
 	if err != nil {
 		t.Fatalf("Reconcile: %v", err)
 	}
@@ -107,9 +107,9 @@ func TestReconcile_AdoptsAWedgedLegacyPageAndLeavesTheWedgedState(t *testing.T) 
 
 	// The twin of "the call succeeded": the page must now behave like any
 	// normally-recorded one.
-	after, err := LoadPrecedenceStore(vaultRoot)
+	after, err := repo.LoadPrecedence()
 	if err != nil {
-		t.Fatalf("LoadPrecedenceStore (after): %v", err)
+		t.Fatalf("LoadPrecedence (after): %v", err)
 	}
 	action, err = UpdateInPlace(after, next, existingPath)
 	if err != nil {
@@ -142,8 +142,9 @@ func TestReconcile_AdoptsAPageWithNoEntryAtAll(t *testing.T) {
 		t.Fatalf("EmitPage: %v", err)
 	}
 	writePromotedPage(t, vaultRoot, page)
+	repo := &memPrecedence{}
 
-	outcome, err := Reconcile(vaultRoot, "labdrian-sdd-overlay", address)
+	outcome, err := Reconcile(vaultRoot, "labdrian-sdd-overlay", address, repo)
 	if err != nil {
 		t.Fatalf("Reconcile: %v", err)
 	}
@@ -151,9 +152,9 @@ func TestReconcile_AdoptsAPageWithNoEntryAtAll(t *testing.T) {
 		t.Fatalf("Reconcile outcome = %+v, want the page adopted at revision 4", outcome)
 	}
 
-	store, err := LoadPrecedenceStore(vaultRoot)
+	store, err := repo.LoadPrecedence()
 	if err != nil {
-		t.Fatalf("LoadPrecedenceStore: %v", err)
+		t.Fatalf("LoadPrecedence: %v", err)
 	}
 	entry, ok := store.Get(address)
 	if !ok {
@@ -181,11 +182,12 @@ func TestReconcile_RefusesAPageThatIsNotWedged(t *testing.T) {
 		writePromotedPage(t, vaultRoot, page)
 		store := PrecedenceStore{}
 		seedPrecedence(store, page)
-		if err := store.Save(vaultRoot); err != nil {
+		repo := &memPrecedence{}
+		if err := repo.SavePrecedence(store); err != nil {
 			t.Fatalf("seed sidecar: %v", err)
 		}
 
-		outcome, err := Reconcile(vaultRoot, "labdrian-sdd-overlay", address)
+		outcome, err := Reconcile(vaultRoot, "labdrian-sdd-overlay", address, repo)
 		if err != nil {
 			t.Fatalf("Reconcile on a healthy page: %v -- re-running reconcile after the vault is repaired must not fail", err)
 		}
@@ -207,7 +209,8 @@ func TestReconcile_RefusesAPageThatIsNotWedged(t *testing.T) {
 		existingPath := writePromotedPage(t, vaultRoot, page)
 		store := PrecedenceStore{}
 		seedPrecedence(store, page)
-		if err := store.Save(vaultRoot); err != nil {
+		repo := &memPrecedence{}
+		if err := repo.SavePrecedence(store); err != nil {
 			t.Fatalf("seed sidecar: %v", err)
 		}
 		// A human edits the body. The entry still records a positive
@@ -218,7 +221,7 @@ func TestReconcile_RefusesAPageThatIsNotWedged(t *testing.T) {
 			t.Fatalf("simulate a local edit: %v", err)
 		}
 
-		if _, err := Reconcile(vaultRoot, "labdrian-sdd-overlay", address); !errors.Is(err, ErrLocalEditPreserved) {
+		if _, err := Reconcile(vaultRoot, "labdrian-sdd-overlay", address, repo); !errors.Is(err, ErrLocalEditPreserved) {
 			t.Fatalf("Reconcile on a locally edited page returned %v, want ErrLocalEditPreserved", err)
 		}
 	})
@@ -229,7 +232,7 @@ func TestReconcile_RefusesAPageThatIsNotWedged(t *testing.T) {
 // failure rather than an adoption of nothing.
 func TestReconcile_UnknownAddressFailsCleanly(t *testing.T) {
 	vaultRoot := t.TempDir()
-	if _, err := Reconcile(vaultRoot, "labdrian-sdd-overlay", "c-999999"); !errors.Is(err, ErrPageNotFound) {
+	if _, err := Reconcile(vaultRoot, "labdrian-sdd-overlay", "c-999999", &memPrecedence{}); !errors.Is(err, ErrPageNotFound) {
 		t.Fatalf("Reconcile on an unknown address returned %v, want ErrPageNotFound", err)
 	}
 }
@@ -254,7 +257,7 @@ func TestReconcile_RefusesAPageWithNoUsableRevision(t *testing.T) {
 		t.Fatalf("strip engram_revision: %v", err)
 	}
 
-	if _, err := Reconcile(vaultRoot, "labdrian-sdd-overlay", address); err == nil {
+	if _, err := Reconcile(vaultRoot, "labdrian-sdd-overlay", address, &memPrecedence{}); err == nil {
 		t.Fatalf("Reconcile adopted a page whose engram_revision cannot be read, recreating the wedge it exists to end")
 	}
 }

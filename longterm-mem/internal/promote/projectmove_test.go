@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultlayout"
 )
 
 // movedFixture seeds one already-promoted page for obs under its current
@@ -25,7 +26,7 @@ func movedFixture(t *testing.T, obs memory.Observation, seedAddress string) (str
 
 func readPage(t *testing.T, vaultRoot, address string) string {
 	t.Helper()
-	data, err := os.ReadFile(filepath.Join(vaultRoot, pagePathPrefix, address+".md"))
+	data, err := os.ReadFile(filepath.Join(vaultRoot, vaultlayout.PagesDir, address+".md"))
 	if err != nil {
 		t.Fatalf("read page %s: %v", address, err)
 	}
@@ -46,7 +47,7 @@ func TestWriter_Promote_ProjectMoveSupersedesOldPage(t *testing.T) {
 
 	moved := obs
 	moved.Project = "p-two"
-	w := &Writer{VaultRoot: vaultRoot, Store: store, Addresses: staticAddress(testAddress), Clock: &fakeClock{at: testInstant}}
+	w := &Writer{VaultRoot: vaultRoot, Store: store, Precedence: &memPrecedence{}, Addresses: staticAddress(testAddress), Clock: &fakeClock{at: testInstant}}
 	result, err := w.Promote(t.Context(), moved, false)
 	if err != nil {
 		t.Fatalf("Promote after project move: %v", err)
@@ -83,7 +84,7 @@ func TestWriter_Promote_ProjectMoveKeepsOldPageOffTheLocalEditPath(t *testing.T)
 
 	moved := obs
 	moved.Project = "p-two"
-	w := &Writer{VaultRoot: vaultRoot, Store: store, Addresses: staticAddress(testAddress), Clock: &fakeClock{at: testInstant}}
+	w := &Writer{VaultRoot: vaultRoot, Store: store, Precedence: &memPrecedence{}, Addresses: staticAddress(testAddress), Clock: &fakeClock{at: testInstant}}
 	if _, err := w.Promote(t.Context(), moved, false); err != nil {
 		t.Fatalf("Promote after project move: %v", err)
 	}
@@ -102,9 +103,9 @@ func TestWriter_Promote_ProjectMoveKeepsOldPageOffTheLocalEditPath(t *testing.T)
 	}
 
 	// The sidecar on disk, not just the in-memory map, must carry it.
-	persisted, err := LoadPrecedenceStore(vaultRoot)
+	persisted, err := w.Precedence.LoadPrecedence()
 	if err != nil {
-		t.Fatalf("LoadPrecedenceStore: %v", err)
+		t.Fatalf("LoadPrecedence: %v", err)
 	}
 	if persisted[oldPage.Address] != entry {
 		t.Fatalf("persisted entry %+v for %s differs from the in-memory one %+v", persisted[oldPage.Address], oldPage.Address, entry)
@@ -120,13 +121,13 @@ func TestWriter_Promote_ProjectMoveIsIdempotent(t *testing.T) {
 
 	moved := obs
 	moved.Project = "p-two"
-	w := &Writer{VaultRoot: vaultRoot, Store: store, Addresses: staticAddress(testAddress), Clock: &fakeClock{at: testInstant}}
+	w := &Writer{VaultRoot: vaultRoot, Store: store, Precedence: &memPrecedence{}, Addresses: staticAddress(testAddress), Clock: &fakeClock{at: testInstant}}
 	if _, err := w.Promote(t.Context(), moved, false); err != nil {
 		t.Fatalf("first Promote after project move: %v", err)
 	}
 	afterFirst := readPage(t, vaultRoot, oldPage.Address)
 	entryAfterFirst, _ := w.Store.Get(oldPage.Address)
-	oldPath := filepath.Join(vaultRoot, pagePathPrefix, oldPage.Address+".md")
+	oldPath := filepath.Join(vaultRoot, vaultlayout.PagesDir, oldPage.Address+".md")
 	statBefore, err := os.Stat(oldPath)
 	if err != nil {
 		t.Fatalf("stat old page: %v", err)
@@ -164,7 +165,7 @@ func TestWriter_Promote_ProjectMoveLeavesAnExistingSupersessionAlone(t *testing.
 	obs := memory.Observation{ID: 324, Type: "decision", Title: "Moved Decision", Content: "Body.", Project: "p-one", RevisionCount: 1, TopicKey: "longterm-mem/projectmove-fixture"}
 	vaultRoot, store, oldPage := movedFixture(t, obs, "c-000001")
 
-	oldPath := filepath.Join(vaultRoot, pagePathPrefix, oldPage.Address+".md")
+	oldPath := filepath.Join(vaultRoot, vaultlayout.PagesDir, oldPage.Address+".md")
 	frontmatterHash, _, err := PatchStatusFields(oldPath, "superseded", []string{wikilink("c-000555", "Some Other Successor")})
 	if err != nil {
 		t.Fatalf("seed an existing supersession: %v", err)
@@ -176,7 +177,7 @@ func TestWriter_Promote_ProjectMoveLeavesAnExistingSupersessionAlone(t *testing.
 
 	moved := obs
 	moved.Project = "p-two"
-	w := &Writer{VaultRoot: vaultRoot, Store: store, Addresses: staticAddress(testAddress), Clock: &fakeClock{at: testInstant}}
+	w := &Writer{VaultRoot: vaultRoot, Store: store, Precedence: &memPrecedence{}, Addresses: staticAddress(testAddress), Clock: &fakeClock{at: testInstant}}
 	if _, err := w.Promote(t.Context(), moved, false); err != nil {
 		t.Fatalf("Promote after project move: %v", err)
 	}
@@ -200,7 +201,7 @@ func TestWriter_Promote_UnmovedObservationStillReusesItsPage(t *testing.T) {
 	next := obs
 	next.RevisionCount = 2
 	next.Content = "V2."
-	w := &Writer{VaultRoot: vaultRoot, Store: store, Addresses: staticAddress(testAddress), Clock: &fakeClock{at: testInstant}}
+	w := &Writer{VaultRoot: vaultRoot, Store: store, Precedence: &memPrecedence{}, Addresses: staticAddress(testAddress), Clock: &fakeClock{at: testInstant}}
 	result, err := w.Promote(t.Context(), next, false)
 	if err != nil {
 		t.Fatalf("Promote: %v", err)
@@ -220,7 +221,7 @@ func TestWriter_Promote_UnmovedObservationStillReusesItsPage(t *testing.T) {
 		t.Fatalf("page was not updated in place; got:\n%s", page)
 	}
 
-	entries, err := os.ReadDir(filepath.Join(vaultRoot, pagePathPrefix))
+	entries, err := os.ReadDir(filepath.Join(vaultRoot, vaultlayout.PagesDir))
 	if err != nil {
 		t.Fatalf("list memory dir: %v", err)
 	}
@@ -237,7 +238,7 @@ func TestWriter_Promote_DistinctObservationsSharingAProjectDoNotCollide(t *testi
 	vaultRoot, store, firstPage := movedFixture(t, first, "c-000001")
 
 	second := memory.Observation{ID: 327, Type: "decision", Title: "Second", Content: "Two.", Project: "p-one", RevisionCount: 1, TopicKey: "longterm-mem/projectmove-fixture"}
-	w := &Writer{VaultRoot: vaultRoot, Store: store, Addresses: staticAddress(testAddress), Clock: &fakeClock{at: testInstant}}
+	w := &Writer{VaultRoot: vaultRoot, Store: store, Precedence: &memPrecedence{}, Addresses: staticAddress(testAddress), Clock: &fakeClock{at: testInstant}}
 	result, err := w.Promote(t.Context(), second, false)
 	if err != nil {
 		t.Fatalf("Promote second observation: %v", err)

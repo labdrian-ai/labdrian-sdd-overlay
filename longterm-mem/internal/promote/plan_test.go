@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultlayout"
 )
 
 // TestPlan_WritesNothingAndPredictsWhatSyncThenDoes is the whole point of a
@@ -44,7 +45,7 @@ func TestPlan_WritesNothingAndPredictsWhatSyncThenDoes(t *testing.T) {
 		ID: ids[2], Type: "decision", Title: "Already Current", Content: "Body three.", Project: "p", RevisionCount: 3,
 	}, "c-000900")
 
-	w := &Writer{VaultRoot: vaultRoot, Store: precedence, Clock: clock, Addresses: addresses}
+	w := &Writer{VaultRoot: vaultRoot, Store: precedence, Precedence: &memPrecedence{}, Clock: clock, Addresses: addresses}
 	deps := Deps{Memory: store, Writer: w}
 
 	before := vaultSnapshot(t, vaultRoot)
@@ -57,7 +58,7 @@ func TestPlan_WritesNothingAndPredictsWhatSyncThenDoes(t *testing.T) {
 	if after := vaultSnapshot(t, vaultRoot); !equalSnapshots(before, after) {
 		t.Fatalf("Plan changed the vault.\nbefore: %v\nafter:  %v", before, after)
 	}
-	if _, err := os.Stat(filepath.Join(vaultRoot, syncStateRelPath)); err == nil {
+	if _, err := os.Stat(filepath.Join(vaultRoot, vaultlayout.SyncStateFile)); err == nil {
 		t.Fatalf("Plan wrote the sync-state record; a dry run must not claim a sync happened")
 	}
 
@@ -163,7 +164,7 @@ func TestPlan_CountsThePagesPropagateWouldPatch(t *testing.T) {
 		ID: ids[1], Type: "decision", Title: "New Decision", Content: "New body.", Project: "p", RevisionCount: 1,
 	}, "c-000002")
 
-	deps := Deps{Memory: store, Writer: &Writer{VaultRoot: vaultRoot, Store: precedence, Clock: clock, Addresses: addresses}}
+	deps := Deps{Memory: store, Writer: &Writer{VaultRoot: vaultRoot, Store: precedence, Precedence: &memPrecedence{}, Clock: clock, Addresses: addresses}}
 
 	before := vaultSnapshot(t, vaultRoot)
 
@@ -213,7 +214,7 @@ func TestPlan_OneBrokenObservationIsReportedOnce(t *testing.T) {
 		{title: "Broken", content: "Body.", project: "p", obsType: "decision", revisionCount: 1, syncID: "s-b", topicKey: "longterm-mem/broken"},
 	}, nil)
 
-	memoryDir := filepath.Join(vaultRoot, pagePathPrefix)
+	memoryDir := filepath.Join(vaultRoot, vaultlayout.PagesDir)
 	if err := os.MkdirAll(memoryDir, 0o755); err != nil {
 		t.Fatalf("mkdir %s: %v", memoryDir, err)
 	}
@@ -223,7 +224,7 @@ func TestPlan_OneBrokenObservationIsReportedOnce(t *testing.T) {
 		t.Fatalf("write broken page: %v", err)
 	}
 
-	deps := Deps{Memory: store, Writer: &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: clock, Addresses: addresses}}
+	deps := Deps{Memory: store, Writer: &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Clock: clock, Addresses: addresses}}
 	plan, err := Plan(context.Background(), deps, "p")
 	if err != nil {
 		t.Fatalf("Plan: %v", err)

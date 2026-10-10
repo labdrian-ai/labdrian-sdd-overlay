@@ -16,19 +16,21 @@ import (
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultfs"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultlayout"
 )
 
 // WriteSyncState writes a minimal sync-state record at vaultRoot's
 // contract path (.vault-meta/longterm-mem-sync-state.json, mirroring
-// promote.syncStateRelPath), simulating a prior successful sync.
+// vaultlayout.SyncStateFile), simulating a prior successful sync.
 func WriteSyncState(t *testing.T, vaultRoot, completedAt string) {
 	t.Helper()
-	dir := filepath.Join(vaultRoot, ".vault-meta")
+	full := filepath.Join(vaultRoot, vaultlayout.SyncStateFile)
+	dir := filepath.Dir(full)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatalf("mkdir %s: %v", dir, err)
 	}
 	content := `{"schema":1,"last_sync_completed_at":"` + completedAt + `"}`
-	full := filepath.Join(dir, "longterm-mem-sync-state.json")
 	if err := os.WriteFile(full, []byte(content), 0o644); err != nil {
 		t.Fatalf("write %s: %v", full, err)
 	}
@@ -62,7 +64,8 @@ func WritePromotedPage(t *testing.T, vaultRoot, address, title string) promote.P
 // (lint.go's checkAddressMap).
 func WriteAddressMap(t *testing.T, vaultRoot string, addressMap map[string]string) {
 	t.Helper()
-	dir := filepath.Join(vaultRoot, ".raw")
+	full := filepath.Join(vaultRoot, vaultlayout.AddressManifestFile)
+	dir := filepath.Dir(full)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatalf("mkdir %s: %v", dir, err)
 	}
@@ -70,7 +73,7 @@ func WriteAddressMap(t *testing.T, vaultRoot string, addressMap map[string]strin
 	if err != nil {
 		t.Fatalf("marshal manifest: %v", err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, ".manifest.json"), data, 0o644); err != nil {
+	if err := os.WriteFile(full, data, 0o644); err != nil {
 		t.Fatalf("write manifest: %v", err)
 	}
 }
@@ -82,16 +85,17 @@ func WriteAddressMap(t *testing.T, vaultRoot string, addressMap map[string]strin
 // promoted page without it is a vault caught mid-crash, not a healthy one.
 func WritePrecedenceEntry(t *testing.T, vaultRoot string, page promote.Page) {
 	t.Helper()
-	store, err := promote.LoadPrecedenceStore(vaultRoot)
+	repo := vaultfs.New(vaultRoot)
+	store, err := repo.LoadPrecedence()
 	if err != nil {
-		t.Fatalf("LoadPrecedenceStore: %v", err)
+		t.Fatalf("LoadPrecedence: %v", err)
 	}
 	store.Set(page.Address, promote.PrecedenceEntry{
 		BodyHash:        sha256Hex(page.Body),
 		FrontmatterHash: sha256Hex(page.Frontmatter),
 	})
-	if err := store.Save(vaultRoot); err != nil {
-		t.Fatalf("PrecedenceStore.Save: %v", err)
+	if err := repo.SavePrecedence(store); err != nil {
+		t.Fatalf("SavePrecedence: %v", err)
 	}
 }
 

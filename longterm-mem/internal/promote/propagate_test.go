@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultlayout"
 )
 
 // TestPropagate: R-033's four scenarios, table-driven.
@@ -36,7 +37,7 @@ func TestPropagate(t *testing.T) {
 		oldPage := seedPromotedPage(t, vaultRoot, precedence, oldObs, "c-000001")
 		seedPromotedPage(t, vaultRoot, precedence, newObs, "c-000002")
 
-		w := &Writer{VaultRoot: vaultRoot, Store: precedence, Clock: clock}
+		w := &Writer{VaultRoot: vaultRoot, Store: precedence, Precedence: &memPrecedence{}, Clock: clock}
 		report, err := Propagate(context.Background(), Deps{Memory: store, Writer: w}, "labdrian-sdd-overlay")
 		if err != nil {
 			t.Fatalf("Propagate: %v", err)
@@ -60,7 +61,7 @@ func TestPropagate(t *testing.T) {
 			t.Fatalf("old page body was rewritten; want it byte-identical, got:\n%s", oldContent)
 		}
 
-		newData, err := os.ReadFile(filepath.Join(vaultRoot, pagePathPrefix, "c-000002.md"))
+		newData, err := os.ReadFile(filepath.Join(vaultRoot, vaultlayout.PagesDir, "c-000002.md"))
 		if err != nil {
 			t.Fatalf("read new (successor) page: %v", err)
 		}
@@ -81,7 +82,7 @@ func TestPropagate(t *testing.T) {
 		obs := memory.Observation{ID: ids[0], Type: "decision", Title: "Deleted Decision", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
 		page := seedPromotedPage(t, vaultRoot, precedence, obs, "c-000003")
 
-		w := &Writer{VaultRoot: vaultRoot, Store: precedence, Clock: clock}
+		w := &Writer{VaultRoot: vaultRoot, Store: precedence, Precedence: &memPrecedence{}, Clock: clock}
 		report, err := Propagate(context.Background(), Deps{Memory: store, Writer: w}, "labdrian-sdd-overlay")
 		if err != nil {
 			t.Fatalf("Propagate: %v", err)
@@ -115,7 +116,7 @@ func TestPropagate(t *testing.T) {
 			t.Fatalf("read page (before): %v", err)
 		}
 
-		w := &Writer{VaultRoot: vaultRoot, Store: precedence, Clock: clock}
+		w := &Writer{VaultRoot: vaultRoot, Store: precedence, Precedence: &memPrecedence{}, Clock: clock}
 		report, err := Propagate(context.Background(), Deps{Memory: store, Writer: w}, "labdrian-sdd-overlay")
 		if err != nil {
 			t.Fatalf("Propagate: %v", err)
@@ -159,7 +160,7 @@ func TestPropagate(t *testing.T) {
 		// edit's real on-disk hash -- this is a genuine "local edit" state
 		// per UpdateInPlace's own detection, deliberately not re-seeded.
 
-		w := &Writer{VaultRoot: vaultRoot, Store: precedence, Clock: clock}
+		w := &Writer{VaultRoot: vaultRoot, Store: precedence, Precedence: &memPrecedence{}, Clock: clock}
 		report, err := Propagate(context.Background(), Deps{Memory: store, Writer: w}, "labdrian-sdd-overlay")
 		if err != nil {
 			t.Fatalf("Propagate: %v", err)
@@ -246,7 +247,7 @@ func TestPropagate_OneBrokenPageDoesNotWedgeTheRun(t *testing.T) {
 		{title: "Archivable", content: "Body two.", project: "labdrian-sdd-overlay", obsType: "decision", revisionCount: 1, deletedAt: "2026-08-20T00:00:00Z", topicKey: "longterm-mem/archivable"},
 	}, nil)
 
-	memoryDir := filepath.Join(vaultRoot, pagePathPrefix)
+	memoryDir := filepath.Join(vaultRoot, vaultlayout.PagesDir)
 	if err := os.MkdirAll(memoryDir, 0o755); err != nil {
 		t.Fatalf("mkdir %s: %v", memoryDir, err)
 	}
@@ -258,7 +259,7 @@ func TestPropagate_OneBrokenPageDoesNotWedgeTheRun(t *testing.T) {
 		t.Fatalf("write broken page: %v", err)
 	}
 
-	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: clock}
+	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Clock: clock}
 	healthy := memory.Observation{ID: ids[1], Type: "decision", Title: "Archivable", Content: "Body two.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
 	seedPromotedPage(t, vaultRoot, w.Store, healthy, "c-000701")
 
@@ -299,7 +300,7 @@ func TestPropagate_SupersessionIsRecordedEvenWithNoSuccessorPage(t *testing.T) {
 	oldObs := memory.Observation{ID: ids[0], Type: "decision", Title: "Old Decision", Content: "Old body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
 	oldPage := seedPromotedPage(t, vaultRoot, precedence, oldObs, "c-000001")
 
-	w := &Writer{VaultRoot: vaultRoot, Store: precedence, Clock: clock}
+	w := &Writer{VaultRoot: vaultRoot, Store: precedence, Precedence: &memPrecedence{}, Clock: clock}
 	report, err := Propagate(context.Background(), Deps{Memory: store, Writer: w}, "labdrian-sdd-overlay")
 	if err != nil {
 		t.Fatalf("Propagate: %v", err)
@@ -339,7 +340,7 @@ func TestPropagate_TheLinkAppearsOnceTheSuccessorIsPromoted(t *testing.T) {
 	oldObs := memory.Observation{ID: ids[0], Type: "decision", Title: "Old Decision", Content: "Old body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
 	newObs := memory.Observation{ID: ids[1], Type: "decision", Title: "New Decision", Content: "New body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
 	oldPage := seedPromotedPage(t, vaultRoot, precedence, oldObs, "c-000001")
-	w := &Writer{VaultRoot: vaultRoot, Store: precedence, Clock: clock}
+	w := &Writer{VaultRoot: vaultRoot, Store: precedence, Precedence: &memPrecedence{}, Clock: clock}
 
 	// First run: successor unpromoted. The status lands, the link cannot.
 	if _, err := Propagate(context.Background(), Deps{Memory: store, Writer: w}, "labdrian-sdd-overlay"); err != nil {

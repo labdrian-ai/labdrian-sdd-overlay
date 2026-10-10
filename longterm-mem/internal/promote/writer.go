@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultlayout"
 )
 
 // Writer is longterm-mem's single promotion entrypoint (6.8 REFACTOR):
@@ -31,6 +32,14 @@ type Writer struct {
 	// interrupted run therefore leaves N consistent pages rather than N
 	// pages of lost provenance.
 	Store PrecedenceStore
+	// Precedence persists Store: the Writer saves through it after every
+	// promotion that wrote a page. Store and Precedence are one pairing,
+	// the store a repository holds and the repository it is saved
+	// through, and UsePrecedence sets both from one repository so the
+	// composition root cannot wire a store loaded from one vault to the
+	// repository of another. A Writer without a repository is refused by
+	// Promote, Sync and Propagate before they write anything.
+	Precedence PrecedenceRepository
 	// Addresses hands out the address of each new page. It is asked only
 	// when a promotion needs a fresh address: re-promoting a page that
 	// already exists reuses its own and never reaches it. A promotion that
@@ -43,10 +52,37 @@ type Writer struct {
 	Clock Clock
 }
 
+// UsePrecedence wires the Writer to repo: it loads the precedence store from
+// repo and keeps repo as the repository the store is saved through, so the
+// two handles on the store are paired by construction. A repository that is
+// missing, or cannot be loaded, leaves the Writer as it was; the load
+// failure reaches the caller as it came.
+func (w *Writer) UsePrecedence(repo PrecedenceRepository) error {
+	if memory.IsMissing(repo) {
+		return errNoPrecedenceRepository
+	}
+	store, err := repo.LoadPrecedence()
+	if err != nil {
+		return err
+	}
+	w.Store = store
+	w.Precedence = repo
+	return nil
+}
+
 // checkPorts reports the first port the Writer needs and was not handed.
 func (w *Writer) checkPorts() error {
 	if memory.IsMissing(w.Clock) {
 		return errNoClock
+	}
+	return w.checkPrecedence()
+}
+
+// checkPrecedence reports whether the Writer was handed the repository its
+// precedence store is persisted through, the one port Propagate needs.
+func (w *Writer) checkPrecedence() error {
+	if memory.IsMissing(w.Precedence) {
+		return errNoPrecedenceRepository
 	}
 	return nil
 }
@@ -64,11 +100,11 @@ type Result struct {
 // promote surface's override semantics (R-007); an ineligible obs is left
 // untouched and reports a Result with no page and ActionNone (the zero
 // Result) and no error, since ineligibility is a normal skip a scanning
-// caller (sync) must not treat as a failure. Every promotion that actually wrote a page persists the precedence
-// sidecar; a create persists it BEFORE publishing the page, since a
-// published page with no recorded provenance is one UpdateInPlace would
-// refuse from then on, while a recorded fingerprint with no page is simply
-// a create the next run finishes.
+// caller (sync) must not treat as a failure. Every promotion that actually
+// wrote a page persists the precedence sidecar; a create persists it BEFORE
+// publishing the page, since a published page with no recorded provenance is
+// one UpdateInPlace would refuse from then on, while a recorded fingerprint
+// with no page is simply a create the next run finishes.
 //
 // Every promotion that actually wrote a page also registers it in the
 // vault's master catalog and append-only promotion log (R-029, task
@@ -129,7 +165,7 @@ func (w *Writer) Promote(ctx context.Context, obs memory.Observation, explicit b
 		// A skip wrote nothing, so there is no new fingerprint to pair and
 		// nothing to register.
 		if action.Kind != ActionSkippedLocalEdit {
-			if err := w.Store.Save(w.VaultRoot); err != nil {
+			if err := w.Precedence.SavePrecedence(w.Store); err != nil {
 				return Result{}, err
 			}
 			if err := w.register(page.Address, obs.Title); err != nil {
@@ -169,7 +205,7 @@ func (w *Writer) Promote(ctx context.Context, obs memory.Observation, explicit b
 	// to react to, which is exactly why the ordering has to carry the
 	// guarantee rather than the cleanup.
 	w.Store.Set(address, entryFor(page))
-	if err := w.Store.Save(w.VaultRoot); err != nil {
+	if err := w.Precedence.SavePrecedence(w.Store); err != nil {
 		// Nothing has been published yet, so there is no page to withdraw:
 		// drop the in-memory entry and report the failure.
 		delete(w.Store, address)
@@ -194,7 +230,7 @@ func (w *Writer) Promote(ctx context.Context, obs memory.Observation, explicit b
 		// a path no later run reuses (the retry allocates a fresh
 		// address), and neither wedges anything.
 		delete(w.Store, address)
-		if saveErr := w.Store.Save(w.VaultRoot); saveErr != nil {
+		if saveErr := w.Precedence.SavePrecedence(w.Store); saveErr != nil {
 			return Result{}, fmt.Errorf("promote: write page %s: %w (and withdrawing its precedence entry failed: %v)", existingPath, err, saveErr)
 		}
 		return Result{}, err
@@ -265,7 +301,7 @@ func (w *Writer) supersedeMoved(moved []promotedPage, successorAddress, successo
 	patched := false
 	var failures []error
 	for _, old := range moved {
-		path := filepath.Join(w.VaultRoot, pagePathPrefix, old.Address+".md")
+		path := filepath.Join(w.VaultRoot, vaultlayout.PagesDir, old.Address+".md")
 		raw, err := os.ReadFile(path)
 		if err != nil {
 			failures = append(failures, fmt.Errorf("promote: read superseded page %s: %w", path, err))
@@ -291,7 +327,7 @@ func (w *Writer) supersedeMoved(moved []promotedPage, successorAddress, successo
 		patched = true
 	}
 	if patched {
-		if err := w.Store.Save(w.VaultRoot); err != nil {
+		if err := w.Precedence.SavePrecedence(w.Store); err != nil {
 			failures = append(failures, fmt.Errorf("promote: persist precedence after superseding a moved page: %w", err))
 		}
 	}
@@ -303,8 +339,8 @@ func (w *Writer) supersedeMoved(moved []promotedPage, successorAddress, successo
 // register.go's RegisterIndex/RegisterLog perform, the log stamped with the
 // writer's clock like every other date it writes.
 func (w *Writer) register(addr, title string) error {
-	if err := RegisterIndex(filepath.Join(w.VaultRoot, indexMdRelPath), addr, title); err != nil {
+	if err := RegisterIndex(filepath.Join(w.VaultRoot, vaultlayout.IndexFile), addr, title); err != nil {
 		return err
 	}
-	return RegisterLog(filepath.Join(w.VaultRoot, logMdRelPath), addr, title, utc(w.Clock))
+	return RegisterLog(filepath.Join(w.VaultRoot, vaultlayout.LogFile), addr, title, utc(w.Clock))
 }

@@ -50,7 +50,12 @@ func (a AddressAllocator) NextAddress(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("allocate address: %w", err)
 	}
-	if ctxErr := ctx.Err(); exitCode == timeoutExitCode && ctxErr != nil {
+	// Runner.Run does not return an error when ctx ends: it kills the script and reports the synthetic
+	// timeoutExitCode (124), so a deadline and a cancellation both reach this point as an exit code,
+	// not as err. The context is asked first, whatever the code says, so that the answer "the context
+	// ended" does not depend on the runner's choice of code: a script that exits 124 on its own, with
+	// the context still live, falls through to the exit-code error below like any other failure.
+	if ctxErr := ctx.Err(); ctxErr != nil {
 		return "", fmt.Errorf("allocate address: %w", ctxErr)
 	}
 	if exitCode != 0 {
