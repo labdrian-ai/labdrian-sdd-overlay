@@ -36,7 +36,7 @@ func TestCmdPromoteReconcile_ExitCodesAreTheContract(t *testing.T) {
 		page, err := promote.EmitPage(memory.Observation{
 			ID: 702, Type: "decision", Title: "Other Project", Content: "Body.",
 			Project: "someone-elses-project", RevisionCount: 3,
-		}, address, nil)
+		}, address, nil, fixtureInstant)
 		if err != nil {
 			t.Fatalf("EmitPage: %v", err)
 		}
@@ -54,7 +54,7 @@ func TestCmdPromoteReconcile_ExitCodesAreTheContract(t *testing.T) {
 		page, err := promote.EmitPage(memory.Observation{
 			ID: 703, Type: "decision", Title: "Unreadable", Content: "Body.",
 			Project: project, RevisionCount: 3,
-		}, address, nil)
+		}, address, nil, fixtureInstant)
 		if err != nil {
 			t.Fatalf("EmitPage: %v", err)
 		}

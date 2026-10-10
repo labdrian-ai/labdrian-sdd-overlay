@@ -1,6 +1,7 @@
 package promote
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -30,7 +31,7 @@ var ErrObservationNotFound = errors.New("promote: observation not found")
 // (design.md's explicit directive). It is the one call both the CLI
 // promote subcommand and the MCP promote tool make (task 8b.11), so
 // neither surface can drift from the other.
-func ExplicitPromote(w *Writer, lookup ObservationLookup, id int64) (Result, error) {
+func ExplicitPromote(ctx context.Context, w *Writer, lookup ObservationLookup, id int64) (Result, error) {
 	obs, ok, err := lookup(id)
 	if err != nil {
 		return Result{}, fmt.Errorf("promote: look up observation %d: %w", id, err)
@@ -38,5 +39,5 @@ func ExplicitPromote(w *Writer, lookup ObservationLookup, id int64) (Result, err
 	if !ok {
 		return Result{}, fmt.Errorf("%w: %d", ErrObservationNotFound, id)
 	}
-	return w.Promote(obs, true)
+	return w.Promote(ctx, obs, true)
 }

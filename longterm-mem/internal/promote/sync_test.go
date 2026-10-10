@@ -107,7 +107,7 @@ func newFixtureEngramStore(t *testing.T, rows []fixtureObs, relations []fixtureR
 // to simulate a promotion Sync/Propagate must decide whether to touch.
 func seedPromotedPage(t *testing.T, vaultRoot string, store PrecedenceStore, obs memory.Observation, addr string) Page {
 	t.Helper()
-	page, err := EmitPage(obs, addr, nil)
+	page, err := EmitPage(obs, addr, nil, testInstant)
 	if err != nil {
 		t.Fatalf("EmitPage (seed): %v", err)
 	}
@@ -115,22 +115,6 @@ func seedPromotedPage(t *testing.T, vaultRoot string, store PrecedenceStore, obs
 	seedPrecedence(store, page)
 	return page
 }
-
-// uniqueAllocateAddressFixture is a fake scripts/allocate-address.sh that
-// allocates a fresh, distinct address on every invocation (a persistent
-// counter file under the vault root) -- unlike address_test.go's
-// allocateAddressFixture (always "c-000042"), a multi-observation Sync run
-// needs one real address per never-promoted observation, not a collision.
-const uniqueAllocateAddressFixture = `#!/bin/sh
-count_file=".allocate-counter"
-n=0
-if [ -f "$count_file" ]; then
-  n=$(cat "$count_file")
-fi
-n=$((n+1))
-echo "$n" > "$count_file"
-printf 'c-%06d\n' "$n"
-`
 
 // TestSync: R-009's three scenarios, table-driven.
 func TestSync(t *testing.T) {
@@ -148,8 +132,7 @@ func TestSync(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			vaultRoot := t.TempDir()
-			fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
-			writeAllocateScript(t, vaultRoot, allocateAddressFixture)
+			clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 			store, ids := newFixtureEngramStore(t, []fixtureObs{
 				{title: "Eligible Decision", content: "Body content.", project: "labdrian-sdd-overlay", obsType: "decision", revisionCount: tc.currentRevision, syncID: "sync-1", topicKey: "longterm-mem/eligible-decision"},
@@ -163,7 +146,7 @@ func TestSync(t *testing.T) {
 				seededPage = seedPromotedPage(t, vaultRoot, precedence, seedObs, "c-000042")
 			}
 
-			w := &Writer{VaultRoot: vaultRoot, Store: precedence}
+			w := &Writer{VaultRoot: vaultRoot, Store: precedence, Clock: clock, Addresses: staticAddress(testAddress)}
 			report, err := Sync(context.Background(), Deps{Memory: store, Writer: w}, "labdrian-sdd-overlay")
 			if err != nil {
 				t.Fatalf("Sync: %v", err)
@@ -202,8 +185,8 @@ func TestSync(t *testing.T) {
 // completion timestamp in the vault's own sync-state record.
 func TestSync_IndexAndSyncStateReflectCompletion(t *testing.T) {
 	vaultRoot := t.TempDir()
-	fixedNow(t, time.Date(2026, 8, 31, 12, 0, 0, 0, time.UTC))
-	writeAllocateScript(t, vaultRoot, uniqueAllocateAddressFixture)
+	clock := &fakeClock{at: time.Date(2026, 8, 31, 12, 0, 0, 0, time.UTC)}
+	addresses := &sequentialAddresses{}
 
 	store, _ := newFixtureEngramStore(t, []fixtureObs{
 		{title: "Decision One", content: "Body one.", project: "labdrian-sdd-overlay", obsType: "decision", revisionCount: 1, topicKey: "longterm-mem/decision-one"},
@@ -212,7 +195,7 @@ func TestSync_IndexAndSyncStateReflectCompletion(t *testing.T) {
 	}, nil)
 
 	var rebuildCalled bool
-	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}}
+	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: clock, Addresses: addresses}
 	deps := Deps{
 		Memory: store,
 		Writer: w,
@@ -261,8 +244,8 @@ func TestSync_IndexAndSyncStateReflectCompletion(t *testing.T) {
 // R4-poison-pill-abort).
 func TestSync_OneFailingObservationDoesNotWedgeTheRun(t *testing.T) {
 	vaultRoot := t.TempDir()
-	fixedNow(t, time.Date(2026, 8, 31, 12, 0, 0, 0, time.UTC))
-	writeAllocateScript(t, vaultRoot, uniqueAllocateAddressFixture)
+	clock := &fakeClock{at: time.Date(2026, 8, 31, 12, 0, 0, 0, time.UTC)}
+	addresses := &sequentialAddresses{}
 
 	store, ids := newFixtureEngramStore(t, []fixtureObs{
 		{title: "Healthy One", content: "Body one.", project: "labdrian-sdd-overlay", obsType: "decision", revisionCount: 1, topicKey: "longterm-mem/healthy-one"},
@@ -284,7 +267,7 @@ func TestSync_OneFailingObservationDoesNotWedgeTheRun(t *testing.T) {
 	}
 
 	var rebuildCalled bool
-	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}}
+	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: clock, Addresses: addresses}
 	deps := Deps{
 		Memory:       store,
 		Writer:       w,

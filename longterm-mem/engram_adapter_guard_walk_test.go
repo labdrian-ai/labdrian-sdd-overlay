@@ -1,3 +1,5 @@
+// This file shares package guard with engram_adapter_guard_test.go: the tests below call
+// adapterImporters, which is defined there, and a different package name would stop them building.
 package guard
 
 import (

@@ -1,6 +1,7 @@
 package promote
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -30,6 +31,24 @@ type Writer struct {
 	// interrupted run therefore leaves N consistent pages rather than N
 	// pages of lost provenance.
 	Store PrecedenceStore
+	// Addresses hands out the address of each new page. It is asked only
+	// when a promotion needs a fresh address: re-promoting a page that
+	// already exists reuses its own and never reaches it. A promotion that
+	// needs one with none wired is refused before anything is written.
+	Addresses AddressAllocator
+	// Clock dates the pages, the promotion log and the sync-state record.
+	// The composition root wires a real one; a Writer without one is
+	// refused by Promote and Sync before they touch the vault. Propagate
+	// patches pages in place and never reads the time, so it asks for none.
+	Clock Clock
+}
+
+// checkPorts reports the first port the Writer needs and was not handed.
+func (w *Writer) checkPorts() error {
+	if memory.IsMissing(w.Clock) {
+		return errNoClock
+	}
+	return nil
 }
 
 // Result reports what Promote did for one observation.
@@ -43,9 +62,9 @@ type Result struct {
 // promoted, through UpdateInPlace (ActionUpdated, or ActionSkippedLocalEdit
 // per R-030). explicit is forwarded to Eligible, matching the explicit
 // promote surface's override semantics (R-007); an ineligible obs is left
-// untouched and reports a zero Result with no error, since ineligibility
-// is a normal skip a scanning caller (sync) must not treat as a failure.
-// Every promotion that actually wrote a page persists the precedence
+// untouched and reports a Result with no page and ActionNone (the zero
+// Result) and no error, since ineligibility is a normal skip a scanning
+// caller (sync) must not treat as a failure. Every promotion that actually wrote a page persists the precedence
 // sidecar; a create persists it BEFORE publishing the page, since a
 // published page with no recorded provenance is one UpdateInPlace would
 // refuse from then on, while a recorded fingerprint with no page is simply
@@ -73,7 +92,10 @@ type Result struct {
 // (ExplicitPromote), which re-enters here, takes the update branch, and
 // registers on every write it does not skip. So: doctor names it, and an
 // explicit promote fixes it.
-func (w *Writer) Promote(obs memory.Observation, explicit bool) (Result, error) {
+func (w *Writer) Promote(ctx context.Context, obs memory.Observation, explicit bool) (Result, error) {
+	if err := w.checkPorts(); err != nil {
+		return Result{}, err
+	}
 	if !Eligible(obs, explicit) {
 		return Result{}, nil
 	}
@@ -87,12 +109,12 @@ func (w *Writer) Promote(obs memory.Observation, explicit bool) (Result, error) 
 		return Result{}, err
 	}
 
-	address, err := Allocate(w.VaultRoot, obs.Project, int(obs.ID))
+	address, err := allocateAddress(ctx, w.VaultRoot, obs.Project, int(obs.ID), w.Addresses, utc(w.Clock))
 	if err != nil {
 		return Result{}, err
 	}
 
-	page, err := EmitPage(obs, address, nil)
+	page, err := EmitPage(obs, address, nil, utc(w.Clock))
 	if err != nil {
 		return Result{}, err
 	}
@@ -132,7 +154,7 @@ func (w *Writer) Promote(obs memory.Observation, explicit bool) (Result, error) 
 	// two orphan states a killed process may leave behind -- and the two
 	// are not equally recoverable:
 	//
-	//   page without entry (the old order) is unrecoverable. Allocate
+	//   page without entry (the old order) is unrecoverable. allocateAddress
 	//   reuses the page's own address, os.Stat finds it, and UpdateInPlace
 	//   refuses it as unknown provenance -- which, being a skip, also
 	//   suppresses the Save and the registration that would have repaired
@@ -159,11 +181,11 @@ func (w *Writer) Promote(obs memory.Observation, explicit bool) (Result, error) 
 		// own absence), but an entry claiming provenance over a file that
 		// does not exist is still a lie the sidecar should not tell.
 		//
-		// Allocate's own two writes are deliberately NOT withdrawn with
-		// it. The address number allocate-address.sh advanced belongs to a
-		// vault script this package can only call forward, so it is burned
+		// allocateAddress's own two writes are deliberately NOT withdrawn with
+		// it. The address number the allocator advanced belongs to a
+		// counter this package can only call forward, so it is burned
 		// whatever happens here; and the .raw/.manifest.json address_map
-		// row Allocate wrote is left alone because a row without a page is
+		// row allocateAddress wrote is left alone because a row without a page is
 		// inert -- doctor's address-map rule walks PAGES looking for their
 		// rows, never rows looking for their pages -- while rewriting that
 		// wiki-ingest-owned file to delete it is a real write that can
@@ -278,12 +300,11 @@ func (w *Writer) supersedeMoved(moved []promotedPage, successorAddress, successo
 
 // register records addr/title's promotion in the vault's master catalog
 // and append-only promotion log (R-029, task 7.10): the two writes
-// register.go's RegisterIndex/RegisterLog perform, using nowFunc() for
-// RegisterLog's timestamp so tests can pin it with fixedNow, matching
-// EmitPage's own convention.
+// register.go's RegisterIndex/RegisterLog perform, the log stamped with the
+// writer's clock like every other date it writes.
 func (w *Writer) register(addr, title string) error {
 	if err := RegisterIndex(filepath.Join(w.VaultRoot, indexMdRelPath), addr, title); err != nil {
 		return err
 	}
-	return RegisterLog(filepath.Join(w.VaultRoot, logMdRelPath), addr, title, nowFunc())
+	return RegisterLog(filepath.Join(w.VaultRoot, logMdRelPath), addr, title, utc(w.Clock))
 }

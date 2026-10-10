@@ -1,0 +1,67 @@
+package vault
+
+import (
+	"context"
+	"fmt"
+	"strings"
+	"time"
+)
+
+// allocateScript is the vault-relative address allocator entrypoint (D7): a real shell entrypoint
+// (shebang and exec bit), so it is exec'd directly through Runner.Run, matching setup-retrieve.sh's
+// convention (3a.4), never through RunInterpreted.
+const allocateScript = "scripts/allocate-address.sh"
+
+// allocateTimeout bounds a single allocate-address.sh call (D8's convention for vault subprocess calls).
+const allocateTimeout = 10 * time.Second
+
+// AddressAllocator hands out the next free address of a vault by running the vault's own allocator
+// script, which advances the counter under a lock. It is the adapter behind the AddressAllocator port
+// that internal/promote owns (promote does not import this package; the composition root wires the two).
+type AddressAllocator struct {
+	// Root is the vault checkout the script belongs to and runs in.
+	Root string
+	// Timeout bounds one call; zero means allocateTimeout. It is a field so that a test can shorten the
+	// bound it proves, instead of waiting out the real one.
+	Timeout time.Duration
+}
+
+// NextAddress runs scripts/allocate-address.sh from the vault root and returns the address it printed,
+// without the newline. A script that cannot run, exits non-zero, prints nothing or prints more than one
+// line is an error: the address becomes a file name and a manifest key, so output that is not exactly one
+// line (a warning ahead of the address, say) is refused rather than passed on as one.
+//
+// The call is bound by the adapter's timeout (allocateTimeout unless Timeout says otherwise) and by ctx,
+// whichever ends first: the script is killed, with the processes it started, and the error says the
+// context ended.
+//
+// The errors carry no package prefix of their own: the caller that owns the operation says what it was
+// doing.
+func (a AddressAllocator) NextAddress(ctx context.Context) (string, error) {
+	runner := &Runner{Root: a.Root}
+	timeout := a.Timeout
+	if timeout == 0 {
+		timeout = allocateTimeout
+	}
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	stdout, stderr, exitCode, err := runner.Run(ctx, allocateScript)
+	if err != nil {
+		return "", fmt.Errorf("allocate address: %w", err)
+	}
+	if ctxErr := ctx.Err(); exitCode == timeoutExitCode && ctxErr != nil {
+		return "", fmt.Errorf("allocate address: %w", ctxErr)
+	}
+	if exitCode != 0 {
+		return "", fmt.Errorf("%s exited %d: %s", allocateScript, exitCode, strings.TrimSpace(string(stderr)))
+	}
+	address := strings.TrimSpace(string(stdout))
+	if address == "" {
+		return "", fmt.Errorf("%s produced no address", allocateScript)
+	}
+	if strings.ContainsAny(address, "\r\n") {
+		return "", fmt.Errorf("%s printed more than one line", allocateScript)
+	}
+	return address, nil
+}

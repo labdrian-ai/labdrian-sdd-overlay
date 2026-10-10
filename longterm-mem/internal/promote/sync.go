@@ -74,6 +74,9 @@ type SyncFailure struct {
 // identically. Sync still returns a non-nil error when anything failed,
 // so a partially successful run can never be mistaken for a clean one.
 func Sync(ctx context.Context, deps Deps, project string) (SyncReport, error) {
+	if err := deps.Writer.checkPorts(); err != nil {
+		return SyncReport{}, fmt.Errorf("promote: sync: %w", err)
+	}
 	observations, err := deps.Memory.ListObservations(project)
 	if err != nil {
 		return SyncReport{}, fmt.Errorf("promote: sync: list observations for %q: %w", project, err)
@@ -91,7 +94,7 @@ func Sync(ctx context.Context, deps Deps, project string) (SyncReport, error) {
 			continue
 		}
 
-		result, err := deps.Writer.Promote(obs, false)
+		result, err := deps.Writer.Promote(ctx, obs, false)
 		if err != nil {
 			report.Failed = append(report.Failed, SyncFailure{ObservationID: obs.ID, Err: err})
 			continue
@@ -105,7 +108,7 @@ func Sync(ctx context.Context, deps Deps, project string) (SyncReport, error) {
 		}
 	}
 
-	if err := writeSyncState(deps.Writer.VaultRoot); err != nil {
+	if err := writeSyncState(deps.Writer.VaultRoot, utc(deps.Writer.Clock)); err != nil {
 		return report, fmt.Errorf("promote: sync: %w", err)
 	}
 	return report, failureError("sync", report.Failed)
@@ -251,11 +254,10 @@ type syncStateRecord struct {
 }
 
 // writeSyncState durably records vaultRoot's sync-state file (R-031, via
-// address.go's writeFileAtomic), stamped with
-// nowFunc (page.go) so tests can assert a deterministic completion
-// timestamp via fixedNow.
-func writeSyncState(vaultRoot string) error {
-	record := syncStateRecord{Schema: syncStateSchema, LastSyncCompletedAt: nowFunc().Format(time.RFC3339)}
+// address.go's writeFileAtomic), stamped with the instant the run completed,
+// which the caller reads from the Writer's Clock in UTC.
+func writeSyncState(vaultRoot string, completedAt time.Time) error {
+	record := syncStateRecord{Schema: syncStateSchema, LastSyncCompletedAt: completedAt.Format(time.RFC3339)}
 	data, err := json.MarshalIndent(record, "", "  ")
 	if err != nil {
 		return fmt.Errorf("marshal sync-state record: %w", err)

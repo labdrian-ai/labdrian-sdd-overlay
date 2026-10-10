@@ -33,7 +33,9 @@ const TruncationMark = "\u2026"
 //
 // A budget with no room in it (zero or negative, which a share of a used-up byte ceiling can
 // produce) gives an empty window: nothing is shown, and it is a fragment of any body that has
-// something to show. The window arithmetic below needs a positive budget, so this is decided first.
+// something to show. The window arithmetic below needs a positive budget, so this is decided first,
+// before the whole-body shortcut. On an empty body the same budget gives an empty string that is not
+// a fragment: there was nothing to cut.
 func SnippetAt(content string, offset, budget int) (string, bool) {
 	if budget <= 0 {
 		return "", content != ""

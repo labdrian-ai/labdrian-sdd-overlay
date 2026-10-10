@@ -44,11 +44,11 @@ func writeIndexWithLink(t *testing.T, vaultRoot, address string) {
 
 // TestLintPage_FreshlyPromotedPagePasses: R-027 scenario 4.
 func TestLintPage_FreshlyPromotedPagePasses(t *testing.T) {
-	fixedNow(t, time.Date(2026, 8, 30, 0, 0, 0, 0, time.UTC))
+	clock := &fakeClock{at: time.Date(2026, 8, 30, 0, 0, 0, 0, time.UTC)}
 	vaultRoot := t.TempDir()
 
 	obs := memory.Observation{ID: 42, SyncID: "sync-42", Type: "decision", Title: "Widget Rollout", Content: "Ship the widget.", Project: "labdrian-sdd-overlay", RevisionCount: 3}
-	page, err := EmitPage(obs, "c-000042", nil)
+	page, err := EmitPage(obs, "c-000042", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
 	}
@@ -68,14 +68,14 @@ func TestLintPage_FreshlyPromotedPagePasses(t *testing.T) {
 // proving the rule inspects the same directory EmitPage targets and is
 // not a no-op (review finding R3-wikilink-rule-unexercised).
 func TestLintPage_DanglingWikilinkIsFlagged(t *testing.T) {
-	fixedNow(t, time.Date(2026, 8, 30, 0, 0, 0, 0, time.UTC))
+	clock := &fakeClock{at: time.Date(2026, 8, 30, 0, 0, 0, 0, time.UTC)}
 	vaultRoot := t.TempDir()
 
 	obs := memory.Observation{ID: 44, SyncID: "sync-44", Type: "decision", Title: "Linked", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 3}
 	page, err := EmitPage(obs, "c-000044", []Link{
 		{Address: "c-000100", Title: "Resolves"},
 		{Address: "c-000999", Title: "Dangling"},
-	})
+	}, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
 	}
@@ -113,11 +113,11 @@ func TestLintPage_DanglingWikilinkIsFlagged(t *testing.T) {
 // absent manifest passes instead -- address allocation is slice 5, not
 // yet built -- so the fixture writes an empty address_map, not no file.)
 func TestLintPage_UnregisteredPageIsFlagged(t *testing.T) {
-	fixedNow(t, time.Date(2026, 8, 30, 0, 0, 0, 0, time.UTC))
+	clock := &fakeClock{at: time.Date(2026, 8, 30, 0, 0, 0, 0, time.UTC)}
 	vaultRoot := t.TempDir()
 
 	obs := memory.Observation{ID: 43, Type: "decision", Title: "Unregistered", Content: "Body.", Project: "labdrian-sdd-overlay"}
-	page, err := EmitPage(obs, "c-000043", nil)
+	page, err := EmitPage(obs, "c-000043", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
 	}

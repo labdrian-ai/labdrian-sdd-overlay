@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"fmt"
@@ -60,7 +61,7 @@ func cmdPromote(args []string) int {
 	defer store.Close()
 	declareDegradedEngram(store, "promote")
 
-	result, err := runPromote(store, vaultRoot, *id)
+	result, err := runPromote(context.Background(), store, vaultRoot, *id)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "longterm-mem: promote: %v\n", err)
 		if errors.Is(err, promote.ErrObservationNotFound) {

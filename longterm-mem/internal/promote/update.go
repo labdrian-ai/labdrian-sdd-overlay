@@ -11,12 +11,20 @@ import (
 
 // ActionKind reports what UpdateInPlace (or, after 6.8, Writer.Promote)
 // did to a promoted page.
+//
+// The integers are not a contract: nothing stores or sends them, and every
+// caller outside this package compares a kind by name or renders it through
+// String. Only ActionNone is promised to be the zero value.
 type ActionKind int
 
 const (
+	// ActionNone means nothing was done: the zero value, so an Action nobody
+	// filled in (the Action that comes back beside an error, or the Result of
+	// an observation that was not eligible) can never read as a write.
+	ActionNone ActionKind = iota
 	// ActionCreated means a brand-new page was written (Writer.Promote
 	// only; UpdateInPlace never returns this).
-	ActionCreated ActionKind = iota
+	ActionCreated
 	// ActionUpdated means the on-disk page and the precedence store
 	// entry for its address were refreshed with freshly rendered
 	// content.
@@ -37,9 +45,11 @@ type Action struct {
 // String renders k as the plain string both cmd_promote.go's CLI output
 // and the MCP promote tool's PromoteOut.Action render over the wire
 // (task 8b.11): one source of truth instead of two callers separately
-// mapping ActionKind's int encoding to the same three names.
+// mapping ActionKind's int encoding to the same names.
 func (k ActionKind) String() string {
 	switch k {
+	case ActionNone:
+		return "none"
 	case ActionCreated:
 		return "created"
 	case ActionUpdated:
@@ -67,7 +77,7 @@ func (k ActionKind) String() string {
 //   - An interrupted CREATE leaves a page with no entry at all, so the
 //     tracked branch's comparisons are not even reachable.
 //     isOwnUnrecordedWrite settles it from the bytes, normalizing away only
-//     the two wall-clock stamps EmitPage takes from nowFunc -- without
+//     the two stamps EmitPage takes from its time argument -- without
 //     which the comparison would succeed on a same-day retry and fail every
 //     day after, which is worse than not reconciling at all.
 //   - An interrupted UPDATE leaves new content fingerprinted by the
@@ -92,7 +102,7 @@ func (k ActionKind) String() string {
 // that would have healed it.
 //
 // store is mutated in place; persisting it (PrecedenceStore.Save) is the
-// caller's job, keeping this a narrow primitive alongside Allocate/
+// caller's job, keeping this a narrow primitive alongside allocateAddress/
 // EmitPage -- Writer (6.8) owns pairing the two writes per run.
 func UpdateInPlace(store PrecedenceStore, page Page, existingPath string) (Action, error) {
 	current, err := os.ReadFile(existingPath)
@@ -168,7 +178,7 @@ func frontmatterRevision(fmBlock string) (int, bool) {
 }
 
 // volatileFrontmatterFields are the only two frontmatter values EmitPage
-// takes from the wall clock (page.go's nowFunc) rather than from the
+// takes from the time it is given (page.go's at) rather than from the
 // observation, so they are the only two that can differ between two renders
 // of identical Engram content. isOwnUnrecordedWrite normalizes exactly
 // these away and nothing else: every other field, and the whole body, still
@@ -371,7 +381,7 @@ func withoutVolatileStamps(fmBlock string) string {
 //     package's whole reason for reconciling is to end wedges.
 //
 //     project rides along for consistency, not because a project move can
-//     reach this comparison: Allocate reuses an existing page's address only
+//     reach this comparison: allocateAddress reuses an existing page's address only
 //     when the on-disk project AND engram_id both match (address.go's
 //     findPromotedPage), so a moved observation gets a FRESH address and no
 //     in-place update ever sees the old page. Blanking it is correct and

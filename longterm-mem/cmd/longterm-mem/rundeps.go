@@ -135,13 +135,13 @@ func observationRowsForIndex(store *engram.Store, project string) ([]vecindex.Ro
 // cmd_mcp.go's MCP promote tool wiring both use, mirroring runQuery's own
 // extraction so R-012 and R-032 genuinely share one code path rather than
 // two callers separately reconstructing the same Writer.
-func runPromote(store *engram.Store, vaultRoot string, engramID int64) (promote.Result, error) {
+func runPromote(ctx context.Context, store *engram.Store, vaultRoot string, engramID int64) (promote.Result, error) {
 	precedence, err := promote.LoadPrecedenceStore(vaultRoot)
 	if err != nil {
 		return promote.Result{}, err
 	}
-	writer := &promote.Writer{VaultRoot: vaultRoot, Store: precedence}
-	return promote.ExplicitPromote(writer, store.ObservationByID, engramID)
+	writer := &promote.Writer{VaultRoot: vaultRoot, Store: precedence, Addresses: vault.AddressAllocator{Root: vaultRoot}, Clock: utcClock{}}
+	return promote.ExplicitPromote(ctx, writer, store.ObservationByID, engramID)
 }
 
 // reindexAfterPromote rebuilds the vault index after a promotion, but only
@@ -177,17 +177,12 @@ func reindexAfterPromote(ctx context.Context, result promote.Result, rebuild fun
 // promotionWrotePage reports whether result describes a promotion that put
 // bytes on disk.
 //
-// The Page.Address guard is not redundant with the switch, and removing it
-// is the trap this function exists to close: Writer.Promote reports an
-// INELIGIBLE observation as a zero promote.Result, and a zero
-// promote.ActionKind is promote.ActionCreated -- the first iota. A bare
-// switch on the kind therefore answers "created" for a promotion that
-// touched no file at all. A real write always carries the address of the
-// page it wrote.
+// The kind alone answers it. Writer.Promote reports an INELIGIBLE observation
+// as a zero promote.Result, and the zero promote.ActionKind is
+// promote.ActionNone, so a promotion that touched no file never reads as a
+// write. (It used to be promote.ActionCreated, the first iota, and a guard
+// on the page address stood in front of the switch to catch that.)
 func promotionWrotePage(result promote.Result) bool {
-	if result.Page.Address == "" {
-		return false
-	}
 	switch result.Action.Kind {
 	case promote.ActionCreated, promote.ActionUpdated:
 		return true

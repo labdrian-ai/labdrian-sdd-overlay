@@ -44,14 +44,13 @@ func (f *fakeMemory) RelatedEdges(observationID int64) ([]memory.Edge, error) {
 
 func TestSync_ReadsTheLiveObservationsThroughItsMemoryPort(t *testing.T) {
 	vaultRoot := t.TempDir()
-	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
-	writeAllocateScript(t, vaultRoot, allocateAddressFixture)
+	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 	curated := memory.Observation{ID: 11, Type: "decision", Title: "Curated", Content: "Curated body.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/curated"}
 	process := memory.Observation{ID: 12, Type: "discovery", Title: "Process note", Content: "Not curated.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "sdd/some-change/progress"}
 	mem := &fakeMemory{live: []memory.Observation{curated, process}}
 
-	report, err := Sync(context.Background(), Deps{Memory: mem, Writer: &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}}}, "labdrian-sdd-overlay")
+	report, err := Sync(context.Background(), Deps{Memory: mem, Writer: &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: clock, Addresses: staticAddress(testAddress)}}, "labdrian-sdd-overlay")
 	if err != nil {
 		t.Fatalf("Sync: %v", err)
 	}
@@ -72,7 +71,7 @@ func TestSync_ReadsTheLiveObservationsThroughItsMemoryPort(t *testing.T) {
 
 func TestSync_AFailingMemoryPortIsTheRunsError(t *testing.T) {
 	broken := errors.New("memory store offline")
-	deps := Deps{Memory: &fakeMemory{listErr: broken}, Writer: &Writer{VaultRoot: t.TempDir(), Store: PrecedenceStore{}}}
+	deps := Deps{Memory: &fakeMemory{listErr: broken}, Writer: &Writer{VaultRoot: t.TempDir(), Store: PrecedenceStore{}, Clock: &fakeClock{at: testInstant}}}
 
 	if _, err := Sync(context.Background(), deps, "labdrian-sdd-overlay"); !errors.Is(err, broken) {
 		t.Fatalf("Sync = %v, want an error that wraps the port's own", err)
@@ -84,7 +83,7 @@ func TestSync_AFailingMemoryPortIsTheRunsError(t *testing.T) {
 
 func TestPropagate_ReadsTheHistoryAndTheEdgesThroughItsMemoryPort(t *testing.T) {
 	vaultRoot := t.TempDir()
-	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 	older := memory.Observation{ID: 21, SyncID: "sync-older", Type: "decision", Title: "Older", Content: "Older body.", Project: "labdrian-sdd-overlay", RevisionCount: 1, CreatedAt: "2026-08-01 00:00:00"}
 	newer := memory.Observation{ID: 22, SyncID: "sync-newer", Type: "decision", Title: "Newer", Content: "Newer body.", Project: "labdrian-sdd-overlay", RevisionCount: 1, CreatedAt: "2026-08-15 00:00:00"}
@@ -101,7 +100,7 @@ func TestPropagate_ReadsTheHistoryAndTheEdgesThroughItsMemoryPort(t *testing.T) 
 	seedPromotedPage(t, vaultRoot, precedence, newer, "c-000002")
 	retiredPage := seedPromotedPage(t, vaultRoot, precedence, retired, "c-000003")
 
-	report, err := Propagate(context.Background(), Deps{Memory: mem, Writer: &Writer{VaultRoot: vaultRoot, Store: precedence}}, "labdrian-sdd-overlay")
+	report, err := Propagate(context.Background(), Deps{Memory: mem, Writer: &Writer{VaultRoot: vaultRoot, Store: precedence, Clock: clock}}, "labdrian-sdd-overlay")
 	if err != nil {
 		t.Fatalf("Propagate: %v", err)
 	}
@@ -131,8 +130,8 @@ func TestPropagate_ReadsTheHistoryAndTheEdgesThroughItsMemoryPort(t *testing.T) 
 func TestPropagate_AFailingMemoryPortIsReportedNotSwallowed(t *testing.T) {
 	broken := errors.New("memory store offline")
 	vaultRoot := t.TempDir()
-	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
-	writer := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}}
+	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
+	writer := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: clock}
 
 	t.Run("the history cannot be read", func(t *testing.T) {
 		_, err := Propagate(context.Background(), Deps{Memory: &fakeMemory{historyErr: broken}, Writer: writer}, "labdrian-sdd-overlay")
@@ -145,7 +144,7 @@ func TestPropagate_AFailingMemoryPortIsReportedNotSwallowed(t *testing.T) {
 		obs := memory.Observation{ID: 31, SyncID: "sync-31", Type: "decision", Title: "Promoted", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
 		precedence := PrecedenceStore{}
 		seedPromotedPage(t, vaultRoot, precedence, obs, "c-000031")
-		writer := &Writer{VaultRoot: vaultRoot, Store: precedence}
+		writer := &Writer{VaultRoot: vaultRoot, Store: precedence, Clock: clock}
 
 		report, err := Propagate(context.Background(), Deps{Memory: &fakeMemory{all: []memory.Observation{obs}, edgesErr: broken}, Writer: writer}, "labdrian-sdd-overlay")
 		if err == nil {

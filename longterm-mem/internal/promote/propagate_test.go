@@ -16,7 +16,7 @@ import (
 func TestPropagate(t *testing.T) {
 	t.Run("Supersession updates status and related, body untouched", func(t *testing.T) {
 		vaultRoot := t.TempDir()
-		fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+		clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 		store, ids := newFixtureEngramStore(t, []fixtureObs{
 			{title: "Old Decision", content: "Old body.", project: "labdrian-sdd-overlay", obsType: "decision", revisionCount: 1, syncID: "sync-old", createdAt: "2026-08-01 00:00:00", topicKey: "longterm-mem/old-decision"},
@@ -36,7 +36,7 @@ func TestPropagate(t *testing.T) {
 		oldPage := seedPromotedPage(t, vaultRoot, precedence, oldObs, "c-000001")
 		seedPromotedPage(t, vaultRoot, precedence, newObs, "c-000002")
 
-		w := &Writer{VaultRoot: vaultRoot, Store: precedence}
+		w := &Writer{VaultRoot: vaultRoot, Store: precedence, Clock: clock}
 		report, err := Propagate(context.Background(), Deps{Memory: store, Writer: w}, "labdrian-sdd-overlay")
 		if err != nil {
 			t.Fatalf("Propagate: %v", err)
@@ -71,7 +71,7 @@ func TestPropagate(t *testing.T) {
 
 	t.Run("Soft-delete with no successor archives the page", func(t *testing.T) {
 		vaultRoot := t.TempDir()
-		fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+		clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 		store, ids := newFixtureEngramStore(t, []fixtureObs{
 			{title: "Deleted Decision", content: "Body.", project: "labdrian-sdd-overlay", obsType: "decision", revisionCount: 1, syncID: "sync-del", deletedAt: "2026-08-20T00:00:00Z", topicKey: "longterm-mem/deleted-decision"},
@@ -81,7 +81,7 @@ func TestPropagate(t *testing.T) {
 		obs := memory.Observation{ID: ids[0], Type: "decision", Title: "Deleted Decision", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
 		page := seedPromotedPage(t, vaultRoot, precedence, obs, "c-000003")
 
-		w := &Writer{VaultRoot: vaultRoot, Store: precedence}
+		w := &Writer{VaultRoot: vaultRoot, Store: precedence, Clock: clock}
 		report, err := Propagate(context.Background(), Deps{Memory: store, Writer: w}, "labdrian-sdd-overlay")
 		if err != nil {
 			t.Fatalf("Propagate: %v", err)
@@ -101,7 +101,7 @@ func TestPropagate(t *testing.T) {
 
 	t.Run("Untouched observation keeps its status", func(t *testing.T) {
 		vaultRoot := t.TempDir()
-		fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+		clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 		store, ids := newFixtureEngramStore(t, []fixtureObs{
 			{title: "Stable Decision", content: "Body.", project: "labdrian-sdd-overlay", obsType: "decision", revisionCount: 1, syncID: "sync-stable", topicKey: "longterm-mem/stable-decision"},
@@ -115,7 +115,7 @@ func TestPropagate(t *testing.T) {
 			t.Fatalf("read page (before): %v", err)
 		}
 
-		w := &Writer{VaultRoot: vaultRoot, Store: precedence}
+		w := &Writer{VaultRoot: vaultRoot, Store: precedence, Clock: clock}
 		report, err := Propagate(context.Background(), Deps{Memory: store, Writer: w}, "labdrian-sdd-overlay")
 		if err != nil {
 			t.Fatalf("Propagate: %v", err)
@@ -135,7 +135,7 @@ func TestPropagate(t *testing.T) {
 
 	t.Run("Status patch on a locally edited page still lands (canon wins)", func(t *testing.T) {
 		vaultRoot := t.TempDir()
-		fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+		clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 		store, ids := newFixtureEngramStore(t, []fixtureObs{
 			{title: "Edited Decision", content: "Original body.", project: "labdrian-sdd-overlay", obsType: "decision", revisionCount: 1, syncID: "sync-edited", deletedAt: "2026-08-20T00:00:00Z", topicKey: "longterm-mem/edited-decision"},
@@ -159,7 +159,7 @@ func TestPropagate(t *testing.T) {
 		// edit's real on-disk hash -- this is a genuine "local edit" state
 		// per UpdateInPlace's own detection, deliberately not re-seeded.
 
-		w := &Writer{VaultRoot: vaultRoot, Store: precedence}
+		w := &Writer{VaultRoot: vaultRoot, Store: precedence, Clock: clock}
 		report, err := Propagate(context.Background(), Deps{Memory: store, Writer: w}, "labdrian-sdd-overlay")
 		if err != nil {
 			t.Fatalf("Propagate: %v", err)
@@ -206,10 +206,10 @@ func TestPropagate(t *testing.T) {
 
 		// The property that actually matters: a later promotion of the
 		// same page still refuses to touch the human's body.
-		fixedNow(t, time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC))
+		clock.Set(time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC))
 		obs.RevisionCount = 2
 		obs.Content = "Freshly rendered body."
-		next, err := EmitPage(obs, "c-000005", nil)
+		next, err := EmitPage(obs, "c-000005", nil, clock.Now())
 		if err != nil {
 			t.Fatalf("EmitPage (later sync): %v", err)
 		}
@@ -239,7 +239,7 @@ func TestPropagate(t *testing.T) {
 // retry fails identically. A broken page must be recorded and stepped over.
 func TestPropagate_OneBrokenPageDoesNotWedgeTheRun(t *testing.T) {
 	vaultRoot := t.TempDir()
-	fixedNow(t, time.Date(2026, 8, 31, 12, 0, 0, 0, time.UTC))
+	clock := &fakeClock{at: time.Date(2026, 8, 31, 12, 0, 0, 0, time.UTC)}
 
 	store, ids := newFixtureEngramStore(t, []fixtureObs{
 		{title: "Broken Page", content: "Body one.", project: "labdrian-sdd-overlay", obsType: "decision", revisionCount: 1, deletedAt: "2026-08-20T00:00:00Z", topicKey: "longterm-mem/broken-page"},
@@ -258,7 +258,7 @@ func TestPropagate_OneBrokenPageDoesNotWedgeTheRun(t *testing.T) {
 		t.Fatalf("write broken page: %v", err)
 	}
 
-	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}}
+	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: clock}
 	healthy := memory.Observation{ID: ids[1], Type: "decision", Title: "Archivable", Content: "Body two.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
 	seedPromotedPage(t, vaultRoot, w.Store, healthy, "c-000701")
 
@@ -285,7 +285,7 @@ func TestPropagate_OneBrokenPageDoesNotWedgeTheRun(t *testing.T) {
 // order is not something the ledger's truth should depend on.
 func TestPropagate_SupersessionIsRecordedEvenWithNoSuccessorPage(t *testing.T) {
 	vaultRoot := t.TempDir()
-	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 	store, ids := newFixtureEngramStore(t, []fixtureObs{
 		{title: "Old Decision", content: "Old body.", project: "labdrian-sdd-overlay", obsType: "decision", revisionCount: 1, syncID: "sync-old", createdAt: "2026-08-01 00:00:00", topicKey: "longterm-mem/old-decision"},
@@ -299,7 +299,7 @@ func TestPropagate_SupersessionIsRecordedEvenWithNoSuccessorPage(t *testing.T) {
 	oldObs := memory.Observation{ID: ids[0], Type: "decision", Title: "Old Decision", Content: "Old body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
 	oldPage := seedPromotedPage(t, vaultRoot, precedence, oldObs, "c-000001")
 
-	w := &Writer{VaultRoot: vaultRoot, Store: precedence}
+	w := &Writer{VaultRoot: vaultRoot, Store: precedence, Clock: clock}
 	report, err := Propagate(context.Background(), Deps{Memory: store, Writer: w}, "labdrian-sdd-overlay")
 	if err != nil {
 		t.Fatalf("Propagate: %v", err)
@@ -326,7 +326,7 @@ func TestPropagate_SupersessionIsRecordedEvenWithNoSuccessorPage(t *testing.T) {
 // proven here rather than asserted.
 func TestPropagate_TheLinkAppearsOnceTheSuccessorIsPromoted(t *testing.T) {
 	vaultRoot := t.TempDir()
-	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 	store, ids := newFixtureEngramStore(t, []fixtureObs{
 		{title: "Old Decision", content: "Old body.", project: "labdrian-sdd-overlay", obsType: "decision", revisionCount: 1, syncID: "sync-old", createdAt: "2026-08-01 00:00:00", topicKey: "longterm-mem/old-decision"},
@@ -339,7 +339,7 @@ func TestPropagate_TheLinkAppearsOnceTheSuccessorIsPromoted(t *testing.T) {
 	oldObs := memory.Observation{ID: ids[0], Type: "decision", Title: "Old Decision", Content: "Old body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
 	newObs := memory.Observation{ID: ids[1], Type: "decision", Title: "New Decision", Content: "New body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
 	oldPage := seedPromotedPage(t, vaultRoot, precedence, oldObs, "c-000001")
-	w := &Writer{VaultRoot: vaultRoot, Store: precedence}
+	w := &Writer{VaultRoot: vaultRoot, Store: precedence, Clock: clock}
 
 	// First run: successor unpromoted. The status lands, the link cannot.
 	if _, err := Propagate(context.Background(), Deps{Memory: store, Writer: w}, "labdrian-sdd-overlay"); err != nil {

@@ -43,7 +43,7 @@ func WriteSyncState(t *testing.T, vaultRoot, completedAt string) {
 func WritePromotedPage(t *testing.T, vaultRoot, address, title string) promote.Page {
 	t.Helper()
 	obs := memory.Observation{ID: 1, Type: "decision", Title: title, Content: "Body content.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
-	page, err := promote.EmitPage(obs, address, nil)
+	page, err := promote.EmitPage(obs, address, nil, Instant())
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
 	}
@@ -114,7 +114,11 @@ func RegisterPage(t *testing.T, vaultRoot, address, title string) {
 	if err := promote.RegisterIndex(filepath.Join(vaultRoot, "wiki", "index.md"), address, title); err != nil {
 		t.Fatalf("RegisterIndex: %v", err)
 	}
-	if err := promote.RegisterLog(filepath.Join(vaultRoot, "wiki", "log.md"), address, title, time.Date(2026, 8, 31, 0, 0, 0, 0, time.UTC)); err != nil {
+	if err := promote.RegisterLog(filepath.Join(vaultRoot, "wiki", "log.md"), address, title, Instant()); err != nil {
 		t.Fatalf("RegisterLog: %v", err)
 	}
 }
+
+// Instant is the instant the fixtures render and register at: a test that builds a page here has no reason to
+// care which day it is, and a fixed one keeps the page the same on every run.
+func Instant() time.Time { return time.Date(2026, 8, 31, 0, 0, 0, 0, time.UTC) }

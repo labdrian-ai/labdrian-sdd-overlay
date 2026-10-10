@@ -42,10 +42,10 @@ func seedPrecedence(store PrecedenceStore, page Page) {
 // page for X is created.
 func TestUpdate_UnmodifiedPageUpdatesInPlace(t *testing.T) {
 	vaultRoot := t.TempDir()
-	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 	obs := memory.Observation{ID: 301, Type: "decision", Title: "Widget Decision", Content: "V1 content.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
-	first, err := EmitPage(obs, "c-000301", nil)
+	first, err := EmitPage(obs, "c-000301", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (v1): %v", err)
 	}
@@ -57,10 +57,10 @@ func TestUpdate_UnmodifiedPageUpdatesInPlace(t *testing.T) {
 	}
 	seedPrecedence(store, first)
 
-	fixedNow(t, time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
+	clock.Set(time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
 	obs.RevisionCount = 2
 	obs.Content = "V2 content."
-	second, err := EmitPage(obs, "c-000301", nil)
+	second, err := EmitPage(obs, "c-000301", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (v2): %v", err)
 	}
@@ -102,10 +102,10 @@ func TestUpdate_UnmodifiedPageUpdatesInPlace(t *testing.T) {
 // created, and no old file is orphaned.
 func TestUpdate_RetitleKeepsSameFile(t *testing.T) {
 	vaultRoot := t.TempDir()
-	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 	obs := memory.Observation{ID: 302, Type: "pattern", Title: "Original Title", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
-	first, err := EmitPage(obs, "c-000302", nil)
+	first, err := EmitPage(obs, "c-000302", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (original): %v", err)
 	}
@@ -119,7 +119,7 @@ func TestUpdate_RetitleKeepsSameFile(t *testing.T) {
 
 	obs.Title = "Renamed Title"
 	obs.RevisionCount = 2
-	second, err := EmitPage(obs, "c-000302", nil)
+	second, err := EmitPage(obs, "c-000302", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (retitled): %v", err)
 	}
@@ -161,10 +161,10 @@ func TestUpdate_RetitleKeepsSameFile(t *testing.T) {
 // the content update is skipped and a diagnostic names the page.
 func TestUpdate_LocallyEditedPageSkippedWithDiagnostic(t *testing.T) {
 	vaultRoot := t.TempDir()
-	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 	obs := memory.Observation{ID: 303, Type: "decision", Title: "Locally Edited", Content: "Original body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
-	first, err := EmitPage(obs, "c-000303", nil)
+	first, err := EmitPage(obs, "c-000303", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
 	}
@@ -185,7 +185,7 @@ func TestUpdate_LocallyEditedPageSkippedWithDiagnostic(t *testing.T) {
 	}
 
 	obs.RevisionCount = 2
-	second, err := EmitPage(obs, "c-000303", nil)
+	second, err := EmitPage(obs, "c-000303", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (re-promotion): %v", err)
 	}
@@ -219,10 +219,10 @@ func TestUpdate_LocallyEditedPageSkippedWithDiagnostic(t *testing.T) {
 // behavior applies, with no skip.
 func TestUpdate_UnmodifiedPageUpdatesNormally(t *testing.T) {
 	vaultRoot := t.TempDir()
-	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 	obs := memory.Observation{ID: 304, Type: "decision", Title: "Not Locally Edited", Content: "Same content, no local edit.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
-	page, err := EmitPage(obs, "c-000304", nil)
+	page, err := EmitPage(obs, "c-000304", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
 	}
@@ -259,10 +259,10 @@ func TestUpdate_UnmodifiedPageUpdatesNormally(t *testing.T) {
 // R4-fail-open-missing-precedence-entry).
 func TestUpdate_UnknownProvenancePageIsNotOverwritten(t *testing.T) {
 	vaultRoot := t.TempDir()
-	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 	obs := memory.Observation{ID: 305, Type: "decision", Title: "Untracked On Disk", Content: "Body nobody tracked.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
-	existing, err := EmitPage(obs, "c-000305", nil)
+	existing, err := EmitPage(obs, "c-000305", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
 	}
@@ -274,7 +274,7 @@ func TestUpdate_UnknownProvenancePageIsNotOverwritten(t *testing.T) {
 
 	obs.RevisionCount = 2
 	obs.Content = "Freshly rendered body."
-	incoming, err := EmitPage(obs, "c-000305", nil)
+	incoming, err := EmitPage(obs, "c-000305", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (re-promotion): %v", err)
 	}
@@ -309,10 +309,10 @@ func TestUpdate_UnknownProvenancePageIsNotOverwritten(t *testing.T) {
 // R4-write-store-persist-crash-window).
 func TestUpdate_InterruptedPriorWriteReconciles(t *testing.T) {
 	vaultRoot := t.TempDir()
-	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 	obs := memory.Observation{ID: 306, Type: "decision", Title: "Interrupted Write", Content: "V1 body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
-	first, err := EmitPage(obs, "c-000306", nil)
+	first, err := EmitPage(obs, "c-000306", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
 	}
@@ -321,10 +321,10 @@ func TestUpdate_InterruptedPriorWriteReconciles(t *testing.T) {
 	store := PrecedenceStore{}
 	seedPrecedence(store, first)
 
-	fixedNow(t, time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
+	clock.Set(time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
 	obs.RevisionCount = 2
 	obs.Content = "V2 body."
-	second, err := EmitPage(obs, "c-000306", nil)
+	second, err := EmitPage(obs, "c-000306", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (re-promotion): %v", err)
 	}
@@ -361,15 +361,15 @@ func TestUpdate_InterruptedPriorWriteReconciles(t *testing.T) {
 // The page's own bytes settle it: when they are what this promotion would
 // itself write, the page is our interrupted write and is adopted rather
 // than refused forever. The comparison must ignore created:/updated:,
-// which EmitPage stamps from the wall clock -- otherwise adoption would
+// which EmitPage stamps from the time it is given -- otherwise adoption would
 // work on a same-day retry and stop working the next day, which is worse
 // than not adopting at all.
 func TestUpdate_UnrecordedOwnWriteIsAdopted(t *testing.T) {
 	vaultRoot := t.TempDir()
-	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 	obs := memory.Observation{ID: 307, Type: "decision", Title: "Unrecorded Own Write", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
-	onDisk, err := EmitPage(obs, "c-000307", nil)
+	onDisk, err := EmitPage(obs, "c-000307", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (interrupted create): %v", err)
 	}
@@ -379,9 +379,9 @@ func TestUpdate_UnrecordedOwnWriteIsAdopted(t *testing.T) {
 	store := PrecedenceStore{}
 
 	// A later day, so the re-render differs from disk in exactly the two
-	// wall-clock stamps and nothing else.
-	fixedNow(t, time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
-	incoming, err := EmitPage(obs, "c-000307", nil)
+	// date stamps and nothing else.
+	clock.Set(time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
+	incoming, err := EmitPage(obs, "c-000307", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (retry): %v", err)
 	}
@@ -422,10 +422,10 @@ func TestUpdate_UnrecordedOwnWriteIsAdopted(t *testing.T) {
 // TestUpdate_UnknownProvenancePageIsNotOverwritten guards.
 func TestUpdate_UntrackedPageDifferingOnlyInANonVolatileFieldIsNotAdopted(t *testing.T) {
 	vaultRoot := t.TempDir()
-	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 	obs := memory.Observation{ID: 308, Type: "decision", Title: "Hand Edited Status", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
-	page, err := EmitPage(obs, "c-000308", nil)
+	page, err := EmitPage(obs, "c-000308", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
 	}
@@ -439,8 +439,8 @@ func TestUpdate_UntrackedPageDifferingOnlyInANonVolatileFieldIsNotAdopted(t *tes
 		t.Fatalf("write hand edit: %v", err)
 	}
 
-	fixedNow(t, time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
-	incoming, err := EmitPage(obs, "c-000308", nil)
+	clock.Set(time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
+	incoming, err := EmitPage(obs, "c-000308", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (retry): %v", err)
 	}
@@ -471,6 +471,7 @@ func TestActionKind_String(t *testing.T) {
 		kind ActionKind
 		want string
 	}{
+		{ActionNone, "none"},
 		{ActionCreated, "created"},
 		{ActionUpdated, "updated"},
 		{ActionSkippedLocalEdit, "skipped_local_edit"},
@@ -483,21 +484,33 @@ func TestActionKind_String(t *testing.T) {
 	}
 }
 
+// TestAction_TheZeroValueMeansNothingWasDone: an Action nobody filled in (the
+// one that comes back beside an error, or the Result of an observation that
+// was not eligible) used to read as ActionCreated, the first iota, so a value
+// that was never set silently claimed a write. The zero value is ActionNone,
+// and a kind that does something has to be named.
+func TestAction_TheZeroValueMeansNothingWasDone(t *testing.T) {
+	var action Action
+	if action.Kind != ActionNone {
+		t.Fatalf("the zero Action has Kind %v, want ActionNone", action.Kind)
+	}
+}
+
 // TestUpdate_InterruptedUpdateRetriedOnALaterDayReconciles: the update
 // path's crash window, retried on a different UTC day. The interrupted run
 // published revision 2 and died before its caller persisted the sidecar, so
 // the entry still fingerprints revision 1. The retry re-renders the SAME
-// observation, but EmitPage stamps created:/updated: from the wall clock, so
+// observation, but EmitPage stamps created:/updated: from the time it is given, so
 // the retry's bytes are not the bytes on disk -- and a byte-equality
 // reconciliation therefore cannot settle it. Nothing about the page is a
-// local edit, so it must not be refused: the same wall-clock normalization
+// local edit, so it must not be refused: the same date-stamp normalization
 // the create path's adoption already uses settles it here too.
 func TestUpdate_InterruptedUpdateRetriedOnALaterDayReconciles(t *testing.T) {
 	vaultRoot := t.TempDir()
-	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 	obs := memory.Observation{ID: 309, Type: "decision", Title: "Interrupted Across Days", Content: "V1 body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
-	first, err := EmitPage(obs, "c-000309", nil)
+	first, err := EmitPage(obs, "c-000309", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (v1): %v", err)
 	}
@@ -508,10 +521,10 @@ func TestUpdate_InterruptedUpdateRetriedOnALaterDayReconciles(t *testing.T) {
 
 	// The interrupted run: revision 2 lands on disk, the sidecar Save never
 	// does, so the entry above still fingerprints revision 1.
-	fixedNow(t, time.Date(2026, 8, 10, 0, 0, 0, 0, time.UTC))
+	clock.Set(time.Date(2026, 8, 10, 0, 0, 0, 0, time.UTC))
 	obs.RevisionCount = 2
 	obs.Content = "V2 body."
-	interrupted, err := EmitPage(obs, "c-000309", nil)
+	interrupted, err := EmitPage(obs, "c-000309", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (interrupted v2): %v", err)
 	}
@@ -520,9 +533,9 @@ func TestUpdate_InterruptedUpdateRetriedOnALaterDayReconciles(t *testing.T) {
 	}
 
 	// The retry, a later day: same observation, so the only divergence from
-	// disk is the two wall-clock stamps.
-	fixedNow(t, time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
-	retry, err := EmitPage(obs, "c-000309", nil)
+	// disk is the two date stamps.
+	clock.Set(time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
+	retry, err := EmitPage(obs, "c-000309", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (retry): %v", err)
 	}
@@ -558,7 +571,7 @@ func TestUpdate_InterruptedUpdateRetriedOnALaterDayReconciles(t *testing.T) {
 // published revision 2 and never persisted the sidecar, and by the time
 // promotion runs again the observation is at revision 3, so the retry
 // renders content that never existed on disk. Byte equality against the
-// incoming render -- with or without the wall-clock stamps normalized away
+// incoming render -- with or without the date stamps normalized away
 // -- cannot settle this by construction: the two renders are of different
 // revisions and are SUPPOSED to differ.
 //
@@ -568,10 +581,10 @@ func TestUpdate_InterruptedUpdateRetriedOnALaterDayReconciles(t *testing.T) {
 // human editing a page leaves it exactly where the sidecar left it.
 func TestUpdate_InterruptedUpdateFollowedByANewRevisionReconciles(t *testing.T) {
 	vaultRoot := t.TempDir()
-	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 	obs := memory.Observation{ID: 310, Type: "decision", Title: "Interrupted Then Revised", Content: "V1 body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
-	first, err := EmitPage(obs, "c-000310", nil)
+	first, err := EmitPage(obs, "c-000310", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (v1): %v", err)
 	}
@@ -580,10 +593,10 @@ func TestUpdate_InterruptedUpdateFollowedByANewRevisionReconciles(t *testing.T) 
 	store := PrecedenceStore{}
 	seedPrecedence(store, first)
 
-	fixedNow(t, time.Date(2026, 8, 10, 0, 0, 0, 0, time.UTC))
+	clock.Set(time.Date(2026, 8, 10, 0, 0, 0, 0, time.UTC))
 	obs.RevisionCount = 2
 	obs.Content = "V2 body."
-	interrupted, err := EmitPage(obs, "c-000310", nil)
+	interrupted, err := EmitPage(obs, "c-000310", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (interrupted v2): %v", err)
 	}
@@ -591,10 +604,10 @@ func TestUpdate_InterruptedUpdateFollowedByANewRevisionReconciles(t *testing.T) 
 		t.Fatalf("simulate interrupted write: %v", err)
 	}
 
-	fixedNow(t, time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
+	clock.Set(time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
 	obs.RevisionCount = 3
 	obs.Content = "V3 body."
-	incoming, err := EmitPage(obs, "c-000310", nil)
+	incoming, err := EmitPage(obs, "c-000310", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (v3): %v", err)
 	}
@@ -644,10 +657,10 @@ func TestUpdate_InterruptedUpdateFollowedByANewRevisionReconciles(t *testing.T) 
 // a truncation, a replaced body.
 func TestUpdate_PageAheadOfTheSidecarWithAnEditedBodyIsStillSkipped(t *testing.T) {
 	vaultRoot := t.TempDir()
-	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 	obs := memory.Observation{ID: 311, Type: "decision", Title: "Edited During The Window", Content: "V1 body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
-	first, err := EmitPage(obs, "c-000311", nil)
+	first, err := EmitPage(obs, "c-000311", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (v1): %v", err)
 	}
@@ -656,10 +669,10 @@ func TestUpdate_PageAheadOfTheSidecarWithAnEditedBodyIsStillSkipped(t *testing.T
 	store := PrecedenceStore{}
 	seedPrecedence(store, first)
 
-	fixedNow(t, time.Date(2026, 8, 10, 0, 0, 0, 0, time.UTC))
+	clock.Set(time.Date(2026, 8, 10, 0, 0, 0, 0, time.UTC))
 	obs.RevisionCount = 2
 	obs.Content = "V2 body."
-	interrupted, err := EmitPage(obs, "c-000311", nil)
+	interrupted, err := EmitPage(obs, "c-000311", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (interrupted v2): %v", err)
 	}
@@ -670,10 +683,10 @@ func TestUpdate_PageAheadOfTheSidecarWithAnEditedBodyIsStillSkipped(t *testing.T
 		t.Fatalf("write local edit: %v", err)
 	}
 
-	fixedNow(t, time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
+	clock.Set(time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
 	obs.RevisionCount = 3
 	obs.Content = "V3 body."
-	incoming, err := EmitPage(obs, "c-000311", nil)
+	incoming, err := EmitPage(obs, "c-000311", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (v3): %v", err)
 	}
@@ -778,10 +791,10 @@ func TestUpdate_FrontmatterEditInsideTheUpdateWindowIsStillSkipped(t *testing.T)
 		for _, tt := range edits {
 			t.Run(entryShape.name+", "+tt.name, func(t *testing.T) {
 				vaultRoot := t.TempDir()
-				fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+				clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 				obs := memory.Observation{ID: 312, Type: "decision", Title: "Edited Frontmatter", Content: "V1 body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
-				first, err := EmitPage(obs, "c-000312", nil)
+				first, err := EmitPage(obs, "c-000312", nil, clock.Now())
 				if err != nil {
 					t.Fatalf("EmitPage (v1): %v", err)
 				}
@@ -792,10 +805,10 @@ func TestUpdate_FrontmatterEditInsideTheUpdateWindowIsStillSkipped(t *testing.T)
 
 				// The interrupted write published revision 2 and the sidecar
 				// Save never ran, so the entry still fingerprints revision 1.
-				fixedNow(t, time.Date(2026, 8, 10, 0, 0, 0, 0, time.UTC))
+				clock.Set(time.Date(2026, 8, 10, 0, 0, 0, 0, time.UTC))
 				obs.RevisionCount = 2
 				obs.Content = "V2 body."
-				interrupted, err := EmitPage(obs, "c-000312", nil)
+				interrupted, err := EmitPage(obs, "c-000312", nil, clock.Now())
 				if err != nil {
 					t.Fatalf("EmitPage (interrupted v2): %v", err)
 				}
@@ -806,10 +819,10 @@ func TestUpdate_FrontmatterEditInsideTheUpdateWindowIsStillSkipped(t *testing.T)
 					t.Fatalf("write local edit: %v", err)
 				}
 
-				fixedNow(t, time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
+				clock.Set(time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
 				obs.RevisionCount = 3
 				obs.Content = "V3 body."
-				incoming, err := EmitPage(obs, "c-000312", nil)
+				incoming, err := EmitPage(obs, "c-000312", nil, clock.Now())
 				if err != nil {
 					t.Fatalf("EmitPage (v3): %v", err)
 				}
@@ -846,10 +859,10 @@ func TestUpdate_FrontmatterEditInsideTheUpdateWindowIsStillSkipped(t *testing.T)
 // revision the entry records, and our own writes never leave it there.
 func TestUpdate_PageLevelWithTheSidecarRevisionIsSkipped(t *testing.T) {
 	vaultRoot := t.TempDir()
-	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 	obs := memory.Observation{ID: 313, Type: "decision", Title: "Level With The Sidecar", Content: "V2 body, first paragraph.", Project: "labdrian-sdd-overlay", RevisionCount: 2}
-	promoted, err := EmitPage(obs, "c-000313", nil)
+	promoted, err := EmitPage(obs, "c-000313", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (v2): %v", err)
 	}
@@ -869,10 +882,10 @@ func TestUpdate_PageLevelWithTheSidecarRevisionIsSkipped(t *testing.T) {
 		t.Fatalf("write local edit: %v", err)
 	}
 
-	fixedNow(t, time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
+	clock.Set(time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
 	obs.RevisionCount = 3
 	obs.Content = "V3 body."
-	incoming, err := EmitPage(obs, "c-000313", nil)
+	incoming, err := EmitPage(obs, "c-000313", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (v3): %v", err)
 	}
@@ -901,10 +914,10 @@ func TestUpdate_PageLevelWithTheSidecarRevisionIsSkipped(t *testing.T) {
 // write and must not be adopted.
 func TestUpdate_PageClaimingARevisionEngramHasNotReachedIsSkipped(t *testing.T) {
 	vaultRoot := t.TempDir()
-	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 	obs := memory.Observation{ID: 314, Type: "decision", Title: "Ahead Of Engram", Content: "V1 body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
-	first, err := EmitPage(obs, "c-000314", nil)
+	first, err := EmitPage(obs, "c-000314", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (v1): %v", err)
 	}
@@ -914,10 +927,10 @@ func TestUpdate_PageClaimingARevisionEngramHasNotReachedIsSkipped(t *testing.T) 
 	seedPrecedence(store, first)
 
 	// The page on disk claims revision 5, complete with the footer for it.
-	fixedNow(t, time.Date(2026, 8, 10, 0, 0, 0, 0, time.UTC))
+	clock.Set(time.Date(2026, 8, 10, 0, 0, 0, 0, time.UTC))
 	obs.RevisionCount = 5
 	obs.Content = "A body claiming revision 5."
-	forged, err := EmitPage(obs, "c-000314", nil)
+	forged, err := EmitPage(obs, "c-000314", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (claimed v5): %v", err)
 	}
@@ -926,10 +939,10 @@ func TestUpdate_PageClaimingARevisionEngramHasNotReachedIsSkipped(t *testing.T) 
 	}
 
 	// Engram itself is only at revision 3.
-	fixedNow(t, time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
+	clock.Set(time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
 	obs.RevisionCount = 3
 	obs.Content = "V3 body."
-	incoming, err := EmitPage(obs, "c-000314", nil)
+	incoming, err := EmitPage(obs, "c-000314", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (v3): %v", err)
 	}
@@ -959,10 +972,10 @@ func TestUpdate_PageClaimingARevisionEngramHasNotReachedIsSkipped(t *testing.T) 
 // engram_revision too.
 func TestUpdate_LegacyEntryWithABodyEditIsStillSkipped(t *testing.T) {
 	vaultRoot := t.TempDir()
-	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 	obs := memory.Observation{ID: 316, Type: "decision", Title: "Legacy Body Edit", Content: "V2 body, first paragraph.", Project: "labdrian-sdd-overlay", RevisionCount: 2}
-	promoted, err := EmitPage(obs, "c-000316", nil)
+	promoted, err := EmitPage(obs, "c-000316", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (v2): %v", err)
 	}
@@ -979,10 +992,10 @@ func TestUpdate_LegacyEntryWithABodyEditIsStillSkipped(t *testing.T) {
 		t.Fatalf("write local edit: %v", err)
 	}
 
-	fixedNow(t, time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
+	clock.Set(time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
 	obs.RevisionCount = 3
 	obs.Content = "V3 body."
-	incoming, err := EmitPage(obs, "c-000316", nil)
+	incoming, err := EmitPage(obs, "c-000316", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (v3): %v", err)
 	}
@@ -1009,14 +1022,14 @@ func TestUpdate_LegacyEntryWithABodyEditIsStillSkipped(t *testing.T) {
 // sidecar did not" from "a human edited this page" is that the page's
 // revision is BEHIND the one now being promoted. At the same revision our
 // own write would have been byte-identical to the incoming render apart from
-// the wall-clock stamps, and the untracked-write comparison would already
+// the date stamps, and the untracked-write comparison would already
 // have adopted it -- so a divergence there is the human's, not ours.
 func TestUpdate_LegacyEntryLevelWithTheIncomingRevisionIsSkipped(t *testing.T) {
 	vaultRoot := t.TempDir()
-	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 	obs := memory.Observation{ID: 317, Type: "decision", Title: "Legacy Level With Engram", Content: "V1 body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
-	first, err := EmitPage(obs, "c-000317", nil)
+	first, err := EmitPage(obs, "c-000317", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (v1): %v", err)
 	}
@@ -1027,10 +1040,10 @@ func TestUpdate_LegacyEntryLevelWithTheIncomingRevisionIsSkipped(t *testing.T) {
 
 	// Revision 2 landed and a human then edited the middle of its body, so
 	// the entry's frontmatter hash (revision 1's) no longer matches.
-	fixedNow(t, time.Date(2026, 8, 10, 0, 0, 0, 0, time.UTC))
+	clock.Set(time.Date(2026, 8, 10, 0, 0, 0, 0, time.UTC))
 	obs.RevisionCount = 2
 	obs.Content = "V2 body, first paragraph."
-	second, err := EmitPage(obs, "c-000317", nil)
+	second, err := EmitPage(obs, "c-000317", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (v2): %v", err)
 	}
@@ -1044,8 +1057,8 @@ func TestUpdate_LegacyEntryLevelWithTheIncomingRevisionIsSkipped(t *testing.T) {
 
 	// Engram is still at revision 2, so the promotion re-renders the same
 	// revision the page already claims.
-	fixedNow(t, time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
-	incoming, err := EmitPage(obs, "c-000317", nil)
+	clock.Set(time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
+	incoming, err := EmitPage(obs, "c-000317", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (v2 retry): %v", err)
 	}
@@ -1081,10 +1094,10 @@ func TestUpdate_LegacyEntryLevelWithTheIncomingRevisionIsSkipped(t *testing.T) {
 // paragraph mid-body. Both must survive.
 func TestUpdate_LegacyEntryOnAHandEditedPageIsRefused(t *testing.T) {
 	vaultRoot := t.TempDir()
-	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 	obs := memory.Observation{ID: 318, Type: "decision", Title: "Legacy Hand Edit", Content: "V2 body, first paragraph.", Project: "labdrian-sdd-overlay", RevisionCount: 2}
-	promoted, err := EmitPage(obs, "c-000318", nil)
+	promoted, err := EmitPage(obs, "c-000318", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (v2): %v", err)
 	}
@@ -1103,10 +1116,10 @@ func TestUpdate_LegacyEntryOnAHandEditedPageIsRefused(t *testing.T) {
 		t.Fatalf("write local edit: %v", err)
 	}
 
-	fixedNow(t, time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
+	clock.Set(time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
 	obs.RevisionCount = 3
 	obs.Content = "V3 body."
-	incoming, err := EmitPage(obs, "c-000318", nil)
+	incoming, err := EmitPage(obs, "c-000318", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (v3): %v", err)
 	}
@@ -1136,10 +1149,10 @@ func TestUpdate_LegacyEntryOnAHandEditedPageIsRefused(t *testing.T) {
 // page by page, with nothing adopted.
 func TestUpdate_LegacyEntryOnAnUndivergedPageIsBackfilled(t *testing.T) {
 	vaultRoot := t.TempDir()
-	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 	obs := memory.Observation{ID: 319, Type: "decision", Title: "Legacy Backfill", Content: "V2 body.", Project: "labdrian-sdd-overlay", RevisionCount: 2}
-	promoted, err := EmitPage(obs, "c-000319", nil)
+	promoted, err := EmitPage(obs, "c-000319", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (v2): %v", err)
 	}
@@ -1148,10 +1161,10 @@ func TestUpdate_LegacyEntryOnAnUndivergedPageIsBackfilled(t *testing.T) {
 	store := PrecedenceStore{}
 	store.Set(promoted.Address, legacyEntryFor(promoted))
 
-	fixedNow(t, time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
+	clock.Set(time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
 	obs.RevisionCount = 3
 	obs.Content = "V3 body."
-	incoming, err := EmitPage(obs, "c-000319", nil)
+	incoming, err := EmitPage(obs, "c-000319", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (v3): %v", err)
 	}
@@ -1177,7 +1190,7 @@ func TestUpdate_LegacyEntryOnAnUndivergedPageIsBackfilled(t *testing.T) {
 	for _, revision := range []int{4, 5, 6} {
 		obs.RevisionCount = revision
 		obs.Content = fmt.Sprintf("V%d body.", revision)
-		later, err := EmitPage(obs, "c-000319", nil)
+		later, err := EmitPage(obs, "c-000319", nil, clock.Now())
 		if err != nil {
 			t.Fatalf("EmitPage (v%d): %v", revision, err)
 		}
@@ -1212,10 +1225,10 @@ func TestUpdate_InterruptedUpdateWhoseObservationWasRetitledReconciles(t *testin
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			vaultRoot := t.TempDir()
-			fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+			clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 			obs := memory.Observation{ID: 320, Type: "decision", Title: "The Original Title", Content: "V1 body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
-			first, err := EmitPage(obs, "c-000320", nil)
+			first, err := EmitPage(obs, "c-000320", nil, clock.Now())
 			if err != nil {
 				t.Fatalf("EmitPage (v1): %v", err)
 			}
@@ -1226,10 +1239,10 @@ func TestUpdate_InterruptedUpdateWhoseObservationWasRetitledReconciles(t *testin
 
 			// The interrupted write published revision 2 under the old
 			// title; the sidecar Save never ran.
-			fixedNow(t, time.Date(2026, 8, 10, 0, 0, 0, 0, time.UTC))
+			clock.Set(time.Date(2026, 8, 10, 0, 0, 0, 0, time.UTC))
 			obs.RevisionCount = 2
 			obs.Content = "V2 body."
-			interrupted, err := EmitPage(obs, "c-000320", nil)
+			interrupted, err := EmitPage(obs, "c-000320", nil, clock.Now())
 			if err != nil {
 				t.Fatalf("EmitPage (interrupted v2): %v", err)
 			}
@@ -1239,11 +1252,11 @@ func TestUpdate_InterruptedUpdateWhoseObservationWasRetitledReconciles(t *testin
 
 			// Engram then revised the observation AND changed the field the
 			// page's frontmatter derives from it.
-			fixedNow(t, time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
+			clock.Set(time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
 			obs.RevisionCount = 3
 			obs.Content = "V3 body."
 			tt.apply(&obs)
-			incoming, err := EmitPage(obs, "c-000320", nil)
+			incoming, err := EmitPage(obs, "c-000320", nil, clock.Now())
 			if err != nil {
 				t.Fatalf("EmitPage (v3): %v", err)
 			}
@@ -1293,7 +1306,7 @@ func TestBlankFrontmatterListSection_AbsentKeyIsNotInserted(t *testing.T) {
 // refusal is a skip, the skip suppresses the Save, the entry stays at the old
 // revision, and every later revision repeats it.
 //
-// The project subcase pins the comparator, not a reachable wedge: Allocate
+// The project subcase pins the comparator, not a reachable wedge: allocateAddress
 // reuses an existing page's address only when the on-disk project AND
 // engram_id both match (address.go's findPromotedPage), so an observation
 // moved to another project is handed a FRESH address and UpdateInPlace never
@@ -1305,14 +1318,14 @@ func TestUpdate_InterruptedUpdateWhoseObservationChangedDescriptiveFieldsReconci
 		apply func(*memory.Observation)
 	}{
 		{name: "sync id backfilled", apply: func(o *memory.Observation) { o.SyncID = "sync-abc123" }},
-		{name: "project differs (comparator only; not reachable via Allocate)", apply: func(o *memory.Observation) { o.Project = "some-other-project" }},
+		{name: "project differs (comparator only; not reachable via allocateAddress)", apply: func(o *memory.Observation) { o.Project = "some-other-project" }},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			vaultRoot := t.TempDir()
-			fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+			clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 			obs := memory.Observation{ID: 321, Type: "decision", Title: "Moved Observation", Content: "V1 body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
-			first, err := EmitPage(obs, "c-000321", nil)
+			first, err := EmitPage(obs, "c-000321", nil, clock.Now())
 			if err != nil {
 				t.Fatalf("EmitPage (v1): %v", err)
 			}
@@ -1323,10 +1336,10 @@ func TestUpdate_InterruptedUpdateWhoseObservationChangedDescriptiveFieldsReconci
 
 			// The interrupted write published revision 2; the sidecar Save
 			// never ran, so the entry still fingerprints revision 1.
-			fixedNow(t, time.Date(2026, 8, 10, 0, 0, 0, 0, time.UTC))
+			clock.Set(time.Date(2026, 8, 10, 0, 0, 0, 0, time.UTC))
 			obs.RevisionCount = 2
 			obs.Content = "V2 body."
-			interrupted, err := EmitPage(obs, "c-000321", nil)
+			interrupted, err := EmitPage(obs, "c-000321", nil, clock.Now())
 			if err != nil {
 				t.Fatalf("EmitPage (interrupted v2): %v", err)
 			}
@@ -1336,11 +1349,11 @@ func TestUpdate_InterruptedUpdateWhoseObservationChangedDescriptiveFieldsReconci
 
 			// Engram then revised the observation AND moved a descriptive
 			// field the page's frontmatter derives from it.
-			fixedNow(t, time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
+			clock.Set(time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
 			obs.RevisionCount = 3
 			obs.Content = "V3 body."
 			tt.apply(&obs)
-			incoming, err := EmitPage(obs, "c-000321", nil)
+			incoming, err := EmitPage(obs, "c-000321", nil, clock.Now())
 			if err != nil {
 				t.Fatalf("EmitPage (v3): %v", err)
 			}

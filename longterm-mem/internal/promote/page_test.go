@@ -13,16 +13,6 @@ import (
 
 var update = flag.Bool("update", false, "update golden files")
 
-// fixedNow swaps nowFunc for the duration of the test so EmitPage's
-// created/updated timestamps -- and hence golden comparisons -- are
-// deterministic.
-func fixedNow(t *testing.T, at time.Time) {
-	t.Helper()
-	original := nowFunc
-	nowFunc = func() time.Time { return at }
-	t.Cleanup(func() { nowFunc = original })
-}
-
 // TestEmitPage_TypeMappedOntoVaultEnum: R-027 scenario 1.
 // TestQuoteYAML_EscapesBackslashes proves quoteYAML emits a valid YAML
 // double-quoted scalar for titles carrying backslashes: an embedded
@@ -42,7 +32,7 @@ func TestQuoteYAML_EscapesBackslashes(t *testing.T) {
 }
 
 func TestEmitPage_TypeMappedOntoVaultEnum(t *testing.T) {
-	fixedNow(t, time.Date(2026, 8, 30, 0, 0, 0, 0, time.UTC))
+	clock := &fakeClock{at: time.Date(2026, 8, 30, 0, 0, 0, 0, time.UTC)}
 
 	obs := memory.Observation{
 		ID: 101, SyncID: "sync-101", Type: "decision", Title: "Widget Decision",
@@ -50,7 +40,7 @@ func TestEmitPage_TypeMappedOntoVaultEnum(t *testing.T) {
 		RevisionCount: 1, Pinned: true,
 	}
 
-	page, err := EmitPage(obs, "c-000101", nil)
+	page, err := EmitPage(obs, "c-000101", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
 	}
@@ -67,7 +57,7 @@ func TestEmitPage_TypeMappedOntoVaultEnum(t *testing.T) {
 
 // TestEmitPage_RelatedLinksResolve: R-027 scenario 2.
 func TestEmitPage_RelatedLinksResolve(t *testing.T) {
-	fixedNow(t, time.Date(2026, 8, 30, 0, 0, 0, 0, time.UTC))
+	clock := &fakeClock{at: time.Date(2026, 8, 30, 0, 0, 0, 0, time.UTC)}
 	vaultRoot := t.TempDir()
 
 	otherDir := filepath.Join(vaultRoot, "wiki", "memory")
@@ -82,7 +72,7 @@ func TestEmitPage_RelatedLinksResolve(t *testing.T) {
 	obs := memory.Observation{ID: 102, Type: "discovery", Title: "Follow-up Discovery", Content: "Details.", Project: "labdrian-sdd-overlay", RevisionCount: 3}
 	related := []Link{{Address: "c-000099", Title: "Other Page"}}
 
-	page, err := EmitPage(obs, "c-000102", related)
+	page, err := EmitPage(obs, "c-000102", related, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
 	}
@@ -98,16 +88,16 @@ func TestEmitPage_RelatedLinksResolve(t *testing.T) {
 
 // TestEmitPage_FilenameSurvivesRetitle: R-027 scenario 3.
 func TestEmitPage_FilenameSurvivesRetitle(t *testing.T) {
-	fixedNow(t, time.Date(2026, 8, 30, 0, 0, 0, 0, time.UTC))
+	clock := &fakeClock{at: time.Date(2026, 8, 30, 0, 0, 0, 0, time.UTC)}
 
 	obs := memory.Observation{ID: 103, Type: "pattern", Title: "Original Title", Content: "Body.", Project: "labdrian-sdd-overlay"}
-	first, err := EmitPage(obs, "c-000103", nil)
+	first, err := EmitPage(obs, "c-000103", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (original title): %v", err)
 	}
 
 	obs.Title = "Renamed Title"
-	second, err := EmitPage(obs, "c-000103", nil)
+	second, err := EmitPage(obs, "c-000103", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (retitled): %v", err)
 	}
@@ -123,7 +113,7 @@ func TestEmitPage_FilenameSurvivesRetitle(t *testing.T) {
 // TestEmitPage_MatchesGolden locks the fixed frontmatter field order (D7)
 // and body shape byte-for-byte (go-testing golden pattern, task 4.9).
 func TestEmitPage_MatchesGolden(t *testing.T) {
-	fixedNow(t, time.Date(2026, 8, 30, 0, 0, 0, 0, time.UTC))
+	clock := &fakeClock{at: time.Date(2026, 8, 30, 0, 0, 0, 0, time.UTC)}
 
 	obs := memory.Observation{
 		ID: 200, SyncID: "sync-200", Type: "architecture", Title: "Read-Only Store",
@@ -132,7 +122,7 @@ func TestEmitPage_MatchesGolden(t *testing.T) {
 	}
 	related := []Link{{Address: "c-000099", Title: "Other Page"}}
 
-	page, err := EmitPage(obs, "c-000200", related)
+	page, err := EmitPage(obs, "c-000200", related, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
 	}
