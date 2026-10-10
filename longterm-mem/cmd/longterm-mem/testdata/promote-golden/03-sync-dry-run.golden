@@ -1,0 +1,83 @@
+args: sync --project golden-project --dry-run
+exit: 0
+--- stdout ---
+longterm-mem: sync --dry-run: would promote 2 observation(s), patch 0 page(s), skip 2, into <vault>
+  would promote: Pinned Decision
+  would promote: Curated Note
+longterm-mem: sync --dry-run: nothing was written
+--- stderr ---
+--- vault ---
+=== .allocator-counter ===
+901
+=== .raw/.longterm-mem-manifest.json ===
+{
+  "c-000901": {
+    "body_hash": "e9580e08dd443aa69587a3668abf35f63512a06260b049075c1189a6cbc4e440",
+    "frontmatter_hash": "d0e83d33b606f21026232023f0e29a2b5a7fc1585f3e7456a1607cd2a767316d",
+    "promoted_revision": 1
+  }
+}
+=== .raw/.manifest.json ===
+{
+  "address_map": {
+    "wiki/memory/c-000901.md": "c-000901"
+  },
+  "created": "<today>",
+  "sources": {},
+  "version": 1
+}
+=== bin/setup-retrieve.sh ===
+#!/bin/sh
+exit 0
+=== scripts/allocate-address.sh ===
+#!/bin/sh
+n=900
+[ -f .allocator-counter ] && read n < .allocator-counter
+n=$((n+1))
+echo "$n" > .allocator-counter
+printf 'c-%06d\n' "$n"
+=== scripts/bm25-index.py ===
+
+=== scripts/contextual-prefix.py ===
+
+=== wiki/index.md ===
+<!-- longterm-mem:begin -->
+- [[c-000901|Below Threshold]]
+<!-- longterm-mem:end -->
+
+=== wiki/log.md ===
+## [<today>] promote | Below Threshold
+
+[[c-000901|Below Threshold]]
+
+## [<today>] promote | Below Threshold
+
+[[c-000901|Below Threshold]]
+
+=== wiki/memory/c-000901.md ===
+---
+type: concept
+title: "Below Threshold"
+address: c-000901
+aliases:
+  - "Below Threshold"
+created: <today>
+updated: <today>
+tags:
+  - "memory"
+  - "discovery"
+status: developing
+related: []
+sources: []
+engram_id: 3
+engram_sync_id: sync-3
+engram_type: discovery
+engram_revision: 1
+project: golden-project
+---
+# Below Threshold
+
+A discovery nobody curated.
+
+---
+Promoted from Engram observation 3, revision 1.

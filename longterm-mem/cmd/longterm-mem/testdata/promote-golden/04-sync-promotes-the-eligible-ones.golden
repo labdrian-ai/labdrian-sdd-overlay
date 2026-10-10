@@ -1,0 +1,165 @@
+args: sync --project golden-project
+exit: 0
+--- stdout ---
+longterm-mem: sync promoted 2 observation(s), patched 0 page(s)
+--- stderr ---
+--- vault ---
+=== .allocator-counter ===
+903
+=== .raw/.longterm-mem-manifest.json ===
+{
+  "c-000901": {
+    "body_hash": "e9580e08dd443aa69587a3668abf35f63512a06260b049075c1189a6cbc4e440",
+    "frontmatter_hash": "d0e83d33b606f21026232023f0e29a2b5a7fc1585f3e7456a1607cd2a767316d",
+    "promoted_revision": 1
+  },
+  "c-000902": {
+    "body_hash": "43c0c8b5ce7879c8a5268caa403a48eb2d07c43d4dd3a978053c14797ca3e98d",
+    "frontmatter_hash": "27061558652d08bcfc17fe21043584833f7530335f93bcd730b0636479070708",
+    "promoted_revision": 1
+  },
+  "c-000903": {
+    "body_hash": "70afa7604aeb5073bd50562c32fa0b91859333766ee7be33b869d338f6ccc784",
+    "frontmatter_hash": "0357d0afc6f88d17c5268fdfe77dd9377ed19c8c829bae83fdc0ed95d695afb4",
+    "promoted_revision": 1
+  }
+}
+=== .raw/.manifest.json ===
+{
+  "address_map": {
+    "wiki/memory/c-000901.md": "c-000901",
+    "wiki/memory/c-000902.md": "c-000902",
+    "wiki/memory/c-000903.md": "c-000903"
+  },
+  "created": "<today>",
+  "sources": {},
+  "version": 1
+}
+=== .vault-meta/.longterm-mem-provisioned ===
+<now>
+=== .vault-meta/longterm-mem-sync-state.json ===
+{
+  "schema": 1,
+  "last_sync_completed_at": "<now>"
+}
+=== bin/setup-retrieve.sh ===
+#!/bin/sh
+exit 0
+=== scripts/allocate-address.sh ===
+#!/bin/sh
+n=900
+[ -f .allocator-counter ] && read n < .allocator-counter
+n=$((n+1))
+echo "$n" > .allocator-counter
+printf 'c-%06d\n' "$n"
+=== scripts/bm25-index.py ===
+
+=== scripts/contextual-prefix.py ===
+
+=== wiki/index.md ===
+<!-- longterm-mem:begin -->
+- [[c-000901|Below Threshold]]
+- [[c-000902|Pinned Decision]]
+- [[c-000903|Curated Note]]
+<!-- longterm-mem:end -->
+
+
+
+=== wiki/log.md ===
+## [<today>] promote | Curated Note
+
+[[c-000903|Curated Note]]
+
+## [<today>] promote | Pinned Decision
+
+[[c-000902|Pinned Decision]]
+
+## [<today>] promote | Below Threshold
+
+[[c-000901|Below Threshold]]
+
+## [<today>] promote | Below Threshold
+
+[[c-000901|Below Threshold]]
+
+=== wiki/memory/c-000901.md ===
+---
+type: concept
+title: "Below Threshold"
+address: c-000901
+aliases:
+  - "Below Threshold"
+created: <today>
+updated: <today>
+tags:
+  - "memory"
+  - "discovery"
+status: developing
+related: []
+sources: []
+engram_id: 3
+engram_sync_id: sync-3
+engram_type: discovery
+engram_revision: 1
+project: golden-project
+---
+# Below Threshold
+
+A discovery nobody curated.
+
+---
+Promoted from Engram observation 3, revision 1.
+=== wiki/memory/c-000902.md ===
+---
+type: concept
+title: "Pinned Decision"
+address: c-000902
+aliases:
+  - "Pinned Decision"
+created: <today>
+updated: <today>
+tags:
+  - "memory"
+  - "decision"
+status: mature
+related: []
+sources: []
+engram_id: 1
+engram_sync_id: sync-1
+engram_type: decision
+engram_revision: 1
+project: golden-project
+---
+# Pinned Decision
+
+A decision somebody pinned.
+
+---
+Promoted from Engram observation 1, revision 1.
+=== wiki/memory/c-000903.md ===
+---
+type: concept
+title: "Curated Note"
+address: c-000903
+aliases:
+  - "Curated Note"
+created: <today>
+updated: <today>
+tags:
+  - "memory"
+  - "decision"
+status: developing
+related: []
+sources: []
+engram_id: 2
+engram_sync_id: sync-2
+engram_type: decision
+engram_revision: 1
+project: golden-project
+---
+# Curated Note
+
+A note with a curated topic key.
+
+---
+Promoted from Engram observation 2, revision 1.
