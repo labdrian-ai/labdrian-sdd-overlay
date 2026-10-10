@@ -9,7 +9,7 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/skillstale"
 )
 
-// fakeObservations is the reader port skillstale owns, implemented without a database: the detector
+// fakeObservations is the lister port skillstale owns (ObservationLister), implemented without a database: the detector
 // depends on the memory model and on that port, not on the store that serves them.
 type fakeObservations struct {
 	asked        []string
@@ -83,7 +83,25 @@ func TestDetect_RequiresAnObservationsPort(t *testing.T) {
 		Now:         fixture.now,
 		PathEnv:     fixture.pathEnv,
 	})
-	if err == nil || !strings.Contains(err.Error(), "observations reader is required") {
-		t.Fatalf("Detect without a port = %v, want an error that says the observations reader is required", err)
+	if err == nil || !strings.Contains(err.Error(), "observation lister is required") {
+		t.Fatalf("Detect without a port = %v, want an error that says the observation lister is required", err)
+	}
+}
+
+// A store that failed to open and was assigned anyway is a typed nil inside the interface, which a plain
+// comparison with nil does not see: it must be refused in the detector's own words, not panic inside the store.
+func TestDetect_RefusesAnObservationsPortHoldingANilPointer(t *testing.T) {
+	fixture := makeFixture(t)
+	var notThere *fakeObservations
+
+	_, err := skillstale.Detect(skillstale.Config{
+		ProjectRoot:  fixture.root,
+		Project:      fixtureProject,
+		Observations: notThere,
+		Now:          fixture.now,
+		PathEnv:      fixture.pathEnv,
+	})
+	if err == nil || !strings.Contains(err.Error(), "observation lister is required") {
+		t.Fatalf("Detect over a nil pointer = %v, want the same refusal as for no port", err)
 	}
 }

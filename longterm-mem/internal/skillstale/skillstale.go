@@ -140,8 +140,8 @@ func Detect(cfg Config) ([]Finding, error) {
 	if !filepath.IsAbs(cfg.ProjectRoot) {
 		return nil, fmt.Errorf("skillstale: project root must be absolute: %q", cfg.ProjectRoot)
 	}
-	if cfg.Observations == nil {
-		return nil, fmt.Errorf("skillstale: observations reader is required")
+	if memory.IsMissing(cfg.Observations) {
+		return nil, fmt.Errorf("skillstale: observation lister is required")
 	}
 
 	lockData, err := os.ReadFile(filepath.Join(cfg.ProjectRoot, ProjectLockRelPath))
