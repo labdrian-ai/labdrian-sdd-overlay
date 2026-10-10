@@ -31,6 +31,11 @@ var ErrMissingProject = errors.New("query: project is required")
 // is the failure R-060 exists to remove.
 var ErrUnknownSource = errors.New("query: unknown source")
 
+// ErrNoMemory rejects a call that asks for a source read from the memory (the lexical and the embedding
+// sources) when Deps carries no Memory, or one that holds a nil pointer: the call fails in the
+// query's own words instead of panicking inside a store that is not there.
+var ErrNoMemory = errors.New("query: no memory is configured for a source that reads it")
+
 // Result.VaultStatus values.
 const (
 	VaultStatusOK             = "ok"
@@ -418,6 +423,9 @@ func Run(ctx context.Context, deps Deps, req Request) (Result, error) {
 	wantVault := containsSource(sources, SourceVault)
 	wantFTS := containsSource(sources, SourceEngramFTS)
 	wantEmbed := containsSource(sources, SourceEngramEmbed)
+	if (wantFTS || wantEmbed) && memory.IsMissing(deps.Memory) {
+		return Result{}, ErrNoMemory
+	}
 
 	top := req.Top
 	if top <= 0 {
@@ -774,7 +782,6 @@ func attachStandings(store StandingReader, rows []ResultRow) []Diagnostic {
 	if len(ids) == 0 {
 		return nil
 	}
-
 	standings, err := store.Standings(ids)
 	if err != nil {
 		return []Diagnostic{{

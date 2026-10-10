@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vault"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vecindex"
 )
 
@@ -198,5 +199,41 @@ func TestRun_AnUnreadableSnapshotIsReportedAsZerosThatAreNotMeasurements(t *test
 	}
 	if len(result.Coverage) != 1 || result.Coverage[0].Live != 0 || result.Coverage[0].Unindexed != 0 {
 		t.Fatalf("Coverage = %+v, want one entry of zeros: an unreadable snapshot is not a measurement", result.Coverage)
+	}
+}
+
+// A query that needs the memory and was not given one fails in its own words, whether the port is absent
+// or holds a nil pointer (a store that failed to open and was assigned anyway), instead of panicking
+// inside the store.
+func TestRun_RefusesToSearchWithoutAMemory(t *testing.T) {
+	var notThere *fakeMemory
+	for name, mem := range map[string]Memory{"no port": nil, "a nil pointer": notThere} {
+		for _, source := range []string{SourceEngramFTS, SourceEngramEmbed} {
+			_, err := Run(context.Background(), Deps{Memory: mem, ResolveLink: NoLinkResolver, StateDir: t.TempDir()}, Request{Project: "p", Query: "alpha", Sources: []string{source}})
+			if !errors.Is(err, ErrNoMemory) {
+				t.Errorf("Run over %s for %s = %v, want ErrNoMemory", name, source, err)
+			}
+		}
+	}
+}
+
+// A vault-only query reads nothing from the memory, so it needs none: a link from a vault page to an
+// observation is only followed against the observations a memory source returned, and there are none. The
+// refusal above is for the sources that read the memory, not for the call as a whole.
+func TestRun_AVaultOnlyQueryNeedsNoMemory(t *testing.T) {
+	deps := Deps{
+		RetrieveVault: fakeRetrieveVault(vault.Result{Status: vault.StatusOK, Candidates: []vault.Candidate{{PageAddress: "c-000042", Snippet: "vault side"}}}, nil),
+		ResolveLink:   func(string) (int64, bool) { return 7, true },
+	}
+
+	result, err := Run(context.Background(), deps, Request{Project: "p", Query: "alpha", Sources: []string{SourceVault}})
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if len(result.Results) != 1 || result.Results[0].PageAddress != "c-000042" {
+		t.Fatalf("Results = %+v, want the vault row", result.Results)
+	}
+	if len(result.Diagnostics) != 0 {
+		t.Fatalf("diagnostics = %+v, want none: nothing was asked of the memory", result.Diagnostics)
 	}
 }
