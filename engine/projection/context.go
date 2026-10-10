@@ -338,18 +338,14 @@ func nextStage(profileName string, recorded []string) string {
 	if err != nil {
 		return "not available: profile " + strconv.Quote(sanitizeLine(profileName)) + " does not resolve, so stage guidance is omitted"
 	}
-	if len(recorded) > len(profile.Stages) {
+	if profile.CheckStagePrefix(recorded) != nil {
 		return "not available: the recorded stages do not follow the declared order of profile " + strconv.Quote(profile.Name) + ", so stage guidance is omitted"
 	}
-	for i, stage := range recorded {
-		if stage != profile.Stages[i].Name {
-			return "not available: the recorded stages do not follow the declared order of profile " + strconv.Quote(profile.Name) + ", so stage guidance is omitted"
-		}
-	}
-	if len(recorded) == len(profile.Stages) {
+	next, more := profile.NextStage(len(recorded))
+	if !more {
 		return "none: every declared stage is recorded"
 	}
-	return sanitizeLine(profile.Stages[len(recorded)].Name)
+	return sanitizeLine(next)
 }
 
 // resolvePlan is the one place the memory plan of a workflow is computed: the

@@ -12,7 +12,6 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/goal"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/memoryscope"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/roles"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflowprofile"
 )
 
 // Sentinel errors returned by Lifecycle operations. Wrap with %w so callers
@@ -437,23 +436,6 @@ func (l Lifecycle) loadVerifiedRoleChain(projectID, goalID, roleChainID string) 
 	return records, nil
 }
 
-// stageOrderPrefix checks that stages is exactly a prefix of profile's
-// declared stage order: stages[i] must equal profile.Stages[i].Name for
-// every i, and there must be no more recorded stages than the profile
-// declares. See RecordStage for how new stages are admitted one at a time
-// against this same order.
-func stageOrderPrefix(profile workflowprofile.WorkflowProfile, stages []string) error {
-	if len(stages) > len(profile.Stages) {
-		return fmt.Errorf("recorded %d stages exceeds profile %q's %d declared stages", len(stages), profile.Name, len(profile.Stages))
-	}
-	for i, stage := range stages {
-		if profile.Stages[i].Name != stage {
-			return fmt.Errorf("recorded stage %d is %q, want %q per profile %q's declared order", i, stage, profile.Stages[i].Name, profile.Name)
-		}
-	}
-	return nil
-}
-
 // Create validates g (a Goal v2) and profileName, optionally verifies a
 // referenced role chain, and appends the workflow's created event: data
 // only, binding goal_id, goal_digest, profile, and (if given) role_chain_id.
@@ -549,7 +531,7 @@ func (l Lifecycle) Resume(projectID, workflowID string) (State, error) {
 // appending anything, a stage name that is not exactly the Workflow
 // Profile's next declared stage: the stage immediately after the last one
 // already recorded, in the profile's declared stage order (see
-// stageOrderPrefix). This also rejects a stage the profile never declares
+// workflowprofile.WorkflowProfile.NextStage). This also rejects a stage the profile never declares
 // (it can never be "next") and a workflow whose profile has already
 // recorded every declared stage.
 func (l Lifecycle) RecordStage(projectID, workflowID, stage string) (State, error) {
@@ -561,10 +543,10 @@ func (l Lifecycle) RecordStage(projectID, workflowID, stage string) (State, erro
 	if err != nil {
 		return State{}, fmt.Errorf("workflow lifecycle: record stage: %w", err)
 	}
-	if len(loaded.State.Stages) >= len(profile.Stages) {
+	want, more := profile.NextStage(len(loaded.State.Stages))
+	if !more {
 		return State{}, fmt.Errorf("%w: profile %q's declared stages are all recorded", ErrStageOutOfOrder, profile.Name)
 	}
-	want := profile.Stages[len(loaded.State.Stages)].Name
 	if stage != want {
 		return State{}, fmt.Errorf("%w: got %q, want %q (profile %q's next declared stage)", ErrStageOutOfOrder, stage, want, profile.Name)
 	}
@@ -604,7 +586,7 @@ func (l Lifecycle) Verify(projectID, workflowID string) (State, error) {
 	if err != nil {
 		return State{}, fmt.Errorf("%w: %v", ErrProfileInvalid, err)
 	}
-	if err := stageOrderPrefix(profile, state.Stages); err != nil {
+	if err := profile.CheckStagePrefix(state.Stages); err != nil {
 		return State{}, fmt.Errorf("%w: %v", ErrStageOrderInvalid, err)
 	}
 	g, err := l.goals.LoadGoal(projectID, state.GoalID)
