@@ -8,6 +8,7 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/capability/presence"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflowprofile"
 )
 
 // The commands do not reach for the machine: they are handed what they run on, in two values that
@@ -78,6 +79,10 @@ type deps struct {
 	// a hung filesystem cannot hang a verb whichever prober is used. A test installs
 	// workflow.UnavailableProber, the safe default that confirms nothing.
 	workflowProber func() workflow.DependencyProber
+	// profileCatalog returns the catalog the workflow verbs resolve profiles from and compare the
+	// profile a workflow recorded with. Nil, as in the program, is the built-in catalog
+	// (profiles); a test that wants the catalog to fail replaces it.
+	profileCatalog func() workflow.ProfileCatalog
 
 	// skillsLockWait is how long a skills verb waits for a taken lock before it gives up with
 	// exit 2. Zero means filelock.DefaultWait (2 s), the bound the workflow binding store uses.
@@ -126,6 +131,14 @@ func (d deps) workingDir() (string, error) {
 // errNoEnvironment is why a deps without a function of the environment cannot answer a question
 // about it.
 var errNoEnvironment = errors.New("no environment was given")
+
+// profiles is the catalog the workflow verbs use: the deps' own, or the built-in profiles.
+func (d deps) profiles() workflow.ProfileCatalog {
+	if d.profileCatalog != nil {
+		return d.profileCatalog()
+	}
+	return workflow.ProfileCatalogFunc(workflowprofile.Resolve)
+}
 
 // dependencyProber is the prober the workflow verbs record observations with: the deps' own,
 // or the presence prober over the home and PATH of the deps and their stat access.

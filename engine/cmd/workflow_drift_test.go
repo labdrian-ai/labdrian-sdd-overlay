@@ -113,6 +113,27 @@ func (w *driftWorld) verb(t *testing.T, verb string, more ...string) (int, strin
 	return w.profileWorld.exec(append([]string{"workflow", verb, "--project", "proj-1", "--workflow", "wf-1"}, more...)...)
 }
 
+// mustDigest is the digest of the snapshot, or a failed test.
+func mustDigest(t *testing.T, s workflowprofile.Snapshot) string {
+	t.Helper()
+	digest, err := s.Digest()
+	if err != nil || digest == "" {
+		t.Fatalf("Digest() = %q, %v, want a digest", digest, err)
+	}
+	return digest
+}
+
+// mustExit requires a setup step of a test to have exited 0, so that a failure of the setup is
+// reported as one and not as a later assertion that passes or fails for the wrong reason.
+func (w *profileWorld) mustExit(t *testing.T, args ...string) string {
+	t.Helper()
+	code, out, errOut := w.exec(args...)
+	if code != 0 {
+		t.Fatalf("setup step %v = exit %d, stderr %q, want 0", args, code, errOut)
+	}
+	return out
+}
+
 // statusFields decodes the JSON a status prints into its top-level fields.
 func statusFields(t *testing.T, out string) map[string]json.RawMessage {
 	t.Helper()
@@ -125,7 +146,10 @@ func statusFields(t *testing.T, out string) map[string]json.RawMessage {
 
 func TestStatusReportsAChangedProfileOfAVersion2Workflow(t *testing.T) {
 	recorded := driftProfileChanged(t)
-	current, _ := workflowprofile.Resolve("odd")
+	current, err := workflowprofile.Resolve("odd")
+	if err != nil {
+		t.Fatal(err)
+	}
 	w := newDriftWorld(t, engineBinary(t), recorded)
 	code, out, errOut := w.verb(t, "status")
 	if code != 0 || errOut != "" {
@@ -141,8 +165,7 @@ func TestStatusReportsAChangedProfileOfAVersion2Workflow(t *testing.T) {
 	if err := json.Unmarshal(statusFields(t, out)["profile_drift"], &drift); err != nil {
 		t.Fatalf("status = %s: no profile_drift object: %v", out, err)
 	}
-	recordedDigest, _ := recorded.Snapshot().Digest()
-	currentDigest, _ := current.Snapshot().Digest()
+	recordedDigest, currentDigest := mustDigest(t, recorded.Snapshot()), mustDigest(t, current.Snapshot())
 	if drift.Kind != "changed" || drift.Profile != "odd" || drift.RecordedDigest != recordedDigest || drift.CurrentDigest != currentDigest ||
 		!reflect.DeepEqual(drift.Fields, []string{"checks", "relies_on_gentle_review"}) {
 		t.Errorf("profile_drift = %+v, want changed odd, recorded %s, current %s, fields checks and relies_on_gentle_review", drift, recordedDigest, currentDigest)
@@ -157,7 +180,7 @@ func TestStatusReportsARetiredProfileOfAVersion2Workflow(t *testing.T) {
 		t.Fatalf("status = exit %d, stderr %q, want 0 and nothing", code, errOut)
 	}
 	drift := statusFields(t, out)["profile_drift"]
-	digest, _ := retired.Snapshot().Digest()
+	digest := mustDigest(t, retired.Snapshot())
 	want := `{"kind":"retired","profile":"retired-profile","recorded_digest":"` + digest + `"}`
 	var compact bytes.Buffer
 	if err := json.Compact(&compact, drift); err != nil {
@@ -211,10 +234,18 @@ func TestVerifyOfADriftedWorkflowWarnsOnStderrAndSucceeds(t *testing.T) {
 			if code != 0 {
 				t.Fatalf("verify = exit %d, stderr %q, want 0", code, errOut)
 			}
+			// The kind the warning names is the kind status reports, read from its field.
+			var reported struct {
+				Kind string `json:"kind"`
+			}
+			_, status, _ := w.verb(t, "status")
+			if err := json.Unmarshal(statusFields(t, status)["profile_drift"], &reported); err != nil || reported.Kind != name {
+				t.Fatalf("status reports drift %q (%v), want kind %q", reported.Kind, err, name)
+			}
 			lines := strings.Split(strings.TrimSuffix(errOut, "\n"), "\n")
 			if len(lines) != 1 || !strings.HasPrefix(lines[0], "warning: workflow verify: profile drift: ") ||
-				!strings.Contains(lines[0], `"`+profile.Name+`"`) || !strings.Contains(lines[0], "("+name) {
-				t.Errorf("stderr = %q, want one warning line naming the profile and the kind (%s)", errOut, name)
+				!strings.Contains(lines[0], `"`+profile.Name+`"`) || !strings.Contains(lines[0], "("+reported.Kind) {
+				t.Errorf("stderr = %q, want one warning line naming the profile and the kind %q", errOut, reported.Kind)
 			}
 			if strings.Contains(out, "drift") {
 				t.Errorf("verify printed %s: the drift field is status's", out)
@@ -235,10 +266,14 @@ func TestOnlyVerifyWarnsOfDriftAndOnlyWhenThereIsSome(t *testing.T) {
 			t.Errorf("%v on a drifted workflow = exit %d, stderr %q, want 0 and nothing", step, code, errOut)
 		}
 	}
+	// The stage step did record the first stage of the recorded profile (it is not a vacuous exit 0).
+	if _, status, _ := w.verb(t, "status"); !strings.Contains(status, `"first"`) {
+		t.Errorf("status after the steps = %s, want the stage first recorded", status)
+	}
 	clean := newProfileWorld(t, bin, false)
 	goalFile := writeMemoryTestFile(t, clean.dir, "goal.json", memoryTestGoalJSON("proj-1", "goal-1"))
 	flags := []string{"--project", "proj-1", "--workflow", "wf-1"}
-	clean.exec(append([]string{"workflow", "create", "--goal", goalFile, "--profile", "odd"}, flags...)...)
+	clean.mustExit(t, append([]string{"workflow", "create", "--goal", goalFile, "--profile", "odd"}, flags...)...)
 	if code, _, errOut := clean.exec(append([]string{"workflow", "verify", "--goal", goalFile}, flags...)...); code != 0 || errOut != "" {
 		t.Errorf("verify without drift = exit %d, stderr %q, want 0 and nothing", code, errOut)
 	}
