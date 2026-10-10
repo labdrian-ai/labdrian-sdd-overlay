@@ -167,7 +167,9 @@ func TestGolden(t *testing.T) {
 
 			doctor, err := Doctor(context.Background(), DoctorDeps{
 				VaultRoot: vaultRoot,
-				// The doctor's command wires the adapter with the prefix its output has always carried.
+				// The doctor's command wires the adapter with the prefix its output has always carried. The
+				// literal is the golden files' own; cmd's TestCmdDoctor_ReportsAnUnparseableSidecarAsTheOpsGoldenDoes
+				// runs the command's wiring over the same damaged vault and holds it to the text recorded here.
 				Precedence:            vaultfs.New(vaultRoot, vaultfs.WithErrorPrefix("promote")),
 				PrerequisitePresent:   func(string) bool { return true },
 				StateDir:              stateDir,
