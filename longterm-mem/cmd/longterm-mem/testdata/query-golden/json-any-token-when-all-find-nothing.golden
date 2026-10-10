@@ -1,0 +1,50 @@
+args: query --project goldenproj --json dragonscale zebracorn unseenwordq
+exit: 0
+--- stdout ---
+{
+  "project": "goldenproj",
+  "query": "dragonscale zebracorn unseenwordq",
+  "vault_status": "not_requested",
+  "results": [
+    {
+      "sources": [
+        "engram-fts"
+      ],
+      "rank": 1,
+      "engram_id": 7,
+      "title": "Policy with multibyte head",
+      "snippet": "…ndú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú the policy marker word zebracorn ééééééééééééééééééééééééééééééééééééééééééééé",
+      "snippet_truncated": true,
+      "full_length": 483
+    },
+    {
+      "sources": [
+        "engram-fts"
+      ],
+      "rank": 2,
+      "engram_id": 6,
+      "title": "Session summary dragonscale",
+      "snippet": "dragonscale summary of a session",
+      "full_length": 32
+    },
+    {
+      "sources": [
+        "engram-fts"
+      ],
+      "rank": 3,
+      "engram_id": 3,
+      "title": "Dragonscale layout",
+      "snippet": "…fé; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café;  dragonscale needle in the middle más texto náutico más texto náutico más texto náutico más texto náutico más texto náutico más texto náutico más texto náutico más texto náutico más texto náutico más texto náu…",
+      "snippet_truncated": true,
+      "full_length": 2599
+    }
+  ],
+  "diagnostics": [
+    {
+      "code": "search_widened",
+      "detail": "no observation matched every term of this query, so it was retried matching any one of them: these rows answer part of the query, not all of it"
+    }
+  ],
+  "coverage": null
+}
+--- stderr ---

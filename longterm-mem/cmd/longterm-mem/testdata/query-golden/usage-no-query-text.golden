@@ -1,0 +1,5 @@
+args: query --project goldenproj
+exit: 2
+--- stdout ---
+--- stderr ---
+longterm-mem: query: a single query text argument is required

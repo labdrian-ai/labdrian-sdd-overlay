@@ -1,0 +1,23 @@
+args: query --project goldenproj --json --top 1 zebracorn
+exit: 0
+--- stdout ---
+{
+  "project": "goldenproj",
+  "query": "zebracorn",
+  "vault_status": "not_requested",
+  "results": [
+    {
+      "sources": [
+        "engram-fts"
+      ],
+      "rank": 1,
+      "engram_id": 7,
+      "title": "Policy with multibyte head",
+      "snippet": "…ndú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú the policy marker word zebracorn ééééééééééééééééééééééééééééééééééééééééééééé",
+      "snippet_truncated": true,
+      "full_length": 483
+    }
+  ],
+  "coverage": null
+}
+--- stderr ---

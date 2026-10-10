@@ -16,7 +16,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/query"
 
@@ -343,7 +343,7 @@ func TestServer_GetReturnsTheWholeObservation(t *testing.T) {
 			if id != 4242 {
 				t.Fatalf("Get called with id %d, want 4242", id)
 			}
-			return GetOutcome{Found: true, Observation: engram.Observation{
+			return GetOutcome{Found: true, Observation: memory.Observation{
 				ID: 4242, Title: "the whole thing", Content: body,
 				Project: "proj-a", Type: "decision", CreatedAt: "2026-09-01T00:00:00Z",
 			}}, nil
@@ -490,7 +490,7 @@ func TestServer_QueryTextBlockStaysReadable(t *testing.T) {
 func TestServer_GetDoesNotShipTheBodyTwice(t *testing.T) {
 	body := strings.Repeat("the whole body ", 400)
 	deps := Deps{Get: func(context.Context, int64) (GetOutcome, error) {
-		return GetOutcome{Found: true, Observation: engram.Observation{ID: 1, Title: "t", Content: body}}, nil
+		return GetOutcome{Found: true, Observation: memory.Observation{ID: 1, Title: "t", Content: body}}, nil
 	}}
 	session := connectInMemory(t, deps)
 

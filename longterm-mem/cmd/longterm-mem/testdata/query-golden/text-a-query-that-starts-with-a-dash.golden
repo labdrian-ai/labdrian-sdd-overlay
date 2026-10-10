@@ -1,0 +1,5 @@
+args: query --project goldenproj -- -foo
+exit: 0
+--- stdout ---
+longterm-mem: query "-foo" (vault_status=not_requested)
+--- stderr ---

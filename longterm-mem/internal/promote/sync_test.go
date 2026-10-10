@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 
 	_ "modernc.org/sqlite"
 )
@@ -104,7 +105,7 @@ func newFixtureEngramStore(t *testing.T, rows []fixtureObs, relations []fixtureR
 // records its precedence entry in store, and returns the written Page --
 // TestSync's revised/unchanged cases, and Propagate's tests, build on this
 // to simulate a promotion Sync/Propagate must decide whether to touch.
-func seedPromotedPage(t *testing.T, vaultRoot string, store PrecedenceStore, obs engram.Observation, addr string) Page {
+func seedPromotedPage(t *testing.T, vaultRoot string, store PrecedenceStore, obs memory.Observation, addr string) Page {
 	t.Helper()
 	page, err := EmitPage(obs, addr, nil)
 	if err != nil {
@@ -158,12 +159,12 @@ func TestSync(t *testing.T) {
 			precedence := PrecedenceStore{}
 			var seededPage Page
 			if tc.seedRevision > 0 {
-				seedObs := engram.Observation{ID: id, Type: "decision", Title: "Eligible Decision", Content: "Body content.", Project: "labdrian-sdd-overlay", RevisionCount: tc.seedRevision}
+				seedObs := memory.Observation{ID: id, Type: "decision", Title: "Eligible Decision", Content: "Body content.", Project: "labdrian-sdd-overlay", RevisionCount: tc.seedRevision}
 				seededPage = seedPromotedPage(t, vaultRoot, precedence, seedObs, "c-000042")
 			}
 
 			w := &Writer{VaultRoot: vaultRoot, Store: precedence}
-			report, err := Sync(context.Background(), Deps{Engram: store, Writer: w}, "labdrian-sdd-overlay")
+			report, err := Sync(context.Background(), Deps{Memory: store, Writer: w}, "labdrian-sdd-overlay")
 			if err != nil {
 				t.Fatalf("Sync: %v", err)
 			}
@@ -213,7 +214,7 @@ func TestSync_IndexAndSyncStateReflectCompletion(t *testing.T) {
 	var rebuildCalled bool
 	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}}
 	deps := Deps{
-		Engram: store,
+		Memory: store,
 		Writer: w,
 		RebuildIndex: func(ctx context.Context) error {
 			rebuildCalled = true
@@ -285,7 +286,7 @@ func TestSync_OneFailingObservationDoesNotWedgeTheRun(t *testing.T) {
 	var rebuildCalled bool
 	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}}
 	deps := Deps{
-		Engram:       store,
+		Memory:       store,
 		Writer:       w,
 		RebuildIndex: func(ctx context.Context) error { rebuildCalled = true; return nil },
 	}

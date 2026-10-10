@@ -14,7 +14,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/query"
 )
@@ -42,7 +42,7 @@ type Deps struct {
 	// (cmd_mcp.go wires that; see PromoteOutcome).
 	Promote func(ctx context.Context, project string, engramID int64) (PromoteOutcome, error)
 	// Get reads one observation whole, by id (cmd_mcp.go wires it to
-	// engram.Store.ObservationByID, which is read-only like every other
+	// the Engram adapter's ObservationByID, which is read-only like every other
 	// path in that package -- R-002).
 	Get func(ctx context.Context, engramID int64) (GetOutcome, error)
 }
@@ -53,7 +53,7 @@ type Deps struct {
 // a caller holding a stale result to ask about, and returning it as an
 // error would make a routine miss look like a broken server.
 type GetOutcome struct {
-	Observation engram.Observation
+	Observation memory.Observation
 	Found       bool
 }
 
@@ -286,7 +286,7 @@ func renderQuery(result QueryOut) string {
 // renderObservation writes one whole observation as text. get exists to
 // deliver a body, so the body IS the rendering; a JSON envelope around it
 // would double the one payload this tool is for.
-func renderObservation(o engram.Observation) string {
+func renderObservation(o memory.Observation) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "engram:%d %s", o.ID, o.Title)
 	if o.Type != "" {

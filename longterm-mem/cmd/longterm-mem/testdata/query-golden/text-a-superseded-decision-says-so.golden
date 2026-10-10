@@ -1,0 +1,8 @@
+args: query --project goldenproj alpha-cache
+exit: 0
+--- stdout ---
+longterm-mem: query "alpha-cache" (vault_status=not_requested)
+  [1] engram-fts engram:8 Old cache decision
+        SUPERSEDED BY engram:9 New cache decision — do not treat as current
+  [2] engram-fts engram:9 New cache decision
+--- stderr ---

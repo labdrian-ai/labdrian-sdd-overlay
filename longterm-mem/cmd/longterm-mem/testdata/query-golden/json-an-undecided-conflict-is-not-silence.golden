@@ -1,0 +1,48 @@
+args: query --project goldenproj --json delta-pending
+exit: 0
+--- stdout ---
+{
+  "project": "goldenproj",
+  "query": "delta-pending",
+  "vault_status": "not_requested",
+  "results": [
+    {
+      "sources": [
+        "engram-fts"
+      ],
+      "rank": 1,
+      "engram_id": 12,
+      "title": "Pending left",
+      "snippet": "delta-pending left",
+      "full_length": 18,
+      "standing": {
+        "unjudged": [
+          {
+            "id": 13,
+            "title": "Pending right"
+          }
+        ]
+      }
+    },
+    {
+      "sources": [
+        "engram-fts"
+      ],
+      "rank": 2,
+      "engram_id": 13,
+      "title": "Pending right",
+      "snippet": "delta-pending right",
+      "full_length": 19,
+      "standing": {
+        "unjudged": [
+          {
+            "id": 12,
+            "title": "Pending left"
+          }
+        ]
+      }
+    }
+  ],
+  "coverage": null
+}
+--- stderr ---

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 )
 
 // pagePathPrefix is the vault-relative directory promoted pages live under
@@ -46,7 +46,7 @@ type Page struct {
 // from the caller-resolved related slice, and a body carrying obs.Content
 // behind an H1 title (omitted when the content already opens with one)
 // plus a footer naming the Engram source.
-func EmitPage(obs engram.Observation, address string, related []Link) (Page, error) {
+func EmitPage(obs memory.Observation, address string, related []Link) (Page, error) {
 	if address == "" {
 		return Page{}, fmt.Errorf("promote: emit page for observation %d: address is required", obs.ID)
 	}
@@ -75,7 +75,7 @@ func EmitPage(obs engram.Observation, address string, related []Link) (Page, err
 // statusFor derives the fresh-promotion status: mature for a pinned
 // observation, developing otherwise; R-033 (slice 7) is the only place
 // that later sets superseded/archived.
-func statusFor(obs engram.Observation) string {
+func statusFor(obs memory.Observation) string {
 	if obs.Pinned {
 		return "mature"
 	}
@@ -97,7 +97,7 @@ func wikilink(address, title string) string {
 
 // renderBody renders obs.Content behind an H1 title (omitted when the
 // content already opens with one) plus a footer naming the Engram source.
-func renderBody(obs engram.Observation) string {
+func renderBody(obs memory.Observation) string {
 	content := strings.TrimRight(obs.Content, "\n")
 	var b strings.Builder
 	if !strings.HasPrefix(strings.TrimSpace(content), "# ") {

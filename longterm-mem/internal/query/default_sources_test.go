@@ -21,7 +21,7 @@ func TestDefaultSources_UnionWhenIndexExists(t *testing.T) {
 		{title: "indexed row", content: "zephyr content", project: "proj-default", vec: []float32{1, 0, 0}},
 	})
 	deps := Deps{
-		Engram:        store,
+		Memory:        store,
 		RetrieveVault: fakeRetrieveVault(vault.Result{Status: vault.StatusOK}, nil),
 		ResolveLink:   NoLinkResolver,
 		StateDir:      stateDir,
@@ -46,7 +46,7 @@ func TestDefaultSources_FTSOnlyWhenNoIndex(t *testing.T) {
 		{title: "engram row", content: "zephyr keyword", project: "proj-no-index"},
 	})
 	deps := Deps{
-		Engram:        store,
+		Memory:        store,
 		RetrieveVault: fakeRetrieveVault(vault.Result{Status: vault.StatusOK}, nil),
 		ResolveLink:   NoLinkResolver,
 		StateDir:      t.TempDir(),

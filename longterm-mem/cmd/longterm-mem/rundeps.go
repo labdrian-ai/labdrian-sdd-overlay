@@ -65,7 +65,7 @@ func freshEmbedFunc() query.EmbedFunc {
 func queryDeps(store *engram.Store, vaultRoot string, embedFn query.EmbedFunc, loadIndex func(dir string) (*vecindex.Index, error), invalidateIndex func(dir string)) query.Deps {
 	runner := &vault.Runner{Root: vaultRoot}
 	return query.Deps{
-		Engram: store,
+		Memory: store,
 		RetrieveVault: func(ctx context.Context, project, q string, n int) (vault.Result, error) {
 			return vault.Retrieve(ctx, runner, project, q, n)
 		},

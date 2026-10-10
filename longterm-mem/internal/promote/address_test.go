@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 )
 
 // allocateAddressFixture is a fake scripts/allocate-address.sh: a real
@@ -75,7 +75,7 @@ func TestAllocate_RePromotionReusesExistingAddress(t *testing.T) {
 	if err := os.MkdirAll(memoryDir, 0o755); err != nil {
 		t.Fatalf("mkdir %s: %v", memoryDir, err)
 	}
-	obs := engram.Observation{ID: 101, Type: "decision", Title: "Already Promoted", Content: "Body.", Project: "labdrian-sdd-overlay"}
+	obs := memory.Observation{ID: 101, Type: "decision", Title: "Already Promoted", Content: "Body.", Project: "labdrian-sdd-overlay"}
 	page, err := EmitPage(obs, "c-000099", nil)
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
@@ -173,7 +173,7 @@ func TestAllocate_ReuseWithoutAddressFails(t *testing.T) {
 // indirectly through re-promotion decisions.
 func TestFindPromotedPage_RevisionRoundTrips(t *testing.T) {
 	vaultRoot := t.TempDir()
-	obs := engram.Observation{ID: 201, Type: "decision", Title: "Revisioned", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 5}
+	obs := memory.Observation{ID: 201, Type: "decision", Title: "Revisioned", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 5}
 	page, err := EmitPage(obs, "c-000201", nil)
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)

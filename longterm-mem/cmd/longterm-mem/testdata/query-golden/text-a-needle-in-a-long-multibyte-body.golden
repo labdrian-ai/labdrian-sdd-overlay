@@ -1,0 +1,7 @@
+args: query --project goldenproj dragonscale
+exit: 0
+--- stdout ---
+longterm-mem: query "dragonscale" (vault_status=not_requested)
+  [1] engram-fts engram:6 Session summary dragonscale
+  [2] engram-fts engram:3 Dragonscale layout
+--- stderr ---

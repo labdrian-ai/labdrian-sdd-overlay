@@ -1,0 +1,6 @@
+args: query --project goldenproj canonical identity
+exit: 0
+--- stdout ---
+longterm-mem: query "canonical identity" (vault_status=not_requested)
+  [1] engram-fts engram:1 Canonical identity of the register writer
+--- stderr ---

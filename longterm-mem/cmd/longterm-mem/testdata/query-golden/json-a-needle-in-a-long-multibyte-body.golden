@@ -1,0 +1,33 @@
+args: query --project goldenproj --json dragonscale
+exit: 0
+--- stdout ---
+{
+  "project": "goldenproj",
+  "query": "dragonscale",
+  "vault_status": "not_requested",
+  "results": [
+    {
+      "sources": [
+        "engram-fts"
+      ],
+      "rank": 1,
+      "engram_id": 6,
+      "title": "Session summary dragonscale",
+      "snippet": "dragonscale summary of a session",
+      "full_length": 32
+    },
+    {
+      "sources": [
+        "engram-fts"
+      ],
+      "rank": 2,
+      "engram_id": 3,
+      "title": "Dragonscale layout",
+      "snippet": "…fé; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café;  dragonscale needle in the middle más texto náutico más texto náutico más texto náutico más texto náutico más texto náutico más texto náutico más texto náutico más texto náutico más texto náutico más texto náu…",
+      "snippet_truncated": true,
+      "full_length": 2599
+    }
+  ],
+  "coverage": null
+}
+--- stderr ---

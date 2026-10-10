@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 )
 
 // writePromotedPage writes page's rendered content to vaultRoot/page.Path,
@@ -44,7 +44,7 @@ func TestUpdate_UnmodifiedPageUpdatesInPlace(t *testing.T) {
 	vaultRoot := t.TempDir()
 	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
 
-	obs := engram.Observation{ID: 301, Type: "decision", Title: "Widget Decision", Content: "V1 content.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
+	obs := memory.Observation{ID: 301, Type: "decision", Title: "Widget Decision", Content: "V1 content.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
 	first, err := EmitPage(obs, "c-000301", nil)
 	if err != nil {
 		t.Fatalf("EmitPage (v1): %v", err)
@@ -104,7 +104,7 @@ func TestUpdate_RetitleKeepsSameFile(t *testing.T) {
 	vaultRoot := t.TempDir()
 	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
 
-	obs := engram.Observation{ID: 302, Type: "pattern", Title: "Original Title", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
+	obs := memory.Observation{ID: 302, Type: "pattern", Title: "Original Title", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
 	first, err := EmitPage(obs, "c-000302", nil)
 	if err != nil {
 		t.Fatalf("EmitPage (original): %v", err)
@@ -163,7 +163,7 @@ func TestUpdate_LocallyEditedPageSkippedWithDiagnostic(t *testing.T) {
 	vaultRoot := t.TempDir()
 	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
 
-	obs := engram.Observation{ID: 303, Type: "decision", Title: "Locally Edited", Content: "Original body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
+	obs := memory.Observation{ID: 303, Type: "decision", Title: "Locally Edited", Content: "Original body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
 	first, err := EmitPage(obs, "c-000303", nil)
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
@@ -221,7 +221,7 @@ func TestUpdate_UnmodifiedPageUpdatesNormally(t *testing.T) {
 	vaultRoot := t.TempDir()
 	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
 
-	obs := engram.Observation{ID: 304, Type: "decision", Title: "Not Locally Edited", Content: "Same content, no local edit.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
+	obs := memory.Observation{ID: 304, Type: "decision", Title: "Not Locally Edited", Content: "Same content, no local edit.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
 	page, err := EmitPage(obs, "c-000304", nil)
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
@@ -261,7 +261,7 @@ func TestUpdate_UnknownProvenancePageIsNotOverwritten(t *testing.T) {
 	vaultRoot := t.TempDir()
 	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
 
-	obs := engram.Observation{ID: 305, Type: "decision", Title: "Untracked On Disk", Content: "Body nobody tracked.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
+	obs := memory.Observation{ID: 305, Type: "decision", Title: "Untracked On Disk", Content: "Body nobody tracked.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
 	existing, err := EmitPage(obs, "c-000305", nil)
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
@@ -311,7 +311,7 @@ func TestUpdate_InterruptedPriorWriteReconciles(t *testing.T) {
 	vaultRoot := t.TempDir()
 	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
 
-	obs := engram.Observation{ID: 306, Type: "decision", Title: "Interrupted Write", Content: "V1 body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
+	obs := memory.Observation{ID: 306, Type: "decision", Title: "Interrupted Write", Content: "V1 body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
 	first, err := EmitPage(obs, "c-000306", nil)
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
@@ -368,7 +368,7 @@ func TestUpdate_UnrecordedOwnWriteIsAdopted(t *testing.T) {
 	vaultRoot := t.TempDir()
 	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
 
-	obs := engram.Observation{ID: 307, Type: "decision", Title: "Unrecorded Own Write", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
+	obs := memory.Observation{ID: 307, Type: "decision", Title: "Unrecorded Own Write", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
 	onDisk, err := EmitPage(obs, "c-000307", nil)
 	if err != nil {
 		t.Fatalf("EmitPage (interrupted create): %v", err)
@@ -424,7 +424,7 @@ func TestUpdate_UntrackedPageDifferingOnlyInANonVolatileFieldIsNotAdopted(t *tes
 	vaultRoot := t.TempDir()
 	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
 
-	obs := engram.Observation{ID: 308, Type: "decision", Title: "Hand Edited Status", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
+	obs := memory.Observation{ID: 308, Type: "decision", Title: "Hand Edited Status", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
 	page, err := EmitPage(obs, "c-000308", nil)
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
@@ -496,7 +496,7 @@ func TestUpdate_InterruptedUpdateRetriedOnALaterDayReconciles(t *testing.T) {
 	vaultRoot := t.TempDir()
 	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
 
-	obs := engram.Observation{ID: 309, Type: "decision", Title: "Interrupted Across Days", Content: "V1 body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
+	obs := memory.Observation{ID: 309, Type: "decision", Title: "Interrupted Across Days", Content: "V1 body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
 	first, err := EmitPage(obs, "c-000309", nil)
 	if err != nil {
 		t.Fatalf("EmitPage (v1): %v", err)
@@ -570,7 +570,7 @@ func TestUpdate_InterruptedUpdateFollowedByANewRevisionReconciles(t *testing.T) 
 	vaultRoot := t.TempDir()
 	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
 
-	obs := engram.Observation{ID: 310, Type: "decision", Title: "Interrupted Then Revised", Content: "V1 body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
+	obs := memory.Observation{ID: 310, Type: "decision", Title: "Interrupted Then Revised", Content: "V1 body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
 	first, err := EmitPage(obs, "c-000310", nil)
 	if err != nil {
 		t.Fatalf("EmitPage (v1): %v", err)
@@ -646,7 +646,7 @@ func TestUpdate_PageAheadOfTheSidecarWithAnEditedBodyIsStillSkipped(t *testing.T
 	vaultRoot := t.TempDir()
 	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
 
-	obs := engram.Observation{ID: 311, Type: "decision", Title: "Edited During The Window", Content: "V1 body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
+	obs := memory.Observation{ID: 311, Type: "decision", Title: "Edited During The Window", Content: "V1 body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
 	first, err := EmitPage(obs, "c-000311", nil)
 	if err != nil {
 		t.Fatalf("EmitPage (v1): %v", err)
@@ -780,7 +780,7 @@ func TestUpdate_FrontmatterEditInsideTheUpdateWindowIsStillSkipped(t *testing.T)
 				vaultRoot := t.TempDir()
 				fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
 
-				obs := engram.Observation{ID: 312, Type: "decision", Title: "Edited Frontmatter", Content: "V1 body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
+				obs := memory.Observation{ID: 312, Type: "decision", Title: "Edited Frontmatter", Content: "V1 body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
 				first, err := EmitPage(obs, "c-000312", nil)
 				if err != nil {
 					t.Fatalf("EmitPage (v1): %v", err)
@@ -848,7 +848,7 @@ func TestUpdate_PageLevelWithTheSidecarRevisionIsSkipped(t *testing.T) {
 	vaultRoot := t.TempDir()
 	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
 
-	obs := engram.Observation{ID: 313, Type: "decision", Title: "Level With The Sidecar", Content: "V2 body, first paragraph.", Project: "labdrian-sdd-overlay", RevisionCount: 2}
+	obs := memory.Observation{ID: 313, Type: "decision", Title: "Level With The Sidecar", Content: "V2 body, first paragraph.", Project: "labdrian-sdd-overlay", RevisionCount: 2}
 	promoted, err := EmitPage(obs, "c-000313", nil)
 	if err != nil {
 		t.Fatalf("EmitPage (v2): %v", err)
@@ -903,7 +903,7 @@ func TestUpdate_PageClaimingARevisionEngramHasNotReachedIsSkipped(t *testing.T) 
 	vaultRoot := t.TempDir()
 	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
 
-	obs := engram.Observation{ID: 314, Type: "decision", Title: "Ahead Of Engram", Content: "V1 body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
+	obs := memory.Observation{ID: 314, Type: "decision", Title: "Ahead Of Engram", Content: "V1 body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
 	first, err := EmitPage(obs, "c-000314", nil)
 	if err != nil {
 		t.Fatalf("EmitPage (v1): %v", err)
@@ -961,7 +961,7 @@ func TestUpdate_LegacyEntryWithABodyEditIsStillSkipped(t *testing.T) {
 	vaultRoot := t.TempDir()
 	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
 
-	obs := engram.Observation{ID: 316, Type: "decision", Title: "Legacy Body Edit", Content: "V2 body, first paragraph.", Project: "labdrian-sdd-overlay", RevisionCount: 2}
+	obs := memory.Observation{ID: 316, Type: "decision", Title: "Legacy Body Edit", Content: "V2 body, first paragraph.", Project: "labdrian-sdd-overlay", RevisionCount: 2}
 	promoted, err := EmitPage(obs, "c-000316", nil)
 	if err != nil {
 		t.Fatalf("EmitPage (v2): %v", err)
@@ -1015,7 +1015,7 @@ func TestUpdate_LegacyEntryLevelWithTheIncomingRevisionIsSkipped(t *testing.T) {
 	vaultRoot := t.TempDir()
 	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
 
-	obs := engram.Observation{ID: 317, Type: "decision", Title: "Legacy Level With Engram", Content: "V1 body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
+	obs := memory.Observation{ID: 317, Type: "decision", Title: "Legacy Level With Engram", Content: "V1 body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
 	first, err := EmitPage(obs, "c-000317", nil)
 	if err != nil {
 		t.Fatalf("EmitPage (v1): %v", err)
@@ -1083,7 +1083,7 @@ func TestUpdate_LegacyEntryOnAHandEditedPageIsRefused(t *testing.T) {
 	vaultRoot := t.TempDir()
 	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
 
-	obs := engram.Observation{ID: 318, Type: "decision", Title: "Legacy Hand Edit", Content: "V2 body, first paragraph.", Project: "labdrian-sdd-overlay", RevisionCount: 2}
+	obs := memory.Observation{ID: 318, Type: "decision", Title: "Legacy Hand Edit", Content: "V2 body, first paragraph.", Project: "labdrian-sdd-overlay", RevisionCount: 2}
 	promoted, err := EmitPage(obs, "c-000318", nil)
 	if err != nil {
 		t.Fatalf("EmitPage (v2): %v", err)
@@ -1138,7 +1138,7 @@ func TestUpdate_LegacyEntryOnAnUndivergedPageIsBackfilled(t *testing.T) {
 	vaultRoot := t.TempDir()
 	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
 
-	obs := engram.Observation{ID: 319, Type: "decision", Title: "Legacy Backfill", Content: "V2 body.", Project: "labdrian-sdd-overlay", RevisionCount: 2}
+	obs := memory.Observation{ID: 319, Type: "decision", Title: "Legacy Backfill", Content: "V2 body.", Project: "labdrian-sdd-overlay", RevisionCount: 2}
 	promoted, err := EmitPage(obs, "c-000319", nil)
 	if err != nil {
 		t.Fatalf("EmitPage (v2): %v", err)
@@ -1205,16 +1205,16 @@ func TestUpdate_LegacyEntryOnAnUndivergedPageIsBackfilled(t *testing.T) {
 func TestUpdate_InterruptedUpdateWhoseObservationWasRetitledReconciles(t *testing.T) {
 	for _, tt := range []struct {
 		name  string
-		apply func(*engram.Observation)
+		apply func(*memory.Observation)
 	}{
-		{name: "retitled", apply: func(o *engram.Observation) { o.Title = "A Wholly New Title" }},
-		{name: "retyped", apply: func(o *engram.Observation) { o.Type = "pattern" }},
+		{name: "retitled", apply: func(o *memory.Observation) { o.Title = "A Wholly New Title" }},
+		{name: "retyped", apply: func(o *memory.Observation) { o.Type = "pattern" }},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			vaultRoot := t.TempDir()
 			fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
 
-			obs := engram.Observation{ID: 320, Type: "decision", Title: "The Original Title", Content: "V1 body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
+			obs := memory.Observation{ID: 320, Type: "decision", Title: "The Original Title", Content: "V1 body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
 			first, err := EmitPage(obs, "c-000320", nil)
 			if err != nil {
 				t.Fatalf("EmitPage (v1): %v", err)
@@ -1302,16 +1302,16 @@ func TestBlankFrontmatterListSection_AbsentKeyIsNotInserted(t *testing.T) {
 func TestUpdate_InterruptedUpdateWhoseObservationChangedDescriptiveFieldsReconciles(t *testing.T) {
 	for _, tt := range []struct {
 		name  string
-		apply func(*engram.Observation)
+		apply func(*memory.Observation)
 	}{
-		{name: "sync id backfilled", apply: func(o *engram.Observation) { o.SyncID = "sync-abc123" }},
-		{name: "project differs (comparator only; not reachable via Allocate)", apply: func(o *engram.Observation) { o.Project = "some-other-project" }},
+		{name: "sync id backfilled", apply: func(o *memory.Observation) { o.SyncID = "sync-abc123" }},
+		{name: "project differs (comparator only; not reachable via Allocate)", apply: func(o *memory.Observation) { o.Project = "some-other-project" }},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			vaultRoot := t.TempDir()
 			fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
 
-			obs := engram.Observation{ID: 321, Type: "decision", Title: "Moved Observation", Content: "V1 body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
+			obs := memory.Observation{ID: 321, Type: "decision", Title: "Moved Observation", Content: "V1 body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
 			first, err := EmitPage(obs, "c-000321", nil)
 			if err != nil {
 				t.Fatalf("EmitPage (v1): %v", err)

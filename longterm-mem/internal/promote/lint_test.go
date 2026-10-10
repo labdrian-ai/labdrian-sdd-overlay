@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 )
 
 // writeManifest writes a minimal .raw/.manifest.json carrying addressMap,
@@ -47,7 +47,7 @@ func TestLintPage_FreshlyPromotedPagePasses(t *testing.T) {
 	fixedNow(t, time.Date(2026, 8, 30, 0, 0, 0, 0, time.UTC))
 	vaultRoot := t.TempDir()
 
-	obs := engram.Observation{ID: 42, SyncID: "sync-42", Type: "decision", Title: "Widget Rollout", Content: "Ship the widget.", Project: "labdrian-sdd-overlay", RevisionCount: 3}
+	obs := memory.Observation{ID: 42, SyncID: "sync-42", Type: "decision", Title: "Widget Rollout", Content: "Ship the widget.", Project: "labdrian-sdd-overlay", RevisionCount: 3}
 	page, err := EmitPage(obs, "c-000042", nil)
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
@@ -71,7 +71,7 @@ func TestLintPage_DanglingWikilinkIsFlagged(t *testing.T) {
 	fixedNow(t, time.Date(2026, 8, 30, 0, 0, 0, 0, time.UTC))
 	vaultRoot := t.TempDir()
 
-	obs := engram.Observation{ID: 44, SyncID: "sync-44", Type: "decision", Title: "Linked", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 3}
+	obs := memory.Observation{ID: 44, SyncID: "sync-44", Type: "decision", Title: "Linked", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 3}
 	page, err := EmitPage(obs, "c-000044", []Link{
 		{Address: "c-000100", Title: "Resolves"},
 		{Address: "c-000999", Title: "Dangling"},
@@ -116,7 +116,7 @@ func TestLintPage_UnregisteredPageIsFlagged(t *testing.T) {
 	fixedNow(t, time.Date(2026, 8, 30, 0, 0, 0, 0, time.UTC))
 	vaultRoot := t.TempDir()
 
-	obs := engram.Observation{ID: 43, Type: "decision", Title: "Unregistered", Content: "Body.", Project: "labdrian-sdd-overlay"}
+	obs := memory.Observation{ID: 43, Type: "decision", Title: "Unregistered", Content: "Body.", Project: "labdrian-sdd-overlay"}
 	page, err := EmitPage(obs, "c-000043", nil)
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)

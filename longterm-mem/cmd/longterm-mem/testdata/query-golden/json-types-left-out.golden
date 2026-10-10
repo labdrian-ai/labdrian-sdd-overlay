@@ -1,0 +1,29 @@
+args: query --project goldenproj --exclude-types session_summary,decision --json dragonscale
+exit: 0
+--- stdout ---
+{
+  "project": "goldenproj",
+  "query": "dragonscale",
+  "vault_status": "not_requested",
+  "results": [
+    {
+      "sources": [
+        "engram-fts"
+      ],
+      "rank": 1,
+      "engram_id": 3,
+      "title": "Dragonscale layout",
+      "snippet": "…fé; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café;  dragonscale needle in the middle más texto náutico más texto náutico más texto náutico más texto náutico más texto náutico más texto náutico más texto náutico más texto náutico más texto náutico más texto náu…",
+      "snippet_truncated": true,
+      "full_length": 2599
+    }
+  ],
+  "diagnostics": [
+    {
+      "code": "types_excluded",
+      "detail": "these observation types were excluded from the search at the caller's request, so matching memories of these kinds are not shown: session_summary, decision"
+    }
+  ],
+  "coverage": null
+}
+--- stderr ---

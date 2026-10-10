@@ -1,0 +1,6 @@
+args: query --project goldenproj zeta-withdrawn
+exit: 0
+--- stdout ---
+longterm-mem: query "zeta-withdrawn" (vault_status=not_requested)
+  [1] engram-fts engram:15 Withdrawn relation subject
+--- stderr ---

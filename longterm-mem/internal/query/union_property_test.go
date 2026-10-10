@@ -5,7 +5,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 )
 
 // TestMergedSetContainsEachRequestedSourcesOwnRows is R-058's property,
@@ -28,10 +28,10 @@ func TestMergedSetContainsEachRequestedSourceRow(t *testing.T) {
 		text      string
 		matchMode string
 	}{
-		{"internal/query/query.go", engram.MatchAll},                 // identifier-shaped: routes FTS
-		{"searchTokens()", engram.MatchAll},                          // identifier-shaped: routes FTS
-		{"what conventions does this module apply", engram.MatchAll}, // paraphrase: routes embed
-		{"anything", engram.MatchAny},                                // widened search: routes FTS regardless of shape
+		{"internal/query/query.go", memory.MatchAll},                 // identifier-shaped: routes FTS
+		{"searchTokens()", memory.MatchAll},                          // identifier-shaped: routes FTS
+		{"what conventions does this module apply", memory.MatchAll}, // paraphrase: routes embed
+		{"anything", memory.MatchAny},                                // widened search: routes FTS regardless of shape
 	}
 
 	for iter := 0; iter < 200; iter++ {
@@ -39,13 +39,13 @@ func TestMergedSetContainsEachRequestedSourceRow(t *testing.T) {
 		nEmbed := rnd.Intn(6)
 		q := queries[rnd.Intn(len(queries))]
 
-		var ftsRows []engram.Row
+		var ftsRows []memory.Row
 		wantIDs := make(map[int64]bool)
 		nextID := int64(1)
 		for i := 0; i < nFTS; i++ {
 			id := nextID
 			nextID++
-			ftsRows = append(ftsRows, engram.Row{ID: id, Title: fmt.Sprintf("fts-%d", id)})
+			ftsRows = append(ftsRows, memory.Row{ID: id, Title: fmt.Sprintf("fts-%d", id)})
 			wantIDs[id] = true
 		}
 		var embedRows []ResultRow

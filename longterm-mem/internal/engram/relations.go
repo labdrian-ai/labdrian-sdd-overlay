@@ -3,16 +3,9 @@ package engram
 import (
 	"fmt"
 	"strings"
-)
 
-// Edge is one accepted relation edge between two observations, identified
-// by their Engram sync_ids: memory_relations keys source_id/target_id on
-// sync_id, not the integer id (live schema #3129).
-type Edge struct {
-	Relation     string
-	SourceSyncID string
-	TargetSyncID string
-}
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
+)
 
 // acceptedRelations are the relation kinds RelatedEdges surfaces (D7); a
 // relation still "pending", or "not_conflict"/"orphaned"/"ignored", never
@@ -23,7 +16,7 @@ var acceptedRelations = []string{"related", "compatible", "scoped", "supersedes"
 // observation identified by observationID: judgment_status = 'judged',
 // superseded_at IS NULL, and relation in the accepted set, on either side
 // of the edge (D7, live schema #3129).
-func (s *Store) RelatedEdges(observationID int64) ([]Edge, error) {
+func (s *Store) RelatedEdges(observationID int64) ([]memory.Edge, error) {
 	// The placeholder list and the argument slice are both derived from
 	// acceptedRelations, so the declaration above stays the single source
 	// of truth for the accepted set's size and contents.
@@ -54,9 +47,9 @@ func (s *Store) RelatedEdges(observationID int64) ([]Edge, error) {
 	}
 	defer rows.Close()
 
-	var edges []Edge
+	var edges []memory.Edge
 	for rows.Next() {
-		var e Edge
+		var e memory.Edge
 		if err := rows.Scan(&e.Relation, &e.SourceSyncID, &e.TargetSyncID); err != nil {
 			return nil, fmt.Errorf("engram: scan relation edge row: %w", err)
 		}

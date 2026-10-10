@@ -9,6 +9,10 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflowprofile"
 )
 
+// verifiedStateMarker is what `workflow verify` prints once the workflow has been started (event 1)
+// and verified (event 2): the sequence number of the last verified event.
+const verifiedStateMarker = `"last_verified_seq": 2`
+
 // Drift is advisory (the owner's decision: nothing is refused), so a catalog that fails when it is
 // asked for the profile, with an error that is not "there is no such profile", must cost a status or
 // a verify nothing but one warning line: the state is printed as it would be, and the exit code is
@@ -26,31 +30,26 @@ func TestAFailingCatalogCostsStatusAndVerifyOneWarningAndNothingElse(t *testing.
 		})
 	}
 	flags := []string{"--project", "proj-1", "--workflow", "wf-1"}
-	for _, verb := range []struct {
-		name string
-		args []string
-	}{
-		{"status", append([]string{"status"}, flags...)},
-		{"verify", append([]string{"verify", "--goal", goalFile}, flags...)},
-	} {
-		t.Run(verb.name, func(t *testing.T) {
-			// The state the verb prints when the catalog answers is the state it prints when it does not.
-			if verb.name == "status" {
-				want := runWorkflowTestWith(e.deps, verb.args, e.dir)
-				got := runWorkflowTestWith(failing, verb.args, e.dir)
-				if got.code != 0 || got.stdout != want.stdout {
-					t.Fatalf("status over a failing catalog = exit %d, stdout %q, want exit 0 and the state %q (stderr %q)", got.code, got.stdout, want.stdout, got.stderr)
-				}
-				assertDriftCheckWarning(t, got.stderr, "status", broken)
-				return
-			}
-			got := runWorkflowTestWith(failing, verb.args, e.dir)
-			if got.code != 0 || !strings.Contains(got.stdout, `"last_verified_seq": 2`) {
-				t.Fatalf("verify over a failing catalog = exit %d, stdout %q (stderr %q), want exit 0 and the verified state", got.code, got.stdout, got.stderr)
-			}
-			assertDriftCheckWarning(t, got.stderr, "verify", broken)
-		})
-	}
+
+	t.Run("status", func(t *testing.T) {
+		args := append([]string{"status"}, flags...)
+		// The state status prints when the catalog answers is the state it prints when it does not.
+		want := runWorkflowTestWith(e.deps, args, e.dir)
+		got := runWorkflowTestWith(failing, args, e.dir)
+		if got.code != 0 || got.stdout != want.stdout {
+			t.Fatalf("status over a failing catalog = exit %d, stdout %q, want exit 0 and the state %q (stderr %q)", got.code, got.stdout, want.stdout, got.stderr)
+		}
+		assertDriftCheckWarning(t, got.stderr, "status", broken)
+	})
+
+	t.Run("verify", func(t *testing.T) {
+		args := append([]string{"verify", "--goal", goalFile}, flags...)
+		got := runWorkflowTestWith(failing, args, e.dir)
+		if got.code != 0 || !strings.Contains(got.stdout, verifiedStateMarker) {
+			t.Fatalf("verify over a failing catalog = exit %d, stdout %q (stderr %q), want exit 0 and the verified state", got.code, got.stdout, got.stderr)
+		}
+		assertDriftCheckWarning(t, got.stderr, "verify", broken)
+	})
 }
 
 // assertDriftCheckWarning requires stderr to be the one line that says why drift could not be checked.

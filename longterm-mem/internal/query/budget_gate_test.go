@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 )
 
 // Gate 0.4 of the `union-retrieval` plan: the per-row snippet budget was
@@ -23,10 +23,10 @@ import (
 func TestSnippetBudgetGate_WorstCaseFitsWithoutDroppingRows(t *testing.T) {
 	const rowsPerSource = DefaultTopN
 
-	standing := &engram.Standing{
-		SupersededBy:  []engram.Neighbour{{ID: 3239, Title: "CORRECTION: Engram MCP search DOES surface supersession — my probes were unisolated"}},
-		ConflictsWith: []engram.Neighbour{{ID: 3238, Title: "Engram conflict surfacing is save-time by design — not a retrieval defect"}},
-		Unjudged:      []engram.Neighbour{{ID: 3237, Title: "Engram's search never joins memory_relations — the judgment loop is open"}},
+	standing := &memory.Standing{
+		SupersededBy:  []memory.Neighbour{{ID: 3239, Title: "CORRECTION: Engram MCP search DOES surface supersession — my probes were unisolated"}},
+		ConflictsWith: []memory.Neighbour{{ID: 3238, Title: "Engram conflict surfacing is save-time by design — not a retrieval defect"}},
+		Unjudged:      []memory.Neighbour{{ID: 3237, Title: "Engram's search never joins memory_relations — the judgment loop is open"}},
 	}
 
 	result := Result{
@@ -39,12 +39,12 @@ func TestSnippetBudgetGate_WorstCaseFitsWithoutDroppingRows(t *testing.T) {
 			Sources: []string{SourceVault}, Rank: i + 1,
 			PageAddress: "c-000123456789", PagePath: "/home/labdrian/labdrian-brain/wiki/memory/c-000123456789.md",
 			Title:   "A promoted page with a title of the length these actually reach in practice",
-			Snippet: "…" + strings.Repeat("x", engram.SnippetBudget) + "…",
+			Snippet: "…" + strings.Repeat("x", memory.SnippetBudget) + "…",
 		})
 		result.Results = append(result.Results, ResultRow{
 			Sources: []string{SourceEngramFTS}, Rank: i + 1, EngramID: 3254,
 			Title:    "Union retrieval validated as a fourth arm: matches the better arm in every class",
-			Snippet:  "…" + strings.Repeat("x", engram.SnippetBudget) + "…",
+			Snippet:  "…" + strings.Repeat("x", memory.SnippetBudget) + "…",
 			Standing: standing,
 		})
 	}
@@ -65,11 +65,11 @@ func TestSnippetBudgetGate_WorstCaseFitsWithoutDroppingRows(t *testing.T) {
 	dropped := before - len(capped.Results)
 
 	t.Logf("worst case: %d rows, snippet budget %d, encoded %d bytes against a %d ceiling",
-		before, engram.SnippetBudget, measured, ResponseByteCeiling)
+		before, memory.SnippetBudget, measured, ResponseByteCeiling)
 	t.Logf("rows dropped by capResponse: %d", dropped)
 	if dropped > 0 {
 		t.Logf("per-row budget that would fit: about %d characters",
-			(ResponseByteCeiling-(measured-before*engram.SnippetBudget))/before)
+			(ResponseByteCeiling-(measured-before*memory.SnippetBudget))/before)
 	}
 
 	if dropped > 0 {

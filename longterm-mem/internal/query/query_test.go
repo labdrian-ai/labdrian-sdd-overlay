@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vault"
 
 	_ "modernc.org/sqlite"
@@ -119,7 +120,7 @@ func TestQuery_GroupedBySourceInNativeRankOrder(t *testing.T) {
 			{PageAddress: "c-000002", AbsolutePath: "/vault/c-000002.md", Snippet: "vault snippet two"},
 		},
 	}
-	deps := Deps{Engram: store, RetrieveVault: fakeRetrieveVault(vaultResult, nil), ResolveLink: NoLinkResolver}
+	deps := Deps{Memory: store, RetrieveVault: fakeRetrieveVault(vaultResult, nil), ResolveLink: NoLinkResolver}
 
 	got, err := Run(context.Background(), deps, Request{Project: "proj-a", Query: "zephyr keyword", Top: 10, Sources: []string{SourceVault, SourceEngramFTS}})
 	if err != nil {
@@ -162,7 +163,7 @@ func TestQuery_LinkedPairEmittedOnce(t *testing.T) {
 		Candidates: []vault.Candidate{{PageAddress: "c-000042", AbsolutePath: "/vault/c-000042.md", Snippet: "vault side snippet"}},
 	}
 	deps := Deps{
-		Engram:        store,
+		Memory:        store,
 		RetrieveVault: fakeRetrieveVault(vaultResult, nil),
 		ResolveLink: func(pageAddress string) (int64, bool) {
 			if pageAddress == "c-000042" {
@@ -201,7 +202,7 @@ func TestQuery_MissingProjectRejected(t *testing.T) {
 func TestQuery_NotProvisionedDegradesToEngramOnly(t *testing.T) {
 	store := newFixtureEngramStore(t, []fixtureObservation{{title: "engram only result", content: "keyword content", project: "proj-a"}})
 	deps := Deps{
-		Engram:        store,
+		Memory:        store,
 		RetrieveVault: fakeRetrieveVault(vault.Result{Status: vault.StatusNotProvisioned}, nil),
 		ResolveLink:   NoLinkResolver,
 	}
@@ -297,7 +298,7 @@ func TestQuery_DegradedEngramSnapshotIsReportedAsADiagnostic(t *testing.T) {
 
 	store := newDegradedFixtureEngramStore(t, []fixtureObservation{{title: "snapshot row", content: "keyword content", project: "proj-a"}})
 	deps := Deps{
-		Engram:        store,
+		Memory:        store,
 		RetrieveVault: fakeRetrieveVault(vault.Result{Status: vault.StatusOK}, nil),
 		ResolveLink:   NoLinkResolver,
 	}
@@ -328,7 +329,7 @@ func TestQuery_DegradedEngramSnapshotIsReportedAsADiagnostic(t *testing.T) {
 func TestQuery_HealthyEngramReportsNoDegradedDiagnostic(t *testing.T) {
 	store := newFixtureEngramStore(t, []fixtureObservation{{title: "live row", content: "keyword content", project: "proj-a"}})
 	deps := Deps{
-		Engram:        store,
+		Memory:        store,
 		RetrieveVault: fakeRetrieveVault(vault.Result{Status: vault.StatusOK}, nil),
 		ResolveLink:   NoLinkResolver,
 	}
@@ -354,7 +355,7 @@ func TestQuery_HealthyEngramReportsNoDegradedDiagnostic(t *testing.T) {
 // the other way.
 func TestQuery_ResultsCarryWhatTheRelationLedgerSays(t *testing.T) {
 	store, oldID, newID := newRelatedFixtureStore(t)
-	deps := Deps{Engram: store, RetrieveVault: fakeRetrieveVault(vault.Result{Status: vault.StatusNotProvisioned}, nil), ResolveLink: NoLinkResolver}
+	deps := Deps{Memory: store, RetrieveVault: fakeRetrieveVault(vault.Result{Status: vault.StatusNotProvisioned}, nil), ResolveLink: NoLinkResolver}
 
 	got, err := Run(context.Background(), deps, Request{Project: "proj-a", Query: "zephyr", Top: 10})
 	if err != nil {
@@ -442,7 +443,7 @@ func TestQuery_ReportsAWidenedSearch(t *testing.T) {
 	store := newFixtureEngramStore(t, []fixtureObservation{
 		{title: "writer", content: "the register writer sorts its keys", project: "proj-a"},
 	})
-	deps := Deps{Engram: store, RetrieveVault: fakeRetrieveVault(vault.Result{Status: vault.StatusOK}, nil), ResolveLink: NoLinkResolver}
+	deps := Deps{Memory: store, RetrieveVault: fakeRetrieveVault(vault.Result{Status: vault.StatusOK}, nil), ResolveLink: NoLinkResolver}
 
 	got, err := Run(context.Background(), deps, Request{Project: "proj-a", Query: "what conventions apply when editing the register writer", Top: 10})
 	if err != nil {
@@ -462,7 +463,7 @@ func TestQuery_SaysNothingAboutWideningWhenItDidNotWiden(t *testing.T) {
 	store := newFixtureEngramStore(t, []fixtureObservation{
 		{title: "both", content: "canonical identity resolution", project: "proj-a"},
 	})
-	deps := Deps{Engram: store, RetrieveVault: fakeRetrieveVault(vault.Result{Status: vault.StatusOK}, nil), ResolveLink: NoLinkResolver}
+	deps := Deps{Memory: store, RetrieveVault: fakeRetrieveVault(vault.Result{Status: vault.StatusOK}, nil), ResolveLink: NoLinkResolver}
 
 	got, err := Run(context.Background(), deps, Request{Project: "proj-a", Query: "canonical identity", Top: 10})
 	if err != nil {
@@ -504,7 +505,7 @@ func TestQuery_EngramRowShipsAnExtractNotTheWholeBody(t *testing.T) {
 	store := newFixtureEngramStore(t, []fixtureObservation{
 		{title: "buried", content: body, project: "proj-a"},
 	})
-	deps := Deps{Engram: store, RetrieveVault: fakeRetrieveVault(vault.Result{Status: vault.StatusOK}, nil), ResolveLink: NoLinkResolver}
+	deps := Deps{Memory: store, RetrieveVault: fakeRetrieveVault(vault.Result{Status: vault.StatusOK}, nil), ResolveLink: NoLinkResolver}
 
 	got, err := Run(context.Background(), deps, Request{Project: "proj-a", Query: "zephyr", Top: 10})
 	if err != nil {
@@ -538,7 +539,7 @@ func TestQuery_VaultRowIsNotMarkedTruncated(t *testing.T) {
 		Status:     vault.StatusOK,
 		Candidates: []vault.Candidate{{PageAddress: "c-000001", AbsolutePath: "/v/c-000001.md", Snippet: "vault side snippet"}},
 	}
-	deps := Deps{Engram: store, RetrieveVault: fakeRetrieveVault(vaultResult, nil), ResolveLink: NoLinkResolver}
+	deps := Deps{Memory: store, RetrieveVault: fakeRetrieveVault(vaultResult, nil), ResolveLink: NoLinkResolver}
 
 	got, err := Run(context.Background(), deps, Request{Project: "proj-a", Query: "zephyr", Top: 10, Sources: []string{SourceVault, SourceEngramFTS}})
 	if err != nil {
@@ -579,7 +580,7 @@ func TestQuery_ResponseNeverExceedsTheCeiling(t *testing.T) {
 		})
 	}
 	deps := Deps{
-		Engram:        store,
+		Memory:        store,
 		RetrieveVault: fakeRetrieveVault(vault.Result{Status: vault.StatusOK, Candidates: candidates}, nil),
 		ResolveLink:   NoLinkResolver,
 	}
@@ -607,7 +608,7 @@ func TestQuery_ResponseNeverExceedsTheCeiling(t *testing.T) {
 func TestQuery_CeilingKeepsTheMergeOrder(t *testing.T) {
 	store := newFixtureEngramStore(t, bigFixture(20))
 	deps := Deps{
-		Engram: store,
+		Memory: store,
 		RetrieveVault: fakeRetrieveVault(vault.Result{
 			Status:     vault.StatusOK,
 			Candidates: []vault.Candidate{{PageAddress: "c-first", AbsolutePath: "/v/first.md", Snippet: "first"}},
@@ -639,7 +640,7 @@ func TestQuery_SmallResponseIsUntouched(t *testing.T) {
 	store := newFixtureEngramStore(t, []fixtureObservation{
 		{title: "small", content: "a short note about zephyr", project: "proj-a"},
 	})
-	deps := Deps{Engram: store, RetrieveVault: fakeRetrieveVault(vault.Result{Status: vault.StatusOK}, nil), ResolveLink: NoLinkResolver}
+	deps := Deps{Memory: store, RetrieveVault: fakeRetrieveVault(vault.Result{Status: vault.StatusOK}, nil), ResolveLink: NoLinkResolver}
 
 	got, err := Run(context.Background(), deps, Request{Project: "proj-a", Query: "zephyr", Top: 10})
 	if err != nil {
@@ -663,7 +664,7 @@ func TestQuery_ExcludeTypesFiltersAndSaysSo(t *testing.T) {
 		{title: "the summary", content: "zephyr came up in this session", project: "proj-a", obsType: "session_summary"},
 		{title: "the decision", content: "zephyr was chosen deliberately", project: "proj-a", obsType: "decision"},
 	})
-	deps := Deps{Engram: store, RetrieveVault: fakeRetrieveVault(vault.Result{Status: vault.StatusOK}, nil), ResolveLink: NoLinkResolver}
+	deps := Deps{Memory: store, RetrieveVault: fakeRetrieveVault(vault.Result{Status: vault.StatusOK}, nil), ResolveLink: NoLinkResolver}
 
 	got, err := Run(context.Background(), deps, Request{Project: "proj-a", Query: "zephyr", Top: 10, ExcludeTypes: []string{"session_summary"}})
 	if err != nil {
@@ -687,7 +688,7 @@ func TestQuery_NoFilterByDefault(t *testing.T) {
 	store := newFixtureEngramStoreTyped(t, []typedObservation{
 		{title: "the summary", content: "zephyr came up in this session", project: "proj-a", obsType: "session_summary"},
 	})
-	deps := Deps{Engram: store, RetrieveVault: fakeRetrieveVault(vault.Result{Status: vault.StatusOK}, nil), ResolveLink: NoLinkResolver}
+	deps := Deps{Memory: store, RetrieveVault: fakeRetrieveVault(vault.Result{Status: vault.StatusOK}, nil), ResolveLink: NoLinkResolver}
 
 	got, err := Run(context.Background(), deps, Request{Project: "proj-a", Query: "zephyr", Top: 10})
 	if err != nil {
@@ -708,7 +709,7 @@ func TestQuery_NoFilterByDefault(t *testing.T) {
 // exists to remove.
 func TestUnknownSourceIsRefusedNotIgnored(t *testing.T) {
 	store := newFixtureEngramStore(t, nil)
-	deps := Deps{Engram: store, RetrieveVault: fakeRetrieveVault(vault.Result{Status: vault.StatusOK}, nil), ResolveLink: NoLinkResolver}
+	deps := Deps{Memory: store, RetrieveVault: fakeRetrieveVault(vault.Result{Status: vault.StatusOK}, nil), ResolveLink: NoLinkResolver}
 
 	_, err := Run(context.Background(), deps, Request{Project: "proj-a", Query: "zephyr", Sources: []string{"nonsense"}})
 	if !errors.Is(err, ErrUnknownSource) {
@@ -732,7 +733,7 @@ func TestOmittedSourcesQueriesBothEngramArmsNotVault(t *testing.T) {
 	})
 	vaultInvoked := false
 	deps := Deps{
-		Engram: store,
+		Memory: store,
 		RetrieveVault: func(context.Context, string, string, int) (vault.Result, error) {
 			vaultInvoked = true
 			return vault.Result{Status: vault.StatusOK}, nil
@@ -761,7 +762,7 @@ func TestNamingVaultInvokesIt(t *testing.T) {
 	store := newFixtureEngramStore(t, nil)
 	vaultInvoked := false
 	deps := Deps{
-		Engram: store,
+		Memory: store,
 		RetrieveVault: func(context.Context, string, string, int) (vault.Result, error) {
 			vaultInvoked = true
 			return vault.Result{Status: vault.StatusOK, Candidates: []vault.Candidate{
@@ -834,7 +835,7 @@ func TestRowFoundByBothEngramSourcesEmittedOnceAtEarliestRank(t *testing.T) {
 // section when it also appears in the (later, round-robin-merged) Engram
 // section.
 func TestLinkedPairEmittedOnceViaMerge(t *testing.T) {
-	engramRows := []engram.Row{{ID: 7, Title: "linked observation"}}
+	engramRows := []memory.Row{{ID: 7, Title: "linked observation"}}
 	vaultRows := []vault.Candidate{{PageAddress: "c-000042", AbsolutePath: "/v/c-000042.md", Snippet: "vault side"}}
 	resolveLink := func(pageAddress string) (int64, bool) {
 		if pageAddress == "c-000042" {
@@ -843,7 +844,7 @@ func TestLinkedPairEmittedOnceViaMerge(t *testing.T) {
 		return 0, false
 	}
 
-	merged := mergeResults(true, true, false, vaultRows, engramRows, nil, resolveLink, "linked observation", engram.MatchAll)
+	merged := mergeResults(true, true, false, vaultRows, engramRows, nil, resolveLink, "linked observation", memory.MatchAll)
 
 	if len(merged) != 1 {
 		t.Fatalf("len(merged) = %d, want 1 (linked pair collapsed); got %+v", len(merged), merged)

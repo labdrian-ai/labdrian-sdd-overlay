@@ -1,0 +1,22 @@
+args: query --project goldenproj --json epsilon-legacy
+exit: 0
+--- stdout ---
+{
+  "project": "goldenproj",
+  "query": "epsilon-legacy",
+  "vault_status": "not_requested",
+  "results": [
+    {
+      "sources": [
+        "engram-fts"
+      ],
+      "rank": 1,
+      "engram_id": 14,
+      "title": "Legacy row without sync id",
+      "snippet": "epsilon-legacy row",
+      "full_length": 18
+    }
+  ],
+  "coverage": null
+}
+--- stderr ---

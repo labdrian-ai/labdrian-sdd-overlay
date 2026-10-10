@@ -70,7 +70,7 @@ func cmdSync(args []string) int {
 	// longterm-mem could not write.
 	var rebuildErr error
 	deps := promote.Deps{
-		Engram: store,
+		Memory: store,
 		Writer: &promote.Writer{VaultRoot: vaultRoot, Store: precedence},
 		RebuildIndex: func(ctx context.Context) error {
 			rebuildErr = vault.Rebuild(ctx, runner, false)

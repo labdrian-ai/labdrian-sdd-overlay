@@ -1,0 +1,40 @@
+args: query --project goldenproj --json cache
+exit: 0
+--- stdout ---
+{
+  "project": "goldenproj",
+  "query": "cache",
+  "vault_status": "not_requested",
+  "results": [
+    {
+      "sources": [
+        "engram-fts"
+      ],
+      "rank": 1,
+      "engram_id": 9,
+      "title": "New cache decision",
+      "snippet": "We cache with strategy beta-cache replacing alpha-cache.",
+      "full_length": 56
+    },
+    {
+      "sources": [
+        "engram-fts"
+      ],
+      "rank": 2,
+      "engram_id": 8,
+      "title": "Old cache decision",
+      "snippet": "We cache with strategy alpha-cache.",
+      "full_length": 35,
+      "standing": {
+        "superseded_by": [
+          {
+            "id": 9,
+            "title": "New cache decision"
+          }
+        ]
+      }
+    }
+  ],
+  "coverage": null
+}
+--- stderr ---

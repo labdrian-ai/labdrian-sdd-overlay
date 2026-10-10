@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
+
 	_ "modernc.org/sqlite"
 )
 
@@ -316,7 +318,7 @@ func TestListObservations_IncludesEligibilityAndExtraFields(t *testing.T) {
 	// matching this test's own established pattern for ID. DeletedAt is
 	// asserted exactly: an active row's NULL deleted_at must read back as
 	// "", not fail the scan (7a's NULL-scan hardening).
-	want := Observation{
+	want := memory.Observation{
 		ID: got[0].ID, SyncID: "sync-abc", Type: "decision", Title: "pinned-decision",
 		Content: "fixture content", Project: "labdrian-sdd-overlay", RevisionCount: 5, Pinned: true,
 		CreatedAt: got[0].CreatedAt, UpdatedAt: got[0].UpdatedAt, DeletedAt: "",
@@ -396,7 +398,7 @@ func TestObservationsIncludingDeleted_IncludesSoftDeletedRows(t *testing.T) {
 		t.Fatalf("len(got) = %d, want 2 (active + soft-deleted, still project-scoped); got %+v", len(got), got)
 	}
 
-	byTitle := map[string]Observation{}
+	byTitle := map[string]memory.Observation{}
 	for _, o := range got {
 		byTitle[o.Title] = o
 	}

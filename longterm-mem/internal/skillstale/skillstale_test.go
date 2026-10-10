@@ -95,11 +95,11 @@ func TestDetect_ReportsStaleSignalsAndDoesNotMutate(t *testing.T) {
 	beforeDB := snapshotTree(t, filepath.Dir(fixture.dbPath))
 
 	got, err := skillstale.Detect(skillstale.Config{
-		ProjectRoot: fixture.root,
-		Project:     fixtureProject,
-		Store:       store,
-		Now:         fixture.now,
-		PathEnv:     fixture.pathEnv,
+		ProjectRoot:  fixture.root,
+		Project:      fixtureProject,
+		Observations: store,
+		Now:          fixture.now,
+		PathEnv:      fixture.pathEnv,
 	})
 	if err != nil {
 		store.Close()
@@ -160,11 +160,11 @@ func TestDetect_RemovedPathIsReportedRegardlessOfCandidateOrdering(t *testing.T)
 		t.Fatalf("engram.Open: %v", err)
 	}
 	findings, err := skillstale.Detect(skillstale.Config{
-		ProjectRoot: fixture.root,
-		Project:     fixtureProject,
-		Store:       store,
-		Now:         fixture.now,
-		PathEnv:     fixture.pathEnv,
+		ProjectRoot:  fixture.root,
+		Project:      fixtureProject,
+		Observations: store,
+		Now:          fixture.now,
+		PathEnv:      fixture.pathEnv,
 	})
 	_ = store.Close()
 	if err != nil {

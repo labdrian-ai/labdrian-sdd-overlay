@@ -3,7 +3,7 @@ package query
 import (
 	"testing"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 )
 
 // TestGateRoutesIdentifierShapesToLexicalArm (R-059): a token carrying an
@@ -12,7 +12,7 @@ import (
 // rank 1 to the FTS source, the arm that finds an exact lexical match, not
 // the embedding source, which finds only an approximate one.
 //
-// matchMode is engram.MatchAny, isolating the shape clause from the
+// matchMode is memory.MatchAny, isolating the shape clause from the
 // match-mode clause (the gate is "shape OR match-mode==MatchAll"; asserted
 // on MatchAll instead, every case here would pass regardless of whether
 // the shape check does anything at all).
@@ -29,7 +29,7 @@ func TestGateRoutesIdentifierShapesToLexicalArm(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := routeRank1(tc.query, engram.MatchAny); got != SourceEngramFTS {
+			if got := routeRank1(tc.query, memory.MatchAny); got != SourceEngramFTS {
 				t.Fatalf("routeRank1(%v) = %q, want %q", tc.query, got, SourceEngramFTS)
 			}
 		})
@@ -46,7 +46,7 @@ func TestGateRoutesIdentifierShapesToLexicalArm(t *testing.T) {
 // implementation would have pre-empted rather than ORed.
 func TestGateRoutesToFTSOnMatchAllEvenWithoutIdentifierShape(t *testing.T) {
 	query := []string{"exec", "allowlist"} // no identifier-shaped token
-	if got := routeRank1(query, engram.MatchAll); got != SourceEngramFTS {
+	if got := routeRank1(query, memory.MatchAll); got != SourceEngramFTS {
 		t.Fatalf("routeRank1(%v, MatchAll) = %q, want %q (match-mode alone must route FTS)", query, got, SourceEngramFTS)
 	}
 }
@@ -57,7 +57,7 @@ func TestGateRoutesToFTSOnMatchAllEvenWithoutIdentifierShape(t *testing.T) {
 // queries to the lexical arm by accident, defeating the whole point of
 // having an embedding arm to route to.
 //
-// matchMode is engram.MatchAny here, not MatchAll: MatchAll is itself an
+// matchMode is memory.MatchAny here, not MatchAll: MatchAll is itself an
 // independent (correct) routing signal for the FTS source (the gate is
 // "shape OR match-mode==MatchAll"), so asserting this on MatchAll would
 // pass regardless of whether the shape clause fires -- it would not
@@ -67,7 +67,7 @@ func TestGateRoutesToFTSOnMatchAllEvenWithoutIdentifierShape(t *testing.T) {
 // clause from the match-mode clause.
 func TestGateDoesNotFireOnHyphenatedEnglish(t *testing.T) {
 	query := []string{"well-known", "state-of-the-art", "results"}
-	if got := routeRank1(query, engram.MatchAny); got != SourceEngramEmbed {
+	if got := routeRank1(query, memory.MatchAny); got != SourceEngramEmbed {
 		t.Fatalf("routeRank1(%v) = %q, want %q (hyphenated English must not trip the identifier gate)", query, got, SourceEngramEmbed)
 	}
 }
@@ -93,8 +93,8 @@ func TestAnIncorrectRank1RoutingDoesNotShrinkTheGuarantee(t *testing.T) {
 		tokens    []string
 		matchMode string
 	}{
-		{"routes to fts", []string{"search.go"}, engram.MatchAll},
-		{"routes to embed", []string{"what", "conventions", "apply"}, engram.MatchAny},
+		{"routes to fts", []string{"search.go"}, memory.MatchAll},
+		{"routes to embed", []string{"what", "conventions", "apply"}, memory.MatchAny},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			// The routing decision is computed to prove it varies across

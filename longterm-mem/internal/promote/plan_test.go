@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 )
 
 // TestPlan_WritesNothingAndPredictsWhatSyncThenDoes is the whole point of a
@@ -40,12 +40,12 @@ func TestPlan_WritesNothingAndPredictsWhatSyncThenDoes(t *testing.T) {
 	}, nil)
 
 	precedence := PrecedenceStore{}
-	seedPromotedPage(t, vaultRoot, precedence, engram.Observation{
+	seedPromotedPage(t, vaultRoot, precedence, memory.Observation{
 		ID: ids[2], Type: "decision", Title: "Already Current", Content: "Body three.", Project: "p", RevisionCount: 3,
 	}, "c-000900")
 
 	w := &Writer{VaultRoot: vaultRoot, Store: precedence}
-	deps := Deps{Engram: store, Writer: w}
+	deps := Deps{Memory: store, Writer: w}
 
 	before := vaultSnapshot(t, vaultRoot)
 
@@ -156,14 +156,14 @@ func TestPlan_CountsThePagesPropagateWouldPatch(t *testing.T) {
 	})
 
 	precedence := PrecedenceStore{}
-	seedPromotedPage(t, vaultRoot, precedence, engram.Observation{
+	seedPromotedPage(t, vaultRoot, precedence, memory.Observation{
 		ID: ids[0], Type: "decision", Title: "Old Decision", Content: "Old body.", Project: "p", RevisionCount: 1,
 	}, "c-000001")
-	seedPromotedPage(t, vaultRoot, precedence, engram.Observation{
+	seedPromotedPage(t, vaultRoot, precedence, memory.Observation{
 		ID: ids[1], Type: "decision", Title: "New Decision", Content: "New body.", Project: "p", RevisionCount: 1,
 	}, "c-000002")
 
-	deps := Deps{Engram: store, Writer: &Writer{VaultRoot: vaultRoot, Store: precedence}}
+	deps := Deps{Memory: store, Writer: &Writer{VaultRoot: vaultRoot, Store: precedence}}
 
 	before := vaultSnapshot(t, vaultRoot)
 
@@ -223,7 +223,7 @@ func TestPlan_OneBrokenObservationIsReportedOnce(t *testing.T) {
 		t.Fatalf("write broken page: %v", err)
 	}
 
-	deps := Deps{Engram: store, Writer: &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}}}
+	deps := Deps{Memory: store, Writer: &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}}}
 	plan, err := Plan(context.Background(), deps, "p")
 	if err != nil {
 		t.Fatalf("Plan: %v", err)

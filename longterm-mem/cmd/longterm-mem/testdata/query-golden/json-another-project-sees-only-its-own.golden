@@ -1,0 +1,22 @@
+args: query --project otherproj --json dragonscale
+exit: 0
+--- stdout ---
+{
+  "project": "otherproj",
+  "query": "dragonscale",
+  "vault_status": "not_requested",
+  "results": [
+    {
+      "sources": [
+        "engram-fts"
+      ],
+      "rank": 1,
+      "engram_id": 5,
+      "title": "Other project dragonscale",
+      "snippet": "dragonscale from another project",
+      "full_length": 32
+    }
+  ],
+  "coverage": null
+}
+--- stderr ---

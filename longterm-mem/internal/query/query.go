@@ -14,7 +14,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vault"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vecindex"
 )
@@ -30,6 +30,11 @@ var ErrMissingProject = errors.New("query: project is required")
 // narrowing the corpus to the sources that happen to be spelled correctly
 // is the failure R-060 exists to remove.
 var ErrUnknownSource = errors.New("query: unknown source")
+
+// ErrNoMemory rejects a call that asks for a source read from the memory (the lexical and the embedding
+// sources) when Deps carries no Memory, or one that holds a nil pointer: the call fails in the
+// query's own words instead of panicking inside a store that is not there.
+var ErrNoMemory = errors.New("query: no memory is configured for a source that reads it")
 
 // Result.VaultStatus values.
 const (
@@ -108,10 +113,16 @@ const (
 	// "nothing is superseded", which is the reading that lets an abandoned
 	// decision pass as current.
 	DiagnosticRelationsUnreadable = "relations_unreadable"
-	// DiagnosticEngramDegradedSnapshot reports that Engram is being read
-	// through engram.Open's immutable=1 fallback: the results come from a
-	// point-in-time snapshot taken when the connection was opened, not
-	// from the live database.
+	// DiagnosticEngramDegradedSnapshot reports that the memory behind
+	// Deps.Memory says it is degraded (DegradationReporter.Degraded). The
+	// one implementation is internal/engram's Store, wired by
+	// cmd/longterm-mem, which falls back to SQLite's immutable=1 read when
+	// its primary read-only connection cannot be established: the results
+	// come from a point-in-time snapshot taken when the connection was
+	// opened, not from the live database. The diagnostic's code and text
+	// name Engram and immutable=1 on purpose: they are what the user sees
+	// and what the operator can act on, and are part of the output that
+	// must not change.
 	//
 	// It matters most where the connection outlives the call. The MCP
 	// server opens Engram once for a whole session (cmd_mcp.go), so a
@@ -247,9 +258,10 @@ type Request struct {
 }
 
 // Deps are Run's dependencies. RetrieveVault/ResolveLink are function seams
-// for tests; Engram is a real *engram.Store (temp DB in tests).
+// for tests; Memory is the port the package owns (a fake, or a temp DB behind
+// the Engram adapter, in tests).
 type Deps struct {
-	Engram        *engram.Store
+	Memory        Memory
 	RetrieveVault func(ctx context.Context, project, query string, top int) (vault.Result, error)
 	// ResolveLink reports the Engram id an existing promotion links to
 	// vault page pageAddress (D6 store, not built until slice 4/5).
@@ -364,9 +376,9 @@ type ResultRow struct {
 	// reads as current, and gets reintroduced. This module cannot fix that
 	// search (R-002 keeps its connection read-only); it can decline to
 	// repeat the omission.
-	Standing *engram.Standing `json:"standing,omitempty"`
-	// MatchOffset is the byte offset engram.SnippetAt should centre a
-	// re-render on, mirroring engram.Row.MatchOffset. It only matters for
+	Standing *memory.Standing `json:"standing,omitempty"`
+	// MatchOffset is the byte offset memory.SnippetAt should centre a
+	// re-render on, mirroring memory.Row.MatchOffset. It only matters for
 	// a row with Content set.
 	MatchOffset int `json:"-"`
 	// Content is the row's full Engram body, carried through the merge so
@@ -417,6 +429,9 @@ func Run(ctx context.Context, deps Deps, req Request) (Result, error) {
 	wantVault := containsSource(sources, SourceVault)
 	wantFTS := containsSource(sources, SourceEngramFTS)
 	wantEmbed := containsSource(sources, SourceEngramEmbed)
+	if (wantFTS || wantEmbed) && memory.IsMissing(deps.Memory) {
+		return Result{}, ErrNoMemory
+	}
 
 	top := req.Top
 	if top <= 0 {
@@ -429,16 +444,16 @@ func Run(ctx context.Context, deps Deps, req Request) (Result, error) {
 
 	result := Result{Project: req.Project, Query: req.Query}
 
-	var engramRows []engram.Row
-	matchMode := engram.MatchAll
+	var engramRows []memory.Row
+	matchMode := memory.MatchAll
 	if wantFTS {
-		search, err := deps.Engram.Search(req.Project, req.Query, top, req.ExcludeTypes...)
+		search, err := deps.Memory.Search(req.Project, req.Query, top, req.ExcludeTypes...)
 		if err != nil {
 			return Result{}, fmt.Errorf("query: search engram: %w", err)
 		}
 		engramRows = search.Rows
 		matchMode = search.MatchMode
-		if search.MatchMode == engram.MatchAny {
+		if search.MatchMode == memory.MatchAny {
 			result.Diagnostics = append(result.Diagnostics, Diagnostic{
 				Code:   DiagnosticSearchWidened,
 				Detail: "no observation matched every term of this query, so it was retried matching any one of them: these rows answer part of the query, not all of it",
@@ -456,7 +471,7 @@ func Run(ctx context.Context, deps Deps, req Request) (Result, error) {
 				Detail: fmt.Sprintf("these terms were not searched, as words too common to narrow anything down: %s", strings.Join(search.DroppedTokens, ", ")),
 			})
 		}
-		if degraded, cause := deps.Engram.Degraded(); degraded {
+		if degraded, cause := deps.Memory.Degraded(); degraded {
 			result.Diagnostics = append(result.Diagnostics, Diagnostic{
 				Code:   DiagnosticEngramDegradedSnapshot,
 				Detail: fmt.Sprintf("engram is being read through the immutable=1 fallback, so these results come from the snapshot taken when the connection was opened, not the live database: %s", cause),
@@ -466,7 +481,7 @@ func Run(ctx context.Context, deps Deps, req Request) (Result, error) {
 
 	var embedRows []ResultRow
 	if wantEmbed {
-		rows, coverage, diags := runEmbeddingArm(ctx, deps.Engram, deps.StateDir, req.Project, req.Query, top, deps.Embed, deps.BuildIndex, resolveLoadIndex(deps))
+		rows, coverage, diags := runEmbeddingArm(ctx, deps.Memory, deps.StateDir, req.Project, req.Query, top, deps.Embed, deps.BuildIndex, resolveLoadIndex(deps))
 		embedRows = rows
 		result.Coverage = append(result.Coverage, coverage)
 		result.Diagnostics = append(result.Diagnostics, diags...)
@@ -498,7 +513,7 @@ func Run(ctx context.Context, deps Deps, req Request) (Result, error) {
 	}
 
 	result.Results = mergeResults(wantVault, wantFTS, wantEmbed, vaultRows, engramRows, embedRows, resolveLink, req.Query, matchMode)
-	result.Diagnostics = append(result.Diagnostics, attachStandings(deps.Engram, result.Results)...)
+	result.Diagnostics = append(result.Diagnostics, attachStandings(deps.Memory, result.Results)...)
 	capResponse(&result)
 	return result, nil
 }
@@ -518,16 +533,16 @@ func containsSource(sources []string, name string) bool {
 // dropping rows.
 //
 // Below it a snippet cannot carry the sentence a match sits in -- the same
-// reasoning engram.SnippetBudget (480, derived from 2 sources x 5 rows) is
+// reasoning memory.SnippetBudget (480, derived from 2 sources x 5 rows) is
 // built from, at roughly the row count (about 20, at this ceiling) where
 // the bound should again correctly fall on row count rather than on
-// snippet length. It completes engram.SnippetBudget's derivation rather
+// snippet length. It completes memory.SnippetBudget's derivation rather
 // than contradicting it: at ordinary row counts share never gets near 120,
 // and only a caller asking for many rows at once reaches it.
 const MinSnippetBudget = 120
 
 // snippetMarkerAllowance reserves bytes for the up-to-two truncation
-// markers engram.SnippetAt may add around a cut, and for the small JSON
+// markers memory.SnippetAt may add around a cut, and for the small JSON
 // overhead a row's own "sources" list carries beyond a bare string, so a
 // row rendered at share does not exceed it once those are counted. It is a
 // constant rather than an exact per-row computation because the exact
@@ -640,7 +655,7 @@ func dropLargestSourceRow(result *Result) {
 // A row with no Content -- a vault or linked row, whose retriever already
 // cut its snippet once, or a future embedding-arm row with no match
 // position to centre on -- re-renders its existing Snippet from the
-// start, the same honest head-slice engram.SnippetAt already falls back
+// start, the same honest head-slice memory.SnippetAt already falls back
 // to when there is nothing to centre on.
 func allocateSnippetBudget(result *Result) {
 	rows := result.Results
@@ -665,8 +680,8 @@ func allocateSnippetBudget(result *Result) {
 
 	available := ResponseByteCeiling - overhead
 	share := available / n
-	if share > engram.SnippetBudget {
-		share = engram.SnippetBudget
+	if share > memory.SnippetBudget {
+		share = memory.SnippetBudget
 	}
 	if share < MinSnippetBudget {
 		share = MinSnippetBudget
@@ -694,8 +709,8 @@ func allocateSnippetBudget(result *Result) {
 		return
 	}
 	share2 := share + leftover/len(stillTruncated)
-	if share2 > engram.SnippetBudget {
-		share2 = engram.SnippetBudget
+	if share2 > memory.SnippetBudget {
+		share2 = memory.SnippetBudget
 	}
 	if share2 <= share {
 		return
@@ -707,7 +722,7 @@ func allocateSnippetBudget(result *Result) {
 
 // renderRowSnippet re-renders row's Snippet at budget, reserving
 // snippetMarkerAllowance so the rendered bytes -- including whatever
-// truncation markers engram.SnippetAt adds -- do not exceed budget.
+// truncation markers memory.SnippetAt adds -- do not exceed budget.
 //
 // A row with no Content -- a vault row, whose snippet was already cut by
 // the vault's own retriever before this module ever saw it -- has no full
@@ -727,7 +742,7 @@ func renderRowSnippet(row *ResultRow, budget int) {
 	if window < 1 {
 		window = 1
 	}
-	snippet, truncated := engram.SnippetAt(content, offset, window)
+	snippet, truncated := memory.SnippetAt(content, offset, window)
 	row.Snippet = snippet
 	if hasFullBody {
 		row.SnippetTruncated = truncated
@@ -763,7 +778,7 @@ func responseBytes(result Result) int {
 // losing the answer. It is reported rather than swallowed, because silence
 // here is indistinguishable from "nothing is superseded" -- the reading
 // that lets an abandoned decision pass as current.
-func attachStandings(store *engram.Store, rows []ResultRow) []Diagnostic {
+func attachStandings(store StandingReader, rows []ResultRow) []Diagnostic {
 	ids := make([]int64, 0, len(rows))
 	for _, r := range rows {
 		if r.EngramID != 0 {
@@ -773,7 +788,6 @@ func attachStandings(store *engram.Store, rows []ResultRow) []Diagnostic {
 	if len(ids) == 0 {
 		return nil
 	}
-
 	standings, err := store.Standings(ids)
 	if err != nil {
 		return []Diagnostic{{
@@ -801,7 +815,7 @@ func attachStandings(store *engram.Store, rows []ResultRow) []Diagnostic {
 // sources' own rows are offered first each round -- the only thing that
 // decides is which row lands at rank 1; interleaveEngramSources itself
 // never consults it, so the union guarantee is untouched by the decision.
-func mergeResults(wantVault, wantFTS, wantEmbed bool, vaultRows []vault.Candidate, engramRows []engram.Row, embedRows []ResultRow, resolveLink func(string) (int64, bool), queryText, matchMode string) []ResultRow {
+func mergeResults(wantVault, wantFTS, wantEmbed bool, vaultRows []vault.Candidate, engramRows []memory.Row, embedRows []ResultRow, resolveLink func(string) (int64, bool), queryText, matchMode string) []ResultRow {
 	consumed := make(map[int64]bool, len(engramRows)+len(embedRows))
 	var merged []ResultRow
 
@@ -853,7 +867,7 @@ func mergeResults(wantVault, wantFTS, wantEmbed bool, vaultRows []vault.Candidat
 	if wantFTS && wantEmbed {
 		// engramSourceList is [FTS, Embed] by construction above; swap
 		// only when the gate names the embedding arm as rank 1's owner.
-		tokens, _ := engram.SearchTokens(queryText)
+		tokens, _ := memory.SearchTokens(queryText)
 		if routeRank1(tokens, matchMode) == SourceEngramEmbed {
 			engramSourceList[0], engramSourceList[1] = engramSourceList[1], engramSourceList[0]
 		}
@@ -931,7 +945,7 @@ func appendSourceOnce(list []string, name string) []string {
 // FTS is searched first so that when both arms hold the observation the
 // consumed row is the FTS one, matching the pre-JD-4 behaviour exactly;
 // the embed copy is then dropped by the consumed check downstream.
-func matchLinkedObservation(pageAddress string, engramRows []engram.Row, embedRows []ResultRow, resolveLink func(string) (int64, bool)) (int64, string, bool) {
+func matchLinkedObservation(pageAddress string, engramRows []memory.Row, embedRows []ResultRow, resolveLink func(string) (int64, bool)) (int64, string, bool) {
 	if resolveLink == nil {
 		return 0, "", false
 	}
