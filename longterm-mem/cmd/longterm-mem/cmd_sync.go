@@ -10,7 +10,6 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vault"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultfs"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultreg"
 )
 
@@ -55,7 +54,7 @@ func cmdSync(args []string) int {
 	defer store.Close()
 	declareDegradedEngram(store, "sync")
 
-	vaultFiles := vaultfs.New(vaultRoot)
+	vaultFiles := openVault(vaultRoot)
 	precedence, err := vaultFiles.LoadPrecedence()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "longterm-mem: sync: %v\n", err)

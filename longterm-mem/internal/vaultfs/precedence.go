@@ -14,7 +14,7 @@ import (
 // promoted under this tracking. A sidecar that cannot be read, or is not a store, is an error that names
 // the file and no store.
 //
-// The errors begin "promote: read" and "promote: parse", as they did when promotion read the file itself.
+// The errors say "read" or "parse" and name the file, behind the Vault's error prefix if it has one.
 func (v *Vault) LoadPrecedence() (promote.PrecedenceStore, error) {
 	full := v.layout.Path(vaultlayout.PrecedenceFile)
 	data, err := os.ReadFile(full)
@@ -22,11 +22,11 @@ func (v *Vault) LoadPrecedence() (promote.PrecedenceStore, error) {
 		if os.IsNotExist(err) {
 			return promote.PrecedenceStore{}, nil
 		}
-		return nil, fmt.Errorf("promote: read %s: %w", full, err)
+		return nil, v.fail(fmt.Errorf("read %s: %w", full, err))
 	}
 	store := promote.PrecedenceStore{}
 	if err := json.Unmarshal(data, &store); err != nil {
-		return nil, fmt.Errorf("promote: parse %s: %w", full, err)
+		return nil, v.fail(fmt.Errorf("parse %s: %w", full, err))
 	}
 	return store, nil
 }
@@ -38,7 +38,10 @@ func (v *Vault) SavePrecedence(store promote.PrecedenceStore) error {
 	full := v.layout.Path(vaultlayout.PrecedenceFile)
 	data, err := json.MarshalIndent(store, "", "  ")
 	if err != nil {
-		return fmt.Errorf("promote: marshal %s: %w", full, err)
+		return v.fail(fmt.Errorf("marshal %s: %w", full, err))
 	}
-	return writeFileAtomic(full, append(data, '\n'))
+	if err := writeFileAtomic(full, append(data, '\n')); err != nil {
+		return v.fail(err)
+	}
+	return nil
 }

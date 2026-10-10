@@ -11,7 +11,6 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/ops"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vault"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultfs"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultreg"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vecindex"
 )
@@ -63,7 +62,7 @@ func cmdDoctor(args []string) int {
 
 	deps := ops.DoctorDeps{
 		VaultRoot:           vaultRoot,
-		Precedence:          vaultfs.New(vaultRoot),
+		Precedence:          openVault(vaultRoot),
 		PrerequisitePresent: vault.PrerequisitePresent,
 		// StateDir/LiveObservationIDs/EmbeddingBackendCheck back the three
 		// embedding-index checks (R-064). This command takes no

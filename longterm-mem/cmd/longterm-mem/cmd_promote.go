@@ -10,7 +10,6 @@ import (
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultfs"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultreg"
 )
 
@@ -153,7 +152,7 @@ func cmdPromoteReconcile(args []string) int {
 		return vaultExitCode(err)
 	}
 
-	outcome, err := promote.Reconcile(vaultRoot, resolvedProject, address, vaultfs.New(vaultRoot))
+	outcome, err := promote.Reconcile(vaultRoot, resolvedProject, address, openVault(vaultRoot))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "longterm-mem: promote reconcile: %v\n", err)
 		switch {

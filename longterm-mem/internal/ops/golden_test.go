@@ -166,8 +166,9 @@ func TestGolden(t *testing.T) {
 			stateDir, liveIDs := newHealthyEmbeddingDeps(t)
 
 			doctor, err := Doctor(context.Background(), DoctorDeps{
-				VaultRoot:             vaultRoot,
-				Precedence:            vaultfs.New(vaultRoot),
+				VaultRoot: vaultRoot,
+				// The doctor's command wires the adapter with the prefix its output has always carried.
+				Precedence:            vaultfs.New(vaultRoot, vaultfs.WithErrorPrefix("promote")),
 				PrerequisitePresent:   func(string) bool { return true },
 				StateDir:              stateDir,
 				LiveObservationIDs:    func(string) ([]int64, error) { return liveIDs, nil },

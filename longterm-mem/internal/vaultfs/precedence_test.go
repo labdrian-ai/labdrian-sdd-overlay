@@ -1,6 +1,7 @@
 package vaultfs
 
 import (
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -249,7 +250,7 @@ func TestLoadPrecedenceReportsASidecarThatCannotBeRead(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	store, err := New(root).LoadPrecedence()
+	store, err := New(root, WithErrorPrefix("promote")).LoadPrecedence()
 	if err == nil {
 		t.Fatalf("LoadPrecedence = %+v, nil error, want the read failure", store)
 	}
@@ -272,7 +273,7 @@ func TestLoadPrecedenceReportsASidecarThatIsNotJSON(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	store, err := New(root).LoadPrecedence()
+	store, err := New(root, WithErrorPrefix("promote")).LoadPrecedence()
 	if err == nil {
 		t.Fatalf("LoadPrecedence = %+v, nil error, want the parse failure", store)
 	}
@@ -292,14 +293,64 @@ func TestSavePrecedenceReportsASidecarItCannotReplace(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err := New(root).SavePrecedence(promote.PrecedenceStore{"c-000001": {BodyHash: "b", FrontmatterHash: "f"}})
+	err := New(root, WithErrorPrefix("promote")).SavePrecedence(promote.PrecedenceStore{"c-000001": {BodyHash: "b", FrontmatterHash: "f"}})
 	if err == nil {
 		t.Fatal("SavePrecedence = nil error, want the failure to replace a directory")
 	}
 	if !strings.HasPrefix(err.Error(), "promote: ") {
-		t.Errorf("error %q does not start with the prefix promotion has always given it", err)
+		t.Errorf("error %q does not start with the prefix the composition root asked for", err)
 	}
 	if info, statErr := os.Stat(sidecarPath(root)); statErr != nil || !info.IsDir() {
 		t.Errorf("what was at the sidecar's path is gone (stat err = %v)", statErr)
 	}
+}
+
+// The adapter names no consumer: left to itself its errors begin with what failed, and the prefix a command's output
+// has always carried is the composition root's to ask for, through WithErrorPrefix. A prefix is added once, to
+// the failure of a load, a parse, a marshal and a replace alike, and the cause stays reachable.
+func TestErrorsCarryNoPrefixUnlessOneIsAskedFor(t *testing.T) {
+	t.Run("a sidecar that cannot be read", func(t *testing.T) {
+		root := t.TempDir()
+		if err := os.MkdirAll(sidecarPath(root), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		_, plain := New(root).LoadPrecedence()
+		_, prefixed := New(root, WithErrorPrefix("promote")).LoadPrecedence()
+		if plain == nil || prefixed == nil {
+			t.Fatalf("errors = (%v, %v), want both to fail", plain, prefixed)
+		}
+		if want := "read " + sidecarPath(root) + ": "; !strings.HasPrefix(plain.Error(), want) {
+			t.Errorf("unprefixed error %q does not start with %q", plain, want)
+		}
+		if want := "promote: " + plain.Error(); prefixed.Error() != want {
+			t.Errorf("prefixed error %q, want %q", prefixed, want)
+		}
+	})
+	t.Run("a sidecar that cannot be replaced", func(t *testing.T) {
+		root := t.TempDir()
+		if err := os.MkdirAll(sidecarPath(root), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		store := promote.PrecedenceStore{"c-000001": {BodyHash: "b", FrontmatterHash: "f"}}
+		plain := New(root).SavePrecedence(store)
+		prefixed := New(root, WithErrorPrefix("promote")).SavePrecedence(store)
+		if plain == nil || prefixed == nil {
+			t.Fatalf("errors = (%v, %v), want both to fail", plain, prefixed)
+		}
+		if strings.HasPrefix(plain.Error(), "promote: ") {
+			t.Errorf("unprefixed error %q carries a consumer's name", plain)
+		}
+		// The temporary file's name differs from one call to the next, so the two are compared as far as the
+		// file they name.
+		stable := len(plain.Error())
+		if i := strings.Index(plain.Error(), sidecarPath(root)); i >= 0 {
+			stable = i + len(sidecarPath(root))
+		}
+		if got, want := strings.TrimPrefix(prefixed.Error(), "promote: "), plain.Error(); !strings.HasPrefix(got, want[:stable]) || got == prefixed.Error() {
+			t.Errorf("prefixed error %q is not %q behind the prefix", prefixed, want[:stable])
+		}
+		if errors.Unwrap(prefixed) == nil {
+			t.Errorf("the prefixed error %q does not wrap the failure it reports", prefixed)
+		}
+	})
 }
