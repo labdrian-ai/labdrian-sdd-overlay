@@ -10,15 +10,6 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings"
 )
 
-func mustJSONString(t *testing.T, v interface{}) string {
-	t.Helper()
-	b, err := json.Marshal(v)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return string(b)
-}
-
 // merge-settings installs the guard and uninstall-hooks removes it, through the
 // same verbs install-hooks and uninstall-hooks call.
 func TestRunMergeSettingsAndUninstallHooks_ManageTheApproveGuard(t *testing.T) {
@@ -58,4 +49,15 @@ func TestRunMergeSettingsAndUninstallHooks_ManageTheApproveGuard(t *testing.T) {
 	if n := count(); n != 0 {
 		t.Errorf("uninstall-hooks left %d approve guard entries", n)
 	}
+}
+
+// mustJSONString is the JSON of v as text, for a test that looks for a word in an entry of a
+// settings object without caring how the entry is laid out. This test is its only user.
+func mustJSONString(t *testing.T, v interface{}) string {
+	t.Helper()
+	b, err := json.Marshal(v)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(b)
 }

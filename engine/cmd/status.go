@@ -22,11 +22,16 @@ import (
 func runStatus(_ []string) {
 	// A directory that cannot be determined is none: the registry is then not looked for.
 	cwd, _ := os.Getwd()
-	service := status.Service{Files: fsfiles.Files{}, Settings: settingsfile.Reader{}}
-	outcome := statusCore(os.Stdout, service, status.Request{Home: os.Getenv("HOME"), Cwd: cwd})
+	outcome := statusCore(os.Stdout, newStatusService(), status.Request{Home: os.Getenv("HOME"), Cwd: cwd})
 	if code := statusExitCode(outcome); code != 0 {
 		os.Exit(code)
 	}
+}
+
+// newStatusService is the status use case over the files of the machine: the one place the
+// adapters of its two ports are named.
+func newStatusService() status.Service {
+	return status.Service{Files: fsfiles.Files{}, Settings: settingsfile.Reader{}}
 }
 
 // statusCore runs the checks of an installation and writes the report to stdout, one line per

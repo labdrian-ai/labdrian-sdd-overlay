@@ -7,11 +7,17 @@ import (
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings/settingsfile"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/status"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/status/fsfiles"
 )
 
-// canned is a status service whose ports answer what a test says, so the command is tested for
-// what it adds to the use case: the lines it prints and the code it exits with.
+// The command is tested for what it adds to the use case: the lines it prints, the code it exits
+// with and the adapters it wires. The checks themselves are the status package's tests, so the
+// ports here answer a fixed world.
+
+// cannedFiles is the Files port of a world in which every path is an executable file that can be
+// statted and no file can be read: the binary is there, the contract is not.
 type cannedFiles struct{ mode fs.FileMode }
 
 func (f cannedFiles) Stat(string) (fs.FileMode, error) { return f.mode, nil }
@@ -19,6 +25,8 @@ func (f cannedFiles) ReadFile(string) ([]byte, error) {
 	return nil, &fs.PathError{Op: "open", Err: fs.ErrNotExist}
 }
 
+// cannedSettings is the SettingsSource port of a world whose settings.json is read with err, and
+// holds nothing otherwise.
 type cannedSettings struct{ err error }
 
 func (s cannedSettings) Settings(string) (settings.Document, error) {
@@ -61,16 +69,38 @@ func TestTheExitCodeOfStatusSeparatesBrokenFromBehind(t *testing.T) {
 	}
 }
 
-func TestStatusCoreWritesTheReportOfTheServiceAndAnswersItsOutcome(t *testing.T) {
+func TestStatusCoreWritesTheWholeReportOfTheServiceAndAnswersItsOutcome(t *testing.T) {
 	service := status.Service{Files: cannedFiles{mode: 0o755}, Settings: cannedSettings{err: errors.New("boom")}}
 	var out bytes.Buffer
 	outcome := statusCore(&out, service, status.Request{Home: "/h"})
 	if outcome != status.Failed {
 		t.Errorf("outcome = %v, want Failed: the settings could not be read", outcome)
 	}
-	want := "[OK  ] binary: /h/.claude/bin/gentle-ai-overlay\n" +
-		"[FAIL] hook: UserPromptSubmit (propagate) — cannot read /h/.claude/settings.json: boom\n"
-	if got := out.String(); len(got) < len(want) || got[:len(want)] != want {
-		t.Errorf("the report begins\n%s\nwant it to begin\n%s", got, want)
+	const unreadable = " — cannot read /h/.claude/settings.json: boom\n"
+	want := "[OK  ] binary: /h/.claude/bin/gentle-ai-overlay\n"
+	for _, label := range []string{
+		"hook: UserPromptSubmit (propagate)",
+		`hook: PreToolUse matcher="Agent" (gate-task)`,
+		"hook: SessionEnd (sync-trigger)",
+		`hook: PreToolUse matcher="Bash" (review-receipt)`,
+		"guard: shaper clearance record (PreToolUse + permissions.deny)",
+		"hooks: projection (UserPromptSubmit + PreToolUse gates)",
+		"guard: skills approve (PreToolUse Bash + file tools)",
+	} {
+		want += "[FAIL] " + label + unreadable
+	}
+	want += "[FAIL] contract: /h/.claude/skills/_shared/minimalism-contract.md — not found\n"
+	if out.String() != want {
+		t.Errorf("the report is\n%s\nwant\n%s", out.String(), want)
+	}
+}
+
+func TestTheStatusCommandIsWiredToTheFileSystemAndTheSettingsFile(t *testing.T) {
+	service := newStatusService()
+	if _, ok := service.Files.(fsfiles.Files); !ok {
+		t.Errorf("Files is %T, want the file system adapter", service.Files)
+	}
+	if _, ok := service.Settings.(settingsfile.Reader); !ok {
+		t.Errorf("Settings is %T, want the settings.json reader", service.Settings)
 	}
 }
