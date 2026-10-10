@@ -219,12 +219,11 @@ func checkAddressMapIntegrity(vaultRoot string, addresses AddressMapReader) Chec
 // checkWikiRegistrationConsistency reports every promoted page absent from
 // the vault's master catalog (wiki/index.md) and/or its append-only
 // promotion log (wiki/log.md) (R-011 scenario: "Unregistered promoted page
-// is named"). The catalog half reuses the inbound-index-link
-// rule LintPage runs among its others (promote.CheckInboundIndexLink, which
-// needs no address map) -- the same
-// on-disk marker block RegisterIndex writes -- rather than
-// re-implementing it; LintPage has no equivalent log.md rule, so the log
-// half is this check's own, small and self-contained.
+// is named"). The catalog half reuses the inbound-index-link rule that
+// LintPage runs among its others (promote.CheckInboundIndexLink, which needs
+// no address map) -- the same on-disk marker block RegisterIndex writes --
+// rather than re-implementing it; LintPage has no equivalent log.md rule, so
+// the log half is this check's own, small and self-contained.
 func checkWikiRegistrationConsistency(vaultRoot string) Check {
 	pages, unreadable, err := loadPromotedPages(vaultRoot)
 	if err != nil {
