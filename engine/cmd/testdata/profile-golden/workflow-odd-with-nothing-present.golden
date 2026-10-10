@@ -1,0 +1,221 @@
+$ memory plan --profile odd
+exit: 2
+--- stdout ---
+--- stderr ---
+error: memory plan: project_id is required for scope "project"
+
+$ memory plan --profile odd --goal <GOAL>
+exit: 0
+--- stdout ---
+{
+  "scope": "project",
+  "sources": [
+    "engram",
+    "longterm-mem",
+    "procedural-skills"
+  ],
+  "filters": {
+    "project_id": "proj-1"
+  },
+  "write": "none",
+  "authority": "this plan executes no query and grants no memory write; executing it is a runtime adapter's responsibility outside this package (Phase 7)",
+  "omitted_filters": [
+    "goal_id"
+  ]
+}
+--- stderr ---
+
+$ workflow create --project proj-1 --workflow wf-1 --goal <GOAL> --profile odd
+exit: 0
+--- stdout ---
+{
+  "classification": "owned",
+  "status": "created",
+  "profile": "odd",
+  "goal_id": "goal-1",
+  "goal_digest": "3fa80a4c34f1198a2fe03c95ecaaab97721dd5a94dce91612f2612b4208e54ac",
+  "stages": [],
+  "last_verified_seq": -1
+}
+--- stderr ---
+
+observations of the created event:
+  memory:engram: unavailable (the Engram database file was not found: no such file)
+  memory:longterm-mem: unavailable (the longterm-mem registration record was not found: no such file)
+  memory:procedural-skills: unavailable (no presence check exists for procedural skills)
+  gentle-ai-review: unavailable (the gentle-ai binary was not found in the absolute PATH directories)
+
+$ workflow start --project proj-1 --workflow wf-1
+exit: 0
+--- stdout ---
+status running, stages []
+--- stderr ---
+
+$ workflow stage --project proj-1 --workflow wf-1 --stage close
+exit: 2
+--- stdout ---
+--- stderr ---
+error: workflow stage: workflow lifecycle: stage is not the profile's next declared stage: got "close", want "authorize" (profile "odd"'s next declared stage)
+
+$ workflow stage --project proj-1 --workflow wf-1 --stage no-such-stage
+exit: 2
+--- stdout ---
+--- stderr ---
+error: workflow stage: workflow lifecycle: stage is not the profile's next declared stage: got "no-such-stage", want "authorize" (profile "odd"'s next declared stage)
+
+$ workflow stage --project proj-1 --workflow wf-1 --stage authorize
+exit: 0
+--- stdout ---
+status running, stages [authorize]
+--- stderr ---
+
+$ workflow stage --project proj-1 --workflow wf-1 --stage authorize
+exit: 2
+--- stdout ---
+--- stderr ---
+error: workflow stage: workflow lifecycle: stage is not the profile's next declared stage: got "authorize", want "explore" (profile "odd"'s next declared stage)
+
+$ workflow stage --project proj-1 --workflow wf-1 --stage no-such-stage
+exit: 2
+--- stdout ---
+--- stderr ---
+error: workflow stage: workflow lifecycle: stage is not the profile's next declared stage: got "no-such-stage", want "explore" (profile "odd"'s next declared stage)
+
+$ workflow stage --project proj-1 --workflow wf-1 --stage close
+exit: 2
+--- stdout ---
+--- stderr ---
+error: workflow stage: workflow lifecycle: stage is not the profile's next declared stage: got "close", want "explore" (profile "odd"'s next declared stage)
+
+$ workflow stage --project proj-1 --workflow wf-1 --stage explore
+exit: 0
+--- stdout ---
+status running, stages [authorize explore]
+--- stderr ---
+
+$ workflow stage --project proj-1 --workflow wf-1 --stage resolve-uncertainty
+exit: 0
+--- stdout ---
+status running, stages [authorize explore resolve-uncertainty]
+--- stderr ---
+
+$ workflow stage --project proj-1 --workflow wf-1 --stage classify
+exit: 0
+--- stdout ---
+status running, stages [authorize explore resolve-uncertainty classify]
+--- stderr ---
+
+$ workflow stage --project proj-1 --workflow wf-1 --stage track-if-substantial
+exit: 0
+--- stdout ---
+status running, stages [authorize explore resolve-uncertainty classify track-if-substantial]
+--- stderr ---
+
+$ workflow stage --project proj-1 --workflow wf-1 --stage implement-task-by-task
+exit: 0
+--- stdout ---
+status running, stages [authorize explore resolve-uncertainty classify track-if-substantial implement-task-by-task]
+--- stderr ---
+
+$ workflow stage --project proj-1 --workflow wf-1 --stage close
+exit: 0
+--- stdout ---
+status running, stages [authorize explore resolve-uncertainty classify track-if-substantial implement-task-by-task close]
+--- stderr ---
+
+$ workflow stage --project proj-1 --workflow wf-1 --stage authorize
+exit: 2
+--- stdout ---
+--- stderr ---
+error: workflow stage: workflow lifecycle: stage is not the profile's next declared stage: profile "odd"'s declared stages are all recorded
+
+$ workflow status --project proj-1 --workflow wf-1
+exit: 0
+--- stdout ---
+{
+  "classification": "owned",
+  "status": "running",
+  "profile": "odd",
+  "goal_id": "goal-1",
+  "goal_digest": "3fa80a4c34f1198a2fe03c95ecaaab97721dd5a94dce91612f2612b4208e54ac",
+  "stages": [
+    "authorize",
+    "explore",
+    "resolve-uncertainty",
+    "classify",
+    "track-if-substantial",
+    "implement-task-by-task",
+    "close"
+  ],
+  "last_verified_seq": -1
+}
+--- stderr ---
+
+$ workflow verify --project proj-1 --workflow wf-1 --goal <GOAL>
+exit: 0
+--- stdout ---
+{
+  "classification": "owned",
+  "status": "running",
+  "profile": "odd",
+  "goal_id": "goal-1",
+  "goal_digest": "3fa80a4c34f1198a2fe03c95ecaaab97721dd5a94dce91612f2612b4208e54ac",
+  "stages": [
+    "authorize",
+    "explore",
+    "resolve-uncertainty",
+    "classify",
+    "track-if-substantial",
+    "implement-task-by-task",
+    "close"
+  ],
+  "last_verified_seq": 9
+}
+--- stderr ---
+
+$ workflow close --project proj-1 --workflow wf-1 --outcome completed
+exit: 0
+--- stdout ---
+{
+  "classification": "owned",
+  "status": "closed",
+  "profile": "odd",
+  "goal_id": "goal-1",
+  "goal_digest": "3fa80a4c34f1198a2fe03c95ecaaab97721dd5a94dce91612f2612b4208e54ac",
+  "stages": [
+    "authorize",
+    "explore",
+    "resolve-uncertainty",
+    "classify",
+    "track-if-substantial",
+    "implement-task-by-task",
+    "close"
+  ],
+  "last_verified_seq": 9,
+  "close_outcome": "completed"
+}
+--- stderr ---
+
+$ workflow status --project proj-1 --workflow wf-1
+exit: 0
+--- stdout ---
+{
+  "classification": "owned",
+  "status": "closed",
+  "profile": "odd",
+  "goal_id": "goal-1",
+  "goal_digest": "3fa80a4c34f1198a2fe03c95ecaaab97721dd5a94dce91612f2612b4208e54ac",
+  "stages": [
+    "authorize",
+    "explore",
+    "resolve-uncertainty",
+    "classify",
+    "track-if-substantial",
+    "implement-task-by-task",
+    "close"
+  ],
+  "last_verified_seq": 9,
+  "close_outcome": "completed"
+}
+--- stderr ---
+

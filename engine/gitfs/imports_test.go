@@ -131,8 +131,21 @@ func TestTheImportPinSeesAGitprovUsedUnderAnyName(t *testing.T) {
 func TestAFileThatImportsGitprovTwiceUnderTwoNamesIsReadThroughBoth(t *testing.T) {
 	file := parseSnippet(t, "package p\nimport (\n\ta \""+gitprovPath+"\"\n\tb \""+gitprovPath+"\"\n)\nvar _ = a.PointerTarget\nvar _ = b.Observe\n")
 	names, dot := selectedFromImport(file, gitprovPath)
-	if got := strings.Join(names, ","); got != "PointerTarget,Observe" || dot {
-		t.Errorf("members selected through both names = %q, dot %v; want PointerTarget,Observe", got, dot)
+	// The members are a set: the order they come in is the order the parser walks the file in,
+	// which is not what this test is about.
+	sort.Strings(names)
+	if got := strings.Join(names, ","); got != "Observe,PointerTarget" || dot {
+		t.Errorf("members selected through both names = %q, dot %v; want Observe and PointerTarget", got, dot)
+	}
+}
+
+// A blank import brings no name into scope, so it neither hides nor adds a member: the members
+// taken through a named import of the same package next to it are still read.
+func TestABlankImportOfGitprovBesideANamedOneChangesNothing(t *testing.T) {
+	file := parseSnippet(t, "package p\nimport (\n\t_ \""+gitprovPath+"\"\n\tg \""+gitprovPath+"\"\n)\nvar _ = g.PointerTarget\n")
+	names, dot := selectedFromImport(file, gitprovPath)
+	if got := strings.Join(names, ","); got != "PointerTarget" || dot {
+		t.Errorf("members selected = %q, dot %v; want PointerTarget through the named import, and no dot import", got, dot)
 	}
 }
 
@@ -157,8 +170,10 @@ func writeSources(t *testing.T, files map[string]string) string {
 
 func TestTheDotImportIsReportedByTheNameOfTheFileThatHasIt(t *testing.T) {
 	dir := writeSources(t, map[string]string{
-		"clean.go":      "package p\nimport \"" + gitprovPath + "\"\nvar _ = gitprov.PointerTarget\n",
-		"dirty.go":      "package p\nimport . \"" + gitprovPath + "\"\n",
+		"clean.go": "package p\nimport \"" + gitprovPath + "\"\nvar _ = gitprov.PointerTarget\n",
+		"dirty.go": "package p\nimport . \"" + gitprovPath + "\"\n",
+		// A test file dot-imports it too, and must not be reported: gitprovUse parses only the
+		// non-test files of the package, so only dirty.go is named.
 		"dirty_test.go": "package p\nimport . \"" + gitprovPath + "\"\n",
 	})
 	members, dotImporters, err := gitprovUse(dir)

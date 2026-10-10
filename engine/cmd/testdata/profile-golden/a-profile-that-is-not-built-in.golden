@@ -1,0 +1,12 @@
+$ memory plan --profile no-such-profile
+exit: 2
+--- stdout ---
+--- stderr ---
+error: memory plan: unknown workflow profile: "no-such-profile"
+
+$ workflow create --project proj-1 --workflow wf-1 --goal <GOAL> --profile no-such-profile
+exit: 2
+--- stdout ---
+--- stderr ---
+error: workflow create: workflow lifecycle: create: unknown workflow profile: "no-such-profile"
+

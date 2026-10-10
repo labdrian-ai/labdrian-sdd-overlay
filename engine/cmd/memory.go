@@ -18,6 +18,7 @@ import (
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/goal"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/memoryscope"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflowprofile"
 )
 
 // runMemory implements the 'memory <verb>' subcommand.
@@ -95,7 +96,11 @@ func runMemoryPlan(args []string, stdout, stderr io.Writer, exit func(int)) {
 		return
 	}
 
-	base, err := memoryscope.DefaultFor(o.profile)
+	var base memoryscope.Directive
+	profile, err := workflowprofile.Resolve(o.profile)
+	if err == nil {
+		base, err = memoryscope.DefaultFor(profile)
+	}
 	if err != nil {
 		fmt.Fprintf(stderr, "error: memory plan: %v\n", err)
 		exit(2)

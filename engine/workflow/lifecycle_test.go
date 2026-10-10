@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -671,8 +672,8 @@ func TestLifecycleDependenciesUnavailableNeverBlock(t *testing.T) {
 }
 
 // TestLifecycleReviewCapabilityDerivedFromProfileData checks that the
-// gentle-ai-review capability is probed for every profile listed in
-// gentleReviewProfiles and is absent for standalone-minimal, which
+// gentle-ai-review capability is probed for every profile that relies on
+// Gentle review and is absent for standalone-minimal, which
 // explicitly disclaims Gentle review.
 func TestLifecycleReviewCapabilityDerivedFromProfileData(t *testing.T) {
 	tests := []struct {
@@ -726,21 +727,55 @@ func TestLifecycleLoadOwnedRefusesNonOwnedClassifications(t *testing.T) {
 	}
 }
 
-// TestGentleReviewProfilesMatchReviewPolicies guards the explicit
-// gentleReviewProfiles list against drift: every built-in profile whose
-// review_policy inherits RDD without disclaiming Gentle must be listed, and
-// no other profile may be. When a policy's wording changes, this test fails
-// and a person decides whether the list or the policy is wrong.
-func TestGentleReviewProfilesMatchReviewPolicies(t *testing.T) {
-	for _, name := range []string{"odd", "sdd", "standalone-minimal", "maintenance", "incident-recovery"} {
-		profile, err := workflowprofile.Resolve(name)
-		if err != nil {
-			t.Fatalf("Resolve(%q) = %v", name, err)
-		}
-		policyRelies := strings.Contains(profile.ReviewPolicy, "RDD") && !strings.Contains(profile.ReviewPolicy, "no Gentle")
-		if gentleReviewProfiles[name] != policyRelies {
-			t.Errorf("profile %q: listed in gentleReviewProfiles = %v, but its review_policy %q relies on Gentle review = %v", name, gentleReviewProfiles[name], profile.ReviewPolicy, policyRelies)
-		}
+// The dependencies a workflow records are those the profile the catalog gives declares as typed
+// data (its memory default's sources, and whether it relies on Gentle review), whatever the
+// profile is called: a profile named like a built-in one but declaring something else is
+// observed as it declares itself. (That the typed review dependency agrees with the review_policy
+// prose is checked where the profiles are declared, in workflowprofile.)
+func TestLifecycleObservesTheDependenciesTheCatalogsProfileDeclares(t *testing.T) {
+	maintenance, err := workflowprofile.Resolve("maintenance")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		name   string
+		edit   func(p *workflowprofile.WorkflowProfile)
+		wanted []string
+	}{
+		{"as the built-in profile", func(*workflowprofile.WorkflowProfile) {}, []string{"memory:engram", "memory:longterm-mem", "memory:procedural-skills", gentleAIReviewCapability}},
+		{"with a narrower memory default", func(p *workflowprofile.WorkflowProfile) {
+			p.MemoryDefault.Sources = []workflowprofile.MemorySource{workflowprofile.MemorySourceEngram}
+		}, []string{"memory:engram", gentleAIReviewCapability}},
+		{"with no review dependency", func(p *workflowprofile.WorkflowProfile) { p.ReliesOnGentleReview = false }, []string{"memory:engram", "memory:longterm-mem", "memory:procedural-skills"}},
+		{"with a review dependency and no memory", func(p *workflowprofile.WorkflowProfile) {
+			p.MemoryDefault = workflowprofile.MemoryDefault{Scope: workflowprofile.MemoryScopeNone, Sources: []workflowprofile.MemorySource{}}
+		}, []string{gentleAIReviewCapability}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			store := newMemEventLog()
+			goals := newFakeGoalReader()
+			lc := newTestLifecycle(t, store, stepClock(), goals, newFakeChainReader(), UnavailableProber{})
+			custom := maintenance
+			custom.MemoryDefault.Sources = append([]workflowprofile.MemorySource(nil), maintenance.MemoryDefault.Sources...)
+			tc.edit(&custom)
+			lc.profiles = ProfileCatalogFunc(func(string) (workflowprofile.WorkflowProfile, error) { return custom, nil })
+			g := validGoal("proj-1", "goal-1")
+			goals.set("proj-1", "goal-1", g)
+			if _, err := lc.Create("proj-1", "wf-1", g, "maintenance", ""); err != nil {
+				t.Fatalf("Create() = %v, want nil", err)
+			}
+			loaded, err := store.Load("proj-1", "wf-1")
+			if err != nil {
+				t.Fatal(err)
+			}
+			var got []string
+			for _, o := range loaded.Events[0].Observations {
+				got = append(got, o.Capability)
+			}
+			if !slices.Equal(got, tc.wanted) {
+				t.Errorf("observed %v, want %v", got, tc.wanted)
+			}
+		})
 	}
 }
 

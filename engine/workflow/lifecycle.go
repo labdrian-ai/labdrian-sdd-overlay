@@ -12,7 +12,6 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/goal"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/memoryscope"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/roles"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflowprofile"
 )
 
 // Sentinel errors returned by Lifecycle operations. Wrap with %w so callers
@@ -54,7 +53,7 @@ var (
 
 // gentleAIReviewCapability is the capability name recorded when a Workflow
 // Profile's review policy relies on Gentle AI's native review (receipt-
-// driven development, "RDD"). See gentleReviewProfiles.
+// driven development, "RDD"). See workflowprofile.WorkflowProfile.ReliesOnGentleReview.
 const gentleAIReviewCapability = "gentle-ai-review"
 
 // GoalReader loads the current bytes of one Goal, by project and goal id, so
@@ -82,7 +81,7 @@ type RoleChainReader interface {
 // "memory:<source>"; native review is named by gentleAIReviewCapability).
 //
 // observationsFor applies its own bounded deadline (see
-// dependencyProbeTimeout) around every call, independent of whether the
+// DefaultDependencyProbeTimeout) around every call, independent of whether the
 // prober itself honors ctx: a prober that ignores ctx and blocks forever
 // still never blocks the calling lifecycle operation past that deadline
 // (see Lifecycle.probe), though its goroutine may leak for the remainder of
@@ -101,7 +100,7 @@ type DependencyProber interface {
 	Probe(ctx context.Context, capabilities []string) ([]Observation, error)
 }
 
-// dependencyProbeTimeout is the default bound observationsFor applies to a
+// DefaultDependencyProbeTimeout is the default bound observationsFor applies to a
 // single DependencyProber.Probe call. 5 seconds is generous for any prober
 // that only inspects local state (a PATH lookup, a socket, a config file)
 // while still keeping every lifecycle-mutating operation (Create, Start,
@@ -109,7 +108,7 @@ type DependencyProber interface {
 // slow, hung, or misbehaving. NewLifecycle sets this as Lifecycle.probeTimeout;
 // tests in this package may lower it to keep a deliberately slow prober test
 // fast.
-const dependencyProbeTimeout = 5 * time.Second
+const DefaultDependencyProbeTimeout = 5 * time.Second
 
 // UnavailableProber is the safe default DependencyProber: it reports every
 // requested capability as unavailable, without running a subprocess or
@@ -158,7 +157,7 @@ type Lifecycle struct {
 	chains     RoleChainReader
 	prober     DependencyProber
 	// probeTimeout bounds a single DependencyProber.Probe call; it is
-	// dependencyProbeTimeout outside tests.
+	// DefaultDependencyProbeTimeout outside tests.
 	probeTimeout time.Duration
 	// degraded is called, if non-nil, exactly when observationsFor could
 	// not get a usable answer from l.prober itself (a Probe error, a
@@ -223,7 +222,7 @@ func NewLifecycle(log EventLog, profiles ProfileCatalog, clock func() time.Time,
 	if prober == nil {
 		prober = UnavailableProber{}
 	}
-	return Lifecycle{log: log, profiles: profiles, clock: clock, provenance: provenance, goals: goals, chains: chains, prober: prober, probeTimeout: dependencyProbeTimeout}, nil
+	return Lifecycle{log: log, profiles: profiles, clock: clock, provenance: provenance, goals: goals, chains: chains, prober: prober, probeTimeout: DefaultDependencyProbeTimeout}, nil
 }
 
 // loadOwned loads the workflow and requires it to be ClassificationOwned;
@@ -293,7 +292,8 @@ func (l Lifecycle) commit(projectID, workflowID string, loaded Loaded, event Wor
 // observationsFor probes, and returns as Observations, every dependency a
 // Workflow Profile declares: its default memory sources
 // (memoryscope.DefaultFor), named "memory:<source>", plus
-// gentleAIReviewCapability when profileReliesOnGentleReview. Every
+// gentleAIReviewCapability when the profile ReliesOnGentleReview. Both are
+// typed data of the profile the catalog returns, never a function of its name. Every
 // dependency this Lifecycle does not positively confirm through l.prober is
 // recorded unavailable; it never blocks the operation and is never
 // recorded as available on its own authority (see DependencyProber). A
@@ -306,7 +306,7 @@ func (l Lifecycle) observationsFor(profileName string) ([]Observation, error) {
 	if err != nil {
 		return nil, fmt.Errorf("workflow lifecycle: %w", err)
 	}
-	directive, err := memoryscope.DefaultFor(profile.Name)
+	directive, err := memoryscope.DefaultFor(profile)
 	if err != nil {
 		return nil, fmt.Errorf("workflow lifecycle: %w", err)
 	}
@@ -314,7 +314,7 @@ func (l Lifecycle) observationsFor(profileName string) ([]Observation, error) {
 	for _, source := range directive.Sources {
 		capabilities = append(capabilities, "memory:"+string(source))
 	}
-	if profileReliesOnGentleReview(profile) {
+	if profile.ReliesOnGentleReview {
 		capabilities = append(capabilities, gentleAIReviewCapability)
 	}
 
@@ -368,27 +368,6 @@ func (l Lifecycle) probe(capabilities []string) ([]Observation, error) {
 	case <-ctx.Done():
 		return nil, fmt.Errorf("dependency prober did not return within %s: %w", l.probeTimeout, ctx.Err())
 	}
-}
-
-// gentleReviewProfiles lists the built-in Workflow Profiles whose
-// review_policy inherits Gentle AI's receipt-driven development (RDD) review:
-// odd, sdd, maintenance, and incident-recovery. standalone-minimal declares
-// "no Gentle/RDD dependency" and is excluded. The list is explicit rather
-// than derived from the policy prose, so rewording a policy cannot silently
-// change which observations a workflow records;
-// TestGentleReviewProfilesMatchReviewPolicies fails when the prose and this
-// list disagree.
-var gentleReviewProfiles = map[string]bool{
-	"odd":               true,
-	"sdd":               true,
-	"maintenance":       true,
-	"incident-recovery": true,
-}
-
-// profileReliesOnGentleReview reports whether profile inherits Gentle AI's
-// RDD review, per gentleReviewProfiles.
-func profileReliesOnGentleReview(profile workflowprofile.WorkflowProfile) bool {
-	return gentleReviewProfiles[profile.Name]
 }
 
 // goalDigest returns the SHA-256 hex digest of g's canonical Marshal
@@ -455,23 +434,6 @@ func (l Lifecycle) loadVerifiedRoleChain(projectID, goalID, roleChainID string) 
 		return nil, fmt.Errorf("%w: %v", ErrRoleChainInvalid, err)
 	}
 	return records, nil
-}
-
-// stageOrderPrefix checks that stages is exactly a prefix of profile's
-// declared stage order: stages[i] must equal profile.Stages[i].Name for
-// every i, and there must be no more recorded stages than the profile
-// declares. See RecordStage for how new stages are admitted one at a time
-// against this same order.
-func stageOrderPrefix(profile workflowprofile.WorkflowProfile, stages []string) error {
-	if len(stages) > len(profile.Stages) {
-		return fmt.Errorf("recorded %d stages exceeds profile %q's %d declared stages", len(stages), profile.Name, len(profile.Stages))
-	}
-	for i, stage := range stages {
-		if profile.Stages[i].Name != stage {
-			return fmt.Errorf("recorded stage %d is %q, want %q per profile %q's declared order", i, stage, profile.Stages[i].Name, profile.Name)
-		}
-	}
-	return nil
 }
 
 // Create validates g (a Goal v2) and profileName, optionally verifies a
@@ -569,7 +531,7 @@ func (l Lifecycle) Resume(projectID, workflowID string) (State, error) {
 // appending anything, a stage name that is not exactly the Workflow
 // Profile's next declared stage: the stage immediately after the last one
 // already recorded, in the profile's declared stage order (see
-// stageOrderPrefix). This also rejects a stage the profile never declares
+// workflowprofile.WorkflowProfile.NextStage). This also rejects a stage the profile never declares
 // (it can never be "next") and a workflow whose profile has already
 // recorded every declared stage.
 func (l Lifecycle) RecordStage(projectID, workflowID, stage string) (State, error) {
@@ -581,10 +543,10 @@ func (l Lifecycle) RecordStage(projectID, workflowID, stage string) (State, erro
 	if err != nil {
 		return State{}, fmt.Errorf("workflow lifecycle: record stage: %w", err)
 	}
-	if len(loaded.State.Stages) >= len(profile.Stages) {
+	want, more := profile.NextStage(len(loaded.State.Stages))
+	if !more {
 		return State{}, fmt.Errorf("%w: profile %q's declared stages are all recorded", ErrStageOutOfOrder, profile.Name)
 	}
-	want := profile.Stages[len(loaded.State.Stages)].Name
 	if stage != want {
 		return State{}, fmt.Errorf("%w: got %q, want %q (profile %q's next declared stage)", ErrStageOutOfOrder, stage, want, profile.Name)
 	}
@@ -624,7 +586,7 @@ func (l Lifecycle) Verify(projectID, workflowID string) (State, error) {
 	if err != nil {
 		return State{}, fmt.Errorf("%w: %v", ErrProfileInvalid, err)
 	}
-	if err := stageOrderPrefix(profile, state.Stages); err != nil {
+	if err := profile.CheckStagePrefix(state.Stages); err != nil {
 		return State{}, fmt.Errorf("%w: %v", ErrStageOrderInvalid, err)
 	}
 	g, err := l.goals.LoadGoal(projectID, state.GoalID)

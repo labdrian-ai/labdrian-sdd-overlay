@@ -37,8 +37,9 @@ const probeReportVersion = 1
 // defaultProbeTimeout bounds one probe run (deps.probeTimeout). The checks are stats of a
 // handful of paths, so this is generous; it exists so a hung filesystem cannot hang the
 // command. A blocked stat cannot be interrupted, so the probe runs in its own goroutine and the
-// command stops waiting at the deadline (see probeWithin).
-const defaultProbeTimeout = 5 * time.Second
+// command stops waiting at the deadline (see probeWithin). It is the bound the workflow
+// lifecycle puts on its own probes, taken from there so that the two cannot drift apart.
+const defaultProbeTimeout = workflow.DefaultDependencyProbeTimeout
 
 // probeTargetAll is the --target value that selects every runtime's credentials
 // signal.
@@ -81,11 +82,7 @@ func runRuntimeProbe(d deps, args []string, stdout, stderr io.Writer, exit func(
 	}
 
 	home, path := runtimeProbeEnv(d)
-	timeout := d.probeTimeout
-	if timeout <= 0 {
-		timeout = defaultProbeTimeout // a deps with no timeout is bound by the default, not by a deadline already passed
-	}
-	observations, err := probeWithin(presence.Prober{Home: home, Path: path, ProbeFS: d.probeFS}, names, timeout)
+	observations, err := probeWithin(presence.Prober{Home: home, Path: path, ProbeFS: d.probeFS}, names, d.probeBound())
 	if err != nil {
 		fmt.Fprintf(stderr, "error: runtime probe: %v\n", err)
 		exit(1)

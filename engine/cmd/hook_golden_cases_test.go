@@ -60,6 +60,7 @@ func hookGoldenCases() []hookGoldenCase {
 	cases = append(cases, gateTaskGoldenCases()...)
 	cases = append(cases, promptHookGoldenCases()...)
 	cases = append(cases, toolHookGoldenCases()...)
+	cases = append(cases, profileHookGoldenCases()...)
 	cases = append(cases, approveGuardGoldenCases()...)
 	cases = append(cases, shaperGuardGoldenCases()...)
 	return cases

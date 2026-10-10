@@ -118,72 +118,30 @@ func (d Directive) Validate() error {
 	return nil
 }
 
-// A profile default is the CEILING of what a request under that profile can
-// read: goal and handoff directives may only narrow it (Resolve refuses any
-// widening). A source or scope left out of every default is therefore
-// unreachable from any request, so each default grants the widest read its
+// DefaultFor returns the default memory directive of a workflow profile:
+// the CEILING of what a request under that profile can read. Goal and
+// handoff directives may only narrow it (Resolve refuses any widening), so
+// a source or scope left out of every default is unreachable from any
+// request; each default therefore grants the widest read its profile's
 // memory_policy prose allows, and requests narrow from there. Write is
 // always "none": these policies govern what is recorded, which is a write
 // concern outside this package.
-
-// odd's memory_policy (engine/workflowprofile.go): "durable task ledger and
-// Engram mirror for substantial work; store evidence as well as status; may
-// read project evidence from Engram, long-term memory, and procedural
-// skills" — the policy names all three stores directly; a single feature
-// narrows to scope goal.
-var oddDefault = Directive{Version: DirectiveVersion, Scope: ScopeProject, Sources: []Source{SourceEngram, SourceLongtermMem, SourceProceduralSkills}, Write: "none"}
-
-// sdd's memory_policy: "use only the store declared/resolved for the
-// change; do not infer or mix stores" — a change's artifacts are
-// project-scoped (topic keys are sdd/{change-name}/..., not tied to one
-// Goal), and the ceiling is the single store SDD resolves to by default,
-// Engram, so the unnarrowed plan never mixes stores.
-var sddDefault = Directive{Version: DirectiveVersion, Scope: ScopeProject, Sources: []Source{SourceEngram}, Write: "none"}
-
-// standalone-minimal's memory_policy: "no persistence required; allow only
-// a store explicitly configured by the caller" — no default source is
-// assumed.
-var standaloneMinimalDefault = Directive{Version: DirectiveVersion, Scope: ScopeNone, Sources: []Source{}, Write: "none"}
-
-// maintenance's memory_policy: "record substantial work units; do not
-// promote transient incidents to reusable memory; may read project evidence
-// from Engram, long-term memory, and procedural skills" — the policy names
-// all three stores directly; one bounded unit narrows to scope goal.
-var maintenanceDefault = Directive{Version: DirectiveVersion, Scope: ScopeProject, Sources: []Source{SourceEngram, SourceLongtermMem, SourceProceduralSkills}, Write: "none"}
-
-// incident-recovery's memory_policy: "case-bounded evidence; exclude
-// secrets/raw logs; preserve verifiable references; may read the case's
-// Engram evidence and procedural skills" — "case-bounded" means one goal
-// (the incident case), and the policy names exactly those two stores, not
-// the project's broad long-term memory.
-var incidentRecoveryDefault = Directive{Version: DirectiveVersion, Scope: ScopeGoal, Sources: []Source{SourceEngram, SourceProceduralSkills}, Write: "none"}
-
-var profileDefaults = map[string]Directive{
-	"odd":                oddDefault,
-	"sdd":                sddDefault,
-	"standalone-minimal": standaloneMinimalDefault,
-	"maintenance":        maintenanceDefault,
-	"incident-recovery":  incidentRecoveryDefault,
-}
-
-// DefaultFor returns the default memory directive for one of the five
-// workflow profiles, derived from that profile's existing memory_policy
-// prose (see the comments above each default). An unknown profile name is
-// refused.
-func DefaultFor(profileName string) (Directive, error) {
-	return defaultFrom(profileDefaults, profileName)
-}
-
-// defaultFrom looks profileName up in defaults after checking that it names
-// a known workflow profile. Taking the table as a parameter lets tests
-// simulate a drifted table without mutating the package-level one.
-func defaultFrom(defaults map[string]Directive, profileName string) (Directive, error) {
-	if _, err := workflowprofile.Resolve(profileName); err != nil {
-		return Directive{}, err
+//
+// The ceiling is the profile's own typed MemoryDefault (declared beside the
+// prose it stands for, in workflowprofile), read from the profile it is
+// given and never looked up by the profile's name. A profile whose memory
+// default is not a valid directive is refused, naming the profile.
+func DefaultFor(profile workflowprofile.WorkflowProfile) (Directive, error) {
+	declared := profile.MemoryDefault
+	d := Directive{Version: DirectiveVersion, Scope: Scope(declared.Scope), Write: "none"}
+	if declared.Sources != nil {
+		d.Sources = make([]Source, len(declared.Sources))
+		for i, source := range declared.Sources {
+			d.Sources[i] = Source(source)
+		}
 	}
-	d, ok := defaults[profileName]
-	if !ok {
-		return Directive{}, fmt.Errorf("no memory directive default registered for profile %q", profileName)
+	if err := d.Validate(); err != nil {
+		return Directive{}, fmt.Errorf("memory default of workflow profile %q: %w", profile.Name, err)
 	}
 	return d, nil
 }

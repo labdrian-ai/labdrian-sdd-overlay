@@ -581,8 +581,8 @@ func TestPhase6Acceptance_MissingDependencies(t *testing.T) {
 	t.Setenv("PATH", "")
 	workDir := t.TempDir()
 	const project, wf = "proj-1", "wf-1"
-	// "odd" is a gentleReviewProfiles member (see
-	// engine/workflow/lifecycle.go), so its declared dependencies include
+	// "odd" relies on Gentle review (see
+	// workflowprofile.WorkflowProfile.ReliesOnGentleReview), so its declared dependencies include
 	// gentle-ai-review on top of its memory sources -- the richer profile
 	// to prove nothing ever reads "available" from an empty PATH.
 	const profileName = "odd"
@@ -622,7 +622,7 @@ func TestPhase6Acceptance_MissingDependencies(t *testing.T) {
 		}
 	}
 	if !sawGentleAIReview {
-		t.Fatalf("no event ever observed gentle-ai-review, want profile %q (a gentleReviewProfiles member) to declare it", profileName)
+		t.Fatalf("no event ever observed gentle-ai-review, want profile %q (it relies on Gentle review) to declare it", profileName)
 	}
 }
 

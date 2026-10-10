@@ -4,7 +4,10 @@ import (
 	"bytes"
 	"context"
 	"io/fs"
+	"slices"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow"
 )
@@ -20,35 +23,118 @@ func (absentEverywhereFS) Stat(string) (fs.FileInfo, error)  { return nil, fs.Er
 // never a nil function call. The program sets every field, but a test, or a caller that comes
 // later, may build a deps with fewer.
 
-// A zero deps has no environment: every command that reads one reads nothing, and none panics.
-func TestACommandRunOverAZeroDepsReadsNoEnvironmentAndDoesNotPanic(t *testing.T) {
+// A zero deps has no environment: every command that reads one reads nothing, none panics, and
+// each ends the way a command with nothing to read ends: with its own exit code and the line that
+// says what was missing, so a change in what a nil environment means is seen here.
+func TestACommandRunOverAZeroDepsReadsNoEnvironmentAndEndsAsItShould(t *testing.T) {
 	root := t.TempDir()
-	for name, run := range map[string]func(p *capturedProcess){
-		"status":        func(p *capturedProcess) { runStatus(p.process, deps{}) },
-		"gadu-generate": func(p *capturedProcess) { runGaduGenerate(p.process, deps{}, nil) },
-		"sync-trigger":  func(p *capturedProcess) { runSyncTriggerCore(deps{}, []string{"--event", "bogus"}, &p.err, p.exit) },
-		"runtime probe": func(p *capturedProcess) { runRuntimeProbe(deps{}, nil, &p.out, &p.err, p.exit) },
-		"runtime status": func(p *capturedProcess) {
-			runRuntimeCore(deps{}, noPi(), noGit(), []string{"status", "--target", "claude", "--config-root", root}, &p.out, &p.err, p.exit)
+	// The expected lines are the program's own words for what was missing (the phrase that names it,
+	// not the whole message), so they change when what a command says about a nil environment
+	// changes, which is what this test is for; the paths in a message are not part of them.
+	for _, tc := range []struct {
+		name string
+		run  func(p *capturedProcess)
+		// wantExits is every exit the command called, in order. None (nil) means it returned
+		// without calling exit at all; {0} means it called exit(0), a deliberate clean exit (the
+		// sync-trigger usage error and the probe report are reported with exit 0 by design).
+		wantExits []int
+		stream    func(p *capturedProcess) string // the stream the line is on
+		want      string
+	}{
+		{
+			name:      "status",
+			run:       func(p *capturedProcess) { runStatus(p.process, deps{}) },
+			wantExits: []int{1},
+			stream:    stdoutOf,
+			want:      "[FAIL] binary: .claude/bin/gentle-ai-overlay — not found",
 		},
-		"pipkg": func(p *capturedProcess) {
-			runPipkgCore(deps{}, noGit(), []string{"build", "--overlay-root", root, "--registry", root + "/r.yaml", "--dest-dir", root + "/d"}, &p.out, &p.err, p.exit)
+		{
+			name:      "gadu-generate",
+			run:       func(p *capturedProcess) { runGaduGenerate(p.process, deps{}, nil) },
+			wantExits: []int{1},
+			stream:    stderrOf,
+			want:      "OVERLAY_DIR is not set",
 		},
-		"runtime wrapper": func(p *capturedProcess) {
-			runRuntime(p.process, deps{}, []string{"status", "--target", "claude", "--config-root", root})
+		{
+			name:      "sync-trigger",
+			run:       func(p *capturedProcess) { runSyncTriggerCore(deps{}, []string{"--event", "bogus"}, &p.err, p.exit) },
+			wantExits: []int{0},
+			stream:    stderrOf,
+			want:      `sync-trigger: error:usage event="bogus" cwd=""`,
 		},
-		"pipkg wrapper": func(p *capturedProcess) { runPipkg(p.process, deps{}, []string{"bogus"}) },
-		"skills list": func(p *capturedProcess) {
-			runSkillsCore(deps{}, "list", []string{"list", "--registry", root + "/absent.yaml"}, &p.out, &p.err, p.exit)
+		{
+			name:      "runtime probe",
+			run:       func(p *capturedProcess) { runRuntimeProbe(deps{}, nil, &p.out, &p.err, p.exit) },
+			wantExits: []int{0},
+			stream:    stdoutOf,
+			want:      "the home directory is unknown, so the Engram database file was not looked for",
 		},
-		"review-receipt": func(p *capturedProcess) { runReviewReceiptCapture(p.process, deps{}, []string{"--cwd", root}) },
+		{
+			name: "runtime status",
+			run: func(p *capturedProcess) {
+				runRuntimeCore(deps{}, noPi(), noGit(), []string{"status", "--target", "claude", "--config-root", root}, &p.out, &p.err, p.exit)
+			},
+			wantExits: []int{1},
+			stream:    stdoutOf,
+			want:      "[claude] status: unsupported — Claude settings file not found",
+		},
+		{
+			name: "pipkg",
+			run: func(p *capturedProcess) {
+				runPipkgCore(deps{}, noGit(), []string{"build", "--overlay-root", root, "--registry", root + "/r.yaml", "--dest-dir", root + "/d"}, &p.out, &p.err, p.exit)
+			},
+			wantExits: []int{1},
+			stream:    stderrOf,
+			want:      "overlaps overlay root",
+		},
+		{
+			name: "runtime wrapper",
+			run: func(p *capturedProcess) {
+				runRuntime(p.process, deps{}, []string{"status", "--target", "claude", "--config-root", root})
+			},
+			wantExits: []int{1},
+			stream:    stdoutOf,
+			want:      "[claude] status: unsupported — Claude settings file not found",
+		},
+		{
+			name:      "pipkg wrapper",
+			run:       func(p *capturedProcess) { runPipkg(p.process, deps{}, []string{"bogus"}) },
+			wantExits: []int{1},
+			stream:    stderrOf,
+			want:      `unknown pipkg verb "bogus"`,
+		},
+		{
+			name: "skills list",
+			run: func(p *capturedProcess) {
+				runSkillsCore(deps{}, "list", []string{"list", "--registry", root + "/absent.yaml"}, &p.out, &p.err, p.exit)
+			},
+			wantExits: []int{1},
+			stream:    stderrOf,
+			want:      "reading registry",
+		},
+		{
+			name:      "review-receipt",
+			run:       func(p *capturedProcess) { runReviewReceiptCapture(p.process, deps{}, []string{"--cwd", root}) },
+			wantExits: nil,
+			stream:    stdoutOf,
+			want:      "review-receipt capture: no active change; nothing to capture",
+		},
 	} {
-		t.Run(name, func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			p := newCapturedProcess()
-			run(p)
+			tc.run(p)
+			if !slices.Equal(p.exits, tc.wantExits) {
+				t.Errorf("exits %v, want %v", p.exits, tc.wantExits)
+			}
+			if got := tc.stream(p); !strings.Contains(got, tc.want) {
+				t.Errorf("output %q does not say %q", got, tc.want)
+			}
 		})
 	}
 }
+
+func stdoutOf(p *capturedProcess) string { return p.out.String() }
+func stderrOf(p *capturedProcess) string { return p.err.String() }
 
 func TestAZeroDepsHasNoHomeAndNoWorkingDirectory(t *testing.T) {
 	if home, err := (deps{}).homeDir(); err == nil || home != "" {
@@ -62,6 +148,26 @@ func TestAZeroDepsHasNoHomeAndNoWorkingDirectory(t *testing.T) {
 	}
 	if got := (deps{}).environment(); len(got) != 0 {
 		t.Errorf("environment = %q, want none", got)
+	}
+}
+
+// The bound of a probe is one number: the deps' own when it is positive, and otherwise the one the
+// workflow lifecycle bounds its own probes with, so the two ways a probe is bounded cannot drift.
+func TestTheBoundOfAProbeIsTheDepsOwnOrTheLifecyclesDefault(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		set  time.Duration
+		want time.Duration
+	}{
+		{"unset", 0, workflow.DefaultDependencyProbeTimeout},
+		{"negative", -time.Second, workflow.DefaultDependencyProbeTimeout},
+		{"its own", 3 * time.Second, 3 * time.Second},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := (deps{probeTimeout: tc.set}).probeBound(); got != tc.want {
+				t.Errorf("probeBound = %s, want %s", got, tc.want)
+			}
+		})
 	}
 }
 
