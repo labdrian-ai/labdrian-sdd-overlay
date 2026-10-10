@@ -17,7 +17,7 @@ import (
 
 // throughTheProgram runs one command of `engine skills` through the entry of the program.
 func throughTheProgram(verb string, args []string) verbRun {
-	return throughTheEntry(newSkillsDeps(), verb, args)
+	return throughTheEntry(newSkillsDeps(testDeps()), verb, args)
 }
 
 // throughTheEntry is throughTheProgram over the ports it is given.
@@ -32,9 +32,19 @@ func throughTheEntry(deps skills.Deps, verb string, args []string) verbRun {
 // throughTheProgramIn is throughTheProgram with the working directory the test names, so that a
 // test never changes the directory of the process.
 func throughTheProgramIn(cwd, verb string, args []string) verbRun {
-	deps := newSkillsDeps()
+	deps := newSkillsDeps(testDeps())
 	deps.Cwd = func() (string, error) { return cwd, nil }
 	return throughTheEntry(deps, verb, args)
+}
+
+// The skills verbs take their working directory from the deps they are built over.
+func TestNewSkillsDepsTakesTheWorkingDirectoryOfTheDeps(t *testing.T) {
+	d := testDeps()
+	d.getwd = func() (string, error) { return "/a/project", nil }
+
+	if got, err := newSkillsDeps(d).Cwd(); err != nil || got != "/a/project" {
+		t.Errorf("Cwd = %q, %v; want /a/project", got, err)
+	}
 }
 
 func TestInstallAndAdoptAreEachTheVerbTheTableNamesThem(t *testing.T) {

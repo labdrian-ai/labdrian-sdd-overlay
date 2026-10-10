@@ -14,9 +14,9 @@ import (
 // builds the value it needs, with the field it wants other than the program's, and hands it to the
 // command.
 //
-// process is where a command writes and reads, how it ends and where it is: the five things a
-// verb needs from the process around it, which its core takes as plain parameters (stdin, stdout,
-// stderr, exit) so that a test can capture them.
+// process is where a command writes and reads and how it ends: the four things a verb needs from
+// the process around it, which its core takes as plain parameters (stdin, stdout, stderr, exit)
+// so that a test can capture them.
 //
 // deps is what the verbs are built over: the environment, resolved once, and the choices that make
 // a verb the program's (which store, which policy, which wait). A field of deps is the program's
@@ -30,13 +30,13 @@ type process struct {
 	// exit ends the process with a code. A command calls it and returns right after, because a
 	// test hands in an exit that does not end anything.
 	exit func(int)
-	// getwd is the working directory of the process. A directory that cannot be determined is
-	// the command's to treat as none.
-	getwd func() (string, error)
 }
 
 // deps is what the commands are built over (see the top of this file).
 type deps struct {
+	// getwd is the working directory of the process. A directory that cannot be determined is
+	// the command's to treat as none.
+	getwd func() (string, error)
 	// getenv, environ and userHomeDir are the environment of the process. They are functions and
 	// not values because a command reads the variable it needs when it needs it, as it always
 	// did; main binds them to the process once.
@@ -53,6 +53,10 @@ type deps struct {
 	// probe run, so that a hung filesystem cannot hang the command.
 	probeFS      presence.StatFS
 	probeTimeout time.Duration
+
+	// skillsLockWait is how long a skills verb waits for a taken lock before it gives up with
+	// exit 2. Zero means filelock.DefaultWait (2 s), the bound the workflow binding store uses.
+	skillsLockWait time.Duration
 }
 
 // agentChildVariable is the environment variable a gentle-pi agent child runs with, set to

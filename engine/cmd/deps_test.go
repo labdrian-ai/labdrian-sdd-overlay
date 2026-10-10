@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"errors"
 	"os"
 	"strings"
 	"testing"
@@ -12,29 +11,22 @@ import (
 // variable of the program: it asks for the process and the deps of a run, and replaces the one
 // field it wants otherwise.
 
-// capturedProcess is a process that runs nowhere: its streams are buffers, its exit only records
-// the codes, and its working directory is the one the test names.
+// capturedProcess is a process that runs nowhere: its streams are buffers and its exit only
+// records the codes.
 type capturedProcess struct {
 	process
 	out, err bytes.Buffer
 	exits    []int
 }
 
-// newCapturedProcess is a process with an empty stdin, buffers for its streams, and the working
-// directory cwd (an empty cwd is a working directory that cannot be determined).
-func newCapturedProcess(cwd string) *capturedProcess {
+// newCapturedProcess is a process with an empty stdin and buffers for its streams.
+func newCapturedProcess() *capturedProcess {
 	c := &capturedProcess{}
 	c.process = process{
 		stdin:  strings.NewReader(""),
 		stdout: &c.out,
 		stderr: &c.err,
 		exit:   func(code int) { c.exits = append(c.exits, code) },
-		getwd: func() (string, error) {
-			if cwd == "" {
-				return "", errors.New("no working directory")
-			}
-			return cwd, nil
-		},
 	}
 	return c
 }

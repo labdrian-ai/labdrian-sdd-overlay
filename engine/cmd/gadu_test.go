@@ -7,7 +7,7 @@ import (
 
 func gaduRun(t *testing.T, env map[string]string, args ...string) *capturedProcess {
 	t.Helper()
-	p := newCapturedProcess("")
+	p := newCapturedProcess()
 	d := testDeps()
 	d.getenv = environmentOf(env)
 	runGaduGenerate(p.process, d, args)

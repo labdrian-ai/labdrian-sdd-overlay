@@ -32,7 +32,7 @@ func (w *hookWorld) skillsGuardReader(label string, stdin io.Reader, stdinNote s
 	w.t.Helper()
 	var stdout, stderr bytes.Buffer
 	var exits []int
-	runSkillsWithStdin(append([]string{skillsGuardVerb}, extraArgs...), stdin, &stdout, &stderr, func(c int) { exits = append(exits, c) })
+	runSkillsWithStdin(testDeps(), append([]string{skillsGuardVerb}, extraArgs...), stdin, &stdout, &stderr, func(c int) { exits = append(exits, c) })
 	w.record("skills "+strings.Join(append([]string{skillsGuardVerb}, extraArgs...), " "), label, stdinNote, exits, stdout.String(), stderr.String())
 }
 
@@ -50,7 +50,7 @@ func (w *hookWorld) skillsGuardWriter(label, stdin string, stdout io.Writer) {
 	w.t.Helper()
 	var stderr bytes.Buffer
 	var exits []int
-	runSkillsWithStdin([]string{skillsGuardVerb}, strings.NewReader(stdin), stdout, &stderr, func(c int) { exits = append(exits, c) })
+	runSkillsWithStdin(testDeps(), []string{skillsGuardVerb}, strings.NewReader(stdin), stdout, &stderr, func(c int) { exits = append(exits, c) })
 	w.record("skills "+skillsGuardVerb, label, stdin, exits, "<stdout cannot be written>\n", stderr.String())
 }
 

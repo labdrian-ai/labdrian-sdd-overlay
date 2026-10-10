@@ -619,7 +619,7 @@ func TestRunMergeSettings_AbsentFile_CreatesHooks(t *testing.T) {
 	// the file-system side effects (the real contract) instead of stdout capture.
 
 	// Call runMergeSettings — happy path should not panic or os.Exit.
-	runMergeSettings(newCapturedProcess("").process, []string{
+	runMergeSettings(newCapturedProcess().process, []string{
 		"--settings", path,
 		"--hook-command", "/test/.claude/bin/gentle-ai-overlay",
 	})
@@ -653,8 +653,8 @@ func TestRunMergeSettings_Idempotent(t *testing.T) {
 		"--hook-command", "/test/.claude/bin/gentle-ai-overlay",
 	}
 
-	runMergeSettings(newCapturedProcess("").process, args)
-	runMergeSettings(newCapturedProcess("").process, args)
+	runMergeSettings(newCapturedProcess().process, args)
+	runMergeSettings(newCapturedProcess().process, args)
 
 	data, _ := os.ReadFile(path)
 	var root map[string]interface{}
@@ -713,7 +713,7 @@ func TestRunMergeSettings_BackupCreated(t *testing.T) {
 	original := []byte(`{"existing":true}`)
 	os.WriteFile(path, original, 0644)
 
-	runMergeSettings(newCapturedProcess("").process, []string{
+	runMergeSettings(newCapturedProcess().process, []string{
 		"--settings", path,
 		"--hook-command", "/test/.claude/bin/gentle-ai-overlay",
 	})
@@ -736,8 +736,8 @@ func TestRunUninstallHooks_RemovesHooks(t *testing.T) {
 	hookCmd := "/test/.claude/bin/gentle-ai-overlay"
 	args := []string{"--settings", path, "--hook-command", hookCmd}
 
-	runMergeSettings(newCapturedProcess("").process, args)
-	runUninstallHooks(newCapturedProcess("").process, args)
+	runMergeSettings(newCapturedProcess().process, args)
+	runUninstallHooks(newCapturedProcess().process, args)
 
 	data, _ := os.ReadFile(path)
 	var root map[string]interface{}
@@ -766,7 +766,7 @@ func TestRunUninstallHooks_AbsentFile_NoOp(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "nonexistent.json")
 	// Should not panic or call os.Exit(1).
-	runUninstallHooks(newCapturedProcess("").process, []string{
+	runUninstallHooks(newCapturedProcess().process, []string{
 		"--settings", path,
 		"--hook-command", "/test/binary",
 	})
@@ -1175,7 +1175,7 @@ skills:
 
 	var outBuf, errBuf bytes.Buffer
 	exitCode := 0
-	runSkillsCore("list", []string{"list", "--registry", regPath}, &outBuf, &errBuf, func(c int) { exitCode = c })
+	runSkillsCore(testDeps(), "list", []string{"list", "--registry", regPath}, &outBuf, &errBuf, func(c int) { exitCode = c })
 	if exitCode != 0 {
 		t.Errorf("exit code = %d, want 0; stderr=%q", exitCode, errBuf.String())
 	}
@@ -1188,7 +1188,7 @@ skills:
 func TestRunSkillsCore_unknown_verb(t *testing.T) {
 	var outBuf, errBuf bytes.Buffer
 	exitCode := 0
-	runSkillsCore("bogus", []string{"bogus"}, &outBuf, &errBuf, func(c int) { exitCode = c })
+	runSkillsCore(testDeps(), "bogus", []string{"bogus"}, &outBuf, &errBuf, func(c int) { exitCode = c })
 	if exitCode != 1 {
 		t.Errorf("exit code = %d, want 1", exitCode)
 	}
@@ -1251,7 +1251,7 @@ func TestApplyIgnoresRegistry(t *testing.T) {
 	var skillsOut, skillsErr bytes.Buffer
 	skillsExitCode := -1
 	missingYAML := filepath.Join(dir, "skills.registry.yaml") // does not exist
-	runSkillsCore("list", []string{"list", "--registry", missingYAML},
+	runSkillsCore(testDeps(), "list", []string{"list", "--registry", missingYAML},
 		&skillsOut, &skillsErr, func(c int) { skillsExitCode = c })
 	if skillsExitCode != 1 {
 		t.Errorf("SC-13: runSkillsCore(list) must exit 1 when skills.registry.yaml is absent; got exit %d", skillsExitCode)
@@ -2603,7 +2603,7 @@ func TestParseReviewReceiptArgs_BothFlags(t *testing.T) {
 // openspec/changes/ directory to auto-detect an active change from.
 func TestRunReviewReceiptCapture_NoActiveChange_NoOp(t *testing.T) {
 	dir := t.TempDir()
-	runReviewReceiptCapture(newCapturedProcess("").process, testDeps(), []string{"--cwd", dir})
+	runReviewReceiptCapture(newCapturedProcess().process, testDeps(), []string{"--cwd", dir})
 	if _, err := os.Stat(filepath.Join(dir, "openspec")); !os.IsNotExist(err) {
 		t.Errorf("no-op capture should not create openspec/, stat err=%v", err)
 	}
@@ -2642,7 +2642,7 @@ func TestRunReviewReceiptCapture_ExplicitChange_Captures(t *testing.T) {
 	receipt := `{"schema":"gentle-ai.review-receipt/v2","lineage_id":"review-cli1","terminal_state":"approved"}`
 	os.WriteFile(filepath.Join(lineageDir, "review-receipt.json"), []byte(receipt), 0644)
 
-	runReviewReceiptCapture(newCapturedProcess("").process, testDeps(), []string{"--cwd", dir, "--change", "cli-change"})
+	runReviewReceiptCapture(newCapturedProcess().process, testDeps(), []string{"--cwd", dir, "--change", "cli-change"})
 
 	dest := filepath.Join(changeDir, "review-receipts", "review-cli1.json")
 	if _, err := os.Stat(dest); err != nil {

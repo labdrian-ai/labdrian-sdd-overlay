@@ -5,7 +5,6 @@ package main
 import (
 	"fmt"
 	"io"
-	"os"
 	"strings"
 	"time"
 
@@ -14,19 +13,19 @@ import (
 
 // runSkills implements the 'skills <verb>' subcommand.
 // Requires exactly one verb argument; fails LOUD on missing or unknown verb (ADR-4).
-func runSkills(args []string) {
-	runSkillsWithStdin(args, os.Stdin, os.Stdout, os.Stderr, os.Exit)
+func runSkills(p process, d deps, args []string) {
+	runSkillsWithStdin(d, args, p.stdin, p.stdout, p.stderr, p.exit)
 }
 
 // runSkillsCore is the testable core of the skills subcommand: the entry with the ports of the
 // program.
-func runSkillsCore(verb string, args []string, stdout, stderr io.Writer, exit func(int)) {
-	runSkillsCoreWith(newSkillsDeps(), verb, args, stdout, stderr, exit)
+func runSkillsCore(d deps, verb string, args []string, stdout, stderr io.Writer, exit func(int)) {
+	runSkillsCoreWith(newSkillsDeps(d), verb, args, stdout, stderr, exit)
 }
 
 // runSkillsCoreWith is the entry of the skills subcommand over the ports it is given: it names the
 // verb the person typed, finds it in the table and runs it.
-func runSkillsCoreWith(deps skills.Deps, verb string, args []string, stdout, stderr io.Writer, exit func(int)) {
+func runSkillsCoreWith(ports skills.Deps, verb string, args []string, stdout, stderr io.Writer, exit func(int)) {
 	if verb == "" {
 		fmt.Fprintf(stderr, "error: skills requires a verb: %s\n", skillsVerbList)
 		exit(1)
@@ -38,7 +37,7 @@ func runSkillsCoreWith(deps skills.Deps, verb string, args []string, stdout, std
 		exit(1)
 		return
 	}
-	run(deps, args, stdout, stderr, exit)
+	run(ports, args, stdout, stderr, exit)
 }
 
 // wallClockUTC is the production clock handed to the skills core: the current

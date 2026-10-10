@@ -12,13 +12,14 @@ func main() {
 
 // productionProcess is the process the program runs in.
 func productionProcess() process {
-	return process{stdin: os.Stdin, stdout: os.Stdout, stderr: os.Stderr, exit: os.Exit, getwd: os.Getwd}
+	return process{stdin: os.Stdin, stdout: os.Stdout, stderr: os.Stderr, exit: os.Exit}
 }
 
 // productionDeps is the deps of the program: the environment of the process, which a command reads
 // when it needs a variable, and the facts main resolves from it once.
 func productionDeps() deps {
 	return deps{
+		getwd:       os.Getwd,
 		getenv:      os.Getenv,
 		environ:     os.Environ,
 		userHomeDir: os.UserHomeDir,

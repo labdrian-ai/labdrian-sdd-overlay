@@ -17,7 +17,7 @@ func TestRunMergeSettingsAndUninstallHooks_ManageTheApproveGuard(t *testing.T) {
 	path := filepath.Join(dir, "settings.json")
 	const hookCmd = "/test/.claude/bin/gentle-ai-overlay"
 	args := []string{"--settings", path, "--hook-command", hookCmd}
-	p := newCapturedProcess("")
+	p := newCapturedProcess()
 	count := func() int {
 		data, err := os.ReadFile(path)
 		if err != nil {

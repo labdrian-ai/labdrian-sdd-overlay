@@ -10,7 +10,7 @@ import (
 // they live and run as the program by the golden tests.
 
 func TestRunWithNoArgumentsPrintsTheUsageAndExitsOne(t *testing.T) {
-	p := newCapturedProcess("")
+	p := newCapturedProcess()
 
 	run(p.process, testDeps(), nil)
 
@@ -26,7 +26,7 @@ func TestRunWithNoArgumentsPrintsTheUsageAndExitsOne(t *testing.T) {
 }
 
 func TestRunWithAnUnknownSubcommandSaysSoThenPrintsTheUsage(t *testing.T) {
-	p := newCapturedProcess("")
+	p := newCapturedProcess()
 
 	run(p.process, testDeps(), []string{"frobnicate", "--x"})
 
@@ -41,7 +41,7 @@ func TestRunWithAnUnknownSubcommandSaysSoThenPrintsTheUsage(t *testing.T) {
 func TestRunHandsEachSubcommandItsOwnArguments(t *testing.T) {
 	// 'roles' with no verb says what it needs, which only the roles command says; the arguments
 	// after its name are the ones it is given.
-	p := newCapturedProcess("")
+	p := newCapturedProcess()
 
 	run(p.process, testDeps(), []string{"roles"})
 

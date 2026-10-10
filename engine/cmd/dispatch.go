@@ -33,7 +33,7 @@ func run(p process, d deps, args []string) {
 	case "pipkg":
 		runPipkg(p, d, rest)
 	case "skills":
-		runSkills(rest)
+		runSkills(p, d, rest)
 	case "sync-trigger":
 		runSyncTrigger(p, d, rest)
 	case "review-receipt":

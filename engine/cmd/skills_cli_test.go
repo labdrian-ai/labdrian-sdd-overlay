@@ -313,7 +313,7 @@ func TestSkillsLintIsReachedThroughTheTableAndTakesNoVerbAsPath(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			var out, errOut bytes.Buffer
 			var exits []int
-			runSkillsCore("lint", args, &out, &errOut, func(c int) { exits = append(exits, c) })
+			runSkillsCore(testDeps(), "lint", args, &out, &errOut, func(c int) { exits = append(exits, c) })
 			if out.String() != "" || errOut.String() != "" || len(exits) != 1 || exits[0] != 0 {
 				t.Errorf("runSkillsCore(lint, %q) printed %q / %q and exited %v, want a clean pass", args, out.String(), errOut.String(), exits)
 			}
@@ -361,7 +361,7 @@ func TestSkillsRefusesAMissingOrUnknownVerbAndListsTheVerbsItKnows(t *testing.T)
 	} {
 		var out, errOut strings.Builder
 		var exits []int
-		runSkillsCore(tc.verb, []string{tc.verb}, &out, &errOut, func(c int) { exits = append(exits, c) })
+		runSkillsCore(testDeps(), tc.verb, []string{tc.verb}, &out, &errOut, func(c int) { exits = append(exits, c) })
 		if out.String() != "" || errOut.String() != tc.want || len(exits) != 1 || exits[0] != 1 {
 			t.Errorf("verb %q: stdout %q, stderr %q, exits %v, want exit 1 and %q", tc.verb, out.String(), errOut.String(), exits, tc.want)
 		}

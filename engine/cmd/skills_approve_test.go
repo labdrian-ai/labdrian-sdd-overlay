@@ -43,7 +43,7 @@ func TestRunSkillsCore_ApproveStampsTheWallClock(t *testing.T) {
 	before := time.Now().UTC().Truncate(time.Second)
 	var out, errBuf bytes.Buffer
 	code := -1
-	runSkillsCore("approve",
+	runSkillsCore(testDeps(), "approve",
 		// --registry only places the overlay lock file, in the temporary directory
 		// and not in the working directory of the test.
 		[]string{"approve", "--id", "wall-clock", "--approver", "test-reviewer", "--source-root", root, "--registry", filepath.Join(base, "skills.registry.yaml")},
