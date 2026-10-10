@@ -118,6 +118,40 @@ func TestLintPage_UnregisteredPageIsFlagged(t *testing.T) {
 	}
 }
 
+// CheckInboundIndexLink is the catalog rule alone, for a caller (the doctor's registration check) that has
+// no use for the other rules and so none for the readers they need. It answers what LintPage answers for that
+// rule, in each state the catalog can be in.
+func TestCheckInboundIndexLink_AnswersWhatLintPageAnswersForThatRule(t *testing.T) {
+	obs := memory.Observation{ID: 44, Type: "decision", Title: "Named", Content: "Body.", Project: "labdrian-sdd-overlay"}
+	page, err := EmitPage(obs, "c-000044", nil, time.Date(2026, 8, 30, 0, 0, 0, 0, time.UTC))
+	if err != nil {
+		t.Fatalf("EmitPage: %v", err)
+	}
+	for name, setup := range map[string]func(t *testing.T, vaultRoot string){
+		"a catalog that is missing":          func(t *testing.T, vaultRoot string) {},
+		"a catalog with no link to the page": func(t *testing.T, vaultRoot string) { writeIndexWithLink(t, vaultRoot, "c-000099") },
+		"a catalog that links to the page":   func(t *testing.T, vaultRoot string) { writeIndexWithLink(t, vaultRoot, "c-000044") },
+	} {
+		t.Run(name, func(t *testing.T) {
+			vaultRoot := t.TempDir()
+			setup(t, vaultRoot)
+			var want []Diagnostic
+			for _, d := range LintPage(page, vaultRoot, &memAddressMap{}) {
+				if d.Rule == "inbound-index-link" {
+					want = append(want, d)
+				}
+			}
+			got, ok := CheckInboundIndexLink(page, vaultRoot)
+			if ok != (len(want) == 0) {
+				t.Fatalf("CheckInboundIndexLink ok = %v, but LintPage reports %+v", ok, want)
+			}
+			if !ok && (len(want) != 1 || got != want[0]) {
+				t.Errorf("CheckInboundIndexLink = %+v, want %+v", got, want)
+			}
+		})
+	}
+}
+
 // The words of the diagnostics that name the catalog are what an operator reads in the doctor's output. The
 // file comes from the layout, so a change of path there must not silently change them, and this test says what
 // they read today. The one that names the address map is pinned by TestLintPage_ChecksTheAddressMapItIsHanded.

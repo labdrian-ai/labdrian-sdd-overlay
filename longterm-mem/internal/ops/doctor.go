@@ -155,7 +155,7 @@ func Doctor(ctx context.Context, deps DoctorDeps, project string) (DoctorReport,
 		Checks: []Check{
 			checkVaultConfigResolvable(deps.VaultRoot),
 			checkAddressMapIntegrity(deps.VaultRoot, deps.AddressMap),
-			checkWikiRegistrationConsistency(deps.VaultRoot, deps.AddressMap),
+			checkWikiRegistrationConsistency(deps.VaultRoot),
 			checkPrecedenceSidecarConsistency(deps.VaultRoot, deps.Precedence),
 			checkRuntimePrerequisites(deps),
 			checkEmbeddingIndexPresent(deps, project),
@@ -196,15 +196,17 @@ func checkAddressMapIntegrity(vaultRoot string, addresses AddressMapReader) Chec
 	}
 
 	details := append([]string(nil), unreadable...)
-	if memory.IsMissing(addresses) && len(pages) > 0 {
+	if memory.IsMissing(addresses) {
 		// One finding, not one per page: every page would say the same.
-		details = append(details, errNoAddressMapReader.Error())
-		pages = nil
-	}
-	for _, page := range pages {
-		for _, diag := range promote.LintPage(page, vaultRoot, addresses) {
-			if diag.Rule == "address-map" {
-				details = append(details, diag.Detail)
+		if len(pages) > 0 {
+			details = append(details, errNoAddressMapReader.Error())
+		}
+	} else {
+		for _, page := range pages {
+			for _, diag := range promote.LintPage(page, vaultRoot, addresses) {
+				if diag.Rule == "address-map" {
+					details = append(details, diag.Detail)
+				}
 			}
 		}
 	}
@@ -217,12 +219,13 @@ func checkAddressMapIntegrity(vaultRoot string, addresses AddressMapReader) Chec
 // checkWikiRegistrationConsistency reports every promoted page absent from
 // the vault's master catalog (wiki/index.md) and/or its append-only
 // promotion log (wiki/log.md) (R-011 scenario: "Unregistered promoted page
-// is named"). The catalog half reuses promote.LintPage's own
-// inbound-index-link rule (lint.go's checkInboundIndexLink) -- the same
+// is named"). The catalog half reuses the inbound-index-link
+// rule LintPage runs among its others (promote.CheckInboundIndexLink, which
+// needs no address map) -- the same
 // on-disk marker block RegisterIndex writes -- rather than
 // re-implementing it; LintPage has no equivalent log.md rule, so the log
 // half is this check's own, small and self-contained.
-func checkWikiRegistrationConsistency(vaultRoot string, addresses AddressMapReader) Check {
+func checkWikiRegistrationConsistency(vaultRoot string) Check {
 	pages, unreadable, err := loadPromotedPages(vaultRoot)
 	if err != nil {
 		return Check{Name: CheckWikiRegistrationConsistency, Status: CheckFailed, Detail: err.Error()}
@@ -232,10 +235,8 @@ func checkWikiRegistrationConsistency(vaultRoot string, addresses AddressMapRead
 
 	details := append([]string(nil), unreadable...)
 	for _, page := range pages {
-		for _, diag := range promote.LintPage(page, vaultRoot, addresses) {
-			if diag.Rule == "inbound-index-link" {
-				details = append(details, diag.Detail)
-			}
+		if diag, ok := promote.CheckInboundIndexLink(page, vaultRoot); !ok {
+			details = append(details, diag.Detail)
 		}
 		if logErr != nil || !strings.Contains(string(logData), "[["+page.Address) {
 			details = append(details, fmt.Sprintf("%s has no entry for %s", vaultlayout.LogFile, page.Address))

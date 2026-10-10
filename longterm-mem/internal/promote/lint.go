@@ -65,7 +65,7 @@ func LintPage(page Page, vaultRoot string, addresses AddressMapReader) []Diagnos
 		diags = append(diags, diag)
 	}
 	diags = append(diags, checkWikilinksResolve(page, vaultRoot)...)
-	if diag, ok := checkInboundIndexLink(page, vaultRoot); !ok {
+	if diag, ok := CheckInboundIndexLink(page, vaultRoot); !ok {
 		diags = append(diags, diag)
 	}
 
@@ -138,9 +138,11 @@ func checkWikilinksResolve(page Page, vaultRoot string) []Diagnostic {
 	return diags
 }
 
-// checkInboundIndexLink reports the inbound-index.md-link rule: wiki/
-// index.md must exist and contain a wikilink to page.Address.
-func checkInboundIndexLink(page Page, vaultRoot string) (Diagnostic, bool) {
+// CheckInboundIndexLink reports the inbound-index.md-link rule: wiki/
+// index.md must exist and contain a wikilink to page.Address. LintPage runs it
+// with the other rules; the doctor runs it alone, for the pages whose
+// registration it checks.
+func CheckInboundIndexLink(page Page, vaultRoot string) (Diagnostic, bool) {
 	data, err := os.ReadFile(filepath.Join(vaultRoot, vaultlayout.IndexFile))
 	if err != nil {
 		return Diagnostic{Rule: "inbound-index-link", Detail: vaultlayout.IndexFile + " is missing"}, false
