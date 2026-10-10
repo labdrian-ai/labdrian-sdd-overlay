@@ -39,6 +39,10 @@ func Propagate(ctx context.Context, deps Deps, project string) (PropagateReport,
 		return PropagateReport{}, err
 	}
 	failed, err := eachPatchTarget(deps, project, func(t patchTarget) error {
+		// The page is named here for the sake of this pass ("patch <page>: ..."), and again inside the patch for
+		// the sake of its own read ("promote: read <page>: ..."): the repeated path is the message the
+		// commands have always printed, pinned by TestPropagatePatchesThePagesThroughThePort, and both
+		// come from the one PageLocation of the port, so the two cannot name different pages.
 		pagePath := deps.Writer.Pages.PageLocation(t.Address)
 		frontmatterHash, _, err := PatchStatusFields(deps.Writer.Pages, t.Address, t.Status, t.Related)
 		if err != nil {
