@@ -26,7 +26,7 @@ func TestDeps_LoadIndexIsConsultedInsteadOfPackageLoad(t *testing.T) {
 
 	loadCalls := 0
 	deps := Deps{
-		Engram:        store,
+		Memory:        store,
 		RetrieveVault: fakeRetrieveVault(vault.Result{Status: vault.StatusOK}, nil),
 		ResolveLink:   NoLinkResolver,
 		StateDir:      stateDir,
@@ -59,7 +59,7 @@ func TestDeps_LoadIndexErrorIsNotSwallowedAsSuccess(t *testing.T) {
 	})
 
 	deps := Deps{
-		Engram:        store,
+		Memory:        store,
 		RetrieveVault: fakeRetrieveVault(vault.Result{Status: vault.StatusOK}, nil),
 		ResolveLink:   NoLinkResolver,
 		StateDir:      t.TempDir(), // no real index here

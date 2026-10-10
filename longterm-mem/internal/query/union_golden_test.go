@@ -275,7 +275,7 @@ func TestUnionArmDReproducesPublishedTable(t *testing.T) {
 
 			hit1, hit5 := 0, 0
 			for _, q := range items {
-				deps := Deps{Engram: store, ResolveLink: NoLinkResolver, StateDir: stateDir, Embed: embedFn}
+				deps := Deps{Memory: store, ResolveLink: NoLinkResolver, StateDir: stateDir, Embed: embedFn}
 				result, err := Run(context.Background(), deps, Request{
 					Project: unionGoldenProject, Query: q.Query, Top: 5,
 					Sources: []string{SourceEngramFTS, SourceEngramEmbed},

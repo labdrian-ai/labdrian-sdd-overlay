@@ -19,7 +19,7 @@ func TestResponseCarriesEmbeddingCoverageWhenSourceRequested(t *testing.T) {
 		{title: "one", content: "alpha", project: "proj-cov", vec: []float32{1, 0, 0}},
 	})
 
-	deps := Deps{Engram: store, ResolveLink: NoLinkResolver, StateDir: stateDir, Embed: fakeEmbed([]float32{1, 0, 0}, nil)}
+	deps := Deps{Memory: store, ResolveLink: NoLinkResolver, StateDir: stateDir, Embed: fakeEmbed([]float32{1, 0, 0}, nil)}
 	result, err := Run(context.Background(), deps, Request{Project: "proj-cov", Query: "alpha", Sources: []string{SourceEngramEmbed}})
 	if err != nil {
 		t.Fatalf("Run: %v", err)
@@ -41,7 +41,7 @@ func TestCoverageIsPresentEvenWhenIndexIsComplete(t *testing.T) {
 		{title: "one", content: "alpha", project: "proj-cov", vec: []float32{1, 0, 0}},
 	})
 
-	deps := Deps{Engram: store, ResolveLink: NoLinkResolver, StateDir: stateDir, Embed: fakeEmbed([]float32{1, 0, 0}, nil)}
+	deps := Deps{Memory: store, ResolveLink: NoLinkResolver, StateDir: stateDir, Embed: fakeEmbed([]float32{1, 0, 0}, nil)}
 	result, err := Run(context.Background(), deps, Request{Project: "proj-cov", Query: "alpha", Sources: []string{SourceEngramEmbed}})
 	if err != nil {
 		t.Fatalf("Run: %v", err)
@@ -74,7 +74,7 @@ func TestIncompleteCoverageDetailNamesTheRebuildCommand(t *testing.T) {
 	_ = ids
 	_ = dbPath
 
-	deps := Deps{Engram: store, ResolveLink: NoLinkResolver, StateDir: stateDir, Embed: fakeEmbed([]float32{1, 0, 0}, nil)}
+	deps := Deps{Memory: store, ResolveLink: NoLinkResolver, StateDir: stateDir, Embed: fakeEmbed([]float32{1, 0, 0}, nil)}
 	// Drop the second entry from the manifest directly to simulate a row
 	// added to the corpus after the index was last built (Unindexed>0).
 	idx, err := vecindex.Load(vecindex.Dir(stateDir, "proj-cov"))

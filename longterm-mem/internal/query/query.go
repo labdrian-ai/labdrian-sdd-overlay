@@ -14,7 +14,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vault"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vecindex"
@@ -110,7 +109,7 @@ const (
 	// decision pass as current.
 	DiagnosticRelationsUnreadable = "relations_unreadable"
 	// DiagnosticEngramDegradedSnapshot reports that Engram is being read
-	// through engram.Open's immutable=1 fallback: the results come from a
+	// through the Engram adapter's immutable=1 fallback: the results come from a
 	// point-in-time snapshot taken when the connection was opened, not
 	// from the live database.
 	//
@@ -248,9 +247,10 @@ type Request struct {
 }
 
 // Deps are Run's dependencies. RetrieveVault/ResolveLink are function seams
-// for tests; Engram is a real *engram.Store (temp DB in tests).
+// for tests; Memory is the port the package owns (a fake, or a temp DB behind
+// the Engram adapter, in tests).
 type Deps struct {
-	Engram        *engram.Store
+	Memory        Memory
 	RetrieveVault func(ctx context.Context, project, query string, top int) (vault.Result, error)
 	// ResolveLink reports the Engram id an existing promotion links to
 	// vault page pageAddress (D6 store, not built until slice 4/5).
@@ -433,7 +433,7 @@ func Run(ctx context.Context, deps Deps, req Request) (Result, error) {
 	var engramRows []memory.Row
 	matchMode := memory.MatchAll
 	if wantFTS {
-		search, err := deps.Engram.Search(req.Project, req.Query, top, req.ExcludeTypes...)
+		search, err := deps.Memory.Search(req.Project, req.Query, top, req.ExcludeTypes...)
 		if err != nil {
 			return Result{}, fmt.Errorf("query: search engram: %w", err)
 		}
@@ -457,7 +457,7 @@ func Run(ctx context.Context, deps Deps, req Request) (Result, error) {
 				Detail: fmt.Sprintf("these terms were not searched, as words too common to narrow anything down: %s", strings.Join(search.DroppedTokens, ", ")),
 			})
 		}
-		if degraded, cause := deps.Engram.Degraded(); degraded {
+		if degraded, cause := deps.Memory.Degraded(); degraded {
 			result.Diagnostics = append(result.Diagnostics, Diagnostic{
 				Code:   DiagnosticEngramDegradedSnapshot,
 				Detail: fmt.Sprintf("engram is being read through the immutable=1 fallback, so these results come from the snapshot taken when the connection was opened, not the live database: %s", cause),
@@ -467,7 +467,7 @@ func Run(ctx context.Context, deps Deps, req Request) (Result, error) {
 
 	var embedRows []ResultRow
 	if wantEmbed {
-		rows, coverage, diags := runEmbeddingArm(ctx, deps.Engram, deps.StateDir, req.Project, req.Query, top, deps.Embed, deps.BuildIndex, resolveLoadIndex(deps))
+		rows, coverage, diags := runEmbeddingArm(ctx, deps.Memory, deps.StateDir, req.Project, req.Query, top, deps.Embed, deps.BuildIndex, resolveLoadIndex(deps))
 		embedRows = rows
 		result.Coverage = append(result.Coverage, coverage)
 		result.Diagnostics = append(result.Diagnostics, diags...)
@@ -499,7 +499,7 @@ func Run(ctx context.Context, deps Deps, req Request) (Result, error) {
 	}
 
 	result.Results = mergeResults(wantVault, wantFTS, wantEmbed, vaultRows, engramRows, embedRows, resolveLink, req.Query, matchMode)
-	result.Diagnostics = append(result.Diagnostics, attachStandings(deps.Engram, result.Results)...)
+	result.Diagnostics = append(result.Diagnostics, attachStandings(deps.Memory, result.Results)...)
 	capResponse(&result)
 	return result, nil
 }
@@ -764,7 +764,7 @@ func responseBytes(result Result) int {
 // losing the answer. It is reported rather than swallowed, because silence
 // here is indistinguishable from "nothing is superseded" -- the reading
 // that lets an abandoned decision pass as current.
-func attachStandings(store *engram.Store, rows []ResultRow) []Diagnostic {
+func attachStandings(store StandingReader, rows []ResultRow) []Diagnostic {
 	ids := make([]int64, 0, len(rows))
 	for _, r := range rows {
 		if r.EngramID != 0 {

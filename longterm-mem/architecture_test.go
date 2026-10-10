@@ -102,7 +102,6 @@ var knownDebt = archguard.Debt{
 	// query: reads through ports it owns instead of the concrete adapters.
 	"internal/query": {
 		"internal/embed":    "L4",
-		"internal/engram":   "L1",
 		"internal/vault":    "L4",
 		"internal/vecindex": "L4",
 	},

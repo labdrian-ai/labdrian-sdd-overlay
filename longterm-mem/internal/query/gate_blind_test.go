@@ -134,7 +134,7 @@ func TestGateRoutingAccuracyOnBlindSet(t *testing.T) {
 				for _, id := range q.Truth {
 					truth[id] = true
 				}
-				deps := Deps{Engram: store, ResolveLink: NoLinkResolver, StateDir: stateDir, Embed: embedFn}
+				deps := Deps{Memory: store, ResolveLink: NoLinkResolver, StateDir: stateDir, Embed: embedFn}
 
 				ftsRes, err := Run(context.Background(), deps, Request{Project: unionGoldenProject, Query: q.Query, Top: 5, Sources: []string{SourceEngramFTS}})
 				if err != nil {
