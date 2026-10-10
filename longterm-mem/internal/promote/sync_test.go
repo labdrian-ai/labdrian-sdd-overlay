@@ -164,7 +164,7 @@ func TestSync(t *testing.T) {
 			}
 
 			w := &Writer{VaultRoot: vaultRoot, Store: precedence}
-			report, err := Sync(context.Background(), Deps{Engram: store, Writer: w}, "labdrian-sdd-overlay")
+			report, err := Sync(context.Background(), Deps{Memory: store, Writer: w}, "labdrian-sdd-overlay")
 			if err != nil {
 				t.Fatalf("Sync: %v", err)
 			}
@@ -214,7 +214,7 @@ func TestSync_IndexAndSyncStateReflectCompletion(t *testing.T) {
 	var rebuildCalled bool
 	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}}
 	deps := Deps{
-		Engram: store,
+		Memory: store,
 		Writer: w,
 		RebuildIndex: func(ctx context.Context) error {
 			rebuildCalled = true
@@ -286,7 +286,7 @@ func TestSync_OneFailingObservationDoesNotWedgeTheRun(t *testing.T) {
 	var rebuildCalled bool
 	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}}
 	deps := Deps{
-		Engram:       store,
+		Memory:       store,
 		Writer:       w,
 		RebuildIndex: func(ctx context.Context) error { rebuildCalled = true; return nil },
 	}

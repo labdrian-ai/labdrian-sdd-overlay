@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 )
 
@@ -19,12 +18,14 @@ const syncStateRelPath = ".vault-meta/longterm-mem-sync-state.json"
 const syncStateSchema = 1
 
 // Deps are Sync's (and Propagate's) dependencies, mirroring query.Deps's
-// function-seam convention: Engram/Writer are concrete production types
-// (a temp DB and a temp vault in tests), RebuildIndex is a seam so tests
+// function-seam convention: Memory is the port the package owns (a fake or
+// a temp DB behind the Engram adapter in tests), Writer is a concrete
+// production type (a temp vault in tests), RebuildIndex is a seam so tests
 // never need real vault subprocess scripts to prove R-031's wiring.
 type Deps struct {
-	// Engram lists candidate observations for project.
-	Engram *engram.Store
+	// Memory serves the candidate observations of a project and the history
+	// propagation reads.
+	Memory Memory
 	// Writer promotes each eligible, unpromoted-or-revised observation,
 	// and (Propagate) owns the precedence sidecar a status-only patch
 	// updates.
@@ -73,7 +74,7 @@ type SyncFailure struct {
 // identically. Sync still returns a non-nil error when anything failed,
 // so a partially successful run can never be mistaken for a clean one.
 func Sync(ctx context.Context, deps Deps, project string) (SyncReport, error) {
-	observations, err := deps.Engram.ListObservations(project)
+	observations, err := deps.Memory.ListObservations(project)
 	if err != nil {
 		return SyncReport{}, fmt.Errorf("promote: sync: list observations for %q: %w", project, err)
 	}
@@ -166,7 +167,7 @@ type SyncPlan struct {
 // decidePatch those passes use, so its prediction is their own decision
 // rather than a second opinion about it.
 func Plan(ctx context.Context, deps Deps, project string) (SyncPlan, error) {
-	observations, err := deps.Engram.ListObservations(project)
+	observations, err := deps.Memory.ListObservations(project)
 	if err != nil {
 		return SyncPlan{}, fmt.Errorf("promote: plan: list observations for %q: %w", project, err)
 	}

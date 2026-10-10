@@ -45,7 +45,7 @@ func TestPlan_WritesNothingAndPredictsWhatSyncThenDoes(t *testing.T) {
 	}, "c-000900")
 
 	w := &Writer{VaultRoot: vaultRoot, Store: precedence}
-	deps := Deps{Engram: store, Writer: w}
+	deps := Deps{Memory: store, Writer: w}
 
 	before := vaultSnapshot(t, vaultRoot)
 
@@ -163,7 +163,7 @@ func TestPlan_CountsThePagesPropagateWouldPatch(t *testing.T) {
 		ID: ids[1], Type: "decision", Title: "New Decision", Content: "New body.", Project: "p", RevisionCount: 1,
 	}, "c-000002")
 
-	deps := Deps{Engram: store, Writer: &Writer{VaultRoot: vaultRoot, Store: precedence}}
+	deps := Deps{Memory: store, Writer: &Writer{VaultRoot: vaultRoot, Store: precedence}}
 
 	before := vaultSnapshot(t, vaultRoot)
 
@@ -223,7 +223,7 @@ func TestPlan_OneBrokenObservationIsReportedOnce(t *testing.T) {
 		t.Fatalf("write broken page: %v", err)
 	}
 
-	deps := Deps{Engram: store, Writer: &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}}}
+	deps := Deps{Memory: store, Writer: &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}}}
 	plan, err := Plan(context.Background(), deps, "p")
 	if err != nil {
 		t.Fatalf("Plan: %v", err)

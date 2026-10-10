@@ -94,7 +94,6 @@ var knownDebt = archguard.Debt{
 	// vaultfs (L3).
 	"internal/promote": {
 		"internal/durable": "L3",
-		"internal/engram":  "L1",
 		"internal/vault":   "L2",
 		"os":               "L3",
 		"time.Now":         "L2",
