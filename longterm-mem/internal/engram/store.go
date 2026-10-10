@@ -1,6 +1,11 @@
 // Package engram gives longterm-mem read-only access to Engram's mid-term
 // SQLite database. Every connection this package opens is read-only by
 // construction (R-002): no code path here can write to Engram's database.
+//
+// It is an adapter: it maps Engram's rows to the types of internal/memory
+// (the observation, the search result, the standing, the relation edge) and
+// defines no domain type of its own. The consumers read memory through the
+// reader ports they each declare, which *Store satisfies.
 package engram
 
 import (
@@ -12,6 +17,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
+
 	_ "modernc.org/sqlite"
 )
 
@@ -20,34 +27,6 @@ type Store struct {
 	db            *sql.DB
 	degraded      bool
 	degradedCause string
-}
-
-// Observation is one mid-term Engram observation row. SyncID, Type, Pinned,
-// and RevisionCount were added in slice 4 for R-007 eligibility and R-027
-// page emission's engram_sync_id/engram_type extras. CreatedAt, UpdatedAt,
-// and DeletedAt were added in slice 7: CreatedAt drives D11's
-// newer-by-created_at successor rule (propagate.go), and DeletedAt lets
-// Propagate (R-033) tell a soft-deleted observation from an active one.
-// Both timestamps are carried as the raw TEXT SQLite stores them in
-// (lexicographically sortable within one column, since every row in a
-// single Engram database is written through the same datetime('now')
-// convention) rather than parsed into time.Time -- there is no cross-row,
-// cross-format comparison this package needs to perform. TopicKey was
-// added for R-007's curated-topic_key eligibility gate: promote.Eligible
-// reads it directly, so every observation load must populate it.
-type Observation struct {
-	ID            int64
-	SyncID        string
-	Type          string
-	Title         string
-	Content       string
-	Project       string
-	RevisionCount int
-	Pinned        bool
-	CreatedAt     string
-	UpdatedAt     string
-	DeletedAt     string
-	TopicKey      string
 }
 
 // Open opens a read-only connection to the Engram database at dbPath. When
@@ -153,11 +132,11 @@ type rowScanner interface {
 // through sql.NullString so a legacy or active row's NULL never fails the
 // scan, per the production incident this guards against: one row with a
 // NULL sync_id previously errored the entire list.
-func scanObservationRow(row rowScanner) (Observation, error) {
-	var o Observation
+func scanObservationRow(row rowScanner) (memory.Observation, error) {
+	var o memory.Observation
 	var syncID, deletedAt, topicKey sql.NullString
 	if err := row.Scan(&o.ID, &syncID, &o.Type, &o.Title, &o.Content, &o.Project, &o.RevisionCount, &o.Pinned, &o.CreatedAt, &o.UpdatedAt, &deletedAt, &topicKey); err != nil {
-		return Observation{}, fmt.Errorf("engram: scan observation row: %w", err)
+		return memory.Observation{}, fmt.Errorf("engram: scan observation row: %w", err)
 	}
 	o.SyncID = syncID.String
 	o.DeletedAt = deletedAt.String
@@ -168,7 +147,7 @@ func scanObservationRow(row rowScanner) (Observation, error) {
 // ListObservations returns every observation belonging to project that has
 // not been soft-deleted (R-020): rows from other projects and rows with a
 // non-null deleted_at are excluded.
-func (s *Store) ListObservations(project string) ([]Observation, error) {
+func (s *Store) ListObservations(project string) ([]memory.Observation, error) {
 	rows, err := s.db.Query(
 		`SELECT `+observationColumns+` FROM observations WHERE project = ? AND deleted_at IS NULL`,
 		project,
@@ -178,7 +157,7 @@ func (s *Store) ListObservations(project string) ([]Observation, error) {
 	}
 	defer rows.Close()
 
-	var observations []Observation
+	var observations []memory.Observation
 	for rows.Next() {
 		o, err := scanObservationRow(rows)
 		if err != nil {
@@ -226,7 +205,7 @@ func (s *Store) HasMemory(project string) (bool, error) {
 // soft-deleted observation's own row to decide archived-vs-superseded,
 // which ListObservations' R-020 scoping deliberately excludes for every
 // other caller.
-func (s *Store) ObservationsIncludingDeleted(project string) ([]Observation, error) {
+func (s *Store) ObservationsIncludingDeleted(project string) ([]memory.Observation, error) {
 	rows, err := s.db.Query(
 		`SELECT `+observationColumns+` FROM observations WHERE project = ?`,
 		project,
@@ -236,7 +215,7 @@ func (s *Store) ObservationsIncludingDeleted(project string) ([]Observation, err
 	}
 	defer rows.Close()
 
-	var observations []Observation
+	var observations []memory.Observation
 	for rows.Next() {
 		o, err := scanObservationRow(rows)
 		if err != nil {
@@ -259,14 +238,14 @@ func (s *Store) ObservationsIncludingDeleted(project string) ([]Observation, err
 // caller (promote.ExplicitPromote) turns that into R-032's "rejected with
 // a clear error" outcome; ObservationByID itself only reports a genuine
 // database error as err.
-func (s *Store) ObservationByID(id int64) (Observation, bool, error) {
+func (s *Store) ObservationByID(id int64) (memory.Observation, bool, error) {
 	row := s.db.QueryRow(`SELECT `+observationColumns+` FROM observations WHERE id = ?`, id)
 	o, err := scanObservationRow(row)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return Observation{}, false, nil
+			return memory.Observation{}, false, nil
 		}
-		return Observation{}, false, fmt.Errorf("engram: look up observation %d: %w", id, err)
+		return memory.Observation{}, false, fmt.Errorf("engram: look up observation %d: %w", id, err)
 	}
 	return o, true, nil
 }
@@ -290,7 +269,7 @@ func (s *Store) ObservationByID(id int64) (Observation, bool, error) {
 // discarded into an empty map, which reported Indexed as 0 and therefore
 // every live observation as unindexed: a read failure told the operator
 // their index was empty and to go rebuild a perfectly good one.
-func (s *Store) CoverageSnapshot(project string, indexedIDs []int64) (int, map[int64]Observation, error) {
+func (s *Store) CoverageSnapshot(project string, indexedIDs []int64) (int, map[int64]memory.Observation, error) {
 	tx, err := s.db.BeginTx(context.Background(), &sql.TxOptions{ReadOnly: true})
 	if err != nil {
 		return 0, nil, fmt.Errorf("engram: open coverage snapshot for project %q: %w", project, err)
@@ -317,8 +296,8 @@ func (s *Store) CoverageSnapshot(project string, indexedIDs []int64) (int, map[i
 // there is exactly one definition of "live".
 func liveObservationsByIDTx(q interface {
 	Query(string, ...any) (*sql.Rows, error)
-}, project string, ids []int64) (map[int64]Observation, error) {
-	result := make(map[int64]Observation, len(ids))
+}, project string, ids []int64) (map[int64]memory.Observation, error) {
+	result := make(map[int64]memory.Observation, len(ids))
 	if len(ids) == 0 {
 		return result, nil
 	}

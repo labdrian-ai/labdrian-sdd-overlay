@@ -3,6 +3,8 @@ package engram
 import (
 	"database/sql"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 )
 
 // Standings answers the only question a reader actually has: should this
@@ -92,7 +94,7 @@ func TestStandings_WithdrawnRelationIsIgnored(t *testing.T) {
 	}
 }
 
-func standings(t *testing.T, dbPath string, ids ...int64) map[int64]Standing {
+func standings(t *testing.T, dbPath string, ids ...int64) map[int64]memory.Standing {
 	t.Helper()
 	store, err := Open(dbPath)
 	if err != nil {

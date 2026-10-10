@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 )
 
 // insertSearchRow inserts one fixture row with caller-controlled content
@@ -304,8 +306,8 @@ func TestSearch_SnippetIsCappedAndSaysSo(t *testing.T) {
 		t.Fatalf("Search: %v", err)
 	}
 	row := got.Rows[0]
-	if len(row.Snippet) > SnippetBudget+len(truncationMark)*2 {
-		t.Fatalf("len(Snippet) = %d, want at most the %d-character budget plus its markers", len(row.Snippet), SnippetBudget)
+	if len(row.Snippet) > memory.SnippetBudget+len(memory.TruncationMark)*2 {
+		t.Fatalf("len(Snippet) = %d, want at most the %d-character budget plus its markers", len(row.Snippet), memory.SnippetBudget)
 	}
 	if !row.SnippetTruncated {
 		t.Fatalf("SnippetTruncated = false on a %d-byte body cut to %d: a caller cannot tell a preview from the whole memory", len(content), len(row.Snippet))
@@ -313,8 +315,8 @@ func TestSearch_SnippetIsCappedAndSaysSo(t *testing.T) {
 	if row.ContentLength != len(content) {
 		t.Fatalf("ContentLength = %d, want %d: truncation is only honest if the caller is told how much it is missing", row.ContentLength, len(content))
 	}
-	if !strings.Contains(row.Snippet, truncationMark) {
-		t.Fatalf("Snippet carries no %q marker, so the text a person reads does not show it was cut:\n%q", truncationMark, row.Snippet)
+	if !strings.Contains(row.Snippet, memory.TruncationMark) {
+		t.Fatalf("Snippet carries no %q marker, so the text a person reads does not show it was cut:\n%q", memory.TruncationMark, row.Snippet)
 	}
 }
 
