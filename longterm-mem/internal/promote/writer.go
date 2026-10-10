@@ -30,6 +30,11 @@ type Writer struct {
 	// interrupted run therefore leaves N consistent pages rather than N
 	// pages of lost provenance.
 	Store PrecedenceStore
+	// Addresses hands out the address of each new page. It is asked only
+	// when a promotion needs a fresh address: re-promoting a page that
+	// already exists reuses its own and never reaches it. A promotion that
+	// needs one with none wired is refused before anything is written.
+	Addresses AddressAllocator
 	// Clock dates the pages, the promotion log and the sync-state record.
 	// The composition root wires a real one; a Writer without one is
 	// refused by Promote and Sync before they touch the vault.
@@ -103,7 +108,7 @@ func (w *Writer) Promote(obs memory.Observation, explicit bool) (Result, error) 
 		return Result{}, err
 	}
 
-	address, err := Allocate(w.VaultRoot, obs.Project, int(obs.ID), utc(w.Clock))
+	address, err := allocateAddress(w.VaultRoot, obs.Project, int(obs.ID), w.Addresses, utc(w.Clock))
 	if err != nil {
 		return Result{}, err
 	}
@@ -148,7 +153,7 @@ func (w *Writer) Promote(obs memory.Observation, explicit bool) (Result, error) 
 	// two orphan states a killed process may leave behind -- and the two
 	// are not equally recoverable:
 	//
-	//   page without entry (the old order) is unrecoverable. Allocate
+	//   page without entry (the old order) is unrecoverable. allocateAddress
 	//   reuses the page's own address, os.Stat finds it, and UpdateInPlace
 	//   refuses it as unknown provenance -- which, being a skip, also
 	//   suppresses the Save and the registration that would have repaired
@@ -175,11 +180,11 @@ func (w *Writer) Promote(obs memory.Observation, explicit bool) (Result, error) 
 		// own absence), but an entry claiming provenance over a file that
 		// does not exist is still a lie the sidecar should not tell.
 		//
-		// Allocate's own two writes are deliberately NOT withdrawn with
-		// it. The address number allocate-address.sh advanced belongs to a
-		// vault script this package can only call forward, so it is burned
+		// allocateAddress's own two writes are deliberately NOT withdrawn with
+		// it. The address number the allocator advanced belongs to a
+		// counter this package can only call forward, so it is burned
 		// whatever happens here; and the .raw/.manifest.json address_map
-		// row Allocate wrote is left alone because a row without a page is
+		// row allocateAddress wrote is left alone because a row without a page is
 		// inert -- doctor's address-map rule walks PAGES looking for their
 		// rows, never rows looking for their pages -- while rewriting that
 		// wiki-ingest-owned file to delete it is a real write that can

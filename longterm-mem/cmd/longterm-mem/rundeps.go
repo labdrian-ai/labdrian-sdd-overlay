@@ -140,7 +140,7 @@ func runPromote(store *engram.Store, vaultRoot string, engramID int64) (promote.
 	if err != nil {
 		return promote.Result{}, err
 	}
-	writer := &promote.Writer{VaultRoot: vaultRoot, Store: precedence, Clock: utcClock{}}
+	writer := &promote.Writer{VaultRoot: vaultRoot, Store: precedence, Addresses: vault.AddressAllocator{Root: vaultRoot}, Clock: utcClock{}}
 	return promote.ExplicitPromote(writer, store.ObservationByID, engramID)
 }
 

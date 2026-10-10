@@ -90,11 +90,10 @@ var knownDebt = archguard.Debt{
 		"path/filepath.EvalSymlinks": "L7",
 	},
 
-	// promote: the clock is injected (L2, done). The address allocator becomes
-	// injected in L2 as well and the vault file system moves to vaultfs (L3).
+	// promote: the vault file system moves to vaultfs (L3). The address
+	// allocator and the clock are ports it owns (L2).
 	"internal/promote": {
 		"internal/durable": "L3",
-		"internal/vault":   "L2",
 		"os":               "L3",
 	},
 

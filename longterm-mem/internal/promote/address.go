@@ -1,8 +1,8 @@
 package promote
 
 import (
-	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -11,52 +11,56 @@ import (
 	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/durable"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vault"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 )
 
-// allocateScript is the vault-relative address allocator entrypoint (D7): a
-// real shell entrypoint (shebang + exec bit), so Allocate execs it directly
-// via Runner.Run, matching setup-retrieve.sh's convention (3a.4), never
-// RunInterpreted.
-const allocateScript = "scripts/allocate-address.sh"
+// AddressAllocator is the port through which promotion obtains the address of
+// a page it is about to create: the next free "c-NNNNNN" of the vault. The
+// package owns it and never runs the vault's allocator itself; the
+// composition root hands the Writer an adapter (internal/vault's
+// AddressAllocator, which runs scripts/allocate-address.sh under its lock),
+// and a test hands it a fake.
+//
+// An allocator that cannot allocate returns an error and no address; promote
+// writes nothing for that observation. An address handed out is spent
+// whether or not the page is ever written, as the vault's counter is.
+type AddressAllocator interface {
+	NextAddress() (string, error)
+}
 
-// allocateTimeout bounds a single allocate-address.sh call (D8's
-// convention for vault subprocess calls).
-const allocateTimeout = 10 * time.Second
+// errNoAddressAllocator is what a promotion that needs a new address answers
+// when its Writer was built without an AddressAllocator.
+var errNoAddressAllocator = errors.New("promote: the writer has no address allocator")
 
 // manifestRelPath is .raw/.manifest.json's vault-relative location (D6/D7):
 // the wiki-ingest-owned address and source manifest.
 const manifestRelPath = ".raw/.manifest.json"
 
-// Allocate returns the vault address for the Engram observation identified
-// by (project, engramID) under vaultRoot (R-028). When a page already
-// promoted under wiki/memory/ carries this engram_id and project in its
-// frontmatter, that page's own address is reused: no subprocess is
-// invoked and .raw/.manifest.json is not written again. Otherwise a fresh
-// address is allocated via scripts/allocate-address.sh (flock-safe, via
-// internal/vault.Runner) and recorded in .raw/.manifest.json's
-// address_map, keyed by the page's address-derived path.
-func Allocate(vaultRoot, project string, engramID int, at time.Time) (string, error) {
+// allocateAddress returns the vault address for the Engram observation
+// identified by (project, engramID) under vaultRoot (R-028). When a page
+// already promoted under wiki/memory/ carries this engram_id and project in
+// its frontmatter, that page's own address is reused: the allocator is not
+// asked (so a Writer that has none still re-promotes) and
+// .raw/.manifest.json is not written again. Otherwise a fresh address is
+// taken from addresses and recorded in .raw/.manifest.json's address_map,
+// keyed by the page's address-derived path, dated at (UTC) when the manifest
+// has to be created.
+func allocateAddress(vaultRoot, project string, engramID int, addresses AddressAllocator, at time.Time) (string, error) {
 	if existing, ok, err := findPromotedPage(vaultRoot, project, engramID); err != nil {
 		return "", err
 	} else if ok {
 		return existing.Address, nil
 	}
 
-	runner := &vault.Runner{Root: vaultRoot}
-	ctx, cancel := context.WithTimeout(context.Background(), allocateTimeout)
-	defer cancel()
-
-	stdout, stderr, exitCode, err := runner.Run(ctx, allocateScript)
+	if memory.IsMissing(addresses) {
+		return "", errNoAddressAllocator
+	}
+	address, err := addresses.NextAddress()
 	if err != nil {
-		return "", fmt.Errorf("promote: allocate address: %w", err)
+		return "", fmt.Errorf("promote: %w", err)
 	}
-	if exitCode != 0 {
-		return "", fmt.Errorf("promote: %s exited %d: %s", allocateScript, exitCode, strings.TrimSpace(string(stderr)))
-	}
-	address := strings.TrimSpace(string(stdout))
 	if address == "" {
-		return "", fmt.Errorf("promote: %s produced no address", allocateScript)
+		return "", errors.New("promote: the address allocator returned no address")
 	}
 
 	path := pagePathPrefix + "/" + address + ".md"
@@ -67,7 +71,7 @@ func Allocate(vaultRoot, project string, engramID int, at time.Time) (string, er
 }
 
 // promotedPage is one already-promoted page's address and the Engram
-// revision it was last promoted at (7a REFACTOR): Allocate's re-promotion
+// revision it was last promoted at (7a REFACTOR): allocateAddress's re-promotion
 // address reuse (R-028) and Sync's unpromoted-or-revised gate (R-009)
 // share this one wiki/memory/ scan instead of each re-implementing it.
 type promotedPage struct {
@@ -97,7 +101,7 @@ type promotedPage struct {
 // engram_revision, errors here exactly as it always has. Widening that to
 // every page sharing the engram_id was tried and reverted. This lookup is
 // Sync's R-009 gate (sync.go) and Propagate's page lookup as well as
-// Allocate's reuse, so one corrupted page under project A would have
+// allocateAddress's reuse, so one corrupted page under project A would have
 // permanently failed project B's promotion of the one observation sharing
 // that engram_id -- nothing writes an address into that page, so no run
 // could ever clear it. Sync and Propagate record such an error per

@@ -15,10 +15,9 @@ import (
 // wiki/memory/, and the precedence store records its fresh hashes.
 func TestWriter_Promote_CreatesNewPage(t *testing.T) {
 	vaultRoot := t.TempDir()
-	writeAllocateScript(t, vaultRoot, allocateAddressFixture)
 	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
-	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: clock}
+	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: clock, Addresses: staticAddress(testAddress)}
 	obs := memory.Observation{ID: 401, Type: "decision", Title: "Fresh Decision", Content: "Never promoted before.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/writer-fixture"}
 
 	result, err := w.Promote(obs, false)
@@ -154,10 +153,9 @@ func TestWriter_Promote_SkipsLocalEdit(t *testing.T) {
 // memory -- a second Writer loading the sidecar afresh sees it.
 func TestWriter_Promote_PersistsPrecedenceEntry(t *testing.T) {
 	vaultRoot := t.TempDir()
-	writeAllocateScript(t, vaultRoot, allocateAddressFixture)
 	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
-	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: clock}
+	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: clock, Addresses: staticAddress(testAddress)}
 	obs := memory.Observation{ID: 404, Type: "decision", Title: "Durable Pairing", Content: "Entry must outlive the process.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/writer-fixture"}
 
 	result, err := w.Promote(obs, false)
@@ -202,10 +200,9 @@ func promoteTwice(t *testing.T, w *Writer, clock *fakeClock, obs memory.Observat
 // finding R3-update-branch-persistence-unproven).
 func TestWriter_Promote_UpdatePersistsPrecedenceEntry(t *testing.T) {
 	vaultRoot := t.TempDir()
-	writeAllocateScript(t, vaultRoot, allocateAddressFixture)
 	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
-	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: clock}
+	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: clock, Addresses: staticAddress(testAddress)}
 	obs := memory.Observation{ID: 405, Type: "decision", Title: "Updated Twice", Content: "First content.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/writer-fixture"}
 	result := promoteTwice(t, w, clock, obs)
 
@@ -231,10 +228,9 @@ func TestWriter_Promote_UpdatePersistsPrecedenceEntry(t *testing.T) {
 // the next run (review finding R3-update-branch-persistence-unproven).
 func TestWriter_Promote_SkipDoesNotPersist(t *testing.T) {
 	vaultRoot := t.TempDir()
-	writeAllocateScript(t, vaultRoot, allocateAddressFixture)
 	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
-	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: clock}
+	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: clock, Addresses: staticAddress(testAddress)}
 	obs := memory.Observation{ID: 406, Type: "decision", Title: "Edited By Hand", Content: "Original content.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/writer-fixture"}
 	first, err := w.Promote(obs, false)
 	if err != nil {
@@ -287,7 +283,6 @@ func TestWriter_Promote_SkipDoesNotPersist(t *testing.T) {
 // cleanup.
 func TestWriter_Promote_CreateRollsBackWhenFingerprintCannotPersist(t *testing.T) {
 	vaultRoot := t.TempDir()
-	writeAllocateScript(t, vaultRoot, allocateAddressFixture)
 	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 	// A directory where the sidecar file belongs: Save's rename cannot
@@ -297,7 +292,7 @@ func TestWriter_Promote_CreateRollsBackWhenFingerprintCannotPersist(t *testing.T
 		t.Fatalf("mkdir %s: %v", blocked, err)
 	}
 
-	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: clock}
+	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: clock, Addresses: staticAddress(testAddress)}
 	obs := memory.Observation{ID: 407, Type: "decision", Title: "Unpersistable", Content: "Fingerprint cannot land.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/writer-fixture"}
 
 	if _, err := w.Promote(obs, false); err == nil {
@@ -332,7 +327,6 @@ func TestWriter_Promote_CreateRollsBackWhenFingerprintCannotPersist(t *testing.T
 // -- an entry must not outlive a page that never landed.
 func TestWriter_Promote_CreatePersistsPrecedenceBeforeThePage(t *testing.T) {
 	vaultRoot := t.TempDir()
-	writeAllocateScript(t, vaultRoot, allocateAddressFixture)
 	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 	// A dangling symlink where wiki/memory belongs: os.Stat of the page
@@ -348,7 +342,7 @@ func TestWriter_Promote_CreatePersistsPrecedenceBeforeThePage(t *testing.T) {
 		t.Fatalf("create dangling symlink: %v", err)
 	}
 
-	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: clock}
+	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: clock, Addresses: staticAddress(testAddress)}
 	obs := memory.Observation{ID: 408, Type: "decision", Title: "Unwritable Page", Content: "The page write cannot land.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/writer-fixture"}
 
 	if _, err := w.Promote(obs, false); err == nil {
@@ -381,10 +375,9 @@ func TestWriter_Promote_CreatePersistsPrecedenceBeforeThePage(t *testing.T) {
 // never reached.
 func TestWriter_Promote_CreateResumesAfterAnUnpairedFingerprint(t *testing.T) {
 	vaultRoot := t.TempDir()
-	writeAllocateScript(t, vaultRoot, allocateAddressFixture)
 	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
-	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: clock}
+	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: clock, Addresses: staticAddress(testAddress)}
 	obs := memory.Observation{ID: 409, Type: "decision", Title: "Entry Without A Page", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/writer-fixture"}
 	first, err := w.Promote(obs, false)
 	if err != nil {
@@ -435,10 +428,9 @@ func TestWriter_Promote_CreateResumesAfterAnUnpairedFingerprint(t *testing.T) {
 // its registration repaired.
 func TestWriter_Promote_AdoptsAnUnrecordedOwnPageAndRepairsRegistration(t *testing.T) {
 	vaultRoot := t.TempDir()
-	writeAllocateScript(t, vaultRoot, allocateAddressFixture)
 	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
-	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: clock}
+	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: clock, Addresses: staticAddress(testAddress)}
 	obs := memory.Observation{ID: 410, Type: "decision", Title: "Wedged In The Field", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/writer-fixture"}
 	first, err := w.Promote(obs, false)
 	if err != nil {
@@ -458,7 +450,7 @@ func TestWriter_Promote_AdoptsAnUnrecordedOwnPageAndRepairsRegistration(t *testi
 	// clock -- the second-order hazard that makes a byte-equality
 	// reconciliation succeed only on a same-day retry.
 	clock.Set(time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
-	wedged := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: clock}
+	wedged := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: clock, Addresses: staticAddress(testAddress)}
 	second, err := wedged.Promote(obs, false)
 	if err != nil {
 		t.Fatalf("Promote (wedged retry): %v", err)
@@ -499,10 +491,9 @@ func TestWriter_Promote_AdoptsAnUnrecordedOwnPageAndRepairsRegistration(t *testi
 // (register.go, Slice 5) had zero production callers until this task.
 func TestWriter_Promote_CreateRegistersIndexAndLog(t *testing.T) {
 	vaultRoot := t.TempDir()
-	writeAllocateScript(t, vaultRoot, allocateAddressFixture)
 	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
-	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: clock}
+	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: clock, Addresses: staticAddress(testAddress)}
 	obs := memory.Observation{ID: 501, Type: "decision", Title: "Catalog Me", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/writer-fixture"}
 
 	result, err := w.Promote(obs, false)
@@ -534,10 +525,9 @@ func TestWriter_Promote_CreateRegistersIndexAndLog(t *testing.T) {
 // than duplicated (RegisterIndex's own idempotent-replace contract).
 func TestWriter_Promote_UpdateRegistersIndexAndLog(t *testing.T) {
 	vaultRoot := t.TempDir()
-	writeAllocateScript(t, vaultRoot, allocateAddressFixture)
 	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
-	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: clock}
+	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: clock, Addresses: staticAddress(testAddress)}
 	obs := memory.Observation{ID: 502, Type: "decision", Title: "Updated Twice", Content: "First content.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/writer-fixture"}
 	result := promoteTwice(t, w, clock, obs)
 	if result.Action.Kind != ActionUpdated {
@@ -571,10 +561,9 @@ func TestWriter_Promote_UpdateRegistersIndexAndLog(t *testing.T) {
 // misrepresent the catalog/log as reflecting the skipped promotion.
 func TestWriter_Promote_SkipDoesNotRegister(t *testing.T) {
 	vaultRoot := t.TempDir()
-	writeAllocateScript(t, vaultRoot, allocateAddressFixture)
 	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
-	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: clock}
+	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: clock, Addresses: staticAddress(testAddress)}
 	obs := memory.Observation{ID: 503, Type: "decision", Title: "Edited By Hand", Content: "Original content.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/writer-fixture"}
 	first, err := w.Promote(obs, false)
 	if err != nil {

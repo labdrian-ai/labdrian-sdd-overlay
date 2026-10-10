@@ -139,10 +139,9 @@ func TestEligible(t *testing.T) {
 // not merely accepted without writing anything.
 func TestPromote_ExplicitCallOverridesAutomaticEligibility(t *testing.T) {
 	vaultRoot := t.TempDir()
-	writeAllocateScript(t, vaultRoot, allocateAddressFixture)
 	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
-	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: clock}
+	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: clock, Addresses: staticAddress(testAddress)}
 	obs := memory.Observation{ID: 601, Type: "discovery", Title: "Below Threshold", Content: "Never automatically eligible.", Project: "labdrian-sdd-overlay", RevisionCount: 1, Pinned: false}
 
 	var lookedUp int64

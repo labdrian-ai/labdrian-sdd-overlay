@@ -45,13 +45,12 @@ func (f *fakeMemory) RelatedEdges(observationID int64) ([]memory.Edge, error) {
 func TestSync_ReadsTheLiveObservationsThroughItsMemoryPort(t *testing.T) {
 	vaultRoot := t.TempDir()
 	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
-	writeAllocateScript(t, vaultRoot, allocateAddressFixture)
 
 	curated := memory.Observation{ID: 11, Type: "decision", Title: "Curated", Content: "Curated body.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/curated"}
 	process := memory.Observation{ID: 12, Type: "discovery", Title: "Process note", Content: "Not curated.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "sdd/some-change/progress"}
 	mem := &fakeMemory{live: []memory.Observation{curated, process}}
 
-	report, err := Sync(context.Background(), Deps{Memory: mem, Writer: &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: clock}}, "labdrian-sdd-overlay")
+	report, err := Sync(context.Background(), Deps{Memory: mem, Writer: &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: clock, Addresses: staticAddress(testAddress)}}, "labdrian-sdd-overlay")
 	if err != nil {
 		t.Fatalf("Sync: %v", err)
 	}

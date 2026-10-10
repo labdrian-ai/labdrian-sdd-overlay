@@ -30,7 +30,7 @@ import (
 func TestPlan_WritesNothingAndPredictsWhatSyncThenDoes(t *testing.T) {
 	vaultRoot := t.TempDir()
 	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
-	writeAllocateScript(t, vaultRoot, uniqueAllocateAddressFixture)
+	addresses := &sequentialAddresses{}
 
 	store, ids := newFixtureEngramStore(t, []fixtureObs{
 		{title: "First Decision", content: "Body one.", project: "p", obsType: "decision", revisionCount: 1, syncID: "s-1", topicKey: "longterm-mem/first-decision"},
@@ -44,7 +44,7 @@ func TestPlan_WritesNothingAndPredictsWhatSyncThenDoes(t *testing.T) {
 		ID: ids[2], Type: "decision", Title: "Already Current", Content: "Body three.", Project: "p", RevisionCount: 3,
 	}, "c-000900")
 
-	w := &Writer{VaultRoot: vaultRoot, Store: precedence, Clock: clock}
+	w := &Writer{VaultRoot: vaultRoot, Store: precedence, Clock: clock, Addresses: addresses}
 	deps := Deps{Memory: store, Writer: w}
 
 	before := vaultSnapshot(t, vaultRoot)
@@ -146,7 +146,7 @@ func equalSnapshots(a, b map[string]string) bool {
 func TestPlan_CountsThePagesPropagateWouldPatch(t *testing.T) {
 	vaultRoot := t.TempDir()
 	clock := &fakeClock{at: time.Date(2026, 8, 31, 12, 0, 0, 0, time.UTC)}
-	writeAllocateScript(t, vaultRoot, uniqueAllocateAddressFixture)
+	addresses := &sequentialAddresses{}
 
 	store, ids := newFixtureEngramStore(t, []fixtureObs{
 		{title: "Old Decision", content: "Old body.", project: "p", obsType: "decision", revisionCount: 1, syncID: "sync-old", createdAt: "2026-08-01 00:00:00", topicKey: "longterm-mem/old-decision"},
@@ -163,7 +163,7 @@ func TestPlan_CountsThePagesPropagateWouldPatch(t *testing.T) {
 		ID: ids[1], Type: "decision", Title: "New Decision", Content: "New body.", Project: "p", RevisionCount: 1,
 	}, "c-000002")
 
-	deps := Deps{Memory: store, Writer: &Writer{VaultRoot: vaultRoot, Store: precedence, Clock: clock}}
+	deps := Deps{Memory: store, Writer: &Writer{VaultRoot: vaultRoot, Store: precedence, Clock: clock, Addresses: addresses}}
 
 	before := vaultSnapshot(t, vaultRoot)
 
@@ -207,7 +207,7 @@ func TestPlan_CountsThePagesPropagateWouldPatch(t *testing.T) {
 func TestPlan_OneBrokenObservationIsReportedOnce(t *testing.T) {
 	vaultRoot := t.TempDir()
 	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
-	writeAllocateScript(t, vaultRoot, uniqueAllocateAddressFixture)
+	addresses := &sequentialAddresses{}
 
 	store, ids := newFixtureEngramStore(t, []fixtureObs{
 		{title: "Broken", content: "Body.", project: "p", obsType: "decision", revisionCount: 1, syncID: "s-b", topicKey: "longterm-mem/broken"},
@@ -223,7 +223,7 @@ func TestPlan_OneBrokenObservationIsReportedOnce(t *testing.T) {
 		t.Fatalf("write broken page: %v", err)
 	}
 
-	deps := Deps{Memory: store, Writer: &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: clock}}
+	deps := Deps{Memory: store, Writer: &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: clock, Addresses: addresses}}
 	plan, err := Plan(context.Background(), deps, "p")
 	if err != nil {
 		t.Fatalf("Plan: %v", err)

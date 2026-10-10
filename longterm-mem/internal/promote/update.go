@@ -98,7 +98,7 @@ func (k ActionKind) String() string {
 // that would have healed it.
 //
 // store is mutated in place; persisting it (PrecedenceStore.Save) is the
-// caller's job, keeping this a narrow primitive alongside Allocate/
+// caller's job, keeping this a narrow primitive alongside allocateAddress/
 // EmitPage -- Writer (6.8) owns pairing the two writes per run.
 func UpdateInPlace(store PrecedenceStore, page Page, existingPath string) (Action, error) {
 	current, err := os.ReadFile(existingPath)
@@ -377,7 +377,7 @@ func withoutVolatileStamps(fmBlock string) string {
 //     package's whole reason for reconciling is to end wedges.
 //
 //     project rides along for consistency, not because a project move can
-//     reach this comparison: Allocate reuses an existing page's address only
+//     reach this comparison: allocateAddress reuses an existing page's address only
 //     when the on-disk project AND engram_id both match (address.go's
 //     findPromotedPage), so a moved observation gets a FRESH address and no
 //     in-place update ever sees the old page. Blanking it is correct and

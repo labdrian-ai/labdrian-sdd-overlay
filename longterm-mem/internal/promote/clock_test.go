@@ -44,9 +44,8 @@ func TestEmitPage_DatesThePageInUTCWhateverZoneTheClockSpeaks(t *testing.T) {
 // the day the Writer's own clock gave, and a clock that moves moves the next promotion with it.
 func TestPromote_DatesTheNewPageAndTheLogWithTheWritersClock(t *testing.T) {
 	vaultRoot := t.TempDir()
-	writeAllocateScript(t, vaultRoot, allocateAddressFixture)
 	clock := &fakeClock{at: time.Date(2026, 9, 3, 22, 0, 0, 0, time.UTC)}
-	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: clock}
+	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Addresses: staticAddress(testAddress), Clock: clock}
 	obs := memory.Observation{ID: 703, Type: "decision", Title: "Dated", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1, Pinned: true}
 
 	result, err := w.Promote(obs, false)

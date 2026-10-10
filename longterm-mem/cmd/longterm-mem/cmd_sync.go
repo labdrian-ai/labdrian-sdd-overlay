@@ -71,7 +71,7 @@ func cmdSync(args []string) int {
 	var rebuildErr error
 	deps := promote.Deps{
 		Memory: store,
-		Writer: &promote.Writer{VaultRoot: vaultRoot, Store: precedence, Clock: utcClock{}},
+		Writer: &promote.Writer{VaultRoot: vaultRoot, Store: precedence, Addresses: vault.AddressAllocator{Root: vaultRoot}, Clock: utcClock{}},
 		RebuildIndex: func(ctx context.Context) error {
 			rebuildErr = vault.Rebuild(ctx, runner, false)
 			return rebuildErr
