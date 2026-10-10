@@ -23,7 +23,7 @@ import (
 // to nothing or to a directory, which used to make every promotion and every sync fail for every observation and
 // now is skipped and named, as the doctor names it, while the observations that no readable page is the page of
 // are left alone (exit 6, nothing written for them). 12, the pages directory that is itself a file, stays a hard
-// error as it was.
+// error as it was, and 24 and 25 were recorded with that decision: an unreadable page beside the page of an observation.
 //
 // A page that cannot be read because of its mode is not a scenario: a test run as the superuser reads it, so its
 // output would depend on who ran the test. A link to nothing and a link to a directory cannot be read by anyone,
@@ -217,6 +217,19 @@ func pagesScenarios() []pagesScenario {
 			w.execSQL(t, `UPDATE observations SET created_at = '2026-08-05 00:00:00' WHERE id = 2`)
 			w.execSQL(t, `INSERT INTO memory_relations (sync_id, source_id, target_id, relation, judgment_status)
 				VALUES ('rel-1', 'sync-2', 'sync-1', 'supersedes', 'judged')`)
+		}, commands: [][]string{sync}},
+		// A page that cannot be read beside the page of an observation that can: the observation is promoted as
+		// ever, the page is named and skipped, and the observation no readable page is the page of is left alone,
+		// because the unreadable page may be its own (decided 2026-10-10). The dry run predicts the run.
+		{name: "24-a-page-that-cannot-be-read-beside-the-page-of-an-observation", prepare: [][]string{promote}, seed: func(t *testing.T, w *promoteGoldenWorld) {
+			symlinkOrSkip(t, "../../notes/absent.md", pageOf(w, "c-000999"))
+			revise(t, w)
+		}, commands: [][]string{promote, {"sync", "--project", promoteGoldenProject, "--dry-run"}, sync}},
+		// Every observation sync promotes has its page, and one more page cannot be read: the promotion pass
+		// leaves nothing alone, and the propagation pass still cannot tell the observations that have no page
+		// (the ones sync never promotes) from the unreadable one's, so the run is the same refusal.
+		{name: "25-a-page-that-cannot-be-read-beside-the-pages-of-every-promoted-observation", prepare: [][]string{sync}, seed: func(t *testing.T, w *promoteGoldenWorld) {
+			symlinkOrSkip(t, "../../notes/absent.md", pageOf(w, "c-000999"))
 		}, commands: [][]string{sync}},
 	}
 }
