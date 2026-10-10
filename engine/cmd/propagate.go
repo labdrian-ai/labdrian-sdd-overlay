@@ -104,16 +104,17 @@ func acquireRegistryLock(lockPath string) (release func(), err error) {
 //     lives;
 //  2. the registry write itself is atomic (temp file + rename), so even a reader outside the lock
 //     can never observe a truncated/empty registry.
-func runPropagate(args []string) {
+func runPropagate(p process, args []string) {
 	if registryPath := registryPathFromArgs(args); registryPath != "" {
 		release, err := acquireRegistryLock(registryPath + ".lock")
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "error: acquiring registry lock: %v\n", err)
-			os.Exit(1)
+			fmt.Fprintf(p.stderr, "error: acquiring registry lock: %v\n", err)
+			p.exit(1)
+			return
 		}
 		defer release()
 	}
-	propagateCommand(args, os.Stdout, os.Stderr, fsstore.Registry{}, os.ReadFile, os.Exit)
+	propagateCommand(args, p.stdout, p.stderr, fsstore.Registry{}, os.ReadFile, p.exit)
 }
 
 // propagateCommand is the testable core of the command: the registry store, the reader of the

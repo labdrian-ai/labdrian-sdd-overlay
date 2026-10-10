@@ -619,7 +619,7 @@ func TestRunMergeSettings_AbsentFile_CreatesHooks(t *testing.T) {
 	// the file-system side effects (the real contract) instead of stdout capture.
 
 	// Call runMergeSettings — happy path should not panic or os.Exit.
-	runMergeSettings([]string{
+	runMergeSettings(newCapturedProcess("").process, []string{
 		"--settings", path,
 		"--hook-command", "/test/.claude/bin/gentle-ai-overlay",
 	})
@@ -653,8 +653,8 @@ func TestRunMergeSettings_Idempotent(t *testing.T) {
 		"--hook-command", "/test/.claude/bin/gentle-ai-overlay",
 	}
 
-	runMergeSettings(args)
-	runMergeSettings(args)
+	runMergeSettings(newCapturedProcess("").process, args)
+	runMergeSettings(newCapturedProcess("").process, args)
 
 	data, _ := os.ReadFile(path)
 	var root map[string]interface{}
@@ -713,7 +713,7 @@ func TestRunMergeSettings_BackupCreated(t *testing.T) {
 	original := []byte(`{"existing":true}`)
 	os.WriteFile(path, original, 0644)
 
-	runMergeSettings([]string{
+	runMergeSettings(newCapturedProcess("").process, []string{
 		"--settings", path,
 		"--hook-command", "/test/.claude/bin/gentle-ai-overlay",
 	})
@@ -736,8 +736,8 @@ func TestRunUninstallHooks_RemovesHooks(t *testing.T) {
 	hookCmd := "/test/.claude/bin/gentle-ai-overlay"
 	args := []string{"--settings", path, "--hook-command", hookCmd}
 
-	runMergeSettings(args)
-	runUninstallHooks(args)
+	runMergeSettings(newCapturedProcess("").process, args)
+	runUninstallHooks(newCapturedProcess("").process, args)
 
 	data, _ := os.ReadFile(path)
 	var root map[string]interface{}
@@ -766,7 +766,7 @@ func TestRunUninstallHooks_AbsentFile_NoOp(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "nonexistent.json")
 	// Should not panic or call os.Exit(1).
-	runUninstallHooks([]string{
+	runUninstallHooks(newCapturedProcess("").process, []string{
 		"--settings", path,
 		"--hook-command", "/test/binary",
 	})

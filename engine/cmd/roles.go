@@ -24,8 +24,8 @@ import (
 const rolesAuthorityNote = "Role data carries no execution authority; no roles command launches an agent or dispatches work."
 
 // runRoles implements the 'roles <verb>' subcommand.
-func runRoles(args []string) {
-	runRolesCore(args, os.Stdin, os.Stdout, os.Stderr, os.Exit)
+func runRoles(p process, args []string) {
+	runRolesCore(args, p.stdin, p.stdout, p.stderr, p.exit)
 }
 
 // runRolesCore is the testable core of the roles subcommand. Every exit(n)

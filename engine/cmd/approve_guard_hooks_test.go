@@ -17,6 +17,7 @@ func TestRunMergeSettingsAndUninstallHooks_ManageTheApproveGuard(t *testing.T) {
 	path := filepath.Join(dir, "settings.json")
 	const hookCmd = "/test/.claude/bin/gentle-ai-overlay"
 	args := []string{"--settings", path, "--hook-command", hookCmd}
+	p := newCapturedProcess("")
 	count := func() int {
 		data, err := os.ReadFile(path)
 		if err != nil {
@@ -37,15 +38,15 @@ func TestRunMergeSettingsAndUninstallHooks_ManageTheApproveGuard(t *testing.T) {
 		return n
 	}
 
-	runMergeSettings(args)
+	runMergeSettings(p.process, args)
 	if n := count(); n != 2 {
 		t.Fatalf("merge-settings wrote %d approve guard entries, want 2 (Bash and the file tools)", n)
 	}
-	runMergeSettings(args)
+	runMergeSettings(p.process, args)
 	if n := count(); n != 2 {
 		t.Errorf("a second merge-settings left %d approve guard entries, want 2", n)
 	}
-	runUninstallHooks(args)
+	runUninstallHooks(p.process, args)
 	if n := count(); n != 0 {
 		t.Errorf("uninstall-hooks left %d approve guard entries", n)
 	}

@@ -4,7 +4,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings/settingsfile"
 )
@@ -30,42 +29,48 @@ func parseMergeSettingsArgs(args []string) (settingsPath, hookCommand string) {
 
 // runMergeSettings implements the 'merge-settings' subcommand.
 // Fails LOUD on any error (exits 1).
-func runMergeSettings(args []string) {
+func runMergeSettings(p process, args []string) {
 	settingsPath, hookCommand := parseMergeSettingsArgs(args)
 
 	if settingsPath == "" {
-		fmt.Fprintln(os.Stderr, "error: --settings is required")
-		os.Exit(1)
+		fmt.Fprintln(p.stderr, "error: --settings is required")
+		p.exit(1)
+		return
 	}
 	if hookCommand == "" {
-		fmt.Fprintln(os.Stderr, "error: --hook-command is required")
-		os.Exit(1)
+		fmt.Fprintln(p.stderr, "error: --hook-command is required")
+		p.exit(1)
+		return
 	}
 
 	if err := (settingsfile.Installer{}).Install(settingsPath, hookCommand); err != nil {
-		fmt.Fprintf(os.Stderr, "error: merge-settings: %v\n", err)
-		os.Exit(1)
+		fmt.Fprintf(p.stderr, "error: merge-settings: %v\n", err)
+		p.exit(1)
+		return
 	}
-	fmt.Fprintln(os.Stdout, "merge-settings: hooks installed successfully")
+	fmt.Fprintln(p.stdout, "merge-settings: hooks installed successfully")
 }
 
 // runUninstallHooks implements the 'uninstall-hooks' subcommand.
 // Fails LOUD on any error (exits 1).
-func runUninstallHooks(args []string) {
+func runUninstallHooks(p process, args []string) {
 	settingsPath, hookCommand := parseMergeSettingsArgs(args)
 
 	if settingsPath == "" {
-		fmt.Fprintln(os.Stderr, "error: --settings is required")
-		os.Exit(1)
+		fmt.Fprintln(p.stderr, "error: --settings is required")
+		p.exit(1)
+		return
 	}
 	if hookCommand == "" {
-		fmt.Fprintln(os.Stderr, "error: --hook-command is required")
-		os.Exit(1)
+		fmt.Fprintln(p.stderr, "error: --hook-command is required")
+		p.exit(1)
+		return
 	}
 
 	if err := (settingsfile.Installer{}).Uninstall(settingsPath, hookCommand); err != nil {
-		fmt.Fprintf(os.Stderr, "error: uninstall-hooks: %v\n", err)
-		os.Exit(1)
+		fmt.Fprintf(p.stderr, "error: uninstall-hooks: %v\n", err)
+		p.exit(1)
+		return
 	}
-	fmt.Fprintln(os.Stdout, "uninstall-hooks: hooks removed successfully")
+	fmt.Fprintln(p.stdout, "uninstall-hooks: hooks removed successfully")
 }

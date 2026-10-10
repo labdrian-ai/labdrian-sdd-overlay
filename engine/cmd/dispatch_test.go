@@ -38,6 +38,21 @@ func TestRunWithAnUnknownSubcommandSaysSoThenPrintsTheUsage(t *testing.T) {
 	}
 }
 
+func TestRunHandsEachSubcommandItsOwnArguments(t *testing.T) {
+	// 'roles' with no verb says what it needs, which only the roles command says; the arguments
+	// after its name are the ones it is given.
+	p := newCapturedProcess("")
+
+	run(p.process, testDeps(), []string{"roles"})
+
+	if want := "error: roles requires a verb: validate, next, resume, append, match-shaper\n"; p.err.String() != want {
+		t.Errorf("stderr = %q, want %q", p.err.String(), want)
+	}
+	if len(p.exits) != 1 || p.exits[0] != 1 {
+		t.Errorf("exit calls = %v, want exactly [1]", p.exits)
+	}
+}
+
 func firstLines(s string, n int) string {
 	lines := strings.SplitAfter(s, "\n")
 	if len(lines) > n {

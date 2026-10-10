@@ -15,21 +15,21 @@ func run(p process, d deps, args []string) {
 	rest := args[1:]
 	switch args[0] {
 	case "propagate":
-		runPropagate(rest)
+		runPropagate(p, rest)
 	case "gate-task":
-		runGateTask(rest)
+		runGateTask(p, rest)
 	case "merge-settings":
-		runMergeSettings(rest)
+		runMergeSettings(p, rest)
 	case "uninstall-hooks":
-		runUninstallHooks(rest)
+		runUninstallHooks(p, rest)
 	case "status":
-		runStatus(rest)
+		runStatus(p, d)
 	case "prespec":
-		runPrespec(rest)
+		runPrespec(p, rest)
 	case "runtime":
 		runRuntime(rest)
 	case "gadu-generate":
-		runGaduGenerate(rest)
+		runGaduGenerate(p, d, rest)
 	case "pipkg":
 		runPipkg(rest)
 	case "skills":
@@ -41,9 +41,9 @@ func run(p process, d deps, args []string) {
 	case "shaper":
 		runShaper(rest)
 	case "roles":
-		runRoles(rest)
+		runRoles(p, rest)
 	case "memory":
-		runMemory(rest)
+		runMemory(p, rest)
 	case "workflow":
 		runWorkflow(rest)
 	case "projection":

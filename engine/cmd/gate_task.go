@@ -21,8 +21,8 @@ const stdinSizeLimit = hookwire.MaxAgentCallBytes
 
 // runGateTask implements the 'gate-task' subcommand.
 // Fails SAFE on any error (exits 0, emits pass-through response).
-func runGateTask(args []string) {
-	gateTaskCore(args, os.Stdin, os.Stdout, os.Stderr, os.ReadFile)
+func runGateTask(p process, args []string) {
+	gateTaskCore(args, p.stdin, p.stdout, p.stderr, os.ReadFile)
 }
 
 // readFileFn is the type of a function that reads a file by path (injectable for tests).
