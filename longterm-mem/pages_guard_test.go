@@ -129,7 +129,8 @@ func parseFile(root, file string) (*ast.File, error) {
 }
 
 // selectsPagesDir reports whether file selects PagesDir from the package imported as vaultlayout, whatever
-// name it gives that import.
+// name it gives that import: under a dot import the name is bare, so any PagesDir that is not the selected
+// name of another package's is the layout's.
 func selectsPagesDir(file *ast.File) bool {
 	var local string
 	for _, spec := range file.Imports {
@@ -146,13 +147,19 @@ func selectsPagesDir(file *ast.File) bool {
 		return false
 	}
 	found := false
+	selected := map[*ast.Ident]bool{}
 	ast.Inspect(file, func(n ast.Node) bool {
-		selector, ok := n.(*ast.SelectorExpr)
-		if !ok || selector.Sel.Name != "PagesDir" {
-			return true
-		}
-		if pkg, ok := selector.X.(*ast.Ident); ok && pkg.Name == local {
-			found = true
+		switch node := n.(type) {
+		case *ast.SelectorExpr:
+			selected[node.Sel] = true
+			if pkg, ok := node.X.(*ast.Ident); ok && node.Sel.Name == "PagesDir" && pkg.Name == local {
+				found = true
+			}
+		case *ast.Ident:
+			// The walk reaches a selector before its parts, so a selected name is already known here.
+			if local == "." && node.Name == "PagesDir" && !selected[node] {
+				found = true
+			}
 		}
 		return true
 	})
@@ -160,7 +167,7 @@ func selectsPagesDir(file *ast.File) bool {
 }
 
 // The rule is tested on trees built for it: a file that imports the file system, an aliased import of it, a
-// file that names the pages directory (through an alias too), and what is left alone.
+// file that names the pages directory (through an alias, or by a dot import, too), and what is left alone.
 func TestPageAccessProblemsFlagsWhatBreaksTheRule(t *testing.T) {
 	root := writeTree(t, map[string]string{
 		"internal/promote/clean.go":      importing(`"fmt"`),
@@ -170,6 +177,9 @@ func TestPageAccessProblemsFlagsWhatBreaksTheRule(t *testing.T) {
 		"internal/promote/names_dir.go":  "package p\n\nimport vl \"" + vaultLayoutPackage + "\"\n\nvar dir = vl.PagesDir\n",
 		"internal/promote/names_file.go": "package p\n\nimport \"" + vaultLayoutPackage + "\"\n\nvar f = vaultlayout.PageFile(\"c-000001\")\n",
 		"internal/promote/in_comment.go": "package p\n\n// vaultlayout.PagesDir is the adapter's, and so is \"os\".\n",
+		"internal/promote/dot_dir.go":    "package p\n\nimport . \"" + vaultLayoutPackage + "\"\n\nvar dir = PagesDir\n",
+		"internal/promote/dot_file.go":   "package p\n\nimport . \"" + vaultLayoutPackage + "\"\n\nvar f = PageFile(\"c-000001\")\n",
+		"internal/promote/dot_other.go":  "package p\n\nimport . \"" + vaultLayoutPackage + "\"\n\nvar f = PageFile(\"c-000001\")\n\nvar g = other.PagesDir\n",
 		"internal/promote/dir_test.go":   "package p\n\nimport \"" + vaultLayoutPackage + "\"\n\nvar dir = vaultlayout.PagesDir\n",
 		"internal/ops/doctor.go":         "package p\n\nimport \"" + vaultLayoutPackage + "\"\n\nvar dir = vaultlayout.PagesDir\n",
 		"internal/promote/allowed.go":    "package p\n\nimport \"" + vaultLayoutPackage + "\"\n\nvar dir = vaultlayout.PagesDir\n",
@@ -202,6 +212,9 @@ func TestPageAccessProblemsFlagsWhatBreaksTheRule(t *testing.T) {
 		"internal/promote/blank.go":      1,
 		"internal/promote/gone.go":       1,
 		"internal/promote/names_dir.go":  1,
+		"internal/promote/dot_dir.go":    1,
+		"internal/promote/dot_file.go":   0,
+		"internal/promote/dot_other.go":  0,
 		"internal/ops/doctor.go":         1,
 		"internal/promote/clean.go":      0,
 		"internal/promote/names_file.go": 0,
