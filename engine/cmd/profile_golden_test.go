@@ -69,6 +69,18 @@ func profileHookGoldenCases() []hookGoldenCase {
 				w.promptHook(p.profile+", running, every dependency present", e, e.repo)
 			}
 		}},
+		// A workflow whose log was written before the log recorded a snapshot of the profile (version
+		// 1, with two stages recorded) is projected and gated by the profile its name resolves to.
+		{"prompt-and-gate-follow-a-version-1-log-of-every-profile", func(w *hookWorld) {
+			for _, p := range profileStages {
+				e := w.env()
+				installV1Log(w.t, e.state, p.profile, "running")
+				mustBindOK(w.t, e.repo, "proj-1", "wf-1")
+				w.promptHook(p.profile+", a version 1 log with two stages recorded", e, e.repo)
+				w.toolHook(p.profile+", the plan's project", e, e.repo, queryTool, `{"query":"q","project":"proj-1"}`)
+				w.toolHook(p.profile+", another project", e, e.repo, queryTool, `{"query":"q","project":"proj-2"}`)
+			}
+		}},
 		{"pretooluse-gates-every-profile-by-its-memory-ceiling", func(w *hookWorld) {
 			for _, p := range profileStages {
 				e := w.env()
@@ -300,31 +312,38 @@ func profileGoldenCaseName(profile string, equipped bool) string {
 	return "workflow-" + profile + "-with-nothing-present"
 }
 
+// checkProfileGolden compares the transcript got with the golden file name under testdata/dir, or
+// rewrites that file when the update flag is given.
+func checkProfileGolden(t *testing.T, dir, name, got string) {
+	t.Helper()
+	if profileGoldenName.MatchString(name) {
+		t.Fatalf("case name %q is not a file name", name)
+	}
+	path := filepath.Join("testdata", dir, name+".golden")
+	if *updateProfileGolden {
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(got), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		return
+	}
+	want, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read golden file: %v (record it with -update-profile-golden)", err)
+	}
+	if diff := goldenDifference(name, got, string(want)); diff != "" {
+		t.Fatal(diff)
+	}
+}
+
 // TestProfileGolden runs the verbs of a workflow of every profile and compares the transcript with
 // its golden file.
 func TestProfileGolden(t *testing.T) {
 	check := func(t *testing.T, name, got string) {
 		t.Helper()
-		if profileGoldenName.MatchString(name) {
-			t.Fatalf("case name %q is not a file name", name)
-		}
-		path := filepath.Join("testdata", "profile-golden", name+".golden")
-		if *updateProfileGolden {
-			if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-				t.Fatal(err)
-			}
-			if err := os.WriteFile(path, []byte(got), 0o644); err != nil {
-				t.Fatal(err)
-			}
-			return
-		}
-		want, err := os.ReadFile(path)
-		if err != nil {
-			t.Fatalf("read golden file: %v (record it with -update-profile-golden)", err)
-		}
-		if diff := goldenDifference(name, got, string(want)); diff != "" {
-			t.Fatal(diff)
-		}
+		checkProfileGolden(t, "profile-golden", name, got)
 	}
 	for _, p := range profileStages {
 		for _, equipped := range []bool{false, true} {

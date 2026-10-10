@@ -1,0 +1,146 @@
+$ projection hook --event UserPromptSubmit
+# odd, a version 1 log with two stages recorded
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"UserPromptSubmit","prompt":"a prompt"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","additionalContext":"labdrian workflow projection: this repository follows the workflow below. Its state is read from the workflow log on disk, not from this session.\nworkflow: wf-1 (project: proj-1)\nprofile: odd\nstatus: running\ngoal: goal-1 (digest 3fa80a4c34f1)\ncurrent stage: explore\nnext stage: resolve-uncertainty\nmemory plan (read-only: it executes no query and grants no memory write): scope=project sources=engram,longterm-mem,procedural-skills project_id=proj-1 goal_id=none write=none\nomitted filters: goal_id\ncapability limits (claude): dispatch=partial, cancellation=partial, authentication=partial, memory-enforcement=partial, skills=partial\nprogress commands: labdrian workflow stage --project proj-1 --workflow wf-1 --stage <name>; labdrian workflow verify --project proj-1 --workflow wf-1 --goal <goal file>; labdrian workflow close --project proj-1 --workflow wf-1 --outcome completed|abandoned\nunavailable dependencies at the last recorded event: memory:engram, memory:longterm-mem, memory:procedural-skills, gentle-ai-review\nstages recorded (2): authorize, explore"}}
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# odd, the plan's project
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"mcp__longterm-mem__query","tool_input":{"query":"q","project":"proj-1"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# odd, another project
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"mcp__longterm-mem__query","tool_input":{"query":"q","project":"proj-2"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian: this longterm-mem query asks for project \"proj-2\", but the memory plan of workflow wf-1 of project proj-1 permits only project \"proj-1\". Query project \"proj-1\", or stop following this workflow with 'labdrian workflow unbind'."}}
+--- stderr ---
+
+$ projection hook --event UserPromptSubmit
+# sdd, a version 1 log with two stages recorded
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"UserPromptSubmit","prompt":"a prompt"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","additionalContext":"labdrian workflow projection: this repository follows the workflow below. Its state is read from the workflow log on disk, not from this session.\nworkflow: wf-1 (project: proj-1)\nprofile: sdd\nstatus: running\ngoal: goal-1 (digest 3fa80a4c34f1)\ncurrent stage: tasks\nnext stage: apply\nmemory plan (read-only: it executes no query and grants no memory write): scope=project sources=engram project_id=proj-1 goal_id=none write=none\nomitted filters: goal_id\ncapability limits (claude): dispatch=partial, cancellation=partial, authentication=partial, memory-enforcement=partial, skills=partial\nprogress commands: labdrian workflow stage --project proj-1 --workflow wf-1 --stage <name>; labdrian workflow verify --project proj-1 --workflow wf-1 --goal <goal file>; labdrian workflow close --project proj-1 --workflow wf-1 --outcome completed|abandoned\nunavailable dependencies at the last recorded event: memory:engram, gentle-ai-review\nstages recorded (2): dispatcher-selected-planning-phases, tasks"}}
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# sdd, the plan's project
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"mcp__longterm-mem__query","tool_input":{"query":"q","project":"proj-1"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# sdd, another project
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"mcp__longterm-mem__query","tool_input":{"query":"q","project":"proj-2"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian: this longterm-mem query asks for project \"proj-2\", but the memory plan of workflow wf-1 of project proj-1 permits only project \"proj-1\". Query project \"proj-1\", or stop following this workflow with 'labdrian workflow unbind'."}}
+--- stderr ---
+
+$ projection hook --event UserPromptSubmit
+# standalone-minimal, a version 1 log with two stages recorded
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"UserPromptSubmit","prompt":"a prompt"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","additionalContext":"labdrian workflow projection: this repository follows the workflow below. Its state is read from the workflow log on disk, not from this session.\nworkflow: wf-1 (project: proj-1)\nprofile: standalone-minimal\nstatus: running\ngoal: goal-1 (digest 3fa80a4c34f1)\ncurrent stage: bound-scope\nnext stage: execute-one-bounded-sequential-path\nmemory plan (read-only: it executes no query and grants no memory write): scope=none sources=none project_id=none goal_id=none write=none\nomitted filters: project_id, goal_id\ncapability limits (claude): dispatch=partial, cancellation=partial, authentication=partial, memory-enforcement=partial, skills=partial\nprogress commands: labdrian workflow stage --project proj-1 --workflow wf-1 --stage <name>; labdrian workflow verify --project proj-1 --workflow wf-1 --goal <goal file>; labdrian workflow close --project proj-1 --workflow wf-1 --outcome completed|abandoned\nstages recorded (2): authorize, bound-scope"}}
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# standalone-minimal, the plan's project
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"mcp__longterm-mem__query","tool_input":{"query":"q","project":"proj-1"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian: workflow wf-1 of project proj-1 (profile \"standalone-minimal\") permits no project in its memory plan (scope none), so every longterm-mem query is denied. Stop following this workflow with 'labdrian workflow unbind' to query."}}
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# standalone-minimal, another project
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"mcp__longterm-mem__query","tool_input":{"query":"q","project":"proj-2"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian: workflow wf-1 of project proj-1 (profile \"standalone-minimal\") permits no project in its memory plan (scope none), so every longterm-mem query is denied. Stop following this workflow with 'labdrian workflow unbind' to query."}}
+--- stderr ---
+
+$ projection hook --event UserPromptSubmit
+# maintenance, a version 1 log with two stages recorded
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"UserPromptSubmit","prompt":"a prompt"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","additionalContext":"labdrian workflow projection: this repository follows the workflow below. Its state is read from the workflow log on disk, not from this session.\nworkflow: wf-1 (project: proj-1)\nprofile: maintenance\nstatus: running\ngoal: goal-1 (digest 3fa80a4c34f1)\ncurrent stage: isolate-smallest-change\nnext stage: repair\nmemory plan (read-only: it executes no query and grants no memory write): scope=project sources=engram,longterm-mem,procedural-skills project_id=proj-1 goal_id=none write=none\nomitted filters: goal_id\ncapability limits (claude): dispatch=partial, cancellation=partial, authentication=partial, memory-enforcement=partial, skills=partial\nprogress commands: labdrian workflow stage --project proj-1 --workflow wf-1 --stage <name>; labdrian workflow verify --project proj-1 --workflow wf-1 --goal <goal file>; labdrian workflow close --project proj-1 --workflow wf-1 --outcome completed|abandoned\nunavailable dependencies at the last recorded event: memory:engram, memory:longterm-mem, memory:procedural-skills, gentle-ai-review\nstages recorded (2): inspect, isolate-smallest-change"}}
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# maintenance, the plan's project
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"mcp__longterm-mem__query","tool_input":{"query":"q","project":"proj-1"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# maintenance, another project
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"mcp__longterm-mem__query","tool_input":{"query":"q","project":"proj-2"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian: this longterm-mem query asks for project \"proj-2\", but the memory plan of workflow wf-1 of project proj-1 permits only project \"proj-1\". Query project \"proj-1\", or stop following this workflow with 'labdrian workflow unbind'."}}
+--- stderr ---
+
+$ projection hook --event UserPromptSubmit
+# incident-recovery, a version 1 log with two stages recorded
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"UserPromptSubmit","prompt":"a prompt"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","additionalContext":"labdrian workflow projection: this repository follows the workflow below. Its state is read from the workflow log on disk, not from this session.\nworkflow: wf-1 (project: proj-1)\nprofile: incident-recovery\nstatus: running\ngoal: goal-1 (digest 3fa80a4c34f1)\ncurrent stage: classify\nnext stage: identify-supported-recovery\nmemory plan (read-only: it executes no query and grants no memory write): scope=goal sources=engram,procedural-skills project_id=proj-1 goal_id=goal-1 write=none\ncapability limits (claude): dispatch=partial, cancellation=partial, authentication=partial, memory-enforcement=partial, skills=partial\nprogress commands: labdrian workflow stage --project proj-1 --workflow wf-1 --stage <name>; labdrian workflow verify --project proj-1 --workflow wf-1 --goal <goal file>; labdrian workflow close --project proj-1 --workflow wf-1 --outcome completed|abandoned\nunavailable dependencies at the last recorded event: memory:engram, memory:procedural-skills, gentle-ai-review\nstages recorded (2): preserve-evidence, classify"}}
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# incident-recovery, the plan's project
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"mcp__longterm-mem__query","tool_input":{"query":"q","project":"proj-1"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# incident-recovery, another project
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"mcp__longterm-mem__query","tool_input":{"query":"q","project":"proj-2"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian: this longterm-mem query asks for project \"proj-2\", but the memory plan of workflow wf-1 of project proj-1 permits only project \"proj-1\". Query project \"proj-1\", or stop following this workflow with 'labdrian workflow unbind'."}}
+--- stderr ---
+
