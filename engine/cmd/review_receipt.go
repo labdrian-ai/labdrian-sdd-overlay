@@ -12,6 +12,10 @@ import (
 
 // runReviewReceipt implements the 'review-receipt <verb>' subcommand.
 // Verbs: capture, hook.
+//
+// Every p.exit in this file is followed by a return, and a service that could not be built is
+// followed by one too: the exit of the program never returns, but a test hands in an exit that
+// does, and the command must not go on with what it does not have. These are not dead code.
 func runReviewReceipt(p process, d deps, args []string) {
 	if len(args) < 1 {
 		fmt.Fprintln(p.stderr, "error: review-receipt requires a verb: capture, hook")
@@ -79,7 +83,7 @@ func runReviewReceiptCapture(p process, d deps, args []string) {
 
 	svc := buildReviewReceiptService(cwd, d.environment(), p.stderr, p.exit, "error: review-receipt capture", 1)
 	if svc == nil {
-		return
+		return // the exit returned (a test's does): there is no service to go on with
 	}
 
 	if change == "" {
@@ -132,7 +136,7 @@ func runReviewReceiptHook(p process, d deps, args []string) {
 	// the acknowledgement it was started for, so its set-up failure exits 2 like a denial.
 	svc := buildReviewReceiptService(cwd, d.environment(), p.stderr, p.exit, "review-receipt hook", hookwire.ExitBlock)
 	if svc == nil {
-		return
+		return // the exit returned (a test's does): there is no service to go on with
 	}
 
 	// Malformed or empty input is treated the same as a command that is not an

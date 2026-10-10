@@ -295,3 +295,17 @@ func TestRuntimeActionErrorNamesCapabilities(t *testing.T) {
 		t.Fatalf("code=%d stderr=%q, want exit 1 with an action list that names capabilities", code, errBuf.String())
 	}
 }
+
+// The usage line of 'runtime capabilities' names the targets the command accepts, the ones the
+// capability package declares, and all.
+func TestUsageNamesTheTargetsOfRuntimeCapabilities(t *testing.T) {
+	want := "  engine runtime capabilities [--target " + strings.Join([]string{capability.TargetClaude, capability.TargetCodex, capability.TargetPi, capability.TargetOpenCode, "all"}, "|") + "]\n"
+	if !strings.Contains(captureUsage(t), want) {
+		t.Errorf("usage does not contain the line %q", want)
+	}
+	for _, target := range []string{capability.TargetClaude, capability.TargetCodex, capability.TargetPi, capability.TargetOpenCode} {
+		if r := runCapabilitiesTest("--target", target); r.code != 0 {
+			t.Errorf("--target %s, which usage names, exits %d", target, r.code)
+		}
+	}
+}

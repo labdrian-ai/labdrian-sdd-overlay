@@ -3,6 +3,7 @@ package main
 // The 'sync-trigger' subcommand: the detached longterm-mem sync a hook starts (engine/synctrigger runs it).
 
 import (
+	"io"
 	"path/filepath"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/synctrigger"
@@ -15,7 +16,7 @@ const defaultStateDirName = ".labdrian-overlay"
 // runSyncTrigger implements the 'sync-trigger --event <e> --cwd <dir>
 // [--state-dir <dir>] [--child]' subcommand.
 func runSyncTrigger(p process, d deps, args []string) {
-	runSyncTriggerCore(d, args, p.exit)
+	runSyncTriggerCore(d, args, p.stderr, p.exit)
 }
 
 // runSyncTriggerCore is the testable core of the sync-trigger subcommand.
@@ -24,8 +25,9 @@ func runSyncTrigger(p process, d deps, args []string) {
 // (R-003) -- the same "core takes an injected exit" shape as
 // runRuntimeCore above, but with a fixed exit(0) rather than a computed
 // one, because sync-trigger has no failure that is allowed to propagate.
-func runSyncTriggerCore(d deps, args []string, exit func(int)) {
+func runSyncTriggerCore(d deps, args []string, stderr io.Writer, exit func(int)) {
 	o, isChild := parseSyncTriggerArgs(args)
+	o.Stderr = stderr // where the runner reports what it can before it has a log
 	if o.StateDir == "" {
 		if home, err := d.homeDir(); err == nil {
 			o.StateDir = filepath.Join(home, defaultStateDirName)

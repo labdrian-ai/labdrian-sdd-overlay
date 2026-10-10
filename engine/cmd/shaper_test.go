@@ -492,6 +492,24 @@ func TestShaperClearanceRecord_DoesNotReadTheEnvironmentForTheAgentChild(t *test
 	}
 }
 
+// The refusal names the variable and the value of the agent child by the constants main reads them
+// with, so the message cannot drift from what is read.
+func TestShaperRefusalInAnAgentChildNamesTheVariableAndValueOfTheConstants(t *testing.T) {
+	root, _ := shaperWorktree(t, shaperTestHandoff, shaperTestGoal("standalone-shaper-handoff", `[]`))
+	d := testDeps()
+	d.agentChild = true
+
+	r := runShaperTestWith(d, recordArgs(root, "--stdin"), "{}")
+
+	want := "error: shaper clearance record: refusing inside a gentle-pi agent child (" + agentChildVariable + "=" + agentChildValue + "): no human answers its dialogs\n"
+	if r.stderr != want || r.code != 1 {
+		t.Errorf("exit %d, stderr %q, want 1 and %q", r.code, r.stderr, want)
+	}
+	if !strings.Contains(r.stderr, "(GENTLE_PI_AGENTS_CHILD=1)") {
+		t.Errorf("stderr %q no longer names GENTLE_PI_AGENTS_CHILD=1, the variable the gentle-pi extension sets", r.stderr)
+	}
+}
+
 // TestShaperAssess_RefusesRPCRecordPlacedInStore proves the read side, not
 // only the record CLI, refuses an RPC-captured affirm: a record written
 // straight into the store (bypassing 'clearance record') must not verify.

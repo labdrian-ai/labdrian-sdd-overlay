@@ -26,7 +26,7 @@ func TestACommandRunOverAZeroDepsReadsNoEnvironmentAndDoesNotPanic(t *testing.T)
 	for name, run := range map[string]func(p *capturedProcess){
 		"status":        func(p *capturedProcess) { runStatus(p.process, deps{}) },
 		"gadu-generate": func(p *capturedProcess) { runGaduGenerate(p.process, deps{}, nil) },
-		"sync-trigger":  func(p *capturedProcess) { runSyncTriggerCore(deps{}, []string{"--event", "bogus"}, p.exit) },
+		"sync-trigger":  func(p *capturedProcess) { runSyncTriggerCore(deps{}, []string{"--event", "bogus"}, &p.err, p.exit) },
 		"runtime probe": func(p *capturedProcess) { runRuntimeProbe(deps{}, nil, &p.out, &p.err, p.exit) },
 		"runtime status": func(p *capturedProcess) {
 			runRuntimeCore(deps{}, noPi(), noGit(), []string{"status", "--target", "claude", "--config-root", root}, &p.out, &p.err, p.exit)

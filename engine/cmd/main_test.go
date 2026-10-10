@@ -2535,7 +2535,7 @@ func TestSyncTriggerChildArgv_IsTheCommandLineThisCommandParses(t *testing.T) {
 func TestRunSyncTriggerCore_NoArgs_ExitsZero(t *testing.T) {
 	exitCode := -1
 
-	runSyncTriggerCore(testDeps(), nil, func(code int) { exitCode = code })
+	runSyncTriggerCore(testDeps(), nil, io.Discard, func(code int) { exitCode = code })
 
 	if exitCode != 0 {
 		t.Fatalf("runSyncTriggerCore(nil) exit = %d, want 0", exitCode)
@@ -2559,7 +2559,7 @@ func TestRunSyncTriggerCore_StateDirDefaultsToTheHomeOfTheDeps(t *testing.T) {
 	d.userHomeDir = func() (string, error) { return home, nil }
 	exitCode := -1
 
-	runSyncTriggerCore(d, []string{"--child", "--event", "session-end", "--cwd", project}, func(code int) { exitCode = code })
+	runSyncTriggerCore(d, []string{"--child", "--event", "session-end", "--cwd", project}, io.Discard, func(code int) { exitCode = code })
 
 	if exitCode != 0 {
 		t.Fatalf("exit = %d, want 0", exitCode)
@@ -2580,7 +2580,7 @@ func TestRunSyncTriggerCore_ChildNoEventNoCwd_ExitsZeroWithoutSpawn(t *testing.T
 	marker := filepath.Join(t.TempDir(), "spawned")
 	os.WriteFile(filepath.Join(binDir, "longterm-mem"), []byte("#!/bin/sh\ntouch \""+marker+"\"\nexit 0\n"), 0o755)
 	exitCode := -1
-	runSyncTriggerCore(testDeps(), []string{"--child", "--state-dir", stateDir}, func(code int) { exitCode = code })
+	runSyncTriggerCore(testDeps(), []string{"--child", "--state-dir", stateDir}, io.Discard, func(code int) { exitCode = code })
 	if exitCode != 0 {
 		t.Fatalf("runSyncTriggerCore exit = %d, want 0", exitCode)
 	}

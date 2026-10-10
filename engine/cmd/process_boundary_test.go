@@ -189,35 +189,53 @@ func TestTheCheckForAReassignedPackageVariableSeesWhatItShould(t *testing.T) {
 	}
 }
 
-// processUses lists, as file:os.Name, every use of the process of the machine in the files: the
-// arguments, the three streams, the exit, the environment, the working directory and the
-// binary's own path. The names are those of package os; a file that imports it under another
-// name is read through that name.
-func processUses(files map[string]*ast.File) []string {
-	process := map[string]bool{
+// processNames are the members of the packages that reach the process of the machine: os (its
+// arguments, streams, exit, environment, working directory, identity and temporary directory,
+// which reads TMPDIR) and fmt (the Print functions write to the standard output; the Fprint and
+// Sprint ones write where they are told). A file that imports a package under another name is
+// read through that name.
+var processNames = map[string]map[string]bool{
+	"os": {
 		"Args": true, "Stdin": true, "Stdout": true, "Stderr": true, "Exit": true,
 		"Getenv": true, "LookupEnv": true, "Environ": true, "Setenv": true, "Unsetenv": true, "Clearenv": true, "ExpandEnv": true, "Expand": true,
-		"UserHomeDir": true, "UserConfigDir": true, "UserCacheDir": true, "Getwd": true, "Chdir": true, "Executable": true, "Hostname": true,
-	}
+		"UserHomeDir": true, "UserConfigDir": true, "UserCacheDir": true, "TempDir": true, "Getwd": true, "Chdir": true, "Executable": true, "Hostname": true,
+		"Getpid": true, "Getppid": true, "Getuid": true, "Geteuid": true, "Getgid": true, "Getegid": true, "Getgroups": true,
+	},
+	"fmt": {"Print": true, "Printf": true, "Println": true, "Scan": true, "Scanf": true, "Scanln": true},
+}
+
+// processImports are packages that read or watch the process whatever they are used for: flag
+// reads os.Args, os/signal watches the signals of the process, os/user asks who it runs as.
+var processImports = map[string]bool{"flag": true, "os/signal": true, "os/user": true}
+
+// processUses lists, as file:pkg.Name or file:import path, every use of the process of the machine
+// in the files (see processNames and processImports).
+func processUses(files map[string]*ast.File) []string {
 	var found []string
 	for name, file := range files {
-		local := ""
+		locals := map[string]string{} // local name -> package path
 		for _, spec := range file.Imports {
-			if strings.Trim(spec.Path.Value, `"`) != "os" {
+			path := strings.Trim(spec.Path.Value, `"`)
+			if processImports[path] {
+				found = append(found, name+":import "+path)
+			}
+			if _, ok := processNames[path]; !ok {
 				continue
 			}
-			local = "os"
+			local := path
 			if spec.Name != nil {
 				local = spec.Name.Name
 			}
-		}
-		if local == "" || local == "_" || local == "." {
-			continue
+			if local != "_" && local != "." {
+				locals[local] = path
+			}
 		}
 		ast.Inspect(file, func(n ast.Node) bool {
 			if sel, ok := n.(*ast.SelectorExpr); ok {
-				if id, ok := sel.X.(*ast.Ident); ok && id.Name == local && id.Obj == nil && process[sel.Sel.Name] {
-					found = append(found, name+":os."+sel.Sel.Name)
+				if id, ok := sel.X.(*ast.Ident); ok && id.Obj == nil {
+					if path, imported := locals[id.Name]; imported && processNames[path][sel.Sel.Name] {
+						found = append(found, name+":"+path+"."+sel.Sel.Name)
+					}
 				}
 			}
 			return true
@@ -248,6 +266,11 @@ func TestTheCheckForTheProcessSeesWhatItShould(t *testing.T) {
 		{"the working directory", "package p\nimport \"os\"\nvar _, _ = os.Getwd()", []string{"f.go:os.Getwd"}},
 		{"the arguments", "package p\nimport \"os\"\nvar _ = os.Args", []string{"f.go:os.Args"}},
 		{"os under another name", "package p\nimport o \"os\"\nvar _ = o.Environ()", []string{"f.go:os.Environ"}},
+		{"the temporary directory, which reads TMPDIR", "package p\nimport \"os\"\nvar _ = os.TempDir()", []string{"f.go:os.TempDir"}},
+		{"the identity of the process", "package p\nimport \"os\"\nvar _, _, _ = os.Getpid(), os.Getuid(), os.Getppid()", []string{"f.go:os.Getpid", "f.go:os.Getppid", "f.go:os.Getuid"}},
+		{"the standard output through fmt", "package p\nimport \"fmt\"\nfunc f() { fmt.Println(1); fmt.Printf(\"x\"); fmt.Print(2); fmt.Sprintf(\"%d\", 3); fmt.Fprintln(nil, 4) }", []string{"f.go:fmt.Print", "f.go:fmt.Printf", "f.go:fmt.Println"}},
+		{"a package that reads os.Args", "package p\nimport \"flag\"\nvar _ = flag.Parse", []string{"f.go:import flag"}},
+		{"signals and users", "package p\nimport (\n\t\"os/signal\"\n\t\"os/user\"\n)\nvar _, _ = signal.Notify, user.Current", []string{"f.go:import os/signal", "f.go:import os/user"}},
 		{"a file of the system", "package p\nimport \"os\"\nvar _, _ = os.ReadFile(\"x\")\nvar _ = os.Stat", nil},
 		{"a local called os", "package p\nimport \"os\"\nfunc f(os struct{ Args int }) int { return os.Args }", nil},
 		{"a package that is not os", "package p\nimport \"example.com/os\"\nvar _ = os.Args", nil},

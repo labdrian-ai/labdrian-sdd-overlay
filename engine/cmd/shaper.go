@@ -346,7 +346,7 @@ func runShaperClearanceRecord(d deps, args []string, stdin io.Reader, stdout, st
 		return
 	}
 	if d.agentChild {
-		fail("refusing inside a gentle-pi agent child (GENTLE_PI_AGENTS_CHILD=1): no human answers its dialogs")
+		fail("refusing inside a gentle-pi agent child (%s=%s): no human answers its dialogs", agentChildVariable, agentChildValue)
 		return
 	}
 	// The record bound is the domain's (shaper.MaxRecordBytes), not the CLI-wide stdin cap,

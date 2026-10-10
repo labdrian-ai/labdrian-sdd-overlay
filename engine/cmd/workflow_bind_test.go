@@ -441,7 +441,9 @@ func TestWorkflowBindDoesNotReplaceABindingThatChangedAfterItWasJudgedStale(t *t
 	seamRuns := 0
 	d := e.deps.withBindingSeams(bindingSeams{beforeStaleReplace: func() {
 		seamRuns++
-		store, err := newBindingStore()
+		// The other process has its own handle on the same store: the environment's deps, which
+		// are not decorated (d is), open it.
+		store, err := e.deps.openBinding()
 		if err != nil {
 			t.Errorf("NewStore() = %v", err)
 			return
