@@ -68,6 +68,27 @@ func (e PrecedenceEntry) MatchesPage(raw string) bool {
 // promoted page, so a later re-promotion can detect a local edit (R-030).
 type PrecedenceStore map[string]PrecedenceEntry
 
+// PrecedenceRepository is the port through which promotion reads and
+// persists the precedence store of one vault. The package owns it and never
+// touches the sidecar file itself; the composition root hands the Writer an
+// adapter (internal/vaultfs, which keeps the store in the vault's own
+// sidecar, vaultlayout.PrecedenceFile), and a test hands it a fake.
+//
+// Both operations speak of the whole store: a Writer loads it once, changes
+// it in memory as it promotes, and saves it after every promotion that wrote
+// a page.
+type PrecedenceRepository interface {
+	// LoadPrecedence returns the persisted store. A vault with none yet
+	// answers an empty store, not an error: nothing has been promoted under
+	// this tracking. A store that exists and cannot be read or decoded is
+	// an error and no store.
+	LoadPrecedence() (PrecedenceStore, error)
+	// SavePrecedence persists store, replacing what was persisted. It is
+	// durable: after it returns nil the store survives the process, and a
+	// failure leaves the previous store in place.
+	SavePrecedence(store PrecedenceStore) error
+}
+
 // LoadPrecedenceStore reads vaultRoot's sidecar precedence file. A missing
 // file returns an empty store, not an error -- nothing has been promoted
 // under this tracking yet.

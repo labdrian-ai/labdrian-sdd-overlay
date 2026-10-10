@@ -27,6 +27,8 @@ import (
 //     import engram (engram_adapter_guard_test.go).
 //   - vaultlayout is a domain package: the one list of where the vault keeps its pages, catalog, log
 //     and state, with no I/O. Promotion, the diagnostics and the file system adapter all read it (L3).
+//   - vaultfs is the file system adapter of the vault: the repositories behind the ports promote and ops
+//     own. Only the composition root may import it (the adapter guard), as with engram (L3).
 //   - the module root (this guard) and internal/ops/testdata (a Go package the
 //     other tests import) are test support.
 var rings = map[string]archguard.Ring{
@@ -49,6 +51,7 @@ var rings = map[string]archguard.Ring{
 	"internal/skillstale":     archguard.Domain,
 	"internal/staleness":      archguard.Domain,
 	"internal/vault":          archguard.Adapter,
+	"internal/vaultfs":        archguard.Adapter,
 	"internal/vaultlayout":    archguard.Domain,
 	"internal/vaultreg":       archguard.Adapter,
 	"internal/vecindex":       archguard.Adapter,
