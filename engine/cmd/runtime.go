@@ -61,7 +61,7 @@ func runRuntimeCore(commands runtimepkg.CommandRunner, source pipkg.SourceRepo, 
 	opts, err := parseRuntimeArgs(args, registry)
 	if err != nil {
 		fmt.Fprintln(stderr, err)
-		usage()
+		usage(stderr)
 		exit(1)
 		return
 	}

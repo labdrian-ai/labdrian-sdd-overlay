@@ -1,114 +1,22 @@
-// Command engine provides subcommands for the deterministic-scoping engine:
-//
-//	engine propagate --registry <path> --contract-file <path> [--contract-path <str>]
-//	engine gate-task --contract-file <path> [--contract-path <str>]
-//	engine merge-settings --settings <path> --hook-command <binary-path>
-//	engine uninstall-hooks --settings <path> --hook-command <binary-path>
-//	engine status
-//	engine skills <verb>  (verbs: list, status, validate, install, adopt, add, remove, sync-manifest, lint, approve, project-register, project-revise, project-status, project-retire)
-//
-// propagate: ensures the scoped minimalism-contract BEGIN/END marker block is
-// present in a target .atl/skill-registry.md. Fails LOUD on bad input.
-// Concurrency-safe: serializes via a bounded exclusive flock on <registry>.lock,
-// writes the registry atomically (temp file + rename), and refuses (exit 1)
-// to propagate over a registry that exists but is empty/whitespace-only.
-//
-// gate-task: reads a Claude Code PreToolUse 'Agent' tool_input JSON from STDIN,
-// inspects subagent_type, and emits the hook response that deterministically
-// injects or strips the minimalism-contract path. Fails SAFE on any error.
-//
-// merge-settings: safely merges two hook entries (UserPromptSubmit + PreToolUse)
-// into a Claude Code settings.json. Preserves all existing keys, is idempotent,
-// atomic (write+rename), creates a .bak backup, and refuses to write if the
-// existing file contains invalid JSON.
-//
-// uninstall-hooks: removes exactly our two hook entries from settings.json,
-// leaving all other keys and hooks intact. Idempotent; no-op if file absent.
-//
-// status: checks and reports the health of the overlay installation (binary,
-// hooks wired in settings.json, contract readable, registry state). Exit codes:
-// 0 = all OK, 1 = a hard check FAILED, 2 = no hard failure but a check is
-// DEGRADED (e.g. registry present but its scoped block is missing). The registry
-// is fail-loud: an empty or unreadable registry is a FAIL, never a silent OK.
-// Intended for manual diagnostics — never called by hooks.
-//
-// propagate/gate-task accept --embedded-contract <name> to source an
-// engine-owned managed contract (e.g. anti-generic-design) from the binary
-// instead of an external file; propagate then writes that contract's DISTINCT
-// marker block. propagate also accepts --require-registry to turn an absent
-// registry into a fail-loud error instead of a silent no-op.
-//
-// skills: registry management commands for skills.registry.yaml and overlay.manifest.
-// list: print sorted registry entries. status: print count summary.
-// validate: cross-check registry vs overlay.manifest, and skills/ on disk vs
-// overlay.manifest via the required --source-root flag, and that every global
-// skill has a valid approval record (grandfathered baseline aside); exit 1 on
-// divergence.
-// install: copy project-scoped skills into <cwd>/.claude/skills.
-// add: register a skill (custom or vendored); refused unless a valid approval
-// record covers the exact SKILL.md bytes. remove: unregister from registry + manifest.
-// sync-manifest: regenerate */SKILL.md rows from skills.registry.yaml.
-// lint: lint a SKILL.md file against the authoritative rule table, or print
-// that table with --rules; exit 1 on any hard error.
-// approve: record a human approval of skills/<id>/SKILL.md, bound to the digest
-// of its exact bytes, next to the skill (--id, --approver, --source-root). The
-// engine cannot prove a human ran it; the record only proves the bytes match.
-// guard-hook: the internal Claude Code PreToolUse hook that denies the agent
-// running approve or writing the approval record (see cmd/skills_guard.go); a
-// speed bump, not a security boundary, installed by install-hooks.
-// project-register/revise/status: manage project-tier procedural skills and
-// report ownership from the project lock.
 package main
 
-import (
-	"fmt"
-	"os"
-)
+import "os"
 
+// main is the composition root of the engine command, and the one place that touches the
+// process: it hands the arguments, the streams, the exit, the environment and the working
+// directory of the process to the code that runs the subcommand, and that code reaches the machine
+// through nothing else (deps.go; process_boundary_test.go keeps it so).
 func main() {
-	if len(os.Args) < 2 {
-		usage()
-		os.Exit(1)
-	}
+	run(productionProcess(), productionDeps(), os.Args[1:])
+}
 
-	switch os.Args[1] {
-	case "propagate":
-		runPropagate(os.Args[2:])
-	case "gate-task":
-		runGateTask(os.Args[2:])
-	case "merge-settings":
-		runMergeSettings(os.Args[2:])
-	case "uninstall-hooks":
-		runUninstallHooks(os.Args[2:])
-	case "status":
-		runStatus(os.Args[2:])
-	case "prespec":
-		runPrespec(os.Args[2:])
-	case "runtime":
-		runRuntime(os.Args[2:])
-	case "gadu-generate":
-		runGaduGenerate(os.Args[2:])
-	case "pipkg":
-		runPipkg(os.Args[2:])
-	case "skills":
-		runSkills(os.Args[2:])
-	case "sync-trigger":
-		runSyncTrigger(os.Args[2:])
-	case "review-receipt":
-		runReviewReceipt(os.Args[2:])
-	case "shaper":
-		runShaper(os.Args[2:])
-	case "roles":
-		runRoles(os.Args[2:])
-	case "memory":
-		runMemory(os.Args[2:])
-	case "workflow":
-		runWorkflow(os.Args[2:])
-	case "projection":
-		runProjection(os.Args[2:])
-	default:
-		fmt.Fprintf(os.Stderr, "error: unknown subcommand %q\n", os.Args[1])
-		usage()
-		os.Exit(1)
-	}
+// productionProcess is the process the program runs in.
+func productionProcess() process {
+	return process{stdin: os.Stdin, stdout: os.Stdout, stderr: os.Stderr, exit: os.Exit, getwd: os.Getwd}
+}
+
+// productionDeps is the deps of the program: the environment of the process, resolved when a
+// command asks for it.
+func productionDeps() deps {
+	return deps{getenv: os.Getenv, environ: os.Environ, userHomeDir: os.UserHomeDir}
 }

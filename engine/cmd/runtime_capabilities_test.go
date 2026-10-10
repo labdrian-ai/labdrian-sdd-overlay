@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"go/parser"
 	"go/token"
-	"io"
 	"os"
 	"reflect"
 	"strconv"
@@ -202,30 +201,12 @@ func TestRuntimeCapabilitiesReportsFailedStdoutWrite(t *testing.T) {
 	}
 }
 
-// captureUsage returns what usage() prints. usage writes straight to
-// os.Stderr, so the test swaps it for a pipe and drains that pipe
-// concurrently: the help text is several kilobytes, more than some platforms'
-// pipe buffers hold if it were only read afterwards.
+// captureUsage returns what usage prints.
 func captureUsage(t *testing.T) string {
 	t.Helper()
-	r, w, err := os.Pipe()
-	if err != nil {
-		t.Fatalf("os.Pipe() = %v", err)
-	}
-	defer r.Close()
-	drained := make(chan string, 1)
-	go func() {
-		data, _ := io.ReadAll(r)
-		drained <- string(data)
-	}()
-	saved := os.Stderr
-	os.Stderr = w
-	func() {
-		defer func() { os.Stderr = saved }()
-		usage()
-	}()
-	w.Close()
-	return <-drained
+	var b strings.Builder
+	usage(&b)
+	return b.String()
 }
 
 // TestUsageDocumentsCapabilitiesExitCodes pins the help line for the exit
