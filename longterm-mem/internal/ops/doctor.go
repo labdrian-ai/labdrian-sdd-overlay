@@ -230,7 +230,7 @@ func checkAddressMapIntegrity(promoted PageReader, vaultRoot string, addresses A
 		}
 	} else {
 		for _, page := range pages {
-			for _, diag := range promote.LintPage(page, vaultRoot, addresses) {
+			for _, diag := range promote.LintPage(page, vaultRoot, promoted, addresses) {
 				if diag.Rule == "address-map" {
 					details = append(details, diag.Detail)
 				}

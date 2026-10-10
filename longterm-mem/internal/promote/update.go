@@ -4,9 +4,10 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 )
 
 // ActionKind reports what UpdateInPlace (or, after 6.8, Writer.Promote)
@@ -61,10 +62,11 @@ func (k ActionKind) String() string {
 	}
 }
 
-// UpdateInPlace re-promotes an already-promoted page (R-008): existingPath
-// is overwritten with page's freshly rendered content and store's entry
-// for page.Address is updated to match. The write is refused, with a
-// diagnostic naming existingPath, whenever those bytes are not provably
+// UpdateInPlace re-promotes an already-promoted page (R-008): the page
+// promoted under page.Address, which pages reads and writes, is overwritten
+// with page's freshly rendered content and store's entry for page.Address is
+// updated to match. The write is refused, with a diagnostic naming the page's
+// location, whenever those bytes are not provably
 // longterm-mem's own last write (R-030): no store entry at all means
 // unknown provenance (a lost or hand-deleted sidecar, a page promoted
 // before tracking existed, a human's own file) and fails closed, and an
@@ -104,17 +106,21 @@ func (k ActionKind) String() string {
 // store is mutated in place; persisting it (PrecedenceStore.Save) is the
 // caller's job, keeping this a narrow primitive alongside allocateAddress/
 // EmitPage -- Writer (6.8) owns pairing the two writes per run.
-func UpdateInPlace(store PrecedenceStore, page Page, existingPath string) (Action, error) {
-	current, err := os.ReadFile(existingPath)
+func UpdateInPlace(pages PageRepository, store PrecedenceStore, page Page) (Action, error) {
+	if memory.IsMissing(pages) {
+		return Action{}, errNoPageRepository
+	}
+	existingPath := pages.PageLocation(page.Address)
+	current, err := pages.ReadPage(page.Address)
 	if err != nil {
 		return Action{}, fmt.Errorf("promote: read %s: %w", existingPath, err)
 	}
 
-	fmBlock, ok := frontmatterBlock(string(current))
+	fmBlock, ok := frontmatterBlock(current)
 	if !ok {
 		return Action{}, fmt.Errorf("promote: %s has no parseable frontmatter block", existingPath)
 	}
-	body := string(current)[len(fmBlock):]
+	body := current[len(fmBlock):]
 	rendered := page.Frontmatter + page.Body
 
 	entry, tracked := store.Get(page.Address)
@@ -136,7 +142,7 @@ func UpdateInPlace(store PrecedenceStore, page Page, existingPath string) (Actio
 		// never got to.
 	}
 
-	if err := writeFileAtomic(existingPath, []byte(rendered)); err != nil {
+	if err := pages.WritePage(page.Address, rendered); err != nil {
 		return Action{}, err
 	}
 	store.Set(page.Address, entryFor(page))

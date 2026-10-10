@@ -81,7 +81,7 @@ func Sync(ctx context.Context, deps Deps, project string) (SyncReport, error) {
 
 	var report SyncReport
 	for _, obs := range observations {
-		decision, err := decidePromotion(deps.Writer.VaultRoot, project, obs)
+		decision, err := decidePromotion(deps.Writer.Pages, project, obs)
 		if err != nil {
 			report.Failed = append(report.Failed, SyncFailure{ObservationID: obs.ID, Err: err})
 			continue
@@ -117,11 +117,11 @@ func Sync(ctx context.Context, deps Deps, project string) (SyncReport, error) {
 // walk is a preview that stops describing the run the moment either copy
 // changes, and an operator only finds out by running the thing the preview
 // existed to let them avoid.
-func decidePromotion(vaultRoot, project string, obs memory.Observation) (bool, error) {
+func decidePromotion(pages PageReader, project string, obs memory.Observation) (bool, error) {
 	if !Eligible(obs, false) {
 		return false, nil
 	}
-	promoted, ok, err := findPromotedPage(vaultRoot, project, int(obs.ID))
+	promoted, ok, err := findPromotedPage(pages, project, int(obs.ID))
 	if err != nil {
 		return false, fmt.Errorf("check promoted state: %w", err)
 	}
@@ -174,7 +174,7 @@ func Plan(ctx context.Context, deps Deps, project string) (SyncPlan, error) {
 
 	var plan SyncPlan
 	for _, obs := range observations {
-		promote, err := decidePromotion(deps.Writer.VaultRoot, project, obs)
+		promote, err := decidePromotion(deps.Writer.Pages, project, obs)
 		if err != nil {
 			plan.Failed = append(plan.Failed, SyncFailure{ObservationID: obs.ID, Err: err})
 			continue

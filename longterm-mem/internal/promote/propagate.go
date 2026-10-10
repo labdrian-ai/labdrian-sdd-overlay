@@ -3,10 +3,8 @@ package promote
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultlayout"
 )
 
 // PropagateReport summarizes one Propagate run: Patched lists the address
@@ -37,12 +35,12 @@ type PropagateReport struct {
 // on, letting the next sync overwrite that edit in silence.
 func Propagate(ctx context.Context, deps Deps, project string) (PropagateReport, error) {
 	var report PropagateReport
-	if err := deps.Writer.checkPrecedence(); err != nil {
+	if err := deps.Writer.checkPatchPorts(); err != nil {
 		return PropagateReport{}, err
 	}
 	failed, err := eachPatchTarget(deps, project, func(t patchTarget) error {
-		pagePath := filepath.Join(deps.Writer.VaultRoot, vaultlayout.PagesDir, t.Address+".md")
-		frontmatterHash, _, err := PatchStatusFields(pagePath, t.Status, t.Related)
+		pagePath := deps.Writer.Pages.PageLocation(t.Address)
+		frontmatterHash, _, err := PatchStatusFields(deps.Writer.Pages, t.Address, t.Status, t.Related)
 		if err != nil {
 			return fmt.Errorf("patch %s: %w", pagePath, err)
 		}
@@ -106,7 +104,7 @@ func eachPatchTarget(deps Deps, project string, visit func(patchTarget) error) (
 
 	var failed []SyncFailure
 	for _, obs := range observations {
-		promoted, ok, err := findPromotedPage(deps.Writer.VaultRoot, project, int(obs.ID))
+		promoted, ok, err := findPromotedPage(deps.Writer.Pages, project, int(obs.ID))
 		if err != nil {
 			failed = append(failed, SyncFailure{ObservationID: obs.ID, Err: fmt.Errorf("check promoted state: %w", err)})
 			continue
@@ -157,7 +155,7 @@ func resolveStatus(deps Deps, project string, obs memory.Observation, bySyncID m
 			// nothing to patch for obs on this edge.
 			continue
 		}
-		successor, ok, err := findPromotedPage(deps.Writer.VaultRoot, project, int(other.ID))
+		successor, ok, err := findPromotedPage(deps.Writer.Pages, project, int(other.ID))
 		if err != nil {
 			return "", nil, err
 		}

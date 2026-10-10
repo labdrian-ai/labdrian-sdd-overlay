@@ -48,7 +48,7 @@ func TestAllocateAddress_AFreshAddressIsRecordedUnderItsPath(t *testing.T) {
 	addresses := &memAddressMap{}
 	at := time.Date(2026, 8, 5, 12, 0, 0, 0, time.UTC)
 
-	address, err := allocateAddress(t.Context(), t.TempDir(), "labdrian-sdd-overlay", 101, staticAddress(testAddress), addresses, at)
+	address, err := allocateAddress(t.Context(), pagesIn(t.TempDir()), "labdrian-sdd-overlay", 101, staticAddress(testAddress), addresses, at)
 	if err != nil {
 		t.Fatalf("allocateAddress: %v", err)
 	}
@@ -69,7 +69,7 @@ func TestAllocateAddress_AReusedAddressRecordsNothing(t *testing.T) {
 	allocator := &countingAddresses{AddressAllocator: staticAddress(testAddress)}
 	addresses := &memAddressMap{}
 
-	address, err := allocateAddress(t.Context(), vaultRoot, "labdrian-sdd-overlay", 101, allocator, addresses, testInstant)
+	address, err := allocateAddress(t.Context(), pagesIn(vaultRoot), "labdrian-sdd-overlay", 101, allocator, addresses, testInstant)
 	if err != nil {
 		t.Fatalf("allocateAddress: %v", err)
 	}
@@ -80,7 +80,7 @@ func TestAllocateAddress_AReusedAddressRecordsNothing(t *testing.T) {
 		t.Errorf("a reused address was recorded again: %+v", addresses.records)
 	}
 
-	if address, err := allocateAddress(t.Context(), vaultRoot, "labdrian-sdd-overlay", 101, nil, nil, testInstant); err != nil || address != "c-000099" {
+	if address, err := allocateAddress(t.Context(), pagesIn(vaultRoot), "labdrian-sdd-overlay", 101, nil, nil, testInstant); err != nil || address != "c-000099" {
 		t.Errorf("allocateAddress with neither port = (%q, %v), want the page's own address", address, err)
 	}
 }
@@ -93,7 +93,7 @@ func TestAllocateAddress_NothingAllocatedRecordsNothing(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			addresses := &memAddressMap{}
-			if address, err := allocateAddress(t.Context(), t.TempDir(), "labdrian-sdd-overlay", 101, allocator, addresses, testInstant); err == nil {
+			if address, err := allocateAddress(t.Context(), pagesIn(t.TempDir()), "labdrian-sdd-overlay", 101, allocator, addresses, testInstant); err == nil {
 				t.Fatalf("allocateAddress = %q, nil error, want a failure", address)
 			}
 			if len(addresses.records) != 0 {
@@ -113,7 +113,7 @@ func TestAllocateAddress_AMissingRecorderIsRefusedBeforeAnAddressIsSpent(t *test
 		t.Run(name, func(t *testing.T) {
 			allocator := &countingAddresses{AddressAllocator: staticAddress(testAddress)}
 
-			address, err := allocateAddress(t.Context(), t.TempDir(), "labdrian-sdd-overlay", 101, allocator, recorder, testInstant)
+			address, err := allocateAddress(t.Context(), pagesIn(t.TempDir()), "labdrian-sdd-overlay", 101, allocator, recorder, testInstant)
 			if !errors.Is(err, errNoAddressMapRecorder) {
 				t.Fatalf("allocateAddress = (%q, %v), want errNoAddressMapRecorder", address, err)
 			}
@@ -129,7 +129,7 @@ func TestAllocateAddress_ARecorderFailureReachesTheCaller(t *testing.T) {
 	boom := errors.New("the manifest cannot be written")
 	addresses := &memAddressMap{recordErr: boom}
 
-	address, err := allocateAddress(t.Context(), t.TempDir(), "labdrian-sdd-overlay", 101, staticAddress(testAddress), addresses, testInstant)
+	address, err := allocateAddress(t.Context(), pagesIn(t.TempDir()), "labdrian-sdd-overlay", 101, staticAddress(testAddress), addresses, testInstant)
 	if !errors.Is(err, boom) || address != "" {
 		t.Fatalf("allocateAddress = (%q, %v), want no address and the recorder's own error", address, err)
 	}
@@ -140,7 +140,7 @@ func TestPromote_AnAddressTheMapCannotRecordMeansNothingIsWritten(t *testing.T) 
 	vaultRoot := t.TempDir()
 	store := PrecedenceStore{}
 	repo := &memPrecedence{}
-	w := &Writer{VaultRoot: vaultRoot, Store: store, Precedence: repo, Addresses: staticAddress(testAddress), AddressMap: &memAddressMap{recordErr: errors.New("no")}, Clock: &fakeClock{at: testInstant}}
+	w := &Writer{VaultRoot: vaultRoot, Pages: pagesIn(vaultRoot), Store: store, Precedence: repo, Addresses: staticAddress(testAddress), AddressMap: &memAddressMap{recordErr: errors.New("no")}, Clock: &fakeClock{at: testInstant}}
 	obs := memory.Observation{ID: 704, Type: "decision", Title: "Unrecordable", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1, Pinned: true}
 
 	if result, err := w.Promote(t.Context(), obs, false); err == nil {
@@ -158,7 +158,7 @@ func TestPromote_AnAddressTheMapCannotRecordMeansNothingIsWritten(t *testing.T) 
 // to, at the instant its clock gave.
 func TestPromote_EntersTheNewPageInTheAddressMap(t *testing.T) {
 	addresses := &memAddressMap{}
-	w := &Writer{VaultRoot: t.TempDir(), Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Addresses: staticAddress(testAddress), AddressMap: addresses, Clock: &fakeClock{at: testInstant}}
+	w := &Writer{VaultRoot: t.TempDir(), Pages: pagesIn(t.TempDir()), Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Addresses: staticAddress(testAddress), AddressMap: addresses, Clock: &fakeClock{at: testInstant}}
 	obs := memory.Observation{ID: 705, Type: "decision", Title: "Recorded", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1, Pinned: true}
 
 	result, err := w.Promote(t.Context(), obs, false)
@@ -182,7 +182,7 @@ func TestLintPage_ChecksTheAddressMapItIsHanded(t *testing.T) {
 	}
 	addressMapDetails := func(addresses AddressMapReader) []string {
 		var details []string
-		for _, d := range LintPage(page, t.TempDir(), addresses) {
+		for _, d := range LintPage(page, t.TempDir(), pagesIn(t.TempDir()), addresses) {
 			if d.Rule == "address-map" {
 				details = append(details, d.Detail)
 			}

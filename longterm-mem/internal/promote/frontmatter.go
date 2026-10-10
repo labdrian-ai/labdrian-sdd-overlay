@@ -2,13 +2,15 @@ package promote
 
 import (
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 )
 
 // PatchStatusFields rewrites only the status: and related: lines inside
-// path's frontmatter block to status/related, leaving every other
+// the frontmatter block of the page promoted under address, which pages reads
+// and writes, to status/related, leaving every other
 // frontmatter line -- and the entire body -- byte-identical (R-033: a
 // frontmatter-only patch never rewrites a page body, even on a page a
 // human has since edited by hand). It returns the patched frontmatter
@@ -18,22 +20,26 @@ import (
 // future frontmatter-only editor shares this one line-patcher instead of
 // re-implementing the frontmatter/body split (frontmatterBlock, address.go)
 // and the fixed-format field layout (writeField/writeListField, below).
-func PatchStatusFields(path, status string, related []string) (frontmatterHash, bodyHash string, err error) {
-	raw, err := os.ReadFile(path)
+func PatchStatusFields(pages PageRepository, address, status string, related []string) (frontmatterHash, bodyHash string, err error) {
+	if memory.IsMissing(pages) {
+		return "", "", errNoPageRepository
+	}
+	path := pages.PageLocation(address)
+	raw, err := pages.ReadPage(address)
 	if err != nil {
 		return "", "", fmt.Errorf("promote: read %s: %w", path, err)
 	}
-	fmBlock, ok := frontmatterBlock(string(raw))
+	fmBlock, ok := frontmatterBlock(raw)
 	if !ok {
 		return "", "", fmt.Errorf("promote: %s has no parseable frontmatter block", path)
 	}
-	body := string(raw)[len(fmBlock):]
+	body := raw[len(fmBlock):]
 
 	newBlock := setScalarField(fmBlock, statusField, status)
 	newBlock = setListField(newBlock, relatedField, related)
 
 	if newBlock != fmBlock {
-		if err := writeFileAtomic(path, []byte(newBlock+body)); err != nil {
+		if err := pages.WritePage(address, newBlock+body); err != nil {
 			return "", "", err
 		}
 	}

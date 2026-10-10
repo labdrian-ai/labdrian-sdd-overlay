@@ -75,7 +75,7 @@ func TestReconcile_AdoptsARevisionZeroPageAndLeavesTheWedgedState(t *testing.T) 
 	if err != nil {
 		t.Fatalf("LoadPrecedence (before): %v", err)
 	}
-	action, err := UpdateInPlace(before, next, existingPath)
+	action, err := UpdateInPlace(pagesIn(vaultRoot), before, next)
 	if err != nil {
 		t.Fatalf("UpdateInPlace (before reconcile): %v", err)
 	}
@@ -83,7 +83,7 @@ func TestReconcile_AdoptsARevisionZeroPageAndLeavesTheWedgedState(t *testing.T) 
 		t.Fatalf("fixture is not wedged: UpdateInPlace answered %v before reconcile, want ActionSkippedLocalEdit", action.Kind)
 	}
 
-	outcome, err := Reconcile(vaultRoot, project, address, repo)
+	outcome, err := Reconcile(pagesIn(vaultRoot), project, address, repo)
 	if err != nil {
 		t.Fatalf("Reconcile on a revision-0 page: %v -- revision 0 is an ordinary promoted state, and refusing it declines the population this command exists for", err)
 	}
@@ -95,7 +95,7 @@ func TestReconcile_AdoptsARevisionZeroPageAndLeavesTheWedgedState(t *testing.T) 
 	if err != nil {
 		t.Fatalf("LoadPrecedence (after): %v", err)
 	}
-	action, err = UpdateInPlace(after, next, existingPath)
+	action, err = UpdateInPlace(pagesIn(vaultRoot), after, next)
 	if err != nil {
 		t.Fatalf("UpdateInPlace (after reconcile): %v", err)
 	}
@@ -133,7 +133,7 @@ func TestReconcile_RefusesAnAddressOutsideThePagesDirectory(t *testing.T) {
 
 	repo := &memPrecedence{}
 	for _, address := range []string{"../../secret", "../secret", "nested/c-000607", "c-000607.md", ""} {
-		if _, err := Reconcile(vaultRoot, project, address, repo); err == nil {
+		if _, err := Reconcile(pagesIn(vaultRoot), project, address, repo); err == nil {
 			t.Fatalf("Reconcile adopted address %q, which is not a promoted-page address", address)
 		}
 	}
@@ -167,7 +167,7 @@ func TestReconcile_RefusesAPageWhoseFrontmatterDisagrees(t *testing.T) {
 		writePromotedPageAt(t, vaultRoot, address, page)
 
 		repo := &memPrecedence{}
-		if _, err := Reconcile(vaultRoot, project, address, repo); err == nil {
+		if _, err := Reconcile(pagesIn(vaultRoot), project, address, repo); err == nil {
 			t.Fatalf("Reconcile adopted a file whose own frontmatter names a different address")
 		}
 		if repo.saves != 0 {
@@ -185,7 +185,7 @@ func TestReconcile_RefusesAPageWhoseFrontmatterDisagrees(t *testing.T) {
 		writePromotedPageAt(t, vaultRoot, address, page)
 
 		repo := &memPrecedence{}
-		if _, err := Reconcile(vaultRoot, project, address, repo); err == nil {
+		if _, err := Reconcile(pagesIn(vaultRoot), project, address, repo); err == nil {
 			t.Fatalf("Reconcile adopted a page belonging to another project")
 		}
 		if repo.saves != 0 {

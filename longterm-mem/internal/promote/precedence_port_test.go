@@ -31,7 +31,7 @@ func vaultIsUntouched(t *testing.T, root string) {
 // provenance, which promotion refuses from then on.
 func TestPromote_RefusesAWriterWithoutAPrecedenceRepository(t *testing.T) {
 	vaultRoot := t.TempDir()
-	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: &fakeClock{at: testInstant}, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress)}
+	w := &Writer{VaultRoot: vaultRoot, Pages: pagesIn(vaultRoot), Store: PrecedenceStore{}, Clock: &fakeClock{at: testInstant}, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress)}
 
 	_, err := w.Promote(t.Context(), portObservation(901), false)
 	if !errors.Is(err, errNoPrecedenceRepository) {
@@ -45,7 +45,7 @@ func TestPromote_RefusesAWriterWithoutAPrecedenceRepository(t *testing.T) {
 func TestPromote_RefusesATypedNilPrecedenceRepository(t *testing.T) {
 	var repo *memPrecedence
 	vaultRoot := t.TempDir()
-	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Precedence: repo, Clock: &fakeClock{at: testInstant}, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress)}
+	w := &Writer{VaultRoot: vaultRoot, Pages: pagesIn(vaultRoot), Store: PrecedenceStore{}, Precedence: repo, Clock: &fakeClock{at: testInstant}, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress)}
 
 	if _, err := w.Promote(t.Context(), portObservation(902), false); !errors.Is(err, errNoPrecedenceRepository) {
 		t.Fatalf("Promote = %v, want errNoPrecedenceRepository", err)
@@ -56,7 +56,7 @@ func TestPromote_RefusesATypedNilPrecedenceRepository(t *testing.T) {
 // Sync is refused the same way, before it lists a thing.
 func TestSync_RefusesAWriterWithoutAPrecedenceRepository(t *testing.T) {
 	mem := &fakeMemory{}
-	deps := Deps{Memory: mem, Writer: &Writer{VaultRoot: t.TempDir(), Store: PrecedenceStore{}, Clock: &fakeClock{at: testInstant}}}
+	deps := Deps{Memory: mem, Writer: &Writer{VaultRoot: t.TempDir(), Pages: pagesIn(t.TempDir()), Store: PrecedenceStore{}, Clock: &fakeClock{at: testInstant}}}
 
 	if _, err := Sync(t.Context(), deps, "labdrian-sdd-overlay"); !errors.Is(err, errNoPrecedenceRepository) {
 		t.Fatalf("Sync = %v, want errNoPrecedenceRepository", err)
@@ -67,7 +67,7 @@ func TestSync_RefusesAWriterWithoutAPrecedenceRepository(t *testing.T) {
 // repository and refuses without it before it patches a page: a patched page whose new fingerprint was
 // never recorded reads as a human's edit from then on.
 func TestPropagate_RefusesAWriterWithoutAPrecedenceRepository(t *testing.T) {
-	deps := Deps{Memory: &fakeMemory{}, Writer: &Writer{VaultRoot: t.TempDir(), Store: PrecedenceStore{}}}
+	deps := Deps{Memory: &fakeMemory{}, Writer: &Writer{VaultRoot: t.TempDir(), Pages: pagesIn(t.TempDir()), Store: PrecedenceStore{}}}
 
 	if _, err := Propagate(t.Context(), deps, "labdrian-sdd-overlay"); !errors.Is(err, errNoPrecedenceRepository) {
 		t.Fatalf("Propagate = %v, want errNoPrecedenceRepository", err)
@@ -79,7 +79,7 @@ func TestReconcile_RefusesWithoutAPrecedenceRepository(t *testing.T) {
 	var typedNil *memPrecedence
 	for name, repo := range map[string]PrecedenceRepository{"absent": nil, "typed nil": typedNil} {
 		t.Run(name, func(t *testing.T) {
-			if _, err := Reconcile(t.TempDir(), "labdrian-sdd-overlay", "c-000001", repo); !errors.Is(err, errNoPrecedenceRepository) {
+			if _, err := Reconcile(pagesIn(t.TempDir()), "labdrian-sdd-overlay", "c-000001", repo); !errors.Is(err, errNoPrecedenceRepository) {
 				t.Fatalf("Reconcile = %v, want errNoPrecedenceRepository", err)
 			}
 		})
@@ -93,7 +93,7 @@ func TestPromote_ReportsAnUpdateWhosePrecedenceCannotBePersisted(t *testing.T) {
 	vaultRoot := t.TempDir()
 	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 	repo := &memPrecedence{}
-	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Precedence: repo, Clock: clock, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress)}
+	w := &Writer{VaultRoot: vaultRoot, Pages: pagesIn(vaultRoot), Store: PrecedenceStore{}, Precedence: repo, Clock: clock, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress)}
 	obs := portObservation(903)
 	if _, err := w.Promote(t.Context(), obs, false); err != nil {
 		t.Fatalf("Promote (create): %v", err)
@@ -120,7 +120,7 @@ func TestPropagate_ReportsAPrecedenceStoreThatCannotBePersisted(t *testing.T) {
 	precedence := PrecedenceStore{}
 	seedPromotedPage(t, vaultRoot, precedence, memory.Observation{ID: ids[0], Type: "decision", Title: "Old Decision", Content: "Old body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}, "c-000001")
 	seedPromotedPage(t, vaultRoot, precedence, memory.Observation{ID: ids[1], Type: "decision", Title: "New Decision", Content: "New body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}, "c-000002")
-	w := &Writer{VaultRoot: vaultRoot, Store: precedence, Precedence: &memPrecedence{saveErr: errTestSave}}
+	w := &Writer{VaultRoot: vaultRoot, Pages: pagesIn(vaultRoot), Store: precedence, Precedence: &memPrecedence{saveErr: errTestSave}}
 
 	_, err := Propagate(t.Context(), Deps{Memory: mem, Writer: w}, "labdrian-sdd-overlay")
 	if !errors.Is(err, errTestSave) {

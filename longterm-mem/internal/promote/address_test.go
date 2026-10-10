@@ -80,7 +80,7 @@ func TestAllocateAddress_RePromotionReusesExistingAddress(t *testing.T) {
 	}
 
 	allocator := &countingAddresses{AddressAllocator: staticAddress(testAddress)}
-	address, err := allocateAddress(t.Context(), vaultRoot, "labdrian-sdd-overlay", 101, allocator, &memAddressMap{}, testInstant)
+	address, err := allocateAddress(t.Context(), pagesIn(vaultRoot), "labdrian-sdd-overlay", 101, allocator, &memAddressMap{}, testInstant)
 	if err != nil {
 		t.Fatalf("allocateAddress: %v", err)
 	}
@@ -98,7 +98,7 @@ func TestPromote_AsksTheAllocatorWithTheCallersContext(t *testing.T) {
 	type key struct{}
 	ctx := context.WithValue(t.Context(), key{}, "the caller's")
 	allocator := &countingAddresses{AddressAllocator: staticAddress(testAddress)}
-	w := &Writer{VaultRoot: t.TempDir(), Store: PrecedenceStore{}, Precedence: &memPrecedence{}, AddressMap: &memAddressMap{}, Addresses: allocator, Clock: &fakeClock{at: testInstant}}
+	w := &Writer{VaultRoot: t.TempDir(), Pages: pagesIn(t.TempDir()), Store: PrecedenceStore{}, Precedence: &memPrecedence{}, AddressMap: &memAddressMap{}, Addresses: allocator, Clock: &fakeClock{at: testInstant}}
 	obs := memory.Observation{ID: 704, Type: "decision", Title: "Context", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1, Pinned: true}
 
 	if _, err := w.Promote(ctx, obs, false); err != nil {
@@ -114,7 +114,7 @@ func TestPromote_AsksTheAllocatorWithTheCallersContext(t *testing.T) {
 func TestAllocateAddress_AnAllocatorFailureIsPromotionsAndRecordsNothing(t *testing.T) {
 	boom := errors.New("the counter is locked")
 
-	address, err := allocateAddress(t.Context(), t.TempDir(), "labdrian-sdd-overlay", 101, failingAddresses{err: boom}, &memAddressMap{}, testInstant)
+	address, err := allocateAddress(t.Context(), pagesIn(t.TempDir()), "labdrian-sdd-overlay", 101, failingAddresses{err: boom}, &memAddressMap{}, testInstant)
 	if !errors.Is(err, boom) {
 		t.Fatalf("allocateAddress = (%q, %v), want the allocator's own error", address, err)
 	}
@@ -137,7 +137,7 @@ func TestPromote_NoAddressMeansNothingIsWritten(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			vaultRoot := t.TempDir()
 			store := PrecedenceStore{}
-			w := &Writer{VaultRoot: vaultRoot, Store: store, Precedence: &memPrecedence{}, AddressMap: &memAddressMap{}, Addresses: addresses, Clock: &fakeClock{at: testInstant}}
+			w := &Writer{VaultRoot: vaultRoot, Pages: pagesIn(vaultRoot), Store: store, Precedence: &memPrecedence{}, AddressMap: &memAddressMap{}, Addresses: addresses, Clock: &fakeClock{at: testInstant}}
 			obs := memory.Observation{ID: 704, Type: "decision", Title: "No Address", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1, Pinned: true}
 
 			result, err := w.Promote(t.Context(), obs, false)
@@ -163,7 +163,7 @@ func TestAllocateAddress_AMissingAllocatorIsRefusedOnlyWhenOneIsNeeded(t *testin
 	t.Run("a new page needs one", func(t *testing.T) {
 		vaultRoot := t.TempDir()
 		for name, allocator := range map[string]AddressAllocator{"absent": nil, "a nil pointer": (*sequentialAddresses)(nil), "a nil function": addressFunc(nil)} {
-			if address, err := allocateAddress(t.Context(), vaultRoot, "labdrian-sdd-overlay", 101, allocator, &memAddressMap{}, testInstant); !errors.Is(err, errNoAddressAllocator) {
+			if address, err := allocateAddress(t.Context(), pagesIn(vaultRoot), "labdrian-sdd-overlay", 101, allocator, &memAddressMap{}, testInstant); !errors.Is(err, errNoAddressAllocator) {
 				t.Errorf("%s: allocateAddress = (%q, %v), want errNoAddressAllocator", name, address, err)
 			}
 		}
@@ -178,7 +178,7 @@ func TestAllocateAddress_AMissingAllocatorIsRefusedOnlyWhenOneIsNeeded(t *testin
 		if err := os.WriteFile(filepath.Join(memoryDir, "c-000099.md"), []byte(page), 0o644); err != nil {
 			t.Fatalf("write the promoted page: %v", err)
 		}
-		address, err := allocateAddress(t.Context(), vaultRoot, "labdrian-sdd-overlay", 101, nil, nil, testInstant)
+		address, err := allocateAddress(t.Context(), pagesIn(vaultRoot), "labdrian-sdd-overlay", 101, nil, nil, testInstant)
 		if err != nil || address != "c-000099" {
 			t.Fatalf("allocateAddress = (%q, %v), want the page's own address without an allocator", address, err)
 		}
@@ -202,7 +202,7 @@ func TestAllocateAddress_ReuseWithoutAddressFails(t *testing.T) {
 		t.Fatalf("write pre-promoted page: %v", err)
 	}
 
-	address, err := allocateAddress(t.Context(), vaultRoot, "labdrian-sdd-overlay", 101, staticAddress(testAddress), &memAddressMap{}, testInstant)
+	address, err := allocateAddress(t.Context(), pagesIn(vaultRoot), "labdrian-sdd-overlay", 101, staticAddress(testAddress), &memAddressMap{}, testInstant)
 	if err == nil {
 		t.Fatalf("allocateAddress = (%q, nil), want an error for a matched page without an address", address)
 	}
@@ -231,7 +231,7 @@ func TestFindPromotedPage_RevisionRoundTrips(t *testing.T) {
 		t.Fatalf("write page: %v", err)
 	}
 
-	promoted, ok, err := findPromotedPage(vaultRoot, "labdrian-sdd-overlay", 201)
+	promoted, ok, err := findPromotedPage(pagesIn(vaultRoot), "labdrian-sdd-overlay", 201)
 	if err != nil {
 		t.Fatalf("findPromotedPage: %v", err)
 	}
@@ -262,7 +262,7 @@ func TestFindPromotedPage_MissingRevisionDefaultsToZero(t *testing.T) {
 		t.Fatalf("write pre-promoted page: %v", err)
 	}
 
-	promoted, ok, err := findPromotedPage(vaultRoot, "labdrian-sdd-overlay", 202)
+	promoted, ok, err := findPromotedPage(pagesIn(vaultRoot), "labdrian-sdd-overlay", 202)
 	if err != nil {
 		t.Fatalf("findPromotedPage: %v", err)
 	}
@@ -290,7 +290,7 @@ func TestFindPromotedPage_UnparseableRevisionErrors(t *testing.T) {
 		t.Fatalf("write pre-promoted page: %v", err)
 	}
 
-	_, _, err := findPromotedPage(vaultRoot, "labdrian-sdd-overlay", 203)
+	_, _, err := findPromotedPage(pagesIn(vaultRoot), "labdrian-sdd-overlay", 203)
 	if err == nil {
 		t.Fatalf("findPromotedPage = nil error, want an error for an unparseable engram_revision")
 	}

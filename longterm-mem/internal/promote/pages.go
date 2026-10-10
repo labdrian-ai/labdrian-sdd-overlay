@@ -1,5 +1,7 @@
 package promote
 
+import "errors"
+
 // PageExistence is the port through which the page check asks whether the page promoted under an address is
 // there: the one question its wikilink rule puts to the pages.
 type PageExistence interface {
@@ -46,3 +48,11 @@ type PageRepository interface {
 	// user's own and shared with other tools; a page it creates is readable by its owner alone.
 	WritePage(address, content string) error
 }
+
+// errNoPageRepository is what a promotion answers when its Writer was built without a PageRepository: a port
+// the caller forgot to wire is named, before anything is written.
+var errNoPageRepository = errors.New("promote: the writer has no page repository")
+
+// errNoPageReader is what a read of the pages answers when it was handed no PageReader, and what the wikilink
+// rule of the page check reports when it was handed no PageExistence and the page has a link to resolve.
+var errNoPageReader = errors.New("promote: no page reader was wired")

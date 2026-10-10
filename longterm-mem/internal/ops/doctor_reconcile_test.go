@@ -75,7 +75,7 @@ func TestDoctorAndReconcile_CloseTheLoopOnARevisionZeroPage(t *testing.T) {
 		t.Fatalf("precedence-sidecar-consistency = %+v, want it FAILed naming %s: the fixture is not wedged", got, address)
 	}
 
-	if _, err := promote.Reconcile(vaultRoot, project, address, vaultfs.New(vaultRoot)); err != nil {
+	if _, err := promote.Reconcile(vaultfs.New(vaultRoot), project, address, vaultfs.New(vaultRoot)); err != nil {
 		t.Fatalf("Reconcile on the page doctor just named: %v -- the only advertised repair declined the state doctor calls unrepairable", err)
 	}
 

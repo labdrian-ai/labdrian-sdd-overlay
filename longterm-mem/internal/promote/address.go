@@ -4,13 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/durable"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultlayout"
 )
@@ -35,16 +32,16 @@ type AddressAllocator interface {
 var errNoAddressAllocator = errors.New("promote: the writer has no address allocator")
 
 // allocateAddress returns the vault address for the Engram observation
-// identified by (project, engramID) under vaultRoot (R-028). When a page
-// already promoted under wiki/memory/ carries this engram_id and project in
-// its frontmatter, that page's own address is reused: the allocator is not
-// asked (so a Writer that has none still re-promotes) and the address map
-// is not written again. Otherwise a fresh address is
-// taken from addresses and entered, through addressMap, in the vault's address
-// map under the page's address-derived path, the manifest being dated at (UTC)
-// when it has to be created.
-func allocateAddress(ctx context.Context, vaultRoot, project string, engramID int, addresses AddressAllocator, addressMap AddressMapRecorder, at time.Time) (string, error) {
-	if existing, ok, err := findPromotedPage(vaultRoot, project, engramID); err != nil {
+// identified by (project, engramID) among the pages of the vault (R-028).
+// When a page already promoted carries this engram_id and project in its
+// frontmatter, that page's own address is reused: the allocator is not asked
+// (so a Writer that has none still re-promotes) and the address map is not
+// written again. Otherwise a fresh address is taken from addresses and
+// entered, through addressMap, in the vault's address map under the page's
+// address-derived path, the manifest being dated at (UTC) when it has to be
+// created.
+func allocateAddress(ctx context.Context, pages PageReader, project string, engramID int, addresses AddressAllocator, addressMap AddressMapRecorder, at time.Time) (string, error) {
+	if existing, ok, err := findPromotedPage(pages, project, engramID); err != nil {
 		return "", err
 	} else if ok {
 		return existing.Address, nil
@@ -110,8 +107,8 @@ type promotedPage struct {
 // it. One permanently unpromotable observation, on account of a page in a
 // project it has nothing to do with, is reason enough. The page is a real
 // defect; doctor is what names it, for the project it belongs to.
-func findPromotedPage(vaultRoot, project string, engramID int) (promotedPage, bool, error) {
-	matches, err := scanPromotedPages(vaultRoot, engramID)
+func findPromotedPage(pages PageReader, project string, engramID int) (promotedPage, bool, error) {
+	matches, err := scanPromotedPages(pages, engramID)
 	if err != nil {
 		return promotedPage{}, false, err
 	}
@@ -154,8 +151,8 @@ func findPromotedPage(vaultRoot, project string, engramID int) (promotedPage, bo
 // status and related only), so an unparseable engram_revision on one is
 // not consulted either; that corruption still fails closed for the project
 // that owns the page.
-func findMovedPages(vaultRoot, project string, engramID int) ([]promotedPage, error) {
-	matches, err := scanPromotedPages(vaultRoot, engramID)
+func findMovedPages(pages PageReader, project string, engramID int) ([]promotedPage, error) {
+	matches, err := scanPromotedPages(pages, engramID)
 	if err != nil {
 		return nil, err
 	}
@@ -214,33 +211,30 @@ func (m promotedPageMatch) resolve() (promotedPage, error) {
 	return promotedPage{Address: m.Address, Revision: revision, Project: m.Project}, nil
 }
 
-// scanPromotedPages walks wiki/memory/*.md once and returns every page
-// whose frontmatter carries engramID, in directory order, whatever project
-// each was promoted under. A missing wiki/memory/ directory means nothing
-// has been promoted yet. Only I/O failures error here; a matched page's own
-// corruption is the caller's to judge, because it may only fail the lookup
-// that selects that page.
-func scanPromotedPages(vaultRoot string, engramID int) ([]promotedPageMatch, error) {
-	memoryDir := filepath.Join(vaultRoot, vaultlayout.PagesDir)
-	entries, err := os.ReadDir(memoryDir)
+// scanPromotedPages reads every page of the vault once, through pages, and
+// returns each one whose frontmatter carries engramID, in the order pages
+// lists them, whatever project each was promoted under. A vault with no pages
+// directory means nothing has been promoted yet. Only I/O failures error
+// here; a matched page's own corruption is the caller's to judge, because it
+// may only fail the lookup that selects that page.
+func scanPromotedPages(pages PageReader, engramID int) ([]promotedPageMatch, error) {
+	if memory.IsMissing(pages) {
+		return nil, errNoPageReader
+	}
+	addresses, err := pages.ListPages()
 	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("promote: list %s: %w", memoryDir, err)
+		return nil, fmt.Errorf("promote: list %s: %w", pages.PagesLocation(), err)
 	}
 
 	wantID := strconv.Itoa(engramID)
 	var found []promotedPageMatch
-	for _, entry := range entries {
-		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".md") {
-			continue
-		}
-		data, err := os.ReadFile(filepath.Join(memoryDir, entry.Name()))
+	for _, address := range addresses {
+		file := address + ".md"
+		content, err := pages.ReadPage(address)
 		if err != nil {
-			return nil, fmt.Errorf("promote: read %s: %w", entry.Name(), err)
+			return nil, fmt.Errorf("promote: read %s: %w", file, err)
 		}
-		block, ok := frontmatterBlock(string(data))
+		block, ok := frontmatterBlock(content)
 		if !ok {
 			continue
 		}
@@ -249,7 +243,7 @@ func scanPromotedPages(vaultRoot string, engramID int) ([]promotedPageMatch, err
 			continue
 		}
 		found = append(found, promotedPageMatch{
-			File:        entry.Name(),
+			File:        file,
 			EngramID:    wantID,
 			Project:     fields[projectField],
 			Address:     strings.TrimSpace(fields["address"]),
@@ -269,39 +263,4 @@ func frontmatterBlock(raw string) (string, bool) {
 		return "", false
 	}
 	return delim + parts[1] + delim, true
-}
-
-// pageCreatePerm is the mode a page or sidecar gets when promote is the one
-// creating it. Promoted pages carry memory content, so a file this module
-// brings into existence starts owner-only. It applies to creation only: a
-// page that already exists keeps whatever mode its owner gave it.
-const pageCreatePerm = 0o600
-
-// writeFileAtomic durably replaces path with data, MkdirAll'ing the parent
-// directory first.
-//
-// Everything it touches lives inside the USER'S Obsidian vault --
-// wiki/memory pages, index.md, log.md -- not inside
-// longterm-mem's own state directory, and several callers rewrite a page
-// that already exists (PatchStatusFields patches frontmatter in place, the
-// update path republishes). So this is not a writer of module-owned files
-// that can pick its own permissions: a vault page is routinely 0o644,
-// routinely tracked by git, and in a synced or dotfiles-style vault
-// routinely reached through a symlink.
-//
-// It used to hand-roll tmp+fsync+rename, which made every page it touched
-// come back as a fresh os.CreateTemp inode: 0o644 silently became 0o600,
-// and a symlinked page was replaced by a regular file, leaving the user's
-// real note unedited while promote reported success. durable.WriteFile
-// resolves the link and carries the mode across; see its doc comment for
-// the one identity property (hardlinks) deliberately traded for atomicity.
-func writeFileAtomic(path string, data []byte) error {
-	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return fmt.Errorf("promote: create directory for %s: %w", path, err)
-	}
-	if err := durable.WriteFile(path, data, pageCreatePerm); err != nil {
-		return fmt.Errorf("promote: %w", err)
-	}
-	return nil
 }
