@@ -117,6 +117,15 @@ func queryGoldenDatabase(t *testing.T) string {
 // runCaptured runs the command in process and returns its exit code, stdout and stderr.
 func runCaptured(t *testing.T, args []string) (code int, stdout, stderr string) {
 	t.Helper()
+	stdout, stderr = captureStreams(t, func() { code = run(args) })
+	return code, stdout, stderr
+}
+
+// captureStreams runs fn with os.Stdout and os.Stderr redirected to files and returns what fn wrote to
+// each. The streams are restored by a deferred call, so a command that panics does not leave them
+// pointing at the capture files for the rest of the process (the test framework reports through them).
+func captureStreams(t *testing.T, fn func()) (stdout, stderr string) {
+	t.Helper()
 	dir := t.TempDir()
 	outFile, err := os.Create(filepath.Join(dir, "stdout"))
 	if err != nil {
@@ -126,10 +135,12 @@ func runCaptured(t *testing.T, args []string) (code int, stdout, stderr string) 
 	if err != nil {
 		t.Fatalf("create the stderr capture: %v", err)
 	}
-	realOut, realErr := os.Stdout, os.Stderr
-	os.Stdout, os.Stderr = outFile, errFile
-	code = run(args)
-	os.Stdout, os.Stderr = realOut, realErr
+	func() {
+		realOut, realErr := os.Stdout, os.Stderr
+		defer func() { os.Stdout, os.Stderr = realOut, realErr }()
+		os.Stdout, os.Stderr = outFile, errFile
+		fn()
+	}()
 	if err := outFile.Close(); err != nil {
 		t.Fatalf("close the stdout capture: %v", err)
 	}
@@ -144,7 +155,7 @@ func runCaptured(t *testing.T, args []string) (code int, stdout, stderr string) 
 	if err != nil {
 		t.Fatalf("read the stderr capture: %v", err)
 	}
-	return code, string(outData), string(errData)
+	return string(outData), string(errData)
 }
 
 // checkQueryGolden compares got with the golden file of the case, or rewrites that file when the update
