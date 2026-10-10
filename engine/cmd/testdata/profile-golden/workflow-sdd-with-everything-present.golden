@@ -65,6 +65,24 @@ exit: 0
 status running, stages [dispatcher-selected-planning-phases]
 --- stderr ---
 
+$ workflow stage --project proj-1 --workflow wf-1 --stage dispatcher-selected-planning-phases
+exit: 2
+--- stdout ---
+--- stderr ---
+error: workflow stage: workflow lifecycle: stage is not the profile's next declared stage: got "dispatcher-selected-planning-phases", want "tasks" (profile "sdd"'s next declared stage)
+
+$ workflow stage --project proj-1 --workflow wf-1 --stage no-such-stage
+exit: 2
+--- stdout ---
+--- stderr ---
+error: workflow stage: workflow lifecycle: stage is not the profile's next declared stage: got "no-such-stage", want "tasks" (profile "sdd"'s next declared stage)
+
+$ workflow stage --project proj-1 --workflow wf-1 --stage archive
+exit: 2
+--- stdout ---
+--- stderr ---
+error: workflow stage: workflow lifecycle: stage is not the profile's next declared stage: got "archive", want "tasks" (profile "sdd"'s next declared stage)
+
 $ workflow stage --project proj-1 --workflow wf-1 --stage tasks
 exit: 0
 --- stdout ---
@@ -135,9 +153,45 @@ exit: 0
 }
 --- stderr ---
 
-$ workflow close --project proj-1 --workflow wf-1 --outcome completed --reason done
-exit: 2
+$ workflow close --project proj-1 --workflow wf-1 --outcome completed
+exit: 0
 --- stdout ---
+{
+  "classification": "owned",
+  "status": "closed",
+  "profile": "sdd",
+  "goal_id": "goal-1",
+  "goal_digest": "3fa80a4c34f1198a2fe03c95ecaaab97721dd5a94dce91612f2612b4208e54ac",
+  "stages": [
+    "dispatcher-selected-planning-phases",
+    "tasks",
+    "apply",
+    "verify",
+    "archive"
+  ],
+  "last_verified_seq": 7,
+  "close_outcome": "completed"
+}
 --- stderr ---
-error: workflow close: workflow store: append: reason must be empty when outcome is "completed"
+
+$ workflow status --project proj-1 --workflow wf-1
+exit: 0
+--- stdout ---
+{
+  "classification": "owned",
+  "status": "closed",
+  "profile": "sdd",
+  "goal_id": "goal-1",
+  "goal_digest": "3fa80a4c34f1198a2fe03c95ecaaab97721dd5a94dce91612f2612b4208e54ac",
+  "stages": [
+    "dispatcher-selected-planning-phases",
+    "tasks",
+    "apply",
+    "verify",
+    "archive"
+  ],
+  "last_verified_seq": 7,
+  "close_outcome": "completed"
+}
+--- stderr ---
 

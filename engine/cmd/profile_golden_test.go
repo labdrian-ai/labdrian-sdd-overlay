@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -14,6 +15,8 @@ import (
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow"
 )
 
 // The golden files under testdata/profile-golden and the profile cases of testdata/hook-golden
@@ -57,6 +60,17 @@ func profileHookGoldenCases() []hookGoldenCase {
 				w.promptHook(p.profile+", every declared stage recorded", e, e.repo)
 			}
 		}},
+		// The hook worlds confirm nothing by default; here every dependency is present, so what the
+		// projection says of a workflow whose dependencies are available is pinned too.
+		{"prompt-projects-every-profile-with-its-dependencies-present", func(w *hookWorld) {
+			for _, p := range profileStages {
+				e := w.env()
+				w.deps.workflowProber = func() workflow.DependencyProber { return everythingPresentProber{} }
+				e.deps = w.deps
+				e.running(w.t, "proj-1", "wf-1", p.profile)
+				w.promptHook(p.profile+", running, every dependency present", e, e.repo)
+			}
+		}},
 		{"pretooluse-gates-every-profile-by-its-memory-ceiling", func(w *hookWorld) {
 			for _, p := range profileStages {
 				e := w.env()
@@ -67,6 +81,17 @@ func profileHookGoldenCases() []hookGoldenCase {
 			}
 		}},
 	}
+}
+
+// everythingPresentProber finds every capability it is asked about available.
+type everythingPresentProber struct{}
+
+func (everythingPresentProber) Probe(_ context.Context, capabilities []string) ([]workflow.Observation, error) {
+	observed := make([]workflow.Observation, len(capabilities))
+	for i, name := range capabilities {
+		observed[i] = workflow.Observation{Capability: name, Status: workflow.ObservationAvailable, Detail: "present (test)"}
+	}
+	return observed, nil
 }
 
 // profileWorld is the scratch space of one profile transcript: the program, a state home, and the
@@ -224,13 +249,23 @@ func profileTranscript(t *testing.T, bin, profile string, stages []string, equip
 	w.runBrief(with("start")...)
 	w.runBrief(with("stage", "--stage", stages[len(stages)-1])...)
 	w.runBrief(with("stage", "--stage", "no-such-stage")...)
-	for _, stage := range stages {
+	for i, stage := range stages {
+		if i == 1 {
+			// In the middle of the sequence the next stage is the second one: the one just recorded
+			// again, one that is not declared and one declared far ahead are all refused.
+			w.runBrief(with("stage", "--stage", stages[0])...)
+			w.runBrief(with("stage", "--stage", "no-such-stage")...)
+			w.runBrief(with("stage", "--stage", stages[len(stages)-1])...)
+		}
 		w.runBrief(with("stage", "--stage", stage)...)
 	}
 	w.runBrief(with("stage", "--stage", stages[0])...)
 	w.run(with("status")...)
 	w.run(with("verify", "--goal", goal)...)
-	w.run(with("close", "--outcome", "completed", "--reason", "done")...)
+	// A completed workflow takes no reason (a reason is for an abandoned one), so the close is
+	// given none and is the successful one; the state after it is recorded too.
+	w.run(with("close", "--outcome", "completed")...)
+	w.run(with("status")...)
 	return w.text()
 }
 
@@ -246,6 +281,14 @@ func unknownProfileTranscript(t *testing.T, bin string) string {
 }
 
 var profileGoldenName = regexp.MustCompile(`[^a-z0-9-]+`)
+
+// profileGoldenCaseName is the name of the case, and of the golden file, of one profile in one world.
+func profileGoldenCaseName(profile string, equipped bool) string {
+	if equipped {
+		return "workflow-" + profile + "-with-everything-present"
+	}
+	return "workflow-" + profile + "-with-nothing-present"
+}
 
 // TestProfileGolden runs the verbs of a workflow of every profile and compares the transcript with
 // its golden file.
@@ -275,10 +318,8 @@ func TestProfileGolden(t *testing.T) {
 	}
 	for _, p := range profileStages {
 		for _, equipped := range []bool{false, true} {
-			name := "workflow-" + p.profile + "-with-nothing-present"
-			if equipped {
-				name = "workflow-" + p.profile + "-with-everything-present"
-			}
+			p, equipped := p, equipped
+			name := profileGoldenCaseName(p.profile, equipped)
 			t.Run(name, func(t *testing.T) {
 				check(t, name, profileTranscript(t, engineBinary(t), p.profile, p.stages, equipped))
 			})
