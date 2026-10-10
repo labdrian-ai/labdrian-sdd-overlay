@@ -27,7 +27,7 @@ func run(p process, d deps, args []string) {
 	case "prespec":
 		runPrespec(p, rest)
 	case "runtime":
-		runRuntime(rest)
+		runRuntime(p, d, rest)
 	case "gadu-generate":
 		runGaduGenerate(p, d, rest)
 	case "pipkg":

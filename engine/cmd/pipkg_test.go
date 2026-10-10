@@ -140,7 +140,7 @@ func TestRuntimeInstallPiAsksGitThroughTheSourceItIsGiven(t *testing.T) {
 	source := &recordingSource{}
 
 	var out, errOut bytes.Buffer
-	runRuntimeCore(&scriptedPiCommands{}, source, []string{"install", "--target", "pi"}, &out, &errOut, func(int) {})
+	runRuntimeCore(testDeps(), &scriptedPiCommands{}, source, []string{"install", "--target", "pi"}, &out, &errOut, func(int) {})
 	if source.asked == 0 {
 		t.Errorf("the Pi package build never asked the source about the overlay; stdout=%q stderr=%q", out.String(), errOut.String())
 	}

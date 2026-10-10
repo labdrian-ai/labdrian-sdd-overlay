@@ -172,7 +172,7 @@ func (r pathGoalReader) LoadGoal(projectID, goalID string) (goal.Goal, error) {
 // It is a variable so a test can install workflow.UnavailableProber, the safe
 // default that confirms nothing.
 var workflowProber = func() workflow.DependencyProber {
-	home, path := runtimeProbeEnv()
+	home, path := runtimeProbeEnv(productionDeps())
 	return presence.Prober{Home: home, Path: path}
 }
 

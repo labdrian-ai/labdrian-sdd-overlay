@@ -23,5 +23,7 @@ func productionDeps() deps {
 		environ:     os.Environ,
 		userHomeDir: os.UserHomeDir,
 		agentChild:  os.Getenv(agentChildVariable) == agentChildValue,
+		// probeFS stays nil: the probe stats the operating system's files.
+		probeTimeout: defaultProbeTimeout,
 	}
 }

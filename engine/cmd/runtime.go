@@ -6,7 +6,6 @@ package main
 import (
 	"fmt"
 	"io"
-	"os"
 	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/execrunner"
@@ -18,8 +17,8 @@ import (
 
 // runRuntime implements the 'runtime <action>' subcommand.
 // Supported actions: status, install, update, uninstall.
-func runRuntime(args []string) {
-	runRuntimeCore(execrunner.New(), newPipkgSource(os.Environ()), args, os.Stdout, os.Stderr, os.Exit)
+func runRuntime(p process, d deps, args []string) {
+	runRuntimeCore(d, execrunner.New(), newPipkgSource(d.environ()), args, p.stdout, p.stderr, p.exit)
 }
 
 // componentRuntimeParity and componentLongtermMem are the two values
@@ -34,7 +33,7 @@ const (
 // adapter starts the `pi` CLI: the process adapter in the program, a fake in a test, so no test of
 // the command can reach a real `pi`. source is how the Pi package builder asks git about the
 // overlay: the git of the machine in the program, pipkg.NoRepository in a test.
-func runRuntimeCore(commands runtimepkg.CommandRunner, source pipkg.SourceRepo, args []string, stdout io.Writer, stderr io.Writer, exit func(int)) {
+func runRuntimeCore(d deps, commands runtimepkg.CommandRunner, source pipkg.SourceRepo, args []string, stdout io.Writer, stderr io.Writer, exit func(int)) {
 	// capabilities is declarative and read-only: it never constructs an
 	// adapter, resolves a config root, or reads HOME, so it is dispatched
 	// before the lifecycle flags are parsed and shares none of their
@@ -46,12 +45,11 @@ func runRuntimeCore(commands runtimepkg.CommandRunner, source pipkg.SourceRepo, 
 	// probe is read-only too: it stats the presence signals under the process's
 	// home and PATH and shares none of the lifecycle flags or defaults.
 	if len(args) > 0 && args[0] == "probe" {
-		home, path := runtimeProbeEnv()
-		runRuntimeProbe(args[1:], home, path, stdout, stderr, exit)
+		runRuntimeProbe(d, args[1:], stdout, stderr, exit)
 		return
 	}
 
-	registry, err := newRuntimeRegistry(newWarningRegistryRepository(stderr), settingsfile.Installer{}, commands, source, pipkgOptionsFromEnv(os.Getenv))
+	registry, err := newRuntimeRegistry(newWarningRegistryRepository(stderr), settingsfile.Installer{}, commands, source, pipkgOptionsFromEnv(d.getenv))
 	if err != nil {
 		fmt.Fprintln(stderr, "error:", err)
 		exit(1)
@@ -66,7 +64,7 @@ func runRuntimeCore(commands runtimepkg.CommandRunner, source pipkg.SourceRepo, 
 		return
 	}
 
-	cfg := runtimeConfigFromEnv(os.Getenv, os.UserHomeDir)
+	cfg := runtimeConfigFromEnv(d.getenv, d.userHomeDir)
 
 	if opts.Component == componentLongtermMem {
 		runLongtermMemComponent(opts, cfg, stdout, stderr, exit)

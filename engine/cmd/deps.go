@@ -2,6 +2,9 @@ package main
 
 import (
 	"io"
+	"time"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/capability/presence"
 )
 
 // The commands do not reach for the machine: they are handed what they run on, in two values that
@@ -44,6 +47,12 @@ type deps struct {
 	// answers a dialog. main resolves it once from the environment (agentChildVariable), so
 	// that no command reads that variable deep inside itself.
 	agentChild bool
+
+	// probeFS is the stat access of 'runtime probe' (and of the dependency prober the workflow
+	// verbs record observations with); nil means the operating system's. probeTimeout bounds one
+	// probe run, so that a hung filesystem cannot hang the command.
+	probeFS      presence.StatFS
+	probeTimeout time.Duration
 }
 
 // agentChildVariable is the environment variable a gentle-pi agent child runs with, set to
