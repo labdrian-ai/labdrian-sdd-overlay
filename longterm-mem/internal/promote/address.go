@@ -13,6 +13,7 @@ import (
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/durable"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultlayout"
 )
 
 // AddressAllocator is the port through which promotion obtains the address of
@@ -33,10 +34,6 @@ type AddressAllocator interface {
 // errNoAddressAllocator is what a promotion that needs a new address answers
 // when its Writer was built without an AddressAllocator.
 var errNoAddressAllocator = errors.New("promote: the writer has no address allocator")
-
-// manifestRelPath is .raw/.manifest.json's vault-relative location (D6/D7):
-// the wiki-ingest-owned address and source manifest.
-const manifestRelPath = ".raw/.manifest.json"
 
 // allocateAddress returns the vault address for the Engram observation
 // identified by (project, engramID) under vaultRoot (R-028). When a page
@@ -65,7 +62,7 @@ func allocateAddress(ctx context.Context, vaultRoot, project string, engramID in
 		return "", errors.New("promote: the address allocator returned no address")
 	}
 
-	path := pagePathPrefix + "/" + address + ".md"
+	path := vaultlayout.PageFile(address)
 	if err := recordAddress(vaultRoot, path, address, at); err != nil {
 		return "", err
 	}
@@ -223,7 +220,7 @@ func (m promotedPageMatch) resolve() (promotedPage, error) {
 // corruption is the caller's to judge, because it may only fail the lookup
 // that selects that page.
 func scanPromotedPages(vaultRoot string, engramID int) ([]promotedPageMatch, error) {
-	memoryDir := filepath.Join(vaultRoot, pagePathPrefix)
+	memoryDir := filepath.Join(vaultRoot, vaultlayout.PagesDir)
 	entries, err := os.ReadDir(memoryDir)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -280,7 +277,7 @@ func frontmatterBlock(raw string) (string, bool) {
 // indent atomically. Only a wholly absent file starts from the minimal
 // seed manifest.
 func recordAddress(vaultRoot, path, address string, at time.Time) error {
-	full := filepath.Join(vaultRoot, manifestRelPath)
+	full := filepath.Join(vaultRoot, vaultlayout.AddressManifestFile)
 	m := map[string]json.RawMessage{}
 
 	if data, err := os.ReadFile(full); err == nil {

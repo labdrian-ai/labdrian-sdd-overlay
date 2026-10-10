@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultlayout"
 )
 
 // TestPlan_WritesNothingAndPredictsWhatSyncThenDoes is the whole point of a
@@ -57,7 +58,7 @@ func TestPlan_WritesNothingAndPredictsWhatSyncThenDoes(t *testing.T) {
 	if after := vaultSnapshot(t, vaultRoot); !equalSnapshots(before, after) {
 		t.Fatalf("Plan changed the vault.\nbefore: %v\nafter:  %v", before, after)
 	}
-	if _, err := os.Stat(filepath.Join(vaultRoot, syncStateRelPath)); err == nil {
+	if _, err := os.Stat(filepath.Join(vaultRoot, vaultlayout.SyncStateFile)); err == nil {
 		t.Fatalf("Plan wrote the sync-state record; a dry run must not claim a sync happened")
 	}
 
@@ -213,7 +214,7 @@ func TestPlan_OneBrokenObservationIsReportedOnce(t *testing.T) {
 		{title: "Broken", content: "Body.", project: "p", obsType: "decision", revisionCount: 1, syncID: "s-b", topicKey: "longterm-mem/broken"},
 	}, nil)
 
-	memoryDir := filepath.Join(vaultRoot, pagePathPrefix)
+	memoryDir := filepath.Join(vaultRoot, vaultlayout.PagesDir)
 	if err := os.MkdirAll(memoryDir, 0o755); err != nil {
 		t.Fatalf("mkdir %s: %v", memoryDir, err)
 	}

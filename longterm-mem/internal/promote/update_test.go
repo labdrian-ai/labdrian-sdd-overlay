@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultlayout"
 )
 
 // writePromotedPage writes page's rendered content to vaultRoot/page.Path,
@@ -87,9 +88,9 @@ func TestUpdate_UnmodifiedPageUpdatesInPlace(t *testing.T) {
 		t.Fatalf("engram_revision not refreshed; got:\n%s", got)
 	}
 
-	entries, err := os.ReadDir(filepath.Join(vaultRoot, pagePathPrefix))
+	entries, err := os.ReadDir(filepath.Join(vaultRoot, vaultlayout.PagesDir))
 	if err != nil {
-		t.Fatalf("read %s: %v", pagePathPrefix, err)
+		t.Fatalf("read %s: %v", vaultlayout.PagesDir, err)
 	}
 	if len(entries) != 1 {
 		t.Fatalf("wiki/memory has %d entries, want 1 (no second page created)", len(entries))
@@ -143,9 +144,9 @@ func TestUpdate_RetitleKeepsSameFile(t *testing.T) {
 		t.Fatalf("title not updated; got:\n%s", got)
 	}
 
-	entries, err := os.ReadDir(filepath.Join(vaultRoot, pagePathPrefix))
+	entries, err := os.ReadDir(filepath.Join(vaultRoot, vaultlayout.PagesDir))
 	if err != nil {
-		t.Fatalf("read %s: %v", pagePathPrefix, err)
+		t.Fatalf("read %s: %v", vaultlayout.PagesDir, err)
 	}
 	if len(entries) != 1 {
 		t.Fatalf("wiki/memory has %d entries, want 1 (no orphaned old file)", len(entries))

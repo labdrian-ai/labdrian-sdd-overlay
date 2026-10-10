@@ -5,13 +5,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-)
 
-// precedenceManifestRelPath is longterm-mem's own sidecar file (D6),
-// vault-relative -- unlike .raw/.manifest.json (wiki-ingest-owned,
-// address.go), this file has exactly one writer (this package), so a
-// closed struct is safe here.
-const precedenceManifestRelPath = ".raw/.longterm-mem-manifest.json"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultlayout"
+)
 
 // PrecedenceEntry is one promoted page's last-written-by-longterm-mem
 // fingerprint (D6): body and frontmatter hashed separately so a
@@ -76,7 +72,7 @@ type PrecedenceStore map[string]PrecedenceEntry
 // file returns an empty store, not an error -- nothing has been promoted
 // under this tracking yet.
 func LoadPrecedenceStore(vaultRoot string) (PrecedenceStore, error) {
-	full := filepath.Join(vaultRoot, precedenceManifestRelPath)
+	full := filepath.Join(vaultRoot, vaultlayout.PrecedenceFile)
 	data, err := os.ReadFile(full)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -94,7 +90,7 @@ func LoadPrecedenceStore(vaultRoot string) (PrecedenceStore, error) {
 // Save writes s to vaultRoot's sidecar precedence file through
 // address.go's writeFileAtomic (D6), which durably replaces it.
 func (s PrecedenceStore) Save(vaultRoot string) error {
-	full := filepath.Join(vaultRoot, precedenceManifestRelPath)
+	full := filepath.Join(vaultRoot, vaultlayout.PrecedenceFile)
 	data, err := json.MarshalIndent(s, "", "  ")
 	if err != nil {
 		return fmt.Errorf("promote: marshal %s: %w", full, err)

@@ -20,7 +20,7 @@ import (
 
 // WriteSyncState writes a minimal sync-state record at vaultRoot's
 // contract path (.vault-meta/longterm-mem-sync-state.json, mirroring
-// promote.syncStateRelPath), simulating a prior successful sync.
+// vaultlayout.SyncStateFile), simulating a prior successful sync.
 func WriteSyncState(t *testing.T, vaultRoot, completedAt string) {
 	t.Helper()
 	dir := filepath.Join(vaultRoot, ".vault-meta")

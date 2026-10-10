@@ -10,6 +10,7 @@ import (
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/embed"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultlayout"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vecindex"
 )
 
@@ -41,26 +42,6 @@ const (
 // vault.Runner.RunInterpreted uses for scripts/contextual-prefix.py and
 // scripts/bm25-index.py.
 const requiredPrerequisite = "python3"
-
-// promotedPagesDir is the vault-relative directory promoted pages live
-// under, mirroring promote's own (unexported) pagePathPrefix constant
-// (D7: wiki/memory/<address>.md).
-const promotedPagesDir = "wiki/memory"
-
-// logRelPath mirrors promote's own (unexported) logMdRelPath constant
-// (register.go): the vault's append-only promotion log, the on-disk
-// source the wiki-registration-consistency check's log half reads. The
-// catalog half (wiki/index.md) needs no equivalent constant here -- it is
-// checked entirely through promote.LintPage's reused inbound-index-link
-// rule, which already knows that path.
-const logRelPath = "wiki/log.md"
-
-// precedenceSidecarRelPath mirrors promote's own (unexported)
-// precedenceManifestRelPath constant (store.go): longterm-mem's
-// last-written-by-us fingerprint file, named in this check's details so an
-// operator reading a FAIL knows which file to look at. The file itself is
-// read through promote.LoadPrecedenceStore, never parsed here.
-const precedenceSidecarRelPath = ".raw/.longterm-mem-manifest.json"
 
 // Check is one named diagnostic's result.
 type Check struct {
@@ -193,7 +174,7 @@ func checkWikiRegistrationConsistency(vaultRoot string) Check {
 		return Check{Name: CheckWikiRegistrationConsistency, Status: CheckFailed, Detail: err.Error()}
 	}
 
-	logData, logErr := os.ReadFile(filepath.Join(vaultRoot, logRelPath))
+	logData, logErr := os.ReadFile(filepath.Join(vaultRoot, vaultlayout.LogFile))
 
 	details := append([]string(nil), unreadable...)
 	for _, page := range pages {
@@ -203,7 +184,7 @@ func checkWikiRegistrationConsistency(vaultRoot string) Check {
 			}
 		}
 		if logErr != nil || !strings.Contains(string(logData), "[["+page.Address) {
-			details = append(details, fmt.Sprintf("wiki/log.md has no entry for %s", page.Address))
+			details = append(details, fmt.Sprintf("%s has no entry for %s", vaultlayout.LogFile, page.Address))
 		}
 	}
 	if len(details) > 0 {
@@ -268,15 +249,15 @@ func checkPrecedenceSidecarConsistency(vaultRoot string) Check {
 	details := append([]string(nil), unreadable...)
 	for _, page := range pages {
 		if storeErr != nil {
-			details = append(details, fmt.Sprintf("%s could not be read, so %s has no provable provenance: %v", precedenceSidecarRelPath, page.Address, storeErr))
+			details = append(details, fmt.Sprintf("%s could not be read, so %s has no provable provenance: %v", vaultlayout.PrecedenceFile, page.Address, storeErr))
 			continue
 		}
 		entry, tracked := store.Get(page.Address)
 		switch {
 		case !tracked:
-			details = append(details, fmt.Sprintf("%s has no entry for %s, so longterm-mem cannot prove it wrote that page", precedenceSidecarRelPath, page.Address))
+			details = append(details, fmt.Sprintf("%s has no entry for %s, so longterm-mem cannot prove it wrote that page", vaultlayout.PrecedenceFile, page.Address))
 		case entry.PromotedRevision <= 0 && !entry.MatchesPage(page.Frontmatter):
-			details = append(details, fmt.Sprintf("%s records no usable promoted revision (%d) for %s and no longer matches that page, so every promotion of it is refused and nothing in the promotion path can repair the entry", precedenceSidecarRelPath, entry.PromotedRevision, page.Address))
+			details = append(details, fmt.Sprintf("%s records no usable promoted revision (%d) for %s and no longer matches that page, so every promotion of it is refused and nothing in the promotion path can repair the entry", vaultlayout.PrecedenceFile, entry.PromotedRevision, page.Address))
 		}
 	}
 	if len(details) > 0 {
@@ -392,7 +373,7 @@ func checkEmbeddingBackendReachable(ctx context.Context, deps DoctorDeps) Check 
 // package's own contract forbids. Only a directory that cannot be listed
 // at all -- where there is no per-page result to salvage -- is an error.
 func loadPromotedPages(vaultRoot string) (pages []promote.Page, unreadable []string, err error) {
-	dir := filepath.Join(vaultRoot, promotedPagesDir)
+	dir := filepath.Join(vaultRoot, vaultlayout.PagesDir)
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -413,7 +394,7 @@ func loadPromotedPages(vaultRoot string) (pages []promote.Page, unreadable []str
 		}
 		pages = append(pages, promote.Page{
 			Address:     address,
-			Path:        promotedPagesDir + "/" + entry.Name(),
+			Path:        vaultlayout.PagesDir + "/" + entry.Name(),
 			Frontmatter: string(data),
 		})
 	}

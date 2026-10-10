@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultlayout"
 )
 
 // PropagateReport summarizes one Propagate run: Patched lists the address
@@ -37,7 +38,7 @@ type PropagateReport struct {
 func Propagate(ctx context.Context, deps Deps, project string) (PropagateReport, error) {
 	var report PropagateReport
 	failed, err := eachPatchTarget(deps, project, func(t patchTarget) error {
-		pagePath := filepath.Join(deps.Writer.VaultRoot, pagePathPrefix, t.Address+".md")
+		pagePath := filepath.Join(deps.Writer.VaultRoot, vaultlayout.PagesDir, t.Address+".md")
 		frontmatterHash, _, err := PatchStatusFields(pagePath, t.Status, t.Related)
 		if err != nil {
 			return fmt.Errorf("patch %s: %w", pagePath, err)

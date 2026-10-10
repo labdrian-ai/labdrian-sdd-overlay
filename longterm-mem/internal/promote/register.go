@@ -17,15 +17,6 @@ const (
 	indexMarkerEnd   = "<!-- longterm-mem:end -->"
 )
 
-// indexMdRelPath and logMdRelPath are the vault's master catalog and
-// append-only promotion log (R-029, D7), vault-relative -- the paths
-// Writer.Promote (task 7.10) joins onto VaultRoot before calling
-// RegisterIndex/RegisterLog.
-const (
-	indexMdRelPath = "wiki/index.md"
-	logMdRelPath   = "wiki/log.md"
-)
-
 // logHeaderDateRegexp matches a log.md entry header line and captures its
 // date (D7): RegisterLog inserts a new entry immediately before the first
 // existing header whose own date is on or before the new entry's date,

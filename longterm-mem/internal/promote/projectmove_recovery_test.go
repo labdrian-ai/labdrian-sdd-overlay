@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultlayout"
 )
 
 // writeRawPage writes a hand-authored wiki/memory/ page verbatim, so a test
@@ -15,7 +16,7 @@ import (
 // address line, or one whose address field disagrees with its filename.
 func writeRawPage(t *testing.T, vaultRoot, file, raw string) {
 	t.Helper()
-	dir := filepath.Join(vaultRoot, pagePathPrefix)
+	dir := filepath.Join(vaultRoot, vaultlayout.PagesDir)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatalf("mkdir %s: %v", dir, err)
 	}
@@ -120,7 +121,7 @@ func TestWriter_Promote_ProjectMoveSupersedesEvenWhenTheSuccessorUpdateIsSkipped
 	successorPage := seedPromotedPage(t, vaultRoot, store, successorObs, "c-000042")
 	// A human edits the successor page's body: its recorded body hash no
 	// longer covers what is on disk, so UpdateInPlace refuses to rewrite it.
-	successorPath := filepath.Join(vaultRoot, pagePathPrefix, successorPage.Address+".md")
+	successorPath := filepath.Join(vaultRoot, vaultlayout.PagesDir, successorPage.Address+".md")
 	if err := os.WriteFile(successorPath, []byte(successorPage.Frontmatter+successorPage.Body+"\nA human wrote this.\n"), 0o644); err != nil {
 		t.Fatalf("seed a local edit on the successor: %v", err)
 	}

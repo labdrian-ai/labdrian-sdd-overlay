@@ -11,17 +11,9 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultlayout"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vecindex"
 )
-
-// syncStateRelPath mirrors promote's own (unexported) syncStateRelPath
-// constant: the same vault-relative sync-state contract path
-// (.vault-meta/longterm-mem-sync-state.json, D6), read here independently
-// since Status is a read-only consumer with no promote package dependency
-// of its own -- lint.go's checkAddressMap follows the same
-// hardcode-the-contract-path convention for .raw/.manifest.json rather
-// than importing the writer that produces it.
-const syncStateRelPath = ".vault-meta/longterm-mem-sync-state.json"
 
 // neverSynced is Report.LastSyncCompletedAt's value when no sync-state
 // record exists yet. Status must never fabricate a timestamp (R-010).
@@ -107,7 +99,7 @@ func readEmbeddingIndexBuiltAt(stateDir, project string) string {
 // not exist yet -- a project that has never synced must never be reported
 // with a fabricated or stale timestamp (R-010).
 func readLastSyncCompletedAt(vaultRoot string) (string, error) {
-	full := filepath.Join(vaultRoot, syncStateRelPath)
+	full := filepath.Join(vaultRoot, vaultlayout.SyncStateFile)
 	data, err := os.ReadFile(full)
 	if err != nil {
 		if os.IsNotExist(err) {

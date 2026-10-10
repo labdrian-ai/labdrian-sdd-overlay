@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultlayout"
 )
 
 // movedFixture seeds one already-promoted page for obs under its current
@@ -25,7 +26,7 @@ func movedFixture(t *testing.T, obs memory.Observation, seedAddress string) (str
 
 func readPage(t *testing.T, vaultRoot, address string) string {
 	t.Helper()
-	data, err := os.ReadFile(filepath.Join(vaultRoot, pagePathPrefix, address+".md"))
+	data, err := os.ReadFile(filepath.Join(vaultRoot, vaultlayout.PagesDir, address+".md"))
 	if err != nil {
 		t.Fatalf("read page %s: %v", address, err)
 	}
@@ -126,7 +127,7 @@ func TestWriter_Promote_ProjectMoveIsIdempotent(t *testing.T) {
 	}
 	afterFirst := readPage(t, vaultRoot, oldPage.Address)
 	entryAfterFirst, _ := w.Store.Get(oldPage.Address)
-	oldPath := filepath.Join(vaultRoot, pagePathPrefix, oldPage.Address+".md")
+	oldPath := filepath.Join(vaultRoot, vaultlayout.PagesDir, oldPage.Address+".md")
 	statBefore, err := os.Stat(oldPath)
 	if err != nil {
 		t.Fatalf("stat old page: %v", err)
@@ -164,7 +165,7 @@ func TestWriter_Promote_ProjectMoveLeavesAnExistingSupersessionAlone(t *testing.
 	obs := memory.Observation{ID: 324, Type: "decision", Title: "Moved Decision", Content: "Body.", Project: "p-one", RevisionCount: 1, TopicKey: "longterm-mem/projectmove-fixture"}
 	vaultRoot, store, oldPage := movedFixture(t, obs, "c-000001")
 
-	oldPath := filepath.Join(vaultRoot, pagePathPrefix, oldPage.Address+".md")
+	oldPath := filepath.Join(vaultRoot, vaultlayout.PagesDir, oldPage.Address+".md")
 	frontmatterHash, _, err := PatchStatusFields(oldPath, "superseded", []string{wikilink("c-000555", "Some Other Successor")})
 	if err != nil {
 		t.Fatalf("seed an existing supersession: %v", err)
@@ -220,7 +221,7 @@ func TestWriter_Promote_UnmovedObservationStillReusesItsPage(t *testing.T) {
 		t.Fatalf("page was not updated in place; got:\n%s", page)
 	}
 
-	entries, err := os.ReadDir(filepath.Join(vaultRoot, pagePathPrefix))
+	entries, err := os.ReadDir(filepath.Join(vaultRoot, vaultlayout.PagesDir))
 	if err != nil {
 		t.Fatalf("list memory dir: %v", err)
 	}

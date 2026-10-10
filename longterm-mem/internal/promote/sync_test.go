@@ -12,6 +12,7 @@ import (
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultlayout"
 
 	_ "modernc.org/sqlite"
 )
@@ -216,15 +217,15 @@ func TestSync_IndexAndSyncStateReflectCompletion(t *testing.T) {
 		t.Fatal("RebuildIndex was not called; the vault index must be rebuilt after promotion (R-031)")
 	}
 
-	entries, err := os.ReadDir(filepath.Join(vaultRoot, pagePathPrefix))
+	entries, err := os.ReadDir(filepath.Join(vaultRoot, vaultlayout.PagesDir))
 	if err != nil {
-		t.Fatalf("read %s: %v", pagePathPrefix, err)
+		t.Fatalf("read %s: %v", vaultlayout.PagesDir, err)
 	}
 	if len(entries) != 3 {
 		t.Fatalf("wiki/memory has %d entries, want 3 (the index rebuild's input must reflect all three new pages)", len(entries))
 	}
 
-	stateData, err := os.ReadFile(filepath.Join(vaultRoot, syncStateRelPath))
+	stateData, err := os.ReadFile(filepath.Join(vaultRoot, vaultlayout.SyncStateFile))
 	if err != nil {
 		t.Fatalf("read sync-state record: %v", err)
 	}
@@ -256,7 +257,7 @@ func TestSync_OneFailingObservationDoesNotWedgeTheRun(t *testing.T) {
 	// The middle observation is already promoted to a page whose
 	// engram_revision cannot be parsed, so deciding whether it needs
 	// re-promotion fails every single run.
-	memoryDir := filepath.Join(vaultRoot, pagePathPrefix)
+	memoryDir := filepath.Join(vaultRoot, vaultlayout.PagesDir)
 	if err := os.MkdirAll(memoryDir, 0o755); err != nil {
 		t.Fatalf("mkdir %s: %v", memoryDir, err)
 	}
@@ -290,7 +291,7 @@ func TestSync_OneFailingObservationDoesNotWedgeTheRun(t *testing.T) {
 	if !rebuildCalled {
 		t.Error("RebuildIndex was not called; a partially failed run still rebuilt real pages and must refresh the index")
 	}
-	if _, err := os.Stat(filepath.Join(vaultRoot, syncStateRelPath)); err != nil {
+	if _, err := os.Stat(filepath.Join(vaultRoot, vaultlayout.SyncStateFile)); err != nil {
 		t.Errorf("sync-state record missing after a partially failed run: %v", err)
 	}
 }

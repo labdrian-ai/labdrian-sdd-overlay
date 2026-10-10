@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultlayout"
 )
 
 // Writer is longterm-mem's single promotion entrypoint (6.8 REFACTOR):
@@ -265,7 +266,7 @@ func (w *Writer) supersedeMoved(moved []promotedPage, successorAddress, successo
 	patched := false
 	var failures []error
 	for _, old := range moved {
-		path := filepath.Join(w.VaultRoot, pagePathPrefix, old.Address+".md")
+		path := filepath.Join(w.VaultRoot, vaultlayout.PagesDir, old.Address+".md")
 		raw, err := os.ReadFile(path)
 		if err != nil {
 			failures = append(failures, fmt.Errorf("promote: read superseded page %s: %w", path, err))
@@ -303,8 +304,8 @@ func (w *Writer) supersedeMoved(moved []promotedPage, successorAddress, successo
 // register.go's RegisterIndex/RegisterLog perform, the log stamped with the
 // writer's clock like every other date it writes.
 func (w *Writer) register(addr, title string) error {
-	if err := RegisterIndex(filepath.Join(w.VaultRoot, indexMdRelPath), addr, title); err != nil {
+	if err := RegisterIndex(filepath.Join(w.VaultRoot, vaultlayout.IndexFile), addr, title); err != nil {
 		return err
 	}
-	return RegisterLog(filepath.Join(w.VaultRoot, logMdRelPath), addr, title, utc(w.Clock))
+	return RegisterLog(filepath.Join(w.VaultRoot, vaultlayout.LogFile), addr, title, utc(w.Clock))
 }

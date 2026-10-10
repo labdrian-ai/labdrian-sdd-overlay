@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultlayout"
 )
 
 // TestPropagate: R-033's four scenarios, table-driven.
@@ -60,7 +61,7 @@ func TestPropagate(t *testing.T) {
 			t.Fatalf("old page body was rewritten; want it byte-identical, got:\n%s", oldContent)
 		}
 
-		newData, err := os.ReadFile(filepath.Join(vaultRoot, pagePathPrefix, "c-000002.md"))
+		newData, err := os.ReadFile(filepath.Join(vaultRoot, vaultlayout.PagesDir, "c-000002.md"))
 		if err != nil {
 			t.Fatalf("read new (successor) page: %v", err)
 		}
@@ -246,7 +247,7 @@ func TestPropagate_OneBrokenPageDoesNotWedgeTheRun(t *testing.T) {
 		{title: "Archivable", content: "Body two.", project: "labdrian-sdd-overlay", obsType: "decision", revisionCount: 1, deletedAt: "2026-08-20T00:00:00Z", topicKey: "longterm-mem/archivable"},
 	}, nil)
 
-	memoryDir := filepath.Join(vaultRoot, pagePathPrefix)
+	memoryDir := filepath.Join(vaultRoot, vaultlayout.PagesDir)
 	if err := os.MkdirAll(memoryDir, 0o755); err != nil {
 		t.Fatalf("mkdir %s: %v", memoryDir, err)
 	}

@@ -7,11 +7,8 @@ import (
 	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultlayout"
 )
-
-// pagePathPrefix is the vault-relative directory promoted pages live under
-// (D7): `wiki/memory/<address>.md`.
-const pagePathPrefix = "wiki/memory"
 
 // wikilinkPattern is the D7 alias wikilink shape, `[[c-NNNNNN|Title]]`,
 // shared by wikilink's rendering and LintPage's resolvability check
@@ -67,7 +64,7 @@ func EmitPage(obs memory.Observation, address string, related []Link, at time.Ti
 
 	return Page{
 		Address:     address,
-		Path:        pagePathPrefix + "/" + address + ".md",
+		Path:        vaultlayout.PageFile(address),
 		Frontmatter: fm.Render(),
 		Body:        renderBody(obs),
 	}, nil

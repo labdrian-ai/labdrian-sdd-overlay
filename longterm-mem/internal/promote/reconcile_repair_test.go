@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultlayout"
 )
 
 // TestReconcile_AdoptsARevisionZeroPageAndLeavesTheWedgedState covers the
@@ -188,7 +189,7 @@ func TestReconcile_RefusesAPageWhoseFrontmatterDisagrees(t *testing.T) {
 // carries -- which is the mismatch the tests above need.
 func writePromotedPageAt(t *testing.T, vaultRoot, address string, page Page) string {
 	t.Helper()
-	full := filepath.Join(vaultRoot, pagePathPrefix, address+".md")
+	full := filepath.Join(vaultRoot, vaultlayout.PagesDir, address+".md")
 	if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
 		t.Fatalf("mkdir %s: %v", filepath.Dir(full), err)
 	}

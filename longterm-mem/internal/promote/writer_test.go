@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultlayout"
 )
 
 // TestWriter_Promote_CreatesNewPage: task 6.8 REFACTOR, create branch.
@@ -83,9 +84,9 @@ func TestWriter_Promote_UpdatesExistingPage(t *testing.T) {
 		t.Fatalf("Page.Address = %q, want the reused c-000402", result.Page.Address)
 	}
 
-	entries, err := os.ReadDir(filepath.Join(vaultRoot, pagePathPrefix))
+	entries, err := os.ReadDir(filepath.Join(vaultRoot, vaultlayout.PagesDir))
 	if err != nil {
-		t.Fatalf("read %s: %v", pagePathPrefix, err)
+		t.Fatalf("read %s: %v", vaultlayout.PagesDir, err)
 	}
 	if len(entries) != 1 {
 		t.Fatalf("wiki/memory has %d entries, want 1 (update, not a second page)", len(entries))
@@ -287,7 +288,7 @@ func TestWriter_Promote_CreateRollsBackWhenFingerprintCannotPersist(t *testing.T
 
 	// A directory where the sidecar file belongs: Save's rename cannot
 	// replace it, so persistence fails.
-	blocked := filepath.Join(vaultRoot, precedenceManifestRelPath)
+	blocked := filepath.Join(vaultRoot, vaultlayout.PrecedenceFile)
 	if err := os.MkdirAll(blocked, 0o755); err != nil {
 		t.Fatalf("mkdir %s: %v", blocked, err)
 	}
@@ -299,11 +300,11 @@ func TestWriter_Promote_CreateRollsBackWhenFingerprintCannotPersist(t *testing.T
 		t.Fatalf("Promote = nil error, want the sidecar persistence failure surfaced")
 	}
 
-	orphan := filepath.Join(vaultRoot, pagePathPrefix, "c-000042.md")
+	orphan := filepath.Join(vaultRoot, vaultlayout.PagesDir, "c-000042.md")
 	if _, err := os.Stat(orphan); !os.IsNotExist(err) {
 		t.Fatalf("page %s survived a failed fingerprint write (stat err = %v); it must never be published so a retry converges", orphan, err)
 	}
-	memoryDir := filepath.Join(vaultRoot, pagePathPrefix)
+	memoryDir := filepath.Join(vaultRoot, vaultlayout.PagesDir)
 	if _, err := os.Stat(memoryDir); !os.IsNotExist(err) {
 		t.Fatalf("%s exists (stat err = %v) after a create whose fingerprint could not persist; the page write must not have been attempted at all, since a killed process between the two writes returns no error for a compensating removal to react to", memoryDir, err)
 	}
@@ -334,7 +335,7 @@ func TestWriter_Promote_CreatePersistsPrecedenceBeforeThePage(t *testing.T) {
 	// branch) while writeFileAtomic's own MkdirAll fails with EEXIST --
 	// deterministically and regardless of the uid the test runs as, the
 	// same discipline internal/ops's unreadable-page fixture uses.
-	memoryDir := filepath.Join(vaultRoot, pagePathPrefix)
+	memoryDir := filepath.Join(vaultRoot, vaultlayout.PagesDir)
 	if err := os.MkdirAll(filepath.Dir(memoryDir), 0o755); err != nil {
 		t.Fatalf("mkdir %s: %v", filepath.Dir(memoryDir), err)
 	}
@@ -349,7 +350,7 @@ func TestWriter_Promote_CreatePersistsPrecedenceBeforeThePage(t *testing.T) {
 		t.Fatalf("Promote = nil error, want the page write failure surfaced")
 	}
 
-	sidecar := filepath.Join(vaultRoot, precedenceManifestRelPath)
+	sidecar := filepath.Join(vaultRoot, vaultlayout.PrecedenceFile)
 	if _, err := os.Stat(sidecar); err != nil {
 		t.Fatalf("sidecar %s was never written (stat err = %v); the fingerprint must be persisted BEFORE the page, so an interrupted create can never publish a page of unrecorded provenance", sidecar, err)
 	}
@@ -390,7 +391,7 @@ func TestWriter_Promote_CreateResumesAfterAnUnpairedFingerprint(t *testing.T) {
 	if err := os.Remove(pagePath); err != nil {
 		t.Fatalf("simulate interrupted create: %v", err)
 	}
-	for _, rel := range []string{indexMdRelPath, logMdRelPath} {
+	for _, rel := range []string{vaultlayout.IndexFile, vaultlayout.LogFile} {
 		if err := os.Remove(filepath.Join(vaultRoot, rel)); err != nil {
 			t.Fatalf("simulate interrupted create (%s): %v", rel, err)
 		}
@@ -407,7 +408,7 @@ func TestWriter_Promote_CreateResumesAfterAnUnpairedFingerprint(t *testing.T) {
 	if _, err := os.Stat(pagePath); err != nil {
 		t.Fatalf("page %s was not republished (stat err = %v); an unpaired fingerprint must not wedge the create branch", pagePath, err)
 	}
-	for _, rel := range []string{indexMdRelPath, logMdRelPath} {
+	for _, rel := range []string{vaultlayout.IndexFile, vaultlayout.LogFile} {
 		data, err := os.ReadFile(filepath.Join(vaultRoot, rel))
 		if err != nil {
 			t.Fatalf("read %s after the resumed create: %v", rel, err)
@@ -439,7 +440,7 @@ func TestWriter_Promote_AdoptsAnUnrecordedOwnPageAndRepairsRegistration(t *testi
 
 	// The old order's crash window: the page and .raw/.manifest.json
 	// survived; the sidecar, the catalog and the log never landed.
-	for _, rel := range []string{precedenceManifestRelPath, indexMdRelPath, logMdRelPath} {
+	for _, rel := range []string{vaultlayout.PrecedenceFile, vaultlayout.IndexFile, vaultlayout.LogFile} {
 		if err := os.Remove(filepath.Join(vaultRoot, rel)); err != nil {
 			t.Fatalf("simulate the pre-fix crash window (%s): %v", rel, err)
 		}
@@ -473,7 +474,7 @@ func TestWriter_Promote_AdoptsAnUnrecordedOwnPageAndRepairsRegistration(t *testi
 	if entry.BodyHash != hashText(second.Page.Body) || entry.FrontmatterHash != hashText(second.Page.Frontmatter) {
 		t.Fatalf("adopted entry %+v does not fingerprint the page now on disk", entry)
 	}
-	for _, rel := range []string{indexMdRelPath, logMdRelPath} {
+	for _, rel := range []string{vaultlayout.IndexFile, vaultlayout.LogFile} {
 		data, err := os.ReadFile(filepath.Join(vaultRoot, rel))
 		if err != nil {
 			t.Fatalf("read %s after adoption: %v", rel, err)

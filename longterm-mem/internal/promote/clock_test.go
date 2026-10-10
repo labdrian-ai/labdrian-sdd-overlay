@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultlayout"
 )
 
 // fakeClock is the Clock of a test: it says the time it was given, and a test moves it to say a later
@@ -100,7 +101,7 @@ func TestSync_RefusesAWriterWithoutAClockBeforeTouchingAnything(t *testing.T) {
 	if _, err := Sync(t.Context(), deps, "labdrian-sdd-overlay"); err == nil {
 		t.Fatal("Sync = nil error, want a writer without a clock refused")
 	}
-	if _, err := os.Stat(filepath.Join(vaultRoot, syncStateRelPath)); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(vaultRoot, vaultlayout.SyncStateFile)); !os.IsNotExist(err) {
 		t.Errorf("the sync-state record exists after a refused run (stat err = %v)", err)
 	}
 }

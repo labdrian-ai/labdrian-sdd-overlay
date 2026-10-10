@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultlayout"
 )
 
 // TestReconcile_ShapeCheckIsTheOnlyThingRefusingATraversalThatNamesItself
@@ -50,7 +51,7 @@ func TestReconcile_ShapeCheckIsTheOnlyThingRefusingATraversalThatNamesItself(t *
 	}
 
 	if _, err := Reconcile(vaultRoot, project, traversal); !errors.Is(err, ErrInvalidAddress) {
-		t.Fatalf("Reconcile(%q) error = %v, want ErrInvalidAddress -- only the address-shape check stands between a self-naming traversal and adoption of a file outside %s", traversal, err, pagePathPrefix)
+		t.Fatalf("Reconcile(%q) error = %v, want ErrInvalidAddress -- only the address-shape check stands between a self-naming traversal and adoption of a file outside %s", traversal, err, vaultlayout.PagesDir)
 	}
 
 	store, err := LoadPrecedenceStore(vaultRoot)
@@ -91,7 +92,7 @@ func TestReconcile_FollowsASymlinkedPageBecauseTheVaultMayBeOne(t *testing.T) {
 	if err := os.WriteFile(elsewhere, []byte(page.Frontmatter+page.Body), 0o644); err != nil {
 		t.Fatalf("write the real page: %v", err)
 	}
-	link := filepath.Join(vaultRoot, pagePathPrefix, address+".md")
+	link := filepath.Join(vaultRoot, vaultlayout.PagesDir, address+".md")
 	if err := os.MkdirAll(filepath.Dir(link), 0o755); err != nil {
 		t.Fatalf("mkdir %s: %v", filepath.Dir(link), err)
 	}
@@ -185,7 +186,7 @@ func TestReconcile_APageWithNoFrontmatterBlockCarriesTheUnusablePageSentinel(t *
 		address = "c-000613"
 	)
 	vaultRoot := t.TempDir()
-	full := filepath.Join(vaultRoot, pagePathPrefix, address+".md")
+	full := filepath.Join(vaultRoot, vaultlayout.PagesDir, address+".md")
 	if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
 		t.Fatalf("mkdir %s: %v", filepath.Dir(full), err)
 	}
