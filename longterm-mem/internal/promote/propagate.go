@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 )
 
 // PropagateReport summarizes one Propagate run: Patched lists the address
@@ -93,7 +93,7 @@ func eachPatchTarget(deps Deps, project string, visit func(patchTarget) error) (
 		return nil, fmt.Errorf("promote: propagate: list observations for %q: %w", project, err)
 	}
 
-	bySyncID := make(map[string]engram.Observation, len(observations))
+	bySyncID := make(map[string]memory.Observation, len(observations))
 	for _, obs := range observations {
 		if obs.SyncID != "" {
 			bySyncID[obs.SyncID] = obs
@@ -134,7 +134,7 @@ func eachPatchTarget(deps Deps, project string, visit func(patchTarget) error) (
 // observation is the survivor and is left alone -- its own turn through
 // this loop finds no edge naming it as the older side, so it is never
 // patched.
-func resolveStatus(deps Deps, project string, obs engram.Observation, bySyncID map[string]engram.Observation) (status string, related []string, err error) {
+func resolveStatus(deps Deps, project string, obs memory.Observation, bySyncID map[string]memory.Observation) (status string, related []string, err error) {
 	edges, err := deps.Engram.RelatedEdges(obs.ID)
 	if err != nil {
 		return "", nil, err
@@ -188,7 +188,7 @@ func resolveStatus(deps Deps, project string, obs engram.Observation, bySyncID m
 // tells an operator "nothing will be rewritten" immediately before a
 // re-sync rewrites existing pages. Plan calls this; so does Propagate; and
 // neither holds a second opinion about what the other will do.
-func decidePatch(deps Deps, project string, obs engram.Observation, bySyncID map[string]engram.Observation) (string, []string, error) {
+func decidePatch(deps Deps, project string, obs memory.Observation, bySyncID map[string]memory.Observation) (string, []string, error) {
 	status, related, err := resolveStatus(deps, project, obs, bySyncID)
 	if err != nil {
 		return "", nil, fmt.Errorf("resolve status: %w", err)

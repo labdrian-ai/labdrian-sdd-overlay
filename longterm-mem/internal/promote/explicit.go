@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 )
 
 // ObservationLookup resolves one Engram observation by id, a function seam
@@ -12,7 +12,7 @@ import (
 // never depends on a concrete *engram.Store directly: production callers
 // (cmd_promote.go, the MCP promote tool via cmd_mcp.go) wire it to
 // (*engram.Store).ObservationByID, and tests wire it to a fake.
-type ObservationLookup func(id int64) (engram.Observation, bool, error)
+type ObservationLookup func(id int64) (memory.Observation, bool, error)
 
 // ErrObservationNotFound is ExplicitPromote's error when lookup reports no
 // such observation -- R-032's "rejected with a clear error rather than

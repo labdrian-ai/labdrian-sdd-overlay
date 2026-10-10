@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 )
 
 // Writer is longterm-mem's single promotion entrypoint (6.8 REFACTOR):
@@ -73,7 +73,7 @@ type Result struct {
 // (ExplicitPromote), which re-enters here, takes the update branch, and
 // registers on every write it does not skip. So: doctor names it, and an
 // explicit promote fixes it.
-func (w *Writer) Promote(obs engram.Observation, explicit bool) (Result, error) {
+func (w *Writer) Promote(obs memory.Observation, explicit bool) (Result, error) {
 	if !Eligible(obs, explicit) {
 		return Result{}, nil
 	}

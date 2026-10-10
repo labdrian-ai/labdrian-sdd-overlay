@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 )
 
 // syncStateRelPath is the vault-relative sync-state record R-031 requires
@@ -115,7 +116,7 @@ func Sync(ctx context.Context, deps Deps, project string) (SyncReport, error) {
 // walk is a preview that stops describing the run the moment either copy
 // changes, and an operator only finds out by running the thing the preview
 // existed to let them avoid.
-func decidePromotion(vaultRoot, project string, obs engram.Observation) (bool, error) {
+func decidePromotion(vaultRoot, project string, obs memory.Observation) (bool, error) {
 	if !Eligible(obs, false) {
 		return false, nil
 	}

@@ -6,7 +6,7 @@ package promote
 import (
 	"strings"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 )
 
 // excludedTopicPrefixes are the first path segments curatedTopicKey treats
@@ -22,7 +22,7 @@ var excludedTopicPrefixes = map[string]bool{
 // Eligible reports whether obs is eligible for promotion (R-007): pinned,
 // OR carrying a curated topic_key, OR explicitly targeted by a promote
 // call, which overrides every other criterion.
-func Eligible(obs engram.Observation, explicit bool) bool {
+func Eligible(obs memory.Observation, explicit bool) bool {
 	return explicit || obs.Pinned || curatedTopicKey(obs.TopicKey)
 }
 
