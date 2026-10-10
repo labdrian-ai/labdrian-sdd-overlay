@@ -186,7 +186,7 @@ func newWorkflowLifecycle(d deps, cwd, goalFile string, stderr io.Writer) (workf
 	if err != nil {
 		return workflow.Lifecycle{}, err
 	}
-	profiles := workflow.ProfileCatalogFunc(workflowprofile.Resolve)
+	profiles := builtInProfileCatalog()
 	lc, err := workflow.NewLifecycle(store, profiles, time.Now, newRepoLocator().Provenance(cwd), pathGoalReader{path: goalFile}, chains, d.dependencyProber())
 	if err != nil {
 		return workflow.Lifecycle{}, err
@@ -304,6 +304,14 @@ func runWorkflowVerify(d deps, args []string, cwd string, stdout, stderr io.Writ
 		exit(2)
 		return
 	}
+	// A verification that succeeded says, once, when the profile the workflow recorded is no longer
+	// the built-in one of its name. It is a warning and nothing more: the workflow was verified
+	// against its recorded profile, and the exit code is as it was.
+	if drift, err := workflow.DetectProfileDrift(state, builtInProfileCatalog()); err != nil {
+		fmt.Fprintf(stderr, "warning: workflow verify: could not tell whether the profile drifted: %v\n", err)
+	} else if drift != nil {
+		fmt.Fprint(stderr, profileDriftWarning(*drift))
+	}
 	writeWorkflowState(stdout, stderr, workflow.ClassificationOwned, state, exit)
 }
 
@@ -365,7 +373,13 @@ func runWorkflowStatus(d deps, args []string, cwd string, stdout, stderr io.Writ
 		exit(2)
 		return
 	}
-	writeWorkflowState(stdout, stderr, classification, state, exit)
+	drift, err := workflow.DetectProfileDrift(state, builtInProfileCatalog())
+	if err != nil {
+		fmt.Fprintf(stderr, "error: workflow status: %v\n", err)
+		exit(2)
+		return
+	}
+	writeWorkflowStateWithDrift(stdout, stderr, classification, state, drift, exit)
 }
 
 // workflowStateJSON is the CLI's stable JSON view of a workflow's
@@ -384,14 +398,51 @@ type workflowStateJSON struct {
 	LastVerifiedSeq int      `json:"last_verified_seq"`
 	CloseOutcome    string   `json:"close_outcome,omitempty"`
 	CloseReason     string   `json:"close_reason,omitempty"`
+	// ProfileDrift is present only in the answer of 'workflow status', and only when the profile a
+	// workflow recorded is no longer the built-in profile of its name; without drift the field is
+	// absent, so every status that did not report drift keeps its bytes.
+	ProfileDrift *profileDriftJSON `json:"profile_drift,omitempty"`
 }
 
-func newWorkflowStateJSON(classification workflow.Classification, s workflow.State) workflowStateJSON {
+// profileDriftJSON is the CLI's view of workflow.ProfileDrift: kind is "changed" (the built-in
+// profile of that name differs from the recorded one in fields) or "retired" (there is none any
+// more, and the digest of the built-in one and the fields are absent).
+type profileDriftJSON struct {
+	Kind           string   `json:"kind"`
+	Profile        string   `json:"profile"`
+	RecordedDigest string   `json:"recorded_digest"`
+	CurrentDigest  string   `json:"current_digest,omitempty"`
+	Fields         []string `json:"fields,omitempty"`
+}
+
+func newProfileDriftJSON(d *workflow.ProfileDrift) *profileDriftJSON {
+	if d == nil {
+		return nil
+	}
+	return &profileDriftJSON{Kind: string(d.Kind), Profile: d.Profile, RecordedDigest: d.RecordedDigest, CurrentDigest: d.CurrentDigest, Fields: d.Fields}
+}
+
+// builtInProfileCatalog is the catalog the program is wired with: the built-in profiles.
+func builtInProfileCatalog() workflow.ProfileCatalog {
+	return workflow.ProfileCatalogFunc(workflowprofile.Resolve)
+}
+
+// profileDriftWarning is the one line 'workflow verify' prints on stderr when the profile the
+// workflow recorded is no longer the built-in one of its name.
+func profileDriftWarning(d workflow.ProfileDrift) string {
+	if d.Kind == workflow.ProfileRetired {
+		return fmt.Sprintf("warning: workflow verify: profile drift: the profile %q this workflow recorded is no longer a built-in profile (retired); the workflow goes on from the recorded profile\n", d.Profile)
+	}
+	return fmt.Sprintf("warning: workflow verify: profile drift: the built-in profile %q differs from the one this workflow recorded (changed: %s); the workflow goes on from the recorded profile\n", d.Profile, strings.Join(d.Fields, ", "))
+}
+
+func newWorkflowStateJSON(classification workflow.Classification, s workflow.State, drift *workflow.ProfileDrift) workflowStateJSON {
 	stages := s.Stages
 	if stages == nil {
 		stages = []string{}
 	}
 	return workflowStateJSON{
+		ProfileDrift:    newProfileDriftJSON(drift),
 		Classification:  string(classification),
 		Status:          string(s.Status),
 		Profile:         s.Profile,
@@ -411,7 +462,13 @@ func newWorkflowStateJSON(classification workflow.Classification, s workflow.Sta
 // exits 1 (these never happen for a valid State, but are handled the same
 // way every other command in this package handles an output failure).
 func writeWorkflowState(stdout, stderr io.Writer, classification workflow.Classification, state workflow.State, exit func(int)) {
-	data, err := json.MarshalIndent(newWorkflowStateJSON(classification, state), "", "  ")
+	writeWorkflowStateWithDrift(stdout, stderr, classification, state, nil, exit)
+}
+
+// writeWorkflowStateWithDrift is writeWorkflowState with the drift finding of the workflow, which
+// only 'workflow status' passes.
+func writeWorkflowStateWithDrift(stdout, stderr io.Writer, classification workflow.Classification, state workflow.State, drift *workflow.ProfileDrift, exit func(int)) {
+	data, err := json.MarshalIndent(newWorkflowStateJSON(classification, state, drift), "", "  ")
 	if err != nil {
 		fmt.Fprintf(stderr, "error: workflow: %v\n", err)
 		exit(1)

@@ -180,7 +180,9 @@ func (w *profileWorld) run(args ...string) { w.t.Helper(); w.record(false, args.
 // status and the stages: the state is recorded whole by the verbs that matter for it.
 func (w *profileWorld) runBrief(args ...string) { w.t.Helper(); w.record(true, args...) }
 
-func (w *profileWorld) record(brief bool, args ...string) {
+// exec runs the program with the arguments in the world and returns its exit code and both streams,
+// as they are (record writes them into the transcript).
+func (w *profileWorld) exec(args ...string) (int, string, string) {
 	w.t.Helper()
 	cmd := exec.Command(w.bin, args...)
 	cmd.Dir = w.dir
@@ -195,7 +197,12 @@ func (w *profileWorld) record(brief bool, args ...string) {
 		}
 		code = exit.ExitCode()
 	}
-	out := stdout.String()
+	return code, stdout.String(), stderr.String()
+}
+
+func (w *profileWorld) record(brief bool, args ...string) {
+	w.t.Helper()
+	code, out, errOut := w.exec(args...)
 	if brief && out != "" {
 		var state struct {
 			Status string   `json:"status"`
@@ -206,7 +213,7 @@ func (w *profileWorld) record(brief bool, args ...string) {
 		}
 		out = fmt.Sprintf("status %s, stages %v\n", state.Status, state.Stages)
 	}
-	w.write("$ %s\nexit: %d\n--- stdout ---\n%s--- stderr ---\n%s\n", strings.Join(args, " "), code, ensureNewline(out), ensureNewline(stderr.String()))
+	w.write("$ %s\nexit: %d\n--- stdout ---\n%s--- stderr ---\n%s\n", strings.Join(args, " "), code, ensureNewline(out), ensureNewline(errOut))
 }
 
 func (w *profileWorld) write(format string, args ...any) {

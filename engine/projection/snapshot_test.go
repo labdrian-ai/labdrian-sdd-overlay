@@ -82,6 +82,25 @@ func TestProjectContextPrefersTheSnapshotToTheCatalogsProfileOfTheSameName(t *te
 	}
 }
 
+// The prompt hook does not report catalog drift (the owner's decision): the context of a workflow
+// whose snapshot differs from the catalog's profile, or whose profile the catalog no longer has, never
+// mentions it.
+func TestProjectContextDoesNotMentionCatalogDrift(t *testing.T) {
+	changed, err := workflowprofile.Resolve("odd")
+	if err != nil {
+		t.Fatal(err)
+	}
+	changed.Checks = append(changed.Checks, "a check odd did not have")
+	for name, w := range map[string]*workflow.Loaded{
+		"a changed profile": withSnapshot(loadedWorkflow("odd", workflow.StatusRunning), changed),
+		"a retired profile": withSnapshot(loadedWorkflow("", workflow.StatusRunning), snapshotProfile()),
+	} {
+		if ctx := project(ownedBinding(), w).Context; strings.Contains(strings.ToLower(ctx), "drift") {
+			t.Errorf("%s: the context mentions drift:\n%s", name, ctx)
+		}
+	}
+}
+
 func TestProjectContextStillSaysWhenTheRecordedStagesDoNotFollowTheSnapshot(t *testing.T) {
 	ctx := project(ownedBinding(), withSnapshot(loadedWorkflow("", workflow.StatusRunning, "second"), snapshotProfile())).Context
 	line := lineWithPrefix(t, ctx, "next stage:")
