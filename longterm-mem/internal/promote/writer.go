@@ -64,11 +64,11 @@ type Result struct {
 // promote surface's override semantics (R-007); an ineligible obs is left
 // untouched and reports a Result with no page and ActionNone (the zero
 // Result) and no error, since ineligibility is a normal skip a scanning
-// caller (sync) must not treat as a failure. Every promotion that actually wrote a page persists the precedence
-// sidecar; a create persists it BEFORE publishing the page, since a
-// published page with no recorded provenance is one UpdateInPlace would
-// refuse from then on, while a recorded fingerprint with no page is simply
-// a create the next run finishes.
+// caller (sync) must not treat as a failure. Every promotion that actually
+// wrote a page persists the precedence sidecar; a create persists it BEFORE
+// publishing the page, since a published page with no recorded provenance is
+// one UpdateInPlace would refuse from then on, while a recorded fingerprint
+// with no page is simply a create the next run finishes.
 //
 // Every promotion that actually wrote a page also registers it in the
 // vault's master catalog and append-only promotion log (R-029, task

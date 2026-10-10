@@ -31,17 +31,20 @@ func (a *sequentialAddresses) NextAddress(context.Context) (string, error) {
 	return fmt.Sprintf("c-%06d", a.taken), nil
 }
 
-// countingAddresses wraps an allocator and counts how often it was asked.
+// countingAddresses wraps an allocator and records how it was asked: how many times, and with which
+// context. It is not synchronized: a test reads it after the promotion it drives has returned, from the
+// goroutine that ran it.
 type countingAddresses struct {
 	AddressAllocator
 	asked int
-	// ctx is the context of the last ask.
-	ctx context.Context
+	// lastAskContext is the context the allocator was last asked with: what the test inspects, not
+	// state shared with the promotion.
+	lastAskContext context.Context
 }
 
 func (a *countingAddresses) NextAddress(ctx context.Context) (string, error) {
 	a.asked++
-	a.ctx = ctx
+	a.lastAskContext = ctx
 	return a.AddressAllocator.NextAddress(ctx)
 }
 
@@ -166,8 +169,8 @@ func TestPromote_AsksTheAllocatorWithTheCallersContext(t *testing.T) {
 	if _, err := w.Promote(ctx, obs, false); err != nil {
 		t.Fatalf("Promote: %v", err)
 	}
-	if allocator.ctx == nil || allocator.ctx.Value(key{}) != "the caller's" {
-		t.Errorf("the allocator was asked with %v, want the context Promote was called with", allocator.ctx)
+	if allocator.lastAskContext == nil || allocator.lastAskContext.Value(key{}) != "the caller's" {
+		t.Errorf("the allocator was asked with %v, want the context Promote was called with", allocator.lastAskContext)
 	}
 }
 
