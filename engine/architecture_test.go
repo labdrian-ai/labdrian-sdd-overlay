@@ -163,10 +163,9 @@ var rings = map[string]archguard.Ring{
 // new violation is not added here to make the guard pass; it is fixed.
 //
 // The guard reads imports and the members selected from a few standard packages.
-// It cannot see package-level mutable variables used as test seams, so these
-// known ones are not listed below and are owed to their units all the same:
-//
-//   - cmd: skillsLockWait and the other global seams of main.go (H31)
+// It cannot see package-level mutable variables used as test seams; for cmd, the
+// package that had them, cmd/process_boundary_test.go reads its source and fails
+// on a reassigned package-level variable, and on a use of the process outside main.go.
 var knownDebt = archguard.Debt{}
 
 // TestArchitectureFollowsTheDependencyRule is the fitness function: it fails on
