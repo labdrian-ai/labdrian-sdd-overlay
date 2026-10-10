@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 )
 
 // TestReconcile_ShapeCheckIsTheOnlyThingRefusingATraversalThatNamesItself
@@ -33,7 +33,7 @@ func TestReconcile_ShapeCheckIsTheOnlyThingRefusingATraversalThatNamesItself(t *
 	vaultRoot := t.TempDir()
 	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
 
-	page, err := EmitPage(engram.Observation{ID: 610, Type: "decision", Title: "Outside", Content: "Body.", Project: project, RevisionCount: 2}, "c-000610", nil)
+	page, err := EmitPage(memory.Observation{ID: 610, Type: "decision", Title: "Outside", Content: "Body.", Project: project, RevisionCount: 2}, "c-000610", nil)
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
 	}
@@ -83,7 +83,7 @@ func TestReconcile_FollowsASymlinkedPageBecauseTheVaultMayBeOne(t *testing.T) {
 	vaultRoot := t.TempDir()
 	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
 
-	page, err := EmitPage(engram.Observation{ID: 612, Type: "decision", Title: "Elsewhere", Content: "Body.", Project: project, RevisionCount: 4}, address, nil)
+	page, err := EmitPage(memory.Observation{ID: 612, Type: "decision", Title: "Elsewhere", Content: "Body.", Project: project, RevisionCount: 4}, address, nil)
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
 	}
@@ -148,7 +148,7 @@ func TestReconcile_AnUnreadableRevisionCarriesTheUnusablePageSentinel(t *testing
 		t.Run(name, func(t *testing.T) {
 			const address = "c-000611"
 			vaultRoot := t.TempDir()
-			page, err := EmitPage(engram.Observation{ID: 611, Type: "decision", Title: "Unreadable", Content: "Body.", Project: project, RevisionCount: 2}, address, nil)
+			page, err := EmitPage(memory.Observation{ID: 611, Type: "decision", Title: "Unreadable", Content: "Body.", Project: project, RevisionCount: 2}, address, nil)
 			if err != nil {
 				t.Fatalf("EmitPage: %v", err)
 			}

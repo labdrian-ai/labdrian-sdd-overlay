@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 )
 
 // TestReconcile_AdoptsARevisionZeroPageAndLeavesTheWedgedState covers the
@@ -36,7 +36,7 @@ func TestReconcile_AdoptsARevisionZeroPageAndLeavesTheWedgedState(t *testing.T) 
 	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
 
 	// A pinned observation Engram has never revised: eligible, revision 0.
-	obs := engram.Observation{ID: 606, Type: "decision", Title: "Never Revised", Content: "V1 body.", Project: project, RevisionCount: 0, Pinned: true}
+	obs := memory.Observation{ID: 606, Type: "decision", Title: "Never Revised", Content: "V1 body.", Project: project, RevisionCount: 0, Pinned: true}
 	first, err := EmitPage(obs, address, nil)
 	if err != nil {
 		t.Fatalf("EmitPage (v1): %v", err)
@@ -119,7 +119,7 @@ func TestReconcile_RefusesAnAddressOutsideThePagesDirectory(t *testing.T) {
 	vaultRoot := t.TempDir()
 	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
 
-	obs := engram.Observation{ID: 607, Type: "decision", Title: "Outside", Content: "Body.", Project: project, RevisionCount: 2}
+	obs := memory.Observation{ID: 607, Type: "decision", Title: "Outside", Content: "Body.", Project: project, RevisionCount: 2}
 	page, err := EmitPage(obs, "c-000607", nil)
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
@@ -157,7 +157,7 @@ func TestReconcile_RefusesAPageWhoseFrontmatterDisagrees(t *testing.T) {
 	t.Run("the page names a different address", func(t *testing.T) {
 		const address = "c-000608"
 		vaultRoot := t.TempDir()
-		page, err := EmitPage(engram.Observation{ID: 608, Type: "decision", Title: "Copied", Content: "Body.", Project: project, RevisionCount: 2}, "c-000999", nil)
+		page, err := EmitPage(memory.Observation{ID: 608, Type: "decision", Title: "Copied", Content: "Body.", Project: project, RevisionCount: 2}, "c-000999", nil)
 		if err != nil {
 			t.Fatalf("EmitPage: %v", err)
 		}
@@ -171,7 +171,7 @@ func TestReconcile_RefusesAPageWhoseFrontmatterDisagrees(t *testing.T) {
 	t.Run("the page belongs to another project", func(t *testing.T) {
 		const address = "c-000609"
 		vaultRoot := t.TempDir()
-		page, err := EmitPage(engram.Observation{ID: 609, Type: "decision", Title: "Other Project", Content: "Body.", Project: "someone-elses-project", RevisionCount: 2}, address, nil)
+		page, err := EmitPage(memory.Observation{ID: 609, Type: "decision", Title: "Other Project", Content: "Body.", Project: "someone-elses-project", RevisionCount: 2}, address, nil)
 		if err != nil {
 			t.Fatalf("EmitPage: %v", err)
 		}
