@@ -1,3 +1,5 @@
+//go:build unix
+
 package main
 
 import (
@@ -5,6 +7,7 @@ import (
 	"flag"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -28,7 +31,31 @@ import (
 // process in its environment, so no case reads or writes anything of the machine. The world is a
 // directory with a neutral name: the program tells its own hook entries apart by words in their
 // commands, and a path that carried one would make a hook appear that is not there.
+//
+// What depends on the machine, and what is done about it. These tests are for Unix systems (the
+// build tag): they use permission bits, symbolic links and the words the system gives for an error
+// ("not a directory", "is a directory"), which are those of Linux and Darwin and are recorded as
+// they are. The bits are the ones stat reports, so the cases hold for root too, and the cases that
+// need a read to fail make a directory of the file, which fails for root as well. The words of the
+// JSON library and the usage text of the program are not the verb's and change with the Go release
+// or with a verb added elsewhere, so the transcript writes them as <JSON ERROR> and <USAGE>
+// (hideForeignWords); the words around them stay pinned.
 var updateStatusGolden = flag.Bool("update-status-golden", false, "rewrite the golden files of the status verb")
+
+var (
+	// jsonErrorText is what encoding/json says of a settings file or a manifest it cannot decode.
+	jsonErrorText = regexp.MustCompile(`(?:json: )?cannot unmarshal \w+ into Go value of type [^\n]*?\{\}|invalid character '[^']*' [^\n]*?string|unexpected end of JSON input`)
+	// usageText is the usage the program prints after a command line it refuses, up to the end of
+	// the stderr it is in: the blank line that closes the record, before the next label or the end.
+	usageText = regexp.MustCompile(`(?s)Usage:\n.*?\n\n(# |\z)`)
+)
+
+// hideForeignWords writes the words of the JSON library and the usage text of the program as
+// placeholders, in a transcript.
+func hideForeignWords(text string) string {
+	text = jsonErrorText.ReplaceAllString(text, "<JSON ERROR>")
+	return usageText.ReplaceAllString(text, "<USAGE>\n\n$1")
+}
 
 // Where the installation lives in a world, relative to the world.
 const (
@@ -45,7 +72,7 @@ const (
 func newBinaryWorld(t *testing.T) *registryWorld {
 	t.Helper()
 	dir := neutralDir(t)
-	w := &registryWorld{t: t, bin: reviewReceiptBinary(t), dir: dir, names: map[string]string{}}
+	w := &registryWorld{t: t, bin: reviewReceiptBinary(t), dir: dir, names: map[string]string{}, filter: hideForeignWords}
 	w.name(dir, "<WORLD>")
 	w.mkdir("nobin")
 	w.mkdir(worldHome)

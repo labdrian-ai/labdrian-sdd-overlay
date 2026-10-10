@@ -3,7 +3,7 @@
 $ runtime status --target claude
 exit: 1
 --- stdout ---
-[claude] status: unsupported — read settings file <WORLD>/home/.claude/settings.json: invalid character 'n' looking for beginning of object key string
+[claude] status: unsupported — read settings file <WORLD>/home/.claude/settings.json: <JSON ERROR>
 --- stderr ---
 
 --- tree of home/.claude ---
@@ -13,7 +13,7 @@ settings.json
 $ runtime install --target claude
 exit: 1
 --- stdout ---
-[claude] install: partial — settings: <WORLD>/home/.claude/settings.json contains invalid JSON (not modified): invalid character 'n' looking for beginning of object key string
+[claude] install: partial — settings: <WORLD>/home/.claude/settings.json contains invalid JSON (not modified): <JSON ERROR>
 --- stderr ---
 
 --- tree of home/.claude ---
@@ -23,7 +23,7 @@ settings.json
 $ runtime update --target claude
 exit: 1
 --- stdout ---
-[claude] update: partial — settings: <WORLD>/home/.claude/settings.json contains invalid JSON (not modified): invalid character 'n' looking for beginning of object key string
+[claude] update: partial — settings: <WORLD>/home/.claude/settings.json contains invalid JSON (not modified): <JSON ERROR>
 --- stderr ---
 
 --- tree of home/.claude ---
@@ -33,7 +33,7 @@ settings.json
 $ runtime uninstall --target claude
 exit: 1
 --- stdout ---
-[claude] uninstall: partial — settings: <WORLD>/home/.claude/settings.json contains invalid JSON (not modified): invalid character 'n' looking for beginning of object key string
+[claude] uninstall: partial — settings: <WORLD>/home/.claude/settings.json contains invalid JSON (not modified): <JSON ERROR>
 --- stderr ---
 
 --- tree of home/.claude ---
@@ -85,7 +85,7 @@ settings.json
 $ runtime status --target claude
 exit: 1
 --- stdout ---
-[claude] status: unsupported — read settings file <WORLD>/home/.claude/settings.json: json: cannot unmarshal array into Go value of type map[string]interface {}
+[claude] status: unsupported — read settings file <WORLD>/home/.claude/settings.json: <JSON ERROR>
 --- stderr ---
 
 --- tree of home/.claude ---
@@ -95,7 +95,7 @@ settings.json
 $ runtime install --target claude
 exit: 1
 --- stdout ---
-[claude] install: partial — settings: <WORLD>/home/.claude/settings.json contains invalid JSON (not modified): json: cannot unmarshal array into Go value of type map[string]interface {}
+[claude] install: partial — settings: <WORLD>/home/.claude/settings.json contains invalid JSON (not modified): <JSON ERROR>
 --- stderr ---
 
 --- tree of home/.claude ---
@@ -105,7 +105,7 @@ settings.json
 $ runtime update --target claude
 exit: 1
 --- stdout ---
-[claude] update: partial — settings: <WORLD>/home/.claude/settings.json contains invalid JSON (not modified): json: cannot unmarshal array into Go value of type map[string]interface {}
+[claude] update: partial — settings: <WORLD>/home/.claude/settings.json contains invalid JSON (not modified): <JSON ERROR>
 --- stderr ---
 
 --- tree of home/.claude ---
@@ -115,7 +115,7 @@ settings.json
 $ runtime uninstall --target claude
 exit: 1
 --- stdout ---
-[claude] uninstall: partial — settings: <WORLD>/home/.claude/settings.json contains invalid JSON (not modified): json: cannot unmarshal array into Go value of type map[string]interface {}
+[claude] uninstall: partial — settings: <WORLD>/home/.claude/settings.json contains invalid JSON (not modified): <JSON ERROR>
 --- stderr ---
 
 --- tree of home/.claude ---
@@ -214,7 +214,7 @@ settings.json.bak
 $ runtime status --target claude
 exit: 1
 --- stdout ---
-[claude] status: unsupported — read settings file <WORLD>/home/.claude/settings.json: unexpected end of JSON input
+[claude] status: unsupported — read settings file <WORLD>/home/.claude/settings.json: <JSON ERROR>
 --- stderr ---
 
 --- tree of home/.claude ---
@@ -224,7 +224,7 @@ settings.json
 $ runtime install --target claude
 exit: 1
 --- stdout ---
-[claude] install: partial — settings: <WORLD>/home/.claude/settings.json contains invalid JSON (not modified): unexpected end of JSON input
+[claude] install: partial — settings: <WORLD>/home/.claude/settings.json contains invalid JSON (not modified): <JSON ERROR>
 --- stderr ---
 
 --- tree of home/.claude ---
@@ -234,7 +234,7 @@ settings.json
 $ runtime update --target claude
 exit: 1
 --- stdout ---
-[claude] update: partial — settings: <WORLD>/home/.claude/settings.json contains invalid JSON (not modified): unexpected end of JSON input
+[claude] update: partial — settings: <WORLD>/home/.claude/settings.json contains invalid JSON (not modified): <JSON ERROR>
 --- stderr ---
 
 --- tree of home/.claude ---
@@ -244,7 +244,7 @@ settings.json
 $ runtime uninstall --target claude
 exit: 1
 --- stdout ---
-[claude] uninstall: partial — settings: <WORLD>/home/.claude/settings.json contains invalid JSON (not modified): unexpected end of JSON input
+[claude] uninstall: partial — settings: <WORLD>/home/.claude/settings.json contains invalid JSON (not modified): <JSON ERROR>
 --- stderr ---
 
 --- tree of home/.claude ---

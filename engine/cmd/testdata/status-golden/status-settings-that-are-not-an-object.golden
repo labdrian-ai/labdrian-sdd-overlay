@@ -3,13 +3,13 @@ $ status
 exit: 1
 --- stdout ---
 [OK  ] binary: <WORLD>/home/.claude/bin/gentle-ai-overlay
-[FAIL] hook: UserPromptSubmit (propagate) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: invalid character 'n' looking for beginning of object key string
-[FAIL] hook: PreToolUse matcher="Agent" (gate-task) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: invalid character 'n' looking for beginning of object key string
-[FAIL] hook: SessionEnd (sync-trigger) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: invalid character 'n' looking for beginning of object key string
-[FAIL] hook: PreToolUse matcher="Bash" (review-receipt) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: invalid character 'n' looking for beginning of object key string
-[FAIL] guard: shaper clearance record (PreToolUse + permissions.deny) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: invalid character 'n' looking for beginning of object key string
-[FAIL] hooks: projection (UserPromptSubmit + PreToolUse gates) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: invalid character 'n' looking for beginning of object key string
-[FAIL] guard: skills approve (PreToolUse Bash + file tools) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: invalid character 'n' looking for beginning of object key string
+[FAIL] hook: UserPromptSubmit (propagate) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
+[FAIL] hook: PreToolUse matcher="Agent" (gate-task) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
+[FAIL] hook: SessionEnd (sync-trigger) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
+[FAIL] hook: PreToolUse matcher="Bash" (review-receipt) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
+[FAIL] guard: shaper clearance record (PreToolUse + permissions.deny) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
+[FAIL] hooks: projection (UserPromptSubmit + PreToolUse gates) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
+[FAIL] guard: skills approve (PreToolUse Bash + file tools) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
 [OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
 [OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
 --- stderr ---
@@ -19,13 +19,13 @@ $ status
 exit: 1
 --- stdout ---
 [OK  ] binary: <WORLD>/home/.claude/bin/gentle-ai-overlay
-[FAIL] hook: UserPromptSubmit (propagate) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: unexpected end of JSON input
-[FAIL] hook: PreToolUse matcher="Agent" (gate-task) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: unexpected end of JSON input
-[FAIL] hook: SessionEnd (sync-trigger) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: unexpected end of JSON input
-[FAIL] hook: PreToolUse matcher="Bash" (review-receipt) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: unexpected end of JSON input
-[FAIL] guard: shaper clearance record (PreToolUse + permissions.deny) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: unexpected end of JSON input
-[FAIL] hooks: projection (UserPromptSubmit + PreToolUse gates) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: unexpected end of JSON input
-[FAIL] guard: skills approve (PreToolUse Bash + file tools) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: unexpected end of JSON input
+[FAIL] hook: UserPromptSubmit (propagate) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
+[FAIL] hook: PreToolUse matcher="Agent" (gate-task) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
+[FAIL] hook: SessionEnd (sync-trigger) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
+[FAIL] hook: PreToolUse matcher="Bash" (review-receipt) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
+[FAIL] guard: shaper clearance record (PreToolUse + permissions.deny) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
+[FAIL] hooks: projection (UserPromptSubmit + PreToolUse gates) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
+[FAIL] guard: skills approve (PreToolUse Bash + file tools) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
 [OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
 [OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
 --- stderr ---
@@ -35,13 +35,13 @@ $ status
 exit: 1
 --- stdout ---
 [OK  ] binary: <WORLD>/home/.claude/bin/gentle-ai-overlay
-[FAIL] hook: UserPromptSubmit (propagate) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: unexpected end of JSON input
-[FAIL] hook: PreToolUse matcher="Agent" (gate-task) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: unexpected end of JSON input
-[FAIL] hook: SessionEnd (sync-trigger) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: unexpected end of JSON input
-[FAIL] hook: PreToolUse matcher="Bash" (review-receipt) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: unexpected end of JSON input
-[FAIL] guard: shaper clearance record (PreToolUse + permissions.deny) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: unexpected end of JSON input
-[FAIL] hooks: projection (UserPromptSubmit + PreToolUse gates) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: unexpected end of JSON input
-[FAIL] guard: skills approve (PreToolUse Bash + file tools) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: unexpected end of JSON input
+[FAIL] hook: UserPromptSubmit (propagate) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
+[FAIL] hook: PreToolUse matcher="Agent" (gate-task) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
+[FAIL] hook: SessionEnd (sync-trigger) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
+[FAIL] hook: PreToolUse matcher="Bash" (review-receipt) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
+[FAIL] guard: shaper clearance record (PreToolUse + permissions.deny) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
+[FAIL] hooks: projection (UserPromptSubmit + PreToolUse gates) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
+[FAIL] guard: skills approve (PreToolUse Bash + file tools) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
 [OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
 [OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
 --- stderr ---
@@ -67,13 +67,13 @@ $ status
 exit: 1
 --- stdout ---
 [OK  ] binary: <WORLD>/home/.claude/bin/gentle-ai-overlay
-[FAIL] hook: UserPromptSubmit (propagate) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: json: cannot unmarshal array into Go value of type map[string]interface {}
-[FAIL] hook: PreToolUse matcher="Agent" (gate-task) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: json: cannot unmarshal array into Go value of type map[string]interface {}
-[FAIL] hook: SessionEnd (sync-trigger) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: json: cannot unmarshal array into Go value of type map[string]interface {}
-[FAIL] hook: PreToolUse matcher="Bash" (review-receipt) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: json: cannot unmarshal array into Go value of type map[string]interface {}
-[FAIL] guard: shaper clearance record (PreToolUse + permissions.deny) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: json: cannot unmarshal array into Go value of type map[string]interface {}
-[FAIL] hooks: projection (UserPromptSubmit + PreToolUse gates) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: json: cannot unmarshal array into Go value of type map[string]interface {}
-[FAIL] guard: skills approve (PreToolUse Bash + file tools) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: json: cannot unmarshal array into Go value of type map[string]interface {}
+[FAIL] hook: UserPromptSubmit (propagate) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
+[FAIL] hook: PreToolUse matcher="Agent" (gate-task) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
+[FAIL] hook: SessionEnd (sync-trigger) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
+[FAIL] hook: PreToolUse matcher="Bash" (review-receipt) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
+[FAIL] guard: shaper clearance record (PreToolUse + permissions.deny) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
+[FAIL] hooks: projection (UserPromptSubmit + PreToolUse gates) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
+[FAIL] guard: skills approve (PreToolUse Bash + file tools) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
 [OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
 [OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
 --- stderr ---
@@ -83,13 +83,13 @@ $ status
 exit: 1
 --- stdout ---
 [OK  ] binary: <WORLD>/home/.claude/bin/gentle-ai-overlay
-[FAIL] hook: UserPromptSubmit (propagate) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: json: cannot unmarshal string into Go value of type map[string]interface {}
-[FAIL] hook: PreToolUse matcher="Agent" (gate-task) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: json: cannot unmarshal string into Go value of type map[string]interface {}
-[FAIL] hook: SessionEnd (sync-trigger) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: json: cannot unmarshal string into Go value of type map[string]interface {}
-[FAIL] hook: PreToolUse matcher="Bash" (review-receipt) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: json: cannot unmarshal string into Go value of type map[string]interface {}
-[FAIL] guard: shaper clearance record (PreToolUse + permissions.deny) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: json: cannot unmarshal string into Go value of type map[string]interface {}
-[FAIL] hooks: projection (UserPromptSubmit + PreToolUse gates) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: json: cannot unmarshal string into Go value of type map[string]interface {}
-[FAIL] guard: skills approve (PreToolUse Bash + file tools) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: json: cannot unmarshal string into Go value of type map[string]interface {}
+[FAIL] hook: UserPromptSubmit (propagate) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
+[FAIL] hook: PreToolUse matcher="Agent" (gate-task) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
+[FAIL] hook: SessionEnd (sync-trigger) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
+[FAIL] hook: PreToolUse matcher="Bash" (review-receipt) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
+[FAIL] guard: shaper clearance record (PreToolUse + permissions.deny) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
+[FAIL] hooks: projection (UserPromptSubmit + PreToolUse gates) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
+[FAIL] guard: skills approve (PreToolUse Bash + file tools) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
 [OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
 [OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
 --- stderr ---
@@ -99,13 +99,13 @@ $ status
 exit: 1
 --- stdout ---
 [OK  ] binary: <WORLD>/home/.claude/bin/gentle-ai-overlay
-[FAIL] hook: UserPromptSubmit (propagate) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: json: cannot unmarshal number into Go value of type map[string]interface {}
-[FAIL] hook: PreToolUse matcher="Agent" (gate-task) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: json: cannot unmarshal number into Go value of type map[string]interface {}
-[FAIL] hook: SessionEnd (sync-trigger) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: json: cannot unmarshal number into Go value of type map[string]interface {}
-[FAIL] hook: PreToolUse matcher="Bash" (review-receipt) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: json: cannot unmarshal number into Go value of type map[string]interface {}
-[FAIL] guard: shaper clearance record (PreToolUse + permissions.deny) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: json: cannot unmarshal number into Go value of type map[string]interface {}
-[FAIL] hooks: projection (UserPromptSubmit + PreToolUse gates) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: json: cannot unmarshal number into Go value of type map[string]interface {}
-[FAIL] guard: skills approve (PreToolUse Bash + file tools) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: json: cannot unmarshal number into Go value of type map[string]interface {}
+[FAIL] hook: UserPromptSubmit (propagate) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
+[FAIL] hook: PreToolUse matcher="Agent" (gate-task) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
+[FAIL] hook: SessionEnd (sync-trigger) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
+[FAIL] hook: PreToolUse matcher="Bash" (review-receipt) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
+[FAIL] guard: shaper clearance record (PreToolUse + permissions.deny) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
+[FAIL] hooks: projection (UserPromptSubmit + PreToolUse gates) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
+[FAIL] guard: skills approve (PreToolUse Bash + file tools) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
 [OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
 [OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
 --- stderr ---
@@ -115,13 +115,13 @@ $ status
 exit: 1
 --- stdout ---
 [OK  ] binary: <WORLD>/home/.claude/bin/gentle-ai-overlay
-[FAIL] hook: UserPromptSubmit (propagate) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: unexpected end of JSON input
-[FAIL] hook: PreToolUse matcher="Agent" (gate-task) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: unexpected end of JSON input
-[FAIL] hook: SessionEnd (sync-trigger) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: unexpected end of JSON input
-[FAIL] hook: PreToolUse matcher="Bash" (review-receipt) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: unexpected end of JSON input
-[FAIL] guard: shaper clearance record (PreToolUse + permissions.deny) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: unexpected end of JSON input
-[FAIL] hooks: projection (UserPromptSubmit + PreToolUse gates) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: unexpected end of JSON input
-[FAIL] guard: skills approve (PreToolUse Bash + file tools) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: unexpected end of JSON input
+[FAIL] hook: UserPromptSubmit (propagate) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
+[FAIL] hook: PreToolUse matcher="Agent" (gate-task) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
+[FAIL] hook: SessionEnd (sync-trigger) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
+[FAIL] hook: PreToolUse matcher="Bash" (review-receipt) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
+[FAIL] guard: shaper clearance record (PreToolUse + permissions.deny) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
+[FAIL] hooks: projection (UserPromptSubmit + PreToolUse gates) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
+[FAIL] guard: skills approve (PreToolUse Bash + file tools) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
 [OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
 [OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
 --- stderr ---

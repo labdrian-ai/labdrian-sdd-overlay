@@ -1,10 +1,11 @@
+//go:build unix
+
 package main
 
 import (
 	"flag"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"testing"
 )
@@ -25,12 +26,10 @@ import (
 // Each case runs the built program in a world as status_golden_test.go describes: a home and a
 // PATH inside a directory with a neutral name, and no other variable of the test process. The
 // PATH holds nothing, so no case can start a pi or a git of the machine, and the Pi runtime is
-// only ever asked what it can tell without a program: the Pi cases cannot install it.
+// only ever asked what it can tell without a program: the Pi cases cannot install it. What depends
+// on the machine, and the words of the JSON library and the usage text that the transcript writes
+// as placeholders, are described in status_golden_test.go.
 var updateRuntimeGolden = flag.Bool("update-runtime-golden", false, "rewrite the golden files of the runtime verb")
-
-// usageText is the usage the program prints after a command line it refuses, up to the end of the
-// stderr it is in: the blank line that closes the record, before the next label or the end.
-var usageText = regexp.MustCompile(`(?s)Usage:\n.*?\n\n(# |\z)`)
 
 // runtime records one run of 'runtime <args>' and says what it shows.
 func (w *registryWorld) runtime(label string, args ...string) {
@@ -209,9 +208,8 @@ func runtimeGoldenCases() []registryGoldenCase {
 			w.treeOf("state", false)
 		}},
 		{"runtime-bad-command-lines", func(w *registryWorld) {
-			// The usage text follows most of these, and is the text of the whole program: it is
-			// written as <USAGE> so that a verb added elsewhere does not change what is pinned here.
-			w.filter = func(text string) string { return usageText.ReplaceAllString(text, "<USAGE>\n\n$1") }
+			// The usage text follows most of these; hideForeignWords writes it as <USAGE>, here and
+			// in every case of this file, so a verb added elsewhere does not change what is pinned.
 			for _, args := range [][]string{
 				{},
 				{"--target", "claude"},

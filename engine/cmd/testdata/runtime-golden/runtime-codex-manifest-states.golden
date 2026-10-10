@@ -32,21 +32,21 @@ exit: 0
 $ runtime status --target codex
 exit: 1
 --- stdout ---
-[codex] status: partial — failed to read Codex manifest: invalid character 'n' looking for beginning of object key string
+[codex] status: partial — failed to read Codex manifest: <JSON ERROR>
 --- stderr ---
 
 # update codex
 $ runtime update --target codex
 exit: 1
 --- stdout ---
-[codex] update: partial — cannot validate existing Codex manifest for update at "<WORLD>/home/.codex/labdrian-runtime-lifecycle.json": invalid character 'n' looking for beginning of object key string
+[codex] update: partial — cannot validate existing Codex manifest for update at "<WORLD>/home/.codex/labdrian-runtime-lifecycle.json": <JSON ERROR>
 --- stderr ---
 
 # uninstall codex
 $ runtime uninstall --target codex
 exit: 1
 --- stdout ---
-[codex] uninstall: partial — cannot validate existing Codex manifest for uninstall at "<WORLD>/home/.codex/labdrian-runtime-lifecycle.json": invalid character 'n' looking for beginning of object key string
+[codex] uninstall: partial — cannot validate existing Codex manifest for uninstall at "<WORLD>/home/.codex/labdrian-runtime-lifecycle.json": <JSON ERROR>
 --- stderr ---
 
 # empty
@@ -54,21 +54,21 @@ exit: 1
 $ runtime status --target codex
 exit: 1
 --- stdout ---
-[codex] status: partial — failed to read Codex manifest: unexpected end of JSON input
+[codex] status: partial — failed to read Codex manifest: <JSON ERROR>
 --- stderr ---
 
 # update codex
 $ runtime update --target codex
 exit: 1
 --- stdout ---
-[codex] update: partial — cannot validate existing Codex manifest for update at "<WORLD>/home/.codex/labdrian-runtime-lifecycle.json": unexpected end of JSON input
+[codex] update: partial — cannot validate existing Codex manifest for update at "<WORLD>/home/.codex/labdrian-runtime-lifecycle.json": <JSON ERROR>
 --- stderr ---
 
 # uninstall codex
 $ runtime uninstall --target codex
 exit: 1
 --- stdout ---
-[codex] uninstall: partial — cannot validate existing Codex manifest for uninstall at "<WORLD>/home/.codex/labdrian-runtime-lifecycle.json": unexpected end of JSON input
+[codex] uninstall: partial — cannot validate existing Codex manifest for uninstall at "<WORLD>/home/.codex/labdrian-runtime-lifecycle.json": <JSON ERROR>
 --- stderr ---
 
 # null
