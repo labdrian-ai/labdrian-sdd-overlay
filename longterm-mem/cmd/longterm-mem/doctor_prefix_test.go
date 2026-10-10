@@ -26,13 +26,21 @@ func goldenCheckDetail(t *testing.T, goldenPath, check string) string {
 	if err := json.Unmarshal([]byte(doctor), &report); err != nil {
 		t.Fatalf("decode the doctor half of %s: %v", goldenPath, err)
 	}
+	detail, found := checkDetail(report, check)
+	if !found {
+		t.Fatalf("%s has no %s check", goldenPath, check)
+	}
+	return detail
+}
+
+// checkDetail is the detail the named check carries in report, and whether the report has that check.
+func checkDetail(report ops.DoctorReport, check string) (detail string, found bool) {
 	for _, c := range report.Checks {
 		if c.Name == check {
-			return c.Detail
+			return c.Detail, true
 		}
 	}
-	t.Fatalf("%s has no %s check", goldenPath, check)
-	return ""
+	return "", false
 }
 
 // The doctor command names a precedence sidecar it cannot parse the way the ops golden files say it does,
@@ -71,11 +79,9 @@ func TestCmdDoctor_ReportsAnUnparseableSidecarAsTheOpsGoldenDoes(t *testing.T) {
 	if err := json.Unmarshal([]byte(stdout), &report); err != nil {
 		t.Fatalf("decode the doctor's output: %v\n%s", err, stdout)
 	}
-	var got string
-	for _, c := range report.Checks {
-		if c.Name == check {
-			got = c.Detail
-		}
+	got, found := checkDetail(report, check)
+	if !found {
+		t.Fatalf("the doctor's report has no %s check:\n%s", check, stdout)
 	}
 
 	want := strings.ReplaceAll(goldenCheckDetail(t, filepath.Join("..", "..", "internal", "ops", "testdata", "golden", golden+".golden"), check), "<vault>", vaultRoot)
