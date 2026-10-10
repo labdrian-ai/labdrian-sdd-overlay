@@ -245,6 +245,75 @@ func TestValidateRequiresTheCatalogsStageSequence(t *testing.T) {
 	}
 }
 
+// The typed data is validated like the rest: a profile whose memory default or review dependency
+// differs from the catalog's for its name does not validate, so a tampered or empty default cannot
+// pass for the profile it is called.
+func TestValidateRequiresTheCatalogsTypedData(t *testing.T) {
+	for _, name := range []string{"odd", "sdd", "standalone-minimal", "maintenance", "incident-recovery"} {
+		for _, tc := range []struct {
+			what string
+			edit func(p *WorkflowProfile)
+		}{
+			{"an empty memory default", func(p *WorkflowProfile) { p.MemoryDefault = MemoryDefault{} }},
+			{"a wider scope", func(p *WorkflowProfile) {
+				p.MemoryDefault.Scope = MemoryScopeProject
+				p.MemoryDefault.Sources = append(p.MemoryDefault.Sources, "extra")
+			}},
+			{"another scope", func(p *WorkflowProfile) {
+				if p.MemoryDefault.Scope == MemoryScopeNone {
+					p.MemoryDefault.Scope = MemoryScopeGoal
+				} else {
+					p.MemoryDefault.Scope = MemoryScopeNone
+				}
+			}},
+			{"a source dropped or added", func(p *WorkflowProfile) {
+				if len(p.MemoryDefault.Sources) > 0 {
+					p.MemoryDefault.Sources = p.MemoryDefault.Sources[1:]
+				} else {
+					p.MemoryDefault.Sources = []MemorySource{MemorySourceEngram}
+				}
+			}},
+			{"the review dependency flipped", func(p *WorkflowProfile) { p.ReliesOnGentleReview = !p.ReliesOnGentleReview }},
+		} {
+			t.Run(name+"/"+tc.what, func(t *testing.T) {
+				profile, err := Resolve(name)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := Validate(profile); err != nil {
+					t.Fatalf("the catalog's own profile is invalid: %v", err)
+				}
+				tc.edit(&profile)
+				if err := Validate(profile); !errors.Is(err, ErrInvalidProfile) {
+					t.Errorf("Validate accepted %s, got %v", tc.what, err)
+				}
+			})
+		}
+	}
+}
+
+// The last stage is named by the catalog too, and no dependency says so: renaming it keeps every
+// dependency intact, so only the comparison of names refuses it.
+func TestValidateRefusesARenamedLastStage(t *testing.T) {
+	profile, _ := Resolve("sdd")
+	profile.Stages[len(profile.Stages)-1].Name = "ship"
+	if err := Validate(profile); !errors.Is(err, ErrInvalidProfile) {
+		t.Errorf("a profile whose last stage is renamed was accepted, got %v", err)
+	}
+}
+
+// Verify before archive is not a rule of its own: the stage sequence must equal the catalog's, and
+// the catalog's puts verify before archive, so a profile that swaps them is invalid.
+func TestValidateRejectsAnSDDProfileThatArchivesBeforeItVerifies(t *testing.T) {
+	profile, _ := Resolve("sdd")
+	n := len(profile.Stages)
+	profile.Stages[n-2] = Stage{Name: "archive", DependsOn: []string{"apply"}}
+	profile.Stages[n-1] = Stage{Name: "verify", DependsOn: []string{"archive"}}
+	if err := Validate(profile); !errors.Is(err, ErrInvalidProfile) {
+		t.Errorf("a profile that archives before it verifies was accepted, got %v", err)
+	}
+}
+
 // The stages a workflow has recorded must be a prefix of its profile's declared order; this is the
 // one rule that says so, and the one that names the next stage.
 func TestTheRecordedStagesMustBeAPrefixOfTheDeclaredOrder(t *testing.T) {

@@ -73,7 +73,11 @@ type WorkflowProfile struct {
 
 // definition is one built-in profile as declared: the profile itself, and the checks of it that
 // Validate does not insist on (the others are mandatory). It is the one place a profile's stages
-// and checks are written; Resolve serves them and Validate compares a profile with them.
+// and checks are written; Resolve serves them and Validate compares a profile with them. Validate
+// requires the stage sequence to equal the catalog's, which is also what keeps sdd's verify before
+// its archive: no rule of its own is needed. A check is optional when it states a practice and not
+// a gate (maintenance's "expand with impact, not ceremony" is guidance on how much to do, so a
+// profile may leave it out and still be maintenance).
 type definition struct {
 	profile        WorkflowProfile
 	optionalChecks []string
@@ -89,7 +93,8 @@ var catalog = index(
 		MemoryPolicy:   "durable task ledger and Engram mirror for substantial work; store evidence as well as status; may read project evidence from Engram, long-term memory, and procedural skills",
 		ReviewPolicy:   "inherit user-owned RDD switch; candidate consent remains separate",
 		DeliveryPolicy: "one work unit per task; Conventional Commit only within authorization and repo policy; push/PR/merge remain separate decisions",
-		// The policy names all three stores directly; a single feature narrows to scope goal.
+		// The policy names all three stores directly, so the ceiling is the whole project; a request
+		// for a single feature narrows from it to scope goal.
 		MemoryDefault:        MemoryDefault{Scope: MemoryScopeProject, Sources: []MemorySource{MemorySourceEngram, MemorySourceLongtermMem, MemorySourceProceduralSkills}},
 		ReliesOnGentleReview: true,
 	}},
@@ -127,7 +132,8 @@ var catalog = index(
 		MemoryPolicy:   "record substantial work units; do not promote transient incidents to reusable memory; may read project evidence from Engram, long-term memory, and procedural skills",
 		ReviewPolicy:   "inherit RDD; use applicable candidate review only when enabled",
 		DeliveryPolicy: "bounded local change; delivery follows repository policy, with no automatic publication",
-		// The policy names all three stores directly; one bounded unit narrows to scope goal.
+		// The policy names all three stores directly, so the ceiling is the whole project; a request
+		// for one bounded unit narrows from it to scope goal.
 		MemoryDefault:        MemoryDefault{Scope: MemoryScopeProject, Sources: []MemorySource{MemorySourceEngram, MemorySourceLongtermMem, MemorySourceProceduralSkills}},
 		ReliesOnGentleReview: true,
 	}, optionalChecks: []string{"expand with impact, not ceremony"}},
@@ -260,7 +266,27 @@ func Validate(profile WorkflowProfile) error {
 			return fmt.Errorf("%w: profile %q is missing mandatory check %q", ErrInvalidProfile, profile.Name, required)
 		}
 	}
+	// The typed data is what programs act on (the ceiling of a memory read, the dependencies a
+	// workflow records), so it must be the catalog's for the name, not merely well formed.
+	if profile.MemoryDefault.Scope != d.profile.MemoryDefault.Scope || !equalSources(profile.MemoryDefault.Sources, d.profile.MemoryDefault.Sources) {
+		return fmt.Errorf("%w: profile %q has a memory default that differs from the catalog's", ErrInvalidProfile, profile.Name)
+	}
+	if profile.ReliesOnGentleReview != d.profile.ReliesOnGentleReview {
+		return fmt.Errorf("%w: profile %q has a review dependency that differs from the catalog's", ErrInvalidProfile, profile.Name)
+	}
 	return nil
+}
+
+func equalSources(a, b []MemorySource) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
 }
 
 func has(values []string, wanted string) bool {
