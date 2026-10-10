@@ -76,7 +76,12 @@ func (c commands) cmdMCP(args []string) int {
 			if err != nil {
 				return query.Result{}, err
 			}
-			qdeps := queryDeps(store, vaultRoot, c.newEmbedClient, embedClient.Embed, loadCache.Load, loadCache.Invalidate)
+			qdeps := queryDeps(store, vaultRoot, queryWiring{
+				newClient:       c.newEmbedClient,
+				embed:           embedClient.Embed,
+				loadIndex:       loadCache.Load,
+				invalidateIndex: loadCache.Invalidate,
+			})
 			return query.Run(ctx, qdeps, req)
 		},
 		// Get reads one observation whole, through the same read-only
