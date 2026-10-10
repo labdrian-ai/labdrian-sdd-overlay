@@ -40,6 +40,7 @@ func portDoctorDeps(t *testing.T, reader PrecedenceReader) (DoctorDeps, promote.
 	return DoctorDeps{
 		VaultRoot:             vaultRoot,
 		Precedence:            reader,
+		Pages:                 vaultfs.New(vaultRoot),
 		AddressMap:            vaultfs.New(vaultRoot),
 		PrerequisitePresent:   func(string) bool { return true },
 		StateDir:              stateDir,
