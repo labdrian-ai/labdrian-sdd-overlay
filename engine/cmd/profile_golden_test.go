@@ -64,9 +64,7 @@ func profileHookGoldenCases() []hookGoldenCase {
 		// projection says of a workflow whose dependencies are available is pinned too.
 		{"prompt-projects-every-profile-with-its-dependencies-present", func(w *hookWorld) {
 			for _, p := range profileStages {
-				e := w.env()
-				w.deps.workflowProber = func() workflow.DependencyProber { return everythingPresentProber{} }
-				e.deps = w.deps
+				e := w.envWithEverythingPresent()
 				e.running(w.t, "proj-1", "wf-1", p.profile)
 				w.promptHook(p.profile+", running, every dependency present", e, e.repo)
 			}
@@ -92,6 +90,18 @@ func (everythingPresentProber) Probe(_ context.Context, capabilities []string) (
 		observed[i] = workflow.Observation{Capability: name, Status: workflow.ObservationAvailable, Detail: "present (test)"}
 	}
 	return observed, nil
+}
+
+// envWithEverythingPresent is env, but with a prober that finds every dependency available, both
+// for the workflow the case creates and for the hooks it then runs. env resets the world's prober to
+// the one that confirms nothing each time it is called, so the prober is set after it, once per
+// environment made; only the prober differs from env's.
+func (w *hookWorld) envWithEverythingPresent() hookEnv {
+	w.t.Helper()
+	e := w.env()
+	w.deps.workflowProber = func() workflow.DependencyProber { return everythingPresentProber{} }
+	e.deps = w.deps
+	return e
 }
 
 // profileWorld is the scratch space of one profile transcript: the program, a state home, and the
