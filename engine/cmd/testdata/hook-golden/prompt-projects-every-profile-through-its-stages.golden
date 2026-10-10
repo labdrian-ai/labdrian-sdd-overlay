@@ -1,0 +1,100 @@
+$ projection hook --event UserPromptSubmit
+# odd, running, no stage recorded
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"UserPromptSubmit","prompt":"a prompt"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","additionalContext":"labdrian workflow projection: this repository follows the workflow below. Its state is read from the workflow log on disk, not from this session.\nworkflow: wf-1 (project: proj-1)\nprofile: odd\nstatus: running\ngoal: goal-1 (digest 3fa80a4c34f1)\ncurrent stage: none yet\nnext stage: authorize\nmemory plan (read-only: it executes no query and grants no memory write): scope=project sources=engram,longterm-mem,procedural-skills project_id=proj-1 goal_id=none write=none\nomitted filters: goal_id\ncapability limits (claude): dispatch=partial, cancellation=partial, authentication=partial, memory-enforcement=partial, skills=partial\nprogress commands: labdrian workflow stage --project proj-1 --workflow wf-1 --stage <name>; labdrian workflow verify --project proj-1 --workflow wf-1 --goal <goal file>; labdrian workflow close --project proj-1 --workflow wf-1 --outcome completed|abandoned\nunavailable dependencies at the last recorded event: memory:engram, memory:longterm-mem, memory:procedural-skills, gentle-ai-review\nstages recorded (0): none"}}
+--- stderr ---
+
+$ projection hook --event UserPromptSubmit
+# odd, every declared stage recorded
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"UserPromptSubmit","prompt":"a prompt"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","additionalContext":"labdrian workflow projection: this repository follows the workflow below. Its state is read from the workflow log on disk, not from this session.\nworkflow: wf-1 (project: proj-1)\nprofile: odd\nstatus: running\ngoal: goal-1 (digest 3fa80a4c34f1)\ncurrent stage: close\nnext stage: none: every declared stage is recorded\nmemory plan (read-only: it executes no query and grants no memory write): scope=project sources=engram,longterm-mem,procedural-skills project_id=proj-1 goal_id=none write=none\nomitted filters: goal_id\ncapability limits (claude): dispatch=partial, cancellation=partial, authentication=partial, memory-enforcement=partial, skills=partial\nprogress commands: labdrian workflow stage --project proj-1 --workflow wf-1 --stage <name>; labdrian workflow verify --project proj-1 --workflow wf-1 --goal <goal file>; labdrian workflow close --project proj-1 --workflow wf-1 --outcome completed|abandoned\nunavailable dependencies at the last recorded event: memory:engram, memory:longterm-mem, memory:procedural-skills, gentle-ai-review\nstages recorded (7): authorize, explore, resolve-uncertainty, classify, track-if-substantial, implement-task-by-task, close"}}
+--- stderr ---
+
+$ projection hook --event UserPromptSubmit
+# sdd, running, no stage recorded
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"UserPromptSubmit","prompt":"a prompt"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","additionalContext":"labdrian workflow projection: this repository follows the workflow below. Its state is read from the workflow log on disk, not from this session.\nworkflow: wf-1 (project: proj-1)\nprofile: sdd\nstatus: running\ngoal: goal-1 (digest 3fa80a4c34f1)\ncurrent stage: none yet\nnext stage: dispatcher-selected-planning-phases\nmemory plan (read-only: it executes no query and grants no memory write): scope=project sources=engram project_id=proj-1 goal_id=none write=none\nomitted filters: goal_id\ncapability limits (claude): dispatch=partial, cancellation=partial, authentication=partial, memory-enforcement=partial, skills=partial\nprogress commands: labdrian workflow stage --project proj-1 --workflow wf-1 --stage <name>; labdrian workflow verify --project proj-1 --workflow wf-1 --goal <goal file>; labdrian workflow close --project proj-1 --workflow wf-1 --outcome completed|abandoned\nunavailable dependencies at the last recorded event: memory:engram, gentle-ai-review\nstages recorded (0): none"}}
+--- stderr ---
+
+$ projection hook --event UserPromptSubmit
+# sdd, every declared stage recorded
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"UserPromptSubmit","prompt":"a prompt"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","additionalContext":"labdrian workflow projection: this repository follows the workflow below. Its state is read from the workflow log on disk, not from this session.\nworkflow: wf-1 (project: proj-1)\nprofile: sdd\nstatus: running\ngoal: goal-1 (digest 3fa80a4c34f1)\ncurrent stage: archive\nnext stage: none: every declared stage is recorded\nmemory plan (read-only: it executes no query and grants no memory write): scope=project sources=engram project_id=proj-1 goal_id=none write=none\nomitted filters: goal_id\ncapability limits (claude): dispatch=partial, cancellation=partial, authentication=partial, memory-enforcement=partial, skills=partial\nprogress commands: labdrian workflow stage --project proj-1 --workflow wf-1 --stage <name>; labdrian workflow verify --project proj-1 --workflow wf-1 --goal <goal file>; labdrian workflow close --project proj-1 --workflow wf-1 --outcome completed|abandoned\nunavailable dependencies at the last recorded event: memory:engram, gentle-ai-review\nstages recorded (5): dispatcher-selected-planning-phases, tasks, apply, verify, archive"}}
+--- stderr ---
+
+$ projection hook --event UserPromptSubmit
+# standalone-minimal, running, no stage recorded
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"UserPromptSubmit","prompt":"a prompt"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","additionalContext":"labdrian workflow projection: this repository follows the workflow below. Its state is read from the workflow log on disk, not from this session.\nworkflow: wf-1 (project: proj-1)\nprofile: standalone-minimal\nstatus: running\ngoal: goal-1 (digest 3fa80a4c34f1)\ncurrent stage: none yet\nnext stage: authorize\nmemory plan (read-only: it executes no query and grants no memory write): scope=none sources=none project_id=none goal_id=none write=none\nomitted filters: project_id, goal_id\ncapability limits (claude): dispatch=partial, cancellation=partial, authentication=partial, memory-enforcement=partial, skills=partial\nprogress commands: labdrian workflow stage --project proj-1 --workflow wf-1 --stage <name>; labdrian workflow verify --project proj-1 --workflow wf-1 --goal <goal file>; labdrian workflow close --project proj-1 --workflow wf-1 --outcome completed|abandoned\nstages recorded (0): none"}}
+--- stderr ---
+
+$ projection hook --event UserPromptSubmit
+# standalone-minimal, every declared stage recorded
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"UserPromptSubmit","prompt":"a prompt"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","additionalContext":"labdrian workflow projection: this repository follows the workflow below. Its state is read from the workflow log on disk, not from this session.\nworkflow: wf-1 (project: proj-1)\nprofile: standalone-minimal\nstatus: running\ngoal: goal-1 (digest 3fa80a4c34f1)\ncurrent stage: report\nnext stage: none: every declared stage is recorded\nmemory plan (read-only: it executes no query and grants no memory write): scope=none sources=none project_id=none goal_id=none write=none\nomitted filters: project_id, goal_id\ncapability limits (claude): dispatch=partial, cancellation=partial, authentication=partial, memory-enforcement=partial, skills=partial\nprogress commands: labdrian workflow stage --project proj-1 --workflow wf-1 --stage <name>; labdrian workflow verify --project proj-1 --workflow wf-1 --goal <goal file>; labdrian workflow close --project proj-1 --workflow wf-1 --outcome completed|abandoned\nstages recorded (5): authorize, bound-scope, execute-one-bounded-sequential-path, check, report"}}
+--- stderr ---
+
+$ projection hook --event UserPromptSubmit
+# maintenance, running, no stage recorded
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"UserPromptSubmit","prompt":"a prompt"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","additionalContext":"labdrian workflow projection: this repository follows the workflow below. Its state is read from the workflow log on disk, not from this session.\nworkflow: wf-1 (project: proj-1)\nprofile: maintenance\nstatus: running\ngoal: goal-1 (digest 3fa80a4c34f1)\ncurrent stage: none yet\nnext stage: inspect\nmemory plan (read-only: it executes no query and grants no memory write): scope=project sources=engram,longterm-mem,procedural-skills project_id=proj-1 goal_id=none write=none\nomitted filters: goal_id\ncapability limits (claude): dispatch=partial, cancellation=partial, authentication=partial, memory-enforcement=partial, skills=partial\nprogress commands: labdrian workflow stage --project proj-1 --workflow wf-1 --stage <name>; labdrian workflow verify --project proj-1 --workflow wf-1 --goal <goal file>; labdrian workflow close --project proj-1 --workflow wf-1 --outcome completed|abandoned\nunavailable dependencies at the last recorded event: memory:engram, memory:longterm-mem, memory:procedural-skills, gentle-ai-review\nstages recorded (0): none"}}
+--- stderr ---
+
+$ projection hook --event UserPromptSubmit
+# maintenance, every declared stage recorded
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"UserPromptSubmit","prompt":"a prompt"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","additionalContext":"labdrian workflow projection: this repository follows the workflow below. Its state is read from the workflow log on disk, not from this session.\nworkflow: wf-1 (project: proj-1)\nprofile: maintenance\nstatus: running\ngoal: goal-1 (digest 3fa80a4c34f1)\ncurrent stage: report\nnext stage: none: every declared stage is recorded\nmemory plan (read-only: it executes no query and grants no memory write): scope=project sources=engram,longterm-mem,procedural-skills project_id=proj-1 goal_id=none write=none\nomitted filters: goal_id\ncapability limits (claude): dispatch=partial, cancellation=partial, authentication=partial, memory-enforcement=partial, skills=partial\nprogress commands: labdrian workflow stage --project proj-1 --workflow wf-1 --stage <name>; labdrian workflow verify --project proj-1 --workflow wf-1 --goal <goal file>; labdrian workflow close --project proj-1 --workflow wf-1 --outcome completed|abandoned\nunavailable dependencies at the last recorded event: memory:engram, memory:longterm-mem, memory:procedural-skills, gentle-ai-review\nstages recorded (5): inspect, isolate-smallest-change, repair, validate, report"}}
+--- stderr ---
+
+$ projection hook --event UserPromptSubmit
+# incident-recovery, running, no stage recorded
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"UserPromptSubmit","prompt":"a prompt"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","additionalContext":"labdrian workflow projection: this repository follows the workflow below. Its state is read from the workflow log on disk, not from this session.\nworkflow: wf-1 (project: proj-1)\nprofile: incident-recovery\nstatus: running\ngoal: goal-1 (digest 3fa80a4c34f1)\ncurrent stage: none yet\nnext stage: preserve-evidence\nmemory plan (read-only: it executes no query and grants no memory write): scope=goal sources=engram,procedural-skills project_id=proj-1 goal_id=goal-1 write=none\ncapability limits (claude): dispatch=partial, cancellation=partial, authentication=partial, memory-enforcement=partial, skills=partial\nprogress commands: labdrian workflow stage --project proj-1 --workflow wf-1 --stage <name>; labdrian workflow verify --project proj-1 --workflow wf-1 --goal <goal file>; labdrian workflow close --project proj-1 --workflow wf-1 --outcome completed|abandoned\nunavailable dependencies at the last recorded event: memory:engram, memory:procedural-skills, gentle-ai-review\nstages recorded (0): none"}}
+--- stderr ---
+
+$ projection hook --event UserPromptSubmit
+# incident-recovery, every declared stage recorded
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"UserPromptSubmit","prompt":"a prompt"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","additionalContext":"labdrian workflow projection: this repository follows the workflow below. Its state is read from the workflow log on disk, not from this session.\nworkflow: wf-1 (project: proj-1)\nprofile: incident-recovery\nstatus: running\ngoal: goal-1 (digest 3fa80a4c34f1)\ncurrent stage: report\nnext stage: none: every declared stage is recorded\nmemory plan (read-only: it executes no query and grants no memory write): scope=goal sources=engram,procedural-skills project_id=proj-1 goal_id=goal-1 write=none\ncapability limits (claude): dispatch=partial, cancellation=partial, authentication=partial, memory-enforcement=partial, skills=partial\nprogress commands: labdrian workflow stage --project proj-1 --workflow wf-1 --stage <name>; labdrian workflow verify --project proj-1 --workflow wf-1 --goal <goal file>; labdrian workflow close --project proj-1 --workflow wf-1 --outcome completed|abandoned\nunavailable dependencies at the last recorded event: memory:engram, memory:procedural-skills, gentle-ai-review\nstages recorded (7): preserve-evidence, classify, identify-supported-recovery, obtain-required-authorization, recover, verify, report"}}
+--- stderr ---
+

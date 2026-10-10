@@ -1,0 +1,160 @@
+$ memory plan --profile incident-recovery
+exit: 2
+--- stdout ---
+--- stderr ---
+error: memory plan: project_id is required for scope "goal"
+
+$ memory plan --profile incident-recovery --goal <GOAL>
+exit: 0
+--- stdout ---
+{
+  "scope": "goal",
+  "sources": [
+    "engram",
+    "procedural-skills"
+  ],
+  "filters": {
+    "project_id": "proj-1",
+    "goal_id": "goal-1"
+  },
+  "write": "none",
+  "authority": "this plan executes no query and grants no memory write; executing it is a runtime adapter's responsibility outside this package (Phase 7)",
+  "omitted_filters": []
+}
+--- stderr ---
+
+$ workflow create --project proj-1 --workflow wf-1 --goal <GOAL> --profile incident-recovery
+exit: 0
+--- stdout ---
+{
+  "classification": "owned",
+  "status": "created",
+  "profile": "incident-recovery",
+  "goal_id": "goal-1",
+  "goal_digest": "3fa80a4c34f1198a2fe03c95ecaaab97721dd5a94dce91612f2612b4208e54ac",
+  "stages": [],
+  "last_verified_seq": -1
+}
+--- stderr ---
+
+observations of the created event:
+  memory:engram: unavailable (the Engram database file was not found: no such file)
+  memory:procedural-skills: unavailable (no presence check exists for procedural skills)
+  gentle-ai-review: unavailable (the gentle-ai binary was not found in the absolute PATH directories)
+
+$ workflow start --project proj-1 --workflow wf-1
+exit: 0
+--- stdout ---
+status running, stages []
+--- stderr ---
+
+$ workflow stage --project proj-1 --workflow wf-1 --stage report
+exit: 2
+--- stdout ---
+--- stderr ---
+error: workflow stage: workflow lifecycle: stage is not the profile's next declared stage: got "report", want "preserve-evidence" (profile "incident-recovery"'s next declared stage)
+
+$ workflow stage --project proj-1 --workflow wf-1 --stage no-such-stage
+exit: 2
+--- stdout ---
+--- stderr ---
+error: workflow stage: workflow lifecycle: stage is not the profile's next declared stage: got "no-such-stage", want "preserve-evidence" (profile "incident-recovery"'s next declared stage)
+
+$ workflow stage --project proj-1 --workflow wf-1 --stage preserve-evidence
+exit: 0
+--- stdout ---
+status running, stages [preserve-evidence]
+--- stderr ---
+
+$ workflow stage --project proj-1 --workflow wf-1 --stage classify
+exit: 0
+--- stdout ---
+status running, stages [preserve-evidence classify]
+--- stderr ---
+
+$ workflow stage --project proj-1 --workflow wf-1 --stage identify-supported-recovery
+exit: 0
+--- stdout ---
+status running, stages [preserve-evidence classify identify-supported-recovery]
+--- stderr ---
+
+$ workflow stage --project proj-1 --workflow wf-1 --stage obtain-required-authorization
+exit: 0
+--- stdout ---
+status running, stages [preserve-evidence classify identify-supported-recovery obtain-required-authorization]
+--- stderr ---
+
+$ workflow stage --project proj-1 --workflow wf-1 --stage recover
+exit: 0
+--- stdout ---
+status running, stages [preserve-evidence classify identify-supported-recovery obtain-required-authorization recover]
+--- stderr ---
+
+$ workflow stage --project proj-1 --workflow wf-1 --stage verify
+exit: 0
+--- stdout ---
+status running, stages [preserve-evidence classify identify-supported-recovery obtain-required-authorization recover verify]
+--- stderr ---
+
+$ workflow stage --project proj-1 --workflow wf-1 --stage report
+exit: 0
+--- stdout ---
+status running, stages [preserve-evidence classify identify-supported-recovery obtain-required-authorization recover verify report]
+--- stderr ---
+
+$ workflow stage --project proj-1 --workflow wf-1 --stage preserve-evidence
+exit: 2
+--- stdout ---
+--- stderr ---
+error: workflow stage: workflow lifecycle: stage is not the profile's next declared stage: profile "incident-recovery"'s declared stages are all recorded
+
+$ workflow status --project proj-1 --workflow wf-1
+exit: 0
+--- stdout ---
+{
+  "classification": "owned",
+  "status": "running",
+  "profile": "incident-recovery",
+  "goal_id": "goal-1",
+  "goal_digest": "3fa80a4c34f1198a2fe03c95ecaaab97721dd5a94dce91612f2612b4208e54ac",
+  "stages": [
+    "preserve-evidence",
+    "classify",
+    "identify-supported-recovery",
+    "obtain-required-authorization",
+    "recover",
+    "verify",
+    "report"
+  ],
+  "last_verified_seq": -1
+}
+--- stderr ---
+
+$ workflow verify --project proj-1 --workflow wf-1 --goal <GOAL>
+exit: 0
+--- stdout ---
+{
+  "classification": "owned",
+  "status": "running",
+  "profile": "incident-recovery",
+  "goal_id": "goal-1",
+  "goal_digest": "3fa80a4c34f1198a2fe03c95ecaaab97721dd5a94dce91612f2612b4208e54ac",
+  "stages": [
+    "preserve-evidence",
+    "classify",
+    "identify-supported-recovery",
+    "obtain-required-authorization",
+    "recover",
+    "verify",
+    "report"
+  ],
+  "last_verified_seq": 9
+}
+--- stderr ---
+
+$ workflow close --project proj-1 --workflow wf-1 --outcome completed --reason done
+exit: 2
+--- stdout ---
+--- stderr ---
+error: workflow close: workflow store: append: reason must be empty when outcome is "completed"
+

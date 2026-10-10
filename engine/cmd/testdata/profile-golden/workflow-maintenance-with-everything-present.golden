@@ -1,0 +1,147 @@
+$ memory plan --profile maintenance
+exit: 2
+--- stdout ---
+--- stderr ---
+error: memory plan: project_id is required for scope "project"
+
+$ memory plan --profile maintenance --goal <GOAL>
+exit: 0
+--- stdout ---
+{
+  "scope": "project",
+  "sources": [
+    "engram",
+    "longterm-mem",
+    "procedural-skills"
+  ],
+  "filters": {
+    "project_id": "proj-1"
+  },
+  "write": "none",
+  "authority": "this plan executes no query and grants no memory write; executing it is a runtime adapter's responsibility outside this package (Phase 7)",
+  "omitted_filters": [
+    "goal_id"
+  ]
+}
+--- stderr ---
+
+$ workflow create --project proj-1 --workflow wf-1 --goal <GOAL> --profile maintenance
+exit: 0
+--- stdout ---
+{
+  "classification": "owned",
+  "status": "created",
+  "profile": "maintenance",
+  "goal_id": "goal-1",
+  "goal_digest": "3fa80a4c34f1198a2fe03c95ecaaab97721dd5a94dce91612f2612b4208e54ac",
+  "stages": [],
+  "last_verified_seq": -1
+}
+--- stderr ---
+
+observations of the created event:
+  memory:engram: available (the Engram database file is present (not opened, so its contents and health are unverified))
+  memory:longterm-mem: available (the longterm-mem registration record is present (not opened; whether a runtime has the MCP server loaded is unverified))
+  memory:procedural-skills: unavailable (no presence check exists for procedural skills)
+  gentle-ai-review: available (the gentle-ai binary is on PATH (not executed; review mode and consent are unverified))
+
+$ workflow start --project proj-1 --workflow wf-1
+exit: 0
+--- stdout ---
+status running, stages []
+--- stderr ---
+
+$ workflow stage --project proj-1 --workflow wf-1 --stage report
+exit: 2
+--- stdout ---
+--- stderr ---
+error: workflow stage: workflow lifecycle: stage is not the profile's next declared stage: got "report", want "inspect" (profile "maintenance"'s next declared stage)
+
+$ workflow stage --project proj-1 --workflow wf-1 --stage no-such-stage
+exit: 2
+--- stdout ---
+--- stderr ---
+error: workflow stage: workflow lifecycle: stage is not the profile's next declared stage: got "no-such-stage", want "inspect" (profile "maintenance"'s next declared stage)
+
+$ workflow stage --project proj-1 --workflow wf-1 --stage inspect
+exit: 0
+--- stdout ---
+status running, stages [inspect]
+--- stderr ---
+
+$ workflow stage --project proj-1 --workflow wf-1 --stage isolate-smallest-change
+exit: 0
+--- stdout ---
+status running, stages [inspect isolate-smallest-change]
+--- stderr ---
+
+$ workflow stage --project proj-1 --workflow wf-1 --stage repair
+exit: 0
+--- stdout ---
+status running, stages [inspect isolate-smallest-change repair]
+--- stderr ---
+
+$ workflow stage --project proj-1 --workflow wf-1 --stage validate
+exit: 0
+--- stdout ---
+status running, stages [inspect isolate-smallest-change repair validate]
+--- stderr ---
+
+$ workflow stage --project proj-1 --workflow wf-1 --stage report
+exit: 0
+--- stdout ---
+status running, stages [inspect isolate-smallest-change repair validate report]
+--- stderr ---
+
+$ workflow stage --project proj-1 --workflow wf-1 --stage inspect
+exit: 2
+--- stdout ---
+--- stderr ---
+error: workflow stage: workflow lifecycle: stage is not the profile's next declared stage: profile "maintenance"'s declared stages are all recorded
+
+$ workflow status --project proj-1 --workflow wf-1
+exit: 0
+--- stdout ---
+{
+  "classification": "owned",
+  "status": "running",
+  "profile": "maintenance",
+  "goal_id": "goal-1",
+  "goal_digest": "3fa80a4c34f1198a2fe03c95ecaaab97721dd5a94dce91612f2612b4208e54ac",
+  "stages": [
+    "inspect",
+    "isolate-smallest-change",
+    "repair",
+    "validate",
+    "report"
+  ],
+  "last_verified_seq": -1
+}
+--- stderr ---
+
+$ workflow verify --project proj-1 --workflow wf-1 --goal <GOAL>
+exit: 0
+--- stdout ---
+{
+  "classification": "owned",
+  "status": "running",
+  "profile": "maintenance",
+  "goal_id": "goal-1",
+  "goal_digest": "3fa80a4c34f1198a2fe03c95ecaaab97721dd5a94dce91612f2612b4208e54ac",
+  "stages": [
+    "inspect",
+    "isolate-smallest-change",
+    "repair",
+    "validate",
+    "report"
+  ],
+  "last_verified_seq": 7
+}
+--- stderr ---
+
+$ workflow close --project proj-1 --workflow wf-1 --outcome completed --reason done
+exit: 2
+--- stdout ---
+--- stderr ---
+error: workflow close: workflow store: append: reason must be empty when outcome is "completed"
+
