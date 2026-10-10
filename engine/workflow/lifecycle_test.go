@@ -782,7 +782,9 @@ func TestLifecycleObservesTheDependenciesTheCatalogsProfileDeclares(t *testing.T
 // TestLifecycleAbandonSucceedsWhenProfileNoLongerResolves checks that closing
 // a workflow as abandoned never depends on its profile still resolving: the
 // close is recorded with a "profile" observation marked unavailable instead
-// of failing, while a completed close still requires a successful verify.
+// of failing, while a completed close still requires a successful verify. The
+// workflow is of version 1, whose profile is the catalog's (a version 2 workflow
+// has its profile in its log and needs no such fallback).
 func TestLifecycleAbandonSucceedsWhenProfileNoLongerResolves(t *testing.T) {
 	store := newMemEventLog()
 	goals := newFakeGoalReader()
@@ -791,9 +793,7 @@ func TestLifecycleAbandonSucceedsWhenProfileNoLongerResolves(t *testing.T) {
 
 	g := validGoal("proj-1", "goal-1")
 	goals.set("proj-1", "goal-1", g)
-	if _, err := lc.Create("proj-1", "wf-1", g, "odd", ""); err != nil {
-		t.Fatalf("Create() = %v, want nil", err)
-	}
+	createVersion1Workflow(t, store, "proj-1", "wf-1", g, "odd")
 	if _, err := lc.Start("proj-1", "wf-1"); err != nil {
 		t.Fatalf("Start() = %v, want nil", err)
 	}
@@ -1009,7 +1009,7 @@ func TestLifecycleObservationsForTreatsMismatchedProberCountAsUnavailable(t *tes
 // TestLifecycleVerifyFailsWhenProfileNoLongerResolves covers R3-2: Verify's
 // ErrProfileInvalid branch, driven through the injectable ProfileCatalog the
 // same way TestLifecycleAbandonSucceedsWhenProfileNoLongerResolves drives
-// Close's profile-observation fallback.
+// Close's profile-observation fallback. The workflow is of version 1.
 func TestLifecycleVerifyFailsWhenProfileNoLongerResolves(t *testing.T) {
 	store := newMemEventLog()
 	clock := stepClock()
@@ -1019,9 +1019,7 @@ func TestLifecycleVerifyFailsWhenProfileNoLongerResolves(t *testing.T) {
 
 	g := validGoal("proj-1", "goal-1")
 	goals.set("proj-1", "goal-1", g)
-	if _, err := newLC().Create("proj-1", "wf-1", g, "standalone-minimal", ""); err != nil {
-		t.Fatalf("Create() = %v, want nil", err)
-	}
+	createVersion1Workflow(t, store, "proj-1", "wf-1", g, "standalone-minimal")
 	if _, err := newLC().Start("proj-1", "wf-1"); err != nil {
 		t.Fatalf("Start() = %v, want nil", err)
 	}
@@ -1050,7 +1048,7 @@ func TestLifecycleVerifyFailsWhenProfileNoLongerResolves(t *testing.T) {
 // TestLifecycleVerifyFailsWhenStageOrderInvalid covers R3-2's other branch:
 // ErrStageOrderInvalid, driven by an injected ProfileCatalog that reports a
 // profile whose declared stage order no longer matches what was actually
-// recorded.
+// recorded. The workflow is of version 1.
 func TestLifecycleVerifyFailsWhenStageOrderInvalid(t *testing.T) {
 	store := newMemEventLog()
 	clock := stepClock()
@@ -1064,9 +1062,7 @@ func TestLifecycleVerifyFailsWhenStageOrderInvalid(t *testing.T) {
 	if err != nil {
 		t.Fatalf("workflowprofile.Resolve() = %v, want nil", err)
 	}
-	if _, err := newLC().Create("proj-1", "wf-1", g, profile.Name, ""); err != nil {
-		t.Fatalf("Create() = %v, want nil", err)
-	}
+	createVersion1Workflow(t, store, "proj-1", "wf-1", g, profile.Name)
 	if _, err := newLC().Start("proj-1", "wf-1"); err != nil {
 		t.Fatalf("Start() = %v, want nil", err)
 	}
@@ -1269,16 +1265,15 @@ func TestLifecycleCreateRefusesAProfileTheResolverRefusesBeforeReadingAnythingEl
 	}
 }
 
-// The next stage RecordStage admits is the one the resolver's profile declares.
+// The next stage RecordStage admits is the one the resolver's profile declares, for a workflow of
+// version 1, whose profile is the catalog's.
 func TestLifecycleRecordStageFollowsTheResolversProfile(t *testing.T) {
 	store := newMemEventLog()
 	goals := newFakeGoalReader()
 	chains := newFakeChainReader()
 	lc := newTestLifecycle(t, store, stepClock(), goals, chains, nil)
 	g := validGoal("proj-1", "goal-1")
-	if _, err := lc.Create("proj-1", "wf-1", g, "maintenance", ""); err != nil {
-		t.Fatalf("Create() = %v, want nil", err)
-	}
+	createVersion1Workflow(t, store, "proj-1", "wf-1", g, "maintenance")
 	if _, err := lc.Start("proj-1", "wf-1"); err != nil {
 		t.Fatalf("Start() = %v, want nil", err)
 	}
