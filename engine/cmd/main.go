@@ -80,7 +80,6 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/reviewreceipt"
 	runtimepkg "github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime"
 	runtimecore "github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime/core"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings/settingsfile"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/synctrigger"
@@ -490,7 +489,7 @@ func runRuntimeCore(commands runtimepkg.CommandRunner, source pipkg.SourceRepo, 
 		return
 	}
 
-	action, target, configRoot, component, stateDir, err := parseRuntimeArgs(args, registry)
+	opts, err := parseRuntimeArgs(args, registry)
 	if err != nil {
 		fmt.Fprintln(stderr, err)
 		usage()
@@ -500,48 +499,13 @@ func runRuntimeCore(commands runtimepkg.CommandRunner, source pipkg.SourceRepo, 
 
 	cfg := runtimeConfigFromEnv(os.Getenv, os.UserHomeDir)
 
-	if component == componentLongtermMem {
-		// D4 parse-time refusal: update is rejected here, BEFORE any
-		// LongtermMemAdapter is even constructed — never after running one
-		// and reporting a failing status. "rollback" needs no separate
-		// guard: it is not a recognized action at all (see the action-name
-		// validation in parseRuntimeArgs below), so it is already rejected
-		// at the exact same point, before any adapter call.
-		if action == "update" {
-			fmt.Fprintln(stderr, "error: longterm-mem does not support the 'update' action; reinstall instead (--component longterm-mem install)")
-			exit(1)
-			return
-		}
-		// The binary path is DERIVED from --state-dir, never resolved
-		// independently from HOME: the overlay entrypoint deploys the
-		// binary at "$STATE_DIR/bin/longterm-mem" and registers MCP
-		// entries naming that exact path, so an adapter that resolved it
-		// from HOME under an overridden state dir reported a deployed
-		// binary as missing and a genuinely owned entry as unmanaged. An
-		// empty stateDir yields an empty binary path here, which
-		// NewLongtermMemAdapter fills in with the same default it fills
-		// stateDir with — so the un-overridden case is unchanged.
-		adapter := runtimepkg.NewLongtermMemAdapter(cfg, stateDir, runtimepkg.LongtermMemBinaryPathForStateDir(stateDir))
-		result := runtimeLifecycleResult(adapter, action)
-		fmt.Fprintln(stdout, result.String())
-		if action == "status" {
-			if result.Status != runtimecore.CapabilitySupported {
-				exit(1)
-				return
-			}
-			exit(0)
-			return
-		}
-		if result.Status == runtimecore.CapabilityUnsupported || result.Status == runtimecore.CapabilityPartial {
-			exit(1)
-			return
-		}
-		exit(0)
+	if opts.Component == componentLongtermMem {
+		runLongtermMemComponent(opts, cfg, stdout, stderr, exit)
 		return
 	}
 
-	cfg.ConfigRoot = configRoot
-	targets := registry.Expand(target)
+	cfg.ConfigRoot = opts.ConfigRoot
+	targets := registry.Expand(opts.Target)
 
 	// Every adapter is built before the first one acts, so a target the registry cannot build
 	// stops the command before anything has been done, never half way through `all`.
@@ -552,109 +516,137 @@ func runRuntimeCore(commands runtimepkg.CommandRunner, source pipkg.SourceRepo, 
 		return
 	}
 
-	failed := false
-	allTargets := len(adapters) > 1
-
+	// Each target acts and is reported before the next one acts. Pi has a real Status(), so it is
+	// reported and aggregated like every other target: an honestly unsupported Pi fails
+	// `status --target all` just as an honestly unsupported claude, opencode or codex would
+	// (W-03 -- there is no "Pi is exempt" status-only carve-out). What fails a run is
+	// runtimecore.AggregateStatus's.
+	results := make([]runtimecore.LifecycleResult, 0, len(adapters))
 	for _, adapter := range adapters {
-		current := adapter.Target()
-		result := runtimeLifecycleResult(adapter, action)
+		result := runtimecore.Perform(adapter, opts.Action)
 		fmt.Fprintln(stdout, result.String())
-		// Pi now has a real Status() implementation (pi-lifecycle, slice
-		// 5), so it is reported and aggregated exactly like every other
-		// target: an honestly unsupported Pi fails `status --target all`
-		// just as an honestly unsupported claude/opencode/codex would
-		// (W-03 — there is no more "Pi is exempt" status-only carve-out).
-		actionFailed := false
-		switch action {
-		case "status":
-			switch {
-			case result.Status == runtimecore.CapabilityRestartRequired:
-				actionFailed = true
-			case result.Status == runtimecore.CapabilityUnsupported:
-				actionFailed = true
-			case result.Status == runtimecore.CapabilityPartial && !(allTargets && current == runtimecore.TargetCodex):
-				actionFailed = true
-			}
-		default:
-			switch result.Status {
-			case runtimecore.CapabilityPartial:
-				actionFailed = true
-			case runtimecore.CapabilityUnsupported:
-				actionFailed = true
-			}
-		}
-		if actionFailed {
-			failed = true
-		}
+		results = append(results, result)
 	}
 
-	if failed {
+	if runtimecore.AggregateStatus(opts.Action, results) {
 		exit(1)
 		return
 	}
 	exit(0)
 }
 
-// parseRuntimeArgs parses minimal runtime subcommand arguments.
-func parseRuntimeArgs(args []string, registry *runtimecore.Registry) (action string, target runtimecore.Target, configRoot, component, stateDir string, err error) {
-	if len(args) == 0 {
-		return "", "", "", "", "", fmt.Errorf("error: runtime requires an action")
+// runLongtermMemComponent runs the action of 'runtime --component longterm-mem': one component
+// that spans claude, opencode and codex, acted on as a whole and not as a target of the registry.
+func runLongtermMemComponent(opts runtimeOptions, cfg runtimecore.Config, stdout, stderr io.Writer, exit func(int)) {
+	// D4 parse-time refusal: update is rejected here, BEFORE any
+	// LongtermMemAdapter is even constructed — never after running one
+	// and reporting a failing status. "rollback" needs no separate
+	// guard: it is not a recognized action at all (see the action-name
+	// validation in parseRuntimeArgs below), so it is already rejected
+	// at the exact same point, before any adapter call.
+	if opts.Action == runtimecore.ActionUpdate {
+		fmt.Fprintln(stderr, "error: longterm-mem does not support the 'update' action; reinstall instead (--component longterm-mem install)")
+		exit(1)
+		return
 	}
-	action = args[0]
+	// The binary path is DERIVED from --state-dir, never resolved
+	// independently from HOME: the overlay entrypoint deploys the
+	// binary at "$STATE_DIR/bin/longterm-mem" and registers MCP
+	// entries naming that exact path, so an adapter that resolved it
+	// from HOME under an overridden state dir reported a deployed
+	// binary as missing and a genuinely owned entry as unmanaged. An
+	// empty stateDir yields an empty binary path here, which
+	// NewLongtermMemAdapter fills in with the same default it fills
+	// stateDir with — so the un-overridden case is unchanged.
+	adapter := runtimepkg.NewLongtermMemAdapter(cfg, opts.StateDir, runtimepkg.LongtermMemBinaryPathForStateDir(opts.StateDir))
+	result := runtimecore.Perform(adapter, opts.Action)
+	fmt.Fprintln(stdout, result.String())
+	if runtimecore.ComponentFailed(opts.Action, result) {
+		exit(1)
+		return
+	}
+	exit(0)
+}
+
+// runtimeOptions is what the command line of 'runtime <action>' asks for. The zero value of a
+// field means the flag was not given; Target and Component carry their defaults after parsing.
+type runtimeOptions struct {
+	// Action is one of status, install, update and uninstall.
+	Action runtimecore.Action
+	// Target is the runtime acted on, or all of them (--component runtime-parity only).
+	Target runtimecore.Target
+	// ConfigRoot, when it is not empty, is the one directory every runtime works in (--config-root).
+	ConfigRoot string
+	// Component is componentRuntimeParity or componentLongtermMem.
+	Component string
+	// StateDir is the state directory of the longterm-mem component (--state-dir).
+	StateDir string
+}
+
+// parseRuntimeArgs reads the command line of 'runtime <action>' into its options. The flags are
+// read, and the first one that cannot be used ends the parse, before the action is judged. On an
+// error the options are empty.
+func parseRuntimeArgs(args []string, registry *runtimecore.Registry) (runtimeOptions, error) {
+	if len(args) == 0 {
+		return runtimeOptions{}, fmt.Errorf("error: runtime requires an action")
+	}
+	action := args[0]
 	if strings.HasPrefix(action, "-") {
-		return "", "", "", "", "", fmt.Errorf("error: runtime requires an action: status | install | update | uninstall | capabilities")
+		return runtimeOptions{}, fmt.Errorf("error: runtime requires an action: status | install | update | uninstall | capabilities")
 	}
 
-	target = runtimecore.TargetOpenCode
-	component = componentRuntimeParity
+	opts := runtimeOptions{Target: runtimecore.TargetOpenCode, Component: componentRuntimeParity}
 	for i := 1; i < len(args); i++ {
 		a := args[i]
 		switch a {
 		case "--target":
 			i++
 			if i >= len(args) {
-				return "", "", "", "", "", fmt.Errorf("error: --target requires a value")
+				return runtimeOptions{}, fmt.Errorf("error: --target requires a value")
 			}
-			target, err = registry.Parse(args[i])
+			target, err := registry.Parse(args[i])
 			if err != nil {
-				return "", "", "", "", "", err
+				return runtimeOptions{}, err
 			}
+			opts.Target = target
 		case "--config-root":
 			i++
 			if i >= len(args) {
-				return "", "", "", "", "", fmt.Errorf("error: --config-root requires a value")
+				return runtimeOptions{}, fmt.Errorf("error: --config-root requires a value")
 			}
-			configRoot = args[i]
+			opts.ConfigRoot = args[i]
 		case "--component":
 			i++
 			if i >= len(args) {
-				return "", "", "", "", "", fmt.Errorf("error: --component requires a value")
+				return runtimeOptions{}, fmt.Errorf("error: --component requires a value")
 			}
 			switch args[i] {
 			case componentRuntimeParity, componentLongtermMem:
-				component = args[i]
+				opts.Component = args[i]
 			default:
-				return "", "", "", "", "", fmt.Errorf("error: unknown --component %q (expected %q or %q)", args[i], componentRuntimeParity, componentLongtermMem)
+				return runtimeOptions{}, fmt.Errorf("error: unknown --component %q (expected %q or %q)", args[i], componentRuntimeParity, componentLongtermMem)
 			}
 		case "--state-dir":
 			i++
 			if i >= len(args) {
-				return "", "", "", "", "", fmt.Errorf("error: --state-dir requires a value")
+				return runtimeOptions{}, fmt.Errorf("error: --state-dir requires a value")
 			}
-			stateDir = args[i]
+			opts.StateDir = args[i]
 		default:
 			if strings.HasPrefix(a, "--") {
-				return "", "", "", "", "", fmt.Errorf("error: unknown flag %q", a)
+				return runtimeOptions{}, fmt.Errorf("error: unknown flag %q", a)
 			}
-			return "", "", "", "", "", fmt.Errorf("error: unexpected runtime argument %q", a)
+			return runtimeOptions{}, fmt.Errorf("error: unexpected runtime argument %q", a)
 		}
 	}
 
-	if action != "status" && action != "install" && action != "update" && action != "uninstall" {
-		return "", "", "", "", "", fmt.Errorf("error: unknown runtime action %q", action)
+	switch runtimecore.Action(action) {
+	case runtimecore.ActionStatus, runtimecore.ActionInstall, runtimecore.ActionUpdate, runtimecore.ActionUninstall:
+		opts.Action = runtimecore.Action(action)
+	default:
+		return runtimeOptions{}, fmt.Errorf("error: unknown runtime action %q", action)
 	}
-
-	return action, target, configRoot, component, stateDir, nil
+	return opts, nil
 }
 
 // ---------------------------------------------------------------------------
@@ -855,21 +847,6 @@ func runReviewReceiptHook(args []string) {
 	reply := hookwire.ExitReply{Block: verdict.Deny, Message: verdict.Reason}
 	_, _ = os.Stderr.Write(reply.MessageLine())
 	os.Exit(reply.Code())
-}
-
-func runtimeLifecycleResult(adapter runtimecore.Adapter, action string) runtimecore.LifecycleResult {
-	switch action {
-	case "status":
-		return adapter.Status()
-	case "install":
-		return adapter.Install()
-	case "update":
-		return adapter.Update()
-	case "uninstall":
-		return adapter.Uninstall()
-	default:
-		return runtimecore.NewLifecycleResult(adapter.Target(), "status", runtimecore.CapabilityUnsupported, "unknown runtime action", nil)
-	}
 }
 
 // runSkills implements the 'skills <verb>' subcommand.
@@ -1120,381 +1097,4 @@ func runUninstallHooks(args []string) {
 		os.Exit(1)
 	}
 	fmt.Fprintln(os.Stdout, "uninstall-hooks: hooks removed successfully")
-}
-
-// ---------------------------------------------------------------------------
-// status subcommand
-// ---------------------------------------------------------------------------
-
-// statusDeps bundles the injectable dependencies for statusCore so unit tests
-// can exercise all branches without touching the real filesystem or home dir.
-type statusDeps struct {
-	// stat reports whether a path exists and is accessible (like os.Stat).
-	stat func(string) (os.FileInfo, error)
-	// readFile reads a file by path (like os.ReadFile).
-	readFile readFileFn
-	// loadSettings reads and JSON-decodes settings.json. Returns nil map on
-	// file-not-found (not an error — hooks simply absent).
-	loadSettings func(string) (map[string]interface{}, error)
-	// home returns the current user's home directory ($HOME).
-	home func() string
-	// cwd returns the current working directory (for registry check).
-	cwd func() string
-}
-
-// defaultStatusDeps returns the real OS dependencies used in production.
-func defaultStatusDeps() statusDeps {
-	return statusDeps{
-		stat:     os.Stat,
-		readFile: os.ReadFile,
-		loadSettings: func(path string) (map[string]interface{}, error) {
-			data, err := os.ReadFile(path)
-			if os.IsNotExist(err) {
-				return nil, nil // file absent → no hooks
-			}
-			if err != nil {
-				return nil, err
-			}
-			var root map[string]interface{}
-			if err := json.Unmarshal(data, &root); err != nil {
-				return nil, fmt.Errorf("invalid JSON: %w", err)
-			}
-			return root, nil
-		},
-		home: func() string { return os.Getenv("HOME") },
-		cwd: func() string {
-			d, _ := os.Getwd()
-			return d
-		},
-	}
-}
-
-// runStatus is the public entry point for the 'status' subcommand.
-// It uses real OS deps and chooses the process exit code:
-//
-//	0 — every check passed (healthy).
-//	1 — at least one hard check FAILED.
-//	2 — no hard failure, but at least one check is DEGRADED (e.g. the registry
-//	    exists but its scoped block is missing). Distinct from 1 so callers can
-//	    tell "broken" from "present-but-needs-attention".
-func runStatus(_ []string) {
-	allOK, degraded := statusCore(os.Stdout, defaultStatusDeps())
-	switch {
-	case !allOK:
-		os.Exit(1)
-	case degraded:
-		os.Exit(2)
-	}
-}
-
-// checkResult holds the result of a single status check.
-//
-// Three tiers: ok=true & degraded=false → OK; ok=false → FAIL (hard);
-// ok=true & degraded=true → WARN (degraded but not a hard failure).
-type checkResult struct {
-	label    string
-	ok       bool
-	degraded bool
-	note     string
-}
-
-// binaryIdentity is the substring used to identify our hook entries in
-// settings.json — same logic as Merger.hookCommand substring match.
-const binaryIdentity = "gentle-ai-overlay"
-
-// statusCore runs all checks and writes the report to stdout.
-// Returns (allOK, degraded): allOK is true only when no check FAILED; degraded
-// is true when no check FAILED but at least one is in the WARN/degraded tier.
-func statusCore(stdout io.Writer, deps statusDeps) (allOK bool, degraded bool) {
-	home := deps.home()
-	binaryPath := filepath.Join(home, ".claude", "bin", "gentle-ai-overlay")
-	settingsPath := filepath.Join(home, ".claude", "settings.json")
-	contractPath := filepath.Join(home, ".claude", "skills", "_shared", "minimalism-contract.md")
-
-	var checks []checkResult
-
-	// Check 1: binary present + executable.
-	checks = append(checks, checkBinary(binaryPath, deps.stat))
-
-	// Check 2: UserPromptSubmit hook wired.
-	// Check 3: PreToolUse/Agent hook wired.
-	settingsRoot, settingsErr := deps.loadSettings(settingsPath)
-	checks = append(checks, checkUserPromptSubmitHook(settingsRoot, settingsErr, settingsPath))
-	checks = append(checks, checkPreToolUseHook(settingsRoot, settingsErr, settingsPath))
-
-	// Check 3b: SessionEnd sync-trigger hook wired. A missing family is
-	// WARN/degraded, not FAIL — it means a pre-#291 two-family install that
-	// hasn't run the upgrade path yet, not a broken installation.
-	checks = append(checks, checkSessionEndHook(settingsRoot, settingsErr, settingsPath))
-
-	// Check 3c: PreToolUse/Bash review-receipt hook wired. Same WARN/degraded
-	// tier as SessionEnd — a machine that hasn't run the upgrade path yet is
-	// pre-#3a, not broken.
-	checks = append(checks, checkReviewReceiptHook(settingsRoot, settingsErr, settingsPath))
-
-	// Check 3d: shaper clearance deny guard (both PreToolUse entries and the
-	// permissions.deny backstop). Missing parts are WARN/degraded.
-	checks = append(checks, checkShaperClearanceGuard(settingsRoot, settingsErr, settingsPath))
-
-	// Check 3e: projection hook family (UserPromptSubmit context and the two
-	// PreToolUse gates). A machine that has not re-run install-hooks since the
-	// family landed is WARN/degraded, not broken.
-	checks = append(checks, checkProjectionHooks(settingsRoot, settingsErr, settingsPath, binaryPath))
-
-	// Check 3f: skills approve guard (the two PreToolUse entries that deny the
-	// agent running skills approve or writing the approval record). A machine
-	// that has not re-run install-hooks since the guard landed is WARN/degraded,
-	// not broken.
-	checks = append(checks, checkApproveGuard(settingsRoot, settingsErr, settingsPath, binaryPath))
-
-	// Check 4: contract readable + frontmatter parses.
-	checks = append(checks, checkContract(contractPath, deps.readFile))
-
-	// Check 5 (best-effort): registry block present in CWD.
-	if cwd := deps.cwd(); cwd != "" {
-		registryPath := filepath.Join(cwd, ".atl", "skill-registry.md")
-		checks = append(checks, checkRegistry(registryPath, deps.readFile))
-	}
-
-	// Emit report.
-	allOK = true
-	for _, c := range checks {
-		status := "OK  "
-		switch {
-		case !c.ok:
-			status = "FAIL"
-			allOK = false
-		case c.degraded:
-			status = "WARN"
-			degraded = true
-		}
-		if c.note != "" {
-			fmt.Fprintf(stdout, "[%s] %s — %s\n", status, c.label, c.note)
-		} else {
-			fmt.Fprintf(stdout, "[%s] %s\n", status, c.label)
-		}
-	}
-	return allOK, degraded
-}
-
-// checkBinary verifies the engine binary is present and executable.
-func checkBinary(binaryPath string, stat func(string) (os.FileInfo, error)) checkResult {
-	label := "binary: " + binaryPath
-	fi, err := stat(binaryPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return checkResult{label: label, ok: false, note: "not found"}
-		}
-		return checkResult{label: label, ok: false, note: err.Error()}
-	}
-	// Check executable bit (owner execute).
-	if fi.Mode()&0o111 == 0 {
-		return checkResult{label: label, ok: false, note: "exists but not executable"}
-	}
-	return checkResult{label: label, ok: true}
-}
-
-// checkUserPromptSubmitHook verifies the UserPromptSubmit entry references our binary.
-func checkUserPromptSubmitHook(root map[string]interface{}, settingsErr error, settingsPath string) checkResult {
-	label := "hook: UserPromptSubmit (propagate)"
-	if settingsErr != nil {
-		return checkResult{label: label, ok: false, note: "cannot read " + settingsPath + ": " + settingsErr.Error()}
-	}
-	if root == nil {
-		return checkResult{label: label, ok: false, note: settingsPath + " absent or empty"}
-	}
-	hooks, _ := root["hooks"].(map[string]interface{})
-	if hooks == nil {
-		return checkResult{label: label, ok: false, note: "hooks key missing in settings.json"}
-	}
-	entries, _ := hooks["UserPromptSubmit"].([]interface{})
-	for _, e := range entries {
-		if innerHookContainsBinary(e, binaryIdentity) {
-			return checkResult{label: label, ok: true}
-		}
-	}
-	return checkResult{label: label, ok: false, note: "no UserPromptSubmit entry referencing " + binaryIdentity}
-}
-
-// checkPreToolUseHook verifies the PreToolUse/Agent entry references our binary.
-func checkPreToolUseHook(root map[string]interface{}, settingsErr error, settingsPath string) checkResult {
-	label := `hook: PreToolUse matcher="Agent" (gate-task)`
-	if settingsErr != nil {
-		return checkResult{label: label, ok: false, note: "cannot read " + settingsPath + ": " + settingsErr.Error()}
-	}
-	if root == nil {
-		return checkResult{label: label, ok: false, note: settingsPath + " absent or empty"}
-	}
-	hooks, _ := root["hooks"].(map[string]interface{})
-	if hooks == nil {
-		return checkResult{label: label, ok: false, note: "hooks key missing in settings.json"}
-	}
-	entries, _ := hooks["PreToolUse"].([]interface{})
-	for _, e := range entries {
-		em, ok := e.(map[string]interface{})
-		if !ok {
-			continue
-		}
-		// Must have matcher == "Agent" AND reference our binary.
-		if em["matcher"] != "Agent" {
-			continue
-		}
-		if innerHookContainsBinary(e, binaryIdentity) {
-			return checkResult{label: label, ok: true}
-		}
-	}
-	return checkResult{label: label, ok: false, note: `no PreToolUse entry with matcher="Agent" referencing ` + binaryIdentity}
-}
-
-// remediationNote is the shared WARN note text pointing at the upgrade path
-// for any check that goes from a two-family install to the three-family
-// state (post-#291): re-run uninstall then install to pick up new entries.
-const remediationNote = "run 'labdrian uninstall-hooks' then 'labdrian install-hooks'"
-
-// checkSessionEndHook verifies the SessionEnd sync-trigger entry references
-// our binary and the sync-trigger identity token. Unreadable settings is a
-// hard FAIL like the other hook checks; a missing entry is WARN/degraded,
-// not FAIL — it names the same two remediation commands as the runtime
-// status partial message so a pre-upgrade machine (two families, no
-// SessionEnd) is actionable rather than treated as a broken install.
-func checkSessionEndHook(root map[string]interface{}, settingsErr error, settingsPath string) checkResult {
-	label := "hook: SessionEnd (sync-trigger)"
-	if settingsErr != nil {
-		return checkResult{label: label, ok: false, note: "cannot read " + settingsPath + ": " + settingsErr.Error()}
-	}
-	if root == nil {
-		return checkResult{label: label, ok: true, degraded: true, note: settingsPath + " absent or empty; " + remediationNote}
-	}
-	hooks, _ := root["hooks"].(map[string]interface{})
-	if hooks != nil {
-		entries, _ := hooks["SessionEnd"].([]interface{})
-		for _, e := range entries {
-			if innerHookContainsBinary(e, binaryIdentity) && innerHookContainsBinary(e, settings.LabdrianSyncTriggerIdentity) {
-				return checkResult{label: label, ok: true}
-			}
-		}
-	}
-	return checkResult{label: label, ok: true, degraded: true, note: "no SessionEnd entry referencing " + binaryIdentity + "; " + remediationNote}
-}
-
-// checkReviewReceiptHook verifies the PreToolUse/Bash review-receipt entry
-// references our binary and the review-receipt identity token. Unreadable
-// settings is a hard FAIL like the other hook checks; a missing entry is
-// WARN/degraded, not FAIL — same remediation as checkSessionEndHook.
-func checkReviewReceiptHook(root map[string]interface{}, settingsErr error, settingsPath string) checkResult {
-	label := `hook: PreToolUse matcher="Bash" (review-receipt)`
-	if settingsErr != nil {
-		return checkResult{label: label, ok: false, note: "cannot read " + settingsPath + ": " + settingsErr.Error()}
-	}
-	if root == nil {
-		return checkResult{label: label, ok: true, degraded: true, note: settingsPath + " absent or empty; " + remediationNote}
-	}
-	hooks, _ := root["hooks"].(map[string]interface{})
-	if hooks != nil {
-		entries, _ := hooks["PreToolUse"].([]interface{})
-		for _, e := range entries {
-			em, ok := e.(map[string]interface{})
-			if !ok || em["matcher"] != "Bash" {
-				continue
-			}
-			if innerHookContainsBinary(e, binaryIdentity) && innerHookContainsBinary(e, settings.LabdrianReviewReceiptIdentity) {
-				return checkResult{label: label, ok: true}
-			}
-		}
-	}
-	return checkResult{label: label, ok: true, degraded: true, note: "no PreToolUse entry with matcher=\"Bash\" referencing " + binaryIdentity + "; " + remediationNote}
-}
-
-// innerHookContainsBinary returns true if the hook entry (outer object) contains
-// binarySubstring in any of its inner hooks[].command strings.
-// This mirrors the identity logic used by settings.Merger.
-func innerHookContainsBinary(e interface{}, binarySubstring string) bool {
-	em, ok := e.(map[string]interface{})
-	if !ok {
-		return false
-	}
-	innerHooks, _ := em["hooks"].([]interface{})
-	for _, ih := range innerHooks {
-		ihm, ok := ih.(map[string]interface{})
-		if !ok {
-			continue
-		}
-		if cmd, ok := ihm["command"].(string); ok {
-			if containsSubstring(cmd, binarySubstring) {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-// containsSubstring is a thin wrapper around strings.Contains.
-func containsSubstring(s, sub string) bool {
-	return strings.Contains(s, sub)
-}
-
-// checkContract verifies the minimalism-contract file is readable with valid frontmatter.
-func checkContract(contractPath string, readFile readFileFn) checkResult {
-	label := "contract: " + contractPath
-	data, err := readFile(contractPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return checkResult{label: label, ok: false, note: "not found"}
-		}
-		return checkResult{label: label, ok: false, note: err.Error()}
-	}
-	if _, err := contract.Parse(string(data)); err != nil {
-		return checkResult{label: label, ok: false, note: "frontmatter error: " + err.Error()}
-	}
-	return checkResult{label: label, ok: true}
-}
-
-// checkRegistry reports on the .atl/skill-registry.md in cwd, distinguishing
-// three outcomes per the fix principles (REGISTRY-AUTHORITATIVE + FAIL-LOUD):
-//
-//   - ABSENT → OK, quiet. A project that does not use the overlay is not a
-//     problem; this is the only branch that stays silently OK.
-//   - UNREADABLE (real IO error, not IsNotExist) → FAIL. A genuine OS error must
-//     surface, never be downgraded to an OK note.
-//   - PRESENT BUT EMPTY / whitespace-only → FAIL. An emptied registry is the
-//     incident's misread state: it must be loud, never treated as "zero skills".
-//   - PRESENT, scoped block MISSING → WARN (degraded). Actionable, not fatal.
-//   - PRESENT, scoped block FOUND → OK.
-func checkRegistry(registryPath string, readFile readFileFn) checkResult {
-	label := "registry: " + registryPath
-	data, err := readFile(registryPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return checkResult{label: label, ok: true, note: "not present (project may not use the overlay)"}
-		}
-		// A real OS error is a genuine failure — fail loud, do not downgrade.
-		return checkResult{label: label, ok: false, note: "cannot read: " + err.Error()}
-	}
-	content := string(data)
-	if strings.TrimSpace(content) == "" {
-		return checkResult{
-			label: label,
-			ok:    false,
-			note:  "present but EMPTY — run skill-registry refresh; do NOT conclude skills are absent (an empty registry is inconclusive, not zero)",
-		}
-	}
-	hasMinimalism := containsSubstring(content, propagator.BeginMarker)
-	hasDesign := containsSubstring(content, propagator.AntiGenericDesignBeginMarker)
-
-	if hasMinimalism && hasDesign {
-		return checkResult{label: label, ok: true, note: "scoped block present"}
-	}
-
-	var missing []string
-	if !hasMinimalism {
-		missing = append(missing, "minimalism-contract-scope")
-	}
-	if !hasDesign {
-		missing = append(missing, "anti-generic-design-scope")
-	}
-	note := fmt.Sprintf(
-		"present but scoped block(s) missing: %s (run 'labdrian install-hooks' or propagate)",
-		strings.Join(missing, ", "),
-	)
-	return checkResult{label: label, ok: true, degraded: true, note: note}
 }

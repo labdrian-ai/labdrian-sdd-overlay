@@ -1,0 +1,135 @@
+# install claude
+$ runtime install --target claude
+exit: 0
+--- stdout ---
+[claude] install: restart_required — Claude lifecycle hooks installed; restart Claude to load hook changes
+--- stderr ---
+
+# install codex
+$ runtime install --target codex
+exit: 0
+--- stdout ---
+[codex] install: restart_required — Codex lifecycle manifest installed; restart long-running Codex processes to pick up updates
+--- stderr ---
+
+# install opencode
+$ runtime install --target opencode
+exit: 1
+--- stdout ---
+[opencode] install: partial — OpenCode prompt config could not be derived from the contracts: could not locate skills/_shared/minimalism-contract.md; set LABDRIAN_OVERLAY_DIR
+--- stderr ---
+
+# install pi
+$ runtime install --target pi
+exit: 1
+--- stdout ---
+[pi] install: unsupported — pi package delivery (pipkg build/install) cannot run without OVERLAY_DIR set
+--- stderr ---
+
+# install all
+$ runtime install --target all
+exit: 1
+--- stdout ---
+[claude] install: restart_required — Claude lifecycle hooks installed; restart Claude to load hook changes
+[opencode] install: partial — OpenCode prompt config could not be derived from the contracts: could not locate skills/_shared/minimalism-contract.md; set LABDRIAN_OVERLAY_DIR
+[codex] install: restart_required — Codex lifecycle manifest installed; restart long-running Codex processes to pick up updates
+[pi] install: unsupported — pi package delivery (pipkg build/install) cannot run without OVERLAY_DIR set
+--- stderr ---
+
+# opencode with the overlay named
+$ runtime install --target opencode
+exit: 0
+--- stdout ---
+[opencode] install: restart_required — OpenCode plugin changed; restart OpenCode to load version 2026-07-08-runtime-parity-4
+--- stderr ---
+
+# opencode again
+$ runtime install --target opencode
+exit: 0
+--- stdout ---
+[opencode] install: restart_required — OpenCode plugin changed; restart OpenCode to load version 2026-07-08-runtime-parity-4
+--- stderr ---
+
+# status opencode
+$ runtime status --target opencode
+exit: 1
+--- stdout ---
+[opencode] status: restart_required — OpenCode restart required to load plugin version 2026-07-08-runtime-parity-4
+--- stderr ---
+
+# update opencode
+$ runtime update --target opencode
+exit: 0
+--- stdout ---
+[opencode] update: restart_required — OpenCode plugin changed; restart OpenCode to load version 2026-07-08-runtime-parity-4
+--- stderr ---
+
+# status opencode
+$ runtime status --target opencode
+exit: 1
+--- stdout ---
+[opencode] status: restart_required — OpenCode restart required to load plugin version 2026-07-08-runtime-parity-4
+--- stderr ---
+
+# pi with an overlay that holds no registry
+$ runtime status --target pi
+exit: 1
+--- stdout ---
+[pi] status: unsupported — labdrian-pi package is not built at <WORLD>/home/.labdrian-overlay/pi/labdrian-pi (run: labdrian-overlay apply --target pi). 'pi --no-extensions' disables the before_agent_start contract-gate extension for that session, and 'pi --no-skills' disables skill discovery, for that session only; neither flag's use is detected at runtime (short aliases: -ne and -ns)
+--- stderr ---
+
+# install pi
+$ runtime install --target pi
+exit: 1
+--- stdout ---
+[pi] install: unsupported — pipkg: opening registry: open <WORLD>/overlay/skills.registry.yaml: no such file or directory
+--- stderr ---
+
+# update pi
+$ runtime update --target pi
+exit: 1
+--- stdout ---
+[pi] update: partial — pipkg: opening registry: open <WORLD>/overlay/skills.registry.yaml: no such file or directory
+--- stderr ---
+
+# uninstall pi
+$ runtime uninstall --target pi
+exit: 1
+--- stdout ---
+[pi] uninstall: unsupported — labdrian-pi package is not built at <WORLD>/home/.labdrian-overlay/pi/labdrian-pi; nothing to uninstall
+--- stderr ---
+
+# status all
+$ runtime status --target all
+exit: 1
+--- stdout ---
+[claude] status: supported — Claude lifecycle hooks are installed and owned
+[opencode] status: restart_required — OpenCode restart required to load plugin version 2026-07-08-runtime-parity-4
+[codex] status: partial — Codex lifecycle manifest is present and managed, but activation/reload state is unverified — reasons: activation/reload proof unavailable until Codex session lifecycle integration is implemented
+[pi] status: unsupported — labdrian-pi package is not built at <WORLD>/home/.labdrian-overlay/pi/labdrian-pi (run: labdrian-overlay apply --target pi). 'pi --no-extensions' disables the before_agent_start contract-gate extension for that session, and 'pi --no-skills' disables skill discovery, for that session only; neither flag's use is detected at runtime (short aliases: -ne and -ns)
+--- stderr ---
+
+# uninstall opencode
+$ runtime uninstall --target opencode
+exit: 0
+--- stdout ---
+[opencode] uninstall: restart_required — OpenCode plugin bridge removed; restart OpenCode to unload any already loaded plugin. Active marker remains at <WORLD>/home/.config/opencode/labdrian-runtime-parity.active.json; remove it only after OpenCode is fully stopped/restarted
+--- stderr ---
+
+# status opencode
+$ runtime status --target opencode
+exit: 1
+--- stdout ---
+[opencode] status: unsupported — OpenCode plugin not installed
+--- stderr ---
+
+# what is left
+--- tree of home ---
+.claude/
+.claude/settings.json
+.codex/
+.codex/labdrian-runtime-lifecycle.json
+.config/
+.config/opencode/
+.config/opencode/plugins/
+

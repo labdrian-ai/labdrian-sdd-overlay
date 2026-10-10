@@ -1,0 +1,281 @@
+# a file that is not JSON
+# status claude
+$ runtime status --target claude
+exit: 1
+--- stdout ---
+[claude] status: unsupported — read settings file <WORLD>/home/.claude/settings.json: <JSON ERROR>
+--- stderr ---
+
+--- tree of home/.claude ---
+settings.json
+
+# install claude
+$ runtime install --target claude
+exit: 1
+--- stdout ---
+[claude] install: partial — settings: <WORLD>/home/.claude/settings.json contains invalid JSON (not modified): <JSON ERROR>
+--- stderr ---
+
+--- tree of home/.claude ---
+settings.json
+
+# update claude
+$ runtime update --target claude
+exit: 1
+--- stdout ---
+[claude] update: partial — settings: <WORLD>/home/.claude/settings.json contains invalid JSON (not modified): <JSON ERROR>
+--- stderr ---
+
+--- tree of home/.claude ---
+settings.json
+
+# uninstall claude
+$ runtime uninstall --target claude
+exit: 1
+--- stdout ---
+[claude] uninstall: partial — settings: <WORLD>/home/.claude/settings.json contains invalid JSON (not modified): <JSON ERROR>
+--- stderr ---
+
+--- tree of home/.claude ---
+settings.json
+
+# the JSON value null
+# status claude
+$ runtime status --target claude
+exit: 1
+--- stdout ---
+[claude] status: unsupported — Claude settings file not found at <WORLD>/home/.claude/settings.json
+--- stderr ---
+
+--- tree of home/.claude ---
+settings.json
+
+# install claude
+$ runtime install --target claude
+exit: 1
+--- stdout ---
+[claude] install: partial — settings: <WORLD>/home/.claude/settings.json contains invalid JSON (not modified): JSON null is not a settings object
+--- stderr ---
+
+--- tree of home/.claude ---
+settings.json
+
+# update claude
+$ runtime update --target claude
+exit: 1
+--- stdout ---
+[claude] update: partial — settings: <WORLD>/home/.claude/settings.json contains invalid JSON (not modified): JSON null is not a settings object
+--- stderr ---
+
+--- tree of home/.claude ---
+settings.json
+
+# uninstall claude
+$ runtime uninstall --target claude
+exit: 0
+--- stdout ---
+[claude] uninstall: restart_required — Claude lifecycle hooks removed; restart Claude to unload stale hook processes
+--- stderr ---
+
+--- tree of home/.claude ---
+settings.json
+
+# an array
+# status claude
+$ runtime status --target claude
+exit: 1
+--- stdout ---
+[claude] status: unsupported — read settings file <WORLD>/home/.claude/settings.json: <JSON ERROR>
+--- stderr ---
+
+--- tree of home/.claude ---
+settings.json
+
+# install claude
+$ runtime install --target claude
+exit: 1
+--- stdout ---
+[claude] install: partial — settings: <WORLD>/home/.claude/settings.json contains invalid JSON (not modified): <JSON ERROR>
+--- stderr ---
+
+--- tree of home/.claude ---
+settings.json
+
+# update claude
+$ runtime update --target claude
+exit: 1
+--- stdout ---
+[claude] update: partial — settings: <WORLD>/home/.claude/settings.json contains invalid JSON (not modified): <JSON ERROR>
+--- stderr ---
+
+--- tree of home/.claude ---
+settings.json
+
+# uninstall claude
+$ runtime uninstall --target claude
+exit: 1
+--- stdout ---
+[claude] uninstall: partial — settings: <WORLD>/home/.claude/settings.json contains invalid JSON (not modified): <JSON ERROR>
+--- stderr ---
+
+--- tree of home/.claude ---
+settings.json
+
+# hooks is an array
+# status claude
+$ runtime status --target claude
+exit: 1
+--- stdout ---
+[claude] status: partial — Claude lifecycle hooks are not fully owned/installed in <WORLD>/home/.claude/settings.json; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+--- stderr ---
+
+--- tree of home/.claude ---
+settings.json
+
+# install claude
+$ runtime install --target claude
+exit: 0
+--- stdout ---
+[claude] install: restart_required — Claude lifecycle hooks installed; restart Claude to load hook changes
+--- stderr ---
+
+--- tree of home/.claude ---
+settings.json
+settings.json.bak
+
+# update claude
+$ runtime update --target claude
+exit: 0
+--- stdout ---
+[claude] update: restart_required — Claude lifecycle hooks updated; restart Claude to load hook changes
+--- stderr ---
+
+--- tree of home/.claude ---
+settings.json
+settings.json.bak
+
+# uninstall claude
+$ runtime uninstall --target claude
+exit: 0
+--- stdout ---
+[claude] uninstall: restart_required — Claude lifecycle hooks removed; restart Claude to unload stale hook processes
+--- stderr ---
+
+--- tree of home/.claude ---
+settings.json
+settings.json.bak
+
+# an event that is not an array
+# status claude
+$ runtime status --target claude
+exit: 1
+--- stdout ---
+[claude] status: partial — Claude lifecycle hooks are not fully owned/installed in <WORLD>/home/.claude/settings.json; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+--- stderr ---
+
+--- tree of home/.claude ---
+settings.json
+
+# install claude
+$ runtime install --target claude
+exit: 0
+--- stdout ---
+[claude] install: restart_required — Claude lifecycle hooks installed; restart Claude to load hook changes
+--- stderr ---
+
+--- tree of home/.claude ---
+settings.json
+settings.json.bak
+
+# update claude
+$ runtime update --target claude
+exit: 0
+--- stdout ---
+[claude] update: restart_required — Claude lifecycle hooks updated; restart Claude to load hook changes
+--- stderr ---
+
+--- tree of home/.claude ---
+settings.json
+settings.json.bak
+
+# uninstall claude
+$ runtime uninstall --target claude
+exit: 0
+--- stdout ---
+[claude] uninstall: restart_required — Claude lifecycle hooks removed; restart Claude to unload stale hook processes
+--- stderr ---
+
+--- tree of home/.claude ---
+settings.json
+settings.json.bak
+
+# an empty file
+# status claude
+$ runtime status --target claude
+exit: 1
+--- stdout ---
+[claude] status: unsupported — read settings file <WORLD>/home/.claude/settings.json: <JSON ERROR>
+--- stderr ---
+
+--- tree of home/.claude ---
+settings.json
+
+# install claude
+$ runtime install --target claude
+exit: 1
+--- stdout ---
+[claude] install: partial — settings: <WORLD>/home/.claude/settings.json contains invalid JSON (not modified): <JSON ERROR>
+--- stderr ---
+
+--- tree of home/.claude ---
+settings.json
+
+# update claude
+$ runtime update --target claude
+exit: 1
+--- stdout ---
+[claude] update: partial — settings: <WORLD>/home/.claude/settings.json contains invalid JSON (not modified): <JSON ERROR>
+--- stderr ---
+
+--- tree of home/.claude ---
+settings.json
+
+# uninstall claude
+$ runtime uninstall --target claude
+exit: 1
+--- stdout ---
+[claude] uninstall: partial — settings: <WORLD>/home/.claude/settings.json contains invalid JSON (not modified): <JSON ERROR>
+--- stderr ---
+
+--- tree of home/.claude ---
+settings.json
+
+# a directory where settings.json should be
+# status claude
+$ runtime status --target claude
+exit: 1
+--- stdout ---
+[claude] status: unsupported — read settings file <WORLD>/home/.claude/settings.json: read <WORLD>/home/.claude/settings.json: is a directory
+--- stderr ---
+
+# install claude
+$ runtime install --target claude
+exit: 1
+--- stdout ---
+[claude] install: partial — settings: read <WORLD>/home/.claude/settings.json: read <WORLD>/home/.claude/settings.json: is a directory
+--- stderr ---
+
+# update claude
+$ runtime update --target claude
+exit: 1
+--- stdout ---
+[claude] update: partial — settings: read <WORLD>/home/.claude/settings.json: read <WORLD>/home/.claude/settings.json: is a directory
+--- stderr ---
+
+# uninstall claude
+$ runtime uninstall --target claude
+exit: 1
+--- stdout ---
+[claude] uninstall: partial — settings: read <WORLD>/home/.claude/settings.json: read <WORLD>/home/.claude/settings.json: is a directory
+--- stderr ---
+

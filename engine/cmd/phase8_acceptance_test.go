@@ -1389,7 +1389,7 @@ func phase8Capabilities(t *testing.T, binary string) {
 // predates Phase 8 and is not new code.
 func phase8NoExecOrNetwork(t *testing.T, _ string) {
 	files := []string{
-		"approve_guard_status.go", "skills_guard.go", "skills_lock.go",
+		"../status/status.go", "skills_guard.go", "skills_lock.go",
 		"../settings/approve_guard.go", "../settings/family.go", "../settings/projection.go", "../settings/document.go",
 		"../capability/capability.go", "../capability/declarations.go",
 		"../projection/context.go",

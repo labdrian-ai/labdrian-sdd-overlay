@@ -1,0 +1,112 @@
+# the binary exists but has no execute bit: FAIL, exit 1
+$ status
+exit: 1
+--- stdout ---
+[FAIL] binary: <WORLD>/home/.claude/bin/gentle-ai-overlay — exists but not executable
+[OK  ] hook: UserPromptSubmit (propagate)
+[OK  ] hook: PreToolUse matcher="Agent" (gate-task)
+[OK  ] hook: SessionEnd (sync-trigger)
+[OK  ] hook: PreToolUse matcher="Bash" (review-receipt)
+[OK  ] guard: shaper clearance record (PreToolUse + permissions.deny) — installed; the guard is a speed bump, not a security boundary
+[OK  ] hooks: projection (UserPromptSubmit + PreToolUse gates) — installed; restart Claude Code to load hook changes if this session started earlier
+[OK  ] guard: skills approve (PreToolUse Bash + file tools) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
+[OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
+[OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
+--- stderr ---
+
+# the execute bit of the owner alone is enough
+$ status
+exit: 0
+--- stdout ---
+[OK  ] binary: <WORLD>/home/.claude/bin/gentle-ai-overlay
+[OK  ] hook: UserPromptSubmit (propagate)
+[OK  ] hook: PreToolUse matcher="Agent" (gate-task)
+[OK  ] hook: SessionEnd (sync-trigger)
+[OK  ] hook: PreToolUse matcher="Bash" (review-receipt)
+[OK  ] guard: shaper clearance record (PreToolUse + permissions.deny) — installed; the guard is a speed bump, not a security boundary
+[OK  ] hooks: projection (UserPromptSubmit + PreToolUse gates) — installed; restart Claude Code to load hook changes if this session started earlier
+[OK  ] guard: skills approve (PreToolUse Bash + file tools) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
+[OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
+[OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
+--- stderr ---
+
+# the execute bit of the group alone is enough too: any bit counts
+$ status
+exit: 0
+--- stdout ---
+[OK  ] binary: <WORLD>/home/.claude/bin/gentle-ai-overlay
+[OK  ] hook: UserPromptSubmit (propagate)
+[OK  ] hook: PreToolUse matcher="Agent" (gate-task)
+[OK  ] hook: SessionEnd (sync-trigger)
+[OK  ] hook: PreToolUse matcher="Bash" (review-receipt)
+[OK  ] guard: shaper clearance record (PreToolUse + permissions.deny) — installed; the guard is a speed bump, not a security boundary
+[OK  ] hooks: projection (UserPromptSubmit + PreToolUse gates) — installed; restart Claude Code to load hook changes if this session started earlier
+[OK  ] guard: skills approve (PreToolUse Bash + file tools) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
+[OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
+[OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
+--- stderr ---
+
+# a directory in its place has execute bits, so it is OK
+$ status
+exit: 0
+--- stdout ---
+[OK  ] binary: <WORLD>/home/.claude/bin/gentle-ai-overlay
+[OK  ] hook: UserPromptSubmit (propagate)
+[OK  ] hook: PreToolUse matcher="Agent" (gate-task)
+[OK  ] hook: SessionEnd (sync-trigger)
+[OK  ] hook: PreToolUse matcher="Bash" (review-receipt)
+[OK  ] guard: shaper clearance record (PreToolUse + permissions.deny) — installed; the guard is a speed bump, not a security boundary
+[OK  ] hooks: projection (UserPromptSubmit + PreToolUse gates) — installed; restart Claude Code to load hook changes if this session started earlier
+[OK  ] guard: skills approve (PreToolUse Bash + file tools) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
+[OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
+[OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
+--- stderr ---
+
+# a link to nothing is not found
+$ status
+exit: 1
+--- stdout ---
+[FAIL] binary: <WORLD>/home/.claude/bin/gentle-ai-overlay — not found
+[OK  ] hook: UserPromptSubmit (propagate)
+[OK  ] hook: PreToolUse matcher="Agent" (gate-task)
+[OK  ] hook: SessionEnd (sync-trigger)
+[OK  ] hook: PreToolUse matcher="Bash" (review-receipt)
+[OK  ] guard: shaper clearance record (PreToolUse + permissions.deny) — installed; the guard is a speed bump, not a security boundary
+[OK  ] hooks: projection (UserPromptSubmit + PreToolUse gates) — installed; restart Claude Code to load hook changes if this session started earlier
+[OK  ] guard: skills approve (PreToolUse Bash + file tools) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
+[OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
+[OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
+--- stderr ---
+
+# a file where the directory of the binary should be: the error of the system is the note
+$ status
+exit: 1
+--- stdout ---
+[FAIL] binary: <WORLD>/home/.claude/bin/gentle-ai-overlay — stat <WORLD>/home/.claude/bin/gentle-ai-overlay: not a directory
+[OK  ] hook: UserPromptSubmit (propagate)
+[OK  ] hook: PreToolUse matcher="Agent" (gate-task)
+[OK  ] hook: SessionEnd (sync-trigger)
+[OK  ] hook: PreToolUse matcher="Bash" (review-receipt)
+[OK  ] guard: shaper clearance record (PreToolUse + permissions.deny) — installed; the guard is a speed bump, not a security boundary
+[OK  ] hooks: projection (UserPromptSubmit + PreToolUse gates) — installed; restart Claude Code to load hook changes if this session started earlier
+[OK  ] guard: skills approve (PreToolUse Bash + file tools) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
+[OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
+[OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
+--- stderr ---
+
+# no binary and no directory: not found
+$ status
+exit: 1
+--- stdout ---
+[FAIL] binary: <WORLD>/home/.claude/bin/gentle-ai-overlay — not found
+[OK  ] hook: UserPromptSubmit (propagate)
+[OK  ] hook: PreToolUse matcher="Agent" (gate-task)
+[OK  ] hook: SessionEnd (sync-trigger)
+[OK  ] hook: PreToolUse matcher="Bash" (review-receipt)
+[OK  ] guard: shaper clearance record (PreToolUse + permissions.deny) — installed; the guard is a speed bump, not a security boundary
+[OK  ] hooks: projection (UserPromptSubmit + PreToolUse gates) — installed; restart Claude Code to load hook changes if this session started earlier
+[OK  ] guard: skills approve (PreToolUse Bash + file tools) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
+[OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
+[OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
+--- stderr ---
+

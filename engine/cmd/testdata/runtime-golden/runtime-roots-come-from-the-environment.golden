@@ -1,0 +1,59 @@
+# install claude, codex and opencode with the roots the environment names
+$ runtime install --target all
+exit: 1
+--- stdout ---
+[claude] install: restart_required — Claude lifecycle hooks installed; restart Claude to load hook changes
+[opencode] install: partial — OpenCode prompt config could not be derived from the contracts: could not locate skills/_shared/minimalism-contract.md; set LABDRIAN_OVERLAY_DIR
+[codex] install: restart_required — Codex lifecycle manifest installed; restart long-running Codex processes to pick up updates
+[pi] install: unsupported — pi package delivery (pipkg build/install) cannot run without OVERLAY_DIR set
+--- stderr ---
+
+--- tree of . ---
+codex-home/
+codex-home/labdrian-runtime-lifecycle.json
+home/
+home/.claude/
+home/.claude/settings.json
+nobin/
+
+# status all
+$ runtime status --target all
+exit: 1
+--- stdout ---
+[claude] status: supported — Claude lifecycle hooks are installed and owned
+[opencode] status: unsupported — OpenCode plugin not installed
+[codex] status: partial — Codex lifecycle manifest is present and managed, but activation/reload state is unverified — reasons: activation/reload proof unavailable until Codex session lifecycle integration is implemented
+[pi] status: unsupported — labdrian-pi package is not built at <WORLD>/state/pi/labdrian-pi (run: labdrian-overlay apply --target pi). 'pi --no-extensions' disables the before_agent_start contract-gate extension for that session, and 'pi --no-skills' disables skill discovery, for that session only; neither flag's use is detected at runtime (short aliases: -ne and -ns)
+--- stderr ---
+
+# --config-root wins over the environment
+$ runtime install --target codex --config-root <WORLD>/given
+exit: 0
+--- stdout ---
+[codex] install: restart_required — Codex lifecycle manifest installed; restart long-running Codex processes to pick up updates
+--- stderr ---
+
+--- tree of given ---
+labdrian-runtime-lifecycle.json
+
+# status of the root that was given
+$ runtime status --target codex --config-root <WORLD>/given
+exit: 1
+--- stdout ---
+[codex] status: partial — Codex lifecycle manifest is present and managed, but activation/reload state is unverified — reasons: activation/reload proof unavailable until Codex session lifecycle integration is implemented
+--- stderr ---
+
+# a HOME with space around it is trimmed
+$ runtime status --target claude
+exit: 0
+--- stdout ---
+[claude] status: supported — Claude lifecycle hooks are installed and owned
+--- stderr ---
+
+# no HOME: there is no default root
+$ runtime status --target claude
+exit: 1
+--- stdout ---
+[claude] status: unsupported — Claude config root could not be resolved; set HOME
+--- stderr ---
+

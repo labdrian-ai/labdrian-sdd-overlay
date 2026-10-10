@@ -1,0 +1,240 @@
+# an empty object
+$ status
+exit: 1
+--- stdout ---
+[OK  ] binary: <WORLD>/home/.claude/bin/gentle-ai-overlay
+[FAIL] hook: UserPromptSubmit (propagate) — hooks key missing in settings.json
+[FAIL] hook: PreToolUse matcher="Agent" (gate-task) — hooks key missing in settings.json
+[WARN] hook: SessionEnd (sync-trigger) — no SessionEnd entry referencing gentle-ai-overlay; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+[WARN] hook: PreToolUse matcher="Bash" (review-receipt) — no PreToolUse entry with matcher="Bash" referencing gentle-ai-overlay; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+[WARN] guard: shaper clearance record (PreToolUse + permissions.deny) — missing PreToolUse matcher="Bash" guard hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" guard hook, permissions.deny Bash(*shaper clearance record*); clearance recording is unguarded against the model (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+[WARN] hooks: projection (UserPromptSubmit + PreToolUse gates) — missing or drifted: UserPromptSubmit projection hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" projection hook, PreToolUse matcher="^mcp__([A-Za-z0-9-]+_)*longterm-mem__query$" projection hook; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[WARN] guard: skills approve (PreToolUse Bash + file tools) — missing or drifted: PreToolUse matcher="Bash" skills guard-hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" skills guard-hook; the agent can run skills approve unguarded (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
+[OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
+--- stderr ---
+
+# hooks is null
+$ status
+exit: 1
+--- stdout ---
+[OK  ] binary: <WORLD>/home/.claude/bin/gentle-ai-overlay
+[FAIL] hook: UserPromptSubmit (propagate) — hooks key missing in settings.json
+[FAIL] hook: PreToolUse matcher="Agent" (gate-task) — hooks key missing in settings.json
+[WARN] hook: SessionEnd (sync-trigger) — no SessionEnd entry referencing gentle-ai-overlay; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+[WARN] hook: PreToolUse matcher="Bash" (review-receipt) — no PreToolUse entry with matcher="Bash" referencing gentle-ai-overlay; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+[WARN] guard: shaper clearance record (PreToolUse + permissions.deny) — missing PreToolUse matcher="Bash" guard hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" guard hook, permissions.deny Bash(*shaper clearance record*); clearance recording is unguarded against the model (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+[WARN] hooks: projection (UserPromptSubmit + PreToolUse gates) — missing or drifted: UserPromptSubmit projection hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" projection hook, PreToolUse matcher="^mcp__([A-Za-z0-9-]+_)*longterm-mem__query$" projection hook; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[WARN] guard: skills approve (PreToolUse Bash + file tools) — missing or drifted: PreToolUse matcher="Bash" skills guard-hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" skills guard-hook; the agent can run skills approve unguarded (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
+[OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
+--- stderr ---
+
+# hooks is an array
+$ status
+exit: 1
+--- stdout ---
+[OK  ] binary: <WORLD>/home/.claude/bin/gentle-ai-overlay
+[FAIL] hook: UserPromptSubmit (propagate) — hooks key missing in settings.json
+[FAIL] hook: PreToolUse matcher="Agent" (gate-task) — hooks key missing in settings.json
+[WARN] hook: SessionEnd (sync-trigger) — no SessionEnd entry referencing gentle-ai-overlay; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+[WARN] hook: PreToolUse matcher="Bash" (review-receipt) — no PreToolUse entry with matcher="Bash" referencing gentle-ai-overlay; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+[WARN] guard: shaper clearance record (PreToolUse + permissions.deny) — missing PreToolUse matcher="Bash" guard hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" guard hook, permissions.deny Bash(*shaper clearance record*); clearance recording is unguarded against the model (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+[WARN] hooks: projection (UserPromptSubmit + PreToolUse gates) — missing or drifted: UserPromptSubmit projection hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" projection hook, PreToolUse matcher="^mcp__([A-Za-z0-9-]+_)*longterm-mem__query$" projection hook; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[WARN] guard: skills approve (PreToolUse Bash + file tools) — missing or drifted: PreToolUse matcher="Bash" skills guard-hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" skills guard-hook; the agent can run skills approve unguarded (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
+[OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
+--- stderr ---
+
+# hooks is a string
+$ status
+exit: 1
+--- stdout ---
+[OK  ] binary: <WORLD>/home/.claude/bin/gentle-ai-overlay
+[FAIL] hook: UserPromptSubmit (propagate) — hooks key missing in settings.json
+[FAIL] hook: PreToolUse matcher="Agent" (gate-task) — hooks key missing in settings.json
+[WARN] hook: SessionEnd (sync-trigger) — no SessionEnd entry referencing gentle-ai-overlay; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+[WARN] hook: PreToolUse matcher="Bash" (review-receipt) — no PreToolUse entry with matcher="Bash" referencing gentle-ai-overlay; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+[WARN] guard: shaper clearance record (PreToolUse + permissions.deny) — missing PreToolUse matcher="Bash" guard hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" guard hook, permissions.deny Bash(*shaper clearance record*); clearance recording is unguarded against the model (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+[WARN] hooks: projection (UserPromptSubmit + PreToolUse gates) — missing or drifted: UserPromptSubmit projection hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" projection hook, PreToolUse matcher="^mcp__([A-Za-z0-9-]+_)*longterm-mem__query$" projection hook; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[WARN] guard: skills approve (PreToolUse Bash + file tools) — missing or drifted: PreToolUse matcher="Bash" skills guard-hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" skills guard-hook; the agent can run skills approve unguarded (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
+[OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
+--- stderr ---
+
+# hooks is an empty object: the keys are there, the entries are not
+$ status
+exit: 1
+--- stdout ---
+[OK  ] binary: <WORLD>/home/.claude/bin/gentle-ai-overlay
+[FAIL] hook: UserPromptSubmit (propagate) — no UserPromptSubmit entry referencing gentle-ai-overlay
+[FAIL] hook: PreToolUse matcher="Agent" (gate-task) — no PreToolUse entry with matcher="Agent" referencing gentle-ai-overlay
+[WARN] hook: SessionEnd (sync-trigger) — no SessionEnd entry referencing gentle-ai-overlay; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+[WARN] hook: PreToolUse matcher="Bash" (review-receipt) — no PreToolUse entry with matcher="Bash" referencing gentle-ai-overlay; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+[WARN] guard: shaper clearance record (PreToolUse + permissions.deny) — missing PreToolUse matcher="Bash" guard hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" guard hook, permissions.deny Bash(*shaper clearance record*); clearance recording is unguarded against the model (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+[WARN] hooks: projection (UserPromptSubmit + PreToolUse gates) — missing or drifted: UserPromptSubmit projection hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" projection hook, PreToolUse matcher="^mcp__([A-Za-z0-9-]+_)*longterm-mem__query$" projection hook; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[WARN] guard: skills approve (PreToolUse Bash + file tools) — missing or drifted: PreToolUse matcher="Bash" skills guard-hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" skills guard-hook; the agent can run skills approve unguarded (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
+[OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
+--- stderr ---
+
+# only entries of someone else
+$ status
+exit: 1
+--- stdout ---
+[OK  ] binary: <WORLD>/home/.claude/bin/gentle-ai-overlay
+[FAIL] hook: UserPromptSubmit (propagate) — no UserPromptSubmit entry referencing gentle-ai-overlay
+[FAIL] hook: PreToolUse matcher="Agent" (gate-task) — no PreToolUse entry with matcher="Agent" referencing gentle-ai-overlay
+[WARN] hook: SessionEnd (sync-trigger) — no SessionEnd entry referencing gentle-ai-overlay; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+[WARN] hook: PreToolUse matcher="Bash" (review-receipt) — no PreToolUse entry with matcher="Bash" referencing gentle-ai-overlay; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+[WARN] guard: shaper clearance record (PreToolUse + permissions.deny) — missing PreToolUse matcher="Bash" guard hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" guard hook, permissions.deny Bash(*shaper clearance record*); clearance recording is unguarded against the model (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+[WARN] hooks: projection (UserPromptSubmit + PreToolUse gates) — missing or drifted: UserPromptSubmit projection hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" projection hook, PreToolUse matcher="^mcp__([A-Za-z0-9-]+_)*longterm-mem__query$" projection hook; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[WARN] guard: skills approve (PreToolUse Bash + file tools) — missing or drifted: PreToolUse matcher="Bash" skills guard-hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" skills guard-hook; the agent can run skills approve unguarded (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
+[OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
+--- stderr ---
+
+# entries that are not objects
+$ status
+exit: 1
+--- stdout ---
+[OK  ] binary: <WORLD>/home/.claude/bin/gentle-ai-overlay
+[FAIL] hook: UserPromptSubmit (propagate) — no UserPromptSubmit entry referencing gentle-ai-overlay
+[FAIL] hook: PreToolUse matcher="Agent" (gate-task) — no PreToolUse entry with matcher="Agent" referencing gentle-ai-overlay
+[WARN] hook: SessionEnd (sync-trigger) — no SessionEnd entry referencing gentle-ai-overlay; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+[WARN] hook: PreToolUse matcher="Bash" (review-receipt) — no PreToolUse entry with matcher="Bash" referencing gentle-ai-overlay; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+[WARN] guard: shaper clearance record (PreToolUse + permissions.deny) — missing PreToolUse matcher="Bash" guard hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" guard hook, permissions.deny Bash(*shaper clearance record*); clearance recording is unguarded against the model (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+[WARN] hooks: projection (UserPromptSubmit + PreToolUse gates) — missing or drifted: UserPromptSubmit projection hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" projection hook, PreToolUse matcher="^mcp__([A-Za-z0-9-]+_)*longterm-mem__query$" projection hook; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[WARN] guard: skills approve (PreToolUse Bash + file tools) — missing or drifted: PreToolUse matcher="Bash" skills guard-hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" skills guard-hook; the agent can run skills approve unguarded (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
+[OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
+--- stderr ---
+
+# events that are not arrays
+$ status
+exit: 1
+--- stdout ---
+[OK  ] binary: <WORLD>/home/.claude/bin/gentle-ai-overlay
+[FAIL] hook: UserPromptSubmit (propagate) — no UserPromptSubmit entry referencing gentle-ai-overlay
+[FAIL] hook: PreToolUse matcher="Agent" (gate-task) — no PreToolUse entry with matcher="Agent" referencing gentle-ai-overlay
+[WARN] hook: SessionEnd (sync-trigger) — no SessionEnd entry referencing gentle-ai-overlay; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+[WARN] hook: PreToolUse matcher="Bash" (review-receipt) — no PreToolUse entry with matcher="Bash" referencing gentle-ai-overlay; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+[WARN] guard: shaper clearance record (PreToolUse + permissions.deny) — missing PreToolUse matcher="Bash" guard hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" guard hook, permissions.deny Bash(*shaper clearance record*); clearance recording is unguarded against the model (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+[WARN] hooks: projection (UserPromptSubmit + PreToolUse gates) — missing or drifted: UserPromptSubmit projection hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" projection hook, PreToolUse matcher="^mcp__([A-Za-z0-9-]+_)*longterm-mem__query$" projection hook; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[WARN] guard: skills approve (PreToolUse Bash + file tools) — missing or drifted: PreToolUse matcher="Bash" skills guard-hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" skills guard-hook; the agent can run skills approve unguarded (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
+[OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
+--- stderr ---
+
+# an inner hooks list that is not an array
+$ status
+exit: 1
+--- stdout ---
+[OK  ] binary: <WORLD>/home/.claude/bin/gentle-ai-overlay
+[FAIL] hook: UserPromptSubmit (propagate) — no UserPromptSubmit entry referencing gentle-ai-overlay
+[FAIL] hook: PreToolUse matcher="Agent" (gate-task) — no PreToolUse entry with matcher="Agent" referencing gentle-ai-overlay
+[WARN] hook: SessionEnd (sync-trigger) — no SessionEnd entry referencing gentle-ai-overlay; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+[WARN] hook: PreToolUse matcher="Bash" (review-receipt) — no PreToolUse entry with matcher="Bash" referencing gentle-ai-overlay; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+[WARN] guard: shaper clearance record (PreToolUse + permissions.deny) — missing PreToolUse matcher="Bash" guard hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" guard hook, permissions.deny Bash(*shaper clearance record*); clearance recording is unguarded against the model (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+[WARN] hooks: projection (UserPromptSubmit + PreToolUse gates) — missing or drifted: UserPromptSubmit projection hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" projection hook, PreToolUse matcher="^mcp__([A-Za-z0-9-]+_)*longterm-mem__query$" projection hook; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[WARN] guard: skills approve (PreToolUse Bash + file tools) — missing or drifted: PreToolUse matcher="Bash" skills guard-hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" skills guard-hook; the agent can run skills approve unguarded (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
+[OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
+--- stderr ---
+
+# commands that are not strings
+$ status
+exit: 1
+--- stdout ---
+[OK  ] binary: <WORLD>/home/.claude/bin/gentle-ai-overlay
+[FAIL] hook: UserPromptSubmit (propagate) — no UserPromptSubmit entry referencing gentle-ai-overlay
+[FAIL] hook: PreToolUse matcher="Agent" (gate-task) — no PreToolUse entry with matcher="Agent" referencing gentle-ai-overlay
+[WARN] hook: SessionEnd (sync-trigger) — no SessionEnd entry referencing gentle-ai-overlay; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+[WARN] hook: PreToolUse matcher="Bash" (review-receipt) — no PreToolUse entry with matcher="Bash" referencing gentle-ai-overlay; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+[WARN] guard: shaper clearance record (PreToolUse + permissions.deny) — missing PreToolUse matcher="Bash" guard hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" guard hook, permissions.deny Bash(*shaper clearance record*); clearance recording is unguarded against the model (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+[WARN] hooks: projection (UserPromptSubmit + PreToolUse gates) — missing or drifted: UserPromptSubmit projection hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" projection hook, PreToolUse matcher="^mcp__([A-Za-z0-9-]+_)*longterm-mem__query$" projection hook; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[WARN] guard: skills approve (PreToolUse Bash + file tools) — missing or drifted: PreToolUse matcher="Bash" skills guard-hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" skills guard-hook; the agent can run skills approve unguarded (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
+[OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
+--- stderr ---
+
+# the matcher is compared as it is written: agent and 5 are not Agent
+$ status
+exit: 1
+--- stdout ---
+[OK  ] binary: <WORLD>/home/.claude/bin/gentle-ai-overlay
+[FAIL] hook: UserPromptSubmit (propagate) — no UserPromptSubmit entry referencing gentle-ai-overlay
+[FAIL] hook: PreToolUse matcher="Agent" (gate-task) — no PreToolUse entry with matcher="Agent" referencing gentle-ai-overlay
+[WARN] hook: SessionEnd (sync-trigger) — no SessionEnd entry referencing gentle-ai-overlay; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+[WARN] hook: PreToolUse matcher="Bash" (review-receipt) — no PreToolUse entry with matcher="Bash" referencing gentle-ai-overlay; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+[WARN] guard: shaper clearance record (PreToolUse + permissions.deny) — missing PreToolUse matcher="Bash" guard hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" guard hook, permissions.deny Bash(*shaper clearance record*); clearance recording is unguarded against the model (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+[WARN] hooks: projection (UserPromptSubmit + PreToolUse gates) — missing or drifted: UserPromptSubmit projection hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" projection hook, PreToolUse matcher="^mcp__([A-Za-z0-9-]+_)*longterm-mem__query$" projection hook; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[WARN] guard: skills approve (PreToolUse Bash + file tools) — missing or drifted: PreToolUse matcher="Bash" skills guard-hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" skills guard-hook; the agent can run skills approve unguarded (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
+[OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
+--- stderr ---
+
+# the binary in the two base hooks and nothing else: the other families are WARN
+$ status
+exit: 2
+--- stdout ---
+[OK  ] binary: <WORLD>/home/.claude/bin/gentle-ai-overlay
+[OK  ] hook: UserPromptSubmit (propagate)
+[OK  ] hook: PreToolUse matcher="Agent" (gate-task)
+[WARN] hook: SessionEnd (sync-trigger) — no SessionEnd entry referencing gentle-ai-overlay; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+[WARN] hook: PreToolUse matcher="Bash" (review-receipt) — no PreToolUse entry with matcher="Bash" referencing gentle-ai-overlay; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+[WARN] guard: shaper clearance record (PreToolUse + permissions.deny) — missing PreToolUse matcher="Bash" guard hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" guard hook, permissions.deny Bash(*shaper clearance record*); clearance recording is unguarded against the model (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+[WARN] hooks: projection (UserPromptSubmit + PreToolUse gates) — missing or drifted: UserPromptSubmit projection hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" projection hook, PreToolUse matcher="^mcp__([A-Za-z0-9-]+_)*longterm-mem__query$" projection hook; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[WARN] guard: skills approve (PreToolUse Bash + file tools) — missing or drifted: PreToolUse matcher="Bash" skills guard-hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" skills guard-hook; the agent can run skills approve unguarded (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
+[OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
+--- stderr ---
+
+# the binary in SessionEnd and in Bash, without the words of their families
+$ status
+exit: 1
+--- stdout ---
+[OK  ] binary: <WORLD>/home/.claude/bin/gentle-ai-overlay
+[FAIL] hook: UserPromptSubmit (propagate) — no UserPromptSubmit entry referencing gentle-ai-overlay
+[FAIL] hook: PreToolUse matcher="Agent" (gate-task) — no PreToolUse entry with matcher="Agent" referencing gentle-ai-overlay
+[WARN] hook: SessionEnd (sync-trigger) — no SessionEnd entry referencing gentle-ai-overlay; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+[WARN] hook: PreToolUse matcher="Bash" (review-receipt) — no PreToolUse entry with matcher="Bash" referencing gentle-ai-overlay; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+[WARN] guard: shaper clearance record (PreToolUse + permissions.deny) — missing PreToolUse matcher="Bash" guard hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" guard hook, permissions.deny Bash(*shaper clearance record*); clearance recording is unguarded against the model (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+[WARN] hooks: projection (UserPromptSubmit + PreToolUse gates) — missing or drifted: UserPromptSubmit projection hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" projection hook, PreToolUse matcher="^mcp__([A-Za-z0-9-]+_)*longterm-mem__query$" projection hook; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[WARN] guard: skills approve (PreToolUse Bash + file tools) — missing or drifted: PreToolUse matcher="Bash" skills guard-hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" skills guard-hook; the agent can run skills approve unguarded (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
+[OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
+--- stderr ---
+
+# the words of the families without the binary
+$ status
+exit: 1
+--- stdout ---
+[OK  ] binary: <WORLD>/home/.claude/bin/gentle-ai-overlay
+[FAIL] hook: UserPromptSubmit (propagate) — no UserPromptSubmit entry referencing gentle-ai-overlay
+[FAIL] hook: PreToolUse matcher="Agent" (gate-task) — no PreToolUse entry with matcher="Agent" referencing gentle-ai-overlay
+[WARN] hook: SessionEnd (sync-trigger) — no SessionEnd entry referencing gentle-ai-overlay; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+[WARN] hook: PreToolUse matcher="Bash" (review-receipt) — no PreToolUse entry with matcher="Bash" referencing gentle-ai-overlay; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+[WARN] guard: shaper clearance record (PreToolUse + permissions.deny) — missing PreToolUse matcher="Bash" guard hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" guard hook, permissions.deny Bash(*shaper clearance record*); clearance recording is unguarded against the model (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+[WARN] hooks: projection (UserPromptSubmit + PreToolUse gates) — missing or drifted: UserPromptSubmit projection hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" projection hook, PreToolUse matcher="^mcp__([A-Za-z0-9-]+_)*longterm-mem__query$" projection hook; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[WARN] guard: skills approve (PreToolUse Bash + file tools) — missing or drifted: PreToolUse matcher="Bash" skills guard-hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" skills guard-hook; the agent can run skills approve unguarded (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
+[OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
+--- stderr ---
+
+# the binary and the words in different inner hooks of one entry
+$ status
+exit: 1
+--- stdout ---
+[OK  ] binary: <WORLD>/home/.claude/bin/gentle-ai-overlay
+[FAIL] hook: UserPromptSubmit (propagate) — no UserPromptSubmit entry referencing gentle-ai-overlay
+[FAIL] hook: PreToolUse matcher="Agent" (gate-task) — no PreToolUse entry with matcher="Agent" referencing gentle-ai-overlay
+[OK  ] hook: SessionEnd (sync-trigger)
+[WARN] hook: PreToolUse matcher="Bash" (review-receipt) — no PreToolUse entry with matcher="Bash" referencing gentle-ai-overlay; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+[WARN] guard: shaper clearance record (PreToolUse + permissions.deny) — missing PreToolUse matcher="Bash" guard hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" guard hook, permissions.deny Bash(*shaper clearance record*); clearance recording is unguarded against the model (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+[WARN] hooks: projection (UserPromptSubmit + PreToolUse gates) — missing or drifted: UserPromptSubmit projection hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" projection hook, PreToolUse matcher="^mcp__([A-Za-z0-9-]+_)*longterm-mem__query$" projection hook; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[WARN] guard: skills approve (PreToolUse Bash + file tools) — missing or drifted: PreToolUse matcher="Bash" skills guard-hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" skills guard-hook; the agent can run skills approve unguarded (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
+[OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
+--- stderr ---
+

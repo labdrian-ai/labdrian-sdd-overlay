@@ -1,0 +1,60 @@
+# with no --target the runtime is opencode
+$ runtime status
+exit: 1
+--- stdout ---
+[opencode] status: unsupported — OpenCode plugin not installed
+--- stderr ---
+
+# status claude
+$ runtime status --target claude
+exit: 1
+--- stdout ---
+[claude] status: unsupported — Claude settings file not found at <WORLD>/home/.claude/settings.json
+--- stderr ---
+
+# status codex
+$ runtime status --target codex
+exit: 1
+--- stdout ---
+[codex] status: partial — Codex lifecycle manifest not found at <WORLD>/home/.codex/labdrian-runtime-lifecycle.json
+--- stderr ---
+
+# status opencode
+$ runtime status --target opencode
+exit: 1
+--- stdout ---
+[opencode] status: unsupported — OpenCode plugin not installed
+--- stderr ---
+
+# status pi
+$ runtime status --target pi
+exit: 1
+--- stdout ---
+[pi] status: unsupported — labdrian-pi package is not built at <WORLD>/home/.labdrian-overlay/pi/labdrian-pi (run: labdrian-overlay apply --target pi). 'pi --no-extensions' disables the before_agent_start contract-gate extension for that session, and 'pi --no-skills' disables skill discovery, for that session only; neither flag's use is detected at runtime (short aliases: -ne and -ns)
+--- stderr ---
+
+# status all
+$ runtime status --target all
+exit: 1
+--- stdout ---
+[claude] status: unsupported — Claude settings file not found at <WORLD>/home/.claude/settings.json
+[opencode] status: unsupported — OpenCode plugin not installed
+[codex] status: partial — Codex lifecycle manifest not found at <WORLD>/home/.codex/labdrian-runtime-lifecycle.json
+[pi] status: unsupported — labdrian-pi package is not built at <WORLD>/home/.labdrian-overlay/pi/labdrian-pi (run: labdrian-overlay apply --target pi). 'pi --no-extensions' disables the before_agent_start contract-gate extension for that session, and 'pi --no-skills' disables skill discovery, for that session only; neither flag's use is detected at runtime (short aliases: -ne and -ns)
+--- stderr ---
+
+# a target is trimmed and the case matters
+$ runtime status --target  claude 
+exit: 1
+--- stdout ---
+[claude] status: unsupported — Claude settings file not found at <WORLD>/home/.claude/settings.json
+--- stderr ---
+
+# a target in capitals is not one
+$ runtime status --target Claude
+exit: 1
+--- stdout ---
+--- stderr ---
+unknown target "Claude"
+<USAGE>
+

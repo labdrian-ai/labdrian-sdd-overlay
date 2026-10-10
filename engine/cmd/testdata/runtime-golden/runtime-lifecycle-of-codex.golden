@@ -1,0 +1,67 @@
+# status codex
+$ runtime status --target codex
+exit: 1
+--- stdout ---
+[codex] status: partial — Codex lifecycle manifest not found at <WORLD>/home/.codex/labdrian-runtime-lifecycle.json
+--- stderr ---
+
+# install codex
+$ runtime install --target codex
+exit: 0
+--- stdout ---
+[codex] install: restart_required — Codex lifecycle manifest installed; restart long-running Codex processes to pick up updates
+--- stderr ---
+
+# status codex
+$ runtime status --target codex
+exit: 1
+--- stdout ---
+[codex] status: partial — Codex lifecycle manifest is present and managed, but activation/reload state is unverified — reasons: activation/reload proof unavailable until Codex session lifecycle integration is implemented
+--- stderr ---
+
+# install codex
+$ runtime install --target codex
+exit: 0
+--- stdout ---
+[codex] install: restart_required — Codex lifecycle manifest installed; restart long-running Codex processes to pick up updates
+--- stderr ---
+
+# update codex
+$ runtime update --target codex
+exit: 0
+--- stdout ---
+[codex] update: restart_required — Codex lifecycle manifest updated; restart long-running Codex processes to pick up updates
+--- stderr ---
+
+# status codex
+$ runtime status --target codex
+exit: 1
+--- stdout ---
+[codex] status: partial — Codex lifecycle manifest is present and managed, but activation/reload state is unverified — reasons: activation/reload proof unavailable until Codex session lifecycle integration is implemented
+--- stderr ---
+
+# uninstall codex
+$ runtime uninstall --target codex
+exit: 0
+--- stdout ---
+[codex] uninstall: restart_required — Codex lifecycle manifest removed; restart long-running Codex processes
+--- stderr ---
+
+# status codex
+$ runtime status --target codex
+exit: 1
+--- stdout ---
+[codex] status: partial — Codex lifecycle manifest not found at <WORLD>/home/.codex/labdrian-runtime-lifecycle.json
+--- stderr ---
+
+# uninstall codex
+$ runtime uninstall --target codex
+exit: 0
+--- stdout ---
+[codex] uninstall: restart_required — Codex lifecycle manifest removed; restart long-running Codex processes
+--- stderr ---
+
+# what is left
+--- tree of home ---
+.codex/
+

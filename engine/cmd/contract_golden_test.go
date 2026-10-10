@@ -12,7 +12,15 @@ import (
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/status"
 )
+
+// readerFunc is the read of the in-memory file system of a world, as the port the contract check
+// asks for.
+type readerFunc func(string) ([]byte, error)
+
+func (f readerFunc) ReadFile(path string) ([]byte, error) { return f(path) }
 
 // The golden files under testdata/contract-golden record what the verbs that read a
 // contract document print today: 'gate-task' (the PreToolUse hook that injects a contract
@@ -178,8 +186,8 @@ func (w *contractWorld) withRegistry(contractContent string) {
 // checkContract records the contract check of the status verb for the contract in the
 // in-memory file system.
 func (w *contractWorld) checkContract(label string) {
-	res := checkContract(contractFile, w.readFile)
-	w.write("# %s\nlabel: %s\nok: %v\nnote: %s\n\n", label, res.label, res.ok, res.note)
+	res := status.CheckContract(contractFile, readerFunc(w.readFile))
+	w.write("# %s\nlabel: %s\nok: %v\nnote: %s\n\n", label, res.Label, res.Level != status.Fail, res.Note)
 }
 
 // opencodeInstall records 'runtime install --target opencode' with a temporary overlay whose

@@ -1,0 +1,104 @@
+# status with nothing installed
+$ runtime status --component longterm-mem
+exit: 1
+--- stdout ---
+[longterm-mem] status: partial — longterm-mem per-runtime status — reasons: claude: partial — missing binary; opencode: partial — missing binary; codex: partial — missing binary
+--- stderr ---
+
+# install with nothing installed
+$ runtime install --component longterm-mem
+exit: 1
+--- stdout ---
+[longterm-mem] install: partial — longterm-mem per-runtime status — reasons: claude: partial — missing binary; opencode: partial — missing binary; codex: partial — missing binary
+--- stderr ---
+
+# update with nothing installed
+$ runtime update --component longterm-mem
+exit: 1
+--- stdout ---
+--- stderr ---
+error: longterm-mem does not support the 'update' action; reinstall instead (--component longterm-mem install)
+
+# uninstall with nothing installed
+$ runtime uninstall --component longterm-mem
+exit: 0
+--- stdout ---
+[longterm-mem] uninstall: supported — longterm-mem registration removed — reasons: claude: runtime not installed on this machine; nothing to report; opencode: runtime not installed on this machine; nothing to report; codex: runtime not installed on this machine; nothing to report
+--- stderr ---
+
+# status with the binary and the runtimes
+$ runtime status --component longterm-mem --state-dir <WORLD>/state
+exit: 0
+--- stdout ---
+[longterm-mem] status: supported — longterm-mem per-runtime status — reasons: claude: supported — runtime not installed; opencode: supported — runtime not installed; codex: supported — runtime not installed
+--- stderr ---
+
+# install with the binary and the runtimes
+$ runtime install --component longterm-mem --state-dir <WORLD>/state
+exit: 0
+--- stdout ---
+[longterm-mem] install: supported — longterm-mem per-runtime status — reasons: claude: supported — runtime not installed; opencode: supported — runtime not installed; codex: supported — runtime not installed
+--- stderr ---
+
+# status with the binary and the runtimes
+$ runtime status --component longterm-mem --state-dir <WORLD>/state
+exit: 0
+--- stdout ---
+[longterm-mem] status: supported — longterm-mem per-runtime status — reasons: claude: supported — runtime not installed; opencode: supported — runtime not installed; codex: supported — runtime not installed
+--- stderr ---
+
+# update with the binary and the runtimes
+$ runtime update --component longterm-mem --state-dir <WORLD>/state
+exit: 1
+--- stdout ---
+--- stderr ---
+error: longterm-mem does not support the 'update' action; reinstall instead (--component longterm-mem install)
+
+# uninstall with the binary and the runtimes
+$ runtime uninstall --component longterm-mem --state-dir <WORLD>/state
+exit: 0
+--- stdout ---
+[longterm-mem] uninstall: supported — longterm-mem registration removed — reasons: claude: runtime not installed on this machine; nothing to report; opencode: runtime not installed on this machine; nothing to report; codex: runtime not installed on this machine; nothing to report
+--- stderr ---
+
+# status with the binary and the runtimes
+$ runtime status --component longterm-mem --state-dir <WORLD>/state
+exit: 0
+--- stdout ---
+[longterm-mem] status: supported — longterm-mem per-runtime status — reasons: claude: supported — runtime not installed; opencode: supported — runtime not installed; codex: supported — runtime not installed
+--- stderr ---
+
+# the target is not read by the component
+$ runtime status --component longterm-mem --target pi --state-dir <WORLD>/state
+exit: 0
+--- stdout ---
+[longterm-mem] status: supported — longterm-mem per-runtime status — reasons: claude: supported — runtime not installed; opencode: supported — runtime not installed; codex: supported — runtime not installed
+--- stderr ---
+
+# the config root is not read by the component
+$ runtime status --component longterm-mem --config-root <WORLD>/elsewhere --state-dir <WORLD>/state
+exit: 0
+--- stdout ---
+[longterm-mem] status: supported — longterm-mem per-runtime status — reasons: claude: supported — runtime not installed; opencode: supported — runtime not installed; codex: supported — runtime not installed
+--- stderr ---
+
+# the binary is not executable
+$ runtime install --component longterm-mem --state-dir <WORLD>/state
+exit: 1
+--- stdout ---
+[longterm-mem] install: partial — longterm-mem per-runtime status — reasons: claude: partial — missing binary; opencode: partial — missing binary; codex: partial — missing binary
+--- stderr ---
+
+# what is left
+--- tree of home ---
+.claude/
+.codex/
+.config/
+.config/opencode/
+.labdrian-overlay/
+
+--- tree of state ---
+bin/
+bin/longterm-mem
+longterm-mem-registration.json
+

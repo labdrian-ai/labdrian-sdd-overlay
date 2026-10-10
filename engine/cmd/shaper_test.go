@@ -15,7 +15,6 @@ import (
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gitprov"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/hookwire"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/shaper"
 )
 
@@ -622,21 +621,6 @@ func TestShaperGuardHook_ReadsAtMostTheBoundPlusOneByte(t *testing.T) {
 	// endlessReader (projection_hook_test.go) counts the bytes it was asked for.
 	if limit := hookwire.MaxToolCallBytes + 1; src.read != limit {
 		t.Errorf("read %d bytes, want exactly %d: up to one byte past the bound", src.read, limit)
-	}
-}
-
-func TestCheckShaperClearanceGuard(t *testing.T) {
-	full := buildSettingsWithHooks("/x/gentle-ai-overlay")
-	if c := checkShaperClearanceGuard(full, nil, "s.json"); !c.ok || c.degraded {
-		t.Errorf("full guard: %+v", c)
-	}
-	delete(full, "permissions")
-	c := checkShaperClearanceGuard(full, nil, "s.json")
-	if !c.ok || !c.degraded || !strings.Contains(c.note, settings.ShaperClearanceDenyRule) || !strings.Contains(c.note, "speed bump") {
-		t.Errorf("missing deny rule: %+v", c)
-	}
-	if c := checkShaperClearanceGuard(nil, nil, "s.json"); !c.degraded {
-		t.Errorf("absent settings: %+v", c)
 	}
 }
 

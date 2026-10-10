@@ -1,0 +1,69 @@
+# status claude
+$ runtime status --target claude
+exit: 1
+--- stdout ---
+[claude] status: unsupported — Claude settings file not found at <WORLD>/home/.claude/settings.json
+--- stderr ---
+
+# install claude
+$ runtime install --target claude
+exit: 0
+--- stdout ---
+[claude] install: restart_required — Claude lifecycle hooks installed; restart Claude to load hook changes
+--- stderr ---
+
+# status claude
+$ runtime status --target claude
+exit: 0
+--- stdout ---
+[claude] status: supported — Claude lifecycle hooks are installed and owned
+--- stderr ---
+
+# install claude
+$ runtime install --target claude
+exit: 0
+--- stdout ---
+[claude] install: restart_required — Claude lifecycle hooks installed; restart Claude to load hook changes
+--- stderr ---
+
+# update claude
+$ runtime update --target claude
+exit: 0
+--- stdout ---
+[claude] update: restart_required — Claude lifecycle hooks updated; restart Claude to load hook changes
+--- stderr ---
+
+# status claude
+$ runtime status --target claude
+exit: 0
+--- stdout ---
+[claude] status: supported — Claude lifecycle hooks are installed and owned
+--- stderr ---
+
+# uninstall claude
+$ runtime uninstall --target claude
+exit: 0
+--- stdout ---
+[claude] uninstall: restart_required — Claude lifecycle hooks removed; restart Claude to unload stale hook processes
+--- stderr ---
+
+# status claude
+$ runtime status --target claude
+exit: 1
+--- stdout ---
+[claude] status: partial — Claude lifecycle hooks are not fully owned/installed in <WORLD>/home/.claude/settings.json; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+--- stderr ---
+
+# uninstall claude
+$ runtime uninstall --target claude
+exit: 0
+--- stdout ---
+[claude] uninstall: restart_required — Claude lifecycle hooks removed; restart Claude to unload stale hook processes
+--- stderr ---
+
+# what is left
+--- tree of home ---
+.claude/
+.claude/settings.json
+.claude/settings.json.bak
+

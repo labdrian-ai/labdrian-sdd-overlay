@@ -20,6 +20,7 @@ import (
 // locator is the adapter under test; it has no state.
 var locator Locator
 
+// writeFixtureFile writes content to path, making the directories above it.
 func writeFixtureFile(t *testing.T, path, content string) {
 	t.Helper()
 	repotest.WriteFile(t, path, content)
@@ -310,21 +311,30 @@ func strPtr(s string) *string { return &s }
 
 // --- Locator.RepoKey and commonDir ---------------------------------------------
 
+// wantRepoKey is the key the design specifies for a git common directory: the hex SHA-256 of its
+// symbolic-link-resolved path, computed here from the fixture and not by the code under test.
 func wantRepoKey(t *testing.T, commonDir string) string {
 	t.Helper()
 	return repotest.WantKey(t, commonDir)
 }
 
+// fixtureRepo builds a plain repository called name under a fresh temporary directory: a .git
+// directory holding a HEAD of forty a's. It returns the root.
 func fixtureRepo(t *testing.T, name string) string {
 	t.Helper()
 	return repotest.Repo(t, name)
 }
 
+// fixtureLinkedWorktree adds a linked worktree called name to the repository at mainRoot, in the
+// layout `git worktree add` makes: a .git file that points at .git/worktrees/<name>, whose
+// commondir leads back to the main .git and whose HEAD is forty b's. It returns the worktree root.
 func fixtureLinkedWorktree(t *testing.T, mainRoot, name string) string {
 	t.Helper()
 	return repotest.LinkedWorktree(t, mainRoot, name)
 }
 
+// mustRepoKey asks the locator under test for the key of the repository that holds cwd, and fails
+// the test when there is none or the answer is not 64 lowercase hexadecimal digits.
 func mustRepoKey(t *testing.T, cwd string) string {
 	t.Helper()
 	return repotest.MustKey(t, locator, cwd)

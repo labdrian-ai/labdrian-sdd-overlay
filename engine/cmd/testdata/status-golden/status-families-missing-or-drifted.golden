@@ -1,0 +1,208 @@
+# no SessionEnd entry: WARN
+$ status
+exit: 2
+--- stdout ---
+[OK  ] binary: <WORLD>/home/.claude/bin/gentle-ai-overlay
+[OK  ] hook: UserPromptSubmit (propagate)
+[OK  ] hook: PreToolUse matcher="Agent" (gate-task)
+[WARN] hook: SessionEnd (sync-trigger) — no SessionEnd entry referencing gentle-ai-overlay; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+[OK  ] hook: PreToolUse matcher="Bash" (review-receipt)
+[OK  ] guard: shaper clearance record (PreToolUse + permissions.deny) — installed; the guard is a speed bump, not a security boundary
+[OK  ] hooks: projection (UserPromptSubmit + PreToolUse gates) — installed; restart Claude Code to load hook changes if this session started earlier
+[OK  ] guard: skills approve (PreToolUse Bash + file tools) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
+[OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
+[OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
+--- stderr ---
+
+# no review-receipt entry: WARN
+$ status
+exit: 2
+--- stdout ---
+[OK  ] binary: <WORLD>/home/.claude/bin/gentle-ai-overlay
+[OK  ] hook: UserPromptSubmit (propagate)
+[OK  ] hook: PreToolUse matcher="Agent" (gate-task)
+[OK  ] hook: SessionEnd (sync-trigger)
+[WARN] hook: PreToolUse matcher="Bash" (review-receipt) — no PreToolUse entry with matcher="Bash" referencing gentle-ai-overlay; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+[OK  ] guard: shaper clearance record (PreToolUse + permissions.deny) — installed; the guard is a speed bump, not a security boundary
+[OK  ] hooks: projection (UserPromptSubmit + PreToolUse gates) — installed; restart Claude Code to load hook changes if this session started earlier
+[OK  ] guard: skills approve (PreToolUse Bash + file tools) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
+[OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
+[OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
+--- stderr ---
+
+# no deny rule: the shaper guard is WARN
+$ status
+exit: 2
+--- stdout ---
+[OK  ] binary: <WORLD>/home/.claude/bin/gentle-ai-overlay
+[OK  ] hook: UserPromptSubmit (propagate)
+[OK  ] hook: PreToolUse matcher="Agent" (gate-task)
+[OK  ] hook: SessionEnd (sync-trigger)
+[OK  ] hook: PreToolUse matcher="Bash" (review-receipt)
+[WARN] guard: shaper clearance record (PreToolUse + permissions.deny) — missing permissions.deny Bash(*shaper clearance record*); clearance recording is unguarded against the model (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+[OK  ] hooks: projection (UserPromptSubmit + PreToolUse gates) — installed; restart Claude Code to load hook changes if this session started earlier
+[OK  ] guard: skills approve (PreToolUse Bash + file tools) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
+[OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
+[OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
+--- stderr ---
+
+# hooks are disabled altogether: the guards say so
+$ status
+exit: 2
+--- stdout ---
+[OK  ] binary: <WORLD>/home/.claude/bin/gentle-ai-overlay
+[OK  ] hook: UserPromptSubmit (propagate)
+[OK  ] hook: PreToolUse matcher="Agent" (gate-task)
+[OK  ] hook: SessionEnd (sync-trigger)
+[OK  ] hook: PreToolUse matcher="Bash" (review-receipt)
+[WARN] guard: shaper clearance record (PreToolUse + permissions.deny) — missing hooks enabled (disableAllHooks is true); clearance recording is unguarded against the model (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+[OK  ] hooks: projection (UserPromptSubmit + PreToolUse gates) — installed; restart Claude Code to load hook changes if this session started earlier
+[WARN] guard: skills approve (PreToolUse Bash + file tools) — missing or drifted: hooks enabled (disableAllHooks is true); the agent can run skills approve unguarded (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
+[OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
+--- stderr ---
+
+# hooks are not disabled when the key is false
+$ status
+exit: 0
+--- stdout ---
+[OK  ] binary: <WORLD>/home/.claude/bin/gentle-ai-overlay
+[OK  ] hook: UserPromptSubmit (propagate)
+[OK  ] hook: PreToolUse matcher="Agent" (gate-task)
+[OK  ] hook: SessionEnd (sync-trigger)
+[OK  ] hook: PreToolUse matcher="Bash" (review-receipt)
+[OK  ] guard: shaper clearance record (PreToolUse + permissions.deny) — installed; the guard is a speed bump, not a security boundary
+[OK  ] hooks: projection (UserPromptSubmit + PreToolUse gates) — installed; restart Claude Code to load hook changes if this session started earlier
+[OK  ] guard: skills approve (PreToolUse Bash + file tools) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
+[OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
+[OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
+--- stderr ---
+
+# no shaper guard entries
+$ status
+exit: 2
+--- stdout ---
+[OK  ] binary: <WORLD>/home/.claude/bin/gentle-ai-overlay
+[OK  ] hook: UserPromptSubmit (propagate)
+[OK  ] hook: PreToolUse matcher="Agent" (gate-task)
+[OK  ] hook: SessionEnd (sync-trigger)
+[OK  ] hook: PreToolUse matcher="Bash" (review-receipt)
+[WARN] guard: shaper clearance record (PreToolUse + permissions.deny) — missing PreToolUse matcher="Bash" guard hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" guard hook; clearance recording is unguarded against the model (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+[OK  ] hooks: projection (UserPromptSubmit + PreToolUse gates) — installed; restart Claude Code to load hook changes if this session started earlier
+[OK  ] guard: skills approve (PreToolUse Bash + file tools) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
+[OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
+[OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
+--- stderr ---
+
+# no projection entries
+$ status
+exit: 2
+--- stdout ---
+[OK  ] binary: <WORLD>/home/.claude/bin/gentle-ai-overlay
+[OK  ] hook: UserPromptSubmit (propagate)
+[OK  ] hook: PreToolUse matcher="Agent" (gate-task)
+[OK  ] hook: SessionEnd (sync-trigger)
+[OK  ] hook: PreToolUse matcher="Bash" (review-receipt)
+[OK  ] guard: shaper clearance record (PreToolUse + permissions.deny) — installed; the guard is a speed bump, not a security boundary
+[WARN] hooks: projection (UserPromptSubmit + PreToolUse gates) — missing or drifted: UserPromptSubmit projection hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" projection hook, PreToolUse matcher="^mcp__([A-Za-z0-9-]+_)*longterm-mem__query$" projection hook; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[OK  ] guard: skills approve (PreToolUse Bash + file tools) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
+[OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
+[OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
+--- stderr ---
+
+# a projection entry that was edited
+$ status
+exit: 2
+--- stdout ---
+[OK  ] binary: <WORLD>/home/.claude/bin/gentle-ai-overlay
+[OK  ] hook: UserPromptSubmit (propagate)
+[OK  ] hook: PreToolUse matcher="Agent" (gate-task)
+[OK  ] hook: SessionEnd (sync-trigger)
+[OK  ] hook: PreToolUse matcher="Bash" (review-receipt)
+[OK  ] guard: shaper clearance record (PreToolUse + permissions.deny) — installed; the guard is a speed bump, not a security boundary
+[WARN] hooks: projection (UserPromptSubmit + PreToolUse gates) — missing or drifted: UserPromptSubmit projection hook, 1 drifted or duplicate UserPromptSubmit projection hook entries; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[OK  ] guard: skills approve (PreToolUse Bash + file tools) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
+[OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
+[OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
+--- stderr ---
+
+# a projection entry twice
+$ status
+exit: 2
+--- stdout ---
+[OK  ] binary: <WORLD>/home/.claude/bin/gentle-ai-overlay
+[OK  ] hook: UserPromptSubmit (propagate)
+[OK  ] hook: PreToolUse matcher="Agent" (gate-task)
+[OK  ] hook: SessionEnd (sync-trigger)
+[OK  ] hook: PreToolUse matcher="Bash" (review-receipt)
+[OK  ] guard: shaper clearance record (PreToolUse + permissions.deny) — installed; the guard is a speed bump, not a security boundary
+[WARN] hooks: projection (UserPromptSubmit + PreToolUse gates) — missing or drifted: 1 drifted or duplicate UserPromptSubmit projection hook entries; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[OK  ] guard: skills approve (PreToolUse Bash + file tools) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
+[OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
+[OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
+--- stderr ---
+
+# no approve guard entries
+$ status
+exit: 2
+--- stdout ---
+[OK  ] binary: <WORLD>/home/.claude/bin/gentle-ai-overlay
+[OK  ] hook: UserPromptSubmit (propagate)
+[OK  ] hook: PreToolUse matcher="Agent" (gate-task)
+[OK  ] hook: SessionEnd (sync-trigger)
+[OK  ] hook: PreToolUse matcher="Bash" (review-receipt)
+[OK  ] guard: shaper clearance record (PreToolUse + permissions.deny) — installed; the guard is a speed bump, not a security boundary
+[OK  ] hooks: projection (UserPromptSubmit + PreToolUse gates) — installed; restart Claude Code to load hook changes if this session started earlier
+[WARN] guard: skills approve (PreToolUse Bash + file tools) — missing or drifted: PreToolUse matcher="Bash" skills guard-hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" skills guard-hook; the agent can run skills approve unguarded (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
+[OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
+--- stderr ---
+
+# an approve guard entry that was edited
+$ status
+exit: 2
+--- stdout ---
+[OK  ] binary: <WORLD>/home/.claude/bin/gentle-ai-overlay
+[OK  ] hook: UserPromptSubmit (propagate)
+[OK  ] hook: PreToolUse matcher="Agent" (gate-task)
+[OK  ] hook: SessionEnd (sync-trigger)
+[OK  ] hook: PreToolUse matcher="Bash" (review-receipt)
+[OK  ] guard: shaper clearance record (PreToolUse + permissions.deny) — installed; the guard is a speed bump, not a security boundary
+[OK  ] hooks: projection (UserPromptSubmit + PreToolUse gates) — installed; restart Claude Code to load hook changes if this session started earlier
+[WARN] guard: skills approve (PreToolUse Bash + file tools) — missing or drifted: PreToolUse matcher="Bash" skills guard-hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" skills guard-hook, 2 drifted or duplicate PreToolUse skills guard-hook entries; the agent can run skills approve unguarded (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
+[OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
+--- stderr ---
+
+# no gate-task entries for Agent: FAIL
+$ status
+exit: 1
+--- stdout ---
+[OK  ] binary: <WORLD>/home/.claude/bin/gentle-ai-overlay
+[OK  ] hook: UserPromptSubmit (propagate)
+[FAIL] hook: PreToolUse matcher="Agent" (gate-task) — no PreToolUse entry with matcher="Agent" referencing gentle-ai-overlay
+[OK  ] hook: SessionEnd (sync-trigger)
+[OK  ] hook: PreToolUse matcher="Bash" (review-receipt)
+[OK  ] guard: shaper clearance record (PreToolUse + permissions.deny) — installed; the guard is a speed bump, not a security boundary
+[OK  ] hooks: projection (UserPromptSubmit + PreToolUse gates) — installed; restart Claude Code to load hook changes if this session started earlier
+[OK  ] guard: skills approve (PreToolUse Bash + file tools) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
+[OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
+[OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
+--- stderr ---
+
+# no UserPromptSubmit key at all: FAIL
+$ status
+exit: 1
+--- stdout ---
+[OK  ] binary: <WORLD>/home/.claude/bin/gentle-ai-overlay
+[FAIL] hook: UserPromptSubmit (propagate) — no UserPromptSubmit entry referencing gentle-ai-overlay
+[OK  ] hook: PreToolUse matcher="Agent" (gate-task)
+[OK  ] hook: SessionEnd (sync-trigger)
+[OK  ] hook: PreToolUse matcher="Bash" (review-receipt)
+[OK  ] guard: shaper clearance record (PreToolUse + permissions.deny) — installed; the guard is a speed bump, not a security boundary
+[WARN] hooks: projection (UserPromptSubmit + PreToolUse gates) — missing or drifted: UserPromptSubmit projection hook; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[OK  ] guard: skills approve (PreToolUse Bash + file tools) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
+[OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
+[OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
+--- stderr ---
+
