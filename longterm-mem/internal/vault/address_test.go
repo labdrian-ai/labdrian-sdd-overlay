@@ -169,10 +169,25 @@ func TestAddressAllocatorStopsWhenTheCallersContextEnds(t *testing.T) {
 // killed and the error is context.Canceled, not "exited 124".
 func TestAddressAllocatorStopsWhenTheCallerCancels(t *testing.T) {
 	root := t.TempDir()
-	writeAllocator(t, root, "#!/bin/sh\nexec sleep 30\n")
-	ctx, cancel := context.WithCancel(t.Context())
-	time.AfterFunc(200*time.Millisecond, cancel)
+	// The script says it is running before it hangs, and the caller cancels only once it has said so:
+	// the cancellation reaches a live script, not one that has yet to start, whatever the machine's
+	// speed. The outer deadline keeps a script that never starts from hanging the test, and it would
+	// surface as DeadlineExceeded, not as the Canceled this test expects.
+	marker := filepath.Join(root, "running")
+	writeAllocator(t, root, "#!/bin/sh\n: > "+marker+"\nexec sleep 30\n")
+	bounded, stop := context.WithTimeout(t.Context(), 10*time.Second)
+	defer stop()
+	ctx, cancel := context.WithCancel(bounded)
 	defer cancel()
+	go func() {
+		for bounded.Err() == nil {
+			if _, err := os.Stat(marker); err == nil {
+				cancel()
+				return
+			}
+			time.Sleep(5 * time.Millisecond)
+		}
+	}()
 
 	started := time.Now()
 	address, err := AddressAllocator{Root: root}.NextAddress(ctx)
@@ -184,6 +199,9 @@ func TestAddressAllocatorStopsWhenTheCallerCancels(t *testing.T) {
 	}
 	if address != "" {
 		t.Errorf("address = %q alongside an error, want none", address)
+	}
+	if _, statErr := os.Stat(marker); statErr != nil {
+		t.Errorf("the script never ran (%v): the cancellation was not delivered to a live script", statErr)
 	}
 }
 
