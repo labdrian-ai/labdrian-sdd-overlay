@@ -204,6 +204,51 @@ func goldenScenarios() []goldenScenario {
 			}
 			symlinkOrSkip(t, "../notes/manifest.json", full)
 		}},
+		// The pages, wiki/memory/<address>.md, in each state a file of the directory can be found in; then the
+		// pages directory itself. Recorded for the move of the pages behind a port (Phase 9, L3 slice 3), from
+		// the program as it stood before it.
+		{name: "31-a-page-that-is-a-directory", build: func(t *testing.T, root string) {
+			if err := os.Mkdir(filepath.Join(root, "wiki", "memory", "c-000043.md"), 0o755); err != nil {
+				t.Fatal(err)
+			}
+		}},
+		{name: "32-a-page-that-is-a-link-to-another-page", build: func(t *testing.T, root string) {
+			symlinkOrSkip(t, goldenAddress+".md", filepath.Join(root, "wiki", "memory", "c-000043.md"))
+		}},
+		{name: "33-a-page-that-is-a-link-to-a-directory", build: func(t *testing.T, root string) {
+			if err := os.Mkdir(filepath.Join(root, "wiki", "folder"), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			symlinkOrSkip(t, "../folder", filepath.Join(root, "wiki", "memory", "c-000043.md"))
+		}},
+		{name: "34-a-page-with-no-frontmatter", build: func(t *testing.T, root string) {
+			writeGoldenFile(t, root, "wiki/memory/c-000043.md", "Just text, no frontmatter.\n")
+		}},
+		{name: "35-an-empty-page", build: func(t *testing.T, root string) {
+			writeGoldenFile(t, root, "wiki/memory/c-000043.md", "")
+		}},
+		{name: "36-files-beside-the-pages-that-are-not-pages", build: func(t *testing.T, root string) {
+			writeGoldenFile(t, root, "wiki/memory/notes.txt", "not a page")
+			writeGoldenFile(t, root, "wiki/memory/C-000044.MD", "not a page either")
+			if err := os.Mkdir(filepath.Join(root, "wiki", "memory", "folder.md"), 0o755); err != nil {
+				t.Fatal(err)
+			}
+		}},
+		{name: "37-a-page-named-only-md", build: func(t *testing.T, root string) {
+			writeGoldenFile(t, root, "wiki/memory/.md", "---\naddress: c-000045\n---\n")
+		}},
+		{name: "38-a-pages-directory-that-is-a-link-to-a-directory", build: func(t *testing.T, root string) {
+			if err := os.Rename(filepath.Join(root, "wiki", "memory"), filepath.Join(root, "notes-pages")); err != nil {
+				t.Fatal(err)
+			}
+			symlinkOrSkip(t, "../notes-pages", filepath.Join(root, "wiki", "memory"))
+		}},
+		{name: "39-a-pages-directory-that-is-a-link-to-nothing", build: func(t *testing.T, root string) {
+			if err := os.RemoveAll(filepath.Join(root, "wiki", "memory")); err != nil {
+				t.Fatal(err)
+			}
+			symlinkOrSkip(t, "../notes/absent", filepath.Join(root, "wiki", "memory"))
+		}},
 	}
 }
 
