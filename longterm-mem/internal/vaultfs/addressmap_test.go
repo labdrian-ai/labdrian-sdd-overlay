@@ -142,6 +142,17 @@ func TestRecordAddressReplacesAnEntryAndAddsAMissingMap(t *testing.T) {
 			t.Fatalf("the manifest holds\n%s\nwant\n%s", got, want)
 		}
 	})
+	// An address_map of JSON null is an empty map, as LoadAddressMap reads it (owner decision, 2026-10-10).
+	t.Run("an address_map of null", func(t *testing.T) {
+		root := t.TempDir()
+		writeManifest(t, root, `{"address_map":null,"version":1}`, 0o644)
+		if err := New(root).RecordAddress("wiki/memory/c-000042.md", "c-000042", recordedAt); err != nil {
+			t.Fatalf("RecordAddress: %v", err)
+		}
+		if got, want := readManifest(t, root), "{\n  \"address_map\": {\n    \"wiki/memory/c-000042.md\": \"c-000042\"\n  },\n  \"version\": 1\n}\n"; got != want {
+			t.Fatalf("the manifest holds\n%s\nwant\n%s", got, want)
+		}
+	})
 }
 
 // A manifest that exists keeps the mode its owner gave it: recording replaces the content, not the file's

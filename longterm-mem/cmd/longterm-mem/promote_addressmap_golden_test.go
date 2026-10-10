@@ -19,8 +19,9 @@ import (
 // symbolic link, a dangling link. After the two commands of a scenario they hold the exit code, stdout and
 // stderr and every file of the vault, with its mode and, for a link, where it points, character for
 // character. They were recorded from the program as it stood before the address map moved behind a port
-// (Phase 9, L3 slice 2), and that change must not alter one byte of them. The one scenario added since, a
-// manifest that is the JSON null, was recorded after the owner's decision about it.
+// (Phase 9, L3 slice 2), and that change must not alter one byte of them. The two scenarios added since,
+// a manifest that is the JSON null and an address_map that is, were recorded after the owner's decisions
+// about them.
 //
 // Two kinds of text in them come from outside the program: the operating system's words for an error ("is a
 // directory", "no such file or directory"), which Linux and macOS spell alike (CI runs on Linux; the module
@@ -121,6 +122,11 @@ func addressMapScenarios() []addressMapScenario {
 		// (assignment to entry in nil map, exit 2), so no golden of the earlier program exists for it.
 		{name: "12-a-manifest-that-is-json-null", seed: func(t *testing.T, root string) {
 			writeManifest(t, root, "null", 0o644)
+		}},
+		// Recorded after the owner's decision of 2026-10-10: an address_map of JSON null is an empty map, as the
+		// doctor already reads it. Before it, promote and sync panicked here too.
+		{name: "13-an-address-map-that-is-json-null", seed: func(t *testing.T, root string) {
+			writeManifest(t, root, `{"version":2,"extra":{"keep":true},"address_map":null}`, 0o644)
 		}},
 	}
 }

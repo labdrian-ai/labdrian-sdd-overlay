@@ -83,14 +83,16 @@ func (v *Vault) RecordAddress(path, address string, createdAt time.Time) error {
 		return v.fail(fmt.Errorf("read %s: %w", full, err))
 	}
 
-	// Known gap: an address_map that is itself JSON null decodes to a nil map and the write below panics,
-	// while LoadAddressMap reads the same file as an empty map. Which of the two it is has not been decided,
-	// so it is not guessed at here.
 	addressMap := map[string]string{}
 	if raw, ok := manifest["address_map"]; ok {
 		if err := json.Unmarshal(raw, &addressMap); err != nil {
 			return v.fail(fmt.Errorf("parse %s address_map: %w", full, err))
 		}
+	}
+	// An address_map of JSON null decodes to a nil map, which cannot be written to. It is an empty map, as
+	// LoadAddressMap reads it.
+	if addressMap == nil {
+		addressMap = map[string]string{}
 	}
 	addressMap[path] = address
 	encoded, err := json.Marshal(addressMap)
