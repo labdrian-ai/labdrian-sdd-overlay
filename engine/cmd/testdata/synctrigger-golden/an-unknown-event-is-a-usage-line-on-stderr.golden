@@ -1,0 +1,11 @@
+$ sync-trigger --event bogus --cwd <CWD> --state-dir <STATE>
+exit: 0
+--- stdout ---
+--- stderr ---
+sync-trigger: error:usage event="bogus" cwd="<CWD>"
+
+=== nothing is opened ===
+log: (none)
+longterm-mem: (never started)
+files: (empty)
+

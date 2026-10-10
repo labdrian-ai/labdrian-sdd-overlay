@@ -16,10 +16,14 @@ type workflowRun struct {
 }
 
 func runWorkflowTest(args []string, cwd string) workflowRun {
+	return runWorkflowTestWith(testDeps(), args, cwd)
+}
+
+func runWorkflowTestWith(d deps, args []string, cwd string) workflowRun {
 	var out, errBuf bytes.Buffer
 	code := -1
 	exited := false
-	runWorkflowCore(args, cwd, &out, &errBuf, func(c int) {
+	runWorkflowCore(d, args, cwd, &out, &errBuf, func(c int) {
 		if !exited {
 			code = c
 			exited = true

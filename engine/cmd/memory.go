@@ -21,8 +21,8 @@ import (
 )
 
 // runMemory implements the 'memory <verb>' subcommand.
-func runMemory(args []string) {
-	runMemoryCore(args, os.Stdout, os.Stderr, os.Exit)
+func runMemory(p process, args []string) {
+	runMemoryCore(args, p.stdout, p.stderr, p.exit)
 }
 
 // runMemoryCore is the testable core of the memory subcommand. Every exit(n)

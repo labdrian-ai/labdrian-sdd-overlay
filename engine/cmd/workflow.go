@@ -30,23 +30,22 @@ import (
 	"strings"
 	"time"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/capability/presence"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/goal"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflowprofile"
 )
 
 // runWorkflow implements the 'workflow <verb>' subcommand.
-func runWorkflow(args []string) {
-	cwd, _ := os.Getwd() // best-effort; "" makes the locator report empty provenance.
-	runWorkflowCore(args, cwd, os.Stdout, os.Stderr, os.Exit)
+func runWorkflow(p process, d deps, args []string) {
+	cwd, _ := d.workingDir() // best-effort; "" makes the locator report empty provenance.
+	runWorkflowCore(d, args, cwd, p.stdout, p.stderr, p.exit)
 }
 
 // runWorkflowCore is the testable core of the workflow subcommand. Every
 // exit(n) is followed by a return, because tests inject a non-terminating
 // exit. cwd is injected so tests never depend on the process's real working
 // directory.
-func runWorkflowCore(args []string, cwd string, stdout, stderr io.Writer, exit func(int)) {
+func runWorkflowCore(d deps, args []string, cwd string, stdout, stderr io.Writer, exit func(int)) {
 	if len(args) == 0 {
 		fmt.Fprintln(stderr, "error: workflow requires a verb: create, start, pause, resume, stage, verify, close, status, bind, unbind, binding")
 		exit(1)
@@ -55,27 +54,27 @@ func runWorkflowCore(args []string, cwd string, stdout, stderr io.Writer, exit f
 	verb, rest := args[0], args[1:]
 	switch verb {
 	case "create":
-		runWorkflowCreate(rest, cwd, stdout, stderr, exit)
+		runWorkflowCreate(d, rest, cwd, stdout, stderr, exit)
 	case "start":
-		runWorkflowTransition(rest, cwd, stdout, stderr, exit, "start", workflow.Lifecycle.Start)
+		runWorkflowTransition(d, rest, cwd, stdout, stderr, exit, "start", workflow.Lifecycle.Start)
 	case "pause":
-		runWorkflowTransition(rest, cwd, stdout, stderr, exit, "pause", workflow.Lifecycle.Pause)
+		runWorkflowTransition(d, rest, cwd, stdout, stderr, exit, "pause", workflow.Lifecycle.Pause)
 	case "resume":
-		runWorkflowTransition(rest, cwd, stdout, stderr, exit, "resume", workflow.Lifecycle.Resume)
+		runWorkflowTransition(d, rest, cwd, stdout, stderr, exit, "resume", workflow.Lifecycle.Resume)
 	case "stage":
-		runWorkflowStage(rest, cwd, stdout, stderr, exit)
+		runWorkflowStage(d, rest, cwd, stdout, stderr, exit)
 	case "verify":
-		runWorkflowVerify(rest, cwd, stdout, stderr, exit)
+		runWorkflowVerify(d, rest, cwd, stdout, stderr, exit)
 	case "close":
-		runWorkflowClose(rest, cwd, stdout, stderr, exit)
+		runWorkflowClose(d, rest, cwd, stdout, stderr, exit)
 	case "status":
-		runWorkflowStatus(rest, cwd, stdout, stderr, exit)
+		runWorkflowStatus(d, rest, cwd, stdout, stderr, exit)
 	case "bind":
-		runWorkflowBind(rest, cwd, stdout, stderr, exit)
+		runWorkflowBind(d, rest, cwd, stdout, stderr, exit)
 	case "unbind":
-		runWorkflowUnbind(rest, cwd, stdout, stderr, exit)
+		runWorkflowUnbind(d, rest, cwd, stdout, stderr, exit)
 	case "binding":
-		runWorkflowBinding(rest, cwd, stdout, stderr, exit)
+		runWorkflowBinding(d, rest, cwd, stdout, stderr, exit)
 	default:
 		fmt.Fprintf(stderr, "error: workflow: unknown verb %q (expected create, start, pause, resume, stage, verify, close, status, bind, unbind, or binding)\n", verb)
 		exit(1)
@@ -164,22 +163,10 @@ func (r pathGoalReader) LoadGoal(projectID, goalID string) (goal.Goal, error) {
 	return g, nil
 }
 
-// workflowProber returns the DependencyProber the workflow verbs record
-// observations with: the presence prober, pointed at the process's home and
-// PATH. It looks at paths with stat and at PATH entries by name, and never opens
-// a file, runs a program, or names a path (see engine/capability/presence), so an
-// "available" observation only says something is present and states the limit.
-// It is a variable so a test can install workflow.UnavailableProber, the safe
-// default that confirms nothing.
-var workflowProber = func() workflow.DependencyProber {
-	home, path := runtimeProbeEnv()
-	return presence.Prober{Home: home, Path: path}
-}
-
 // newWorkflowLifecycle builds a Lifecycle over the real XDG-resolved Store
 // (its EventLog), the built-in profile catalog, and the real role chain store,
 // with provenance observed from cwd (no
-// subprocess) and the presence prober of workflowProber (a dependency is
+// subprocess) and the prober of the deps (deps.workflowProber; a dependency is
 // recorded available only when its presence is seen by stat, never on the
 // CLI's own authority). goalFile is used only by
 // verbs that call LoadGoal (verify); it must be empty for every other verb,
@@ -190,7 +177,7 @@ var workflowProber = func() workflow.DependencyProber {
 // workflow.DegradedHook), one line is printed to stderr so the degradation
 // is visible to whoever ran the command, even though the operation still
 // succeeds.
-func newWorkflowLifecycle(cwd, goalFile string, stderr io.Writer) (workflow.Lifecycle, error) {
+func newWorkflowLifecycle(d deps, cwd, goalFile string, stderr io.Writer) (workflow.Lifecycle, error) {
 	store, err := newWorkflowStore()
 	if err != nil {
 		return workflow.Lifecycle{}, err
@@ -200,7 +187,7 @@ func newWorkflowLifecycle(cwd, goalFile string, stderr io.Writer) (workflow.Life
 		return workflow.Lifecycle{}, err
 	}
 	profiles := workflow.ProfileCatalogFunc(workflowprofile.Resolve)
-	lc, err := workflow.NewLifecycle(store, profiles, time.Now, newRepoLocator().Provenance(cwd), pathGoalReader{path: goalFile}, chains, workflowProber())
+	lc, err := workflow.NewLifecycle(store, profiles, time.Now, newRepoLocator().Provenance(cwd), pathGoalReader{path: goalFile}, chains, d.dependencyProber())
 	if err != nil {
 		return workflow.Lifecycle{}, err
 	}
@@ -211,7 +198,7 @@ func newWorkflowLifecycle(cwd, goalFile string, stderr io.Writer) (workflow.Life
 
 // runWorkflowCreate implements 'workflow create --project --workflow --goal
 // --profile [--role-chain]'.
-func runWorkflowCreate(args []string, cwd string, stdout, stderr io.Writer, exit func(int)) {
+func runWorkflowCreate(d deps, args []string, cwd string, stdout, stderr io.Writer, exit func(int)) {
 	o, err := parseWorkflowArgs(args, []string{"--project", "--workflow", "--goal", "--profile"})
 	if err != nil {
 		fmt.Fprintf(stderr, "error: workflow create: %v\n", err)
@@ -233,7 +220,7 @@ func runWorkflowCreate(args []string, cwd string, stdout, stderr io.Writer, exit
 	// "" here, not o.goalFile: Create takes the already-read-and-parsed g
 	// directly and never calls the injected GoalReader (only Verify does),
 	// so wiring o.goalFile in would be dead wiring reading nothing.
-	lc, err := newWorkflowLifecycle(cwd, "", stderr)
+	lc, err := newWorkflowLifecycle(d, cwd, "", stderr)
 	if err != nil {
 		fmt.Fprintf(stderr, "error: workflow create: %v\n", err)
 		exit(2)
@@ -250,14 +237,14 @@ func runWorkflowCreate(args []string, cwd string, stdout, stderr io.Writer, exit
 
 // runWorkflowTransition implements the three verbs that need only
 // --project/--workflow: start, pause, resume.
-func runWorkflowTransition(args []string, cwd string, stdout, stderr io.Writer, exit func(int), label string, op func(workflow.Lifecycle, string, string) (workflow.State, error)) {
+func runWorkflowTransition(d deps, args []string, cwd string, stdout, stderr io.Writer, exit func(int), label string, op func(workflow.Lifecycle, string, string) (workflow.State, error)) {
 	o, err := parseWorkflowArgs(args, []string{"--project", "--workflow"})
 	if err != nil {
 		fmt.Fprintf(stderr, "error: workflow %s: %v\n", label, err)
 		exit(1)
 		return
 	}
-	lc, err := newWorkflowLifecycle(cwd, "", stderr)
+	lc, err := newWorkflowLifecycle(d, cwd, "", stderr)
 	if err != nil {
 		fmt.Fprintf(stderr, "error: workflow %s: %v\n", label, err)
 		exit(2)
@@ -273,14 +260,14 @@ func runWorkflowTransition(args []string, cwd string, stdout, stderr io.Writer, 
 }
 
 // runWorkflowStage implements 'workflow stage --project --workflow --stage'.
-func runWorkflowStage(args []string, cwd string, stdout, stderr io.Writer, exit func(int)) {
+func runWorkflowStage(d deps, args []string, cwd string, stdout, stderr io.Writer, exit func(int)) {
 	o, err := parseWorkflowArgs(args, []string{"--project", "--workflow", "--stage"})
 	if err != nil {
 		fmt.Fprintf(stderr, "error: workflow stage: %v\n", err)
 		exit(1)
 		return
 	}
-	lc, err := newWorkflowLifecycle(cwd, "", stderr)
+	lc, err := newWorkflowLifecycle(d, cwd, "", stderr)
 	if err != nil {
 		fmt.Fprintf(stderr, "error: workflow stage: %v\n", err)
 		exit(2)
@@ -298,14 +285,14 @@ func runWorkflowStage(args []string, cwd string, stdout, stderr io.Writer, exit 
 // runWorkflowVerify implements 'workflow verify --project --workflow
 // --goal'. --goal is required: verify always re-reads the Goal from the
 // path given here, never from a path recorded at create.
-func runWorkflowVerify(args []string, cwd string, stdout, stderr io.Writer, exit func(int)) {
+func runWorkflowVerify(d deps, args []string, cwd string, stdout, stderr io.Writer, exit func(int)) {
 	o, err := parseWorkflowArgs(args, []string{"--project", "--workflow", "--goal"})
 	if err != nil {
 		fmt.Fprintf(stderr, "error: workflow verify: %v\n", err)
 		exit(1)
 		return
 	}
-	lc, err := newWorkflowLifecycle(cwd, o.goalFile, stderr)
+	lc, err := newWorkflowLifecycle(d, cwd, o.goalFile, stderr)
 	if err != nil {
 		fmt.Fprintf(stderr, "error: workflow verify: %v\n", err)
 		exit(2)
@@ -322,7 +309,7 @@ func runWorkflowVerify(args []string, cwd string, stdout, stderr io.Writer, exit
 
 // runWorkflowClose implements 'workflow close --project --workflow
 // --outcome completed|abandoned [--reason]'.
-func runWorkflowClose(args []string, cwd string, stdout, stderr io.Writer, exit func(int)) {
+func runWorkflowClose(d deps, args []string, cwd string, stdout, stderr io.Writer, exit func(int)) {
 	o, err := parseWorkflowArgs(args, []string{"--project", "--workflow", "--outcome"})
 	if err != nil {
 		fmt.Fprintf(stderr, "error: workflow close: %v\n", err)
@@ -340,7 +327,7 @@ func runWorkflowClose(args []string, cwd string, stdout, stderr io.Writer, exit 
 		exit(1)
 		return
 	}
-	lc, err := newWorkflowLifecycle(cwd, "", stderr)
+	lc, err := newWorkflowLifecycle(d, cwd, "", stderr)
 	if err != nil {
 		fmt.Fprintf(stderr, "error: workflow close: %v\n", err)
 		exit(2)
@@ -359,14 +346,14 @@ func runWorkflowClose(args []string, cwd string, stdout, stderr io.Writer, exit 
 // is entirely read-only: it never appends anything, even for a workflow
 // whose on-disk state is foreign, malformed, drifted, or unavailable (those
 // classifications are reported, not refused, since status never writes).
-func runWorkflowStatus(args []string, cwd string, stdout, stderr io.Writer, exit func(int)) {
+func runWorkflowStatus(d deps, args []string, cwd string, stdout, stderr io.Writer, exit func(int)) {
 	o, err := parseWorkflowArgs(args, []string{"--project", "--workflow"})
 	if err != nil {
 		fmt.Fprintf(stderr, "error: workflow status: %v\n", err)
 		exit(1)
 		return
 	}
-	lc, err := newWorkflowLifecycle(cwd, "", stderr)
+	lc, err := newWorkflowLifecycle(d, cwd, "", stderr)
 	if err != nil {
 		fmt.Fprintf(stderr, "error: workflow status: %v\n", err)
 		exit(2)

@@ -14,18 +14,15 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
 )
 
-// skillsLockWait is how long a skills verb waits for a taken lock before it gives
-// up with exit 2. Zero means filelock.DefaultWait, 2 s, the bound the workflow
-// binding store uses. It is a variable so that a test can shorten it.
-var skillsLockWait time.Duration
-
 // fileLocker is the skills.Locker of the production entry point.
 type fileLocker struct {
 	wait time.Duration
 }
 
-// newSkillsLocker returns the locker runSkillsCore hands to engine/skills.
-func newSkillsLocker() skills.Locker { return fileLocker{wait: skillsLockWait} }
+// newSkillsLocker returns the locker runSkillsCore hands to engine/skills: one that waits up to
+// wait for a taken lock (zero is filelock.DefaultWait, 2 s, the bound the workflow binding store
+// uses; deps.skillsLockWait).
+func newSkillsLocker(wait time.Duration) skills.Locker { return fileLocker{wait: wait} }
 
 // Lock takes an advisory file lock. It returns filelock's errors as they are, so
 // that a *filelock.BusyError still answers Busy() to engine/skills.

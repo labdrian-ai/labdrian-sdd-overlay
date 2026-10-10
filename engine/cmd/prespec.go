@@ -12,7 +12,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 	"time"
 
@@ -34,8 +33,8 @@ func realPrespecEnv() prespecEnv {
 
 // runPrespec implements the 'prespec <verb>' subcommand.
 // Requires exactly one verb argument; fails LOUD on missing or unknown verb (ADR-4).
-func runPrespec(args []string) {
-	runPrespecCore(verbFromArgs(args), os.Stdin, os.Stdout, os.Stderr, os.Exit, realPrespecEnv())
+func runPrespec(p process, args []string) {
+	runPrespecCore(verbFromArgs(args), p.stdin, p.stdout, p.stderr, p.exit, realPrespecEnv())
 }
 
 // runPrespecCore is the testable core of the `engine prespec <verb>` subcommand.

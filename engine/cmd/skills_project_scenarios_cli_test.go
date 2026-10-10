@@ -27,7 +27,7 @@ func TestProjectRegisterKeepsTheInstallRecordsAndInstallStillOwnsItsSkill(t *tes
 
 	var out, errOut strings.Builder
 	code := -1
-	runSkillsCore("project-register", []string{"project-register", "--project-root", w.project,
+	runSkillsCore(testDeps(), "project-register", []string{"project-register", "--project-root", w.project,
 		"--candidate", "procedural/candidates/repeated-success/tidy-worktree", "--registry", regPath, draft}, &out, &errOut, func(c int) { code = c })
 	if code != 0 {
 		t.Fatalf("project-register: exit %d, stderr %q", code, errOut.String())

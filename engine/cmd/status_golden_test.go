@@ -72,7 +72,7 @@ const (
 func newBinaryWorld(t *testing.T) *registryWorld {
 	t.Helper()
 	dir := neutralDir(t)
-	w := &registryWorld{t: t, bin: reviewReceiptBinary(t), dir: dir, names: map[string]string{}, filter: hideForeignWords}
+	w := &registryWorld{t: t, bin: engineBinary(t), dir: dir, names: map[string]string{}, filter: hideForeignWords}
 	w.name(dir, "<WORLD>")
 	w.mkdir("nobin")
 	w.mkdir(worldHome)

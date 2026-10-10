@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"io"
-	"os"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings/settingsfile"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/status"
@@ -19,12 +18,12 @@ import (
 //	2 — no hard failure, but at least one check is DEGRADED (e.g. the registry
 //	    exists but its scoped block is missing). Distinct from 1 so callers can
 //	    tell "broken" from "present-but-needs-attention".
-func runStatus(_ []string) {
+func runStatus(p process, d deps) {
 	// A directory that cannot be determined is none: the registry is then not looked for.
-	cwd, _ := os.Getwd()
-	outcome := statusCore(os.Stdout, newStatusService(), status.Request{Home: os.Getenv("HOME"), Cwd: cwd})
+	cwd, _ := d.workingDir()
+	outcome := statusCore(p.stdout, newStatusService(), status.Request{Home: d.env("HOME"), Cwd: cwd})
 	if code := statusExitCode(outcome); code != 0 {
-		os.Exit(code)
+		p.exit(code)
 	}
 }
 

@@ -72,7 +72,7 @@ func (w installCLIWorld) deps(locker skills.Locker) skills.Deps {
 }
 
 func (w installCLIWorld) depsAt(locker skills.Locker, cwd func() (string, error)) skills.Deps {
-	deps := newSkillsDeps()
+	deps := newSkillsDeps(testDeps())
 	deps.Locker, deps.Cwd = locker, cwd
 	return deps
 }
@@ -841,7 +841,7 @@ func TestConcurrentInstallsIntoOneProjectKeepBothRecords(t *testing.T) {
 	}
 	gate := newReadGate(t, skills.ProjectLockPath(project))
 	locker := &exclusionLocker{blocked: gate.release}
-	deps := newSkillsDeps()
+	deps := newSkillsDeps(testDeps())
 	deps.Locker, deps.Cwd = locker, func() (string, error) { return project, nil }
 	deps.ProjectLocks = parkedLocks{deps.ProjectLocks, gate}
 	install := func(projectID string) func() verbRun {
@@ -903,7 +903,7 @@ func TestInstallAndAdoptAreReachedThroughTheProgram(t *testing.T) {
 			code := -1
 			// The working directory of the program is the one of the test, which holds no registry
 			// for this project, so the project named admits nothing and nothing is written.
-			runSkillsCore(verb, []string{verb, "--registry", w.reg, "--source-root", w.root, "--project-id", "nobody"}, &out, &errOut, func(c int) { code = c })
+			runSkillsCore(testDeps(), verb, []string{verb, "--registry", w.reg, "--source-root", w.root, "--project-id", "nobody"}, &out, &errOut, func(c int) { code = c })
 			if code != 0 || out.String() != "no project-scoped skills admitted for project \"nobody\"\n" || errOut.String() != "" {
 				t.Errorf("exit %d, stdout %q, stderr %q", code, out.String(), errOut.String())
 			}

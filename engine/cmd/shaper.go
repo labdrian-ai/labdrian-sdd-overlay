@@ -12,7 +12,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -25,13 +24,13 @@ import (
 const shaperAuthorityNote = "Readiness is evidence only and grants no execution authority; it never permits or dispatches work."
 
 // runShaper implements the 'shaper <verb>' subcommand.
-func runShaper(args []string) {
-	runShaperCore(args, os.Stdin, os.Stdout, os.Stderr, os.Exit)
+func runShaper(p process, d deps, args []string) {
+	runShaperCore(d, args, p.stdin, p.stdout, p.stderr, p.exit)
 }
 
 // runShaperCore is the testable core of the shaper subcommand. Every exit(n)
 // is followed by a return, because tests inject a non-terminating exit.
-func runShaperCore(args []string, stdin io.Reader, stdout, stderr io.Writer, exit func(int)) {
+func runShaperCore(d deps, args []string, stdin io.Reader, stdout, stderr io.Writer, exit func(int)) {
 	if len(args) == 0 {
 		fmt.Fprintln(stderr, "error: shaper requires a verb: assess, clearance, guard-hook")
 		exit(1)
@@ -46,7 +45,7 @@ func runShaperCore(args []string, stdin io.Reader, stdout, stderr io.Writer, exi
 			exit(1)
 			return
 		}
-		runShaperClearanceRecord(args[2:], stdin, stdout, stderr, exit)
+		runShaperClearanceRecord(d, args[2:], stdin, stdout, stderr, exit)
 	case "guard-hook":
 		runShaperGuardHook(stdin, stderr, exit)
 	default:
@@ -111,50 +110,27 @@ func parseShaperArgs(args []string, allowView, allowStdin bool) (shaperOpts, err
 	return o, nil
 }
 
-// loadShaperInput reads the handoff and Goal strictly inside the resolved
-// root and observes the worktree. Sources that exist but fail strict parsing
-// or binding are passed through as raw bytes so Evaluate reports them as
-// blockers; a source that cannot be read at all is an error. A failed
-// worktree observation leaves Provenance nil and is returned as a note.
+// loadShaperInput resolves the root the command was given and has the shaper
+// read the handoff and Goal strictly inside it and observe the worktree
+// (shaper.LoadReadinessInput decides what a source that cannot be parsed, or
+// cannot be read, becomes).
 func loadShaperInput(o shaperOpts) (shaper.ReadinessInput, []string, error) {
 	resolved, err := filepath.EvalSymlinks(o.root)
 	if err != nil {
 		return shaper.ReadinessInput{}, nil, fmt.Errorf("resolve --root: %w", err)
 	}
-	root := filepath.Clean(resolved)
-	in := shaper.ReadinessInput{WorktreeRoot: root}
-	var notes []string
+	return shaper.LoadReadinessInput(newContainedSource(), gitWorktree{}, filepath.Clean(resolved), o.handoff, o.goal)
+}
 
-	files := newContainedSource()
-	src, loadErr := shaper.LoadHandoff(files, root, o.handoff)
-	if loadErr != nil {
-		cleaned, data, err := shaper.ReadContainedSource(files, root, o.handoff)
-		if err != nil {
-			return shaper.ReadinessInput{}, nil, loadErr
-		}
-		in.Handoff = shaper.HandoffSource{SourcePath: cleaned, Bytes: data, SHA256: shaper.SourceSHA256(data)}
-		return in, notes, nil
-	}
-	in.Handoff = src
+// gitWorktree is the shaper's WorktreeObserver over git, through the gitprov adapter.
+type gitWorktree struct{}
 
-	gb, bindErr := shaper.BindGoal(files, src.Handoff, root, o.goal)
-	if bindErr != nil {
-		cleaned, data, err := shaper.ReadContainedSource(files, root, o.goal)
-		if err != nil {
-			return shaper.ReadinessInput{}, nil, bindErr
-		}
-		gb = shaper.GoalBinding{SourcePath: cleaned, GoalBytes: data, GoalSHA256: shaper.SourceSHA256(data)}
-	}
-	in.Goal = &gb
-
+func (gitWorktree) Observe(root string) (shaper.WorktreeProvenance, error) {
 	obs, err := gitprov.Observe(root)
 	if err != nil {
-		notes = append(notes, "worktree observation failed: "+err.Error())
-	} else {
-		provenance := worktreeProvenanceFrom(obs)
-		in.Provenance = &provenance
+		return shaper.WorktreeProvenance{}, err
 	}
-	return in, notes, nil
+	return worktreeProvenanceFrom(obs), nil
 }
 
 // worktreeProvenanceFrom maps what the git adapter observed into the value the
@@ -355,7 +331,7 @@ func writeShaperAssessment(stdout, stderr io.Writer, a shaper.Assessment, report
 // decision is read only from stdin; the Subject, flags, and presented view
 // are re-derived from disk, and any mismatch is refused under Verify's
 // binding rules before the immutable store is written.
-func runShaperClearanceRecord(args []string, stdin io.Reader, stdout, stderr io.Writer, exit func(int)) {
+func runShaperClearanceRecord(d deps, args []string, stdin io.Reader, stdout, stderr io.Writer, exit func(int)) {
 	fail := func(format string, a ...any) {
 		fmt.Fprintf(stderr, "error: shaper clearance record: "+format+"\n", a...)
 		exit(1)
@@ -369,8 +345,8 @@ func runShaperClearanceRecord(args []string, stdin io.Reader, stdout, stderr io.
 		fail("--stdin is required: the clearance decision is accepted only on stdin, never from argv")
 		return
 	}
-	if os.Getenv("GENTLE_PI_AGENTS_CHILD") == "1" {
-		fail("refusing inside a gentle-pi agent child (GENTLE_PI_AGENTS_CHILD=1): no human answers its dialogs")
+	if d.agentChild {
+		fail("refusing inside a gentle-pi agent child (%s=%s): no human answers its dialogs", agentChildVariable, agentChildValue)
 		return
 	}
 	// The record bound is the domain's (shaper.MaxRecordBytes), not the CLI-wide stdin cap,

@@ -208,12 +208,11 @@ func promptHookGoldenCases() []hookGoldenCase {
 				w.t.Fatal(err)
 			}
 			key := mustRepoKey(w.t, e.repo)
-			beforeHookUnbind = func() {
+			w.deps = w.deps.withBindingSeams(bindingSeams{beforeHookUnbind: func() {
 				if err := store.Bind(key, "proj-2", "wf-2", time.Now(), true); err != nil {
 					w.t.Errorf("Bind() from the other process = %v", err)
 				}
-			}
-			w.t.Cleanup(func() { beforeHookUnbind = nil })
+			}})
 			w.promptHook("another process binds the next workflow just before the removal", e, e.repo)
 			w.promptHook("the next prompt follows the workflow bound meanwhile", e, e.repo)
 		}},
@@ -302,8 +301,7 @@ func promptHookGoldenCases() []hookGoldenCase {
 			e := w.env()
 			e.running(w.t, "proj-1", "wf-1", "standalone-minimal")
 			e.step(w.t, "proj-1", "wf-1", "close", "--outcome", "abandoned", "--reason", "done")
-			beforeHookUnbind = func() { panic("boom\nsecond line \x1b[31mred " + strings.Repeat("x", 5000)) }
-			w.t.Cleanup(func() { beforeHookUnbind = nil })
+			w.deps = w.deps.withBindingSeams(bindingSeams{beforeHookUnbind: func() { panic("boom\nsecond line \x1b[31mred " + strings.Repeat("x", 5000)) }})
 			w.promptHook("a panic where the hook removes the binding", e, e.repo)
 		}},
 		{"prompt-exits-zero-when-stdout-cannot-be-written", func(w *hookWorld) {

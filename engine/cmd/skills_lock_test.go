@@ -36,6 +36,8 @@ const lockTestSkill = "---\n" +
 // manifest, and the approved skill tree.
 type lockWorld struct {
 	dir, registry, manifest, root string
+	// deps is what the verbs run over: the program's, with the wait the test wants.
+	deps deps
 }
 
 func newLockWorld(t *testing.T) lockWorld {
@@ -46,6 +48,7 @@ func newLockWorld(t *testing.T) lockWorld {
 		registry: filepath.Join(dir, "skills.registry.yaml"),
 		manifest: filepath.Join(dir, "overlay.manifest"),
 		root:     filepath.Join(dir, "skills"),
+		deps:     testDeps(),
 	}
 	writeFixtureFile(t, w.registry, "version: \"1\"\nskills:\n  - id: one\n    path: one\n    source:\n      type: custom\n"+
 		"    install:\n      defaultScope: global\n      targets:\n        - claude\n    lifecycle:\n      updateStrategy: overlay-only\n")
@@ -71,21 +74,18 @@ type skillsRun struct {
 func (w lockWorld) run(verb string, extra ...string) skillsRun {
 	var out, errBuf bytes.Buffer
 	code := 0
-	runSkillsCore(verb, append(append([]string{verb}, extra...), w.flags()...), &out, &errBuf, func(c int) { code = c })
+	runSkillsCore(w.deps, verb, append(append([]string{verb}, extra...), w.flags()...), &out, &errBuf, func(c int) { code = c })
 	return skillsRun{code, out.String(), errBuf.String()}
 }
 
-// shortWait shortens the wait for a taken lock for one test.
-func shortWait(t *testing.T) {
-	t.Helper()
-	saved := skillsLockWait
-	skillsLockWait = 30 * time.Millisecond
-	t.Cleanup(func() { skillsLockWait = saved })
+// withShortWait is the world with a short wait for a taken lock.
+func (w lockWorld) withShortWait() lockWorld {
+	w.deps.skillsLockWait = 30 * time.Millisecond
+	return w
 }
 
 func TestSkillsLock_TheProductionEntryPointCreatesAndHonoursTheRegistryLock(t *testing.T) {
-	shortWait(t)
-	w := newLockWorld(t)
+	w := newLockWorld(t).withShortWait()
 	lockFile := skills.RegistryLockPath(w.registry)
 
 	// A writer creates the lock file beside the registry...
@@ -144,8 +144,7 @@ func snapshotBytes(t *testing.T, paths ...string) map[string]string {
 // Readers share: validate runs while another reader holds the lock, and a writer
 // does not.
 func TestSkillsLock_ValidateSharesTheLockWithReadersAndExcludesWriters(t *testing.T) {
-	shortWait(t)
-	w := newLockWorld(t)
+	w := newLockWorld(t).withShortWait()
 	lockFile := skills.RegistryLockPath(w.registry)
 	if r := w.run("sync-manifest"); r.code != 0 {
 		t.Fatalf("sync-manifest: exit %d, stderr %q", r.code, r.stderr)
@@ -230,8 +229,7 @@ func (w lockWorld) registerArgs(t *testing.T, root string) []string {
 }
 
 func TestSkillsLock_ProjectVerbsHonourARealDirectoryLockAndCreateNoFileForIt(t *testing.T) {
-	shortWait(t)
-	w := newLockWorld(t)
+	w := newLockWorld(t).withShortWait()
 	root := filepath.Join(t.TempDir(), "project")
 	if err := os.Mkdir(root, 0o755); err != nil {
 		t.Fatal(err)
@@ -271,8 +269,7 @@ func TestSkillsLock_ProjectVerbsHonourARealDirectoryLockAndCreateNoFileForIt(t *
 // project-status is a reader of the project: it runs while another reader holds the
 // directory, and it is refused, exit 2, while a verb that writes the project holds it.
 func TestSkillsLock_ProjectStatusSharesTheProjectWithReadersAndWaitsForWriters(t *testing.T) {
-	shortWait(t)
-	w := newLockWorld(t)
+	w := newLockWorld(t).withShortWait()
 	root := filepath.Join(t.TempDir(), "project")
 	if err := os.Mkdir(root, 0o755); err != nil {
 		t.Fatal(err)
@@ -304,8 +301,7 @@ func TestSkillsLock_ProjectStatusSharesTheProjectWithReadersAndWaitsForWriters(t
 // A working directory reached through a symlink is the same project: the lock is
 // on the directory, whichever way it is named.
 func TestSkillsLock_AProjectRootReachedThroughASymlinkIsTheSameLock(t *testing.T) {
-	shortWait(t)
-	w := newLockWorld(t)
+	w := newLockWorld(t).withShortWait()
 	base := t.TempDir()
 	root := filepath.Join(base, "project")
 	if err := os.Mkdir(root, 0o755); err != nil {
@@ -355,7 +351,7 @@ func TestSkillsLock_ARawWriterWithoutARegistryCreatesNoLockFile(t *testing.T) {
 	var out, errBuf bytes.Buffer
 	code := 0
 	// No --registry: the default is ./skills.registry.yaml, which is not here.
-	runSkillsCore("sync-manifest", []string{"sync-manifest", "--manifest", w.manifest}, &out, &errBuf, func(c int) { code = c })
+	runSkillsCore(w.deps, "sync-manifest", []string{"sync-manifest", "--manifest", w.manifest}, &out, &errBuf, func(c int) { code = c })
 
 	if code != 1 || !strings.Contains(errBuf.String(), "nothing was locked") {
 		t.Errorf("exit %d, stderr %q, want exit 1 and 'nothing was locked'", code, errBuf.String())

@@ -54,7 +54,6 @@ package main
 import (
 	"fmt"
 	"io"
-	"os"
 	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/hookwire"
@@ -62,34 +61,17 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection/app"
 )
 
-// beforeHookUnbind is a test seam, nil outside tests. The binding store of the
-// hook calls it (seamedBindings) after the hook decided to remove the binding of
-// a closed workflow and before it does: the
-// window in which another process can bind the next workflow, which
-// projection.Store.UnbindIfUnchanged must then refuse to remove.
-var beforeHookUnbind func()
-
-// onGateStoreAccess is a test seam, nil outside tests. The binding store of the
-// gate calls it (seamedBindings) at the moment it goes to the stores, so a test
-// can prove that a tool the gate never checks is answered without touching them.
-var onGateStoreAccess func()
-
-// beforeGateDecision is a test seam, nil outside tests. The gate policy of the
-// hook (newGateHook) calls it before it decides, so a test can make the gate
-// panic where a bug in it would.
-var beforeGateDecision func()
-
 // runProjection implements the 'projection <action>' subcommand.
-func runProjection(args []string) {
-	cwd, _ := os.Getwd() // best-effort; "" leaves the hook with only the input's directory.
-	runProjectionCore(args, cwd, os.Stdin, os.Stdout, os.Stderr, os.Exit)
+func runProjection(p process, d deps, args []string) {
+	cwd, _ := d.workingDir() // best-effort; "" leaves the hook with only the input's directory.
+	runProjectionCore(d, args, cwd, p.stdin, p.stdout, p.stderr, p.exit)
 }
 
 // runProjectionCore is the testable core of the projection subcommand. Every
 // exit(n) is followed by a return, because tests inject a non-terminating exit.
 // processCwd is the working directory of the process, used when the hook input
 // names none.
-func runProjectionCore(args []string, processCwd string, stdin io.Reader, stdout, stderr io.Writer, exit func(int)) {
+func runProjectionCore(d deps, args []string, processCwd string, stdin io.Reader, stdout, stderr io.Writer, exit func(int)) {
 	if len(args) == 0 || strings.HasPrefix(args[0], "-") {
 		fmt.Fprintln(stderr, "error: projection requires an action: hook")
 		exit(1)
@@ -97,7 +79,7 @@ func runProjectionCore(args []string, processCwd string, stdin io.Reader, stdout
 	}
 	switch args[0] {
 	case "hook":
-		runProjectionHook(args[1:], processCwd, stdin, stdout, stderr, exit)
+		runProjectionHook(d, args[1:], processCwd, stdin, stdout, stderr, exit)
 	default:
 		fmt.Fprintf(stderr, "error: projection: unknown action %q (expected hook)\n", args[0])
 		exit(1)
@@ -108,7 +90,7 @@ func runProjectionCore(args []string, processCwd string, stdin io.Reader, stdout
 // moment the command line has been understood, nothing it does can change the
 // exit code from 0: a hook that fails must not fail the prompt or the tool call
 // it serves.
-func runProjectionHook(args []string, processCwd string, stdin io.Reader, stdout, stderr io.Writer, exit func(int)) {
+func runProjectionHook(d deps, args []string, processCwd string, stdin io.Reader, stdout, stderr io.Writer, exit func(int)) {
 	event, err := parseHookArgs(args)
 	if err != nil {
 		fmt.Fprintf(stderr, "error: projection hook: %v\n", err)
@@ -131,9 +113,9 @@ func runProjectionHook(args []string, processCwd string, stdin io.Reader, stdout
 	}()
 	var out []byte
 	if event == hookwire.EventPreToolUse {
-		out = preToolUse(stdin, processCwd)
+		out = preToolUse(d, stdin, processCwd)
 	} else {
-		out = userPromptSubmit(stdin, processCwd)
+		out = userPromptSubmit(d, stdin, processCwd)
 	}
 	if len(out) > 0 {
 		_, _ = stdout.Write(out) // nothing to do if the write fails: the prompt or the call goes through.
@@ -198,7 +180,7 @@ func warningOutput(event, warning string) []byte {
 // in silence: there is nothing to be loyal to. A store that cannot be opened or
 // read is different, because the repository may well be bound, so it gets one
 // warning.
-func userPromptSubmit(stdin io.Reader, processCwd string) []byte {
+func userPromptSubmit(d deps, stdin io.Reader, processCwd string) []byte {
 	// One byte past the cap is enough for the decoder to see the input is over
 	// it, and no more of an endless input is ever read.
 	data, err := io.ReadAll(io.LimitReader(stdin, hookwire.MaxEnvelopeBytes+1))
@@ -214,7 +196,7 @@ func userPromptSubmit(stdin io.Reader, processCwd string) []byte {
 	if in.Event != "" && in.Event != hookwire.EventUserPromptSubmit {
 		return nil
 	}
-	outcome := newPromptHook().OnPrompt(app.PromptRequest{InputDir: in.Cwd, ProcessDir: processCwd})
+	outcome := d.promptHook().OnPrompt(app.PromptRequest{InputDir: in.Cwd, ProcessDir: processCwd})
 	switch outcome.Kind {
 	case app.PromptWarning:
 		return warningOutput(hookwire.EventUserPromptSubmit, outcome.Warning)
@@ -236,7 +218,7 @@ func userPromptSubmit(stdin io.Reader, processCwd string) []byte {
 // read, a binding or workflow that cannot be followed. The gate runs on every
 // tool call, and the prompt hook already warns about those, so it does not
 // repeat the warning. It reads and never writes.
-func preToolUse(stdin io.Reader, processCwd string) []byte {
+func preToolUse(d deps, stdin io.Reader, processCwd string) []byte {
 	data, err := io.ReadAll(io.LimitReader(stdin, hookwire.MaxEnvelopeBytes+1))
 	if err != nil {
 		return nil
@@ -252,7 +234,7 @@ func preToolUse(stdin io.Reader, processCwd string) []byte {
 	// runs on every tool call, and only a file-edit tool or a longterm-mem query
 	// is ever checked against the workflow. Any other tool is allowed there,
 	// without reading the binding or the workflow log.
-	outcome := newGateHook().OnToolCall(app.ToolCallRequest{InputDir: in.Cwd, ProcessDir: processCwd, Call: gateCall(in)})
+	outcome := d.gateHook().OnToolCall(app.ToolCallRequest{InputDir: in.Cwd, ProcessDir: processCwd, Call: gateCall(in)})
 	if !outcome.Decided {
 		return nil
 	}

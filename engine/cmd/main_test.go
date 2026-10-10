@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"sync"
 	"syscall"
@@ -618,7 +619,7 @@ func TestRunMergeSettings_AbsentFile_CreatesHooks(t *testing.T) {
 	// the file-system side effects (the real contract) instead of stdout capture.
 
 	// Call runMergeSettings — happy path should not panic or os.Exit.
-	runMergeSettings([]string{
+	runMergeSettings(newCapturedProcess().process, []string{
 		"--settings", path,
 		"--hook-command", "/test/.claude/bin/gentle-ai-overlay",
 	})
@@ -652,8 +653,8 @@ func TestRunMergeSettings_Idempotent(t *testing.T) {
 		"--hook-command", "/test/.claude/bin/gentle-ai-overlay",
 	}
 
-	runMergeSettings(args)
-	runMergeSettings(args)
+	runMergeSettings(newCapturedProcess().process, args)
+	runMergeSettings(newCapturedProcess().process, args)
 
 	data, _ := os.ReadFile(path)
 	var root map[string]interface{}
@@ -712,7 +713,7 @@ func TestRunMergeSettings_BackupCreated(t *testing.T) {
 	original := []byte(`{"existing":true}`)
 	os.WriteFile(path, original, 0644)
 
-	runMergeSettings([]string{
+	runMergeSettings(newCapturedProcess().process, []string{
 		"--settings", path,
 		"--hook-command", "/test/.claude/bin/gentle-ai-overlay",
 	})
@@ -735,8 +736,8 @@ func TestRunUninstallHooks_RemovesHooks(t *testing.T) {
 	hookCmd := "/test/.claude/bin/gentle-ai-overlay"
 	args := []string{"--settings", path, "--hook-command", hookCmd}
 
-	runMergeSettings(args)
-	runUninstallHooks(args)
+	runMergeSettings(newCapturedProcess().process, args)
+	runUninstallHooks(newCapturedProcess().process, args)
 
 	data, _ := os.ReadFile(path)
 	var root map[string]interface{}
@@ -765,7 +766,7 @@ func TestRunUninstallHooks_AbsentFile_NoOp(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "nonexistent.json")
 	// Should not panic or call os.Exit(1).
-	runUninstallHooks([]string{
+	runUninstallHooks(newCapturedProcess().process, []string{
 		"--settings", path,
 		"--hook-command", "/test/binary",
 	})
@@ -1174,7 +1175,7 @@ skills:
 
 	var outBuf, errBuf bytes.Buffer
 	exitCode := 0
-	runSkillsCore("list", []string{"list", "--registry", regPath}, &outBuf, &errBuf, func(c int) { exitCode = c })
+	runSkillsCore(testDeps(), "list", []string{"list", "--registry", regPath}, &outBuf, &errBuf, func(c int) { exitCode = c })
 	if exitCode != 0 {
 		t.Errorf("exit code = %d, want 0; stderr=%q", exitCode, errBuf.String())
 	}
@@ -1187,7 +1188,7 @@ skills:
 func TestRunSkillsCore_unknown_verb(t *testing.T) {
 	var outBuf, errBuf bytes.Buffer
 	exitCode := 0
-	runSkillsCore("bogus", []string{"bogus"}, &outBuf, &errBuf, func(c int) { exitCode = c })
+	runSkillsCore(testDeps(), "bogus", []string{"bogus"}, &outBuf, &errBuf, func(c int) { exitCode = c })
 	if exitCode != 1 {
 		t.Errorf("exit code = %d, want 1", exitCode)
 	}
@@ -1250,7 +1251,7 @@ func TestApplyIgnoresRegistry(t *testing.T) {
 	var skillsOut, skillsErr bytes.Buffer
 	skillsExitCode := -1
 	missingYAML := filepath.Join(dir, "skills.registry.yaml") // does not exist
-	runSkillsCore("list", []string{"list", "--registry", missingYAML},
+	runSkillsCore(testDeps(), "list", []string{"list", "--registry", missingYAML},
 		&skillsOut, &skillsErr, func(c int) { skillsExitCode = c })
 	if skillsExitCode != 1 {
 		t.Errorf("SC-13: runSkillsCore(list) must exit 1 when skills.registry.yaml is absent; got exit %d", skillsExitCode)
@@ -2341,7 +2342,7 @@ func TestComponentFlag_LongtermMemRefusesUpdateRollback(t *testing.T) {
 	var outBuf, errBuf bytes.Buffer
 	exitCode := -1
 
-	runRuntimeCore(noPi(), noGit(),
+	runRuntimeCore(testDeps(), noPi(), noGit(),
 		[]string{"update", "--component", "longterm-mem", "--state-dir", stateDir},
 		&outBuf,
 		&errBuf,
@@ -2368,7 +2369,7 @@ func TestComponentFlag_LongtermMemRefusesUpdateRollback(t *testing.T) {
 	t.Run("rollback action does not exist at all", func(t *testing.T) {
 		var out2, err2 bytes.Buffer
 		exit2 := -1
-		runRuntimeCore(noPi(), noGit(),
+		runRuntimeCore(testDeps(), noPi(), noGit(),
 			[]string{"rollback", "--component", "longterm-mem", "--state-dir", stateDir},
 			&out2, &err2, func(code int) { exit2 = code },
 		)
@@ -2410,7 +2411,7 @@ func TestComponentFlag_LongtermMemLifecycleExitCodes(t *testing.T) {
 
 			var outBuf, errBuf bytes.Buffer
 			exitCode := -1
-			runRuntimeCore(noPi(), noGit(),
+			runRuntimeCore(testDeps(), noPi(), noGit(),
 				[]string{tc.action, "--component", "longterm-mem", "--state-dir", stateDir},
 				&outBuf, &errBuf, func(code int) { exitCode = code },
 			)
@@ -2463,7 +2464,7 @@ func TestComponentFlag_LongtermMemDefaultsStateDir(t *testing.T) {
 
 	var outBuf, errBuf bytes.Buffer
 	exitCode := -1
-	runRuntimeCore(noPi(), noGit(),
+	runRuntimeCore(testDeps(), noPi(), noGit(),
 		[]string{"status", "--component", "longterm-mem"},
 		&outBuf, &errBuf, func(code int) { exitCode = code },
 	)
@@ -2491,7 +2492,7 @@ func TestComponentFlag_DefaultIsRuntimeParity(t *testing.T) {
 	var outBuf, errBuf bytes.Buffer
 	exitCode := -1
 
-	runRuntimeCore(noPi(), noGit(),
+	runRuntimeCore(testDeps(), noPi(), noGit(),
 		[]string{"status", "--target", "claude", "--config-root", configRoot},
 		&outBuf,
 		&errBuf,
@@ -2509,6 +2510,22 @@ func TestComponentFlag_DefaultIsRuntimeParity(t *testing.T) {
 	}
 }
 
+// TestSyncTriggerChildArgv_IsTheCommandLineThisCommandParses pins what the parent hands its
+// detached child. The command line is this package's grammar (synctrigger knows none of it), so
+// it is pinned twice: literally, and by reading it back with the parser of the same command.
+func TestSyncTriggerChildArgv_IsTheCommandLineThisCommandParses(t *testing.T) {
+	got := syncTriggerChildArgv("archive", "/project dir", "/state")
+
+	want := []string{"sync-trigger", "--event", "archive", "--cwd", "/project dir", "--state-dir", "/state", "--child"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("syncTriggerChildArgv = %q, want %q", got, want)
+	}
+	o, child := parseSyncTriggerArgs(got[1:])
+	if !child || o.Event != "archive" || o.Cwd != "/project dir" || o.StateDir != "/state" {
+		t.Errorf("the child's command line reads back as %+v (child %v), want the event, cwd and state directory it was made from", o, child)
+	}
+}
+
 // TestRunSyncTriggerCore_NoArgs_ExitsZero pins R-003: the sync-trigger verb
 // must never surface a non-zero exit to its caller (a Claude Code hook or
 // the archive closure-feedback step), even with no arguments at all --
@@ -2518,10 +2535,40 @@ func TestComponentFlag_DefaultIsRuntimeParity(t *testing.T) {
 func TestRunSyncTriggerCore_NoArgs_ExitsZero(t *testing.T) {
 	exitCode := -1
 
-	runSyncTriggerCore(nil, func(code int) { exitCode = code })
+	runSyncTriggerCore(testDeps(), nil, io.Discard, func(code int) { exitCode = code })
 
 	if exitCode != 0 {
 		t.Fatalf("runSyncTriggerCore(nil) exit = %d, want 0", exitCode)
+	}
+}
+
+// The overlay state directory, when --state-dir is not given, is under the home the deps give,
+// not under whatever HOME the process has: the child finds its longterm-mem there and logs there.
+func TestRunSyncTriggerCore_StateDirDefaultsToTheHomeOfTheDeps(t *testing.T) {
+	home, project := t.TempDir(), t.TempDir()
+	state := filepath.Join(home, ".labdrian-overlay")
+	marker := filepath.Join(t.TempDir(), "ran")
+	if err := os.MkdirAll(filepath.Join(state, "bin"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	script := "#!/bin/sh\ntouch \"" + marker + "\"\nexit 0\n"
+	if err := os.WriteFile(filepath.Join(state, "bin", "longterm-mem"), []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	d := testDeps()
+	d.userHomeDir = func() (string, error) { return home, nil }
+	exitCode := -1
+
+	runSyncTriggerCore(d, []string{"--child", "--event", "session-end", "--cwd", project}, io.Discard, func(code int) { exitCode = code })
+
+	if exitCode != 0 {
+		t.Fatalf("exit = %d, want 0", exitCode)
+	}
+	if _, err := os.Stat(marker); err != nil {
+		t.Errorf("the longterm-mem under the home of the deps did not run: %v", err)
+	}
+	if log, err := os.ReadFile(filepath.Join(state, "logs", "sync-trigger.log")); err != nil || !strings.Contains(string(log), "outcome=ok") {
+		t.Errorf("log under the home of the deps = %q, %v; want a line with outcome=ok", log, err)
 	}
 }
 
@@ -2533,7 +2580,7 @@ func TestRunSyncTriggerCore_ChildNoEventNoCwd_ExitsZeroWithoutSpawn(t *testing.T
 	marker := filepath.Join(t.TempDir(), "spawned")
 	os.WriteFile(filepath.Join(binDir, "longterm-mem"), []byte("#!/bin/sh\ntouch \""+marker+"\"\nexit 0\n"), 0o755)
 	exitCode := -1
-	runSyncTriggerCore([]string{"--child", "--state-dir", stateDir}, func(code int) { exitCode = code })
+	runSyncTriggerCore(testDeps(), []string{"--child", "--state-dir", stateDir}, io.Discard, func(code int) { exitCode = code })
 	if exitCode != 0 {
 		t.Fatalf("runSyncTriggerCore exit = %d, want 0", exitCode)
 	}
@@ -2556,7 +2603,7 @@ func TestParseReviewReceiptArgs_BothFlags(t *testing.T) {
 // openspec/changes/ directory to auto-detect an active change from.
 func TestRunReviewReceiptCapture_NoActiveChange_NoOp(t *testing.T) {
 	dir := t.TempDir()
-	runReviewReceiptCapture([]string{"--cwd", dir})
+	runReviewReceiptCapture(newCapturedProcess().process, testDeps(), []string{"--cwd", dir})
 	if _, err := os.Stat(filepath.Join(dir, "openspec")); !os.IsNotExist(err) {
 		t.Errorf("no-op capture should not create openspec/, stat err=%v", err)
 	}
@@ -2595,7 +2642,7 @@ func TestRunReviewReceiptCapture_ExplicitChange_Captures(t *testing.T) {
 	receipt := `{"schema":"gentle-ai.review-receipt/v2","lineage_id":"review-cli1","terminal_state":"approved"}`
 	os.WriteFile(filepath.Join(lineageDir, "review-receipt.json"), []byte(receipt), 0644)
 
-	runReviewReceiptCapture([]string{"--cwd", dir, "--change", "cli-change"})
+	runReviewReceiptCapture(newCapturedProcess().process, testDeps(), []string{"--cwd", dir, "--change", "cli-change"})
 
 	dest := filepath.Join(changeDir, "review-receipts", "review-cli1.json")
 	if _, err := os.Stat(dest); err != nil {

@@ -11,10 +11,10 @@ package main
 // never runs a program, and it never names a path in its output: an available
 // signal only says a file or binary is present, and its detail says what that
 // does not prove (a credentials file that exists is not an authenticated
-// session). The static test in runtime_probe_test.go pins this source to
-// os.UserHomeDir and os.Getenv, with no file access of its own, and the prober's
-// own static test pins the rest; engine/runtime's Phase 7 import policy keeps
-// os/exec and the network out of both.
+// session). The static test in runtime_probe_test.go pins this source to no use of
+// package os at all (the home and PATH are the deps', which main builds from the
+// process), with no file access of its own, and the prober's own static test pins the
+// rest; engine/runtime's Phase 7 import policy keeps os/exec and the network out of both.
 
 import (
 	"bytes"
@@ -23,7 +23,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 	"time"
 
@@ -35,16 +34,11 @@ import (
 // probeReportVersion is the wire version of the probe report.
 const probeReportVersion = 1
 
-// probeTimeout bounds one probe run. The checks are stats of a handful of
-// paths, so this is generous; it exists so a hung filesystem cannot hang the
-// command. A blocked stat cannot be interrupted, so the probe runs in its own
-// goroutine and the command stops waiting at the deadline (see probeWithin).
-// It is a variable only so tests can shorten it.
-var probeTimeout = 5 * time.Second
-
-// runtimeProbeFS is the prober's stat access; nil (outside tests) means the
-// operating system's.
-var runtimeProbeFS presence.StatFS
+// defaultProbeTimeout bounds one probe run (deps.probeTimeout). The checks are stats of a
+// handful of paths, so this is generous; it exists so a hung filesystem cannot hang the
+// command. A blocked stat cannot be interrupted, so the probe runs in its own goroutine and the
+// command stops waiting at the deadline (see probeWithin).
+const defaultProbeTimeout = 5 * time.Second
 
 // probeTargetAll is the --target value that selects every runtime's credentials
 // signal.
@@ -56,15 +50,15 @@ type probeReport struct {
 	Observations []workflow.Observation `json:"observations"`
 }
 
-// runtimeProbeEnv returns the home directory and PATH the process runs with.
-// The home is empty when it cannot be determined, which the prober reads as
-// "unknown", never as a location to guess.
-func runtimeProbeEnv() (home, path string) {
-	home, err := os.UserHomeDir()
+// runtimeProbeEnv returns the home directory and PATH the process runs with, as the deps give
+// them. The home is empty when it cannot be determined, which the prober reads as "unknown",
+// never as a location to guess.
+func runtimeProbeEnv(d deps) (home, path string) {
+	home, err := d.homeDir()
 	if err != nil {
 		home = ""
 	}
-	return home, os.Getenv("PATH")
+	return home, d.env("PATH")
 }
 
 // runRuntimeProbe implements 'runtime probe'. Exit 0 prints the report; exit 2
@@ -72,7 +66,7 @@ func runtimeProbeEnv() (home, path string) {
 // --target without its value, or a positional argument) or a failed write of the
 // report. Every exit(n) is followed by a return, because tests inject a
 // non-terminating exit.
-func runRuntimeProbe(args []string, home, path string, stdout, stderr io.Writer, exit func(int)) {
+func runRuntimeProbe(d deps, args []string, stdout, stderr io.Writer, exit func(int)) {
 	target, err := parseProbeArgs(args)
 	if err != nil {
 		fmt.Fprintf(stderr, "error: runtime probe: %v\n", err)
@@ -86,7 +80,12 @@ func runRuntimeProbe(args []string, home, path string, stdout, stderr io.Writer,
 		return
 	}
 
-	observations, err := probeWithin(presence.Prober{Home: home, Path: path, ProbeFS: runtimeProbeFS}, names, probeTimeout)
+	home, path := runtimeProbeEnv(d)
+	timeout := d.probeTimeout
+	if timeout <= 0 {
+		timeout = defaultProbeTimeout // a deps with no timeout is bound by the default, not by a deadline already passed
+	}
+	observations, err := probeWithin(presence.Prober{Home: home, Path: path, ProbeFS: d.probeFS}, names, timeout)
 	if err != nil {
 		fmt.Fprintf(stderr, "error: runtime probe: %v\n", err)
 		exit(1)

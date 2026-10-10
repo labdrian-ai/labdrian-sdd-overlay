@@ -1,0 +1,11 @@
+$ sync-trigger --child --cwd <CWD> --state-dir <STATE>
+exit: 0
+--- stdout ---
+--- stderr ---
+sync-trigger: error:usage event="" cwd="<CWD>"
+
+=== after the child ===
+log: <TIME> event= cwd=<CWD> outcome=error:usage exit=0 duration=<DURATION>
+longterm-mem: (never started)
+files: bin/, bin/longterm-mem 0755, logs/, logs/sync-trigger.log 0644
+

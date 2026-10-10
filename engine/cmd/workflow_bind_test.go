@@ -26,13 +26,16 @@ type bindEnv struct {
 	state string
 	repo  string
 	dir   string
+	// deps is what the verbs the environment runs are built over: the program's, unless a test
+	// puts another prober (or a decorated store) in them.
+	deps deps
 }
 
 func newBindEnv(t *testing.T) bindEnv {
 	t.Helper()
 	state := t.TempDir()
 	t.Setenv("XDG_STATE_HOME", state)
-	return bindEnv{state: state, repo: fixtureRepo(t, "repo"), dir: t.TempDir()}
+	return bindEnv{state: state, repo: fixtureRepo(t, "repo"), dir: t.TempDir(), deps: testDeps()}
 }
 
 // bindingFile is where the binding of the repository at cwd is stored.
@@ -46,7 +49,7 @@ func (e bindEnv) bindingFile(t *testing.T, cwd string) string {
 func (e bindEnv) createWorkflow(t *testing.T, project, wf string) {
 	t.Helper()
 	goal := writeMemoryTestFile(t, e.dir, project+"-"+wf+"-goal.json", memoryTestGoalJSON(project, "goal-1"))
-	phase6MustExitZero(t, "create", []string{"create", "--project", project, "--workflow", wf, "--goal", goal, "--profile", "standalone-minimal"}, e.dir)
+	phase6MustExitZeroWith(t, e.deps, "create", []string{"create", "--project", project, "--workflow", wf, "--goal", goal, "--profile", "standalone-minimal"}, e.dir)
 }
 
 // workflowInStatus creates a workflow and moves it to status: created,
@@ -61,7 +64,7 @@ func (e bindEnv) workflowInStatus(t *testing.T, project, wf, status string) {
 		"closed":  {{"close", "--outcome", "abandoned", "--reason", "test"}},
 	}[status]
 	for _, step := range steps {
-		phase6MustExitZero(t, step[0], append(step, "--project", project, "--workflow", wf), e.dir)
+		phase6MustExitZeroWith(t, e.deps, step[0], append(step, "--project", project, "--workflow", wf), e.dir)
 	}
 }
 
@@ -436,9 +439,11 @@ func TestWorkflowBindDoesNotReplaceABindingThatChangedAfterItWasJudgedStale(t *t
 	phase6MustExitZero(t, "close", []string{"close", "--project", "proj-1", "--workflow", "wf-1", "--outcome", "abandoned", "--reason", "done with it"}, e.dir)
 
 	seamRuns := 0
-	beforeStaleReplace = func() {
+	d := e.deps.withBindingSeams(bindingSeams{beforeStaleReplace: func() {
 		seamRuns++
-		store, err := newBindingStore()
+		// The other process has its own handle on the same store: the environment's deps, which
+		// are not decorated (d is), open it.
+		store, err := e.deps.openBinding()
 		if err != nil {
 			t.Errorf("NewStore() = %v", err)
 			return
@@ -447,10 +452,9 @@ func TestWorkflowBindDoesNotReplaceABindingThatChangedAfterItWasJudgedStale(t *t
 		if err := store.Bind(mustRepoKey(t, e.repo), "proj-3", "wf-3", time.Now(), true); err != nil {
 			t.Errorf("Bind() from the other process = %v", err)
 		}
-	}
-	t.Cleanup(func() { beforeStaleReplace = nil })
+	}})
 
-	r := runWorkflowTest([]string{"bind", "--project", "proj-2", "--workflow", "wf-9"}, e.repo)
+	r := runWorkflowTestWith(d, []string{"bind", "--project", "proj-2", "--workflow", "wf-9"}, e.repo)
 	if seamRuns != 1 {
 		t.Fatalf("the seam ran %d times, want once: the closed binding was not judged stale", seamRuns)
 	}
@@ -882,7 +886,7 @@ func TestWorkflowBindingVerbsReportAFailedStdoutWrite(t *testing.T) {
 	} {
 		var errBuf bytes.Buffer
 		var codes []int
-		runWorkflowCore(args, e.repo, failingMemoryWriter{}, &errBuf, func(c int) { codes = append(codes, c) })
+		runWorkflowCore(e.deps, args, e.repo, failingMemoryWriter{}, &errBuf, func(c int) { codes = append(codes, c) })
 		if !reflect.DeepEqual(codes, []int{1}) {
 			t.Errorf("%v: exit calls = %v, want exactly [1]", args, codes)
 		}

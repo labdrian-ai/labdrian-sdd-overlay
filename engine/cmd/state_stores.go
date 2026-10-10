@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gitfs"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gitprov"
@@ -110,9 +109,10 @@ func newContainedSource() shaper.ContainedSource {
 
 // newReviewReceiptService builds the review receipt capture for the project at root, which
 // is the directory the verb was given: the file-backed adapter, finding the review
-// transaction stores through gitprov with the real git binary and the process environment.
-func newReviewReceiptService(root string) (*reviewreceipt.Service, error) {
-	store, err := receiptfs.New(root, gitprov.Observer{Run: gitprov.ExecRunner, Environ: os.Environ()})
+// transaction stores through gitprov with the real git binary, asked in environ (the environment
+// of the process, which main hands over).
+func newReviewReceiptService(root string, environ []string) (*reviewreceipt.Service, error) {
+	store, err := receiptfs.New(root, gitprov.Observer{Run: gitprov.ExecRunner, Environ: environ})
 	if err != nil {
 		return nil, err
 	}

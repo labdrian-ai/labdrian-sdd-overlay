@@ -54,10 +54,10 @@ var updateReviewReceiptGolden = flag.Bool("update-review-receipt-golden", false,
 // every case; one that keeps failing is reported in full by the first case and by a line
 // pointing at it by the others.
 var (
-	reviewReceiptBinaryOnce sync.Once
-	reviewReceiptBinaryPath string
-	reviewReceiptBinaryDir  string
-	reviewReceiptBinaryErr  error
+	engineBinaryOnce sync.Once
+	engineBinaryPath string
+	engineBinaryDir  string
+	engineBinaryErr  error
 	// reviewReceiptBuildReported says that a case already printed the failed build in full.
 	reviewReceiptBuildReported atomic.Bool
 )
@@ -86,7 +86,7 @@ func buildWithRetry(attempts int, attempt func(n int) error) error {
 	return fmt.Errorf("the build failed %d times:\n%s", attempts, strings.Join(failures, "\n"))
 }
 
-func reviewReceiptBinary(t *testing.T) string {
+func engineBinary(t *testing.T) string {
 	t.Helper()
 	if testing.Short() {
 		t.Skip("skipping the build of the engine binary under -short")
@@ -97,18 +97,18 @@ func reviewReceiptBinary(t *testing.T) string {
 	if _, err := exec.LookPath("go"); err != nil {
 		t.Skipf("go unavailable: %v", err)
 	}
-	reviewReceiptBinaryOnce.Do(func() {
+	engineBinaryOnce.Do(func() {
 		dir, err := os.MkdirTemp("", "engine-review-receipt-bin-*")
 		if err != nil {
-			reviewReceiptBinaryErr = err
+			engineBinaryErr = err
 			return
 		}
-		reviewReceiptBinaryDir = dir
-		reviewReceiptBinaryPath = filepath.Join(dir, "engine")
-		reviewReceiptBinaryErr = buildWithRetry(engineBuildAttempts, func(int) error {
+		engineBinaryDir = dir
+		engineBinaryPath = filepath.Join(dir, "engine")
+		engineBinaryErr = buildWithRetry(engineBuildAttempts, func(int) error {
 			ctx, cancel := context.WithTimeout(context.Background(), engineBuildTimeout)
 			defer cancel()
-			build := exec.CommandContext(ctx, "go", "build", "-buildvcs=false", "-o", reviewReceiptBinaryPath, ".")
+			build := exec.CommandContext(ctx, "go", "build", "-buildvcs=false", "-o", engineBinaryPath, ".")
 			out, err := build.CombinedOutput()
 			if ctx.Err() != nil {
 				return fmt.Errorf("go build did not finish within %s\n%s", engineBuildTimeout, out)
@@ -119,19 +119,19 @@ func reviewReceiptBinary(t *testing.T) string {
 			return nil
 		})
 	})
-	if reviewReceiptBinaryErr != nil {
+	if engineBinaryErr != nil {
 		if reviewReceiptBuildReported.Swap(true) {
 			t.Fatalf("the engine binary could not be built (the first case that needed it printed why)")
 		}
-		t.Fatalf("build the engine binary: %v", reviewReceiptBinaryErr)
+		t.Fatalf("build the engine binary: %v", engineBinaryErr)
 	}
-	return reviewReceiptBinaryPath
+	return engineBinaryPath
 }
 
-// removeReviewReceiptBinary is called by TestMain after the run.
-func removeReviewReceiptBinary() {
-	if reviewReceiptBinaryDir != "" {
-		os.RemoveAll(reviewReceiptBinaryDir)
+// removeEngineBinary is called by TestMain after the run.
+func removeEngineBinary() {
+	if engineBinaryDir != "" {
+		os.RemoveAll(engineBinaryDir)
 	}
 }
 
@@ -162,7 +162,7 @@ type receiptWorld struct {
 
 func newReceiptWorld(t *testing.T) *receiptWorld {
 	t.Helper()
-	return &receiptWorld{t: t, bin: reviewReceiptBinary(t), names: map[string]string{}, reader: t.TempDir()}
+	return &receiptWorld{t: t, bin: engineBinary(t), names: map[string]string{}, reader: t.TempDir()}
 }
 
 // name registers path to be written as placeholder in the transcript.

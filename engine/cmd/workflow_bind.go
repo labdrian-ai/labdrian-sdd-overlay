@@ -47,13 +47,6 @@ import (
 // key on, and guessing from the working directory would bind the wrong thing.
 const errNoRepository = "binding needs a git repository to key on: no .git was found at or above the working directory"
 
-// beforeStaleReplace is a test seam, nil outside tests. The binding store of
-// the verbs calls it (seamedBindings) after bind judged the repository's
-// binding stale and before it replaces it: the window in which another
-// process can bind a live workflow, which projection.Store.BindIfUnchanged
-// must then refuse to overwrite.
-var beforeStaleReplace func()
-
 // bindingReportJSON is the CLI's JSON view of a repository's binding, printed
 // by bind (with the binding just made or kept) and by binding. Detail explains
 // every classification other than absent and owned; Binding is set only when the
@@ -192,14 +185,14 @@ func writeBindingJSON(verb string, v any, stdout, stderr io.Writer, exit func(in
 // user to unbind first. A stale binding is replaced only if it is still the
 // exact binding that was judged stale (projection.Store.BindIfUnchanged): if
 // another process changed it in between, bind exits 2 and leaves it alone.
-func runWorkflowBind(args []string, cwd string, stdout, stderr io.Writer, exit func(int)) {
+func runWorkflowBind(d deps, args []string, cwd string, stdout, stderr io.Writer, exit func(int)) {
 	project, workflowID, err := parseBindingArgs(args, true)
 	if err != nil {
 		fmt.Fprintf(stderr, "error: workflow bind: %v\n", err)
 		exit(1)
 		return
 	}
-	stored, err := newBindWorkflow().Bind(app.BindRequest{Dir: cwd, ProjectID: project, WorkflowID: workflowID})
+	stored, err := d.bindWorkflow().Bind(app.BindRequest{Dir: cwd, ProjectID: project, WorkflowID: workflowID})
 	if err != nil {
 		refuseBinding(stderr, exit, "bind", "%s", bindingRefusal(err))
 		return
@@ -214,13 +207,13 @@ func runWorkflowBind(args []string, cwd string, stdout, stderr io.Writer, exit f
 // idempotent: unbinding a repository that is not bound removes nothing and
 // succeeds. A binding file that is foreign or malformed is refused and left
 // untouched.
-func runWorkflowUnbind(args []string, cwd string, stdout, stderr io.Writer, exit func(int)) {
+func runWorkflowUnbind(d deps, args []string, cwd string, stdout, stderr io.Writer, exit func(int)) {
 	if _, _, err := parseBindingArgs(args, false); err != nil {
 		fmt.Fprintf(stderr, "error: workflow unbind: %v\n", err)
 		exit(1)
 		return
 	}
-	removed, err := newBindWorkflow().Unbind(cwd)
+	removed, err := d.bindWorkflow().Unbind(cwd)
 	if err != nil {
 		refuseBinding(stderr, exit, "unbind", "%s", bindingRefusal(err))
 		return
@@ -235,13 +228,13 @@ func runWorkflowUnbind(args []string, cwd string, stdout, stderr io.Writer, exit
 // the binding and the classification and status of the workflow it names. A
 // state that is not ours (foreign, malformed, unavailable) is reported with its
 // detail and exit 0, as 'workflow status' reports a workflow it cannot own.
-func runWorkflowBinding(args []string, cwd string, stdout, stderr io.Writer, exit func(int)) {
+func runWorkflowBinding(d deps, args []string, cwd string, stdout, stderr io.Writer, exit func(int)) {
 	if _, _, err := parseBindingArgs(args, false); err != nil {
 		fmt.Fprintf(stderr, "error: workflow binding: %v\n", err)
 		exit(1)
 		return
 	}
-	view, err := newBindWorkflow().Describe(cwd)
+	view, err := d.bindWorkflow().Describe(cwd)
 	if err != nil {
 		refuseBinding(stderr, exit, "binding", "%s", bindingRefusal(err))
 		return

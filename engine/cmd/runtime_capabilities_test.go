@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"go/parser"
 	"go/token"
-	"io"
 	"os"
 	"reflect"
 	"strconv"
@@ -29,7 +28,7 @@ func runCapabilitiesTest(args ...string) capabilitiesRun {
 	var out, errBuf bytes.Buffer
 	code := -1
 	exited := false
-	runRuntimeCore(noPi(), noGit(), append([]string{"capabilities"}, args...), &out, &errBuf, func(c int) {
+	runRuntimeCore(testDeps(), noPi(), noGit(), append([]string{"capabilities"}, args...), &out, &errBuf, func(c int) {
 		if !exited {
 			code = c
 			exited = true
@@ -189,7 +188,7 @@ func TestRuntimeCapabilitiesRefusals(t *testing.T) {
 func TestRuntimeCapabilitiesReportsFailedStdoutWrite(t *testing.T) {
 	var errBuf bytes.Buffer
 	var codes []int
-	runRuntimeCore(noPi(), noGit(), []string{"capabilities"}, failingMemoryWriter{}, &errBuf, func(c int) {
+	runRuntimeCore(testDeps(), noPi(), noGit(), []string{"capabilities"}, failingMemoryWriter{}, &errBuf, func(c int) {
 		codes = append(codes, c)
 	})
 	if !reflect.DeepEqual(codes, []int{1}) {
@@ -202,30 +201,12 @@ func TestRuntimeCapabilitiesReportsFailedStdoutWrite(t *testing.T) {
 	}
 }
 
-// captureUsage returns what usage() prints. usage writes straight to
-// os.Stderr, so the test swaps it for a pipe and drains that pipe
-// concurrently: the help text is several kilobytes, more than some platforms'
-// pipe buffers hold if it were only read afterwards.
+// captureUsage returns what usage prints.
 func captureUsage(t *testing.T) string {
 	t.Helper()
-	r, w, err := os.Pipe()
-	if err != nil {
-		t.Fatalf("os.Pipe() = %v", err)
-	}
-	defer r.Close()
-	drained := make(chan string, 1)
-	go func() {
-		data, _ := io.ReadAll(r)
-		drained <- string(data)
-	}()
-	saved := os.Stderr
-	os.Stderr = w
-	func() {
-		defer func() { os.Stderr = saved }()
-		usage()
-	}()
-	w.Close()
-	return <-drained
+	var b strings.Builder
+	usage(&b)
+	return b.String()
 }
 
 // TestUsageDocumentsCapabilitiesExitCodes pins the help line for the exit
@@ -305,12 +286,26 @@ func TestRuntimeCapabilitiesSourceImportsNoFilesystemOrAdapters(t *testing.T) {
 func TestRuntimeActionErrorNamesCapabilities(t *testing.T) {
 	var out, errBuf bytes.Buffer
 	code := -1
-	runRuntimeCore(noPi(), noGit(), []string{"--target", "claude"}, &out, &errBuf, func(c int) {
+	runRuntimeCore(testDeps(), noPi(), noGit(), []string{"--target", "claude"}, &out, &errBuf, func(c int) {
 		if code == -1 {
 			code = c
 		}
 	})
 	if code != 1 || !strings.Contains(errBuf.String(), "capabilities") {
 		t.Fatalf("code=%d stderr=%q, want exit 1 with an action list that names capabilities", code, errBuf.String())
+	}
+}
+
+// The usage line of 'runtime capabilities' names the targets the command accepts, the ones the
+// capability package declares, and all.
+func TestUsageNamesTheTargetsOfRuntimeCapabilities(t *testing.T) {
+	want := "  engine runtime capabilities [--target " + strings.Join([]string{capability.TargetClaude, capability.TargetCodex, capability.TargetPi, capability.TargetOpenCode, "all"}, "|") + "]\n"
+	if !strings.Contains(captureUsage(t), want) {
+		t.Errorf("usage does not contain the line %q", want)
+	}
+	for _, target := range []string{capability.TargetClaude, capability.TargetCodex, capability.TargetPi, capability.TargetOpenCode} {
+		if r := runCapabilitiesTest("--target", target); r.code != 0 {
+			t.Errorf("--target %s, which usage names, exits %d", target, r.code)
+		}
 	}
 }

@@ -97,10 +97,14 @@ type shaperRun struct {
 }
 
 func runShaperTest(args []string, stdin string) shaperRun {
+	return runShaperTestWith(testDeps(), args, stdin)
+}
+
+func runShaperTestWith(d deps, args []string, stdin string) shaperRun {
 	var out, errBuf bytes.Buffer
 	code := -1
 	exited := false
-	runShaperCore(args, strings.NewReader(stdin), &out, &errBuf, func(c int) {
+	runShaperCore(d, args, strings.NewReader(stdin), &out, &errBuf, func(c int) {
 		if !exited {
 			code = c
 			exited = true
@@ -438,28 +442,27 @@ func TestShaperClearanceRecord_Refusals(t *testing.T) {
 		t.Fatalf("fixture did not drop the resolution: %s", good)
 	}
 	for _, tc := range []struct {
-		name  string
-		args  []string
-		stdin string
-		env   map[string]string
-		match string
+		name       string
+		args       []string
+		stdin      string
+		agentChild bool
+		match      string
 	}{
-		{"no --stdin", recordArgs(root), good, nil, "--stdin"},
-		{"record content in argv", recordArgs(root, "--stdin", good), good, nil, "unexpected argument"},
-		{"unknown flag", recordArgs(root, "--stdin", "--record", "x"), good, nil, "unknown flag"},
-		{"empty stdin", recordArgs(root, "--stdin"), "", nil, "empty"},
-		{"oversized stdin", recordArgs(root, "--stdin"), strings.Repeat(" ", shaper.MaxRecordBytes+1), nil, "exceeds"},
-		{"view digest mismatch", recordArgs(root, "--stdin"), badView, nil, "view_sha256"},
-		{"missing flag resolution", recordArgs(root, "--stdin"), unresolved, nil, "unresolved"},
-		{"rpc channel", recordArgs(root, "--stdin"), recordFromAssess(t, a, "affirm", "rpc", nil), nil, "tui"},
-		{"gentle-pi child", recordArgs(root, "--stdin"), good, map[string]string{"GENTLE_PI_AGENTS_CHILD": "1"}, "GENTLE_PI_AGENTS_CHILD"},
-		{"not json", recordArgs(root, "--stdin"), "{", nil, "parse"},
+		{"no --stdin", recordArgs(root), good, false, "--stdin"},
+		{"record content in argv", recordArgs(root, "--stdin", good), good, false, "unexpected argument"},
+		{"unknown flag", recordArgs(root, "--stdin", "--record", "x"), good, false, "unknown flag"},
+		{"empty stdin", recordArgs(root, "--stdin"), "", false, "empty"},
+		{"oversized stdin", recordArgs(root, "--stdin"), strings.Repeat(" ", shaper.MaxRecordBytes+1), false, "exceeds"},
+		{"view digest mismatch", recordArgs(root, "--stdin"), badView, false, "view_sha256"},
+		{"missing flag resolution", recordArgs(root, "--stdin"), unresolved, false, "unresolved"},
+		{"rpc channel", recordArgs(root, "--stdin"), recordFromAssess(t, a, "affirm", "rpc", nil), false, "tui"},
+		{"gentle-pi child", recordArgs(root, "--stdin"), good, true, "GENTLE_PI_AGENTS_CHILD"},
+		{"not json", recordArgs(root, "--stdin"), "{", false, "parse"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			for k, v := range tc.env {
-				t.Setenv(k, v)
-			}
-			r := runShaperTest(tc.args, tc.stdin)
+			d := testDeps()
+			d.agentChild = tc.agentChild
+			r := runShaperTestWith(d, tc.args, tc.stdin)
 			if r.code != 1 {
 				t.Fatalf("exit %d, want 1; stdout %q stderr %q", r.code, r.stdout, r.stderr)
 			}
@@ -470,6 +473,40 @@ func TestShaperClearanceRecord_Refusals(t *testing.T) {
 				t.Errorf("refused record wrote %v", files)
 			}
 		})
+	}
+}
+
+// Whether the command runs inside an agent child is main's to say (deps.agentChild, resolved from
+// the environment once): the record verb does not look at the variable itself.
+func TestShaperClearanceRecord_DoesNotReadTheEnvironmentForTheAgentChild(t *testing.T) {
+	root, _ := shaperWorktree(t, shaperTestHandoff, shaperTestGoal("standalone-shaper-handoff", `["Extract jsonstrict."]`))
+	a := decodeAssess(t, runShaperTest(assessArgs(root), ""))
+	t.Setenv("GENTLE_PI_AGENTS_CHILD", "1")
+	d := testDeps()
+	d.agentChild = false
+
+	r := runShaperTestWith(d, recordArgs(root, "--stdin"), recordFromAssess(t, a, "affirm", "tui", nil))
+
+	if r.code != 0 {
+		t.Errorf("exit %d with deps.agentChild false and the variable set, want 0 (the record is stored); stderr %q", r.code, r.stderr)
+	}
+}
+
+// The refusal names the variable and the value of the agent child by the constants main reads them
+// with, so the message cannot drift from what is read.
+func TestShaperRefusalInAnAgentChildNamesTheVariableAndValueOfTheConstants(t *testing.T) {
+	root, _ := shaperWorktree(t, shaperTestHandoff, shaperTestGoal("standalone-shaper-handoff", `[]`))
+	d := testDeps()
+	d.agentChild = true
+
+	r := runShaperTestWith(d, recordArgs(root, "--stdin"), "{}")
+
+	want := "error: shaper clearance record: refusing inside a gentle-pi agent child (" + agentChildVariable + "=" + agentChildValue + "): no human answers its dialogs\n"
+	if r.stderr != want || r.code != 1 {
+		t.Errorf("exit %d, stderr %q, want 1 and %q", r.code, r.stderr, want)
+	}
+	if !strings.Contains(r.stderr, "(GENTLE_PI_AGENTS_CHILD=1)") {
+		t.Errorf("stderr %q no longer names GENTLE_PI_AGENTS_CHILD=1, the variable the gentle-pi extension sets", r.stderr)
 	}
 }
 
@@ -614,7 +651,7 @@ func TestShaperGuardHook_ReadsAtMostTheBoundPlusOneByte(t *testing.T) {
 	src := &endlessReader{}
 	var out, errBuf bytes.Buffer
 	var codes []int
-	runShaperCore([]string{"guard-hook"}, src, &out, &errBuf, func(c int) { codes = append(codes, c) })
+	runShaperCore(testDeps(), []string{"guard-hook"}, src, &out, &errBuf, func(c int) { codes = append(codes, c) })
 	if !reflect.DeepEqual(codes, []int{2}) || !strings.Contains(errBuf.String(), "is larger than the") {
 		t.Errorf("exits %v, stderr %q, want a denial that names the bound", codes, errBuf.String())
 	}

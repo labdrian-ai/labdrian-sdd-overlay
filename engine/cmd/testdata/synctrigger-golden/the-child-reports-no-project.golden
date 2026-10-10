@@ -1,0 +1,11 @@
+$ sync-trigger --child --event archive --cwd <CWD> --state-dir <STATE>
+exit: 0
+--- stdout ---
+--- stderr ---
+
+=== after the child ===
+log: project could not be resolved from the working directory
+log: <TIME> event=archive cwd=<CWD> outcome=skip:no-project exit=2 duration=<DURATION>
+longterm-mem: ran in <CWD> with: sync
+files: bin/, bin/longterm-mem 0755, logs/, logs/sync-trigger.log 0644
+

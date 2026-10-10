@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -33,10 +34,28 @@ type probeRun struct {
 // runProbeTest drives the probe core with an injected home and PATH. Like the
 // other cores it injects a non-terminating exit, so the first exit code wins.
 func runProbeTest(home, path string, args ...string) probeRun {
+	return runProbeTestWith(probeDeps(home, path), args...)
+}
+
+// probeDeps is the deps of a run whose home is home (an empty home is one that cannot be
+// determined) and whose PATH is path.
+func probeDeps(home, path string) deps {
+	d := testDeps()
+	d.userHomeDir = func() (string, error) {
+		if home == "" {
+			return "", errors.New("no home directory")
+		}
+		return home, nil
+	}
+	d.getenv = environmentOf(map[string]string{"PATH": path})
+	return d
+}
+
+func runProbeTestWith(d deps, args ...string) probeRun {
 	var out, errBuf bytes.Buffer
 	code := -1
 	exited := false
-	runRuntimeProbe(args, home, path, &out, &errBuf, func(c int) {
+	runRuntimeProbe(d, args, &out, &errBuf, func(c int) {
 		if !exited {
 			code = c
 			exited = true
@@ -207,7 +226,7 @@ func TestRuntimeProbeExitsOneWhenTheReportCannotBeWritten(t *testing.T) {
 	home, path := probeFixture(t)
 	var errBuf bytes.Buffer
 	var codes []int
-	runRuntimeProbe(nil, home, path, failingMemoryWriter{}, &errBuf, func(c int) { codes = append(codes, c) })
+	runRuntimeProbe(probeDeps(home, path), nil, failingMemoryWriter{}, &errBuf, func(c int) { codes = append(codes, c) })
 	if len(codes) == 0 || codes[0] != 1 || !strings.Contains(errBuf.String(), "writing report") {
 		t.Errorf("exits %v, stderr %q, want exit 1 naming the failed write", codes, errBuf.String())
 	}
@@ -215,27 +234,39 @@ func TestRuntimeProbeExitsOneWhenTheReportCannotBeWritten(t *testing.T) {
 
 // TestRuntimeProbeIsDispatchedFromTheRuntimeVerb: 'runtime probe' is reachable
 // through the same entry point as the other runtime actions, before the
-// lifecycle flags are parsed. The process HOME is the test's isolated one, so
-// nothing there is present.
+// lifecycle flags are parsed. The home and PATH it looks at are the deps': with the
+// signals in the home of the deps they are present, with an empty home they are not.
 func TestRuntimeProbeIsDispatchedFromTheRuntimeVerb(t *testing.T) {
-	var out, errBuf bytes.Buffer
-	code := -1
-	runRuntimeCore(noPi(), noGit(), []string{"probe", "--target", "pi"}, &out, &errBuf, func(c int) {
-		if code == -1 {
-			code = c
-		}
-	})
-	if code != -1 && code != 0 {
-		t.Fatalf("code=%d stderr=%q, want exit 0", code, errBuf.String())
-	}
-	rep := decodeProbe(t, probeRun{stdout: out.String(), stderr: errBuf.String()})
-	if got := names(rep.Observations)[0]; got != "credentials:pi" {
-		t.Errorf("first capability = %q, want credentials:pi", got)
-	}
-	for _, o := range rep.Observations {
-		if o.Capability == "credentials:pi" && o.Status != workflow.ObservationUnavailable {
-			t.Errorf("credentials:pi = %+v, want unavailable in the isolated home", o)
-		}
+	home, path := probeFixture(t)
+	for _, tc := range []struct {
+		name string
+		deps deps
+		want string
+	}{
+		{"the signals are in the home of the deps", probeDeps(home, path), workflow.ObservationAvailable},
+		{"an isolated home holds none", probeDeps(t.TempDir(), t.TempDir()), workflow.ObservationUnavailable},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var out, errBuf bytes.Buffer
+			code := -1
+			runRuntimeCore(tc.deps, noPi(), noGit(), []string{"probe", "--target", "pi"}, &out, &errBuf, func(c int) {
+				if code == -1 {
+					code = c
+				}
+			})
+			if code != -1 && code != 0 {
+				t.Fatalf("code=%d stderr=%q, want exit 0", code, errBuf.String())
+			}
+			rep := decodeProbe(t, probeRun{stdout: out.String(), stderr: errBuf.String()})
+			if got := names(rep.Observations)[0]; got != "credentials:pi" {
+				t.Errorf("first capability = %q, want credentials:pi", got)
+			}
+			for _, o := range rep.Observations {
+				if o.Capability == "credentials:pi" && o.Status != tc.want {
+					t.Errorf("credentials:pi = %+v, want %s", o, tc.want)
+				}
+			}
+		})
 	}
 }
 
@@ -263,9 +294,9 @@ func TestUsageDocumentsRuntimeProbe(t *testing.T) {
 }
 
 // TestRuntimeProbeSourceOpensNoFile: the probe verb takes its home and PATH
-// from the environment and hands them to the presence prober. Its source may
-// use only os.UserHomeDir and os.Getenv, imports no os/exec or net, and calls no
-// function that opens or reads a file.
+// from the deps it is handed (the environment is main's) and hands them to the
+// presence prober. Its source uses nothing of package os, imports no os/exec or
+// net, and calls no function that opens or reads a file.
 func TestRuntimeProbeSourceOpensNoFile(t *testing.T) {
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, "runtime_probe.go", nil, 0)
@@ -278,14 +309,13 @@ func TestRuntimeProbeSourceOpensNoFile(t *testing.T) {
 			t.Errorf("runtime_probe.go imports %s", path)
 		}
 	}
-	allowed := map[string]bool{"UserHomeDir": true, "Getenv": true}
 	ast.Inspect(file, func(n ast.Node) bool {
 		sel, ok := n.(*ast.SelectorExpr)
 		if !ok {
 			return true
 		}
-		if id, ok := sel.X.(*ast.Ident); ok && id.Name == "os" && !allowed[sel.Sel.Name] {
-			t.Errorf("runtime_probe.go uses os.%s; only os.UserHomeDir and os.Getenv are allowed", sel.Sel.Name)
+		if id, ok := sel.X.(*ast.Ident); ok && id.Name == "os" {
+			t.Errorf("runtime_probe.go uses os.%s; it reaches the machine through its deps only", sel.Sel.Name)
 		}
 		return true
 	})
@@ -306,12 +336,11 @@ func (h hangingStatFS) Stat(name string) (fs.FileInfo, error) { return h.Lstat(n
 func TestRuntimeProbeReturnsWithinItsDeadlineWhenAStatHangs(t *testing.T) {
 	release := make(chan struct{})
 	t.Cleanup(func() { close(release) })
-	savedFS, savedTimeout := runtimeProbeFS, probeTimeout
-	runtimeProbeFS, probeTimeout = hangingStatFS{release: release}, 50*time.Millisecond
-	t.Cleanup(func() { runtimeProbeFS, probeTimeout = savedFS, savedTimeout })
+	d := probeDeps(t.TempDir(), "")
+	d.probeFS, d.probeTimeout = hangingStatFS{release: release}, 50*time.Millisecond
 
 	start := time.Now()
-	r := runProbeTest(t.TempDir(), "")
+	r := runProbeTestWith(d)
 	if elapsed := time.Since(start); elapsed > 2*time.Second {
 		t.Fatalf("runtime probe took %v with a hung stat, want it bounded by the deadline", elapsed)
 	}

@@ -48,7 +48,7 @@ func newProjectCLIWorld(t *testing.T) projectCLIWorld {
 }
 
 func (w projectCLIWorld) deps(locker skills.Locker) skills.Deps {
-	deps := newSkillsDeps()
+	deps := newSkillsDeps(testDeps())
 	deps.Locker = locker
 	return deps
 }

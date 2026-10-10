@@ -187,12 +187,12 @@ func toolHookGoldenCases() []hookGoldenCase {
 			e := w.env()
 			e.running(w.t, "proj-1", "wf-1", "standalone-minimal")
 			e.step(w.t, "proj-1", "wf-1", "pause")
-			beforeGateDecision = func() { panic("boom\nsecond line \x1b[31mred " + strings.Repeat("x", 5000)) }
-			w.t.Cleanup(func() { beforeGateDecision = nil })
+			program := w.deps
+			w.deps = program.withGateDecision(func() { panic("boom\nsecond line \x1b[31mred " + strings.Repeat("x", 5000)) })
 			w.toolHook("a panic where the gate decides", e, e.repo, "Edit", editToolInput)
-			beforeGateDecision = func() { panic("boom") }
+			w.deps = program.withGateDecision(func() { panic("boom") })
 			w.toolHook("a short panic value", e, e.repo, "Edit", editToolInput)
-			beforeGateDecision = func() { panic(fmt.Errorf("an error value <with> html & quotes \"q\"")) }
+			w.deps = program.withGateDecision(func() { panic(fmt.Errorf("an error value <with> html & quotes \"q\"")) })
 			w.toolHook("an error as the panic value", e, e.repo, "Edit", editToolInput)
 		}},
 		{"pretooluse-exits-zero-when-stdout-cannot-be-written", func(w *hookWorld) {

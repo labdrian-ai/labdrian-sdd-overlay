@@ -151,10 +151,10 @@ func TestNewClearanceStoreResolvesTheStateHomeFromTheEnvironment(t *testing.T) {
 // real git; an empty root is refused instead of looking at whatever directory the process
 // happens to be in.
 func TestNewReviewReceiptServiceIsBuiltOverTheProjectRoot(t *testing.T) {
-	if svc, err := newReviewReceiptService(""); err == nil || svc != nil {
+	if svc, err := newReviewReceiptService("", os.Environ()); err == nil || svc != nil {
 		t.Errorf("newReviewReceiptService(\"\") = %v, %v, want no service and an error", svc, err)
 	}
-	svc, err := newReviewReceiptService(t.TempDir())
+	svc, err := newReviewReceiptService(t.TempDir(), os.Environ())
 	if err != nil || svc == nil {
 		t.Fatalf("newReviewReceiptService(dir) = %v, %v, want a service", svc, err)
 	}

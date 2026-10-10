@@ -25,7 +25,7 @@ func TestRunRuntimeCore_ConfigRootReachesPi(t *testing.T) {
 
 	var outBuf, errBuf bytes.Buffer
 	exitCode := -1
-	runRuntimeCore(noPi(), noGit(),
+	runRuntimeCore(testDeps(), noPi(), noGit(),
 		[]string{"status", "--target", "pi", "--config-root", root},
 		&outBuf, &errBuf, func(code int) { exitCode = code },
 	)
@@ -45,7 +45,7 @@ func TestRunRuntimeCore_ConfigRootReachesPiInTheAllForm(t *testing.T) {
 	root := filepath.Join(t.TempDir(), "shared-root")
 
 	var outBuf, errBuf bytes.Buffer
-	runRuntimeCore(noPi(), noGit(),
+	runRuntimeCore(testDeps(), noPi(), noGit(),
 		[]string{"status", "--target", "all", "--config-root", root},
 		&outBuf, &errBuf, func(int) {},
 	)

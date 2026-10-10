@@ -14,8 +14,9 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills/skillsfs"
 )
 
-// newSkillsDeps returns the Deps of the production entry point.
-func newSkillsDeps() skills.Deps {
+// newSkillsDeps returns the Deps of the production entry point, over the working directory and
+// the lock wait of d.
+func newSkillsDeps(d deps) skills.Deps {
 	return skills.Deps{
 		ReadFile:     os.ReadFile,
 		Approvals:    skillsfs.Approvals{},
@@ -23,9 +24,9 @@ func newSkillsDeps() skills.Deps {
 		Tree:         skillsfs.Tree{},
 		Project:      skillsfs.Project{},
 		ProjectLocks: skillsfs.ProjectLocks{},
-		Cwd:          os.Getwd,
+		Cwd:          d.workingDir,
 		Identity:     newProjectIdentity(),
-		Locker:       newSkillsLocker(),
+		Locker:       newSkillsLocker(d.skillsLockWait),
 		Now:          wallClockUTC,
 	}
 }

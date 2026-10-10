@@ -1,0 +1,10 @@
+$ sync-trigger --child --event session-end --cwd <CWD> --state-dir <STATE>
+exit: 0
+--- stdout ---
+--- stderr ---
+
+=== after the child ===
+log: <TIME> event=session-end cwd=<CWD> outcome=failure:engram-unavailable exit=4 duration=<DURATION>
+longterm-mem: ran in <CWD> with: sync
+files: bin/, bin/longterm-mem 0755, logs/, logs/sync-trigger.log 0644
+

@@ -88,7 +88,13 @@ func phase6MustUnmarshal(t *testing.T, data []byte) workflowStateJSON {
 // full context (args, stdout, stderr) unless it exits 0.
 func phase6MustExitZero(t *testing.T, label string, args []string, cwd string) workflowRun {
 	t.Helper()
-	r := runWorkflowTest(args, cwd)
+	return phase6MustExitZeroWith(t, testDeps(), label, args, cwd)
+}
+
+// phase6MustExitZeroWith is phase6MustExitZero over the deps the test gives.
+func phase6MustExitZeroWith(t *testing.T, d deps, label string, args []string, cwd string) workflowRun {
+	t.Helper()
+	r := runWorkflowTestWith(d, args, cwd)
 	if r.code != 0 {
 		t.Fatalf("%s: args=%v code=%d stderr=%q, want exit 0", label, args, r.code, r.stderr)
 	}

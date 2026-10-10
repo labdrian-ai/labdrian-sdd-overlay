@@ -1,0 +1,11 @@
+$ sync-trigger --event session-end --state-dir <STATE>
+exit: 0
+--- stdout ---
+--- stderr ---
+sync-trigger: error:usage event="session-end" cwd=""
+
+=== nothing is opened ===
+log: (none)
+longterm-mem: (never started)
+files: (empty)
+

@@ -53,12 +53,12 @@ const skillsGuardVerb = "guard-hook"
 // runSkillsWithStdin routes 'skills <verb>': the guard hook, which needs stdin,
 // or the skills core, which does not. Every exit(n) is followed by a return,
 // because tests inject a non-terminating exit.
-func runSkillsWithStdin(args []string, stdin io.Reader, stdout, stderr io.Writer, exit func(int)) {
+func runSkillsWithStdin(d deps, args []string, stdin io.Reader, stdout, stderr io.Writer, exit func(int)) {
 	if len(args) > 0 && args[0] == skillsGuardVerb {
 		runSkillsGuardHook(args[1:], stdin, stdout, stderr, exit, nil)
 		return
 	}
-	runSkillsCore(verbFromArgs(args), args, stdout, stderr, exit)
+	runSkillsCore(d, verbFromArgs(args), args, stdout, stderr, exit)
 }
 
 // runSkillsGuardHook implements 'skills guard-hook'. From the moment the command

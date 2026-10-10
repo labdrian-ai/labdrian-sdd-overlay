@@ -30,7 +30,7 @@ func TestRuntimeInstallPiRunsPiThroughTheInjectedRunner(t *testing.T) {
 
 	var out, errOut bytes.Buffer
 	code := -1
-	runRuntimeCore(commands, noGit(), []string{"install", "--target", "pi"}, &out, &errOut, func(c int) { code = c })
+	runRuntimeCore(testDeps(), commands, noGit(), []string{"install", "--target", "pi"}, &out, &errOut, func(c int) { code = c })
 
 	if code != 0 {
 		t.Fatalf("install --target pi exited %d\nstdout=%q\nstderr=%q", code, out.String(), errOut.String())
@@ -50,7 +50,7 @@ func TestRuntimeInstallPiWithoutTheCLIKeepsTheBuildAndTheHint(t *testing.T) {
 
 	var out, errOut bytes.Buffer
 	code := -1
-	runRuntimeCore(commands, noGit(), []string{"install", "--target", "pi"}, &out, &errOut, func(c int) { code = c })
+	runRuntimeCore(testDeps(), commands, noGit(), []string{"install", "--target", "pi"}, &out, &errOut, func(c int) { code = c })
 
 	pkg := filepath.Join(stateDir, "pi", "labdrian-pi")
 	if want := "run: pi install " + pkg; !strings.Contains(out.String(), want) {
@@ -70,7 +70,7 @@ func TestRuntimeInstallPiHonoursTheSkipVariableThroughTheConfig(t *testing.T) {
 	commands := &scriptedPiCommands{}
 
 	var out, errOut bytes.Buffer
-	runRuntimeCore(commands, noGit(), []string{"install", "--target", "pi"}, &out, &errOut, func(int) {})
+	runRuntimeCore(testDeps(), commands, noGit(), []string{"install", "--target", "pi"}, &out, &errOut, func(int) {})
 
 	for _, run := range commands.runs {
 		if strings.Contains(strings.Join(run, " "), "pi-subagents") {
@@ -86,7 +86,7 @@ func TestRuntimeCoreWithoutACommandRunnerRefusesBeforeActing(t *testing.T) {
 	piOverlayWorld(t)
 	var out, errOut bytes.Buffer
 	code := -1
-	runRuntimeCore(nil, noGit(), []string{"install", "--target", "pi"}, &out, &errOut, func(c int) { code = c })
+	runRuntimeCore(testDeps(), nil, noGit(), []string{"install", "--target", "pi"}, &out, &errOut, func(c int) { code = c })
 	if code != 1 || !strings.Contains(errOut.String(), "no command runner") {
 		t.Fatalf("exit=%d stderr=%q, want a refusal naming the missing command runner", code, errOut.String())
 	}

@@ -44,21 +44,17 @@ func presenceWorld(t *testing.T) (stateHome string) {
 	return stateHome
 }
 
-// useUnavailableProber installs workflow.UnavailableProber through the seam for
-// one test, so a test that asserts "every dependency is unavailable" does not
-// depend on the gentle-ai binary or the memory files of the machine it runs on.
-func useUnavailableProber(t *testing.T) {
+func createOddWorkflow(t *testing.T) {
 	t.Helper()
-	saved := workflowProber
-	workflowProber = func() workflow.DependencyProber { return workflow.UnavailableProber{} }
-	t.Cleanup(func() { workflowProber = saved })
+	createOddWorkflowWith(t, testDeps())
 }
 
-func createOddWorkflow(t *testing.T) {
+// createOddWorkflowWith creates the workflow over the deps the test gives.
+func createOddWorkflowWith(t *testing.T, d deps) {
 	t.Helper()
 	dir := t.TempDir()
 	goalPath := writeMemoryTestFile(t, dir, "goal.json", memoryTestGoalJSON("proj-1", "goal-1"))
-	phase6MustExitZero(t, "create", []string{"create", "--project", "proj-1", "--workflow", "wf-1", "--goal", goalPath, "--profile", "odd"}, dir)
+	phase6MustExitZeroWith(t, d, "create", []string{"create", "--project", "proj-1", "--workflow", "wf-1", "--goal", goalPath, "--profile", "odd"}, dir)
 }
 
 func TestWorkflowRecordsWhatThePresenceProberFindsInTheHomeAndPath(t *testing.T) {
@@ -97,14 +93,13 @@ func TestWorkflowRecordsWhatThePresenceProberFindsInTheHomeAndPath(t *testing.T)
 	}
 }
 
-// TestWorkflowSeamKeepsTheUnavailableProberAvailable: the default prober reads
-// the home and PATH, but the constructor takes its prober from a seam, so the
+// TestWorkflowDepsKeepTheUnavailableProberAvailable: the default prober reads
+// the home and PATH, but the lifecycle takes its prober from the deps, so the
 // old behavior (nothing is ever confirmed) stays covered in the same world
 // where the presence prober confirms everything.
-func TestWorkflowSeamKeepsTheUnavailableProberAvailable(t *testing.T) {
+func TestWorkflowDepsKeepTheUnavailableProberAvailable(t *testing.T) {
 	stateHome := presenceWorld(t)
-	useUnavailableProber(t)
-	createOddWorkflow(t)
+	createOddWorkflowWith(t, testDeps().withUnavailableProber())
 
 	for _, e := range phase6LoadOwned(t, stateHome, "proj-1", "wf-1").Events {
 		for _, o := range e.Observations {
@@ -117,7 +112,7 @@ func TestWorkflowSeamKeepsTheUnavailableProberAvailable(t *testing.T) {
 
 func TestWorkflowDefaultProberUsesTheProcessHomeAndPath(t *testing.T) {
 	presenceWorld(t)
-	got, err := workflowProber().Probe(context.Background(), []string{"memory:engram", "gentle-ai-review", "credentials:codex"})
+	got, err := testDeps().dependencyProber().Probe(context.Background(), []string{"memory:engram", "gentle-ai-review", "credentials:codex"})
 	if err != nil || len(got) != 3 {
 		t.Fatalf("Probe() = %v, %v", got, err)
 	}
@@ -165,16 +160,15 @@ func TestWorkflowVerbWithAHungStatReturnsWithinTheProbeDeadline(t *testing.T) {
 	home, _ := phase6IsolatedHome(t)
 	release := make(chan struct{})
 	t.Cleanup(func() { close(release) })
-	saved := workflowProber
-	workflowProber = func() workflow.DependencyProber {
+	d := testDeps()
+	d.workflowProber = func() workflow.DependencyProber {
 		return presence.Prober{Home: home, ProbeFS: hangingStatFS{release: release}}
 	}
-	t.Cleanup(func() { workflowProber = saved })
 
 	dir := t.TempDir()
 	goalPath := writeMemoryTestFile(t, dir, "goal.json", memoryTestGoalJSON("proj-1", "goal-1"))
 	start := time.Now()
-	r := runWorkflowTest([]string{"create", "--project", "proj-1", "--workflow", "wf-1", "--goal", goalPath, "--profile", "odd"}, dir)
+	r := runWorkflowTestWith(d, []string{"create", "--project", "proj-1", "--workflow", "wf-1", "--goal", goalPath, "--profile", "odd"}, dir)
 	if elapsed := time.Since(start); elapsed > 15*time.Second {
 		t.Fatalf("create took %v with a hung stat, want it bounded by the probe deadline", elapsed)
 	}

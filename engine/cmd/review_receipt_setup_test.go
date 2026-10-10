@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"os"
 	"os/exec"
 	"strings"
 	"testing"
@@ -19,7 +20,7 @@ func TestNewReviewReceiptServiceAsksTheRealGitInTheProcessEnvironment(t *testing
 		}
 		dir := t.TempDir()
 		gitInit(t, dir)
-		svc, err := newReviewReceiptService(dir)
+		svc, err := newReviewReceiptService(dir, os.Environ())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -34,7 +35,7 @@ func TestNewReviewReceiptServiceAsksTheRealGitInTheProcessEnvironment(t *testing
 		if _, err := exec.LookPath("git"); err != nil {
 			t.Skipf("git unavailable: %v", err)
 		}
-		svc, err := newReviewReceiptService(t.TempDir())
+		svc, err := newReviewReceiptService(t.TempDir(), os.Environ())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -48,7 +49,7 @@ func TestNewReviewReceiptServiceAsksTheRealGitInTheProcessEnvironment(t *testing
 		// another one, so the refusal can only come from the environment the service was
 		// wired with: a service wired with an empty environment would not see it.
 		t.Setenv("GIT_DIR", t.TempDir())
-		svc, err := newReviewReceiptService(t.TempDir())
+		svc, err := newReviewReceiptService(t.TempDir(), os.Environ())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -86,7 +87,7 @@ func TestBuildReviewReceiptServiceFailsInTheWordsAndWithTheCodeOfTheVerb(t *test
 		t.Run(tc.name, func(t *testing.T) {
 			var stderr bytes.Buffer
 			var exits []int
-			svc := buildReviewReceiptService("", &stderr, func(code int) { exits = append(exits, code) }, tc.prefix, tc.code)
+			svc := buildReviewReceiptService("", os.Environ(), &stderr, func(code int) { exits = append(exits, code) }, tc.prefix, tc.code)
 			if svc != nil {
 				t.Errorf("service = %v, want none", svc)
 			}
@@ -102,7 +103,7 @@ func TestBuildReviewReceiptServiceFailsInTheWordsAndWithTheCodeOfTheVerb(t *test
 	t.Run("a service that can be built is returned in silence", func(t *testing.T) {
 		var stderr bytes.Buffer
 		exited := false
-		svc := buildReviewReceiptService(t.TempDir(), &stderr, func(int) { exited = true }, "p", 1)
+		svc := buildReviewReceiptService(t.TempDir(), os.Environ(), &stderr, func(int) { exited = true }, "p", 1)
 		if svc == nil || stderr.Len() != 0 || exited {
 			t.Errorf("service = %v, stderr = %q, exited = %v, want a service and silence", svc, stderr.String(), exited)
 		}

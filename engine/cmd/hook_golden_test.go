@@ -69,11 +69,15 @@ type hookWorld struct {
 	b     strings.Builder
 	files map[string]string
 	names map[string]string
+	// deps is what the hooks the world runs are built over: the program's, with a prober that
+	// confirms nothing once a case has a bound-repository world (env), and with the decorators a
+	// case puts in front of the store or the gate.
+	deps deps
 }
 
 func newHookWorld(t *testing.T) *hookWorld {
 	t.Helper()
-	return &hookWorld{t: t, files: map[string]string{}, names: map[string]string{}}
+	return &hookWorld{t: t, files: map[string]string{}, names: map[string]string{}, deps: testDeps()}
 }
 
 // name registers path to be written as placeholder in the transcript.
@@ -83,8 +87,9 @@ func (w *hookWorld) name(path, placeholder string) { w.names[path] = placeholder
 // prober confirms nothing, so the projected context is the same on every machine.
 func (w *hookWorld) env() hookEnv {
 	w.t.Helper()
-	useUnavailableProber(w.t)
+	w.deps = w.deps.withUnavailableProber()
 	e := newHookEnv(w.t)
+	e.deps = w.deps
 	w.name(e.state, "<STATE>")
 	w.name(e.dir, "<DIR>")
 	w.name(e.repo, "<REPO>")
@@ -249,7 +254,7 @@ func (w *hookWorld) projectionReader(label string, args []string, stdin io.Reade
 	w.t.Helper()
 	var stdout, stderr bytes.Buffer
 	var exits []int
-	runProjectionCore(args, processCwd, stdin, &stdout, &stderr, func(c int) { exits = append(exits, c) })
+	runProjectionCore(w.deps, args, processCwd, stdin, &stdout, &stderr, func(c int) { exits = append(exits, c) })
 	w.record("projection "+strings.Join(args, " "), label, stdinNote, exits, stdout.String(), stderr.String())
 }
 
@@ -258,7 +263,7 @@ func (w *hookWorld) projectionWriter(label string, args []string, stdin, process
 	w.t.Helper()
 	var stderr bytes.Buffer
 	var exits []int
-	runProjectionCore(args, processCwd, strings.NewReader(stdin), stdout, &stderr, func(c int) { exits = append(exits, c) })
+	runProjectionCore(w.deps, args, processCwd, strings.NewReader(stdin), stdout, &stderr, func(c int) { exits = append(exits, c) })
 	w.record("projection "+strings.Join(args, " "), label, stdin, exits, "<stdout cannot be written>\n", stderr.String())
 }
 

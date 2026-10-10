@@ -30,7 +30,7 @@ type guardRun struct {
 func runGuardHookWith(stdin io.Reader, args ...string) guardRun {
 	var out, errBuf bytes.Buffer
 	var codes []int
-	runSkillsWithStdin(append([]string{"guard-hook"}, args...), stdin, &out, &errBuf, func(c int) { codes = append(codes, c) })
+	runSkillsWithStdin(testDeps(), append([]string{"guard-hook"}, args...), stdin, &out, &errBuf, func(c int) { codes = append(codes, c) })
 	return guardRun{codes: codes, stdout: out.String(), stderr: errBuf.String()}
 }
 
@@ -159,7 +159,7 @@ func TestSkillsGuardHook_NothingItDoesCanBlockACall(t *testing.T) {
 
 	t.Run("an answer that cannot be written", func(t *testing.T) {
 		var codes []int
-		runSkillsWithStdin([]string{"guard-hook"},
+		runSkillsWithStdin(testDeps(), []string{"guard-hook"},
 			strings.NewReader(guardToolInput(t, "Bash", map[string]any{"command": "labdrian skills approve"})),
 			failingWriter{}, io.Discard, func(c int) { codes = append(codes, c) })
 		if !reflect.DeepEqual(codes, []int{0}) {
@@ -314,14 +314,14 @@ func TestSkillsGuardHook_RefusesAnArgumentItDoesNotUnderstand(t *testing.T) {
 func TestSkillsWithStdin_OtherVerbsStillReachTheSkillsCore(t *testing.T) {
 	var out, errBuf bytes.Buffer
 	var codes []int
-	runSkillsWithStdin([]string{"nuke"}, strings.NewReader(""), &out, &errBuf, func(c int) { codes = append(codes, c) })
+	runSkillsWithStdin(testDeps(), []string{"nuke"}, strings.NewReader(""), &out, &errBuf, func(c int) { codes = append(codes, c) })
 	if len(codes) == 0 || codes[0] != 1 || !strings.Contains(errBuf.String(), `unknown skills verb "nuke"`) {
 		t.Errorf("exits %v, stderr %q, want the skills core's unknown-verb refusal", codes, errBuf.String())
 	}
 	out.Reset()
 	errBuf.Reset()
 	codes = nil
-	runSkillsWithStdin(nil, strings.NewReader(""), &out, &errBuf, func(c int) { codes = append(codes, c) })
+	runSkillsWithStdin(testDeps(), nil, strings.NewReader(""), &out, &errBuf, func(c int) { codes = append(codes, c) })
 	if len(codes) == 0 || codes[0] != 1 || !strings.Contains(errBuf.String(), "skills requires a verb") {
 		t.Errorf("exits %v, stderr %q, want the missing-verb refusal", codes, errBuf.String())
 	}

@@ -214,7 +214,7 @@ func (w *contractWorld) opencodeInstall(minimalism, oo string) {
 
 	var stdout, stderr bytes.Buffer
 	exitCode := -1
-	runRuntimeCore(noPi(), noGit(), []string{"install", "--target", "opencode", "--config-root", configRoot}, &stdout, &stderr, func(code int) { exitCode = code })
+	runRuntimeCore(testDeps(), noPi(), noGit(), []string{"install", "--target", "opencode", "--config-root", configRoot}, &stdout, &stderr, func(code int) { exitCode = code })
 	exit := "none"
 	if exitCode >= 0 {
 		exit = fmt.Sprint(exitCode)

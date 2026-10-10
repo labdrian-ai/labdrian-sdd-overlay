@@ -72,8 +72,9 @@ func neutralDir(t *testing.T) string {
 // same on every machine.
 func newRepoWorld(t *testing.T) *repoWorld {
 	t.Helper()
-	useUnavailableProber(t)
-	w := &repoWorld{hookWorld: newHookWorld(t), state: neutralDir(t), goals: neutralDir(t), keys: map[string]string{}}
+	hookWorld := newHookWorld(t)
+	hookWorld.deps = hookWorld.deps.withUnavailableProber()
+	w := &repoWorld{hookWorld: hookWorld, state: neutralDir(t), goals: neutralDir(t), keys: map[string]string{}}
 	t.Setenv("XDG_STATE_HOME", w.state)
 	w.name(w.state, "<STATE>")
 	w.name(w.goals, "<GOALS>")
@@ -99,7 +100,7 @@ func (w *repoWorld) key(commonDir, label string) {
 // run records one run of 'workflow <args>' in the directory cwd.
 func (w *repoWorld) run(label, cwd string, args ...string) workflowRun {
 	w.t.Helper()
-	r := runWorkflowTest(args, cwd)
+	r := runWorkflowTestWith(w.deps, args, cwd)
 	fmt.Fprintf(&w.b, "$ workflow %s\n# %s (in %s)\n--- exit ---\n%d\n--- stdout ---\n%s--- stderr ---\n%s\n",
 		strings.Join(args, " "), label, w.cwdName(cwd), r.code, w.shown(r.stdout), w.shown(r.stderr))
 	return r
