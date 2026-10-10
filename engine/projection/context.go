@@ -303,9 +303,9 @@ func buildContext(b Binding, w workflow.Loaded) string {
 	if len(recorded) > 0 {
 		current = orElse(sanitizeLine(recorded[len(recorded)-1]), blankField)
 	}
-	lines = append(lines, "current stage: "+current, "next stage: "+nextStage(state.Profile, recorded))
+	lines = append(lines, "current stage: "+current, "next stage: "+nextStage(state, recorded))
 
-	lines = append(lines, memoryPlanLines(state.Profile, b.ProjectID, state.GoalID)...)
+	lines = append(lines, memoryPlanLines(state, b.ProjectID)...)
 	lines = append(lines, claudeCapabilityLine())
 	lines = append(lines, "progress commands: labdrian workflow stage "+flags+" --stage <name>; "+
 		"labdrian workflow verify "+flags+" --goal <goal file>; "+
@@ -327,16 +327,23 @@ func buildContext(b Binding, w workflow.Loaded) string {
 	return strings.Join(lines, "\n")
 }
 
+// builtInWorkflowProfile is the profile the workflow in state goes on from, the one the lifecycle
+// goes on from: workflow.ProfileOf over the built-in catalog, that is the snapshot its log
+// recorded, or, for a log that recorded only a name, the built-in profile of that name.
+func builtInWorkflowProfile(state workflow.State) (workflowprofile.WorkflowProfile, error) {
+	return workflow.ProfileOf(state, workflow.ProfileCatalogFunc(workflowprofile.Resolve))
+}
+
 // nextStage names the stage to record next. The workflow log never says: the
 // lifecycle admits exactly the profile's next declared stage, so the answer is
 // the entry of the profile's list after the ones recorded. When the profile does
 // not resolve, or the recorded stages are not a prefix of its list (a log that
 // was edited by hand), there is no next stage to name, and the line says so
 // instead of guessing.
-func nextStage(profileName string, recorded []string) string {
-	profile, err := workflowprofile.Resolve(profileName)
+func nextStage(state workflow.State, recorded []string) string {
+	profile, err := builtInWorkflowProfile(state)
 	if err != nil {
-		return "not available: profile " + strconv.Quote(sanitizeLine(profileName)) + " does not resolve, so stage guidance is omitted"
+		return "not available: profile " + strconv.Quote(sanitizeLine(state.Profile)) + " does not resolve, so stage guidance is omitted"
 	}
 	if profile.CheckStagePrefix(recorded) != nil {
 		return "not available: the recorded stages do not follow the declared order of profile " + strconv.Quote(profile.Name) + ", so stage guidance is omitted"
@@ -352,8 +359,8 @@ func nextStage(profileName string, recorded []string) string {
 // profile's ceiling, resolved for the project and goal. The context states this
 // plan and the PreToolUse gate enforces it, so both call this function, and can
 // never disagree about which project is permitted.
-func resolvePlan(profileName, projectID, goalID string) (memoryscope.Plan, error) {
-	profile, err := workflowprofile.Resolve(profileName)
+func resolvePlan(state workflow.State, projectID string) (memoryscope.Plan, error) {
+	profile, err := builtInWorkflowProfile(state)
 	if err != nil {
 		return memoryscope.Plan{}, err
 	}
@@ -361,15 +368,15 @@ func resolvePlan(profileName, projectID, goalID string) (memoryscope.Plan, error
 	if err != nil {
 		return memoryscope.Plan{}, err
 	}
-	return memoryscope.Resolve(directive, projectID, goalID)
+	return memoryscope.Resolve(directive, projectID, state.GoalID)
 }
 
 // memoryPlanLines renders the memory plan of the workflow's profile: the profile
 // ceiling, resolved for the project and goal, exactly as 'memory plan' prints it.
 // The plan is only a description of what may be read. It is stated as such,
 // because nothing here queries or enforces anything.
-func memoryPlanLines(profileName, projectID, goalID string) []string {
-	plan, err := resolvePlan(profileName, projectID, goalID)
+func memoryPlanLines(state workflow.State, projectID string) []string {
+	plan, err := resolvePlan(state, projectID)
 	if err != nil {
 		return []string{"memory plan: not available: " + clip(sanitizeLine(err.Error()), maxDetailRunes)}
 	}

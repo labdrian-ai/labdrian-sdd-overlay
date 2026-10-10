@@ -124,7 +124,7 @@ func TestWorkflowEventValidate(t *testing.T) {
 		wantErr bool
 	}{
 		{name: "valid created", mutate: func(e *WorkflowEvent) {}, wantErr: false},
-		{name: "bad version", mutate: func(e *WorkflowEvent) { e.Version = 2 }, wantErr: true},
+		{name: "bad version", mutate: func(e *WorkflowEvent) { e.Version = 3 }, wantErr: true},
 		{name: "blank workflow_id", mutate: func(e *WorkflowEvent) { e.WorkflowID = "" }, wantErr: true},
 		{name: "workflow_id with path separator", mutate: func(e *WorkflowEvent) { e.WorkflowID = "a/b" }, wantErr: true},
 		{name: "workflow_id with dotdot", mutate: func(e *WorkflowEvent) { e.WorkflowID = ".." }, wantErr: true},

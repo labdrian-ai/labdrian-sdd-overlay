@@ -12,6 +12,7 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/goal"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/memoryscope"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/roles"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflowprofile"
 )
 
 // Sentinel errors returned by Lifecycle operations. Wrap with %w so callers
@@ -37,7 +38,8 @@ var (
 	// exists as a defensive, named failure rather than a silent assumption.
 	ErrChainInvalid = errors.New("workflow lifecycle: verify: event hash chain does not verify")
 	// ErrProfileInvalid is returned by Verify when the workflow's recorded
-	// Workflow Profile name no longer resolves against workflowprofile.
+	// Workflow Profile name no longer resolves against the catalog. Only a
+	// workflow of version 1 can fail so: one of version 2 carries its profile.
 	ErrProfileInvalid = errors.New("workflow lifecycle: verify: recorded profile no longer resolves")
 	// ErrStageOrderInvalid is returned by Verify when the workflow's
 	// recorded stages no longer form a valid prefix of the Profile's
@@ -238,26 +240,59 @@ func (l Lifecycle) loadOwned(projectID, workflowID string) (Loaded, error) {
 	return loaded, nil
 }
 
+// ProfileOf is the Workflow Profile a workflow goes on from. A workflow whose log recorded a
+// snapshot of its profile when it was created (version 2) goes on from that snapshot, and the
+// catalog is not asked: the workflow is self-contained, so it does not change when the catalog does,
+// and it does not stop when the catalog drops the profile. A workflow whose log recorded the name
+// alone (version 1) goes on from the profile the catalog gives for that name, as it always did, and
+// the catalog's refusal is the error.
+func ProfileOf(state State, catalog ProfileCatalog) (workflowprofile.WorkflowProfile, error) {
+	if state.ProfileSnapshot != nil {
+		return state.ProfileSnapshot.Profile(), nil
+	}
+	return catalog.Resolve(state.Profile)
+}
+
+// catalogProfileOf is ProfileOf over this Lifecycle's catalog: the profile of the workflow in state,
+// from the snapshot its log has, and from that catalog only where the log has none. (Not to be
+// confused with Resolve on the catalog, which Create alone calls, for a workflow that has no log.)
+func (l Lifecycle) catalogProfileOf(state State) (workflowprofile.WorkflowProfile, error) {
+	return ProfileOf(state, l.profiles)
+}
+
 // baseEvent builds the fields common to every event this Lifecycle appends:
 // version, ids, seq/prev_digest linkage derived from loaded, kind, the
 // current timestamp, this Lifecycle's static provenance, and dependency
-// observations for profileName. The caller fills in any kind-specific
+// observations for profile. The caller fills in any kind-specific
 // payload fields before appending.
-func (l Lifecycle) baseEvent(loaded Loaded, projectID, workflowID string, kind Kind, profileName string) (WorkflowEvent, error) {
-	observations, err := l.observationsFor(profileName)
+func (l Lifecycle) baseEvent(loaded Loaded, projectID, workflowID string, kind Kind, profile workflowprofile.WorkflowProfile) (WorkflowEvent, error) {
+	observations, err := l.observationsFor(profile)
 	if err != nil {
 		return WorkflowEvent{}, err
 	}
 	return l.eventWith(loaded, projectID, workflowID, kind, observations)
 }
 
+// stateEvent is baseEvent for an event of the workflow loaded holds, which goes on from the profile
+// of that workflow (see ProfileOf).
+func (l Lifecycle) stateEvent(loaded Loaded, projectID, workflowID string, kind Kind) (WorkflowEvent, error) {
+	profile, err := l.catalogProfileOf(loaded.State)
+	if err != nil {
+		return WorkflowEvent{}, fmt.Errorf("workflow lifecycle: %w", err)
+	}
+	return l.baseEvent(loaded, projectID, workflowID, kind, profile)
+}
+
 // eventWith builds the next event of kind for loaded's chain with the given
-// observations.
+// observations. Its version is the log's, that of the created event, and the
+// current one for the created event of a workflow that has no log yet.
 func (l Lifecycle) eventWith(loaded Loaded, projectID, workflowID string, kind Kind, observations []Observation) (WorkflowEvent, error) {
 	var seq int
 	var prevDigest string
+	version := EventVersion
 	if n := len(loaded.Events); n > 0 {
 		seq = n
+		version = loaded.State.Version
 		digest, err := EventDigest(loaded.Events[n-1])
 		if err != nil {
 			return WorkflowEvent{}, fmt.Errorf("workflow lifecycle: %w", err)
@@ -265,7 +300,7 @@ func (l Lifecycle) eventWith(loaded Loaded, projectID, workflowID string, kind K
 		prevDigest = digest
 	}
 	return WorkflowEvent{
-		Version:      EventVersion,
+		Version:      version,
 		WorkflowID:   workflowID,
 		ProjectID:    projectID,
 		Seq:          seq,
@@ -301,11 +336,7 @@ func (l Lifecycle) commit(projectID, workflowID string, loaded Loaded, event Wor
 // or does not return within l.probeTimeout is treated the same way: every
 // requested capability is recorded unavailable, with a detail explaining
 // why (see l.probe).
-func (l Lifecycle) observationsFor(profileName string) ([]Observation, error) {
-	profile, err := l.profiles.Resolve(profileName)
-	if err != nil {
-		return nil, fmt.Errorf("workflow lifecycle: %w", err)
-	}
+func (l Lifecycle) observationsFor(profile workflowprofile.WorkflowProfile) ([]Observation, error) {
 	directive, err := memoryscope.DefaultFor(profile)
 	if err != nil {
 		return nil, fmt.Errorf("workflow lifecycle: %w", err)
@@ -438,8 +469,10 @@ func (l Lifecycle) loadVerifiedRoleChain(projectID, goalID, roleChainID string) 
 
 // Create validates g (a Goal v2) and profileName, optionally verifies a
 // referenced role chain, and appends the workflow's created event: data
-// only, binding goal_id, goal_digest, profile, and (if given) role_chain_id.
-// It fails, appending nothing, when g is invalid, profileName is unknown,
+// only, binding goal_id, goal_digest, profile, a snapshot of the profile the
+// catalog gave for profileName (and the snapshot's digest), and (if given)
+// role_chain_id. The workflow goes on from that snapshot, not from the
+// catalog. It fails, appending nothing, when g is invalid, profileName is unknown,
 // roleChainID is non-blank but the chain has no records or fails
 // roles.VerifyChain, or on-disk state already exists for this workflow
 // (ErrCreateRefused).
@@ -447,7 +480,15 @@ func (l Lifecycle) Create(projectID, workflowID string, g goal.Goal, profileName
 	if err := g.Validate(); err != nil {
 		return State{}, fmt.Errorf("workflow lifecycle: create: invalid goal: %w", err)
 	}
-	if _, err := l.profiles.Resolve(profileName); err != nil {
+	profile, err := l.profiles.Resolve(profileName)
+	if err != nil {
+		return State{}, fmt.Errorf("workflow lifecycle: create: %w", err)
+	}
+	// A catalog that gives a profile of another name than it was asked for is refused by the created
+	// event's own validation (the snapshot must be of the profile the event names).
+	snapshot := profile.Snapshot()
+	snapshotDigest, err := snapshot.Digest()
+	if err != nil {
 		return State{}, fmt.Errorf("workflow lifecycle: create: %w", err)
 	}
 	var roleChainHead string
@@ -474,13 +515,15 @@ func (l Lifecycle) Create(projectID, workflowID string, g goal.Goal, profileName
 		return State{}, fmt.Errorf("%w: on-disk classification is %q", ErrCreateRefused, loaded.Classification)
 	}
 
-	event, err := l.baseEvent(loaded, projectID, workflowID, KindCreated, profileName)
+	event, err := l.baseEvent(loaded, projectID, workflowID, KindCreated, profile)
 	if err != nil {
 		return State{}, err
 	}
 	event.GoalID = g.GoalID
 	event.GoalDigest = digest
 	event.Profile = profileName
+	event.ProfileSnapshot = &snapshot
+	event.ProfileDigest = snapshotDigest
 	event.RoleChainID = roleChainID
 	event.RoleChainHead = roleChainHead
 
@@ -494,7 +537,7 @@ func (l Lifecycle) Start(projectID, workflowID string) (State, error) {
 	if err != nil {
 		return State{}, err
 	}
-	event, err := l.baseEvent(loaded, projectID, workflowID, KindStarted, loaded.State.Profile)
+	event, err := l.stateEvent(loaded, projectID, workflowID, KindStarted)
 	if err != nil {
 		return State{}, err
 	}
@@ -507,7 +550,7 @@ func (l Lifecycle) Pause(projectID, workflowID string) (State, error) {
 	if err != nil {
 		return State{}, err
 	}
-	event, err := l.baseEvent(loaded, projectID, workflowID, KindPaused, loaded.State.Profile)
+	event, err := l.stateEvent(loaded, projectID, workflowID, KindPaused)
 	if err != nil {
 		return State{}, err
 	}
@@ -520,7 +563,7 @@ func (l Lifecycle) Resume(projectID, workflowID string) (State, error) {
 	if err != nil {
 		return State{}, err
 	}
-	event, err := l.baseEvent(loaded, projectID, workflowID, KindResumed, loaded.State.Profile)
+	event, err := l.stateEvent(loaded, projectID, workflowID, KindResumed)
 	if err != nil {
 		return State{}, err
 	}
@@ -539,7 +582,7 @@ func (l Lifecycle) RecordStage(projectID, workflowID, stage string) (State, erro
 	if err != nil {
 		return State{}, err
 	}
-	profile, err := l.profiles.Resolve(loaded.State.Profile)
+	profile, err := l.catalogProfileOf(loaded.State)
 	if err != nil {
 		return State{}, fmt.Errorf("workflow lifecycle: record stage: %w", err)
 	}
@@ -550,7 +593,7 @@ func (l Lifecycle) RecordStage(projectID, workflowID, stage string) (State, erro
 	if stage != want {
 		return State{}, fmt.Errorf("%w: got %q, want %q (profile %q's next declared stage)", ErrStageOutOfOrder, stage, want, profile.Name)
 	}
-	event, err := l.baseEvent(loaded, projectID, workflowID, KindStageRecorded, profile.Name)
+	event, err := l.baseEvent(loaded, projectID, workflowID, KindStageRecorded, profile)
 	if err != nil {
 		return State{}, err
 	}
@@ -560,7 +603,8 @@ func (l Lifecycle) RecordStage(projectID, workflowID, stage string) (State, erro
 
 // Verify performs a structural-only verification (no execution): the
 // event hash chain still verifies, the Workflow Profile still resolves
-// (ErrProfileInvalid), the recorded stages still respect the Profile's
+// (ErrProfileInvalid; a workflow of version 2 uses the snapshot in its log, so
+// it always does), the recorded stages still respect the Profile's
 // declared order (ErrStageOrderInvalid), re-reading the Goal (via
 // GoalReader) still produces the digest recorded at creation
 // (ErrGoalDigestMismatch), and, if a role chain is referenced, it still has
@@ -582,7 +626,7 @@ func (l Lifecycle) Verify(projectID, workflowID string) (State, error) {
 	if err := VerifyEvents(loaded.Events); err != nil {
 		return State{}, fmt.Errorf("%w: %v", ErrChainInvalid, err)
 	}
-	profile, err := l.profiles.Resolve(state.Profile)
+	profile, err := l.catalogProfileOf(state)
 	if err != nil {
 		return State{}, fmt.Errorf("%w: %v", ErrProfileInvalid, err)
 	}
@@ -621,7 +665,7 @@ func (l Lifecycle) Verify(projectID, workflowID string) (State, error) {
 		return State{}, fmt.Errorf("workflow lifecycle: verify: %w", err)
 	}
 
-	event, err := l.baseEvent(loaded, projectID, workflowID, KindVerified, profile.Name)
+	event, err := l.baseEvent(loaded, projectID, workflowID, KindVerified, profile)
 	if err != nil {
 		return State{}, err
 	}
@@ -644,7 +688,7 @@ func (l Lifecycle) Close(projectID, workflowID string, outcome Outcome, reason s
 	if err != nil {
 		return State{}, err
 	}
-	event, err := l.baseEvent(loaded, projectID, workflowID, KindClosed, loaded.State.Profile)
+	event, err := l.stateEvent(loaded, projectID, workflowID, KindClosed)
 	if err != nil && outcome == OutcomeAbandoned {
 		// Abandoning must stay possible even when the recorded profile no
 		// longer resolves (for example after a profile is retired), so the

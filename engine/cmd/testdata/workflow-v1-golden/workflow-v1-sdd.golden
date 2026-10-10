@@ -1,0 +1,259 @@
+== sdd, from its running log ==
+
+$ workflow status --project proj-1 --workflow wf-1
+exit: 0
+--- stdout ---
+{
+  "classification": "owned",
+  "status": "running",
+  "profile": "sdd",
+  "goal_id": "goal-1",
+  "goal_digest": "3fa80a4c34f1198a2fe03c95ecaaab97721dd5a94dce91612f2612b4208e54ac",
+  "stages": [
+    "dispatcher-selected-planning-phases",
+    "tasks"
+  ],
+  "last_verified_seq": -1
+}
+--- stderr ---
+
+$ workflow stage --project proj-1 --workflow wf-1 --stage dispatcher-selected-planning-phases
+exit: 2
+--- stdout ---
+--- stderr ---
+error: workflow stage: workflow lifecycle: stage is not the profile's next declared stage: got "dispatcher-selected-planning-phases", want "apply" (profile "sdd"'s next declared stage)
+
+$ workflow stage --project proj-1 --workflow wf-1 --stage no-such-stage
+exit: 2
+--- stdout ---
+--- stderr ---
+error: workflow stage: workflow lifecycle: stage is not the profile's next declared stage: got "no-such-stage", want "apply" (profile "sdd"'s next declared stage)
+
+$ workflow stage --project proj-1 --workflow wf-1 --stage archive
+exit: 2
+--- stdout ---
+--- stderr ---
+error: workflow stage: workflow lifecycle: stage is not the profile's next declared stage: got "archive", want "apply" (profile "sdd"'s next declared stage)
+
+$ workflow stage --project proj-1 --workflow wf-1 --stage apply
+exit: 0
+--- stdout ---
+status running, stages [dispatcher-selected-planning-phases tasks apply]
+--- stderr ---
+
+$ workflow stage --project proj-1 --workflow wf-1 --stage verify
+exit: 0
+--- stdout ---
+status running, stages [dispatcher-selected-planning-phases tasks apply verify]
+--- stderr ---
+
+$ workflow stage --project proj-1 --workflow wf-1 --stage archive
+exit: 0
+--- stdout ---
+status running, stages [dispatcher-selected-planning-phases tasks apply verify archive]
+--- stderr ---
+
+$ workflow stage --project proj-1 --workflow wf-1 --stage dispatcher-selected-planning-phases
+exit: 2
+--- stdout ---
+--- stderr ---
+error: workflow stage: workflow lifecycle: stage is not the profile's next declared stage: profile "sdd"'s declared stages are all recorded
+
+$ workflow verify --project proj-1 --workflow wf-1 --goal <GOAL>
+exit: 0
+--- stdout ---
+{
+  "classification": "owned",
+  "status": "running",
+  "profile": "sdd",
+  "goal_id": "goal-1",
+  "goal_digest": "3fa80a4c34f1198a2fe03c95ecaaab97721dd5a94dce91612f2612b4208e54ac",
+  "stages": [
+    "dispatcher-selected-planning-phases",
+    "tasks",
+    "apply",
+    "verify",
+    "archive"
+  ],
+  "last_verified_seq": 7
+}
+--- stderr ---
+
+$ workflow close --project proj-1 --workflow wf-1 --outcome completed
+exit: 0
+--- stdout ---
+{
+  "classification": "owned",
+  "status": "closed",
+  "profile": "sdd",
+  "goal_id": "goal-1",
+  "goal_digest": "3fa80a4c34f1198a2fe03c95ecaaab97721dd5a94dce91612f2612b4208e54ac",
+  "stages": [
+    "dispatcher-selected-planning-phases",
+    "tasks",
+    "apply",
+    "verify",
+    "archive"
+  ],
+  "last_verified_seq": 7,
+  "close_outcome": "completed"
+}
+--- stderr ---
+
+$ workflow status --project proj-1 --workflow wf-1
+exit: 0
+--- stdout ---
+{
+  "classification": "owned",
+  "status": "closed",
+  "profile": "sdd",
+  "goal_id": "goal-1",
+  "goal_digest": "3fa80a4c34f1198a2fe03c95ecaaab97721dd5a94dce91612f2612b4208e54ac",
+  "stages": [
+    "dispatcher-selected-planning-phases",
+    "tasks",
+    "apply",
+    "verify",
+    "archive"
+  ],
+  "last_verified_seq": 7,
+  "close_outcome": "completed"
+}
+--- stderr ---
+
+the log, line by line (version, seq, kind, payload, observations, SHA-256 of the line with the timestamp and chain digests masked):
+  v1 0 created [memory:engram=unavailable gentle-ai-review=unavailable] 9a5a3bbfed0386d8457b6acbe6e8ff8f40fa8f3a4bfb31914fb69be4cf4818e7
+  v1 1 started [memory:engram=unavailable gentle-ai-review=unavailable] 800831acc6190cf4f5ca30d1022cc08430d6135191ef22fff5ed8196339ecf7e
+  v1 2 stage_recorded stage="dispatcher-selected-planning-phases" [memory:engram=unavailable gentle-ai-review=unavailable] 1b4a3c579bf3e2c069a34fa6bbaa273622d400c5506e45cb8792207b34715008
+  v1 3 stage_recorded stage="tasks" [memory:engram=unavailable gentle-ai-review=unavailable] 40c925f74ab1a1f8c2abed92a1ab0b3df140a68ac773412d55879859bdc6b9f5
+  v1 4 stage_recorded stage="apply" [memory:engram=unavailable gentle-ai-review=unavailable] 391c64ef4b41ed816981d4f0505be26ac88f5a01657cbe5f851050cbd2ec9b7e
+  v1 5 stage_recorded stage="verify" [memory:engram=unavailable gentle-ai-review=unavailable] dc288358b3916b6eb59efd4105822d6c8dcf3fd7527c83d309940110e6a3783e
+  v1 6 stage_recorded stage="archive" [memory:engram=unavailable gentle-ai-review=unavailable] 92b69945e98ff0b584d18e3252675efc747d48da963e8c37ddbd5cd816f34748
+  v1 7 verified checked.profile="sdd" [memory:engram=unavailable gentle-ai-review=unavailable] 53204c938f10d0b7b10627fdb4d0f27d8cf71f9ff906a56f951861d362401ec6
+  v1 8 closed outcome="completed" [memory:engram=unavailable gentle-ai-review=unavailable] ad28484ce1160106d9e1180650e9ac7c8e38f2e9030fc999a35184032a17fa88
+
+== sdd, from its created log ==
+
+$ workflow status --project proj-1 --workflow wf-1
+exit: 0
+--- stdout ---
+{
+  "classification": "owned",
+  "status": "created",
+  "profile": "sdd",
+  "goal_id": "goal-1",
+  "goal_digest": "3fa80a4c34f1198a2fe03c95ecaaab97721dd5a94dce91612f2612b4208e54ac",
+  "stages": [],
+  "last_verified_seq": -1
+}
+--- stderr ---
+
+$ workflow stage --project proj-1 --workflow wf-1 --stage dispatcher-selected-planning-phases
+exit: 2
+--- stdout ---
+--- stderr ---
+error: workflow stage: workflow store: append: workflow: invalid lifecycle transition: stage_recorded is only legal while "running", current status is "created"
+
+$ workflow pause --project proj-1 --workflow wf-1
+exit: 2
+--- stdout ---
+--- stderr ---
+error: workflow pause: workflow store: append: workflow: invalid lifecycle transition: paused is only legal from "running", current status is "created"
+
+$ workflow start --project proj-1 --workflow wf-1
+exit: 0
+--- stdout ---
+status running, stages []
+--- stderr ---
+
+$ workflow start --project proj-1 --workflow wf-1
+exit: 2
+--- stdout ---
+--- stderr ---
+error: workflow start: workflow store: append: workflow: invalid lifecycle transition: started is only legal from "created", current status is "running"
+
+$ workflow pause --project proj-1 --workflow wf-1
+exit: 0
+--- stdout ---
+status paused, stages []
+--- stderr ---
+
+$ workflow stage --project proj-1 --workflow wf-1 --stage dispatcher-selected-planning-phases
+exit: 2
+--- stdout ---
+--- stderr ---
+error: workflow stage: workflow store: append: workflow: invalid lifecycle transition: stage_recorded is only legal while "running", current status is "paused"
+
+$ workflow resume --project proj-1 --workflow wf-1
+exit: 0
+--- stdout ---
+status running, stages []
+--- stderr ---
+
+$ workflow stage --project proj-1 --workflow wf-1 --stage dispatcher-selected-planning-phases
+exit: 0
+--- stdout ---
+status running, stages [dispatcher-selected-planning-phases]
+--- stderr ---
+
+$ workflow verify --project proj-1 --workflow wf-1 --goal <GOAL>
+exit: 0
+--- stdout ---
+{
+  "classification": "owned",
+  "status": "running",
+  "profile": "sdd",
+  "goal_id": "goal-1",
+  "goal_digest": "3fa80a4c34f1198a2fe03c95ecaaab97721dd5a94dce91612f2612b4208e54ac",
+  "stages": [
+    "dispatcher-selected-planning-phases"
+  ],
+  "last_verified_seq": 5
+}
+--- stderr ---
+
+$ workflow close --project proj-1 --workflow wf-1 --outcome abandoned --reason no longer needed
+exit: 0
+--- stdout ---
+{
+  "classification": "owned",
+  "status": "closed",
+  "profile": "sdd",
+  "goal_id": "goal-1",
+  "goal_digest": "3fa80a4c34f1198a2fe03c95ecaaab97721dd5a94dce91612f2612b4208e54ac",
+  "stages": [
+    "dispatcher-selected-planning-phases"
+  ],
+  "last_verified_seq": 5,
+  "close_outcome": "abandoned",
+  "close_reason": "no longer needed"
+}
+--- stderr ---
+
+$ workflow status --project proj-1 --workflow wf-1
+exit: 0
+--- stdout ---
+{
+  "classification": "owned",
+  "status": "closed",
+  "profile": "sdd",
+  "goal_id": "goal-1",
+  "goal_digest": "3fa80a4c34f1198a2fe03c95ecaaab97721dd5a94dce91612f2612b4208e54ac",
+  "stages": [
+    "dispatcher-selected-planning-phases"
+  ],
+  "last_verified_seq": 5,
+  "close_outcome": "abandoned",
+  "close_reason": "no longer needed"
+}
+--- stderr ---
+
+the log, line by line (version, seq, kind, payload, observations, SHA-256 of the line with the timestamp and chain digests masked):
+  v1 0 created [memory:engram=unavailable gentle-ai-review=unavailable] 9a5a3bbfed0386d8457b6acbe6e8ff8f40fa8f3a4bfb31914fb69be4cf4818e7
+  v1 1 started [memory:engram=unavailable gentle-ai-review=unavailable] 800831acc6190cf4f5ca30d1022cc08430d6135191ef22fff5ed8196339ecf7e
+  v1 2 paused [memory:engram=unavailable gentle-ai-review=unavailable] d51d8f505f492a5d5920a721521e5239692d9c7bea2d871cf0d989f2d4c52992
+  v1 3 resumed [memory:engram=unavailable gentle-ai-review=unavailable] 468dfca5c2c2d8b0511e891ed66de6fc0337c92e48c84465d30699a7f27bc11b
+  v1 4 stage_recorded stage="dispatcher-selected-planning-phases" [memory:engram=unavailable gentle-ai-review=unavailable] 91221b67afa19060959c47637e81d5f5a88c8d8eb345436d4cc343ea27043f9e
+  v1 5 verified checked.profile="sdd" [memory:engram=unavailable gentle-ai-review=unavailable] a519757a55e8b069c617d35b32901b77d1969f5db73385f9be966f40764d1268
+  v1 6 closed outcome="abandoned" reason="no longer needed" [memory:engram=unavailable gentle-ai-review=unavailable] 41f98f537c35e87cfea3c0feeb8b3558d3c6cf118256777785cfc02f73719651
+

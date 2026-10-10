@@ -165,7 +165,7 @@ func pausedReason(b Binding, tool string) string {
 // memoryGate checks one longterm-mem query against the memory plan of the
 // workflow, computed exactly as the projected context computes it.
 func memoryGate(b Binding, s workflow.State, query QueryArguments) GateResult {
-	plan, err := resolvePlan(s.Profile, b.ProjectID, s.GoalID)
+	plan, err := resolvePlan(s, b.ProjectID)
 	if err != nil {
 		return GateResult{Warning: "labdrian: the memory plan of " + workflowRef(b) + " could not be computed" + detailIn(err.Error()) +
 			", so this longterm-mem query was not checked against it."}

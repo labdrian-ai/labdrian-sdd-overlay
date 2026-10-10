@@ -5,6 +5,7 @@ package workflowprofile
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -42,8 +43,8 @@ const (
 // scope and the sources the profile's memory_policy prose allows. A request may only narrow it
 // (engine/memoryscope refuses any widening). It never grants a write.
 type MemoryDefault struct {
-	Scope   MemoryScope
-	Sources []MemorySource
+	Scope   MemoryScope    `json:"scope"`
+	Sources []MemorySource `json:"sources"`
 }
 
 // WorkflowProfile is the seven-field declarative Phase 2 contract, plus the typed data that the
@@ -218,14 +219,11 @@ func (p WorkflowProfile) NextStage(recorded int) (string, bool) {
 	return p.Stages[recorded].Name, true
 }
 
-// Validate rejects missing contract fields, invalid dependencies, and a stage sequence or set of
-// mandatory checks that differs from the catalog's for the profile's name. It validates data only;
-// it authorizes nothing.
-func Validate(profile WorkflowProfile) error {
-	d, ok := catalog[profile.Name]
-	if !ok {
-		return fmt.Errorf("%w: unknown name %q", ErrInvalidProfile, profile.Name)
-	}
+// checkShape rejects a profile whose contract fields are not all populated and whose stages are not
+// named once each and dependent only on earlier ones. It judges the profile alone: no catalog is
+// consulted, so it serves Validate, which then compares the profile with the catalog's, and
+// Snapshot.Validate, which does not.
+func checkShape(profile WorkflowProfile) error {
 	if len(profile.Stages) == 0 || len(profile.Roles) == 0 || len(profile.Checks) == 0 ||
 		strings.TrimSpace(profile.MemoryPolicy) == "" || strings.TrimSpace(profile.ReviewPolicy) == "" || strings.TrimSpace(profile.DeliveryPolicy) == "" {
 		return fmt.Errorf("%w: all seven contract fields must be populated", ErrInvalidProfile)
@@ -245,6 +243,20 @@ func Validate(profile WorkflowProfile) error {
 				return fmt.Errorf("%w: stage %q depends on missing or unordered stage %q", ErrInvalidProfile, stage.Name, dependency)
 			}
 		}
+	}
+	return nil
+}
+
+// Validate rejects missing contract fields, invalid dependencies, and a stage sequence or set of
+// mandatory checks that differs from the catalog's for the profile's name. It validates data only;
+// it authorizes nothing.
+func Validate(profile WorkflowProfile) error {
+	d, ok := catalog[profile.Name]
+	if !ok {
+		return fmt.Errorf("%w: unknown name %q", ErrInvalidProfile, profile.Name)
+	}
+	if err := checkShape(profile); err != nil {
+		return err
 	}
 	expected := d.profile.Stages
 	if len(profile.Stages) != len(expected) {
@@ -268,25 +280,13 @@ func Validate(profile WorkflowProfile) error {
 	}
 	// The typed data is what programs act on (the ceiling of a memory read, the dependencies a
 	// workflow records), so it must be the catalog's for the name, not merely well formed.
-	if profile.MemoryDefault.Scope != d.profile.MemoryDefault.Scope || !equalSources(profile.MemoryDefault.Sources, d.profile.MemoryDefault.Sources) {
+	if profile.MemoryDefault.Scope != d.profile.MemoryDefault.Scope || !slices.Equal(profile.MemoryDefault.Sources, d.profile.MemoryDefault.Sources) {
 		return fmt.Errorf("%w: profile %q has a memory default that differs from the catalog's", ErrInvalidProfile, profile.Name)
 	}
 	if profile.ReliesOnGentleReview != d.profile.ReliesOnGentleReview {
 		return fmt.Errorf("%w: profile %q has a review dependency that differs from the catalog's", ErrInvalidProfile, profile.Name)
 	}
 	return nil
-}
-
-func equalSources(a, b []MemorySource) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
 }
 
 func has(values []string, wanted string) bool {

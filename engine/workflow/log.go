@@ -30,7 +30,7 @@ const (
 	// ClassificationAbsent means no file exists yet at the workflow's path.
 	// The next Append must be the workflow's created event at seq 0.
 	ClassificationAbsent Classification = "absent"
-	// ClassificationOwned means every line parsed as a WorkflowEvent v1 for
+	// ClassificationOwned means every line parsed as a WorkflowEvent (version 1 or 2) for
 	// this exact project_id/workflow_id, the hash chain and seq sequence
 	// verify (VerifyEvents), and the lifecycle transitions replay cleanly
 	// (Replay). Loaded.Events and Loaded.State are populated.

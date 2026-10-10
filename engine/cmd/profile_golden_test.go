@@ -64,11 +64,21 @@ func profileHookGoldenCases() []hookGoldenCase {
 		// projection says of a workflow whose dependencies are available is pinned too.
 		{"prompt-projects-every-profile-with-its-dependencies-present", func(w *hookWorld) {
 			for _, p := range profileStages {
-				e := w.env()
-				w.deps.workflowProber = func() workflow.DependencyProber { return everythingPresentProber{} }
-				e.deps = w.deps
+				e := w.envWithEverythingPresent()
 				e.running(w.t, "proj-1", "wf-1", p.profile)
 				w.promptHook(p.profile+", running, every dependency present", e, e.repo)
+			}
+		}},
+		// A workflow whose log was written before the log recorded a snapshot of the profile (version
+		// 1, with two stages recorded) is projected and gated by the profile its name resolves to.
+		{"prompt-and-gate-follow-a-version-1-log-of-every-profile", func(w *hookWorld) {
+			for _, p := range profileStages {
+				e := w.env()
+				installV1Log(w.t, e.state, p.profile, "running")
+				mustBindOK(w.t, e.repo, "proj-1", "wf-1")
+				w.promptHook(p.profile+", a version 1 log with two stages recorded", e, e.repo)
+				w.toolHook(p.profile+", the plan's project", e, e.repo, queryTool, `{"query":"q","project":"proj-1"}`)
+				w.toolHook(p.profile+", another project", e, e.repo, queryTool, `{"query":"q","project":"proj-2"}`)
 			}
 		}},
 		{"pretooluse-gates-every-profile-by-its-memory-ceiling", func(w *hookWorld) {
@@ -92,6 +102,18 @@ func (everythingPresentProber) Probe(_ context.Context, capabilities []string) (
 		observed[i] = workflow.Observation{Capability: name, Status: workflow.ObservationAvailable, Detail: "present (test)"}
 	}
 	return observed, nil
+}
+
+// envWithEverythingPresent is env, but with a prober that finds every dependency available, both
+// for the workflow the case creates and for the hooks it then runs. env resets the world's prober to
+// the one that confirms nothing each time it is called, so the prober is set after it, once per
+// environment made; only the prober differs from env's.
+func (w *hookWorld) envWithEverythingPresent() hookEnv {
+	w.t.Helper()
+	e := w.env()
+	w.deps.workflowProber = func() workflow.DependencyProber { return everythingPresentProber{} }
+	e.deps = w.deps
+	return e
 }
 
 // profileWorld is the scratch space of one profile transcript: the program, a state home, and the
@@ -158,7 +180,9 @@ func (w *profileWorld) run(args ...string) { w.t.Helper(); w.record(false, args.
 // status and the stages: the state is recorded whole by the verbs that matter for it.
 func (w *profileWorld) runBrief(args ...string) { w.t.Helper(); w.record(true, args...) }
 
-func (w *profileWorld) record(brief bool, args ...string) {
+// exec runs the program with the arguments in the world and returns its exit code and both streams,
+// as they are (record writes them into the transcript).
+func (w *profileWorld) exec(args ...string) (int, string, string) {
 	w.t.Helper()
 	cmd := exec.Command(w.bin, args...)
 	cmd.Dir = w.dir
@@ -173,7 +197,12 @@ func (w *profileWorld) record(brief bool, args ...string) {
 		}
 		code = exit.ExitCode()
 	}
-	out := stdout.String()
+	return code, stdout.String(), stderr.String()
+}
+
+func (w *profileWorld) record(brief bool, args ...string) {
+	w.t.Helper()
+	code, out, errOut := w.exec(args...)
 	if brief && out != "" {
 		var state struct {
 			Status string   `json:"status"`
@@ -184,7 +213,7 @@ func (w *profileWorld) record(brief bool, args ...string) {
 		}
 		out = fmt.Sprintf("status %s, stages %v\n", state.Status, state.Stages)
 	}
-	w.write("$ %s\nexit: %d\n--- stdout ---\n%s--- stderr ---\n%s\n", strings.Join(args, " "), code, ensureNewline(out), ensureNewline(stderr.String()))
+	w.write("$ %s\nexit: %d\n--- stdout ---\n%s--- stderr ---\n%s\n", strings.Join(args, " "), code, ensureNewline(out), ensureNewline(errOut))
 }
 
 func (w *profileWorld) write(format string, args ...any) {
@@ -280,7 +309,9 @@ func unknownProfileTranscript(t *testing.T, bin string) string {
 	return w.text()
 }
 
-var profileGoldenName = regexp.MustCompile(`[^a-z0-9-]+`)
+// notAGoldenFileNameCharacter matches a run of characters a golden file name may not hold: a name
+// is acceptable when it does NOT match (checkProfileGolden refuses one that does).
+var notAGoldenFileNameCharacter = regexp.MustCompile(`[^a-z0-9-]+`)
 
 // profileGoldenCaseName is the name of the case, and of the golden file, of one profile in one world.
 func profileGoldenCaseName(profile string, equipped bool) string {
@@ -290,31 +321,38 @@ func profileGoldenCaseName(profile string, equipped bool) string {
 	return "workflow-" + profile + "-with-nothing-present"
 }
 
+// checkProfileGolden compares the transcript got with the golden file name under testdata/dir, or
+// rewrites that file when the update flag is given.
+func checkProfileGolden(t *testing.T, dir, name, got string) {
+	t.Helper()
+	if notAGoldenFileNameCharacter.MatchString(name) {
+		t.Fatalf("case name %q is not a file name", name)
+	}
+	path := filepath.Join("testdata", dir, name+".golden")
+	if *updateProfileGolden {
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(got), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		return
+	}
+	want, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read golden file: %v (record it with -update-profile-golden)", err)
+	}
+	if diff := goldenDifference(name, got, string(want)); diff != "" {
+		t.Fatal(diff)
+	}
+}
+
 // TestProfileGolden runs the verbs of a workflow of every profile and compares the transcript with
 // its golden file.
 func TestProfileGolden(t *testing.T) {
 	check := func(t *testing.T, name, got string) {
 		t.Helper()
-		if profileGoldenName.MatchString(name) {
-			t.Fatalf("case name %q is not a file name", name)
-		}
-		path := filepath.Join("testdata", "profile-golden", name+".golden")
-		if *updateProfileGolden {
-			if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-				t.Fatal(err)
-			}
-			if err := os.WriteFile(path, []byte(got), 0o644); err != nil {
-				t.Fatal(err)
-			}
-			return
-		}
-		want, err := os.ReadFile(path)
-		if err != nil {
-			t.Fatalf("read golden file: %v (record it with -update-profile-golden)", err)
-		}
-		if diff := goldenDifference(name, got, string(want)); diff != "" {
-			t.Fatal(diff)
-		}
+		checkProfileGolden(t, "profile-golden", name, got)
 	}
 	for _, p := range profileStages {
 		for _, equipped := range []bool{false, true} {
