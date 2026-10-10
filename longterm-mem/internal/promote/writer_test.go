@@ -371,6 +371,45 @@ func TestWriter_Promote_CreatePersistsPrecedenceBeforeThePage(t *testing.T) {
 	}
 }
 
+// A create whose page never lands leaves the address it took in the address map: the allocator's counter has
+// moved and the map row is not withdrawn, because a row without a page is inert (the page check walks pages
+// looking for rows) and taking it back is a write to wiki-ingest's file that can itself fail. The residue is
+// the one Writer.Promote documents: one spent address and one row naming a path nothing later reuses. The
+// retry takes a fresh address, so the row is not found again either.
+func TestWriter_Promote_AFailedCreateKeepsTheAddressItRecorded(t *testing.T) {
+	vaultRoot := t.TempDir()
+	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
+
+	// The same unwritable pages directory as TestWriter_Promote_CreatePersistsPrecedenceBeforeThePage.
+	memoryDir := filepath.Join(vaultRoot, vaultlayout.PagesDir)
+	if err := os.MkdirAll(filepath.Dir(memoryDir), 0o755); err != nil {
+		t.Fatalf("mkdir %s: %v", filepath.Dir(memoryDir), err)
+	}
+	if err := os.Symlink(filepath.Join(vaultRoot, "wiki", "nonexistent-target"), memoryDir); err != nil {
+		t.Skipf("this file system cannot make a symbolic link: %v", err)
+	}
+
+	addresses := &memAddressMap{}
+	allocator := &countingAddresses{AddressAllocator: staticAddress(testAddress)}
+	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Clock: clock, AddressMap: addresses, Addresses: allocator}
+	obs := memory.Observation{ID: 409, Type: "decision", Title: "Unwritable Page", Content: "The page write cannot land.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/writer-fixture"}
+
+	if _, err := w.Promote(t.Context(), obs, false); err == nil {
+		t.Fatalf("Promote = nil error, want the page write failure surfaced")
+	}
+
+	if allocator.asked != 1 {
+		t.Errorf("the allocator was asked %d times, want once", allocator.asked)
+	}
+	want := addressRecord{path: "wiki/memory/" + testAddress + ".md", address: testAddress, createdAt: clock.at}
+	if len(addresses.records) != 1 || addresses.records[0] != want {
+		t.Errorf("records = %+v, want exactly %+v", addresses.records, want)
+	}
+	if got := addresses.entries[want.path]; got != testAddress {
+		t.Errorf("the address map names %q for %s after the failed create, want the row to stay (%q)", got, want.path, testAddress)
+	}
+}
+
 // TestWriter_Promote_CreateResumesAfterAnUnpairedFingerprint: the state the
 // reversed create order leaves behind when a process is killed between its
 // two writes -- a durable precedence entry with no page on disk. That state
