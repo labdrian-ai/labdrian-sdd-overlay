@@ -135,3 +135,49 @@ func TestLintPage_UnregisteredPageIsFlagged(t *testing.T) {
 		t.Errorf("diagnostics = %+v, want an inbound-index-link finding for a missing wiki/index.md", diags)
 	}
 }
+
+// The words of the three diagnostics that name a vault file are what an operator reads in the doctor's output.
+// The files come from the layout now, so a change of path there must not silently change them, and this
+// test says what they read today.
+func TestLintPage_NamesTheVaultFilesItReportsOn(t *testing.T) {
+	clock := &fakeClock{at: time.Date(2026, 8, 30, 0, 0, 0, 0, time.UTC)}
+	obs := memory.Observation{ID: 44, Type: "decision", Title: "Named", Content: "Body.", Project: "labdrian-sdd-overlay"}
+	page, err := EmitPage(obs, "c-000044", nil, clock.Now())
+	if err != nil {
+		t.Fatalf("EmitPage: %v", err)
+	}
+	detailsOf := func(vaultRoot, rule string) []string {
+		var details []string
+		for _, d := range LintPage(page, vaultRoot) {
+			if d.Rule == rule {
+				details = append(details, d.Detail)
+			}
+		}
+		return details
+	}
+	want := func(t *testing.T, got []string, detail string) {
+		t.Helper()
+		if len(got) != 1 || got[0] != detail {
+			t.Errorf("details = %q, want exactly %q", got, detail)
+		}
+	}
+
+	t.Run("a catalog that is missing", func(t *testing.T) {
+		want(t, detailsOf(t.TempDir(), "inbound-index-link"), "wiki/index.md is missing")
+	})
+	t.Run("a catalog with no link to the page", func(t *testing.T) {
+		vaultRoot := t.TempDir()
+		writeIndexWithLink(t, vaultRoot, "c-000099")
+		want(t, detailsOf(vaultRoot, "inbound-index-link"), "wiki/index.md has no link to c-000044")
+	})
+	t.Run("an address manifest that is not JSON", func(t *testing.T) {
+		vaultRoot := t.TempDir()
+		if err := os.MkdirAll(filepath.Join(vaultRoot, ".raw"), 0o755); err != nil {
+			t.Fatalf("mkdir: %v", err)
+		}
+		if err := os.WriteFile(filepath.Join(vaultRoot, ".raw", ".manifest.json"), []byte("{not json"), 0o644); err != nil {
+			t.Fatalf("write manifest: %v", err)
+		}
+		want(t, detailsOf(vaultRoot, "address-map"), ".raw/.manifest.json is not valid JSON")
+	})
+}

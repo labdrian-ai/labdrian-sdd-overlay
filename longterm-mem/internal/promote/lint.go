@@ -106,7 +106,7 @@ func checkAddressMap(page Page, vaultRoot string) (Diagnostic, bool) {
 		AddressMap map[string]string `json:"address_map"`
 	}
 	if err := json.Unmarshal(data, &manifest); err != nil {
-		return Diagnostic{Rule: "address-map", Detail: ".raw/.manifest.json is not valid JSON"}, false
+		return Diagnostic{Rule: "address-map", Detail: vaultlayout.AddressManifestFile + " is not valid JSON"}, false
 	}
 	for path, addr := range manifest.AddressMap {
 		if addr != page.Address {
@@ -139,10 +139,10 @@ func checkWikilinksResolve(page Page, vaultRoot string) []Diagnostic {
 func checkInboundIndexLink(page Page, vaultRoot string) (Diagnostic, bool) {
 	data, err := os.ReadFile(filepath.Join(vaultRoot, vaultlayout.IndexFile))
 	if err != nil {
-		return Diagnostic{Rule: "inbound-index-link", Detail: "wiki/index.md is missing"}, false
+		return Diagnostic{Rule: "inbound-index-link", Detail: vaultlayout.IndexFile + " is missing"}, false
 	}
 	if !strings.Contains(string(data), "[["+page.Address) {
-		return Diagnostic{Rule: "inbound-index-link", Detail: fmt.Sprintf("wiki/index.md has no link to %s", page.Address)}, false
+		return Diagnostic{Rule: "inbound-index-link", Detail: fmt.Sprintf("%s has no link to %s", vaultlayout.IndexFile, page.Address)}, false
 	}
 	return Diagnostic{}, true
 }
