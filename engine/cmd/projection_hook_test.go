@@ -40,9 +40,14 @@ var hookArgs = []string{"hook", "--event", "UserPromptSubmit"}
 // input and processCwd as the working directory of the process. Every exit call
 // is recorded, because the core is handed a non-terminating exit.
 func runProjectionArgs(args []string, stdin, processCwd string) hookRun {
+	return runProjectionArgsWith(testDeps(), args, stdin, processCwd)
+}
+
+// runProjectionArgsWith is runProjectionArgs over the deps the test gives.
+func runProjectionArgsWith(d deps, args []string, stdin, processCwd string) hookRun {
 	var out, errBuf bytes.Buffer
 	var codes []int
-	runProjectionCore(args, processCwd, strings.NewReader(stdin), &out, &errBuf, func(c int) { codes = append(codes, c) })
+	runProjectionCore(d, args, processCwd, strings.NewReader(stdin), &out, &errBuf, func(c int) { codes = append(codes, c) })
 	return hookRun{codes: codes, stdout: out.String(), stderr: errBuf.String()}
 }
 
@@ -164,7 +169,13 @@ func (e hookEnv) running(t *testing.T, project, wf, profile string, stages ...st
 // hook runs the hook for the repository at cwd, as Claude Code would.
 func (e hookEnv) hook(t *testing.T, cwd string) hookRun {
 	t.Helper()
-	return runHook(hookInput(t, cwd, "session-1", "a prompt"), e.dir)
+	return e.hookWith(e.deps, t, cwd)
+}
+
+// hookWith is hook over the deps the test gives.
+func (e hookEnv) hookWith(d deps, t *testing.T, cwd string) hookRun {
+	t.Helper()
+	return runProjectionArgsWith(d, hookArgs, hookInput(t, cwd, "session-1", "a prompt"), e.dir)
 }
 
 // snapshotContents lists every path under root with the SHA-256 of its content
@@ -277,7 +288,7 @@ func TestProjectionHookReadsNoMoreThanTheCapPlusOneByte(t *testing.T) {
 	stdin := &endlessReader{}
 	var out, errBuf bytes.Buffer
 	var codes []int
-	runProjectionCore(hookArgs, e.repo, stdin, &out, &errBuf, func(c int) { codes = append(codes, c) })
+	runProjectionCore(testDeps(), hookArgs, e.repo, stdin, &out, &errBuf, func(c int) { codes = append(codes, c) })
 	if out.Len() != 0 || errBuf.Len() != 0 || !reflect.DeepEqual(codes, []int{0}) {
 		t.Errorf("exits %v, stdout %q, stderr %q, want a silent exit 0", codes, out.String(), errBuf.String())
 	}
@@ -530,15 +541,14 @@ func TestProjectionHookLeavesAFreshBindingAlone(t *testing.T) {
 	}
 	key := mustRepoKey(t, e.repo)
 	seamRuns := 0
-	beforeHookUnbind = func() {
+	d := e.deps.withBindingSeams(bindingSeams{beforeHookUnbind: func() {
 		seamRuns++
 		if err := store.Bind(key, "proj-2", "wf-2", time.Now(), true); err != nil {
 			t.Errorf("Bind() from the other process = %v", err)
 		}
-	}
-	t.Cleanup(func() { beforeHookUnbind = nil })
+	}})
 
-	r := e.hook(t, e.repo)
+	r := e.hookWith(d, t, e.repo)
 	if seamRuns != 1 {
 		t.Fatalf("the seam ran %d times, want once: the hook did not try to unbind", seamRuns)
 	}
@@ -867,10 +877,9 @@ func TestProjectionHookTurnsAPanicIntoExitZero(t *testing.T) {
 	e := newHookEnv(t)
 	e.running(t, "proj-1", "wf-1", "standalone-minimal")
 	e.step(t, "proj-1", "wf-1", "close", "--outcome", "abandoned", "--reason", "done")
-	beforeHookUnbind = func() { panic("boom\nsecond line \x1b[31mred " + strings.Repeat("x", 5000)) }
-	t.Cleanup(func() { beforeHookUnbind = nil })
+	d := e.deps.withBindingSeams(bindingSeams{beforeHookUnbind: func() { panic("boom\nsecond line \x1b[31mred " + strings.Repeat("x", 5000)) }})
 
-	r := e.hook(t, e.repo)
+	r := e.hookWith(d, t, e.repo)
 	if !reflect.DeepEqual(r.codes, []int{0}) || !strings.Contains(r.stderr, "internal error: boom") {
 		t.Fatalf("exits %v, stderr %q, want exit 0 and the panic reported on stderr", r.codes, r.stderr)
 	}
@@ -911,7 +920,7 @@ func TestProjectionHookStaysSilentWhenTheReaderFails(t *testing.T) {
 	e.running(t, "proj-1", "wf-1", "standalone-minimal")
 	var out, errBuf bytes.Buffer
 	var codes []int
-	runProjectionCore(hookArgs, e.dir, failingReader{}, &out, &errBuf, func(c int) { codes = append(codes, c) })
+	runProjectionCore(testDeps(), hookArgs, e.dir, failingReader{}, &out, &errBuf, func(c int) { codes = append(codes, c) })
 	assertSilent(t, "a failing stdin", hookRun{codes: codes, stdout: out.String(), stderr: errBuf.String()})
 }
 
@@ -924,7 +933,7 @@ func TestProjectionHookExitsZeroEvenWhenStdoutCannotBeWritten(t *testing.T) {
 	e.running(t, "proj-1", "wf-1", "standalone-minimal")
 	var errBuf bytes.Buffer
 	var codes []int
-	runProjectionCore(hookArgs, e.dir, strings.NewReader(hookInput(t, e.repo, "s", "p")), failingMemoryWriter{}, &errBuf, func(c int) { codes = append(codes, c) })
+	runProjectionCore(testDeps(), hookArgs, e.dir, strings.NewReader(hookInput(t, e.repo, "s", "p")), failingMemoryWriter{}, &errBuf, func(c int) { codes = append(codes, c) })
 	if !reflect.DeepEqual(codes, []int{0}) || errBuf.String() != "" {
 		t.Errorf("exits %v, stderr %q, want exit 0 and no stderr: a hook must never fail the prompt over its own output", codes, errBuf.String())
 	}

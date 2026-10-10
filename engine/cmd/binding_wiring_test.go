@@ -116,13 +116,22 @@ func TestLazyBindingsOpensTheStoreOnceWhenSeveralGoroutinesAskAtTheSameTime(t *t
 	}
 }
 
-func TestSeamedBindingsRunsEachSeamJustBeforeItsOperation(t *testing.T) {
+// The test decorator of the binding store (seams_test.go) runs each seam just before its operation
+// and no other, and leaves the store behind it answering as it did.
+func TestSeamedBindingStoreRunsEachSeamJustBeforeItsOperation(t *testing.T) {
 	inner := &recordingBindings{}
 	var order []string
-	beforeStaleReplace = func() { order = append(order, "beforeStaleReplace") }
-	beforeHookUnbind = func() { order = append(order, "beforeHookUnbind") }
-	t.Cleanup(func() { beforeStaleReplace, beforeHookUnbind = nil, nil })
-	store := seamedBindings{BindingStore: inner, beforeLoad: func() { order = append(order, "beforeLoad") }}
+	d := testDeps()
+	d.openBindings = func() (projection.BindingStore, error) { return inner, nil }
+	d = d.withBindingSeams(bindingSeams{
+		beforeLoad:         func() { order = append(order, "beforeLoad") },
+		beforeStaleReplace: func() { order = append(order, "beforeStaleReplace") },
+		beforeHookUnbind:   func() { order = append(order, "beforeHookUnbind") },
+	})
+	store, err := d.openBindings()
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	_, _ = store.Load("key")
 	_ = store.BindIfUnchanged("key", "p", "w", time.Time{}, projection.Binding{})
@@ -141,5 +150,46 @@ func TestSeamedBindingsRunsEachSeamJustBeforeItsOperation(t *testing.T) {
 	}
 	if len(inner.calls) != 5 {
 		t.Errorf("the store was asked %v, want the five operations", inner.calls)
+	}
+}
+
+// The use cases are built over the binding store and the gate policy the deps give.
+func TestTheUseCasesAreBuiltOverTheBindingStoreOfTheDeps(t *testing.T) {
+	inner := &recordingBindings{}
+	opened := 0
+	d := testDeps()
+	d.openBindings = func() (projection.BindingStore, error) { opened++; return inner, nil }
+
+	stores := map[string]projection.BindingStore{
+		"bind":   d.bindWorkflow().Bindings,
+		"prompt": d.promptHook().Bindings,
+		"gate":   d.gateHook().Bindings,
+	}
+	if opened != 0 {
+		t.Fatalf("the store was opened %d times by building the use cases, want 0: it is opened on first use", opened)
+	}
+	for name, bindings := range stores {
+		before := opened
+		if _, err := bindings.Load("key"); err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		if opened != before+1 {
+			t.Errorf("%s: the store of the deps was opened %d times by one use, want once", name, opened-before)
+		}
+	}
+}
+
+func TestTheGateHookDecidesWithTheGateOfTheDepsAndThePromptHookHasNone(t *testing.T) {
+	decisions := 0
+	d := testDeps()
+	d.gate = func(projection.GateInput) projection.GateResult { decisions++; return projection.GateResult{} }
+
+	d.gateHook().Gate(projection.GateInput{})
+
+	if decisions != 1 {
+		t.Errorf("the gate of the deps decided %d times, want once", decisions)
+	}
+	if d.promptHook().Gate != nil {
+		t.Error("the prompt hook has a gate; only a tool call is gated")
 	}
 }

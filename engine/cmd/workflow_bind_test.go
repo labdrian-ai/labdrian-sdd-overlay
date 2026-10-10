@@ -439,7 +439,7 @@ func TestWorkflowBindDoesNotReplaceABindingThatChangedAfterItWasJudgedStale(t *t
 	phase6MustExitZero(t, "close", []string{"close", "--project", "proj-1", "--workflow", "wf-1", "--outcome", "abandoned", "--reason", "done with it"}, e.dir)
 
 	seamRuns := 0
-	beforeStaleReplace = func() {
+	d := e.deps.withBindingSeams(bindingSeams{beforeStaleReplace: func() {
 		seamRuns++
 		store, err := newBindingStore()
 		if err != nil {
@@ -450,10 +450,9 @@ func TestWorkflowBindDoesNotReplaceABindingThatChangedAfterItWasJudgedStale(t *t
 		if err := store.Bind(mustRepoKey(t, e.repo), "proj-3", "wf-3", time.Now(), true); err != nil {
 			t.Errorf("Bind() from the other process = %v", err)
 		}
-	}
-	t.Cleanup(func() { beforeStaleReplace = nil })
+	}})
 
-	r := runWorkflowTest([]string{"bind", "--project", "proj-2", "--workflow", "wf-9"}, e.repo)
+	r := runWorkflowTestWith(d, []string{"bind", "--project", "proj-2", "--workflow", "wf-9"}, e.repo)
 	if seamRuns != 1 {
 		t.Fatalf("the seam ran %d times, want once: the closed binding was not judged stale", seamRuns)
 	}

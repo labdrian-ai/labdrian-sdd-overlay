@@ -254,7 +254,7 @@ func (w *hookWorld) projectionReader(label string, args []string, stdin io.Reade
 	w.t.Helper()
 	var stdout, stderr bytes.Buffer
 	var exits []int
-	runProjectionCore(args, processCwd, stdin, &stdout, &stderr, func(c int) { exits = append(exits, c) })
+	runProjectionCore(w.deps, args, processCwd, stdin, &stdout, &stderr, func(c int) { exits = append(exits, c) })
 	w.record("projection "+strings.Join(args, " "), label, stdinNote, exits, stdout.String(), stderr.String())
 }
 
@@ -263,7 +263,7 @@ func (w *hookWorld) projectionWriter(label string, args []string, stdin, process
 	w.t.Helper()
 	var stderr bytes.Buffer
 	var exits []int
-	runProjectionCore(args, processCwd, strings.NewReader(stdin), stdout, &stderr, func(c int) { exits = append(exits, c) })
+	runProjectionCore(w.deps, args, processCwd, strings.NewReader(stdin), stdout, &stderr, func(c int) { exits = append(exits, c) })
 	w.record("projection "+strings.Join(args, " "), label, stdin, exits, "<stdout cannot be written>\n", stderr.String())
 }
 

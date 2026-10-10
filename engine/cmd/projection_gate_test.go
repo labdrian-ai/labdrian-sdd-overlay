@@ -50,7 +50,13 @@ func gateInput(t *testing.T, cwd, session, tool string, toolInput any) string {
 // gate runs the gate for the repository at cwd, as Claude Code would.
 func (e hookEnv) gate(t *testing.T, cwd, tool string, toolInput any) hookRun {
 	t.Helper()
-	return runGateArgs(gateArgs, gateInput(t, cwd, "session-1", tool, toolInput), e.dir)
+	return e.gateWith(e.deps, t, cwd, tool, toolInput)
+}
+
+// gateWith is gate over the deps the test gives.
+func (e hookEnv) gateWith(d deps, t *testing.T, cwd, tool string, toolInput any) hookRun {
+	t.Helper()
+	return runProjectionArgsWith(d, gateArgs, gateInput(t, cwd, "session-1", tool, toolInput), e.dir)
 }
 
 var (
@@ -160,7 +166,7 @@ func TestPreToolUseReadsNoMoreThanTheCapPlusOneByte(t *testing.T) {
 	stdin := &endlessReader{}
 	var out, errBuf bytes.Buffer
 	var codes []int
-	runProjectionCore(gateArgs, e.repo, stdin, &out, &errBuf, func(c int) { codes = append(codes, c) })
+	runProjectionCore(testDeps(), gateArgs, e.repo, stdin, &out, &errBuf, func(c int) { codes = append(codes, c) })
 	assertSilent(t, "an endless input", hookRun{codes: codes, stdout: out.String(), stderr: errBuf.String()})
 	if stdin.read > hookwire.MaxEnvelopeBytes+1 {
 		t.Errorf("the gate read %d bytes of an endless input, want at most %d", stdin.read, hookwire.MaxEnvelopeBytes+1)
@@ -171,7 +177,7 @@ func TestPreToolUseStaysSilentWhenTheReaderFails(t *testing.T) {
 	e := pausedEnv(t, "standalone-minimal")
 	var out, errBuf bytes.Buffer
 	var codes []int
-	runProjectionCore(gateArgs, e.dir, failingReader{}, &out, &errBuf, func(c int) { codes = append(codes, c) })
+	runProjectionCore(testDeps(), gateArgs, e.dir, failingReader{}, &out, &errBuf, func(c int) { codes = append(codes, c) })
 	assertSilent(t, "a failing stdin", hookRun{codes: codes, stdout: out.String(), stderr: errBuf.String()})
 }
 
@@ -431,10 +437,9 @@ func TestPreToolUseFallsBackToTheProcessDirectory(t *testing.T) {
 // cause on stderr, no denial, and one short sanitized systemMessage.
 func TestPreToolUseTurnsAPanicIntoAnAllowWithAWarning(t *testing.T) {
 	e := pausedEnv(t, "standalone-minimal")
-	beforeGateDecision = func() { panic("boom\nsecond line \x1b[31mred " + strings.Repeat("x", 5000)) }
-	t.Cleanup(func() { beforeGateDecision = nil })
+	d := e.deps.withGateDecision(func() { panic("boom\nsecond line \x1b[31mred " + strings.Repeat("x", 5000)) })
 
-	r := e.gate(t, e.repo, "Edit", editInput)
+	r := e.gateWith(d, t, e.repo, "Edit", editInput)
 	if !reflect.DeepEqual(r.codes, []int{0}) || !strings.Contains(r.stderr, "internal error: boom") {
 		t.Fatalf("exits %v, stderr %q, want exit 0 and the panic reported on stderr", r.codes, r.stderr)
 	}
@@ -457,10 +462,9 @@ func TestPreToolUseTurnsAPanicIntoAnAllowWithAWarning(t *testing.T) {
 // never carries a permission decision: a panic is not a reason to deny.
 func TestPreToolUsePanicWarningSpeaksOfTheToolCallNotThePrompt(t *testing.T) {
 	e := pausedEnv(t, "standalone-minimal")
-	beforeGateDecision = func() { panic("boom") }
-	t.Cleanup(func() { beforeGateDecision = nil })
+	d := e.deps.withGateDecision(func() { panic("boom") })
 
-	r := e.gate(t, e.repo, "Edit", editInput)
+	r := e.gateWith(d, t, e.repo, "Edit", editInput)
 	var top map[string]json.RawMessage
 	if err := json.Unmarshal([]byte(r.stdout), &top); err != nil || len(top) != 1 || top["systemMessage"] == nil {
 		t.Fatalf("stdout %q (%v), want only a systemMessage", r.stdout, err)
@@ -485,11 +489,10 @@ func TestPreToolUsePanicWarningSpeaksOfTheToolCallNotThePrompt(t *testing.T) {
 func TestPreToolUseTouchesNoStoreForAToolTheGateDoesNotCheck(t *testing.T) {
 	e := pausedEnv(t, "standalone-minimal")
 	accesses := 0
-	onGateStoreAccess = func() { accesses++ }
-	t.Cleanup(func() { onGateStoreAccess = nil })
+	d := e.deps.withBindingSeams(bindingSeams{beforeLoad: func() { accesses++ }})
 
 	for _, tool := range []string{"Bash", "Read", "Grep", "Task", "mcp__longterm-mem__get", "mcp__engram__mem_save", ""} {
-		assertSilent(t, "irrelevant/"+tool, e.gate(t, e.repo, tool, map[string]any{"command": "ls"}))
+		assertSilent(t, "irrelevant/"+tool, e.gateWith(d, t, e.repo, tool, map[string]any{"command": "ls"}))
 	}
 	if accesses != 0 {
 		t.Fatalf("the hook went to the stores %d times for tools the gate never checks, want 0", accesses)
@@ -498,7 +501,7 @@ func TestPreToolUseTouchesNoStoreForAToolTheGateDoesNotCheck(t *testing.T) {
 	// The seam is live: the tools the gate does check do reach the stores.
 	for _, tool := range append([]string{"Write", "Edit", "MultiEdit", "NotebookEdit"}, queryTools...) {
 		before := accesses
-		e.gate(t, e.repo, tool, editInput)
+		e.gateWith(d, t, e.repo, tool, editInput)
 		if accesses != before+1 {
 			t.Errorf("%s: the hook went to the stores %d times, want exactly once", tool, accesses-before)
 		}
@@ -509,7 +512,7 @@ func TestPreToolUseExitsZeroEvenWhenStdoutCannotBeWritten(t *testing.T) {
 	e := pausedEnv(t, "standalone-minimal")
 	var errBuf bytes.Buffer
 	var codes []int
-	runProjectionCore(gateArgs, e.dir, strings.NewReader(gateInput(t, e.repo, "s", "Edit", editInput)), failingMemoryWriter{}, &errBuf, func(c int) { codes = append(codes, c) })
+	runProjectionCore(testDeps(), gateArgs, e.dir, strings.NewReader(gateInput(t, e.repo, "s", "Edit", editInput)), failingMemoryWriter{}, &errBuf, func(c int) { codes = append(codes, c) })
 	if !reflect.DeepEqual(codes, []int{0}) || errBuf.String() != "" {
 		t.Errorf("exits %v, stderr %q, want exit 0 and no stderr: a hook must never fail the call over its own output", codes, errBuf.String())
 	}

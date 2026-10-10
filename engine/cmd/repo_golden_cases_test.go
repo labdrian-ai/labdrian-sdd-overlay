@@ -98,7 +98,7 @@ func (w *repoWorld) hook(label, event, stdin, processCwd string) {
 	w.t.Helper()
 	var stdout, stderr bytes.Buffer
 	var exits []int
-	runProjectionCore([]string{"hook", "--event", event}, processCwd, strings.NewReader(stdin), &stdout, &stderr, func(c int) { exits = append(exits, c) })
+	runProjectionCore(w.deps, []string{"hook", "--event", event}, processCwd, strings.NewReader(stdin), &stdout, &stderr, func(c int) { exits = append(exits, c) })
 	fmt.Fprintf(&w.b, "$ projection hook --event %s\n# %s (stdin %s, in %s)\n--- exit ---\n%v\n--- stdout ---\n%s--- stderr ---\n%s\n",
 		event, label, stdin, w.cwdName(processCwd), exits, w.shown(stdout.String()), w.shown(stderr.String()))
 }

@@ -47,13 +47,6 @@ import (
 // key on, and guessing from the working directory would bind the wrong thing.
 const errNoRepository = "binding needs a git repository to key on: no .git was found at or above the working directory"
 
-// beforeStaleReplace is a test seam, nil outside tests. The binding store of
-// the verbs calls it (seamedBindings) after bind judged the repository's
-// binding stale and before it replaces it: the window in which another
-// process can bind a live workflow, which projection.Store.BindIfUnchanged
-// must then refuse to overwrite.
-var beforeStaleReplace func()
-
 // bindingReportJSON is the CLI's JSON view of a repository's binding, printed
 // by bind (with the binding just made or kept) and by binding. Detail explains
 // every classification other than absent and owned; Binding is set only when the
@@ -199,7 +192,7 @@ func runWorkflowBind(d deps, args []string, cwd string, stdout, stderr io.Writer
 		exit(1)
 		return
 	}
-	stored, err := newBindWorkflow().Bind(app.BindRequest{Dir: cwd, ProjectID: project, WorkflowID: workflowID})
+	stored, err := d.bindWorkflow().Bind(app.BindRequest{Dir: cwd, ProjectID: project, WorkflowID: workflowID})
 	if err != nil {
 		refuseBinding(stderr, exit, "bind", "%s", bindingRefusal(err))
 		return
@@ -220,7 +213,7 @@ func runWorkflowUnbind(d deps, args []string, cwd string, stdout, stderr io.Writ
 		exit(1)
 		return
 	}
-	removed, err := newBindWorkflow().Unbind(cwd)
+	removed, err := d.bindWorkflow().Unbind(cwd)
 	if err != nil {
 		refuseBinding(stderr, exit, "unbind", "%s", bindingRefusal(err))
 		return
@@ -241,7 +234,7 @@ func runWorkflowBinding(d deps, args []string, cwd string, stdout, stderr io.Wri
 		exit(1)
 		return
 	}
-	view, err := newBindWorkflow().Describe(cwd)
+	view, err := d.bindWorkflow().Describe(cwd)
 	if err != nil {
 		refuseBinding(stderr, exit, "binding", "%s", bindingRefusal(err))
 		return

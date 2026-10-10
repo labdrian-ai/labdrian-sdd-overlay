@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/capability/presence"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow"
 )
 
@@ -31,6 +32,8 @@ func productionDeps() deps {
 		agentChild:  os.Getenv(agentChildVariable) == agentChildValue,
 		// probeFS stays nil: the probe stats the operating system's files.
 		probeTimeout: defaultProbeTimeout,
+		openBindings: newBindingStore,
+		gate:         projection.Gate,
 	}
 	// The prober looks at the home and PATH of the environment d gives, read when a verb asks.
 	d.workflowProber = func() workflow.DependencyProber {

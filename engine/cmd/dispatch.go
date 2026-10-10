@@ -47,7 +47,7 @@ func run(p process, d deps, args []string) {
 	case "workflow":
 		runWorkflow(p, d, rest)
 	case "projection":
-		runProjection(rest)
+		runProjection(p, d, rest)
 	default:
 		fmt.Fprintf(p.stderr, "error: unknown subcommand %q\n", args[0])
 		usage(p.stderr)

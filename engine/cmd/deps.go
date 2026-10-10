@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/capability/presence"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow"
 )
 
@@ -55,6 +56,12 @@ type deps struct {
 	probeFS      presence.StatFS
 	probeTimeout time.Duration
 
+	// openBindings opens the session binding store of a run: the file-backed one over the state
+	// home in the program. A test that wants to run code at a moment of the store decorates it.
+	openBindings func() (projection.BindingStore, error)
+	// gate decides whether a tool call is allowed against the workflow a repository is bound to
+	// (projection.Gate in the program). A test that wants the decision to fail replaces it.
+	gate func(projection.GateInput) projection.GateResult
 	// workflowProber returns the DependencyProber the workflow verbs record observations with:
 	// the presence prober, pointed at the home and PATH of the environment. It looks at paths
 	// with stat and at PATH entries by name, and never opens a file, runs a program, or names a
