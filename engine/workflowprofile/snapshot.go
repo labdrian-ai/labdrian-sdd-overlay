@@ -54,17 +54,10 @@ func (p WorkflowProfile) Snapshot() Snapshot {
 // says whether the snapshot is well formed, and the profile of one that is not is as malformed as
 // it was.
 func (s Snapshot) Profile() WorkflowProfile {
-	return clone(WorkflowProfile{
-		Name:                 s.Name,
-		Stages:               s.Stages,
-		Roles:                s.Roles,
-		Checks:               s.Checks,
-		MemoryPolicy:         s.MemoryPolicy,
-		ReviewPolicy:         s.ReviewPolicy,
-		DeliveryPolicy:       s.DeliveryPolicy,
-		MemoryDefault:        s.MemoryDefault,
-		ReliesOnGentleReview: s.ReliesOnGentleReview,
-	})
+	// The conversion compiles only while the two types have the same fields, in the same order and of
+	// the same types: a field added to one and not the other is a build failure, not a datum a
+	// snapshot silently leaves out.
+	return clone(WorkflowProfile(s))
 }
 
 // Digest is the SHA-256 of the snapshot's encoding (see Snapshot), in lowercase hex. Two snapshots
