@@ -129,6 +129,63 @@ func goldenScenarios() []goldenScenario {
 				t.Fatal(err)
 			}
 		}},
+		// The address map, .raw/.manifest.json, in each state the file can be found in.
+		{name: "19-an-address-map-that-is-not-json", build: func(t *testing.T, root string) {
+			writeGoldenFile(t, root, ".raw/.manifest.json", "{not json")
+		}},
+		{name: "20-an-empty-address-map-file", build: func(t *testing.T, root string) {
+			writeGoldenFile(t, root, ".raw/.manifest.json", "")
+		}},
+		{name: "21-an-address-map-file-that-is-a-json-array", build: func(t *testing.T, root string) {
+			writeGoldenFile(t, root, ".raw/.manifest.json", "[]")
+		}},
+		{name: "22-an-address-map-that-is-a-string", build: func(t *testing.T, root string) {
+			writeGoldenFile(t, root, ".raw/.manifest.json", `{"address_map":"nope"}`)
+		}},
+		{name: "23-an-address-map-with-a-value-that-is-not-a-string", build: func(t *testing.T, root string) {
+			writeGoldenFile(t, root, ".raw/.manifest.json", `{"address_map":{"wiki/memory/c-000042.md":42}}`)
+		}},
+		{name: "24-a-manifest-without-an-address-map", build: func(t *testing.T, root string) {
+			writeGoldenFile(t, root, ".raw/.manifest.json", `{"version":1}`)
+		}},
+		{name: "25-a-manifest-that-is-null", build: func(t *testing.T, root string) {
+			writeGoldenFile(t, root, ".raw/.manifest.json", "null")
+		}},
+		{name: "26-the-address-mapped-to-another-page", build: func(t *testing.T, root string) {
+			writeGoldenFile(t, root, ".raw/.manifest.json", `{"address_map":{"wiki/memory/elsewhere.md":"`+goldenAddress+`"}}`)
+		}},
+		{name: "27-an-address-map-file-that-is-a-directory", build: func(t *testing.T, root string) {
+			full := filepath.Join(root, ".raw", ".manifest.json")
+			if err := os.Remove(full); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.Mkdir(full, 0o755); err != nil {
+				t.Fatal(err)
+			}
+		}},
+		{name: "28-an-address-map-file-that-is-a-link", build: func(t *testing.T, root string) {
+			full := filepath.Join(root, ".raw", ".manifest.json")
+			data, err := os.ReadFile(full)
+			if err != nil {
+				t.Fatal(err)
+			}
+			writeGoldenFile(t, root, "notes/manifest.json", string(data))
+			if err := os.Remove(full); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.Symlink("../notes/manifest.json", full); err != nil {
+				t.Fatal(err)
+			}
+		}},
+		{name: "29-an-address-map-file-that-is-a-link-to-nothing", build: func(t *testing.T, root string) {
+			full := filepath.Join(root, ".raw", ".manifest.json")
+			if err := os.Remove(full); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.Symlink("../notes/absent.json", full); err != nil {
+				t.Fatal(err)
+			}
+		}},
 	}
 }
 
