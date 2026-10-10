@@ -27,8 +27,8 @@ import (
 //
 // and read the diff before committing it.
 
-// v1LogPath is where the log of the workflow proj-1/wf-1 lives under a world's state home.
-func (w *profileWorld) v1LogPath() string {
+// workflowLogPath is where the log of the workflow proj-1/wf-1 lives under a world's state home.
+func (w *profileWorld) workflowLogPath() string {
 	return filepath.Join(w.state, "labdrian", "workflows", "proj-1", "wf-1.jsonl")
 }
 
@@ -62,7 +62,7 @@ var (
 // are what the program appended.
 func (w *profileWorld) log() {
 	w.t.Helper()
-	data, err := os.ReadFile(w.v1LogPath())
+	data, err := os.ReadFile(w.workflowLogPath())
 	if err != nil {
 		w.t.Fatal(err)
 	}
