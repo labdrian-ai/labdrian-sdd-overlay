@@ -14,15 +14,17 @@ import (
 // Where the document leaves a package open the choice is made here:
 //
 //   - query and ops are application packages: use cases that own the ports they
-//     read through (L1, L3, L4).
+//     read through (L1 gave query its memory ports; L3 and L4 give the rest).
 //   - ingest, projectid, promote, skillstale and staleness are domain packages:
 //     their rules are the part that stays; the file system, git and SQLite they
 //     reach today are debt below.
 //   - vaultreg is an adapter. L9 makes its Resolve pure, but the registry file
 //     store stays in the package, so it cannot be a domain package without a
 //     debt that L9 does not clear.
-//   - engram is an adapter even though the domain types still live in it (L1
-//     moves them to internal/memory).
+//   - memory is the domain model of what longterm-mem reads (the observation, the
+//     search shapes, the standing, the tokenizer and the snippet rule); engram is
+//     an adapter that maps Engram's rows to it (L1). Only the composition root may
+//     import engram (engram_adapter_guard_test.go).
 //   - the module root (this guard) and internal/ops/testdata (a Go package the
 //     other tests import) are test support.
 var rings = map[string]archguard.Ring{
@@ -89,9 +91,8 @@ var knownDebt = archguard.Debt{
 		"path/filepath.EvalSymlinks": "L7",
 	},
 
-	// promote: the engram types move to internal/memory (L1), the address
-	// allocator and the clock become injected (L2), the vault file system moves to
-	// vaultfs (L3).
+	// promote: the address allocator and the clock become injected (L2), the
+	// vault file system moves to vaultfs (L3).
 	"internal/promote": {
 		"internal/durable": "L3",
 		"internal/vault":   "L2",

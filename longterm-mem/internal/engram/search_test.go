@@ -157,8 +157,8 @@ func TestSearch_NaturalQuestionIsNotAndedIntoSilence(t *testing.T) {
 	if len(got.Rows) != 1 {
 		t.Fatalf("len(Rows) = %d, want 1: a natural-language question must not be AND-joined into an empty result", len(got.Rows))
 	}
-	if got.MatchMode != MatchAny {
-		t.Fatalf("MatchMode = %q, want %q: a widened query must say so, or the caller cannot tell a precise hit from a broad one", got.MatchMode, MatchAny)
+	if got.MatchMode != memory.MatchAny {
+		t.Fatalf("MatchMode = %q, want %q: a widened query must say so, or the caller cannot tell a precise hit from a broad one", got.MatchMode, memory.MatchAny)
 	}
 }
 
@@ -186,8 +186,8 @@ func TestSearch_KeepsEveryTokenRequiredWhenThatFindsSomething(t *testing.T) {
 	if len(got.Rows) != 1 || got.Rows[0].Title != "both" {
 		t.Fatalf("Rows = %+v, want only the row matching every token", got.Rows)
 	}
-	if got.MatchMode != MatchAll {
-		t.Fatalf("MatchMode = %q, want %q", got.MatchMode, MatchAll)
+	if got.MatchMode != memory.MatchAll {
+		t.Fatalf("MatchMode = %q, want %q", got.MatchMode, memory.MatchAll)
 	}
 }
 

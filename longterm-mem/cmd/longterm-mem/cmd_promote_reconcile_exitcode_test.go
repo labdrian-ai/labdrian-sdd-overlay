@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
 )
 
@@ -33,7 +33,7 @@ func TestCmdPromoteReconcile_ExitCodesAreTheContract(t *testing.T) {
 	t.Run("another project's page is a registration conflict", func(t *testing.T) {
 		const address = "c-000702"
 		vaultRoot := t.TempDir()
-		page, err := promote.EmitPage(engram.Observation{
+		page, err := promote.EmitPage(memory.Observation{
 			ID: 702, Type: "decision", Title: "Other Project", Content: "Body.",
 			Project: "someone-elses-project", RevisionCount: 3,
 		}, address, nil)
@@ -51,7 +51,7 @@ func TestCmdPromoteReconcile_ExitCodesAreTheContract(t *testing.T) {
 	t.Run("a page with no readable revision is a registration conflict", func(t *testing.T) {
 		const address = "c-000703"
 		vaultRoot := t.TempDir()
-		page, err := promote.EmitPage(engram.Observation{
+		page, err := promote.EmitPage(memory.Observation{
 			ID: 703, Type: "decision", Title: "Unreadable", Content: "Body.",
 			Project: project, RevisionCount: 3,
 		}, address, nil)
