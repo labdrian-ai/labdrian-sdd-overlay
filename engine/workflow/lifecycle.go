@@ -253,9 +253,10 @@ func ProfileOf(state State, catalog ProfileCatalog) (workflowprofile.WorkflowPro
 	return catalog.Resolve(state.Profile)
 }
 
-// profileOf is the profile of the workflow in state, from this Lifecycle's catalog where the log has
-// no snapshot of it (see ProfileOf).
-func (l Lifecycle) profileOf(state State) (workflowprofile.WorkflowProfile, error) {
+// catalogProfileOf is ProfileOf over this Lifecycle's catalog: the profile of the workflow in state,
+// from the snapshot its log has, and from that catalog only where the log has none. (Not to be
+// confused with Resolve on the catalog, which Create alone calls, for a workflow that has no log.)
+func (l Lifecycle) catalogProfileOf(state State) (workflowprofile.WorkflowProfile, error) {
 	return ProfileOf(state, l.profiles)
 }
 
@@ -275,7 +276,7 @@ func (l Lifecycle) baseEvent(loaded Loaded, projectID, workflowID string, kind K
 // stateEvent is baseEvent for an event of the workflow loaded holds, which goes on from the profile
 // of that workflow (see ProfileOf).
 func (l Lifecycle) stateEvent(loaded Loaded, projectID, workflowID string, kind Kind) (WorkflowEvent, error) {
-	profile, err := l.profileOf(loaded.State)
+	profile, err := l.catalogProfileOf(loaded.State)
 	if err != nil {
 		return WorkflowEvent{}, fmt.Errorf("workflow lifecycle: %w", err)
 	}
@@ -581,7 +582,7 @@ func (l Lifecycle) RecordStage(projectID, workflowID, stage string) (State, erro
 	if err != nil {
 		return State{}, err
 	}
-	profile, err := l.profileOf(loaded.State)
+	profile, err := l.catalogProfileOf(loaded.State)
 	if err != nil {
 		return State{}, fmt.Errorf("workflow lifecycle: record stage: %w", err)
 	}
@@ -625,7 +626,7 @@ func (l Lifecycle) Verify(projectID, workflowID string) (State, error) {
 	if err := VerifyEvents(loaded.Events); err != nil {
 		return State{}, fmt.Errorf("%w: %v", ErrChainInvalid, err)
 	}
-	profile, err := l.profileOf(state)
+	profile, err := l.catalogProfileOf(state)
 	if err != nil {
 		return State{}, fmt.Errorf("%w: %v", ErrProfileInvalid, err)
 	}

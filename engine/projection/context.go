@@ -327,10 +327,10 @@ func buildContext(b Binding, w workflow.Loaded) string {
 	return strings.Join(lines, "\n")
 }
 
-// profileOf is the profile the workflow in state goes on from, the one the lifecycle goes on from
-// (workflow.ProfileOf): the snapshot its log recorded, or, for a log that recorded only a name,
-// the built-in profile of that name.
-func profileOf(state workflow.State) (workflowprofile.WorkflowProfile, error) {
+// builtInWorkflowProfile is the profile the workflow in state goes on from, the one the lifecycle
+// goes on from: workflow.ProfileOf over the built-in catalog, that is the snapshot its log
+// recorded, or, for a log that recorded only a name, the built-in profile of that name.
+func builtInWorkflowProfile(state workflow.State) (workflowprofile.WorkflowProfile, error) {
 	return workflow.ProfileOf(state, workflow.ProfileCatalogFunc(workflowprofile.Resolve))
 }
 
@@ -341,7 +341,7 @@ func profileOf(state workflow.State) (workflowprofile.WorkflowProfile, error) {
 // was edited by hand), there is no next stage to name, and the line says so
 // instead of guessing.
 func nextStage(state workflow.State, recorded []string) string {
-	profile, err := profileOf(state)
+	profile, err := builtInWorkflowProfile(state)
 	if err != nil {
 		return "not available: profile " + strconv.Quote(sanitizeLine(state.Profile)) + " does not resolve, so stage guidance is omitted"
 	}
@@ -360,7 +360,7 @@ func nextStage(state workflow.State, recorded []string) string {
 // plan and the PreToolUse gate enforces it, so both call this function, and can
 // never disagree about which project is permitted.
 func resolvePlan(state workflow.State, projectID string) (memoryscope.Plan, error) {
-	profile, err := profileOf(state)
+	profile, err := builtInWorkflowProfile(state)
 	if err != nil {
 		return memoryscope.Plan{}, err
 	}

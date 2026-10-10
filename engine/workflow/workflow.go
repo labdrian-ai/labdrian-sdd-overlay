@@ -37,6 +37,9 @@ const (
 )
 
 // EventVersion is the WorkflowEvent wire version this package writes for a new workflow: the newest.
+// Lifecycle.Create writes it (eventWith: the created event of a workflow with no log), and every
+// later event of that workflow has the version of its log, which is this one for a log Create made
+// and EventVersionNameOnly for one an earlier program made.
 const EventVersion = EventVersionSnapshot
 
 // Bounds on the snapshot of a profile in a created event, from an untrusted log. The stages are
@@ -636,10 +639,7 @@ func (e WorkflowEvent) validateCheckedProfile(name string) error {
 		}
 		return nil
 	}
-	if err := ValidateIdentifier("checked.profile", name); err != nil {
-		return err
-	}
-	return nil
+	return ValidateIdentifier("checked.profile", name)
 }
 
 func (e WorkflowEvent) validateCheckedPayload() error {

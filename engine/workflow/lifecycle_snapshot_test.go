@@ -149,8 +149,13 @@ func TestCreateAppendsNothingWhenTheProfileTheCatalogGaveIsMalformed(t *testing.
 	if _, err := w.lifecycle(catalogOf(malformed)).Create("proj-1", "wf-1", w.g, "odd", ""); err == nil {
 		t.Fatal("Create() = nil, want an error")
 	}
-	if got := w.store.appends; got != 0 && len(w.events()) != 0 {
-		t.Errorf("%d appends left %d events, want none", got, len(w.events()))
+	// The append is attempted and refused (the store counts attempts), so what must be none is what
+	// the log holds.
+	if n := len(w.events()); n != 0 {
+		t.Errorf("the log holds %d events, want none", n)
+	}
+	if w.store.appends == 0 {
+		t.Error("no append was attempted, so the refusal was not the created event's own validation")
 	}
 }
 
