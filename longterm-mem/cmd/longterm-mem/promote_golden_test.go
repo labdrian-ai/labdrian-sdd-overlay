@@ -57,6 +57,36 @@ type promoteGoldenWorld struct {
 	vaultRoot string
 	dbPath    string
 	home      string
+	// began is when the world was built; now reads the clock when the output is normalised. Every UTC
+	// day from one to the other is a day the run can have written.
+	began time.Time
+	now   func() time.Time
+}
+
+// realTempDir is a fresh temporary directory named by its resolved path: /var is /private/var on macOS,
+// and the path the program prints must be the one normalise replaces, whichever way the program names it.
+func realTempDir(t *testing.T) string {
+	t.Helper()
+	dir, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatalf("resolve the temporary directory: %v", err)
+	}
+	return dir
+}
+
+// TestPromoteGoldenNormalise_ARunThatCrossesMidnightStillMatches: the days a run can have written are
+// every UTC day from the moment the world was built to the moment the output is normalised, not only the
+// day the normalising happens to run on. A run that starts before 00:00 UTC and ends after it wrote
+// dates of both days, and neither may make the comparison fail; a day outside that window still must.
+func TestPromoteGoldenNormalise_ARunThatCrossesMidnightStillMatches(t *testing.T) {
+	now := time.Date(2026, 8, 2, 0, 0, 5, 0, time.UTC)
+	w := &promoteGoldenWorld{vaultRoot: "/vault", home: "/home", dbPath: "/db", began: now.Add(-10 * time.Second), now: func() time.Time { return now }}
+
+	got := w.normalise("created: 2026-08-01\nupdated: 2026-08-02\nlogged 2026-08-01T23:59:58Z, synced 2026-08-02T00:00:04Z\nstale: 2026-07-31 2026-07-31T10:00:00Z\n")
+	want := "created: <today>\nupdated: <today>\nlogged <now>, synced <now>\nstale: 2026-07-31 2026-07-31T10:00:00Z\n"
+	if got != want {
+		t.Errorf("normalise =\n%s\nwant\n%s", got, want)
+	}
 }
 
 func promoteGoldenSteps() []promoteGoldenStep {
@@ -129,7 +159,9 @@ func TestPromoteGolden(t *testing.T) {
 
 func newPromoteGoldenWorld(t *testing.T) *promoteGoldenWorld {
 	t.Helper()
-	w := &promoteGoldenWorld{vaultRoot: t.TempDir(), home: t.TempDir()}
+	// The roots are the paths the program sees and prints; resolving their symlinks (/var is /private/var on
+	// macOS) makes the path in the output the one normalise replaces, whichever way the program names it.
+	w := &promoteGoldenWorld{vaultRoot: realTempDir(t), home: realTempDir(t), began: time.Now().UTC(), now: time.Now}
 	writeExecutable := func(rel, body string) {
 		path := filepath.Join(w.vaultRoot, rel)
 		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
@@ -148,7 +180,7 @@ func newPromoteGoldenWorld(t *testing.T) *promoteGoldenWorld {
 	if err != nil {
 		t.Fatalf("read the engram schema fixture: %v", err)
 	}
-	w.dbPath = filepath.Join(t.TempDir(), "engram.db")
+	w.dbPath = filepath.Join(realTempDir(t), "engram.db")
 	w.execSQL(t, string(schema))
 	// Observation 1 is pinned, 2 carries a curated topic key, 3 is neither (only an explicit promotion
 	// writes it), 4 is bookkeeping a sync leaves alone.
@@ -180,21 +212,29 @@ func (w *promoteGoldenWorld) execSQL(t *testing.T, statement string, args ...any
 	}
 }
 
-// normalise replaces what differs from one run to the next: the temporary paths and today's date.
+// normalise replaces what differs from one run to the next: the temporary paths and the day (or
+// days) of the run.
 func (w *promoteGoldenWorld) normalise(text string) string {
 	text = strings.ReplaceAll(text, w.vaultRoot, "<vault>")
 	text = strings.ReplaceAll(text, w.home, "<home>")
 	text = strings.ReplaceAll(text, w.dbPath, "<engram-db>")
-	// Only the day the test runs, in UTC, becomes a marker: any other date in the output (a clock that
-	// answered the wrong day, or in local time near midnight) stays as written and fails the comparison.
-	today := time.Now().UTC().Format("2006-01-02")
+	// Only the UTC days the run can have written become a marker: any other date in the output (a clock
+	// that answered the wrong day, or in local time near midnight) stays as written and fails the
+	// comparison. A run that crosses 00:00 UTC wrote two days, and both are expected.
+	days := map[string]bool{}
+	for day := w.began.UTC().Truncate(24 * time.Hour); !day.After(w.now().UTC()); day = day.AddDate(0, 0, 1) {
+		days[day.Format("2006-01-02")] = true
+	}
 	text = promoteGoldenInstant.ReplaceAllStringFunc(text, func(instant string) string {
-		if strings.HasPrefix(instant, today+"T") {
+		if days[instant[:len("2006-01-02")]] {
 			return "<now>"
 		}
 		return instant
 	})
-	return strings.ReplaceAll(text, today, "<today>")
+	for day := range days {
+		text = strings.ReplaceAll(text, day, "<today>")
+	}
+	return text
 }
 
 // renderPromoteGoldenTree lists every file of the vault, sorted, with its content.
