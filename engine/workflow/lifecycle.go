@@ -265,7 +265,7 @@ func (l Lifecycle) eventWith(loaded Loaded, projectID, workflowID string, kind K
 		prevDigest = digest
 	}
 	return WorkflowEvent{
-		Version:      EventVersion,
+		Version:      EventVersionNameOnly,
 		WorkflowID:   workflowID,
 		ProjectID:    projectID,
 		Seq:          seq,

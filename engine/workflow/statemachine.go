@@ -3,6 +3,8 @@ package workflow
 import (
 	"errors"
 	"fmt"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflowprofile"
 )
 
 // Status is a workflow's current lifecycle status, derived by Replay.
@@ -32,6 +34,7 @@ var (
 	ErrDuplicateStage          = errors.New("workflow: stage already recorded")
 	ErrCompletedRequiresVerify = errors.New("workflow: a completed close requires an immediately preceding verified event")
 	ErrTooManyStages           = errors.New("workflow: stage limit exceeded")
+	ErrMixedVersions           = errors.New("workflow: every event of a log has the version of its created event")
 )
 
 // MaxStages bounds how many stages a single workflow may record. The
@@ -51,8 +54,14 @@ const MaxStages = 256
 // stage_recorded event, so branches from a common ancestor never alias.
 // MaxStages bounds the copy cost.
 type State struct {
-	Status          Status
-	Profile         string
+	Status Status
+	// Version is the wire version of the log, that of its created event; every other event has it.
+	Version int
+	Profile string
+	// ProfileSnapshot is the snapshot of Profile the created event recorded, in a log of version
+	// EventVersionSnapshot and nil in one of EventVersionNameOnly, whose profile is the catalog's of
+	// that name. It is shared by every State replayed from the log and is never modified.
+	ProfileSnapshot *workflowprofile.Snapshot
 	GoalID          string
 	GoalDigest      string
 	RoleChainID     string
@@ -112,6 +121,9 @@ func CheckTransition(state State, next WorkflowEvent) error {
 	if next.Kind == KindCreated {
 		return fmt.Errorf("%w", ErrAlreadyCreated)
 	}
+	if next.Version != state.Version {
+		return fmt.Errorf("%w: the log is of version %d, and a %s event is of version %d", ErrMixedVersions, state.Version, next.Kind, next.Version)
+	}
 
 	switch next.Kind {
 	case KindStarted:
@@ -137,7 +149,12 @@ func CheckTransition(state State, next WorkflowEvent) error {
 			return fmt.Errorf("%w: limit is %d", ErrTooManyStages, MaxStages)
 		}
 	case KindVerified:
-		// Legal from any non-closed state; StatusClosed already rejected above.
+		// Legal from any non-closed state; StatusClosed already rejected above. In a log that
+		// carries the profile (version 2) the profile a verification checked is that profile; a
+		// version 1 log never compared them, and still does not.
+		if state.Version == EventVersionSnapshot && next.Checked != nil && next.Checked.Profile != state.Profile {
+			return fmt.Errorf("%w: verified checked profile %q, but the workflow's profile is %q", ErrInvalidTransition, next.Checked.Profile, state.Profile)
+		}
 	case KindClosed:
 		switch Outcome(next.Outcome) {
 		case OutcomeCompleted:
@@ -185,9 +202,11 @@ func applyEvent(state State, e WorkflowEvent) State {
 	switch e.Kind {
 	case KindCreated:
 		state.Status = StatusCreated
+		state.Version = e.Version
 		state.GoalID = e.GoalID
 		state.GoalDigest = e.GoalDigest
 		state.Profile = e.Profile
+		state.ProfileSnapshot = e.ProfileSnapshot
 		state.RoleChainID = e.RoleChainID
 		state.RoleChainHead = e.RoleChainHead
 		state.Stages = []string{}

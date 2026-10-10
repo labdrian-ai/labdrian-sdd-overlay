@@ -22,8 +22,31 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflowprofile"
 )
 
-// EventVersion is the only WorkflowEvent wire version this package accepts.
-const EventVersion = 1
+// The WorkflowEvent wire versions this package accepts. A log has the version of its created event
+// from its first line to its last (see ErrMixedVersions), and an operation on a log appends events of
+// that version, so a log is never rewritten into another one.
+const (
+	// EventVersionNameOnly is the version whose created event names the workflow's profile and
+	// nothing else: the profile is looked up in the catalog every time it is needed. No new workflow
+	// is created in it, and a workflow created in it behaves as it always did.
+	EventVersionNameOnly = 1
+	// EventVersionSnapshot is the version whose created event also records a snapshot of the profile
+	// it names, and a digest of that snapshot (profile_snapshot, profile_digest). The workflow is
+	// carried on from the snapshot, so it does not depend on the catalog that served it.
+	EventVersionSnapshot = 2
+)
+
+// EventVersion is the WorkflowEvent wire version this package writes for a new workflow: the newest.
+const EventVersion = EventVersionSnapshot
+
+// Bounds on the snapshot of a profile in a created event, from an untrusted log. The stages are
+// bounded by MaxStages and MaxStageLength; a role, a check or a policy is free text like Reason, and
+// MaxProfileListLength is far beyond the longest list a built-in profile declares (seven stages, five
+// roles, four checks).
+const (
+	MaxProfileTextLength = MaxReasonLength
+	MaxProfileListLength = 64
+)
 
 // MaxIdentifierLength bounds every identifier this package validates
 // (workflow_id, project_id, role_chain_id). The workflow store
@@ -159,10 +182,16 @@ type WorkflowEvent struct {
 	Observations []Observation `json:"observations"`
 
 	// created-only payload.
-	GoalID      string `json:"goal_id,omitempty"`
-	GoalDigest  string `json:"goal_digest,omitempty"`
-	Profile     string `json:"profile,omitempty"`
-	RoleChainID string `json:"role_chain_id,omitempty"`
+	GoalID     string `json:"goal_id,omitempty"`
+	GoalDigest string `json:"goal_digest,omitempty"`
+	Profile    string `json:"profile,omitempty"`
+	// ProfileSnapshot is the profile named by Profile as it was when the workflow was created, and
+	// ProfileDigest is its digest (workflowprofile.Snapshot.Digest). Both are present if and only if
+	// Version is EventVersionSnapshot; a version 1 event has neither, and its profile is the
+	// catalog's of that name.
+	ProfileSnapshot *workflowprofile.Snapshot `json:"profile_snapshot,omitempty"`
+	ProfileDigest   string                    `json:"profile_digest,omitempty"`
+	RoleChainID     string                    `json:"role_chain_id,omitempty"`
 	// RoleChainHead is the digest of the referenced role chain's last
 	// record at the moment this event was produced (see roleChainDigest).
 	// It is present if and only if RoleChainID is set; Verify uses it to
@@ -190,7 +219,7 @@ type WorkflowEvent struct {
 var workflowEventFields = []string{
 	"version", "workflow_id", "project_id", "seq", "prev_digest", "kind", "at",
 	"provenance", "observations",
-	"goal_id", "goal_digest", "profile", "role_chain_id", "role_chain_head",
+	"goal_id", "goal_digest", "profile", "profile_snapshot", "profile_digest", "role_chain_id", "role_chain_head",
 	"stage",
 	"checked",
 	"outcome", "reason",
@@ -200,6 +229,9 @@ var (
 	provenanceFields  = []string{"worktree_root", "git_head"}
 	observationFields = []string{"capability", "status", "detail"}
 	checkedFields     = []string{"chain_digest", "goal_digest", "profile", "role_chain_digest"}
+	snapshotFields    = []string{"name", "stages", "roles", "checks", "memory_policy", "review_policy", "delivery_policy", "memory_default", "relies_on_gentle_review"}
+	snapshotStageKeys = []string{"name", "depends_on"}
+	snapshotMemoryKey = []string{"scope", "sources"}
 )
 
 var sha256HexPattern = regexp.MustCompile(`^[0-9a-f]{64}$`)
@@ -271,6 +303,11 @@ func checkNestedWorkflowFields(raw map[string]json.RawMessage) error {
 			return fmt.Errorf("checked: %w", err)
 		}
 	}
+	if v, ok := raw["profile_snapshot"]; ok && !isNull(v) {
+		if err := checkNestedSnapshotFields(v, isNull); err != nil {
+			return fmt.Errorf("profile_snapshot: %w", err)
+		}
+	}
 	v, ok := raw["observations"]
 	if !ok || isNull(v) {
 		return nil
@@ -282,6 +319,37 @@ func checkNestedWorkflowFields(raw map[string]json.RawMessage) error {
 	for i, item := range items {
 		if err := jsonstrict.CheckKnownFields(item, "workflow event observation", observationFields); err != nil {
 			return fmt.Errorf("observations[%d]: %w", i, err)
+		}
+	}
+	return nil
+}
+
+// checkNestedSnapshotFields rejects unknown keys, with exact-case matching, in the snapshot of a
+// profile, in each of its stages and in its memory default.
+func checkNestedSnapshotFields(snapshot json.RawMessage, isNull func(json.RawMessage) bool) error {
+	if err := jsonstrict.CheckKnownFields(snapshot, "workflow event profile snapshot", snapshotFields); err != nil {
+		return err
+	}
+	var parts map[string]json.RawMessage
+	if err := json.Unmarshal(snapshot, &parts); err != nil {
+		return err
+	}
+	if v, ok := parts["memory_default"]; ok && !isNull(v) {
+		if err := jsonstrict.CheckKnownFields(v, "workflow event profile snapshot memory default", snapshotMemoryKey); err != nil {
+			return fmt.Errorf("memory_default: %w", err)
+		}
+	}
+	v, ok := parts["stages"]
+	if !ok || isNull(v) {
+		return nil
+	}
+	var stages []json.RawMessage
+	if err := json.Unmarshal(v, &stages); err != nil {
+		return fmt.Errorf("stages: %w", err)
+	}
+	for i, stage := range stages {
+		if err := jsonstrict.CheckKnownFields(stage, "workflow event profile snapshot stage", snapshotStageKeys); err != nil {
+			return fmt.Errorf("stages[%d]: %w", i, err)
 		}
 	}
 	return nil
@@ -348,8 +416,8 @@ func ValidateIdentifier(name, value string) error {
 // payload fields its Kind requires are populated and every other
 // kind-specific field is zero-valued. It is first-error-wins.
 func (e WorkflowEvent) Validate() error {
-	if e.Version != EventVersion {
-		return fmt.Errorf("version must be %d, got %d", EventVersion, e.Version)
+	if e.Version != EventVersionNameOnly && e.Version != EventVersionSnapshot {
+		return fmt.Errorf("version must be %d or %d, got %d", EventVersionNameOnly, EventVersionSnapshot, e.Version)
 	}
 	if err := ValidateIdentifier("workflow_id", e.WorkflowID); err != nil {
 		return err
@@ -416,7 +484,7 @@ func validateObservations(observations []Observation) error {
 // validatePayload checks that e carries exactly the payload fields its Kind
 // requires and that every other kind-specific field is zero-valued.
 func (e WorkflowEvent) validatePayload() error {
-	blankCreated := e.GoalID == "" && e.GoalDigest == "" && e.Profile == "" && e.RoleChainID == "" && e.RoleChainHead == ""
+	blankCreated := e.GoalID == "" && e.GoalDigest == "" && e.Profile == "" && e.ProfileSnapshot == nil && e.ProfileDigest == "" && e.RoleChainID == "" && e.RoleChainHead == ""
 	blankStage := e.Stage == ""
 	blankChecked := e.Checked == nil
 	blankClosed := e.Outcome == "" && e.Reason == ""
@@ -466,8 +534,8 @@ func (e WorkflowEvent) validateCreatedPayload() error {
 	if !sha256HexPattern.MatchString(e.GoalDigest) {
 		return fmt.Errorf("goal_digest must be 64 lowercase hex characters, got %q", e.GoalDigest)
 	}
-	if _, err := workflowprofile.Resolve(e.Profile); err != nil {
-		return fmt.Errorf("profile %q is not a known workflow profile: %w", e.Profile, err)
+	if err := e.validateCreatedProfile(); err != nil {
+		return err
 	}
 	if e.RoleChainID != "" {
 		if err := ValidateIdentifier("role_chain_id", e.RoleChainID); err != nil {
@@ -478,6 +546,98 @@ func (e WorkflowEvent) validateCreatedPayload() error {
 		}
 	} else if e.RoleChainHead != "" {
 		return fmt.Errorf("role_chain_head must be empty when role_chain_id is not set")
+	}
+	return nil
+}
+
+// validateCreatedProfile checks the profile a created event names, by the version of the event. A
+// version 1 event names a profile of the catalog and has no snapshot. A version 2 event is
+// self-contained: it names a safe profile name, and records a well formed snapshot of that profile
+// within the bounds, and the digest of it; the catalog is not consulted, so the profile may be one it
+// has never had or no longer has.
+func (e WorkflowEvent) validateCreatedProfile() error {
+	if e.Version == EventVersionNameOnly {
+		if e.ProfileSnapshot != nil || e.ProfileDigest != "" {
+			return fmt.Errorf("profile_snapshot and profile_digest are not part of version %d", EventVersionNameOnly)
+		}
+		if _, err := workflowprofile.Resolve(e.Profile); err != nil {
+			return fmt.Errorf("profile %q is not a known workflow profile: %w", e.Profile, err)
+		}
+		return nil
+	}
+	if err := ValidateIdentifier("profile", e.Profile); err != nil {
+		return err
+	}
+	if e.ProfileSnapshot == nil {
+		return fmt.Errorf("profile_snapshot must be present in a version %d created event", EventVersionSnapshot)
+	}
+	snapshot := *e.ProfileSnapshot
+	if snapshot.Name != e.Profile {
+		return fmt.Errorf("profile_snapshot is of profile %q, but profile is %q", snapshot.Name, e.Profile)
+	}
+	if err := snapshot.Validate(); err != nil {
+		return fmt.Errorf("profile_snapshot: %w", err)
+	}
+	if err := validateSnapshotBounds(snapshot); err != nil {
+		return fmt.Errorf("profile_snapshot: %w", err)
+	}
+	digest, err := snapshot.Digest()
+	if err != nil {
+		return err
+	}
+	// The digest is 64 lowercase hex characters, or it is not the snapshot's.
+	if digest != e.ProfileDigest {
+		return fmt.Errorf("profile_digest is %q, but the digest of profile_snapshot is %s", e.ProfileDigest, digest)
+	}
+	return nil
+}
+
+// validateSnapshotBounds holds the snapshot of a profile to the bounds an untrusted log is held to.
+func validateSnapshotBounds(s workflowprofile.Snapshot) error {
+	if len(s.Stages) > MaxStages {
+		return fmt.Errorf("%d stages exceed the maximum of %d", len(s.Stages), MaxStages)
+	}
+	for i, stage := range s.Stages {
+		if len([]rune(stage.Name)) > MaxStageLength {
+			return fmt.Errorf("stages[%d].name exceeds the maximum length of %d runes", i, MaxStageLength)
+		}
+	}
+	lists := []struct {
+		field string
+		items []string
+	}{{"roles", s.Roles}, {"checks", s.Checks}}
+	for _, list := range lists {
+		if len(list.items) > MaxProfileListLength {
+			return fmt.Errorf("%s has %d entries, more than the maximum of %d", list.field, len(list.items), MaxProfileListLength)
+		}
+		for i, item := range list.items {
+			if len([]rune(item)) > MaxProfileTextLength {
+				return fmt.Errorf("%s[%d] exceeds the maximum length of %d runes", list.field, i, MaxProfileTextLength)
+			}
+		}
+	}
+	texts := []struct{ field, text string }{{"memory_policy", s.MemoryPolicy}, {"review_policy", s.ReviewPolicy}, {"delivery_policy", s.DeliveryPolicy}}
+	for _, t := range texts {
+		if len([]rune(t.text)) > MaxProfileTextLength {
+			return fmt.Errorf("%s exceeds the maximum length of %d runes", t.field, MaxProfileTextLength)
+		}
+	}
+	return nil
+}
+
+// validateCheckedProfile checks the profile name a verified event records, by the version of the
+// event: a version 1 event names a profile of the catalog; a version 2 event names a safe name, since
+// the profile of the workflow is the snapshot in its log and the state machine requires the name to
+// be that workflow's (see CheckTransition).
+func (e WorkflowEvent) validateCheckedProfile(name string) error {
+	if e.Version == EventVersionNameOnly {
+		if _, err := workflowprofile.Resolve(name); err != nil {
+			return fmt.Errorf("checked.profile %q is not a known workflow profile: %w", name, err)
+		}
+		return nil
+	}
+	if err := ValidateIdentifier("checked.profile", name); err != nil {
+		return err
 	}
 	return nil
 }
@@ -493,8 +653,8 @@ func (e WorkflowEvent) validateCheckedPayload() error {
 	if !sha256HexPattern.MatchString(c.GoalDigest) {
 		return fmt.Errorf("checked.goal_digest must be 64 lowercase hex characters, got %q", c.GoalDigest)
 	}
-	if _, err := workflowprofile.Resolve(c.Profile); err != nil {
-		return fmt.Errorf("checked.profile %q is not a known workflow profile: %w", c.Profile, err)
+	if err := e.validateCheckedProfile(c.Profile); err != nil {
+		return err
 	}
 	if c.RoleChainDigest != "" && !sha256HexPattern.MatchString(c.RoleChainDigest) {
 		return fmt.Errorf("checked.role_chain_digest must be 64 lowercase hex characters or empty, got %q", c.RoleChainDigest)
