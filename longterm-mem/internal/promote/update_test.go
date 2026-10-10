@@ -361,7 +361,7 @@ func TestUpdate_InterruptedPriorWriteReconciles(t *testing.T) {
 // The page's own bytes settle it: when they are what this promotion would
 // itself write, the page is our interrupted write and is adopted rather
 // than refused forever. The comparison must ignore created:/updated:,
-// which EmitPage stamps from the wall clock -- otherwise adoption would
+// which EmitPage stamps from the time it is given -- otherwise adoption would
 // work on a same-day retry and stop working the next day, which is worse
 // than not adopting at all.
 func TestUpdate_UnrecordedOwnWriteIsAdopted(t *testing.T) {
@@ -379,7 +379,7 @@ func TestUpdate_UnrecordedOwnWriteIsAdopted(t *testing.T) {
 	store := PrecedenceStore{}
 
 	// A later day, so the re-render differs from disk in exactly the two
-	// wall-clock stamps and nothing else.
+	// date stamps and nothing else.
 	clock.Set(time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
 	incoming, err := EmitPage(obs, "c-000307", nil, clock.Now())
 	if err != nil {
@@ -484,18 +484,15 @@ func TestActionKind_String(t *testing.T) {
 	}
 }
 
-// TestAction_TheZeroValueMeansNothingWasDone (Phase 9, L2): an Action nobody
-// filled in used to read as ActionCreated, the first iota, so a value that
-// was never set silently claimed a write. The zero value is ActionNone now,
+// TestAction_TheZeroValueMeansNothingWasDone: an Action nobody filled in (the
+// one that comes back beside an error, or the Result of an observation that
+// was not eligible) used to read as ActionCreated, the first iota, so a value
+// that was never set silently claimed a write. The zero value is ActionNone,
 // and a kind that does something has to be named.
 func TestAction_TheZeroValueMeansNothingWasDone(t *testing.T) {
 	var action Action
 	if action.Kind != ActionNone {
 		t.Fatalf("the zero Action has Kind %v, want ActionNone", action.Kind)
-	}
-	var kind ActionKind
-	if kind == ActionCreated || kind == ActionUpdated || kind == ActionSkippedLocalEdit {
-		t.Fatalf("the zero ActionKind %v is a kind that does something", kind)
 	}
 }
 
@@ -503,10 +500,10 @@ func TestAction_TheZeroValueMeansNothingWasDone(t *testing.T) {
 // path's crash window, retried on a different UTC day. The interrupted run
 // published revision 2 and died before its caller persisted the sidecar, so
 // the entry still fingerprints revision 1. The retry re-renders the SAME
-// observation, but EmitPage stamps created:/updated: from the wall clock, so
+// observation, but EmitPage stamps created:/updated: from the time it is given, so
 // the retry's bytes are not the bytes on disk -- and a byte-equality
 // reconciliation therefore cannot settle it. Nothing about the page is a
-// local edit, so it must not be refused: the same wall-clock normalization
+// local edit, so it must not be refused: the same date-stamp normalization
 // the create path's adoption already uses settles it here too.
 func TestUpdate_InterruptedUpdateRetriedOnALaterDayReconciles(t *testing.T) {
 	vaultRoot := t.TempDir()
@@ -536,7 +533,7 @@ func TestUpdate_InterruptedUpdateRetriedOnALaterDayReconciles(t *testing.T) {
 	}
 
 	// The retry, a later day: same observation, so the only divergence from
-	// disk is the two wall-clock stamps.
+	// disk is the two date stamps.
 	clock.Set(time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
 	retry, err := EmitPage(obs, "c-000309", nil, clock.Now())
 	if err != nil {
@@ -574,7 +571,7 @@ func TestUpdate_InterruptedUpdateRetriedOnALaterDayReconciles(t *testing.T) {
 // published revision 2 and never persisted the sidecar, and by the time
 // promotion runs again the observation is at revision 3, so the retry
 // renders content that never existed on disk. Byte equality against the
-// incoming render -- with or without the wall-clock stamps normalized away
+// incoming render -- with or without the date stamps normalized away
 // -- cannot settle this by construction: the two renders are of different
 // revisions and are SUPPOSED to differ.
 //
@@ -1025,7 +1022,7 @@ func TestUpdate_LegacyEntryWithABodyEditIsStillSkipped(t *testing.T) {
 // sidecar did not" from "a human edited this page" is that the page's
 // revision is BEHIND the one now being promoted. At the same revision our
 // own write would have been byte-identical to the incoming render apart from
-// the wall-clock stamps, and the untracked-write comparison would already
+// the date stamps, and the untracked-write comparison would already
 // have adopted it -- so a divergence there is the human's, not ours.
 func TestUpdate_LegacyEntryLevelWithTheIncomingRevisionIsSkipped(t *testing.T) {
 	vaultRoot := t.TempDir()

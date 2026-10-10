@@ -11,6 +11,10 @@ import (
 
 // ActionKind reports what UpdateInPlace (or, after 6.8, Writer.Promote)
 // did to a promoted page.
+//
+// The integers are not a contract: nothing stores or sends them, and every
+// caller outside this package compares a kind by name or renders it through
+// String. Only ActionNone is promised to be the zero value.
 type ActionKind int
 
 const (
