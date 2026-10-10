@@ -1,0 +1,9 @@
+args: query --project goldenproj gamma-conflict
+exit: 0
+--- stdout ---
+longterm-mem: query "gamma-conflict" (vault_status=not_requested)
+  [1] engram-fts engram:10 Conflict left side
+        CONFLICTS WITH engram:11 Conflict right side
+  [2] engram-fts engram:11 Conflict right side
+        CONFLICTS WITH engram:10 Conflict left side
+--- stderr ---
