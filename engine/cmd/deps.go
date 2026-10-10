@@ -137,6 +137,16 @@ func (d deps) dependencyProber() workflow.DependencyProber {
 	return presence.Prober{Home: home, Path: path, ProbeFS: d.probeFS}
 }
 
+// probeBound is how long one probe run may take: the deps' own timeout when it is positive, and
+// otherwise the default, so that a deps with no timeout is bound by the default and not by a
+// deadline that has already passed.
+func (d deps) probeBound() time.Duration {
+	if d.probeTimeout <= 0 {
+		return defaultProbeTimeout
+	}
+	return d.probeTimeout
+}
+
 // openBinding opens the binding store of a run: the deps' own, or the file-backed one.
 func (d deps) openBinding() (projection.BindingStore, error) {
 	if d.openBindings != nil {

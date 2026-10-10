@@ -82,7 +82,7 @@ type RoleChainReader interface {
 // "memory:<source>"; native review is named by gentleAIReviewCapability).
 //
 // observationsFor applies its own bounded deadline (see
-// dependencyProbeTimeout) around every call, independent of whether the
+// DefaultDependencyProbeTimeout) around every call, independent of whether the
 // prober itself honors ctx: a prober that ignores ctx and blocks forever
 // still never blocks the calling lifecycle operation past that deadline
 // (see Lifecycle.probe), though its goroutine may leak for the remainder of
@@ -101,7 +101,7 @@ type DependencyProber interface {
 	Probe(ctx context.Context, capabilities []string) ([]Observation, error)
 }
 
-// dependencyProbeTimeout is the default bound observationsFor applies to a
+// DefaultDependencyProbeTimeout is the default bound observationsFor applies to a
 // single DependencyProber.Probe call. 5 seconds is generous for any prober
 // that only inspects local state (a PATH lookup, a socket, a config file)
 // while still keeping every lifecycle-mutating operation (Create, Start,
@@ -109,7 +109,7 @@ type DependencyProber interface {
 // slow, hung, or misbehaving. NewLifecycle sets this as Lifecycle.probeTimeout;
 // tests in this package may lower it to keep a deliberately slow prober test
 // fast.
-const dependencyProbeTimeout = 5 * time.Second
+const DefaultDependencyProbeTimeout = 5 * time.Second
 
 // UnavailableProber is the safe default DependencyProber: it reports every
 // requested capability as unavailable, without running a subprocess or
@@ -158,7 +158,7 @@ type Lifecycle struct {
 	chains     RoleChainReader
 	prober     DependencyProber
 	// probeTimeout bounds a single DependencyProber.Probe call; it is
-	// dependencyProbeTimeout outside tests.
+	// DefaultDependencyProbeTimeout outside tests.
 	probeTimeout time.Duration
 	// degraded is called, if non-nil, exactly when observationsFor could
 	// not get a usable answer from l.prober itself (a Probe error, a
@@ -223,7 +223,7 @@ func NewLifecycle(log EventLog, profiles ProfileCatalog, clock func() time.Time,
 	if prober == nil {
 		prober = UnavailableProber{}
 	}
-	return Lifecycle{log: log, profiles: profiles, clock: clock, provenance: provenance, goals: goals, chains: chains, prober: prober, probeTimeout: dependencyProbeTimeout}, nil
+	return Lifecycle{log: log, profiles: profiles, clock: clock, provenance: provenance, goals: goals, chains: chains, prober: prober, probeTimeout: DefaultDependencyProbeTimeout}, nil
 }
 
 // loadOwned loads the workflow and requires it to be ClassificationOwned;
