@@ -1,0 +1,10 @@
+$ sync-trigger --event session-end --cwd <CWD> --state-dir <STATE>
+exit: 0
+--- stdout ---
+--- stderr ---
+
+=== after the parent and its child ===
+log: <TIME> event=session-end cwd=<CWD> outcome=skip:no-binary exit=0 duration=<DURATION>
+longterm-mem: (never started)
+files: logs/, logs/sync-trigger.log 0644
+

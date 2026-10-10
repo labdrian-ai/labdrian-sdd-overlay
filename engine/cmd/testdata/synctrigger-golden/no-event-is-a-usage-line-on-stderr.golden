@@ -1,0 +1,11 @@
+$ sync-trigger --cwd <CWD> --state-dir <STATE>
+exit: 0
+--- stdout ---
+--- stderr ---
+sync-trigger: error:usage event="" cwd="<CWD>"
+
+=== nothing is opened ===
+log: (none)
+longterm-mem: (never started)
+files: (empty)
+
