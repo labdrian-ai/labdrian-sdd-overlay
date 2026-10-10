@@ -121,8 +121,8 @@ func (s *Store) searchMatching(project, match string, limit int, excludeTypes []
 // them anyway would shift the extract's centre and nothing else -- there
 // is no parsing here to confuse, only a first offset to look for.
 const (
-	matchOpen  = ""
-	matchClose = ""
+	matchOpen  = "\ue000"
+	matchClose = "\ue001"
 )
 
 // extract returns a memory.SnippetBudget-sized window of content centred on

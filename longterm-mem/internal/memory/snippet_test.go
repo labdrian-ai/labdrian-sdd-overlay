@@ -89,7 +89,7 @@ func TestSnippetAtMarksACutOfASingleByte(t *testing.T) {
 // The mark is the one character a reader and a client both see in the text; it is pinned so a change
 // of it is a decision, not a side effect.
 func TestTruncationMarkIsAnEllipsis(t *testing.T) {
-	if memory.TruncationMark != "…" {
+	if memory.TruncationMark != "\u2026" {
 		t.Fatalf("TruncationMark = %q, want the single ellipsis character", memory.TruncationMark)
 	}
 }

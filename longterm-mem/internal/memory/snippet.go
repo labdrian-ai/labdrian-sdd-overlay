@@ -18,7 +18,7 @@ const SnippetBudget = 480
 // machine-readable half of the same statement is Row.SnippetTruncated and Row.ContentLength -- a
 // marker in prose is not something a program can act on, and a boolean is not something a person
 // reads.
-const TruncationMark = "…"
+const TruncationMark = "\u2026"
 
 // SnippetAt returns a budget-sized window of content centred on offset (a byte index into content),
 // and whether that window is a fragment of the whole.
