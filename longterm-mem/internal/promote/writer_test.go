@@ -327,18 +327,7 @@ func TestWriter_Promote_CreatePersistsPrecedenceBeforeThePage(t *testing.T) {
 	vaultRoot := t.TempDir()
 	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
-	// A dangling symlink where wiki/memory belongs: os.Stat of the page
-	// path still reports "does not exist" (so Promote takes the create
-	// branch) while writeFileAtomic's own MkdirAll fails with EEXIST --
-	// deterministically and regardless of the uid the test runs as, the
-	// same discipline internal/ops's unreadable-page fixture uses.
-	memoryDir := filepath.Join(vaultRoot, vaultlayout.PagesDir)
-	if err := os.MkdirAll(filepath.Dir(memoryDir), 0o755); err != nil {
-		t.Fatalf("mkdir %s: %v", filepath.Dir(memoryDir), err)
-	}
-	if err := os.Symlink(filepath.Join(vaultRoot, "wiki", "nonexistent-target"), memoryDir); err != nil {
-		t.Fatalf("create dangling symlink: %v", err)
-	}
+	makePagesUnwritable(t, vaultRoot)
 
 	// What the repository sees at the instant of each save: whether the entry is in the store it is given.
 	var recordedAtSave []bool
@@ -375,22 +364,17 @@ func TestWriter_Promote_CreatePersistsPrecedenceBeforeThePage(t *testing.T) {
 // moved and the map row is not withdrawn, because a row without a page is inert (the page check walks pages
 // looking for rows) and taking it back is a write to wiki-ingest's file that can itself fail. The residue is
 // the one Writer.Promote documents: one spent address and one row naming a path nothing later reuses. The
-// retry takes a fresh address, so the row is not found again either.
+// retry takes a fresh address, so the row is not found again either: the test clears the obstruction, promotes
+// the same observation again and holds the page to the second address, with both rows in the map.
 func TestWriter_Promote_AFailedCreateKeepsTheAddressItRecorded(t *testing.T) {
 	vaultRoot := t.TempDir()
 	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 	// The same unwritable pages directory as TestWriter_Promote_CreatePersistsPrecedenceBeforeThePage.
-	memoryDir := filepath.Join(vaultRoot, vaultlayout.PagesDir)
-	if err := os.MkdirAll(filepath.Dir(memoryDir), 0o755); err != nil {
-		t.Fatalf("mkdir %s: %v", filepath.Dir(memoryDir), err)
-	}
-	if err := os.Symlink(filepath.Join(vaultRoot, "wiki", "nonexistent-target"), memoryDir); err != nil {
-		t.Skipf("this file system cannot make a symbolic link: %v", err)
-	}
+	memoryDir := makePagesUnwritable(t, vaultRoot)
 
 	addresses := &memAddressMap{}
-	allocator := &countingAddresses{AddressAllocator: staticAddress(testAddress)}
+	allocator := &countingAddresses{AddressAllocator: &sequentialAddresses{}}
 	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Clock: clock, AddressMap: addresses, Addresses: allocator}
 	obs := memory.Observation{ID: 409, Type: "decision", Title: "Unwritable Page", Content: "The page write cannot land.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/writer-fixture"}
 
@@ -401,13 +385,56 @@ func TestWriter_Promote_AFailedCreateKeepsTheAddressItRecorded(t *testing.T) {
 	if allocator.asked != 1 {
 		t.Errorf("the allocator was asked %d times, want once", allocator.asked)
 	}
-	want := addressRecord{path: "wiki/memory/" + testAddress + ".md", address: testAddress, createdAt: clock.at}
+	const spent = "c-000001"
+	want := addressRecord{path: "wiki/memory/" + spent + ".md", address: spent, createdAt: clock.at}
 	if len(addresses.records) != 1 || addresses.records[0] != want {
 		t.Errorf("records = %+v, want exactly %+v", addresses.records, want)
 	}
-	if got := addresses.entries[want.path]; got != testAddress {
-		t.Errorf("the address map names %q for %s after the failed create, want the row to stay (%q)", got, want.path, testAddress)
+	if got := addresses.entries[want.path]; got != spent {
+		t.Errorf("the address map names %q for %s after the failed create, want the row to stay (%q)", got, want.path, spent)
 	}
+
+	// The retry: the obstruction is gone, and the page lands under a fresh address, not under the spent one.
+	if err := os.Remove(memoryDir); err != nil {
+		t.Fatalf("remove the obstruction %s: %v", memoryDir, err)
+	}
+	retried, err := w.Promote(t.Context(), obs, false)
+	if err != nil {
+		t.Fatalf("Promote (retry): %v", err)
+	}
+	const fresh = "c-000002"
+	if retried.Page.Address != fresh {
+		t.Errorf("the retry promoted the page under %q, want a fresh address (%q) and not the spent %q", retried.Page.Address, fresh, spent)
+	}
+	if allocator.asked != 2 {
+		t.Errorf("the allocator was asked %d times after the retry, want twice", allocator.asked)
+	}
+	if got := addresses.entries["wiki/memory/"+fresh+".md"]; got != fresh {
+		t.Errorf("the address map names %q for the retried page, want %q", got, fresh)
+	}
+	if got := addresses.entries[want.path]; got != spent {
+		t.Errorf("the spent row went from the address map after the retry: %q for %s, want it kept (%q)", got, want.path, spent)
+	}
+	if _, err := os.Stat(filepath.Join(vaultRoot, vaultlayout.PagesDir, spent+".md")); err == nil {
+		t.Errorf("a page was written under the spent address %s", spent)
+	}
+}
+
+// makePagesUnwritable puts a dangling symbolic link where wiki/memory belongs and returns its path: os.Stat of
+// a page under it still reports "does not exist", so Promote takes the create branch, while the page write's
+// own MkdirAll fails with EEXIST -- deterministically and regardless of the uid the test runs as, the same
+// discipline internal/ops's unreadable-page fixture uses. The test is skipped on a file system that cannot
+// make a link, which is what the state needs.
+func makePagesUnwritable(t *testing.T, vaultRoot string) string {
+	t.Helper()
+	memoryDir := filepath.Join(vaultRoot, vaultlayout.PagesDir)
+	if err := os.MkdirAll(filepath.Dir(memoryDir), 0o755); err != nil {
+		t.Fatalf("mkdir %s: %v", filepath.Dir(memoryDir), err)
+	}
+	if err := os.Symlink(filepath.Join(vaultRoot, "wiki", "nonexistent-target"), memoryDir); err != nil {
+		t.Skipf("this file system cannot make a symbolic link: %v", err)
+	}
+	return memoryDir
 }
 
 // TestWriter_Promote_CreateResumesAfterAnUnpairedFingerprint: the state the
