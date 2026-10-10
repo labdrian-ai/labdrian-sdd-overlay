@@ -45,7 +45,7 @@ func run(p process, d deps, args []string) {
 	case "memory":
 		runMemory(p, rest)
 	case "workflow":
-		runWorkflow(rest)
+		runWorkflow(p, d, rest)
 	case "projection":
 		runProjection(rest)
 	default:

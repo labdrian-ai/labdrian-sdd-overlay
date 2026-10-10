@@ -140,13 +140,13 @@ func (e hookEnv) goalPath(project, wf string) string {
 func (e hookEnv) create(t *testing.T, project, wf, profile string) {
 	t.Helper()
 	goal := writeMemoryTestFile(t, e.dir, project+"-"+wf+"-goal.json", memoryTestGoalJSON(project, "goal-1"))
-	phase6MustExitZero(t, "create", []string{"create", "--project", project, "--workflow", wf, "--goal", goal, "--profile", profile}, e.dir)
+	phase6MustExitZeroWith(t, e.deps, "create", []string{"create", "--project", project, "--workflow", wf, "--goal", goal, "--profile", profile}, e.dir)
 }
 
 // step runs one workflow verb (with its own flags) against the workflow.
 func (e hookEnv) step(t *testing.T, project, wf string, verbAndFlags ...string) {
 	t.Helper()
-	phase6MustExitZero(t, verbAndFlags[0], append(append([]string(nil), verbAndFlags...), "--project", project, "--workflow", wf), e.dir)
+	phase6MustExitZeroWith(t, e.deps, verbAndFlags[0], append(append([]string(nil), verbAndFlags...), "--project", project, "--workflow", wf), e.dir)
 }
 
 // running creates a workflow, starts it, records the given stages, and binds the
@@ -449,13 +449,13 @@ func TestProjectionHookStatesTheMemoryPlanOfTheProfile(t *testing.T) {
 }
 
 // TestProjectionHookNamesTheUnavailableDependenciesAndTheCapabilityLimits: with
-// a prober that confirms nothing (the seam installs UnavailableProber, so the
+// a prober that confirms nothing (the deps carry UnavailableProber, so the
 // test does not depend on what the machine running it has on PATH), every
 // dependency of a workflow is recorded unavailable, and the context says so; the
 // capability line is the declaration's.
 func TestProjectionHookNamesTheUnavailableDependenciesAndTheCapabilityLimits(t *testing.T) {
-	useUnavailableProber(t)
 	e := newHookEnv(t)
+	e.deps = e.deps.withUnavailableProber()
 	e.running(t, "proj-1", "wf-1", "odd")
 	ctx := decodeHookOutput(t, e.hook(t, e.repo)).Context
 

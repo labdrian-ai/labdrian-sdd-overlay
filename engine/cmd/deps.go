@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/capability/presence"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow"
 )
 
 // The commands do not reach for the machine: they are handed what they run on, in two values that
@@ -53,6 +54,14 @@ type deps struct {
 	// probe run, so that a hung filesystem cannot hang the command.
 	probeFS      presence.StatFS
 	probeTimeout time.Duration
+
+	// workflowProber returns the DependencyProber the workflow verbs record observations with:
+	// the presence prober, pointed at the home and PATH of the environment. It looks at paths
+	// with stat and at PATH entries by name, and never opens a file, runs a program, or names a
+	// path (see engine/capability/presence), so an "available" observation only says something
+	// is present and states the limit. A test installs workflow.UnavailableProber, the safe
+	// default that confirms nothing.
+	workflowProber func() workflow.DependencyProber
 
 	// skillsLockWait is how long a skills verb waits for a taken lock before it gives up with
 	// exit 2. Zero means filelock.DefaultWait (2 s), the bound the workflow binding store uses.
