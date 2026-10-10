@@ -111,50 +111,27 @@ func parseShaperArgs(args []string, allowView, allowStdin bool) (shaperOpts, err
 	return o, nil
 }
 
-// loadShaperInput reads the handoff and Goal strictly inside the resolved
-// root and observes the worktree. Sources that exist but fail strict parsing
-// or binding are passed through as raw bytes so Evaluate reports them as
-// blockers; a source that cannot be read at all is an error. A failed
-// worktree observation leaves Provenance nil and is returned as a note.
+// loadShaperInput resolves the root the command was given and has the shaper
+// read the handoff and Goal strictly inside it and observe the worktree
+// (shaper.LoadReadinessInput decides what a source that cannot be parsed, or
+// cannot be read, becomes).
 func loadShaperInput(o shaperOpts) (shaper.ReadinessInput, []string, error) {
 	resolved, err := filepath.EvalSymlinks(o.root)
 	if err != nil {
 		return shaper.ReadinessInput{}, nil, fmt.Errorf("resolve --root: %w", err)
 	}
-	root := filepath.Clean(resolved)
-	in := shaper.ReadinessInput{WorktreeRoot: root}
-	var notes []string
+	return shaper.LoadReadinessInput(newContainedSource(), gitWorktree{}, filepath.Clean(resolved), o.handoff, o.goal)
+}
 
-	files := newContainedSource()
-	src, loadErr := shaper.LoadHandoff(files, root, o.handoff)
-	if loadErr != nil {
-		cleaned, data, err := shaper.ReadContainedSource(files, root, o.handoff)
-		if err != nil {
-			return shaper.ReadinessInput{}, nil, loadErr
-		}
-		in.Handoff = shaper.HandoffSource{SourcePath: cleaned, Bytes: data, SHA256: shaper.SourceSHA256(data)}
-		return in, notes, nil
-	}
-	in.Handoff = src
+// gitWorktree is the shaper's WorktreeObserver over git, through the gitprov adapter.
+type gitWorktree struct{}
 
-	gb, bindErr := shaper.BindGoal(files, src.Handoff, root, o.goal)
-	if bindErr != nil {
-		cleaned, data, err := shaper.ReadContainedSource(files, root, o.goal)
-		if err != nil {
-			return shaper.ReadinessInput{}, nil, bindErr
-		}
-		gb = shaper.GoalBinding{SourcePath: cleaned, GoalBytes: data, GoalSHA256: shaper.SourceSHA256(data)}
-	}
-	in.Goal = &gb
-
+func (gitWorktree) Observe(root string) (shaper.WorktreeProvenance, error) {
 	obs, err := gitprov.Observe(root)
 	if err != nil {
-		notes = append(notes, "worktree observation failed: "+err.Error())
-	} else {
-		provenance := worktreeProvenanceFrom(obs)
-		in.Provenance = &provenance
+		return shaper.WorktreeProvenance{}, err
 	}
-	return in, notes, nil
+	return worktreeProvenanceFrom(obs), nil
 }
 
 // worktreeProvenanceFrom maps what the git adapter observed into the value the
