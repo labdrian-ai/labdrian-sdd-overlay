@@ -2535,10 +2535,40 @@ func TestSyncTriggerChildArgv_IsTheCommandLineThisCommandParses(t *testing.T) {
 func TestRunSyncTriggerCore_NoArgs_ExitsZero(t *testing.T) {
 	exitCode := -1
 
-	runSyncTriggerCore(nil, func(code int) { exitCode = code })
+	runSyncTriggerCore(testDeps(), nil, func(code int) { exitCode = code })
 
 	if exitCode != 0 {
 		t.Fatalf("runSyncTriggerCore(nil) exit = %d, want 0", exitCode)
+	}
+}
+
+// The overlay state directory, when --state-dir is not given, is under the home the deps give,
+// not under whatever HOME the process has: the child finds its longterm-mem there and logs there.
+func TestRunSyncTriggerCore_StateDirDefaultsToTheHomeOfTheDeps(t *testing.T) {
+	home, project := t.TempDir(), t.TempDir()
+	state := filepath.Join(home, ".labdrian-overlay")
+	marker := filepath.Join(t.TempDir(), "ran")
+	if err := os.MkdirAll(filepath.Join(state, "bin"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	script := "#!/bin/sh\ntouch \"" + marker + "\"\nexit 0\n"
+	if err := os.WriteFile(filepath.Join(state, "bin", "longterm-mem"), []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	d := testDeps()
+	d.userHomeDir = func() (string, error) { return home, nil }
+	exitCode := -1
+
+	runSyncTriggerCore(d, []string{"--child", "--event", "session-end", "--cwd", project}, func(code int) { exitCode = code })
+
+	if exitCode != 0 {
+		t.Fatalf("exit = %d, want 0", exitCode)
+	}
+	if _, err := os.Stat(marker); err != nil {
+		t.Errorf("the longterm-mem under the home of the deps did not run: %v", err)
+	}
+	if log, err := os.ReadFile(filepath.Join(state, "logs", "sync-trigger.log")); err != nil || !strings.Contains(string(log), "outcome=ok") {
+		t.Errorf("log under the home of the deps = %q, %v; want a line with outcome=ok", log, err)
 	}
 }
 
@@ -2550,7 +2580,7 @@ func TestRunSyncTriggerCore_ChildNoEventNoCwd_ExitsZeroWithoutSpawn(t *testing.T
 	marker := filepath.Join(t.TempDir(), "spawned")
 	os.WriteFile(filepath.Join(binDir, "longterm-mem"), []byte("#!/bin/sh\ntouch \""+marker+"\"\nexit 0\n"), 0o755)
 	exitCode := -1
-	runSyncTriggerCore([]string{"--child", "--state-dir", stateDir}, func(code int) { exitCode = code })
+	runSyncTriggerCore(testDeps(), []string{"--child", "--state-dir", stateDir}, func(code int) { exitCode = code })
 	if exitCode != 0 {
 		t.Fatalf("runSyncTriggerCore exit = %d, want 0", exitCode)
 	}

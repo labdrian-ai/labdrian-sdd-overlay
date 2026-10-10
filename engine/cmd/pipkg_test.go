@@ -54,7 +54,7 @@ func TestRunPipkgCore_BuildThenCheck(t *testing.T) {
 
 	var outBuf, errBuf bytes.Buffer
 	exitCode := -1
-	runPipkgCore(noGit(),
+	runPipkgCore(testDeps(), noGit(),
 		[]string{"build", "--overlay-root", overlayRoot, "--registry", registryPath, "--dest-dir", destDir},
 		&outBuf, &errBuf, func(code int) { exitCode = code },
 	)
@@ -68,7 +68,7 @@ func TestRunPipkgCore_BuildThenCheck(t *testing.T) {
 	outBuf.Reset()
 	errBuf.Reset()
 	exitCode = -1
-	runPipkgCore(noGit(),
+	runPipkgCore(testDeps(), noGit(),
 		[]string{"check", "--overlay-root", overlayRoot, "--registry", registryPath, "--dest-dir", destDir},
 		&outBuf, &errBuf, func(code int) { exitCode = code },
 	)
@@ -83,7 +83,7 @@ func TestRunPipkgCore_CheckReportsDriftBeforeBuild(t *testing.T) {
 
 	var outBuf, errBuf bytes.Buffer
 	exitCode := -1
-	runPipkgCore(noGit(),
+	runPipkgCore(testDeps(), noGit(),
 		[]string{"check", "--overlay-root", overlayRoot, "--registry", registryPath, "--dest-dir", destDir},
 		&outBuf, &errBuf, func(code int) { exitCode = code },
 	)
@@ -98,7 +98,7 @@ func TestRunPipkgCore_CheckReportsDriftBeforeBuild(t *testing.T) {
 func TestRunPipkgCore_MissingVerbFailsLoud(t *testing.T) {
 	var outBuf, errBuf bytes.Buffer
 	exitCode := -1
-	runPipkgCore(noGit(), []string{}, &outBuf, &errBuf, func(code int) { exitCode = code })
+	runPipkgCore(testDeps(), noGit(), []string{}, &outBuf, &errBuf, func(code int) { exitCode = code })
 	if exitCode != 1 {
 		t.Fatalf("pipkg with no verb should exit 1, got %d", exitCode)
 	}
@@ -128,7 +128,7 @@ func TestRunPipkgCore_AsksGitThroughTheSourceItIsGiven(t *testing.T) {
 	source := &recordingSource{}
 
 	var outBuf, errBuf bytes.Buffer
-	runPipkgCore(source, []string{"build", "--overlay-root", overlayRoot, "--registry", registryPath, "--dest-dir", destDir}, &outBuf, &errBuf, func(int) {})
+	runPipkgCore(testDeps(), source, []string{"build", "--overlay-root", overlayRoot, "--registry", registryPath, "--dest-dir", destDir}, &outBuf, &errBuf, func(int) {})
 	if source.asked == 0 {
 		t.Errorf("pipkg build never asked the source about the overlay; stderr=%q", errBuf.String())
 	}
@@ -146,6 +146,50 @@ func TestRuntimeInstallPiAsksGitThroughTheSourceItIsGiven(t *testing.T) {
 	}
 }
 
+// The deploy ref the check compares against is the one the deps' environment gives, and the
+// process's own environment is not looked at.
+func TestRunPipkgCore_CheckReadsTheDeployRefFromTheDeps(t *testing.T) {
+	overlayRoot, registryPath := pipkgFixtureOverlay(t)
+	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
+	var outBuf, errBuf bytes.Buffer
+	runPipkgCore(testDeps(), noGit(), []string{"build", "--overlay-root", overlayRoot, "--registry", registryPath, "--dest-dir", destDir}, &outBuf, &errBuf, func(int) {})
+	check := []string{"check", "--overlay-root", overlayRoot, "--registry", registryPath, "--dest-dir", destDir}
+
+	t.Run("the ref of the deps is asked about first", func(t *testing.T) {
+		d := testDeps()
+		d.getenv = environmentOf(map[string]string{deployRefVariable: "a-ref-of-the-deps"})
+		source := &refAskingSource{}
+		runPipkgCore(d, source, check, &outBuf, &errBuf, func(int) {})
+		if len(source.refs) == 0 || source.refs[0] != "a-ref-of-the-deps" {
+			t.Errorf("the check asked git about the refs %q, want the deploy ref the deps gave first", source.refs)
+		}
+	})
+	t.Run("the ref of the process is not asked about", func(t *testing.T) {
+		t.Setenv(deployRefVariable, "a-ref-of-the-process")
+		d := testDeps()
+		d.getenv = environmentOf(nil)
+		source := &refAskingSource{}
+		runPipkgCore(d, source, check, &outBuf, &errBuf, func(int) {})
+		if len(source.refs) == 0 || source.refs[0] != "main" {
+			t.Errorf("the check asked git about the refs %q, want the usual ones (main first) since the deps gave none", source.refs)
+		}
+	})
+}
+
+// refAskingSource is a source tree under version control, clean, that holds no commit of any name,
+// and records which refs it was asked about.
+type refAskingSource struct {
+	pipkg.NoRepository
+	refs []string
+}
+
+func (r *refAskingSource) IsWorkTree(string) (bool, error)            { return true, nil }
+func (r *refAskingSource) HasChanges(string, ...string) (bool, error) { return false, nil }
+func (r *refAskingSource) HasCommit(_, ref string) (bool, error) {
+	r.refs = append(r.refs, ref)
+	return false, nil
+}
+
 // The build reads the deploy ref along with the rest of the options, but nothing in a build uses
 // it: only the check compares against a ref. So a ref in the environment, even one the adapter
 // would refuse, neither changes the build nor makes it ask git which commit the ref names.
@@ -157,7 +201,7 @@ func TestRunPipkgCore_BuildIgnoresTheDeployRef(t *testing.T) {
 
 	var outBuf, errBuf bytes.Buffer
 	code := -1
-	runPipkgCore(source, []string{"build", "--overlay-root", overlayRoot, "--registry", registryPath, "--dest-dir", destDir}, &outBuf, &errBuf, func(c int) { code = c })
+	runPipkgCore(testDeps(), source, []string{"build", "--overlay-root", overlayRoot, "--registry", registryPath, "--dest-dir", destDir}, &outBuf, &errBuf, func(c int) { code = c })
 	if code != 0 {
 		t.Fatalf("pipkg build exited %d, stderr=%q", code, errBuf.String())
 	}

@@ -5,14 +5,13 @@ package main
 import (
 	"fmt"
 	"io"
-	"os"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/pipkg"
 )
 
 // runPipkg implements the 'pipkg build|check' subcommand.
-func runPipkg(args []string) {
-	runPipkgCore(newPipkgSource(os.Environ()), args, os.Stdout, os.Stderr, os.Exit)
+func runPipkg(p process, d deps, args []string) {
+	runPipkgCore(d, newPipkgSource(d.environ()), args, p.stdout, p.stderr, p.exit)
 }
 
 // runPipkgCore is the testable core of the pipkg subcommand: 'build' writes
@@ -20,7 +19,7 @@ func runPipkg(args []string) {
 // --overlay-root, --registry, and --dest-dir. Fails LOUD on a missing verb
 // or missing flag (ADR-4). source is how the builder asks git about the overlay: the git of the
 // machine in the program, a fake or pipkg.NoRepository in a test.
-func runPipkgCore(source pipkg.SourceRepo, args []string, stdout, stderr io.Writer, exit func(int)) {
+func runPipkgCore(d deps, source pipkg.SourceRepo, args []string, stdout, stderr io.Writer, exit func(int)) {
 	if len(args) == 0 {
 		fmt.Fprintln(stderr, "error: pipkg requires a verb: build, check")
 		exit(1)
@@ -75,7 +74,7 @@ func runPipkgCore(source pipkg.SourceRepo, args []string, stdout, stderr io.Writ
 	packages := pipkg.Packages{
 		Registries: newWarningRegistryRepository(stderr),
 		Source:     source,
-		Options:    pipkgOptionsFromEnv(os.Getenv),
+		Options:    pipkgOptionsFromEnv(d.getenv),
 	}
 	if verb == "build" {
 		if err := packages.Build(overlayRoot, registryPath, destDir); err != nil {

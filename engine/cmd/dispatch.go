@@ -31,11 +31,11 @@ func run(p process, d deps, args []string) {
 	case "gadu-generate":
 		runGaduGenerate(p, d, rest)
 	case "pipkg":
-		runPipkg(rest)
+		runPipkg(p, d, rest)
 	case "skills":
 		runSkills(rest)
 	case "sync-trigger":
-		runSyncTrigger(rest)
+		runSyncTrigger(p, d, rest)
 	case "review-receipt":
 		runReviewReceipt(p, d, rest)
 	case "shaper":
