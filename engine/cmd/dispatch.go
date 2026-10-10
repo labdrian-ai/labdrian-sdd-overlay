@@ -37,7 +37,7 @@ func run(p process, d deps, args []string) {
 	case "sync-trigger":
 		runSyncTrigger(rest)
 	case "review-receipt":
-		runReviewReceipt(rest)
+		runReviewReceipt(p, d, rest)
 	case "shaper":
 		runShaper(rest)
 	case "roles":

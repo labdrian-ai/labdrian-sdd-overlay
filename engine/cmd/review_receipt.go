@@ -5,7 +5,6 @@ package main
 import (
 	"fmt"
 	"io"
-	"os"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/hookwire"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/reviewreceipt"
@@ -13,19 +12,20 @@ import (
 
 // runReviewReceipt implements the 'review-receipt <verb>' subcommand.
 // Verbs: capture, hook.
-func runReviewReceipt(args []string) {
+func runReviewReceipt(p process, d deps, args []string) {
 	if len(args) < 1 {
-		fmt.Fprintln(os.Stderr, "error: review-receipt requires a verb: capture, hook")
-		os.Exit(1)
+		fmt.Fprintln(p.stderr, "error: review-receipt requires a verb: capture, hook")
+		p.exit(1)
+		return
 	}
 	switch args[0] {
 	case "capture":
-		runReviewReceiptCapture(args[1:])
+		runReviewReceiptCapture(p, d, args[1:])
 	case "hook":
-		runReviewReceiptHook(args[1:])
+		runReviewReceiptHook(p, d, args[1:])
 	default:
-		fmt.Fprintf(os.Stderr, "error: review-receipt: unknown verb %q (expected capture or hook)\n", args[0])
-		os.Exit(1)
+		fmt.Fprintf(p.stderr, "error: review-receipt: unknown verb %q (expected capture or hook)\n", args[0])
+		p.exit(1)
 	}
 }
 
@@ -48,14 +48,14 @@ func parseReviewReceiptArgs(args []string) (cwd, change string) {
 	return
 }
 
-// buildReviewReceiptService builds the review receipt capture both verbs run on. When it
-// cannot be built it says why on stderr, in the words of the verb (prefix) and as a set-up
-// failure, which tells it apart from a failure of the capture itself, and exits with code,
+// buildReviewReceiptService builds the review receipt capture both verbs run on, asking git in
+// environ. When it cannot be built it says why on stderr, in the words of the verb (prefix) and as a
+// set-up failure, which tells it apart from a failure of the capture itself, and exits with code,
 // the one the verb's contract gives a failure: 1 for the capture a person runs, 2 for the
 // hook, where exit code 2 denies the acknowledgement. The exit is injected; a caller whose exit
 // returns gets no service.
-func buildReviewReceiptService(cwd string, stderr io.Writer, exit func(int), prefix string, code int) *reviewreceipt.Service {
-	svc, err := newReviewReceiptService(cwd)
+func buildReviewReceiptService(cwd string, environ []string, stderr io.Writer, exit func(int), prefix string, code int) *reviewreceipt.Service {
+	svc, err := newReviewReceiptService(cwd, environ)
 	if err != nil {
 		fmt.Fprintf(stderr, "%s: set up failed: %v\n", prefix, err)
 		exit(code)
@@ -69,23 +69,28 @@ func buildReviewReceiptService(cwd string, stderr io.Writer, exit func(int), pre
 // Without it, auto-detects the single active change: zero active changes is
 // a no-op (exit 0); more than one is a loud failure (exit 1) naming
 // --change as the remedy.
-func runReviewReceiptCapture(args []string) {
+func runReviewReceiptCapture(p process, d deps, args []string) {
 	cwd, change := parseReviewReceiptArgs(args)
 	if cwd == "" {
-		fmt.Fprintln(os.Stderr, "error: --cwd is required")
-		os.Exit(1)
+		fmt.Fprintln(p.stderr, "error: --cwd is required")
+		p.exit(1)
+		return
 	}
 
-	svc := buildReviewReceiptService(cwd, os.Stderr, os.Exit, "error: review-receipt capture", 1)
+	svc := buildReviewReceiptService(cwd, d.environ(), p.stderr, p.exit, "error: review-receipt capture", 1)
+	if svc == nil {
+		return
+	}
 
 	if change == "" {
 		detected, err := svc.DetectActiveChange()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "error: %v\n", err)
-			os.Exit(1)
+			fmt.Fprintf(p.stderr, "error: %v\n", err)
+			p.exit(1)
+			return
 		}
 		if detected == "" {
-			fmt.Fprintln(os.Stdout, "review-receipt capture: no active change; nothing to capture")
+			fmt.Fprintln(p.stdout, "review-receipt capture: no active change; nothing to capture")
 			return
 		}
 		change = detected
@@ -93,10 +98,11 @@ func runReviewReceiptCapture(args []string) {
 
 	captured, err := svc.Capture(change)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: review-receipt capture: %v\n", err)
-		os.Exit(1)
+		fmt.Fprintf(p.stderr, "error: review-receipt capture: %v\n", err)
+		p.exit(1)
+		return
 	}
-	fmt.Fprintf(os.Stdout, "review-receipt capture: %d receipt(s) captured for %q\n", len(captured), change)
+	fmt.Fprintf(p.stdout, "review-receipt capture: %d receipt(s) captured for %q\n", len(captured), change)
 }
 
 // runReviewReceiptHook implements 'review-receipt hook --cwd <repo>': the
@@ -104,35 +110,41 @@ func runReviewReceiptCapture(args []string) {
 // JSON from stdin, has engine/hookwire read the command out of it, asks
 // reviewreceipt.Service.CheckCommand, and exits with the status of its
 // verdict, printing its reason (if any) to stderr.
-func runReviewReceiptHook(args []string) {
+func runReviewReceiptHook(p process, d deps, args []string) {
 	cwd, _ := parseReviewReceiptArgs(args)
 	if cwd == "" {
-		fmt.Fprintln(os.Stderr, "error: --cwd is required")
-		os.Exit(hookwire.ExitBlock)
+		fmt.Fprintln(p.stderr, "error: --cwd is required")
+		p.exit(hookwire.ExitBlock)
+		return
 	}
 
-	raw, err := io.ReadAll(os.Stdin)
+	raw, err := io.ReadAll(p.stdin)
 	if err != nil {
 		// Fail closed: an unreadable hook input is treated the same as any
 		// other capture-resolution failure -- deny rather than silently
 		// allow an acknowledgement this hook could not even inspect.
-		fmt.Fprintf(os.Stderr, "review-receipt hook: read stdin: %v\n", err)
-		os.Exit(hookwire.ExitBlock)
+		fmt.Fprintf(p.stderr, "review-receipt hook: read stdin: %v\n", err)
+		p.exit(hookwire.ExitBlock)
+		return
 	}
 
 	// Fail closed, as for an unreadable input: a hook that cannot be set up cannot guard
 	// the acknowledgement it was started for, so its set-up failure exits 2 like a denial.
-	svc := buildReviewReceiptService(cwd, os.Stderr, os.Exit, "review-receipt hook", hookwire.ExitBlock)
+	svc := buildReviewReceiptService(cwd, d.environ(), p.stderr, p.exit, "review-receipt hook", hookwire.ExitBlock)
+	if svc == nil {
+		return
+	}
 
 	// Malformed or empty input is treated the same as a command that is not an
 	// acknowledgement -- pass through -- because a hook that cannot even see a command is
 	// not looking at an acknowledge-approved invocation in the first place.
 	command, err := hookwire.DecodeCommand(raw)
 	if err != nil {
-		os.Exit(hookwire.ExitAllow)
+		p.exit(hookwire.ExitAllow)
+		return
 	}
 	verdict := svc.CheckCommand(command)
 	reply := hookwire.ExitReply{Block: verdict.Deny, Message: verdict.Reason}
-	_, _ = os.Stderr.Write(reply.MessageLine())
-	os.Exit(reply.Code())
+	_, _ = p.stderr.Write(reply.MessageLine())
+	p.exit(reply.Code())
 }

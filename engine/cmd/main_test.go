@@ -2573,7 +2573,7 @@ func TestParseReviewReceiptArgs_BothFlags(t *testing.T) {
 // openspec/changes/ directory to auto-detect an active change from.
 func TestRunReviewReceiptCapture_NoActiveChange_NoOp(t *testing.T) {
 	dir := t.TempDir()
-	runReviewReceiptCapture([]string{"--cwd", dir})
+	runReviewReceiptCapture(newCapturedProcess("").process, testDeps(), []string{"--cwd", dir})
 	if _, err := os.Stat(filepath.Join(dir, "openspec")); !os.IsNotExist(err) {
 		t.Errorf("no-op capture should not create openspec/, stat err=%v", err)
 	}
@@ -2612,7 +2612,7 @@ func TestRunReviewReceiptCapture_ExplicitChange_Captures(t *testing.T) {
 	receipt := `{"schema":"gentle-ai.review-receipt/v2","lineage_id":"review-cli1","terminal_state":"approved"}`
 	os.WriteFile(filepath.Join(lineageDir, "review-receipt.json"), []byte(receipt), 0644)
 
-	runReviewReceiptCapture([]string{"--cwd", dir, "--change", "cli-change"})
+	runReviewReceiptCapture(newCapturedProcess("").process, testDeps(), []string{"--cwd", dir, "--change", "cli-change"})
 
 	dest := filepath.Join(changeDir, "review-receipts", "review-cli1.json")
 	if _, err := os.Stat(dest); err != nil {
