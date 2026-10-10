@@ -58,8 +58,8 @@ var (
 	engineBinaryPath string
 	engineBinaryDir  string
 	engineBinaryErr  error
-	// reviewReceiptBuildReported says that a case already printed the failed build in full.
-	reviewReceiptBuildReported atomic.Bool
+	// engineBuildReported says that a case already printed the failed build in full.
+	engineBuildReported atomic.Bool
 )
 
 const (
@@ -98,7 +98,7 @@ func engineBinary(t *testing.T) string {
 		t.Skipf("go unavailable: %v", err)
 	}
 	engineBinaryOnce.Do(func() {
-		dir, err := os.MkdirTemp("", "engine-review-receipt-bin-*")
+		dir, err := os.MkdirTemp("", "engine-golden-bin-*")
 		if err != nil {
 			engineBinaryErr = err
 			return
@@ -120,7 +120,7 @@ func engineBinary(t *testing.T) string {
 		})
 	})
 	if engineBinaryErr != nil {
-		if reviewReceiptBuildReported.Swap(true) {
+		if engineBuildReported.Swap(true) {
 			t.Fatalf("the engine binary could not be built (the first case that needed it printed why)")
 		}
 		t.Fatalf("build the engine binary: %v", engineBinaryErr)
