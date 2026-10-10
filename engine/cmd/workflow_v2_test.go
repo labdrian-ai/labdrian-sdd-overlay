@@ -63,7 +63,11 @@ func TestWorkflowCreateWritesAVersion2LogOfTheProfileWhateverTheVerbs(t *testing
 			if created.ProfileSnapshot == nil || !reflect.DeepEqual(*created.ProfileSnapshot, profile.Snapshot()) {
 				t.Errorf("the created event records %+v, want the snapshot of the built-in %s", created.ProfileSnapshot, p.profile)
 			}
-			if digest, _ := profile.Snapshot().Digest(); created.ProfileDigest != digest {
+			digest, err := profile.Snapshot().Digest()
+			if err != nil || digest == "" {
+				t.Fatalf("the digest of the built-in %s = %q, %v, want a digest", p.profile, digest, err)
+			}
+			if created.ProfileDigest != digest {
 				t.Errorf("the created event records the digest %q, want %q", created.ProfileDigest, digest)
 			}
 			// The line is the compact encoding the format has always had: one object per line, the

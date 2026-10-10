@@ -139,18 +139,18 @@ exit: 0
 }
 --- stderr ---
 
-the log, line by line (version, seq, kind, SHA-256 of the line with the timestamp and chain digests masked):
-  v1 0 created d86ee709fb058eab7c3c9e529555eae176f396f91f6b3135a1ba63f57e524e4f
-  v1 1 started ee685becbcb6ebe39f507f18c4ce11b44492aec8bd676e28f7459b7af15a41c5
-  v1 2 stage_recorded 44123276fa48122d42cb1faf3952a15630a9dc379a7e674c9c6ac2b3e291d54d
-  v1 3 stage_recorded 9eca5a4fc63856e483b44bcb4a7cb8666c88740b2fa69702782f6decaea8e12d
-  v1 4 stage_recorded 865e12e11f631250ed90e7a8347f9f8920f660c2e7e787e67914ec1ae8324046
-  v1 5 stage_recorded fbaab78a9e6805b853eaec6681defdc66f9d024fc84459ce183392b29dfae0d2
-  v1 6 stage_recorded 8538f1de925759bd55d6048f0051b9e227b6696869eeed8c9b4fa7647625959f
-  v1 7 stage_recorded c0a0b2a8e77fcf2c9581bcf7071451a1b3db95d77cee8e6e6ef5cc62747caf75
-  v1 8 stage_recorded 46ee9b40e146af1c191449bc2ed0ccab7223f0081a9c9ac488fb7014ee701628
-  v1 9 verified 9ed78579e1309b5afe871b214bb114aa87d80196e98a37bd3728d2a084f58606
-  v1 10 closed 4b35a5603fe642a3abfc66688b537632d7d0f1b7844d9d18ee45d68372ddcacc
+the log, line by line (version, seq, kind, payload, observations, SHA-256 of the line with the timestamp and chain digests masked):
+  v1 0 created [memory:engram=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] d86ee709fb058eab7c3c9e529555eae176f396f91f6b3135a1ba63f57e524e4f
+  v1 1 started [memory:engram=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] ee685becbcb6ebe39f507f18c4ce11b44492aec8bd676e28f7459b7af15a41c5
+  v1 2 stage_recorded stage="preserve-evidence" [memory:engram=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 44123276fa48122d42cb1faf3952a15630a9dc379a7e674c9c6ac2b3e291d54d
+  v1 3 stage_recorded stage="classify" [memory:engram=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 9eca5a4fc63856e483b44bcb4a7cb8666c88740b2fa69702782f6decaea8e12d
+  v1 4 stage_recorded stage="identify-supported-recovery" [memory:engram=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 865e12e11f631250ed90e7a8347f9f8920f660c2e7e787e67914ec1ae8324046
+  v1 5 stage_recorded stage="obtain-required-authorization" [memory:engram=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] fbaab78a9e6805b853eaec6681defdc66f9d024fc84459ce183392b29dfae0d2
+  v1 6 stage_recorded stage="recover" [memory:engram=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 8538f1de925759bd55d6048f0051b9e227b6696869eeed8c9b4fa7647625959f
+  v1 7 stage_recorded stage="verify" [memory:engram=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] c0a0b2a8e77fcf2c9581bcf7071451a1b3db95d77cee8e6e6ef5cc62747caf75
+  v1 8 stage_recorded stage="report" [memory:engram=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 46ee9b40e146af1c191449bc2ed0ccab7223f0081a9c9ac488fb7014ee701628
+  v1 9 verified checked.profile="incident-recovery" [memory:engram=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 9ed78579e1309b5afe871b214bb114aa87d80196e98a37bd3728d2a084f58606
+  v1 10 closed outcome="completed" [memory:engram=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 4b35a5603fe642a3abfc66688b537632d7d0f1b7844d9d18ee45d68372ddcacc
 
 == incident-recovery, from its created log ==
 
@@ -268,12 +268,12 @@ exit: 0
 }
 --- stderr ---
 
-the log, line by line (version, seq, kind, SHA-256 of the line with the timestamp and chain digests masked):
-  v1 0 created d86ee709fb058eab7c3c9e529555eae176f396f91f6b3135a1ba63f57e524e4f
-  v1 1 started ee685becbcb6ebe39f507f18c4ce11b44492aec8bd676e28f7459b7af15a41c5
-  v1 2 paused 5a3c9a6bde1e8f2f492b392bf66a2822262651112b8ac24b15d753eedd33b995
-  v1 3 resumed e68cb6ef3ff4654eff7abd9d1e509c1efe4689a66f0787cb01742a38f6f70736
-  v1 4 stage_recorded 582d59c48af5ace87f49906c776277027c8b6b494b128fc714ca2c3190b96f3f
-  v1 5 verified c6edc434388c8f7cc6b175e6c5a049b0278a09152455a9e194a6186a91aaeabc
-  v1 6 closed 24d9b9cf9582cede5682f57e6248b08f382cc8843040d45f49ff05ffeee1a969
+the log, line by line (version, seq, kind, payload, observations, SHA-256 of the line with the timestamp and chain digests masked):
+  v1 0 created [memory:engram=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] d86ee709fb058eab7c3c9e529555eae176f396f91f6b3135a1ba63f57e524e4f
+  v1 1 started [memory:engram=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] ee685becbcb6ebe39f507f18c4ce11b44492aec8bd676e28f7459b7af15a41c5
+  v1 2 paused [memory:engram=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 5a3c9a6bde1e8f2f492b392bf66a2822262651112b8ac24b15d753eedd33b995
+  v1 3 resumed [memory:engram=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] e68cb6ef3ff4654eff7abd9d1e509c1efe4689a66f0787cb01742a38f6f70736
+  v1 4 stage_recorded stage="preserve-evidence" [memory:engram=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 582d59c48af5ace87f49906c776277027c8b6b494b128fc714ca2c3190b96f3f
+  v1 5 verified checked.profile="incident-recovery" [memory:engram=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] c6edc434388c8f7cc6b175e6c5a049b0278a09152455a9e194a6186a91aaeabc
+  v1 6 closed outcome="abandoned" reason="no longer needed" [memory:engram=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 24d9b9cf9582cede5682f57e6248b08f382cc8843040d45f49ff05ffeee1a969
 

@@ -121,16 +121,16 @@ exit: 0
 }
 --- stderr ---
 
-the log, line by line (version, seq, kind, SHA-256 of the line with the timestamp and chain digests masked):
-  v1 0 created 1e845709b4b5d0d99b127af635a07b7e2a977c23d067c277863ba795955d3cdc
-  v1 1 started d6bf68785a796beb843bc71b45853772735da29772cb46a2162893b1970417a1
-  v1 2 stage_recorded 3cd602ac95fba126f618928689efd41529ccef6d5dfa6544288cba43a4f464f2
-  v1 3 stage_recorded 62282bafcba539f425b56356e5e080e9a9a9a9dde3cf4614564505873994a230
-  v1 4 stage_recorded 4781fa653a0bda23a92b4d93ed6a1b46120e31b0f8278eae7b6bc8f866cc194b
-  v1 5 stage_recorded afc17752b89c8fefa9bf74ec8f977c359b8e97f3ff080e414faa0d39a5221cce
-  v1 6 stage_recorded 287fe2a781ba9e8e776562279c059a2d6739774f9686599f4d02e8a91c6d6c1f
-  v1 7 verified 1e20442860cdcacc80958d7e9a083fdd5489dec9ac7493fa878dbd70515d862f
-  v1 8 closed d1ab08f57577e09f9d71533667a4867b8e8f937b06d3cdc3a6660172d37d5ce1
+the log, line by line (version, seq, kind, payload, observations, SHA-256 of the line with the timestamp and chain digests masked):
+  v1 0 created [] 1e845709b4b5d0d99b127af635a07b7e2a977c23d067c277863ba795955d3cdc
+  v1 1 started [] d6bf68785a796beb843bc71b45853772735da29772cb46a2162893b1970417a1
+  v1 2 stage_recorded stage="authorize" [] 3cd602ac95fba126f618928689efd41529ccef6d5dfa6544288cba43a4f464f2
+  v1 3 stage_recorded stage="bound-scope" [] 62282bafcba539f425b56356e5e080e9a9a9a9dde3cf4614564505873994a230
+  v1 4 stage_recorded stage="execute-one-bounded-sequential-path" [] 4781fa653a0bda23a92b4d93ed6a1b46120e31b0f8278eae7b6bc8f866cc194b
+  v1 5 stage_recorded stage="check" [] afc17752b89c8fefa9bf74ec8f977c359b8e97f3ff080e414faa0d39a5221cce
+  v1 6 stage_recorded stage="report" [] 287fe2a781ba9e8e776562279c059a2d6739774f9686599f4d02e8a91c6d6c1f
+  v1 7 verified checked.profile="standalone-minimal" [] 1e20442860cdcacc80958d7e9a083fdd5489dec9ac7493fa878dbd70515d862f
+  v1 8 closed outcome="completed" [] d1ab08f57577e09f9d71533667a4867b8e8f937b06d3cdc3a6660172d37d5ce1
 
 == standalone-minimal, from its created log ==
 
@@ -248,12 +248,12 @@ exit: 0
 }
 --- stderr ---
 
-the log, line by line (version, seq, kind, SHA-256 of the line with the timestamp and chain digests masked):
-  v1 0 created 1e845709b4b5d0d99b127af635a07b7e2a977c23d067c277863ba795955d3cdc
-  v1 1 started d6bf68785a796beb843bc71b45853772735da29772cb46a2162893b1970417a1
-  v1 2 paused 980671e8886ec11b18ba251880e144fe18d475287c6421a9bdcb4e43705ed1e4
-  v1 3 resumed 3f34728ba74cd8af4c9d7e9a41b76e7f4157d28294261e3e5b38b29aa15418b7
-  v1 4 stage_recorded e0be45d91cc86f968952a702f20dd6433df90bec4486d659d7a66b345dd26d77
-  v1 5 verified 85b95b13f2f610dbf3c5ed977bc5d225dea4ed97ed21767f115c333805e3cfbd
-  v1 6 closed ed0d010edeecb9338cc87efe1495908b88651756c17e469d601b861daa9ec3a6
+the log, line by line (version, seq, kind, payload, observations, SHA-256 of the line with the timestamp and chain digests masked):
+  v1 0 created [] 1e845709b4b5d0d99b127af635a07b7e2a977c23d067c277863ba795955d3cdc
+  v1 1 started [] d6bf68785a796beb843bc71b45853772735da29772cb46a2162893b1970417a1
+  v1 2 paused [] 980671e8886ec11b18ba251880e144fe18d475287c6421a9bdcb4e43705ed1e4
+  v1 3 resumed [] 3f34728ba74cd8af4c9d7e9a41b76e7f4157d28294261e3e5b38b29aa15418b7
+  v1 4 stage_recorded stage="authorize" [] e0be45d91cc86f968952a702f20dd6433df90bec4486d659d7a66b345dd26d77
+  v1 5 verified checked.profile="standalone-minimal" [] 85b95b13f2f610dbf3c5ed977bc5d225dea4ed97ed21767f115c333805e3cfbd
+  v1 6 closed outcome="abandoned" reason="no longer needed" [] ed0d010edeecb9338cc87efe1495908b88651756c17e469d601b861daa9ec3a6
 

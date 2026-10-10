@@ -121,16 +121,16 @@ exit: 0
 }
 --- stderr ---
 
-the log, line by line (version, seq, kind, SHA-256 of the line with the timestamp and chain digests masked):
-  v1 0 created 9a5a3bbfed0386d8457b6acbe6e8ff8f40fa8f3a4bfb31914fb69be4cf4818e7
-  v1 1 started 800831acc6190cf4f5ca30d1022cc08430d6135191ef22fff5ed8196339ecf7e
-  v1 2 stage_recorded 1b4a3c579bf3e2c069a34fa6bbaa273622d400c5506e45cb8792207b34715008
-  v1 3 stage_recorded 40c925f74ab1a1f8c2abed92a1ab0b3df140a68ac773412d55879859bdc6b9f5
-  v1 4 stage_recorded 391c64ef4b41ed816981d4f0505be26ac88f5a01657cbe5f851050cbd2ec9b7e
-  v1 5 stage_recorded dc288358b3916b6eb59efd4105822d6c8dcf3fd7527c83d309940110e6a3783e
-  v1 6 stage_recorded 92b69945e98ff0b584d18e3252675efc747d48da963e8c37ddbd5cd816f34748
-  v1 7 verified 53204c938f10d0b7b10627fdb4d0f27d8cf71f9ff906a56f951861d362401ec6
-  v1 8 closed ad28484ce1160106d9e1180650e9ac7c8e38f2e9030fc999a35184032a17fa88
+the log, line by line (version, seq, kind, payload, observations, SHA-256 of the line with the timestamp and chain digests masked):
+  v1 0 created [memory:engram=unavailable gentle-ai-review=unavailable] 9a5a3bbfed0386d8457b6acbe6e8ff8f40fa8f3a4bfb31914fb69be4cf4818e7
+  v1 1 started [memory:engram=unavailable gentle-ai-review=unavailable] 800831acc6190cf4f5ca30d1022cc08430d6135191ef22fff5ed8196339ecf7e
+  v1 2 stage_recorded stage="dispatcher-selected-planning-phases" [memory:engram=unavailable gentle-ai-review=unavailable] 1b4a3c579bf3e2c069a34fa6bbaa273622d400c5506e45cb8792207b34715008
+  v1 3 stage_recorded stage="tasks" [memory:engram=unavailable gentle-ai-review=unavailable] 40c925f74ab1a1f8c2abed92a1ab0b3df140a68ac773412d55879859bdc6b9f5
+  v1 4 stage_recorded stage="apply" [memory:engram=unavailable gentle-ai-review=unavailable] 391c64ef4b41ed816981d4f0505be26ac88f5a01657cbe5f851050cbd2ec9b7e
+  v1 5 stage_recorded stage="verify" [memory:engram=unavailable gentle-ai-review=unavailable] dc288358b3916b6eb59efd4105822d6c8dcf3fd7527c83d309940110e6a3783e
+  v1 6 stage_recorded stage="archive" [memory:engram=unavailable gentle-ai-review=unavailable] 92b69945e98ff0b584d18e3252675efc747d48da963e8c37ddbd5cd816f34748
+  v1 7 verified checked.profile="sdd" [memory:engram=unavailable gentle-ai-review=unavailable] 53204c938f10d0b7b10627fdb4d0f27d8cf71f9ff906a56f951861d362401ec6
+  v1 8 closed outcome="completed" [memory:engram=unavailable gentle-ai-review=unavailable] ad28484ce1160106d9e1180650e9ac7c8e38f2e9030fc999a35184032a17fa88
 
 == sdd, from its created log ==
 
@@ -248,12 +248,12 @@ exit: 0
 }
 --- stderr ---
 
-the log, line by line (version, seq, kind, SHA-256 of the line with the timestamp and chain digests masked):
-  v1 0 created 9a5a3bbfed0386d8457b6acbe6e8ff8f40fa8f3a4bfb31914fb69be4cf4818e7
-  v1 1 started 800831acc6190cf4f5ca30d1022cc08430d6135191ef22fff5ed8196339ecf7e
-  v1 2 paused d51d8f505f492a5d5920a721521e5239692d9c7bea2d871cf0d989f2d4c52992
-  v1 3 resumed 468dfca5c2c2d8b0511e891ed66de6fc0337c92e48c84465d30699a7f27bc11b
-  v1 4 stage_recorded 91221b67afa19060959c47637e81d5f5a88c8d8eb345436d4cc343ea27043f9e
-  v1 5 verified a519757a55e8b069c617d35b32901b77d1969f5db73385f9be966f40764d1268
-  v1 6 closed 41f98f537c35e87cfea3c0feeb8b3558d3c6cf118256777785cfc02f73719651
+the log, line by line (version, seq, kind, payload, observations, SHA-256 of the line with the timestamp and chain digests masked):
+  v1 0 created [memory:engram=unavailable gentle-ai-review=unavailable] 9a5a3bbfed0386d8457b6acbe6e8ff8f40fa8f3a4bfb31914fb69be4cf4818e7
+  v1 1 started [memory:engram=unavailable gentle-ai-review=unavailable] 800831acc6190cf4f5ca30d1022cc08430d6135191ef22fff5ed8196339ecf7e
+  v1 2 paused [memory:engram=unavailable gentle-ai-review=unavailable] d51d8f505f492a5d5920a721521e5239692d9c7bea2d871cf0d989f2d4c52992
+  v1 3 resumed [memory:engram=unavailable gentle-ai-review=unavailable] 468dfca5c2c2d8b0511e891ed66de6fc0337c92e48c84465d30699a7f27bc11b
+  v1 4 stage_recorded stage="dispatcher-selected-planning-phases" [memory:engram=unavailable gentle-ai-review=unavailable] 91221b67afa19060959c47637e81d5f5a88c8d8eb345436d4cc343ea27043f9e
+  v1 5 verified checked.profile="sdd" [memory:engram=unavailable gentle-ai-review=unavailable] a519757a55e8b069c617d35b32901b77d1969f5db73385f9be966f40764d1268
+  v1 6 closed outcome="abandoned" reason="no longer needed" [memory:engram=unavailable gentle-ai-review=unavailable] 41f98f537c35e87cfea3c0feeb8b3558d3c6cf118256777785cfc02f73719651
 

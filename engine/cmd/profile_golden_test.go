@@ -302,7 +302,9 @@ func unknownProfileTranscript(t *testing.T, bin string) string {
 	return w.text()
 }
 
-var profileGoldenName = regexp.MustCompile(`[^a-z0-9-]+`)
+// notAGoldenFileNameCharacter matches a run of characters a golden file name may not hold: a name
+// is acceptable when it does NOT match (checkProfileGolden refuses one that does).
+var notAGoldenFileNameCharacter = regexp.MustCompile(`[^a-z0-9-]+`)
 
 // profileGoldenCaseName is the name of the case, and of the golden file, of one profile in one world.
 func profileGoldenCaseName(profile string, equipped bool) string {
@@ -316,7 +318,7 @@ func profileGoldenCaseName(profile string, equipped bool) string {
 // rewrites that file when the update flag is given.
 func checkProfileGolden(t *testing.T, dir, name, got string) {
 	t.Helper()
-	if profileGoldenName.MatchString(name) {
+	if notAGoldenFileNameCharacter.MatchString(name) {
 		t.Fatalf("case name %q is not a file name", name)
 	}
 	path := filepath.Join("testdata", dir, name+".golden")

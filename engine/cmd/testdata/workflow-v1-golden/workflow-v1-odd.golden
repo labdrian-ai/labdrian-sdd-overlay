@@ -139,18 +139,18 @@ exit: 0
 }
 --- stderr ---
 
-the log, line by line (version, seq, kind, SHA-256 of the line with the timestamp and chain digests masked):
-  v1 0 created fffbab92dd0b63a979b5f6817c8a8fa5e09114db26de97dcfa4a306f76bb5d27
-  v1 1 started 5a767cb9f502176b63a71b23fdfa9fc651ef911870c03ff39d0f76435c1dbeda
-  v1 2 stage_recorded 000cc3f917c56a1eba9aa40dc5c407f7c8b9e9acdec579b323648700cfbcd508
-  v1 3 stage_recorded 293cda4b7642633d42107eba3f17c65185e652b5a357324e5f658d79de5b7e94
-  v1 4 stage_recorded 0eb82c95b39755ad9e5b93f21454f9f5b81c4ae6a14ecbe1dc066300b7604a56
-  v1 5 stage_recorded 6dc98fd807736a4d6fd5949cc31657e93177d8a322003181996a14a8841629e8
-  v1 6 stage_recorded eed8adc78c7347e682d4a50ad45e58f3710248167d5569c85f4057ee4061587e
-  v1 7 stage_recorded 0bfa33999e1edbe42acfbda3e3cf8baefc0cc2be586ddbe0ad91c5dd0a46d25c
-  v1 8 stage_recorded 920dcf2a6deb1893951577a6d4a212faf273c9a10ba495701dfc7bb14baafdfd
-  v1 9 verified 7cf46ffd802a1ec1b00983672ffa4825de4f9c8403a105644a9298f92185490c
-  v1 10 closed 7c8a6d8920fe58c7855c2c2e737dd8e7dcde0c36042d309b7caa3a0bda7ac4d2
+the log, line by line (version, seq, kind, payload, observations, SHA-256 of the line with the timestamp and chain digests masked):
+  v1 0 created [memory:engram=unavailable memory:longterm-mem=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] fffbab92dd0b63a979b5f6817c8a8fa5e09114db26de97dcfa4a306f76bb5d27
+  v1 1 started [memory:engram=unavailable memory:longterm-mem=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 5a767cb9f502176b63a71b23fdfa9fc651ef911870c03ff39d0f76435c1dbeda
+  v1 2 stage_recorded stage="authorize" [memory:engram=unavailable memory:longterm-mem=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 000cc3f917c56a1eba9aa40dc5c407f7c8b9e9acdec579b323648700cfbcd508
+  v1 3 stage_recorded stage="explore" [memory:engram=unavailable memory:longterm-mem=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 293cda4b7642633d42107eba3f17c65185e652b5a357324e5f658d79de5b7e94
+  v1 4 stage_recorded stage="resolve-uncertainty" [memory:engram=unavailable memory:longterm-mem=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 0eb82c95b39755ad9e5b93f21454f9f5b81c4ae6a14ecbe1dc066300b7604a56
+  v1 5 stage_recorded stage="classify" [memory:engram=unavailable memory:longterm-mem=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 6dc98fd807736a4d6fd5949cc31657e93177d8a322003181996a14a8841629e8
+  v1 6 stage_recorded stage="track-if-substantial" [memory:engram=unavailable memory:longterm-mem=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] eed8adc78c7347e682d4a50ad45e58f3710248167d5569c85f4057ee4061587e
+  v1 7 stage_recorded stage="implement-task-by-task" [memory:engram=unavailable memory:longterm-mem=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 0bfa33999e1edbe42acfbda3e3cf8baefc0cc2be586ddbe0ad91c5dd0a46d25c
+  v1 8 stage_recorded stage="close" [memory:engram=unavailable memory:longterm-mem=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 920dcf2a6deb1893951577a6d4a212faf273c9a10ba495701dfc7bb14baafdfd
+  v1 9 verified checked.profile="odd" [memory:engram=unavailable memory:longterm-mem=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 7cf46ffd802a1ec1b00983672ffa4825de4f9c8403a105644a9298f92185490c
+  v1 10 closed outcome="completed" [memory:engram=unavailable memory:longterm-mem=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 7c8a6d8920fe58c7855c2c2e737dd8e7dcde0c36042d309b7caa3a0bda7ac4d2
 
 == odd, from its created log ==
 
@@ -268,12 +268,12 @@ exit: 0
 }
 --- stderr ---
 
-the log, line by line (version, seq, kind, SHA-256 of the line with the timestamp and chain digests masked):
-  v1 0 created fffbab92dd0b63a979b5f6817c8a8fa5e09114db26de97dcfa4a306f76bb5d27
-  v1 1 started 5a767cb9f502176b63a71b23fdfa9fc651ef911870c03ff39d0f76435c1dbeda
-  v1 2 paused 9d8e84b67a67e6e724c7f416acd3920568a956480376675561635ea56b4a3328
-  v1 3 resumed 220f6002ed31aa76b6ae885c39cf5c8e7127bb85f7ed6809d2513467869096ee
-  v1 4 stage_recorded 323c6a6cddd7b32c6b3418c6664b2718cf634d640b3c912a8c072e70320e7c4b
-  v1 5 verified a769a7e33c62e05a69c74dc47bf7bbc0be3080ad84ddbcd6529eb5883d91f9a2
-  v1 6 closed 8a3e441eca0eee0d78b2727d7f48317e365c3ec463d5e76cc89bdb7a48b1a5b2
+the log, line by line (version, seq, kind, payload, observations, SHA-256 of the line with the timestamp and chain digests masked):
+  v1 0 created [memory:engram=unavailable memory:longterm-mem=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] fffbab92dd0b63a979b5f6817c8a8fa5e09114db26de97dcfa4a306f76bb5d27
+  v1 1 started [memory:engram=unavailable memory:longterm-mem=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 5a767cb9f502176b63a71b23fdfa9fc651ef911870c03ff39d0f76435c1dbeda
+  v1 2 paused [memory:engram=unavailable memory:longterm-mem=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 9d8e84b67a67e6e724c7f416acd3920568a956480376675561635ea56b4a3328
+  v1 3 resumed [memory:engram=unavailable memory:longterm-mem=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 220f6002ed31aa76b6ae885c39cf5c8e7127bb85f7ed6809d2513467869096ee
+  v1 4 stage_recorded stage="authorize" [memory:engram=unavailable memory:longterm-mem=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 323c6a6cddd7b32c6b3418c6664b2718cf634d640b3c912a8c072e70320e7c4b
+  v1 5 verified checked.profile="odd" [memory:engram=unavailable memory:longterm-mem=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] a769a7e33c62e05a69c74dc47bf7bbc0be3080ad84ddbcd6529eb5883d91f9a2
+  v1 6 closed outcome="abandoned" reason="no longer needed" [memory:engram=unavailable memory:longterm-mem=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 8a3e441eca0eee0d78b2727d7f48317e365c3ec463d5e76cc89bdb7a48b1a5b2
 
