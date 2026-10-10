@@ -112,7 +112,6 @@ var knownDebt = archguard.Debt{
 	// command resolver and the clock supplied by the caller. The repohistory
 	// states it reads become its own facts type.
 	"internal/skillstale": {
-		"internal/engram":            "L1",
 		"internal/repohistory":       "L5",
 		"os":                         "L5",
 		"path/filepath.EvalSymlinks": "L5",

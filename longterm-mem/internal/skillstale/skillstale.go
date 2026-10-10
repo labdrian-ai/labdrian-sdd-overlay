@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/repohistory"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/staleness"
 )
@@ -110,6 +110,14 @@ type Finding struct {
 	Signals   []Signal
 }
 
+// ObservationLister is the port through which the detector reads the candidate
+// records of a project: its live (not soft-deleted) observations. The detector
+// owns this port and the memory model it speaks; the store that serves it (the
+// Engram adapter in production) is wired by the caller.
+type ObservationLister interface {
+	ListObservations(project string) ([]memory.Observation, error)
+}
+
 // Config supplies the detector's read-only inputs. Now and PathEnv are
 // injectable for deterministic tests. SupersededBy is optional evidence from
 // the runtime that performed the global MatchCandidate lookup; the detector
@@ -117,7 +125,7 @@ type Finding struct {
 type Config struct {
 	ProjectRoot  string
 	Project      string
-	Store        *engram.Store
+	Observations ObservationLister
 	Now          time.Time
 	PathEnv      string
 	SupersededBy map[string]string
@@ -132,8 +140,8 @@ func Detect(cfg Config) ([]Finding, error) {
 	if !filepath.IsAbs(cfg.ProjectRoot) {
 		return nil, fmt.Errorf("skillstale: project root must be absolute: %q", cfg.ProjectRoot)
 	}
-	if cfg.Store == nil {
-		return nil, fmt.Errorf("skillstale: Engram store is required")
+	if cfg.Observations == nil {
+		return nil, fmt.Errorf("skillstale: observations reader is required")
 	}
 
 	lockData, err := os.ReadFile(filepath.Join(cfg.ProjectRoot, ProjectLockRelPath))
@@ -144,7 +152,7 @@ func Detect(cfg Config) ([]Finding, error) {
 	if err != nil {
 		return nil, err
 	}
-	observations, err := cfg.Store.ListObservations(cfg.Project)
+	observations, err := cfg.Observations.ListObservations(cfg.Project)
 	if err != nil {
 		return nil, fmt.Errorf("skillstale: list candidate observations: %w", err)
 	}
@@ -233,7 +241,7 @@ var (
 	lastObservedField = regexp.MustCompile(`(?m)^\s*\*\*LastObserved\*\*:\s*(\S+)\s*$`)
 )
 
-func latestCandidates(observations []engram.Observation) map[string]candidateRecord {
+func latestCandidates(observations []memory.Observation) map[string]candidateRecord {
 	out := make(map[string]candidateRecord)
 	for _, observation := range observations {
 		if observation.TopicKey == "" {

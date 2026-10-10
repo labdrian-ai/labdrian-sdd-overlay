@@ -56,9 +56,9 @@ func cmdSkillsStale(args []string) int {
 	defer store.Close()
 
 	findings, err := skillstale.Detect(skillstale.Config{
-		ProjectRoot: *projectRoot,
-		Project:     resolvedProject,
-		Store:       store,
+		ProjectRoot:  *projectRoot,
+		Project:      resolvedProject,
+		Observations: store,
 	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "longterm-mem: skills-stale: %v\n", err)
