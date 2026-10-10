@@ -1,0 +1,259 @@
+== maintenance, from its running log ==
+
+$ workflow status --project proj-1 --workflow wf-1
+exit: 0
+--- stdout ---
+{
+  "classification": "owned",
+  "status": "running",
+  "profile": "maintenance",
+  "goal_id": "goal-1",
+  "goal_digest": "3fa80a4c34f1198a2fe03c95ecaaab97721dd5a94dce91612f2612b4208e54ac",
+  "stages": [
+    "inspect",
+    "isolate-smallest-change"
+  ],
+  "last_verified_seq": -1
+}
+--- stderr ---
+
+$ workflow stage --project proj-1 --workflow wf-1 --stage inspect
+exit: 2
+--- stdout ---
+--- stderr ---
+error: workflow stage: workflow lifecycle: stage is not the profile's next declared stage: got "inspect", want "repair" (profile "maintenance"'s next declared stage)
+
+$ workflow stage --project proj-1 --workflow wf-1 --stage no-such-stage
+exit: 2
+--- stdout ---
+--- stderr ---
+error: workflow stage: workflow lifecycle: stage is not the profile's next declared stage: got "no-such-stage", want "repair" (profile "maintenance"'s next declared stage)
+
+$ workflow stage --project proj-1 --workflow wf-1 --stage report
+exit: 2
+--- stdout ---
+--- stderr ---
+error: workflow stage: workflow lifecycle: stage is not the profile's next declared stage: got "report", want "repair" (profile "maintenance"'s next declared stage)
+
+$ workflow stage --project proj-1 --workflow wf-1 --stage repair
+exit: 0
+--- stdout ---
+status running, stages [inspect isolate-smallest-change repair]
+--- stderr ---
+
+$ workflow stage --project proj-1 --workflow wf-1 --stage validate
+exit: 0
+--- stdout ---
+status running, stages [inspect isolate-smallest-change repair validate]
+--- stderr ---
+
+$ workflow stage --project proj-1 --workflow wf-1 --stage report
+exit: 0
+--- stdout ---
+status running, stages [inspect isolate-smallest-change repair validate report]
+--- stderr ---
+
+$ workflow stage --project proj-1 --workflow wf-1 --stage inspect
+exit: 2
+--- stdout ---
+--- stderr ---
+error: workflow stage: workflow lifecycle: stage is not the profile's next declared stage: profile "maintenance"'s declared stages are all recorded
+
+$ workflow verify --project proj-1 --workflow wf-1 --goal <GOAL>
+exit: 0
+--- stdout ---
+{
+  "classification": "owned",
+  "status": "running",
+  "profile": "maintenance",
+  "goal_id": "goal-1",
+  "goal_digest": "3fa80a4c34f1198a2fe03c95ecaaab97721dd5a94dce91612f2612b4208e54ac",
+  "stages": [
+    "inspect",
+    "isolate-smallest-change",
+    "repair",
+    "validate",
+    "report"
+  ],
+  "last_verified_seq": 7
+}
+--- stderr ---
+
+$ workflow close --project proj-1 --workflow wf-1 --outcome completed
+exit: 0
+--- stdout ---
+{
+  "classification": "owned",
+  "status": "closed",
+  "profile": "maintenance",
+  "goal_id": "goal-1",
+  "goal_digest": "3fa80a4c34f1198a2fe03c95ecaaab97721dd5a94dce91612f2612b4208e54ac",
+  "stages": [
+    "inspect",
+    "isolate-smallest-change",
+    "repair",
+    "validate",
+    "report"
+  ],
+  "last_verified_seq": 7,
+  "close_outcome": "completed"
+}
+--- stderr ---
+
+$ workflow status --project proj-1 --workflow wf-1
+exit: 0
+--- stdout ---
+{
+  "classification": "owned",
+  "status": "closed",
+  "profile": "maintenance",
+  "goal_id": "goal-1",
+  "goal_digest": "3fa80a4c34f1198a2fe03c95ecaaab97721dd5a94dce91612f2612b4208e54ac",
+  "stages": [
+    "inspect",
+    "isolate-smallest-change",
+    "repair",
+    "validate",
+    "report"
+  ],
+  "last_verified_seq": 7,
+  "close_outcome": "completed"
+}
+--- stderr ---
+
+the log, line by line (version, seq, kind, SHA-256 of the line with the timestamp and chain digests masked):
+  v1 0 created 2dddcb2c967021cffe95854290abaf2b954085f88896025a557e8409fdf04462
+  v1 1 started 5a767cb9f502176b63a71b23fdfa9fc651ef911870c03ff39d0f76435c1dbeda
+  v1 2 stage_recorded feab14c749946a649fa441963ac6348f09243ce5735b8a6216669d295c45273f
+  v1 3 stage_recorded 06b6b7b8ff33184cf30b9e9c19df799679943a432e9b9251aa4b85009f485d01
+  v1 4 stage_recorded 2083b983fa4c9cd0fe2a5096f7df0e7e5edc424aa6c6d97fbf5d41e29d461b39
+  v1 5 stage_recorded 6fd8f6fa6fc4f1b9b9ab131795658abf1178571c3f8c9160f99bd6bc5dc88aa6
+  v1 6 stage_recorded 21350b857ef9e0c8f32e3327dba3eafe9fa5e127fccfad968a0d7d8214f11ab0
+  v1 7 verified ce25c745bee857de5bd4c48c301793da348d403b0991fa1b0ca76443937e9712
+  v1 8 closed 557c4e78d23faba90c74c7eb269b99f439900258f1e05dc5393e51c47b391af3
+
+== maintenance, from its created log ==
+
+$ workflow status --project proj-1 --workflow wf-1
+exit: 0
+--- stdout ---
+{
+  "classification": "owned",
+  "status": "created",
+  "profile": "maintenance",
+  "goal_id": "goal-1",
+  "goal_digest": "3fa80a4c34f1198a2fe03c95ecaaab97721dd5a94dce91612f2612b4208e54ac",
+  "stages": [],
+  "last_verified_seq": -1
+}
+--- stderr ---
+
+$ workflow stage --project proj-1 --workflow wf-1 --stage inspect
+exit: 2
+--- stdout ---
+--- stderr ---
+error: workflow stage: workflow store: append: workflow: invalid lifecycle transition: stage_recorded is only legal while "running", current status is "created"
+
+$ workflow pause --project proj-1 --workflow wf-1
+exit: 2
+--- stdout ---
+--- stderr ---
+error: workflow pause: workflow store: append: workflow: invalid lifecycle transition: paused is only legal from "running", current status is "created"
+
+$ workflow start --project proj-1 --workflow wf-1
+exit: 0
+--- stdout ---
+status running, stages []
+--- stderr ---
+
+$ workflow start --project proj-1 --workflow wf-1
+exit: 2
+--- stdout ---
+--- stderr ---
+error: workflow start: workflow store: append: workflow: invalid lifecycle transition: started is only legal from "created", current status is "running"
+
+$ workflow pause --project proj-1 --workflow wf-1
+exit: 0
+--- stdout ---
+status paused, stages []
+--- stderr ---
+
+$ workflow stage --project proj-1 --workflow wf-1 --stage inspect
+exit: 2
+--- stdout ---
+--- stderr ---
+error: workflow stage: workflow store: append: workflow: invalid lifecycle transition: stage_recorded is only legal while "running", current status is "paused"
+
+$ workflow resume --project proj-1 --workflow wf-1
+exit: 0
+--- stdout ---
+status running, stages []
+--- stderr ---
+
+$ workflow stage --project proj-1 --workflow wf-1 --stage inspect
+exit: 0
+--- stdout ---
+status running, stages [inspect]
+--- stderr ---
+
+$ workflow verify --project proj-1 --workflow wf-1 --goal <GOAL>
+exit: 0
+--- stdout ---
+{
+  "classification": "owned",
+  "status": "running",
+  "profile": "maintenance",
+  "goal_id": "goal-1",
+  "goal_digest": "3fa80a4c34f1198a2fe03c95ecaaab97721dd5a94dce91612f2612b4208e54ac",
+  "stages": [
+    "inspect"
+  ],
+  "last_verified_seq": 5
+}
+--- stderr ---
+
+$ workflow close --project proj-1 --workflow wf-1 --outcome abandoned --reason no longer needed
+exit: 0
+--- stdout ---
+{
+  "classification": "owned",
+  "status": "closed",
+  "profile": "maintenance",
+  "goal_id": "goal-1",
+  "goal_digest": "3fa80a4c34f1198a2fe03c95ecaaab97721dd5a94dce91612f2612b4208e54ac",
+  "stages": [
+    "inspect"
+  ],
+  "last_verified_seq": 5,
+  "close_outcome": "abandoned",
+  "close_reason": "no longer needed"
+}
+--- stderr ---
+
+$ workflow status --project proj-1 --workflow wf-1
+exit: 0
+--- stdout ---
+{
+  "classification": "owned",
+  "status": "closed",
+  "profile": "maintenance",
+  "goal_id": "goal-1",
+  "goal_digest": "3fa80a4c34f1198a2fe03c95ecaaab97721dd5a94dce91612f2612b4208e54ac",
+  "stages": [
+    "inspect"
+  ],
+  "last_verified_seq": 5,
+  "close_outcome": "abandoned",
+  "close_reason": "no longer needed"
+}
+--- stderr ---
+
+the log, line by line (version, seq, kind, SHA-256 of the line with the timestamp and chain digests masked):
+  v1 0 created 2dddcb2c967021cffe95854290abaf2b954085f88896025a557e8409fdf04462
+  v1 1 started 5a767cb9f502176b63a71b23fdfa9fc651ef911870c03ff39d0f76435c1dbeda
+  v1 2 paused 9d8e84b67a67e6e724c7f416acd3920568a956480376675561635ea56b4a3328
+  v1 3 resumed 220f6002ed31aa76b6ae885c39cf5c8e7127bb85f7ed6809d2513467869096ee
+  v1 4 stage_recorded 0a660fa9e812cfb0aae156f04ba81a0836d70721ff6f2425e466dcd6adf42c58
+  v1 5 verified 57a72747840f49b0a604187167ac2af43297beaf5e2786ba3350b39d987b081c
+  v1 6 closed 8a3e441eca0eee0d78b2727d7f48317e365c3ec463d5e76cc89bdb7a48b1a5b2
+
