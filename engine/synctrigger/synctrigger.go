@@ -47,6 +47,13 @@ type Options struct {
 	// Self overrides the path Run re-execs as the detached child. Empty
 	// means os.Executable().
 	Self string
+	// ChildArgv gives the arguments Run starts Self with, from the event, the
+	// absolute cwd and the state directory Run settled on. The command line
+	// of the program (what it calls the runner and its flags) is the
+	// caller's to know: this package only starts what it is told to and
+	// reads none of that grammar. Run only. Nil means there is no child to
+	// start, which Run reports as error:spawn.
+	ChildArgv func(event, cwd, stateDir string) []string
 	// Timeout bounds the child sync invocation. Zero means 60s.
 	Timeout time.Duration
 	// Stderr is where Run reports best-effort pre-log errors. Nil means
@@ -83,7 +90,8 @@ func validArgs(event, cwd string) bool {
 }
 
 // Run is the parent entrypoint. It validates its own argv, opens the log,
-// locates itself, and detaches a "--child" re-exec of itself under a new
+// locates itself, and detaches a re-exec of itself, with the arguments
+// Options.ChildArgv gives (the child that runs RunChild), under a new
 // session (Setsid) so it survives the caller's process-group teardown.
 // It always returns 0: every failure in this path -- bad argv, an
 // unwritable log, a missing/rebuilding self, a spawn failure -- is
@@ -136,7 +144,12 @@ func Run(o Options) int {
 		}
 	}
 
-	cmd := exec.Command(self, "sync-trigger", "--event", o.Event, "--cwd", o.Cwd, "--state-dir", o.StateDir, "--child")
+	if o.ChildArgv == nil {
+		fmt.Fprintf(stderr, "sync-trigger: error:spawn: no command line was given for the child\n")
+		appendLog(logFile, o.Event, o.Cwd, "error:spawn", 0, 0)
+		return 0
+	}
+	cmd := exec.Command(self, o.ChildArgv(o.Event, o.Cwd, o.StateDir)...)
 	if devnull, openErr := os.Open(os.DevNull); openErr == nil {
 		cmd.Stdin = devnull
 	}

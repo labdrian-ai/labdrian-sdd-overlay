@@ -682,8 +682,17 @@ func runSyncTriggerCore(args []string, exit func(int)) {
 		exit(0)
 		return
 	}
+	o.ChildArgv = syncTriggerChildArgv
 	synctrigger.Run(o)
 	exit(0)
+}
+
+// syncTriggerChildArgv is the command line of the detached child the parent starts: this
+// command again, with the verb's own flags and --child. It is given to synctrigger.Options, which
+// starts the child with it and knows nothing of what it says; parseSyncTriggerArgs is what reads
+// it back.
+func syncTriggerChildArgv(event, cwd, stateDir string) []string {
+	return []string{"sync-trigger", "--event", event, "--cwd", cwd, "--state-dir", stateDir, "--child"}
 }
 
 // parseSyncTriggerArgs extracts sync-trigger flags into synctrigger.Options

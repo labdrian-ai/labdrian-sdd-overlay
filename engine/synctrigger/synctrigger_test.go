@@ -49,6 +49,113 @@ func lastLogLine(t *testing.T, stateDir string) string {
 	return lines[len(lines)-1]
 }
 
+// exampleChildArgv is a command line a caller might give: the layout of the 'engine' command
+// the tests below stand in for, which synctrigger itself knows nothing of.
+func exampleChildArgv(event, cwd, stateDir string) []string {
+	return []string{"sync-trigger", "--event", event, "--cwd", cwd, "--state-dir", stateDir, "--child"}
+}
+
+// recordingSelf writes a script that records the arguments it is started with, one per line,
+// into the file it returns.
+func recordingSelf(t *testing.T) (self, record string) {
+	t.Helper()
+	dir := t.TempDir()
+	self, record = filepath.Join(dir, "self"), filepath.Join(dir, "arguments")
+	script := "#!/bin/sh\nfor a in \"$@\"; do printf '%s\\n' \"$a\" >> '" + record + "'; done\n"
+	if err := os.WriteFile(self, []byte(script), 0o755); err != nil {
+		t.Fatalf("write self: %v", err)
+	}
+	return self, record
+}
+
+func waitForFile(t *testing.T, path string) string {
+	t.Helper()
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		if data, err := os.ReadFile(path); err == nil && len(data) > 0 {
+			return string(data)
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	t.Fatalf("%s was not written within 2s", path)
+	return ""
+}
+
+// The command line of the child is the caller's: Run starts Self with exactly the arguments
+// ChildArgv gives, made from the event, the absolute cwd it settled on and the state directory.
+func TestRun_StartsTheChildWithTheArgumentsTheCallerGives(t *testing.T) {
+	stateDir, projectDir := t.TempDir(), t.TempDir()
+	self, record := recordingSelf(t)
+	var asked [][3]string
+	o := Options{Event: "archive", Cwd: projectDir, StateDir: stateDir, Self: self, ChildArgv: func(event, cwd, state string) []string {
+		asked = append(asked, [3]string{event, cwd, state})
+		return []string{"first", "--event=" + event, "a b", cwd, state}
+	}}
+
+	if got := Run(o); got != 0 {
+		t.Fatalf("Run() = %d, want 0", got)
+	}
+
+	want := strings.Join([]string{"first", "--event=archive", "a b", projectDir, stateDir}, "\n") + "\n"
+	if got := waitForFile(t, record); got != want {
+		t.Errorf("the child was started with\n%s\nwant\n%s", got, want)
+	}
+	if len(asked) != 1 || asked[0] != [3]string{"archive", projectDir, stateDir} {
+		t.Errorf("ChildArgv was asked %v, want once, for (archive, %s, %s)", asked, projectDir, stateDir)
+	}
+}
+
+// A relative cwd is made absolute before the caller is asked for the command line, so the child
+// is never handed a path that depends on its own working directory.
+func TestRun_AsksForTheChildArgumentsWithTheAbsoluteCwd(t *testing.T) {
+	stateDir, projectDir := t.TempDir(), t.TempDir()
+	self, record := recordingSelf(t)
+	oldWd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Getwd: %v", err)
+	}
+	if err := os.Chdir(projectDir); err != nil {
+		t.Fatalf("Chdir: %v", err)
+	}
+	t.Cleanup(func() { os.Chdir(oldWd) })
+	var cwd string
+	o := Options{Event: "session-end", Cwd: ".", StateDir: stateDir, Self: self, ChildArgv: func(_, c, _ string) []string {
+		cwd = c
+		return []string{"x"}
+	}}
+
+	Run(o)
+	waitForFile(t, record)
+
+	if got, err := filepath.EvalSymlinks(cwd); err != nil || got != projectDir {
+		t.Errorf("ChildArgv was given cwd %q, want the absolute %q", cwd, projectDir)
+	}
+}
+
+// Without a command line there is no child to start, and no guessing one: the log and stderr
+// say so, and Self is not started.
+func TestRun_WithoutChildArgv_ErrorSpawnAndNothingStarted(t *testing.T) {
+	stateDir := t.TempDir()
+	self, record := recordingSelf(t)
+	var stderr strings.Builder
+	o := Options{Event: "session-end", Cwd: t.TempDir(), StateDir: stateDir, Self: self, Stderr: &stderr}
+
+	if got := Run(o); got != 0 {
+		t.Fatalf("Run() = %d, want 0", got)
+	}
+
+	if line := lastLogLine(t, stateDir); !strings.Contains(line, "outcome=error:spawn") {
+		t.Errorf("log line = %q, want outcome=error:spawn", line)
+	}
+	if !strings.Contains(stderr.String(), "error:spawn") {
+		t.Errorf("stderr = %q, want it to mention error:spawn", stderr.String())
+	}
+	time.Sleep(200 * time.Millisecond)
+	if _, err := os.Stat(record); err == nil {
+		t.Error("Self was started with no command line to give it")
+	}
+}
+
 func TestRunChild_MissingBinary_SkipsWithoutRunning(t *testing.T) {
 	stateDir := t.TempDir()
 	o := Options{
@@ -321,7 +428,7 @@ func TestRun_RelativeCwd_ResolvesToAbsoluteBeforeValidation(t *testing.T) {
 	}
 
 	var stderr strings.Builder
-	o := Options{Event: "session-end", Cwd: ".", StateDir: stateDir, Self: self, Stderr: &stderr}
+	o := Options{Event: "session-end", Cwd: ".", StateDir: stateDir, Self: self, ChildArgv: exampleChildArgv, Stderr: &stderr}
 
 	got := Run(o)
 
@@ -384,7 +491,7 @@ func TestRun_NonExecutableSelf_ErrorSpawn(t *testing.T) {
 	}
 
 	var stderr strings.Builder
-	o := Options{Event: "session-end", Cwd: t.TempDir(), StateDir: stateDir, Self: self, Stderr: &stderr}
+	o := Options{Event: "session-end", Cwd: t.TempDir(), StateDir: stateDir, Self: self, ChildArgv: exampleChildArgv, Stderr: &stderr}
 
 	got := Run(o)
 
@@ -415,7 +522,7 @@ func TestRun_HappyPath_DetachesAndLogsWithin2s(t *testing.T) {
 		t.Fatalf("write self: %v", err)
 	}
 
-	o := Options{Event: "session-end", Cwd: t.TempDir(), StateDir: stateDir, Self: self}
+	o := Options{Event: "session-end", Cwd: t.TempDir(), StateDir: stateDir, Self: self, ChildArgv: exampleChildArgv}
 
 	got := Run(o)
 

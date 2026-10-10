@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"sync"
 	"syscall"
@@ -2506,6 +2507,22 @@ func TestComponentFlag_DefaultIsRuntimeParity(t *testing.T) {
 	}
 	if !strings.Contains(outBuf.String(), "[claude] status: unsupported") {
 		t.Fatalf("runtime status should report unsupported Claude lifecycle exactly as before this slice, got %q", outBuf.String())
+	}
+}
+
+// TestSyncTriggerChildArgv_IsTheCommandLineThisCommandParses pins what the parent hands its
+// detached child. The command line is this package's grammar (synctrigger knows none of it), so
+// it is pinned twice: literally, and by reading it back with the parser of the same command.
+func TestSyncTriggerChildArgv_IsTheCommandLineThisCommandParses(t *testing.T) {
+	got := syncTriggerChildArgv("archive", "/project dir", "/state")
+
+	want := []string{"sync-trigger", "--event", "archive", "--cwd", "/project dir", "--state-dir", "/state", "--child"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("syncTriggerChildArgv = %q, want %q", got, want)
+	}
+	o, child := parseSyncTriggerArgs(got[1:])
+	if !child || o.Event != "archive" || o.Cwd != "/project dir" || o.StateDir != "/state" {
+		t.Errorf("the child's command line reads back as %+v (child %v), want the event, cwd and state directory it was made from", o, child)
 	}
 }
 
