@@ -5,6 +5,7 @@ package workflowprofile
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -268,25 +269,13 @@ func Validate(profile WorkflowProfile) error {
 	}
 	// The typed data is what programs act on (the ceiling of a memory read, the dependencies a
 	// workflow records), so it must be the catalog's for the name, not merely well formed.
-	if profile.MemoryDefault.Scope != d.profile.MemoryDefault.Scope || !equalSources(profile.MemoryDefault.Sources, d.profile.MemoryDefault.Sources) {
+	if profile.MemoryDefault.Scope != d.profile.MemoryDefault.Scope || !slices.Equal(profile.MemoryDefault.Sources, d.profile.MemoryDefault.Sources) {
 		return fmt.Errorf("%w: profile %q has a memory default that differs from the catalog's", ErrInvalidProfile, profile.Name)
 	}
 	if profile.ReliesOnGentleReview != d.profile.ReliesOnGentleReview {
 		return fmt.Errorf("%w: profile %q has a review dependency that differs from the catalog's", ErrInvalidProfile, profile.Name)
 	}
 	return nil
-}
-
-func equalSources(a, b []MemorySource) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
 }
 
 func has(values []string, wanted string) bool {
