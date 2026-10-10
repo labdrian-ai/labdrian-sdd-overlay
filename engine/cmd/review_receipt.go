@@ -77,7 +77,7 @@ func runReviewReceiptCapture(p process, d deps, args []string) {
 		return
 	}
 
-	svc := buildReviewReceiptService(cwd, d.environ(), p.stderr, p.exit, "error: review-receipt capture", 1)
+	svc := buildReviewReceiptService(cwd, d.environment(), p.stderr, p.exit, "error: review-receipt capture", 1)
 	if svc == nil {
 		return
 	}
@@ -130,7 +130,7 @@ func runReviewReceiptHook(p process, d deps, args []string) {
 
 	// Fail closed, as for an unreadable input: a hook that cannot be set up cannot guard
 	// the acknowledgement it was started for, so its set-up failure exits 2 like a denial.
-	svc := buildReviewReceiptService(cwd, d.environ(), p.stderr, p.exit, "review-receipt hook", hookwire.ExitBlock)
+	svc := buildReviewReceiptService(cwd, d.environment(), p.stderr, p.exit, "review-receipt hook", hookwire.ExitBlock)
 	if svc == nil {
 		return
 	}

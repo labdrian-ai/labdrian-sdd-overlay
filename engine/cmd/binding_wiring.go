@@ -40,7 +40,7 @@ func (d deps) promptHook() app.HookService {
 // the policy the deps give (projection.Gate in the program).
 func (d deps) gateHook() app.HookService {
 	hook := d.promptHook()
-	hook.Gate = d.gate
+	hook.Gate = d.gate // nil is the domain's own: the service falls back to it (TestAGateHookOverADepsWithNoGate...)
 	return hook
 }
 
@@ -48,7 +48,7 @@ func (d deps) gateHook() app.HookService {
 // deps open. It is the one place the stack is put together, so the three use cases cannot differ in
 // it.
 func (d deps) runBindings() projection.BindingStore {
-	return &lazyBindings{open: d.openBindings}
+	return &lazyBindings{open: d.openBinding}
 }
 
 // wallClock is the clock of the machine.

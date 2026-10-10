@@ -33,7 +33,7 @@ func runGaduGenerate(p process, d deps, args []string) {
 		}
 	}
 
-	root, err := overlayRoot(d.getenv)
+	root, err := overlayRoot(d.env)
 	if err != nil {
 		fmt.Fprintf(p.stderr, "gadu-generate: %v\n", err)
 		p.exit(1)

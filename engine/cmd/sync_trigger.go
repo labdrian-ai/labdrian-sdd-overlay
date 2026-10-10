@@ -27,7 +27,7 @@ func runSyncTrigger(p process, d deps, args []string) {
 func runSyncTriggerCore(d deps, args []string, exit func(int)) {
 	o, isChild := parseSyncTriggerArgs(args)
 	if o.StateDir == "" {
-		if home, err := d.userHomeDir(); err == nil {
+		if home, err := d.homeDir(); err == nil {
 			o.StateDir = filepath.Join(home, defaultStateDirName)
 		}
 	}

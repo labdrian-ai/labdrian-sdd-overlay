@@ -3,9 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/capability/presence"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow"
 )
 
 // main is the composition root of the engine command, and the one place that touches the
@@ -24,7 +22,7 @@ func productionProcess() process {
 // productionDeps is the deps of the program: the environment of the process, which a command reads
 // when it needs a variable, and the facts main resolves from it once.
 func productionDeps() deps {
-	d := deps{
+	return deps{
 		getwd:       os.Getwd,
 		getenv:      os.Getenv,
 		environ:     os.Environ,
@@ -34,11 +32,7 @@ func productionDeps() deps {
 		probeTimeout: defaultProbeTimeout,
 		openBindings: newBindingStore,
 		gate:         projection.Gate,
+		// workflowProber stays nil: the verbs probe the presence of the home and PATH of the
+		// deps they are given.
 	}
-	// The prober looks at the home and PATH of the environment d gives, read when a verb asks.
-	d.workflowProber = func() workflow.DependencyProber {
-		home, path := runtimeProbeEnv(d)
-		return presence.Prober{Home: home, Path: path}
-	}
-	return d
 }

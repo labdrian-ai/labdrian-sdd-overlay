@@ -24,7 +24,7 @@ func newSkillsDeps(d deps) skills.Deps {
 		Tree:         skillsfs.Tree{},
 		Project:      skillsfs.Project{},
 		ProjectLocks: skillsfs.ProjectLocks{},
-		Cwd:          d.getwd,
+		Cwd:          d.workingDir,
 		Identity:     newProjectIdentity(),
 		Locker:       newSkillsLocker(d.skillsLockWait),
 		Now:          wallClockUTC,

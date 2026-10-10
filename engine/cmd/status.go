@@ -20,8 +20,8 @@ import (
 //	    tell "broken" from "present-but-needs-attention".
 func runStatus(p process, d deps) {
 	// A directory that cannot be determined is none: the registry is then not looked for.
-	cwd, _ := d.getwd()
-	outcome := statusCore(p.stdout, newStatusService(), status.Request{Home: d.getenv("HOME"), Cwd: cwd})
+	cwd, _ := d.workingDir()
+	outcome := statusCore(p.stdout, newStatusService(), status.Request{Home: d.env("HOME"), Cwd: cwd})
 	if code := statusExitCode(outcome); code != 0 {
 		p.exit(code)
 	}

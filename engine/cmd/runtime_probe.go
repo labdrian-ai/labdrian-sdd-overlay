@@ -54,11 +54,11 @@ type probeReport struct {
 // them. The home is empty when it cannot be determined, which the prober reads as "unknown",
 // never as a location to guess.
 func runtimeProbeEnv(d deps) (home, path string) {
-	home, err := d.userHomeDir()
+	home, err := d.homeDir()
 	if err != nil {
 		home = ""
 	}
-	return home, d.getenv("PATH")
+	return home, d.env("PATH")
 }
 
 // runRuntimeProbe implements 'runtime probe'. Exit 0 prints the report; exit 2
@@ -81,7 +81,11 @@ func runRuntimeProbe(d deps, args []string, stdout, stderr io.Writer, exit func(
 	}
 
 	home, path := runtimeProbeEnv(d)
-	observations, err := probeWithin(presence.Prober{Home: home, Path: path, ProbeFS: d.probeFS}, names, d.probeTimeout)
+	timeout := d.probeTimeout
+	if timeout <= 0 {
+		timeout = defaultProbeTimeout // a deps with no timeout is bound by the default, not by a deadline already passed
+	}
+	observations, err := probeWithin(presence.Prober{Home: home, Path: path, ProbeFS: d.probeFS}, names, timeout)
 	if err != nil {
 		fmt.Fprintf(stderr, "error: runtime probe: %v\n", err)
 		exit(1)

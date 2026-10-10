@@ -63,7 +63,7 @@ import (
 
 // runProjection implements the 'projection <action>' subcommand.
 func runProjection(p process, d deps, args []string) {
-	cwd, _ := d.getwd() // best-effort; "" leaves the hook with only the input's directory.
+	cwd, _ := d.workingDir() // best-effort; "" leaves the hook with only the input's directory.
 	runProjectionCore(d, args, cwd, p.stdin, p.stdout, p.stderr, p.exit)
 }
 

@@ -11,7 +11,7 @@ import (
 
 // runPipkg implements the 'pipkg build|check' subcommand.
 func runPipkg(p process, d deps, args []string) {
-	runPipkgCore(d, newPipkgSource(d.environ()), args, p.stdout, p.stderr, p.exit)
+	runPipkgCore(d, newPipkgSource(d.environment()), args, p.stdout, p.stderr, p.exit)
 }
 
 // runPipkgCore is the testable core of the pipkg subcommand: 'build' writes
@@ -74,7 +74,7 @@ func runPipkgCore(d deps, source pipkg.SourceRepo, args []string, stdout, stderr
 	packages := pipkg.Packages{
 		Registries: newWarningRegistryRepository(stderr),
 		Source:     source,
-		Options:    pipkgOptionsFromEnv(d.getenv),
+		Options:    pipkgOptionsFromEnv(d.env),
 	}
 	if verb == "build" {
 		if err := packages.Build(overlayRoot, registryPath, destDir); err != nil {

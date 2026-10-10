@@ -18,7 +18,7 @@ import (
 // runRuntime implements the 'runtime <action>' subcommand.
 // Supported actions: status, install, update, uninstall.
 func runRuntime(p process, d deps, args []string) {
-	runRuntimeCore(d, execrunner.New(), newPipkgSource(d.environ()), args, p.stdout, p.stderr, p.exit)
+	runRuntimeCore(d, execrunner.New(), newPipkgSource(d.environment()), args, p.stdout, p.stderr, p.exit)
 }
 
 // componentRuntimeParity and componentLongtermMem are the two values
@@ -49,7 +49,7 @@ func runRuntimeCore(d deps, commands runtimepkg.CommandRunner, source pipkg.Sour
 		return
 	}
 
-	registry, err := newRuntimeRegistry(newWarningRegistryRepository(stderr), settingsfile.Installer{}, commands, source, pipkgOptionsFromEnv(d.getenv))
+	registry, err := newRuntimeRegistry(newWarningRegistryRepository(stderr), settingsfile.Installer{}, commands, source, pipkgOptionsFromEnv(d.env))
 	if err != nil {
 		fmt.Fprintln(stderr, "error:", err)
 		exit(1)
@@ -64,7 +64,7 @@ func runRuntimeCore(d deps, commands runtimepkg.CommandRunner, source pipkg.Sour
 		return
 	}
 
-	cfg := runtimeConfigFromEnv(d.getenv, d.userHomeDir)
+	cfg := runtimeConfigFromEnv(d.env, d.homeDir)
 
 	if opts.Component == componentLongtermMem {
 		runLongtermMemComponent(opts, cfg, stdout, stderr, exit)

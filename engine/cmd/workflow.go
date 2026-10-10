@@ -37,7 +37,7 @@ import (
 
 // runWorkflow implements the 'workflow <verb>' subcommand.
 func runWorkflow(p process, d deps, args []string) {
-	cwd, _ := d.getwd() // best-effort; "" makes the locator report empty provenance.
+	cwd, _ := d.workingDir() // best-effort; "" makes the locator report empty provenance.
 	runWorkflowCore(d, args, cwd, p.stdout, p.stderr, p.exit)
 }
 
@@ -187,7 +187,7 @@ func newWorkflowLifecycle(d deps, cwd, goalFile string, stderr io.Writer) (workf
 		return workflow.Lifecycle{}, err
 	}
 	profiles := workflow.ProfileCatalogFunc(workflowprofile.Resolve)
-	lc, err := workflow.NewLifecycle(store, profiles, time.Now, newRepoLocator().Provenance(cwd), pathGoalReader{path: goalFile}, chains, d.workflowProber())
+	lc, err := workflow.NewLifecycle(store, profiles, time.Now, newRepoLocator().Provenance(cwd), pathGoalReader{path: goalFile}, chains, d.dependencyProber())
 	if err != nil {
 		return workflow.Lifecycle{}, err
 	}

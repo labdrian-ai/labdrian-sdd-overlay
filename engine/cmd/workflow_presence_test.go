@@ -112,7 +112,7 @@ func TestWorkflowDepsKeepTheUnavailableProberAvailable(t *testing.T) {
 
 func TestWorkflowDefaultProberUsesTheProcessHomeAndPath(t *testing.T) {
 	presenceWorld(t)
-	got, err := testDeps().workflowProber().Probe(context.Background(), []string{"memory:engram", "gentle-ai-review", "credentials:codex"})
+	got, err := testDeps().dependencyProber().Probe(context.Background(), []string{"memory:engram", "gentle-ai-review", "credentials:codex"})
 	if err != nil || len(got) != 3 {
 		t.Fatalf("Probe() = %v, %v", got, err)
 	}
