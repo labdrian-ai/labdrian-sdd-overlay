@@ -54,6 +54,15 @@ func writeGoldenFile(t *testing.T, root, rel, content string) {
 	}
 }
 
+// symlinkOrSkip makes newname a symbolic link to oldname, and skips the test on a file system that cannot make
+// one: a scenario about links is about a state the file system must be able to hold.
+func symlinkOrSkip(t *testing.T, oldname, newname string) {
+	t.Helper()
+	if err := os.Symlink(oldname, newname); err != nil {
+		t.Skipf("this file system cannot make a symbolic link: %v", err)
+	}
+}
+
 func goldenScenarios() []goldenScenario {
 	return []goldenScenario{
 		{name: "01-a-healthy-vault"},
@@ -101,9 +110,7 @@ func goldenScenarios() []goldenScenario {
 			editPromotedPage(t, root, goldenAddress)
 		}},
 		{name: "12-a-page-that-cannot-be-read", build: func(t *testing.T, root string) {
-			if err := os.Symlink(filepath.Join(root, "nowhere"), filepath.Join(root, "wiki", "memory", "c-000043.md")); err != nil {
-				t.Fatal(err)
-			}
+			symlinkOrSkip(t, filepath.Join(root, "nowhere"), filepath.Join(root, "wiki", "memory", "c-000043.md"))
 		}},
 		{name: "13-a-pages-directory-that-cannot-be-listed", build: func(t *testing.T, root string) {
 			dir := filepath.Join(root, "wiki", "memory")
@@ -173,18 +180,26 @@ func goldenScenarios() []goldenScenario {
 			if err := os.Remove(full); err != nil {
 				t.Fatal(err)
 			}
-			if err := os.Symlink("../notes/manifest.json", full); err != nil {
-				t.Fatal(err)
-			}
+			symlinkOrSkip(t, "../notes/manifest.json", full)
 		}},
 		{name: "29-an-address-map-file-that-is-a-link-to-nothing", build: func(t *testing.T, root string) {
 			full := filepath.Join(root, ".raw", ".manifest.json")
 			if err := os.Remove(full); err != nil {
 				t.Fatal(err)
 			}
-			if err := os.Symlink("../notes/absent.json", full); err != nil {
+			symlinkOrSkip(t, "../notes/absent.json", full)
+		}},
+		// Scenario 28 cannot tell a link that is followed from one that is refused: the map it points to is
+		// the healthy one, and a doctor that ignored the link would find the same map by reading the file
+		// beside it. This one points at a map that disagrees with the page, so that the finding it
+		// produces, the one of scenario 26, can only come from the file the link names.
+		{name: "30-an-address-map-file-that-is-a-link-to-a-map-that-disagrees", build: func(t *testing.T, root string) {
+			full := filepath.Join(root, ".raw", ".manifest.json")
+			writeGoldenFile(t, root, "notes/manifest.json", `{"address_map":{"wiki/memory/elsewhere.md":"`+goldenAddress+`"}}`)
+			if err := os.Remove(full); err != nil {
 				t.Fatal(err)
 			}
+			symlinkOrSkip(t, "../notes/manifest.json", full)
 		}},
 	}
 }
