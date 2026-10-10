@@ -9,6 +9,7 @@ import (
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/embed"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vecindex"
 )
 
@@ -203,7 +204,7 @@ func manifestEngramIDs(idx *vecindex.Index) []int64 {
 // does -- the query never fails because a top-up could not run -- plus a
 // diagnostic naming what went wrong, appended to diags and returned
 // alongside the unchanged idx/coverage/liveByID the caller already had.
-func topUpEmbeddingIndex(ctx context.Context, store *engram.Store, dir, project string, idx *vecindex.Index, coverage Coverage, liveByID map[int64]engram.Observation, buildIndex BuildIndexFunc, loadIndex func(dir string) (*vecindex.Index, error), diags []Diagnostic) (*vecindex.Index, Coverage, map[int64]engram.Observation, []Diagnostic) {
+func topUpEmbeddingIndex(ctx context.Context, store *engram.Store, dir, project string, idx *vecindex.Index, coverage Coverage, liveByID map[int64]memory.Observation, buildIndex BuildIndexFunc, loadIndex func(dir string) (*vecindex.Index, error), diags []Diagnostic) (*vecindex.Index, Coverage, map[int64]memory.Observation, []Diagnostic) {
 	toppedUp := coverage.Unindexed
 	if err := buildIndex(ctx, project, idx.Manifest.Model, idx.Manifest.Dimension, idx.Manifest.InputLimit); err != nil {
 		diags = append(diags, Diagnostic{

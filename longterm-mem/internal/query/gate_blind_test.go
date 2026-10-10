@@ -8,7 +8,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 )
 
 // blindGateFixturePath is a dedicated fixture for this test, distinct from
@@ -95,7 +95,7 @@ const paraphraseRoutingAccuracyFloor = 50.0
 // `if matchMode == "any" { return SourceEngramFTS }` as an early return
 // that pre-empted the token-shape rule below it, rather than being ORed
 // with it. Every one of this set's 16 paraphrase queries widens to
-// engram.MatchAny (a natural-language question's own words rarely all
+// memory.MatchAny (a natural-language question's own words rarely all
 // co-occur), so that defect forced every one of them to the lexical arm
 // regardless of shape, scoring 22% -- failing even this test's own,
 // deliberately generous floor -- while identifier still read 100% (the
@@ -151,13 +151,13 @@ func TestGateRoutingAccuracyOnBlindSet(t *testing.T) {
 				}
 				decidable++
 
-				matchMode := engram.MatchAll
+				matchMode := memory.MatchAll
 				for _, d := range ftsRes.Diagnostics {
 					if d.Code == DiagnosticSearchWidened {
-						matchMode = engram.MatchAny
+						matchMode = memory.MatchAny
 					}
 				}
-				tokens, _ := engram.SearchTokens(q.Query)
+				tokens, _ := memory.SearchTokens(q.Query)
 				decision := routeRank1(tokens, matchMode)
 				if (decision == SourceEngramFTS && ftsHit) || (decision == SourceEngramEmbed && embHit) {
 					right++

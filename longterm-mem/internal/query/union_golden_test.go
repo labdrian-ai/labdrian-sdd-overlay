@@ -244,7 +244,7 @@ func TestUnionGoldenFixtureUsesLiveFTSSchema(t *testing.T) {
 // token-shape rule below it, rather than being ORed with it (gate.go's own
 // doc comment carries the full history). Because every one of these 10
 // paraphrase queries fails FTS's exact AND-match and widens to
-// engram.MatchAny, that defect forced all 10 to the lexical arm regardless
+// memory.MatchAny, that defect forced all 10 to the lexical arm regardless
 // of shape, and this test's paraphrase hit@1 read 10%, not 40% -- a real,
 // reproducible regression this golden table exists to catch, not a
 // harness artifact. TestGateRoutingAccuracyOnBlindSet

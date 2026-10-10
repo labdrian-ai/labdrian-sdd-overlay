@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vault"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vecindex"
 )
@@ -364,9 +365,9 @@ type ResultRow struct {
 	// reads as current, and gets reintroduced. This module cannot fix that
 	// search (R-002 keeps its connection read-only); it can decline to
 	// repeat the omission.
-	Standing *engram.Standing `json:"standing,omitempty"`
-	// MatchOffset is the byte offset engram.SnippetAt should centre a
-	// re-render on, mirroring engram.Row.MatchOffset. It only matters for
+	Standing *memory.Standing `json:"standing,omitempty"`
+	// MatchOffset is the byte offset memory.SnippetAt should centre a
+	// re-render on, mirroring memory.Row.MatchOffset. It only matters for
 	// a row with Content set.
 	MatchOffset int `json:"-"`
 	// Content is the row's full Engram body, carried through the merge so
@@ -429,8 +430,8 @@ func Run(ctx context.Context, deps Deps, req Request) (Result, error) {
 
 	result := Result{Project: req.Project, Query: req.Query}
 
-	var engramRows []engram.Row
-	matchMode := engram.MatchAll
+	var engramRows []memory.Row
+	matchMode := memory.MatchAll
 	if wantFTS {
 		search, err := deps.Engram.Search(req.Project, req.Query, top, req.ExcludeTypes...)
 		if err != nil {
@@ -438,7 +439,7 @@ func Run(ctx context.Context, deps Deps, req Request) (Result, error) {
 		}
 		engramRows = search.Rows
 		matchMode = search.MatchMode
-		if search.MatchMode == engram.MatchAny {
+		if search.MatchMode == memory.MatchAny {
 			result.Diagnostics = append(result.Diagnostics, Diagnostic{
 				Code:   DiagnosticSearchWidened,
 				Detail: "no observation matched every term of this query, so it was retried matching any one of them: these rows answer part of the query, not all of it",
@@ -518,16 +519,16 @@ func containsSource(sources []string, name string) bool {
 // dropping rows.
 //
 // Below it a snippet cannot carry the sentence a match sits in -- the same
-// reasoning engram.SnippetBudget (480, derived from 2 sources x 5 rows) is
+// reasoning memory.SnippetBudget (480, derived from 2 sources x 5 rows) is
 // built from, at roughly the row count (about 20, at this ceiling) where
 // the bound should again correctly fall on row count rather than on
-// snippet length. It completes engram.SnippetBudget's derivation rather
+// snippet length. It completes memory.SnippetBudget's derivation rather
 // than contradicting it: at ordinary row counts share never gets near 120,
 // and only a caller asking for many rows at once reaches it.
 const MinSnippetBudget = 120
 
 // snippetMarkerAllowance reserves bytes for the up-to-two truncation
-// markers engram.SnippetAt may add around a cut, and for the small JSON
+// markers memory.SnippetAt may add around a cut, and for the small JSON
 // overhead a row's own "sources" list carries beyond a bare string, so a
 // row rendered at share does not exceed it once those are counted. It is a
 // constant rather than an exact per-row computation because the exact
@@ -640,7 +641,7 @@ func dropLargestSourceRow(result *Result) {
 // A row with no Content -- a vault or linked row, whose retriever already
 // cut its snippet once, or a future embedding-arm row with no match
 // position to centre on -- re-renders its existing Snippet from the
-// start, the same honest head-slice engram.SnippetAt already falls back
+// start, the same honest head-slice memory.SnippetAt already falls back
 // to when there is nothing to centre on.
 func allocateSnippetBudget(result *Result) {
 	rows := result.Results
@@ -665,8 +666,8 @@ func allocateSnippetBudget(result *Result) {
 
 	available := ResponseByteCeiling - overhead
 	share := available / n
-	if share > engram.SnippetBudget {
-		share = engram.SnippetBudget
+	if share > memory.SnippetBudget {
+		share = memory.SnippetBudget
 	}
 	if share < MinSnippetBudget {
 		share = MinSnippetBudget
@@ -694,8 +695,8 @@ func allocateSnippetBudget(result *Result) {
 		return
 	}
 	share2 := share + leftover/len(stillTruncated)
-	if share2 > engram.SnippetBudget {
-		share2 = engram.SnippetBudget
+	if share2 > memory.SnippetBudget {
+		share2 = memory.SnippetBudget
 	}
 	if share2 <= share {
 		return
@@ -707,7 +708,7 @@ func allocateSnippetBudget(result *Result) {
 
 // renderRowSnippet re-renders row's Snippet at budget, reserving
 // snippetMarkerAllowance so the rendered bytes -- including whatever
-// truncation markers engram.SnippetAt adds -- do not exceed budget.
+// truncation markers memory.SnippetAt adds -- do not exceed budget.
 //
 // A row with no Content -- a vault row, whose snippet was already cut by
 // the vault's own retriever before this module ever saw it -- has no full
@@ -727,7 +728,7 @@ func renderRowSnippet(row *ResultRow, budget int) {
 	if window < 1 {
 		window = 1
 	}
-	snippet, truncated := engram.SnippetAt(content, offset, window)
+	snippet, truncated := memory.SnippetAt(content, offset, window)
 	row.Snippet = snippet
 	if hasFullBody {
 		row.SnippetTruncated = truncated
@@ -801,7 +802,7 @@ func attachStandings(store *engram.Store, rows []ResultRow) []Diagnostic {
 // sources' own rows are offered first each round -- the only thing that
 // decides is which row lands at rank 1; interleaveEngramSources itself
 // never consults it, so the union guarantee is untouched by the decision.
-func mergeResults(wantVault, wantFTS, wantEmbed bool, vaultRows []vault.Candidate, engramRows []engram.Row, embedRows []ResultRow, resolveLink func(string) (int64, bool), queryText, matchMode string) []ResultRow {
+func mergeResults(wantVault, wantFTS, wantEmbed bool, vaultRows []vault.Candidate, engramRows []memory.Row, embedRows []ResultRow, resolveLink func(string) (int64, bool), queryText, matchMode string) []ResultRow {
 	consumed := make(map[int64]bool, len(engramRows)+len(embedRows))
 	var merged []ResultRow
 
@@ -853,7 +854,7 @@ func mergeResults(wantVault, wantFTS, wantEmbed bool, vaultRows []vault.Candidat
 	if wantFTS && wantEmbed {
 		// engramSourceList is [FTS, Embed] by construction above; swap
 		// only when the gate names the embedding arm as rank 1's owner.
-		tokens, _ := engram.SearchTokens(queryText)
+		tokens, _ := memory.SearchTokens(queryText)
 		if routeRank1(tokens, matchMode) == SourceEngramEmbed {
 			engramSourceList[0], engramSourceList[1] = engramSourceList[1], engramSourceList[0]
 		}
@@ -931,7 +932,7 @@ func appendSourceOnce(list []string, name string) []string {
 // FTS is searched first so that when both arms hold the observation the
 // consumed row is the FTS one, matching the pre-JD-4 behaviour exactly;
 // the embed copy is then dropped by the consumed check downstream.
-func matchLinkedObservation(pageAddress string, engramRows []engram.Row, embedRows []ResultRow, resolveLink func(string) (int64, bool)) (int64, string, bool) {
+func matchLinkedObservation(pageAddress string, engramRows []memory.Row, embedRows []ResultRow, resolveLink func(string) (int64, bool)) (int64, string, bool) {
 	if resolveLink == nil {
 		return 0, "", false
 	}

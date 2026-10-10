@@ -3,7 +3,7 @@ package query
 import (
 	"strings"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 )
 
 // routeRank1 decides which source's top row should occupy rank 1 when more
@@ -19,20 +19,20 @@ import (
 // The two conditions are ORed, not chained as an early return: an
 // identifier-shaped token -- an interior CamelCase boundary, a `/`, a `_`,
 // a `(`, a `)`, or a dotted `word.word` -- routes to the FTS source, and so
-// does matchMode == engram.MatchAll -- FTS matched the query PRECISELY,
+// does matchMode == memory.MatchAll -- FTS matched the query PRECISELY,
 // every token required, without needing to widen. Only when NEITHER holds
 // does rank 1 go to the embedding source.
 //
 // This was wrong once already, in the direction the natural first idea
 // gets it wrong (openspec/decisions/union-retrieval.md §4.3): using
-// engram.MatchAny (FTS had to WIDEN because the precise AND search found
+// memory.MatchAny (FTS had to WIDEN because the precise AND search found
 // nothing) as a signal FOR the embedding arm looked elegant -- "FTS's own
 // admission of weakness" -- and was rejected because ~90% of realistic
 // identifier questions ALSO widen (a multi-token natural-language question
 // about a symbol rarely AND-matches every one of its own words), so that
 // rule alone misroutes the majority of realistic identifier queries to the
 // arm measured at 0% identifier@1. A second, precisely inverted mistake
-// checked matchMode == engram.MatchAny as an early return FOR the FTS
+// checked matchMode == memory.MatchAny as an early return FOR the FTS
 // source -- which pre-empts the token-shape rule below it rather than
 // being ORed with it, and since EVERY natural-language paraphrase question
 // also widens (100% of the frozen blind validation set), that early return
@@ -58,7 +58,7 @@ func routeRank1(tokens []string, matchMode string) string {
 			return SourceEngramFTS
 		}
 	}
-	if matchMode == engram.MatchAll {
+	if matchMode == memory.MatchAll {
 		return SourceEngramFTS
 	}
 	return SourceEngramEmbed

@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vault"
 
 	_ "modernc.org/sqlite"
@@ -834,7 +835,7 @@ func TestRowFoundByBothEngramSourcesEmittedOnceAtEarliestRank(t *testing.T) {
 // section when it also appears in the (later, round-robin-merged) Engram
 // section.
 func TestLinkedPairEmittedOnceViaMerge(t *testing.T) {
-	engramRows := []engram.Row{{ID: 7, Title: "linked observation"}}
+	engramRows := []memory.Row{{ID: 7, Title: "linked observation"}}
 	vaultRows := []vault.Candidate{{PageAddress: "c-000042", AbsolutePath: "/v/c-000042.md", Snippet: "vault side"}}
 	resolveLink := func(pageAddress string) (int64, bool) {
 		if pageAddress == "c-000042" {
@@ -843,7 +844,7 @@ func TestLinkedPairEmittedOnceViaMerge(t *testing.T) {
 		return 0, false
 	}
 
-	merged := mergeResults(true, true, false, vaultRows, engramRows, nil, resolveLink, "linked observation", engram.MatchAll)
+	merged := mergeResults(true, true, false, vaultRows, engramRows, nil, resolveLink, "linked observation", memory.MatchAll)
 
 	if len(merged) != 1 {
 		t.Fatalf("len(merged) = %d, want 1 (linked pair collapsed); got %+v", len(merged), merged)

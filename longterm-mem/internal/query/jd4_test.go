@@ -3,7 +3,7 @@ package query
 import (
 	"testing"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vault"
 )
 
@@ -25,7 +25,7 @@ func TestMergeResults_LinkedPairCollapsesAgainstTheEmbeddingArm(t *testing.T) {
 
 	merged := mergeResults(
 		true, true, true,
-		vaultRows, nil, embedRows, resolveLink, "some query", engram.MatchAll,
+		vaultRows, nil, embedRows, resolveLink, "some query", memory.MatchAll,
 	)
 
 	if len(merged) != 1 {
@@ -56,13 +56,13 @@ func TestMergeResults_EmbedOnlyLinkDoesNotStealAnFTSRow(t *testing.T) {
 	// unable to fail for the ordering it is named after -- proven by
 	// swapping matchLinkedObservation's two loops and watching the whole
 	// package stay green.
-	ftsRows := []engram.Row{{ID: linkedID, Title: "title from the fts arm", Snippet: "fts snippet", Content: "fts body", ContentLength: 8}}
+	ftsRows := []memory.Row{{ID: linkedID, Title: "title from the fts arm", Snippet: "fts snippet", Content: "fts body", ContentLength: 8}}
 	embedRows := []ResultRow{{EngramID: linkedID, Title: "title from the embed arm", Snippet: "embed snippet", Content: "embed body", FullLength: 10}}
 	resolveLink := func(a string) (int64, bool) { return linkedID, a == addr }
 
 	merged := mergeResults(
 		true, true, true,
-		vaultRows, ftsRows, embedRows, resolveLink, "some query", engram.MatchAll,
+		vaultRows, ftsRows, embedRows, resolveLink, "some query", memory.MatchAll,
 	)
 
 	if len(merged) != 1 {

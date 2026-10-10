@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 )
 
 // TestSnippetShareIsPerRowNotPerSource (R-062): the byte budget is divided
@@ -53,7 +53,7 @@ func TestUnusedSnippetShareIsRedistributedExactlyOnce(t *testing.T) {
 	longBody := strings.Repeat("z", 5000)
 	result := Result{Project: "proj-a", Query: "zephyr"}
 	// Enough short rows that the naive equal share (available/n) is well
-	// under engram.SnippetBudget's own 480-byte ceiling -- otherwise that
+	// under memory.SnippetBudget's own 480-byte ceiling -- otherwise that
 	// ceiling, not the division, would be the only thing capping a long
 	// row's snippet, and redistribution would have nothing to prove.
 	for i := 0; i < 20; i++ {
@@ -80,8 +80,8 @@ func TestUnusedSnippetShareIsRedistributedExactlyOnce(t *testing.T) {
 	}
 	overhead := responseBytes(Result{Project: result.Project, Query: result.Query, Results: blanked})
 	naiveShare := (ResponseByteCeiling - overhead) / len(result.Results)
-	if naiveShare >= engram.SnippetBudget {
-		t.Fatalf("fixture's naive share (%d) is not below engram.SnippetBudget (%d); the test proves nothing", naiveShare, engram.SnippetBudget)
+	if naiveShare >= memory.SnippetBudget {
+		t.Fatalf("fixture's naive share (%d) is not below memory.SnippetBudget (%d); the test proves nothing", naiveShare, memory.SnippetBudget)
 	}
 
 	allocateSnippetBudget(&result)
