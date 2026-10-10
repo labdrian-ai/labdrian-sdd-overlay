@@ -95,9 +95,18 @@ func appendToPage(t *testing.T, w *promoteGoldenWorld, address string) {
 	}
 }
 
+// removeSidecar deletes longterm-mem's own record of what it wrote, so that no page is known to be its own.
+func removeSidecar(t *testing.T, w *promoteGoldenWorld) {
+	t.Helper()
+	if err := os.Remove(filepath.Join(w.vaultRoot, ".raw", ".longterm-mem-manifest.json")); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func pagesScenarios() []pagesScenario {
 	promote := []string{"promote", "--project", promoteGoldenProject, "--id", "1"}
 	sync := []string{"sync", "--project", promoteGoldenProject}
+	reconcile := []string{"promote", "reconcile", "--project", promoteGoldenProject, "c-000901"}
 	revise := func(t *testing.T, w *promoteGoldenWorld) {
 		w.execSQL(t, `UPDATE observations SET revision_count = 2, content = 'Revised body.' WHERE id = 1`)
 	}
@@ -151,6 +160,60 @@ func pagesScenarios() []pagesScenario {
 			{"promote", "--project", "other-project", "--id", "1"},
 			{"sync", "--project", "other-project"},
 		}},
+		{name: "12-the-pages-directory-is-a-file", seed: func(t *testing.T, w *promoteGoldenWorld) {
+			writeVaultFile(t, w, "wiki/memory", "not a directory")
+		}, commands: [][]string{promote, sync}},
+		{name: "13-the-pages-directory-is-a-link-to-a-directory", seed: func(t *testing.T, w *promoteGoldenWorld) {
+			if err := os.MkdirAll(filepath.Join(w.vaultRoot, "notes", "pages"), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.MkdirAll(filepath.Join(w.vaultRoot, "wiki"), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			symlinkOrSkip(t, "../notes/pages", filepath.Join(w.vaultRoot, "wiki", "memory"))
+		}, commands: [][]string{promote, sync}},
+		{name: "14-the-pages-directory-is-a-link-to-nothing", seed: func(t *testing.T, w *promoteGoldenWorld) {
+			if err := os.MkdirAll(filepath.Join(w.vaultRoot, "wiki"), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			symlinkOrSkip(t, "../notes/absent", filepath.Join(w.vaultRoot, "wiki", "memory"))
+		}, commands: [][]string{promote, sync}},
+		{name: "15-files-beside-the-pages-that-are-not-pages", seed: func(t *testing.T, w *promoteGoldenWorld) {
+			writeVaultFile(t, w, "wiki/memory/notes.txt", "---\nengram_id: 1\n---\n")
+			writeVaultFile(t, w, "wiki/memory/C-000999.MD", "---\nengram_id: 1\n---\n")
+			if err := os.MkdirAll(filepath.Join(w.vaultRoot, "wiki", "memory", "folder.md"), 0o755); err != nil {
+				t.Fatal(err)
+			}
+		}, commands: [][]string{promote, sync}},
+		{name: "16-reconcile-a-page-that-is-gone", commands: [][]string{reconcile}},
+		{name: "17-reconcile-a-page-without-frontmatter", prepare: [][]string{promote}, seed: func(t *testing.T, w *promoteGoldenWorld) {
+			writeVaultFile(t, w, "wiki/memory/c-000901.md", "Just text, no frontmatter.\n")
+		}, commands: [][]string{reconcile}},
+		{name: "18-reconcile-an-edited-page-nobody-recorded-adopts-it", prepare: [][]string{promote}, seed: func(t *testing.T, w *promoteGoldenWorld) {
+			removeSidecar(t, w)
+			appendToPage(t, w, "c-000901")
+		}, commands: [][]string{reconcile}},
+		{name: "19-reconcile-an-edited-page-with-a-recorded-revision-is-refused", prepare: [][]string{promote}, seed: func(t *testing.T, w *promoteGoldenWorld) {
+			appendToPage(t, w, "c-000901")
+		}, commands: [][]string{reconcile}},
+		{name: "20-reconcile-a-page-that-is-a-link", prepare: [][]string{promote}, seed: func(t *testing.T, w *promoteGoldenWorld) {
+			removeSidecar(t, w)
+			movePageToNotes(t, w, "c-000901")
+		}, commands: [][]string{reconcile}},
+		{name: "21-reconcile-a-page-that-is-a-directory", seed: func(t *testing.T, w *promoteGoldenWorld) {
+			if err := os.MkdirAll(pageOf(w, "c-000901"), 0o755); err != nil {
+				t.Fatal(err)
+			}
+		}, commands: [][]string{reconcile}},
+		{name: "22-reconcile-a-page-of-another-project", prepare: [][]string{promote}, seed: func(t *testing.T, w *promoteGoldenWorld) {
+			removeSidecar(t, w)
+			w.execSQL(t, `UPDATE observations SET project = 'other-project' WHERE id = 1`)
+		}, commands: [][]string{{"promote", "reconcile", "--project", "other-project", "c-000901"}}},
+		{name: "23-an-observation-superseded-by-a-newer-one", prepare: [][]string{sync}, seed: func(t *testing.T, w *promoteGoldenWorld) {
+			w.execSQL(t, `UPDATE observations SET created_at = '2026-08-05 00:00:00' WHERE id = 2`)
+			w.execSQL(t, `INSERT INTO memory_relations (sync_id, source_id, target_id, relation, judgment_status)
+				VALUES ('rel-1', 'sync-2', 'sync-1', 'supersedes', 'judged')`)
+		}, commands: [][]string{sync}},
 	}
 }
 
