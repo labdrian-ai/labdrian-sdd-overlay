@@ -164,6 +164,21 @@ func (r Report) named(t *testing.T, label string) Check {
 	return Check{}
 }
 
+// labelStarting is the label of the one check whose label begins with prefix.
+func (r Report) labelStarting(t *testing.T, prefix string) string {
+	t.Helper()
+	var found []string
+	for _, c := range r.Checks {
+		if strings.HasPrefix(c.Label, prefix) {
+			found = append(found, c.Label)
+		}
+	}
+	if len(found) != 1 {
+		t.Fatalf("%d checks begin with %q in %q, want exactly one", len(found), prefix, r.labels())
+	}
+	return found[0]
+}
+
 func (r Report) labels() []string {
 	var labels []string
 	for _, c := range r.Checks {
@@ -239,13 +254,35 @@ func TestWithoutADirectoryThereIsNoRegistryToLookFor(t *testing.T) {
 			t.Errorf("a registry check was made without a directory: %v", c)
 		}
 	}
-	if len(report.Checks) != 9 {
-		t.Errorf("%d checks, want 9", len(report.Checks))
+	if full := complete(t).check(); len(report.Checks) != len(full.Checks)-1 {
+		t.Errorf("%d checks without a directory, want the %d of a complete run less the registry: %q", len(report.Checks), len(full.Checks)-1, report.labels())
 	}
 	for _, asked := range w.files.asked {
 		if strings.Contains(asked, "skill-registry") {
 			t.Errorf("the registry was asked for: %q", asked)
 		}
+	}
+}
+
+func TestAServiceWithoutAPortSaysWhichInsteadOfFailingOnANilPointer(t *testing.T) {
+	w := complete(t)
+	for name, c := range map[string]struct {
+		service Service
+		want    string
+	}{
+		"no files":    {Service{Settings: w.settings}, "status: Service.Files is nil"},
+		"no settings": {Service{Files: w.files}, "status: Service.Settings is nil"},
+		"neither":     {Service{}, "status: Service.Files is nil"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			defer func() {
+				if got := recover(); got != c.want {
+					t.Errorf("Check panicked with %v, want %q", got, c.want)
+				}
+			}()
+			c.service.Check(Request{Home: home})
+			t.Error("Check returned a report from a service with a port missing")
+		})
 	}
 }
 
@@ -257,7 +294,7 @@ func TestTheLayoutFollowsTheHomeAsItIsGivenEvenWhenItIsEmpty(t *testing.T) {
 		"contract: .claude/skills/_shared/minimalism-contract.md",
 		"registry: rel/.atl/skill-registry.md",
 	}
-	got := []string{report.Checks[0].Label, report.Checks[8].Label, report.Checks[9].Label}
+	got := []string{report.labelStarting(t, "binary: "), report.labelStarting(t, "contract: "), report.labelStarting(t, "registry: ")}
 	if strings.Join(got, "|") != strings.Join(want, "|") {
 		t.Errorf("labels = %q, want %q", got, want)
 	}

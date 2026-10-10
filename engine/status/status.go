@@ -157,7 +157,16 @@ const (
 // Check makes every check, in the order a report lists them: the binary; the two base hooks,
 // whose absence is a failure; the four families added later, whose absence is a warning; the
 // contract; and, when the request names a directory, the registry of the project there.
+//
+// Both ports are required: a Service without one is a wiring mistake and Check panics saying which,
+// rather than answering a report that hides it.
 func (s Service) Check(req Request) Report {
+	if s.Files == nil {
+		panic("status: Service.Files is nil")
+	}
+	if s.Settings == nil {
+		panic("status: Service.Settings is nil")
+	}
 	binaryPath := filepath.Join(req.Home, ".claude", "bin", binaryIdentity)
 	settingsPath := filepath.Join(req.Home, ".claude", "settings.json")
 	contractPath := filepath.Join(req.Home, ".claude", "skills", "_shared", "minimalism-contract.md")
@@ -190,13 +199,18 @@ type loadedSettings struct {
 	err  error
 }
 
-// unreadable is the failed check of label when the file could not be read; the second result is
-// false when it could.
-func (s loadedSettings) unreadable(label string) (Check, bool) {
-	if s.err == nil {
-		return Check{}, false
+// beforeEntries is the answer of a check that needs no look at the entries, because the settings
+// cannot give it any: a file that could not be read fails every check that asks, and a file that is
+// absent or holds nothing is the check's own level, with its advice after the fixed words. The
+// second result is false when there are settings to look into.
+func (s loadedSettings) beforeEntries(label string, whenAbsent Level, advice string) (Check, bool) {
+	if s.err != nil {
+		return Check{Label: label, Level: Fail, Note: "cannot read " + s.path + ": " + s.err.Error()}, true
 	}
-	return Check{Label: label, Level: Fail, Note: "cannot read " + s.path + ": " + s.err.Error()}, true
+	if s.root == nil {
+		return Check{Label: label, Level: whenAbsent, Note: s.path + " absent or empty" + advice}, true
+	}
+	return Check{}, false
 }
 
 // checkBinary verifies the engine binary is present and executable: any execute bit is enough.
@@ -218,11 +232,8 @@ func checkBinary(binaryPath string, files Files) Check {
 // checkUserPromptSubmitHook verifies a UserPromptSubmit entry references our binary.
 func checkUserPromptSubmitHook(s loadedSettings) Check {
 	label := "hook: UserPromptSubmit (propagate)"
-	if c, bad := s.unreadable(label); bad {
+	if c, done := s.beforeEntries(label, Fail, ""); done {
 		return c
-	}
-	if s.root == nil {
-		return Check{Label: label, Level: Fail, Note: s.path + " absent or empty"}
 	}
 	if !settings.HasHooksObject(s.root) {
 		return Check{Label: label, Level: Fail, Note: "hooks key missing in settings.json"}
@@ -236,11 +247,8 @@ func checkUserPromptSubmitHook(s loadedSettings) Check {
 // checkPreToolUseHook verifies the PreToolUse entry for the Agent tool references our binary.
 func checkPreToolUseHook(s loadedSettings) Check {
 	label := `hook: PreToolUse matcher="Agent" (gate-task)`
-	if c, bad := s.unreadable(label); bad {
+	if c, done := s.beforeEntries(label, Fail, ""); done {
 		return c
-	}
-	if s.root == nil {
-		return Check{Label: label, Level: Fail, Note: s.path + " absent or empty"}
 	}
 	if !settings.HasHooksObject(s.root) {
 		return Check{Label: label, Level: Fail, Note: "hooks key missing in settings.json"}
@@ -257,11 +265,8 @@ func checkPreToolUseHook(s loadedSettings) Check {
 // SessionEnd is one that has not run the upgrade path, not a broken installation.
 func checkSessionEndHook(s loadedSettings) Check {
 	label := "hook: SessionEnd (sync-trigger)"
-	if c, bad := s.unreadable(label); bad {
+	if c, done := s.beforeEntries(label, Warn, "; "+remediation); done {
 		return c
-	}
-	if s.root == nil {
-		return Check{Label: label, Level: Warn, Note: s.path + " absent or empty; " + remediation}
 	}
 	if settings.HasHookContaining(s.root, "SessionEnd", binaryIdentity, settings.LabdrianSyncTriggerIdentity) {
 		return Check{Label: label, Level: OK}
@@ -273,11 +278,8 @@ func checkSessionEndHook(s loadedSettings) Check {
 // review-receipt identity token. It is judged as checkSessionEndHook is.
 func checkReviewReceiptHook(s loadedSettings) Check {
 	label := `hook: PreToolUse matcher="Bash" (review-receipt)`
-	if c, bad := s.unreadable(label); bad {
+	if c, done := s.beforeEntries(label, Warn, "; "+remediation); done {
 		return c
-	}
-	if s.root == nil {
-		return Check{Label: label, Level: Warn, Note: s.path + " absent or empty; " + remediation}
 	}
 	if settings.HasMatchedHookContaining(s.root, "PreToolUse", "Bash", binaryIdentity, settings.LabdrianReviewReceiptIdentity) {
 		return Check{Label: label, Level: OK}
@@ -290,11 +292,8 @@ func checkReviewReceiptHook(s loadedSettings) Check {
 // remediation as the other families added later. Even installed, the guard is a speed bump.
 func checkShaperClearanceGuard(s loadedSettings) Check {
 	label := "guard: shaper clearance record (PreToolUse + permissions.deny)"
-	if c, bad := s.unreadable(label); bad {
+	if c, done := s.beforeEntries(label, Warn, "; clearance recording is unguarded ("+speedBump+"); "+remediation); done {
 		return c
-	}
-	if s.root == nil {
-		return Check{Label: label, Level: Warn, Note: s.path + " absent or empty; clearance recording is unguarded (" + speedBump + "); " + remediation}
 	}
 	if missing := settings.MissingShaperClearanceGuardParts(s.root, binaryIdentity); len(missing) > 0 {
 		return Check{Label: label, Level: Warn,
@@ -312,11 +311,8 @@ func checkShaperClearanceGuard(s loadedSettings) Check {
 // when it starts, so the note says to restart it.
 func checkProjectionHooks(s loadedSettings, hookCommand string) Check {
 	label := "hooks: projection (UserPromptSubmit + PreToolUse gates)"
-	if c, bad := s.unreadable(label); bad {
+	if c, done := s.beforeEntries(label, Warn, "; "+remediation+"; "+restartNote); done {
 		return c
-	}
-	if s.root == nil {
-		return Check{Label: label, Level: Warn, Note: s.path + " absent or empty; " + remediation + "; " + restartNote}
 	}
 	if missing := settings.MissingProjectionHookParts(s.root, hookCommand); len(missing) > 0 {
 		return Check{Label: label, Level: Warn, Note: "missing or drifted: " + strings.Join(missing, ", ") + "; " + remediation + "; " + restartNote}
@@ -329,12 +325,8 @@ func checkProjectionHooks(s loadedSettings, hookCommand string) Check {
 // checkProjectionHooks is, and even installed it is a speed bump, which the note says.
 func checkApproveGuard(s loadedSettings, hookCommand string) Check {
 	label := "guard: skills approve (PreToolUse Bash + file tools)"
-	if c, bad := s.unreadable(label); bad {
+	if c, done := s.beforeEntries(label, Warn, "; the agent can run skills approve unguarded ("+speedBump+"); "+remediation+"; "+restartNote); done {
 		return c
-	}
-	if s.root == nil {
-		return Check{Label: label, Level: Warn,
-			Note: s.path + " absent or empty; the agent can run skills approve unguarded (" + speedBump + "); " + remediation + "; " + restartNote}
 	}
 	if missing := settings.MissingApproveGuardParts(s.root, hookCommand); len(missing) > 0 {
 		return Check{Label: label, Level: Warn,
