@@ -137,13 +137,15 @@ func observationRowsForIndex(store *engram.Store, project string) ([]vecindex.Ro
 // newPromoteWriter is the Writer of the vault at vaultRoot, as every command
 // that promotes (promote, the MCP promote tool, sync) uses it: the vault's
 // address allocator, the wall clock in UTC, and the vault file system adapter
-// its precedence store is loaded from and saved through. It is the one
+// its precedence store is loaded from and saved through and its address map
+// is recorded in. It is the one
 // construction, so two commands cannot come to wire a Writer differently; a
 // precedence sidecar that cannot be loaded is the error, as the repository
 // reported it.
 func newPromoteWriter(vaultRoot string) (*promote.Writer, error) {
-	writer := &promote.Writer{VaultRoot: vaultRoot, Addresses: vault.AddressAllocator{Root: vaultRoot}, Clock: utcClock{}}
-	if err := writer.UsePrecedence(openVault(vaultRoot)); err != nil {
+	vaultFiles := openVault(vaultRoot)
+	writer := &promote.Writer{VaultRoot: vaultRoot, Addresses: vault.AddressAllocator{Root: vaultRoot}, AddressMap: vaultFiles, Clock: utcClock{}}
+	if err := writer.UsePrecedence(vaultFiles); err != nil {
 		return nil, err
 	}
 	return writer, nil

@@ -2,7 +2,6 @@ package promote
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -39,12 +38,12 @@ var errNoAddressAllocator = errors.New("promote: the writer has no address alloc
 // identified by (project, engramID) under vaultRoot (R-028). When a page
 // already promoted under wiki/memory/ carries this engram_id and project in
 // its frontmatter, that page's own address is reused: the allocator is not
-// asked (so a Writer that has none still re-promotes) and
-// .raw/.manifest.json is not written again. Otherwise a fresh address is
-// taken from addresses and recorded in .raw/.manifest.json's address_map,
-// keyed by the page's address-derived path, dated at (UTC) when the manifest
-// has to be created.
-func allocateAddress(ctx context.Context, vaultRoot, project string, engramID int, addresses AddressAllocator, at time.Time) (string, error) {
+// asked (so a Writer that has none still re-promotes) and the address map
+// is not written again. Otherwise a fresh address is
+// taken from addresses and entered, through addressMap, in the vault's address
+// map under the page's address-derived path, the manifest being dated at (UTC)
+// when it has to be created.
+func allocateAddress(ctx context.Context, vaultRoot, project string, engramID int, addresses AddressAllocator, addressMap AddressMapRecorder, at time.Time) (string, error) {
 	if existing, ok, err := findPromotedPage(vaultRoot, project, engramID); err != nil {
 		return "", err
 	} else if ok {
@@ -54,6 +53,9 @@ func allocateAddress(ctx context.Context, vaultRoot, project string, engramID in
 	if memory.IsMissing(addresses) {
 		return "", errNoAddressAllocator
 	}
+	if memory.IsMissing(addressMap) {
+		return "", errNoAddressMapRecorder
+	}
 	address, err := addresses.NextAddress(ctx)
 	if err != nil {
 		return "", fmt.Errorf("promote: %w", err)
@@ -62,8 +64,7 @@ func allocateAddress(ctx context.Context, vaultRoot, project string, engramID in
 		return "", errors.New("promote: the address allocator returned no address")
 	}
 
-	path := vaultlayout.PageFile(address)
-	if err := recordAddress(vaultRoot, path, address, at); err != nil {
+	if err := addressMap.RecordAddress(vaultlayout.PageFile(address), address, at); err != nil {
 		return "", err
 	}
 	return address, nil
@@ -270,48 +271,6 @@ func frontmatterBlock(raw string) (string, bool) {
 	return delim + parts[1] + delim, true
 }
 
-// recordAddress decodes .raw/.manifest.json as an open key set -- the
-// file is wiki-ingest-owned (D7): fields this package does not know must
-// survive, and keys absent from the live file must never be fabricated --
-// mutates only address_map[path] = address, and re-encodes at 2-space
-// indent atomically. Only a wholly absent file starts from the minimal
-// seed manifest.
-func recordAddress(vaultRoot, path, address string, at time.Time) error {
-	full := filepath.Join(vaultRoot, vaultlayout.AddressManifestFile)
-	m := map[string]json.RawMessage{}
-
-	if data, err := os.ReadFile(full); err == nil {
-		if err := json.Unmarshal(data, &m); err != nil {
-			return fmt.Errorf("promote: parse %s: %w", full, err)
-		}
-	} else if os.IsNotExist(err) {
-		m["version"] = json.RawMessage("1")
-		m["created"] = json.RawMessage(strconv.Quote(at.Format("2006-01-02")))
-		m["sources"] = json.RawMessage("{}")
-	} else {
-		return fmt.Errorf("promote: read %s: %w", full, err)
-	}
-
-	addressMap := map[string]string{}
-	if raw, ok := m["address_map"]; ok {
-		if err := json.Unmarshal(raw, &addressMap); err != nil {
-			return fmt.Errorf("promote: parse %s address_map: %w", full, err)
-		}
-	}
-	addressMap[path] = address
-	encoded, err := json.Marshal(addressMap)
-	if err != nil {
-		return fmt.Errorf("promote: marshal %s address_map: %w", full, err)
-	}
-	m["address_map"] = encoded
-
-	data, err := json.MarshalIndent(m, "", "  ")
-	if err != nil {
-		return fmt.Errorf("promote: marshal %s: %w", full, err)
-	}
-	return writeFileAtomic(full, append(data, '\n'))
-}
-
 // pageCreatePerm is the mode a page or sidecar gets when promote is the one
 // creating it. Promoted pages carry memory content, so a file this module
 // brings into existence starts owner-only. It applies to creation only: a
@@ -322,7 +281,7 @@ const pageCreatePerm = 0o600
 // directory first.
 //
 // Everything it touches lives inside the USER'S Obsidian vault --
-// wiki/memory pages, index.md, log.md, .raw/.manifest.json -- not inside
+// wiki/memory pages, index.md, log.md -- not inside
 // longterm-mem's own state directory, and several callers rewrite a page
 // that already exists (PatchStatusFields patches frontmatter in place, the
 // update path republishes). So this is not a writer of module-owned files

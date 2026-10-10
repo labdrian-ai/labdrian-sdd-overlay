@@ -31,7 +31,7 @@ func vaultIsUntouched(t *testing.T, root string) {
 // provenance, which promotion refuses from then on.
 func TestPromote_RefusesAWriterWithoutAPrecedenceRepository(t *testing.T) {
 	vaultRoot := t.TempDir()
-	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: &fakeClock{at: testInstant}, Addresses: staticAddress(testAddress)}
+	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: &fakeClock{at: testInstant}, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress)}
 
 	_, err := w.Promote(t.Context(), portObservation(901), false)
 	if !errors.Is(err, errNoPrecedenceRepository) {
@@ -45,7 +45,7 @@ func TestPromote_RefusesAWriterWithoutAPrecedenceRepository(t *testing.T) {
 func TestPromote_RefusesATypedNilPrecedenceRepository(t *testing.T) {
 	var repo *memPrecedence
 	vaultRoot := t.TempDir()
-	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Precedence: repo, Clock: &fakeClock{at: testInstant}, Addresses: staticAddress(testAddress)}
+	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Precedence: repo, Clock: &fakeClock{at: testInstant}, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress)}
 
 	if _, err := w.Promote(t.Context(), portObservation(902), false); !errors.Is(err, errNoPrecedenceRepository) {
 		t.Fatalf("Promote = %v, want errNoPrecedenceRepository", err)
@@ -93,7 +93,7 @@ func TestPromote_ReportsAnUpdateWhosePrecedenceCannotBePersisted(t *testing.T) {
 	vaultRoot := t.TempDir()
 	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 	repo := &memPrecedence{}
-	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Precedence: repo, Clock: clock, Addresses: staticAddress(testAddress)}
+	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Precedence: repo, Clock: clock, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress)}
 	obs := portObservation(903)
 	if _, err := w.Promote(t.Context(), obs, false); err != nil {
 		t.Fatalf("Promote (create): %v", err)

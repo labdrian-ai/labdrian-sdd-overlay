@@ -147,7 +147,7 @@ func TestSync(t *testing.T) {
 				seededPage = seedPromotedPage(t, vaultRoot, precedence, seedObs, "c-000042")
 			}
 
-			w := &Writer{VaultRoot: vaultRoot, Store: precedence, Precedence: &memPrecedence{}, Clock: clock, Addresses: staticAddress(testAddress)}
+			w := &Writer{VaultRoot: vaultRoot, Store: precedence, Precedence: &memPrecedence{}, Clock: clock, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress)}
 			report, err := Sync(context.Background(), Deps{Memory: store, Writer: w}, "labdrian-sdd-overlay")
 			if err != nil {
 				t.Fatalf("Sync: %v", err)
@@ -196,7 +196,7 @@ func TestSync_IndexAndSyncStateReflectCompletion(t *testing.T) {
 	}, nil)
 
 	var rebuildCalled bool
-	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Clock: clock, Addresses: addresses}
+	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Clock: clock, AddressMap: &memAddressMap{}, Addresses: addresses}
 	deps := Deps{
 		Memory: store,
 		Writer: w,
@@ -268,7 +268,7 @@ func TestSync_OneFailingObservationDoesNotWedgeTheRun(t *testing.T) {
 	}
 
 	var rebuildCalled bool
-	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Clock: clock, Addresses: addresses}
+	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Clock: clock, AddressMap: &memAddressMap{}, Addresses: addresses}
 	deps := Deps{
 		Memory:       store,
 		Writer:       w,

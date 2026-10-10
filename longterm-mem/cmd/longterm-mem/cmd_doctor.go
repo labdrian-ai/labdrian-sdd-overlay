@@ -60,9 +60,11 @@ func (c commands) cmdDoctor(args []string) int {
 		return vaultExitCode(err)
 	}
 
+	vaultFiles := openVault(vaultRoot)
 	deps := ops.DoctorDeps{
 		VaultRoot:           vaultRoot,
-		Precedence:          openVault(vaultRoot),
+		Precedence:          vaultFiles,
+		AddressMap:          vaultFiles,
 		PrerequisitePresent: vault.PrerequisitePresent,
 		// StateDir/LiveObservationIDs/EmbeddingBackendCheck back the three
 		// embedding-index checks (R-064). This command takes no

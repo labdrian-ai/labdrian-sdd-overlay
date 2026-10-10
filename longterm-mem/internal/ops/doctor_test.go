@@ -125,6 +125,7 @@ func TestDoctor(t *testing.T) {
 		return DoctorDeps{
 			VaultRoot:           vaultRoot,
 			Precedence:          vaultfs.New(vaultRoot),
+			AddressMap:          vaultfs.New(vaultRoot),
 			PrerequisitePresent: func(string) bool { return true },
 			StateDir:            stateDir,
 			LiveObservationIDs:  func(string) ([]int64, error) { return liveIDs, nil },
@@ -464,6 +465,7 @@ func TestDoctor_UnreadablePageDoesNotHideEveryOtherPage(t *testing.T) {
 	deps := DoctorDeps{
 		VaultRoot:             vaultRoot,
 		Precedence:            vaultfs.New(vaultRoot),
+		AddressMap:            vaultfs.New(vaultRoot),
 		PrerequisitePresent:   func(name string) bool { return true },
 		StateDir:              t.TempDir(),
 		LiveObservationIDs:    func(string) ([]int64, error) { return nil, nil },

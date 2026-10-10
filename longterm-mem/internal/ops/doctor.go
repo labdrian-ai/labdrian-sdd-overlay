@@ -65,6 +65,21 @@ type PrecedenceReader interface {
 // named, and only that check fails.
 var errNoPrecedenceReader = errors.New("ops: no precedence reader was wired")
 
+// AddressMapReader is the port through which Doctor reads the address map of the
+// vault it inspects: the record, in the manifest wiki-ingest keeps, of which
+// address each promoted page was allocated. The package owns it, asks for the
+// read half only (a diagnostic never writes), and is satisfied by the vault file
+// system adapter and by promote.AddressMapReader alike. A map that cannot be
+// read is an error; one that is there and is not an address map is an error
+// for which errors.Is(err, promote.ErrAddressMapCorrupt) holds.
+type AddressMapReader interface {
+	LoadAddressMap() (promote.AddressMap, error)
+}
+
+// errNoAddressMapReader is what the address-map check reports when Doctor was
+// built without an AddressMapReader and there is a promoted page to check.
+var errNoAddressMapReader = errors.New("ops: no address map reader was wired")
+
 // loadPrecedence reads the precedence store through reader, or says that
 // there is none to read through.
 func loadPrecedence(reader PrecedenceReader) (promote.PrecedenceStore, error) {
@@ -86,6 +101,11 @@ type DoctorDeps struct {
 	// system adapter over VaultRoot. Required: without it that check fails
 	// and says so.
 	Precedence PrecedenceReader
+	// AddressMap reads the vault's address map for the address-map-integrity
+	// check. Production wires the vault file system adapter over VaultRoot.
+	// Required: without it that check fails, when there is a promoted page to
+	// check, and says so.
+	AddressMap AddressMapReader
 	// PrerequisitePresent reports whether name is present as a runtime
 	// prerequisite. Production wires vault.PrerequisitePresent (R-021: no
 	// direct os/exec import outside internal/vault/runner.go). Required.
@@ -134,8 +154,8 @@ func Doctor(ctx context.Context, deps DoctorDeps, project string) (DoctorReport,
 		Project: project,
 		Checks: []Check{
 			checkVaultConfigResolvable(deps.VaultRoot),
-			checkAddressMapIntegrity(deps.VaultRoot),
-			checkWikiRegistrationConsistency(deps.VaultRoot),
+			checkAddressMapIntegrity(deps.VaultRoot, deps.AddressMap),
+			checkWikiRegistrationConsistency(deps.VaultRoot, deps.AddressMap),
 			checkPrecedenceSidecarConsistency(deps.VaultRoot, deps.Precedence),
 			checkRuntimePrerequisites(deps),
 			checkEmbeddingIndexPresent(deps, project),
@@ -169,15 +189,20 @@ func checkVaultConfigResolvable(vaultRoot string) Check {
 // A vault root that cannot be scanned for promoted pages at all (missing
 // directory) reports PASS -- there is nothing yet to be inconsistent with,
 // matching checkAddressMap's own graceful handling of a missing manifest.
-func checkAddressMapIntegrity(vaultRoot string) Check {
+func checkAddressMapIntegrity(vaultRoot string, addresses AddressMapReader) Check {
 	pages, unreadable, err := loadPromotedPages(vaultRoot)
 	if err != nil {
 		return Check{Name: CheckAddressMapIntegrity, Status: CheckFailed, Detail: err.Error()}
 	}
 
 	details := append([]string(nil), unreadable...)
+	if memory.IsMissing(addresses) && len(pages) > 0 {
+		// One finding, not one per page: every page would say the same.
+		details = append(details, errNoAddressMapReader.Error())
+		pages = nil
+	}
 	for _, page := range pages {
-		for _, diag := range promote.LintPage(page, vaultRoot) {
+		for _, diag := range promote.LintPage(page, vaultRoot, addresses) {
 			if diag.Rule == "address-map" {
 				details = append(details, diag.Detail)
 			}
@@ -197,7 +222,7 @@ func checkAddressMapIntegrity(vaultRoot string) Check {
 // on-disk marker block RegisterIndex writes -- rather than
 // re-implementing it; LintPage has no equivalent log.md rule, so the log
 // half is this check's own, small and self-contained.
-func checkWikiRegistrationConsistency(vaultRoot string) Check {
+func checkWikiRegistrationConsistency(vaultRoot string, addresses AddressMapReader) Check {
 	pages, unreadable, err := loadPromotedPages(vaultRoot)
 	if err != nil {
 		return Check{Name: CheckWikiRegistrationConsistency, Status: CheckFailed, Detail: err.Error()}
@@ -207,7 +232,7 @@ func checkWikiRegistrationConsistency(vaultRoot string) Check {
 
 	details := append([]string(nil), unreadable...)
 	for _, page := range pages {
-		for _, diag := range promote.LintPage(page, vaultRoot) {
+		for _, diag := range promote.LintPage(page, vaultRoot, addresses) {
 			if diag.Rule == "inbound-index-link" {
 				details = append(details, diag.Detail)
 			}

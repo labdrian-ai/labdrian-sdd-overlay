@@ -228,6 +228,7 @@ func TestGolden(t *testing.T) {
 				// literal is the golden files' own; cmd's TestCmdDoctor_ReportsAnUnparseableSidecarAsTheOpsGoldenDoes
 				// runs the command's wiring over the same damaged vault and holds it to the text recorded here.
 				Precedence:            vaultfs.New(vaultRoot, vaultfs.WithErrorPrefix("promote")),
+				AddressMap:            vaultfs.New(vaultRoot, vaultfs.WithErrorPrefix("promote")),
 				PrerequisitePresent:   func(string) bool { return true },
 				StateDir:              stateDir,
 				LiveObservationIDs:    func(string) ([]int64, error) { return liveIDs, nil },

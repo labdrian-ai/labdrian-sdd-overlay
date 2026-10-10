@@ -35,3 +35,12 @@ type AddressMapReader interface {
 // ErrAddressMapCorrupt is what a reader answers for a manifest that is there and is not an address map:
 // not JSON, not an object, or an address_map that is not a map of paths to addresses.
 var ErrAddressMapCorrupt = errors.New("promote: the address map is corrupt")
+
+// errNoAddressMapRecorder is what a promotion that needs to record a new address answers when its Writer was
+// built without an AddressMapRecorder: a port the caller forgot to wire is named, before an address is spent
+// on it.
+var errNoAddressMapRecorder = errors.New("promote: the writer has no address map recorder")
+
+// errNoAddressMapReader is what the address map rule of the page check reports when it was handed no
+// AddressMapReader.
+var errNoAddressMapReader = errors.New("promote: no address map reader was wired")

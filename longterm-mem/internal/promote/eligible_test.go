@@ -141,7 +141,7 @@ func TestPromote_ExplicitCallOverridesAutomaticEligibility(t *testing.T) {
 	vaultRoot := t.TempDir()
 	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
-	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Clock: clock, Addresses: staticAddress(testAddress)}
+	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Clock: clock, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress)}
 	obs := memory.Observation{ID: 601, Type: "discovery", Title: "Below Threshold", Content: "Never automatically eligible.", Project: "labdrian-sdd-overlay", RevisionCount: 1, Pinned: false}
 
 	var lookedUp int64

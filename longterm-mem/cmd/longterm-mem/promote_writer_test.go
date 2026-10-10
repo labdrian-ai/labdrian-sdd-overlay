@@ -33,6 +33,9 @@ func TestNewPromoteWriterWiresTheWriterOfAVault(t *testing.T) {
 	if writer.Precedence == nil || writer.Store == nil {
 		t.Errorf("Precedence = %v, Store = %v, want the repository and the store it holds", writer.Precedence, writer.Store)
 	}
+	if writer.AddressMap == nil {
+		t.Error("AddressMap is not wired: the first page this Writer creates would be refused")
+	}
 }
 
 // A vault whose precedence sidecar cannot be parsed gives no Writer, and the failure reaches the caller as the

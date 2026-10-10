@@ -1,13 +1,14 @@
 package promote
 
 import (
-	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultlayout"
 )
 
@@ -36,9 +37,10 @@ var requiredScalarFields = []string{"type", titleField, "address", "created", "u
 // the 6 rules the design's line-budget mitigation names for this slice:
 // required fields, the type/status enum, the address format, address_map
 // consistency, wikilink resolvability, and an inbound index.md link.
-// vaultRoot lets the last three rules inspect on-disk state; doctor
+// addresses is where the address_map rule reads the vault's address map
+// from; vaultRoot lets the last two rules inspect on-disk state. Doctor
 // (slice 8a) reuses LintPage's rules unchanged.
-func LintPage(page Page, vaultRoot string) []Diagnostic {
+func LintPage(page Page, vaultRoot string, addresses AddressMapReader) []Diagnostic {
 	var diags []Diagnostic
 
 	fields := parseFrontmatterFields(page.Frontmatter)
@@ -59,7 +61,7 @@ func LintPage(page Page, vaultRoot string) []Diagnostic {
 		diags = append(diags, Diagnostic{Rule: "address-format", Detail: fmt.Sprintf("address %q does not match ^c-\\d{6}$", page.Address)})
 	}
 
-	if diag, ok := checkAddressMap(page, vaultRoot); !ok {
+	if diag, ok := checkAddressMap(page, addresses); !ok {
 		diags = append(diags, diag)
 	}
 	diags = append(diags, checkWikilinksResolve(page, vaultRoot)...)
@@ -94,21 +96,23 @@ func parseFrontmatterFields(raw string) map[string]string {
 }
 
 // checkAddressMap reports the address-map-consistency rule: page.Address
-// must have an entry in .raw/.manifest.json's address_map pointing at
-// page.Path. A missing manifest (address allocation is slice 5) passes --
-// there is nothing yet to be inconsistent with.
-func checkAddressMap(page Page, vaultRoot string) (Diagnostic, bool) {
-	data, err := os.ReadFile(filepath.Join(vaultRoot, vaultlayout.AddressManifestFile))
+// must have an entry in the vault's address map pointing at page.Path. A
+// manifest that is missing, or cannot be read (address allocation is slice 5),
+// passes -- there is nothing yet to be inconsistent with; one that is there and
+// is not an address map is a finding of its own. A reader that was not wired is
+// named, rather than called.
+func checkAddressMap(page Page, addresses AddressMapReader) (Diagnostic, bool) {
+	if memory.IsMissing(addresses) {
+		return Diagnostic{Rule: "address-map", Detail: errNoAddressMapReader.Error()}, false
+	}
+	addressMap, err := addresses.LoadAddressMap()
+	if errors.Is(err, ErrAddressMapCorrupt) {
+		return Diagnostic{Rule: "address-map", Detail: vaultlayout.AddressManifestFile + " is not valid JSON"}, false
+	}
 	if err != nil {
 		return Diagnostic{}, true
 	}
-	var manifest struct {
-		AddressMap map[string]string `json:"address_map"`
-	}
-	if err := json.Unmarshal(data, &manifest); err != nil {
-		return Diagnostic{Rule: "address-map", Detail: vaultlayout.AddressManifestFile + " is not valid JSON"}, false
-	}
-	for path, addr := range manifest.AddressMap {
+	for path, addr := range addressMap {
 		if addr != page.Address {
 			continue
 		}
