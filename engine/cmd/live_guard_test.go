@@ -44,7 +44,7 @@ func TestMain(m *testing.M) {
 	}
 	guard.Close()
 	os.RemoveAll(home)
-	removeReviewReceiptBinary()
+	removeEngineBinary()
 	os.Exit(code)
 }
 

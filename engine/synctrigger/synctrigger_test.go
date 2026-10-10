@@ -49,10 +49,11 @@ func lastLogLine(t *testing.T, stateDir string) string {
 	return lines[len(lines)-1]
 }
 
-// exampleChildArgv is a command line a caller might give: the layout of the 'engine' command
-// the tests below stand in for, which synctrigger itself knows nothing of.
+// exampleChildArgv is a command line a caller might give, invented for these tests: the scripts
+// below read the event as $3 and the cwd as $5. It is not the command line of the engine, which
+// synctrigger knows nothing of and which cmd pins (TestSyncTriggerChildArgv_...).
 func exampleChildArgv(event, cwd, stateDir string) []string {
-	return []string{"sync-trigger", "--event", event, "--cwd", cwd, "--state-dir", stateDir, "--child"}
+	return []string{"a-child", "--event", event, "--cwd", cwd, "--state", stateDir}
 }
 
 // recordingSelf writes a script that records the arguments it is started with, one per line,
@@ -110,6 +111,9 @@ func TestRun_StartsTheChildWithTheArgumentsTheCallerGives(t *testing.T) {
 func TestRun_AsksForTheChildArgumentsWithTheAbsoluteCwd(t *testing.T) {
 	stateDir, projectDir := t.TempDir(), t.TempDir()
 	self, record := recordingSelf(t)
+	// Run resolves a relative cwd against the process's own directory, so this test has to move
+	// it. No test of this package runs in parallel (rg t.Parallel finds none), and the directory
+	// is put back when the test ends.
 	oldWd, err := os.Getwd()
 	if err != nil {
 		t.Fatalf("Getwd: %v", err)
@@ -133,10 +137,12 @@ func TestRun_AsksForTheChildArgumentsWithTheAbsoluteCwd(t *testing.T) {
 }
 
 // Without a command line there is no child to start, and no guessing one: the log and stderr
-// say so, and Self is not started.
+// say so. Self is a path that does not exist: had Run tried to start it, stderr would carry the
+// failure of the start (fork/exec) and not the absence of a command line, so the message tells
+// the two apart without waiting to see whether anything ran.
 func TestRun_WithoutChildArgv_ErrorSpawnAndNothingStarted(t *testing.T) {
 	stateDir := t.TempDir()
-	self, record := recordingSelf(t)
+	self := filepath.Join(t.TempDir(), "absent")
 	var stderr strings.Builder
 	o := Options{Event: "session-end", Cwd: t.TempDir(), StateDir: stateDir, Self: self, Stderr: &stderr}
 
@@ -147,12 +153,8 @@ func TestRun_WithoutChildArgv_ErrorSpawnAndNothingStarted(t *testing.T) {
 	if line := lastLogLine(t, stateDir); !strings.Contains(line, "outcome=error:spawn") {
 		t.Errorf("log line = %q, want outcome=error:spawn", line)
 	}
-	if !strings.Contains(stderr.String(), "error:spawn") {
-		t.Errorf("stderr = %q, want it to mention error:spawn", stderr.String())
-	}
-	time.Sleep(200 * time.Millisecond)
-	if _, err := os.Stat(record); err == nil {
-		t.Error("Self was started with no command line to give it")
+	if want := "sync-trigger: error:spawn: no command line was given for the child\n"; stderr.String() != want {
+		t.Errorf("stderr = %q, want %q", stderr.String(), want)
 	}
 }
 

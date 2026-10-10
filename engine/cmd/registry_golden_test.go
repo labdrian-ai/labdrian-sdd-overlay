@@ -66,7 +66,7 @@ type registryWorld struct {
 
 func newRegistryWorld(t *testing.T) *registryWorld {
 	t.Helper()
-	w := &registryWorld{t: t, bin: reviewReceiptBinary(t), dir: t.TempDir(), names: map[string]string{}, env: goldenEnvironment()}
+	w := &registryWorld{t: t, bin: engineBinary(t), dir: t.TempDir(), names: map[string]string{}, env: goldenEnvironment()}
 	w.name(w.dir, "<WORLD>")
 	// No case runs a Pi that is installed on the machine: the PATH of the test run, which the
 	// program inherits, holds a refusing `pi` in front of any real one (TestMain), and the run

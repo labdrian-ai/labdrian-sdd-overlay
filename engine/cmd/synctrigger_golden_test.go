@@ -35,8 +35,12 @@ import (
 //
 // and read the diff before committing it.
 //
-// The longterm-mem the child finds is a script the case writes: it records its working directory
-// and arguments and exits with the code the case chose. Nothing here starts the real one.
+// The helpers this file shares with the other golden tests are where they are defined:
+// engineBinary and goldenEnvironment in review_receipt_golden_test.go (the binary built once for
+// the run, and the environment the program and git run in), ensureNewline and goldenDifference in
+// shaper_golden_test.go (the end of a stream, and the first difference of two transcripts).
+
+// updateSyncTriggerGolden is the flag that rewrites the golden files.
 var updateSyncTriggerGolden = flag.Bool("update-synctrigger-golden", false, "rewrite the golden files of sync-trigger")
 
 // syncTriggerLogWait bounds the wait for the detached child to write its line.
@@ -68,13 +72,19 @@ func newSyncTriggerWorld(t *testing.T) *syncTriggerWorld {
 		}
 		return d
 	}
-	w := &syncTriggerWorld{t: t, bin: reviewReceiptBinary(t), state: dir(), cwd: dir(), home: dir()}
+	w := &syncTriggerWorld{t: t, bin: engineBinary(t), state: dir(), cwd: dir(), home: dir()}
+	for _, pair := range [][2]string{{w.state, w.cwd}, {w.state, w.home}, {w.cwd, w.home}} {
+		if pathsNest(pair[0], pair[1]) {
+			t.Fatalf("the directories of the world %q and %q nest, so the transcript could not tell them apart", pair[0], pair[1])
+		}
+	}
 	w.calls = filepath.Join(w.state, "calls.txt")
 	return w
 }
 
 // memory writes the script that stands for longterm-mem into dir/bin: it records where it ran
-// and with what, prints stderr text on stderr, and exits with code. mode is the file mode.
+// and with what, prints stderr text on stderr, and exits with code. mode is the file mode. The
+// script is all the child finds to run: nothing here starts the real longterm-mem.
 func (w *syncTriggerWorld) memory(dir string, code int, stderr string, mode os.FileMode) {
 	w.t.Helper()
 	script := "#!/bin/sh\n" +
@@ -91,10 +101,10 @@ func (w *syncTriggerWorld) memory(dir string, code int, stderr string, mode os.F
 	}
 }
 
-// run records one invocation of 'sync-trigger <args>' started in dir. When wait is set the
-// command is a parent, which returns before its child has written the log, so the case waits for
-// the line.
-func (w *syncTriggerWorld) run(dir string, wait bool, args ...string) {
+// run records one invocation of 'sync-trigger <args>' started in dir. When waitIn is not empty
+// the command is a parent, which returns before its child has written the log, so the case waits
+// for the child's line in the log under waitIn (the state directory the run was given or defaults to).
+func (w *syncTriggerWorld) run(dir, waitIn string, args ...string) {
 	w.t.Helper()
 	cmd := exec.Command(w.bin, append([]string{"sync-trigger"}, args...)...)
 	cmd.Dir = dir
@@ -110,24 +120,35 @@ func (w *syncTriggerWorld) run(dir string, wait bool, args ...string) {
 		code = exit.ExitCode()
 	}
 	fmt.Fprintf(&w.b, "$ sync-trigger %s\nexit: %d\n--- stdout ---\n%s--- stderr ---\n%s\n", strings.Join(args, " "), code, ensureNewline(stdout.String()), ensureNewline(stderr.String()))
-	if wait {
-		w.waitForLog()
+	if waitIn != "" {
+		w.waitForLog(waitIn)
 	}
 }
 
-// waitForLog waits until the log holds a line of the child.
-func (w *syncTriggerWorld) waitForLog() {
+// logHoldsAChildLine says whether the log holds a complete line of the child: one with its
+// outcome, ended by a newline. The child writes the line after it has run, and what the script
+// recorded is written before it, so a complete line means the case can read both.
+func logHoldsAChildLine(log []byte) bool {
+	for _, line := range bytes.SplitAfter(log, []byte("\n")) {
+		if bytes.HasSuffix(line, []byte("\n")) && bytes.Contains(line, []byte("outcome=")) && bytes.Contains(line, []byte("exit=")) {
+			return true
+		}
+	}
+	return false
+}
+
+// waitForLog waits until the log under root holds a complete line of the child. It looks in that
+// directory only, so a log of another directory cannot satisfy it.
+func (w *syncTriggerWorld) waitForLog(root string) {
 	w.t.Helper()
 	deadline := time.Now().Add(syncTriggerLogWait)
 	for time.Now().Before(deadline) {
-		for _, root := range []string{w.state, filepath.Join(w.home, ".labdrian-overlay")} {
-			if data, err := os.ReadFile(filepath.Join(root, "logs", "sync-trigger.log")); err == nil && bytes.Contains(data, []byte("outcome=")) {
-				return
-			}
+		if data, err := os.ReadFile(filepath.Join(root, "logs", "sync-trigger.log")); err == nil && logHoldsAChildLine(data) {
+			return
 		}
 		time.Sleep(20 * time.Millisecond)
 	}
-	w.t.Fatalf("the child wrote no line to the log within %s", syncTriggerLogWait)
+	w.t.Fatalf("the child wrote no line to the log under %s within %s", root, syncTriggerLogWait)
 }
 
 // report records the log under root (with the time and the duration of each line left out), what
@@ -180,12 +201,32 @@ func (w *syncTriggerWorld) report(label, root string) {
 	fmt.Fprintf(&w.b, "files: %s\n\n", strings.Join(paths, ", "))
 }
 
-func (w *syncTriggerWorld) text() string {
-	text := w.b.String()
-	for _, n := range []struct{ path, name string }{{w.state, "<STATE>"}, {w.cwd, "<CWD>"}, {w.home, "<HOME>"}} {
+// pathName is a path of the world and the placeholder a transcript writes in its place.
+type pathName struct{ path, name string }
+
+// maskPaths writes each path of names as its placeholder, the longest first, so that a path inside
+// another is named as itself.
+func maskPaths(text string, names []pathName) string {
+	ordered := append([]pathName(nil), names...)
+	sort.SliceStable(ordered, func(i, j int) bool { return len(ordered[i].path) > len(ordered[j].path) })
+	for _, n := range ordered {
 		text = strings.ReplaceAll(text, n.path, n.name)
 	}
 	return text
+}
+
+// pathsNest says whether one path is the other or inside it (a shared prefix of the spelling, as in
+// /w/a and /w/ab, is not nesting).
+func pathsNest(a, b string) bool {
+	inside := func(outer, inner string) bool {
+		rel, err := filepath.Rel(outer, inner)
+		return err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
+	}
+	return inside(a, b) || inside(b, a)
+}
+
+func (w *syncTriggerWorld) text() string {
+	return maskPaths(w.b.String(), []pathName{{w.state, "<STATE>"}, {w.cwd, "<CWD>"}, {w.home, "<HOME>"}})
 }
 
 type syncTriggerCase struct {
@@ -197,79 +238,79 @@ func syncTriggerCases() []syncTriggerCase {
 	return []syncTriggerCase{
 		{"session-end-runs-the-sync-in-the-project", func(w *syncTriggerWorld) {
 			w.memory(w.state, 0, "", 0o755)
-			w.run(w.home, true, "--event", "session-end", "--cwd", w.cwd, "--state-dir", w.state)
+			w.run(w.home, w.state, "--event", "session-end", "--cwd", w.cwd, "--state-dir", w.state)
 			w.report("after the parent and its child", w.state)
 		}},
 		{"archive-runs-the-sync-in-the-project", func(w *syncTriggerWorld) {
 			w.memory(w.state, 0, "", 0o755)
-			w.run(w.home, true, "--event", "archive", "--cwd", w.cwd, "--state-dir", w.state)
+			w.run(w.home, w.state, "--event", "archive", "--cwd", w.cwd, "--state-dir", w.state)
 			w.report("after the parent and its child", w.state)
 		}},
 		{"a-relative-cwd-is-made-absolute", func(w *syncTriggerWorld) {
 			w.memory(w.state, 0, "", 0o755)
-			w.run(w.cwd, true, "--event", "session-end", "--cwd", ".", "--state-dir", w.state)
+			w.run(w.cwd, w.state, "--event", "session-end", "--cwd", ".", "--state-dir", w.state)
 			w.report("after the parent and its child", w.state)
 		}},
 		{"the-state-directory-defaults-to-the-home", func(w *syncTriggerWorld) {
 			home := filepath.Join(w.home, ".labdrian-overlay")
 			w.memory(home, 0, "", 0o755)
-			w.run(w.cwd, true, "--event", "session-end", "--cwd", w.cwd)
+			w.run(w.cwd, home, "--event", "session-end", "--cwd", w.cwd)
 			w.report("after the parent and its child (the home's overlay directory)", home)
 		}},
 		{"an-unknown-event-is-a-usage-line-on-stderr", func(w *syncTriggerWorld) {
-			w.run(w.home, false, "--event", "bogus", "--cwd", w.cwd, "--state-dir", w.state)
+			w.run(w.home, "", "--event", "bogus", "--cwd", w.cwd, "--state-dir", w.state)
 			w.report("nothing is opened", w.state)
 		}},
 		{"no-event-is-a-usage-line-on-stderr", func(w *syncTriggerWorld) {
-			w.run(w.home, false, "--cwd", w.cwd, "--state-dir", w.state)
+			w.run(w.home, "", "--cwd", w.cwd, "--state-dir", w.state)
 			w.report("nothing is opened", w.state)
 		}},
 		{"no-cwd-is-a-usage-line-on-stderr", func(w *syncTriggerWorld) {
-			w.run(w.home, false, "--event", "session-end", "--state-dir", w.state)
+			w.run(w.home, "", "--event", "session-end", "--state-dir", w.state)
 			w.report("nothing is opened", w.state)
 		}},
 		{"no-longterm-mem-is-skipped", func(w *syncTriggerWorld) {
-			w.run(w.home, true, "--event", "session-end", "--cwd", w.cwd, "--state-dir", w.state)
+			w.run(w.home, w.state, "--event", "session-end", "--cwd", w.cwd, "--state-dir", w.state)
 			w.report("after the parent and its child", w.state)
 		}},
 		{"a-longterm-mem-that-cannot-run-is-reported", func(w *syncTriggerWorld) {
 			w.memory(w.state, 0, "", 0o644)
-			w.run(w.home, true, "--event", "session-end", "--cwd", w.cwd, "--state-dir", w.state)
+			w.run(w.home, w.state, "--event", "session-end", "--cwd", w.cwd, "--state-dir", w.state)
 			w.report("after the parent and its child", w.state)
 		}},
 		{"the-child-reports-no-vault", func(w *syncTriggerWorld) {
 			w.memory(w.state, 3, "", 0o755)
-			w.run(w.home, false, "--child", "--event", "session-end", "--cwd", w.cwd, "--state-dir", w.state)
+			w.run(w.home, "", "--child", "--event", "session-end", "--cwd", w.cwd, "--state-dir", w.state)
 			w.report("after the child", w.state)
 		}},
 		{"the-child-reports-no-project", func(w *syncTriggerWorld) {
 			w.memory(w.state, 2, "project could not be resolved from the working directory", 0o755)
-			w.run(w.home, false, "--child", "--event", "archive", "--cwd", w.cwd, "--state-dir", w.state)
+			w.run(w.home, "", "--child", "--event", "archive", "--cwd", w.cwd, "--state-dir", w.state)
 			w.report("after the child", w.state)
 		}},
 		{"the-child-reports-a-usage-error", func(w *syncTriggerWorld) {
 			w.memory(w.state, 2, "flag provided but not defined", 0o755)
-			w.run(w.home, false, "--child", "--event", "session-end", "--cwd", w.cwd, "--state-dir", w.state)
+			w.run(w.home, "", "--child", "--event", "session-end", "--cwd", w.cwd, "--state-dir", w.state)
 			w.report("after the child", w.state)
 		}},
 		{"the-child-reports-engram-unavailable", func(w *syncTriggerWorld) {
 			w.memory(w.state, 4, "", 0o755)
-			w.run(w.home, false, "--child", "--event", "session-end", "--cwd", w.cwd, "--state-dir", w.state)
+			w.run(w.home, "", "--child", "--event", "session-end", "--cwd", w.cwd, "--state-dir", w.state)
 			w.report("after the child", w.state)
 		}},
 		{"the-child-reports-a-vault-failure", func(w *syncTriggerWorld) {
 			w.memory(w.state, 5, "", 0o755)
-			w.run(w.home, false, "--child", "--event", "session-end", "--cwd", w.cwd, "--state-dir", w.state)
+			w.run(w.home, "", "--child", "--event", "session-end", "--cwd", w.cwd, "--state-dir", w.state)
 			w.report("after the child", w.state)
 		}},
 		{"the-child-reports-any-other-exit", func(w *syncTriggerWorld) {
 			w.memory(w.state, 7, "", 0o755)
-			w.run(w.home, false, "--child", "--event", "session-end", "--cwd", w.cwd, "--state-dir", w.state)
+			w.run(w.home, "", "--child", "--event", "session-end", "--cwd", w.cwd, "--state-dir", w.state)
 			w.report("after the child", w.state)
 		}},
 		{"the-child-without-an-event-never-runs-the-sync", func(w *syncTriggerWorld) {
 			w.memory(w.state, 0, "", 0o755)
-			w.run(w.home, false, "--child", "--cwd", w.cwd, "--state-dir", w.state)
+			w.run(w.home, "", "--child", "--cwd", w.cwd, "--state-dir", w.state)
 			w.report("after the child", w.state)
 		}},
 	}
@@ -319,7 +360,7 @@ func TestSyncTriggerGoldenCasesAreDistinctFiles(t *testing.T) {
 	}
 	entries, err := os.ReadDir(filepath.Join("testdata", "synctrigger-golden"))
 	if err != nil {
-		t.Skipf("no golden files yet: %v", err)
+		t.Fatalf("the golden files are missing, and with them the check that none belongs to no case: %v (record them with -update-synctrigger-golden)", err)
 	}
 	for _, e := range entries {
 		if name := strings.TrimSuffix(e.Name(), ".golden"); !seen[name] {
