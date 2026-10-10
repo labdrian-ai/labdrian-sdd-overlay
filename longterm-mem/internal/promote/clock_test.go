@@ -48,7 +48,7 @@ func TestPromote_DatesTheNewPageAndTheLogWithTheWritersClock(t *testing.T) {
 	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Addresses: staticAddress(testAddress), Clock: clock}
 	obs := memory.Observation{ID: 703, Type: "decision", Title: "Dated", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1, Pinned: true}
 
-	result, err := w.Promote(obs, false)
+	result, err := w.Promote(t.Context(), obs, false)
 	if err != nil {
 		t.Fatalf("Promote: %v", err)
 	}
@@ -74,7 +74,7 @@ func TestPromote_RefusesAWriterWithoutAClockAndWritesNothing(t *testing.T) {
 	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}}
 	obs := memory.Observation{ID: 702, Type: "decision", Title: "No Clock", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1, Pinned: true}
 
-	result, err := w.Promote(obs, false)
+	result, err := w.Promote(t.Context(), obs, false)
 	if err == nil {
 		t.Fatalf("Promote = %+v, nil error, want a writer without a clock refused", result)
 	}

@@ -1,10 +1,13 @@
 package vault
 
 import (
+	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 // writeAllocator materializes a fixture scripts/allocate-address.sh under root: a real shell
@@ -26,7 +29,7 @@ func TestAddressAllocatorReturnsTheAddressTheScriptPrints(t *testing.T) {
 	root := t.TempDir()
 	writeAllocator(t, root, "#!/bin/sh\necho c-000042\n")
 
-	address, err := AddressAllocator{Root: root}.NextAddress()
+	address, err := AddressAllocator{Root: root}.NextAddress(t.Context())
 	if err != nil {
 		t.Fatalf("NextAddress: %v", err)
 	}
@@ -42,11 +45,11 @@ func TestAddressAllocatorRunsTheScriptInTheVaultRoot(t *testing.T) {
 	writeAllocator(t, root, "#!/bin/sh\nn=0\n[ -f .counter ] && read n < .counter\nn=$((n+1))\necho \"$n\" > .counter\nprintf 'c-%06d\\n' \"$n\"\n")
 	allocator := AddressAllocator{Root: root}
 
-	first, err := allocator.NextAddress()
+	first, err := allocator.NextAddress(t.Context())
 	if err != nil {
 		t.Fatalf("NextAddress (first): %v", err)
 	}
-	second, err := allocator.NextAddress()
+	second, err := allocator.NextAddress(t.Context())
 	if err != nil {
 		t.Fatalf("NextAddress (second): %v", err)
 	}
@@ -61,7 +64,7 @@ func TestAddressAllocatorReportsAScriptThatFails(t *testing.T) {
 	root := t.TempDir()
 	writeAllocator(t, root, "#!/bin/sh\necho 'the counter is locked' >&2\nexit 3\n")
 
-	address, err := AddressAllocator{Root: root}.NextAddress()
+	address, err := AddressAllocator{Root: root}.NextAddress(t.Context())
 	if err == nil {
 		t.Fatalf("NextAddress = %q, nil error, want the failure of the script", address)
 	}
@@ -80,7 +83,7 @@ func TestAddressAllocatorReportsAScriptThatPrintsNoAddress(t *testing.T) {
 	root := t.TempDir()
 	writeAllocator(t, root, "#!/bin/sh\nprintf '  \\n'\n")
 
-	address, err := AddressAllocator{Root: root}.NextAddress()
+	address, err := AddressAllocator{Root: root}.NextAddress(t.Context())
 	if err == nil {
 		t.Fatalf("NextAddress = %q, nil error, want an error for a script that printed nothing", address)
 	}
@@ -92,9 +95,70 @@ func TestAddressAllocatorReportsAScriptThatPrintsNoAddress(t *testing.T) {
 // A vault with no allocator script is not a vault this adapter can allocate in, and the runner's refusal
 // is carried up, wrapped in what was being done.
 func TestAddressAllocatorReportsAVaultWithoutTheScript(t *testing.T) {
-	_, err := AddressAllocator{Root: t.TempDir()}.NextAddress()
+	_, err := AddressAllocator{Root: t.TempDir()}.NextAddress(t.Context())
 	if err == nil {
 		t.Fatal("NextAddress = nil error, want an error for a vault with no allocator script")
+	}
+	if !strings.Contains(err.Error(), "allocate address") {
+		t.Errorf("error %q does not say what was being done", err)
+	}
+}
+
+// The address becomes a file name and a manifest key, so stdout that is more than one line (a warning
+// ahead of the address, say) is a script that did not answer as the contract says, and is refused
+// instead of being handed on as the address. A trailing newline, or surrounding blanks, are not lines.
+func TestAddressAllocatorRefusesOutputOfMoreThanOneLine(t *testing.T) {
+	root := t.TempDir()
+	writeAllocator(t, root, "#!/bin/sh\necho 'warning: the counter file was recreated'\necho c-000001\n")
+
+	address, err := AddressAllocator{Root: root}.NextAddress(t.Context())
+	if err == nil {
+		t.Fatalf("NextAddress = %q, nil error, want a script that printed two lines refused", address)
+	}
+	if address != "" {
+		t.Errorf("address = %q alongside an error, want none", address)
+	}
+	if !strings.Contains(err.Error(), "more than one line") {
+		t.Errorf("error %q does not say the script printed more than one line", err)
+	}
+}
+
+// A script that hangs is stopped by the adapter's own timeout when the caller set no deadline: the call
+// returns, with the script killed, and the error says the deadline passed. The timeout is the field the
+// test shortens; the production bound is the same code path with allocateTimeout in it.
+func TestAddressAllocatorStopsAHungScriptAtItsOwnTimeout(t *testing.T) {
+	root := t.TempDir()
+	writeAllocator(t, root, "#!/bin/sh\nexec sleep 30\n")
+
+	started := time.Now()
+	address, err := AddressAllocator{Root: root, Timeout: 200 * time.Millisecond}.NextAddress(t.Context())
+	if elapsed := time.Since(started); elapsed > 10*time.Second {
+		t.Errorf("NextAddress took %v: the script was not killed at the timeout", elapsed)
+	}
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("NextAddress = (%q, %v), want an error that is context.DeadlineExceeded", address, err)
+	}
+}
+
+// A caller that cancels, or whose deadline passes, ends the allocation: the script is killed with its
+// children (the exec'd sleep would otherwise outlive the test by half a minute) and the error says the
+// context ended, not that the script exited 124.
+func TestAddressAllocatorStopsWhenTheCallersContextEnds(t *testing.T) {
+	root := t.TempDir()
+	writeAllocator(t, root, "#!/bin/sh\nexec sleep 30\n")
+	ctx, cancel := context.WithTimeout(t.Context(), 200*time.Millisecond)
+	defer cancel()
+
+	started := time.Now()
+	address, err := AddressAllocator{Root: root}.NextAddress(ctx)
+	if elapsed := time.Since(started); elapsed > 10*time.Second {
+		t.Errorf("NextAddress took %v: the script was not killed when the context ended", elapsed)
+	}
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("NextAddress = (%q, %v), want an error that is context.DeadlineExceeded", address, err)
+	}
+	if address != "" {
+		t.Errorf("address = %q alongside an error, want none", address)
 	}
 	if !strings.Contains(err.Error(), "allocate address") {
 		t.Errorf("error %q does not say what was being done", err)

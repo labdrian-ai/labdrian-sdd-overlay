@@ -21,21 +21,37 @@ const allocateTimeout = 10 * time.Second
 type AddressAllocator struct {
 	// Root is the vault checkout the script belongs to and runs in.
 	Root string
+	// Timeout bounds one call; zero means allocateTimeout. It is a field so that a test can shorten the
+	// bound it proves, instead of waiting out the real one.
+	Timeout time.Duration
 }
 
 // NextAddress runs scripts/allocate-address.sh from the vault root and returns the address it printed,
-// without the newline. A script that cannot run, exits non-zero or prints nothing is an error.
+// without the newline. A script that cannot run, exits non-zero, prints nothing or prints more than one
+// line is an error: the address becomes a file name and a manifest key, so output that is not exactly one
+// line (a warning ahead of the address, say) is refused rather than passed on as one.
+//
+// The call is bound by the adapter's timeout (allocateTimeout unless Timeout says otherwise) and by ctx,
+// whichever ends first: the script is killed, with the processes it started, and the error says the
+// context ended.
 //
 // The errors carry no package prefix of their own: the caller that owns the operation says what it was
 // doing.
-func (a AddressAllocator) NextAddress() (string, error) {
+func (a AddressAllocator) NextAddress(ctx context.Context) (string, error) {
 	runner := &Runner{Root: a.Root}
-	ctx, cancel := context.WithTimeout(context.Background(), allocateTimeout)
+	timeout := a.Timeout
+	if timeout == 0 {
+		timeout = allocateTimeout
+	}
+	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
 	stdout, stderr, exitCode, err := runner.Run(ctx, allocateScript)
 	if err != nil {
 		return "", fmt.Errorf("allocate address: %w", err)
+	}
+	if ctxErr := ctx.Err(); exitCode == timeoutExitCode && ctxErr != nil {
+		return "", fmt.Errorf("allocate address: %w", ctxErr)
 	}
 	if exitCode != 0 {
 		return "", fmt.Errorf("%s exited %d: %s", allocateScript, exitCode, strings.TrimSpace(string(stderr)))
@@ -43,6 +59,9 @@ func (a AddressAllocator) NextAddress() (string, error) {
 	address := strings.TrimSpace(string(stdout))
 	if address == "" {
 		return "", fmt.Errorf("%s produced no address", allocateScript)
+	}
+	if strings.ContainsAny(address, "\r\n") {
+		return "", fmt.Errorf("%s printed more than one line", allocateScript)
 	}
 	return address, nil
 }

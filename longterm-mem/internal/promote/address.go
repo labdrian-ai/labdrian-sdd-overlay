@@ -1,6 +1,7 @@
 package promote
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -21,11 +22,12 @@ import (
 // AddressAllocator, which runs scripts/allocate-address.sh under its lock),
 // and a test hands it a fake.
 //
-// An allocator that cannot allocate returns an error and no address; promote
+// The context is the caller's: cancelling it abandons the allocation. An
+// allocator that cannot allocate returns an error and no address; promote
 // writes nothing for that observation. An address handed out is spent
 // whether or not the page is ever written, as the vault's counter is.
 type AddressAllocator interface {
-	NextAddress() (string, error)
+	NextAddress(ctx context.Context) (string, error)
 }
 
 // errNoAddressAllocator is what a promotion that needs a new address answers
@@ -45,7 +47,7 @@ const manifestRelPath = ".raw/.manifest.json"
 // taken from addresses and recorded in .raw/.manifest.json's address_map,
 // keyed by the page's address-derived path, dated at (UTC) when the manifest
 // has to be created.
-func allocateAddress(vaultRoot, project string, engramID int, addresses AddressAllocator, at time.Time) (string, error) {
+func allocateAddress(ctx context.Context, vaultRoot, project string, engramID int, addresses AddressAllocator, at time.Time) (string, error) {
 	if existing, ok, err := findPromotedPage(vaultRoot, project, engramID); err != nil {
 		return "", err
 	} else if ok {
@@ -55,7 +57,7 @@ func allocateAddress(vaultRoot, project string, engramID int, addresses AddressA
 	if memory.IsMissing(addresses) {
 		return "", errNoAddressAllocator
 	}
-	address, err := addresses.NextAddress()
+	address, err := addresses.NextAddress(ctx)
 	if err != nil {
 		return "", fmt.Errorf("promote: %w", err)
 	}

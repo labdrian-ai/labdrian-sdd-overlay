@@ -94,7 +94,7 @@ func Sync(ctx context.Context, deps Deps, project string) (SyncReport, error) {
 			continue
 		}
 
-		result, err := deps.Writer.Promote(obs, false)
+		result, err := deps.Writer.Promote(ctx, obs, false)
 		if err != nil {
 			report.Failed = append(report.Failed, SyncFailure{ObservationID: obs.ID, Err: err})
 			continue
