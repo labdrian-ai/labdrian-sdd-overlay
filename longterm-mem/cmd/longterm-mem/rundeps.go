@@ -8,6 +8,7 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/query"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vault"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultfs"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vecindex"
 )
 
@@ -136,11 +137,12 @@ func observationRowsForIndex(store *engram.Store, project string) ([]vecindex.Ro
 // extraction so R-012 and R-032 genuinely share one code path rather than
 // two callers separately reconstructing the same Writer.
 func runPromote(ctx context.Context, store *engram.Store, vaultRoot string, engramID int64) (promote.Result, error) {
-	precedence, err := promote.LoadPrecedenceStore(vaultRoot)
+	vaultFiles := vaultfs.New(vaultRoot)
+	precedence, err := vaultFiles.LoadPrecedence()
 	if err != nil {
 		return promote.Result{}, err
 	}
-	writer := &promote.Writer{VaultRoot: vaultRoot, Store: precedence, Addresses: vault.AddressAllocator{Root: vaultRoot}, Clock: utcClock{}}
+	writer := &promote.Writer{VaultRoot: vaultRoot, Store: precedence, Precedence: vaultFiles, Addresses: vault.AddressAllocator{Root: vaultRoot}, Clock: utcClock{}}
 	return promote.ExplicitPromote(ctx, writer, store.ObservationByID, engramID)
 }
 

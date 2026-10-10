@@ -37,6 +37,9 @@ type PropagateReport struct {
 // on, letting the next sync overwrite that edit in silence.
 func Propagate(ctx context.Context, deps Deps, project string) (PropagateReport, error) {
 	var report PropagateReport
+	if err := deps.Writer.checkPrecedence(); err != nil {
+		return PropagateReport{}, err
+	}
 	failed, err := eachPatchTarget(deps, project, func(t patchTarget) error {
 		pagePath := filepath.Join(deps.Writer.VaultRoot, vaultlayout.PagesDir, t.Address+".md")
 		frontmatterHash, _, err := PatchStatusFields(pagePath, t.Status, t.Related)
@@ -62,7 +65,7 @@ func Propagate(ctx context.Context, deps Deps, project string) (PropagateReport,
 	report.Failed = failed
 
 	if len(report.Patched) > 0 {
-		if err := deps.Writer.Store.Save(deps.Writer.VaultRoot); err != nil {
+		if err := deps.Writer.Precedence.SavePrecedence(deps.Writer.Store); err != nil {
 			return report, fmt.Errorf("promote: propagate: persist precedence: %w", err)
 		}
 	}

@@ -38,7 +38,7 @@ func TestWriter_Promote_CorruptedPageInAnotherProjectDoesNotBlockThisOne(t *test
 	writeRawPage(t, vaultRoot, "c-000001.md", "---\nengram_id: 905\nproject: p-one\n---\n\nBody.\n")
 
 	obs := memory.Observation{ID: 905, Type: "decision", Title: "Live Decision", Content: "Body.", Project: "p-two", RevisionCount: 1, TopicKey: "longterm-mem/projectmove-recovery-fixture"}
-	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: clock, Addresses: staticAddress(testAddress)}
+	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Clock: clock, Addresses: staticAddress(testAddress)}
 	result, err := w.Promote(t.Context(), obs, false)
 	if err != nil {
 		t.Fatalf("Promote under p-two was blocked by a corrupted page under p-one: %v", err)
@@ -82,7 +82,7 @@ func TestWriter_Promote_ProjectMoveSupersedesFromTheUpdateBranch(t *testing.T) {
 	revised := successorObs
 	revised.RevisionCount = 2
 	revised.Content = "Body v2."
-	w := &Writer{VaultRoot: vaultRoot, Store: store, Addresses: staticAddress(testAddress), Clock: &fakeClock{at: testInstant}}
+	w := &Writer{VaultRoot: vaultRoot, Store: store, Precedence: &memPrecedence{}, Addresses: staticAddress(testAddress), Clock: &fakeClock{at: testInstant}}
 	result, err := w.Promote(t.Context(), revised, false)
 	if err != nil {
 		t.Fatalf("Promote: %v", err)
@@ -129,7 +129,7 @@ func TestWriter_Promote_ProjectMoveSupersedesEvenWhenTheSuccessorUpdateIsSkipped
 	revised := successorObs
 	revised.RevisionCount = 2
 	revised.Content = "Body v2."
-	w := &Writer{VaultRoot: vaultRoot, Store: store, Addresses: staticAddress(testAddress), Clock: &fakeClock{at: testInstant}}
+	w := &Writer{VaultRoot: vaultRoot, Store: store, Precedence: &memPrecedence{}, Addresses: staticAddress(testAddress), Clock: &fakeClock{at: testInstant}}
 	result, err := w.Promote(t.Context(), revised, false)
 	if err != nil {
 		t.Fatalf("Promote: %v", err)
@@ -167,7 +167,7 @@ func TestWriter_Promote_ProjectMoveKeepsPatchedHashesWhenALaterPageFails(t *test
 
 	moved := obs
 	moved.Project = "p-two"
-	w := &Writer{VaultRoot: vaultRoot, Store: store, Addresses: staticAddress(testAddress), Clock: &fakeClock{at: testInstant}}
+	w := &Writer{VaultRoot: vaultRoot, Store: store, Precedence: &memPrecedence{}, Addresses: staticAddress(testAddress), Clock: &fakeClock{at: testInstant}}
 	if _, err := w.Promote(t.Context(), moved, false); err == nil {
 		t.Fatalf("Promote = nil error, want the unreachable second orphan reported")
 	} else if !strings.Contains(err.Error(), "c-999999") {
@@ -178,9 +178,9 @@ func TestWriter_Promote_ProjectMoveKeepsPatchedHashesWhenALaterPageFails(t *test
 	if !strings.Contains(old, "status: superseded") {
 		t.Fatalf("the first orphan was not superseded; got:\n%s", old)
 	}
-	persisted, err := LoadPrecedenceStore(vaultRoot)
+	persisted, err := w.Precedence.LoadPrecedence()
 	if err != nil {
-		t.Fatalf("LoadPrecedenceStore: %v", err)
+		t.Fatalf("LoadPrecedence: %v", err)
 	}
 	entry, ok := persisted.Get(firstOrphan.Address)
 	if !ok || !entry.MatchesPage(old) {
@@ -217,7 +217,7 @@ func TestWriter_Promote_ProjectMoveKeepsPatchedHashesWhenALaterPageIsUnparseable
 
 	moved := obs
 	moved.Project = "p-two"
-	w := &Writer{VaultRoot: vaultRoot, Store: store, Addresses: staticAddress(testAddress), Clock: &fakeClock{at: testInstant}}
+	w := &Writer{VaultRoot: vaultRoot, Store: store, Precedence: &memPrecedence{}, Addresses: staticAddress(testAddress), Clock: &fakeClock{at: testInstant}}
 	if _, err := w.Promote(t.Context(), moved, false); err == nil {
 		t.Fatalf("Promote = nil error, want the unparseable second orphan reported")
 	} else if !strings.Contains(err.Error(), "c-000003") {
@@ -228,9 +228,9 @@ func TestWriter_Promote_ProjectMoveKeepsPatchedHashesWhenALaterPageIsUnparseable
 	if !strings.Contains(old, "status: superseded") {
 		t.Fatalf("the first orphan was not superseded; got:\n%s", old)
 	}
-	persisted, err := LoadPrecedenceStore(vaultRoot)
+	persisted, err := w.Precedence.LoadPrecedence()
 	if err != nil {
-		t.Fatalf("LoadPrecedenceStore: %v", err)
+		t.Fatalf("LoadPrecedence: %v", err)
 	}
 	entry, ok := persisted.Get(firstOrphan.Address)
 	if !ok || !entry.MatchesPage(old) {

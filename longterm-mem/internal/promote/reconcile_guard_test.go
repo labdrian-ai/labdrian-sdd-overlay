@@ -50,13 +50,14 @@ func TestReconcile_ShapeCheckIsTheOnlyThingRefusingATraversalThatNamesItself(t *
 		t.Fatalf("write the outside file: %v", err)
 	}
 
-	if _, err := Reconcile(vaultRoot, project, traversal); !errors.Is(err, ErrInvalidAddress) {
+	repo := &memPrecedence{}
+	if _, err := Reconcile(vaultRoot, project, traversal, repo); !errors.Is(err, ErrInvalidAddress) {
 		t.Fatalf("Reconcile(%q) error = %v, want ErrInvalidAddress -- only the address-shape check stands between a self-naming traversal and adoption of a file outside %s", traversal, err, vaultlayout.PagesDir)
 	}
 
-	store, err := LoadPrecedenceStore(vaultRoot)
+	store, err := repo.LoadPrecedence()
 	if err != nil {
-		t.Fatalf("LoadPrecedenceStore: %v", err)
+		t.Fatalf("LoadPrecedence: %v", err)
 	}
 	if len(store) != 0 {
 		t.Fatalf("a refused traversal still wrote %d sidecar entr(ies): %+v", len(store), store)
@@ -100,7 +101,7 @@ func TestReconcile_FollowsASymlinkedPageBecauseTheVaultMayBeOne(t *testing.T) {
 		t.Fatalf("symlink: %v", err)
 	}
 
-	outcome, err := Reconcile(vaultRoot, project, address)
+	outcome, err := Reconcile(vaultRoot, project, address, &memPrecedence{})
 	if err != nil {
 		t.Fatalf("Reconcile on a symlinked page: %v -- a vault reached through a symlink is an ordinary setup, and refusing it would be a new wedge", err)
 	}
@@ -118,7 +119,7 @@ func TestReconcile_MalformedAddressesCarryTheInvalidAddressSentinel(t *testing.T
 	vaultRoot := t.TempDir()
 
 	for _, address := range []string{"../../secret", "../secret", "nested/c-000607", "c-000607.md", "", "c-00060", "C-000607"} {
-		if _, err := Reconcile(vaultRoot, project, address); !errors.Is(err, ErrInvalidAddress) {
+		if _, err := Reconcile(vaultRoot, project, address, &memPrecedence{}); !errors.Is(err, ErrInvalidAddress) {
 			t.Fatalf("Reconcile(%q) error = %v, want ErrInvalidAddress", address, err)
 		}
 	}
@@ -160,7 +161,7 @@ func TestReconcile_AnUnreadableRevisionCarriesTheUnusablePageSentinel(t *testing
 			page.Frontmatter = mutated
 			writePromotedPageAt(t, vaultRoot, address, page)
 
-			if _, err := Reconcile(vaultRoot, project, address); !errors.Is(err, ErrUnusablePage) {
+			if _, err := Reconcile(vaultRoot, project, address, &memPrecedence{}); !errors.Is(err, ErrUnusablePage) {
 				t.Fatalf("Reconcile error = %v, want ErrUnusablePage -- an unreadable page is a vault-data condition, not longterm-mem's own internal fault", err)
 			}
 		})
@@ -197,7 +198,7 @@ func TestReconcile_APageWithNoFrontmatterBlockCarriesTheUnusablePageSentinel(t *
 		t.Fatalf("write %s: %v", full, err)
 	}
 
-	if _, err := Reconcile(vaultRoot, project, address); !errors.Is(err, ErrUnusablePage) {
+	if _, err := Reconcile(vaultRoot, project, address, &memPrecedence{}); !errors.Is(err, ErrUnusablePage) {
 		t.Fatalf("Reconcile error = %v, want ErrUnusablePage -- a page whose frontmatter cannot be parsed is a vault-data condition, not longterm-mem's own internal fault", err)
 	}
 }

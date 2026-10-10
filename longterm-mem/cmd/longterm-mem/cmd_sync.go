@@ -10,6 +10,7 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vault"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultfs"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultreg"
 )
 
@@ -54,7 +55,8 @@ func cmdSync(args []string) int {
 	defer store.Close()
 	declareDegradedEngram(store, "sync")
 
-	precedence, err := promote.LoadPrecedenceStore(vaultRoot)
+	vaultFiles := vaultfs.New(vaultRoot)
+	precedence, err := vaultFiles.LoadPrecedence()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "longterm-mem: sync: %v\n", err)
 		return exitInternal
@@ -71,7 +73,7 @@ func cmdSync(args []string) int {
 	var rebuildErr error
 	deps := promote.Deps{
 		Memory: store,
-		Writer: &promote.Writer{VaultRoot: vaultRoot, Store: precedence, Addresses: vault.AddressAllocator{Root: vaultRoot}, Clock: utcClock{}},
+		Writer: &promote.Writer{VaultRoot: vaultRoot, Store: precedence, Precedence: vaultFiles, Addresses: vault.AddressAllocator{Root: vaultRoot}, Clock: utcClock{}},
 		RebuildIndex: func(ctx context.Context) error {
 			rebuildErr = vault.Rebuild(ctx, runner, false)
 			return rebuildErr

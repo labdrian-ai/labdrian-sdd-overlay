@@ -16,6 +16,7 @@ import (
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultfs"
 )
 
 // WriteSyncState writes a minimal sync-state record at vaultRoot's
@@ -82,16 +83,17 @@ func WriteAddressMap(t *testing.T, vaultRoot string, addressMap map[string]strin
 // promoted page without it is a vault caught mid-crash, not a healthy one.
 func WritePrecedenceEntry(t *testing.T, vaultRoot string, page promote.Page) {
 	t.Helper()
-	store, err := promote.LoadPrecedenceStore(vaultRoot)
+	repo := vaultfs.New(vaultRoot)
+	store, err := repo.LoadPrecedence()
 	if err != nil {
-		t.Fatalf("LoadPrecedenceStore: %v", err)
+		t.Fatalf("LoadPrecedence: %v", err)
 	}
 	store.Set(page.Address, promote.PrecedenceEntry{
 		BodyHash:        sha256Hex(page.Body),
 		FrontmatterHash: sha256Hex(page.Frontmatter),
 	})
-	if err := store.Save(vaultRoot); err != nil {
-		t.Fatalf("PrecedenceStore.Save: %v", err)
+	if err := repo.SavePrecedence(store); err != nil {
+		t.Fatalf("SavePrecedence: %v", err)
 	}
 }
 

@@ -1,13 +1,6 @@
 package promote
 
-import (
-	"encoding/json"
-	"fmt"
-	"os"
-	"path/filepath"
-
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultlayout"
-)
+import "errors"
 
 // PrecedenceEntry is one promoted page's last-written-by-longterm-mem
 // fingerprint (D6): body and frontmatter hashed separately so a
@@ -89,35 +82,10 @@ type PrecedenceRepository interface {
 	SavePrecedence(store PrecedenceStore) error
 }
 
-// LoadPrecedenceStore reads vaultRoot's sidecar precedence file. A missing
-// file returns an empty store, not an error -- nothing has been promoted
-// under this tracking yet.
-func LoadPrecedenceStore(vaultRoot string) (PrecedenceStore, error) {
-	full := filepath.Join(vaultRoot, vaultlayout.PrecedenceFile)
-	data, err := os.ReadFile(full)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return PrecedenceStore{}, nil
-		}
-		return nil, fmt.Errorf("promote: read %s: %w", full, err)
-	}
-	store := PrecedenceStore{}
-	if err := json.Unmarshal(data, &store); err != nil {
-		return nil, fmt.Errorf("promote: parse %s: %w", full, err)
-	}
-	return store, nil
-}
-
-// Save writes s to vaultRoot's sidecar precedence file through
-// address.go's writeFileAtomic (D6), which durably replaces it.
-func (s PrecedenceStore) Save(vaultRoot string) error {
-	full := filepath.Join(vaultRoot, vaultlayout.PrecedenceFile)
-	data, err := json.MarshalIndent(s, "", "  ")
-	if err != nil {
-		return fmt.Errorf("promote: marshal %s: %w", full, err)
-	}
-	return writeFileAtomic(full, append(data, '\n'))
-}
+// errNoPrecedenceRepository is what a Writer without a PrecedenceRepository
+// answers: a port the caller forgot to wire is named, rather than nil-called
+// after pages were already written.
+var errNoPrecedenceRepository = errors.New("promote: the writer has no precedence repository")
 
 // Get returns address's stored entry, if any.
 func (s PrecedenceStore) Get(address string) (PrecedenceEntry, bool) {

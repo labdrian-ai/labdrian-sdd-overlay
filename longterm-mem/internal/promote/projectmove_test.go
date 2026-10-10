@@ -47,7 +47,7 @@ func TestWriter_Promote_ProjectMoveSupersedesOldPage(t *testing.T) {
 
 	moved := obs
 	moved.Project = "p-two"
-	w := &Writer{VaultRoot: vaultRoot, Store: store, Addresses: staticAddress(testAddress), Clock: &fakeClock{at: testInstant}}
+	w := &Writer{VaultRoot: vaultRoot, Store: store, Precedence: &memPrecedence{}, Addresses: staticAddress(testAddress), Clock: &fakeClock{at: testInstant}}
 	result, err := w.Promote(t.Context(), moved, false)
 	if err != nil {
 		t.Fatalf("Promote after project move: %v", err)
@@ -84,7 +84,7 @@ func TestWriter_Promote_ProjectMoveKeepsOldPageOffTheLocalEditPath(t *testing.T)
 
 	moved := obs
 	moved.Project = "p-two"
-	w := &Writer{VaultRoot: vaultRoot, Store: store, Addresses: staticAddress(testAddress), Clock: &fakeClock{at: testInstant}}
+	w := &Writer{VaultRoot: vaultRoot, Store: store, Precedence: &memPrecedence{}, Addresses: staticAddress(testAddress), Clock: &fakeClock{at: testInstant}}
 	if _, err := w.Promote(t.Context(), moved, false); err != nil {
 		t.Fatalf("Promote after project move: %v", err)
 	}
@@ -103,9 +103,9 @@ func TestWriter_Promote_ProjectMoveKeepsOldPageOffTheLocalEditPath(t *testing.T)
 	}
 
 	// The sidecar on disk, not just the in-memory map, must carry it.
-	persisted, err := LoadPrecedenceStore(vaultRoot)
+	persisted, err := w.Precedence.LoadPrecedence()
 	if err != nil {
-		t.Fatalf("LoadPrecedenceStore: %v", err)
+		t.Fatalf("LoadPrecedence: %v", err)
 	}
 	if persisted[oldPage.Address] != entry {
 		t.Fatalf("persisted entry %+v for %s differs from the in-memory one %+v", persisted[oldPage.Address], oldPage.Address, entry)
@@ -121,7 +121,7 @@ func TestWriter_Promote_ProjectMoveIsIdempotent(t *testing.T) {
 
 	moved := obs
 	moved.Project = "p-two"
-	w := &Writer{VaultRoot: vaultRoot, Store: store, Addresses: staticAddress(testAddress), Clock: &fakeClock{at: testInstant}}
+	w := &Writer{VaultRoot: vaultRoot, Store: store, Precedence: &memPrecedence{}, Addresses: staticAddress(testAddress), Clock: &fakeClock{at: testInstant}}
 	if _, err := w.Promote(t.Context(), moved, false); err != nil {
 		t.Fatalf("first Promote after project move: %v", err)
 	}
@@ -177,7 +177,7 @@ func TestWriter_Promote_ProjectMoveLeavesAnExistingSupersessionAlone(t *testing.
 
 	moved := obs
 	moved.Project = "p-two"
-	w := &Writer{VaultRoot: vaultRoot, Store: store, Addresses: staticAddress(testAddress), Clock: &fakeClock{at: testInstant}}
+	w := &Writer{VaultRoot: vaultRoot, Store: store, Precedence: &memPrecedence{}, Addresses: staticAddress(testAddress), Clock: &fakeClock{at: testInstant}}
 	if _, err := w.Promote(t.Context(), moved, false); err != nil {
 		t.Fatalf("Promote after project move: %v", err)
 	}
@@ -201,7 +201,7 @@ func TestWriter_Promote_UnmovedObservationStillReusesItsPage(t *testing.T) {
 	next := obs
 	next.RevisionCount = 2
 	next.Content = "V2."
-	w := &Writer{VaultRoot: vaultRoot, Store: store, Addresses: staticAddress(testAddress), Clock: &fakeClock{at: testInstant}}
+	w := &Writer{VaultRoot: vaultRoot, Store: store, Precedence: &memPrecedence{}, Addresses: staticAddress(testAddress), Clock: &fakeClock{at: testInstant}}
 	result, err := w.Promote(t.Context(), next, false)
 	if err != nil {
 		t.Fatalf("Promote: %v", err)
@@ -238,7 +238,7 @@ func TestWriter_Promote_DistinctObservationsSharingAProjectDoNotCollide(t *testi
 	vaultRoot, store, firstPage := movedFixture(t, first, "c-000001")
 
 	second := memory.Observation{ID: 327, Type: "decision", Title: "Second", Content: "Two.", Project: "p-one", RevisionCount: 1, TopicKey: "longterm-mem/projectmove-fixture"}
-	w := &Writer{VaultRoot: vaultRoot, Store: store, Addresses: staticAddress(testAddress), Clock: &fakeClock{at: testInstant}}
+	w := &Writer{VaultRoot: vaultRoot, Store: store, Precedence: &memPrecedence{}, Addresses: staticAddress(testAddress), Clock: &fakeClock{at: testInstant}}
 	result, err := w.Promote(t.Context(), second, false)
 	if err != nil {
 		t.Fatalf("Promote second observation: %v", err)

@@ -52,10 +52,7 @@ func TestUpdate_UnmodifiedPageUpdatesInPlace(t *testing.T) {
 	}
 	existingPath := writePromotedPage(t, vaultRoot, first)
 
-	store, err := LoadPrecedenceStore(vaultRoot)
-	if err != nil {
-		t.Fatalf("LoadPrecedenceStore: %v", err)
-	}
+	store := PrecedenceStore{}
 	seedPrecedence(store, first)
 
 	clock.Set(time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
@@ -112,10 +109,7 @@ func TestUpdate_RetitleKeepsSameFile(t *testing.T) {
 	}
 	existingPath := writePromotedPage(t, vaultRoot, first)
 
-	store, err := LoadPrecedenceStore(vaultRoot)
-	if err != nil {
-		t.Fatalf("LoadPrecedenceStore: %v", err)
-	}
+	store := PrecedenceStore{}
 	seedPrecedence(store, first)
 
 	obs.Title = "Renamed Title"
@@ -171,10 +165,7 @@ func TestUpdate_LocallyEditedPageSkippedWithDiagnostic(t *testing.T) {
 	}
 	existingPath := writePromotedPage(t, vaultRoot, first)
 
-	store, err := LoadPrecedenceStore(vaultRoot)
-	if err != nil {
-		t.Fatalf("LoadPrecedenceStore: %v", err)
-	}
+	store := PrecedenceStore{}
 	seedPrecedence(store, first)
 
 	// A human/agent edits the page directly in the vault, after
@@ -229,10 +220,7 @@ func TestUpdate_UnmodifiedPageUpdatesNormally(t *testing.T) {
 	}
 	existingPath := writePromotedPage(t, vaultRoot, page)
 
-	store, err := LoadPrecedenceStore(vaultRoot)
-	if err != nil {
-		t.Fatalf("LoadPrecedenceStore: %v", err)
-	}
+	store := PrecedenceStore{}
 	seedPrecedence(store, page)
 
 	// Re-promotion re-renders byte-identical content (nothing changed

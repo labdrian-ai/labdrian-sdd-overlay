@@ -163,7 +163,7 @@ func TestPromote_AsksTheAllocatorWithTheCallersContext(t *testing.T) {
 	type key struct{}
 	ctx := context.WithValue(t.Context(), key{}, "the caller's")
 	allocator := &countingAddresses{AddressAllocator: staticAddress(testAddress)}
-	w := &Writer{VaultRoot: t.TempDir(), Store: PrecedenceStore{}, Addresses: allocator, Clock: &fakeClock{at: testInstant}}
+	w := &Writer{VaultRoot: t.TempDir(), Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Addresses: allocator, Clock: &fakeClock{at: testInstant}}
 	obs := memory.Observation{ID: 704, Type: "decision", Title: "Context", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1, Pinned: true}
 
 	if _, err := w.Promote(ctx, obs, false); err != nil {
@@ -207,7 +207,7 @@ func TestPromote_NoAddressMeansNothingIsWritten(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			vaultRoot := t.TempDir()
 			store := PrecedenceStore{}
-			w := &Writer{VaultRoot: vaultRoot, Store: store, Addresses: addresses, Clock: &fakeClock{at: testInstant}}
+			w := &Writer{VaultRoot: vaultRoot, Store: store, Precedence: &memPrecedence{}, Addresses: addresses, Clock: &fakeClock{at: testInstant}}
 			obs := memory.Observation{ID: 704, Type: "decision", Title: "No Address", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1, Pinned: true}
 
 			result, err := w.Promote(t.Context(), obs, false)

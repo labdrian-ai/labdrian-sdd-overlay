@@ -46,7 +46,8 @@ func TestReconcile_AdoptsARevisionZeroPageAndLeavesTheWedgedState(t *testing.T) 
 
 	store := PrecedenceStore{}
 	seedPrecedence(store, first)
-	if err := store.Save(vaultRoot); err != nil {
+	repo := &memPrecedence{}
+	if err := repo.SavePrecedence(store); err != nil {
 		t.Fatalf("seed sidecar: %v", err)
 	}
 
@@ -70,9 +71,9 @@ func TestReconcile_AdoptsARevisionZeroPageAndLeavesTheWedgedState(t *testing.T) 
 	if err != nil {
 		t.Fatalf("EmitPage (v2): %v", err)
 	}
-	before, err := LoadPrecedenceStore(vaultRoot)
+	before, err := repo.LoadPrecedence()
 	if err != nil {
-		t.Fatalf("LoadPrecedenceStore (before): %v", err)
+		t.Fatalf("LoadPrecedence (before): %v", err)
 	}
 	action, err := UpdateInPlace(before, next, existingPath)
 	if err != nil {
@@ -82,7 +83,7 @@ func TestReconcile_AdoptsARevisionZeroPageAndLeavesTheWedgedState(t *testing.T) 
 		t.Fatalf("fixture is not wedged: UpdateInPlace answered %v before reconcile, want ActionSkippedLocalEdit", action.Kind)
 	}
 
-	outcome, err := Reconcile(vaultRoot, project, address)
+	outcome, err := Reconcile(vaultRoot, project, address, repo)
 	if err != nil {
 		t.Fatalf("Reconcile on a revision-0 page: %v -- revision 0 is an ordinary promoted state, and refusing it declines the population this command exists for", err)
 	}
@@ -90,9 +91,9 @@ func TestReconcile_AdoptsARevisionZeroPageAndLeavesTheWedgedState(t *testing.T) 
 		t.Fatalf("Reconcile outcome = %+v, want the page adopted at revision 0", outcome)
 	}
 
-	after, err := LoadPrecedenceStore(vaultRoot)
+	after, err := repo.LoadPrecedence()
 	if err != nil {
-		t.Fatalf("LoadPrecedenceStore (after): %v", err)
+		t.Fatalf("LoadPrecedence (after): %v", err)
 	}
 	action, err = UpdateInPlace(after, next, existingPath)
 	if err != nil {
@@ -130,15 +131,16 @@ func TestReconcile_RefusesAnAddressOutsideThePagesDirectory(t *testing.T) {
 		t.Fatalf("write the outside file: %v", err)
 	}
 
+	repo := &memPrecedence{}
 	for _, address := range []string{"../../secret", "../secret", "nested/c-000607", "c-000607.md", ""} {
-		if _, err := Reconcile(vaultRoot, project, address); err == nil {
+		if _, err := Reconcile(vaultRoot, project, address, repo); err == nil {
 			t.Fatalf("Reconcile adopted address %q, which is not a promoted-page address", address)
 		}
 	}
 
-	store, err := LoadPrecedenceStore(vaultRoot)
+	store, err := repo.LoadPrecedence()
 	if err != nil {
-		t.Fatalf("LoadPrecedenceStore: %v", err)
+		t.Fatalf("LoadPrecedence: %v", err)
 	}
 	if len(store) != 0 {
 		t.Fatalf("a refused traversal still wrote %d sidecar entr(ies): %+v", len(store), store)
@@ -164,8 +166,12 @@ func TestReconcile_RefusesAPageWhoseFrontmatterDisagrees(t *testing.T) {
 		}
 		writePromotedPageAt(t, vaultRoot, address, page)
 
-		if _, err := Reconcile(vaultRoot, project, address); err == nil {
+		repo := &memPrecedence{}
+		if _, err := Reconcile(vaultRoot, project, address, repo); err == nil {
 			t.Fatalf("Reconcile adopted a file whose own frontmatter names a different address")
+		}
+		if repo.saves != 0 {
+			t.Fatalf("a refused page still wrote the precedence store %d time(s)", repo.saves)
 		}
 	})
 
@@ -178,8 +184,12 @@ func TestReconcile_RefusesAPageWhoseFrontmatterDisagrees(t *testing.T) {
 		}
 		writePromotedPageAt(t, vaultRoot, address, page)
 
-		if _, err := Reconcile(vaultRoot, project, address); err == nil {
+		repo := &memPrecedence{}
+		if _, err := Reconcile(vaultRoot, project, address, repo); err == nil {
 			t.Fatalf("Reconcile adopted a page belonging to another project")
+		}
+		if repo.saves != 0 {
+			t.Fatalf("a refused page still wrote the precedence store %d time(s)", repo.saves)
 		}
 	})
 }

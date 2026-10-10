@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultlayout"
 )
 
@@ -117,7 +118,10 @@ type ReconcileOutcome struct {
 //     change what would be destroyed. The remedy is the human's: keep the
 //     edit (and leave the page refused), or fold it into Engram and let the
 //     ordinary promotion path rewrite the page.
-func Reconcile(vaultRoot, project, address string) (ReconcileOutcome, error) {
+func Reconcile(vaultRoot, project, address string, precedence PrecedenceRepository) (ReconcileOutcome, error) {
+	if memory.IsMissing(precedence) {
+		return ReconcileOutcome{}, errNoPrecedenceRepository
+	}
 	// The address is checked against the allocator's own shape BEFORE it
 	// touches the filesystem, because it is used twice: as a path segment
 	// and as the sidecar key. addressPattern (lint.go) is the same
@@ -174,7 +178,7 @@ func Reconcile(vaultRoot, project, address string) (ReconcileOutcome, error) {
 		return ReconcileOutcome{}, fmt.Errorf("%w: %s belongs to project %q, not %q", ErrNotThatPage, full, got, project)
 	}
 
-	store, err := LoadPrecedenceStore(vaultRoot)
+	store, err := precedence.LoadPrecedence()
 	if err != nil {
 		return ReconcileOutcome{}, err
 	}
@@ -216,7 +220,7 @@ func Reconcile(vaultRoot, project, address string) (ReconcileOutcome, error) {
 		FrontmatterHash:  hashText(fmBlock),
 		PromotedRevision: revision,
 	})
-	if err := store.Save(vaultRoot); err != nil {
+	if err := precedence.SavePrecedence(store); err != nil {
 		return ReconcileOutcome{}, err
 	}
 	return ReconcileOutcome{Address: address, Path: rel, Adopted: true, PromotedRevision: revision}, nil

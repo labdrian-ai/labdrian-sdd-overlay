@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/ops/testdata"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultfs"
 )
 
 // The golden files under testdata/golden pin what Doctor and Status report about a vault, character
@@ -166,6 +167,7 @@ func TestGolden(t *testing.T) {
 
 			doctor, err := Doctor(context.Background(), DoctorDeps{
 				VaultRoot:             vaultRoot,
+				Precedence:            vaultfs.New(vaultRoot),
 				PrerequisitePresent:   func(string) bool { return true },
 				StateDir:              stateDir,
 				LiveObservationIDs:    func(string) ([]int64, error) { return liveIDs, nil },

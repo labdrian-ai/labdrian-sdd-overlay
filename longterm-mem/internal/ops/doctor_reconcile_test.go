@@ -10,6 +10,7 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/ops/testdata"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultfs"
 )
 
 // TestDoctorAndReconcile_CloseTheLoopOnARevisionZeroPage is the whole point
@@ -56,6 +57,7 @@ func TestDoctorAndReconcile_CloseTheLoopOnARevisionZeroPage(t *testing.T) {
 
 	deps := DoctorDeps{
 		VaultRoot:             vaultRoot,
+		Precedence:            vaultfs.New(vaultRoot),
 		PrerequisitePresent:   func(string) bool { return true },
 		StateDir:              t.TempDir(),
 		LiveObservationIDs:    func(string) ([]int64, error) { return nil, nil },
@@ -71,7 +73,7 @@ func TestDoctorAndReconcile_CloseTheLoopOnARevisionZeroPage(t *testing.T) {
 		t.Fatalf("precedence-sidecar-consistency = %+v, want it FAILed naming %s: the fixture is not wedged", got, address)
 	}
 
-	if _, err := promote.Reconcile(vaultRoot, project, address); err != nil {
+	if _, err := promote.Reconcile(vaultRoot, project, address, vaultfs.New(vaultRoot)); err != nil {
 		t.Fatalf("Reconcile on the page doctor just named: %v -- the only advertised repair declined the state doctor calls unrepairable", err)
 	}
 

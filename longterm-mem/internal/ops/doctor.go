@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/embed"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultlayout"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vecindex"
@@ -50,6 +51,29 @@ type Check struct {
 	Detail string `json:"detail,omitempty"`
 }
 
+// PrecedenceReader is the port through which Doctor reads the precedence
+// store of the vault it inspects: longterm-mem's record of what it last wrote
+// for each promoted page. The package owns it, asks for the read half only
+// (a diagnostic never writes), and is satisfied by the vault file system
+// adapter and by promote.PrecedenceRepository alike.
+type PrecedenceReader interface {
+	LoadPrecedence() (promote.PrecedenceStore, error)
+}
+
+// errNoPrecedenceReader is what the precedence check reports when Doctor was
+// built without a PrecedenceReader: a port the caller forgot to wire is
+// named, and only that check fails.
+var errNoPrecedenceReader = errors.New("ops: no precedence reader was wired")
+
+// loadPrecedence reads the precedence store through reader, or says that
+// there is none to read through.
+func loadPrecedence(reader PrecedenceReader) (promote.PrecedenceStore, error) {
+	if memory.IsMissing(reader) {
+		return nil, errNoPrecedenceReader
+	}
+	return reader.LoadPrecedence()
+}
+
 // DoctorDeps are Doctor's dependencies (function-seam convention matching
 // StatusDeps): PrerequisitePresent is a seam so a test can prove the
 // runtime-prerequisites check's own logic without depending on what is
@@ -57,6 +81,11 @@ type Check struct {
 type DoctorDeps struct {
 	// VaultRoot is the (possibly unresolvable) vault path Doctor inspects.
 	VaultRoot string
+	// Precedence reads the vault's precedence store for the
+	// precedence-sidecar-consistency check. Production wires the vault file
+	// system adapter over VaultRoot. Required: without it that check fails
+	// and says so.
+	Precedence PrecedenceReader
 	// PrerequisitePresent reports whether name is present as a runtime
 	// prerequisite. Production wires vault.PrerequisitePresent (R-021: no
 	// direct os/exec import outside internal/vault/runner.go). Required.
@@ -107,7 +136,7 @@ func Doctor(ctx context.Context, deps DoctorDeps, project string) (DoctorReport,
 			checkVaultConfigResolvable(deps.VaultRoot),
 			checkAddressMapIntegrity(deps.VaultRoot),
 			checkWikiRegistrationConsistency(deps.VaultRoot),
-			checkPrecedenceSidecarConsistency(deps.VaultRoot),
+			checkPrecedenceSidecarConsistency(deps.VaultRoot, deps.Precedence),
 			checkRuntimePrerequisites(deps),
 			checkEmbeddingIndexPresent(deps, project),
 			checkEmbeddingIndexFresh(deps, project),
@@ -238,13 +267,13 @@ func checkWikiRegistrationConsistency(vaultRoot string) Check {
 // but it is a standing refusal, and this check stays quiet about it
 // precisely because flagging it would report every page a human has ever
 // touched as broken.
-func checkPrecedenceSidecarConsistency(vaultRoot string) Check {
+func checkPrecedenceSidecarConsistency(vaultRoot string, precedence PrecedenceReader) Check {
 	pages, unreadable, err := loadPromotedPages(vaultRoot)
 	if err != nil {
 		return Check{Name: CheckPrecedenceSidecarConsistency, Status: CheckFailed, Detail: err.Error()}
 	}
 
-	store, storeErr := promote.LoadPrecedenceStore(vaultRoot)
+	store, storeErr := loadPrecedence(precedence)
 
 	details := append([]string(nil), unreadable...)
 	for _, page := range pages {

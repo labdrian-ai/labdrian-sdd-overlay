@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/ops"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultfs"
 )
 
 // countWords maps a check count onto the English word a doc comment would
@@ -58,8 +59,10 @@ func funcDocComment(t *testing.T, file, funcName string) string {
 // run, so adding or removing a check makes this test name the new number
 // instead of quietly agreeing with a stale one.
 func TestCmdDoctor_DocumentedCheckCountMatchesOpsDoctor(t *testing.T) {
+	vaultRoot := t.TempDir()
 	report, err := ops.Doctor(context.Background(), ops.DoctorDeps{
-		VaultRoot:             t.TempDir(),
+		VaultRoot:             vaultRoot,
+		Precedence:            vaultfs.New(vaultRoot),
 		PrerequisitePresent:   func(string) bool { return true },
 		StateDir:              t.TempDir(),
 		LiveObservationIDs:    func(string) ([]int64, error) { return nil, nil },
@@ -108,6 +111,7 @@ func TestCmdDoctor_PrintsEveryCheckOpsDoctorReturns(t *testing.T) {
 
 	report, err := ops.Doctor(context.Background(), ops.DoctorDeps{
 		VaultRoot:             vaultRoot,
+		Precedence:            vaultfs.New(vaultRoot),
 		PrerequisitePresent:   func(string) bool { return true },
 		StateDir:              t.TempDir(),
 		LiveObservationIDs:    func(string) ([]int64, error) { return nil, nil },

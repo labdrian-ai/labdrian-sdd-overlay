@@ -32,6 +32,11 @@ type Writer struct {
 	// interrupted run therefore leaves N consistent pages rather than N
 	// pages of lost provenance.
 	Store PrecedenceStore
+	// Precedence persists Store: the Writer saves through it after every
+	// promotion that wrote a page, and the composition root loads Store
+	// from it. A Writer without one is refused by Promote, Sync and
+	// Propagate before they write anything.
+	Precedence PrecedenceRepository
 	// Addresses hands out the address of each new page. It is asked only
 	// when a promotion needs a fresh address: re-promoting a page that
 	// already exists reuses its own and never reaches it. A promotion that
@@ -48,6 +53,15 @@ type Writer struct {
 func (w *Writer) checkPorts() error {
 	if memory.IsMissing(w.Clock) {
 		return errNoClock
+	}
+	return w.checkPrecedence()
+}
+
+// checkPrecedence reports whether the Writer was handed the repository its
+// precedence store is persisted through, the one port Propagate needs.
+func (w *Writer) checkPrecedence() error {
+	if memory.IsMissing(w.Precedence) {
+		return errNoPrecedenceRepository
 	}
 	return nil
 }
@@ -130,7 +144,7 @@ func (w *Writer) Promote(ctx context.Context, obs memory.Observation, explicit b
 		// A skip wrote nothing, so there is no new fingerprint to pair and
 		// nothing to register.
 		if action.Kind != ActionSkippedLocalEdit {
-			if err := w.Store.Save(w.VaultRoot); err != nil {
+			if err := w.Precedence.SavePrecedence(w.Store); err != nil {
 				return Result{}, err
 			}
 			if err := w.register(page.Address, obs.Title); err != nil {
@@ -170,7 +184,7 @@ func (w *Writer) Promote(ctx context.Context, obs memory.Observation, explicit b
 	// to react to, which is exactly why the ordering has to carry the
 	// guarantee rather than the cleanup.
 	w.Store.Set(address, entryFor(page))
-	if err := w.Store.Save(w.VaultRoot); err != nil {
+	if err := w.Precedence.SavePrecedence(w.Store); err != nil {
 		// Nothing has been published yet, so there is no page to withdraw:
 		// drop the in-memory entry and report the failure.
 		delete(w.Store, address)
@@ -195,7 +209,7 @@ func (w *Writer) Promote(ctx context.Context, obs memory.Observation, explicit b
 		// a path no later run reuses (the retry allocates a fresh
 		// address), and neither wedges anything.
 		delete(w.Store, address)
-		if saveErr := w.Store.Save(w.VaultRoot); saveErr != nil {
+		if saveErr := w.Precedence.SavePrecedence(w.Store); saveErr != nil {
 			return Result{}, fmt.Errorf("promote: write page %s: %w (and withdrawing its precedence entry failed: %v)", existingPath, err, saveErr)
 		}
 		return Result{}, err
@@ -292,7 +306,7 @@ func (w *Writer) supersedeMoved(moved []promotedPage, successorAddress, successo
 		patched = true
 	}
 	if patched {
-		if err := w.Store.Save(w.VaultRoot); err != nil {
+		if err := w.Precedence.SavePrecedence(w.Store); err != nil {
 			failures = append(failures, fmt.Errorf("promote: persist precedence after superseding a moved page: %w", err))
 		}
 	}
