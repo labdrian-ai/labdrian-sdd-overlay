@@ -112,3 +112,30 @@ func TestSnippetAtNeverCutsACharacterInHalf(t *testing.T) {
 		t.Fatalf("SnippetAt = %q, want the window widened to the characters' edges %q", got, want)
 	}
 }
+
+// A budget with no room in it is a value a caller can compute (a share of a byte ceiling that is used
+// up), so it is an answer, not a crash: the window is empty, and it is a fragment of any body that has
+// something to show. The rule must hold wherever the offset points.
+func TestSnippetAtWithNoRoomShowsNothingAndNeverPanics(t *testing.T) {
+	body := strings.Repeat("x", 100)
+	for _, budget := range []int{0, -1, -480} {
+		for _, offset := range []int{-5, 0, 50, 100, 5000} {
+			got, truncated := memory.SnippetAt(body, offset, budget)
+			if got != "" || !truncated {
+				t.Errorf("SnippetAt(100 bytes, %d, %d) = %q, %v, want an empty window that says it is a fragment", offset, budget, got, truncated)
+			}
+		}
+		if got, truncated := memory.SnippetAt("", 0, budget); got != "" || truncated {
+			t.Errorf("SnippetAt(empty, 0, %d) = %q, %v, want nothing, and not a fragment: there was nothing to cut", budget, got, truncated)
+		}
+	}
+}
+
+// The smallest budget with room in it still shows a character, whole.
+func TestSnippetAtOfOneByteKeepsACharacterWhole(t *testing.T) {
+	body := strings.Repeat("\u00e9", 10) // two bytes each
+	got, truncated := memory.SnippetAt(body, 8, 1)
+	if !truncated || !utf8.ValidString(got) || !strings.Contains(got, "\u00e9") {
+		t.Fatalf("SnippetAt(.., 8, 1) = %q, %v, want one whole character, marked as a fragment", got, truncated)
+	}
+}

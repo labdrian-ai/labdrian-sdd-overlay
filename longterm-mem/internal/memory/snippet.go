@@ -30,7 +30,14 @@ const TruncationMark = "\u2026"
 // content; a row with no lexical match position -- the embedding arm has none, a cosine match is not
 // a location in text -- passes 0, which renders an honest head slice rather than inventing a
 // position the retrieval method cannot support.
+//
+// A budget with no room in it (zero or negative, which a share of a used-up byte ceiling can
+// produce) gives an empty window: nothing is shown, and it is a fragment of any body that has
+// something to show. The window arithmetic below needs a positive budget, so this is decided first.
 func SnippetAt(content string, offset, budget int) (string, bool) {
+	if budget <= 0 {
+		return "", content != ""
+	}
 	if len(content) <= budget {
 		return content, false
 	}
