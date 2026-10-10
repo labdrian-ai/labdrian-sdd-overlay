@@ -32,7 +32,9 @@ type EventLog interface {
 // use is one decision made where the program is wired.
 type ProfileCatalog interface {
 	// Resolve returns the profile named name, or an error when the catalog has
-	// no such profile.
+	// no such profile. The error of a catalog that has none wraps
+	// workflowprofile.ErrUnknownProfile, so that a caller can tell a profile
+	// that is gone from a catalog that failed (see DetectProfileDrift).
 	Resolve(name string) (workflowprofile.WorkflowProfile, error)
 }
 
