@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 )
@@ -49,7 +50,7 @@ func TestAllocate_FirstPromotionAllocatesNewAddress(t *testing.T) {
 	vaultRoot := t.TempDir()
 	writeAllocateScript(t, vaultRoot, allocateAddressFixture)
 
-	address, err := Allocate(vaultRoot, "labdrian-sdd-overlay", 101)
+	address, err := Allocate(vaultRoot, "labdrian-sdd-overlay", 101, testInstant)
 	if err != nil {
 		t.Fatalf("Allocate: %v", err)
 	}
@@ -61,6 +62,32 @@ func TestAllocate_FirstPromotionAllocatesNewAddress(t *testing.T) {
 	wantPath := "wiki/memory/c-000042.md"
 	if got := addressMap[wantPath]; got != "c-000042" {
 		t.Fatalf("address_map[%q] = %q, want %q (full map: %+v)", wantPath, got, "c-000042", addressMap)
+	}
+}
+
+// TestAllocate_SeedsANewManifestWithTheDayItIsGiven (Phase 9, L2): a vault
+// with no manifest yet gets one whose created date is the day the caller's
+// clock gave, not a day read from the machine.
+func TestAllocate_SeedsANewManifestWithTheDayItIsGiven(t *testing.T) {
+	vaultRoot := t.TempDir()
+	writeAllocateScript(t, vaultRoot, allocateAddressFixture)
+
+	if _, err := Allocate(vaultRoot, "labdrian-sdd-overlay", 101, time.Date(2026, 8, 5, 12, 0, 0, 0, time.UTC)); err != nil {
+		t.Fatalf("Allocate: %v", err)
+	}
+
+	data, err := os.ReadFile(filepath.Join(vaultRoot, ".raw", ".manifest.json"))
+	if err != nil {
+		t.Fatalf("read manifest: %v", err)
+	}
+	var m struct {
+		Created string `json:"created"`
+	}
+	if err := json.Unmarshal(data, &m); err != nil {
+		t.Fatalf("parse manifest: %v", err)
+	}
+	if m.Created != "2026-08-05" {
+		t.Fatalf("created = %q, want 2026-08-05 (the day Allocate was given)", m.Created)
 	}
 }
 
@@ -76,7 +103,7 @@ func TestAllocate_RePromotionReusesExistingAddress(t *testing.T) {
 		t.Fatalf("mkdir %s: %v", memoryDir, err)
 	}
 	obs := memory.Observation{ID: 101, Type: "decision", Title: "Already Promoted", Content: "Body.", Project: "labdrian-sdd-overlay"}
-	page, err := EmitPage(obs, "c-000099", nil)
+	page, err := EmitPage(obs, "c-000099", nil, testInstant)
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
 	}
@@ -84,7 +111,7 @@ func TestAllocate_RePromotionReusesExistingAddress(t *testing.T) {
 		t.Fatalf("write pre-promoted page: %v", err)
 	}
 
-	address, err := Allocate(vaultRoot, "labdrian-sdd-overlay", 101)
+	address, err := Allocate(vaultRoot, "labdrian-sdd-overlay", 101, testInstant)
 	if err != nil {
 		t.Fatalf("Allocate: %v", err)
 	}
@@ -111,7 +138,7 @@ func TestAllocate_RecordAddressPreservesForeignManifestFields(t *testing.T) {
 		t.Fatalf("write manifest: %v", err)
 	}
 
-	if _, err := Allocate(vaultRoot, "labdrian-sdd-overlay", 101); err != nil {
+	if _, err := Allocate(vaultRoot, "labdrian-sdd-overlay", 101, testInstant); err != nil {
 		t.Fatalf("Allocate: %v", err)
 	}
 
@@ -157,7 +184,7 @@ func TestAllocate_ReuseWithoutAddressFails(t *testing.T) {
 		t.Fatalf("write pre-promoted page: %v", err)
 	}
 
-	address, err := Allocate(vaultRoot, "labdrian-sdd-overlay", 101)
+	address, err := Allocate(vaultRoot, "labdrian-sdd-overlay", 101, testInstant)
 	if err == nil {
 		t.Fatalf("Allocate = (%q, nil), want an error for a matched page without an address", address)
 	}
@@ -174,7 +201,7 @@ func TestAllocate_ReuseWithoutAddressFails(t *testing.T) {
 func TestFindPromotedPage_RevisionRoundTrips(t *testing.T) {
 	vaultRoot := t.TempDir()
 	obs := memory.Observation{ID: 201, Type: "decision", Title: "Revisioned", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 5}
-	page, err := EmitPage(obs, "c-000201", nil)
+	page, err := EmitPage(obs, "c-000201", nil, testInstant)
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
 	}

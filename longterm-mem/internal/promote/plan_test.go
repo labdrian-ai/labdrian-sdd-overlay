@@ -29,7 +29,7 @@ import (
 // re-finding.
 func TestPlan_WritesNothingAndPredictsWhatSyncThenDoes(t *testing.T) {
 	vaultRoot := t.TempDir()
-	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 	writeAllocateScript(t, vaultRoot, uniqueAllocateAddressFixture)
 
 	store, ids := newFixtureEngramStore(t, []fixtureObs{
@@ -44,7 +44,7 @@ func TestPlan_WritesNothingAndPredictsWhatSyncThenDoes(t *testing.T) {
 		ID: ids[2], Type: "decision", Title: "Already Current", Content: "Body three.", Project: "p", RevisionCount: 3,
 	}, "c-000900")
 
-	w := &Writer{VaultRoot: vaultRoot, Store: precedence}
+	w := &Writer{VaultRoot: vaultRoot, Store: precedence, Clock: clock}
 	deps := Deps{Memory: store, Writer: w}
 
 	before := vaultSnapshot(t, vaultRoot)
@@ -145,7 +145,7 @@ func equalSnapshots(a, b map[string]string) bool {
 // prediction that can quietly stop being true.
 func TestPlan_CountsThePagesPropagateWouldPatch(t *testing.T) {
 	vaultRoot := t.TempDir()
-	fixedNow(t, time.Date(2026, 8, 31, 12, 0, 0, 0, time.UTC))
+	clock := &fakeClock{at: time.Date(2026, 8, 31, 12, 0, 0, 0, time.UTC)}
 	writeAllocateScript(t, vaultRoot, uniqueAllocateAddressFixture)
 
 	store, ids := newFixtureEngramStore(t, []fixtureObs{
@@ -163,7 +163,7 @@ func TestPlan_CountsThePagesPropagateWouldPatch(t *testing.T) {
 		ID: ids[1], Type: "decision", Title: "New Decision", Content: "New body.", Project: "p", RevisionCount: 1,
 	}, "c-000002")
 
-	deps := Deps{Memory: store, Writer: &Writer{VaultRoot: vaultRoot, Store: precedence}}
+	deps := Deps{Memory: store, Writer: &Writer{VaultRoot: vaultRoot, Store: precedence, Clock: clock}}
 
 	before := vaultSnapshot(t, vaultRoot)
 
@@ -206,7 +206,7 @@ func TestPlan_CountsThePagesPropagateWouldPatch(t *testing.T) {
 // second broken page that does not exist.
 func TestPlan_OneBrokenObservationIsReportedOnce(t *testing.T) {
 	vaultRoot := t.TempDir()
-	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 	writeAllocateScript(t, vaultRoot, uniqueAllocateAddressFixture)
 
 	store, ids := newFixtureEngramStore(t, []fixtureObs{
@@ -223,7 +223,7 @@ func TestPlan_OneBrokenObservationIsReportedOnce(t *testing.T) {
 		t.Fatalf("write broken page: %v", err)
 	}
 
-	deps := Deps{Memory: store, Writer: &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}}}
+	deps := Deps{Memory: store, Writer: &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: clock}}
 	plan, err := Plan(context.Background(), deps, "p")
 	if err != nil {
 		t.Fatalf("Plan: %v", err)

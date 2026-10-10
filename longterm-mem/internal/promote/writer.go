@@ -30,6 +30,18 @@ type Writer struct {
 	// interrupted run therefore leaves N consistent pages rather than N
 	// pages of lost provenance.
 	Store PrecedenceStore
+	// Clock dates the pages, the promotion log and the sync-state record.
+	// The composition root wires a real one; a Writer without one is
+	// refused by Promote and Sync before they touch the vault.
+	Clock Clock
+}
+
+// checkPorts reports the first port the Writer needs and was not handed.
+func (w *Writer) checkPorts() error {
+	if memory.IsMissing(w.Clock) {
+		return errNoClock
+	}
+	return nil
 }
 
 // Result reports what Promote did for one observation.
@@ -75,6 +87,9 @@ type Result struct {
 // registers on every write it does not skip. So: doctor names it, and an
 // explicit promote fixes it.
 func (w *Writer) Promote(obs memory.Observation, explicit bool) (Result, error) {
+	if err := w.checkPorts(); err != nil {
+		return Result{}, err
+	}
 	if !Eligible(obs, explicit) {
 		return Result{}, nil
 	}
@@ -88,12 +103,12 @@ func (w *Writer) Promote(obs memory.Observation, explicit bool) (Result, error) 
 		return Result{}, err
 	}
 
-	address, err := Allocate(w.VaultRoot, obs.Project, int(obs.ID))
+	address, err := Allocate(w.VaultRoot, obs.Project, int(obs.ID), utc(w.Clock))
 	if err != nil {
 		return Result{}, err
 	}
 
-	page, err := EmitPage(obs, address, nil)
+	page, err := EmitPage(obs, address, nil, utc(w.Clock))
 	if err != nil {
 		return Result{}, err
 	}
@@ -279,12 +294,11 @@ func (w *Writer) supersedeMoved(moved []promotedPage, successorAddress, successo
 
 // register records addr/title's promotion in the vault's master catalog
 // and append-only promotion log (R-029, task 7.10): the two writes
-// register.go's RegisterIndex/RegisterLog perform, using nowFunc() for
-// RegisterLog's timestamp so tests can pin it with fixedNow, matching
-// EmitPage's own convention.
+// register.go's RegisterIndex/RegisterLog perform, the log stamped with the
+// writer's clock like every other date it writes.
 func (w *Writer) register(addr, title string) error {
 	if err := RegisterIndex(filepath.Join(w.VaultRoot, indexMdRelPath), addr, title); err != nil {
 		return err
 	}
-	return RegisterLog(filepath.Join(w.VaultRoot, logMdRelPath), addr, title, nowFunc())
+	return RegisterLog(filepath.Join(w.VaultRoot, logMdRelPath), addr, title, utc(w.Clock))
 }

@@ -20,7 +20,7 @@ func vaultWithUnrecordedPage(t *testing.T, address string) string {
 	page, err := promote.EmitPage(memory.Observation{
 		ID: 701, Type: "decision", Title: "Unrecorded", Content: "Body.",
 		Project: "reconcile-project", RevisionCount: 3,
-	}, address, nil)
+	}, address, nil, fixtureInstant)
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
 	}

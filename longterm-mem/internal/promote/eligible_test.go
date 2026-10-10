@@ -140,9 +140,9 @@ func TestEligible(t *testing.T) {
 func TestPromote_ExplicitCallOverridesAutomaticEligibility(t *testing.T) {
 	vaultRoot := t.TempDir()
 	writeAllocateScript(t, vaultRoot, allocateAddressFixture)
-	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
-	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}}
+	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: clock}
 	obs := memory.Observation{ID: 601, Type: "discovery", Title: "Below Threshold", Content: "Never automatically eligible.", Project: "labdrian-sdd-overlay", RevisionCount: 1, Pinned: false}
 
 	var lookedUp int64
@@ -192,7 +192,7 @@ func TestPromote_ExplicitCallOverridesAutomaticEligibility(t *testing.T) {
 // by being an unset struct. Nothing is written to the vault.
 func TestPromote_AnIneligibleObservationReportsNoActionAndWritesNothing(t *testing.T) {
 	vaultRoot := t.TempDir()
-	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}}
+	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: &fakeClock{at: testInstant}}
 	obs := memory.Observation{ID: 602, Type: "discovery", Title: "Not Curated", Content: "Never automatically eligible.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
 
 	result, err := w.Promote(obs, false)
@@ -217,7 +217,7 @@ func TestPromote_AnIneligibleObservationReportsNoActionAndWritesNothing(t *testi
 // unable to tell "nothing to do" from "the id was wrong".
 func TestPromote_InvalidObservationIdRejected(t *testing.T) {
 	vaultRoot := t.TempDir()
-	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}}
+	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: &fakeClock{at: testInstant}}
 
 	_, err := ExplicitPromote(w, func(int64) (memory.Observation, bool, error) {
 		return memory.Observation{}, false, nil

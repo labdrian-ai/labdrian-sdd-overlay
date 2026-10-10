@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 )
@@ -19,7 +18,6 @@ func movedFixture(t *testing.T, obs memory.Observation, seedAddress string) (str
 	t.Helper()
 	vaultRoot := t.TempDir()
 	writeAllocateScript(t, vaultRoot, allocateAddressFixture)
-	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
 
 	store := PrecedenceStore{}
 	page := seedPromotedPage(t, vaultRoot, store, obs, seedAddress)
@@ -49,7 +47,7 @@ func TestWriter_Promote_ProjectMoveSupersedesOldPage(t *testing.T) {
 
 	moved := obs
 	moved.Project = "p-two"
-	w := &Writer{VaultRoot: vaultRoot, Store: store}
+	w := &Writer{VaultRoot: vaultRoot, Store: store, Clock: &fakeClock{at: testInstant}}
 	result, err := w.Promote(moved, false)
 	if err != nil {
 		t.Fatalf("Promote after project move: %v", err)
@@ -86,7 +84,7 @@ func TestWriter_Promote_ProjectMoveKeepsOldPageOffTheLocalEditPath(t *testing.T)
 
 	moved := obs
 	moved.Project = "p-two"
-	w := &Writer{VaultRoot: vaultRoot, Store: store}
+	w := &Writer{VaultRoot: vaultRoot, Store: store, Clock: &fakeClock{at: testInstant}}
 	if _, err := w.Promote(moved, false); err != nil {
 		t.Fatalf("Promote after project move: %v", err)
 	}
@@ -123,7 +121,7 @@ func TestWriter_Promote_ProjectMoveIsIdempotent(t *testing.T) {
 
 	moved := obs
 	moved.Project = "p-two"
-	w := &Writer{VaultRoot: vaultRoot, Store: store}
+	w := &Writer{VaultRoot: vaultRoot, Store: store, Clock: &fakeClock{at: testInstant}}
 	if _, err := w.Promote(moved, false); err != nil {
 		t.Fatalf("first Promote after project move: %v", err)
 	}
@@ -179,7 +177,7 @@ func TestWriter_Promote_ProjectMoveLeavesAnExistingSupersessionAlone(t *testing.
 
 	moved := obs
 	moved.Project = "p-two"
-	w := &Writer{VaultRoot: vaultRoot, Store: store}
+	w := &Writer{VaultRoot: vaultRoot, Store: store, Clock: &fakeClock{at: testInstant}}
 	if _, err := w.Promote(moved, false); err != nil {
 		t.Fatalf("Promote after project move: %v", err)
 	}
@@ -203,7 +201,7 @@ func TestWriter_Promote_UnmovedObservationStillReusesItsPage(t *testing.T) {
 	next := obs
 	next.RevisionCount = 2
 	next.Content = "V2."
-	w := &Writer{VaultRoot: vaultRoot, Store: store}
+	w := &Writer{VaultRoot: vaultRoot, Store: store, Clock: &fakeClock{at: testInstant}}
 	result, err := w.Promote(next, false)
 	if err != nil {
 		t.Fatalf("Promote: %v", err)
@@ -240,7 +238,7 @@ func TestWriter_Promote_DistinctObservationsSharingAProjectDoNotCollide(t *testi
 	vaultRoot, store, firstPage := movedFixture(t, first, "c-000001")
 
 	second := memory.Observation{ID: 327, Type: "decision", Title: "Second", Content: "Two.", Project: "p-one", RevisionCount: 1, TopicKey: "longterm-mem/projectmove-fixture"}
-	w := &Writer{VaultRoot: vaultRoot, Store: store}
+	w := &Writer{VaultRoot: vaultRoot, Store: store, Clock: &fakeClock{at: testInstant}}
 	result, err := w.Promote(second, false)
 	if err != nil {
 		t.Fatalf("Promote second observation: %v", err)

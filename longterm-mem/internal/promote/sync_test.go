@@ -107,7 +107,7 @@ func newFixtureEngramStore(t *testing.T, rows []fixtureObs, relations []fixtureR
 // to simulate a promotion Sync/Propagate must decide whether to touch.
 func seedPromotedPage(t *testing.T, vaultRoot string, store PrecedenceStore, obs memory.Observation, addr string) Page {
 	t.Helper()
-	page, err := EmitPage(obs, addr, nil)
+	page, err := EmitPage(obs, addr, nil, testInstant)
 	if err != nil {
 		t.Fatalf("EmitPage (seed): %v", err)
 	}
@@ -148,7 +148,7 @@ func TestSync(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			vaultRoot := t.TempDir()
-			fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+			clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 			writeAllocateScript(t, vaultRoot, allocateAddressFixture)
 
 			store, ids := newFixtureEngramStore(t, []fixtureObs{
@@ -163,7 +163,7 @@ func TestSync(t *testing.T) {
 				seededPage = seedPromotedPage(t, vaultRoot, precedence, seedObs, "c-000042")
 			}
 
-			w := &Writer{VaultRoot: vaultRoot, Store: precedence}
+			w := &Writer{VaultRoot: vaultRoot, Store: precedence, Clock: clock}
 			report, err := Sync(context.Background(), Deps{Memory: store, Writer: w}, "labdrian-sdd-overlay")
 			if err != nil {
 				t.Fatalf("Sync: %v", err)
@@ -202,7 +202,7 @@ func TestSync(t *testing.T) {
 // completion timestamp in the vault's own sync-state record.
 func TestSync_IndexAndSyncStateReflectCompletion(t *testing.T) {
 	vaultRoot := t.TempDir()
-	fixedNow(t, time.Date(2026, 8, 31, 12, 0, 0, 0, time.UTC))
+	clock := &fakeClock{at: time.Date(2026, 8, 31, 12, 0, 0, 0, time.UTC)}
 	writeAllocateScript(t, vaultRoot, uniqueAllocateAddressFixture)
 
 	store, _ := newFixtureEngramStore(t, []fixtureObs{
@@ -212,7 +212,7 @@ func TestSync_IndexAndSyncStateReflectCompletion(t *testing.T) {
 	}, nil)
 
 	var rebuildCalled bool
-	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}}
+	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: clock}
 	deps := Deps{
 		Memory: store,
 		Writer: w,
@@ -261,7 +261,7 @@ func TestSync_IndexAndSyncStateReflectCompletion(t *testing.T) {
 // R4-poison-pill-abort).
 func TestSync_OneFailingObservationDoesNotWedgeTheRun(t *testing.T) {
 	vaultRoot := t.TempDir()
-	fixedNow(t, time.Date(2026, 8, 31, 12, 0, 0, 0, time.UTC))
+	clock := &fakeClock{at: time.Date(2026, 8, 31, 12, 0, 0, 0, time.UTC)}
 	writeAllocateScript(t, vaultRoot, uniqueAllocateAddressFixture)
 
 	store, ids := newFixtureEngramStore(t, []fixtureObs{
@@ -284,7 +284,7 @@ func TestSync_OneFailingObservationDoesNotWedgeTheRun(t *testing.T) {
 	}
 
 	var rebuildCalled bool
-	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}}
+	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: clock}
 	deps := Deps{
 		Memory:       store,
 		Writer:       w,

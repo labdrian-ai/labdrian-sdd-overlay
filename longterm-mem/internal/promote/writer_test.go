@@ -16,9 +16,9 @@ import (
 func TestWriter_Promote_CreatesNewPage(t *testing.T) {
 	vaultRoot := t.TempDir()
 	writeAllocateScript(t, vaultRoot, allocateAddressFixture)
-	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
-	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}}
+	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: clock}
 	obs := memory.Observation{ID: 401, Type: "decision", Title: "Fresh Decision", Content: "Never promoted before.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/writer-fixture"}
 
 	result, err := w.Promote(obs, false)
@@ -52,10 +52,10 @@ func TestWriter_Promote_CreatesNewPage(t *testing.T) {
 // UpdateInPlace instead of writing a second file.
 func TestWriter_Promote_UpdatesExistingPage(t *testing.T) {
 	vaultRoot := t.TempDir()
-	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 	obs := memory.Observation{ID: 402, Type: "pattern", Title: "Already Promoted", Content: "V1.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/writer-fixture"}
-	first, err := EmitPage(obs, "c-000402", nil)
+	first, err := EmitPage(obs, "c-000402", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (seed v1): %v", err)
 	}
@@ -67,9 +67,9 @@ func TestWriter_Promote_UpdatesExistingPage(t *testing.T) {
 	// findPromotedPage (address.go) reuses the same page for the same
 	// engram_id/project, so Allocate needs no allocator script fixture
 	// here -- reuse must never invoke the subprocess.
-	w := &Writer{VaultRoot: vaultRoot, Store: store}
+	w := &Writer{VaultRoot: vaultRoot, Store: store, Clock: clock}
 
-	fixedNow(t, time.Date(2026, 8, 20, 0, 0, 0, 0, time.UTC))
+	clock.Set(time.Date(2026, 8, 20, 0, 0, 0, 0, time.UTC))
 	obs.RevisionCount = 2
 	obs.Content = "V2."
 
@@ -106,10 +106,10 @@ func TestWriter_Promote_UpdatesExistingPage(t *testing.T) {
 // through UpdateInPlace called directly.
 func TestWriter_Promote_SkipsLocalEdit(t *testing.T) {
 	vaultRoot := t.TempDir()
-	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 	obs := memory.Observation{ID: 403, Type: "decision", Title: "Edited In Vault", Content: "Original.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/writer-fixture"}
-	first, err := EmitPage(obs, "c-000403", nil)
+	first, err := EmitPage(obs, "c-000403", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
 	}
@@ -123,7 +123,7 @@ func TestWriter_Promote_SkipsLocalEdit(t *testing.T) {
 		t.Fatalf("write local edit: %v", err)
 	}
 
-	w := &Writer{VaultRoot: vaultRoot, Store: store}
+	w := &Writer{VaultRoot: vaultRoot, Store: store, Clock: clock}
 	obs.RevisionCount = 2
 
 	result, err := w.Promote(obs, false)
@@ -155,9 +155,9 @@ func TestWriter_Promote_SkipsLocalEdit(t *testing.T) {
 func TestWriter_Promote_PersistsPrecedenceEntry(t *testing.T) {
 	vaultRoot := t.TempDir()
 	writeAllocateScript(t, vaultRoot, allocateAddressFixture)
-	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
-	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}}
+	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: clock}
 	obs := memory.Observation{ID: 404, Type: "decision", Title: "Durable Pairing", Content: "Entry must outlive the process.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/writer-fixture"}
 
 	result, err := w.Promote(obs, false)
@@ -180,12 +180,12 @@ func TestWriter_Promote_PersistsPrecedenceEntry(t *testing.T) {
 
 // promoteTwice promotes obs, then promotes a revised copy of it, and
 // returns the second Result -- the update branch's fixture.
-func promoteTwice(t *testing.T, w *Writer, obs memory.Observation) Result {
+func promoteTwice(t *testing.T, w *Writer, clock *fakeClock, obs memory.Observation) Result {
 	t.Helper()
 	if _, err := w.Promote(obs, false); err != nil {
 		t.Fatalf("Promote (first): %v", err)
 	}
-	fixedNow(t, time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
+	clock.Set(time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
 	obs.RevisionCount++
 	obs.Content = "Revised content."
 	result, err := w.Promote(obs, false)
@@ -203,11 +203,11 @@ func promoteTwice(t *testing.T, w *Writer, obs memory.Observation) Result {
 func TestWriter_Promote_UpdatePersistsPrecedenceEntry(t *testing.T) {
 	vaultRoot := t.TempDir()
 	writeAllocateScript(t, vaultRoot, allocateAddressFixture)
-	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
-	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}}
+	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: clock}
 	obs := memory.Observation{ID: 405, Type: "decision", Title: "Updated Twice", Content: "First content.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/writer-fixture"}
-	result := promoteTwice(t, w, obs)
+	result := promoteTwice(t, w, clock, obs)
 
 	if result.Action.Kind != ActionUpdated {
 		t.Fatalf("Action.Kind = %v, want ActionUpdated", result.Action.Kind)
@@ -232,9 +232,9 @@ func TestWriter_Promote_UpdatePersistsPrecedenceEntry(t *testing.T) {
 func TestWriter_Promote_SkipDoesNotPersist(t *testing.T) {
 	vaultRoot := t.TempDir()
 	writeAllocateScript(t, vaultRoot, allocateAddressFixture)
-	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
-	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}}
+	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: clock}
 	obs := memory.Observation{ID: 406, Type: "decision", Title: "Edited By Hand", Content: "Original content.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/writer-fixture"}
 	first, err := w.Promote(obs, false)
 	if err != nil {
@@ -251,7 +251,7 @@ func TestWriter_Promote_SkipDoesNotPersist(t *testing.T) {
 		t.Fatalf("LoadPrecedenceStore (before): %v", err)
 	}
 
-	fixedNow(t, time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
+	clock.Set(time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
 	obs.RevisionCount = 2
 	obs.Content = "Revised content."
 	second, err := w.Promote(obs, false)
@@ -288,7 +288,7 @@ func TestWriter_Promote_SkipDoesNotPersist(t *testing.T) {
 func TestWriter_Promote_CreateRollsBackWhenFingerprintCannotPersist(t *testing.T) {
 	vaultRoot := t.TempDir()
 	writeAllocateScript(t, vaultRoot, allocateAddressFixture)
-	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 	// A directory where the sidecar file belongs: Save's rename cannot
 	// replace it, so persistence fails.
@@ -297,7 +297,7 @@ func TestWriter_Promote_CreateRollsBackWhenFingerprintCannotPersist(t *testing.T
 		t.Fatalf("mkdir %s: %v", blocked, err)
 	}
 
-	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}}
+	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: clock}
 	obs := memory.Observation{ID: 407, Type: "decision", Title: "Unpersistable", Content: "Fingerprint cannot land.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/writer-fixture"}
 
 	if _, err := w.Promote(obs, false); err == nil {
@@ -333,7 +333,7 @@ func TestWriter_Promote_CreateRollsBackWhenFingerprintCannotPersist(t *testing.T
 func TestWriter_Promote_CreatePersistsPrecedenceBeforeThePage(t *testing.T) {
 	vaultRoot := t.TempDir()
 	writeAllocateScript(t, vaultRoot, allocateAddressFixture)
-	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 	// A dangling symlink where wiki/memory belongs: os.Stat of the page
 	// path still reports "does not exist" (so Promote takes the create
@@ -348,7 +348,7 @@ func TestWriter_Promote_CreatePersistsPrecedenceBeforeThePage(t *testing.T) {
 		t.Fatalf("create dangling symlink: %v", err)
 	}
 
-	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}}
+	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: clock}
 	obs := memory.Observation{ID: 408, Type: "decision", Title: "Unwritable Page", Content: "The page write cannot land.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/writer-fixture"}
 
 	if _, err := w.Promote(obs, false); err == nil {
@@ -382,9 +382,9 @@ func TestWriter_Promote_CreatePersistsPrecedenceBeforeThePage(t *testing.T) {
 func TestWriter_Promote_CreateResumesAfterAnUnpairedFingerprint(t *testing.T) {
 	vaultRoot := t.TempDir()
 	writeAllocateScript(t, vaultRoot, allocateAddressFixture)
-	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
-	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}}
+	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: clock}
 	obs := memory.Observation{ID: 409, Type: "decision", Title: "Entry Without A Page", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/writer-fixture"}
 	first, err := w.Promote(obs, false)
 	if err != nil {
@@ -403,7 +403,7 @@ func TestWriter_Promote_CreateResumesAfterAnUnpairedFingerprint(t *testing.T) {
 		}
 	}
 
-	fixedNow(t, time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
+	clock.Set(time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
 	second, err := w.Promote(obs, false)
 	if err != nil {
 		t.Fatalf("Promote (resume): %v", err)
@@ -436,9 +436,9 @@ func TestWriter_Promote_CreateResumesAfterAnUnpairedFingerprint(t *testing.T) {
 func TestWriter_Promote_AdoptsAnUnrecordedOwnPageAndRepairsRegistration(t *testing.T) {
 	vaultRoot := t.TempDir()
 	writeAllocateScript(t, vaultRoot, allocateAddressFixture)
-	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
-	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}}
+	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: clock}
 	obs := memory.Observation{ID: 410, Type: "decision", Title: "Wedged In The Field", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/writer-fixture"}
 	first, err := w.Promote(obs, false)
 	if err != nil {
@@ -457,8 +457,8 @@ func TestWriter_Promote_AdoptsAnUnrecordedOwnPageAndRepairsRegistration(t *testi
 	// disk in exactly the two volatile stamps EmitPage takes from the wall
 	// clock -- the second-order hazard that makes a byte-equality
 	// reconciliation succeed only on a same-day retry.
-	fixedNow(t, time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
-	wedged := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}}
+	clock.Set(time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
+	wedged := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: clock}
 	second, err := wedged.Promote(obs, false)
 	if err != nil {
 		t.Fatalf("Promote (wedged retry): %v", err)
@@ -500,9 +500,9 @@ func TestWriter_Promote_AdoptsAnUnrecordedOwnPageAndRepairsRegistration(t *testi
 func TestWriter_Promote_CreateRegistersIndexAndLog(t *testing.T) {
 	vaultRoot := t.TempDir()
 	writeAllocateScript(t, vaultRoot, allocateAddressFixture)
-	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
-	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}}
+	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: clock}
 	obs := memory.Observation{ID: 501, Type: "decision", Title: "Catalog Me", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/writer-fixture"}
 
 	result, err := w.Promote(obs, false)
@@ -535,11 +535,11 @@ func TestWriter_Promote_CreateRegistersIndexAndLog(t *testing.T) {
 func TestWriter_Promote_UpdateRegistersIndexAndLog(t *testing.T) {
 	vaultRoot := t.TempDir()
 	writeAllocateScript(t, vaultRoot, allocateAddressFixture)
-	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
-	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}}
+	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: clock}
 	obs := memory.Observation{ID: 502, Type: "decision", Title: "Updated Twice", Content: "First content.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/writer-fixture"}
-	result := promoteTwice(t, w, obs)
+	result := promoteTwice(t, w, clock, obs)
 	if result.Action.Kind != ActionUpdated {
 		t.Fatalf("Action.Kind = %v, want ActionUpdated", result.Action.Kind)
 	}
@@ -572,9 +572,9 @@ func TestWriter_Promote_UpdateRegistersIndexAndLog(t *testing.T) {
 func TestWriter_Promote_SkipDoesNotRegister(t *testing.T) {
 	vaultRoot := t.TempDir()
 	writeAllocateScript(t, vaultRoot, allocateAddressFixture)
-	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
-	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}}
+	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: clock}
 	obs := memory.Observation{ID: 503, Type: "decision", Title: "Edited By Hand", Content: "Original content.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/writer-fixture"}
 	first, err := w.Promote(obs, false)
 	if err != nil {
@@ -596,7 +596,7 @@ func TestWriter_Promote_SkipDoesNotRegister(t *testing.T) {
 		t.Fatalf("read wiki/log.md (before): %v", err)
 	}
 
-	fixedNow(t, time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
+	clock.Set(time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
 	obs.RevisionCount = 2
 	obs.Content = "Revised content."
 	second, err := w.Promote(obs, false)
@@ -630,7 +630,7 @@ func TestWriter_Promote_SkipDoesNotRegister(t *testing.T) {
 // registration.
 func TestWriter_Promote_IneligibleDoesNotRegister(t *testing.T) {
 	vaultRoot := t.TempDir()
-	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}}
+	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: &fakeClock{at: testInstant}}
 	// Not pinned, not explicit, and TopicKey left at its zero value: an
 	// untopiced observation is not automatically eligible (R-007).
 	obs := memory.Observation{ID: 504, Type: "note", Title: "Not Eligible", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}

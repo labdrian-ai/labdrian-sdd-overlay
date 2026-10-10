@@ -21,10 +21,10 @@ import (
 func wedgedLegacyPage(t *testing.T, id int64, address string) (vaultRoot string, obs memory.Observation) {
 	t.Helper()
 	vaultRoot = t.TempDir()
-	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 	obs = memory.Observation{ID: id, Type: "decision", Title: "Wedged Legacy", Content: "V1 body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
-	first, err := EmitPage(obs, address, nil)
+	first, err := EmitPage(obs, address, nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (v1): %v", err)
 	}
@@ -41,10 +41,10 @@ func wedgedLegacyPage(t *testing.T, id int64, address string) (vaultRoot string,
 	// The divergence: revision 2 landed on disk and the sidecar never
 	// caught up, so the entry fingerprints a render that is no longer
 	// there and carries no revision to attribute the new one to.
-	fixedNow(t, time.Date(2026, 8, 10, 0, 0, 0, 0, time.UTC))
+	clock.Set(time.Date(2026, 8, 10, 0, 0, 0, 0, time.UTC))
 	obs.RevisionCount = 2
 	obs.Content = "V2 body."
-	diverged, err := EmitPage(obs, address, nil)
+	diverged, err := EmitPage(obs, address, nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (v2): %v", err)
 	}
@@ -73,10 +73,10 @@ func TestReconcile_AdoptsAWedgedLegacyPageAndLeavesTheWedgedState(t *testing.T) 
 
 	// Precondition: the page really is wedged today. Without this the test
 	// could pass against a vault that was never stuck.
-	fixedNow(t, time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
+	clock := &fakeClock{at: time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC)}
 	obs.RevisionCount = 3
 	obs.Content = "V3 body."
-	next, err := EmitPage(obs, address, nil)
+	next, err := EmitPage(obs, address, nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (v3): %v", err)
 	}
@@ -134,10 +134,10 @@ func TestReconcile_AdoptsAWedgedLegacyPageAndLeavesTheWedgedState(t *testing.T) 
 func TestReconcile_AdoptsAPageWithNoEntryAtAll(t *testing.T) {
 	const address = "c-000602"
 	vaultRoot := t.TempDir()
-	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 	obs := memory.Observation{ID: 602, Type: "decision", Title: "Untracked", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 4}
-	page, err := EmitPage(obs, address, nil)
+	page, err := EmitPage(obs, address, nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
 	}
@@ -171,10 +171,10 @@ func TestReconcile_RefusesAPageThatIsNotWedged(t *testing.T) {
 	t.Run("an entry that already matches its page is a clear no-op", func(t *testing.T) {
 		const address = "c-000603"
 		vaultRoot := t.TempDir()
-		fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+		clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 		obs := memory.Observation{ID: 603, Type: "decision", Title: "Healthy", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 2}
-		page, err := EmitPage(obs, address, nil)
+		page, err := EmitPage(obs, address, nil, clock.Now())
 		if err != nil {
 			t.Fatalf("EmitPage: %v", err)
 		}
@@ -197,10 +197,10 @@ func TestReconcile_RefusesAPageThatIsNotWedged(t *testing.T) {
 	t.Run("an ordinary local edit is refused, not adopted", func(t *testing.T) {
 		const address = "c-000604"
 		vaultRoot := t.TempDir()
-		fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+		clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 		obs := memory.Observation{ID: 604, Type: "decision", Title: "Edited By Hand", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 2}
-		page, err := EmitPage(obs, address, nil)
+		page, err := EmitPage(obs, address, nil, clock.Now())
 		if err != nil {
 			t.Fatalf("EmitPage: %v", err)
 		}
@@ -241,10 +241,10 @@ func TestReconcile_UnknownAddressFailsCleanly(t *testing.T) {
 func TestReconcile_RefusesAPageWithNoUsableRevision(t *testing.T) {
 	const address = "c-000605"
 	vaultRoot := t.TempDir()
-	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 	obs := memory.Observation{ID: 605, Type: "decision", Title: "No Revision", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 2}
-	page, err := EmitPage(obs, address, nil)
+	page, err := EmitPage(obs, address, nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
 	}

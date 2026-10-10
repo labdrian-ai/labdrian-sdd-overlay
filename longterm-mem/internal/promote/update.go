@@ -73,7 +73,7 @@ func (k ActionKind) String() string {
 //   - An interrupted CREATE leaves a page with no entry at all, so the
 //     tracked branch's comparisons are not even reachable.
 //     isOwnUnrecordedWrite settles it from the bytes, normalizing away only
-//     the two wall-clock stamps EmitPage takes from nowFunc -- without
+//     the two stamps EmitPage takes from its time argument -- without
 //     which the comparison would succeed on a same-day retry and fail every
 //     day after, which is worse than not reconciling at all.
 //   - An interrupted UPDATE leaves new content fingerprinted by the
@@ -174,7 +174,7 @@ func frontmatterRevision(fmBlock string) (int, bool) {
 }
 
 // volatileFrontmatterFields are the only two frontmatter values EmitPage
-// takes from the wall clock (page.go's nowFunc) rather than from the
+// takes from the time it is given (page.go's at) rather than from the
 // observation, so they are the only two that can differ between two renders
 // of identical Engram content. isOwnUnrecordedWrite normalizes exactly
 // these away and nothing else: every other field, and the whole body, still

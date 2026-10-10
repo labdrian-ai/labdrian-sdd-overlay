@@ -61,7 +61,6 @@ var rings = map[string]archguard.Ring{
 // It cannot see package-level mutable variables used as test seams, so these
 // known ones are not listed below and are owed to their units all the same:
 //
-//   - promote: the nowFunc clock seam (L2)
 //   - register: the saveInstallState seam (L10)
 //   - vecindex: the global dirLocks map (L10), and its own flock helper,
 //     acquireFileLock, which L10 should settle together with it
@@ -91,13 +90,12 @@ var knownDebt = archguard.Debt{
 		"path/filepath.EvalSymlinks": "L7",
 	},
 
-	// promote: the address allocator and the clock become injected (L2), the
-	// vault file system moves to vaultfs (L3).
+	// promote: the clock is injected (L2, done). The address allocator becomes
+	// injected in L2 as well and the vault file system moves to vaultfs (L3).
 	"internal/promote": {
 		"internal/durable": "L3",
 		"internal/vault":   "L2",
 		"os":               "L3",
-		"time.Now":         "L2",
 	},
 
 	// query: reads through ports it owns instead of the concrete adapters.

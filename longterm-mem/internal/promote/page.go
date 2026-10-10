@@ -13,10 +13,6 @@ import (
 // (D7): `wiki/memory/<address>.md`.
 const pagePathPrefix = "wiki/memory"
 
-// nowFunc is swapped in tests for deterministic created/updated timestamps
-// and golden comparisons.
-var nowFunc = func() time.Time { return time.Now().UTC() }
-
 // wikilinkPattern is the D7 alias wikilink shape, `[[c-NNNNNN|Title]]`,
 // shared by wikilink's rendering and LintPage's resolvability check
 // (4.12 REFACTOR).
@@ -46,12 +42,17 @@ type Page struct {
 // from the caller-resolved related slice, and a body carrying obs.Content
 // behind an H1 title (omitted when the content already opens with one)
 // plus a footer naming the Engram source.
-func EmitPage(obs memory.Observation, address string, related []Link) (Page, error) {
+//
+// at is the instant the page is rendered at: its created and updated dates
+// are the day it is in UTC, whatever zone at carries. The caller reads the
+// time (the Writer from its Clock), so the same inputs always render the
+// same page.
+func EmitPage(obs memory.Observation, address string, related []Link, at time.Time) (Page, error) {
 	if address == "" {
 		return Page{}, fmt.Errorf("promote: emit page for observation %d: address is required", obs.ID)
 	}
 
-	today := nowFunc().Format("2006-01-02")
+	today := at.UTC().Format("2006-01-02")
 	fm := frontmatter{
 		Title: obs.Title, Address: address, Aliases: []string{obs.Title},
 		Created: today, Updated: today,

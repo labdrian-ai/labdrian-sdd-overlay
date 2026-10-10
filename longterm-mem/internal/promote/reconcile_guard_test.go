@@ -31,9 +31,9 @@ func TestReconcile_ShapeCheckIsTheOnlyThingRefusingATraversalThatNamesItself(t *
 	const project = "labdrian-sdd-overlay"
 	const traversal = "../../secret"
 	vaultRoot := t.TempDir()
-	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
-	page, err := EmitPage(memory.Observation{ID: 610, Type: "decision", Title: "Outside", Content: "Body.", Project: project, RevisionCount: 2}, "c-000610", nil)
+	page, err := EmitPage(memory.Observation{ID: 610, Type: "decision", Title: "Outside", Content: "Body.", Project: project, RevisionCount: 2}, "c-000610", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
 	}
@@ -81,9 +81,9 @@ func TestReconcile_FollowsASymlinkedPageBecauseTheVaultMayBeOne(t *testing.T) {
 	const address = "c-000612"
 	const project = "labdrian-sdd-overlay"
 	vaultRoot := t.TempDir()
-	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
-	page, err := EmitPage(memory.Observation{ID: 612, Type: "decision", Title: "Elsewhere", Content: "Body.", Project: project, RevisionCount: 4}, address, nil)
+	page, err := EmitPage(memory.Observation{ID: 612, Type: "decision", Title: "Elsewhere", Content: "Body.", Project: project, RevisionCount: 4}, address, nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
 	}
@@ -132,7 +132,7 @@ func TestReconcile_MalformedAddressesCarryTheInvalidAddressSentinel(t *testing.T
 // in longterm-mem" to a broken page, and the state never advanced.
 func TestReconcile_AnUnreadableRevisionCarriesTheUnusablePageSentinel(t *testing.T) {
 	const project = "labdrian-sdd-overlay"
-	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 	for name, mutate := range map[string]func(string) string{
 		"the engram_revision line is stripped": func(fm string) string {
@@ -148,7 +148,7 @@ func TestReconcile_AnUnreadableRevisionCarriesTheUnusablePageSentinel(t *testing
 		t.Run(name, func(t *testing.T) {
 			const address = "c-000611"
 			vaultRoot := t.TempDir()
-			page, err := EmitPage(memory.Observation{ID: 611, Type: "decision", Title: "Unreadable", Content: "Body.", Project: project, RevisionCount: 2}, address, nil)
+			page, err := EmitPage(memory.Observation{ID: 611, Type: "decision", Title: "Unreadable", Content: "Body.", Project: project, RevisionCount: 2}, address, nil, clock.Now())
 			if err != nil {
 				t.Fatalf("EmitPage: %v", err)
 			}
@@ -184,8 +184,6 @@ func TestReconcile_APageWithNoFrontmatterBlockCarriesTheUnusablePageSentinel(t *
 		project = "labdrian-sdd-overlay"
 		address = "c-000613"
 	)
-	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
-
 	vaultRoot := t.TempDir()
 	full := filepath.Join(vaultRoot, pagePathPrefix, address+".md")
 	if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {

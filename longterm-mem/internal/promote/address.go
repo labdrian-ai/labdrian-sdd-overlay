@@ -36,7 +36,7 @@ const manifestRelPath = ".raw/.manifest.json"
 // address is allocated via scripts/allocate-address.sh (flock-safe, via
 // internal/vault.Runner) and recorded in .raw/.manifest.json's
 // address_map, keyed by the page's address-derived path.
-func Allocate(vaultRoot, project string, engramID int) (string, error) {
+func Allocate(vaultRoot, project string, engramID int, at time.Time) (string, error) {
 	if existing, ok, err := findPromotedPage(vaultRoot, project, engramID); err != nil {
 		return "", err
 	} else if ok {
@@ -60,7 +60,7 @@ func Allocate(vaultRoot, project string, engramID int) (string, error) {
 	}
 
 	path := pagePathPrefix + "/" + address + ".md"
-	if err := recordAddress(vaultRoot, path, address); err != nil {
+	if err := recordAddress(vaultRoot, path, address, at); err != nil {
 		return "", err
 	}
 	return address, nil
@@ -273,7 +273,7 @@ func frontmatterBlock(raw string) (string, bool) {
 // mutates only address_map[path] = address, and re-encodes at 2-space
 // indent atomically. Only a wholly absent file starts from the minimal
 // seed manifest.
-func recordAddress(vaultRoot, path, address string) error {
+func recordAddress(vaultRoot, path, address string, at time.Time) error {
 	full := filepath.Join(vaultRoot, manifestRelPath)
 	m := map[string]json.RawMessage{}
 
@@ -283,7 +283,7 @@ func recordAddress(vaultRoot, path, address string) error {
 		}
 	} else if os.IsNotExist(err) {
 		m["version"] = json.RawMessage("1")
-		m["created"] = json.RawMessage(strconv.Quote(nowFunc().Format("2006-01-02")))
+		m["created"] = json.RawMessage(strconv.Quote(at.Format("2006-01-02")))
 		m["sources"] = json.RawMessage("{}")
 	} else {
 		return fmt.Errorf("promote: read %s: %w", full, err)
