@@ -446,8 +446,8 @@ func TestWriter_Promote_AdoptsAnUnrecordedOwnPageAndRepairsRegistration(t *testi
 	}
 
 	// A later day, so the freshly rendered page differs from the one on
-	// disk in exactly the two volatile stamps EmitPage takes from the wall
-	// clock -- the second-order hazard that makes a byte-equality
+	// disk in exactly the two volatile stamps EmitPage takes from the time
+	// it is given -- the second-order hazard that makes a byte-equality
 	// reconciliation succeed only on a same-day retry.
 	clock.Set(time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
 	wedged := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Clock: clock, Addresses: staticAddress(testAddress)}

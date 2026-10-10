@@ -37,7 +37,8 @@ type Writer struct {
 	Addresses AddressAllocator
 	// Clock dates the pages, the promotion log and the sync-state record.
 	// The composition root wires a real one; a Writer without one is
-	// refused by Promote and Sync before they touch the vault.
+	// refused by Promote and Sync before they touch the vault. Propagate
+	// patches pages in place and never reads the time, so it asks for none.
 	Clock Clock
 }
 
@@ -61,9 +62,8 @@ type Result struct {
 // per R-030). explicit is forwarded to Eligible, matching the explicit
 // promote surface's override semantics (R-007); an ineligible obs is left
 // untouched and reports a Result with no page and ActionNone (the zero
-// Result) and no error, since ineligibility
-// is a normal skip a scanning caller (sync) must not treat as a failure.
-// Every promotion that actually wrote a page persists the precedence
+// Result) and no error, since ineligibility is a normal skip a scanning
+// caller (sync) must not treat as a failure. Every promotion that actually wrote a page persists the precedence
 // sidecar; a create persists it BEFORE publishing the page, since a
 // published page with no recorded provenance is one UpdateInPlace would
 // refuse from then on, while a recorded fingerprint with no page is simply

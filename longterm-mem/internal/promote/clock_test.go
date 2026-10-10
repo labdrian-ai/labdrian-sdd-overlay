@@ -105,5 +105,31 @@ func TestSync_RefusesAWriterWithoutAClockBeforeTouchingAnything(t *testing.T) {
 	}
 }
 
+// TestPropagate_NeedsNoClock: Propagate patches the status and related fields of a page in place and
+// never reads the time, so a Writer without a clock is not refused by it and must not fault: the guard
+// belongs to Promote and Sync only, and a change that makes Propagate read the clock has to add it there
+// too.
+func TestPropagate_NeedsNoClock(t *testing.T) {
+	vaultRoot := t.TempDir()
+	store, ids := newFixtureEngramStore(t, []fixtureObs{
+		{title: "Old Decision", content: "Old body.", project: "labdrian-sdd-overlay", obsType: "decision", revisionCount: 1, syncID: "sync-old", createdAt: "2026-08-01 00:00:00", topicKey: "longterm-mem/old-decision"},
+		{title: "New Decision", content: "New body.", project: "labdrian-sdd-overlay", obsType: "decision", revisionCount: 1, syncID: "sync-new", createdAt: "2026-08-15 00:00:00", topicKey: "longterm-mem/new-decision"},
+	}, []fixtureRelation{
+		{syncID: "rel-1", sourceSyncID: "sync-new", targetSyncID: "sync-old", relation: "supersedes"},
+	})
+	precedence := PrecedenceStore{}
+	seedPromotedPage(t, vaultRoot, precedence, memory.Observation{ID: ids[0], Type: "decision", Title: "Old Decision", Content: "Old body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}, "c-000001")
+	seedPromotedPage(t, vaultRoot, precedence, memory.Observation{ID: ids[1], Type: "decision", Title: "New Decision", Content: "New body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}, "c-000002")
+
+	w := &Writer{VaultRoot: vaultRoot, Store: precedence}
+	report, err := Propagate(t.Context(), Deps{Memory: store, Writer: w}, "labdrian-sdd-overlay")
+	if err != nil {
+		t.Fatalf("Propagate: %v", err)
+	}
+	if len(report.Patched) != 1 || report.Patched[0] != "c-000001" {
+		t.Fatalf("Patched = %+v, want exactly [c-000001]", report.Patched)
+	}
+}
+
 // testInstant is the instant of a test that has no reason to care which one it is.
 var testInstant = time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)
