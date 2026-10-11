@@ -97,28 +97,7 @@ func (c commands) cmdMCP(args []string) int {
 			}
 			return mcpserver.GetOutcome{Observation: o, Found: found}, nil
 		},
-		// A promotion that wrote a page rebuilds the vault index before
-		// the call returns, exactly as cmd_sync.go does: without it a page
-		// promoted over MCP stayed invisible to MCP query until someone
-		// ran `sync` out of band. The rebuild is keyed off the promotion's
-		// outcome (reindexAfterPromote), and its failure is reported
-		// beside a SUCCESSFUL promotion rather than as the call's error --
-		// the page is written and durable by then.
-		Promote: func(ctx context.Context, project string, engramID int64) (mcpserver.PromoteOutcome, error) {
-			vaultRoot, err := vaultreg.Resolve(defaultVaultsPath(), project, "")
-			if err != nil {
-				return mcpserver.PromoteOutcome{}, err
-			}
-			result, err := runPromote(ctx, store, vaultRoot, c.clock, engramID)
-			if err != nil {
-				return mcpserver.PromoteOutcome{}, err
-			}
-			runner := &vault.Runner{Root: vaultRoot}
-			rebuildErr := reindexAfterPromote(ctx, result, func(ctx context.Context) error {
-				return vault.Rebuild(ctx, runner, false)
-			})
-			return mcpserver.PromoteOutcome{Result: result, IndexRebuildErr: rebuildErr}, nil
-		},
+		Promote: c.mcpPromote(store),
 	}
 
 	server := mcpserver.New(deps)
@@ -130,4 +109,30 @@ func (c commands) cmdMCP(args []string) int {
 		return exitInternal
 	}
 	return exitOK
+}
+
+// mcpPromote is the promote tool of the MCP session: it resolves the vault of the call's project, promotes the
+// observation with the clock the commands were composed with, and rebuilds the vault index when the promotion
+// wrote a page.
+//
+// The rebuild happens before the call returns, exactly as cmd_sync.go does it: without it a page promoted over
+// MCP stayed invisible to MCP query until someone ran `sync` out of band. It is keyed off the promotion's
+// outcome (reindexAfterPromote), and its failure is reported beside a SUCCESSFUL promotion rather than as the
+// call's error -- the page is written and durable by then.
+func (c commands) mcpPromote(store *engram.Store) func(ctx context.Context, project string, engramID int64) (mcpserver.PromoteOutcome, error) {
+	return func(ctx context.Context, project string, engramID int64) (mcpserver.PromoteOutcome, error) {
+		vaultRoot, err := vaultreg.Resolve(defaultVaultsPath(), project, "")
+		if err != nil {
+			return mcpserver.PromoteOutcome{}, err
+		}
+		result, err := runPromote(ctx, store, vaultRoot, c.clock, engramID)
+		if err != nil {
+			return mcpserver.PromoteOutcome{}, err
+		}
+		runner := &vault.Runner{Root: vaultRoot}
+		rebuildErr := reindexAfterPromote(ctx, result, func(ctx context.Context) error {
+			return vault.Rebuild(ctx, runner, false)
+		})
+		return mcpserver.PromoteOutcome{Result: result, IndexRebuildErr: rebuildErr}, nil
+	}
 }
