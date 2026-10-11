@@ -246,14 +246,22 @@ func pagesScenarios() []pagesScenario {
 }
 
 func TestPromotePagesGolden(t *testing.T) {
+	runGoldenScenarios(t, "pages-golden", pagesScenarios())
+}
+
+// runGoldenScenarios runs each scenario in a world of its own and compares what the commands printed and the
+// vault they left with the golden file of the scenario under testdata/<goldenSubdir>. The sets of golden files
+// that hold the commands to the vault's files (the pages, the catalog and the log, the sync state) share it.
+func runGoldenScenarios(t *testing.T, goldenSubdir string, scenarios []pagesScenario) {
+	t.Helper()
 	if !vault.PrerequisitePresent("python3") {
 		t.Skip("python3 is not on PATH: the vault's index rebuild runs its scripts under it")
 	}
-	goldenDir, err := filepath.Abs(filepath.Join("testdata", "pages-golden"))
+	goldenDir, err := filepath.Abs(filepath.Join("testdata", goldenSubdir))
 	if err != nil {
 		t.Fatalf("resolve the golden directory: %v", err)
 	}
-	for _, scenario := range pagesScenarios() {
+	for _, scenario := range scenarios {
 		t.Run(scenario.name, func(t *testing.T) {
 			fixedUmask(t)
 			w := newPromoteGoldenWorld(t)
