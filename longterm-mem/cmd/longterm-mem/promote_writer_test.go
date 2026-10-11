@@ -17,7 +17,9 @@ const promotePackage = "github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem
 func TestNewPromoteWriterWiresTheWriterOfAVault(t *testing.T) {
 	vaultRoot := t.TempDir()
 
-	writer, err := newPromoteWriter(vaultRoot)
+	clock := fixedClock{at: fixtureInstant}
+
+	writer, err := newPromoteWriter(vaultRoot, clock)
 	if err != nil {
 		t.Fatalf("newPromoteWriter: %v", err)
 	}
@@ -27,8 +29,8 @@ func TestNewPromoteWriterWiresTheWriterOfAVault(t *testing.T) {
 	if got, want := writer.Addresses, (promote.AddressAllocator)(vault.AddressAllocator{Root: vaultRoot}); got != want {
 		t.Errorf("Addresses = %#v, want the vault's allocator %#v", got, want)
 	}
-	if _, ok := writer.Clock.(utcClock); !ok {
-		t.Errorf("Clock = %T, want the UTC wall clock", writer.Clock)
+	if writer.Clock != promote.Clock(clock) {
+		t.Errorf("Clock = %#v, want the clock the Writer was given, %#v", writer.Clock, clock)
 	}
 	if writer.Precedence == nil || writer.Store == nil {
 		t.Errorf("Precedence = %v, Store = %v, want the repository and the store it holds", writer.Precedence, writer.Store)
@@ -44,7 +46,7 @@ func TestNewPromoteWriterFailsWithTheSidecarsOwnError(t *testing.T) {
 	vaultRoot := t.TempDir()
 	writeCorruptSidecar(t, vaultRoot)
 
-	writer, err := newPromoteWriter(vaultRoot)
+	writer, err := newPromoteWriter(vaultRoot, utcClock{})
 	if err == nil || writer != nil {
 		t.Fatalf("newPromoteWriter = (%v, %v), want no writer and the parse failure", writer, err)
 	}

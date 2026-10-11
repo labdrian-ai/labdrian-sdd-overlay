@@ -23,7 +23,7 @@ import (
 // promote.Sync and promote.Propagate wired to a real Engram connection and
 // a real vault, the same seam shape cmd_index.go and cmd_query.go already
 // use for vault.Rebuild/vault.Retrieve.
-func cmdSync(args []string) int {
+func (c commands) cmdSync(args []string) int {
 	fs := flag.NewFlagSet("sync", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
 	project := fs.String("project", "", projectFlagUsage)
@@ -57,7 +57,7 @@ func cmdSync(args []string) int {
 	defer store.Close()
 	declareDegradedEngram(store, "sync")
 
-	writer, err := newPromoteWriter(vaultRoot)
+	writer, err := newPromoteWriter(vaultRoot, c.clock)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "longterm-mem: sync: %v\n", err)
 		return exitInternal

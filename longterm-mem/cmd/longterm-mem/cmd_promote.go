@@ -22,7 +22,7 @@ import (
 // exit 7 (not_found), never a silent no-op, and a promotion the local-edit
 // precedence rule refuses (R-030) exits 6 (registration_conflict) rather
 // than reporting a page it deliberately did not write as promoted.
-func cmdPromote(args []string) int {
+func (c commands) cmdPromote(args []string) int {
 	// `promote reconcile <address>` is its own verb, dispatched before the
 	// flag set below ever sees the arguments: it takes a page address, not
 	// an --id, and its refusals are its own.
@@ -61,7 +61,7 @@ func cmdPromote(args []string) int {
 	defer store.Close()
 	declareDegradedEngram(store, "promote")
 
-	result, err := runPromote(context.Background(), store, vaultRoot, *id)
+	result, err := runPromote(context.Background(), store, vaultRoot, c.clock, *id)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "longterm-mem: promote: %v\n", err)
 		if errors.Is(err, promote.ErrObservationNotFound) {

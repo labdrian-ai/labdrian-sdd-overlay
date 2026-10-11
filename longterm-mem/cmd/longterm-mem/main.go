@@ -27,7 +27,7 @@ func (c commands) run(args []string) int {
 	case "query":
 		return c.cmdQuery(args[1:])
 	case "sync":
-		return cmdSync(args[1:])
+		return c.cmdSync(args[1:])
 	case "status":
 		return cmdStatus(args[1:])
 	case "stale":
@@ -37,7 +37,7 @@ func (c commands) run(args []string) int {
 	case "doctor":
 		return c.cmdDoctor(args[1:])
 	case "promote":
-		return cmdPromote(args[1:])
+		return c.cmdPromote(args[1:])
 	case "mcp":
 		return c.cmdMCP(args[1:])
 	case "register":
