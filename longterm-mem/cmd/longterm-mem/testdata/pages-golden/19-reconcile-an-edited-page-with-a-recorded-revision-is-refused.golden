@@ -1,0 +1,82 @@
+args: promote reconcile --project golden-project c-000901
+exit: 6
+--- stdout ---
+--- stderr ---
+longterm-mem: promote reconcile: promote: page has a local edit the precedence rule preserves: .raw/.longterm-mem-manifest.json records revision 1 for c-000901 and the page no longer matches it; promotion adopts such a page only when the page's own engram_revision stands above 1 (which only longterm-mem's own writes advance) and otherwise refuses it to keep the edit, and reconcile does not override that refusal
+--- vault ---
+=== .allocator-counter (-rw-r--r--) ===
+901
+=== .raw/ (directory -rwxr-xr-x) ===
+=== .raw/.longterm-mem-manifest.json (-rw-------) ===
+{
+  "c-000901": {
+    "body_hash": "43c0c8b5ce7879c8a5268caa403a48eb2d07c43d4dd3a978053c14797ca3e98d",
+    "frontmatter_hash": "1b21326f72b961a3fbb0960a4364c0fba15144fd63a59f907350fd1e30a3a65b",
+    "promoted_revision": 1
+  }
+}
+=== .raw/.manifest.json (-rw-------) ===
+{
+  "address_map": {
+    "wiki/memory/c-000901.md": "c-000901"
+  },
+  "created": "2026-10-10",
+  "sources": {},
+  "version": 1
+}
+=== bin/ (directory -rwxr-xr-x) ===
+=== bin/setup-retrieve.sh (-rwxr-xr-x) ===
+#!/bin/sh
+exit 0
+=== scripts/ (directory -rwxr-xr-x) ===
+=== scripts/allocate-address.sh (-rwxr-xr-x) ===
+#!/bin/sh
+n=900
+[ -f .allocator-counter ] && read n < .allocator-counter
+n=$((n+1))
+echo "$n" > .allocator-counter
+printf 'c-%06d\n' "$n"
+=== scripts/bm25-index.py (-rwxr-xr-x) ===
+
+=== scripts/contextual-prefix.py (-rwxr-xr-x) ===
+
+=== wiki/ (directory -rwxr-xr-x) ===
+=== wiki/index.md (-rw-------) ===
+<!-- longterm-mem:begin -->
+- [[c-000901|Pinned Decision]]
+<!-- longterm-mem:end -->
+=== wiki/log.md (-rw-------) ===
+## [2026-10-10] promote | Pinned Decision
+
+[[c-000901|Pinned Decision]]
+
+=== wiki/memory/ (directory -rwxr-xr-x) ===
+=== wiki/memory/c-000901.md (-rw-------) ===
+---
+type: concept
+title: "Pinned Decision"
+address: c-000901
+aliases:
+  - "Pinned Decision"
+created: 2026-10-10
+updated: 2026-10-10
+tags:
+  - "memory"
+  - "decision"
+status: mature
+related: []
+sources: []
+engram_id: 1
+engram_sync_id: sync-1
+engram_type: decision
+engram_revision: 1
+project: golden-project
+---
+# Pinned Decision
+
+A decision somebody pinned.
+
+---
+Promoted from Engram observation 1, revision 1.
+
+A line a person added.

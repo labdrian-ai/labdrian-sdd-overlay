@@ -109,7 +109,7 @@ func (c commands) cmdMCP(args []string) int {
 			if err != nil {
 				return mcpserver.PromoteOutcome{}, err
 			}
-			result, err := runPromote(ctx, store, vaultRoot, engramID)
+			result, err := runPromote(ctx, store, vaultRoot, c.clock, engramID)
 			if err != nil {
 				return mcpserver.PromoteOutcome{}, err
 			}

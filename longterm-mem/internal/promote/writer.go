@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
@@ -17,9 +16,17 @@ import (
 // explicit promote command (slice 8b) share one code path instead of
 // each re-implementing the create/update decision.
 type Writer struct {
-	// VaultRoot is the vault checkout Promote allocates addresses in and
-	// writes pages under.
+	// VaultRoot is the vault checkout Promote registers pages in (the
+	// catalog and log) and records syncs under; the pages themselves are
+	// Pages' to read and write.
 	VaultRoot string
+	// Pages is where the pages of the vault are read and written: the
+	// scan for an observation's page, the check for the page about to be
+	// created, the replacement of a page, and the patches that supersede
+	// the pages an observation left behind. A Writer without one is refused
+	// by Promote and Sync before they write anything, and by Propagate
+	// before it patches anything.
+	Pages PageRepository
 	// Store is the precedence store Promote consults and updates
 	// (R-030). UpdateInPlace leaves persistence to its caller, and
 	// Writer is that caller: it saves the sidecar as part of every
@@ -80,16 +87,35 @@ func (w *Writer) checkPorts() error {
 	if memory.IsMissing(w.Clock) {
 		return errNoClock
 	}
-	return w.checkPrecedence()
+	return w.checkPatchPorts()
 }
 
 // checkPrecedence reports whether the Writer was handed the repository its
-// precedence store is persisted through, the one port Propagate needs.
+// precedence store is persisted through.
 func (w *Writer) checkPrecedence() error {
 	if memory.IsMissing(w.Precedence) {
 		return errNoPrecedenceRepository
 	}
 	return nil
+}
+
+// checkPages reports whether the Writer was handed the repository its pages
+// are read and written through.
+func (w *Writer) checkPages() error {
+	if memory.IsMissing(w.Pages) {
+		return errNoPageRepository
+	}
+	return nil
+}
+
+// checkPatchPorts reports the first port Propagate needs and was not handed:
+// the repository the precedence store is persisted through, and the pages it
+// patches.
+func (w *Writer) checkPatchPorts() error {
+	if err := w.checkPrecedence(); err != nil {
+		return err
+	}
+	return w.checkPages()
 }
 
 // Result reports what Promote did for one observation.
@@ -145,12 +171,19 @@ func (w *Writer) Promote(ctx context.Context, obs memory.Observation, explicit b
 	// makes it correct: findMovedPages filters on project != obs.Project,
 	// so the page this run is about to create or update can never appear
 	// in it, whenever the scan runs.
-	moved, err := findMovedPages(w.VaultRoot, obs.Project, int(obs.ID))
+	moved, err := findMovedPages(w.Pages, obs.Project, int(obs.ID))
 	if err != nil {
 		return Result{}, err
 	}
 
-	address, err := allocateAddress(ctx, w.VaultRoot, obs.Project, int(obs.ID), w.Addresses, w.AddressMap, utc(w.Clock))
+	address, err := allocateAddress(ctx, w.Pages, obs.Project, int(obs.ID), w.Addresses, w.AddressMap, utc(w.Clock))
+	var unknown *unreadablePagesError
+	if errors.As(err, &unknown) {
+		// A page that could not be read may be this observation's own. Taking an address and writing a page
+		// would make it a second one, so nothing is taken and nothing is written: the observation is reported
+		// as left alone, with the pages that kept it from being decided.
+		return Result{Action: unreadablePagesAction(obs.ID, unknown)}, nil
+	}
 	if err != nil {
 		return Result{}, err
 	}
@@ -160,10 +193,13 @@ func (w *Writer) Promote(ctx context.Context, obs memory.Observation, explicit b
 		return Result{}, err
 	}
 
-	existingPath := filepath.Join(w.VaultRoot, page.Path)
-	switch _, err := os.Stat(existingPath); {
-	case err == nil:
-		action, err := UpdateInPlace(w.Store, page, existingPath)
+	existingPath := w.Pages.PageLocation(address)
+	exists, err := w.Pages.PageExists(address)
+	if err != nil {
+		return Result{}, fmt.Errorf("promote: stat %s: %w", existingPath, err)
+	}
+	if exists {
+		action, err := UpdateInPlace(w.Pages, w.Store, page)
 		if err != nil {
 			return Result{}, err
 		}
@@ -186,8 +222,6 @@ func (w *Writer) Promote(ctx context.Context, obs memory.Observation, explicit b
 			return Result{}, err
 		}
 		return Result{Page: page, Action: action}, nil
-	case !os.IsNotExist(err):
-		return Result{}, fmt.Errorf("promote: stat %s: %w", existingPath, err)
 	}
 
 	// Fingerprint first, page second. The two writes cannot be made atomic
@@ -196,12 +230,12 @@ func (w *Writer) Promote(ctx context.Context, obs memory.Observation, explicit b
 	// are not equally recoverable:
 	//
 	//   page without entry (the old order) is unrecoverable. allocateAddress
-	//   reuses the page's own address, os.Stat finds it, and UpdateInPlace
+	//   reuses the page's own address, PageExists finds it, and UpdateInPlace
 	//   refuses it as unknown provenance -- which, being a skip, also
 	//   suppresses the Save and the registration that would have repaired
 	//   it. Every later run repeats that exact skip: a fixed point.
 	//
-	//   entry without page (this order) is self-healing. os.Stat finds no
+	//   entry without page (this order) is self-healing. PageExists finds no
 	//   page, so the next run takes this same create branch and finishes
 	//   the job, catalog and log included.
 	//
@@ -216,7 +250,7 @@ func (w *Writer) Promote(ctx context.Context, obs memory.Observation, explicit b
 		delete(w.Store, address)
 		return Result{}, fmt.Errorf("promote: persist precedence for %s: %w (no page published)", address, err)
 	}
-	if err := writeFileAtomic(existingPath, []byte(page.Frontmatter+page.Body)); err != nil {
+	if err := w.Pages.WritePage(address, page.Frontmatter+page.Body); err != nil {
 		// The fingerprint is durable but no page carries it. A retry would
 		// converge regardless (the create branch is chosen by the page's
 		// own absence), but an entry claiming provenance over a file that
@@ -306,13 +340,13 @@ func (w *Writer) supersedeMoved(moved []promotedPage, successorAddress, successo
 	patched := false
 	var failures []error
 	for _, old := range moved {
-		path := filepath.Join(w.VaultRoot, vaultlayout.PagesDir, old.Address+".md")
-		raw, err := os.ReadFile(path)
+		path := w.Pages.PageLocation(old.Address)
+		raw, err := w.Pages.ReadPage(old.Address)
 		if err != nil {
 			failures = append(failures, fmt.Errorf("promote: read superseded page %s: %w", path, err))
 			continue
 		}
-		block, ok := frontmatterBlock(string(raw))
+		block, ok := frontmatterBlock(raw)
 		if !ok {
 			failures = append(failures, fmt.Errorf("promote: %s has no parseable frontmatter block", path))
 			continue
@@ -321,7 +355,7 @@ func (w *Writer) supersedeMoved(moved []promotedPage, successorAddress, successo
 			continue
 		}
 
-		frontmatterHash, _, err := PatchStatusFields(path, "superseded", []string{wikilink(successorAddress, successorTitle)})
+		frontmatterHash, _, err := PatchStatusFields(w.Pages, old.Address, "superseded", []string{wikilink(successorAddress, successorTitle)})
 		if err != nil {
 			failures = append(failures, fmt.Errorf("promote: supersede %s: %w", path, err))
 			continue

@@ -38,9 +38,11 @@ var requiredScalarFields = []string{"type", titleField, "address", "created", "u
 // required fields, the type/status enum, the address format, address_map
 // consistency, wikilink resolvability, and an inbound index.md link.
 // addresses is where the address_map rule reads the vault's address map
-// from; vaultRoot lets the last two rules inspect on-disk state. Doctor
-// (slice 8a) reuses LintPage's rules unchanged.
-func LintPage(page Page, vaultRoot string, addresses AddressMapReader) []Diagnostic {
+// from, pages is where the wikilink rule asks whether a linked page is there,
+// and vaultRoot lets the last rule inspect on-disk state (the catalog, which
+// the next L3 slice moves behind a port). Doctor (slice 8a) reuses LintPage's
+// rules unchanged.
+func LintPage(page Page, vaultRoot string, pages PageExistence, addresses AddressMapReader) []Diagnostic {
 	var diags []Diagnostic
 
 	fields := parseFrontmatterFields(page.Frontmatter)
@@ -64,7 +66,7 @@ func LintPage(page Page, vaultRoot string, addresses AddressMapReader) []Diagnos
 	if diag, ok := checkAddressMap(page, addresses); !ok {
 		diags = append(diags, diag)
 	}
-	diags = append(diags, checkWikilinksResolve(page, vaultRoot)...)
+	diags = append(diags, checkWikilinksResolve(page, pages)...)
 	if diag, ok := CheckInboundIndexLink(page, vaultRoot); !ok {
 		diags = append(diags, diag)
 	}
@@ -126,12 +128,18 @@ func checkAddressMap(page Page, addresses AddressMapReader) (Diagnostic, bool) {
 
 // checkWikilinksResolve reports the wikilink-resolvability rule: every
 // `[[c-NNNNNN|...]]` in the rendered page must resolve to an existing
-// wiki/memory/<address>.md file.
-func checkWikilinksResolve(page Page, vaultRoot string) []Diagnostic {
+// wiki/memory/<address>.md file. A link whose page pages cannot say is there
+// for any reason does not resolve. A page with a link to resolve and no
+// PageExistence wired gets one finding that names the missing port, rather
+// than a call to it.
+func checkWikilinksResolve(page Page, pages PageExistence) []Diagnostic {
+	links := wikilinkPattern.FindAllStringSubmatch(page.Frontmatter+page.Body, -1)
+	if len(links) > 0 && memory.IsMissing(pages) {
+		return []Diagnostic{{Rule: "wikilink-resolvability", Detail: errNoPageReader.Error()}}
+	}
 	var diags []Diagnostic
-	for _, m := range wikilinkPattern.FindAllStringSubmatch(page.Frontmatter+page.Body, -1) {
-		target := filepath.Join(vaultRoot, vaultlayout.PagesDir, m[1]+".md")
-		if _, err := os.Stat(target); err != nil {
+	for _, m := range links {
+		if exists, err := pages.PageExists(m[1]); err != nil || !exists {
 			diags = append(diags, Diagnostic{Rule: "wikilink-resolvability", Detail: fmt.Sprintf("%s does not resolve to an existing file", m[0])})
 		}
 	}

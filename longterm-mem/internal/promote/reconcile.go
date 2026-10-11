@@ -3,8 +3,7 @@ package promote
 import (
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
+	"io/fs"
 	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
@@ -118,23 +117,23 @@ type ReconcileOutcome struct {
 //     change what would be destroyed. The remedy is the human's: keep the
 //     edit (and leave the page refused), or fold it into Engram and let the
 //     ordinary promotion path rewrite the page.
-func Reconcile(vaultRoot, project, address string, precedence PrecedenceRepository) (ReconcileOutcome, error) {
+func Reconcile(pages PageReader, project, address string, precedence PrecedenceRepository) (ReconcileOutcome, error) {
 	if memory.IsMissing(precedence) {
 		return ReconcileOutcome{}, errNoPrecedenceRepository
 	}
 	// The address is checked against the allocator's own shape BEFORE it
-	// touches the filesystem, because it is used twice: as a path segment
+	// reaches the pages, because it is used twice: as a path segment
 	// and as the sidecar key. addressPattern (lint.go) is the same
 	// ^c-\d{6}$ every promoted page is linted against, and it admits no
 	// separator, no dot and no `..`.
 	//
 	// That is a claim about the address STRING, and only about the string:
-	// the join below can name nothing but wiki/memory/<address>.md. It is
+	// the page it names can be nothing but wiki/memory/<address>.md. It is
 	// NOT a containment claim about the resolved path, and saying it was
-	// would be untrue -- nothing here calls filepath.EvalSymlinks or
+	// would be untrue -- nothing here resolves symbolic links or
 	// prefix-checks the result, so a symlink AT wiki/memory/<address>.md is
-	// followed and its target read. That is deliberate rather than
-	// overlooked: a vault behind a symlink is an ordinary setup, the
+	// followed by the adapter and its target read. That is deliberate rather
+	// than overlooked: a vault behind a symlink is an ordinary setup, the
 	// ordinary promotion path follows the same link, and resolving here
 	// would refuse those vaults for no gain. What the shape check buys is
 	// the pair of defects a raw string bought: a path the operator can
@@ -146,17 +145,20 @@ func Reconcile(vaultRoot, project, address string, precedence PrecedenceReposito
 		return ReconcileOutcome{}, fmt.Errorf("%w: %q does not match %s, so it names neither a page under %s nor a key any promotion looks up", ErrInvalidAddress, address, addressPattern, vaultlayout.PagesDir)
 	}
 
-	rel := filepath.Join(vaultlayout.PagesDir, address+".md")
-	full := filepath.Join(vaultRoot, rel)
-	raw, err := os.ReadFile(full)
+	if memory.IsMissing(pages) {
+		return ReconcileOutcome{}, errNoPageReader
+	}
+	rel := vaultlayout.PageFile(address)
+	full := pages.PageLocation(address)
+	raw, err := pages.ReadPage(address)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, fs.ErrNotExist) {
 			return ReconcileOutcome{}, fmt.Errorf("%w: %s", ErrPageNotFound, address)
 		}
 		return ReconcileOutcome{}, fmt.Errorf("promote: read %s: %w", full, err)
 	}
 
-	fmBlock, ok := frontmatterBlock(string(raw))
+	fmBlock, ok := frontmatterBlock(raw)
 	if !ok {
 		return ReconcileOutcome{}, fmt.Errorf("%w: %s has no parseable frontmatter block", ErrUnusablePage, full)
 	}
@@ -185,7 +187,7 @@ func Reconcile(vaultRoot, project, address string, precedence PrecedenceReposito
 
 	entry, tracked := store.Get(address)
 	switch {
-	case tracked && entry.MatchesPage(string(raw)):
+	case tracked && entry.MatchesPage(raw):
 		return ReconcileOutcome{Address: address, Path: rel, PromotedRevision: entry.PromotedRevision}, nil
 	case tracked && entry.PromotedRevision > 0:
 		return ReconcileOutcome{}, fmt.Errorf("%w: %s records revision %d for %s and the page no longer matches it; promotion adopts such a page only when the page's own engram_revision stands above %d (which only longterm-mem's own writes advance) and otherwise refuses it to keep the edit, and reconcile does not override that refusal", ErrLocalEditPreserved, vaultlayout.PrecedenceFile, entry.PromotedRevision, address, entry.PromotedRevision)
@@ -216,7 +218,7 @@ func Reconcile(vaultRoot, project, address string, precedence PrecedenceReposito
 	}
 
 	store.Set(address, PrecedenceEntry{
-		BodyHash:         hashText(string(raw)[len(fmBlock):]),
+		BodyHash:         hashText(raw[len(fmBlock):]),
 		FrontmatterHash:  hashText(fmBlock),
 		PromotedRevision: revision,
 	})

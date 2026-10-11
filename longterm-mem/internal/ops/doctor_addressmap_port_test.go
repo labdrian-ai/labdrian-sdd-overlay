@@ -39,6 +39,7 @@ func addressMapDoctorDeps(t *testing.T, reader AddressMapReader) DoctorDeps {
 	return DoctorDeps{
 		VaultRoot:             vaultRoot,
 		Precedence:            vaultfs.New(vaultRoot),
+		Pages:                 vaultfs.New(vaultRoot),
 		AddressMap:            reader,
 		PrerequisitePresent:   func(string) bool { return true },
 		StateDir:              stateDir,
@@ -136,6 +137,7 @@ func TestDoctorWithoutAnAddressMapReaderFailsOnlyThatCheck(t *testing.T) {
 func TestDoctorWithoutAnAddressMapReaderAndWithoutPagesPasses(t *testing.T) {
 	deps := addressMapDoctorDeps(t, nil)
 	deps.VaultRoot = t.TempDir()
+	deps.Pages = vaultfs.New(deps.VaultRoot)
 	deps.Precedence = vaultfs.New(deps.VaultRoot)
 
 	if got := addressMapCheck(t, deps); got.Status != CheckPassed || strings.TrimSpace(got.Detail) != "" {

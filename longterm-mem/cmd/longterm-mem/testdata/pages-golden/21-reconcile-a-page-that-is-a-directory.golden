@@ -1,0 +1,25 @@
+args: promote reconcile --project golden-project c-000901
+exit: 1
+--- stdout ---
+--- stderr ---
+longterm-mem: promote reconcile: promote: read <vault>/wiki/memory/c-000901.md: read <vault>/wiki/memory/c-000901.md: is a directory
+--- vault ---
+=== bin/ (directory -rwxr-xr-x) ===
+=== bin/setup-retrieve.sh (-rwxr-xr-x) ===
+#!/bin/sh
+exit 0
+=== scripts/ (directory -rwxr-xr-x) ===
+=== scripts/allocate-address.sh (-rwxr-xr-x) ===
+#!/bin/sh
+n=900
+[ -f .allocator-counter ] && read n < .allocator-counter
+n=$((n+1))
+echo "$n" > .allocator-counter
+printf 'c-%06d\n' "$n"
+=== scripts/bm25-index.py (-rwxr-xr-x) ===
+
+=== scripts/contextual-prefix.py (-rwxr-xr-x) ===
+
+=== wiki/ (directory -rwxr-xr-x) ===
+=== wiki/memory/ (directory -rwxr-xr-x) ===
+=== wiki/memory/c-000901.md/ (directory -rwxr-xr-x) ===

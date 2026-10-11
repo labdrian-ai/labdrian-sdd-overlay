@@ -64,6 +64,7 @@ func (c commands) cmdDoctor(args []string) int {
 	deps := ops.DoctorDeps{
 		VaultRoot:           vaultRoot,
 		Precedence:          vaultFiles,
+		Pages:               vaultFiles,
 		AddressMap:          vaultFiles,
 		PrerequisitePresent: vault.PrerequisitePresent,
 		// StateDir/LiveObservationIDs/EmbeddingBackendCheck back the three

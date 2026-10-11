@@ -8,8 +8,9 @@
 //
 // The package holds names and the joining of a name to a root, and does no I/O. Reading and writing the
 // files is the vault file system adapter's, and Layout is the one way it joins a name to its root: the
-// promotion and diagnostic code that still joins a root to a name itself does so for the files the next
-// slices of the vault repository move behind the adapter, and goes with them.
+// promotion and diagnostic code that still joins a root to a name itself does so for the catalog, the log
+// and the sync state, which the last slice of the vault repository moves behind the adapter, and goes with
+// them. The pages are the adapter's already; the code that works on them speaks of an address and not a path.
 package vaultlayout
 
 import "path/filepath"

@@ -4,9 +4,10 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 )
 
 // ActionKind reports what UpdateInPlace (or, after 6.8, Writer.Promote)
@@ -33,12 +34,18 @@ const (
 	// from what longterm-mem itself last wrote there (R-030): the
 	// content update was skipped and Diagnostic names the page.
 	ActionSkippedLocalEdit
+	// ActionSkippedUnreadablePages means no readable page belongs to the observation and a page could not be
+	// read, so it cannot be told whether the observation already has a page: nothing was written for it, no
+	// address was taken, and Diagnostic names the pages that could not be read. It is a skip like
+	// ActionSkippedLocalEdit, and the Result carries no page.
+	ActionSkippedUnreadablePages
 )
 
 // Action reports the outcome of one promotion write.
 type Action struct {
 	Kind ActionKind
-	// Diagnostic is set only when Kind == ActionSkippedLocalEdit.
+	// Diagnostic is set only when Kind is one of the skips, ActionSkippedLocalEdit or
+	// ActionSkippedUnreadablePages.
 	Diagnostic *Diagnostic
 }
 
@@ -56,15 +63,18 @@ func (k ActionKind) String() string {
 		return "updated"
 	case ActionSkippedLocalEdit:
 		return "skipped_local_edit"
+	case ActionSkippedUnreadablePages:
+		return "skipped_unreadable_pages"
 	default:
 		return "unknown"
 	}
 }
 
-// UpdateInPlace re-promotes an already-promoted page (R-008): existingPath
-// is overwritten with page's freshly rendered content and store's entry
-// for page.Address is updated to match. The write is refused, with a
-// diagnostic naming existingPath, whenever those bytes are not provably
+// UpdateInPlace re-promotes an already-promoted page (R-008): the page
+// promoted under page.Address, which pages reads and writes, is overwritten
+// with page's freshly rendered content and store's entry for page.Address is
+// updated to match. The write is refused, with a diagnostic naming the page's
+// location, whenever those bytes are not provably
 // longterm-mem's own last write (R-030): no store entry at all means
 // unknown provenance (a lost or hand-deleted sidecar, a page promoted
 // before tracking existed, a human's own file) and fails closed, and an
@@ -104,17 +114,21 @@ func (k ActionKind) String() string {
 // store is mutated in place; persisting it (PrecedenceStore.Save) is the
 // caller's job, keeping this a narrow primitive alongside allocateAddress/
 // EmitPage -- Writer (6.8) owns pairing the two writes per run.
-func UpdateInPlace(store PrecedenceStore, page Page, existingPath string) (Action, error) {
-	current, err := os.ReadFile(existingPath)
+func UpdateInPlace(pages PageRepository, store PrecedenceStore, page Page) (Action, error) {
+	if memory.IsMissing(pages) {
+		return Action{}, errNoPageRepository
+	}
+	existingPath := pages.PageLocation(page.Address)
+	current, err := pages.ReadPage(page.Address)
 	if err != nil {
 		return Action{}, fmt.Errorf("promote: read %s: %w", existingPath, err)
 	}
 
-	fmBlock, ok := frontmatterBlock(string(current))
+	fmBlock, ok := frontmatterBlock(current)
 	if !ok {
 		return Action{}, fmt.Errorf("promote: %s has no parseable frontmatter block", existingPath)
 	}
-	body := string(current)[len(fmBlock):]
+	body := current[len(fmBlock):]
 	rendered := page.Frontmatter + page.Body
 
 	entry, tracked := store.Get(page.Address)
@@ -136,7 +150,7 @@ func UpdateInPlace(store PrecedenceStore, page Page, existingPath string) (Actio
 		// never got to.
 	}
 
-	if err := writeFileAtomic(existingPath, []byte(rendered)); err != nil {
+	if err := pages.WritePage(page.Address, rendered); err != nil {
 		return Action{}, err
 	}
 	store.Set(page.Address, entryFor(page))
@@ -476,6 +490,19 @@ func skippedAction(existingPath, address, reason string) Action {
 		Diagnostic: &Diagnostic{
 			Rule:   "local-edit-precedence",
 			Detail: fmt.Sprintf("%s (address %s) %s; content update skipped", existingPath, address, reason),
+		},
+	}
+}
+
+// unreadablePagesAction is the skip of an observation that no readable page carries while a page could not be
+// read: it names the observation and every page that could not be read, and says nothing was written.
+func unreadablePagesAction(observationID int64, unknown *unreadablePagesError) Action {
+	return Action{
+		Kind: ActionSkippedUnreadablePages,
+		Diagnostic: &Diagnostic{
+			Rule: "unreadable-pages",
+			Detail: fmt.Sprintf("observation %d was not promoted: no readable page belongs to it, but a page that could not be read may: %s; nothing was written for it",
+				observationID, describePages(unknown.pages)),
 		},
 	}
 }

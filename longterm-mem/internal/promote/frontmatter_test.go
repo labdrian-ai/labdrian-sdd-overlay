@@ -32,7 +32,7 @@ func TestPatchStatusFields_ReplacesExistingFieldInPlace(t *testing.T) {
 		t.Fatalf("write fixture: %v", err)
 	}
 
-	if _, _, err := PatchStatusFields(path, "archived", []string{"[[c-000002|New]]"}); err != nil {
+	if _, _, err := PatchStatusFields(diskPages{dir: dir}, "c-000601", "archived", []string{"[[c-000002|New]]"}); err != nil {
 		t.Fatalf("PatchStatusFields: %v", err)
 	}
 
@@ -69,7 +69,7 @@ func TestPatchStatusFields_AddsAbsentFieldIntoBlock(t *testing.T) {
 		t.Fatalf("write fixture: %v", err)
 	}
 
-	if _, _, err := PatchStatusFields(path, "archived", []string{"[[c-000003|Successor]]"}); err != nil {
+	if _, _, err := PatchStatusFields(diskPages{dir: dir}, "c-000602", "archived", []string{"[[c-000003|Successor]]"}); err != nil {
 		t.Fatalf("PatchStatusFields: %v", err)
 	}
 
@@ -108,7 +108,7 @@ func TestPatchStatusFields_AddsAbsentScalarFieldIntoBlock(t *testing.T) {
 		t.Fatalf("write fixture: %v", err)
 	}
 
-	if _, _, err := PatchStatusFields(path, "superseded", nil); err != nil {
+	if _, _, err := PatchStatusFields(diskPages{dir: dir}, "c-000605", "superseded", nil); err != nil {
 		t.Fatalf("PatchStatusFields: %v", err)
 	}
 
@@ -154,7 +154,7 @@ func TestPatchStatusFields_BodyNeverTouched(t *testing.T) {
 		t.Fatalf("write fixture: %v", err)
 	}
 
-	_, bodyHash, err := PatchStatusFields(path, "archived", nil)
+	_, bodyHash, err := PatchStatusFields(diskPages{dir: dir}, "c-000603", "archived", nil)
 	if err != nil {
 		t.Fatalf("PatchStatusFields: %v", err)
 	}
@@ -201,7 +201,7 @@ func TestPatchStatusFields_PreservesContentOutsideBlockByteForByte(t *testing.T)
 		t.Fatalf("write fixture: %v", err)
 	}
 
-	if _, _, err := PatchStatusFields(path, "mature", []string{"[[c-000005|Related]]"}); err != nil {
+	if _, _, err := PatchStatusFields(diskPages{dir: dir}, "c-000604", "mature", []string{"[[c-000005|Related]]"}); err != nil {
 		t.Fatalf("PatchStatusFields: %v", err)
 	}
 

@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/ops/testdata"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultfs"
 )
 
@@ -204,7 +205,81 @@ func goldenScenarios() []goldenScenario {
 			}
 			symlinkOrSkip(t, "../notes/manifest.json", full)
 		}},
+		// The pages, wiki/memory/<address>.md, in each state a file of the directory can be found in; then the
+		// pages directory itself. Recorded for the move of the pages behind a port (Phase 9, L3 slice 3), from
+		// the program as it stood before it.
+		{name: "31-a-page-that-is-a-directory", build: func(t *testing.T, root string) {
+			if err := os.Mkdir(filepath.Join(root, "wiki", "memory", "c-000043.md"), 0o755); err != nil {
+				t.Fatal(err)
+			}
+		}},
+		{name: "32-a-page-that-is-a-link-to-another-page", build: func(t *testing.T, root string) {
+			symlinkOrSkip(t, goldenAddress+".md", filepath.Join(root, "wiki", "memory", "c-000043.md"))
+		}},
+		{name: "33-a-page-that-is-a-link-to-a-directory", build: func(t *testing.T, root string) {
+			if err := os.Mkdir(filepath.Join(root, "wiki", "folder"), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			symlinkOrSkip(t, "../folder", filepath.Join(root, "wiki", "memory", "c-000043.md"))
+		}},
+		{name: "34-a-page-with-no-frontmatter", build: func(t *testing.T, root string) {
+			writeGoldenFile(t, root, "wiki/memory/c-000043.md", "Just text, no frontmatter.\n")
+		}},
+		{name: "35-an-empty-page", build: func(t *testing.T, root string) {
+			writeGoldenFile(t, root, "wiki/memory/c-000043.md", "")
+		}},
+		{name: "36-files-beside-the-pages-that-are-not-pages", build: func(t *testing.T, root string) {
+			writeGoldenFile(t, root, "wiki/memory/notes.txt", "not a page")
+			writeGoldenFile(t, root, "wiki/memory/C-000044.MD", "not a page either")
+			if err := os.Mkdir(filepath.Join(root, "wiki", "memory", "folder.md"), 0o755); err != nil {
+				t.Fatal(err)
+			}
+		}},
+		{name: "37-a-page-named-only-md", build: func(t *testing.T, root string) {
+			writeGoldenFile(t, root, "wiki/memory/.md", "---\naddress: c-000045\n---\n")
+		}},
+		{name: "38-a-pages-directory-that-is-a-link-to-a-directory", build: func(t *testing.T, root string) {
+			if err := os.Rename(filepath.Join(root, "wiki", "memory"), filepath.Join(root, "notes-pages")); err != nil {
+				t.Fatal(err)
+			}
+			symlinkOrSkip(t, "../notes-pages", filepath.Join(root, "wiki", "memory"))
+		}},
+		{name: "39-a-pages-directory-that-is-a-link-to-nothing", build: func(t *testing.T, root string) {
+			if err := os.RemoveAll(filepath.Join(root, "wiki", "memory")); err != nil {
+				t.Fatal(err)
+			}
+			symlinkOrSkip(t, "../notes/absent", filepath.Join(root, "wiki", "memory"))
+		}},
+		// 32, 34 and 35 (a link to another page, a page with no frontmatter, an empty page) are one golden, and
+		// that is what they pin: the doctor takes a page's address from its name, and reads its content only
+		// against the hashes the precedence sidecar records for it, so where the sidecar has no entry for the
+		// page the content is not consulted and the three states cannot differ. These two give the page an entry
+		// that records no usable revision and the hashes of the healthy page, which is what makes the content
+		// matter: followed to the healthy page the link matches the entry, a page with no frontmatter does not.
+		{name: "40-a-page-that-is-a-link-to-a-page-the-sidecar-entry-matches", build: func(t *testing.T, root string) {
+			recordEntryMatchingTheHealthyPage(t, root, "c-000043")
+			symlinkOrSkip(t, goldenAddress+".md", filepath.Join(root, "wiki", "memory", "c-000043.md"))
+		}},
+		{name: "41-a-page-with-no-frontmatter-where-the-sidecar-entry-expects-the-healthy-page", build: func(t *testing.T, root string) {
+			recordEntryMatchingTheHealthyPage(t, root, "c-000043")
+			writeGoldenFile(t, root, "wiki/memory/c-000043.md", "Just text, no frontmatter.\n")
+		}},
 	}
+}
+
+// recordEntryMatchingTheHealthyPage gives the page promoted under address a precedence entry that records no
+// promoted revision and the hashes of the healthy page's frontmatter and body.
+func recordEntryMatchingTheHealthyPage(t *testing.T, root, address string) {
+	t.Helper()
+	raw, err := os.ReadFile(filepath.Join(root, "wiki", "memory", goldenAddress+".md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	parts := strings.SplitN(string(raw), "---\n", 3)
+	if len(parts) != 3 {
+		t.Fatalf("the healthy page has no frontmatter block to take the hashes of")
+	}
+	testdata.WritePrecedenceEntry(t, root, promote.Page{Address: address, Frontmatter: "---\n" + parts[1] + "---\n", Body: parts[2]})
 }
 
 // buildGoldenVault fills root with the healthy vault: one promoted page, its address-map entry, its
@@ -246,6 +321,7 @@ func TestGolden(t *testing.T) {
 				// literal is the golden files' own; cmd's TestCmdDoctor_ReportsAnUnparseableSidecarAsTheOpsGoldenDoes
 				// runs the command's wiring over the same damaged vault and holds it to the text recorded here.
 				Precedence:            vaultfs.New(vaultRoot, vaultfs.WithErrorPrefix("promote")),
+				Pages:                 vaultfs.New(vaultRoot, vaultfs.WithErrorPrefix("promote")),
 				AddressMap:            vaultfs.New(vaultRoot, vaultfs.WithErrorPrefix("promote")),
 				PrerequisitePresent:   func(string) bool { return true },
 				StateDir:              stateDir,

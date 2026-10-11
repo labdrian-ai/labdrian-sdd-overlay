@@ -80,6 +80,30 @@ type AddressMapReader interface {
 // built without an AddressMapReader and there is a promoted page to check.
 var errNoAddressMapReader = errors.New("ops: no address map reader was wired")
 
+// PageReader is the port through which Doctor reads the promoted pages of the vault it inspects: the notes in
+// the pages directory, one file each, named by their address. The package owns it, asks for the read half
+// only (a diagnostic never writes), and is satisfied by the vault file system adapter and by
+// promote.PageReader alike. It is a subset of promote.PageReader's methods, not a second vocabulary: what
+// promotion adds (PageLocation, the name of one page in its messages) is promotion's alone, and the
+// subset is held at compile time by a test (doctor_pages_port_test.go), so the two cannot drift apart by hand.
+// Its failures are the file system's own, untouched: the checks word them around the page they concern.
+type PageReader interface {
+	// ListPages returns the address of every page in the vault, in the order of the directory. A vault with
+	// no pages directory has no pages, which is (nil, nil); a directory that cannot be listed is an error.
+	ListPages() ([]string, error)
+	// ReadPage returns the whole content of the page promoted under address, following a link to it.
+	ReadPage(address string) (string, error)
+	// PageExists reports whether the page promoted under address is there; the page check asks it of the
+	// pages a page links to.
+	PageExists(address string) (bool, error)
+	// PagesLocation names the pages directory, for the messages that tell what could not be listed.
+	PagesLocation() string
+}
+
+// errNoPageReader is what the checks that judge the promoted pages report when Doctor was built without a
+// PageReader.
+var errNoPageReader = errors.New("ops: no page reader was wired")
+
 // loadPrecedence reads the precedence store through reader, or says that
 // there is none to read through.
 func loadPrecedence(reader PrecedenceReader) (promote.PrecedenceStore, error) {
@@ -96,6 +120,11 @@ func loadPrecedence(reader PrecedenceReader) (promote.PrecedenceStore, error) {
 type DoctorDeps struct {
 	// VaultRoot is the (possibly unresolvable) vault path Doctor inspects.
 	VaultRoot string
+	// Pages reads the vault's promoted pages for the three checks that judge
+	// them (address-map-integrity, wiki-registration-consistency and
+	// precedence-sidecar-consistency). Production wires the vault file system
+	// adapter over VaultRoot. Required: without it those checks fail and say so.
+	Pages PageReader
 	// Precedence reads the vault's precedence store for the
 	// precedence-sidecar-consistency check. Production wires the vault file
 	// system adapter over VaultRoot. Required: without it that check fails
@@ -149,14 +178,19 @@ type DoctorReport struct {
 // Doctor itself only returns a non-nil error for a condition outside any
 // single check's own reporting (there is none today; every failure mode
 // this slice defines is expressed as a Check, not a Doctor-level error).
+//
+// The three checks that judge the promoted pages take their arguments in one order: the pages, then the vault
+// root while the check still reads a file of it itself (the catalog and the log, until the next slice puts
+// them behind ports), then the other port it needs. A transposition does not compile: the three are
+// different types.
 func Doctor(ctx context.Context, deps DoctorDeps, project string) (DoctorReport, error) {
 	return DoctorReport{
 		Project: project,
 		Checks: []Check{
 			checkVaultConfigResolvable(deps.VaultRoot),
-			checkAddressMapIntegrity(deps.VaultRoot, deps.AddressMap),
-			checkWikiRegistrationConsistency(deps.VaultRoot),
-			checkPrecedenceSidecarConsistency(deps.VaultRoot, deps.Precedence),
+			checkAddressMapIntegrity(deps.Pages, deps.VaultRoot, deps.AddressMap),
+			checkWikiRegistrationConsistency(deps.Pages, deps.VaultRoot),
+			checkPrecedenceSidecarConsistency(deps.Pages, deps.Precedence),
 			checkRuntimePrerequisites(deps),
 			checkEmbeddingIndexPresent(deps, project),
 			checkEmbeddingIndexFresh(deps, project),
@@ -189,8 +223,8 @@ func checkVaultConfigResolvable(vaultRoot string) Check {
 // A vault root that cannot be scanned for promoted pages at all (missing
 // directory) reports PASS -- there is nothing yet to be inconsistent with,
 // matching checkAddressMap's own graceful handling of a missing manifest.
-func checkAddressMapIntegrity(vaultRoot string, addresses AddressMapReader) Check {
-	pages, unreadable, err := loadPromotedPages(vaultRoot)
+func checkAddressMapIntegrity(promoted PageReader, vaultRoot string, addresses AddressMapReader) Check {
+	pages, unreadable, err := loadPromotedPages(promoted)
 	if err != nil {
 		return Check{Name: CheckAddressMapIntegrity, Status: CheckFailed, Detail: err.Error()}
 	}
@@ -203,7 +237,7 @@ func checkAddressMapIntegrity(vaultRoot string, addresses AddressMapReader) Chec
 		}
 	} else {
 		for _, page := range pages {
-			for _, diag := range promote.LintPage(page, vaultRoot, addresses) {
+			for _, diag := range promote.LintPage(page, vaultRoot, promoted, addresses) {
 				if diag.Rule == "address-map" {
 					details = append(details, diag.Detail)
 				}
@@ -219,14 +253,13 @@ func checkAddressMapIntegrity(vaultRoot string, addresses AddressMapReader) Chec
 // checkWikiRegistrationConsistency reports every promoted page absent from
 // the vault's master catalog (wiki/index.md) and/or its append-only
 // promotion log (wiki/log.md) (R-011 scenario: "Unregistered promoted page
-// is named"). The catalog half reuses the inbound-index-link
-// rule LintPage runs among its others (promote.CheckInboundIndexLink, which
-// needs no address map) -- the same
-// on-disk marker block RegisterIndex writes -- rather than
-// re-implementing it; LintPage has no equivalent log.md rule, so the log
-// half is this check's own, small and self-contained.
-func checkWikiRegistrationConsistency(vaultRoot string) Check {
-	pages, unreadable, err := loadPromotedPages(vaultRoot)
+// is named"). The catalog half reuses the inbound-index-link rule that
+// LintPage runs among its others (promote.CheckInboundIndexLink, which needs
+// no address map) -- the same on-disk marker block RegisterIndex writes --
+// rather than re-implementing it; LintPage has no equivalent log.md rule, so
+// the log half is this check's own, small and self-contained.
+func checkWikiRegistrationConsistency(promoted PageReader, vaultRoot string) Check {
+	pages, unreadable, err := loadPromotedPages(promoted)
 	if err != nil {
 		return Check{Name: CheckWikiRegistrationConsistency, Status: CheckFailed, Detail: err.Error()}
 	}
@@ -293,8 +326,8 @@ func checkWikiRegistrationConsistency(vaultRoot string) Check {
 // but it is a standing refusal, and this check stays quiet about it
 // precisely because flagging it would report every page a human has ever
 // touched as broken.
-func checkPrecedenceSidecarConsistency(vaultRoot string, precedence PrecedenceReader) Check {
-	pages, unreadable, err := loadPromotedPages(vaultRoot)
+func checkPrecedenceSidecarConsistency(promoted PageReader, precedence PrecedenceReader) Check {
+	pages, unreadable, err := loadPromotedPages(promoted)
 	if err != nil {
 		return Check{Name: CheckPrecedenceSidecarConsistency, Status: CheckFailed, Detail: err.Error()}
 	}
@@ -410,47 +443,42 @@ func checkEmbeddingBackendReachable(ctx context.Context, deps DoctorDeps) Check 
 	return Check{Name: CheckEmbeddingBackendReachable, Status: CheckFailed, Detail: fmt.Sprintf("backend is unreachable: %v", err)}
 }
 
-// loadPromotedPages scans vaultRoot's promoted-pages directory
-// (wiki/memory) and builds a promote.Page per entry, address and path
-// derived from the filename (D7: never from title, so a later retitle
-// cannot rename it) and Frontmatter carrying the raw file content --
-// sufficient for the address-map and inbound-index-link rules, which only
-// read Page.Address and Page.Path. A missing directory (nothing promoted
-// yet) returns an empty slice, not an error -- mirroring checkAddressMap's
-// own "nothing yet to be inconsistent with" handling of a missing
-// manifest.
+// loadPromotedPages reads the promoted pages through reader and builds a
+// promote.Page per page, address and path derived from the filename (D7:
+// never from title, so a later retitle cannot rename it) and Frontmatter
+// carrying the raw file content -- sufficient for the address-map and
+// inbound-index-link rules, which only read Page.Address and Page.Path. A
+// vault with no pages directory (nothing promoted yet) has no pages: an empty
+// slice, not an error -- mirroring checkAddressMap's own "nothing yet to be
+// inconsistent with" handling of a missing manifest. A reader that was not
+// wired is an error, named.
 //
-// A single unreadable entry is returned as its own detail line, never as
+// A single unreadable page is returned as its own detail line, never as
 // an error that ends the scan: aborting here would make every calling
 // check report only that one I/O message and discard every other page's
 // result, hiding a genuinely unregistered page behind one broken symlink
 // on every run. That is the per-item-failure-aborts-the-run shape this
 // package's own contract forbids. Only a directory that cannot be listed
 // at all -- where there is no per-page result to salvage -- is an error.
-func loadPromotedPages(vaultRoot string) (pages []promote.Page, unreadable []string, err error) {
-	dir := filepath.Join(vaultRoot, vaultlayout.PagesDir)
-	entries, err := os.ReadDir(dir)
+func loadPromotedPages(reader PageReader) (pages []promote.Page, unreadable []string, err error) {
+	if memory.IsMissing(reader) {
+		return nil, nil, errNoPageReader
+	}
+	addresses, err := reader.ListPages()
 	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, nil, nil
-		}
-		return nil, nil, fmt.Errorf("ops: list promoted pages in %s: %w", dir, err)
+		return nil, nil, fmt.Errorf("ops: list promoted pages in %s: %w", reader.PagesLocation(), err)
 	}
 
-	for _, entry := range entries {
-		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".md") {
-			continue
-		}
-		address := strings.TrimSuffix(entry.Name(), ".md")
-		data, err := os.ReadFile(filepath.Join(dir, entry.Name()))
+	for _, address := range addresses {
+		content, err := reader.ReadPage(address)
 		if err != nil {
-			unreadable = append(unreadable, fmt.Sprintf("promoted page %s could not be read: %v", entry.Name(), err))
+			unreadable = append(unreadable, fmt.Sprintf("promoted page %s could not be read: %v", address+".md", err))
 			continue
 		}
 		pages = append(pages, promote.Page{
 			Address:     address,
-			Path:        vaultlayout.PagesDir + "/" + entry.Name(),
-			Frontmatter: string(data),
+			Path:        vaultlayout.PageFile(address),
+			Frontmatter: content,
 		})
 	}
 	return pages, unreadable, nil

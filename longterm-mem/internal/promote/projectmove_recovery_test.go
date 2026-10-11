@@ -38,7 +38,7 @@ func TestWriter_Promote_CorruptedPageInAnotherProjectDoesNotBlockThisOne(t *test
 	writeRawPage(t, vaultRoot, "c-000001.md", "---\nengram_id: 905\nproject: p-one\n---\n\nBody.\n")
 
 	obs := memory.Observation{ID: 905, Type: "decision", Title: "Live Decision", Content: "Body.", Project: "p-two", RevisionCount: 1, TopicKey: "longterm-mem/projectmove-recovery-fixture"}
-	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Clock: clock, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress)}
+	w := &Writer{VaultRoot: vaultRoot, Pages: pagesIn(vaultRoot), Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Clock: clock, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress)}
 	result, err := w.Promote(t.Context(), obs, false)
 	if err != nil {
 		t.Fatalf("Promote under p-two was blocked by a corrupted page under p-one: %v", err)
@@ -56,13 +56,13 @@ func TestFindPromotedPage_CorruptionIsScopedToItsOwnProject(t *testing.T) {
 	vaultRoot := t.TempDir()
 	writeRawPage(t, vaultRoot, "c-000001.md", "---\nengram_id: 906\nproject: p-one\naddress: c-000001\nengram_revision: not-a-number\n---\n\nBody.\n")
 
-	if _, ok, err := findPromotedPage(vaultRoot, "p-two", 906); err != nil {
+	if _, ok, err := findPromotedPage(pagesIn(vaultRoot), "p-two", 906); err != nil {
 		t.Fatalf("findPromotedPage(p-two) = %v, want no error: a corrupted page under p-one is not p-two's problem", err)
 	} else if ok {
 		t.Fatalf("findPromotedPage(p-two) ok = true, want false: the page belongs to p-one")
 	}
 
-	if _, _, err := findPromotedPage(vaultRoot, "p-one", 906); err == nil {
+	if _, _, err := findPromotedPage(pagesIn(vaultRoot), "p-one", 906); err == nil {
 		t.Fatalf("findPromotedPage(p-one) = nil error, want the corruption to still fail closed for the project that owns the page")
 	}
 }
@@ -82,7 +82,7 @@ func TestWriter_Promote_ProjectMoveSupersedesFromTheUpdateBranch(t *testing.T) {
 	revised := successorObs
 	revised.RevisionCount = 2
 	revised.Content = "Body v2."
-	w := &Writer{VaultRoot: vaultRoot, Store: store, Precedence: &memPrecedence{}, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress), Clock: &fakeClock{at: testInstant}}
+	w := &Writer{VaultRoot: vaultRoot, Pages: pagesIn(vaultRoot), Store: store, Precedence: &memPrecedence{}, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress), Clock: &fakeClock{at: testInstant}}
 	result, err := w.Promote(t.Context(), revised, false)
 	if err != nil {
 		t.Fatalf("Promote: %v", err)
@@ -129,7 +129,7 @@ func TestWriter_Promote_ProjectMoveSupersedesEvenWhenTheSuccessorUpdateIsSkipped
 	revised := successorObs
 	revised.RevisionCount = 2
 	revised.Content = "Body v2."
-	w := &Writer{VaultRoot: vaultRoot, Store: store, Precedence: &memPrecedence{}, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress), Clock: &fakeClock{at: testInstant}}
+	w := &Writer{VaultRoot: vaultRoot, Pages: pagesIn(vaultRoot), Store: store, Precedence: &memPrecedence{}, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress), Clock: &fakeClock{at: testInstant}}
 	result, err := w.Promote(t.Context(), revised, false)
 	if err != nil {
 		t.Fatalf("Promote: %v", err)
@@ -167,7 +167,7 @@ func TestWriter_Promote_ProjectMoveKeepsPatchedHashesWhenALaterPageFails(t *test
 
 	moved := obs
 	moved.Project = "p-two"
-	w := &Writer{VaultRoot: vaultRoot, Store: store, Precedence: &memPrecedence{}, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress), Clock: &fakeClock{at: testInstant}}
+	w := &Writer{VaultRoot: vaultRoot, Pages: pagesIn(vaultRoot), Store: store, Precedence: &memPrecedence{}, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress), Clock: &fakeClock{at: testInstant}}
 	if _, err := w.Promote(t.Context(), moved, false); err == nil {
 		t.Fatalf("Promote = nil error, want the unreachable second orphan reported")
 	} else if !strings.Contains(err.Error(), "c-999999") {
@@ -217,7 +217,7 @@ func TestWriter_Promote_ProjectMoveKeepsPatchedHashesWhenALaterPageIsUnparseable
 
 	moved := obs
 	moved.Project = "p-two"
-	w := &Writer{VaultRoot: vaultRoot, Store: store, Precedence: &memPrecedence{}, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress), Clock: &fakeClock{at: testInstant}}
+	w := &Writer{VaultRoot: vaultRoot, Pages: pagesIn(vaultRoot), Store: store, Precedence: &memPrecedence{}, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress), Clock: &fakeClock{at: testInstant}}
 	if _, err := w.Promote(t.Context(), moved, false); err == nil {
 		t.Fatalf("Promote = nil error, want the unparseable second orphan reported")
 	} else if !strings.Contains(err.Error(), "c-000003") {

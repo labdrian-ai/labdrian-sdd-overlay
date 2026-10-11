@@ -226,7 +226,7 @@ func TestPromoteAddressMapGolden(t *testing.T) {
 				{"promote", "--project", promoteGoldenProject, "--id", "1"},
 				{"sync", "--project", promoteGoldenProject},
 			} {
-				code, stdout, stderr := runCaptured(t, args)
+				code, stdout, stderr := runPromoteGolden(t, args)
 				fmt.Fprintf(&out, "args: %s\nexit: %d\n--- stdout ---\n%s--- stderr ---\n%s", strings.Join(args, " "), code, stdout, stderr)
 			}
 			out.WriteString("--- vault ---\n" + renderVaultWithModes(t, w.vaultRoot))

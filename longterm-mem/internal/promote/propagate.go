@@ -2,11 +2,10 @@ package promote
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"path/filepath"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultlayout"
 )
 
 // PropagateReport summarizes one Propagate run: Patched lists the address
@@ -15,6 +14,10 @@ import (
 type PropagateReport struct {
 	Patched []string
 	Failed  []SyncFailure
+	// Withheld lists the observations the pass left alone because no readable page carries them and a page
+	// could not be read: the page of one of them may be the unreadable one, and a status cannot be patched
+	// into a page that cannot be found. Not a failure; a later run decides them.
+	Withheld []int64
 }
 
 // Propagate patches every already-promoted page whose observation was
@@ -37,12 +40,16 @@ type PropagateReport struct {
 // on, letting the next sync overwrite that edit in silence.
 func Propagate(ctx context.Context, deps Deps, project string) (PropagateReport, error) {
 	var report PropagateReport
-	if err := deps.Writer.checkPrecedence(); err != nil {
+	if err := deps.Writer.checkPatchPorts(); err != nil {
 		return PropagateReport{}, err
 	}
-	failed, err := eachPatchTarget(deps, project, func(t patchTarget) error {
-		pagePath := filepath.Join(deps.Writer.VaultRoot, vaultlayout.PagesDir, t.Address+".md")
-		frontmatterHash, _, err := PatchStatusFields(pagePath, t.Status, t.Related)
+	outcome, err := eachPatchTarget(deps, project, func(t patchTarget) error {
+		// The page is named here for the sake of this pass ("patch <page>: ..."), and again inside the patch for
+		// the sake of its own read ("promote: read <page>: ..."): the repeated path is the message the
+		// commands have always printed, pinned by TestPropagatePatchesThePagesThroughThePort, and both
+		// come from the one PageLocation of the port, so the two cannot name different pages.
+		pagePath := deps.Writer.Pages.PageLocation(t.Address)
+		frontmatterHash, _, err := PatchStatusFields(deps.Writer.Pages, t.Address, t.Status, t.Related)
 		if err != nil {
 			return fmt.Errorf("patch %s: %w", pagePath, err)
 		}
@@ -62,7 +69,8 @@ func Propagate(ctx context.Context, deps Deps, project string) (PropagateReport,
 	if err != nil {
 		return PropagateReport{}, err
 	}
-	report.Failed = failed
+	report.Failed = outcome.failed
+	report.Withheld = outcome.withheld
 
 	if len(report.Patched) > 0 {
 		if err := deps.Writer.Precedence.SavePrecedence(deps.Writer.Store); err != nil {
@@ -81,9 +89,19 @@ type patchTarget struct {
 	Related       []string
 }
 
+// patchOutcome is what a walk of the propagation pass found beyond the pages it visited: the observations it
+// could not decide, and those it left alone because no readable page carries them while a page could not be
+// read (the page of one of them may be that one, and a status cannot be patched into a page that cannot be
+// found).
+type patchOutcome struct {
+	failed   []SyncFailure
+	withheld []int64
+}
+
 // eachPatchTarget walks project once and calls visit for every page the
 // propagation pass would rewrite. It returns the observations it could not
-// decide, and an error only when the walk itself could not start.
+// decide or left alone, and an error only when the walk itself could not
+// start.
 //
 // This is the ONE walk. Propagate visits to patch; Plan visits to count.
 // The first attempt at the preview gave it its own copy of this loop and
@@ -91,10 +109,10 @@ type patchTarget struct {
 // preview exists to prevent, moved one level out: the two copies agreed on
 // the day they were written and nothing structural kept them agreeing. A
 // filter added here is now added for both, because there is only one here.
-func eachPatchTarget(deps Deps, project string, visit func(patchTarget) error) ([]SyncFailure, error) {
+func eachPatchTarget(deps Deps, project string, visit func(patchTarget) error) (patchOutcome, error) {
 	observations, err := deps.Memory.ObservationsIncludingDeleted(project)
 	if err != nil {
-		return nil, fmt.Errorf("promote: propagate: list observations for %q: %w", project, err)
+		return patchOutcome{}, fmt.Errorf("promote: propagate: list observations for %q: %w", project, err)
 	}
 
 	bySyncID := make(map[string]memory.Observation, len(observations))
@@ -104,11 +122,16 @@ func eachPatchTarget(deps Deps, project string, visit func(patchTarget) error) (
 		}
 	}
 
-	var failed []SyncFailure
+	var outcome patchOutcome
 	for _, obs := range observations {
-		promoted, ok, err := findPromotedPage(deps.Writer.VaultRoot, project, int(obs.ID))
+		promoted, ok, err := findPromotedPage(deps.Writer.Pages, project, int(obs.ID))
+		var unknown *unreadablePagesError
+		if errors.As(err, &unknown) {
+			outcome.withheld = append(outcome.withheld, obs.ID)
+			continue
+		}
 		if err != nil {
-			failed = append(failed, SyncFailure{ObservationID: obs.ID, Err: fmt.Errorf("check promoted state: %w", err)})
+			outcome.failed = append(outcome.failed, SyncFailure{ObservationID: obs.ID, Err: fmt.Errorf("check promoted state: %w", err)})
 			continue
 		}
 		if !ok {
@@ -117,7 +140,7 @@ func eachPatchTarget(deps Deps, project string, visit func(patchTarget) error) (
 
 		status, related, err := decidePatch(deps, project, obs, bySyncID)
 		if err != nil {
-			failed = append(failed, SyncFailure{ObservationID: obs.ID, Err: err})
+			outcome.failed = append(outcome.failed, SyncFailure{ObservationID: obs.ID, Err: err})
 			continue
 		}
 		if status == "" {
@@ -125,10 +148,10 @@ func eachPatchTarget(deps Deps, project string, visit func(patchTarget) error) (
 		}
 
 		if err := visit(patchTarget{ObservationID: obs.ID, Address: promoted.Address, Status: status, Related: related}); err != nil {
-			failed = append(failed, SyncFailure{ObservationID: obs.ID, Err: err})
+			outcome.failed = append(outcome.failed, SyncFailure{ObservationID: obs.ID, Err: err})
 		}
 	}
-	return failed, nil
+	return outcome, nil
 }
 
 // resolveStatus determines obs's new status and related wikilinks, or
@@ -157,8 +180,9 @@ func resolveStatus(deps Deps, project string, obs memory.Observation, bySyncID m
 			// nothing to patch for obs on this edge.
 			continue
 		}
-		successor, ok, err := findPromotedPage(deps.Writer.VaultRoot, project, int(other.ID))
-		if err != nil {
+		successor, ok, err := findPromotedPage(deps.Writer.Pages, project, int(other.ID))
+		var unknown *unreadablePagesError
+		if err != nil && !errors.As(err, &unknown) {
 			return "", nil, err
 		}
 		if !ok {
@@ -202,14 +226,22 @@ func decidePatch(deps Deps, project string, obs memory.Observation, bySyncID map
 
 // patchCandidates reports the addresses the propagation pass would
 // rewrite, using the same eachPatchTarget walk Propagate itself runs.
-func patchCandidates(deps Deps, project string) ([]string, []SyncFailure, error) {
-	var addresses []string
-	failed, err := eachPatchTarget(deps, project, func(t patchTarget) error {
-		addresses = append(addresses, t.Address)
+func patchCandidates(deps Deps, project string) (patchPlan, error) {
+	var plan patchPlan
+	outcome, err := eachPatchTarget(deps, project, func(t patchTarget) error {
+		plan.addresses = append(plan.addresses, t.Address)
 		return nil
 	})
 	if err != nil {
-		return nil, nil, err
+		return patchPlan{}, err
 	}
-	return addresses, failed, nil
+	plan.patchOutcome = outcome
+	return plan, nil
+}
+
+// patchPlan is what the propagation pass would do: the pages it would rewrite, and what the walk found out
+// besides.
+type patchPlan struct {
+	patchOutcome
+	addresses []string
 }

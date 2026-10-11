@@ -1,6 +1,6 @@
 // Package vaultfs is the file system adapter of a vault: it reads and writes the files longterm-mem keeps
-// there, behind the ports the consumers own (promote.PrecedenceRepository today; the address map, the pages
-// and the sync state, log and index as the L3 slices that follow move behind theirs).
+// there, behind the ports the consumers own (the precedence store, the address map and the pages today; the
+// sync state, log and index as the last L3 slice moves behind theirs).
 //
 // The vault is the user's own Obsidian vault, shared with tools that are not this module, so what this package
 // writes there is written the way a file of someone else is: replaced whole and atomically, its mode kept

@@ -63,7 +63,7 @@ func TestUpdate_UnmodifiedPageUpdatesInPlace(t *testing.T) {
 		t.Fatalf("EmitPage (v2): %v", err)
 	}
 
-	action, err := UpdateInPlace(store, second, existingPath)
+	action, err := UpdateInPlace(pagesIn(vaultRoot), store, second)
 	if err != nil {
 		t.Fatalf("UpdateInPlace: %v", err)
 	}
@@ -122,7 +122,7 @@ func TestUpdate_RetitleKeepsSameFile(t *testing.T) {
 		t.Fatalf("Path changed across a retitle: %q -> %q", first.Path, second.Path)
 	}
 
-	action, err := UpdateInPlace(store, second, existingPath)
+	action, err := UpdateInPlace(pagesIn(vaultRoot), store, second)
 	if err != nil {
 		t.Fatalf("UpdateInPlace: %v", err)
 	}
@@ -182,7 +182,7 @@ func TestUpdate_LocallyEditedPageSkippedWithDiagnostic(t *testing.T) {
 		t.Fatalf("EmitPage (re-promotion): %v", err)
 	}
 
-	action, err := UpdateInPlace(store, second, existingPath)
+	action, err := UpdateInPlace(pagesIn(vaultRoot), store, second)
 	if err != nil {
 		t.Fatalf("UpdateInPlace: %v", err)
 	}
@@ -218,14 +218,14 @@ func TestUpdate_UnmodifiedPageUpdatesNormally(t *testing.T) {
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
 	}
-	existingPath := writePromotedPage(t, vaultRoot, page)
+	writePromotedPage(t, vaultRoot, page)
 
 	store := PrecedenceStore{}
 	seedPrecedence(store, page)
 
 	// Re-promotion re-renders byte-identical content (nothing changed
 	// upstream in Engram): still must not be misread as a local edit.
-	action, err := UpdateInPlace(store, page, existingPath)
+	action, err := UpdateInPlace(pagesIn(vaultRoot), store, page)
 	if err != nil {
 		t.Fatalf("UpdateInPlace: %v", err)
 	}
@@ -268,7 +268,7 @@ func TestUpdate_UnknownProvenancePageIsNotOverwritten(t *testing.T) {
 		t.Fatalf("EmitPage (re-promotion): %v", err)
 	}
 
-	action, err := UpdateInPlace(store, incoming, existingPath)
+	action, err := UpdateInPlace(pagesIn(vaultRoot), store, incoming)
 	if err != nil {
 		t.Fatalf("UpdateInPlace: %v", err)
 	}
@@ -324,7 +324,7 @@ func TestUpdate_InterruptedPriorWriteReconciles(t *testing.T) {
 		t.Fatalf("simulate interrupted write: %v", err)
 	}
 
-	action, err := UpdateInPlace(store, second, existingPath)
+	action, err := UpdateInPlace(pagesIn(vaultRoot), store, second)
 	if err != nil {
 		t.Fatalf("UpdateInPlace: %v", err)
 	}
@@ -378,7 +378,7 @@ func TestUpdate_UnrecordedOwnWriteIsAdopted(t *testing.T) {
 		t.Fatalf("fixture is not exercising the timestamp hazard: the two renders are byte-identical")
 	}
 
-	action, err := UpdateInPlace(store, incoming, existingPath)
+	action, err := UpdateInPlace(pagesIn(vaultRoot), store, incoming)
 	if err != nil {
 		t.Fatalf("UpdateInPlace: %v", err)
 	}
@@ -434,7 +434,7 @@ func TestUpdate_UntrackedPageDifferingOnlyInANonVolatileFieldIsNotAdopted(t *tes
 		t.Fatalf("EmitPage (retry): %v", err)
 	}
 
-	action, err := UpdateInPlace(PrecedenceStore{}, incoming, existingPath)
+	action, err := UpdateInPlace(pagesIn(vaultRoot), PrecedenceStore{}, incoming)
 	if err != nil {
 		t.Fatalf("UpdateInPlace: %v", err)
 	}
@@ -532,7 +532,7 @@ func TestUpdate_InterruptedUpdateRetriedOnALaterDayReconciles(t *testing.T) {
 		t.Fatalf("fixture is not exercising the timestamp hazard: the two renders are byte-identical")
 	}
 
-	action, err := UpdateInPlace(store, retry, existingPath)
+	action, err := UpdateInPlace(pagesIn(vaultRoot), store, retry)
 	if err != nil {
 		t.Fatalf("UpdateInPlace: %v", err)
 	}
@@ -601,7 +601,7 @@ func TestUpdate_InterruptedUpdateFollowedByANewRevisionReconciles(t *testing.T) 
 		t.Fatalf("EmitPage (v3): %v", err)
 	}
 
-	action, err := UpdateInPlace(store, incoming, existingPath)
+	action, err := UpdateInPlace(pagesIn(vaultRoot), store, incoming)
 	if err != nil {
 		t.Fatalf("UpdateInPlace: %v", err)
 	}
@@ -680,7 +680,7 @@ func TestUpdate_PageAheadOfTheSidecarWithAnEditedBodyIsStillSkipped(t *testing.T
 		t.Fatalf("EmitPage (v3): %v", err)
 	}
 
-	action, err := UpdateInPlace(store, incoming, existingPath)
+	action, err := UpdateInPlace(pagesIn(vaultRoot), store, incoming)
 	if err != nil {
 		t.Fatalf("UpdateInPlace: %v", err)
 	}
@@ -816,7 +816,7 @@ func TestUpdate_FrontmatterEditInsideTheUpdateWindowIsStillSkipped(t *testing.T)
 					t.Fatalf("EmitPage (v3): %v", err)
 				}
 
-				action, err := UpdateInPlace(store, incoming, existingPath)
+				action, err := UpdateInPlace(pagesIn(vaultRoot), store, incoming)
 				if err != nil {
 					t.Fatalf("UpdateInPlace: %v", err)
 				}
@@ -879,7 +879,7 @@ func TestUpdate_PageLevelWithTheSidecarRevisionIsSkipped(t *testing.T) {
 		t.Fatalf("EmitPage (v3): %v", err)
 	}
 
-	action, err := UpdateInPlace(store, incoming, existingPath)
+	action, err := UpdateInPlace(pagesIn(vaultRoot), store, incoming)
 	if err != nil {
 		t.Fatalf("UpdateInPlace: %v", err)
 	}
@@ -936,7 +936,7 @@ func TestUpdate_PageClaimingARevisionEngramHasNotReachedIsSkipped(t *testing.T) 
 		t.Fatalf("EmitPage (v3): %v", err)
 	}
 
-	action, err := UpdateInPlace(store, incoming, existingPath)
+	action, err := UpdateInPlace(pagesIn(vaultRoot), store, incoming)
 	if err != nil {
 		t.Fatalf("UpdateInPlace: %v", err)
 	}
@@ -989,7 +989,7 @@ func TestUpdate_LegacyEntryWithABodyEditIsStillSkipped(t *testing.T) {
 		t.Fatalf("EmitPage (v3): %v", err)
 	}
 
-	action, err := UpdateInPlace(store, incoming, existingPath)
+	action, err := UpdateInPlace(pagesIn(vaultRoot), store, incoming)
 	if err != nil {
 		t.Fatalf("UpdateInPlace: %v", err)
 	}
@@ -1052,7 +1052,7 @@ func TestUpdate_LegacyEntryLevelWithTheIncomingRevisionIsSkipped(t *testing.T) {
 		t.Fatalf("EmitPage (v2 retry): %v", err)
 	}
 
-	action, err := UpdateInPlace(store, incoming, existingPath)
+	action, err := UpdateInPlace(pagesIn(vaultRoot), store, incoming)
 	if err != nil {
 		t.Fatalf("UpdateInPlace: %v", err)
 	}
@@ -1113,7 +1113,7 @@ func TestUpdate_LegacyEntryOnAHandEditedPageIsRefused(t *testing.T) {
 		t.Fatalf("EmitPage (v3): %v", err)
 	}
 
-	action, err := UpdateInPlace(store, incoming, existingPath)
+	action, err := UpdateInPlace(pagesIn(vaultRoot), store, incoming)
 	if err != nil {
 		t.Fatalf("UpdateInPlace: %v", err)
 	}
@@ -1145,7 +1145,7 @@ func TestUpdate_LegacyEntryOnAnUndivergedPageIsBackfilled(t *testing.T) {
 	if err != nil {
 		t.Fatalf("EmitPage (v2): %v", err)
 	}
-	existingPath := writePromotedPage(t, vaultRoot, promoted)
+	writePromotedPage(t, vaultRoot, promoted)
 
 	store := PrecedenceStore{}
 	store.Set(promoted.Address, legacyEntryFor(promoted))
@@ -1158,7 +1158,7 @@ func TestUpdate_LegacyEntryOnAnUndivergedPageIsBackfilled(t *testing.T) {
 		t.Fatalf("EmitPage (v3): %v", err)
 	}
 
-	action, err := UpdateInPlace(store, incoming, existingPath)
+	action, err := UpdateInPlace(pagesIn(vaultRoot), store, incoming)
 	if err != nil {
 		t.Fatalf("UpdateInPlace: %v", err)
 	}
@@ -1183,7 +1183,7 @@ func TestUpdate_LegacyEntryOnAnUndivergedPageIsBackfilled(t *testing.T) {
 		if err != nil {
 			t.Fatalf("EmitPage (v%d): %v", revision, err)
 		}
-		action, err := UpdateInPlace(store, later, existingPath)
+		action, err := UpdateInPlace(pagesIn(vaultRoot), store, later)
 		if err != nil {
 			t.Fatalf("UpdateInPlace (v%d): %v", revision, err)
 		}
@@ -1250,7 +1250,7 @@ func TestUpdate_InterruptedUpdateWhoseObservationWasRetitledReconciles(t *testin
 				t.Fatalf("EmitPage (v3): %v", err)
 			}
 
-			action, err := UpdateInPlace(store, incoming, existingPath)
+			action, err := UpdateInPlace(pagesIn(vaultRoot), store, incoming)
 			if err != nil {
 				t.Fatalf("UpdateInPlace: %v", err)
 			}
@@ -1347,7 +1347,7 @@ func TestUpdate_InterruptedUpdateWhoseObservationChangedDescriptiveFieldsReconci
 				t.Fatalf("EmitPage (v3): %v", err)
 			}
 
-			action, err := UpdateInPlace(store, incoming, existingPath)
+			action, err := UpdateInPlace(pagesIn(vaultRoot), store, incoming)
 			if err != nil {
 				t.Fatalf("UpdateInPlace: %v", err)
 			}

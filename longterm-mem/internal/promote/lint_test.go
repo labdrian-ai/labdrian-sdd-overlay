@@ -38,7 +38,7 @@ func TestLintPage_FreshlyPromotedPagePasses(t *testing.T) {
 	addresses := &memAddressMap{entries: AddressMap{page.Path: page.Address}}
 	writeIndexWithLink(t, vaultRoot, page.Address)
 
-	if diags := LintPage(page, vaultRoot, addresses); len(diags) != 0 {
+	if diags := LintPage(page, vaultRoot, pagesIn(vaultRoot), addresses); len(diags) != 0 {
 		t.Fatalf("LintPage() = %+v, want no diagnostics for a freshly promoted, registered page", diags)
 	}
 }
@@ -74,7 +74,7 @@ func TestLintPage_DanglingWikilinkIsFlagged(t *testing.T) {
 	writeIndexWithLink(t, vaultRoot, page.Address)
 
 	var wikilinkDiags []Diagnostic
-	for _, d := range LintPage(page, vaultRoot, addresses) {
+	for _, d := range LintPage(page, vaultRoot, pagesIn(vaultRoot), addresses) {
 		if d.Rule == "wikilink-resolvability" {
 			wikilinkDiags = append(wikilinkDiags, d)
 		}
@@ -105,7 +105,7 @@ func TestLintPage_UnregisteredPageIsFlagged(t *testing.T) {
 	}
 	addresses := &memAddressMap{entries: AddressMap{}}
 
-	diags := LintPage(page, vaultRoot, addresses)
+	diags := LintPage(page, vaultRoot, pagesIn(vaultRoot), addresses)
 	rules := map[string]bool{}
 	for _, d := range diags {
 		rules[d.Rule] = true
@@ -136,7 +136,7 @@ func TestCheckInboundIndexLink_AnswersWhatLintPageAnswersForThatRule(t *testing.
 			vaultRoot := t.TempDir()
 			setup(t, vaultRoot)
 			var want []Diagnostic
-			for _, d := range LintPage(page, vaultRoot, &memAddressMap{}) {
+			for _, d := range LintPage(page, vaultRoot, pagesIn(vaultRoot), &memAddressMap{}) {
 				if d.Rule == "inbound-index-link" {
 					want = append(want, d)
 				}
@@ -164,7 +164,7 @@ func TestLintPage_NamesTheVaultFilesItReportsOn(t *testing.T) {
 	}
 	detailsOf := func(vaultRoot, rule string) []string {
 		var details []string
-		for _, d := range LintPage(page, vaultRoot, &memAddressMap{}) {
+		for _, d := range LintPage(page, vaultRoot, pagesIn(vaultRoot), &memAddressMap{}) {
 			if d.Rule == rule {
 				details = append(details, d.Detail)
 			}
