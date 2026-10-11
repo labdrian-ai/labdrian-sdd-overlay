@@ -31,7 +31,7 @@ func pagesWriter(t *testing.T, pages PageRepository) (*Writer, *memPrecedence, *
 	t.Helper()
 	repo := &memPrecedence{}
 	allocator := &countingAddresses{AddressAllocator: staticAddress(testAddress)}
-	return &Writer{VaultRoot: t.TempDir(), Pages: pages, Store: PrecedenceStore{}, Precedence: repo, Clock: &fakeClock{at: testInstant}, AddressMap: &memAddressMap{}, Addresses: allocator}, repo, allocator
+	return &Writer{Pages: pages, Index: newAbsentMemFile(), Log: newAbsentMemFile(), SyncState: &memSyncState{}, Store: PrecedenceStore{}, Precedence: repo, Clock: &fakeClock{at: testInstant}, AddressMap: &memAddressMap{}, Addresses: allocator}, repo, allocator
 }
 
 // renderedPage is the page of obs under address, as a promotion writes it.
@@ -65,8 +65,8 @@ func TestPromote_CreatesThePageThroughThePort(t *testing.T) {
 	if len(pages.writes) != 1 || pages.writes[0] != want {
 		t.Errorf("writes = %+v, want exactly %+v", pages.writes, want)
 	}
-	if _, err := os.Stat(filepath.Join(w.VaultRoot, "wiki", "memory")); !os.IsNotExist(err) {
-		t.Errorf("the promotion made the pages directory itself (stat err = %v): the pages are the port's", err)
+	if index, log := w.Index.(*memFile), w.Log.(*memFile); len(index.writes) != 1 || len(log.writes) != 1 {
+		t.Errorf("the catalog was written %d times and the log %d, want once each: the page is registered through the ports", len(index.writes), len(log.writes))
 	}
 }
 
@@ -561,7 +561,7 @@ func TestPromoteFindsNoPageTheListingDoesNotName(t *testing.T) {
 	}
 	pages := newMemPages(nil)
 	w, _, _ := pagesWriter(t, pages)
-	w.VaultRoot = onDisk
+	w.Index, w.Log = indexIn(onDisk), logIn(onDisk)
 
 	result, err := w.Promote(context.Background(), obs, false)
 

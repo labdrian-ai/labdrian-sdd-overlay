@@ -7,11 +7,10 @@
 // each carry their own copy of them; they read them from here.
 //
 // The package holds names and the joining of a name to a root, and does no I/O. Reading and writing the
-// files is the vault file system adapter's, and Layout is the one way it joins a name to its root: the
-// promotion and diagnostic code that still joins a root to a name itself does so for the catalog, the log
-// and the sync state, which the last slice of the vault repository moves behind the adapter, and goes with
-// them. The pages are the adapter's already; the code that works on them speaks of an address and not a path.
-// The vault's own index scripts (internal/vault) read the markers of a provisioned vault from here too.
+// files is the vault file system adapter's, and Layout is the one way it joins a name to its root. Promotion
+// and the diagnostics reach the vault's files through ports they own and speak of an address, the catalog,
+// the log or the sync state, never of a path; the adapter implements those ports with the paths of this
+// package. The vault's own index scripts (internal/vault) read the markers of a provisioned vault from here too.
 package vaultlayout
 
 import "path/filepath"

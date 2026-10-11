@@ -95,13 +95,6 @@ var knownDebt = archguard.Debt{
 		"path/filepath.EvalSymlinks": "L7",
 	},
 
-	// promote: the vault file system moves to vaultfs (L3). The address
-	// allocator and the clock are ports it owns (L2).
-	"internal/promote": {
-		"internal/durable": "L3",
-		"os":               "L3",
-	},
-
 	// query: reads through ports it owns instead of the concrete adapters.
 	"internal/query": {
 		"internal/embed":    "L4",

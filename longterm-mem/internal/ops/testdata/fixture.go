@@ -125,10 +125,10 @@ func sha256Hex(text string) string {
 // exercises the exact writers Writer.Promote itself calls (task 7.10).
 func RegisterPage(t *testing.T, vaultRoot, address, title string) {
 	t.Helper()
-	if err := promote.RegisterIndex(filepath.Join(vaultRoot, "wiki", "index.md"), address, title); err != nil {
+	if err := promote.RegisterIndex(vaultfs.New(vaultRoot), address, title); err != nil {
 		t.Fatalf("RegisterIndex: %v", err)
 	}
-	if err := promote.RegisterLog(filepath.Join(vaultRoot, "wiki", "log.md"), address, title, Instant()); err != nil {
+	if err := promote.RegisterLog(vaultfs.New(vaultRoot), address, title, Instant()); err != nil {
 		t.Fatalf("RegisterLog: %v", err)
 	}
 }

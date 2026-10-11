@@ -4,10 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"path/filepath"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultlayout"
 )
 
 // Writer is longterm-mem's single promotion entrypoint (6.8 REFACTOR):
@@ -16,10 +14,6 @@ import (
 // explicit promote command (slice 8b) share one code path instead of
 // each re-implementing the create/update decision.
 type Writer struct {
-	// VaultRoot is the vault checkout Promote registers pages in (the
-	// catalog and log) and records syncs under; the pages themselves are
-	// Pages' to read and write.
-	VaultRoot string
 	// Pages is where the pages of the vault are read and written: the
 	// scan for an observation's page, the check for the page about to be
 	// created, the replacement of a page, and the patches that supersede
@@ -57,6 +51,15 @@ type Writer struct {
 	// needs a fresh address, and a promotion that needs it with none wired is
 	// refused before the allocator is asked, so no address is spent on it.
 	AddressMap AddressMapRecorder
+	// Index is the vault's master catalog and Log its append-only promotion
+	// log: every promotion that wrote a page registers it in both, after
+	// the precedence sidecar is durable. A Writer without either is refused
+	// by Promote and Sync before they write anything.
+	Index IndexRepository
+	Log   LogRepository
+	// SyncState records when a sync completed. Only Sync asks for it, and a
+	// Sync that finds none is refused before it does anything.
+	SyncState SyncStateRecorder
 	// Clock dates the pages, the promotion log and the sync-state record.
 	// The composition root wires a real one; a Writer without one is
 	// refused by Promote and Sync before they touch the vault. Propagate
@@ -82,12 +85,32 @@ func (w *Writer) UsePrecedence(repo PrecedenceRepository) error {
 	return nil
 }
 
-// checkPorts reports the first port the Writer needs and was not handed.
+// checkPorts reports the first port the Writer needs and was not handed: the
+// clock, then the ports a patch needs, then the catalog and the log a promotion
+// registers its page in.
 func (w *Writer) checkPorts() error {
 	if memory.IsMissing(w.Clock) {
 		return errNoClock
 	}
-	return w.checkPatchPorts()
+	if err := w.checkPatchPorts(); err != nil {
+		return err
+	}
+	if memory.IsMissing(w.Index) {
+		return errNoIndexRepository
+	}
+	if memory.IsMissing(w.Log) {
+		return errNoLogRepository
+	}
+	return nil
+}
+
+// checkSyncState reports whether the Writer was handed the recorder of the
+// sync state, which only Sync asks for.
+func (w *Writer) checkSyncState() error {
+	if memory.IsMissing(w.SyncState) {
+		return errNoSyncStateRecorder
+	}
+	return nil
 }
 
 // checkPrecedence reports whether the Writer was handed the repository its
@@ -378,8 +401,8 @@ func (w *Writer) supersedeMoved(moved []promotedPage, successorAddress, successo
 // register.go's RegisterIndex/RegisterLog perform, the log stamped with the
 // writer's clock like every other date it writes.
 func (w *Writer) register(addr, title string) error {
-	if err := RegisterIndex(filepath.Join(w.VaultRoot, vaultlayout.IndexFile), addr, title); err != nil {
+	if err := RegisterIndex(w.Index, addr, title); err != nil {
 		return err
 	}
-	return RegisterLog(filepath.Join(w.VaultRoot, vaultlayout.LogFile), addr, title, utc(w.Clock))
+	return RegisterLog(w.Log, addr, title, utc(w.Clock))
 }

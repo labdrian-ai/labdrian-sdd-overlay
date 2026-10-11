@@ -23,8 +23,17 @@ func TestNewPromoteWriterWiresTheWriterOfAVault(t *testing.T) {
 	if err != nil {
 		t.Fatalf("newPromoteWriter: %v", err)
 	}
-	if writer.VaultRoot != vaultRoot {
-		t.Errorf("VaultRoot = %q, want %q", writer.VaultRoot, vaultRoot)
+	if got, want := writer.Pages.PagesLocation(), filepath.Join(vaultRoot, "wiki", "memory"); got != want {
+		t.Errorf("Pages are kept at %q, want the vault's, %q", got, want)
+	}
+	if got, want := writer.Index.IndexLocation(), filepath.Join(vaultRoot, "wiki", "index.md"); got != want {
+		t.Errorf("Index is kept at %q, want the vault's, %q", got, want)
+	}
+	if got, want := writer.Log.LogLocation(), filepath.Join(vaultRoot, "wiki", "log.md"); got != want {
+		t.Errorf("Log is kept at %q, want the vault's, %q", got, want)
+	}
+	if writer.SyncState == nil {
+		t.Error("SyncState is not wired: the first sync this Writer runs would be refused")
 	}
 	if got, want := writer.Addresses, (promote.AddressAllocator)(vault.AddressAllocator{Root: vaultRoot}); got != want {
 		t.Errorf("Addresses = %#v, want the vault's allocator %#v", got, want)

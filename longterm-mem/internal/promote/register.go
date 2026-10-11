@@ -1,12 +1,15 @@
 package promote
 
 import (
+	"errors"
 	"fmt"
-	"os"
+	"io/fs"
 	"regexp"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 )
 
 // indexMarkerBegin/indexMarkerEnd delimit the idempotent master-catalog
@@ -37,11 +40,16 @@ var logHeaderDateRegexp = regexp.MustCompile(`(?m)^## \[(\d{4}-\d{2}-\d{2})\]`)
 var indexEntryLineRegexp = regexp.MustCompile(`(?m)^- \[\[(c-\d{6})\|(.*)\]\]$`)
 
 // RegisterIndex registers addr/title in the vault's master catalog,
-// wiki/index.md (R-029): an idempotent marker block, sorted by address,
-// appended once and replaced thereafter so re-registering the same address
-// updates its entry in place instead of duplicating it.
-func RegisterIndex(indexMdPath, addr, title string) error {
-	content, err := readOptional(indexMdPath)
+// wiki/index.md (R-029), which index reads and replaces: an idempotent marker
+// block, sorted by address, appended once and replaced thereafter so
+// re-registering the same address updates its entry in place instead of
+// duplicating it. A catalog the vault does not have yet is an empty one; a
+// repository that was not wired is named.
+func RegisterIndex(index IndexRepository, addr, title string) error {
+	if memory.IsMissing(index) {
+		return errNoIndexRepository
+	}
+	content, err := readOptional(index.IndexLocation(), index.ReadIndex)
 	if err != nil {
 		return err
 	}
@@ -50,18 +58,18 @@ func RegisterIndex(indexMdPath, addr, title string) error {
 		return err
 	}
 	entries[addr] = title
-	return writeIndexBlock(indexMdPath, content, entries)
+	return writeIndexBlock(index, content, entries)
 }
 
-// writeIndexBlock replaces or appends the marker block in indexMdPath
+// writeIndexBlock replaces or appends the marker block in the catalog
 // (whose current content is content) with entries, sorted by address.
 // Extracted from RegisterIndex (5.6 REFACTOR) so a future batch caller
 // (sync, slice 7) can compute the full entries map once across every
 // promoted page and write it in a single pass, instead of one
 // read-modify-write per page.
-func writeIndexBlock(indexMdPath, content string, entries map[string]string) error {
+func writeIndexBlock(index IndexRepository, content string, entries map[string]string) error {
 	block := renderIndexBlock(entries)
-	return writeFileAtomic(indexMdPath, []byte(replaceOrAppendBlock(content, block)))
+	return index.WriteIndex(replaceOrAppendBlock(content, block))
 }
 
 // parseIndexEntries extracts the existing marker block's address->title
@@ -130,15 +138,18 @@ func replaceOrAppendBlock(content, block string) string {
 // sorted file when every call happened to arrive in chronological order;
 // an out-of-order call (an older at registered after a newer one already
 // present) left the file unsorted.
-func RegisterLog(logMdPath, addr, title string, at time.Time) error {
-	content, err := readOptional(logMdPath)
+func RegisterLog(log LogRepository, addr, title string, at time.Time) error {
+	if memory.IsMissing(log) {
+		return errNoLogRepository
+	}
+	content, err := readOptional(log.LogLocation(), log.ReadLog)
 	if err != nil {
 		return err
 	}
 
 	entry := fmt.Sprintf("## [%s] promote | %s\n\n%s\n\n", at.Format("2006-01-02"), title, wikilink(addr, title))
 	newContent := insertLogEntry(content, entry, at)
-	return writeFileAtomic(logMdPath, []byte(newContent))
+	return log.WriteLog(newContent)
 }
 
 // insertLogEntry returns content with entry inserted at the position that
@@ -161,15 +172,17 @@ func insertLogEntry(content, entry string, at time.Time) string {
 	return trimmed + "\n\n" + entry
 }
 
-// readOptional reads path's content, treating a missing file as empty
-// content rather than an error.
-func readOptional(path string) (string, error) {
-	data, err := os.ReadFile(path)
+// readOptional reads a file of the vault through read, treating a missing file
+// as empty content rather than an error. Any other failure is the file
+// system's own, worded around the file's location: promote: read <location>:
+// <cause>.
+func readOptional(location string, read func() (string, error)) (string, error) {
+	content, err := read()
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, fs.ErrNotExist) {
 			return "", nil
 		}
-		return "", fmt.Errorf("promote: read %s: %w", path, err)
+		return "", fmt.Errorf("promote: read %s: %w", location, err)
 	}
-	return string(data), nil
+	return content, nil
 }
