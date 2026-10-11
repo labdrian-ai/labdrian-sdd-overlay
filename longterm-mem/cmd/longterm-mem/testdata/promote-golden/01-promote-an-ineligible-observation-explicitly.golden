@@ -19,7 +19,7 @@ longterm-mem: promoted c-000901 (created)
   "address_map": {
     "wiki/memory/c-000901.md": "c-000901"
   },
-  "created": "<today>",
+  "created": "2026-10-10",
   "sources": {},
   "version": 1
 }
@@ -42,7 +42,7 @@ printf 'c-%06d\n' "$n"
 - [[c-000901|Below Threshold]]
 <!-- longterm-mem:end -->
 === wiki/log.md ===
-## [<today>] promote | Below Threshold
+## [2026-10-10] promote | Below Threshold
 
 [[c-000901|Below Threshold]]
 
@@ -53,8 +53,8 @@ title: "Below Threshold"
 address: c-000901
 aliases:
   - "Below Threshold"
-created: <today>
-updated: <today>
+created: 2026-10-10
+updated: 2026-10-10
 tags:
   - "memory"
   - "discovery"

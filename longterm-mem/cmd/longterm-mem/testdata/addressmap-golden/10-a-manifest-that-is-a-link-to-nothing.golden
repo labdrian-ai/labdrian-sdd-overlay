@@ -20,7 +20,7 @@ longterm-mem: sync: promote: sync: 2 observations failed, first is 1: promote: d
 === .vault-meta/longterm-mem-sync-state.json (-rw-------) ===
 {
   "schema": 1,
-  "last_sync_completed_at": "<now>"
+  "last_sync_completed_at": "2026-10-10T12:00:00Z"
 }
 === bin/ (directory -rwxr-xr-x) ===
 === bin/setup-retrieve.sh (-rwxr-xr-x) ===

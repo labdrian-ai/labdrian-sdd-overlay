@@ -253,7 +253,7 @@ func TestPromotePagesGolden(t *testing.T) {
 			t.Chdir(t.TempDir())
 
 			for _, args := range scenario.prepare {
-				if code, stdout, stderr := runCaptured(t, args); code != exitOK {
+				if code, stdout, stderr := runPromoteGolden(t, args); code != exitOK {
 					t.Fatalf("preparing with %s: exit %d\nstdout: %s\nstderr: %s", strings.Join(args, " "), code, stdout, stderr)
 				}
 			}
@@ -263,7 +263,7 @@ func TestPromotePagesGolden(t *testing.T) {
 
 			var out strings.Builder
 			for _, args := range scenario.commands {
-				code, stdout, stderr := runCaptured(t, args)
+				code, stdout, stderr := runPromoteGolden(t, args)
 				fmt.Fprintf(&out, "args: %s\nexit: %d\n--- stdout ---\n%s--- stderr ---\n%s", strings.Join(args, " "), code, stdout, stderr)
 			}
 			out.WriteString("--- vault ---\n" + renderVaultWithModes(t, w.vaultRoot))

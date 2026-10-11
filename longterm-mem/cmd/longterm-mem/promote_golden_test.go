@@ -19,9 +19,11 @@ import (
 // do to a vault: after each step of one scenario, the exit code, stdout and stderr of the command and
 // every file the vault holds, character for character. They were recorded from the program as it stood
 // before the promote package took its address allocator and its clock as injected ports (Phase 9, L2),
-// and that change must not alter one byte of them, apart from the day the test
-// runs (in UTC) and the instants of that day, which are replaced by a marker; any other date stays
-// as written, so a clock that answered a different day would fail them.
+// and that change must not alter one byte of them. The commands run with the clock of
+// promoteGoldenClock, fixed on the day they were recorded (2026-10-10, UTC), so every date, every
+// instant and every hash derived from either is the same on whatever day the test runs; the dates in the
+// golden files are that day, as written. What the clock does not drive stays masked: the paths of the
+// temporary directories, and the provisioned sentinel, which the vault writes from the wall clock.
 //
 // To rewrite them after a change that is MEANT to alter the output:
 //
@@ -42,9 +44,25 @@ echo "$n" > .allocator-counter
 printf 'c-%06d\n' "$n"
 `
 
-// promoteGoldenInstant is an instant the clock writes, to the second and in UTC: the sentinel of the
-// provisioned index and the completion time of a sync.
-var promoteGoldenInstant = regexp.MustCompile(`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z`)
+// promoteGoldenClock is the clock the golden tests run the commands with: an instant on the day the golden
+// files were recorded, so that the hashes of the pages (their frontmatter carries the date) are the recorded
+// ones on any day.
+var promoteGoldenClock = fixedClock{at: time.Date(2026, 10, 10, 12, 0, 0, 0, time.UTC)}
+
+// promoteGoldenSentinel is the content of the provisioned sentinel in the rendering of the vault: an
+// instant the vault writes from the wall clock, not from the clock the commands hold. It is the one
+// instant of the output that is not the clock's, and it is masked by where it is, never by its value.
+var promoteGoldenSentinel = regexp.MustCompile(`(=== \.vault-meta/\.longterm-mem-provisioned[^\n]*===\n)\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z`)
+
+// runPromoteGolden runs one command of a golden scenario in process, composed with the fixed clock, and
+// returns its exit code, stdout and stderr.
+func runPromoteGolden(t *testing.T, args []string) (code int, stdout, stderr string) {
+	t.Helper()
+	stdout, stderr = captureStreams(t, func() {
+		code = commands{newEmbedClient: testEmbedClient, clock: promoteGoldenClock}.run(args)
+	})
+	return code, stdout, stderr
+}
 
 type promoteGoldenStep struct {
 	name string
@@ -57,10 +75,6 @@ type promoteGoldenWorld struct {
 	vaultRoot string
 	dbPath    string
 	home      string
-	// began is when the world was built; now reads the clock when the output is normalised. Every UTC
-	// day from one to the other is a day the run can have written.
-	began time.Time
-	now   func() time.Time
 }
 
 // realTempDir is a fresh temporary directory named by its resolved path: /var is /private/var on macOS,
@@ -74,16 +88,16 @@ func realTempDir(t *testing.T) string {
 	return dir
 }
 
-// TestPromoteGoldenNormalise_ARunThatCrossesMidnightStillMatches: the days a run can have written are
-// every UTC day from the moment the world was built to the moment the output is normalised, not only the
-// day the normalising happens to run on. A run that starts before 00:00 UTC and ends after it wrote
-// dates of both days, and neither may make the comparison fail; a day outside that window still must.
-func TestPromoteGoldenNormalise_ARunThatCrossesMidnightStillMatches(t *testing.T) {
-	now := time.Date(2026, 8, 2, 0, 0, 5, 0, time.UTC)
-	w := &promoteGoldenWorld{vaultRoot: "/vault", home: "/home", dbPath: "/db", began: now.Add(-10 * time.Second), now: func() time.Time { return now }}
+// TestPromoteGoldenNormalise_MasksThePathsAndTheSentinelAndNothingElse: the temporary paths and the
+// instant the vault writes to its provisioned sentinel differ from one run to the next and are replaced; a
+// date or an instant anywhere else is the clock's, stays as written, and so fails the comparison if the
+// clock answered another one -- on the day of the recording as on any other.
+func TestPromoteGoldenNormalise_MasksThePathsAndTheSentinelAndNothingElse(t *testing.T) {
+	w := &promoteGoldenWorld{vaultRoot: "/vault", home: "/home", dbPath: "/db"}
+	fixed := promoteGoldenClock.at.Format(time.RFC3339)
 
-	got := w.normalise("created: 2026-08-01\nupdated: 2026-08-02\nlogged 2026-08-01T23:59:58Z, synced 2026-08-02T00:00:04Z\nstale: 2026-07-31 2026-07-31T10:00:00Z\n")
-	want := "created: <today>\nupdated: <today>\nlogged <now>, synced <now>\nstale: 2026-07-31 2026-07-31T10:00:00Z\n"
+	got := w.normalise("/vault /home /db\n=== .vault-meta/.longterm-mem-provisioned (-rw-r--r--) ===\n2031-01-02T03:04:05Z\n=== .vault-meta/sync-state.json ===\n{\"last_sync_completed_at\": \"" + fixed + "\"}\ncreated: 2026-10-10\nstale: 2026-07-31 2026-07-31T10:00:00Z\n")
+	want := "<vault> <home> <engram-db>\n=== .vault-meta/.longterm-mem-provisioned (-rw-r--r--) ===\n<now>\n=== .vault-meta/sync-state.json ===\n{\"last_sync_completed_at\": \"" + fixed + "\"}\ncreated: 2026-10-10\nstale: 2026-07-31 2026-07-31T10:00:00Z\n"
 	if got != want {
 		t.Errorf("normalise =\n%s\nwant\n%s", got, want)
 	}
@@ -150,7 +164,7 @@ func TestPromoteGolden(t *testing.T) {
 		if step.before != nil {
 			step.before(t, w)
 		}
-		code, stdout, stderr := runCaptured(t, step.args)
+		code, stdout, stderr := runPromoteGolden(t, step.args)
 		got := w.normalise(fmt.Sprintf("args: %s\nexit: %d\n--- stdout ---\n%s--- stderr ---\n%s--- vault ---\n%s",
 			strings.Join(step.args, " "), code, stdout, stderr, renderPromoteGoldenTree(t, w.vaultRoot)))
 		checkPromoteGolden(t, goldenDir, step.name, got)
@@ -161,7 +175,7 @@ func newPromoteGoldenWorld(t *testing.T) *promoteGoldenWorld {
 	t.Helper()
 	// The roots are the paths the program sees and prints; resolving their symlinks (/var is /private/var on
 	// macOS) makes the path in the output the one normalise replaces, whichever way the program names it.
-	w := &promoteGoldenWorld{vaultRoot: realTempDir(t), home: realTempDir(t), began: time.Now().UTC(), now: time.Now}
+	w := &promoteGoldenWorld{vaultRoot: realTempDir(t), home: realTempDir(t)}
 	writeExecutable := func(rel, body string) {
 		path := filepath.Join(w.vaultRoot, rel)
 		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
@@ -212,29 +226,13 @@ func (w *promoteGoldenWorld) execSQL(t *testing.T, statement string, args ...any
 	}
 }
 
-// normalise replaces what differs from one run to the next: the temporary paths and the day (or
-// days) of the run.
+// normalise replaces what differs from one run to the next: the temporary paths and the instant of the
+// provisioned sentinel. Every date and instant the clock wrote stays as written.
 func (w *promoteGoldenWorld) normalise(text string) string {
 	text = strings.ReplaceAll(text, w.vaultRoot, "<vault>")
 	text = strings.ReplaceAll(text, w.home, "<home>")
 	text = strings.ReplaceAll(text, w.dbPath, "<engram-db>")
-	// Only the UTC days the run can have written become a marker: any other date in the output (a clock
-	// that answered the wrong day, or in local time near midnight) stays as written and fails the
-	// comparison. A run that crosses 00:00 UTC wrote two days, and both are expected.
-	days := map[string]bool{}
-	for day := w.began.UTC().Truncate(24 * time.Hour); !day.After(w.now().UTC()); day = day.AddDate(0, 0, 1) {
-		days[day.Format("2006-01-02")] = true
-	}
-	text = promoteGoldenInstant.ReplaceAllStringFunc(text, func(instant string) string {
-		if days[instant[:len("2006-01-02")]] {
-			return "<now>"
-		}
-		return instant
-	})
-	for day := range days {
-		text = strings.ReplaceAll(text, day, "<today>")
-	}
-	return text
+	return promoteGoldenSentinel.ReplaceAllString(text, "${1}<now>")
 }
 
 // renderPromoteGoldenTree lists every file of the vault, sorted, with its content.

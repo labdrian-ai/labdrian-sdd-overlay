@@ -20,7 +20,7 @@ longterm-mem: promote reconcile: promote: page has a local edit the precedence r
   "address_map": {
     "wiki/memory/c-000901.md": "c-000901"
   },
-  "created": "<today>",
+  "created": "2026-10-10",
   "sources": {},
   "version": 1
 }
@@ -46,7 +46,7 @@ printf 'c-%06d\n' "$n"
 - [[c-000901|Pinned Decision]]
 <!-- longterm-mem:end -->
 === wiki/log.md (-rw-------) ===
-## [<today>] promote | Pinned Decision
+## [2026-10-10] promote | Pinned Decision
 
 [[c-000901|Pinned Decision]]
 
@@ -58,8 +58,8 @@ title: "Pinned Decision"
 address: c-000901
 aliases:
   - "Pinned Decision"
-created: <today>
-updated: <today>
+created: 2026-10-10
+updated: 2026-10-10
 tags:
   - "memory"
   - "decision"

@@ -31,7 +31,7 @@ longterm-mem: sync promoted 1 observation(s), patched 0 page(s)
     "wiki/memory/c-000901.md": "c-000901",
     "wiki/memory/c-000902.md": "c-000902"
   },
-  "created": "<today>",
+  "created": "2026-10-10",
   "sources": {},
   "version": 1
 }
@@ -41,7 +41,7 @@ longterm-mem: sync promoted 1 observation(s), patched 0 page(s)
 === .vault-meta/longterm-mem-sync-state.json (-rw-------) ===
 {
   "schema": 1,
-  "last_sync_completed_at": "<now>"
+  "last_sync_completed_at": "2026-10-10T12:00:00Z"
 }
 === bin/ (directory -rwxr-xr-x) ===
 === bin/setup-retrieve.sh (-rwxr-xr-x) ===
@@ -55,8 +55,8 @@ title: "Pinned Decision"
 address: c-000901
 aliases:
   - "Pinned Decision"
-created: <today>
-updated: <today>
+created: 2026-10-10
+updated: 2026-10-10
 tags:
   - "memory"
   - "decision"
@@ -96,15 +96,15 @@ printf 'c-%06d\n' "$n"
 
 
 === wiki/log.md (-rw-------) ===
-## [<today>] promote | Curated Note
+## [2026-10-10] promote | Curated Note
 
 [[c-000902|Curated Note]]
 
-## [<today>] promote | Pinned Decision
+## [2026-10-10] promote | Pinned Decision
 
 [[c-000901|Pinned Decision]]
 
-## [<today>] promote | Pinned Decision
+## [2026-10-10] promote | Pinned Decision
 
 [[c-000901|Pinned Decision]]
 
@@ -117,8 +117,8 @@ title: "Curated Note"
 address: c-000902
 aliases:
   - "Curated Note"
-created: <today>
-updated: <today>
+created: 2026-10-10
+updated: 2026-10-10
 tags:
   - "memory"
   - "decision"
