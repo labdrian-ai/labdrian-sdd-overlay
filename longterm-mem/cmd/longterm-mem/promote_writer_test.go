@@ -46,7 +46,7 @@ func TestNewPromoteWriterFailsWithTheSidecarsOwnError(t *testing.T) {
 	vaultRoot := t.TempDir()
 	writeCorruptSidecar(t, vaultRoot)
 
-	writer, err := newPromoteWriter(vaultRoot, utcClock{})
+	writer, err := newPromoteWriter(vaultRoot, fixedClock{at: fixtureInstant})
 	if err == nil || writer != nil {
 		t.Fatalf("newPromoteWriter = (%v, %v), want no writer and the parse failure", writer, err)
 	}
