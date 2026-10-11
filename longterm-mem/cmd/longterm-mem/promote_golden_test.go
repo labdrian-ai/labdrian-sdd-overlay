@@ -52,7 +52,7 @@ var promoteGoldenClock = fixedClock{at: time.Date(2026, 10, 10, 12, 0, 0, 0, tim
 // promoteGoldenSentinel is the content of the provisioned sentinel in the rendering of the vault: an
 // instant the vault writes from the wall clock, not from the clock the commands hold. It is the one
 // instant of the output that is not the clock's, and it is masked by where it is, never by its value.
-var promoteGoldenSentinel = regexp.MustCompile(`(=== \.vault-meta/\.longterm-mem-provisioned[^\n]*===\n)\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z`)
+var promoteGoldenSentinel = regexp.MustCompile(`(=== [^\n]*\.longterm-mem-provisioned[^\n]*===\n)\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z`)
 
 // runPromoteGolden runs one command of a golden scenario in process, composed with the fixed clock, and
 // returns its exit code, stdout and stderr.
@@ -98,6 +98,18 @@ func TestPromoteGoldenNormalise_MasksThePathsAndTheSentinelAndNothingElse(t *tes
 
 	got := w.normalise("/vault /home /db\n=== .vault-meta/.longterm-mem-provisioned (-rw-r--r--) ===\n2031-01-02T03:04:05Z\n=== .vault-meta/sync-state.json ===\n{\"last_sync_completed_at\": \"" + fixed + "\"}\ncreated: 2026-10-10\nstale: 2026-07-31 2026-07-31T10:00:00Z\n")
 	want := "<vault> <home> <engram-db>\n=== .vault-meta/.longterm-mem-provisioned (-rw-r--r--) ===\n<now>\n=== .vault-meta/sync-state.json ===\n{\"last_sync_completed_at\": \"" + fixed + "\"}\ncreated: 2026-10-10\nstale: 2026-07-31 2026-07-31T10:00:00Z\n"
+	if got != want {
+		t.Errorf("normalise =\n%s\nwant\n%s", got, want)
+	}
+}
+
+// The sentinel is masked wherever the rendering finds it, not only under .vault-meta: a .vault-meta that is a
+// link to another directory puts the file under that one, and its instant is the wall clock's all the same.
+func TestPromoteGoldenNormalise_MasksTheSentinelWhereverTheRenderingFindsIt(t *testing.T) {
+	w := &promoteGoldenWorld{vaultRoot: "/vault", home: "/home", dbPath: "/db"}
+
+	got := w.normalise("=== notes/meta/.longterm-mem-provisioned (-rw-r--r--) ===\n2031-01-02T03:04:05Z\n=== notes/meta/other ===\n2031-01-02T03:04:05Z\n")
+	want := "=== notes/meta/.longterm-mem-provisioned (-rw-r--r--) ===\n<now>\n=== notes/meta/other ===\n2031-01-02T03:04:05Z\n"
 	if got != want {
 		t.Errorf("normalise =\n%s\nwant\n%s", got, want)
 	}
