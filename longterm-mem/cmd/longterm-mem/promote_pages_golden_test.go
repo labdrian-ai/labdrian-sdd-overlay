@@ -225,12 +225,23 @@ func pagesScenarios() []pagesScenario {
 			symlinkOrSkip(t, "../../notes/absent.md", pageOf(w, "c-000999"))
 			revise(t, w)
 		}, commands: [][]string{promote, {"sync", "--project", promoteGoldenProject, "--dry-run"}, sync}},
-		// Every observation sync promotes has its page, and one more page cannot be read: the promotion pass
-		// leaves nothing alone, and the propagation pass still cannot tell the observations that have no page
-		// (the ones sync never promotes) from the unreadable one's, so the run is the same refusal.
+		// Every observation sync promotes has its page, and one more page cannot be read. The promotion pass
+		// leaves no observation alone, so the run has no "nothing was written for them" warning. The propagation
+		// pass still cannot tell the observations that have no page (the ones sync never promotes, 3 and 4) from
+		// the unreadable one's, so it leaves those alone, "nothing was patched for them", and that warning is
+		// what makes the run exit 6. The golden holds the whole vault: the pages, the sidecar, the catalog and
+		// the log show that nothing was written for 3 and 4.
 		{name: "25-a-page-that-cannot-be-read-beside-the-pages-of-every-promoted-observation", prepare: [][]string{sync}, seed: func(t *testing.T, w *promoteGoldenWorld) {
 			symlinkOrSkip(t, "../../notes/absent.md", pageOf(w, "c-000999"))
 		}, commands: [][]string{sync}},
+		// An observation whose page cannot be told apart is not the only thing a run can meet. Here a page claims
+		// observation 1 and names no address, so its promoted state cannot be read (a failure), and a page that
+		// cannot be read withholds observation 2: the failure outranks the observations left alone, in the dry
+		// run as in the run, which exit 1 where a run with only the withheld ones exits 6 (scenarios 24 and 25).
+		{name: "26-a-failure-beside-an-observation-left-alone", seed: func(t *testing.T, w *promoteGoldenWorld) {
+			writeVaultFile(t, w, "wiki/memory/c-000500.md", withoutAddress)
+			symlinkOrSkip(t, "../../notes/absent.md", pageOf(w, "c-000999"))
+		}, commands: [][]string{{"sync", "--project", promoteGoldenProject, "--dry-run"}, sync}},
 	}
 }
 
