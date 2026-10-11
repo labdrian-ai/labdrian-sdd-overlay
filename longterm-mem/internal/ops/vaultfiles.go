@@ -1,5 +1,7 @@
 package ops
 
+import "errors"
+
 // IndexReader is the port through which Doctor reads the master catalog of the vault it inspects, wiki/index.md,
 // for the check that every promoted page is registered in it. The package owns it, asks for the read half only (a
 // diagnostic never writes), and is satisfied by the vault file system adapter and by promote.IndexReader
@@ -35,3 +37,16 @@ type SyncStateReader interface {
 	// and a record that holds no completion time, answer the empty string and no error: nothing has completed.
 	LastSyncCompletedAt() (string, error)
 }
+
+// errNoIndexReader and errNoLogReader are what the registration check reports when Doctor was built without the
+// reader of the file, and there is a promoted page to look for in it.
+var (
+	errNoIndexReader = errors.New("ops: no index reader was wired")
+	errNoLogReader   = errors.New("ops: no log reader was wired")
+)
+
+// errNoRootInspector is what the vault-config check reports when Doctor was built without a RootInspector.
+var errNoRootInspector = errors.New("ops: no root inspector was wired")
+
+// errNoSyncStateReader is what Status answers when it was built without a SyncStateReader.
+var errNoSyncStateReader = errors.New("ops: no sync state reader was wired")

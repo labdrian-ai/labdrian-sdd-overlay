@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/embed"
@@ -118,8 +116,19 @@ func loadPrecedence(reader PrecedenceReader) (promote.PrecedenceStore, error) {
 // runtime-prerequisites check's own logic without depending on what is
 // actually installed on the host running the test.
 type DoctorDeps struct {
-	// VaultRoot is the (possibly unresolvable) vault path Doctor inspects.
+	// VaultRoot is the (possibly unresolvable) vault path Doctor inspects, as the checks name it.
 	VaultRoot string
+	// Root examines what is at VaultRoot for the vault-config-resolvable check. Production wires the
+	// vault file system adapter over VaultRoot. Required: without it that check fails and says so,
+	// when a vault root is configured.
+	Root RootInspector
+	// Index reads the vault's master catalog and Log its promotion log, for the
+	// wiki-registration-consistency check (and Index for the inbound-link rule the
+	// address-map-integrity check runs among its others). Production wires the vault file
+	// system adapter over VaultRoot. Required: without them those checks fail, when there is a
+	// promoted page to look for, and say so.
+	Index IndexReader
+	Log   LogReader
 	// Pages reads the vault's promoted pages for the three checks that judge
 	// them (address-map-integrity, wiki-registration-consistency and
 	// precedence-sidecar-consistency). Production wires the vault file system
@@ -179,17 +188,16 @@ type DoctorReport struct {
 // single check's own reporting (there is none today; every failure mode
 // this slice defines is expressed as a Check, not a Doctor-level error).
 //
-// The three checks that judge the promoted pages take their arguments in one order: the pages, then the vault
-// root while the check still reads a file of it itself (the catalog and the log, until the next slice puts
-// them behind ports), then the other port it needs. A transposition does not compile: the three are
-// different types.
+// The three checks that judge the promoted pages take their arguments in one order: the pages first, then the
+// other ports each needs, in the order its name gives them. A transposition does not compile: the ports are
+// different types, and a type that is two of them is still not the other.
 func Doctor(ctx context.Context, deps DoctorDeps, project string) (DoctorReport, error) {
 	return DoctorReport{
 		Project: project,
 		Checks: []Check{
-			checkVaultConfigResolvable(deps.VaultRoot),
-			checkAddressMapIntegrity(deps.Pages, deps.VaultRoot, deps.AddressMap),
-			checkWikiRegistrationConsistency(deps.Pages, deps.VaultRoot),
+			checkVaultConfigResolvable(deps.VaultRoot, deps.Root),
+			checkAddressMapIntegrity(deps.Pages, deps.AddressMap, deps.Index),
+			checkWikiRegistrationConsistency(deps.Pages, deps.Index, deps.Log),
 			checkPrecedenceSidecarConsistency(deps.Pages, deps.Precedence),
 			checkRuntimePrerequisites(deps),
 			checkEmbeddingIndexPresent(deps, project),
@@ -201,16 +209,19 @@ func Doctor(ctx context.Context, deps DoctorDeps, project string) (DoctorReport,
 
 // checkVaultConfigResolvable reports whether vaultRoot resolves to an
 // existing directory on disk (R-011 scenario: "Unresolvable vault config
-// is named").
-func checkVaultConfigResolvable(vaultRoot string) Check {
+// is named"), as root says; a root inspector that was not wired is named.
+func checkVaultConfigResolvable(vaultRoot string, root RootInspector) Check {
 	if vaultRoot == "" {
 		return Check{Name: CheckVaultConfigResolvable, Status: CheckFailed, Detail: "vault root is not configured"}
 	}
-	info, err := os.Stat(vaultRoot)
+	if memory.IsMissing(root) {
+		return Check{Name: CheckVaultConfigResolvable, Status: CheckFailed, Detail: errNoRootInspector.Error()}
+	}
+	isDir, err := root.RootIsDirectory()
 	if err != nil {
 		return Check{Name: CheckVaultConfigResolvable, Status: CheckFailed, Detail: fmt.Sprintf("%s does not resolve to an existing directory: %v", vaultRoot, err)}
 	}
-	if !info.IsDir() {
+	if !isDir {
 		return Check{Name: CheckVaultConfigResolvable, Status: CheckFailed, Detail: fmt.Sprintf("%s is not a directory", vaultRoot)}
 	}
 	return Check{Name: CheckVaultConfigResolvable, Status: CheckPassed}
@@ -223,7 +234,7 @@ func checkVaultConfigResolvable(vaultRoot string) Check {
 // A vault root that cannot be scanned for promoted pages at all (missing
 // directory) reports PASS -- there is nothing yet to be inconsistent with,
 // matching checkAddressMap's own graceful handling of a missing manifest.
-func checkAddressMapIntegrity(promoted PageReader, vaultRoot string, addresses AddressMapReader) Check {
+func checkAddressMapIntegrity(promoted PageReader, addresses AddressMapReader, index IndexReader) Check {
 	pages, unreadable, err := loadPromotedPages(promoted)
 	if err != nil {
 		return Check{Name: CheckAddressMapIntegrity, Status: CheckFailed, Detail: err.Error()}
@@ -237,7 +248,7 @@ func checkAddressMapIntegrity(promoted PageReader, vaultRoot string, addresses A
 		}
 	} else {
 		for _, page := range pages {
-			for _, diag := range promote.LintPage(page, vaultRoot, promoted, addresses) {
+			for _, diag := range promote.LintPage(page, promoted, addresses, index) {
 				if diag.Rule == "address-map" {
 					details = append(details, diag.Detail)
 				}
@@ -257,21 +268,40 @@ func checkAddressMapIntegrity(promoted PageReader, vaultRoot string, addresses A
 // LintPage runs among its others (promote.CheckInboundIndexLink, which needs
 // no address map) -- the same on-disk marker block RegisterIndex writes --
 // rather than re-implementing it; LintPage has no equivalent log.md rule, so
-// the log half is this check's own, small and self-contained.
-func checkWikiRegistrationConsistency(promoted PageReader, vaultRoot string) Check {
+// the log half is this check's own, small and self-contained. A catalog or a
+// log that cannot be read, for whatever reason, is one the page is not in.
+//
+// A reader that was not wired is named once, when there is a page to look for,
+// and not once per page: every page would say the same.
+func checkWikiRegistrationConsistency(promoted PageReader, index IndexReader, log LogReader) Check {
 	pages, unreadable, err := loadPromotedPages(promoted)
 	if err != nil {
 		return Check{Name: CheckWikiRegistrationConsistency, Status: CheckFailed, Detail: err.Error()}
 	}
 
-	logData, logErr := os.ReadFile(filepath.Join(vaultRoot, vaultlayout.LogFile))
+	noIndex, noLog := memory.IsMissing(index), memory.IsMissing(log)
+	var logContent string
+	var logErr error
+	if !noLog && len(pages) > 0 {
+		logContent, logErr = log.ReadLog()
+	}
 
 	details := append([]string(nil), unreadable...)
-	for _, page := range pages {
-		if diag, ok := promote.CheckInboundIndexLink(page, vaultRoot); !ok {
-			details = append(details, diag.Detail)
+	if len(pages) > 0 {
+		if noIndex {
+			details = append(details, errNoIndexReader.Error())
 		}
-		if logErr != nil || !strings.Contains(string(logData), "[["+page.Address) {
+		if noLog {
+			details = append(details, errNoLogReader.Error())
+		}
+	}
+	for _, page := range pages {
+		if !noIndex {
+			if diag, ok := promote.CheckInboundIndexLink(page, index); !ok {
+				details = append(details, diag.Detail)
+			}
+		}
+		if !noLog && (logErr != nil || !strings.Contains(logContent, "[["+page.Address)) {
 			details = append(details, fmt.Sprintf("%s has no entry for %s", vaultlayout.LogFile, page.Address))
 		}
 	}

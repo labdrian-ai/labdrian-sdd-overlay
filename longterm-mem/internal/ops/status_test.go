@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/ops/testdata"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultfs"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vecindex"
 )
 
@@ -63,6 +64,7 @@ func TestStatus(t *testing.T) {
 
 			deps := StatusDeps{
 				VaultRoot: vaultRoot,
+				SyncState: vaultfs.New(vaultRoot, vaultfs.WithErrorPrefix("ops")),
 				StateDir:  t.TempDir(),
 				EngramReachable: func(ctx context.Context) (bool, string) {
 					return tc.engramReachable, ""
@@ -110,6 +112,7 @@ func TestStatus_MalformedSyncStateIsAnErrorNotAFabricatedTimestamp(t *testing.T)
 
 	deps := StatusDeps{
 		VaultRoot:        vaultRoot,
+		SyncState:        vaultfs.New(vaultRoot, vaultfs.WithErrorPrefix("ops")),
 		StateDir:         t.TempDir(),
 		EngramReachable:  func(ctx context.Context) (bool, string) { return true, "" },
 		VaultProvisioned: func(vaultRoot string) bool { return true },
@@ -138,6 +141,7 @@ func TestStatus_EmbeddingIndexBuiltAt(t *testing.T) {
 		vaultRoot := t.TempDir()
 		return StatusDeps{
 			VaultRoot:        vaultRoot,
+			SyncState:        vaultfs.New(vaultRoot, vaultfs.WithErrorPrefix("ops")),
 			StateDir:         stateDir,
 			EngramReachable:  func(ctx context.Context) (bool, string) { return true, "" },
 			VaultProvisioned: func(vaultRoot string) bool { return true },

@@ -429,6 +429,9 @@ func TestGolden(t *testing.T) {
 				// The doctor's command wires the adapter with the prefix its output has always carried. The
 				// literal is the golden files' own; cmd's TestCmdDoctor_ReportsAnUnparseableSidecarAsTheOpsGoldenDoes
 				// runs the command's wiring over the same damaged vault and holds it to the text recorded here.
+				Root:                  vaultfs.New(vaultRoot, vaultfs.WithErrorPrefix("promote")),
+				Index:                 vaultfs.New(vaultRoot, vaultfs.WithErrorPrefix("promote")),
+				Log:                   vaultfs.New(vaultRoot, vaultfs.WithErrorPrefix("promote")),
 				Precedence:            vaultfs.New(vaultRoot, vaultfs.WithErrorPrefix("promote")),
 				Pages:                 vaultfs.New(vaultRoot, vaultfs.WithErrorPrefix("promote")),
 				AddressMap:            vaultfs.New(vaultRoot, vaultfs.WithErrorPrefix("promote")),
@@ -449,6 +452,7 @@ func TestGolden(t *testing.T) {
 			status, err := Status(context.Background(), StatusDeps{
 				VaultRoot:        vaultRoot,
 				StateDir:         stateDir,
+				SyncState:        vaultfs.New(vaultRoot, vaultfs.WithErrorPrefix("ops")),
 				VaultProvisioned: func(string) bool { return false },
 				EngramReachable:  func(context.Context) (bool, string) { return true, "" },
 			}, doctorTestProject)

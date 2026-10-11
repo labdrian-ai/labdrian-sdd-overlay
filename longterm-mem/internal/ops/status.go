@@ -6,12 +6,8 @@ package ops
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
-	"os"
-	"path/filepath"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultlayout"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vecindex"
 )
 
@@ -38,9 +34,13 @@ type StatusDeps struct {
 	// VaultProvisioned reports whether VaultRoot has been fully indexed.
 	// Production wires vault.Provisioned. Required.
 	VaultProvisioned func(vaultRoot string) bool
-	// VaultRoot is the resolved vault path Status inspects (provisioning
-	// state and the sync-state record).
+	// VaultRoot is the resolved vault path Status inspects (its provisioning
+	// state).
 	VaultRoot string
+	// SyncState reads the vault's record of the last sync that completed.
+	// Production wires the vault file system adapter over VaultRoot.
+	// Required: without it Status fails and says so.
+	SyncState SyncStateReader
 	// StateDir is the directory this module's own derived state (the
 	// embedding index) lives under -- vecindex.Dir(StateDir, project)
 	// resolves the project's index directory (R-065). Production wires the
@@ -71,7 +71,7 @@ func Status(ctx context.Context, deps StatusDeps, project string) (StatusReport,
 	report.EngramReachable, report.EngramDetail = deps.EngramReachable(ctx)
 	report.VaultProvisioned = deps.VaultProvisioned(deps.VaultRoot)
 
-	lastSync, err := readLastSyncCompletedAt(deps.VaultRoot)
+	lastSync, err := readLastSyncCompletedAt(deps.SyncState)
 	if err != nil {
 		return StatusReport{}, err
 	}
@@ -94,28 +94,22 @@ func readEmbeddingIndexBuiltAt(stateDir, project string) string {
 	return idx.Manifest.BuiltAt
 }
 
-// readLastSyncCompletedAt reads vaultRoot's sync-state record and returns
-// its last_sync_completed_at field, or neverSynced when the record does
-// not exist yet -- a project that has never synced must never be reported
-// with a fabricated or stale timestamp (R-010).
-func readLastSyncCompletedAt(vaultRoot string) (string, error) {
-	full := filepath.Join(vaultRoot, vaultlayout.SyncStateFile)
-	data, err := os.ReadFile(full)
+// readLastSyncCompletedAt asks the vault's sync state for the completion
+// time of the last sync, or says neverSynced when the vault has none -- no
+// record yet, or a record that holds no completion -- because a project that
+// has never synced must never be reported with a fabricated or stale
+// timestamp (R-010). A reader that cannot read or understand the record
+// fails Status with the reason it gives; one that was not wired is named.
+func readLastSyncCompletedAt(syncState SyncStateReader) (string, error) {
+	if memory.IsMissing(syncState) {
+		return "", errNoSyncStateReader
+	}
+	completedAt, err := syncState.LastSyncCompletedAt()
 	if err != nil {
-		if os.IsNotExist(err) {
-			return neverSynced, nil
-		}
-		return "", fmt.Errorf("ops: read %s: %w", full, err)
+		return "", err
 	}
-
-	var record struct {
-		LastSyncCompletedAt string `json:"last_sync_completed_at"`
-	}
-	if err := json.Unmarshal(data, &record); err != nil {
-		return "", fmt.Errorf("ops: parse %s: %w", full, err)
-	}
-	if record.LastSyncCompletedAt == "" {
+	if completedAt == "" {
 		return neverSynced, nil
 	}
-	return record.LastSyncCompletedAt, nil
+	return completedAt, nil
 }

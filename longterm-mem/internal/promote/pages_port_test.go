@@ -288,7 +288,7 @@ func wikilinkRuleOf(pages PageExistence, links ...string) []Diagnostic {
 	}
 	page := Page{Address: testAddress, Path: "wiki/memory/" + testAddress + ".md", Frontmatter: "---\naddress: " + testAddress + "\n---\n", Body: body}
 	var found []Diagnostic
-	for _, d := range LintPage(page, "", pages, &memAddressMap{}) {
+	for _, d := range LintPage(page, pages, &memAddressMap{}, nil) {
 		if d.Rule == "wikilink-resolvability" {
 			found = append(found, d)
 		}

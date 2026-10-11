@@ -39,6 +39,9 @@ func portDoctorDeps(t *testing.T, reader PrecedenceReader) (DoctorDeps, promote.
 	stateDir, liveIDs := newHealthyEmbeddingDeps(t)
 	return DoctorDeps{
 		VaultRoot:             vaultRoot,
+		Root:                  vaultfs.New(vaultRoot),
+		Index:                 vaultfs.New(vaultRoot),
+		Log:                   vaultfs.New(vaultRoot),
 		Precedence:            reader,
 		Pages:                 vaultfs.New(vaultRoot),
 		AddressMap:            vaultfs.New(vaultRoot),

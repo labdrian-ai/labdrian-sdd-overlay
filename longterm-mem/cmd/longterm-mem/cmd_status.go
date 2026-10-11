@@ -43,6 +43,7 @@ func cmdStatus(args []string) int {
 
 	deps := ops.StatusDeps{
 		VaultRoot:        vaultRoot,
+		SyncState:        openVaultForStatus(vaultRoot),
 		StateDir:         defaultStateDir(),
 		VaultProvisioned: vault.Provisioned,
 		EngramReachable: func(ctx context.Context) (bool, string) {

@@ -38,6 +38,9 @@ func addressMapDoctorDeps(t *testing.T, reader AddressMapReader) DoctorDeps {
 	stateDir, liveIDs := newHealthyEmbeddingDeps(t)
 	return DoctorDeps{
 		VaultRoot:             vaultRoot,
+		Root:                  vaultfs.New(vaultRoot),
+		Index:                 vaultfs.New(vaultRoot),
+		Log:                   vaultfs.New(vaultRoot),
 		Precedence:            vaultfs.New(vaultRoot),
 		Pages:                 vaultfs.New(vaultRoot),
 		AddressMap:            reader,

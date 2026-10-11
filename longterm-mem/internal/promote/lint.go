@@ -3,8 +3,6 @@ package promote
 import (
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -37,12 +35,12 @@ var requiredScalarFields = []string{"type", titleField, "address", "created", "u
 // the 6 rules the design's line-budget mitigation names for this slice:
 // required fields, the type/status enum, the address format, address_map
 // consistency, wikilink resolvability, and an inbound index.md link.
-// addresses is where the address_map rule reads the vault's address map
-// from, pages is where the wikilink rule asks whether a linked page is there,
-// and vaultRoot lets the last rule inspect on-disk state (the catalog, which
-// the next L3 slice moves behind a port). Doctor (slice 8a) reuses LintPage's
-// rules unchanged.
-func LintPage(page Page, vaultRoot string, pages PageExistence, addresses AddressMapReader) []Diagnostic {
+// pages is where the wikilink rule asks whether a linked page is there,
+// addresses is where the address_map rule reads the vault's address map from,
+// and index is where the last rule reads the vault's catalog; the vault's
+// files are the ports', and LintPage touches none itself. Doctor (slice 8a)
+// reuses LintPage's rules unchanged.
+func LintPage(page Page, pages PageExistence, addresses AddressMapReader, index IndexReader) []Diagnostic {
 	var diags []Diagnostic
 
 	fields := parseFrontmatterFields(page.Frontmatter)
@@ -67,7 +65,7 @@ func LintPage(page Page, vaultRoot string, pages PageExistence, addresses Addres
 		diags = append(diags, diag)
 	}
 	diags = append(diags, checkWikilinksResolve(page, pages)...)
-	if diag, ok := CheckInboundIndexLink(page, vaultRoot); !ok {
+	if diag, ok := CheckInboundIndexLink(page, index); !ok {
 		diags = append(diags, diag)
 	}
 
@@ -149,13 +147,18 @@ func checkWikilinksResolve(page Page, pages PageExistence) []Diagnostic {
 // CheckInboundIndexLink reports the inbound-index.md-link rule: wiki/
 // index.md must exist and contain a wikilink to page.Address. LintPage runs it
 // with the other rules; the doctor runs it alone, for the pages whose
-// registration it checks.
-func CheckInboundIndexLink(page Page, vaultRoot string) (Diagnostic, bool) {
-	data, err := os.ReadFile(filepath.Join(vaultRoot, vaultlayout.IndexFile))
+// registration it checks. A catalog that cannot be read, for whatever reason,
+// is a catalog that is missing as far as the rule can tell; an IndexReader that
+// was not wired is named, rather than called.
+func CheckInboundIndexLink(page Page, index IndexReader) (Diagnostic, bool) {
+	if memory.IsMissing(index) {
+		return Diagnostic{Rule: "inbound-index-link", Detail: errNoIndexReader.Error()}, false
+	}
+	content, err := index.ReadIndex()
 	if err != nil {
 		return Diagnostic{Rule: "inbound-index-link", Detail: vaultlayout.IndexFile + " is missing"}, false
 	}
-	if !strings.Contains(string(data), "[["+page.Address) {
+	if !strings.Contains(content, "[["+page.Address) {
 		return Diagnostic{Rule: "inbound-index-link", Detail: fmt.Sprintf("%s has no link to %s", vaultlayout.IndexFile, page.Address)}, false
 	}
 	return Diagnostic{}, true

@@ -63,6 +63,9 @@ func (c commands) cmdDoctor(args []string) int {
 	vaultFiles := openVault(vaultRoot)
 	deps := ops.DoctorDeps{
 		VaultRoot:           vaultRoot,
+		Root:                vaultFiles,
+		Index:               vaultFiles,
+		Log:                 vaultFiles,
 		Precedence:          vaultFiles,
 		Pages:               vaultFiles,
 		AddressMap:          vaultFiles,

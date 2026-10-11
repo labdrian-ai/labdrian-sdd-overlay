@@ -184,7 +184,7 @@ func TestLintPage_ChecksTheAddressMapItIsHanded(t *testing.T) {
 	addressMapDetails := func(addresses AddressMapReader) []string {
 		var details []string
 		root := t.TempDir()
-		for _, d := range LintPage(page, root, pagesIn(root), addresses) {
+		for _, d := range LintPage(page, pagesIn(root), addresses, indexIn(root)) {
 			if d.Rule == "address-map" {
 				details = append(details, d.Detail)
 			}

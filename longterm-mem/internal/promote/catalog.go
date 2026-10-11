@@ -1,6 +1,12 @@
 package promote
 
-import "time"
+import (
+	"errors"
+	"time"
+)
+
+// errNoIndexReader is what the inbound-link rule of the page check reports when it was handed no IndexReader.
+var errNoIndexReader = errors.New("promote: no index reader was wired")
 
 // IndexReader is the port through which the page check reads the vault's master catalog, wiki/index.md: the
 // one question its inbound-link rule puts to it. The package owns it and never touches the catalog itself.
