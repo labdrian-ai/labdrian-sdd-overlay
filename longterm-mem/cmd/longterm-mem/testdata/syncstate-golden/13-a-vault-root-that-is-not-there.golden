@@ -1,0 +1,50 @@
+args: promote --project golden-project --id 1
+exit: 1
+--- stdout ---
+--- stderr ---
+longterm-mem: promote: promote: allocate address: vault: resolve vault root <vault>/absent: lstat <vault>/absent: no such file or directory
+args: sync --project golden-project
+exit: 5
+--- stdout ---
+longterm-mem: sync promoted 0 observation(s), patched 0 page(s)
+--- stderr ---
+longterm-mem: sync: promote: sync: rebuild index: vault: provision index: vault: resolve vault root <vault>/absent: lstat <vault>/absent: no such file or directory
+args: status --project golden-project
+exit: 0
+--- stdout ---
+longterm-mem: status for golden-project
+  engram: reachable=true
+  vault: provisioned=false
+  last sync: never
+  embedding index built at: never
+--- stderr ---
+args: doctor --project golden-project
+exit: 9
+--- stdout ---
+longterm-mem: doctor for golden-project
+  [FAIL] vault-config-resolvable (<vault>/absent does not resolve to an existing directory: stat <vault>/absent: no such file or directory)
+  [PASS] address-map-integrity
+  [PASS] wiki-registration-consistency
+  [PASS] precedence-sidecar-consistency
+  [PASS] runtime-prerequisites
+  [FAIL] embedding-index-present (no embedding index has been built at <home>/.labdrian-overlay/longterm-mem/index/golden-project; run `longterm-mem index --embeddings`)
+  [FAIL] embedding-index-fresh (freshness cannot be determined: embedding index at <home>/.labdrian-overlay/longterm-mem/index/golden-project could not be loaded: vecindex: no index at this path)
+  [PASS] embedding-backend-reachable
+--- stderr ---
+--- vault ---
+=== bin/ (directory -rwxr-xr-x) ===
+=== bin/setup-retrieve.sh (-rwxr-xr-x) ===
+#!/bin/sh
+exit 0
+=== scripts/ (directory -rwxr-xr-x) ===
+=== scripts/allocate-address.sh (-rwxr-xr-x) ===
+#!/bin/sh
+n=900
+[ -f .allocator-counter ] && read n < .allocator-counter
+n=$((n+1))
+echo "$n" > .allocator-counter
+printf 'c-%06d\n' "$n"
+=== scripts/bm25-index.py (-rwxr-xr-x) ===
+
+=== scripts/contextual-prefix.py (-rwxr-xr-x) ===
+

@@ -40,6 +40,9 @@ type pagesScenario struct {
 	prepare [][]string
 	// seed leaves the world in the state the scenario is about, after prepare.
 	seed func(t *testing.T, w *promoteGoldenWorld)
+	// vaultAs, when set, is the path the commands are told the vault is at, in place of its root: a link to
+	// it, a path that is not there. What the golden file records of the vault is still the vault as built.
+	vaultAs func(t *testing.T, w *promoteGoldenWorld) string
 	// commands are what the golden file records.
 	commands [][]string
 }
@@ -278,6 +281,9 @@ func runGoldenScenarios(t *testing.T, goldenSubdir string, scenarios []pagesScen
 			}
 			if scenario.seed != nil {
 				scenario.seed(t, w)
+			}
+			if scenario.vaultAs != nil {
+				t.Setenv("LONGTERM_MEM_VAULT", scenario.vaultAs(t, w))
 			}
 
 			var out strings.Builder
