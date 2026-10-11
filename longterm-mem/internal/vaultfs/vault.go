@@ -11,6 +11,7 @@ package vaultfs
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultlayout"
 )
@@ -40,6 +41,17 @@ type Option func(*Vault)
 // composition root to ask for, so the text an operator reads is decided where the commands are.
 func WithErrorPrefix(prefix string) Option {
 	return func(v *Vault) { v.errorPrefix = prefix }
+}
+
+// RootIsDirectory reports whether the root of the vault, following a link, is a directory. A root that cannot be
+// examined (it is not there, it is a link to nothing, a path of it goes through a file) is the file system's own
+// error, naming the root and carrying no prefix, and no answer.
+func (v *Vault) RootIsDirectory() (bool, error) {
+	info, err := os.Stat(v.layout.Root)
+	if err != nil {
+		return false, err
+	}
+	return info.IsDir(), nil
 }
 
 // fail is err with the Vault's error prefix in front, if it has one.
