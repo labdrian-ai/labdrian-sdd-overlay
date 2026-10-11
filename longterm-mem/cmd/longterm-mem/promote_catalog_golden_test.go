@@ -55,6 +55,8 @@ func removeFromVault(t *testing.T, w *promoteGoldenWorld, rel string) {
 func catalogScenarios() []pagesScenario {
 	promote := []string{"promote", "--project", promoteGoldenProject, "--id", "1"}
 	sync := []string{"sync", "--project", promoteGoldenProject}
+	doctor := []string{"doctor", "--project", promoteGoldenProject}
+	status := []string{"status", "--project", promoteGoldenProject}
 	openBlock := "<!-- longterm-mem:begin -->\n- [[c-000001|An entry above the end of the block]]\n"
 
 	return []pagesScenario{
@@ -88,6 +90,33 @@ func catalogScenarios() []pagesScenario {
 		{name: "09-a-wiki-directory-that-is-a-file", seed: func(t *testing.T, w *promoteGoldenWorld) {
 			writeVaultFile(t, w, "wiki", "not a directory")
 		}, commands: [][]string{promote, sync}},
+		{name: "10-a-log-that-is-not-in-order", seed: func(t *testing.T, w *promoteGoldenWorld) {
+			writeVaultFile(t, w, "wiki/log.md", "## [2027-01-01] ingest | Later\n\nA later entry.\n\n## [2025-01-01] ingest | Earlier\n\nAn earlier entry.\n")
+		}, commands: [][]string{promote}},
+		{name: "11-the-catalog-and-the-log-of-an-earlier-promotion", prepare: [][]string{promote}, commands: [][]string{promote, sync}},
+		{name: "12-an-empty-index-and-an-empty-log", seed: func(t *testing.T, w *promoteGoldenWorld) {
+			writeVaultFile(t, w, "wiki/index.md", "")
+			writeVaultFile(t, w, "wiki/log.md", "")
+		}, commands: [][]string{promote}},
+		{name: "13-the-doctor-and-status-over-an-index-that-became-a-directory", prepare: [][]string{promote}, seed: func(t *testing.T, w *promoteGoldenWorld) {
+			removeFromVault(t, w, "wiki/index.md")
+			directoryInVault(t, w, "wiki/index.md")
+		}, commands: [][]string{doctor, status}},
+		{name: "14-the-doctor-over-a-log-that-became-a-link-to-nothing", prepare: [][]string{promote}, seed: func(t *testing.T, w *promoteGoldenWorld) {
+			removeFromVault(t, w, "wiki/log.md")
+			linkInVault(t, w, "wiki/log.md", "../notes/absent.md")
+		}, commands: [][]string{doctor}},
+		{name: "15-the-doctor-over-an-index-and-a-log-that-became-links-to-the-same-files", prepare: [][]string{promote}, seed: func(t *testing.T, w *promoteGoldenWorld) {
+			for _, name := range []string{"index", "log"} {
+				data, err := os.ReadFile(filepath.Join(w.vaultRoot, "wiki", name+".md"))
+				if err != nil {
+					t.Fatal(err)
+				}
+				writeVaultFile(t, w, "notes/"+name+".md", string(data))
+				removeFromVault(t, w, "wiki/"+name+".md")
+				linkInVault(t, w, "wiki/"+name+".md", "../notes/"+name+".md")
+			}
+		}, commands: [][]string{doctor}},
 	}
 }
 
