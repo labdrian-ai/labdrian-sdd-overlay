@@ -266,7 +266,86 @@ func goldenScenarios() []goldenScenario {
 			recordEntryMatchingTheHealthyPage(t, root)
 			writeGoldenFile(t, root, "wiki/memory/"+goldenOtherAddress+".md", "Just text, no frontmatter.\n")
 		}},
+		// The catalog, wiki/index.md, the log, wiki/log.md, the sync state, .vault-meta/longterm-mem-sync-state.json
+		// and the vault root, in each state a file or a directory can be found in. Recorded for the move of those
+		// reads behind ports (Phase 9, L3 slice 4), from the program as it stood before it. A file that cannot be
+		// read because of its mode is not a scenario: a test run as the superuser reads it, so its output would
+		// depend on who ran the test; a directory, a link to nothing and a file under a file cannot be read by
+		// anyone, and stand for it.
+		{name: "42-an-index-that-is-a-directory", build: func(t *testing.T, root string) {
+			replaceWithDirectory(t, root, "wiki/index.md")
+		}},
+		{name: "43-an-index-that-is-a-link-to-the-catalog", build: func(t *testing.T, root string) {
+			replaceWithLinkToACopy(t, root, "wiki/index.md")
+		}},
+		{name: "44-an-index-that-is-a-link-to-nothing", build: func(t *testing.T, root string) {
+			replaceWithLinkToNothing(t, root, "wiki/index.md")
+		}},
+		{name: "45-an-empty-index", build: func(t *testing.T, root string) {
+			writeGoldenFile(t, root, "wiki/index.md", "")
+		}},
+		{name: "46-a-log-that-is-a-directory", build: func(t *testing.T, root string) {
+			replaceWithDirectory(t, root, "wiki/log.md")
+		}},
+		{name: "47-a-log-that-is-a-link-to-a-log-that-names-the-page", build: func(t *testing.T, root string) {
+			replaceWithLinkToACopy(t, root, "wiki/log.md")
+		}},
+		{name: "48-a-log-that-is-a-link-to-nothing", build: func(t *testing.T, root string) {
+			replaceWithLinkToNothing(t, root, "wiki/log.md")
+		}},
+		{name: "49-a-wiki-directory-that-is-a-file", build: func(t *testing.T, root string) {
+			if err := os.RemoveAll(filepath.Join(root, "wiki")); err != nil {
+				t.Fatal(err)
+			}
+			writeGoldenFile(t, root, "wiki", "not a directory")
+		}},
 	}
+}
+
+// replaceWithDirectory makes the vault-relative path rel a directory, where it was a file.
+func replaceWithDirectory(t *testing.T, root, rel string) {
+	t.Helper()
+	full := filepath.Join(root, filepath.FromSlash(rel))
+	if err := os.Remove(full); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(full, 0o755); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// replaceWithLinkToACopy moves the file at the vault-relative path rel to notes/ and leaves a link to it where
+// it was, so that the file is the same and is reached through a link.
+func replaceWithLinkToACopy(t *testing.T, root, rel string) {
+	t.Helper()
+	full := filepath.Join(root, filepath.FromSlash(rel))
+	data, err := os.ReadFile(full)
+	if err != nil {
+		t.Fatal(err)
+	}
+	moved := "notes/" + filepath.Base(rel)
+	writeGoldenFile(t, root, moved, string(data))
+	if err := os.Remove(full); err != nil {
+		t.Fatal(err)
+	}
+	up, err := filepath.Rel(filepath.Dir(full), filepath.Join(root, filepath.FromSlash(moved)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	symlinkOrSkip(t, up, full)
+}
+
+// replaceWithLinkToNothing puts, at the vault-relative path rel, a link to a file that is not there.
+func replaceWithLinkToNothing(t *testing.T, root, rel string) {
+	t.Helper()
+	full := filepath.Join(root, filepath.FromSlash(rel))
+	if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(full); err != nil && !os.IsNotExist(err) {
+		t.Fatal(err)
+	}
+	symlinkOrSkip(t, filepath.Join(root, "notes", "absent"), full)
 }
 
 // recordEntryMatchingTheHealthyPage gives the page promoted under goldenOtherAddress a precedence entry that
