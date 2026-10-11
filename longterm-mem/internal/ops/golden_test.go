@@ -299,6 +299,40 @@ func goldenScenarios() []goldenScenario {
 			}
 			writeGoldenFile(t, root, "wiki", "not a directory")
 		}},
+		{name: "50-a-sync-state-that-is-a-link-to-a-finished-sync", build: func(t *testing.T, root string) {
+			testdata.WriteSyncState(t, root, "2026-08-31T12:00:00Z")
+			replaceWithLinkToACopy(t, root, ".vault-meta/longterm-mem-sync-state.json")
+		}},
+		{name: "51-a-sync-state-that-is-a-link-to-nothing", build: func(t *testing.T, root string) {
+			testdata.WriteSyncState(t, root, "2026-08-31T12:00:00Z")
+			replaceWithLinkToNothing(t, root, ".vault-meta/longterm-mem-sync-state.json")
+		}},
+		{name: "52-an-empty-sync-state", build: func(t *testing.T, root string) {
+			writeGoldenFile(t, root, ".vault-meta/longterm-mem-sync-state.json", "")
+		}},
+		{name: "53-a-sync-state-that-is-json-null", build: func(t *testing.T, root string) {
+			writeGoldenFile(t, root, ".vault-meta/longterm-mem-sync-state.json", "null")
+		}},
+		{name: "54-a-sync-state-whose-completion-is-not-a-string", build: func(t *testing.T, root string) {
+			writeGoldenFile(t, root, ".vault-meta/longterm-mem-sync-state.json", `{"last_sync_completed_at":5}`)
+		}},
+		{name: "55-a-vault-meta-directory-that-is-a-file", build: func(t *testing.T, root string) {
+			writeGoldenFile(t, root, ".vault-meta", "not a directory")
+		}},
+		{name: "56-a-vault-root-that-is-a-link-to-the-vault", root: func(dir string) string {
+			link := dir + "-link"
+			if err := os.Symlink(dir, link); err != nil {
+				panic(err)
+			}
+			return link
+		}},
+		{name: "57-a-vault-root-that-is-a-link-to-nothing", bare: true, root: func(dir string) string {
+			link := filepath.Join(dir, "link")
+			if err := os.Symlink(filepath.Join(dir, "absent"), link); err != nil {
+				panic(err)
+			}
+			return link
+		}},
 	}
 }
 
