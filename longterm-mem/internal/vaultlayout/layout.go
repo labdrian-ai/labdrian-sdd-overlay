@@ -11,6 +11,7 @@
 // promotion and diagnostic code that still joins a root to a name itself does so for the catalog, the log
 // and the sync state, which the last slice of the vault repository moves behind the adapter, and goes with
 // them. The pages are the adapter's already; the code that works on them speaks of an address and not a path.
+// The vault's own index scripts (internal/vault) read the markers of a provisioned vault from here too.
 package vaultlayout
 
 import "path/filepath"
@@ -30,6 +31,14 @@ const (
 	PrecedenceFile = ".raw/.longterm-mem-manifest.json"
 	// SyncStateFile records when the last sync completed.
 	SyncStateFile = ".vault-meta/longterm-mem-sync-state.json"
+	// Bm25IndexFile is the BM25 index the vault's retrieval scripts build; with ChunksDir it is what a vault
+	// has when it has been indexed.
+	Bm25IndexFile = ".vault-meta/bm25/index.json"
+	// ChunksDir is the directory of the page chunks the retrieval scripts build.
+	ChunksDir = ".vault-meta/chunks"
+	// ProvisionedSentinel marks a provision step that ran to completion: its absence, with the index and the
+	// chunks present, means the provisioning was interrupted and is run again.
+	ProvisionedSentinel = ".vault-meta/.longterm-mem-provisioned"
 )
 
 // PageFile is the vault-relative path of the page promoted under address.

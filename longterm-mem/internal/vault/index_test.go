@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultlayout"
 )
 
 // setupRetrieveOKFixture is a fixture bin/setup-retrieve.sh: a real shell
@@ -75,7 +77,7 @@ func newIndexFixtureVault(t *testing.T, bm25Body string, provisioned bool) (root
 
 	if provisioned {
 		provisionMarkersOnly(t, root)
-		sentinel := filepath.Join(root, provisionedSentinel)
+		sentinel := filepath.Join(root, vaultlayout.ProvisionedSentinel)
 		if err := os.WriteFile(sentinel, []byte("2024-01-01T00:00:00Z"), 0o644); err != nil {
 			t.Fatalf("pre-provision completion sentinel: %v", err)
 		}

@@ -18,6 +18,9 @@ func TestThePathsOfTheVaultAreTheOnesItAlwaysHad(t *testing.T) {
 		{"the address manifest", AddressManifestFile, ".raw/.manifest.json"},
 		{"the precedence sidecar", PrecedenceFile, ".raw/.longterm-mem-manifest.json"},
 		{"the sync state", SyncStateFile, ".vault-meta/longterm-mem-sync-state.json"},
+		{"the BM25 index of the retrieval scripts", Bm25IndexFile, ".vault-meta/bm25/index.json"},
+		{"the chunks of the retrieval scripts", ChunksDir, ".vault-meta/chunks"},
+		{"the mark of a provisioning that ran to completion", ProvisionedSentinel, ".vault-meta/.longterm-mem-provisioned"},
 	} {
 		if tc.got != tc.want {
 			t.Errorf("%s = %q, want %q", tc.name, tc.got, tc.want)
