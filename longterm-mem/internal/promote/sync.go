@@ -257,7 +257,8 @@ func mergeWithheld(first, second []int64) []int64 {
 	for _, id := range first {
 		seen[id] = true
 	}
-	merged := first
+	// A copy: appending to first itself could write into its backing array, which is the caller's.
+	merged := append([]int64(nil), first...)
 	for _, id := range second {
 		if seen[id] {
 			continue
@@ -288,7 +289,8 @@ func mergeFailures(first, second []SyncFailure) []SyncFailure {
 	for _, f := range first {
 		seen[key(f)] = true
 	}
-	merged := first
+	// A copy, as in mergeWithheld: the caller's backing array is not this function's to write into.
+	merged := append([]SyncFailure(nil), first...)
 	for _, f := range second {
 		if seen[key(f)] {
 			continue
