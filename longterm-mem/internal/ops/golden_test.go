@@ -31,6 +31,8 @@ var updateOpsGolden = flag.Bool("update-ops-golden", false, "rewrite the golden 
 const (
 	goldenAddress = "c-000042"
 	goldenTitle   = "Widget Decision"
+	// goldenOtherAddress is the address of the second page the scenarios put beside the healthy one.
+	goldenOtherAddress = "c-000043"
 )
 
 // goldenScenario is a vault in one state: it starts as the healthy vault (or as an empty directory when bare
@@ -257,29 +259,23 @@ func goldenScenarios() []goldenScenario {
 		// that records no usable revision and the hashes of the healthy page, which is what makes the content
 		// matter: followed to the healthy page the link matches the entry, a page with no frontmatter does not.
 		{name: "40-a-page-that-is-a-link-to-a-page-the-sidecar-entry-matches", build: func(t *testing.T, root string) {
-			recordEntryMatchingTheHealthyPage(t, root, "c-000043")
-			symlinkOrSkip(t, goldenAddress+".md", filepath.Join(root, "wiki", "memory", "c-000043.md"))
+			recordEntryMatchingTheHealthyPage(t, root)
+			symlinkOrSkip(t, goldenAddress+".md", filepath.Join(root, "wiki", "memory", goldenOtherAddress+".md"))
 		}},
 		{name: "41-a-page-with-no-frontmatter-where-the-sidecar-entry-expects-the-healthy-page", build: func(t *testing.T, root string) {
-			recordEntryMatchingTheHealthyPage(t, root, "c-000043")
-			writeGoldenFile(t, root, "wiki/memory/c-000043.md", "Just text, no frontmatter.\n")
+			recordEntryMatchingTheHealthyPage(t, root)
+			writeGoldenFile(t, root, "wiki/memory/"+goldenOtherAddress+".md", "Just text, no frontmatter.\n")
 		}},
 	}
 }
 
-// recordEntryMatchingTheHealthyPage gives the page promoted under address a precedence entry that records no
-// promoted revision and the hashes of the healthy page's frontmatter and body.
-func recordEntryMatchingTheHealthyPage(t *testing.T, root, address string) {
+// recordEntryMatchingTheHealthyPage gives the page promoted under goldenOtherAddress a precedence entry that
+// records no promoted revision and the hashes of the healthy page's frontmatter and body, which the fixture
+// renders (the same page it writes under goldenAddress), so nothing here splits a file to find them.
+func recordEntryMatchingTheHealthyPage(t *testing.T, root string) {
 	t.Helper()
-	raw, err := os.ReadFile(filepath.Join(root, "wiki", "memory", goldenAddress+".md"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	parts := strings.SplitN(string(raw), "---\n", 3)
-	if len(parts) != 3 {
-		t.Fatalf("the healthy page has no frontmatter block to take the hashes of")
-	}
-	testdata.WritePrecedenceEntry(t, root, promote.Page{Address: address, Frontmatter: "---\n" + parts[1] + "---\n", Body: parts[2]})
+	healthy := testdata.RenderPage(t, goldenAddress, goldenTitle)
+	testdata.WritePrecedenceEntry(t, root, promote.Page{Address: goldenOtherAddress, Frontmatter: healthy.Frontmatter, Body: healthy.Body})
 }
 
 // buildGoldenVault fills root with the healthy vault: one promoted page, its address-map entry, its
