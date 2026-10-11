@@ -190,19 +190,43 @@ type pageScan struct {
 }
 
 // UnreadablePages names every page of the vault that could not be read, in the order the port lists them. It is
-// what a sync run reports as skipped. A vault whose pages cannot be listed at all, and a reader that was not
-// wired, have no page to name: those are the failure of each lookup, as they have always been.
+// what a sync run reports as skipped, surveyed once before the run looks at its observations: it reads each page
+// once and looks at none of their frontmatter.
+//
+// A vault whose pages cannot be listed at all, and a reader that was not wired, have no page to name, and that
+// is deliberate and not a swallowed error: the same failure is the answer of every observation's own lookup
+// (scanPromotedPages), which is where Sync and Plan report it, once per observation, as they always have. The
+// survey adding a second report of it would change the output of the commands.
 func UnreadablePages(pages PageReader) []UnreadablePage {
-	scan, err := scanPromotedPages(pages, noEngramID)
-	if err != nil {
+	var unreadable []UnreadablePage
+	if err := eachPage(pages, func(address, _ string, err error) {
+		if err != nil {
+			unreadable = append(unreadable, UnreadablePage{File: address + ".md", Err: err})
+		}
+	}); err != nil {
 		return nil
 	}
-	return scan.unreadable
+	return unreadable
 }
 
-// noEngramID is the engram_id of no observation (Engram's start at 1), for the pass over the pages that wants
-// only the pages it could not read.
-const noEngramID = 0
+// eachPage reads every page of the vault once, through pages, in the order the port lists them, and hands each
+// to visit with the address, the whole content, and the error if the page could not be read (the content is
+// then empty). A page that cannot be read does not stop the pass. Only a pages directory that cannot be listed,
+// or a reader that was not wired, is an error: there is then no page to hand over.
+func eachPage(pages PageReader, visit func(address, content string, err error)) error {
+	if memory.IsMissing(pages) {
+		return errNoPageReader
+	}
+	addresses, err := pages.ListPages()
+	if err != nil {
+		return fmt.Errorf("promote: list %s: %w", pages.PagesLocation(), err)
+	}
+	for _, address := range addresses {
+		content, err := pages.ReadPage(address)
+		visit(address, content, err)
+	}
+	return nil
+}
 
 // promotedPageMatch is one wiki/memory/ page whose frontmatter carries the
 // scanned engram_id, with its fields still unvalidated. Validation is
@@ -263,31 +287,22 @@ func (m promotedPageMatch) resolve() (promotedPage, error) {
 // there is then no per-page result to salvage. What an unreadable page means
 // for an observation is findPromotedPage's to say.
 func scanPromotedPages(pages PageReader, engramID int) (pageScan, error) {
-	if memory.IsMissing(pages) {
-		return pageScan{}, errNoPageReader
-	}
-	addresses, err := pages.ListPages()
-	if err != nil {
-		return pageScan{}, fmt.Errorf("promote: list %s: %w", pages.PagesLocation(), err)
-	}
-
 	wantID := strconv.Itoa(engramID)
 	var found []promotedPageMatch
 	var unreadable []UnreadablePage
-	for _, address := range addresses {
+	if err := eachPage(pages, func(address, content string, err error) {
 		file := address + ".md"
-		content, err := pages.ReadPage(address)
 		if err != nil {
 			unreadable = append(unreadable, UnreadablePage{File: file, Err: err})
-			continue
+			return
 		}
 		block, ok := frontmatterBlock(content)
 		if !ok {
-			continue
+			return
 		}
 		fields := parseFrontmatterFields(block)
 		if fields[engramIDField] != wantID {
-			continue
+			return
 		}
 		found = append(found, promotedPageMatch{
 			File:        file,
@@ -296,6 +311,8 @@ func scanPromotedPages(pages PageReader, engramID int) (pageScan, error) {
 			Address:     strings.TrimSpace(fields["address"]),
 			RawRevision: strings.TrimSpace(fields[engramRevisionField]),
 		})
+	}); err != nil {
+		return pageScan{}, err
 	}
 	return pageScan{matches: found, unreadable: unreadable}, nil
 }

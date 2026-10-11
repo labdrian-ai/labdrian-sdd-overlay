@@ -114,6 +114,21 @@ func TestUnreadablePagesNamesEveryPageThePortCouldNotRead(t *testing.T) {
 	}
 }
 
+// The survey of the unreadable pages is one pass over the vault: it lists the pages once and reads each of them
+// once, whatever they hold. (A lookup of an observation's page is a pass of its own; a run makes one survey and
+// one lookup per observation, and a snapshot shared among them would be stale once the run had written a page.)
+func TestUnreadablePagesReadsEachPageOnce(t *testing.T) {
+	pages, _, _ := pagesWithOneUnreadable(t)
+
+	UnreadablePages(pages)
+
+	for _, address := range []string{unreadableAddress, "c-000002", "c-000003"} {
+		if got := pages.reads[address]; got != 1 {
+			t.Errorf("page %s was read %d times by the survey, want once", address, got)
+		}
+	}
+}
+
 // A page that is readable and carries the observation is found whatever else cannot be read: the unreadable
 // page is not its page, or the observation would have two.
 func TestFindPromotedPageFindsTheReadablePageBesideAnUnreadableOne(t *testing.T) {
