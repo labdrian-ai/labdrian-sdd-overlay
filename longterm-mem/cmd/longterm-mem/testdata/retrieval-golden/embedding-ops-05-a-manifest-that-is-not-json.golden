@@ -1,0 +1,87 @@
+args: status --project goldenproj
+exit: 0
+--- stdout ---
+longterm-mem: status for goldenproj
+  engram: reachable=true
+  vault: provisioned=false
+  last sync: never
+  embedding index built at: never
+--- stderr ---
+
+args: status --project goldenproj --json
+exit: 0
+--- stdout ---
+{
+  "project": "goldenproj",
+  "engram_reachable": true,
+  "vault_provisioned": false,
+  "last_sync_completed_at": "never",
+  "embedding_index_built_at": "never"
+}
+--- stderr ---
+
+args: doctor --project goldenproj
+exit: 9
+--- stdout ---
+longterm-mem: doctor for goldenproj
+  [PASS] vault-config-resolvable
+  [PASS] address-map-integrity
+  [PASS] wiki-registration-consistency
+  [PASS] precedence-sidecar-consistency
+  [PASS] runtime-prerequisites
+  [FAIL] embedding-index-present (embedding index at <state>/index/goldenproj could not be loaded: vecindex: index is corrupted: <state>/index/goldenproj/manifest.json: parse manifest: invalid character 'n' looking for beginning of object key string)
+  [FAIL] embedding-index-fresh (freshness cannot be determined: embedding index at <state>/index/goldenproj could not be loaded: vecindex: index is corrupted: <state>/index/goldenproj/manifest.json: parse manifest: invalid character 'n' looking for beginning of object key string)
+  [PASS] embedding-backend-reachable
+--- stderr ---
+
+args: doctor --project goldenproj --json
+exit: 9
+--- stdout ---
+{
+  "project": "goldenproj",
+  "checks": [
+    {
+      "name": "vault-config-resolvable",
+      "status": "PASS"
+    },
+    {
+      "name": "address-map-integrity",
+      "status": "PASS"
+    },
+    {
+      "name": "wiki-registration-consistency",
+      "status": "PASS"
+    },
+    {
+      "name": "precedence-sidecar-consistency",
+      "status": "PASS"
+    },
+    {
+      "name": "runtime-prerequisites",
+      "status": "PASS"
+    },
+    {
+      "name": "embedding-index-present",
+      "status": "FAIL",
+      "detail": "embedding index at <state>/index/goldenproj could not be loaded: vecindex: index is corrupted: <state>/index/goldenproj/manifest.json: parse manifest: invalid character 'n' looking for beginning of object key string"
+    },
+    {
+      "name": "embedding-index-fresh",
+      "status": "FAIL",
+      "detail": "freshness cannot be determined: embedding index at <state>/index/goldenproj could not be loaded: vecindex: index is corrupted: <state>/index/goldenproj/manifest.json: parse manifest: invalid character 'n' looking for beginning of object key string"
+    },
+    {
+      "name": "embedding-backend-reachable",
+      "status": "PASS"
+    }
+  ]
+}
+--- stderr ---
+
+--- state ---
+=== index/goldenproj/.build.lock ===
+(empty)
+=== index/goldenproj/manifest.json ===
+{not json
+=== index/goldenproj/vectors.blob ===
+156 bytes, sha256 5e7d6e8d8e241051f12b0525e7633654c1dd023b927dd479b7d072023a4a2960

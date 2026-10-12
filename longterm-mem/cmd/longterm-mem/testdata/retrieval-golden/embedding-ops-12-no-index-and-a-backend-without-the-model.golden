@@ -1,0 +1,83 @@
+args: status --project goldenproj
+exit: 0
+--- stdout ---
+longterm-mem: status for goldenproj
+  engram: reachable=true
+  vault: provisioned=false
+  last sync: never
+  embedding index built at: never
+--- stderr ---
+
+args: status --project goldenproj --json
+exit: 0
+--- stdout ---
+{
+  "project": "goldenproj",
+  "engram_reachable": true,
+  "vault_provisioned": false,
+  "last_sync_completed_at": "never",
+  "embedding_index_built_at": "never"
+}
+--- stderr ---
+
+args: doctor --project goldenproj
+exit: 9
+--- stdout ---
+longterm-mem: doctor for goldenproj
+  [PASS] vault-config-resolvable
+  [PASS] address-map-integrity
+  [PASS] wiki-registration-consistency
+  [PASS] precedence-sidecar-consistency
+  [PASS] runtime-prerequisites
+  [FAIL] embedding-index-present (no embedding index has been built at <state>/index/goldenproj; run `longterm-mem index --embeddings`)
+  [FAIL] embedding-index-fresh (freshness cannot be determined: embedding index at <state>/index/goldenproj could not be loaded: vecindex: no index at this path)
+  [FAIL] embedding-backend-reachable (backend answered but required model is missing: embed: model "nomic-embed-text" is not pulled on the backend)
+--- stderr ---
+
+args: doctor --project goldenproj --json
+exit: 9
+--- stdout ---
+{
+  "project": "goldenproj",
+  "checks": [
+    {
+      "name": "vault-config-resolvable",
+      "status": "PASS"
+    },
+    {
+      "name": "address-map-integrity",
+      "status": "PASS"
+    },
+    {
+      "name": "wiki-registration-consistency",
+      "status": "PASS"
+    },
+    {
+      "name": "precedence-sidecar-consistency",
+      "status": "PASS"
+    },
+    {
+      "name": "runtime-prerequisites",
+      "status": "PASS"
+    },
+    {
+      "name": "embedding-index-present",
+      "status": "FAIL",
+      "detail": "no embedding index has been built at <state>/index/goldenproj; run `longterm-mem index --embeddings`"
+    },
+    {
+      "name": "embedding-index-fresh",
+      "status": "FAIL",
+      "detail": "freshness cannot be determined: embedding index at <state>/index/goldenproj could not be loaded: vecindex: no index at this path"
+    },
+    {
+      "name": "embedding-backend-reachable",
+      "status": "FAIL",
+      "detail": "backend answered but required model is missing: embed: model \"nomic-embed-text\" is not pulled on the backend"
+    }
+  ]
+}
+--- stderr ---
+
+--- state ---
+(nothing)
