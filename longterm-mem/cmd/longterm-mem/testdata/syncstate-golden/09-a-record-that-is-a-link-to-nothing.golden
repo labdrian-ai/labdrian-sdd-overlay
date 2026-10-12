@@ -12,7 +12,7 @@ exit: 1
 --- stdout ---
 longterm-mem: sync promoted 2 observation(s), patched 0 page(s)
 --- stderr ---
-longterm-mem: sync: promote: sync: promote: durable: create temp file for <vault>/notes/absent.json: open <vault>/notes/absent.json.tmp-<n>: no such file or directory
+longterm-mem: sync: promote: sync: durable: create temp file for <vault>/notes/absent.json: open <vault>/notes/absent.json.tmp-<n>: no such file or directory
 args: status --project golden-project
 exit: 0
 --- stdout ---

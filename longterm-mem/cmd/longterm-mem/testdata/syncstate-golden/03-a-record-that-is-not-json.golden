@@ -2,7 +2,7 @@ args: status --project golden-project
 exit: 1
 --- stdout ---
 --- stderr ---
-longterm-mem: status: ops: parse <vault>/.vault-meta/longterm-mem-sync-state.json: invalid character 'n' looking for beginning of object key string
+longterm-mem: status: parse <vault>/.vault-meta/longterm-mem-sync-state.json: invalid character 'n' looking for beginning of object key string
 args: sync --project golden-project
 exit: 0
 --- stdout ---

@@ -2,7 +2,7 @@ args: status --project golden-project
 exit: 1
 --- stdout ---
 --- stderr ---
-longterm-mem: status: ops: parse <vault>/.vault-meta/longterm-mem-sync-state.json: json: cannot unmarshal number into Go struct field .last_sync_completed_at of type string
+longterm-mem: status: parse <vault>/.vault-meta/longterm-mem-sync-state.json: json: cannot unmarshal number into Go struct field .last_sync_completed_at of type string
 args: sync --project golden-project
 exit: 0
 --- stdout ---

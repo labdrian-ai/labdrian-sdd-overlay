@@ -2,7 +2,7 @@ args: status --project golden-project
 exit: 1
 --- stdout ---
 --- stderr ---
-longterm-mem: status: ops: parse <vault>/.vault-meta/longterm-mem-sync-state.json: unexpected end of JSON input
+longterm-mem: status: parse <vault>/.vault-meta/longterm-mem-sync-state.json: unexpected end of JSON input
 args: sync --project golden-project
 exit: 0
 --- stdout ---

@@ -426,15 +426,15 @@ func TestGolden(t *testing.T) {
 
 			doctor, err := Doctor(context.Background(), DoctorDeps{
 				VaultRoot: vaultRoot,
-				// The doctor's command wires the adapter with the prefix its output has always carried. The
-				// literal is the golden files' own; cmd's TestCmdDoctor_ReportsAnUnparseableSidecarAsTheOpsGoldenDoes
+				// The doctor's command wires the adapter as it is built here, asking it for no prefix. The
+				// text is the golden files' own; cmd's TestCmdDoctor_ReportsAnUnparseableSidecarAsTheOpsGoldenDoes
 				// runs the command's wiring over the same damaged vault and holds it to the text recorded here.
-				Root:                  vaultfs.New(vaultRoot, vaultfs.WithErrorPrefix("promote")),
-				Index:                 vaultfs.New(vaultRoot, vaultfs.WithErrorPrefix("promote")),
-				Log:                   vaultfs.New(vaultRoot, vaultfs.WithErrorPrefix("promote")),
-				Precedence:            vaultfs.New(vaultRoot, vaultfs.WithErrorPrefix("promote")),
-				Pages:                 vaultfs.New(vaultRoot, vaultfs.WithErrorPrefix("promote")),
-				AddressMap:            vaultfs.New(vaultRoot, vaultfs.WithErrorPrefix("promote")),
+				Root:                  vaultfs.New(vaultRoot),
+				Index:                 vaultfs.New(vaultRoot),
+				Log:                   vaultfs.New(vaultRoot),
+				Precedence:            vaultfs.New(vaultRoot),
+				Pages:                 vaultfs.New(vaultRoot),
+				AddressMap:            vaultfs.New(vaultRoot),
 				PrerequisitePresent:   func(string) bool { return true },
 				StateDir:              stateDir,
 				LiveObservationIDs:    func(string) ([]int64, error) { return liveIDs, nil },
@@ -452,7 +452,7 @@ func TestGolden(t *testing.T) {
 			status, err := Status(context.Background(), StatusDeps{
 				VaultRoot:        vaultRoot,
 				StateDir:         stateDir,
-				SyncState:        vaultfs.New(vaultRoot, vaultfs.WithErrorPrefix("ops")),
+				SyncState:        vaultfs.New(vaultRoot),
 				VaultProvisioned: func(string) bool { return false },
 				EngramReachable:  func(context.Context) (bool, string) { return true, "" },
 			}, doctorTestProject)

@@ -19,9 +19,11 @@ func writeCorruptSidecar(t *testing.T, vaultRoot string) {
 	}
 }
 
-// The vault's file system adapter names no consumer, and what an operator reads when it fails has always
-// begun "promote: ": the composition root is where that is decided, and openVault is the one place it is.
-func TestOpenVault_ReportsFailuresUnderThePromotePrefix(t *testing.T) {
+// The vault's file system adapter names no consumer, and the program asks it for none: a failure begins with
+// what failed, and the command that reports it puts its own name in front, once (the owner's decision of
+// 2026-10-12; the output used to say "longterm-mem: promote: promote: parse ..."). openVault is the one place
+// the adapter is built.
+func TestOpenVault_ReportsFailuresWithoutAConsumersName(t *testing.T) {
 	vaultRoot := t.TempDir()
 	writeCorruptSidecar(t, vaultRoot)
 
@@ -29,14 +31,14 @@ func TestOpenVault_ReportsFailuresUnderThePromotePrefix(t *testing.T) {
 	if err == nil {
 		t.Fatal("LoadPrecedence = nil error, want the parse failure")
 	}
-	if want := "promote: parse " + filepath.Join(vaultRoot, ".raw", ".longterm-mem-manifest.json") + ": "; !strings.HasPrefix(err.Error(), want) {
+	if want := "parse " + filepath.Join(vaultRoot, ".raw", ".longterm-mem-manifest.json") + ": "; !strings.HasPrefix(err.Error(), want) {
 		t.Errorf("error %q does not start with %q", err, want)
 	}
 }
 
-// The prefix reaches the operator through the command, not only through the adapter: promote reconcile over
-// a sidecar that cannot be parsed prints it on stderr.
-func TestCmdPromoteReconcile_ACorruptSidecarIsReportedUnderThePromotePrefix(t *testing.T) {
+// The failure reaches the operator through the command with the command's name once: promote reconcile over a
+// sidecar that cannot be parsed prints it on stderr.
+func TestCmdPromoteReconcile_ACorruptSidecarIsReportedUnderTheCommandsNameOnce(t *testing.T) {
 	const address = "c-000701"
 	vaultRoot := vaultWithUnrecordedPage(t, address)
 	writeCorruptSidecar(t, vaultRoot)
@@ -47,7 +49,10 @@ func TestCmdPromoteReconcile_ACorruptSidecarIsReportedUnderThePromotePrefix(t *t
 			t.Errorf("promote reconcile exited %d over a sidecar it cannot parse, want a failure", exit)
 		}
 	})
-	if want := "longterm-mem: promote reconcile: promote: parse "; !strings.Contains(stderr, want) {
+	if want := "longterm-mem: promote reconcile: parse "; !strings.Contains(stderr, want) {
 		t.Errorf("stderr = %q, want it to contain %q", stderr, want)
+	}
+	if strings.Contains(stderr, "promote: promote:") {
+		t.Errorf("stderr = %q, want the command's name once", stderr)
 	}
 }

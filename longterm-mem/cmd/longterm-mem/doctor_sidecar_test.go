@@ -43,11 +43,11 @@ func checkDetail(report ops.DoctorReport, check string) (detail string, found bo
 	return "", false
 }
 
-// The doctor command names a precedence sidecar it cannot parse the way the ops golden files say it does,
-// prefix included. The ops golden is recorded with an adapter that is given the prefix by hand, because the
-// ops package cannot import the command that wires it; this test is what holds the two together: the
-// command's own wiring, run over the same damaged vault, must print the golden's text, so that neither a
-// change to the prefix the command asks for nor an edit of the golden can drift from the other unseen.
+// The doctor command names a precedence sidecar it cannot parse the way the ops golden files say it does.
+// The ops golden is recorded with an adapter the test builds by hand, because the ops package cannot import
+// the command that wires it; this test is what holds the two together: the command's own wiring, run over
+// the same damaged vault, must print the golden's text, so that neither a change to the adapter the command
+// builds nor an edit of the golden can drift from the other unseen.
 func TestCmdDoctor_ReportsAnUnparseableSidecarAsTheOpsGoldenDoes(t *testing.T) {
 	const (
 		address = "c-000042"
@@ -88,7 +88,7 @@ func TestCmdDoctor_ReportsAnUnparseableSidecarAsTheOpsGoldenDoes(t *testing.T) {
 	if got != want {
 		t.Errorf("the doctor command reports the %s check as\n  %q\nwhere the ops golden file %s has\n  %q", check, got, golden, want)
 	}
-	if !strings.Contains(got, "promote: parse ") {
-		t.Errorf("detail %q does not carry the promote prefix the golden pins", got)
+	if !strings.Contains(got, "provenance: parse ") || strings.Contains(got, "promote: parse ") {
+		t.Errorf("detail %q does not give what failed as the adapter says it, with no consumer's name in front", got)
 	}
 }

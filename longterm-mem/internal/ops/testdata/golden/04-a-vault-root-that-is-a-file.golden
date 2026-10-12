@@ -41,4 +41,4 @@
   ]
 }
 --- status ---
-error: ops: read <vault>/file/.vault-meta/longterm-mem-sync-state.json: open <vault>/file/.vault-meta/longterm-mem-sync-state.json: not a directory
+error: read <vault>/file/.vault-meta/longterm-mem-sync-state.json: open <vault>/file/.vault-meta/longterm-mem-sync-state.json: not a directory

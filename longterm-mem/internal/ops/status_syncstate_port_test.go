@@ -45,7 +45,7 @@ func TestStatusReportsNeverWhenTheReaderHasNoCompletion(t *testing.T) {
 // A reader that cannot read or understand the record fails Status with the reason it gives, untouched, and no
 // field of a report carries a value derived from an unreadable record.
 func TestStatusFailsWithTheReasonTheReaderGives(t *testing.T) {
-	cause := errors.New("ops: parse /vault/.vault-meta/longterm-mem-sync-state.json: unexpected end of JSON input")
+	cause := errors.New("parse /vault/.vault-meta/longterm-mem-sync-state.json: unexpected end of JSON input")
 
 	report, err := statusOver(t, &fakeSyncState{err: cause})
 

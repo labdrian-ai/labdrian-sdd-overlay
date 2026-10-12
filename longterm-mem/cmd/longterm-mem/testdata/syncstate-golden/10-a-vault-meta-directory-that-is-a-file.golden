@@ -2,7 +2,7 @@ args: status --project golden-project
 exit: 1
 --- stdout ---
 --- stderr ---
-longterm-mem: status: ops: read <vault>/.vault-meta/longterm-mem-sync-state.json: open <vault>/.vault-meta/longterm-mem-sync-state.json: not a directory
+longterm-mem: status: read <vault>/.vault-meta/longterm-mem-sync-state.json: open <vault>/.vault-meta/longterm-mem-sync-state.json: not a directory
 args: sync --project golden-project
 exit: 5
 --- stdout ---
@@ -13,7 +13,7 @@ args: status --project golden-project
 exit: 1
 --- stdout ---
 --- stderr ---
-longterm-mem: status: ops: read <vault>/.vault-meta/longterm-mem-sync-state.json: open <vault>/.vault-meta/longterm-mem-sync-state.json: not a directory
+longterm-mem: status: read <vault>/.vault-meta/longterm-mem-sync-state.json: open <vault>/.vault-meta/longterm-mem-sync-state.json: not a directory
 --- vault ---
 === .allocator-counter (-rw-r--r--) ===
 902

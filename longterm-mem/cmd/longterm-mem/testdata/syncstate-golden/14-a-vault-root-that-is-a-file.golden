@@ -2,17 +2,17 @@ args: promote --project golden-project --id 1
 exit: 1
 --- stdout ---
 --- stderr ---
-longterm-mem: promote: promote: read <home>/vault-file/.raw/.longterm-mem-manifest.json: open <home>/vault-file/.raw/.longterm-mem-manifest.json: not a directory
+longterm-mem: promote: read <home>/vault-file/.raw/.longterm-mem-manifest.json: open <home>/vault-file/.raw/.longterm-mem-manifest.json: not a directory
 args: sync --project golden-project
 exit: 1
 --- stdout ---
 --- stderr ---
-longterm-mem: sync: promote: read <home>/vault-file/.raw/.longterm-mem-manifest.json: open <home>/vault-file/.raw/.longterm-mem-manifest.json: not a directory
+longterm-mem: sync: read <home>/vault-file/.raw/.longterm-mem-manifest.json: open <home>/vault-file/.raw/.longterm-mem-manifest.json: not a directory
 args: status --project golden-project
 exit: 1
 --- stdout ---
 --- stderr ---
-longterm-mem: status: ops: read <home>/vault-file/.vault-meta/longterm-mem-sync-state.json: open <home>/vault-file/.vault-meta/longterm-mem-sync-state.json: not a directory
+longterm-mem: status: read <home>/vault-file/.vault-meta/longterm-mem-sync-state.json: open <home>/vault-file/.vault-meta/longterm-mem-sync-state.json: not a directory
 args: doctor --project golden-project
 exit: 9
 --- stdout ---

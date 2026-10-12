@@ -37,4 +37,4 @@
   ]
 }
 --- status ---
-error: ops: parse <vault>/.vault-meta/longterm-mem-sync-state.json: json: cannot unmarshal number into Go struct field .last_sync_completed_at of type string
+error: parse <vault>/.vault-meta/longterm-mem-sync-state.json: json: cannot unmarshal number into Go struct field .last_sync_completed_at of type string
