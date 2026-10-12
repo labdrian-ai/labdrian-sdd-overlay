@@ -161,6 +161,9 @@ func TestRepositoryBuildInvalidatesTheCacheOnlyWhenItWrote(t *testing.T) {
 	if err := failing.BuildEmbeddingIndex(context.Background(), "p", testModel, 4, testLimit); err == nil {
 		t.Fatal("BuildEmbeddingIndex = nil error, want the rows' failure")
 	}
+	if _, held := cache.entries[dir]; !held {
+		t.Fatal("a build that failed made the cache forget an index nothing changed")
+	}
 	if _, err := cache.Load(dir); err != nil || loads != 1 {
 		t.Fatalf("after a failed build the disk was read %d times (err %v), want the cached one only", loads, err)
 	}
@@ -168,6 +171,11 @@ func TestRepositoryBuildInvalidatesTheCacheOnlyWhenItWrote(t *testing.T) {
 	working := newBuildRepository(stateDir, []Row{{EngramID: 1, Title: "a", Content: "alpha"}}, nil, &models, &fakeEmbedder{dim: 4}, nil, cache)
 	if err := working.BuildEmbeddingIndex(context.Background(), "p", testModel, 4, testLimit); err != nil {
 		t.Fatalf("BuildEmbeddingIndex: %v", err)
+	}
+	// Asked before anything reads again: a changed size or mtime of the manifest would make the next Load read
+	// the disk whether or not the build forgot the index, so what the cache holds is what proves it did.
+	if _, held := cache.entries[dir]; held {
+		t.Fatal("the cache still holds the index a build just replaced")
 	}
 	if _, err := cache.Load(dir); err != nil || loads != 2 {
 		t.Fatalf("after a build that wrote, the disk was read %d times (err %v), want a second read", loads, err)

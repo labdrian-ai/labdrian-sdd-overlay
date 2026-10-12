@@ -105,8 +105,11 @@ func TestEmbeddingIndexOf_WiresWhatTheProcessReadsAndWritesWith(t *testing.T) {
 	if err != nil || len(loaded.Entries) != 1 {
 		t.Errorf("LoadEmbeddingIndex = (%+v, %v), want the index just built", loaded, err)
 	}
-	if loaded2, err2 := cache.Load(vecindex.Dir(stateDir, project)); err2 != nil || loaded2 == nil {
-		t.Errorf("the cache the repository was given holds no index after a load through it: %v", err2)
+	// Read through the cache the repository was given: a second read answers the vectors of the first, the same
+	// memory, where a read from the disk would make them anew.
+	again, err := index.LoadEmbeddingIndex(project)
+	if err != nil || len(again.Vectors) != 1 || &again.Vectors[0][0] != &loaded.Vectors[0][0] {
+		t.Errorf("the second read did not come from the cache the repository was given (%v)", err)
 	}
 }
 
