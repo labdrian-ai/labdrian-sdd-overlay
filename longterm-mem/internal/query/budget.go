@@ -255,12 +255,11 @@ func renderRowSnippet(row *ResultRow, budget int) {
 // cappedDetail states what was dropped in the terms a caller needs to act
 // on it: how many results exist that they are not looking at.
 //
-// "Dropped from the end" and "the highest-ranked ones that fit" are the wording of the tail drop this cap had
-// before R-063, kept as it is because it is printed: rows now leave by dropLargestSourceRow, the lowest-ranked
-// of the source holding the most, which is not always the tail.
+// The words describe how rows leave: one at a time, the lowest-ranked of the source holding the most rows
+// (dropLargestSourceRow), not the tail of the merged list.
 func cappedDetail(dropped, full int) string {
 	return fmt.Sprintf(
-		"this response reached the %d-token ceiling, so %d of %d results were dropped from the end; the rows shown are the highest-ranked ones that fit, and narrowing the query or lowering top will surface the rest",
+		"this response reached the %d-token ceiling, so %d of %d results were dropped, each the lowest-ranked of the source holding the most rows; the rows shown are the ones that fit, and narrowing the query or lowering top will surface the rest",
 		ResponseTokenCeiling, dropped, full)
 }
 
