@@ -73,6 +73,16 @@ type hookWorld struct {
 	// confirms nothing once a case has a bound-repository world (env), and with the decorators a
 	// case puts in front of the store or the gate.
 	deps deps
+	// cuts are the details the program cut at a number of characters, which the transcript writes as
+	// whole (see cutAt).
+	cuts []cutDetail
+}
+
+// cutDetail is a detail a hook prints cut at a number of characters: what introduces it, and what the
+// transcript says in place of the part of it that was kept.
+type cutDetail struct {
+	re    *regexp.Regexp
+	whole string
 }
 
 func newHookWorld(t *testing.T) *hookWorld {
@@ -94,6 +104,14 @@ func (w *hookWorld) env() hookEnv {
 	w.name(e.dir, "<DIR>")
 	w.name(e.repo, "<REPO>")
 	return e
+}
+
+// cutAt declares that the transcript holds a detail which a hook printed cut at a number of characters,
+// introduced by lead and ending in "...". How much of a path in it is kept depends on how long the
+// places of the world are, so the transcript writes everything from lead to the "..." as whole,
+// whatever part of it was kept: the cut itself (the "...") and what introduces it are still pinned.
+func (w *hookWorld) cutAt(lead, whole string) {
+	w.cuts = append(w.cuts, cutDetail{re: regexp.MustCompile(regexp.QuoteMeta(lead) + `[^\s)]*\.\.\.`), whole: lead + whole + "..."})
 }
 
 // tempDir is a directory outside every repository, written as placeholder in the transcript.
@@ -143,7 +161,11 @@ var digests = regexp.MustCompile(`[0-9a-f]{40,}`)
 // text is the transcript, with the registered places replaced, the digests of a run written
 // as <DIGEST>, and every control character shown as \xNN.
 func (w *hookWorld) text() string {
-	return visibleControls(digests.ReplaceAllString(w.replace(w.b.String()), "<DIGEST>"))
+	text := w.b.String()
+	for _, cut := range w.cuts {
+		text = cut.re.ReplaceAllLiteralString(text, cut.whole)
+	}
+	return visibleControls(digests.ReplaceAllString(w.replace(text), "<DIGEST>"))
 }
 
 // visibleControls shows a control character (other than a line break or a tab) as \xNN, and a
@@ -280,6 +302,35 @@ func TestHookGolden(t *testing.T) {
 			w := newHookWorld(t)
 			tc.run(w)
 			checkHookGolden(t, tc.name, w.text())
+		})
+	}
+}
+
+// What a hook prints must not depend on where the world is: a hook cuts a detail it prints at a
+// number of characters, and a path in it is as long as the temporary directory the world was
+// made in, so a transcript that holds the cut text of a path says different things in a short
+// and in a long directory unless its masks are indifferent to where the cut falls. Every case
+// is run twice, in the temporary directory the test was started with and in one far longer, and
+// must say the same thing in both.
+func TestHookGolden_DoesNotDependOnWhereTheWorldIs(t *testing.T) {
+	long := filepath.Join(t.TempDir(), strings.Repeat("a-long-name-", 10))
+	if err := os.MkdirAll(long, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range hookGoldenCases() {
+		t.Run(tc.name, func(t *testing.T) {
+			answers := map[string]string{}
+			for _, where := range []struct{ name, tmpdir string }{{"as-started", os.Getenv("TMPDIR")}, {"long", long}} {
+				t.Run(where.name, func(t *testing.T) {
+					t.Setenv("TMPDIR", where.tmpdir)
+					w := newHookWorld(t)
+					tc.run(w)
+					answers[where.name] = w.text()
+				})
+			}
+			if answers["as-started"] != answers["long"] {
+				t.Errorf("the transcript depends on the length of the temporary directory the world is in:\n--- as started ---\n%s\n--- long ---\n%s", answers["as-started"], answers["long"])
+			}
 		})
 	}
 }

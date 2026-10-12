@@ -82,7 +82,9 @@ func TestAcquireOnAFailingFilesystemDoesNotMentionDirectories(t *testing.T) {
 	failing := locker{flock: func(fd, how int) error { return syscall.ENOLCK }}
 
 	_, err := failing.acquire(path, Options{Clock: Clock{Now: time.Now}}, false)
-	if err == nil || errors.Is(err, ErrBusy) || strings.Contains(err.Error(), "directory") {
+	// The path is the temporary directory's, whatever it is called: only the words around it are the
+	// package's.
+	if err == nil || errors.Is(err, ErrBusy) || strings.Contains(strings.ReplaceAll(err.Error(), path, "<lock>"), "directory") {
 		t.Errorf("Acquire = %v, want a plain error that does not mention directories", err)
 	}
 }
