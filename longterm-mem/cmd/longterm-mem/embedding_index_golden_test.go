@@ -45,6 +45,10 @@ func embeddingIndexGoldenSteps() []retrievalStep {
 			},
 			args: query("--json", "dragonscale"),
 		},
+		// The backend answers 500 with a plain-text body, and the diagnostics carry it as the program words it:
+		// a 500 is "unreachable" (the backend produced no vector; only a 404 or a "not found" body is a missing
+		// model, step 08) and the detail ends with the body's own newline. Both are recorded as they are;
+		// trimming the body would change the detail, which is the owner's decision, not a golden's.
 		{
 			name: "07-a-top-up-the-backend-cannot-serve-is-named-beside-the-answer",
 			before: func(t *testing.T, w *retrievalWorld) {
@@ -71,8 +75,12 @@ func embeddingIndexGoldenSteps() []retrievalStep {
 			args: query("--json", "dragonscale"),
 		},
 		{name: "10-the-index-builds-what-the-query-did-not", args: build},
+		// What the query does today, recorded as it is: the arm degrades a manifest it cannot read to "no index
+		// was built" (coverage null, no diagnostic, empty stderr), by the design in embeddingArm.run. Only the
+		// build of the next step reports the corruption. Whether the query should say so too is the owner's
+		// decision (it would add a diagnostic to the answer), and the name says what is pinned, not what is wished.
 		{
-			name: "11-a-corrupted-manifest-is-reported-and-the-query-falls-back",
+			name: "11-a-corrupted-manifest-leaves-the-query-on-full-text-search-and-says-nothing",
 			before: func(t *testing.T, w *retrievalWorld) {
 				if err := os.WriteFile(filepath.Join(w.embeddingIndexDir(), "manifest.json"), []byte("{not json"), 0o600); err != nil {
 					t.Fatalf("corrupt the manifest: %v", err)
