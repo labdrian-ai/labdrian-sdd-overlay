@@ -13,14 +13,6 @@ import (
 // The adapter is what the query package's port asks for.
 var _ query.VaultRetriever = Retriever{}
 
-// The query package and this one bound a result alike (D8: both sources share one bound), and each names it for
-// itself; this holds the two numbers to one another.
-func TestTheQueryAndTheVaultShareTheirDefaultBound(t *testing.T) {
-	if query.DefaultTopN != DefaultTopN {
-		t.Fatalf("query.DefaultTopN = %d, vault.DefaultTopN = %d, want one bound", query.DefaultTopN, DefaultTopN)
-	}
-}
-
 func TestRetrieverAnswersTheCandidatesInTheQuerysTerms(t *testing.T) {
 	vaultRoot, _ := newFixtureVault(t, retrieveOKFixture)
 

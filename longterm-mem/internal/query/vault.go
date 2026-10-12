@@ -6,8 +6,8 @@ import (
 )
 
 // DefaultTopN is the number of results each source is asked for when the caller gives no bound (D8: the
-// vault's retrieval and the memory's search share one bound; the vault adapter holds its own default to this
-// number).
+// vault's retrieval and the memory's search share one bound). The vault adapter's own default is this
+// constant (vault.DefaultTopN), so the number is written once, here.
 const DefaultTopN = 5
 
 // ErrVaultNotProvisioned is what a VaultRetriever answers for a vault that was never indexed: a typed outcome

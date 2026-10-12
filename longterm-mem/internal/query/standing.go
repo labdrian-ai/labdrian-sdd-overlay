@@ -25,8 +25,9 @@ type Standing struct {
 	Unjudged []Neighbour `json:"unjudged,omitempty"`
 }
 
-// standingOf is the wire standing for what the memory said. The types differ, so it shares nothing with the domain's value, and a list
-// the memory left unsaid stays unsaid (nil, so the wire omits it).
+// standingOf is the wire standing for what the memory said. It is a deep copy: no slice is shared with the
+// domain's value, so a caller that edits one cannot change the other. A list the memory left unsaid (nil) stays
+// nil, so the wire omits it.
 func standingOf(in memory.Standing) Standing {
 	return Standing{
 		SupersededBy:  neighboursOf(in.SupersededBy),

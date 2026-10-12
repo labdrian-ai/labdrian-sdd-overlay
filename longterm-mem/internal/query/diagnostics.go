@@ -50,7 +50,9 @@ const (
 	DiagnosticSearchStopwordsDropped = "search_stopwords_dropped"
 
 	// DiagnosticResponseCapped reports that the assembled response did not
-	// fit under ResponseTokenCeiling, so its tail was dropped. It names how
+	// fit under ResponseTokenCeiling, so rows were dropped: one at a time, the
+	// lowest-ranked of the source holding the most rows (dropLargestSourceRow),
+	// not the tail of the merged list. It names how
 	// many rows were dropped, because "these are the results" and "these
 	// are the results that fit" are different statements and only one of
 	// them is true here.
