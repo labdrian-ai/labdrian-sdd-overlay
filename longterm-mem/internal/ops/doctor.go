@@ -6,11 +6,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/embed"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultlayout"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vecindex"
 )
 
 // Check status values.
@@ -29,7 +27,8 @@ const (
 )
 
 // Check names -- the three additional embedding-index diagnostics R-064
-// requires, read-only over internal/vecindex's own state.
+// requires, read-only over the embedding index and the backend through the
+// ports this package owns.
 const (
 	CheckEmbeddingIndexPresent     = "embedding-index-present"
 	CheckEmbeddingIndexFresh       = "embedding-index-fresh"
@@ -151,12 +150,12 @@ type DoctorDeps struct {
 	// direct os/exec import outside internal/vault/runner.go). Required.
 	PrerequisitePresent func(name string) bool
 
-	// StateDir is the directory this module's own derived state (the
-	// embedding index) lives under -- vecindex.Dir(StateDir, project)
-	// resolves the project's index directory. Production wires the same
-	// state directory `index --embeddings` writes to (cmd's
-	// defaultStateDir). Required for the three embedding checks (R-064).
-	StateDir string
+	// EmbeddingIndex reads the project's embedding index for the
+	// embedding-index-present and embedding-index-fresh checks (R-064).
+	// Production wires the repository over the same state directory `index
+	// --embeddings` writes to (cmd's defaultStateDir). Required: without it
+	// those two checks fail and say so.
+	EmbeddingIndex EmbeddingIndexReader
 	// LiveObservationIDs returns every live (non-soft-deleted) engram_id
 	// for project, so embedding-index-fresh can name exactly how many of
 	// them the index is missing. Production wires
@@ -164,12 +163,13 @@ type DoctorDeps struct {
 	// Required.
 	LiveObservationIDs func(project string) ([]int64, error)
 	// EmbeddingBackendCheck probes the configured embedding backend and
-	// reports nil when it answered with the required model present, or a
-	// typed error -- *embed.BackendUnreachableError or
-	// *embed.ModelMissingError -- otherwise. This is the seam that keeps
-	// doctor.go itself out of net_allowlist_test.go's allowedNetImporters
-	// (R-071): production wires embed.Client.Embed with a small probe
-	// input, this package never imports net/http directly. Required.
+	// reports nil when it answered with the required model present, or an
+	// error otherwise -- one that is EmbedModelMissing when the backend
+	// answered without the model, and any other when it did not answer. This
+	// is the seam that keeps doctor.go itself out of net_allowlist_test.go's
+	// allowedNetImporters (R-071): production wires embed.Client.Embed with
+	// a small probe input, this package never imports net/http directly or
+	// the client. Required.
 	EmbeddingBackendCheck func(ctx context.Context) error
 }
 
@@ -399,16 +399,22 @@ func checkRuntimePrerequisites(deps DoctorDeps) Check {
 
 // checkEmbeddingIndexPresent reports whether project has an embedding index
 // at all (R-064 scenario: "Missing index is named, not silently skipped").
-// It reports the same failure -- naming the directory doctor looked in --
-// whether no index has ever been built (vecindex.ErrNoIndex) or an index
-// exists but cannot be trusted (vecindex.ErrCorrupted): a corrupted index is
-// exactly as absent from a caller's point of view as no index at all, and
-// this is doctor's own read-only diagnostic, never a place that repairs or
-// rebuilds one (doctor is read-only by contract).
+// It reports a failure -- naming the directory doctor looked in, as the port
+// says it -- whether no index has ever been built (an error that is
+// NoEmbeddingIndex) or an index exists but cannot be trusted (any other
+// error, printed in the adapter's own words): a corrupted index is exactly as
+// absent from a caller's point of view as no index at all, and this is
+// doctor's own read-only diagnostic, never a place that repairs or rebuilds
+// one (doctor is read-only by contract). A reader that was not wired is
+// named.
 func checkEmbeddingIndexPresent(deps DoctorDeps, project string) Check {
-	dir := vecindex.Dir(deps.StateDir, project)
-	if _, err := vecindex.Load(dir); err != nil {
-		if errors.Is(err, vecindex.ErrNoIndex) {
+	if memory.IsMissing(deps.EmbeddingIndex) {
+		return Check{Name: CheckEmbeddingIndexPresent, Status: CheckFailed, Detail: errNoEmbeddingIndexReader.Error()}
+	}
+	dir := deps.EmbeddingIndex.EmbeddingIndexLocation(project)
+	if _, err := deps.EmbeddingIndex.EmbeddingIndexBuiltAt(project); err != nil {
+		var nobodyBuilt NoEmbeddingIndex
+		if errors.As(err, &nobodyBuilt) {
 			return Check{Name: CheckEmbeddingIndexPresent, Status: CheckFailed, Detail: fmt.Sprintf("no embedding index has been built at %s; run `longterm-mem index --embeddings`", dir)}
 		}
 		return Check{Name: CheckEmbeddingIndexPresent, Status: CheckFailed, Detail: fmt.Sprintf("embedding index at %s could not be loaded: %v", dir, err)}
@@ -419,18 +425,22 @@ func checkEmbeddingIndexPresent(deps DoctorDeps, project string) Check {
 // checkEmbeddingIndexFresh reports how many of project's live rows the
 // embedding index does not yet know about (R-064 scenario: "A stale index
 // is named with its coverage gap"). It compares deps.LiveObservationIDs
-// against the loaded manifest's own entries -- comparing ID sets, not
+// against the ids the index vouches for -- comparing ID sets, not
 // counts, so a corpus that both grew and shrank by the same amount is still
 // caught, unlike a bare length comparison.
 //
 // When the index cannot be loaded at all, freshness is reported as its own
 // failure naming that it cannot be determined, rather than fabricating
 // either a pass or a specific missing-row count doctor has no evidence for
-// -- "if it cannot determine freshness, it says so."
+// -- "if it cannot determine freshness, it says so." A reader that was not
+// wired is named.
 func checkEmbeddingIndexFresh(deps DoctorDeps, project string) Check {
-	dir := vecindex.Dir(deps.StateDir, project)
-	idx, err := vecindex.Load(dir)
+	if memory.IsMissing(deps.EmbeddingIndex) {
+		return Check{Name: CheckEmbeddingIndexFresh, Status: CheckFailed, Detail: errNoEmbeddingIndexReader.Error()}
+	}
+	indexedIDs, err := deps.EmbeddingIndex.IndexedEngramIDs(project)
 	if err != nil {
+		dir := deps.EmbeddingIndex.EmbeddingIndexLocation(project)
 		return Check{Name: CheckEmbeddingIndexFresh, Status: CheckFailed, Detail: fmt.Sprintf("freshness cannot be determined: embedding index at %s could not be loaded: %v", dir, err)}
 	}
 
@@ -439,9 +449,9 @@ func checkEmbeddingIndexFresh(deps DoctorDeps, project string) Check {
 		return Check{Name: CheckEmbeddingIndexFresh, Status: CheckFailed, Detail: fmt.Sprintf("freshness cannot be determined: could not list live rows for %s: %v", project, err)}
 	}
 
-	indexed := make(map[int64]bool, len(idx.Manifest.Entries))
-	for _, e := range idx.Manifest.Entries {
-		indexed[e.EngramID] = true
+	indexed := make(map[int64]bool, len(indexedIDs))
+	for _, id := range indexedIDs {
+		indexed[id] = true
 	}
 	missing := 0
 	for _, id := range liveIDs {
@@ -457,10 +467,11 @@ func checkEmbeddingIndexFresh(deps DoctorDeps, project string) Check {
 
 // checkEmbeddingBackendReachable reports whether the configured embedding
 // backend actually answers with the required model present, distinguishing
-// unreachable from model-missing by deps.EmbeddingBackendCheck's typed
-// error (R-064 scenario: "An unreachable backend is distinguished from a
-// missing model"; R-070's own BackendUnreachableError/ModelMissingError
-// split). A check that could not fail would be worse than no check: this
+// unreachable from model-missing by what deps.EmbeddingBackendCheck's error
+// says it is (R-064 scenario: "An unreachable backend is distinguished from a
+// missing model"; R-070's own unreachable/model-missing split): an error that
+// is EmbedModelMissing is the model, and any other is a backend that did not
+// answer. A check that could not fail would be worse than no check: this
 // one fails on either condition, with wording that never collapses the two.
 func checkEmbeddingBackendReachable(ctx context.Context, deps DoctorDeps) Check {
 	err := deps.EmbeddingBackendCheck(ctx)
@@ -468,7 +479,7 @@ func checkEmbeddingBackendReachable(ctx context.Context, deps DoctorDeps) Check 
 		return Check{Name: CheckEmbeddingBackendReachable, Status: CheckPassed}
 	}
 
-	var modelMissing *embed.ModelMissingError
+	var modelMissing EmbedModelMissing
 	if errors.As(err, &modelMissing) {
 		return Check{Name: CheckEmbeddingBackendReachable, Status: CheckFailed, Detail: fmt.Sprintf("backend answered but required model is missing: %v", err)}
 	}

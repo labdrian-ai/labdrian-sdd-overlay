@@ -44,7 +44,7 @@ func cmdStatus(args []string) int {
 	deps := ops.StatusDeps{
 		VaultRoot:        vaultRoot,
 		SyncState:        openVault(vaultRoot),
-		StateDir:         defaultStateDir(),
+		EmbeddingIndex:   embeddingIndexReader(),
 		VaultProvisioned: vault.Provisioned,
 		EngramReachable: func(ctx context.Context) (bool, string) {
 			store, err := engram.Open(os.Getenv(engramDBEnvVar))

@@ -115,6 +115,14 @@ func embeddingIndexOf(store *engram.Store, wiring queryWiring) *vecindex.Reposit
 	}
 }
 
+// embeddingIndexReader is the embedding index as `status` and `doctor` read it (ops.EmbeddingIndexReader): the
+// repository over the state directory the module keeps its derived state in, with nothing it builds with and no
+// cache, because the process reads an index to report on it and exits. An unresolvable state directory is the
+// empty one, whose indexes Dir puts in the working directory, which is what the two commands have always read.
+func embeddingIndexReader() *vecindex.Repository {
+	return &vecindex.Repository{StateDir: defaultStateDir()}
+}
+
 // observationRowsForIndex reads project's live Engram rows in the shape
 // vecindex.Build wants, the same source cmd_index_embeddings.go's own
 // -embeddings flag reads (store.ListObservations, already R-020 soft-delete

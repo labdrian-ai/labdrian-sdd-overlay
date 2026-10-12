@@ -8,7 +8,6 @@ import (
 	"context"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vecindex"
 )
 
 // neverSynced is Report.LastSyncCompletedAt's value when no sync-state
@@ -41,11 +40,11 @@ type StatusDeps struct {
 	// Production wires the vault file system adapter over VaultRoot.
 	// Required: without it Status fails and says so.
 	SyncState SyncStateReader
-	// StateDir is the directory this module's own derived state (the
-	// embedding index) lives under -- vecindex.Dir(StateDir, project)
-	// resolves the project's index directory (R-065). Production wires the
-	// same state directory `index --embeddings` writes to.
-	StateDir string
+	// EmbeddingIndex reads the project's embedding index for the instant it
+	// was built at (R-065). Production wires the repository over the same
+	// state directory `index --embeddings` writes to. Required: without it
+	// Status fails and says so.
+	EmbeddingIndex EmbeddingIndexReader
 }
 
 // StatusReport is Status's R-010/R-065 output: Engram reachability, the
@@ -77,21 +76,30 @@ func Status(ctx context.Context, deps StatusDeps, project string) (StatusReport,
 	}
 	report.LastSyncCompletedAt = lastSync
 
-	report.EmbeddingIndexBuiltAt = readEmbeddingIndexBuiltAt(deps.StateDir, project)
+	builtAt, err := readEmbeddingIndexBuiltAt(deps.EmbeddingIndex, project)
+	if err != nil {
+		return StatusReport{}, err
+	}
+	report.EmbeddingIndexBuiltAt = builtAt
 
 	return report, nil
 }
 
 // readEmbeddingIndexBuiltAt reports project's embedding index's own
 // recorded build time, or neverIndexed when no index has ever been built
-// (including when one exists but is corrupted -- Status, like Doctor, never
-// fabricates a timestamp it cannot stand behind, R-065).
-func readEmbeddingIndexBuiltAt(stateDir, project string) string {
-	idx, err := vecindex.Load(vecindex.Dir(stateDir, project))
-	if err != nil {
-		return neverIndexed
+// (including when one exists but cannot be read -- Status, like Doctor,
+// never fabricates a timestamp it cannot stand behind, R-065). A reader that
+// was not wired is named: that is a mistake of the wiring, not a project
+// without an index.
+func readEmbeddingIndexBuiltAt(index EmbeddingIndexReader, project string) (string, error) {
+	if memory.IsMissing(index) {
+		return "", errNoEmbeddingIndexReader
 	}
-	return idx.Manifest.BuiltAt
+	builtAt, err := index.EmbeddingIndexBuiltAt(project)
+	if err != nil {
+		return neverIndexed, nil
+	}
+	return builtAt, nil
 }
 
 // readLastSyncCompletedAt asks the vault's sync state for the completion

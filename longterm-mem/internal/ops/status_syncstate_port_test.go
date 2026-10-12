@@ -13,7 +13,7 @@ func statusOver(t *testing.T, syncState SyncStateReader) (StatusReport, error) {
 	return Status(context.Background(), StatusDeps{
 		VaultRoot:        t.TempDir(),
 		SyncState:        syncState,
-		StateDir:         t.TempDir(),
+		EmbeddingIndex:   noEmbeddingIndexBuilt(),
 		EngramReachable:  func(context.Context) (bool, string) { return true, "" },
 		VaultProvisioned: func(string) bool { return true },
 	}, "labdrian-sdd-overlay")

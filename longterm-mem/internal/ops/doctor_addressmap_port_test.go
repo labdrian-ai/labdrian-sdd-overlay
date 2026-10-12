@@ -35,7 +35,7 @@ func addressMapDoctorDeps(t *testing.T, reader AddressMapReader) DoctorDeps {
 	if _, err := os.Stat(filepath.Join(vaultRoot, ".raw", ".manifest.json")); !os.IsNotExist(err) {
 		t.Fatalf("the fixture has an address map on disk (stat err = %v); the test would not prove the port is the source", err)
 	}
-	stateDir, liveIDs := newHealthyEmbeddingDeps(t)
+	embeddingIndex, liveIDs := newHealthyEmbeddingDeps(t)
 	return DoctorDeps{
 		VaultRoot:             vaultRoot,
 		Root:                  vaultfs.New(vaultRoot),
@@ -45,7 +45,7 @@ func addressMapDoctorDeps(t *testing.T, reader AddressMapReader) DoctorDeps {
 		Pages:                 vaultfs.New(vaultRoot),
 		AddressMap:            reader,
 		PrerequisitePresent:   func(string) bool { return true },
-		StateDir:              stateDir,
+		EmbeddingIndex:        embeddingIndex,
 		LiveObservationIDs:    func(string) ([]int64, error) { return liveIDs, nil },
 		EmbeddingBackendCheck: func(context.Context) error { return nil },
 	}

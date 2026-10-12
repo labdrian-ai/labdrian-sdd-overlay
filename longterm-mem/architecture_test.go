@@ -78,17 +78,6 @@ var knownDebt = archguard.Debt{
 		"path/filepath.Abs": "L11",
 	},
 
-	// ops: Doctor and Status read the vector index directly. The vault is behind
-	// the ports ops owns (L3 is done for ops). L4 owns the index repository port;
-	// the C17 table names no unit for the embed and vecindex edges of ops, and L4
-	// is assigned because ops would consume the same port and typed errors as query.
-	// L4's query half is done (batch 35: query owns EmbeddingIndexRepository and
-	// the typed embedding failures); the ops half is what is left of the unit.
-	"internal/ops": {
-		"internal/embed":    "L4",
-		"internal/vecindex": "L4",
-	},
-
 	// projectid: the git and file system reads move to a RepositoryInspector
 	// adapter.
 	"internal/projectid": {

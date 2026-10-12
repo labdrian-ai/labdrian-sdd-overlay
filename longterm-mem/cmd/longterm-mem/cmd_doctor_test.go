@@ -13,6 +13,7 @@ import (
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/ops"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultfs"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vecindex"
 )
 
 // countWords maps a check count onto the English word a doc comment would
@@ -66,7 +67,7 @@ func TestCmdDoctor_DocumentedCheckCountMatchesOpsDoctor(t *testing.T) {
 		Pages:                 vaultfs.New(vaultRoot),
 		AddressMap:            vaultfs.New(vaultRoot),
 		PrerequisitePresent:   func(string) bool { return true },
-		StateDir:              t.TempDir(),
+		EmbeddingIndex:        &vecindex.Repository{StateDir: t.TempDir()},
 		LiveObservationIDs:    func(string) ([]int64, error) { return nil, nil },
 		EmbeddingBackendCheck: func(context.Context) error { return nil },
 	}, "doc-count-project")
@@ -117,7 +118,7 @@ func TestCmdDoctor_PrintsEveryCheckOpsDoctorReturns(t *testing.T) {
 		Pages:                 vaultfs.New(vaultRoot),
 		AddressMap:            vaultfs.New(vaultRoot),
 		PrerequisitePresent:   func(string) bool { return true },
-		StateDir:              t.TempDir(),
+		EmbeddingIndex:        &vecindex.Repository{StateDir: t.TempDir()},
 		LiveObservationIDs:    func(string) ([]int64, error) { return nil, nil },
 		EmbeddingBackendCheck: func(context.Context) error { return nil },
 	}, "doctor-print-project")
