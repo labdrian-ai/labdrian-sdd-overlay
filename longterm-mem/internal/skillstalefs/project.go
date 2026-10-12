@@ -59,8 +59,8 @@ func (p Project) PathFacts(paths []string) (map[string]skillstale.PathFact, erro
 		return nil, err
 	}
 	out := make(map[string]skillstale.PathFact, len(facts))
-	for path, fact := range facts {
-		out[path] = skillstale.PathFact{State: stateOf(fact.State), NewPath: fact.NewPath, Commit: fact.Commit}
+	for asked, fact := range facts {
+		out[asked] = skillstale.PathFact{State: stateOf(fact.State), NewPath: fact.NewPath, Commit: fact.Commit}
 	}
 	return out, nil
 }
@@ -80,6 +80,13 @@ func stateOf(state repohistory.State) skillstale.PathState {
 	}
 }
 
+// safeTarget is the absolute path of the skill file a lock records at recorded, or the reason that file is not
+// to be read. It checks twice, because a name can be inside the project and its file still not: first the text
+// alone (not empty, not absolute, no ".." segment, and what it joins to stays strictly below the root), which
+// needs no file and refuses a target before the disk is asked about it; then the file system's answer, with every
+// link followed on the root and on the target, which must still be strictly below the resolved root, and which
+// fails with the file system's own error when there is no file. The path returned is the lexical one, not the
+// resolved one.
 func safeTarget(root, recorded string) (string, error) {
 	if recorded == "" || path.IsAbs(recorded) || filepath.IsAbs(filepath.FromSlash(recorded)) {
 		return "", fmt.Errorf("invalid target %q", recorded)
@@ -102,9 +109,9 @@ func safeTarget(root, recorded string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("resolve project root: %w", err)
 	}
-	resolvedTarget, err := resolveExistingTarget(candidate)
+	resolvedTarget, err := filepath.EvalSymlinks(candidate)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("resolve target %q: %w", candidate, err)
 	}
 	inside, err = strictlyWithin(filepath.Clean(resolvedRoot), filepath.Clean(resolvedTarget))
 	if err != nil {
@@ -116,14 +123,7 @@ func safeTarget(root, recorded string) (string, error) {
 	return candidate, nil
 }
 
-func resolveExistingTarget(target string) (string, error) {
-	resolved, err := filepath.EvalSymlinks(target)
-	if err == nil {
-		return resolved, nil
-	}
-	return "", fmt.Errorf("resolve target %q: %w", target, err)
-}
-
+// strictlyWithin says whether candidate is below root and is not root itself.
 func strictlyWithin(root, candidate string) (bool, error) {
 	rel, err := filepath.Rel(root, candidate)
 	if err != nil {

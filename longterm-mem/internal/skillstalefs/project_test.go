@@ -106,6 +106,18 @@ func TestReadSkill_RefusesATargetThatLeavesTheProjectOrNamesNoFile(t *testing.T)
 	}
 }
 
+// A skill file that is not there is told with the words of the refusal above, and the error still is the file
+// system's own underneath, so that a caller can ask it what it was.
+func TestReadSkill_WrapsTheFileSystemsErrorForAFileThatIsNotThere(t *testing.T) {
+	_, project := projectIn(t)
+
+	_, err := project.ReadSkill(".claude/skills/absent/SKILL.md")
+
+	if !errors.Is(err, fs.ErrNotExist) {
+		t.Errorf("ReadSkill of a missing file = %v, want an error that is fs.ErrNotExist underneath", err)
+	}
+}
+
 // A link inside the project is followed; a link that leaves it is refused, and what it points at is not read.
 func TestReadSkill_FollowsALinkInsideTheProjectAndRefusesOneOutsideIt(t *testing.T) {
 	root, project := projectIn(t)
@@ -210,6 +222,81 @@ func TestPathFacts_NeedsNoRepositoryForPathsTheTreeHolds(t *testing.T) {
 
 	if err != nil || facts["present.go"].State != skillstale.PathPresent {
 		t.Errorf("PathFacts = %v, %v; want present.go present", facts, err)
+	}
+}
+
+// No path asked about, nothing to answer and nothing to ask the repository: a project that is no repository
+// answers it as one that is.
+func TestPathFacts_AnEmptyListAsksAndAnswersNothing(t *testing.T) {
+	root, project := projectIn(t)
+	for _, paths := range [][]string{nil, {}} {
+		facts, err := project.PathFacts(paths)
+		if err != nil || len(facts) != 0 {
+			t.Errorf("PathFacts(%#v) in a directory that is no repository = %v, %v; want no facts and no error", paths, facts, err)
+		}
+	}
+	gitIn(t, root, "init", "-q", "-b", "main")
+	if facts, err := project.PathFacts(nil); err != nil || len(facts) != 0 {
+		t.Errorf("PathFacts(nil) in a repository = %v, %v; want no facts and no error", facts, err)
+	}
+}
+
+// Every path asked about is answered under the text it was asked by, whatever its shape, and a name with a space
+// or a non-ASCII letter (the characters git quotes in its own output) is told as any other: present in the tree,
+// or removed by a commit with that commit's id. (The paths the detector asks about come from a strict pattern
+// that admits no space and no quote; what the history says of such shapes is its own to say, and the adapter
+// must only not lose them on the way.)
+func TestPathFacts_AnswersEveryPathUnderTheTextItWasAskedBy(t *testing.T) {
+	root, project := projectIn(t)
+	gitIn(t, root, "init", "-q", "-b", "main")
+	spaced, accented, gone := "has space.go", "se"+string(rune(0xF1))+"al.go", "gone away.go"
+	for _, name := range []string{spaced, accented, gone} {
+		writeProjectFile(t, root, name, "package fixture\n")
+	}
+	gitIn(t, root, "add", "-A")
+	gitIn(t, root, "commit", "-q", "-m", "initial")
+	gitIn(t, root, "rm", "-q", gone)
+	gitIn(t, root, "commit", "-q", "-m", "remove a spaced name")
+	asked := []string{spaced, accented, gone, `it's "quoted".go`, ""}
+
+	facts, err := project.PathFacts(asked)
+
+	if err != nil {
+		t.Fatalf("PathFacts: %v", err)
+	}
+	for _, path := range asked {
+		if _, answered := facts[path]; !answered {
+			t.Errorf("no fact for %q in %+v", path, facts)
+		}
+	}
+	if len(facts) != len(asked) {
+		t.Errorf("facts = %+v, want one for each of the %d paths asked about", facts, len(asked))
+	}
+	for _, path := range []string{spaced, accented} {
+		if got := facts[path]; got.State != skillstale.PathPresent {
+			t.Errorf("%q = %+v, want present", path, got)
+		}
+	}
+	if got := facts[gone]; got.State != skillstale.PathDeleted || len(got.Commit) != 40 {
+		t.Errorf("%q = %+v, want deleted by a commit (its full id)", gone, got)
+	}
+}
+
+// A path outside the project, absolute or climbing out of it, is not a question the history can answer: it
+// refuses it, as an error of its own, and the adapter returns that error and no facts, not a guess for the path
+// and not a fact for the others.
+func TestPathFacts_RefusesAPathOutsideTheProjectAndAnswersNothing(t *testing.T) {
+	root, project := projectIn(t)
+	gitIn(t, root, "init", "-q", "-b", "main")
+	writeProjectFile(t, root, "present.go", "package fixture\n")
+	gitIn(t, root, "add", "-A")
+	gitIn(t, root, "commit", "-q", "-m", "initial")
+	for _, outside := range []string{filepath.Join(filepath.Dir(root), "beside-the-project.go"), "../beside-the-project.go"} {
+		facts, err := project.PathFacts([]string{"present.go", outside})
+
+		if err == nil || facts != nil {
+			t.Errorf("PathFacts(present.go, %q) = %v, %v; want the history's refusal and no facts", outside, facts, err)
+		}
 	}
 }
 

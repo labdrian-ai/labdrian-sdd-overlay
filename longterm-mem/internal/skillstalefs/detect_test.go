@@ -99,14 +99,21 @@ func makeFixture(t *testing.T) fixtureRepo {
 	return fixtureRepo{root: root, bin: bin, now: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)}
 }
 
+// candidates is the candidate record of each of the fixture's five skills, last observed at the instant the map
+// gives for its id. A skill the map does not name has a record that says nothing of when it was observed (no
+// LastObserved line at all, as in the sibling world of the detector's own tests), not one with an empty value.
 func candidates(lastObserved map[string]string) fakeObservations {
 	var out fakeObservations
 	i := int64(0)
 	for _, id := range []string{"removed-path-skill", "moved-path-skill", "clean-skill", "unresolved-command-skill", "quiet-skill"} {
 		i++
+		content := "**Status**: registered\n"
+		if observed := lastObserved[id]; observed != "" {
+			content += "**LastObserved**: " + observed + "\n"
+		}
 		out = append(out, memory.Observation{
 			ID: i, Title: id, Type: "pattern", TopicKey: "procedural/candidates/repeated-success/" + id,
-			Content: "**Status**: registered\n**LastObserved**: " + lastObserved[id] + "\n", UpdatedAt: "2025-12-31 00:00:00",
+			Content: content, UpdatedAt: "2025-12-31 00:00:00",
 		})
 	}
 	return out
