@@ -120,6 +120,9 @@ func Sync(ctx context.Context, deps Deps, project string) (SyncReport, error) {
 		report.Promoted = append(report.Promoted, result)
 	}
 
+	// memory.IsMissing and not "!= nil": a rebuilder that failed to open reaches Deps as an interface holding a
+	// nil pointer, which a plain nil comparison takes for a rebuilder and which then panics inside the call
+	// (TestSyncWithoutARebuilderSkipsTheRebuild holds both shapes).
 	if !memory.IsMissing(deps.Index) {
 		if err := deps.Index.RebuildIndex(ctx); err != nil {
 			return report, fmt.Errorf("promote: sync: rebuild index: %w", err)
