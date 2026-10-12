@@ -2,6 +2,7 @@ package synctrigger
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -60,15 +61,89 @@ func exampleChildArgv(event, cwd, stateDir string) []string {
 // into the file it returns.
 func recordingSelf(t *testing.T) (self, record string) {
 	t.Helper()
-	dir := t.TempDir()
+	return recordingSelfIn(t, t.TempDir())
+}
+
+// recordingSelfIn is recordingSelf in the directory dir, which must exist.
+func recordingSelfIn(t *testing.T, dir string) (self, record string) {
+	t.Helper()
 	self, record = filepath.Join(dir, "self"), filepath.Join(dir, "arguments")
 	// The child writes every argument to a temporary file and renames it into place, so a reader
-	// polling for the record sees all of the arguments or none of them, never a prefix.
-	script := "#!/bin/sh\nfor a in \"$@\"; do printf '%s\\n' \"$a\" >> '" + record + ".tmp'; done\nmv '" + record + ".tmp' '" + record + "'\n"
+	// polling for the record sees all of the arguments or none of them, never a prefix. It finds its
+	// directory from $0, so the script names no path of the test's (none can break its quoting), it
+	// starts the temporary file afresh (a child that was killed before the rename left one behind),
+	// and `set -e` makes a child that cannot write say so, instead of renaming what it did not write.
+	const script = `#!/bin/sh
+set -e
+dir="${0%/*}"
+tmp="$dir/arguments.tmp"
+rm -f "$tmp"
+: > "$tmp"
+for a in "$@"; do
+	printf '%s\n' "$a" >> "$tmp"
+done
+mv "$tmp" "$dir/arguments"
+`
 	if err := os.WriteFile(self, []byte(script), 0o755); err != nil {
 		t.Fatalf("write self: %v", err)
 	}
 	return self, record
+}
+
+// The recording child does not care what the directory it lives in is called: a path with an apostrophe in it
+// (a user's home can have one) does not break the script, because the script names no path of the test's.
+func TestRecordingSelf_WorksInADirectoryWhoseNameHasAnApostrophe(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "it's here")
+	if err := os.Mkdir(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	self, record := recordingSelfIn(t, dir)
+
+	if out, err := exec.Command(self, "one", "two words").CombinedOutput(); err != nil {
+		t.Fatalf("the recording child failed: %v\n%s", err, out)
+	}
+
+	if got, want := waitForFile(t, record), "one\ntwo words\n"; got != want {
+		t.Errorf("the record = %q, want %q", got, want)
+	}
+}
+
+// A record that an earlier child left half written does not leak into the next one: a child starts its record
+// afresh, so what it holds is the arguments of that child alone.
+func TestRecordingSelf_StartsItsRecordAfresh(t *testing.T) {
+	dir := t.TempDir()
+	self, record := recordingSelfIn(t, dir)
+	if err := os.WriteFile(record+".tmp", []byte("left by an earlier child\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	if out, err := exec.Command(self, "only").CombinedOutput(); err != nil {
+		t.Fatalf("the recording child failed: %v\n%s", err, out)
+	}
+
+	if got, want := waitForFile(t, record), "only\n"; got != want {
+		t.Errorf("the record = %q, want %q", got, want)
+	}
+}
+
+// A child that cannot write its record says so by its exit status and leaves no record: it does not go on to
+// rename what it did not write into place.
+func TestRecordingSelf_FailsWhenItCannotWriteItsRecord(t *testing.T) {
+	dir := t.TempDir()
+	self, record := recordingSelfIn(t, dir)
+	// A directory where the temporary file should go: appending to it fails.
+	if err := os.Mkdir(record+".tmp", 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	err := exec.Command(self, "only").Run()
+
+	if err == nil {
+		t.Error("the recording child exited 0 though it could not write its record")
+	}
+	if info, statErr := os.Stat(record); statErr == nil && info.IsDir() {
+		t.Error("the recording child renamed what it could not write into place as the record")
+	}
 }
 
 func waitForFile(t *testing.T, path string) string {
