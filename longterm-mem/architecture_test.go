@@ -17,7 +17,7 @@ import (
 //     read through (L1 gave query its memory ports; L3 and L4 give the rest).
 //   - ingest, projectid, promote, skillstale and staleness are domain packages:
 //     their rules are the part that stays; the file system, git and SQLite they
-//     reach today are debt below.
+//     still reach are debt below (skillstale reaches nothing since L5, staleness since L6).
 //   - vaultreg is an adapter. L9 makes its Resolve pure, but the registry file
 //     store stays in the package, so it cannot be a domain package without a
 //     debt that L9 does not clear.
@@ -89,13 +89,6 @@ var knownDebt = archguard.Debt{
 		"os":                         "L7",
 		"path/filepath.Abs":          "L7",
 		"path/filepath.EvalSymlinks": "L7",
-	},
-
-	// staleness: reads the repository through a RepoEvidence port.
-	"internal/staleness": {
-		"internal/repohistory":  "L6",
-		"os":                    "L6",
-		"path/filepath.WalkDir": "L6",
 	},
 }
 

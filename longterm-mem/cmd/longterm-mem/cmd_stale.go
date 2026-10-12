@@ -7,6 +7,7 @@ import (
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/projectid"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/repoevidence"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/staleness"
 )
 
@@ -55,7 +56,9 @@ func cmdStale(args []string) int {
 		return exitEngramUnavailable
 	}
 
-	findings, err := staleness.Detect(id.WorktreeRoot, observations)
+	// The rule reads nothing itself: the repository's tree and history are handed to it here, where the program
+	// meets its surroundings.
+	findings, err := staleness.Detect(repoevidence.At(id.WorktreeRoot), observations)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "longterm-mem: stale: %v\n", err)
 		return exitInternal

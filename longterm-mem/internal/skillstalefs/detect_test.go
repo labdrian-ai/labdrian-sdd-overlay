@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/repoevidence"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/skillstale"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/skillstalefs"
 )
@@ -121,7 +122,7 @@ func candidates(lastObserved map[string]string) fakeObservations {
 
 func detect(t *testing.T, fixture fixtureRepo, observations fakeObservations) []skillstale.Finding {
 	t.Helper()
-	project, err := skillstalefs.OpenProject(fixture.root)
+	project, err := skillstalefs.OpenProject(fixture.root, repoevidence.At(fixture.root))
 	if err != nil {
 		t.Fatalf("OpenProject: %v", err)
 	}

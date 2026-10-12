@@ -6,11 +6,13 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/repohistory"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/repoevidence"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/skillstale"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/staleness"
 )
 
 // projectIn is a project over a fresh directory, named by its resolved path (a temporary directory can be a link,
@@ -21,7 +23,7 @@ func projectIn(t *testing.T) (root string, project Project) {
 	if err != nil {
 		t.Fatalf("resolve the temporary directory: %v", err)
 	}
-	project, err = OpenProject(root)
+	project, err = OpenProject(root, repoevidence.At(root))
 	if err != nil {
 		t.Fatalf("OpenProject: %v", err)
 	}
@@ -41,10 +43,73 @@ func writeProjectFile(t *testing.T, root, rel, content string) {
 
 func TestOpenProject_RefusesARelativeRoot(t *testing.T) {
 	for _, root := range []string{"", "relative/root", "."} {
-		_, err := OpenProject(root)
+		_, err := OpenProject(root, repoevidence.At(root))
 		if err == nil || !strings.Contains(err.Error(), "project root must be absolute") {
 			t.Errorf("OpenProject(%q) = %v, want the refusal of a root that is not absolute", root, err)
 		}
+	}
+}
+
+// A project with no repository evidence cannot say what became of a path, and is refused when it is opened
+// rather than when it is asked.
+func TestOpenProject_RefusesNoRepositoryEvidence(t *testing.T) {
+	_, err := OpenProject(t.TempDir(), nil)
+	if err == nil || !strings.Contains(err.Error(), "repository evidence is required") {
+		t.Errorf("OpenProject(root, nil) = %v, want the refusal of a project with no repository evidence", err)
+	}
+}
+
+// evidenceOf answers what staleness asks from a table, and records it.
+type evidenceOf struct {
+	files   []string
+	history map[string]staleness.PathFact
+	asked   [][]string
+}
+
+func (e *evidenceOf) Files() ([]string, error) { return e.files, nil }
+
+func (e *evidenceOf) History(paths []string) (map[string]staleness.PathFact, error) {
+	e.asked = append(e.asked, append([]string(nil), paths...))
+	facts := map[string]staleness.PathFact{}
+	for _, p := range paths {
+		facts[p] = e.history[p]
+	}
+	return facts, nil
+}
+
+// What the project says of a path is what the evidence it was opened with says, in the detector's words: the
+// adapter reads no tree and no history of its own, so a table stands in for both.
+func TestPathFacts_AreWhatTheEvidenceItWasGivenSays(t *testing.T) {
+	root := t.TempDir()
+	evidence := &evidenceOf{
+		files: []string{"module/present.go"},
+		history: map[string]staleness.PathFact{
+			"removed.go": {State: staleness.PathDeleted, Commit: "c0ffee1"},
+			"moved.go":   {State: staleness.PathRenamed, NewPath: "moved-new.go", Commit: "c0ffee2"},
+			"never.go":   {State: staleness.PathUnknown},
+		},
+	}
+	project, err := OpenProject(root, evidence)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	facts, err := project.PathFacts([]string{"present.go", "removed.go", "moved.go", "never.go"})
+
+	if err != nil {
+		t.Fatalf("PathFacts: %v", err)
+	}
+	want := map[string]skillstale.PathFact{
+		"present.go": {State: skillstale.PathPresent},
+		"removed.go": {State: skillstale.PathDeleted, Commit: "c0ffee1"},
+		"moved.go":   {State: skillstale.PathRenamed, NewPath: "moved-new.go", Commit: "c0ffee2"},
+		"never.go":   {State: skillstale.PathUnknown},
+	}
+	if !reflect.DeepEqual(facts, want) {
+		t.Errorf("PathFacts = %+v, want %+v", facts, want)
+	}
+	if asked := [][]string{{"moved.go", "never.go", "removed.go"}}; !reflect.DeepEqual(evidence.asked, asked) {
+		t.Errorf("the history was asked %v, want %v: once, for the paths the tree does not hold", evidence.asked, asked)
 	}
 }
 
@@ -303,13 +368,13 @@ func TestPathFacts_RefusesAPathOutsideTheProjectAndAnswersNothing(t *testing.T) 
 // The detector has no word for a state of the history it has not heard of: it is the state it reports nothing
 // for.
 func TestStateOf_SaysUnknownForWhatItHasNoWordFor(t *testing.T) {
-	for state, want := range map[repohistory.State]skillstale.PathState{
-		repohistory.StatePresent: skillstale.PathPresent,
-		repohistory.StateDeleted: skillstale.PathDeleted,
-		repohistory.StateRenamed: skillstale.PathRenamed,
-		repohistory.StateUnknown: skillstale.PathUnknown,
-		"something-new":          skillstale.PathUnknown,
-		"":                       skillstale.PathUnknown,
+	for state, want := range map[staleness.PathState]skillstale.PathState{
+		staleness.PathPresent: skillstale.PathPresent,
+		staleness.PathDeleted: skillstale.PathDeleted,
+		staleness.PathRenamed: skillstale.PathRenamed,
+		staleness.PathUnknown: skillstale.PathUnknown,
+		"something-new":       skillstale.PathUnknown,
+		"":                    skillstale.PathUnknown,
 	} {
 		if got := stateOf(state); got != want {
 			t.Errorf("stateOf(%q) = %q, want %q", state, got, want)
