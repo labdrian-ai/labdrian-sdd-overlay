@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"strings"
 	"testing"
@@ -327,12 +328,35 @@ func newSkillsStaleWorld(t *testing.T, pathNeedsGit bool) *skillsStaleWorld {
 // The directory git lives in is not put on the PATH instead: it holds whatever else the host keeps beside git,
 // and a command a case treats as missing could be found there. (A file that runs git, not a link to it, because
 // a git built to find its own files by where it was started from finds them from the real one.)
+//
+// The file is a POSIX shell script, so a host with no /bin/sh cannot run these cases and the test says so and
+// skips them. A host that has one and a file that still does not run git is a fault of this harness, not of the
+// program, and fails with that said, instead of surfacing as a golden that differs.
 func (w *skillsStaleWorld) lendGit(t *testing.T, gitPath string) {
 	t.Helper()
+	if _, err := os.Stat("/bin/sh"); err != nil {
+		t.Skipf("the file that runs git is a shell script and there is no /bin/sh here: %v", err)
+	}
+	wrapper := filepath.Join(w.binDir, "git")
 	script := "#!/bin/sh\nexec '" + strings.ReplaceAll(gitPath, "'", `'\''`) + "' \"$@\"\n"
-	if err := os.WriteFile(filepath.Join(w.binDir, "git"), []byte(script), 0o755); err != nil {
+	if err := os.WriteFile(wrapper, []byte(script), 0o755); err != nil {
 		t.Fatalf("write the file that runs git: %v", err)
 	}
+	if err := wrapperRunsGit(wrapper); err != nil {
+		t.Fatalf("the test harness's file that runs git does not run it (a fault of the harness, not of the program): %v", err)
+	}
+}
+
+// wrapperRunsGit runs the file at path as `git --version` and says whether it answered as git does.
+func wrapperRunsGit(path string) error {
+	out, err := exec.Command(path, "--version").Output()
+	if err != nil {
+		return fmt.Errorf("%s --version: %w", path, err)
+	}
+	if !strings.HasPrefix(string(out), "git version ") {
+		return fmt.Errorf("%s --version printed %q, want git's version", path, out)
+	}
+	return nil
 }
 
 // The commands a skill names are found in the world's directory or nowhere, in the cases that read a repository's
@@ -354,12 +378,19 @@ func TestSkillsStaleWorld_PathIsTheWorldsOwnDirectoryAlone(t *testing.T) {
 			for _, entry := range entries {
 				names = append(names, entry.Name())
 			}
-			if want := map[bool][]string{false: nil, true: {"git"}}[needsGit]; strings.Join(names, ",") != strings.Join(want, ",") {
+			var want []string
+			if needsGit {
+				want = []string{"git"}
+			}
+			if !reflect.DeepEqual(names, want) {
 				t.Errorf("the world's directory holds %v, want %v", names, want)
 			}
 			if needsGit {
-				if found, err := exec.LookPath("git"); err != nil || found != filepath.Join(w.binDir, "git") {
+				found, err := exec.LookPath("git")
+				if err != nil || found != filepath.Join(w.binDir, "git") {
 					t.Errorf("git is found at %q (%v), want the file of the world's own", found, err)
+				} else if err := wrapperRunsGit(found); err != nil {
+					t.Errorf("the file of the world's own does not run git: %v", err)
 				}
 			}
 			if found, err := exec.LookPath("definitely-missing-command"); err == nil {

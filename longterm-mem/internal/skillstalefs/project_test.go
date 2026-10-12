@@ -264,17 +264,17 @@ func TestPathFacts_AnswersEveryPathUnderTheTextItWasAskedBy(t *testing.T) {
 	if err != nil {
 		t.Fatalf("PathFacts: %v", err)
 	}
-	for _, path := range asked {
-		if _, answered := facts[path]; !answered {
-			t.Errorf("no fact for %q in %+v", path, facts)
+	for _, question := range asked {
+		if _, answered := facts[question]; !answered {
+			t.Errorf("no fact for %q in %+v", question, facts)
 		}
 	}
 	if len(facts) != len(asked) {
 		t.Errorf("facts = %+v, want one for each of the %d paths asked about", facts, len(asked))
 	}
-	for _, path := range []string{spaced, accented} {
-		if got := facts[path]; got.State != skillstale.PathPresent {
-			t.Errorf("%q = %+v, want present", path, got)
+	for _, question := range []string{spaced, accented} {
+		if got := facts[question]; got.State != skillstale.PathPresent {
+			t.Errorf("%q = %+v, want present", question, got)
 		}
 	}
 	if got := facts[gone]; got.State != skillstale.PathDeleted || len(got.Commit) != 40 {
