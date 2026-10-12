@@ -1,0 +1,5 @@
+args: skills-stale --project-root <project> --project skillsgolden
+exit: 1
+--- stdout ---
+--- stderr ---
+longterm-mem: skills-stale: skillstale: gone-skill: resolve target "<project>/.claude/skills/gone-skill/SKILL.md": lstat <project>/.claude/skills/gone-skill: no such file or directory

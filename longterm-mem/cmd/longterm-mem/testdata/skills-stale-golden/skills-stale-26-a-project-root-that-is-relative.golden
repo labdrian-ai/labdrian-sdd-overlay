@@ -1,0 +1,5 @@
+args: skills-stale --project-root relative/root --project skillsgolden
+exit: 2
+--- stdout ---
+--- stderr ---
+longterm-mem: skills-stale: --project-root must be an absolute path

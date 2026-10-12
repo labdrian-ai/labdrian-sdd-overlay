@@ -1,0 +1,10 @@
+args: skills-stale --nope
+exit: 2
+--- stdout ---
+--- stderr ---
+flag provided but not defined: -nope
+Usage of skills-stale:
+  -project string
+    	project name (default: resolved from the working directory)
+  -project-root string
+    	absolute project root to inspect

@@ -1,0 +1,8 @@
+args: skills-stale --project-root <project> --project skillsgolden
+exit: 0
+--- stdout ---
+longterm-mem: skills-stale: checked <project> for project skillsgolden
+linked candidate:procedural/candidates/repeated-success/linked status:registered
+  UNRESOLVED-COMMAND definitely-missing-command
+  Nothing was changed. Review this report before making a separate retirement decision.
+--- stderr ---
