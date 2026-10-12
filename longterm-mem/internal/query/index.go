@@ -1,6 +1,15 @@
 package query
 
-import "context"
+import (
+	"context"
+	"errors"
+)
+
+// ErrNoEmbeddingIndex is what an EmbeddingIndexRepository answers for a project nothing was built for: a typed
+// outcome, found with errors.Is, as the arm tells an index nobody built (nothing to say) from one that is there
+// and cannot be read (said beside the answer, DiagnosticEmbeddingIndexUnreadable). The words of an error are
+// never read to tell the two apart.
+var ErrNoEmbeddingIndex = errors.New("query: no embedding index was built for this project")
 
 // IndexedObservation is one row an embedding index vouches for: which observation it embeds, and the fingerprint
 // that was true when it was embedded (the index's own account of the text and the contract the vector came
@@ -32,10 +41,11 @@ type EmbeddingIndex struct {
 // The package owns it; the embedding index adapter (internal/vecindex) satisfies it, and where an index is kept,
 // how it is stored and how it is cached are the adapter's to say.
 type EmbeddingIndexRepository interface {
-	// LoadEmbeddingIndex returns project's index. An error means there is no index the arm can use: none was
-	// ever built, or the one there cannot be trusted or read. The arm degrades the same way for every cause (no
-	// rows, a Coverage that says "never built" and the command that builds one), so the words of the error are
-	// not read.
+	// LoadEmbeddingIndex returns project's index. An error means there is no index the arm can use. A project
+	// nothing was built for is answered with an error that is ErrNoEmbeddingIndex (wrapped or not); any other
+	// error is an index that is there and cannot be trusted or read. The arm degrades the same way for both (no
+	// rows, a Coverage that says "never built" and the command that builds one), and says the second beside
+	// the answer with the error's own text. The words of the error are never read to tell them apart.
 	LoadEmbeddingIndex(project string) (*EmbeddingIndex, error)
 	// Fingerprint is what an index built under (model, dimension, inputLimit) records for a row with this title
 	// and content. A row whose recorded fingerprint differs has changed since it was embedded, and its vector no

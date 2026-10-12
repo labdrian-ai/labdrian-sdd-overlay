@@ -2,12 +2,11 @@ package query
 
 import (
 	"context"
-	"errors"
 	"fmt"
 )
 
 // errNoFakeIndex is what fakeIndexes answers for a project it holds no index of: an index nobody built.
-var errNoFakeIndex = errors.New("no index was built for this project")
+var errNoFakeIndex = fmt.Errorf("%w: the fake holds none", ErrNoEmbeddingIndex)
 
 // fakeIndexes is an EmbeddingIndexRepository over indexes held in memory, by project, with no disk and no
 // adapter: the use case depends on the port and on the model it speaks, not on how an index is stored.

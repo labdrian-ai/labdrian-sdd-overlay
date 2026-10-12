@@ -45,8 +45,8 @@ func TestRepositoryRefusesWhatLoadRefuses(t *testing.T) {
 	stateDir := t.TempDir()
 	repository := &Repository{StateDir: stateDir}
 
-	if _, err := repository.LoadEmbeddingIndex("never-built"); !errors.Is(err, ErrNoIndex) {
-		t.Errorf("error = %v, want ErrNoIndex for a project nothing was built for", err)
+	if _, err := repository.LoadEmbeddingIndex("never-built"); !errors.Is(err, ErrNoIndex) || !errors.Is(err, query.ErrNoEmbeddingIndex) {
+		t.Errorf("error = %v, want ErrNoIndex and, for the query, ErrNoEmbeddingIndex for a project nothing was built for", err)
 	}
 
 	corrupted := testIndex()
@@ -54,8 +54,8 @@ func TestRepositoryRefusesWhatLoadRefuses(t *testing.T) {
 		t.Fatalf("save: %v", err)
 	}
 	corruptManifest(t, Dir(stateDir, "broken"))
-	if _, err := repository.LoadEmbeddingIndex("broken"); !errors.Is(err, ErrCorrupted) {
-		t.Errorf("error = %v, want ErrCorrupted for a manifest that does not match its digest", err)
+	if _, err := repository.LoadEmbeddingIndex("broken"); !errors.Is(err, ErrCorrupted) || errors.Is(err, query.ErrNoEmbeddingIndex) {
+		t.Errorf("error = %v, want ErrCorrupted and not ErrNoEmbeddingIndex for a manifest that does not match its digest", err)
 	}
 }
 

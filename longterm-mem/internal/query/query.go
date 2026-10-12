@@ -112,8 +112,9 @@ func Run(ctx context.Context, deps Deps, req Request) (Result, error) {
 		return Result{}, ErrMissingProject
 	}
 	sources := req.Sources
+	var defaultDiags []Diagnostic
 	if len(sources) == 0 {
-		sources = defaultSources(deps, req.Project)
+		sources, defaultDiags = defaultSources(deps, req.Project)
 	}
 	for _, s := range sources {
 		if !knownSources[s] {
@@ -139,7 +140,7 @@ func Run(ctx context.Context, deps Deps, req Request) (Result, error) {
 		resolveLink = NoLinkResolver
 	}
 
-	result := Result{Project: req.Project, Query: req.Query}
+	result := Result{Project: req.Project, Query: req.Query, Diagnostics: defaultDiags}
 
 	var engramRows []memory.Row
 	matchMode := memory.MatchAll

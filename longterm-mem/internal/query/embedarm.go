@@ -113,6 +113,20 @@ func loadEmbeddingIndex(repository EmbeddingIndexRepository, project string) (*E
 	return repository.LoadEmbeddingIndex(project)
 }
 
+// unreadableIndexDiagnostic is what a load error says beside the answer when the index is there and cannot be
+// read or trusted, with the error's own text, so that it is not taken for an index nobody built (owner decision of
+// 2026-10-12). An index nobody built (ErrNoEmbeddingIndex) and a repository that is not wired have nothing to say.
+// The results are the same as for those, and no call fails.
+func unreadableIndexDiagnostic(project string, loadErr error) (Diagnostic, bool) {
+	if errors.Is(loadErr, ErrNoEmbeddingIndex) || errors.Is(loadErr, errNoIndexRepository) {
+		return Diagnostic{}, false
+	}
+	return Diagnostic{
+		Code:   DiagnosticEmbeddingIndexUnreadable,
+		Detail: fmt.Sprintf("the embedding index of project %q could not be read, so this answer has no embedding rows: %v", project, loadErr),
+	}, true
+}
+
 // errNoIndexRepository is what loadEmbeddingIndex answers when no repository was wired.
 var errNoIndexRepository = errors.New("query: no embedding index repository is configured")
 
@@ -157,6 +171,9 @@ func (a embeddingArm) run(ctx context.Context, project, queryText string, top in
 		// is a call failure, since the union's @5 guarantee is
 		// unaffected by one arm having nothing to contribute (R-058).
 		coverage.Unindexed = coverage.Live
+		if d, unreadable := unreadableIndexDiagnostic(project, loadErr); unreadable {
+			diags = append(diags, d)
+		}
 		return nil, coverage, diags
 	}
 	coverage.BuiltAt = idx.BuiltAt

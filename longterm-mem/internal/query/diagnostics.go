@@ -100,4 +100,8 @@ const (
 	// topped up would, from the stale index it already had, plus this
 	// diagnostic naming what went wrong so the failure is not silent.
 	DiagnosticEmbeddingTopUpFailed = "embedding_topup_failed"
+	// DiagnosticEmbeddingIndexUnreadable reports that the project's embedding index is there and cannot be read
+	// or trusted (a corrupted manifest, for example). The query answers without embedding rows, as it does for an
+	// index nobody built, and this diagnostic carries the load error so the failure is not read as "no index".
+	DiagnosticEmbeddingIndexUnreadable = "embedding_index_unreadable"
 )

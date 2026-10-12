@@ -3,6 +3,7 @@ package vecindex
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/query"
 )
@@ -51,6 +52,11 @@ func (r *Repository) LoadEmbeddingIndex(project string) (*query.EmbeddingIndex, 
 		idx, err = Load(dir)
 	}
 	if err != nil {
+		if errors.Is(err, ErrNoIndex) {
+			// Both stay reachable: the query tells an index nobody built by its own error, and a caller of
+			// this package by ErrNoIndex.
+			return nil, fmt.Errorf("%w: %w", query.ErrNoEmbeddingIndex, err)
+		}
 		return nil, err
 	}
 	entries := make([]query.IndexedObservation, len(idx.Manifest.Entries))

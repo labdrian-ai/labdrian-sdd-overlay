@@ -37,6 +37,12 @@ exit: 0
       "full_length": 32
     }
   ],
+  "diagnostics": [
+    {
+      "code": "embedding_index_unreadable",
+      "detail": "the embedding index of project \"goldenproj\" could not be read, so this answer has no embedding rows: vecindex: index is corrupted: <state>/index/goldenproj/manifest.json: parse manifest: invalid character 'n' looking for beginning of object key string"
+    }
+  ],
   "coverage": null
 }
 --- stderr ---

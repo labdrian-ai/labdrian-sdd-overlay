@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
@@ -133,6 +134,11 @@ func TestWithoutAnIndexPortThereIsNoIndex(t *testing.T) {
 			if !reflect.DeepEqual(named.Coverage, want) {
 				t.Errorf("Coverage = %+v, want %+v", named.Coverage, want)
 			}
+			for _, d := range named.Diagnostics {
+				if d.Code == DiagnosticEmbeddingIndexUnreadable {
+					t.Errorf("a repository that is not wired said %+v: there is no index to be unreadable", d)
+				}
+			}
 
 			defaulted, err := Run(context.Background(), deps, Request{Project: "p", Query: "alpha"})
 			if err != nil {
@@ -146,11 +152,21 @@ func TestWithoutAnIndexPortThereIsNoIndex(t *testing.T) {
 }
 
 // Whatever the port says to refuse an index (none built, corrupted, unreadable), the arm answers the same: no
-// rows, Coverage "never", no diagnostic of its own. The words of the error are not read.
+// rows and Coverage "never". An index nobody built (ErrNoEmbeddingIndex) has nothing more to say; one that is
+// there and cannot be read says so beside the answer, with the error's own text (owner decision of 2026-10-12).
+// The words of the error are never read to tell the two apart.
 func TestAnyRefusalOfTheIndexDegradesTheSameWay(t *testing.T) {
-	for name, refusal := range map[string]error{
-		"none built": errNoFakeIndex, "corrupted": errors.New("index is corrupted"), "unreadable": fmt.Errorf("read: %w", errors.New("permission denied")),
+	for name, tc := range map[string]struct {
+		refusal    error
+		wantDetail string // empty: no unreadable-index diagnostic
+	}{
+		"none built":                {errNoFakeIndex, ""},
+		"none built, wrapped":       {fmt.Errorf("load: %w", errNoFakeIndex), ""},
+		"corrupted":                 {errors.New("index is corrupted"), "index is corrupted"},
+		"unreadable":                {fmt.Errorf("read: %w", errors.New("permission denied")), "read: permission denied"},
+		"words that look like none": {errors.New("no embedding index was built for this project"), "no embedding index was built for this project"},
 	} {
+		refusal := tc.refusal
 		t.Run(name, func(t *testing.T) {
 			mem := &fakeMemory{search: memory.SearchResult{MatchMode: memory.MatchAll}, live: 3}
 			deps := Deps{Memory: mem, Index: &fakeIndexes{loadErr: refusal}, Embed: fakeEmbed([]float32{1, 0, 0}, nil), ResolveLink: NoLinkResolver}
@@ -163,10 +179,62 @@ func TestAnyRefusalOfTheIndexDegradesTheSameWay(t *testing.T) {
 			if !reflect.DeepEqual(result.Coverage, want) {
 				t.Errorf("Coverage = %+v, want %+v", result.Coverage, want)
 			}
+			var unreadable []string
 			for _, d := range result.Diagnostics {
-				if d.Code != DiagnosticEmbeddingIndexIncomplete {
-					t.Errorf("diagnostic %+v: the only thing to say is that the index is incomplete", d)
+				switch d.Code {
+				case DiagnosticEmbeddingIndexIncomplete:
+				case DiagnosticEmbeddingIndexUnreadable:
+					unreadable = append(unreadable, d.Detail)
+				default:
+					t.Errorf("diagnostic %+v: the only things to say are that the index is incomplete or unreadable", d)
 				}
+			}
+			switch {
+			case tc.wantDetail == "" && len(unreadable) != 0:
+				t.Errorf("an index nobody built said %q beside the answer, want nothing", unreadable)
+			case tc.wantDetail != "" && (len(unreadable) != 1 || !strings.Contains(unreadable[0], tc.wantDetail)):
+				t.Errorf("unreadable-index diagnostics = %q, want one carrying %q", unreadable, tc.wantDetail)
+			}
+		})
+	}
+}
+
+// When no source is named, the embedding one is left out of the defaults for an index that cannot be read, as for
+// one nobody built, and the answer comes from the lexical source alone; the unreadable one says so beside the
+// answer (owner decision of 2026-10-12), and the one nobody built, or the port not wired, says nothing.
+func TestTheDefaultSourcesSayWhenTheIndexIsThereAndCannotBeRead(t *testing.T) {
+	var typedNil *fakeIndexes
+	for name, tc := range map[string]struct {
+		index      EmbeddingIndexRepository
+		wantDetail string
+	}{
+		"corrupted":     {&fakeIndexes{loadErr: errors.New("index is corrupted")}, "index is corrupted"},
+		"none built":    {&fakeIndexes{}, ""},
+		"no port":       {nil, ""},
+		"a nil pointer": {typedNil, ""},
+	} {
+		t.Run(name, func(t *testing.T) {
+			mem := &fakeMemory{search: memory.SearchResult{MatchMode: memory.MatchAll}, live: 3}
+			deps := Deps{Memory: mem, Index: tc.index, Embed: fakeEmbed([]float32{1, 0, 0}, nil), ResolveLink: NoLinkResolver}
+
+			result, err := Run(context.Background(), deps, Request{Project: "p", Query: "alpha"})
+			if err != nil {
+				t.Fatalf("Run: %v", err)
+			}
+			if len(result.Coverage) != 0 {
+				t.Errorf("Coverage = %+v, want none: the embedding source did not run", result.Coverage)
+			}
+			var unreadable []string
+			for _, d := range result.Diagnostics {
+				if d.Code == DiagnosticEmbeddingIndexUnreadable {
+					unreadable = append(unreadable, d.Detail)
+				}
+			}
+			switch {
+			case tc.wantDetail == "" && len(unreadable) != 0:
+				t.Errorf("said %q beside the answer, want nothing", unreadable)
+			case tc.wantDetail != "" && (len(unreadable) != 1 || !strings.Contains(unreadable[0], tc.wantDetail)):
+				t.Errorf("unreadable-index diagnostics = %q, want one carrying %q", unreadable, tc.wantDetail)
 			}
 		})
 	}
@@ -188,7 +256,7 @@ func TestTheDefaultSourcesFollowWhetherThePortAnswersAnIndex(t *testing.T) {
 		{"no port", nil, []string{SourceEngramFTS}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := defaultSources(Deps{Index: tc.index}, "p"); !reflect.DeepEqual(got, tc.want) {
+			if got, _ := defaultSources(Deps{Index: tc.index}, "p"); !reflect.DeepEqual(got, tc.want) {
 				t.Errorf("defaultSources = %v, want %v", got, tc.want)
 			}
 		})

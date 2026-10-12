@@ -75,12 +75,11 @@ func embeddingIndexGoldenSteps() []retrievalStep {
 			args: query("--json", "dragonscale"),
 		},
 		{name: "10-the-index-builds-what-the-query-did-not", args: build},
-		// What the query does today, recorded as it is: the arm degrades a manifest it cannot read to "no index
-		// was built" (coverage null, no diagnostic, empty stderr), by the design in embeddingArm.run. Only the
-		// build of the next step reports the corruption. Whether the query should say so too is the owner's
-		// decision (it would add a diagnostic to the answer), and the name says what is pinned, not what is wished.
+		// The query over a manifest it cannot read answers from full-text search, as for an index nobody built
+		// (coverage null, the same rows, exit 0), and says so beside the answer with the load error (owner decision
+		// of 2026-10-12). The build of the next step refuses the same index.
 		{
-			name: "11-a-corrupted-manifest-leaves-the-query-on-full-text-search-and-says-nothing",
+			name: "11-a-corrupted-manifest-is-reported-and-the-query-falls-back",
 			before: func(t *testing.T, w *retrievalWorld) {
 				if err := os.WriteFile(filepath.Join(w.embeddingIndexDir(), "manifest.json"), []byte("{not json"), 0o600); err != nil {
 					t.Fatalf("corrupt the manifest: %v", err)
