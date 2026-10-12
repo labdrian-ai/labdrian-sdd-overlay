@@ -400,12 +400,15 @@ func TestRegistryLockE2E_ValidateLeavesTheRealTreeUntouched(t *testing.T) {
 	}
 }
 
-// treeListing describes each directory's entries (name, size, modification time),
-// so that a created, removed, or rewritten entry shows. It leaves out .git: that is
-// git's own metadata, whose modification time a git process can change even when it
-// only reads (a status refreshes the index through a lock file), and go test runs other
-// packages beside this one, so it says nothing about what validate did to the tree. CI
-// saw exactly that: only .git's time differed.
+// treeListing describes the entries of each directory it is given, one level deep
+// (name, size, modification time), so that a created, removed, or rewritten entry
+// shows. An entry named .git, a directory or a file such as a worktree's pointer,
+// is listed by its name and its kind alone: it is git's own metadata, whose size and
+// modification time a git process can change even when it only reads (a status
+// refreshes the index through a lock file), and go test runs other packages beside
+// this one, so they say nothing about what validate did to the tree. CI saw exactly
+// that: only .git's time differed. That it is there, and what kind of thing it is, is
+// still compared, so a .git that is removed or replaced shows.
 func treeListing(t *testing.T, dirs ...string) []string {
 	t.Helper()
 	var out []string
@@ -416,6 +419,7 @@ func treeListing(t *testing.T, dirs ...string) []string {
 		}
 		for _, e := range entries {
 			if e.Name() == ".git" {
+				out = append(out, fmt.Sprintf("%s/%s %s", dir, e.Name(), e.Type()))
 				continue
 			}
 			info, err := e.Info()
