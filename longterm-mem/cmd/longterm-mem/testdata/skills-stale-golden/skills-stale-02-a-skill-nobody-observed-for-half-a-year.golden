@@ -1,0 +1,8 @@
+args: skills-stale --project-root <project> --project skillsgolden
+exit: 0
+--- stdout ---
+longterm-mem: skills-stale: checked <project> for project skillsgolden
+quiet-skill candidate:procedural/candidates/repeated-success/quiet-skill status:registered
+  QUIET since 2000-01-01T00:00:00Z
+  Nothing was changed. Review this report before making a separate retirement decision.
+--- stderr ---

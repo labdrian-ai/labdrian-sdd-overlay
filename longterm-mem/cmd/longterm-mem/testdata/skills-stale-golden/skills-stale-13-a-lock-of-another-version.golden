@@ -1,0 +1,5 @@
+args: skills-stale --project-root <project> --project skillsgolden
+exit: 1
+--- stdout ---
+--- stderr ---
+longterm-mem: skills-stale: parse project lock: unsupported version 2, want 1

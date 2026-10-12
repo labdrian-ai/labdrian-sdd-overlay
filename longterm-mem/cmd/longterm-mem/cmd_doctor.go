@@ -75,7 +75,7 @@ func (c commands) cmdDoctor(args []string) int {
 		// --embed-endpoint/--embed-model flags of its own (unlike `index
 		// --embeddings`), so embedding-backend-reachable probes the same
 		// defaults `index --embeddings` uses when none are given.
-		EmbeddingIndex: embeddingIndexReader(),
+		EmbeddingIndex: embeddingIndexReader(defaultStateDir()),
 		LiveObservationIDs: func(project string) ([]int64, error) {
 			store, err := engram.Open(os.Getenv(engramDBEnvVar))
 			if err != nil {

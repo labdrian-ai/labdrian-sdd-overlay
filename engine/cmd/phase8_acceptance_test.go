@@ -541,15 +541,27 @@ func phase8ProceduralDraft(activation string) string {
 // phase8DetectorLockKeys reads the JSON field names the retirement detector's strict
 // lock parser accepts, from the detector's own source (longterm-mem, a separate module
 // with an internal package, so it cannot be imported): the tags of ProjectLock and of
-// ProjectLockEntry in internal/skillstale/skillstale.go.
+// ProjectLockEntry, wherever in the internal/skillstale package they are declared, so a
+// type moving between the package's files does not lose them.
 func phase8DetectorLockKeys(t *testing.T) (top, entry map[string]bool) {
 	t.Helper()
-	src := filepath.Join("..", "..", "longterm-mem", "internal", "skillstale", "skillstale.go")
-	file, err := parser.ParseFile(token.NewFileSet(), src, nil, 0)
+	src := filepath.Join("..", "..", "longterm-mem", "internal", "skillstale")
+	sources, err := filepath.Glob(filepath.Join(src, "*.go"))
 	if err != nil {
-		t.Fatalf("parse the detector's source %s: %v", src, err)
+		t.Fatalf("list the detector's sources in %s: %v", src, err)
 	}
-	for _, decl := range file.Decls {
+	var decls []ast.Decl
+	for _, path := range sources {
+		if strings.HasSuffix(path, "_test.go") {
+			continue
+		}
+		file, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+		if err != nil {
+			t.Fatalf("parse the detector's source %s: %v", path, err)
+		}
+		decls = append(decls, file.Decls...)
+	}
+	for _, decl := range decls {
 		gen, ok := decl.(*ast.GenDecl)
 		if !ok || gen.Tok != token.TYPE {
 			continue

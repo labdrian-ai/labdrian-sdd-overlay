@@ -9,6 +9,7 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/projectid"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/skillstale"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/skillstalefs"
 )
 
 // cmdSkillsStale implements the report-only project-tier retirement detector.
@@ -16,7 +17,7 @@ import (
 // inspect the command's cwd or a home-directory fallback. The detector and
 // Engram store are both read-only; a finding is evidence for a later,
 // separately invoked retirement decision, never an instruction to remove.
-func cmdSkillsStale(args []string) int {
+func (c commands) cmdSkillsStale(args []string) int {
 	fs := flag.NewFlagSet("skills-stale", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
 	projectRoot := fs.String("project-root", "", "absolute project root to inspect")
@@ -55,10 +56,20 @@ func cmdSkillsStale(args []string) int {
 	}
 	defer store.Close()
 
+	// The detector reads nothing itself: the project's files and repository, the commands on this process's
+	// PATH and the instant are handed to it here, where the program meets its surroundings.
+	onDisk, err := skillstalefs.OpenProject(*projectRoot)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "longterm-mem: skills-stale: %v\n", err)
+		return exitUsage
+	}
 	findings, err := skillstale.Detect(skillstale.Config{
-		ProjectRoot:  *projectRoot,
 		Project:      resolvedProject,
+		Source:       onDisk,
 		Observations: store,
+		Facts:        onDisk,
+		Commands:     skillstalefs.PathCommands{PathEnv: os.Getenv("PATH")},
+		Now:          c.clock.Now(),
 	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "longterm-mem: skills-stale: %v\n", err)

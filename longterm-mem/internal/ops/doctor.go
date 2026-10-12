@@ -415,7 +415,7 @@ func checkEmbeddingIndexPresent(deps DoctorDeps, project string) Check {
 	if err := probeEmbeddingIndex(deps.EmbeddingIndex, project); err != nil {
 		var noStateDir StateDirUnresolved
 		if errors.As(err, &noStateDir) {
-			return Check{Name: CheckEmbeddingIndexPresent, Status: CheckFailed, Detail: "the state directory could not be resolved, so no embedding index can be looked for; " + stateDirHint}
+			return Check{Name: CheckEmbeddingIndexPresent, Status: CheckFailed, Detail: "the state directory could not be resolved, so no embedding index can be looked for; " + StateDirHint}
 		}
 		var nobodyBuilt NoEmbeddingIndex
 		if errors.As(err, &nobodyBuilt) {
@@ -455,7 +455,7 @@ func checkEmbeddingIndexFresh(deps DoctorDeps, project string) Check {
 	if err != nil {
 		var noStateDir StateDirUnresolved
 		if errors.As(err, &noStateDir) {
-			return Check{Name: CheckEmbeddingIndexFresh, Status: CheckFailed, Detail: "freshness cannot be determined: the state directory could not be resolved; " + stateDirHint}
+			return Check{Name: CheckEmbeddingIndexFresh, Status: CheckFailed, Detail: "freshness cannot be determined: the state directory could not be resolved; " + StateDirHint}
 		}
 		dir := deps.EmbeddingIndex.EmbeddingIndexLocation(project)
 		return Check{Name: CheckEmbeddingIndexFresh, Status: CheckFailed, Detail: fmt.Sprintf("freshness cannot be determined: embedding index at %s could not be loaded: %v", dir, err)}

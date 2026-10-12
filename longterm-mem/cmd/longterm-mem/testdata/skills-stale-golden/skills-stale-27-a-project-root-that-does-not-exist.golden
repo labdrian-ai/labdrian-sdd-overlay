@@ -1,0 +1,5 @@
+args: skills-stale --project-root <project>/absent --project skillsgolden
+exit: 2
+--- stdout ---
+--- stderr ---
+longterm-mem: skills-stale: inspect project root: stat <project>/absent: no such file or directory

@@ -1,0 +1,5 @@
+args: skills-stale --project-root <project>
+exit: 2
+--- stdout ---
+--- stderr ---
+longterm-mem: skills-stale: --project is required when the project root cannot be resolved: projectid: directory is not inside a git repository: <project>

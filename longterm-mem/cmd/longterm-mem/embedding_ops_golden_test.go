@@ -39,12 +39,14 @@ import (
 // World 14 (a state directory nobody can name) was re-recorded on the owner's decision of 2026-10-12: `status`
 // refuses with exit 8 and `doctor` fails the two checks that read the index, saying the directory could not be
 // resolved, where both had looked in the working directory. It is the only world whose recording changed for a
-// change of behavior; worlds 05, 08 and 13 changed only in the words of the libraries (libraryErrorText).
+// change of behavior; worlds 05, 08 and 13 changed only in the words of the libraries (libraryError).
 
 // opsGoldenCase is one world and the commands run in it.
 type opsGoldenCase struct {
 	name  string
 	setup func(t *testing.T, w *retrievalWorld)
+	// masks are the words of the libraries the world prints, which its golden pins by placeholder.
+	masks []libraryError
 }
 
 // opsGoldenCommands are the commands run in every world, in this order.
@@ -70,7 +72,7 @@ func opsGoldenCases() []opsGoldenCase {
 			w.buildIndexOfLiveRows(t, func(r vecindex.Row) bool { return r.EngramID != live[0].EngramID },
 				[]vecindex.Row{{EngramID: 9999, Title: "A row since deleted", Content: "gone"}})
 		}},
-		{name: "05-a-manifest-that-is-not-json", setup: func(t *testing.T, w *retrievalWorld) {
+		{name: "05-a-manifest-that-is-not-json", masks: []libraryError{jsonSyntaxError}, setup: func(t *testing.T, w *retrievalWorld) {
 			w.buildIndexOfLiveRows(t, nil, nil)
 			w.writeIndexFile(t, "manifest.json", "{not json")
 		}},
@@ -89,7 +91,7 @@ func opsGoldenCases() []opsGoldenCase {
 			}
 			w.writeIndexFile(t, "manifest.json", strings.Replace(string(data), `"dimension": 3`, `"dimension": 4`, 1))
 		}},
-		{name: "08-an-index-directory-that-is-a-file", setup: func(t *testing.T, w *retrievalWorld) {
+		{name: "08-an-index-directory-that-is-a-file", masks: []libraryError{notADirectoryError}, setup: func(t *testing.T, w *retrievalWorld) {
 			w.writeFile(t, w.embeddingIndexDir(), "not a directory")
 		}},
 		{name: "09-an-index-of-another-project-only", setup: func(t *testing.T, w *retrievalWorld) {
@@ -106,7 +108,7 @@ func opsGoldenCases() []opsGoldenCase {
 		{name: "12-no-index-and-a-backend-without-the-model", setup: func(t *testing.T, w *retrievalWorld) {
 			w.backend.mode.Store(int32(backendLacksTheModel))
 		}},
-		{name: "13-a-complete-index-and-an-engram-database-that-is-not-there", setup: func(t *testing.T, w *retrievalWorld) {
+		{name: "13-a-complete-index-and-an-engram-database-that-is-not-there", masks: []libraryError{sqliteOpenError}, setup: func(t *testing.T, w *retrievalWorld) {
 			w.buildIndexOfLiveRows(t, nil, nil)
 			t.Setenv(engramDBEnvVar, filepath.Join(w.home, "absent", "engram.db"))
 		}},
@@ -193,39 +195,93 @@ func putPython3OnPath(t *testing.T) {
 	t.Setenv("PATH", dir)
 }
 
-// libraryErrorText is the words of errors that the program prints but does not write: the JSON parser's message
-// for a manifest it cannot parse, the SQLite driver's for a database it cannot open, and the operating system's
-// for a path through a file. They are the toolchain's, the driver's and the platform's to change, so the goldens
-// of this set pin the sentence the program builds around them and not their wording (a golden that failed on a
-// new Go release or driver would say nothing about the program).
-var libraryErrorText = []struct {
+// libraryError is the words of an error that the program prints but does not write, and the placeholder the
+// goldens pin in their place. The words are the toolchain's, the driver's or the platform's to change, so the
+// goldens of this set pin the sentence the program builds around them and not their wording (a golden that failed
+// on a new Go release or driver would say nothing about the program). The pattern keeps the words that come
+// before them (group 1) because those are the program's: a mask applies where the library's words arrive in the
+// sentence that carries them, and not to the same words in any other.
+type libraryError struct {
 	pattern *regexp.Regexp
 	mask    string
-}{
-	{regexp.MustCompile(`invalid character .+? looking for beginning of object key string`), "<json syntax error>"},
-	{regexp.MustCompile(`unable to open database file \(\d+\)`), "<sqlite open error>"},
-	{regexp.MustCompile(`: not a directory`), ": <not a directory>"},
 }
 
-// maskLibraryErrors replaces the words of libraryErrorText in a rendering, and nothing else.
-func maskLibraryErrors(text string) string {
-	for _, r := range libraryErrorText {
+var (
+	// jsonSyntaxError is the JSON parser's message for a manifest it cannot parse.
+	jsonSyntaxError = libraryError{regexp.MustCompile(`(parse manifest: )invalid character '[^']*' looking for beginning of object key string`), "${1}<json syntax error>"}
+	// sqliteOpenError is the SQLite driver's message for a database it cannot open, as the primary and the
+	// fallback connection each report it.
+	sqliteOpenError = libraryError{regexp.MustCompile(`(open failed[: (]+)unable to open database file \(\d+\)`), "${1}<sqlite open error>"}
+	// notADirectoryError is the operating system's message for a manifest read through a path that has a file in it.
+	notADirectoryError = libraryError{regexp.MustCompile(`(manifest\.json): not a directory`), "${1}: <not a directory>"}
+)
+
+// maskLibraryErrors replaces the words of the given library errors in a rendering, and nothing else: a world
+// names the ones it is about (opsGoldenCase.masks), so no other world, and no other sentence, is masked.
+func maskLibraryErrors(text string, masks ...libraryError) string {
+	for _, r := range masks {
 		text = r.pattern.ReplaceAllString(text, r.mask)
 	}
 	return text
 }
 
 func TestMaskLibraryErrorsMasksTheWordsOfTheLibrariesAndNothingElse(t *testing.T) {
-	got := maskLibraryErrors("parse manifest: invalid character 'n' looking for beginning of object key string)\n" +
-		"engram: connect x: primary open failed (unable to open database file (14)), fallback open failed: unable to open database file (14)\n" +
-		"open /s/index/p/manifest.json: not a directory\n" +
-		"vecindex: index is corrupted: no such file or directory; is a directory\n")
+	got := maskLibraryErrors("parse manifest: invalid character 'n' looking for beginning of object key string)\n"+
+		"engram: connect x: primary open failed (unable to open database file (14)), fallback open failed: unable to open database file (14)\n"+
+		"open /s/index/p/manifest.json: not a directory\n"+
+		"vecindex: index is corrupted: no such file or directory; is a directory\n",
+		jsonSyntaxError, sqliteOpenError, notADirectoryError)
 	want := "parse manifest: <json syntax error>)\n" +
 		"engram: connect x: primary open failed (<sqlite open error>), fallback open failed: <sqlite open error>\n" +
 		"open /s/index/p/manifest.json: <not a directory>\n" +
 		"vecindex: index is corrupted: no such file or directory; is a directory\n"
 	if got != want {
 		t.Errorf("masked:\n%s\nwant:\n%s", got, want)
+	}
+}
+
+// A world masks the words of the libraries it is about and no others: the same words anywhere else in the
+// rendering, or in a world that did not ask for them, are the program's to have changed, and the golden says so.
+func TestMaskLibraryErrorsOnlyMasksWhatTheWorldAskedFor(t *testing.T) {
+	const text = "parse manifest: invalid character 'n' looking for beginning of object key string)\n" +
+		"engram: connect x: primary open failed (unable to open database file (14))\n" +
+		"open /s/index/p/manifest.json: not a directory\n"
+	for _, tc := range []struct {
+		name   string
+		masks  []libraryError
+		masked string
+	}{
+		{"nothing", nil, ""},
+		{"json only", []libraryError{jsonSyntaxError}, "<json syntax error>"},
+		{"sqlite only", []libraryError{sqliteOpenError}, "<sqlite open error>"},
+		{"not a directory only", []libraryError{notADirectoryError}, "<not a directory>"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got := maskLibraryErrors(text, tc.masks...)
+			for _, mask := range []string{"<json syntax error>", "<sqlite open error>", "<not a directory>"} {
+				if has, want := strings.Contains(got, mask), mask == tc.masked; has != want {
+					t.Errorf("%s in the masked text = %v, want %v:\n%s", mask, has, want, got)
+				}
+			}
+		})
+	}
+}
+
+// Each mask is anchored to the sentence the libraries' words arrive in, so the same words in a sentence the
+// program wrote itself are not hidden: a refusal that names a path that "is not a directory", a manifest of
+// another file, or a different parser error.
+func TestMaskLibraryErrorsLeavesTheProgramsOwnSentencesAlone(t *testing.T) {
+	for _, text := range []string{
+		"longterm-mem: skills-stale: --project-root is not a directory: /w/root\n",
+		"open /w/notes.txt: not a directory\n",
+		"parse config: invalid character 'n' looking for beginning of object key string\n",
+		"parse manifest: invalid character 'n' looking for beginning of value\n",
+		"the vault said: unable to open database file (14)\n",
+		"parse manifest: invalid character 'n' and then more before looking for beginning of object key string\n",
+	} {
+		if got := maskLibraryErrors(text, jsonSyntaxError, sqliteOpenError, notADirectoryError); got != text {
+			t.Errorf("masked a sentence of the program's own:\n%q\nbecame\n%q", text, got)
+		}
 	}
 }
 
@@ -247,7 +303,7 @@ func runOpsGoldenCase(t *testing.T, tc opsGoldenCase) (w *retrievalWorld, render
 		fmt.Fprintf(&b, "args: %s\nexit: %d\n--- stdout ---\n%s--- stderr ---\n%s\n", strings.Join(args, " "), code, stdout, stderr)
 	}
 	fmt.Fprintf(&b, "--- state ---\n%s", w.renderState(t))
-	return w, maskLibraryErrors(w.normalise(b.String()))
+	return w, maskLibraryErrors(w.normalise(b.String()), tc.masks...)
 }
 
 func TestEmbeddingOpsGolden(t *testing.T) {

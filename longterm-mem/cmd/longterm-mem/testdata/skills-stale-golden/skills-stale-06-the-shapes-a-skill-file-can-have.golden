@@ -1,0 +1,15 @@
+args: skills-stale --project-root <project> --project skillsgolden
+exit: 0
+--- stdout ---
+longterm-mem: skills-stale: checked <project> for project skillsgolden
+a-no-front-matter candidate:procedural/candidates/repeated-success/a-no-front-matter status:registered
+  UNRESOLVED-COMMAND missing-one
+b-unclosed-front-matter candidate:procedural/candidates/repeated-success/b-unclosed-front-matter status:registered
+  UNRESOLVED-COMMAND missing-two
+c-bom-and-longer-fence candidate:procedural/candidates/repeated-success/c-bom-and-longer-fence status:registered
+  UNRESOLVED-COMMAND missing-three
+d-two-blocks candidate:procedural/candidates/repeated-success/d-two-blocks status:registered
+  UNRESOLVED-COMMAND missing-four
+  UNRESOLVED-COMMAND missing-five
+  Nothing was changed. Review this report before making a separate retirement decision.
+--- stderr ---

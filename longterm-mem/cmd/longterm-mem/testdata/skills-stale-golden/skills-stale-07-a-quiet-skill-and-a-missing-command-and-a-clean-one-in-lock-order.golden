@@ -1,0 +1,11 @@
+args: skills-stale --project-root <project> --project skillsgolden
+exit: 0
+--- stdout ---
+longterm-mem: skills-stale: checked <project> for project skillsgolden
+zeta-quiet candidate:procedural/candidates/repeated-success/zeta-quiet status:registered
+  QUIET since 2000-01-01T00:00:00Z
+mid-both candidate:procedural/candidates/repeated-success/mid-both status:registered
+  QUIET since 2000-01-01T00:00:00Z
+  UNRESOLVED-COMMAND definitely-missing-command
+  Nothing was changed. Review this report before making a separate retirement decision.
+--- stderr ---

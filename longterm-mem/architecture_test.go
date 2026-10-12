@@ -49,6 +49,7 @@ var rings = map[string]archguard.Ring{
 	"internal/register":       archguard.Adapter,
 	"internal/repohistory":    archguard.Adapter,
 	"internal/skillstale":     archguard.Domain,
+	"internal/skillstalefs":   archguard.Adapter,
 	"internal/staleness":      archguard.Domain,
 	"internal/vault":          archguard.Adapter,
 	"internal/vaultfs":        archguard.Adapter,
@@ -84,16 +85,6 @@ var knownDebt = archguard.Debt{
 		"os":                         "L7",
 		"path/filepath.Abs":          "L7",
 		"path/filepath.EvalSymlinks": "L7",
-	},
-
-	// skillstale: pure Detect over its inputs, with the lock, the facts, the
-	// command resolver and the clock supplied by the caller. The repohistory
-	// states it reads become its own facts type.
-	"internal/skillstale": {
-		"internal/repohistory":       "L5",
-		"os":                         "L5",
-		"path/filepath.EvalSymlinks": "L5",
-		"time.Now":                   "L5",
 	},
 
 	// staleness: reads the repository through a RepoEvidence port.

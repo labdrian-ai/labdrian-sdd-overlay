@@ -39,9 +39,9 @@ type StateDirUnresolved interface {
 	StateDirUnresolved()
 }
 
-// stateDirHint is what the checks tell a caller whose state directory could not be resolved, in the words
+// StateDirHint is what the checks tell a caller whose state directory could not be resolved, in the words
 // `index --embeddings` says it with.
-const stateDirHint = "set HOME or LONGTERM_MEM_STATE_DIR"
+const StateDirHint = "set HOME or LONGTERM_MEM_STATE_DIR"
 
 // EmbedModelMissing is what an error from the embedding backend implements when the backend answered but the
 // model the index needs is not pulled (R-070). Doctor finds it with errors.As, however the error is wrapped, and

@@ -118,11 +118,11 @@ func embeddingIndexOf(store *engram.Store, wiring queryWiring) *vecindex.Reposit
 
 // embeddingIndexReader is the embedding index as `status` and `doctor` read it (ops.EmbeddingIndexReader): the
 // repository over the state directory the module keeps its derived state in, with nothing it builds with and no
-// cache, because the process reads an index to report on it and exits. When nothing names the state directory
-// there is nowhere to look, and the reader says so (noStateDirectory) instead of looking in the working
-// directory, which it did until the owner's decision of 2026-10-12.
-func embeddingIndexReader() ops.EmbeddingIndexReader {
-	stateDir := defaultStateDir()
+// cache, because the process reads an index to report on it and exits. The caller resolves the state directory
+// (defaultStateDir) and hands it in: `status` refuses an empty one before it gets here, and `doctor` passes it on.
+// When nothing names the state directory there is nowhere to look, and the reader says so (noStateDirectory)
+// instead of looking in the working directory, which it did until the owner's decision of 2026-10-12.
+func embeddingIndexReader(stateDir string) ops.EmbeddingIndexReader {
 	if stateDir == "" {
 		return noStateDirectory{}
 	}
@@ -134,7 +134,7 @@ func embeddingIndexReader() ops.EmbeddingIndexReader {
 type stateDirUnresolved struct{}
 
 func (stateDirUnresolved) Error() string {
-	return "could not resolve the state directory; set HOME or LONGTERM_MEM_STATE_DIR"
+	return "could not resolve the state directory; " + ops.StateDirHint
 }
 
 func (stateDirUnresolved) StateDirUnresolved() {}

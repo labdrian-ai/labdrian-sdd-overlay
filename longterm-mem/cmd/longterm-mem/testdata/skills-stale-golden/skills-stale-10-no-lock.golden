@@ -1,0 +1,5 @@
+args: skills-stale --project-root <project> --project skillsgolden
+exit: 1
+--- stdout ---
+--- stderr ---
+longterm-mem: skills-stale: skillstale: read .labdrian/procedural-skills.lock.json: open <project>/.labdrian/procedural-skills.lock.json: no such file or directory

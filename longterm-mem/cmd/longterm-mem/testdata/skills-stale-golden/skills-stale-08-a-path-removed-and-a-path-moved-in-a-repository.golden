@@ -1,0 +1,9 @@
+args: skills-stale --project-root <project> --project skillsgolden
+exit: 0
+--- stdout ---
+longterm-mem: skills-stale: checked <project> for project skillsgolden
+history-skill candidate:procedural/candidates/repeated-success/history-skill status:registered
+  REMOVED removed.go (by c2e8dc14cbaaedf525e1748db7d5631de81d69f2)
+  MOVED moved.go -> moved-new.go
+  Nothing was changed. Review this report before making a separate retirement decision.
+--- stderr ---

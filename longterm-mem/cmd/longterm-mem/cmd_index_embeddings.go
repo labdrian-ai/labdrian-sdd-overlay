@@ -58,7 +58,7 @@ type embedConfig struct {
 func (c commands) cmdIndexEmbeddings(project string, cfg embedConfig) int {
 	stateDir := defaultStateDir()
 	if stateDir == "" {
-		fmt.Fprintln(os.Stderr, "longterm-mem: index: could not resolve the state directory; set HOME or LONGTERM_MEM_STATE_DIR")
+		fmt.Fprintf(os.Stderr, "longterm-mem: index: %v\n", stateDirUnresolved{})
 		return exitPathUnresolvable
 	}
 

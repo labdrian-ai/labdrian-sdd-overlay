@@ -1,0 +1,5 @@
+args: skills-stale --project-root <project> --project skillsgolden
+exit: 1
+--- stdout ---
+--- stderr ---
+longterm-mem: skills-stale: skillstale: linked: target ".claude/skills/linked/SKILL.md" resolves outside project root
