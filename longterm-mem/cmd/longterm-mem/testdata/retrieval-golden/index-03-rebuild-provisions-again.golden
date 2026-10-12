@@ -1,0 +1,16 @@
+args: index --project goldenproj --rebuild
+exit: 0
+--- stdout ---
+longterm-mem: index rebuilt
+--- stderr ---
+--- vault ---
+calls:
+setup --no-llm
+prefix --all --no-llm
+bm25 build
+present: .vault-meta/.longterm-mem-provisioned
+present: .vault-meta/bm25/index.json
+present: .vault-meta/chunks/a
+absent: wiki/memory/c-000901.md
+absent: wiki/index.md
+absent: wiki/log.md
