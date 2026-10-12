@@ -136,7 +136,7 @@ func TestDoctor_SaysWhenTheStateDirectoryCouldNotBeResolved(t *testing.T) {
 				t.Fatalf("Doctor: %v", doctorErr)
 			}
 
-			const hint = "set HOME or LONGTERM_MEM_STATE_DIR"
+			const hint = StateDirHint
 			wantPresent := Check{Name: CheckEmbeddingIndexPresent, Status: CheckFailed, Detail: "the state directory could not be resolved, so no embedding index can be looked for; " + hint}
 			wantFresh := Check{Name: CheckEmbeddingIndexFresh, Status: CheckFailed, Detail: "freshness cannot be determined: the state directory could not be resolved; " + hint}
 			if got := checkStatus(t, report.Checks, CheckEmbeddingIndexPresent); got != wantPresent {

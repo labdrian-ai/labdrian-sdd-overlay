@@ -46,7 +46,7 @@ func TestStatusAsJSONRefusesAStateDirectoryNobodyCanName(t *testing.T) {
 // error is (ops.StateDirUnresolved), and does not look anywhere else.
 func TestTheIndexReaderWithoutAStateDirectoryAnswersThatItCouldNotBeResolved(t *testing.T) {
 	withNoStateDirectory(t)
-	reader := embeddingIndexReader()
+	reader := embeddingIndexReader("")
 
 	_, builtAtErr := reader.EmbeddingIndexBuiltAt("p")
 	_, idsErr := reader.IndexedEngramIDs("p")

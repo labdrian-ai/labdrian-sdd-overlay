@@ -42,8 +42,13 @@ func cmdStatus(args []string) int {
 	}
 
 	// Nothing names the directory the embedding index is kept in: there is nowhere to report on, and nothing
-	// was attempted. It is the failure `index --embeddings` gives for the same case, with the same code.
-	if defaultStateDir() == "" {
+	// was attempted. It is the failure `index --embeddings` gives for the same case, with the same code. The
+	// directory is resolved here once and handed to the reader, so the refusal and the reader cannot disagree
+	// about it. `status` refuses because a status report with no place to look is no report; `doctor`, whose job
+	// is to say what is wrong, hands the reader the same empty directory and reports it as two failed checks
+	// (noStateDirectory answers for it), which is why the reader still has that case.
+	stateDir := defaultStateDir()
+	if stateDir == "" {
 		fmt.Fprintf(os.Stderr, "longterm-mem: status: %v\n", stateDirUnresolved{})
 		return exitPathUnresolvable
 	}
@@ -51,7 +56,7 @@ func cmdStatus(args []string) int {
 	deps := ops.StatusDeps{
 		VaultRoot:        vaultRoot,
 		SyncState:        openVault(vaultRoot),
-		EmbeddingIndex:   embeddingIndexReader(),
+		EmbeddingIndex:   embeddingIndexReader(stateDir),
 		VaultProvisioned: vault.Provisioned,
 		EngramReachable: func(ctx context.Context) (bool, string) {
 			store, err := engram.Open(os.Getenv(engramDBEnvVar))
