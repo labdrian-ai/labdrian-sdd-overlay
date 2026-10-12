@@ -63,8 +63,7 @@ func (c commands) cmdIndex(args []string) int {
 		return vaultExitCode(err)
 	}
 
-	runner := &vault.Runner{Root: vaultRoot}
-	if err := vault.Rebuild(context.Background(), runner, *force); err != nil {
+	if err := (vault.IndexRebuilder{Root: vaultRoot}).Rebuild(context.Background(), *force); err != nil {
 		fmt.Fprintf(os.Stderr, "longterm-mem: index: %v\n", err)
 		return exitVaultSubprocessFailed
 	}

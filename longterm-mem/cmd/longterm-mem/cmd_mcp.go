@@ -128,10 +128,7 @@ func (c commands) mcpPromote(store *engram.Store) func(ctx context.Context, proj
 		if err != nil {
 			return mcpserver.PromoteOutcome{}, err
 		}
-		runner := &vault.Runner{Root: vaultRoot}
-		rebuildErr := reindexAfterPromote(ctx, result, func(ctx context.Context) error {
-			return vault.Rebuild(ctx, runner, false)
-		})
+		rebuildErr := reindexAfterPromote(ctx, result, vault.IndexRebuilder{Root: vaultRoot})
 		return mcpserver.PromoteOutcome{Result: result, IndexRebuildErr: rebuildErr}, nil
 	}
 }

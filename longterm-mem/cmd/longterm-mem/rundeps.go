@@ -195,11 +195,11 @@ func runPromote(ctx context.Context, store *engram.Store, vaultRoot string, cloc
 // durable by the time the rebuild runs, so failing the call would tell the
 // caller that a page it can see on disk was never written. It is surfaced
 // separately instead (mcpserver.PromoteOutcome.IndexRebuildErr).
-func reindexAfterPromote(ctx context.Context, result promote.Result, rebuild func(context.Context) error) error {
+func reindexAfterPromote(ctx context.Context, result promote.Result, rebuilder promote.IndexRebuilder) error {
 	if !promotionWrotePage(result) {
 		return nil
 	}
-	return rebuild(ctx)
+	return rebuilder.RebuildIndex(ctx)
 }
 
 // promotionWrotePage reports whether result describes a promotion that put
