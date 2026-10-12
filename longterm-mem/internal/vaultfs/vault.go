@@ -1,6 +1,8 @@
 // Package vaultfs is the file system adapter of a vault: it reads and writes the files longterm-mem keeps
-// there, behind the ports the consumers own (the precedence store, the address map and the pages today; the
-// sync state, log and index as the last L3 slice moves behind theirs).
+// there, behind the ports the consumers own: the precedence store, the address map, the pages, the catalog, the
+// log, the record of the last sync and the question of what is at the vault root. It is the one place the
+// promotion and the diagnostics' vault files are read and written from; the vault's own index scripts
+// (internal/vault) keep their markers and their sentinel, the files of the scripts it runs, and nothing else.
 //
 // The vault is the user's own Obsidian vault, shared with tools that are not this module, so what this package
 // writes there is written the way a file of someone else is: replaced whole and atomically, its mode kept
@@ -11,6 +13,7 @@ package vaultfs
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultlayout"
 )
@@ -40,6 +43,17 @@ type Option func(*Vault)
 // composition root to ask for, so the text an operator reads is decided where the commands are.
 func WithErrorPrefix(prefix string) Option {
 	return func(v *Vault) { v.errorPrefix = prefix }
+}
+
+// RootIsDirectory reports whether the root of the vault, following a link, is a directory. A root that cannot be
+// examined (it is not there, it is a link to nothing, a path of it goes through a file) is the file system's own
+// error, naming the root and carrying no prefix, and no answer.
+func (v *Vault) RootIsDirectory() (bool, error) {
+	info, err := os.Stat(v.layout.Root)
+	if err != nil {
+		return false, err
+	}
+	return info.IsDir(), nil
 }
 
 // fail is err with the Vault's error prefix in front, if it has one.

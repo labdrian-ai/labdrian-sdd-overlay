@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultlayout"
 )
 
 // TestWriteProvisionedSentinel_SurvivesAStaleTempPath: the sentinel's whole
@@ -19,7 +21,7 @@ import (
 // whatever the mode.
 func TestWriteProvisionedSentinel_SurvivesAStaleTempPath(t *testing.T) {
 	root := t.TempDir()
-	sentinelPath := filepath.Join(root, provisionedSentinel)
+	sentinelPath := filepath.Join(root, vaultlayout.ProvisionedSentinel)
 	if err := os.MkdirAll(filepath.Dir(sentinelPath), 0o755); err != nil {
 		t.Fatalf("mkdir sentinel parent: %v", err)
 	}
@@ -45,13 +47,13 @@ func TestWriteProvisionedSentinel_LeavesNoTempFileBehind(t *testing.T) {
 		t.Fatalf("writeProvisionedSentinel: %v", err)
 	}
 
-	metaDir := filepath.Dir(filepath.Join(root, provisionedSentinel))
+	metaDir := filepath.Dir(filepath.Join(root, vaultlayout.ProvisionedSentinel))
 	entries, err := os.ReadDir(metaDir)
 	if err != nil {
 		t.Fatalf("read %s: %v", metaDir, err)
 	}
 	for _, e := range entries {
-		if e.Name() == filepath.Base(provisionedSentinel) {
+		if e.Name() == filepath.Base(vaultlayout.ProvisionedSentinel) {
 			continue
 		}
 		t.Fatalf("writeProvisionedSentinel left %s behind in %s", e.Name(), metaDir)

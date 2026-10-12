@@ -36,6 +36,20 @@ func WriteSyncState(t *testing.T, vaultRoot, completedAt string) {
 	}
 }
 
+// RenderPage is the minimal promoted page WritePromotedPage writes, without writing it: what promote.EmitPage
+// makes of the fixture's observation under address and title at Instant. A test that needs the page's
+// frontmatter and body (the hashes the precedence sidecar records for it) takes them from here, and does not
+// split the file it wrote.
+func RenderPage(t *testing.T, address, title string) promote.Page {
+	t.Helper()
+	obs := memory.Observation{ID: 1, Type: "decision", Title: title, Content: "Body content.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
+	page, err := promote.EmitPage(obs, address, nil, Instant())
+	if err != nil {
+		t.Fatalf("EmitPage: %v", err)
+	}
+	return page
+}
+
 // WritePromotedPage renders a minimal promoted page via promote.EmitPage
 // and writes it to vaultRoot/wiki/memory/<address>.md, mirroring
 // internal/promote's own seedPromotedPage/writePromotedPage convention --
@@ -44,11 +58,7 @@ func WriteSyncState(t *testing.T, vaultRoot, completedAt string) {
 // production).
 func WritePromotedPage(t *testing.T, vaultRoot, address, title string) promote.Page {
 	t.Helper()
-	obs := memory.Observation{ID: 1, Type: "decision", Title: title, Content: "Body content.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
-	page, err := promote.EmitPage(obs, address, nil, Instant())
-	if err != nil {
-		t.Fatalf("EmitPage: %v", err)
-	}
+	page := RenderPage(t, address, title)
 	full := filepath.Join(vaultRoot, page.Path)
 	if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
 		t.Fatalf("mkdir %s: %v", filepath.Dir(full), err)
@@ -115,10 +125,10 @@ func sha256Hex(text string) string {
 // exercises the exact writers Writer.Promote itself calls (task 7.10).
 func RegisterPage(t *testing.T, vaultRoot, address, title string) {
 	t.Helper()
-	if err := promote.RegisterIndex(filepath.Join(vaultRoot, "wiki", "index.md"), address, title); err != nil {
+	if err := promote.RegisterIndex(vaultfs.New(vaultRoot), address, title); err != nil {
 		t.Fatalf("RegisterIndex: %v", err)
 	}
-	if err := promote.RegisterLog(filepath.Join(vaultRoot, "wiki", "log.md"), address, title, Instant()); err != nil {
+	if err := promote.RegisterLog(vaultfs.New(vaultRoot), address, title, Instant()); err != nil {
 		t.Fatalf("RegisterLog: %v", err)
 	}
 }

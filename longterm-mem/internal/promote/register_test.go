@@ -14,11 +14,11 @@ func TestRegister_NewPageDiscoverableAndLogged(t *testing.T) {
 	indexPath := filepath.Join(vaultRoot, "wiki", "index.md")
 	logPath := filepath.Join(vaultRoot, "wiki", "log.md")
 
-	if err := RegisterIndex(indexPath, "c-000042", "Widget Decision"); err != nil {
+	if err := RegisterIndex(diskFile{indexPath}, "c-000042", "Widget Decision"); err != nil {
 		t.Fatalf("RegisterIndex: %v", err)
 	}
 	at := time.Date(2026, 8, 31, 0, 0, 0, 0, time.UTC)
-	if err := RegisterLog(logPath, "c-000042", "Widget Decision", at); err != nil {
+	if err := RegisterLog(diskFile{logPath}, "c-000042", "Widget Decision", at); err != nil {
 		t.Fatalf("RegisterLog: %v", err)
 	}
 
@@ -46,13 +46,13 @@ func TestRegisterIndex_IdempotentAndSortedByAddress(t *testing.T) {
 	vaultRoot := t.TempDir()
 	indexPath := filepath.Join(vaultRoot, "wiki", "index.md")
 
-	if err := RegisterIndex(indexPath, "c-000099", "Second"); err != nil {
+	if err := RegisterIndex(diskFile{indexPath}, "c-000099", "Second"); err != nil {
 		t.Fatalf("RegisterIndex (c-000099): %v", err)
 	}
-	if err := RegisterIndex(indexPath, "c-000042", "First"); err != nil {
+	if err := RegisterIndex(diskFile{indexPath}, "c-000042", "First"); err != nil {
 		t.Fatalf("RegisterIndex (c-000042): %v", err)
 	}
-	if err := RegisterIndex(indexPath, "c-000099", "Second Retitled"); err != nil {
+	if err := RegisterIndex(diskFile{indexPath}, "c-000099", "Second Retitled"); err != nil {
 		t.Fatalf("RegisterIndex (c-000099 retitle): %v", err)
 	}
 
@@ -89,10 +89,10 @@ func TestRegisterLog_NewestEntryInsertedBeforeExisting(t *testing.T) {
 	older := time.Date(2026, 8, 30, 0, 0, 0, 0, time.UTC)
 	newer := time.Date(2026, 8, 31, 0, 0, 0, 0, time.UTC)
 
-	if err := RegisterLog(logPath, "c-000001", "Older Entry", older); err != nil {
+	if err := RegisterLog(diskFile{logPath}, "c-000001", "Older Entry", older); err != nil {
 		t.Fatalf("RegisterLog (older): %v", err)
 	}
-	if err := RegisterLog(logPath, "c-000002", "Newer Entry", newer); err != nil {
+	if err := RegisterLog(diskFile{logPath}, "c-000002", "Newer Entry", newer); err != nil {
 		t.Fatalf("RegisterLog (newer): %v", err)
 	}
 
@@ -122,10 +122,10 @@ func TestRegisterLog_OutOfOrderCallsStaySortedByTimestamp(t *testing.T) {
 	newer := time.Date(2026, 8, 31, 0, 0, 0, 0, time.UTC)
 	older := time.Date(2026, 8, 30, 0, 0, 0, 0, time.UTC)
 
-	if err := RegisterLog(logPath, "c-000002", "Newer Entry", newer); err != nil {
+	if err := RegisterLog(diskFile{logPath}, "c-000002", "Newer Entry", newer); err != nil {
 		t.Fatalf("RegisterLog (newer, first call): %v", err)
 	}
-	if err := RegisterLog(logPath, "c-000001", "Older Entry", older); err != nil {
+	if err := RegisterLog(diskFile{logPath}, "c-000001", "Older Entry", older); err != nil {
 		t.Fatalf("RegisterLog (older, second call): %v", err)
 	}
 
@@ -160,7 +160,7 @@ func TestRegisterIndex_MalformedMarkerBlockRefusesToDropEntries(t *testing.T) {
 		t.Fatalf("write corrupted index.md: %v", err)
 	}
 
-	if err := RegisterIndex(indexPath, "c-000003", "Third"); err == nil {
+	if err := RegisterIndex(diskFile{indexPath}, "c-000003", "Third"); err == nil {
 		t.Fatal("RegisterIndex on a malformed marker block = nil error, want a refusal that names the risk of dropping entries")
 	}
 
@@ -188,10 +188,10 @@ func TestRegisterIndex_PreservesHandWrittenContentOutsideBlock(t *testing.T) {
 		t.Fatalf("write index.md: %v", err)
 	}
 
-	if err := RegisterIndex(indexPath, "c-000001", "First"); err != nil {
+	if err := RegisterIndex(diskFile{indexPath}, "c-000001", "First"); err != nil {
 		t.Fatalf("RegisterIndex (first): %v", err)
 	}
-	if err := RegisterIndex(indexPath, "c-000002", "Second"); err != nil {
+	if err := RegisterIndex(diskFile{indexPath}, "c-000002", "Second"); err != nil {
 		t.Fatalf("RegisterIndex (second): %v", err)
 	}
 
@@ -217,12 +217,12 @@ func TestRegisterIndex_TitleWithSpecialCharsRoundTrips(t *testing.T) {
 	vaultRoot := t.TempDir()
 	indexPath := filepath.Join(vaultRoot, "wiki", "index.md")
 
-	if err := RegisterIndex(indexPath, "c-000001", "Weird | Pipe]]Bracket"); err != nil {
+	if err := RegisterIndex(diskFile{indexPath}, "c-000001", "Weird | Pipe]]Bracket"); err != nil {
 		t.Fatalf("RegisterIndex: %v", err)
 	}
 	// The second call forces a re-parse of the first entry's rendered
 	// line -- exactly where a truncating parser loses the tail.
-	if err := RegisterIndex(indexPath, "c-000002", "Second"); err != nil {
+	if err := RegisterIndex(diskFile{indexPath}, "c-000002", "Second"); err != nil {
 		t.Fatalf("RegisterIndex (second, forces a re-parse of the first entry): %v", err)
 	}
 

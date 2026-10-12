@@ -2,18 +2,11 @@ package promote
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"path/filepath"
-	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultlayout"
 )
-
-// syncStateSchema is the sync-state record's schema version.
-const syncStateSchema = 1
 
 // Deps are Sync's (and Propagate's) dependencies, mirroring query.Deps's
 // function-seam convention: Memory is the port the package owns (a fake or
@@ -92,6 +85,9 @@ func Sync(ctx context.Context, deps Deps, project string) (SyncReport, error) {
 	if err := deps.Writer.checkPorts(); err != nil {
 		return SyncReport{}, fmt.Errorf("promote: sync: %w", err)
 	}
+	if err := deps.Writer.checkSyncState(); err != nil {
+		return SyncReport{}, fmt.Errorf("promote: sync: %w", err)
+	}
 	observations, err := deps.Memory.ListObservations(project)
 	if err != nil {
 		return SyncReport{}, fmt.Errorf("promote: sync: list observations for %q: %w", project, err)
@@ -131,7 +127,7 @@ func Sync(ctx context.Context, deps Deps, project string) (SyncReport, error) {
 		}
 	}
 
-	if err := writeSyncState(deps.Writer.VaultRoot, utc(deps.Writer.Clock)); err != nil {
+	if err := deps.Writer.SyncState.RecordSyncCompleted(utc(deps.Writer.Clock)); err != nil {
 		return report, fmt.Errorf("promote: sync: %w", err)
 	}
 	return report, failureError("sync", report.Failed)
@@ -257,7 +253,8 @@ func mergeWithheld(first, second []int64) []int64 {
 	for _, id := range first {
 		seen[id] = true
 	}
-	merged := first
+	// A copy: appending to first itself could write into its backing array, which is the caller's.
+	merged := append([]int64(nil), first...)
 	for _, id := range second {
 		if seen[id] {
 			continue
@@ -288,7 +285,8 @@ func mergeFailures(first, second []SyncFailure) []SyncFailure {
 	for _, f := range first {
 		seen[key(f)] = true
 	}
-	merged := first
+	// A copy, as in mergeWithheld: the caller's backing array is not this function's to write into.
+	merged := append([]SyncFailure(nil), first...)
 	for _, f := range second {
 		if seen[key(f)] {
 			continue
@@ -313,23 +311,4 @@ func failureError(op string, failed []SyncFailure) error {
 		return fmt.Errorf("promote: %s: observation %d: %w", op, first.ObservationID, first.Err)
 	}
 	return fmt.Errorf("promote: %s: %d observations failed, first is %d: %w", op, len(failed), first.ObservationID, first.Err)
-}
-
-// syncStateRecord is vaultlayout.SyncStateFile's decoded/encoded form.
-type syncStateRecord struct {
-	Schema              int    `json:"schema"`
-	LastSyncCompletedAt string `json:"last_sync_completed_at"`
-}
-
-// writeSyncState durably records vaultRoot's sync-state file (R-031, via
-// address.go's writeFileAtomic), stamped with the instant the run completed,
-// which the caller reads from the Writer's Clock in UTC.
-func writeSyncState(vaultRoot string, completedAt time.Time) error {
-	record := syncStateRecord{Schema: syncStateSchema, LastSyncCompletedAt: completedAt.Format(time.RFC3339)}
-	data, err := json.MarshalIndent(record, "", "  ")
-	if err != nil {
-		return fmt.Errorf("marshal sync-state record: %w", err)
-	}
-	full := filepath.Join(vaultRoot, vaultlayout.SyncStateFile)
-	return writeFileAtomic(full, append(data, '\n'))
 }

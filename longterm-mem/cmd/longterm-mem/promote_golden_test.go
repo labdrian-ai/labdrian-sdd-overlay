@@ -52,7 +52,7 @@ var promoteGoldenClock = fixedClock{at: time.Date(2026, 10, 10, 12, 0, 0, 0, tim
 // promoteGoldenSentinel is the content of the provisioned sentinel in the rendering of the vault: an
 // instant the vault writes from the wall clock, not from the clock the commands hold. It is the one
 // instant of the output that is not the clock's, and it is masked by where it is, never by its value.
-var promoteGoldenSentinel = regexp.MustCompile(`(=== \.vault-meta/\.longterm-mem-provisioned[^\n]*===\n)\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z`)
+var promoteGoldenSentinel = regexp.MustCompile(`(=== [^\n]*\.longterm-mem-provisioned[^\n]*===\n)\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z`)
 
 // runPromoteGolden runs one command of a golden scenario in process, composed with the fixed clock, and
 // returns its exit code, stdout and stderr.
@@ -100,6 +100,53 @@ func TestPromoteGoldenNormalise_MasksThePathsAndTheSentinelAndNothingElse(t *tes
 	want := "<vault> <home> <engram-db>\n=== .vault-meta/.longterm-mem-provisioned (-rw-r--r--) ===\n<now>\n=== .vault-meta/sync-state.json ===\n{\"last_sync_completed_at\": \"" + fixed + "\"}\ncreated: 2026-10-10\nstale: 2026-07-31 2026-07-31T10:00:00Z\n"
 	if got != want {
 		t.Errorf("normalise =\n%s\nwant\n%s", got, want)
+	}
+}
+
+// The sentinel is masked wherever the rendering finds it, not only under .vault-meta: a .vault-meta that is a
+// link to another directory puts the file under that one, and its instant is the wall clock's all the same.
+func TestPromoteGoldenNormalise_MasksTheSentinelWhereverTheRenderingFindsIt(t *testing.T) {
+	w := &promoteGoldenWorld{vaultRoot: "/vault", home: "/home", dbPath: "/db"}
+
+	got := w.normalise("=== notes/meta/.longterm-mem-provisioned (-rw-r--r--) ===\n2031-01-02T03:04:05Z\n=== notes/meta/other ===\n2031-01-02T03:04:05Z\n")
+	want := "=== notes/meta/.longterm-mem-provisioned (-rw-r--r--) ===\n<now>\n=== notes/meta/other ===\n2031-01-02T03:04:05Z\n"
+	if got != want {
+		t.Errorf("normalise =\n%s\nwant\n%s", got, want)
+	}
+}
+
+// instantInOutput finds an instant, as the vault and the commands write one, anywhere in a rendering.
+var instantInOutput = regexp.MustCompile(`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z`)
+
+// The mask is proved on the real rendering and not only on the synthetic header of the test above: a sync
+// runs in a world, both renderings of the vault the golden tests use (the tree, and the tree with modes) are
+// taken, and the mask has to find the sentinel's header in each of them. Once it has, no instant is left in
+// either but the clock's, so an instant that went unmasked because the header took another shape would fail
+// here and not intermittently in a golden comparison.
+func TestPromoteGoldenMaskFindsTheSentinelInTheRealRenderings(t *testing.T) {
+	w := enterClockWorld(t)
+	if code, stdout, stderr := runPromoteGolden(t, []string{"sync", "--project", promoteGoldenProject}); code != exitOK {
+		t.Fatalf("sync exited %d\nstdout: %s\nstderr: %s", code, stdout, stderr)
+	}
+	clockInstant := promoteGoldenClock.at.Format(time.RFC3339)
+
+	for name, rendering := range map[string]string{
+		"the tree":                renderPromoteGoldenTree(t, w.vaultRoot),
+		"the tree with its modes": renderVaultWithModes(t, w.vaultRoot),
+	} {
+		if !instantInOutput.MatchString(promoteGoldenSentinel.FindString(rendering)) {
+			t.Errorf("the mask does not find the sentinel with its instant in %s:\n%s", name, rendering)
+			continue
+		}
+		masked := w.normalise(rendering)
+		if !strings.Contains(masked, "<now>") {
+			t.Errorf("the sentinel is not masked in %s:\n%s", name, masked)
+		}
+		for _, instant := range instantInOutput.FindAllString(masked, -1) {
+			if instant != clockInstant {
+				t.Errorf("%s keeps the instant %s after the mask, which is not the clock's (%s)", name, instant, clockInstant)
+			}
+		}
 	}
 }
 

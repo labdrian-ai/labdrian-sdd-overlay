@@ -48,10 +48,12 @@ func testEmbedClient(cfg embed.Config) (*embed.Client, error) {
 	return embed.NewClient(cfg)
 }
 
-// run is what the tests call to run a subcommand: the commands, wired to testEmbedClient and the wall clock. The program's own
-// wiring, productionCommands, is built by main and by nothing a test runs.
+// run is what the tests call to run a subcommand: the commands, wired to testEmbedClient and to a clock
+// fixed at fixtureInstant, so that no test depends on the day it runs. A test that needs another instant
+// builds its commands with a fixedClock of its own (promoteGoldenClock, for the golden files); the program's
+// own wiring, productionCommands, which holds the wall clock, is built by main and by nothing a test runs.
 func run(args []string) int {
-	return commands{newEmbedClient: testEmbedClient, clock: utcClock{}}.run(args)
+	return commands{newEmbedClient: testEmbedClient, clock: fixedClock{at: fixtureInstant}}.run(args)
 }
 
 // A doctor run by a test probes the embedding backend the test binary gave it, not the default endpoint:

@@ -40,6 +40,9 @@ type pagesScenario struct {
 	prepare [][]string
 	// seed leaves the world in the state the scenario is about, after prepare.
 	seed func(t *testing.T, w *promoteGoldenWorld)
+	// vaultAs, when set, is the path the commands are told the vault is at, in place of its root: a link to
+	// it, a path that is not there. What the golden file records of the vault is still the vault as built.
+	vaultAs func(t *testing.T, w *promoteGoldenWorld) string
 	// commands are what the golden file records.
 	commands [][]string
 }
@@ -225,24 +228,43 @@ func pagesScenarios() []pagesScenario {
 			symlinkOrSkip(t, "../../notes/absent.md", pageOf(w, "c-000999"))
 			revise(t, w)
 		}, commands: [][]string{promote, {"sync", "--project", promoteGoldenProject, "--dry-run"}, sync}},
-		// Every observation sync promotes has its page, and one more page cannot be read: the promotion pass
-		// leaves nothing alone, and the propagation pass still cannot tell the observations that have no page
-		// (the ones sync never promotes) from the unreadable one's, so the run is the same refusal.
+		// Every observation sync promotes has its page, and one more page cannot be read. The promotion pass
+		// leaves no observation alone, so the run has no "nothing was written for them" warning. The propagation
+		// pass still cannot tell the observations that have no page (the ones sync never promotes, 3 and 4) from
+		// the unreadable one's, so it leaves those alone, "nothing was patched for them", and that warning is
+		// what makes the run exit 6. The golden holds the whole vault: the pages, the sidecar, the catalog and
+		// the log show that nothing was written for 3 and 4.
 		{name: "25-a-page-that-cannot-be-read-beside-the-pages-of-every-promoted-observation", prepare: [][]string{sync}, seed: func(t *testing.T, w *promoteGoldenWorld) {
 			symlinkOrSkip(t, "../../notes/absent.md", pageOf(w, "c-000999"))
 		}, commands: [][]string{sync}},
+		// An observation whose page cannot be told apart is not the only thing a run can meet. Here a page claims
+		// observation 1 and names no address, so its promoted state cannot be read (a failure), and a page that
+		// cannot be read withholds observation 2: the failure outranks the observations left alone, in the dry
+		// run as in the run, which exit 1 where a run with only the withheld ones exits 6 (scenarios 24 and 25).
+		{name: "26-a-failure-beside-an-observation-left-alone", seed: func(t *testing.T, w *promoteGoldenWorld) {
+			writeVaultFile(t, w, "wiki/memory/c-000500.md", withoutAddress)
+			symlinkOrSkip(t, "../../notes/absent.md", pageOf(w, "c-000999"))
+		}, commands: [][]string{{"sync", "--project", promoteGoldenProject, "--dry-run"}, sync}},
 	}
 }
 
 func TestPromotePagesGolden(t *testing.T) {
+	runGoldenScenarios(t, "pages-golden", pagesScenarios())
+}
+
+// runGoldenScenarios runs each scenario in a world of its own and compares what the commands printed and the
+// vault they left with the golden file of the scenario under testdata/<goldenSubdir>. The sets of golden files
+// that hold the commands to the vault's files (the pages, the catalog and the log, the sync state) share it.
+func runGoldenScenarios(t *testing.T, goldenSubdir string, scenarios []pagesScenario) {
+	t.Helper()
 	if !vault.PrerequisitePresent("python3") {
 		t.Skip("python3 is not on PATH: the vault's index rebuild runs its scripts under it")
 	}
-	goldenDir, err := filepath.Abs(filepath.Join("testdata", "pages-golden"))
+	goldenDir, err := filepath.Abs(filepath.Join("testdata", goldenSubdir))
 	if err != nil {
 		t.Fatalf("resolve the golden directory: %v", err)
 	}
-	for _, scenario := range pagesScenarios() {
+	for _, scenario := range scenarios {
 		t.Run(scenario.name, func(t *testing.T) {
 			fixedUmask(t)
 			w := newPromoteGoldenWorld(t)
@@ -259,6 +281,9 @@ func TestPromotePagesGolden(t *testing.T) {
 			}
 			if scenario.seed != nil {
 				scenario.seed(t, w)
+			}
+			if scenario.vaultAs != nil {
+				t.Setenv("LONGTERM_MEM_VAULT", scenario.vaultAs(t, w))
 			}
 
 			var out strings.Builder

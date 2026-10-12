@@ -124,6 +124,9 @@ func TestDoctor(t *testing.T) {
 		stateDir, liveIDs := newHealthyEmbeddingDeps(t)
 		return DoctorDeps{
 			VaultRoot:           vaultRoot,
+			Root:                vaultfs.New(vaultRoot),
+			Index:               vaultfs.New(vaultRoot),
+			Log:                 vaultfs.New(vaultRoot),
 			Precedence:          vaultfs.New(vaultRoot),
 			Pages:               vaultfs.New(vaultRoot),
 			AddressMap:          vaultfs.New(vaultRoot),
@@ -141,6 +144,7 @@ func TestDoctor(t *testing.T) {
 		badRoot := filepath.Join(vaultRoot, "does-not-exist")
 		deps.VaultRoot = badRoot
 		deps.Precedence = vaultfs.New(badRoot)
+		deps.Root = vaultfs.New(badRoot)
 
 		report, err := Doctor(context.Background(), deps, "labdrian-sdd-overlay")
 		if err != nil {
@@ -463,6 +467,9 @@ func TestDoctor_UnreadablePageDoesNotHideEveryOtherPage(t *testing.T) {
 
 	deps := DoctorDeps{
 		VaultRoot:             vaultRoot,
+		Root:                  vaultfs.New(vaultRoot),
+		Index:                 vaultfs.New(vaultRoot),
+		Log:                   vaultfs.New(vaultRoot),
 		Precedence:            vaultfs.New(vaultRoot),
 		Pages:                 vaultfs.New(vaultRoot),
 		AddressMap:            vaultfs.New(vaultRoot),

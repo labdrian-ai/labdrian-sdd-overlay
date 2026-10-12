@@ -8,16 +8,14 @@ import (
 	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/durable"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultlayout"
 )
 
+// The markers Provisioned checks are a vault's BM25 index and its chunked pages
+// (vaultlayout.Bm25IndexFile and vaultlayout.ChunksDir): a vault is provisioned once
+// bin/setup-retrieve.sh has produced them (D12, exploration #3121's documented .vault-meta/
+// contents). Where they are is the layout's to say, as is the sentinel Provisioned reads first.
 const (
-	// bm25IndexFile and chunksDir are the two markers Provisioned checks:
-	// a vault is provisioned once bin/setup-retrieve.sh has produced a
-	// BM25 index and chunked pages (D12, exploration #3121's documented
-	// .vault-meta/ contents).
-	bm25IndexFile = ".vault-meta/bm25/index.json"
-	chunksDir     = ".vault-meta/chunks"
-
 	// setupScript provisions a never-indexed vault (D12), run once before
 	// the first refresh. It carries its own shebang and exec bit, so it
 	// runs directly (Runner.Run) like any other shell entrypoint.
@@ -31,32 +29,29 @@ const (
 	contextualPrefixScript = "scripts/contextual-prefix.py"
 	bm25IndexScript        = "scripts/bm25-index.py"
 	rebuildInterpreter     = "python3"
-
-	// provisionedSentinel marks a provision step that ran to completion.
-	// Rebuild writes it only after setupScript exits 0, right before the
-	// refresh steps run. Its absence — even with bm25IndexFile and
-	// chunksDir present — means provisioning was interrupted (SIGKILL/OOM,
-	// disk-full, operator Ctrl-C) partway through, so Provisioned reports
-	// false and the next Rebuild re-runs setupScript instead of silently
-	// refreshing a half-built vault.
-	provisionedSentinel = ".vault-meta/.longterm-mem-provisioned"
 )
 
 // Provisioned reports whether vaultRoot has already been fully indexed:
-// provisionedSentinel exists (the provision step ran to completion), plus
-// bm25IndexFile exists and chunksDir contains at least one entry (D12). The
+// vaultlayout.ProvisionedSentinel exists (the provision step ran to completion), plus
+// vaultlayout.Bm25IndexFile exists and vaultlayout.ChunksDir contains at least one entry (D12). The
 // sentinel check comes first so a provision step interrupted after leaving
 // those markers but before finishing never reads as provisioned. A vault
 // failing any check has never been (fully) indexed — Rebuild provisions it
 // first (R-005).
+//
+// Rebuild writes the sentinel only after setupScript exits 0, right before the refresh steps run. Its
+// absence — even with the index and the chunks present — means provisioning was interrupted
+// (SIGKILL/OOM, disk-full, operator Ctrl-C) partway through, so Provisioned reports false and the next
+// Rebuild re-runs setupScript instead of silently refreshing a half-built vault.
 func Provisioned(vaultRoot string) bool {
-	if _, err := os.Stat(filepath.Join(vaultRoot, provisionedSentinel)); err != nil {
+	layout := vaultlayout.Layout{Root: vaultRoot}
+	if _, err := os.Stat(layout.Path(vaultlayout.ProvisionedSentinel)); err != nil {
 		return false
 	}
-	if _, err := os.Stat(filepath.Join(vaultRoot, bm25IndexFile)); err != nil {
+	if _, err := os.Stat(layout.Path(vaultlayout.Bm25IndexFile)); err != nil {
 		return false
 	}
-	entries, err := os.ReadDir(filepath.Join(vaultRoot, chunksDir))
+	entries, err := os.ReadDir(layout.Path(vaultlayout.ChunksDir))
 	if err != nil {
 		return false
 	}
@@ -71,7 +66,7 @@ func Provisioned(vaultRoot string) bool {
 // that never claims success (R-025).
 func Rebuild(ctx context.Context, runner *Runner, force bool) error {
 	if force {
-		if err := os.Remove(filepath.Join(runner.Root, provisionedSentinel)); err != nil && !os.IsNotExist(err) {
+		if err := os.Remove(vaultlayout.Layout{Root: runner.Root}.Path(vaultlayout.ProvisionedSentinel)); err != nil && !os.IsNotExist(err) {
 			return fmt.Errorf("vault: clear provision sentinel: %w", err)
 		}
 	}
@@ -115,7 +110,7 @@ func Rebuild(ctx context.Context, runner *Runner, force bool) error {
 // empty on the next boot while still reading as present — the exact false
 // "provisioned" the sentinel was added to prevent.
 func writeProvisionedSentinel(vaultRoot string) error {
-	path := filepath.Join(vaultRoot, provisionedSentinel)
+	path := vaultlayout.Layout{Root: vaultRoot}.Path(vaultlayout.ProvisionedSentinel)
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}

@@ -31,6 +31,8 @@ var updateOpsGolden = flag.Bool("update-ops-golden", false, "rewrite the golden 
 const (
 	goldenAddress = "c-000042"
 	goldenTitle   = "Widget Decision"
+	// goldenOtherAddress is the address of the second page the scenarios put beside the healthy one.
+	goldenOtherAddress = "c-000043"
 )
 
 // goldenScenario is a vault in one state: it starts as the healthy vault (or as an empty directory when bare
@@ -257,29 +259,136 @@ func goldenScenarios() []goldenScenario {
 		// that records no usable revision and the hashes of the healthy page, which is what makes the content
 		// matter: followed to the healthy page the link matches the entry, a page with no frontmatter does not.
 		{name: "40-a-page-that-is-a-link-to-a-page-the-sidecar-entry-matches", build: func(t *testing.T, root string) {
-			recordEntryMatchingTheHealthyPage(t, root, "c-000043")
-			symlinkOrSkip(t, goldenAddress+".md", filepath.Join(root, "wiki", "memory", "c-000043.md"))
+			recordEntryMatchingTheHealthyPage(t, root)
+			symlinkOrSkip(t, goldenAddress+".md", filepath.Join(root, "wiki", "memory", goldenOtherAddress+".md"))
 		}},
 		{name: "41-a-page-with-no-frontmatter-where-the-sidecar-entry-expects-the-healthy-page", build: func(t *testing.T, root string) {
-			recordEntryMatchingTheHealthyPage(t, root, "c-000043")
-			writeGoldenFile(t, root, "wiki/memory/c-000043.md", "Just text, no frontmatter.\n")
+			recordEntryMatchingTheHealthyPage(t, root)
+			writeGoldenFile(t, root, "wiki/memory/"+goldenOtherAddress+".md", "Just text, no frontmatter.\n")
+		}},
+		// The catalog, wiki/index.md, the log, wiki/log.md, the sync state, .vault-meta/longterm-mem-sync-state.json
+		// and the vault root, in each state a file or a directory can be found in. Recorded for the move of those
+		// reads behind ports (Phase 9, L3 slice 4), from the program as it stood before it. A file that cannot be
+		// read because of its mode is not a scenario: a test run as the superuser reads it, so its output would
+		// depend on who ran the test; a directory, a link to nothing and a file under a file cannot be read by
+		// anyone, and stand for it.
+		{name: "42-an-index-that-is-a-directory", build: func(t *testing.T, root string) {
+			replaceWithDirectory(t, root, "wiki/index.md")
+		}},
+		{name: "43-an-index-that-is-a-link-to-the-catalog", build: func(t *testing.T, root string) {
+			replaceWithLinkToACopy(t, root, "wiki/index.md")
+		}},
+		{name: "44-an-index-that-is-a-link-to-nothing", build: func(t *testing.T, root string) {
+			replaceWithLinkToNothing(t, root, "wiki/index.md")
+		}},
+		{name: "45-an-empty-index", build: func(t *testing.T, root string) {
+			writeGoldenFile(t, root, "wiki/index.md", "")
+		}},
+		{name: "46-a-log-that-is-a-directory", build: func(t *testing.T, root string) {
+			replaceWithDirectory(t, root, "wiki/log.md")
+		}},
+		{name: "47-a-log-that-is-a-link-to-a-log-that-names-the-page", build: func(t *testing.T, root string) {
+			replaceWithLinkToACopy(t, root, "wiki/log.md")
+		}},
+		{name: "48-a-log-that-is-a-link-to-nothing", build: func(t *testing.T, root string) {
+			replaceWithLinkToNothing(t, root, "wiki/log.md")
+		}},
+		{name: "49-a-wiki-directory-that-is-a-file", build: func(t *testing.T, root string) {
+			if err := os.RemoveAll(filepath.Join(root, "wiki")); err != nil {
+				t.Fatal(err)
+			}
+			writeGoldenFile(t, root, "wiki", "not a directory")
+		}},
+		{name: "50-a-sync-state-that-is-a-link-to-a-finished-sync", build: func(t *testing.T, root string) {
+			testdata.WriteSyncState(t, root, "2026-08-31T12:00:00Z")
+			replaceWithLinkToACopy(t, root, ".vault-meta/longterm-mem-sync-state.json")
+		}},
+		{name: "51-a-sync-state-that-is-a-link-to-nothing", build: func(t *testing.T, root string) {
+			testdata.WriteSyncState(t, root, "2026-08-31T12:00:00Z")
+			replaceWithLinkToNothing(t, root, ".vault-meta/longterm-mem-sync-state.json")
+		}},
+		{name: "52-an-empty-sync-state", build: func(t *testing.T, root string) {
+			writeGoldenFile(t, root, ".vault-meta/longterm-mem-sync-state.json", "")
+		}},
+		{name: "53-a-sync-state-that-is-json-null", build: func(t *testing.T, root string) {
+			writeGoldenFile(t, root, ".vault-meta/longterm-mem-sync-state.json", "null")
+		}},
+		{name: "54-a-sync-state-whose-completion-is-not-a-string", build: func(t *testing.T, root string) {
+			writeGoldenFile(t, root, ".vault-meta/longterm-mem-sync-state.json", `{"last_sync_completed_at":5}`)
+		}},
+		{name: "55-a-vault-meta-directory-that-is-a-file", build: func(t *testing.T, root string) {
+			writeGoldenFile(t, root, ".vault-meta", "not a directory")
+		}},
+		{name: "56-a-vault-root-that-is-a-link-to-the-vault", root: func(dir string) string {
+			link := dir + "-link"
+			if err := os.Symlink(dir, link); err != nil {
+				panic(err)
+			}
+			return link
+		}},
+		{name: "57-a-vault-root-that-is-a-link-to-nothing", bare: true, root: func(dir string) string {
+			link := filepath.Join(dir, "link")
+			if err := os.Symlink(filepath.Join(dir, "absent"), link); err != nil {
+				panic(err)
+			}
+			return link
 		}},
 	}
 }
 
-// recordEntryMatchingTheHealthyPage gives the page promoted under address a precedence entry that records no
-// promoted revision and the hashes of the healthy page's frontmatter and body.
-func recordEntryMatchingTheHealthyPage(t *testing.T, root, address string) {
+// replaceWithDirectory makes the vault-relative path rel a directory, where it was a file.
+func replaceWithDirectory(t *testing.T, root, rel string) {
 	t.Helper()
-	raw, err := os.ReadFile(filepath.Join(root, "wiki", "memory", goldenAddress+".md"))
+	full := filepath.Join(root, filepath.FromSlash(rel))
+	if err := os.Remove(full); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(full, 0o755); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// replaceWithLinkToACopy moves the file at the vault-relative path rel to notes/ and leaves a link to it where
+// it was, so that the file is the same and is reached through a link.
+func replaceWithLinkToACopy(t *testing.T, root, rel string) {
+	t.Helper()
+	full := filepath.Join(root, filepath.FromSlash(rel))
+	data, err := os.ReadFile(full)
 	if err != nil {
 		t.Fatal(err)
 	}
-	parts := strings.SplitN(string(raw), "---\n", 3)
-	if len(parts) != 3 {
-		t.Fatalf("the healthy page has no frontmatter block to take the hashes of")
+	moved := "notes/" + filepath.Base(rel)
+	writeGoldenFile(t, root, moved, string(data))
+	if err := os.Remove(full); err != nil {
+		t.Fatal(err)
 	}
-	testdata.WritePrecedenceEntry(t, root, promote.Page{Address: address, Frontmatter: "---\n" + parts[1] + "---\n", Body: parts[2]})
+	up, err := filepath.Rel(filepath.Dir(full), filepath.Join(root, filepath.FromSlash(moved)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	symlinkOrSkip(t, up, full)
+}
+
+// replaceWithLinkToNothing puts, at the vault-relative path rel, a link to a file that is not there.
+func replaceWithLinkToNothing(t *testing.T, root, rel string) {
+	t.Helper()
+	full := filepath.Join(root, filepath.FromSlash(rel))
+	if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(full); err != nil && !os.IsNotExist(err) {
+		t.Fatal(err)
+	}
+	symlinkOrSkip(t, filepath.Join(root, "notes", "absent"), full)
+}
+
+// recordEntryMatchingTheHealthyPage gives the page promoted under goldenOtherAddress a precedence entry that
+// records no promoted revision and the hashes of the healthy page's frontmatter and body, which the fixture
+// renders (the same page it writes under goldenAddress), so nothing here splits a file to find them.
+func recordEntryMatchingTheHealthyPage(t *testing.T, root string) {
+	t.Helper()
+	healthy := testdata.RenderPage(t, goldenAddress, goldenTitle)
+	testdata.WritePrecedenceEntry(t, root, promote.Page{Address: goldenOtherAddress, Frontmatter: healthy.Frontmatter, Body: healthy.Body})
 }
 
 // buildGoldenVault fills root with the healthy vault: one promoted page, its address-map entry, its
@@ -320,6 +429,9 @@ func TestGolden(t *testing.T) {
 				// The doctor's command wires the adapter with the prefix its output has always carried. The
 				// literal is the golden files' own; cmd's TestCmdDoctor_ReportsAnUnparseableSidecarAsTheOpsGoldenDoes
 				// runs the command's wiring over the same damaged vault and holds it to the text recorded here.
+				Root:                  vaultfs.New(vaultRoot, vaultfs.WithErrorPrefix("promote")),
+				Index:                 vaultfs.New(vaultRoot, vaultfs.WithErrorPrefix("promote")),
+				Log:                   vaultfs.New(vaultRoot, vaultfs.WithErrorPrefix("promote")),
 				Precedence:            vaultfs.New(vaultRoot, vaultfs.WithErrorPrefix("promote")),
 				Pages:                 vaultfs.New(vaultRoot, vaultfs.WithErrorPrefix("promote")),
 				AddressMap:            vaultfs.New(vaultRoot, vaultfs.WithErrorPrefix("promote")),
@@ -340,6 +452,7 @@ func TestGolden(t *testing.T) {
 			status, err := Status(context.Background(), StatusDeps{
 				VaultRoot:        vaultRoot,
 				StateDir:         stateDir,
+				SyncState:        vaultfs.New(vaultRoot, vaultfs.WithErrorPrefix("ops")),
 				VaultProvisioned: func(string) bool { return false },
 				EngramReachable:  func(context.Context) (bool, string) { return true, "" },
 			}, doctorTestProject)

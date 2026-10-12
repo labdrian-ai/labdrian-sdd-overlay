@@ -79,6 +79,9 @@ func pagesDoctorDeps(t *testing.T, pages PageReader) DoctorDeps {
 	stateDir, liveIDs := newHealthyEmbeddingDeps(t)
 	return DoctorDeps{
 		VaultRoot:             vaultRoot,
+		Root:                  vaultfs.New(vaultRoot),
+		Index:                 vaultfs.New(vaultRoot),
+		Log:                   vaultfs.New(vaultRoot),
 		Pages:                 pages,
 		Precedence:            vaultfs.New(vaultRoot),
 		AddressMap:            &fakeAddressMap{entries: promote.AddressMap{}},
