@@ -1,0 +1,17 @@
+--- answer 1 ---
+{
+  "jsonrpc": "2.0",
+  "id": 10,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "query: unknown source: \"elsewhere\""
+      }
+    ],
+    "isError": true
+  }
+}
+--- exit ---
+0
+--- stderr ---

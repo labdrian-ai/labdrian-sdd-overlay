@@ -200,10 +200,10 @@ func TestSync_IndexAndSyncStateReflectCompletion(t *testing.T) {
 	deps := Deps{
 		Memory: store,
 		Writer: w,
-		RebuildIndex: func(ctx context.Context) error {
+		Index: IndexRebuilderFunc(func(ctx context.Context) error {
 			rebuildCalled = true
 			return nil
-		},
+		}),
 	}
 
 	report, err := Sync(context.Background(), deps, "labdrian-sdd-overlay")
@@ -270,9 +270,9 @@ func TestSync_OneFailingObservationDoesNotWedgeTheRun(t *testing.T) {
 	var rebuildCalled bool
 	w := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Clock: clock, AddressMap: &memAddressMap{}, Addresses: addresses}
 	deps := Deps{
-		Memory:       store,
-		Writer:       w,
-		RebuildIndex: func(ctx context.Context) error { rebuildCalled = true; return nil },
+		Memory: store,
+		Writer: w,
+		Index:  IndexRebuilderFunc(func(ctx context.Context) error { rebuildCalled = true; return nil }),
 	}
 
 	report, err := Sync(context.Background(), deps, "labdrian-sdd-overlay")

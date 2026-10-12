@@ -1,0 +1,37 @@
+--- answer 1 ---
+{
+  "jsonrpc": "2.0",
+  "id": 10,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "query \"dragonscale\" in goldenproj (vault_status=not_requested, 0 results)\n\nWARN embedding_index_incomplete: no embedding index has ever been built for this project, so paraphrase questions are unanswerable from it right now; run `longterm-mem index --embeddings` to build one\n"
+      }
+    ],
+    "structuredContent": {
+      "coverage": [
+        {
+          "built_at": "never",
+          "indexed": 0,
+          "live": 13,
+          "source": "engram-embed",
+          "unindexed": 13
+        }
+      ],
+      "diagnostics": [
+        {
+          "code": "embedding_index_incomplete",
+          "detail": "no embedding index has ever been built for this project, so paraphrase questions are unanswerable from it right now; run `longterm-mem index --embeddings` to build one"
+        }
+      ],
+      "project": "goldenproj",
+      "query": "dragonscale",
+      "results": null,
+      "vault_status": "not_requested"
+    }
+  }
+}
+--- exit ---
+0
+--- stderr ---

@@ -16,7 +16,7 @@ import (
 // (openspec/changes/union-retrieval/validation/queries.json, "dropped"
 // entries excluded) with its own pre-computed query embeddings, over the
 // FULL live corpus (592 rows, all embedded under production's own
-// title+NUL+content[:2000] shape, vecindex.EmbedInput) -- not the
+// title+NUL+content[:2000] shape of vecindex.EmbedInput) -- not the
 // harness-shape corpus TestUnionArmDReproducesPublishedTable uses to
 // reproduce a historical academic table. This one exists to measure the
 // gate's real, current routing accuracy, not to reproduce a fixed number.
@@ -105,7 +105,7 @@ const paraphraseRoutingAccuracyFloor = 50.0
 func TestGateRoutingAccuracyOnBlindSet(t *testing.T) {
 	fixture := loadBlindGateFixture(t)
 	store, _ := buildUnionGoldenStore(t, fixture)
-	stateDir := buildUnionGoldenIndex(t, fixture)
+	index := buildUnionGoldenIndex(t, fixture)
 
 	byQuery := make(map[string][]float32)
 	for _, items := range fixture.Blind {
@@ -134,7 +134,7 @@ func TestGateRoutingAccuracyOnBlindSet(t *testing.T) {
 				for _, id := range q.Truth {
 					truth[id] = true
 				}
-				deps := Deps{Memory: store, ResolveLink: NoLinkResolver, StateDir: stateDir, Embed: embedFn}
+				deps := Deps{Memory: store, ResolveLink: NoLinkResolver, Index: index, Embed: embedFn}
 
 				ftsRes, err := Run(context.Background(), deps, Request{Project: unionGoldenProject, Query: q.Query, Top: 5, Sources: []string{SourceEngramFTS}})
 				if err != nil {

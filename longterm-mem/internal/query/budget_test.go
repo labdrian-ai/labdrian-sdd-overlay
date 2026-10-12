@@ -8,6 +8,15 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 )
 
+// The detail of a capped response says how rows leave: one at a time, the lowest-ranked of the source that holds
+// the most, which is what dropLargestSourceRow does and not a tail drop (owner decision of 2026-10-12).
+func TestTheCappedDetailSaysWhichRowsLeave(t *testing.T) {
+	want := "this response reached the 2000-token ceiling, so 10 of 32 results were dropped, each the lowest-ranked of the source holding the most rows; the rows shown are the ones that fit, and narrowing the query or lowering top will surface the rest"
+	if got := cappedDetail(10, 32); got != want {
+		t.Errorf("cappedDetail(10, 32) = %q, want %q", got, want)
+	}
+}
+
 // TestSnippetShareIsPerRowNotPerSource (R-062): the byte budget is divided
 // across ROWS, not across sources. Eight rows from one source and two from
 // another must all receive the exact same per-row share -- a per-source

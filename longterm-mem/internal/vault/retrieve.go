@@ -6,11 +6,15 @@ import (
 	"fmt"
 	"strconv"
 	"time"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/query"
 )
 
 // DefaultTopN is the result count Retrieve requests when the caller does
-// not supply an explicit override (R-004).
-const DefaultTopN = 5
+// not supply an explicit override (R-004). It is the query package's bound,
+// named here and not written again: both sources of a query share one (D8),
+// and a second literal could drift from the first.
+const DefaultTopN = query.DefaultTopN
 
 // retrieveScript is the vault-relative path to the retrieval entrypoint,
 // always invoked with the vault root as the subprocess's working directory.

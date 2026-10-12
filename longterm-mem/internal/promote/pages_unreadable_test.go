@@ -242,7 +242,7 @@ func TestSyncSkipsAnUnreadablePageAndLeavesAloneTheObservationsItMightBelongTo(t
 	three.Content = "Revised body."
 	ineligible := memory.Observation{ID: 4, Type: "discovery", Title: "Process note", Content: "Not curated.", Project: pagesProject, RevisionCount: 1, TopicKey: "sdd/some-change/progress"}
 	rebuilt := false
-	deps := Deps{Memory: &fakeMemory{live: []memory.Observation{pageObservation(1), two, three, ineligible}}, Writer: w, RebuildIndex: func(context.Context) error { rebuilt = true; return nil }}
+	deps := Deps{Memory: &fakeMemory{live: []memory.Observation{pageObservation(1), two, three, ineligible}}, Writer: w, Index: IndexRebuilderFunc(func(context.Context) error { rebuilt = true; return nil })}
 
 	report, err := Sync(t.Context(), deps, pagesProject)
 

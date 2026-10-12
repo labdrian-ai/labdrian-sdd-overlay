@@ -5,16 +5,14 @@ import (
 	"database/sql"
 	"errors"
 	"testing"
-
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vecindex"
 )
 
 // insertExtraLiveObservation writes one more live observation directly
 // through dbPath's write connection, the same trick softDeleteEmbedFixtureRow
 // already uses to reach past the read-only production Store -- it exists
-// only to leave the manifest behind the live corpus by exactly one row
-// without going through vecindex.Build itself, which is the very thing
-// these tests are proving Run does or does not invoke.
+// only to leave the index behind the live corpus by exactly one row without
+// going through a build, which is the very thing these tests are proving Run
+// does or does not ask for.
 func insertExtraLiveObservation(t *testing.T, dbPath, title, content, project string) int64 {
 	t.Helper()
 	conn, err := sql.Open("sqlite", dbPath)
@@ -36,52 +34,36 @@ func insertExtraLiveObservation(t *testing.T, dbPath, title, content, project st
 	return id
 }
 
-// fakeBuildIndex returns a Deps.BuildIndex stand-in counting its calls,
-// running behavior into apply for each call, and reporting err.
-func fakeBuildIndex(calls *int, apply func(), err error) BuildIndexFunc {
-	return func(_ context.Context, _, _ string, _, _ int) error {
-		*calls++
-		if err == nil && apply != nil {
-			apply()
-		}
-		return err
-	}
-}
-
 // TestEmbeddingArm_ToppedUpWhenUnindexedWithinBudget is this issue's
-// bounded top-up: one row left behind the manifest (Unindexed=1, well
+// bounded top-up: one row left behind the index (Unindexed=1, well
 // within TopUpMaxRows) must be embedded and folded into the index BEFORE
 // the query scans it, not left for a human to notice in Coverage and fix
 // out of band later.
 func TestEmbeddingArm_ToppedUpWhenUnindexedWithinBudget(t *testing.T) {
-	store, dbPath, _, stateDir := newEmbedArmFixture(t, []embedArmFixture{
+	store, dbPath, _, index := newEmbedArmFixture(t, []embedArmFixture{
 		{title: "already indexed", content: "alpha content", project: "proj-embed", vec: []float32{1, 0, 0}},
 	})
 	newID := insertExtraLiveObservation(t, dbPath, "fresh row", "beta content", "proj-embed")
 
-	buildCalls := 0
-	buildFn := fakeBuildIndex(&buildCalls, func() {
+	builder := &fakeBuilder{apply: func() {
 		// Simulate a real incremental build: the fresh row joins the index
-		// alongside the one already there, exactly as vecindex.Build would
-		// leave it on disk.
-		idx, err := vecindex.Load(vecindex.Dir(stateDir, "proj-embed"))
+		// alongside the one already there, exactly as the build would
+		// leave it.
+		held, err := index.LoadEmbeddingIndex("proj-embed")
 		if err != nil {
 			t.Fatalf("load index to simulate top-up: %v", err)
 		}
-		idx.Manifest.Entries = append(idx.Manifest.Entries, vecindex.ManifestEntry{
+		held.Entries = append(held.Entries, IndexedObservation{
 			EngramID:    newID,
-			Fingerprint: vecindex.Fingerprint(idx.Manifest.Model, idx.Manifest.Dimension, idx.Manifest.InputLimit, "fresh row", "beta content"),
+			Fingerprint: testFingerprint(held.Model, held.Dimension, held.InputLimit, "fresh row", "beta content"),
 		})
-		idx.Vectors = append(idx.Vectors, []float32{0, 1, 0})
-		if err := idx.Save(vecindex.Dir(stateDir, "proj-embed")); err != nil {
-			t.Fatalf("save topped-up index: %v", err)
-		}
-	}, nil)
+		held.Vectors = append(held.Vectors, []float32{0, 1, 0})
+	}}
 
-	rows, coverage, diags := runEmbeddingArm(context.Background(), store, stateDir, "proj-embed", "alpha", 5, fakeEmbed([]float32{1, 0, 0}, nil), buildFn, nil)
+	rows, coverage, diags := embeddingArm{Memory: store, Index: index, Builder: builder, Embed: fakeEmbed([]float32{1, 0, 0}, nil)}.run(context.Background(), "proj-embed", "alpha", 5)
 
-	if buildCalls != 1 {
-		t.Fatalf("BuildIndex was called %d times, want exactly 1", buildCalls)
+	if len(builder.calls) != 1 {
+		t.Fatalf("the builder was called %d times, want exactly 1", len(builder.calls))
 	}
 	if coverage.Unindexed != 0 {
 		t.Fatalf("coverage.Unindexed = %d after a successful top-up, want 0", coverage.Unindexed)
@@ -107,20 +89,19 @@ func TestEmbeddingArm_ToppedUpWhenUnindexedWithinBudget(t *testing.T) {
 // TopUpMaxRows, the arm must not build at all -- today's degrade-and-name-
 // the-CLI-command behavior stands unchanged.
 func TestEmbeddingArm_NoTopUpWhenOverBudget(t *testing.T) {
-	store, dbPath, _, stateDir := newEmbedArmFixture(t, []embedArmFixture{
+	store, dbPath, _, index := newEmbedArmFixture(t, []embedArmFixture{
 		{title: "already indexed", content: "alpha content", project: "proj-embed", vec: []float32{1, 0, 0}},
 	})
 	for i := 0; i < TopUpMaxRows+1; i++ {
 		insertExtraLiveObservation(t, dbPath, "extra", "beta content", "proj-embed")
 	}
 
-	buildCalls := 0
-	buildFn := fakeBuildIndex(&buildCalls, nil, nil)
+	builder := &fakeBuilder{}
 
-	_, coverage, _ := runEmbeddingArm(context.Background(), store, stateDir, "proj-embed", "alpha", 5, fakeEmbed([]float32{1, 0, 0}, nil), buildFn, nil)
+	_, coverage, _ := embeddingArm{Memory: store, Index: index, Builder: builder, Embed: fakeEmbed([]float32{1, 0, 0}, nil)}.run(context.Background(), "proj-embed", "alpha", 5)
 
-	if buildCalls != 0 {
-		t.Fatalf("BuildIndex was called %d times, want 0: the gap exceeds TopUpMaxRows", buildCalls)
+	if len(builder.calls) != 0 {
+		t.Fatalf("the builder was called %d times, want 0: the gap exceeds TopUpMaxRows", len(builder.calls))
 	}
 	if coverage.Unindexed != TopUpMaxRows+1 {
 		t.Fatalf("coverage.Unindexed = %d, want %d", coverage.Unindexed, TopUpMaxRows+1)
@@ -131,19 +112,17 @@ func TestEmbeddingArm_NoTopUpWhenOverBudget(t *testing.T) {
 // build failure (backend down, etc.) must never surface as a query error --
 // it degrades exactly like today, plus a diagnostic naming the failure.
 func TestEmbeddingArm_TopUpFailureDegradesWithoutFailingTheQuery(t *testing.T) {
-	store, dbPath, _, stateDir := newEmbedArmFixture(t, []embedArmFixture{
+	store, dbPath, _, index := newEmbedArmFixture(t, []embedArmFixture{
 		{title: "already indexed", content: "alpha content", project: "proj-embed", vec: []float32{1, 0, 0}},
 	})
 	insertExtraLiveObservation(t, dbPath, "fresh row", "beta content", "proj-embed")
 
-	buildCalls := 0
-	buildErr := errors.New("embedding backend unreachable")
-	buildFn := fakeBuildIndex(&buildCalls, nil, buildErr)
+	builder := &fakeBuilder{err: errors.New("embedding backend unreachable")}
 
-	rows, coverage, diags := runEmbeddingArm(context.Background(), store, stateDir, "proj-embed", "alpha", 5, fakeEmbed([]float32{1, 0, 0}, nil), buildFn, nil)
+	rows, coverage, diags := embeddingArm{Memory: store, Index: index, Builder: builder, Embed: fakeEmbed([]float32{1, 0, 0}, nil)}.run(context.Background(), "proj-embed", "alpha", 5)
 
-	if buildCalls != 1 {
-		t.Fatalf("BuildIndex was called %d times, want exactly 1", buildCalls)
+	if len(builder.calls) != 1 {
+		t.Fatalf("the builder was called %d times, want exactly 1", len(builder.calls))
 	}
 	if coverage.Unindexed != 1 {
 		t.Fatalf("coverage.Unindexed = %d after a failed top-up, want 1 (unchanged)", coverage.Unindexed)

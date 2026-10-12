@@ -60,10 +60,10 @@ func TestReindexAfterPromote_KeysOffTheOutcomeNotTheCall(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			rebuilds := 0
-			err := reindexAfterPromote(context.Background(), tc.result, func(context.Context) error {
+			err := reindexAfterPromote(context.Background(), tc.result, promote.IndexRebuilderFunc(func(context.Context) error {
 				rebuilds++
 				return nil
-			})
+			}))
 			if err != nil {
 				t.Fatalf("reindexAfterPromote: %v", err)
 			}
@@ -86,7 +86,7 @@ func TestReindexAfterPromote_ReportsARebuildFailureWithoutHidingIt(t *testing.T)
 			Page:   promote.Page{Address: "c-000002"},
 			Action: promote.Action{Kind: promote.ActionCreated},
 		},
-		func(context.Context) error { return boom },
+		promote.IndexRebuilderFunc(func(context.Context) error { return boom }),
 	)
 	if !errors.Is(err, boom) {
 		t.Fatalf("reindexAfterPromote returned %v, want the rebuild's own error", err)

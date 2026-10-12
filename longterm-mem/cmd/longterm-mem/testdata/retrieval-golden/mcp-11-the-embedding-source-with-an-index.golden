@@ -1,0 +1,64 @@
+--- answer 1 ---
+{
+  "jsonrpc": "2.0",
+  "id": 10,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "query \"dragonscale\" in goldenproj (vault_status=not_requested, 3 results)\n\n[1] engram-embed engram:3 Dragonscale layout\n    reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del p…\n    (extract of 2599 bytes; call get{engram_id: 3} for the whole text)\n\n[2] engram-embed engram:6 Session summary dragonscale\n    dragonscale summary of a session\n\n[3] engram-embed engram:7 Policy with multibyte head\n    ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú the policy marker word zebracorn éééééééééééééééééééééééééééééééé…\n    (extract of 483 bytes; call get{engram_id: 7} for the whole text)\n"
+      }
+    ],
+    "structuredContent": {
+      "coverage": [
+        {
+          "built_at": "<instant>",
+          "indexed": 13,
+          "live": 13,
+          "source": "engram-embed",
+          "unindexed": 0
+        }
+      ],
+      "project": "goldenproj",
+      "query": "dragonscale",
+      "results": [
+        {
+          "engram_id": 3,
+          "full_length": 2599,
+          "rank": 1,
+          "snippet": "reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del p…",
+          "snippet_truncated": true,
+          "sources": [
+            "engram-embed"
+          ],
+          "title": "Dragonscale layout"
+        },
+        {
+          "engram_id": 6,
+          "full_length": 32,
+          "rank": 2,
+          "snippet": "dragonscale summary of a session",
+          "sources": [
+            "engram-embed"
+          ],
+          "title": "Session summary dragonscale"
+        },
+        {
+          "engram_id": 7,
+          "full_length": 483,
+          "rank": 3,
+          "snippet": "ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú the policy marker word zebracorn éééééééééééééééééééééééééééééééé…",
+          "snippet_truncated": true,
+          "sources": [
+            "engram-embed"
+          ],
+          "title": "Policy with multibyte head"
+        }
+      ],
+      "vault_status": "not_requested"
+    }
+  }
+}
+--- exit ---
+0
+--- stderr ---

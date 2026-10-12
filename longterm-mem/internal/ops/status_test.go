@@ -64,7 +64,7 @@ func TestStatus(t *testing.T) {
 
 			deps := StatusDeps{
 				VaultRoot: vaultRoot,
-				SyncState: vaultfs.New(vaultRoot, vaultfs.WithErrorPrefix("ops")),
+				SyncState: vaultfs.New(vaultRoot),
 				StateDir:  t.TempDir(),
 				EngramReachable: func(ctx context.Context) (bool, string) {
 					return tc.engramReachable, ""
@@ -112,7 +112,7 @@ func TestStatus_MalformedSyncStateIsAnErrorNotAFabricatedTimestamp(t *testing.T)
 
 	deps := StatusDeps{
 		VaultRoot:        vaultRoot,
-		SyncState:        vaultfs.New(vaultRoot, vaultfs.WithErrorPrefix("ops")),
+		SyncState:        vaultfs.New(vaultRoot),
 		StateDir:         t.TempDir(),
 		EngramReachable:  func(ctx context.Context) (bool, string) { return true, "" },
 		VaultProvisioned: func(vaultRoot string) bool { return true },
@@ -141,7 +141,7 @@ func TestStatus_EmbeddingIndexBuiltAt(t *testing.T) {
 		vaultRoot := t.TempDir()
 		return StatusDeps{
 			VaultRoot:        vaultRoot,
-			SyncState:        vaultfs.New(vaultRoot, vaultfs.WithErrorPrefix("ops")),
+			SyncState:        vaultfs.New(vaultRoot),
 			StateDir:         stateDir,
 			EngramReachable:  func(ctx context.Context) (bool, string) { return true, "" },
 			VaultProvisioned: func(vaultRoot string) bool { return true },

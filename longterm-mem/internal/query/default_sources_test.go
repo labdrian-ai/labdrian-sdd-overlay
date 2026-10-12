@@ -3,8 +3,6 @@ package query
 import (
 	"context"
 	"testing"
-
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vault"
 )
 
 // TestDefaultSources_UnionWhenIndexExists is this issue's core behavior: an
@@ -17,15 +15,15 @@ import (
 // actually ran -- not just that the default sources slice happens to
 // mention it.
 func TestDefaultSources_UnionWhenIndexExists(t *testing.T) {
-	store, _, _, stateDir := newEmbedArmFixture(t, []embedArmFixture{
+	store, _, _, index := newEmbedArmFixture(t, []embedArmFixture{
 		{title: "indexed row", content: "zephyr content", project: "proj-default", vec: []float32{1, 0, 0}},
 	})
 	deps := Deps{
-		Memory:        store,
-		RetrieveVault: fakeRetrieveVault(vault.Result{Status: vault.StatusOK}, nil),
-		ResolveLink:   NoLinkResolver,
-		StateDir:      stateDir,
-		Embed:         fakeEmbed([]float32{1, 0, 0}, nil),
+		Memory:      store,
+		Vault:       fakeVault(nil, nil),
+		ResolveLink: NoLinkResolver,
+		Index:       index,
+		Embed:       fakeEmbed([]float32{1, 0, 0}, nil),
 	}
 
 	got, err := Run(context.Background(), deps, Request{Project: "proj-default", Query: "zephyr"})
@@ -46,10 +44,10 @@ func TestDefaultSources_FTSOnlyWhenNoIndex(t *testing.T) {
 		{title: "engram row", content: "zephyr keyword", project: "proj-no-index"},
 	})
 	deps := Deps{
-		Memory:        store,
-		RetrieveVault: fakeRetrieveVault(vault.Result{Status: vault.StatusOK}, nil),
-		ResolveLink:   NoLinkResolver,
-		StateDir:      t.TempDir(),
+		Memory:      store,
+		Vault:       fakeVault(nil, nil),
+		ResolveLink: NoLinkResolver,
+		Index:       &fakeIndexes{},
 	}
 
 	got, err := Run(context.Background(), deps, Request{Project: "proj-no-index", Query: "zephyr"})

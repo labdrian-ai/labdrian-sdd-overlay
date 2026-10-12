@@ -13,7 +13,6 @@ import (
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vecindex"
 
 	_ "modernc.org/sqlite"
 )
@@ -131,9 +130,19 @@ func buildUnionGoldenStore(t *testing.T, fixture *unionFixture) (*engram.Store, 
 	return store, dbPath
 }
 
-// buildUnionGoldenIndex builds an on-disk vecindex over every fixture row
-// that carries a precomputed vector, under a fresh temp state directory,
-// with each entry's fingerprint computed the same way runEmbeddingArm
+// The contract the golden vectors were produced under. It is the fixture's own and is not read from the
+// vector index package's defaults (this package cannot import that adapter): the vectors do not change when a
+// default does, and the fingerprints are computed under this contract, so a default that moves cannot make the
+// fixture drift. The values are those of the production index when the fixture was captured.
+const (
+	unionGoldenModel      = "nomic-embed-text"
+	unionGoldenDimension  = 768
+	unionGoldenInputLimit = 2000
+)
+
+// buildUnionGoldenIndex builds an embedding index, held in memory, over every
+// fixture row that carries a precomputed vector, with each entry's
+// fingerprint computed the same way the embedding arm
 // recomputes it at query time -- over the row's title/content as stored in
 // the database above -- so a fingerprint check inside the query path
 // passes for every indexed row.
@@ -147,36 +156,29 @@ func buildUnionGoldenStore(t *testing.T, fixture *unionFixture) (*engram.Store, 
 // measurement, because bm25 depends on the whole corpus's document
 // statistics and the FTS arm evaluate.py measured always saw the full
 // table.
-func buildUnionGoldenIndex(t *testing.T, fixture *unionFixture) string {
+func buildUnionGoldenIndex(t *testing.T, fixture *unionFixture) *fakeIndexes {
 	t.Helper()
-	stateDir := t.TempDir()
 
-	manifest := vecindex.Manifest{
-		Model: vecindex.DefaultModel, Dimension: vecindex.DefaultDimension, InputLimit: vecindex.DefaultInputLimit,
-		BuiltAt: "2026-01-01T00:00:00Z",
-	}
-	var vectors [][]float32
+	built := &EmbeddingIndex{Model: unionGoldenModel, Dimension: unionGoldenDimension, InputLimit: unionGoldenInputLimit, BuiltAt: "2026-01-01T00:00:00Z"}
 	for _, r := range fixture.Rows {
 		vec, ok := fixture.Vectors[strconv.FormatInt(r.ID, 10)]
 		if !ok {
 			continue
 		}
-		if len(vec) != manifest.Dimension {
-			t.Fatalf("row %d vector has dimension %d, want %d", r.ID, len(vec), manifest.Dimension)
+		if len(vec) != built.Dimension {
+			t.Fatalf("row %d vector has dimension %d, want %d", r.ID, len(vec), built.Dimension)
 		}
-		fp := vecindex.Fingerprint(manifest.Model, manifest.Dimension, manifest.InputLimit, r.Title, r.Content)
-		manifest.Entries = append(manifest.Entries, vecindex.ManifestEntry{EngramID: r.ID, Fingerprint: fp})
-		vectors = append(vectors, vec)
+		fp := testFingerprint(built.Model, built.Dimension, built.InputLimit, r.Title, r.Content)
+		built.Entries = append(built.Entries, IndexedObservation{EngramID: r.ID, Fingerprint: fp})
+		built.Vectors = append(built.Vectors, vec)
 	}
-	if len(manifest.Entries) == 0 {
+	if len(built.Entries) == 0 {
 		t.Fatalf("fixture has no rows with a vector")
 	}
 
-	idx := &vecindex.Index{Manifest: manifest, Vectors: vectors}
-	if err := idx.Save(vecindex.Dir(stateDir, unionGoldenProject)); err != nil {
-		t.Fatalf("save golden index: %v", err)
-	}
-	return stateDir
+	indexes := &fakeIndexes{}
+	indexes.hold(unionGoldenProject, built)
+	return indexes
 }
 
 // unionGoldenEmbedFunc answers embedFn with fixture's own pre-computed
@@ -254,7 +256,7 @@ func TestUnionGoldenFixtureUsesLiveFTSSchema(t *testing.T) {
 func TestUnionArmDReproducesPublishedTable(t *testing.T) {
 	fixture := loadUnionFixture(t)
 	store, _ := buildUnionGoldenStore(t, fixture)
-	stateDir := buildUnionGoldenIndex(t, fixture)
+	index := buildUnionGoldenIndex(t, fixture)
 	embedFn := unionGoldenEmbedFunc(fixture)
 
 	cases := []struct {
@@ -275,7 +277,7 @@ func TestUnionArmDReproducesPublishedTable(t *testing.T) {
 
 			hit1, hit5 := 0, 0
 			for _, q := range items {
-				deps := Deps{Memory: store, ResolveLink: NoLinkResolver, StateDir: stateDir, Embed: embedFn}
+				deps := Deps{Memory: store, ResolveLink: NoLinkResolver, Index: index, Embed: embedFn}
 				result, err := Run(context.Background(), deps, Request{
 					Project: unionGoldenProject, Query: q.Query, Top: 5,
 					Sources: []string{SourceEngramFTS, SourceEngramEmbed},

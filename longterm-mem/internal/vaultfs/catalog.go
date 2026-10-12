@@ -8,7 +8,7 @@ import (
 
 // ReadIndex returns the whole content of the vault's master catalog, byte for byte, reading through a link to
 // it. A catalog that is not there is the file system's error for it (errors.Is(err, fs.ErrNotExist)), and any
-// other failure is the file system's own: both name the file, and neither carries the Vault's error prefix,
+// other failure is the file system's own: both name the file, and the adapter adds no word of its own to either,
 // because the callers word the failure around the file they were reading.
 func (v *Vault) ReadIndex() (string, error) { return v.readFile(vaultlayout.IndexFile) }
 
@@ -17,7 +17,7 @@ func (v *Vault) IndexLocation() string { return v.layout.Path(vaultlayout.IndexF
 
 // WriteIndex replaces the catalog with content, durably and atomically, creating the wiki directory when the
 // vault has none: through a link to the catalog, keeping the mode of the catalog that is there, and creating a
-// new one owner-only. Its errors name what failed behind the Vault's error prefix, if it has one.
+// new one owner-only. Its errors name what failed and carry no consumer's name.
 func (v *Vault) WriteIndex(content string) error { return v.writeFile(vaultlayout.IndexFile, content) }
 
 // ReadLog returns the whole content of the vault's promotion log, and fails as ReadIndex does.
@@ -41,7 +41,7 @@ func (v *Vault) readFile(rel string) (string, error) {
 // writeFile replaces the vault-relative file rel with content the way the module replaces every file of the vault.
 func (v *Vault) writeFile(rel, content string) error {
 	if err := writeFileAtomic(v.layout.Path(rel), []byte(content)); err != nil {
-		return v.fail(err)
+		return err
 	}
 	return nil
 }

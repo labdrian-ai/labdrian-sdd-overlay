@@ -23,10 +23,10 @@ import (
 func TestSnippetBudgetGate_WorstCaseFitsWithoutDroppingRows(t *testing.T) {
 	const rowsPerSource = DefaultTopN
 
-	standing := &memory.Standing{
-		SupersededBy:  []memory.Neighbour{{ID: 3239, Title: "CORRECTION: Engram MCP search DOES surface supersession — my probes were unisolated"}},
-		ConflictsWith: []memory.Neighbour{{ID: 3238, Title: "Engram conflict surfacing is save-time by design — not a retrieval defect"}},
-		Unjudged:      []memory.Neighbour{{ID: 3237, Title: "Engram's search never joins memory_relations — the judgment loop is open"}},
+	standing := &Standing{
+		SupersededBy:  []Neighbour{{ID: 3239, Title: "CORRECTION: Engram MCP search DOES surface supersession — my probes were unisolated"}},
+		ConflictsWith: []Neighbour{{ID: 3238, Title: "Engram conflict surfacing is save-time by design — not a retrieval defect"}},
+		Unjudged:      []Neighbour{{ID: 3237, Title: "Engram's search never joins memory_relations — the judgment loop is open"}},
 	}
 
 	result := Result{

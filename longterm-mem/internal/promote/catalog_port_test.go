@@ -297,7 +297,7 @@ func TestSyncRecordsItsCompletionThroughThePort(t *testing.T) {
 		w, _, _ := pagesWriter(t, newMemPages(nil))
 		_, _, syncState := registration(w)
 		var seenAtRebuild int
-		deps := Deps{Memory: &fakeMemory{}, Writer: w, RebuildIndex: func(context.Context) error { seenAtRebuild = len(syncState.recorded); return nil }}
+		deps := Deps{Memory: &fakeMemory{}, Writer: w, Index: IndexRebuilderFunc(func(context.Context) error { seenAtRebuild = len(syncState.recorded); return nil })}
 
 		if _, err := Sync(t.Context(), deps, pagesProject); err != nil {
 			t.Fatalf("Sync: %v", err)
@@ -310,7 +310,7 @@ func TestSyncRecordsItsCompletionThroughThePort(t *testing.T) {
 	t.Run("not when the rebuild failed", func(t *testing.T) {
 		w, _, _ := pagesWriter(t, newMemPages(nil))
 		_, _, syncState := registration(w)
-		deps := Deps{Memory: &fakeMemory{}, Writer: w, RebuildIndex: func(context.Context) error { return errCatalogBoom }}
+		deps := Deps{Memory: &fakeMemory{}, Writer: w, Index: IndexRebuilderFunc(func(context.Context) error { return errCatalogBoom })}
 
 		_, err := Sync(t.Context(), deps, pagesProject)
 

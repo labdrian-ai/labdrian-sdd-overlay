@@ -8,11 +8,10 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 )
 
-// Deps are Sync's (and Propagate's) dependencies, mirroring query.Deps's
-// function-seam convention: Memory is the port the package owns (a fake or
-// a temp DB behind the Engram adapter in tests), Writer is a concrete
-// production type (a temp vault in tests), RebuildIndex is a seam so tests
-// never need real vault subprocess scripts to prove R-031's wiring.
+// Deps are Sync's (and Propagate's) dependencies: Memory and Index are ports
+// the package owns (a fake or a temp DB behind the Engram adapter in tests, and
+// a fake so tests never need real vault subprocess scripts to prove R-031's
+// wiring), Writer is a concrete production type (a temp vault in tests).
 type Deps struct {
 	// Memory serves the candidate observations of a project and the history
 	// propagation reads.
@@ -21,11 +20,11 @@ type Deps struct {
 	// and (Propagate) owns the precedence sidecar a status-only patch
 	// updates.
 	Writer *Writer
-	// RebuildIndex rebuilds the vault's index after promotion completes
-	// (R-031). A real caller (cmd_sync.go) wraps vault.Rebuild; a nil
-	// RebuildIndex is treated as a no-op, letting Sync's promotion-only
-	// tests skip the seam entirely.
-	RebuildIndex func(ctx context.Context) error
+	// Index rebuilds the vault's index after promotion completes (R-031).
+	// A real caller (cmd_sync.go) hands it the vault adapter; none wired,
+	// or a nil pointer, is a no-op, letting Sync's promotion-only tests
+	// skip the port entirely.
+	Index IndexRebuilder
 }
 
 // SyncReport summarizes one Sync run: Promoted lists every observation
@@ -121,8 +120,11 @@ func Sync(ctx context.Context, deps Deps, project string) (SyncReport, error) {
 		report.Promoted = append(report.Promoted, result)
 	}
 
-	if deps.RebuildIndex != nil {
-		if err := deps.RebuildIndex(ctx); err != nil {
+	// memory.IsMissing and not "!= nil": a rebuilder that failed to open reaches Deps as an interface holding a
+	// nil pointer, which a plain nil comparison takes for a rebuilder and which then panics inside the call
+	// (TestSyncWithoutARebuilderSkipsTheRebuild holds both shapes).
+	if !memory.IsMissing(deps.Index) {
+		if err := deps.Index.RebuildIndex(ctx); err != nil {
 			return report, fmt.Errorf("promote: sync: rebuild index: %w", err)
 		}
 	}

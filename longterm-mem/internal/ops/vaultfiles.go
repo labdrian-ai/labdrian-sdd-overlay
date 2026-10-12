@@ -30,8 +30,8 @@ type RootInspector interface {
 
 // SyncStateReader is the port through which Status reads the record of the last sync that completed. The package
 // owns it and the vault file system adapter satisfies it; what the record holds and how it is read are the
-// adapter's to say, and the failures it returns say what they could not read or understand, behind whatever
-// prefix the composition root asked of the adapter.
+// adapter's to say, and the failures it returns say what they could not read or understand, in the adapter's own
+// words (it puts no consumer's name in front of them).
 type SyncStateReader interface {
 	// LastSyncCompletedAt returns the completion time the record holds, as it holds it. A vault with no record,
 	// and a record that holds no completion time, answer the empty string and no error: nothing has completed.
@@ -45,8 +45,10 @@ type SyncStateReader interface {
 // check reports (so one missing Index makes two checks say so, each in its own words). They are two errors on
 // purpose: promote.IndexReader and this package's IndexReader are two ports, each package words the failure of
 // the one it owns, and promote's is not exported. Their texts are
-// the commands' output, pinned here (doctor_vaultfiles_port_test.go) and there (lint_index_port_test.go), and
-// the prefix both carry is the one the owner has yet to decide on.
+// the commands' output, pinned here (doctor_vaultfiles_port_test.go) and there (lint_index_port_test.go).
+// Each begins with the name of its own package, as every error of the two packages does; that is not the prefix
+// the vault adapter used to be asked for, which the owner dropped on 2026-10-12. The two texts differ by
+// that name alone, so making them one would change what the doctor prints, and they stay two.
 var (
 	errNoIndexReader = errors.New("ops: no index reader was wired")
 	errNoLogReader   = errors.New("ops: no log reader was wired")

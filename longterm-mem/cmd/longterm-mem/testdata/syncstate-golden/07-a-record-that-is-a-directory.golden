@@ -2,18 +2,18 @@ args: status --project golden-project
 exit: 1
 --- stdout ---
 --- stderr ---
-longterm-mem: status: ops: read <vault>/.vault-meta/longterm-mem-sync-state.json: read <vault>/.vault-meta/longterm-mem-sync-state.json: is a directory
+longterm-mem: status: read <vault>/.vault-meta/longterm-mem-sync-state.json: read <vault>/.vault-meta/longterm-mem-sync-state.json: is a directory
 args: sync --project golden-project
 exit: 1
 --- stdout ---
 longterm-mem: sync promoted 2 observation(s), patched 0 page(s)
 --- stderr ---
-longterm-mem: sync: promote: sync: promote: durable: rename temp file into <vault>/.vault-meta/longterm-mem-sync-state.json: rename <vault>/.vault-meta/longterm-mem-sync-state.json.tmp-<n> <vault>/.vault-meta/longterm-mem-sync-state.json: file exists
+longterm-mem: sync: promote: sync: durable: rename temp file into <vault>/.vault-meta/longterm-mem-sync-state.json: rename <vault>/.vault-meta/longterm-mem-sync-state.json.tmp-<n> <vault>/.vault-meta/longterm-mem-sync-state.json: file exists
 args: status --project golden-project
 exit: 1
 --- stdout ---
 --- stderr ---
-longterm-mem: status: ops: read <vault>/.vault-meta/longterm-mem-sync-state.json: read <vault>/.vault-meta/longterm-mem-sync-state.json: is a directory
+longterm-mem: status: read <vault>/.vault-meta/longterm-mem-sync-state.json: read <vault>/.vault-meta/longterm-mem-sync-state.json: is a directory
 --- vault ---
 === .allocator-counter (-rw-r--r--) ===
 902

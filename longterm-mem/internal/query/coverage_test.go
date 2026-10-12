@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
-
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vecindex"
 )
 
 // TestResponseCarriesEmbeddingCoverageWhenSourceRequested (design:
@@ -15,11 +13,11 @@ import (
 // entry, since this module does not own observations_fts and reporting a
 // count for it would report an assumption in the shape of a measurement.
 func TestResponseCarriesEmbeddingCoverageWhenSourceRequested(t *testing.T) {
-	store, _, _, stateDir := newEmbedArmFixture(t, []embedArmFixture{
+	store, _, _, index := newEmbedArmFixture(t, []embedArmFixture{
 		{title: "one", content: "alpha", project: "proj-cov", vec: []float32{1, 0, 0}},
 	})
 
-	deps := Deps{Memory: store, ResolveLink: NoLinkResolver, StateDir: stateDir, Embed: fakeEmbed([]float32{1, 0, 0}, nil)}
+	deps := Deps{Memory: store, ResolveLink: NoLinkResolver, Index: index, Embed: fakeEmbed([]float32{1, 0, 0}, nil)}
 	result, err := Run(context.Background(), deps, Request{Project: "proj-cov", Query: "alpha", Sources: []string{SourceEngramEmbed}})
 	if err != nil {
 		t.Fatalf("Run: %v", err)
@@ -37,11 +35,11 @@ func TestResponseCarriesEmbeddingCoverageWhenSourceRequested(t *testing.T) {
 // carry a Coverage entry with that value, never omit the field entirely --
 // an absent field and "the index is complete" must never look alike.
 func TestCoverageIsPresentEvenWhenIndexIsComplete(t *testing.T) {
-	store, _, _, stateDir := newEmbedArmFixture(t, []embedArmFixture{
+	store, _, _, index := newEmbedArmFixture(t, []embedArmFixture{
 		{title: "one", content: "alpha", project: "proj-cov", vec: []float32{1, 0, 0}},
 	})
 
-	deps := Deps{Memory: store, ResolveLink: NoLinkResolver, StateDir: stateDir, Embed: fakeEmbed([]float32{1, 0, 0}, nil)}
+	deps := Deps{Memory: store, ResolveLink: NoLinkResolver, Index: index, Embed: fakeEmbed([]float32{1, 0, 0}, nil)}
 	result, err := Run(context.Background(), deps, Request{Project: "proj-cov", Query: "alpha", Sources: []string{SourceEngramEmbed}})
 	if err != nil {
 		t.Fatalf("Run: %v", err)
@@ -62,7 +60,7 @@ func TestCoverageIsPresentEvenWhenIndexIsComplete(t *testing.T) {
 // thin or empty paraphrase result must be told the exact command that
 // fixes it, not left to infer one from a bare count (design's own table).
 func TestIncompleteCoverageDetailNamesTheRebuildCommand(t *testing.T) {
-	store, dbPath, ids, stateDir := newEmbedArmFixture(t, []embedArmFixture{
+	store, dbPath, ids, index := newEmbedArmFixture(t, []embedArmFixture{
 		{title: "one", content: "alpha", project: "proj-cov", vec: []float32{1, 0, 0}},
 		{title: "two", content: "beta", project: "proj-cov", vec: []float32{0, 1, 0}},
 	})
@@ -74,18 +72,15 @@ func TestIncompleteCoverageDetailNamesTheRebuildCommand(t *testing.T) {
 	_ = ids
 	_ = dbPath
 
-	deps := Deps{Memory: store, ResolveLink: NoLinkResolver, StateDir: stateDir, Embed: fakeEmbed([]float32{1, 0, 0}, nil)}
-	// Drop the second entry from the manifest directly to simulate a row
+	deps := Deps{Memory: store, ResolveLink: NoLinkResolver, Index: index, Embed: fakeEmbed([]float32{1, 0, 0}, nil)}
+	// Drop the second entry from the index directly to simulate a row
 	// added to the corpus after the index was last built (Unindexed>0).
-	idx, err := vecindex.Load(vecindex.Dir(stateDir, "proj-cov"))
+	held, err := index.LoadEmbeddingIndex("proj-cov")
 	if err != nil {
 		t.Fatalf("load fixture index: %v", err)
 	}
-	idx.Manifest.Entries = idx.Manifest.Entries[:1]
-	idx.Vectors = idx.Vectors[:1]
-	if err := idx.Save(vecindex.Dir(stateDir, "proj-cov")); err != nil {
-		t.Fatalf("re-save fixture index: %v", err)
-	}
+	held.Entries = held.Entries[:1]
+	held.Vectors = held.Vectors[:1]
 
 	result, err := Run(context.Background(), deps, Request{Project: "proj-cov", Query: "alpha", Sources: []string{SourceEngramEmbed}})
 	if err != nil {

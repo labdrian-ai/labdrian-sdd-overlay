@@ -2,13 +2,13 @@ args: promote --project golden-project --id 1
 exit: 1
 --- stdout ---
 --- stderr ---
-longterm-mem: promote: promote: create directory for <vault>/wiki/memory/c-000901.md: mkdir <vault>/wiki/memory: file exists
+longterm-mem: promote: create directory for <vault>/wiki/memory/c-000901.md: mkdir <vault>/wiki/memory: file exists
 args: sync --project golden-project
 exit: 1
 --- stdout ---
 longterm-mem: sync promoted 0 observation(s), patched 0 page(s)
 --- stderr ---
-longterm-mem: sync: promote: sync: 2 observations failed, first is 1: promote: create directory for <vault>/wiki/memory/c-000902.md: mkdir <vault>/wiki/memory: file exists
+longterm-mem: sync: promote: sync: 2 observations failed, first is 1: create directory for <vault>/wiki/memory/c-000902.md: mkdir <vault>/wiki/memory: file exists
 --- vault ---
 === .allocator-counter (-rw-r--r--) ===
 903

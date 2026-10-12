@@ -1,0 +1,13 @@
+args: index --project goldenproj --vault /nonexistent/vault
+exit: 5
+--- stdout ---
+--- stderr ---
+longterm-mem: index: vault: provision index: vault: resolve vault root /nonexistent/vault: lstat /nonexistent: no such file or directory
+--- vault ---
+calls: none
+present: .vault-meta/.longterm-mem-provisioned
+present: .vault-meta/bm25/index.json
+present: .vault-meta/chunks/a
+absent: wiki/memory/c-000901.md
+absent: wiki/index.md
+absent: wiki/log.md

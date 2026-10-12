@@ -43,7 +43,8 @@ func TestCmdPromote_PromotesAtTheAddressTheVaultsScriptPrints(t *testing.T) {
 // The command wires the vault's allocator into promotion (Phase 9, L2), and what an operator reads when
 // that allocator cannot give an address is the same as before the wiring moved: the exit code, the
 // script, its exit status and what it said. The wording below was recorded from the program as it stood
-// before L2 (it says "promote:" twice because the command and the package each prefix it).
+// before L2, but for one token: it said "promote:" twice, from the command and from the package wrapping the
+// allocator's failure, and the owner decided on 2026-10-12 to keep the command's.
 func TestCmdPromote_WhenTheVaultCannotGiveAnAddress(t *testing.T) {
 	cases := []struct {
 		name       string
@@ -53,16 +54,16 @@ func TestCmdPromote_WhenTheVaultCannotGiveAnAddress(t *testing.T) {
 		{
 			name:       "the script exits non-zero",
 			script:     "#!/bin/sh\necho 'the counter is locked' >&2\nexit 3\n",
-			wantStderr: "longterm-mem: promote: promote: scripts/allocate-address.sh exited 3: the counter is locked\n",
+			wantStderr: "longterm-mem: promote: scripts/allocate-address.sh exited 3: the counter is locked\n",
 		},
 		{
 			name:       "the script prints nothing",
 			script:     "#!/bin/sh\nprintf '  \\n'\n",
-			wantStderr: "longterm-mem: promote: promote: scripts/allocate-address.sh produced no address\n",
+			wantStderr: "longterm-mem: promote: scripts/allocate-address.sh produced no address\n",
 		},
 		{
 			name:       "the script is absent",
-			wantStderr: "longterm-mem: promote: promote: allocate address: vault: resolve script scripts/allocate-address.sh: ",
+			wantStderr: "longterm-mem: promote: allocate address: vault: resolve script scripts/allocate-address.sh: ",
 		},
 	}
 	for _, tc := range cases {

@@ -63,8 +63,8 @@ func (c commands) cmdSync(args []string) int {
 		return exitInternal
 	}
 
-	runner := &vault.Runner{Root: vaultRoot}
-	// rebuildErr is captured from this command's own RebuildIndex closure
+	rebuilder := vault.IndexRebuilder{Root: vaultRoot}
+	// rebuildErr is captured from this command's own IndexRebuilder wrapper
 	// rather than dug back out of the joined error below. Sync reports the
 	// index rebuild's failure and its per-observation failures through one
 	// error value, and only the first of the two is a vault subprocess
@@ -75,10 +75,10 @@ func (c commands) cmdSync(args []string) int {
 	deps := promote.Deps{
 		Memory: store,
 		Writer: writer,
-		RebuildIndex: func(ctx context.Context) error {
-			rebuildErr = vault.Rebuild(ctx, runner, false)
+		Index: promote.IndexRebuilderFunc(func(ctx context.Context) error {
+			rebuildErr = rebuilder.RebuildIndex(ctx)
 			return rebuildErr
-		},
+		}),
 	}
 
 	// Both passes always run. Sync's failures are per-observation by

@@ -1,0 +1,14 @@
+args: index --project goldenproj
+exit: 5
+--- stdout ---
+--- stderr ---
+longterm-mem: index: vault: refresh index: vault: resolve script scripts/bm25-index.py: lstat <vault>/scripts/bm25-index.py: no such file or directory
+--- vault ---
+calls:
+prefix --all --no-llm
+present: .vault-meta/.longterm-mem-provisioned
+present: .vault-meta/bm25/index.json
+present: .vault-meta/chunks/a
+absent: wiki/memory/c-000901.md
+absent: wiki/index.md
+absent: wiki/log.md

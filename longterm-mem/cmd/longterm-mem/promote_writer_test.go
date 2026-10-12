@@ -50,7 +50,7 @@ func TestNewPromoteWriterWiresTheWriterOfAVault(t *testing.T) {
 }
 
 // A vault whose precedence sidecar cannot be parsed gives no Writer, and the failure reaches the caller as the
-// repository reported it, under the prefix the commands' output carries.
+// repository reported it, with no consumer's name in front.
 func TestNewPromoteWriterFailsWithTheSidecarsOwnError(t *testing.T) {
 	vaultRoot := t.TempDir()
 	writeCorruptSidecar(t, vaultRoot)
@@ -59,7 +59,7 @@ func TestNewPromoteWriterFailsWithTheSidecarsOwnError(t *testing.T) {
 	if err == nil || writer != nil {
 		t.Fatalf("newPromoteWriter = (%v, %v), want no writer and the parse failure", writer, err)
 	}
-	want := "promote: parse " + filepath.Join(vaultRoot, ".raw", ".longterm-mem-manifest.json") + ": "
+	want := "parse " + filepath.Join(vaultRoot, ".raw", ".longterm-mem-manifest.json") + ": "
 	if !strings.HasPrefix(err.Error(), want) {
 		t.Errorf("error %q does not start with %q", err, want)
 	}

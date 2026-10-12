@@ -1,0 +1,12 @@
+args: index --project goldenproj --embeddings --embed-dimension 3
+exit: 1
+--- stdout ---
+--- stderr ---
+longterm-mem: index: vecindex: build: load existing index at <state>/index/goldenproj: vecindex: index is corrupted: <state>/index/goldenproj/manifest.json: parse manifest: invalid character 'n' looking for beginning of object key string
+--- state ---
+=== index/goldenproj/.build.lock ===
+(empty)
+=== index/goldenproj/manifest.json ===
+{not json
+=== index/goldenproj/vectors.blob ===
+480 bytes, sha256 0102866eaa8bbae376d10df126c85870756a1fa2b4a4f92b2a87b4edaf86497f

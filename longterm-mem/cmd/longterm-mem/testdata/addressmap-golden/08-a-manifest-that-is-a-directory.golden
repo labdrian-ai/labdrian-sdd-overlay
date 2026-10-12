@@ -2,13 +2,13 @@ args: promote --project golden-project --id 1
 exit: 1
 --- stdout ---
 --- stderr ---
-longterm-mem: promote: promote: read <vault>/.raw/.manifest.json: read <vault>/.raw/.manifest.json: is a directory
+longterm-mem: promote: read <vault>/.raw/.manifest.json: read <vault>/.raw/.manifest.json: is a directory
 args: sync --project golden-project
 exit: 1
 --- stdout ---
 longterm-mem: sync promoted 0 observation(s), patched 0 page(s)
 --- stderr ---
-longterm-mem: sync: promote: sync: 2 observations failed, first is 1: promote: read <vault>/.raw/.manifest.json: read <vault>/.raw/.manifest.json: is a directory
+longterm-mem: sync: promote: sync: 2 observations failed, first is 1: read <vault>/.raw/.manifest.json: read <vault>/.raw/.manifest.json: is a directory
 --- vault ---
 === .allocator-counter (-rw-r--r--) ===
 903

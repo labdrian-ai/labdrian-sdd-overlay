@@ -12,7 +12,6 @@
 package vaultfs
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultlayout"
@@ -20,46 +19,26 @@ import (
 
 // Vault is the vault at one root. It satisfies the ports its consumers declare, and holds no state of its
 // own beyond the root: every call reads or writes the files as they are.
+//
+// Its errors begin with what failed and name no consumer: the command that reports one puts its own name in
+// front, once.
 type Vault struct {
-	layout      vaultlayout.Layout
-	errorPrefix string
+	layout vaultlayout.Layout
 }
 
 // New is the Vault whose root is root. It touches no file; a root that is not a vault shows at the first read
 // or write.
-func New(root string, options ...Option) *Vault {
-	v := &Vault{layout: vaultlayout.Layout{Root: root}}
-	for _, option := range options {
-		option(v)
-	}
-	return v
-}
-
-// Option adjusts a Vault at its construction.
-type Option func(*Vault)
-
-// WithErrorPrefix makes every error the Vault returns begin with prefix and ": ", wrapping the failure it
-// reports. The adapter names no consumer on its own: the prefix a command's output has always carried is for the
-// composition root to ask for, so the text an operator reads is decided where the commands are.
-func WithErrorPrefix(prefix string) Option {
-	return func(v *Vault) { v.errorPrefix = prefix }
+func New(root string) *Vault {
+	return &Vault{layout: vaultlayout.Layout{Root: root}}
 }
 
 // RootIsDirectory reports whether the root of the vault, following a link, is a directory. A root that cannot be
 // examined (it is not there, it is a link to nothing, a path of it goes through a file) is the file system's own
-// error, naming the root and carrying no prefix, and no answer.
+// error, naming the root, and no answer.
 func (v *Vault) RootIsDirectory() (bool, error) {
 	info, err := os.Stat(v.layout.Root)
 	if err != nil {
 		return false, err
 	}
 	return info.IsDir(), nil
-}
-
-// fail is err with the Vault's error prefix in front, if it has one.
-func (v *Vault) fail(err error) error {
-	if v.errorPrefix == "" {
-		return err
-	}
-	return fmt.Errorf("%s: %w", v.errorPrefix, err)
 }

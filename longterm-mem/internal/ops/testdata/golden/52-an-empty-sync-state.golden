@@ -37,4 +37,4 @@
   ]
 }
 --- status ---
-error: ops: parse <vault>/.vault-meta/longterm-mem-sync-state.json: unexpected end of JSON input
+error: parse <vault>/.vault-meta/longterm-mem-sync-state.json: unexpected end of JSON input

@@ -9,17 +9,15 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/embed"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vecindex"
 
 	_ "modernc.org/sqlite"
 )
 
 // embedArmFixture is one observation newEmbedArmFixture indexes: its title
-// and content are embedded verbatim through vecindex.EmbedInput/Fingerprint,
-// so a caller can soft-delete it afterward via dbPath without going through
-// the read-only production Store.
+// and content are fingerprinted verbatim (testFingerprint), so a caller can
+// soft-delete it afterward via dbPath without going through the read-only
+// production Store.
 type embedArmFixture struct {
 	title, content, project string
 	vec                     []float32
@@ -31,12 +29,12 @@ const (
 	testEmbedInputLimit = 2000
 )
 
-// newEmbedArmFixture builds a temp Engram DB from rows, a matching
-// vecindex manifest+blob under stateDir's embedding index directory, and
+// newEmbedArmFixture builds a temp Engram DB from rows and a matching
+// embedding index held in memory (the repository the arm reads through), and
 // returns the opened (read-only) Store, the writable dbPath (for a test to
-// soft-delete a row afterward), the assigned ids in rows order, and
-// stateDir.
-func newEmbedArmFixture(t *testing.T, rows []embedArmFixture) (store *engram.Store, dbPath string, ids []int64, stateDir string) {
+// soft-delete a row afterward), the assigned ids in rows order, and the
+// repository.
+func newEmbedArmFixture(t *testing.T, rows []embedArmFixture) (store *engram.Store, dbPath string, ids []int64, index *fakeIndexes) {
 	t.Helper()
 
 	schema, err := os.ReadFile(filepath.Join("..", "engram", "testdata", "schema.sql"))
@@ -54,8 +52,7 @@ func newEmbedArmFixture(t *testing.T, rows []embedArmFixture) (store *engram.Sto
 	}
 
 	var project string
-	manifest := vecindex.Manifest{Model: testEmbedModel, Dimension: testEmbedDimension, InputLimit: testEmbedInputLimit, BuiltAt: "2026-01-01T00:00:00Z"}
-	var vectors [][]float32
+	built := &EmbeddingIndex{Model: testEmbedModel, Dimension: testEmbedDimension, InputLimit: testEmbedInputLimit, BuiltAt: "2026-01-01T00:00:00Z"}
 	for _, r := range rows {
 		project = r.project
 		res, err := setup.Exec(
@@ -72,16 +69,15 @@ func newEmbedArmFixture(t *testing.T, rows []embedArmFixture) (store *engram.Sto
 			t.Fatalf("last insert id for %q: %v", r.title, err)
 		}
 		ids = append(ids, id)
-		fp := vecindex.Fingerprint(manifest.Model, manifest.Dimension, manifest.InputLimit, r.title, r.content)
-		manifest.Entries = append(manifest.Entries, vecindex.ManifestEntry{EngramID: id, Fingerprint: fp})
-		vectors = append(vectors, r.vec)
+		fp := testFingerprint(built.Model, built.Dimension, built.InputLimit, r.title, r.content)
+		built.Entries = append(built.Entries, IndexedObservation{EngramID: id, Fingerprint: fp})
+		built.Vectors = append(built.Vectors, r.vec)
 	}
 	setup.Close()
 
-	stateDir = t.TempDir()
-	idx := &vecindex.Index{Manifest: manifest, Vectors: vectors}
-	if err := idx.Save(vecindex.Dir(stateDir, project)); err != nil {
-		t.Fatalf("save fixture index: %v", err)
+	index = &fakeIndexes{}
+	if len(rows) > 0 {
+		index.hold(project, built)
 	}
 
 	store, err = engram.Open(dbPath)
@@ -89,7 +85,7 @@ func newEmbedArmFixture(t *testing.T, rows []embedArmFixture) (store *engram.Sto
 		t.Fatalf("engram.Open(%q): %v", dbPath, err)
 	}
 	t.Cleanup(func() { _ = store.Close() })
-	return store, dbPath, ids, stateDir
+	return store, dbPath, ids, index
 }
 
 func softDeleteEmbedFixtureRow(t *testing.T, dbPath string, id int64) {
@@ -115,13 +111,13 @@ func fakeEmbed(vec []float32, err error) EmbedFunc {
 // not distort Coverage.Unindexed -- the row leaves Live and Indexed
 // together, so the gap between them is unchanged.
 func TestSoftDeletedObservationNeverSurfacesFromTheIndex(t *testing.T) {
-	store, dbPath, ids, stateDir := newEmbedArmFixture(t, []embedArmFixture{
+	store, dbPath, ids, index := newEmbedArmFixture(t, []embedArmFixture{
 		{title: "will be deleted", content: "alpha content", project: "proj-embed", vec: []float32{1, 0, 0}},
 		{title: "stays live", content: "beta content", project: "proj-embed", vec: []float32{0, 1, 0}},
 	})
 	softDeleteEmbedFixtureRow(t, dbPath, ids[0])
 
-	rows, coverage, diags := runEmbeddingArm(context.Background(), store, stateDir, "proj-embed", "alpha", 5, fakeEmbed([]float32{1, 0, 0}, nil), nil, nil)
+	rows, coverage, diags := embeddingArm{Memory: store, Index: index, Embed: fakeEmbed([]float32{1, 0, 0}, nil)}.run(context.Background(), "proj-embed", "alpha", 5)
 	if len(diags) != 0 {
 		t.Fatalf("unexpected diagnostics: %+v", diags)
 	}
@@ -150,7 +146,7 @@ func TestSoftDeletedObservationNeverSurfacesFromTheIndex(t *testing.T) {
 // edited since it was embedded -- is dropped rather than served under a
 // vector that no longer describes it.
 func TestEmbeddingArmDropsAStaleFingerprint(t *testing.T) {
-	store, dbPath, ids, stateDir := newEmbedArmFixture(t, []embedArmFixture{
+	store, dbPath, ids, index := newEmbedArmFixture(t, []embedArmFixture{
 		{title: "original title", content: "original content", project: "proj-embed", vec: []float32{1, 0, 0}},
 	})
 	conn, err := sql.Open("sqlite", dbPath)
@@ -162,7 +158,7 @@ func TestEmbeddingArmDropsAStaleFingerprint(t *testing.T) {
 	}
 	conn.Close()
 
-	rows, _, diags := runEmbeddingArm(context.Background(), store, stateDir, "proj-embed", "original", 5, fakeEmbed([]float32{1, 0, 0}, nil), nil, nil)
+	rows, _, diags := embeddingArm{Memory: store, Index: index, Embed: fakeEmbed([]float32{1, 0, 0}, nil)}.run(context.Background(), "proj-embed", "original", 5)
 	if len(diags) != 0 {
 		t.Fatalf("unexpected diagnostics: %+v", diags)
 	}
@@ -177,8 +173,8 @@ func TestEmbeddingArmDropsAStaleFingerprint(t *testing.T) {
 // (if oddly formatted) timestamp.
 func TestEmbeddingArmReportsNeverBuiltWhenNoIndexExists(t *testing.T) {
 	store, _, _, _ := newEmbedArmFixture(t, nil)
-	stateDir := t.TempDir() // deliberately empty: no index was ever saved here
-	_, coverage, diags := runEmbeddingArm(context.Background(), store, stateDir, "proj-embed", "anything", 5, fakeEmbed([]float32{1, 0, 0}, nil), nil, nil)
+	index := &fakeIndexes{} // deliberately empty: no index was ever held here
+	_, coverage, diags := embeddingArm{Memory: store, Index: index, Embed: fakeEmbed([]float32{1, 0, 0}, nil)}.run(context.Background(), "proj-embed", "anything", 5)
 	if len(diags) != 0 {
 		t.Fatalf("unexpected diagnostics: %+v", diags)
 	}
@@ -202,14 +198,14 @@ func TestEmbeddingArmReportsNeverBuiltWhenNoIndexExists(t *testing.T) {
 // told the operator to rebuild an index that was never the problem -- a
 // read failure turned into a confident, actionable, wrong instruction.
 func TestRunEmbeddingArm_UnreadableCoverageIsNamedAndReportsNoMeasurements(t *testing.T) {
-	store, _, _, stateDir := newEmbedArmFixture(t, []embedArmFixture{
+	store, _, _, index := newEmbedArmFixture(t, []embedArmFixture{
 		{title: "one", content: "alpha", project: "proj-embed", vec: []float32{1, 0, 0}},
 	})
 	if err := store.Close(); err != nil {
 		t.Fatalf("close fixture store: %v", err)
 	}
 
-	_, coverage, diags := runEmbeddingArm(context.Background(), store, stateDir, "proj-embed", "alpha", 5, fakeEmbed([]float32{1, 0, 0}, nil), nil, nil)
+	_, coverage, diags := embeddingArm{Memory: store, Index: index, Embed: fakeEmbed([]float32{1, 0, 0}, nil)}.run(context.Background(), "proj-embed", "alpha", 5)
 
 	var found *Diagnostic
 	for i, d := range diags {
@@ -240,7 +236,7 @@ func TestRunEmbeddingArm_UnreadableCoverageIsNamedAndReportsNoMeasurements(t *te
 // reports a real gap rather than having lost the number along with the
 // clamp.
 func TestRunEmbeddingArm_UnindexedIsAPlainSubtraction(t *testing.T) {
-	store, dbPath, _, stateDir := newEmbedArmFixture(t, []embedArmFixture{
+	store, dbPath, _, index := newEmbedArmFixture(t, []embedArmFixture{
 		{title: "indexed one", content: "alpha", project: "proj-embed", vec: []float32{1, 0, 0}},
 	})
 	if err := store.Close(); err != nil {
@@ -267,7 +263,7 @@ func TestRunEmbeddingArm_UnindexedIsAPlainSubtraction(t *testing.T) {
 	}
 	t.Cleanup(func() { reopened.Close() })
 
-	_, coverage, _ := runEmbeddingArm(context.Background(), reopened, stateDir, "proj-embed", "alpha", 5, fakeEmbed([]float32{1, 0, 0}, nil), nil, nil)
+	_, coverage, _ := embeddingArm{Memory: reopened, Index: index, Embed: fakeEmbed([]float32{1, 0, 0}, nil)}.run(context.Background(), "proj-embed", "alpha", 5)
 
 	if coverage.Live != 2 || coverage.Indexed != 1 {
 		t.Fatalf("coverage = %+v, want Live 2 / Indexed 1", coverage)
@@ -280,16 +276,16 @@ func TestRunEmbeddingArm_UnindexedIsAPlainSubtraction(t *testing.T) {
 // TestUnreachableBackendAndMissingModelAreDistinctDiagnostics (R-070): the
 // two ways an embedding call can fail must never collapse into one code.
 func TestUnreachableBackendAndMissingModelAreDistinctDiagnostics(t *testing.T) {
-	store, _, _, stateDir := newEmbedArmFixture(t, []embedArmFixture{
+	store, _, _, index := newEmbedArmFixture(t, []embedArmFixture{
 		{title: "t", content: "c", project: "proj-embed", vec: []float32{1, 0, 0}},
 	})
 
-	_, _, diags := runEmbeddingArm(context.Background(), store, stateDir, "proj-embed", "q", 5, fakeEmbed(nil, &embed.BackendUnreachableError{Err: errors.New("dial tcp: connection refused")}), nil, nil)
+	_, _, diags := embeddingArm{Memory: store, Index: index, Embed: fakeEmbed(nil, &backendDown{errors.New("dial tcp: connection refused")})}.run(context.Background(), "proj-embed", "q", 5)
 	if len(diags) != 1 || diags[0].Code != DiagnosticEmbeddingBackendUnreachable {
 		t.Fatalf("diags = %+v, want exactly one %q", diags, DiagnosticEmbeddingBackendUnreachable)
 	}
 
-	_, _, diags = runEmbeddingArm(context.Background(), store, stateDir, "proj-embed", "q", 5, fakeEmbed(nil, &embed.ModelMissingError{Model: "nomic-embed-text"}), nil, nil)
+	_, _, diags = embeddingArm{Memory: store, Index: index, Embed: fakeEmbed(nil, &modelMissing{"nomic-embed-text"})}.run(context.Background(), "proj-embed", "q", 5)
 	if len(diags) != 1 || diags[0].Code != DiagnosticEmbeddingModelMissing {
 		t.Fatalf("diags = %+v, want exactly one %q", diags, DiagnosticEmbeddingModelMissing)
 	}

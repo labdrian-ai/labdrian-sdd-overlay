@@ -1,0 +1,173 @@
+--- answer 1 ---
+{
+  "jsonrpc": "2.0",
+  "id": 10,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "query \"layout\" in goldenproj (vault_status=ok, 5 results)\n\n[1] vault c-000001 \n    page 1 for layout (top 2) xxxxxxxxxx\n\n[2] vault c-000002 \n    page 2 for layout (top 2) xxxxxxxxxx\n\n[3] vault c-000003 \n    page 3 for layout (top 2) xxxxxxxxxx\n\n[4] vault c-000004 \n    page 4 for layout (top 2) xxxxxxxxxx\n\n[5] vault c-000005 \n    page 5 for layout (top 2) xxxxxxxxxx\n"
+      }
+    ],
+    "structuredContent": {
+      "coverage": null,
+      "project": "goldenproj",
+      "query": "layout",
+      "results": [
+        {
+          "page_address": "c-000001",
+          "page_path": "<vault>/wiki/memory/c-000001.md",
+          "rank": 1,
+          "score": {
+            "bm25": 2,
+            "rerank": 0.25
+          },
+          "snippet": "page 1 for layout (top 2) xxxxxxxxxx",
+          "sources": [
+            "vault"
+          ]
+        },
+        {
+          "page_address": "c-000002",
+          "page_path": "<vault>/wiki/memory/c-000002.md",
+          "rank": 2,
+          "score": {
+            "bm25": 1.5,
+            "rerank": 0.5
+          },
+          "snippet": "page 2 for layout (top 2) xxxxxxxxxx",
+          "sources": [
+            "vault"
+          ]
+        },
+        {
+          "page_address": "c-000003",
+          "page_path": "<vault>/wiki/memory/c-000003.md",
+          "rank": 3,
+          "score": {
+            "bm25": 1,
+            "rerank": 0.75
+          },
+          "snippet": "page 3 for layout (top 2) xxxxxxxxxx",
+          "sources": [
+            "vault"
+          ]
+        },
+        {
+          "page_address": "c-000004",
+          "page_path": "<vault>/wiki/memory/c-000004.md",
+          "rank": 4,
+          "score": {
+            "bm25": 0.5,
+            "rerank": 1
+          },
+          "snippet": "page 4 for layout (top 2) xxxxxxxxxx",
+          "sources": [
+            "vault"
+          ]
+        },
+        {
+          "page_address": "c-000005",
+          "page_path": "<vault>/wiki/memory/c-000005.md",
+          "rank": 5,
+          "score": {
+            "rerank": 1.25
+          },
+          "snippet": "page 5 for layout (top 2) xxxxxxxxxx",
+          "sources": [
+            "vault"
+          ]
+        }
+      ],
+      "vault_status": "ok"
+    }
+  }
+}
+--- answer 2 ---
+{
+  "jsonrpc": "2.0",
+  "id": 11,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "query \"layout\" in goldenproj (vault_status=ok, 5 results)\n\n[1] vault c-000001 \n    page 1 for layout (top 5) xxxxxxxxxx\n\n[2] vault c-000002 \n    page 2 for layout (top 5) xxxxxxxxxx\n\n[3] vault c-000003 \n    page 3 for layout (top 5) xxxxxxxxxx\n\n[4] vault c-000004 \n    page 4 for layout (top 5) xxxxxxxxxx\n\n[5] vault c-000005 \n    page 5 for layout (top 5) xxxxxxxxxx\n"
+      }
+    ],
+    "structuredContent": {
+      "coverage": null,
+      "project": "goldenproj",
+      "query": "layout",
+      "results": [
+        {
+          "page_address": "c-000001",
+          "page_path": "<vault>/wiki/memory/c-000001.md",
+          "rank": 1,
+          "score": {
+            "bm25": 2,
+            "rerank": 0.25
+          },
+          "snippet": "page 1 for layout (top 5) xxxxxxxxxx",
+          "sources": [
+            "vault"
+          ]
+        },
+        {
+          "page_address": "c-000002",
+          "page_path": "<vault>/wiki/memory/c-000002.md",
+          "rank": 2,
+          "score": {
+            "bm25": 1.5,
+            "rerank": 0.5
+          },
+          "snippet": "page 2 for layout (top 5) xxxxxxxxxx",
+          "sources": [
+            "vault"
+          ]
+        },
+        {
+          "page_address": "c-000003",
+          "page_path": "<vault>/wiki/memory/c-000003.md",
+          "rank": 3,
+          "score": {
+            "bm25": 1,
+            "rerank": 0.75
+          },
+          "snippet": "page 3 for layout (top 5) xxxxxxxxxx",
+          "sources": [
+            "vault"
+          ]
+        },
+        {
+          "page_address": "c-000004",
+          "page_path": "<vault>/wiki/memory/c-000004.md",
+          "rank": 4,
+          "score": {
+            "bm25": 0.5,
+            "rerank": 1
+          },
+          "snippet": "page 4 for layout (top 5) xxxxxxxxxx",
+          "sources": [
+            "vault"
+          ]
+        },
+        {
+          "page_address": "c-000005",
+          "page_path": "<vault>/wiki/memory/c-000005.md",
+          "rank": 5,
+          "score": {
+            "rerank": 1.25
+          },
+          "snippet": "page 5 for layout (top 5) xxxxxxxxxx",
+          "sources": [
+            "vault"
+          ]
+        }
+      ],
+      "vault_status": "ok"
+    }
+  }
+}
+--- exit ---
+0
+--- stderr ---

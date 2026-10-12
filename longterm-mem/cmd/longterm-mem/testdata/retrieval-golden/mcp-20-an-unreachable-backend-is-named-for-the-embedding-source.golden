@@ -1,0 +1,59 @@
+--- answer 1 ---
+{
+  "jsonrpc": "2.0",
+  "id": 10,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "query \"dragonscale\" in goldenproj (vault_status=not_requested, 2 results)\n\n[1] engram-fts engram:6 Session summary dragonscale\n    dragonscale summary of a session\n\n[2] engram-fts engram:3 Dragonscale layout\n    …fé; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café;  dragonscale needle in the middle más texto náutico más texto náutico más texto náutico más texto náutico más texto náutico más texto náutico más texto náutico más texto náutico más texto náutico más texto náu…\n    (extract of 2599 bytes; call get{engram_id: 3} for the whole text)\n\nWARN embedding_backend_unreachable: embed: backend unreachable: unexpected status 500: backend broke\n"
+      }
+    ],
+    "structuredContent": {
+      "coverage": [
+        {
+          "built_at": "<instant>",
+          "indexed": 13,
+          "live": 13,
+          "source": "engram-embed",
+          "unindexed": 0
+        }
+      ],
+      "diagnostics": [
+        {
+          "code": "embedding_backend_unreachable",
+          "detail": "embed: backend unreachable: unexpected status 500: backend broke"
+        }
+      ],
+      "project": "goldenproj",
+      "query": "dragonscale",
+      "results": [
+        {
+          "engram_id": 6,
+          "full_length": 32,
+          "rank": 1,
+          "snippet": "dragonscale summary of a session",
+          "sources": [
+            "engram-fts"
+          ],
+          "title": "Session summary dragonscale"
+        },
+        {
+          "engram_id": 3,
+          "full_length": 2599,
+          "rank": 2,
+          "snippet": "…fé; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café;  dragonscale needle in the middle más texto náutico más texto náutico más texto náutico más texto náutico más texto náutico más texto náutico más texto náutico más texto náutico más texto náutico más texto náu…",
+          "snippet_truncated": true,
+          "sources": [
+            "engram-fts"
+          ],
+          "title": "Dragonscale layout"
+        }
+      ],
+      "vault_status": "not_requested"
+    }
+  }
+}
+--- exit ---
+0
+--- stderr ---

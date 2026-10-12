@@ -1,0 +1,67 @@
+--- answer 1 ---
+{
+  "jsonrpc": "2.0",
+  "id": 10,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "engram:1 Canonical identity of the register writer (decision)\n\nThe canonical identity rule: the register writer sorts its keys.\n**Where**: internal/old/gone.go, moved.go\nisolation marker here."
+      }
+    ],
+    "structuredContent": {
+      "content": "The canonical identity rule: the register writer sorts its keys.\n**Where**: internal/old/gone.go, moved.go\nisolation marker here.",
+      "created_at": "2026-08-01 00:00:00",
+      "engram_id": 1,
+      "found": true,
+      "project": "goldenproj",
+      "title": "Canonical identity of the register writer",
+      "type": "decision",
+      "updated_at": "2026-08-02 00:00:00"
+    }
+  }
+}
+--- answer 2 ---
+{
+  "jsonrpc": "2.0",
+  "id": 11,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "no observation with id 999 exists in Engram; it may have been hard-deleted, or the id may come from another database"
+      }
+    ],
+    "structuredContent": {
+      "detail": "no observation with id 999 exists in Engram; it may have been hard-deleted, or the id may come from another database",
+      "found": false
+    }
+  }
+}
+--- answer 3 ---
+{
+  "jsonrpc": "2.0",
+  "id": 12,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "engram:4 Deleted dragonscale note (discovery) — RETIRED 2026-08-06 00:00:00\n\ndragonscale deleted body"
+      }
+    ],
+    "structuredContent": {
+      "content": "dragonscale deleted body",
+      "created_at": "2026-08-05 00:00:00",
+      "deleted_at": "2026-08-06 00:00:00",
+      "engram_id": 4,
+      "found": true,
+      "project": "goldenproj",
+      "title": "Deleted dragonscale note",
+      "type": "discovery",
+      "updated_at": "2026-08-05 00:00:00"
+    }
+  }
+}
+--- exit ---
+0
+--- stderr ---

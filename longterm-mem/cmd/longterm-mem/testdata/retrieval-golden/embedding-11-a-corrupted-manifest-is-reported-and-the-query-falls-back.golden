@@ -1,0 +1,55 @@
+args: query --project goldenproj --json dragonscale
+exit: 0
+--- stdout ---
+{
+  "project": "goldenproj",
+  "query": "dragonscale",
+  "vault_status": "not_requested",
+  "results": [
+    {
+      "sources": [
+        "engram-fts"
+      ],
+      "rank": 1,
+      "engram_id": 20,
+      "title": "Fresh dragonscale note",
+      "snippet": "dragonscale fresh body",
+      "full_length": 22
+    },
+    {
+      "sources": [
+        "engram-fts"
+      ],
+      "rank": 2,
+      "engram_id": 21,
+      "title": "Second dragonscale note",
+      "snippet": "dragonscale second body",
+      "full_length": 23
+    },
+    {
+      "sources": [
+        "engram-fts"
+      ],
+      "rank": 3,
+      "engram_id": 6,
+      "title": "Session summary dragonscale",
+      "snippet": "dragonscale summary of a session",
+      "full_length": 32
+    }
+  ],
+  "diagnostics": [
+    {
+      "code": "embedding_index_unreadable",
+      "detail": "the embedding index of project \"goldenproj\" could not be read, so this answer has no embedding rows: vecindex: index is corrupted: <state>/index/goldenproj/manifest.json: parse manifest: invalid character 'n' looking for beginning of object key string"
+    }
+  ],
+  "coverage": null
+}
+--- stderr ---
+--- state ---
+=== index/goldenproj/.build.lock ===
+(empty)
+=== index/goldenproj/manifest.json ===
+{not json
+=== index/goldenproj/vectors.blob ===
+480 bytes, sha256 0102866eaa8bbae376d10df126c85870756a1fa2b4a4f92b2a87b4edaf86497f

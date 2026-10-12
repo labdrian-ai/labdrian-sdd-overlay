@@ -82,6 +82,8 @@ var knownDebt = archguard.Debt{
 	// the ports ops owns (L3 is done for ops). L4 owns the index repository port;
 	// the C17 table names no unit for the embed and vecindex edges of ops, and L4
 	// is assigned because ops would consume the same port and typed errors as query.
+	// L4's query half is done (batch 35: query owns EmbeddingIndexRepository and
+	// the typed embedding failures); the ops half is what is left of the unit.
 	"internal/ops": {
 		"internal/embed":    "L4",
 		"internal/vecindex": "L4",
@@ -93,13 +95,6 @@ var knownDebt = archguard.Debt{
 		"os":                         "L7",
 		"path/filepath.Abs":          "L7",
 		"path/filepath.EvalSymlinks": "L7",
-	},
-
-	// query: reads through ports it owns instead of the concrete adapters.
-	"internal/query": {
-		"internal/embed":    "L4",
-		"internal/vault":    "L4",
-		"internal/vecindex": "L4",
 	},
 
 	// skillstale: pure Detect over its inputs, with the lock, the facts, the

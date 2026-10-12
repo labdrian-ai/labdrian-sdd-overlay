@@ -17,7 +17,7 @@
     {
       "name": "precedence-sidecar-consistency",
       "status": "FAIL",
-      "detail": ".raw/.longterm-mem-manifest.json could not be read, so c-000042 has no provable provenance: promote: parse <vault>/.raw/.longterm-mem-manifest.json: invalid character 'n' looking for beginning of object key string"
+      "detail": ".raw/.longterm-mem-manifest.json could not be read, so c-000042 has no provable provenance: parse <vault>/.raw/.longterm-mem-manifest.json: invalid character 'n' looking for beginning of object key string"
     },
     {
       "name": "runtime-prerequisites",

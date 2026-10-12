@@ -18,7 +18,7 @@ const createPerm = 0o600
 // symlink, so it replaces the file the way durable.WriteFile does: through the link, keeping the mode of the
 // file that is there, and by rename, so a reader never sees half a file.
 //
-// Its errors name what failed and carry no prefix; the Vault adds the one it was asked for.
+// Its errors name what failed and carry no consumer's name.
 func writeFileAtomic(path string, data []byte) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return fmt.Errorf("create directory for %s: %w", path, err)

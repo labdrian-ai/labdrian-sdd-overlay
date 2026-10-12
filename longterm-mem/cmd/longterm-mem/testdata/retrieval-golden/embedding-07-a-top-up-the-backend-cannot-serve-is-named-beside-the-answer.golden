@@ -1,0 +1,84 @@
+args: query --project goldenproj --json dragonscale
+exit: 0
+--- stdout ---
+{
+  "project": "goldenproj",
+  "query": "dragonscale",
+  "vault_status": "not_requested",
+  "results": [
+    {
+      "sources": [
+        "engram-fts"
+      ],
+      "rank": 1,
+      "engram_id": 20,
+      "title": "Fresh dragonscale note",
+      "snippet": "dragonscale fresh body",
+      "full_length": 22
+    },
+    {
+      "sources": [
+        "engram-fts"
+      ],
+      "rank": 2,
+      "engram_id": 21,
+      "title": "Second dragonscale note",
+      "snippet": "dragonscale second body",
+      "full_length": 23
+    },
+    {
+      "sources": [
+        "engram-fts"
+      ],
+      "rank": 3,
+      "engram_id": 6,
+      "title": "Session summary dragonscale",
+      "snippet": "dragonscale summary of a session",
+      "full_length": 32
+    }
+  ],
+  "diagnostics": [
+    {
+      "code": "embedding_topup_failed",
+      "detail": "tried to embed 1 unindexed rows before answering this query, but the build failed, so this answer still comes from the index as it stood before: vecindex: build: embed engram id 21: embed: backend unreachable: unexpected status 500: backend broke"
+    },
+    {
+      "code": "embedding_backend_unreachable",
+      "detail": "embed: backend unreachable: unexpected status 500: backend broke"
+    },
+    {
+      "code": "embedding_index_incomplete",
+      "detail": "1 of 14 live observations are not in the embedding index, so a thin or empty paraphrase result is not evidence of absence; run `longterm-mem index --embeddings` to rebuild it"
+    }
+  ],
+  "coverage": [
+    {
+      "source": "engram-embed",
+      "live": 14,
+      "indexed": 13,
+      "unindexed": 1,
+      "built_at": "<instant>"
+    }
+  ]
+}
+--- stderr ---
+--- state ---
+=== index/goldenproj/.build.lock ===
+(empty)
+=== index/goldenproj/manifest.json ===
+model nomic-embed-text, dimension 3, input limit 2000, built at <instant>, revision <digest>
+  engram:1 eeb5d758fe17
+  engram:2 664f101f410e
+  engram:6 563d1445d16f
+  engram:7 f6edb5a0da4a
+  engram:8 3217b5611d1e
+  engram:9 c1204e60546b
+  engram:10 2db7e0ef6a05
+  engram:11 78928ddda441
+  engram:12 9c6ffbbc6284
+  engram:13 4e124a6a8980
+  engram:14 bf18edc4fccd
+  engram:15 7e8f2166ebef
+  engram:20 b15dc0814f8f
+=== index/goldenproj/vectors.blob ===
+156 bytes, sha256 7780dabf53a44ae8c663a523ca0414e41bc0bf2be9c954f97cf7c1702a062dda

@@ -8,8 +8,6 @@ import (
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vault"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vecindex"
 )
 
 // fakeMemory is the Memory port query owns, implemented without a database or an index: the use case
@@ -133,7 +131,7 @@ func TestRun_AttachesTheStandingsThePortReportsToTheRowsItAskedAbout(t *testing.
 	if !reflect.DeepEqual(mem.standingsFor, []int64{7, 9}) {
 		t.Errorf("standings were asked for %v, want the ids of the rows in rank order", mem.standingsFor)
 	}
-	if result.Results[0].Standing == nil || !reflect.DeepEqual(result.Results[0].Standing.SupersededBy, []memory.Neighbour{{ID: 9, Title: "second"}}) {
+	if result.Results[0].Standing == nil || !reflect.DeepEqual(result.Results[0].Standing.SupersededBy, []Neighbour{{ID: 9, Title: "second"}}) {
 		t.Errorf("row 7 standing = %+v, want superseded by 9", result.Results[0].Standing)
 	}
 	if result.Results[1].Standing != nil {
@@ -162,8 +160,7 @@ func TestRun_TheEmbeddingArmCountsCoverageThroughTheMemoryPort(t *testing.T) {
 	deps := Deps{
 		Memory:      mem,
 		ResolveLink: NoLinkResolver,
-		StateDir:    t.TempDir(),
-		LoadIndex:   func(string) (*vecindex.Index, error) { return nil, vecindex.ErrNoIndex },
+		Index:       &fakeIndexes{},
 	}
 
 	result, err := Run(context.Background(), deps, Request{Project: "p", Query: "alpha", Sources: []string{SourceEngramEmbed}})
@@ -186,8 +183,7 @@ func TestRun_AnUnreadableSnapshotIsReportedAsZerosThatAreNotMeasurements(t *test
 	deps := Deps{
 		Memory:      mem,
 		ResolveLink: NoLinkResolver,
-		StateDir:    t.TempDir(),
-		LoadIndex:   func(string) (*vecindex.Index, error) { return nil, vecindex.ErrNoIndex },
+		Index:       &fakeIndexes{},
 	}
 
 	result, err := Run(context.Background(), deps, Request{Project: "p", Query: "alpha", Sources: []string{SourceEngramEmbed}})
@@ -209,7 +205,7 @@ func TestRun_RefusesToSearchWithoutAMemory(t *testing.T) {
 	var notThere *fakeMemory
 	for name, mem := range map[string]Memory{"no port": nil, "a nil pointer": notThere} {
 		for _, source := range []string{SourceEngramFTS, SourceEngramEmbed} {
-			_, err := Run(context.Background(), Deps{Memory: mem, ResolveLink: NoLinkResolver, StateDir: t.TempDir()}, Request{Project: "p", Query: "alpha", Sources: []string{source}})
+			_, err := Run(context.Background(), Deps{Memory: mem, ResolveLink: NoLinkResolver}, Request{Project: "p", Query: "alpha", Sources: []string{source}})
 			if !errors.Is(err, ErrNoMemory) {
 				t.Errorf("Run over %s for %s = %v, want ErrNoMemory", name, source, err)
 			}
@@ -222,8 +218,8 @@ func TestRun_RefusesToSearchWithoutAMemory(t *testing.T) {
 // refusal above is for the sources that read the memory, not for the call as a whole.
 func TestRun_AVaultOnlyQueryNeedsNoMemory(t *testing.T) {
 	deps := Deps{
-		RetrieveVault: fakeRetrieveVault(vault.Result{Status: vault.StatusOK, Candidates: []vault.Candidate{{PageAddress: "c-000042", Snippet: "vault side"}}}, nil),
-		ResolveLink:   func(string) (int64, bool) { return 7, true },
+		Vault:       fakeVault([]VaultCandidate{{PageAddress: "c-000042", Snippet: "vault side"}}, nil),
+		ResolveLink: func(string) (int64, bool) { return 7, true },
 	}
 
 	result, err := Run(context.Background(), deps, Request{Project: "p", Query: "alpha", Sources: []string{SourceVault}})

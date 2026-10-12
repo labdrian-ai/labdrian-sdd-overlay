@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vault"
 )
 
 // TestMergeResults_LinkedPairCollapsesAgainstTheEmbeddingArm (JD-4): a
@@ -17,7 +16,7 @@ import (
 func TestMergeResults_LinkedPairCollapsesAgainstTheEmbeddingArm(t *testing.T) {
 	const addr, linkedID = "c-000042", int64(42)
 
-	vaultRows := []vault.Candidate{{PageAddress: addr, AbsolutePath: "/v/c-000042.md", Snippet: "page snippet"}}
+	vaultRows := []VaultCandidate{{PageAddress: addr, AbsolutePath: "/v/c-000042.md", Snippet: "page snippet"}}
 	// The FTS arm found nothing; only the embedding arm surfaced the
 	// observation this page was promoted from.
 	embedRows := []ResultRow{{EngramID: linkedID, Title: "linked observation", Snippet: "embed snippet", Content: "embed body", FullLength: 10}}
@@ -50,7 +49,7 @@ func TestMergeResults_LinkedPairCollapsesAgainstTheEmbeddingArm(t *testing.T) {
 func TestMergeResults_EmbedOnlyLinkDoesNotStealAnFTSRow(t *testing.T) {
 	const addr, linkedID = "c-000042", int64(42)
 
-	vaultRows := []vault.Candidate{{PageAddress: addr, AbsolutePath: "/v/c-000042.md", Snippet: "page snippet"}}
+	vaultRows := []VaultCandidate{{PageAddress: addr, AbsolutePath: "/v/c-000042.md", Snippet: "page snippet"}}
 	// The two arms carry DIFFERENT titles on purpose. With the same title
 	// this test passes whichever arm is consulted first, which makes it
 	// unable to fail for the ordering it is named after -- proven by
