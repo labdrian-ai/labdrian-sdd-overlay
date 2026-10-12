@@ -252,11 +252,11 @@ func TestRecordAddressRefusesAManifestItCannotUnderstand(t *testing.T) {
 			root := t.TempDir()
 			writeManifest(t, root, tc.content, 0o644)
 
-			err := New(root, WithErrorPrefix("promote")).RecordAddress("wiki/memory/c-000042.md", "c-000042", recordedAt)
+			err := New(root).RecordAddress("wiki/memory/c-000042.md", "c-000042", recordedAt)
 			if err == nil {
 				t.Fatal("RecordAddress = nil error, want the parse failure")
 			}
-			if want := "promote: " + strings.Replace(tc.want, "%s", manifestPath(root), 1); !strings.HasPrefix(err.Error(), want) {
+			if want := strings.Replace(tc.want, "%s", manifestPath(root), 1); !strings.HasPrefix(err.Error(), want) {
 				t.Errorf("error %q does not start with %q", err, want)
 			}
 			if got := readManifest(t, root); got != tc.content {
@@ -274,11 +274,11 @@ func TestRecordAddressReportsAManifestItCannotRead(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err := New(root, WithErrorPrefix("promote")).RecordAddress("wiki/memory/c-000042.md", "c-000042", recordedAt)
+	err := New(root).RecordAddress("wiki/memory/c-000042.md", "c-000042", recordedAt)
 	if err == nil {
 		t.Fatal("RecordAddress = nil error, want the read failure")
 	}
-	if want := "promote: read " + manifestPath(root) + ": "; !strings.HasPrefix(err.Error(), want) {
+	if want := "read " + manifestPath(root) + ": "; !strings.HasPrefix(err.Error(), want) {
 		t.Errorf("error %q does not start with %q", err, want)
 	}
 	if info, statErr := os.Stat(manifestPath(root)); statErr != nil || !info.IsDir() {
@@ -297,11 +297,11 @@ func TestRecordAddressOverALinkToNothingFailsAndKeepsTheLink(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err := New(root, WithErrorPrefix("promote")).RecordAddress("wiki/memory/c-000042.md", "c-000042", recordedAt)
+	err := New(root).RecordAddress("wiki/memory/c-000042.md", "c-000042", recordedAt)
 	if err == nil {
 		t.Fatal("RecordAddress = nil error, want the failure to create the file behind the link")
 	}
-	if !strings.HasPrefix(err.Error(), "promote: durable: create temp file for "+filepath.Join(root, "notes", "absent.json")) {
+	if !strings.HasPrefix(err.Error(), "durable: create temp file for "+filepath.Join(root, "notes", "absent.json")) {
 		t.Errorf("error %q does not say what could not be created", err)
 	}
 	if target, linkErr := os.Readlink(manifestPath(root)); linkErr != nil || target != "../notes/absent.json" {
@@ -369,14 +369,14 @@ func TestLoadAddressMapOfAManifestThatCannotBeReadIsNotCorruption(t *testing.T) 
 		if err := os.MkdirAll(manifestPath(root), 0o755); err != nil {
 			t.Fatal(err)
 		}
-		got, err := New(root, WithErrorPrefix("promote")).LoadAddressMap()
+		got, err := New(root).LoadAddressMap()
 		if err == nil || got != nil {
 			t.Fatalf("LoadAddressMap = (%v, %v), want no map and an error", got, err)
 		}
 		if errors.Is(err, promote.ErrAddressMapCorrupt) {
 			t.Errorf("error %q says the manifest is corrupt", err)
 		}
-		if want := "promote: read " + manifestPath(root) + ": "; !strings.HasPrefix(err.Error(), want) {
+		if want := "read " + manifestPath(root) + ": "; !strings.HasPrefix(err.Error(), want) {
 			t.Errorf("error %q does not start with %q", err, want)
 		}
 	})
@@ -398,14 +398,14 @@ func TestLoadAddressMapOfACorruptManifestIsErrAddressMapCorrupt(t *testing.T) {
 			root := t.TempDir()
 			writeManifest(t, root, content, 0o644)
 
-			got, err := New(root, WithErrorPrefix("promote")).LoadAddressMap()
+			got, err := New(root).LoadAddressMap()
 			if err == nil || got != nil {
 				t.Fatalf("LoadAddressMap = (%v, %v), want no map and an error", got, err)
 			}
 			if !errors.Is(err, promote.ErrAddressMapCorrupt) {
 				t.Errorf("error %q is not promote.ErrAddressMapCorrupt", err)
 			}
-			if want := "promote: parse " + manifestPath(root) + ": "; !strings.HasPrefix(err.Error(), want) {
+			if want := "parse " + manifestPath(root) + ": "; !strings.HasPrefix(err.Error(), want) {
 				t.Errorf("error %q does not start with %q", err, want)
 			}
 			if strings.Contains(err.Error(), promote.ErrAddressMapCorrupt.Error()) {

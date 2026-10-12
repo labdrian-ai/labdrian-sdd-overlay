@@ -36,7 +36,7 @@ func (v *Vault) ListPages() ([]string, error) {
 
 // ReadPage returns the whole content of the page promoted under address, byte for byte, reading through a link
 // to it. A page that is not there is the file system's error for it (errors.Is(err, fs.ErrNotExist)), and any
-// other failure is the file system's own: both name the file, and neither carries the Vault's error prefix,
+// other failure is the file system's own: both name the file, and the adapter adds no word of its own to either,
 // because the callers word the failure around the page they were reading.
 func (v *Vault) ReadPage(address string) (string, error) {
 	data, err := os.ReadFile(v.PageLocation(address))
@@ -62,11 +62,10 @@ func (v *Vault) PageExists(address string) (bool, error) {
 
 // WritePage replaces the page promoted under address with content, durably and atomically, creating the
 // pages directory when the vault has none: through a link to the page, keeping the mode of the page that is
-// there, and creating a new one owner-only. Its errors name what failed behind the Vault's error prefix, if
-// it has one.
+// there, and creating a new one owner-only. Its errors name what failed and carry no consumer's name.
 func (v *Vault) WritePage(address, content string) error {
 	if err := writeFileAtomic(v.PageLocation(address), []byte(content)); err != nil {
-		return v.fail(err)
+		return err
 	}
 	return nil
 }

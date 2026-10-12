@@ -83,15 +83,15 @@ func TestRecordingASyncReplacesTheRecordThatIsThere(t *testing.T) {
 		}
 	})
 
-	t.Run("a failure names what failed behind the prefix and leaves the record as it was", func(t *testing.T) {
+	t.Run("a failure names what failed and leaves the record as it was", func(t *testing.T) {
 		root := t.TempDir()
 		path := filepath.Join(root, filepath.FromSlash(syncStateRel))
 		if err := os.MkdirAll(path, 0o755); err != nil {
 			t.Fatal(err)
 		}
-		err := New(root, WithErrorPrefix("promote")).RecordSyncCompleted(at)
-		if err == nil || !strings.HasPrefix(err.Error(), "promote: ") {
-			t.Fatalf("error = %v, want one behind the prefix", err)
+		err := New(root).RecordSyncCompleted(at)
+		if err == nil || !strings.HasPrefix(err.Error(), "durable: ") {
+			t.Fatalf("error = %v, want one that begins with what failed", err)
 		}
 		if info, statErr := os.Stat(path); statErr != nil || !info.IsDir() {
 			t.Errorf("the directory in the record's place was disturbed (%v, %v)", info, statErr)
@@ -156,7 +156,7 @@ func TestTheLastSyncIsWhatTheRecordHolds(t *testing.T) {
 }
 
 // A record that cannot be read, or is not the object it should be, is an error that names the file and says whether
-// it could not read it or could not understand it, behind the Vault's prefix; it is no completion.
+// it could not read it or could not understand it; it is no completion.
 func TestARecordThatCannotBeReadOrUnderstoodIsAnErrorThatNamesIt(t *testing.T) {
 	for _, tc := range []struct {
 		name  string
@@ -186,7 +186,7 @@ func TestARecordThatCannotBeReadOrUnderstoodIsAnErrorThatNamesIt(t *testing.T) {
 			path := filepath.Join(root, filepath.FromSlash(syncStateRel))
 			tc.setup(t, root, path)
 
-			got, err := New(root, WithErrorPrefix("ops")).LastSyncCompletedAt()
+			got, err := New(root).LastSyncCompletedAt()
 			if tc.want == "" {
 				// A link to nothing is no record: the file is not there.
 				if err != nil || got != "" {
@@ -197,7 +197,7 @@ func TestARecordThatCannotBeReadOrUnderstoodIsAnErrorThatNamesIt(t *testing.T) {
 			if err == nil || got != "" {
 				t.Fatalf("LastSyncCompletedAt = (%q, %v), want an error and no completion", got, err)
 			}
-			if want := "ops: " + tc.want + path + ": "; !strings.HasPrefix(err.Error(), want) {
+			if want := tc.want + path + ": "; !strings.HasPrefix(err.Error(), want) {
 				t.Errorf("error %q does not start with %q", err, want)
 			}
 		})

@@ -161,7 +161,7 @@ func TestListPagesOfAPagesDirectoryThatIsALinkAFileOrNothing(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		_, err := New(root, WithErrorPrefix("promote")).ListPages()
+		_, err := New(root).ListPages()
 		if err == nil {
 			t.Fatal("ListPages = nil error, want the listing to fail")
 		}
@@ -212,7 +212,7 @@ func TestReadPageFollowsALink(t *testing.T) {
 
 // A page that is not there is the file system's error for it, which the caller recognises with
 // errors.Is(err, fs.ErrNotExist); one that is there and cannot be read (a directory, a link to one) is not.
-// The failures are the file system's own: they name the file, and the Vault's prefix is not put in front of
+// The failures are the file system's own: they name the file, and no consumer's name is put in front of
 // them, because each caller words its failure around the cause.
 func TestReadPageFailuresAreTheFileSystemsOwn(t *testing.T) {
 	root := t.TempDir()
@@ -220,7 +220,7 @@ func TestReadPageFailuresAreTheFileSystemsOwn(t *testing.T) {
 		t.Fatal(err)
 	}
 	symlinkOrSkip(t, "../folder", filepath.Join(pagesDir(root), "c-000003.md"))
-	vault := New(root, WithErrorPrefix("promote"))
+	vault := New(root)
 
 	_, missing := vault.ReadPage("c-000001")
 	if !errors.Is(missing, fs.ErrNotExist) {
@@ -235,7 +235,7 @@ func TestReadPageFailuresAreTheFileSystemsOwn(t *testing.T) {
 			t.Errorf("ReadPage(%s): %v is the error of a missing page", address, err)
 		}
 		if strings.HasPrefix(err.Error(), "promote:") {
-			t.Errorf("ReadPage(%s): %q carries the Vault's prefix, want the file system's error untouched", address, err)
+			t.Errorf("ReadPage(%s): %q carries a consumer's name, want the file system's error untouched", address, err)
 		}
 		if !strings.Contains(err.Error(), filepath.Join(pagesDir(root), address+".md")) {
 			t.Errorf("ReadPage(%s): %q does not name the page", address, err)
@@ -253,7 +253,7 @@ func TestPageExists(t *testing.T) {
 	}
 	symlinkOrSkip(t, "c-000001.md", filepath.Join(pagesDir(root), "c-000003.md"))
 	symlinkOrSkip(t, "../absent.md", filepath.Join(pagesDir(root), "c-000004.md"))
-	vault := New(root, WithErrorPrefix("promote"))
+	vault := New(root)
 
 	for _, c := range []struct {
 		address string
@@ -280,7 +280,7 @@ func TestPageExists(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		exists, err := New(other, WithErrorPrefix("promote")).PageExists("c-000001")
+		exists, err := New(other).PageExists("c-000001")
 		if err == nil || exists {
 			t.Fatalf("PageExists = %v, %v, want no answer and the error", exists, err)
 		}
@@ -407,31 +407,29 @@ func mustStat(t *testing.T, path string) os.FileInfo {
 	return info
 }
 
-// A write that cannot land says what failed behind the prefix the Vault was asked for, and leaves the pages
+// A write that cannot land says what failed and leaves the pages
 // as they were. A dangling link where the pages directory belongs cannot be made a directory, whoever runs
 // the test.
-func TestWritePageFailureCarriesThePrefixAndWritesNothing(t *testing.T) {
+func TestWritePageFailureNamesWhatFailedAndWritesNothing(t *testing.T) {
 	root := t.TempDir()
 	if err := os.MkdirAll(filepath.Dir(pagesDir(root)), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	symlinkOrSkip(t, "../notes/absent", pagesDir(root))
 
-	err := New(root, WithErrorPrefix("promote")).WritePage("c-000001", "x")
+	err := New(root).WritePage("c-000001", "x")
 	if err == nil {
 		t.Fatal("WritePage = nil error, want the write to fail")
 	}
-	want := "promote: create directory for " + filepath.Join(pagesDir(root), "c-000001.md") + ": "
+	want := "create directory for " + filepath.Join(pagesDir(root), "c-000001.md") + ": "
 	if !strings.HasPrefix(err.Error(), want) {
 		t.Errorf("WritePage: %q, want it to begin %q", err, want)
 	}
 	if _, statErr := os.Stat(filepath.Join(root, "notes")); statErr == nil {
 		t.Error("the write created the directory the dangling link names")
 	}
-
-	bare := New(root).WritePage("c-000001", "x")
-	if bare == nil || strings.HasPrefix(bare.Error(), "promote:") {
-		t.Errorf("WritePage without a prefix: %v, want the failure without one", bare)
+	if strings.HasPrefix(err.Error(), "promote:") {
+		t.Errorf("WritePage: %q begins with a consumer's name", err)
 	}
 }
 

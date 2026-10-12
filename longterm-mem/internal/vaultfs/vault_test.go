@@ -31,12 +31,12 @@ func TestTheVaultRootIsExaminedWithoutBeingChanged(t *testing.T) {
 	})
 	t.Run("nothing there", func(t *testing.T) {
 		absent := filepath.Join(t.TempDir(), "absent")
-		_, err := New(absent, WithErrorPrefix("promote")).RootIsDirectory()
+		_, err := New(absent).RootIsDirectory()
 		if !errors.Is(err, fs.ErrNotExist) || !strings.Contains(err.Error(), absent) {
 			t.Fatalf("error = %v, want the file system's, naming %s", err, absent)
 		}
 		if strings.HasPrefix(err.Error(), "promote:") {
-			t.Errorf("error %q carries the prefix: the stat returns the file system's own error", err)
+			t.Errorf("error %q carries a consumer's name: the stat returns the file system's own error", err)
 		}
 	})
 	t.Run("a link to nothing", func(t *testing.T) {

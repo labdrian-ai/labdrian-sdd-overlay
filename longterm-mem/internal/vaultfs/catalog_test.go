@@ -72,8 +72,8 @@ func TestTheCatalogAndTheLogAreWhereTheVaultKeepsThem(t *testing.T) {
 }
 
 // Reading returns the file byte for byte, through a link; a file that is not there is the file system's error
-// for it, and any other failure is the file system's own: both name the file, and neither carries the Vault's
-// error prefix, because the callers word the failure around the file they were reading.
+// for it, and any other failure is the file system's own: both name the file, and the adapter adds no word of its
+// own to either, because the callers word the failure around the file they were reading.
 func TestReadingTheCatalogAndTheLog(t *testing.T) {
 	for _, file := range wikiFiles {
 		t.Run(file.name, func(t *testing.T) {
@@ -82,7 +82,7 @@ func TestReadingTheCatalogAndTheLog(t *testing.T) {
 			t.Run("the content comes back whole", func(t *testing.T) {
 				root := t.TempDir()
 				writeVaultFile(t, root, file.rel, content, 0o644)
-				got, err := file.read(New(root, WithErrorPrefix("promote")))
+				got, err := file.read(New(root))
 				if err != nil || got != content {
 					t.Fatalf("read = (%q, %v), want %q", got, err, content)
 				}
@@ -102,12 +102,12 @@ func TestReadingTheCatalogAndTheLog(t *testing.T) {
 			})
 
 			t.Run("a file that is not there", func(t *testing.T) {
-				_, err := file.read(New(t.TempDir(), WithErrorPrefix("promote")))
+				_, err := file.read(New(t.TempDir()))
 				if !errors.Is(err, fs.ErrNotExist) {
 					t.Fatalf("error = %v, want one for which errors.Is(err, fs.ErrNotExist) holds", err)
 				}
 				if strings.HasPrefix(err.Error(), "promote:") {
-					t.Errorf("error %q carries the prefix: a read returns the file system's own error", err)
+					t.Errorf("error %q carries a consumer's name: a read returns the file system's own error", err)
 				}
 			})
 
@@ -135,12 +135,12 @@ func TestReadingTheCatalogAndTheLog(t *testing.T) {
 					root := t.TempDir()
 					path := filepath.Join(root, filepath.FromSlash(file.rel))
 					tc.setup(t, root, path)
-					_, err := file.read(New(root, WithErrorPrefix("promote")))
+					_, err := file.read(New(root))
 					if err == nil || !strings.Contains(err.Error(), tc.want) || !strings.Contains(err.Error(), path) {
 						t.Fatalf("error = %v, want the file system's, naming %s and saying %q", err, path, tc.want)
 					}
 					if strings.HasPrefix(err.Error(), "promote:") {
-						t.Errorf("error %q carries the prefix: a read returns the file system's own error", err)
+						t.Errorf("error %q carries a consumer's name: a read returns the file system's own error", err)
 					}
 				})
 			}
@@ -206,22 +206,22 @@ func TestWritingTheCatalogAndTheLog(t *testing.T) {
 				}
 			})
 
-			t.Run("a failure names what failed behind the prefix and leaves the file as it was", func(t *testing.T) {
+			t.Run("a failure names what failed and leaves the file as it was", func(t *testing.T) {
 				root := t.TempDir()
 				path := filepath.Join(root, filepath.FromSlash(file.rel))
 				if err := os.MkdirAll(path, 0o755); err != nil {
 					t.Fatal(err)
 				}
-				err := file.write(New(root, WithErrorPrefix("promote")), "new\n")
-				if err == nil || !strings.HasPrefix(err.Error(), "promote: ") {
-					t.Fatalf("error = %v, want one behind the prefix", err)
+				err := file.write(New(root), "new\n")
+				if err == nil || !strings.HasPrefix(err.Error(), "durable: ") {
+					t.Fatalf("error = %v, want one that begins with what failed", err)
 				}
 				if info, statErr := os.Stat(path); statErr != nil || !info.IsDir() {
 					t.Errorf("the directory in the file's place was disturbed (%v, %v)", info, statErr)
 				}
 			})
 
-			t.Run("without a prefix the error is the plain one", func(t *testing.T) {
+			t.Run("a file in the place of the wiki directory fails with what could not be created", func(t *testing.T) {
 				root := t.TempDir()
 				writeVaultFile(t, root, "wiki", "not a directory", 0o644)
 				err := file.write(New(root), "new\n")
