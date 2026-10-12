@@ -57,6 +57,13 @@ func exampleChildArgv(event, cwd, stateDir string) []string {
 	return []string{"a-child", "--event", event, "--cwd", cwd, "--state", stateDir}
 }
 
+const (
+	// recordName is the file the recording child leaves its arguments in, beside itself.
+	recordName = "arguments"
+	// unfinishedRecordName is the file it writes them to first, and renames to recordName.
+	unfinishedRecordName = recordName + ".tmp"
+)
+
 // recordingSelf writes a script that records the arguments it is started with, one per line,
 // into the file it returns.
 func recordingSelf(t *testing.T) (self, record string) {
@@ -67,22 +74,24 @@ func recordingSelf(t *testing.T) (self, record string) {
 // recordingSelfIn is recordingSelf in the directory dir, which must exist.
 func recordingSelfIn(t *testing.T, dir string) (self, record string) {
 	t.Helper()
-	self, record = filepath.Join(dir, "self"), filepath.Join(dir, "arguments")
+	self, record = filepath.Join(dir, "self"), filepath.Join(dir, recordName)
 	// The child writes every argument to a temporary file and renames it into place, so a reader
 	// polling for the record sees all of the arguments or none of them, never a prefix. It finds its
 	// directory from $0, so the script names no path of the test's (none can break its quoting), it
 	// starts the temporary file afresh (a child that was killed before the rename left one behind),
 	// and `set -e` makes a child that cannot write say so, instead of renaming what it did not write.
+	// The only names it holds are the two constants below, which the tests that build the record's
+	// path read as well: a rename is made in one place.
 	const script = `#!/bin/sh
 set -e
 dir="${0%/*}"
-tmp="$dir/arguments.tmp"
+tmp="$dir/` + unfinishedRecordName + `"
 rm -f "$tmp"
 : > "$tmp"
 for a in "$@"; do
 	printf '%s\n' "$a" >> "$tmp"
 done
-mv "$tmp" "$dir/arguments"
+mv "$tmp" "$dir/` + recordName + `"
 `
 	if err := os.WriteFile(self, []byte(script), 0o755); err != nil {
 		t.Fatalf("write self: %v", err)
@@ -113,7 +122,7 @@ func TestRecordingSelf_WorksInADirectoryWhoseNameHasAnApostrophe(t *testing.T) {
 func TestRecordingSelf_StartsItsRecordAfresh(t *testing.T) {
 	dir := t.TempDir()
 	self, record := recordingSelfIn(t, dir)
-	if err := os.WriteFile(record+".tmp", []byte("left by an earlier child\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, unfinishedRecordName), []byte("left by an earlier child\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -132,7 +141,7 @@ func TestRecordingSelf_FailsWhenItCannotWriteItsRecord(t *testing.T) {
 	dir := t.TempDir()
 	self, record := recordingSelfIn(t, dir)
 	// A directory where the temporary file should go: appending to it fails.
-	if err := os.Mkdir(record+".tmp", 0o755); err != nil {
+	if err := os.Mkdir(filepath.Join(dir, unfinishedRecordName), 0o755); err != nil {
 		t.Fatal(err)
 	}
 
