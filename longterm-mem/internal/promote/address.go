@@ -55,7 +55,7 @@ func allocateAddress(ctx context.Context, pages PageReader, project string, engr
 	}
 	address, err := addresses.NextAddress(ctx)
 	if err != nil {
-		return "", fmt.Errorf("promote: %w", err)
+		return "", err
 	}
 	if address == "" {
 		return "", errors.New("promote: the address allocator returned no address")

@@ -111,7 +111,9 @@ func TestPromote_AsksTheAllocatorWithTheCallersContext(t *testing.T) {
 }
 
 // The allocator is the one place an address comes from. A failure of the allocator is promotion's failure,
-// in promotion's words (that it records nothing is TestAllocateAddress_NothingAllocatedRecordsNothing).
+// as the allocator told it, with no package name in front: the command that reports it names itself, and
+// a second "promote:" there was the doubled token the owner dropped on 2026-10-12 (that it records nothing is
+// TestAllocateAddress_NothingAllocatedRecordsNothing).
 func TestAllocateAddress_AnAllocatorFailureIsPromotionsAndRecordsNothing(t *testing.T) {
 	boom := errors.New("the counter is locked")
 
@@ -119,8 +121,8 @@ func TestAllocateAddress_AnAllocatorFailureIsPromotionsAndRecordsNothing(t *test
 	if !errors.Is(err, boom) {
 		t.Fatalf("allocateAddress = (%q, %v), want the allocator's own error", address, err)
 	}
-	if !strings.HasPrefix(err.Error(), "promote: ") {
-		t.Errorf("error %q does not say it is promotion's", err)
+	if got := err.Error(); got != boom.Error() {
+		t.Errorf("error %q, want the allocator's own words %q", got, boom.Error())
 	}
 	if address != "" {
 		t.Errorf("address = %q alongside an error, want none", address)

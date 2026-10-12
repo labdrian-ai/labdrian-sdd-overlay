@@ -2,7 +2,7 @@ args: promote --project golden-project --id 1
 exit: 1
 --- stdout ---
 --- stderr ---
-longterm-mem: promote: promote: allocate address: vault: resolve vault root <vault>/absent: lstat <vault>/absent: no such file or directory
+longterm-mem: promote: allocate address: vault: resolve vault root <vault>/absent: lstat <vault>/absent: no such file or directory
 args: sync --project golden-project
 exit: 5
 --- stdout ---
