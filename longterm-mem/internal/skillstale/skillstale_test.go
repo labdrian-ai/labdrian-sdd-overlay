@@ -20,6 +20,41 @@ import (
 
 const fixtureProject = "retirement-detector-fixture"
 
+// sharedLockFixtures is where the lock files this detector reads and the engine writes are pinned. The engine
+// (a module that does not import this one, and that this one does not import) reads the same files in its own
+// tests and checks that what it writes is those bytes, so a change to the format in one module that the other
+// does not follow fails a test in each (engine/skills, TestSerializeProjectLock_ReproducesTheSharedLockFixtures).
+const sharedLockFixtures = "../../../contracts/project-lock"
+
+// The lock `skills install` and project-register leave together, in the bytes the engine writes: the
+// procedural skills with their targets, and the install records beside them, which the detector reads past.
+func TestParseProjectLock_ReadsTheSharedFixtureWithInstallRecords(t *testing.T) {
+	data, err := os.ReadFile(filepath.Join(sharedLockFixtures, "procedural-skills-with-installs.lock.json"))
+	if err != nil {
+		t.Fatalf("read the shared fixture: %v", err)
+	}
+
+	lock, err := skillstale.ParseProjectLock(data)
+	if err != nil {
+		t.Fatalf("ParseProjectLock: %v", err)
+	}
+
+	want := []skillstale.ProjectLockEntry{
+		{ID: "alpha-skill", Provenance: "procedural", Candidate: "procedural/candidates/repeated-success/alpha-skill",
+			SHA256: strings.Repeat("1", 64), Revision: 2,
+			Targets: []string{".claude/skills/alpha-skill/SKILL.md", ".agents/skills/alpha-skill/SKILL.md"}},
+		{ID: "zeta-skill", Provenance: "procedural", Candidate: "procedural/candidates/repeated-success/zeta-skill",
+			SHA256: strings.Repeat("2", 64), Revision: 1,
+			Targets: []string{".claude/skills/zeta-skill/SKILL.md", ".agents/skills/zeta-skill/SKILL.md"}},
+	}
+	if lock.Version != 1 || !reflect.DeepEqual(lock.Skills, want) {
+		t.Errorf("lock = %+v, want version 1 and skills %+v", lock, want)
+	}
+	if !strings.Contains(string(lock.Installs), `"pdf"`) || !strings.Contains(string(lock.Installs), `"xlsx"`) {
+		t.Errorf("the install records were not kept as they were written: %s", lock.Installs)
+	}
+}
+
 func TestParseProjectLock_ReadsSharedFixture(t *testing.T) {
 	data := readFixture(t)
 	lock, err := skillstale.ParseProjectLock(data)
@@ -246,7 +281,7 @@ func writeLock(t *testing.T, root string, data []byte) {
 
 func readFixture(t *testing.T) []byte {
 	t.Helper()
-	data, err := os.ReadFile("testdata/procedural-skills.lock.json")
+	data, err := os.ReadFile(filepath.Join(sharedLockFixtures, "procedural-skills.lock.json"))
 	if err != nil {
 		t.Fatalf("read lock fixture: %v", err)
 	}

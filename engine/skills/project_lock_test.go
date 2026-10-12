@@ -247,26 +247,36 @@ func TestProjectLockRelPath_ExactValue(t *testing.T) {
 	}
 }
 
-func TestSerializeProjectLock_MatchesSharedSkillstaleFixture(t *testing.T) {
-	repoRoot, err := filepath.Abs(filepath.Join("..", ".."))
-	if err != nil {
-		t.Fatalf("resolve repository root: %v", err)
-	}
-	fixturePath := filepath.Join(repoRoot, "longterm-mem", "internal", "skillstale", "testdata", "procedural-skills.lock.json")
-	want, err := os.ReadFile(fixturePath)
-	if err != nil {
-		t.Fatalf("read shared lock fixture %s: %v", fixturePath, err)
-	}
-	lock, err := ParseProjectLock(want)
-	if err != nil {
-		t.Fatalf("ParseProjectLock(shared fixture): %v", err)
-	}
-	got, err := SerializeProjectLock(lock)
-	if err != nil {
-		t.Fatalf("SerializeProjectLock(shared fixture): %v", err)
-	}
-	if string(got) != string(want) {
-		t.Fatalf("SerializeProjectLock does not reproduce the shared fixture byte-for-byte:\ngot:\n%s\nwant:\n%s", got, want)
+// sharedLockFixtures is where the lock files both programs read and write are pinned: the engine writes the
+// project lock (this package) and longterm-mem's skills-stale reads it, in a module of its own that does not
+// import this one, so the format lives twice and the files below are what holds the two to each other. Each
+// module's tests read them (longterm-mem/internal/skillstale reads the same files), so a change to the format
+// in one module that the other does not follow fails a test in each.
+const sharedLockFixtures = "../../contracts/project-lock"
+
+// The writer reproduces every shared fixture byte for byte: what it parses, it serializes unchanged, so the
+// files are what the engine really writes (a field it renames or reorders, or an install record it shapes
+// otherwise, fails here, and the reader in longterm-mem fails on the same file).
+func TestSerializeProjectLock_ReproducesTheSharedLockFixtures(t *testing.T) {
+	for _, name := range []string{"procedural-skills.lock.json", "procedural-skills-with-installs.lock.json"} {
+		t.Run(name, func(t *testing.T) {
+			fixturePath := filepath.Join(sharedLockFixtures, name)
+			want, err := os.ReadFile(fixturePath)
+			if err != nil {
+				t.Fatalf("read shared lock fixture %s: %v", fixturePath, err)
+			}
+			lock, err := ParseProjectLock(want)
+			if err != nil {
+				t.Fatalf("ParseProjectLock(shared fixture): %v", err)
+			}
+			got, err := SerializeProjectLock(lock)
+			if err != nil {
+				t.Fatalf("SerializeProjectLock(shared fixture): %v", err)
+			}
+			if string(got) != string(want) {
+				t.Fatalf("SerializeProjectLock does not reproduce the shared fixture byte-for-byte:\ngot:\n%s\nwant:\n%s", got, want)
+			}
+		})
 	}
 }
 
