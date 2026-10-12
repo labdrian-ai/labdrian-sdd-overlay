@@ -272,10 +272,19 @@ func TestVaultAccessProblemsFlagsWhatBreaksTheRule(t *testing.T) {
 		t.Fatalf("problems per file = %v, want %v\nproblems:\n%v", counts, want, got)
 	}
 	// A file allowed two names that selects one: the problem is the unused permission, and it names it.
+	// The problems are found by the same prefix the counts above use, and the loop fails when it finds none,
+	// so a change of the message format cannot leave it checking nothing.
+	partial := 0
 	for _, problem := range got {
-		if strings.HasPrefix(problem, "internal/promote/partial.go ") && !strings.Contains(problem, "vaultlayout.Layout") {
-			t.Errorf("the problem of partial.go = %q, want the unused permission for Layout", problem)
+		if strings.HasPrefix(problem, "internal/promote/partial.go ") {
+			partial++
+			if !strings.Contains(problem, "vaultlayout.Layout") {
+				t.Errorf("the problem of partial.go = %q, want the unused permission for Layout", problem)
+			}
 		}
+	}
+	if partial != 1 {
+		t.Errorf("found %d problems of partial.go, want the one for the unused permission", partial)
 	}
 }
 
