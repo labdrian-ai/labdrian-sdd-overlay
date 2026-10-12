@@ -144,36 +144,12 @@ func Run(ctx context.Context, deps Deps, req Request) (Result, error) {
 	var engramRows []memory.Row
 	matchMode := memory.MatchAll
 	if wantFTS {
-		search, err := deps.Memory.Search(req.Project, req.Query, top, req.ExcludeTypes...)
+		search, diags, err := searchLexically(deps.Memory, req, top)
 		if err != nil {
-			return Result{}, fmt.Errorf("query: search engram: %w", err)
+			return Result{}, err
 		}
-		engramRows = search.Rows
-		matchMode = search.MatchMode
-		if search.MatchMode == memory.MatchAny {
-			result.Diagnostics = append(result.Diagnostics, Diagnostic{
-				Code:   DiagnosticSearchWidened,
-				Detail: "no observation matched every term of this query, so it was retried matching any one of them: these rows answer part of the query, not all of it",
-			})
-		}
-		if len(req.ExcludeTypes) > 0 {
-			result.Diagnostics = append(result.Diagnostics, Diagnostic{
-				Code:   DiagnosticTypesExcluded,
-				Detail: fmt.Sprintf("these observation types were excluded from the search at the caller's request, so matching memories of these kinds are not shown: %s", strings.Join(req.ExcludeTypes, ", ")),
-			})
-		}
-		if len(search.DroppedTokens) > 0 {
-			result.Diagnostics = append(result.Diagnostics, Diagnostic{
-				Code:   DiagnosticSearchStopwordsDropped,
-				Detail: fmt.Sprintf("these terms were not searched, as words too common to narrow anything down: %s", strings.Join(search.DroppedTokens, ", ")),
-			})
-		}
-		if degraded, cause := deps.Memory.Degraded(); degraded {
-			result.Diagnostics = append(result.Diagnostics, Diagnostic{
-				Code:   DiagnosticEngramDegradedSnapshot,
-				Detail: fmt.Sprintf("engram is being read through the immutable=1 fallback, so these results come from the snapshot taken when the connection was opened, not the live database: %s", cause),
-			})
-		}
+		engramRows, matchMode = search.Rows, search.MatchMode
+		result.Diagnostics = append(result.Diagnostics, diags...)
 	}
 
 	var embedRows []ResultRow
@@ -188,28 +164,72 @@ func Run(ctx context.Context, deps Deps, req Request) (Result, error) {
 	}
 
 	var vaultRows []VaultCandidate
+	result.VaultStatus = VaultStatusNotRequested
 	if wantVault {
-		candidates, vaultErr := deps.Vault.RetrieveVault(ctx, req.Project, req.Query, top)
-		switch {
-		case errors.Is(vaultErr, ErrVaultNotProvisioned):
-			result.VaultStatus = VaultStatusNotProvisioned
-		case vaultErr != nil:
-			// D8: a subprocess failure degrades to Engram-only + a diagnostic
-			// rather than failing the call. Follow-up: distinguish the
-			// runner's synthetic timeout exit (124) once the retriever
-			// exposes exit codes typed.
-			result.VaultStatus = VaultStatusError
-			result.Diagnostics = append(result.Diagnostics, Diagnostic{Code: DiagnosticVaultSubprocessFailed, Detail: vaultErr.Error()})
-		default:
-			result.VaultStatus = VaultStatusOK
-			vaultRows = candidates
-		}
-	} else {
-		result.VaultStatus = VaultStatusNotRequested
+		var diags []Diagnostic
+		result.VaultStatus, vaultRows, diags = askVault(ctx, deps.Vault, req, top)
+		result.Diagnostics = append(result.Diagnostics, diags...)
 	}
 
 	result.Results = mergeResults(wantVault, wantFTS, wantEmbed, vaultRows, engramRows, embedRows, resolveLink, req.Query, matchMode)
 	result.Diagnostics = append(result.Diagnostics, attachStandings(deps.Memory, result.Results)...)
 	capResponse(&result)
 	return result, nil
+}
+
+// searchLexically is the lexical source: the memory's own search for the request, and the diagnostics that say how
+// far its rows can be trusted (a widened search, the types left out, the words never searched, a store read from a
+// snapshot). A search that fails fails the call.
+func searchLexically(store interface {
+	Searcher
+	DegradationReporter
+}, req Request, top int) (memory.SearchResult, []Diagnostic, error) {
+	search, err := store.Search(req.Project, req.Query, top, req.ExcludeTypes...)
+	if err != nil {
+		return memory.SearchResult{}, nil, fmt.Errorf("query: search engram: %w", err)
+	}
+	var diags []Diagnostic
+	if search.MatchMode == memory.MatchAny {
+		diags = append(diags, Diagnostic{
+			Code:   DiagnosticSearchWidened,
+			Detail: "no observation matched every term of this query, so it was retried matching any one of them: these rows answer part of the query, not all of it",
+		})
+	}
+	if len(req.ExcludeTypes) > 0 {
+		diags = append(diags, Diagnostic{
+			Code:   DiagnosticTypesExcluded,
+			Detail: fmt.Sprintf("these observation types were excluded from the search at the caller's request, so matching memories of these kinds are not shown: %s", strings.Join(req.ExcludeTypes, ", ")),
+		})
+	}
+	if len(search.DroppedTokens) > 0 {
+		diags = append(diags, Diagnostic{
+			Code:   DiagnosticSearchStopwordsDropped,
+			Detail: fmt.Sprintf("these terms were not searched, as words too common to narrow anything down: %s", strings.Join(search.DroppedTokens, ", ")),
+		})
+	}
+	if degraded, cause := store.Degraded(); degraded {
+		diags = append(diags, Diagnostic{
+			Code:   DiagnosticEngramDegradedSnapshot,
+			Detail: fmt.Sprintf("engram is being read through the immutable=1 fallback, so these results come from the snapshot taken when the connection was opened, not the live database: %s", cause),
+		})
+	}
+	return search, diags, nil
+}
+
+// askVault is the vault source: the retriever's candidates, the status that says what the vault gave, and the
+// diagnostic of a retrieval that failed.
+func askVault(ctx context.Context, retriever VaultRetriever, req Request, top int) (status string, rows []VaultCandidate, diags []Diagnostic) {
+	candidates, err := retriever.RetrieveVault(ctx, req.Project, req.Query, top)
+	switch {
+	case errors.Is(err, ErrVaultNotProvisioned):
+		return VaultStatusNotProvisioned, nil, nil
+	case err != nil:
+		// D8: a subprocess failure degrades to Engram-only + a diagnostic
+		// rather than failing the call. Follow-up: distinguish the
+		// runner's synthetic timeout exit (124) once the retriever
+		// exposes exit codes typed.
+		return VaultStatusError, nil, []Diagnostic{{Code: DiagnosticVaultSubprocessFailed, Detail: err.Error()}}
+	default:
+		return VaultStatusOK, candidates, nil
+	}
 }
