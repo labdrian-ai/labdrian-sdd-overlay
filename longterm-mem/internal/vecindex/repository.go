@@ -2,6 +2,7 @@ package vecindex
 
 import (
 	"context"
+	"errors"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/query"
 )
@@ -26,9 +27,20 @@ type Repository struct {
 	Now func() string
 }
 
+// What a build answers when the Repository was built without what it needs; a read needs none of them.
+var (
+	errNoLiveRows        = errors.New("vecindex: the repository has no source of live rows")
+	errNoEmbedderFactory = errors.New("vecindex: the repository has no embedder factory")
+	errNoClock           = errors.New("vecindex: the repository has no clock")
+)
+
 // LoadEmbeddingIndex reads project's index and answers it in the terms of the query. It refuses as Load does
 // (ErrNoIndex for a project nothing was built for, an error wrapping ErrCorrupted for an index that cannot be
 // trusted), untouched, so that a caller who cares can tell which.
+//
+// The vectors it answers are the ones the cache holds, not copies of them: a copy of every vector per query is
+// what the cache exists to avoid. The index is read-only to its callers (query.EmbeddingIndex says so, and the
+// embedding arm is held to it by a test).
 func (r *Repository) LoadEmbeddingIndex(project string) (*query.EmbeddingIndex, error) {
 	dir := Dir(r.StateDir, project)
 	var idx *Index
@@ -61,6 +73,14 @@ func (r *Repository) Fingerprint(model string, dimension, inputLimit int, title,
 // the cache forgets the project's index; when it failed, nothing on disk changed and nothing is forgotten. Every
 // failure is the stage's own, untouched, and the stages after it do not run.
 func (r *Repository) BuildEmbeddingIndex(ctx context.Context, project, model string, dimension, inputLimit int) error {
+	switch {
+	case r.LiveRows == nil:
+		return errNoLiveRows
+	case r.NewEmbedder == nil:
+		return errNoEmbedderFactory
+	case r.Now == nil:
+		return errNoClock
+	}
 	rows, err := r.LiveRows(project)
 	if err != nil {
 		return err

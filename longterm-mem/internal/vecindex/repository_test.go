@@ -59,6 +59,43 @@ func TestRepositoryRefusesWhatLoadRefuses(t *testing.T) {
 	}
 }
 
+// A repository built without what a top-up needs (the live rows, the embedder of a model, the clock) answers the
+// build with an error that names what is missing, before it reads, embeds or writes anything, and does not panic.
+// A read needs none of the three.
+func TestRepositoryBuiltWithoutWhatABuildNeedsFailsTheBuildNamingIt(t *testing.T) {
+	wired := func(stateDir string) *Repository {
+		return &Repository{
+			StateDir:    stateDir,
+			LiveRows:    func(string) ([]Row, error) { return nil, nil },
+			NewEmbedder: func(string) (Embedder, error) { return nil, errors.New("no embedder was needed") },
+			Now:         func() string { return "2026-01-01T00:00:00Z" },
+		}
+	}
+	for name, tc := range map[string]struct {
+		unwire func(*Repository)
+		want   error
+	}{
+		"no live rows":        {func(r *Repository) { r.LiveRows = nil }, errNoLiveRows},
+		"no embedder factory": {func(r *Repository) { r.NewEmbedder = nil }, errNoEmbedderFactory},
+		"no clock":            {func(r *Repository) { r.Now = nil }, errNoClock},
+	} {
+		t.Run(name, func(t *testing.T) {
+			stateDir := t.TempDir()
+			repository := wired(stateDir)
+			tc.unwire(repository)
+
+			err := repository.BuildEmbeddingIndex(context.Background(), "p", "m", 3, 100)
+
+			if !errors.Is(err, tc.want) {
+				t.Fatalf("error = %v, want %v", err, tc.want)
+			}
+			if _, statErr := os.Stat(Dir(stateDir, "p")); !errors.Is(statErr, os.ErrNotExist) {
+				t.Errorf("the failed build left %s behind (stat: %v)", Dir(stateDir, "p"), statErr)
+			}
+		})
+	}
+}
+
 // A repository given a cache reads through it, so a long-lived process reads a project's index from disk once per
 // change; one without a cache reads the disk every time.
 func TestRepositoryReadsThroughItsCacheWhenItHasOne(t *testing.T) {
