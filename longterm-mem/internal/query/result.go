@@ -1,9 +1,5 @@
 package query
 
-import (
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
-)
-
 // Result.VaultStatus values.
 const (
 	VaultStatusOK             = "ok"
@@ -103,7 +99,7 @@ type ResultRow struct {
 	// reads as current, and gets reintroduced. This module cannot fix that
 	// search (R-002 keeps its connection read-only); it can decline to
 	// repeat the omission.
-	Standing *memory.Standing `json:"standing,omitempty"`
+	Standing *Standing `json:"standing,omitempty"`
 	// MatchOffset is the byte offset memory.SnippetAt should centre a
 	// re-render on, mirroring memory.Row.MatchOffset. It only matters for
 	// a row with Content set.

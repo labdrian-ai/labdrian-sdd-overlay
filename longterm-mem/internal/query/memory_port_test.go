@@ -133,7 +133,7 @@ func TestRun_AttachesTheStandingsThePortReportsToTheRowsItAskedAbout(t *testing.
 	if !reflect.DeepEqual(mem.standingsFor, []int64{7, 9}) {
 		t.Errorf("standings were asked for %v, want the ids of the rows in rank order", mem.standingsFor)
 	}
-	if result.Results[0].Standing == nil || !reflect.DeepEqual(result.Results[0].Standing.SupersededBy, []memory.Neighbour{{ID: 9, Title: "second"}}) {
+	if result.Results[0].Standing == nil || !reflect.DeepEqual(result.Results[0].Standing.SupersededBy, []Neighbour{{ID: 9, Title: "second"}}) {
 		t.Errorf("row 7 standing = %+v, want superseded by 9", result.Results[0].Standing)
 	}
 	if result.Results[1].Standing != nil {
