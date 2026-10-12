@@ -6,10 +6,11 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"os"
+	"io/fs"
 	"path"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -45,15 +46,18 @@ var fileSystemImports = []string{"os", "path/filepath", "io/ioutil", durablePack
 // name to the root of a vault, and PagesDir is where the pages are.
 var layoutNamesThatArePrivateToTheAdapter = []string{"Layout", "PagesDir"}
 
-// mayNameThePagesDirectory are the files that name the directory without reaching a page through it, each with
-// the reason. Naming it is not reading it: the text of a refusal that the commands' output has always carried.
-var mayNameThePagesDirectory = map[string]bool{
+// mayNameTheLayout are the files that name a part of the layout without reaching the vault through it, each with
+// the names it may select and the reason. The permission is per name: a file allowed to name PagesDir may not
+// join a name to a root with Layout. Naming a directory is not reading it: the text of a refusal that the
+// commands' output has always carried. An entry that is not used (the file is gone, or no longer selects the
+// name) is itself a problem, so the list cannot keep a permission nobody needs.
+var mayNameTheLayout = map[string][]string{
 	// Reconcile's refusal of an address of the wrong shape says which directory the address would have named.
-	"internal/promote/reconcile.go": true,
+	"internal/promote/reconcile.go": {"PagesDir"},
 }
 
 func TestTheVaultsFilesAreReachedOnlyThroughTheirPorts(t *testing.T) {
-	problems, err := vaultAccessProblems(".", packagesThatReachTheVaultThroughPorts, fileSystemImports, layoutNamesThatArePrivateToTheAdapter, mayNameThePagesDirectory)
+	problems, err := vaultAccessProblems(".", packagesThatReachTheVaultThroughPorts, fileSystemImports, layoutNamesThatArePrivateToTheAdapter, mayNameTheLayout)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -64,30 +68,43 @@ func TestTheVaultsFilesAreReachedOnlyThroughTheirPorts(t *testing.T) {
 
 // vaultAccessProblems reads the production files of the packages it is given, under root, and says what breaks
 // the rule: a file importing a package of the file system, and a file selecting from the layout a name private
-// to the adapter, unless it is among those allowed to. It reads the syntax tree, so an aliased import is still the
+// to the adapter, unless the file is allowed that name. It reads the syntax tree, so an aliased import is still the
 // package, a dot import of the layout still names what it selects, and a comment that names either is not a use.
-// A package that is not there is an error: the rule would guard nothing.
-func vaultAccessProblems(root string, packages, bannedImports, privateLayoutNames []string, allowedToNameTheLayout map[string]bool) ([]string, error) {
+// It walks each package's directory tree, so a subpackage is held to the rule as the package is (a directory
+// named testdata is not Go to the build and is left alone). A package that is not there is an error: the rule
+// would guard nothing. A permission in allowedToNameTheLayout (file to the names it may select) that nothing
+// uses is a problem of its own.
+func vaultAccessProblems(root string, packages, bannedImports, privateLayoutNames []string, allowedToNameTheLayout map[string][]string) ([]string, error) {
 	var problems []string
+	used := map[string]bool{}
 	for _, pkg := range packages {
-		entries, err := os.ReadDir(filepath.Join(root, filepath.FromSlash(pkg)))
-		if err != nil {
-			return nil, err
-		}
-		for _, entry := range entries {
-			name := entry.Name()
-			if entry.IsDir() || filepath.Ext(name) != ".go" || strings.HasSuffix(name, "_test.go") {
-				continue
-			}
-			file := path.Join(pkg, name)
-			parsed, err := parser.ParseFile(token.NewFileSet(), filepath.Join(root, filepath.FromSlash(file)), nil, 0)
+		err := filepath.WalkDir(filepath.Join(root, filepath.FromSlash(pkg)), func(full string, entry fs.DirEntry, err error) error {
 			if err != nil {
-				return nil, err
+				return err
+			}
+			name := entry.Name()
+			if entry.IsDir() {
+				if name == "testdata" {
+					return filepath.SkipDir
+				}
+				return nil
+			}
+			if filepath.Ext(name) != ".go" || strings.HasSuffix(name, "_test.go") {
+				return nil
+			}
+			rel, err := filepath.Rel(root, full)
+			if err != nil {
+				return err
+			}
+			file := filepath.ToSlash(rel)
+			parsed, err := parser.ParseFile(token.NewFileSet(), full, nil, 0)
+			if err != nil {
+				return err
 			}
 			for _, spec := range parsed.Imports {
 				imported, err := strconv.Unquote(spec.Path.Value)
 				if err != nil {
-					return nil, err
+					return err
 				}
 				for _, banned := range bannedImports {
 					if imported == banned {
@@ -96,9 +113,25 @@ func vaultAccessProblems(root string, packages, bannedImports, privateLayoutName
 				}
 			}
 			for _, layoutName := range privateLayoutNames {
-				if selectsFromLayout(parsed, layoutName) && !allowedToNameTheLayout[file] {
-					problems = append(problems, file+" names vaultlayout."+layoutName+": where the vault's files are is the file system adapter's to say, and the code reaches them through its ports")
+				if !selectsFromLayout(parsed, layoutName) {
+					continue
 				}
+				if slices.Contains(allowedToNameTheLayout[file], layoutName) {
+					used[file+" "+layoutName] = true
+					continue
+				}
+				problems = append(problems, file+" names vaultlayout."+layoutName+": where the vault's files are is the file system adapter's to say, and the code reaches them through its ports")
+			}
+			return nil
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+	for file, names := range allowedToNameTheLayout {
+		for _, layoutName := range names {
+			if !used[file+" "+layoutName] {
+				problems = append(problems, file+" is allowed to name vaultlayout."+layoutName+" and does not: the file is gone or no longer needs it, so remove the permission")
 			}
 		}
 	}
@@ -152,32 +185,41 @@ func TestVaultAccessProblemsFlagsWhatBreaksTheRule(t *testing.T) {
 		return "package p\n\nimport vl \"" + vaultLayoutPackage + "\"\n\n" + body + "\n"
 	}
 	root := writeTree(t, map[string]string{
-		"internal/promote/clean.go":       importing(`"fmt"`),
-		"internal/promote/uses_os.go":     importing(`"os"`),
-		"internal/promote/alias.go":       importing(`file "os"`),
-		"internal/promote/uses_path.go":   importing(`"path/filepath"`),
-		"internal/promote/uses_ioutil.go": importing(`"io/ioutil"`),
-		"internal/promote/blank.go":       importing(`_ "` + durablePackage + `"`),
-		"internal/promote/names_dir.go":   layout("var dir = vl.PagesDir"),
-		"internal/promote/joins_root.go":  layout("var l = vl.Layout{Root: \"/vault\"}"),
-		"internal/promote/names_file.go":  layout("var f = vl.PageFile(\"c-000001\")"),
-		"internal/promote/names_state.go": layout("var f = vl.SyncStateFile"),
-		"internal/promote/in_comment.go":  "package p\n\n// vaultlayout.PagesDir and vaultlayout.Layout are the adapter's, and so is \"os\".\n",
-		"internal/promote/dot_dir.go":     "package p\n\nimport . \"" + vaultLayoutPackage + "\"\n\nvar dir = PagesDir\n",
-		"internal/promote/dot_layout.go":  "package p\n\nimport . \"" + vaultLayoutPackage + "\"\n\nvar l = Layout{}\n",
-		"internal/promote/dot_file.go":    "package p\n\nimport . \"" + vaultLayoutPackage + "\"\n\nvar f = PageFile(\"c-000001\")\n",
-		"internal/promote/dot_other.go":   "package p\n\nimport . \"" + vaultLayoutPackage + "\"\n\nvar f = PageFile(\"c-000001\")\n\nvar g = other.PagesDir\n",
-		"internal/promote/dir_test.go":    "package p\n\nimport \"os\"\nimport \"" + vaultLayoutPackage + "\"\n\nvar dir = vaultlayout.PagesDir\n",
-		"internal/promote/sub/deeper.go":  importing(`"os"`),
-		"internal/ops/doctor.go":          layout("var dir = vl.PagesDir"),
-		"internal/ops/uses_os.go":         importing(`"os"`),
-		"internal/promote/allowed.go":     layout("var dir = vl.PagesDir"),
-		"internal/vaultfs/anything.go":    importing(`"os"`),
+		"internal/promote/clean.go":          importing(`"fmt"`),
+		"internal/promote/uses_os.go":        importing(`"os"`),
+		"internal/promote/alias.go":          importing(`file "os"`),
+		"internal/promote/uses_path.go":      importing(`"path/filepath"`),
+		"internal/promote/uses_ioutil.go":    importing(`"io/ioutil"`),
+		"internal/promote/blank.go":          importing(`_ "` + durablePackage + `"`),
+		"internal/promote/names_dir.go":      layout("var dir = vl.PagesDir"),
+		"internal/promote/joins_root.go":     layout("var l = vl.Layout{Root: \"/vault\"}"),
+		"internal/promote/names_file.go":     layout("var f = vl.PageFile(\"c-000001\")"),
+		"internal/promote/names_state.go":    layout("var f = vl.SyncStateFile"),
+		"internal/promote/in_comment.go":     "package p\n\n// vaultlayout.PagesDir and vaultlayout.Layout are the adapter's, and so is \"os\".\n",
+		"internal/promote/dot_dir.go":        "package p\n\nimport . \"" + vaultLayoutPackage + "\"\n\nvar dir = PagesDir\n",
+		"internal/promote/dot_layout.go":     "package p\n\nimport . \"" + vaultLayoutPackage + "\"\n\nvar l = Layout{}\n",
+		"internal/promote/dot_file.go":       "package p\n\nimport . \"" + vaultLayoutPackage + "\"\n\nvar f = PageFile(\"c-000001\")\n",
+		"internal/promote/dot_other.go":      "package p\n\nimport . \"" + vaultLayoutPackage + "\"\n\nvar f = PageFile(\"c-000001\")\n\nvar g = other.PagesDir\n",
+		"internal/promote/dir_test.go":       "package p\n\nimport \"os\"\nimport \"" + vaultLayoutPackage + "\"\n\nvar dir = vaultlayout.PagesDir\n",
+		"internal/promote/sub/deeper.go":     importing(`"os"`),
+		"internal/promote/testdata/x.go":     importing(`"os"`),
+		"internal/promote/stale.go":          importing(`"fmt"`),
+		"internal/promote/allowed_layout.go": layout("var dir = vl.PagesDir\nvar l = vl.Layout{}"),
+		"internal/ops/doctor.go":             layout("var dir = vl.PagesDir"),
+		"internal/ops/uses_os.go":            importing(`"os"`),
+		"internal/promote/allowed.go":        layout("var dir = vl.PagesDir"),
+		"internal/vaultfs/anything.go":       importing(`"os"`),
 	})
 	private := []string{"Layout", "PagesDir"}
+	allowed := map[string][]string{
+		"internal/promote/allowed.go":        {"PagesDir"},
+		"internal/promote/allowed_layout.go": {"PagesDir"},
+		"internal/promote/stale.go":          {"PagesDir"},
+		"internal/promote/gone.go":           {"PagesDir"},
+	}
 	imports := []string{"os", "path/filepath", "io/ioutil", durablePackage}
 
-	got, err := vaultAccessProblems(root, []string{"internal/promote", "internal/ops"}, imports, private, map[string]bool{"internal/promote/allowed.go": true})
+	got, err := vaultAccessProblems(root, []string{"internal/promote", "internal/ops"}, imports, private, allowed)
 	if err != nil {
 		t.Fatalf("vaultAccessProblems: %v", err)
 	}
@@ -192,27 +234,31 @@ func TestVaultAccessProblemsFlagsWhatBreaksTheRule(t *testing.T) {
 		return n
 	}
 	want := map[string]int{
-		"internal/promote/uses_os.go":     1,
-		"internal/promote/alias.go":       1,
-		"internal/promote/uses_path.go":   1,
-		"internal/promote/uses_ioutil.go": 1,
-		"internal/promote/blank.go":       1,
-		"internal/promote/names_dir.go":   1,
-		"internal/promote/joins_root.go":  1,
-		"internal/promote/dot_dir.go":     1,
-		"internal/promote/dot_layout.go":  1,
-		"internal/ops/doctor.go":          1,
-		"internal/ops/uses_os.go":         1,
-		"internal/promote/clean.go":       0,
-		"internal/promote/names_file.go":  0,
-		"internal/promote/names_state.go": 0,
-		"internal/promote/in_comment.go":  0,
-		"internal/promote/dot_file.go":    0,
-		"internal/promote/dot_other.go":   0,
-		"internal/promote/dir_test.go":    0,
-		"internal/promote/sub/deeper.go":  0,
-		"internal/promote/allowed.go":     0,
-		"internal/vaultfs/anything.go":    0,
+		"internal/promote/uses_os.go":        1,
+		"internal/promote/alias.go":          1,
+		"internal/promote/uses_path.go":      1,
+		"internal/promote/uses_ioutil.go":    1,
+		"internal/promote/blank.go":          1,
+		"internal/promote/names_dir.go":      1,
+		"internal/promote/joins_root.go":     1,
+		"internal/promote/dot_dir.go":        1,
+		"internal/promote/dot_layout.go":     1,
+		"internal/ops/doctor.go":             1,
+		"internal/ops/uses_os.go":            1,
+		"internal/promote/clean.go":          0,
+		"internal/promote/names_file.go":     0,
+		"internal/promote/names_state.go":    0,
+		"internal/promote/in_comment.go":     0,
+		"internal/promote/dot_file.go":       0,
+		"internal/promote/dot_other.go":      0,
+		"internal/promote/dir_test.go":       0,
+		"internal/promote/sub/deeper.go":     1,
+		"internal/promote/allowed_layout.go": 1,
+		"internal/promote/allowed.go":        0,
+		"internal/promote/testdata/x.go":     0,
+		"internal/promote/stale.go":          1,
+		"internal/promote/gone.go":           1,
+		"internal/vaultfs/anything.go":       0,
 	}
 	counts := map[string]int{}
 	for file := range want {
