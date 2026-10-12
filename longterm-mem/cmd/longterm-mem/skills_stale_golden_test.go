@@ -304,22 +304,30 @@ func skillsStaleCases() []skillsStaleCase {
 // toolchain's to change, so the goldens pin the sentence the program builds around them and not these.
 var libraryJSONWords = regexp.MustCompile(`(parse project lock: )(invalid character [^\n]*|unexpected end of JSON input|unexpected EOF)`)
 
-// runSkillsStaleCase builds the world of the case, runs the command in it and renders what it did.
-func runSkillsStaleCase(t *testing.T, tc skillsStaleCase) (w *skillsStaleWorld, rendering string) {
+// newSkillsStaleWorld builds a world with a project root of its own and a PATH that is a directory of its own
+// (and, for the cases that read the history of a repository, the directory of git): the commands a skill names
+// are found in that PATH or nowhere.
+func newSkillsStaleWorld(t *testing.T, pathNeedsGit bool) *skillsStaleWorld {
 	t.Helper()
 	base := newRetrievalWorld(t)
-	w = &skillsStaleWorld{retrievalWorld: base, root: realTempDir(t), binDir: realTempDir(t), outside: realTempDir(t)}
+	w := &skillsStaleWorld{retrievalWorld: base, root: realTempDir(t), binDir: realTempDir(t), outside: realTempDir(t)}
 	w.goldenDir = filepath.Join(filepath.Dir(base.goldenDir), "skills-stale-golden")
 	path := w.binDir
-	if tc.pathNeedsGit {
+	if pathNeedsGit {
 		gitPath, err := exec.LookPath("git")
 		if err != nil {
 			t.Skip("git is not on PATH: this case reads the history of a repository")
 		}
 		path += string(os.PathListSeparator) + filepath.Dir(gitPath)
 	}
-	// The whole PATH is the world's own: the commands a skill names are found in it or nowhere.
 	t.Setenv("PATH", path)
+	return w
+}
+
+// runSkillsStaleCase builds the world of the case, runs the command in it and renders what it did.
+func runSkillsStaleCase(t *testing.T, tc skillsStaleCase) (w *skillsStaleWorld, rendering string) {
+	t.Helper()
+	w = newSkillsStaleWorld(t, tc.pathNeedsGit)
 	if tc.setup != nil {
 		tc.setup(t, w)
 	}

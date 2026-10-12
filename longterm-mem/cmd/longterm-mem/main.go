@@ -33,7 +33,7 @@ func (c commands) run(args []string) int {
 	case "stale":
 		return cmdStale(args[1:])
 	case "skills-stale":
-		return cmdSkillsStale(args[1:])
+		return c.cmdSkillsStale(args[1:])
 	case "doctor":
 		return c.cmdDoctor(args[1:])
 	case "promote":

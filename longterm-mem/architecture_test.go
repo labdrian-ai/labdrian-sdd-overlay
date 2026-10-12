@@ -87,16 +87,6 @@ var knownDebt = archguard.Debt{
 		"path/filepath.EvalSymlinks": "L7",
 	},
 
-	// skillstale: pure Detect over its inputs, with the lock, the facts, the
-	// command resolver and the clock supplied by the caller. The repohistory
-	// states it reads become its own facts type.
-	"internal/skillstale": {
-		"internal/repohistory":       "L5",
-		"os":                         "L5",
-		"path/filepath.EvalSymlinks": "L5",
-		"time.Now":                   "L5",
-	},
-
 	// staleness: reads the repository through a RepoEvidence port.
 	"internal/staleness": {
 		"internal/repohistory":  "L6",
