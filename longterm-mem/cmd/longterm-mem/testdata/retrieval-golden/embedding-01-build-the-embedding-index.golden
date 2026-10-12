@@ -1,0 +1,25 @@
+args: index --project goldenproj --embeddings --embed-dimension 3
+exit: 0
+--- stdout ---
+longterm-mem: embedding index built for goldenproj: 13 embedded, 0 reused, 0 removed
+--- stderr ---
+--- state ---
+=== index/goldenproj/.build.lock ===
+(empty)
+=== index/goldenproj/manifest.json ===
+model nomic-embed-text, dimension 3, input limit 2000, built at <instant>, revision <digest>
+  engram:1 eeb5d758fe17
+  engram:2 664f101f410e
+  engram:3 81e5eb06c6d1
+  engram:6 563d1445d16f
+  engram:7 f6edb5a0da4a
+  engram:8 f1e440687b8c
+  engram:9 c1204e60546b
+  engram:10 2db7e0ef6a05
+  engram:11 78928ddda441
+  engram:12 9c6ffbbc6284
+  engram:13 4e124a6a8980
+  engram:14 bf18edc4fccd
+  engram:15 7e8f2166ebef
+=== index/goldenproj/vectors.blob ===
+156 bytes, sha256 5e7d6e8d8e241051f12b0525e7633654c1dd023b927dd479b7d072023a4a2960

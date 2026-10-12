@@ -1,0 +1,59 @@
+args: index --project otherproj --embeddings --embed-dimension 3
+exit: 0
+--- stdout ---
+longterm-mem: embedding index built for otherproj: 1 embedded, 0 reused, 0 removed
+--- stderr ---
+--- state ---
+=== index/goldenproj/.build.lock ===
+(empty)
+=== index/goldenproj/manifest.json ===
+model nomic-embed-text, dimension 3, input limit 2000, built at <instant>, revision <digest>
+  engram:1 eeb5d758fe17
+  engram:2 664f101f410e
+  engram:6 563d1445d16f
+  engram:7 f6edb5a0da4a
+  engram:8 3217b5611d1e
+  engram:9 c1204e60546b
+  engram:10 2db7e0ef6a05
+  engram:11 78928ddda441
+  engram:12 9c6ffbbc6284
+  engram:13 4e124a6a8980
+  engram:14 bf18edc4fccd
+  engram:15 7e8f2166ebef
+  engram:20 b15dc0814f8f
+  engram:21 2ba46bffbb91
+  engram:30 692e5f1fc2af
+  engram:31 db9a061f4f01
+  engram:32 47f707c550ce
+  engram:33 5bd24c56865e
+  engram:34 7c8cc201685c
+  engram:35 09c55d789a29
+  engram:36 c05f3b55c9ac
+  engram:37 614312fb3507
+  engram:38 6e994992a11a
+  engram:39 9d7a9bccc6b6
+  engram:40 eebed887d969
+  engram:41 56ae87f46f80
+  engram:42 2a0ae6b86ae4
+  engram:43 d650ed7be131
+  engram:44 2d874d87a7eb
+  engram:45 8eee303fa228
+  engram:46 512c53877811
+  engram:47 466112ddbe3f
+  engram:48 6089917ef1cb
+  engram:49 cdd8fe3c9712
+  engram:50 66b1c3f68fe4
+  engram:51 2026f5440182
+  engram:52 15bac5f5ab28
+  engram:53 6941909280ec
+  engram:54 b62b3159ea9e
+  engram:55 326f53021854
+=== index/goldenproj/vectors.blob ===
+480 bytes, sha256 0102866eaa8bbae376d10df126c85870756a1fa2b4a4f92b2a87b4edaf86497f
+=== index/otherproj/.build.lock ===
+(empty)
+=== index/otherproj/manifest.json ===
+model nomic-embed-text, dimension 3, input limit 2000, built at <instant>, revision <digest>
+  engram:5 4e8bdf495571
+=== index/otherproj/vectors.blob ===
+12 bytes, sha256 480376c6bf738a0227f2bbf2b3506b7cde209152c0ba9a9077e5527169eb292e
