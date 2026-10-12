@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vault"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vecindex"
 )
 
@@ -222,8 +221,8 @@ func TestRun_RefusesToSearchWithoutAMemory(t *testing.T) {
 // refusal above is for the sources that read the memory, not for the call as a whole.
 func TestRun_AVaultOnlyQueryNeedsNoMemory(t *testing.T) {
 	deps := Deps{
-		RetrieveVault: fakeRetrieveVault(vault.Result{Status: vault.StatusOK, Candidates: []vault.Candidate{{PageAddress: "c-000042", Snippet: "vault side"}}}, nil),
-		ResolveLink:   func(string) (int64, bool) { return 7, true },
+		Vault:       fakeVault([]VaultCandidate{{PageAddress: "c-000042", Snippet: "vault side"}}, nil),
+		ResolveLink: func(string) (int64, bool) { return 7, true },
 	}
 
 	result, err := Run(context.Background(), deps, Request{Project: "p", Query: "alpha", Sources: []string{SourceVault}})

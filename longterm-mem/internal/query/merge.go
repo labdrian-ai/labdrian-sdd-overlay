@@ -1,9 +1,6 @@
 package query
 
-import (
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vault"
-)
+import "github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 
 // mergeResults implements the amended R-006: vault rows precede Engram
 // rows only when the vault is a requested source (matchLinkedObservation
@@ -15,7 +12,7 @@ import (
 // sources' own rows are offered first each round -- the only thing that
 // decides is which row lands at rank 1; interleaveEngramSources itself
 // never consults it, so the union guarantee is untouched by the decision.
-func mergeResults(wantVault, wantFTS, wantEmbed bool, vaultRows []vault.Candidate, engramRows []memory.Row, embedRows []ResultRow, resolveLink func(string) (int64, bool), queryText, matchMode string) []ResultRow {
+func mergeResults(wantVault, wantFTS, wantEmbed bool, vaultRows []VaultCandidate, engramRows []memory.Row, embedRows []ResultRow, resolveLink func(string) (int64, bool), queryText, matchMode string) []ResultRow {
 	consumed := make(map[int64]bool, len(engramRows)+len(embedRows))
 	var merged []ResultRow
 

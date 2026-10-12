@@ -13,12 +13,8 @@ import (
 	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vault"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vecindex"
 )
-
-// DefaultTopN mirrors vault.DefaultTopN (D8: both sources share one bound).
-const DefaultTopN = vault.DefaultTopN
 
 // ErrMissingProject rejects a call with no project (R-006).
 var ErrMissingProject = errors.New("query: project is required")
@@ -68,12 +64,15 @@ type Request struct {
 	Sources []string
 }
 
-// Deps are Run's dependencies. RetrieveVault/ResolveLink are function seams
-// for tests; Memory is the port the package owns (a fake, or a temp DB behind
-// the Engram adapter, in tests).
+// Deps are Run's dependencies. Memory and Vault are ports the package owns (a
+// fake, or a temp DB behind the Engram adapter, in tests); ResolveLink is a
+// function seam.
 type Deps struct {
-	Memory        Memory
-	RetrieveVault func(ctx context.Context, project, query string, top int) (vault.Result, error)
+	Memory Memory
+	// Vault retrieves from the project's vault. It is asked only when the
+	// vault is a requested source (R-060); a call that names the vault with
+	// none wired is refused with ErrNoVault.
+	Vault VaultRetriever
 	// ResolveLink reports the Engram id an existing promotion links to
 	// vault page pageAddress (D6 store, not built until slice 4/5).
 	ResolveLink func(pageAddress string) (engramID int64, ok bool)
@@ -145,6 +144,9 @@ func Run(ctx context.Context, deps Deps, req Request) (Result, error) {
 	if (wantFTS || wantEmbed) && memory.IsMissing(deps.Memory) {
 		return Result{}, ErrNoMemory
 	}
+	if wantVault && memory.IsMissing(deps.Vault) {
+		return Result{}, ErrNoVault
+	}
 
 	top := req.Top
 	if top <= 0 {
@@ -203,23 +205,22 @@ func Run(ctx context.Context, deps Deps, req Request) (Result, error) {
 		}
 	}
 
-	var vaultRows []vault.Candidate
+	var vaultRows []VaultCandidate
 	if wantVault {
-		vaultResult, vaultErr := deps.RetrieveVault(ctx, req.Project, req.Query, top)
+		candidates, vaultErr := deps.Vault.RetrieveVault(ctx, req.Project, req.Query, top)
 		switch {
+		case errors.Is(vaultErr, ErrVaultNotProvisioned):
+			result.VaultStatus = VaultStatusNotProvisioned
 		case vaultErr != nil:
 			// D8: a subprocess failure degrades to Engram-only + a diagnostic
 			// rather than failing the call. Follow-up: distinguish the
-			// runner's synthetic timeout exit (124) once vault.Retrieve
-			// exposes exit codes typed (retrieve.go/status.go are reused, not
-			// modified, in this slice).
+			// runner's synthetic timeout exit (124) once the retriever
+			// exposes exit codes typed.
 			result.VaultStatus = VaultStatusError
 			result.Diagnostics = append(result.Diagnostics, Diagnostic{Code: DiagnosticVaultSubprocessFailed, Detail: vaultErr.Error()})
-		case vaultResult.Status == vault.StatusNotProvisioned:
-			result.VaultStatus = VaultStatusNotProvisioned
 		default:
 			result.VaultStatus = VaultStatusOK
-			vaultRows = vaultResult.Candidates
+			vaultRows = candidates
 		}
 	} else {
 		result.VaultStatus = VaultStatusNotRequested

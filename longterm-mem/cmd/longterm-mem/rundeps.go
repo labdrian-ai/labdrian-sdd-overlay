@@ -83,12 +83,9 @@ func freshEmbedFunc(newClient embedClientFactory) query.EmbedFunc {
 // triggered it, rather than served stale from the cache until an unrelated
 // mtime/size change happens to be noticed.
 func queryDeps(store *engram.Store, vaultRoot string, wiring queryWiring) query.Deps {
-	runner := &vault.Runner{Root: vaultRoot}
 	return query.Deps{
-		Memory: store,
-		RetrieveVault: func(ctx context.Context, project, q string, n int) (vault.Result, error) {
-			return vault.Retrieve(ctx, runner, project, q, n)
-		},
+		Memory:      store,
+		Vault:       vault.Retriever{Root: vaultRoot},
 		ResolveLink: query.NoLinkResolver,
 		StateDir:    defaultStateDir(),
 		Embed:       wiring.embed,

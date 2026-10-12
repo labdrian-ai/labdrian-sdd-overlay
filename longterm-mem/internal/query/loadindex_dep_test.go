@@ -5,7 +5,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vault"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vecindex"
 )
 
@@ -26,11 +25,11 @@ func TestDeps_LoadIndexIsConsultedInsteadOfPackageLoad(t *testing.T) {
 
 	loadCalls := 0
 	deps := Deps{
-		Memory:        store,
-		RetrieveVault: fakeRetrieveVault(vault.Result{Status: vault.StatusOK}, nil),
-		ResolveLink:   NoLinkResolver,
-		StateDir:      stateDir,
-		Embed:         fakeEmbed([]float32{1, 0, 0}, nil),
+		Memory:      store,
+		Vault:       fakeVault(nil, nil),
+		ResolveLink: NoLinkResolver,
+		StateDir:    stateDir,
+		Embed:       fakeEmbed([]float32{1, 0, 0}, nil),
 		LoadIndex: func(dir string) (*vecindex.Index, error) {
 			loadCalls++
 			return nil, vecindex.ErrNoIndex
@@ -59,10 +58,10 @@ func TestDeps_LoadIndexErrorIsNotSwallowedAsSuccess(t *testing.T) {
 	})
 
 	deps := Deps{
-		Memory:        store,
-		RetrieveVault: fakeRetrieveVault(vault.Result{Status: vault.StatusOK}, nil),
-		ResolveLink:   NoLinkResolver,
-		StateDir:      t.TempDir(), // no real index here
+		Memory:      store,
+		Vault:       fakeVault(nil, nil),
+		ResolveLink: NoLinkResolver,
+		StateDir:    t.TempDir(), // no real index here
 		LoadIndex: func(dir string) (*vecindex.Index, error) {
 			return nil, errors.New("boom")
 		},
