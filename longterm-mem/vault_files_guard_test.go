@@ -205,6 +205,7 @@ func TestVaultAccessProblemsFlagsWhatBreaksTheRule(t *testing.T) {
 		"internal/promote/testdata/x.go":     importing(`"os"`),
 		"internal/promote/stale.go":          importing(`"fmt"`),
 		"internal/promote/allowed_layout.go": layout("var dir = vl.PagesDir\nvar l = vl.Layout{}"),
+		"internal/promote/partial.go":        layout("var dir = vl.PagesDir"),
 		"internal/ops/doctor.go":             layout("var dir = vl.PagesDir"),
 		"internal/ops/uses_os.go":            importing(`"os"`),
 		"internal/promote/allowed.go":        layout("var dir = vl.PagesDir"),
@@ -214,8 +215,10 @@ func TestVaultAccessProblemsFlagsWhatBreaksTheRule(t *testing.T) {
 	allowed := map[string][]string{
 		"internal/promote/allowed.go":        {"PagesDir"},
 		"internal/promote/allowed_layout.go": {"PagesDir"},
-		"internal/promote/stale.go":          {"PagesDir"},
-		"internal/promote/gone.go":           {"PagesDir"},
+		// Allowed both names and selecting one: the permission it does not use is the problem.
+		"internal/promote/partial.go": {"PagesDir", "Layout"},
+		"internal/promote/stale.go":   {"PagesDir"},
+		"internal/promote/gone.go":    {"PagesDir"},
 	}
 	imports := []string{"os", "path/filepath", "io/ioutil", durablePackage}
 
@@ -254,6 +257,7 @@ func TestVaultAccessProblemsFlagsWhatBreaksTheRule(t *testing.T) {
 		"internal/promote/dir_test.go":       0,
 		"internal/promote/sub/deeper.go":     1,
 		"internal/promote/allowed_layout.go": 1,
+		"internal/promote/partial.go":        1,
 		"internal/promote/allowed.go":        0,
 		"internal/promote/testdata/x.go":     0,
 		"internal/promote/stale.go":          1,
@@ -266,6 +270,12 @@ func TestVaultAccessProblemsFlagsWhatBreaksTheRule(t *testing.T) {
 	}
 	if !reflect.DeepEqual(counts, want) {
 		t.Fatalf("problems per file = %v, want %v\nproblems:\n%v", counts, want, got)
+	}
+	// A file allowed two names that selects one: the problem is the unused permission, and it names it.
+	for _, problem := range got {
+		if strings.HasPrefix(problem, "internal/promote/partial.go ") && !strings.Contains(problem, "vaultlayout.Layout") {
+			t.Errorf("the problem of partial.go = %q, want the unused permission for Layout", problem)
+		}
 	}
 }
 
