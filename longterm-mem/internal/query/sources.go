@@ -29,11 +29,11 @@ var knownSources = map[string]bool{
 // an unreadable index itself only when the caller names the embedding source, which is a call that did not
 // ask for the defaults, so the two never say it for one call.
 func defaultSources(reading indexReading, project string) ([]string, []Diagnostic) {
-	err := reading.err
-	if err == nil {
+	if reading.err == nil {
 		return []string{SourceEngramFTS, SourceEngramEmbed}, nil
 	}
-	if d, unreadable := unreadableIndexDiagnostic(project, err); unreadable {
+	// project is the one the diagnostic names ("the embedding index of project ... could not be read").
+	if d, unreadable := unreadableIndexDiagnostic(project, reading.err); unreadable {
 		return []string{SourceEngramFTS}, []Diagnostic{d}
 	}
 	return []string{SourceEngramFTS}, nil

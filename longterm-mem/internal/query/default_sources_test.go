@@ -3,6 +3,7 @@ package query
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
@@ -62,6 +63,19 @@ func TestDefaultSources_FTSOnlyWhenNoIndex(t *testing.T) {
 	}
 	if len(got.Results) != 1 || !hasSource(got.Results[0], SourceEngramFTS) {
 		t.Fatalf("Results = %+v, want the one engram-fts row", got.Results)
+	}
+}
+
+// The project given to defaultSources is the one the diagnostic of an unreadable index names: it is not a
+// parameter that cannot matter (a reading of an index says nothing of which project it was read for).
+func TestDefaultSourcesNameTheProjectOfAnUnreadableIndex(t *testing.T) {
+	sources, diags := defaultSources(indexReading{err: errors.New("boom")}, "my-proj")
+
+	if len(sources) != 1 || sources[0] != SourceEngramFTS {
+		t.Errorf("sources = %v, want engram-fts alone", sources)
+	}
+	if len(diags) != 1 || diags[0].Code != DiagnosticEmbeddingIndexUnreadable || !strings.Contains(diags[0].Detail, `project "my-proj"`) {
+		t.Errorf("diagnostics = %+v, want one unreadable-index diagnostic naming project %q", diags, "my-proj")
 	}
 }
 
