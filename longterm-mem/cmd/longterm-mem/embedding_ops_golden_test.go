@@ -35,6 +35,11 @@ import (
 //	go test ./cmd/longterm-mem -run TestEmbeddingOpsGolden -update-retrieval-golden
 //
 // and read the diff before committing it.
+//
+// World 14 (a state directory nobody can name) was re-recorded on the owner's decision of 2026-10-12: `status`
+// refuses with exit 8 and `doctor` fails the two checks that read the index, saying the directory could not be
+// resolved, where both had looked in the working directory. It is the only world whose recording changed for a
+// change of behavior; worlds 05, 08 and 13 changed only in the words of the libraries (libraryErrorText).
 
 // opsGoldenCase is one world and the commands run in it.
 type opsGoldenCase struct {
