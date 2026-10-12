@@ -412,9 +412,7 @@ func checkEmbeddingIndexPresent(deps DoctorDeps, project string) Check {
 		return Check{Name: CheckEmbeddingIndexPresent, Status: CheckFailed, Detail: errNoEmbeddingIndexReader.Error()}
 	}
 	dir := deps.EmbeddingIndex.EmbeddingIndexLocation(project)
-	// An index is present when the port can tell when it was built; the instant itself is of no use here (Status
-	// reports it). Each check reads the index on its own, so that one that fails does not take the other with it.
-	if _, err := deps.EmbeddingIndex.EmbeddingIndexBuiltAt(project); err != nil {
+	if err := probeEmbeddingIndex(deps.EmbeddingIndex, project); err != nil {
 		var noStateDir StateDirUnresolved
 		if errors.As(err, &noStateDir) {
 			return Check{Name: CheckEmbeddingIndexPresent, Status: CheckFailed, Detail: "the state directory could not be resolved, so no embedding index can be looked for; " + stateDirHint}
@@ -426,6 +424,15 @@ func checkEmbeddingIndexPresent(deps DoctorDeps, project string) Check {
 		return Check{Name: CheckEmbeddingIndexPresent, Status: CheckFailed, Detail: fmt.Sprintf("embedding index at %s could not be loaded: %v", dir, err)}
 	}
 	return Check{Name: CheckEmbeddingIndexPresent, Status: CheckPassed}
+}
+
+// probeEmbeddingIndex asks whether project has an embedding index the port can read, and why not when it
+// cannot. The port has no question of its own for that: an index is there when it can tell when it was built, so
+// the probe asks that and keeps the error (Status is the reader of the instant itself). Each check reads the
+// index on its own, so that one that fails does not take the other with it.
+func probeEmbeddingIndex(index EmbeddingIndexReader, project string) error {
+	_, err := index.EmbeddingIndexBuiltAt(project)
+	return err
 }
 
 // checkEmbeddingIndexFresh reports how many of project's live rows the
