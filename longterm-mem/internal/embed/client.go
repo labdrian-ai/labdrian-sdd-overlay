@@ -193,7 +193,7 @@ func (c *Client) Embed(ctx context.Context, text string) ([]float32, error) {
 		return nil, &ModelMissingError{Model: c.model}
 	}
 	if resp.StatusCode != http.StatusOK {
-		return nil, &BackendUnreachableError{Err: fmt.Errorf("unexpected status %d: %s", resp.StatusCode, string(body))}
+		return nil, &BackendUnreachableError{Err: fmt.Errorf("unexpected status %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))}
 	}
 
 	var parsed struct {

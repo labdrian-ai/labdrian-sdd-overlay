@@ -119,6 +119,30 @@ func TestClientTimeoutIsExplicit(t *testing.T) {
 	}
 }
 
+// A backend that answers with an error status and a plain-text body is told with that body as the backend wrote
+// it, without the whitespace around it: http.Error and most servers end the body with a newline, and a newline
+// inside an error's text splits the line a diagnostic or a log is printed on (owner decision of 2026-10-12).
+func TestAnErrorStatusIsToldWithItsBodyTrimmed(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "  backend broke \t", http.StatusInternalServerError)
+	}))
+	defer srv.Close()
+	c, err := NewClient(Config{Endpoint: srv.URL, Model: "m", Timeout: time.Second})
+	if err != nil {
+		t.Fatalf("NewClient: %v", err)
+	}
+
+	_, embedErr := c.Embed(context.Background(), "hello")
+
+	var unreachable *BackendUnreachableError
+	if !errors.As(embedErr, &unreachable) {
+		t.Fatalf("Embed err = %v (%T), want *BackendUnreachableError", embedErr, embedErr)
+	}
+	if want := "embed: backend unreachable: unexpected status 500: backend broke"; embedErr.Error() != want {
+		t.Errorf("error = %q, want %q", embedErr.Error(), want)
+	}
+}
+
 // TestUnreachableBackendAndMissingModelAreDistinctErrors pins R-070's
 // query-facing consequence at the client layer: a caller must be able to
 // tell "the backend did not answer" apart from "the backend answered but

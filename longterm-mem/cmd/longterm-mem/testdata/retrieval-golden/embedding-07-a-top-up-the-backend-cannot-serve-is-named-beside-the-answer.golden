@@ -40,11 +40,11 @@ exit: 0
   "diagnostics": [
     {
       "code": "embedding_topup_failed",
-      "detail": "tried to embed 1 unindexed rows before answering this query, but the build failed, so this answer still comes from the index as it stood before: vecindex: build: embed engram id 21: embed: backend unreachable: unexpected status 500: backend broke\n"
+      "detail": "tried to embed 1 unindexed rows before answering this query, but the build failed, so this answer still comes from the index as it stood before: vecindex: build: embed engram id 21: embed: backend unreachable: unexpected status 500: backend broke"
     },
     {
       "code": "embedding_backend_unreachable",
-      "detail": "embed: backend unreachable: unexpected status 500: backend broke\n"
+      "detail": "embed: backend unreachable: unexpected status 500: backend broke"
     },
     {
       "code": "embedding_index_incomplete",
