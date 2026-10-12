@@ -8,6 +8,10 @@
 // where it would be run (CommandResolver) and the time. It reads no file, no
 // environment variable and no clock, and starts no process; the composition root
 // chooses the adapters that answer.
+//
+// The ports and the words they answer in (PathFact, and its states PathPresent,
+// PathDeleted, PathRenamed and PathUnknown) are defined in ports.go; ObservationLister
+// is defined below, in this file.
 package skillstale
 
 import (

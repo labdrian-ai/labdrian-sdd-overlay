@@ -130,7 +130,7 @@ func (w *world) observed(id, lastObserved string) *world {
 	return w
 }
 
-// lockOf renders the lock of the skills added so far, unless the case set the bytes itself.
+// lockBytes renders the lock of the skills added so far, unless the case set the bytes itself.
 func (w *world) lockBytes() []byte {
 	if w.source.lock != nil {
 		return w.source.lock
