@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"testing"
@@ -264,13 +265,22 @@ func TestMCPSessionGolden(t *testing.T) {
 	}
 }
 
+// sessionT is the part of *testing.T a session needs, so that a test can give it a T whose failure it can see.
+type sessionT interface {
+	Helper()
+	Fatal(args ...any)
+	Fatalf(format string, args ...any)
+	Errorf(format string, args ...any)
+	TempDir() string
+}
+
 // mcpSession runs `longterm-mem mcp` in process over pipes and sends it the JSON-RPC messages, one at a time,
 // waiting for each answer before it sends the next. A notification (a message with no id) gets no answer. It
 // returns the answers in order, indented, then closes the server's input and returns the exit code and what the
 // server wrote to stderr.
 //
 // The streams of the process are the test's for the length of the session and restored afterwards.
-func (w *retrievalWorld) mcpSession(t *testing.T, messages []string) (answers []string, code int, stderr string) {
+func (w *retrievalWorld) mcpSession(t sessionT, messages []string) (answers []string, code int, stderr string) {
 	t.Helper()
 	stdinR, stdinW, err := os.Pipe()
 	if err != nil {
@@ -287,10 +297,34 @@ func (w *retrievalWorld) mcpSession(t *testing.T, messages []string) (answers []
 	realIn, realOut, realErr := os.Stdin, os.Stdout, os.Stderr
 	os.Stdin, os.Stdout, os.Stderr = stdinR, stdoutW, errFile
 	restore := func() { os.Stdin, os.Stdout, os.Stderr = realIn, realOut, realErr }
-	defer restore()
 
 	exit := make(chan int, 1)
 	go func() { exit <- w.commands.run([]string{"mcp"}) }()
+
+	// stop ends the server whichever way the session ends: its input is closed, so that it returns, and what it
+	// still writes is read and dropped, so that it is never stuck on a full pipe; only then are the streams of
+	// the process given back, so that nothing the server writes lands on them. It is safe to call twice.
+	stopped := false
+	stop := func() bool {
+		if stopped {
+			return true
+		}
+		_ = stdinW.Close()
+		go func() { _, _ = io.Copy(io.Discard, stdoutR) }()
+		select {
+		case code = <-exit:
+			stopped = true
+		case <-time.After(30 * time.Second): // a watchdog only: the server does not stop when its input closes
+			return false
+		}
+		return true
+	}
+	defer func() {
+		stop()
+		restore()
+		_ = stdoutW.Close()
+		_ = stdinR.Close()
+	}()
 
 	reader := bufio.NewReader(stdoutR)
 	for _, message := range messages {
@@ -318,17 +352,10 @@ func (w *retrievalWorld) mcpSession(t *testing.T, messages []string) (answers []
 		}
 		answers = append(answers, indented.String())
 	}
-	if err := stdinW.Close(); err != nil {
-		t.Fatalf("close the server's input: %v", err)
-	}
-	select {
-	case code = <-exit:
-	case <-time.After(30 * time.Second):
+	if !stop() {
 		t.Fatal("the server did not stop when its input closed")
 	}
 	restore()
-	_ = stdoutW.Close()
-	_ = stdinR.Close()
 	data, err := os.ReadFile(errFile.Name())
 	if err != nil {
 		t.Fatalf("read the stderr capture: %v", err)
