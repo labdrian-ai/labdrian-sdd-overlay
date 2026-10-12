@@ -102,6 +102,25 @@ type embeddingArm struct {
 	Index   EmbeddingIndexRepository
 	Builder EmbeddingIndexBuilder
 	Embed   EmbedFunc
+	// Reading, when set, is the reading of the project's index that the call's sources were chosen on (Run reads
+	// it for the default sources). The arm searches that reading instead of reading the index again, so the choice
+	// of the sources and the answer cannot describe two indexes. None reads the index, as a call that names the
+	// embedding source does.
+	Reading *indexReading
+}
+
+// indexReading is one reading of a project's embedding index through the port: the index, or the error that says
+// there is none the arm can use (an index nobody built, one that cannot be read or trusted, no repository wired).
+type indexReading struct {
+	index *EmbeddingIndex
+	err   error
+}
+
+// readEmbeddingIndex reads project's embedding index through the port, or answers an error when no port was
+// wired: the arm treats it as it treats an index nobody built.
+func readEmbeddingIndex(repository EmbeddingIndexRepository, project string) indexReading {
+	idx, err := loadEmbeddingIndex(repository, project)
+	return indexReading{index: idx, err: err}
 }
 
 // loadEmbeddingIndex is project's embedding index through the port, or an error when no
@@ -148,7 +167,12 @@ func (a embeddingArm) run(ctx context.Context, project, queryText string, top in
 	// read that counts live observations. Coverage's two numbers used to
 	// come from two separate calls, which is what let them disagree and
 	// forced a clamp, a diagnostic and a branch no test could reach.
-	idx, loadErr := loadEmbeddingIndex(a.Index, project)
+	reading := a.Reading
+	if reading == nil {
+		read := readEmbeddingIndex(a.Index, project)
+		reading = &read
+	}
+	idx, loadErr := reading.index, reading.err
 
 	var diags []Diagnostic
 	live, liveByID, err := a.Memory.CoverageSnapshot(project, indexedIDs(idx))

@@ -24,9 +24,12 @@ var knownSources = map[string]bool{
 // sources: ["vault", "engram-fts"].
 //
 // An index that is there and cannot be read leaves the embedding source out as one nobody built does, and says
-// so in the diagnostic it returns (unreadableIndexDiagnostic).
-func defaultSources(deps Deps, project string) ([]string, []Diagnostic) {
-	_, err := loadEmbeddingIndex(deps.Index, project)
+// so in the diagnostic it returns (unreadableIndexDiagnostic). The embedding arm that runs when the index is
+// readable searches this same reading (embeddingArm.Reading), so the call reads the index once; the arm says
+// an unreadable index itself only when the caller names the embedding source, which is a call that did not
+// ask for the defaults, so the two never say it for one call.
+func defaultSources(reading indexReading, project string) ([]string, []Diagnostic) {
+	err := reading.err
 	if err == nil {
 		return []string{SourceEngramFTS, SourceEngramEmbed}, nil
 	}

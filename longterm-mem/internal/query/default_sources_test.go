@@ -2,7 +2,10 @@ package query
 
 import (
 	"context"
+	"errors"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 )
 
 // TestDefaultSources_UnionWhenIndexExists is this issue's core behavior: an
@@ -60,4 +63,92 @@ func TestDefaultSources_FTSOnlyWhenNoIndex(t *testing.T) {
 	if len(got.Results) != 1 || !hasSource(got.Results[0], SourceEngramFTS) {
 		t.Fatalf("Results = %+v, want the one engram-fts row", got.Results)
 	}
+}
+
+// scriptedIndexes is an EmbeddingIndexRepository whose loads answer, in order, what the script says, and the
+// last answer once the script is over: a repository whose index changes between two reads of it.
+type scriptedIndexes struct {
+	fakeIndexes
+	script []indexAnswer
+}
+
+type indexAnswer struct {
+	index *EmbeddingIndex
+	err   error
+}
+
+func (s *scriptedIndexes) LoadEmbeddingIndex(project string) (*EmbeddingIndex, error) {
+	s.loads = append(s.loads, project)
+	answer := s.script[len(s.script)-1]
+	if len(s.loads) <= len(s.script) {
+		answer = s.script[len(s.loads)-1]
+	}
+	return answer.index, answer.err
+}
+
+// The sources a call defaults to are chosen on one reading of the project's index, and the embedding arm, when
+// the choice includes it, searches that reading: the index is read once for the call, so the choice and the
+// answer cannot describe two indexes, and an index that changes (or fails) between two reads has no second
+// read to disagree with the first.
+func TestTheDefaultSourcesAndTheEmbeddingArmAreOneReadingOfTheIndex(t *testing.T) {
+	healthy := oneRowIndex(7, "alpha", "alpha body", []float32{1, 0, 0})
+	mem := func() *filteringMemory {
+		return memoryOf(memory.Observation{ID: 7, Title: "alpha", Content: "alpha body"})
+	}
+
+	t.Run("an index that reads", func(t *testing.T) {
+		indexes := &scriptedIndexes{script: []indexAnswer{{index: healthy}, {err: errors.New("unreadable the second time")}}}
+		deps := Deps{Memory: mem(), Index: indexes, Embed: fakeEmbed([]float32{1, 0, 0}, nil), ResolveLink: NoLinkResolver}
+
+		result, err := Run(context.Background(), deps, Request{Project: "p", Query: "alpha"})
+		if err != nil {
+			t.Fatalf("Run: %v", err)
+		}
+
+		if len(indexes.loads) != 1 {
+			t.Errorf("the index was read %d times for one call, want once", len(indexes.loads))
+		}
+		if len(result.Coverage) != 1 || result.Coverage[0].Indexed != 1 || hasDiagCode(result.Diagnostics, DiagnosticEmbeddingIndexUnreadable) {
+			t.Errorf("coverage = %+v, diagnostics = %+v, want the arm to have searched the index the sources were chosen on, with nothing said of it being unreadable", result.Coverage, result.Diagnostics)
+		}
+	})
+
+	t.Run("an index that does not read", func(t *testing.T) {
+		indexes := &scriptedIndexes{script: []indexAnswer{{err: errors.New("unreadable the first time")}, {index: healthy}}}
+		deps := Deps{Memory: mem(), Index: indexes, Embed: fakeEmbed([]float32{1, 0, 0}, nil), ResolveLink: NoLinkResolver}
+
+		result, err := Run(context.Background(), deps, Request{Project: "p", Query: "alpha"})
+		if err != nil {
+			t.Fatalf("Run: %v", err)
+		}
+
+		if len(indexes.loads) != 1 {
+			t.Errorf("the index was read %d times for one call, want once", len(indexes.loads))
+		}
+		if len(result.Coverage) != 0 {
+			t.Errorf("Coverage = %+v, want none: the sources were chosen on a reading that failed, so the embedding source did not run", result.Coverage)
+		}
+		said := 0
+		for _, d := range result.Diagnostics {
+			if d.Code == DiagnosticEmbeddingIndexUnreadable {
+				said++
+			}
+		}
+		if said != 1 {
+			t.Errorf("the unreadable index is said %d times in %+v, want once", said, result.Diagnostics)
+		}
+	})
+
+	t.Run("sources named by the caller are read by the arm alone", func(t *testing.T) {
+		indexes := &scriptedIndexes{script: []indexAnswer{{index: healthy}}}
+		deps := Deps{Memory: mem(), Index: indexes, Embed: fakeEmbed([]float32{1, 0, 0}, nil), ResolveLink: NoLinkResolver}
+
+		if _, err := Run(context.Background(), deps, Request{Project: "p", Query: "alpha", Sources: []string{SourceEngramFTS, SourceEngramEmbed}}); err != nil {
+			t.Fatalf("Run: %v", err)
+		}
+
+		if len(indexes.loads) != 1 {
+			t.Errorf("the index was read %d times for a call that names the embedding source, want once (by the arm)", len(indexes.loads))
+		}
+	})
 }
