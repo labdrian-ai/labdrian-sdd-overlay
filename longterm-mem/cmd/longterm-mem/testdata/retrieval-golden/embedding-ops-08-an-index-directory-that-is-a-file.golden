@@ -29,8 +29,8 @@ longterm-mem: doctor for goldenproj
   [PASS] wiki-registration-consistency
   [PASS] precedence-sidecar-consistency
   [PASS] runtime-prerequisites
-  [FAIL] embedding-index-present (embedding index at <state>/index/goldenproj could not be loaded: vecindex: read <state>/index/goldenproj/manifest.json: open <state>/index/goldenproj/manifest.json: not a directory)
-  [FAIL] embedding-index-fresh (freshness cannot be determined: embedding index at <state>/index/goldenproj could not be loaded: vecindex: read <state>/index/goldenproj/manifest.json: open <state>/index/goldenproj/manifest.json: not a directory)
+  [FAIL] embedding-index-present (embedding index at <state>/index/goldenproj could not be loaded: vecindex: read <state>/index/goldenproj/manifest.json: open <state>/index/goldenproj/manifest.json: <not a directory>)
+  [FAIL] embedding-index-fresh (freshness cannot be determined: embedding index at <state>/index/goldenproj could not be loaded: vecindex: read <state>/index/goldenproj/manifest.json: open <state>/index/goldenproj/manifest.json: <not a directory>)
   [PASS] embedding-backend-reachable
 --- stderr ---
 
@@ -63,12 +63,12 @@ exit: 9
     {
       "name": "embedding-index-present",
       "status": "FAIL",
-      "detail": "embedding index at <state>/index/goldenproj could not be loaded: vecindex: read <state>/index/goldenproj/manifest.json: open <state>/index/goldenproj/manifest.json: not a directory"
+      "detail": "embedding index at <state>/index/goldenproj could not be loaded: vecindex: read <state>/index/goldenproj/manifest.json: open <state>/index/goldenproj/manifest.json: <not a directory>"
     },
     {
       "name": "embedding-index-fresh",
       "status": "FAIL",
-      "detail": "freshness cannot be determined: embedding index at <state>/index/goldenproj could not be loaded: vecindex: read <state>/index/goldenproj/manifest.json: open <state>/index/goldenproj/manifest.json: not a directory"
+      "detail": "freshness cannot be determined: embedding index at <state>/index/goldenproj could not be loaded: vecindex: read <state>/index/goldenproj/manifest.json: open <state>/index/goldenproj/manifest.json: <not a directory>"
     },
     {
       "name": "embedding-backend-reachable",

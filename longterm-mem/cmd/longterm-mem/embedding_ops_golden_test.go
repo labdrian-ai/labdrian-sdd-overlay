@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -187,6 +188,46 @@ func putPython3OnPath(t *testing.T) {
 	t.Setenv("PATH", dir)
 }
 
+// libraryErrorText is the words of errors that the program prints but does not write: the JSON parser's message
+// for a manifest it cannot parse, the SQLite driver's for a database it cannot open, and the operating system's
+// for a path through a file. They are the toolchain's, the driver's and the platform's to change, so the goldens
+// of this set pin the sentence the program builds around them and not their wording (a golden that failed on a
+// new Go release or driver would say nothing about the program).
+var libraryErrorText = []struct {
+	pattern *regexp.Regexp
+	mask    string
+}{
+	{regexp.MustCompile(`invalid character .+? looking for beginning of object key string`), "<json syntax error>"},
+	{regexp.MustCompile(`unable to open database file \(\d+\)`), "<sqlite open error>"},
+	{regexp.MustCompile(`: not a directory`), ": <not a directory>"},
+}
+
+// maskLibraryErrors replaces the words of libraryErrorText in a rendering, and nothing else.
+func maskLibraryErrors(text string) string {
+	for _, r := range libraryErrorText {
+		text = r.pattern.ReplaceAllString(text, r.mask)
+	}
+	return text
+}
+
+func TestMaskLibraryErrorsMasksTheWordsOfTheLibrariesAndNothingElse(t *testing.T) {
+	got := maskLibraryErrors("parse manifest: invalid character 'n' looking for beginning of object key string)\n" +
+		"engram: connect x: primary open failed (unable to open database file (14)), fallback open failed: unable to open database file (14)\n" +
+		"open /s/index/p/manifest.json: not a directory\n" +
+		"vecindex: index is corrupted: no such file or directory; is a directory\n")
+	want := "parse manifest: <json syntax error>)\n" +
+		"engram: connect x: primary open failed (<sqlite open error>), fallback open failed: <sqlite open error>\n" +
+		"open /s/index/p/manifest.json: <not a directory>\n" +
+		"vecindex: index is corrupted: no such file or directory; is a directory\n"
+	if got != want {
+		t.Errorf("masked:\n%s\nwant:\n%s", got, want)
+	}
+}
+
+// Status prints "never" for an index it cannot read, as it does for one nobody built (worlds 05 to 08): it
+// never invents an instant it cannot stand behind (R-065, status.go), and the doctor, which says what is wrong
+// with the index, is where the difference is told. The goldens pin that as the intended behavior.
+
 // runOpsGoldenCase runs the commands of the case in a world of its own and renders what they did.
 func runOpsGoldenCase(t *testing.T, tc opsGoldenCase) (w *retrievalWorld, rendering string) {
 	t.Helper()
@@ -201,7 +242,7 @@ func runOpsGoldenCase(t *testing.T, tc opsGoldenCase) (w *retrievalWorld, render
 		fmt.Fprintf(&b, "args: %s\nexit: %d\n--- stdout ---\n%s--- stderr ---\n%s\n", strings.Join(args, " "), code, stdout, stderr)
 	}
 	fmt.Fprintf(&b, "--- state ---\n%s", w.renderState(t))
-	return w, w.normalise(b.String())
+	return w, maskLibraryErrors(w.normalise(b.String()))
 }
 
 func TestEmbeddingOpsGolden(t *testing.T) {
