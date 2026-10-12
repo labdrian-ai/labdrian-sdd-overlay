@@ -178,6 +178,7 @@ var (
 // was built at and the digest that covers it, and the instant of the vault's provisioned sentinel.
 func (w *retrievalWorld) normalise(text string) string {
 	text = strings.ReplaceAll(text, w.vaultRoot, "<vault>")
+	text = strings.ReplaceAll(text, goldenVaultRoot, "<vault>")
 	text = strings.ReplaceAll(text, w.home, "<home>")
 	text = strings.ReplaceAll(text, w.dbPath, "<engram-db>")
 	text = strings.ReplaceAll(text, w.stateDir, "<state>")

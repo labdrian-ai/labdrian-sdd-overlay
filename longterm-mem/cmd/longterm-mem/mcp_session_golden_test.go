@@ -12,14 +12,22 @@ import (
 	"time"
 )
 
+// goldenVaultRoot is the vault root the retrieval script of a case names its pages under: a fixed path of a
+// fixed length, which the golden files show as <vault> like the real root of the world.
+const goldenVaultRoot = "/home/golden/vault"
+
 // retrieveScript is the vault's retrieval entrypoint as a test writes it: it answers count candidates, each
 // with a snippet of padding bytes after the words that say what it was asked, so that the query text and the
 // bound reach the transcript.
+//
+// The page paths it answers are under goldenVaultRoot, not under the directory the world happens to be in:
+// the response ceiling is measured on the bytes of the answer, path included, so a path whose length is the
+// temporary directory's would make the rows that fit depend on where the tests run.
 func retrieveScript(count, padding int) string {
-	return strings.NewReplacer("COUNT", fmt.Sprint(count), "PADDING", fmt.Sprint(padding)).Replace(`import json, os, sys
+	return strings.NewReplacer("COUNT", fmt.Sprint(count), "PADDING", fmt.Sprint(padding), "GOLDENROOT", goldenVaultRoot).Replace(`import json, os, sys
 query = sys.argv[1]
 top = sys.argv[sys.argv.index("--top") + 1]
-root = os.getcwd()
+root = "GOLDENROOT"
 candidates = []
 for i in range(COUNT):
     n = i + 1
@@ -225,44 +233,52 @@ func TestMCPSessionGolden(t *testing.T) {
 	requirePython3(t)
 	for _, tc := range mcpGoldenCases() {
 		t.Run(tc.name, func(t *testing.T) {
-			w := newRetrievalWorld(t)
-			if tc.setup != nil {
-				tc.setup(t, w)
-			}
-			messages := []string{
-				`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"golden","version":"0"}}}`,
-				`{"jsonrpc":"2.0","method":"notifications/initialized"}`,
-			}
-			if tc.handshake {
-				messages = append(messages, `{"jsonrpc":"2.0","id":2,"method":"tools/list"}`)
-			}
-			for i, call := range tc.calls {
-				request, err := json.Marshal(map[string]any{
-					"jsonrpc": "2.0", "id": i + 10, "method": "tools/call",
-					"params": map[string]any{"name": call.tool, "arguments": call.args},
-				})
-				if err != nil {
-					t.Fatalf("encode a call: %v", err)
-				}
-				messages = append(messages, string(request))
-			}
-
-			answers, code, stderr := w.mcpSession(t, messages)
-			if !tc.handshake && len(answers) > 0 {
-				answers = answers[1:] // the answer to initialize says nothing about the case
-			}
-
-			var b strings.Builder
-			for i, answer := range answers {
-				fmt.Fprintf(&b, "--- answer %d ---\n%s\n", i+1, answer)
-			}
-			fmt.Fprintf(&b, "--- exit ---\n%d\n--- stderr ---\n%s", code, stderr)
-			if tc.after != nil {
-				fmt.Fprintf(&b, "--- after ---\n%s", tc.after(t, w))
-			}
-			w.check(t, "mcp-"+tc.name, w.normalise(b.String()))
+			w, got := runMCPGoldenCase(t, tc)
+			w.check(t, "mcp-"+tc.name, got)
 		})
 	}
+}
+
+// runMCPGoldenCase runs one session in a world of its own and returns the world and what the session printed,
+// masked as the golden files are.
+func runMCPGoldenCase(t *testing.T, tc mcpGoldenCase) (*retrievalWorld, string) {
+	t.Helper()
+	w := newRetrievalWorld(t)
+	if tc.setup != nil {
+		tc.setup(t, w)
+	}
+	messages := []string{
+		`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"golden","version":"0"}}}`,
+		`{"jsonrpc":"2.0","method":"notifications/initialized"}`,
+	}
+	if tc.handshake {
+		messages = append(messages, `{"jsonrpc":"2.0","id":2,"method":"tools/list"}`)
+	}
+	for i, call := range tc.calls {
+		request, err := json.Marshal(map[string]any{
+			"jsonrpc": "2.0", "id": i + 10, "method": "tools/call",
+			"params": map[string]any{"name": call.tool, "arguments": call.args},
+		})
+		if err != nil {
+			t.Fatalf("encode a call: %v", err)
+		}
+		messages = append(messages, string(request))
+	}
+
+	answers, code, stderr := w.mcpSession(t, messages)
+	if !tc.handshake && len(answers) > 0 {
+		answers = answers[1:] // the answer to initialize says nothing about the case
+	}
+
+	var b strings.Builder
+	for i, answer := range answers {
+		fmt.Fprintf(&b, "--- answer %d ---\n%s\n", i+1, answer)
+	}
+	fmt.Fprintf(&b, "--- exit ---\n%d\n--- stderr ---\n%s", code, stderr)
+	if tc.after != nil {
+		fmt.Fprintf(&b, "--- after ---\n%s", tc.after(t, w))
+	}
+	return w, w.normalise(b.String())
 }
 
 // sessionT is the part of *testing.T a session needs, so that a test can give it a T whose failure it can see.

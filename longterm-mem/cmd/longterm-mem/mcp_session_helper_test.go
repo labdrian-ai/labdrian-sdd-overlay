@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"runtime"
 	"strconv"
@@ -114,6 +115,45 @@ func TestMCPSession_ACappedResponseFitsTheCeilingAndAccountsForEveryRow(t *testi
 	found, _ := strconv.Atoi(counts[2])
 	if dropped == 0 || len(structured.Results)+dropped != found {
 		t.Errorf("the answer shows %d rows and says %d of %d were dropped: they must add up, and something must have been dropped", len(structured.Results), dropped, found)
+	}
+}
+
+// The ceiling is measured on the bytes of the answer, and the answer carries the path of every page the vault
+// names. Where a world's directories are depends on where the tests run (TMPDIR on a laptop is not the one on a
+// runner), so a golden that is bounded by the ceiling holds only if the world does not let that path reach the
+// bytes. Golden 09 is the one that is: the same session in two directories of very different lengths must say
+// the same thing, for the rows that fit are the rows the ceiling leaves room for.
+func TestMCPSessionGolden_ACappedAnswerDoesNotDependOnWhereTheWorldIs(t *testing.T) {
+	requirePython3(t)
+	const capped = "09-a-response-over-the-ceiling-drops-rows-and-says-so"
+	var tc mcpGoldenCase
+	for _, candidate := range mcpGoldenCases() {
+		if candidate.name == capped {
+			tc = candidate
+		}
+	}
+	if tc.name == "" {
+		t.Fatalf("the golden case %q is gone", capped)
+	}
+	base := t.TempDir()
+	answers := map[string]string{}
+	for name, dir := range map[string]string{
+		"short": filepath.Join(base, "s"),
+		"long":  filepath.Join(base, strings.Repeat("a-long-directory-", 6)),
+	} {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatalf("create the %s temporary directory: %v", name, err)
+		}
+		t.Run(name, func(t *testing.T) {
+			t.Setenv("TMPDIR", dir)
+			_, answers[name] = runMCPGoldenCase(t, tc)
+		})
+	}
+	if answers["short"] == "" || answers["long"] == "" {
+		t.Fatalf("a session printed nothing: short %d bytes, long %d bytes", len(answers["short"]), len(answers["long"]))
+	}
+	if answers["short"] != answers["long"] {
+		t.Errorf("the capped answer depends on the length of the temporary directory the world is in:\n--- short ---\n%s\n--- long ---\n%s", answers["short"], answers["long"])
 	}
 }
 
