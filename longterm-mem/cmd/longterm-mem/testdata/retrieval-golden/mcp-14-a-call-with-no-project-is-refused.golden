@@ -1,0 +1,17 @@
+--- answer 1 ---
+{
+  "jsonrpc": "2.0",
+  "id": 10,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "validating \"arguments\": validating root: required: missing properties: [\"project\"]"
+      }
+    ],
+    "isError": true
+  }
+}
+--- exit ---
+0
+--- stderr ---

@@ -1,0 +1,78 @@
+--- answer 1 ---
+{
+  "jsonrpc": "2.0",
+  "id": 10,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "query \"cache\" in goldenproj (vault_status=ok, 4 results)\n\n[1] vault c-000001 \n    page 1 for cache (top 5) xxxxxxxxxxxxxxxxxxxx\n\n[2] vault c-000002 \n    page 2 for cache (top 5) xxxxxxxxxxxxxxxxxxxx\n\n[3] engram-fts engram:9 New cache decision\n    We cache with strategy beta-cache replacing alpha-cache.\n\n[4] engram-fts engram:8 Old cache decision\n    We cache with strategy alpha-cache.\n    SUPERSEDED BY engram:9 New cache decision — do not treat as current\n"
+      }
+    ],
+    "structuredContent": {
+      "coverage": null,
+      "project": "goldenproj",
+      "query": "cache",
+      "results": [
+        {
+          "page_address": "c-000001",
+          "page_path": "<vault>/wiki/memory/c-000001.md",
+          "rank": 1,
+          "score": {
+            "bm25": 2,
+            "rerank": 0.25
+          },
+          "snippet": "page 1 for cache (top 5) xxxxxxxxxxxxxxxxxxxx",
+          "sources": [
+            "vault"
+          ]
+        },
+        {
+          "page_address": "c-000002",
+          "page_path": "<vault>/wiki/memory/c-000002.md",
+          "rank": 2,
+          "score": {
+            "bm25": 1.5,
+            "rerank": 0.5
+          },
+          "snippet": "page 2 for cache (top 5) xxxxxxxxxxxxxxxxxxxx",
+          "sources": [
+            "vault"
+          ]
+        },
+        {
+          "engram_id": 9,
+          "full_length": 56,
+          "rank": 3,
+          "snippet": "We cache with strategy beta-cache replacing alpha-cache.",
+          "sources": [
+            "engram-fts"
+          ],
+          "title": "New cache decision"
+        },
+        {
+          "engram_id": 8,
+          "full_length": 35,
+          "rank": 4,
+          "snippet": "We cache with strategy alpha-cache.",
+          "sources": [
+            "engram-fts"
+          ],
+          "standing": {
+            "superseded_by": [
+              {
+                "id": 9,
+                "title": "New cache decision"
+              }
+            ]
+          },
+          "title": "Old cache decision"
+        }
+      ],
+      "vault_status": "ok"
+    }
+  }
+}
+--- exit ---
+0
+--- stderr ---

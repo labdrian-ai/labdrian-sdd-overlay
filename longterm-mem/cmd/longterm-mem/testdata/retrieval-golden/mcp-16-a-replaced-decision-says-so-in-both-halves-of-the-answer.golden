@@ -1,0 +1,52 @@
+--- answer 1 ---
+{
+  "jsonrpc": "2.0",
+  "id": 10,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "query \"cache\" in goldenproj (vault_status=not_requested, 2 results)\n\n[1] engram-fts engram:9 New cache decision\n    We cache with strategy beta-cache replacing alpha-cache.\n\n[2] engram-fts engram:8 Old cache decision\n    We cache with strategy alpha-cache.\n    SUPERSEDED BY engram:9 New cache decision — do not treat as current\n"
+      }
+    ],
+    "structuredContent": {
+      "coverage": null,
+      "project": "goldenproj",
+      "query": "cache",
+      "results": [
+        {
+          "engram_id": 9,
+          "full_length": 56,
+          "rank": 1,
+          "snippet": "We cache with strategy beta-cache replacing alpha-cache.",
+          "sources": [
+            "engram-fts"
+          ],
+          "title": "New cache decision"
+        },
+        {
+          "engram_id": 8,
+          "full_length": 35,
+          "rank": 2,
+          "snippet": "We cache with strategy alpha-cache.",
+          "sources": [
+            "engram-fts"
+          ],
+          "standing": {
+            "superseded_by": [
+              {
+                "id": 9,
+                "title": "New cache decision"
+              }
+            ]
+          },
+          "title": "Old cache decision"
+        }
+      ],
+      "vault_status": "not_requested"
+    }
+  }
+}
+--- exit ---
+0
+--- stderr ---

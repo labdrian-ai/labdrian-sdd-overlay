@@ -1,0 +1,23 @@
+--- answer 1 ---
+{
+  "jsonrpc": "2.0",
+  "id": 10,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "query \"layout\" in goldenproj (vault_status=ok, 0 results)\n"
+      }
+    ],
+    "structuredContent": {
+      "coverage": null,
+      "project": "goldenproj",
+      "query": "layout",
+      "results": null,
+      "vault_status": "ok"
+    }
+  }
+}
+--- exit ---
+0
+--- stderr ---

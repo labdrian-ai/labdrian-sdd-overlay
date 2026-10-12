@@ -1,0 +1,397 @@
+--- answer 1 ---
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "capabilities": {
+      "logging": {},
+      "tools": {
+        "listChanged": true
+      }
+    },
+    "protocolVersion": "2025-06-18",
+    "serverInfo": {
+      "name": "longterm-mem",
+      "version": "0.1.0"
+    }
+  }
+}
+--- answer 2 ---
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": {
+    "ttlMs": 0,
+    "cacheScope": "public",
+    "tools": [
+      {
+        "description": "Read one Engram observation whole by id, untruncated -- the full text behind a query result whose snippet was cut.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "engram_id": {
+              "type": "integer",
+              "description": "the Engram observation id to read whole"
+            }
+          },
+          "required": [
+            "engram_id"
+          ],
+          "additionalProperties": false
+        },
+        "name": "get",
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "found": {
+              "type": "boolean"
+            },
+            "engram_id": {
+              "type": "integer"
+            },
+            "title": {
+              "type": "string"
+            },
+            "content": {
+              "type": "string"
+            },
+            "project": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string"
+            },
+            "created_at": {
+              "type": "string"
+            },
+            "updated_at": {
+              "type": "string"
+            },
+            "deleted_at": {
+              "type": "string"
+            },
+            "detail": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "found"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "description": "Explicitly promote one Engram observation to a vault page, regardless of its automatic eligibility (R-032).",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "project": {
+              "type": "string",
+              "description": "the project owning the observation"
+            },
+            "engram_id": {
+              "type": "integer",
+              "description": "the Engram observation id to promote"
+            }
+          },
+          "required": [
+            "project",
+            "engram_id"
+          ],
+          "additionalProperties": false
+        },
+        "name": "promote",
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "page_address": {
+              "type": "string"
+            },
+            "page_path": {
+              "type": "string"
+            },
+            "action": {
+              "type": "string"
+            },
+            "index_stale": {
+              "type": "boolean"
+            },
+            "index_stale_detail": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "action"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "description": "Search a project's Engram observations and vault pages, merged by source and never re-ranked (D8).",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "project": {
+              "type": "string",
+              "description": "the project to search"
+            },
+            "query": {
+              "type": "string",
+              "description": "the query text"
+            },
+            "top": {
+              "type": "integer",
+              "description": "results per source (default 5 when omitted or 0)"
+            },
+            "exclude_types": {
+              "type": [
+                "null",
+                "array"
+              ],
+              "items": {
+                "type": "string"
+              },
+              "description": "Engram observation types to leave out, e.g. session_summary (default: none excluded)"
+            },
+            "sources": {
+              "type": [
+                "null",
+                "array"
+              ],
+              "items": {
+                "type": "string"
+              },
+              "description": "sources to query: engram-fts, engram-embed, vault (default: engram-fts plus engram-embed once the project's embedding index exists, else engram-fts only; vault is not queried unless named)"
+            }
+          },
+          "required": [
+            "project",
+            "query"
+          ],
+          "additionalProperties": false
+        },
+        "name": "query",
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "project": {
+              "type": "string"
+            },
+            "query": {
+              "type": "string"
+            },
+            "vault_status": {
+              "type": "string"
+            },
+            "results": {
+              "type": [
+                "null",
+                "array"
+              ],
+              "items": {
+                "type": "object",
+                "properties": {
+                  "sources": {
+                    "type": [
+                      "null",
+                      "array"
+                    ],
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "rank": {
+                    "type": "integer"
+                  },
+                  "page_address": {
+                    "type": "string"
+                  },
+                  "page_path": {
+                    "type": "string"
+                  },
+                  "engram_id": {
+                    "type": "integer"
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "snippet": {
+                    "type": "string"
+                  },
+                  "snippet_truncated": {
+                    "type": "boolean"
+                  },
+                  "full_length": {
+                    "type": "integer"
+                  },
+                  "score": {
+                    "type": [
+                      "null",
+                      "object"
+                    ],
+                    "properties": {
+                      "bm25": {
+                        "type": "number"
+                      },
+                      "rerank": {
+                        "type": "number"
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "standing": {
+                    "type": [
+                      "null",
+                      "object"
+                    ],
+                    "properties": {
+                      "superseded_by": {
+                        "type": [
+                          "null",
+                          "array"
+                        ],
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "integer"
+                            },
+                            "title": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "title"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "conflicts_with": {
+                        "type": [
+                          "null",
+                          "array"
+                        ],
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "integer"
+                            },
+                            "title": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "title"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "unjudged": {
+                        "type": [
+                          "null",
+                          "array"
+                        ],
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "integer"
+                            },
+                            "title": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "title"
+                          ],
+                          "additionalProperties": false
+                        }
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "sources",
+                  "rank"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "diagnostics": {
+              "type": [
+                "null",
+                "array"
+              ],
+              "items": {
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "type": "string"
+                  },
+                  "detail": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "code",
+                  "detail"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "coverage": {
+              "type": [
+                "null",
+                "array"
+              ],
+              "items": {
+                "type": "object",
+                "properties": {
+                  "source": {
+                    "type": "string"
+                  },
+                  "live": {
+                    "type": "integer"
+                  },
+                  "indexed": {
+                    "type": "integer"
+                  },
+                  "unindexed": {
+                    "type": "integer"
+                  },
+                  "built_at": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "source",
+                  "live",
+                  "indexed",
+                  "unindexed",
+                  "built_at"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "project",
+            "query",
+            "vault_status",
+            "results",
+            "coverage"
+          ],
+          "additionalProperties": false
+        }
+      }
+    ]
+  }
+}
+--- exit ---
+0
+--- stderr ---

@@ -1,0 +1,134 @@
+--- answer 1 ---
+{
+  "jsonrpc": "2.0",
+  "id": 10,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "query \"dragonscale\" in goldenproj (vault_status=not_requested, 5 results)\n\n[1] engram-embed engram:3 Dragonscale layout\n    reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del p…\n    (extract of 2599 bytes; call get{engram_id: 3} for the whole text)\n\n[2] engram-embed engram:6 Session summary dragonscale\n    dragonscale summary of a session\n\n[3] engram-embed engram:7 Policy with multibyte head\n    ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú the policy marker word zebracorn éééééééééééééééééééééééééééééééé…\n    (extract of 483 bytes; call get{engram_id: 7} for the whole text)\n\n[4] engram-embed engram:10 Conflict left side\n    gamma-conflict claim one\n    CONFLICTS WITH engram:11 Conflict right side\n\n[5] engram-embed engram:11 Conflict right side\n    gamma-conflict claim two\n    CONFLICTS WITH engram:10 Conflict left side\n"
+      }
+    ],
+    "structuredContent": {
+      "coverage": [
+        {
+          "built_at": "<instant>",
+          "indexed": 13,
+          "live": 13,
+          "source": "engram-embed",
+          "unindexed": 0
+        }
+      ],
+      "project": "goldenproj",
+      "query": "dragonscale",
+      "results": [
+        {
+          "engram_id": 3,
+          "full_length": 2599,
+          "rank": 1,
+          "snippet": "reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del p…",
+          "snippet_truncated": true,
+          "sources": [
+            "engram-embed"
+          ],
+          "title": "Dragonscale layout"
+        },
+        {
+          "engram_id": 6,
+          "full_length": 32,
+          "rank": 2,
+          "snippet": "dragonscale summary of a session",
+          "sources": [
+            "engram-embed"
+          ],
+          "title": "Session summary dragonscale"
+        },
+        {
+          "engram_id": 7,
+          "full_length": 483,
+          "rank": 3,
+          "snippet": "ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú ñandú the policy marker word zebracorn éééééééééééééééééééééééééééééééé…",
+          "snippet_truncated": true,
+          "sources": [
+            "engram-embed"
+          ],
+          "title": "Policy with multibyte head"
+        },
+        {
+          "engram_id": 10,
+          "full_length": 24,
+          "rank": 4,
+          "snippet": "gamma-conflict claim one",
+          "sources": [
+            "engram-embed"
+          ],
+          "standing": {
+            "conflicts_with": [
+              {
+                "id": 11,
+                "title": "Conflict right side"
+              }
+            ]
+          },
+          "title": "Conflict left side"
+        },
+        {
+          "engram_id": 11,
+          "full_length": 24,
+          "rank": 5,
+          "snippet": "gamma-conflict claim two",
+          "sources": [
+            "engram-embed"
+          ],
+          "standing": {
+            "conflicts_with": [
+              {
+                "id": 10,
+                "title": "Conflict left side"
+              }
+            ]
+          },
+          "title": "Conflict right side"
+        }
+      ],
+      "vault_status": "not_requested"
+    }
+  }
+}
+--- answer 2 ---
+{
+  "jsonrpc": "2.0",
+  "id": 11,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "query \"dragonscale\" in otherproj (vault_status=not_requested, 0 results)\n\nWARN embedding_index_incomplete: no embedding index has ever been built for this project, so paraphrase questions are unanswerable from it right now; run `longterm-mem index --embeddings` to build one\n"
+      }
+    ],
+    "structuredContent": {
+      "coverage": [
+        {
+          "built_at": "never",
+          "indexed": 0,
+          "live": 1,
+          "source": "engram-embed",
+          "unindexed": 1
+        }
+      ],
+      "diagnostics": [
+        {
+          "code": "embedding_index_incomplete",
+          "detail": "no embedding index has ever been built for this project, so paraphrase questions are unanswerable from it right now; run `longterm-mem index --embeddings` to build one"
+        }
+      ],
+      "project": "otherproj",
+      "query": "dragonscale",
+      "results": null,
+      "vault_status": "not_requested"
+    }
+  }
+}
+--- exit ---
+0
+--- stderr ---

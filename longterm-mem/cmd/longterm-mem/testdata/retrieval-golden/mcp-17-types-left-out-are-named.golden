@@ -1,0 +1,41 @@
+--- answer 1 ---
+{
+  "jsonrpc": "2.0",
+  "id": 10,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "query \"dragonscale\" in goldenproj (vault_status=not_requested, 1 results)\n\n[1] engram-fts engram:3 Dragonscale layout\n    …fé; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café;  dragonscale needle in the middle más texto náutico más texto náutico más texto náutico más texto náutico más texto náutico más texto náutico más texto náutico más texto náutico más texto náutico más texto náu…\n    (extract of 2599 bytes; call get{engram_id: 3} for the whole text)\n\nWARN types_excluded: these observation types were excluded from the search at the caller's request, so matching memories of these kinds are not shown: session_summary\n"
+      }
+    ],
+    "structuredContent": {
+      "coverage": null,
+      "diagnostics": [
+        {
+          "code": "types_excluded",
+          "detail": "these observation types were excluded from the search at the caller's request, so matching memories of these kinds are not shown: session_summary"
+        }
+      ],
+      "project": "goldenproj",
+      "query": "dragonscale",
+      "results": [
+        {
+          "engram_id": 3,
+          "full_length": 2599,
+          "rank": 1,
+          "snippet": "…fé; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café; reglas del pingüino, ñandú café;  dragonscale needle in the middle más texto náutico más texto náutico más texto náutico más texto náutico más texto náutico más texto náutico más texto náutico más texto náutico más texto náutico más texto náu…",
+          "snippet_truncated": true,
+          "sources": [
+            "engram-fts"
+          ],
+          "title": "Dragonscale layout"
+        }
+      ],
+      "vault_status": "not_requested"
+    }
+  }
+}
+--- exit ---
+0
+--- stderr ---

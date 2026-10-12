@@ -1,0 +1,317 @@
+--- answer 1 ---
+{
+  "jsonrpc": "2.0",
+  "id": 10,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "query \"cache\" in goldenproj (vault_status=ok, 22 results)\n\n[1] vault c-000001 \n    page 1 for cache (top 50) xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…\n\n[2] vault c-000002 \n    page 2 for cache (top 50) xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…\n\n[3] vault c-000003 \n    page 3 for cache (top 50) xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…\n\n[4] vault c-000004 \n    page 4 for cache (top 50) xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…\n\n[5] vault c-000005 \n    page 5 for cache (top 50) xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…\n\n[6] vault c-000006 \n    page 6 for cache (top 50) xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…\n\n[7] vault c-000007 \n    page 7 for cache (top 50) xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…\n\n[8] vault c-000008 \n    page 8 for cache (top 50) xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…\n\n[9] vault c-000009 \n    page 9 for cache (top 50) xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…\n\n[10] vault c-000010 \n    page 10 for cache (top 50) xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…\n\n[11] vault c-000011 \n    page 11 for cache (top 50) xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…\n\n[12] vault c-000012 \n    page 12 for cache (top 50) xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…\n\n[13] vault c-000013 \n    page 13 for cache (top 50) xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…\n\n[14] vault c-000014 \n    page 14 for cache (top 50) xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…\n\n[15] vault c-000015 \n    page 15 for cache (top 50) xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…\n\n[16] vault c-000016 \n    page 16 for cache (top 50) xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…\n\n[17] vault c-000017 \n    page 17 for cache (top 50) xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…\n\n[18] vault c-000018 \n    page 18 for cache (top 50) xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…\n\n[19] vault c-000019 \n    page 19 for cache (top 50) xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…\n\n[20] vault c-000020 \n    page 20 for cache (top 50) xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…\n\n[31] engram-fts engram:9 New cache decision\n    We cache with strategy beta-cache replacing alpha-cache.\n\n[32] engram-fts engram:8 Old cache decision\n    We cache with strategy alpha-cache.\n    SUPERSEDED BY engram:9 New cache decision — do not treat as current\n\nWARN response_capped: this response reached the 2000-token ceiling, so 10 of 32 results were dropped from the end; the rows shown are the highest-ranked ones that fit, and narrowing the query or lowering top will surface the rest\n"
+      }
+    ],
+    "structuredContent": {
+      "coverage": null,
+      "diagnostics": [
+        {
+          "code": "response_capped",
+          "detail": "this response reached the 2000-token ceiling, so 10 of 32 results were dropped from the end; the rows shown are the highest-ranked ones that fit, and narrowing the query or lowering top will surface the rest"
+        }
+      ],
+      "project": "goldenproj",
+      "query": "cache",
+      "results": [
+        {
+          "page_address": "c-000001",
+          "page_path": "<vault>/wiki/memory/c-000001.md",
+          "rank": 1,
+          "score": {
+            "bm25": 2,
+            "rerank": 0.25
+          },
+          "snippet": "page 1 for cache (top 50) xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…",
+          "sources": [
+            "vault"
+          ]
+        },
+        {
+          "page_address": "c-000002",
+          "page_path": "<vault>/wiki/memory/c-000002.md",
+          "rank": 2,
+          "score": {
+            "bm25": 1.5,
+            "rerank": 0.5
+          },
+          "snippet": "page 2 for cache (top 50) xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…",
+          "sources": [
+            "vault"
+          ]
+        },
+        {
+          "page_address": "c-000003",
+          "page_path": "<vault>/wiki/memory/c-000003.md",
+          "rank": 3,
+          "score": {
+            "bm25": 1,
+            "rerank": 0.75
+          },
+          "snippet": "page 3 for cache (top 50) xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…",
+          "sources": [
+            "vault"
+          ]
+        },
+        {
+          "page_address": "c-000004",
+          "page_path": "<vault>/wiki/memory/c-000004.md",
+          "rank": 4,
+          "score": {
+            "bm25": 0.5,
+            "rerank": 1
+          },
+          "snippet": "page 4 for cache (top 50) xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…",
+          "sources": [
+            "vault"
+          ]
+        },
+        {
+          "page_address": "c-000005",
+          "page_path": "<vault>/wiki/memory/c-000005.md",
+          "rank": 5,
+          "score": {
+            "rerank": 1.25
+          },
+          "snippet": "page 5 for cache (top 50) xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…",
+          "sources": [
+            "vault"
+          ]
+        },
+        {
+          "page_address": "c-000006",
+          "page_path": "<vault>/wiki/memory/c-000006.md",
+          "rank": 6,
+          "score": {
+            "bm25": -0.5,
+            "rerank": 1.5
+          },
+          "snippet": "page 6 for cache (top 50) xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…",
+          "sources": [
+            "vault"
+          ]
+        },
+        {
+          "page_address": "c-000007",
+          "page_path": "<vault>/wiki/memory/c-000007.md",
+          "rank": 7,
+          "score": {
+            "bm25": -1,
+            "rerank": 1.75
+          },
+          "snippet": "page 7 for cache (top 50) xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…",
+          "sources": [
+            "vault"
+          ]
+        },
+        {
+          "page_address": "c-000008",
+          "page_path": "<vault>/wiki/memory/c-000008.md",
+          "rank": 8,
+          "score": {
+            "bm25": -1.5,
+            "rerank": 2
+          },
+          "snippet": "page 8 for cache (top 50) xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…",
+          "sources": [
+            "vault"
+          ]
+        },
+        {
+          "page_address": "c-000009",
+          "page_path": "<vault>/wiki/memory/c-000009.md",
+          "rank": 9,
+          "score": {
+            "bm25": -2,
+            "rerank": 2.25
+          },
+          "snippet": "page 9 for cache (top 50) xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…",
+          "sources": [
+            "vault"
+          ]
+        },
+        {
+          "page_address": "c-000010",
+          "page_path": "<vault>/wiki/memory/c-000010.md",
+          "rank": 10,
+          "score": {
+            "bm25": -2.5,
+            "rerank": 2.5
+          },
+          "snippet": "page 10 for cache (top 50) xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…",
+          "sources": [
+            "vault"
+          ]
+        },
+        {
+          "page_address": "c-000011",
+          "page_path": "<vault>/wiki/memory/c-000011.md",
+          "rank": 11,
+          "score": {
+            "bm25": -3,
+            "rerank": 2.75
+          },
+          "snippet": "page 11 for cache (top 50) xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…",
+          "sources": [
+            "vault"
+          ]
+        },
+        {
+          "page_address": "c-000012",
+          "page_path": "<vault>/wiki/memory/c-000012.md",
+          "rank": 12,
+          "score": {
+            "bm25": -3.5,
+            "rerank": 3
+          },
+          "snippet": "page 12 for cache (top 50) xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…",
+          "sources": [
+            "vault"
+          ]
+        },
+        {
+          "page_address": "c-000013",
+          "page_path": "<vault>/wiki/memory/c-000013.md",
+          "rank": 13,
+          "score": {
+            "bm25": -4,
+            "rerank": 3.25
+          },
+          "snippet": "page 13 for cache (top 50) xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…",
+          "sources": [
+            "vault"
+          ]
+        },
+        {
+          "page_address": "c-000014",
+          "page_path": "<vault>/wiki/memory/c-000014.md",
+          "rank": 14,
+          "score": {
+            "bm25": -4.5,
+            "rerank": 3.5
+          },
+          "snippet": "page 14 for cache (top 50) xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…",
+          "sources": [
+            "vault"
+          ]
+        },
+        {
+          "page_address": "c-000015",
+          "page_path": "<vault>/wiki/memory/c-000015.md",
+          "rank": 15,
+          "score": {
+            "bm25": -5,
+            "rerank": 3.75
+          },
+          "snippet": "page 15 for cache (top 50) xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…",
+          "sources": [
+            "vault"
+          ]
+        },
+        {
+          "page_address": "c-000016",
+          "page_path": "<vault>/wiki/memory/c-000016.md",
+          "rank": 16,
+          "score": {
+            "bm25": -5.5,
+            "rerank": 4
+          },
+          "snippet": "page 16 for cache (top 50) xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…",
+          "sources": [
+            "vault"
+          ]
+        },
+        {
+          "page_address": "c-000017",
+          "page_path": "<vault>/wiki/memory/c-000017.md",
+          "rank": 17,
+          "score": {
+            "bm25": -6,
+            "rerank": 4.25
+          },
+          "snippet": "page 17 for cache (top 50) xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…",
+          "sources": [
+            "vault"
+          ]
+        },
+        {
+          "page_address": "c-000018",
+          "page_path": "<vault>/wiki/memory/c-000018.md",
+          "rank": 18,
+          "score": {
+            "bm25": -6.5,
+            "rerank": 4.5
+          },
+          "snippet": "page 18 for cache (top 50) xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…",
+          "sources": [
+            "vault"
+          ]
+        },
+        {
+          "page_address": "c-000019",
+          "page_path": "<vault>/wiki/memory/c-000019.md",
+          "rank": 19,
+          "score": {
+            "bm25": -7,
+            "rerank": 4.75
+          },
+          "snippet": "page 19 for cache (top 50) xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…",
+          "sources": [
+            "vault"
+          ]
+        },
+        {
+          "page_address": "c-000020",
+          "page_path": "<vault>/wiki/memory/c-000020.md",
+          "rank": 20,
+          "score": {
+            "bm25": -7.5,
+            "rerank": 5
+          },
+          "snippet": "page 20 for cache (top 50) xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…",
+          "sources": [
+            "vault"
+          ]
+        },
+        {
+          "engram_id": 9,
+          "full_length": 56,
+          "rank": 31,
+          "snippet": "We cache with strategy beta-cache replacing alpha-cache.",
+          "sources": [
+            "engram-fts"
+          ],
+          "title": "New cache decision"
+        },
+        {
+          "engram_id": 8,
+          "full_length": 35,
+          "rank": 32,
+          "snippet": "We cache with strategy alpha-cache.",
+          "sources": [
+            "engram-fts"
+          ],
+          "standing": {
+            "superseded_by": [
+              {
+                "id": 9,
+                "title": "New cache decision"
+              }
+            ]
+          },
+          "title": "Old cache decision"
+        }
+      ],
+      "vault_status": "ok"
+    }
+  }
+}
+--- exit ---
+0
+--- stderr ---

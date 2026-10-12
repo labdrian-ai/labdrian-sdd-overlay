@@ -1,0 +1,52 @@
+--- answer 1 ---
+{
+  "jsonrpc": "2.0",
+  "id": 10,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"action\":\"created\",\"page_address\":\"c-000901\",\"page_path\":\"wiki/memory/c-000901.md\"}"
+      }
+    ],
+    "structuredContent": {
+      "action": "created",
+      "page_address": "c-000901",
+      "page_path": "wiki/memory/c-000901.md"
+    }
+  }
+}
+--- answer 2 ---
+{
+  "jsonrpc": "2.0",
+  "id": 11,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"action\":\"updated\",\"page_address\":\"c-000901\",\"page_path\":\"wiki/memory/c-000901.md\"}"
+      }
+    ],
+    "structuredContent": {
+      "action": "updated",
+      "page_address": "c-000901",
+      "page_path": "wiki/memory/c-000901.md"
+    }
+  }
+}
+--- exit ---
+0
+--- stderr ---
+--- after ---
+calls:
+setup --no-llm
+prefix --all --no-llm
+bm25 build
+prefix --all --no-llm
+bm25 build
+present: .vault-meta/.longterm-mem-provisioned
+present: .vault-meta/bm25/index.json
+present: .vault-meta/chunks/a
+present: wiki/memory/c-000901.md
+present: wiki/index.md
+present: wiki/log.md

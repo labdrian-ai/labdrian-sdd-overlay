@@ -1,0 +1,32 @@
+--- answer 1 ---
+{
+  "jsonrpc": "2.0",
+  "id": 10,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"action\":\"created\",\"index_stale\":true,\"index_stale_detail\":\"the page was written and is durable, but rebuilding the vault index failed: vault: provision index: bin/setup-retrieve.sh exited 3: setup refused\\n; it will not be found by query until `longterm-mem sync --project goldenproj` rebuilds it\",\"page_address\":\"c-000901\",\"page_path\":\"wiki/memory/c-000901.md\"}"
+      }
+    ],
+    "structuredContent": {
+      "action": "created",
+      "index_stale": true,
+      "index_stale_detail": "the page was written and is durable, but rebuilding the vault index failed: vault: provision index: bin/setup-retrieve.sh exited 3: setup refused\n; it will not be found by query until `longterm-mem sync --project goldenproj` rebuilds it",
+      "page_address": "c-000901",
+      "page_path": "wiki/memory/c-000901.md"
+    }
+  }
+}
+--- exit ---
+0
+--- stderr ---
+--- after ---
+calls:
+setup --no-llm
+absent: .vault-meta/.longterm-mem-provisioned
+absent: .vault-meta/bm25/index.json
+absent: .vault-meta/chunks/a
+present: wiki/memory/c-000901.md
+present: wiki/index.md
+present: wiki/log.md
