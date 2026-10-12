@@ -1,0 +1,20 @@
+args: stale --project skillsgolden
+exit: 0
+--- stdout ---
+longterm-mem: stale: 5 observations in skillsgolden, checked against <project>
+
+  [17] second: a removal and a move and a path there
+      REMOVED gone.go (by 7cc3e33e09a2 on 2026-01-01)
+      MOVED   moved.go -> moved-new.go (by b3ad2c8c2bbc)
+
+  [19] fourth: a move
+      MOVED   moved.go -> moved-new.go (by b3ad2c8c2bbc)
+
+  [20] fifth: a removal
+      REMOVED gone.go (by 7cc3e33e09a2 on 2026-01-01)
+
+  2 memories name something removed after they were written; 2 name something that moved.
+  Nothing was changed. Each REMOVED line carries the commit that removed it: read it before
+  deciding, then record the removal so the next agent does not reintroduce what it describes.
+--- stderr ---
+WARN stale: --project skillsgolden does not correspond to this directory's project, which resolves to "<project>/.git" (via the common_dir rule); proceeding as asked, but if this was not deliberate the memory you write lands in a project that will never be searched back

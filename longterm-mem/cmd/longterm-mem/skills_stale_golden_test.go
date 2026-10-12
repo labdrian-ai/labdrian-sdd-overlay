@@ -56,6 +56,9 @@ type skillsStaleCase struct {
 	args func(w *skillsStaleWorld) []string
 	// pathNeedsGit puts a file that runs git in the directory that is PATH, for the cases that read the repository's history.
 	pathNeedsGit bool
+	// maskGitWords replaces the words git itself uses for what it refuses, which are its own to change, in a case
+	// whose report holds them. (The cases recorded before them keep git's words as they were written.)
+	maskGitWords bool
 }
 
 // writeProjectFile writes content at rel in the project root, creating its directory.
@@ -298,6 +301,60 @@ func skillsStaleCases() []skillsStaleCase {
 			return []string{"skills-stale", "--project-root", w.root}
 		}},
 		{name: "31-a-flag-nobody-knows", args: func(w *skillsStaleWorld) []string { return []string{"skills-stale", "--nope"} }},
+		{name: "32-a-path-recorded-under-another-root-of-the-tree", pathNeedsGit: true, setup: func(t *testing.T, w *skillsStaleWorld) {
+			w.git(t, "init", "-q", "-b", "main")
+			w.writeProjectFile(t, "module/promote/writer.go", "package promote\n")
+			w.lock(t, lockOf("suffix-skill"))
+			w.skillFiles(t, "suffix-skill", skillText("See `promote/writer.go`, `writer.go` and `module/promote/writer.go`.\n"))
+			w.git(t, "add", "-A")
+			w.git(t, "commit", "-q", "-m", "initial")
+			w.observed(t, "suffix-skill", recently)
+		}},
+		{name: "33-a-path-that-climbs-out-of-the-project-in-a-repository", pathNeedsGit: true, maskGitWords: true, setup: func(t *testing.T, w *skillsStaleWorld) {
+			w.git(t, "init", "-q", "-b", "main")
+			w.writeProjectFile(t, "present.go", "package golden\n")
+			w.lock(t, lockOf("climbing-skill"))
+			w.skillFiles(t, "climbing-skill", skillText("See `present.go` and `a/../../outside.go`.\n"))
+			w.git(t, "add", "-A")
+			w.git(t, "commit", "-q", "-m", "initial")
+			w.observed(t, "climbing-skill", recently)
+		}},
+		{name: "34-a-path-that-climbs-and-comes-back-in-a-repository", pathNeedsGit: true, setup: func(t *testing.T, w *skillsStaleWorld) {
+			w.git(t, "init", "-q", "-b", "main")
+			w.writeProjectFile(t, "removed.go", "package golden\n")
+			w.lock(t, lockOf("detour-skill"))
+			w.skillFiles(t, "detour-skill", skillText("See `a/../removed.go`.\n"))
+			w.git(t, "add", "-A")
+			w.git(t, "commit", "-q", "-m", "initial")
+			w.git(t, "rm", "-q", "removed.go")
+			w.git(t, "commit", "-q", "-m", "remove a recorded path")
+			w.observed(t, "detour-skill", recently)
+		}},
+		{name: "35-a-repository-with-no-commit", pathNeedsGit: true, maskGitWords: true, setup: func(t *testing.T, w *skillsStaleWorld) {
+			w.git(t, "init", "-q", "-b", "main")
+			w.lock(t, lockOf("early-skill"))
+			w.skillFiles(t, "early-skill", skillText("See `lost.go`.\n"))
+			w.observed(t, "early-skill", recently)
+		}},
+		{name: "36-a-removed-path-two-skills-name", pathNeedsGit: true, setup: func(t *testing.T, w *skillsStaleWorld) {
+			w.git(t, "init", "-q", "-b", "main")
+			w.writeProjectFile(t, "removed.go", "package golden\n")
+			w.lock(t, lockOf("first-skill", "second-skill"))
+			w.skillFiles(t, "first-skill", skillText("See `removed.go` and `removed.go` again.\n"))
+			w.skillFiles(t, "second-skill", skillText("See `removed.go`.\n"))
+			w.git(t, "add", "-A")
+			w.git(t, "commit", "-q", "-m", "initial")
+			w.git(t, "rm", "-q", "removed.go")
+			w.git(t, "commit", "-q", "-m", "remove a recorded path")
+			w.observed(t, "first-skill", recently)
+			w.observed(t, "second-skill", recently)
+		}},
+		{name: "37-paths-the-tree-holds-in-a-directory-that-is-no-repository", pathNeedsGit: true, setup: func(t *testing.T, w *skillsStaleWorld) {
+			w.writeProjectFile(t, "docs/guide.md", "# guide\n")
+			w.lock(t, lockOf("plain-skill"))
+			w.skillFiles(t, "plain-skill", skillText("See `docs/guide.md` and `guide.md`.\n"))
+			w.observed(t, "plain-skill", recently)
+		}},
 	}
 }
 
@@ -419,7 +476,11 @@ func runSkillsStaleCase(t *testing.T, tc skillsStaleCase) (w *skillsStaleWorld, 
 		t.Errorf("the report changed the project:\nbefore:\n%s\nafter:\n%s", before, after)
 	}
 	rendering = fmt.Sprintf("args: %s\nexit: %d\n--- stdout ---\n%s--- stderr ---\n%s", strings.Join(args, " "), code, stdout, stderr)
-	return w, w.maskForSkillsStale(rendering)
+	masked := w.maskForSkillsStale(rendering)
+	if tc.maskGitWords {
+		masked = gitWords.ReplaceAllString(masked, "${1}<git's words>")
+	}
+	return w, masked
 }
 
 // maskForSkillsStale replaces what differs from one machine to the next: the world's directories, and the
