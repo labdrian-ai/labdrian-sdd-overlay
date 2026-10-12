@@ -62,7 +62,9 @@ func recordingSelf(t *testing.T) (self, record string) {
 	t.Helper()
 	dir := t.TempDir()
 	self, record = filepath.Join(dir, "self"), filepath.Join(dir, "arguments")
-	script := "#!/bin/sh\nfor a in \"$@\"; do printf '%s\\n' \"$a\" >> '" + record + "'; done\n"
+	// The child writes every argument to a temporary file and renames it into place, so a reader
+	// polling for the record sees all of the arguments or none of them, never a prefix.
+	script := "#!/bin/sh\nfor a in \"$@\"; do printf '%s\\n' \"$a\" >> '" + record + ".tmp'; done\nmv '" + record + ".tmp' '" + record + "'\n"
 	if err := os.WriteFile(self, []byte(script), 0o755); err != nil {
 		t.Fatalf("write self: %v", err)
 	}

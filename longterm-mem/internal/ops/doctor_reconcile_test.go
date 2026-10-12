@@ -64,7 +64,7 @@ func TestDoctorAndReconcile_CloseTheLoopOnARevisionZeroPage(t *testing.T) {
 		Pages:                 vaultfs.New(vaultRoot),
 		AddressMap:            vaultfs.New(vaultRoot),
 		PrerequisitePresent:   func(string) bool { return true },
-		StateDir:              t.TempDir(),
+		EmbeddingIndex:        noEmbeddingIndexBuilt(),
 		LiveObservationIDs:    func(string) ([]int64, error) { return nil, nil },
 		EmbeddingBackendCheck: func(context.Context) error { return nil },
 	}

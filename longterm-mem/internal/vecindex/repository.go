@@ -10,9 +10,11 @@ import (
 
 // Repository is the adapter behind the two ports internal/query owns for its embedding arm: the repository that
 // reads a project's index and says what a row's fingerprint is (query.EmbeddingIndexRepository), and the builder
-// that closes a small gap before a scan (query.EmbeddingIndexBuilder). It keeps the indexes under StateDir
-// (StateDir/index/<project>/, Dir), in the format this package defines, and the composition root builds it and
-// hands it to the query.
+// that closes a small gap before a scan (query.EmbeddingIndexBuilder). It is also the adapter behind the port
+// the diagnostics of internal/ops read an index through (ops.EmbeddingIndexReader: where an index is kept, when
+// it was built and which rows it holds, in plain types, so this package does not import the package that asks).
+// It keeps the indexes under StateDir (StateDir/index/<project>/, Dir), in the format this package defines, and
+// the composition root builds it and hands it to the query and to the diagnostics.
 type Repository struct {
 	// StateDir is the directory the indexes live under.
 	StateDir string
@@ -43,14 +45,7 @@ var (
 // what the cache exists to avoid. The index is read-only to its callers (query.EmbeddingIndex says so, and the
 // embedding arm is held to it by a test).
 func (r *Repository) LoadEmbeddingIndex(project string) (*query.EmbeddingIndex, error) {
-	dir := Dir(r.StateDir, project)
-	var idx *Index
-	var err error
-	if r.Cache != nil {
-		idx, err = r.Cache.Load(dir)
-	} else {
-		idx, err = Load(dir)
-	}
+	idx, err := r.load(project)
 	if err != nil {
 		if errors.Is(err, ErrNoIndex) {
 			// Both stay reachable: the query tells an index nobody built by its own error, and a caller of
@@ -67,6 +62,65 @@ func (r *Repository) LoadEmbeddingIndex(project string) (*query.EmbeddingIndex, 
 		Model: idx.Manifest.Model, Dimension: idx.Manifest.Dimension, InputLimit: idx.Manifest.InputLimit,
 		BuiltAt: idx.Manifest.BuiltAt, Entries: entries, Vectors: idx.Vectors,
 	}, nil
+}
+
+// load reads project's index (Load), through the cache when the repository has one.
+func (r *Repository) load(project string) (*Index, error) {
+	dir := Dir(r.StateDir, project)
+	if r.Cache != nil {
+		return r.Cache.Load(dir)
+	}
+	return Load(dir)
+}
+
+// notBuilt is what the diagnostics' questions answer for a project nothing was built for: the load's own ErrNoIndex,
+// with its words and still found by errors.Is, that also says what it is in the terms of the diagnostics (a
+// method, NoEmbeddingIndex, that internal/ops finds with errors.As). This package does not import the package
+// that asks, so the statement is the method and the composition root holds the two together.
+type notBuilt struct{ error }
+
+func (notBuilt) NoEmbeddingIndex() {}
+
+func (e notBuilt) Unwrap() error { return e.error }
+
+// loadForInspection is load with the refusal of an index nobody built told apart, as the diagnostics need it.
+// Every other failure is the load's own, untouched: the diagnostics print its words.
+func (r *Repository) loadForInspection(project string) (*Index, error) {
+	idx, err := r.load(project)
+	if errors.Is(err, ErrNoIndex) {
+		return nil, notBuilt{err}
+	}
+	return idx, err
+}
+
+// EmbeddingIndexLocation is the directory project's index is kept in, which the diagnostics name when they say
+// they looked for an index or could not read one (Dir under the repository's state directory).
+func (r *Repository) EmbeddingIndexLocation(project string) string {
+	return Dir(r.StateDir, project)
+}
+
+// EmbeddingIndexBuiltAt is the instant project's index says it was last built at. A project nothing was built
+// for is answered with an error that says so (notBuilt); any other failure is Load's own.
+func (r *Repository) EmbeddingIndexBuiltAt(project string) (string, error) {
+	idx, err := r.loadForInspection(project)
+	if err != nil {
+		return "", err
+	}
+	return idx.Manifest.BuiltAt, nil
+}
+
+// IndexedEngramIDs lists the engram id of every row project's index vouches for, in the order the index holds
+// them, in a slice of the caller's own. Its failures are those of EmbeddingIndexBuiltAt.
+func (r *Repository) IndexedEngramIDs(project string) ([]int64, error) {
+	idx, err := r.loadForInspection(project)
+	if err != nil {
+		return nil, err
+	}
+	ids := make([]int64, len(idx.Manifest.Entries))
+	for i, e := range idx.Manifest.Entries {
+		ids[i] = e.EngramID
+	}
+	return ids, nil
 }
 
 // Fingerprint is the package's rule for what an index records of a row (Fingerprint).

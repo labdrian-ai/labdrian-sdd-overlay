@@ -8,10 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/embed"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/ops/testdata"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultfs"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vecindex"
 )
 
 // checkStatus finds check name's Status in checks, failing the test if
@@ -51,43 +49,7 @@ func recordPrecedenceRevision(t *testing.T, vaultRoot, address string, revision 
 }
 
 // doctorTestProject is the project name every TestDoctor subtest uses.
-// Shared as a constant so newHealthyEmbeddingDeps's index and each
-// subtest's Doctor() call always agree on which project's directory
-// vecindex.Dir resolves to.
 const doctorTestProject = "labdrian-sdd-overlay"
-
-// newHealthyEmbeddingDeps builds a state directory holding an embedding
-// index that exactly matches liveIDs -- present and fresh -- so the three
-// embedding checks (R-064) default to healthy the same way newHealthyDeps'
-// vault fixture defaults its own four checks to healthy. Each subtest that
-// exercises one embedding check breaks exactly that one piece, mirroring
-// the vault fixtures' own one-broken-piece convention.
-func newHealthyEmbeddingDeps(t *testing.T) (stateDir string, liveIDs []int64) {
-	t.Helper()
-	liveIDs = []int64{1, 2, 3}
-	stateDir = t.TempDir()
-
-	entries := make([]vecindex.ManifestEntry, len(liveIDs))
-	vectors := make([][]float32, len(liveIDs))
-	for i, id := range liveIDs {
-		entries[i] = vecindex.ManifestEntry{EngramID: id, Fingerprint: "fp"}
-		vectors[i] = []float32{0, 0}
-	}
-	idx := &vecindex.Index{
-		Manifest: vecindex.Manifest{
-			Model:      "nomic-embed-text",
-			Dimension:  2,
-			InputLimit: 2000,
-			BuiltAt:    "2026-01-01T00:00:00Z",
-			Entries:    entries,
-		},
-		Vectors: vectors,
-	}
-	if err := idx.Save(vecindex.Dir(stateDir, doctorTestProject)); err != nil {
-		t.Fatalf("save healthy embedding index fixture: %v", err)
-	}
-	return stateDir, liveIDs
-}
 
 // editPromotedPage appends a human's own line to a promoted page, so its
 // bytes no longer match whatever the precedence sidecar recorded.
@@ -121,7 +83,7 @@ func TestDoctor(t *testing.T) {
 		testdata.WriteAddressMap(t, vaultRoot, map[string]string{"wiki/memory/" + address + ".md": address})
 		testdata.WritePrecedenceEntry(t, vaultRoot, page)
 		testdata.RegisterPage(t, vaultRoot, address, title)
-		stateDir, liveIDs := newHealthyEmbeddingDeps(t)
+		embeddingIndex, liveIDs := newHealthyEmbeddingDeps(t)
 		return DoctorDeps{
 			VaultRoot:           vaultRoot,
 			Root:                vaultfs.New(vaultRoot),
@@ -131,7 +93,7 @@ func TestDoctor(t *testing.T) {
 			Pages:               vaultfs.New(vaultRoot),
 			AddressMap:          vaultfs.New(vaultRoot),
 			PrerequisitePresent: func(string) bool { return true },
-			StateDir:            stateDir,
+			EmbeddingIndex:      embeddingIndex,
 			LiveObservationIDs:  func(string) ([]int64, error) { return liveIDs, nil },
 			EmbeddingBackendCheck: func(context.Context) error {
 				return nil
@@ -356,7 +318,7 @@ func TestDoctor(t *testing.T) {
 
 	t.Run("Missing embedding index is named", func(t *testing.T) {
 		deps, _ := newHealthyDeps(t)
-		deps.StateDir = t.TempDir() // no index ever built at this path
+		deps.EmbeddingIndex = noEmbeddingIndexBuilt()
 
 		report, err := Doctor(context.Background(), deps, doctorTestProject)
 		if err != nil {
@@ -401,7 +363,7 @@ func TestDoctor(t *testing.T) {
 	t.Run("An unreachable backend is distinguished from a missing model", func(t *testing.T) {
 		deps, _ := newHealthyDeps(t)
 		deps.EmbeddingBackendCheck = func(context.Context) error {
-			return &embed.BackendUnreachableError{Err: errors.New("connection refused")}
+			return &backendDown{cause: errors.New("connection refused")}
 		}
 
 		report, err := Doctor(context.Background(), deps, doctorTestProject)
@@ -421,7 +383,7 @@ func TestDoctor(t *testing.T) {
 	t.Run("A reachable backend missing its model is named distinctly from unreachable", func(t *testing.T) {
 		deps, _ := newHealthyDeps(t)
 		deps.EmbeddingBackendCheck = func(context.Context) error {
-			return &embed.ModelMissingError{Model: "nomic-embed-text"}
+			return &modelNotPulled{model: "nomic-embed-text"}
 		}
 
 		report, err := Doctor(context.Background(), deps, doctorTestProject)
@@ -474,7 +436,7 @@ func TestDoctor_UnreadablePageDoesNotHideEveryOtherPage(t *testing.T) {
 		Pages:                 vaultfs.New(vaultRoot),
 		AddressMap:            vaultfs.New(vaultRoot),
 		PrerequisitePresent:   func(name string) bool { return true },
-		StateDir:              t.TempDir(),
+		EmbeddingIndex:        noEmbeddingIndexBuilt(),
 		LiveObservationIDs:    func(string) ([]int64, error) { return nil, nil },
 		EmbeddingBackendCheck: func(context.Context) error { return nil },
 	}

@@ -113,8 +113,12 @@ func Run(ctx context.Context, deps Deps, req Request) (Result, error) {
 	}
 	sources := req.Sources
 	var defaultDiags []Diagnostic
+	// The reading of the index the default sources are chosen on; the embedding arm searches it too.
+	var reading *indexReading
 	if len(sources) == 0 {
-		sources, defaultDiags = defaultSources(deps, req.Project)
+		read := readEmbeddingIndex(deps.Index, req.Project)
+		reading = &read
+		sources, defaultDiags = defaultSources(read, req.Project)
 	}
 	for _, s := range sources {
 		if !knownSources[s] {
@@ -155,7 +159,7 @@ func Run(ctx context.Context, deps Deps, req Request) (Result, error) {
 
 	var embedRows []ResultRow
 	if wantEmbed {
-		rows, coverage, diags := embeddingArm{Memory: deps.Memory, Index: deps.Index, Builder: deps.IndexBuilder, Embed: deps.Embed}.run(ctx, req.Project, req.Query, top)
+		rows, coverage, diags := embeddingArm{Memory: deps.Memory, Index: deps.Index, Builder: deps.IndexBuilder, Embed: deps.Embed, Reading: reading}.run(ctx, req.Project, req.Query, top)
 		embedRows = rows
 		result.Coverage = append(result.Coverage, coverage)
 		result.Diagnostics = append(result.Diagnostics, diags...)

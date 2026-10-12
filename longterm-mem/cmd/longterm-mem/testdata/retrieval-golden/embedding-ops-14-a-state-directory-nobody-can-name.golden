@@ -1,0 +1,72 @@
+args: status --project goldenproj
+exit: 8
+--- stdout ---
+--- stderr ---
+longterm-mem: status: could not resolve the state directory; set HOME or LONGTERM_MEM_STATE_DIR
+
+args: status --project goldenproj --json
+exit: 8
+--- stdout ---
+--- stderr ---
+longterm-mem: status: could not resolve the state directory; set HOME or LONGTERM_MEM_STATE_DIR
+
+args: doctor --project goldenproj
+exit: 9
+--- stdout ---
+longterm-mem: doctor for goldenproj
+  [PASS] vault-config-resolvable
+  [PASS] address-map-integrity
+  [PASS] wiki-registration-consistency
+  [PASS] precedence-sidecar-consistency
+  [PASS] runtime-prerequisites
+  [FAIL] embedding-index-present (the state directory could not be resolved, so no embedding index can be looked for; set HOME or LONGTERM_MEM_STATE_DIR)
+  [FAIL] embedding-index-fresh (freshness cannot be determined: the state directory could not be resolved; set HOME or LONGTERM_MEM_STATE_DIR)
+  [PASS] embedding-backend-reachable
+--- stderr ---
+
+args: doctor --project goldenproj --json
+exit: 9
+--- stdout ---
+{
+  "project": "goldenproj",
+  "checks": [
+    {
+      "name": "vault-config-resolvable",
+      "status": "PASS"
+    },
+    {
+      "name": "address-map-integrity",
+      "status": "PASS"
+    },
+    {
+      "name": "wiki-registration-consistency",
+      "status": "PASS"
+    },
+    {
+      "name": "precedence-sidecar-consistency",
+      "status": "PASS"
+    },
+    {
+      "name": "runtime-prerequisites",
+      "status": "PASS"
+    },
+    {
+      "name": "embedding-index-present",
+      "status": "FAIL",
+      "detail": "the state directory could not be resolved, so no embedding index can be looked for; set HOME or LONGTERM_MEM_STATE_DIR"
+    },
+    {
+      "name": "embedding-index-fresh",
+      "status": "FAIL",
+      "detail": "freshness cannot be determined: the state directory could not be resolved; set HOME or LONGTERM_MEM_STATE_DIR"
+    },
+    {
+      "name": "embedding-backend-reachable",
+      "status": "PASS"
+    }
+  ]
+}
+--- stderr ---
+
+--- state ---
+(nothing)

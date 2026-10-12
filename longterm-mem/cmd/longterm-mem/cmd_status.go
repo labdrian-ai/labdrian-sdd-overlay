@@ -41,10 +41,17 @@ func cmdStatus(args []string) int {
 		return vaultExitCode(err)
 	}
 
+	// Nothing names the directory the embedding index is kept in: there is nowhere to report on, and nothing
+	// was attempted. It is the failure `index --embeddings` gives for the same case, with the same code.
+	if defaultStateDir() == "" {
+		fmt.Fprintf(os.Stderr, "longterm-mem: status: %v\n", stateDirUnresolved{})
+		return exitPathUnresolvable
+	}
+
 	deps := ops.StatusDeps{
 		VaultRoot:        vaultRoot,
 		SyncState:        openVault(vaultRoot),
-		StateDir:         defaultStateDir(),
+		EmbeddingIndex:   embeddingIndexReader(),
 		VaultProvisioned: vault.Provisioned,
 		EngramReachable: func(ctx context.Context) (bool, string) {
 			store, err := engram.Open(os.Getenv(engramDBEnvVar))

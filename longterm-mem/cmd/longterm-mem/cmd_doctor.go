@@ -70,12 +70,12 @@ func (c commands) cmdDoctor(args []string) int {
 		Pages:               vaultFiles,
 		AddressMap:          vaultFiles,
 		PrerequisitePresent: vault.PrerequisitePresent,
-		// StateDir/LiveObservationIDs/EmbeddingBackendCheck back the three
+		// EmbeddingIndex/LiveObservationIDs/EmbeddingBackendCheck back the three
 		// embedding-index checks (R-064). This command takes no
 		// --embed-endpoint/--embed-model flags of its own (unlike `index
 		// --embeddings`), so embedding-backend-reachable probes the same
 		// defaults `index --embeddings` uses when none are given.
-		StateDir: defaultStateDir(),
+		EmbeddingIndex: embeddingIndexReader(),
 		LiveObservationIDs: func(project string) ([]int64, error) {
 			store, err := engram.Open(os.Getenv(engramDBEnvVar))
 			if err != nil {

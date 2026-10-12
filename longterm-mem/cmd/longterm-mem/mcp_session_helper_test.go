@@ -10,6 +10,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -32,9 +33,41 @@ type watchedT struct {
 // serverFrame is how a goroutine running the command shows in a stack dump.
 const serverFrame = "cmd/longterm-mem.commands.run("
 
+// allStacks is every goroutine's stack. runtime.Stack cuts its dump where the buffer ends and says so only by
+// filling it, so a dump that filled its buffer is taken again with a buffer twice the size.
 func allStacks() string {
-	stacks := make([]byte, 1<<20)
-	return string(stacks[:runtime.Stack(stacks, true)])
+	for size := 1 << 20; ; size *= 2 {
+		stacks := make([]byte, size)
+		if n := runtime.Stack(stacks, true); n < size {
+			return string(stacks[:n])
+		}
+	}
+}
+
+// A dump that stops where its buffer ends would let serverFrame go missing from it at the moment of a failure
+// (the control would fail for the wrong reason) and, after the session, let the absence of the frame pass for the
+// server having stopped. So the dump holds every goroutine, however many the process has: this one has far more
+// than a megabyte of stacks.
+func TestAllStacksHoldsEveryGoroutineHoweverManyThereAre(t *testing.T) {
+	const parked = 8000
+	release := make(chan struct{})
+	var started sync.WaitGroup
+	started.Add(parked)
+	for i := 0; i < parked; i++ {
+		go func() {
+			started.Done()
+			<-release
+		}()
+	}
+	started.Wait()
+	defer close(release)
+
+	stacks := allStacks()
+
+	headers := regexp.MustCompile(`(?m)^goroutine \d+ \[`).FindAllString(stacks, -1)
+	if len(headers) < parked {
+		t.Errorf("the dump of %d bytes holds %d goroutines, want at least the %d that were parked: it stops where its buffer ends", len(stacks), len(headers), parked)
+	}
 }
 
 func (w *watchedT) Fatal(...any)          { w.stacksAtFailure = allStacks(); panic(sessionFailed{}) }
@@ -164,6 +197,9 @@ func (c *countingCloser) Close() error { c.closed++; return nil }
 // A server is stopped by closing its input, and its answer is the exit code it returns; one that never returns
 // is reported as not stopped (the wait is the watchdog's channel, here one the test closes or leaves open).
 func TestStopServerWaitsForTheExitCodeOrGivesUp(t *testing.T) {
+	// The exit code is already waiting in the buffer and the watchdog is nil, a channel nothing is ever received
+	// from: only the exit code can be chosen, so the answer does not depend on timing. The readers given to the
+	// discarding goroutine are finite, so it ends and nothing outlives the test.
 	exited := make(chan int, 1)
 	exited <- 7
 	input := &countingCloser{}

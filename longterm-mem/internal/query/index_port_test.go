@@ -256,7 +256,7 @@ func TestTheDefaultSourcesFollowWhetherThePortAnswersAnIndex(t *testing.T) {
 		{"no port", nil, []string{SourceEngramFTS}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			if got, _ := defaultSources(Deps{Index: tc.index}, "p"); !reflect.DeepEqual(got, tc.want) {
+			if got, _ := defaultSources(readEmbeddingIndex(tc.index, "p"), "p"); !reflect.DeepEqual(got, tc.want) {
 				t.Errorf("defaultSources = %v, want %v", got, tc.want)
 			}
 		})

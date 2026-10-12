@@ -36,7 +36,7 @@ func portDoctorDeps(t *testing.T, reader PrecedenceReader) (DoctorDeps, promote.
 	if _, err := os.Stat(filepath.Join(vaultRoot, ".raw", ".longterm-mem-manifest.json")); !os.IsNotExist(err) {
 		t.Fatalf("the fixture has a sidecar on disk (stat err = %v); the test would not prove the port is the source", err)
 	}
-	stateDir, liveIDs := newHealthyEmbeddingDeps(t)
+	embeddingIndex, liveIDs := newHealthyEmbeddingDeps(t)
 	return DoctorDeps{
 		VaultRoot:             vaultRoot,
 		Root:                  vaultfs.New(vaultRoot),
@@ -46,7 +46,7 @@ func portDoctorDeps(t *testing.T, reader PrecedenceReader) (DoctorDeps, promote.
 		Pages:                 vaultfs.New(vaultRoot),
 		AddressMap:            vaultfs.New(vaultRoot),
 		PrerequisitePresent:   func(string) bool { return true },
-		StateDir:              stateDir,
+		EmbeddingIndex:        embeddingIndex,
 		LiveObservationIDs:    func(string) ([]int64, error) { return liveIDs, nil },
 		EmbeddingBackendCheck: func(context.Context) error { return nil },
 	}, page

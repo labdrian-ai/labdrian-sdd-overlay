@@ -62,7 +62,7 @@ func registeredDeps(t *testing.T, index IndexReader, log LogReader) DoctorDeps {
 	vaultRoot := t.TempDir()
 	page := testdata.WritePromotedPage(t, vaultRoot, "c-000042", "Widget Decision")
 	testdata.WritePrecedenceEntry(t, vaultRoot, page)
-	stateDir, liveIDs := newHealthyEmbeddingDeps(t)
+	embeddingIndex, liveIDs := newHealthyEmbeddingDeps(t)
 	return DoctorDeps{
 		VaultRoot:             vaultRoot,
 		Root:                  vaultfs.New(vaultRoot),
@@ -72,7 +72,7 @@ func registeredDeps(t *testing.T, index IndexReader, log LogReader) DoctorDeps {
 		Precedence:            vaultfs.New(vaultRoot),
 		AddressMap:            &fakeAddressMap{entries: promote.AddressMap{"wiki/memory/c-000042.md": "c-000042"}},
 		PrerequisitePresent:   func(string) bool { return true },
-		StateDir:              stateDir,
+		EmbeddingIndex:        embeddingIndex,
 		LiveObservationIDs:    func(string) ([]int64, error) { return liveIDs, nil },
 		EmbeddingBackendCheck: func(context.Context) error { return nil },
 	}

@@ -422,7 +422,7 @@ func TestGolden(t *testing.T) {
 			if scenario.root != nil {
 				vaultRoot = scenario.root(dir)
 			}
-			stateDir, liveIDs := newHealthyEmbeddingDeps(t)
+			embeddingIndex, liveIDs := newHealthyEmbeddingDeps(t)
 
 			doctor, err := Doctor(context.Background(), DoctorDeps{
 				VaultRoot: vaultRoot,
@@ -436,7 +436,7 @@ func TestGolden(t *testing.T) {
 				Pages:                 vaultfs.New(vaultRoot),
 				AddressMap:            vaultfs.New(vaultRoot),
 				PrerequisitePresent:   func(string) bool { return true },
-				StateDir:              stateDir,
+				EmbeddingIndex:        embeddingIndex,
 				LiveObservationIDs:    func(string) ([]int64, error) { return liveIDs, nil },
 				EmbeddingBackendCheck: func(context.Context) error { return nil },
 			}, doctorTestProject)
@@ -451,7 +451,7 @@ func TestGolden(t *testing.T) {
 			var statusText string
 			status, err := Status(context.Background(), StatusDeps{
 				VaultRoot:        vaultRoot,
-				StateDir:         stateDir,
+				EmbeddingIndex:   embeddingIndex,
 				SyncState:        vaultfs.New(vaultRoot),
 				VaultProvisioned: func(string) bool { return false },
 				EngramReachable:  func(context.Context) (bool, string) { return true, "" },
