@@ -21,7 +21,7 @@ import (
 //
 // Each world is deterministic. The project root, the home and the Engram database are the world's own temporary
 // directories, replaced by name; the commands a skill names are resolved against a PATH that is a directory of
-// the test's own (and, where the repository's history is read, the directory of git); the repository's commits are
+// the test's own (and, where the repository's history is read, a file that runs git); the repository's commits are
 // made with a fixed identity and a fixed date, so their ids are the same on every machine; and no case depends on
 // the day it runs: what is "observed long ago" is the year 2000 and what is "observed recently" is the year 2099.
 // The recording runs under two lengths of TMPDIR (TestSkillsStaleGolden_DoesNotDependOnWhereTheWorldIs).
@@ -53,7 +53,7 @@ type skillsStaleCase struct {
 	setup func(t *testing.T, w *skillsStaleWorld)
 	// args are the command's arguments when the case does not run the usual ones.
 	args func(w *skillsStaleWorld) []string
-	// pathNeedsGit adds the directory of git to PATH, for the cases that read the repository's history.
+	// pathNeedsGit puts a file that runs git in the directory that is PATH, for the cases that read the repository's history.
 	pathNeedsGit bool
 }
 
@@ -305,23 +305,68 @@ func skillsStaleCases() []skillsStaleCase {
 var libraryJSONWords = regexp.MustCompile(`(parse project lock: )(invalid character [^\n]*|unexpected end of JSON input|unexpected EOF)`)
 
 // newSkillsStaleWorld builds a world with a project root of its own and a PATH that is a directory of its own
-// (and, for the cases that read the history of a repository, the directory of git): the commands a skill names
+// (and, for the cases that read the history of a repository, a file that runs git): the commands a skill names
 // are found in that PATH or nowhere.
 func newSkillsStaleWorld(t *testing.T, pathNeedsGit bool) *skillsStaleWorld {
 	t.Helper()
 	base := newRetrievalWorld(t)
 	w := &skillsStaleWorld{retrievalWorld: base, root: realTempDir(t), binDir: realTempDir(t), outside: realTempDir(t)}
 	w.goldenDir = filepath.Join(filepath.Dir(base.goldenDir), "skills-stale-golden")
-	path := w.binDir
 	if pathNeedsGit {
 		gitPath, err := exec.LookPath("git")
 		if err != nil {
 			t.Skip("git is not on PATH: this case reads the history of a repository")
 		}
-		path += string(os.PathListSeparator) + filepath.Dir(gitPath)
+		w.lendGit(t, gitPath)
 	}
-	t.Setenv("PATH", path)
+	t.Setenv("PATH", w.binDir)
 	return w
+}
+
+// lendGit puts a file named git in the directory that is the PATH of the world, which runs the git at gitPath.
+// The directory git lives in is not put on the PATH instead: it holds whatever else the host keeps beside git,
+// and a command a case treats as missing could be found there. (A file that runs git, not a link to it, because
+// a git built to find its own files by where it was started from finds them from the real one.)
+func (w *skillsStaleWorld) lendGit(t *testing.T, gitPath string) {
+	t.Helper()
+	script := "#!/bin/sh\nexec '" + strings.ReplaceAll(gitPath, "'", `'\''`) + "' \"$@\"\n"
+	if err := os.WriteFile(filepath.Join(w.binDir, "git"), []byte(script), 0o755); err != nil {
+		t.Fatalf("write the file that runs git: %v", err)
+	}
+}
+
+// The commands a skill names are found in the world's directory or nowhere, in the cases that read a repository's
+// history as in the others: the directory git lives in (which holds whatever else the host keeps beside it) is
+// never on the world's PATH, and git is reached through a file of the world's own that runs it.
+func TestSkillsStaleWorld_PathIsTheWorldsOwnDirectoryAlone(t *testing.T) {
+	for _, needsGit := range []bool{false, true} {
+		t.Run(fmt.Sprintf("git=%v", needsGit), func(t *testing.T) {
+			w := newSkillsStaleWorld(t, needsGit)
+
+			if got := os.Getenv("PATH"); got != w.binDir {
+				t.Errorf("PATH = %q, want the world's directory %q alone", got, w.binDir)
+			}
+			entries, err := os.ReadDir(w.binDir)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var names []string
+			for _, entry := range entries {
+				names = append(names, entry.Name())
+			}
+			if want := map[bool][]string{false: nil, true: {"git"}}[needsGit]; strings.Join(names, ",") != strings.Join(want, ",") {
+				t.Errorf("the world's directory holds %v, want %v", names, want)
+			}
+			if needsGit {
+				if found, err := exec.LookPath("git"); err != nil || found != filepath.Join(w.binDir, "git") {
+					t.Errorf("git is found at %q (%v), want the file of the world's own", found, err)
+				}
+			}
+			if found, err := exec.LookPath("definitely-missing-command"); err == nil {
+				t.Errorf("a command nobody provided is found at %q", found)
+			}
+		})
+	}
 }
 
 // runSkillsStaleCase builds the world of the case, runs the command in it and renders what it did.
