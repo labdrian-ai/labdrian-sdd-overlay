@@ -29,6 +29,9 @@ import (
 //     and state, with no I/O. Promotion, the diagnostics and the file system adapter all read it (L3).
 //   - vaultfs is the file system adapter of the vault: the repositories behind the ports promote and ops
 //     own. Only the composition root may import it (the adapter guard), as with engram (L3).
+//   - repoevidence is the adapter of the repository evidence staleness asks for: it lists the working tree and
+//     asks repohistory (git) what became of a path, and answers in staleness's own types (L6). Only the
+//     composition root may import it (the adapter guard).
 //   - the module root (this guard) and internal/ops/testdata (a Go package the
 //     other tests import) are test support.
 var rings = map[string]archguard.Ring{
@@ -47,6 +50,7 @@ var rings = map[string]archguard.Ring{
 	"internal/promote":        archguard.Domain,
 	"internal/query":          archguard.Application,
 	"internal/register":       archguard.Adapter,
+	"internal/repoevidence":   archguard.Adapter,
 	"internal/repohistory":    archguard.Adapter,
 	"internal/skillstale":     archguard.Domain,
 	"internal/skillstalefs":   archguard.Adapter,
