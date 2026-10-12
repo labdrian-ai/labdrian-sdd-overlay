@@ -344,14 +344,16 @@ func (w *retrievalWorld) mcpSession(t sessionT, messages []string) (answers []st
 
 	reader := bufio.NewReader(stdoutR)
 	for _, message := range messages {
-		if _, err := fmt.Fprintln(stdinW, message); err != nil {
-			t.Fatalf("send %s: %v", message, err)
-		}
+		// A message is checked before it is sent, so that one that is not JSON fails the session while the server
+		// is still waiting for its next line, and never reaches it.
 		var probe struct {
 			ID *json.RawMessage `json:"id"`
 		}
 		if err := json.Unmarshal([]byte(message), &probe); err != nil {
 			t.Fatalf("the message is not JSON: %v\n%s", err, message)
+		}
+		if _, err := fmt.Fprintln(stdinW, message); err != nil {
+			t.Fatalf("send %s: %v", message, err)
 		}
 		if probe.ID == nil {
 			continue
