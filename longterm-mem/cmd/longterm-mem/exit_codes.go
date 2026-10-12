@@ -56,7 +56,8 @@ const (
 	// exitPathUnresolvable: `register`/`unregister` could not resolve a
 	// precondition from the environment at all -- no resolvable HOME, so
 	// no install-state directory, no default binary path, or no config
-	// root for the named runtime.
+	// root for the named runtime; `index --embeddings` and `status`, no
+	// resolvable state directory (no HOME and no LONGTERM_MEM_STATE_DIR).
 	//
 	// It is deliberately NOT exitInternal. Exit 1 is "a target was
 	// attempted and failed" -- a config that would not parse, a file that

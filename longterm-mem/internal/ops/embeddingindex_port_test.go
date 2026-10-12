@@ -122,6 +122,36 @@ func TestDoctor_NamesWhereTheIndexPortLookedWhenNobodyBuiltAnIndex(t *testing.T)
 	}
 }
 
+// A state directory nobody can name is not an index nobody built: the two checks that read the index say that
+// the directory could not be resolved and what sets it, as the error says it is (StateDirUnresolved), however it
+// is wrapped, and the checks that do not read the index run as they do.
+func TestDoctor_SaysWhenTheStateDirectoryCouldNotBeResolved(t *testing.T) {
+	unresolved := unresolvedState{"fake words that are never read"}
+	for name, err := range map[string]error{"as the port gives it": unresolved, "wrapped": fmt.Errorf("while reading: %w", unresolved)} {
+		t.Run(name, func(t *testing.T) {
+			index := &fakeEmbeddingIndex{location: fakeIndexLocation, err: err}
+
+			report, doctorErr := Doctor(context.Background(), doctorDepsWith(t, index, 1), "proj")
+			if doctorErr != nil {
+				t.Fatalf("Doctor: %v", doctorErr)
+			}
+
+			const hint = "set HOME or LONGTERM_MEM_STATE_DIR"
+			wantPresent := Check{Name: CheckEmbeddingIndexPresent, Status: CheckFailed, Detail: "the state directory could not be resolved, so no embedding index can be looked for; " + hint}
+			wantFresh := Check{Name: CheckEmbeddingIndexFresh, Status: CheckFailed, Detail: "freshness cannot be determined: the state directory could not be resolved; " + hint}
+			if got := checkStatus(t, report.Checks, CheckEmbeddingIndexPresent); got != wantPresent {
+				t.Errorf("embedding-index-present = %+v, want %+v", got, wantPresent)
+			}
+			if got := checkStatus(t, report.Checks, CheckEmbeddingIndexFresh); got != wantFresh {
+				t.Errorf("embedding-index-fresh = %+v, want %+v", got, wantFresh)
+			}
+			if got := checkStatus(t, report.Checks, CheckEmbeddingBackendReachable); got.Status != CheckPassed {
+				t.Errorf("embedding-backend-reachable = %+v, want PASSed: the backend does not need the state directory", got)
+			}
+		})
+	}
+}
+
 // What an error says it is decides, and its words do not: an error whose text sounds like a missing index is
 // told as an index that could not be loaded, with those words, the way any other failure is.
 func TestDoctor_TellsAnIndexNobodyBuiltByWhatTheErrorSaysItIs(t *testing.T) {

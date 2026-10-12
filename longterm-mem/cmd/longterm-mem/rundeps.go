@@ -5,6 +5,7 @@ import (
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/embed"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/ops"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/query"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vault"
@@ -117,11 +118,38 @@ func embeddingIndexOf(store *engram.Store, wiring queryWiring) *vecindex.Reposit
 
 // embeddingIndexReader is the embedding index as `status` and `doctor` read it (ops.EmbeddingIndexReader): the
 // repository over the state directory the module keeps its derived state in, with nothing it builds with and no
-// cache, because the process reads an index to report on it and exits. An unresolvable state directory is the
-// empty one, whose indexes Dir puts in the working directory, which is what the two commands have always read.
-func embeddingIndexReader() *vecindex.Repository {
-	return &vecindex.Repository{StateDir: defaultStateDir()}
+// cache, because the process reads an index to report on it and exits. When nothing names the state directory
+// there is nowhere to look, and the reader says so (noStateDirectory) instead of looking in the working
+// directory, which it did until the owner's decision of 2026-10-12.
+func embeddingIndexReader() ops.EmbeddingIndexReader {
+	stateDir := defaultStateDir()
+	if stateDir == "" {
+		return noStateDirectory{}
+	}
+	return &vecindex.Repository{StateDir: stateDir}
 }
+
+// stateDirUnresolved is the error of a process that cannot name the directory it keeps its derived state in: no
+// HOME and no LONGTERM_MEM_STATE_DIR. It says what it is in the terms of the diagnostics (ops.StateDirUnresolved).
+type stateDirUnresolved struct{}
+
+func (stateDirUnresolved) Error() string {
+	return "could not resolve the state directory; set HOME or LONGTERM_MEM_STATE_DIR"
+}
+
+func (stateDirUnresolved) StateDirUnresolved() {}
+
+// noStateDirectory is the ops.EmbeddingIndexReader of a process with no state directory: it holds no index, and
+// every question about one is answered with stateDirUnresolved.
+type noStateDirectory struct{}
+
+func (noStateDirectory) EmbeddingIndexLocation(string) string { return "" }
+
+func (noStateDirectory) EmbeddingIndexBuiltAt(string) (string, error) {
+	return "", stateDirUnresolved{}
+}
+
+func (noStateDirectory) IndexedEngramIDs(string) ([]int64, error) { return nil, stateDirUnresolved{} }
 
 // observationRowsForIndex reads project's live Engram rows in the shape
 // vecindex.Build wants, the same source cmd_index_embeddings.go's own

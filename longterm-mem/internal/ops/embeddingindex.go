@@ -30,6 +30,19 @@ type NoEmbeddingIndex interface {
 	NoEmbeddingIndex()
 }
 
+// StateDirUnresolved is what an error from an EmbeddingIndexReader implements when the reader was given no
+// state directory to look in (nothing names one: no HOME and no LONGTERM_MEM_STATE_DIR). Doctor reports it as
+// that, apart from an index nobody built and from one that cannot be read, naming what sets the directory. It is
+// not a project without an index: nothing was looked for.
+type StateDirUnresolved interface {
+	error
+	StateDirUnresolved()
+}
+
+// stateDirHint is what the checks tell a caller whose state directory could not be resolved, in the words
+// `index --embeddings` says it with.
+const stateDirHint = "set HOME or LONGTERM_MEM_STATE_DIR"
+
 // EmbedModelMissing is what an error from the embedding backend implements when the backend answered but the
 // model the index needs is not pulled (R-070). Doctor finds it with errors.As, however the error is wrapped, and
 // reports it apart from a backend that did not answer, which is every other failure of the probe. The embedding

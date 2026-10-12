@@ -1,24 +1,14 @@
 args: status --project goldenproj
-exit: 0
+exit: 8
 --- stdout ---
-longterm-mem: status for goldenproj
-  engram: reachable=true
-  vault: provisioned=false
-  last sync: never
-  embedding index built at: never
 --- stderr ---
+longterm-mem: status: could not resolve the state directory; set HOME or LONGTERM_MEM_STATE_DIR
 
 args: status --project goldenproj --json
-exit: 0
+exit: 8
 --- stdout ---
-{
-  "project": "goldenproj",
-  "engram_reachable": true,
-  "vault_provisioned": false,
-  "last_sync_completed_at": "never",
-  "embedding_index_built_at": "never"
-}
 --- stderr ---
+longterm-mem: status: could not resolve the state directory; set HOME or LONGTERM_MEM_STATE_DIR
 
 args: doctor --project goldenproj
 exit: 9
@@ -29,8 +19,8 @@ longterm-mem: doctor for goldenproj
   [PASS] wiki-registration-consistency
   [PASS] precedence-sidecar-consistency
   [PASS] runtime-prerequisites
-  [FAIL] embedding-index-present (no embedding index has been built at index/goldenproj; run `longterm-mem index --embeddings`)
-  [FAIL] embedding-index-fresh (freshness cannot be determined: embedding index at index/goldenproj could not be loaded: vecindex: no index at this path)
+  [FAIL] embedding-index-present (the state directory could not be resolved, so no embedding index can be looked for; set HOME or LONGTERM_MEM_STATE_DIR)
+  [FAIL] embedding-index-fresh (freshness cannot be determined: the state directory could not be resolved; set HOME or LONGTERM_MEM_STATE_DIR)
   [PASS] embedding-backend-reachable
 --- stderr ---
 
@@ -63,12 +53,12 @@ exit: 9
     {
       "name": "embedding-index-present",
       "status": "FAIL",
-      "detail": "no embedding index has been built at index/goldenproj; run `longterm-mem index --embeddings`"
+      "detail": "the state directory could not be resolved, so no embedding index can be looked for; set HOME or LONGTERM_MEM_STATE_DIR"
     },
     {
       "name": "embedding-index-fresh",
       "status": "FAIL",
-      "detail": "freshness cannot be determined: embedding index at index/goldenproj could not be loaded: vecindex: no index at this path"
+      "detail": "freshness cannot be determined: the state directory could not be resolved; set HOME or LONGTERM_MEM_STATE_DIR"
     },
     {
       "name": "embedding-backend-reachable",

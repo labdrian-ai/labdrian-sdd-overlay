@@ -412,7 +412,13 @@ func checkEmbeddingIndexPresent(deps DoctorDeps, project string) Check {
 		return Check{Name: CheckEmbeddingIndexPresent, Status: CheckFailed, Detail: errNoEmbeddingIndexReader.Error()}
 	}
 	dir := deps.EmbeddingIndex.EmbeddingIndexLocation(project)
+	// An index is present when the port can tell when it was built; the instant itself is of no use here (Status
+	// reports it). Each check reads the index on its own, so that one that fails does not take the other with it.
 	if _, err := deps.EmbeddingIndex.EmbeddingIndexBuiltAt(project); err != nil {
+		var noStateDir StateDirUnresolved
+		if errors.As(err, &noStateDir) {
+			return Check{Name: CheckEmbeddingIndexPresent, Status: CheckFailed, Detail: "the state directory could not be resolved, so no embedding index can be looked for; " + stateDirHint}
+		}
 		var nobodyBuilt NoEmbeddingIndex
 		if errors.As(err, &nobodyBuilt) {
 			return Check{Name: CheckEmbeddingIndexPresent, Status: CheckFailed, Detail: fmt.Sprintf("no embedding index has been built at %s; run `longterm-mem index --embeddings`", dir)}
@@ -440,6 +446,10 @@ func checkEmbeddingIndexFresh(deps DoctorDeps, project string) Check {
 	}
 	indexedIDs, err := deps.EmbeddingIndex.IndexedEngramIDs(project)
 	if err != nil {
+		var noStateDir StateDirUnresolved
+		if errors.As(err, &noStateDir) {
+			return Check{Name: CheckEmbeddingIndexFresh, Status: CheckFailed, Detail: "freshness cannot be determined: the state directory could not be resolved; " + stateDirHint}
+		}
 		dir := deps.EmbeddingIndex.EmbeddingIndexLocation(project)
 		return Check{Name: CheckEmbeddingIndexFresh, Status: CheckFailed, Detail: fmt.Sprintf("freshness cannot be determined: embedding index at %s could not be loaded: %v", dir, err)}
 	}

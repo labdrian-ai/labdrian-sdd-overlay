@@ -9,6 +9,13 @@ type nothingBuilt struct{ words string }
 func (e nothingBuilt) Error() string   { return e.words }
 func (nothingBuilt) NoEmbeddingIndex() {}
 
+// unresolvedState is what a reader answers when it was given no state directory to look in: an error that says
+// what it is, with words of its own.
+type unresolvedState struct{ words string }
+
+func (e unresolvedState) Error() string     { return e.words }
+func (unresolvedState) StateDirUnresolved() {}
+
 // modelNotPulled and backendDown are errors of an embedding backend as the diagnostics' contract describes
 // them, with no dependency on the package that makes the real ones.
 type modelNotPulled struct{ model string }
