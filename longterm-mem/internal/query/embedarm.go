@@ -197,6 +197,9 @@ func (a embeddingArm) run(ctx context.Context, project, queryText string, top in
 		if !ok {
 			continue
 		}
+		// a.Index is not missing here: idx came from a load that returned no error, and loadEmbeddingIndex
+		// answers errNoIndexRepository for a missing repository before it asks it anything (held by
+		// TestWithoutAnIndexPortThereIsNoIndex). A change of that load must keep a missing repository out of here.
 		if a.Index.Fingerprint(idx.Model, idx.Dimension, idx.InputLimit, obs.Title, obs.Content) != c.entry.Fingerprint {
 			// A stale entry: the observation's title or content changed
 			// since it was embedded (R-069). Serving it would show a

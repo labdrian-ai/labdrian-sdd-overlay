@@ -14,6 +14,10 @@ type IndexedObservation struct {
 // produced under (the model, how many numbers a vector has, how many characters of a row were embedded), when it
 // was built, and every indexed row with its vector. Vectors[i] is the vector of Entries[i]; the repository
 // answers an index in which the two agree.
+//
+// An index is read-only to whoever receives it. A repository that caches may answer every caller the same slices
+// (the vecindex adapter shares its Vectors), not copies, so the arm only reads them
+// (TestTheEmbeddingArmOnlyReadsTheIndexItIsGiven) and so must any other reader.
 type EmbeddingIndex struct {
 	Model      string
 	Dimension  int

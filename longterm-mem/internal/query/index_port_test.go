@@ -271,3 +271,36 @@ func TestEmbeddingFailuresAreToldApartByWhatTheErrorSaysItIs(t *testing.T) {
 		})
 	}
 }
+
+// A repository that caches answers every caller the same index, vectors included, so the arm must only read
+// what it is given (see EmbeddingIndex). The arm runs over an index with a fresh row, a stale one and one that
+// was deleted, and the index it read is afterwards exactly what it was.
+func TestTheEmbeddingArmOnlyReadsTheIndexItIsGiven(t *testing.T) {
+	fresh := oneRowIndex(1, "alpha", "alpha body", []float32{1, 0, 0})
+	stale := oneRowIndex(2, "beta", "beta body as it was", []float32{0, 1, 0})
+	gone := oneRowIndex(3, "gamma", "gamma body", []float32{0, 0, 1})
+	held := &EmbeddingIndex{Model: fresh.Model, Dimension: fresh.Dimension, InputLimit: fresh.InputLimit, BuiltAt: fresh.BuiltAt}
+	for _, part := range []*EmbeddingIndex{fresh, stale, gone} {
+		held.Entries = append(held.Entries, part.Entries...)
+		held.Vectors = append(held.Vectors, part.Vectors...)
+	}
+	before := &EmbeddingIndex{Model: held.Model, Dimension: held.Dimension, InputLimit: held.InputLimit, BuiltAt: held.BuiltAt, Entries: append([]IndexedObservation(nil), held.Entries...)}
+	for _, vector := range held.Vectors {
+		before.Vectors = append(before.Vectors, append([]float32(nil), vector...))
+	}
+
+	indexes := &fakeIndexes{}
+	indexes.hold("p", held)
+	mem := memoryOf(
+		memory.Observation{ID: 1, Title: "alpha", Content: "alpha body"},
+		memory.Observation{ID: 2, Title: "beta", Content: "beta body as it is now"},
+	)
+	rows, _, _ := embeddingArm{Memory: mem, Index: indexes, Embed: fakeEmbed([]float32{1, 0, 0}, nil)}.run(context.Background(), "p", "alpha", 5)
+
+	if len(rows) != 1 || rows[0].EngramID != 1 {
+		t.Fatalf("rows = %+v, want only the fresh live row (the stale and the deleted ones are not served)", rows)
+	}
+	if !reflect.DeepEqual(held, before) {
+		t.Errorf("the arm changed the index it read:\n got %+v\nwant %+v", held, before)
+	}
+}

@@ -130,6 +130,16 @@ func buildUnionGoldenStore(t *testing.T, fixture *unionFixture) (*engram.Store, 
 	return store, dbPath
 }
 
+// The contract the golden vectors were produced under. It is the fixture's own and is not read from the
+// vector index package's defaults (this package cannot import that adapter): the vectors do not change when a
+// default does, and the fingerprints are computed under this contract, so a default that moves cannot make the
+// fixture drift. The values are those of the production index when the fixture was captured.
+const (
+	unionGoldenModel      = "nomic-embed-text"
+	unionGoldenDimension  = 768
+	unionGoldenInputLimit = 2000
+)
+
 // buildUnionGoldenIndex builds an embedding index, held in memory, over every
 // fixture row that carries a precomputed vector, with each entry's
 // fingerprint computed the same way the embedding arm
@@ -149,8 +159,7 @@ func buildUnionGoldenStore(t *testing.T, fixture *unionFixture) (*engram.Store, 
 func buildUnionGoldenIndex(t *testing.T, fixture *unionFixture) *fakeIndexes {
 	t.Helper()
 
-	// The contract the golden vectors were produced under (nomic-embed-text, 768 numbers, 2000 characters).
-	built := &EmbeddingIndex{Model: "nomic-embed-text", Dimension: 768, InputLimit: 2000, BuiltAt: "2026-01-01T00:00:00Z"}
+	built := &EmbeddingIndex{Model: unionGoldenModel, Dimension: unionGoldenDimension, InputLimit: unionGoldenInputLimit, BuiltAt: "2026-01-01T00:00:00Z"}
 	for _, r := range fixture.Rows {
 		vec, ok := fixture.Vectors[strconv.FormatInt(r.ID, 10)]
 		if !ok {
