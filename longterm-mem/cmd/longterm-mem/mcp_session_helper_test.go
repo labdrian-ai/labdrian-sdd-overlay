@@ -197,6 +197,9 @@ func (c *countingCloser) Close() error { c.closed++; return nil }
 // A server is stopped by closing its input, and its answer is the exit code it returns; one that never returns
 // is reported as not stopped (the wait is the watchdog's channel, here one the test closes or leaves open).
 func TestStopServerWaitsForTheExitCodeOrGivesUp(t *testing.T) {
+	// The exit code is already waiting in the buffer and the watchdog is nil, a channel nothing is ever received
+	// from: only the exit code can be chosen, so the answer does not depend on timing. The readers given to the
+	// discarding goroutine are finite, so it ends and nothing outlives the test.
 	exited := make(chan int, 1)
 	exited <- 7
 	input := &countingCloser{}
