@@ -49,6 +49,7 @@ var rings = map[string]archguard.Ring{
 	"internal/register":       archguard.Adapter,
 	"internal/repohistory":    archguard.Adapter,
 	"internal/skillstale":     archguard.Domain,
+	"internal/skillstalefs":   archguard.Adapter,
 	"internal/staleness":      archguard.Domain,
 	"internal/vault":          archguard.Adapter,
 	"internal/vaultfs":        archguard.Adapter,
