@@ -19,6 +19,14 @@ import (
 // there use it, as the ones that care only for what is asked of the port use memFile.
 type diskFile struct{ path string }
 
+// The modes the real adapter gives what it creates (internal/vaultfs/atomic.go: a new file owner-only, a new
+// directory 0o755): the mode of a file that exists is kept by durable.WriteFile, and is held for the
+// catalog and the log by the adapter's own tests (TestWritingTheCatalogAndTheLog).
+const (
+	diskFileMode = 0o600
+	diskDirMode  = 0o755
+)
+
 // indexIn is the catalog of the vault at root, where vaultlayout says it is.
 func indexIn(root string) diskFile { return diskFile{path: filepath.Join(root, vaultlayout.IndexFile)} }
 
@@ -31,10 +39,10 @@ func (f diskFile) read() (string, error) {
 }
 
 func (f diskFile) write(content string) error {
-	if err := os.MkdirAll(filepath.Dir(f.path), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(f.path), diskDirMode); err != nil {
 		return fmt.Errorf("promote: create directory for %s: %w", f.path, err)
 	}
-	if err := durable.WriteFile(f.path, []byte(content), 0o600); err != nil {
+	if err := durable.WriteFile(f.path, []byte(content), diskFileMode); err != nil {
 		return fmt.Errorf("promote: %w", err)
 	}
 	return nil

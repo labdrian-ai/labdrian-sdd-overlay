@@ -6,6 +6,8 @@ import (
 )
 
 // errNoIndexReader is what the inbound-link rule of the page check reports when it was handed no IndexReader.
+// internal/ops has an errNoIndexReader of its own for the doctor's registration check; see the note there for
+// why the two are not one.
 var errNoIndexReader = errors.New("promote: no index reader was wired")
 
 // errNoIndexRepository is what a registration in the catalog answers when it was handed no IndexRepository, and

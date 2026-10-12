@@ -11,6 +11,14 @@ import (
 // what `longterm-mem promote`, `sync`, `status` and `doctor` do when the record of the last sync is a link to a
 // file or to nothing, when .vault-meta is a link to a directory, and when the path they are told the vault is at
 // is a link to it, is not there, or is a file.
+//
+// The numbers are the directory's, not this file's: 01 to 07 and 10 are in promote_syncstate_golden_test.go (10
+// is a .vault-meta that is a file), so this file's 08, 09 and 11 to 14 leave no gap.
+//
+// Scenario 09, like 07 there, pins a sync that promotes its observations and then exits 1 because the record
+// cannot be written (in 09 a later status then says `last sync: never`; in 07 it fails). That is what the program does and the
+// golden holds it so a change is seen; it is not a statement that a sync which has promoted should report
+// failure, and changing it would be a decision about the command's exit code.
 
 func vaultLinksScenarios() []pagesScenario {
 	status := []string{"status", "--project", promoteGoldenProject}

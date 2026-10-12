@@ -31,11 +31,6 @@ const (
 	rebuildInterpreter     = "python3"
 )
 
-// Rebuild writes vaultlayout.ProvisionedSentinel only after setupScript exits 0, right before the
-// refresh steps run. Its absence — even with the index and the chunks present — means provisioning
-// was interrupted (SIGKILL/OOM, disk-full, operator Ctrl-C) partway through, so Provisioned reports
-// false and the next Rebuild re-runs setupScript instead of silently refreshing a half-built vault.
-
 // Provisioned reports whether vaultRoot has already been fully indexed:
 // vaultlayout.ProvisionedSentinel exists (the provision step ran to completion), plus
 // vaultlayout.Bm25IndexFile exists and vaultlayout.ChunksDir contains at least one entry (D12). The
@@ -43,6 +38,11 @@ const (
 // those markers but before finishing never reads as provisioned. A vault
 // failing any check has never been (fully) indexed — Rebuild provisions it
 // first (R-005).
+//
+// Rebuild writes the sentinel only after setupScript exits 0, right before the refresh steps run. Its
+// absence — even with the index and the chunks present — means provisioning was interrupted
+// (SIGKILL/OOM, disk-full, operator Ctrl-C) partway through, so Provisioned reports false and the next
+// Rebuild re-runs setupScript instead of silently refreshing a half-built vault.
 func Provisioned(vaultRoot string) bool {
 	layout := vaultlayout.Layout{Root: vaultRoot}
 	if _, err := os.Stat(layout.Path(vaultlayout.ProvisionedSentinel)); err != nil {

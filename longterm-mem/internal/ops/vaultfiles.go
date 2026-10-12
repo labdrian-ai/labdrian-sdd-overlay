@@ -40,6 +40,13 @@ type SyncStateReader interface {
 
 // errNoIndexReader and errNoLogReader are what the registration check reports when Doctor was built without the
 // reader of the file, and there is a promoted page to look for in it.
+//
+// internal/promote has an errNoIndexReader of its own, which the inbound-link rule of the address-map-integrity
+// check reports (so one missing Index makes two checks say so, each in its own words). They are two errors on
+// purpose: promote.IndexReader and this package's IndexReader are two ports, each package words the failure of
+// the one it owns, and promote's is not exported. Their texts are
+// the commands' output, pinned here (doctor_vaultfiles_port_test.go) and there (lint_index_port_test.go), and
+// the prefix both carry is the one the owner has yet to decide on.
 var (
 	errNoIndexReader = errors.New("ops: no index reader was wired")
 	errNoLogReader   = errors.New("ops: no log reader was wired")

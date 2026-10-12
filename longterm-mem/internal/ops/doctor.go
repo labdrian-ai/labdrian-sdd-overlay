@@ -122,13 +122,15 @@ type DoctorDeps struct {
 	// vault file system adapter over VaultRoot. Required: without it that check fails and says so,
 	// when a vault root is configured.
 	Root RootInspector
-	// Index reads the vault's master catalog and Log its promotion log, for the
-	// wiki-registration-consistency check (and Index for the inbound-link rule the
-	// address-map-integrity check runs among its others). Production wires the vault file
-	// system adapter over VaultRoot. Required: without them those checks fail, when there is a
-	// promoted page to look for, and say so.
+	// Index reads the vault's master catalog, for the wiki-registration-consistency check and for the
+	// inbound-link rule the address-map-integrity check runs among its others. Production wires the vault
+	// file system adapter over VaultRoot. Required: without it those checks fail, when there is a promoted
+	// page to look for, and say so.
 	Index IndexReader
-	Log   LogReader
+	// Log reads the vault's promotion log, for the wiki-registration-consistency check. Production wires the
+	// vault file system adapter over VaultRoot. Required: without it that check fails, when there is a
+	// promoted page to look for, and says so.
+	Log LogReader
 	// Pages reads the vault's promoted pages for the three checks that judge
 	// them (address-map-integrity, wiki-registration-consistency and
 	// precedence-sidecar-consistency). Production wires the vault file system

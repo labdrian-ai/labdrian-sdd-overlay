@@ -58,10 +58,8 @@ func requireOnlyTheInjectedDate(t *testing.T, w *promoteGoldenWorld, files map[s
 		if !strings.Contains(got, want) {
 			t.Errorf("%s does not say %q:\n%s", rel, want, got)
 		}
-		for _, other := range []string{promoteGoldenClock.at.Format("2006-01-02")} {
-			if strings.Contains(got, other) {
-				t.Errorf("%s says %s, a day the clock the commands were given did not tell:\n%s", rel, other, got)
-			}
+		if goldenDay := promoteGoldenClock.at.Format("2006-01-02"); strings.Contains(got, goldenDay) {
+			t.Errorf("%s says %s, a day the clock the commands were given did not tell:\n%s", rel, goldenDay, got)
 		}
 	}
 }

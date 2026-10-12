@@ -153,7 +153,8 @@ func observationRowsForIndex(store *engram.Store, project string) ([]vecindex.Ro
 // that promotes (promote, the MCP promote tool, sync) uses it: the vault's
 // address allocator, the clock it is given, and the vault file system adapter
 // its precedence store is loaded from and saved through, its address map is
-// recorded in, its pages are read and written through, and its catalog, log and sync state are registered in and recorded to. It is the one
+// recorded in, its pages are read and written through, and its catalog, log
+// and sync state are registered in and recorded to. It is the one
 // construction, so two commands cannot come to wire a Writer differently; a
 // precedence sidecar that cannot be loaded is the error, as the repository
 // reported it.
