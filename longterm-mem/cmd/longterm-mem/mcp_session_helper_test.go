@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/query"
 )
@@ -22,10 +23,21 @@ type sessionFailed struct{}
 type watchedT struct {
 	*testing.T
 	errors []string
+	// stacksAtFailure is every goroutine's stack at the moment the session failed, when its server is still
+	// running: the control that shows serverFrame can find a live server.
+	stacksAtFailure string
 }
 
-func (w *watchedT) Fatal(...any)          { panic(sessionFailed{}) }
-func (w *watchedT) Fatalf(string, ...any) { panic(sessionFailed{}) }
+// serverFrame is how a goroutine running the command shows in a stack dump.
+const serverFrame = "cmd/longterm-mem.commands.run("
+
+func allStacks() string {
+	stacks := make([]byte, 1<<20)
+	return string(stacks[:runtime.Stack(stacks, true)])
+}
+
+func (w *watchedT) Fatal(...any)          { w.stacksAtFailure = allStacks(); panic(sessionFailed{}) }
+func (w *watchedT) Fatalf(string, ...any) { w.stacksAtFailure = allStacks(); panic(sessionFailed{}) }
 func (w *watchedT) Errorf(format string, args ...any) {
 	w.errors = append(w.errors, fmt.Sprintf(format, args...))
 }
@@ -105,6 +117,59 @@ func TestMCPSession_ACappedResponseFitsTheCeilingAndAccountsForEveryRow(t *testi
 	}
 }
 
+type countingCloser struct{ closed int }
+
+func (c *countingCloser) Close() error { c.closed++; return nil }
+
+// A server is stopped by closing its input, and its answer is the exit code it returns; one that never returns
+// is reported as not stopped (the wait is the watchdog's channel, here one the test closes or leaves open).
+func TestStopServerWaitsForTheExitCodeOrGivesUp(t *testing.T) {
+	exited := make(chan int, 1)
+	exited <- 7
+	input := &countingCloser{}
+	if code, ok := stopServer(input, strings.NewReader("late output"), exited, nil); !ok || code != 7 || input.closed != 1 {
+		t.Errorf("stopServer = (%d, %v), input closed %d times; want (7, true) and the input closed once", code, ok, input.closed)
+	}
+
+	givenUp := make(chan time.Time)
+	close(givenUp)
+	if code, ok := stopServer(&countingCloser{}, strings.NewReader(""), make(chan int), givenUp); ok || code != 0 {
+		t.Errorf("stopServer of a server that never returns = (%d, %v), want (0, false)", code, ok)
+	}
+}
+
+// A session that ends with its server stopped gives the streams back and closes its pipes. One whose server did
+// not stop gives the streams back too (the test's own output must work) but is reported, and its pipes stay open:
+// a server that is still running is not handed closed pipes to write to.
+func TestFinishSessionLeavesThePipesOfAServerThatDidNotStop(t *testing.T) {
+	for name, tc := range map[string]struct {
+		stopped    bool
+		wantClosed int
+		wantErrors int
+	}{
+		"the server stopped":      {true, 2, 0},
+		"the server did not stop": {false, 0, 1},
+	} {
+		t.Run(name, func(t *testing.T) {
+			watched := &watchedT{T: t}
+			restored := 0
+			a, b := &countingCloser{}, &countingCloser{}
+
+			finishSession(watched, tc.stopped, func() { restored++ }, a, b)
+
+			if restored != 1 {
+				t.Errorf("the streams were given back %d times, want once", restored)
+			}
+			if a.closed+b.closed != tc.wantClosed {
+				t.Errorf("%d pipes closed, want %d", a.closed+b.closed, tc.wantClosed)
+			}
+			if len(watched.errors) != tc.wantErrors {
+				t.Errorf("errors = %v, want %d", watched.errors, tc.wantErrors)
+			}
+		})
+	}
+}
+
 // A session that fails before it is over (an answer that never comes, a message that is not JSON) must not
 // leave the server it started behind: that server would sit on a stdin nobody closes, and could write to the
 // stdout the test gives back. The server is stopped and the streams are restored whatever way the session ends.
@@ -138,9 +203,12 @@ func TestMCPSession_AFailureBeforeTheEndStopsTheServerAndGivesTheStreamsBack(t *
 	if len(watched.errors) != 0 {
 		t.Errorf("the session reported %v while stopping the server", watched.errors)
 	}
-	stacks := make([]byte, 1<<20)
-	stacks = stacks[:runtime.Stack(stacks, true)]
-	if strings.Contains(string(stacks), "cmd/longterm-mem.commands.run(") {
+	// The control: at the moment of the failure the server was running and the frame finds it, so that an
+	// absence after the session means something.
+	if !strings.Contains(watched.stacksAtFailure, serverFrame) {
+		t.Fatalf("the frame %q does not find the live server in a stack dump, so its absence proves nothing:\n%s", serverFrame, watched.stacksAtFailure)
+	}
+	if stacks := allStacks(); strings.Contains(stacks, serverFrame) {
 		t.Errorf("the server of the failed session is still running:\n%s", stacks)
 	}
 }

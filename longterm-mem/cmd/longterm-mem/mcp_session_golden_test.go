@@ -274,6 +274,32 @@ type sessionT interface {
 	TempDir() string
 }
 
+// stopServer closes the input of the server so that it returns, reads and drops what it still writes so that it
+// is never stuck on a full pipe, and waits for its exit code; it gives up when wait fires (the watchdog).
+func stopServer(input io.Closer, output io.Reader, exit <-chan int, wait <-chan time.Time) (code int, stopped bool) {
+	_ = input.Close()
+	go func() { _, _ = io.Copy(io.Discard, output) }()
+	select {
+	case code = <-exit:
+		return code, true
+	case <-wait:
+		return 0, false
+	}
+}
+
+// finishSession gives the streams of the process back and, when the server is stopped, closes the pipes. A
+// server that did not stop is reported and keeps its pipes: it is not handed closed ones to write to.
+func finishSession(t sessionT, stopped bool, restore func(), pipes ...io.Closer) {
+	restore()
+	if !stopped {
+		t.Errorf("the server did not stop when its input closed; its pipes are left open and it may still be running")
+		return
+	}
+	for _, pipe := range pipes {
+		_ = pipe.Close()
+	}
+}
+
 // mcpSession runs `longterm-mem mcp` in process over pipes and sends it the JSON-RPC messages, one at a time,
 // waiting for each answer before it sends the next. A notification (a message with no id) gets no answer. It
 // returns the answers in order, indented, then closes the server's input and returns the exit code and what the
@@ -306,24 +332,14 @@ func (w *retrievalWorld) mcpSession(t sessionT, messages []string) (answers []st
 	// the process given back, so that nothing the server writes lands on them. It is safe to call twice.
 	stopped := false
 	stop := func() bool {
-		if stopped {
-			return true
+		if !stopped {
+			// a watchdog only: the server does not stop when its input closes
+			code, stopped = stopServer(stdinW, stdoutR, exit, time.After(30*time.Second))
 		}
-		_ = stdinW.Close()
-		go func() { _, _ = io.Copy(io.Discard, stdoutR) }()
-		select {
-		case code = <-exit:
-			stopped = true
-		case <-time.After(30 * time.Second): // a watchdog only: the server does not stop when its input closes
-			return false
-		}
-		return true
+		return stopped
 	}
 	defer func() {
-		stop()
-		restore()
-		_ = stdoutW.Close()
-		_ = stdinR.Close()
+		finishSession(t, stop(), restore, stdoutW, stdinR)
 	}()
 
 	reader := bufio.NewReader(stdoutR)
