@@ -67,7 +67,7 @@ func (c commands) cmdMCP(args []string) int {
 	// runPromote (rundeps.go, task 8b.11) -- the exact same
 	// construction+call functions cmdQuery/cmdPromote use for the CLI
 	// query/promote subcommands, so the CLI and MCP surfaces cannot drift
-	// (the query tool's Embed and LoadIndex are the one deliberate
+	// (the query tool's Embed and index cache are the one deliberate
 	// exception, issue #286: this session's shared client and load cache,
 	// not runQuery's per-call construction).
 	deps := mcpserver.Deps{
@@ -77,10 +77,9 @@ func (c commands) cmdMCP(args []string) int {
 				return query.Result{}, err
 			}
 			qdeps := queryDeps(store, vaultRoot, queryWiring{
-				newClient:       c.newEmbedClient,
-				embed:           embedClient.Embed,
-				loadIndex:       loadCache.Load,
-				invalidateIndex: loadCache.Invalidate,
+				newClient: c.newEmbedClient,
+				embed:     embedClient.Embed,
+				cache:     loadCache,
 			})
 			return query.Run(ctx, qdeps, req)
 		},

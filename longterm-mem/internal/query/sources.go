@@ -1,9 +1,5 @@
 package query
 
-import (
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vecindex"
-)
-
 // knownSources is every name Request.Sources may contain.
 var knownSources = map[string]bool{
 	SourceEngramFTS:   true,
@@ -27,8 +23,7 @@ var knownSources = map[string]bool{
 // arms default to. A caller that wants it names it:
 // sources: ["vault", "engram-fts"].
 func defaultSources(deps Deps, project string) []string {
-	loadIndex := resolveLoadIndex(deps)
-	if _, err := loadIndex(vecindex.Dir(deps.StateDir, project)); err == nil {
+	if _, err := loadEmbeddingIndex(deps.Index, project); err == nil {
 		return []string{SourceEngramFTS, SourceEngramEmbed}
 	}
 	return []string{SourceEngramFTS}

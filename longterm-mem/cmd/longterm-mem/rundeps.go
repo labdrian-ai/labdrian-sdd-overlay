@@ -14,13 +14,13 @@ import (
 // runQuery builds query.Deps for vaultRoot/store and calls query.Run
 // (task 8b.11): the one construction+call path cmdQuery (the CLI query
 // subcommand) uses. It deliberately constructs a fresh Embed closure and
-// leaves LoadIndex unset (defaulting to vecindex.Load) on every call,
-// because the CLI process serves exactly one query and exits -- there is
-// no session for a shared client or a load cache to help with (issue
-// #286's session-scoped caching is a benefit specific to a long-lived
-// process; cmd_mcp.go's cmdMCP builds its own deps per call via queryDeps
-// directly, passing a client and load cache it constructs once for the
-// whole MCP session, rather than calling runQuery).
+// holds no index cache on every call, because the CLI process serves
+// exactly one query and exits -- there is no session for a shared client
+// or a load cache to help with (issue #286's session-scoped caching is a
+// benefit specific to a long-lived process; cmd_mcp.go's cmdMCP builds its
+// own deps per call via queryDeps directly, passing a client and load cache
+// it constructs once for the whole MCP session, rather than calling
+// runQuery).
 func runQuery(ctx context.Context, store *engram.Store, vaultRoot string, newClient embedClientFactory, req query.Request) (query.Result, error) {
 	deps := queryDeps(store, vaultRoot, queryWiring{newClient: newClient, embed: freshEmbedFunc(newClient)})
 	return query.Run(ctx, deps, req)
@@ -30,18 +30,17 @@ func runQuery(ctx context.Context, store *engram.Store, vaultRoot string, newCli
 // because the parts answer different steps and a positional list of them is easy to mis-order.
 //
 // The two clients are not redundant: embed answers the query's own embedding (the embedding arm, one call
-// per query), and newClient builds the client of the bounded top-up (buildIndexForQuery), which asks for
-// the model the existing index was built under and so cannot be the one client a session holds for its
+// per query), and newClient builds the client of the bounded top-up (the index adapter's build), which asks
+// for the model the existing index was built under and so cannot be the one client a session holds for its
 // default model.
 type queryWiring struct {
 	// newClient builds the embedding client of the top-up build.
 	newClient embedClientFactory
 	// embed embeds the query text.
 	embed query.EmbedFunc
-	// loadIndex loads an embedding index; nil defaults to vecindex.Load, and the MCP session sets its cache's.
-	loadIndex func(dir string) (*vecindex.Index, error)
-	// invalidateIndex forgets a cached index after a top-up wrote a fresh one; nil when nothing is cached.
-	invalidateIndex func(dir string)
+	// cache is what the embedding index is read through, and forgets an index a top-up wrote; nil when nothing
+	// is cached (the CLI), and the MCP session's own for the whole session.
+	cache *vecindex.LoadCache
 }
 
 // freshEmbedFunc builds a new embed.Client on every call it makes -- the
@@ -62,8 +61,8 @@ func freshEmbedFunc(newClient embedClientFactory) query.EmbedFunc {
 // cmdQuery's own inline construction, which cmd_mcp.go originally
 // duplicated verbatim.
 //
-// StateDir and Embed are always set, not only when a caller names
-// engram-embed: query.Run only reads StateDir/invokes Embed when that
+// The embedding index and Embed are always set, not only when a caller
+// names engram-embed: query.Run only reads the index/invokes Embed when that
 // source is actually requested (R-071), so wiring them here unconditionally
 // costs nothing on the default engram-fts-only path and lets a caller who
 // does name the source (over the MCP tool's own `sources` field) reach it
@@ -72,60 +71,47 @@ func freshEmbedFunc(newClient embedClientFactory) query.EmbedFunc {
 // wiring is supplied by the caller rather than constructed here, because
 // the CLI (one query per process) and the MCP server (many queries per
 // session) want different lifetimes for its parts: runQuery builds a fresh
-// embed.Client per embedding and leaves loadIndex nil (vecindex.Load) on
-// every call, while cmdMCP builds one embed.Client and one
-// *vecindex.LoadCache for the whole session and passes them on every call.
-// wiring.newClient is the factory the commands were wired with, so that no
-// query reaches an embedding backend its caller did not choose.
-// invalidateIndex is nil for the CLI (nothing to invalidate) and
-// loadCache.Invalidate for the MCP server, so a bounded top-up (embedarm.go)
+// embed.Client per embedding and holds no cache on every call, while
+// cmdMCP builds one embed.Client and one *vecindex.LoadCache for the whole
+// session and passes them on every call. wiring.newClient is the factory
+// the commands were wired with, so that no query reaches an embedding
+// backend its caller did not choose. The cache is nil for the CLI (nothing
+// to invalidate) and the session's for the MCP server, so a bounded top-up
 // that writes a fresh index is immediately visible to the very query that
 // triggered it, rather than served stale from the cache until an unrelated
 // mtime/size change happens to be noticed.
 func queryDeps(store *engram.Store, vaultRoot string, wiring queryWiring) query.Deps {
+	index := embeddingIndexOf(store, wiring)
 	return query.Deps{
-		Memory:      store,
-		Vault:       vault.Retriever{Root: vaultRoot},
-		ResolveLink: query.NoLinkResolver,
-		StateDir:    defaultStateDir(),
-		Embed:       wiring.embed,
-		BuildIndex:  buildIndexForQuery(store, wiring.newClient, wiring.invalidateIndex),
-		LoadIndex:   wiring.loadIndex,
+		Memory:       store,
+		Vault:        vault.Retriever{Root: vaultRoot},
+		ResolveLink:  query.NoLinkResolver,
+		Embed:        wiring.embed,
+		Index:        index,
+		IndexBuilder: index,
 	}
 }
 
-// buildIndexForQuery wires query.Deps.BuildIndex for a query.Run bounded
-// top-up (issue #286): read project's live rows the same way
-// cmd_index_embeddings.go's own -embeddings flag does
-// (store.ListObservations, already R-020-scoped), then run one incremental
-// vecindex.Build under exactly the model/dimension/inputLimit contract the
-// embedding arm read off the existing manifest -- never this process's own
-// defaults, which could silently disagree with whatever contract the index
-// was actually built under.
-//
-// invalidateIndex, when non-nil, is called with the freshly built index's
-// own directory right after a successful build -- but never after a
-// failed one, since nothing changed on disk for a load cache to need to
-// forget. A nil invalidateIndex (the CLI path, which caches nothing) is
-// simply skipped.
-func buildIndexForQuery(store *engram.Store, newClient embedClientFactory, invalidateIndex func(dir string)) func(ctx context.Context, project, model string, dimension, inputLimit int) error {
-	return func(ctx context.Context, project, model string, dimension, inputLimit int) error {
-		rows, err := observationRowsForIndex(store, project)
-		if err != nil {
-			return err
-		}
-		client, err := newClient(embed.Config{Model: model})
-		if err != nil {
-			return err
-		}
-		dir := vecindex.Dir(defaultStateDir(), project)
-		if _, _, err := vecindex.Build(ctx, dir, model, dimension, inputLimit, rows, client, buildNowRFC3339); err != nil {
-			return err
-		}
-		if invalidateIndex != nil {
-			invalidateIndex(dir)
-		}
-		return nil
+// embeddingIndexOf is the embedding index adapter of this process, wired to what it reads and writes with: the
+// state directory the module keeps its derived state in, the live rows of a project as the Engram store has
+// them (the same source cmd_index_embeddings.go's own -embeddings flag reads, store.ListObservations, already
+// R-020-scoped), the embedding client of the model a build asks for -- exactly the model the embedding arm read
+// off the existing index, never this process's own default, which could silently disagree with whatever
+// contract the index was actually built under (issue #286's bounded top-up) -- and the wall clock a build stamps
+// its index with.
+func embeddingIndexOf(store *engram.Store, wiring queryWiring) *vecindex.Repository {
+	return &vecindex.Repository{
+		StateDir: defaultStateDir(),
+		Cache:    wiring.cache,
+		LiveRows: func(project string) ([]vecindex.Row, error) { return observationRowsForIndex(store, project) },
+		NewEmbedder: func(model string) (vecindex.Embedder, error) {
+			client, err := wiring.newClient(embed.Config{Model: model})
+			if err != nil {
+				return nil, err
+			}
+			return client, nil
+		},
+		Now: buildNowRFC3339,
 	}
 }
 

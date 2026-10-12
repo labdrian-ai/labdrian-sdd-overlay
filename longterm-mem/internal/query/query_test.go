@@ -714,7 +714,7 @@ func TestUnknownSourceIsRefusedNotIgnored(t *testing.T) {
 
 // TestOmittedSourcesQueriesBothEngramArmsNotVault is R-060's default-set
 // scenario for a project with no embedding index: defaultSources still
-// falls back to engram-fts alone here (Deps.StateDir is unset, so no
+// falls back to engram-fts alone here (Deps.Index is unset, so no
 // index can be found), which is exactly right -- asking the embedding arm
 // to run against a project with nothing indexed would cost a network round
 // trip for a guaranteed-empty answer (see TestDefaultSources_UnionWhenIndexExists

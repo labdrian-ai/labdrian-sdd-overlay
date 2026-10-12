@@ -3,16 +3,15 @@ package main
 import (
 	"context"
 	"database/sql"
-	"os"
-	"path/filepath"
 	"testing"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/embed"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vecindex"
 )
 
 // TestObservationRowsForIndex_MatchesLiveEngramRows is the RED/GREEN proof
-// for buildIndexForQuery's own row source (issue #286's top-up wiring): it
+// for the embedding index adapter's row source (issue #286's top-up wiring): it
 // must map exactly the live rows of one project into vecindex.Row shape,
 // carrying id/title/content through unchanged, and leave out a
 // soft-deleted row -- the same R-020 scoping cmd_index_embeddings.go
@@ -61,55 +60,68 @@ func TestObservationRowsForIndex_MatchesLiveEngramRows(t *testing.T) {
 	}
 }
 
-// TestBuildIndexForQuery_InvalidatesCacheOnlyOnSuccess is the RED/GREEN
-// proof for the session cache's invalidation wiring (issue #286): a
-// successful build must invalidate the load cache for the exact directory
-// it just wrote, so the very query that triggered the top-up sees the
-// fresh index rather than a stale cached one; a failed build must not
-// invalidate anything, since nothing changed on disk for a cache to need
-// to forget.
-//
-// The "no rows" project deliberately never calls the embedding backend at
-// all (vecindex.Build's embed loop never runs when there is nothing to
-// embed), so this proves the invalidation wiring without any network
-// dependency. The failure case is forced offline too, by corrupting the
-// index buildIndexForQuery just wrote so its own internal Load fails.
-func TestBuildIndexForQuery_InvalidatesCacheOnlyOnSuccess(t *testing.T) {
-	const project = "rundeps-invalidate-project"
-	// A different project's row keeps the fixture's schema realistic
-	// without giving `project` itself any live rows to embed.
-	dbPath := newTestEngramDBWithObservation(t, "other-project", "Other Title", "Other content.")
+// TestEmbeddingIndexOf_WiresWhatTheProcessReadsAndWritesWith is the proof of the wiring of the embedding index
+// adapter (issue #286's top-up): the repository keeps the indexes in the state directory the module keeps its
+// derived state in, builds from the live rows of the Engram store, makes its embedder with the factory the
+// commands were wired with (for the model the build is asked for), and reads through the cache it was given. How
+// the adapter builds and caches is held by its own tests; this holds what the process hands it.
+func TestEmbeddingIndexOf_WiresWhatTheProcessReadsAndWritesWith(t *testing.T) {
+	const project = "rundeps-index-project"
+	dbPath := newTestEngramDBWithObservation(t, project, "Live Title", "Live content.")
 	store, err := engram.Open(dbPath)
 	if err != nil {
 		t.Fatalf("engram.Open(%q): %v", dbPath, err)
 	}
 	t.Cleanup(func() { _ = store.Close() })
-
 	stateDir := t.TempDir()
 	t.Setenv("LONGTERM_MEM_STATE_DIR", stateDir)
+	cache := vecindex.NewLoadCache()
+	var models []string
+	factory := func(cfg embed.Config) (*embed.Client, error) {
+		models = append(models, cfg.Model)
+		return testEmbedClient(cfg)
+	}
+	index := embeddingIndexOf(store, queryWiring{newClient: factory, cache: cache})
+	before := testEmbedRequests.Load()
 
-	var invalidated []string
-	buildFn := buildIndexForQuery(store, testEmbedClient, func(dir string) { invalidated = append(invalidated, dir) })
-
-	if err := buildFn(context.Background(), project, "test-model", 3, 2000); err != nil {
-		t.Fatalf("buildIndexForQuery with nothing to embed: %v", err)
-	}
-	wantDir := vecindex.Dir(stateDir, project)
-	if len(invalidated) != 1 || invalidated[0] != wantDir {
-		t.Fatalf("invalidated = %v, want exactly [%s] after a successful build", invalidated, wantDir)
+	if err := index.BuildEmbeddingIndex(context.Background(), project, "wired-model", vecindex.DefaultDimension, 2000); err != nil {
+		t.Fatalf("BuildEmbeddingIndex: %v", err)
 	}
 
-	// Force the next build to fail without any network call: a manifest
-	// that is not valid JSON makes vecindex.Build's own internal Load
-	// return a wrapped ErrCorrupted before anything is embedded.
-	if err := os.WriteFile(filepath.Join(wantDir, "manifest.json"), []byte("not json"), 0o600); err != nil {
-		t.Fatalf("corrupt manifest: %v", err)
+	if len(models) != 1 || models[0] != "wired-model" {
+		t.Errorf("the embedding client was made for %v, want the model the build was asked for", models)
 	}
-	invalidated = nil
-	if err := buildFn(context.Background(), project, "test-model", 3, 2000); err == nil {
-		t.Fatalf("buildIndexForQuery over a corrupted index succeeded, want an error")
+	if got := testEmbedRequests.Load() - before; got != 1 {
+		t.Errorf("the embedding backend of the commands was asked %d times, want once: one live row", got)
 	}
-	if len(invalidated) != 0 {
-		t.Fatalf("invalidated = %v, want none: the build failed, so nothing on disk changed", invalidated)
+	built, err := vecindex.Load(vecindex.Dir(stateDir, project))
+	if err != nil {
+		t.Fatalf("the index is not in the state directory: %v", err)
+	}
+	if len(built.Manifest.Entries) != 1 || built.Manifest.Model != "wired-model" {
+		t.Errorf("the index holds %+v, want the one live row, under the model of the build", built.Manifest)
+	}
+	loaded, err := index.LoadEmbeddingIndex(project)
+	if err != nil || len(loaded.Entries) != 1 {
+		t.Errorf("LoadEmbeddingIndex = (%+v, %v), want the index just built", loaded, err)
+	}
+	if loaded2, err2 := cache.Load(vecindex.Dir(stateDir, project)); err2 != nil || loaded2 == nil {
+		t.Errorf("the cache the repository was given holds no index after a load through it: %v", err2)
+	}
+}
+
+// A repository built with no cache reads the disk every time, as the CLI's one query does.
+func TestEmbeddingIndexOf_WithoutACacheReadsTheDisk(t *testing.T) {
+	store, err := engram.Open(newTestEngramDBWithObservation(t, "p", "T", "C"))
+	if err != nil {
+		t.Fatalf("engram.Open: %v", err)
+	}
+	t.Cleanup(func() { _ = store.Close() })
+	t.Setenv("LONGTERM_MEM_STATE_DIR", t.TempDir())
+
+	index := embeddingIndexOf(store, queryWiring{newClient: testEmbedClient})
+
+	if index.Cache != nil {
+		t.Errorf("Cache = %v, want none for a surface that serves one query", index.Cache)
 	}
 }

@@ -95,12 +95,6 @@ var knownDebt = archguard.Debt{
 		"path/filepath.EvalSymlinks": "L7",
 	},
 
-	// query: reads through ports it owns instead of the concrete adapters.
-	"internal/query": {
-		"internal/embed":    "L4",
-		"internal/vecindex": "L4",
-	},
-
 	// skillstale: pure Detect over its inputs, with the lock, the facts, the
 	// command resolver and the clock supplied by the caller. The repohistory
 	// states it reads become its own facts type.

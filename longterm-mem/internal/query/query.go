@@ -13,7 +13,6 @@ import (
 	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vecindex"
 )
 
 // ErrMissingProject rejects a call with no project (R-006).
@@ -76,48 +75,31 @@ type Deps struct {
 	// ResolveLink reports the Engram id an existing promotion links to
 	// vault page pageAddress (D6 store, not built until slice 4/5).
 	ResolveLink func(pageAddress string) (engramID int64, ok bool)
-	// StateDir is the directory internal/vecindex's embedding index lives
-	// under (StateDir/index/<project>/, vecindex.Dir). It is read only
-	// when a caller names engram-embed in Sources; every other call
-	// leaves it unused.
-	StateDir string
 	// Embed embeds one query string into a vector for the embedding arm.
 	// It is invoked only when engram-embed is requested, so a call that
 	// never names that source never reaches the network (R-071). nil
 	// degrades exactly like an index that was never built: zero rows,
 	// Coverage says so.
 	Embed EmbedFunc
-	// BuildIndex incrementally (re)builds project's embedding index under
-	// the given model/dimension/inputLimit contract -- the same contract
-	// the embedding arm just read off the existing manifest, so a top-up
-	// never silently reinterprets what "the index" means for this project.
-	// It is invoked only when the embedding arm finds a small, bounded gap
-	// (see TopUpMaxRows) between the manifest and the live corpus, right
-	// before scanning; nil skips the top-up entirely and leaves today's
-	// degrade-and-name-the-CLI-command behaviour unchanged. A production
-	// caller wires it to read live rows and call vecindex.Build, the same
-	// way cmd_index_embeddings.go already does.
-	BuildIndex BuildIndexFunc
-	// LoadIndex loads one project's embedding index, defaulting to
-	// vecindex.Load when nil so an existing or non-MCP caller (the CLI
-	// query subcommand, every test that does not set this field) is
-	// unaffected. A long-lived caller that serves more than one query per
-	// process -- the MCP server -- wires it to a *vecindex.LoadCache's Load
-	// method instead, so a project's index is read from disk at most once
-	// per change rather than on every query that names or defaults to
+	// Index reads a project's embedding index. It is read when a caller
+	// names engram-embed in Sources, and by the default sources to learn
+	// whether an index exists; every other call leaves it unused. None
+	// wired (or a nil pointer) is no index: the arm degrades as it does for
+	// a project nothing was built for. A long-lived caller that serves more
+	// than one query per process -- the MCP server -- hands it a repository
+	// that caches, so a project's index is read from disk at most once per
+	// change rather than on every query that names or defaults to
 	// engram-embed.
-	LoadIndex func(dir string) (*vecindex.Index, error)
-}
-
-// resolveLoadIndex returns deps.LoadIndex, or vecindex.Load when deps did
-// not set one -- the one place that default is decided, so defaultSources
-// and runEmbeddingArm's own index load can never drift into resolving it
-// two different ways.
-func resolveLoadIndex(deps Deps) func(dir string) (*vecindex.Index, error) {
-	if deps.LoadIndex != nil {
-		return deps.LoadIndex
-	}
-	return vecindex.Load
+	Index EmbeddingIndexRepository
+	// IndexBuilder incrementally (re)builds project's embedding index
+	// under the contract the embedding arm just read off the existing
+	// index, so a top-up never silently reinterprets what "the index"
+	// means for this project. It is asked only when the arm finds a small,
+	// bounded gap (see TopUpMaxRows) between the index and the live corpus,
+	// right before scanning; none wired (or a nil pointer) skips the top-up
+	// entirely and leaves the degrade-and-name-the-CLI-command behaviour
+	// unchanged.
+	IndexBuilder EmbeddingIndexBuilder
 }
 
 // NoLinkResolver reports every page as unlinked (default until D6 exists).
@@ -196,7 +178,7 @@ func Run(ctx context.Context, deps Deps, req Request) (Result, error) {
 
 	var embedRows []ResultRow
 	if wantEmbed {
-		rows, coverage, diags := runEmbeddingArm(ctx, deps.Memory, deps.StateDir, req.Project, req.Query, top, deps.Embed, deps.BuildIndex, resolveLoadIndex(deps))
+		rows, coverage, diags := embeddingArm{Memory: deps.Memory, Index: deps.Index, Builder: deps.IndexBuilder, Embed: deps.Embed}.run(ctx, req.Project, req.Query, top)
 		embedRows = rows
 		result.Coverage = append(result.Coverage, coverage)
 		result.Diagnostics = append(result.Diagnostics, diags...)

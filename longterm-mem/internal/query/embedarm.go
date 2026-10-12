@@ -7,34 +7,46 @@ import (
 	"math"
 	"sort"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/embed"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vecindex"
 )
 
 // EmbedFunc embeds one query string into a vector for the embedding arm
 // (R-058). Production wires embed.Client.Embed; it is invoked only when a
 // caller actually names engram-embed in Sources, so a query that never
 // asks for it never reaches the network (R-071).
+//
+// A failure says what kind it is by the interfaces below (EmbedModelMissing,
+// EmbedBackendUnreachable), not by the package that makes it: this package
+// names no embedding client.
 type EmbedFunc func(ctx context.Context, text string) ([]float32, error)
 
-// BuildIndexFunc incrementally (re)builds one project's embedding index
-// under an explicit model/dimension/inputLimit contract (Deps.BuildIndex's
-// own doc comment explains why the contract is passed in rather than
-// assumed). Production wires it to read the project's live rows
-// (engram.Store.ListObservations, the same source cmd_index_embeddings.go
-// already reads) and call vecindex.Build.
-type BuildIndexFunc func(ctx context.Context, project, model string, dimension, inputLimit int) error
+// EmbedModelMissing is what an error from an EmbedFunc implements when the
+// backend answered but the configured model is not pulled (R-070). The
+// embedding arm finds it with errors.As, however the error is wrapped, and
+// reports it as DiagnosticEmbeddingModelMissing.
+type EmbedModelMissing interface {
+	error
+	EmbedModelMissing()
+}
 
-// TopUpMaxRows bounds runEmbeddingArm's inline top-up: a gap of at most
-// this many unindexed rows is closed with one incremental vecindex.Build
-// call before scanning; a larger gap is left to `longterm-mem index
-// --embeddings`, exactly as before this change.
+// EmbedBackendUnreachable is what an error from an EmbedFunc implements when
+// the backend never answered at all (R-070). The embedding arm reports it as
+// DiagnosticEmbeddingBackendUnreachable, as it does an error that says
+// neither: a backend that did not produce a vector.
+type EmbedBackendUnreachable interface {
+	error
+	EmbedBackendUnreachable()
+}
+
+// TopUpMaxRows bounds the embedding arm's inline top-up: a gap of at most
+// this many unindexed rows is closed with one incremental build (the
+// EmbeddingIndexBuilder port) before scanning; a larger gap is left to
+// `longterm-mem index --embeddings`, exactly as before this change.
 //
 // The bound is measured, not guessed (issue #286, this repository,
 // 2026-09-08): a single embedding request costs ~50ms for a short row and
-// ~350ms at the 2000-character input limit (internal/vecindex's own
-// DefaultInputLimit), and the backend serializes requests rather than
+// ~350ms at the 2000-character input limit (the index adapter's own
+// default), and the backend serializes requests rather than
 // batching or parallelizing them usefully. 25 rows at the worst-case
 // 350ms/row is therefore under 9 seconds -- one query call's worth of
 // added latency, paid once to close a small gap, never accumulating
@@ -80,7 +92,31 @@ type Coverage struct {
 // a genuine (if malformed) timestamp rather than an honest "never".
 const embeddingIndexNeverBuilt = "never"
 
-// runEmbeddingArm retrieves the embedding source's own top-`top` rows
+// embeddingArm is the embedding source's own reading: the memory it counts
+// coverage in, the index it scans and the builder that tops it up, and the
+// function that embeds the query. Index and Builder may be missing (see
+// Deps): no index is the arm degrading as a project nothing was built for
+// does, and no builder leaves a gap as it is.
+type embeddingArm struct {
+	Memory  CoverageReader
+	Index   EmbeddingIndexRepository
+	Builder EmbeddingIndexBuilder
+	Embed   EmbedFunc
+}
+
+// loadEmbeddingIndex is project's embedding index through the port, or an error when no
+// port was wired: the arm treats it as it treats an index nobody built.
+func loadEmbeddingIndex(repository EmbeddingIndexRepository, project string) (*EmbeddingIndex, error) {
+	if memory.IsMissing(repository) {
+		return nil, errNoIndexRepository
+	}
+	return repository.LoadEmbeddingIndex(project)
+}
+
+// errNoIndexRepository is what loadEmbeddingIndex answers when no repository was wired.
+var errNoIndexRepository = errors.New("query: no embedding index repository is configured")
+
+// run retrieves the embedding source's own top-`top` rows
 // (R-058), in its own native cosine-rank order, alongside this request's
 // Coverage entry (design) and any degradation diagnostics (R-070).
 //
@@ -91,21 +127,17 @@ const embeddingIndexNeverBuilt = "never"
 // convenience. Every candidate is resolved through CoverageSnapshot
 // instead, which simply omits a row that is missing, soft-deleted, or
 // belongs to another project.
-func runEmbeddingArm(ctx context.Context, store CoverageReader, stateDir, project, queryText string, top int, embedFn EmbedFunc, buildIndex BuildIndexFunc, loadIndex func(dir string) (*vecindex.Index, error)) ([]ResultRow, Coverage, []Diagnostic) {
-	if loadIndex == nil {
-		loadIndex = vecindex.Load
-	}
+func (a embeddingArm) run(ctx context.Context, project, queryText string, top int) ([]ResultRow, Coverage, []Diagnostic) {
 	coverage := Coverage{Source: SourceEngramEmbed, BuiltAt: embeddingIndexNeverBuilt}
-	dir := vecindex.Dir(stateDir, project)
 
-	// The index is loaded FIRST so its manifest ids can go into the same
+	// The index is loaded FIRST so its entry ids can go into the same
 	// read that counts live observations. Coverage's two numbers used to
 	// come from two separate calls, which is what let them disagree and
 	// forced a clamp, a diagnostic and a branch no test could reach.
-	idx, loadErr := loadIndex(dir)
+	idx, loadErr := loadEmbeddingIndex(a.Index, project)
 
 	var diags []Diagnostic
-	live, liveByID, err := store.CoverageSnapshot(project, manifestEngramIDs(idx))
+	live, liveByID, err := a.Memory.CoverageSnapshot(project, indexedIDs(idx))
 	if err != nil {
 		// One failure, named once. Coverage's counts stay zero and the
 		// diagnostic says they are not measurements -- the previous shape
@@ -120,38 +152,38 @@ func runEmbeddingArm(ctx context.Context, store CoverageReader, stateDir, projec
 	coverage.Live = live
 
 	if loadErr != nil {
-		// ErrNoIndex (nothing built yet) and ErrCorrupted (a corrupted
-		// on-disk index) both degrade to "no rows, coverage says so" --
-		// neither is a call failure, since the union's @5 guarantee is
+		// An index nobody built and one that cannot be trusted or
+		// read both degrade to "no rows, coverage says so" -- neither
+		// is a call failure, since the union's @5 guarantee is
 		// unaffected by one arm having nothing to contribute (R-058).
 		coverage.Unindexed = coverage.Live
 		return nil, coverage, diags
 	}
-	coverage.BuiltAt = idx.Manifest.BuiltAt
+	coverage.BuiltAt = idx.BuiltAt
 	coverage.Indexed = len(liveByID)
 	// No clamp, and none needed: both counts came from one snapshot, in
 	// which every indexed row is by definition one of the live rows
 	// counted, so this subtraction cannot go negative.
 	coverage.Unindexed = coverage.Live - coverage.Indexed
 
-	if coverage.Unindexed > 0 && coverage.Unindexed <= TopUpMaxRows && buildIndex != nil {
-		idx, coverage, liveByID, diags = topUpEmbeddingIndex(ctx, store, dir, project, idx, coverage, liveByID, buildIndex, loadIndex, diags)
+	if coverage.Unindexed > 0 && coverage.Unindexed <= TopUpMaxRows && !memory.IsMissing(a.Builder) {
+		idx, coverage, liveByID, diags = a.topUp(ctx, project, idx, coverage, liveByID, diags)
 	}
 
-	if embedFn == nil {
+	if a.Embed == nil {
 		return nil, coverage, diags
 	}
-	queryVector, embedErr := embedFn(ctx, queryText)
+	queryVector, embedErr := a.Embed(ctx, queryText)
 	if embedErr != nil {
 		return nil, coverage, append(diags, embeddingDegradationDiagnostic(embedErr))
 	}
 
 	type scoredCandidate struct {
 		score float64
-		entry vecindex.ManifestEntry
+		entry IndexedObservation
 	}
-	candidates := make([]scoredCandidate, len(idx.Manifest.Entries))
-	for i, e := range idx.Manifest.Entries {
+	candidates := make([]scoredCandidate, len(idx.Entries))
+	for i, e := range idx.Entries {
 		candidates[i] = scoredCandidate{score: cosineSimilarity(queryVector, idx.Vectors[i]), entry: e}
 	}
 	sort.SliceStable(candidates, func(i, j int) bool { return candidates[i].score > candidates[j].score })
@@ -165,7 +197,7 @@ func runEmbeddingArm(ctx context.Context, store CoverageReader, stateDir, projec
 		if !ok {
 			continue
 		}
-		if vecindex.Fingerprint(idx.Manifest.Model, idx.Manifest.Dimension, idx.Manifest.InputLimit, obs.Title, obs.Content) != c.entry.Fingerprint {
+		if a.Index.Fingerprint(idx.Model, idx.Dimension, idx.InputLimit, obs.Title, obs.Content) != c.entry.Fingerprint {
 			// A stale entry: the observation's title or content changed
 			// since it was embedded (R-069). Serving it would show a
 			// snippet under a vector that no longer describes it, so it
@@ -179,33 +211,33 @@ func runEmbeddingArm(ctx context.Context, store CoverageReader, stateDir, projec
 	return rows, coverage, diags
 }
 
-// manifestEngramIDs collects idx's own manifest entry ids, or nil when idx
-// is nil (Load failed): store.CoverageSnapshot treats a nil/empty id slice
-// as "nothing is indexed yet", which is exactly true when there is no
-// index to read ids from.
-func manifestEngramIDs(idx *vecindex.Index) []int64 {
+// indexedIDs collects idx's own entry ids, or nil when idx is nil (the load
+// failed): the memory's CoverageSnapshot treats a nil/empty id slice as
+// "nothing is indexed yet", which is exactly true when there is no index to
+// read ids from.
+func indexedIDs(idx *EmbeddingIndex) []int64 {
 	if idx == nil {
 		return nil
 	}
-	ids := make([]int64, len(idx.Manifest.Entries))
-	for i, e := range idx.Manifest.Entries {
+	ids := make([]int64, len(idx.Entries))
+	for i, e := range idx.Entries {
 		ids[i] = e.EngramID
 	}
 	return ids
 }
 
-// topUpEmbeddingIndex closes a small, bounded gap between dir's manifest
-// and project's live corpus (runEmbeddingArm has already checked the gap
-// is within TopUpMaxRows) by running one incremental build BEFORE the
-// caller scans, so this query's own results already reflect it.
+// topUp closes a small, bounded gap between idx and project's live corpus
+// (run has already checked the gap is within TopUpMaxRows) by asking the
+// builder for one incremental build BEFORE the caller scans, so this query's
+// own results already reflect it.
 //
 // A build failure degrades exactly as an untopped-up stale index already
 // does -- the query never fails because a top-up could not run -- plus a
 // diagnostic naming what went wrong, appended to diags and returned
 // alongside the unchanged idx/coverage/liveByID the caller already had.
-func topUpEmbeddingIndex(ctx context.Context, store CoverageReader, dir, project string, idx *vecindex.Index, coverage Coverage, liveByID map[int64]memory.Observation, buildIndex BuildIndexFunc, loadIndex func(dir string) (*vecindex.Index, error), diags []Diagnostic) (*vecindex.Index, Coverage, map[int64]memory.Observation, []Diagnostic) {
+func (a embeddingArm) topUp(ctx context.Context, project string, idx *EmbeddingIndex, coverage Coverage, liveByID map[int64]memory.Observation, diags []Diagnostic) (*EmbeddingIndex, Coverage, map[int64]memory.Observation, []Diagnostic) {
 	toppedUp := coverage.Unindexed
-	if err := buildIndex(ctx, project, idx.Manifest.Model, idx.Manifest.Dimension, idx.Manifest.InputLimit); err != nil {
+	if err := a.Builder.BuildEmbeddingIndex(ctx, project, idx.Model, idx.Dimension, idx.InputLimit); err != nil {
 		diags = append(diags, Diagnostic{
 			Code:   DiagnosticEmbeddingTopUpFailed,
 			Detail: fmt.Sprintf("tried to embed %d unindexed rows before answering this query, but the build failed, so this answer still comes from the index as it stood before: %v", toppedUp, err),
@@ -213,7 +245,7 @@ func topUpEmbeddingIndex(ctx context.Context, store CoverageReader, dir, project
 		return idx, coverage, liveByID, diags
 	}
 
-	reloaded, err := loadIndex(dir)
+	reloaded, err := loadEmbeddingIndex(a.Index, project)
 	if err != nil {
 		// The build itself reported success but the index it wrote cannot
 		// be read back -- treated the same as a build failure: the query
@@ -226,7 +258,7 @@ func topUpEmbeddingIndex(ctx context.Context, store CoverageReader, dir, project
 		return idx, coverage, liveByID, diags
 	}
 
-	live, newLiveByID, err := store.CoverageSnapshot(project, manifestEngramIDs(reloaded))
+	live, newLiveByID, err := a.Memory.CoverageSnapshot(project, indexedIDs(reloaded))
 	if err != nil {
 		diags = append(diags, Diagnostic{
 			Code:   DiagnosticCoverageUnreadable,
@@ -235,7 +267,7 @@ func topUpEmbeddingIndex(ctx context.Context, store CoverageReader, dir, project
 		return idx, coverage, liveByID, diags
 	}
 
-	coverage.BuiltAt = reloaded.Manifest.BuiltAt
+	coverage.BuiltAt = reloaded.BuiltAt
 	coverage.Live = live
 	coverage.Indexed = len(newLiveByID)
 	coverage.Unindexed = coverage.Live - coverage.Indexed
@@ -252,15 +284,15 @@ func topUpEmbeddingIndex(ctx context.Context, store CoverageReader, dir, project
 // rows this call" for a caller who does not read diagnostics; this is the
 // one place that says which happened.
 func embeddingDegradationDiagnostic(err error) Diagnostic {
-	var modelMissing *embed.ModelMissingError
+	var modelMissing EmbedModelMissing
 	if errors.As(err, &modelMissing) {
 		return Diagnostic{Code: DiagnosticEmbeddingModelMissing, Detail: modelMissing.Error()}
 	}
-	var unreachable *embed.BackendUnreachableError
+	var unreachable EmbedBackendUnreachable
 	if errors.As(err, &unreachable) {
 		return Diagnostic{Code: DiagnosticEmbeddingBackendUnreachable, Detail: unreachable.Error()}
 	}
-	// An error neither typed error names (e.g. a redirect refusal, or a
+	// An error that says neither (e.g. a redirect refusal, or a
 	// non-loopback endpoint refused at construction) is still a backend
 	// that did not produce a vector -- reported under the same code rather
 	// than invented a third one for a case R-070 does not distinguish.

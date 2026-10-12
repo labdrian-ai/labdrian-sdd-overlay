@@ -15,14 +15,14 @@ import (
 // actually ran -- not just that the default sources slice happens to
 // mention it.
 func TestDefaultSources_UnionWhenIndexExists(t *testing.T) {
-	store, _, _, stateDir := newEmbedArmFixture(t, []embedArmFixture{
+	store, _, _, index := newEmbedArmFixture(t, []embedArmFixture{
 		{title: "indexed row", content: "zephyr content", project: "proj-default", vec: []float32{1, 0, 0}},
 	})
 	deps := Deps{
 		Memory:      store,
 		Vault:       fakeVault(nil, nil),
 		ResolveLink: NoLinkResolver,
-		StateDir:    stateDir,
+		Index:       index,
 		Embed:       fakeEmbed([]float32{1, 0, 0}, nil),
 	}
 
@@ -47,7 +47,7 @@ func TestDefaultSources_FTSOnlyWhenNoIndex(t *testing.T) {
 		Memory:      store,
 		Vault:       fakeVault(nil, nil),
 		ResolveLink: NoLinkResolver,
-		StateDir:    t.TempDir(),
+		Index:       &fakeIndexes{},
 	}
 
 	got, err := Run(context.Background(), deps, Request{Project: "proj-no-index", Query: "zephyr"})

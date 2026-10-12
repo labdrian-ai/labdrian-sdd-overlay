@@ -23,7 +23,7 @@ const (
 	SourceEngramFTS = "engram-fts"
 	// SourceEngramEmbed names Engram's embedding-index search as a
 	// requested source (R-060): a cosine-similarity search over
-	// internal/vecindex's own index, populated by `index --embeddings`.
+	// the embedding index (EmbeddingIndexRepository), populated by `index --embeddings`.
 	// Naming it when no index has ever been built degrades to zero rows
 	// plus a Coverage entry saying so (design), rather than an error --
 	// the same soft-degradation rule R-026 applies to a not-provisioned
