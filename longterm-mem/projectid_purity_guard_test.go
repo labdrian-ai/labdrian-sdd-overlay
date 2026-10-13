@@ -11,8 +11,10 @@ import (
 
 // identityPackages are the packages that decide a project's identity: the rules that derive it from what a
 // repository looks like (projectid), which read the repository through a port they own
-// (projectid.RepositoryInspector) that internal/projectidfs answers on a disk and the composition root wires.
-var identityPackages = []string{"internal/projectid"}
+// (projectid.RepositoryInspector) that internal/projectidfs answers on a disk, and the use case that lets what
+// is already stored choose among the names it derives (adoption), which reads the stores, the ledger and the
+// clock through ports of its own. The composition root wires the adapters of both.
+var identityPackages = []string{"internal/projectid", "internal/adoption"}
 
 // TestIdentityPackagesNameNoAdapter keeps the rules free of the concrete adapters, in their production files and
 // in their tests alike (the dependency rule of the rings reads production code only): not projectidfs, which
@@ -90,5 +92,48 @@ func TestIdentityGuardsFlagTheProcessTheClockTheDiskAndTheAdaptersInTestsToo(t *
 	}
 	if !reflect.DeepEqual(flagged, want) {
 		t.Fatalf("flagged = %v, want %v (the pure uses of errors, filepath.Join and strings pass)", flagged, want)
+	}
+}
+
+// The same walk reads the adoption use case: the stores it asks (Engram, the vault registry), the ledger file and
+// the adapters of the identity rules are not its to name, and the wall clock and the file system are not its to
+// reach, in a production file or in a test. What it is handed through its ports is all it uses.
+func TestIdentityGuardsReadTheAdoptionUseCaseToo(t *testing.T) {
+	imp := func(dir string) string { return `"` + modulePath + "/" + dir + `"` }
+	root := writeTree(t, map[string]string{
+		"internal/adoption/ok.go":          "package p\n\nimport (\n\t\"fmt\"\n\t\"time\"\n)\n\nvar _ = fmt.Sprintf\nvar _ time.Time\n",
+		"internal/adoption/clock.go":       "package p\n\nimport \"time\"\n\nvar _ = time.Now\n",
+		"internal/adoption/engram.go":      importing(imp("internal/engram")),
+		"internal/adoption/registry.go":    importing(imp("internal/vaultreg")),
+		"internal/adoption/ledger.go":      importing(imp("internal/identityledger")),
+		"internal/adoption/inspector.go":   importing(imp("internal/projectidfs")),
+		"internal/adoption/env_test.go":    "package p\n\nimport \"testing\"\n\nfunc TestX(t *testing.T) { t.Setenv(\"HOME\", t.TempDir()) }\n",
+		"internal/adoption/stdout_test.go": "package p\n\nimport \"fmt\"\n\nvar _ = fmt.Println\n",
+	})
+
+	ambient, err := ambientUsesIn(root, "internal/adoption")
+	if err != nil {
+		t.Fatalf("ambientUsesIn: %v", err)
+	}
+	adapters, err := adapterImportsIn(root, "internal/adoption", []string{"internal/engram", "internal/vaultreg", "internal/identityledger", "internal/projectidfs"}, "")
+	if err != nil {
+		t.Fatalf("adapterImportsIn: %v", err)
+	}
+
+	flagged := map[string]bool{}
+	for _, problem := range append(ambient, adapters...) {
+		flagged[strings.SplitN(problem, " ", 2)[0]] = true
+	}
+	want := map[string]bool{
+		"internal/adoption/clock.go":       true,
+		"internal/adoption/engram.go":      true,
+		"internal/adoption/registry.go":    true,
+		"internal/adoption/ledger.go":      true,
+		"internal/adoption/inspector.go":   true,
+		"internal/adoption/env_test.go":    true,
+		"internal/adoption/stdout_test.go": true,
+	}
+	if !reflect.DeepEqual(flagged, want) {
+		t.Fatalf("flagged = %v, want %v (fmt.Sprintf and the time type pass)", flagged, want)
 	}
 }

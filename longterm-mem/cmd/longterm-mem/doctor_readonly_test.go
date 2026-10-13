@@ -22,7 +22,7 @@ func TestResolveProjectFlagReadOnly_LeavesTheIdentityLedgerUntouched(t *testing.
 	}
 
 	var project string
-	captureStderr(t, func() { project, _ = resolveProjectFlagReadOnly("doctor", "") })
+	captureStderr(t, func() { project, _ = identityCommands().resolveProjectFlagReadOnly("doctor", "") })
 	if project == "" {
 		t.Fatalf("resolveProjectFlagReadOnly resolved no project inside a repository")
 	}
@@ -41,7 +41,7 @@ func TestResolveProjectFlag_StillRecordsForWritingCommands(t *testing.T) {
 	t.Chdir(repo)
 	ledger := filepath.Join(repo, ".git", "longterm-mem", "identity-ledger.json")
 
-	captureStderr(t, func() { resolveProjectFlag("sync", "") })
+	captureStderr(t, func() { identityCommands().resolveProjectFlag("sync", "") })
 
 	if _, err := os.Stat(ledger); err != nil {
 		t.Fatalf("a writing command's resolution no longer records the ledger at %s: %v", ledger, err)

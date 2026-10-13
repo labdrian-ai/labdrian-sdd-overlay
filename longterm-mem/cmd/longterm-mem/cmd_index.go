@@ -42,7 +42,7 @@ func (c commands) cmdIndex(args []string) int {
 	if err := fs.Parse(args); err != nil {
 		return exitUsage
 	}
-	resolvedProject, exit := resolveProjectFlag("index", *project)
+	resolvedProject, exit := c.resolveProjectFlag("index", *project)
 	if exit != exitOK {
 		return exit
 	}

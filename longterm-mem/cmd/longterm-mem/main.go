@@ -29,9 +29,9 @@ func (c commands) run(args []string) int {
 	case "sync":
 		return c.cmdSync(args[1:])
 	case "status":
-		return cmdStatus(args[1:])
+		return c.cmdStatus(args[1:])
 	case "stale":
-		return cmdStale(args[1:])
+		return c.cmdStale(args[1:])
 	case "skills-stale":
 		return c.cmdSkillsStale(args[1:])
 	case "doctor":

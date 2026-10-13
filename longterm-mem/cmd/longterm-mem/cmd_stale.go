@@ -20,14 +20,14 @@ import (
 // also why removals and moves are printed apart: a moved file leaves a
 // memory out of date about where something lives, never wrong about what it
 // is, and folding the two together would invite treating them alike.
-func cmdStale(args []string) int {
+func (c commands) cmdStale(args []string) int {
 	fs := flag.NewFlagSet("stale", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
 	project := fs.String("project", "", projectFlagUsage)
 	if err := fs.Parse(args); err != nil {
 		return exitUsage
 	}
-	resolvedProject, exit := resolveProjectFlag("stale", *project)
+	resolvedProject, exit := c.resolveProjectFlag("stale", *project)
 	if exit != exitOK {
 		return exit
 	}

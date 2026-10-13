@@ -27,7 +27,7 @@ func (c commands) cmdPromote(args []string) int {
 	// flag set below ever sees the arguments: it takes a page address, not
 	// an --id, and its refusals are its own.
 	if len(args) > 0 && args[0] == "reconcile" {
-		return cmdPromoteReconcile(args[1:])
+		return c.cmdPromoteReconcile(args[1:])
 	}
 
 	fs := flag.NewFlagSet("promote", flag.ContinueOnError)
@@ -38,7 +38,7 @@ func (c commands) cmdPromote(args []string) int {
 	if err := fs.Parse(args); err != nil {
 		return exitUsage
 	}
-	resolvedProject, exit := resolveProjectFlag("promote", *project)
+	resolvedProject, exit := c.resolveProjectFlag("promote", *project)
 	if exit != exitOK {
 		return exit
 	}
@@ -129,7 +129,7 @@ func refusalLine(result promote.Result, observationID int64) (string, bool) {
 // consent reduced to one keystroke covering pages nobody looked at. --all
 // is therefore DECLARED here rather than left undefined, so reaching for it
 // answers with that reason instead of "flag provided but not defined".
-func cmdPromoteReconcile(args []string) int {
+func (c commands) cmdPromoteReconcile(args []string) int {
 	fs := flag.NewFlagSet("promote reconcile", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
 	project := fs.String("project", "", projectFlagUsage)
@@ -159,7 +159,7 @@ func cmdPromoteReconcile(args []string) int {
 		fmt.Fprintf(os.Stderr, "longterm-mem: promote reconcile: expected exactly one address, got %d: reconcile adopts one page at a time on purpose\n", len(rest))
 		return exitUsage
 	}
-	resolvedProject, exit := resolveProjectFlag("promote reconcile", *project)
+	resolvedProject, exit := c.resolveProjectFlag("promote reconcile", *project)
 	if exit != exitOK {
 		return exit
 	}

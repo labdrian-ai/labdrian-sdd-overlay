@@ -43,6 +43,7 @@ var rings = map[string]archguard.Ring{
 	"internal/durable":        archguard.Adapter,
 	"internal/embed":          archguard.Adapter,
 	"internal/engram":         archguard.Adapter,
+	"internal/adoption":       archguard.Application,
 	"internal/identityledger": archguard.Adapter,
 	"internal/ingest":         archguard.Domain,
 	"internal/memory":         archguard.Domain,

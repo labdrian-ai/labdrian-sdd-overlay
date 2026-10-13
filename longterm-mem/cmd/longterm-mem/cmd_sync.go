@@ -34,9 +34,9 @@ func (c commands) cmdSync(args []string) int {
 	}
 	// A dry run must not record this repository's derived names either: an
 	// operator asking "what would this do" has not asked it to do anything.
-	resolve := resolveProjectFlag
+	resolve := c.resolveProjectFlag
 	if *dryRun {
-		resolve = resolveProjectFlagReadOnly
+		resolve = c.resolveProjectFlagReadOnly
 	}
 	resolvedProject, exit := resolve("sync", *project)
 	if exit != exitOK {
