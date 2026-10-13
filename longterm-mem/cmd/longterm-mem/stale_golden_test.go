@@ -2,10 +2,9 @@ package main
 
 import (
 	"database/sql"
-	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"testing"
 )
@@ -81,6 +80,29 @@ func (w *skillsStaleWorld) history(t *testing.T) {
 	w.git(t, "commit", "-q", "-m", "remove a recorded path")
 	w.git(t, "mv", "moved.go", "moved-new.go")
 	w.git(t, "commit", "-q", "-m", "rename a recorded path")
+}
+
+// The goldens print the ids of commits (twelve characters of them), which are the same on every machine only
+// because the world pins everything an id is made of: the identity and the date of author and committer, the
+// messages, the tree and the order. This says so out loud: if the shared harness (git, its environment or the
+// history this builds) changes, this test fails first and names the cause, instead of every golden at once.
+func TestStaleWorld_CommitsHaveTheSameIdsOnEveryMachine(t *testing.T) {
+	w := newSkillsStaleWorld(t, true)
+	w.history(t)
+
+	for revision, want := range map[string]string{
+		"HEAD~2": "f02a2770779f3b8ae337d9d69e54b42c5a1ac319",
+		"HEAD~1": "7cc3e33e09a274e807dd309d3a7b27ba8ba84c22", // the removal the goldens name
+		"HEAD":   "b3ad2c8c2bbca4bad9e45bc805a931dfecbd4a16", // the rename the goldens name
+	} {
+		out, err := exec.Command("git", "-C", w.root, "rev-parse", revision).Output()
+		if err != nil {
+			t.Fatalf("git rev-parse %s: %v", revision, err)
+		}
+		if got := strings.TrimSpace(string(out)); got != want {
+			t.Errorf("%s is %s, want %s: the world's commits are no longer the same on every machine", revision, got, want)
+		}
+	}
 }
 
 func staleCases() []staleCase {
@@ -186,6 +208,10 @@ func staleCases() []staleCase {
 			}
 			t.Cleanup(func() { _ = os.Chmod(locked, 0o755) })
 			if _, err := os.ReadDir(locked); err == nil {
+				// A process with root's capability reads any directory, so the file system cannot be made to
+				// refuse here. What the program says of a walk that fails is not left to this case alone: the
+				// words are built by a function that internal/repoevidence tests with the error a refused
+				// directory gives, whoever runs the tests.
 				t.Skip("directory permissions are not enforced for this process (root or an equivalent capability): the tree cannot be made unreadable")
 			}
 			w.memory(t, "names a removed path", where("gone.go"), beforeTheCommits, beforeTheCommits)
@@ -198,10 +224,6 @@ func staleCases() []staleCase {
 			}},
 	}
 }
-
-// gitWords are the words git itself uses for what it refuses, which are its own to change: the goldens pin the
-// sentence the program builds around them and not these.
-var gitWords = regexp.MustCompile(`(exit status 128: )[^\n]*`)
 
 // runStaleCase builds the world of the case, runs the command in it and renders what it did.
 func runStaleCase(t *testing.T, tc staleCase) (w *skillsStaleWorld, rendering string) {
@@ -229,8 +251,7 @@ func runStaleCase(t *testing.T, tc staleCase) (w *skillsStaleWorld, rendering st
 			t.Errorf("the report changed the project:\nbefore:\n%s\nafter:\n%s", before, after)
 		}
 	}
-	rendering = fmt.Sprintf("args: %s\nexit: %d\n--- stdout ---\n%s--- stderr ---\n%s", strings.Join(args, " "), code, stdout, stderr)
-	return w, gitWords.ReplaceAllString(w.maskForSkillsStale(rendering), "${1}<git's words>")
+	return w, withGitWordsMasked(w.maskForSkillsStale(renderRun(args, code, stdout, stderr)))
 }
 
 func TestStaleGolden(t *testing.T) {

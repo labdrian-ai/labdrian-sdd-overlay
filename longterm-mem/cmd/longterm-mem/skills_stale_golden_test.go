@@ -475,12 +475,28 @@ func runSkillsStaleCase(t *testing.T, tc skillsStaleCase) (w *skillsStaleWorld, 
 	if after := w.listing(t); after != before {
 		t.Errorf("the report changed the project:\nbefore:\n%s\nafter:\n%s", before, after)
 	}
-	rendering = fmt.Sprintf("args: %s\nexit: %d\n--- stdout ---\n%s--- stderr ---\n%s", strings.Join(args, " "), code, stdout, stderr)
+	rendering = renderRun(args, code, stdout, stderr)
 	masked := w.maskForSkillsStale(rendering)
 	if tc.maskGitWords {
-		masked = gitWords.ReplaceAllString(masked, "${1}<git's words>")
+		masked = withGitWordsMasked(masked)
 	}
 	return w, masked
+}
+
+// renderRun is what a golden of these worlds holds for one run of a command: its arguments, its exit code and
+// both streams.
+func renderRun(args []string, code int, stdout, stderr string) string {
+	return fmt.Sprintf("args: %s\nexit: %d\n--- stdout ---\n%s--- stderr ---\n%s", strings.Join(args, " "), code, stdout, stderr)
+}
+
+// gitWords are the words git itself uses for what it refuses, which are its own to change: the goldens pin the
+// sentence the program builds around them and not these.
+var gitWords = regexp.MustCompile(`(exit status 128: )[^\n]*`)
+
+// withGitWordsMasked replaces git's words in a rendering. The cases of skills-stale recorded before it existed
+// keep git's words as they were written (the per-case flag), and every case of stale, all new, uses it.
+func withGitWordsMasked(text string) string {
+	return gitWords.ReplaceAllString(text, "${1}<git's words>")
 }
 
 // maskForSkillsStale replaces what differs from one machine to the next: the world's directories, and the

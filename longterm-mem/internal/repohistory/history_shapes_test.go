@@ -44,7 +44,9 @@ func shapesRepo(t *testing.T) (root, beside string) {
 // Shapes of a path that the detectors' pattern keeps out of what they ask (an empty text, a leading "./" or
 // "../", an absolute path, a space, a quote, a letter outside ASCII) are still a question this package can be
 // asked, and so is a climb in the middle of a path ("a/../../x.go"), which the pattern does admit: what it
-// answers is pinned here as it is today, so that rework of what is around it cannot change it unseen. Every answer follows from two plain facts: it first asks the file system about the path joined to the
+// answers is pinned here as it is today, so that rework of what is around it cannot change it unseen.
+//
+// Every answer follows from two plain facts: it first asks the file system about the path joined to the
 // root (anything that resolves to a file or a directory is "present", the root itself included), and it then
 // asks git for the history of the text as given, and compares it with the names git prints, which git writes
 // without a leading "./", and quoted when they hold a quote or a letter outside ASCII. So a removed file asked
