@@ -134,17 +134,41 @@ func (w *skillsStaleWorld) standIn(t *testing.T, name string) {
 // have the same ids on every machine.
 func (w *skillsStaleWorld) git(t *testing.T, args ...string) {
 	t.Helper()
+	w.gitOutput(t, args...)
+}
+
+// gitOutput is git as git() runs it, and what it printed.
+func (w *skillsStaleWorld) gitOutput(t *testing.T, args ...string) string {
+	t.Helper()
+	out, err := w.tryGitOutput(args...)
+	if err != nil {
+		t.Fatalf("git %s: %v\n%s", strings.Join(args, " "), err, out)
+	}
+	return out
+}
+
+// tryGitOutput runs git in the project root in an environment that holds nothing but what an id is made of: no
+// configuration of the system or of the user (git is told where neither is, and not to read the system's),
+// the identity and the instant of author and committer, and the world's own PATH and HOME. Its output and its
+// error are returned.
+func (w *skillsStaleWorld) tryGitOutput(args ...string) (string, error) {
 	command := exec.Command("git", args...)
 	command.Dir = w.root
 	command.Env = []string{
 		"PATH=" + os.Getenv("PATH"), "HOME=" + w.home,
-		"GIT_CONFIG_GLOBAL=/dev/null", "GIT_CONFIG_SYSTEM=/dev/null",
+		"GIT_CONFIG_NOSYSTEM=1", "GIT_CONFIG_GLOBAL=/dev/null", "GIT_CONFIG_SYSTEM=/dev/null",
 		"GIT_AUTHOR_NAME=golden", "GIT_AUTHOR_EMAIL=golden@example.com", "GIT_AUTHOR_DATE=2026-01-01T00:00:00Z",
 		"GIT_COMMITTER_NAME=golden", "GIT_COMMITTER_EMAIL=golden@example.com", "GIT_COMMITTER_DATE=2026-01-01T00:00:00Z",
 	}
-	if out, err := command.CombinedOutput(); err != nil {
-		t.Fatalf("git %s: %v\n%s", strings.Join(args, " "), err, out)
-	}
+	out, err := command.CombinedOutput()
+	return string(out), err
+}
+
+// initRepo makes the project a repository on main, from no template: a template of the machine could put hooks
+// in it, and a hook can rewrite a commit's message.
+func (w *skillsStaleWorld) initRepo(t *testing.T) {
+	t.Helper()
+	w.git(t, "init", "-q", "--template=", "-b", "main")
 }
 
 // lockedTarget is a case whose lock records one skill with the one target given.
@@ -206,7 +230,7 @@ func skillsStaleCases() []skillsStaleCase {
 			w.observed(t, "mid-both", longAgo)
 		}},
 		{name: "08-a-path-removed-and-a-path-moved-in-a-repository", pathNeedsGit: true, setup: func(t *testing.T, w *skillsStaleWorld) {
-			w.git(t, "init", "-q", "-b", "main")
+			w.initRepo(t)
 			w.writeProjectFile(t, "removed.go", "package golden\n")
 			w.writeProjectFile(t, "moved.go", "package golden\n// distinctive moved body\n")
 			w.writeProjectFile(t, "present.go", "package golden\n")
@@ -302,7 +326,7 @@ func skillsStaleCases() []skillsStaleCase {
 		}},
 		{name: "31-a-flag-nobody-knows", args: func(w *skillsStaleWorld) []string { return []string{"skills-stale", "--nope"} }},
 		{name: "32-a-path-recorded-under-another-root-of-the-tree", pathNeedsGit: true, setup: func(t *testing.T, w *skillsStaleWorld) {
-			w.git(t, "init", "-q", "-b", "main")
+			w.initRepo(t)
 			w.writeProjectFile(t, "module/promote/writer.go", "package promote\n")
 			w.lock(t, lockOf("suffix-skill"))
 			w.skillFiles(t, "suffix-skill", skillText("See `promote/writer.go`, `writer.go` and `module/promote/writer.go`.\n"))
@@ -311,7 +335,7 @@ func skillsStaleCases() []skillsStaleCase {
 			w.observed(t, "suffix-skill", recently)
 		}},
 		{name: "33-a-path-that-climbs-out-of-the-project-in-a-repository", pathNeedsGit: true, maskGitWords: true, setup: func(t *testing.T, w *skillsStaleWorld) {
-			w.git(t, "init", "-q", "-b", "main")
+			w.initRepo(t)
 			w.writeProjectFile(t, "present.go", "package golden\n")
 			w.lock(t, lockOf("climbing-skill"))
 			w.skillFiles(t, "climbing-skill", skillText("See `present.go` and `a/../../outside.go`.\n"))
@@ -320,7 +344,7 @@ func skillsStaleCases() []skillsStaleCase {
 			w.observed(t, "climbing-skill", recently)
 		}},
 		{name: "34-a-path-that-climbs-and-comes-back-in-a-repository", pathNeedsGit: true, setup: func(t *testing.T, w *skillsStaleWorld) {
-			w.git(t, "init", "-q", "-b", "main")
+			w.initRepo(t)
 			w.writeProjectFile(t, "removed.go", "package golden\n")
 			w.lock(t, lockOf("detour-skill"))
 			w.skillFiles(t, "detour-skill", skillText("See `a/../removed.go`.\n"))
@@ -331,13 +355,13 @@ func skillsStaleCases() []skillsStaleCase {
 			w.observed(t, "detour-skill", recently)
 		}},
 		{name: "35-a-repository-with-no-commit", pathNeedsGit: true, maskGitWords: true, setup: func(t *testing.T, w *skillsStaleWorld) {
-			w.git(t, "init", "-q", "-b", "main")
+			w.initRepo(t)
 			w.lock(t, lockOf("early-skill"))
 			w.skillFiles(t, "early-skill", skillText("See `lost.go`.\n"))
 			w.observed(t, "early-skill", recently)
 		}},
 		{name: "36-a-removed-path-two-skills-name", pathNeedsGit: true, setup: func(t *testing.T, w *skillsStaleWorld) {
-			w.git(t, "init", "-q", "-b", "main")
+			w.initRepo(t)
 			w.writeProjectFile(t, "removed.go", "package golden\n")
 			w.lock(t, lockOf("first-skill", "second-skill"))
 			w.skillFiles(t, "first-skill", skillText("See `removed.go` and `removed.go` again.\n"))

@@ -3,7 +3,6 @@ package main
 import (
 	"database/sql"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -69,7 +68,7 @@ func where(paths ...string) string {
 // module/promote/writer.go, a path a memory may record without its module.
 func (w *skillsStaleWorld) history(t *testing.T) {
 	t.Helper()
-	w.git(t, "init", "-q", "-b", "main")
+	w.initRepo(t)
 	w.writeProjectFile(t, "kept.go", "package golden\n")
 	w.writeProjectFile(t, "gone.go", "package golden\n// distinctive body of the removed file\n")
 	w.writeProjectFile(t, "moved.go", "package golden\n// distinctive body of the moved file\n")
@@ -82,11 +81,58 @@ func (w *skillsStaleWorld) history(t *testing.T) {
 	w.git(t, "commit", "-q", "-m", "rename a recorded path")
 }
 
-// The goldens print the ids of commits (twelve characters of them), which are the same on every machine only
-// because the world pins everything an id is made of: the identity and the date of author and committer, the
-// messages, the tree and the order. This says so out loud: if the shared harness (git, its environment or the
-// history this builds) changes, this test fails first and names the cause, instead of every golden at once.
-func TestStaleWorld_CommitsHaveTheSameIdsOnEveryMachine(t *testing.T) {
+// The goldens print the ids of commits (twelve characters of them). An id is the SHA-1 of the commit's own text,
+// so it is the same on every machine exactly when that text is: the tree (the files this history writes, in the
+// default object format), the parent, the identity and the date of author and committer, and the message, with
+// nothing added by a signature, an encoding header, a hook that rewrites the message or a configuration of the
+// machine. This test does not look at an id: it checks that the world gives none of those a way in, from the
+// text of the commit and the configuration git sees, and it names the cause when one does. (It skips with the
+// rest when there is no git: newSkillsStaleWorld does.)
+func TestStaleWorld_PinsEverythingACommitIdIsMadeOf(t *testing.T) {
+	w := newSkillsStaleWorld(t, true)
+	w.history(t)
+
+	// No configuration but the repository's own: no system, no global, no include.
+	for _, line := range strings.Split(strings.TrimSpace(w.gitOutput(t, "config", "--list", "--show-origin")), "\n") {
+		if !strings.HasPrefix(line, "file:.git/config\t") {
+			t.Errorf("git sees configuration that is not the repository's own: %q", line)
+		}
+	}
+	// No hooks: a hook (from a template of the machine) could rewrite a message or refuse a commit.
+	if entries, err := os.ReadDir(filepath.Join(w.root, ".git", "hooks")); err == nil && len(entries) != 0 {
+		t.Errorf(".git/hooks holds %d entries: the repository was made with a template of the machine", len(entries))
+	}
+	// The default object format. (Git older than the question cannot be asked, and only has the one.)
+	if format, err := w.tryGitOutput("rev-parse", "--show-object-format"); err == nil && strings.TrimSpace(format) != "sha1" {
+		t.Errorf("object format is %q, want sha1", format)
+	}
+	// The text of every commit: the fixed identity at the fixed instant, and nothing else a machine could add.
+	for _, revision := range []string{"HEAD", "HEAD~1", "HEAD~2"} {
+		text := w.gitOutput(t, "cat-file", "commit", revision)
+		header, message, _ := strings.Cut(text, "\n\n")
+		for _, line := range strings.Split(header, "\n") {
+			switch {
+			case strings.HasPrefix(line, "tree "), strings.HasPrefix(line, "parent "):
+			case line == "author golden <golden@example.com> 1767225600 +0000", line == "committer golden <golden@example.com> 1767225600 +0000":
+			default:
+				t.Errorf("%s: the commit has a header line the world does not pin: %q", revision, line)
+			}
+		}
+		if strings.Count(message, "\n") != 1 {
+			t.Errorf("%s: the message is %q, want one line", revision, message)
+		}
+	}
+}
+
+// The three commits of history() have the ids the goldens name. They are here so that the goldens' ids are not
+// only in the goldens: with the test above passing, a difference here is a change of the history or of the
+// files it writes. To regenerate them after meaning to change either, run
+//
+//	go test ./cmd/longterm-mem -run TestStaleWorld_TheCommitsOfTheHistoryHaveTheIdsTheGoldensName
+//
+// copy the three ids from the failure messages, and rewrite the goldens with -update-retrieval-golden (the
+// short ids they print are the first twelve characters).
+func TestStaleWorld_TheCommitsOfTheHistoryHaveTheIdsTheGoldensName(t *testing.T) {
 	w := newSkillsStaleWorld(t, true)
 	w.history(t)
 
@@ -95,12 +141,8 @@ func TestStaleWorld_CommitsHaveTheSameIdsOnEveryMachine(t *testing.T) {
 		"HEAD~1": "7cc3e33e09a274e807dd309d3a7b27ba8ba84c22", // the removal the goldens name
 		"HEAD":   "b3ad2c8c2bbca4bad9e45bc805a931dfecbd4a16", // the rename the goldens name
 	} {
-		out, err := exec.Command("git", "-C", w.root, "rev-parse", revision).Output()
-		if err != nil {
-			t.Fatalf("git rev-parse %s: %v", revision, err)
-		}
-		if got := strings.TrimSpace(string(out)); got != want {
-			t.Errorf("%s is %s, want %s: the world's commits are no longer the same on every machine", revision, got, want)
+		if got := strings.TrimSpace(w.gitOutput(t, "rev-parse", revision)); got != want {
+			t.Errorf("%s is %s, want %s", revision, got, want)
 		}
 	}
 }
@@ -188,12 +230,12 @@ func staleCases() []staleCase {
 		}},
 		{name: "16-a-project-with-no-memory", setup: func(t *testing.T, w *skillsStaleWorld) { w.history(t) }},
 		{name: "17-a-repository-with-no-commit", setup: func(t *testing.T, w *skillsStaleWorld) {
-			w.git(t, "init", "-q", "-b", "main")
+			w.initRepo(t)
 			w.writeProjectFile(t, "kept.go", "package golden\n")
 			w.memory(t, "names a path the tree does not hold", where("gone.go"), beforeTheCommits, beforeTheCommits)
 		}},
 		{name: "18-a-repository-with-no-commit-and-every-path-in-the-tree", setup: func(t *testing.T, w *skillsStaleWorld) {
-			w.git(t, "init", "-q", "-b", "main")
+			w.initRepo(t)
 			w.writeProjectFile(t, "kept.go", "package golden\n")
 			w.memory(t, "names a path the tree holds", where("kept.go"), beforeTheCommits, beforeTheCommits)
 		}},

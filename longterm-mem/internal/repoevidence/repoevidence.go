@@ -53,9 +53,9 @@ func collect(root string, files *[]string) fs.WalkDirFunc {
 			}
 			return nil
 		}
-		rel, err := filepath.Rel(root, path)
-		if err != nil {
-			return err
+		rel, relErr := filepath.Rel(root, path)
+		if relErr != nil {
+			return relErr
 		}
 		*files = append(*files, filepath.ToSlash(rel))
 		return nil
