@@ -34,17 +34,21 @@
 // .git file points at <repo>/.git/worktrees/<name>, whose commondir file
 // holds the relative "../..". Using either answer raw as a key fragments a
 // repository exactly the way this package exists to prevent, so the common
-// dir is always made absolute, cleaned, and symlink-resolved.
+// dir is always made absolute, cleaned, and symlink-resolved -- by the
+// inspector that locates the repository, which hands the rules a Repository
+// whose paths are already so.
 //
-// No subprocess. Production code in this module may not import os/exec
-// (see exec_allowlist_test.go, R-021), so every fact above is read from
-// the repository's own on-disk metadata rather than from git itself.
+// The rules read the repository through RepositoryInspector, a port they
+// own: where the repository is, the declaration file of its main checkout,
+// and its git configuration. They walk no directory, read no file and run no
+// process; internal/projectidfs answers the port from the metadata git keeps
+// on a disk (it never shells out, R-021), and the composition root hands the
+// rules that adapter.
 package projectid
 
 import (
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -110,168 +114,27 @@ type Identity struct {
 }
 
 // Resolve returns the canonical identity of the project containing dir.
-func Resolve(dir string) (Identity, error) {
-	repo, err := discover(dir)
+func (r Resolver) Resolve(dir string) (Identity, error) {
+	repo, err := r.repositories.Locate(dir)
 	if err != nil {
 		return Identity{}, err
 	}
 
-	if name, ok, err := declared(repo); err != nil {
+	if name, ok, err := r.declared(repo); err != nil {
 		return Identity{}, err
 	} else if ok {
-		return repo.identity(name, RuleDeclared), nil
+		return identityOf(repo, name, RuleDeclared), nil
 	}
 
-	if name, ok := remote(repo.commonDir); ok {
-		return repo.identity(name, RuleRemote), nil
+	if name, ok := r.remote(repo.CommonDir); ok {
+		return identityOf(repo, name, RuleRemote), nil
 	}
 
-	return repo.identity(repo.commonDir, RuleCommonDir), nil
+	return identityOf(repo, repo.CommonDir, RuleCommonDir), nil
 }
 
-// repository is the resolved on-disk shape of one working tree.
-type repository struct {
-	// worktreeRoot is the root of the working tree containing the queried
-	// directory: the main checkout, or one linked worktree.
-	worktreeRoot string
-	// mainWorktreeRoot is the main checkout's root, derived from the
-	// common dir. Empty for a bare repository.
-	mainWorktreeRoot string
-	// commonDir is absolute, cleaned and symlink-resolved.
-	commonDir string
-}
-
-func (r repository) identity(project string, rule Rule) Identity {
-	return Identity{Project: project, Rule: rule, WorktreeRoot: r.worktreeRoot, CommonDir: r.commonDir}
-}
-
-// discover walks up from dir to the nearest .git entry and resolves the
-// working tree root and the git common directory.
-func discover(dir string) (repository, error) {
-	start, err := realDir(dir)
-	if err != nil {
-		return repository{}, err
-	}
-
-	for cur := start; ; {
-		dotGit := filepath.Join(cur, ".git")
-		// os.Stat, not os.Lstat: a `.git` that is a SYMLINK to the real
-		// git directory is a layout git supports, and lstat reports it as
-		// neither a directory nor a regular file. Lstat sent it down the
-		// linked-worktree branch, which parsed a directory for a
-		// "gitdir:" line and failed the repository outright. Following
-		// the link costs nothing here -- the common dir is realpathed
-		// either way -- and a dangling link still falls through to the
-		// IsNotExist walk, exactly as no .git at all does.
-		info, err := os.Stat(dotGit)
-		switch {
-		case err == nil && info.IsDir():
-			// Main checkout: .git is the common dir itself.
-			common, err := canonicalDir(dotGit)
-			if err != nil {
-				return repository{}, err
-			}
-			// The main checkout's root is cur, which is KNOWN here --
-			// not filepath.Dir(common), which merely happens to equal it
-			// while the git directory sits inside the working tree. With
-			// a symlinked or relocated .git it does not, and deriving it
-			// pointed the declared-file read at a directory that is not
-			// the repository at all.
-			return repository{worktreeRoot: cur, mainWorktreeRoot: cur, commonDir: common}, nil
-		case err == nil:
-			// Linked worktree (or a submodule): .git is a file naming the
-			// worktree's own git dir, whose commondir file points back at
-			// the shared one -- relatively, which is the trap.
-			//
-			// Here the main checkout's root can only be DERIVED, as the
-			// parent of the common dir, which is how git presents it too.
-			// A repository whose git directory has been relocated out of
-			// its working tree therefore has no main root a linked
-			// worktree can find; the declared rule then finds no file and
-			// the chain falls through to a derived rule, which still
-			// answers identically from every worktree. Wrong-but-shared
-			// beats right-but-fragmented, and only the declared rule is
-			// lost.
-			common, err := commonDirFromGitFile(dotGit, cur)
-			if err != nil {
-				return repository{}, err
-			}
-			return repository{worktreeRoot: cur, mainWorktreeRoot: filepath.Dir(common), commonDir: common}, nil
-		case !os.IsNotExist(err):
-			return repository{}, fmt.Errorf("projectid: inspecting %s: %w", dotGit, err)
-		}
-
-		parent := filepath.Dir(cur)
-		if parent == cur {
-			return repository{}, fmt.Errorf("%w: %s", ErrNotARepository, start)
-		}
-		cur = parent
-	}
-}
-
-// commonDirFromGitFile reads a linked worktree's .git file and returns the
-// canonical common dir it ultimately points at.
-func commonDirFromGitFile(gitFile, worktreeRoot string) (string, error) {
-	raw, err := os.ReadFile(gitFile)
-	if err != nil {
-		return "", fmt.Errorf("projectid: reading %s: %w", gitFile, err)
-	}
-	line := strings.TrimSpace(string(raw))
-	rest, ok := strings.CutPrefix(line, "gitdir:")
-	if !ok {
-		return "", fmt.Errorf("projectid: %s does not name a git directory: %w", gitFile, ErrNotARepository)
-	}
-	gitDir := strings.TrimSpace(rest)
-	if gitDir == "" {
-		return "", fmt.Errorf("projectid: %s names an empty git directory: %w", gitFile, ErrNotARepository)
-	}
-	if !filepath.IsAbs(gitDir) {
-		gitDir = filepath.Join(worktreeRoot, gitDir)
-	}
-
-	// commondir is git's own pointer back to the shared directory, and it
-	// is written relative to gitDir ("../.."). Joining it and leaving the
-	// ".." segments in place is exactly the fragmenting mistake; canonical
-	// resolution below cleans and realpaths it.
-	commonPointer := filepath.Join(gitDir, "commondir")
-	if raw, err := os.ReadFile(commonPointer); err == nil {
-		target := strings.TrimSpace(string(raw))
-		if target != "" {
-			if !filepath.IsAbs(target) {
-				target = filepath.Join(gitDir, target)
-			}
-			return canonicalDir(target)
-		}
-	} else if !os.IsNotExist(err) {
-		return "", fmt.Errorf("projectid: reading %s: %w", commonPointer, err)
-	}
-
-	// No commondir file: this git dir IS the common dir (a submodule, or a
-	// plain worktree-less .git file).
-	return canonicalDir(gitDir)
-}
-
-// canonicalDir makes p absolute, cleaned and symlink-free. Skipping any one
-// of the three reproduces the measured fragmentation.
-func canonicalDir(p string) (string, error) {
-	abs, err := filepath.Abs(p)
-	if err != nil {
-		return "", fmt.Errorf("projectid: resolving %s: %w", p, err)
-	}
-	real, err := filepath.EvalSymlinks(abs)
-	if err != nil {
-		return "", fmt.Errorf("projectid: resolving %s: %w", abs, err)
-	}
-	return filepath.Clean(real), nil
-}
-
-// realDir canonicalizes the queried directory itself, so a repository
-// reached through a symlinked parent resolves like the real path.
-func realDir(dir string) (string, error) {
-	if dir == "" {
-		dir = "."
-	}
-	return canonicalDir(dir)
+func identityOf(repo Repository, project string, rule Rule) Identity {
+	return Identity{Project: project, Rule: rule, WorktreeRoot: repo.WorktreeRoot, CommonDir: repo.CommonDir}
 }
 
 // declared reads DeclaredFileName from EXACTLY ONE location: the main
@@ -292,37 +155,30 @@ func realDir(dir string) (string, error) {
 // declaration IS fragmentation. When the main checkout's root cannot be
 // located or carries no file, the declaration simply does not exist for this
 // repository, whatever any linked worktree holds, and the chain moves on.
-func declared(repo repository) (string, bool, error) {
-	root := repo.mainWorktreeRoot
+func (r Resolver) declared(repo Repository) (string, bool, error) {
+	root := repo.MainWorktreeRoot
 	if root == "" {
-		root = repo.worktreeRoot
+		root = repo.WorktreeRoot
 	}
 
-	path := filepath.Join(root, DeclaredFileName)
-	raw, err := os.ReadFile(path)
-	if os.IsNotExist(err) {
-		return "", false, nil
-	}
-	if err != nil {
-		return "", false, fmt.Errorf("projectid: reading %s: %w", path, err)
+	text, found, err := r.repositories.DeclaredProject(root)
+	if err != nil || !found {
+		return "", false, err
 	}
 
-	name := strings.TrimSpace(string(raw))
+	name := strings.TrimSpace(text)
 	if name == "" || strings.ContainsAny(name, "\n\r") {
-		return "", false, fmt.Errorf("%w: %s", ErrDeclaredInvalid, path)
+		return "", false, fmt.Errorf("%w: %s", ErrDeclaredInvalid, filepath.Join(root, DeclaredFileName))
 	}
 	return name, true, nil
 }
 
 // remote reads origin's URL out of the common dir's config and normalizes
-// it. The file is read here, because this module may not shell out (R-021);
-// what the text means is the identity module's rule, shared with the engine.
-func remote(commonDir string) (string, bool) {
-	raw, err := os.ReadFile(filepath.Join(commonDir, "config"))
-	if err != nil {
-		return "", false
-	}
-	return identity.OriginRemote(string(raw))
+// it. The text is the inspector's, because this module may not shell out
+// (R-021); what the text means is the identity module's rule, shared with
+// the engine.
+func (r Resolver) remote(commonDir string) (string, bool) {
+	return identity.OriginRemote(r.repositories.GitConfig(commonDir))
 }
 
 // Correspondence is the result of checking a caller-supplied project name
@@ -347,8 +203,8 @@ type Correspondence struct {
 // too. Without that, every command run in a repository with no declared
 // file would warn, and a warning that fires on every correct call teaches
 // operators to stop reading warnings, which costs more than it catches.
-func CheckCorrespondence(dir, given string) (Correspondence, error) {
-	id, err := Resolve(dir)
+func (r Resolver) CheckCorrespondence(dir, given string) (Correspondence, error) {
+	id, err := r.Resolve(dir)
 	if err != nil {
 		return Correspondence{}, err
 	}

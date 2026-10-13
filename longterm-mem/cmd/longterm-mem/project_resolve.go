@@ -88,7 +88,7 @@ func resolveProjectFlagWith(cmd, given string, policy ledgerPolicy) (string, int
 		// --project into a failure.
 		return given, exitOK
 	}
-	c, err := projectid.CheckCorrespondence(wd, given)
+	c, err := identityRules().CheckCorrespondence(wd, given)
 	if err != nil {
 		if !errors.Is(err, projectid.ErrNotARepository) {
 			fmt.Fprintf(os.Stderr, "WARN %s: could not check --project against the working directory: %v\n", cmd, err)
@@ -170,7 +170,7 @@ func adoptFromWorkingDirectory(policy ledgerPolicy) (projectid.Adoption, []strin
 	remembered, commonDir, ledgerNotes := rememberedNames(wd)
 	notes = append(notes, ledgerNotes...)
 
-	a, err := projectid.AdoptWith(wd, projectid.AdoptOptions{
+	a, err := identityRules().AdoptWith(wd, projectid.AdoptOptions{
 		Established: stores.lookup,
 		Remembered:  remembered,
 	})
@@ -193,7 +193,7 @@ func adoptFromWorkingDirectory(policy ledgerPolicy) (projectid.Adoption, []strin
 // bind this one to another project's memory -- see projectid.DerivedName's
 // Strict field for why the visible failure is the better trade.
 func rememberedNames(wd string) ([]string, string, []string) {
-	commonDir, err := projectid.CommonDir(wd)
+	commonDir, err := identityRules().CommonDir(wd)
 	if err != nil {
 		// Not a repository, or unreadable metadata. AdoptWith is about to
 		// report that far more precisely than this path could.

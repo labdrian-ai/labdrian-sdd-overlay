@@ -1,4 +1,4 @@
-package projectid_test
+package projectidfs_test
 
 import (
 	"errors"
@@ -10,6 +10,7 @@ import (
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/identity"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/projectid"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/projectidfs"
 )
 
 // Every test here builds its own throwaway repositories under t.TempDir()
@@ -62,9 +63,13 @@ func write(t *testing.T, path, content string) {
 	}
 }
 
+// resolver is the identity rules reading real repositories, which is what these cases are about: the rules
+// themselves are tested over a table in internal/projectid.
+func resolver() projectid.Resolver { return projectid.NewResolver(projectidfs.Inspector{}) }
+
 func resolve(t *testing.T, dir string) projectid.Identity {
 	t.Helper()
-	id, err := projectid.Resolve(dir)
+	id, err := resolver().Resolve(dir)
 	if err != nil {
 		t.Fatalf("Resolve(%s): unexpected error: %v", dir, err)
 	}
@@ -313,7 +318,7 @@ func TestResolve_DeclaredGarbageIsRejected(t *testing.T) {
 			git(t, repo, "remote", "add", "origin", "https://github.com/acme/widgets.git")
 			write(t, filepath.Join(repo, projectid.DeclaredFileName), content)
 
-			id, err := projectid.Resolve(repo)
+			id, err := resolver().Resolve(repo)
 			if !errors.Is(err, projectid.ErrDeclaredInvalid) {
 				t.Fatalf("Resolve with declared content %q = (%+v, %v), want ErrDeclaredInvalid -- a broken declaration must be reported, not silently skipped", content, id, err)
 			}
@@ -347,7 +352,7 @@ func TestResolve_DifferentRepositoriesDiffer(t *testing.T) {
 
 func TestResolve_NotARepository(t *testing.T) {
 	dir := t.TempDir()
-	id, err := projectid.Resolve(dir)
+	id, err := resolver().Resolve(dir)
 	if !errors.Is(err, projectid.ErrNotARepository) {
 		t.Fatalf("Resolve(%s) = (%+v, %v), want ErrNotARepository", dir, id, err)
 	}
@@ -358,7 +363,7 @@ func TestResolve_NotARepository(t *testing.T) {
 
 func TestResolve_MissingDirectoryIsNamedFailure(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "does-not-exist")
-	if _, err := projectid.Resolve(dir); err == nil {
+	if _, err := resolver().Resolve(dir); err == nil {
 		t.Fatal("Resolve on a nonexistent directory returned no error")
 	}
 }
@@ -371,7 +376,7 @@ func TestCheckCorrespondence(t *testing.T) {
 	write(t, filepath.Join(repo, projectid.DeclaredFileName), "acme-widgets")
 
 	t.Run("matching project is silent", func(t *testing.T) {
-		c, err := projectid.CheckCorrespondence(repo, "acme-widgets")
+		c, err := resolver().CheckCorrespondence(repo, "acme-widgets")
 		if err != nil {
 			t.Fatalf("CheckCorrespondence: %v", err)
 		}
@@ -384,7 +389,7 @@ func TestCheckCorrespondence(t *testing.T) {
 	})
 
 	t.Run("mismatching project warns and names both", func(t *testing.T) {
-		c, err := projectid.CheckCorrespondence(repo, "some-other-project")
+		c, err := resolver().CheckCorrespondence(repo, "some-other-project")
 		if err != nil {
 			t.Fatalf("CheckCorrespondence: %v", err)
 		}
@@ -398,7 +403,7 @@ func TestCheckCorrespondence(t *testing.T) {
 	})
 
 	t.Run("outside a repository there is nothing to check", func(t *testing.T) {
-		_, err := projectid.CheckCorrespondence(t.TempDir(), "whatever")
+		_, err := resolver().CheckCorrespondence(t.TempDir(), "whatever")
 		if !errors.Is(err, projectid.ErrNotARepository) {
 			t.Fatalf("CheckCorrespondence outside a repository = %v, want ErrNotARepository", err)
 		}
@@ -409,14 +414,14 @@ func TestCheckCorrespondence(t *testing.T) {
 		// operator types. Warning on every such call would be pure
 		// noise, so the repository's own name counts as corresponding.
 		plain := newRepo(t, tmp, "plain-repo")
-		c, err := projectid.CheckCorrespondence(plain, "plain-repo")
+		c, err := resolver().CheckCorrespondence(plain, "plain-repo")
 		if err != nil {
 			t.Fatalf("CheckCorrespondence: %v", err)
 		}
 		if !c.Match {
 			t.Fatalf("--project plain-repo mismatched its own repository, canonical %q via %q", c.Canonical.Project, c.Canonical.Rule)
 		}
-		c, err = projectid.CheckCorrespondence(plain, "unrelated")
+		c, err = resolver().CheckCorrespondence(plain, "unrelated")
 		if err != nil {
 			t.Fatalf("CheckCorrespondence: %v", err)
 		}

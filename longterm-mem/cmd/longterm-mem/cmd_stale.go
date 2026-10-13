@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/projectid"
+
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/repoevidence"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/staleness"
 )
@@ -37,7 +37,7 @@ func cmdStale(args []string) int {
 		fmt.Fprintf(os.Stderr, "longterm-mem: stale: reading the working directory: %v\n", err)
 		return exitUsage
 	}
-	id, err := projectid.Resolve(wd)
+	id, err := identityRules().Resolve(wd)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "longterm-mem: stale: %v\n", err)
 		return exitUsage

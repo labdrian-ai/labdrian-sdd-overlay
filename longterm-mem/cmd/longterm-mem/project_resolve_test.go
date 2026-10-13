@@ -319,7 +319,7 @@ func TestIdentityLedger_IsSharedByEveryWorktree(t *testing.T) {
 	worktree := filepath.Join(parent, "feature")
 	runGit(t, main, "worktree", "add", "-q", "-b", "feature", worktree)
 
-	commonFromWorktree, err := projectid.CommonDir(worktree)
+	commonFromWorktree, err := identityRules().CommonDir(worktree)
 	if err != nil {
 		t.Fatalf("CommonDir(worktree): %v", err)
 	}

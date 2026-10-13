@@ -1,4 +1,4 @@
-package projectid_test
+package projectidfs_test
 
 import (
 	"encoding/json"

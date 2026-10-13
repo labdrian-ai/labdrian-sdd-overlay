@@ -64,12 +64,12 @@ type AdoptOptions struct {
 // so it cannot merge two repositories whose names happen to resemble each
 // other, which is the one mistake this package must never make. What it
 // cannot prove, it reports.
-func AdoptWith(dir string, opts AdoptOptions) (Adoption, error) {
-	repo, err := discover(dir)
+func (r Resolver) AdoptWith(dir string, opts AdoptOptions) (Adoption, error) {
+	repo, err := r.repositories.Locate(dir)
 	if err != nil {
 		return Adoption{}, err
 	}
-	derived, err := derivableNames(repo)
+	derived, err := r.derivableNames(repo)
 	if err != nil {
 		return Adoption{}, err
 	}
@@ -98,12 +98,12 @@ func AdoptWith(dir string, opts AdoptOptions) (Adoption, error) {
 			return Adoption{}, fmt.Errorf("projectid: checking whether %q already holds memory: %w", n.Name, err)
 		}
 		if ok {
-			found = append(found, repo.identity(n.Name, n.Rule))
+			found = append(found, identityOf(repo, n.Name, n.Rule))
 		}
 	}
 
 	if len(found) == 0 {
-		id, err := Resolve(dir)
+		id, err := r.Resolve(dir)
 		if err != nil {
 			return Adoption{}, err
 		}
@@ -138,12 +138,12 @@ type DerivedName struct {
 // dir's repository: the one directory a main checkout and every linked
 // worktree share, and the only sane place to keep a record that belongs to
 // the repository rather than to one checkout of it.
-func CommonDir(dir string) (string, error) {
-	repo, err := discover(dir)
+func (r Resolver) CommonDir(dir string) (string, error) {
+	repo, err := r.repositories.Locate(dir)
 	if err != nil {
 		return "", err
 	}
-	return repo.commonDir, nil
+	return repo.CommonDir, nil
 }
 
 // derivableNames lists every name this repository derives, in the order
@@ -157,7 +157,7 @@ func CommonDir(dir string) (string, error) {
 // ever type, so the name the memory actually lives under is far more often
 // the plain one. Leaving them out would make adoption miss the only case it
 // exists for.
-func derivableNames(repo repository) ([]DerivedName, error) {
+func (r Resolver) derivableNames(repo Repository) ([]DerivedName, error) {
 	var names []DerivedName
 	seen := map[string]bool{}
 	add := func(name string, rule Rule, strict bool) {
@@ -168,7 +168,7 @@ func derivableNames(repo repository) ([]DerivedName, error) {
 		names = append(names, DerivedName{Name: name, Rule: rule, Strict: strict})
 	}
 
-	declaredName, ok, err := declared(repo)
+	declaredName, ok, err := r.declared(repo)
 	if err != nil {
 		return nil, err
 	}
@@ -176,12 +176,12 @@ func derivableNames(repo repository) ([]DerivedName, error) {
 		add(declaredName, RuleDeclared, true)
 	}
 
-	if remoteName, ok := remote(repo.commonDir); ok {
+	if remoteName, ok := r.remote(repo.CommonDir); ok {
 		add(remoteName, RuleRemote, true)
 		add(lastSegment(remoteName), RuleRemote, false)
 	}
 
-	commonDirID := repo.identity(repo.commonDir, RuleCommonDir)
+	commonDirID := identityOf(repo, repo.CommonDir, RuleCommonDir)
 	for i, n := range correspondingNames(commonDirID) {
 		// correspondingNames puts the strict identity -- the absolute
 		// common-dir path -- first, and the loose directory name after it.
