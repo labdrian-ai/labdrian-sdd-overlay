@@ -141,6 +141,41 @@ func TestResolveProjectFlag_CorrespondenceCheck(t *testing.T) {
 	})
 }
 
+// A working directory that cannot be read (it was removed under the process) is the end of an omitted --project,
+// which has nothing to resolve from, and no matter at all to an explicit one: the correspondence check is a
+// diagnostic, never a gate.
+func TestResolveProjectFlag_AnUnreadableWorkingDirectory(t *testing.T) {
+	isolatedStores(t)
+	gone := t.TempDir()
+	t.Chdir(gone)
+	if err := os.Remove(gone); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Getwd(); err == nil {
+		t.Skip("this system still reads the working directory after it is removed")
+	}
+
+	var project string
+	var exit int
+	stderr := captureStderr(t, func() { project, exit = identityCommands().resolveProjectFlag("query", "chosen") })
+	if project != "chosen" || exit != exitOK || stderr != "" {
+		t.Errorf("an explicit --project = %q, %d, %q; want it kept, exit %d and silence", project, exit, stderr, exitOK)
+	}
+
+	stderr = captureStderr(t, func() { project, exit = identityCommands().resolveProjectFlag("query", "") })
+	if project != "" || exit != exitUsage || !strings.Contains(stderr, "--project is required") || !strings.Contains(stderr, "reading the working directory") {
+		t.Errorf("an omitted --project = %q, %d, %q; want a refusal that says the working directory could not be read", project, exit, stderr)
+	}
+}
+
+// isolatedStores names the two stores a command consults when told nothing, so a case that resolves a project
+// reads nothing of the machine's.
+func isolatedStores(t *testing.T) {
+	t.Helper()
+	t.Setenv(engramDBEnvVar, filepath.Join(t.TempDir(), "absent.db"))
+	t.Setenv(vaultsFileEnvVar, writeVaults(t))
+}
+
 // TestCommands_ProjectFlagIsOptional walks every subcommand that takes
 // --project and proves the flag is no longer mandatory: run from inside a
 // repository with no --project, each one gets past its own usage check and

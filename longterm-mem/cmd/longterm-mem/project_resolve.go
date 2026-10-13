@@ -59,32 +59,43 @@ func (c commands) resolveProjectFlagReadOnly(cmd, given string) (string, int) {
 }
 
 func (c commands) resolveProjectFlagWith(cmd, given string, policy adoption.RecordPolicy) (string, int) {
-	wd, err := os.Getwd()
 	if given == "" {
-		if err != nil {
-			return refuseUnresolved(cmd, fmt.Errorf("reading the working directory: %w", err))
-		}
-		// Adoption runs only on this path, where longterm-mem is choosing the name itself. An explicit
-		// --project is the operator choosing it, and there the correspondence warning below already says when
-		// that choice disagrees with the directory.
-		//
-		// This seam exists for the CLI and only for the CLI. Do NOT reach for it from internal/mcpserver to
-		// default or validate an MCP tool's project field: the MCP server is launched by a runtime (an editor,
-		// an agent host) whose working directory has no relationship to the project a given call is asking
-		// about, so adopting from its cwd would bind observations to wherever the host happened to start -- the
-		// exact misattribution this whole mechanism exists to prevent.
-		adopted, notes, err := c.adoption().Adopt(wd, policy)
-		if err != nil {
-			return refuseUnresolved(cmd, err)
-		}
-		reportAdoption(cmd, adopted, notes)
-		return adopted.Identity.Project, exitOK
+		return c.adoptProject(cmd, policy)
 	}
+	return checkGivenProject(cmd, given)
+}
 
+// adoptProject is the project of a command that was given none: resolved from the working directory, with what
+// is already stored deciding which of the names the repository derives is used.
+//
+// Adoption runs only on this path, where longterm-mem is choosing the name itself. An explicit --project is the
+// operator choosing it, and there the correspondence warning (checkGivenProject) already says when that choice
+// disagrees with the directory.
+//
+// This seam exists for the CLI and only for the CLI. Do NOT reach for it from internal/mcpserver to default or
+// validate an MCP tool's project field: the MCP server is launched by a runtime (an editor, an agent host) whose
+// working directory has no relationship to the project a given call is asking about, so adopting from its cwd
+// would bind observations to wherever the host happened to start -- the exact misattribution this whole
+// mechanism exists to prevent.
+func (c commands) adoptProject(cmd string, policy adoption.RecordPolicy) (string, int) {
+	wd, err := os.Getwd()
 	if err != nil {
-		// The correspondence check is a diagnostic, never a gate: an
-		// unreadable working directory must not turn an explicit
-		// --project into a failure.
+		return refuseUnresolved(cmd, fmt.Errorf("reading the working directory: %w", err))
+	}
+	adopted, notes, err := c.adoption().Adopt(wd, policy)
+	if err != nil {
+		return refuseUnresolved(cmd, err)
+	}
+	reportAdoption(cmd, adopted, notes)
+	return adopted.Identity.Project, exitOK
+}
+
+// checkGivenProject keeps the project the operator named and warns when the working directory's repository
+// resolves to another. The check is a diagnostic, never a gate: an unreadable working directory must not turn an
+// explicit --project into a failure.
+func checkGivenProject(cmd, given string) (string, int) {
+	wd, err := os.Getwd()
+	if err != nil {
 		return given, exitOK
 	}
 	check, err := identityRules().CheckCorrespondence(wd, given)
