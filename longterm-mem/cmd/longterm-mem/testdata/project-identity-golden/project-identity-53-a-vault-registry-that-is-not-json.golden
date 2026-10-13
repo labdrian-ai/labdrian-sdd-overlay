@@ -1,0 +1,43 @@
+args: stale
+exit: 0
+--- stdout ---
+longterm-mem: stale: 0 observations in github.com/acme/widgets, checked against <project>
+  nothing this repository disagrees with
+--- stderr ---
+longterm-mem: stale: --project not given, resolved "github.com/acme/widgets" from the working directory (via the remote rule)
+WARN stale: the vault registry could not be read (vaultreg: parse <home>/.labdrian-overlay/vaults.json: <json syntax error>), so an identity the memory already uses may have been missed
+--- ledger ---
+{
+  "schema": "longterm-mem.identity-ledger/v1",
+  "revision": "<digest>",
+  "entries": [
+    {
+      "name": "<project>/.git",
+      "rule": "common_dir",
+      "adoptable": true,
+      "first_seen": "<run>",
+      "last_seen": "<run>"
+    },
+    {
+      "name": "checkout",
+      "rule": "common_dir",
+      "adoptable": false,
+      "first_seen": "<run>",
+      "last_seen": "<run>"
+    },
+    {
+      "name": "github.com/acme/widgets",
+      "rule": "remote",
+      "adoptable": true,
+      "first_seen": "<run>",
+      "last_seen": "<run>"
+    },
+    {
+      "name": "widgets",
+      "rule": "remote",
+      "adoptable": false,
+      "first_seen": "<run>",
+      "last_seen": "<run>"
+    }
+  ]
+}

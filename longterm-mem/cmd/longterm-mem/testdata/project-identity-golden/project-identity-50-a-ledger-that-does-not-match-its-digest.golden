@@ -1,0 +1,23 @@
+args: stale
+exit: 0
+--- stdout ---
+longterm-mem: stale: 0 observations in github.com/acme/widgets, checked against <project>
+  nothing this repository disagrees with
+--- stderr ---
+longterm-mem: stale: --project not given, resolved "github.com/acme/widgets" from the working directory (via the remote rule)
+WARN stale: this repository's identity ledger could not be read (identityledger: ledger does not match its own digest: <project>/.git/longterm-mem/identity-ledger.json carries sha256:9b6c819bfa35e2351019bf3ddad651c8f1ed2116a1a665aaa9f0425651490ffe but its entries digest to sha256:b185e00dbd8980a3100baa0db636035ed61a29812eced43bfcc1c406bcae3a06), so an identity the memory already uses may have been missed
+WARN stale: this repository's identity ledger could not be written (identityledger: ledger does not match its own digest: <project>/.git/longterm-mem/identity-ledger.json carries sha256:9b6c819bfa35e2351019bf3ddad651c8f1ed2116a1a665aaa9f0425651490ffe but its entries digest to sha256:b185e00dbd8980a3100baa0db636035ed61a29812eced43bfcc1c406bcae3a06), so an identity the memory already uses may have been missed
+--- ledger ---
+{
+  "schema": "longterm-mem.identity-ledger/v1",
+  "revision": "<digest>",
+  "entries": [
+    {
+      "name": "tampered-name",
+      "rule": "declared",
+      "adoptable": true,
+      "first_seen": "2020-01-01T00:00:00Z",
+      "last_seen": "2020-01-01T00:00:00Z"
+    }
+  ]
+}

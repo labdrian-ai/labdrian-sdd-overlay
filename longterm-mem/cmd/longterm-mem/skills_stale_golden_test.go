@@ -161,8 +161,13 @@ const worldInstant = "2026-01-01T00:00:00Z"
 // git ignores them and finds the user's file under HOME, which is the world's own empty directory. Drop one
 // and a version of git reads the machine's configuration.
 func (w *skillsStaleWorld) tryGitOutput(args ...string) (string, error) {
+	return w.tryGitOutputIn(w.root, args...)
+}
+
+// tryGitOutputIn is tryGitOutput run in dir instead of the project root.
+func (w *skillsStaleWorld) tryGitOutputIn(dir string, args ...string) (string, error) {
 	command := exec.Command("git", args...)
-	command.Dir = w.root
+	command.Dir = dir
 	command.Env = []string{
 		"PATH=" + os.Getenv("PATH"), "HOME=" + w.home,
 		"GIT_CONFIG_NOSYSTEM=1", "GIT_CONFIG_GLOBAL=/dev/null", "GIT_CONFIG_SYSTEM=/dev/null",

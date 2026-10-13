@@ -1,0 +1,45 @@
+args: status
+exit: 0
+--- stdout ---
+longterm-mem: status for widgets
+  engram: reachable=true
+  vault: provisioned=false
+  last sync: never
+  embedding index built at: never
+--- stderr ---
+longterm-mem: status: --project not given, adopted "widgets" from the working directory (the memory already lives under this name; derived via the remote rule)
+--- ledger ---
+{
+  "schema": "longterm-mem.identity-ledger/v1",
+  "revision": "<digest>",
+  "entries": [
+    {
+      "name": "<project>/.git",
+      "rule": "common_dir",
+      "adoptable": true,
+      "first_seen": "<run>",
+      "last_seen": "<run>"
+    },
+    {
+      "name": "checkout",
+      "rule": "common_dir",
+      "adoptable": false,
+      "first_seen": "<run>",
+      "last_seen": "<run>"
+    },
+    {
+      "name": "github.com/acme/widgets",
+      "rule": "remote",
+      "adoptable": true,
+      "first_seen": "<run>",
+      "last_seen": "<run>"
+    },
+    {
+      "name": "widgets",
+      "rule": "remote",
+      "adoptable": false,
+      "first_seen": "<run>",
+      "last_seen": "<run>"
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+args: stale --project somebody-elses
+exit: 0
+--- stdout ---
+longterm-mem: stale: 0 observations in somebody-elses, checked against <project>
+  nothing this repository disagrees with
+--- stderr ---
+WARN stale: --project somebody-elses does not correspond to this directory's project, which resolves to "declared-widgets" (via the declared rule); proceeding as asked, but if this was not deliberate the memory you write lands in a project that will never be searched back
+--- ledger ---
+no ledger

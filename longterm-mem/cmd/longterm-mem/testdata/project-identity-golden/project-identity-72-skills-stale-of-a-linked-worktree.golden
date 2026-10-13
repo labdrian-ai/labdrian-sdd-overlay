@@ -1,0 +1,9 @@
+args: skills-stale --project-root <outside>/wt
+exit: 0
+--- stdout ---
+longterm-mem: skills-stale: checked <outside>/wt for project github.com/acme/widgets
+  nothing stale was found
+  Nothing was changed. Review this report before making a separate retirement decision.
+--- stderr ---
+--- ledger ---
+no ledger

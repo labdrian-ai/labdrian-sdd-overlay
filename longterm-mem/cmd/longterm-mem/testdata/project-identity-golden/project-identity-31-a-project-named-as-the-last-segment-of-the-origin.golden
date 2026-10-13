@@ -1,0 +1,8 @@
+args: stale --project widgets
+exit: 0
+--- stdout ---
+longterm-mem: stale: 0 observations in widgets, checked against <project>
+  nothing this repository disagrees with
+--- stderr ---
+--- ledger ---
+no ledger
