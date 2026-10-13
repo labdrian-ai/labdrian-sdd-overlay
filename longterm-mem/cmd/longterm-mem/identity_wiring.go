@@ -10,6 +10,10 @@ import (
 // identityRules are the project identity rules reading the repositories on this machine's file system: the
 // rules own the port they read through (projectid.RepositoryInspector) and projectidfs is what answers it. This
 // is where the program meets the disk for them, and the only place that names the adapter.
+//
+// It builds the resolver on every call and keeps none: the inspector holds nothing (every question is answered
+// from the disk as it is when asked), so construction costs nothing and there is no instance to share or to
+// get stale between two calls of one command.
 func identityRules() projectid.Resolver {
 	return projectid.NewResolver(projectidfs.Inspector{})
 }

@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
-
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/repoevidence"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/staleness"
 )
