@@ -24,7 +24,11 @@
 //   - a rename is reported as MOVED, never removed (the history behind
 //     RepoEvidence asks git in the one way that can tell them apart);
 //   - a path this repository never had is ignored, because this repository
-//     has nothing to say about it.
+//     has nothing to say about it;
+//   - a path that climbs out of the project ("a/../../outside.go") is
+//     unknown without a question to the history, because the repository
+//     has nothing to say about a place outside it and git would refuse the
+//     question, failing the whole report for one odd path.
 //
 // The rule itself is a comparison, not a judgement about meaning: a memory
 // is stale when a path it names was deleted AFTER the memory was last
@@ -43,6 +47,7 @@
 package staleness
 
 import (
+	"path"
 	"regexp"
 	"sort"
 	"strings"
@@ -191,15 +196,21 @@ func ClassifyPaths(evidence RepoEvidence, paths []string) (map[string]PathFact, 
 
 	facts := make(map[string]PathFact, len(paths))
 	unresolved := make(map[string]bool)
-	for _, path := range paths {
-		if _, seen := facts[path]; seen {
+	for _, recorded := range paths {
+		if _, seen := facts[recorded]; seen {
 			continue
 		}
-		if tree.holds(path) {
-			facts[path] = PathFact{Path: path, State: PathPresent}
+		// Before the tree, and never a question of the history: the repository has nothing to say about a place
+		// outside the project, and a history that is asked refuses it, taking the whole report with it.
+		if climbsOutOfTheProject(recorded) {
+			facts[recorded] = PathFact{Path: recorded, State: PathUnknown}
 			continue
 		}
-		unresolved[path] = true
+		if tree.holds(recorded) {
+			facts[recorded] = PathFact{Path: recorded, State: PathPresent}
+			continue
+		}
+		unresolved[recorded] = true
 	}
 	if len(unresolved) == 0 {
 		return facts, nil
@@ -209,10 +220,22 @@ func ClassifyPaths(evidence RepoEvidence, paths []string) (map[string]PathFact, 
 	if err != nil {
 		return nil, err
 	}
-	for path, fact := range history {
-		facts[path] = fact
+	for recorded, fact := range history {
+		facts[recorded] = fact
 	}
 	return facts, nil
+}
+
+// climbsOutOfTheProject says whether a recorded path, once its detours are taken out ("a/../b" is "b"), leads to
+// a place above the project's root. The strict pattern of the detectors admits a climb in the middle of a path
+// ("a/../../outside.go"), so it is a path they can name. A detour that stays inside the project does not climb,
+// and neither does a name that merely begins with dots ("..hidden/x.go").
+//
+// Owner's decision of 2026-10-13: such a path is unknown. Before it, the history was asked, git refused it, and
+// the refusal was the answer for the whole report, which then printed nothing.
+func climbsOutOfTheProject(recorded string) bool {
+	cleaned := path.Clean(recorded)
+	return cleaned == ".." || strings.HasPrefix(cleaned, "../")
 }
 
 // Detect reports which of observations the repository disagrees with.

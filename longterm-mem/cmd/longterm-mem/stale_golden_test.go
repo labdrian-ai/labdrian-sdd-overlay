@@ -17,8 +17,9 @@ import (
 // paths a memory names and what the repository says of them: a path removed after the memory was written, one
 // removed before (or at the instant) and so recorded by it, one renamed, one the repository never held, one
 // recorded under another root of the tree, several memories and several paths in one, the layouts of the time a
-// memory carries and the memory whose time cannot be read, the shapes of a path that the pattern admits and the
-// history refuses, and the directories that are no repository, have no commit or cannot be walked. They were
+// memory carries and the memory whose time cannot be read, the shapes of a path that the pattern admits (a path
+// that climbs out of the project is unknown and the rest of the report prints: the owner's decision of
+// 2026-10-13, which re-recorded goldens 13 here and 33 of skills-stale), and the directories that are no repository, have no commit or cannot be walked. They were
 // recorded from the program as it stood before the detector took the repository's evidence (the working tree and
 // its history) as a port of its own (Phase 9, L6), and that change must not alter one byte of them.
 //
@@ -364,6 +365,11 @@ func staleCases() []staleCase {
 				w.history(t)
 				w.memory(t, "how gone.go works", where("gone.go"), beforeTheCommits, beforeTheCommits)
 			}},
+		{name: "22-a-path-that-climbs-out-beside-paths-the-repository-has-a-word-for", setup: func(t *testing.T, w *skillsStaleWorld) {
+			w.history(t)
+			w.memory(t, "names a climb, a removed file and a moved one", where("a/../../outside.go", "gone.go", "moved.go", "kept.go"), beforeTheCommits, beforeTheCommits)
+			w.memory(t, "names only a climb", where("../../elsewhere.go"), beforeTheCommits, beforeTheCommits)
+		}},
 	}
 }
 

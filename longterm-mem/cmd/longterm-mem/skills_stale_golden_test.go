@@ -388,6 +388,17 @@ func skillsStaleCases() []skillsStaleCase {
 			w.skillFiles(t, "plain-skill", skillText("See `docs/guide.md` and `guide.md`.\n"))
 			w.observed(t, "plain-skill", recently)
 		}},
+		{name: "38-a-path-that-climbs-out-beside-a-removed-one", pathNeedsGit: true, setup: func(t *testing.T, w *skillsStaleWorld) {
+			w.initRepo(t)
+			w.writeProjectFile(t, "removed.go", "package golden\n")
+			w.lock(t, lockOf("climbing-skill"))
+			w.skillFiles(t, "climbing-skill", skillText("See `a/../../outside.go`, `removed.go` and `../../elsewhere.go`.\n"))
+			w.git(t, "add", "-A")
+			w.git(t, "commit", "-q", "-m", "initial")
+			w.git(t, "rm", "-q", "removed.go")
+			w.git(t, "commit", "-q", "-m", "remove a recorded path")
+			w.observed(t, "climbing-skill", recently)
+		}},
 	}
 }
 

@@ -347,20 +347,42 @@ func TestPathFacts_AnswersEveryPathUnderTheTextItWasAskedBy(t *testing.T) {
 	}
 }
 
-// A path outside the project, absolute or climbing out of it, is not a question the history can answer: it
-// refuses it, as an error of its own, and the adapter returns that error and no facts, not a guess for the path
-// and not a fact for the others.
-func TestPathFacts_RefusesAPathOutsideTheProjectAndAnswersNothing(t *testing.T) {
+// An absolute path outside the project is not a question the history can answer: it refuses it, as an error of
+// its own, and the adapter returns that error and no facts, not a guess for the path and not a fact for the
+// others. (A path that climbs out of the project is not asked at all: it is unknown, the next test.)
+func TestPathFacts_RefusesAnAbsolutePathOutsideTheProjectAndAnswersNothing(t *testing.T) {
 	root, project := projectIn(t)
 	gitIn(t, root, "init", "-q", "-b", "main")
 	writeProjectFile(t, root, "present.go", "package fixture\n")
 	gitIn(t, root, "add", "-A")
 	gitIn(t, root, "commit", "-q", "-m", "initial")
-	for _, outside := range []string{filepath.Join(filepath.Dir(root), "beside-the-project.go"), "../beside-the-project.go"} {
-		facts, err := project.PathFacts([]string{"present.go", outside})
+	outside := filepath.Join(filepath.Dir(root), "beside-the-project.go")
 
-		if err == nil || facts != nil {
-			t.Errorf("PathFacts(present.go, %q) = %v, %v; want the history's refusal and no facts", outside, facts, err)
+	facts, err := project.PathFacts([]string{"present.go", outside})
+
+	if err == nil || facts != nil {
+		t.Errorf("PathFacts(present.go, %q) = %v, %v; want the history's refusal and no facts", outside, facts, err)
+	}
+}
+
+// A path that climbs out of the project is unknown (the owner's decision of 2026-10-13), and the facts of the
+// other paths come back with it.
+func TestPathFacts_AClimbingPathIsUnknownAndTheOthersAreAnswered(t *testing.T) {
+	root, project := projectIn(t)
+	gitIn(t, root, "init", "-q", "-b", "main")
+	writeProjectFile(t, root, "present.go", "package fixture\n")
+	gitIn(t, root, "add", "-A")
+	gitIn(t, root, "commit", "-q", "-m", "initial")
+
+	for _, climbing := range []string{"../beside-the-project.go", "a/../../outside.go"} {
+		facts, err := project.PathFacts([]string{"present.go", climbing})
+
+		if err != nil {
+			t.Errorf("PathFacts(present.go, %q): %v; want the climbing path unknown", climbing, err)
+			continue
+		}
+		if facts["present.go"].State != skillstale.PathPresent || facts[climbing].State != skillstale.PathUnknown || len(facts) != 2 {
+			t.Errorf("PathFacts(present.go, %q) = %+v, want present and unknown", climbing, facts)
 		}
 	}
 }
