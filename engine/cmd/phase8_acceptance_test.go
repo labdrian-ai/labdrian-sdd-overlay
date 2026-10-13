@@ -546,11 +546,11 @@ func phase8ProceduralDraft(activation string) string {
 // type moving between the package's files does not lose them.
 func phase8DetectorLockKeys(t *testing.T) (top, entry map[string]bool) {
 	t.Helper()
-	top, entry, err := phase8LockKeysIn(filepath.Join("..", "..", "longterm-mem", "internal", "skillstale"))
+	topKeys, entryKeys, err := phase8LockKeysIn(filepath.Join("..", "..", "longterm-mem", "internal", "skillstale"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	return top, entry
+	return topKeys, entryKeys
 }
 
 // phase8LockKeysIn is the reading behind phase8DetectorLockKeys, over the package in src. It refuses a

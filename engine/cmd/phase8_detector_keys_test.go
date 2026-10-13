@@ -20,11 +20,18 @@ func writeDetectorSources(t *testing.T, files map[string]string) string {
 	return dir
 }
 
-const detectorLockSource = "package p\n\n" +
-	"type ProjectLock struct {\n\tVersion int `json:\"version\"`\n\tSkills []int `json:\"skills\"`\n}\n"
+// detectorHeader opens every stand-in source file; the declarations follow it, so that a file can hold both
+// types by joining their declarations under one header.
+const detectorHeader = "package p\n\n"
 
-const detectorEntrySource = "package p\n\n" +
-	"type ProjectLockEntry struct {\n\tID string `json:\"id\"`\n\tTargets []string `json:\"targets,omitempty\"`\n\tIgnored int `json:\"-\"`\n}\n"
+const (
+	detectorLockDecl  = "type ProjectLock struct {\n\tVersion int `json:\"version\"`\n\tSkills []int `json:\"skills\"`\n}\n"
+	detectorEntryDecl = "type ProjectLockEntry struct {\n\tID string `json:\"id\"`\n\tTargets []string `json:\"targets,omitempty\"`\n\tIgnored int `json:\"-\"`\n}\n"
+
+	detectorLockSource  = detectorHeader + detectorLockDecl
+	detectorEntrySource = detectorHeader + detectorEntryDecl
+	detectorBothSource  = detectorHeader + detectorLockDecl + detectorEntryDecl
+)
 
 // The keys are read from every non-test file of the package, wherever the two types are declared, and from
 // no test file.
@@ -72,8 +79,8 @@ func TestPhase8LockKeysIn_RefusesAPackageWithNoNonTestSource(t *testing.T) {
 // A type declared twice is an error: the later declaration would replace the earlier one without a word.
 func TestPhase8LockKeysIn_RefusesATypeDeclaredTwice(t *testing.T) {
 	for name, files := range map[string]map[string]string{
-		"ProjectLock":      {"a.go": detectorLockSource + detectorEntrySource[len("package p\n\n"):], "b.go": detectorLockSource},
-		"ProjectLockEntry": {"a.go": detectorLockSource + detectorEntrySource[len("package p\n\n"):], "b.go": detectorEntrySource},
+		"ProjectLock":      {"a.go": detectorBothSource, "b.go": detectorLockSource},
+		"ProjectLockEntry": {"a.go": detectorBothSource, "b.go": detectorEntrySource},
 	} {
 		t.Run(name, func(t *testing.T) {
 			_, _, err := phase8LockKeysIn(writeDetectorSources(t, files))
