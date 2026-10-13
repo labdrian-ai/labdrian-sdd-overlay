@@ -68,13 +68,9 @@ func TestStalenessGuardsFlagTheWalkTheProcessAndTheAdaptersInTestsToo(t *testing
 		t.Fatalf("adapterImportsIn: %v", err)
 	}
 
-	var files []string
-	for _, problem := range append(ambient, adapters...) {
-		files = append(files, strings.SplitN(problem, " ", 2)[0])
-	}
 	flagged := map[string]bool{}
-	for _, f := range files {
-		flagged[f] = true
+	for _, problem := range append(ambient, adapters...) {
+		flagged[strings.SplitN(problem, " ", 2)[0]] = true
 	}
 	want := map[string]bool{
 		"internal/staleness/walk.go":      true,
@@ -86,6 +82,6 @@ func TestStalenessGuardsFlagTheWalkTheProcessAndTheAdaptersInTestsToo(t *testing
 		"internal/staleness/git_test.go":  true,
 	}
 	if !reflect.DeepEqual(flagged, want) {
-		t.Fatalf("flagged = %v, want %v (the pure uses of sort, strings and time pass)", files, want)
+		t.Fatalf("flagged = %v, want %v (the pure uses of sort, strings and time pass)", flagged, want)
 	}
 }

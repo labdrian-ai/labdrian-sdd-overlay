@@ -36,6 +36,9 @@ func TestPaths_TakesFilesAndNothingElse(t *testing.T) {
 	}
 }
 
+// A skill's instructions name files in code spans and fenced blocks, and only there: prose, URLs and the same
+// path twice are not references. (The comment that sat here before described the finding Detect exists for,
+// which is the one on TestDetect_APathRemovedAfterTheMemoryWasWritten below.)
 func TestReferencedPaths_ExtractsOnlyCodeSpansAndFencedBlocks(t *testing.T) {
 	text := "prose internal/not-code.go and https://example.test/nope.go\n" +
 		"inline `internal/inline.go`, `internal/inline.go`\n" +
