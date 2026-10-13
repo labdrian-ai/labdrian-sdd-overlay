@@ -163,11 +163,24 @@ var digests = regexp.MustCompile(`[0-9a-f]{40,}`)
 // text is the transcript, with the registered places replaced, the digests of a run written
 // as <DIGEST>, and every control character shown as \xNN.
 func (w *hookWorld) text() string {
-	text, unmatched := w.applyCuts(w.b.String())
-	for _, lead := range unmatched {
+	text, _ := w.applyCuts(w.b.String())
+	return visibleControls(digests.ReplaceAllString(w.replace(text), "<DIGEST>"))
+}
+
+// unmatchedCuts are the leads of the declared cuts that match nothing in the transcript: the program no longer
+// cuts that detail, or says it otherwise. It is asked for once, after a case has run, by the tests that run the
+// cases (checkCutsUsed); reading text() never fails a test.
+func (w *hookWorld) unmatchedCuts() []string {
+	_, unmatched := w.applyCuts(w.b.String())
+	return unmatched
+}
+
+// checkCutsUsed fails the test for each declared cut that matched nothing.
+func (w *hookWorld) checkCutsUsed() {
+	w.t.Helper()
+	for _, lead := range w.unmatchedCuts() {
 		w.t.Errorf("cutAt(%q) matched nothing in the transcript: the program no longer cuts that detail, or says it otherwise; remove the declaration or fix its lead", lead)
 	}
-	return visibleControls(digests.ReplaceAllString(w.replace(text), "<DIGEST>"))
 }
 
 // applyCuts writes each declared cut detail of text as its whole, and says which declarations (by their lead)
@@ -316,6 +329,7 @@ func TestHookGolden(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			w := newHookWorld(t)
 			tc.run(w)
+			w.checkCutsUsed()
 			checkHookGolden(t, tc.name, w.text())
 		})
 	}
@@ -343,6 +357,7 @@ func TestHookGolden_DoesNotDependOnWhereTheWorldIs(t *testing.T) {
 					}
 					w := newHookWorld(t)
 					tc.run(w)
+					w.checkCutsUsed()
 					answers[where.name] = w.text()
 				})
 			}

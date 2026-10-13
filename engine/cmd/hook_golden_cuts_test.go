@@ -21,6 +21,23 @@ func TestCutAt_StopsAtTheFirstCut(t *testing.T) {
 	}
 }
 
+// Reading the transcript has no effect on the test: text() can be read any number of times, and a declaration
+// that matches nothing is asked for apart, by unmatchedCuts, which the tests that run the cases call once.
+func TestText_DoesNotFailTheTestWhateverIsDeclaredAndHoweverOftenItIsRead(t *testing.T) {
+	w := &hookWorld{t: t}
+	w.b.WriteString("failed (remove /tmp/pa...)")
+	w.cutAt("never said ", "<Y>")
+
+	first, second := w.text(), w.text()
+
+	if first != second {
+		t.Errorf("text() reads %q and then %q", first, second)
+	}
+	if want := []string{"never said "}; !reflect.DeepEqual(w.unmatchedCuts(), want) {
+		t.Errorf("unmatchedCuts = %v, want %v", w.unmatchedCuts(), want)
+	}
+}
+
 // A declared cut that matches nothing is reported: the program stopped cutting there (or the lead changed), and
 // a mask that matches nothing would otherwise hide that for good.
 func TestCutAt_ReportsADeclarationThatMatchesNothing(t *testing.T) {
