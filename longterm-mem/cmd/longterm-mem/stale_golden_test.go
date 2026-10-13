@@ -17,11 +17,14 @@ import (
 // paths a memory names and what the repository says of them: a path removed after the memory was written, one
 // removed before (or at the instant) and so recorded by it, one renamed, one the repository never held, one
 // recorded under another root of the tree, several memories and several paths in one, the layouts of the time a
-// memory carries and the memory whose time cannot be read, the shapes of a path that the pattern admits (a path
-// that climbs out of the project is unknown and the rest of the report prints: the owner's decision of
-// 2026-10-13, which re-recorded goldens 13 here and 33 of skills-stale), and the directories that are no repository, have no commit or cannot be walked. They were
-// recorded from the program as it stood before the detector took the repository's evidence (the working tree and
-// its history) as a port of its own (Phase 9, L6), and that change must not alter one byte of them.
+// memory carries and the memory whose time cannot be read, the shapes of a path that the pattern admits, and the
+// directories that are no repository, have no commit or cannot be walked. They were recorded from the program as
+// it stood before the detector took the repository's evidence (the working tree and its history) as a port of its
+// own (Phase 9, L6), and that change must not alter one byte of them.
+//
+// One exception was made on purpose. A path that climbs out of the project is unknown and the rest of the report
+// prints (the owner's decision of 2026-10-13); that re-recorded golden 13 here and golden 33 of skills-stale, and
+// added 22 here and 38 there.
 //
 // Each world is the one of the skills-stale goldens (a project root, a PATH of the world's own with git behind a
 // file that runs it, commits made with a fixed identity and a fixed date), and the command runs in the project
