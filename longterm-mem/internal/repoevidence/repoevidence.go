@@ -33,7 +33,17 @@ func At(root string) Repository {
 // which is why they name staleness, the rule they are told for.
 func (r Repository) Files() ([]string, error) {
 	var files []string
-	err := filepath.WalkDir(r.root, func(path string, d fs.DirEntry, err error) error {
+	if err := filepath.WalkDir(r.root, collect(r.root, &files)); err != nil {
+		return nil, walkError(r.root, err)
+	}
+	return files, nil
+}
+
+// collect is the step of the walk: it adds every file below root to files. A path that cannot be made relative to
+// root is an error of the walk, never a file left out of a listing that claims to be the whole tree (a walk only
+// meets paths below its root, so on a real tree it does not happen).
+func collect(root string, files *[]string) fs.WalkDirFunc {
+	return func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -43,20 +53,21 @@ func (r Repository) Files() ([]string, error) {
 			}
 			return nil
 		}
-		rel, relErr := filepath.Rel(r.root, path)
-		if relErr != nil {
-			return nil
+		rel, err := filepath.Rel(root, path)
+		if err != nil {
+			return err
 		}
-		files = append(files, filepath.ToSlash(rel))
+		*files = append(*files, filepath.ToSlash(rel))
 		return nil
-	})
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("staleness: %s does not exist", r.root)
-		}
-		return nil, fmt.Errorf("staleness: walking %s: %w", r.root, err)
 	}
-	return files, nil
+}
+
+// walkError tells why the walk of root failed, in the words the report has always used.
+func walkError(root string, err error) error {
+	if os.IsNotExist(err) {
+		return fmt.Errorf("staleness: %s does not exist", root)
+	}
+	return fmt.Errorf("staleness: walking %s: %w", root, err)
 }
 
 // History asks the repository's history what became of each path, in the rule's own words.

@@ -199,8 +199,50 @@ func TestHistory_ReportsADirectoryThatIsNoRepository(t *testing.T) {
 	}
 }
 
-// A refusal of one path is the refusal of all: git does not take a path outside the repository, and the answer
-// is its error and no fact, not a guess for that path and not the facts for the others.
+// The port promises one fact for every distinct path asked about, under the text it was asked by: a path asked
+// twice is one fact, and the same path in two spellings is two (the history is asked about the text), and no
+// path asked about is left without one.
+func TestHistory_AnswersEveryDistinctPathAskedAboutOnceUnderItsText(t *testing.T) {
+	requireGit(t)
+	root := realDir(t)
+	git(t, root, "", "init", "-q", "-b", "main")
+	write(t, root, "kept.go", "package a\n")
+	git(t, root, "", "add", "-A")
+	git(t, root, "", "commit", "-q", "-m", "first")
+	asked := []string{"kept.go", "kept.go", "./kept.go", "never-was.go", "never-was.go"}
+
+	facts, err := repoevidence.At(root).History(asked)
+
+	if err != nil {
+		t.Fatalf("History: %v", err)
+	}
+	if len(facts) != 3 {
+		t.Errorf("History = %+v, want 3 facts, one for each distinct text asked about", facts)
+	}
+	for _, p := range asked {
+		if got, ok := facts[p]; !ok || got.Path != p {
+			t.Errorf("History[%q] = %+v (answered: %v), want a fact under that text", p, got, ok)
+		}
+	}
+}
+
+// No path asked about, no fact: and it is no error, in a repository.
+func TestHistory_AnEmptyListHasNoFacts(t *testing.T) {
+	requireGit(t)
+	root := realDir(t)
+	git(t, root, "", "init", "-q", "-b", "main")
+
+	for _, paths := range [][]string{nil, {}} {
+		facts, err := repoevidence.At(root).History(paths)
+		if err != nil || len(facts) != 0 {
+			t.Errorf("History(%#v) = %v, %v; want no facts and no error", paths, facts, err)
+		}
+	}
+}
+
+// A refusal of one path is the refusal of all: git does not take a path outside the repository (which of its
+// words it uses is not looked at: the prefix asserted below is repohistory's own), and the answer is its error
+// and no fact, not a guess for that path and not the facts for the others.
 func TestHistory_AnErrorForOnePathIsTheAnswerForAll(t *testing.T) {
 	requireGit(t)
 	root := realDir(t)
