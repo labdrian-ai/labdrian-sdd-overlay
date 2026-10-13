@@ -147,18 +147,27 @@ func (w *skillsStaleWorld) gitOutput(t *testing.T, args ...string) string {
 	return out
 }
 
+// worldInstant is the instant every commit of every world is made at (author and committer), in the layout git
+// reads from its environment.
+const worldInstant = "2026-01-01T00:00:00Z"
+
 // tryGitOutput runs git in the project root in an environment that holds nothing but what an id is made of: no
-// configuration of the system or of the user (git is told where neither is, and not to read the system's),
-// the identity and the instant of author and committer, and the world's own PATH and HOME. Its output and its
-// error are returned.
+// configuration of the system or of the user, the identity and the instant of author and committer, and the
+// world's own PATH and HOME. Its output and its error are returned.
+//
+// The system and the user's configuration are each shut out in two ways, because no one way holds for every
+// version of git. GIT_CONFIG_NOSYSTEM is honoured by all of them for the system file; GIT_CONFIG_SYSTEM and
+// GIT_CONFIG_GLOBAL, which name a file to read instead (here, none), are honoured from git 2.32 on, and an older
+// git ignores them and finds the user's file under HOME, which is the world's own empty directory. Drop one
+// and a version of git reads the machine's configuration.
 func (w *skillsStaleWorld) tryGitOutput(args ...string) (string, error) {
 	command := exec.Command("git", args...)
 	command.Dir = w.root
 	command.Env = []string{
 		"PATH=" + os.Getenv("PATH"), "HOME=" + w.home,
 		"GIT_CONFIG_NOSYSTEM=1", "GIT_CONFIG_GLOBAL=/dev/null", "GIT_CONFIG_SYSTEM=/dev/null",
-		"GIT_AUTHOR_NAME=golden", "GIT_AUTHOR_EMAIL=golden@example.com", "GIT_AUTHOR_DATE=2026-01-01T00:00:00Z",
-		"GIT_COMMITTER_NAME=golden", "GIT_COMMITTER_EMAIL=golden@example.com", "GIT_COMMITTER_DATE=2026-01-01T00:00:00Z",
+		"GIT_AUTHOR_NAME=golden", "GIT_AUTHOR_EMAIL=golden@example.com", "GIT_AUTHOR_DATE=" + worldInstant,
+		"GIT_COMMITTER_NAME=golden", "GIT_COMMITTER_EMAIL=golden@example.com", "GIT_COMMITTER_DATE=" + worldInstant,
 	}
 	out, err := command.CombinedOutput()
 	return string(out), err

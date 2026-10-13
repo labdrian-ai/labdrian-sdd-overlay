@@ -2,10 +2,14 @@ package main
 
 import (
 	"database/sql"
+	"errors"
+	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 // The golden files under testdata/stale-golden pin what `longterm-mem stale` prints, with its exit code, for the
@@ -81,6 +85,60 @@ func (w *skillsStaleWorld) history(t *testing.T) {
 	w.git(t, "commit", "-q", "-m", "rename a recorded path")
 }
 
+// foreignConfig lists the configuration entries git sees that are not the repository's own, and counts all the
+// entries it listed. It asks for the scope of each entry (git 2.26 and later); a git that cannot is asked for
+// the origin of each, which it names relative to where it ran or absolute, so the origin is resolved to a file
+// and compared with the repository's own config file.
+func (w *skillsStaleWorld) foreignConfig(t *testing.T) (foreign []string, entries int) {
+	t.Helper()
+	if out, err := w.tryGitOutput("config", "--list", "--show-scope"); err == nil {
+		return nonLocalScopes(out)
+	}
+	return foreignOrigins(w.gitOutput(t, "config", "--list", "--show-origin"), w.root)
+}
+
+// nonLocalScopes are the lines of `git config --list --show-scope` ("<scope><TAB><key>=<value>") whose scope is
+// not the repository's, and the number of lines.
+func nonLocalScopes(listing string) (foreign []string, entries int) {
+	for _, line := range strings.Split(listing, "\n") {
+		if line == "" {
+			continue
+		}
+		entries++
+		if !strings.HasPrefix(line, "local\t") {
+			foreign = append(foreign, line)
+		}
+	}
+	return foreign, entries
+}
+
+// foreignOrigins are the lines of `git config --list --show-origin` ("<origin><TAB><key>=<value>") whose origin
+// is not the repository's own config file, wherever git says that file is: a path relative to root or absolute,
+// through links or not; and the number of lines.
+func foreignOrigins(listing, root string) (foreign []string, entries int) {
+	own, err := filepath.EvalSymlinks(filepath.Join(root, ".git", "config"))
+	if err != nil {
+		own = filepath.Join(root, ".git", "config")
+	}
+	for _, line := range strings.Split(listing, "\n") {
+		if line == "" {
+			continue
+		}
+		entries++
+		origin, _, _ := strings.Cut(line, "\t")
+		if path, isFile := strings.CutPrefix(origin, "file:"); isFile {
+			if !filepath.IsAbs(path) {
+				path = filepath.Join(root, path)
+			}
+			if resolved, err := filepath.EvalSymlinks(path); err == nil && resolved == own {
+				continue
+			}
+		}
+		foreign = append(foreign, line)
+	}
+	return foreign, entries
+}
+
 // The goldens print the ids of commits (twelve characters of them). An id is the SHA-1 of the commit's own text,
 // so it is the same on every machine exactly when that text is: the tree (the files this history writes, in the
 // default object format), the parent, the identity and the date of author and committer, and the message, with
@@ -92,28 +150,48 @@ func TestStaleWorld_PinsEverythingACommitIdIsMadeOf(t *testing.T) {
 	w := newSkillsStaleWorld(t, true)
 	w.history(t)
 
-	// No configuration but the repository's own: no system, no global, no include.
-	for _, line := range strings.Split(strings.TrimSpace(w.gitOutput(t, "config", "--list", "--show-origin")), "\n") {
-		if !strings.HasPrefix(line, "file:.git/config\t") {
+	// No configuration but the repository's own: no system, no global, no include, no command line. The
+	// repository always has entries of its own (git init writes them), so an empty list means that git was not
+	// asked the question the way this test thinks (or that the world is not a repository) and proves nothing.
+	if foreign, entries := w.foreignConfig(t); entries == 0 {
+		t.Error("git lists no configuration at all, not even the repository's own: the check below would prove nothing")
+	} else {
+		for _, line := range foreign {
 			t.Errorf("git sees configuration that is not the repository's own: %q", line)
 		}
 	}
-	// No hooks: a hook (from a template of the machine) could rewrite a message or refuse a commit.
-	if entries, err := os.ReadDir(filepath.Join(w.root, ".git", "hooks")); err == nil && len(entries) != 0 {
+	// No hooks: a hook (from a template of the machine) could rewrite a message or refuse a commit. A
+	// repository made from no template has no hooks directory at all, which is the state wanted; any other
+	// failure to look is a failure.
+	switch entries, err := os.ReadDir(filepath.Join(w.root, ".git", "hooks")); {
+	case errors.Is(err, fs.ErrNotExist):
+	case err != nil:
+		t.Errorf("reading .git/hooks: %v", err)
+	case len(entries) != 0:
 		t.Errorf(".git/hooks holds %d entries: the repository was made with a template of the machine", len(entries))
 	}
 	// The default object format. (Git older than the question cannot be asked, and only has the one.)
 	if format, err := w.tryGitOutput("rev-parse", "--show-object-format"); err == nil && strings.TrimSpace(format) != "sha1" {
 		t.Errorf("object format is %q, want sha1", format)
 	}
-	// The text of every commit: the fixed identity at the fixed instant, and nothing else a machine could add.
-	for _, revision := range []string{"HEAD", "HEAD~1", "HEAD~2"} {
+	// The text of every commit of the history, whatever their number: the fixed identity at the fixed instant,
+	// and nothing else a machine could add.
+	revisions := strings.Fields(w.gitOutput(t, "rev-list", "HEAD"))
+	if len(revisions) == 0 {
+		t.Fatal("the history has no commit")
+	}
+	instant, err := time.Parse(time.RFC3339, worldInstant)
+	if err != nil {
+		t.Fatal(err)
+	}
+	identity := fmt.Sprintf("golden <golden@example.com> %d +0000", instant.Unix())
+	for _, revision := range revisions {
 		text := w.gitOutput(t, "cat-file", "commit", revision)
 		header, message, _ := strings.Cut(text, "\n\n")
 		for _, line := range strings.Split(header, "\n") {
 			switch {
 			case strings.HasPrefix(line, "tree "), strings.HasPrefix(line, "parent "):
-			case line == "author golden <golden@example.com> 1767225600 +0000", line == "committer golden <golden@example.com> 1767225600 +0000":
+			case line == "author "+identity, line == "committer "+identity:
 			default:
 				t.Errorf("%s: the commit has a header line the world does not pin: %q", revision, line)
 			}
