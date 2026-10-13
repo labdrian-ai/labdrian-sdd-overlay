@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -94,6 +95,13 @@ func (w *skillsStaleWorld) foreignConfig(t *testing.T) (foreign []string, entrie
 	if out, err := w.tryGitOutput("config", "--list", "--show-scope"); err == nil {
 		return nonLocalScopes(out)
 	}
+	return w.foreignConfigByOrigin(t)
+}
+
+// foreignConfigByOrigin is the way foreignConfig asks when git cannot say the scope of an entry. It is a method
+// of its own so that a test can run it against the git of the host, which can say the scope.
+func (w *skillsStaleWorld) foreignConfigByOrigin(t *testing.T) (foreign []string, entries int) {
+	t.Helper()
 	return foreignOrigins(w.gitOutput(t, "config", "--list", "--show-origin"), w.root)
 }
 
@@ -116,10 +124,10 @@ func nonLocalScopes(listing string) (foreign []string, entries int) {
 // is not the repository's own config file, wherever git says that file is: a path relative to root or absolute,
 // through links or not; and the number of lines.
 func foreignOrigins(listing, root string) (foreign []string, entries int) {
-	own, err := filepath.EvalSymlinks(filepath.Join(root, ".git", "config"))
-	if err != nil {
-		own = filepath.Join(root, ".git", "config")
-	}
+	// A repository whose own config file cannot be resolved (it is not there) has no file an entry could come from,
+	// so own stays empty and nothing matches it: every entry is foreign. (A fallback to the unresolved path would
+	// match nothing either, because an entry's path is resolved the same way and fails the same way.)
+	own, _ := filepath.EvalSymlinks(filepath.Join(root, ".git", "config"))
 	for _, line := range strings.Split(listing, "\n") {
 		if line == "" {
 			continue
@@ -127,6 +135,7 @@ func foreignOrigins(listing, root string) (foreign []string, entries int) {
 		entries++
 		origin, _, _ := strings.Cut(line, "\t")
 		if path, isFile := strings.CutPrefix(origin, "file:"); isFile {
+			path = unquoteOrigin(path)
 			if !filepath.IsAbs(path) {
 				path = filepath.Join(root, path)
 			}
@@ -137,6 +146,19 @@ func foreignOrigins(listing, root string) (foreign []string, entries int) {
 		foreign = append(foreign, line)
 	}
 	return foreign, entries
+}
+
+// unquoteOrigin is the path of an origin as git printed it: git puts a path that has a quote, a backslash or a
+// control character in it between double quotes, with a backslash before each such character, and prints any
+// other path as it is. A quoted path that cannot be read back is returned as printed, so that it is foreign.
+func unquoteOrigin(path string) string {
+	if !strings.HasPrefix(path, `"`) {
+		return path
+	}
+	if unquoted, err := strconv.Unquote(path); err == nil {
+		return unquoted
+	}
+	return path
 }
 
 // The goldens print the ids of commits (twelve characters of them). An id is the SHA-1 of the commit's own text,
