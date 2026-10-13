@@ -1,15 +1,12 @@
 package staleness_test
 
 import (
-	"os"
-	"os/exec"
-	"path/filepath"
+	"errors"
 	"reflect"
-	"strings"
 	"testing"
+	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/repohistory"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/staleness"
 )
 
@@ -39,9 +36,9 @@ func TestPaths_TakesFilesAndNothingElse(t *testing.T) {
 	}
 }
 
-// The finding the whole feature exists for: a memory describing something
-// that was removed from the project AFTER the memory was written. Left
-// unreported, an agent reads it and reintroduces what was extirpated.
+// A skill's instructions name files in code spans and fenced blocks, and only there: prose, URLs and the same
+// path twice are not references. (The comment that sat here before described the finding Detect exists for,
+// which is the one on TestDetect_APathRemovedAfterTheMemoryWasWritten below.)
 func TestReferencedPaths_ExtractsOnlyCodeSpansAndFencedBlocks(t *testing.T) {
 	text := "prose internal/not-code.go and https://example.test/nope.go\n" +
 		"inline `internal/inline.go`, `internal/inline.go`\n" +
@@ -54,205 +51,397 @@ func TestReferencedPaths_ExtractsOnlyCodeSpansAndFencedBlocks(t *testing.T) {
 	}
 }
 
+// fakeEvidence is a repository in a table: the files of its tree, and what its history says of the paths it is
+// asked about (a path it has no word for is unknown, as a repository that never held it would say). It records
+// every question, so that a test can say what was asked and what was not.
+type fakeEvidence struct {
+	files      []string
+	filesErr   error
+	history    map[string]staleness.PathFact
+	historyErr error
+
+	filesAsked int
+	asked      [][]string
+}
+
+func (f *fakeEvidence) Files() ([]string, error) {
+	f.filesAsked++
+	if f.filesErr != nil {
+		return nil, f.filesErr
+	}
+	return f.files, nil
+}
+
+func (f *fakeEvidence) History(paths []string) (map[string]staleness.PathFact, error) {
+	f.asked = append(f.asked, append([]string(nil), paths...))
+	if f.historyErr != nil {
+		return nil, f.historyErr
+	}
+	facts := make(map[string]staleness.PathFact, len(paths))
+	for _, p := range paths {
+		fact, known := f.history[p]
+		if !known {
+			fact = staleness.PathFact{State: staleness.PathUnknown}
+		}
+		fact.Path = p
+		facts[p] = fact
+	}
+	return facts, nil
+}
+
+// theRepository is the repository most of the cases below ask about: kept.go and a module's writer are in the
+// tree, gone.go was removed by a commit of 2027, and pkg/moved.go was renamed by one.
+func theRepository() *fakeEvidence {
+	return &fakeEvidence{
+		files: []string{"kept.go", "module/promote/writer.go", "module/moved-root.go"},
+		history: map[string]staleness.PathFact{
+			"gone.go":      {State: staleness.PathDeleted, Commit: "c0ffee1", At: time.Date(2027, 6, 1, 0, 0, 0, 0, time.UTC)},
+			"pkg/moved.go": {State: staleness.PathRenamed, NewPath: "pkg/renamed.go", Commit: "c0ffee2", At: time.Date(2027, 6, 2, 0, 0, 0, 0, time.UTC)},
+			// The tree was listed before this one came back as a file; a fact of "present" from the
+			// history is not a finding.
+			"elsewhere.go": {State: staleness.PathPresent},
+		},
+	}
+}
+
 func TestClassifyPaths_UsesTreeAndHistory(t *testing.T) {
-	repo := fixture(t)
-	got, err := staleness.ClassifyPaths(repo, []string{
-		"kept.go",
-		"gone.go",
-		"pkg/moved.go",
-		"never-was.go",
-	})
+	evidence := theRepository()
+
+	got, err := staleness.ClassifyPaths(evidence, []string{"kept.go", "gone.go", "pkg/moved.go", "never-was.go"})
+
 	if err != nil {
 		t.Fatalf("ClassifyPaths: %v", err)
 	}
-
-	cases := map[string]repohistory.State{
-		"kept.go":      repohistory.StatePresent,
-		"gone.go":      repohistory.StateDeleted,
-		"pkg/moved.go": repohistory.StateRenamed,
-		"never-was.go": repohistory.StateUnknown,
+	want := map[string]staleness.PathFact{
+		"kept.go":      {Path: "kept.go", State: staleness.PathPresent},
+		"gone.go":      {Path: "gone.go", State: staleness.PathDeleted, Commit: "c0ffee1", At: time.Date(2027, 6, 1, 0, 0, 0, 0, time.UTC)},
+		"pkg/moved.go": {Path: "pkg/moved.go", State: staleness.PathRenamed, NewPath: "pkg/renamed.go", Commit: "c0ffee2", At: time.Date(2027, 6, 2, 0, 0, 0, 0, time.UTC)},
+		"never-was.go": {Path: "never-was.go", State: staleness.PathUnknown},
 	}
-	for path, want := range cases {
-		fact, ok := got[path]
-		if !ok {
-			t.Errorf("ClassifyPaths omitted %q", path)
-			continue
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("ClassifyPaths = %+v, want %+v", got, want)
+	}
+}
+
+// Only a path the tree cannot account for is worth a question of the history, and it is asked once, for all of
+// them, each distinct path once and in order: a path the tree holds never reaches the history.
+func TestClassifyPaths_AsksTheHistoryOnceForTheDistinctPathsTheTreeDoesNotHold(t *testing.T) {
+	evidence := theRepository()
+
+	_, err := staleness.ClassifyPaths(evidence, []string{"kept.go", "zeta.go", "gone.go", "kept.go", "gone.go", "alpha.go"})
+
+	if err != nil {
+		t.Fatalf("ClassifyPaths: %v", err)
+	}
+	if want := [][]string{{"alpha.go", "gone.go", "zeta.go"}}; !reflect.DeepEqual(evidence.asked, want) {
+		t.Errorf("the history was asked %v, want %v", evidence.asked, want)
+	}
+	if evidence.filesAsked != 1 {
+		t.Errorf("the tree was listed %d times, want once", evidence.filesAsked)
+	}
+}
+
+// The history is not asked at all when the tree accounts for everything, nor when there is nothing to ask about.
+func TestClassifyPaths_NeedsNoHistoryWhenTheTreeHoldsEverything(t *testing.T) {
+	for _, paths := range [][]string{{"kept.go", "kept.go"}, {"kept.go", "promote/writer.go"}, nil, {}} {
+		evidence := theRepository()
+
+		got, err := staleness.ClassifyPaths(evidence, paths)
+
+		if err != nil || len(evidence.asked) != 0 {
+			t.Errorf("ClassifyPaths(%v) asked the history %v and failed with %v; want no question and no error", paths, evidence.asked, err)
 		}
-		if fact.State != want {
-			t.Errorf("ClassifyPaths[%q].State = %q, want %q (fact=%+v)", path, fact.State, want, fact)
+		for _, p := range paths {
+			if got[p].State != staleness.PathPresent || got[p].Path != p {
+				t.Errorf("ClassifyPaths(%v)[%q] = %+v, want present", paths, p, got[p])
+			}
 		}
 	}
-	if got["pkg/moved.go"].NewPath != "pkg/renamed.go" {
-		t.Errorf("ClassifyPaths[pkg/moved.go].NewPath = %q, want pkg/renamed.go", got["pkg/moved.go"].NewPath)
+}
+
+// A path recorded under a different root of the tree is resolved against the tree by its trailing segments (and
+// without a leading "./"), before the history is consulted: it is alive, not a suspected deletion.
+func TestClassifyPaths_ResolvesAPathByTheTrailingSegmentsOfTheTree(t *testing.T) {
+	evidence := theRepository()
+
+	got, err := staleness.ClassifyPaths(evidence, []string{"promote/writer.go", "writer.go", "./kept.go", "module/promote/writer.go", "module/promote", "promote"})
+
+	if err != nil {
+		t.Fatalf("ClassifyPaths: %v", err)
+	}
+	for _, held := range []string{"promote/writer.go", "writer.go", "./kept.go", "module/promote/writer.go"} {
+		if got[held].State != staleness.PathPresent {
+			t.Errorf("%q = %+v, want present: the tree holds a file that ends in it", held, got[held])
+		}
+	}
+	// A directory is not a file of the tree: its name alone resolves nothing.
+	if want := [][]string{{"module/promote", "promote"}}; !reflect.DeepEqual(evidence.asked, want) {
+		t.Errorf("the history was asked %v, want %v: a directory's name is no file", evidence.asked, want)
 	}
 }
 
-func TestDetect_APathRemovedAfterTheMemoryWasWritten(t *testing.T) {
-	repo := fixture(t)
+// What a fact from the history says is not second-guessed: a path the tree did not account for that the history
+// knows to be there is there.
+func TestClassifyPaths_TakesTheHistorysWordForAPathTheTreeDoesNotName(t *testing.T) {
+	got, err := staleness.ClassifyPaths(theRepository(), []string{"elsewhere.go"})
 
-	got := detect(t, repo, memory.Observation{
-		ID: 1, Title: "how gone.go works",
-		Content:   "**Where**: gone.go\n",
-		UpdatedAt: "2026-01-01 00:00:00",
-	})
-	if len(got) != 1 {
-		t.Fatalf("a memory describing a removed file must be reported: got %+v", got)
-	}
-	if len(got[0].Removed) != 1 || got[0].Removed[0].Commit == "" {
-		t.Fatalf("the finding must carry the commit that removed it: %+v", got[0])
+	if err != nil || got["elsewhere.go"].State != staleness.PathPresent {
+		t.Errorf("ClassifyPaths = %+v, %v; want elsewhere.go present, as the history says", got, err)
 	}
 }
 
-// The inverse, and it matters just as much: a memory written AFTER the
-// removal is very likely the record OF the removal. Reporting it would
-// invite deleting the one memory that says the thing is gone -- the exact
-// knowledge that stops it being reintroduced.
-func TestDetect_APathRemovedBeforeTheMemoryIsNotStale(t *testing.T) {
-	repo := fixture(t)
+// The texts the strict pattern of the detectors never produces are still questions: an empty text, a climb and an
+// absolute path are not resolved against the tree, whatever the tree holds, and go to the history as they are
+// written; a leading "./" is the one thing taken off. (What the history answers for them is its own, pinned in
+// internal/repohistory.)
+func TestClassifyPaths_PassesWhatTheTreeCannotResolveToTheHistoryAsWritten(t *testing.T) {
+	evidence := &fakeEvidence{files: []string{"name.go", "a/name.go"}}
 
-	got := detect(t, repo, memory.Observation{
-		ID: 2, Title: "we removed gone.go on purpose",
-		Content:   "**Where**: gone.go\n",
-		UpdatedAt: "2030-01-01 00:00:00",
-	})
-	if len(got) != 0 {
-		t.Fatalf("a memory written after the removal records it; reporting it invites deleting the very thing that prevents the revival: %+v", got)
+	_, err := staleness.ClassifyPaths(evidence, []string{"", "../name.go", "/name.go", "a/../name.go", "./name.go", ".//name.go"})
+
+	if err != nil {
+		t.Fatalf("ClassifyPaths: %v", err)
+	}
+	want := [][]string{{"", "../name.go", ".//name.go", "/name.go", "a/../name.go"}}
+	if !reflect.DeepEqual(evidence.asked, want) {
+		t.Errorf("the history was asked %v, want %v", evidence.asked, want)
 	}
 }
 
-// The false positive measured on the real database: a path recorded
-// relative to a different root. internal/promote/reconcile.go looked absent
-// and is alive at longterm-mem/internal/promote/reconcile.go.
-func TestDetect_APathRecordedUnderAnotherRootIsAlive(t *testing.T) {
-	repo := fixture(t)
+// The tree that cannot be listed is the answer, before the history is asked about anything.
+func TestClassifyPaths_FailsWithTheTreesErrorBeforeAskingTheHistory(t *testing.T) {
+	boom := errors.New("the tree is gone")
+	evidence := &fakeEvidence{filesErr: boom}
 
-	// The fixture once held moved-root.go at the top level, deleted it, and
-	// now holds module/moved-root.go. History therefore says "deleted" for
-	// the recorded path, and only resolving it against the tree by suffix
-	// shows the file is alive -- without that step this is a false report
-	// of a removal, which is the finding that gets a live memory deleted.
-	got := detect(t, repo, memory.Observation{
-		ID: 3, Title: "about a file recorded without its module prefix",
-		Content:   "**Where**: moved-root.go\n",
-		UpdatedAt: "2026-01-01 00:00:00",
-	})
-	if len(got) != 0 {
-		t.Fatalf("a file that exists under a different root is alive, not removed: %+v", got)
+	got, err := staleness.ClassifyPaths(evidence, []string{"gone.go"})
+
+	if !errors.Is(err, boom) || got != nil || len(evidence.asked) != 0 {
+		t.Errorf("ClassifyPaths = %v, %v (history asked %v); want the tree's error, no facts, and no question", got, err, evidence.asked)
 	}
 }
 
-// A rename leaves the old path absent and the content alive. The memory is
-// out of date about WHERE, never wrong about WHAT.
-func TestDetect_ARenameIsReportedAsMovedNotRemoved(t *testing.T) {
-	repo := fixture(t)
+// Nothing to classify still lists the tree: a repository that cannot be read is told, with or without paths.
+func TestClassifyPaths_ListsTheTreeEvenWithNothingToClassify(t *testing.T) {
+	boom := errors.New("the tree is gone")
 
-	got := detect(t, repo, memory.Observation{
-		ID: 4, Title: "about a moved file",
-		Content:   "**Where**: pkg/moved.go\n",
-		UpdatedAt: "2026-01-01 00:00:00",
-	})
-	if len(got) != 1 {
-		t.Fatalf("a moved file is worth saying out loud: %+v", got)
-	}
-	if len(got[0].Removed) != 0 {
-		t.Errorf("a rename must never be reported as a removal: %+v", got[0])
-	}
-	if len(got[0].Moved) != 1 || got[0].Moved[0].NewPath != "pkg/renamed.go" {
-		t.Errorf("the move must say where it went: %+v", got[0].Moved)
+	got, err := staleness.ClassifyPaths(&fakeEvidence{filesErr: boom}, nil)
+
+	if !errors.Is(err, boom) || got != nil {
+		t.Errorf("ClassifyPaths(nil) = %v, %v; want the tree's error and no facts", got, err)
 	}
 }
 
-// The other false positive from the real database: observations naming
-// another repository's files. This repository has nothing to say about
-// them, and saying something anyway is inventing evidence.
-func TestDetect_APathThisRepositoryNeverHadIsIgnored(t *testing.T) {
-	repo := fixture(t)
+// A history that cannot answer is the answer for all the paths at once, and no fact is returned: not those the
+// tree accounts for either.
+func TestClassifyPaths_FailsWithTheHistorysErrorAndNoFacts(t *testing.T) {
+	boom := errors.New("the history is unreadable")
+	evidence := &fakeEvidence{files: []string{"kept.go"}, historyErr: boom}
 
-	got := detect(t, repo, memory.Observation{
-		ID: 5, Title: "about gentle-ai's code",
-		Content:   "**Where**: internal/cli/review_facade.go\n",
-		UpdatedAt: "2026-01-01 00:00:00",
-	})
-	if len(got) != 0 {
-		t.Fatalf("another project's file is not evidence about this one: %+v", got)
+	got, err := staleness.ClassifyPaths(evidence, []string{"kept.go", "lost.go"})
+
+	if !errors.Is(err, boom) || got != nil {
+		t.Errorf("ClassifyPaths = %v, %v; want the history's error and no facts", got, err)
 	}
 }
 
-func detect(t *testing.T, repo string, obs ...memory.Observation) []staleness.Finding {
+func observation(id int64, title, where, updatedAt string) memory.Observation {
+	return memory.Observation{ID: id, Title: title, Content: "**Where**: " + where + "\n", UpdatedAt: updatedAt}
+}
+
+func detect(t *testing.T, evidence *fakeEvidence, obs ...memory.Observation) []staleness.Finding {
 	t.Helper()
-	got, err := staleness.Detect(repo, obs)
+	got, err := staleness.Detect(evidence, obs)
 	if err != nil {
 		t.Fatalf("Detect: %v", err)
 	}
 	return got
 }
 
-// fixture builds a repository where gone.go was deleted and pkg/moved.go
-// renamed, both in 2027 -- between the "written before" and "written after"
-// timestamps the tests use.
-func fixture(t *testing.T) string {
-	t.Helper()
-	root := t.TempDir()
-	git(t, root, "init", "-q", "-b", "main")
-	write(t, root, "kept.go", "package a\n")
-	write(t, root, "gone.go", "package a\n// distinctive body for rename detection to chew on\n")
-	write(t, root, "pkg/moved.go", "package b\n// another distinctive body, long enough to match\n")
-	write(t, root, "module/promote/writer.go", "package promote\n")
-	git(t, root, "add", "-A")
-	git(t, root, "commit", "-q", "-m", "first")
+// The finding the whole feature exists for: a memory describing something that was removed from the project
+// AFTER the memory was written. Left unreported, an agent reads it and reintroduces what was extirpated.
+func TestDetect_APathRemovedAfterTheMemoryWasWritten(t *testing.T) {
+	got := detect(t, theRepository(), observation(1, "how gone.go works", "gone.go", "2026-01-01 00:00:00"))
 
-	write(t, root, "moved-root.go", "package a\n// moved to another root by delete-and-add, not a rename\n")
-	git(t, root, "add", "-A")
-	git(t, root, "commit", "-q", "-m", "add moved-root.go")
-
-	git(t, root, "rm", "-q", "gone.go")
-	commitAt(t, root, "2027-06-01T00:00:00Z", "remove gone.go")
-
-	// Re-rooted: deleted where it was, added where it now lives, in
-	// separate commits so rename detection cannot pair them.
-	git(t, root, "rm", "-q", "moved-root.go")
-	commitAt(t, root, "2027-06-03T00:00:00Z", "drop moved-root.go from the top level")
-	write(t, root, "module/moved-root.go", "package a\n// moved to another root by delete-and-add, not a rename\n")
-	git(t, root, "add", "-A")
-	commitAt(t, root, "2027-06-04T00:00:00Z", "re-add moved-root.go under module/")
-	git(t, root, "mv", "pkg/moved.go", "pkg/renamed.go")
-	commitAt(t, root, "2027-06-02T00:00:00Z", "rename moved.go")
-	return root
-}
-
-func commitAt(t *testing.T, dir, when, msg string) {
-	t.Helper()
-	cmd := exec.Command("git", "commit", "-q", "-m", msg)
-	cmd.Dir = dir
-	cmd.Env = append(gitEnv(), "GIT_AUTHOR_DATE="+when, "GIT_COMMITTER_DATE="+when)
-	if out, err := cmd.CombinedOutput(); err != nil {
-		t.Fatalf("git commit: %v\n%s", err, out)
+	if len(got) != 1 || got[0].ObservationID != 1 || got[0].Title != "how gone.go works" {
+		t.Fatalf("a memory describing a removed file must be reported: got %+v", got)
+	}
+	if len(got[0].Removed) != 1 || got[0].Removed[0].Commit != "c0ffee1" || got[0].Removed[0].Path != "gone.go" {
+		t.Fatalf("the finding must carry the commit that removed it: %+v", got[0])
 	}
 }
 
-func gitEnv() []string {
-	return append(os.Environ(),
-		"GIT_CONFIG_GLOBAL=/dev/null", "GIT_CONFIG_SYSTEM=/dev/null",
-		"GIT_AUTHOR_NAME=t", "GIT_AUTHOR_EMAIL=t@example.com",
-		"GIT_COMMITTER_NAME=t", "GIT_COMMITTER_EMAIL=t@example.com")
-}
-
-func git(t *testing.T, dir string, args ...string) {
-	t.Helper()
-	cmd := exec.Command("git", args...)
-	cmd.Dir, cmd.Env = dir, gitEnv()
-	if out, err := cmd.CombinedOutput(); err != nil {
-		t.Fatalf("git %s: %v\n%s", strings.Join(args, " "), err, out)
+// The inverse, and it matters just as much: a memory written AFTER the removal is very likely the record OF the
+// removal. Reporting it would invite deleting the one memory that says the thing is gone -- the exact knowledge
+// that stops it being reintroduced. A memory written at the very instant is not after it either.
+func TestDetect_APathRemovedBeforeOrAtTheInstantTheMemoryWasWrittenIsNotStale(t *testing.T) {
+	for _, written := range []string{"2030-01-01 00:00:00", "2027-06-01 00:00:00"} {
+		got := detect(t, theRepository(), observation(2, "we removed gone.go on purpose", "gone.go", written))
+		if len(got) != 0 {
+			t.Errorf("a memory written %s records the removal; reporting it invites deleting the very thing that prevents the revival: %+v", written, got)
+		}
 	}
 }
 
-func write(t *testing.T, root, rel, content string) {
-	t.Helper()
-	path := filepath.Join(root, rel)
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		t.Fatalf("mkdir: %v", err)
+// The false positive measured on the real database: a path recorded relative to a different root. It looked
+// absent and is alive under a module of the tree; without resolving it against the tree this is a false report
+// of a removal, which is the finding that gets a live memory deleted -- and the history is never asked.
+func TestDetect_APathRecordedUnderAnotherRootIsAlive(t *testing.T) {
+	evidence := theRepository()
+	evidence.history["moved-root.go"] = staleness.PathFact{State: staleness.PathDeleted, Commit: "c0ffee3", At: time.Date(2027, 6, 3, 0, 0, 0, 0, time.UTC)}
+
+	got := detect(t, evidence, observation(3, "about a file recorded without its module", "moved-root.go", "2026-01-01 00:00:00"))
+
+	if len(got) != 0 || len(evidence.asked) != 0 {
+		t.Fatalf("a file that exists under a different root is alive, not removed, and the history is not asked: %+v (asked %v)", got, evidence.asked)
 	}
-	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
-		t.Fatalf("write: %v", err)
+}
+
+// A rename leaves the old path absent and the content alive. The memory is out of date about WHERE, never wrong
+// about WHAT.
+func TestDetect_ARenameIsReportedAsMovedNotRemoved(t *testing.T) {
+	got := detect(t, theRepository(), observation(4, "about a moved file", "pkg/moved.go", "2026-01-01 00:00:00"))
+
+	if len(got) != 1 {
+		t.Fatalf("a moved file is worth saying out loud: %+v", got)
+	}
+	if len(got[0].Removed) != 0 {
+		t.Errorf("a rename must never be reported as a removal: %+v", got[0])
+	}
+	if len(got[0].Moved) != 1 || got[0].Moved[0].NewPath != "pkg/renamed.go" || got[0].Moved[0].Commit != "c0ffee2" {
+		t.Errorf("the move must say where it went: %+v", got[0].Moved)
+	}
+}
+
+// A move is reported whenever the memory was written: it is not a claim that anything was removed after.
+func TestDetect_AMoveIsReportedWhateverTheTimeOfTheMemory(t *testing.T) {
+	for _, written := range []string{"2026-01-01 00:00:00", "2030-01-01 00:00:00", "yesterday"} {
+		got := detect(t, theRepository(), observation(4, "about a moved file", "pkg/moved.go", written))
+		if len(got) != 1 || len(got[0].Moved) != 1 {
+			t.Errorf("a memory written %q: %+v, want the move reported", written, got)
+		}
+	}
+}
+
+// The other false positive from the real database: observations naming another repository's files. This
+// repository has nothing to say about them, and saying something anyway is inventing evidence.
+func TestDetect_APathThisRepositoryNeverHadIsIgnored(t *testing.T) {
+	got := detect(t, theRepository(), observation(5, "about gentle-ai's code", "internal/cli/review_facade.go", "2026-01-01 00:00:00"))
+
+	if len(got) != 0 {
+		t.Fatalf("another project's file is not evidence about this one: %+v", got)
+	}
+}
+
+// A path the tree did not name that the history knows to be there is not a finding.
+func TestDetect_APathTheHistoryKnowsToBeThereIsNotAFinding(t *testing.T) {
+	if got := detect(t, theRepository(), observation(6, "about elsewhere.go", "elsewhere.go", "2026-01-01 00:00:00")); len(got) != 0 {
+		t.Fatalf("a path that is there was reported: %+v", got)
+	}
+}
+
+// Undatable memory is not reported as stale: assuming a zero time would make every deletion look later than every
+// memory, turning an unparsed timestamp into a finding. The layouts Engram's timestamps come in are read, the
+// update first and the creation when there is none.
+func TestDetect_ReadsTheLayoutsOfAMemorysTimeAndNothingElse(t *testing.T) {
+	for _, tc := range []struct {
+		name               string
+		createdAt, updated string
+		reported           bool
+	}{
+		{"SQLite text", "2026-01-01 00:00:00", "2026-01-01 00:00:00", true},
+		{"RFC 3339", "2030-01-01 00:00:00", "2026-01-01T00:00:00Z", true},
+		{"a T and no zone", "2030-01-01 00:00:00", "2026-01-01T00:00:00", true},
+		{"no update, created before", "2026-01-01 00:00:00", "", true},
+		{"no update, created after", "2030-01-01 00:00:00", "  ", false},
+		{"updated after, created before", "2026-01-01 00:00:00", "2030-01-01 00:00:00", false},
+		{"updated in no layout, created before", "2026-01-01 00:00:00", "yesterday", true},
+		{"nothing readable", "last week", "yesterday", false},
+		{"nothing", "", "", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			o := observation(7, "t", "gone.go", tc.updated)
+			o.CreatedAt = tc.createdAt
+
+			got := detect(t, theRepository(), o)
+
+			if reported := len(got) == 1 && len(got[0].Removed) == 1; reported != tc.reported {
+				t.Errorf("created %q, updated %q: findings %+v, want reported = %v", tc.createdAt, tc.updated, got, tc.reported)
+			}
+		})
+	}
+}
+
+// Every memory's own paths decide its own findings, in the order the memories came, and within a memory in the
+// order the paths are named; one question of the history serves them all, and a path two memories name is asked
+// once.
+func TestDetect_ReportsEachMemoryByItsOwnPathsInOrderWithOneQuestionOfTheHistory(t *testing.T) {
+	evidence := theRepository()
+
+	got := detect(t, evidence,
+		observation(30, "first: a path that is there", "kept.go", "2026-01-01 00:00:00"),
+		observation(10, "second: a move and a removal", "pkg/moved.go, kept.go, gone.go, never.go", "2026-01-01 00:00:00"),
+		observation(20, "third: written after the removal", "gone.go", "2030-01-01 00:00:00"),
+		observation(40, "fourth: the removal again", "gone.go", "2026-01-01 00:00:00"),
+	)
+
+	if len(got) != 2 || got[0].ObservationID != 10 || got[1].ObservationID != 40 {
+		t.Fatalf("findings = %+v, want those of the memories 10 and 40, in the order they came", got)
+	}
+	if len(got[0].Moved) != 1 || len(got[0].Removed) != 1 || got[0].Removed[0].Path != "gone.go" || got[0].Moved[0].Path != "pkg/moved.go" {
+		t.Errorf("memory 10 = %+v, want a move and a removal", got[0])
+	}
+	if want := [][]string{{"gone.go", "never.go", "pkg/moved.go"}}; !reflect.DeepEqual(evidence.asked, want) {
+		t.Errorf("the history was asked %v, want %v: once, for the distinct paths the tree does not hold", evidence.asked, want)
+	}
+}
+
+// Two memories that carry the same id (a database does not allow it) are still two memories, each judged by its
+// own paths.
+func TestDetect_JudgesAMemoryByItsOwnPathsWhateverItsId(t *testing.T) {
+	got := detect(t, theRepository(),
+		observation(1, "names a removed path", "gone.go", "2026-01-01 00:00:00"),
+		observation(1, "names a path that is there", "kept.go", "2026-01-01 00:00:00"),
+	)
+
+	if len(got) != 1 || got[0].Title != "names a removed path" {
+		t.Fatalf("findings = %+v, want the one of the memory that names the removed path", got)
+	}
+}
+
+// Nothing the tree does not hold, nothing to ask: no question of the history and no findings.
+func TestDetect_NeedsNoHistoryWhenTheTreeHoldsEveryPath(t *testing.T) {
+	evidence := theRepository()
+
+	got := detect(t, evidence,
+		observation(1, "a path that is there", "kept.go, promote/writer.go", "2026-01-01 00:00:00"),
+		memory.Observation{ID: 2, Title: "names no file", Content: "**What**: nothing\n"},
+	)
+
+	if got != nil || len(evidence.asked) != 0 {
+		t.Errorf("Detect = %+v, history asked %v; want no findings (nil) and no question", got, evidence.asked)
+	}
+}
+
+// With no memory at all the tree is still listed, so a repository that cannot be read is told.
+func TestDetect_ListsTheTreeEvenWithNoMemory(t *testing.T) {
+	boom := errors.New("the tree is gone")
+
+	got, err := staleness.Detect(&fakeEvidence{filesErr: boom}, nil)
+
+	if !errors.Is(err, boom) || got != nil {
+		t.Errorf("Detect = %v, %v; want the tree's error", got, err)
+	}
+}
+
+// The errors of the evidence are the answer, unchanged.
+func TestDetect_FailsWithTheEvidencesErrors(t *testing.T) {
+	treeBoom, historyBoom := errors.New("the tree is gone"), errors.New("the history is unreadable")
+	o := observation(1, "t", "gone.go", "2026-01-01 00:00:00")
+
+	if got, err := staleness.Detect(&fakeEvidence{filesErr: treeBoom}, []memory.Observation{o}); !errors.Is(err, treeBoom) || got != nil {
+		t.Errorf("Detect over a tree that cannot be listed = %v, %v; want its error", got, err)
+	}
+	if got, err := staleness.Detect(&fakeEvidence{historyErr: historyBoom}, []memory.Observation{o}); !errors.Is(err, historyBoom) || got != nil {
+		t.Errorf("Detect over a history that cannot answer = %v, %v; want its error", got, err)
 	}
 }

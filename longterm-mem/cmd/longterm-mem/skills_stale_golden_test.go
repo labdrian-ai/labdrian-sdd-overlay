@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"strings"
 	"testing"
@@ -55,6 +56,9 @@ type skillsStaleCase struct {
 	args func(w *skillsStaleWorld) []string
 	// pathNeedsGit puts a file that runs git in the directory that is PATH, for the cases that read the repository's history.
 	pathNeedsGit bool
+	// maskGitWords replaces the words git itself uses for what it refuses, which are its own to change, in a case
+	// whose report holds them. (The cases recorded before them keep git's words as they were written.)
+	maskGitWords bool
 }
 
 // writeProjectFile writes content at rel in the project root, creating its directory.
@@ -130,17 +134,50 @@ func (w *skillsStaleWorld) standIn(t *testing.T, name string) {
 // have the same ids on every machine.
 func (w *skillsStaleWorld) git(t *testing.T, args ...string) {
 	t.Helper()
+	w.gitOutput(t, args...)
+}
+
+// gitOutput is git as git() runs it, and what it printed.
+func (w *skillsStaleWorld) gitOutput(t *testing.T, args ...string) string {
+	t.Helper()
+	out, err := w.tryGitOutput(args...)
+	if err != nil {
+		t.Fatalf("git %s: %v\n%s", strings.Join(args, " "), err, out)
+	}
+	return out
+}
+
+// worldInstant is the instant every commit of every world is made at (author and committer), in the layout git
+// reads from its environment.
+const worldInstant = "2026-01-01T00:00:00Z"
+
+// tryGitOutput runs git in the project root in an environment that holds nothing but what an id is made of: no
+// configuration of the system or of the user, the identity and the instant of author and committer, and the
+// world's own PATH and HOME. Its output and its error are returned.
+//
+// The system and the user's configuration are each shut out in two ways, because no one way holds for every
+// version of git. GIT_CONFIG_NOSYSTEM is honoured by all of them for the system file; GIT_CONFIG_SYSTEM and
+// GIT_CONFIG_GLOBAL, which name a file to read instead (here, none), are honoured from git 2.32 on, and an older
+// git ignores them and finds the user's file under HOME, which is the world's own empty directory. Drop one
+// and a version of git reads the machine's configuration.
+func (w *skillsStaleWorld) tryGitOutput(args ...string) (string, error) {
 	command := exec.Command("git", args...)
 	command.Dir = w.root
 	command.Env = []string{
 		"PATH=" + os.Getenv("PATH"), "HOME=" + w.home,
-		"GIT_CONFIG_GLOBAL=/dev/null", "GIT_CONFIG_SYSTEM=/dev/null",
-		"GIT_AUTHOR_NAME=golden", "GIT_AUTHOR_EMAIL=golden@example.com", "GIT_AUTHOR_DATE=2026-01-01T00:00:00Z",
-		"GIT_COMMITTER_NAME=golden", "GIT_COMMITTER_EMAIL=golden@example.com", "GIT_COMMITTER_DATE=2026-01-01T00:00:00Z",
+		"GIT_CONFIG_NOSYSTEM=1", "GIT_CONFIG_GLOBAL=/dev/null", "GIT_CONFIG_SYSTEM=/dev/null",
+		"GIT_AUTHOR_NAME=golden", "GIT_AUTHOR_EMAIL=golden@example.com", "GIT_AUTHOR_DATE=" + worldInstant,
+		"GIT_COMMITTER_NAME=golden", "GIT_COMMITTER_EMAIL=golden@example.com", "GIT_COMMITTER_DATE=" + worldInstant,
 	}
-	if out, err := command.CombinedOutput(); err != nil {
-		t.Fatalf("git %s: %v\n%s", strings.Join(args, " "), err, out)
-	}
+	out, err := command.CombinedOutput()
+	return string(out), err
+}
+
+// initRepo makes the project a repository on main, from no template: a template of the machine could put hooks
+// in it, and a hook can rewrite a commit's message.
+func (w *skillsStaleWorld) initRepo(t *testing.T) {
+	t.Helper()
+	w.git(t, "init", "-q", "--template=", "-b", "main")
 }
 
 // lockedTarget is a case whose lock records one skill with the one target given.
@@ -202,7 +239,7 @@ func skillsStaleCases() []skillsStaleCase {
 			w.observed(t, "mid-both", longAgo)
 		}},
 		{name: "08-a-path-removed-and-a-path-moved-in-a-repository", pathNeedsGit: true, setup: func(t *testing.T, w *skillsStaleWorld) {
-			w.git(t, "init", "-q", "-b", "main")
+			w.initRepo(t)
 			w.writeProjectFile(t, "removed.go", "package golden\n")
 			w.writeProjectFile(t, "moved.go", "package golden\n// distinctive moved body\n")
 			w.writeProjectFile(t, "present.go", "package golden\n")
@@ -297,6 +334,60 @@ func skillsStaleCases() []skillsStaleCase {
 			return []string{"skills-stale", "--project-root", w.root}
 		}},
 		{name: "31-a-flag-nobody-knows", args: func(w *skillsStaleWorld) []string { return []string{"skills-stale", "--nope"} }},
+		{name: "32-a-path-recorded-under-another-root-of-the-tree", pathNeedsGit: true, setup: func(t *testing.T, w *skillsStaleWorld) {
+			w.initRepo(t)
+			w.writeProjectFile(t, "module/promote/writer.go", "package promote\n")
+			w.lock(t, lockOf("suffix-skill"))
+			w.skillFiles(t, "suffix-skill", skillText("See `promote/writer.go`, `writer.go` and `module/promote/writer.go`.\n"))
+			w.git(t, "add", "-A")
+			w.git(t, "commit", "-q", "-m", "initial")
+			w.observed(t, "suffix-skill", recently)
+		}},
+		{name: "33-a-path-that-climbs-out-of-the-project-in-a-repository", pathNeedsGit: true, maskGitWords: true, setup: func(t *testing.T, w *skillsStaleWorld) {
+			w.initRepo(t)
+			w.writeProjectFile(t, "present.go", "package golden\n")
+			w.lock(t, lockOf("climbing-skill"))
+			w.skillFiles(t, "climbing-skill", skillText("See `present.go` and `a/../../outside.go`.\n"))
+			w.git(t, "add", "-A")
+			w.git(t, "commit", "-q", "-m", "initial")
+			w.observed(t, "climbing-skill", recently)
+		}},
+		{name: "34-a-path-that-climbs-and-comes-back-in-a-repository", pathNeedsGit: true, setup: func(t *testing.T, w *skillsStaleWorld) {
+			w.initRepo(t)
+			w.writeProjectFile(t, "removed.go", "package golden\n")
+			w.lock(t, lockOf("detour-skill"))
+			w.skillFiles(t, "detour-skill", skillText("See `a/../removed.go`.\n"))
+			w.git(t, "add", "-A")
+			w.git(t, "commit", "-q", "-m", "initial")
+			w.git(t, "rm", "-q", "removed.go")
+			w.git(t, "commit", "-q", "-m", "remove a recorded path")
+			w.observed(t, "detour-skill", recently)
+		}},
+		{name: "35-a-repository-with-no-commit", pathNeedsGit: true, maskGitWords: true, setup: func(t *testing.T, w *skillsStaleWorld) {
+			w.initRepo(t)
+			w.lock(t, lockOf("early-skill"))
+			w.skillFiles(t, "early-skill", skillText("See `lost.go`.\n"))
+			w.observed(t, "early-skill", recently)
+		}},
+		{name: "36-a-removed-path-two-skills-name", pathNeedsGit: true, setup: func(t *testing.T, w *skillsStaleWorld) {
+			w.initRepo(t)
+			w.writeProjectFile(t, "removed.go", "package golden\n")
+			w.lock(t, lockOf("first-skill", "second-skill"))
+			w.skillFiles(t, "first-skill", skillText("See `removed.go` and `removed.go` again.\n"))
+			w.skillFiles(t, "second-skill", skillText("See `removed.go`.\n"))
+			w.git(t, "add", "-A")
+			w.git(t, "commit", "-q", "-m", "initial")
+			w.git(t, "rm", "-q", "removed.go")
+			w.git(t, "commit", "-q", "-m", "remove a recorded path")
+			w.observed(t, "first-skill", recently)
+			w.observed(t, "second-skill", recently)
+		}},
+		{name: "37-paths-the-tree-holds-in-a-directory-that-is-no-repository", pathNeedsGit: true, setup: func(t *testing.T, w *skillsStaleWorld) {
+			w.writeProjectFile(t, "docs/guide.md", "# guide\n")
+			w.lock(t, lockOf("plain-skill"))
+			w.skillFiles(t, "plain-skill", skillText("See `docs/guide.md` and `guide.md`.\n"))
+			w.observed(t, "plain-skill", recently)
+		}},
 	}
 }
 
@@ -327,12 +418,35 @@ func newSkillsStaleWorld(t *testing.T, pathNeedsGit bool) *skillsStaleWorld {
 // The directory git lives in is not put on the PATH instead: it holds whatever else the host keeps beside git,
 // and a command a case treats as missing could be found there. (A file that runs git, not a link to it, because
 // a git built to find its own files by where it was started from finds them from the real one.)
+//
+// The file is a POSIX shell script, so a host with no /bin/sh cannot run these cases and the test says so and
+// skips them. A host that has one and a file that still does not run git is a fault of this harness, not of the
+// program, and fails with that said, instead of surfacing as a golden that differs.
 func (w *skillsStaleWorld) lendGit(t *testing.T, gitPath string) {
 	t.Helper()
+	if _, err := os.Stat("/bin/sh"); err != nil {
+		t.Skipf("the file that runs git is a shell script and there is no /bin/sh here: %v", err)
+	}
+	wrapper := filepath.Join(w.binDir, "git")
 	script := "#!/bin/sh\nexec '" + strings.ReplaceAll(gitPath, "'", `'\''`) + "' \"$@\"\n"
-	if err := os.WriteFile(filepath.Join(w.binDir, "git"), []byte(script), 0o755); err != nil {
+	if err := os.WriteFile(wrapper, []byte(script), 0o755); err != nil {
 		t.Fatalf("write the file that runs git: %v", err)
 	}
+	if err := wrapperRunsGit(wrapper); err != nil {
+		t.Fatalf("the test harness's file that runs git does not run it (a fault of the harness, not of the program): %v", err)
+	}
+}
+
+// wrapperRunsGit runs the file at path as `git --version` and says whether it answered as git does.
+func wrapperRunsGit(path string) error {
+	out, err := exec.Command(path, "--version").Output()
+	if err != nil {
+		return fmt.Errorf("%s --version: %w", path, err)
+	}
+	if !strings.HasPrefix(string(out), "git version ") {
+		return fmt.Errorf("%s --version printed %q, want git's version", path, out)
+	}
+	return nil
 }
 
 // The commands a skill names are found in the world's directory or nowhere, in the cases that read a repository's
@@ -354,12 +468,19 @@ func TestSkillsStaleWorld_PathIsTheWorldsOwnDirectoryAlone(t *testing.T) {
 			for _, entry := range entries {
 				names = append(names, entry.Name())
 			}
-			if want := map[bool][]string{false: nil, true: {"git"}}[needsGit]; strings.Join(names, ",") != strings.Join(want, ",") {
+			var want []string
+			if needsGit {
+				want = []string{"git"}
+			}
+			if !reflect.DeepEqual(names, want) {
 				t.Errorf("the world's directory holds %v, want %v", names, want)
 			}
 			if needsGit {
-				if found, err := exec.LookPath("git"); err != nil || found != filepath.Join(w.binDir, "git") {
+				found, err := exec.LookPath("git")
+				if err != nil || found != filepath.Join(w.binDir, "git") {
 					t.Errorf("git is found at %q (%v), want the file of the world's own", found, err)
+				} else if err := wrapperRunsGit(found); err != nil {
+					t.Errorf("the file of the world's own does not run git: %v", err)
 				}
 			}
 			if found, err := exec.LookPath("definitely-missing-command"); err == nil {
@@ -387,8 +508,28 @@ func runSkillsStaleCase(t *testing.T, tc skillsStaleCase) (w *skillsStaleWorld, 
 	if after := w.listing(t); after != before {
 		t.Errorf("the report changed the project:\nbefore:\n%s\nafter:\n%s", before, after)
 	}
-	rendering = fmt.Sprintf("args: %s\nexit: %d\n--- stdout ---\n%s--- stderr ---\n%s", strings.Join(args, " "), code, stdout, stderr)
-	return w, w.maskForSkillsStale(rendering)
+	rendering = renderRun(args, code, stdout, stderr)
+	masked := w.maskForSkillsStale(rendering)
+	if tc.maskGitWords {
+		masked = withGitWordsMasked(masked)
+	}
+	return w, masked
+}
+
+// renderRun is what a golden of these worlds holds for one run of a command: its arguments, its exit code and
+// both streams.
+func renderRun(args []string, code int, stdout, stderr string) string {
+	return fmt.Sprintf("args: %s\nexit: %d\n--- stdout ---\n%s--- stderr ---\n%s", strings.Join(args, " "), code, stdout, stderr)
+}
+
+// gitWords are the words git itself uses for what it refuses, which are its own to change: the goldens pin the
+// sentence the program builds around them and not these.
+var gitWords = regexp.MustCompile(`(exit status 128: )[^\n]*`)
+
+// withGitWordsMasked replaces git's words in a rendering. The cases of skills-stale recorded before it existed
+// keep git's words as they were written (the per-case flag), and every case of stale, all new, uses it.
+func withGitWordsMasked(text string) string {
+	return gitWords.ReplaceAllString(text, "${1}<git's words>")
 }
 
 // maskForSkillsStale replaces what differs from one machine to the next: the world's directories, and the

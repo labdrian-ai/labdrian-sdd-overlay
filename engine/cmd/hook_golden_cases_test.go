@@ -231,6 +231,9 @@ func promptHookGoldenCases() []hookGoldenCase {
 				os.Remove(filepath.Join(dir, "probe"))
 				w.t.Skip("directory permissions are not enforced for this process (root or an equivalent capability); the removal cannot be made to fail")
 			}
+			// The program cuts the failure it reports at 200 characters, and the path of the binding file (the
+			// state home, which is as long as the temporary directory, and the digest of the repository) is in it.
+			w.cutAt("unbind if unchanged: remove ", "<STATE>/labdrian/bindings/<DIGEST>")
 			w.promptHook("the binding cannot be removed", e, e.repo)
 			w.promptHook("and the note repeats on the next prompt", e, e.repo)
 		}},

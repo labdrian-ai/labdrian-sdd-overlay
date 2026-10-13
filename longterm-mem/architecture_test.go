@@ -17,7 +17,7 @@ import (
 //     read through (L1 gave query its memory ports; L3 and L4 give the rest).
 //   - ingest, projectid, promote, skillstale and staleness are domain packages:
 //     their rules are the part that stays; the file system, git and SQLite they
-//     reach today are debt below.
+//     still reach are debt below (skillstale reaches nothing since L5, staleness since L6).
 //   - vaultreg is an adapter. L9 makes its Resolve pure, but the registry file
 //     store stays in the package, so it cannot be a domain package without a
 //     debt that L9 does not clear.
@@ -29,6 +29,9 @@ import (
 //     and state, with no I/O. Promotion, the diagnostics and the file system adapter all read it (L3).
 //   - vaultfs is the file system adapter of the vault: the repositories behind the ports promote and ops
 //     own. Only the composition root may import it (the adapter guard), as with engram (L3).
+//   - repoevidence is the adapter of the repository evidence staleness asks for: it lists the working tree and
+//     asks repohistory (git) what became of a path, and answers in staleness's own types (L6). Only the
+//     composition root may import it (the adapter guard).
 //   - the module root (this guard) and internal/ops/testdata (a Go package the
 //     other tests import) are test support.
 var rings = map[string]archguard.Ring{
@@ -47,6 +50,7 @@ var rings = map[string]archguard.Ring{
 	"internal/promote":        archguard.Domain,
 	"internal/query":          archguard.Application,
 	"internal/register":       archguard.Adapter,
+	"internal/repoevidence":   archguard.Adapter,
 	"internal/repohistory":    archguard.Adapter,
 	"internal/skillstale":     archguard.Domain,
 	"internal/skillstalefs":   archguard.Adapter,
@@ -85,13 +89,6 @@ var knownDebt = archguard.Debt{
 		"os":                         "L7",
 		"path/filepath.Abs":          "L7",
 		"path/filepath.EvalSymlinks": "L7",
-	},
-
-	// staleness: reads the repository through a RepoEvidence port.
-	"internal/staleness": {
-		"internal/repohistory":  "L6",
-		"os":                    "L6",
-		"path/filepath.WalkDir": "L6",
 	},
 }
 

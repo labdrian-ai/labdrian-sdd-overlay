@@ -80,6 +80,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -545,21 +546,37 @@ func phase8ProceduralDraft(activation string) string {
 // type moving between the package's files does not lose them.
 func phase8DetectorLockKeys(t *testing.T) (top, entry map[string]bool) {
 	t.Helper()
-	src := filepath.Join("..", "..", "longterm-mem", "internal", "skillstale")
+	topKeys, entryKeys, err := phase8LockKeysIn(filepath.Join("..", "..", "longterm-mem", "internal", "skillstale"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return topKeys, entryKeys
+}
+
+// phase8LockKeysIn is the reading behind phase8DetectorLockKeys, over the package in src. It refuses a
+// directory with no non-test Go source (a path that moved or a glob that matched nothing would otherwise
+// show only as keys that are missing), and a package that declares ProjectLock or ProjectLockEntry twice
+// (under a build tag, say), because the later declaration would silently replace the earlier one.
+func phase8LockKeysIn(src string) (top, entry map[string]bool, err error) {
 	sources, err := filepath.Glob(filepath.Join(src, "*.go"))
 	if err != nil {
-		t.Fatalf("list the detector's sources in %s: %v", src, err)
+		return nil, nil, fmt.Errorf("list the detector's sources in %s: %w", src, err)
 	}
 	var decls []ast.Decl
+	parsed := 0
 	for _, path := range sources {
 		if strings.HasSuffix(path, "_test.go") {
 			continue
 		}
 		file, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
 		if err != nil {
-			t.Fatalf("parse the detector's source %s: %v", path, err)
+			return nil, nil, fmt.Errorf("parse the detector's source %s: %w", path, err)
 		}
+		parsed++
 		decls = append(decls, file.Decls...)
+	}
+	if parsed == 0 {
+		return nil, nil, fmt.Errorf("no non-test Go source in %s; did the detector move?", src)
 	}
 	for _, decl := range decls {
 		gen, ok := decl.(*ast.GenDecl)
@@ -579,7 +596,7 @@ func phase8DetectorLockKeys(t *testing.T) (top, entry map[string]bool) {
 				}
 				tag, err := strconv.Unquote(field.Tag.Value)
 				if err != nil {
-					t.Fatalf("tag %s: %v", field.Tag.Value, err)
+					return nil, nil, fmt.Errorf("tag %s: %w", field.Tag.Value, err)
 				}
 				if name := strings.Split(reflect.StructTag(tag).Get("json"), ",")[0]; name != "" && name != "-" {
 					keys[name] = true
@@ -587,16 +604,22 @@ func phase8DetectorLockKeys(t *testing.T) (top, entry map[string]bool) {
 			}
 			switch typeSpec.Name.Name {
 			case "ProjectLock":
+				if top != nil {
+					return nil, nil, fmt.Errorf("ProjectLock is declared more than once in %s", src)
+				}
 				top = keys
 			case "ProjectLockEntry":
+				if entry != nil {
+					return nil, nil, fmt.Errorf("ProjectLockEntry is declared more than once in %s", src)
+				}
 				entry = keys
 			}
 		}
 	}
 	if len(top) == 0 || len(entry) == 0 {
-		t.Fatalf("found no json fields for ProjectLock (%v) or ProjectLockEntry (%v) in %s; did the detector move?", top, entry, src)
+		return nil, nil, fmt.Errorf("found no json fields for ProjectLock (%v) or ProjectLockEntry (%v) in %s; did the detector move?", top, entry, src)
 	}
-	return top, entry
+	return top, entry, nil
 }
 
 // phase8AssertDetectorAcceptsLock restates the detector's strict parse for a lock file

@@ -21,8 +21,8 @@
 //
 //   - a different root is resolved against the tree by path suffix before
 //     the history is ever consulted;
-//   - a rename is reported as MOVED, never removed (internal/repohistory
-//     asks git in the one way that can tell them apart);
+//   - a rename is reported as MOVED, never removed (the history behind
+//     RepoEvidence asks git in the one way that can tell them apart);
 //   - a path this repository never had is ignored, because this repository
 //     has nothing to say about it.
 //
@@ -35,20 +35,20 @@
 // Findings are REPORTED, never acted on. longterm-mem reads Engram
 // read-only (R-002), and a memory is not deleted on the word of a heuristic
 // about file paths.
+//
+// The rule reads the repository through RepoEvidence, a port it owns: the
+// files of the working tree and what the history says of a path. It walks no
+// directory and runs no process; internal/repoevidence answers the port on a
+// file system and git, and the composition root hands it over.
 package staleness
 
 import (
-	"fmt"
-	"io/fs"
-	"os"
-	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/repohistory"
 )
 
 // Finding is one observation the repository disagrees with.
@@ -57,11 +57,11 @@ type Finding struct {
 	Title         string
 	// Removed are paths deleted after the observation was written: the
 	// reason it may describe something that no longer exists.
-	Removed []repohistory.PathFact
+	Removed []PathFact
 	// Moved are paths whose content was renamed elsewhere. The observation
 	// is out of date about WHERE, never wrong about WHAT, so these are
 	// reported separately and are never grounds for removing anything.
-	Moved []repohistory.PathFact
+	Moved []PathFact
 }
 
 // whereField captures the "**Where**:" line of Engram's save format, which
@@ -176,24 +176,27 @@ func extractPaths(text string) []string {
 }
 
 // ClassifyPaths returns the repository's best evidence for every recorded
-// path. Present paths are resolved by the working-tree suffix index without a
-// git subprocess; absent paths are delegated to repohistory.Inspect so a
-// deletion, rename, or path this repository never held remains distinguishable.
-// The returned map contains one fact for every distinct input path.
-func ClassifyPaths(repoRoot string, paths []string) (map[string]repohistory.PathFact, error) {
-	tree, err := indexTree(repoRoot)
+// path. A path is resolved against the files of the working tree by its
+// trailing segments first, which needs no question of the history; the ones
+// the tree cannot account for are put to the history, in one question, so a
+// deletion, rename, or path this repository never held remains
+// distinguishable. The returned map contains one fact for every distinct
+// input path.
+func ClassifyPaths(evidence RepoEvidence, paths []string) (map[string]PathFact, error) {
+	files, err := evidence.Files()
 	if err != nil {
 		return nil, err
 	}
+	tree := indexFiles(files)
 
-	facts := make(map[string]repohistory.PathFact, len(paths))
+	facts := make(map[string]PathFact, len(paths))
 	unresolved := make(map[string]bool)
 	for _, path := range paths {
 		if _, seen := facts[path]; seen {
 			continue
 		}
 		if tree.holds(path) {
-			facts[path] = repohistory.PathFact{Path: path, State: repohistory.StatePresent}
+			facts[path] = PathFact{Path: path, State: PathPresent}
 			continue
 		}
 		unresolved[path] = true
@@ -202,7 +205,7 @@ func ClassifyPaths(repoRoot string, paths []string) (map[string]repohistory.Path
 		return facts, nil
 	}
 
-	history, err := repohistory.Inspect(repoRoot, sortedKeys(unresolved))
+	history, err := evidence.History(sortedKeys(unresolved))
 	if err != nil {
 		return nil, err
 	}
@@ -212,55 +215,39 @@ func ClassifyPaths(repoRoot string, paths []string) (map[string]repohistory.Path
 	return facts, nil
 }
 
-// Detect reports which of observations the repository at repoRoot
-// disagrees with.
-func Detect(repoRoot string, observations []memory.Observation) ([]Finding, error) {
-	tree, err := indexTree(repoRoot)
+// Detect reports which of observations the repository disagrees with.
+//
+// Only paths the tree cannot account for are worth a question of the history,
+// and resolving by suffix first (what ClassifyPaths does) is what keeps a path
+// recorded under another root from ever reaching the history as a suspected
+// deletion.
+func Detect(evidence RepoEvidence, observations []memory.Observation) ([]Finding, error) {
+	named := make([][]string, len(observations))
+	var all []string
+	for i, o := range observations {
+		named[i] = Paths(o.Content)
+		all = append(all, named[i]...)
+	}
+
+	facts, err := ClassifyPaths(evidence, all)
 	if err != nil {
 		return nil, err
 	}
-
-	// Only paths the tree cannot account for are worth a subprocess, and
-	// resolving by suffix first is what keeps a path recorded under another
-	// root from ever reaching the history as a suspected deletion.
-	unresolved := map[string]bool{}
-	perObs := make(map[int64][]string, len(observations))
-	for _, o := range observations {
-		var candidates []string
-		for _, p := range Paths(o.Content) {
-			if tree.holds(p) {
-				continue
-			}
-			candidates = append(candidates, p)
-			unresolved[p] = true
-		}
-		if len(candidates) > 0 {
-			perObs[o.ID] = candidates
-		}
-	}
-	if len(unresolved) == 0 {
-		return nil, nil
-	}
-
-	facts, err := repohistory.Inspect(repoRoot, sortedKeys(unresolved))
-	if err != nil {
-		return nil, err
-	}
-
-	return findings(observations, perObs, facts), nil
+	return findings(observations, named, facts), nil
 }
 
-// findings applies the rule to already-gathered facts. It is separated from
-// the gathering so the rule can be tested against facts that are awkward to
-// build on disk -- an unknown path carrying a recent date above all.
-func findings(observations []memory.Observation, perObs map[int64][]string, facts map[string]repohistory.PathFact) []Finding {
+// findings applies the rule to already-gathered facts: named[i] are the paths
+// observations[i] names. It is separated from the gathering so the rule can be
+// tested against facts that are awkward to build on disk -- an unknown path
+// carrying a recent date above all.
+func findings(observations []memory.Observation, named [][]string, facts map[string]PathFact) []Finding {
 	var out []Finding
-	for _, o := range observations {
+	for i, o := range observations {
 		written, ok := observationTime(o)
 		f := Finding{ObservationID: o.ID, Title: o.Title}
-		for _, p := range perObs[o.ID] {
+		for _, p := range named[i] {
 			switch fact := facts[p]; fact.State {
-			case repohistory.StateDeleted:
+			case PathDeleted:
 				// Undatable memory is not reported as stale. Assuming a
 				// zero time would make every deletion look later than
 				// every memory, turning an unparsed timestamp into a
@@ -269,7 +256,7 @@ func findings(observations []memory.Observation, perObs map[int64][]string, fact
 				if ok && fact.At.After(written) {
 					f.Removed = append(f.Removed, fact)
 				}
-			case repohistory.StateRenamed:
+			case PathRenamed:
 				f.Moved = append(f.Moved, fact)
 			}
 		}
@@ -310,40 +297,20 @@ func (t treeIndex) holds(recorded string) bool {
 	return t.bySuffix[strings.TrimPrefix(recorded, "./")]
 }
 
-// indexTree walks the working tree once and indexes every suffix of every
-// file path, so "promote/writer.go" resolves to
+// indexFiles indexes every suffix of every file path of the working tree
+// (slash-separated, relative to its root), so "promote/writer.go" resolves to
 // "module/promote/writer.go" -- the false positive measured on the real
 // database, where a path recorded relative to a different root looked
 // removed while the file was alive.
-func indexTree(repoRoot string) (treeIndex, error) {
+func indexFiles(files []string) treeIndex {
 	idx := treeIndex{bySuffix: map[string]bool{}}
-	err := filepath.WalkDir(repoRoot, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if d.IsDir() {
-			if d.Name() == ".git" {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		rel, relErr := filepath.Rel(repoRoot, path)
-		if relErr != nil {
-			return nil
-		}
-		segments := strings.Split(filepath.ToSlash(rel), "/")
+	for _, file := range files {
+		segments := strings.Split(file, "/")
 		for i := range segments {
 			idx.bySuffix[strings.Join(segments[i:], "/")] = true
 		}
-		return nil
-	})
-	if err != nil {
-		if os.IsNotExist(err) {
-			return treeIndex{}, fmt.Errorf("staleness: %s does not exist", repoRoot)
-		}
-		return treeIndex{}, fmt.Errorf("staleness: walking %s: %w", repoRoot, err)
 	}
-	return idx, nil
+	return idx
 }
 
 func sortedKeys(m map[string]bool) []string {

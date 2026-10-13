@@ -1,0 +1,5 @@
+args: skills-stale --project-root <project> --project skillsgolden
+exit: 1
+--- stdout ---
+--- stderr ---
+longterm-mem: skills-stale: skillstale: classify paths for climbing-skill: repohistory: reading the history of a/../../outside.go: git log -1 --format=%H%x00%cI -- a/../../outside.go: exit status 128: <git's words>

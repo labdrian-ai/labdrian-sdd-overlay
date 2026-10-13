@@ -8,6 +8,7 @@ import (
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/projectid"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/repoevidence"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/skillstale"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/skillstalefs"
 )
@@ -58,7 +59,7 @@ func (c commands) cmdSkillsStale(args []string) int {
 
 	// The detector reads nothing itself: the project's files and repository, the commands on this process's
 	// PATH and the instant are handed to it here, where the program meets its surroundings.
-	onDisk, err := skillstalefs.OpenProject(*projectRoot)
+	onDisk, err := skillstalefs.OpenProject(*projectRoot, repoevidence.At(*projectRoot))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "longterm-mem: skills-stale: %v\n", err)
 		return exitUsage

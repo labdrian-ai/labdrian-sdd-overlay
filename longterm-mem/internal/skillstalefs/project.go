@@ -11,14 +11,15 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/repohistory"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/skillstale"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/staleness"
 )
 
-// Project is a project on disk: the directory its lock, its skill files and its repository live under.
+// Project is a project on disk: the directory its lock and its skill files live under, and the evidence of
+// its repository.
 type Project struct {
-	root string
+	root     string
+	evidence staleness.RepoEvidence
 }
 
 var (
@@ -27,12 +28,16 @@ var (
 )
 
 // OpenProject names the project at root, which must be an absolute path: nothing here resolves a relative one
-// against the working directory.
-func OpenProject(root string) (Project, error) {
+// against the working directory. What its repository says of a path is asked of evidence, which the caller
+// chooses (the composition root hands it the adapter over the project's own tree and git).
+func OpenProject(root string, evidence staleness.RepoEvidence) (Project, error) {
 	if !filepath.IsAbs(root) {
 		return Project{}, fmt.Errorf("skillstale: project root must be absolute: %q", root)
 	}
-	return Project{root: root}, nil
+	if evidence == nil {
+		return Project{}, fmt.Errorf("skillstale: repository evidence is required")
+	}
+	return Project{root: root, evidence: evidence}, nil
 }
 
 // ReadLock reads the project lock. The error is the file system's own, naming the path it tried.
@@ -54,7 +59,7 @@ func (p Project) ReadSkill(target string) ([]byte, error) {
 // PathFacts asks the repository of the project what became of each path: in the working tree, deleted by a
 // commit, renamed by one, or never there.
 func (p Project) PathFacts(paths []string) (map[string]skillstale.PathFact, error) {
-	facts, err := staleness.ClassifyPaths(p.root, paths)
+	facts, err := staleness.ClassifyPaths(p.evidence, paths)
 	if err != nil {
 		return nil, err
 	}
@@ -67,13 +72,13 @@ func (p Project) PathFacts(paths []string) (map[string]skillstale.PathFact, erro
 
 // stateOf is the detector's word for what the repository history says. A state it has no word for is the one the
 // detector reports nothing for.
-func stateOf(state repohistory.State) skillstale.PathState {
+func stateOf(state staleness.PathState) skillstale.PathState {
 	switch state {
-	case repohistory.StatePresent:
+	case staleness.PathPresent:
 		return skillstale.PathPresent
-	case repohistory.StateDeleted:
+	case staleness.PathDeleted:
 		return skillstale.PathDeleted
-	case repohistory.StateRenamed:
+	case staleness.PathRenamed:
 		return skillstale.PathRenamed
 	default:
 		return skillstale.PathUnknown
