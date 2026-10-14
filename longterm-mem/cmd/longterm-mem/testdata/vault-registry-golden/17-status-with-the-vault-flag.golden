@@ -1,0 +1,11 @@
+args: status --project labdrian-sdd-overlay --vault <vault>
+exit: 0
+--- stdout ---
+longterm-mem: status for labdrian-sdd-overlay
+  engram: reachable=true
+  vault: provisioned=false
+  last sync: never
+  embedding index built at: never
+--- stderr ---
+--- registry ---
+absent

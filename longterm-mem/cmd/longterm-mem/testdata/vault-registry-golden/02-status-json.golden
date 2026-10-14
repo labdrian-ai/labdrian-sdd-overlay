@@ -1,0 +1,22 @@
+args: status --project labdrian-sdd-overlay --json
+exit: 0
+--- stdout ---
+{
+  "project": "labdrian-sdd-overlay",
+  "engram_reachable": true,
+  "vault_provisioned": false,
+  "last_sync_completed_at": "never",
+  "embedding_index_built_at": "never"
+}
+--- stderr ---
+--- registry ---
+file -rw-------, directory -rwx------
+{
+  "schema": 1,
+  "vaults": {
+    "labdrian-sdd-overlay": {
+      "path": "~/labdrian-brain",
+      "seeded": true
+    }
+  }
+}

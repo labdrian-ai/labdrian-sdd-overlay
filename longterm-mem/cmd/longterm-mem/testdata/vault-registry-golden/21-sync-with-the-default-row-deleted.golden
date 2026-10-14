@@ -1,0 +1,8 @@
+args: sync --project labdrian-sdd-overlay
+exit: 3
+--- stdout ---
+--- stderr ---
+longterm-mem: sync: vaultreg: vault not configured: project "labdrian-sdd-overlay" has no vault-registry entry in <home>/.labdrian-overlay/vaults.json
+--- registry ---
+file -rw-r--r--, directory -rwxr-xr-x
+{"schema": 1, "vaults": {}}

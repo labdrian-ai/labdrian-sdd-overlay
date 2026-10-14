@@ -1,0 +1,8 @@
+args: sync --project labdrian-sdd-overlay
+exit: 1
+--- stdout ---
+--- stderr ---
+longterm-mem: sync: vaultreg: parse <home>/.labdrian-overlay/vaults.json: invalid character 'n' looking for beginning of object key string
+--- registry ---
+file -rw-r--r--, directory -rwxr-xr-x
+{ not json
