@@ -4,10 +4,10 @@
 
 | Field | Value |
 |-------|-------|
-| Estimated changed lines | ~1140 total across 4 slices (design forecast: WU-1 ~400 total, WU-2 ~730 total; split below: 1a ~210, 1b ~200, 2a ~400, 2b ~330) |
-| 400-line budget risk | Medium overall — 1a and 1b individually sit safely under budget; 2a sits right at the 400-line boundary and is the slice most likely to need trimming if implementation runs long; 2b is comfortably under |
+| Estimated changed lines | ~1290 total across 4 slices (design forecast: WU-1 ~400 total, WU-2 ~730 total; split below: 1a ~210, 1b ~200, 2a ~400, 2b ~480 — the Extractor use case over the `SourceReader` port ~330 plus the reading side of `internal/sourcefs` and its tests ~150, which the L11 amendment added; the design's ~730 for WU-2 becomes ~880) |
+| 400-line budget risk | Medium overall — 1a and 1b individually sit safely under budget; 2a sits right at the 400-line boundary; 2b now sits over it, and splits at its seam if it runs long: the use case (2b.1–2b.4, 2b.7–2b.10) and the directory scan with the reading side of `sourcefs` (2b.5–2b.6a) |
 | Chained PRs recommended | Yes |
-| Suggested split | PR 1a (contract doc) → PR 1b (SKILL.md + registry) → PR 2a (header/slug/chunker) → PR 2b (Extract/directory scan) |
+| Suggested split | PR 1a (contract doc) → PR 1b (SKILL.md + registry) → PR 2a (header/slug/chunker) → PR 2b (Extractor over the `SourceReader` port, directory scan, `sourcefs` reads) |
 | Delivery strategy | ask-on-risk (session preflight) |
 | Chain strategy | stacked-to-main (established this session) |
 
@@ -28,10 +28,13 @@ or over budget and explicitly authorizes `sdd-tasks` to split further:
   emitter cites the same contract).
 - **WU-2 `ingest-extraction`** forecast ~730 lines as one slice — over budget — and is split into
   **2a** (`header.go`, `chunk.go`, `doc.go` plus their tests: slug, `SourceID`, provenance-block
-  round-trip, chunk boundary and chunk metadata, ~400 lines) and **2b** (`extract.go`: `Extract`,
-  request validation, per-item skip semantics, directory scan, plus its tests and the one-line
-  `net_allowlist_test.go` addition, ~330 lines). 2b depends on 2a (`Extract` calls the chunker and
-  the header renderer).
+  round-trip, chunk boundary and chunk metadata, ~400 lines) and **2b** (`extract.go`: the
+  `Extractor` use case — `Extract`, request validation, per-item skip semantics, directory scan —
+  over the `SourceReader` port `internal/ingest` owns, with its tests over an in-memory reader; the
+  reading side of the `internal/sourcefs` adapter and its `t.TempDir()` tests; and the one-line
+  `net_allowlist_test.go` addition, ~480 lines). 2b depends on 2a (`Extract` calls the chunker and
+  the header renderer) and on L11 (Phase 9, batch 42: the port, `ResolveOrigin` and the adapter's
+  `WorkingDirectory` landed there).
 
 Dependency order: **1a → 1b → 2a → 2b**. 1a must land before 2a can cite a stable contract; 2a must
 land before 2b can call it. 1b has no Go dependency on 2a/2b but is kept between them in the stack
@@ -44,8 +47,8 @@ sequencing.
 |------|------|-----------|----------------------|-----------------|-------------------|
 | 1a contract | Normative ingested-observation contract document + artifact test (R-002, R-004) | PR 1a | `cd engine && go test ./skills/...` | Go table/repo-file assertion test, no fixtures | delete `skills/_shared/ingested-observation-contract.md` and `engine/skills/ingested_contract_artifact_test.go` |
 | 1b procedure | `SKILL.md` procedure + registry row (R-001, R-003) | PR 1b | `cd engine && go test ./skills/...` | Registry-parse test over the real `skills.registry.yaml`; acceptance checklist executed manually during `sdd-verify` | delete `skills/knowledge-ingestion/`, revert the registry row, re-propagate the registry |
-| 2a header/chunker | `Header`/`Render`/`ParseHeader`/`NormalizeSlug`/`SourceID` and the chunk boundary (R-006, part of R-007) | PR 2a | `cd longterm-mem && go test ./internal/ingest/...` | Go table tests + `t.TempDir()` where needed, no fixtures beyond in-memory strings | delete `longterm-mem/internal/ingest/header.go`, `chunk.go`, `doc.go` and their tests; package has no caller yet |
-| 2b extract/scan | `Extract`, request validation, skip semantics, directory scan (R-005, R-007) | PR 2b | `cd longterm-mem && go vet ./... && go test ./...` | Go table tests over `t.TempDir()` fixtures; full-module run proves `TestNetImportAllowlist`/`TestNetImportAllowlistStillRefusesOthers` still pass | delete `longterm-mem/internal/ingest/extract.go` and its tests; revert the one-line `net_allowlist_test.go` addition |
+| 2a header/chunker | `Header`/`Render`/`ParseHeader`/`NormalizeSlug`/`SourceID` and the chunk boundary (R-006, part of R-007) | PR 2a | `cd longterm-mem && go test ./internal/ingest/...` | Go table tests, no fixtures beyond in-memory strings (no `t.TempDir()` since L11: `ingest_purity_guard_test.go` keeps `internal/ingest`'s tests off the file system) | delete `longterm-mem/internal/ingest/header.go`, `chunk.go`, `doc.go` and their tests; package has no caller yet |
+| 2b extract/scan | The `Extractor` use case over the `SourceReader` port: `Extract`, request validation, skip semantics, directory scan; the reading side of `internal/sourcefs` (R-005, R-007) | PR 2b | `cd longterm-mem && go vet ./... && go test ./...` | Go table tests over an in-memory `SourceReader` for the use case (no file is touched); `t.TempDir()` fixtures only in `internal/sourcefs`'s tests; full-module run proves `TestNetImportAllowlist`/`TestNetImportAllowlistStillRefusesOthers` and the L11 guards (empty `knownDebt`, `ingest_purity_guard_test.go`, `sourcefs_adapter_guard_test.go`) still pass | delete `longterm-mem/internal/ingest/extract.go` and its tests, and the reading methods of `internal/sourcefs` with their tests (the port's `WorkingDirectory`, `ResolveOrigin` and the guards are L11's and stay); revert the one-line `net_allowlist_test.go` addition |
 
 **Note on TDD applicability.** R-005 and R-006 are pure Go and follow strict RED→GREEN→REFACTOR
 throughout WU-2. R-001, R-002, R-003, R-004 are agent-driven prose plus one repo-file assertion test
@@ -119,6 +122,15 @@ table.
 
 Depends on Phase 1a (the contract document `header.go`'s doc comment cites as normative).
 
+**Amended by L11 (Phase 9, batch 42).** 2a.4 delivered `SourceID` calling `filepath.Abs`, so the id of a
+file or directory origin depended on the directory the process was in, and `internal/ingest` was the
+last package on the architecture guard's debt table. L11 moved that behind the `SourceReader` port
+`internal/ingest` owns (`source.go`): `ResolveOrigin(reader, origin)` begins a relative file or
+directory path at `reader.WorkingDirectory()`, and `SourceID` derives the id of an absolute path
+exactly as before and refuses a relative one. The ids 2a.3 and 2a.4 specify are unchanged
+(`origin_file_test.go` holds them); `internal/sourcefs` answers the port on the local file system.
+The 2a tasks below stay as they were delivered; 2b is where the amendment bites.
+
 - [x] 2a.1 RED `longterm-mem/internal/ingest/header_test.go`: `NormalizeSlug(s string, limit int)`
   table — lowercase ASCII, runs of non-`[a-z0-9]` collapsed to one `-`, leading/trailing `-` trimmed,
   truncation at the last `-` boundary at or before `limit`, empty string, all-punctuation string,
@@ -173,32 +185,79 @@ Depends on Phase 1a (the contract document `header.go`'s doc comment cites as no
 
 ## Phase 2b: ingest-extraction — Extract, skip semantics, and directory scan (PR 2b, R-005, R-007)
 
-Depends on Phase 2a (`Extract` calls `chunk.go` and `header.go`).
+Depends on Phase 2a (`Extract` calls `chunk.go` and `header.go`) and on L11 (Phase 9, batch 42).
+
+**Amended by L11 (Phase 9, batch 42): `internal/ingest` stays pure.** `extract.go` reads no file and no
+directory itself. Extraction is an ingestion use case, `ingest.Extractor{Reader SourceReader}`, over the
+`SourceReader` port that `internal/ingest` owns (`source.go`, where L11 put `WorkingDirectory` and
+`ResolveOrigin`); `internal/sourcefs` answers the port on the local file system with `os`; and
+`cmd/longterm-mem`, the composition root, is the only package that may name `sourcefs`
+(`sourcefs_adapter_guard_test.go`). This change adds no command and no MCP tool (Threat Matrix, routing),
+so it wires nothing: the change that adds the first command that ingests builds
+`ingest.Extractor{Reader: sourcefs.Reader{}}` in `cmd`. Three consequences for the tasks below:
+
+- `internal/ingest` imports no `os`, `os/exec`, `net` or `net/http`, uses no `path/filepath` member that
+  reaches the disk (`Abs`, `EvalSymlinks`, `Glob`, `Walk`, `WalkDir`), reads no wall clock, and names no
+  adapter, in its tests as in its code. The architecture test (empty `knownDebt`) and
+  `ingest_purity_guard_test.go` hold that; a new test of the use case does not use `t.TempDir()`,
+  `t.Chdir` or `t.Setenv`, and does not import `sourcefs`.
+- The use case is tested over an in-memory `SourceReader` that the case builds (entries, bytes, listings
+  and failures). Cases that need a real directory (a permission-denied file, a real link, a missing
+  path) are the adapter's, in `internal/sourcefs`'s own tests with `t.TempDir()`.
+- The port stays the use case's vocabulary: its methods return `ingest`'s own types and report a missing
+  entry as an error that satisfies `errors.Is(err, fs.ErrNotExist)`, never by its words.
 
 - [ ] 2b.1 RED `longterm-mem/internal/ingest/extract_test.go` (new): `Extract` request-validation
-  table — `Text` and `Path` both set errors; both empty errors; `Origin.Kind` invalid errors;
-  `KindPasted` with empty `Label` errors; a source whose chunk count would exceed `MaxChunks` (9999)
-  errors rather than silently truncating or renumbering
+  table, over an in-memory `SourceReader` (no file is touched) — `Text` and `Path` both set errors;
+  both empty errors; `Origin.Kind` invalid errors; `KindPasted` with empty `Label` errors; a source
+  whose chunk count would exceed `MaxChunks` (9999) errors rather than silently truncating or
+  renumbering
 - [ ] 2b.2 GREEN `longterm-mem/internal/ingest/extract.go` (new): define `Request`, `Result`,
-  `Source`, `Record`, `Skip`, `RecordRole` types per the design's Interfaces/Contracts section, and
-  implement `Extract`'s request-validation branch — returns a hard `error` only for these cases
-- [ ] 2b.3 RED `extract_test.go`: per-item skip-code table, one case per code — `unreadable`
-  (permission-denied fixture), `binary` (NUL byte within the first 8 KiB), `unsupported_extension`
-  (extension outside `.md`, `.markdown`, `.txt`, `.text`, `.rst`, `.adoc`), `too_large` (above
-  `MaxSourceBytes`), `empty` (zero bytes and whitespace-only), `symlink` (entry is a symlink, never
-  followed), `outside_root` (resolved path escapes the scan root); assert a call producing zero
-  units plus a non-empty `Skipped` list is success, not error
+  `Source`, `Record`, `Skip`, `RecordRole` types per the design's Interfaces/Contracts section; add the
+  reading side to the `SourceReader` port in `source.go`, beside `WorkingDirectory`, in `ingest`'s own
+  types — `Lstat` (the kind of an entry and its size, without following a link), `ReadFile` (an entry's
+  bytes) and `ReadDir` (the names in a directory); define the `Extractor` use case, a struct with a
+  `Reader SourceReader` field and the method `Extract(req Request) (Result, error)` (there is no
+  package-level `Extract` that reaches for the machine), and implement `Extract`'s request-validation
+  branch — returns a hard `error` only for these cases. Every touch of the machine is a call on
+  `Extractor.Reader`; `Text` requests never ask it anything
+- [ ] 2b.3 RED `extract_test.go`: per-item skip-code table, one case per code, over an in-memory
+  `SourceReader` whose entries, bytes and failures the case sets — `unreadable` (the reader's `ReadFile`
+  fails), `binary` (NUL byte within the first 8 KiB of the bytes it returns), `unsupported_extension`
+  (extension outside `.md`, `.markdown`, `.txt`, `.text`, `.rst`, `.adoc`), `too_large` (the size
+  `Lstat` reports is above `MaxSourceBytes`; the bytes are not read), `empty` (zero bytes and
+  whitespace-only), `symlink` (`Lstat` reports a link; it is never followed, and the case fails if the
+  use case asks the reader to read it), `outside_root` (an entry whose cleaned absolute path is not
+  below the scan root's); assert a call producing zero units plus a non-empty `Skipped` list is
+  success, not error
 - [ ] 2b.4 GREEN `extract.go`: implement single-source extraction for `Text` and for `Path` pointing
-  at one file — produce `Skip` records for each reachable failure code above, and for a readable
-  source call `chunk.go`'s boundary function and `header.go`'s `SourceID`/`Header.Render` to build
-  `Record`s; assert `Result.Skipped` is always rendered (never `omitempty`)
-- [ ] 2b.5 RED `extract_test.go`: directory-scan table using `t.TempDir()` fixtures — lexical
-  ordering by relative path; shallow scan by default; recursive scan only when `Request.Recursive`
-  is set; a symlinked entry is skipped and never followed (`os.Lstat`); a directory with zero
+  at one file — the path made absolute with `ResolveOrigin` over the reader (so the id is a function
+  of the origin, never of the process), the entry's kind and size asked through `Lstat` and its bytes
+  read through `ReadFile`; produce `Skip` records for each reachable failure code above, and for a
+  readable source call `chunk.go`'s boundary function and `header.go`'s `SourceID`/`Header.Render` to
+  build `Record`s; assert `Result.Skipped` is always rendered (never `omitempty`)
+- [ ] 2b.5 RED `extract_test.go`: directory-scan table over an in-memory tree — lexical ordering by
+  relative path (whatever order the reader lists them in); shallow scan by default; recursive scan only
+  when `Request.Recursive` is set; a symlinked entry is skipped and never followed (the reader reports a
+  link from `Lstat`; the case fails if the use case lists or reads through it); a directory with zero
   readable files returns success with zero sources and a fully populated `Skipped` list
+- [ ] 2b.5a RED `longterm-mem/internal/sourcefs/sourcefs_test.go` (extend, `t.TempDir()` fixtures):
+  the reading side of the adapter on a real directory — `Lstat` tells a file, a directory, a link and
+  anything else apart and reports a file's size, and does not follow a link (a link to a file outside
+  the directory is a link, and the target is never opened); an entry that is not there fails with an
+  error that satisfies `errors.Is(err, fs.ErrNotExist)`; `ReadFile` returns the bytes, and a file the
+  process may not read fails (the case is skipped when the process can read it anyway, as root can);
+  `ReadDir` lists the names in a directory without `.` and `..`, in no promised order (the use case
+  sorts)
 - [ ] 2b.6 GREEN `extract.go`: implement the directory-scan path (`Path` pointing at a directory) —
-  lexical ordering, shallow/recursive switch, `os.Lstat`-based symlink detection, and the
-  `outside_root` guard for any resolved entry escaping the scan root
+  lexical ordering (the use case sorts the names the reader lists), shallow/recursive switch, symlink
+  detection from the kind `Lstat` reports (a link is a `symlink` skip: never followed, never read), and
+  the `outside_root` guard for any entry whose cleaned absolute path is not below the scan root's,
+  decided by the use case on the paths (no link is ever resolved, so the port has no `EvalSymlinks`)
+- [ ] 2b.6a GREEN `longterm-mem/internal/sourcefs/sourcefs.go`: implement `Lstat`, `ReadFile` and
+  `ReadDir` on `Reader` with `os.Lstat`, `os.ReadFile` and `os.ReadDir`, answering in `ingest`'s own
+  types (the adapter imports `ingest`, never the other way). The adapter is the only place in the
+  extraction that names `os`; its assertion that it satisfies `ingest.SourceReader` stays
 - [ ] 2b.7 RED `extract_test.go`: R-007 field-completeness table — a single-unit extraction's one
   `Record` carries origin, ingestion timestamp, and the ingested-vs-session marker; a multi-chunk
   extraction's every `Record` independently carries the same three fields, identical across all N
@@ -209,17 +268,22 @@ Depends on Phase 2a (`Extract` calls `chunk.go` and `header.go`).
 - [ ] 2b.9 Modify `longterm-mem/net_allowlist_test.go`: add `internal/ingest/extract.go` to
   `TestNetImportAllowlistStillRefusesOthers`'s must-never-be-allowlisted list (one line); do not
   touch `allowedNetImporters` and do not change its `len == 1` assertion
-- [ ] 2b.10 REFACTOR: confirm `extract.go` imports neither `net` nor `net/http` nor `os/exec`; confirm
-  `doc.go`'s citation of the contract document (2a.11) still matches `extract.go`'s actual `Record`
-  field population
+- [ ] 2b.10 REFACTOR: confirm `extract.go` imports neither `net` nor `net/http` nor `os/exec` nor `os`,
+  uses no `path/filepath` member that reaches the disk, and names no adapter (`internal/sourcefs`
+  included); confirm `doc.go`'s citation of the contract document (2a.11) still matches `extract.go`'s
+  actual `Record` field population, and that `doc.go` and `source.go` describe the port as it now is
 - [ ] 2b.11 Verify: `cd longterm-mem && go vet ./... && go test ./...` — full module run, confirming
   `TestNetImportAllowlist` and `TestNetImportAllowlistStillRefusesOthers` both pass with the
-  allowlist still holding exactly one entry (`internal/embed/client.go`)
+  allowlist still holding exactly one entry (`internal/embed/client.go`), and that the L11 guards
+  still pass with `knownDebt` empty: `TestArchitectureFollowsTheDependencyRule`,
+  `TestIngestNamesNoAdapter`, `TestIngestReachesNothingAmbient` and
+  `TestOnlyTheCompositionRootImportsTheSourceFSAdapter`
 - [ ] 2b.12 Verify threat-matrix coverage explicitly (cross-reference, no new tests expected beyond
-  2b.1/2b.3/2b.5): filesystem traversal — a symlink pointing outside the scan root, and a relative
-  entry containing a `..` component, are both covered by the `symlink`/`outside_root` cases in 2b.5;
-  resource exhaustion — an oversized file skip (`too_large`) is covered by 2b.3, and a source
-  exceeding `MaxChunks` is covered by 2b.1
+  2b.1/2b.3/2b.5/2b.5a): filesystem traversal — a symlink pointing outside the scan root, and a
+  relative entry containing a `..` component, are covered by the `symlink`/`outside_root` cases in
+  2b.5 (the use case, over an in-memory reader) and by 2b.5a (the adapter reports a real link as a link
+  and never opens its target); resource exhaustion — an oversized file skip (`too_large`) is covered by
+  2b.3, and a source exceeding `MaxChunks` is covered by 2b.1
 
 ## Phase 3: Full Verification (after all four slices land)
 
@@ -228,6 +292,11 @@ Depends on Phase 2a (`Extract` calls `chunk.go` and `header.go`).
 - [ ] 3.3 Confirm `net_allowlist_test.go`'s allowlist still holds exactly one entry and no `.go` file
   added or modified by this change imports `net` or `net/http` (re-run the two allowlist tests named
   in 2a.14/2b.11 as the final confirmation after all slices are merged)
+- [ ] 3.3a Confirm the L11 invariants after all slices are merged: `knownDebt` in
+  `longterm-mem/architecture_test.go` is still empty; `internal/ingest` still reaches no file, process,
+  clock or adapter, tests included (`TestIngestReachesNothingAmbient`); `cmd/longterm-mem` is still the
+  only package that imports `internal/sourcefs`; and no `.go` file added by this change outside
+  `internal/sourcefs` names `os`
 - [ ] 3.4 Confirm no Go source path introduced by this change opens Engram's database in a writable
   mode — `longterm-mem/internal/engram/store.go` stays untouched and read-only; no new `sql.Open`/DSN
   construction touching Engram appears anywhere in `longterm-mem/internal/ingest`
