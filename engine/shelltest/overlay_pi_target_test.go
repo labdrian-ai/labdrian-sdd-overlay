@@ -302,13 +302,17 @@ func extractTargetSection(t *testing.T, out, cmdName, target string) string {
 // intentional (see apply-progress.md's Slice 1 section).
 func TestOverlayVersionAndUpdate_ListPiNeverDeployed(t *testing.T) {
 	overlay := piTargetOverlayPath(t)
-	overlayDir, err := filepath.Abs(filepath.Join("..", ".."))
-	if err != nil {
-		t.Fatalf("resolve overlay dir: %v", err)
+	// The overlay this runs against is a repository made for the test, with no origin. `version` fetches the
+	// release tags from origin before it prints anything, and the repository these tests live in has one that
+	// is a network address: against it the test would write FETCH_HEAD into the checkout and reach GitHub with
+	// the credentials of whoever runs it.
+	overlayDir := t.TempDir()
+	if out, err := exec.Command("git", "-C", overlayDir, "init", "-q").CombinedOutput(); err != nil {
+		t.Fatalf("git init the overlay: %v\n%s", err, out)
 	}
 
 	cmd := exec.Command(overlay, "version")
-	cmd.Env = append(os.Environ(), "HOME="+t.TempDir())
+	cmd.Env = append(os.Environ(), "HOME="+t.TempDir(), "OVERLAY_DIR="+overlayDir)
 	cmd.Dir = overlayDir
 	out, err := cmd.CombinedOutput()
 	if err != nil {

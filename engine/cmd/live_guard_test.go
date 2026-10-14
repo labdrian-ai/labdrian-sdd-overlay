@@ -20,7 +20,8 @@ import (
 // that the golden tests start included. Individual tests may still override the environment with
 // t.Setenv. HOME, STATE_DIR and OVERLAY_DIR are pinned under a temporary directory, and
 // XDG_STATE_HOME and XDG_CONFIG_HOME under the temporary HOME too, so no test can write the real
-// shaper clearance store or the real XDG config.
+// shaper clearance store or the real XDG config; CODEX_HOME is unset, so none finds the Codex
+// configuration directory the person running the tests exported.
 func TestMain(m *testing.M) {
 	home, err := os.MkdirTemp("", "engine-test-home-*")
 	if err != nil {
@@ -33,6 +34,7 @@ func TestMain(m *testing.M) {
 	os.Setenv("HOME", home)
 	os.Setenv("STATE_DIR", filepath.Join(home, ".labdrian-overlay"))
 	os.Unsetenv("OVERLAY_DIR")
+	os.Unsetenv("CODEX_HOME")
 	os.Setenv("XDG_STATE_HOME", filepath.Join(home, ".local", "state"))
 	os.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
 	os.Unsetenv("GENTLE_PI_AGENTS_CHILD")
@@ -60,6 +62,15 @@ func TestLiveGuard_PiOnThePathIsTheGuard(t *testing.T) {
 	}
 	if !strings.HasPrefix(filepath.Base(filepath.Dir(path)), "pi-guard-") {
 		t.Fatalf("pi resolves to %s on the PATH of the run, want the refusing guard", path)
+	}
+}
+
+// TestLiveGuard_CodexHomeIsNotTheMachines proves the TestMain guard leaves no Codex configuration directory
+// exported: a lifecycle command that is not told where Codex's configuration is reads and writes
+// $CODEX_HOME/config.toml, so one exported by whoever runs the tests would be the file those tests change.
+func TestLiveGuard_CodexHomeIsNotTheMachines(t *testing.T) {
+	if value, set := os.LookupEnv("CODEX_HOME"); set {
+		t.Fatalf("CODEX_HOME is set to %q in the tests of this package: they would use the machine's Codex configuration", value)
 	}
 }
 
