@@ -126,10 +126,15 @@ func TestNames_TheRefusalOfATamperedLedgerNamesTwoDifferentDigests(t *testing.T)
 	}
 
 	_, err = identityledger.Names(dir)
+	if err == nil {
+		t.Fatal("a tampered ledger was read without a refusal, so there is no message to check")
+	}
 
+	// Fatal, not Error: the second check below indexes both digests, and a message that names fewer than two
+	// would panic there instead of failing with the message.
 	found := regexp.MustCompile(`sha256:[0-9a-f]{64}`).FindAllString(err.Error(), -1)
 	if len(found) != 2 || found[0] == found[1] {
-		t.Errorf("the refusal %q names %v, want two different sha256 digests", err, found)
+		t.Fatalf("the refusal %q names %v, want two different sha256 digests", err, found)
 	}
 	if !strings.Contains(err.Error(), "carries "+found[0]) || !strings.Contains(err.Error(), "digest to "+found[1]) {
 		t.Errorf("the refusal %q does not say which is the file's and which the entries'", err)
