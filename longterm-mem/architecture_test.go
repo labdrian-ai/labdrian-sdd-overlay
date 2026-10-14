@@ -35,8 +35,10 @@ import (
 //   - projectidfs is the adapter of the repository the identity rules ask for: where it is, the file that
 //     declares its project and its git configuration, read from the metadata git keeps on a disk, in
 //     projectid's own types (L7). Only the composition root may import it (the adapter guard).
-//   - the module root (this guard) and internal/ops/testdata (a Go package the
-//     other tests import) are test support.
+//   - the module root (this guard), internal/ops/testdata (a Go package the
+//     other tests import) and internal/testhome (the home directory a test
+//     binary runs in, which the TestMain of every package that can reach a
+//     path derived from HOME enters) are test support.
 var rings = map[string]archguard.Ring{
 	".":                       archguard.Support,
 	"cmd/longterm-mem":        archguard.Root,
@@ -60,6 +62,7 @@ var rings = map[string]archguard.Ring{
 	"internal/skillstale":     archguard.Domain,
 	"internal/skillstalefs":   archguard.Adapter,
 	"internal/staleness":      archguard.Domain,
+	"internal/testhome":       archguard.Support,
 	"internal/vault":          archguard.Adapter,
 	"internal/vaultfs":        archguard.Adapter,
 	"internal/vaultlayout":    archguard.Domain,
