@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/ops/testdata"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/opstest"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultfs"
 )
@@ -29,9 +29,9 @@ func (f *fakeAddressMap) LoadAddressMap() (promote.AddressMap, error) { return f
 func addressMapDoctorDeps(t *testing.T, reader AddressMapReader) DoctorDeps {
 	t.Helper()
 	vaultRoot := t.TempDir()
-	page := testdata.WritePromotedPage(t, vaultRoot, "c-000042", "Widget Decision")
-	testdata.WritePrecedenceEntry(t, vaultRoot, page)
-	testdata.RegisterPage(t, vaultRoot, "c-000042", "Widget Decision")
+	page := opstest.WritePromotedPage(t, vaultRoot, "c-000042", "Widget Decision")
+	opstest.WritePrecedenceEntry(t, vaultRoot, page)
+	opstest.RegisterPage(t, vaultRoot, "c-000042", "Widget Decision")
 	if _, err := os.Stat(filepath.Join(vaultRoot, ".raw", ".manifest.json")); !os.IsNotExist(err) {
 		t.Fatalf("the fixture has an address map on disk (stat err = %v); the test would not prove the port is the source", err)
 	}

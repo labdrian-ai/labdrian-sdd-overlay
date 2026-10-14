@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/ops/testdata"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/opstest"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultfs"
 )
 
@@ -79,10 +79,10 @@ func TestDoctor(t *testing.T) {
 	newHealthyDeps := func(t *testing.T) (DoctorDeps, string) {
 		t.Helper()
 		vaultRoot := t.TempDir()
-		page := testdata.WritePromotedPage(t, vaultRoot, address, title)
-		testdata.WriteAddressMap(t, vaultRoot, map[string]string{"wiki/memory/" + address + ".md": address})
-		testdata.WritePrecedenceEntry(t, vaultRoot, page)
-		testdata.RegisterPage(t, vaultRoot, address, title)
+		page := opstest.WritePromotedPage(t, vaultRoot, address, title)
+		opstest.WriteAddressMap(t, vaultRoot, map[string]string{"wiki/memory/" + address + ".md": address})
+		opstest.WritePrecedenceEntry(t, vaultRoot, page)
+		opstest.RegisterPage(t, vaultRoot, address, title)
 		embeddingIndex, liveIDs := newHealthyEmbeddingDeps(t)
 		return DoctorDeps{
 			VaultRoot:           vaultRoot,
@@ -135,7 +135,7 @@ func TestDoctor(t *testing.T) {
 		deps, vaultRoot := newHealthyDeps(t)
 		// Overwrite the manifest so the promoted page's address has no
 		// entry at all.
-		testdata.WriteAddressMap(t, vaultRoot, map[string]string{})
+		opstest.WriteAddressMap(t, vaultRoot, map[string]string{})
 
 		report, err := Doctor(context.Background(), deps, "labdrian-sdd-overlay")
 		if err != nil {
@@ -418,8 +418,8 @@ func TestDoctor_UnreadablePageDoesNotHideEveryOtherPage(t *testing.T) {
 	// A genuinely broken page the checks MUST still report: promoted, but
 	// absent from both the address map and the catalog.
 	const unregistered = "c-000777"
-	testdata.WritePromotedPage(t, vaultRoot, unregistered, "Unregistered Page")
-	testdata.WriteAddressMap(t, vaultRoot, map[string]string{})
+	opstest.WritePromotedPage(t, vaultRoot, unregistered, "Unregistered Page")
+	opstest.WriteAddressMap(t, vaultRoot, map[string]string{})
 
 	// An unreadable entry: a dangling symlink is listed by ReadDir as a
 	// non-directory but fails ReadFile, deterministically and regardless

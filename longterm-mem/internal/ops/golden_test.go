@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/ops/testdata"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/opstest"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultfs"
 )
@@ -79,7 +79,7 @@ func goldenScenarios() []goldenScenario {
 			return path
 		}},
 		{name: "05-an-address-map-without-the-page", build: func(t *testing.T, root string) {
-			testdata.WriteAddressMap(t, root, map[string]string{})
+			opstest.WriteAddressMap(t, root, map[string]string{})
 		}},
 		{name: "06-a-page-registered-nowhere", build: func(t *testing.T, root string) {
 			for _, rel := range []string{"wiki/index.md", "wiki/log.md"} {
@@ -126,7 +126,7 @@ func goldenScenarios() []goldenScenario {
 			writeGoldenFile(t, root, "wiki/log.md", "# Log\n")
 		}},
 		{name: "15-a-sync-state-of-a-finished-sync", build: func(t *testing.T, root string) {
-			testdata.WriteSyncState(t, root, "2026-08-31T12:00:00Z")
+			opstest.WriteSyncState(t, root, "2026-08-31T12:00:00Z")
 		}},
 		{name: "16-a-sync-state-that-is-not-json", build: func(t *testing.T, root string) {
 			writeGoldenFile(t, root, ".vault-meta/longterm-mem-sync-state.json", "{not json")
@@ -300,11 +300,11 @@ func goldenScenarios() []goldenScenario {
 			writeGoldenFile(t, root, "wiki", "not a directory")
 		}},
 		{name: "50-a-sync-state-that-is-a-link-to-a-finished-sync", build: func(t *testing.T, root string) {
-			testdata.WriteSyncState(t, root, "2026-08-31T12:00:00Z")
+			opstest.WriteSyncState(t, root, "2026-08-31T12:00:00Z")
 			replaceWithLinkToACopy(t, root, ".vault-meta/longterm-mem-sync-state.json")
 		}},
 		{name: "51-a-sync-state-that-is-a-link-to-nothing", build: func(t *testing.T, root string) {
-			testdata.WriteSyncState(t, root, "2026-08-31T12:00:00Z")
+			opstest.WriteSyncState(t, root, "2026-08-31T12:00:00Z")
 			replaceWithLinkToNothing(t, root, ".vault-meta/longterm-mem-sync-state.json")
 		}},
 		{name: "52-an-empty-sync-state", build: func(t *testing.T, root string) {
@@ -387,18 +387,18 @@ func replaceWithLinkToNothing(t *testing.T, root, rel string) {
 // renders (the same page it writes under goldenAddress), so nothing here splits a file to find them.
 func recordEntryMatchingTheHealthyPage(t *testing.T, root string) {
 	t.Helper()
-	healthy := testdata.RenderPage(t, goldenAddress, goldenTitle)
-	testdata.WritePrecedenceEntry(t, root, promote.Page{Address: goldenOtherAddress, Frontmatter: healthy.Frontmatter, Body: healthy.Body})
+	healthy := opstest.RenderPage(t, goldenAddress, goldenTitle)
+	opstest.WritePrecedenceEntry(t, root, promote.Page{Address: goldenOtherAddress, Frontmatter: healthy.Frontmatter, Body: healthy.Body})
 }
 
 // buildGoldenVault fills root with the healthy vault: one promoted page, its address-map entry, its
 // precedence record and its catalog and log entries.
 func buildGoldenVault(t *testing.T, root string) {
 	t.Helper()
-	page := testdata.WritePromotedPage(t, root, goldenAddress, goldenTitle)
-	testdata.WriteAddressMap(t, root, map[string]string{"wiki/memory/" + goldenAddress + ".md": goldenAddress})
-	testdata.WritePrecedenceEntry(t, root, page)
-	testdata.RegisterPage(t, root, goldenAddress, goldenTitle)
+	page := opstest.WritePromotedPage(t, root, goldenAddress, goldenTitle)
+	opstest.WriteAddressMap(t, root, map[string]string{"wiki/memory/" + goldenAddress + ".md": goldenAddress})
+	opstest.WritePrecedenceEntry(t, root, page)
+	opstest.RegisterPage(t, root, goldenAddress, goldenTitle)
 }
 
 func TestGolden(t *testing.T) {

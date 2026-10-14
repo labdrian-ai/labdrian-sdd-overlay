@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/ops/testdata"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/opstest"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultfs"
 )
@@ -30,7 +30,7 @@ func TestDoctorAndReconcile_CloseTheLoopOnARevisionZeroPage(t *testing.T) {
 	vaultRoot := t.TempDir()
 
 	obs := memory.Observation{ID: 610, Type: "decision", Title: "Never Revised", Content: "V1 body.", Project: project, RevisionCount: 0, Pinned: true}
-	page, err := promote.EmitPage(obs, address, nil, testdata.Instant())
+	page, err := promote.EmitPage(obs, address, nil, opstest.Instant())
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
 	}
@@ -41,13 +41,13 @@ func TestDoctorAndReconcile_CloseTheLoopOnARevisionZeroPage(t *testing.T) {
 	if err := os.WriteFile(full, []byte(page.Frontmatter+page.Body), 0o644); err != nil {
 		t.Fatalf("write %s: %v", full, err)
 	}
-	testdata.WriteAddressMap(t, vaultRoot, map[string]string{page.Path: address})
-	testdata.WritePrecedenceEntry(t, vaultRoot, page)
-	testdata.RegisterPage(t, vaultRoot, address, "Never Revised")
+	opstest.WriteAddressMap(t, vaultRoot, map[string]string{page.Path: address})
+	opstest.WritePrecedenceEntry(t, vaultRoot, page)
+	opstest.RegisterPage(t, vaultRoot, address, "Never Revised")
 
 	// The divergence the sidecar never caught up with.
 	obs.Content = "V1 body, republished."
-	diverged, err := promote.EmitPage(obs, address, nil, testdata.Instant())
+	diverged, err := promote.EmitPage(obs, address, nil, opstest.Instant())
 	if err != nil {
 		t.Fatalf("EmitPage (diverged): %v", err)
 	}

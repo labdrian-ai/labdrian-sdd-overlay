@@ -37,10 +37,11 @@ import (
 //     projectid's own types (L7). Only the composition root may import it (the adapter guard).
 //   - vaultregfs is the adapter of the registry of vaults: the JSON file the Store port of vaultreg is answered
 //     from, in vaultreg's own types (L9). Only the composition root may import it (the adapter guard).
-//   - the module root (this guard), internal/ops/testdata (a Go package the
-//     other tests import) and internal/testhome (the home directory a test
-//     binary runs in, which the TestMain of every package that can reach a
-//     path derived from HOME enters) are test support.
+//   - the module root (this guard), internal/opstest (the fixtures the tests
+//     of ops and of the commands build a vault with, a package of its own since
+//     L10 took it out of ops's testdata directory) and internal/testhome (the
+//     home directory a test binary runs in, which the TestMain of every package
+//     that can reach a path derived from HOME enters) are test support.
 var rings = map[string]archguard.Ring{
 	".":                       archguard.Support,
 	"cmd/longterm-mem":        archguard.Root,
@@ -54,7 +55,7 @@ var rings = map[string]archguard.Ring{
 	"internal/memory":         archguard.Domain,
 	"internal/mcpserver":      archguard.Adapter,
 	"internal/ops":            archguard.Application,
-	"internal/ops/testdata":   archguard.Support,
+	"internal/opstest":        archguard.Support,
 	"internal/projectid":      archguard.Domain,
 	"internal/projectidfs":    archguard.Adapter,
 	"internal/promote":        archguard.Domain,

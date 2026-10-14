@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/ops/testdata"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/opstest"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultfs"
 )
@@ -30,9 +30,9 @@ func (f *fakePrecedence) LoadPrecedence() (promote.PrecedenceStore, error) {
 func portDoctorDeps(t *testing.T, reader PrecedenceReader) (DoctorDeps, promote.Page) {
 	t.Helper()
 	vaultRoot := t.TempDir()
-	page := testdata.WritePromotedPage(t, vaultRoot, "c-000042", "Widget Decision")
-	testdata.WriteAddressMap(t, vaultRoot, map[string]string{"wiki/memory/c-000042.md": "c-000042"})
-	testdata.RegisterPage(t, vaultRoot, "c-000042", "Widget Decision")
+	page := opstest.WritePromotedPage(t, vaultRoot, "c-000042", "Widget Decision")
+	opstest.WriteAddressMap(t, vaultRoot, map[string]string{"wiki/memory/c-000042.md": "c-000042"})
+	opstest.RegisterPage(t, vaultRoot, "c-000042", "Widget Decision")
 	if _, err := os.Stat(filepath.Join(vaultRoot, ".raw", ".longterm-mem-manifest.json")); !os.IsNotExist(err) {
 		t.Fatalf("the fixture has a sidecar on disk (stat err = %v); the test would not prove the port is the source", err)
 	}

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/ops/testdata"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/opstest"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultfs"
 )
@@ -60,8 +60,8 @@ func (f *fakeSyncState) LastSyncCompletedAt() (string, error) { f.reads++; retur
 func registeredDeps(t *testing.T, index IndexReader, log LogReader) DoctorDeps {
 	t.Helper()
 	vaultRoot := t.TempDir()
-	page := testdata.WritePromotedPage(t, vaultRoot, "c-000042", "Widget Decision")
-	testdata.WritePrecedenceEntry(t, vaultRoot, page)
+	page := opstest.WritePromotedPage(t, vaultRoot, "c-000042", "Widget Decision")
+	opstest.WritePrecedenceEntry(t, vaultRoot, page)
 	embeddingIndex, liveIDs := newHealthyEmbeddingDeps(t)
 	return DoctorDeps{
 		VaultRoot:             vaultRoot,
