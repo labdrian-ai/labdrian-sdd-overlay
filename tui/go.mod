@@ -8,6 +8,7 @@ require (
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/charmbracelet/x/exp/golden v0.0.0-20241011142426-46044092ad91
 	github.com/charmbracelet/x/exp/teatest v0.0.0-20260615092313-b57e5e6d29bb
+	github.com/labdrian-ai/labdrian-sdd-overlay/archguard v0.0.0
 	github.com/muesli/termenv v0.16.0
 )
 
@@ -33,3 +34,5 @@ require (
 	golang.org/x/sys v0.38.0 // indirect
 	golang.org/x/text v0.28.0 // indirect
 )
+
+replace github.com/labdrian-ai/labdrian-sdd-overlay/archguard => ../archguard
