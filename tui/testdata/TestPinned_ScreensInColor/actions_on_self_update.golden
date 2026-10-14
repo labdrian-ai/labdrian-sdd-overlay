@@ -1,0 +1,27 @@
+    [38;5;242m? No se pudo verificar el estado del repo (sin red / sin fetch previo)[0m                      
+    [1;38;5;255mElegir una acción[0m                                                                           
+                                                                                                
+    [1;38;5;75m── Sincronización ──[0m                                                                        
+      Estado                          [38;5;242mResumen del estado actual (targets + hooks)[0m               
+      Verificar sincronización        [38;5;242mCompara overlay vs upstream[0m                               
+      Capturar (actualizar upstream)  [38;5;242mTrae cambios de upstream al overlay[0m                       
+      Aplicar cambios                 [38;5;242mDespliega el overlay en los destinos[0m                      
+      Restaurar respaldo              [38;5;242mRevierte un destino a su respaldo más reciente[0m            
+                                                                                                
+    [1;38;5;75m── Hooks ──[0m                                                                                 
+    [1;38;5;105m▸ [0m[1;38;5;105mActualizar repositorio          [0m[38;5;242mPone main al día (ff-only) y lo despliega, en un solo paso[0m
+      Instalar hooks                  [38;5;242mCompila engine y cablea hooks (paso 1)[0m                    
+      Desinstalar hooks               [38;5;242mQuita los hooks de settings.json[0m                          
+                                                                                                
+    [1;38;5;75m── Skills ──[0m                                                                                
+      Skills                          [38;5;242mEstado + valida + lista el registro[0m                       
+                                                                                                
+    [1;38;5;75m── Memoria ──[0m                                                                               
+      Memoria: estado                 [38;5;242mRegistro MCP de longterm-mem por runtime[0m                  
+      Memoria: instalar               [38;5;242mCompila, despliega y registra el MCP en cada runtime[0m      
+      Memoria: desinstalar            [38;5;242mQuita la entrada MCP propia de cada runtime[0m               
+                                                                                                
+                                                                                                
+    [38;5;238m────────────────────────────────────────────────────────────────────────────────────────────[0m
+                                                                                                
+    [38;5;242m↑/↓ navegar  ·  enter ejecutar la acción seleccionada  ·  esc volver  ·  q salir[0m            

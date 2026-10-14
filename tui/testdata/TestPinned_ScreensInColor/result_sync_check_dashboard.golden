@@ -1,0 +1,51 @@
+[38;5;78m✓ Repo al día con el último release[0m                                                                 
+[1;38;5;255mResultado · Verificar sincronización[0m                                                                
+[1;38;5;78m✓ Completado[0m                                                                                        
+[38;5;105m╭──────────────────────────────────────────────────────────────────────────────────────────────────╮[0m
+[38;5;105m│[0m [1;38;5;75mEstado de sincronización[0m                                                                         [38;5;105m│[0m
+[38;5;105m│[0m [1;38;5;78m✓[0m [1mclaude   [0m  [38;5;78mSincronizado[0m                                                                        [38;5;105m│[0m
+[38;5;105m│[0m [38;5;240m  cambios upstream: 0  overlay sin desplegar: 0[0m                                                  [38;5;105m│[0m
+[38;5;105m│[0m [38;5;240m  versión: v1.2.0[0m                                                                                [38;5;105m│[0m
+[38;5;105m│[0m [38;5;242m  → in sync with gentle-ai (healthy)[0m                                                             [38;5;105m│[0m
+[38;5;105m│[0m [1;38;5;214m![0m [1mopencode [0m  [38;5;214mPendiente de aplicación[0m                                                             [38;5;105m│[0m
+[38;5;105m│[0m [38;5;240m  cambios upstream: 0  overlay sin desplegar: 2[0m                                                  [38;5;105m│[0m
+[38;5;105m│[0m [38;5;240m  versión: v1.1.0 (digest desactualizado)[0m                                                        [38;5;105m│[0m
+[38;5;105m│[0m [38;5;242m  → run 'labdrian apply --target opencode'[0m                                                       [38;5;105m│[0m
+[38;5;105m│[0m [38;5;242m  Agents:[0m                                                                                        [38;5;105m│[0m
+[38;5;105m│[0m [38;5;214m    ! agents/GADU.md[0m                                                                             [38;5;105m│[0m
+[38;5;105m│[0m [38;5;78m    ✓ agents/SDD.md[0m                                                                              [38;5;105m│[0m
+[38;5;105m│[0m [1;38;5;203m✗[0m [1mcodex    [0m  [38;5;203mRequiere capture + apply[0m                                                            [38;5;105m│[0m
+[38;5;105m│[0m [38;5;240m  cambios upstream: 3  overlay sin desplegar: 1  detrás del release: 2  detrás de origin: 5[0m      [38;5;105m│[0m
+[38;5;105m│[0m [38;5;240m  versión: v1.0.0[0m                                                                                [38;5;105m│[0m
+[38;5;105m│[0m [38;5;242m  → gentle-ai sync detected: run 'labdrian capture --target codex' then 'labdrian apply'[0m         [38;5;105m│[0m
+[38;5;105m│[0m [38;5;242m  Agents:[0m                                                                                        [38;5;105m│[0m
+[38;5;105m│[0m [38;5;203m    ✗ agents/Orchestrator.md[0m                                                                     [38;5;105m│[0m
+[38;5;105m│[0m [1;38;5;179m~[0m [1mpi       [0m  [38;5;179mDetrás del release[0m                                                                  [38;5;105m│[0m
+[38;5;105m│[0m [38;5;240m  cambios upstream: 0  overlay sin desplegar: 0  detrás del release: 2[0m                           [38;5;105m│[0m
+[38;5;105m│[0m [38;5;240m  versión: nunca desplegado[0m                                                                      [38;5;105m│[0m
+[38;5;105m│[0m [38;5;242m  → self-update to catch up with the latest release[0m                                              [38;5;105m│[0m
+[38;5;105m╰──────────────────────────────────────────────────────────────────────────────────────────────────╯[0m
+[1;38;5;75msalida[0m[38;5;242m  [lines 1-15 of 23][0m                                                                          
+[38;5;242m╭──────────────────────────────────────────────────────────────────────────────────────────────────╮[0m
+[38;5;242m│[0m $ bin/labdrian-overlay sync-check --target all                                                   [38;5;242m│[0m
+[38;5;242m│[0m                                                                                                  [38;5;242m│[0m
+[38;5;242m│[0m === sync-check: claude (/stub/.claude) ===                                                       [38;5;242m│[0m
+[38;5;242m│[0m   IN_SYNC: skills/foo                                                                            [38;5;242m│[0m
+[38;5;242m│[0m VERDICT:claude:UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=0 REPO_BEHIND_ORIGIN=0                    [38;5;242m│[0m
+[38;5;242m│[0m REPO_BEHIND_RELEASE=0 RECORDED_VERSION=v1.2.0 DIGEST_MATCH=yes                                   [38;5;242m│[0m
+[38;5;242m│[0m ACTION:claude: in sync with gentle-ai (healthy)                                                  [38;5;242m│[0m
+[38;5;242m│[0m                                                                                                  [38;5;242m│[0m
+[38;5;242m│[0m === sync-check: opencode (/stub/.config/opencode) ===                                            [38;5;242m│[0m
+[38;5;242m│[0m   OVERLAY_NOT_DEPLOYED: skills/bar (live missing)                                                [38;5;242m│[0m
+[38;5;242m│[0m   OVERLAY_NOT_DEPLOYED: agents/GADU.md (live missing)                                            [38;5;242m│[0m
+[38;5;242m│[0m   IN_SYNC: agents/SDD.md (same)                                                                  [38;5;242m│[0m
+[38;5;242m│[0m VERDICT:opencode:UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=2 REPO_BEHIND_ORIGIN=0                  [38;5;242m│[0m
+[38;5;242m│[0m REPO_BEHIND_RELEASE=0 RECORDED_VERSION=v1.1.0 DIGEST_MATCH=no                                    [38;5;242m│[0m
+[38;5;242m│[0m ACTION:opencode: run 'labdrian apply --target opencode'                                          [38;5;242m│[0m
+[38;5;242m│[0m                                                                                                  [38;5;242m│[0m
+[38;5;242m│[0m === sync-check: codex (/stub/.codex) ===                                                         [38;5;242m│[0m
+[38;5;242m╰──────────────────────────────────────────────────────────────────────────────────────────────────╯[0m
+                                                                                                    
+[38;5;238m────────────────────────────────────────────────────────────────────────────────────────────────────[0m
+                                                                                                    
+[38;5;242m↑/↓ desplazar  ·  esc/enter volver  ·  q salir[0m                                                      

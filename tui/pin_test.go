@@ -415,3 +415,37 @@ func TestPinned_Screens(t *testing.T) {
 		})
 	}
 }
+
+// TestPinned_ScreensInColor pins how the screens that carry the most styling are painted: the same text, with
+// the escape sequences of a 256-color terminal.
+func TestPinned_ScreensInColor(t *testing.T) {
+	inColor := map[string]bool{
+		"targets_loaded": true, "actions_on_self_update": true, "confirm_restore_names_the_latest_backup": true,
+		"result_sync_check_dashboard": true, "result_hard_failure": true, "result_degraded_exit_two": true,
+		"banner_behind_release": true,
+	}
+	for _, tc := range pinnedScreens {
+		if !inColor[tc.name] {
+			continue
+		}
+		t.Run(tc.name, func(t *testing.T) {
+			withColors(t, termenv.ANSI256)
+			golden.RequireEqualEscape(t, []byte(tc.build(t).view()), true)
+		})
+	}
+}
+
+// TestPinned_FirstScreenWithTheLogo pins the whole first screen, hero logo included.
+func TestPinned_FirstScreenWithTheLogo(t *testing.T) {
+	withColors(t, termenv.Ascii)
+	golden.RequireEqual(t, []byte(newSession(t).start().m.View()))
+}
+
+// ---------------------------------------------------------------------------
+// the menu
+// ---------------------------------------------------------------------------
+
+// TestPinned_Menu pins the actions the program offers: what each one is called and says, and how it is run.
+func TestPinned_Menu(t *testing.T) {
+	golden.RequireEqual(t, []byte(menuDefinition()))
+}

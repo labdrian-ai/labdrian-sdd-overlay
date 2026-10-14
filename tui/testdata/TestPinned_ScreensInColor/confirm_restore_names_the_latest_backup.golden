@@ -1,0 +1,15 @@
+           [38;5;242m? No se pudo verificar el estado del repo (sin red / sin fetch previo)[0m       
+           [38;5;214m╭───────────────────────────────────────────────────────────────────────────╮[0m
+           [38;5;214m│[0m Ejecutar [1;38;5;214mRestaurar respaldo[0m en: claude, opencode, codex                   [38;5;214m│[0m
+           [38;5;214m│[0m                                                                           [38;5;214m│[0m
+           [38;5;214m│[0m [1;38;5;214mAtención:[0m Restaura el respaldo más reciente de cada destino seleccionado, [38;5;214m│[0m
+           [38;5;214m│[0m sobrescribiendo sus archivos actualmente desplegados.                     [38;5;214m│[0m
+           [38;5;214m│[0m                                                                           [38;5;214m│[0m
+           [38;5;214m│[0m Respaldo a restaurar:                                                     [38;5;214m│[0m
+           [38;5;214m│[0m   claude: 20260301T093000Z (v1.5.0)                                       [38;5;214m│[0m
+           [38;5;214m│[0m   opencode: 20260302T080000Z (desconocida)                                [38;5;214m│[0m
+           [38;5;214m╰───────────────────────────────────────────────────────────────────────────╯[0m
+                                                                                        
+           [38;5;238m─────────────────────────────────────────────────────────────────────────────[0m
+                                                                                        
+           [38;5;242my/enter confirmar  ·  n/esc cancelar[0m                                         
