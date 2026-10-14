@@ -44,6 +44,7 @@ var rings = map[string]archguard.Ring{
 	"cmd/longterm-mem":        archguard.Root,
 	"internal/adoption":       archguard.Application,
 	"internal/durable":        archguard.Adapter,
+	"internal/embedindex":     archguard.Application,
 	"internal/embed":          archguard.Adapter,
 	"internal/engram":         archguard.Adapter,
 	"internal/identityledger": archguard.Adapter,

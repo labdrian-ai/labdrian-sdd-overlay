@@ -2,12 +2,14 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/embed"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/embedindex"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vecindex"
 )
@@ -50,11 +52,12 @@ type embedConfig struct {
 
 // cmdIndexEmbeddings implements `longterm-mem index --project P
 // --embeddings [--embed-endpoint URL] [--embed-model NAME]
-// [--allow-remote-embedder]` (R-069): read P's live Engram observations,
-// incrementally (re-)embed them through the configured backend, and
-// persist the resulting index under <state-dir>/index/<project>/
-// (vecindex.Dir). It never builds lazily from a query path (R-069) --
-// this is the only production caller of vecindex.Build.
+// [--allow-remote-embedder]` (R-069): the build use case
+// (embedindex.UseCase) reads P's live Engram observations, incrementally
+// (re-)embeds them through the configured backend, and persists the
+// resulting index under <state-dir>/index/<project>/ (vecindex.Dir). It
+// never builds lazily from a query path (R-069) -- this is the only
+// command that builds an index from scratch.
 func (c commands) cmdIndexEmbeddings(project string, cfg embedConfig) int {
 	stateDir := defaultStateDir()
 	if stateDir == "" {
@@ -69,39 +72,52 @@ func (c commands) cmdIndexEmbeddings(project string, cfg embedConfig) int {
 	}
 	defer store.Close()
 
-	// R-020: ListObservations already excludes soft-deleted rows, so a row
-	// deleted since the last build is simply absent here and Build's own
-	// removal pass (R-069) drops its index entry.
-	observations, err := store.ListObservations(project)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "longterm-mem: index: %v\n", err)
-		return exitEngramUnavailable
-	}
-
-	client, err := c.newEmbedClient(embed.Config{
-		Endpoint:    cfg.Endpoint,
-		Model:       cfg.Model,
-		AllowRemote: cfg.AllowRemote,
+	result, err := c.embeddingIndexing(store, stateDir, cfg).Build(context.Background(), project, embedindex.Contract{
+		Model:      cfg.Model,
+		Dimension:  cfg.Dimension,
+		InputLimit: cfg.InputLimit,
 	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "longterm-mem: index: %v\n", err)
-		return exitInternal
-	}
-
-	rows := make([]vecindex.Row, 0, len(observations))
-	for _, o := range observations {
-		rows = append(rows, vecindex.Row{EngramID: o.ID, Title: o.Title, Content: o.Content})
-	}
-
-	dir := vecindex.Dir(stateDir, project)
-	_, result, err := vecindex.Build(context.Background(), dir, cfg.Model, cfg.Dimension, cfg.InputLimit, rows, client, buildNowRFC3339)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "longterm-mem: index: %v\n", err)
-		return exitInternal
+		return embedIndexExitCode(err)
 	}
 
 	fmt.Printf("longterm-mem: embedding index built for %s: %d embedded, %d reused, %d removed\n", project, result.Embedded, result.Reused, result.Removed)
 	return exitOK
+}
+
+// embeddingIndexing is the build of the embedding index wired to what lives outside the process: the live
+// observations of the Engram store (R-020: it leaves out what was soft-deleted, so a row deleted since the last
+// build is absent and the build's removal pass drops its entry), the embedding client the commands were composed
+// with, made from the flags of this invocation, and the index repository over the state directory, with the wall
+// clock to stamp a build with. The CLI serves one build and exits, so the repository has no cache.
+func (c commands) embeddingIndexing(store *engram.Store, stateDir string, cfg embedConfig) embedindex.UseCase {
+	return embedindex.UseCase{
+		Observations: store,
+		NewEmbedder: func() (embedindex.Embedder, error) {
+			client, err := c.newEmbedClient(embed.Config{
+				Endpoint:    cfg.Endpoint,
+				Model:       cfg.Model,
+				AllowRemote: cfg.AllowRemote,
+			})
+			if err != nil {
+				return nil, err
+			}
+			return client, nil
+		},
+		Builder: &vecindex.Repository{StateDir: stateDir, Now: buildNowRFC3339},
+	}
+}
+
+// embedIndexExitCode is the exit code of a build that stopped: Engram that cannot list its observations is
+// engram_unavailable; the rest (an embedding client that is refused, an index that cannot be built) is
+// longterm-mem's own side.
+func embedIndexExitCode(err error) int {
+	var failure *embedindex.Error
+	if errors.As(err, &failure) && failure.Stage == embedindex.StageObservations {
+		return exitEngramUnavailable
+	}
+	return exitInternal
 }
 
 // buildNowRFC3339 is vecindex.Build's `now` seam, wired to the real clock.

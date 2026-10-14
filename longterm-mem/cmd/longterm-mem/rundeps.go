@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/embed"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/embedindex"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/ops"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
@@ -104,7 +105,7 @@ func embeddingIndexOf(store *engram.Store, wiring queryWiring) *vecindex.Reposit
 	return &vecindex.Repository{
 		StateDir: defaultStateDir(),
 		Cache:    wiring.cache,
-		LiveRows: func(project string) ([]vecindex.Row, error) { return observationRowsForIndex(store, project) },
+		LiveRows: func(project string) ([]vecindex.Row, error) { return embedindex.LiveRows(store, project) },
 		NewEmbedder: func(model string) (vecindex.Embedder, error) {
 			client, err := wiring.newClient(embed.Config{Model: model})
 			if err != nil {
@@ -150,23 +151,6 @@ func (noStateDirectory) EmbeddingIndexBuiltAt(string) (string, error) {
 }
 
 func (noStateDirectory) IndexedEngramIDs(string) ([]int64, error) { return nil, stateDirUnresolved{} }
-
-// observationRowsForIndex reads project's live Engram rows in the shape
-// vecindex.Build wants, the same source cmd_index_embeddings.go's own
-// -embeddings flag reads (store.ListObservations, already R-020 soft-delete
-// scoped) -- extracted so this mapping can be tested without a network
-// round trip to an embedding backend.
-func observationRowsForIndex(store *engram.Store, project string) ([]vecindex.Row, error) {
-	observations, err := store.ListObservations(project)
-	if err != nil {
-		return nil, err
-	}
-	rows := make([]vecindex.Row, 0, len(observations))
-	for _, o := range observations {
-		rows = append(rows, vecindex.Row{EngramID: o.ID, Title: o.Title, Content: o.Content})
-	}
-	return rows, nil
-}
 
 // newPromoteWriter is the Writer of the vault at vaultRoot, as every command
 // that promotes (promote, the MCP promote tool, sync) uses it: the vault's
