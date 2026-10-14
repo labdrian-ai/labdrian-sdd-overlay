@@ -1,6 +1,7 @@
 package durable
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -88,6 +89,42 @@ func TestWriteJSON_RefusesAValueThatCannotBeEncodedAndTouchesNothing(t *testing.
 	}
 	if _, err := os.Stat(filepath.Join(root, "dir")); !os.IsNotExist(err) {
 		t.Errorf("the directory of the file that was refused exists (stat error %v), want it not made", err)
+	}
+}
+
+// The failure to encode is a type of its own, so that a caller that owes its users the words it has always used can
+// tell it from the other two failures and say it in them (the identity ledger does): it carries the file and the
+// encoder's own error, which is still found with errors.Is, and its words are the ones the error always had.
+func TestWriteJSON_TheFailureToEncodeIsATypeOfItsOwn(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "state.json")
+
+	err := WriteJSON(path, make(chan int), 0o600)
+
+	var encoding *EncodeError
+	if !errors.As(err, &encoding) {
+		t.Fatalf("error = %#v, want an *EncodeError", err)
+	}
+	if encoding.Path != path || encoding.Err == nil || !strings.Contains(encoding.Err.Error(), "unsupported type") {
+		t.Errorf("EncodeError = %+v, want the file and the encoder's own error", encoding)
+	}
+	if want := "marshal " + path + ": " + encoding.Err.Error(); err.Error() != want {
+		t.Errorf("error = %q, want %q", err, want)
+	}
+	if !errors.Is(err, encoding.Err) {
+		t.Errorf("the encoder's error %v is not found through %v", encoding.Err, err)
+	}
+}
+
+// The two other failures are not encoding failures, whatever their words begin with.
+func TestWriteJSON_TheOtherFailuresAreNotEncodingFailures(t *testing.T) {
+	blocker := filepath.Join(t.TempDir(), "blocker")
+	mustWriteFile(t, blocker, "a file where a directory should be\n", 0o600)
+
+	err := WriteJSON(filepath.Join(blocker, "state.json"), map[string]int{"schema": 1}, 0o600)
+
+	var encoding *EncodeError
+	if err == nil || errors.As(err, &encoding) {
+		t.Errorf("error = %v, want a failure to make the directory that is not an *EncodeError", err)
 	}
 }
 
