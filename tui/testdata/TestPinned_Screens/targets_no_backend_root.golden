@@ -1,0 +1,11 @@
+Error al localizar el repositorio: could not locate overlay repo root (bin/labdrian-overlay not foun
+Seleccionar destinos                                                                                
+                                                                                                    
+No se pudo leer el catálogo de destinos del backend.                                                
+could not locate the overlay backend (bin/labdrian-overlay); set OVERLAY_DIR                        
+                                                                                                    
+Sin el catálogo no hay acciones sobre destinos.                                                     
+                                                                                                    
+────────────────────────────────────────────────────────────────────────────────────────────────────
+                                                                                                    
+↑/↓ navegar  ·  espacio seleccionar  ·  a selec. todos  ·  enter continuar  ·  q salir              

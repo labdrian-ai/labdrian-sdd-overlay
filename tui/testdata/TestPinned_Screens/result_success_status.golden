@@ -1,0 +1,21 @@
+? No se pudo verificar el estado del repo (sin red / sin fetch previo)                              
+Resultado · Estado                                                                                  
+✓ Completado                                                                                        
+salida                                                                                              
+╭──────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ $ bin/labdrian-overlay status --target all                                                       │
+│ claude: deployed                                                                                 │
+│ opencode: deployed                                                                               │
+│ codex: deployed                                                                                  │
+│ pi: deployed                                                                                     │
+│                                                                                                  │
+│ $ bin/labdrian-overlay status-hooks                                                              │
+│ hooks: installed                                                                                 │
+│                                                                                                  │
+│ $ bin/labdrian-overlay version                                                                   │
+│ claude v1.2.0                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
+                                                                                                    
+────────────────────────────────────────────────────────────────────────────────────────────────────
+                                                                                                    
+↑/↓ desplazar  ·  esc/enter volver  ·  q salir                                                      

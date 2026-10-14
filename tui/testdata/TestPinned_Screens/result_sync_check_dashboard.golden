@@ -1,0 +1,51 @@
+✓ Repo al día con el último release                                                                 
+Resultado · Verificar sincronización                                                                
+✓ Completado                                                                                        
+╭──────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Estado de sincronización                                                                         │
+│ ✓ claude     Sincronizado                                                                        │
+│   cambios upstream: 0  overlay sin desplegar: 0                                                  │
+│   versión: v1.2.0                                                                                │
+│   → in sync with gentle-ai (healthy)                                                             │
+│ ! opencode   Pendiente de aplicación                                                             │
+│   cambios upstream: 0  overlay sin desplegar: 2                                                  │
+│   versión: v1.1.0 (digest desactualizado)                                                        │
+│   → run 'labdrian apply --target opencode'                                                       │
+│   Agents:                                                                                        │
+│     ! agents/GADU.md                                                                             │
+│     ✓ agents/SDD.md                                                                              │
+│ ✗ codex      Requiere capture + apply                                                            │
+│   cambios upstream: 3  overlay sin desplegar: 1  detrás del release: 2  detrás de origin: 5      │
+│   versión: v1.0.0                                                                                │
+│   → gentle-ai sync detected: run 'labdrian capture --target codex' then 'labdrian apply'         │
+│   Agents:                                                                                        │
+│     ✗ agents/Orchestrator.md                                                                     │
+│ ~ pi         Detrás del release                                                                  │
+│   cambios upstream: 0  overlay sin desplegar: 0  detrás del release: 2                           │
+│   versión: nunca desplegado                                                                      │
+│   → self-update to catch up with the latest release                                              │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
+salida  [lines 1-15 of 23]                                                                          
+╭──────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ $ bin/labdrian-overlay sync-check --target all                                                   │
+│                                                                                                  │
+│ === sync-check: claude (/stub/.claude) ===                                                       │
+│   IN_SYNC: skills/foo                                                                            │
+│ VERDICT:claude:UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=0 REPO_BEHIND_ORIGIN=0                    │
+│ REPO_BEHIND_RELEASE=0 RECORDED_VERSION=v1.2.0 DIGEST_MATCH=yes                                   │
+│ ACTION:claude: in sync with gentle-ai (healthy)                                                  │
+│                                                                                                  │
+│ === sync-check: opencode (/stub/.config/opencode) ===                                            │
+│   OVERLAY_NOT_DEPLOYED: skills/bar (live missing)                                                │
+│   OVERLAY_NOT_DEPLOYED: agents/GADU.md (live missing)                                            │
+│   IN_SYNC: agents/SDD.md (same)                                                                  │
+│ VERDICT:opencode:UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=2 REPO_BEHIND_ORIGIN=0                  │
+│ REPO_BEHIND_RELEASE=0 RECORDED_VERSION=v1.1.0 DIGEST_MATCH=no                                    │
+│ ACTION:opencode: run 'labdrian apply --target opencode'                                          │
+│                                                                                                  │
+│ === sync-check: codex (/stub/.codex) ===                                                         │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
+                                                                                                    
+────────────────────────────────────────────────────────────────────────────────────────────────────
+                                                                                                    
+↑/↓ desplazar  ·  esc/enter volver  ·  q salir                                                      

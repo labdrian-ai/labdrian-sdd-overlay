@@ -1,0 +1,28 @@
+? No se pudo verificar el estado del repo (sin red
+Elegir una acción                                 
+                                                  
+── Sincronización ──                              
+▸ Estado                          Resumen del esta
+  Verificar sincronización        Compara overlay 
+  Capturar (actualizar upstream)  Trae cambios de 
+  Aplicar cambios                 Despliega el ove
+  Restaurar respaldo              Revierte un dest
+                                                  
+── Hooks ──                                       
+  Actualizar repositorio          Pone main al día
+  Instalar hooks                  Compila engine y
+  Desinstalar hooks               Quita los hooks 
+                                                  
+── Skills ──                                      
+  Skills                          Estado + valida 
+                                                  
+── Memoria ──                                     
+  Memoria: estado                 Registro MCP de 
+  Memoria: instalar               Compila, desplie
+  Memoria: desinstalar            Quita la entrada
+                                                  
+                                                  
+──────────────────────────────────────────────────
+                                                  
+↑/↓ navegar  ·  enter ejecutar la acción          
+seleccionada  ·  esc volver  ·  q salir           

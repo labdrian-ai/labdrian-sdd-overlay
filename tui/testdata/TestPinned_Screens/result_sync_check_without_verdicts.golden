@@ -1,0 +1,13 @@
+? No se pudo verificar el estado del repo (sin red / sin fetch previo)                              
+Resultado · Verificar sincronización                                                                
+✓ Completado                                                                                        
+No se pudieron analizar veredictos                                                                  
+salida                                                                                              
+╭──────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ $ bin/labdrian-overlay sync-check --target all                                                   │
+│ SYNC_CHECK:claude: target dir not found -- skipping                                              │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
+                                                                                                    
+────────────────────────────────────────────────────────────────────────────────────────────────────
+                                                                                                    
+↑/↓ desplazar  ·  esc/enter volver  ·  q salir                                                      

@@ -1,0 +1,10 @@
+    ? No se pudo verificar el estado del repo (sin red / sin fetch previo)                      
+    ╭──────────────────────────────────────────────────────────────────────────────────────────╮
+    │ Ejecutar Instalar hooks                                                                  │
+    │                                                                                          │
+    │ Atención: Modifica ~/.claude/settings.json (se crea un respaldo .bak antes de escribir). │
+    ╰──────────────────────────────────────────────────────────────────────────────────────────╯
+                                                                                                
+    ────────────────────────────────────────────────────────────────────────────────────────────
+                                                                                                
+    y/enter confirmar  ·  n/esc cancelar                                                        

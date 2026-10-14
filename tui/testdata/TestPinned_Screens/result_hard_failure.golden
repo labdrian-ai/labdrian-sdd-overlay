@@ -1,0 +1,15 @@
+? No se pudo verificar el estado del repo (sin red / sin fetch previo)                              
+Resultado · Aplicar cambios                                                                         
+✗ Comando falló                                                                                     
+salida                                                                                              
+╭──────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ $ bin/labdrian-overlay apply --target all                                                        │
+│ applying...                                                                                      │
+│ boom                                                                                             │
+│                                                                                                  │
+│ [exit error: exit status 1]                                                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
+                                                                                                    
+────────────────────────────────────────────────────────────────────────────────────────────────────
+                                                                                                    
+↑/↓ desplazar  ·  esc/enter volver  ·  q salir                                                      

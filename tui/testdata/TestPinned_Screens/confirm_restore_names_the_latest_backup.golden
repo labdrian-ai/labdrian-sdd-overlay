@@ -1,0 +1,15 @@
+           ? No se pudo verificar el estado del repo (sin red / sin fetch previo)       
+           ╭───────────────────────────────────────────────────────────────────────────╮
+           │ Ejecutar Restaurar respaldo en: claude, opencode, codex                   │
+           │                                                                           │
+           │ Atención: Restaura el respaldo más reciente de cada destino seleccionado, │
+           │ sobrescribiendo sus archivos actualmente desplegados.                     │
+           │                                                                           │
+           │ Respaldo a restaurar:                                                     │
+           │   claude: 20260301T093000Z (v1.5.0)                                       │
+           │   opencode: 20260302T080000Z (desconocida)                                │
+           ╰───────────────────────────────────────────────────────────────────────────╯
+                                                                                        
+           ─────────────────────────────────────────────────────────────────────────────
+                                                                                        
+           y/enter confirmar  ·  n/esc cancelar                                         
