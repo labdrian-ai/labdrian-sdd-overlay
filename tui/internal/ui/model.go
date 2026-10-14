@@ -233,13 +233,14 @@ func (m model) runActionCmd(action domain.Action, targets []domain.Target) tea.C
 	}
 }
 
-// selfUpdateAction returns the registered self-update Action from m.actions,
-// so the banner shortcut always confirms/runs the exact SAME entry Actions()
-// wires up (including its chained-apply Also) rather than a hand-built
+// remedyAction returns the first action of m.actions that declares
+// RefreshProbe: the one whose success moves what the banner reports, so the
+// banner shortcut offers it. It is the exact SAME entry Actions() wires up
+// (including self-update's chained-apply Also) rather than a hand-built
 // stand-in that could drift from it.
-func (m model) selfUpdateAction() (domain.Action, bool) {
+func (m model) remedyAction() (domain.Action, bool) {
 	for _, a := range m.actions {
-		if a.Command == "self-update" {
+		if a.RefreshProbe {
 			return a, true
 		}
 	}
@@ -339,11 +340,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.result = msg.result
 		m.scroll = 0
 		m.scr = screenResult
-		// D5 tail: a successful self-update just fetched and fast-forwarded
-		// main, refreshing the cached origin/main ref the launch-time probe
-		// reads from. Re-fire it so the banner can self-correct without
-		// requiring a restart.
-		if msg.result.Action.Command == "self-update" && msg.result.Err == nil {
+		// D5 tail: a successful run of an action that declares RefreshProbe
+		// (self-update just fetched and fast-forwarded main) refreshed the
+		// cached origin/main ref the launch-time probe reads from. Re-fire it
+		// so the banner can self-correct without requiring a restart.
+		if msg.result.Action.RefreshProbe && msg.result.Err == nil {
 			return m, probeCmd(m.probe)
 		}
 		return m, nil
@@ -408,7 +409,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// which is a target action, and with no catalog there is no target
 		// it may run against.
 		if msg.String() == "u" && m.bannerVisible() && m.scr != screenRunning && m.catalogReady() {
-			if a, ok := m.selfUpdateAction(); ok {
+			if a, ok := m.remedyAction(); ok {
 				m.pendingAction = a
 				m.pendingTargets = m.selectedTargets()
 				m.scr = screenConfirm
@@ -499,8 +500,8 @@ func (m model) updateActions(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			// pi alone). Stay put: no confirm screen, no process.
 			return m, nil
 		}
-		if action.Command == "restore" {
-			// R-003: restore is never offered for a target with zero backups.
+		if action.RequiresBackup {
+			// R-003: an action that requires a backup (restore) is never offered for a target with zero backups.
 			// The lookup spawns the backend, so it runs in a command and its
 			// restoreLookupMsg opens the confirm screen (or does nothing when
 			// no target has a backup). Each press is a new request.

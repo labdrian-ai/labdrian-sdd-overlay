@@ -1,6 +1,22 @@
 package domain
 
-// Action is a backend subcommand the TUI can invoke.
+// ResultKind says how the result of running an action is read and shown.
+type ResultKind int
+
+const (
+	// ResultTranscript shows the transcript of the invocations, as the backend
+	// printed it, and nothing more. It is the zero value.
+	ResultTranscript ResultKind = iota
+	// ResultSyncDashboard reads the transcript as a sync-check report: the
+	// verdicts it holds become the per-target dashboard above it, and a report
+	// that holds none says so.
+	ResultSyncDashboard
+)
+
+// Action is a backend subcommand the TUI can invoke. What the program does
+// differently for one action than for another is declared here, in fields,
+// and never inferred from the Command string: a screen or a use case that
+// needs to know "is this the one that..." asks a field.
 type Action struct {
 	Name            string   // label shown in the menu
 	Command         string   // bin/labdrian-overlay subcommand
@@ -12,6 +28,19 @@ type Action struct {
 	ConfirmMessage  string   // per-action confirm copy; empty falls back to generic
 	Hint            string   // one-line purpose scent shown in the menu
 	Also            []Action // nested sub-actions merged into this menu entry (invisible in the menu)
+
+	// ResultKind is how the result of running the action is read and shown.
+	ResultKind ResultKind
+	// RefreshProbe says a successful run changes what the launch-time probe
+	// reads (it moves the repository), so the probe runs again and the banner
+	// can correct itself. The banner's shortcut offers the first action that
+	// declares it: the one that can clear what the banner reports.
+	RefreshProbe bool
+	// RequiresBackup says the action is only ever offered for a target that
+	// has a backup to go back to: before the confirm screen the backend is
+	// asked what each selected target has, and the action runs against the
+	// ones that have one.
+	RequiresBackup bool
 }
 
 // ApplicableTo narrows selected to the targets this action can run against:
@@ -76,7 +105,8 @@ func Actions() []Action {
 				{Command: "version", TargetAgnostic: true},
 			}},
 		{Name: "Verificar sincronización", Command: "sync-check", Mutating: false, SupportsAll: true,
-			Hint: "Compara overlay vs upstream"},
+			ResultKind: ResultSyncDashboard,
+			Hint:       "Compara overlay vs upstream"},
 		// Capture reads a target's deployed files back into the repo, so it
 		// only exists for per-file (copy) targets: the backend refuses a
 		// package target such as pi.
@@ -96,7 +126,7 @@ func Actions() []Action {
 		// Like capture, restore is refused by the backend for a package
 		// target (it keeps no per-target backups), hence CopyTargetsOnly.
 		{Name: "Restaurar respaldo", Command: "restore", Mutating: true, SupportsAll: false,
-			CopyTargetsOnly: true,
+			CopyTargetsOnly: true, RequiresBackup: true,
 			ConfirmMessage: "Restaura el respaldo más reciente de cada destino seleccionado,\n" +
 				"sobrescribiendo sus archivos actualmente desplegados.",
 			Hint: "Revierte un destino a su respaldo más reciente"},
@@ -115,6 +145,7 @@ func Actions() []Action {
 			Command:        "self-update",
 			Mutating:       true,
 			TargetAgnostic: true,
+			RefreshProbe:   true,
 			ConfirmMessage: "Actualiza main a origin/main (fast-forward) y despliega el resultado en los destinos seleccionados (equivalente a Aplicar cambios). Tu rama actual no se toca y se vuelve a ella al terminar. Rechaza con árbol sucio o main local adelantado.",
 			Hint:           "Pone main al día (ff-only) y lo despliega, en un solo paso",
 			Also: []Action{

@@ -593,32 +593,33 @@ func TestDegradedBannerOnExitTwo(t *testing.T) {
 	}
 }
 
-// TestEmptyVerdictNote verifies the dim note when sync-check produces zero
-// verdicts (R-004), and that a non-sync-check command does NOT show the note
-// even when verdicts are also empty.
+// TestEmptyVerdictNote verifies the dim note when an action whose result is a
+// sync-check report produces zero verdicts (R-004), and that an action whose
+// result is only a transcript does NOT show the note even when verdicts are
+// also empty -- whatever its command is called.
 func TestEmptyVerdictNote(t *testing.T) {
 	m := newTestModel(t)
 	m.scr = screenResult
 	m.result = domain.CommandResult{
-		Action:   domain.Action{Name: "Verificar sincronización", Command: "sync-check"},
+		Action:   domain.Action{Name: "Verificar sincronización", Command: "sync-check", ResultKind: domain.ResultSyncDashboard},
 		Output:   "some raw output",
 		Verdicts: nil,
 	}
 
 	rendered := m.View()
 	if !strings.Contains(rendered, "No se pudieron analizar veredictos") {
-		t.Errorf("sync-check with 0 verdicts must show dim note, got:\n%s", rendered)
+		t.Errorf("a sync-check report with 0 verdicts must show dim note, got:\n%s", rendered)
 	}
 
 	// With verdicts present, note must NOT appear.
 	m.result.Verdicts = []domain.TargetVerdict{{Target: "claude", Status: domain.SyncHealthy}}
 	rendered = m.View()
 	if strings.Contains(rendered, "No se pudieron analizar veredictos") {
-		t.Errorf("sync-check with verdicts must NOT show dim note")
+		t.Errorf("a sync-check report with verdicts must NOT show dim note")
 	}
 
-	// NEGATIVE PATH: a non-sync-check command with zero verdicts must NOT show
-	// the note — guards the Command=="sync-check" gate in viewResult.
+	// NEGATIVE PATH: an action that is only a transcript, with zero verdicts,
+	// must NOT show the note -- guards the ResultKind gate in viewResult.
 	m.result = domain.CommandResult{
 		Action:   domain.Action{Name: "Estado", Command: "status"},
 		Output:   "some output",
@@ -626,7 +627,27 @@ func TestEmptyVerdictNote(t *testing.T) {
 	}
 	rendered = m.View()
 	if strings.Contains(rendered, "No se pudieron analizar veredictos") {
-		t.Errorf("non-sync-check command with 0 verdicts must NOT show dim note, got:\n%s", rendered)
+		t.Errorf("a transcript-only action with 0 verdicts must NOT show dim note, got:\n%s", rendered)
+	}
+}
+
+// TestEmptyVerdictNote_FollowsTheDeclaredKindNotTheCommand: the note belongs to
+// the kind of result an action declares. An action called sync-check that does
+// not declare a report shows no note, and a differently named action that
+// declares one does.
+func TestEmptyVerdictNote_FollowsTheDeclaredKindNotTheCommand(t *testing.T) {
+	const note = "No se pudieron analizar veredictos"
+	m := newTestModel(t)
+	m.scr = screenResult
+
+	m.result = domain.CommandResult{Action: domain.Action{Name: "Verificar", Command: "sync-check"}, Output: "raw"}
+	if strings.Contains(m.View(), note) {
+		t.Error("an action called sync-check that declares no report showed the note: the command string is being read")
+	}
+
+	m.result = domain.CommandResult{Action: domain.Action{Name: "Comparar", Command: "compare", ResultKind: domain.ResultSyncDashboard}, Output: "raw"}
+	if !strings.Contains(m.View(), note) {
+		t.Error("an action that declares a report showed no note: it is being decided by the command string")
 	}
 }
 
@@ -1092,50 +1113,56 @@ func TestSelfUpdateConfirmScreen(t *testing.T) {
 	}
 }
 
-// TestUpdate_SelfUpdateSuccess_RefiresProbe verifies the D5 tail: a
-// successful self-update run (err == nil) re-fires the launch-time probe so
-// the banner can self-correct against the just-refreshed cached ref. A
-// failed self-update run, and a successful run of a DIFFERENT action, must
-// NOT re-fire the probe (triangulation — proves the branch is gated on both
-// the command AND the error, not just one of them).
-func TestUpdate_SelfUpdateSuccess_RefiresProbe(t *testing.T) {
-	t.Run("self-update success re-fires probe", func(t *testing.T) {
+// TestUpdate_SuccessOfAnActionThatRefreshesTheProbe_RefiresIt verifies the D5
+// tail: a successful run of an action that declares RefreshProbe (self-update
+// moves main) re-fires the launch-time probe so the banner can self-correct
+// against the just-refreshed cached ref. A failed run, and a successful run of
+// an action that does not declare it, must NOT re-fire the probe
+// (triangulation -- proves the branch is gated on both the declaration AND the
+// error, and on nothing about the command's name).
+func TestUpdate_SuccessOfAnActionThatRefreshesTheProbe_RefiresIt(t *testing.T) {
+	selfUpdate := domain.Action{Command: "self-update", RefreshProbe: true}
+
+	t.Run("a successful run re-fires the probe", func(t *testing.T) {
 		m := newTestModel(t)
-		msg := runDoneMsg{result: domain.CommandResult{
-			Action: domain.Action{Command: "self-update"},
-			Err:    nil,
-		}}
+		msg := runDoneMsg{result: domain.CommandResult{Action: selfUpdate}}
 		updated, cmd := m.Update(msg)
 		m = updated.(model)
 		if m.scr != screenResult {
 			t.Fatalf("scr after runDoneMsg = %v, want screenResult", m.scr)
 		}
 		if cmd == nil {
-			t.Fatal("successful self-update runDoneMsg must return a non-nil re-probe cmd")
+			t.Fatal("a successful run of an action that refreshes the probe must return a non-nil re-probe cmd")
 		}
 	})
 
-	t.Run("self-update failure does not re-fire probe", func(t *testing.T) {
+	t.Run("a failed run does not re-fire the probe", func(t *testing.T) {
 		m := newTestModel(t)
-		msg := runDoneMsg{result: domain.CommandResult{
-			Action: domain.Action{Command: "self-update"},
-			Err:    errors.New("boom"),
-		}}
+		msg := runDoneMsg{result: domain.CommandResult{Action: selfUpdate, Err: errors.New("boom")}}
 		_, cmd := m.Update(msg)
 		if cmd != nil {
-			t.Error("failed self-update runDoneMsg must NOT re-fire the probe")
+			t.Error("a failed run must NOT re-fire the probe")
 		}
 	})
 
-	t.Run("other action success does not re-fire probe", func(t *testing.T) {
+	t.Run("a successful run of another action does not re-fire the probe", func(t *testing.T) {
 		m := newTestModel(t)
-		msg := runDoneMsg{result: domain.CommandResult{
-			Action: domain.Action{Command: "apply"},
-			Err:    nil,
-		}}
+		msg := runDoneMsg{result: domain.CommandResult{Action: domain.Action{Command: "apply"}}}
 		_, cmd := m.Update(msg)
 		if cmd != nil {
-			t.Error("a non-self-update runDoneMsg must NOT re-fire the probe")
+			t.Error("an action that does not refresh the probe must NOT re-fire it")
+		}
+	})
+
+	t.Run("the name of the command decides nothing", func(t *testing.T) {
+		m := newTestModel(t)
+		named := runDoneMsg{result: domain.CommandResult{Action: domain.Action{Command: "self-update"}}}
+		if _, cmd := m.Update(named); cmd != nil {
+			t.Error("an action called self-update that does not declare RefreshProbe re-fired the probe: the command string is being read")
+		}
+		declared := runDoneMsg{result: domain.CommandResult{Action: domain.Action{Command: "fetch-tags", RefreshProbe: true}}}
+		if _, cmd := m.Update(declared); cmd == nil {
+			t.Error("an action that declares RefreshProbe did not re-fire the probe: it is being decided by the command string")
 		}
 	})
 }

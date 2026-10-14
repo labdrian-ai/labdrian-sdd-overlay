@@ -89,7 +89,7 @@ func (r ActionRunner) Run(action domain.Action, selected, shown []domain.Target)
 	}
 
 	res.Output = sb.String()
-	if action.Command == "sync-check" {
+	if action.ResultKind == domain.ResultSyncDashboard {
 		res.Verdicts = domain.ParseSyncCheck(res.Output)
 	}
 	return res

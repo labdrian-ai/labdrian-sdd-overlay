@@ -485,8 +485,8 @@ func (m model) viewResult() string {
 		b.WriteString("\n")
 	}
 
-	// Empty-verdict note for sync-check.
-	if m.result.Action.Command == "sync-check" && len(m.result.Verdicts) == 0 {
+	// Empty-verdict note for an action whose result is a sync-check report.
+	if m.result.Action.ResultKind == domain.ResultSyncDashboard && len(m.result.Verdicts) == 0 {
 		b.WriteString(dimStyle.Render("No se pudieron analizar veredictos") + "\n")
 	}
 

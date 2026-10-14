@@ -252,20 +252,44 @@ func TestActionRunner_TheResultIsTheWorstOutcomeNotTheLastOne(t *testing.T) {
 	})
 }
 
-func TestActionRunner_OnlySyncCheckIsReadAsAReport(t *testing.T) {
+// An action is read as a sync-check report when it declares that its result is
+// one (ResultSyncDashboard), and only then: not because its command is called
+// sync-check, and not because its output happens to look like a report.
+func TestActionRunner_OnlyAnActionThatDeclaresAReportIsReadAsOne(t *testing.T) {
 	const report = "=== sync-check: claude ===\n" +
 		"VERDICT:claude:UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=1 REPO_BEHIND_ORIGIN=0\n" +
 		"ACTION:claude: run 'labdrian apply --target claude'\n"
 	shown := threeCopyTargets()
-	backend := &fakeBackend{script: map[string]domain.Execution{"sync-check": {Output: report}, "status": {Output: report}}}
+	backend := &fakeBackend{script: map[string]domain.Execution{
+		"sync-check": {Output: report}, "status": {Output: report}, "compare": {Output: report},
+	}}
+	catalog := &fakeCatalog{targets: shown}
 
-	res := run(domain.Action{Command: "sync-check", SupportsAll: true}, shown, shown, &fakeCatalog{targets: shown}, backend)
-	if len(res.Verdicts) != 1 || res.Verdicts[0].Target != "claude" || res.Verdicts[0].Status != domain.SyncNeedsApply {
-		t.Errorf("sync-check verdicts = %+v, want claude needing apply", res.Verdicts)
-	}
+	t.Run("an action that declares a report", func(t *testing.T) {
+		action := domain.Action{Command: "sync-check", SupportsAll: true, ResultKind: domain.ResultSyncDashboard}
+		res := run(action, shown, shown, catalog, backend)
+		if len(res.Verdicts) != 1 || res.Verdicts[0].Target != "claude" || res.Verdicts[0].Status != domain.SyncNeedsApply {
+			t.Errorf("verdicts = %+v, want claude needing apply", res.Verdicts)
+		}
+	})
 
-	res = run(statusAction(), shown, shown, &fakeCatalog{targets: shown}, backend)
-	if len(res.Verdicts) != 0 {
-		t.Errorf("status verdicts = %+v, want none: only a sync-check is a report", res.Verdicts)
-	}
+	t.Run("it need not be called sync-check", func(t *testing.T) {
+		action := domain.Action{Command: "compare", SupportsAll: true, ResultKind: domain.ResultSyncDashboard}
+		if res := run(action, shown, shown, catalog, backend); len(res.Verdicts) != 1 {
+			t.Errorf("verdicts = %+v, want the report read: the kind is declared", res.Verdicts)
+		}
+	})
+
+	t.Run("an action that shows its transcript is not read, whatever it printed", func(t *testing.T) {
+		if res := run(statusAction(), shown, shown, catalog, backend); len(res.Verdicts) != 0 {
+			t.Errorf("verdicts = %+v, want none: only a declared report is read", res.Verdicts)
+		}
+	})
+
+	t.Run("a command called sync-check that declares nothing is not read", func(t *testing.T) {
+		action := domain.Action{Command: "sync-check", SupportsAll: true}
+		if res := run(action, shown, shown, catalog, backend); len(res.Verdicts) != 0 {
+			t.Errorf("verdicts = %+v, want none: the command string is being read", res.Verdicts)
+		}
+	})
 }
