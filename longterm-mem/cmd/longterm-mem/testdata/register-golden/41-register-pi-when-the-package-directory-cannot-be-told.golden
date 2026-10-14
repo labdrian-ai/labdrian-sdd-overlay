@@ -1,0 +1,6 @@
+args: register --target pi --state-dir <home>/state --binary /opt/bin/longterm-mem
+exit: 1
+--- stdout ---
+--- stderr ---
+longterm-mem: register: pi: not installed (no package at , or not listed in ~/.pi/agent/settings.json); build it (labdrian-overlay apply --target pi) and run pi install first
+--- machine ---

@@ -195,6 +195,7 @@ func registerScenarios() []registerScenario {
 		{name: "40-register-pi-in-a-package-directory-that-is-given-and-not-listed", setup: func(t *testing.T, w *registerWorld) {
 			w.write(t, "package/mcp.json", registerEmptyPi)
 		}, commands: [][]string{register("--target", "pi", "--config-root", "{home}/package")}},
+		{name: "41-register-pi-when-the-package-directory-cannot-be-told", homeless: true, commands: [][]string{register(withFlags("--target", "pi")...)}},
 	}
 }
 
