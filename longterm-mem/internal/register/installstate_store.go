@@ -50,8 +50,9 @@ func (s FileInstallState) Save(stateDir string, state *InstallState) error {
 
 // errNoInstallState is what a Writer built without a store answers, before it has touched a runtime's
 // configuration: nothing could be recorded of what it did, and a config entry with no record is exactly the shape
-// every later run refuses.
-var errNoInstallState = errors.New("register: the writer has no install-state store")
+// every later run refuses. Like every error under the per-target wrap of writer.go it names no command: the layer
+// that knows the direction says "register: <target>: " or "unregister: <target>: " in front of it.
+var errNoInstallState = errors.New("no install-state store was given, so nothing was recorded and nothing was written")
 
 // Writer writes longterm-mem's MCP entry into the configuration of the runtimes, and takes it out again, recording
 // what it did in the store it is given. It owns no state of its own: the composition root builds one over the

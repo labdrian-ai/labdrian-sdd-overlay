@@ -110,7 +110,7 @@ func (w Writer) adoptExistingEntry(target, stateDir string, state *InstallState,
 // touched on adopt, refuse or noop.
 func (w Writer) jsonInstall(target, configPath, stateDir, containerKey, memberKey string, entry json.RawMessage) error {
 	if w.State == nil {
-		return errNoInstallState
+		return fmt.Errorf("register: %s: %w", target, errNoInstallState)
 	}
 	state, err := w.State.Load(stateDir)
 	if err != nil {
@@ -180,7 +180,7 @@ func (w Writer) jsonInstall(target, configPath, stateDir, containerKey, memberKe
 // doc comment).
 func (w Writer) tomlInstall(target, configPath, stateDir, tableKey, memberKey, binary string, newSection []byte) error {
 	if w.State == nil {
-		return errNoInstallState
+		return fmt.Errorf("register: %s: %w", target, errNoInstallState)
 	}
 	state, err := w.State.Load(stateDir)
 	if err != nil {
@@ -245,7 +245,7 @@ func (w Writer) tomlInstall(target, configPath, stateDir, tableKey, memberKey, b
 // regress into the 11b-1 failure mode.
 func (w Writer) jsonUninstall(target, configPath, stateDir, containerKey, memberKey string) (UnregisterOutcome, error) {
 	if w.State == nil {
-		return 0, errNoInstallState
+		return 0, fmt.Errorf("unregister: %s: %w", target, errNoInstallState)
 	}
 	state, err := w.State.Load(stateDir)
 	if err != nil {
@@ -285,7 +285,7 @@ func (w Writer) jsonUninstall(target, configPath, stateDir, containerKey, member
 // Decide-reinterpretation rule and why no rollback guard is needed.
 func (w Writer) tomlUninstall(target, configPath, stateDir, tableKey, memberKey string) (UnregisterOutcome, error) {
 	if w.State == nil {
-		return 0, errNoInstallState
+		return 0, fmt.Errorf("unregister: %s: %w", target, errNoInstallState)
 	}
 	state, err := w.State.Load(stateDir)
 	if err != nil {

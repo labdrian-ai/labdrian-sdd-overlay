@@ -91,7 +91,12 @@ func refusalWords(refusal runtimes.Refusal) string {
 	case runtimes.BinaryUnresolved:
 		return "could not resolve the longterm-mem binary path; set HOME or pass --binary"
 	case runtimes.PiNotInstalled:
-		return fmt.Sprintf("pi: not installed (no package at %s, or not listed in ~/.pi/agent/settings.json); build it (labdrian-overlay apply --target pi) and run pi install first", refusal.Root)
+		const next = "build it (labdrian-overlay apply --target pi) and run pi install first"
+		if refusal.Root == "" {
+			// A machine that cannot tell where the package is built has no place to say it was not found at.
+			return "pi: not installed (the place its package is built could not be told: set HOME or pass --config-root); " + next
+		}
+		return fmt.Sprintf("pi: not installed (no package at %s, or not listed in ~/.pi/agent/settings.json); %s", refusal.Root, next)
 	default:
 		return "the request was refused"
 	}

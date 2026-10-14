@@ -136,7 +136,9 @@ func TestWriter_ARecordThatCannotBeReadStopsTheWriteBeforeTheConfigIsTouched(t *
 }
 
 // A Writer with no store writes nothing, and says why, for every way into it: a config entry with no record of it is
-// the shape every later run refuses.
+// the shape every later run refuses. It says what is missing in the package's own form, the one layer that names the
+// command and the target ("register: claude: ..." / "unregister: claude: ...") around words that name neither, and
+// the words say what happened to the config.
 func TestWriter_WithoutAStoreWritesNothing(t *testing.T) {
 	for _, target := range []string{claudeTarget, opencodeTarget, codexTarget, piTarget} {
 		t.Run(target, func(t *testing.T) {
@@ -155,6 +157,13 @@ func TestWriter_WithoutAStoreWritesNothing(t *testing.T) {
 
 			if !errors.Is(err, errNoInstallState) || !errors.Is(unregErr, errNoInstallState) {
 				t.Errorf("Register = %v and Unregister = %v, want both to say the writer has no store", err, unregErr)
+			}
+			const words = "no install-state store was given, so nothing was recorded and nothing was written"
+			if want := "register: " + target + ": " + words; err == nil || err.Error() != want {
+				t.Errorf("Register = %v, want %q", err, want)
+			}
+			if want := "unregister: " + target + ": " + words; unregErr == nil || unregErr.Error() != want {
+				t.Errorf("Unregister = %v, want %q", unregErr, want)
 			}
 			if got, _ := os.ReadFile(path); string(got) != before {
 				t.Errorf("the config changed to %q though the writer had nowhere to record it", got)
