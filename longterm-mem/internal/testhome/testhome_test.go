@@ -343,6 +343,13 @@ func TestEnter_LeavesTheRealGoCommandAnsweringAsItDid(t *testing.T) {
 				t.Setenv(name, "")
 				os.Unsetenv(name)
 			}
+			// What the developer exports that changes which go answers, or how, is not the world's either: the go
+			// on PATH answers for itself, offline, whatever GOTOOLCHAIN, GOFLAGS or GOROOT say outside the test.
+			for _, name := range []string{"GOFLAGS", "GOROOT"} {
+				t.Setenv(name, "")
+				os.Unsetenv(name)
+			}
+			t.Setenv("GOTOOLCHAIN", "local")
 			t.Setenv("HOME", realHome)
 			for name, value := range tc.exports {
 				t.Setenv(name, expand(value))
