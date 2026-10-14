@@ -1,0 +1,16 @@
+args: doctor
+exit: 9
+--- stdout ---
+longterm-mem: doctor for widgets
+  [PASS] vault-config-resolvable
+  [PASS] address-map-integrity
+  [PASS] wiki-registration-consistency
+  [PASS] precedence-sidecar-consistency
+  [FAIL] runtime-prerequisites (python3 is not present on PATH)
+  [FAIL] embedding-index-present (no embedding index has been built at <state>/index/widgets; run `longterm-mem index --embeddings`)
+  [FAIL] embedding-index-fresh (freshness cannot be determined: embedding index at <state>/index/widgets could not be loaded: vecindex: no index at this path)
+  [PASS] embedding-backend-reachable
+--- stderr ---
+longterm-mem: doctor: --project not given, adopted "widgets" from the working directory (the memory already lives under this name; derived via the remote rule)
+--- ledger ---
+no ledger

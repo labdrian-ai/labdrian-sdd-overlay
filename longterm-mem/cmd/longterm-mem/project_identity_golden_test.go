@@ -469,6 +469,25 @@ func identityCases() []identityCase {
 			w.git(t, "remote", "add", "origin", widgetsRemote)
 			w.holdsMemory(t, "widgets", false)
 		}},
+		{name: "63-doctor-resolves-and-records-nothing", args: func(w *identityWorld) []string { return []string{"doctor"} }, setup: func(t *testing.T, w *identityWorld) {
+			w.repo(t)
+			w.git(t, "remote", "add", "origin", widgetsRemote)
+			w.holdsMemory(t, "widgets", false)
+		}},
+		{name: "64-stale-when-the-observations-cannot-be-listed", args: func(w *identityWorld) []string {
+			return []string{"stale", "--project", "github.com/acme/widgets"}
+		}, setup: func(t *testing.T, w *identityWorld) {
+			w.repo(t)
+			w.git(t, "remote", "add", "origin", widgetsRemote)
+			db, err := sql.Open("sqlite", w.dbPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer db.Close()
+			if _, err := db.Exec(`DROP TABLE observations`); err != nil {
+				t.Fatal(err)
+			}
+		}},
 		{name: "70-skills-stale-names-the-origin", args: func(w *identityWorld) []string { return []string{"skills-stale", "--project-root", w.root} }, setup: func(t *testing.T, w *identityWorld) {
 			w.repo(t)
 			w.git(t, "remote", "add", "origin", widgetsRemote)
