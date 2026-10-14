@@ -14,7 +14,8 @@
 // mode: os.WriteFile applies its perm argument only when it CREATES the
 // file, so passing the captured mode of an existing file is dead code.
 //
-// WriteFile is the single replacement for both.
+// WriteFile is the single replacement for both. WriteJSON is the one way the module writes the JSON files it keeps
+// for itself, on top of it.
 package durable
 
 import (

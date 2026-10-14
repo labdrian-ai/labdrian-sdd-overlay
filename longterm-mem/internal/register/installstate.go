@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/durable"
 )
@@ -91,8 +90,9 @@ func (s *InstallState) Delete(target string) {
 	delete(s.Targets, target)
 }
 
-// Save writes s to path through durable.WriteFile — the same single
-// replacement primitive the runtime-config writers use (D6).
+// Save writes s to path through durable.WriteJSON, which replaces the file
+// through durable.WriteFile — the same single replacement primitive the
+// runtime-config writers use (D6).
 //
 // Unlike those, install-state.json is longterm-mem's own sidecar in
 // longterm-mem's own state directory, so durable.WriteFile's mode- and
@@ -105,22 +105,12 @@ func (s *InstallState) Delete(target string) {
 // directory where three hand-rolled copies of this sequence did not. The
 // second reason is that there were three hand-rolled copies: a subtle
 // sequence duplicated per package is how this module ended up carrying two
-// different, and both incomplete, write disciplines at once.
+// different, and both incomplete, write disciplines at once. The sequence
+// is now written once, as durable.WriteJSON, which names the file and no
+// command in its errors, as this package's convention asks.
 func (s *InstallState) Save(path string) error {
 	if s.Schema == 0 {
 		s.Schema = installStateSchemaVersion
 	}
-	data, err := json.MarshalIndent(s, "", "  ")
-	if err != nil {
-		return fmt.Errorf("marshal %s: %w", path, err)
-	}
-	data = append(data, '\n')
-
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-		return fmt.Errorf("create directory for %s: %w", path, err)
-	}
-	if err := durable.WriteFile(path, data, configCreatePerm); err != nil {
-		return err
-	}
-	return nil
+	return durable.WriteJSON(path, s, configCreatePerm)
 }

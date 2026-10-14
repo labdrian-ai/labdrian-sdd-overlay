@@ -167,17 +167,7 @@ func load(commonDir string) (ledger, error) {
 }
 
 func write(commonDir string, l ledger) error {
-	data, err := json.MarshalIndent(l, "", "  ")
-	if err != nil {
-		return fmt.Errorf("identityledger: marshal: %w", err)
-	}
-	data = append(data, '\n')
-
-	path := Path(commonDir)
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-		return fmt.Errorf("identityledger: create directory for %s: %w", path, err)
-	}
-	if err := durable.WriteFile(path, data, 0o600); err != nil {
+	if err := durable.WriteJSON(Path(commonDir), l, 0o600); err != nil {
 		return fmt.Errorf("identityledger: %w", err)
 	}
 	return nil
