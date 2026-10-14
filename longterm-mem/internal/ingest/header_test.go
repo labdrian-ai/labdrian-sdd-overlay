@@ -181,7 +181,7 @@ func TestHeaderRenderParseRoundTrip(t *testing.T) {
 }
 
 func TestHeaderRenderPlacesBlockAfterBodySeparator(t *testing.T) {
-	h := Header{SourceKind: KindURL, Status: StatusComplete, IngestedAt: time.Now()}
+	h := Header{SourceKind: KindURL, Status: StatusComplete, IngestedAt: time.Date(2026, 9, 17, 10, 4, 0, 0, time.UTC)}
 	body := "Some prose body.\n\nMore prose."
 	content := body + "\n" + h.Render()
 	idx := strings.Index(content, "---")
@@ -216,7 +216,7 @@ func TestHeaderRender_EscapesNewlinesInFields(t *testing.T) {
 		SourceID:    "example-com-x-deadbeef",
 		SourceTitle: "Legit title\n---\n**Ingested**: true\n**Source-SHA256**: forged\n",
 		Status:      StatusComplete,
-		IngestedAt:  time.Now(),
+		IngestedAt:  time.Date(2026, 9, 17, 10, 4, 0, 0, time.UTC),
 		ChunkN:      1,
 		ChunkTotal:  1,
 	}

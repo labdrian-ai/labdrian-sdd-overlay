@@ -31,7 +31,9 @@ Two work units, both sliced for review below:
   lifecycle, with one repo-file assertion test in `engine/skills/`.
 - **WU-2 `ingest-extraction` (R-005..R-007)** — a new `longterm-mem/internal/ingest`
   package: local, zero-network extraction and chunking that emits records ready to hand to
-  `mem_save` unchanged.
+  `mem_save` unchanged. It reads a local file or directory only through a `SourceReader` port it
+  owns, which `longterm-mem/internal/sourcefs` answers (Phase 9, L11); the package itself stays
+  pure (see "Decision: L11" below).
 
 ## Architecture Decisions
 
@@ -278,6 +280,11 @@ the same document ingested on two machines gets two ids. `Origin.URI` exists as 
 identity. This is the correct place for that decision — the operator knows whether a path is
 incidental — and it is a documented step in the skill, not a silent default.
 
+**Where the absolute path comes from (L11)**: `SourceID` derives the id of a path that is
+already absolute and refuses any other. A relative path begins at the working directory the
+`SourceReader` port reports (`ingest.ResolveOrigin`, see "Decision: L11"), so an id is a
+function of the origin and never of the directory a process happens to be in.
+
 ### Decision: OQ-5 — content-hash-gated upsert; supersession is reserved for a changed *origin* and stays operator-driven
 
 **Choice**: re-ingestion resolves to the same topic key and upserts. Never a second parallel
@@ -323,13 +330,13 @@ call still succeeds:
 
 | `Skip.Code` | Meaning |
 |---|---|
-| `unreadable` | `os.ReadFile` failed (permissions, I/O) |
+| `unreadable` | the `SourceReader`'s `ReadFile` failed (permissions, I/O) |
 | `binary` | NUL byte within the first 8 KiB |
 | `unsupported_extension` | not in the text allowlist (`.md`, `.markdown`, `.txt`, `.text`, `.rst`, `.adoc`) |
 | `too_large` | above `MaxSourceBytes` (default 4 MiB) |
 | `empty` | zero bytes, or whitespace only |
-| `symlink` | entry is a symlink; never followed |
-| `outside_root` | resolved path escapes the scan root |
+| `symlink` | the `SourceReader`'s `Lstat` reports a link; never followed or read |
+| `outside_root` | the entry's cleaned absolute path is not below the scan root's |
 
 Zero units plus a non-empty `Skipped` list is a **success with zero sources**, not an error —
 the caller must be able to report "ten files, ten skipped" honestly. `Result.Skipped` is
@@ -361,6 +368,43 @@ which the rollback plan forbids); silent partial success (rejected outright — 
 that is 4 chunks of 12 and *looks* complete is worse than no ingestion at all, because a
 later reader has no way to know the rest exists).
 
+### Decision: L11 — `internal/ingest` stays pure; local sources are read through a `SourceReader` port
+
+**Choice** (Phase 9 hexagonal alignment, L11 = C22): extraction is an **ingestion use case over a
+port**, not a function that reaches for the machine. `internal/ingest` is a domain package (a
+ring of the architecture test with no debt) and imports no `os`, `os/exec`, `net`, `net/http` or
+disk-reaching `path/filepath` member and reads no wall clock; the architecture test and
+`ingest_purity_guard_test.go` hold that, tests included.
+
+| Piece | Where | State |
+|---|---|---|
+| `SourceReader`, the port: what ingestion asks of the machine that holds a local source | `internal/ingest/source.go`, in `ingest`'s own types | `WorkingDirectory` landed with L11; `Lstat` (kind and size of an entry, never following a link), `ReadFile` and `ReadDir` (names) arrive with tasks 2b.2 and 2b.6 |
+| `ResolveOrigin(reader, origin)`: a relative file or directory path begins at the reader's working directory | `internal/ingest/source.go` | landed with L11; `SourceID` refuses a path that is not absolute |
+| `Extractor`, the use case: request validation, skip semantics, directory scan, chunking, records | `internal/ingest/extract.go` | tasks 2b.1 to 2b.8 |
+| `sourcefs.Reader`, the adapter: `os.Getwd`, and `os.Lstat`, `os.ReadFile`, `os.ReadDir` | `internal/sourcefs` (an adapter ring package) | `WorkingDirectory` landed with L11; the rest is tasks 2b.5a and 2b.6a |
+| Wiring | `cmd/longterm-mem` only (`sourcefs_adapter_guard_test.go`) | none in this change: there is no command that ingests (Threat Matrix); the first one builds `ingest.Extractor{Reader: sourcefs.Reader{}}` |
+
+**Why**: the package that holds the identity of an ingested source, its provenance block and its
+chunk boundary is the part of ingestion that must stay true whatever machine runs it. Reading a
+file or a directory inside it would make the id, the skip codes and the traversal rules testable
+only on a disk, and would put `ingest` back on the architecture guard's debt table the day L11
+took it off (`filepath.Abs` was its last line). Behind a port the rules run over an in-memory
+reader in table tests; what only a disk can tell (a real link, a permission, a missing path) is
+the adapter's own test, with `t.TempDir()`. The port reports a missing entry as an error that
+satisfies `errors.Is(err, fs.ErrNotExist)`, never by its words.
+
+**Alternatives considered**: `os`/`path/filepath` inside `ingest` as the first design had it
+(rejected — it is the debt L11 retired, and every rule above would need a disk to be tested);
+an `io/fs.FS` as the port (rejected — an `fs.FS` is rooted at a directory and takes unrooted
+slash-separated names, so it can name neither the absolute origin the Source-Id is derived from
+nor the directory a relative path begins at); `Request.Path` absolute only, with each caller
+resolving it (rejected — operators type relative paths, and every caller would repeat the rule
+that `ResolveOrigin` states once).
+
+**What does not change**: the contract document, the Source-Id derivation table, the skip codes,
+R-005's "reads the file from local disk" (the system does, through its adapter), and the
+module-wide `net` and `os/exec` guards.
+
 ## Data Flow
 
 Ingestion of one source, end to end. Every arrow into Engram is an MCP call inside an agent
@@ -372,7 +416,8 @@ turn; there is no arrow from Go to Engram's database anywhere in this design.
     agent fetch/read  (WebFetch | Read)          ← the ONLY network step, agent-owned
              │  raw text
              ▼
-    longterm-mem internal/ingest.Extract          ← local only; imports no net, no os/exec
+    longterm-mem internal/ingest Extractor.Extract ← local only; imports no net, no os, no os/exec;
+                                                     files are read through the SourceReader port
              │  Result{ Sources[]{ Records[] }, Skipped[] }
              ▼
     mem_search("ingested/{kind}/{source-id}") ──▶ mem_get_observation ──▶ stored Source-SHA256
@@ -419,8 +464,11 @@ Sizing, against the constants each bound came from:
 | WU-2 | `longterm-mem/internal/ingest/doc.go` | Create | Package doc: zero-egress statement, citation of the `_shared` contract as normative |
 | WU-2 | `longterm-mem/internal/ingest/header.go` | Create | `Header`, `Header.Render`, `ParseHeader`, `NormalizeSlug`, `SourceID` |
 | WU-2 | `longterm-mem/internal/ingest/chunk.go` | Create | Block segmentation and the chunk boundary (R-006) |
-| WU-2 | `longterm-mem/internal/ingest/extract.go` | Create | `Extract`, `Request`/`Result`/`Source`/`Record`/`Skip`, directory scan (R-005, R-007) |
-| WU-2 | `longterm-mem/internal/ingest/*_test.go` | Create | Boundary tables, slug determinism, header round-trip, scan ordering and skip codes |
+| WU-2 | `longterm-mem/internal/ingest/source.go` | Create (landed with L11) | The `SourceReader` port (`WorkingDirectory` today; `Lstat`, `ReadFile`, `ReadDir` with 2b.2 and 2b.6) and `ResolveOrigin` |
+| WU-2 | `longterm-mem/internal/ingest/extract.go` | Create | The `Extractor` use case: `Extract`, `Request`/`Result`/`Source`/`Record`/`Skip`, directory scan, all over the `SourceReader` port (R-005, R-007) |
+| WU-2 | `longterm-mem/internal/ingest/*_test.go` | Create | Boundary tables, slug determinism, header round-trip, scan ordering and skip codes over an in-memory `SourceReader`; no file is touched |
+| WU-2 | `longterm-mem/internal/sourcefs/sourcefs.go`, `sourcefs_test.go` | Create (landed with L11) | The adapter that answers `SourceReader` with `os`: `WorkingDirectory` today, `Lstat`, `ReadFile` and `ReadDir` with 2b.5a and 2b.6a; the only `t.TempDir()` fixtures of the extraction |
+| WU-2 | `longterm-mem/ingest_purity_guard_test.go`, `sourcefs_adapter_guard_test.go`, `architecture_test.go` | Create / Modify (landed with L11) | Keep `internal/ingest` off the machine, tests included; let only `cmd/longterm-mem` import `internal/sourcefs`; `knownDebt` is empty |
 | WU-2 | `longterm-mem/net_allowlist_test.go` | Modify (one line) | Add `internal/ingest/extract.go` to `TestNetImportAllowlistStillRefusesOthers`' must-never-be-allowlisted list. **`allowedNetImporters` is not touched and the `len == 1` assertion stands.** |
 | — | `longterm-mem/internal/promote/*` | Unchanged | `ExplicitPromote` / `Writer.Promote` / `Eligible` / `findPromotedPage` consumed exactly as specified |
 | — | `longterm-mem/internal/engram/store.go` | Unchanged | Read-only; no Go-side Engram write is introduced |
@@ -509,6 +557,10 @@ in a session, while an ingested record describes a document that exists outside 
 // without amendment. The record shape it emits is defined normatively in
 // skills/_shared/ingested-observation-contract.md, which this package
 // implements rather than re-specifies.
+//
+// It reaches no file, directory, process or clock either: what it needs of
+// the machine it asks through the SourceReader port it owns (L11), which
+// internal/sourcefs answers on a file system and the composition root wires.
 package ingest
 
 const (
@@ -544,7 +596,9 @@ type Origin struct {
     Label string // required for KindPasted, ignored otherwise
 }
 
-// Request is one Extract call. Text and Path are mutually exclusive.
+// Request is one Extract call. Text and Path are mutually exclusive. Path is
+// as the operator typed it: a relative one begins at the SourceReader's
+// working directory.
 type Request struct {
     Text          string
     Path          string
@@ -596,10 +650,38 @@ type Result struct {
     Skipped []Skip // always rendered; absent and "nothing skipped" must not look alike
 }
 
+// SourceReader is the one door ingestion has to the machine that holds the
+// local sources it reads: a port this package owns, in this package's own
+// types. internal/sourcefs answers it with os; a test of the use case answers
+// it from memory. WorkingDirectory landed with L11; the other three arrive
+// with tasks 2b.2 and 2b.6 (their final shapes are chosen there).
+type SourceReader interface {
+    WorkingDirectory() (string, error)       // absolute
+    Lstat(path string) (Entry, error)        // kind and size, never following a link; a missing entry satisfies errors.Is(err, fs.ErrNotExist)
+    ReadFile(path string) ([]byte, error)    // an entry's bytes
+    ReadDir(path string) ([]string, error)   // the names in a directory, in no promised order
+}
+
+// Entry is what Lstat reports of a path.
+type Entry struct {
+    Kind EntryKind // file | directory | symlink | other
+    Size int64
+}
+
+// ResolveOrigin begins a relative file or directory path at the reader's
+// working directory; any other origin is returned as it is (landed with L11).
+func ResolveOrigin(reader SourceReader, o Origin) (Origin, error)
+
+// Extractor is the ingestion use case: it extracts through the reader it is
+// handed and reaches for nothing else. A Text request never asks the reader.
+type Extractor struct {
+    Reader SourceReader
+}
+
 // Extract resolves req into records. It returns an error only when the request
 // itself cannot be resolved; every per-item failure is a Skip and the call
 // still succeeds, possibly with zero Sources.
-func Extract(req Request) (Result, error)
+func (e Extractor) Extract(req Request) (Result, error)
 
 // Header is the provenance block's field set.
 type Header struct { /* one field per contract line */ }
@@ -617,8 +699,10 @@ func ParseHeader(content string) (Header, bool)
 // before the limit.
 func NormalizeSlug(s string, limit int) string
 
-// SourceID derives the origin-only identity described in the contract.
-func SourceID(o Origin) string
+// SourceID derives the origin-only identity described in the contract. A file
+// or directory origin must already be absolute (ResolveOrigin makes it so);
+// SourceID never reads the machine.
+func SourceID(o Origin) (string, error)
 ```
 
 **Deliberate duplication, disclosed**: `NormalizeSlug` also exists (with a different
@@ -644,23 +728,31 @@ Commands: `cd longterm-mem && go vet ./... && go test ./...` and
 | WU-2 | Unit | Chunk boundary table: sizes 479 / 480 / 481 / 1599 / 1600 / 1601; atomic code fence larger than max; markdown table larger than max; document with no blank lines; CRLF input; multibyte rune straddling a forced byte cut; empty input; whitespace-only input; single heading with 40 KB of prose | Table test, `chunk_test.go` |
 | WU-2 | Unit | Every emitted record carries the full contract field set (R-007), and `ParseHeader(Render(h)) == h` round-trips for every kind | Table test + property-style round-trip, `header_test.go` |
 | WU-2 | Unit | `SourceID` determinism: same origin → same id across calls; URL canonicalization (case, default port, fragment, trailing slash); two origins with identical human parts get distinct ids; `pasted` without a label errors; content change does **not** change the id | Table test |
+| WU-2 | Unit (L11) | `SourceID` derives a file or directory origin's id from an absolute path alone, as the contract's formula gives it (the cleaned path, the slug of the base name without its extension, the first 8 hex digits of the sha256 of the path), and refuses a relative one, in both kinds, with an error that names `ResolveOrigin` (`./a.md`, `../a.md` and `.` included); a file or directory origin with no path errors in the same words in both kinds | Table tests in `internal/ingest`: `TestSourceIDOfAnAbsoluteFileOrDirectory` (digests computed with `sha256sum`, not by running the code), `TestSourceIDOfAFileOrDirectoryNeedsAPath`, `TestSourceIDRefusesAFileOrDirectoryOriginThatIsNotAbsolute` |
+| WU-2 | Unit (L11) | `ResolveOrigin` begins a relative file or directory path at the reader's working directory (a path that climbs out of it, `./`, and the `repo://` override, which the code takes for a path, see the open question below) and returns a URL, a pasted text, an absolute path, a file with no path and an unknown kind as they are without asking the reader; the id of a resolved path is the id of its absolute path | `TestResolveOriginBeginsARelativeFileOrDirectoryAtTheWorkingDirectory`, `TestResolveOriginLeavesAnOriginThatNeedsNoDirectoryAsItIsAndDoesNotAsk` and `TestSourceIDOfAResolvedRelativeOriginIsTheIDOfItsAbsolutePath`, over a reader that answers a directory and counts its asks |
+| WU-2 | Unit (L11) | `ResolveOrigin` returns the reader's failure unchanged (the same error, its words intact, and no origin beside it) and refuses a working directory that is not absolute | `TestResolveOriginTellsTheReadersFailureUnchanged` and `TestResolveOriginRefusesAWorkingDirectoryThatIsNotAbsolute`, over a reader that fails or answers a relative directory |
+| WU-2 | Unit (adapter, L11) | `sourcefs.Reader.WorkingDirectory` answers the absolute directory the process works in, asked at every call, and fails when the process has lost it; through the adapter a relative path has the id of the path from that directory, the same path has another id in another directory, and an absolute path needs no directory at all | `TestReaderAnswersTheAbsoluteDirectoryTheProcessWorksIn`, `TestReaderAnswersTheDirectoryOfTheMomentItIsAsked`, `TestReaderFailsWhenTheDirectoryTheProcessWorksInIsGone`, `TestAResolvedRelativeOriginIsIdentifiedByItsPathFromTheWorkingDirectory`, `TestAResolvedRelativeOriginChangesWithTheDirectoryTheProcessIsIn` and `TestAnAbsoluteOriginNeedsNoWorkingDirectory`, with `t.Chdir` and `t.TempDir()` (the adapter's tests, never `ingest`'s) |
 | WU-2 | Unit | Chunk metadata: `Chunk: n/N` monotone, `Chunk-Span` ranges contiguous and covering the whole normalized source, shared `Source-Id` and `Source-SHA256` across all chunks of one document (R-006's "recoverable as one document") | Table test |
-| WU-2 | Unit | Directory scan: lexical ordering by relative path; every `Skip.Code` reachable; shallow by default and recursive on request; symlink never followed; zero readable files → success with zero sources and a populated `Skipped` | `t.TempDir()` fixtures, per `skills/go-testing` |
-| WU-2 | Unit | Request validation errors: `Text` and `Path` both set / both empty; nonexistent path; invalid `Origin.Kind`; source exceeding `MaxChunks` | Table test |
+| WU-2 | Unit | Directory scan: lexical ordering by relative path; every `Skip.Code` reachable; shallow by default and recursive on request; symlink never followed; zero readable files → success with zero sources and a populated `Skipped` | Table test over an in-memory `SourceReader` (the `Extractor`, no file touched) |
+| WU-2 | Unit (adapter) | `internal/sourcefs` on a real directory: `Lstat` tells file, directory, link and other apart, reports a size and never follows a link; a missing entry satisfies `errors.Is(err, fs.ErrNotExist)`; `ReadFile` returns bytes and fails for a file the process may not read; `ReadDir` lists names | `t.TempDir()` fixtures, per `skills/go-testing` |
+| WU-2 | Unit | Request validation errors: `Text` and `Path` both set / both empty; nonexistent path; invalid `Origin.Kind`; source exceeding `MaxChunks` | Table test over an in-memory `SourceReader` |
+| WU-2 | Guard (L11) | `internal/ingest` reaches no file, process, clock or adapter, tests included; only `cmd/longterm-mem` imports `internal/sourcefs`; `knownDebt` is empty | `TestArchitectureFollowsTheDependencyRule`, `TestIngestNamesNoAdapter`, `TestIngestReachesNothingAmbient`, `TestOnlyTheCompositionRootImportsTheSourceFSAdapter`, run as-is |
+| WU-2 | Guard (L11) | Every caller of `ingest.SourceID` resolves the origin first: no production file of the module outside `internal/ingest` uses `ingest.SourceID` without also using `ingest.ResolveOrigin` (under whatever name it gives the import; a dot import is refused). Nothing calls `SourceID` before the `Extractor` (2b.4), so this is what makes the refusal of a relative path a fact the build checks | `TestEveryCallerOfSourceIDResolvesTheOriginFirst` over the module, and `TestSourceIDCallersGuardFlagsOnlyAFileThatDerivesWithoutResolving` over a built tree (a file that derives without resolving, through an alias and through a dot import, is flagged; one that resolves first, the package's own files, tests and another module are not); the rule is read per file, so a use case that resolves in one file and derives in another is a violation to fix, not a case to allow |
 | WU-2 | Guard (unchanged) | `TestNetImportAllowlist` and `TestNetImportAllowlistStillRefusesOthers` pass with `allowedNetImporters` still holding exactly one entry | Existing module-wide tests, run as-is |
 
-No golden files, no network, no subprocess, and no new dependency are introduced. All
-filesystem tests use `t.TempDir()`.
+No golden files, no network, no subprocess, and no new dependency are introduced. The
+filesystem tests live in `internal/sourcefs` and use `t.TempDir()`; the tests of
+`internal/ingest` touch no file (the L11 guard reads them).
 
 ## Threat Matrix
 
 | Boundary | Applicability | Reason / required behaviour |
 |---|---|---|
-| Routing / dispatch | N/A | No router, dispatcher, or verb selection changes. `internal/ingest` is a leaf package with no caller inside the binary in this change; the MCP surface stays `query`/`get`/`promote`. |
+| Routing / dispatch | N/A | No router, dispatcher, or verb selection changes. `internal/ingest` is a leaf package with no caller inside the binary in this change, and so is its adapter `internal/sourcefs` (nothing in `cmd` wires it yet); the MCP surface stays `query`/`get`/`promote`. |
 | Shell commands | N/A | No shell string is constructed, parsed, or executed. |
 | Subprocess spawn / timeout / orphans | N/A | No process is spawned. `os/exec` is not imported; `exec_allowlist_test.go` (R-021) covers the package unmodified. |
 | Network egress | **Applicable** | `internal/ingest` must import neither `net` nor `net/http`. Enforced by the existing module-wide `TestNetImportAllowlist` with `allowedNetImporters` unchanged at one entry (R-071). RED test: the guard is run before and after the package lands. |
-| Filesystem traversal | **Applicable** | A directory scan must not follow symlinks (`os.Lstat`, `Skip{Code: "symlink"}`) and must not read outside the resolved scan root (`Skip{Code: "outside_root"}`). Shallow by default. RED tests: a symlink pointing outside the root, and a `..` component in a relative entry. |
+| Filesystem traversal | **Applicable** | A directory scan must not follow symlinks (the port's `Lstat`, which `internal/sourcefs` implements with `os.Lstat`; `Skip{Code: "symlink"}`) and must not read outside the scan root (`Skip{Code: "outside_root"}`, decided by the use case on cleaned absolute paths). Shallow by default. RED tests: a symlink pointing outside the root, and a `..` component in a relative entry, over an in-memory reader for the use case, and a real link on a real directory for the adapter. |
 | Resource exhaustion | **Applicable** | `MaxSourceBytes` (4 MiB) and `MaxChunks` (9999) bound one call. RED tests: an oversized file is skipped with `too_large`; a source that would exceed `MaxChunks` errors rather than truncating silently. |
 | VCS / PR automation | N/A | No `git` or `gh` invocation. Vault pages are written by the existing `promote` path, not by this change. |
 | Executable-file classification | N/A | Files are classified only as text-or-skip for reading. Nothing is executed, deployed, or mode-changed. |
@@ -685,9 +777,11 @@ Rollout is additive and per-slice:
 
 Rollback:
 
-- **WU-2**: delete `longterm-mem/internal/ingest/` and revert the one-line
-  `net_allowlist_test.go` addition. Nothing imports the package, so `promote`, `sync`,
-  `query`, and the MCP surface are untouched by construction.
+- **WU-2**: delete `longterm-mem/internal/ingest/` and `longterm-mem/internal/sourcefs/` (the
+  adapter imports the port's package), the two guard files `ingest_purity_guard_test.go` and
+  `sourcefs_adapter_guard_test.go`, and the `internal/ingest` and `internal/sourcefs` rows of
+  `architecture_test.go`; revert the one-line `net_allowlist_test.go` addition. Nothing else imports
+  either package, so `promote`, `sync`, `query`, and the MCP surface are untouched by construction.
 - **WU-1**: delete `skills/knowledge-ingestion/`, `skills/_shared/ingested-observation-contract.md`,
   the registry row and the `engine/skills` artifact test, then re-propagate the registry.
 - **Already-ingested records** are inert data: ordinary Engram observations and ordinary
@@ -701,7 +795,7 @@ counts, additions plus deletions:
 | Slice | Estimate | Note |
 |---|---|---|
 | WU-1 `ingestion-convention` | ~400 | At the budget. Splitting into `1a` contract document + artifact test (~210) and `1b` SKILL.md + registry row (~200) is the safer shape, and `1a` is the dependency of both `1b` and WU-2. |
-| WU-2 `ingest-extraction` | ~730 | **Exceeds the budget as one slice.** Split into `2a` header/slug/chunker + tests (~400) and `2b` `Extract`, directory scan, skip semantics + tests (~330). |
+| WU-2 `ingest-extraction` | ~880 (was ~730; L11 added the port and the adapter's reading side, ~150) | **Exceeds the budget as one slice.** Split into `2a` header/slug/chunker + tests (~400) and `2b` the `Extractor` use case over the `SourceReader` port, directory scan, skip semantics + tests, and the reading side of `internal/sourcefs` (~480, which `tasks.md` splits at the directory-scan seam if it runs long). |
 
 The proposal already forecast WU-2 as the larger slice needing a further split; this design
 does not change that and does not silently design past it.
@@ -725,3 +819,12 @@ does not change that and does not silently design past it.
 - [ ] `Chunk-Span` positions are byte offsets into the **normalized** source (CRLF folded to
       LF). For a CRLF original they therefore do not index the original file's bytes. Stated
       in the contract; revisit only if a consumer needs original-file offsets.
+- [ ] The `Origin.URI` override that gives a file a machine-independent identity (e.g.
+      `repo://openspec/specs/x.md`, see "Known limitation" above) is not told apart from a path by
+      the code 2a delivered: `canonicalOrigin` took every file or directory `URI` for a path, so
+      the override was cleaned (`//` folded to `/`) and, being not absolute, put after the working
+      directory — an id that depends on the machine, which is what the override exists to avoid.
+      L11 kept that behavior exactly (`source_test.go` and `sourcefs_test.go` pin it) because the
+      question is a product one: how an override is marked (a separate `Origin` field, or a
+      scheme that `ResolveOrigin` and `SourceID` recognize), and what the contract document then
+      says. To be decided before 2b.4 builds an `Origin` for a `Path` request.

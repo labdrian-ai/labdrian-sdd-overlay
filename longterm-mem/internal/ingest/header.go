@@ -50,7 +50,7 @@ const (
 // supplies it; this package never learns an origin by reaching for it.
 type Origin struct {
 	Kind  SourceKind
-	URI   string // canonical origin; for KindFile/KindDirectory, the file path (or an override)
+	URI   string // canonical origin; for KindFile/KindDirectory, the file path (or an override), absolute once ResolveOrigin has seen it
 	Title string
 	Label string // required for KindPasted, ignored otherwise
 }
@@ -259,11 +259,10 @@ func canonicalOrigin(o Origin) (canonical, human string, err error) {
 		if o.URI == "" {
 			return "", "", errors.New("ingest: file/directory origin requires URI")
 		}
-		abs, err := filepath.Abs(o.URI)
-		if err != nil {
-			return "", "", err
+		if !filepath.IsAbs(o.URI) {
+			return "", "", fmt.Errorf("ingest: file/directory origin %q is not absolute; resolve it with ResolveOrigin first", o.URI)
 		}
-		canonical = filepath.Clean(abs)
+		canonical = filepath.Clean(o.URI)
 		base := filepath.Base(canonical)
 		human = strings.TrimSuffix(base, filepath.Ext(base))
 		return canonical, human, nil
@@ -317,7 +316,10 @@ func isDefaultPort(scheme, port string) bool {
 
 // SourceID derives the origin-only identity described in the contract:
 // Source-Id = NormalizeSlug(<human part>)[:40] + "-" + sha256(<canonical origin>)[:8].
-// It never reads content — only o.Title changing must never change the id.
+// It never reads content — only o.Title changing must never change the id —
+// and never reads the machine: a file or directory origin must already be
+// absolute (ResolveOrigin makes it so through a SourceReader), so the id is a
+// function of o alone.
 func SourceID(o Origin) (string, error) {
 	canonical, human, err := canonicalOrigin(o)
 	if err != nil {
