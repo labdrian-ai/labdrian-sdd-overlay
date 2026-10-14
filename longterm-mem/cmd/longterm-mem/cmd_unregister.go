@@ -101,7 +101,7 @@ func cmdUnregister(args []string) int {
 		// said "register:" is what made unregister report its failures
 		// under the other subcommand's name. Exactly one layer names the
 		// command, and it is the writer's per-target wrap (writer.go).
-		outcome, unregErr := register.Unregister(tgt, root, resolvedStateDir)
+		outcome, unregErr := registerWriter().Unregister(tgt, root, resolvedStateDir)
 		if unregErr != nil {
 			fmt.Fprintf(os.Stderr, "longterm-mem: %v\n", unregErr)
 			failed = true

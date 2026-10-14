@@ -64,20 +64,20 @@ func (o UnregisterOutcome) String() string {
 // jsonInstall/tomlInstall — the exact call site, not a second copy of the
 // D9 semantics table — reinterpreted for the uninstall direction; see
 // UnregisterOutcome's own doc comments for how each Action maps (12b.7).
-func Unregister(target, configRoot, stateDir string) (UnregisterOutcome, error) {
+func (w Writer) Unregister(target, configRoot, stateDir string) (UnregisterOutcome, error) {
 	switch target {
 	case claudeTarget:
 		configPath := filepath.Join(configRoot, claudeConfigFileName)
-		return jsonUninstall(claudeTarget, configPath, stateDir, claudeContainerKey, "longterm-mem")
+		return w.jsonUninstall(claudeTarget, configPath, stateDir, claudeContainerKey, "longterm-mem")
 	case opencodeTarget:
 		configPath := filepath.Join(configRoot, opencodeConfigFileName)
-		return jsonUninstall(opencodeTarget, configPath, stateDir, opencodeContainerKey, "longterm-mem")
+		return w.jsonUninstall(opencodeTarget, configPath, stateDir, opencodeContainerKey, "longterm-mem")
 	case codexTarget:
 		configPath := filepath.Join(configRoot, codexConfigFileName)
-		return tomlUninstall(codexTarget, configPath, stateDir, codexTableKey, "longterm-mem")
+		return w.tomlUninstall(codexTarget, configPath, stateDir, codexTableKey, "longterm-mem")
 	case piTarget:
 		configPath := filepath.Join(configRoot, piConfigFileName)
-		return jsonUninstall(piTarget, configPath, stateDir, piContainerKey, "longterm-mem")
+		return w.jsonUninstall(piTarget, configPath, stateDir, piContainerKey, "longterm-mem")
 	default:
 		return 0, fmt.Errorf("unregister: %s: unknown target", target)
 	}

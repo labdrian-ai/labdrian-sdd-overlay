@@ -38,7 +38,7 @@ func TestCodex_BareSectionHeaderIsNotAForeignEntry(t *testing.T) {
 		t.Fatalf("write config: %v", err)
 	}
 
-	if err := RegisterCodex(configRoot, stateDir, "/usr/local/bin/longterm-mem"); err != nil {
+	if err := fileWriter().RegisterCodex(configRoot, stateDir, "/usr/local/bin/longterm-mem"); err != nil {
 		t.Fatalf("register over a bodyless section header failed: %v", err)
 	}
 
@@ -71,7 +71,7 @@ func TestCodex_ForeignSectionWithACommandIsStillRefused(t *testing.T) {
 		t.Fatalf("write config: %v", err)
 	}
 
-	err := RegisterCodex(configRoot, stateDir, "/usr/local/bin/longterm-mem")
+	err := fileWriter().RegisterCodex(configRoot, stateDir, "/usr/local/bin/longterm-mem")
 	if err == nil {
 		t.Fatal("register overwrote a foreign codex section carrying its own command line")
 	}

@@ -119,7 +119,7 @@ func cmdRegister(args []string) int {
 		// prints the error alone rather than re-stating both. Re-stating
 		// them is how the conflict message came to read "longterm-mem:
 		// register: claude: register: claude: register: an entry ...".
-		regErr := registerTarget(tgt, root, resolvedStateDir, resolvedBinary)
+		regErr := registerWriter().Register(tgt, root, resolvedStateDir, resolvedBinary)
 		switch {
 		case regErr == nil:
 		case errors.Is(regErr, register.ErrConflict):
@@ -165,18 +165,5 @@ func cmdRegister(args []string) int {
 	}
 }
 
-// registerTarget dispatches to the one runtime writer target names.
-func registerTarget(target, configRoot, stateDir, binary string) error {
-	switch target {
-	case "claude":
-		return register.RegisterClaude(configRoot, stateDir, binary)
-	case "opencode":
-		return register.RegisterOpencode(configRoot, stateDir, binary)
-	case "codex":
-		return register.RegisterCodex(configRoot, stateDir, binary)
-	case "pi":
-		return register.RegisterPi(configRoot, stateDir, binary)
-	default:
-		return fmt.Errorf("register: %s: unknown target", target)
-	}
-}
+// registerWriter writes the runtimes' configuration and keeps the record of it in install-state.json.
+func registerWriter() register.Writer { return register.Writer{State: register.FileInstallState{}} }

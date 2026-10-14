@@ -160,7 +160,7 @@ func TestInstallRollback_PreservesConfigFileMode(t *testing.T) {
 				t.Fatalf("%s: read seeded config: %v", c.target, err)
 			}
 
-			failInstallStateSave(t)
+			c = c.over(unsavableWriter())
 
 			if err := c.register(dir, stateDir, c.binary1); err == nil {
 				t.Fatalf("%s: install with an unsavable install-state returned nil error, want a failure", c.target)
@@ -205,7 +205,7 @@ func TestInstallRollback_RestoresAReadOnlyConfig(t *testing.T) {
 				t.Fatalf("%s: read seeded config: %v", c.target, err)
 			}
 
-			failInstallStateSave(t)
+			c = c.over(unsavableWriter())
 
 			err = c.register(dir, stateDir, c.binary1)
 			if err == nil {
@@ -361,15 +361,30 @@ func TestRegister_AtomicReplaceBreaksHardlinksOnPurpose(t *testing.T) {
 	}
 }
 
-// failInstallStateSave forces the one failure the filesystem cannot provoke
-// on its own: install-state's save failing AFTER the config write already
-// landed. See installWithRollback for why that window is the failure a
-// re-run cannot recover from.
-func failInstallStateSave(t *testing.T) {
-	t.Helper()
-	restore := saveInstallState
-	saveInstallState = func(*InstallState, string) error { return errors.New("install-state is unwritable") }
-	t.Cleanup(func() { saveInstallState = restore })
+// fileWriter is a Writer over the real files, as the program builds it.
+func fileWriter() Writer { return Writer{State: FileInstallState{}} }
+
+// unsavableState is the one failure the filesystem cannot provoke on its own: install-state's save failing AFTER
+// the config write already landed. See installWithRollback for why that window is the failure a re-run cannot
+// recover from. It loads from the real files, so everything before the save is the program's own.
+type unsavableState struct{ FileInstallState }
+
+func (unsavableState) Save(string, *InstallState) error {
+	return errors.New("install-state is unwritable")
+}
+
+// unsavableWriter is a Writer whose install-state cannot be saved.
+func unsavableWriter() Writer { return Writer{State: unsavableState{}} }
+
+// over returns the case driven through w: its register and unregister are w's, for the target of the case.
+func (c goldenWriterCase) over(w Writer) goldenWriterCase {
+	c.register = func(configRoot, stateDir, binary string) error {
+		return w.Register(c.target, configRoot, stateDir, binary)
+	}
+	c.unregister = func(configRoot, stateDir string) (UnregisterOutcome, error) {
+		return w.Unregister(c.target, configRoot, stateDir)
+	}
+	return c
 }
 
 // assertNoTempLeftovers fails if dir still holds any of this package's
@@ -418,7 +433,7 @@ func TestJSONInstall_RollbackIsReachableWithoutStubbingTheSave(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = os.Chmod(stateDir, 0o700) })
 
-	err := jsonInstall("claude", configPath, stateDir, "mcpServers", "longterm-mem", json.RawMessage(`{"type":"stdio"}`))
+	err := fileWriter().jsonInstall("claude", configPath, stateDir, "mcpServers", "longterm-mem", json.RawMessage(`{"type":"stdio"}`))
 	if err == nil {
 		t.Fatal("jsonInstall against an unwritable state directory returned nil error — the rollback window was never entered")
 	}

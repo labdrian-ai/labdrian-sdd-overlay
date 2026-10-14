@@ -36,11 +36,11 @@ type piEntry struct {
 // target, not a user config root, C3), recording the entry's fingerprint
 // under stateDir/install-state.json. See jsonInstall for the shared D9
 // decision flow every JSON-backed writer follows.
-func RegisterPi(configRoot, stateDir, binary string) error {
+func (w Writer) RegisterPi(configRoot, stateDir, binary string) error {
 	configPath := filepath.Join(configRoot, piConfigFileName)
 	entry, err := json.Marshal(piEntry{Type: "stdio", Command: binary, Args: []string{"mcp"}})
 	if err != nil {
 		return fmt.Errorf("register: %s: marshal entry: %w", piTarget, err)
 	}
-	return jsonInstall(piTarget, configPath, stateDir, piContainerKey, "longterm-mem", entry)
+	return w.jsonInstall(piTarget, configPath, stateDir, piContainerKey, "longterm-mem", entry)
 }

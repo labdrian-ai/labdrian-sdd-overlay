@@ -82,10 +82,9 @@ var rings = map[string]archguard.Ring{
 // new violation is not added here to make the guard pass; it is fixed.
 //
 // The guard reads imports and the members selected from a few standard packages.
-// It cannot see package-level mutable variables used as test seams, so these
-// known ones are not listed below and are owed to their units all the same:
-//
-//   - register: the saveInstallState seam (L10)
+// It cannot see package-level mutable variables used as test seams; those are
+// held by package_state_guard_test.go, which is why this table lists none (L10
+// removed the last two: register's saveInstallState and vecindex's dirLocks).
 var knownDebt = archguard.Debt{
 	// ingest: the canonical origin of a file reads the working directory. The C17
 	// audit read ingest as pure from its imports; the call is the debt. L11 makes
