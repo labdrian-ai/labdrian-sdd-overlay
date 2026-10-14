@@ -183,12 +183,20 @@ func TestAdopt_OnlyTheAdoptableNamesOfTheLedgerAreRemembered(t *testing.T) {
 	}
 }
 
+// What an operator is told when a place the adoption looks in could not be consulted: the cause, and what it may
+// have cost. The words are the use case's, because they say what the rule could not do; a store only says what
+// failed.
+const (
+	missed      = ", so an identity the memory already uses may have been missed"
+	notRecorded = "; the ledger is left as it is and nothing was recorded"
+)
+
 // The notes come in the order things happened, and none of them stops the command: the stores first, then the
-// ledger that could not be read, then the ledger that could not be written. The adoption itself is made all the
-// same.
+// ledger that could not be written. The adoption itself is made all the same. Each says what was not done and what
+// that may have cost.
 func TestAdopt_NotesAreOwedInTheOrderTheyHappenedAndNeverFailTheCommand(t *testing.T) {
 	s := &stores{notes: []string{"the vault registry could not be read (boom)"}}
-	l := &ledger{knownErr: errors.New("unreadable"), recordErr: errors.New("unwritable")}
+	l := &ledger{recordErr: errors.New("unwritable")}
 
 	got, notes, err := useCase(inspector{config: widgetsOrigin}, s, l).Adopt("/anywhere", adoption.RecordDerived)
 
@@ -196,27 +204,58 @@ func TestAdopt_NotesAreOwedInTheOrderTheyHappenedAndNeverFailTheCommand(t *testi
 		t.Fatalf("Adopt = %+v, %v; want the chain's answer in spite of the notes", got, err)
 	}
 	want := []string{
-		"the vault registry could not be read (boom)",
-		"this repository's identity ledger could not be read (unreadable)",
-		"this repository's identity ledger could not be written (unwritable)",
+		"the vault registry could not be read (boom)" + missed,
+		"this repository's identity ledger could not be written (unwritable)" + missed,
 	}
 	if !reflect.DeepEqual(notes, want) {
 		t.Errorf("notes = %q, want %q", notes, want)
 	}
+	if len(l.recordedIn) != 1 {
+		t.Errorf("the ledger was written to %d times, want the attempt that failed, once", len(l.recordedIn))
+	}
 }
 
-// A ledger that could not be read offers no remembered name, and the write is still attempted.
-func TestAdopt_ALedgerThatCannotBeReadOffersNothingToRemember(t *testing.T) {
-	s := &stores{holding: map[string]bool{"former-name": true}}
-	l := &ledger{knownErr: errors.New("unreadable"), known: []adoption.KnownName{{Name: "former-name", Adoptable: true}}}
+// A ledger that could not be read is not written: the write would read it first and meet the same fault, and
+// saying so a second time, as a failure to write, would be the same note twice with a cause that is not the
+// ledger's being unwritable. So there is one note, the read one, and it says the ledger was left alone (the owner's
+// decision of 2026-10-14). Nothing remembered is offered for adoption, and the adoption itself is made all the same.
+func TestAdopt_ALedgerThatCannotBeReadIsReportedOnceAndNotWritten(t *testing.T) {
+	s := &stores{notes: []string{"the vault registry could not be read (boom)"}, holding: map[string]bool{"former-name": true}}
+	l := &ledger{knownErr: errors.New("unreadable"), recordErr: errors.New("unwritable"), known: []adoption.KnownName{{Name: "former-name", Adoptable: true}}}
 
-	got, _, err := useCase(inspector{}, s, l).Adopt("/anywhere", adoption.RecordDerived)
+	got, notes, err := useCase(inspector{config: widgetsOrigin}, s, l).Adopt("/anywhere", adoption.RecordDerived)
 
-	if err != nil || got.Adopted {
-		t.Errorf("Adopt = %+v, %v; want no adoption: the ledger's word was not available", got, err)
+	if err != nil || got.Adopted || got.Identity.Project != "github.com/acme/widgets" {
+		t.Fatalf("Adopt = %+v, %v; want the chain's answer, not an adoption: the ledger's word was not available", got, err)
 	}
-	if len(l.recordedIn) != 1 {
-		t.Errorf("the ledger was written %d times, want once", len(l.recordedIn))
+	want := []string{
+		"the vault registry could not be read (boom)" + missed,
+		"this repository's identity ledger could not be read (unreadable)" + missed + notRecorded,
+	}
+	if !reflect.DeepEqual(notes, want) {
+		t.Errorf("notes = %q, want %q", notes, want)
+	}
+	if len(l.recordedIn) != 0 {
+		t.Errorf("the ledger was written to (%v) after it could not be read", l.recordedIn)
+	}
+}
+
+// The clause that says nothing was recorded belongs to a command that would have recorded something. One that
+// promises to record nothing (doctor, sync --dry-run) reads the ledger and says the cause, as it always has.
+func TestAdopt_APolicyThatRecordsNothingDoesNotSayNothingWasRecorded(t *testing.T) {
+	l := &ledger{knownErr: errors.New("unreadable")}
+
+	_, notes, err := useCase(inspector{config: widgetsOrigin}, &stores{}, l).Adopt("/anywhere", adoption.DoNotRecordDerived)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"this repository's identity ledger could not be read (unreadable)" + missed}
+	if !reflect.DeepEqual(notes, want) {
+		t.Errorf("notes = %q, want %q", notes, want)
+	}
+	if len(l.recordedIn) != 0 {
+		t.Errorf("the ledger was written to (%v) by a policy that records nothing", l.recordedIn)
 	}
 }
 
@@ -232,7 +271,7 @@ func TestAdopt_AStoreThatCannotAnswerFailsTheAdoption(t *testing.T) {
 	if !errors.Is(err, boom) || !reflect.DeepEqual(got, projectid.Adoption{}) {
 		t.Errorf("Adopt = %+v, %v; want the store's error and no adoption", got, err)
 	}
-	if !reflect.DeepEqual(notes, []string{"a store was not consulted"}) {
+	if !reflect.DeepEqual(notes, []string{"a store was not consulted" + missed}) {
 		t.Errorf("notes = %q, want the ones gathered before the failure", notes)
 	}
 	if len(l.recordedIn) != 0 {

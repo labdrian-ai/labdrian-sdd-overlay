@@ -48,7 +48,8 @@ type Established interface {
 type Stores interface {
 	// Open consults the stores. It returns what answers, and a note for each store it could not consult: a
 	// store that cannot be read must not stop the command (most never touch it), but it must not read as
-	// "nothing is established" in silence either, so the notes are part of what the caller reports.
+	// "nothing is established" in silence either, so the notes are part of what the caller reports. A note says
+	// what failed and why; what that may have cost is the use case's to say (Adopt adds it).
 	Open() (established Established, notes []string)
 }
 
@@ -82,6 +83,14 @@ type UseCase struct {
 	Clock    Clock
 }
 
+// What an operator is told when a place the adoption looks in could not be consulted, after the cause: what it
+// may have cost, and, for a ledger that could not be read by a command that would have recorded into it, what
+// was done about it. They are the use case's words because they say what the rule could not do.
+const (
+	missedIdentity = ", so an identity the memory already uses may have been missed"
+	leftAlone      = "; the ledger is left as it is and nothing was recorded"
+)
+
 // Adopt resolves dir's identity and lets storage override which of the derivable names is used, also
 // considering the names the ledger remembers. It returns the adoption and the notes the operator is owed: a
 // store that could not be consulted, a ledger that could not be read or written. A note is never a failure: the
@@ -89,13 +98,19 @@ type UseCase struct {
 // to run because of one would be its own kind of memory loss.
 //
 // The ledger is consulted BEFORE resolving, because it answers what this repository was called before. It is
-// written after only when the policy says so.
+// written after only when the policy says so, and never when it could not be read: writing merges into what the
+// ledger holds, so it would read it first and meet the same fault, and reporting that as a failure to write would
+// be the same note twice with the wrong cause. A ledger that could not be read is reported once, as that, and
+// left alone (the owner's decision of 2026-10-14). One that reads but cannot be written keeps its own note.
 func (u UseCase) Adopt(dir string, policy RecordPolicy) (projectid.Adoption, []string, error) {
-	established, notes := u.Stores.Open()
+	established, storeNotes := u.Stores.Open()
 	defer established.Close()
+	notes := withConsequence(storeNotes)
 
-	remembered, commonDir, ledgerNotes := u.remembered(dir)
-	notes = append(notes, ledgerNotes...)
+	remembered, commonDir, readErr := u.remembered(dir)
+	if readErr != nil {
+		notes = append(notes, unreadableLedgerNote(readErr, policy))
+	}
 
 	a, err := u.Identity.AdoptWith(dir, projectid.AdoptOptions{
 		Established: established.HasMemory,
@@ -105,29 +120,50 @@ func (u UseCase) Adopt(dir string, policy RecordPolicy) (projectid.Adoption, []s
 		return projectid.Adoption{}, notes, err
 	}
 
-	if policy == RecordDerived {
+	if policy == RecordDerived && readErr == nil {
 		notes = append(notes, u.record(commonDir, a.Derived)...)
 	}
 	return a, notes, nil
 }
 
+// withConsequence says, after each of the causes the stores gave, what not having consulted a store may have cost.
+// It returns a new slice and leaves the stores' own alone.
+func withConsequence(causes []string) []string {
+	notes := make([]string, len(causes))
+	for i, cause := range causes {
+		notes[i] = cause + missedIdentity
+	}
+	return notes
+}
+
+// unreadableLedgerNote is the one note of a ledger that could not be read. A command that would have recorded
+// into it says that nothing was; one that promises to record nothing has nothing to add.
+func unreadableLedgerNote(cause error, policy RecordPolicy) string {
+	note := fmt.Sprintf("this repository's identity ledger could not be read (%v)%s", cause, missedIdentity)
+	if policy == RecordDerived {
+		note += leftAlone
+	}
+	return note
+}
+
 // remembered reads the names this repository was known by from its ledger, and returns the common directory the
-// ledger lives under so the caller can write back to the same place.
+// ledger lives under so the caller can write back to the same place. The error is the ledger's own, when it could
+// not be read; a directory with no repository to keep a ledger in is no fault of the ledger's (AdoptWith is about
+// to report it far more precisely) and has no error.
 //
 // Only the STRICT names are offered for adoption. A ledger's bare directory name can equally name somebody
 // else's repository, and adopting it would bind this one to another project's memory -- see
 // projectid.DerivedName's Strict field for why the visible failure is the better trade.
-func (u UseCase) remembered(dir string) (names []string, commonDir string, notes []string) {
+func (u UseCase) remembered(dir string) (names []string, commonDir string, readErr error) {
 	commonDir, err := u.Identity.CommonDir(dir)
 	if err != nil {
-		// Not a repository, or unreadable metadata. AdoptWith is about to report that far more precisely than
-		// this path could.
+		// Not a repository, or unreadable metadata.
 		return nil, "", nil
 	}
 
 	known, err := u.Ledger.Known(commonDir)
 	if err != nil {
-		return nil, commonDir, []string{fmt.Sprintf("this repository's identity ledger could not be read (%v)", err)}
+		return nil, commonDir, err
 	}
 	for _, k := range known {
 		if k.Adoptable {
@@ -144,7 +180,7 @@ func (u UseCase) record(commonDir string, derived []projectid.DerivedName) []str
 		return nil
 	}
 	if err := u.Ledger.Record(commonDir, derived, u.Clock.Now().UTC()); err != nil {
-		return []string{fmt.Sprintf("this repository's identity ledger could not be written (%v)", err)}
+		return []string{fmt.Sprintf("this repository's identity ledger could not be written (%v)%s", err, missedIdentity)}
 	}
 	return nil
 }

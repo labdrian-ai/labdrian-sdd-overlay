@@ -141,8 +141,9 @@ func reportAdoption(cmd string, a projectid.Adoption, notes []string) {
 		// An unconsulted store is not an empty one. Saying so is the whole
 		// point: silence here would be indistinguishable from "this really
 		// is a fresh repository", which is the answer that mints the second
-		// pile.
-		fmt.Fprintf(os.Stderr, "WARN %s: %s, so an identity the memory already uses may have been missed\n", cmd, note)
+		// pile. The use case wrote the note whole, with what it may have
+		// cost; this only says where it came from.
+		fmt.Fprintf(os.Stderr, "WARN %s: %s\n", cmd, note)
 	}
 }
 

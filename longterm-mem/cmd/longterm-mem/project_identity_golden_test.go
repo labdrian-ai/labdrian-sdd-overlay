@@ -37,11 +37,13 @@ import (
 // (maskLedger); the one instant a case seeds (seededInstant) is not, so what the ledger keeps of an earlier run
 // shows.
 //
-// Cases 50 to 52 pin behavior that is known to be odd and is kept as it was, because this change moves code and
-// does not alter what the commands print: a ledger that cannot be read is reported twice, as unreadable and then
-// as unwritable, in the same words, because writing reads the ledger first and meets the same fault. The ledger is
-// left as it was (TestProjectIdentity_ACorruptLedgerIsLeftAsItWas). Whether the second note should say something
-// else, or not be said, is a decision about what the commands print and is not taken here.
+// Cases 50 to 52 are a ledger that cannot be read. They were recorded when it was reported twice, as unreadable and
+// then as unwritable, in the same words, because writing reads the ledger first and meets the same fault; the owner
+// decided on 2026-10-14 that it is reported once, as unreadable, with the words "; the ledger is left as it is and
+// nothing was recorded" after the cause, and not written to, so those three were re-recorded for that and for
+// nothing else (the diff of each is the two old warnings and the one new). The ledger is left as it was
+// (TestProjectIdentity_ACorruptLedgerIsLeftAsItWas). Case 55 is the other fault: a ledger that reads but cannot be
+// written, which keeps its own warning.
 //
 // To rewrite them after a change that is MEANT to alter the output:
 //
@@ -587,9 +589,11 @@ func TestMaskLedger_KeepsTheSeededInstantAndMasksTheRestAndTheDigests(t *testing
 	}
 }
 
-// A ledger that cannot be trusted is left exactly as it was: the note that it could not be written is not the
-// command overwriting it. The goldens show the ledger's text after the run; this compares its bytes before and
-// after, so a run that rewrote it with the same words, or with a newline at the end, would fail here.
+// A ledger that cannot be trusted is left exactly as it was, and the command says so once. The goldens show the
+// ledger's text after the run; this compares its bytes before and after, so a run that rewrote it with the same
+// words, or with a newline at the end, would fail here, and it counts what the command says of the ledger: one
+// warning, that it could not be read, saying nothing was recorded; none that it could not be written (the owner's
+// decision of 2026-10-14: a ledger that cannot be read is not written, so the same cause is not reported twice).
 func TestProjectIdentity_ACorruptLedgerIsLeftAsItWas(t *testing.T) {
 	for _, prefix := range []string{"50-", "51-"} {
 		for _, tc := range identityCases() {
@@ -612,8 +616,17 @@ func TestProjectIdentity_ACorruptLedgerIsLeftAsItWas(t *testing.T) {
 				if err != nil || string(after) != string(before) {
 					t.Errorf("the ledger is %q (%v) after the run, was %q", after, err, before)
 				}
-				if code != exitOK || !strings.Contains(stderr, "identity ledger could not be written") {
-					t.Errorf("exit %d, stderr %q; want the command to go on (exit %d) and say the ledger could not be written", code, stderr, exitOK)
+				if code != exitOK {
+					t.Errorf("exit %d, want the command to go on (exit %d)", code, exitOK)
+				}
+				if got := strings.Count(stderr, "identity ledger could not be read"); got != 1 {
+					t.Errorf("the command said the ledger could not be read %d times, want once; stderr:\n%s", got, stderr)
+				}
+				if strings.Contains(stderr, "could not be written") {
+					t.Errorf("the command says the ledger could not be written, which it did not try to do; stderr:\n%s", stderr)
+				}
+				if !strings.Contains(stderr, "; the ledger is left as it is and nothing was recorded\n") {
+					t.Errorf("the warning does not end by saying the ledger was left alone and nothing recorded; stderr:\n%s", stderr)
 				}
 			})
 		}
