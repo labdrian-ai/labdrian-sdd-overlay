@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -11,7 +10,6 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/ops"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vault"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultreg"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vecindex"
 )
 
@@ -49,80 +47,96 @@ func (c commands) cmdDoctor(args []string) int {
 	if err := fs.Parse(args); err != nil {
 		return exitUsage
 	}
-	resolvedProject, exit := c.resolveProjectFlagReadOnly("doctor", *project)
+	a := c.newApp("doctor")
+	resolvedProject, exit := a.project(*project, true)
+	if exit != exitOK {
+		return exit
+	}
+	vaultRoot, exit := a.vaultRoot(resolvedProject, *vaultDir)
 	if exit != exitOK {
 		return exit
 	}
 
-	vaultRoot, err := vaultreg.Resolve(defaultVaultsPath(), resolvedProject, *vaultDir)
+	report, err := ops.Doctor(context.Background(), a.doctorDeps(vaultRoot), resolvedProject)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "longterm-mem: doctor: %v\n", err)
-		return vaultExitCode(err)
-	}
-
-	vaultFiles := openVault(vaultRoot)
-	deps := ops.DoctorDeps{
-		VaultRoot:           vaultRoot,
-		Root:                vaultFiles,
-		Index:               vaultFiles,
-		Log:                 vaultFiles,
-		Precedence:          vaultFiles,
-		Pages:               vaultFiles,
-		AddressMap:          vaultFiles,
-		PrerequisitePresent: vault.PrerequisitePresent,
-		// EmbeddingIndex/LiveObservationIDs/EmbeddingBackendCheck back the three
-		// embedding-index checks (R-064). This command takes no
-		// --embed-endpoint/--embed-model flags of its own (unlike `index
-		// --embeddings`), so embedding-backend-reachable probes the same
-		// defaults `index --embeddings` uses when none are given.
-		EmbeddingIndex: embeddingIndexReader(defaultStateDir()),
-		LiveObservationIDs: func(project string) ([]int64, error) {
-			store, err := engram.Open(os.Getenv(engramDBEnvVar))
-			if err != nil {
-				return nil, err
-			}
-			defer store.Close()
-			// R-020: ListObservations already excludes soft-deleted rows.
-			observations, err := store.ListObservations(project)
-			if err != nil {
-				return nil, err
-			}
-			ids := make([]int64, len(observations))
-			for i, o := range observations {
-				ids[i] = o.ID
-			}
-			return ids, nil
-		},
-		EmbeddingBackendCheck: func(ctx context.Context) error {
-			client, err := c.newEmbedClient(embed.Config{Model: vecindex.DefaultModel})
-			if err != nil {
-				return err
-			}
-			_, err = client.Embed(ctx, "longterm-mem doctor: embedding-backend-reachable probe")
-			return err
-		},
-	}
-
-	report, err := ops.Doctor(context.Background(), deps, resolvedProject)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "longterm-mem: doctor: %v\n", err)
-		return exitInternal
+		return a.refuse(err, exitInternal)
 	}
 
 	if *asJSON {
-		enc := json.NewEncoder(os.Stdout)
-		enc.SetIndent("", "  ")
-		if err := enc.Encode(report); err != nil {
-			fmt.Fprintf(os.Stderr, "longterm-mem: doctor: encode result: %v\n", err)
-			return exitInternal
+		if exit := a.printJSON(report); exit != exitOK {
+			return exit
 		}
 	} else {
-		fmt.Printf("longterm-mem: doctor for %s\n", report.Project)
-		for _, check := range report.Checks {
-			fmt.Printf("  [%s] %s%s\n", check.Status, check.Name, detailSuffix(check.Detail))
-		}
+		printDoctor(report)
 	}
+	return doctorExitCode(report)
+}
 
+// doctorDeps is what the diagnostics of the vault at vaultRoot read: the vault's files, the embedding index under
+// the state directory, the live observations of Engram and the embedding backend the commands were composed with.
+//
+// EmbeddingIndex, LiveObservationIDs and EmbeddingBackendCheck back the three embedding-index checks (R-064).
+// This command takes no --embed-endpoint/--embed-model flags of its own (unlike `index --embeddings`), so
+// embedding-backend-reachable probes the same defaults `index --embeddings` uses when none are given.
+func (a app) doctorDeps(vaultRoot string) ops.DoctorDeps {
+	vaultFiles := openVault(vaultRoot)
+	return ops.DoctorDeps{
+		VaultRoot:             vaultRoot,
+		Root:                  vaultFiles,
+		Index:                 vaultFiles,
+		Log:                   vaultFiles,
+		Precedence:            vaultFiles,
+		Pages:                 vaultFiles,
+		AddressMap:            vaultFiles,
+		PrerequisitePresent:   vault.PrerequisitePresent,
+		EmbeddingIndex:        embeddingIndexReader(defaultStateDir()),
+		LiveObservationIDs:    liveObservationIDs,
+		EmbeddingBackendCheck: a.probeEmbeddingBackend,
+	}
+}
+
+// liveObservationIDs is the id of each live observation of project, in the order Engram lists them. It opens the
+// database for the question and closes it.
+func liveObservationIDs(project string) ([]int64, error) {
+	store, err := engram.Open(os.Getenv(engramDBEnvVar))
+	if err != nil {
+		return nil, err
+	}
+	defer store.Close()
+	// R-020: ListObservations already excludes soft-deleted rows.
+	observations, err := store.ListObservations(project)
+	if err != nil {
+		return nil, err
+	}
+	ids := make([]int64, len(observations))
+	for i, o := range observations {
+		ids[i] = o.ID
+	}
+	return ids, nil
+}
+
+// probeEmbeddingBackend asks the embedding backend the commands were composed with to embed one text, and says
+// why it could not.
+func (a app) probeEmbeddingBackend(ctx context.Context) error {
+	client, err := a.newEmbedClient(embed.Config{Model: vecindex.DefaultModel})
+	if err != nil {
+		return err
+	}
+	_, err = client.Embed(ctx, "longterm-mem doctor: embedding-backend-reachable probe")
+	return err
+}
+
+// printDoctor prints the text form of a doctor report: every check, whatever it found.
+func printDoctor(report ops.DoctorReport) {
+	fmt.Printf("longterm-mem: doctor for %s\n", report.Project)
+	for _, check := range report.Checks {
+		fmt.Printf("  [%s] %s%s\n", check.Status, check.Name, detailSuffix(check.Detail))
+	}
+}
+
+// doctorExitCode is 9 when any check failed and 0 when none did: the verdict is about the vault, not about the
+// program.
+func doctorExitCode(report ops.DoctorReport) int {
 	for _, check := range report.Checks {
 		if check.Status == ops.CheckFailed {
 			return exitDoctorChecksFailed

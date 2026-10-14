@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/repoevidence"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/staleness"
 )
@@ -26,41 +25,37 @@ func (c commands) cmdStale(args []string) int {
 	if err := fs.Parse(args); err != nil {
 		return exitUsage
 	}
-	resolvedProject, exit := c.resolveProjectFlag("stale", *project)
+	a := c.newApp("stale")
+	resolvedProject, exit := a.project(*project, false)
 	if exit != exitOK {
 		return exit
 	}
 
 	wd, err := os.Getwd()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "longterm-mem: stale: reading the working directory: %v\n", err)
-		return exitUsage
+		return a.refuse(fmt.Errorf("reading the working directory: %w", err), exitUsage)
 	}
 	id, err := identityRules().Resolve(wd)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "longterm-mem: stale: %v\n", err)
-		return exitUsage
+		return a.refuse(err, exitUsage)
 	}
 
-	store, err := engram.Open(os.Getenv(engramDBEnvVar))
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "longterm-mem: stale: %v\n", err)
-		return exitEngramUnavailable
+	store, exit := a.memory()
+	if exit != exitOK {
+		return exit
 	}
 	defer store.Close()
 
 	observations, err := store.ListObservations(resolvedProject)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "longterm-mem: stale: %v\n", err)
-		return exitEngramUnavailable
+		return a.refuse(err, exitEngramUnavailable)
 	}
 
 	// The rule reads nothing itself: the repository's tree and history are handed to it here, where the program
 	// meets its surroundings.
 	findings, err := staleness.Detect(repoevidence.At(id.WorktreeRoot), observations)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "longterm-mem: stale: %v\n", err)
-		return exitInternal
+		return a.refuse(err, exitInternal)
 	}
 
 	reportStale(resolvedProject, id.WorktreeRoot, len(observations), findings)

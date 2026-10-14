@@ -9,10 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vault"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultreg"
 )
 
 // cmdSync implements `longterm-mem sync --project P [--vault DIR]`:
@@ -32,37 +29,26 @@ func (c commands) cmdSync(args []string) int {
 	if err := fs.Parse(args); err != nil {
 		return exitUsage
 	}
+	a := c.newApp("sync")
 	// A dry run must not record this repository's derived names either: an
 	// operator asking "what would this do" has not asked it to do anything.
-	resolve := c.resolveProjectFlag
-	if *dryRun {
-		resolve = c.resolveProjectFlagReadOnly
-	}
-	resolvedProject, exit := resolve("sync", *project)
+	resolvedProject, exit := a.project(*project, *dryRun)
 	if exit != exitOK {
 		return exit
 	}
-
-	vaultRoot, err := vaultreg.Resolve(defaultVaultsPath(), resolvedProject, *vaultDir)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "longterm-mem: sync: %v\n", err)
-		return vaultExitCode(err)
+	vaultRoot, exit := a.vaultRoot(resolvedProject, *vaultDir)
+	if exit != exitOK {
+		return exit
 	}
-
-	store, err := engram.Open(os.Getenv(engramDBEnvVar))
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "longterm-mem: sync: %v\n", err)
-		return exitEngramUnavailable
+	store, exit := a.memoryToPromoteFrom()
+	if exit != exitOK {
+		return exit
 	}
 	defer store.Close()
-	declareDegradedEngram(store, "sync")
-
-	writer, err := newPromoteWriter(vaultRoot, c.clock)
+	deps, err := a.syncDeps(store, vaultRoot)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "longterm-mem: sync: %v\n", err)
-		return exitInternal
+		return a.refuse(err, exitInternal)
 	}
-	deps := promote.Deps{Memory: store, Writer: writer, Index: vault.IndexRebuilder{Root: vaultRoot}}
 
 	ctx := context.Background()
 	if *dryRun {

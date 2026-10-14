@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vault"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultreg"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vecindex"
 )
 
@@ -42,7 +41,8 @@ func (c commands) cmdIndex(args []string) int {
 	if err := fs.Parse(args); err != nil {
 		return exitUsage
 	}
-	resolvedProject, exit := c.resolveProjectFlag("index", *project)
+	a := c.newApp("index")
+	resolvedProject, exit := a.project(*project, false)
 	if exit != exitOK {
 		return exit
 	}
@@ -57,15 +57,13 @@ func (c commands) cmdIndex(args []string) int {
 		})
 	}
 
-	vaultRoot, err := vaultreg.Resolve(defaultVaultsPath(), resolvedProject, *vaultDir)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "longterm-mem: index: %v\n", err)
-		return vaultExitCode(err)
+	vaultRoot, exit := a.vaultRoot(resolvedProject, *vaultDir)
+	if exit != exitOK {
+		return exit
 	}
 
 	if err := (vault.IndexRebuilder{Root: vaultRoot}).Rebuild(context.Background(), *force); err != nil {
-		fmt.Fprintf(os.Stderr, "longterm-mem: index: %v\n", err)
-		return exitVaultSubprocessFailed
+		return a.refuse(err, exitVaultSubprocessFailed)
 	}
 
 	fmt.Println("longterm-mem: index rebuilt")

@@ -59,16 +59,14 @@ type embedConfig struct {
 // never builds lazily from a query path (R-069) -- this is the only
 // command that builds an index from scratch.
 func (c commands) cmdIndexEmbeddings(project string, cfg embedConfig) int {
+	a := c.newApp("index")
 	stateDir := defaultStateDir()
 	if stateDir == "" {
-		fmt.Fprintf(os.Stderr, "longterm-mem: index: %v\n", stateDirUnresolved{})
-		return exitPathUnresolvable
+		return a.refuse(stateDirUnresolved{}, exitPathUnresolvable)
 	}
-
-	store, err := engram.Open(os.Getenv(engramDBEnvVar))
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "longterm-mem: index: %v\n", err)
-		return exitEngramUnavailable
+	store, exit := a.memory()
+	if exit != exitOK {
+		return exit
 	}
 	defer store.Close()
 
@@ -78,8 +76,7 @@ func (c commands) cmdIndexEmbeddings(project string, cfg embedConfig) int {
 		InputLimit: cfg.InputLimit,
 	})
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "longterm-mem: index: %v\n", err)
-		return embedIndexExitCode(err)
+		return a.refuse(err, embedIndexExitCode(err))
 	}
 
 	fmt.Printf("longterm-mem: embedding index built for %s: %d embedded, %d reused, %d removed\n", project, result.Embedded, result.Reused, result.Removed)

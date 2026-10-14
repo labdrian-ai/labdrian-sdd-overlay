@@ -2,15 +2,12 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
 	"strings"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/query"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultreg"
 )
 
 // engramDBEnvVar overrides the default Engram database path (D8 CLI).
@@ -38,7 +35,8 @@ func (c commands) cmdQuery(args []string) int {
 	if err := fs.Parse(args); err != nil {
 		return exitUsage
 	}
-	resolvedProject, exit := c.resolveProjectFlag("query", *project)
+	a := c.newApp("query")
+	resolvedProject, exit := a.project(*project, false)
 	if exit != exitOK {
 		return exit
 	}
@@ -52,16 +50,13 @@ func (c commands) cmdQuery(args []string) int {
 		return exitUsage
 	}
 
-	vaultRoot, err := vaultreg.Resolve(defaultVaultsPath(), resolvedProject, *vaultDir)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "longterm-mem: query: %v\n", err)
-		return vaultExitCode(err)
+	vaultRoot, exit := a.vaultRoot(resolvedProject, *vaultDir)
+	if exit != exitOK {
+		return exit
 	}
-
-	store, err := engram.Open(os.Getenv(engramDBEnvVar))
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "longterm-mem: query: %v\n", err)
-		return exitEngramUnavailable
+	store, exit := a.memory()
+	if exit != exitOK {
+		return exit
 	}
 	defer store.Close()
 
@@ -78,20 +73,19 @@ func (c commands) cmdQuery(args []string) int {
 		// query.Run degrades a failing vault to a diagnostic and only
 		// ever errors on the Engram side (a missing project is rejected
 		// before this call), so its failure is engram_unavailable.
-		fmt.Fprintf(os.Stderr, "longterm-mem: query: %v\n", err)
-		return exitEngramUnavailable
+		return a.refuse(err, exitEngramUnavailable)
 	}
 
 	if *asJSON {
-		enc := json.NewEncoder(os.Stdout)
-		enc.SetIndent("", "  ")
-		if err := enc.Encode(result); err != nil {
-			fmt.Fprintf(os.Stderr, "longterm-mem: query: encode result: %v\n", err)
-			return exitInternal
-		}
-		return exitOK
+		return a.printJSON(result)
 	}
+	printQueryResult(result)
+	return exitOK
+}
 
+// printQueryResult prints the text form of a query's result: the rows with the sources that found them and what
+// the ledger says of them, then the diagnostics (on stderr), and nothing of a row's body.
+func printQueryResult(result query.Result) {
 	fmt.Printf("longterm-mem: query %q (vault_status=%s)\n", result.Query, result.VaultStatus)
 	for _, row := range result.Results {
 		label := row.PageAddress
@@ -104,7 +98,6 @@ func (c commands) cmdQuery(args []string) int {
 	for _, d := range result.Diagnostics {
 		fmt.Fprintf(os.Stderr, "WARN %s: %s\n", d.Code, d.Detail)
 	}
-	return exitOK
 }
 
 // splitTypes turns a comma-separated --exclude-types into the list
