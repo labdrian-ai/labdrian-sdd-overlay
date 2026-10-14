@@ -1,0 +1,20 @@
+args: register --target claude --config-root <home>/elsewhere --state-dir <home>/state --binary /opt/bin/longterm-mem
+exit: 0
+--- stdout ---
+longterm-mem: register: claude: ok
+--- stderr ---
+--- machine ---
+=== elsewhere/.claude.json ===
+{"mcpServers": {
+  "longterm-mem": {"type":"stdio","command":"/opt/bin/longterm-mem","args":["mcp"]}}}
+=== elsewhere/.claude.json.bak ===
+{"mcpServers": {}}
+=== state/install-state.json ===
+{
+  "schema": 1,
+  "targets": {
+    "claude": {
+      "fingerprint": "<sha256>"
+    }
+  }
+}

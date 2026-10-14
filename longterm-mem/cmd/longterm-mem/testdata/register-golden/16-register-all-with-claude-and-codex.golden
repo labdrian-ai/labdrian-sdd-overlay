@@ -1,0 +1,35 @@
+args: register --target all
+exit: 0
+--- stdout ---
+longterm-mem: register: claude: ok
+longterm-mem: register: opencode: skipped (no configuration found at <home>/.config/opencode)
+longterm-mem: register: codex: ok
+--- stderr ---
+--- machine ---
+=== .claude.json ===
+{"mcpServers": {
+  "longterm-mem": {"type":"stdio","command":"<home>/.labdrian-overlay/bin/longterm-mem","args":["mcp"]}}}
+=== .claude.json.bak ===
+{"mcpServers": {}}
+=== .codex/config.toml ===
+# the user's own settings
+model = "o3"
+
+[mcp_servers.longterm-mem]
+command = "<home>/.labdrian-overlay/bin/longterm-mem"
+args = ["mcp"]
+=== .codex/config.toml.bak ===
+# the user's own settings
+model = "o3"
+=== .labdrian-overlay/longterm-mem/install-state.json ===
+{
+  "schema": 1,
+  "targets": {
+    "claude": {
+      "fingerprint": "<sha256>"
+    },
+    "codex": {
+      "fingerprint": "<sha256>"
+    }
+  }
+}

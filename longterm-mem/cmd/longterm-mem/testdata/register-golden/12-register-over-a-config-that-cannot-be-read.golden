@@ -1,0 +1,6 @@
+args: register --target claude
+exit: 1
+--- stdout ---
+--- stderr ---
+longterm-mem: register: claude: read <home>/.claude.json: read <home>/.claude.json: is a directory
+--- machine ---

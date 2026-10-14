@@ -1,0 +1,8 @@
+args: register --target all
+exit: 0
+--- stdout ---
+longterm-mem: register: claude: skipped (no configuration found at <home>)
+longterm-mem: register: opencode: skipped (no configuration found at <home>/.config/opencode)
+longterm-mem: register: codex: skipped (no configuration found at <home>/.codex)
+--- stderr ---
+--- machine ---

@@ -1,0 +1,15 @@
+args: unregister --target all
+exit: 0
+--- stdout ---
+longterm-mem: unregister: claude: noop
+longterm-mem: unregister: opencode: noop
+longterm-mem: unregister: codex: noop
+--- stderr ---
+--- machine ---
+=== .claude.json ===
+{"mcpServers": {}}
+=== .codex/config.toml ===
+# the user's own settings
+model = "o3"
+=== .config/opencode/opencode.json ===
+{"mcp": {}}

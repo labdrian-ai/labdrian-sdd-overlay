@@ -1,0 +1,6 @@
+args: unregister
+exit: 2
+--- stdout ---
+--- stderr ---
+longterm-mem: unregister: --target is required
+--- machine ---

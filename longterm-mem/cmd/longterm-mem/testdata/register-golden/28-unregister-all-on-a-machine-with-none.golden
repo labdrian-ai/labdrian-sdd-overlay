@@ -1,0 +1,8 @@
+args: unregister --target all
+exit: 0
+--- stdout ---
+longterm-mem: unregister: claude: noop
+longterm-mem: unregister: opencode: noop
+longterm-mem: unregister: codex: noop
+--- stderr ---
+--- machine ---

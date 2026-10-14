@@ -1,0 +1,6 @@
+args: unregister --target claude --config-root <home>
+exit: 8
+--- stdout ---
+--- stderr ---
+longterm-mem: unregister: could not resolve the install-state directory; set HOME or pass --state-dir
+--- machine ---

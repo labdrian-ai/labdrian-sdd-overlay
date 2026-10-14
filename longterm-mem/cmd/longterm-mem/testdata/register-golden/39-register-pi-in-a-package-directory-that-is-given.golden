@@ -1,0 +1,22 @@
+args: register --target pi --config-root <home>/package
+exit: 0
+--- stdout ---
+longterm-mem: register: pi: ok
+--- stderr ---
+--- machine ---
+=== .labdrian-overlay/longterm-mem/install-state.json ===
+{
+  "schema": 1,
+  "targets": {
+    "pi": {
+      "fingerprint": "<sha256>"
+    }
+  }
+}
+=== .pi/agent/settings.json ===
+{"packages": ["<home>/package"]}
+=== package/mcp.json ===
+{"mcpServers": {
+  "longterm-mem": {"type":"stdio","command":"<home>/.labdrian-overlay/bin/longterm-mem","args":["mcp"]}}}
+=== package/mcp.json.bak ===
+{"mcpServers": {}}

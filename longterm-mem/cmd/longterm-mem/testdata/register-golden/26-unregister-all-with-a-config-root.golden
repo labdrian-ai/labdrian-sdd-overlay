@@ -1,0 +1,6 @@
+args: unregister --target all --config-root <home>/elsewhere
+exit: 2
+--- stdout ---
+--- stderr ---
+longterm-mem: unregister: --config-root requires a single --target, not "all"
+--- machine ---

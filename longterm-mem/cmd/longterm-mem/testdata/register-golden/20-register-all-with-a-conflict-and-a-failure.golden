@@ -1,0 +1,31 @@
+args: register --target all
+exit: 1
+--- stdout ---
+longterm-mem: register: codex: ok
+--- stderr ---
+longterm-mem: register: claude: <home>/.claude.json: an entry with this name already exists and is not owned by longterm-mem; to hand it to longterm-mem, remove that entry by hand and run register again
+longterm-mem: register: opencode: parse <home>/.config/opencode/opencode.json: unexpected end of JSON input
+--- machine ---
+=== .claude.json ===
+{"mcpServers": {"longterm-mem": {"type": "stdio", "command": "/someone/elses/binary", "args": ["mcp"]}}}
+=== .codex/config.toml ===
+# the user's own settings
+model = "o3"
+
+[mcp_servers.longterm-mem]
+command = "<home>/.labdrian-overlay/bin/longterm-mem"
+args = ["mcp"]
+=== .codex/config.toml.bak ===
+# the user's own settings
+model = "o3"
+=== .config/opencode/opencode.json ===
+{"mcp": 
+=== .labdrian-overlay/longterm-mem/install-state.json ===
+{
+  "schema": 1,
+  "targets": {
+    "codex": {
+      "fingerprint": "<sha256>"
+    }
+  }
+}

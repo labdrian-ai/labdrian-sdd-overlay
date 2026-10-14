@@ -1,0 +1,8 @@
+args: register --target pi --config-root <home>/package
+exit: 1
+--- stdout ---
+--- stderr ---
+longterm-mem: register: pi: not installed (no package at <home>/package, or not listed in ~/.pi/agent/settings.json); build it (labdrian-overlay apply --target pi) and run pi install first
+--- machine ---
+=== package/mcp.json ===
+{"mcpServers": {}}

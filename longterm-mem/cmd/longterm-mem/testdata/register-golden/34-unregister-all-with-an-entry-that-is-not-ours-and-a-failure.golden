@@ -1,0 +1,10 @@
+args: unregister --target all
+exit: 1
+--- stdout ---
+longterm-mem: unregister: claude: unmanaged (an entry exists that longterm-mem does not own; left untouched)
+longterm-mem: unregister: codex: noop
+--- stderr ---
+longterm-mem: unregister: opencode: read <home>/.config/opencode/opencode.json: read <home>/.config/opencode/opencode.json: is a directory
+--- machine ---
+=== .claude.json ===
+{"mcpServers": {"longterm-mem": {"type": "stdio", "command": "/someone/elses/binary", "args": ["mcp"]}}}

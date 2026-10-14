@@ -1,0 +1,6 @@
+args: register --target claude --config-root <home> --state-dir <home>/state
+exit: 8
+--- stdout ---
+--- stderr ---
+longterm-mem: register: could not resolve the longterm-mem binary path; set HOME or pass --binary
+--- machine ---

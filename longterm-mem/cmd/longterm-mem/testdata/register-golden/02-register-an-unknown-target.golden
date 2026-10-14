@@ -1,0 +1,6 @@
+args: register --target bogus
+exit: 2
+--- stdout ---
+--- stderr ---
+longterm-mem: register: unknown --target "bogus" (want claude|opencode|codex|pi|all)
+--- machine ---

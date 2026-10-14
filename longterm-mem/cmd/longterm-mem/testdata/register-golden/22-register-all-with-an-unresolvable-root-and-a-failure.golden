@@ -1,0 +1,10 @@
+args: register --target all --state-dir <home>/state --binary /opt/bin/longterm-mem
+exit: 1
+--- stdout ---
+--- stderr ---
+longterm-mem: register: claude: could not resolve a config root; set HOME or pass --config-root
+longterm-mem: register: opencode: parse <home>/xdg/opencode/opencode.json: unexpected end of JSON input
+longterm-mem: register: codex: could not resolve a config root; set HOME or pass --config-root
+--- machine ---
+=== xdg/opencode/opencode.json ===
+{"mcp": 
