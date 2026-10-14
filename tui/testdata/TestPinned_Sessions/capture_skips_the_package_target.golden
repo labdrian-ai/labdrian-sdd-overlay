@@ -1,0 +1,35 @@
+### the confirmation
+              ? No se pudo verificar el estado del repo (sin red / sin fetch previo) 
+              ╭─────────────────────────────────────────────────────────────────────╮
+              │ Ejecutar Capturar (actualizar upstream) en: claude, opencode, codex │
+              │                                                                     │
+              │ Atención: Esta acción modifica los destinos.                        │
+              ╰─────────────────────────────────────────────────────────────────────╯
+                                                                                     
+              ───────────────────────────────────────────────────────────────────────
+                                                                                     
+              y/enter confirmar  ·  n/esc cancelar                                   
+
+### the result of the capture
+? No se pudo verificar el estado del repo (sin red / sin fetch previo)                              
+Resultado · Capturar (actualizar upstream)                                                          
+✓ Completado                                                                                        
+salida                                                                                              
+╭──────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ $ bin/labdrian-overlay capture --target claude                                                   │
+│                                                                                                  │
+│ $ bin/labdrian-overlay capture --target opencode                                                 │
+│                                                                                                  │
+│ $ bin/labdrian-overlay capture --target codex                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
+                                                                                                    
+────────────────────────────────────────────────────────────────────────────────────────────────────
+                                                                                                    
+↑/↓ desplazar  ·  esc/enter volver  ·  q salir                                                      
+
+### the backend received
+targets
+sync-check
+capture --target claude
+capture --target opencode
+capture --target codex

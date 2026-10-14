@@ -1,0 +1,42 @@
+### the targets screen
+  ▲ Repo 2 release(s) detrás del último tag · u actualizar y desplegar · x ocultar                
+  Seleccionar destinos                                                                            
+                                                                                                  
+  No se pudo leer el catálogo de destinos del backend.                                            
+  labdrian-overlay targets: exit status 3: labdrian-overlay targets: catalog unreadable           
+                                                                                                  
+  Sin el catálogo no hay acciones sobre destinos.                                                 
+                                                                                                  
+  ────────────────────────────────────────────────────────────────────────────────────────────────
+                                                                                                  
+  ↑/↓ navegar  ·  espacio seleccionar  ·  a selec. todos  ·  enter continuar  ·  q salir          
+
+### enter does not leave it
+  ▲ Repo 2 release(s) detrás del último tag · u actualizar y desplegar · x ocultar                
+  Seleccionar destinos                                                                            
+                                                                                                  
+  No se pudo leer el catálogo de destinos del backend.                                            
+  labdrian-overlay targets: exit status 3: labdrian-overlay targets: catalog unreadable           
+                                                                                                  
+  Sin el catálogo no hay acciones sobre destinos.                                                 
+                                                                                                  
+  ────────────────────────────────────────────────────────────────────────────────────────────────
+                                                                                                  
+  ↑/↓ navegar  ·  espacio seleccionar  ·  a selec. todos  ·  enter continuar  ·  q salir          
+
+### the update shortcut is withheld
+  ▲ Repo 2 release(s) detrás del último tag · u actualizar y desplegar · x ocultar                
+  Seleccionar destinos                                                                            
+                                                                                                  
+  No se pudo leer el catálogo de destinos del backend.                                            
+  labdrian-overlay targets: exit status 3: labdrian-overlay targets: catalog unreadable           
+                                                                                                  
+  Sin el catálogo no hay acciones sobre destinos.                                                 
+                                                                                                  
+  ────────────────────────────────────────────────────────────────────────────────────────────────
+                                                                                                  
+  ↑/↓ navegar  ·  espacio seleccionar  ·  a selec. todos  ·  enter continuar  ·  q salir          
+
+### the backend received
+targets
+sync-check

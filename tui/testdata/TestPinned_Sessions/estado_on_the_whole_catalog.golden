@@ -1,0 +1,27 @@
+### the result of Estado
+? No se pudo verificar el estado del repo (sin red / sin fetch previo)                              
+Resultado · Estado                                                                                  
+✓ Completado                                                                                        
+salida                                                                                              
+╭──────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ $ bin/labdrian-overlay status --target all                                                       │
+│ claude: deployed                                                                                 │
+│                                                                                                  │
+│ $ bin/labdrian-overlay status-hooks                                                              │
+│ hooks: installed                                                                                 │
+│                                                                                                  │
+│ $ bin/labdrian-overlay version                                                                   │
+│ claude v1.2.0                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
+                                                                                                    
+────────────────────────────────────────────────────────────────────────────────────────────────────
+                                                                                                    
+↑/↓ desplazar  ·  esc/enter volver  ·  q salir                                                      
+
+### the backend received
+targets
+sync-check
+targets
+status --target all
+status-hooks
+version

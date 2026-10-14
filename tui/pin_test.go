@@ -11,11 +11,13 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/exp/golden"
+	"github.com/charmbracelet/x/exp/teatest"
 	"github.com/muesli/termenv"
 )
 
@@ -448,4 +450,185 @@ func TestPinned_FirstScreenWithTheLogo(t *testing.T) {
 // TestPinned_Menu pins the actions the program offers: what each one is called and says, and how it is run.
 func TestPinned_Menu(t *testing.T) {
 	golden.RequireEqual(t, []byte(menuDefinition()))
+}
+
+// ---------------------------------------------------------------------------
+// the sessions: what the operator sees and what the backend receives
+// ---------------------------------------------------------------------------
+
+// TestPinned_Sessions pins whole sessions. The record of each is what the operator saw at the marked points and,
+// last, every invocation the backend received, in order: the catalog and the probe at launch, the checks before
+// `--target all`, the actions, and the probe again after a self-update.
+func TestPinned_Sessions(t *testing.T) {
+	sessions := []struct {
+		name string
+		run  func(t *testing.T) *session
+	}{
+		{"estado_on_the_whole_catalog", func(t *testing.T) *session {
+			s := newSession(t)
+			s.stub.say("status", "claude: deployed\n")
+			s.stub.say("status-hooks", "hooks: installed\n")
+			s.stub.say("version", "claude v1.2.0\n")
+			s.start().toActions().press("enter")
+			return s.snap("the result of Estado")
+		}},
+		{"a_partial_selection_never_says_all", func(t *testing.T) *session {
+			s := newSession(t).start()
+			s.press("down", "down", "down", "space") // pi off
+			s.toActions().press("enter")
+			return s.snap("the result of Estado without pi")
+		}},
+		{"sync_check_dashboard", func(t *testing.T) *session {
+			s := newSession(t)
+			s.stub.say("sync-check", syncCheckReport)
+			s.start().toActions().onRow(rowSyncCheck).press("enter")
+			return s.snap("the dashboard")
+		}},
+		{"capture_skips_the_package_target", func(t *testing.T) *session {
+			s := newSession(t).start().toActions().onRow(rowCapture).press("enter")
+			s.snap("the confirmation")
+			s.press("y")
+			return s.snap("the result of the capture")
+		}},
+		{"apply_all_fails", func(t *testing.T) *session {
+			s := newSession(t)
+			s.stub.say("apply", "applying...\nboom\n")
+			s.stub.exit("apply", 1)
+			s.start().toActions().onRow(rowApply).press("enter")
+			s.snap("the confirmation")
+			s.press("y")
+			return s.snap("the failure")
+		}},
+		{"restore_the_latest_backup_of_one_target", func(t *testing.T) *session {
+			s := newSession(t).start()
+			s.press("down", "down", "space", "down", "space") // codex and pi off; claude and opencode stay
+			s.toActions().onRow(rowRestore)
+			s.stub.backups("claude", "20260301T093000Z (v1.5.0)")
+			s.stub.noBackups("opencode")
+			s.press("enter")
+			s.snap("the confirmation names the target that has a backup")
+			s.press("y")
+			return s.snap("the result of the restore")
+		}},
+		{"restore_when_nothing_can_be_restored", func(t *testing.T) *session {
+			s := newSession(t).start().toActions().onRow(rowRestore)
+			for _, name := range []string{"claude", "opencode", "codex"} {
+				s.stub.noBackups(name)
+			}
+			s.press("enter")
+			return s.snap("still on the menu")
+		}},
+		{"self_update_from_the_banner_and_the_probe_again", func(t *testing.T) *session {
+			s := newSession(t)
+			s.stub.say("sync-check", probeReport("3", "2"))
+			// self-update fast-forwards main, so the next probe finds nothing behind
+			s.stub.onRun("self-update", "printf '%s' '"+probeReport("0", "0")+"' > "+s.stub.dir+"/out/sync-check")
+			s.stub.say("self-update", "main is now at origin/main\n")
+			s.stub.say("apply", "deployed\n")
+			s.start()
+			s.snap("the banner at launch")
+			s.press("u")
+			s.snap("the confirmation, reached from the banner")
+			s.press("y")
+			return s.snap("the result, and the banner gone")
+		}},
+		{"all_is_refused_when_the_catalog_changed", func(t *testing.T) *session {
+			s := newSession(t)
+			s.stub.say("targets", "claude\tcopy\nopencode\tcopy\ncodex\tcopy\n")
+			s.start().toActions().onRow(rowApply).press("enter")
+			// an update added a target while the confirmation was on the screen
+			s.stub.say("targets", defaultCatalog)
+			s.press("y")
+			return s.snap("the refusal")
+		}},
+		{"hooks_skills_and_memory", func(t *testing.T) *session {
+			s := newSession(t)
+			s.stub.say("install-hooks", "hooks installed\n")
+			s.stub.say("skills", "skills: ok\n")
+			s.stub.say("longterm-mem", "longterm-mem: ok\n")
+			s.start().toActions().onRow(rowInstallHooks).press("enter", "y")
+			s.snap("the result of Instalar hooks")
+			s.press("enter") // back to the menu, the cursor where it was
+			s.press("down", "down")
+			s.press("enter")
+			s.snap("the result of Skills")
+			s.press("enter", "down", "down")
+			s.press("enter", "y")
+			return s.snap("the result of Memoria: instalar")
+		}},
+		{"the_catalog_cannot_be_read", func(t *testing.T) *session {
+			s := newSession(t)
+			s.stub.exit("targets", 3)
+			s.stub.complain("targets", "labdrian-overlay targets: catalog unreadable\n")
+			s.stub.say("sync-check", probeReport("3", "2"))
+			s.start()
+			s.snap("the targets screen")
+			s.press("enter")
+			s.snap("enter does not leave it")
+			s.press("u")
+			return s.snap("the update shortcut is withheld")
+		}},
+		{"a_hard_failure_after_a_degraded_run_is_the_result", func(t *testing.T) *session {
+			s := newSession(t)
+			s.stub.exit("status", 2)
+			s.stub.exit("version", 1)
+			s.start().toActions().press("enter")
+			return s.snap("Estado: status degraded, then version failed")
+		}},
+		{"a_degraded_run_after_a_hard_failure_does_not_mask_it", func(t *testing.T) *session {
+			s := newSession(t)
+			s.stub.exit("status", 1)
+			s.stub.exit("version", 2)
+			s.start().toActions().press("enter")
+			return s.snap("Estado: status failed, then version degraded")
+		}},
+		{"quit", func(t *testing.T) *session {
+			s := newSession(t).start().toActions().press("q")
+			return s.snap("after q")
+		}},
+	}
+	for _, tc := range sessions {
+		t.Run(tc.name, func(t *testing.T) {
+			withColors(t, termenv.Ascii)
+			golden.RequireEqual(t, tc.run(t).record())
+		})
+	}
+}
+
+// TestPinned_TheRunningProgram drives the program through the real event loop (the commands run concurrently, as
+// they do for an operator) from launch to a result and out, and pins what the backend received. The catalog and
+// the probe are asked for together at launch, so their order is not pinned; everything after them is.
+func TestPinned_TheRunningProgram(t *testing.T) {
+	withColors(t, termenv.Ascii)
+	stub := newStubBackend(t)
+	stub.say("status", "claude: deployed\n")
+	tm := teatest.NewTestModel(t, stackModel(stub.root, nil), teatest.WithInitialTermSize(pinnedWidth, pinnedHeight))
+
+	teatest.WaitFor(t, tm.Output(), func(b []byte) bool {
+		return strings.Count(string(b), "[✓]") >= 4
+	}, teatest.WithDuration(5*time.Second))
+	// The probe is started with the catalog; let it reach the backend before the operator's first key does.
+	for deadline := time.Now().Add(5 * time.Second); len(stub.invoked()) < 2; {
+		if time.Now().After(deadline) {
+			t.Fatalf("the backend received %q at launch, want the catalog and the probe", stub.invoked())
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	tm.Send(keyNamed("enter")) // to the actions
+	tm.Send(keyNamed("enter")) // Estado
+	teatest.WaitFor(t, tm.Output(), func(b []byte) bool {
+		return strings.Contains(string(b), "Completado")
+	}, teatest.WithDuration(5*time.Second))
+	tm.Send(keyNamed("q"))
+	tm.WaitFinished(t, teatest.WithFinalTimeout(5*time.Second))
+
+	got := stub.invoked()
+	if len(got) < 2 {
+		t.Fatalf("the backend received %q, want at least the catalog and the probe", got)
+	}
+	launch := map[string]bool{got[0]: true, got[1]: true}
+	if !launch["targets"] || !launch["sync-check"] {
+		t.Errorf("the first two invocations were %q, want the catalog (targets) and the probe (sync-check) in either order", got[:2])
+	}
+	golden.RequireEqual(t, []byte(strings.Join(got[2:], "\n")+"\n"))
 }

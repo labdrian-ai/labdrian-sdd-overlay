@@ -1,0 +1,4 @@
+targets
+status --target all
+status-hooks
+version
