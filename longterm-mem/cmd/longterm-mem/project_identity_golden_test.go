@@ -440,6 +440,16 @@ func identityCases() []identityCase {
 			w.git(t, "remote", "add", "origin", widgetsRemote)
 			t.Setenv(engramDBEnvVar, filepath.Join(w.outside, "no", "such", "directory", "engram.db"))
 		}},
+		{name: "55-a-ledger-that-reads-but-cannot-be-written", setup: func(t *testing.T, w *identityWorld) {
+			w.repo(t)
+			w.git(t, "remote", "add", "origin", widgetsRemote)
+			// The ledger's directory is a link to a place that is not there. Reading through it finds no ledger,
+			// which is an empty one and not a fault; writing cannot make the directory. Nothing in this depends on
+			// who the process runs as, as a directory it is not allowed to write to would.
+			if err := os.Symlink(filepath.Join(w.outside, "gone"), filepath.Join(w.root, ".git", "longterm-mem")); err != nil {
+				t.Fatal(err)
+			}
+		}},
 
 		// The commands that record nothing, and the one that adopts nothing.
 		{name: "60-a-dry-run-records-nothing", args: func(w *identityWorld) []string { return []string{"sync", "--dry-run"} }, setup: func(t *testing.T, w *identityWorld) {
