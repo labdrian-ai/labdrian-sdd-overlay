@@ -143,13 +143,20 @@ func TestSourceIDOfAResolvedRelativeOriginIsTheIDOfItsAbsolutePath(t *testing.T)
 }
 
 // SourceID is a function of its argument: it does not learn where a relative path begins, so it refuses one
-// rather than choose a directory, and says what makes the path absolute.
+// rather than choose a directory, and says what makes the path absolute. It is the one thing that tells a
+// caller that forgot ResolveOrigin, in a file origin and in a directory origin alike, and the same path made
+// absolute is accepted: the refusal is about the path and nothing else.
 func TestSourceIDRefusesAFileOrDirectoryOriginThatIsNotAbsolute(t *testing.T) {
 	for _, kind := range []SourceKind{KindFile, KindDirectory} {
-		_, err := SourceID(Origin{Kind: kind, URI: "notes/a.md"})
-		want := `ingest: file/directory origin "notes/a.md" is not absolute; resolve it with ResolveOrigin first`
-		if err == nil || err.Error() != want {
-			t.Errorf("SourceID(%s, a relative path) error = %v, want %q", kind, err, want)
+		for _, uri := range []string{"notes/a.md", "./a.md", "../a.md", "."} {
+			_, err := SourceID(Origin{Kind: kind, URI: uri})
+			want := `ingest: file/directory origin "` + uri + `" is not absolute; resolve it with ResolveOrigin first`
+			if err == nil || err.Error() != want {
+				t.Errorf("SourceID(%s %q) error = %v, want %q", kind, uri, err, want)
+			}
+		}
+		if id, err := SourceID(Origin{Kind: kind, URI: "/srv/notes/a.md"}); err != nil || id == "" {
+			t.Errorf("SourceID(%s, an absolute path) = %q, %v, want an id", kind, id, err)
 		}
 	}
 }
