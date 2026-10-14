@@ -5,6 +5,7 @@ import (
 
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -469,6 +470,9 @@ func identityCases() []identityCase {
 			w.git(t, "remote", "add", "origin", widgetsRemote)
 			w.holdsMemory(t, "widgets", false)
 		}},
+		// The PATH of the world holds no python3 (see TestProjectIdentityWorld_HasNoPython3AndTheGuardSeesOneThatIsAdded),
+		// so the runtime-prerequisites check FAILs by construction and the golden says so on every host; the exit code
+		// 9 is that of a report with failed checks, of which this is one.
 		{name: "63-doctor-resolves-and-records-nothing", args: func(w *identityWorld) []string { return []string{"doctor"} }, setup: func(t *testing.T, w *identityWorld) {
 			w.repo(t)
 			w.git(t, "remote", "add", "origin", widgetsRemote)
@@ -532,11 +536,26 @@ func newIdentityWorld(t *testing.T) *identityWorld {
 	return w
 }
 
+// python3OnPath is where python3 resolves on the PATH of the process, which is how the program looks for it, or the
+// empty string when it does not resolve.
+func python3OnPath() string {
+	found, err := exec.LookPath("python3")
+	if err != nil {
+		return ""
+	}
+	return found
+}
+
 func runIdentityCase(t *testing.T, tc identityCase) (w *identityWorld, rendering string) {
 	t.Helper()
 	w = newIdentityWorld(t)
 	if tc.setup != nil {
 		tc.setup(t, w)
+	}
+	// No case of this set provides python3 (case 63 pins a doctor whose runtime-prerequisites check FAILs for want
+	// of it), so a world that finds one has been given it by mistake: say so before the golden differs.
+	if found := python3OnPath(); found != "" {
+		t.Fatalf("python3 resolves at %q on the PATH of the world %q, which holds none by construction: the goldens of this set are those of a host without it", found, tc.name)
 	}
 	dir := w.root
 	if tc.cwd != nil {
@@ -560,6 +579,24 @@ func TestProjectIdentityGolden(t *testing.T) {
 			w, got := runIdentityCase(t, tc)
 			w.check(t, "project-identity-"+tc.name, got)
 		})
+	}
+}
+
+// The runtime-prerequisites check of `doctor` looks for python3 on the PATH of the process, and the PATH of a
+// world is its own directory alone, which holds the file that runs git and nothing else. So python3 is found in no
+// world of this set, whatever the host keeps: case 63 pins a check that FAILs by construction, and its golden is
+// the same on a host with python3 and on one without. This is what makes that true, and what fails if a world is
+// ever given one: python3OnPath is where python3 resolves from here (empty when it does not).
+func TestProjectIdentityWorld_HasNoPython3AndTheGuardSeesOneThatIsAdded(t *testing.T) {
+	w := newIdentityWorld(t)
+	if found := python3OnPath(); found != "" {
+		t.Errorf("python3 resolves at %q on the PATH of an identity world, want it found nowhere", found)
+	}
+
+	w.standIn(t, "python3")
+
+	if found, want := python3OnPath(), filepath.Join(w.binDir, "python3"); found != want {
+		t.Errorf("a python3 added to the world's directory resolves at %q, want %q: the guard does not look where the program does", found, want)
 	}
 }
 
