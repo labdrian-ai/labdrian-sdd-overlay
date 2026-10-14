@@ -36,7 +36,7 @@ const (
 )
 
 // manifestCreatePerm is the mode a freshly written manifest/blob get:
-// per-user state, owner-only, matching vaultreg's vaults.json convention.
+// per-user state, owner-only, matching the vault registry's convention.
 const manifestCreatePerm = 0o600
 
 // ErrNoIndex is returned by Load when dir holds no manifest yet -- distinct
@@ -118,7 +118,7 @@ func computeRevision(m Manifest) string {
 // Save writes idx to dir as a manifest.json (self-digested) and a
 // vectors.blob (fixed-stride float32, little-endian), both through
 // durable.WriteFile so a reader never observes a partially written index
-// (mirroring vaultreg's own writeJSONAtomic convention).
+// (the discipline durable.WriteJSON gives the module's other state files).
 //
 // It refuses a manifest whose entry count does not match len(Vectors), or
 // any vector whose length does not match Manifest.Dimension: writing an

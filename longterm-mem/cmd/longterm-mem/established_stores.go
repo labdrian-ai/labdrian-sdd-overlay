@@ -3,11 +3,11 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/adoption"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultreg"
 )
 
 // machineStores are the two stores longterm-mem is allowed to consult to learn whether memory already lives
@@ -26,11 +26,11 @@ func (machineStores) Open() (adoption.Established, []string) {
 
 	// Load, never Seed: consulting the registry must not create it. A missing registry is simply a machine
 	// where nothing is configured yet.
-	if reg, err := vaultreg.Load(defaultVaultsPath()); err == nil {
+	if reg, err := machineVaultsStore().Load(); err == nil {
 		for name := range reg.Vaults {
 			s.vaults[name] = true
 		}
-	} else if !os.IsNotExist(errors.Unwrap(err)) {
+	} else if !errors.Is(err, fs.ErrNotExist) {
 		notes = append(notes, fmt.Sprintf("the vault registry could not be read (%v)", err))
 	}
 

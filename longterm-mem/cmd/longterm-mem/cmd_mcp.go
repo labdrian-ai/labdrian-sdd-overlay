@@ -16,7 +16,6 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/query"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vault"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultreg"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vecindex"
 )
 
@@ -87,7 +86,7 @@ func (c commands) mcpDeps(store *engram.Store, embedClient *embed.Client, loadCa
 // session's store, embedding client and index cache.
 func (c commands) mcpQuery(store *engram.Store, embedClient *embed.Client, loadCache *vecindex.LoadCache) func(context.Context, query.Request) (query.Result, error) {
 	return func(ctx context.Context, req query.Request) (query.Result, error) {
-		vaultRoot, err := vaultreg.Resolve(defaultVaultsPath(), req.Project, "")
+		vaultRoot, err := machineVaults().Resolve(req.Project, "")
 		if err != nil {
 			return query.Result{}, err
 		}
@@ -121,7 +120,7 @@ func mcpGet(store *engram.Store) func(context.Context, int64) (mcpserver.GetOutc
 // then.
 func (c commands) mcpPromote(store *engram.Store) func(ctx context.Context, project string, engramID int64) (mcpserver.PromoteOutcome, error) {
 	return func(ctx context.Context, project string, engramID int64) (mcpserver.PromoteOutcome, error) {
-		vaultRoot, err := vaultreg.Resolve(defaultVaultsPath(), project, "")
+		vaultRoot, err := machineVaults().Resolve(project, "")
 		if err != nil {
 			return mcpserver.PromoteOutcome{}, err
 		}

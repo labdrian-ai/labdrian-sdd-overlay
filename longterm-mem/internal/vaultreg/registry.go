@@ -1,142 +1,106 @@
-// Package vaultreg resolves each project's claude-obsidian long-term vault
-// path from a per-project registry file, ~/.labdrian-overlay/vaults.json by
-// default (D5). Resolution never falls back to a code-level constant for a
-// specific project: the registry file is the single source of truth, and
-// it is pre-seeded with one default row only when the file does not yet
-// exist. Deleting a row — including the pre-seeded one — means "not
-// configured" (R-022, R-023), never "guess the old value again".
+// Package vaultreg decides where the long-term vault of a project is: the --vault flag, else the environment's
+// LONGTERM_MEM_VAULT, else the project's row in a per-project registry, ~/.labdrian-overlay/vaults.json by default
+// (D5). Resolution never falls back to a code-level constant for a specific project: the registry is the single
+// source of truth, and a row deleted from it, the one a machine starts with included, means "not configured"
+// (R-022, R-023), never "guess the old value again".
+//
+// The package owns the rule and the ports it reads through, and touches nothing of the machine. Resolve is a
+// function of what it is handed: the flag, the environment's view (Environment), the registry and the project.
+// Where the registry is kept, and how it is read and written, is the Store port, which internal/vaultregfs
+// answers on a file system and the composition root wires; what a machine that has no registry is taken to hold,
+// and the row a command that writes seeds it with, are the Defaults the composition root hands to Vaults.
 package vaultreg
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/durable"
 )
 
-// DefaultProject is the project the registry is pre-seeded for the first
-// time vaults.json is created. It names only what Seed writes; Resolve
-// never special-cases it as a lookup fallback (R-022).
-const DefaultProject = "labdrian-sdd-overlay"
-
-// DefaultVaultPath is the vault path Seed writes for DefaultProject,
-// unexpanded (Resolve expands the leading ~ like any other row).
-const DefaultVaultPath = "~/labdrian-brain"
-
-// schemaVersion is the current vaults.json schema version (D5).
-const schemaVersion = 1
-
-// vaultEnvVar is the environment variable that overrides a project's
-// registry row, but is itself overridden by the --vault flag (D5).
-const vaultEnvVar = "LONGTERM_MEM_VAULT"
-
-// ErrVaultNotConfigured is returned by Resolve when no --vault flag, no
-// LONGTERM_MEM_VAULT env var, and no registry row apply to the requested
-// project. Callers map it to exit code 3 (R-023).
+// ErrVaultNotConfigured is returned by Resolve when no --vault flag, no LONGTERM_MEM_VAULT value, and no registry
+// row apply to the requested project. Callers map it to exit code 3 (R-023).
 var ErrVaultNotConfigured = errors.New("vaultreg: vault not configured")
 
-// Registry is the on-disk vaults.json model: one row per project, each an
-// ordinary, independently editable/deletable JSON entry (R-022).
+// Registry is the registry of vaults: one row per project, each an ordinary, independently editable and deletable
+// entry (R-022).
 type Registry struct {
-	Schema int                   `json:"schema"`
-	Vaults map[string]VaultEntry `json:"vaults"`
+	// Vaults are the rows, by project.
+	Vaults map[string]Entry
+	// Origin is where the registry is kept, which the words of a project with no row name.
+	Origin string
 }
 
-// VaultEntry is one project's registry row.
-type VaultEntry struct {
-	Path   string `json:"path"`
-	Seeded bool   `json:"seeded,omitempty"`
+// Entry is one project's row.
+type Entry struct {
+	// Path is the vault of the project, with a leading ~ not yet expanded.
+	Path string
+	// Seeded marks a row the program wrote, as opposed to one a person added.
+	Seeded bool
 }
 
-// Load reads and parses the registry file at path.
-func Load(path string) (*Registry, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("vaultreg: read %s: %w", path, err)
-	}
-
-	var reg Registry
-	if err := json.Unmarshal(data, &reg); err != nil {
-		return nil, fmt.Errorf("vaultreg: parse %s: %w", path, err)
-	}
-	if reg.Vaults == nil {
-		reg.Vaults = map[string]VaultEntry{}
-	}
-	return &reg, nil
+// Environment is what Resolve is told about the machine it runs on. It is built by whoever reads the machine, so
+// that Resolve reads none of it.
+type Environment struct {
+	// Vault is the value of the environment's LONGTERM_MEM_VAULT, the empty string when it is unset or empty.
+	Vault string
+	// Home answers the home directory of the user. It is asked only when a path begins with ~, so a machine whose
+	// home cannot be told is no worse off for a vault named by an absolute path.
+	Home func() (string, error)
 }
 
-// Seed writes the pre-seeded default row (DefaultProject → DefaultVaultPath)
-// to path, but only when path does not exist yet. A file that already
-// exists is left untouched no matter its contents — even one lacking the
-// default row — so deleting the seed row means "not configured", not
-// "re-seed it" (D5).
-func Seed(path string) error {
-	if _, err := os.Stat(path); err == nil {
-		return nil
-	} else if !os.IsNotExist(err) {
-		return fmt.Errorf("vaultreg: stat %s: %w", path, err)
-	}
-
-	reg := Registry{
-		Schema: schemaVersion,
-		Vaults: map[string]VaultEntry{
-			DefaultProject: {Path: DefaultVaultPath, Seeded: true},
-		},
-	}
-	return writeJSONAtomic(path, reg)
+// Overridden says whether the flag or the environment names the vault, in which case the registry is not
+// consulted at all and Resolve needs none.
+func Overridden(flag string, env Environment) bool {
+	_, overridden := override(flag, env)
+	return overridden
 }
 
-// Resolve determines project's vault path using flag > env > registry-row
-// precedence (D5). vaultsPath is the registry file to lazily seed (only
-// when absent) and read; flagVault is the --vault flag value, empty when
-// unset. Every resolved path is ~-expanded and validated absolute before
-// being returned. When none of the three sources apply, Resolve returns
-// ErrVaultNotConfigured rather than guessing a path (R-023).
-func Resolve(vaultsPath, project, flagVault string) (string, error) {
-	if flagVault != "" {
-		return expandVaultPath(flagVault)
+// override is the vault the flag or, failing it, the environment names, as it was written.
+func override(flag string, env Environment) (path string, overridden bool) {
+	switch {
+	case flag != "":
+		return flag, true
+	case env.Vault != "":
+		return env.Vault, true
+	default:
+		return "", false
 	}
-	if envVault := os.Getenv(vaultEnvVar); envVault != "" {
-		return expandVaultPath(envVault)
-	}
+}
 
-	if err := Seed(vaultsPath); err != nil {
-		return "", err
+// Resolve determines project's vault path using flag > environment > registry-row precedence (D5). flag is the
+// --vault flag value, empty when unset. Every resolved path is ~-expanded and validated absolute before being
+// returned. When none of the three sources apply, Resolve returns ErrVaultNotConfigured rather than guessing a
+// path (R-023).
+func Resolve(flag string, env Environment, reg Registry, project string) (string, error) {
+	if path, overridden := override(flag, env); overridden {
+		return expandVaultPath(path, env.Home)
 	}
-	reg, err := Load(vaultsPath)
-	if err != nil {
-		return "", err
-	}
-
 	entry, ok := reg.Vaults[project]
 	if !ok {
-		return "", fmt.Errorf("%w: project %q has no vault-registry entry in %s", ErrVaultNotConfigured, project, vaultsPath)
+		return "", fmt.Errorf("%w: project %q has no vault-registry entry in %s", ErrVaultNotConfigured, project, reg.Origin)
 	}
-	return expandVaultPath(entry.Path)
+	return expandVaultPath(entry.Path, env.Home)
 }
 
-// expandVaultPath expands a leading ~ to the caller's home directory, then
-// validates the result is an absolute path (D5).
-func expandVaultPath(raw string) (string, error) {
+// expandVaultPath expands a leading ~ to the home directory home answers, then validates the result is an
+// absolute path (D5).
+func expandVaultPath(raw string, home func() (string, error)) (string, error) {
 	expanded := raw
 
 	switch {
 	case raw == "~":
-		home, err := os.UserHomeDir()
+		dir, err := homeDirectory(home)
 		if err != nil {
-			return "", fmt.Errorf("vaultreg: resolve home directory: %w", err)
+			return "", err
 		}
-		expanded = home
+		expanded = dir
 	case strings.HasPrefix(raw, "~/"):
-		home, err := os.UserHomeDir()
+		dir, err := homeDirectory(home)
 		if err != nil {
-			return "", fmt.Errorf("vaultreg: resolve home directory: %w", err)
+			return "", err
 		}
-		expanded = filepath.Join(home, raw[2:])
+		expanded = filepath.Join(dir, raw[2:])
 	}
 
 	if !filepath.IsAbs(expanded) {
@@ -145,37 +109,18 @@ func expandVaultPath(raw string) (string, error) {
 	return expanded, nil
 }
 
-// registryCreatePerm is the mode the registry gets when vaultreg creates
-// it: per-user state, owner-only. It applies to creation only.
-const registryCreatePerm = 0o600
+// errNoHome is what a path that begins with ~ meets when the environment was built without a way to tell the home
+// directory: the caller's fault, said in the words of the failure to tell it.
+var errNoHome = errors.New("the environment has no source of the home directory")
 
-// writeJSONAtomic marshals v as 2-space-indented JSON and writes it to path
-// through durable.WriteFile, so a reader never observes a partially written
-// registry (D6).
-//
-// Like register's install-state.json, and unlike the runtime configs and
-// the vault pages, vaults.json is a file only this module creates and
-// edits, so nothing about the user's own permissions or symlinks is at
-// stake. It routes through the shared primitive because this was the
-// original of three verbatim copies of the same subtle sequence —
-// installstate.go's own doc comment named this function as the convention
-// it mirrored — and keeping one of them hand-rolled would make that
-// statement false while leaving a fourth place for the sequence to drift.
-func writeJSONAtomic(path string, v any) error {
-	data, err := json.MarshalIndent(v, "", "  ")
+// homeDirectory asks home for the home directory, or says it cannot be told.
+func homeDirectory(home func() (string, error)) (string, error) {
+	if home == nil {
+		return "", fmt.Errorf("vaultreg: resolve home directory: %w", errNoHome)
+	}
+	dir, err := home()
 	if err != nil {
-		return fmt.Errorf("vaultreg: marshal %s: %w", path, err)
+		return "", fmt.Errorf("vaultreg: resolve home directory: %w", err)
 	}
-	data = append(data, '\n')
-
-	// A fresh install has no state directory yet; materialize it so the
-	// first-run seed cannot fail with ENOENT (review finding
-	// R3-seed-missing-parent-dir). 0o700: the registry is per-user config.
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-		return fmt.Errorf("vaultreg: create directory for %s: %w", path, err)
-	}
-	if err := durable.WriteFile(path, data, registryCreatePerm); err != nil {
-		return fmt.Errorf("vaultreg: %w", err)
-	}
-	return nil
+	return dir, nil
 }

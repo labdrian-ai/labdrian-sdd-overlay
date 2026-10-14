@@ -69,7 +69,7 @@ file (`~/.claude.json`, `opencode.json`, `config.toml`), and `uninstall`
 calls `longterm-mem unregister`. Both are ownership-tagged, idempotent, and
 refuse an untagged same-named entry. The only planned module-owned
 subcommand that does not exist yet is `vaults` (direct management of
-`vaults.json` seeding); registry seeding is lazy inside `vaultreg.Resolve`.
+`vaults.json` seeding); registry seeding is lazy, inside `vaultreg.Vaults.Resolve` (`internal/vaultreg`).
 
 ## CLI surface (as shipped)
 

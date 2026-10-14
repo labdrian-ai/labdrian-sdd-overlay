@@ -8,7 +8,6 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vault"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultreg"
 )
 
 // app is the program's use cases and the adapters under them, composed for one run of a command. newApp builds it
@@ -49,7 +48,7 @@ func (a app) project(given string, readOnly bool) (string, int) {
 // exitOK, or the exit code to return after saying why: no vault configured for the project is exit 3, a registry
 // that cannot be read is the program's own fault.
 func (a app) vaultRoot(project, override string) (string, int) {
-	root, err := vaultreg.Resolve(defaultVaultsPath(), project, override)
+	root, err := machineVaults().Resolve(project, override)
 	if err != nil {
 		return "", a.refuse(err, vaultExitCode(err))
 	}

@@ -18,9 +18,9 @@ import (
 //   - ingest, projectid, promote, skillstale and staleness are domain packages:
 //     their rules are the part that stays; the file system, git and SQLite they
 //     still reach are debt below (skillstale reaches nothing since L5, staleness since L6, projectid since L7).
-//   - vaultreg is an adapter. L9 makes its Resolve pure, but the registry file
-//     store stays in the package, so it cannot be a domain package without a
-//     debt that L9 does not clear.
+//   - vaultreg is an application package: the rule that finds the vault of a project (a pure Resolve over the
+//     flag, the environment's view and the registry) and the use case that reads and seeds the registry, over
+//     the Store port it owns (L9). The registry file itself is vaultregfs, the adapter.
 //   - memory is the domain model of what longterm-mem reads (the observation, the
 //     search shapes, the standing, the tokenizer and the snippet rule); engram is
 //     an adapter that maps Engram's rows to it (L1). Only the composition root may
@@ -35,6 +35,8 @@ import (
 //   - projectidfs is the adapter of the repository the identity rules ask for: where it is, the file that
 //     declares its project and its git configuration, read from the metadata git keeps on a disk, in
 //     projectid's own types (L7). Only the composition root may import it (the adapter guard).
+//   - vaultregfs is the adapter of the registry of vaults: the JSON file the Store port of vaultreg is answered
+//     from, in vaultreg's own types (L9). Only the composition root may import it (the adapter guard).
 //   - the module root (this guard), internal/ops/testdata (a Go package the
 //     other tests import) and internal/testhome (the home directory a test
 //     binary runs in, which the TestMain of every package that can reach a
@@ -67,7 +69,8 @@ var rings = map[string]archguard.Ring{
 	"internal/vault":          archguard.Adapter,
 	"internal/vaultfs":        archguard.Adapter,
 	"internal/vaultlayout":    archguard.Domain,
-	"internal/vaultreg":       archguard.Adapter,
+	"internal/vaultreg":       archguard.Application,
+	"internal/vaultregfs":     archguard.Adapter,
 	"internal/vecindex":       archguard.Adapter,
 }
 
