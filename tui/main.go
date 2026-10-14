@@ -13,6 +13,7 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/tui/internal/adapters/overlaycli"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/tui/internal/app"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/tui/internal/domain"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/tui/internal/ui"
 )
 
 // main is the composition root: it locates the backend and hands the program
@@ -34,12 +35,12 @@ func main() {
 func compose(root string, rootErr error) tea.Model {
 	backend := overlaycli.New(root)
 
-	return newModel(deps{
-		rootErr: rootErr,
-		actions: domain.Actions(),
-		catalog: backend,
-		runner:  app.NewActionRunner(backend, backend),
-		restore: app.NewRestorePlanner(backend),
-		probe:   app.NewRepoProber(backend),
+	return ui.New(ui.Deps{
+		RootErr: rootErr,
+		Actions: domain.Actions(),
+		Catalog: backend,
+		Runner:  app.NewActionRunner(backend, backend),
+		Restore: app.NewRestorePlanner(backend),
+		Probe:   app.NewRepoProber(backend),
 	})
 }

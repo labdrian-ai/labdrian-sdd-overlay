@@ -1,4 +1,4 @@
-package main
+package ui
 
 // How the model uses the RepoProber: it asks at launch and again after a
 // self-update, in a command, and shows what it is told. What the probe reads
@@ -43,7 +43,7 @@ func TestProbeCmd_WithoutAProberThereIsNothingToAsk(t *testing.T) {
 func TestInit_AsksTheProberForHowFarTheRepoIsBehind(t *testing.T) {
 	probe := &fakeProbe{origin: 3, release: domain.RepoBehindOriginNA}
 	d := testDeps(&fakeCatalog{targets: threeCopyTargets()})
-	d.probe = probe
+	d.Probe = probe
 	m := newModel(d)
 
 	var got *probeDoneMsg

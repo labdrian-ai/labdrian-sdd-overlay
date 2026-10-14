@@ -1,4 +1,4 @@
-package main
+package ui
 
 import (
 	"errors"
@@ -1052,9 +1052,6 @@ func TestSkillsActionsSectionHeaderVisible(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// GAP 3: Action menu simplification (11 -> 7) and Also composition
-// ---------------------------------------------------------------------------
-// ---------------------------------------------------------------------------
 // Phase 5: action entry + re-probe (R-003, D7, D5 tail).
 // ---------------------------------------------------------------------------
 
@@ -1143,17 +1140,6 @@ func TestUpdate_SelfUpdateSuccess_RefiresProbe(t *testing.T) {
 	})
 }
 
-// ---------------------------------------------------------------------------
-// Slice 3b: overlay-release-tui-surfacing (R-011).
-//
-// domain.TargetVerdict gains RecordedVersion/DigestMatch/RepoBehindRelease (D2),
-// classify's precedence extends to capture > apply/digest-mismatch >
-// behind-release > behind-origin, the launch-time probe delivers both
-// behind-origin and behind-release from one sync-check run, and domain.Actions()
-// gains a per-target "Restaurar respaldo" entry gated on backup
-// availability (R-003, D4).
-// ---------------------------------------------------------------------------
-
 // TestNewModel_BehindReleaseDefaultsToNA mirrors
 // TestNewModel_BehindOriginDefaultsToNA for the new field: newModel must
 // initialize behindRelease to domain.RepoBehindOriginNA, not Go's zero value.
@@ -1174,15 +1160,6 @@ func TestUpdate_ProbeDoneMsg_SetsBehindRelease(t *testing.T) {
 		t.Errorf("behindRelease after probeDoneMsg{behindRelease: 7} = %d, want 7", m.behindRelease)
 	}
 }
-
-// ---------------------------------------------------------------------------
-// Slice 3b: domain.Actions() registration for restore and the folded-in version
-// command (R-011).
-// ---------------------------------------------------------------------------
-
-// ---------------------------------------------------------------------------
-// Slice 3b: restore selectability gating in updateActions (R-003).
-// ---------------------------------------------------------------------------
 
 // findAction returns the index of the action with the given Command in
 // m.actions, failing the test if not found.
@@ -1326,14 +1303,6 @@ func TestUpdateActions_Restore_PartialBackupAvailabilityAmongSelection(t *testin
 		t.Errorf("the runner was asked to run against targets = %+v, want exactly [claude]", done.result.Targets)
 	}
 }
-
-// ---------------------------------------------------------------------------
-// longterm-mem menu surface: status / install / uninstall.
-//
-// These three entries share one Command and differ only in Args, so every
-// helper below keys by Command+Args. A byCmd-style map keyed on Command alone
-// would silently assert against whichever of the three landed last.
-// ---------------------------------------------------------------------------
 
 // TestLongtermMemActionsRenderUnderTheirOwnHeader pins the one record the
 // operator actually reads.

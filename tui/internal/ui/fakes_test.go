@@ -1,4 +1,4 @@
-package main
+package ui
 
 // In-memory stand-ins for what the model talks to (the catalog, the action
 // runner, the restore planner and the repo prober), and the constructors that
@@ -109,13 +109,13 @@ func fourTargets() []domain.Target {
 // testDeps is a model's collaborators with nothing behind them: the menu as
 // the program has it, the catalog given, a runner that runs nothing, a planner
 // that vouches for no backup and a probe that knows nothing.
-func testDeps(catalog domain.TargetCatalog) deps {
-	return deps{
-		actions: domain.Actions(),
-		catalog: catalog,
-		runner:  &fakeRunner{},
-		restore: &fakeRestore{},
-		probe:   &fakeProbe{origin: domain.RepoBehindOriginNA, release: domain.RepoBehindOriginNA},
+func testDeps(catalog domain.TargetCatalog) Deps {
+	return Deps{
+		Actions: domain.Actions(),
+		Catalog: catalog,
+		Runner:  &fakeRunner{},
+		Restore: &fakeRestore{},
+		Probe:   &fakeProbe{origin: domain.RepoBehindOriginNA, release: domain.RepoBehindOriginNA},
 	}
 }
 
@@ -139,7 +139,7 @@ func newTestModelWith(t *testing.T, catalog domain.TargetCatalog) model {
 func newLoadedModel(t *testing.T, catalog domain.TargetCatalog, restore RestorePlanner) model {
 	t.Helper()
 	d := testDeps(catalog)
-	d.restore = restore
+	d.Restore = restore
 	updated, _ := newModel(d).Update(loadTargetsCmd(catalog)())
 	return updated.(model)
 }

@@ -1,4 +1,4 @@
-package main
+package ui
 
 // How the model uses the RestorePlanner to decide whether restore is offered
 // and what its confirm screen says. The planner is a fake here; what it vouches
@@ -140,7 +140,7 @@ func TestRestore_WhenThePlannerOffersNothingTheMenuStays(t *testing.T) {
 func TestRestore_WithoutAPlannerOffersNothing(t *testing.T) {
 	catalog := &fakeCatalog{targets: threeCopyTargets()}
 	d := testDeps(catalog)
-	d.restore = nil
+	d.Restore = nil
 	updated, _ := newModel(d).Update(loadTargetsCmd(catalog)())
 
 	m := enterRestore(t, updated.(model))

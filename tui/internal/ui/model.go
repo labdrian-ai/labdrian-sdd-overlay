@@ -1,4 +1,10 @@
-package main
+// Package ui is the TUI's driving adapter: the bubbletea model that turns keys
+// into the questions and the actions of the use cases, and the screens that
+// show what they answered. It holds no list of targets, runs no process and
+// reads no file: everything it knows comes from the domain, and everything it
+// does goes through the collaborators main gave it (Deps). Only the
+// composition root imports it.
+package ui
 
 import (
 	"github.com/charmbracelet/bubbles/spinner"
@@ -115,34 +121,38 @@ type RepoProber interface {
 	Behind() (origin, release int)
 }
 
-// deps is what the composition root (main) hands the model: the error of
+// Deps is what the composition root (main) hands the model: the error of
 // locating the repository, the action menu, the catalog and the use cases the
 // model talks to. The model builds none of them.
-type deps struct {
-	rootErr error
-	actions []domain.Action
-	catalog domain.TargetCatalog
-	runner  ActionRunner
-	restore RestorePlanner
-	probe   RepoProber
+type Deps struct {
+	RootErr error
+	Actions []domain.Action
+	Catalog domain.TargetCatalog
+	Runner  ActionRunner
+	Restore RestorePlanner
+	Probe   RepoProber
 }
+
+// New returns the program's model over d. It is the only way in from outside
+// the package: the model is not exported, and main hands bubbletea this.
+func New(d Deps) tea.Model { return newModel(d) }
 
 // newModel builds the initial state. It has no targets yet: the catalog is
 // asked from Init, off the UI goroutine, and its answer selects them all.
-func newModel(d deps) model {
+func newModel(d Deps) model {
 	sp := spinner.New()
 	sp.Spinner = spinner.Dot
 	sp.Style = lipgloss.NewStyle().Foreground(colorAccent)
 
 	return model{
-		rootErr:       d.rootErr,
-		catalog:       d.catalog,
-		runner:        d.runner,
-		restore:       d.restore,
-		probe:         d.probe,
+		rootErr:       d.RootErr,
+		catalog:       d.Catalog,
+		runner:        d.Runner,
+		restore:       d.Restore,
+		probe:         d.Probe,
 		scr:           screenTargets,
 		selected:      map[int]bool{},
-		actions:       d.actions,
+		actions:       d.Actions,
 		spinner:       sp,
 		behindOrigin:  domain.RepoBehindOriginNA,
 		behindRelease: domain.RepoBehindOriginNA,

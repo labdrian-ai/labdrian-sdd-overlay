@@ -321,6 +321,10 @@ func TestVersionFoldedIntoEstadoAlso(t *testing.T) {
 	}
 }
 
+// The three longterm-mem entries share one Command and differ only in Args, so
+// the helpers below key by Command+Args. A map keyed on Command alone would
+// silently assert against whichever of the three landed last.
+//
 // findActionByCommandArgs returns the top-level action whose Command and Args
 // both match, failing the test when no such entry exists.
 func findActionByCommandArgs(t *testing.T, command string, args ...string) Action {

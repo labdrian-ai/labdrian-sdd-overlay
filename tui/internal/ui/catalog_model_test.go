@@ -1,4 +1,4 @@
-package main
+package ui
 
 // Model behavior that follows from reading the targets from the backend's
 // catalog (D5): what the TUI shows, what it does when the catalog cannot be
@@ -234,7 +234,7 @@ func TestRunActionCmd_HandsTheRunnerTheSelectionAndTheCatalogShown(t *testing.T)
 	catalog := &fakeCatalog{targets: fourTargets()}
 	runner := &fakeRunner{}
 	d := testDeps(catalog)
-	d.runner = runner
+	d.Runner = runner
 	updated, _ := newModel(d).Update(loadTargetsCmd(catalog)())
 	m := updated.(model)
 	m.selected[3] = false // pi
