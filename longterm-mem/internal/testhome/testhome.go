@@ -124,6 +124,12 @@ func Check(t testing.TB) {
 // current home when neither the environment nor that file sets it. GOMODCACHE is not pinned: its default is under
 // GOPATH, which is.
 //
+// These are the go command's rules written out here, and not its answer asked for (`go env`, as engine/testhome
+// does), because R-021 forbids os/exec in non-test code of this module and this is such code. They are kept to the
+// real command by TestEnter_LeavesTheRealGoCommandAnsweringAsItDid, which starts it, before and after Enter, in
+// worlds that export, write in a go env file or leave to the defaults each of these variables, and requires the
+// same answers: a change in the go command's rules fails that test instead of drifting unseen.
+//
 // home, cache and config are the user's home, cache and config directories as they are now; getenv and readFile
 // read the environment and the file system, so that a table can stand in for both.
 func toolchainPins(getenv func(string) string, readFile func(string) ([]byte, error), home, cache, config string) map[string]string {

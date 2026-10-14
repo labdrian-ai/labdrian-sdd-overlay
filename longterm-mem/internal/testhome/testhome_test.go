@@ -1,10 +1,13 @@
 package testhome
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -233,6 +236,155 @@ func TestEnter_KeepsTheToolchainOnItsOwnCaches(t *testing.T) {
 	}
 	if home := os.Getenv("HOME"); home == realHome {
 		t.Errorf("HOME is still %q", home)
+	}
+}
+
+// toolchainVariables are the variables through which the go command finds its caches and its configuration.
+var toolchainVariables = []string{"GOCACHE", "GOMODCACHE", "GOPATH", "GOENV"}
+
+// goEnv asks the real go command, from the environment this process has now, where it keeps its caches and its
+// configuration.
+func goEnv(t *testing.T) map[string]string {
+	t.Helper()
+	out, err := exec.Command("go", append([]string{"env", "-json"}, toolchainVariables...)...).Output()
+	if err != nil {
+		t.Fatalf("go env: %v", err)
+	}
+	answers := map[string]string{}
+	if err := json.Unmarshal(out, &answers); err != nil {
+		t.Fatalf("go env -json printed %q: %v", out, err)
+	}
+	return answers
+}
+
+// The rules of toolchainPins are the go command's own, written out here and not asked of it, because R-021 lets
+// two files of the module import os/exec and this is not one of them. This test is what keeps them from drifting
+// away from the real command unseen: in each world it asks the real go command where its caches and its
+// configuration are, enters the home of a run, and asks again from the environment the run leaves. The answers must
+// be the same, for whichever of the variables the world exports, writes in a go env file or leaves to the defaults.
+// $DIR in the table below is the directory of the world.
+func TestEnter_LeavesTheRealGoCommandAnsweringAsItDid(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the go command on windows does not take its defaults from HOME")
+	}
+	if _, err := exec.LookPath("go"); err != nil {
+		t.Skip("there is no go command on the PATH to compare the rules with")
+	}
+	tests := []struct {
+		name string
+		// exports are the toolchain variables the world exports.
+		exports map[string]string
+		// file is the go env file of the world, at the GOENV it exports or else at the place the go command looks.
+		file string
+		// answers are what the real go command must say before the run enters its home for the world to be the one
+		// the name describes; underHome names the variables whose default it must say, which is a place under the
+		// home that is about to go.
+		answers   map[string]string
+		underHome []string
+	}{
+		{
+			name:      "nothing exported and no go env file: every default moves with the home",
+			underHome: toolchainVariables,
+		},
+		{
+			name:      "the go env file sets two paths: the others are the defaults",
+			file:      "GOPATH=$DIR/from-file/go\nGOCACHE=$DIR/from-file/cache\n",
+			answers:   map[string]string{"GOPATH": "$DIR/from-file/go", "GOCACHE": "$DIR/from-file/cache"},
+			underHome: []string{"GOENV"},
+		},
+		{
+			name:      "the go env file sets one path and a commented line sets nothing",
+			file:      "# GOCACHE=$DIR/commented-out\nGOPATH=$DIR/from-file/go\n",
+			answers:   map[string]string{"GOPATH": "$DIR/from-file/go"},
+			underHome: []string{"GOCACHE", "GOENV"},
+		},
+		{
+			name:      "an exported value beats the file",
+			exports:   map[string]string{"GOPATH": "$DIR/exported/go"},
+			file:      "GOPATH=$DIR/from-file/go\n",
+			answers:   map[string]string{"GOPATH": "$DIR/exported/go"},
+			underHome: []string{"GOCACHE", "GOENV"},
+		},
+		{
+			name:      "GOENV exported to another file: that file is read and the default place is not",
+			exports:   map[string]string{"GOENV": "$DIR/other/env"},
+			file:      "GOCACHE=$DIR/from-file/cache\n",
+			answers:   map[string]string{"GOENV": "$DIR/other/env", "GOCACHE": "$DIR/from-file/cache"},
+			underHome: []string{"GOPATH"},
+		},
+		{
+			name: "everything exported: nothing moves with the home",
+			exports: map[string]string{
+				"GOCACHE": "$DIR/exported/cache", "GOMODCACHE": "$DIR/exported/mod", "GOPATH": "$DIR/exported/go", "GOENV": "$DIR/exported/env",
+			},
+			answers: map[string]string{
+				"GOCACHE": "$DIR/exported/cache", "GOMODCACHE": "$DIR/exported/mod", "GOPATH": "$DIR/exported/go", "GOENV": "$DIR/exported/env",
+			},
+		},
+		{
+			name:      "a value with an equals sign in the go env file",
+			file:      "GOPATH=$DIR/a=b\nGOCACHE=$DIR/from-file/cache\n",
+			answers:   map[string]string{"GOPATH": "$DIR/a=b", "GOCACHE": "$DIR/from-file/cache"},
+			underHome: []string{"GOENV"},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			expand := func(text string) string { return strings.ReplaceAll(text, "$DIR", dir) }
+			realHome := filepath.Join(dir, "home")
+			if err := os.MkdirAll(realHome, 0o700); err != nil {
+				t.Fatal(err)
+			}
+
+			// The environment of a developer who exports none of what the run touches, but for what the world says.
+			scrub(t)
+			for _, name := range append(append([]string{}, toolchainVariables...), xdgRoots...) {
+				t.Setenv(name, "")
+				os.Unsetenv(name)
+			}
+			t.Setenv("HOME", realHome)
+			for name, value := range tc.exports {
+				t.Setenv(name, expand(value))
+			}
+			if tc.file != "" {
+				path := os.Getenv("GOENV")
+				if path == "" {
+					path = goEnv(t)["GOENV"]
+				}
+				if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(path, []byte(expand(tc.file)), 0o600); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			before := goEnv(t)
+			for name, want := range tc.answers {
+				if before[name] != expand(want) {
+					t.Fatalf("the world is not the one it says: go env %s = %q, want %q", name, before[name], expand(want))
+				}
+			}
+			for _, name := range tc.underHome {
+				if !strings.HasPrefix(before[name], realHome+string(os.PathSeparator)) {
+					t.Fatalf("the world is not the one it says: go env %s = %q, want a default under the home %q", name, before[name], realHome)
+				}
+			}
+
+			cleanup, err := Enter()
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(cleanup)
+			after := goEnv(t)
+
+			for _, name := range toolchainVariables {
+				if after[name] != before[name] {
+					t.Errorf("go env %s = %q once the home is replaced, was %q: the rules of toolchainPins no longer keep the go command where it was", name, after[name], before[name])
+				}
+			}
+		})
 	}
 }
 
