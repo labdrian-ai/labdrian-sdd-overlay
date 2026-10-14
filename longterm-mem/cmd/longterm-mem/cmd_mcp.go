@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"flag"
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -14,6 +13,7 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/embed"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/mcpserver"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/query"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vault"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultreg"
@@ -39,10 +39,10 @@ func (c commands) cmdMCP(args []string) int {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	store, err := engram.Open(os.Getenv(engramDBEnvVar))
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "longterm-mem: mcp: %v\n", err)
-		return exitEngramUnavailable
+	a := c.newApp("mcp")
+	store, exit := a.memory()
+	if exit != exitOK {
+		return exit
 	}
 	defer store.Close()
 
@@ -57,78 +57,82 @@ func (c commands) cmdMCP(args []string) int {
 	// how store is already shared across the whole session below.
 	embedClient, err := c.newEmbedClient(embed.Config{Model: vecindex.DefaultModel})
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "longterm-mem: mcp: %v\n", err)
-		return exitInternal
-	}
-	loadCache := vecindex.NewLoadCache()
-
-	// Both closures resolve their own project's vault fresh on every call
-	// (a session can serve more than one project) and then call queryDeps/
-	// runPromote (rundeps.go, task 8b.11) -- the exact same
-	// construction+call functions cmdQuery/cmdPromote use for the CLI
-	// query/promote subcommands, so the CLI and MCP surfaces cannot drift
-	// (the query tool's Embed and index cache are the one deliberate
-	// exception, issue #286: this session's shared client and load cache,
-	// not runQuery's per-call construction).
-	deps := mcpserver.Deps{
-		Query: func(ctx context.Context, req query.Request) (query.Result, error) {
-			vaultRoot, err := vaultreg.Resolve(defaultVaultsPath(), req.Project, "")
-			if err != nil {
-				return query.Result{}, err
-			}
-			qdeps := queryDeps(store, vaultRoot, queryWiring{
-				newClient: c.newEmbedClient,
-				embed:     embedClient.Embed,
-				cache:     loadCache,
-			})
-			return query.Run(ctx, qdeps, req)
-		},
-		// Get reads one observation whole, through the same read-only
-		// store the query tool searches. It takes no project: an id
-		// already names exactly one row, and asking for a project too
-		// would let a caller be told "not found" for an observation that
-		// exists, which is the one answer this tool must never give
-		// wrongly -- it is where a truncated snippet sends people.
-		Get: func(_ context.Context, engramID int64) (mcpserver.GetOutcome, error) {
-			o, found, err := store.ObservationByID(engramID)
-			if err != nil {
-				return mcpserver.GetOutcome{}, err
-			}
-			return mcpserver.GetOutcome{Observation: o, Found: found}, nil
-		},
-		Promote: c.mcpPromote(store),
+		return a.refuse(err, exitInternal)
 	}
 
-	server := mcpserver.New(deps)
+	server := mcpserver.New(c.mcpDeps(store, embedClient, vecindex.NewLoadCache()))
 	// context.Canceled here means SIGINT/SIGTERM asked for a graceful
 	// shutdown (R-034), not a failure; only a genuine transport/session
 	// error is reported and turns into a non-zero exit.
 	if err := server.Run(ctx, &mcp.StdioTransport{}); err != nil && !errors.Is(err, context.Canceled) {
-		fmt.Fprintf(os.Stderr, "longterm-mem: mcp: %v\n", err)
-		return exitInternal
+		return a.refuse(err, exitInternal)
 	}
 	return exitOK
 }
 
-// mcpPromote is the promote tool of the MCP session: it resolves the vault of the call's project, promotes the
-// observation with the clock the commands were composed with, and rebuilds the vault index when the promotion
-// wrote a page.
-//
-// The rebuild happens before the call returns, exactly as cmd_sync.go does it: without it a page promoted over
-// MCP stayed invisible to MCP query until someone ran `sync` out of band. It is keyed off the promotion's
-// outcome (reindexAfterPromote), and its failure is reported beside a SUCCESSFUL promotion rather than as the
-// call's error -- the page is written and durable by then.
+// mcpDeps are the tools of the MCP session. Each resolves its own project's vault fresh on every call (a session
+// can serve more than one project) and then calls the same construction and use cases the CLI subcommands do
+// (queryDeps, promote.PromoteAndReindex), so the CLI and MCP surfaces cannot drift -- the query tool's Embed and
+// index cache being the one deliberate exception (issue #286): this session's shared client and load cache, not
+// runQuery's per-call construction.
+func (c commands) mcpDeps(store *engram.Store, embedClient *embed.Client, loadCache *vecindex.LoadCache) mcpserver.Deps {
+	return mcpserver.Deps{
+		Query:   c.mcpQuery(store, embedClient, loadCache),
+		Get:     mcpGet(store),
+		Promote: c.mcpPromote(store),
+	}
+}
+
+// mcpQuery is the query tool of the MCP session: the vault of the call's project, and the query use case over the
+// session's store, embedding client and index cache.
+func (c commands) mcpQuery(store *engram.Store, embedClient *embed.Client, loadCache *vecindex.LoadCache) func(context.Context, query.Request) (query.Result, error) {
+	return func(ctx context.Context, req query.Request) (query.Result, error) {
+		vaultRoot, err := vaultreg.Resolve(defaultVaultsPath(), req.Project, "")
+		if err != nil {
+			return query.Result{}, err
+		}
+		qdeps := queryDeps(store, vaultRoot, queryWiring{
+			newClient: c.newEmbedClient,
+			embed:     embedClient.Embed,
+			cache:     loadCache,
+		})
+		return query.Run(ctx, qdeps, req)
+	}
+}
+
+// mcpGet is the get tool of the MCP session: it reads one observation whole, through the same read-only store the
+// query tool searches. It takes no project: an id already names exactly one row, and asking for a project too would
+// let a caller be told "not found" for an observation that exists, which is the one answer this tool must never
+// give wrongly -- it is where a truncated snippet sends people.
+func mcpGet(store *engram.Store) func(context.Context, int64) (mcpserver.GetOutcome, error) {
+	return func(_ context.Context, engramID int64) (mcpserver.GetOutcome, error) {
+		o, found, err := store.ObservationByID(engramID)
+		if err != nil {
+			return mcpserver.GetOutcome{}, err
+		}
+		return mcpserver.GetOutcome{Observation: o, Found: found}, nil
+	}
+}
+
+// mcpPromote is the promote tool of the MCP session: it resolves the vault of the call's project and promotes the
+// observation with the clock the commands were composed with (promote.PromoteAndReindex), which rebuilds the vault
+// index when the promotion wrote a page, before the call returns, exactly as a sync does. The rebuild's failure is
+// reported beside a SUCCESSFUL promotion rather than as the call's error -- the page is written and durable by
+// then.
 func (c commands) mcpPromote(store *engram.Store) func(ctx context.Context, project string, engramID int64) (mcpserver.PromoteOutcome, error) {
 	return func(ctx context.Context, project string, engramID int64) (mcpserver.PromoteOutcome, error) {
 		vaultRoot, err := vaultreg.Resolve(defaultVaultsPath(), project, "")
 		if err != nil {
 			return mcpserver.PromoteOutcome{}, err
 		}
-		result, err := runPromote(ctx, store, vaultRoot, c.clock, engramID)
+		writer, err := newPromoteWriter(vaultRoot, c.clock)
 		if err != nil {
 			return mcpserver.PromoteOutcome{}, err
 		}
-		rebuildErr := reindexAfterPromote(ctx, result, vault.IndexRebuilder{Root: vaultRoot})
-		return mcpserver.PromoteOutcome{Result: result, IndexRebuildErr: rebuildErr}, nil
+		outcome, err := promote.PromoteAndReindex(ctx, writer, store.ObservationByID, engramID, vault.IndexRebuilder{Root: vaultRoot})
+		if err != nil {
+			return mcpserver.PromoteOutcome{}, err
+		}
+		return mcpserver.PromoteOutcome{Result: outcome.Result, IndexRebuildErr: outcome.IndexRebuildErr}, nil
 	}
 }

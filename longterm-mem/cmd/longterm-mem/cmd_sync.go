@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -10,19 +9,17 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vault"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultreg"
 )
 
 // cmdSync implements `longterm-mem sync --project P [--vault DIR]`:
 // promote every eligible, unpromoted-or-revised observation (R-009),
 // propagate soft-delete/supersession status from Engram (R-033), rebuild
 // the vault's index, and record the sync's completion timestamp (R-031) --
-// promote.Sync and promote.Propagate wired to a real Engram connection and
-// a real vault, the same seam shape cmd_index.go and cmd_query.go already
-// use for vault.Rebuild/vault.Retrieve.
+// promote.SyncProject wired to a real Engram connection and a real vault,
+// the same seam shape cmd_index.go and cmd_query.go already use for
+// vault.Rebuild/vault.Retrieve. With --dry-run it reports what promote.Plan
+// says the run would do and writes nothing.
 func (c commands) cmdSync(args []string) int {
 	fs := flag.NewFlagSet("sync", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
@@ -32,114 +29,84 @@ func (c commands) cmdSync(args []string) int {
 	if err := fs.Parse(args); err != nil {
 		return exitUsage
 	}
+	a := c.newApp("sync")
 	// A dry run must not record this repository's derived names either: an
 	// operator asking "what would this do" has not asked it to do anything.
-	resolve := c.resolveProjectFlag
-	if *dryRun {
-		resolve = c.resolveProjectFlagReadOnly
-	}
-	resolvedProject, exit := resolve("sync", *project)
+	resolvedProject, exit := a.project(*project, *dryRun)
 	if exit != exitOK {
 		return exit
 	}
-
-	vaultRoot, err := vaultreg.Resolve(defaultVaultsPath(), resolvedProject, *vaultDir)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "longterm-mem: sync: %v\n", err)
-		return vaultExitCode(err)
+	vaultRoot, exit := a.vaultRoot(resolvedProject, *vaultDir)
+	if exit != exitOK {
+		return exit
 	}
-
-	store, err := engram.Open(os.Getenv(engramDBEnvVar))
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "longterm-mem: sync: %v\n", err)
-		return exitEngramUnavailable
+	store, exit := a.memoryToPromoteFrom()
+	if exit != exitOK {
+		return exit
 	}
 	defer store.Close()
-	declareDegradedEngram(store, "sync")
-
-	writer, err := newPromoteWriter(vaultRoot, c.clock)
+	deps, err := a.syncDeps(store, vaultRoot)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "longterm-mem: sync: %v\n", err)
+		return a.refuse(err, exitInternal)
+	}
+
+	ctx := context.Background()
+	if *dryRun {
+		return reportPlan(ctx, deps, resolvedProject, vaultRoot)
+	}
+	report, err := promote.SyncProject(ctx, deps, resolvedProject)
+	return reportSync(report, err)
+}
+
+// reportPlan prints what a sync of the project would do, and writes nothing.
+func reportPlan(ctx context.Context, deps promote.Deps, project, vaultRoot string) int {
+	plan, err := promote.Plan(ctx, deps, project)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "longterm-mem: sync --dry-run: %v\n", err)
 		return exitInternal
 	}
-
-	rebuilder := vault.IndexRebuilder{Root: vaultRoot}
-	// rebuildErr is captured from this command's own IndexRebuilder wrapper
-	// rather than dug back out of the joined error below. Sync reports the
-	// index rebuild's failure and its per-observation failures through one
-	// error value, and only the first of the two is a vault subprocess
-	// failure: an operator who reads exit 5 goes and looks at the vault's
-	// Python tooling, which is the wrong place to look for an observation
-	// longterm-mem could not write.
-	var rebuildErr error
-	deps := promote.Deps{
-		Memory: store,
-		Writer: writer,
-		Index: promote.IndexRebuilderFunc(func(ctx context.Context) error {
-			rebuildErr = rebuilder.RebuildIndex(ctx)
-			return rebuildErr
-		}),
+	// Both counts, in the same shape the real run reports them
+	// (`promoted N, patched M`). A dry run that named only the
+	// promotions would tell an operator nothing is rewritten
+	// immediately before a re-sync rewrites existing pages.
+	fmt.Printf("longterm-mem: sync --dry-run: would promote %d observation(s), patch %d page(s), skip %d, into %s\n", plan.WouldPromote, plan.WouldPatch, plan.Skipped, vaultRoot)
+	for _, title := range plan.Titles {
+		fmt.Printf("  would promote: %s\n", title)
 	}
-
-	// Both passes always run. Sync's failures are per-observation by
-	// design -- it steps over a broken observation rather than letting it
-	// wedge the run -- so returning here on its error would rebuild that
-	// wedge one level up: a single unpromotable observation would stop
-	// Propagate from ever running, and R-033's soft-delete and
-	// supersession statuses would never again land for that project,
-	// identically on every retry. The command reports what did land and
-	// exits non-zero when anything failed, so a partial run is visible
-	// without being fatal to the work that can still be done.
-	ctx := context.Background()
-
-	if *dryRun {
-		plan, err := promote.Plan(ctx, deps, resolvedProject)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "longterm-mem: sync --dry-run: %v\n", err)
-			return exitInternal
-		}
-		// Both counts, in the same shape the real run reports them
-		// (`promoted N, patched M`). A dry run that named only the
-		// promotions would tell an operator nothing is rewritten
-		// immediately before a re-sync rewrites existing pages.
-		fmt.Printf("longterm-mem: sync --dry-run: would promote %d observation(s), patch %d page(s), skip %d, into %s\n", plan.WouldPromote, plan.WouldPatch, plan.Skipped, vaultRoot)
-		for _, title := range plan.Titles {
-			fmt.Printf("  would promote: %s\n", title)
-		}
-		for _, addr := range plan.PatchAddresses {
-			fmt.Printf("  would patch: %s\n", addr)
-		}
-		for _, f := range plan.Failed {
-			fmt.Fprintf(os.Stderr, "  cannot read promoted state for observation %d: %v\n", f.ObservationID, f.Err)
-		}
-		warnSkippedPages(os.Stderr, "longterm-mem: sync --dry-run:", plan.Unreadable)
-		warnLeftAlone(os.Stderr, "longterm-mem: sync --dry-run:", "would be left alone, nothing would be written for them", plan.Withheld)
-		fmt.Println("longterm-mem: sync --dry-run: nothing was written")
-		switch {
-		case len(plan.Failed) > 0:
-			return exitInternal
-		case len(plan.Withheld) > 0:
-			return exitRegistrationConflict
-		}
-		return exitOK
+	for _, addr := range plan.PatchAddresses {
+		fmt.Printf("  would patch: %s\n", addr)
 	}
+	for _, f := range plan.Failed {
+		fmt.Fprintf(os.Stderr, "  cannot read promoted state for observation %d: %v\n", f.ObservationID, f.Err)
+	}
+	warnSkippedPages(os.Stderr, "longterm-mem: sync --dry-run:", plan.Unreadable)
+	warnLeftAlone(os.Stderr, "longterm-mem: sync --dry-run:", "would be left alone, nothing would be written for them", plan.Withheld)
+	fmt.Println("longterm-mem: sync --dry-run: nothing was written")
+	switch {
+	case len(plan.Failed) > 0:
+		return exitInternal
+	case len(plan.Withheld) > 0:
+		return exitRegistrationConflict
+	}
+	return exitOK
+}
 
-	syncReport, syncErr := promote.Sync(ctx, deps, resolvedProject)
-	propagateReport, propagateErr := promote.Propagate(ctx, deps, resolvedProject)
-
-	fmt.Printf("longterm-mem: sync promoted %d observation(s), patched %d page(s)\n", len(syncReport.Promoted), len(propagateReport.Patched))
+// reportSync prints what a sync did and answers the exit code of the run: what landed is reported whether or not
+// the run failed, and a run that failed answers by what failed (syncExitCode).
+func reportSync(report promote.ProjectSyncReport, err error) int {
+	fmt.Printf("longterm-mem: sync promoted %d observation(s), patched %d page(s)\n", len(report.Sync.Promoted), len(report.Propagate.Patched))
 
 	// A page that cannot be read is skipped and named, as the doctor names it, and the observations it keeps
 	// from being decided are left alone: the run did everything else.
-	warnSkippedPages(os.Stderr, "longterm-mem: sync:", syncReport.Unreadable)
-	warnLeftAlone(os.Stderr, "longterm-mem: sync:", "left alone, nothing was written for them", syncReport.Withheld)
-	warnLeftAlone(os.Stderr, "longterm-mem: sync:", "left alone, nothing was patched for them", propagateReport.Withheld)
+	warnSkippedPages(os.Stderr, "longterm-mem: sync:", report.Sync.Unreadable)
+	warnLeftAlone(os.Stderr, "longterm-mem: sync:", "left alone, nothing was written for them", report.Sync.Withheld)
+	warnLeftAlone(os.Stderr, "longterm-mem: sync:", "left alone, nothing was patched for them", report.Propagate.Withheld)
 
-	if err := errors.Join(syncErr, propagateErr); err != nil {
+	if err != nil {
 		fmt.Fprintf(os.Stderr, "longterm-mem: sync: %v\n", err)
-		return syncExitCode(store, resolvedProject, rebuildErr)
+		return syncExitCode(report.Failure)
 	}
-	if len(syncReport.Withheld)+len(propagateReport.Withheld) > 0 {
+	if len(report.Sync.Withheld)+len(report.Propagate.Withheld) > 0 {
 		// Nothing failed, but an observation was refused on the grounds that its page could not be told from
 		// an unreadable one, and left byte-identical: the code `promote --id` answers for the same refusal.
 		return exitRegistrationConflict
@@ -186,14 +153,14 @@ func warnLeftAlone(w io.Writer, prefix, outcome string, withheld []int64) {
 //   - anything else (a per-observation page write, the sync-state record,
 //     the precedence store) -> exitInternal.
 //
-// The Engram question is answered by asking the database rather than by
-// matching on error text, so the code stays bound to the condition it
-// names instead of to a message string.
-func syncExitCode(store *engram.Store, project string, rebuildErr error) int {
-	switch {
-	case rebuildErr != nil:
+// What failed is told by promote.SyncProject (promote.Failure), which asks
+// the memory itself and never matches a message, so the code stays bound to
+// the condition it names instead of to a string.
+func syncExitCode(failure promote.Failure) int {
+	switch failure {
+	case promote.IndexRebuildFailed:
 		return exitVaultSubprocessFailed
-	case !engramReadable(store, project):
+	case promote.MemoryUnavailable:
 		return exitEngramUnavailable
 	default:
 		return exitInternal

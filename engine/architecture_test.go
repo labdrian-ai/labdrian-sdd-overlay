@@ -91,6 +91,9 @@ import (
 //   - repotest is test support: the hand-made repositories the tests of gitfs and cmd share.
 //   - piguard is test support: the `pi` that refuses to run, put first on the PATH of a test
 //     run by a TestMain, so nothing started by accident reaches the real CLI.
+//   - testhome is test support: the home directory a test binary runs in, which the TestMain of a
+//     package that can reach a path derived from HOME enters, so nothing a test forgets to name is
+//     found in the machine of whoever runs it.
 //   - installer, shelltest, capabilitytest, shaper/shapertest (the documents the shaper's
 //     tests share), reviewreceipt/receipttest (the review documents the receipt capture's
 //     tests share) and this guard (the module root) are test-only.
@@ -151,6 +154,7 @@ var rings = map[string]archguard.Ring{
 	"status":                    archguard.Application,
 	"status/fsfiles":            archguard.Adapter,
 	"synctrigger":               archguard.Adapter,
+	"testhome":                  archguard.Support,
 	"workflow":                  archguard.Domain,
 	"workflow/filelog":          archguard.Adapter,
 	"workflowprofile":           archguard.Domain,

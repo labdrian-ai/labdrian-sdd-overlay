@@ -1,0 +1,7 @@
+args: stale --project github.com/acme/widgets
+exit: 4
+--- stdout ---
+--- stderr ---
+longterm-mem: stale: engram: list observations for project "github.com/acme/widgets": SQL logic error: no such table: observations (1)
+--- ledger ---
+no ledger

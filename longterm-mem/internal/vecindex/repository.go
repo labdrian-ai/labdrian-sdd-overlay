@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/embedindex"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/query"
 )
 
@@ -149,12 +150,26 @@ func (r *Repository) BuildEmbeddingIndex(ctx context.Context, project, model str
 	if err != nil {
 		return err
 	}
+	_, err = r.BuildRows(ctx, project, embedindex.Contract{Model: model, Dimension: dimension, InputLimit: inputLimit}, rows, embedder)
+	return err
+}
+
+// BuildRows builds project's index incrementally (Build) from the rows and with the embedder it is given, under
+// the contract it is given, into the project's directory under StateDir, and says what the build did. It is the
+// build the use case behind `index --embeddings` (internal/embedindex) asks of the repository, which has no source
+// of rows or factory of embedders of its own to bring. When the build wrote, the cache forgets the project's index;
+// when it failed, nothing on disk changed and nothing is forgotten. A failure is Build's own, untouched.
+func (r *Repository) BuildRows(ctx context.Context, project string, contract embedindex.Contract, rows []embedindex.Row, embedder embedindex.Embedder) (embedindex.Result, error) {
+	if r.Now == nil {
+		return embedindex.Result{}, errNoClock
+	}
 	dir := Dir(r.StateDir, project)
-	if _, _, err := Build(ctx, dir, model, dimension, inputLimit, rows, embedder, r.Now); err != nil {
-		return err
+	_, built, err := Build(ctx, dir, contract.Model, contract.Dimension, contract.InputLimit, rows, embedder, r.Now)
+	if err != nil {
+		return embedindex.Result{}, err
 	}
 	if r.Cache != nil {
 		r.Cache.Invalidate(dir)
 	}
-	return nil
+	return embedindex.Result{Embedded: built.Embedded, Reused: built.Reused, Removed: built.Removed}, nil
 }

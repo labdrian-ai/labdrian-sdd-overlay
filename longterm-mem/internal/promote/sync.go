@@ -125,7 +125,7 @@ func Sync(ctx context.Context, deps Deps, project string) (SyncReport, error) {
 	// (TestSyncWithoutARebuilderSkipsTheRebuild holds both shapes).
 	if !memory.IsMissing(deps.Index) {
 		if err := deps.Index.RebuildIndex(ctx); err != nil {
-			return report, fmt.Errorf("promote: sync: rebuild index: %w", err)
+			return report, &IndexRebuildError{Err: err}
 		}
 	}
 
@@ -134,6 +134,18 @@ func Sync(ctx context.Context, deps Deps, project string) (SyncReport, error) {
 	}
 	return report, failureError("sync", report.Failed)
 }
+
+// IndexRebuildError is how Sync reports that the vault's index could not be rebuilt after the pages were written:
+// a type of its own, so that a caller who needs to tell that failure from the others finds it with errors.As and
+// does not read words. Its words are the ones the sync has always said.
+type IndexRebuildError struct {
+	// Err is the rebuild's own failure.
+	Err error
+}
+
+func (e *IndexRebuildError) Error() string { return "promote: sync: rebuild index: " + e.Err.Error() }
+
+func (e *IndexRebuildError) Unwrap() error { return e.Err }
 
 // promotionDecision is what a run does about one observation.
 type promotionDecision int

@@ -31,6 +31,19 @@ func TestStatusRefusesAStateDirectoryNobodyCanName(t *testing.T) {
 	}
 }
 
+// `index --embeddings` is the failure `status` copies: with nothing that names the state directory it writes no index
+// wherever the process happens to be running, says so in the words of the diagnostics, and exits 8.
+func TestIndexEmbeddingsRefusesAStateDirectoryNobodyCanName(t *testing.T) {
+	w := withNoStateDirectory(t)
+
+	code, stdout, stderr := w.run(t, []string{"index", "--project", queryGoldenProject, "--embeddings"})
+
+	const want = "longterm-mem: index: could not resolve the state directory; set HOME or LONGTERM_MEM_STATE_DIR\n"
+	if code != exitPathUnresolvable || stdout != "" || stderr != want {
+		t.Errorf("index --embeddings = exit %d, stdout %q, stderr %q; want exit %d, nothing on stdout and %q", code, stdout, stderr, exitPathUnresolvable, want)
+	}
+}
+
 // The same with --json: the refusal is on stderr, and no JSON is printed.
 func TestStatusAsJSONRefusesAStateDirectoryNobodyCanName(t *testing.T) {
 	w := withNoStateDirectory(t)

@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/embed"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/embedindex"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/ops"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
@@ -104,7 +105,7 @@ func embeddingIndexOf(store *engram.Store, wiring queryWiring) *vecindex.Reposit
 	return &vecindex.Repository{
 		StateDir: defaultStateDir(),
 		Cache:    wiring.cache,
-		LiveRows: func(project string) ([]vecindex.Row, error) { return observationRowsForIndex(store, project) },
+		LiveRows: func(project string) ([]vecindex.Row, error) { return embedindex.LiveRows(store, project) },
 		NewEmbedder: func(model string) (vecindex.Embedder, error) {
 			client, err := wiring.newClient(embed.Config{Model: model})
 			if err != nil {
@@ -151,23 +152,6 @@ func (noStateDirectory) EmbeddingIndexBuiltAt(string) (string, error) {
 
 func (noStateDirectory) IndexedEngramIDs(string) ([]int64, error) { return nil, stateDirUnresolved{} }
 
-// observationRowsForIndex reads project's live Engram rows in the shape
-// vecindex.Build wants, the same source cmd_index_embeddings.go's own
-// -embeddings flag reads (store.ListObservations, already R-020 soft-delete
-// scoped) -- extracted so this mapping can be tested without a network
-// round trip to an embedding backend.
-func observationRowsForIndex(store *engram.Store, project string) ([]vecindex.Row, error) {
-	observations, err := store.ListObservations(project)
-	if err != nil {
-		return nil, err
-	}
-	rows := make([]vecindex.Row, 0, len(observations))
-	for _, o := range observations {
-		rows = append(rows, vecindex.Row{EngramID: o.ID, Title: o.Title, Content: o.Content})
-	}
-	return rows, nil
-}
-
 // newPromoteWriter is the Writer of the vault at vaultRoot, as every command
 // that promotes (promote, the MCP promote tool, sync) uses it: the vault's
 // address allocator, the clock it is given, and the vault file system adapter
@@ -195,62 +179,15 @@ func newPromoteWriter(vaultRoot string, clock promote.Clock) (*promote.Writer, e
 }
 
 // runPromote builds a Writer for vaultRoot and calls
-// promote.ExplicitPromote against store (task 8b.11): the one
-// construction+call path cmdPromote (the CLI promote subcommand) and
-// cmd_mcp.go's MCP promote tool wiring both use, mirroring runQuery's own
-// extraction so R-012 and R-032 genuinely share one code path rather than
-// two callers separately reconstructing the same Writer.
+// promote.ExplicitPromote against store (task 8b.11): the construction+call
+// path of cmdPromote, the CLI promote subcommand. The MCP promote tool
+// (cmd_mcp.go) builds its Writer the same way, with newPromoteWriter, and
+// promotes through promote.PromoteAndReindex, which is this call and the
+// rebuild of the index that follows a page being written.
 func runPromote(ctx context.Context, store *engram.Store, vaultRoot string, clock promote.Clock, engramID int64) (promote.Result, error) {
 	writer, err := newPromoteWriter(vaultRoot, clock)
 	if err != nil {
 		return promote.Result{}, err
 	}
 	return promote.ExplicitPromote(ctx, writer, store.ObservationByID, engramID)
-}
-
-// reindexAfterPromote rebuilds the vault index after a promotion, but only
-// when that promotion actually WROTE a page.
-//
-// A page promoted over MCP used to stay invisible to MCP query until
-// someone ran `sync` out of band, because cmd_sync.go rebuilds the index
-// and the promote tool did not. Rebuilding here closes that, consistent
-// with sync.
-//
-// The rebuild is keyed off the promotion's OUTCOME, never off "promote was
-// called". A rebuild walks the whole vault and shells out to the vault's
-// own tooling; paying that for a promotion that wrote nothing is the entire
-// cost for none of the benefit, on a surface a client can call in a loop.
-// Two outcomes write nothing and both reach here as ordinary, non-error
-// results: a refusal under local-edit precedence (ActionSkippedLocalEdit),
-// and an ineligible observation, which Writer.Promote reports as a true
-// no-op. "No error was returned" therefore does not mean a page was
-// written, and cannot be the test.
-//
-// The returned error is the rebuild's own. It is deliberately NOT reported
-// as a promotion failure by any caller: the page is already written and
-// durable by the time the rebuild runs, so failing the call would tell the
-// caller that a page it can see on disk was never written. It is surfaced
-// separately instead (mcpserver.PromoteOutcome.IndexRebuildErr).
-func reindexAfterPromote(ctx context.Context, result promote.Result, rebuilder promote.IndexRebuilder) error {
-	if !promotionWrotePage(result) {
-		return nil
-	}
-	return rebuilder.RebuildIndex(ctx)
-}
-
-// promotionWrotePage reports whether result describes a promotion that put
-// bytes on disk.
-//
-// The kind alone answers it. Writer.Promote reports an INELIGIBLE observation
-// as a zero promote.Result, and the zero promote.ActionKind is
-// promote.ActionNone, so a promotion that touched no file never reads as a
-// write. (It used to be promote.ActionCreated, the first iota, and a guard
-// on the page address stood in front of the switch to catch that.)
-func promotionWrotePage(result promote.Result) bool {
-	switch result.Action.Kind {
-	case promote.ActionCreated, promote.ActionUpdated:
-		return true
-	default:
-		return false
-	}
 }

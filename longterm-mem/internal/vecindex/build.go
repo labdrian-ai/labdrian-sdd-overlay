@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"sync"
 	"syscall"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/embedindex"
 )
 
 // buildLockFileName is the advisory lock file Build takes an exclusive
@@ -66,15 +68,10 @@ func releaseFileLock(f *os.File) {
 	_ = f.Close()
 }
 
-// Row is one candidate observation for (re)indexing. Callers (the CLI's
-// `index --embeddings` command) supply only live rows -- typically via
-// engram.Store.ListObservations, which is already R-020 (soft-delete)
-// scoped -- so Build never has to ask which rows are live a second time.
-type Row struct {
-	EngramID int64
-	Title    string
-	Content  string
-}
+// Row is one candidate observation for (re)indexing: the row of the build use case (internal/embedindex), which
+// maps the live observations to it. Callers supply only live rows -- the use case lists them through the memory,
+// which is already R-020 (soft-delete) scoped -- so Build never has to ask which rows are live a second time.
+type Row = embedindex.Row
 
 // Embedder is the seam Build calls into for one row's vector. Production
 // wires embed.Client.Embed (internal/embed); tests use a fake. Build never

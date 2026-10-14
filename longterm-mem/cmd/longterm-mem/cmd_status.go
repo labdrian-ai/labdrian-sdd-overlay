@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -10,7 +9,6 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/ops"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vault"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultreg"
 )
 
 // cmdStatus implements `longterm-mem status --project P [--vault DIR]
@@ -30,15 +28,14 @@ func (c commands) cmdStatus(args []string) int {
 	if err := fs.Parse(args); err != nil {
 		return exitUsage
 	}
-	resolvedProject, exit := c.resolveProjectFlag("status", *project)
+	a := c.newApp("status")
+	resolvedProject, exit := a.project(*project, false)
 	if exit != exitOK {
 		return exit
 	}
-
-	vaultRoot, err := vaultreg.Resolve(defaultVaultsPath(), resolvedProject, *vaultDir)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "longterm-mem: status: %v\n", err)
-		return vaultExitCode(err)
+	vaultRoot, exit := a.vaultRoot(resolvedProject, *vaultDir)
+	if exit != exitOK {
+		return exit
 	}
 
 	// Nothing names the directory the embedding index is kept in: there is nowhere to report on, and nothing
@@ -49,56 +46,59 @@ func (c commands) cmdStatus(args []string) int {
 	// (noStateDirectory answers for it), which is why the reader still has that case.
 	stateDir := defaultStateDir()
 	if stateDir == "" {
-		fmt.Fprintf(os.Stderr, "longterm-mem: status: %v\n", stateDirUnresolved{})
-		return exitPathUnresolvable
+		return a.refuse(stateDirUnresolved{}, exitPathUnresolvable)
 	}
 
-	deps := ops.StatusDeps{
+	report, err := ops.Status(context.Background(), statusDeps(vaultRoot, stateDir), resolvedProject)
+	if err != nil {
+		return a.refuse(err, exitInternal)
+	}
+
+	if *asJSON {
+		return a.printJSON(report)
+	}
+	printStatus(report)
+	return exitOK
+}
+
+// statusDeps is what the status of the vault at vaultRoot is read from: the vault's files and its provisioning,
+// the embedding index under stateDir, and Engram as the process finds it.
+func statusDeps(vaultRoot, stateDir string) ops.StatusDeps {
+	return ops.StatusDeps{
 		VaultRoot:        vaultRoot,
 		SyncState:        openVault(vaultRoot),
 		EmbeddingIndex:   embeddingIndexReader(stateDir),
 		VaultProvisioned: vault.Provisioned,
-		EngramReachable: func(ctx context.Context) (bool, string) {
-			store, err := engram.Open(os.Getenv(engramDBEnvVar))
-			if err != nil {
-				return false, err.Error()
-			}
-			defer store.Close()
-			// Open can succeed via its immutable=1 fallback (see Open's
-			// own doc comment) when the primary read-only connection
-			// cannot be established -- stale but never unsafe. Without
-			// reading Store.Degraded here, a reachable-but-degraded
-			// connection was indistinguishable from a healthy one in
-			// every status report.
-			if degraded, cause := store.Degraded(); degraded {
-				return true, fmt.Sprintf("degraded: primary read-only connection unavailable, using stale fallback: %s", cause)
-			}
-			return true, ""
-		},
+		EngramReachable:  engramReachability,
 	}
+}
 
-	report, err := ops.Status(context.Background(), deps, resolvedProject)
+// engramReachability opens Engram's database to say whether it can be reached, and closes it.
+func engramReachability(_ context.Context) (bool, string) {
+	store, err := engram.Open(os.Getenv(engramDBEnvVar))
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "longterm-mem: status: %v\n", err)
-		return exitInternal
+		return false, err.Error()
 	}
-
-	if *asJSON {
-		enc := json.NewEncoder(os.Stdout)
-		enc.SetIndent("", "  ")
-		if err := enc.Encode(report); err != nil {
-			fmt.Fprintf(os.Stderr, "longterm-mem: status: encode result: %v\n", err)
-			return exitInternal
-		}
-		return exitOK
+	defer store.Close()
+	// Open can succeed via its immutable=1 fallback (see Open's
+	// own doc comment) when the primary read-only connection
+	// cannot be established -- stale but never unsafe. Without
+	// reading Store.Degraded here, a reachable-but-degraded
+	// connection was indistinguishable from a healthy one in
+	// every status report.
+	if degraded, cause := store.Degraded(); degraded {
+		return true, fmt.Sprintf("degraded: primary read-only connection unavailable, using stale fallback: %s", cause)
 	}
+	return true, ""
+}
 
+// printStatus prints the text form of a status report.
+func printStatus(report ops.StatusReport) {
 	fmt.Printf("longterm-mem: status for %s\n", report.Project)
 	fmt.Printf("  engram: reachable=%t%s\n", report.EngramReachable, detailSuffix(report.EngramDetail))
 	fmt.Printf("  vault: provisioned=%t\n", report.VaultProvisioned)
 	fmt.Printf("  last sync: %s\n", report.LastSyncCompletedAt)
 	fmt.Printf("  embedding index built at: %s\n", report.EmbeddingIndexBuiltAt)
-	return exitOK
 }
 
 // detailSuffix formats an optional parenthetical detail, shared by

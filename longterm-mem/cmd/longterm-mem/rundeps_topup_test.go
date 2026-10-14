@@ -6,17 +6,19 @@ import (
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/embed"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/embedindex"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vecindex"
 )
 
-// TestObservationRowsForIndex_MatchesLiveEngramRows is the RED/GREEN proof
-// for the embedding index adapter's row source (issue #286's top-up wiring): it
-// must map exactly the live rows of one project into vecindex.Row shape,
-// carrying id/title/content through unchanged, and leave out a
-// soft-deleted row -- the same R-020 scoping cmd_index_embeddings.go
-// already relies on via store.ListObservations.
-func TestObservationRowsForIndex_MatchesLiveEngramRows(t *testing.T) {
+// TestLiveRows_MatchesLiveEngramRows is the RED/GREEN proof for the embedding
+// index adapter's row source (issue #286's top-up wiring) over the real Engram
+// store: the build use case's LiveRows must map exactly the live rows of one
+// project into rows, carrying id/title/content through unchanged, and leave
+// out a soft-deleted row -- the same R-020 scoping the command's own build
+// relies on via store.ListObservations. (The mapping itself is held by
+// internal/embedindex over a table; this holds what the store hands it.)
+func TestLiveRows_MatchesLiveEngramRows(t *testing.T) {
 	const project = "rundeps-topup-project"
 	dbPath := newTestEngramDBWithObservation(t, project, "Live Title", "Live content.")
 
@@ -48,9 +50,9 @@ func TestObservationRowsForIndex_MatchesLiveEngramRows(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = store.Close() })
 
-	rows, err := observationRowsForIndex(store, project)
+	rows, err := embedindex.LiveRows(store, project)
 	if err != nil {
-		t.Fatalf("observationRowsForIndex: %v", err)
+		t.Fatalf("LiveRows: %v", err)
 	}
 	if len(rows) != 1 {
 		t.Fatalf("rows = %+v, want exactly the one live row (soft-deleted row must be excluded)", rows)

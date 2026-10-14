@@ -5,6 +5,7 @@ import (
 
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -37,11 +38,13 @@ import (
 // (maskLedger); the one instant a case seeds (seededInstant) is not, so what the ledger keeps of an earlier run
 // shows.
 //
-// Cases 50 to 52 pin behavior that is known to be odd and is kept as it was, because this change moves code and
-// does not alter what the commands print: a ledger that cannot be read is reported twice, as unreadable and then
-// as unwritable, in the same words, because writing reads the ledger first and meets the same fault. The ledger is
-// left as it was (TestProjectIdentity_ACorruptLedgerIsLeftAsItWas). Whether the second note should say something
-// else, or not be said, is a decision about what the commands print and is not taken here.
+// Cases 50 to 52 are a ledger that cannot be read. They were recorded when it was reported twice, as unreadable and
+// then as unwritable, in the same words, because writing reads the ledger first and meets the same fault; the owner
+// decided on 2026-10-14 that it is reported once, as unreadable, with the words "; the ledger is left as it is and
+// nothing was recorded" after the cause, and not written to, so those three were re-recorded for that and for
+// nothing else (the diff of each is the two old warnings and the one new). The ledger is left as it was
+// (TestProjectIdentity_ACorruptLedgerIsLeftAsItWas). Case 55 is the other fault: a ledger that reads but cannot be
+// written, which keeps its own warning.
 //
 // To rewrite them after a change that is MEANT to alter the output:
 //
@@ -440,6 +443,16 @@ func identityCases() []identityCase {
 			w.git(t, "remote", "add", "origin", widgetsRemote)
 			t.Setenv(engramDBEnvVar, filepath.Join(w.outside, "no", "such", "directory", "engram.db"))
 		}},
+		{name: "55-a-ledger-that-reads-but-cannot-be-written", setup: func(t *testing.T, w *identityWorld) {
+			w.repo(t)
+			w.git(t, "remote", "add", "origin", widgetsRemote)
+			// The ledger's directory is a link to a place that is not there. Reading through it finds no ledger,
+			// which is an empty one and not a fault; writing cannot make the directory. Nothing in this depends on
+			// who the process runs as, as a directory it is not allowed to write to would.
+			if err := os.Symlink(filepath.Join(w.outside, "gone"), filepath.Join(w.root, ".git", "longterm-mem")); err != nil {
+				t.Fatal(err)
+			}
+		}},
 
 		// The commands that record nothing, and the one that adopts nothing.
 		{name: "60-a-dry-run-records-nothing", args: func(w *identityWorld) []string { return []string{"sync", "--dry-run"} }, setup: func(t *testing.T, w *identityWorld) {
@@ -456,6 +469,28 @@ func identityCases() []identityCase {
 			w.repo(t)
 			w.git(t, "remote", "add", "origin", widgetsRemote)
 			w.holdsMemory(t, "widgets", false)
+		}},
+		// The PATH of the world holds no python3 (see TestProjectIdentityWorld_HasNoPython3AndTheGuardSeesOneThatIsAdded),
+		// so the runtime-prerequisites check FAILs by construction and the golden says so on every host; the exit code
+		// 9 is that of a report with failed checks, of which this is one.
+		{name: "63-doctor-resolves-and-records-nothing", args: func(w *identityWorld) []string { return []string{"doctor"} }, setup: func(t *testing.T, w *identityWorld) {
+			w.repo(t)
+			w.git(t, "remote", "add", "origin", widgetsRemote)
+			w.holdsMemory(t, "widgets", false)
+		}},
+		{name: "64-stale-when-the-observations-cannot-be-listed", args: func(w *identityWorld) []string {
+			return []string{"stale", "--project", "github.com/acme/widgets"}
+		}, setup: func(t *testing.T, w *identityWorld) {
+			w.repo(t)
+			w.git(t, "remote", "add", "origin", widgetsRemote)
+			db, err := sql.Open("sqlite", w.dbPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer db.Close()
+			if _, err := db.Exec(`DROP TABLE observations`); err != nil {
+				t.Fatal(err)
+			}
 		}},
 		{name: "70-skills-stale-names-the-origin", args: func(w *identityWorld) []string { return []string{"skills-stale", "--project-root", w.root} }, setup: func(t *testing.T, w *identityWorld) {
 			w.repo(t)
@@ -501,11 +536,26 @@ func newIdentityWorld(t *testing.T) *identityWorld {
 	return w
 }
 
+// python3OnPath is where python3 resolves on the PATH of the process, which is how the program looks for it, or the
+// empty string when it does not resolve.
+func python3OnPath() string {
+	found, err := exec.LookPath("python3")
+	if err != nil {
+		return ""
+	}
+	return found
+}
+
 func runIdentityCase(t *testing.T, tc identityCase) (w *identityWorld, rendering string) {
 	t.Helper()
 	w = newIdentityWorld(t)
 	if tc.setup != nil {
 		tc.setup(t, w)
+	}
+	// No case of this set provides python3 (case 63 pins a doctor whose runtime-prerequisites check FAILs for want
+	// of it), so a world that finds one has been given it by mistake: say so before the golden differs.
+	if found := python3OnPath(); found != "" {
+		t.Fatalf("python3 resolves at %q on the PATH of the world %q, which holds none by construction: the goldens of this set are those of a host without it", found, tc.name)
 	}
 	dir := w.root
 	if tc.cwd != nil {
@@ -529,6 +579,24 @@ func TestProjectIdentityGolden(t *testing.T) {
 			w, got := runIdentityCase(t, tc)
 			w.check(t, "project-identity-"+tc.name, got)
 		})
+	}
+}
+
+// The runtime-prerequisites check of `doctor` looks for python3 on the PATH of the process, and the PATH of a
+// world is its own directory alone, which holds the file that runs git and nothing else. So python3 is found in no
+// world of this set, whatever the host keeps: case 63 pins a check that FAILs by construction, and its golden is
+// the same on a host with python3 and on one without. This is what makes that true, and what fails if a world is
+// ever given one: python3OnPath is where python3 resolves from here (empty when it does not).
+func TestProjectIdentityWorld_HasNoPython3AndTheGuardSeesOneThatIsAdded(t *testing.T) {
+	w := newIdentityWorld(t)
+	if found := python3OnPath(); found != "" {
+		t.Errorf("python3 resolves at %q on the PATH of an identity world, want it found nowhere", found)
+	}
+
+	w.standIn(t, "python3")
+
+	if found, want := python3OnPath(), filepath.Join(w.binDir, "python3"); found != want {
+		t.Errorf("a python3 added to the world's directory resolves at %q, want %q: the guard does not look where the program does", found, want)
 	}
 }
 
@@ -577,9 +645,11 @@ func TestMaskLedger_KeepsTheSeededInstantAndMasksTheRestAndTheDigests(t *testing
 	}
 }
 
-// A ledger that cannot be trusted is left exactly as it was: the note that it could not be written is not the
-// command overwriting it. The goldens show the ledger's text after the run; this compares its bytes before and
-// after, so a run that rewrote it with the same words, or with a newline at the end, would fail here.
+// A ledger that cannot be trusted is left exactly as it was, and the command says so once. The goldens show the
+// ledger's text after the run; this compares its bytes before and after, so a run that rewrote it with the same
+// words, or with a newline at the end, would fail here, and it counts what the command says of the ledger: one
+// warning, that it could not be read, saying nothing was recorded; none that it could not be written (the owner's
+// decision of 2026-10-14: a ledger that cannot be read is not written, so the same cause is not reported twice).
 func TestProjectIdentity_ACorruptLedgerIsLeftAsItWas(t *testing.T) {
 	for _, prefix := range []string{"50-", "51-"} {
 		for _, tc := range identityCases() {
@@ -602,8 +672,17 @@ func TestProjectIdentity_ACorruptLedgerIsLeftAsItWas(t *testing.T) {
 				if err != nil || string(after) != string(before) {
 					t.Errorf("the ledger is %q (%v) after the run, was %q", after, err, before)
 				}
-				if code != exitOK || !strings.Contains(stderr, "identity ledger could not be written") {
-					t.Errorf("exit %d, stderr %q; want the command to go on (exit %d) and say the ledger could not be written", code, stderr, exitOK)
+				if code != exitOK {
+					t.Errorf("exit %d, want the command to go on (exit %d)", code, exitOK)
+				}
+				if got := strings.Count(stderr, "identity ledger could not be read"); got != 1 {
+					t.Errorf("the command said the ledger could not be read %d times, want once; stderr:\n%s", got, stderr)
+				}
+				if strings.Contains(stderr, "could not be written") {
+					t.Errorf("the command says the ledger could not be written, which it did not try to do; stderr:\n%s", stderr)
+				}
+				if !strings.Contains(stderr, "; the ledger is left as it is and nothing was recorded\n") {
+					t.Errorf("the warning does not end by saying the ledger was left alone and nothing recorded; stderr:\n%s", stderr)
 				}
 			})
 		}
