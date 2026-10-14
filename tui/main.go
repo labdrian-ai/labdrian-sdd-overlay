@@ -10,6 +10,7 @@ import (
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/tui/internal/adapters/overlaycli"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/tui/internal/app"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/tui/internal/domain"
 )
@@ -17,7 +18,7 @@ import (
 // main is the composition root: it locates the backend and hands the program
 // to bubbletea. Nothing else chooses an adapter.
 func main() {
-	root, rootErr := RepoRoot()
+	root, rootErr := overlaycli.RepoRoot()
 
 	p := tea.NewProgram(compose(root, rootErr), tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
@@ -31,7 +32,7 @@ func main() {
 // menu, all handed to the model, which builds none of them. rootErr is why the
 // backend could not be located, when it could not; the model shows it.
 func compose(root string, rootErr error) tea.Model {
-	backend := newOverlayCLI(root)
+	backend := overlaycli.New(root)
 
 	return newModel(deps{
 		rootErr: rootErr,

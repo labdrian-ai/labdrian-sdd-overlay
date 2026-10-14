@@ -1,6 +1,6 @@
-package main
+package overlaycli
 
-// Contract tests between the overlayCLI backup query and the REAL
+// Contract tests between the CLI backup query and the REAL
 // `labdrian-overlay restore --target <t> --list`: what the TUI assumes about
 // which backup is the latest, and about whose state directory it reads. They
 // run the actual script under scratch HOME and STATE_DIR (see
@@ -15,7 +15,7 @@ import (
 )
 
 func TestOverlayCLIContract_LatestBackup_NoBackups(t *testing.T) {
-	cli, _, _ := realOverlayCLI(t)
+	cli, _, _ := realCLI(t)
 
 	b, ok, err := cli.LatestBackup("claude")
 	if err != nil || ok || b != (domain.Backup{}) {
@@ -26,7 +26,7 @@ func TestOverlayCLIContract_LatestBackup_NoBackups(t *testing.T) {
 // TestOverlayCLIContract_LatestBackup_PicksTheNewest: the TUI always targets
 // the most recent backup, and relies on the backend listing it last.
 func TestOverlayCLIContract_LatestBackup_PicksTheNewest(t *testing.T) {
-	cli, _, stateDir := realOverlayCLI(t)
+	cli, _, stateDir := realCLI(t)
 	writeBackupFixture(t, stateDir, "claude", "20260101T000000Z", "v1.2.0\tabc123\t2026-01-01T00:00:00Z")
 	writeBackupFixture(t, stateDir, "claude", "20260215T120000Z", "v1.3.0\tdef456\t2026-02-15T12:00:00Z")
 
@@ -43,7 +43,7 @@ func TestOverlayCLIContract_LatestBackup_PicksTheNewest(t *testing.T) {
 // taken in the same second get a "-N" suffix on the later one, and the backend
 // must list it after the first, or the TUI would offer the older of the two.
 func TestOverlayCLIContract_LatestBackup_SameSecondSuffixIsNewer(t *testing.T) {
-	cli, _, stateDir := realOverlayCLI(t)
+	cli, _, stateDir := realCLI(t)
 	writeBackupFixture(t, stateDir, "claude", "20260215T120000Z", "v1.3.0\tdef456\t2026-02-15T12:00:00Z")
 	writeBackupFixture(t, stateDir, "claude", "20260215T120000Z-1", "v1.4.0\tghi789\t2026-02-15T12:00:00Z")
 
@@ -58,7 +58,7 @@ func TestOverlayCLIContract_LatestBackup_SameSecondSuffixIsNewer(t *testing.T) {
 // it disagreed with the backend whenever STATE_DIR pointed elsewhere. A decoy
 // newer backup sits where the old lookup would have looked.
 func TestOverlayCLIContract_LatestBackup_FollowsTheBackendsStateDir(t *testing.T) {
-	cli, home, stateDir := realOverlayCLI(t)
+	cli, home, stateDir := realCLI(t)
 	if stateDir == filepath.Join(home, ".labdrian-overlay") {
 		t.Fatal("test setup: STATE_DIR must differ from the default location for this test to mean anything")
 	}
@@ -84,7 +84,7 @@ func TestOverlayCLIContract_LatestBackup_MetaThatNamesNoVersion(t *testing.T) {
 		"empty .meta":    "",
 	} {
 		t.Run(name, func(t *testing.T) {
-			cli, _, stateDir := realOverlayCLI(t)
+			cli, _, stateDir := realCLI(t)
 			writeBackupFixture(t, stateDir, "claude", "20260101T000000Z", meta)
 
 			b, ok, err := cli.LatestBackup("claude")
@@ -101,7 +101,7 @@ func TestOverlayCLIContract_LatestBackup_MetaThatNamesNoVersion(t *testing.T) {
 // TestOverlayCLIContract_LatestBackup_TargetIsolation: one target's backups
 // never answer for another's.
 func TestOverlayCLIContract_LatestBackup_TargetIsolation(t *testing.T) {
-	cli, _, stateDir := realOverlayCLI(t)
+	cli, _, stateDir := realCLI(t)
 	writeBackupFixture(t, stateDir, "claude", "20260101T000000Z", "v1.0.0\tabc\t2026-01-01T00:00:00Z")
 
 	if b, ok, err := cli.LatestBackup("opencode"); err != nil || ok {
@@ -114,7 +114,7 @@ func TestOverlayCLIContract_LatestBackup_TargetIsolation(t *testing.T) {
 // than an empty answer. The model never asks (restore is CopyTargetsOnly), and
 // this pins why that guard exists.
 func TestOverlayCLIContract_LatestBackup_APackageTargetIsAnError(t *testing.T) {
-	cli, _, stateDir := realOverlayCLI(t)
+	cli, _, stateDir := realCLI(t)
 	// Even a leftover directory must not make a package target restorable.
 	if err := os.MkdirAll(filepath.Join(stateDir, "backups", "pi", "20260101T000000Z"), 0o755); err != nil {
 		t.Fatal(err)
@@ -128,7 +128,7 @@ func TestOverlayCLIContract_LatestBackup_APackageTargetIsAnError(t *testing.T) {
 // TestOverlayCLIContract_RestoreListIsReadOnly: asking never changes anything
 // -- the listing is a query, so the scratch state stays as it was.
 func TestOverlayCLIContract_RestoreListIsReadOnly(t *testing.T) {
-	cli, home, stateDir := realOverlayCLI(t)
+	cli, home, stateDir := realCLI(t)
 	writeBackupFixture(t, stateDir, "claude", "20260101T000000Z", "v1.2.0\tabc123\t2026-01-01T00:00:00Z")
 
 	before := listTree(t, home)

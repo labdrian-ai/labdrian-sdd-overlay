@@ -1,11 +1,11 @@
-package main
+package overlaycli
 
 // Integration harness for `bin/labdrian-overlay self-update` (D1-D3, R-004
 // through R-007). This is a Go-to-bash test: it spawns the REAL backend
 // script against hermetic scratch git repos (a bare "origin" plus a working
 // clone, both under t.TempDir()), so it exercises the actual `git`
 // invocations the subcommand performs rather than a Go re-implementation of
-// its logic. It lives in package main (the tui module) per design.md's File
+// its logic. It lives in the overlaycli adapter's package (the tui module) per design.md's File
 // Changes table, even though it never touches Bubbletea.
 //
 // Every scratch repo is fully isolated from the developer's real git

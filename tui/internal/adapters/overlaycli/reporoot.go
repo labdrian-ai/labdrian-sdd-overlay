@@ -1,4 +1,4 @@
-package main
+package overlaycli
 
 import (
 	"fmt"

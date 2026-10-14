@@ -1,4 +1,4 @@
-package main
+package overlaycli
 
 // Integration harness for `bin/labdrian-overlay`'s release-identity, digest,
 // and state helpers (overlay-release-identity R-001..R-003, overlay-release-state
@@ -6,7 +6,7 @@ package main
 // established by selfupdate_backend_test.go: it spawns the REAL backend
 // script against hermetic scratch git repos, reusing that file's shared
 // helpers (gitTestEnv, runGit, writeFile, realBackendBin) since both live in
-// package main.
+// package overlaycli.
 //
 // Unlike self-update (a full subcommand), the functions under test here
 // (resolve_latest_release_tag, compute_target_digest, state_read_target,

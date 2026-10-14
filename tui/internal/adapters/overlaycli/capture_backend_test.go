@@ -1,11 +1,11 @@
-package main
+package overlaycli
 
 // Integration harness for `bin/labdrian-overlay capture`'s upstream-branch
 // reconcile step. This is a Go-to-bash test, following the exact pattern
 // established by selfupdate_backend_test.go (real backend script against
 // hermetic scratch git repos) — it reuses that file's shared helpers
 // (gitTestEnv, runGit, writeFile, currentBranch, headRev, realBackendBin,
-// runBackendSubcommand) since both live in package main.
+// runBackendSubcommand) since both live in package overlaycli.
 //
 // Bug this covers: cmd_capture used to `git checkout upstream` and push
 // unconditionally, with no fetch/reconcile step. If origin/upstream had

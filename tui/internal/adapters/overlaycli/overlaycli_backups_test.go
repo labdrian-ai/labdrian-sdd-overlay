@@ -1,4 +1,4 @@
-package main
+package overlaycli
 
 import (
 	"os"
@@ -90,7 +90,7 @@ func TestOverlayCLI_LatestBackup_AsksTheBackendToListThatTarget(t *testing.T) {
 	recorder := filepath.Join(root, "invoked.log")
 	writeStubBackend(t, root, recorder, "Backups for opencode (newest last):\n  20260301T093000Z (v1.5.0)", 0)
 
-	b, ok, err := newOverlayCLI(root).LatestBackup("opencode")
+	b, ok, err := New(root).LatestBackup("opencode")
 	if err != nil || !ok || b != (domain.Backup{Timestamp: "20260301T093000Z", Version: "v1.5.0"}) {
 		t.Fatalf("LatestBackup = %+v, %v, %v", b, ok, err)
 	}
@@ -113,7 +113,7 @@ func TestOverlayCLI_LatestBackup_FailsClosed(t *testing.T) {
 		root := t.TempDir()
 		writeScriptBackend(t, root, `echo "ERROR: restore does not support --target pi" >&2; exit 1`)
 
-		b, ok, err := newOverlayCLI(root).LatestBackup("pi")
+		b, ok, err := New(root).LatestBackup("pi")
 		if err == nil || ok || b != (domain.Backup{}) {
 			t.Fatalf("LatestBackup = %+v, %v, %v; want an error and no backup", b, ok, err)
 		}
@@ -126,13 +126,13 @@ func TestOverlayCLI_LatestBackup_FailsClosed(t *testing.T) {
 		root := t.TempDir()
 		writeScriptBackend(t, root, `echo "hello"`)
 
-		if b, ok, err := newOverlayCLI(root).LatestBackup("claude"); err == nil || ok {
+		if b, ok, err := New(root).LatestBackup("claude"); err == nil || ok {
 			t.Fatalf("LatestBackup = %+v, %v, %v; want an error", b, ok, err)
 		}
 	})
 
 	t.Run("no repo root at all", func(t *testing.T) {
-		if _, ok, err := newOverlayCLI("").LatestBackup("claude"); err == nil || ok {
+		if _, ok, err := New("").LatestBackup("claude"); err == nil || ok {
 			t.Fatalf("LatestBackup with no backend: ok=%v err=%v; want an error", ok, err)
 		}
 	})

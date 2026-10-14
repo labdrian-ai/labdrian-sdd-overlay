@@ -1,4 +1,4 @@
-package main
+package overlaycli
 
 // The adapter's other two ports: Run carries out one invocation of the backend
 // and says how it ended, and Report reads the cached-only sync-check the launch
@@ -32,7 +32,7 @@ func TestOverlayCLI_Run_RunsOneInvocationFromTheRepoRoot(t *testing.T) {
 	recorder := filepath.Join(root, "invoked.log")
 	writeStubBackend(t, root, recorder, "applied", 0)
 
-	run := newOverlayCLI(root).Run([]string{"apply", "--target", "claude"})
+	run := New(root).Run([]string{"apply", "--target", "claude"})
 
 	if run.Err != nil || run.ExitCode != 0 || strings.TrimSpace(run.Output) != "applied" {
 		t.Errorf("Run = %+v, want a clean run that printed applied", run)
@@ -68,7 +68,7 @@ func TestOverlayCLI_Run_SaysHowTheBackendEnded(t *testing.T) {
 			root := t.TempDir()
 			writeScriptBackend(t, root, tc.script)
 
-			run := newOverlayCLI(root).Run([]string{"status"})
+			run := New(root).Run([]string{"status"})
 
 			if run.Output != tc.output || run.ExitCode != tc.exitCode || (run.Err != nil) != tc.failed {
 				t.Errorf("Run = {output %q, exit %d, err %v}, want {output %q, exit %d, failed %t}",
@@ -78,7 +78,7 @@ func TestOverlayCLI_Run_SaysHowTheBackendEnded(t *testing.T) {
 	}
 
 	t.Run("a backend that cannot be started has no exit status of its own", func(t *testing.T) {
-		run := newOverlayCLI(t.TempDir()).Run([]string{"status"})
+		run := New(t.TempDir()).Run([]string{"status"})
 		if run.Err == nil || run.ExitCode != -1 {
 			t.Errorf("Run = %+v, want a failure with exit -1", run)
 		}
@@ -98,7 +98,7 @@ func TestOverlayCLI_Report_RunsACachedOnlySyncCheckFromTheRepoRoot(t *testing.T)
 		"ACTION:claude: run 'git pull' to update your local clone\n"
 	writeStubBackend(t, root, recorder, sample, 1) // nonzero exit on purpose
 
-	report := newOverlayCLI(root).Report()
+	report := New(root).Report()
 
 	if !strings.Contains(report, "REPO_BEHIND_ORIGIN=7") {
 		t.Errorf("Report = %q, want the sync-check output even though the stub exits nonzero", report)
@@ -116,7 +116,7 @@ func TestOverlayCLI_Report_RunsACachedOnlySyncCheckFromTheRepoRoot(t *testing.T)
 // TestOverlayCLI_Report_WithNoBackendIsEmpty: a probe that cannot be run says
 // nothing, which the reader degrades to "unknown".
 func TestOverlayCLI_Report_WithNoBackendIsEmpty(t *testing.T) {
-	if report := newOverlayCLI(t.TempDir()).Report(); report != "" {
+	if report := New(t.TempDir()).Report(); report != "" {
 		t.Errorf("Report = %q, want nothing from a repo root without a backend", report)
 	}
 }

@@ -1,4 +1,4 @@
-package main
+package overlaycli
 
 // Integration harness for `bin/labdrian-overlay`'s backup/restore and
 // surfacing additions (overlay-backup-restore R-001..R-003,
@@ -8,7 +8,7 @@ package main
 // hermetic scratch git repos / plain scratch directories, reusing shared
 // helpers (gitTestEnv, runGit, writeFile, realBackendBin, runBackendFunc,
 // runBackendSubcommandWithHome, newScratchRepo, pushUpstreamTag,
-// writeDigestFixtureFiles) since all of these live in package main.
+// writeDigestFixtureFiles) since all of these live in package overlaycli.
 //
 // `restore` (design.md's threat matrix: "restore performs zero git
 // operations") is deliberately exercised with a plain, non-git OVERLAY_DIR

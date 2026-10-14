@@ -1,4 +1,4 @@
-package main
+package overlaycli
 
 import (
 	"os"
@@ -107,7 +107,7 @@ func TestOverlayCLI_Targets_AsksTheBackendFromTheRepoRoot(t *testing.T) {
 	recorder := filepath.Join(root, "invoked.log")
 	writeStubBackend(t, root, recorder, "claude\tcopy\npi\tpackage", 0)
 
-	got, err := newOverlayCLI(root).Targets()
+	got, err := New(root).Targets()
 	if err != nil {
 		t.Fatalf("Targets: unexpected error: %v", err)
 	}
@@ -137,7 +137,7 @@ func TestOverlayCLI_Targets_FailsClosed(t *testing.T) {
 		root := t.TempDir()
 		writeScriptBackend(t, root, `echo "boom: catalog unreadable" >&2; exit 3`)
 
-		got, err := newOverlayCLI(root).Targets()
+		got, err := New(root).Targets()
 		if err == nil {
 			t.Fatalf("Targets = %+v, want an error", got)
 		}
@@ -153,7 +153,7 @@ func TestOverlayCLI_Targets_FailsClosed(t *testing.T) {
 		root := t.TempDir()
 		writeScriptBackend(t, root, `echo "not a catalog"`)
 
-		if got, err := newOverlayCLI(root).Targets(); err == nil {
+		if got, err := New(root).Targets(); err == nil {
 			t.Fatalf("Targets = %+v, want an error", got)
 		}
 	})
@@ -162,19 +162,19 @@ func TestOverlayCLI_Targets_FailsClosed(t *testing.T) {
 		root := t.TempDir()
 		writeScriptBackend(t, root, `exit 0`)
 
-		if got, err := newOverlayCLI(root).Targets(); err == nil {
+		if got, err := New(root).Targets(); err == nil {
 			t.Fatalf("Targets = %+v, want an error for an empty catalog", got)
 		}
 	})
 
 	t.Run("a repo root without bin/labdrian-overlay", func(t *testing.T) {
-		if got, err := newOverlayCLI(t.TempDir()).Targets(); err == nil {
+		if got, err := New(t.TempDir()).Targets(); err == nil {
 			t.Fatalf("Targets = %+v, want an error", got)
 		}
 	})
 
 	t.Run("no repo root at all", func(t *testing.T) {
-		got, err := newOverlayCLI("").Targets()
+		got, err := New("").Targets()
 		if err == nil {
 			t.Fatalf("Targets = %+v, want an error", got)
 		}

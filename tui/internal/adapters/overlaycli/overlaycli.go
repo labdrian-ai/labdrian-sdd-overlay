@@ -1,4 +1,9 @@
-package main
+// Package overlaycli is the TUI's driven adapter over the bash backend,
+// bin/labdrian-overlay: it answers the ports the domain owns (the target
+// catalog, the backups, running an invocation, the launch probe) by running
+// the script, and it knows the script's wire formats. It also finds where the
+// script is (RepoRoot). Only the composition root imports it.
+package overlaycli
 
 import (
 	"bytes"
@@ -19,11 +24,13 @@ import (
 // answered by now is broken, and the caller fails closed instead of waiting.
 const backendQueryTimeout = 15 * time.Second
 
-// overlayCLI is the driven adapter behind the TUI's ports: it answers by
+// CLI is the driven adapter behind the TUI's ports: it answers by
 // asking the bash backend, bin/labdrian-overlay, which stays the single
 // source of truth for everything it reports. It parses the backend's wire
-// formats into the TUI's own types; nothing outside this file knows them.
-type overlayCLI struct {
+// formats into the TUI's own types; nothing outside this package knows them,
+// except the sync-check report, which domain.ParseSyncCheck still reads (it
+// moves here with the structured invocations).
+type CLI struct {
 	// root is the overlay repo root that holds bin/labdrian-overlay; empty
 	// when it could not be located.
 	root string
@@ -33,17 +40,17 @@ type overlayCLI struct {
 	env []string
 }
 
-// newOverlayCLI returns the adapter over the backend under root.
-func newOverlayCLI(root string) overlayCLI { return overlayCLI{root: root} }
+// New returns the adapter over the backend under root.
+func New(root string) CLI { return CLI{root: root} }
 
 // binary is the path of the backend script under the repo root.
-func (c overlayCLI) binary() string { return filepath.Join(c.root, "bin", "labdrian-overlay") }
+func (c CLI) binary() string { return filepath.Join(c.root, "bin", "labdrian-overlay") }
 
 // Run implements domain.Backend: it runs one invocation of the backend script
 // from the repo root and returns what it printed, standard output and standard
 // error together, and how it ended. There is no deadline: an action (apply,
 // self-update) takes as long as it takes, and the operator can see it run.
-func (c overlayCLI) Run(args []string) domain.Execution {
+func (c CLI) Run(args []string) domain.Execution {
 	cmd := exec.Command(c.binary(), args...)
 	cmd.Dir = c.root
 	cmd.Env = c.env
@@ -66,7 +73,7 @@ func (c overlayCLI) Run(args []string) domain.Execution {
 // --fetch/--check-origin, per R-001) from the repo root. Whatever the backend
 // printed is the report, even when the process exits non-zero: the probe reads
 // cached refs, it does not require a clean exit.
-func (c overlayCLI) Report() string {
+func (c CLI) Report() string {
 	cmd := exec.Command(c.binary(), "sync-check")
 	cmd.Dir = c.root
 	cmd.Env = c.env
@@ -75,7 +82,7 @@ func (c overlayCLI) Report() string {
 }
 
 // Targets implements TargetCatalog with `labdrian-overlay targets`.
-func (c overlayCLI) Targets() ([]domain.Target, error) {
+func (c CLI) Targets() ([]domain.Target, error) {
 	out, err := c.query("targets")
 	if err != nil {
 		return nil, err
@@ -90,7 +97,7 @@ func (c overlayCLI) Targets() ([]domain.Target, error) {
 // LatestBackup implements BackupQuery with `labdrian-overlay restore --target
 // <target> --list`. The backend owns the backup layout and the STATE_DIR it
 // lives under, so the TUI no longer reads that directory itself.
-func (c overlayCLI) LatestBackup(target string) (domain.Backup, bool, error) {
+func (c CLI) LatestBackup(target string) (domain.Backup, bool, error) {
 	out, err := c.query("restore", "--target", target, "--list")
 	if err != nil {
 		return domain.Backup{}, false, err
@@ -144,7 +151,7 @@ func parseBackupList(output, target string) (domain.Backup, bool, error) {
 
 // query runs one backend subcommand and returns its stdout. A failure carries
 // the backend's own stderr, which is where it explains itself.
-func (c overlayCLI) query(args ...string) (string, error) {
+func (c CLI) query(args ...string) (string, error) {
 	if c.root == "" {
 		return "", errors.New("could not locate the overlay backend (bin/labdrian-overlay); set OVERLAY_DIR")
 	}

@@ -1,6 +1,6 @@
-package main
+package overlaycli
 
-// Contract tests between the TUI's overlayCLI adapter and the REAL
+// Contract tests between the TUI's CLI adapter and the REAL
 // bin/labdrian-overlay: they pin what the TUI assumes about the backend's
 // answers, so a backend change that breaks an assumption fails here instead
 // of in front of an operator. Like the other *_backend_test.go files they
@@ -32,13 +32,13 @@ func hermeticBackendEnv(t *testing.T) (env []string, home, stateDir string) {
 	), home, stateDir
 }
 
-// realOverlayCLI returns an adapter over this checkout's real backend script,
+// realCLI returns an adapter over this checkout's real backend script,
 // running under hermeticBackendEnv.
-func realOverlayCLI(t *testing.T) (cli overlayCLI, home, stateDir string) {
+func realCLI(t *testing.T) (cli CLI, home, stateDir string) {
 	t.Helper()
 	env, home, stateDir := hermeticBackendEnv(t)
 	root := filepath.Dir(filepath.Dir(realBackendBin(t)))
-	return overlayCLI{root: root, env: env}, home, stateDir
+	return CLI{root: root, env: env}, home, stateDir
 }
 
 // noMeta, as the metaContent of writeBackupFixture, writes no .meta file at all.
@@ -65,7 +65,7 @@ func writeBackupFixture(t *testing.T, stateDir, target, timestamp, metaContent s
 // `--target all` acts on. The expansion is read from the real script's own
 // resolve_targets, so a list kept separately on either side fails here.
 func TestOverlayCLIContract_CatalogIsWhatAllExpandsTo(t *testing.T) {
-	cli, home, _ := realOverlayCLI(t)
+	cli, home, _ := realCLI(t)
 
 	catalog, err := cli.Targets()
 	if err != nil {
@@ -92,7 +92,7 @@ func TestOverlayCLIContract_CatalogIsWhatAllExpandsTo(t *testing.T) {
 // are offered only for domain.KindCopy targets, so the kind the TUI parses must be
 // the one the backend enforces (is_copy_target) when it refuses the rest.
 func TestOverlayCLIContract_KindsMatchTheBackendsCopyRule(t *testing.T) {
-	cli, home, _ := realOverlayCLI(t)
+	cli, home, _ := realCLI(t)
 
 	catalog, err := cli.Targets()
 	if err != nil {
