@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/runtimes"
 )
 
 // InstallStateStore is where the record of what longterm-mem installed is kept: the dependency a Writer is given
@@ -58,6 +60,9 @@ type Writer struct {
 	// State is where the record of what was installed is kept. A Writer without one writes nothing.
 	State InstallStateStore
 }
+
+// A Writer is what the registration use case writes through (runtimes.Registrar).
+var _ runtimes.Registrar = Writer{}
 
 // Register installs (or reinstalls) the entry into target's configuration at configRoot, recording its fingerprint
 // under stateDir: the writer of the runtime target names (RegisterClaude, RegisterOpencode, RegisterCodex,

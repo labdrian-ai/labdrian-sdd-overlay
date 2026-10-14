@@ -3,11 +3,11 @@ package register
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/durable"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/runtimes"
 )
 
 // installStateFileName is install-state.json's file name inside a target's
@@ -24,16 +24,12 @@ const installStateFileName = "install-state.json"
 // jsonInstall caller returns this wrapped with errors.Is still resolving
 // it, so callers can branch on it without string matching.
 //
-// The text carries the way out, and deliberately does not repeat the
-// "register:" prefix its wrapper already adds. This message is the only
-// instruction a user staring at exit 6 gets, and it used to be both
-// tripled ("register: claude: register: claude: register: ...", one
-// prefix per layer) and a dead end: it named the situation and no action.
-// Its wrapper names the config file, so between them the message says
-// which file, what is wrong, and what to do about it.
+// It is the refusal the registration use case (internal/runtimes) knows the
+// writers by, and it is that package's value, with the way out in its text
+// (see runtimes.ErrConflict): the writer wraps it, the use case finds it.
 //
-// The de-duplication rule that produced that wrapper is now stated once,
-// for the whole package: exactly ONE layer names the command, and it is
+// The de-duplication rule for the wrappers around it is stated once, for the
+// whole package: exactly ONE layer names the command, and it is
 // the per-target wrap in jsonInstall/tomlInstall ("register: <target>: ")
 // or jsonUninstall/tomlUninstall ("unregister: <target>: "), because only
 // those know which direction is running. Every helper underneath them
@@ -42,7 +38,7 @@ const installStateFileName = "install-state.json"
 // "longterm-mem: register: claude: register: read ...", a command that
 // was never run, twice (errormessage_test.go pins the convention,
 // cmd/longterm-mem/register_messages_test.go pins the resulting lines).
-var ErrConflict = errors.New("an entry with this name already exists and is not owned by longterm-mem; to hand it to longterm-mem, remove that entry by hand and run register again")
+var ErrConflict = runtimes.ErrConflict
 
 // uninstallCannotDeriveOwnership is the entryOwned argument jsonUninstall
 // and tomlUninstall pass to Decide, named rather than spelled `false` at

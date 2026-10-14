@@ -1,31 +1,29 @@
 package main
 
 import (
-	"errors"
 	"flag"
 	"fmt"
-	iofs "io/fs" // aliased: fs is the FlagSet variable below
 	"os"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/register"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/runtimes"
 )
 
 // cmdRegister implements `longterm-mem register --target
-// claude|opencode|codex|all [--config-root DIR] [--state-dir DIR]
-// [--binary PATH]` (R-016, R-017, R-018). It drives internal/register's
-// per-runtime writers, which own the actual D9 decision
-// (insert/replace/refuse/noop) and byte-preserving edit, and it resolves
-// targets and default paths through register_paths.go; what is left here
-// is the effectful shell -- flag parsing, per-target dispatch, and mapping
-// each writer's outcome to a process exit code. An untagged same-named
-// conflict (register.ErrConflict) exits 6, a path that could not be
-// resolved from the environment exits 8 (exitPathUnresolvable), any other
-// per-target failure exits 1, success exits 0 -- except that a --target
-// all expansion skips a runtime whose configuration file is absent, since
-// that is how a runtime nobody installed looks from here. Like cmdDoctor,
-// every target in the expanded list is attempted before the exit code is
-// decided, so one target's failure never hides another target's success or
-// failure.
+// claude|opencode|codex|pi|all [--config-root DIR] [--state-dir DIR]
+// [--binary PATH]` (R-016, R-017, R-018). What it does is the registration
+// use case's (internal/runtimes: which runtimes a target names, what is
+// refused before any is touched, the pi probe, the defaults, the loop over
+// the runtimes that attempts every one whatever happened to the others,
+// and the verdict among their outcomes), over the per-runtime writers of
+// internal/register, which own the D9 decision (insert/replace/refuse/noop)
+// and the byte-preserving edit; what is left here is the effectful shell --
+// flag parsing, and rendering the report with the exit code of the
+// contract. An untagged same-named conflict exits 6, a path that could not
+// be resolved from the environment exits 8 (exitPathUnresolvable), any
+// other per-target failure exits 1, success exits 0 -- except that a
+// --target all expansion skips a runtime whose configuration file is
+// absent, since that is how a runtime nobody installed looks from here.
 func cmdRegister(args []string) int {
 	fs := flag.NewFlagSet("register", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
@@ -34,136 +32,94 @@ func cmdRegister(args []string) int {
 	stateDir := fs.String("state-dir", "", "override install-state.json's directory")
 	binary := fs.String("binary", "", "override the longterm-mem binary path written into the entry")
 	if err := fs.Parse(args); err != nil {
-		return 2
-	}
-	if *target == "" {
-		fmt.Fprintln(os.Stderr, "longterm-mem: register: --target is required")
-		return 2
+		return exitUsage
 	}
 
-	targets, err := registerExpandTarget(*target)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "longterm-mem: register: %v\n", err)
-		return 2
-	}
-	if *configRoot != "" && len(targets) > 1 {
-		fmt.Fprintln(os.Stderr, "longterm-mem: register: --config-root requires a single --target, not \"all\"")
-		return 2
-	}
+	report := machineRuntimes().Register(runtimes.Request{Target: *target, ConfigRoot: *configRoot, StateDir: *stateDir, Binary: *binary})
+	return reportRegister(report)
+}
 
-	resolvedStateDir := *stateDir
-	if resolvedStateDir == "" {
-		resolvedStateDir = defaultRegisterStateDir()
+// reportRegister says what a run of register did, runtime by runtime, and answers the exit code of it.
+//
+// Every error the writers return already names the package and the target it was working on ("register: claude:
+// ..."), so it is printed alone rather than re-stating both. Re-stating them is how the conflict message came to
+// read "longterm-mem: register: claude: register: claude: register: an entry ...".
+func reportRegister(report runtimes.Report) int {
+	if report.Refusal != nil {
+		return refuseRegistration("register", *report.Refusal)
 	}
-	resolvedBinary := *binary
-	if resolvedBinary == "" {
-		resolvedBinary = defaultRegisterBinaryPath()
+	for _, result := range report.Results {
+		switch result.Outcome {
+		case runtimes.Done:
+			fmt.Printf("longterm-mem: register: %s: ok\n", result.Target)
+		case runtimes.Skipped:
+			fmt.Printf("longterm-mem: register: %s: skipped (no configuration found at %s)\n", result.Target, result.Root)
+		case runtimes.RootUnresolved:
+			fmt.Fprintf(os.Stderr, "longterm-mem: register: %s: could not resolve a config root; set HOME or pass --config-root\n", result.Target)
+		default: // an entry that is not ours, or a failure: the writer says which, in the words of its error
+			fmt.Fprintf(os.Stderr, "longterm-mem: %v\n", result.Err)
+		}
 	}
-	// An unresolvable default path must never degrade into a silent
-	// fallback. An empty binary path installs a structurally valid entry
-	// that can never start a server, and an empty state dir writes
-	// install-state.json into whatever the process working directory
-	// happens to be -- losing the ownership record the next run needs to
-	// tell its own write from a hand edit. Both are refused before any
-	// target is touched, rather than written and reported as ok.
-	if resolvedStateDir == "" {
-		fmt.Fprintln(os.Stderr, "longterm-mem: register: could not resolve the install-state directory; set HOME or pass --state-dir")
+	return registrationExitCode(report.Failure())
+}
+
+// refuseRegistration says why a request of command (register or unregister) was refused before any runtime was
+// touched, and answers the exit code of the refusal.
+func refuseRegistration(command string, refusal runtimes.Refusal) int {
+	fmt.Fprintf(os.Stderr, "longterm-mem: %s: %s\n", command, refusalWords(refusal))
+	switch refusal.Kind {
+	case runtimes.StateDirUnresolved, runtimes.BinaryUnresolved:
 		return exitPathUnresolvable
-	}
-	if resolvedBinary == "" {
-		fmt.Fprintln(os.Stderr, "longterm-mem: register: could not resolve the longterm-mem binary path; set HOME or pass --binary")
-		return exitPathUnresolvable
-	}
-
-	// pi is not part of registerExpandTarget's own "all" expansion
-	// (registerExpandTarget's own doc comment says why); it is folded in
-	// here instead, gated on piInstalled's probe (C6): --target all
-	// attempts pi only when it looks installed, silently skipping it
-	// otherwise — the same "this machine does not have it" story the
-	// other three targets get from a missing config file. --target pi
-	// named explicitly gets the opposite: fail loudly when the probe says
-	// no, rather than let jsonInstall discover the missing package dir on
-	// its own with a less specific error.
-	if *target == "all" || *target == "pi" {
-		piRoot := *configRoot
-		if piRoot == "" {
-			piRoot = defaultRegisterConfigRoot("pi")
-		}
-		switch {
-		case *target == "pi" && !piInstalled(piRoot):
-			fmt.Fprintf(os.Stderr, "longterm-mem: register: pi: not installed (no package at %s, or not listed in ~/.pi/agent/settings.json); build it (labdrian-overlay apply --target pi) and run pi install first\n", piRoot)
-			return 1
-		case *target == "all" && piInstalled(piRoot):
-			targets = append(targets, "pi")
-		}
-	}
-
-	// expandedAll distinguishes "register everything this machine has"
-	// from "register this one runtime, which I am telling you is there".
-	// Only the first may skip a runtime whose config is absent.
-	expandedAll := len(targets) > 1
-	conflict, failed, unresolvable := false, false, false
-	for _, tgt := range targets {
-		root := *configRoot
-		if root == "" {
-			root = defaultRegisterConfigRoot(tgt)
-		}
-		if root == "" {
-			fmt.Fprintf(os.Stderr, "longterm-mem: register: %s: could not resolve a config root; set HOME or pass --config-root\n", tgt)
-			unresolvable = true
-			continue
-		}
-
-		// Every error the writers return already names the package and the
-		// target it was working on ("register: claude: ..."), so this
-		// prints the error alone rather than re-stating both. Re-stating
-		// them is how the conflict message came to read "longterm-mem:
-		// register: claude: register: claude: register: an entry ...".
-		regErr := registerWriter().Register(tgt, root, resolvedStateDir, resolvedBinary)
-		switch {
-		case regErr == nil:
-		case errors.Is(regErr, register.ErrConflict):
-			fmt.Fprintf(os.Stderr, "longterm-mem: %v\n", regErr)
-			conflict = true
-			continue
-		case expandedAll && errors.Is(regErr, iofs.ErrNotExist):
-			// --target all means "every runtime this machine has", not
-			// "every runtime that exists" -- few machines have all three.
-			// A missing config is how a runtime that is not installed
-			// looks from here, and failing the whole run over it would
-			// report a failure for a run in which the runtimes that ARE
-			// installed were registered correctly. Asking for one runtime
-			// by name is a different statement, and still fails below.
-			fmt.Printf("longterm-mem: register: %s: skipped (no configuration found at %s)\n", tgt, root)
-			continue
-		default:
-			fmt.Fprintf(os.Stderr, "longterm-mem: %v\n", regErr)
-			failed = true
-			continue
-		}
-		fmt.Printf("longterm-mem: register: %s: ok\n", tgt)
-	}
-
-	// A hard failure outranks an unresolvable path, which outranks a
-	// conflict. With --target all any two of them can happen in the same
-	// run, and reporting the softer of them would hide the harder one
-	// behind an exit code that reads as "nothing much broke".
-	//
-	// A hard failure means a target was attempted and could not be
-	// registered. An unresolvable path means a target was never attempted
-	// at all, and the remedy is the caller's environment. A conflict is an
-	// expected, recoverable outcome the caller resolves by hand.
-	switch {
-	case failed:
-		return 1
-	case unresolvable:
-		return exitPathUnresolvable
-	case conflict:
-		return 6
+	case runtimes.PiNotInstalled:
+		return exitInternal
 	default:
-		return 0
+		return exitUsage
 	}
 }
 
-// registerWriter writes the runtimes' configuration and keeps the record of it in install-state.json.
-func registerWriter() register.Writer { return register.Writer{State: register.FileInstallState{}} }
+// refusalWords is what a refused request is told, with the flags that put it right.
+func refusalWords(refusal runtimes.Refusal) string {
+	switch refusal.Kind {
+	case runtimes.TargetRequired:
+		return "--target is required"
+	case runtimes.UnknownTarget:
+		return fmt.Sprintf("unknown --target %q (want claude|opencode|codex|pi|all)", refusal.Target)
+	case runtimes.ConfigRootNeedsOneTarget:
+		return `--config-root requires a single --target, not "all"`
+	case runtimes.StateDirUnresolved:
+		return "could not resolve the install-state directory; set HOME or pass --state-dir"
+	case runtimes.BinaryUnresolved:
+		return "could not resolve the longterm-mem binary path; set HOME or pass --binary"
+	case runtimes.PiNotInstalled:
+		return fmt.Sprintf("pi: not installed (no package at %s, or not listed in ~/.pi/agent/settings.json); build it (labdrian-overlay apply --target pi) and run pi install first", refusal.Root)
+	default:
+		return "the request was refused"
+	}
+}
+
+// registrationExitCode is the exit code of a run of register or unregister whose request was not refused. A hard
+// failure outranks an unresolvable path, which outranks an entry that is not ours (the use case decides which is
+// the verdict): a failure means a runtime was attempted and could not be done, an unresolvable path means a runtime
+// was never attempted at all and the remedy is the caller's environment, and an entry that is not ours is an
+// expected, recoverable outcome the caller resolves by hand.
+func registrationExitCode(failure runtimes.Failure) int {
+	switch failure {
+	case runtimes.SomeTargetFailed:
+		return exitInternal
+	case runtimes.SomePathUnresolved:
+		return exitPathUnresolvable
+	case runtimes.SomeEntryNotOurs:
+		return exitRegistrationConflict
+	default:
+		return exitOK
+	}
+}
+
+// machineRuntimes is the registration use cases over this machine: the writers of the runtimes' configuration, which
+// record what they installed in install-state.json, and the machine's own paths (register_paths.go).
+func machineRuntimes() runtimes.Runtimes {
+	return runtimes.Runtimes{
+		Registrar: register.Writer{State: register.FileInstallState{}},
+		Machine:   thisMachine{},
+	}
+}

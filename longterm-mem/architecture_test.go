@@ -35,6 +35,9 @@ import (
 //   - projectidfs is the adapter of the repository the identity rules ask for: where it is, the file that
 //     declares its project and its git configuration, read from the metadata git keeps on a disk, in
 //     projectid's own types (L7). Only the composition root may import it (the adapter guard).
+//   - runtimes is an application package: the use cases behind register and unregister (which runtimes a
+//     target names, what is refused, what is skipped, the verdict among several), over the Registrar and Machine
+//     ports it owns; internal/register answers the first and the composition root the second (L10).
 //   - vaultregfs is the adapter of the registry of vaults: the JSON file the Store port of vaultreg is answered
 //     from, in vaultreg's own types (L9). Only the composition root may import it (the adapter guard).
 //   - the module root (this guard), internal/opstest (the fixtures the tests
@@ -63,6 +66,7 @@ var rings = map[string]archguard.Ring{
 	"internal/register":       archguard.Adapter,
 	"internal/repoevidence":   archguard.Adapter,
 	"internal/repohistory":    archguard.Adapter,
+	"internal/runtimes":       archguard.Application,
 	"internal/skillstale":     archguard.Domain,
 	"internal/skillstalefs":   archguard.Adapter,
 	"internal/staleness":      archguard.Domain,
