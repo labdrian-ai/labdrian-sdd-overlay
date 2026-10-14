@@ -7,13 +7,4 @@ longterm-mem: sync --dry-run: would promote 2 observation(s), patch 0 page(s), s
 longterm-mem: sync --dry-run: nothing was written
 --- stderr ---
 --- registry ---
-file -rw-------, directory -rwx------
-{
-  "schema": 1,
-  "vaults": {
-    "labdrian-sdd-overlay": {
-      "path": "~/labdrian-brain",
-      "seeded": true
-    }
-  }
-}
+absent

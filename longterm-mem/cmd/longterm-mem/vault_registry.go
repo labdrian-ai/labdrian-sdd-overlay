@@ -43,23 +43,25 @@ func defaultVaultsPath() string {
 	return filepath.Join(home, ".labdrian-overlay", "vaults.json")
 }
 
-// defaultVaultRegistry is the registry a machine starts with: one row, for defaultVaultProject, marked as the
-// program's own.
-func defaultVaultRegistry() vaultreg.Registry {
-	return vaultreg.Registry{Vaults: map[string]vaultreg.Entry{defaultVaultProject: {Path: defaultVaultPath, Seeded: true}}}
+// defaultVaultRegistry is the registry a machine starts with, as it would be kept at path: one row, for
+// defaultVaultProject, marked as the program's own. A command that writes seeds the registry file with it; a
+// command that only reads takes a machine that has no file to hold it, and the words of a project with no row name
+// path as the place the registry is kept.
+func defaultVaultRegistry(path string) vaultreg.Registry {
+	return vaultreg.Registry{
+		Vaults: map[string]vaultreg.Entry{defaultVaultProject: {Path: defaultVaultPath, Seeded: true}},
+		Origin: path,
+	}
 }
-
-// machineVaultsStore is where the registry of this machine is kept.
-func machineVaultsStore() vaultregfs.Store { return vaultregfs.Store{Path: defaultVaultsPath()} }
 
 // machineVaults finds the vault of a project on this machine: the registry file it keeps (defaultVaultsPath), the
 // row a machine starts with, and the environment as it is when the command asks. It is built for each resolution,
 // so a session that outlives a change of the environment reads the new one.
 func machineVaults() vaultreg.Vaults {
-	store := machineVaultsStore()
+	store := vaultregfs.Store{Path: defaultVaultsPath()}
 	return vaultreg.Vaults{
 		Store:       store,
-		Defaults:    defaultVaultRegistry(),
+		Defaults:    defaultVaultRegistry(store.Path),
 		Environment: vaultreg.Environment{Vault: os.Getenv(vaultEnvVar), Home: os.UserHomeDir},
 	}
 }

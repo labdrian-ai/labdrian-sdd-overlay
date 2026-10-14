@@ -50,7 +50,7 @@ func (c commands) cmdQuery(args []string) int {
 		return exitUsage
 	}
 
-	vaultRoot, exit := a.vaultRoot(resolvedProject, *vaultDir)
+	vaultRoot, exit := a.vaultRoot(resolvedProject, *vaultDir, true)
 	if exit != exitOK {
 		return exit
 	}

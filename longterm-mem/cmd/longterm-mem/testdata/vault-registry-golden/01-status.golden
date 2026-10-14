@@ -8,13 +8,4 @@ longterm-mem: status for labdrian-sdd-overlay
   embedding index built at: never
 --- stderr ---
 --- registry ---
-file -rw-------, directory -rwx------
-{
-  "schema": 1,
-  "vaults": {
-    "labdrian-sdd-overlay": {
-      "path": "~/labdrian-brain",
-      "seeded": true
-    }
-  }
-}
+absent

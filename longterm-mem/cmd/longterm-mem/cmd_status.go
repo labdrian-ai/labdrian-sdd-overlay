@@ -33,7 +33,7 @@ func (c commands) cmdStatus(args []string) int {
 	if exit != exitOK {
 		return exit
 	}
-	vaultRoot, exit := a.vaultRoot(resolvedProject, *vaultDir)
+	vaultRoot, exit := a.vaultRoot(resolvedProject, *vaultDir, true)
 	if exit != exitOK {
 		return exit
 	}

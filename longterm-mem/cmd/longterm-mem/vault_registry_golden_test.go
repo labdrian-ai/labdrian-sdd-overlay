@@ -20,8 +20,8 @@ import (
 // command (absent, or its mode, the mode of its directory and its bytes), beside the exit code, stdout and stderr.
 // They were recorded from the program before Phase 9, L9 made the resolution of a vault pure, and the change that
 // followed (the owner's decision of 2026-10-14, "Solo los que escriben": only a command that writes seeds the
-// registry) must move one thing in them, the registry line of a command that only reads, and not one byte of what
-// a command prints or exits with.
+// registry) moved one thing in them, the registry line of a command that only reads (it says "absent" where it
+// said the registry was made), and not one byte of what a command prints or exits with.
 //
 // The world is the promote goldens' (an Engram database, a vault with its stub scripts), with the vault where the
 // registry's seeded row for the default project puts it, ~/labdrian-brain, and the registry file left to the
@@ -134,7 +134,8 @@ func TestVaultRegistryGolden(t *testing.T) {
 
 // The tools of the MCP session resolve the vault of the project of each call, as the commands do, and leave the
 // registry as they do: each is run here over the world, with the registry absent, and the registry it leaves is
-// read. The query tool only reads; the promote tool writes a page.
+// read. The query tool only reads and leaves the machine as it found it; the promote tool writes a page, and seeds
+// the registry (the owner's decision of 2026-10-14: only a command that writes does).
 func TestVaultRegistry_WhatTheMCPToolsLeave(t *testing.T) {
 	if !vault.PrerequisitePresent("python3") {
 		t.Skip("python3 is not on PATH: the vault's index rebuild runs its scripts under it")
@@ -144,7 +145,7 @@ func TestVaultRegistry_WhatTheMCPToolsLeave(t *testing.T) {
 		// seeded is whether the registry exists once the tool has answered.
 		seeded bool
 	}{
-		"the query tool": {seeded: true, call: func(t *testing.T, c commands, store *engram.Store) {
+		"the query tool": {seeded: false, call: func(t *testing.T, c commands, store *engram.Store) {
 			embedClient, err := testEmbedClient(embed.Config{Model: vecindex.DefaultModel})
 			if err != nil {
 				t.Fatalf("the embedding client: %v", err)

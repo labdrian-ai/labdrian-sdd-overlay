@@ -83,10 +83,10 @@ func (c commands) mcpDeps(store *engram.Store, embedClient *embed.Client, loadCa
 }
 
 // mcpQuery is the query tool of the MCP session: the vault of the call's project, and the query use case over the
-// session's store, embedding client and index cache.
+// session's store, embedding client and index cache. It only reads, so it leaves the vault registry as it found it.
 func (c commands) mcpQuery(store *engram.Store, embedClient *embed.Client, loadCache *vecindex.LoadCache) func(context.Context, query.Request) (query.Result, error) {
 	return func(ctx context.Context, req query.Request) (query.Result, error) {
-		vaultRoot, err := machineVaults().Resolve(req.Project, "")
+		vaultRoot, err := machineVaults().ToRead(req.Project, "")
 		if err != nil {
 			return query.Result{}, err
 		}
@@ -117,10 +117,10 @@ func mcpGet(store *engram.Store) func(context.Context, int64) (mcpserver.GetOutc
 // observation with the clock the commands were composed with (promote.PromoteAndReindex), which rebuilds the vault
 // index when the promotion wrote a page, before the call returns, exactly as a sync does. The rebuild's failure is
 // reported beside a SUCCESSFUL promotion rather than as the call's error -- the page is written and durable by
-// then.
+// then. It writes, so it seeds the vault registry of a machine that has none, as the commands that write do.
 func (c commands) mcpPromote(store *engram.Store) func(ctx context.Context, project string, engramID int64) (mcpserver.PromoteOutcome, error) {
 	return func(ctx context.Context, project string, engramID int64) (mcpserver.PromoteOutcome, error) {
-		vaultRoot, err := machineVaults().Resolve(project, "")
+		vaultRoot, err := machineVaults().ToWrite(project, "")
 		if err != nil {
 			return mcpserver.PromoteOutcome{}, err
 		}

@@ -69,7 +69,11 @@ file (`~/.claude.json`, `opencode.json`, `config.toml`), and `uninstall`
 calls `longterm-mem unregister`. Both are ownership-tagged, idempotent, and
 refuse an untagged same-named entry. The only planned module-owned
 subcommand that does not exist yet is `vaults` (direct management of
-`vaults.json` seeding); registry seeding is lazy, inside `vaultreg.Vaults.Resolve` (`internal/vaultreg`).
+`vaults.json` seeding); registry seeding is lazy and belongs to the commands that write: the first `sync`
+(without `--dry-run`), `promote`, `promote reconcile` or `index`, or the MCP `promote` tool, that has to find a
+vault makes `~/.labdrian-overlay/vaults.json` with the one row every machine starts with. `status`, `doctor`,
+`query`, `sync --dry-run` and the MCP `query` tool only read: on a machine with no registry they behave as if it held
+that row, and make nothing (`vaultreg.Vaults.ToRead`, `ToWrite`; `internal/vaultreg`).
 
 ## CLI surface (as shipped)
 

@@ -44,11 +44,18 @@ func (a app) project(given string, readOnly bool) (string, int) {
 	return a.resolveProjectFlag(a.command, given)
 }
 
-// vaultRoot is the root of the vault of project: the override the command was given, or the registry's row.
-// exitOK, or the exit code to return after saying why: no vault configured for the project is exit 3, a registry
-// that cannot be read is the program's own fault.
-func (a app) vaultRoot(project, override string) (string, int) {
-	root, err := machineVaults().Resolve(project, override)
+// vaultRoot is the root of the vault of project: the override the command was given, or the registry's row. A
+// command that promises not to write (readOnly) leaves the registry as it found it; any other seeds the registry
+// of a machine that has none, the first time it is asked (the owner's decision of 2026-10-14: only a command that
+// writes does). exitOK, or the exit code to return after saying why: no vault configured for the project is exit
+// 3, a registry that cannot be read is the program's own fault.
+func (a app) vaultRoot(project, override string, readOnly bool) (string, int) {
+	vaults := machineVaults()
+	find := vaults.ToWrite
+	if readOnly {
+		find = vaults.ToRead
+	}
+	root, err := find(project, override)
 	if err != nil {
 		return "", a.refuse(err, vaultExitCode(err))
 	}

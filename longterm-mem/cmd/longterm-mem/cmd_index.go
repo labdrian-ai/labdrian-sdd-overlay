@@ -52,7 +52,7 @@ func (c commands) cmdIndex(args []string) int {
 		})
 	}
 
-	vaultRoot, exit := a.vaultRoot(resolvedProject, *vaultDir)
+	vaultRoot, exit := a.vaultRoot(resolvedProject, *vaultDir, false)
 	if exit != exitOK {
 		return exit
 	}

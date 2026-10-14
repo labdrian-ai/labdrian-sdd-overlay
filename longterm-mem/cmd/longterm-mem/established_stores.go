@@ -1,9 +1,7 @@
 package main
 
 import (
-	"errors"
 	"fmt"
-	"io/fs"
 	"os"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/adoption"
@@ -24,13 +22,14 @@ func (machineStores) Open() (adoption.Established, []string) {
 	s := &establishedNames{vaults: map[string]bool{}}
 	var notes []string
 
-	// Load, never Seed: consulting the registry must not create it. A missing registry is simply a machine
-	// where nothing is configured yet.
-	if reg, err := machineVaultsStore().Load(); err == nil {
+	// Known, never seeded: consulting the registry must not create it. A machine where no command that writes
+	// has been is taken to hold the row every machine starts with, as it is by the commands that read, so what a
+	// repository's name resolves to does not depend on which command ran first.
+	if reg, err := machineVaults().Known(); err == nil {
 		for name := range reg.Vaults {
 			s.vaults[name] = true
 		}
-	} else if !errors.Is(err, fs.ErrNotExist) {
+	} else {
 		notes = append(notes, fmt.Sprintf("the vault registry could not be read (%v)", err))
 	}
 
