@@ -62,7 +62,7 @@ func (c commands) cmdMCP(args []string) int {
 		return a.refuse(err, exitInternal)
 	}
 
-	server := mcpserver.New(c.mcpDeps(store, embedClient, vecindex.NewLoadCache(), &vecindex.Builder{}))
+	server := mcpserver.New(c.mcpDeps(store, a.sessionQueryWiring(embedClient, vecindex.NewLoadCache())))
 	// context.Canceled here means SIGINT/SIGTERM asked for a graceful
 	// shutdown (R-034), not a failure; only a genuine transport/session
 	// error is reported and turns into a non-zero exit.
@@ -75,11 +75,11 @@ func (c commands) cmdMCP(args []string) int {
 // mcpDeps are the tools of the MCP session. Each resolves its own project's vault fresh on every call (a session
 // can serve more than one project) and then calls the same construction and use cases the CLI subcommands do
 // (queryDeps, promote.PromoteAndReindex), so the CLI and MCP surfaces cannot drift -- the query tool's Embed and
-// index cache being the one deliberate exception (issue #286): this session's shared client, load cache and Builder, not
-// runQuery's per-call construction.
-func (c commands) mcpDeps(store *engram.Store, embedClient *embed.Client, loadCache *vecindex.LoadCache, builder *vecindex.Builder) mcpserver.Deps {
+// index cache being the one deliberate exception (issue #286): this session's shared client, load cache and Builder (its
+// wiring, app.sessionQueryWiring), not runQuery's per-call construction.
+func (c commands) mcpDeps(store *engram.Store, wiring queryWiring) mcpserver.Deps {
 	return mcpserver.Deps{
-		Query:   c.mcpQuery(store, embedClient, loadCache, builder),
+		Query:   c.mcpQuery(store, wiring),
 		Get:     mcpGet(store),
 		Promote: c.mcpPromote(store),
 	}
@@ -87,18 +87,13 @@ func (c commands) mcpDeps(store *engram.Store, embedClient *embed.Client, loadCa
 
 // mcpQuery is the query tool of the MCP session: the vault of the call's project, and the query use case over the
 // session's store, embedding client and index cache. It only reads, so it leaves the vault registry as it found it.
-func (c commands) mcpQuery(store *engram.Store, embedClient *embed.Client, loadCache *vecindex.LoadCache, builder *vecindex.Builder) func(context.Context, query.Request) (query.Result, error) {
+func (c commands) mcpQuery(store *engram.Store, wiring queryWiring) func(context.Context, query.Request) (query.Result, error) {
 	return func(ctx context.Context, req query.Request) (query.Result, error) {
 		vaultRoot, err := machineVaults().ToRead(req.Project, "")
 		if err != nil {
 			return query.Result{}, err
 		}
-		qdeps := queryDeps(store, vaultRoot, queryWiring{
-			newClient: c.newEmbedClient,
-			embed:     embedClient.Embed,
-			cache:     loadCache,
-			builder:   builder,
-		})
+		qdeps := queryDeps(store, vaultRoot, wiring)
 		return query.Run(ctx, qdeps, req)
 	}
 }

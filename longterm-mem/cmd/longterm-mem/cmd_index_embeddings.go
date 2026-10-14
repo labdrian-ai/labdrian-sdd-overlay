@@ -70,7 +70,7 @@ func (c commands) cmdIndexEmbeddings(project string, cfg embedConfig) int {
 	}
 	defer store.Close()
 
-	result, err := c.embeddingIndexing(store, stateDir, cfg).Build(context.Background(), project, embedindex.Contract{
+	result, err := a.embeddingIndexing(store, stateDir, cfg).Build(context.Background(), project, embedindex.Contract{
 		Model:      cfg.Model,
 		Dimension:  cfg.Dimension,
 		InputLimit: cfg.InputLimit,
@@ -87,12 +87,13 @@ func (c commands) cmdIndexEmbeddings(project string, cfg embedConfig) int {
 // observations of the Engram store (R-020: it leaves out what was soft-deleted, so a row deleted since the last
 // build is absent and the build's removal pass drops its entry), the embedding client the commands were composed
 // with, made from the flags of this invocation, and the index repository over the state directory, with the wall
-// clock to stamp a build with. The CLI serves one build and exits, so the repository has no cache.
-func (c commands) embeddingIndexing(store *engram.Store, stateDir string, cfg embedConfig) embedindex.UseCase {
+// clock to stamp a build with and the Builder of the app, which every path of the process that builds an index
+// builds through. The CLI serves one build and exits, so the repository has no cache.
+func (a app) embeddingIndexing(store *engram.Store, stateDir string, cfg embedConfig) embedindex.UseCase {
 	return embedindex.UseCase{
 		Observations: store,
 		NewEmbedder: func() (embedindex.Embedder, error) {
-			client, err := c.newEmbedClient(embed.Config{
+			client, err := a.newEmbedClient(embed.Config{
 				Endpoint:    cfg.Endpoint,
 				Model:       cfg.Model,
 				AllowRemote: cfg.AllowRemote,
@@ -102,7 +103,7 @@ func (c commands) embeddingIndexing(store *engram.Store, stateDir string, cfg em
 			}
 			return client, nil
 		},
-		Builder: &vecindex.Repository{StateDir: stateDir, Now: buildNowRFC3339, Builder: &vecindex.Builder{}},
+		Builder: &vecindex.Repository{StateDir: stateDir, Now: buildNowRFC3339, Builder: a.builder},
 	}
 }
 

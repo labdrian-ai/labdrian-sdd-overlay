@@ -20,19 +20,23 @@ import (
 // exactly one query and exits -- there is no session for a shared client
 // or a load cache to help with (issue #286's session-scoped caching is a
 // benefit specific to a long-lived process; cmd_mcp.go's cmdMCP builds its
-// own deps per call via queryDeps directly, passing a client, load cache and
-// Builder it constructs once for the whole MCP session, rather than calling
-// runQuery).
-func runQuery(ctx context.Context, store *engram.Store, vaultRoot string, newClient embedClientFactory, req query.Request) (query.Result, error) {
-	deps := queryDeps(store, vaultRoot, cliQueryWiring(newClient))
+// own deps per call via queryDeps directly, with the wiring of the session,
+// rather than calling runQuery).
+func (a app) runQuery(ctx context.Context, store *engram.Store, vaultRoot string, req query.Request) (query.Result, error) {
+	deps := queryDeps(store, vaultRoot, a.cliQueryWiring())
 	return query.Run(ctx, deps, req)
 }
 
 // cliQueryWiring is the embedding side of the one query a CLI process serves: a fresh client for the query's own
-// embedding, no cache, and a Builder of its own for the top-up it may make, since nothing outlives the process for
-// them to be shared with.
-func cliQueryWiring(newClient embedClientFactory) queryWiring {
-	return queryWiring{newClient: newClient, embed: freshEmbedFunc(newClient), builder: &vecindex.Builder{}}
+// embedding, no cache, and the Builder of the app for the top-up it may make.
+func (a app) cliQueryWiring() queryWiring {
+	return queryWiring{newClient: a.newEmbedClient, embed: freshEmbedFunc(a.newEmbedClient), builder: a.builder}
+}
+
+// sessionQueryWiring is the embedding side of the queries an MCP session serves: the one embedding client and the one
+// index cache the session holds (issue #286), and the Builder of the app for the top-ups its calls may make.
+func (a app) sessionQueryWiring(embedClient *embed.Client, loadCache *vecindex.LoadCache) queryWiring {
+	return queryWiring{newClient: a.newEmbedClient, embed: embedClient.Embed, cache: loadCache, builder: a.builder}
 }
 
 // queryWiring is what a surface decides about the embedding side of a query, each part under its own name

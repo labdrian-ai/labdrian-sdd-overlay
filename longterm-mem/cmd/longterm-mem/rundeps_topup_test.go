@@ -137,7 +137,7 @@ func TestEmbeddingIndexOf_BuildsThroughTheBuilderOfTheWiring(t *testing.T) {
 // A run of the CLI serves one query, with no cache and a fresh embedding client, and has a Builder of its own for
 // the top-up it may make: nothing is shared between two runs, which are two processes.
 func TestCLIQueryWiring_HasNoCacheAndABuilderOfItsOwn(t *testing.T) {
-	first, second := cliQueryWiring(testEmbedClient), cliQueryWiring(testEmbedClient)
+	first, second := commands{newEmbedClient: testEmbedClient}.newApp("query").cliQueryWiring(), commands{newEmbedClient: testEmbedClient}.newApp("query").cliQueryWiring()
 
 	if first.cache != nil {
 		t.Errorf("cache = %v, want none for a surface that serves one query", first.cache)

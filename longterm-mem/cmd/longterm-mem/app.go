@@ -8,6 +8,7 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vault"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vecindex"
 )
 
 // app is the program's use cases and the adapters under them, composed for one run of a command. newApp builds it
@@ -20,11 +21,16 @@ type app struct {
 	commands
 	// command is what the command is called in its messages: "sync", "promote reconcile", "index".
 	command string
+	// builder is the Builder every path of this process that builds an embedding index builds through: two builds of
+	// one index exclude each other by the locks it owns (vecindex.Builder), so the app makes the one and hands it to
+	// the query top-up of the command line, the top-ups of an MCP session and `index --embeddings`, and no path makes
+	// a Builder for itself.
+	builder *vecindex.Builder
 }
 
 // newApp composes the app of the command called command in its messages.
 func (c commands) newApp(command string) app {
-	return app{commands: c, command: command}
+	return app{commands: c, command: command, builder: &vecindex.Builder{}}
 }
 
 // refuse says that the command cannot go on, as every command says it -- `longterm-mem: <command>: <why>` on

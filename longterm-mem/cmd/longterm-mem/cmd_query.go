@@ -65,7 +65,7 @@ func (c commands) cmdQuery(args []string) int {
 		requestedTop = *top
 	}
 
-	result, err := runQuery(context.Background(), store, vaultRoot, c.newEmbedClient, query.Request{
+	result, err := a.runQuery(context.Background(), store, vaultRoot, query.Request{
 		Project: resolvedProject, Query: rest[0], Top: requestedTop,
 		ExcludeTypes: splitTypes(*excludeTypes),
 	})
