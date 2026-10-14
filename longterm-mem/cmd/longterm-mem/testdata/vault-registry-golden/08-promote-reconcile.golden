@@ -1,0 +1,16 @@
+args: promote reconcile --project labdrian-sdd-overlay c-000901
+exit: 7
+--- stdout ---
+--- stderr ---
+longterm-mem: promote reconcile: promote: no promoted page at that address: c-000901
+--- registry ---
+file -rw-------, directory -rwx------
+{
+  "schema": 1,
+  "vaults": {
+    "labdrian-sdd-overlay": {
+      "path": "~/labdrian-brain",
+      "seeded": true
+    }
+  }
+}

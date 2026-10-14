@@ -30,19 +30,19 @@ func uninstallCases() []uninstallCase {
 		configFile: claudeConfigFileName,
 		untagged:   `{"mcpServers":{"other-project-server":{"type":"stdio"},"longterm-mem":{"type":"stdio","command":"/someone/elses/binary"}}}`,
 		empty:      `{"mcpServers":{"other-project-server":{"type":"stdio"}}}`,
-		install:    RegisterClaude,
+		install:    fileWriter().RegisterClaude,
 	}, {
 		target:     opencodeTarget,
 		configFile: opencodeConfigFileName,
 		untagged:   `{"mcp":{"other-project-server":{"type":"local"},"longterm-mem":{"type":"local","command":["/someone/elses/binary","mcp"]}}}`,
 		empty:      `{"mcp":{"other-project-server":{"type":"local"}}}`,
-		install:    RegisterOpencode,
+		install:    fileWriter().RegisterOpencode,
 	}, {
 		target:     codexTarget,
 		configFile: codexConfigFileName,
 		untagged:   "theme = \"dark\"\n\n[mcp_servers.longterm-mem]\ncommand = \"/someone/elses/binary\"\n",
 		empty:      "theme = \"dark\"\n",
-		install:    RegisterCodex,
+		install:    fileWriter().RegisterCodex,
 	}}
 }
 
@@ -79,7 +79,7 @@ func TestUnregister_OutcomeAndOnDiskEffect(t *testing.T) {
 					}
 				}
 
-				outcome, err := Unregister(c.target, dir, stateDir)
+				outcome, err := fileWriter().Unregister(c.target, dir, stateDir)
 				if err != nil {
 					t.Fatalf("Unregister: %v", err)
 				}
@@ -154,7 +154,7 @@ func TestUnregister_SelectiveRemovalAcrossAllThreeRuntimes(t *testing.T) {
 		}
 	}
 
-	outcome, err := Unregister("opencode", opencodeDir, stateDir)
+	outcome, err := fileWriter().Unregister("opencode", opencodeDir, stateDir)
 	if err != nil {
 		t.Fatalf("Unregister(opencode) returned error: %v", err)
 	}
@@ -242,7 +242,7 @@ func TestUnregister_PartialUninstallKeepsSharedBinary(t *testing.T) {
 		}
 	}
 
-	outcome, err := Unregister("claude", claudeDir, stateDir)
+	outcome, err := fileWriter().Unregister("claude", claudeDir, stateDir)
 	if err != nil {
 		t.Fatalf("Unregister(claude) returned error: %v", err)
 	}

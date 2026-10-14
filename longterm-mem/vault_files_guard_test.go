@@ -35,8 +35,8 @@ const durablePackage = "github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem
 //
 // What stays outside the adapter, and why: internal/vault runs the vault's own index scripts and reads and
 // writes the markers and the sentinel of a provisioned vault, which are the scripts' files and not the
-// promotion's (their names come from the layout); internal/vaultreg reads the registry of vaults, which lives
-// beside the user's configuration and not in a vault.
+// promotion's (their names come from the layout); internal/vaultregfs reads the registry of vaults (that
+// internal/vaultreg decides by), which lives beside the user's configuration and not in a vault.
 var packagesThatReachTheVaultThroughPorts = []string{"internal/promote", "internal/ops"}
 
 // fileSystemImports are the packages through which a file of the vault is read or written.

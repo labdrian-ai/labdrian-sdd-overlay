@@ -80,6 +80,38 @@ func TestAdapterImportersLooksOnlyAtTheModulesOwnProductionCode(t *testing.T) {
 	}
 }
 
+// Test support drives the real adapters on purpose (internal/opstest builds a vault with the vault's own writers,
+// and has no ring rule), so the packages the rings declare Support, apart from the module root, are let through,
+// and a package that is not one of them is not: being called a fixture is not enough.
+func TestAdapterImportersLetsTheTestSupportOfTheRingsDriveARealAdapter(t *testing.T) {
+	adapter := `"` + engramAdapter + `"`
+	root := writeTree(t, map[string]string{
+		"internal/opstest/fixture.go":       importing(adapter),
+		"internal/opstest/sub/helper.go":    importing(adapter),
+		"internal/testhome/home.go":         importing(adapter),
+		"internal/queryfixtures/fixture.go": importing(adapter),
+		"internal/query/query.go":           importing(adapter),
+	})
+
+	got, err := adapterImporters(root)
+	if err != nil {
+		t.Fatalf("adapterImporters: %v", err)
+	}
+	want := []string{"internal/query/query.go", "internal/queryfixtures/fixture.go"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("adapterImporters = %v, want %v (the support packages of the rings are exempt, a fixture the rings do not declare is not)", got, want)
+	}
+}
+
+func TestSupportDirectoriesAreTheSupportPackagesOfTheRingsAndNotTheModuleRoot(t *testing.T) {
+	got := supportDirectories()
+
+	want := []string{"internal/opstest", "internal/testhome"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("supportDirectories = %v, want %v", got, want)
+	}
+}
+
 func TestAdapterImportersReportsAFileItCannotParse(t *testing.T) {
 	root := writeTree(t, map[string]string{"internal/query/broken.go": "package p\n\nimport (\n"})
 	if _, err := adapterImporters(root); err == nil {

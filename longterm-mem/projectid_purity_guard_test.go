@@ -104,7 +104,7 @@ func TestIdentityGuardsReadTheAdoptionUseCaseToo(t *testing.T) {
 		"internal/adoption/ok.go":          "package p\n\nimport (\n\t\"fmt\"\n\t\"time\"\n)\n\nvar _ = fmt.Sprintf\nvar _ time.Time\n",
 		"internal/adoption/clock.go":       "package p\n\nimport \"time\"\n\nvar _ = time.Now\n",
 		"internal/adoption/engram.go":      importing(imp("internal/engram")),
-		"internal/adoption/registry.go":    importing(imp("internal/vaultreg")),
+		"internal/adoption/registry.go":    importing(imp("internal/vaultregfs")),
 		"internal/adoption/ledger.go":      importing(imp("internal/identityledger")),
 		"internal/adoption/inspector.go":   importing(imp("internal/projectidfs")),
 		"internal/adoption/env_test.go":    "package p\n\nimport \"testing\"\n\nfunc TestX(t *testing.T) { t.Setenv(\"HOME\", t.TempDir()) }\n",
@@ -115,7 +115,7 @@ func TestIdentityGuardsReadTheAdoptionUseCaseToo(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ambientUsesIn: %v", err)
 	}
-	adapters, err := adapterImportsIn(root, "internal/adoption", []string{"internal/engram", "internal/vaultreg", "internal/identityledger", "internal/projectidfs"}, "")
+	adapters, err := adapterImportsIn(root, "internal/adoption", []string{"internal/engram", "internal/vaultregfs", "internal/identityledger", "internal/projectidfs"}, "")
 	if err != nil {
 		t.Fatalf("adapterImportsIn: %v", err)
 	}

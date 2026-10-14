@@ -1,0 +1,10 @@
+args: register --target all --state-dir <home>/state --binary /opt/bin/longterm-mem
+exit: 8
+--- stdout ---
+--- stderr ---
+longterm-mem: register: claude: could not resolve a config root; set HOME or pass --config-root
+longterm-mem: register: opencode: <home>/xdg/opencode/opencode.json: an entry with this name already exists and is not owned by longterm-mem; to hand it to longterm-mem, remove that entry by hand and run register again
+longterm-mem: register: codex: could not resolve a config root; set HOME or pass --config-root
+--- machine ---
+=== xdg/opencode/opencode.json ===
+{"mcp": {"longterm-mem": {"type": "local", "command": ["/someone/elses/binary", "mcp"]}}}

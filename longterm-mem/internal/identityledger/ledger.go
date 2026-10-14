@@ -167,17 +167,23 @@ func load(commonDir string) (ledger, error) {
 }
 
 func write(commonDir string, l ledger) error {
-	data, err := json.MarshalIndent(l, "", "  ")
-	if err != nil {
-		return fmt.Errorf("identityledger: marshal: %w", err)
-	}
-	data = append(data, '\n')
+	return writeWith(durable.WriteJSON, commonDir, l)
+}
 
-	path := Path(commonDir)
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-		return fmt.Errorf("identityledger: create directory for %s: %w", path, err)
-	}
-	if err := durable.WriteFile(path, data, 0o600); err != nil {
+// jsonWriter is how the ledger is put on disk: durable.WriteJSON in the program, and in a test one that fails where
+// the case says, so that the words of each failure are held without asking a file system to break.
+type jsonWriter func(path string, v any, createPerm os.FileMode) error
+
+// writeWith writes the ledger of commonDir through writeJSON, and says a failure in the words the ledger has always
+// said it in: the failure to make the directory and the failure to replace the file are writeJSON's own words after
+// the name of this package, and the failure to encode names no file ("identityledger: marshal: <the encoder's>"),
+// where writeJSON's names it.
+func writeWith(writeJSON jsonWriter, commonDir string, l ledger) error {
+	if err := writeJSON(Path(commonDir), l, 0o600); err != nil {
+		var encoding *durable.EncodeError
+		if errors.As(err, &encoding) {
+			return fmt.Errorf("identityledger: marshal: %w", encoding.Err)
+		}
 		return fmt.Errorf("identityledger: %w", err)
 	}
 	return nil

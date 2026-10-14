@@ -36,7 +36,7 @@ func (c commands) cmdSync(args []string) int {
 	if exit != exitOK {
 		return exit
 	}
-	vaultRoot, exit := a.vaultRoot(resolvedProject, *vaultDir)
+	vaultRoot, exit := a.vaultRoot(resolvedProject, *vaultDir, *dryRun)
 	if exit != exitOK {
 		return exit
 	}

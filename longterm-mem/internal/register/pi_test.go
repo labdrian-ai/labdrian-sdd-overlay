@@ -15,9 +15,9 @@ func piGoldenCase() goldenWriterCase {
 		memberKey:      "longterm-mem",
 		testdataDir:    "testdata/pi",
 		fixtureExt:     ".json",
-		register:       RegisterPi,
+		register:       fileWriter().RegisterPi,
 		unregister: func(configRoot, stateDir string) (UnregisterOutcome, error) {
-			return Unregister(piTarget, configRoot, stateDir)
+			return fileWriter().Unregister(piTarget, configRoot, stateDir)
 		},
 		binary1:          "/opt/labdrian-overlay/bin/longterm-mem",
 		binary2:          "/opt/labdrian-overlay/bin/longterm-mem-v2",

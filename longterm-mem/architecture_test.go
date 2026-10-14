@@ -18,9 +18,9 @@ import (
 //   - ingest, projectid, promote, skillstale and staleness are domain packages:
 //     their rules are the part that stays; the file system, git and SQLite they
 //     still reach are debt below (skillstale reaches nothing since L5, staleness since L6, projectid since L7).
-//   - vaultreg is an adapter. L9 makes its Resolve pure, but the registry file
-//     store stays in the package, so it cannot be a domain package without a
-//     debt that L9 does not clear.
+//   - vaultreg is an application package: the rule that finds the vault of a project (a pure Resolve over the
+//     flag, the environment's view and the registry) and the use case that reads and seeds the registry, over
+//     the Store port it owns (L9). The registry file itself is vaultregfs, the adapter.
 //   - memory is the domain model of what longterm-mem reads (the observation, the
 //     search shapes, the standing, the tokenizer and the snippet rule); engram is
 //     an adapter that maps Engram's rows to it (L1). Only the composition root may
@@ -35,10 +35,16 @@ import (
 //   - projectidfs is the adapter of the repository the identity rules ask for: where it is, the file that
 //     declares its project and its git configuration, read from the metadata git keeps on a disk, in
 //     projectid's own types (L7). Only the composition root may import it (the adapter guard).
-//   - the module root (this guard), internal/ops/testdata (a Go package the
-//     other tests import) and internal/testhome (the home directory a test
-//     binary runs in, which the TestMain of every package that can reach a
-//     path derived from HOME enters) are test support.
+//   - runtimes is an application package: the use cases behind register and unregister (which runtimes a
+//     target names, what is refused, what is skipped, the verdict among several), over the Registrar and Machine
+//     ports it owns; internal/register answers the first and the composition root the second (L10).
+//   - vaultregfs is the adapter of the registry of vaults: the JSON file the Store port of vaultreg is answered
+//     from, in vaultreg's own types (L9). Only the composition root may import it (the adapter guard).
+//   - the module root (this guard), internal/opstest (the fixtures the tests
+//     of ops and of the commands build a vault with, a package of its own since
+//     L10 took it out of ops's testdata directory) and internal/testhome (the
+//     home directory a test binary runs in, which the TestMain of every package
+//     that can reach a path derived from HOME enters) are test support.
 var rings = map[string]archguard.Ring{
 	".":                       archguard.Support,
 	"cmd/longterm-mem":        archguard.Root,
@@ -52,7 +58,7 @@ var rings = map[string]archguard.Ring{
 	"internal/memory":         archguard.Domain,
 	"internal/mcpserver":      archguard.Adapter,
 	"internal/ops":            archguard.Application,
-	"internal/ops/testdata":   archguard.Support,
+	"internal/opstest":        archguard.Support,
 	"internal/projectid":      archguard.Domain,
 	"internal/projectidfs":    archguard.Adapter,
 	"internal/promote":        archguard.Domain,
@@ -60,6 +66,7 @@ var rings = map[string]archguard.Ring{
 	"internal/register":       archguard.Adapter,
 	"internal/repoevidence":   archguard.Adapter,
 	"internal/repohistory":    archguard.Adapter,
+	"internal/runtimes":       archguard.Application,
 	"internal/skillstale":     archguard.Domain,
 	"internal/skillstalefs":   archguard.Adapter,
 	"internal/staleness":      archguard.Domain,
@@ -67,7 +74,8 @@ var rings = map[string]archguard.Ring{
 	"internal/vault":          archguard.Adapter,
 	"internal/vaultfs":        archguard.Adapter,
 	"internal/vaultlayout":    archguard.Domain,
-	"internal/vaultreg":       archguard.Adapter,
+	"internal/vaultreg":       archguard.Application,
+	"internal/vaultregfs":     archguard.Adapter,
 	"internal/vecindex":       archguard.Adapter,
 }
 
@@ -78,12 +86,9 @@ var rings = map[string]archguard.Ring{
 // new violation is not added here to make the guard pass; it is fixed.
 //
 // The guard reads imports and the members selected from a few standard packages.
-// It cannot see package-level mutable variables used as test seams, so these
-// known ones are not listed below and are owed to their units all the same:
-//
-//   - register: the saveInstallState seam (L10)
-//   - vecindex: the global dirLocks map (L10), and its own flock helper,
-//     acquireFileLock, which L10 should settle together with it
+// It cannot see package-level mutable variables used as test seams; those are
+// held by package_state_guard_test.go, which is why this table lists none (L10
+// removed the last two: register's saveInstallState and vecindex's dirLocks).
 var knownDebt = archguard.Debt{
 	// ingest: the canonical origin of a file reads the working directory. The C17
 	// audit read ingest as pure from its imports; the call is the debt. L11 makes

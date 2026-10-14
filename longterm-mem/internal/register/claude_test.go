@@ -12,9 +12,9 @@ func claudeGoldenCase() goldenWriterCase {
 		memberKey:      "longterm-mem",
 		testdataDir:    "testdata/claude",
 		fixtureExt:     ".json",
-		register:       RegisterClaude,
+		register:       fileWriter().RegisterClaude,
 		unregister: func(configRoot, stateDir string) (UnregisterOutcome, error) {
-			return Unregister(claudeTarget, configRoot, stateDir)
+			return fileWriter().Unregister(claudeTarget, configRoot, stateDir)
 		},
 		binary1:          "/usr/local/bin/longterm-mem",
 		binary2:          "/usr/local/bin/longterm-mem-v2",

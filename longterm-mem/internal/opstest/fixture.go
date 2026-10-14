@@ -1,9 +1,15 @@
-// Package testdata is internal/ops's shared test-fixture builder (8a.7
-// REFACTOR), reused by status_test.go and doctor_test.go: a temp vault
-// root's sync-state record, a promoted page, its address-map entry, and
-// its catalog/log registration -- the same on-disk shapes Status and
-// Doctor each independently read.
-package testdata
+// Package opstest is the shared test-fixture builder of internal/ops (8a.7
+// REFACTOR), reused by its status and doctor tests and by the tests of the
+// commands that run them: a temp vault root's sync-state record, a promoted
+// page, its address-map entry, and its catalog/log registration -- the same
+// on-disk shapes Status and Doctor each independently read.
+//
+// It is a package of its own, test support that no production code imports,
+// and no longer a "package testdata" inside ops: the Go tool leaves a
+// directory of that name out of ./... (vet, staticcheck and the race run
+// never saw this code), and ops's testdata directory is where its golden
+// files are kept, which is data and not a package.
+package opstest
 
 import (
 	"crypto/sha256"

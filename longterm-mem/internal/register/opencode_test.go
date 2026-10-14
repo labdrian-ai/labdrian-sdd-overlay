@@ -15,9 +15,9 @@ func opencodeGoldenCase() goldenWriterCase {
 		memberKey:      "longterm-mem",
 		testdataDir:    "testdata/opencode",
 		fixtureExt:     ".json",
-		register:       RegisterOpencode,
+		register:       fileWriter().RegisterOpencode,
 		unregister: func(configRoot, stateDir string) (UnregisterOutcome, error) {
-			return Unregister(opencodeTarget, configRoot, stateDir)
+			return fileWriter().Unregister(opencodeTarget, configRoot, stateDir)
 		},
 		binary1:          "/opt/labdrian-overlay/bin/longterm-mem",
 		binary2:          "/opt/labdrian-overlay/bin/longterm-mem-v2",

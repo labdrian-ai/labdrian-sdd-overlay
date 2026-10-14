@@ -29,6 +29,9 @@ type Repository struct {
 	NewEmbedder func(model string) (Embedder, error)
 	// Now is the clock a build stamps its index with (Build's own seam).
 	Now func() string
+	// Builder owns the locks that keep two builds of one index apart. Repositories that must exclude one another
+	// (the ones a session makes for each call) are given the same one.
+	Builder *Builder
 }
 
 // What a build answers when the Repository was built without what it needs; a read needs none of them.
@@ -36,6 +39,7 @@ var (
 	errNoLiveRows        = errors.New("vecindex: the repository has no source of live rows")
 	errNoEmbedderFactory = errors.New("vecindex: the repository has no embedder factory")
 	errNoClock           = errors.New("vecindex: the repository has no clock")
+	errNoBuilder         = errors.New("vecindex: the repository has no builder to keep its builds apart")
 )
 
 // LoadEmbeddingIndex reads project's index and answers it in the terms of the query. It refuses as Load does
@@ -141,6 +145,8 @@ func (r *Repository) BuildEmbeddingIndex(ctx context.Context, project, model str
 		return errNoEmbedderFactory
 	case r.Now == nil:
 		return errNoClock
+	case r.Builder == nil:
+		return errNoBuilder
 	}
 	rows, err := r.LiveRows(project)
 	if err != nil {
@@ -163,8 +169,11 @@ func (r *Repository) BuildRows(ctx context.Context, project string, contract emb
 	if r.Now == nil {
 		return embedindex.Result{}, errNoClock
 	}
+	if r.Builder == nil {
+		return embedindex.Result{}, errNoBuilder
+	}
 	dir := Dir(r.StateDir, project)
-	_, built, err := Build(ctx, dir, contract.Model, contract.Dimension, contract.InputLimit, rows, embedder, r.Now)
+	_, built, err := r.Builder.Build(ctx, dir, contract.Model, contract.Dimension, contract.InputLimit, rows, embedder, r.Now)
 	if err != nil {
 		return embedindex.Result{}, err
 	}

@@ -1,0 +1,6 @@
+args: register
+exit: 2
+--- stdout ---
+--- stderr ---
+longterm-mem: register: --target is required
+--- machine ---

@@ -3,12 +3,11 @@ package register
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/durable"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/runtimes"
 )
 
 // installStateFileName is install-state.json's file name inside a target's
@@ -25,16 +24,12 @@ const installStateFileName = "install-state.json"
 // jsonInstall caller returns this wrapped with errors.Is still resolving
 // it, so callers can branch on it without string matching.
 //
-// The text carries the way out, and deliberately does not repeat the
-// "register:" prefix its wrapper already adds. This message is the only
-// instruction a user staring at exit 6 gets, and it used to be both
-// tripled ("register: claude: register: claude: register: ...", one
-// prefix per layer) and a dead end: it named the situation and no action.
-// Its wrapper names the config file, so between them the message says
-// which file, what is wrong, and what to do about it.
+// It is the refusal the registration use case (internal/runtimes) knows the
+// writers by, and it is that package's value, with the way out in its text
+// (see runtimes.ErrConflict): the writer wraps it, the use case finds it.
 //
-// The de-duplication rule that produced that wrapper is now stated once,
-// for the whole package: exactly ONE layer names the command, and it is
+// The de-duplication rule for the wrappers around it is stated once, for the
+// whole package: exactly ONE layer names the command, and it is
 // the per-target wrap in jsonInstall/tomlInstall ("register: <target>: ")
 // or jsonUninstall/tomlUninstall ("unregister: <target>: "), because only
 // those know which direction is running. Every helper underneath them
@@ -43,32 +38,7 @@ const installStateFileName = "install-state.json"
 // "longterm-mem: register: claude: register: read ...", a command that
 // was never run, twice (errormessage_test.go pins the convention,
 // cmd/longterm-mem/register_messages_test.go pins the resulting lines).
-var ErrConflict = errors.New("an entry with this name already exists and is not owned by longterm-mem; to hand it to longterm-mem, remove that entry by hand and run register again")
-
-// saveInstallState is InstallState.Save, indirected the way promote's
-// nowFunc is, so a test can put a failure exactly in the window
-// installWithRollback exists for, without depending on how the filesystem
-// happens to fail.
-//
-// This comment used to claim the rollback below could never run outside a
-// test, on the reasoning that anything making the state directory
-// unwritable would first break LoadInstallState. That was false, and it is
-// worth naming the exact counter-example rather than just deleting the
-// claim: LoadInstallState treats a MISSING install-state.json as an empty
-// state and no error (installstate.go), so a state directory at mode 0o500
-// — readable and searchable, not writable — loads perfectly and only fails
-// later at Save's os.CreateTemp. Every fresh install against a directory
-// the user (or a restrictive umask, or a partially restored backup) left
-// unwritable takes exactly that path. TestJSONInstall_
-// RollbackIsReachableWithoutStubbingTheSave pins it with no stub at all.
-//
-// The comment is worth this much space because of what it cost: an error
-// path documented as unreachable is a path nobody writes a test for, and
-// this one went on to spend its whole life as the only non-atomic write to
-// a user's own config file, with a mode-preservation argument that never
-// did anything. A false claim of unreachability is not a harmless comment;
-// it is a standing instruction not to look.
-var saveInstallState = func(s *InstallState, path string) error { return s.Save(path) }
+var ErrConflict = runtimes.ErrConflict
 
 // uninstallCannotDeriveOwnership is the entryOwned argument jsonUninstall
 // and tomlUninstall pass to Decide, named rather than spelled `false` at
@@ -121,9 +91,9 @@ const uninstallCannotDeriveOwnership = false
 // undo. Rewriting the config with the bytes it already has would be a
 // pointless edit to a file longterm-mem does not own, and would churn its
 // .bak for nothing.
-func adoptExistingEntry(target string, state *InstallState, statePath, fingerprint string) error {
+func (w Writer) adoptExistingEntry(target, stateDir string, state *InstallState, fingerprint string) error {
 	state.Set(target, TargetRecord{Fingerprint: fingerprint})
-	if err := saveInstallState(state, statePath); err != nil {
+	if err := w.State.Save(stateDir, state); err != nil {
 		return fmt.Errorf("register: %s: %w", target, err)
 	}
 	return nil
@@ -138,9 +108,11 @@ func adoptExistingEntry(target string, state *InstallState, statePath, fingerpri
 // adopt an entry that is already exactly ours by recording it, refuse via
 // ErrConflict, or do nothing. The runtime's own config file is never
 // touched on adopt, refuse or noop.
-func jsonInstall(target, configPath, stateDir, containerKey, memberKey string, entry json.RawMessage) error {
-	statePath := filepath.Join(stateDir, installStateFileName)
-	state, err := LoadInstallState(statePath)
+func (w Writer) jsonInstall(target, configPath, stateDir, containerKey, memberKey string, entry json.RawMessage) error {
+	if w.State == nil {
+		return fmt.Errorf("register: %s: %w", target, errNoInstallState)
+	}
+	state, err := w.State.Load(stateDir)
 	if err != nil {
 		return fmt.Errorf("register: %s: %w", target, err)
 	}
@@ -185,9 +157,9 @@ func jsonInstall(target, configPath, stateDir, containerKey, memberKey string, e
 	case ActionRefuse:
 		return fmt.Errorf("register: %s: %s: %w", target, configPath, ErrConflict)
 	case ActionAdopt:
-		return adoptExistingEntry(target, state, statePath, Fingerprint(entry))
+		return w.adoptExistingEntry(target, stateDir, state, Fingerprint(entry))
 	case ActionInsert, ActionReplace:
-		return installWithRollback(target, configPath, memberKey, state, statePath, Fingerprint(entry), func() error {
+		return w.installWithRollback(target, configPath, memberKey, stateDir, state, Fingerprint(entry), func() error {
 			return WriteMember(configPath, containerKey, memberKey, entry)
 		})
 	default:
@@ -206,9 +178,11 @@ func jsonInstall(target, configPath, stateDir, containerKey, memberKey string, e
 // install-state-write rollback window, so a TOML-specific writer can never
 // reopen the exact CRITICAL 11b-1 fixed for JSON (see installWithRollback's
 // doc comment).
-func tomlInstall(target, configPath, stateDir, tableKey, memberKey, binary string, newSection []byte) error {
-	statePath := filepath.Join(stateDir, installStateFileName)
-	state, err := LoadInstallState(statePath)
+func (w Writer) tomlInstall(target, configPath, stateDir, tableKey, memberKey, binary string, newSection []byte) error {
+	if w.State == nil {
+		return fmt.Errorf("register: %s: %w", target, errNoInstallState)
+	}
+	state, err := w.State.Load(stateDir)
 	if err != nil {
 		return fmt.Errorf("register: %s: %w", target, err)
 	}
@@ -237,9 +211,9 @@ func tomlInstall(target, configPath, stateDir, tableKey, memberKey, binary strin
 	case ActionRefuse:
 		return fmt.Errorf("register: %s: %s: %w", target, configPath, ErrConflict)
 	case ActionAdopt:
-		return adoptExistingEntry(target, state, statePath, Fingerprint(newSection))
+		return w.adoptExistingEntry(target, stateDir, state, Fingerprint(newSection))
 	case ActionInsert, ActionReplace:
-		return installWithRollback(target, configPath, memberKey, state, statePath, Fingerprint(newSection), func() error {
+		return w.installWithRollback(target, configPath, memberKey, stateDir, state, Fingerprint(newSection), func() error {
 			return WriteTOMLSection(configPath, tableKey, memberKey, binary, newSection)
 		})
 	default:
@@ -261,7 +235,7 @@ func tomlInstall(target, configPath, stateDir, tableKey, memberKey, binary strin
 //
 // No installWithRollback-style guard is needed here the way jsonInstall's
 // install-state-write failure needed one (11b-1 CRITICAL): if the config
-// removal succeeds but saveInstallState then fails, the next run sees
+// removal succeeds but the install-state save then fails, the next run sees
 // entryPresent=false, recordPresent=true — Decide's ActionReplace, which
 // jsonUninstall (like jsonInstall) simply retries: entryPresent is false,
 // so no config write is attempted, and clearing the stale record is
@@ -269,9 +243,11 @@ func tomlInstall(target, configPath, stateDir, tableKey, memberKey, binary strin
 // state Decide's table understands on both sides; it is never mistaken for
 // someone else's entry (that requires entryPresent=true), so it can never
 // regress into the 11b-1 failure mode.
-func jsonUninstall(target, configPath, stateDir, containerKey, memberKey string) (UnregisterOutcome, error) {
-	statePath := filepath.Join(stateDir, installStateFileName)
-	state, err := LoadInstallState(statePath)
+func (w Writer) jsonUninstall(target, configPath, stateDir, containerKey, memberKey string) (UnregisterOutcome, error) {
+	if w.State == nil {
+		return 0, fmt.Errorf("unregister: %s: %w", target, errNoInstallState)
+	}
+	state, err := w.State.Load(stateDir)
 	if err != nil {
 		return 0, fmt.Errorf("unregister: %s: %w", target, err)
 	}
@@ -295,7 +271,7 @@ func jsonUninstall(target, configPath, stateDir, containerKey, memberKey string)
 			}
 		}
 		state.Delete(target)
-		if err := saveInstallState(state, statePath); err != nil {
+		if err := w.State.Save(stateDir, state); err != nil {
 			return 0, fmt.Errorf("unregister: %s: %w", target, err)
 		}
 		return UnregisterRemoved, nil
@@ -307,9 +283,11 @@ func jsonUninstall(target, configPath, stateDir, containerKey, memberKey string)
 // tomlUninstall is jsonUninstall's TOML counterpart, exactly as tomlInstall
 // is jsonInstall's — see jsonUninstall's own doc comment for the shared
 // Decide-reinterpretation rule and why no rollback guard is needed.
-func tomlUninstall(target, configPath, stateDir, tableKey, memberKey string) (UnregisterOutcome, error) {
-	statePath := filepath.Join(stateDir, installStateFileName)
-	state, err := LoadInstallState(statePath)
+func (w Writer) tomlUninstall(target, configPath, stateDir, tableKey, memberKey string) (UnregisterOutcome, error) {
+	if w.State == nil {
+		return 0, fmt.Errorf("unregister: %s: %w", target, errNoInstallState)
+	}
+	state, err := w.State.Load(stateDir)
 	if err != nil {
 		return 0, fmt.Errorf("unregister: %s: %w", target, err)
 	}
@@ -333,7 +311,7 @@ func tomlUninstall(target, configPath, stateDir, tableKey, memberKey string) (Un
 			}
 		}
 		state.Delete(target)
-		if err := saveInstallState(state, statePath); err != nil {
+		if err := w.State.Save(stateDir, state); err != nil {
 			return 0, fmt.Errorf("unregister: %s: %w", target, err)
 		}
 		return UnregisterRemoved, nil
@@ -350,7 +328,7 @@ func tomlUninstall(target, configPath, stateDir, tableKey, memberKey string) (Un
 // failure a re-run cannot recover from: a config carrying a longterm-mem
 // entry install-state has no record of is exactly the shape ActionRefuse
 // is for, so every later run would refuse over an entry longterm-mem
-// itself wrote (11b-1 CRITICAL). If saveInstallState fails, writeConfig's
+// itself wrote (11b-1 CRITICAL). If saving the install-state fails, writeConfig's
 // effect is therefore rolled back to the bytes configPath had before it
 // ran, and the caller is told the entry was withdrawn.
 //
@@ -364,7 +342,7 @@ func tomlUninstall(target, configPath, stateDir, tableKey, memberKey string) (Un
 // CREATES the file, and by this point writeConfig's own rename has always
 // just created it. Restoring bytes while silently re-permissioning the file
 // to 0o600 is not a restore.
-func installWithRollback(target, configPath, label string, state *InstallState, statePath, fingerprint string, writeConfig func() error) error {
+func (w Writer) installWithRollback(target, configPath, label, stateDir string, state *InstallState, fingerprint string, writeConfig func() error) error {
 	before, err := os.ReadFile(configPath)
 	if err != nil {
 		return fmt.Errorf("register: %s: read %s: %w", target, configPath, err)
@@ -373,7 +351,7 @@ func installWithRollback(target, configPath, label string, state *InstallState, 
 		return fmt.Errorf("register: %s: %w", target, err)
 	}
 	state.Set(target, TargetRecord{Fingerprint: fingerprint})
-	if err := saveInstallState(state, statePath); err != nil {
+	if err := w.State.Save(stateDir, state); err != nil {
 		if rollbackErr := durable.WriteFile(configPath, before, configCreatePerm); rollbackErr != nil {
 			return fmt.Errorf("register: %s: %w (and restoring %s failed: %v — remove the %q entry by hand before re-running)", target, err, configPath, rollbackErr, label)
 		}

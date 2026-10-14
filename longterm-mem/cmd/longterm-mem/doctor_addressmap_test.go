@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/ops"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/ops/testdata"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/opstest"
 )
 
 // doctorCheck runs the doctor command over the vault and returns the named check of its report.
@@ -39,16 +39,16 @@ func TestCmdDoctor_ChecksThePagesAgainstTheVaultsAddressMap(t *testing.T) {
 		title   = "Widget Decision"
 	)
 	vaultRoot := realTempDir(t)
-	page := testdata.WritePromotedPage(t, vaultRoot, address, title)
-	testdata.WriteAddressMap(t, vaultRoot, map[string]string{page.Path: address})
-	testdata.WritePrecedenceEntry(t, vaultRoot, page)
-	testdata.RegisterPage(t, vaultRoot, address, title)
+	page := opstest.WritePromotedPage(t, vaultRoot, address, title)
+	opstest.WriteAddressMap(t, vaultRoot, map[string]string{page.Path: address})
+	opstest.WritePrecedenceEntry(t, vaultRoot, page)
+	opstest.RegisterPage(t, vaultRoot, address, title)
 
 	if got := doctorCheck(t, vaultRoot, ops.CheckAddressMapIntegrity); got.Status != ops.CheckPassed {
 		t.Fatalf("address-map-integrity = %+v over a healthy vault, want PASS", got)
 	}
 
-	testdata.WriteAddressMap(t, vaultRoot, map[string]string{filepath.ToSlash(filepath.Join("wiki", "memory", "elsewhere.md")): address})
+	opstest.WriteAddressMap(t, vaultRoot, map[string]string{filepath.ToSlash(filepath.Join("wiki", "memory", "elsewhere.md")): address})
 	got := doctorCheck(t, vaultRoot, ops.CheckAddressMapIntegrity)
 	if want := "address c-000042 maps to wiki/memory/elsewhere.md, not wiki/memory/c-000042.md"; got.Status != ops.CheckFailed || got.Detail != want {
 		t.Errorf("address-map-integrity = %+v, want FAIL with %q", got, want)

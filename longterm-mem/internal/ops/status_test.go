@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/ops/testdata"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/opstest"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultfs"
 )
 
@@ -58,7 +58,7 @@ func TestStatus(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			vaultRoot := t.TempDir()
 			if tc.seedSyncState != "" {
-				testdata.WriteSyncState(t, vaultRoot, tc.seedSyncState)
+				opstest.WriteSyncState(t, vaultRoot, tc.seedSyncState)
 			}
 
 			deps := StatusDeps{

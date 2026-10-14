@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/ops"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/ops/testdata"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/opstest"
 )
 
 // goldenCheckDetail is the detail the named check carries in the doctor half of an ops golden file.
@@ -59,9 +59,9 @@ func TestCmdDoctor_ReportsAnUnparseableSidecarAsTheOpsGoldenDoes(t *testing.T) {
 	if err != nil {
 		t.Fatalf("resolve the temporary directory: %v", err)
 	}
-	testdata.WritePromotedPage(t, vaultRoot, address, title)
-	testdata.WriteAddressMap(t, vaultRoot, map[string]string{"wiki/memory/" + address + ".md": address})
-	testdata.RegisterPage(t, vaultRoot, address, title)
+	opstest.WritePromotedPage(t, vaultRoot, address, title)
+	opstest.WriteAddressMap(t, vaultRoot, map[string]string{"wiki/memory/" + address + ".md": address})
+	opstest.RegisterPage(t, vaultRoot, address, title)
 	sidecar := filepath.Join(vaultRoot, ".raw", ".longterm-mem-manifest.json")
 	if err := os.MkdirAll(filepath.Dir(sidecar), 0o755); err != nil {
 		t.Fatal(err)

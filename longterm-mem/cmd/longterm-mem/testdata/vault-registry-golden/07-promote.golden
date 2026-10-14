@@ -1,0 +1,16 @@
+args: promote --project labdrian-sdd-overlay --id 1
+exit: 0
+--- stdout ---
+longterm-mem: promoted c-000901 (created)
+--- stderr ---
+--- registry ---
+file -rw-------, directory -rwx------
+{
+  "schema": 1,
+  "vaults": {
+    "labdrian-sdd-overlay": {
+      "path": "~/labdrian-brain",
+      "seeded": true
+    }
+  }
+}

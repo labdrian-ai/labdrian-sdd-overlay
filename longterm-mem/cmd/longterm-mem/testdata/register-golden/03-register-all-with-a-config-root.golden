@@ -1,0 +1,6 @@
+args: register --target all --config-root <home>/elsewhere
+exit: 2
+--- stdout ---
+--- stderr ---
+longterm-mem: register: --config-root requires a single --target, not "all"
+--- machine ---

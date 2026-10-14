@@ -33,7 +33,7 @@ func TestApp_VaultRootIsTheVaultTheCommandWasGiven(t *testing.T) {
 
 	var got string
 	var code int
-	stderr := captureStderr(t, func() { got, code = commands{}.newApp("sync").vaultRoot("any-project", vaultRoot) })
+	stderr := captureStderr(t, func() { got, code = commands{}.newApp("sync").vaultRoot("any-project", vaultRoot, false) })
 
 	if got != vaultRoot || code != exitOK || stderr != "" {
 		t.Errorf("vaultRoot = (%q, %d) with stderr %q, want the vault it was given, %q, and silence", got, code, stderr, vaultRoot)
@@ -61,7 +61,7 @@ func TestApp_VaultRootRefusesWithTheCodeOfTheFailure(t *testing.T) {
 			}
 
 			var code int
-			stderr := captureStderr(t, func() { _, code = commands{}.newApp("status").vaultRoot("no-such-project", "") })
+			stderr := captureStderr(t, func() { _, code = commands{}.newApp("status").vaultRoot("no-such-project", "", false) })
 
 			if code != tc.want {
 				t.Errorf("vaultRoot answered %d, want %d", code, tc.want)

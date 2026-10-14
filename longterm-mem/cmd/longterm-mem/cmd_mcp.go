@@ -16,7 +16,6 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/query"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vault"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultreg"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vecindex"
 )
 
@@ -54,13 +53,16 @@ func (c commands) cmdMCP(args []string) int {
 	// queried repeatedly and nothing about its index has changed between
 	// calls. embedClient.Embed and loadCache.Load are safe for concurrent
 	// use (http.Client and LoadCache's own mutex, respectively), matching
-	// how store is already shared across the whole session below.
+	// how store is already shared across the whole session below. The
+	// Builder is the session's for the same reason: the repository each
+	// call makes builds through it, so two top-ups of one index made by two
+	// calls exclude each other.
 	embedClient, err := c.newEmbedClient(embed.Config{Model: vecindex.DefaultModel})
 	if err != nil {
 		return a.refuse(err, exitInternal)
 	}
 
-	server := mcpserver.New(c.mcpDeps(store, embedClient, vecindex.NewLoadCache()))
+	server := mcpserver.New(c.mcpDeps(store, a.sessionQueryWiring(embedClient, vecindex.NewLoadCache())))
 	// context.Canceled here means SIGINT/SIGTERM asked for a graceful
 	// shutdown (R-034), not a failure; only a genuine transport/session
 	// error is reported and turns into a non-zero exit.
@@ -73,29 +75,25 @@ func (c commands) cmdMCP(args []string) int {
 // mcpDeps are the tools of the MCP session. Each resolves its own project's vault fresh on every call (a session
 // can serve more than one project) and then calls the same construction and use cases the CLI subcommands do
 // (queryDeps, promote.PromoteAndReindex), so the CLI and MCP surfaces cannot drift -- the query tool's Embed and
-// index cache being the one deliberate exception (issue #286): this session's shared client and load cache, not
-// runQuery's per-call construction.
-func (c commands) mcpDeps(store *engram.Store, embedClient *embed.Client, loadCache *vecindex.LoadCache) mcpserver.Deps {
+// index cache being the one deliberate exception (issue #286): this session's shared client, load cache and Builder (its
+// wiring, app.sessionQueryWiring), not runQuery's per-call construction.
+func (c commands) mcpDeps(store *engram.Store, wiring queryWiring) mcpserver.Deps {
 	return mcpserver.Deps{
-		Query:   c.mcpQuery(store, embedClient, loadCache),
+		Query:   c.mcpQuery(store, wiring),
 		Get:     mcpGet(store),
 		Promote: c.mcpPromote(store),
 	}
 }
 
 // mcpQuery is the query tool of the MCP session: the vault of the call's project, and the query use case over the
-// session's store, embedding client and index cache.
-func (c commands) mcpQuery(store *engram.Store, embedClient *embed.Client, loadCache *vecindex.LoadCache) func(context.Context, query.Request) (query.Result, error) {
+// session's store, embedding client and index cache. It only reads, so it leaves the vault registry as it found it.
+func (c commands) mcpQuery(store *engram.Store, wiring queryWiring) func(context.Context, query.Request) (query.Result, error) {
 	return func(ctx context.Context, req query.Request) (query.Result, error) {
-		vaultRoot, err := vaultreg.Resolve(defaultVaultsPath(), req.Project, "")
+		vaultRoot, err := machineVaults().ToRead(req.Project, "")
 		if err != nil {
 			return query.Result{}, err
 		}
-		qdeps := queryDeps(store, vaultRoot, queryWiring{
-			newClient: c.newEmbedClient,
-			embed:     embedClient.Embed,
-			cache:     loadCache,
-		})
+		qdeps := queryDeps(store, vaultRoot, wiring)
 		return query.Run(ctx, qdeps, req)
 	}
 }
@@ -118,10 +116,10 @@ func mcpGet(store *engram.Store) func(context.Context, int64) (mcpserver.GetOutc
 // observation with the clock the commands were composed with (promote.PromoteAndReindex), which rebuilds the vault
 // index when the promotion wrote a page, before the call returns, exactly as a sync does. The rebuild's failure is
 // reported beside a SUCCESSFUL promotion rather than as the call's error -- the page is written and durable by
-// then.
+// then. It writes, so it seeds the vault registry of a machine that has none, as the commands that write do.
 func (c commands) mcpPromote(store *engram.Store) func(ctx context.Context, project string, engramID int64) (mcpserver.PromoteOutcome, error) {
 	return func(ctx context.Context, project string, engramID int64) (mcpserver.PromoteOutcome, error) {
-		vaultRoot, err := vaultreg.Resolve(defaultVaultsPath(), project, "")
+		vaultRoot, err := machineVaults().ToWrite(project, "")
 		if err != nil {
 			return mcpserver.PromoteOutcome{}, err
 		}
@@ -129,7 +127,7 @@ func (c commands) mcpPromote(store *engram.Store) func(ctx context.Context, proj
 		if err != nil {
 			return mcpserver.PromoteOutcome{}, err
 		}
-		outcome, err := promote.PromoteAndReindex(ctx, writer, store.ObservationByID, engramID, vault.IndexRebuilder{Root: vaultRoot})
+		outcome, err := promote.PromoteAndReindex(ctx, writer, store.ObservationByID, engramID, vault.IndexRebuilder{Root: vaultRoot, Clock: c.clock})
 		if err != nil {
 			return mcpserver.PromoteOutcome{}, err
 		}

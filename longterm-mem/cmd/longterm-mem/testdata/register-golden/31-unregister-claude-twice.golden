@@ -1,0 +1,26 @@
+args: register --target claude
+exit: 0
+--- stdout ---
+longterm-mem: register: claude: ok
+--- stderr ---
+args: unregister --target claude
+exit: 0
+--- stdout ---
+longterm-mem: unregister: claude: removed
+--- stderr ---
+args: unregister --target claude
+exit: 0
+--- stdout ---
+longterm-mem: unregister: claude: noop
+--- stderr ---
+--- machine ---
+=== .claude.json ===
+{"mcpServers": {}}
+=== .claude.json.bak ===
+{"mcpServers": {
+  "longterm-mem": {"type":"stdio","command":"<home>/.labdrian-overlay/bin/longterm-mem","args":["mcp"]}}}
+=== .labdrian-overlay/longterm-mem/install-state.json ===
+{
+  "schema": 1,
+  "targets": {}
+}

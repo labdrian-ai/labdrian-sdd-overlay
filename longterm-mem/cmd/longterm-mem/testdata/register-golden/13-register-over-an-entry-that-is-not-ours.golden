@@ -1,0 +1,8 @@
+args: register --target claude
+exit: 6
+--- stdout ---
+--- stderr ---
+longterm-mem: register: claude: <home>/.claude.json: an entry with this name already exists and is not owned by longterm-mem; to hand it to longterm-mem, remove that entry by hand and run register again
+--- machine ---
+=== .claude.json ===
+{"mcpServers": {"longterm-mem": {"type": "stdio", "command": "/someone/elses/binary", "args": ["mcp"]}}}

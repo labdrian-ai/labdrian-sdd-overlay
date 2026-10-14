@@ -50,7 +50,7 @@ func (c commands) cmdQuery(args []string) int {
 		return exitUsage
 	}
 
-	vaultRoot, exit := a.vaultRoot(resolvedProject, *vaultDir)
+	vaultRoot, exit := a.vaultRoot(resolvedProject, *vaultDir, true)
 	if exit != exitOK {
 		return exit
 	}
@@ -65,7 +65,7 @@ func (c commands) cmdQuery(args []string) int {
 		requestedTop = *top
 	}
 
-	result, err := runQuery(context.Background(), store, vaultRoot, c.newEmbedClient, query.Request{
+	result, err := a.runQuery(context.Background(), store, vaultRoot, query.Request{
 		Project: resolvedProject, Query: rest[0], Top: requestedTop,
 		ExcludeTypes: splitTypes(*excludeTypes),
 	})

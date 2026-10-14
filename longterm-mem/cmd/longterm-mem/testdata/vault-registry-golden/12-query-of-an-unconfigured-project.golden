@@ -1,0 +1,7 @@
+args: query --project no-such-project pinned
+exit: 3
+--- stdout ---
+--- stderr ---
+longterm-mem: query: vaultreg: vault not configured: project "no-such-project" has no vault-registry entry in <home>/.labdrian-overlay/vaults.json
+--- registry ---
+absent

@@ -23,7 +23,7 @@ func TestCodex_ForeignURLSectionWithoutACommandIsStillRefused(t *testing.T) {
 		t.Fatalf("write config: %v", err)
 	}
 
-	err := RegisterCodex(configRoot, stateDir, "/usr/local/bin/longterm-mem")
+	err := fileWriter().RegisterCodex(configRoot, stateDir, "/usr/local/bin/longterm-mem")
 	if err == nil {
 		t.Fatal("register overwrote a foreign url-based codex section that carries no command line")
 	}
@@ -48,7 +48,7 @@ func TestCodex_CommentOnlySectionIsStillNotAForeignEntry(t *testing.T) {
 		t.Fatalf("write config: %v", err)
 	}
 
-	if err := RegisterCodex(configRoot, stateDir, "/usr/local/bin/longterm-mem"); err != nil {
+	if err := fileWriter().RegisterCodex(configRoot, stateDir, "/usr/local/bin/longterm-mem"); err != nil {
 		t.Fatalf("register over a comment-only section header failed: %v", err)
 	}
 	raw, err := os.ReadFile(configPath)

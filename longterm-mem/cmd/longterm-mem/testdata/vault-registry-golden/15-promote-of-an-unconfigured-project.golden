@@ -1,0 +1,16 @@
+args: promote --project no-such-project --id 1
+exit: 3
+--- stdout ---
+--- stderr ---
+longterm-mem: promote: vaultreg: vault not configured: project "no-such-project" has no vault-registry entry in <home>/.labdrian-overlay/vaults.json
+--- registry ---
+file -rw-------, directory -rwx------
+{
+  "schema": 1,
+  "vaults": {
+    "labdrian-sdd-overlay": {
+      "path": "~/labdrian-brain",
+      "seeded": true
+    }
+  }
+}

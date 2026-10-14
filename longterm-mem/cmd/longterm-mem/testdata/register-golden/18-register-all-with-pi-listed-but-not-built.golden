@@ -1,0 +1,45 @@
+args: register --target all
+exit: 0
+--- stdout ---
+longterm-mem: register: claude: ok
+longterm-mem: register: opencode: ok
+longterm-mem: register: codex: ok
+--- stderr ---
+--- machine ---
+=== .claude.json ===
+{"mcpServers": {
+  "longterm-mem": {"type":"stdio","command":"<home>/.labdrian-overlay/bin/longterm-mem","args":["mcp"]}}}
+=== .claude.json.bak ===
+{"mcpServers": {}}
+=== .codex/config.toml ===
+# the user's own settings
+model = "o3"
+
+[mcp_servers.longterm-mem]
+command = "<home>/.labdrian-overlay/bin/longterm-mem"
+args = ["mcp"]
+=== .codex/config.toml.bak ===
+# the user's own settings
+model = "o3"
+=== .config/opencode/opencode.json ===
+{"mcp": {
+  "longterm-mem": {"type":"local","command":["<home>/.labdrian-overlay/bin/longterm-mem","mcp"],"enabled":true}}}
+=== .config/opencode/opencode.json.bak ===
+{"mcp": {}}
+=== .labdrian-overlay/longterm-mem/install-state.json ===
+{
+  "schema": 1,
+  "targets": {
+    "claude": {
+      "fingerprint": "<sha256>"
+    },
+    "codex": {
+      "fingerprint": "<sha256>"
+    },
+    "opencode": {
+      "fingerprint": "<sha256>"
+    }
+  }
+}
+=== .pi/agent/settings.json ===
+{"packages": ["<home>/.labdrian-overlay/pi/labdrian-pi"]}

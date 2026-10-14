@@ -1,13 +1,11 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"os"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/adoption"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultreg"
 )
 
 // machineStores are the two stores longterm-mem is allowed to consult to learn whether memory already lives
@@ -24,13 +22,14 @@ func (machineStores) Open() (adoption.Established, []string) {
 	s := &establishedNames{vaults: map[string]bool{}}
 	var notes []string
 
-	// Load, never Seed: consulting the registry must not create it. A missing registry is simply a machine
-	// where nothing is configured yet.
-	if reg, err := vaultreg.Load(defaultVaultsPath()); err == nil {
+	// Known, never seeded: consulting the registry must not create it. A machine where no command that writes
+	// has been is taken to hold the row every machine starts with, as it is by the commands that read, so what a
+	// repository's name resolves to does not depend on which command ran first.
+	if reg, err := machineVaults().Known(); err == nil {
 		for name := range reg.Vaults {
 			s.vaults[name] = true
 		}
-	} else if !os.IsNotExist(errors.Unwrap(err)) {
+	} else {
 		notes = append(notes, fmt.Sprintf("the vault registry could not be read (%v)", err))
 	}
 

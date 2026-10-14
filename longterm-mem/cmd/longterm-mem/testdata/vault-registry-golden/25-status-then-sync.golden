@@ -1,0 +1,27 @@
+args: status --project labdrian-sdd-overlay
+exit: 0
+--- stdout ---
+longterm-mem: status for labdrian-sdd-overlay
+  engram: reachable=true
+  vault: provisioned=false
+  last sync: never
+  embedding index built at: never
+--- stderr ---
+--- registry ---
+absent
+args: sync --project labdrian-sdd-overlay
+exit: 0
+--- stdout ---
+longterm-mem: sync promoted 2 observation(s), patched 0 page(s)
+--- stderr ---
+--- registry ---
+file -rw-------, directory -rwx------
+{
+  "schema": 1,
+  "vaults": {
+    "labdrian-sdd-overlay": {
+      "path": "~/labdrian-brain",
+      "seeded": true
+    }
+  }
+}

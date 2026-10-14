@@ -47,7 +47,7 @@ func TestBuildFromScratchEmbedsEveryLiveRow(t *testing.T) {
 	}
 	embedder := &fakeEmbedder{dim: testDim}
 
-	idx, result, err := Build(context.Background(), dir, testModel, testDim, testLimit, rows, embedder, fixedNow)
+	idx, result, err := (&Builder{}).Build(context.Background(), dir, testModel, testDim, testLimit, rows, embedder, fixedNow)
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -85,7 +85,7 @@ func TestBuildReembedsOnlyMissingOrChanged(t *testing.T) {
 		{EngramID: 1, Title: "a", Content: "alpha"},
 		{EngramID: 2, Title: "b", Content: "beta"},
 	}
-	if _, _, err := Build(context.Background(), dir, testModel, testDim, testLimit, rows, embedder, fixedNow); err != nil {
+	if _, _, err := (&Builder{}).Build(context.Background(), dir, testModel, testDim, testLimit, rows, embedder, fixedNow); err != nil {
 		t.Fatalf("first Build: %v", err)
 	}
 	firstCallCount := len(embedder.calls)
@@ -96,7 +96,7 @@ func TestBuildReembedsOnlyMissingOrChanged(t *testing.T) {
 		{EngramID: 2, Title: "b", Content: "beta CHANGED"},
 		{EngramID: 3, Title: "c", Content: "gamma"},
 	}
-	idx, result, err := Build(context.Background(), dir, testModel, testDim, testLimit, rows2, embedder, fixedNow)
+	idx, result, err := (&Builder{}).Build(context.Background(), dir, testModel, testDim, testLimit, rows2, embedder, fixedNow)
 	if err != nil {
 		t.Fatalf("second Build: %v", err)
 	}
@@ -127,7 +127,7 @@ func TestBuildRemovesEntriesForRowsNoLongerLive(t *testing.T) {
 		{EngramID: 1, Title: "a", Content: "alpha"},
 		{EngramID: 2, Title: "b", Content: "beta"},
 	}
-	if _, _, err := Build(context.Background(), dir, testModel, testDim, testLimit, rows, embedder, fixedNow); err != nil {
+	if _, _, err := (&Builder{}).Build(context.Background(), dir, testModel, testDim, testLimit, rows, embedder, fixedNow); err != nil {
 		t.Fatalf("first Build: %v", err)
 	}
 
@@ -135,7 +135,7 @@ func TestBuildRemovesEntriesForRowsNoLongerLive(t *testing.T) {
 	rows2 := []Row{
 		{EngramID: 1, Title: "a", Content: "alpha"},
 	}
-	idx, result, err := Build(context.Background(), dir, testModel, testDim, testLimit, rows2, embedder, fixedNow)
+	idx, result, err := (&Builder{}).Build(context.Background(), dir, testModel, testDim, testLimit, rows2, embedder, fixedNow)
 	if err != nil {
 		t.Fatalf("second Build: %v", err)
 	}
@@ -155,7 +155,7 @@ func TestBuildRefusesOnCorruptedExistingIndex(t *testing.T) {
 	dir := t.TempDir()
 	embedder := &fakeEmbedder{dim: testDim}
 	rows := []Row{{EngramID: 1, Title: "a", Content: "alpha"}}
-	if _, _, err := Build(context.Background(), dir, testModel, testDim, testLimit, rows, embedder, fixedNow); err != nil {
+	if _, _, err := (&Builder{}).Build(context.Background(), dir, testModel, testDim, testLimit, rows, embedder, fixedNow); err != nil {
 		t.Fatalf("first Build: %v", err)
 	}
 
@@ -179,7 +179,7 @@ func TestBuildRefusesOnCorruptedExistingIndex(t *testing.T) {
 		t.Fatalf("write corrupted manifest: %v", err)
 	}
 
-	if _, _, err := Build(context.Background(), dir, testModel, testDim, testLimit, rows, embedder, fixedNow); !errors.Is(err, ErrCorrupted) {
+	if _, _, err := (&Builder{}).Build(context.Background(), dir, testModel, testDim, testLimit, rows, embedder, fixedNow); !errors.Is(err, ErrCorrupted) {
 		t.Errorf("Build over a corrupted index: got %v, want ErrCorrupted", err)
 	}
 }

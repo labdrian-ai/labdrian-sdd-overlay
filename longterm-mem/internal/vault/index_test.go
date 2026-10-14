@@ -6,9 +6,23 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultlayout"
 )
+
+// fixedClock is a Clock that tells one instant, whatever the day the test runs.
+type fixedClock struct{ at time.Time }
+
+func (c fixedClock) Now() time.Time { return c.at }
+
+// indexClock is the clock the cases rebuild with: an instant that is not today's, in a zone that is not UTC, so a
+// sentinel written from the wall clock, or from the instant in its own zone, cannot pass for the one asked for.
+var indexClock = fixedClock{at: time.Date(2031, 2, 3, 4, 5, 6, 0, time.FixedZone("UTC+2", 2*60*60))}
+
+// indexClockSentinel is what the provisioned sentinel reads when it is written from indexClock: the instant in UTC,
+// as RFC 3339.
+const indexClockSentinel = "2031-02-03T02:05:06Z"
 
 // setupRetrieveOKFixture is a fixture bin/setup-retrieve.sh: a real shell
 // script (shebang + exec bit — run directly via Runner.Run, never
@@ -128,7 +142,7 @@ func callLog(t *testing.T, vaultRoot string) []string {
 func TestIndex_AlreadyProvisionedRefresh(t *testing.T) {
 	vaultRoot, runner := newIndexFixtureVault(t, bm25IndexOKFixture, true)
 
-	if err := Rebuild(context.Background(), runner, false); err != nil {
+	if err := Rebuild(context.Background(), runner, false, indexClock); err != nil {
 		t.Fatalf("Rebuild returned an unexpected error: %v", err)
 	}
 
@@ -151,7 +165,7 @@ func TestIndex_NeverIndexedIsProvisionedFirst(t *testing.T) {
 		t.Fatal("fixture setup bug: vault must start out not provisioned")
 	}
 
-	if err := Rebuild(context.Background(), runner, false); err != nil {
+	if err := Rebuild(context.Background(), runner, false, indexClock); err != nil {
 		t.Fatalf("Rebuild returned an unexpected error: %v", err)
 	}
 
@@ -171,10 +185,46 @@ func TestIndex_NeverIndexedIsProvisionedFirst(t *testing.T) {
 	}
 }
 
+// The provisioned sentinel records when the provision step ran to completion, and the instant is the clock's: the
+// one Rebuild is handed, in UTC, and not the time of the machine it runs on.
+func TestIndex_TheSentinelRecordsTheInstantOfTheClockItWasGiven(t *testing.T) {
+	vaultRoot, runner := newIndexFixtureVault(t, bm25IndexOKFixture, false)
+
+	if err := Rebuild(context.Background(), runner, false, indexClock); err != nil {
+		t.Fatalf("Rebuild returned an unexpected error: %v", err)
+	}
+
+	got, err := os.ReadFile(vaultlayout.Layout{Root: vaultRoot}.Path(vaultlayout.ProvisionedSentinel))
+	if err != nil {
+		t.Fatalf("read the sentinel: %v", err)
+	}
+	if string(got) != indexClockSentinel {
+		t.Errorf("sentinel = %q, want %q (the clock's instant, in UTC)", got, indexClockSentinel)
+	}
+}
+
+// A rebuild is told what time it is or it does not begin: a vault is not provisioned by scripts whose completion
+// cannot be recorded, and the scripts are not run to find that out.
+func TestIndex_RebuildWithoutAClockRunsNothing(t *testing.T) {
+	vaultRoot, runner := newIndexFixtureVault(t, bm25IndexOKFixture, false)
+
+	err := Rebuild(context.Background(), runner, false, nil)
+
+	if err == nil {
+		t.Fatal("Rebuild without a clock = nil, want an error")
+	}
+	if log := callLog(t, vaultRoot); len(log) != 0 {
+		t.Errorf("the scripts ran %v, want none", log)
+	}
+	if Provisioned(vaultRoot) {
+		t.Error("the vault reads as provisioned after a rebuild that did not begin")
+	}
+}
+
 func TestIndex_RebuildStepFailureReportsFailure(t *testing.T) {
 	_, runner := newIndexFixtureVault(t, bm25IndexFailFixture, true)
 
-	err := Rebuild(context.Background(), runner, false)
+	err := Rebuild(context.Background(), runner, false, indexClock)
 
 	if err == nil {
 		t.Fatal("expected Rebuild to return an error when a rebuild step fails")
@@ -201,7 +251,7 @@ func TestIndex_InterruptedProvisionRetriggersSetup(t *testing.T) {
 		t.Fatal("fixture setup bug: markers without a completion sentinel must not read as provisioned")
 	}
 
-	if err := Rebuild(context.Background(), runner, false); err != nil {
+	if err := Rebuild(context.Background(), runner, false, indexClock); err != nil {
 		t.Fatalf("Rebuild returned an unexpected error: %v", err)
 	}
 
@@ -217,7 +267,7 @@ func TestIndex_InterruptedProvisionRetriggersSetup(t *testing.T) {
 func TestIndex_ForceRebuildReprovisionsAlreadyProvisionedVault(t *testing.T) {
 	vaultRoot, runner := newIndexFixtureVault(t, bm25IndexOKFixture, true)
 
-	if err := Rebuild(context.Background(), runner, true); err != nil {
+	if err := Rebuild(context.Background(), runner, true, indexClock); err != nil {
 		t.Fatalf("Rebuild returned an unexpected error: %v", err)
 	}
 

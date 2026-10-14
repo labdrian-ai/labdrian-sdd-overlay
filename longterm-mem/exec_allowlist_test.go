@@ -51,8 +51,9 @@ var allowedExecImporters = map[string]bool{
 // pruned: Go's own toolchain treats "testdata" as special only for its own
 // package-discovery purposes, but nothing stops a "testdata" directory from
 // holding a genuine compiled Go package — internal/ops/testdata/fixture.go
-// is exactly that, a real "package testdata" reused by other tests, not
-// inert fixture data — so the walk must still see its .go files. Non-.go
+// was exactly that (a real "package testdata" reused by other tests, not
+// inert fixture data) until L10 moved it to internal/opstest — so the walk
+// must still see the .go files of such a directory. Non-.go
 // content under testdata (fixtures, golden files, YAML) is already excluded
 // by the ".go" suffix check below, so there is nothing left for a directory
 // skip to usefully prune.
@@ -126,7 +127,7 @@ func TestOSExecImportAllowlist(t *testing.T) {
 
 // TestOSExecImportAllowlistCatchesTestdataPackage is a regression test for
 // the blind spot the walk above closes: a directory named "testdata" can
-// hold a genuine compiled Go package (internal/ops/testdata/fixture.go is
+// hold a genuine compiled Go package (internal/ops/testdata/fixture.go was
 // exactly that), so an os/exec import under such a directory must still be
 // caught. It builds a synthetic tree whose only production file lives under
 // a "testdata" directory and imports "os/exec", then asserts the walk

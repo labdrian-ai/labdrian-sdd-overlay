@@ -593,45 +593,6 @@ func TestCmdPromote_InvalidIdExits7(t *testing.T) {
 	}
 }
 
-// TestRegisterExpandTarget (11b.7, 12a.6, R-016/R-017/R-018) pins
-// --target's accepted domain, including the "all" row's scope: as of 12a.6
-// every currently-wired runtime target (claude, opencode, codex) is part
-// of "all"'s expansion, now that register.RegisterCodex exists to receive
-// it (11b.7 asserted a narrower "all" — [claude opencode] — as a
-// deliberate boundary while codex's writer did not exist yet; updating
-// this row is this slice's own scope-boundary move, not a regression of
-// that guard).
-func TestRegisterExpandTarget(t *testing.T) {
-	for _, tc := range []struct {
-		target  string
-		want    []string
-		wantErr bool
-	}{
-		{target: "claude", want: []string{"claude"}},
-		{target: "opencode", want: []string{"opencode"}},
-		{target: "codex", want: []string{"codex"}},
-		{target: "all", want: []string{"claude", "opencode", "codex"}},
-		{target: "", wantErr: true},
-		{target: "bogus", wantErr: true},
-		{target: "Claude", wantErr: true},
-	} {
-		got, err := registerExpandTarget(tc.target)
-		if tc.wantErr {
-			if err == nil {
-				t.Errorf("registerExpandTarget(%q) = %v, nil; want an error", tc.target, got)
-			}
-			continue
-		}
-		if err != nil {
-			t.Errorf("registerExpandTarget(%q) returned error: %v", tc.target, err)
-			continue
-		}
-		if strings.Join(got, ",") != strings.Join(tc.want, ",") {
-			t.Errorf("registerExpandTarget(%q) = %v, want %v", tc.target, got, tc.want)
-		}
-	}
-}
-
 // TestDefaultRegisterConfigRoot (11b.7) pins where each runtime's config
 // is looked for when --config-root is not given. The two rows that matter
 // most are the ones an end-to-end test cannot see: a relative

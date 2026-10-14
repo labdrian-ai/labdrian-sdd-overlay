@@ -1,0 +1,40 @@
+args: register --target all
+exit: 0
+--- stdout ---
+longterm-mem: register: claude: ok
+longterm-mem: register: opencode: ok
+longterm-mem: register: codex: ok
+--- stderr ---
+args: unregister --target all
+exit: 0
+--- stdout ---
+longterm-mem: unregister: claude: removed
+longterm-mem: unregister: opencode: removed
+longterm-mem: unregister: codex: removed
+--- stderr ---
+--- machine ---
+=== .claude.json ===
+{"mcpServers": {}}
+=== .claude.json.bak ===
+{"mcpServers": {
+  "longterm-mem": {"type":"stdio","command":"<home>/.labdrian-overlay/bin/longterm-mem","args":["mcp"]}}}
+=== .codex/config.toml ===
+# the user's own settings
+model = "o3"
+=== .codex/config.toml.bak ===
+# the user's own settings
+model = "o3"
+
+[mcp_servers.longterm-mem]
+command = "<home>/.labdrian-overlay/bin/longterm-mem"
+args = ["mcp"]
+=== .config/opencode/opencode.json ===
+{"mcp": {}}
+=== .config/opencode/opencode.json.bak ===
+{"mcp": {
+  "longterm-mem": {"type":"local","command":["<home>/.labdrian-overlay/bin/longterm-mem","mcp"],"enabled":true}}}
+=== .labdrian-overlay/longterm-mem/install-state.json ===
+{
+  "schema": 1,
+  "targets": {}
+}

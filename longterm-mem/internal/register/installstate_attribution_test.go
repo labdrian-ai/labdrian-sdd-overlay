@@ -27,6 +27,29 @@ func TestLoadInstallState_ErrorNamesTheFileAndNoCommand(t *testing.T) {
 	assertHelperErrorAttribution(t, err, path, "parse")
 }
 
+// install-state.json is the ownership record of the module: it is created owner-only, in a directory made for it
+// that is owner-only too.
+func TestInstallStateSave_CreatesTheRecordAndItsDirectoryOwnerOnly(t *testing.T) {
+	stateDir := filepath.Join(t.TempDir(), "state")
+	path := filepath.Join(stateDir, installStateFileName)
+	state := &InstallState{}
+	state.Set("claude", TargetRecord{Fingerprint: "deadbeef"})
+
+	if err := state.Save(path); err != nil {
+		t.Fatalf("Save: %v", err)
+	}
+
+	for p, want := range map[string]os.FileMode{path: 0o600, stateDir: 0o700} {
+		info, err := os.Stat(p)
+		if err != nil {
+			t.Fatalf("stat %s: %v", p, err)
+		}
+		if got := info.Mode().Perm(); got != want {
+			t.Errorf("mode of %s = %o, want %o", p, got, want)
+		}
+	}
+}
+
 func TestInstallStateSave_ErrorNamesTheFileAndNoCommand(t *testing.T) {
 	// A path whose parent is a FILE, not a directory: Save cannot create
 	// the directory it needs, which is the failure an operator meets on a

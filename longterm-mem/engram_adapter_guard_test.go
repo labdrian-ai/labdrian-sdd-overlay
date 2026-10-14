@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/archguard"
 )
 
 // engramAdapter is the import path of the adapter that reads Engram's SQLite database.
@@ -51,8 +53,10 @@ func adapterImporters(root string) ([]string, error) {
 }
 
 // importersOf is adapterImporters for any adapter: the production Go files that import adapterImport and are
-// neither part of the composition root nor of adapterPackage, the directory of the adapter itself.
+// neither part of the composition root, nor of adapterPackage, the directory of the adapter itself, nor of a
+// package of the rings that is test support (supportDirectories).
 func importersOf(root, adapterImport, adapterPackage string) ([]string, error) {
+	support := supportDirectories()
 	var found []string
 	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -70,7 +74,7 @@ func importersOf(root, adapterImport, adapterPackage string) ([]string, error) {
 			return nil
 		}
 		dir := filepath.ToSlash(filepath.Dir(rel))
-		if within(dir, compositionRoot) || within(dir, adapterPackage) {
+		if within(dir, compositionRoot) || within(dir, adapterPackage) || withinAny(dir, support) {
 			return nil
 		}
 		file, err := parser.ParseFile(token.NewFileSet(), path, nil, parser.ImportsOnly)
@@ -109,4 +113,29 @@ func skipDirectory(root, path, rel, name string) error {
 // within reports whether dir is base or a directory below it.
 func within(dir, base string) bool {
 	return dir == base || strings.HasPrefix(dir, base+"/")
+}
+
+// withinAny reports whether dir is one of bases or a directory below one of them.
+func withinAny(dir string, bases []string) bool {
+	for _, base := range bases {
+		if within(dir, base) {
+			return true
+		}
+	}
+	return false
+}
+
+// supportDirectories are the packages the rings declare test support, apart from the module root (which holds
+// the guards and no production code): code that exists to drive the real adapters from a test, as
+// internal/opstest does when it builds a vault with the vault's own writers. The rings give it no rule, so the
+// rule that only the composition root names an adapter does not apply to it.
+func supportDirectories() []string {
+	var dirs []string
+	for dir, ring := range rings {
+		if ring == archguard.Support && dir != "." {
+			dirs = append(dirs, dir)
+		}
+	}
+	sort.Strings(dirs)
+	return dirs
 }

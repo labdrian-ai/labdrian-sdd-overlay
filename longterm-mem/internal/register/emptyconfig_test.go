@@ -34,10 +34,10 @@ func TestRegister_EmptyJSONConfigIsInstalledInto(t *testing.T) {
 		containerKey string
 		register     func(configRoot, stateDir, binary string) error
 	}{
-		{"claude zero-byte", "", claudeConfigFileName, claudeContainerKey, RegisterClaude},
-		{"claude whitespace-only", "\n  \t\n", claudeConfigFileName, claudeContainerKey, RegisterClaude},
-		{"opencode zero-byte", "", opencodeConfigFileName, opencodeContainerKey, RegisterOpencode},
-		{"opencode whitespace-only", " \n", opencodeConfigFileName, opencodeContainerKey, RegisterOpencode},
+		{"claude zero-byte", "", claudeConfigFileName, claudeContainerKey, fileWriter().RegisterClaude},
+		{"claude whitespace-only", "\n  \t\n", claudeConfigFileName, claudeContainerKey, fileWriter().RegisterClaude},
+		{"opencode zero-byte", "", opencodeConfigFileName, opencodeContainerKey, fileWriter().RegisterOpencode},
+		{"opencode whitespace-only", " \n", opencodeConfigFileName, opencodeContainerKey, fileWriter().RegisterOpencode},
 	}
 
 	for _, tc := range cases {
@@ -83,7 +83,7 @@ func TestRegister_EmptyTOMLConfigIsInstalledInto(t *testing.T) {
 		t.Fatalf("write empty config: %v", err)
 	}
 
-	if err := RegisterCodex(configRoot, stateDir, "/usr/local/bin/longterm-mem"); err != nil {
+	if err := fileWriter().RegisterCodex(configRoot, stateDir, "/usr/local/bin/longterm-mem"); err != nil {
 		t.Fatalf("register into an empty config.toml failed: %v", err)
 	}
 

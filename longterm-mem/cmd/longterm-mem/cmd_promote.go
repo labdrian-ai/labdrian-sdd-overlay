@@ -45,7 +45,7 @@ func (c commands) cmdPromote(args []string) int {
 		fmt.Fprintln(os.Stderr, "longterm-mem: promote: --id is required")
 		return exitUsage
 	}
-	vaultRoot, exit := a.vaultRoot(resolvedProject, *vaultDir)
+	vaultRoot, exit := a.vaultRoot(resolvedProject, *vaultDir, false)
 	if exit != exitOK {
 		return exit
 	}
@@ -150,7 +150,7 @@ func (c commands) cmdPromoteReconcile(args []string) int {
 	}
 	address := fs.Args()[0]
 
-	vaultRoot, exit := a.vaultRoot(resolvedProject, *vaultDir)
+	vaultRoot, exit := a.vaultRoot(resolvedProject, *vaultDir, false)
 	if exit != exitOK {
 		return exit
 	}

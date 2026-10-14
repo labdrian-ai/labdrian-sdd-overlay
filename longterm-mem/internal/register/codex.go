@@ -32,8 +32,8 @@ const codexSectionTemplate = "[mcp_servers.%s]\ncommand = %q\nargs = [\"mcp\"]\n
 // unrelated sections and top-level keys are left byte-identical, a
 // reinstall replaces the existing tagged section in place, and an untagged
 // same-named section is refused with ErrConflict rather than overwritten.
-func RegisterCodex(configRoot, stateDir, binary string) error {
+func (w Writer) RegisterCodex(configRoot, stateDir, binary string) error {
 	configPath := filepath.Join(configRoot, codexConfigFileName)
 	newSection := []byte(fmt.Sprintf(codexSectionTemplate, "longterm-mem", binary))
-	return tomlInstall(codexTarget, configPath, stateDir, codexTableKey, "longterm-mem", binary, newSection)
+	return w.tomlInstall(codexTarget, configPath, stateDir, codexTableKey, "longterm-mem", binary, newSection)
 }

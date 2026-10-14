@@ -1,0 +1,7 @@
+args: sync --project labdrian-sdd-overlay --vault <vault>
+exit: 0
+--- stdout ---
+longterm-mem: sync promoted 2 observation(s), patched 0 page(s)
+--- stderr ---
+--- registry ---
+absent

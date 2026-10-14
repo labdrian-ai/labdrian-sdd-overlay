@@ -1,0 +1,8 @@
+args: query --project labdrian-sdd-overlay pinned
+exit: 0
+--- stdout ---
+longterm-mem: query "pinned" (vault_status=not_requested)
+  [1] engram-fts engram:1 Pinned Decision
+--- stderr ---
+--- registry ---
+absent

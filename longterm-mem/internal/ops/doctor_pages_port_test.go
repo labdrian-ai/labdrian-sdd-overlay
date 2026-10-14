@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/ops/testdata"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/opstest"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultfs"
 )
@@ -73,9 +73,9 @@ func (f *fakePages) PagesLocation() string { return f.location }
 func pagesDoctorDeps(t *testing.T, pages PageReader) DoctorDeps {
 	t.Helper()
 	vaultRoot := t.TempDir()
-	page := testdata.WritePromotedPage(t, vaultRoot, "c-000042", "Widget Decision")
-	testdata.WritePrecedenceEntry(t, vaultRoot, page)
-	testdata.RegisterPage(t, vaultRoot, "c-000042", "Widget Decision")
+	page := opstest.WritePromotedPage(t, vaultRoot, "c-000042", "Widget Decision")
+	opstest.WritePrecedenceEntry(t, vaultRoot, page)
+	opstest.RegisterPage(t, vaultRoot, "c-000042", "Widget Decision")
 	embeddingIndex, liveIDs := newHealthyEmbeddingDeps(t)
 	return DoctorDeps{
 		VaultRoot:             vaultRoot,

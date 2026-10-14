@@ -1,0 +1,25 @@
+args: register --target claude
+exit: 0
+--- stdout ---
+longterm-mem: register: claude: ok
+--- stderr ---
+args: register --target claude
+exit: 0
+--- stdout ---
+longterm-mem: register: claude: ok
+--- stderr ---
+--- machine ---
+=== .claude.json ===
+{"mcpServers": {
+  "longterm-mem": {"type":"stdio","command":"<home>/.labdrian-overlay/bin/longterm-mem","args":["mcp"]}}}
+=== .claude.json.bak ===
+{"mcpServers": {}}
+=== .labdrian-overlay/longterm-mem/install-state.json ===
+{
+  "schema": 1,
+  "targets": {
+    "claude": {
+      "fingerprint": "<sha256>"
+    }
+  }
+}

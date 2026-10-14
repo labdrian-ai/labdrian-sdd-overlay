@@ -1,0 +1,8 @@
+args: register --target all --state-dir <home>/state --binary /opt/bin/longterm-mem
+exit: 8
+--- stdout ---
+--- stderr ---
+longterm-mem: register: claude: could not resolve a config root; set HOME or pass --config-root
+longterm-mem: register: opencode: could not resolve a config root; set HOME or pass --config-root
+longterm-mem: register: codex: could not resolve a config root; set HOME or pass --config-root
+--- machine ---

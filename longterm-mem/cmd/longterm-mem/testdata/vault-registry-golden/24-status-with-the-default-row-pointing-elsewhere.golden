@@ -1,0 +1,12 @@
+args: status --project labdrian-sdd-overlay
+exit: 0
+--- stdout ---
+longterm-mem: status for labdrian-sdd-overlay
+  engram: reachable=true
+  vault: provisioned=false
+  last sync: never
+  embedding index built at: never
+--- stderr ---
+--- registry ---
+file -rw-r--r--, directory -rwxr-xr-x
+{"schema": 1, "vaults": {"labdrian-sdd-overlay": {"path": "<vault>"}}}

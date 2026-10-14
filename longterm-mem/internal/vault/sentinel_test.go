@@ -29,7 +29,7 @@ func TestWriteProvisionedSentinel_SurvivesAStaleTempPath(t *testing.T) {
 		t.Fatalf("seed stale temp path: %v", err)
 	}
 
-	if err := writeProvisionedSentinel(root); err != nil {
+	if err := writeProvisionedSentinel(root, indexClock.Now()); err != nil {
 		t.Fatalf("writeProvisionedSentinel with a stale <sentinel>.tmp leftover: %v", err)
 	}
 
@@ -43,7 +43,7 @@ func TestWriteProvisionedSentinel_SurvivesAStaleTempPath(t *testing.T) {
 // .vault-meta/ it sits next to files the retrieval scripts enumerate.
 func TestWriteProvisionedSentinel_LeavesNoTempFileBehind(t *testing.T) {
 	root := t.TempDir()
-	if err := writeProvisionedSentinel(root); err != nil {
+	if err := writeProvisionedSentinel(root, indexClock.Now()); err != nil {
 		t.Fatalf("writeProvisionedSentinel: %v", err)
 	}
 

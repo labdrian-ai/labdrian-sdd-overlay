@@ -520,18 +520,15 @@ func TestJSONInstall_UnsavableInstallStateWithdrawsTheConfigWrite(t *testing.T) 
 		t.Fatalf("seed config: %v", err)
 	}
 
-	// The save is stubbed rather than broken through the filesystem: every
-	// way to make the state directory unwritable also breaks the load that
-	// precedes it, so jsonInstall would return before writing anything and
-	// the test would pass without ever exercising the window it is about.
-	// Overriding saveInstallState (the package's nowFunc convention) is
-	// what puts the failure in the one place it matters.
+	// The save is failed by the store rather than broken through the
+	// filesystem: every way to make the state directory unwritable also
+	// breaks the load that precedes it, so jsonInstall would return before
+	// writing anything and the test would pass without ever exercising the
+	// window it is about. A store whose Save fails (the Writer's dependency)
+	// is what puts the failure in the one place it matters.
 	stateDir := t.TempDir()
-	restoreSave := saveInstallState
-	saveInstallState = func(*InstallState, string) error { return errors.New("install-state is unwritable") }
-	t.Cleanup(func() { saveInstallState = restoreSave })
 
-	err := jsonInstall("claude", configPath, stateDir, "mcpServers", "longterm-mem", json.RawMessage(`{"type":"stdio"}`))
+	err := unsavableWriter().jsonInstall("claude", configPath, stateDir, "mcpServers", "longterm-mem", json.RawMessage(`{"type":"stdio"}`))
 	if err == nil {
 		t.Fatal("jsonInstall with an unsavable install-state returned nil error, want a failure")
 	}
@@ -562,7 +559,7 @@ func TestRegisterOpencode_ConfigWithNoMCPKeyIsInstalledInto(t *testing.T) {
 	}
 	stateDir := t.TempDir()
 
-	if err := RegisterOpencode(configRoot, stateDir, "/opt/bin/longterm-mem"); err != nil {
+	if err := fileWriter().RegisterOpencode(configRoot, stateDir, "/opt/bin/longterm-mem"); err != nil {
 		t.Fatalf("RegisterOpencode into a config with no %q key returned error: %v", opencodeContainerKey, err)
 	}
 

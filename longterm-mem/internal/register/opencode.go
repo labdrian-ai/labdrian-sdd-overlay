@@ -34,11 +34,11 @@ type opencodeEntry struct {
 // configRoot/opencode.json (R-017), recording the entry's fingerprint under
 // stateDir/install-state.json. See jsonInstall for the shared D9 decision
 // flow every JSON-backed writer follows.
-func RegisterOpencode(configRoot, stateDir, binary string) error {
+func (w Writer) RegisterOpencode(configRoot, stateDir, binary string) error {
 	configPath := filepath.Join(configRoot, opencodeConfigFileName)
 	entry, err := json.Marshal(opencodeEntry{Type: "local", Command: []string{binary, "mcp"}, Enabled: true})
 	if err != nil {
 		return fmt.Errorf("register: %s: marshal entry: %w", opencodeTarget, err)
 	}
-	return jsonInstall(opencodeTarget, configPath, stateDir, opencodeContainerKey, "longterm-mem", entry)
+	return w.jsonInstall(opencodeTarget, configPath, stateDir, opencodeContainerKey, "longterm-mem", entry)
 }

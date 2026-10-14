@@ -15,9 +15,9 @@ func codexGoldenCase() goldenWriterCase {
 		memberKey:      "longterm-mem",
 		testdataDir:    "testdata/codex",
 		fixtureExt:     ".toml",
-		register:       RegisterCodex,
+		register:       fileWriter().RegisterCodex,
 		unregister: func(configRoot, stateDir string) (UnregisterOutcome, error) {
-			return Unregister(codexTarget, configRoot, stateDir)
+			return fileWriter().Unregister(codexTarget, configRoot, stateDir)
 		},
 		binary1:          "/usr/local/bin/longterm-mem",
 		binary2:          "/usr/local/bin/longterm-mem-v2",

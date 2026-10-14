@@ -153,6 +153,29 @@ func TestNames_AbsentLedgerIsEmptyNotAnError(t *testing.T) {
 	}
 }
 
+// The ledger holds the names a repository has been known by, in a repository somebody else may share a machine
+// with: the file starts owner-only, and so does the directory made for it.
+func TestRecord_CreatesTheLedgerAndItsDirectoryOwnerOnly(t *testing.T) {
+	dir := t.TempDir()
+
+	if err := identityledger.Record(dir, []identityledger.Name{{Name: "widgets", Rule: "remote", Adoptable: true}}, at(1)); err != nil {
+		t.Fatalf("Record: %v", err)
+	}
+
+	for path, want := range map[string]os.FileMode{
+		identityledger.Path(dir):               0o600,
+		filepath.Dir(identityledger.Path(dir)): 0o700,
+	} {
+		info, err := os.Stat(path)
+		if err != nil {
+			t.Fatalf("stat %s: %v", path, err)
+		}
+		if got := info.Mode().Perm(); got != want {
+			t.Errorf("mode of %s = %o, want %o", path, got, want)
+		}
+	}
+}
+
 // The ledger belongs to the repository, so it is written under the git
 // common directory -- the one directory a main checkout and every linked
 // worktree share. Writing it anywhere per-worktree would fragment the very

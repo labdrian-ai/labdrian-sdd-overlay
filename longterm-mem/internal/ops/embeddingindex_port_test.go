@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/ops/testdata"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/opstest"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultfs"
 )
 
@@ -32,10 +32,10 @@ func doctorDepsWith(t *testing.T, index EmbeddingIndexReader, liveIDs ...int64) 
 	t.Helper()
 	vaultRoot := t.TempDir()
 	const address, title = "c-000042", "Widget Decision"
-	page := testdata.WritePromotedPage(t, vaultRoot, address, title)
-	testdata.WriteAddressMap(t, vaultRoot, map[string]string{"wiki/memory/" + address + ".md": address})
-	testdata.WritePrecedenceEntry(t, vaultRoot, page)
-	testdata.RegisterPage(t, vaultRoot, address, title)
+	page := opstest.WritePromotedPage(t, vaultRoot, address, title)
+	opstest.WriteAddressMap(t, vaultRoot, map[string]string{"wiki/memory/" + address + ".md": address})
+	opstest.WritePrecedenceEntry(t, vaultRoot, page)
+	opstest.RegisterPage(t, vaultRoot, address, title)
 	return DoctorDeps{
 		VaultRoot:             vaultRoot,
 		Root:                  vaultfs.New(vaultRoot),

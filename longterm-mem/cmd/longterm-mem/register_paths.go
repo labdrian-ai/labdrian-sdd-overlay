@@ -2,46 +2,33 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/runtimes"
 )
 
-// This file holds `register`'s pure resolution rules -- which targets a
-// --target value names, and where each runtime's configuration, the
-// install-state record and the installed binary live when the
-// corresponding flag is not given. They are separated from cmd_register.go
-// so they can be pinned directly, without a config file, a temp directory
-// or an exit code in the way: a default-path rule that silently resolves
-// to the wrong place is invisible in an end-to-end test that passes
-// --config-root, and an unresolvable one is only observable here as an
-// empty string.
+// This file holds what `register` and `unregister` ask of this machine -- where each
+// runtime's configuration, the install-state record and the installed binary live
+// when the corresponding flag is not given, and whether pi is installed. They are
+// separated from cmd_register.go so they can be pinned directly, without a config
+// file, a temp directory or an exit code in the way: a default-path rule that
+// silently resolves to the wrong place is invisible in an end-to-end test that
+// passes --config-root, and an unresolvable one is only observable here as an
+// empty string. Which targets a --target value names is the use case's
+// (runtimes.Expand), and so is the decision to try pi only when it looks
+// installed.
 
-// registerExpandTarget expands --target's value into the ordered list of
-// concrete targets to register, mirroring the runtime-parity --target
-// convention: claude|opencode|codex|pi select one, all expands to every
-// currently-wired per-runtime-config target — codex joined "all"'s
-// expansion in 12a.6, once its writer (register.RegisterCodex) existed to
-// receive it.
-//
-// pi is deliberately NOT part of "all"'s expansion here: unlike the other
-// three, a missing pi package is not "a runtime this machine does not
-// run" (register's own all-vs-explicit skip story) but "this machine built
-// the package and never ran pi install" — a state piInstalled's own probe
-// distinguishes, not a missing config file. cmdRegister appends "pi" to
-// the expanded list itself, only when that probe says it looks installed
-// (C6).
-func registerExpandTarget(target string) ([]string, error) {
-	switch target {
-	case "claude", "opencode", "codex", "pi":
-		return []string{target}, nil
-	case "all":
-		return []string{"claude", "opencode", "codex"}, nil
-	default:
-		return nil, fmt.Errorf("unknown --target %q (want claude|opencode|codex|pi|all)", target)
-	}
-}
+// thisMachine is the runtimes.Machine of the machine the program runs on.
+type thisMachine struct{}
+
+var _ runtimes.Machine = thisMachine{}
+
+func (thisMachine) ConfigRoot(target string) string    { return defaultRegisterConfigRoot(target) }
+func (thisMachine) StateDir() string                   { return defaultRegisterStateDir() }
+func (thisMachine) Binary() string                     { return defaultRegisterBinaryPath() }
+func (thisMachine) PiInstalled(packageDir string) bool { return piInstalled(packageDir) }
 
 // piInstalled probes, read-only, whether labdrian-pi looks genuinely
 // installed rather than merely built: packageDir exists AND

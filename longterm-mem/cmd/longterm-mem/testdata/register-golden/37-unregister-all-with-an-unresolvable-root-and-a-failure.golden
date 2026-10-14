@@ -1,0 +1,8 @@
+args: unregister --target all --state-dir <home>/state
+exit: 1
+--- stdout ---
+--- stderr ---
+longterm-mem: unregister: claude: could not resolve a config root; set HOME or pass --config-root
+longterm-mem: unregister: opencode: read <home>/xdg/opencode/opencode.json: read <home>/xdg/opencode/opencode.json: is a directory
+longterm-mem: unregister: codex: could not resolve a config root; set HOME or pass --config-root
+--- machine ---
