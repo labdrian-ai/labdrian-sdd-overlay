@@ -39,6 +39,10 @@ import (
 //   - runtimes is an application package: the use cases behind register and unregister (which runtimes a
 //     target names, what is refused, what is skipped, the verdict among several), over the Registrar and Machine
 //     ports it owns; internal/register answers the first and the composition root the second (L10).
+//   - sourcefs is the adapter of the local sources ingestion reads: the directory a relative path begins at,
+//     answered from the process, in ingest's own SourceReader port (L11). The reads the extraction use case will
+//     add (tasks 2b.2 and 2b.6 of longterm-mem-knowledge-ingestion) join it here. Only the composition root may
+//     import it (the adapter guard).
 //   - vaultregfs is the adapter of the registry of vaults: the JSON file the Store port of vaultreg is answered
 //     from, in vaultreg's own types (L9). Only the composition root may import it (the adapter guard).
 //   - the module root (this guard), internal/opstest (the fixtures the tests
@@ -70,6 +74,7 @@ var rings = map[string]archguard.Ring{
 	"internal/runtimes":       archguard.Application,
 	"internal/skillstale":     archguard.Domain,
 	"internal/skillstalefs":   archguard.Adapter,
+	"internal/sourcefs":       archguard.Adapter,
 	"internal/staleness":      archguard.Domain,
 	"internal/testhome":       archguard.Support,
 	"internal/vault":          archguard.Adapter,
