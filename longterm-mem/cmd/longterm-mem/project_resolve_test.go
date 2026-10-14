@@ -11,6 +11,12 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/projectid"
 )
 
+// identityCommands are the commands the cases below resolve a project through: a clock fixed at fixtureInstant
+// dates what the identity ledger records, so that no case depends on the day it runs.
+func identityCommands() commands {
+	return commands{clock: fixedClock{at: fixtureInstant}}
+}
+
 // declaredRepo builds a throwaway git repository under t.TempDir() that
 // declares the given project name, and returns its path. Tests here run
 // git inside their own repositories only; nothing touches the repository
@@ -46,7 +52,7 @@ func TestResolveProjectFlag_OmittedResolvesFromWorkingDirectory(t *testing.T) {
 
 	var project string
 	var exit int
-	stderr := captureStderr(t, func() { project, exit = resolveProjectFlag("query", "") })
+	stderr := captureStderr(t, func() { project, exit = identityCommands().resolveProjectFlag("query", "") })
 
 	if exit != exitOK {
 		t.Fatalf("resolveProjectFlag with no --project inside a repository exited %d, want %d; stderr=%q", exit, exitOK, stderr)
@@ -64,7 +70,7 @@ func TestResolveProjectFlag_UnresolvableKeepsTheRefusalAndNamesWhy(t *testing.T)
 
 	var project string
 	var exit int
-	stderr := captureStderr(t, func() { project, exit = resolveProjectFlag("query", "") })
+	stderr := captureStderr(t, func() { project, exit = identityCommands().resolveProjectFlag("query", "") })
 
 	if exit != exitUsage {
 		t.Fatalf("resolveProjectFlag outside a repository exited %d, want %d (usage)", exit, exitUsage)
@@ -91,7 +97,7 @@ func TestResolveProjectFlag_CorrespondenceCheck(t *testing.T) {
 	t.Run("mismatch warns and still proceeds", func(t *testing.T) {
 		var project string
 		var exit int
-		stderr := captureStderr(t, func() { project, exit = resolveProjectFlag("query", "some-other-project") })
+		stderr := captureStderr(t, func() { project, exit = identityCommands().resolveProjectFlag("query", "some-other-project") })
 
 		if exit != exitOK {
 			t.Fatalf("a mismatching --project exited %d, want %d: naming another project deliberately must stay possible", exit, exitOK)
@@ -110,7 +116,7 @@ func TestResolveProjectFlag_CorrespondenceCheck(t *testing.T) {
 	t.Run("match stays silent", func(t *testing.T) {
 		var project string
 		var exit int
-		stderr := captureStderr(t, func() { project, exit = resolveProjectFlag("query", "acme-widgets") })
+		stderr := captureStderr(t, func() { project, exit = identityCommands().resolveProjectFlag("query", "acme-widgets") })
 
 		if exit != exitOK || project != "acme-widgets" {
 			t.Fatalf("resolveProjectFlag = (%q, %d), want (%q, %d)", project, exit, "acme-widgets", exitOK)
@@ -124,7 +130,7 @@ func TestResolveProjectFlag_CorrespondenceCheck(t *testing.T) {
 		t.Chdir(t.TempDir())
 		var project string
 		var exit int
-		stderr := captureStderr(t, func() { project, exit = resolveProjectFlag("query", "some-project") })
+		stderr := captureStderr(t, func() { project, exit = identityCommands().resolveProjectFlag("query", "some-project") })
 
 		if exit != exitOK || project != "some-project" {
 			t.Fatalf("resolveProjectFlag = (%q, %d), want (%q, %d)", project, exit, "some-project", exitOK)
@@ -133,6 +139,41 @@ func TestResolveProjectFlag_CorrespondenceCheck(t *testing.T) {
 			t.Errorf("outside a repository the check produced %q, want silence", stderr)
 		}
 	})
+}
+
+// A working directory that cannot be read (it was removed under the process) is the end of an omitted --project,
+// which has nothing to resolve from, and no matter at all to an explicit one: the correspondence check is a
+// diagnostic, never a gate.
+func TestResolveProjectFlag_AnUnreadableWorkingDirectory(t *testing.T) {
+	isolatedStores(t)
+	gone := t.TempDir()
+	t.Chdir(gone)
+	if err := os.Remove(gone); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Getwd(); err == nil {
+		t.Skip("this system still reads the working directory after it is removed")
+	}
+
+	var project string
+	var exit int
+	stderr := captureStderr(t, func() { project, exit = identityCommands().resolveProjectFlag("query", "chosen") })
+	if project != "chosen" || exit != exitOK || stderr != "" {
+		t.Errorf("an explicit --project = %q, %d, %q; want it kept, exit %d and silence", project, exit, stderr, exitOK)
+	}
+
+	stderr = captureStderr(t, func() { project, exit = identityCommands().resolveProjectFlag("query", "") })
+	if project != "" || exit != exitUsage || !strings.Contains(stderr, "--project is required") || !strings.Contains(stderr, "reading the working directory") {
+		t.Errorf("an omitted --project = %q, %d, %q; want a refusal that says the working directory could not be read", project, exit, stderr)
+	}
+}
+
+// isolatedStores names the two stores a command consults when told nothing, so a case that resolves a project
+// reads nothing of the machine's.
+func isolatedStores(t *testing.T) {
+	t.Helper()
+	t.Setenv(engramDBEnvVar, filepath.Join(t.TempDir(), "absent.db"))
+	t.Setenv(vaultsFileEnvVar, writeVaults(t))
 }
 
 // TestCommands_ProjectFlagIsOptional walks every subcommand that takes
@@ -227,7 +268,7 @@ func TestResolveProjectFlag_AdoptsTheNameTheMemoryAlreadyLivesUnder(t *testing.T
 
 	var project string
 	var exit int
-	stderr := captureStderr(t, func() { project, exit = resolveProjectFlag("query", "") })
+	stderr := captureStderr(t, func() { project, exit = identityCommands().resolveProjectFlag("query", "") })
 
 	if exit != exitOK {
 		t.Fatalf("exit = %d, want %d; stderr=%q", exit, exitOK, stderr)
@@ -254,7 +295,7 @@ func TestResolveProjectFlag_ReportsDerivableNamesOwedAnIntegration(t *testing.T)
 	t.Chdir(repo)
 
 	var project string
-	stderr := captureStderr(t, func() { project, _ = resolveProjectFlag("query", "") })
+	stderr := captureStderr(t, func() { project, _ = identityCommands().resolveProjectFlag("query", "") })
 
 	if project != "acme-widgets" {
 		t.Fatalf("the highest-ranked established name is canonical: got %q", project)
@@ -279,7 +320,7 @@ func TestResolveProjectFlag_AMovedRepositoryIsReunitedWithItsMemory(t *testing.T
 	t.Setenv(vaultsFileEnvVar, writeVaults(t))
 	t.Chdir(before)
 	var oldName string
-	captureStderr(t, func() { oldName, _ = resolveProjectFlag("query", "") })
+	captureStderr(t, func() { oldName, _ = identityCommands().resolveProjectFlag("query", "") })
 	if oldName == "" {
 		t.Fatal("the first resolution produced no name")
 	}
@@ -295,7 +336,7 @@ func TestResolveProjectFlag_AMovedRepositoryIsReunitedWithItsMemory(t *testing.T
 	t.Chdir(after)
 
 	var got string
-	stderr := captureStderr(t, func() { got, _ = resolveProjectFlag("query", "") })
+	stderr := captureStderr(t, func() { got, _ = identityCommands().resolveProjectFlag("query", "") })
 	if got != oldName {
 		t.Fatalf("a moved repository lost its memory: resolved %q, want the remembered %q; stderr=%q", got, oldName, stderr)
 	}
@@ -314,12 +355,12 @@ func TestIdentityLedger_IsSharedByEveryWorktree(t *testing.T) {
 
 	// Resolve once from the main checkout: the ledger gets written.
 	t.Chdir(main)
-	captureStderr(t, func() { resolveProjectFlag("query", "") })
+	captureStderr(t, func() { identityCommands().resolveProjectFlag("query", "") })
 
 	worktree := filepath.Join(parent, "feature")
 	runGit(t, main, "worktree", "add", "-q", "-b", "feature", worktree)
 
-	commonFromWorktree, err := projectid.CommonDir(worktree)
+	commonFromWorktree, err := identityRules().CommonDir(worktree)
 	if err != nil {
 		t.Fatalf("CommonDir(worktree): %v", err)
 	}
@@ -334,6 +375,30 @@ func TestIdentityLedger_IsSharedByEveryWorktree(t *testing.T) {
 	// And nothing was written into the worktree's own git directory.
 	if _, err := os.Stat(filepath.Join(main, ".git", "worktrees", "feature", "longterm-mem")); !os.IsNotExist(err) {
 		t.Fatalf("a per-worktree ledger was created; it must live in the common dir only (%v)", err)
+	}
+}
+
+// The ledger dates what it records by the clock the commands were given, as promote dates its pages: a test
+// that hands the commands a fixed instant gets that instant in the file, and no test depends on the day it runs.
+func TestIdentityLedger_IsDatedByTheCommandsClock(t *testing.T) {
+	t.Setenv(engramDBEnvVar, filepath.Join(t.TempDir(), "absent.db"))
+	t.Setenv(vaultsFileEnvVar, writeVaults(t))
+	repo := declaredRepo(t, "dated-by-the-clock")
+	t.Chdir(repo)
+
+	captureStderr(t, func() { run([]string{"query", "anything"}) })
+
+	names, err := identityledger.Names(filepath.Join(repo, ".git"))
+	if err != nil {
+		t.Fatalf("read the ledger: %v", err)
+	}
+	if len(names) == 0 {
+		t.Fatal("the command recorded no name")
+	}
+	for _, n := range names {
+		if !n.FirstSeen.Equal(fixtureInstant) || !n.LastSeen.Equal(fixtureInstant) {
+			t.Errorf("%q is recorded as seen from %v to %v, want the commands' clock, %v", n.Name, n.FirstSeen, n.LastSeen, fixtureInstant)
+		}
 	}
 }
 

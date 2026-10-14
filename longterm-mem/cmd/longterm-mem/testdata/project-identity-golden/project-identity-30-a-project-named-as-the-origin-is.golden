@@ -1,0 +1,8 @@
+args: stale --project github.com/acme/widgets
+exit: 0
+--- stdout ---
+longterm-mem: stale: 0 observations in github.com/acme/widgets, checked against <project>
+  nothing this repository disagrees with
+--- stderr ---
+--- ledger ---
+no ledger

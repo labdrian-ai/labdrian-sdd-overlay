@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -105,6 +106,33 @@ func TestNames_TamperedLedgerIsReportedNotTrusted(t *testing.T) {
 
 	if _, err := identityledger.Names(dir); !errors.Is(err, identityledger.ErrCorrupt) {
 		t.Fatalf("a tampered ledger must be reported: got %v", err)
+	}
+}
+
+// The refusal says which digest the file carries and which its entries come to, and they are two: a message that
+// named one digest twice would not tell an operator what was edited. (The digests are masked in the goldens of
+// the commands that print this message, so that a change of the scheme fails here and not there.)
+func TestNames_TheRefusalOfATamperedLedgerNamesTwoDifferentDigests(t *testing.T) {
+	dir := t.TempDir()
+	if err := identityledger.Record(dir, []identityledger.Name{{Name: "widgets", Rule: "declared", Adoptable: true}}, at(1)); err != nil {
+		t.Fatalf("Record: %v", err)
+	}
+	raw, err := os.ReadFile(identityledger.Path(dir))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(identityledger.Path(dir), []byte(strings.Replace(string(raw), "widgets", "stolen!", 1)), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = identityledger.Names(dir)
+
+	found := regexp.MustCompile(`sha256:[0-9a-f]{64}`).FindAllString(err.Error(), -1)
+	if len(found) != 2 || found[0] == found[1] {
+		t.Errorf("the refusal %q names %v, want two different sha256 digests", err, found)
+	}
+	if !strings.Contains(err.Error(), "carries "+found[0]) || !strings.Contains(err.Error(), "digest to "+found[1]) {
+		t.Errorf("the refusal %q does not say which is the file's and which the entries'", err)
 	}
 }
 

@@ -1,0 +1,42 @@
+args: stale
+exit: 0
+--- stdout ---
+longterm-mem: stale: 1 observations in widgets, checked against <outside>/wt
+  nothing this repository disagrees with
+--- stderr ---
+longterm-mem: stale: --project not given, adopted "widgets" from the working directory (the memory already lives under this name; derived via the remote rule)
+--- ledger ---
+{
+  "schema": "longterm-mem.identity-ledger/v1",
+  "revision": "<digest>",
+  "entries": [
+    {
+      "name": "<project>/.git",
+      "rule": "common_dir",
+      "adoptable": true,
+      "first_seen": "<run>",
+      "last_seen": "<run>"
+    },
+    {
+      "name": "checkout",
+      "rule": "common_dir",
+      "adoptable": false,
+      "first_seen": "<run>",
+      "last_seen": "<run>"
+    },
+    {
+      "name": "github.com/acme/widgets",
+      "rule": "remote",
+      "adoptable": true,
+      "first_seen": "<run>",
+      "last_seen": "<run>"
+    },
+    {
+      "name": "widgets",
+      "rule": "remote",
+      "adoptable": false,
+      "first_seen": "<run>",
+      "last_seen": "<run>"
+    }
+  ]
+}

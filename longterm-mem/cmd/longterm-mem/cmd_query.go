@@ -38,7 +38,7 @@ func (c commands) cmdQuery(args []string) int {
 	if err := fs.Parse(args); err != nil {
 		return exitUsage
 	}
-	resolvedProject, exit := resolveProjectFlag("query", *project)
+	resolvedProject, exit := c.resolveProjectFlag("query", *project)
 	if exit != exitOK {
 		return exit
 	}

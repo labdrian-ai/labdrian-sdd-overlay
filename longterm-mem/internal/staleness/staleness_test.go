@@ -190,20 +190,85 @@ func TestClassifyPaths_TakesTheHistorysWordForAPathTheTreeDoesNotName(t *testing
 	}
 }
 
-// The texts the strict pattern of the detectors never produces are still questions: an empty text, a climb and an
-// absolute path are not resolved against the tree, whatever the tree holds, and go to the history as they are
-// written; a leading "./" is the one thing taken off. (What the history answers for them is its own, pinned in
-// internal/repohistory.)
+// The texts the strict pattern of the detectors never produces are still questions: an empty text, an absolute
+// path and a detour that stays inside the project are not resolved against the tree, whatever the tree holds,
+// and go to the history as they are written; a leading "./" is the one thing taken off. (What the history
+// answers for them is its own, pinned in internal/repohistory.)
 func TestClassifyPaths_PassesWhatTheTreeCannotResolveToTheHistoryAsWritten(t *testing.T) {
 	evidence := &fakeEvidence{files: []string{"name.go", "a/name.go"}}
 
-	_, err := staleness.ClassifyPaths(evidence, []string{"", "../name.go", "/name.go", "a/../name.go", "./name.go", ".//name.go"})
+	_, err := staleness.ClassifyPaths(evidence, []string{"", "/name.go", "a/../name.go", "./name.go", ".//name.go"})
 
 	if err != nil {
 		t.Fatalf("ClassifyPaths: %v", err)
 	}
-	want := [][]string{{"", "../name.go", ".//name.go", "/name.go", "a/../name.go"}}
+	want := [][]string{{"", ".//name.go", "/name.go", "a/../name.go"}}
 	if !reflect.DeepEqual(evidence.asked, want) {
+		t.Errorf("the history was asked %v, want %v", evidence.asked, want)
+	}
+}
+
+// A path that climbs out of the project (once its detours are taken out) names a place the repository has
+// nothing to say about: it is unknown, and it is not a question for the history, which would refuse it and so
+// take the whole report down with it. (The pattern of the detectors admits a climb in the middle of a path.)
+// This is so whatever the tree holds: a climb is no path of the tree, even when its last segments name a file.
+func TestClassifyPaths_APathThatClimbsOutOfTheProjectIsUnknownAndNeverAsked(t *testing.T) {
+	climbing := []string{"a/../../outside.go", "../name.go", "..", "a/b/../../../name.go", "./../name.go", "a/../../a/name.go", "../"}
+	history := map[string]staleness.PathFact{}
+	for _, p := range climbing {
+		history[p] = staleness.PathFact{State: staleness.PathDeleted, Commit: "c0ffee3", At: time.Date(2027, 6, 1, 0, 0, 0, 0, time.UTC)}
+	}
+	evidence := &fakeEvidence{files: []string{"name.go", "a/name.go"}, history: history}
+
+	got, err := staleness.ClassifyPaths(evidence, climbing)
+
+	if err != nil {
+		t.Fatalf("ClassifyPaths: %v", err)
+	}
+	for _, p := range climbing {
+		if want := (staleness.PathFact{Path: p, State: staleness.PathUnknown}); got[p] != want {
+			t.Errorf("ClassifyPaths[%q] = %+v, want %+v", p, got[p], want)
+		}
+	}
+	if len(got) != len(climbing) {
+		t.Errorf("ClassifyPaths gave %d facts for %d paths: %+v", len(got), len(climbing), got)
+	}
+	if len(evidence.asked) != 0 {
+		t.Errorf("the history was asked %v; a path that climbs out of the project is not a question for it", evidence.asked)
+	}
+}
+
+// What stays inside the project is still a question, however it detours: only a climb out of the root is
+// unknown, and a name that merely starts with dots is a name.
+func TestClassifyPaths_AsksAboutAPathThatDetoursButStaysInsideTheProject(t *testing.T) {
+	evidence := &fakeEvidence{files: []string{"name.go"}}
+	inside := []string{"a/../gone.go", "a/b/../../gone2.go", "a/b/../c.go", "..hidden/x.go", "a/..b/x.go", "a/b../x.go", "...go", "./a/../gone3.go"}
+
+	_, err := staleness.ClassifyPaths(evidence, inside)
+
+	if err != nil {
+		t.Fatalf("ClassifyPaths: %v", err)
+	}
+	want := [][]string{{"...go", "..hidden/x.go", "./a/../gone3.go", "a/../gone.go", "a/..b/x.go", "a/b../x.go", "a/b/../../gone2.go", "a/b/../c.go"}}
+	if !reflect.DeepEqual(evidence.asked, want) {
+		t.Errorf("the history was asked %v, want %v", evidence.asked, want)
+	}
+}
+
+// One path that leaves the project does not take the others down: those that can be judged are, with the one
+// question of the history for them alone.
+func TestClassifyPaths_AClimbingPathLeavesTheOthersToTheirOwnEvidence(t *testing.T) {
+	evidence := theRepository()
+
+	got, err := staleness.ClassifyPaths(evidence, []string{"kept.go", "a/../../outside.go", "gone.go"})
+
+	if err != nil {
+		t.Fatalf("ClassifyPaths: %v", err)
+	}
+	if got["kept.go"].State != staleness.PathPresent || got["gone.go"].State != staleness.PathDeleted || got["a/../../outside.go"].State != staleness.PathUnknown {
+		t.Errorf("ClassifyPaths = %+v", got)
+	}
+	if want := [][]string{{"gone.go"}}; !reflect.DeepEqual(evidence.asked, want) {
 		t.Errorf("the history was asked %v, want %v", evidence.asked, want)
 	}
 }
@@ -405,6 +470,29 @@ func TestDetect_JudgesAMemoryByItsOwnPathsWhateverItsId(t *testing.T) {
 
 	if len(got) != 1 || got[0].Title != "names a removed path" {
 		t.Fatalf("findings = %+v, want the one of the memory that names the removed path", got)
+	}
+}
+
+// A memory that names a path that climbs out of the project (the pattern admits it) neither fails the report nor
+// hides what the rest of it says: that path is unknown and no finding, and the other paths of the memory and
+// the other memories are reported as they would be without it.
+func TestDetect_APathThatClimbsOutOfTheProjectIsSkippedAndTheRestOfTheReportStands(t *testing.T) {
+	evidence := theRepository()
+
+	got := detect(t, evidence,
+		observation(1, "names a path above the project", "a/../../outside.go", "2026-01-01 00:00:00"),
+		observation(2, "names it beside a removed one", "kept.go, a/../../outside.go, gone.go", "2026-01-01 00:00:00"),
+		observation(3, "names a path that is moved", "pkg/moved.go", "2026-01-01 00:00:00"),
+	)
+
+	if len(got) != 2 || got[0].ObservationID != 2 || got[1].ObservationID != 3 {
+		t.Fatalf("findings = %+v, want those of memories 2 and 3", got)
+	}
+	if len(got[0].Removed) != 1 || got[0].Removed[0].Path != "gone.go" || len(got[0].Moved) != 0 {
+		t.Errorf("memory 2 = %+v, want gone.go alone as removed", got[0])
+	}
+	if want := [][]string{{"gone.go", "pkg/moved.go"}}; !reflect.DeepEqual(evidence.asked, want) {
+		t.Errorf("the history was asked %v, want %v", evidence.asked, want)
 	}
 }
 

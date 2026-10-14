@@ -21,7 +21,7 @@ import (
 // never-synced project, or a never-built embedding index is a reported
 // state, not an error -- so this command exits 0 once its own inputs
 // (project, vault registry) resolve.
-func cmdStatus(args []string) int {
+func (c commands) cmdStatus(args []string) int {
 	fs := flag.NewFlagSet("status", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
 	project := fs.String("project", "", projectFlagUsage)
@@ -30,7 +30,7 @@ func cmdStatus(args []string) int {
 	if err := fs.Parse(args); err != nil {
 		return exitUsage
 	}
-	resolvedProject, exit := resolveProjectFlag("status", *project)
+	resolvedProject, exit := c.resolveProjectFlag("status", *project)
 	if exit != exitOK {
 		return exit
 	}

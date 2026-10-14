@@ -2,116 +2,46 @@ package projectid
 
 import (
 	"errors"
-	"os"
-	"os/exec"
-	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 )
 
-// This file exercises AdoptWith and the unexported derivableNames directly
-// (white-box, package projectid) rather than through the now-deleted Adopt
-// and DerivableNames wrappers. Every assertion below is the one the deleted
-// wrappers' tests used to pin; only the entry point changed.
-//
-// Every test here builds its own throwaway repositories under t.TempDir()
-// and runs git inside those. Nothing touches the repository this module
-// lives in. Production code never shells out (exec_allowlist_test.go), but
-// a _test.go file may, and building a real linked worktree is the only
-// honest way to prove the property under test.
+// These cases run AdoptWith and derivableNames over a table that stands for the repositories (see
+// resolver_test.go): which names a repository derives, in what order, and which of them the memory already
+// lives under are all the rules' to decide, and none of it needs a disk.
 
-// established builds an Established backed by a fixed set of names.
-func established(names ...string) Established {
+// established builds an Established backed by a fixed set of names, and records the names it was asked about.
+func established(asked *[]string, names ...string) Established {
 	have := map[string]bool{}
 	for _, n := range names {
 		have[n] = true
 	}
-	return func(name string) (bool, error) { return have[name], nil }
+	return func(name string) (bool, error) {
+		if asked != nil {
+			*asked = append(*asked, name)
+		}
+		return have[name], nil
+	}
 }
 
-func git(t *testing.T, dir string, args ...string) string {
+func adoptWith(t *testing.T, f *fakeRepositories, dir string, opts AdoptOptions) Adoption {
 	t.Helper()
-	cmd := exec.Command("git", args...)
-	cmd.Dir = dir
-	cmd.Env = append(os.Environ(),
-		"GIT_CONFIG_GLOBAL=/dev/null",
-		"GIT_CONFIG_SYSTEM=/dev/null",
-		"GIT_AUTHOR_NAME=t", "GIT_AUTHOR_EMAIL=t@example.com",
-		"GIT_COMMITTER_NAME=t", "GIT_COMMITTER_EMAIL=t@example.com",
-	)
-	out, err := cmd.CombinedOutput()
+	got, err := NewResolver(f).AdoptWith(dir, opts)
 	if err != nil {
-		t.Fatalf("git %s in %s: %v\n%s", strings.Join(args, " "), dir, err, out)
+		t.Fatalf("AdoptWith(%s): %v", dir, err)
 	}
-	return strings.TrimSpace(string(out))
+	return got
 }
 
-// newRepo creates an initialized repository with one commit at parent/name
-// and returns its path.
-func newRepo(t *testing.T, parent, name string) string {
-	t.Helper()
-	root := filepath.Join(parent, name)
-	if err := os.MkdirAll(root, 0o755); err != nil {
-		t.Fatalf("mkdir %s: %v", root, err)
-	}
-	git(t, root, "init", "-q", "-b", "main")
-	git(t, root, "commit", "-q", "--allow-empty", "-m", "init")
-	return root
-}
-
-// addWorktree creates a linked worktree of repo at path and returns path.
-func addWorktree(t *testing.T, repo, path string) string {
-	t.Helper()
-	git(t, repo, "worktree", "add", "-q", "-b", filepath.Base(path), path)
-	return path
-}
-
-func write(t *testing.T, path, content string) {
-	t.Helper()
-	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
-		t.Fatalf("write %s: %v", path, err)
-	}
-}
-
-func resolveIdentity(t *testing.T, dir string) Identity {
-	t.Helper()
-	id, err := Resolve(dir)
-	if err != nil {
-		t.Fatalf("Resolve(%s): unexpected error: %v", dir, err)
-	}
-	return id
-}
-
-// derivableNamesFor is the DerivableNames wrapper's body, inlined for
-// tests now that the exported wrapper is gone: discover dir's repository,
-// then list what it derives.
-func derivableNamesFor(t *testing.T, dir string) []DerivedName {
-	t.Helper()
-	repo, err := discover(dir)
-	if err != nil {
-		t.Fatalf("discover(%s): %v", dir, err)
-	}
-	names, err := derivableNames(repo)
-	if err != nil {
-		t.Fatalf("derivableNames(%s): %v", dir, err)
-	}
-	return names
-}
-
-// The cheapest form of integrating fragmented memory is not creating the
-// second pile. A repository whose remote normalizes to
-// "github.com/acme/widgets" also derives the plain "widgets", and if THAT
-// is the name the memory already lives under, minting the URL-shaped one
-// is fragmentation performed by the resolver itself.
+// The cheapest form of integrating fragmented memory is not creating the second pile. A repository whose remote
+// normalizes to "github.com/acme/widgets" also derives the plain "widgets", and if THAT is the name the memory
+// already lives under, minting the URL-shaped one is fragmentation performed by the resolver itself.
 func TestAdopt_EstablishedAliasWinsOverTheChainsAnswer(t *testing.T) {
-	tmp := t.TempDir()
-	root := newRepo(t, tmp, "widgets")
-	git(t, root, "remote", "add", "origin", "https://github.com/acme/widgets.git")
+	f := widgets(originConfig("https://github.com/acme/widgets.git"))
 
-	got, err := AdoptWith(root, AdoptOptions{Established: established("widgets")})
-	if err != nil {
-		t.Fatalf("AdoptWith: %v", err)
-	}
+	got := adoptWith(t, f, mainRoot, AdoptOptions{Established: established(nil, "widgets")})
+
 	if got.Identity.Project != "widgets" {
 		t.Fatalf("an established alias must be adopted, not re-minted: got %q", got.Identity.Project)
 	}
@@ -121,24 +51,21 @@ func TestAdopt_EstablishedAliasWinsOverTheChainsAnswer(t *testing.T) {
 	if got.Identity.Rule != RuleRemote {
 		t.Fatalf("the adopted name must still name the rule that derived it: got %q", got.Identity.Rule)
 	}
+	if got.Identity.WorktreeRoot != mainRoot || got.Identity.CommonDir != commonDir {
+		t.Fatalf("the adopted identity lost where the repository is: %+v", got.Identity)
+	}
 }
 
-// With nothing established there is nothing to integrate WITH, so the chain
-// decides exactly as before. Adoption must never invent a name that no rule
-// derives.
+// With nothing established there is nothing to integrate WITH, so the chain decides exactly as before. Adoption
+// must never invent a name that no rule derives.
 func TestAdopt_NothingEstablishedFallsBackToTheChain(t *testing.T) {
-	tmp := t.TempDir()
-	root := newRepo(t, tmp, "widgets")
-	git(t, root, "remote", "add", "origin", "https://github.com/acme/widgets.git")
+	f := widgets(originConfig("https://github.com/acme/widgets.git"))
 
-	got, err := AdoptWith(root, AdoptOptions{Established: established()})
-	if err != nil {
-		t.Fatalf("AdoptWith: %v", err)
-	}
-	want := resolveIdentity(t, root)
-	if got.Identity.Project != want.Project || got.Identity.Rule != want.Rule {
-		t.Fatalf("with nothing established AdoptWith must equal Resolve: got %q (%s), want %q (%s)",
-			got.Identity.Project, got.Identity.Rule, want.Project, want.Rule)
+	got := adoptWith(t, f, mainRoot, AdoptOptions{Established: established(nil)})
+
+	want := resolveWith(t, f, mainRoot)
+	if got.Identity != want {
+		t.Fatalf("with nothing established AdoptWith must equal Resolve: got %+v, want %+v", got.Identity, want)
 	}
 	if got.Adopted {
 		t.Fatal("Adopted must be false when no name was established")
@@ -148,134 +75,203 @@ func TestAdopt_NothingEstablishedFallsBackToTheChain(t *testing.T) {
 	}
 }
 
-// Two derivable names both holding memory is the fragmentation itself, and
-// it is PROVABLE rather than guessed: both names came out of this one
-// repository's own metadata in a single read. The higher-ranked spelling
-// becomes canonical and the other is reported as owed an integration --
-// reported, because merging Engram's own store is not this module's to do
-// (R-002 keeps its connection read-only).
+// Two derivable names both holding memory is the fragmentation itself, and it is PROVABLE rather than guessed:
+// both names came out of this one repository's own metadata in a single read. The higher-ranked spelling becomes
+// canonical and the other is reported as owed an integration -- reported, because merging Engram's own store is
+// not this module's to do (R-002 keeps its connection read-only).
 func TestAdopt_OtherEstablishedAliasesArePendingIntegration(t *testing.T) {
-	tmp := t.TempDir()
-	root := newRepo(t, tmp, "widgets")
-	write(t, filepath.Join(root, DeclaredFileName), "acme-widgets\n")
-	git(t, root, "remote", "add", "origin", "https://github.com/acme/widgets.git")
+	f := widgets(originConfig("https://github.com/acme/widgets.git"))
+	f.declarations[mainRoot] = "acme-widgets\n"
 
-	got, err := AdoptWith(root, AdoptOptions{Established: established("acme-widgets", "widgets")})
-	if err != nil {
-		t.Fatalf("AdoptWith: %v", err)
-	}
+	got := adoptWith(t, f, mainRoot, AdoptOptions{Established: established(nil, "acme-widgets", "widgets", "github.com/acme/widgets")})
+
 	if got.Identity.Project != "acme-widgets" {
 		t.Fatalf("the highest-ranked established name is canonical: got %q", got.Identity.Project)
 	}
-	if len(got.PendingIntegration) != 1 || got.PendingIntegration[0] != "widgets" {
-		t.Fatalf("every other established derivable name is owed an integration: got %v", got.PendingIntegration)
+	if want := []string{"github.com/acme/widgets", "widgets"}; !reflect.DeepEqual(got.PendingIntegration, want) {
+		t.Fatalf("every other established derivable name is owed an integration, in rank order: got %v, want %v", got.PendingIntegration, want)
 	}
 }
 
-// The property Resolve guarantees must survive adoption: a main checkout
-// and a linked worktree adopt the same name, or adoption has reintroduced
-// exactly what it exists to prevent.
+// The property Resolve guarantees must survive adoption: a main checkout and a linked worktree adopt the same
+// name, or adoption has reintroduced exactly what it exists to prevent.
 func TestAdopt_MainCheckoutAndWorktreeAdoptIdentically(t *testing.T) {
-	tmp := t.TempDir()
-	root := newRepo(t, tmp, "widgets")
-	git(t, root, "remote", "add", "origin", "https://github.com/acme/widgets.git")
-	wt := addWorktree(t, root, filepath.Join(tmp, "widgets-feature"))
+	f := widgets(originConfig("https://github.com/acme/widgets.git"))
+	opts := AdoptOptions{Established: established(nil, "widgets")}
 
-	e := established("widgets")
-	fromMain, err := AdoptWith(root, AdoptOptions{Established: e})
-	if err != nil {
-		t.Fatalf("AdoptWith(main): %v", err)
+	fromMain, fromLinked := adoptWith(t, f, mainRoot, opts), adoptWith(t, f, linkedRoot, opts)
+
+	if fromMain.Identity.Project != fromLinked.Identity.Project || fromMain.Adopted != fromLinked.Adopted {
+		t.Fatalf("adoption fragmented the repository: main=%+v worktree=%+v", fromMain, fromLinked)
 	}
-	fromWorktree, err := AdoptWith(wt, AdoptOptions{Established: e})
-	if err != nil {
-		t.Fatalf("AdoptWith(worktree): %v", err)
-	}
-	if fromMain.Identity.Project != fromWorktree.Identity.Project {
-		t.Fatalf("adoption fragmented the repository: main=%q worktree=%q",
-			fromMain.Identity.Project, fromWorktree.Identity.Project)
+	if !reflect.DeepEqual(fromMain.Derived, fromLinked.Derived) {
+		t.Fatalf("the two derive different names: main=%v worktree=%v", fromMain.Derived, fromLinked.Derived)
 	}
 }
 
-// A storage that cannot be consulted must not silently become "nothing is
-// established" -- that answer is indistinguishable from a genuinely fresh
-// repository, and acting on it mints the second pile this whole mechanism
-// exists to avoid. The error is surfaced so the caller decides.
+// A storage that cannot be consulted must not silently become "nothing is established" -- that answer is
+// indistinguishable from a genuinely fresh repository, and acting on it mints the second pile this whole
+// mechanism exists to avoid. The error is surfaced, with the name that could not be asked about, so the caller
+// decides.
 func TestAdopt_UnreadableStorageIsReportedNotAssumedEmpty(t *testing.T) {
-	tmp := t.TempDir()
-	root := newRepo(t, tmp, "widgets")
 	boom := errors.New("storage unavailable")
+	f := widgets(originConfig("https://github.com/acme/widgets.git"))
 
-	_, err := AdoptWith(root, AdoptOptions{Established: func(string) (bool, error) { return false, boom }})
+	_, err := NewResolver(f).AdoptWith(mainRoot, AdoptOptions{Established: func(string) (bool, error) { return false, boom }})
+
 	if !errors.Is(err, boom) {
 		t.Fatalf("an unreadable storage must surface, not read as empty: got %v", err)
 	}
+	if want := `projectid: checking whether "github.com/acme/widgets" already holds memory: storage unavailable`; err.Error() != want {
+		t.Errorf("the error is %q, want %q", err, want)
+	}
 }
 
-// The hole derivation alone cannot close: a repository that MOVES stops
-// deriving its old path, so memory stored under that path becomes
-// unreachable -- silently, and forever. A name the repository was known by
-// before is still its name, and adopting it is the reunion.
-func TestAdoptWith_RemembersANameNothingDerivesAnyMore(t *testing.T) {
-	tmp := t.TempDir()
-	root := newRepo(t, tmp, "widgets") // no declaration, no remote: path-derived only
+// A repository that is in no repository, or cannot be read, is told as it is: nothing is asked of the storage.
+func TestAdopt_ALocationErrorIsTheAnswerAndTheStorageIsNotAsked(t *testing.T) {
+	var asked []string
 
-	got, err := AdoptWith(root, AdoptOptions{
-		Established: established("/somewhere/else/.git"),
+	_, err := NewResolver(widgets("")).AdoptWith("/elsewhere", AdoptOptions{Established: established(&asked)})
+
+	if !errors.Is(err, ErrNotARepository) || len(asked) != 0 {
+		t.Errorf("AdoptWith = %v (storage asked about %v); want ErrNotARepository and no question", err, asked)
+	}
+}
+
+// The hole derivation alone cannot close: a repository that MOVES stops deriving its old path, so memory stored
+// under that path becomes unreachable -- silently, and forever. A name the repository was known by before is
+// still its name, and adopting it is the reunion.
+func TestAdoptWith_RemembersANameNothingDerivesAnyMore(t *testing.T) {
+	f := widgets("") // no declaration, no remote: path-derived only
+
+	got := adoptWith(t, f, mainRoot, AdoptOptions{
+		Established: established(nil, "/somewhere/else/.git"),
 		Remembered:  []string{"/somewhere/else/.git"},
 	})
-	if err != nil {
-		t.Fatalf("AdoptWith: %v", err)
-	}
+
 	if got.Identity.Project != "/somewhere/else/.git" {
 		t.Fatalf("a remembered name that still holds memory must be adopted: got %q", got.Identity.Project)
 	}
 	if !got.Adopted {
 		t.Fatal("Adopted must report that the identity came from storage")
 	}
+	if got.Identity.Rule != RuleRemembered {
+		t.Fatalf("the adopted name must say it was remembered: got %q", got.Identity.Rule)
+	}
 }
 
-// Remembered names rank BELOW everything the repository still derives. What
-// it looks like now is better evidence than what it looked like once, and
-// inverting that would let a stale name outrank a live declaration.
+// Remembered names rank BELOW everything the repository still derives. What it looks like now is better evidence
+// than what it looked like once, and inverting that would let a stale name outrank a live declaration.
 func TestAdoptWith_LiveDerivationOutranksMemory(t *testing.T) {
-	tmp := t.TempDir()
-	root := newRepo(t, tmp, "widgets")
-	write(t, filepath.Join(root, DeclaredFileName), "current-name\n")
+	f := widgets("")
+	f.declarations[mainRoot] = "current-name\n"
 
-	got, err := AdoptWith(root, AdoptOptions{
-		Established: established("current-name", "former-name"),
+	got := adoptWith(t, f, mainRoot, AdoptOptions{
+		Established: established(nil, "current-name", "former-name"),
 		Remembered:  []string{"former-name"},
 	})
-	if err != nil {
-		t.Fatalf("AdoptWith: %v", err)
-	}
+
 	if got.Identity.Project != "current-name" {
 		t.Fatalf("a live declaration must outrank a remembered name: got %q", got.Identity.Project)
 	}
-	if len(got.PendingIntegration) != 1 || got.PendingIntegration[0] != "former-name" {
+	if want := []string{"former-name"}; !reflect.DeepEqual(got.PendingIntegration, want) {
 		t.Fatalf("the remembered name still holds memory and is owed an integration: got %v", got.PendingIntegration)
 	}
 }
 
-// derivableNames is what the caller writes to the ledger, so it must report
-// the rule and whether each name may later be adopted on the ledger's word
-// alone. The loose spellings may not: a bare directory name can name
-// somebody else's repository.
-func TestDerivableNames_MarksLooseSpellingsUnadoptable(t *testing.T) {
-	tmp := t.TempDir()
-	root := newRepo(t, tmp, "widgets")
-	git(t, root, "remote", "add", "origin", "https://github.com/acme/widgets.git")
+// Storage is asked about every name there is, the derived ones in rank order and then the remembered ones in the
+// order they were given, and each once: a remembered name the repository also derives is not a second question,
+// and an empty one is no question at all.
+func TestAdoptWith_AsksAboutEveryNameOnceDerivedFirst(t *testing.T) {
+	f := widgets(originConfig("https://github.com/acme/widgets.git"))
+	var asked []string
 
-	names := derivableNamesFor(t, root)
+	adoptWith(t, f, mainRoot, AdoptOptions{
+		Established: established(&asked),
+		Remembered:  []string{"older", "widgets", "", "oldest", "older"},
+	})
 
-	strict := map[string]bool{}
-	for _, n := range names {
-		strict[n.Name] = n.Strict
+	// "widgets" is derived twice (the origin's last segment and the common directory's own directory name) and
+	// remembered once more, and asked about once.
+	want := []string{"github.com/acme/widgets", "widgets", commonDir, "older", "oldest"}
+	if !reflect.DeepEqual(asked, want) {
+		t.Errorf("storage was asked about %v, want %v", asked, want)
 	}
-	if !strict["github.com/acme/widgets"] {
-		t.Error("a normalized remote is a strict identity")
+}
+
+// What a repository derives is what the caller writes to its ledger, so the rule and the strictness of each name
+// are part of the answer: the loose spellings (a bare directory name, the last segment of an origin) may not be
+// adopted later on a ledger's word alone, because they can name somebody else's repository.
+func TestDerivableNames_ListsEveryNameWithItsRuleAndItsStrictness(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		declaration string
+		config      string
+		want        []DerivedName
+	}{
+		{"declared, remote and path", "chosen-name\n", originConfig("https://github.com/acme/widgets.git"), []DerivedName{
+			{Name: "chosen-name", Rule: RuleDeclared, Strict: true},
+			{Name: "github.com/acme/widgets", Rule: RuleRemote, Strict: true},
+			{Name: "widgets", Rule: RuleRemote, Strict: false},
+			{Name: commonDir, Rule: RuleCommonDir, Strict: true},
+		}},
+		{"remote and path", "", originConfig("https://github.com/acme/gadgets.git"), []DerivedName{
+			{Name: "github.com/acme/gadgets", Rule: RuleRemote, Strict: true},
+			{Name: "gadgets", Rule: RuleRemote, Strict: false},
+			{Name: commonDir, Rule: RuleCommonDir, Strict: true},
+			{Name: "widgets", Rule: RuleCommonDir, Strict: false},
+		}},
+		{"path alone", "", "", []DerivedName{
+			{Name: commonDir, Rule: RuleCommonDir, Strict: true},
+			{Name: "widgets", Rule: RuleCommonDir, Strict: false},
+		}},
+		{"a declared name that is also the directory's", "widgets\n", "", []DerivedName{
+			{Name: "widgets", Rule: RuleDeclared, Strict: true},
+			{Name: commonDir, Rule: RuleCommonDir, Strict: true},
+		}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f := widgets(tc.config)
+			if tc.declaration != "" {
+				f.declarations[mainRoot] = tc.declaration
+			}
+
+			got := adoptWith(t, f, mainRoot, AdoptOptions{Established: established(nil)}).Derived
+
+			if !reflect.DeepEqual(got, tc.want) {
+				t.Errorf("Derived = %+v, want %+v", got, tc.want)
+			}
+		})
 	}
-	if strict["widgets"] {
-		t.Error("a bare last segment can name another repository and must not be adoptable from memory alone")
+}
+
+// The names remembered from a ledger are not names the repository derives: they never appear among the ones the
+// caller records, which would make a ledger vouch for itself.
+func TestAdoptWith_RememberedNamesAreNotAmongTheDerivedOnes(t *testing.T) {
+	f := widgets("")
+
+	got := adoptWith(t, f, mainRoot, AdoptOptions{Established: established(nil), Remembered: []string{"former-name"}})
+
+	for _, d := range got.Derived {
+		if d.Name == "former-name" {
+			t.Errorf("a remembered name was reported as derived: %+v", got.Derived)
+		}
+	}
+}
+
+// A declaration that is broken is refused here as it is by Resolve, with the same error, before storage is
+// asked anything: adoption does not paper over the one file a human wrote to control the name.
+func TestAdoptWith_ABrokenDeclarationIsRefusedBeforeStorageIsAsked(t *testing.T) {
+	f := widgets("")
+	f.declarations[mainRoot] = "one\ntwo\n"
+	var asked []string
+
+	_, err := NewResolver(f).AdoptWith(mainRoot, AdoptOptions{Established: established(&asked)})
+
+	if !errors.Is(err, ErrDeclaredInvalid) || len(asked) != 0 {
+		t.Errorf("AdoptWith = %v (storage asked about %v); want ErrDeclaredInvalid and no question", err, asked)
+	}
+	if !strings.Contains(err.Error(), DeclaredFileName) {
+		t.Errorf("the refusal %q does not name the declaration file", err)
 	}
 }

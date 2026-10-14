@@ -49,7 +49,7 @@ func (c commands) cmdDoctor(args []string) int {
 	if err := fs.Parse(args); err != nil {
 		return exitUsage
 	}
-	resolvedProject, exit := resolveProjectFlagReadOnly("doctor", *project)
+	resolvedProject, exit := c.resolveProjectFlagReadOnly("doctor", *project)
 	if exit != exitOK {
 		return exit
 	}

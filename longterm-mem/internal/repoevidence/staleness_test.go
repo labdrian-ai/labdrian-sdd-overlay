@@ -160,20 +160,23 @@ func TestDetect_APathThisRepositoryNeverHadIsIgnored(t *testing.T) {
 	}
 }
 
-// A path that climbs out of the project is refused by git, and the refusal is the answer for the whole report: a
-// memory that names such a path (the pattern admits a climb in the middle of a path) makes the report fail
-// rather than skip it. Recorded as it is; changing it is a decision about what the report prints.
-func TestDetect_APathThatClimbsOutOfTheProjectFailsTheReport(t *testing.T) {
+// A path that climbs out of the project would be refused by git, and the refusal would be the answer for the
+// whole report; it is not asked (the owner's decision of 2026-10-13: such a path is unknown, and the rest of
+// the report prints). Over the real repository: the report is what the other paths of the memory say.
+func TestDetect_APathThatClimbsOutOfTheProjectIsSkippedNotRefused(t *testing.T) {
 	repo := fixture(t)
 
 	got, err := staleness.Detect(repoevidence.At(repo), []memory.Observation{{
 		ID: 6, Title: "names a path above the project",
-		Content:   "**Where**: kept.go, a/../../outside.go\n",
+		Content:   "**Where**: kept.go, a/../../outside.go, gone.go\n",
 		UpdatedAt: "2026-01-01 00:00:00",
 	}})
 
-	if err == nil || got != nil {
-		t.Fatalf("Detect = %+v, %v; want git's refusal of the path and no findings", got, err)
+	if err != nil {
+		t.Fatalf("Detect: %v; want the path that climbs out skipped", err)
+	}
+	if len(got) != 1 || len(got[0].Removed) != 1 || got[0].Removed[0].Path != "gone.go" {
+		t.Fatalf("Detect = %+v, want the one finding the other paths give (gone.go removed)", got)
 	}
 }
 

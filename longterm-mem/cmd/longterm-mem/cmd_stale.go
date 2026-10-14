@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/projectid"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/repoevidence"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/staleness"
 )
@@ -20,14 +19,14 @@ import (
 // also why removals and moves are printed apart: a moved file leaves a
 // memory out of date about where something lives, never wrong about what it
 // is, and folding the two together would invite treating them alike.
-func cmdStale(args []string) int {
+func (c commands) cmdStale(args []string) int {
 	fs := flag.NewFlagSet("stale", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
 	project := fs.String("project", "", projectFlagUsage)
 	if err := fs.Parse(args); err != nil {
 		return exitUsage
 	}
-	resolvedProject, exit := resolveProjectFlag("stale", *project)
+	resolvedProject, exit := c.resolveProjectFlag("stale", *project)
 	if exit != exitOK {
 		return exit
 	}
@@ -37,7 +36,7 @@ func cmdStale(args []string) int {
 		fmt.Fprintf(os.Stderr, "longterm-mem: stale: reading the working directory: %v\n", err)
 		return exitUsage
 	}
-	id, err := projectid.Resolve(wd)
+	id, err := identityRules().Resolve(wd)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "longterm-mem: stale: %v\n", err)
 		return exitUsage

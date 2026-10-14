@@ -17,7 +17,7 @@ import (
 //     read through (L1 gave query its memory ports; L3 and L4 give the rest).
 //   - ingest, projectid, promote, skillstale and staleness are domain packages:
 //     their rules are the part that stays; the file system, git and SQLite they
-//     still reach are debt below (skillstale reaches nothing since L5, staleness since L6).
+//     still reach are debt below (skillstale reaches nothing since L5, staleness since L6, projectid since L7).
 //   - vaultreg is an adapter. L9 makes its Resolve pure, but the registry file
 //     store stays in the package, so it cannot be a domain package without a
 //     debt that L9 does not clear.
@@ -32,11 +32,15 @@ import (
 //   - repoevidence is the adapter of the repository evidence staleness asks for: it lists the working tree and
 //     asks repohistory (git) what became of a path, and answers in staleness's own types (L6). Only the
 //     composition root may import it (the adapter guard).
+//   - projectidfs is the adapter of the repository the identity rules ask for: where it is, the file that
+//     declares its project and its git configuration, read from the metadata git keeps on a disk, in
+//     projectid's own types (L7). Only the composition root may import it (the adapter guard).
 //   - the module root (this guard) and internal/ops/testdata (a Go package the
 //     other tests import) are test support.
 var rings = map[string]archguard.Ring{
 	".":                       archguard.Support,
 	"cmd/longterm-mem":        archguard.Root,
+	"internal/adoption":       archguard.Application,
 	"internal/durable":        archguard.Adapter,
 	"internal/embed":          archguard.Adapter,
 	"internal/engram":         archguard.Adapter,
@@ -47,6 +51,7 @@ var rings = map[string]archguard.Ring{
 	"internal/ops":            archguard.Application,
 	"internal/ops/testdata":   archguard.Support,
 	"internal/projectid":      archguard.Domain,
+	"internal/projectidfs":    archguard.Adapter,
 	"internal/promote":        archguard.Domain,
 	"internal/query":          archguard.Application,
 	"internal/register":       archguard.Adapter,
@@ -81,14 +86,6 @@ var knownDebt = archguard.Debt{
 	// the origin a value the source adapter resolves.
 	"internal/ingest": {
 		"path/filepath.Abs": "L11",
-	},
-
-	// projectid: the git and file system reads move to a RepositoryInspector
-	// adapter.
-	"internal/projectid": {
-		"os":                         "L7",
-		"path/filepath.Abs":          "L7",
-		"path/filepath.EvalSymlinks": "L7",
 	},
 }
 

@@ -1,0 +1,43 @@
+args: stale
+exit: 0
+--- stdout ---
+longterm-mem: stale: 1 observations in current-name, checked against <project>
+  nothing this repository disagrees with
+--- stderr ---
+longterm-mem: stale: --project not given, adopted "current-name" from the working directory (the memory already lives under this name; derived via the declared rule)
+WARN stale: "former-name" also hold memory and are the same repository as "current-name"; they are owed an integration into it. longterm-mem reads Engram read-only and must not merge it: run `engram projects consolidate` to fold them in.
+--- ledger ---
+{
+  "schema": "longterm-mem.identity-ledger/v1",
+  "revision": "<digest>",
+  "entries": [
+    {
+      "name": "<project>/.git",
+      "rule": "common_dir",
+      "adoptable": true,
+      "first_seen": "<run>",
+      "last_seen": "<run>"
+    },
+    {
+      "name": "checkout",
+      "rule": "common_dir",
+      "adoptable": false,
+      "first_seen": "<run>",
+      "last_seen": "<run>"
+    },
+    {
+      "name": "current-name",
+      "rule": "declared",
+      "adoptable": true,
+      "first_seen": "<run>",
+      "last_seen": "<run>"
+    },
+    {
+      "name": "former-name",
+      "rule": "declared",
+      "adoptable": true,
+      "first_seen": "2020-01-01T00:00:00Z",
+      "last_seen": "2020-01-01T00:00:00Z"
+    }
+  ]
+}

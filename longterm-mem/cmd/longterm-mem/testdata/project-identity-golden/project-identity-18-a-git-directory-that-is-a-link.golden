@@ -1,0 +1,28 @@
+args: stale
+exit: 0
+--- stdout ---
+longterm-mem: stale: 0 observations in <outside>/elsewhere/.git, checked against <project>
+  nothing this repository disagrees with
+--- stderr ---
+longterm-mem: stale: --project not given, resolved "<outside>/elsewhere/.git" from the working directory (via the common_dir rule)
+--- ledger ---
+{
+  "schema": "longterm-mem.identity-ledger/v1",
+  "revision": "<digest>",
+  "entries": [
+    {
+      "name": "<outside>/elsewhere/.git",
+      "rule": "common_dir",
+      "adoptable": true,
+      "first_seen": "<run>",
+      "last_seen": "<run>"
+    },
+    {
+      "name": "elsewhere",
+      "rule": "common_dir",
+      "adoptable": false,
+      "first_seen": "<run>",
+      "last_seen": "<run>"
+    }
+  ]
+}

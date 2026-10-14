@@ -1,0 +1,7 @@
+args: stale
+exit: 2
+--- stdout ---
+--- stderr ---
+longterm-mem: stale: --project is required: it could not be resolved from the working directory: projectid: resolving <outside>/gone: lstat <outside>/gone: no such file or directory
+--- ledger ---
+no ledger

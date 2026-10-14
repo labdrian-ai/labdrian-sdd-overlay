@@ -2,9 +2,12 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
+	"strings"
 	"sync/atomic"
 	"testing"
 
@@ -22,7 +25,22 @@ var testEmbedBackend *httptest.Server
 // testEmbedRequests counts the requests testEmbedBackend received.
 var testEmbedRequests atomic.Int64
 
+// testHomePrefix names the home directory the tests of this package run in.
+const testHomePrefix = "longterm-mem-test-home-"
+
 func TestMain(m *testing.M) {
+	// No test runs in the home of whoever runs the tests: a command that is not told where Engram's database is
+	// looks for it under the home directory, and so does the vault registry, so a test that forgets to name them
+	// would read the machine's own. The tests that need a home of their own set it again (t.Setenv).
+	home, err := os.MkdirTemp("", testHomePrefix)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "create the home of the tests: %v\n", err)
+		os.Exit(1)
+	}
+	if err := os.Setenv("HOME", home); err != nil {
+		fmt.Fprintf(os.Stderr, "set the home of the tests: %v\n", err)
+		os.Exit(1)
+	}
 	testEmbedBackend = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		testEmbedRequests.Add(1)
 		vector := make([]float64, vecindex.DefaultDimension)
@@ -34,7 +52,24 @@ func TestMain(m *testing.M) {
 	}))
 	code := m.Run()
 	testEmbedBackend.Close()
+	os.RemoveAll(home)
 	os.Exit(code)
+}
+
+// The tests run in a home directory made for them, under the temporary directory, whatever home the process was
+// started with: the two stores a command consults when it is told nothing (Engram's database and the vault
+// registry) are looked for there, so no test reads the machine's own.
+func TestTheTestsRunInAHomeOfTheirOwn(t *testing.T) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(home, os.TempDir()) || !strings.HasPrefix(filepath.Base(home), testHomePrefix) {
+		t.Errorf("the tests run in %q, want a directory named %s* under %s", home, testHomePrefix, os.TempDir())
+	}
+	if _, err := os.Stat(filepath.Join(home, ".engram")); !os.IsNotExist(err) {
+		t.Errorf("the home of the tests holds an Engram directory (%v): it is not one made for them", err)
+	}
 }
 
 // testEmbedClient is the embedding client factory of the commands the tests run: embed.NewClient, except that

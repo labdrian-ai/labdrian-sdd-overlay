@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/projectid"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/repoevidence"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/skillstale"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/skillstalefs"
@@ -42,7 +41,7 @@ func (c commands) cmdSkillsStale(args []string) int {
 
 	resolvedProject := *project
 	if resolvedProject == "" {
-		identity, err := projectid.Resolve(*projectRoot)
+		identity, err := identityRules().Resolve(*projectRoot)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "longterm-mem: skills-stale: --project is required when the project root cannot be resolved: %v\n", err)
 			return exitUsage

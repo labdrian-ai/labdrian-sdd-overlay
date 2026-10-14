@@ -1,0 +1,35 @@
+args: stale
+exit: 0
+--- stdout ---
+longterm-mem: stale: 0 observations in declared-widgets, checked against <project>
+  nothing this repository disagrees with
+--- stderr ---
+longterm-mem: stale: --project not given, resolved "declared-widgets" from the working directory (via the declared rule)
+--- ledger ---
+{
+  "schema": "longterm-mem.identity-ledger/v1",
+  "revision": "<digest>",
+  "entries": [
+    {
+      "name": "<project>/.git",
+      "rule": "common_dir",
+      "adoptable": true,
+      "first_seen": "<run>",
+      "last_seen": "<run>"
+    },
+    {
+      "name": "checkout",
+      "rule": "common_dir",
+      "adoptable": false,
+      "first_seen": "<run>",
+      "last_seen": "<run>"
+    },
+    {
+      "name": "declared-widgets",
+      "rule": "declared",
+      "adoptable": true,
+      "first_seen": "<run>",
+      "last_seen": "<run>"
+    }
+  ]
+}

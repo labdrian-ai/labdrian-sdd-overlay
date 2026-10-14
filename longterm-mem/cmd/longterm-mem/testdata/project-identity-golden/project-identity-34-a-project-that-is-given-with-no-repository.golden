@@ -1,0 +1,7 @@
+args: stale --project somebody-elses
+exit: 2
+--- stdout ---
+--- stderr ---
+longterm-mem: stale: projectid: directory is not inside a git repository: <outside>
+--- ledger ---
+no ledger
