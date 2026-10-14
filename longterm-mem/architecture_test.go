@@ -17,7 +17,8 @@ import (
 //     read through (L1 gave query its memory ports; L3 and L4 give the rest).
 //   - ingest, projectid, promote, skillstale and staleness are domain packages:
 //     their rules are the part that stays; the file system, git and SQLite they
-//     still reach are debt below (skillstale reaches nothing since L5, staleness since L6, projectid since L7).
+//     once reached were debt (skillstale reaches nothing since L5, staleness since L6, projectid since L7,
+//     ingest since L11, which left the debt table empty).
 //   - vaultreg is an application package: the rule that finds the vault of a project (a pure Resolve over the
 //     flag, the environment's view and the registry) and the use case that reads and seeds the registry, over
 //     the Store port it owns (L9). The registry file itself is vaultregfs, the adapter.
@@ -83,20 +84,15 @@ var rings = map[string]archguard.Ring{
 // work unit that removes it: package, then the import or member it should not
 // use, then the unit. It only shrinks: a unit deletes its lines when it lands, and
 // a line whose violation is gone fails the guard, so none can be left behind. A
-// new violation is not added here to make the guard pass; it is fixed.
+// new violation is not added here to make the guard pass; it is fixed. It is
+// empty since L11 took the last line out (ingest's filepath.Abs): the module owes
+// the rule nothing, and what is added here again is a decision, not a habit.
 //
 // The guard reads imports and the members selected from a few standard packages.
 // It cannot see package-level mutable variables used as test seams; those are
 // held by package_state_guard_test.go, which is why this table lists none (L10
 // removed the last two: register's saveInstallState and vecindex's dirLocks).
-var knownDebt = archguard.Debt{
-	// ingest: the canonical origin of a file reads the working directory. The C17
-	// audit read ingest as pure from its imports; the call is the debt. L11 makes
-	// the origin a value the source adapter resolves.
-	"internal/ingest": {
-		"path/filepath.Abs": "L11",
-	},
-}
+var knownDebt = archguard.Debt{}
 
 // pureModules are the modules of this repository that the domain may import: the rules both this
 // module and the engine need (the identity of a project) live in a module of the standard library

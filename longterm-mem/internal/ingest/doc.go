@@ -7,6 +7,12 @@
 // without amendment. The record shape it emits is defined normatively in
 // skills/_shared/ingested-observation-contract.md, which this package
 // implements rather than re-specifies.
+//
+// It reaches no file, directory, process or clock either: what it needs of the
+// machine it asks through the SourceReader port it owns (ResolveOrigin asks
+// where a relative path begins), which internal/sourcefs answers on a file
+// system and the composition root wires. The architecture guard and
+// ingest_purity_guard_test.go hold that, tests included.
 package ingest
 
 const (
