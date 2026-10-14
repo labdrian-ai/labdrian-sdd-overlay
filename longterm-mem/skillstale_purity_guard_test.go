@@ -113,7 +113,7 @@ func ambientUsesIn(root, pkg string) ([]string, error) {
 				continue
 			}
 			if ambientImports[importPath] {
-				problems = append(problems, rel+" imports "+importPath+": the detector reaches the process or the machine only through its ports")
+				problems = append(problems, rel+" imports "+importPath+": the package reaches the process or the machine only through its ports")
 			}
 			if _, guarded := ambientMembers[importPath]; guarded {
 				name := filepath.Base(importPath)
@@ -134,13 +134,13 @@ func ambientUsesIn(root, pkg string) ([]string, error) {
 			}
 			for _, method := range ambientMethods {
 				if selector.Sel.Name == method {
-					problems = append(problems, rel+" calls "+method+": the detector's cases do not depend on the environment or on files")
+					problems = append(problems, rel+" calls "+method+": the package's cases do not depend on the environment or on files")
 				}
 			}
 			if pkgIdent, ok := selector.X.(*ast.Ident); ok {
 				if importPath, guarded := localNames[pkgIdent.Name]; guarded {
 					if importPath == "os" && selector.Sel.Name != "ReadFile" {
-						problems = append(problems, rel+" uses os."+selector.Sel.Name+": a test of the detector reads a checked-in fixture with os.ReadFile and touches nothing else of the system")
+						problems = append(problems, rel+" uses os."+selector.Sel.Name+": a test of the package reads a checked-in fixture with os.ReadFile and touches nothing else of the system")
 					}
 					for _, member := range ambientMembers[importPath] {
 						if selector.Sel.Name == member {
