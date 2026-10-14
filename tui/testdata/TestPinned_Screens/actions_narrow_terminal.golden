@@ -7,9 +7,9 @@ Elegir una acción
   Capturar (actualizar upstream)  Trae cambios de 
   Aplicar cambios                 Despliega el ove
   Restaurar respaldo              Revierte un dest
+  Actualizar repositorio          Pone main al día
                                                   
 ── Hooks ──                                       
-  Actualizar repositorio          Pone main al día
   Instalar hooks                  Compila engine y
   Desinstalar hooks               Quita los hooks 
                                                   

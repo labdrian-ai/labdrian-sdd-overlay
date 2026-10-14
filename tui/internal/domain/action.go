@@ -13,6 +13,23 @@ const (
 	ResultSyncDashboard
 )
 
+// Group is the section of the action menu an action is listed under. Its value
+// is the label of the section's header, in the language of the menu.
+type Group string
+
+const (
+	// GroupSync is the operational flow: look, capture, apply, restore, and
+	// the self-update that brings the repository itself up to date.
+	GroupSync Group = "Sincronización"
+	// GroupHooks is the lifecycle of the hooks in ~/.claude/settings.json.
+	GroupHooks Group = "Hooks"
+	// GroupSkills is the skills registry: status, validate, list.
+	GroupSkills Group = "Skills"
+	// GroupMemory is the longterm-mem lifecycle: the MCP server registered in
+	// each runtime's own configuration.
+	GroupMemory Group = "Memoria"
+)
+
 // Action is a backend subcommand the TUI can invoke. What the program does
 // differently for one action than for another is declared here, in fields,
 // and never inferred from the Command string: a screen or a use case that
@@ -29,6 +46,11 @@ type Action struct {
 	Hint            string   // one-line purpose scent shown in the menu
 	Also            []Action // nested sub-actions merged into this menu entry (invisible in the menu)
 
+	// Group is the menu section the action is listed under: a header opens
+	// each run of consecutive actions of one group. An action with no group
+	// joins the section above it. The menu's order is the actions' order, so
+	// the actions of a group are written next to each other.
+	Group Group
 	// ResultKind is how the result of running the action is read and shown.
 	ResultKind ResultKind
 	// RefreshProbe says a successful run changes what the launch-time probe
@@ -95,7 +117,7 @@ func (a Action) UsesTargets() bool {
 // sequence as Command+Args.
 func Actions() []Action {
 	return []Action{
-		{Name: "Estado", Command: "status", Mutating: false, SupportsAll: true,
+		{Name: "Estado", Command: "status", Group: GroupSync, Mutating: false, SupportsAll: true,
 			Hint: "Resumen del estado actual (targets + hooks)",
 			Also: []Action{
 				{Command: "status-hooks", TargetAgnostic: true},
@@ -104,16 +126,16 @@ func Actions() []Action {
 				// than a separate top-level entry.
 				{Command: "version", TargetAgnostic: true},
 			}},
-		{Name: "Verificar sincronización", Command: "sync-check", Mutating: false, SupportsAll: true,
+		{Name: "Verificar sincronización", Command: "sync-check", Group: GroupSync, Mutating: false, SupportsAll: true,
 			ResultKind: ResultSyncDashboard,
 			Hint:       "Compara overlay vs upstream"},
 		// Capture reads a target's deployed files back into the repo, so it
 		// only exists for per-file (copy) targets: the backend refuses a
 		// package target such as pi.
-		{Name: "Capturar (actualizar upstream)", Command: "capture", Mutating: true, SupportsAll: false,
+		{Name: "Capturar (actualizar upstream)", Command: "capture", Group: GroupSync, Mutating: true, SupportsAll: false,
 			CopyTargetsOnly: true,
 			Hint:            "Trae cambios de upstream al overlay"},
-		{Name: "Aplicar cambios", Command: "apply", Mutating: true, SupportsAll: true,
+		{Name: "Aplicar cambios", Command: "apply", Group: GroupSync, Mutating: true, SupportsAll: true,
 			Hint: "Despliega el overlay en los destinos"},
 		// Restore — per-target, never SupportsAll (the backend's cmd_restore
 		// explicitly refuses --target all: restore is a single-target,
@@ -125,7 +147,7 @@ func Actions() []Action {
 		// have a backup (never offer restore for a target with zero backups).
 		// Like capture, restore is refused by the backend for a package
 		// target (it keeps no per-target backups), hence CopyTargetsOnly.
-		{Name: "Restaurar respaldo", Command: "restore", Mutating: true, SupportsAll: false,
+		{Name: "Restaurar respaldo", Command: "restore", Group: GroupSync, Mutating: true, SupportsAll: false,
 			CopyTargetsOnly: true, RequiresBackup: true,
 			ConfirmMessage: "Restaura el respaldo más reciente de cada destino seleccionado,\n" +
 				"sobrescribiendo sus archivos actualmente desplegados.",
@@ -142,6 +164,7 @@ func Actions() []Action {
 		// needed).
 		{
 			Name:           "Actualizar repositorio",
+			Group:          GroupSync,
 			Command:        "self-update",
 			Mutating:       true,
 			TargetAgnostic: true,
@@ -155,6 +178,7 @@ func Actions() []Action {
 		// Hooks lifecycle — TargetAgnostic: operate on ~/.claude/settings.json globally.
 		{
 			Name:           "Instalar hooks",
+			Group:          GroupHooks,
 			Command:        "install-hooks",
 			Mutating:       true,
 			TargetAgnostic: true,
@@ -163,6 +187,7 @@ func Actions() []Action {
 		},
 		{
 			Name:           "Desinstalar hooks",
+			Group:          GroupHooks,
 			Command:        "uninstall-hooks",
 			Mutating:       true,
 			TargetAgnostic: true,
@@ -171,7 +196,7 @@ func Actions() []Action {
 		},
 		// Skills registry — read-only, TargetAgnostic. The bash backend injects
 		// --registry/--manifest/--source-root defaults, so no flags are needed here.
-		{Name: "Skills", Command: "skills", Args: []string{"status"},
+		{Name: "Skills", Command: "skills", Group: GroupSkills, Args: []string{"status"},
 			TargetAgnostic: true, Mutating: false,
 			Hint: "Estado + valida + lista el registro",
 			Also: []Action{
@@ -195,17 +220,17 @@ func Actions() []Action {
 		// of that, and a one-keystroke path to it from a menu is not
 		// proportionate to what it does. It stays a deliberate CLI act.
 		// TestNoActionPassesPurge keeps this omission deliberate.
-		{Name: "Memoria: estado", Command: "longterm-mem", Args: []string{"status"},
+		{Name: "Memoria: estado", Command: "longterm-mem", Group: GroupMemory, Args: []string{"status"},
 			Mutating: false, SupportsAll: true,
 			Hint: "Registro MCP de longterm-mem por runtime"},
-		{Name: "Memoria: instalar", Command: "longterm-mem", Args: []string{"install"},
+		{Name: "Memoria: instalar", Command: "longterm-mem", Group: GroupMemory, Args: []string{"install"},
 			Mutating: true, SupportsAll: true,
 			ConfirmMessage: "Compila el binario de longterm-mem, lo despliega en el directorio de estado del overlay\n" +
 				"y escribe una entrada MCP con marca de propiedad en la configuración propia de cada\n" +
 				"runtime seleccionado (Claude Code, opencode, codex). Antes de modificar cualquier\n" +
 				"configuración se escribe un respaldo .bak junto al archivo.",
 			Hint: "Compila, despliega y registra el MCP en cada runtime"},
-		{Name: "Memoria: desinstalar", Command: "longterm-mem", Args: []string{"uninstall"},
+		{Name: "Memoria: desinstalar", Command: "longterm-mem", Group: GroupMemory, Args: []string{"uninstall"},
 			Mutating: true, SupportsAll: true,
 			ConfirmMessage: "Elimina únicamente la entrada MCP con marca de propiedad de cada runtime seleccionado.\n" +
 				"Una entrada que longterm-mem no posee se deja intacta y se reporta como no gestionada.\n" +

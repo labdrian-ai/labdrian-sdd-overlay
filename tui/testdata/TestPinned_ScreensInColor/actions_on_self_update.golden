@@ -7,9 +7,9 @@
       Capturar (actualizar upstream)  [38;5;242mTrae cambios de upstream al overlay[0m                       
       Aplicar cambios                 [38;5;242mDespliega el overlay en los destinos[0m                      
       Restaurar respaldo              [38;5;242mRevierte un destino a su respaldo más reciente[0m            
+    [1;38;5;105m▸ [0m[1;38;5;105mActualizar repositorio          [0m[38;5;242mPone main al día (ff-only) y lo despliega, en un solo paso[0m
                                                                                                 
     [1;38;5;75m── Hooks ──[0m                                                                                 
-    [1;38;5;105m▸ [0m[1;38;5;105mActualizar repositorio          [0m[38;5;242mPone main al día (ff-only) y lo despliega, en un solo paso[0m
       Instalar hooks                  [38;5;242mCompila engine y cablea hooks (paso 1)[0m                    
       Desinstalar hooks               [38;5;242mQuita los hooks de settings.json[0m                          
                                                                                                 

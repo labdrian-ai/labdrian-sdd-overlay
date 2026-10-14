@@ -373,34 +373,22 @@ func (m model) viewActions() string {
 	var b strings.Builder
 	b.WriteString(titleStyle.Render("Elegir una acción") + "\n\n")
 
+	// A section header opens each run of consecutive actions of one group,
+	// with the label the group carries; an action with no group joins the
+	// section above it. The headers are display-only -- they are not in the
+	// actions slice, so cursor navigation and m.actions[m.aCursor] indexing
+	// are unaffected. (They used to be derived: "Hooks" from TargetAgnostic,
+	// which listed "Actualizar repositorio" under it, and "Skills" and
+	// "Memoria" from two command names, which each needed its own clause so
+	// that the rows below did not inherit the section above.)
+	var section domain.Group
 	for i, a := range m.actions {
-		// Operational group header before the first action.
-		if i == 0 {
-			b.WriteString(sectionStyle.Render("── Sincronización ──") + "\n")
-		}
-		// Hooks group header before the first TargetAgnostic action.
-		// These headers are display-only — they are not in the actions slice, so
-		// cursor navigation and m.actions[m.aCursor] indexing are unaffected.
-		if a.TargetAgnostic && (i == 0 || !m.actions[i-1].TargetAgnostic) {
-			b.WriteString("\n" + sectionStyle.Render("── Hooks ──") + "\n")
-		}
-		// Skills group header before the first skills action.
-		if a.Command == "skills" && (i == 0 || m.actions[i-1].Command != "skills") {
-			b.WriteString("\n" + sectionStyle.Render("── Skills ──") + "\n")
-		}
-		// Memory group header before the first longterm-mem action.
-		//
-		// Without this clause the longterm-mem rows inherit the Skills
-		// section: viewActions emits a header only at i==0, at the first
-		// TargetAgnostic row, and at the first "skills" row, and these rows
-		// match none of the three. The menu would then label an MCP server
-		// that edits three runtime configuration files as "Skills" -- while
-		// Actions()' own doc comment and the code comment beside the group
-		// both call it a separate lifecycle. Of those three records only
-		// this one is read by the operator, so it is the one that has to be
-		// true.
-		if a.Command == "longterm-mem" && (i == 0 || m.actions[i-1].Command != "longterm-mem") {
-			b.WriteString("\n" + sectionStyle.Render("── Memoria ──") + "\n")
+		if a.Group != "" && a.Group != section {
+			if i > 0 {
+				b.WriteString("\n")
+			}
+			b.WriteString(sectionStyle.Render("── "+string(a.Group)+" ──") + "\n")
+			section = a.Group
 		}
 
 		cursor := "  "
