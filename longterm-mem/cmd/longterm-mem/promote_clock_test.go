@@ -96,6 +96,8 @@ func TestSyncDatesWhatItWritesWithTheClockItWasGiven(t *testing.T) {
 		"wiki/log.md":                              "## [" + clockE2EDate + "] promote | ",
 		".raw/.manifest.json":                      `"created": "` + clockE2EDate + `"`,
 		".vault-meta/longterm-mem-sync-state.json": `"last_sync_completed_at": "` + clockE2EInstant8601 + `"`,
+		// The sync rebuilt the index of a vault nobody had provisioned, and the vault dated that with the clock.
+		".vault-meta/.longterm-mem-provisioned": clockE2EInstant8601,
 	})
 }
 
@@ -119,5 +121,20 @@ func TestTheMCPPromoteToolDatesWhatItWritesWithTheClockItWasGiven(t *testing.T) 
 		"wiki/memory/c-000901.md": "created: " + clockE2EDate,
 		"wiki/log.md":             "## [" + clockE2EDate + "] promote | Pinned Decision",
 		".raw/.manifest.json":     `"created": "` + clockE2EDate + `"`,
+		// The tool rebuilt the index of a vault nobody had provisioned, and the vault dated that with the clock.
+		".vault-meta/.longterm-mem-provisioned": clockE2EInstant8601,
 	})
+}
+
+func TestIndexDatesTheProvisionedVaultWithTheClockItWasGiven(t *testing.T) {
+	w := enterClockWorld(t)
+	var code int
+	captureStreams(t, func() {
+		code = commands{newEmbedClient: testEmbedClient, clock: fixedClock{at: clockE2EInstant}}.run([]string{"index", "--project", promoteGoldenProject})
+	})
+	if code != exitOK {
+		t.Fatalf("index exited %d", code)
+	}
+
+	requireOnlyTheInjectedDate(t, w, map[string]string{".vault-meta/.longterm-mem-provisioned": clockE2EInstant8601})
 }

@@ -57,7 +57,7 @@ func (c commands) cmdIndex(args []string) int {
 		return exit
 	}
 
-	if err := (vault.IndexRebuilder{Root: vaultRoot}).Rebuild(context.Background(), *force); err != nil {
+	if err := (vault.IndexRebuilder{Root: vaultRoot, Clock: a.clock}).Rebuild(context.Background(), *force); err != nil {
 		return a.refuse(err, exitVaultSubprocessFailed)
 	}
 

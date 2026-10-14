@@ -128,7 +128,7 @@ func (c commands) mcpPromote(store *engram.Store) func(ctx context.Context, proj
 		if err != nil {
 			return mcpserver.PromoteOutcome{}, err
 		}
-		outcome, err := promote.PromoteAndReindex(ctx, writer, store.ObservationByID, engramID, vault.IndexRebuilder{Root: vaultRoot})
+		outcome, err := promote.PromoteAndReindex(ctx, writer, store.ObservationByID, engramID, vault.IndexRebuilder{Root: vaultRoot, Clock: c.clock})
 		if err != nil {
 			return mcpserver.PromoteOutcome{}, err
 		}

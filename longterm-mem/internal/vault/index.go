@@ -64,7 +64,15 @@ func Provisioned(vaultRoot string) bool {
 // re-provision), then always refreshes the index (R-005). Any step's
 // failure stops the remaining steps immediately and is reported as an error
 // that never claims success (R-025).
-func Rebuild(ctx context.Context, runner *Runner, force bool) error {
+//
+// clock tells the instant the sentinel records when provisioning completes.
+// A rebuild without one does not begin: provisioning whose completion cannot
+// be recorded would leave the vault looking unprovisioned after the work was
+// done, and nothing has run yet to be undone.
+func Rebuild(ctx context.Context, runner *Runner, force bool, clock Clock) error {
+	if clock == nil {
+		return errNoClock
+	}
 	if force {
 		if err := os.Remove(vaultlayout.Layout{Root: runner.Root}.Path(vaultlayout.ProvisionedSentinel)); err != nil && !os.IsNotExist(err) {
 			return fmt.Errorf("vault: clear provision sentinel: %w", err)
@@ -76,7 +84,7 @@ func Rebuild(ctx context.Context, runner *Runner, force bool) error {
 		if failErr := stepFailure(setupScript, stderr, exitCode, err); failErr != nil {
 			return fmt.Errorf("vault: provision index: %w", failErr)
 		}
-		if err := writeProvisionedSentinel(runner.Root); err != nil {
+		if err := writeProvisionedSentinel(runner.Root, clock.Now()); err != nil {
 			return fmt.Errorf("vault: mark provisioned: %w", err)
 		}
 	}
@@ -94,10 +102,11 @@ func Rebuild(ctx context.Context, runner *Runner, force bool) error {
 	return nil
 }
 
-// writeProvisionedSentinel durably marks vaultRoot as fully provisioned: it
-// creates the sentinel's parent dir, then writes an ISO-8601 timestamp
-// through durable.WriteFile, so a process killed mid-write never leaves a
-// half-written sentinel that would falsely read as complete.
+// writeProvisionedSentinel durably marks vaultRoot as fully provisioned at
+// the instant at: it creates the sentinel's parent dir, then writes at, in
+// UTC, as an ISO-8601 timestamp through durable.WriteFile, so a process
+// killed mid-write never leaves a half-written sentinel that would falsely
+// read as complete.
 //
 // It used to hand-roll that sequence with a FIXED "<sentinel>.tmp" name and
 // no fsync — the two things that make the difference between a sentinel
@@ -109,12 +118,12 @@ func Rebuild(ctx context.Context, runner *Runner, force bool) error {
 // a sentinel written and renamed just before a power loss can come back
 // empty on the next boot while still reading as present — the exact false
 // "provisioned" the sentinel was added to prevent.
-func writeProvisionedSentinel(vaultRoot string) error {
+func writeProvisionedSentinel(vaultRoot string, at time.Time) error {
 	path := vaultlayout.Layout{Root: vaultRoot}.Path(vaultlayout.ProvisionedSentinel)
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}
-	return durable.WriteFile(path, []byte(time.Now().UTC().Format(time.RFC3339)), 0o644)
+	return durable.WriteFile(path, []byte(at.UTC().Format(time.RFC3339)), 0o644)
 }
 
 // stepFailure turns a Runner-level error or a non-success exit code into

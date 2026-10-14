@@ -92,7 +92,7 @@ func (a app) syncDeps(store *engram.Store, vaultRoot string) (promote.Deps, erro
 	if err != nil {
 		return promote.Deps{}, err
 	}
-	return promote.Deps{Memory: store, Writer: writer, Index: vault.IndexRebuilder{Root: vaultRoot}}, nil
+	return promote.Deps{Memory: store, Writer: writer, Index: vault.IndexRebuilder{Root: vaultRoot, Clock: a.clock}}, nil
 }
 
 // printJSON prints v on stdout as the result of a command that was asked for JSON: indented by two spaces. A

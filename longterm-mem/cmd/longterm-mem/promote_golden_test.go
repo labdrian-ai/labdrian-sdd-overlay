@@ -22,8 +22,10 @@ import (
 // and that change must not alter one byte of them. The commands run with the clock of
 // promoteGoldenClock, fixed on the day they were recorded (2026-10-10, UTC), so every date, every
 // instant and every hash derived from either is the same on whatever day the test runs; the dates in the
-// golden files are that day, as written. What the clock does not drive stays masked: the paths of the
-// temporary directories, and the provisioned sentinel, which the vault writes from the wall clock.
+// golden files are that day, as written. What differs from one world to the next stays masked: the paths of the
+// temporary directories, and the instant of the provisioned sentinel, which was the wall clock's when they were
+// recorded and has been the clock's since Phase 9, L10 (promote_clock_test.go holds it to that); it stays masked
+// so that the files recorded before do not change.
 //
 // To rewrite them after a change that is MEANT to alter the output:
 //
@@ -49,9 +51,10 @@ printf 'c-%06d\n' "$n"
 // ones on any day.
 var promoteGoldenClock = fixedClock{at: time.Date(2026, 10, 10, 12, 0, 0, 0, time.UTC)}
 
-// promoteGoldenSentinel is the content of the provisioned sentinel in the rendering of the vault: an
-// instant the vault writes from the wall clock, not from the clock the commands hold. It is the one
-// instant of the output that is not the clock's, and it is masked by where it is, never by its value.
+// promoteGoldenSentinel is the content of the provisioned sentinel in the rendering of the vault: the instant the
+// vault records when it was provisioned. It was written from the wall clock, the one instant of the output that was
+// not the clock's, and is masked by where it is, never by its value; since L10 the vault dates it with the clock
+// the commands hold, and the mask stays as the files were recorded.
 var promoteGoldenSentinel = regexp.MustCompile(`(=== [^\n]*\.longterm-mem-provisioned[^\n]*===\n)\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z`)
 
 // runPromoteGolden runs one command of a golden scenario in process, composed with the fixed clock, and
@@ -104,7 +107,7 @@ func TestPromoteGoldenNormalise_MasksThePathsAndTheSentinelAndNothingElse(t *tes
 }
 
 // The sentinel is masked wherever the rendering finds it, not only under .vault-meta: a .vault-meta that is a
-// link to another directory puts the file under that one, and its instant is the wall clock's all the same.
+// link to another directory puts the file under that one, and its instant is masked all the same.
 func TestPromoteGoldenNormalise_MasksTheSentinelWhereverTheRenderingFindsIt(t *testing.T) {
 	w := &promoteGoldenWorld{vaultRoot: "/vault", home: "/home", dbPath: "/db"}
 
@@ -273,8 +276,8 @@ func (w *promoteGoldenWorld) execSQL(t *testing.T, statement string, args ...any
 	}
 }
 
-// normalise replaces what differs from one run to the next: the temporary paths and the instant of the
-// provisioned sentinel. Every date and instant the clock wrote stays as written.
+// normalise replaces what differs from one run to the next: the temporary paths, and the instant of the
+// provisioned sentinel by where it is. Every other date and instant the clock wrote stays as written.
 func (w *promoteGoldenWorld) normalise(text string) string {
 	text = strings.ReplaceAll(text, w.vaultRoot, "<vault>")
 	text = strings.ReplaceAll(text, w.home, "<home>")
