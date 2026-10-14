@@ -276,8 +276,10 @@ so it wires nothing: the change that adds the first command that ingests builds
   `TestNetImportAllowlist` and `TestNetImportAllowlistStillRefusesOthers` both pass with the
   allowlist still holding exactly one entry (`internal/embed/client.go`), and that the L11 guards
   still pass with `knownDebt` empty: `TestArchitectureFollowsTheDependencyRule`,
-  `TestIngestNamesNoAdapter`, `TestIngestReachesNothingAmbient` and
-  `TestOnlyTheCompositionRootImportsTheSourceFSAdapter`
+  `TestIngestNamesNoAdapter`, `TestIngestReachesNothingAmbient`,
+  `TestOnlyTheCompositionRootImportsTheSourceFSAdapter` and
+  `TestEveryCallerOfSourceIDResolvesTheOriginFirst` (the `Extractor` of 2b.4 is the first caller of
+  `SourceID`, and its file must also use `ingest.ResolveOrigin`: the guard fails the build otherwise)
 - [ ] 2b.12 Verify threat-matrix coverage explicitly (cross-reference, no new tests expected beyond
   2b.1/2b.3/2b.5/2b.5a): filesystem traversal — a symlink pointing outside the scan root, and a
   relative entry containing a `..` component, are covered by the `symlink`/`outside_root` cases in
@@ -295,8 +297,9 @@ so it wires nothing: the change that adds the first command that ingests builds
 - [ ] 3.3a Confirm the L11 invariants after all slices are merged: `knownDebt` in
   `longterm-mem/architecture_test.go` is still empty; `internal/ingest` still reaches no file, process,
   clock or adapter, tests included (`TestIngestReachesNothingAmbient`); `cmd/longterm-mem` is still the
-  only package that imports `internal/sourcefs`; and no `.go` file added by this change outside
-  `internal/sourcefs` names `os`
+  only package that imports `internal/sourcefs`; every caller of `ingest.SourceID` still resolves the
+  origin first (`TestEveryCallerOfSourceIDResolvesTheOriginFirst`); and no `.go` file added by this
+  change outside `internal/sourcefs` names `os`
 - [ ] 3.4 Confirm no Go source path introduced by this change opens Engram's database in a writable
   mode — `longterm-mem/internal/engram/store.go` stays untouched and read-only; no new `sql.Open`/DSN
   construction touching Engram appears anywhere in `longterm-mem/internal/ingest`
