@@ -83,7 +83,7 @@ func TestEmbeddingIndexOf_WiresWhatTheProcessReadsAndWritesWith(t *testing.T) {
 		models = append(models, cfg.Model)
 		return testEmbedClient(cfg)
 	}
-	index := embeddingIndexOf(store, queryWiring{newClient: factory, cache: cache})
+	index := embeddingIndexOf(store, queryWiring{newClient: factory, cache: cache, builder: &vecindex.Builder{}})
 	before := testEmbedRequests.Load()
 
 	if err := index.BuildEmbeddingIndex(context.Background(), project, "wired-model", vecindex.DefaultDimension, 2000); err != nil {
@@ -115,6 +115,41 @@ func TestEmbeddingIndexOf_WiresWhatTheProcessReadsAndWritesWith(t *testing.T) {
 	}
 }
 
+// The locks that keep two top-ups of one index apart are the Builder's, and the repository of a call builds through
+// the one the surface gave it: a session makes a repository for each call and gives every one of them the session's.
+func TestEmbeddingIndexOf_BuildsThroughTheBuilderOfTheWiring(t *testing.T) {
+	store, err := engram.Open(newTestEngramDBWithObservation(t, "p", "T", "C"))
+	if err != nil {
+		t.Fatalf("engram.Open: %v", err)
+	}
+	t.Cleanup(func() { _ = store.Close() })
+	t.Setenv("LONGTERM_MEM_STATE_DIR", t.TempDir())
+	session := &vecindex.Builder{}
+
+	first := embeddingIndexOf(store, queryWiring{newClient: testEmbedClient, builder: session})
+	second := embeddingIndexOf(store, queryWiring{newClient: testEmbedClient, builder: session})
+
+	if first.Builder != session || second.Builder != session {
+		t.Errorf("the repositories of two calls build through %p and %p, want the session's %p", first.Builder, second.Builder, session)
+	}
+}
+
+// A run of the CLI serves one query, with no cache and a fresh embedding client, and has a Builder of its own for
+// the top-up it may make: nothing is shared between two runs, which are two processes.
+func TestCLIQueryWiring_HasNoCacheAndABuilderOfItsOwn(t *testing.T) {
+	first, second := cliQueryWiring(testEmbedClient), cliQueryWiring(testEmbedClient)
+
+	if first.cache != nil {
+		t.Errorf("cache = %v, want none for a surface that serves one query", first.cache)
+	}
+	if first.builder == nil || first.embed == nil || first.newClient == nil {
+		t.Errorf("wiring = %+v, want a Builder, an embedding function and a client factory", first)
+	}
+	if first.builder == second.builder {
+		t.Error("two runs of the CLI share a Builder")
+	}
+}
+
 // A repository built with no cache reads the disk every time, as the CLI's one query does.
 func TestEmbeddingIndexOf_WithoutACacheReadsTheDisk(t *testing.T) {
 	store, err := engram.Open(newTestEngramDBWithObservation(t, "p", "T", "C"))
@@ -124,7 +159,7 @@ func TestEmbeddingIndexOf_WithoutACacheReadsTheDisk(t *testing.T) {
 	t.Cleanup(func() { _ = store.Close() })
 	t.Setenv("LONGTERM_MEM_STATE_DIR", t.TempDir())
 
-	index := embeddingIndexOf(store, queryWiring{newClient: testEmbedClient})
+	index := embeddingIndexOf(store, queryWiring{newClient: testEmbedClient, builder: &vecindex.Builder{}})
 
 	if index.Cache != nil {
 		t.Errorf("Cache = %v, want none for a surface that serves one query", index.Cache)

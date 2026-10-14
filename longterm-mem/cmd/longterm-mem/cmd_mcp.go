@@ -53,13 +53,16 @@ func (c commands) cmdMCP(args []string) int {
 	// queried repeatedly and nothing about its index has changed between
 	// calls. embedClient.Embed and loadCache.Load are safe for concurrent
 	// use (http.Client and LoadCache's own mutex, respectively), matching
-	// how store is already shared across the whole session below.
+	// how store is already shared across the whole session below. The
+	// Builder is the session's for the same reason: the repository each
+	// call makes builds through it, so two top-ups of one index made by two
+	// calls exclude each other.
 	embedClient, err := c.newEmbedClient(embed.Config{Model: vecindex.DefaultModel})
 	if err != nil {
 		return a.refuse(err, exitInternal)
 	}
 
-	server := mcpserver.New(c.mcpDeps(store, embedClient, vecindex.NewLoadCache()))
+	server := mcpserver.New(c.mcpDeps(store, embedClient, vecindex.NewLoadCache(), &vecindex.Builder{}))
 	// context.Canceled here means SIGINT/SIGTERM asked for a graceful
 	// shutdown (R-034), not a failure; only a genuine transport/session
 	// error is reported and turns into a non-zero exit.
@@ -72,11 +75,11 @@ func (c commands) cmdMCP(args []string) int {
 // mcpDeps are the tools of the MCP session. Each resolves its own project's vault fresh on every call (a session
 // can serve more than one project) and then calls the same construction and use cases the CLI subcommands do
 // (queryDeps, promote.PromoteAndReindex), so the CLI and MCP surfaces cannot drift -- the query tool's Embed and
-// index cache being the one deliberate exception (issue #286): this session's shared client and load cache, not
+// index cache being the one deliberate exception (issue #286): this session's shared client, load cache and Builder, not
 // runQuery's per-call construction.
-func (c commands) mcpDeps(store *engram.Store, embedClient *embed.Client, loadCache *vecindex.LoadCache) mcpserver.Deps {
+func (c commands) mcpDeps(store *engram.Store, embedClient *embed.Client, loadCache *vecindex.LoadCache, builder *vecindex.Builder) mcpserver.Deps {
 	return mcpserver.Deps{
-		Query:   c.mcpQuery(store, embedClient, loadCache),
+		Query:   c.mcpQuery(store, embedClient, loadCache, builder),
 		Get:     mcpGet(store),
 		Promote: c.mcpPromote(store),
 	}
@@ -84,7 +87,7 @@ func (c commands) mcpDeps(store *engram.Store, embedClient *embed.Client, loadCa
 
 // mcpQuery is the query tool of the MCP session: the vault of the call's project, and the query use case over the
 // session's store, embedding client and index cache. It only reads, so it leaves the vault registry as it found it.
-func (c commands) mcpQuery(store *engram.Store, embedClient *embed.Client, loadCache *vecindex.LoadCache) func(context.Context, query.Request) (query.Result, error) {
+func (c commands) mcpQuery(store *engram.Store, embedClient *embed.Client, loadCache *vecindex.LoadCache, builder *vecindex.Builder) func(context.Context, query.Request) (query.Result, error) {
 	return func(ctx context.Context, req query.Request) (query.Result, error) {
 		vaultRoot, err := machineVaults().ToRead(req.Project, "")
 		if err != nil {
@@ -94,6 +97,7 @@ func (c commands) mcpQuery(store *engram.Store, embedClient *embed.Client, loadC
 			newClient: c.newEmbedClient,
 			embed:     embedClient.Embed,
 			cache:     loadCache,
+			builder:   builder,
 		})
 		return query.Run(ctx, qdeps, req)
 	}

@@ -59,9 +59,9 @@ func TestRepositoryRefusesWhatLoadRefuses(t *testing.T) {
 	}
 }
 
-// A repository built without what a top-up needs (the live rows, the embedder of a model, the clock) answers the
-// build with an error that names what is missing, before it reads, embeds or writes anything, and does not panic.
-// A read needs none of the three.
+// A repository built without what a top-up needs (the live rows, the embedder of a model, the clock, the builder
+// that owns the locks) answers the build with an error that names what is missing, before it reads, embeds or
+// writes anything, and does not panic. A read needs none of the four.
 func TestRepositoryBuiltWithoutWhatABuildNeedsFailsTheBuildNamingIt(t *testing.T) {
 	wired := func(stateDir string) *Repository {
 		return &Repository{
@@ -69,6 +69,7 @@ func TestRepositoryBuiltWithoutWhatABuildNeedsFailsTheBuildNamingIt(t *testing.T
 			LiveRows:    func(string) ([]Row, error) { return nil, nil },
 			NewEmbedder: func(string) (Embedder, error) { return nil, errors.New("no embedder was needed") },
 			Now:         func() string { return "2026-01-01T00:00:00Z" },
+			Builder:     &Builder{},
 		}
 	}
 	for name, tc := range map[string]struct {
@@ -78,6 +79,7 @@ func TestRepositoryBuiltWithoutWhatABuildNeedsFailsTheBuildNamingIt(t *testing.T
 		"no live rows":        {func(r *Repository) { r.LiveRows = nil }, errNoLiveRows},
 		"no embedder factory": {func(r *Repository) { r.NewEmbedder = nil }, errNoEmbedderFactory},
 		"no clock":            {func(r *Repository) { r.Now = nil }, errNoClock},
+		"no builder":          {func(r *Repository) { r.Builder = nil }, errNoBuilder},
 	} {
 		t.Run(name, func(t *testing.T) {
 			stateDir := t.TempDir()
@@ -144,7 +146,8 @@ func newBuildRepository(stateDir string, rows []Row, rowsErr error, models *[]st
 			*models = append(*models, model)
 			return embedder, embedderErr
 		},
-		Now: fixedNow,
+		Now:     fixedNow,
+		Builder: &Builder{},
 	}
 }
 

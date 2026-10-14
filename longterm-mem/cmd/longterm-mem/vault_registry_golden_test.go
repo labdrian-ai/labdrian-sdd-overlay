@@ -150,7 +150,7 @@ func TestVaultRegistry_WhatTheMCPToolsLeave(t *testing.T) {
 			if err != nil {
 				t.Fatalf("the embedding client: %v", err)
 			}
-			if _, err := c.mcpQuery(store, embedClient, vecindex.NewLoadCache())(context.Background(), query.Request{Project: registryDefaultProject, Query: "pinned", Top: 5}); err != nil {
+			if _, err := c.mcpQuery(store, embedClient, vecindex.NewLoadCache(), &vecindex.Builder{})(context.Background(), query.Request{Project: registryDefaultProject, Query: "pinned", Top: 5}); err != nil {
 				t.Fatalf("the query tool: %v", err)
 			}
 		}},

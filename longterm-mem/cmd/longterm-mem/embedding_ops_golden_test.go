@@ -159,7 +159,7 @@ func (w *retrievalWorld) buildIndexOfLiveRowsFor(t *testing.T, project string, k
 		t.Fatalf("build the embedding client: %v", err)
 	}
 	builtAt := func() string { return fixtureInstant.Format(time.RFC3339) }
-	if _, _, err := vecindex.Build(context.Background(), vecindex.Dir(w.stateDir, project), vecindex.DefaultModel, 3, vecindex.DefaultInputLimit, rows, client, builtAt); err != nil {
+	if _, _, err := (&vecindex.Builder{}).Build(context.Background(), vecindex.Dir(w.stateDir, project), vecindex.DefaultModel, 3, vecindex.DefaultInputLimit, rows, client, builtAt); err != nil {
 		t.Fatalf("build the embedding index of %s: %v", project, err)
 	}
 }

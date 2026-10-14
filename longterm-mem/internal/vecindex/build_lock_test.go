@@ -70,6 +70,7 @@ func (erroringEmbedder) Embed(context.Context, string) ([]float32, error) {
 // returns for that row's content.
 func TestBuildSerializesConcurrentBuildsOnSameDirectory(t *testing.T) {
 	dir := t.TempDir()
+	builder := &Builder{}
 	embedder := &trackingEmbedder{dim: testDim}
 	rows := []Row{
 		{EngramID: 1, Title: "a", Content: "alpha"},
@@ -84,7 +85,7 @@ func TestBuildSerializesConcurrentBuildsOnSameDirectory(t *testing.T) {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
-			_, _, err := Build(context.Background(), dir, testModel, testDim, testLimit, rows, embedder, fixedNow)
+			_, _, err := builder.Build(context.Background(), dir, testModel, testDim, testLimit, rows, embedder, fixedNow)
 			errs[i] = err
 		}(i)
 	}
@@ -135,15 +136,16 @@ func TestBuildSerializesConcurrentBuildsOnSameDirectory(t *testing.T) {
 // embedder errors must not leave the directory locked for a later Build.
 func TestBuildReleasesLockOnEmbedderError(t *testing.T) {
 	dir := t.TempDir()
+	builder := &Builder{}
 	rows := []Row{{EngramID: 1, Title: "a", Content: "alpha"}}
 
-	if _, _, err := Build(context.Background(), dir, testModel, testDim, testLimit, rows, erroringEmbedder{}, fixedNow); err == nil {
+	if _, _, err := builder.Build(context.Background(), dir, testModel, testDim, testLimit, rows, erroringEmbedder{}, fixedNow); err == nil {
 		t.Fatal("Build with an erroring embedder: got nil error, want an error")
 	}
 
 	done := make(chan error, 1)
 	go func() {
-		_, _, err := Build(context.Background(), dir, testModel, testDim, testLimit, rows, &fakeEmbedder{dim: testDim}, fixedNow)
+		_, _, err := builder.Build(context.Background(), dir, testModel, testDim, testLimit, rows, &fakeEmbedder{dim: testDim}, fixedNow)
 		done <- err
 	}()
 

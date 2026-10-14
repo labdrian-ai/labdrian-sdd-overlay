@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/embedindex"
@@ -27,7 +29,7 @@ func TestRepositoryBuildRowsBuildsFromTheRowsAndTheEmbedderItIsGiven(t *testing.
 	stateDir := t.TempDir()
 	rows := []embedindex.Row{{EngramID: 1, Title: "a", Content: "alpha"}, {EngramID: 2, Title: "b", Content: "beta"}}
 	embedder := &fakeEmbedder{dim: testDim}
-	repository := &Repository{StateDir: stateDir, Now: fixedNow}
+	repository := &Repository{StateDir: stateDir, Builder: &Builder{}, Now: fixedNow}
 
 	first, err := repository.BuildRows(context.Background(), "p", buildContract, rows, embedder)
 	if err != nil {
@@ -58,7 +60,7 @@ func TestRepositoryBuildRowsBuildsFromTheRowsAndTheEmbedderItIsGiven(t *testing.
 
 // A build that removed a row's entry says so.
 func TestRepositoryBuildRowsCountsTheEntriesItDrops(t *testing.T) {
-	repository := &Repository{StateDir: t.TempDir(), Now: fixedNow}
+	repository := &Repository{StateDir: t.TempDir(), Builder: &Builder{}, Now: fixedNow}
 	embedder := &fakeEmbedder{dim: testDim}
 	all := []embedindex.Row{{EngramID: 1, Title: "a", Content: "alpha"}, {EngramID: 2, Title: "b", Content: "beta"}}
 	if _, err := repository.BuildRows(context.Background(), "p", buildContract, all, embedder); err != nil {
@@ -85,7 +87,7 @@ func TestRepositoryBuildRowsInvalidatesTheCacheOnlyWhenItWrote(t *testing.T) {
 	if _, err := cache.Load(dir); err != nil {
 		t.Fatalf("warm the cache: %v", err)
 	}
-	repository := &Repository{StateDir: stateDir, Cache: cache, Now: fixedNow}
+	repository := &Repository{StateDir: stateDir, Cache: cache, Builder: &Builder{}, Now: fixedNow}
 
 	failing := failingEmbedder{errors.New("backend down")}
 	if _, err := repository.BuildRows(context.Background(), "p", buildContract, []embedindex.Row{{EngramID: 9, Title: "t", Content: "c"}}, failing); err == nil {
@@ -110,7 +112,7 @@ func TestRepositoryBuildRowsReportsTheBuildsFailureAndNamesAMissingClock(t *test
 	stateDir := t.TempDir()
 	rows := []embedindex.Row{{EngramID: 1, Title: "a", Content: "alpha"}}
 
-	if _, err := (&Repository{StateDir: stateDir, Now: fixedNow}).BuildRows(context.Background(), "p", buildContract, rows, failingEmbedder{boom}); !errors.Is(err, boom) {
+	if _, err := (&Repository{StateDir: stateDir, Builder: &Builder{}, Now: fixedNow}).BuildRows(context.Background(), "p", buildContract, rows, failingEmbedder{boom}); !errors.Is(err, boom) {
 		t.Errorf("error = %v, want the build's, wrapping %v", err, boom)
 	}
 
@@ -120,6 +122,59 @@ func TestRepositoryBuildRowsReportsTheBuildsFailureAndNamesAMissingClock(t *test
 	}
 	if _, statErr := os.Stat(Dir(other, "p")); !errors.Is(statErr, os.ErrNotExist) {
 		t.Errorf("the refused build left %s behind (stat: %v)", Dir(other, "p"), statErr)
+	}
+}
+
+// The locks that keep two builds of one index apart belong to a Builder, and a repository holds the one it was
+// given: with none it refuses before it reads or writes anything, and names what is missing.
+func TestRepositoryBuildRowsWithoutABuilderRefusesAndNamesIt(t *testing.T) {
+	stateDir := t.TempDir()
+	rows := []embedindex.Row{{EngramID: 1, Title: "a", Content: "alpha"}}
+
+	_, err := (&Repository{StateDir: stateDir, Now: fixedNow}).BuildRows(context.Background(), "p", buildContract, rows, &fakeEmbedder{dim: testDim})
+
+	if !errors.Is(err, errNoBuilder) {
+		t.Errorf("error = %v, want errNoBuilder", err)
+	}
+	if _, statErr := os.Stat(Dir(stateDir, "p")); !errors.Is(statErr, os.ErrNotExist) {
+		t.Errorf("the refused build left %s behind (stat: %v)", Dir(stateDir, "p"), statErr)
+	}
+}
+
+// Two repositories that share a Builder build through the same locks, whichever of them is asked: the case of a
+// session that makes a repository for each call and holds one Builder for all of them. What the builds leave is
+// one consistent index, built by whichever got there second.
+func TestRepositoriesSharingABuilderBuildTheSameDirectoryOneAfterTheOther(t *testing.T) {
+	stateDir := t.TempDir()
+	builder := &Builder{}
+	rows := []embedindex.Row{{EngramID: 1, Title: "a", Content: "alpha"}, {EngramID: 2, Title: "b", Content: "beta"}}
+	embedder := &trackingEmbedder{dim: testDim}
+
+	const calls = 6
+	var wg sync.WaitGroup
+	errs := make([]error, calls)
+	for i := 0; i < calls; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			repository := &Repository{StateDir: stateDir, Builder: builder, Now: fixedNow}
+			_, errs[i] = repository.BuildRows(context.Background(), "p", buildContract, rows, embedder)
+		}()
+	}
+	wg.Wait()
+
+	for i, err := range errs {
+		if err != nil {
+			t.Errorf("call %d: %v", i, err)
+		}
+	}
+	if max := atomic.LoadInt32(&embedder.maxSeen); max != 1 {
+		t.Errorf("max in-flight Embed calls = %d, want 1", max)
+	}
+	// The file lock would keep them apart whichever Builder they used; that they used the shared one shows in
+	// the Builder, which has kept the lock of the directory.
+	if _, kept := builder.locks[Dir(stateDir, "p")]; !kept || len(builder.locks) != 1 {
+		t.Errorf("the shared Builder holds the locks of %d directories, want the one the repositories built in", len(builder.locks))
 	}
 }
 

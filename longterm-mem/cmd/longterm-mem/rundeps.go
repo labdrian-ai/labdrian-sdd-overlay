@@ -20,12 +20,19 @@ import (
 // exactly one query and exits -- there is no session for a shared client
 // or a load cache to help with (issue #286's session-scoped caching is a
 // benefit specific to a long-lived process; cmd_mcp.go's cmdMCP builds its
-// own deps per call via queryDeps directly, passing a client and load cache
-// it constructs once for the whole MCP session, rather than calling
+// own deps per call via queryDeps directly, passing a client, load cache and
+// Builder it constructs once for the whole MCP session, rather than calling
 // runQuery).
 func runQuery(ctx context.Context, store *engram.Store, vaultRoot string, newClient embedClientFactory, req query.Request) (query.Result, error) {
-	deps := queryDeps(store, vaultRoot, queryWiring{newClient: newClient, embed: freshEmbedFunc(newClient)})
+	deps := queryDeps(store, vaultRoot, cliQueryWiring(newClient))
 	return query.Run(ctx, deps, req)
+}
+
+// cliQueryWiring is the embedding side of the one query a CLI process serves: a fresh client for the query's own
+// embedding, no cache, and a Builder of its own for the top-up it may make, since nothing outlives the process for
+// them to be shared with.
+func cliQueryWiring(newClient embedClientFactory) queryWiring {
+	return queryWiring{newClient: newClient, embed: freshEmbedFunc(newClient), builder: &vecindex.Builder{}}
 }
 
 // queryWiring is what a surface decides about the embedding side of a query, each part under its own name
@@ -43,6 +50,10 @@ type queryWiring struct {
 	// cache is what the embedding index is read through, and forgets an index a top-up wrote; nil when nothing
 	// is cached (the CLI), and the MCP session's own for the whole session.
 	cache *vecindex.LoadCache
+	// builder owns the locks that keep two builds of one index apart: the top-up of a query is one, and a session
+	// makes a repository for each call, so the session holds the one Builder they all build through. A run of the
+	// CLI serves one query and has a Builder of its own.
+	builder *vecindex.Builder
 }
 
 // freshEmbedFunc builds a new embed.Client on every call it makes -- the
@@ -113,7 +124,8 @@ func embeddingIndexOf(store *engram.Store, wiring queryWiring) *vecindex.Reposit
 			}
 			return client, nil
 		},
-		Now: buildNowRFC3339,
+		Now:     buildNowRFC3339,
+		Builder: wiring.builder,
 	}
 }
 

@@ -86,8 +86,6 @@ var rings = map[string]archguard.Ring{
 // known ones are not listed below and are owed to their units all the same:
 //
 //   - register: the saveInstallState seam (L10)
-//   - vecindex: the global dirLocks map (L10), and its own flock helper,
-//     acquireFileLock, which L10 should settle together with it
 var knownDebt = archguard.Debt{
 	// ingest: the canonical origin of a file reads the working directory. The C17
 	// audit read ingest as pure from its imports; the call is the debt. L11 makes

@@ -102,7 +102,7 @@ func (c commands) embeddingIndexing(store *engram.Store, stateDir string, cfg em
 			}
 			return client, nil
 		},
-		Builder: &vecindex.Repository{StateDir: stateDir, Now: buildNowRFC3339},
+		Builder: &vecindex.Repository{StateDir: stateDir, Now: buildNowRFC3339, Builder: &vecindex.Builder{}},
 	}
 }
 
