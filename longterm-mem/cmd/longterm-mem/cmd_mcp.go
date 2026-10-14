@@ -14,6 +14,7 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/embed"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/mcpserver"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/query"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vault"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultreg"
@@ -110,25 +111,25 @@ func (c commands) cmdMCP(args []string) int {
 	return exitOK
 }
 
-// mcpPromote is the promote tool of the MCP session: it resolves the vault of the call's project, promotes the
-// observation with the clock the commands were composed with, and rebuilds the vault index when the promotion
-// wrote a page.
-//
-// The rebuild happens before the call returns, exactly as cmd_sync.go does it: without it a page promoted over
-// MCP stayed invisible to MCP query until someone ran `sync` out of band. It is keyed off the promotion's
-// outcome (reindexAfterPromote), and its failure is reported beside a SUCCESSFUL promotion rather than as the
-// call's error -- the page is written and durable by then.
+// mcpPromote is the promote tool of the MCP session: it resolves the vault of the call's project and promotes the
+// observation with the clock the commands were composed with (promote.PromoteAndReindex), which rebuilds the vault
+// index when the promotion wrote a page, before the call returns, exactly as a sync does. The rebuild's failure is
+// reported beside a SUCCESSFUL promotion rather than as the call's error -- the page is written and durable by
+// then.
 func (c commands) mcpPromote(store *engram.Store) func(ctx context.Context, project string, engramID int64) (mcpserver.PromoteOutcome, error) {
 	return func(ctx context.Context, project string, engramID int64) (mcpserver.PromoteOutcome, error) {
 		vaultRoot, err := vaultreg.Resolve(defaultVaultsPath(), project, "")
 		if err != nil {
 			return mcpserver.PromoteOutcome{}, err
 		}
-		result, err := runPromote(ctx, store, vaultRoot, c.clock, engramID)
+		writer, err := newPromoteWriter(vaultRoot, c.clock)
 		if err != nil {
 			return mcpserver.PromoteOutcome{}, err
 		}
-		rebuildErr := reindexAfterPromote(ctx, result, vault.IndexRebuilder{Root: vaultRoot})
-		return mcpserver.PromoteOutcome{Result: result, IndexRebuildErr: rebuildErr}, nil
+		outcome, err := promote.PromoteAndReindex(ctx, writer, store.ObservationByID, engramID, vault.IndexRebuilder{Root: vaultRoot})
+		if err != nil {
+			return mcpserver.PromoteOutcome{}, err
+		}
+		return mcpserver.PromoteOutcome{Result: outcome.Result, IndexRebuildErr: outcome.IndexRebuildErr}, nil
 	}
 }

@@ -195,62 +195,15 @@ func newPromoteWriter(vaultRoot string, clock promote.Clock) (*promote.Writer, e
 }
 
 // runPromote builds a Writer for vaultRoot and calls
-// promote.ExplicitPromote against store (task 8b.11): the one
-// construction+call path cmdPromote (the CLI promote subcommand) and
-// cmd_mcp.go's MCP promote tool wiring both use, mirroring runQuery's own
-// extraction so R-012 and R-032 genuinely share one code path rather than
-// two callers separately reconstructing the same Writer.
+// promote.ExplicitPromote against store (task 8b.11): the construction+call
+// path of cmdPromote, the CLI promote subcommand. The MCP promote tool
+// (cmd_mcp.go) builds its Writer the same way, with newPromoteWriter, and
+// promotes through promote.PromoteAndReindex, which is this call and the
+// rebuild of the index that follows a page being written.
 func runPromote(ctx context.Context, store *engram.Store, vaultRoot string, clock promote.Clock, engramID int64) (promote.Result, error) {
 	writer, err := newPromoteWriter(vaultRoot, clock)
 	if err != nil {
 		return promote.Result{}, err
 	}
 	return promote.ExplicitPromote(ctx, writer, store.ObservationByID, engramID)
-}
-
-// reindexAfterPromote rebuilds the vault index after a promotion, but only
-// when that promotion actually WROTE a page.
-//
-// A page promoted over MCP used to stay invisible to MCP query until
-// someone ran `sync` out of band, because cmd_sync.go rebuilds the index
-// and the promote tool did not. Rebuilding here closes that, consistent
-// with sync.
-//
-// The rebuild is keyed off the promotion's OUTCOME, never off "promote was
-// called". A rebuild walks the whole vault and shells out to the vault's
-// own tooling; paying that for a promotion that wrote nothing is the entire
-// cost for none of the benefit, on a surface a client can call in a loop.
-// Two outcomes write nothing and both reach here as ordinary, non-error
-// results: a refusal under local-edit precedence (ActionSkippedLocalEdit),
-// and an ineligible observation, which Writer.Promote reports as a true
-// no-op. "No error was returned" therefore does not mean a page was
-// written, and cannot be the test.
-//
-// The returned error is the rebuild's own. It is deliberately NOT reported
-// as a promotion failure by any caller: the page is already written and
-// durable by the time the rebuild runs, so failing the call would tell the
-// caller that a page it can see on disk was never written. It is surfaced
-// separately instead (mcpserver.PromoteOutcome.IndexRebuildErr).
-func reindexAfterPromote(ctx context.Context, result promote.Result, rebuilder promote.IndexRebuilder) error {
-	if !promotionWrotePage(result) {
-		return nil
-	}
-	return rebuilder.RebuildIndex(ctx)
-}
-
-// promotionWrotePage reports whether result describes a promotion that put
-// bytes on disk.
-//
-// The kind alone answers it. Writer.Promote reports an INELIGIBLE observation
-// as a zero promote.Result, and the zero promote.ActionKind is
-// promote.ActionNone, so a promotion that touched no file never reads as a
-// write. (It used to be promote.ActionCreated, the first iota, and a guard
-// on the page address stood in front of the switch to catch that.)
-func promotionWrotePage(result promote.Result) bool {
-	switch result.Action.Kind {
-	case promote.ActionCreated, promote.ActionUpdated:
-		return true
-	default:
-		return false
-	}
 }
