@@ -57,17 +57,14 @@ type model struct {
 	aCursor int
 
 	pendingAction domain.Action // action awaiting confirmation / running
-	// pendingTargets is the EXACT target set runActionCmd will invoke the
-	// backend against for pendingAction. It is computed once (in
-	// updateActions, or the "u" banner shortcut) and reused verbatim by
-	// updateConfirm's "y" handler -- never recomputed from m.selectedTargets()
-	// at run time. This matters for restore (D4/R-003): its confirm text is
-	// filtered to only the selected targets that actually have a backup
-	// (RestorePlanner.Confirmation), and the real invocation must target that SAME
-	// filtered subset, or a target with zero backups would be invoked anyway,
-	// fail, and make the action runner's worst-severity aggregation misreport the
-	// whole action as failed even though the backup-bearing target's
-	// destructive restore already succeeded.
+	// pendingTargets is the exact target set runActionCmd runs pendingAction
+	// against. It is computed once, when the action is chosen (updateActions,
+	// the answer of the restore lookup, or the "u" banner shortcut), and
+	// reused verbatim by updateConfirm's "y" handler; it is never recomputed
+	// from m.selectedTargets() at run time. For an action that requires a
+	// backup it is the subset the RestorePlanner vouched for, the targets its
+	// confirm text names: running against the whole selection would invoke
+	// targets that have nothing to restore.
 	pendingTargets []domain.Target
 	// restoreReq numbers the restore backup lookups; only the latest answer counts.
 	restoreReq int

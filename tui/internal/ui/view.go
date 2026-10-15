@@ -377,10 +377,7 @@ func (m model) viewActions() string {
 	// with the label the group carries; an action with no group joins the
 	// section above it. The headers are display-only -- they are not in the
 	// actions slice, so cursor navigation and m.actions[m.aCursor] indexing
-	// are unaffected. (They used to be derived: "Hooks" from TargetAgnostic,
-	// which listed "Actualizar repositorio" under it, and "Skills" and
-	// "Memoria" from two command names, which each needed its own clause so
-	// that the rows below did not inherit the section above.)
+	// are unaffected.
 	var section domain.Group
 	for i, a := range m.actions {
 		if a.Group != "" && a.Group != section {
