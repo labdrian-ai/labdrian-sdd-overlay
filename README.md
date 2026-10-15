@@ -649,6 +649,39 @@ gentle-ai-overlay registry repair-sdd --registry <path> --target <name> --skills
     unknown flag), a registry without the headings `## Skills` and `## Loading protocol` (`ERROR: registry has no '<heading>'
     section: <path>`), a lock that stays taken, or a file that cannot be read or written, with the registry as it was.
 
+gentle-ai-overlay installed-targets record|release --state-dir <dir> --target <name>
+gentle-ai-overlay installed-targets list --state-dir <dir>
+gentle-ai-overlay installed-targets assess --state-dir <dir> [--purge] [--unregister-failed]
+gentle-ai-overlay installed-targets retire --state-dir <dir> --binary <path> [--purge]
+    Engine verbs (Phase 9, B3): there is no `overlay installed-targets` wrapper, so run them on the installed engine binary,
+    ~/.claude/bin/gentle-ai-overlay. They are what `overlay longterm-mem install` and `uninstall` ask. longterm-mem is one
+    binary, deployed once at `<state dir>/bin/longterm-mem` and shared by every runtime it is registered with, and the overlay
+    keeps a record of the runtimes it registered it with: the file `<dir>/longterm-mem/installed-targets`, one name a line. It
+    is the only thing that says whether a runtime still depends on the binary, and the binary goes when it is empty and not
+    before. `record` adds `--target` to it, once, after longterm-mem has registered that runtime (a name this build cannot
+    install for is refused), and appends it after whatever the file held. `release` takes it out, after longterm-mem has
+    removed that runtime's entry, rewriting the record from the names it vouches for, through a temporary file and a rename
+    (mode 0600): garbage is compacted away, a name only a newer build knows stays, and the last name leaves an empty record,
+    which is not an absent one. `list` prints the names, one a line. A name is a bare word of at most 64 bytes that begins with a
+    letter or a digit and goes on with letters, digits, dots, underscores and dashes; a NUL byte, a blank or padded line, a
+    carriage return and a line the file ends in the middle of are not names and are dropped when the record is read. A
+    record that is there and cannot be read is never appended to or rewritten, and `list` fails on it: "I could not look" is
+    not "there is nothing". `assess` says what an uninstall comes to once its targets are dealt with, from the record as it is
+    and without the lock: exit 0 and nothing said when the registration record and the shared binary may go (the record is
+    there and holds nothing, or `--purge`), exit 3 and the reason when they are kept (`--unregister-failed` says that a
+    target was not unregistered; the record cannot be read; there is no record, which means that what is installed is not
+    known and never that nothing is; or a target is still installed, and the names are printed). `retire` removes the binary
+    at `--binary` and then the record, and says which (`==> longterm-mem binary removed: <path>` or `already absent`), when the
+    record read again under the lock says that nothing depends on the binary or `--purge` forces it: a target recorded since
+    `assess` keeps the binary, and a record that cannot be read does too. `--binary` is the path the overlay deployed the binary
+    to and wrote into every runtime's entry; the engine does not derive it. Every read-modify-write (`record`, `release`,
+    `retire`) is one critical section under an advisory lock on `<dir>/.installed-targets.flock`, a file of its own beside
+    the directory of the record, waiting up to 2 seconds for a holder; the kernel lets it go when the process ends, so there
+    is no abandoned lock to break (the script's lock was a directory, `.installed-targets.lock`, and one a killed run left
+    behind is ignored). The words are the script's (`ERROR: longterm-mem: ...`, `WARN: longterm-mem: ...`). Exit 0 on success;
+    1 on a usage error (including an unknown flag), a lock that stays taken, or a file that cannot be read or written, with the
+    record as it was; and 3 from `assess` when the registration record and the binary are kept.
+
 gentle-ai-overlay status [--only registry] [--cwd <dir>]
     Engine verb: `overlay status-hooks` runs it on the installed engine binary, ~/.claude/bin/gentle-ai-overlay. It is the doctor
     of an installation: one line per check -- the binary, the hook families and guards in Claude Code's settings.json, the

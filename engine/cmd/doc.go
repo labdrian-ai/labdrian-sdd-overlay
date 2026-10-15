@@ -6,6 +6,7 @@
 //	engine uninstall-hooks --settings <path> --hook-command <binary-path>
 //	engine status [--only registry] [--cwd <dir>]
 //	engine registry repair-sdd --registry <path> --target <name> --skills-root <dir>
+//	engine installed-targets record|release|list|assess|retire --state-dir <dir> [--target <name>] [--binary <path>] [--purge] [--unregister-failed]
 //	engine skills <verb>  (verbs: list, status, validate, install, adopt, add, remove, sync-manifest, lint, approve, project-register, project-revise, project-status, project-retire)
 //
 // propagate: ensures the scoped minimalism-contract BEGIN/END marker block is
