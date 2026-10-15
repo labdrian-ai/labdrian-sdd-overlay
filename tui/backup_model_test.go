@@ -1,6 +1,6 @@
 package main
 
-// How the model uses the BackupQuery port to decide whether restore is
+// How the model uses the domain.BackupQuery port to decide whether restore is
 // offered and what its confirm screen says. The query itself is a fake here;
 // what the real backend answers is pinned in overlaycli_backend_test.go.
 
@@ -11,6 +11,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/tui/internal/domain"
 )
 
 // lookupResult runs a command and picks out the lookup's message.
@@ -49,7 +50,7 @@ func enterRestore(t *testing.T, m model) model {
 // TestRestore_EnterNeverQueriesInsideUpdate: the real query spawns the backend,
 // so it runs in the returned command, never in Update, where it would freeze the UI.
 func TestRestore_EnterNeverQueriesInsideUpdate(t *testing.T) {
-	backups := &fakeBackups{gate: make(chan struct{}), byTarget: map[string]Backup{
+	backups := &fakeBackups{gate: make(chan struct{}), byTarget: map[string]domain.Backup{
 		"claude": {Timestamp: "20260301T093000Z", Version: "v1.5.0"},
 	}}
 	m := newLoadedModel(t, &fakeCatalog{targets: threeCopyTargets()}, backups)
@@ -58,7 +59,7 @@ func TestRestore_EnterNeverQueriesInsideUpdate(t *testing.T) {
 	timer := time.AfterFunc(2*time.Second, func() { close(backups.gate) })
 	m, cmd := pressRestore(t, m)
 	if !timer.Stop() {
-		t.Fatal("enter on restore blocked on the BackupQuery inside Update")
+		t.Fatal("enter on restore blocked on the domain.BackupQuery inside Update")
 	}
 	if len(backups.asked) != 0 || m.scr != screenLookup || !strings.Contains(stripANSI(m.View()), "Consultando respaldos") {
 		t.Errorf("after enter: asked %q, screen %v; want no query yet and the lookup screen", backups.asked, m.scr)
@@ -74,7 +75,7 @@ func TestRestore_EnterNeverQueriesInsideUpdate(t *testing.T) {
 // TestRestore_AStaleLookupResultIsIgnored: an answer arriving after the operator
 // backed out, or after a newer request began, must not open the confirm screen.
 func TestRestore_AStaleLookupResultIsIgnored(t *testing.T) {
-	backups := &fakeBackups{byTarget: map[string]Backup{"claude": {Timestamp: "20260301T093000Z", Version: "v1.5.0"}}}
+	backups := &fakeBackups{byTarget: map[string]domain.Backup{"claude": {Timestamp: "20260301T093000Z", Version: "v1.5.0"}}}
 	m := newLoadedModel(t, &fakeCatalog{targets: threeCopyTargets()}, backups)
 
 	m, cmd := pressRestore(t, m)
@@ -108,7 +109,7 @@ func TestRestore_QuitWorksWhileTheLookupIsInFlight(t *testing.T) {
 // from the port, once per target restore can run against, not from the state
 // directory's layout.
 func TestRestore_AsksTheBackupQueryForEachSelectedTarget(t *testing.T) {
-	backups := &fakeBackups{byTarget: map[string]Backup{
+	backups := &fakeBackups{byTarget: map[string]domain.Backup{
 		"claude":   {Timestamp: "20260301T093000Z", Version: "v1.5.0"},
 		"opencode": {Timestamp: "20260302T101500Z", Version: "v1.6.0"},
 	}}
@@ -132,7 +133,7 @@ func TestRestore_AsksTheBackupQueryForEachSelectedTarget(t *testing.T) {
 // backup whose version it cannot read as unknown; the UI says so in its own
 // language rather than printing nothing or a made-up version.
 func TestRestore_AnUnknownVersionIsLabelledInSpanish(t *testing.T) {
-	backups := &fakeBackups{byTarget: map[string]Backup{
+	backups := &fakeBackups{byTarget: map[string]domain.Backup{
 		"claude": {Timestamp: "20260101T000000Z"},
 	}}
 	m := enterRestore(t, newLoadedModel(t, &fakeCatalog{targets: threeCopyTargets()}, backups))
@@ -150,7 +151,7 @@ func TestRestore_AnUnknownVersionIsLabelledInSpanish(t *testing.T) {
 // backend could not confirm, and the targets whose answer is clear still are.
 func TestRestore_ATargetWhoseBackupsCannotBeReadIsNotOffered(t *testing.T) {
 	backups := &fakeBackups{
-		byTarget: map[string]Backup{
+		byTarget: map[string]domain.Backup{
 			"claude":   {Timestamp: "20260301T093000Z", Version: "v1.5.0"},
 			"opencode": {Timestamp: "20260302T101500Z", Version: "v1.6.0"},
 		},

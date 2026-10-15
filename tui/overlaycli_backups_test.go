@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/tui/internal/domain"
 )
 
 // TestParseBackupList pins what the TUI assumes about `labdrian-overlay
@@ -18,7 +20,7 @@ func TestParseBackupList(t *testing.T) {
 
 	t.Run("no backups is a clear answer, not an error", func(t *testing.T) {
 		b, ok, err := parseBackupList("No backups available for target 'claude'.\n", "claude")
-		if err != nil || ok || b != (Backup{}) {
+		if err != nil || ok || b != (domain.Backup{}) {
 			t.Errorf("parseBackupList = %+v, %v, %v; want no backup, no error", b, ok, err)
 		}
 	})
@@ -28,7 +30,7 @@ func TestParseBackupList(t *testing.T) {
 		if err != nil || !ok {
 			t.Fatalf("parseBackupList: ok=%v err=%v", ok, err)
 		}
-		if b != (Backup{Timestamp: "20260215T120000Z", Version: "v1.3.0"}) {
+		if b != (domain.Backup{Timestamp: "20260215T120000Z", Version: "v1.3.0"}) {
 			t.Errorf("backup = %+v, want the last (newest) entry", b)
 		}
 	})
@@ -73,7 +75,7 @@ func TestParseBackupList(t *testing.T) {
 			if err == nil {
 				t.Fatalf("parseBackupList(%q) = %+v, %v; want an error", tc.output, b, ok)
 			}
-			if ok || b != (Backup{}) {
+			if ok || b != (domain.Backup{}) {
 				t.Errorf("a rejected listing must report no backup, got %+v, %v", b, ok)
 			}
 		})
@@ -89,7 +91,7 @@ func TestOverlayCLI_LatestBackup_AsksTheBackendToListThatTarget(t *testing.T) {
 	writeStubBackend(t, root, recorder, "Backups for opencode (newest last):\n  20260301T093000Z (v1.5.0)", 0)
 
 	b, ok, err := newOverlayCLI(root).LatestBackup("opencode")
-	if err != nil || !ok || b != (Backup{Timestamp: "20260301T093000Z", Version: "v1.5.0"}) {
+	if err != nil || !ok || b != (domain.Backup{Timestamp: "20260301T093000Z", Version: "v1.5.0"}) {
 		t.Fatalf("LatestBackup = %+v, %v, %v", b, ok, err)
 	}
 
@@ -112,7 +114,7 @@ func TestOverlayCLI_LatestBackup_FailsClosed(t *testing.T) {
 		writeScriptBackend(t, root, `echo "ERROR: restore does not support --target pi" >&2; exit 1`)
 
 		b, ok, err := newOverlayCLI(root).LatestBackup("pi")
-		if err == nil || ok || b != (Backup{}) {
+		if err == nil || ok || b != (domain.Backup{}) {
 			t.Fatalf("LatestBackup = %+v, %v, %v; want an error and no backup", b, ok, err)
 		}
 		if !strings.Contains(err.Error(), "restore does not support --target pi") {

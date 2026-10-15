@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/tui/internal/domain"
 )
 
 // collectMsgs runs cmd and returns every message it produces, flattening the
@@ -151,7 +152,7 @@ func TestCatalogFailure_FailsClosed(t *testing.T) {
 	})
 }
 
-func targetNames(targets []Target) string {
+func targetNames(targets []domain.Target) string {
 	var names []string
 	for _, tgt := range targets {
 		names = append(names, tgt.Name)
@@ -204,7 +205,7 @@ func TestCapture_WithOnlyAPackageTargetSelectedIsANoOp(t *testing.T) {
 // TestRestore_NeverRunsAgainstAPackageTarget: even a package target that has
 // a backup directory is not offered a restore, because the backend refuses it.
 func TestRestore_NeverRunsAgainstAPackageTarget(t *testing.T) {
-	backups := &fakeBackups{byTarget: map[string]Backup{
+	backups := &fakeBackups{byTarget: map[string]domain.Backup{
 		"claude": {Timestamp: "20260301T093000Z", Version: "v1.5.0"},
 		"pi":     {Timestamp: "20260301T093000Z", Version: "v1.5.0"},
 	}}

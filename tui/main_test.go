@@ -15,6 +15,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/exp/teatest"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/tui/internal/domain"
 )
 
 // ansiRE matches SGR color escape sequences for ANSI-stripping in assertions.
@@ -141,13 +142,13 @@ func TestInit_ReturnsNonNilCmd(t *testing.T) {
 }
 
 // TestNewModel_BehindOriginDefaultsToNA locks in the D5 zero-value guard:
-// newModel must initialize behindOrigin to RepoBehindOriginNA, not Go's
+// newModel must initialize behindOrigin to domain.RepoBehindOriginNA, not Go's
 // zero value (which is 0 and would collapse into "confirmed 0 behind" —
 // the exact R-006 bug class this field's sentinel exists to prevent).
 func TestNewModel_BehindOriginDefaultsToNA(t *testing.T) {
 	m := newTestModel(t)
-	if m.behindOrigin != RepoBehindOriginNA {
-		t.Errorf("newTestModel(t).behindOrigin = %d, want RepoBehindOriginNA (%d) before any probe result arrives", m.behindOrigin, RepoBehindOriginNA)
+	if m.behindOrigin != domain.RepoBehindOriginNA {
+		t.Errorf("newTestModel(t).behindOrigin = %d, want domain.RepoBehindOriginNA (%d) before any probe result arrives", m.behindOrigin, domain.RepoBehindOriginNA)
 	}
 }
 
@@ -181,7 +182,7 @@ func TestGlobalXKey_DismissesBannerOnlyWhenVisible(t *testing.T) {
 	})
 
 	t.Run("no-op when not behind origin", func(t *testing.T) {
-		m := newTestModel(t) // behindOrigin defaults to RepoBehindOriginNA
+		m := newTestModel(t) // behindOrigin defaults to domain.RepoBehindOriginNA
 		updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("x")})
 		m = updated.(model)
 		if m.bannerDismissed {
@@ -229,7 +230,7 @@ func TestGlobalUKey_JumpsToSelfUpdateConfirmOnlyWhenVisible(t *testing.T) {
 	})
 
 	t.Run("no-op when not behind origin", func(t *testing.T) {
-		m := newTestModel(t) // behindOrigin defaults to RepoBehindOriginNA
+		m := newTestModel(t) // behindOrigin defaults to domain.RepoBehindOriginNA
 		before := m.scr
 		m = pressU(m)
 		if m.scr != before {
@@ -279,7 +280,7 @@ func TestToggleSelection(t *testing.T) {
 func TestSpinnerPresentOnRunning(t *testing.T) {
 	m := newTestModel(t)
 	// Advance into screenRunning by choosing a non-mutating action.
-	action := Action{Name: "Estado", Command: "status", Mutating: false, SupportsAll: true}
+	action := domain.Action{Name: "Estado", Command: "status", Mutating: false, SupportsAll: true}
 	m.pendingAction = action
 	m.scr = screenRunning
 
@@ -336,13 +337,13 @@ func TestSpinnerAbsentOutsideRunning(t *testing.T) {
 
 			// For screenConfirm we need a pending action.
 			if tc.scr == screenConfirm {
-				m.pendingAction = Action{Name: "Aplicar cambios", Command: "apply", Mutating: true}
+				m.pendingAction = domain.Action{Name: "Aplicar cambios", Command: "apply", Mutating: true}
 			}
 			// For screenResult we need a result.
 			if tc.scr == screenResult {
-				m.result = commandResult{
-					action: Action{Name: "Estado", Command: "status"},
-					output: "some output",
+				m.result = domain.CommandResult{
+					Action: domain.Action{Name: "Estado", Command: "status"},
+					Output: "some output",
 				}
 			}
 
@@ -379,9 +380,9 @@ func TestNoDoubleGapInAnyScreen(t *testing.T) {
 
 	// Result screen.
 	m.scr = screenResult
-	m.result = commandResult{
-		action: Action{Name: "Estado", Command: "status"},
-		output: "ok",
+	m.result = domain.CommandResult{
+		Action: domain.Action{Name: "Estado", Command: "status"},
+		Output: "ok",
 	}
 	rendered = m.View()
 	if strings.Contains(rendered, "\n\n\n") {
@@ -400,9 +401,9 @@ func TestWidthResponsiveRendering(t *testing.T) {
 		updated, _ := m.Update(tea.WindowSizeMsg{Width: narrowWidth, Height: 20})
 		m = updated.(model)
 		m.scr = screenResult
-		m.result = commandResult{
-			action: Action{Name: "Estado", Command: "status"},
-			output: output,
+		m.result = domain.CommandResult{
+			Action: domain.Action{Name: "Estado", Command: "status"},
+			Output: output,
 		}
 		return m
 	}
@@ -494,9 +495,9 @@ func TestScrollClamp(t *testing.T) {
 	for i := range lines {
 		lines[i] = "line"
 	}
-	m.result = commandResult{
-		action: Action{Name: "Estado", Command: "status"},
-		output: strings.Join(lines, "\n"),
+	m.result = domain.CommandResult{
+		Action: domain.Action{Name: "Estado", Command: "status"},
+		Output: strings.Join(lines, "\n"),
 	}
 
 	max := m.maxScroll()
@@ -550,15 +551,15 @@ func TestSelectAllToggle(t *testing.T) {
 	}
 }
 
-// TestErrorBannerOnFailure verifies a red "Comando falló" banner when result.err != nil,
+// TestErrorBannerOnFailure verifies a red "Comando falló" banner when result.Err != nil,
 // and that the success path does NOT contain the banner (R-003).
 func TestErrorBannerOnFailure(t *testing.T) {
 	m := newTestModel(t)
 	m.scr = screenResult
-	m.result = commandResult{
-		action: Action{Name: "Aplicar cambios", Command: "apply"},
-		output: "error output",
-		err:    fmt.Errorf("exit status 1"),
+	m.result = domain.CommandResult{
+		Action: domain.Action{Name: "Aplicar cambios", Command: "apply"},
+		Output: "error output",
+		Err:    fmt.Errorf("exit status 1"),
 	}
 
 	rendered := m.View()
@@ -567,23 +568,23 @@ func TestErrorBannerOnFailure(t *testing.T) {
 	}
 
 	// Success path.
-	m.result.err = nil
+	m.result.Err = nil
 	rendered = m.View()
 	if strings.Contains(rendered, "Comando falló") {
 		t.Errorf("success result must NOT contain 'Comando falló'")
 	}
 }
 
-// TestDegradedBannerOnExitTwo verifies that a commandResult with exitCode==2 renders
+// TestDegradedBannerOnExitTwo verifies that a domain.CommandResult with exitCode==2 renders
 // the YELLOW "Degradado" banner and NOT the red "Comando falló" banner (exit-2 path).
 func TestDegradedBannerOnExitTwo(t *testing.T) {
 	m := newTestModel(t)
 	m.scr = screenResult
-	m.result = commandResult{
-		action:   Action{Name: "Aplicar cambios", Command: "apply"},
-		output:   "degraded output",
-		err:      fmt.Errorf("exit status 2"),
-		exitCode: 2,
+	m.result = domain.CommandResult{
+		Action:   domain.Action{Name: "Aplicar cambios", Command: "apply"},
+		Output:   "degraded output",
+		Err:      fmt.Errorf("exit status 2"),
+		ExitCode: 2,
 	}
 
 	rendered := m.View()
@@ -601,10 +602,10 @@ func TestDegradedBannerOnExitTwo(t *testing.T) {
 func TestEmptyVerdictNote(t *testing.T) {
 	m := newTestModel(t)
 	m.scr = screenResult
-	m.result = commandResult{
-		action:   Action{Name: "Verificar sincronización", Command: "sync-check"},
-		output:   "some raw output",
-		verdicts: nil,
+	m.result = domain.CommandResult{
+		Action:   domain.Action{Name: "Verificar sincronización", Command: "sync-check"},
+		Output:   "some raw output",
+		Verdicts: nil,
 	}
 
 	rendered := m.View()
@@ -613,7 +614,7 @@ func TestEmptyVerdictNote(t *testing.T) {
 	}
 
 	// With verdicts present, note must NOT appear.
-	m.result.verdicts = []TargetVerdict{{Target: "claude", Status: SyncHealthy}}
+	m.result.Verdicts = []domain.TargetVerdict{{Target: "claude", Status: domain.SyncHealthy}}
 	rendered = m.View()
 	if strings.Contains(rendered, "No se pudieron analizar veredictos") {
 		t.Errorf("sync-check with verdicts must NOT show dim note")
@@ -621,10 +622,10 @@ func TestEmptyVerdictNote(t *testing.T) {
 
 	// NEGATIVE PATH: a non-sync-check command with zero verdicts must NOT show
 	// the note — guards the Command=="sync-check" gate in viewResult.
-	m.result = commandResult{
-		action:   Action{Name: "Estado", Command: "status"},
-		output:   "some output",
-		verdicts: nil,
+	m.result = domain.CommandResult{
+		Action:   domain.Action{Name: "Estado", Command: "status"},
+		Output:   "some output",
+		Verdicts: nil,
 	}
 	rendered = m.View()
 	if strings.Contains(rendered, "No se pudieron analizar veredictos") {
@@ -658,9 +659,9 @@ func TestFooterLegendCorrectness(t *testing.T) {
 
 	// Result screen footer.
 	m.scr = screenResult
-	m.result = commandResult{
-		action: Action{Name: "Estado", Command: "status"},
-		output: "ok",
+	m.result = domain.CommandResult{
+		Action: domain.Action{Name: "Estado", Command: "status"},
+		Output: "ok",
 	}
 	rendered = m.View()
 	if !strings.Contains(rendered, "esc/enter") {
@@ -669,7 +670,7 @@ func TestFooterLegendCorrectness(t *testing.T) {
 
 	// Confirm screen footer.
 	m.scr = screenConfirm
-	m.pendingAction = Action{Name: "Aplicar cambios", Command: "apply", Mutating: true}
+	m.pendingAction = domain.Action{Name: "Aplicar cambios", Command: "apply", Mutating: true}
 	rendered = m.View()
 	if !strings.Contains(rendered, "n/esc") {
 		t.Errorf("confirm screen footer must contain 'n/esc', got:\n%s", rendered)
@@ -691,7 +692,7 @@ func TestConfirmMessageSelection(t *testing.T) {
 	t.Run("empty ConfirmMessage shows generic copy", func(t *testing.T) {
 		m := newTestModel(t)
 		m.scr = screenConfirm
-		m.pendingAction = Action{
+		m.pendingAction = domain.Action{
 			Name:     "Aplicar cambios",
 			Command:  "apply",
 			Mutating: true,
@@ -704,16 +705,16 @@ func TestConfirmMessageSelection(t *testing.T) {
 	})
 
 	t.Run("install-hooks ConfirmMessage shows settings.json and .bak", func(t *testing.T) {
-		// Find the install-hooks action from Actions().
-		var installAction Action
-		for _, a := range Actions() {
+		// Find the install-hooks action from domain.Actions().
+		var installAction domain.Action
+		for _, a := range domain.Actions() {
 			if a.Command == "install-hooks" {
 				installAction = a
 				break
 			}
 		}
 		if installAction.Command == "" {
-			t.Skip("install-hooks not yet registered in Actions()")
+			t.Skip("install-hooks not yet registered in domain.Actions()")
 		}
 
 		m := newTestModel(t)
@@ -731,7 +732,7 @@ func TestConfirmMessageSelection(t *testing.T) {
 	t.Run("TargetAgnostic action on screenConfirm hides target list", func(t *testing.T) {
 		m := newTestModel(t)
 		m.scr = screenConfirm
-		m.pendingAction = Action{
+		m.pendingAction = domain.Action{
 			Name:           "Estado de hooks",
 			Command:        "status-hooks",
 			Mutating:       true,
@@ -799,9 +800,9 @@ func TestActionMenuShowsHints(t *testing.T) {
 func TestSuccessBannerOnResult(t *testing.T) {
 	m := newTestModel(t)
 	m.scr = screenResult
-	m.result = commandResult{
-		action: Action{Name: "Estado", Command: "status"},
-		output: "ok",
+	m.result = domain.CommandResult{
+		Action: domain.Action{Name: "Estado", Command: "status"},
+		Output: "ok",
 	}
 	rendered := m.View()
 	if !strings.Contains(rendered, "✓ Completado") {
@@ -809,7 +810,7 @@ func TestSuccessBannerOnResult(t *testing.T) {
 	}
 
 	// Failure path must NOT show the success banner.
-	m.result.err = fmt.Errorf("exit status 1")
+	m.result.Err = fmt.Errorf("exit status 1")
 	rendered = m.View()
 	if strings.Contains(rendered, "✓ Completado") {
 		t.Errorf("failure result must NOT contain '✓ Completado', got:\n%s", rendered)
@@ -834,7 +835,7 @@ func TestEstadoSkipsConfirmAndMergesStatusHooks(t *testing.T) {
 		}
 	}
 	if statusIdx < 0 {
-		t.Fatal("status (Estado) not found in Actions(); required by this change")
+		t.Fatal("status (Estado) not found in domain.Actions(); required by this change")
 	}
 
 	// Lock in the merge: status-hooks must be nested under Estado's Also.
@@ -874,7 +875,7 @@ func TestInstallHooksRequiresConfirm(t *testing.T) {
 		}
 	}
 	if installIdx < 0 {
-		t.Fatal("install-hooks not found in Actions(); hooks actions are required by this change")
+		t.Fatal("install-hooks not found in domain.Actions(); hooks actions are required by this change")
 	}
 
 	m.aCursor = installIdx
@@ -900,7 +901,7 @@ func TestUninstallHooksRequiresConfirm(t *testing.T) {
 		}
 	}
 	if uninstallIdx < 0 {
-		t.Fatal("uninstall-hooks not found in Actions(); hooks actions are required by this change")
+		t.Fatal("uninstall-hooks not found in domain.Actions(); hooks actions are required by this change")
 	}
 
 	m.aCursor = uninstallIdx
@@ -931,7 +932,7 @@ func TestKeyboardNavigationOverSeparator(t *testing.T) {
 	m.scr = screenActions
 
 	if len(m.actions) == 0 {
-		t.Fatal("Actions() must be non-empty")
+		t.Fatal("domain.Actions() must be non-empty")
 	}
 
 	// Verify initial cursor is valid.
@@ -969,7 +970,7 @@ func TestKeyboardNavigationOverSeparator(t *testing.T) {
 		}
 	}
 	if hooksIdx < 0 {
-		t.Fatal("no hooks mutating action found in Actions(); required by this change")
+		t.Fatal("no hooks mutating action found in domain.Actions(); required by this change")
 	}
 
 	m2 := newTestModel(t)
@@ -993,20 +994,20 @@ func TestViewDashboardShowsAgentsSection(t *testing.T) {
 	m := newTestModel(t)
 	m.width = 80
 	m.scr = screenResult
-	m.result = commandResult{
-		action: Action{Name: "Verificar sincronización", Command: "sync-check"},
-		verdicts: []TargetVerdict{
+	m.result = domain.CommandResult{
+		Action: domain.Action{Name: "Verificar sincronización", Command: "sync-check"},
+		Verdicts: []domain.TargetVerdict{
 			{
 				Target:             "claude",
-				Status:             SyncNeedsApply,
+				Status:             domain.SyncNeedsApply,
 				OverlayNotDeployed: 1,
 				Action:             "run 'labdrian apply --target claude'",
-				AgentFiles: []AgentFileEntry{
+				AgentFiles: []domain.AgentFileEntry{
 					{Path: "agents/GADU.md", Status: "OVERLAY_NOT_DEPLOYED"},
 				},
 			},
 		},
-		output: "ok",
+		Output: "ok",
 	}
 
 	rendered := stripANSI(m.viewDashboard())
@@ -1024,12 +1025,12 @@ func TestViewDashboardNoAgentsSectionWhenEmpty(t *testing.T) {
 	m := newTestModel(t)
 	m.width = 80
 	m.scr = screenResult
-	m.result = commandResult{
-		action: Action{Name: "Verificar sincronización", Command: "sync-check"},
-		verdicts: []TargetVerdict{
-			{Target: "opencode", Status: SyncHealthy, Action: "in sync"},
+	m.result = domain.CommandResult{
+		Action: domain.Action{Name: "Verificar sincronización", Command: "sync-check"},
+		Verdicts: []domain.TargetVerdict{
+			{Target: "opencode", Status: domain.SyncHealthy, Action: "in sync"},
 		},
-		output: "ok",
+		Output: "ok",
 	}
 
 	rendered := stripANSI(m.viewDashboard())
@@ -1132,16 +1133,16 @@ func TestProbeBehindOriginCmd(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 // TestSelfUpdateConfirmScreen proves, for the ACTUAL registered self-update
-// entry (sourced from Actions(), not a hand-built stand-in), that
+// entry (sourced from domain.Actions(), not a hand-built stand-in), that
 // screenConfirm SHOWS the target list — self-update now chains "apply" via
 // Also (menos-pasos change), so it is no longer purely target-agnostic from
 // the user's point of view even though its own primary invocation still
 // receives no --target — and that the confirm copy names both "main" (the
 // branch fast-forwarded) and the fact that it also deploys.
 func TestSelfUpdateConfirmScreen(t *testing.T) {
-	var selfUpdate Action
+	var selfUpdate domain.Action
 	found := false
-	for _, a := range Actions() {
+	for _, a := range domain.Actions() {
 		if a.Command == "self-update" {
 			selfUpdate = a
 			found = true
@@ -1149,7 +1150,7 @@ func TestSelfUpdateConfirmScreen(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Fatal(`Actions() must contain "self-update" before its confirm screen can be exercised`)
+		t.Fatal(`domain.Actions() must contain "self-update" before its confirm screen can be exercised`)
 	}
 
 	m := newTestModel(t)
@@ -1177,9 +1178,9 @@ func TestSelfUpdateConfirmScreen(t *testing.T) {
 func TestUpdate_SelfUpdateSuccess_RefiresProbe(t *testing.T) {
 	t.Run("self-update success re-fires probe", func(t *testing.T) {
 		m := newTestModel(t)
-		msg := runDoneMsg{result: commandResult{
-			action: Action{Command: "self-update"},
-			err:    nil,
+		msg := runDoneMsg{result: domain.CommandResult{
+			Action: domain.Action{Command: "self-update"},
+			Err:    nil,
 		}}
 		updated, cmd := m.Update(msg)
 		m = updated.(model)
@@ -1193,9 +1194,9 @@ func TestUpdate_SelfUpdateSuccess_RefiresProbe(t *testing.T) {
 
 	t.Run("self-update failure does not re-fire probe", func(t *testing.T) {
 		m := newTestModel(t)
-		msg := runDoneMsg{result: commandResult{
-			action: Action{Command: "self-update"},
-			err:    errors.New("boom"),
+		msg := runDoneMsg{result: domain.CommandResult{
+			Action: domain.Action{Command: "self-update"},
+			Err:    errors.New("boom"),
 		}}
 		_, cmd := m.Update(msg)
 		if cmd != nil {
@@ -1205,9 +1206,9 @@ func TestUpdate_SelfUpdateSuccess_RefiresProbe(t *testing.T) {
 
 	t.Run("other action success does not re-fire probe", func(t *testing.T) {
 		m := newTestModel(t)
-		msg := runDoneMsg{result: commandResult{
-			action: Action{Command: "apply"},
-			err:    nil,
+		msg := runDoneMsg{result: domain.CommandResult{
+			Action: domain.Action{Command: "apply"},
+			Err:    nil,
 		}}
 		_, cmd := m.Update(msg)
 		if cmd != nil {
@@ -1219,10 +1220,10 @@ func TestUpdate_SelfUpdateSuccess_RefiresProbe(t *testing.T) {
 // ---------------------------------------------------------------------------
 // Slice 3b: overlay-release-tui-surfacing (R-011).
 //
-// TargetVerdict gains RecordedVersion/DigestMatch/RepoBehindRelease (D2),
+// domain.TargetVerdict gains RecordedVersion/DigestMatch/RepoBehindRelease (D2),
 // classify's precedence extends to capture > apply/digest-mismatch >
 // behind-release > behind-origin, the launch-time probe delivers both
-// behind-origin and behind-release from one sync-check run, and Actions()
+// behind-origin and behind-release from one sync-check run, and domain.Actions()
 // gains a per-target "Restaurar respaldo" entry gated on backup
 // availability (R-003, D4).
 // ---------------------------------------------------------------------------
@@ -1253,11 +1254,11 @@ func TestProbeBehindOriginCmd_AlsoDeliversBehindRelease(t *testing.T) {
 
 // TestNewModel_BehindReleaseDefaultsToNA mirrors
 // TestNewModel_BehindOriginDefaultsToNA for the new field: newModel must
-// initialize behindRelease to RepoBehindOriginNA, not Go's zero value.
+// initialize behindRelease to domain.RepoBehindOriginNA, not Go's zero value.
 func TestNewModel_BehindReleaseDefaultsToNA(t *testing.T) {
 	m := newTestModel(t)
-	if m.behindRelease != RepoBehindOriginNA {
-		t.Errorf("newTestModel(t).behindRelease = %d, want RepoBehindOriginNA (%d)", m.behindRelease, RepoBehindOriginNA)
+	if m.behindRelease != domain.RepoBehindOriginNA {
+		t.Errorf("newTestModel(t).behindRelease = %d, want domain.RepoBehindOriginNA (%d)", m.behindRelease, domain.RepoBehindOriginNA)
 	}
 }
 
@@ -1273,7 +1274,7 @@ func TestUpdate_ProbeDoneMsg_SetsBehindRelease(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// Slice 3b: Actions() registration for restore and the folded-in version
+// Slice 3b: domain.Actions() registration for restore and the folded-in version
 // command (R-011).
 // ---------------------------------------------------------------------------
 
@@ -1290,7 +1291,7 @@ func findAction(t *testing.T, m model, command string) int {
 			return i
 		}
 	}
-	t.Fatalf("Actions() must contain a %q entry", command)
+	t.Fatalf("domain.Actions() must contain a %q entry", command)
 	return -1
 }
 
@@ -1316,7 +1317,7 @@ func TestUpdateActions_Restore_NoBackupIsNoOp(t *testing.T) {
 // the EXACT existing confirm->run->result pattern (Mutating: true ->
 // screenConfirm -> y/enter -> screenRunning).
 func TestUpdateActions_Restore_WithBackupShowsConfirmNamingTimestampVersion(t *testing.T) {
-	m := newLoadedModel(t, &fakeCatalog{targets: threeCopyTargets()}, &fakeBackups{byTarget: map[string]Backup{
+	m := newLoadedModel(t, &fakeCatalog{targets: threeCopyTargets()}, &fakeBackups{byTarget: map[string]domain.Backup{
 		"claude": {Timestamp: "20260301T093000Z", Version: "v1.5.0"},
 	}})
 	// Only "claude" selected, to make the confirm text assertion unambiguous.
@@ -1361,7 +1362,7 @@ func TestUpdateActions_Restore_WithBackupShowsConfirmNamingTimestampVersion(t *t
 // rather than refusing the whole action.
 func TestUpdateActions_Restore_PartialBackupAvailabilityAmongSelection(t *testing.T) {
 	// "opencode" deliberately has no backup.
-	m := newLoadedModel(t, &fakeCatalog{targets: threeCopyTargets()}, &fakeBackups{byTarget: map[string]Backup{
+	m := newLoadedModel(t, &fakeCatalog{targets: threeCopyTargets()}, &fakeBackups{byTarget: map[string]domain.Backup{
 		"claude": {Timestamp: "20260301T093000Z", Version: "v1.5.0"},
 	}})
 	m.selected = map[int]bool{0: true, 1: true, 2: false} // claude + opencode
@@ -1415,17 +1416,17 @@ func TestUpdateActions_Restore_PartialBackupAvailabilityAmongSelection(t *testin
 	if !found {
 		t.Fatal("confirming restore's batched commands never produced a runDoneMsg")
 	}
-	// done.result.targets is runBackend's own record of exactly which targets
+	// done.result.Targets is runBackend's own record of exactly which targets
 	// it was invoked against (set before any subprocess runs) -- the direct
 	// proof that "opencode" (zero backups) was never actually invoked, not
 	// just omitted from the confirm text.
-	for _, tgt := range done.result.targets {
+	for _, tgt := range done.result.Targets {
 		if tgt.Name == "opencode" {
-			t.Errorf("runBackend was invoked against opencode (zero backups); targets = %+v", done.result.targets)
+			t.Errorf("runBackend was invoked against opencode (zero backups); targets = %+v", done.result.Targets)
 		}
 	}
-	if len(done.result.targets) != 1 || done.result.targets[0].Name != "claude" {
-		t.Errorf("runBackend invoked against targets = %+v, want exactly [claude]", done.result.targets)
+	if len(done.result.Targets) != 1 || done.result.Targets[0].Name != "claude" {
+		t.Errorf("runBackend invoked against targets = %+v, want exactly [claude]", done.result.Targets)
 	}
 }
 
@@ -1444,11 +1445,11 @@ func TestUpdateActions_Restore_PartialBackupAvailabilityAmongSelection(t *testin
 // TargetAgnostic row, and at the first "skills" row. The longterm-mem rows
 // match none of those, so before this guard they rendered UNDER "── Skills ──"
 // — an MCP server that edits three runtime configuration files, filed by the
-// menu as a skill, while Actions()' doc comment and the code comment beside
+// menu as a skill, while domain.Actions()' doc comment and the code comment beside
 // the group both called it a separate lifecycle. Two records said one thing
 // and the screen said another; only the screen is read.
 func TestLongtermMemActionsRenderUnderTheirOwnHeader(t *testing.T) {
-	m := model{actions: Actions(), width: 100, height: 40}
+	m := model{actions: domain.Actions(), width: 100, height: 40}
 	out := m.viewActions()
 
 	memHeader := strings.Index(out, "── Memoria ──")
@@ -1465,6 +1466,6 @@ func TestLongtermMemActionsRenderUnderTheirOwnHeader(t *testing.T) {
 	// The header must sit between the skills section and the memory rows —
 	// otherwise it exists but the grouping it claims does not.
 	if skills := strings.Index(out, "── Skills ──"); skills >= 0 && skills > memHeader {
-		t.Errorf("── Skills ── renders after ── Memoria ──; the group order does not match Actions():\n%s", out)
+		t.Errorf("── Skills ── renders after ── Memoria ──; the group order does not match domain.Actions():\n%s", out)
 	}
 }

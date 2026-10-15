@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/tui/internal/domain"
 )
 
 // stackModel builds the program's model over the backend under root, with the adapter main would choose.
@@ -22,8 +23,8 @@ func stackModel(root string, rootErr error) tea.Model {
 // run and shown, and the sub-actions merged into it.
 func menuDefinition() string {
 	var b strings.Builder
-	var dump func(a Action, indent string)
-	dump = func(a Action, indent string) {
+	var dump func(a domain.Action, indent string)
+	dump = func(a domain.Action, indent string) {
 		fmt.Fprintf(&b, "%sName=%q Command=%q Args=%q\n", indent, a.Name, a.Command, a.Args)
 		fmt.Fprintf(&b, "%s  Mutating=%t SupportsAll=%t TargetAgnostic=%t CopyTargetsOnly=%t\n",
 			indent, a.Mutating, a.SupportsAll, a.TargetAgnostic, a.CopyTargetsOnly)
@@ -33,7 +34,7 @@ func menuDefinition() string {
 			dump(sub, indent+"    also: ")
 		}
 	}
-	for _, a := range Actions() {
+	for _, a := range domain.Actions() {
 		dump(a, "")
 	}
 	return b.String()

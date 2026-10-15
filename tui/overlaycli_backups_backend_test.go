@@ -10,13 +10,15 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/tui/internal/domain"
 )
 
 func TestOverlayCLIContract_LatestBackup_NoBackups(t *testing.T) {
 	cli, _, _ := realOverlayCLI(t)
 
 	b, ok, err := cli.LatestBackup("claude")
-	if err != nil || ok || b != (Backup{}) {
+	if err != nil || ok || b != (domain.Backup{}) {
 		t.Errorf("LatestBackup = %+v, %v, %v; want no backup and no error for a target without any", b, ok, err)
 	}
 }
@@ -32,7 +34,7 @@ func TestOverlayCLIContract_LatestBackup_PicksTheNewest(t *testing.T) {
 	if err != nil || !ok {
 		t.Fatalf("LatestBackup: ok=%v err=%v", ok, err)
 	}
-	if b != (Backup{Timestamp: "20260215T120000Z", Version: "v1.3.0"}) {
+	if b != (domain.Backup{Timestamp: "20260215T120000Z", Version: "v1.3.0"}) {
 		t.Errorf("backup = %+v, want the chronologically last one with its .meta version", b)
 	}
 }

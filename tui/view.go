@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/tui/internal/domain"
 )
 
 var (
@@ -143,7 +144,7 @@ func (m model) repoLine() string {
 	// pre-D2 origin-only rendering — the tui-self-update MODIFIED R-007
 	// scenario "pre-first-tag legacy convergence keeps the old claim"
 	// applies to the TUI's own rendering too, not only the backend.
-	if m.behindRelease == RepoBehindOriginNA {
+	if m.behindRelease == domain.RepoBehindOriginNA {
 		switch {
 		case m.bannerVisible():
 			return lipgloss.NewStyle().Foreground(colorAmber).Render(fmt.Sprintf(
@@ -157,7 +158,7 @@ func (m model) repoLine() string {
 			return ""
 		case m.behindOrigin == 0:
 			return lipgloss.NewStyle().Foreground(colorGreen).Render("✓ Repo al día con origin/main")
-		default: // RepoBehindOriginNA
+		default: // domain.RepoBehindOriginNA
 			return lipgloss.NewStyle().Foreground(colorGray).Render(
 				"? No se pudo verificar el estado del repo (sin red / sin fetch previo)")
 		}
@@ -458,34 +459,34 @@ func (m model) viewRunning() string {
 func (m model) viewResult() string {
 	var b strings.Builder
 
-	if m.result.err != nil {
-		if m.result.exitCode == 2 {
+	if m.result.Err != nil {
+		if m.result.ExitCode == 2 {
 			// Exit 2 means DEGRADED (e.g. 'engine status' with a warning): not a
 			// hard failure, but the install needs attention. Render as a warning.
-			b.WriteString(lipgloss.NewStyle().Foreground(colorYellow).Bold(true).Render("Resultado · " + m.result.action.Name))
+			b.WriteString(lipgloss.NewStyle().Foreground(colorYellow).Bold(true).Render("Resultado · " + m.result.Action.Name))
 			b.WriteString("\n")
 			b.WriteString(lipgloss.NewStyle().Foreground(colorYellow).Bold(true).Render("! Degradado — revisá la salida"))
 			b.WriteString("\n")
 		} else {
-			b.WriteString(errStyle.Render("Resultado · " + m.result.action.Name))
+			b.WriteString(errStyle.Render("Resultado · " + m.result.Action.Name))
 			b.WriteString("\n")
 			b.WriteString(lipgloss.NewStyle().Foreground(colorRed).Bold(true).Render("✗ Comando falló"))
 			b.WriteString("\n")
 		}
 	} else {
-		b.WriteString(titleStyle.Render("Resultado · " + m.result.action.Name))
+		b.WriteString(titleStyle.Render("Resultado · " + m.result.Action.Name))
 		b.WriteString("\n")
 		b.WriteString(lipgloss.NewStyle().Foreground(colorGreen).Bold(true).
 			Render("✓ Completado") + "\n")
 	}
 
-	if len(m.result.verdicts) > 0 {
+	if len(m.result.Verdicts) > 0 {
 		b.WriteString(m.viewDashboard())
 		b.WriteString("\n")
 	}
 
 	// Empty-verdict note for sync-check.
-	if m.result.action.Command == "sync-check" && len(m.result.verdicts) == 0 {
+	if m.result.Action.Command == "sync-check" && len(m.result.Verdicts) == 0 {
 		b.WriteString(dimStyle.Render("No se pudieron analizar veredictos") + "\n")
 	}
 
@@ -498,7 +499,7 @@ func (m model) viewResult() string {
 // version`'s output). Empty RecordedVersion (a sync-check run predating
 // this field, or a verdict built without it) renders nothing — backwards
 // compatible with every existing verdict-construction call site.
-func versionLine(v TargetVerdict) string {
+func versionLine(v domain.TargetVerdict) string {
 	switch v.RecordedVersion {
 	case "":
 		return ""
@@ -519,19 +520,19 @@ func (m model) viewDashboard() string {
 	var b strings.Builder
 	b.WriteString(lipgloss.NewStyle().Bold(true).Foreground(colorAccent2).Render("Estado de sincronización") + "\n")
 
-	for _, v := range m.result.verdicts {
+	for _, v := range m.result.Verdicts {
 		var color lipgloss.Color
 		var icon, label string
 		switch v.Status {
-		case SyncHealthy:
+		case domain.SyncHealthy:
 			color, icon, label = colorGreen, "✓", "Sincronizado"
-		case SyncNeedsApply:
+		case domain.SyncNeedsApply:
 			color, icon, label = colorYellow, "!", "Pendiente de aplicación"
-		case SyncNeedsCapture:
+		case domain.SyncNeedsCapture:
 			color, icon, label = colorRed, "✗", "Requiere capture + apply"
-		case SyncBehindRelease:
+		case domain.SyncBehindRelease:
 			color, icon, label = colorAmber, "~", "Detrás del release"
-		case SyncBehindOrigin:
+		case domain.SyncBehindOrigin:
 			color, icon, label = colorAmber, "~", "Detrás de origin"
 		default:
 			color, icon, label = colorGray, "?", "Sin datos"
@@ -586,12 +587,12 @@ func (m model) viewDashboard() string {
 // viewOutput renders the raw command output, scrollable.
 func (m model) viewOutput() string {
 	w := m.contentWidth()
-	lines := splitOutputLines(m.result.output)
+	lines := splitOutputLines(m.result.Output)
 
 	// Reserve vertical room for header/footer/title/dashboard.
 	viewport := m.height - 10
-	if len(m.result.verdicts) > 0 {
-		viewport -= len(m.result.verdicts)*3 + 3
+	if len(m.result.Verdicts) > 0 {
+		viewport -= len(m.result.Verdicts)*3 + 3
 	}
 	if viewport < 5 {
 		viewport = 5

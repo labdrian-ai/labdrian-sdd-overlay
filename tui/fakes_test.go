@@ -9,34 +9,35 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/tui/internal/domain"
 )
 
-// fakeCatalog is a TargetCatalog that answers from memory and counts how many
+// fakeCatalog is a domain.TargetCatalog that answers from memory and counts how many
 // times it was asked.
 type fakeCatalog struct {
-	targets []Target
+	targets []domain.Target
 	err     error
 	asked   int
 }
 
-func (f *fakeCatalog) Targets() ([]Target, error) {
+func (f *fakeCatalog) Targets() ([]domain.Target, error) {
 	f.asked++
 	if f.err != nil {
 		return nil, f.err
 	}
-	return append([]Target(nil), f.targets...), nil
+	return append([]domain.Target(nil), f.targets...), nil
 }
 
-// fakeBackups is a BackupQuery that answers from memory. It records which
+// fakeBackups is a domain.BackupQuery that answers from memory. It records which
 // targets it was asked about, so a test can prove a target was never queried.
 type fakeBackups struct {
-	byTarget map[string]Backup
+	byTarget map[string]domain.Backup
 	errs     map[string]error
 	asked    []string
 	gate     chan struct{} // when set, every query waits until it is closed
 }
 
-func (f *fakeBackups) LatestBackup(target string) (Backup, bool, error) {
+func (f *fakeBackups) LatestBackup(target string) (domain.Backup, bool, error) {
 	if f.gate != nil {
 		<-f.gate
 	}
@@ -49,17 +50,17 @@ func (f *fakeBackups) LatestBackup(target string) (Backup, bool, error) {
 
 // threeCopyTargets is the catalog most model tests run against: the three
 // per-file targets, as the backend lists them.
-func threeCopyTargets() []Target {
-	return []Target{
-		{Name: "claude", Kind: KindCopy},
-		{Name: "opencode", Kind: KindCopy},
-		{Name: "codex", Kind: KindCopy},
+func threeCopyTargets() []domain.Target {
+	return []domain.Target{
+		{Name: "claude", Kind: domain.KindCopy},
+		{Name: "opencode", Kind: domain.KindCopy},
+		{Name: "codex", Kind: domain.KindCopy},
 	}
 }
 
 // fourTargets adds the package target, as the backend's own catalog does.
-func fourTargets() []Target {
-	return append(threeCopyTargets(), Target{Name: "pi", Kind: KindPackage})
+func fourTargets() []domain.Target {
+	return append(threeCopyTargets(), domain.Target{Name: "pi", Kind: domain.KindPackage})
 }
 
 // newTestModel returns a model whose catalog has already loaded the three
@@ -72,7 +73,7 @@ func newTestModel(t *testing.T) model {
 }
 
 // newTestModelWith is newTestModel over a catalog the caller controls.
-func newTestModelWith(t *testing.T, catalog TargetCatalog) model {
+func newTestModelWith(t *testing.T, catalog domain.TargetCatalog) model {
 	t.Helper()
 	return newLoadedModel(t, catalog, &fakeBackups{})
 }
@@ -80,7 +81,7 @@ func newTestModelWith(t *testing.T, catalog TargetCatalog) model {
 // newLoadedModel builds a model over the given ports and delivers the catalog
 // the same way the program does: by running the command Init issues and
 // handing its message to Update.
-func newLoadedModel(t *testing.T, catalog TargetCatalog, backups BackupQuery) model {
+func newLoadedModel(t *testing.T, catalog domain.TargetCatalog, backups domain.BackupQuery) model {
 	t.Helper()
 	m := newModel(deps{repoRoot: t.TempDir(), catalog: catalog, backups: backups})
 	updated, _ := m.Update(loadTargetsCmd(catalog)())
@@ -88,7 +89,7 @@ func newLoadedModel(t *testing.T, catalog TargetCatalog, backups BackupQuery) mo
 }
 
 // unloadedTestModel is a model that has not yet received its catalog.
-func unloadedTestModel(t *testing.T, catalog TargetCatalog) model {
+func unloadedTestModel(t *testing.T, catalog domain.TargetCatalog) model {
 	t.Helper()
 	return newModel(deps{repoRoot: t.TempDir(), catalog: catalog, backups: &fakeBackups{}})
 }

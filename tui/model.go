@@ -7,6 +7,7 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/tui/internal/domain"
 )
 
 // screen identifies the active view in the TUI.
@@ -28,15 +29,15 @@ type model struct {
 
 	// catalog is the port the targets come from. The model holds no list of
 	// its own: targets stays empty until the catalog answers.
-	catalog TargetCatalog
+	catalog domain.TargetCatalog
 	// backups is the port restore asks for each target's latest backup.
-	backups BackupQuery
+	backups domain.BackupQuery
 
 	scr screen
 
 	// targets is the backend's catalog exactly as the operator was shown it,
 	// in the backend's order. It is what `--target all` may be taken to mean.
-	targets []Target
+	targets []domain.Target
 	// targetsLoaded is false until the catalog's answer arrives; targetsErr is
 	// that answer when it is a failure. With a failed catalog targets stays
 	// empty, so there is nothing to select and no target action can start.
@@ -45,10 +46,10 @@ type model struct {
 	selected      map[int]bool // index into targets -> selected
 	tCursor       int
 
-	actions []Action
+	actions []domain.Action
 	aCursor int
 
-	pendingAction Action // action awaiting confirmation / running
+	pendingAction domain.Action // action awaiting confirmation / running
 	// pendingTargets is the EXACT target set runActionCmd will invoke the
 	// backend against for pendingAction. It is computed once (in
 	// updateActions, or the "u" banner shortcut) and reused verbatim by
@@ -60,11 +61,11 @@ type model struct {
 	// fail, and make runBackend's worst-severity aggregation misreport the
 	// whole action as failed even though the backup-bearing target's
 	// destructive restore already succeeded.
-	pendingTargets []Target
+	pendingTargets []domain.Target
 	// restoreReq numbers the restore backup lookups; only the latest answer counts.
 	restoreReq int
 
-	result commandResult
+	result domain.CommandResult
 	scroll int // line offset into the output pane
 
 	width  int
@@ -96,8 +97,8 @@ type model struct {
 type deps struct {
 	repoRoot string
 	rootErr  error
-	catalog  TargetCatalog
-	backups  BackupQuery
+	catalog  domain.TargetCatalog
+	backups  domain.BackupQuery
 }
 
 // newModel builds the initial state. It has no targets yet: the catalog is
@@ -114,10 +115,10 @@ func newModel(d deps) model {
 		backups:       d.backups,
 		scr:           screenTargets,
 		selected:      map[int]bool{},
-		actions:       Actions(),
+		actions:       domain.Actions(),
 		spinner:       sp,
-		behindOrigin:  RepoBehindOriginNA,
-		behindRelease: RepoBehindOriginNA,
+		behindOrigin:  domain.RepoBehindOriginNA,
+		behindRelease: domain.RepoBehindOriginNA,
 	}
 }
 
@@ -132,12 +133,12 @@ func (m model) Init() tea.Cmd {
 // targetsLoadedMsg is delivered with the catalog's answer. err is set when the
 // backend's catalog could not be read, in which case targets is empty.
 type targetsLoadedMsg struct {
-	targets []Target
+	targets []domain.Target
 	err     error
 }
 
 // loadTargetsCmd asks the catalog port for the targets.
-func loadTargetsCmd(catalog TargetCatalog) tea.Cmd {
+func loadTargetsCmd(catalog domain.TargetCatalog) tea.Cmd {
 	return func() tea.Msg {
 		targets, err := catalog.Targets()
 		return targetsLoadedMsg{targets: targets, err: err}
@@ -149,14 +150,14 @@ func loadTargetsCmd(catalog TargetCatalog) tea.Cmd {
 func (m model) catalogReady() bool { return m.targetsLoaded && m.targetsErr == nil }
 
 // runDoneMsg is delivered when a backend invocation completes.
-type runDoneMsg struct{ result commandResult }
+type runDoneMsg struct{ result domain.CommandResult }
 
 // restoreLookupMsg is the outcome of request req's backup lookup: targets is
 // the backup-bearing subset action.ConfirmMessage names (empty: none has one).
 type restoreLookupMsg struct {
 	req     int
-	action  Action
-	targets []Target
+	action  domain.Action
+	targets []domain.Target
 }
 
 // probeDoneMsg is delivered when the launch-time cached-only origin probe
@@ -172,9 +173,9 @@ type probeDoneMsg struct {
 // need to invoke a filtered subset of the current selection (restore/D4).
 // The catalog the operator was shown travels with the run, so `--target all`
 // can be checked against it.
-func (m model) runActionCmd(action Action, targets []Target) tea.Cmd {
+func (m model) runActionCmd(action domain.Action, targets []domain.Target) tea.Cmd {
 	root := m.repoRoot
-	scope := targetScope{shown: append([]Target(nil), m.targets...), catalog: m.catalog}
+	scope := domain.TargetScope{Shown: append([]domain.Target(nil), m.targets...), Catalog: m.catalog}
 	return func() tea.Msg {
 		return runDoneMsg{result: runBackend(root, action, targets, scope)}
 	}
@@ -184,18 +185,18 @@ func (m model) runActionCmd(action Action, targets []Target) tea.Cmd {
 // so the banner shortcut always confirms/runs the exact SAME entry Actions()
 // wires up (including its chained-apply Also) rather than a hand-built
 // stand-in that could drift from it.
-func (m model) selfUpdateAction() (Action, bool) {
+func (m model) selfUpdateAction() (domain.Action, bool) {
 	for _, a := range m.actions {
 		if a.Command == "self-update" {
 			return a, true
 		}
 	}
-	return Action{}, false
+	return domain.Action{}, false
 }
 
 // selectedTargets returns the chosen targets in canonical order.
-func (m model) selectedTargets() []Target {
-	out := []Target{}
+func (m model) selectedTargets() []domain.Target {
+	out := []domain.Target{}
 	for i, t := range m.targets {
 		if m.selected[i] {
 			out = append(out, t)
@@ -241,7 +242,7 @@ func (m model) bannerVisible() bool {
 	if m.rootErr != nil || m.bannerDismissed {
 		return false
 	}
-	if m.behindRelease != RepoBehindOriginNA {
+	if m.behindRelease != domain.RepoBehindOriginNA {
 		return m.behindRelease > 0
 	}
 	return m.behindOrigin > 0
@@ -257,13 +258,13 @@ func (m model) contentWidth() int {
 // maxScroll returns the maximum valid scroll offset for the output pane,
 // clamped to max(0, totalLines-viewport).
 func (m model) maxScroll() int {
-	if m.result.output == "" {
+	if m.result.Output == "" {
 		return 0
 	}
-	lines := splitOutputLines(m.result.output)
+	lines := splitOutputLines(m.result.Output)
 	viewport := m.height - 10
-	if len(m.result.verdicts) > 0 {
-		viewport -= len(m.result.verdicts)*3 + 3
+	if len(m.result.Verdicts) > 0 {
+		viewport -= len(m.result.Verdicts)*3 + 3
 	}
 	if viewport < 5 {
 		viewport = 5
@@ -290,7 +291,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// main, refreshing the cached origin/main ref the launch-time probe
 		// reads from. Re-fire it so the banner can self-correct without
 		// requiring a restart.
-		if msg.result.action.Command == "self-update" && msg.result.err == nil {
+		if msg.result.Action.Command == "self-update" && msg.result.Err == nil {
 			return m, probeBehindOriginCmd(m.repoRoot)
 		}
 		return m, nil
@@ -486,7 +487,7 @@ func (m model) updateActions(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 // selected targets have an available backup, the signal updateActions uses
 // to refuse entering the confirm screen at all (R-003). candidates are the
 // selected targets restore can apply to at all (copy targets only).
-func (m model) restoreConfirmInfo(action Action, candidates []Target) (message string, targets []Target, ok bool) {
+func (m model) restoreConfirmInfo(action domain.Action, candidates []domain.Target) (message string, targets []domain.Target, ok bool) {
 	if m.backups == nil {
 		return "", nil, false
 	}
@@ -514,7 +515,7 @@ func (m model) restoreConfirmInfo(action Action, candidates []Target) (message s
 // restoreLookupCmd runs restoreConfirmInfo off the UI goroutine, querying the
 // targets one after another: a listing takes milliseconds, the port need not be
 // concurrency-safe, and quit/back stay available however long the backend takes.
-func (m model) restoreLookupCmd(req int, action Action, candidates []Target) tea.Cmd {
+func (m model) restoreLookupCmd(req int, action domain.Action, candidates []domain.Target) tea.Cmd {
 	return func() tea.Msg {
 		info, targets, _ := m.restoreConfirmInfo(action, candidates)
 		action.ConfirmMessage = info

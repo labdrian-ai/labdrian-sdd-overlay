@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/tui/internal/domain"
 )
 
 // hermeticBackendEnv is the environment for running the real backend without
@@ -87,7 +89,7 @@ func TestOverlayCLIContract_CatalogIsWhatAllExpandsTo(t *testing.T) {
 }
 
 // TestOverlayCLIContract_KindsMatchTheBackendsCopyRule: capture and restore
-// are offered only for KindCopy targets, so the kind the TUI parses must be
+// are offered only for domain.KindCopy targets, so the kind the TUI parses must be
 // the one the backend enforces (is_copy_target) when it refuses the rest.
 func TestOverlayCLIContract_KindsMatchTheBackendsCopyRule(t *testing.T) {
 	cli, home, _ := realOverlayCLI(t)
@@ -102,7 +104,7 @@ func TestOverlayCLIContract_KindsMatchTheBackendsCopyRule(t *testing.T) {
 	for _, tgt := range catalog {
 		_, code := runBackendFunc(t, t.TempDir(), home, "is_copy_target", tgt.Name)
 		backendSaysCopy := code == 0
-		if backendSaysCopy != (tgt.Kind == KindCopy) {
+		if backendSaysCopy != (tgt.Kind == domain.KindCopy) {
 			t.Errorf("target %s: the TUI parsed kind %q, but is_copy_target exits %d", tgt.Name, tgt.Kind, code)
 		}
 	}

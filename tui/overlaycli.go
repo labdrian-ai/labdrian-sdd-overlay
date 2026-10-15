@@ -10,6 +10,8 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/tui/internal/domain"
 )
 
 // backendQueryTimeout bounds one read-only question put to the backend. The
@@ -35,7 +37,7 @@ type overlayCLI struct {
 func newOverlayCLI(root string) overlayCLI { return overlayCLI{root: root} }
 
 // Targets implements TargetCatalog with `labdrian-overlay targets`.
-func (c overlayCLI) Targets() ([]Target, error) {
+func (c overlayCLI) Targets() ([]domain.Target, error) {
 	out, err := c.query("targets")
 	if err != nil {
 		return nil, err
@@ -50,14 +52,14 @@ func (c overlayCLI) Targets() ([]Target, error) {
 // LatestBackup implements BackupQuery with `labdrian-overlay restore --target
 // <target> --list`. The backend owns the backup layout and the STATE_DIR it
 // lives under, so the TUI no longer reads that directory itself.
-func (c overlayCLI) LatestBackup(target string) (Backup, bool, error) {
+func (c overlayCLI) LatestBackup(target string) (domain.Backup, bool, error) {
 	out, err := c.query("restore", "--target", target, "--list")
 	if err != nil {
-		return Backup{}, false, err
+		return domain.Backup{}, false, err
 	}
 	backup, ok, err := parseBackupList(out, target)
 	if err != nil {
-		return Backup{}, false, fmt.Errorf("labdrian-overlay restore --target %s --list: %w", target, err)
+		return domain.Backup{}, false, fmt.Errorf("labdrian-overlay restore --target %s --list: %w", target, err)
 	}
 	return backup, ok, nil
 }
@@ -76,25 +78,25 @@ const backendUnknownVersion = "unknown"
 // the newest. It is strict: anything else, including a listing for another
 // target, is an error, because a rollback is only ever offered for a backup
 // the backend confirmed.
-func parseBackupList(output, target string) (Backup, bool, error) {
+func parseBackupList(output, target string) (domain.Backup, bool, error) {
 	text := strings.TrimSpace(output)
 	if text == fmt.Sprintf("No backups available for target '%s'.", target) {
-		return Backup{}, false, nil
+		return domain.Backup{}, false, nil
 	}
 	lines := strings.Split(text, "\n")
 	if want := fmt.Sprintf("Backups for %s (newest last):", target); lines[0] != want {
-		return Backup{}, false, fmt.Errorf("unrecognized listing, expected %q first, got %q", want, lines[0])
+		return domain.Backup{}, false, fmt.Errorf("unrecognized listing, expected %q first, got %q", want, lines[0])
 	}
 	if len(lines) < 2 {
-		return Backup{}, false, errors.New("the listing names no backups")
+		return domain.Backup{}, false, errors.New("the listing names no backups")
 	}
-	var newest Backup
+	var newest domain.Backup
 	for _, line := range lines[1:] {
 		m := backupEntry.FindStringSubmatch(line)
 		if m == nil {
-			return Backup{}, false, fmt.Errorf("unrecognized backup entry %q", line)
+			return domain.Backup{}, false, fmt.Errorf("unrecognized backup entry %q", line)
 		}
-		newest = Backup{Timestamp: m[1], Version: m[2]}
+		newest = domain.Backup{Timestamp: m[1], Version: m[2]}
 		if newest.Version == backendUnknownVersion {
 			newest.Version = ""
 		}
@@ -137,12 +139,12 @@ func (c overlayCLI) query(args ...string) (string, error) {
 // end ends up acting on a target nobody chose. A kind it does not know is
 // kept verbatim: it is simply not KindCopy, so no file-by-file action
 // applies to it.
-func parseTargets(output string) ([]Target, error) {
+func parseTargets(output string) ([]domain.Target, error) {
 	body := strings.TrimRight(output, "\n")
 	if body == "" {
 		return nil, errors.New("the backend listed no targets")
 	}
-	var targets []Target
+	var targets []domain.Target
 	seen := map[string]bool{}
 	for i, line := range strings.Split(body, "\n") {
 		fields := strings.Split(line, "\t")
@@ -160,7 +162,7 @@ func parseTargets(output string) ([]Target, error) {
 			return nil, fmt.Errorf("line %d: target %q is listed twice", i+1, name)
 		}
 		seen[name] = true
-		targets = append(targets, Target{Name: name, Kind: TargetKind(kind)})
+		targets = append(targets, domain.Target{Name: name, Kind: domain.TargetKind(kind)})
 	}
 	return targets, nil
 }

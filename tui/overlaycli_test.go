@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/tui/internal/domain"
 )
 
 // writeScriptBackend installs a fake bin/labdrian-overlay under root whose
@@ -31,11 +33,11 @@ func TestParseTargets(t *testing.T) {
 		if err != nil {
 			t.Fatalf("parseTargets: unexpected error: %v", err)
 		}
-		want := []Target{
-			{Name: "claude", Kind: KindCopy},
-			{Name: "opencode", Kind: KindCopy},
-			{Name: "codex", Kind: KindCopy},
-			{Name: "pi", Kind: KindPackage},
+		want := []domain.Target{
+			{Name: "claude", Kind: domain.KindCopy},
+			{Name: "opencode", Kind: domain.KindCopy},
+			{Name: "codex", Kind: domain.KindCopy},
+			{Name: "pi", Kind: domain.KindPackage},
 		}
 		if len(got) != len(want) {
 			t.Fatalf("parseTargets = %+v, want %+v", got, want)
@@ -56,13 +58,13 @@ func TestParseTargets(t *testing.T) {
 
 	t.Run("an unknown kind is kept and is not a copy target", func(t *testing.T) {
 		// A newer backend may add a kind. Keeping it verbatim means the
-		// file-by-file actions (which require KindCopy) never apply to it.
+		// file-by-file actions (which require domain.KindCopy) never apply to it.
 		got, err := parseTargets("zed\tcontainer\n")
 		if err != nil || len(got) != 1 {
 			t.Fatalf("parseTargets = %+v, %v; want one target", got, err)
 		}
-		if got[0].Kind != TargetKind("container") || got[0].Kind == KindCopy {
-			t.Errorf("kind = %q, want it kept verbatim and distinct from %q", got[0].Kind, KindCopy)
+		if got[0].Kind != domain.TargetKind("container") || got[0].Kind == domain.KindCopy {
+			t.Errorf("kind = %q, want it kept verbatim and distinct from %q", got[0].Kind, domain.KindCopy)
 		}
 	})
 
@@ -109,7 +111,7 @@ func TestOverlayCLI_Targets_AsksTheBackendFromTheRepoRoot(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Targets: unexpected error: %v", err)
 	}
-	if len(got) != 2 || got[0] != (Target{Name: "claude", Kind: KindCopy}) || got[1] != (Target{Name: "pi", Kind: KindPackage}) {
+	if len(got) != 2 || got[0] != (domain.Target{Name: "claude", Kind: domain.KindCopy}) || got[1] != (domain.Target{Name: "pi", Kind: domain.KindPackage}) {
 		t.Fatalf("Targets = %+v, want [claude copy, pi package]", got)
 	}
 
