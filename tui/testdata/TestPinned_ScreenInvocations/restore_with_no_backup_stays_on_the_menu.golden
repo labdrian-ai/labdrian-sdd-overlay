@@ -1,0 +1,5 @@
+targets
+sync-check
+restore --target claude --list
+restore --target opencode --list
+restore --target codex --list

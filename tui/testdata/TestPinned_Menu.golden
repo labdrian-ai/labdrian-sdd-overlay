@@ -1,0 +1,68 @@
+Name="Estado" Command="status" Args=[]
+  Mutating=false SupportsAll=true TargetAgnostic=false CopyTargetsOnly=false
+  Hint="Resumen del estado actual (targets + hooks)"
+  ConfirmMessage=""
+    also: Name="" Command="status-hooks" Args=[]
+    also:   Mutating=false SupportsAll=false TargetAgnostic=true CopyTargetsOnly=false
+    also:   Hint=""
+    also:   ConfirmMessage=""
+    also: Name="" Command="version" Args=[]
+    also:   Mutating=false SupportsAll=false TargetAgnostic=true CopyTargetsOnly=false
+    also:   Hint=""
+    also:   ConfirmMessage=""
+Name="Verificar sincronización" Command="sync-check" Args=[]
+  Mutating=false SupportsAll=true TargetAgnostic=false CopyTargetsOnly=false
+  Hint="Compara overlay vs upstream"
+  ConfirmMessage=""
+Name="Capturar (actualizar upstream)" Command="capture" Args=[]
+  Mutating=true SupportsAll=false TargetAgnostic=false CopyTargetsOnly=true
+  Hint="Trae cambios de upstream al overlay"
+  ConfirmMessage=""
+Name="Aplicar cambios" Command="apply" Args=[]
+  Mutating=true SupportsAll=true TargetAgnostic=false CopyTargetsOnly=false
+  Hint="Despliega el overlay en los destinos"
+  ConfirmMessage=""
+Name="Restaurar respaldo" Command="restore" Args=[]
+  Mutating=true SupportsAll=false TargetAgnostic=false CopyTargetsOnly=true
+  Hint="Revierte un destino a su respaldo más reciente"
+  ConfirmMessage="Restaura el respaldo más reciente de cada destino seleccionado,\nsobrescribiendo sus archivos actualmente desplegados."
+Name="Actualizar repositorio" Command="self-update" Args=[]
+  Mutating=true SupportsAll=false TargetAgnostic=true CopyTargetsOnly=false
+  Hint="Pone main al día (ff-only) y lo despliega, en un solo paso"
+  ConfirmMessage="Actualiza main a origin/main (fast-forward) y despliega el resultado en los destinos seleccionados (equivalente a Aplicar cambios). Tu rama actual no se toca y se vuelve a ella al terminar. Rechaza con árbol sucio o main local adelantado."
+    also: Name="" Command="apply" Args=[]
+    also:   Mutating=false SupportsAll=true TargetAgnostic=false CopyTargetsOnly=false
+    also:   Hint=""
+    also:   ConfirmMessage=""
+Name="Instalar hooks" Command="install-hooks" Args=[]
+  Mutating=true SupportsAll=false TargetAgnostic=true CopyTargetsOnly=false
+  Hint="Compila engine y cablea hooks (paso 1)"
+  ConfirmMessage="Modifica ~/.claude/settings.json (se crea un respaldo .bak antes de escribir)."
+Name="Desinstalar hooks" Command="uninstall-hooks" Args=[]
+  Mutating=true SupportsAll=false TargetAgnostic=true CopyTargetsOnly=false
+  Hint="Quita los hooks de settings.json"
+  ConfirmMessage="Elimina los hooks de ~/.claude/settings.json (se crea un respaldo .bak antes de modificar)."
+Name="Skills" Command="skills" Args=["status"]
+  Mutating=false SupportsAll=false TargetAgnostic=true CopyTargetsOnly=false
+  Hint="Estado + valida + lista el registro"
+  ConfirmMessage=""
+    also: Name="" Command="skills" Args=["validate"]
+    also:   Mutating=false SupportsAll=false TargetAgnostic=true CopyTargetsOnly=false
+    also:   Hint=""
+    also:   ConfirmMessage=""
+    also: Name="" Command="skills" Args=["list"]
+    also:   Mutating=false SupportsAll=false TargetAgnostic=true CopyTargetsOnly=false
+    also:   Hint=""
+    also:   ConfirmMessage=""
+Name="Memoria: estado" Command="longterm-mem" Args=["status"]
+  Mutating=false SupportsAll=true TargetAgnostic=false CopyTargetsOnly=false
+  Hint="Registro MCP de longterm-mem por runtime"
+  ConfirmMessage=""
+Name="Memoria: instalar" Command="longterm-mem" Args=["install"]
+  Mutating=true SupportsAll=true TargetAgnostic=false CopyTargetsOnly=false
+  Hint="Compila, despliega y registra el MCP en cada runtime"
+  ConfirmMessage="Compila el binario de longterm-mem, lo despliega en el directorio de estado del overlay\ny escribe una entrada MCP con marca de propiedad en la configuración propia de cada\nruntime seleccionado (Claude Code, opencode, codex). Antes de modificar cualquier\nconfiguración se escribe un respaldo .bak junto al archivo."
+Name="Memoria: desinstalar" Command="longterm-mem" Args=["uninstall"]
+  Mutating=true SupportsAll=true TargetAgnostic=false CopyTargetsOnly=false
+  Hint="Quita la entrada MCP propia de cada runtime"
+  ConfirmMessage="Elimina únicamente la entrada MCP con marca de propiedad de cada runtime seleccionado.\nUna entrada que longterm-mem no posee se deja intacta y se reporta como no gestionada.\nEl binario compartido sobrevive a una desinstalación parcial: solo se elimina al\ndesinstalar todos los runtimes, o con --purge desde la CLI (no disponible aquí)."

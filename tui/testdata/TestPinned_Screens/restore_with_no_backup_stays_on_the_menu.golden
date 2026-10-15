@@ -1,0 +1,27 @@
+    ? No se pudo verificar el estado del repo (sin red / sin fetch previo)                      
+    Elegir una acción                                                                           
+                                                                                                
+    ── Sincronización ──                                                                        
+      Estado                          Resumen del estado actual (targets + hooks)               
+      Verificar sincronización        Compara overlay vs upstream                               
+      Capturar (actualizar upstream)  Trae cambios de upstream al overlay                       
+      Aplicar cambios                 Despliega el overlay en los destinos                      
+    ▸ Restaurar respaldo              Revierte un destino a su respaldo más reciente            
+      Actualizar repositorio          Pone main al día (ff-only) y lo despliega, en un solo paso
+                                                                                                
+    ── Hooks ──                                                                                 
+      Instalar hooks                  Compila engine y cablea hooks (paso 1)                    
+      Desinstalar hooks               Quita los hooks de settings.json                          
+                                                                                                
+    ── Skills ──                                                                                
+      Skills                          Estado + valida + lista el registro                       
+                                                                                                
+    ── Memoria ──                                                                               
+      Memoria: estado                 Registro MCP de longterm-mem por runtime                  
+      Memoria: instalar               Compila, despliega y registra el MCP en cada runtime      
+      Memoria: desinstalar            Quita la entrada MCP propia de cada runtime               
+                                                                                                
+                                                                                                
+    ────────────────────────────────────────────────────────────────────────────────────────────
+                                                                                                
+    ↑/↓ navegar  ·  enter ejecutar la acción seleccionada  ·  esc volver  ·  q salir            

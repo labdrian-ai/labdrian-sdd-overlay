@@ -1,0 +1,18 @@
+? No se pudo verificar el estado del repo (sin red / sin fetch previo)                              
+Resultado · Estado                                                                                  
+! Degradado — revisá la salida                                                                      
+salida                                                                                              
+╭──────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ $ bin/labdrian-overlay status --target all                                                       │
+│ engine: DEGRADED                                                                                 │
+│                                                                                                  │
+│ [exit error: exit status 2]                                                                      │
+│                                                                                                  │
+│ $ bin/labdrian-overlay status-hooks                                                              │
+│                                                                                                  │
+│ $ bin/labdrian-overlay version                                                                   │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
+                                                                                                    
+────────────────────────────────────────────────────────────────────────────────────────────────────
+                                                                                                    
+↑/↓ desplazar  ·  esc/enter volver  ·  q salir                                                      

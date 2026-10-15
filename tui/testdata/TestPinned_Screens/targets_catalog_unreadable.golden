@@ -1,0 +1,11 @@
+  ? No se pudo verificar el estado del repo (sin red / sin fetch previo)                          
+  Seleccionar destinos                                                                            
+                                                                                                  
+  No se pudo leer el catálogo de destinos del backend.                                            
+  labdrian-overlay targets: exit status 3: labdrian-overlay targets: catalog unreadable           
+                                                                                                  
+  Sin el catálogo no hay acciones sobre destinos.                                                 
+                                                                                                  
+  ────────────────────────────────────────────────────────────────────────────────────────────────
+                                                                                                  
+  ↑/↓ navegar  ·  espacio seleccionar  ·  a selec. todos  ·  enter continuar  ·  q salir          

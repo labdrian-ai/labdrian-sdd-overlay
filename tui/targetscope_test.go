@@ -1,201 +1,204 @@
 package main
 
-// The invariant behind T1: the TUI never acts on a target the operator did
-// not see. `--target all` is the one argument that can name more than the
-// selection, so it is sent only when the selection is the whole catalog the
-// operator was shown, and only while the backend still answers with that same
-// catalog.
+// The invariant behind T1, end to end: the TUI never acts on a target the
+// operator did not see. `--target all` is the one argument that can name more
+// than the selection, so it is sent only when the selection is the whole catalog
+// the operator was shown, and only while the backend still answers with that
+// same catalog.
+//
+// The rule has three homes: the scope in the domain (CoversAll, ConfirmUnchanged),
+// the runner that applies it (package app, over a recording backend), and the
+// model that hands the runner the selection and the catalog shown. These tests
+// are the fourth, and the one that proves the three are joined: the program as
+// main composes it, driven key by key against the stub backend, judged by what
+// the backend received. They are the cases the first version of the rule was
+// tested with, when it was one function run against the script.
 
 import (
-	"errors"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 )
 
-// recordedInvocations returns the argument string of each backend call the
-// stub recorded, in order; nil when it was never invoked.
-func recordedInvocations(t *testing.T, recorder string) []string {
-	t.Helper()
-	data, err := os.ReadFile(recorder)
-	if errors.Is(err, os.ErrNotExist) {
+// afterLaunch is what the backend received after the two invocations the
+// program makes on its own at launch: the catalog and the probe.
+func afterLaunch(s *session) []string {
+	got := s.stub.invoked()
+	if len(got) < 2 {
 		return nil
 	}
-	if err != nil {
-		t.Fatalf("read recorder: %v", err)
-	}
-	var out []string
-	for _, line := range strings.Split(strings.TrimSpace(string(data)), "\n") {
-		_, args, _ := strings.Cut(line, "|")
-		out = append(out, args)
-	}
-	return out
+	return got[2:]
 }
 
-// runAgainstStub runs action over selected through runBackend against a
-// recording stub backend, with scope as the catalog the operator saw.
-func runAgainstStub(t *testing.T, action Action, selected []Target, scope targetScope) (commandResult, []string) {
-	t.Helper()
-	root := t.TempDir()
-	recorder := filepath.Join(root, "invoked.log")
-	writeStubBackend(t, root, recorder, "", 0)
-	res := runBackend(root, action, selected, scope)
-	return res, recordedInvocations(t, recorder)
-}
+// receivedAfterLaunch is afterLaunch, joined for a comparison.
+func receivedAfterLaunch(s *session) string { return strings.Join(afterLaunch(s), "|") }
 
-func statusAction() Action {
-	return Action{Name: "Estado", Command: "status", SupportsAll: true}
-}
-
-func TestRunBackend_AllStandsForTheSelectionOnlyWhenItIsTheWholeCatalog(t *testing.T) {
-	t.Run("every target of the catalog selected sends all", func(t *testing.T) {
-		shown := fourTargets()
-		_, got := runAgainstStub(t, statusAction(), shown, targetScope{shown: shown, catalog: &fakeCatalog{targets: shown}})
-		if len(got) != 1 || got[0] != "status --target all" {
-			t.Errorf("invocations = %q, want exactly [status --target all]", got)
+func TestTargetScope_AllStandsForTheSelectionOnlyWhenItIsTheWholeCatalog(t *testing.T) {
+	t.Run("every target of the catalog selected sends all, after checking the catalog", func(t *testing.T) {
+		s := newSession(t).start().toActions().onRow(rowSyncCheck).press("enter")
+		if got, want := receivedAfterLaunch(s), "targets|sync-check --target all"; got != want {
+			t.Errorf("the backend received %q, want %q", got, want)
 		}
 	})
 
 	t.Run("the three targets the TUI used to call all no longer do", func(t *testing.T) {
-		// This is the bug: a four-target catalog, three of them selected,
-		// used to be sent as `--target all`, which also acts on pi.
-		shown := fourTargets()
-		catalog := &fakeCatalog{targets: shown}
-		_, got := runAgainstStub(t, statusAction(), threeCopyTargets(), targetScope{shown: shown, catalog: catalog})
-		want := []string{"status --target claude", "status --target opencode", "status --target codex"}
-		if strings.Join(got, "|") != strings.Join(want, "|") {
-			t.Errorf("invocations = %q, want one explicit call per selected target %q", got, want)
-		}
-		if catalog.asked != 0 {
-			t.Errorf("explicit per-target calls asked the catalog %d times, want 0: only `all` needs re-checking", catalog.asked)
+		// This is the bug: a four-target catalog, three of them selected, used
+		// to be sent as `--target all`, which also acts on pi.
+		s := newSession(t).start().press("down", "down", "down", "space") // pi off
+		s.toActions().onRow(rowSyncCheck).press("enter")
+		want := "sync-check --target claude|sync-check --target opencode|sync-check --target codex"
+		if got := receivedAfterLaunch(s); got != want {
+			t.Errorf("the backend received %q, want one explicit call per selected target, and no question to the catalog: %q", got, want)
 		}
 	})
 
 	t.Run("a one-target catalog fully selected is all", func(t *testing.T) {
-		shown := []Target{{Name: "claude", Kind: KindCopy}}
-		_, got := runAgainstStub(t, statusAction(), shown, targetScope{shown: shown, catalog: &fakeCatalog{targets: shown}})
-		if len(got) != 1 || got[0] != "status --target all" {
-			t.Errorf("invocations = %q, want [status --target all]", got)
+		s := newSession(t)
+		s.stub.say("targets", "claude\tcopy\n")
+		s.start().toActions().onRow(rowSyncCheck).press("enter")
+		if got, want := receivedAfterLaunch(s), "targets|sync-check --target all"; got != want {
+			t.Errorf("the backend received %q, want %q", got, want)
 		}
 	})
 
-	t.Run("an empty selection of an empty catalog is not all", func(t *testing.T) {
-		// Two empty sets are equal, and `all` would then act on every target
-		// the backend has. Nothing selected means nothing runs.
-		_, got := runAgainstStub(t, statusAction(), nil, targetScope{catalog: &fakeCatalog{}})
-		if len(got) != 0 {
-			t.Errorf("invocations = %q, want none", got)
+	t.Run("a catalog with no targets offers nothing to run", func(t *testing.T) {
+		// Two empty sets are equal, and `all` would then act on every target the
+		// backend has. An empty catalog is an error, so there is nothing to
+		// select and no action to start.
+		s := newSession(t)
+		s.stub.say("targets", "")
+		s.start().press("enter")
+		if got := receivedAfterLaunch(s); got != "" {
+			t.Errorf("the backend received %q after launch, want nothing", got)
+		}
+		if view := s.view(); !strings.Contains(view, "No se pudo leer el catálogo de destinos") || strings.Contains(view, "Elegir una acción") {
+			t.Errorf("an empty catalog should leave the operator on the targets screen, saying so; got:\n%s", view)
 		}
 	})
 
-	t.Run("a non-all action never sends all, even for the whole catalog", func(t *testing.T) {
-		shown := fourTargets()
-		capture := Action{Name: "Capturar", Command: "capture", SupportsAll: false}
-		_, got := runAgainstStub(t, capture, shown, targetScope{shown: shown, catalog: &fakeCatalog{targets: shown}})
-		for _, args := range got {
-			if strings.Contains(args, "--target all") {
-				t.Errorf("capture was sent %q; the backend refuses --target all for it", args)
-			}
+	t.Run("nothing selected runs nothing", func(t *testing.T) {
+		s := newSession(t).start().press("a", "enter") // select-all toggled off; enter has nowhere to go
+		if got := receivedAfterLaunch(s); got != "" {
+			t.Errorf("the backend received %q with nothing selected, want nothing", got)
 		}
-		if len(got) != 4 {
-			t.Errorf("invocations = %q, want one per target", got)
+		if strings.Contains(s.view(), "Elegir una acción") {
+			t.Error("enter with nothing selected reached the actions")
+		}
+	})
+
+	t.Run("an action the backend refuses all for never sends all, even for the whole catalog", func(t *testing.T) {
+		s := newSession(t)
+		s.stub.say("targets", "claude\tcopy\nopencode\tcopy\ncodex\tcopy\n")
+		s.start().toActions().onRow(rowCapture).press("enter", "y")
+		want := "capture --target claude|capture --target opencode|capture --target codex"
+		if got := receivedAfterLaunch(s); got != want {
+			t.Errorf("the backend received %q, want one capture per target and no all: %q", got, want)
+		}
+	})
+
+	t.Run("capture on a catalog that holds a package target skips it", func(t *testing.T) {
+		s := newSession(t).start().toActions().onRow(rowCapture).press("enter", "y")
+		want := "capture --target claude|capture --target opencode|capture --target codex"
+		if got := receivedAfterLaunch(s); got != want {
+			t.Errorf("the backend received %q, want the three copy targets only: %q", got, want)
 		}
 	})
 }
 
-func TestRunBackend_AllIsRefusedUnlessTheBackendStillListsTheCatalogShown(t *testing.T) {
-	shown := threeCopyTargets()
+func TestTargetScope_AllIsRefusedUnlessTheBackendStillListsTheCatalogShown(t *testing.T) {
+	const shown = "claude\tcopy\nopencode\tcopy\ncodex\tcopy\n"
+	// confirming returns the program on the confirm screen of apply with the
+	// three targets shown, which is the moment an update elsewhere can change
+	// what `all` means.
+	confirming := func(t *testing.T) *session {
+		t.Helper()
+		s := newSession(t)
+		s.resize(250, 40) // wide enough that no line of the transcript wraps
+		s.stub.say("targets", shown)
+		return s.start().toActions().onRow(rowApply).press("enter")
+	}
+	refused := func(t *testing.T, s *session) {
+		t.Helper()
+		if got, want := receivedAfterLaunch(s), "targets"; got != want {
+			t.Errorf("the backend received %q after the confirmation, want only the question to the catalog: %q", got, want)
+		}
+		view := s.view()
+		for _, want := range []string{"Comando falló", "[omitido:", "$ bin/labdrian-overlay apply --target all"} {
+			if !strings.Contains(view, want) {
+				t.Errorf("the result of a refused all should show %q, got:\n%s", want, view)
+			}
+		}
+	}
 
 	t.Run("the backend now lists another target", func(t *testing.T) {
 		// What an update that adds a target looks like from the TUI: it showed
 		// three, the backend now has four, and `all` would reach the fourth.
-		catalog := &fakeCatalog{targets: fourTargets()}
-		res, got := runAgainstStub(t, statusAction(), shown, targetScope{shown: shown, catalog: catalog})
-
-		if len(got) != 0 {
-			t.Errorf("the backend was invoked with %q; `--target all` must not be sent", got)
-		}
-		if res.err == nil {
-			t.Error("a refused invocation must fail the result, not pass as a success")
-		}
-		if !strings.Contains(res.output, "catálogo") {
-			t.Errorf("the transcript should say the catalog changed, got:\n%s", res.output)
-		}
-		if catalog.asked != 1 {
-			t.Errorf("the catalog was asked %d times, want once before the all invocation", catalog.asked)
-		}
-	})
-
-	t.Run("the backend cannot be asked", func(t *testing.T) {
-		catalog := &fakeCatalog{err: errors.New("catalog unreadable")}
-		res, got := runAgainstStub(t, statusAction(), shown, targetScope{shown: shown, catalog: catalog})
-
-		if len(got) != 0 {
-			t.Errorf("the backend was invoked with %q; an unverified `all` must not be sent", got)
-		}
-		if res.err == nil || !strings.Contains(res.output, "catalog unreadable") {
-			t.Errorf("want the failure and its cause in the result, got err=%v output:\n%s", res.err, res.output)
+		s := confirming(t)
+		s.stub.say("targets", defaultCatalog)
+		s.press("y")
+		refused(t, s)
+		if view := s.view(); !strings.Contains(view, "catálogo") {
+			t.Errorf("the transcript should say the catalog changed, got:\n%s", view)
 		}
 	})
 
 	t.Run("the backend lists one target fewer", func(t *testing.T) {
-		catalog := &fakeCatalog{targets: shown[:2]}
-		res, got := runAgainstStub(t, statusAction(), shown, targetScope{shown: shown, catalog: catalog})
-		if len(got) != 0 || res.err == nil {
-			t.Errorf("invocations = %q, err = %v; a changed catalog must refuse `all`", got, res.err)
+		s := confirming(t)
+		s.stub.say("targets", "claude\tcopy\nopencode\tcopy\n")
+		s.press("y")
+		refused(t, s)
+	})
+
+	t.Run("the backend cannot be asked", func(t *testing.T) {
+		s := confirming(t)
+		s.stub.exit("targets", 3)
+		s.stub.complain("targets", "catalog unreadable\n")
+		s.press("y")
+		refused(t, s)
+		if view := s.view(); !strings.Contains(view, "catalog unreadable") {
+			t.Errorf("the transcript should carry the cause, got:\n%s", view)
 		}
 	})
 
+	t.Run("the backend answers in a form that is not a catalog", func(t *testing.T) {
+		s := confirming(t)
+		s.stub.say("targets", "not a catalog\n")
+		s.press("y")
+		refused(t, s)
+	})
+
 	t.Run("the same set in another order is still the catalog shown", func(t *testing.T) {
-		reordered := []Target{shown[2], shown[0], shown[1]}
-		res, got := runAgainstStub(t, statusAction(), shown, targetScope{shown: shown, catalog: &fakeCatalog{targets: reordered}})
-		if res.err != nil || len(got) != 1 || got[0] != "status --target all" {
-			t.Errorf("invocations = %q, err = %v; want [status --target all]", got, res.err)
+		s := confirming(t)
+		s.stub.say("targets", "codex\tcopy\nclaude\tcopy\nopencode\tcopy\n")
+		s.press("y")
+		if got, want := receivedAfterLaunch(s), "targets|apply --target all"; got != want {
+			t.Errorf("the backend received %q, want the check and then all: %q", got, want)
+		}
+		if view := s.view(); !strings.Contains(view, "Completado") {
+			t.Errorf("an unchanged catalog should let the run complete, got:\n%s", view)
 		}
 	})
 
 	t.Run("a refused all does not stop the invocations around it", func(t *testing.T) {
 		// "Actualizar repositorio": self-update, then the chained apply. The
 		// first runs; only the target-using second one is refused.
-		chain := Action{
-			Name: "Actualizar repositorio", Command: "self-update", TargetAgnostic: true,
-			Also: []Action{{Command: "apply", SupportsAll: true}},
-		}
-		catalog := &fakeCatalog{targets: fourTargets()}
-		res, got := runAgainstStub(t, chain, shown, targetScope{shown: shown, catalog: catalog})
+		s := newSession(t)
+		s.resize(250, 40)
+		s.stub.say("targets", shown)
+		s.stub.say("self-update", "main is now at origin/main\n")
+		s.start().toActions().onRow(rowSelfUpdate).press("enter")
+		s.stub.say("targets", defaultCatalog)
+		s.press("y")
 
-		if len(got) != 1 || got[0] != "self-update" {
-			t.Errorf("invocations = %q, want only [self-update]", got)
+		// self-update ran, then the check that refused the apply; the apply never
+		// started, and the run failed, so the launch probe was not asked again.
+		if got, want := receivedAfterLaunch(s), "self-update|targets"; got != want {
+			t.Errorf("the backend received %q, want %q", got, want)
 		}
-		if res.err == nil {
-			t.Error("the refused apply must fail the result")
+		view := s.view()
+		for _, want := range []string{"Comando falló", "$ bin/labdrian-overlay self-update", "main is now at origin/main", "$ bin/labdrian-overlay apply --target all", "[omitido:"} {
+			if !strings.Contains(view, want) {
+				t.Errorf("the result should show %q, got:\n%s", want, view)
+			}
 		}
 	})
-}
-
-// TestRunActionCmd_DeselectingATargetNeverSendsAll drives the same bug from
-// the model: the operator starts with everything selected, turns pi off, and
-// runs an action. Nothing in that path may say `all`.
-func TestRunActionCmd_DeselectingATargetNeverSendsAll(t *testing.T) {
-	root := t.TempDir()
-	recorder := filepath.Join(root, "invoked.log")
-	writeStubBackend(t, root, recorder, "", 0)
-
-	catalog := &fakeCatalog{targets: fourTargets()}
-	m := newModel(deps{repoRoot: root, catalog: catalog})
-	updated, _ := m.Update(loadTargetsCmd(catalog)())
-	m = updated.(model)
-	m.selected[3] = false // pi
-
-	done := m.runActionCmd(statusAction(), m.selectedTargets())().(runDoneMsg)
-
-	got := recordedInvocations(t, recorder)
-	want := "status --target claude|status --target opencode|status --target codex"
-	if strings.Join(got, "|") != want {
-		t.Errorf("invocations = %q, want %q", got, want)
-	}
-	if done.result.err != nil {
-		t.Errorf("unexpected error: %v", done.result.err)
-	}
 }

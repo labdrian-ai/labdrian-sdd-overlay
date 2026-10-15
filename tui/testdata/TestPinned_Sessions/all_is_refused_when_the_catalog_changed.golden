@@ -1,0 +1,19 @@
+### the refusal
+? No se pudo verificar el estado del repo (sin red / sin fetch previo)                              
+Resultado · Aplicar cambios                                                                         
+✗ Comando falló                                                                                     
+salida                                                                                              
+╭──────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ $ bin/labdrian-overlay apply --target all                                                        │
+│ [omitido: el catálogo de destinos del backend cambió desde que se mostró: --target all           │
+│ alcanzaría destinos que no viste]                                                                │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
+                                                                                                    
+────────────────────────────────────────────────────────────────────────────────────────────────────
+                                                                                                    
+↑/↓ desplazar  ·  esc/enter volver  ·  q salir                                                      
+
+### the backend received
+targets
+sync-check
+targets

@@ -1,0 +1,57 @@
+### the result of Instalar hooks
+? No se pudo verificar el estado del repo (sin red / sin fetch previo)                              
+Resultado · Instalar hooks                                                                          
+✓ Completado                                                                                        
+salida                                                                                              
+╭──────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ $ bin/labdrian-overlay install-hooks                                                             │
+│ hooks installed                                                                                  │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
+                                                                                                    
+────────────────────────────────────────────────────────────────────────────────────────────────────
+                                                                                                    
+↑/↓ desplazar  ·  esc/enter volver  ·  q salir                                                      
+
+### the result of Skills
+? No se pudo verificar el estado del repo (sin red / sin fetch previo)                              
+Resultado · Skills                                                                                  
+✓ Completado                                                                                        
+salida                                                                                              
+╭──────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ $ bin/labdrian-overlay skills status                                                             │
+│ skills: ok                                                                                       │
+│                                                                                                  │
+│ $ bin/labdrian-overlay skills validate                                                           │
+│ skills: ok                                                                                       │
+│                                                                                                  │
+│ $ bin/labdrian-overlay skills list                                                               │
+│ skills: ok                                                                                       │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
+                                                                                                    
+────────────────────────────────────────────────────────────────────────────────────────────────────
+                                                                                                    
+↑/↓ desplazar  ·  esc/enter volver  ·  q salir                                                      
+
+### the result of Memoria: instalar
+? No se pudo verificar el estado del repo (sin red / sin fetch previo)                              
+Resultado · Memoria: instalar                                                                       
+✓ Completado                                                                                        
+salida                                                                                              
+╭──────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ $ bin/labdrian-overlay longterm-mem install --target all                                         │
+│ longterm-mem: ok                                                                                 │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
+                                                                                                    
+────────────────────────────────────────────────────────────────────────────────────────────────────
+                                                                                                    
+↑/↓ desplazar  ·  esc/enter volver  ·  q salir                                                      
+
+### the backend received
+targets
+sync-check
+install-hooks
+skills status
+skills validate
+skills list
+targets
+longterm-mem install --target all

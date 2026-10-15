@@ -10,23 +10,37 @@ import (
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/tui/internal/adapters/overlaycli"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/tui/internal/app"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/tui/internal/domain"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/tui/internal/ui"
 )
 
-// main is the composition root: it locates the backend, builds the adapter
-// that answers the TUI's ports from it, and hands both to the model. Nothing
-// else chooses an adapter.
+// main is the composition root: it locates the backend and hands the program
+// to bubbletea. Nothing else chooses an adapter.
 func main() {
-	root, rootErr := RepoRoot()
-	backend := newOverlayCLI(root)
+	root, rootErr := overlaycli.RepoRoot()
 
-	p := tea.NewProgram(newModel(deps{
-		repoRoot: root,
-		rootErr:  rootErr,
-		catalog:  backend,
-		backups:  backend,
-	}), tea.WithAltScreen())
+	p := tea.NewProgram(compose(root, rootErr), tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)
 		os.Exit(1)
 	}
+}
+
+// compose builds the program's model: the adapter that answers the TUI's
+// ports from the backend under root, the use cases over it, and the action
+// menu, all handed to the model, which builds none of them. rootErr is why the
+// backend could not be located, when it could not; the model shows it.
+func compose(root string, rootErr error) tea.Model {
+	backend := overlaycli.New(root)
+
+	return ui.New(ui.Deps{
+		RootErr: rootErr,
+		Actions: domain.Actions(),
+		Catalog: backend,
+		Runner:  app.NewActionRunner(backend, backend),
+		Restore: app.NewRestorePlanner(backend),
+		Probe:   app.NewRepoProber(backend),
+	})
 }

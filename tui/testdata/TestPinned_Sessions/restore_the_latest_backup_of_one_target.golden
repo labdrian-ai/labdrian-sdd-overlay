@@ -1,0 +1,35 @@
+### the confirmation names the target that has a backup
+           ? No se pudo verificar el estado del repo (sin red / sin fetch previo)       
+           ╭───────────────────────────────────────────────────────────────────────────╮
+           │ Ejecutar Restaurar respaldo en: claude, opencode                          │
+           │                                                                           │
+           │ Atención: Restaura el respaldo más reciente de cada destino seleccionado, │
+           │ sobrescribiendo sus archivos actualmente desplegados.                     │
+           │                                                                           │
+           │ Respaldo a restaurar:                                                     │
+           │   claude: 20260301T093000Z (v1.5.0)                                       │
+           ╰───────────────────────────────────────────────────────────────────────────╯
+                                                                                        
+           ─────────────────────────────────────────────────────────────────────────────
+                                                                                        
+           y/enter confirmar  ·  n/esc cancelar                                         
+
+### the result of the restore
+? No se pudo verificar el estado del repo (sin red / sin fetch previo)                              
+Resultado · Restaurar respaldo                                                                      
+✓ Completado                                                                                        
+salida                                                                                              
+╭──────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ $ bin/labdrian-overlay restore --target claude                                                   │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
+                                                                                                    
+────────────────────────────────────────────────────────────────────────────────────────────────────
+                                                                                                    
+↑/↓ desplazar  ·  esc/enter volver  ·  q salir                                                      
+
+### the backend received
+targets
+sync-check
+restore --target claude --list
+restore --target opencode --list
+restore --target claude

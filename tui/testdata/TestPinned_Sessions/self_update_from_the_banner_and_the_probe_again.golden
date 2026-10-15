@@ -1,0 +1,49 @@
+### the banner at launch
+       ▲ Repo 2 release(s) detrás del último tag · u actualizar y desplegar · x ocultar      
+       Seleccionar destinos                                                                  
+       ▸ [✓] claude                                                                          
+         [✓] opencode                                                                        
+         [✓] codex                                                                           
+         [✓] pi                                                                              
+                                                                                             
+                                                                                             
+       ──────────────────────────────────────────────────────────────────────────────────────
+                                                                                             
+       ↑/↓ navegar  ·  espacio seleccionar  ·  a selec. todos  ·  enter continuar  ·  q salir
+
+### the confirmation, reached from the banner
+▲ Repo 2 release(s) detrás del último tag · u actualizar y desplegar · x ocultar                    
+╭───────────────────────────────────────────────────────────────────────────────────────────────────
+│ Ejecutar Actualizar repositorio en: claude, opencode, codex, pi                                   
+│                                                                                                   
+│ Atención: Actualiza main a origin/main (fast-forward) y despliega el resultado en los destinos sel
+╰───────────────────────────────────────────────────────────────────────────────────────────────────
+                                                                                                    
+────────────────────────────────────────────────────────────────────────────────────────────────────
+                                                                                                    
+y/enter confirmar  ·  n/esc cancelar                                                                
+
+### the result, and the banner gone
+✓ Repo al día con el último release                                                                 
+Resultado · Actualizar repositorio                                                                  
+✓ Completado                                                                                        
+salida                                                                                              
+╭──────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ $ bin/labdrian-overlay self-update                                                               │
+│ main is now at origin/main                                                                       │
+│                                                                                                  │
+│ $ bin/labdrian-overlay apply --target all                                                        │
+│ deployed                                                                                         │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
+                                                                                                    
+────────────────────────────────────────────────────────────────────────────────────────────────────
+                                                                                                    
+↑/↓ desplazar  ·  esc/enter volver  ·  q salir                                                      
+
+### the backend received
+targets
+sync-check
+self-update
+targets
+apply --target all
+sync-check

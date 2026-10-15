@@ -1,0 +1,29 @@
+### the result of Estado without pi
+? No se pudo verificar el estado del repo (sin red / sin fetch previo)                              
+Resultado · Estado                                                                                  
+✓ Completado                                                                                        
+salida                                                                                              
+╭──────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ $ bin/labdrian-overlay status --target claude                                                    │
+│                                                                                                  │
+│ $ bin/labdrian-overlay status --target opencode                                                  │
+│                                                                                                  │
+│ $ bin/labdrian-overlay status --target codex                                                     │
+│                                                                                                  │
+│ $ bin/labdrian-overlay status-hooks                                                              │
+│                                                                                                  │
+│ $ bin/labdrian-overlay version                                                                   │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
+                                                                                                    
+────────────────────────────────────────────────────────────────────────────────────────────────────
+                                                                                                    
+↑/↓ desplazar  ·  esc/enter volver  ·  q salir                                                      
+
+### the backend received
+targets
+sync-check
+status --target claude
+status --target opencode
+status --target codex
+status-hooks
+version

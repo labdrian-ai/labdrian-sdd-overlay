@@ -1,0 +1,13 @@
+? No se pudo verificar el estado del repo (sin red / sin fetch previo)                              
+╭───────────────────────────────────────────────────────────────────────────────────────────────────
+│ Ejecutar Memoria: instalar en: claude, opencode, codex, pi                                        
+│                                                                                                   
+│ Atención: Compila el binario de longterm-mem, lo despliega en el directorio de estado del overlay 
+│ y escribe una entrada MCP con marca de propiedad en la configuración propia de cada               
+│ runtime seleccionado (Claude Code, opencode, codex). Antes de modificar cualquier                 
+│ configuración se escribe un respaldo .bak junto al archivo.                                       
+╰───────────────────────────────────────────────────────────────────────────────────────────────────
+                                                                                                    
+────────────────────────────────────────────────────────────────────────────────────────────────────
+                                                                                                    
+y/enter confirmar  ·  n/esc cancelar                                                                
