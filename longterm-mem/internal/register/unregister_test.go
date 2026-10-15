@@ -210,9 +210,10 @@ func TestUnregister_UntaggedEntryPreservedAndReported(t *testing.T) {
 // TestUnregister_PartialUninstallKeepsSharedBinary (12b.3, R-019 scenario
 // "Partial uninstall does not remove the shared binary"): the longterm-mem
 // binary itself is bin/labdrian-overlay's own concern
-// (longtermmem_maybe_remove_binary, 10b/12b.6) — this package has no
+// (the engine's `installed-targets retire`, which replaced the script's
+// longtermmem_maybe_remove_binary in Phase 9, B3) — this package has no
 // notion of a binary path to remove at all. What THIS layer owns, and what
-// that bash-level guard depends on being correct, is that unregistering
+// that guard depends on being correct, is that unregistering
 // one target never disturbs another target's install-state record: with
 // all three targets recorded in ONE install-state.json (mirroring a real
 // machine), unregistering "claude" alone must leave "opencode" and "codex"

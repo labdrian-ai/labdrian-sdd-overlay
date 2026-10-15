@@ -1,9 +1,9 @@
 package installer_test
 
-// The world the longterm-mem pins run in. The pins are in longterm_pins_install_test.go (what
-// `longterm-mem install` records of the targets it registered) and longterm_pins_uninstall_test.go
-// (what `longterm-mem uninstall` removes from that record, and when it removes the shared binary and
-// the engine's registration record). They record what bin/labdrian-overlay did, so that where the
+// The world the longterm-mem pins run in. The pins are the longterm_pins_*_test.go files beside this one,
+// one for each command: what `longterm-mem install` records of the targets it registered, and what
+// `longterm-mem uninstall` removes from that record and when it removes the shared binary and the
+// engine's registration record. They record what bin/labdrian-overlay did, so that where the
 // script keeps the record of the installed targets can change without the program changing; they were
 // recorded from the script as it was before that record moved into the engine (`installed-targets`),
 // and they hold what that program did as it did it, but for the lines a later commit changed on
@@ -271,9 +271,18 @@ func pinLongterm(t *testing.T, w *pinWorld, name string, run pinRun) {
 }
 
 // pinSkipped marks the pins a test could not make as compared, so that the record is not reported as
-// holding entries nobody looks at, and skips the test.
+// holding entries nobody looks at, and skips the test, saying which pins were not compared and why.
+//
+// The pins that need a record nobody can read, or a directory nobody can write in, can only be made by a
+// user who is not root: root reads a file whose mode is 0 and writes where it should not. A run as root
+// (a container) skips them, and the skip is the only trace: `go test -v` shows it with the pins named.
+// The paths they pin are held for every user by tests that inject the failure (a store that answers
+// Unreadable, a rewrite that fails at a stage) in engine/runtime/ownership/app, engine/runtime/ownership/fsstore
+// and engine/cmd, and the way the script reacts to every exit code of the engine by
+// longterm_engine_calls_test.go, which needs no privilege.
 func pinSkipped(t *testing.T, reason string, names ...string) {
 	t.Helper()
+	reason += ": pins not compared: " + strings.Join(names, ", ")
 	consumed.Lock()
 	for _, name := range names {
 		consumed.names[name] = true
