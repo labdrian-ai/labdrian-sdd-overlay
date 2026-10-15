@@ -530,6 +530,38 @@ func TestRetireLeavesEverythingWhenARuntimeMayDependOnTheBinary(t *testing.T) {
 	}
 }
 
+// What a record holds is evidence, and the shared binary goes only on evidence that nothing depends on
+// it: a name only a newer build knows holds it, and bytes that are not a name (a NUL byte, a name cut
+// short by the end of the file, garbage) are not install state and do not.
+func TestRetireReadsTheRecordAsEvidence(t *testing.T) {
+	for _, tc := range []struct {
+		name, content string
+		want          ownership.Disposal
+	}{
+		{"a name only a newer build knows", "zed\n", ownership.KeepBinary},
+		{"a NUL byte makes a well-formed name garbage", "\x00zed\n", ownership.DisposeOfBinary},
+		{"a name cut short is garbage", "clau", ownership.DisposeOfBinary},
+		{"a name cut short does not discard the names above it", "claude\nopenc", ownership.KeepBinary},
+		{"garbage alone does not wedge the binary", "\x00garbage\n{not-a-target}\n\n", ownership.DisposeOfBinary},
+		{"a carriage return is garbage", "claude\r\n", ownership.DisposeOfBinary},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			store := recordHolding(t, tc.content)
+			svc, binaries := service(store, true)
+			got, err := svc.Retire(app.RetireRequest{Binary: binary})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got.Disposal != tc.want {
+				t.Errorf("Retire = %v, want %v", got.Disposal, tc.want)
+			}
+			if gone := !binaries.there; gone != (tc.want == ownership.DisposeOfBinary) {
+				t.Errorf("binary gone = %v, want %v", gone, tc.want == ownership.DisposeOfBinary)
+			}
+		})
+	}
+}
+
 func TestRetireWithPurgeRemovesWhateverTheRecordSays(t *testing.T) {
 	for _, tc := range []struct {
 		name  string

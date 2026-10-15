@@ -3,6 +3,7 @@ package fsstore_test
 import (
 	"errors"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -447,6 +448,84 @@ func TestLockIsExclusiveBoundedAndLetGoOnRelease(t *testing.T) {
 		t.Fatalf("Lock after the release = %v", err)
 	}
 	again()
+}
+
+// holdsTheLockEnv names the state directory the child process of the next test takes the lock in.
+const holdsTheLockEnv = "FSSTORE_TEST_HOLD_LOCK_IN"
+
+// TestChildProcessHoldsTheLock is the child of TestALockHeldByAProcessThatIsKilledIsFreeForTheNext: it
+// takes the lock, says so by making a file, and holds it until it is killed. Run on its own it does
+// nothing.
+func TestChildProcessHoldsTheLock(t *testing.T) {
+	dir := os.Getenv(holdsTheLockEnv)
+	if dir == "" {
+		t.Skip("the child of another test")
+	}
+	if _, err := fsstore.New(dir).Lock(); err != nil {
+		t.Fatalf("the child could not take the lock: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "child-holds-the-lock"), nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(time.Minute)
+}
+
+// The script's lock was a directory, and a run killed inside its critical section left it behind: every
+// later run waited for it, then waited for it to be five minutes old, and said so. The lock of the store
+// is the kernel's: a process that is killed holds nothing, and the next one takes the lock at once.
+func TestALockHeldByAProcessThatIsKilledIsFreeForTheNext(t *testing.T) {
+	store := newStore(t)
+	child := exec.Command(os.Args[0], "-test.run=^TestChildProcessHoldsTheLock$")
+	child.Env = append(os.Environ(), holdsTheLockEnv+"="+store.Layout.StateDir)
+	if err := child.Start(); err != nil {
+		t.Fatal(err)
+	}
+	defer child.Process.Kill()
+	ready := filepath.Join(store.Layout.StateDir, "child-holds-the-lock")
+	deadline := time.Now().Add(10 * time.Second)
+	for {
+		if _, err := os.Stat(ready); err == nil {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("the child did not take the lock")
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	if _, err := store.Lock(); !errors.Is(err, app.ErrBusy) {
+		t.Fatalf("Lock while the child holds it = %v, want app.ErrBusy", err)
+	}
+	if err := child.Process.Kill(); err != nil {
+		t.Fatal(err)
+	}
+	child.Wait()
+	release, err := store.Lock()
+	if err != nil {
+		t.Fatalf("Lock after the holder was killed = %v, want the lock at once", err)
+	}
+	release()
+}
+
+// The script rewrote the record through one fixed temporary path, <record>.tmp, until two runs
+// truncated each other's file; a directory there is what a crashed run or a stray mkdir leaves. The
+// store appends in one write and rewrites through a temporary file of its own name, so nothing at that
+// path is in its way.
+func TestAStrayDirectoryAtTheOldSharedTemporaryPathBlocksNeitherAnAppendNorARewrite(t *testing.T) {
+	store := newStore(t)
+	seed(t, store, "claude\nopencode\n")
+	if err := os.Mkdir(store.Layout.Record()+".tmp", 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Append("codex"); err != nil {
+		t.Fatalf("Append = %v", err)
+	}
+	if err := store.Replace([]byte("opencode\n")); err != nil {
+		t.Fatalf("Replace = %v", err)
+	}
+	if got := onDisk(t, store); got != "opencode\n" {
+		t.Errorf("record = %q", got)
+	}
 }
 
 func TestLockMakesTheStateDirectoryAndSaysWhenItCannot(t *testing.T) {
