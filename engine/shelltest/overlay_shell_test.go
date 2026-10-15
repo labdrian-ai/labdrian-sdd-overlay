@@ -13,6 +13,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/enginetest"
 )
 
 func TestOverlayLongtermMemShellHarness(t *testing.T) {
@@ -29,6 +31,9 @@ func TestOverlayLongtermMemShellHarness(t *testing.T) {
 	}
 
 	cmd := exec.Command("bash", harness)
+	// The cases that read back or seed the record of the installed targets need a real engine, which
+	// owns it (engine installed-targets); the test builds one from this checkout and hands it over.
+	cmd.Env = append(os.Environ(), "LONGTERM_TEST_ENGINE="+enginetest.Binary(t))
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("shell harness failed: %v\n%s", err, output)

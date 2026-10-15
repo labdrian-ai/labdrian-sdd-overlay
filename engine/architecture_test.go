@@ -88,6 +88,18 @@ import (
 //     nowhere. The line a person reads and the exit code are the command's, in cmd.
 //   - status/fsfiles is the adapter of status's Files port (H30): the file system of the machine.
 //     The adapter of its SettingsSource port is settings/settingsfile.Reader.
+//   - runtime/ownership is a domain package (B3): the rule for the record of the runtimes the
+//     overlay has installed longterm-mem for (how the record is read as evidence, which names it
+//     vouches for, when the shared binary and the engine's registration record may go). It reads and
+//     writes no file.
+//   - runtime/ownership/app holds the use case of `engine installed-targets` (B3): record a target,
+//     release one, report the record, assess what an uninstall comes to and retire the shared binary
+//     and the record, each read-modify-write one critical section, over the Store and Binaries ports
+//     it owns. It takes no time from the machine, prints nothing and exits nowhere.
+//   - runtime/ownership/fsstore is the adapter of those two ports (B3): the record as the file the
+//     script always kept (appended to, and rewritten through a temporary file and a rename), the lock
+//     around it as an advisory file lock on engine/filelock, and the shared binary as a file. The
+//     words a person reads are the command's, in cmd.
 //   - sddregistry is a domain package (B2): the rule over text for the SDD executor rows of a
 //     project's skill registry (which skills are executors, how a row reads, how a registry that
 //     has none starts, how the rows of an earlier repair are replaced). It reads and writes no file.
@@ -153,6 +165,9 @@ var rings = map[string]archguard.Ring{
 	"runtime":                   archguard.Adapter,
 	"runtime/core":              archguard.Domain,
 	"runtime/opencodeprompt":    archguard.Domain,
+	"runtime/ownership":         archguard.Domain,
+	"runtime/ownership/app":     archguard.Application,
+	"runtime/ownership/fsstore": archguard.Adapter,
 	"sddregistry":               archguard.Domain,
 	"sddregistry/app":           archguard.Application,
 	"sddregistry/fsstore":       archguard.Adapter,

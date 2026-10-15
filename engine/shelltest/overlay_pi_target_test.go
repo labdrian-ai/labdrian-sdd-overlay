@@ -392,7 +392,8 @@ func TestLongtermMemUninstall_TargetAllIncludesPi(t *testing.T) {
 	}
 
 	home := t.TempDir()
-	seedFakeEngineBinary(t, home)
+	// The record of the installed targets is the engine's, so this test runs a real one.
+	enginetest.Provision(t, home)
 
 	trackingDir := filepath.Join(home, ".labdrian-overlay", "longterm-mem")
 	if err := os.MkdirAll(trackingDir, 0o755); err != nil {
@@ -411,8 +412,8 @@ func TestLongtermMemUninstall_TargetAllIncludesPi(t *testing.T) {
 	}
 
 	// Every target (including pi) was cleared, which is exactly what makes
-	// longtermmem_maybe_remove_binary's convergence guard fire and delete
-	// the now-empty tracking file itself (its own doc comment). A stray pi
+	// the engine's retire (the guard that removes the shared binary) fire
+	// and delete the now-empty tracking file itself. A stray pi
 	// entry left behind would keep this file non-empty and present instead.
 	if _, statErr := os.Stat(trackingFile); !os.IsNotExist(statErr) {
 		t.Fatalf("tracking file should be removed once every target (including pi) converges to untracked, stat err: %v", statErr)
@@ -431,7 +432,8 @@ func TestLongtermMemInstall_TargetPiRecordsTracking(t *testing.T) {
 		t.Fatalf("resolve overlay dir: %v", err)
 	}
 	home := t.TempDir()
-	seedFakeEngineBinary(t, home)
+	// The record of the installed targets is the engine's, so this test runs a real one.
+	enginetest.Provision(t, home)
 	stateDir := filepath.Join(home, ".labdrian-overlay")
 	// A built package listed in ~/.pi/agent/settings.json (relative, as a
 	// real `pi install` records it) is what the real register probe needs.

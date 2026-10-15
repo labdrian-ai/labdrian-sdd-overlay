@@ -47,684 +47,33 @@ new_case_dir() {
 }
 
 # ---------------------------------------------------------------------------
-# hazard (a): the installed-targets tracking file
+# the record of the installed targets is the engine's
 # ---------------------------------------------------------------------------
-
-# Concurrent adds must not lose a target. Two overlay invocations racing on
-# the same tracking file is the whole reason this file is written through a
-# temporary rather than in place; a read-modify-write through one FIXED,
-# shared temporary path makes the race worse, not better, because both
-# writers truncate the same file before either renames it.
-case_parallel_adds_keep_every_target() {
-  local dir status out
-  dir="$(new_case_dir parallel-adds)"
-
-  out="$(
-    STATE_DIR="$dir/state" bash -c '
-      source "$1"
-      mkdir -p "$(dirname "$LONGTERM_MEM_INSTALLED_TARGETS")"
-      for t in claude opencode codex; do
-        longtermmem_installed_targets_add "$t" &
-      done
-      wait
-      longtermmem_installed_targets_read
-    ' _ "$OVERLAY" 2>&1
-  )"
-  status=$?
-
-  if [[ "$status" -ne 0 ]]; then
-    fail "parallel adds: the run itself failed (exit $status)" "$out"
-    return
-  fi
-
-  local t missing=()
-  for t in claude opencode codex; do
-    grep -q -x -F -e "$t" <<<"$out" || missing+=("$t")
-  done
-  if [[ ${#missing[@]} -gt 0 ]]; then
-    fail "parallel adds: lost target(s): ${missing[*]}" "tracked: $(tr '\n' ' ' <<<"$out")"
-    return
-  fi
-  pass "parallel adds keep every target"
-}
-
-# A per-process temporary is provable without racing anything: make the one
-# FIXED shared path hostile and see whether the write still lands. A
-# directory at "<tracking-file>.tmp" is exactly what a crashed concurrent
-# writer, or a stray mkdir, can leave behind — with the shared name the
-# redirect and the rename both fail against it forever.
-case_add_does_not_use_a_shared_temp_path() {
-  local dir status out
-  dir="$(new_case_dir add-shared-temp)"
-
-  out="$(
-    STATE_DIR="$dir/state" bash -c '
-      source "$1"
-      mkdir -p "$(dirname "$LONGTERM_MEM_INSTALLED_TARGETS")"
-      mkdir -p "${LONGTERM_MEM_INSTALLED_TARGETS}.tmp"
-      longtermmem_installed_targets_add claude
-      longtermmem_installed_targets_read
-    ' _ "$OVERLAY" 2>&1
-  )"
-  status=$?
-
-  if [[ "$status" -ne 0 ]]; then
-    fail "add with a hostile shared temp path: run failed (exit $status)" "$out"
-    return
-  fi
-  if ! grep -q -x -F -e claude <<<"$out"; then
-    fail "add with a hostile shared temp path: claude was not recorded" "output: $out"
-    return
-  fi
-  pass "add does not use a shared temp path"
-}
-
-case_remove_does_not_use_a_shared_temp_path() {
-  local dir status out
-  dir="$(new_case_dir remove-shared-temp)"
-
-  out="$(
-    STATE_DIR="$dir/state" bash -c '
-      source "$1"
-      mkdir -p "$(dirname "$LONGTERM_MEM_INSTALLED_TARGETS")"
-      printf "claude\nopencode\n" > "$LONGTERM_MEM_INSTALLED_TARGETS"
-      mkdir -p "${LONGTERM_MEM_INSTALLED_TARGETS}.tmp"
-      longtermmem_installed_targets_remove claude
-      longtermmem_installed_targets_read
-    ' _ "$OVERLAY" 2>&1
-  )"
-  status=$?
-
-  if [[ "$status" -ne 0 ]]; then
-    fail "remove with a hostile shared temp path: run failed (exit $status)" "$out"
-    return
-  fi
-  if grep -q -x -F -e claude <<<"$out"; then
-    fail "remove with a hostile shared temp path: claude was not removed" "output: $out"
-    return
-  fi
-  if ! grep -q -x -F -e opencode <<<"$out"; then
-    fail "remove with a hostile shared temp path: opencode was dropped" "output: $out"
-    return
-  fi
-  pass "remove does not use a shared temp path"
-}
-
-# slow_the_tracking_read emits shell source that replaces
-# longtermmem_installed_targets_read with a wrapper that returns the same
-# lines and the same status, then sleeps.
 #
-# A lost update is a timing bug, and a timing bug asserted by luck is a test
-# that passes on a fast machine while the bug is still there. Widening the
-# read-modify-write window by a fixed half second makes the interleaving
-# deterministic in BOTH directions: without serialization the two cycles
-# provably overlap and one write provably lands on stale state, and with
-# serialization the second cycle provably waits (the delay is spent INSIDE
-# the critical section, because every writer reads there).
-slow_the_tracking_read() {
-  cat <<'SLOW'
-      eval "longtermmem_installed_targets_read_real() $(declare -f longtermmem_installed_targets_read | tail -n +2)"
-      longtermmem_installed_targets_read() {
-        local rc=0
-        longtermmem_installed_targets_read_real "$@" || rc=$?
-        sleep 0.5
-        return "$rc"
-      }
-SLOW
-}
+# This file used to open with hazard (a), the shell that kept the record of the
+# runtimes longterm-mem is installed for (a tracking file, and a lock made of a
+# directory), sourcing the entrypoint to call its functions. That record moved
+# into the engine (Phase 9, B3): `engine installed-targets`, whose cases are Go
+# tests, with the races of the old cases kept under a window that is
+# deterministic in both directions (engine/runtime/ownership/fsstore), and what
+# the script says and does around it pinned by engine/installer
+# (testdata/longterm_pins.golden). What stays here is the script's own
+# behavior around the record.
 
-# Two concurrent REMOVES are the twin of the concurrent adds above, and the
-# append that makes adds safe is unavailable to them: a removal is a real
-# read-modify-write. Unserialized, both cycles read the same three targets
-# and each writes back its own two, so whichever renames last silently
-# resurrects the target the other one removed -- or, with the operands
-# swapped, drops a target that is still installed, which is what lets the
-# binary-removal guard delete the shared binary out from under a runtime
-# that is still registered.
-case_parallel_removes_keep_every_other_target() {
-  local dir status out
-  dir="$(new_case_dir parallel-removes)"
-
-  out="$(
-    STATE_DIR="$dir/state" bash -c '
-      source "$1"
-      mkdir -p "$(dirname "$LONGTERM_MEM_INSTALLED_TARGETS")"
-      printf "claude\nopencode\ncodex\n" > "$LONGTERM_MEM_INSTALLED_TARGETS"
-      '"$(slow_the_tracking_read)"'
-      longtermmem_installed_targets_remove claude &
-      longtermmem_installed_targets_remove opencode &
-      wait
-      longtermmem_installed_targets_read_real
-    ' _ "$OVERLAY" 2>&1
-  )"
-  status=$?
-
-  if [[ "$status" -ne 0 ]]; then
-    fail "parallel removes: the run itself failed (exit $status)" "$out"
+# real_engine prints the path of an engine built from this checkout: the one the
+# Go test hands over in LONGTERM_TEST_ENGINE, or, when this file is run by hand,
+# one built here, once.
+real_engine() {
+  if [[ -n "${LONGTERM_TEST_ENGINE:-}" ]]; then
+    printf '%s\n' "$LONGTERM_TEST_ENGINE"
     return
   fi
-  if ! grep -q -x -F -e codex <<<"$out"; then
-    fail "parallel removes: dropped the untouched target codex" "tracked: $(tr '\n' ' ' <<<"$out")"
-    return
+  local built="$work_root/engine-built"
+  if [[ ! -x "$built" ]]; then
+    (cd "$REPO_ROOT/engine" && go build -o "$built" ./cmd) \
+      || { echo "FAIL - could not build the engine for the cases" >&2; exit 1; }
   fi
-  local t survived=()
-  for t in claude opencode; do
-    grep -q -x -F -e "$t" <<<"$out" && survived+=("$t")
-  done
-  if [[ ${#survived[@]} -gt 0 ]]; then
-    fail "parallel removes: a removal was lost, still tracked: ${survived[*]}" "tracked: $(tr '\n' ' ' <<<"$out")"
-    return
-  fi
-  pass "parallel removes keep every other target and lose no removal"
-}
-
-# The mixed race is the one that deletes a shared binary: a remove that read
-# BEFORE a concurrent add rewrites the file from its stale copy, so the
-# freshly installed target vanishes from tracking while its MCP entry stays
-# in that runtime's config. The add is started first and the remove a beat
-# later, so the stale read is deterministic rather than a coin flip.
-case_add_racing_a_remove_is_not_lost() {
-  local dir status out
-  dir="$(new_case_dir add-racing-remove)"
-
-  out="$(
-    STATE_DIR="$dir/state" bash -c '
-      source "$1"
-      mkdir -p "$(dirname "$LONGTERM_MEM_INSTALLED_TARGETS")"
-      printf "claude\ncodex\n" > "$LONGTERM_MEM_INSTALLED_TARGETS"
-      '"$(slow_the_tracking_read)"'
-      longtermmem_installed_targets_add opencode &
-      sleep 0.1
-      longtermmem_installed_targets_remove claude &
-      wait
-      longtermmem_installed_targets_read_real
-    ' _ "$OVERLAY" 2>&1
-  )"
-  status=$?
-
-  if [[ "$status" -ne 0 ]]; then
-    fail "add racing a remove: the run itself failed (exit $status)" "$out"
-    return
-  fi
-  if ! grep -q -x -F -e opencode <<<"$out"; then
-    fail "add racing a remove: the concurrent add was lost" "tracked: $(tr '\n' ' ' <<<"$out")"
-    return
-  fi
-  if ! grep -q -x -F -e codex <<<"$out"; then
-    fail "add racing a remove: dropped the untouched target codex" "tracked: $(tr '\n' ' ' <<<"$out")"
-    return
-  fi
-  if grep -q -x -F -e claude <<<"$out"; then
-    fail "add racing a remove: the removal was lost" "tracked: $(tr '\n' ' ' <<<"$out")"
-    return
-  fi
-  pass "an add racing a remove loses neither"
-}
-
-# The binary-removal guard is the THIRD writer of the tracking file, and the
-# one with the worst blast radius: it reads the file, and on an empty read it
-# deletes BOTH the shared binary and the tracking file. The two concurrency
-# cases above pin `add` and `remove` only, so this site's lock could be
-# deleted outright and the whole suite still passed -- the exact failure
-# shape this file exists to catch, reproduced at the test level.
-#
-# The add is started first and the guard a beat later, so the stale read is
-# deterministic: unserialized, the guard reads the file while the add is
-# still inside its own read-modify-write, sees no remaining target, and
-# removes the binary the add is registering a runtime against -- deleting the
-# add's record along with it. Serialized, the guard waits, reads "opencode",
-# and leaves both alone.
-case_binary_removal_racing_an_add_is_serialized() {
-  local dir status out
-  dir="$(new_case_dir remove-binary-racing-add)"
-
-  out="$(
-    STATE_DIR="$dir/state" bash -c '
-      source "$1"
-      mkdir -p "$(dirname "$LONGTERM_MEM_INSTALLED_TARGETS")"
-      mkdir -p "$(dirname "$LONGTERM_MEM_BINARY")"
-      : > "$LONGTERM_MEM_INSTALLED_TARGETS"
-      printf "not-a-real-binary\n" > "$LONGTERM_MEM_BINARY"
-      '"$(slow_the_tracking_read)"'
-      # The guard consults its callers $tracking_known: a tracking file that
-      # exists at all is "known".
-      tracking_known=1
-      longtermmem_installed_targets_add opencode &
-      sleep 0.1
-      longtermmem_maybe_remove_binary "" &
-      wait
-      if [[ -e "$LONGTERM_MEM_BINARY" ]]; then
-        echo "BINARY-PRESENT"
-      else
-        echo "BINARY-GONE"
-      fi
-      echo "AFTER=[$(longtermmem_installed_targets_read_real | tr "\n" " ")]"
-    ' _ "$OVERLAY" 2>&1
-  )"
-  status=$?
-
-  if [[ "$status" -ne 0 ]]; then
-    fail "binary removal racing an add: the run itself failed (exit $status)" "$out"
-    return
-  fi
-  if ! grep -q -F -e BINARY-PRESENT <<<"$out"; then
-    fail "binary removal racing an add: the shared binary was deleted while a concurrent add was registering a runtime against it" "$out"
-    return
-  fi
-  if ! grep -q -F -e "opencode" <<<"$out"; then
-    fail "binary removal racing an add: the concurrent add was erased with the tracking file" "$out"
-    return
-  fi
-  pass "the binary-removal guard is serialized against a concurrent add"
-}
-
-# The staleness escape must itself be mutually exclusive. Two invocations
-# that both classify the SAME lock as abandoned each act on that
-# classification independently, and an interleaving where the loser breaks in
-# AFTER the winner has already taken the lock deletes the winner's LIVE lock
-# and puts both inside the critical section -- exactly the lost update the
-# lock exists to prevent, reached through the lock's own recovery path.
-#
-# The window is microseconds wide in production, so it is widened here the
-# same way the tracking-file races are: a wrapper that makes the age test
-# slow makes the classify-then-act gap deterministic rather than a coin flip.
-# Both racers reach the stale branch; only one may end up holding.
-case_simultaneous_stale_breakins_admit_only_one() {
-  local dir status out entered refused
-  dir="$(new_case_dir stale-break-in)"
-
-  out="$(
-    STATE_DIR="$dir/state" bash -c '
-      source "$1"
-      mkdir -p "$STATE_DIR"
-      mkdir "$LONGTERM_MEM_TARGETS_LOCK"
-      touch -d "-10 minutes" "$LONGTERM_MEM_TARGETS_LOCK" 2>/dev/null \
-        || touch -A -001000 "$LONGTERM_MEM_TARGETS_LOCK"
-
-      # Widen the gap between classifying the lock as stale and acting on
-      # that classification. The age test goes through find, so wrapping find
-      # delays every classification by a fixed half second.
-      find() { command find "$@"; sleep 0.5; }
-
-      # A refusal arrives through die, which exits the PROCESS, so the
-      # critical section runs in its own subshell and the refusal is
-      # observed from outside it -- the same seam case_failed_critical_
-      # section_releases_the_lock uses.
-      breaker() {
-        (
-          longtermmem_targets_lock_acquire 2>/dev/null
-          echo "ENTERED-$1"
-          sleep 0.4
-          longtermmem_targets_lock_release
-        ) || echo "REFUSED-$1"
-      }
-
-      breaker A &
-      sleep 0.3
-      breaker B &
-      wait
-    ' _ "$OVERLAY" 2>&1
-  )"
-  status=$?
-
-  if [[ "$status" -ne 0 ]]; then
-    fail "simultaneous stale break-ins: the run itself failed (exit $status)" "$out"
-    return
-  fi
-  entered="$(grep -c -E "^ENTERED-" <<<"$out")"
-  refused="$(grep -c -E "^REFUSED-" <<<"$out")"
-  if [[ "$entered" -ne 1 ]]; then
-    fail "simultaneous stale break-ins: $entered invocation(s) entered the critical section, expected exactly 1" "$out"
-    return
-  fi
-  if [[ "$refused" -ne 1 ]]; then
-    fail "simultaneous stale break-ins: $refused invocation(s) were refused, expected exactly 1" "$out"
-    return
-  fi
-  pass "two simultaneous stale break-ins admit only one"
-}
-
-# A lock a failed critical section keeps forever is worse than no lock: it
-# wedges every later invocation of this entrypoint. The failure is forced
-# through the exact path this file uses to report unrecoverable problems --
-# `die`, which exits the process rather than returning -- because that is
-# the path a RETURN trap alone does not cover.
-case_failed_critical_section_releases_the_lock() {
-  local dir status out
-  dir="$(new_case_dir lock-release-on-failure)"
-
-  out="$(
-    STATE_DIR="$dir/state" bash -c '
-      source "$1"
-      mkdir -p "$(dirname "$LONGTERM_MEM_INSTALLED_TARGETS")"
-      printf "claude\n" > "$LONGTERM_MEM_INSTALLED_TARGETS"
-      echo "LOCKPATH=[${LONGTERM_MEM_TARGETS_LOCK:-}]"
-      # Break the staging step INSIDE the critical section, so the writer
-      # dies while holding the lock. A subshell is how cmd_apply already
-      # reaches this code, so `die` is observable instead of fatal here.
-      mktemp() { return 1; }
-      ( longtermmem_installed_targets_remove claude ) || echo "REMOVE-FAILED"
-      unset -f mktemp
-      if [[ -e "${LONGTERM_MEM_TARGETS_LOCK:-/nonexistent}" ]]; then
-        echo "LOCK-HELD"
-      else
-        echo "LOCK-FREE"
-      fi
-      longtermmem_installed_targets_add opencode
-      echo "AFTER=[$(longtermmem_installed_targets_read | tr "\n" " ")]"
-    ' _ "$OVERLAY" 2>&1
-  )"
-  status=$?
-
-  if [[ "$status" -ne 0 ]]; then
-    fail "failed critical section: the run itself failed (exit $status)" "$out"
-    return
-  fi
-  if ! grep -q -E '^LOCKPATH=\[.+\]$' <<<"$out"; then
-    fail "failed critical section: no install-tracking lock path is defined" "$out"
-    return
-  fi
-  if ! grep -q -F -e REMOVE-FAILED <<<"$out"; then
-    fail "failed critical section: the forced staging failure did not fail the remove" "$out"
-    return
-  fi
-  if ! grep -q -F -e LOCK-FREE <<<"$out"; then
-    fail "failed critical section left the lock held; the next invocation is wedged" "$out"
-    return
-  fi
-  if ! grep -q -F -e "opencode" <<<"$out"; then
-    fail "failed critical section: the next invocation could not record a target" "$out"
-    return
-  fi
-  pass "a failed critical section releases the lock"
-}
-
-# A tracking file that has picked up garbage — a partial write, a hand edit,
-# a file from some other tool — must not wedge the binary-removal guard
-# forever. Lines that do not name a target this entrypoint can install for
-# are not install state, so they must not be read as "something is still
-# installed".
-case_corrupt_tracking_file_does_not_wedge_cleanup() {
-  local dir status out
-  dir="$(new_case_dir corrupt-tracking)"
-
-  out="$(
-    STATE_DIR="$dir/state" bash -c '
-      source "$1"
-      mkdir -p "$(dirname "$LONGTERM_MEM_INSTALLED_TARGETS")"
-      printf "\x00garbage\n{not-a-target}\n\n" > "$LONGTERM_MEM_INSTALLED_TARGETS"
-      mkdir -p "$(dirname "$LONGTERM_MEM_BINARY")"
-      printf "#!/bin/sh\n" > "$LONGTERM_MEM_BINARY"
-      chmod +x "$LONGTERM_MEM_BINARY"
-      tracking_known=1
-      longtermmem_maybe_remove_binary ""
-      if [[ -e "$LONGTERM_MEM_BINARY" ]]; then
-        echo "BINARY-STILL-PRESENT"
-      else
-        echo "BINARY-REMOVED"
-      fi
-    ' _ "$OVERLAY" 2>&1
-  )"
-  status=$?
-
-  if [[ "$status" -ne 0 ]]; then
-    fail "corrupt tracking file: run failed (exit $status)" "$out"
-    return
-  fi
-  if ! grep -q -F -e BINARY-REMOVED <<<"$out"; then
-    fail "corrupt tracking file wedged the binary-removal guard" "$out"
-    return
-  fi
-  pass "a corrupt tracking file does not wedge binary cleanup"
-}
-
-# run_guard_case <case-dir-name> <printf-format-for-the-tracking-file> prints
-# BINARY-STILL-PRESENT or BINARY-REMOVED for a tracking file with exactly
-# that content, driving the same guard the uninstall path drives.
-run_guard_case() {
-  local dir="$1" content="$2"
-  STATE_DIR="$dir/state" bash -c '
-    source "$1"
-    mkdir -p "$(dirname "$LONGTERM_MEM_INSTALLED_TARGETS")"
-    printf "$2" > "$LONGTERM_MEM_INSTALLED_TARGETS"
-    mkdir -p "$(dirname "$LONGTERM_MEM_BINARY")"
-    printf "#!/bin/sh\n" > "$LONGTERM_MEM_BINARY"
-    chmod +x "$LONGTERM_MEM_BINARY"
-    tracking_known=1
-    longtermmem_maybe_remove_binary ""
-    if [[ -e "$LONGTERM_MEM_BINARY" ]]; then
-      echo "BINARY-STILL-PRESENT"
-    else
-      echo "BINARY-REMOVED"
-    fi
-  ' _ "$OVERLAY" "$content" 2>&1
-}
-
-# Dropping a line the tracking file cannot vouch for is only safe for
-# GARBAGE. A line that is a perfectly well-formed target name this build
-# simply does not know is the opposite case: the likeliest way it got there
-# is a NEWER build that installs for a runtime this one has never heard of,
-# and the shared binary is exactly what that runtime is still running. So an
-# unknown-but-well-formed name has to keep the guard CLOSED — reading it as
-# "nothing is installed" deletes a binary out from under a live runtime.
-case_unknown_wellformed_target_keeps_the_guard_closed() {
-  local dir status out
-  dir="$(new_case_dir unknown-wellformed)"
-
-  out="$(run_guard_case "$dir" 'zed\n')"
-  status=$?
-
-  if [[ "$status" -ne 0 ]]; then
-    fail "unknown well-formed target: run failed (exit $status)" "$out"
-    return
-  fi
-  if ! grep -q -F -e BINARY-STILL-PRESENT <<<"$out"; then
-    fail "an unknown but well-formed target name let the binary be removed" "$out"
-    return
-  fi
-  pass "an unknown but well-formed target name keeps the binary-removal guard closed"
-}
-
-# The twin of the case above, in the other direction: the SAME word, made
-# unreadable by a NUL byte, is a torn or binary write and must stay
-# droppable. Bash cannot hold a NUL in a variable at all, so a reader that
-# forgets this sees the NUL silently vanish and reads "zed" — turning the
-# one class of content that is provably garbage into the one class that
-# wedges the guard forever.
-case_nul_byte_makes_a_wellformed_name_garbage() {
-  local dir status out
-  dir="$(new_case_dir nul-wellformed)"
-
-  out="$(run_guard_case "$dir" '\x00zed\n')"
-  status=$?
-
-  if [[ "$status" -ne 0 ]]; then
-    fail "NUL-byte tracking line: run failed (exit $status)" "$out"
-    return
-  fi
-  if ! grep -q -F -e BINARY-REMOVED <<<"$out"; then
-    fail "a NUL-byte line was read as a live install and wedged the guard" "$out"
-    return
-  fi
-  pass "a NUL byte makes an otherwise well-formed name garbage"
-}
-
-# The other garbage twin: a final line with no terminating newline. Every
-# write this script makes is newline-terminated, so unterminated trailing
-# bytes are a partial write — a name that was still being written, not a
-# name. "clau" is a well-formed bare word and would otherwise pass the
-# name check.
-case_partial_final_line_is_garbage() {
-  local dir status out
-  dir="$(new_case_dir partial-line)"
-
-  out="$(run_guard_case "$dir" 'clau')"
-  status=$?
-
-  if [[ "$status" -ne 0 ]]; then
-    fail "partial final line: run failed (exit $status)" "$out"
-    return
-  fi
-  if ! grep -q -F -e BINARY-REMOVED <<<"$out"; then
-    fail "an unterminated partial line was read as a live install" "$out"
-    return
-  fi
-  pass "an unterminated final line is garbage, not install state"
-}
-
-# A partial line must not take the VALID lines above it down with it, and a
-# valid line must still hold the guard when a partial one follows.
-case_partial_line_does_not_discard_valid_lines() {
-  local dir status out
-  dir="$(new_case_dir partial-line-mixed)"
-
-  out="$(run_guard_case "$dir" 'claude\nopenc')"
-  status=$?
-
-  if [[ "$status" -ne 0 ]]; then
-    fail "partial line after a valid one: run failed (exit $status)" "$out"
-    return
-  fi
-  if ! grep -q -F -e BINARY-STILL-PRESENT <<<"$out"; then
-    fail "a trailing partial line discarded the valid target above it" "$out"
-    return
-  fi
-  pass "a trailing partial line does not discard the valid lines above it"
-}
-
-# The twin of the guard case at the WRITE side. Removal rewrites the file
-# from what the reader returns, so a reader that drops unknown names makes
-# an OLDER build silently erase a NEWER build's record: uninstall one target
-# it does know, and the unknown one is gone from the file. The very next
-# call then reads empty and deletes the shared binary — the same defect, one
-# invocation later.
-case_removal_preserves_an_unknown_wellformed_target() {
-  local dir status out
-  dir="$(new_case_dir remove-preserves-unknown)"
-
-  out="$(
-    STATE_DIR="$dir/state" bash -c '
-      source "$1"
-      mkdir -p "$(dirname "$LONGTERM_MEM_INSTALLED_TARGETS")"
-      printf "claude\nzed\n" > "$LONGTERM_MEM_INSTALLED_TARGETS"
-      longtermmem_installed_targets_remove claude
-      echo "FILE=[$(tr "\n" " " < "$LONGTERM_MEM_INSTALLED_TARGETS")]"
-    ' _ "$OVERLAY" 2>&1
-  )"
-  status=$?
-
-  if [[ "$status" -ne 0 ]]; then
-    fail "removal with an unknown target present: run failed (exit $status)" "$out"
-    return
-  fi
-  if grep -q -F -e "claude" <<<"$out"; then
-    fail "removal did not remove the target it was asked to remove" "$out"
-    return
-  fi
-  if ! grep -q -F -e "zed" <<<"$out"; then
-    fail "removal erased an unknown but well-formed target from the tracking file" "$out"
-    return
-  fi
-  pass "removal preserves an unknown but well-formed target"
-}
-
-# A tracking file that EXISTS but cannot be read is the third pile, and it
-# belongs with "unknown", not with "garbage": the file may well list every
-# runtime still depending on the shared binary, and nothing about a
-# permission error says otherwise. Reading it as empty is the same fail-open
-# as dropping an unknown name, arrived at from the other direction.
-#
-# chmod 000 does not stop root, so the two cases below verify the fixture
-# before trusting it rather than passing vacuously in a root CI container.
-case_unreadable_tracking_file_keeps_the_guard_closed() {
-  local dir status out
-  dir="$(new_case_dir unreadable-tracking)"
-
-  out="$(
-    STATE_DIR="$dir/state" bash -c '
-      source "$1"
-      mkdir -p "$(dirname "$LONGTERM_MEM_INSTALLED_TARGETS")"
-      printf "claude\n" > "$LONGTERM_MEM_INSTALLED_TARGETS"
-      chmod 000 "$LONGTERM_MEM_INSTALLED_TARGETS"
-      if [[ -r "$LONGTERM_MEM_INSTALLED_TARGETS" ]]; then
-        echo "FIXTURE-UNUSABLE"
-        exit 0
-      fi
-      mkdir -p "$(dirname "$LONGTERM_MEM_BINARY")"
-      printf "#!/bin/sh\n" > "$LONGTERM_MEM_BINARY"
-      chmod +x "$LONGTERM_MEM_BINARY"
-      tracking_known=1
-      longtermmem_maybe_remove_binary ""
-      if [[ -e "$LONGTERM_MEM_BINARY" ]]; then
-        echo "BINARY-STILL-PRESENT"
-      else
-        echo "BINARY-REMOVED"
-      fi
-    ' _ "$OVERLAY" 2>&1
-  )"
-  status=$?
-  chmod -R u+rwX "$dir" 2>/dev/null
-
-  if [[ "$status" -ne 0 ]]; then
-    fail "unreadable tracking file: run failed (exit $status)" "$out"
-    return
-  fi
-  if grep -q -F -e FIXTURE-UNUSABLE <<<"$out"; then
-    pass "unreadable tracking file: skipped (this user can read a 000 file)"
-    return
-  fi
-  if ! grep -q -F -e BINARY-STILL-PRESENT <<<"$out"; then
-    fail "an unreadable tracking file was read as empty and the binary was removed" "$out"
-    return
-  fi
-  pass "an unreadable tracking file keeps the binary-removal guard closed"
-}
-
-# The write-side twin. Removal rewrites the file from what the reader
-# returns, so a reader that answers "empty" for an unreadable file does not
-# just misreport it — it TRUNCATES it, destroying the very state that would
-# have kept the guard closed on the next call.
-case_unreadable_tracking_file_is_not_truncated() {
-  local dir status out
-  dir="$(new_case_dir unreadable-tracking-write)"
-
-  out="$(
-    STATE_DIR="$dir/state" bash -c '
-      source "$1"
-      set +e
-      mkdir -p "$(dirname "$LONGTERM_MEM_INSTALLED_TARGETS")"
-      printf "claude\nopencode\n" > "$LONGTERM_MEM_INSTALLED_TARGETS"
-      chmod 000 "$LONGTERM_MEM_INSTALLED_TARGETS"
-      if [[ -r "$LONGTERM_MEM_INSTALLED_TARGETS" ]]; then
-        echo "FIXTURE-UNUSABLE"
-        exit 0
-      fi
-      ( longtermmem_installed_targets_remove claude )
-      echo "REMOVE-STATUS=$?"
-      chmod 600 "$LONGTERM_MEM_INSTALLED_TARGETS"
-      echo "FILE=[$(tr "\n" " " < "$LONGTERM_MEM_INSTALLED_TARGETS")]"
-    ' _ "$OVERLAY" 2>&1
-  )"
-  status=$?
-  chmod -R u+rwX "$dir" 2>/dev/null
-
-  if [[ "$status" -ne 0 ]]; then
-    fail "unreadable tracking file (write side): run failed (exit $status)" "$out"
-    return
-  fi
-  if grep -q -F -e FIXTURE-UNUSABLE <<<"$out"; then
-    pass "unreadable tracking file (write side): skipped (this user can read a 000 file)"
-    return
-  fi
-  if grep -q -F -e "REMOVE-STATUS=0" <<<"$out"; then
-    fail "removal on an unreadable tracking file reported success" "$out"
-    return
-  fi
-  if ! grep -q -F -e "FILE=[claude opencode ]" <<<"$out"; then
-    fail "removal truncated a tracking file it could not read" "$out"
-    return
-  fi
-  pass "removal refuses to rewrite a tracking file it could not read"
+  printf '%s\n' "$built"
 }
 
 # ---------------------------------------------------------------------------
@@ -831,7 +180,12 @@ exit 0
 FAKEBIN
   chmod +x "$dir/fake-longterm-mem"
 
-  printf '#!/usr/bin/env bash\nexit 0\n' > "$dir/engine-stub"
+  # The engine of these cases answers every verb with success, as a runtime
+  # lifecycle that has nothing to report would, except the record of the
+  # installed targets: that is the engine's now, and what the cases read back
+  # (TRACKED=[...]) and seed is a real record, so those verbs go to a real
+  # engine built from this checkout.
+  printf '#!/usr/bin/env bash\nif [[ "${1:-}" == "installed-targets" ]]; then exec "%s" "$@"; fi\nexit 0\n' "$(real_engine)" > "$dir/engine-stub"
   chmod +x "$dir/engine-stub"
 }
 
@@ -855,7 +209,7 @@ case_register_refusal_does_not_mark_target_installed() {
       LONGTERM_MEM_SRC="$3/src"
       cmd_longterm_mem install --target claude
       echo "INSTALL-STATUS=$?"
-      echo "TRACKED=[$(longtermmem_installed_targets_read | tr "\n" " ")]"
+      echo "TRACKED=[$(longtermmem_targets list | tr "\n" " ")]"
     ' _ "$OVERLAY" "$dir/engine-stub" "$dir" 2>&1
   )"
   status=$?
@@ -897,7 +251,7 @@ case_register_hard_failure_fails_the_run() {
       LONGTERM_MEM_SRC="$3/src"
       cmd_longterm_mem install --target claude
       echo "INSTALL-STATUS=$?"
-      echo "TRACKED=[$(longtermmem_installed_targets_read | tr "\n" " ")]"
+      echo "TRACKED=[$(longtermmem_targets list | tr "\n" " ")]"
     ' _ "$OVERLAY" "$dir/engine-stub" "$dir" 2>&1
   )"
   status=$?
@@ -939,7 +293,7 @@ case_register_failure_under_target_all_converges() {
       LONGTERM_MEM_SRC="$3/src"
       cmd_longterm_mem install --target all
       echo "INSTALL-STATUS=$?"
-      echo "TRACKED=[$(longtermmem_installed_targets_read | tr "\n" " ")]"
+      echo "TRACKED=[$(longtermmem_targets list | tr "\n" " ")]"
     ' _ "$OVERLAY" "$dir/engine-stub" "$dir" 2>&1
   )"
   status=$?
@@ -1031,7 +385,7 @@ case_register_path_unresolvable_is_named() {
       LONGTERM_MEM_SRC="$3/src"
       cmd_longterm_mem install --target claude
       echo "INSTALL-STATUS=$?"
-      echo "TRACKED=[$(longtermmem_installed_targets_read | tr "\n" " ")]"
+      echo "TRACKED=[$(longtermmem_targets list | tr "\n" " ")]"
     ' _ "$OVERLAY" "$dir/engine-stub" "$dir" 2>&1
   )"
   status=$?
@@ -1075,7 +429,7 @@ case_register_path_unresolvable_under_target_all_is_named() {
       LONGTERM_MEM_SRC="$3/src"
       cmd_longterm_mem install --target all
       echo "INSTALL-STATUS=$?"
-      echo "TRACKED=[$(longtermmem_installed_targets_read | tr "\n" " ")]"
+      echo "TRACKED=[$(longtermmem_targets list | tr "\n" " ")]"
     ' _ "$OVERLAY" "$dir/engine-stub" "$dir" 2>&1
   )"
   status=$?
@@ -1114,13 +468,13 @@ case_unregister_path_unresolvable_is_named() {
       source "$1"
       set +e
       ENGINE_BINARY="$2"
-      mkdir -p "$(dirname "$LONGTERM_MEM_BINARY")" "$(dirname "$LONGTERM_MEM_INSTALLED_TARGETS")"
+      mkdir -p "$(dirname "$LONGTERM_MEM_BINARY")" "$STATE_DIR/longterm-mem"
       cp "$3" "$LONGTERM_MEM_BINARY"
       chmod +x "$LONGTERM_MEM_BINARY"
-      printf "claude\n" > "$LONGTERM_MEM_INSTALLED_TARGETS"
+      printf "claude\n" > "$STATE_DIR/longterm-mem/installed-targets"
       cmd_longterm_mem uninstall --target claude
       echo "UNINSTALL-STATUS=$?"
-      echo "TRACKED=[$(longtermmem_installed_targets_read | tr "\n" " ")]"
+      echo "TRACKED=[$(longtermmem_targets list | tr "\n" " ")]"
     ' _ "$OVERLAY" "$dir/engine-stub" "$dir/fake-longterm-mem" 2>&1
   )"
   status=$?
@@ -1166,13 +520,13 @@ case_unregister_unmanaged_keeps_the_target_tracked() {
       source "$1"
       set +e
       ENGINE_BINARY="$2"
-      mkdir -p "$(dirname "$LONGTERM_MEM_BINARY")" "$(dirname "$LONGTERM_MEM_INSTALLED_TARGETS")"
+      mkdir -p "$(dirname "$LONGTERM_MEM_BINARY")" "$STATE_DIR/longterm-mem"
       cp "$3" "$LONGTERM_MEM_BINARY"
       chmod +x "$LONGTERM_MEM_BINARY"
-      printf "claude\n" > "$LONGTERM_MEM_INSTALLED_TARGETS"
+      printf "claude\n" > "$STATE_DIR/longterm-mem/installed-targets"
       cmd_longterm_mem uninstall --target claude
       echo "UNINSTALL-STATUS=$?"
-      echo "TRACKED=[$(longtermmem_installed_targets_read | tr "\n" " ")]"
+      echo "TRACKED=[$(longtermmem_targets list | tr "\n" " ")]"
     ' _ "$OVERLAY" "$dir/engine-stub" "$dir/fake-longterm-mem" 2>&1
   )"
   status=$?
@@ -1216,13 +570,13 @@ case_unregister_version_skew_converges() {
       source "$1"
       set +e
       ENGINE_BINARY="$2"
-      mkdir -p "$(dirname "$LONGTERM_MEM_BINARY")" "$(dirname "$LONGTERM_MEM_INSTALLED_TARGETS")"
+      mkdir -p "$(dirname "$LONGTERM_MEM_BINARY")" "$STATE_DIR/longterm-mem"
       cp "$3" "$LONGTERM_MEM_BINARY"
       chmod +x "$LONGTERM_MEM_BINARY"
-      printf "claude\n" > "$LONGTERM_MEM_INSTALLED_TARGETS"
+      printf "claude\n" > "$STATE_DIR/longterm-mem/installed-targets"
       cmd_longterm_mem uninstall --target claude
       echo "UNINSTALL-STATUS=$?"
-      echo "TRACKED=[$(longtermmem_installed_targets_read | tr "\n" " ")]"
+      echo "TRACKED=[$(longtermmem_targets list | tr "\n" " ")]"
     ' _ "$OVERLAY" "$dir/engine-stub" "$dir/fake-longterm-mem" 2>&1
   )"
   status=$?
@@ -1267,7 +621,7 @@ case_register_version_skew_fails_the_run() {
       LONGTERM_MEM_SRC="$3/src"
       cmd_longterm_mem install --target claude
       echo "INSTALL-STATUS=$?"
-      echo "TRACKED=[$(longtermmem_installed_targets_read | tr "\n" " ")]"
+      echo "TRACKED=[$(longtermmem_targets list | tr "\n" " ")]"
     ' _ "$OVERLAY" "$dir/engine-stub" "$dir" 2>&1
   )"
   status=$?
@@ -1309,7 +663,7 @@ case_install_succeeds_under_errexit() {
       cmd_longterm_mem install --target claude
       # Twice: the second add takes the "already recorded" path.
       cmd_longterm_mem install --target claude
-      echo "TRACKED=[$(longtermmem_installed_targets_read | tr "\n" " ")]"
+      echo "TRACKED=[$(longtermmem_targets list | tr "\n" " ")]"
     ' _ "$OVERLAY" "$dir/engine-stub" "$dir" 2>&1
   )"
   status=$?
@@ -2608,22 +1962,6 @@ case_self_update_refuses_a_dirty_tracked_tree() {
 
 # ---------------------------------------------------------------------------
 
-case_parallel_adds_keep_every_target
-case_add_does_not_use_a_shared_temp_path
-case_remove_does_not_use_a_shared_temp_path
-case_parallel_removes_keep_every_other_target
-case_add_racing_a_remove_is_not_lost
-case_binary_removal_racing_an_add_is_serialized
-case_simultaneous_stale_breakins_admit_only_one
-case_failed_critical_section_releases_the_lock
-case_corrupt_tracking_file_does_not_wedge_cleanup
-case_unknown_wellformed_target_keeps_the_guard_closed
-case_nul_byte_makes_a_wellformed_name_garbage
-case_partial_final_line_is_garbage
-case_partial_line_does_not_discard_valid_lines
-case_removal_preserves_an_unknown_wellformed_target
-case_unreadable_tracking_file_keeps_the_guard_closed
-case_unreadable_tracking_file_is_not_truncated
 case_install_failure_is_reported_with_recovery_text
 case_register_refusal_does_not_mark_target_installed
 case_register_hard_failure_fails_the_run
