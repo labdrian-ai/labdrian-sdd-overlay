@@ -158,13 +158,15 @@ func TestRegistryPins_ARefreshThatFailsLeavesTheRegistryAlone(t *testing.T) {
 		{"repair-sdd-registry", []string{"repair-sdd-registry"}},
 		{"skill-registry-refresh", []string{"skill-registry", "refresh"}},
 	} {
-		w := registryWorld(t)
-		w.installFew("codex")
-		w.writeRegistry(gentleRegistry)
-		g := w.installGentle("# regenerated, and then it failed\n", 3)
-		args := append(append([]string(nil), tc.args...), "--cwd", w.project())
-		run := w.runIn(w.project(), args...)
-		pin(t, "refresh/fails-"+tc.name, pinRunText(run)+"--- gentle-ai\n"+w.gentleCalls(g)+w.showRegistry(w.registryPath()))
+		t.Run(tc.name, func(t *testing.T) {
+			w := registryWorld(t)
+			w.installFew("codex")
+			w.writeRegistry(gentleRegistry)
+			g := w.installGentle("# regenerated, and then it failed\n", 3)
+			args := append(append([]string(nil), tc.args...), "--cwd", w.project())
+			run := w.runIn(w.project(), args...)
+			pin(t, "refresh/fails-"+tc.name, pinRunText(run)+"--- gentle-ai\n"+w.gentleCalls(g)+w.showRegistry(w.registryPath()))
+		})
 	}
 }
 
@@ -177,12 +179,14 @@ func TestRegistryPins_WithoutGentleAiTheRefreshStopsAndNoRefreshIsNotAsked(t *te
 		{"skill-registry-refresh", []string{"skill-registry", "refresh"}},
 		{"repair-sdd-registry-no-refresh", []string{"repair-sdd-registry", "--no-refresh"}},
 	} {
-		w := registryWorld(t)
-		w.installFew("codex")
-		path := pathWithout(t, "gentle-ai")
-		w.changePath(func(string) string { return path })
-		run := w.runIn(w.project(), tc.args...)
-		pinRepair(t, w, "refresh/without-gentle-ai-"+tc.name, run)
+		t.Run(tc.name, func(t *testing.T) {
+			w := registryWorld(t)
+			w.installFew("codex")
+			path := pathWithout(t, "gentle-ai")
+			w.changePath(func(string) string { return path })
+			run := w.runIn(w.project(), tc.args...)
+			pinRepair(t, w, "refresh/without-gentle-ai-"+tc.name, run)
+		})
 	}
 }
 
@@ -200,13 +204,15 @@ func TestRegistryPins_RefreshRefusesWhatItIsNotAskedRight(t *testing.T) {
 		{"cwd-without-a-value", []string{"skill-registry", "refresh", "--cwd"}},
 		{"cwd-that-is-not-a-directory", []string{"skill-registry", "refresh", "--cwd", "$HOME/not-there"}},
 	} {
-		w := registryWorld(t)
-		g := w.installGentle(gentleRegistry, 0)
-		args := make([]string, len(tc.args))
-		for i, a := range tc.args {
-			args[i] = strings.ReplaceAll(a, "$HOME", w.home)
-		}
-		run := w.runIn(w.project(), args...)
-		pin(t, "refresh/refused-"+tc.name, pinRunText(run)+"--- gentle-ai\n"+w.gentleCalls(g)+w.showRegistry(w.registryPath()))
+		t.Run(tc.name, func(t *testing.T) {
+			w := registryWorld(t)
+			g := w.installGentle(gentleRegistry, 0)
+			args := make([]string, len(tc.args))
+			for i, a := range tc.args {
+				args[i] = strings.ReplaceAll(a, "$HOME", w.home)
+			}
+			run := w.runIn(w.project(), args...)
+			pin(t, "refresh/refused-"+tc.name, pinRunText(run)+"--- gentle-ai\n"+w.gentleCalls(g)+w.showRegistry(w.registryPath()))
+		})
 	}
 }

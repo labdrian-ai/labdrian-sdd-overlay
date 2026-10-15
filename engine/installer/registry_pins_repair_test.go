@@ -108,15 +108,17 @@ func TestRegistryPins_RepairReplacesTheRowsOfAnExistingRegistryAndAddsABlankLine
 		{"as-gentle-wrote-it", gentleRegistry},
 		{"after-an-earlier-repair", staleRegistry},
 	} {
-		w := registryWorld(t)
-		for _, name := range []string{"sdd-apply", "sdd-spec", "sdd-verify"} {
-			w.installSkill("codex", name, "---\ndescription: Runs "+name+"\n---\n")
-		}
-		w.writeRegistry(tc.registry)
-		pinRepair(t, w, "repair/existing-"+tc.name, w.runIn(w.project(), "repair-sdd-registry", "--no-refresh"))
-		// Not idempotent, and pinned as it is: the note and the rows are written again, and the
-		// blank line each is followed by is kept from the run before, so every repair adds two.
-		pinRepair(t, w, "repair/existing-"+tc.name+"-again", w.runIn(w.project(), "repair-sdd-registry", "--no-refresh"))
+		t.Run(tc.name, func(t *testing.T) {
+			w := registryWorld(t)
+			for _, name := range []string{"sdd-apply", "sdd-spec", "sdd-verify"} {
+				w.installSkill("codex", name, "---\ndescription: Runs "+name+"\n---\n")
+			}
+			w.writeRegistry(tc.registry)
+			pinRepair(t, w, "repair/existing-"+tc.name, w.runIn(w.project(), "repair-sdd-registry", "--no-refresh"))
+			// Not idempotent, and pinned as it is: the note and the rows are written again, and the
+			// blank line each is followed by is kept from the run before, so every repair adds two.
+			pinRepair(t, w, "repair/existing-"+tc.name+"-again", w.runIn(w.project(), "repair-sdd-registry", "--no-refresh"))
+		})
 	}
 }
 
@@ -147,10 +149,12 @@ func TestRegistryPins_RepairRefusesARegistryWithoutItsSections(t *testing.T) {
 		{"zero-bytes", ""},
 		{"white-space-only", " \n\n"},
 	} {
-		w := registryWorld(t)
-		w.installFew("codex")
-		w.writeRegistry(tc.registry)
-		pinRepair(t, w, "repair/refused-"+tc.name, w.runIn(w.project(), "repair-sdd-registry", "--no-refresh"))
+		t.Run(tc.name, func(t *testing.T) {
+			w := registryWorld(t)
+			w.installFew("codex")
+			w.writeRegistry(tc.registry)
+			pinRepair(t, w, "repair/refused-"+tc.name, w.runIn(w.project(), "repair-sdd-registry", "--no-refresh"))
+		})
 	}
 }
 
@@ -164,10 +168,12 @@ func TestRegistryPins_RepairFollowsTheShapeOfTheRegistry(t *testing.T) {
 		{"a-note-in-the-middle-of-the-table", "## Skills\n" + noteLine + "\n| a |\n" + noteLine + "\n## Loading protocol\n"},
 		{"a-heading-in-a-code-fence", "```\n## Skills\n```\n## Loading protocol\n"},
 	} {
-		w := registryWorld(t)
-		w.installSkill("codex", "sdd-apply", "---\ndescription: Apply\n---\n")
-		w.writeRegistry(tc.registry)
-		pinRepair(t, w, "repair/shape-"+tc.name, w.runIn(w.project(), "repair-sdd-registry", "--no-refresh"))
+		t.Run(tc.name, func(t *testing.T) {
+			w := registryWorld(t)
+			w.installSkill("codex", "sdd-apply", "---\ndescription: Apply\n---\n")
+			w.writeRegistry(tc.registry)
+			pinRepair(t, w, "repair/shape-"+tc.name, w.runIn(w.project(), "repair-sdd-registry", "--no-refresh"))
+		})
 	}
 }
 
@@ -176,16 +182,20 @@ const noteLine = "`sdd-*` phase skills are executor contracts. Gentle may skip t
 
 func TestRegistryPins_RepairReadsTheSkillsOfTheTargetItIsToldOf(t *testing.T) {
 	for _, target := range []string{"claude", "opencode", "codex"} {
-		w := registryWorld(t)
-		for _, other := range []string{"claude", "opencode", "codex"} {
-			w.installSkill(other, "sdd-apply", "---\ndescription: Apply for "+other+"\n---\n")
-		}
-		pinRepair(t, w, "repair/target-"+target,
-			w.runIn(w.project(), "repair-sdd-registry", "--no-refresh", "--target", target))
+		t.Run(target, func(t *testing.T) {
+			w := registryWorld(t)
+			for _, other := range []string{"claude", "opencode", "codex"} {
+				w.installSkill(other, "sdd-apply", "---\ndescription: Apply for "+other+"\n---\n")
+			}
+			pinRepair(t, w, "repair/target-"+target,
+				w.runIn(w.project(), "repair-sdd-registry", "--no-refresh", "--target", target))
+		})
 	}
-	w := registryWorld(t)
-	w.installSkill("codex", "sdd-apply", "---\ndescription: Apply for codex\n---\n")
-	pinRepair(t, w, "repair/target-by-default", w.runIn(w.project(), "repair-sdd-registry", "--no-refresh"))
+	t.Run("by default", func(t *testing.T) {
+		w := registryWorld(t)
+		w.installSkill("codex", "sdd-apply", "---\ndescription: Apply for codex\n---\n")
+		pinRepair(t, w, "repair/target-by-default", w.runIn(w.project(), "repair-sdd-registry", "--no-refresh"))
+	})
 }
 
 func TestRegistryPins_RepairNamesTheProjectAfterItsDirectory(t *testing.T) {
@@ -235,12 +245,14 @@ func TestRegistryPins_RepairRefusesWhatItIsNotAskedRight(t *testing.T) {
 		{"cwd-that-is-not-a-directory", []string{"--cwd", "$HOME/not-there"}},
 		{"cwd-that-is-a-file", []string{"--cwd", "$HOME/proj/.atl/file"}},
 	} {
-		w := registryWorld(t)
-		w.write(w.project(), ".atl/file", "x")
-		args := []string{"repair-sdd-registry", "--no-refresh"}
-		for _, a := range tc.args {
-			args = append(args, strings.ReplaceAll(a, "$HOME", w.home))
-		}
-		pinRepair(t, w, "repair/refused-"+tc.name, w.runIn(w.project(), args...))
+		t.Run(tc.name, func(t *testing.T) {
+			w := registryWorld(t)
+			w.write(w.project(), ".atl/file", "x")
+			args := []string{"repair-sdd-registry", "--no-refresh"}
+			for _, a := range tc.args {
+				args = append(args, strings.ReplaceAll(a, "$HOME", w.home))
+			}
+			pinRepair(t, w, "repair/refused-"+tc.name, w.runIn(w.project(), args...))
+		})
 	}
 }
