@@ -2942,7 +2942,8 @@ doctor_report_engine_binary() {
 # Doctor must still say something when the engine cannot answer, because
 # diagnosing a missing engine is part of its job: an absent binary, or one so
 # old that it does not know the question, is a WARN that says the registry was
-# not checked, never a silent pass.
+# not checked, never a silent pass. An engine that ran and ended with a code it
+# does not give for a report is a fault, and is a FAIL that fails doctor.
 doctor_report_registry() {
   local dir="$PWD"
   [[ -f "$OVERLAY_DIR/.atl/skill-registry.md" ]] && dir="$OVERLAY_DIR"
@@ -2954,6 +2955,20 @@ doctor_report_registry() {
 
   local report rc=0
   report="$("$ENGINE_BINARY" status --only registry --cwd "$dir" 2>&1)" || rc=$?
+  # The engine's codes for a report are 0 (ok), 2 (a warning and no failure) and 1
+  # (a failure); a usage error is 1 too, but it has no line of the shape below. An
+  # engine that ran and ended with any other code (a crash, a kill, a program that
+  # could not be run, a code of its own) is not an engine that left the registry
+  # unchecked for want of one, it is an engine that failed: FAIL, and doctor fails
+  # with it. A line printed before such a code may be half an answer, so it is not
+  # shown.
+  case "$rc" in
+    0 | 1 | 2) ;;
+    *)
+      echo "FAIL  registry not checked: the engine at $ENGINE_BINARY ended with code $rc on 'status --only registry'; only 0 (ok), 2 (a warning) and 1 (a failure) are answers. Rebuild it with 'labdrian doctor --fix'."
+      return 1
+      ;;
+  esac
   # One line, "[LEVEL] registry: ...": an engine older than this script ignores
   # --only and prints its whole report, and then none of it is an answer.
   if [[ "$report" != "["*"] registry: "* || "$report" == *$'\n'* ]]; then
@@ -2961,15 +2976,10 @@ doctor_report_registry() {
     return 0
   fi
   local line="${report#*] }"
-  # The engine's codes for a report are 0 (ok), 2 (a warning and no failure) and 1
-  # (a failure); a usage error is 1 too, but it has no line of this shape. Any
-  # other code is a crash or a program that was not found, and a line printed
-  # before it may be half an answer: the registry was not checked.
   case "$rc" in
     0) echo "PASS  $line" ;;
     2) echo "WARN  $line" ;;
     1) echo "FAIL  $line"; return 1 ;;
-    *) echo "WARN  registry not checked: the engine at $ENGINE_BINARY ended with code $rc on 'status --only registry'; only 0 (ok), 2 (a warning) and 1 (a failure) are answers. Rebuild it with 'labdrian doctor --fix'." ;;
   esac
 }
 
@@ -3021,7 +3031,8 @@ doctor_fix_engine_binary() {
 #     silently passed.
 #
 # Classification:
-#   FAIL  -> registry empty/whitespace-only or unreadable; go absent
+#   FAIL  -> registry empty/whitespace-only or unreadable; go absent; an engine that
+#            ran and ended with a code it does not give for a report
 #   WARN  -> registry without a scoped block, or not checked (no engine to ask);
 #            gentle-ai absent; engine binary absent; fd/eza/bat absent
 #   (a registry that is absent is PASS: a project that does not use the overlay is no problem)

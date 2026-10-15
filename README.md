@@ -384,7 +384,8 @@ overlay doctor [--fix]
     Read-only host-toolchain preflight: checks go (required), gentle-ai, bat/rg/fd/sd/eza,
     the engine binary, the skill registry of the project (judged by the engine, the check
     `status --only registry` makes: absent passes, empty or unreadable fails, one without
-    a scoped block warns; with no usable engine it warns that it was not checked), and a per-target release
+    a scoped block warns; with no engine, or one too old to know the question, it warns that it was not checked, and an
+    engine that ran and ended with a code it does not give for a report fails doctor), and a per-target release
     version/digest consistency row. Prints PASS/WARN/FAIL per check; exits non-zero
     only on a hard FAIL (the version/digest row is WARN-only, never fails the exit
     code). --fix: after the checks, attempt to install any missing discovery tools

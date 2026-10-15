@@ -101,11 +101,14 @@ func TestDoctorSaysTheRegistryWasNotCheckedWhenTheEngineCannotAnswer(t *testing.
 	notChecked := func(binary string) string {
 		return "WARN  registry not checked: the engine at " + binary + " did not answer 'status --only registry' (is it older than this overlay?). Rebuild it with 'labdrian doctor --fix'."
 	}
-	// An engine that ends with a code of its own, the code of a crash or of a program that was not
-	// found, after it printed a line of the right shape: the line may be a half of an answer, so the
-	// registry was not checked. Only 0, 2 and 1 are what the engine says of a registry.
+	// An engine that ran and ended with a code it does not give for a report (the code of a crash, of a
+	// kill, of a program that could not be run, or one of its own) is a fault of the engine, not a
+	// registry that was left unchecked for want of one: doctor says FAIL, with or without a line printed
+	// before it (that line may be half an answer), and its own exit says so. Only 0, 2 and 1 are what the
+	// engine says of a registry. An engine that is not there, or that does not know the question, is a
+	// WARN, as before.
 	endedWith := func(binary, code string) string {
-		return "WARN  registry not checked: the engine at " + binary + " ended with code " + code + " on 'status --only registry'; only 0 (ok), 2 (a warning) and 1 (a failure) are answers. Rebuild it with 'labdrian doctor --fix'."
+		return "FAIL  registry not checked: the engine at " + binary + " ended with code " + code + " on 'status --only registry'; only 0 (ok), 2 (a warning) and 1 (a failure) are answers. Rebuild it with 'labdrian doctor --fix'."
 	}
 	const binary = "$HOME/.claude/bin/gentle-ai-overlay"
 	const aLine = "[FAIL] registry: r — present but EMPTY"
@@ -121,6 +124,9 @@ func TestDoctorSaysTheRegistryWasNotCheckedWhenTheEngineCannotAnswer(t *testing.
 		{"an engine that is killed after it printed a line (SIGKILL)", aLine, "137", nil, endedWith(binary, "137")},
 		{"an engine that ends with a code of its own after a line", aLine, "3", nil, endedWith(binary, "3")},
 		{"an engine that ends with the highest code after a line", aLine, "255", nil, endedWith(binary, "255")},
+		{"an engine that crashes before it printed anything", "", "139", nil, endedWith(binary, "139")},
+		{"an engine that cannot be run", "", "126", nil, endedWith(binary, "126")},
+		{"an engine that crashes in the middle of its whole report", "[OK  ] binary: b\n[FAIL] hook: h", "134", nil, endedWith(binary, "134")},
 		{"an engine that ignores the question and prints its whole report", "[OK  ] binary: b\n[FAIL] hook: h\n[OK  ] registry: r", "1", nil, notChecked(binary)},
 		{"an engine that refuses the question", "error: status: unknown", "1", nil, notChecked(binary)},
 		{"an engine that says nothing", "", "1", nil, notChecked(binary)},
@@ -148,8 +154,12 @@ func TestDoctorSaysTheRegistryWasNotCheckedWhenTheEngineCannotAnswer(t *testing.
 			if len(got) != 1 || got[0] != tc.want {
 				t.Errorf("lines that say the registry was not checked = %q, want %q", got, tc.want)
 			}
-			if run.Exit != 0 {
-				t.Errorf("doctor = %s, want exit 0: a registry that was not checked is a warning, not a failure", pinRunText(run))
+			wantExit, wantSummary := 0, "doctor: OK"
+			if strings.HasPrefix(tc.want, "FAIL") {
+				wantExit, wantSummary = 1, "doctor: FAIL"
+			}
+			if run.Exit != wantExit || !strings.Contains(run.Stdout+run.Stderr, wantSummary) {
+				t.Errorf("doctor = %s, want exit %d and %q: a registry not checked because the engine is not there or does not know the question is a warning; one the engine ran and failed to answer is a failure", pinRunText(run), wantExit, wantSummary)
 			}
 		})
 	}
