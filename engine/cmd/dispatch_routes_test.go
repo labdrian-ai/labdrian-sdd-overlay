@@ -29,6 +29,7 @@ func TestRunRoutesEachSubcommandThroughTheProcessItWasHanded(t *testing.T) {
 		{"pipkg", "stderr", "error: pipkg requires a verb: build, check\n", []int{1}},
 		{"skills", "stderr", "error: skills requires a verb: list, status, ", []int{1}},
 		{"manifest", "stderr", "error: manifest requires a verb: routes\n", []int{1}},
+		{"registry", "stderr", "error: registry requires a verb: repair-sdd\n", []int{1}},
 		{"sync-trigger", "stderr", "sync-trigger: error:usage event=\"\" cwd=\"\"\n", []int{0}},
 		{"review-receipt", "stderr", "error: review-receipt requires a verb: capture, hook\n", []int{1}},
 		{"shaper", "stderr", "error: shaper requires a verb: assess, clearance, guard-hook\n", []int{1}},

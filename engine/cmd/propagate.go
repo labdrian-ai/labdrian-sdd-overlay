@@ -106,7 +106,7 @@ func acquireRegistryLock(lockPath string) (release func(), err error) {
 //     can never observe a truncated/empty registry.
 func runPropagate(p process, args []string) {
 	if registryPath := registryPathFromArgs(args); registryPath != "" {
-		release, err := acquireRegistryLock(registryPath + ".lock")
+		release, err := acquireRegistryLock(registryLockPath(registryPath))
 		if err != nil {
 			fmt.Fprintf(p.stderr, "error: acquiring registry lock: %v\n", err)
 			p.exit(1)

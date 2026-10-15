@@ -627,6 +627,25 @@ gentle-ai-overlay manifest routes --overlay-root <dir> --target <name> --skills-
     read it). Exit 0 on success; 1 on a usage error (including an unknown flag) or a refusal, with nothing on stdout,
     so a caller never acts on part of a manifest.
 
+gentle-ai-overlay registry repair-sdd --registry <path> --target <name> --skills-root <dir>
+    Engine verb (Phase 9, B2): there is no `overlay registry` wrapper, so run it on the installed engine binary,
+    ~/.claude/bin/gentle-ai-overlay. It is what `overlay repair-sdd-registry` and `overlay skill-registry refresh` ask, after
+    gentle-ai has regenerated the registry. gentle-ai leaves the sdd-* phase skills out of the skill registry it writes, because
+    they are executor contracts and not skills a person invokes; SDD delegation still needs their paths, so this puts a row back
+    for each one installed in --skills-root (`<dir>/<name>/SKILL.md`; --target only names the target in what it says), with the
+    scope `executor`, above the `## Loading protocol` heading of the registry at --registry, and a note that says why above
+    the `## Skills` heading. The note and the rows of an earlier repair are replaced; every other line stays as it was. A project
+    that has no registry gets one. The description of a row is the text after the first `description:` line of the skill (one
+    double quote off each end, every `|` escaped), or `SDD phase executor: <name>.` when it has none. It takes the lock
+    `propagate` takes (`<registry>.lock`, waiting up to 2 seconds), so a repair and the `propagate` hook that runs on every prompt
+    take turns, and it writes the registry whole through a temporary file and a rename (mode 0644), so a reader never sees half of it.
+    Each executor that is not installed is said on stderr (`WARN: missing <target> SDD executor skill: <path>`), and the run is
+    summed up on stdout: `repair-sdd-registry: registry=<path> target=<name> sdd_executors=<n> missing=<m>`. Two things the script
+    always did and the engine keeps: the rows land after the blank line that precedes the loading protocol heading, and a second
+    repair adds a blank line above the note and one above that heading. Exit 0 on success; 1 on a usage error (including an
+    unknown flag), a registry without the headings `## Skills` and `## Loading protocol` (`ERROR: registry has no '<heading>'
+    section: <path>`), a lock that stays taken, or a file that cannot be read or written, with the registry as it was.
+
 gentle-ai-overlay runtime capabilities [--target claude|codex|pi|opencode|all]
     Engine verb (Phase 7): there is no `overlay runtime` wrapper, so run it on the installed engine
     binary, ~/.claude/bin/gentle-ai-overlay. Read-only and declarative: it prints, as JSON, what

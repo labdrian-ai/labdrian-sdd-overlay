@@ -36,6 +36,8 @@ func run(p process, d deps, args []string) {
 		runSkills(p, d, rest)
 	case "manifest":
 		runManifest(p, rest)
+	case "registry":
+		runRegistry(p, rest)
 	case "sync-trigger":
 		runSyncTrigger(p, d, rest)
 	case "review-receipt":
