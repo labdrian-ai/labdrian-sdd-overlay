@@ -96,6 +96,10 @@ import (
 //     release one, report the record, assess what an uninstall comes to and retire the shared binary
 //     and the record, each read-modify-write one critical section, over the Store and Binaries ports
 //     it owns. It takes no time from the machine, prints nothing and exits nowhere.
+//   - runtime/ownership/fsstore is the adapter of those two ports (B3): the record as the file the
+//     script always kept (appended to, and rewritten through a temporary file and a rename), the lock
+//     around it as an advisory file lock on engine/filelock, and the shared binary as a file. The
+//     words a person reads are the command's, in cmd.
 //   - sddregistry is a domain package (B2): the rule over text for the SDD executor rows of a
 //     project's skill registry (which skills are executors, how a row reads, how a registry that
 //     has none starts, how the rows of an earlier repair are replaced). It reads and writes no file.
@@ -163,6 +167,7 @@ var rings = map[string]archguard.Ring{
 	"runtime/opencodeprompt":    archguard.Domain,
 	"runtime/ownership":         archguard.Domain,
 	"runtime/ownership/app":     archguard.Application,
+	"runtime/ownership/fsstore": archguard.Adapter,
 	"sddregistry":               archguard.Domain,
 	"sddregistry/app":           archguard.Application,
 	"sddregistry/fsstore":       archguard.Adapter,
