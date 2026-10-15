@@ -5,6 +5,8 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"reflect"
+	"sort"
 	"strings"
 	"testing"
 
@@ -161,6 +163,64 @@ func TestManifestRoutesIsReachedThroughTheProgramOverTheFilesOfTheMachine(t *tes
 	}
 	if _, err := os.Stat(filepath.Join(overlay, "overlay.manifest")); err != nil {
 		t.Errorf("the manifest is read and never written: %v", err)
+	}
+}
+
+// scriptFlagsOfManifestRoutes are the flags bin/labdrian-overlay passes to the command, read from
+// manifest_routes_load, the one function of the script that builds its command line.
+func scriptFlagsOfManifestRoutes(t *testing.T) []string {
+	t.Helper()
+	script, err := os.ReadFile(filepath.Join("..", "..", "bin", "labdrian-overlay"))
+	if err != nil {
+		t.Fatalf("read the overlay script: %v", err)
+	}
+	text := string(script)
+	start := strings.Index(text, "\nmanifest_routes_load() {\n")
+	if start < 0 {
+		t.Fatal("the overlay script has no manifest_routes_load")
+	}
+	body := text[start:]
+	if end := strings.Index(body, "\n}\n"); end >= 0 {
+		body = body[:end]
+	}
+	seen := map[string]bool{}
+	var flags []string
+	for _, word := range strings.FieldsFunc(body, func(r rune) bool { return r == ' ' || r == '\n' || r == '(' || r == ')' }) {
+		if strings.HasPrefix(word, "--") && !seen[word] {
+			seen[word] = true
+			flags = append(flags, word)
+		}
+	}
+	sort.Strings(flags)
+	return flags
+}
+
+// The script and the command agree on the spelling of every flag the script passes, and the
+// command takes every one of them: the manifest flag is the one the wrapper of `skills` passes too
+// (flagManifest, declared with the flags of those verbs), so its spelling is the script's.
+func TestTheScriptPassesManifestRoutesTheFlagsItTakes(t *testing.T) {
+	if flagManifest != "--manifest" {
+		t.Errorf("flagManifest = %q, want %q: the script passes --manifest", flagManifest, "--manifest")
+	}
+	flags := scriptFlagsOfManifestRoutes(t)
+	want := []string{"--agents-root", "--managed", "--manifest", "--overlay-root", "--skills-root", "--target"}
+	if !reflect.DeepEqual(flags, want) {
+		t.Fatalf("flags of manifest_routes_load = %v, want %v", flags, want)
+	}
+	args := []string{}
+	for _, flag := range flags {
+		args = append(args, flag)
+		if flag != flagManaged {
+			args = append(args, "value-of"+flag)
+		}
+	}
+	parsed, err := parseManifestRoutesArgs(args)
+	if err != nil {
+		t.Fatalf("the command refuses the flags the script passes: %v", err)
+	}
+	if parsed.overlayRoot != "value-of--overlay-root" || parsed.manifest != "value-of--manifest" || parsed.target != "value-of--target" ||
+		parsed.skillsRoot != "value-of--skills-root" || parsed.agentsRoot != "value-of--agents-root" || !parsed.managedOnly {
+		t.Errorf("the command took the flags of the script as %+v: each flag must reach its own field", parsed)
 	}
 }
 

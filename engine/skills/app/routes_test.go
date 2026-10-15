@@ -4,7 +4,6 @@ import (
 	"errors"
 	"io/fs"
 	"reflect"
-	"strings"
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
@@ -84,8 +83,13 @@ func TestManifestRoutesSaysWhyAManifestThatIsThereCouldNotBeRead(t *testing.T) {
 	if !errors.As(err, &read) || read.Path != "/o/overlay.manifest" || !errors.Is(err, fs.ErrPermission) {
 		t.Errorf("ManifestRoutes error = %v, want a ManifestReadError that names the manifest and wraps the cause", err)
 	}
-	if !strings.Contains(err.Error(), `reading manifest "/o/overlay.manifest"`) {
-		t.Errorf("error = %q, want it to name the manifest", err)
+	// The type is the one validate and the writers of the overlay use (validate.go): its words and
+	// its Unwrap are what the command says and what a caller can ask of the cause.
+	if want := `reading manifest "/o/overlay.manifest": open /o/overlay.manifest: permission denied`; err.Error() != want {
+		t.Errorf("error = %q, want %q", err, want)
+	}
+	if !errors.Is(err, denied) {
+		t.Errorf("errors.Is(err, the cause) = false, want the cause to be unwrapped from the ManifestReadError")
 	}
 }
 

@@ -27,6 +27,32 @@ func destinations(target string) RouteDestinations {
 
 const testOverlay = "/o"
 
+// --- the route domain the routing relies on ----------------------------------------------------
+
+// The routing refuses a longterm-mem/** row whose route is outside validLongtermMemRoutes, a
+// variable of ondisk.go, so what the refusal tests below show depends on what it holds. It is
+// exactly the four routes of the manifest and the words the refusal gives them, and the routes the
+// on-disk check sends outside skills/ (nonSkillRoutes) are these but the skill route itself.
+func TestValidLongtermMemRoutesAreExactlyTheFourRoutes(t *testing.T) {
+	want := map[string]bool{RouteSkill: true, RouteAgent: true, RouteOpencodeAgent: true, RouteMCP: true}
+	if !reflect.DeepEqual(validLongtermMemRoutes, want) {
+		t.Errorf("validLongtermMemRoutes = %v, want exactly %v", validLongtermMemRoutes, want)
+	}
+	for _, spelled := range []string{"skill", "agent", "opencode-agent", "mcp"} {
+		if !validLongtermMemRoutes[spelled] {
+			t.Errorf("%q is not a valid route, but the refusal says it is: %s", spelled, (&UnroutedRowError{Path: "longterm-mem/x"}).Error())
+		}
+	}
+	for route := range nonSkillRoutes {
+		if !validLongtermMemRoutes[route] || route == RouteSkill {
+			t.Errorf("nonSkillRoutes holds %q, which is not one of the routes that leave skills/", route)
+		}
+	}
+	if len(nonSkillRoutes) != len(validLongtermMemRoutes)-1 {
+		t.Errorf("nonSkillRoutes = %v, want the valid routes but the skill route", nonSkillRoutes)
+	}
+}
+
 // --- reading the rows -------------------------------------------------------------------------
 
 func TestReadManifestRowsReadsALineTheWayGrepAndAwkDid(t *testing.T) {
