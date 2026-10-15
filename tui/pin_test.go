@@ -418,6 +418,31 @@ func TestPinned_Screens(t *testing.T) {
 	}
 }
 
+// TestPinned_ScreenInvocations pins what the backend received on the way to
+// each screen: the catalog and the probe at launch, the check before
+// `--target all`, the lookups, and the action itself with its subcommand, its
+// arguments and the targets it was sent to. A refactor that renders the same
+// screen from a run against other targets, or with other arguments, fails here.
+// A screen the program has not started for (the targets screen still loading)
+// pins no invocation at all.
+func TestPinned_ScreenInvocations(t *testing.T) {
+	for _, tc := range pinnedScreens {
+		t.Run(tc.name, func(t *testing.T) {
+			withColors(t, termenv.Ascii)
+			golden.RequireEqual(t, invocationsOf(tc.build(t).stub))
+		})
+	}
+}
+
+// invocationsOf is every invocation the backend received, in order, one per line.
+func invocationsOf(stub *stubBackend) []byte {
+	var b strings.Builder
+	for _, args := range stub.invoked() {
+		b.WriteString(args + "\n")
+	}
+	return []byte(b.String())
+}
+
 // TestPinned_ScreensInColor pins how the screens that carry the most styling are painted: the same text, with
 // the escape sequences of a 256-color terminal.
 func TestPinned_ScreensInColor(t *testing.T) {

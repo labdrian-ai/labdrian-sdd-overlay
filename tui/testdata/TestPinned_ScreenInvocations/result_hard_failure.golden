@@ -1,0 +1,4 @@
+targets
+sync-check
+targets
+apply --target all

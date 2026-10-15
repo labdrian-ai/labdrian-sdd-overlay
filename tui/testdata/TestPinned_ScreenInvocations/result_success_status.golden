@@ -1,0 +1,6 @@
+targets
+sync-check
+targets
+status --target all
+status-hooks
+version
