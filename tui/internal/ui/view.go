@@ -492,7 +492,7 @@ func versionLine(v domain.TargetVerdict) string {
 		return "  versión: nunca desplegado"
 	default:
 		line := "  versión: " + v.RecordedVersion
-		if v.DigestMatch == "no" {
+		if v.DigestMatch == domain.DigestMismatch {
 			line += " (digest desactualizado)"
 		}
 		return line
@@ -569,10 +569,11 @@ func (m model) viewDashboard() string {
 	return boxStyle.Width(w - 2).Render(strings.TrimRight(b.String(), "\n"))
 }
 
-// viewOutput renders the raw command output, scrollable.
+// viewOutput renders the transcript of the invocations the result records,
+// scrollable.
 func (m model) viewOutput() string {
 	w := m.contentWidth()
-	lines := splitOutputLines(m.result.Output)
+	lines := m.output
 
 	// Reserve vertical room for header/footer/title/dashboard.
 	viewport := m.height - 10

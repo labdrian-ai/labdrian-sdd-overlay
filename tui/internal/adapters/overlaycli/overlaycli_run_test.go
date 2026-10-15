@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/tui/internal/domain"
 )
 
 // recordedRun reads the one invocation a stub backend recorded: the working
@@ -85,6 +87,49 @@ func TestOverlayCLI_Run_SaysHowTheBackendEnded(t *testing.T) {
 	})
 }
 
+// TestOverlayCLI_Run_ReadsTheSyncCheckReportItsOutputHolds: the verdicts of a
+// report come back with the execution, whatever the exit status, and the output
+// they were read from is kept as it was printed. Output that holds no report
+// carries none.
+func TestOverlayCLI_Run_ReadsTheSyncCheckReportItsOutputHolds(t *testing.T) {
+	const report = "=== sync-check: claude ===\n" +
+		"VERDICT:claude:UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=2 REPO_BEHIND_ORIGIN=0\n" +
+		"ACTION:claude: run labdrian apply --target claude\n"
+	tests := []struct {
+		name         string
+		script       string
+		wantVerdicts int
+	}{
+		{"a clean report", "printf '%s' '" + report + "'", 1},
+		{"a report from a run that failed", "printf '%s' '" + report + "'; exit 1", 1},
+		{"output that is no report", `echo "claude: deployed"`, 0},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			root := t.TempDir()
+			writeScriptBackend(t, root, tc.script)
+
+			run := New(root).Run([]string{"sync-check", "--target", "claude"})
+
+			var read domain.SyncReport
+			read.Add(run.Report)
+			verdicts := read.Verdicts()
+			if len(verdicts) != tc.wantVerdicts {
+				t.Fatalf("Run read %d verdicts from %q, want %d", len(verdicts), run.Output, tc.wantVerdicts)
+			}
+			if tc.wantVerdicts == 1 {
+				v := verdicts[0]
+				if v.Target != "claude" || v.OverlayNotDeployed != 2 || v.Status != domain.SyncNeedsApply {
+					t.Errorf("verdict = %+v, want claude with 2 files not deployed, needing apply", v)
+				}
+				if run.Output != report {
+					t.Errorf("Output = %q, want the report as the backend printed it", run.Output)
+				}
+			}
+		})
+	}
+}
+
 // TestOverlayCLI_Report_RunsACachedOnlySyncCheckFromTheRepoRoot proves the
 // exec contract of the launch probe (D4): `sync-check` alone, no
 // --fetch/--check-origin (a cached-only probe, R-001), from the repo root,
@@ -98,10 +143,10 @@ func TestOverlayCLI_Report_RunsACachedOnlySyncCheckFromTheRepoRoot(t *testing.T)
 		"ACTION:claude: run 'git pull' to update your local clone\n"
 	writeStubBackend(t, root, recorder, sample, 1) // nonzero exit on purpose
 
-	report := New(root).Report()
+	verdicts := New(root).Report()
 
-	if !strings.Contains(report, "REPO_BEHIND_ORIGIN=7") {
-		t.Errorf("Report = %q, want the sync-check output even though the stub exits nonzero", report)
+	if len(verdicts) != 1 || verdicts[0].Target != "claude" || verdicts[0].RepoBehindOrigin != 7 {
+		t.Errorf("Report = %+v, want the claude verdict of the sync-check even though the stub exits nonzero", verdicts)
 	}
 	dir, args := recordedRun(t, recorder)
 	if args != "sync-check" {
@@ -113,10 +158,31 @@ func TestOverlayCLI_Report_RunsACachedOnlySyncCheckFromTheRepoRoot(t *testing.T)
 	}
 }
 
-// TestOverlayCLI_Report_WithNoBackendIsEmpty: a probe that cannot be run says
-// nothing, which the reader degrades to "unknown".
-func TestOverlayCLI_Report_WithNoBackendIsEmpty(t *testing.T) {
-	if report := New(t.TempDir()).Report(); report != "" {
-		t.Errorf("Report = %q, want nothing from a repo root without a backend", report)
+// TestOverlayCLI_Report_WithNothingToReadHasNoVerdicts: a probe that cannot be
+// run, or whose output holds no verdict, says nothing, which the domain
+// degrades to "unknown" (BehindOf) rather than to "up to date".
+func TestOverlayCLI_Report_WithNothingToReadHasNoVerdicts(t *testing.T) {
+	tests := []struct {
+		name  string
+		setup func(t *testing.T, root string)
+	}{
+		{"a repo root without a backend", func(*testing.T, string) {}},
+		{"a backend that prints nothing", func(t *testing.T, root string) { writeScriptBackend(t, root, `:`) }},
+		{"a target skipped, so no verdict", func(t *testing.T, root string) {
+			writeScriptBackend(t, root, `echo "SYNC_CHECK:claude: target dir not found -- skipping"`)
+		}},
+		{"output that is no report at all", func(t *testing.T, root string) {
+			writeScriptBackend(t, root, `printf 'not even close to a sync-check line\n\000\377 binary noise'`)
+		}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			root := t.TempDir()
+			tc.setup(t, root)
+
+			if verdicts := New(root).Report(); len(verdicts) != 0 {
+				t.Errorf("Report = %+v, want no verdict", verdicts)
+			}
+		})
 	}
 }

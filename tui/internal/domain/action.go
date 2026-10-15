@@ -7,9 +7,10 @@ const (
 	// ResultTranscript shows the transcript of the invocations, as the backend
 	// printed it, and nothing more. It is the zero value.
 	ResultTranscript ResultKind = iota
-	// ResultSyncDashboard reads the transcript as a sync-check report: the
-	// verdicts it holds become the per-target dashboard above it, and a report
-	// that holds none says so.
+	// ResultSyncDashboard takes the result as a sync-check report: the report
+	// lines the executions hold (Execution.Report), added up as one report
+	// (SyncReport), become the per-target dashboard above the transcript, and a
+	// report that holds none says so.
 	ResultSyncDashboard
 )
 

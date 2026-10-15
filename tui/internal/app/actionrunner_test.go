@@ -78,9 +78,9 @@ func TestActionRunner_AllStandsForTheSelectionOnlyWhenItIsTheWholeCatalog(t *tes
 		// Two empty sets are equal, and `all` would then act on every target
 		// the backend has. Nothing selected means nothing runs.
 		backend := &fakeBackend{}
-		run(statusAction(), nil, nil, &fakeCatalog{}, backend)
-		if len(backend.ran) != 0 {
-			t.Errorf("invocations = %q, want none", backend.ran)
+		res := run(statusAction(), nil, nil, &fakeCatalog{}, backend)
+		if len(backend.ran) != 0 || len(res.Invocations) != 0 {
+			t.Errorf("invocations = %q, recorded %+v, want none", backend.ran, res.Invocations)
 		}
 	})
 
@@ -116,8 +116,15 @@ func TestActionRunner_AllIsRefusedUnlessTheBackendStillListsTheCatalogShown(t *t
 		if res.Err == nil {
 			t.Error("a refused invocation must fail the result, not pass as a success")
 		}
-		if !strings.Contains(res.Output, "catálogo") {
-			t.Errorf("the transcript should say the catalog changed, got:\n%s", res.Output)
+		inv := onlyInvocation(t, res)
+		if got := strings.Join(inv.Args, " "); got != "status --target all" {
+			t.Errorf("the refused invocation = %q, want [status --target all]", got)
+		}
+		if inv.Refusal == nil || !strings.Contains(inv.Refusal.Error(), "catálogo") {
+			t.Errorf("the refusal should say the catalog changed, got %v", inv.Refusal)
+		}
+		if inv.Run.Output != "" || inv.Run.Err != nil {
+			t.Errorf("a refused invocation was never run, yet it carries %+v", inv.Run)
 		}
 		if catalog.asked != 1 {
 			t.Errorf("the catalog was asked %d times, want once before the all invocation", catalog.asked)
@@ -131,8 +138,8 @@ func TestActionRunner_AllIsRefusedUnlessTheBackendStillListsTheCatalogShown(t *t
 		if len(backend.ran) != 0 {
 			t.Errorf("the backend was invoked with %q; an unverified `all` must not be sent", backend.ran)
 		}
-		if res.Err == nil || !strings.Contains(res.Output, "catalog unreadable") {
-			t.Errorf("want the failure and its cause in the result, got err=%v output:\n%s", res.Err, res.Output)
+		if refusal := onlyInvocation(t, res).Refusal; res.Err == nil || refusal == nil || !strings.Contains(refusal.Error(), "catalog unreadable") {
+			t.Errorf("want the failure and its cause in the result, got err=%v refusal=%v", res.Err, refusal)
 		}
 	})
 
@@ -169,7 +176,20 @@ func TestActionRunner_AllIsRefusedUnlessTheBackendStillListsTheCatalogShown(t *t
 		if res.Err == nil {
 			t.Error("the refused apply must fail the result")
 		}
+		// The result tells both, in order: the one that ran, then the one that was not made.
+		if len(res.Invocations) != 2 || res.Invocations[0].Refusal != nil || res.Invocations[1].Refusal == nil {
+			t.Errorf("invocations = %+v, want self-update run and then the apply refused", res.Invocations)
+		}
 	})
+}
+
+// onlyInvocation is the one invocation a result records.
+func onlyInvocation(t *testing.T, res domain.CommandResult) domain.Invocation {
+	t.Helper()
+	if len(res.Invocations) != 1 {
+		t.Fatalf("the result records %d invocations, want exactly one: %+v", len(res.Invocations), res.Invocations)
+	}
+	return res.Invocations[0]
 }
 
 // A refused `all` is recorded as a failure with exit code -1: the invocation was
@@ -243,9 +263,11 @@ func TestActionRunner_RoutesEveryInvocationOfAnAction(t *testing.T) {
 	}
 }
 
-// What the screen shows is the transcript: each invocation after a "$" line,
-// what it printed, and how it failed.
-func TestActionRunner_TheTranscriptNamesEachInvocationItsOutputAndItsFailure(t *testing.T) {
+// The result records each invocation as a value, in the order it was made: the
+// arguments, and what the backend left behind (its output and how it failed).
+// How that reads on the screen is the screen's, not the runner's: the result
+// holds no text of its own.
+func TestActionRunner_TheResultRecordsEachInvocationAndWhatItLeftBehind(t *testing.T) {
 	shown := threeCopyTargets()
 	backend := &fakeBackend{script: map[string]domain.Execution{
 		"status": {Output: "claude: deployed\n"},
@@ -255,14 +277,15 @@ func TestActionRunner_TheTranscriptNamesEachInvocationItsOutputAndItsFailure(t *
 
 	res := run(action, shown[:1], shown, &fakeCatalog{targets: shown}, backend)
 
-	want := "$ bin/labdrian-overlay status --target claude\n" +
-		"claude: deployed\n" +
-		"\n" +
-		"$ bin/labdrian-overlay apply\n" +
-		"boom\n" +
-		"\n[exit error: exit status 1]\n"
-	if res.Output != want {
-		t.Errorf("transcript =\n%q\nwant\n%q", res.Output, want)
+	if len(res.Invocations) != 2 {
+		t.Fatalf("the result records %d invocations, want 2: %+v", len(res.Invocations), res.Invocations)
+	}
+	first, second := res.Invocations[0], res.Invocations[1]
+	if got := strings.Join(first.Args, " "); got != "status --target claude" || first.Run.Output != "claude: deployed\n" || first.Err() != nil || first.Refusal != nil {
+		t.Errorf("first invocation = %+v, want status --target claude, its output, no failure", first)
+	}
+	if got := strings.Join(second.Args, " "); got != "apply" || second.Run.Output != "boom\n" || second.Err() == nil || second.ExitCode() != 1 || second.Refusal != nil {
+		t.Errorf("second invocation = %+v, want apply, its output, exit status 1", second)
 	}
 	if res.Action.Command != "status" || targetNames(res.Targets) != "claude" {
 		t.Errorf("the result names %q on %q, want the action run and the targets it ran against", res.Action.Command, targetNames(res.Targets))
@@ -312,16 +335,18 @@ func TestActionRunner_TheResultIsTheWorstOutcomeNotTheLastOne(t *testing.T) {
 	})
 }
 
-// An action is read as a sync-check report when it declares that its result is
-// one (ResultSyncDashboard), and only then: not because its command is called
-// sync-check, and not because its output happens to look like a report.
-func TestActionRunner_OnlyAnActionThatDeclaresAReportIsReadAsOne(t *testing.T) {
-	const report = "=== sync-check: claude ===\n" +
-		"VERDICT:claude:UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=1 REPO_BEHIND_ORIGIN=0\n" +
-		"ACTION:claude: run 'labdrian apply --target claude'\n"
+// An action shows the verdicts of a sync-check report when it declares that its
+// result is one (ResultSyncDashboard), and only then: not because its command
+// is called sync-check, and not because the backend's output happens to hold a
+// report. The verdicts come from the lines the adapter read from the
+// executions; the runner reads no text.
+func TestActionRunner_OnlyAnActionThatDeclaresAReportShowsItsVerdicts(t *testing.T) {
+	reports := domain.Execution{Output: "a report", Report: []domain.SyncLine{
+		section("claude"), verdict("claude", domain.VerdictFields{OverlayNotDeployed: intp(1)}),
+	}}
 	shown := threeCopyTargets()
 	backend := &fakeBackend{script: map[string]domain.Execution{
-		"sync-check": {Output: report}, "status": {Output: report}, "compare": {Output: report},
+		"sync-check": reports, "status": reports, "compare": reports,
 	}}
 	catalog := &fakeCatalog{targets: shown}
 
@@ -336,20 +361,118 @@ func TestActionRunner_OnlyAnActionThatDeclaresAReportIsReadAsOne(t *testing.T) {
 	t.Run("it need not be called sync-check", func(t *testing.T) {
 		action := domain.Action{Command: "compare", SupportsAll: true, ResultKind: domain.ResultSyncDashboard}
 		if res := run(action, shown, shown, catalog, backend); len(res.Verdicts) != 1 {
-			t.Errorf("verdicts = %+v, want the report read: the kind is declared", res.Verdicts)
+			t.Errorf("verdicts = %+v, want the report shown: the kind is declared", res.Verdicts)
 		}
 	})
 
-	t.Run("an action that shows its transcript is not read, whatever it printed", func(t *testing.T) {
+	t.Run("an action that shows its transcript shows no verdicts, whatever its execution carried", func(t *testing.T) {
 		if res := run(statusAction(), shown, shown, catalog, backend); len(res.Verdicts) != 0 {
-			t.Errorf("verdicts = %+v, want none: only a declared report is read", res.Verdicts)
+			t.Errorf("verdicts = %+v, want none: only a declared report is shown", res.Verdicts)
 		}
 	})
 
-	t.Run("a command called sync-check that declares nothing is not read", func(t *testing.T) {
+	t.Run("a command called sync-check that declares nothing shows none", func(t *testing.T) {
 		action := domain.Action{Command: "sync-check", SupportsAll: true}
 		if res := run(action, shown, shown, catalog, backend); len(res.Verdicts) != 0 {
 			t.Errorf("verdicts = %+v, want none: the command string is being read", res.Verdicts)
 		}
 	})
+
+	t.Run("a declared report that held no verdict shows none", func(t *testing.T) {
+		quiet := &fakeBackend{script: map[string]domain.Execution{"sync-check": {Output: "nothing to report\n"}}}
+		action := domain.Action{Command: "sync-check", SupportsAll: true, ResultKind: domain.ResultSyncDashboard}
+		if res := run(action, shown, shown, catalog, quiet); len(res.Verdicts) != 0 {
+			t.Errorf("verdicts = %+v, want none", res.Verdicts)
+		}
+	})
+
+	t.Run("the verdicts of every invocation are shown, in the order they ran", func(t *testing.T) {
+		// A partial selection is one sync-check per target, each reporting its own.
+		perTarget := &fakeBackend{script: map[string]domain.Execution{
+			"sync-check --target claude": {Report: []domain.SyncLine{section("claude"), verdict("claude", domain.VerdictFields{})}},
+			"sync-check --target codex":  {Report: []domain.SyncLine{section("codex"), verdict("codex", domain.VerdictFields{})}},
+		}}
+		action := domain.Action{Command: "sync-check", SupportsAll: true, ResultKind: domain.ResultSyncDashboard}
+		selected := []domain.Target{shown[0], shown[2]}
+
+		res := run(action, selected, shown, catalog, perTarget)
+
+		if got := verdictTargets(res); got != "claude,codex" {
+			t.Errorf("verdicts of %v, want claude then codex, one per invocation", got)
+		}
+	})
+}
+
+func verdictTargets(res domain.CommandResult) string {
+	var names []string
+	for _, v := range res.Verdicts {
+		names = append(names, v.Target)
+	}
+	return strings.Join(names, ",")
+}
+
+// The invocations of one action are one report, as the operator has always been
+// shown them (and as the program read their transcript before the report was
+// read per invocation): a target named by a later invocation is the verdict it
+// already had, in the place where it was first seen, updated by what the later
+// lines give.
+func TestActionRunner_ATargetNamedInTwoInvocationsIsOneVerdictWhereItWasFirstSeen(t *testing.T) {
+	shown := threeCopyTargets()
+	action := domain.Action{Command: "sync-check", SupportsAll: true, ResultKind: domain.ResultSyncDashboard}
+	backend := &fakeBackend{script: map[string]domain.Execution{
+		"sync-check --target claude": {Report: []domain.SyncLine{
+			section("claude"), agentFile("agents/GADU.md", "OVERLAY_NOT_DEPLOYED"),
+			verdict("claude", domain.VerdictFields{OverlayNotDeployed: intp(1), RecordedVersion: strptr("v1.0.0")}),
+			remedy("claude", "apply it"),
+			section("opencode"), verdict("opencode", domain.VerdictFields{}),
+		}},
+		"sync-check --target codex": {Report: []domain.SyncLine{
+			section("claude"), agentFile("agents/EXTRA.md", "UPSTREAM_CHANGED"),
+			// This line does not give the version: the one before it stands.
+			verdict("claude", domain.VerdictFields{UpstreamChanged: intp(2), OverlayNotDeployed: intp(0)}),
+			remedy("claude", "capture it"),
+			section("codex"), verdict("codex", domain.VerdictFields{}),
+		}},
+	}}
+
+	res := run(action, []domain.Target{shown[0], shown[2]}, shown, &fakeCatalog{targets: shown}, backend)
+
+	if got := verdictTargets(res); got != "claude,opencode,codex" {
+		t.Fatalf("verdicts of %v, want claude (once, where first seen), opencode, codex", got)
+	}
+	claude := res.Verdicts[0]
+	if claude.UpstreamChanged != 2 || claude.OverlayNotDeployed != 0 || claude.RecordedVersion != "v1.0.0" || claude.Action != "capture it" {
+		t.Errorf("claude = %+v, want what the later lines gave, over what the earlier ones did where the later gave nothing", claude)
+	}
+	if claude.Status != domain.SyncNeedsCapture {
+		t.Errorf("claude.Status = %d, want it classified again from the merged fields: SyncNeedsCapture", claude.Status)
+	}
+	if len(claude.AgentFiles) != 2 || claude.AgentFiles[0].Path != "agents/GADU.md" || claude.AgentFiles[1].Path != "agents/EXTRA.md" {
+		t.Errorf("claude.AgentFiles = %+v, want the files of both invocations, in order", claude.AgentFiles)
+	}
+}
+
+// An agent file line belongs to the section last opened, which may have been in
+// an invocation before: the report is one.
+func TestActionRunner_AnAgentFileBelongsToTheSectionLastOpenedEvenInAnEarlierInvocation(t *testing.T) {
+	shown := threeCopyTargets()
+	action := domain.Action{Command: "sync-check", SupportsAll: true, ResultKind: domain.ResultSyncDashboard}
+	backend := &fakeBackend{script: map[string]domain.Execution{
+		"sync-check --target claude": {Report: []domain.SyncLine{section("claude"), verdict("claude", domain.VerdictFields{})}},
+		"sync-check --target codex": {Report: []domain.SyncLine{
+			agentFile("agents/CARRIED.md", "OVERLAY_NOT_DEPLOYED"), section("codex"), verdict("codex", domain.VerdictFields{}),
+		}},
+	}}
+
+	res := run(action, []domain.Target{shown[0], shown[2]}, shown, &fakeCatalog{targets: shown}, backend)
+
+	if got := verdictTargets(res); got != "claude,codex" {
+		t.Fatalf("verdicts of %v, want claude and codex", got)
+	}
+	if files := res.Verdicts[0].AgentFiles; len(files) != 1 || files[0].Path != "agents/CARRIED.md" {
+		t.Errorf("claude.AgentFiles = %+v, want the file whose section was opened by the invocation before", files)
+	}
+	if files := res.Verdicts[1].AgentFiles; len(files) != 0 {
+		t.Errorf("codex.AgentFiles = %+v, want none: the file came before its section", files)
+	}
 }

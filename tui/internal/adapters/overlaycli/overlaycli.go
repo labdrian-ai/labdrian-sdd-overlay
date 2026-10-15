@@ -27,9 +27,7 @@ const backendQueryTimeout = 15 * time.Second
 // CLI is the driven adapter behind the TUI's ports: it answers by
 // asking the bash backend, bin/labdrian-overlay, which stays the single
 // source of truth for everything it reports. It parses the backend's wire
-// formats into the TUI's own types; nothing outside this package knows them,
-// except the sync-check report, which domain.ParseSyncCheck still reads (it
-// moves here with the structured invocations).
+// formats into the TUI's own types; nothing outside this package knows them.
 type CLI struct {
 	// root is the overlay repo root that holds bin/labdrian-overlay; empty
 	// when it could not be located.
@@ -52,18 +50,20 @@ func (c CLI) binary() string { return filepath.Join(c.root, "bin", "labdrian-ove
 
 // Run implements domain.Backend: it runs one invocation of the backend script
 // from the repo root and returns what it printed, standard output and standard
-// error together, and how it ended. There is no deadline: an action (apply,
-// self-update) takes as long as it takes, and the operator can see it run.
+// error together, how it ended, and the lines of a sync-check report the output
+// holds (none for any command that does not print one). There is no deadline:
+// an action (apply, self-update) takes as long as it takes, and the operator
+// can see it run.
 func (c CLI) Run(args []string) domain.Execution {
 	cmd := exec.Command(c.binary(), args...)
 	cmd.Dir = c.root
 	out, err := cmd.CombinedOutput()
-	run := domain.Execution{Output: string(out), Err: err}
+	run := domain.Execution{Output: string(out), Err: err, Report: readSyncLines(string(out))}
 	if err != nil {
 		// The exit code lets callers tell a hard failure (exit 1) from a
-		// degraded/warning result (exit 2); -1 when the process did not exit
-		// on its own.
-		run.ExitCode = -1
+		// degraded/warning result (exit 2); domain.NoExitStatus when the
+		// process did not exit on its own.
+		run.ExitCode = domain.NoExitStatus
 		var exited *exec.ExitError
 		if errors.As(err, &exited) {
 			run.ExitCode = exited.ExitCode()
@@ -75,12 +75,14 @@ func (c CLI) Run(args []string) domain.Execution {
 // Report implements domain.RepoProbe with a cached-only sync-check (no
 // --fetch/--check-origin, per R-001) from the repo root. Whatever the backend
 // printed is the report, even when the process exits non-zero: the probe reads
-// cached refs, it does not require a clean exit.
-func (c CLI) Report() string {
+// cached refs, it does not require a clean exit. The report is read once, into
+// the verdicts it holds; there are none when it holds none (or the backend
+// could not be run).
+func (c CLI) Report() []domain.TargetVerdict {
 	cmd := exec.Command(c.binary(), "sync-check")
 	cmd.Dir = c.root
 	out, _ := cmd.CombinedOutput()
-	return string(out)
+	return parseSyncCheck(string(out))
 }
 
 // Targets implements TargetCatalog with `labdrian-overlay targets`.

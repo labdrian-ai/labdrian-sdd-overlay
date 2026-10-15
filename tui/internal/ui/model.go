@@ -69,7 +69,12 @@ type model struct {
 	// restoreReq numbers the restore backup lookups; only the latest answer counts.
 	restoreReq int
 
+	// result is what the last action did, and output the transcript of its
+	// invocations, as the lines of the output pane. The transcript is made once,
+	// when the result arrives (showResult), so scrolling and every redraw read it
+	// instead of making it again.
 	result domain.CommandResult
+	output []string
 	scroll int // line offset into the output pane
 
 	width  int
@@ -83,7 +88,8 @@ type model struct {
 	// (D4/D5). It is initialized to RepoBehindOriginNA in newModel, NOT left
 	// at Go's zero value — a bare `0` would collapse into "confirmed 0
 	// commits behind" before the probe ever resolves, reproducing the exact
-	// R-006 bug class ParseSyncCheck already guards against.
+	// R-006 bug class the reader of a report (domain.BehindOf) already guards
+	// against.
 	behindOrigin int
 	// behindRelease is the launch-time probe's REPO_BEHIND_RELEASE reading
 	// (D2). Initialized to RepoBehindOriginNA in newModel, same rationale as
@@ -112,10 +118,10 @@ type RestorePlanner interface {
 }
 
 // RepoProber is what the model needs to show how far the repository is
-// behind: commits behind origin/main and releases behind the latest tag, each
+// behind: commits behind origin/main and behind the latest release tag, each
 // domain.RepoBehindOriginNA when unknown.
 type RepoProber interface {
-	Behind() (origin, release int)
+	Behind() domain.RepoBehind
 }
 
 // Deps is what the composition root (main) hands the model: the error of
@@ -174,8 +180,8 @@ func probeCmd(p RepoProber) tea.Cmd {
 		return nil
 	}
 	return func() tea.Msg {
-		origin, release := p.Behind()
-		return probeDoneMsg{behind: origin, behindRelease: release}
+		behind := p.Behind()
+		return probeDoneMsg{behind: behind.Origin, behindRelease: behind.Release}
 	}
 }
 
@@ -305,13 +311,18 @@ func (m model) contentWidth() int {
 	return m.width
 }
 
+// showResult makes res the result the screen shows: it makes the transcript of
+// its invocations, once, as the lines of the output pane.
+func (m model) showResult(res domain.CommandResult) model {
+	m.result = res
+	m.output = splitOutputLines(transcript(res.Invocations))
+	return m
+}
+
 // maxScroll returns the maximum valid scroll offset for the output pane,
 // clamped to max(0, totalLines-viewport).
 func (m model) maxScroll() int {
-	if m.result.Output == "" {
-		return 0
-	}
-	lines := splitOutputLines(m.result.Output)
+	lines := m.output
 	viewport := m.height - 10
 	if len(m.result.Verdicts) > 0 {
 		viewport -= len(m.result.Verdicts)*3 + 3
@@ -334,7 +345,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case runDoneMsg:
-		m.result = msg.result
+		m = m.showResult(msg.result)
 		m.scroll = 0
 		m.scr = screenResult
 		// D5 tail: a successful run of an action that declares RefreshProbe

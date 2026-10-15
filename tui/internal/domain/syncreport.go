@@ -1,11 +1,5 @@
 package domain
 
-import (
-	"bufio"
-	"strconv"
-	"strings"
-)
-
 // AgentFileEntry records the per-file sync status of a single agent file.
 type AgentFileEntry struct {
 	Path   string // relative path, e.g. "agents/GADU.md"
@@ -26,14 +20,14 @@ const (
 	SyncNeedsCapture
 	// SyncBehindOrigin means local main is behind this repo's own origin/main
 	// (informational drift; never overridden by, and never masks, the other
-	// two verdicts — see classify's precedence and R-006). Tracks main, not
+	// two verdicts — see Classify's precedence and R-006). Tracks main, not
 	// HEAD, because self-update (the source of truth this mirrors) only ever
 	// converges main, never the checked-out branch.
 	SyncBehindOrigin
 	// SyncBehindRelease means local main is behind the newest locally-known
 	// release tag (D2, R-011): the primary "you should self-update" signal
 	// once at least one release tag exists. Outranks SyncBehindOrigin in
-	// classify's precedence — a target's own release standing is more
+	// Classify's precedence — a target's own release standing is more
 	// actionable than raw untagged origin drift.
 	SyncBehindRelease
 )
@@ -45,7 +39,8 @@ const (
 // keeps every producer/consumer of this field agreeing by construction.
 const RepoBehindOriginNA = -1
 
-// TargetVerdict holds the parsed sync-check result for one target.
+// TargetVerdict holds the sync-check result for one target, as the adapter
+// read it from the backend's report.
 type TargetVerdict struct {
 	Target             string
 	UpstreamChanged    int
@@ -59,7 +54,7 @@ type TargetVerdict struct {
 	AgentFiles         []AgentFileEntry // per-file statuses for agents/ paths
 }
 
-// classify maps verdict counts to a color status.
+// Classify maps verdict counts to a color status.
 //
 // Priority (matches the backend ACTION precedence, extended by R-006/D2):
 //   - UPSTREAM_CHANGED > 0                         -> RED    (gentle-ai synced, needs capture+apply)
@@ -69,7 +64,11 @@ type TargetVerdict struct {
 //     once a release tag exists; outranks raw origin drift)
 //   - REPO_BEHIND_ORIGIN > 0                       -> behind-origin (never silently healthy)
 //   - otherwise                                    -> GREEN (healthy)
-func classify(upstreamChanged, overlayNotDeployed, repoBehindOrigin, repoBehindRelease int, digestMismatch bool) SyncStatus {
+//
+// The adapter that reads a report calls it for each verdict: what the counts
+// mean for the operator is the domain's rule, and how the backend spells them
+// is not.
+func Classify(upstreamChanged, overlayNotDeployed, repoBehindOrigin, repoBehindRelease int, digestMismatch bool) SyncStatus {
 	switch {
 	case upstreamChanged > 0:
 		return SyncNeedsCapture
@@ -84,158 +83,166 @@ func classify(upstreamChanged, overlayNotDeployed, repoBehindOrigin, repoBehindR
 	}
 }
 
-// ParseSyncCheck extracts per-target verdicts from sync-check stdout.
-//
-// It reads the machine-friendly lines emitted by the backend:
-//
-//	VERDICT:<target>:UPSTREAM_CHANGED=N OVERLAY_NOT_DEPLOYED=M REPO_BEHIND_ORIGIN=<n|NA>
-//	ACTION:<target>: <text>
-//
-// It also tracks `=== sync-check: <target> ===` section headers to set the
-// active target scope, and captures per-file `agents/...` status lines
-// (format: `  <path>: <STATUS>`) into [TargetVerdict.AgentFiles].
-//
-// Verdicts are returned in first-seen order.
-func ParseSyncCheck(output string) []TargetVerdict {
-	order := []string{}
-	byTarget := map[string]*TargetVerdict{}
+// DigestMismatch is the value of TargetVerdict.DigestMatch that says the
+// deployed files no longer match what was recorded at the last apply: it counts
+// for the status of a verdict (Classify) like a file that is not deployed.
+const DigestMismatch = "no"
 
-	get := func(name string) *TargetVerdict {
-		v, ok := byTarget[name]
-		if !ok {
-			// RepoBehindOrigin/RepoBehindRelease default to RepoBehindOriginNA
-			// until a VERDICT line explicitly sets them — mirrors the
-			// backend's NA sentinel and avoids a defensive zero-value
-			// collapsing into "0 behind".
-			v = &TargetVerdict{Target: name, RepoBehindOrigin: RepoBehindOriginNA, RepoBehindRelease: RepoBehindOriginNA}
-			byTarget[name] = v
-			order = append(order, name)
+// SyncLineKind says what a line of a sync-check report was about.
+type SyncLineKind int
+
+const (
+	// SyncSectionLine opens the section of a target: the agent file lines that
+	// follow belong to it, until another section opens. It names a target but
+	// is no verdict of it.
+	SyncSectionLine SyncLineKind = iota
+	// SyncVerdictLine gives the counts and versions of a target.
+	SyncVerdictLine
+	// SyncActionLine gives the remedy the backend offers for a target.
+	SyncActionLine
+	// SyncAgentFileLine gives the status of an agent file, in the section last
+	// opened.
+	SyncAgentFileLine
+)
+
+// VerdictFields are the fields a VERDICT line gave. A nil field is one the line
+// did not give (or gave in a form the adapter could not read), and leaves what
+// an earlier line gave.
+type VerdictFields struct {
+	UpstreamChanged    *int
+	OverlayNotDeployed *int
+	RepoBehindOrigin   *int
+	RepoBehindRelease  *int
+	RecordedVersion    *string
+	DigestMatch        *string
+}
+
+// SyncLine is one line of a sync-check report that said something, as the
+// adapter read it. The adapter knows how the backend spells a line; what the
+// lines add up to is the domain's (SyncReport).
+type SyncLine struct {
+	Kind SyncLineKind
+	// Target is the target a section, verdict or action line is about.
+	Target string
+	// Fields are what a verdict line gave.
+	Fields VerdictFields
+	// Remedy is what an action line offers.
+	Remedy string
+	// File is the agent file an agent file line gave the status of.
+	File AgentFileEntry
+}
+
+// SyncReport adds up the lines of a sync-check report into the verdict of each
+// target. It reads the lines of as many outputs as an action produced, in the
+// order they were produced, as ONE report, which is how the operator has always
+// been shown them: a target named again is the same verdict (it keeps the place
+// where it was first seen, and a later line updates the fields it gives), and
+// an agent file line belongs to the section last opened, even in an earlier
+// output. The zero value is an empty report.
+type SyncReport struct {
+	order    []string
+	byTarget map[string]*TargetVerdict
+	section  string
+}
+
+// Add reads lines, which come after the ones already read.
+func (r *SyncReport) Add(lines []SyncLine) {
+	for _, line := range lines {
+		switch line.Kind {
+		case SyncSectionLine:
+			r.section = line.Target
+		case SyncVerdictLine:
+			v := r.verdict(line.Target)
+			line.Fields.applyTo(v)
+			v.Status = Classify(v.UpstreamChanged, v.OverlayNotDeployed, v.RepoBehindOrigin, v.RepoBehindRelease, v.DigestMatch == DigestMismatch)
+		case SyncActionLine:
+			r.verdict(line.Target).Action = line.Remedy
+		case SyncAgentFileLine:
+			if r.section != "" {
+				v := r.verdict(r.section)
+				v.AgentFiles = append(v.AgentFiles, line.File)
+			}
 		}
+	}
+}
+
+// Verdicts are the verdicts of the targets the lines named, in the order they
+// were first named; none when no line named one. They are the report's state
+// at the time of the call: later lines do not change them.
+func (r *SyncReport) Verdicts() []TargetVerdict {
+	out := make([]TargetVerdict, 0, len(r.order))
+	for _, name := range r.order {
+		v := *r.byTarget[name]
+		v.AgentFiles = append([]AgentFileEntry(nil), v.AgentFiles...)
+		out = append(out, v)
+	}
+	return out
+}
+
+// verdict is the verdict of target, which a line naming it makes if it was not
+// there. RepoBehindOrigin and RepoBehindRelease are RepoBehindOriginNA until a
+// line gives them -- mirroring the backend's NA sentinel and keeping a verdict
+// nobody gave counts for from collapsing into "0 behind".
+func (r *SyncReport) verdict(target string) *TargetVerdict {
+	if v, ok := r.byTarget[target]; ok {
 		return v
 	}
-
-	scanner := bufio.NewScanner(strings.NewReader(output))
-	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
-	var currentTarget string // tracks the active section for per-file lines
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-
-		// Section header: "=== sync-check: <target> (<path>) ==="
-		if strings.HasPrefix(line, "=== sync-check: ") {
-			rest := strings.TrimPrefix(line, "=== sync-check: ")
-			currentTarget, _, _ = strings.Cut(rest, " ")
-			continue
-		}
-
-		if rest, ok := strings.CutPrefix(line, "VERDICT:"); ok {
-			// rest = "<target>:UPSTREAM_CHANGED=N OVERLAY_NOT_DEPLOYED=M"
-			target, counts, ok := strings.Cut(rest, ":")
-			if !ok {
-				continue
-			}
-			v := get(target)
-			for _, field := range strings.Fields(counts) {
-				key, val, ok := strings.Cut(field, "=")
-				if !ok {
-					continue
-				}
-				switch key {
-				case "UPSTREAM_CHANGED":
-					n, _ := strconv.Atoi(val)
-					v.UpstreamChanged = n
-				case "OVERLAY_NOT_DEPLOYED":
-					n, _ := strconv.Atoi(val)
-					v.OverlayNotDeployed = n
-				case "REPO_BEHIND_ORIGIN":
-					// Dedicated NA pre-check: the field's literal "NA" sentinel
-					// MUST be handled before strconv.Atoi. Falling through to a
-					// generic `n, _ := strconv.Atoi(val)` (as UPSTREAM_CHANGED/
-					// OVERLAY_NOT_DEPLOYED do) would discard the parse error and
-					// silently collapse "NA" (or an omitted field) to Go's
-					// zero-value 0 — indistinguishable from "confirmed 0 commits
-					// behind" and reproducing the exact silent-healthy bug class
-					// R-006 exists to eliminate.
-					if val == "NA" {
-						v.RepoBehindOrigin = RepoBehindOriginNA
-					} else if n, err := strconv.Atoi(val); err == nil {
-						v.RepoBehindOrigin = n
-					}
-				case "REPO_BEHIND_RELEASE":
-					// Same dedicated NA pre-check as REPO_BEHIND_ORIGIN above,
-					// for the same reason (D2 — a new field, same
-					// silent-zero-collapse risk).
-					if val == "NA" {
-						v.RepoBehindRelease = RepoBehindOriginNA
-					} else if n, err := strconv.Atoi(val); err == nil {
-						v.RepoBehindRelease = n
-					}
-				case "RECORDED_VERSION":
-					v.RecordedVersion = val
-				case "DIGEST_MATCH":
-					v.DigestMatch = val
-				}
-			}
-			v.Status = classify(v.UpstreamChanged, v.OverlayNotDeployed, v.RepoBehindOrigin, v.RepoBehindRelease, v.DigestMatch == "no")
-			continue
-		}
-
-		if rest, ok := strings.CutPrefix(line, "ACTION:"); ok {
-			// rest = "<target>: <text>"
-			target, text, ok := strings.Cut(rest, ":")
-			if !ok {
-				continue
-			}
-			v := get(target)
-			v.Action = strings.TrimSpace(text)
-			continue
-		}
-
-		// Per-file lines: capture agents/ file statuses within the current section.
-		for _, s := range []string{"IN_SYNC", "OVERLAY_NOT_DEPLOYED", "UPSTREAM_CHANGED"} {
-			if rest, ok := strings.CutPrefix(line, s+": "); ok {
-				if strings.HasPrefix(rest, "agents/") && currentTarget != "" {
-					path, _, _ := strings.Cut(rest, " ") // strip "(detail)" suffix
-					v := get(currentTarget)
-					v.AgentFiles = append(v.AgentFiles, AgentFileEntry{Path: path, Status: s})
-				}
-				break
-			}
-		}
+	if r.byTarget == nil {
+		r.byTarget = map[string]*TargetVerdict{}
 	}
-
-	result := make([]TargetVerdict, 0, len(order))
-	for _, name := range order {
-		result = append(result, *byTarget[name])
-	}
-	return result
+	v := &TargetVerdict{Target: target, RepoBehindOrigin: RepoBehindOriginNA, RepoBehindRelease: RepoBehindOriginNA}
+	r.byTarget[target] = v
+	r.order = append(r.order, target)
+	return v
 }
 
-// ProbeBehind extracts the launch-time origin-behind count from cached-only
-// sync-check output. It reuses ParseSyncCheck (D4) instead of re-deriving
-// REPO_BEHIND_ORIGIN detection, which stays owned by sync-check-verdicts —
-// this capability only reads that published value. Any failure to determine
-// a concrete count — zero verdicts (e.g. every target dir missing skips the
-// VERDICT line), an explicit "NA", or unparseable/garbage output — degrades
-// to RepoBehindOriginNA rather than Go's zero value, which would collapse
-// into "confirmed 0 behind" (the exact R-006 bug class ParseSyncCheck
-// already guards against for its own callers).
-func ProbeBehind(output string) int {
-	verdicts := ParseSyncCheck(output)
-	if len(verdicts) == 0 {
-		return RepoBehindOriginNA
+// applyTo sets on v the fields f gave.
+func (f VerdictFields) applyTo(v *TargetVerdict) {
+	if f.UpstreamChanged != nil {
+		v.UpstreamChanged = *f.UpstreamChanged
 	}
-	return verdicts[0].RepoBehindOrigin
+	if f.OverlayNotDeployed != nil {
+		v.OverlayNotDeployed = *f.OverlayNotDeployed
+	}
+	if f.RepoBehindOrigin != nil {
+		v.RepoBehindOrigin = *f.RepoBehindOrigin
+	}
+	if f.RepoBehindRelease != nil {
+		v.RepoBehindRelease = *f.RepoBehindRelease
+	}
+	if f.RecordedVersion != nil {
+		v.RecordedVersion = *f.RecordedVersion
+	}
+	if f.DigestMatch != nil {
+		v.DigestMatch = *f.DigestMatch
+	}
 }
 
-// ProbeBehindRelease is ProbeBehind's D2 counterpart: it extracts
-// REPO_BEHIND_RELEASE instead of REPO_BEHIND_ORIGIN from the same
-// cached-only sync-check output, with the identical degrade-to-NA contract
-// (zero verdicts, explicit "NA", or unparseable output all resolve to
-// RepoBehindOriginNA — the sentinel is reused, per D2, not redefined).
-func ProbeBehindRelease(output string) int {
-	verdicts := ParseSyncCheck(output)
+// RepoBehind is how far the repository is behind, as one sync-check report
+// says it (the launch-time probe, D4 and D2). A count the report does not give
+// is RepoBehindOriginNA, which is not the same as "up to date".
+type RepoBehind struct {
+	// Origin is how many commits local main is behind origin/main.
+	Origin int
+	// Release is how many commits local main is behind the newest
+	// locally-known release tag.
+	Release int
+}
+
+// BehindOf reads how far the repository is behind from the verdicts of one
+// sync-check report. Both counts are the repository's, not a target's: the
+// backend works them out once and prints them on every VERDICT line, so the
+// first verdict stands for the repository and the two numbers come from the
+// same one.
+//
+// Any failure to determine a count -- no verdict at all (e.g. every target dir
+// missing skips the VERDICT line, or the report could not be read) or an
+// explicit "NA" -- degrades to RepoBehindOriginNA rather than Go's zero value,
+// which would collapse into "confirmed 0 behind" (the exact R-006 bug class
+// the reader of a report already guards against).
+func BehindOf(verdicts []TargetVerdict) RepoBehind {
 	if len(verdicts) == 0 {
-		return RepoBehindOriginNA
+		return RepoBehind{Origin: RepoBehindOriginNA, Release: RepoBehindOriginNA}
 	}
-	return verdicts[0].RepoBehindRelease
+	return RepoBehind{Origin: verdicts[0].RepoBehindOrigin, Release: verdicts[0].RepoBehindRelease}
 }

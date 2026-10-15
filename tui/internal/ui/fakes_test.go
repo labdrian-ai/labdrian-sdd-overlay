@@ -50,6 +50,13 @@ func (f *fakeRunner) Run(action domain.Action, selected, shown []domain.Target) 
 	return res
 }
 
+// printing is the invocations of a run that printed output: a result with
+// something on its screen, for the tests that are about anything but the
+// transcript itself.
+func printing(output string) []domain.Invocation {
+	return []domain.Invocation{{Args: []string{"status"}, Run: domain.Execution{Output: output}}}
+}
+
 // fakeRestore is a RestorePlanner that vouches for the targets in backed. It
 // records the candidates it was asked about, so a test can prove a target was
 // never put to it, and it answers with a text of its own that names the
@@ -89,9 +96,9 @@ type fakeProbe struct {
 	asked           int
 }
 
-func (f *fakeProbe) Behind() (int, int) {
+func (f *fakeProbe) Behind() domain.RepoBehind {
 	f.asked++
-	return f.origin, f.release
+	return domain.RepoBehind{Origin: f.origin, Release: f.release}
 }
 
 // threeCopyTargets is the catalog most model tests run against: the three

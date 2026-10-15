@@ -42,12 +42,19 @@ type Execution struct {
 	// Output is what the backend wrote, standard output and standard error
 	// together, in the order it wrote them.
 	Output string
-	// ExitCode is the exit status of the process; -1 when it did not end by
-	// exiting (it could not be started, or it was killed).
+	// ExitCode is the exit status of the process; NoExitStatus when it did not
+	// end by exiting (it could not be started, or it was killed).
 	ExitCode int
 	// Err is nil when the backend exited with status 0, and says why not
 	// otherwise.
 	Err error
+	// Report are the lines of a sync-check report the output holds, read by the
+	// adapter, which is the one that knows how the backend spells them; none
+	// when the output holds no report. What they add up to is a SyncReport's,
+	// across all the invocations of an action; whether the screen shows it is up
+	// to the action (Action.ResultKind), not to what the output happens to look
+	// like.
+	Report []SyncLine
 }
 
 // Backend is where the TUI has an action run. It takes the arguments of one
@@ -60,10 +67,10 @@ type Backend interface {
 
 // RepoProbe is where the TUI learns how far the repository is behind its
 // origin and its latest release, without the network: the report of a
-// cached-only sync-check, whatever the backend's exit status. The report is
-// the backend's own text (ParseSyncCheck reads it); a probe that cannot be
-// run answers with whatever it has, possibly nothing, and the reader degrades
-// that to "unknown" rather than to "up to date".
+// cached-only sync-check, whatever the backend's exit status, as the verdicts
+// it holds. A probe that cannot be run, or whose report holds no verdict,
+// answers with none, and BehindOf degrades that to "unknown" rather than to
+// "up to date".
 type RepoProbe interface {
-	Report() string
+	Report() []TargetVerdict
 }

@@ -24,7 +24,7 @@ func TestViewDashboard_ShowsOriginBehindIndicator(t *testing.T) {
 	m := newTestModel(t)
 	m.width = 80
 	m.scr = screenResult
-	m.result = domain.CommandResult{
+	m = m.showResult(domain.CommandResult{
 		Action: domain.Action{Name: "Verificar sincronización", Command: "sync-check"},
 		Verdicts: []domain.TargetVerdict{
 			{
@@ -34,8 +34,8 @@ func TestViewDashboard_ShowsOriginBehindIndicator(t *testing.T) {
 				Action:           "run 'git pull' to update your local clone",
 			},
 		},
-		Output: "ok",
-	}
+		Invocations: printing("ok"),
+	})
 
 	rendered := stripANSI(m.viewDashboard())
 	if !strings.Contains(rendered, "Detrás de origin") {
@@ -54,7 +54,7 @@ func TestViewDashboard_ZeroOriginBehind_NoIndicator(t *testing.T) {
 	m := newTestModel(t)
 	m.width = 80
 	m.scr = screenResult
-	m.result = domain.CommandResult{
+	m = m.showResult(domain.CommandResult{
 		Action: domain.Action{Name: "Verificar sincronización", Command: "sync-check"},
 		Verdicts: []domain.TargetVerdict{
 			{
@@ -64,8 +64,8 @@ func TestViewDashboard_ZeroOriginBehind_NoIndicator(t *testing.T) {
 				Action:           "in sync with gentle-ai (healthy)",
 			},
 		},
-		Output: "ok",
-	}
+		Invocations: printing("ok"),
+	})
 
 	rendered := stripANSI(m.viewDashboard())
 	if strings.Contains(rendered, "detrás de origin") {
@@ -76,19 +76,23 @@ func TestViewDashboard_ZeroOriginBehind_NoIndicator(t *testing.T) {
 // TestViewDashboard_NeverHealthyWhileBehindOrigin verifies R-006: a target
 // with UPSTREAM_CHANGED=0, OVERLAY_NOT_DEPLOYED=0, REPO_BEHIND_ORIGIN>0 must
 // never render as "Sincronizado" (healthy) — it must render its own distinct
-// status instead. The verdict is the one the backend's report earns, parsed
-// and classified by the domain, so the whole path to the screen is under test.
+// status instead. The verdict is the one the domain classifies from those
+// counts, so the path from the counts to the screen is under test.
 func TestViewDashboard_NeverHealthyWhileBehindOrigin(t *testing.T) {
 	m := newTestModel(t)
 	m.width = 80
 	m.scr = screenResult
-	m.result = domain.CommandResult{
+	m = m.showResult(domain.CommandResult{
 		Action: domain.Action{Name: "Verificar sincronización", Command: "sync-check", ResultKind: domain.ResultSyncDashboard},
-		Verdicts: domain.ParseSyncCheck("=== sync-check: claude ===\n" +
-			"VERDICT:claude:UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=0 REPO_BEHIND_ORIGIN=3\n" +
-			"ACTION:claude: run 'git pull' to update your local clone\n"),
-		Output: "ok",
-	}
+		Verdicts: []domain.TargetVerdict{{
+			Target:            "claude",
+			RepoBehindOrigin:  3,
+			RepoBehindRelease: domain.RepoBehindOriginNA,
+			Status:            domain.Classify(0, 0, 3, domain.RepoBehindOriginNA, false),
+			Action:            "run 'git pull' to update your local clone",
+		}},
+		Invocations: printing("ok"),
+	})
 
 	rendered := stripANSI(m.viewDashboard())
 	if strings.Contains(rendered, "Sincronizado") {
@@ -99,46 +103,63 @@ func TestViewDashboard_NeverHealthyWhileBehindOrigin(t *testing.T) {
 	}
 }
 
-// TestViewDashboard_TheStatusOfAReportIsTheOneTheDashboardShows follows a
-// sync-check report the whole way: the backend's VERDICT line is parsed, the
-// domain classifies it, and the dashboard paints it. Each report earns exactly
-// one status label, so a parser that misreads a field, a classification that
-// ranks two states the other way round, or a view that labels a status with the
-// words of another fails here and not only in the unit it lives in.
-func TestViewDashboard_TheStatusOfAReportIsTheOneTheDashboardShows(t *testing.T) {
+// TestViewDashboard_TheStatusOfAVerdictIsTheOneTheDashboardShows follows the
+// counts of a verdict the whole way to the screen: the domain classifies them
+// and the dashboard paints the status. Each verdict earns exactly one status
+// label, so a classification that ranks two states the other way round, or a
+// view that labels a status with the words of another, fails here and not only
+// in the unit it lives in. (How the backend's report is read into those counts
+// is the adapter's, tested in package overlaycli.)
+func TestViewDashboard_TheStatusOfAVerdictIsTheOneTheDashboardShows(t *testing.T) {
+	const na = domain.RepoBehindOriginNA
 	labels := []string{"Sincronizado", "Pendiente de aplicación", "Requiere capture + apply", "Detrás del release", "Detrás de origin"}
 	tests := []struct {
-		name   string
-		fields string
-		want   string
+		name                        string
+		upstream, notDeployed       int
+		behindOrigin, behindRelease int
+		digestMismatch              bool
+		want                        string
 	}{
-		{"nothing to do", "UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=0 REPO_BEHIND_ORIGIN=0 REPO_BEHIND_RELEASE=0", "Sincronizado"},
-		{"files not deployed", "UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=2 REPO_BEHIND_ORIGIN=0", "Pendiente de aplicación"},
-		{"a digest that no longer matches", "UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=0 REPO_BEHIND_ORIGIN=0 DIGEST_MATCH=no", "Pendiente de aplicación"},
-		{"upstream changed", "UPSTREAM_CHANGED=3 OVERLAY_NOT_DEPLOYED=0 REPO_BEHIND_ORIGIN=0", "Requiere capture + apply"},
-		{"upstream changed outranks files not deployed", "UPSTREAM_CHANGED=1 OVERLAY_NOT_DEPLOYED=4 REPO_BEHIND_ORIGIN=0", "Requiere capture + apply"},
-		{"behind the release", "UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=0 REPO_BEHIND_ORIGIN=0 REPO_BEHIND_RELEASE=2", "Detrás del release"},
-		{"behind the release outranks behind origin", "UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=0 REPO_BEHIND_ORIGIN=5 REPO_BEHIND_RELEASE=2", "Detrás del release"},
-		{"behind origin", "UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=0 REPO_BEHIND_ORIGIN=3", "Detrás de origin"},
-		{"files not deployed outrank being behind", "UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=1 REPO_BEHIND_ORIGIN=3 REPO_BEHIND_RELEASE=2", "Pendiente de aplicación"},
-		{"an origin that could not be read adds nothing to the status", "UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=0 REPO_BEHIND_ORIGIN=NA", "Sincronizado"},
+		{"nothing to do", 0, 0, 0, 0, false, "Sincronizado"},
+		{"files not deployed", 0, 2, 0, na, false, "Pendiente de aplicación"},
+		{"a digest that no longer matches", 0, 0, 0, na, true, "Pendiente de aplicación"},
+		{"upstream changed", 3, 0, 0, na, false, "Requiere capture + apply"},
+		{"upstream changed outranks files not deployed", 1, 4, 0, na, false, "Requiere capture + apply"},
+		{"behind the release", 0, 0, 0, 2, false, "Detrás del release"},
+		{"behind the release outranks behind origin", 0, 0, 5, 2, false, "Detrás del release"},
+		{"behind origin", 0, 0, 3, na, false, "Detrás de origin"},
+		{"files not deployed outrank being behind", 0, 1, 3, 2, false, "Pendiente de aplicación"},
+		{"an origin that could not be read adds nothing to the status", 0, 0, na, na, false, "Sincronizado"},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			m := newTestModel(t)
 			m.width = 100
 			m.scr = screenResult
-			m.result = domain.CommandResult{
-				Action:   domain.Action{Name: "Verificar sincronización", Command: "sync-check", ResultKind: domain.ResultSyncDashboard},
-				Verdicts: domain.ParseSyncCheck("=== sync-check: claude ===\nVERDICT:claude:" + tc.fields + "\nACTION:claude: next step\n"),
-				Output:   "ok",
+			digest := ""
+			if tc.digestMismatch {
+				digest = "no"
 			}
+			m = m.showResult(domain.CommandResult{
+				Action: domain.Action{Name: "Verificar sincronización", Command: "sync-check", ResultKind: domain.ResultSyncDashboard},
+				Verdicts: []domain.TargetVerdict{{
+					Target:             "claude",
+					UpstreamChanged:    tc.upstream,
+					OverlayNotDeployed: tc.notDeployed,
+					RepoBehindOrigin:   tc.behindOrigin,
+					RepoBehindRelease:  tc.behindRelease,
+					DigestMatch:        digest,
+					Action:             "next step",
+					Status:             domain.Classify(tc.upstream, tc.notDeployed, tc.behindOrigin, tc.behindRelease, tc.digestMismatch),
+				}},
+				Invocations: printing("ok"),
+			})
 
 			rendered := stripANSI(m.viewDashboard())
 
 			for _, label := range labels {
 				if got, want := strings.Contains(rendered, label), label == tc.want; got != want {
-					t.Errorf("%q in the dashboard of %q = %t, want %t:\n%s", label, tc.fields, got, want, rendered)
+					t.Errorf("%q in the dashboard of %+v = %t, want %t:\n%s", label, m.result.Verdicts[0], got, want, rendered)
 				}
 			}
 		})
@@ -365,7 +386,7 @@ func TestViewDashboard_ShowsReleaseBehindIndicator(t *testing.T) {
 	m := newTestModel(t)
 	m.width = 80
 	m.scr = screenResult
-	m.result = domain.CommandResult{
+	m = m.showResult(domain.CommandResult{
 		Action: domain.Action{Name: "Verificar sincronización", Command: "sync-check"},
 		Verdicts: []domain.TargetVerdict{
 			{
@@ -377,8 +398,8 @@ func TestViewDashboard_ShowsReleaseBehindIndicator(t *testing.T) {
 				Action:            "run 'labdrian self-update' to fetch release v1.4.0",
 			},
 		},
-		Output: "ok",
-	}
+		Invocations: printing("ok"),
+	})
 
 	rendered := stripANSI(m.viewDashboard())
 	if !strings.Contains(rendered, "Detrás del release") {
@@ -420,11 +441,11 @@ func TestViewDashboard_VersionLineRendering(t *testing.T) {
 			m := newTestModel(t)
 			m.width = 80
 			m.scr = screenResult
-			m.result = domain.CommandResult{
-				Action:   domain.Action{Name: "Verificar sincronización", Command: "sync-check"},
-				Verdicts: []domain.TargetVerdict{tc.verdict},
-				Output:   "ok",
-			}
+			m = m.showResult(domain.CommandResult{
+				Action:      domain.Action{Name: "Verificar sincronización", Command: "sync-check"},
+				Verdicts:    []domain.TargetVerdict{tc.verdict},
+				Invocations: printing("ok"),
+			})
 			rendered := stripANSI(m.viewDashboard())
 			if !strings.Contains(rendered, tc.wantSubstr) {
 				t.Errorf("viewDashboard must contain %q, got:\n%s", tc.wantSubstr, rendered)
@@ -441,11 +462,11 @@ func TestViewDashboard_EmptyRecordedVersionRendersNoVersionLine(t *testing.T) {
 	m := newTestModel(t)
 	m.width = 80
 	m.scr = screenResult
-	m.result = domain.CommandResult{
-		Action:   domain.Action{Name: "Verificar sincronización", Command: "sync-check"},
-		Verdicts: []domain.TargetVerdict{{Target: "claude", Status: domain.SyncHealthy}},
-		Output:   "ok",
-	}
+	m = m.showResult(domain.CommandResult{
+		Action:      domain.Action{Name: "Verificar sincronización", Command: "sync-check"},
+		Verdicts:    []domain.TargetVerdict{{Target: "claude", Status: domain.SyncHealthy}},
+		Invocations: printing("ok"),
+	})
 	rendered := stripANSI(m.viewDashboard())
 	if strings.Contains(rendered, "versión:") {
 		t.Errorf("viewDashboard must NOT show a version line when RecordedVersion is empty, got:\n%s", rendered)
