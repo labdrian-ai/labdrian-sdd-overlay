@@ -111,11 +111,14 @@ func TestOverlayCLI_Run_ReadsTheSyncCheckReportItsOutputHolds(t *testing.T) {
 
 			run := New(root).Run([]string{"sync-check", "--target", "claude"})
 
-			if len(run.Verdicts) != tc.wantVerdicts {
-				t.Fatalf("Run read %d verdicts from %q, want %d", len(run.Verdicts), run.Output, tc.wantVerdicts)
+			var read domain.SyncReport
+			read.Add(run.Report)
+			verdicts := read.Verdicts()
+			if len(verdicts) != tc.wantVerdicts {
+				t.Fatalf("Run read %d verdicts from %q, want %d", len(verdicts), run.Output, tc.wantVerdicts)
 			}
 			if tc.wantVerdicts == 1 {
-				v := run.Verdicts[0]
+				v := verdicts[0]
 				if v.Target != "claude" || v.OverlayNotDeployed != 2 || v.Status != domain.SyncNeedsApply {
 					t.Errorf("verdict = %+v, want claude with 2 files not deployed, needing apply", v)
 				}

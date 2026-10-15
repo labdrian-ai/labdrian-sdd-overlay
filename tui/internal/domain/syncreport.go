@@ -83,6 +83,141 @@ func Classify(upstreamChanged, overlayNotDeployed, repoBehindOrigin, repoBehindR
 	}
 }
 
+// DigestMismatch is the value of TargetVerdict.DigestMatch that says the
+// deployed files no longer match what was recorded at the last apply: it counts
+// for the status of a verdict (Classify) like a file that is not deployed.
+const DigestMismatch = "no"
+
+// SyncLineKind says what a line of a sync-check report was about.
+type SyncLineKind int
+
+const (
+	// SyncSectionLine opens the section of a target: the agent file lines that
+	// follow belong to it, until another section opens. It names a target but
+	// is no verdict of it.
+	SyncSectionLine SyncLineKind = iota
+	// SyncVerdictLine gives the counts and versions of a target.
+	SyncVerdictLine
+	// SyncActionLine gives the remedy the backend offers for a target.
+	SyncActionLine
+	// SyncAgentFileLine gives the status of an agent file, in the section last
+	// opened.
+	SyncAgentFileLine
+)
+
+// VerdictFields are the fields a VERDICT line gave. A nil field is one the line
+// did not give (or gave in a form the adapter could not read), and leaves what
+// an earlier line gave.
+type VerdictFields struct {
+	UpstreamChanged    *int
+	OverlayNotDeployed *int
+	RepoBehindOrigin   *int
+	RepoBehindRelease  *int
+	RecordedVersion    *string
+	DigestMatch        *string
+}
+
+// SyncLine is one line of a sync-check report that said something, as the
+// adapter read it. The adapter knows how the backend spells a line; what the
+// lines add up to is the domain's (SyncReport).
+type SyncLine struct {
+	Kind SyncLineKind
+	// Target is the target a section, verdict or action line is about.
+	Target string
+	// Fields are what a verdict line gave.
+	Fields VerdictFields
+	// Remedy is what an action line offers.
+	Remedy string
+	// File is the agent file an agent file line gave the status of.
+	File AgentFileEntry
+}
+
+// SyncReport adds up the lines of a sync-check report into the verdict of each
+// target. It reads the lines of as many outputs as an action produced, in the
+// order they were produced, as ONE report, which is how the operator has always
+// been shown them: a target named again is the same verdict (it keeps the place
+// where it was first seen, and a later line updates the fields it gives), and
+// an agent file line belongs to the section last opened, even in an earlier
+// output. The zero value is an empty report.
+type SyncReport struct {
+	order    []string
+	byTarget map[string]*TargetVerdict
+	section  string
+}
+
+// Add reads lines, which come after the ones already read.
+func (r *SyncReport) Add(lines []SyncLine) {
+	for _, line := range lines {
+		switch line.Kind {
+		case SyncSectionLine:
+			r.section = line.Target
+		case SyncVerdictLine:
+			v := r.verdict(line.Target)
+			line.Fields.applyTo(v)
+			v.Status = Classify(v.UpstreamChanged, v.OverlayNotDeployed, v.RepoBehindOrigin, v.RepoBehindRelease, v.DigestMatch == DigestMismatch)
+		case SyncActionLine:
+			r.verdict(line.Target).Action = line.Remedy
+		case SyncAgentFileLine:
+			if r.section != "" {
+				v := r.verdict(r.section)
+				v.AgentFiles = append(v.AgentFiles, line.File)
+			}
+		}
+	}
+}
+
+// Verdicts are the verdicts of the targets the lines named, in the order they
+// were first named; none when no line named one. They are the report's state
+// at the time of the call: later lines do not change them.
+func (r *SyncReport) Verdicts() []TargetVerdict {
+	out := make([]TargetVerdict, 0, len(r.order))
+	for _, name := range r.order {
+		v := *r.byTarget[name]
+		v.AgentFiles = append([]AgentFileEntry(nil), v.AgentFiles...)
+		out = append(out, v)
+	}
+	return out
+}
+
+// verdict is the verdict of target, which a line naming it makes if it was not
+// there. RepoBehindOrigin and RepoBehindRelease are RepoBehindOriginNA until a
+// line gives them -- mirroring the backend's NA sentinel and keeping a verdict
+// nobody gave counts for from collapsing into "0 behind".
+func (r *SyncReport) verdict(target string) *TargetVerdict {
+	if v, ok := r.byTarget[target]; ok {
+		return v
+	}
+	if r.byTarget == nil {
+		r.byTarget = map[string]*TargetVerdict{}
+	}
+	v := &TargetVerdict{Target: target, RepoBehindOrigin: RepoBehindOriginNA, RepoBehindRelease: RepoBehindOriginNA}
+	r.byTarget[target] = v
+	r.order = append(r.order, target)
+	return v
+}
+
+// applyTo sets on v the fields f gave.
+func (f VerdictFields) applyTo(v *TargetVerdict) {
+	if f.UpstreamChanged != nil {
+		v.UpstreamChanged = *f.UpstreamChanged
+	}
+	if f.OverlayNotDeployed != nil {
+		v.OverlayNotDeployed = *f.OverlayNotDeployed
+	}
+	if f.RepoBehindOrigin != nil {
+		v.RepoBehindOrigin = *f.RepoBehindOrigin
+	}
+	if f.RepoBehindRelease != nil {
+		v.RepoBehindRelease = *f.RepoBehindRelease
+	}
+	if f.RecordedVersion != nil {
+		v.RecordedVersion = *f.RecordedVersion
+	}
+	if f.DigestMatch != nil {
+		v.DigestMatch = *f.DigestMatch
+	}
+}
+
 // RepoBehind is how far the repository is behind, as one sync-check report
 // says it (the launch-time probe, D4 and D2). A count the report does not give
 // is RepoBehindOriginNA, which is not the same as "up to date".

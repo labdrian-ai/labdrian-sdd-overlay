@@ -39,23 +39,26 @@ func NewActionRunner(backend domain.Backend, catalog domain.TargetCatalog) Actio
 // backend left behind or why the call was refused; the screen renders the
 // transcript from them. The result's failure is the worst of the invocations',
 // and an action that declares its result a sync-check report carries the
-// verdicts the executions hold.
+// verdicts that the report lines of all its executions add up to, read as one
+// report.
 func (r ActionRunner) Run(action domain.Action, selected, shown []domain.Target) domain.CommandResult {
 	res := domain.CommandResult{Action: action, Targets: selected}
 	scope := domain.TargetScope{Shown: shown, Catalog: r.catalog}
 
 	argSets := domain.AllArgSets(action, selected, scope.CoversAll(selected))
 
+	// An action that declares its result a sync-check report shows one report
+	// for all of its invocations, in the order they ran; any other action shows
+	// its transcript only, whatever its output looked like.
+	reported := action.ResultKind == domain.ResultSyncDashboard
+	var report domain.SyncReport
+
 	severity := 0
 	for _, args := range argSets {
 		inv := r.invoke(scope, args)
 		res.Invocations = append(res.Invocations, inv)
-
-		// An action that declares its result a sync-check report shows the
-		// verdicts of every invocation, in the order they ran; any other action
-		// shows its transcript only, whatever its output looked like.
-		if action.ResultKind == domain.ResultSyncDashboard {
-			res.Verdicts = append(res.Verdicts, inv.Run.Verdicts...)
+		if reported {
+			report.Add(inv.Run.Report)
 		}
 
 		// Aggregate by worst severity seen across all invocations in this
@@ -69,6 +72,9 @@ func (r ActionRunner) Run(action domain.Action, selected, shown []domain.Target)
 			res.Err = inv.Err()
 			res.ExitCode = inv.ExitCode()
 		}
+	}
+	if reported {
+		res.Verdicts = report.Verdicts()
 	}
 	return res
 }

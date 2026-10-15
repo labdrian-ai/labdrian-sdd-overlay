@@ -338,11 +338,12 @@ func TestActionRunner_TheResultIsTheWorstOutcomeNotTheLastOne(t *testing.T) {
 // An action shows the verdicts of a sync-check report when it declares that its
 // result is one (ResultSyncDashboard), and only then: not because its command
 // is called sync-check, and not because the backend's output happens to hold a
-// report. The verdicts come from the executions, read by the adapter; the
-// runner reads no text.
+// report. The verdicts come from the lines the adapter read from the
+// executions; the runner reads no text.
 func TestActionRunner_OnlyAnActionThatDeclaresAReportShowsItsVerdicts(t *testing.T) {
-	needsApply := domain.TargetVerdict{Target: "claude", OverlayNotDeployed: 1, Status: domain.SyncNeedsApply}
-	reports := domain.Execution{Output: "a report", Verdicts: []domain.TargetVerdict{needsApply}}
+	reports := domain.Execution{Output: "a report", Report: []domain.SyncLine{
+		section("claude"), verdict("claude", domain.VerdictFields{OverlayNotDeployed: intp(1)}),
+	}}
 	shown := threeCopyTargets()
 	backend := &fakeBackend{script: map[string]domain.Execution{
 		"sync-check": reports, "status": reports, "compare": reports,
@@ -388,20 +389,90 @@ func TestActionRunner_OnlyAnActionThatDeclaresAReportShowsItsVerdicts(t *testing
 	t.Run("the verdicts of every invocation are shown, in the order they ran", func(t *testing.T) {
 		// A partial selection is one sync-check per target, each reporting its own.
 		perTarget := &fakeBackend{script: map[string]domain.Execution{
-			"sync-check --target claude": {Verdicts: []domain.TargetVerdict{{Target: "claude"}}},
-			"sync-check --target codex":  {Verdicts: []domain.TargetVerdict{{Target: "codex"}}},
+			"sync-check --target claude": {Report: []domain.SyncLine{section("claude"), verdict("claude", domain.VerdictFields{})}},
+			"sync-check --target codex":  {Report: []domain.SyncLine{section("codex"), verdict("codex", domain.VerdictFields{})}},
 		}}
 		action := domain.Action{Command: "sync-check", SupportsAll: true, ResultKind: domain.ResultSyncDashboard}
 		selected := []domain.Target{shown[0], shown[2]}
 
 		res := run(action, selected, shown, catalog, perTarget)
 
-		var got []string
-		for _, v := range res.Verdicts {
-			got = append(got, v.Target)
-		}
-		if strings.Join(got, ",") != "claude,codex" {
+		if got := verdictTargets(res); got != "claude,codex" {
 			t.Errorf("verdicts of %v, want claude then codex, one per invocation", got)
 		}
 	})
+}
+
+func verdictTargets(res domain.CommandResult) string {
+	var names []string
+	for _, v := range res.Verdicts {
+		names = append(names, v.Target)
+	}
+	return strings.Join(names, ",")
+}
+
+// The invocations of one action are one report, as the operator has always been
+// shown them (and as the program read their transcript before the report was
+// read per invocation): a target named by a later invocation is the verdict it
+// already had, in the place where it was first seen, updated by what the later
+// lines give.
+func TestActionRunner_ATargetNamedInTwoInvocationsIsOneVerdictWhereItWasFirstSeen(t *testing.T) {
+	shown := threeCopyTargets()
+	action := domain.Action{Command: "sync-check", SupportsAll: true, ResultKind: domain.ResultSyncDashboard}
+	backend := &fakeBackend{script: map[string]domain.Execution{
+		"sync-check --target claude": {Report: []domain.SyncLine{
+			section("claude"), agentFile("agents/GADU.md", "OVERLAY_NOT_DEPLOYED"),
+			verdict("claude", domain.VerdictFields{OverlayNotDeployed: intp(1), RecordedVersion: strptr("v1.0.0")}),
+			remedy("claude", "apply it"),
+			section("opencode"), verdict("opencode", domain.VerdictFields{}),
+		}},
+		"sync-check --target codex": {Report: []domain.SyncLine{
+			section("claude"), agentFile("agents/EXTRA.md", "UPSTREAM_CHANGED"),
+			// This line does not give the version: the one before it stands.
+			verdict("claude", domain.VerdictFields{UpstreamChanged: intp(2), OverlayNotDeployed: intp(0)}),
+			remedy("claude", "capture it"),
+			section("codex"), verdict("codex", domain.VerdictFields{}),
+		}},
+	}}
+
+	res := run(action, []domain.Target{shown[0], shown[2]}, shown, &fakeCatalog{targets: shown}, backend)
+
+	if got := verdictTargets(res); got != "claude,opencode,codex" {
+		t.Fatalf("verdicts of %v, want claude (once, where first seen), opencode, codex", got)
+	}
+	claude := res.Verdicts[0]
+	if claude.UpstreamChanged != 2 || claude.OverlayNotDeployed != 0 || claude.RecordedVersion != "v1.0.0" || claude.Action != "capture it" {
+		t.Errorf("claude = %+v, want what the later lines gave, over what the earlier ones did where the later gave nothing", claude)
+	}
+	if claude.Status != domain.SyncNeedsCapture {
+		t.Errorf("claude.Status = %d, want it classified again from the merged fields: SyncNeedsCapture", claude.Status)
+	}
+	if len(claude.AgentFiles) != 2 || claude.AgentFiles[0].Path != "agents/GADU.md" || claude.AgentFiles[1].Path != "agents/EXTRA.md" {
+		t.Errorf("claude.AgentFiles = %+v, want the files of both invocations, in order", claude.AgentFiles)
+	}
+}
+
+// An agent file line belongs to the section last opened, which may have been in
+// an invocation before: the report is one.
+func TestActionRunner_AnAgentFileBelongsToTheSectionLastOpenedEvenInAnEarlierInvocation(t *testing.T) {
+	shown := threeCopyTargets()
+	action := domain.Action{Command: "sync-check", SupportsAll: true, ResultKind: domain.ResultSyncDashboard}
+	backend := &fakeBackend{script: map[string]domain.Execution{
+		"sync-check --target claude": {Report: []domain.SyncLine{section("claude"), verdict("claude", domain.VerdictFields{})}},
+		"sync-check --target codex": {Report: []domain.SyncLine{
+			agentFile("agents/CARRIED.md", "OVERLAY_NOT_DEPLOYED"), section("codex"), verdict("codex", domain.VerdictFields{}),
+		}},
+	}}
+
+	res := run(action, []domain.Target{shown[0], shown[2]}, shown, &fakeCatalog{targets: shown}, backend)
+
+	if got := verdictTargets(res); got != "claude,codex" {
+		t.Fatalf("verdicts of %v, want claude and codex", got)
+	}
+	if files := res.Verdicts[0].AgentFiles; len(files) != 1 || files[0].Path != "agents/CARRIED.md" {
+		t.Errorf("claude.AgentFiles = %+v, want the file whose section was opened by the invocation before", files)
+	}
+	if files := res.Verdicts[1].AgentFiles; len(files) != 0 {
+		t.Errorf("codex.AgentFiles = %+v, want none: the file came before its section", files)
+	}
 }

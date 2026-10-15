@@ -87,6 +87,29 @@ func (f *fakeBackend) Run(args []string) domain.Execution {
 	return f.script[args[0]]
 }
 
+// The lines of a sync-check report, as the adapter reads them: what a test
+// needs to give an execution a report without any text.
+
+func intp(n int) *int { return &n }
+
+func strptr(s string) *string { return &s }
+
+func section(target string) domain.SyncLine {
+	return domain.SyncLine{Kind: domain.SyncSectionLine, Target: target}
+}
+
+func verdict(target string, fields domain.VerdictFields) domain.SyncLine {
+	return domain.SyncLine{Kind: domain.SyncVerdictLine, Target: target, Fields: fields}
+}
+
+func remedy(target, text string) domain.SyncLine {
+	return domain.SyncLine{Kind: domain.SyncActionLine, Target: target, Remedy: text}
+}
+
+func agentFile(path, status string) domain.SyncLine {
+	return domain.SyncLine{Kind: domain.SyncAgentFileLine, File: domain.AgentFileEntry{Path: path, Status: status}}
+}
+
 // failing is an Execution that ended with exit status code.
 func failing(output string, code int) domain.Execution {
 	return domain.Execution{Output: output, ExitCode: code, Err: fmt.Errorf("exit status %d", code)}

@@ -492,7 +492,7 @@ func versionLine(v domain.TargetVerdict) string {
 		return "  versión: nunca desplegado"
 	default:
 		line := "  versión: " + v.RecordedVersion
-		if v.DigestMatch == "no" {
+		if v.DigestMatch == domain.DigestMismatch {
 			line += " (digest desactualizado)"
 		}
 		return line
