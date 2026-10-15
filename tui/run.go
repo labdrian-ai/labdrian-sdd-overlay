@@ -3,35 +3,8 @@ package main
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"strings"
-
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/tui/internal/domain"
 )
-
-// probeBehindOriginCmd returns a tea.Cmd that runs a cached-only sync-check
-// (no --fetch/--check-origin, per R-001) against root and delivers a
-// probeDoneMsg. bubbletea runs the returned func() tea.Msg off the UI
-// goroutine, so this never blocks Init()'s first render. CombinedOutput is
-// fed to probeBehind/probeBehindRelease even when the process exits
-// non-zero — the probe reads cached refs, it does not require a clean exit.
-// One sync-check invocation feeds both fields (D2): no second exec is
-// spent just to pick up the release-behind count.
-func probeBehindOriginCmd(root string) tea.Cmd {
-	return func() tea.Msg {
-		bin := filepath.Join(root, "bin", "labdrian-overlay")
-		cmd := exec.Command(bin, "sync-check")
-		cmd.Dir = root
-		out, _ := cmd.CombinedOutput()
-		output := string(out)
-		return probeDoneMsg{
-			behind:        domain.ProbeBehind(output),
-			behindRelease: domain.ProbeBehindRelease(output),
-		}
-	}
-}
 
 // RepoRoot resolves the overlay repo root.
 //
@@ -78,73 +51,4 @@ func walkUpForBackend(start string) (string, bool) {
 		}
 		dir = parent
 	}
-}
-
-// runBackend executes the backend action for the selected targets.
-//
-// When the action supports `all` and the selection is the whole catalog the
-// operator was shown (scope.CoversAll), it issues a single `--target all`
-// invocation, after confirming the backend still lists that same catalog.
-// Otherwise it iterates per target (this is required for `capture`, which
-// rejects `--target all`, and it is what keeps a partial selection from ever
-// widening into `all`). For TargetAgnostic actions (hooks lifecycle), no
-// --target is emitted at all. Nested Also actions contribute their own
-// invocations, routed and appended after the primary action's.
-func runBackend(root string, action domain.Action, selected []domain.Target, scope domain.TargetScope) domain.CommandResult {
-	res := domain.CommandResult{Action: action, Targets: selected}
-	bin := filepath.Join(root, "bin", "labdrian-overlay")
-
-	argSets := domain.AllArgSets(action, selected, scope.CoversAll(selected))
-
-	var sb strings.Builder
-	severity := 0
-	// Aggregate by worst severity seen across all invocations in this
-	// CommandResult, not "last failing invocation wins": a later degraded
-	// (exit 2) invocation must never mask an earlier hard failure (or vice
-	// versa) once the Also merge concatenates invocations from different
-	// backend subcommands into this loop.
-	fail := func(err error, exitCode int) {
-		if sev := domain.InvocationSeverity(err, exitCode); sev > severity {
-			severity = sev
-			res.Err = err
-			res.ExitCode = exitCode
-		}
-	}
-	for i, args := range argSets {
-		if i > 0 {
-			sb.WriteString("\n")
-		}
-		sb.WriteString(fmt.Sprintf("$ bin/labdrian-overlay %s\n", strings.Join(args, " ")))
-
-		// `all` is defined by the backend when it runs, so verify it still
-		// means what the operator saw; if it cannot be verified, do not run.
-		if domain.UsesTargetAll(args) {
-			if err := scope.ConfirmUnchanged(); err != nil {
-				sb.WriteString(fmt.Sprintf("[omitido: %v]\n", err))
-				fail(err, -1)
-				continue
-			}
-		}
-
-		cmd := exec.Command(bin, args...)
-		cmd.Dir = root
-		out, err := cmd.CombinedOutput()
-		sb.Write(out)
-		if err != nil {
-			sb.WriteString(fmt.Sprintf("\n[exit error: %v]\n", err))
-			// Extract the exit code so callers can distinguish a hard failure
-			// (exit 1) from a degraded/warning result (exit 2).
-			exitCode := -1
-			if ee, ok := err.(*exec.ExitError); ok {
-				exitCode = ee.ExitCode()
-			}
-			fail(err, exitCode)
-		}
-	}
-
-	res.Output = sb.String()
-	if action.Command == "sync-check" {
-		res.Verdicts = domain.ParseSyncCheck(res.Output)
-	}
-	return res
 }

@@ -36,6 +36,44 @@ type overlayCLI struct {
 // newOverlayCLI returns the adapter over the backend under root.
 func newOverlayCLI(root string) overlayCLI { return overlayCLI{root: root} }
 
+// binary is the path of the backend script under the repo root.
+func (c overlayCLI) binary() string { return filepath.Join(c.root, "bin", "labdrian-overlay") }
+
+// Run implements domain.Backend: it runs one invocation of the backend script
+// from the repo root and returns what it printed, standard output and standard
+// error together, and how it ended. There is no deadline: an action (apply,
+// self-update) takes as long as it takes, and the operator can see it run.
+func (c overlayCLI) Run(args []string) domain.Execution {
+	cmd := exec.Command(c.binary(), args...)
+	cmd.Dir = c.root
+	cmd.Env = c.env
+	out, err := cmd.CombinedOutput()
+	run := domain.Execution{Output: string(out), Err: err}
+	if err != nil {
+		// The exit code lets callers tell a hard failure (exit 1) from a
+		// degraded/warning result (exit 2); -1 when the process did not exit
+		// on its own.
+		run.ExitCode = -1
+		var exited *exec.ExitError
+		if errors.As(err, &exited) {
+			run.ExitCode = exited.ExitCode()
+		}
+	}
+	return run
+}
+
+// Report implements domain.RepoProbe with a cached-only sync-check (no
+// --fetch/--check-origin, per R-001) from the repo root. Whatever the backend
+// printed is the report, even when the process exits non-zero: the probe reads
+// cached refs, it does not require a clean exit.
+func (c overlayCLI) Report() string {
+	cmd := exec.Command(c.binary(), "sync-check")
+	cmd.Dir = c.root
+	cmd.Env = c.env
+	out, _ := cmd.CombinedOutput()
+	return string(out)
+}
+
 // Targets implements TargetCatalog with `labdrian-overlay targets`.
 func (c overlayCLI) Targets() ([]domain.Target, error) {
 	out, err := c.query("targets")
@@ -113,7 +151,7 @@ func (c overlayCLI) query(args ...string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), backendQueryTimeout)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, filepath.Join(c.root, "bin", "labdrian-overlay"), args...)
+	cmd := exec.CommandContext(ctx, c.binary(), args...)
 	cmd.Dir = c.root
 	cmd.Env = c.env
 	var stdout, stderr bytes.Buffer

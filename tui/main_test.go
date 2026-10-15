@@ -1085,49 +1085,6 @@ func writeStubBackend(t *testing.T, root, recorderPath, stdout string, exitCode 
 	}
 }
 
-// TestProbeBehindOriginCmd proves probeBehindOriginCmd's exec contract
-// (D4): no --fetch/--check-origin flag (cached-only probe), cmd.Dir=root,
-// and the output is fed to probeBehind even when the process exits
-// non-zero — the probe's job is reading a cached ref, not requiring a clean
-// exit.
-func TestProbeBehindOriginCmd(t *testing.T) {
-	root := t.TempDir()
-	recorder := filepath.Join(root, "invoked.log")
-	const sample = "\n=== sync-check: claude ===\n" +
-		"VERDICT:claude:UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=0 REPO_BEHIND_ORIGIN=7\n" +
-		"ACTION:claude: run 'git pull' to update your local clone\n"
-	writeStubBackend(t, root, recorder, sample, 1) // nonzero exit on purpose
-
-	cmd := probeBehindOriginCmd(root)
-	if cmd == nil {
-		t.Fatal("probeBehindOriginCmd must return a non-nil tea.Cmd")
-	}
-	msg := cmd()
-
-	pd, ok := msg.(probeDoneMsg)
-	if !ok {
-		t.Fatalf("expected probeDoneMsg, got %T", msg)
-	}
-	if pd.behind != 7 {
-		t.Errorf("behind = %d, want 7 (output must be parsed even though the stub exits nonzero)", pd.behind)
-	}
-
-	data, err := os.ReadFile(recorder)
-	if err != nil {
-		t.Fatalf("read recorder (backend was never invoked?): %v", err)
-	}
-	invoked := strings.TrimSpace(string(data))
-	if strings.Contains(invoked, "--fetch") || strings.Contains(invoked, "--check-origin") {
-		t.Errorf("probeBehindOriginCmd must not pass --fetch/--check-origin (cached-only probe per R-001), got invocation: %q", invoked)
-	}
-	pwdPart, _, _ := strings.Cut(invoked, "|")
-	gotDir, _ := filepath.EvalSymlinks(pwdPart)
-	wantDir, _ := filepath.EvalSymlinks(root)
-	if gotDir == "" || gotDir != wantDir {
-		t.Errorf("cmd.Dir mismatch: backend ran with cwd %q, want %q", pwdPart, root)
-	}
-}
-
 // ---------------------------------------------------------------------------
 // Phase 5: action entry + re-probe (R-003, D7, D5 tail).
 // ---------------------------------------------------------------------------
@@ -1228,30 +1185,6 @@ func TestUpdate_SelfUpdateSuccess_RefiresProbe(t *testing.T) {
 // availability (R-003, D4).
 // ---------------------------------------------------------------------------
 
-// TestProbeBehindOriginCmd_AlsoDeliversBehindRelease proves the D2 wiring:
-// one sync-check invocation feeds both probeDoneMsg fields, so no second
-// exec is spent picking up the release-behind count.
-func TestProbeBehindOriginCmd_AlsoDeliversBehindRelease(t *testing.T) {
-	root := t.TempDir()
-	recorder := filepath.Join(root, "invoked.log")
-	const sample = "\n=== sync-check: claude ===\n" +
-		"VERDICT:claude:UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=0 REPO_BEHIND_ORIGIN=1 REPO_BEHIND_RELEASE=4\n" +
-		"ACTION:claude: run 'labdrian self-update'\n"
-	writeStubBackend(t, root, recorder, sample, 0)
-
-	msg := probeBehindOriginCmd(root)()
-	pd, ok := msg.(probeDoneMsg)
-	if !ok {
-		t.Fatalf("expected probeDoneMsg, got %T", msg)
-	}
-	if pd.behind != 1 {
-		t.Errorf("behind = %d, want 1", pd.behind)
-	}
-	if pd.behindRelease != 4 {
-		t.Errorf("behindRelease = %d, want 4", pd.behindRelease)
-	}
-}
-
 // TestNewModel_BehindReleaseDefaultsToNA mirrors
 // TestNewModel_BehindOriginDefaultsToNA for the new field: newModel must
 // initialize behindRelease to domain.RepoBehindOriginNA, not Go's zero value.
@@ -1317,9 +1250,7 @@ func TestUpdateActions_Restore_NoBackupIsNoOp(t *testing.T) {
 // the EXACT existing confirm->run->result pattern (Mutating: true ->
 // screenConfirm -> y/enter -> screenRunning).
 func TestUpdateActions_Restore_WithBackupShowsConfirmNamingTimestampVersion(t *testing.T) {
-	m := newLoadedModel(t, &fakeCatalog{targets: threeCopyTargets()}, &fakeBackups{byTarget: map[string]domain.Backup{
-		"claude": {Timestamp: "20260301T093000Z", Version: "v1.5.0"},
-	}})
+	m := newLoadedModel(t, &fakeCatalog{targets: threeCopyTargets()}, &fakeRestore{backed: []string{"claude"}})
 	// Only "claude" selected, to make the confirm text assertion unambiguous.
 	m.selected = map[int]bool{0: true, 1: false, 2: false}
 	m = enterRestore(t, m)
@@ -1335,11 +1266,10 @@ func TestUpdateActions_Restore_WithBackupShowsConfirmNamingTimestampVersion(t *t
 	}
 
 	rendered := stripANSI(m.View())
-	if !strings.Contains(rendered, "20260301T093000Z") {
-		t.Errorf("confirm screen must name the backup timestamp being restored, got:\n%s", rendered)
-	}
-	if !strings.Contains(rendered, "v1.5.0") {
-		t.Errorf("confirm screen must name the backup version being restored, got:\n%s", rendered)
+	// The planner words the backups (package app tests the timestamp and the
+	// version it names); the confirm screen shows its text under the action's.
+	if !strings.Contains(rendered, "BACKUPS FOR: claude") {
+		t.Errorf("confirm screen must show the planner's text naming the backup being restored, got:\n%s", rendered)
 	}
 	if !strings.Contains(rendered, "sobrescribiendo") {
 		t.Errorf("confirm screen must still state that restore overwrites deployed files, got:\n%s", rendered)
@@ -1362,9 +1292,7 @@ func TestUpdateActions_Restore_WithBackupShowsConfirmNamingTimestampVersion(t *t
 // rather than refusing the whole action.
 func TestUpdateActions_Restore_PartialBackupAvailabilityAmongSelection(t *testing.T) {
 	// "opencode" deliberately has no backup.
-	m := newLoadedModel(t, &fakeCatalog{targets: threeCopyTargets()}, &fakeBackups{byTarget: map[string]domain.Backup{
-		"claude": {Timestamp: "20260301T093000Z", Version: "v1.5.0"},
-	}})
+	m := newLoadedModel(t, &fakeCatalog{targets: threeCopyTargets()}, &fakeRestore{backed: []string{"claude"}})
 	m.selected = map[int]bool{0: true, 1: true, 2: false} // claude + opencode
 	m = enterRestore(t, m)
 
@@ -1381,7 +1309,7 @@ func TestUpdateActions_Restore_PartialBackupAvailabilityAmongSelection(t *testin
 	// Before the fix, pendingTargets didn't exist and runActionCmd recomputed
 	// m.selectedTargets() at run time -- i.e. it would have invoked restore
 	// against "opencode" too, which has zero backups and would fail, making
-	// runBackend's worst-severity aggregation misreport the whole action as
+	// the runner's worst-severity aggregation misreport the whole action as
 	// failed even though "claude"'s destructive restore had already
 	// succeeded.
 	if len(m.pendingTargets) != 1 || m.pendingTargets[0].Name != "claude" {
@@ -1416,17 +1344,17 @@ func TestUpdateActions_Restore_PartialBackupAvailabilityAmongSelection(t *testin
 	if !found {
 		t.Fatal("confirming restore's batched commands never produced a runDoneMsg")
 	}
-	// done.result.Targets is runBackend's own record of exactly which targets
+	// done.result.Targets is the runner's own record of exactly which targets
 	// it was invoked against (set before any subprocess runs) -- the direct
 	// proof that "opencode" (zero backups) was never actually invoked, not
 	// just omitted from the confirm text.
 	for _, tgt := range done.result.Targets {
 		if tgt.Name == "opencode" {
-			t.Errorf("runBackend was invoked against opencode (zero backups); targets = %+v", done.result.Targets)
+			t.Errorf("the runner was asked to run against opencode (zero backups); targets = %+v", done.result.Targets)
 		}
 	}
 	if len(done.result.Targets) != 1 || done.result.Targets[0].Name != "claude" {
-		t.Errorf("runBackend invoked against targets = %+v, want exactly [claude]", done.result.Targets)
+		t.Errorf("the runner was asked to run against targets = %+v, want exactly [claude]", done.result.Targets)
 	}
 }
 

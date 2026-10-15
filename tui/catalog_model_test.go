@@ -205,11 +205,8 @@ func TestCapture_WithOnlyAPackageTargetSelectedIsANoOp(t *testing.T) {
 // TestRestore_NeverRunsAgainstAPackageTarget: even a package target that has
 // a backup directory is not offered a restore, because the backend refuses it.
 func TestRestore_NeverRunsAgainstAPackageTarget(t *testing.T) {
-	backups := &fakeBackups{byTarget: map[string]domain.Backup{
-		"claude": {Timestamp: "20260301T093000Z", Version: "v1.5.0"},
-		"pi":     {Timestamp: "20260301T093000Z", Version: "v1.5.0"},
-	}}
-	m := newLoadedModel(t, &fakeCatalog{targets: fourTargets()}, backups)
+	restore := &fakeRestore{backed: []string{"claude", "pi"}}
+	m := newLoadedModel(t, &fakeCatalog{targets: fourTargets()}, restore)
 	m.selected = map[int]bool{0: true, 3: true} // claude and pi
 	m = enterRestore(t, m)
 
@@ -219,9 +216,42 @@ func TestRestore_NeverRunsAgainstAPackageTarget(t *testing.T) {
 	if got := targetNames(m.pendingTargets); got != "claude" {
 		t.Errorf("restore will run against %q, want only claude", got)
 	}
-	for _, asked := range backups.asked {
-		if asked == "pi" {
-			t.Error("the backend was asked for pi's backups, but restore never applies to a package target")
+	for _, candidates := range restore.asked {
+		for _, asked := range candidates {
+			if asked == "pi" {
+				t.Error("the planner was asked about pi's backups, but restore never applies to a package target")
+			}
 		}
+	}
+}
+
+// TestRunActionCmd_HandsTheRunnerTheSelectionAndTheCatalogShown drives the bug of T1
+// from the model: the operator starts with everything selected, turns pi off, and
+// runs an action. The runner decides what `--target all` may mean, and it can only
+// decide it if it is given both what was selected and the whole catalog that was
+// shown; the model must never narrow the second to the first.
+func TestRunActionCmd_HandsTheRunnerTheSelectionAndTheCatalogShown(t *testing.T) {
+	catalog := &fakeCatalog{targets: fourTargets()}
+	runner := &fakeRunner{}
+	d := testDeps(catalog)
+	d.runner = runner
+	updated, _ := newModel(d).Update(loadTargetsCmd(catalog)())
+	m := updated.(model)
+	m.selected[3] = false // pi
+
+	done := m.runActionCmd(domain.Action{Name: "Estado", Command: "status", SupportsAll: true}, m.selectedTargets())().(runDoneMsg)
+
+	if len(runner.calls) != 1 {
+		t.Fatalf("the runner was asked %d times, want once", len(runner.calls))
+	}
+	call := runner.calls[0]
+	if got := targetNames(call.selected); got != "claude, opencode, codex" {
+		t.Errorf("the runner was told to run against %q, want the three that stay selected", got)
+	}
+	if got := targetNames(call.shown); got != "claude, opencode, codex, pi" {
+		t.Errorf("the runner was shown the catalog %q, want all four the operator saw", got)
+	}
+	if done.result.Action.Command != "status" {
+		t.Errorf("the model delivered %+v, want the runner's result", done.result)
 	}
 }

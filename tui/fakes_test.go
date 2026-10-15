@@ -1,18 +1,20 @@
 package main
 
-// In-memory stand-ins for the TUI's ports, and the constructors that give
-// model tests a ready model without a process or a file behind it. Anything
-// that needs a real answer from the backend belongs in a *_backend_test.go
-// file instead.
+// In-memory stand-ins for what the model talks to (the catalog, the action
+// runner, the restore planner and the repo prober), and the constructors that
+// give model tests a ready model without a process or a file behind it.
+// Anything that needs a real answer from the backend belongs in a
+// *_backend_test.go file instead.
 
 import (
+	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/tui/internal/domain"
 )
 
-// fakeCatalog is a domain.TargetCatalog that answers from memory and counts how many
+// fakeCatalog is a TargetCatalog that answers from memory and counts how many
 // times it was asked.
 type fakeCatalog struct {
 	targets []domain.Target
@@ -28,24 +30,65 @@ func (f *fakeCatalog) Targets() ([]domain.Target, error) {
 	return append([]domain.Target(nil), f.targets...), nil
 }
 
-// fakeBackups is a domain.BackupQuery that answers from memory. It records which
-// targets it was asked about, so a test can prove a target was never queried.
-type fakeBackups struct {
-	byTarget map[string]domain.Backup
-	errs     map[string]error
-	asked    []string
-	gate     chan struct{} // when set, every query waits until it is closed
+// runCall is one run the model asked of its ActionRunner.
+type runCall struct {
+	action   domain.Action
+	selected []domain.Target
+	shown    []domain.Target
 }
 
-func (f *fakeBackups) LatestBackup(target string) (domain.Backup, bool, error) {
+// fakeRunner is an ActionRunner that records what it was asked and answers
+// with result, which names the action and the targets it was asked about.
+type fakeRunner struct {
+	calls  []runCall
+	result domain.CommandResult
+}
+
+func (f *fakeRunner) Run(action domain.Action, selected, shown []domain.Target) domain.CommandResult {
+	f.calls = append(f.calls, runCall{action: action, selected: selected, shown: shown})
+	res := f.result
+	res.Action, res.Targets = action, selected
+	return res
+}
+
+// fakeRestore is a RestorePlanner that vouches for the targets in backed. It
+// records the candidates it was asked about, so a test can prove a target was
+// never put to it, and it answers with a text of its own that names the
+// targets it vouches for.
+type fakeRestore struct {
+	backed []string
+	asked  [][]string
+	gate   chan struct{} // when set, every question waits until it is closed
+}
+
+func (f *fakeRestore) Confirmation(action domain.Action, candidates []domain.Target) (string, []domain.Target, bool) {
 	if f.gate != nil {
 		<-f.gate
 	}
-	f.asked = append(f.asked, target)
-	b, ok := f.byTarget[target]
-	// A failing query may still hand back what it knew. The model must go by
-	// the error, not by a backup returned alongside it.
-	return b, ok, f.errs[target]
+	f.asked = append(f.asked, strings.Split(targetNames(candidates), ", "))
+	var have []domain.Target
+	for _, c := range candidates {
+		for _, name := range f.backed {
+			if c.Name == name {
+				have = append(have, c)
+			}
+		}
+	}
+	if len(have) == 0 {
+		return "", nil, false
+	}
+	return action.ConfirmMessage + "\n\nBACKUPS FOR: " + targetNames(have), have, true
+}
+
+// fakeProbe is a RepoProber that answers with fixed counts.
+type fakeProbe struct {
+	origin, release int
+	asked           int
+}
+
+func (f *fakeProbe) Behind() (int, int) {
+	f.asked++
+	return f.origin, f.release
 }
 
 // threeCopyTargets is the catalog most model tests run against: the three
@@ -63,35 +106,48 @@ func fourTargets() []domain.Target {
 	return append(threeCopyTargets(), domain.Target{Name: "pi", Kind: domain.KindPackage})
 }
 
+// testDeps is a model's collaborators with nothing behind them: the menu as
+// the program has it, the catalog given, a runner that runs nothing, a planner
+// that vouches for no backup and a probe that knows nothing.
+func testDeps(catalog domain.TargetCatalog) deps {
+	return deps{
+		actions: domain.Actions(),
+		catalog: catalog,
+		runner:  &fakeRunner{},
+		restore: &fakeRestore{},
+		probe:   &fakeProbe{origin: domain.RepoBehindOriginNA, release: domain.RepoBehindOriginNA},
+	}
+}
+
 // newTestModel returns a model whose catalog has already loaded the three
 // copy targets, every one selected -- the state the TUI is in a moment after
-// launch. Its repo root is an empty scratch directory, so the launch probe
-// finds no backend there and never reaches real state.
+// launch.
 func newTestModel(t *testing.T) model {
 	t.Helper()
-	return newLoadedModel(t, &fakeCatalog{targets: threeCopyTargets()}, &fakeBackups{})
+	return newLoadedModel(t, &fakeCatalog{targets: threeCopyTargets()}, &fakeRestore{})
 }
 
 // newTestModelWith is newTestModel over a catalog the caller controls.
 func newTestModelWith(t *testing.T, catalog domain.TargetCatalog) model {
 	t.Helper()
-	return newLoadedModel(t, catalog, &fakeBackups{})
+	return newLoadedModel(t, catalog, &fakeRestore{})
 }
 
-// newLoadedModel builds a model over the given ports and delivers the catalog
-// the same way the program does: by running the command Init issues and
-// handing its message to Update.
-func newLoadedModel(t *testing.T, catalog domain.TargetCatalog, backups domain.BackupQuery) model {
+// newLoadedModel builds a model over the given catalog and restore planner and
+// delivers the catalog the same way the program does: by running the command
+// Init issues and handing its message to Update.
+func newLoadedModel(t *testing.T, catalog domain.TargetCatalog, restore RestorePlanner) model {
 	t.Helper()
-	m := newModel(deps{repoRoot: t.TempDir(), catalog: catalog, backups: backups})
-	updated, _ := m.Update(loadTargetsCmd(catalog)())
+	d := testDeps(catalog)
+	d.restore = restore
+	updated, _ := newModel(d).Update(loadTargetsCmd(catalog)())
 	return updated.(model)
 }
 
 // unloadedTestModel is a model that has not yet received its catalog.
 func unloadedTestModel(t *testing.T, catalog domain.TargetCatalog) model {
 	t.Helper()
-	return newModel(deps{repoRoot: t.TempDir(), catalog: catalog, backups: &fakeBackups{}})
+	return newModel(testDeps(catalog))
 }
 
 // pressKey feeds one key to the model's Update and returns the new model.

@@ -13,10 +13,9 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/tui/internal/domain"
 )
 
-// stackModel builds the program's model over the backend under root, with the adapter main would choose.
+// stackModel builds the program's model over the backend under root, the way main does.
 func stackModel(root string, rootErr error) tea.Model {
-	backend := newOverlayCLI(root)
-	return newModel(deps{repoRoot: root, rootErr: rootErr, catalog: backend, backups: backend})
+	return compose(root, rootErr)
 }
 
 // menuDefinition lists the action menu as the program builds it: every row with the fields that decide how it is
