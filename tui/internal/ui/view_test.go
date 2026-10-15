@@ -24,7 +24,7 @@ func TestViewDashboard_ShowsOriginBehindIndicator(t *testing.T) {
 	m := newTestModel(t)
 	m.width = 80
 	m.scr = screenResult
-	m.result = domain.CommandResult{
+	m = m.showResult(domain.CommandResult{
 		Action: domain.Action{Name: "Verificar sincronización", Command: "sync-check"},
 		Verdicts: []domain.TargetVerdict{
 			{
@@ -35,7 +35,7 @@ func TestViewDashboard_ShowsOriginBehindIndicator(t *testing.T) {
 			},
 		},
 		Invocations: printing("ok"),
-	}
+	})
 
 	rendered := stripANSI(m.viewDashboard())
 	if !strings.Contains(rendered, "Detrás de origin") {
@@ -54,7 +54,7 @@ func TestViewDashboard_ZeroOriginBehind_NoIndicator(t *testing.T) {
 	m := newTestModel(t)
 	m.width = 80
 	m.scr = screenResult
-	m.result = domain.CommandResult{
+	m = m.showResult(domain.CommandResult{
 		Action: domain.Action{Name: "Verificar sincronización", Command: "sync-check"},
 		Verdicts: []domain.TargetVerdict{
 			{
@@ -65,7 +65,7 @@ func TestViewDashboard_ZeroOriginBehind_NoIndicator(t *testing.T) {
 			},
 		},
 		Invocations: printing("ok"),
-	}
+	})
 
 	rendered := stripANSI(m.viewDashboard())
 	if strings.Contains(rendered, "detrás de origin") {
@@ -82,7 +82,7 @@ func TestViewDashboard_NeverHealthyWhileBehindOrigin(t *testing.T) {
 	m := newTestModel(t)
 	m.width = 80
 	m.scr = screenResult
-	m.result = domain.CommandResult{
+	m = m.showResult(domain.CommandResult{
 		Action: domain.Action{Name: "Verificar sincronización", Command: "sync-check", ResultKind: domain.ResultSyncDashboard},
 		Verdicts: []domain.TargetVerdict{{
 			Target:            "claude",
@@ -92,7 +92,7 @@ func TestViewDashboard_NeverHealthyWhileBehindOrigin(t *testing.T) {
 			Action:            "run 'git pull' to update your local clone",
 		}},
 		Invocations: printing("ok"),
-	}
+	})
 
 	rendered := stripANSI(m.viewDashboard())
 	if strings.Contains(rendered, "Sincronizado") {
@@ -140,7 +140,7 @@ func TestViewDashboard_TheStatusOfAVerdictIsTheOneTheDashboardShows(t *testing.T
 			if tc.digestMismatch {
 				digest = "no"
 			}
-			m.result = domain.CommandResult{
+			m = m.showResult(domain.CommandResult{
 				Action: domain.Action{Name: "Verificar sincronización", Command: "sync-check", ResultKind: domain.ResultSyncDashboard},
 				Verdicts: []domain.TargetVerdict{{
 					Target:             "claude",
@@ -153,7 +153,7 @@ func TestViewDashboard_TheStatusOfAVerdictIsTheOneTheDashboardShows(t *testing.T
 					Status:             domain.Classify(tc.upstream, tc.notDeployed, tc.behindOrigin, tc.behindRelease, tc.digestMismatch),
 				}},
 				Invocations: printing("ok"),
-			}
+			})
 
 			rendered := stripANSI(m.viewDashboard())
 
@@ -386,7 +386,7 @@ func TestViewDashboard_ShowsReleaseBehindIndicator(t *testing.T) {
 	m := newTestModel(t)
 	m.width = 80
 	m.scr = screenResult
-	m.result = domain.CommandResult{
+	m = m.showResult(domain.CommandResult{
 		Action: domain.Action{Name: "Verificar sincronización", Command: "sync-check"},
 		Verdicts: []domain.TargetVerdict{
 			{
@@ -399,7 +399,7 @@ func TestViewDashboard_ShowsReleaseBehindIndicator(t *testing.T) {
 			},
 		},
 		Invocations: printing("ok"),
-	}
+	})
 
 	rendered := stripANSI(m.viewDashboard())
 	if !strings.Contains(rendered, "Detrás del release") {
@@ -441,11 +441,11 @@ func TestViewDashboard_VersionLineRendering(t *testing.T) {
 			m := newTestModel(t)
 			m.width = 80
 			m.scr = screenResult
-			m.result = domain.CommandResult{
+			m = m.showResult(domain.CommandResult{
 				Action:      domain.Action{Name: "Verificar sincronización", Command: "sync-check"},
 				Verdicts:    []domain.TargetVerdict{tc.verdict},
 				Invocations: printing("ok"),
-			}
+			})
 			rendered := stripANSI(m.viewDashboard())
 			if !strings.Contains(rendered, tc.wantSubstr) {
 				t.Errorf("viewDashboard must contain %q, got:\n%s", tc.wantSubstr, rendered)
@@ -462,11 +462,11 @@ func TestViewDashboard_EmptyRecordedVersionRendersNoVersionLine(t *testing.T) {
 	m := newTestModel(t)
 	m.width = 80
 	m.scr = screenResult
-	m.result = domain.CommandResult{
+	m = m.showResult(domain.CommandResult{
 		Action:      domain.Action{Name: "Verificar sincronización", Command: "sync-check"},
 		Verdicts:    []domain.TargetVerdict{{Target: "claude", Status: domain.SyncHealthy}},
 		Invocations: printing("ok"),
-	}
+	})
 	rendered := stripANSI(m.viewDashboard())
 	if strings.Contains(rendered, "versión:") {
 		t.Errorf("viewDashboard must NOT show a version line when RecordedVersion is empty, got:\n%s", rendered)

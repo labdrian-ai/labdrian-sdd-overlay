@@ -87,13 +87,13 @@ func TestMaxScroll_CountsTheLinesOfTheTranscript(t *testing.T) {
 	m.width = 80
 	m.height = 12 // the pane's viewport is clamped to its 5-line minimum
 	m.scr = screenResult
-	m.result = domain.CommandResult{
+	m = m.showResult(domain.CommandResult{
 		Action: domain.Action{Name: "Estado", Command: "status"},
 		Invocations: []domain.Invocation{
 			{Args: []string{"one"}, Run: domain.Execution{Output: "a\nb\nc\n"}},
 			{Args: []string{"two"}, Run: domain.Execution{Output: "d\n"}},
 		},
-	}
+	})
 
 	// "$ one", a, b, c, a blank line, "$ two", d: seven lines in a viewport of five.
 	if got := m.maxScroll(); got != 2 {
@@ -104,12 +104,40 @@ func TestMaxScroll_CountsTheLinesOfTheTranscript(t *testing.T) {
 	}
 }
 
+// The transcript is made once, when the result arrives, and the screen shows
+// that: scrolling and every redraw read what was made, they do not make it
+// again from the invocations. The result's invocations are shared with whoever
+// ran the action, so one changed afterwards shows whether the screen goes back
+// to them.
+func TestResultScreen_ShowsTheTranscriptAsItWasWhenTheResultArrived(t *testing.T) {
+	m := newTestModel(t)
+	m.width = 80
+	m.height = 12
+	invocations := []domain.Invocation{{Args: []string{"status"}, Run: domain.Execution{Output: "a\nb\nc\nd\ne\nf\ng\n"}}}
+
+	updated, _ := m.Update(runDoneMsg{result: domain.CommandResult{Action: domain.Action{Name: "Estado", Command: "status"}, Invocations: invocations}})
+	m = updated.(model)
+	invocations[0].Run.Output = "changed after the result arrived\n"
+	invocations[0].Args = []string{"another"}
+
+	rendered := stripANSI(m.View())
+	if strings.Contains(rendered, "changed after the result arrived") || strings.Contains(rendered, "$ bin/labdrian-overlay another") {
+		t.Errorf("the screen shows what became of the invocations after the result arrived:\n%s", rendered)
+	}
+	if !strings.Contains(rendered, "$ bin/labdrian-overlay status") || !strings.Contains(rendered, "[lines 1-5 of 8]") {
+		t.Errorf("the screen should show the transcript made when the result arrived (8 lines in a pane of 5), got:\n%s", rendered)
+	}
+	if got := m.maxScroll(); got != 3 {
+		t.Errorf("maxScroll() = %d, want 3: the 8 lines of the transcript made on arrival, in a pane of 5", got)
+	}
+}
+
 // A result with nothing run has nothing to scroll and an empty pane.
 func TestMaxScroll_AResultThatRanNothingHasNothingToScroll(t *testing.T) {
 	m := newTestModel(t)
 	m.height = 12
 	m.scr = screenResult
-	m.result = domain.CommandResult{Action: domain.Action{Name: "Estado", Command: "status"}}
+	m = m.showResult(domain.CommandResult{Action: domain.Action{Name: "Estado", Command: "status"}})
 
 	if got := m.maxScroll(); got != 0 {
 		t.Errorf("maxScroll() = %d, want 0", got)

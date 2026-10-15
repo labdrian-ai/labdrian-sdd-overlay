@@ -573,7 +573,7 @@ func (m model) viewDashboard() string {
 // scrollable.
 func (m model) viewOutput() string {
 	w := m.contentWidth()
-	lines := splitOutputLines(transcript(m.result.Invocations))
+	lines := m.output
 
 	// Reserve vertical room for header/footer/title/dashboard.
 	viewport := m.height - 10
