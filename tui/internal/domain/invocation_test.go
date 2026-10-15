@@ -1,9 +1,39 @@
 package domain
 
 import (
+	"errors"
 	"strings"
 	"testing"
 )
+
+// TestInvocationSeverity pins how the outcome of one invocation ranks against
+// another's, which is how the result of several is chosen: a clean run ranks
+// lowest, a degraded run (exit status 2) next, and everything else, including
+// an invocation that was refused or could not be started (-1), is a hard failure.
+func TestInvocationSeverity(t *testing.T) {
+	failed := errors.New("failed")
+	tests := []struct {
+		name string
+		err  error
+		code int
+		want int
+	}{
+		{"a clean run", nil, 0, 0},
+		{"a degraded run", failed, 2, 1},
+		{"a failure", failed, 1, 2},
+		{"another failure", failed, 3, 2},
+		{"an invocation that was refused or never started", failed, -1, 2},
+		{"a failure with a large status", failed, 255, 2},
+		{"a nil error ranks lowest whatever the status says", nil, 2, 0},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := InvocationSeverity(tc.err, tc.code); got != tc.want {
+				t.Errorf("InvocationSeverity(%v, %d) = %d, want %d", tc.err, tc.code, got, tc.want)
+			}
+		})
+	}
+}
 
 // TestBuildArgSets verifies the pure buildArgSets helper:
 //   - TargetAgnostic action → single arg set with no --target (R-008 Scenario 8.1)

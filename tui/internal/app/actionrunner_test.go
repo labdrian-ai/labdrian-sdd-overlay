@@ -172,6 +172,51 @@ func TestActionRunner_AllIsRefusedUnlessTheBackendStillListsTheCatalogShown(t *t
 	})
 }
 
+// A refused `all` is recorded as a failure with exit code -1: the invocation was
+// never started, so there is no status of the backend's to carry. That is a hard
+// failure, and it must stay the result when it meets a degraded run (exit 2) in
+// either order: a refusal that a later degraded run could replace would turn
+// "nothing was applied" into a warning.
+func TestActionRunner_ARefusedAllIsAHardFailureThatOutranksADegradedRun(t *testing.T) {
+	shown := threeCopyTargets()
+	changed := &fakeCatalog{targets: fourTargets()} // what the backend lists now: another target, so `all` is refused
+
+	t.Run("alone, its code is -1", func(t *testing.T) {
+		res := run(statusAction(), shown, shown, changed, &fakeBackend{})
+		if res.Err == nil || res.ExitCode != -1 {
+			t.Errorf("result = (%v, exit %d), want a failure with exit -1", res.Err, res.ExitCode)
+		}
+	})
+
+	chain := func(first, second domain.Action) domain.Action {
+		first.Also = []domain.Action{second}
+		return first
+	}
+	degraded := domain.Action{Command: "status-hooks", TargetAgnostic: true}
+	refused := domain.Action{Command: "apply", SupportsAll: true}
+	backend := func() *fakeBackend {
+		return &fakeBackend{script: map[string]domain.Execution{"status-hooks": failing("engine: DEGRADED\n", 2)}}
+	}
+
+	t.Run("after a degraded run, the refusal is the result", func(t *testing.T) {
+		b := backend()
+		res := run(chain(degraded, refused), shown, shown, changed, b)
+		if res.Err == nil || res.ExitCode != -1 {
+			t.Errorf("result = (%v, exit %d), want the refusal (exit -1) to outrank the degraded run", res.Err, res.ExitCode)
+		}
+		if got := strings.Join(b.ran, "|"); got != "status-hooks" {
+			t.Errorf("invocations = %q, want only the degraded one: the refused all is never sent", got)
+		}
+	})
+
+	t.Run("before a degraded run, the refusal stays the result", func(t *testing.T) {
+		res := run(chain(refused, degraded), shown, shown, changed, backend())
+		if res.Err == nil || res.ExitCode != -1 {
+			t.Errorf("result = (%v, exit %d), want the refusal (exit -1) not to be replaced by the degraded run", res.Err, res.ExitCode)
+		}
+	})
+}
+
 func TestActionRunner_RoutesEveryInvocationOfAnAction(t *testing.T) {
 	shown := fourTargets()
 	tests := []struct {
