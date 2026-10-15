@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/enginetest"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/testhome"
 )
 
@@ -16,7 +17,11 @@ import (
 // this the answers depend on how whoever runs the tests has configured git and on what they exported. The tests
 // that need a sandboxed home of their own pass one to the script (HOME=...) as before; the go command is kept on
 // the caches it had (testhome).
-func TestMain(m *testing.M) { os.Exit(testhome.Run(m)) }
+func TestMain(m *testing.M) {
+	code := testhome.Run(m)
+	enginetest.Cleanup()
+	os.Exit(code)
+}
 
 // The tests run in the home TestMain made for them, not in the machine's.
 func TestTheTestsRunInAHomeOfTheirOwn(t *testing.T) { testhome.Check(t) }

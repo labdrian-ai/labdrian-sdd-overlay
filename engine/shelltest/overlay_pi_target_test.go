@@ -4,8 +4,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/enginetest"
 )
 
 // piTargetOverlayPath resolves bin/labdrian-overlay the same way the other
@@ -107,8 +110,14 @@ func TestOverlayStatusAndSyncCheck_PiStubNoEmptyMkdir(t *testing.T) {
 
 	run := func(sub ...string) (string, int) {
 		t.Helper()
+		home := t.TempDir()
+		// The copy targets that `all` includes ask the engine where each row of the manifest goes;
+		// a run for pi alone does not, and its "not built" answer must stay reachable without one.
+		if slices.Contains(sub, "all") {
+			enginetest.Provision(t, home)
+		}
 		cmd := exec.Command(overlay, sub...)
-		cmd.Env = append(os.Environ(), "HOME="+t.TempDir())
+		cmd.Env = append(os.Environ(), "HOME="+home)
 		cmd.Dir = overlayDir
 		out, runErr := cmd.CombinedOutput()
 		exitCode := 0
@@ -224,6 +233,9 @@ func TestOverlayStatusAndSyncCheckAll_ClaudeOpenCodeCodexOutputUnchanged(t *test
 	// write happens outside cmd_apply), so re-running them back to back
 	// against the same $HOME is safe.
 	home := t.TempDir()
+	// Provisioned, so that the first run does not say it is building the engine inside the section
+	// of the first target and make the sections differ by that line alone.
+	enginetest.Provision(t, home)
 	runSingle := func(cmdName, target string) string {
 		t.Helper()
 		cmd := exec.Command(overlay, cmdName, "--target", target)

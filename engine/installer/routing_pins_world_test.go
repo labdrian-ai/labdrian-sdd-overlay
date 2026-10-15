@@ -20,6 +20,8 @@ import (
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/enginetest"
 )
 
 // pinWorld is one overlay repository and the home its script runs in.
@@ -67,6 +69,7 @@ func newPinWorld(t *testing.T, manifest string, files map[string]string) *pinWor
 	w.git("add", ".")
 	w.git("commit", "-m", "upstream: baseline")
 	w.git("checkout", "-b", "main")
+	enginetest.Provision(t, w.home)
 	return w
 }
 
@@ -163,7 +166,7 @@ func (w *pinWorld) tree(root string) string {
 		if err != nil {
 			return err
 		}
-		if info.IsDir() {
+		if info.IsDir() || enginetest.IsProvisioned(path) {
 			return nil
 		}
 		body, err := os.ReadFile(path)

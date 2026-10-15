@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/enginetest"
 )
 
 // branchFiles lists the files of a branch with their content, as the world's tree does, but for
@@ -83,6 +85,7 @@ func TestRoutingPins_BootstrapExtractsAndLayersTheManagedAndTheTrackedRows(t *te
 		"GIT_CONFIG_VALUE_0=master",
 		"PATH=" + os.Getenv("PATH"),
 	}
+	enginetest.Provision(t, w.home)
 	w.write(w.overlay, "overlay.manifest", pinManifest)
 	w.write(w.overlay, "bin/overlay", "#!/bin/sh\n")
 	writeSnapshot(t, w, ".gentle-ai/backups/upgrade-20260615T175529Z/snapshot.tar.gz")

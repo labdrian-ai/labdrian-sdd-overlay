@@ -94,6 +94,9 @@ import (
 //   - testhome is test support: the home directory a test binary runs in, which the TestMain of a
 //     package that can reach a path derived from HOME enters, so nothing a test forgets to name is
 //     found in the machine of whoever runs it.
+//   - enginetest is test support: the engine binary built once for a test binary and put in the
+//     home where bin/labdrian-overlay looks for it, which the tests that run the script over an
+//     overlay with no engine source need (the script asks the engine where each manifest row goes).
 //   - installer, shelltest, capabilitytest, shaper/shapertest (the documents the shaper's
 //     tests share), reviewreceipt/receipttest (the review documents the receipt capture's
 //     tests share) and this guard (the module root) are test-only.
@@ -106,6 +109,7 @@ var rings = map[string]archguard.Ring{
 	"capabilitytest":            archguard.Support,
 	"cmd":                       archguard.Root,
 	"contract":                  archguard.Domain,
+	"enginetest":                archguard.Support,
 	"execrunner":                archguard.Adapter,
 	"filelock":                  archguard.Adapter,
 	"gadu":                      archguard.Adapter,
