@@ -35,6 +35,14 @@ const (
 
 func Actions() []Action { return domain.Actions() }
 
+func allArgSets(action Action, selected []Target, allSelected bool) [][]string {
+	return domain.AllArgSets(action, selected, allSelected)
+}
+
+func usesTargetAll(args []string) bool { return domain.UsesTargetAll(args) }
+
+func invocationSeverity(err error, exitCode int) int { return domain.InvocationSeverity(err, exitCode) }
+
 func ParseSyncCheck(output string) []TargetVerdict { return domain.ParseSyncCheck(output) }
 
 func probeBehind(output string) int { return domain.ProbeBehind(output) }
