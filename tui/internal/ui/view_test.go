@@ -74,25 +74,19 @@ func TestViewDashboard_ZeroOriginBehind_NoIndicator(t *testing.T) {
 }
 
 // TestViewDashboard_NeverHealthyWhileBehindOrigin verifies R-006: a target
-// with UPSTREAM_CHANGED=0, OVERLAY_NOT_DEPLOYED=0, REPO_BEHIND_ORIGIN>0 (i.e.
-// classify() returns domain.SyncBehindOrigin) must never render as "Sincronizado"
-// (healthy) — it must render its own distinct status instead.
+// with UPSTREAM_CHANGED=0, OVERLAY_NOT_DEPLOYED=0, REPO_BEHIND_ORIGIN>0 must
+// never render as "Sincronizado" (healthy) — it must render its own distinct
+// status instead. The verdict is the one the backend's report earns, parsed
+// and classified by the domain, so the whole path to the screen is under test.
 func TestViewDashboard_NeverHealthyWhileBehindOrigin(t *testing.T) {
 	m := newTestModel(t)
 	m.width = 80
 	m.scr = screenResult
 	m.result = domain.CommandResult{
-		Action: domain.Action{Name: "Verificar sincronización", Command: "sync-check"},
-		Verdicts: []domain.TargetVerdict{
-			{
-				Target:             "claude",
-				Status:             domain.SyncBehindOrigin, // what classify gives for REPO_BEHIND_ORIGIN>0 (R-006); the domain tests it
-				UpstreamChanged:    0,
-				OverlayNotDeployed: 0,
-				RepoBehindOrigin:   3,
-				Action:             "run 'git pull' to update your local clone",
-			},
-		},
+		Action: domain.Action{Name: "Verificar sincronización", Command: "sync-check", ResultKind: domain.ResultSyncDashboard},
+		Verdicts: domain.ParseSyncCheck("=== sync-check: claude ===\n" +
+			"VERDICT:claude:UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=0 REPO_BEHIND_ORIGIN=3\n" +
+			"ACTION:claude: run 'git pull' to update your local clone\n"),
 		Output: "ok",
 	}
 
@@ -102,6 +96,52 @@ func TestViewDashboard_NeverHealthyWhileBehindOrigin(t *testing.T) {
 	}
 	if !strings.Contains(rendered, "detrás de origin: 3") {
 		t.Errorf("viewDashboard must keep the REPO_BEHIND_ORIGIN count visible (R-006), got:\n%s", rendered)
+	}
+}
+
+// TestViewDashboard_TheStatusOfAReportIsTheOneTheDashboardShows follows a
+// sync-check report the whole way: the backend's VERDICT line is parsed, the
+// domain classifies it, and the dashboard paints it. Each report earns exactly
+// one status label, so a parser that misreads a field, a classification that
+// ranks two states the other way round, or a view that labels a status with the
+// words of another fails here and not only in the unit it lives in.
+func TestViewDashboard_TheStatusOfAReportIsTheOneTheDashboardShows(t *testing.T) {
+	labels := []string{"Sincronizado", "Pendiente de aplicación", "Requiere capture + apply", "Detrás del release", "Detrás de origin"}
+	tests := []struct {
+		name   string
+		fields string
+		want   string
+	}{
+		{"nothing to do", "UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=0 REPO_BEHIND_ORIGIN=0 REPO_BEHIND_RELEASE=0", "Sincronizado"},
+		{"files not deployed", "UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=2 REPO_BEHIND_ORIGIN=0", "Pendiente de aplicación"},
+		{"a digest that no longer matches", "UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=0 REPO_BEHIND_ORIGIN=0 DIGEST_MATCH=no", "Pendiente de aplicación"},
+		{"upstream changed", "UPSTREAM_CHANGED=3 OVERLAY_NOT_DEPLOYED=0 REPO_BEHIND_ORIGIN=0", "Requiere capture + apply"},
+		{"upstream changed outranks files not deployed", "UPSTREAM_CHANGED=1 OVERLAY_NOT_DEPLOYED=4 REPO_BEHIND_ORIGIN=0", "Requiere capture + apply"},
+		{"behind the release", "UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=0 REPO_BEHIND_ORIGIN=0 REPO_BEHIND_RELEASE=2", "Detrás del release"},
+		{"behind the release outranks behind origin", "UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=0 REPO_BEHIND_ORIGIN=5 REPO_BEHIND_RELEASE=2", "Detrás del release"},
+		{"behind origin", "UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=0 REPO_BEHIND_ORIGIN=3", "Detrás de origin"},
+		{"files not deployed outrank being behind", "UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=1 REPO_BEHIND_ORIGIN=3 REPO_BEHIND_RELEASE=2", "Pendiente de aplicación"},
+		{"an origin that could not be read adds nothing to the status", "UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=0 REPO_BEHIND_ORIGIN=NA", "Sincronizado"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			m := newTestModel(t)
+			m.width = 100
+			m.scr = screenResult
+			m.result = domain.CommandResult{
+				Action:   domain.Action{Name: "Verificar sincronización", Command: "sync-check", ResultKind: domain.ResultSyncDashboard},
+				Verdicts: domain.ParseSyncCheck("=== sync-check: claude ===\nVERDICT:claude:" + tc.fields + "\nACTION:claude: next step\n"),
+				Output:   "ok",
+			}
+
+			rendered := stripANSI(m.viewDashboard())
+
+			for _, label := range labels {
+				if got, want := strings.Contains(rendered, label), label == tc.want; got != want {
+					t.Errorf("%q in the dashboard of %q = %t, want %t:\n%s", label, tc.fields, got, want, rendered)
+				}
+			}
+		})
 	}
 }
 
