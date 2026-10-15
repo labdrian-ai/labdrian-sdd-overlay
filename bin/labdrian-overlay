@@ -1315,6 +1315,13 @@ route_tar_path() {
 # ---------------------------------------------------------------------------
 
 cmd_bootstrap() {
+  # The engine says where each row goes (manifest_routes_load below), and
+  # bootstrap writes a repository and commits to it before it asks: make the
+  # engine first, so that a machine that cannot (no go, no binary) stops with
+  # nothing written, and while the engine source is still in the tree the
+  # branches are cut from.
+  ensure_engine_binary >&2
+
   info "Bootstrapping overlay repo at $OVERLAY_DIR"
 
   # 1. Init git repo if needed
@@ -1349,10 +1356,6 @@ cmd_bootstrap() {
   if ! git log --oneline 2>/dev/null | head -1 | grep -q .; then
     git commit -m "chore: initial overlay scaffold"
   fi
-
-  # The engine says where each row goes (manifest_routes_load below); make it
-  # now, while the engine source is still in the tree the branches are cut from.
-  ensure_engine_binary >&2
 
   # 6. Create/switch to upstream branch
   git checkout -B upstream
