@@ -1,7 +1,7 @@
 package app
 
 import (
-	"errors"
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -84,5 +84,5 @@ func (f *fakeBackend) Run(args []string) domain.Execution {
 
 // failing is an Execution that ended with exit status code.
 func failing(output string, code int) domain.Execution {
-	return domain.Execution{Output: output, ExitCode: code, Err: errors.New("exit status " + string(rune('0'+code)))}
+	return domain.Execution{Output: output, ExitCode: code, Err: fmt.Errorf("exit status %d", code)}
 }

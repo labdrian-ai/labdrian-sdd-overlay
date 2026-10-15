@@ -8,11 +8,26 @@ package app
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/tui/internal/domain"
 )
+
+// The helper that stands for a backend that failed must say so truthfully for
+// any exit status, since the tests that rank outcomes read the code it gives.
+func TestFailing_SaysTheExitStatusItWasGiven(t *testing.T) {
+	for _, code := range []int{1, 2, 9, 10, 42, 127, 255} {
+		got := failing("output", code)
+		if want := fmt.Sprintf("exit status %d", code); got.Err == nil || got.Err.Error() != want {
+			t.Errorf("failing(_, %d).Err = %v, want %q", code, got.Err, want)
+		}
+		if got.ExitCode != code || got.Output != "output" {
+			t.Errorf("failing(%q, %d) = %+v, want that output and that code", "output", code, got)
+		}
+	}
+}
 
 func statusAction() domain.Action {
 	return domain.Action{Name: "Estado", Command: "status", SupportsAll: true}
