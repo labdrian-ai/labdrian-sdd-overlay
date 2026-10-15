@@ -19,9 +19,15 @@ import (
 )
 
 // recordingEngineScript is an engine that writes its arguments, one call a line, in FAKE_ENGINE_LOG and
-// ends with the code the test gave it for the installed-targets verb, or with 0.
+// ends with the code the test gave it for the installed-targets verb, or with 0; with FAKE_ENGINE_TOO_OLD it
+// is an engine older than the command, which answers any call to it as the engine does: `error: unknown
+// subcommand` and exit 1.
 const recordingEngineScript = `#!/bin/sh
 echo "$*" >> "$FAKE_ENGINE_LOG"
+if [ -n "$FAKE_ENGINE_TOO_OLD" ] && [ "$1" = "installed-targets" ]; then
+  echo 'error: unknown subcommand "installed-targets"' >&2
+  exit 1
+fi
 case "$1 $2" in
   "installed-targets record") exit "${FAKE_RECORD_EXIT:-0}" ;;
   "installed-targets release") exit "${FAKE_RELEASE_EXIT:-0}" ;;
@@ -195,32 +201,142 @@ func TestEngineCalls_ARetireThatFailsEndsTheRunWithExit1(t *testing.T) {
 	}
 }
 
-func TestEngineCalls_AnEngineThatDoesNotAnswerAssessKeepsEverythingAndFailsTheRun(t *testing.T) {
-	// An engine older than the command ends with its own "unknown subcommand" and exit 1; any code but 0
-	// and 3 is the engine not answering, and the registration record and the binary stay.
-	for _, exit := range []string{"1", "2", "127"} {
-		t.Run("exit "+exit, func(t *testing.T) {
-			w, log := recordingEngineWorld(t)
-			w.placeBinary()
-			w.setEnv("FAKE_ASSESS_EXIT", exit)
-			run := w.runLongterm("longterm-mem", "uninstall", "--target", "claude")
+// whatTheUninstallSays runs an uninstall of claude, with its unregister ending as given, against the
+// recording engine with the environment given, and returns the run and the calls the engine got.
+func whatTheUninstallSays(t *testing.T, unregisterExit string, env map[string]string) (pinRun, string, *pinWorld) {
+	t.Helper()
+	w, log := recordingEngineWorld(t)
+	w.placeBinary()
+	w.setEnv("FAKE_UNREGISTER_EXIT", unregisterExit)
+	for k, v := range env {
+		w.setEnv(k, v)
+	}
+	run := w.runLongterm("longterm-mem", "uninstall", "--target", "claude")
+	return run, w.loggedCalls(log), w
+}
+
+const (
+	// engineTooOld is what the script says of an engine that does not have the command.
+	engineTooOld = "WARN: longterm-mem: the engine at $HOME/.claude/bin/gentle-ai-overlay does not know 'installed-targets' (it is older than this overlay), so whether any runtime still depends on the shared binary is unknown; leaving the registration record and the shared binary untouched. Rebuild it with 'labdrian doctor --fix' and re-run uninstall.\n"
+)
+
+// engineFailed is what the script says of an engine that has the command and ended with a code that is
+// no answer.
+func engineFailed(code string) string {
+	return "WARN: longterm-mem: the engine at $HOME/.claude/bin/gentle-ai-overlay ended with code " + code + " on 'installed-targets assess'; only 0 (the registration record and the shared binary may go) and 3 (they are kept) are answers, so whether any runtime still depends on the shared binary is unknown; leaving the registration record and the shared binary untouched. Fix what it said above, or check the engine with 'labdrian doctor', and re-run uninstall.\n"
+}
+
+// An engine that has the command and ended with a code that is neither 0 nor 3 (a crash, a kill, a
+// program that could not be run, a code of its own) is not an engine that is too old: the script says
+// its code, keeps the registration record and the binary, and fails the run. Only exit 1 is asked
+// whether the engine knows the command, because that is what an old engine ends with; a current one
+// answers the bare command with a refusal that is not "unknown subcommand".
+func TestEngineCalls_AnEngineThatKnowsTheCommandAndFailedOnAssessKeepsEverythingAndSaysItsCode(t *testing.T) {
+	for _, tc := range []struct {
+		exit  string
+		probe bool
+	}{{"1", true}, {"2", false}, {"127", false}, {"137", false}} {
+		t.Run("exit "+tc.exit, func(t *testing.T) {
+			run, calls, w := whatTheUninstallSays(t, "0", map[string]string{"FAKE_ASSESS_EXIT": tc.exit})
 			if run.Exit != 1 {
 				t.Errorf("exit %d, want 1", run.Exit)
 			}
-			if want := "WARN: longterm-mem: the engine could not say whether any runtime still depends on the shared binary (exit " + exit + " of 'installed-targets assess'); leaving the registration record and the shared binary untouched. Rebuild the engine with 'labdrian doctor --fix' and re-run uninstall.\n"; run.Stderr != want {
-				t.Errorf("stderr = %q, want %q", run.Stderr, want)
+			if run.Stderr != engineFailed(tc.exit) {
+				t.Errorf("stderr = %q, want %q", run.Stderr, engineFailed(tc.exit))
 			}
-			wantCalls := lines(
-				"installed-targets release --state-dir "+state+" --target claude",
-				"installed-targets assess --state-dir "+state,
-			)
-			if got := w.loggedCalls(log); got != wantCalls {
-				t.Errorf("the engine was called\n%swant\n%s", got, wantCalls)
+			want := []string{
+				"installed-targets release --state-dir " + state + " --target claude",
+				"installed-targets assess --state-dir " + state,
+			}
+			if tc.probe {
+				want = append(want, "installed-targets")
+			}
+			if calls != lines(want...) {
+				t.Errorf("the engine was called\n%swant\n%s", calls, lines(want...))
 			}
 			if _, err := os.Stat(w.sharedBinary()); err != nil {
 				t.Errorf("the shared binary was removed: %v", err)
 			}
 		})
+	}
+}
+
+// An engine older than the command ends with its own `error: unknown subcommand "installed-targets"`
+// and exit 1 to any call to it. The script finds that out by asking the bare command (it changes
+// nothing), says that the engine is too old and names the command that rebuilds it, keeps the
+// registration record and the binary, and fails the run. The unregister ends 6 here because a release
+// comes first otherwise, and an old engine ends the run at it with its own words.
+func TestEngineCalls_AnEngineTooOldForTheCommandIsToldFromOneThatFailed(t *testing.T) {
+	run, calls, w := whatTheUninstallSays(t, "6", map[string]string{"FAKE_ENGINE_TOO_OLD": "1"})
+	if run.Exit != 1 {
+		t.Errorf("exit %d, want 1", run.Exit)
+	}
+	said := "error: unknown subcommand \"installed-targets\"\n"
+	skipped := "WARN: longterm-mem unregister --target claude: unmanaged (an entry exists that longterm-mem does not own; left untouched). claude stays tracked as installed, because that entry was NOT removed and may be ours under a lost install-state.json -- inspect claude's config and remove the entry by hand, then re-run uninstall, or pass --purge to drop the shared binary regardless.\n"
+	if want := skipped + said + engineTooOld; run.Stderr != want {
+		t.Errorf("stderr = %q, want %q", run.Stderr, want)
+	}
+	want := lines("installed-targets assess --state-dir "+state, "installed-targets")
+	if calls != want {
+		t.Errorf("the engine was called\n%swant\n%s", calls, want)
+	}
+	if _, err := os.Stat(w.sharedBinary()); err != nil {
+		t.Errorf("the shared binary was removed: %v", err)
+	}
+	// An engine that is too old ends the run at the first verb it is asked, with its own words: a
+	// release after a good unregister.
+	run, calls, _ = whatTheUninstallSays(t, "0", map[string]string{"FAKE_ENGINE_TOO_OLD": "1"})
+	if run.Exit != 1 || run.Stderr != said {
+		t.Errorf("an old engine asked to release = exit %d, stderr %q; want exit 1 and its own words", run.Exit, run.Stderr)
+	}
+	if want := lines("installed-targets release --state-dir " + state + " --target claude"); calls != want {
+		t.Errorf("the engine was called\n%swant\n%s", calls, want)
+	}
+}
+
+// The remedies the warnings name are commands of the script that exist: `labdrian` is the name that
+// install-alias links the script under by default, `doctor` is a command, and `--fix` is an option of
+// it that rebuilds an engine that is stale or absent (a test of the harness runs that). A remedy that
+// does not exist is a dead end for the person who reads it.
+func TestEngineCalls_TheRemediesTheAssessWarningsNameAreCommandsThatExist(t *testing.T) {
+	script, err := os.ReadFile(overlayScript(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(script)
+	tooOld, _, _ := whatTheUninstallSays(t, "6", map[string]string{"FAKE_ENGINE_TOO_OLD": "1"})
+	failed, _, _ := whatTheUninstallSays(t, "0", map[string]string{"FAKE_ASSESS_EXIT": "2"})
+	named := regexp.MustCompile(`'(labdrian [^']+)'`)
+	seen := map[string]bool{}
+	for _, said := range []string{tooOld.Stderr, failed.Stderr} {
+		for _, m := range named.FindAllStringSubmatch(said, -1) {
+			seen[m[1]] = true
+		}
+	}
+	for _, want := range []string{"labdrian doctor --fix", "labdrian doctor"} {
+		if !seen[want] {
+			t.Errorf("the warnings do not name %q (they name %v)", want, seen)
+		}
+	}
+	for remedy := range seen {
+		words := strings.Fields(remedy)
+		if words[0] != "labdrian" {
+			t.Errorf("%q: the command is not named labdrian", remedy)
+		}
+		if !strings.Contains(text, `local name="${1:-labdrian}"`) {
+			t.Errorf("%q: install-alias does not link the script as labdrian by default", remedy)
+		}
+		if !regexp.MustCompile(`(?m)^\s+` + words[1] + `\)\s+cmd_` + words[1] + ` "\$@" ;;`).MatchString(text) {
+			t.Errorf("%q: %s is not a command of the script", remedy, words[1])
+		}
+		for _, option := range words[2:] {
+			if !regexp.MustCompile(`(?m)^\s+` + regexp.QuoteMeta(option) + `\) fix=1 ;;`).MatchString(text) {
+				t.Errorf("%q: %s is not an option of %s", remedy, option, words[1])
+			}
+		}
+	}
+	if !strings.Contains(text, "doctor [--fix]") {
+		t.Error("the usage of the script does not list doctor [--fix]")
 	}
 }
 

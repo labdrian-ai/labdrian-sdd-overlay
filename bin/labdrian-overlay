@@ -3480,6 +3480,17 @@ longtermmem_targets() {
   "$ENGINE_BINARY" installed-targets "$verb" --state-dir "$STATE_DIR" "$@"
 }
 
+# longtermmem_engine_knows_installed_targets answers whether the engine has the installed-targets
+# command at all. An engine older than this overlay answers any call to it with `error: unknown
+# subcommand "installed-targets"` and exit 1, so the bare command (which a current engine refuses
+# for want of a verb, and which changes nothing in either) tells an engine that does not know the
+# command from one that knows it and failed. Only a caller that has seen exit 1 asks.
+longtermmem_engine_knows_installed_targets() {
+  local said
+  said="$("$ENGINE_BINARY" installed-targets 2>&1 </dev/null)" || true
+  [[ "$said" != *"unknown subcommand"* ]]
+}
+
 # longtermmem_install_step runs cmd_apply's D13 "install once per apply
 # invocation" step and reports whether it succeeded, printing the recovery
 # line itself when it did not.
@@ -3962,7 +3973,16 @@ cmd_longterm_mem() {
       3)
         ;;
       *)
-        warn "longterm-mem: the engine could not say whether any runtime still depends on the shared binary (exit $assess_exit of 'installed-targets assess'); leaving the registration record and the shared binary untouched. Rebuild the engine with 'labdrian doctor --fix' and re-run uninstall."
+        # Neither of the two answers. An engine too old to have the command ends with exit 1 and its own
+        # "unknown subcommand", and is told from one that knows the command and failed (a crash, a kill, a
+        # program that could not be run, a code of its own) the way doctor_report_registry tells them:
+        # the first is stale and is rebuilt, the second is a fault and is read from what it said. Either
+        # way the registration record and the binary stay, and the run fails.
+        if [[ "$assess_exit" -eq 1 ]] && ! longtermmem_engine_knows_installed_targets; then
+          warn "longterm-mem: the engine at $ENGINE_BINARY does not know 'installed-targets' (it is older than this overlay), so whether any runtime still depends on the shared binary is unknown; leaving the registration record and the shared binary untouched. Rebuild it with 'labdrian doctor --fix' and re-run uninstall."
+        else
+          warn "longterm-mem: the engine at $ENGINE_BINARY ended with code $assess_exit on 'installed-targets assess'; only 0 (the registration record and the shared binary may go) and 3 (they are kept) are answers, so whether any runtime still depends on the shared binary is unknown; leaving the registration record and the shared binary untouched. Fix what it said above, or check the engine with 'labdrian doctor', and re-run uninstall."
+        fi
         uninstall_failed=1
         ;;
     esac
