@@ -608,11 +608,14 @@ Commands:
   repair-sdd-registry [--cwd DIR] [--target claude|opencode|codex] [--no-refresh]
                                    Refresh and repair .atl/skill-registry.md so existing
                                    sdd-* phase executor skills stay resolvable after
-                                   gentle-ai sync/skill-registry refresh.
+                                   gentle-ai sync/skill-registry refresh. The repair is the
+                                   engine's (registry repair-sdd): it takes the lock the
+                                   propagate hook takes and writes the registry atomically,
+                                   so it needs the engine binary (built on first use).
   skill-registry refresh [--cwd DIR] [--target claude|opencode|codex] [--no-repair]
                                    Run gentle-ai skill-registry refresh, then immediately
                                    repair sdd-* executor rows for the selected target
-                                   (default target: codex).
+                                   (default target: codex), as repair-sdd-registry does.
   tui                              Launch the Bubbletea TUI front-end
   install-alias [name]             Symlink a command (default: labdrian) into ~/.local/bin
   prespec <verb>                   Forward to the engine's prespec discovery core
@@ -824,108 +827,25 @@ Hook activation notes:
 EOF
 }
 
-SDD_EXECUTOR_SKILLS=(
-  sdd-apply
-  sdd-archive
-  sdd-design
-  sdd-explore
-  sdd-init
-  sdd-onboard
-  sdd-propose
-  sdd-spec
-  sdd-tasks
-  sdd-time-estimation
-  sdd-verify
-)
-
-skill_frontmatter_description() {
-  local skill_file="$1"
-  awk '
-    /^description:[[:space:]]*/ {
-      sub(/^description:[[:space:]]*/, "")
-      gsub(/^"/, "")
-      gsub(/"$/, "")
-      gsub(/\|/, "\\|")
-      print
-      exit
-    }
-  ' "$skill_file"
-}
-
+# repair_sdd_registry_file <registry> <target>
+#
+# gentle-ai leaves the sdd-* phase skills out of the skill registry it writes;
+# SDD delegation needs their paths, so a row for each installed one is put back.
+# That repair is the engine's (`registry repair-sdd`): which skills are
+# executors, what a row says, how the registry is edited, the lock it takes (the
+# one `propagate` takes, so a repair and the hook that writes the same file take
+# turns) and the atomic write live in engine/sddregistry. This script owns what
+# the engine cannot know, the directory the target keeps its skills in
+# (TARGET_PATHS), and hands it over. The engine speaks for itself: the WARN line
+# of each executor not installed, the sum-up on stdout, and a refusal on stderr
+# with exit 1.
 repair_sdd_registry_file() {
   local registry="$1"
   local target="$2"
-  local skill_root="${TARGET_PATHS[$target]}"
 
-  mkdir -p "$(dirname "$registry")"
-  if [[ ! -f "$registry" ]]; then
-    cat > "$registry" <<EOF
-# Skill Registry — $(basename "$(dirname "$(dirname "$registry")")")
-
-## Skills
-
-| Skill | Trigger / description | Scope | Path |
-| --- | --- | --- | --- |
-
-## Loading protocol
-
-1. Match task context and target files against the \`Trigger / description\` column.
-2. Pass only the matching \`Path\` values to the subagent under \`## Skills to load before work\`.
-EOF
-  fi
-
-  grep -q '^## Skills$' "$registry" || die "registry has no '## Skills' section: $registry"
-  grep -q '^## Loading protocol$' "$registry" || die "registry has no '## Loading protocol' section: $registry"
-
-  local block tmp
-  block="$(mktemp)"
-  tmp="$(mktemp)"
-  trap 'rm -f "$block" "$tmp"' RETURN
-
-  local name path desc missing=0
-  for name in "${SDD_EXECUTOR_SKILLS[@]}"; do
-    path="$skill_root/$name/SKILL.md"
-    if [[ ! -f "$path" ]]; then
-      warn "missing $target SDD executor skill: $path"
-      missing=$((missing + 1))
-      continue
-    fi
-    desc="$(skill_frontmatter_description "$path")"
-    [[ -n "$desc" ]] || desc="SDD phase executor: $name."
-    printf '| `%s` | %s | executor | `%s` |\n' "$name" "$desc" "$path" >> "$block"
-  done
-
-  local note
-  note='`sdd-*` phase skills are executor contracts. Gentle may skip them as user-invocable skills, but this registry keeps their paths visible so SDD delegation can resolve the existing installed files.'
-
-  awk -v note="$note" -v block="$block" '
-    $0 == note { next }
-    $0 ~ /^\| `sdd-[^`]+` \|/ { next }
-    $0 == "## Skills" {
-      print note
-      print ""
-      print
-      next
-    }
-    $0 == "## Loading protocol" {
-      while ((getline line < block) > 0) {
-        print line
-      }
-      close(block)
-      print ""
-      print
-      next
-    }
-    { print }
-  ' "$registry" > "$tmp"
-
-  mv "$tmp" "$registry"
-  rm -f "$block"
-  trap - RETURN
-
-  local count
-  count="$(grep -c '^| `sdd-' "$registry" || true)"
-  echo "repair-sdd-registry: registry=$registry target=$target sdd_executors=$count missing=$missing"
+  ensure_engine_binary >&2
+  "$ENGINE_BINARY" registry repair-sdd --registry "$registry" \
+    --target "$target" --skills-root "${TARGET_PATHS[$target]}"
 }
 
 # ---------------------------------------------------------------------------

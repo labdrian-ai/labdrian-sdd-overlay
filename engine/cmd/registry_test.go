@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"reflect"
+	"sort"
 	"strings"
 	"sync"
 	"testing"
@@ -343,5 +345,60 @@ func TestRegistryRepairSDDLetsGoOfTheLockWhenItEnds(t *testing.T) {
 			}
 			release()
 		})
+	}
+}
+
+// scriptCallOfRepairSDD is the body of repair_sdd_registry_file, the one function of bin/labdrian-overlay
+// that builds the command line of the verb.
+func scriptCallOfRepairSDD(t *testing.T) string {
+	t.Helper()
+	script, err := os.ReadFile(filepath.Join("..", "..", "bin", "labdrian-overlay"))
+	if err != nil {
+		t.Fatalf("read the overlay script: %v", err)
+	}
+	text := string(script)
+	start := strings.Index(text, "\nrepair_sdd_registry_file() {\n")
+	if start < 0 {
+		t.Fatal("the overlay script has no repair_sdd_registry_file")
+	}
+	body := text[start:]
+	if end := strings.Index(body, "\n}\n"); end >= 0 {
+		body = body[:end]
+	}
+	return body
+}
+
+// The script asks the engine to repair the registry, with the flags the command takes and nothing
+// else, and edits no markdown itself.
+func TestTheScriptAsksTheEngineToRepairTheRegistryWithTheFlagsItTakes(t *testing.T) {
+	body := scriptCallOfRepairSDD(t)
+	if !strings.Contains(body, `"$ENGINE_BINARY" registry repair-sdd`) {
+		t.Fatalf("repair_sdd_registry_file does not call the engine binary it is told of (ENGINE_BINARY) with registry repair-sdd:\n%s", body)
+	}
+	var flags []string
+	for _, word := range strings.Fields(body) {
+		if strings.HasPrefix(word, "--") {
+			flags = append(flags, word)
+		}
+	}
+	sort.Strings(flags)
+	if want := []string{flagRegistry, flagSkillsRoot, flagTarget}; !reflect.DeepEqual(flags, want) {
+		t.Fatalf("flags of repair_sdd_registry_file = %v, want %v", flags, want)
+	}
+	args := []string{}
+	for _, flag := range flags {
+		args = append(args, flag, "value-of"+flag)
+	}
+	parsed, err := parseRepairSDDArgs(args)
+	if err != nil {
+		t.Fatalf("the command refuses the flags the script passes: %v", err)
+	}
+	if parsed.registry != "value-of--registry" || parsed.target != "value-of--target" || parsed.skillsRoot != "value-of--skills-root" {
+		t.Errorf("the command took the flags of the script as %+v: each flag must reach its own field", parsed)
+	}
+	for _, gone := range []string{"awk", "grep", "mktemp", "mv "} {
+		if strings.Contains(body, gone) {
+			t.Errorf("repair_sdd_registry_file still uses %q: the markdown is the engine's", gone)
+		}
 	}
 }

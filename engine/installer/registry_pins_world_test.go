@@ -105,6 +105,7 @@ func (w *pinWorld) showRegistry(path string) string {
 // command that refreshes can never reach the real binary of the machine.
 type fakeGentle struct {
 	log string
+	dir string // the directory the fake is in, first on the PATH it was put on
 }
 
 // installGentle puts a fake gentle-ai first on the PATH. regenerated, when it is not empty, is the
@@ -134,7 +135,7 @@ func (w *pinWorld) installGentle(regenerated string, exit int) fakeGentle {
 	}
 	w.env = append(w.env, "FAKE_GENTLE_LOG="+log, "FAKE_GENTLE_REGISTRY="+body)
 	w.changePath(func(old string) string { return dir + string(os.PathListSeparator) + old })
-	return fakeGentle{log: log}
+	return fakeGentle{log: log, dir: dir}
 }
 
 // gentleCalls are the calls a fake gentle-ai recorded, normalized, in order; none is nothing.
