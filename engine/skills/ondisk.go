@@ -23,8 +23,8 @@ const (
 )
 
 // nonSkillRoutes lists the third-column route values that send a manifest row
-// somewhere other than skills/. Mirrors route_resolve in bin/labdrian-overlay,
-// where any other third-column value falls through to the default skill route.
+// somewhere other than skills/. It agrees with ResolveRoutes (routes.go), where any
+// other third-column value falls through to the default skill route.
 // The full route domain is {skill, agent, opencode-agent, mcp} (D13); "skill"
 // is not listed here because it is the default route and IS the skills
 // destination, so it must stay out of this exclusion set.
@@ -52,8 +52,8 @@ var validLongtermMemRoutes = map[string]bool{
 // DeployableManifestPaths parses a manifest and returns the set of row paths that
 // route to skills/, keyed by the row path exactly as written.
 //
-// It mirrors route_resolve in bin/labdrian-overlay, which is the single source of
-// truth for row → routing:
+// It agrees with ResolveRoutes, which is the single source of truth for row →
+// routing (the overlay script asks the engine for it), on what goes to skills/:
 //   - Blank lines and lines starting with '#' are skipped.
 //   - A row needs at least two fields; the first is the path. This applies to
 //     every path prefix except longterm-mem/** — see below.
@@ -67,10 +67,9 @@ var validLongtermMemRoutes = map[string]bool{
 // "at least two fields" rule above so it also catches a one-column row (path
 // only, no tag): a row whose path is under longterm-mem/** with a missing or
 // unrecognized third column (R-012 in overlay-agent-route, traces
-// longterm-mem R-035). Mirrors route_reject_unrouted_longterm_mem in
-// bin/labdrian-overlay — that guard is the single source of truth this one is
-// kept in sync with (see
-// TestRouteDomain_MatchesBashAndGo).
+// longterm-mem R-035). ResolveRoutes refuses the same rows (UnroutedRowError) —
+// that guard is the one this is kept in sync with, over the same
+// validLongtermMemRoutes (see TestRouteDomain_OnDiskCheckAndRoutingAgree).
 func DeployableManifestPaths(r io.Reader) (map[string]struct{}, error) {
 	paths := make(map[string]struct{})
 	scanner := bufio.NewScanner(r)
@@ -92,10 +91,9 @@ func DeployableManifestPaths(r io.Reader) (map[string]struct{}, error) {
 
 		// The longterm-mem/** route-domain guard must see every row with this
 		// prefix, including a one-column row (path only, no tag). Mirrors
-		// bash: all_tracked_files (awk '{print $1}') still emits such a row,
-		// and route_resolve's awk lookup for the third field still resolves
-		// to an empty (undefaulted) string for it, so
-		// route_reject_unrouted_longterm_mem still fires. This check must
+		// the routing: ReadManifestRows still reads such a row, and its route
+		// is the empty (undefaulted) third column, so ResolveRoutes still
+		// refuses it (UnroutedRowError). This check must
 		// therefore run BEFORE the generic "fewer than two fields" skip
 		// below, which otherwise applies identically to every path prefix
 		// and must not change for anything other than longterm-mem/**.

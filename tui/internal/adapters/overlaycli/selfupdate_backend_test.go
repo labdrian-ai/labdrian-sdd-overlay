@@ -13,10 +13,12 @@ package overlaycli
 // identity) so the tests are hermetic and reproducible in CI.
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -125,6 +127,52 @@ func realBackendBin(t *testing.T) string {
 	return filepath.Join(root, "bin", "labdrian-overlay")
 }
 
+// builtEngine is the engine of this checkout, built once for the test binary.
+var builtEngine struct {
+	once sync.Once
+	path string
+	err  error
+}
+
+// provisionEngine puts the engine where the script looks for it in a home
+// ($HOME/.claude/bin/gentle-ai-overlay). The script asks the engine where each
+// manifest row goes (`manifest routes`), and a scratch overlay has no engine
+// source to build it from.
+func provisionEngine(t *testing.T, home string) {
+	t.Helper()
+	dst := filepath.Join(home, ".claude", "bin", "gentle-ai-overlay")
+	if _, err := os.Stat(dst); err == nil {
+		return // a home that has it keeps it: the script may be running it
+	}
+	builtEngine.once.Do(func() {
+		root := filepath.Dir(filepath.Dir(realBackendBin(t)))
+		dir, err := engineBuildDir(t)
+		if err != nil {
+			builtEngine.err = err
+			return
+		}
+		builtEngine.path = filepath.Join(dir, "gentle-ai-overlay")
+		cmd := exec.Command("go", "build", "-o", builtEngine.path, "./cmd")
+		cmd.Dir = filepath.Join(root, "engine")
+		if out, err := cmd.CombinedOutput(); err != nil {
+			builtEngine.err = fmt.Errorf("go build ./cmd: %v\n%s", err, out)
+		}
+	})
+	if builtEngine.err != nil {
+		t.Fatalf("build the engine for the tests: %v", builtEngine.err)
+	}
+	body, err := os.ReadFile(builtEngine.path)
+	if err != nil {
+		t.Fatalf("read the built engine: %v", err)
+	}
+	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+		t.Fatalf("mkdir %s: %v", filepath.Dir(dst), err)
+	}
+	if err := os.WriteFile(dst, body, 0o755); err != nil {
+		t.Fatalf("install the engine at %s: %v", dst, err)
+	}
+}
+
 // runBackendSubcommand runs the real backend script with OVERLAY_DIR pointed
 // at the scratch clone, returning combined stdout+stderr and the exit code
 // (0 when the process exits cleanly). HOME is pointed at a fresh scratch
@@ -148,6 +196,7 @@ func runBackendSubcommand(t *testing.T, overlayDir string, args ...string) (stri
 	if err := os.MkdirAll(filepath.Join(fakeHome, ".claude", "skills"), 0o755); err != nil {
 		t.Fatalf("creating scratch HOME/.claude/skills: %v", err)
 	}
+	provisionEngine(t, fakeHome)
 	cmd := exec.Command(bin, args...)
 	cmd.Dir = overlayDir
 	cmd.Env = append(gitTestEnv(), "OVERLAY_DIR="+overlayDir, "HOME="+fakeHome)

@@ -34,6 +34,8 @@ func run(p process, d deps, args []string) {
 		runPipkg(p, d, rest)
 	case "skills":
 		runSkills(p, d, rest)
+	case "manifest":
+		runManifest(p, rest)
 	case "sync-trigger":
 		runSyncTrigger(p, d, rest)
 	case "review-receipt":

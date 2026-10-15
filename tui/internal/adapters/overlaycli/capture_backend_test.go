@@ -82,6 +82,7 @@ func runCapture(t *testing.T, overlayDir string) (string, int) {
 	t.Helper()
 	bin := realBackendBin(t)
 	fakeHome := t.TempDir()
+	provisionEngine(t, fakeHome)
 	cmd := exec.Command(bin, "capture", "--target", "claude")
 	cmd.Dir = overlayDir
 	cmd.Env = append(gitTestEnv(), "OVERLAY_DIR="+overlayDir, "HOME="+fakeHome)

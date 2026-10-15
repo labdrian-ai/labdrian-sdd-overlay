@@ -1,11 +1,12 @@
 package installer_test
 
-// TC-INSTALLER: validates the route_resolve bash helper and the five
-// installer commands against the route contract from design D2/D3/D8.
+// TC-INSTALLER: validates the routing of the manifest rows (the engine's
+// `manifest routes`, which the overlay script asks) and the five installer
+// commands against the route contract from design D2/D3/D8.
 //
 // Structure:
-//   - Unit tests (fast, always run): source route_resolve from the overlay
-//     script, call it with fixture manifest rows, assert emitted record fields.
+//   - Unit tests (fast, always run): ask the engine about fixture manifest
+//     rows, assert the emitted record fields.
 //   - Target-flag unit tests (fast): intersect emitted targets with a simulated
 //     --target selection; pin the D2 applicability rule.
 //   - Integration tests (skip on -short): run the full overlay apply/status/
@@ -20,9 +21,13 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/enginetest"
 )
 
-// overlayScript returns the absolute path to bin/labdrian-overlay.
+// overlayScript returns the absolute path to bin/labdrian-overlay, for the tests that run it (the
+// integration tests below, sync_check_test.go and the routing pins). The unit tests of the routing
+// ask the engine (callManifestRoutes) and do not need the script.
 // Go tests run with cwd = engine/installer/, so two levels up → repo root.
 func overlayScript(t *testing.T) string {
 	t.Helper()
@@ -40,17 +45,19 @@ func overlayScript(t *testing.T) string {
 	return p
 }
 
-// resolveResult holds the parsed output of a single route_resolve call.
-type resolveResult struct {
+// routedRow holds what the routing says of one manifest row.
+type routedRow struct {
 	Route   string            // "skill", "agent", or "opencode-agent"
 	RepoSrc string            // absolute repo source path
 	Targets map[string]string // target_name -> absolute dest path
 }
 
-// callRouteResolve sources route_resolve from the overlay script using eval+awk
-// and calls it with manifestPath. manifestContent is written to a temp manifest.
-// overlayDir is used as OVERLAY_DIR; home is used as HOME.
-func callRouteResolve(t *testing.T, overlayPath, overlayDir, home, manifestContent, manifestPath string) (resolveResult, error) {
+// callManifestRoutes asks the engine (`manifest routes`) for the row of manifestPath, once for each
+// target that copies files, and puts the answers together: the route and source are the row's, and
+// a target is among the Targets when the row goes somewhere for it. manifestContent is written to
+// the manifest of overlayDir. The skills and agents directories handed over are the ones the script
+// holds for the targets in a home of the given name.
+func callManifestRoutes(t *testing.T, engine, overlayDir, home, manifestContent, manifestPath string) (routedRow, error) {
 	t.Helper()
 
 	manifestFile := filepath.Join(overlayDir, "overlay.manifest")
@@ -61,68 +68,52 @@ func callRouteResolve(t *testing.T, overlayPath, overlayDir, home, manifestConte
 		t.Fatalf("write manifest: %v", err)
 	}
 
-	// minimal: forced — need to eval-extract route_resolve without running
-	// the full overlay script dispatch (which exits 1 for empty command).
-	// We define all globals route_resolve needs, then eval-load just the
-	// function. route_resolve also calls route_reject_unrouted_longterm_mem
-	// (defined immediately above it), so both ranges are extracted.
-	scriptFile := filepath.Join(t.TempDir(), "run_route_resolve.sh")
-	script := fmt.Sprintf(`#!/usr/bin/env bash
-set -euo pipefail
-OVERLAY_DIR=%q
-MANIFEST=%q
-HOME=%q
-declare -A TARGET_PATHS=( [claude]=%q [opencode]=%q [codex]=%q )
-declare -A AGENT_TARGET_PATHS=( [claude]=%q [opencode]=%q )
-eval "$(awk '/^route_reject_unrouted_longterm_mem\(\)/,/^}$/ { print } /^route_resolve\(\)/,/^}$/ { print }' %q)"
-route_resolve %q
-`,
-		overlayDir,
-		manifestFile,
-		home,
-		filepath.Join(home, ".claude", "skills"),
-		filepath.Join(home, ".config", "opencode", "skills"),
-		filepath.Join(home, ".codex", "skills"),
-		filepath.Join(home, ".claude", "agents"),
-		filepath.Join(home, ".config", "opencode", "agents"),
-		overlayPath,
-		manifestPath,
-	)
-	if err := os.WriteFile(scriptFile, []byte(script), 0755); err != nil {
-		t.Fatalf("write runner script: %v", err)
+	skills := map[string]string{
+		"claude":   filepath.Join(home, ".claude", "skills"),
+		"opencode": filepath.Join(home, ".config", "opencode", "skills"),
+		"codex":    filepath.Join(home, ".codex", "skills"),
 	}
-
-	cmd := exec.Command("bash", scriptFile)
-	out, err := cmd.Output()
-	if err != nil {
-		var ee *exec.ExitError
-		if errors.As(err, &ee) {
-			return resolveResult{}, fmt.Errorf("route_resolve failed (exit %d): stderr: %s stdout: %s",
-				ee.ExitCode(), ee.Stderr, out)
+	agents := map[string]string{
+		"claude":   filepath.Join(home, ".claude", "agents"),
+		"opencode": filepath.Join(home, ".config", "opencode", "agents"),
+	}
+	result := routedRow{Targets: map[string]string{}}
+	found := false
+	for _, target := range []string{"claude", "opencode", "codex"} {
+		args := []string{"manifest", "routes", "--overlay-root", overlayDir, "--manifest", manifestFile,
+			"--target", target, "--skills-root", skills[target]}
+		if root, ok := agents[target]; ok {
+			args = append(args, "--agents-root", root)
 		}
-		return resolveResult{}, fmt.Errorf("exec: %w", err)
-	}
-
-	line := strings.TrimRight(string(out), "\n")
-	parts := strings.SplitN(line, "\t", 3)
-	if len(parts) != 3 {
-		return resolveResult{}, fmt.Errorf("expected 3 tab-separated fields, got %d: %q", len(parts), line)
-	}
-
-	targets := make(map[string]string)
-	for _, pair := range strings.Fields(parts[2]) {
-		idx := strings.Index(pair, ":")
-		if idx < 0 {
-			return resolveResult{}, fmt.Errorf("malformed target pair: %q", pair)
+		cmd := exec.Command(engine, args...)
+		out, err := cmd.Output()
+		if err != nil {
+			var ee *exec.ExitError
+			if errors.As(err, &ee) {
+				return routedRow{}, fmt.Errorf("manifest routes failed (exit %d): stderr: %s stdout: %s",
+					ee.ExitCode(), ee.Stderr, out)
+			}
+			return routedRow{}, fmt.Errorf("exec: %w", err)
 		}
-		targets[pair[:idx]] = pair[idx+1:]
+		for _, line := range strings.Split(strings.TrimRight(string(out), "\n"), "\n") {
+			columns := strings.Split(line, "\t")
+			if len(columns) != 5 {
+				return routedRow{}, fmt.Errorf("expected 5 tab-separated columns, got %d: %q", len(columns), line)
+			}
+			if columns[0] != manifestPath {
+				continue
+			}
+			result.Route, result.RepoSrc, found = columns[1], columns[3], true
+			if columns[4] != "" {
+				result.Targets[target] = columns[4]
+			}
+			break
+		}
 	}
-
-	return resolveResult{
-		Route:   parts[0],
-		RepoSrc: parts[1],
-		Targets: targets,
-	}, nil
+	if !found {
+		return routedRow{}, fmt.Errorf("manifest routes told nothing of %q", manifestPath)
+	}
+	return result, nil
 }
 
 // createTarball writes the provided relative paths into a temporary directory and
@@ -213,6 +204,7 @@ func setupCaptureFromBackupSandbox(t *testing.T, home string) (string, []string)
 		"GIT_COMMITTER_EMAIL=test@test.com",
 		"PATH=" + os.Getenv("PATH"),
 	}
+	enginetest.Provision(t, home)
 	return overlayDir, env
 }
 
@@ -240,17 +232,17 @@ const unrecognizedRouteLongtermMemFixture = fixtureManifest + "longterm-mem/inte
 // Unit tests — fast, always run
 // ---------------------------------------------------------------------------
 
-// TestRouteResolve_LegacySkillRow pins the back-compat invariant (D2):
+// TestManifestRoutes_LegacySkillRow pins the back-compat invariant (D2):
 // a bare two-column skill row resolves to route=skill, skills/ repo source,
 // and exactly the three skills destination paths.
-func TestRouteResolve_LegacySkillRow(t *testing.T) {
-	overlay := overlayScript(t)
+func TestManifestRoutes_LegacySkillRow(t *testing.T) {
+	engine := enginetest.Binary(t)
 	overlayDir := t.TempDir()
 	home := t.TempDir()
 
-	got, err := callRouteResolve(t, overlay, overlayDir, home, fixtureManifest, "sdd-spec/SKILL.md")
+	got, err := callManifestRoutes(t, engine, overlayDir, home, fixtureManifest, "sdd-spec/SKILL.md")
 	if err != nil {
-		t.Fatalf("route_resolve: %v", err)
+		t.Fatalf("manifest routes: %v", err)
 	}
 
 	if got.Route != "skill" {
@@ -275,16 +267,16 @@ func TestRouteResolve_LegacySkillRow(t *testing.T) {
 	}
 }
 
-// TestRouteResolve_GADUSkillRow verifies that the GADU skill row (no route column)
+// TestManifestRoutes_GADUSkillRow verifies that the GADU skill row (no route column)
 // resolves identically to a legacy skill row — 3 skills destinations.
-func TestRouteResolve_GADUSkillRow(t *testing.T) {
-	overlay := overlayScript(t)
+func TestManifestRoutes_GADUSkillRow(t *testing.T) {
+	engine := enginetest.Binary(t)
 	overlayDir := t.TempDir()
 	home := t.TempDir()
 
-	got, err := callRouteResolve(t, overlay, overlayDir, home, fixtureManifest, "gadu-operator/SKILL.md")
+	got, err := callManifestRoutes(t, engine, overlayDir, home, fixtureManifest, "gadu-operator/SKILL.md")
 	if err != nil {
-		t.Fatalf("route_resolve: %v", err)
+		t.Fatalf("manifest routes: %v", err)
 	}
 
 	if got.Route != "skill" {
@@ -308,16 +300,16 @@ func TestRouteResolve_GADUSkillRow(t *testing.T) {
 	}
 }
 
-// TestRouteResolve_GADUAgentRow verifies that the Claude Code GADU agent row (route=agent)
+// TestManifestRoutes_GADUAgentRow verifies that the Claude Code GADU agent row (route=agent)
 // resolves to route=agent, agents/ repo source, and exactly ONE claude target.
-func TestRouteResolve_GADUAgentRow(t *testing.T) {
-	overlay := overlayScript(t)
+func TestManifestRoutes_GADUAgentRow(t *testing.T) {
+	engine := enginetest.Binary(t)
 	overlayDir := t.TempDir()
 	home := t.TempDir()
 
-	got, err := callRouteResolve(t, overlay, overlayDir, home, fixtureManifest, "GADU.md")
+	got, err := callManifestRoutes(t, engine, overlayDir, home, fixtureManifest, "GADU.md")
 	if err != nil {
-		t.Fatalf("route_resolve: %v", err)
+		t.Fatalf("manifest routes: %v", err)
 	}
 
 	if got.Route != "agent" {
@@ -343,17 +335,17 @@ func TestRouteResolve_GADUAgentRow(t *testing.T) {
 	}
 }
 
-// TestRouteResolve_GADUOpenCodeAgentRow verifies that the OpenCode GADU agent
+// TestManifestRoutes_GADUOpenCodeAgentRow verifies that the OpenCode GADU agent
 // row resolves to the OpenCode-specific generated source and exactly one
 // OpenCode agent target.
-func TestRouteResolve_GADUOpenCodeAgentRow(t *testing.T) {
-	overlay := overlayScript(t)
+func TestManifestRoutes_GADUOpenCodeAgentRow(t *testing.T) {
+	engine := enginetest.Binary(t)
 	overlayDir := t.TempDir()
 	home := t.TempDir()
 
-	got, err := callRouteResolve(t, overlay, overlayDir, home, fixtureManifest, "opencode/agents/GADU.md")
+	got, err := callManifestRoutes(t, engine, overlayDir, home, fixtureManifest, "opencode/agents/GADU.md")
 	if err != nil {
-		t.Fatalf("route_resolve: %v", err)
+		t.Fatalf("manifest routes: %v", err)
 	}
 
 	if got.Route != "opencode-agent" {
@@ -378,13 +370,13 @@ func TestRouteResolve_GADUOpenCodeAgentRow(t *testing.T) {
 	}
 }
 
-// TestRouteResolve_NonDeployableRows pins that structurally non-deployable rows
+// TestManifestRoutes_NonDeployableRows pins that structurally non-deployable rows
 // — engine/*.go overlay-source rows and root-level files like skills.registry.yaml
-// — produce an empty target set from route_resolve so that the deploy and sync
+// — produce an empty target set from manifest routes so that the deploy and sync
 // loops skip them silently (no WARNING, no OVERLAY_NOT_DEPLOYED noise). The
 // back-compat invariant for real skill rows is preserved.
-func TestRouteResolve_NonDeployableRows(t *testing.T) {
-	overlay := overlayScript(t)
+func TestManifestRoutes_NonDeployableRows(t *testing.T) {
+	engine := enginetest.Binary(t)
 	overlayDir := t.TempDir()
 	home := t.TempDir()
 
@@ -423,34 +415,34 @@ skills.registry.yaml   custom
 	for _, tc := range cases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := callRouteResolve(t, overlay, overlayDir, home, infraManifest, tc.manifestPath)
+			got, err := callManifestRoutes(t, engine, overlayDir, home, infraManifest, tc.manifestPath)
 			if err != nil {
-				t.Fatalf("route_resolve(%q): %v", tc.manifestPath, err)
+				t.Fatalf("manifest routes(%q): %v", tc.manifestPath, err)
 			}
 			if got.Route != tc.wantRoute {
-				t.Errorf("route_resolve(%q): route=%q, want %q", tc.manifestPath, got.Route, tc.wantRoute)
+				t.Errorf("manifest routes(%q): route=%q, want %q", tc.manifestPath, got.Route, tc.wantRoute)
 			}
 			if len(got.Targets) != tc.wantTargets {
-				t.Errorf("route_resolve(%q): %d targets, want %d: %v",
+				t.Errorf("manifest routes(%q): %d targets, want %d: %v",
 					tc.manifestPath, len(got.Targets), tc.wantTargets, got.Targets)
 			}
 		})
 	}
 }
 
-// TestRouteResolve_McpRow verifies that a longterm-mem/** row routed "mcp"
+// TestManifestRoutes_McpRow verifies that a longterm-mem/** row routed "mcp"
 // resolves to route=mcp, the repo source path as written (no skills/ or
 // agents/ prefix rewriting), and zero copy targets — the longterm-mem
 // install path (build, copy, register) is dispatched separately, not via the
 // deploy loop. (overlay-agent-route R-006, traces longterm-mem R-013.)
-func TestRouteResolve_McpRow(t *testing.T) {
-	overlay := overlayScript(t)
+func TestManifestRoutes_McpRow(t *testing.T) {
+	engine := enginetest.Binary(t)
 	overlayDir := t.TempDir()
 	home := t.TempDir()
 
-	got, err := callRouteResolve(t, overlay, overlayDir, home, mcpFixtureManifest, "longterm-mem/go.mod")
+	got, err := callManifestRoutes(t, engine, overlayDir, home, mcpFixtureManifest, "longterm-mem/go.mod")
 	if err != nil {
-		t.Fatalf("route_resolve: %v", err)
+		t.Fatalf("manifest routes: %v", err)
 	}
 
 	if got.Route != "mcp" {
@@ -464,17 +456,17 @@ func TestRouteResolve_McpRow(t *testing.T) {
 	}
 }
 
-// TestRouteResolve_OpencodeAgentUnaffected is the slice 9 regression guard:
+// TestManifestRoutes_OpencodeAgentUnaffected is the slice 9 regression guard:
 // an existing opencode-agent-routed row must resolve and deploy exactly as
 // before this change, with no regression from the mcp route addition.
-func TestRouteResolve_OpencodeAgentUnaffected(t *testing.T) {
-	overlay := overlayScript(t)
+func TestManifestRoutes_OpencodeAgentUnaffected(t *testing.T) {
+	engine := enginetest.Binary(t)
 	overlayDir := t.TempDir()
 	home := t.TempDir()
 
-	got, err := callRouteResolve(t, overlay, overlayDir, home, mcpFixtureManifest, "opencode/agents/GADU.md")
+	got, err := callManifestRoutes(t, engine, overlayDir, home, mcpFixtureManifest, "opencode/agents/GADU.md")
 	if err != nil {
-		t.Fatalf("route_resolve: %v", err)
+		t.Fatalf("manifest routes: %v", err)
 	}
 
 	if got.Route != "opencode-agent" {
@@ -494,18 +486,18 @@ func TestRouteResolve_OpencodeAgentUnaffected(t *testing.T) {
 	}
 }
 
-// TestRouteResolve_UnroutedLongtermMemRowRejected pins that a longterm-mem/**
+// TestManifestRoutes_UnroutedLongtermMemRowRejected pins that a longterm-mem/**
 // row with a missing third column is rejected loudly (exit 1, explicit
 // stderr naming the row) instead of silently falling through to route=skill.
 // (overlay-agent-route R-012, traces longterm-mem R-035.)
-func TestRouteResolve_UnroutedLongtermMemRowRejected(t *testing.T) {
-	overlay := overlayScript(t)
+func TestManifestRoutes_UnroutedLongtermMemRowRejected(t *testing.T) {
+	engine := enginetest.Binary(t)
 	overlayDir := t.TempDir()
 	home := t.TempDir()
 
-	_, err := callRouteResolve(t, overlay, overlayDir, home, unroutedLongtermMemFixture, "longterm-mem/internal/foo.go")
+	_, err := callManifestRoutes(t, engine, overlayDir, home, unroutedLongtermMemFixture, "longterm-mem/internal/foo.go")
 	if err == nil {
-		t.Fatal("expected route_resolve to reject a longterm-mem row with a missing route column, got nil error")
+		t.Fatal("expected manifest routes to reject a longterm-mem row with a missing route column, got nil error")
 	}
 	if !strings.Contains(err.Error(), "exit 1") {
 		t.Errorf("expected exit 1, got: %v", err)
@@ -515,17 +507,17 @@ func TestRouteResolve_UnroutedLongtermMemRowRejected(t *testing.T) {
 	}
 }
 
-// TestRouteResolve_UnrecognizedRouteLongtermMemRowRejected pins the same
+// TestManifestRoutes_UnrecognizedRouteLongtermMemRowRejected pins the same
 // guard for a longterm-mem/** row whose third column holds a value outside
 // {skill, agent, opencode-agent, mcp}.
-func TestRouteResolve_UnrecognizedRouteLongtermMemRowRejected(t *testing.T) {
-	overlay := overlayScript(t)
+func TestManifestRoutes_UnrecognizedRouteLongtermMemRowRejected(t *testing.T) {
+	engine := enginetest.Binary(t)
 	overlayDir := t.TempDir()
 	home := t.TempDir()
 
-	_, err := callRouteResolve(t, overlay, overlayDir, home, unrecognizedRouteLongtermMemFixture, "longterm-mem/internal/bar.go")
+	_, err := callManifestRoutes(t, engine, overlayDir, home, unrecognizedRouteLongtermMemFixture, "longterm-mem/internal/bar.go")
 	if err == nil {
-		t.Fatal("expected route_resolve to reject a longterm-mem row with an unrecognized route, got nil error")
+		t.Fatal("expected manifest routes to reject a longterm-mem row with an unrecognized route, got nil error")
 	}
 	if !strings.Contains(err.Error(), "exit 1") {
 		t.Errorf("expected exit 1, got: %v", err)
@@ -539,7 +531,7 @@ func TestRouteResolve_UnrecognizedRouteLongtermMemRowRejected(t *testing.T) {
 // Target-flag unit tests — pin the D2 --target intersection rule
 // ---------------------------------------------------------------------------
 
-// intersectTargets returns the subset of route_resolve targets that match the
+// intersectTargets returns the subset of manifest routes targets that match the
 // requested --target selection, mirroring the call-site logic in cmd_apply/status/sync-check.
 func intersectTargets(targets map[string]string, requested string) map[string]string {
 	if requested == "all" {
@@ -551,16 +543,16 @@ func intersectTargets(targets map[string]string, requested string) map[string]st
 	return map[string]string{}
 }
 
-// TestRouteResolve_TargetFlag_AgentRowOpencode pins that the Claude Code agent
+// TestManifestRoutes_TargetFlag_AgentRowOpencode pins that the Claude Code agent
 // row + --target opencode yields ZERO applicable targets.
-func TestRouteResolve_TargetFlag_AgentRowOpencode(t *testing.T) {
-	overlay := overlayScript(t)
+func TestManifestRoutes_TargetFlag_AgentRowOpencode(t *testing.T) {
+	engine := enginetest.Binary(t)
 	overlayDir := t.TempDir()
 	home := t.TempDir()
 
-	got, err := callRouteResolve(t, overlay, overlayDir, home, fixtureManifest, "GADU.md")
+	got, err := callManifestRoutes(t, engine, overlayDir, home, fixtureManifest, "GADU.md")
 	if err != nil {
-		t.Fatalf("route_resolve: %v", err)
+		t.Fatalf("manifest routes: %v", err)
 	}
 
 	applicable := intersectTargets(got.Targets, "opencode")
@@ -569,16 +561,16 @@ func TestRouteResolve_TargetFlag_AgentRowOpencode(t *testing.T) {
 	}
 }
 
-// TestRouteResolve_TargetFlag_OpenCodeAgentRowOpencode pins that the OpenCode
+// TestManifestRoutes_TargetFlag_OpenCodeAgentRowOpencode pins that the OpenCode
 // native agent row + --target opencode yields the OpenCode agent destination.
-func TestRouteResolve_TargetFlag_OpenCodeAgentRowOpencode(t *testing.T) {
-	overlay := overlayScript(t)
+func TestManifestRoutes_TargetFlag_OpenCodeAgentRowOpencode(t *testing.T) {
+	engine := enginetest.Binary(t)
 	overlayDir := t.TempDir()
 	home := t.TempDir()
 
-	got, err := callRouteResolve(t, overlay, overlayDir, home, fixtureManifest, "opencode/agents/GADU.md")
+	got, err := callManifestRoutes(t, engine, overlayDir, home, fixtureManifest, "opencode/agents/GADU.md")
 	if err != nil {
-		t.Fatalf("route_resolve: %v", err)
+		t.Fatalf("manifest routes: %v", err)
 	}
 
 	applicable := intersectTargets(got.Targets, "opencode")
@@ -591,16 +583,16 @@ func TestRouteResolve_TargetFlag_OpenCodeAgentRowOpencode(t *testing.T) {
 	}
 }
 
-// TestRouteResolve_TargetFlag_AgentRowClaude pins that agent row + --target claude
+// TestManifestRoutes_TargetFlag_AgentRowClaude pins that agent row + --target claude
 // yields exactly claude:~/.claude/agents/GADU.md.
-func TestRouteResolve_TargetFlag_AgentRowClaude(t *testing.T) {
-	overlay := overlayScript(t)
+func TestManifestRoutes_TargetFlag_AgentRowClaude(t *testing.T) {
+	engine := enginetest.Binary(t)
 	overlayDir := t.TempDir()
 	home := t.TempDir()
 
-	got, err := callRouteResolve(t, overlay, overlayDir, home, fixtureManifest, "GADU.md")
+	got, err := callManifestRoutes(t, engine, overlayDir, home, fixtureManifest, "GADU.md")
 	if err != nil {
-		t.Fatalf("route_resolve: %v", err)
+		t.Fatalf("manifest routes: %v", err)
 	}
 
 	applicable := intersectTargets(got.Targets, "claude")
@@ -613,16 +605,16 @@ func TestRouteResolve_TargetFlag_AgentRowClaude(t *testing.T) {
 	}
 }
 
-// TestRouteResolve_TargetFlag_SkillRowOpencode pins that a skill row + --target opencode
+// TestManifestRoutes_TargetFlag_SkillRowOpencode pins that a skill row + --target opencode
 // yields exactly one opencode skills destination (D2 back-compat).
-func TestRouteResolve_TargetFlag_SkillRowOpencode(t *testing.T) {
-	overlay := overlayScript(t)
+func TestManifestRoutes_TargetFlag_SkillRowOpencode(t *testing.T) {
+	engine := enginetest.Binary(t)
 	overlayDir := t.TempDir()
 	home := t.TempDir()
 
-	got, err := callRouteResolve(t, overlay, overlayDir, home, fixtureManifest, "sdd-spec/SKILL.md")
+	got, err := callManifestRoutes(t, engine, overlayDir, home, fixtureManifest, "sdd-spec/SKILL.md")
 	if err != nil {
-		t.Fatalf("route_resolve: %v", err)
+		t.Fatalf("manifest routes: %v", err)
 	}
 
 	applicable := intersectTargets(got.Targets, "opencode")
@@ -740,6 +732,7 @@ func TestBootstrap_UsesRouteAwareTarPaths(t *testing.T) {
 		"GIT_COMMITTER_EMAIL=test@test.com",
 		"PATH=" + os.Getenv("PATH"),
 	}
+	enginetest.Provision(t, home)
 
 	out, err := runOverlay(t, overlay, env, "bootstrap")
 	if err != nil {
@@ -847,6 +840,7 @@ func setupSandboxOverlay(t *testing.T, home string) (string, []string) {
 		"GIT_COMMITTER_EMAIL=test@test.com",
 		"PATH=" + os.Getenv("PATH"),
 	}
+	enginetest.Provision(t, home)
 	return overlayDir, env
 }
 

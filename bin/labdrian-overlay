@@ -485,21 +485,6 @@ longtermmem_targets_lock_release() {
   rmdir "$LONGTERM_MEM_TARGETS_LOCK" 2>/dev/null || true
 }
 
-# Read manifest: emit "path tag" lines, skipping blank lines and comments
-parse_manifest() {
-  grep -v '^\s*#' "$MANIFEST" | grep -v '^\s*$'
-}
-
-# Managed files only
-managed_files() {
-  parse_manifest | awk '$2 == "managed" { print $1 }'
-}
-
-# All tracked files (managed + custom)
-all_tracked_files() {
-  parse_manifest | awk '{ print $1 }'
-}
-
 # Ensure the parent directory of a path exists
 ensure_parent() {
   local path="$1"
@@ -944,151 +929,67 @@ EOF
 }
 
 # ---------------------------------------------------------------------------
-# route_resolve — single source of truth for manifest entry → routing
+# manifest routes — where each row of overlay.manifest goes
 # ---------------------------------------------------------------------------
 #
-# route_resolve <manifest_path>
+# The decision is the engine's (`manifest routes`), not this script's: how a
+# manifest is read, which route a row takes, which rows are never deployed,
+# and the longterm-mem/** route-domain guard (R-012 in overlay-agent-route)
+# live in engine/skills, in one place. This script owns what the engine
+# cannot know -- the directories its targets keep their skills and native
+# agents in (TARGET_PATHS, AGENT_TARGET_PATHS) -- and hands them over.
 #
-# Reads the optional third column of the overlay.manifest row whose first field
-# equals <manifest_path>. Emits ONE tab-separated line (side-effect-free):
+# manifest_routes_load <target> [managed]
 #
-#   <route>\t<repo_source_abs>\t<target_name>:<dest_abs> [...]
+# Fills MANIFEST_ROUTES with one line per row of the manifest, in the order it
+# is written (only the rows tagged managed when the second argument is
+# "managed"), in five columns separated by a tab:
 #
-# route=skill (default; all existing bare two-column rows):
-#   repo_source = $OVERLAY_DIR/skills/<path>
-#   targets     = claude:<CLAUDE_SKILLS>/<path>  opencode:<OC_SKILLS>/<path>  codex:<CODEX_SKILLS>/<path>
+#   <path> <route> <repo_rel> <repo_source> <dest>
 #
-# route=agent (third column == "agent"):
-#   repo_source = $OVERLAY_DIR/agents/<path>
-#   targets     = claude:$HOME/.claude/agents/<path>
+#   path         the first column of the row
+#   route        skill, agent, opencode-agent, mcp or non-deployable; a third
+#                column nobody knows keeps its own name and is the skill route
+#   repo_rel     the file's place in the overlay repository, which is how git
+#                knows it on the branches (skills/<path> for a skill)
+#   repo_source  the absolute path it is copied from; empty when non-deployable
+#   dest         the absolute path it is copied to for <target>; empty when it
+#                goes nowhere for that target (an agent for opencode, an mcp
+#                row, a row that is never deployed)
 #
-# route=opencode-agent (third column == "opencode-agent"):
-#   repo_source = $OVERLAY_DIR/opencode/agents/<path>
-#   targets     = opencode:$HOME/.config/opencode/agents/<path>
+# An empty column is never followed by one that is not, so `IFS=$'\t' read -r`
+# (which drops empty trailing fields) reads every line whole. Callers skip a
+# row with an empty dest, as they always did.
 #
-# route=mcp (third column == "mcp"; D13):
-#   repo_source = $OVERLAY_DIR/<path>
-#   targets     = (none) — the longterm-mem install path (build, copy,
-#                 register) is dispatched separately, not via the deploy loop.
+# Any refusal ends the run: a longterm-mem/** row with no route or an unknown
+# one, a manifest that cannot be read, an engine that is not there. The engine
+# says why on stderr and answers nothing, so the run stops before it acts on
+# part of a manifest. (The `|| exit $?` is for the callers that run inside
+# $(...), where errexit is off and a plain failure would go unnoticed.)
 #
-# Callers intersect the emitted target set with their --target selection:
-#   --target codex + agent row → zero applicable targets (no work, not an error).
-#
-# Route domain guard (R-012 in overlay-agent-route, traces longterm-mem R-035):
-# a row under longterm-mem/** whose third column is absent or not in the
-# recognized four-value domain {skill, agent, opencode-agent, mcp} is REJECTED
-# (exit 1, explicit stderr naming the row) rather than silently falling
-# through to the skill route — see route_reject_unrouted_longterm_mem below.
-#
-# Back-compat invariant: bare two-column skill rows emit BYTE-IDENTICAL results
-# to pre-route_resolve behavior (pinned by TestRouteResolve_LegacySkillRow).
+# The engine is made on first use, or again when it is older than its source
+# (ensure_engine_binary), with its words on stderr: this runs inside $(...) too,
+# and a line on stdout there would end up in the value being computed.
+MANIFEST_ROUTES=""
 
-# route_reject_unrouted_longterm_mem <manifest_path> <route_raw>
-#
-# Enforces the longterm-mem/** route-domain guard described above. <route_raw>
-# is the UNDEFAULTED third column (empty when absent) — route_resolve must
-# pass the raw value, not the "skill"-defaulted one, or a missing column would
-# be indistinguishable from an explicit route=skill row. Exits 1 with an
-# explicit stderr message naming the row on rejection; returns 0 otherwise.
-# Hoisted into its own function so cmd_apply's manifest-load hook can reuse it
-# without re-deriving route_resolve's internals.
-route_reject_unrouted_longterm_mem() {
-  local manifest_path="$1"
-  local route_raw="$2"
-
-  case "$route_raw" in
-    skill|agent|opencode-agent|mcp)
-      return 0
-      ;;
-  esac
-
-  if [[ -z "$route_raw" ]]; then
-    echo "route_resolve: longterm-mem row '$manifest_path' declares no route (missing third column); must be one of: skill, agent, opencode-agent, mcp" >&2
-  else
-    echo "route_resolve: longterm-mem row '$manifest_path' declares an unrecognized route '$route_raw'; must be one of: skill, agent, opencode-agent, mcp" >&2
+manifest_routes_load() {
+  local target="$1"
+  local -a args=(manifest routes --overlay-root "$OVERLAY_DIR" --manifest "$MANIFEST"
+    --target "$target" --skills-root "${TARGET_PATHS[$target]}")
+  if [[ -v AGENT_TARGET_PATHS["$target"] ]]; then
+    args+=(--agents-root "${AGENT_TARGET_PATHS[$target]}")
   fi
-  exit 1
+  if [[ "${2:-}" == "managed" ]]; then
+    args+=(--managed)
+  fi
+  ensure_engine_binary >&2
+  MANIFEST_ROUTES="$("$ENGINE_BINARY" "${args[@]}")" || exit $?
 }
 
-route_resolve() {
-  local manifest_path="$1"
-  local route_raw
-  route_raw="$(awk -v p="$manifest_path" '$1 == p { print $3; exit }' "$MANIFEST")"
-
-  if [[ "$manifest_path" == longterm-mem/* ]]; then
-    route_reject_unrouted_longterm_mem "$manifest_path" "$route_raw"
-  fi
-
-  local route="${route_raw:-skill}"
-
-  # Detect structurally non-deployable rows: paths that cannot map to a skill
-  # or agent source directory. Overlay engine source files (engine/*) and
-  # root-level files (no path separator, e.g. skills.registry.yaml) are
-  # tracked in the manifest for diff/sync-check purposes only; they are never
-  # copied to skills/ or agents/ targets.
-  #
-  # Rule: for skill-route rows (non-agent), if the first path segment equals
-  # the full path (no "/") or equals "engine", the row is non-deployable.
-  # Callers skip non-deployable rows silently because the emitted target list
-  # is empty and their existing [[ -z "$rr_dest" ]] && continue guards fire.
-  if [[ "$route" != "agent" ]]; then
-    local first_seg="${manifest_path%%/*}"
-    if [[ "$first_seg" == "$manifest_path" || "$first_seg" == "engine" ]]; then
-      printf 'non-deployable\t\t\n'
-      return
-    fi
-  fi
-
-  local repo_source
-  local targets=()
-  local tname
-
-  if [[ "$route" == "agent" ]]; then
-    repo_source="$OVERLAY_DIR/agents/${manifest_path}"
-    targets+=("claude:${AGENT_TARGET_PATHS[claude]}/${manifest_path}")
-  elif [[ "$route" == "opencode-agent" ]]; then
-    local opencode_agent_rel="${manifest_path#opencode/agents/}"
-    if [[ "$opencode_agent_rel" == "$manifest_path" || -z "$opencode_agent_rel" ]]; then
-      printf 'non-deployable\t\t\n'
-      return
-    fi
-    repo_source="$OVERLAY_DIR/${manifest_path}"
-    targets+=("opencode:${AGENT_TARGET_PATHS[opencode]}/${opencode_agent_rel}")
-  elif [[ "$route" == "mcp" ]]; then
-    repo_source="$OVERLAY_DIR/${manifest_path}"
-    # No copy targets: the longterm-mem install path (build, copy, register)
-    # is dispatched separately from the deploy loop (D13).
-  else
-    repo_source="$OVERLAY_DIR/skills/${manifest_path}"
-    for tname in "${!TARGET_PATHS[@]}"; do
-      targets+=("${tname}:${TARGET_PATHS[$tname]}/${manifest_path}")
-    done
-  fi
-
-  printf '%s\t%s\t%s\n' "$route" "$repo_source" "${targets[*]}"
-}
-
-route_repo_rel() {
-  local route="$1"
-  local manifest_path="$2"
-
-  case "$route" in
-    agent)
-      printf 'agents/%s' "$manifest_path"
-      ;;
-    opencode-agent)
-      printf '%s' "$manifest_path"
-      ;;
-    mcp)
-      printf '%s' "$manifest_path"
-      ;;
-    skill)
-      printf 'skills/%s' "$manifest_path"
-      ;;
-    *)
-      printf '%s' "$manifest_path"
-      ;;
-  esac
+# manifest_routes_rows prints the lines manifest_routes_load filled, one per
+# row and none when there are none, for a `while read ... done < <(...)` loop.
+manifest_routes_rows() {
+  [[ -z "$MANIFEST_ROUTES" ]] || printf '%s\n' "$MANIFEST_ROUTES"
 }
 
 # ---------------------------------------------------------------------------
@@ -1169,18 +1070,9 @@ compute_target_digest() {
   local mode="$2"
 
   local lines=()
-  while IFS= read -r rel_path; do
-    local rr_line rr_route rr_src rr_rest rr_targets rr_dest rr_pair rr_repo_rel path filehash
-    rr_line="$(route_resolve "$rel_path")"
-    rr_route="${rr_line%%$'\t'*}"
-    rr_rest="${rr_line#*$'\t'}"
-    rr_src="${rr_rest%%$'\t'*}"
-    rr_targets="${rr_rest#*$'\t'}"
-
-    rr_dest=""
-    for rr_pair in $rr_targets; do
-      [[ "${rr_pair%%:*}" == "$target" ]] && rr_dest="${rr_pair#*:}" && break
-    done
+  local rr_repo_rel rr_src rr_dest path filehash
+  manifest_routes_load "$target" managed
+  while IFS=$'\t' read -r _ _ rr_repo_rel rr_src rr_dest; do
     [[ -z "$rr_dest" ]] && continue
 
     if [[ "$mode" == "ref" ]]; then
@@ -1189,8 +1081,6 @@ compute_target_digest() {
       path="$rr_dest"
     fi
 
-    rr_repo_rel="$(route_repo_rel "$rr_route" "$rel_path")"
-
     if [[ -f "$path" ]]; then
       filehash="$(sha256sum "$path" | awk '{ print $1 }')"
     else
@@ -1198,7 +1088,7 @@ compute_target_digest() {
     fi
 
     lines+=("${rr_repo_rel}:${filehash}")
-  done < <(managed_files)
+  done < <(manifest_routes_rows)
 
   printf '%s\n' "${lines[@]}" | LC_ALL=C sort | sha256sum | awk '{ print $1 }'
 }
@@ -1309,19 +1199,11 @@ state_write_target() {
 backup_target() {
   local target="$1"
 
-  local -a changed_rel_paths=()
-  local rel_path
-  while IFS= read -r rel_path; do
-    local rr_line rr_route rr_src rr_rest rr_targets rr_dest rr_pair
-    rr_line="$(route_resolve "$rel_path")"
-    rr_route="${rr_line%%$'\t'*}"
-    rr_rest="${rr_line#*$'\t'}"
-    rr_src="${rr_rest%%$'\t'*}"
-    rr_targets="${rr_rest#*$'\t'}"
-    rr_dest=""
-    for rr_pair in $rr_targets; do
-      [[ "${rr_pair%%:*}" == "$target" ]] && rr_dest="${rr_pair#*:}" && break
-    done
+  local -a changed_repo_rels=()
+  local -a changed_dests=()
+  local rr_repo_rel rr_src rr_dest
+  manifest_routes_load "$target" managed
+  while IFS=$'\t' read -r _ _ rr_repo_rel rr_src rr_dest; do
     [[ -z "$rr_dest" ]] && continue
 
     # Only an EXISTING live file that is about to be OVERWRITTEN needs
@@ -1329,16 +1211,17 @@ backup_target() {
     # itself (never overwritten), and a target with no live file yet has
     # nothing to preserve -- both degrade to "nothing to back up" here.
     if [[ -f "$rr_dest" && -f "$rr_src" ]] && ! diff --brief "$rr_src" "$rr_dest" > /dev/null 2>&1; then
-      changed_rel_paths+=("$rel_path")
+      changed_repo_rels+=("$rr_repo_rel")
+      changed_dests+=("$rr_dest")
     fi
-  done < <(managed_files)
+  done < <(manifest_routes_rows)
 
   # Explicit 'return 0' (not a bare 'return' after a failing [[ ]] test):
   # under this script's 'set -e', a bare 'return' here would propagate the
   # [[ ]] test's own nonzero status as this function's exit code, tripping
   # errexit for any caller that assigns its stdout via command substitution
   # (e.g. cmd_apply's `backup_ts="$(backup_target "$t")"`).
-  [[ "${#changed_rel_paths[@]}" -gt 0 ]] || return 0
+  [[ "${#changed_dests[@]}" -gt 0 ]] || return 0
 
   local backups_dir="$STATE_DIR/backups/$target"
   mkdir -p "$backups_dir"
@@ -1354,22 +1237,11 @@ backup_target() {
   local backup_dir="$backups_dir/$candidate"
   mkdir -p "$backup_dir"
 
-  for rel_path in "${changed_rel_paths[@]}"; do
-    local rr_line rr_route rr_rest rr_targets rr_dest rr_pair rr_repo_rel dest_path
-    rr_line="$(route_resolve "$rel_path")"
-    rr_route="${rr_line%%$'\t'*}"
-    rr_rest="${rr_line#*$'\t'}"
-    rr_targets="${rr_rest#*$'\t'}"
-    rr_dest=""
-    for rr_pair in $rr_targets; do
-      [[ "${rr_pair%%:*}" == "$target" ]] && rr_dest="${rr_pair#*:}" && break
-    done
-    [[ -z "$rr_dest" ]] && continue
-
-    rr_repo_rel="$(route_repo_rel "$rr_route" "$rel_path")"
-    dest_path="$backup_dir/$rr_repo_rel"
+  local i dest_path
+  for i in "${!changed_dests[@]}"; do
+    dest_path="$backup_dir/${changed_repo_rels[$i]}"
     mkdir -p "$(dirname "$dest_path")"
-    cp "$rr_dest" "$dest_path"
+    cp "${changed_dests[$i]}" "$dest_path"
   done
 
   local prior
@@ -1426,7 +1298,7 @@ prune_backups() {
 # ~/.config/opencode instead.
 route_tar_path() {
   local route="$1"
-  local repo_rel="$2"  # output of route_repo_rel()
+  local repo_rel="$2"  # the repo_rel column of manifest_routes_load
 
   case "$route" in
     opencode-agent)
@@ -1443,6 +1315,13 @@ route_tar_path() {
 # ---------------------------------------------------------------------------
 
 cmd_bootstrap() {
+  # The engine says where each row goes (manifest_routes_load below), and
+  # bootstrap writes a repository and commits to it before it asks: make the
+  # engine first, so that a machine that cannot (no go, no binary) stops with
+  # nothing written, and while the engine source is still in the tree the
+  # branches are cut from.
+  ensure_engine_binary >&2
+
   info "Bootstrapping overlay repo at $OVERLAY_DIR"
 
   # 1. Init git repo if needed
@@ -1473,8 +1352,15 @@ cmd_bootstrap() {
   # 4. Stage scaffold (bin/overlay itself is already here; stage it too)
   git add README.md overlay.manifest .gitignore bin/overlay
 
-  # 5. Initial commit (only if none exists)
-  if ! git log --oneline 2>/dev/null | head -1 | grep -q .; then
+  # 5. Initial commit (only if none exists). The log is captured and then tested:
+  # `git log | head -1 | grep -q .` under pipefail loses a race, because head and
+  # grep leave as soon as they have a line, and when git log is still writing it
+  # is killed by SIGPIPE, the pipeline fails, and the guard reads "no commit yet"
+  # for a repository that has them (so a second bootstrap stopped here one run in
+  # three, trying to commit what is committed). Same reason as the tar listing below.
+  local commits
+  commits="$(git log --oneline 2>/dev/null || true)"
+  if [[ -z "$commits" ]]; then
     git commit -m "chore: initial overlay scaffold"
   fi
 
@@ -1491,25 +1377,22 @@ cmd_bootstrap() {
   local tar_listing
   tar_listing="$(tar tzf "$TARBALL" 2>/dev/null)"
 
-  while IFS= read -r rel_path; do
-    local rr_line rr_route rr_src rr_rest rr_repo_rel
-    rr_line="$(route_resolve "$rel_path")"
-    rr_route="${rr_line%%$'\t'*}"
-    rr_rest="${rr_line#*$'\t'}"
-    rr_src="${rr_rest%%$'\t'*}"
-    rr_repo_rel="$(route_repo_rel "$rr_route" "$rel_path")"
-
+  # The destination of a row is not read here (the files go into the
+  # repository); claude is only the target the engine is asked to answer for.
+  local rr_route rr_repo_rel rr_src rr_dest
+  manifest_routes_load claude managed
+  while IFS=$'\t' read -r _ rr_route rr_repo_rel rr_src _; do
     tar_path="$(route_tar_path "$rr_route" "$rr_repo_rel")"
     dest="$rr_src"
     ensure_parent "$dest"
 
-    if echo "$tar_listing" | grep -qF "$tar_path"; then
+    if grep -qF "$tar_path" <<< "$tar_listing"; then
       tar xzf "$TARBALL" --to-stdout "$tar_path" > "$dest"
       info "  extracted: ${rr_repo_rel}"
     else
       echo "  WARNING: not found in tarball, skipping: $tar_path"
     fi
-  done < <(managed_files)
+  done < <(manifest_routes_rows)
 
   # 8. Commit upstream baseline (only if there are changes)
   git add skills/
@@ -1526,22 +1409,14 @@ cmd_bootstrap() {
 
   # 10. Copy current customized files from live targets onto main
   info "Layering customized files onto main..."
-  while IFS= read -r line; do
-    rel_path="$(echo "$line" | awk '{ print $1 }')"
-    local rr_line rr_src rr_rest rr_targets rr_dest rr_pair
-    rr_line="$(route_resolve "$rel_path")"
-    rr_rest="${rr_line#*$'\t'}"
-    rr_src="${rr_rest%%$'\t'*}"      # repo dest
-    rr_targets="${rr_rest#*$'\t'}"
+  local rel_path
+  manifest_routes_load claude
+  while IFS=$'\t' read -r rel_path _ _ rr_src rr_dest; do
     # Source from the claude live location when applicable (bootstrap layers from claude).
-    rr_dest=""
-    for rr_pair in $rr_targets; do
-      [[ "${rr_pair%%:*}" == "claude" ]] && rr_dest="${rr_pair#*:}" && break
-    done
     [[ -z "$rr_dest" ]] && continue
 
     src="${rr_dest}"
-    dest="$rr_src"
+    dest="$rr_src"   # repo dest
     ensure_parent "$dest"
 
     if [[ -f "$src" ]]; then
@@ -1550,7 +1425,7 @@ cmd_bootstrap() {
     else
       echo "  WARNING: source file not found, skipping: $src"
     fi
-  done < <(parse_manifest)
+  done < <(manifest_routes_rows)
 
   # 11. Commit overlay
   git add skills/
@@ -1615,6 +1490,11 @@ cmd_capture() {
   local current_branch
   current_branch="$(git rev-parse --abbrev-ref HEAD)"
 
+  # The engine says where each row goes (manifest_routes_load), and 'upstream',
+  # which is checked out below, holds no engine source to build it from: it has
+  # to be there, or be made, before this script leaves the branch it is on.
+  ensure_engine_binary >&2
+
   # Always return to the original branch, even if a later step fails under
   # 'set -euo pipefail' — prevents stranding the working tree on 'upstream'.
   # Expand the branch name NOW: an EXIT trap fires after the function's locals
@@ -1660,39 +1540,26 @@ cmd_capture() {
     local cap_listing
     cap_listing="$(tar tzf "$from_backup" 2>/dev/null)"
 
-    while IFS= read -r rel_path; do
-      local rr_line rr_route rr_src rr_rest rr_repo_rel
-      rr_line="$(route_resolve "$rel_path")"
-      rr_route="${rr_line%%$'\t'*}"
-      rr_rest="${rr_line#*$'\t'}"
-      rr_src="${rr_rest%%$'\t'*}"
-      rr_repo_rel="$(route_repo_rel "$rr_route" "$rel_path")"
-
+    local rr_route rr_repo_rel rr_src
+    manifest_routes_load "$target_arg" managed
+    while IFS=$'\t' read -r _ rr_route rr_repo_rel rr_src _; do
       tar_path="$(route_tar_path "$rr_route" "$rr_repo_rel")"
       dest="$rr_src"
       ensure_parent "$dest"
 
-      if echo "$cap_listing" | grep -qF "$tar_path"; then
+      if grep -qF "$tar_path" <<< "$cap_listing"; then
         tar xzf "$from_backup" --to-stdout "$tar_path" > "$dest"
         info "  extracted: ${rr_repo_rel}"
       else
         echo "  WARNING: not found in tarball, skipping: $tar_path"
       fi
-    done < <(managed_files)
+    done < <(manifest_routes_rows)
   else
     info "Capturing managed files from $target_dir"
-    while IFS= read -r rel_path; do
-      local rr_line rr_route rr_src rr_rest rr_targets rr_dest rr_pair
-      rr_line="$(route_resolve "$rel_path")"
-      rr_route="${rr_line%%$'\t'*}"
-      rr_rest="${rr_line#*$'\t'}"
-      rr_src="${rr_rest%%$'\t'*}"
-      rr_targets="${rr_rest#*$'\t'}"
-      # Find live path for the requested target; skip if not applicable (e.g. native agent + codex)
-      rr_dest=""
-      for rr_pair in $rr_targets; do
-        [[ "${rr_pair%%:*}" == "$target_arg" ]] && rr_dest="${rr_pair#*:}" && break
-      done
+    local rel_path rr_src rr_dest
+    manifest_routes_load "$target_arg" managed
+    while IFS=$'\t' read -r rel_path _ _ rr_src rr_dest; do
+      # Live path for the requested target; skip if not applicable (e.g. native agent + codex)
       [[ -z "$rr_dest" ]] && continue
 
       src="$rr_dest"
@@ -1705,7 +1572,7 @@ cmd_capture() {
       else
         echo "  WARNING: source file not found, skipping: $src"
       fi
-    done < <(managed_files)
+    done < <(manifest_routes_rows)
   fi
 
   git add skills/
@@ -1848,28 +1715,19 @@ cmd_apply() {
     local deployed=0
     local in_sync=0
 
-    while IFS= read -r rel_path; do
-      local rr_line rr_route rr_src rr_rest rr_targets rr_dest rr_pair rr_repo_rel
-      rr_line="$(route_resolve "$rel_path")"
-      rr_route="${rr_line%%$'\t'*}"
-      rr_rest="${rr_line#*$'\t'}"
-      rr_src="${rr_rest%%$'\t'*}"
-      rr_targets="${rr_rest#*$'\t'}"
-      # D13: mcp-routed rows emit zero copy targets and would otherwise be
+    local rr_route rr_repo_rel rr_src rr_dest
+    manifest_routes_load "$t"
+    while IFS=$'\t' read -r _ rr_route rr_repo_rel rr_src rr_dest; do
+      # D13: mcp-routed rows have no destination and would otherwise be
       # silently skipped by the "[[ -z "$rr_dest" ]] && continue" guard
       # below with no trace of ever having been seen — record the sighting
       # here, before that guard, so the install hook after the deploy loop
-      # knows whether to fire (reusing route_resolve's own already-applied
-      # route_reject_unrouted_longterm_mem guard for the same-pass rejection
-      # of any unrouted/unrecognized longterm-mem/** row, task 9.11).
+      # knows whether to fire (the same pass that refuses, in the engine, any
+      # unrouted/unrecognized longterm-mem/** row, task 9.11).
       if [[ "$rr_route" == "mcp" ]]; then
         saw_mcp_row=1
       fi
-      # Find dest for the current target ($t); skip if not in applicable set
-      rr_dest=""
-      for rr_pair in $rr_targets; do
-        [[ "${rr_pair%%:*}" == "$t" ]] && rr_dest="${rr_pair#*:}" && break
-      done
+      # Skip if the row does not go to the current target ($t)
       [[ -z "$rr_dest" ]] && continue
 
       src="$rr_src"
@@ -1884,10 +1742,9 @@ cmd_apply() {
           deployed=$((deployed + 1))
         fi
       else
-        rr_repo_rel="$(route_repo_rel "$rr_route" "$rel_path")"
         echo "  WARNING: ${rr_repo_rel} not found in overlay, skipping"
       fi
-    done < <(all_tracked_files)
+    done < <(manifest_routes_rows)
 
     echo "  $t: deployed=$deployed in-sync=$in_sync"
 
@@ -2287,26 +2144,18 @@ cmd_restore() {
 
   info "Restoring $target_arg from backup $selected..."
 
-  while IFS= read -r rel_path; do
-    local rr_line rr_route rr_rest rr_targets rr_dest rr_pair rr_repo_rel src_path
-    rr_line="$(route_resolve "$rel_path")"
-    rr_route="${rr_line%%$'\t'*}"
-    rr_rest="${rr_line#*$'\t'}"
-    rr_targets="${rr_rest#*$'\t'}"
-    rr_dest=""
-    for rr_pair in $rr_targets; do
-      [[ "${rr_pair%%:*}" == "$target_arg" ]] && rr_dest="${rr_pair#*:}" && break
-    done
+  local rr_repo_rel rr_dest src_path
+  manifest_routes_load "$target_arg" managed
+  while IFS=$'\t' read -r _ _ rr_repo_rel _ rr_dest; do
     [[ -z "$rr_dest" ]] && continue
 
-    rr_repo_rel="$(route_repo_rel "$rr_route" "$rel_path")"
     src_path="$backup_dir/$rr_repo_rel"
 
     if [[ -f "$src_path" ]]; then
       ensure_parent "$rr_dest"
       cp "$src_path" "$rr_dest"
     fi
-  done < <(managed_files)
+  done < <(manifest_routes_rows)
 
   local restored_digest
   restored_digest="$(compute_target_digest "$target_arg" live)"
@@ -2420,16 +2269,10 @@ cmd_status() {
 
     local tpath="${TARGET_PATHS[$t]}"
 
-    while IFS= read -r rel_path; do
-      local rr_line rr_src rr_targets rr_dest rr_pair
-      rr_line="$(route_resolve "$rel_path")"
-      rr_src="${rr_line#*$'\t'}"; rr_src="${rr_src%%$'\t'*}"
-      rr_targets="${rr_line##*$'\t'}"
-      # Find live_file for this target; skip if route not applicable
-      rr_dest=""
-      for rr_pair in $rr_targets; do
-        [[ "${rr_pair%%:*}" == "$t" ]] && rr_dest="${rr_pair#*:}" && break
-      done
+    local rel_path rr_src rr_dest
+    manifest_routes_load "$t"
+    while IFS=$'\t' read -r rel_path _ _ rr_src rr_dest; do
+      # Skip if the route does not apply to this target
       [[ -z "$rr_dest" ]] && continue
 
       repo_file="$rr_src"
@@ -2446,7 +2289,7 @@ cmd_status() {
           echo "  DIFFERS  : $rel_path"
         fi
       fi
-    done < <(all_tracked_files)
+    done < <(manifest_routes_rows)
 
     # overlay-release-state R-001/R-002, sync-check-verdicts R-008: report
     # this target's recorded release version against its live aggregate
@@ -2719,23 +2562,10 @@ cmd_sync_check() {
     local upstream_changed=0
     local overlay_not_deployed=0
 
-    while IFS= read -r line; do
-      local rel_path tag rr_line rr_route rr_src rr_rest rr_targets rr_dest rr_pair rr_repo_rel
-      rel_path="$(echo "$line" | awk '{ print $1 }')"
-      tag="$(echo "$line" | awk '{ print $2 }')"
-
-      rr_line="$(route_resolve "$rel_path")"
-      rr_route="${rr_line%%$'\t'*}"
-      rr_rest="${rr_line#*$'\t'}"
-      rr_src="${rr_rest%%$'\t'*}"
-      rr_targets="${rr_rest#*$'\t'}"
-      rr_repo_rel="$(route_repo_rel "$rr_route" "$rel_path")"
-
-      # Find live_file for this target; skip row if route not applicable
-      rr_dest=""
-      for rr_pair in $rr_targets; do
-        [[ "${rr_pair%%:*}" == "$t" ]] && rr_dest="${rr_pair#*:}" && break
-      done
+    local rr_repo_rel rr_dest
+    manifest_routes_load "$t"
+    while IFS=$'\t' read -r _ _ rr_repo_rel _ rr_dest; do
+      # Skip the row if its route does not apply to this target
       [[ -z "$rr_dest" ]] && continue
 
       local live_file="$rr_dest"
@@ -2792,7 +2622,7 @@ cmd_sync_check() {
         echo "  OVERLAY_NOT_DEPLOYED: ${rr_repo_rel} (custom file, not deployed)"
       fi
 
-    done < <(parse_manifest)
+    done < <(manifest_routes_rows)
 
     # sync-check-verdicts R-007/R-008: aggregate per-target digest vs. the
     # recorded deploy (from `apply`), independent of the per-file
@@ -4572,7 +4402,7 @@ cmd_longterm_mem() {
 # dispatch
 # ---------------------------------------------------------------------------
 
-# Guarded so this file can be `source`d (e.g. by tui/release_backend_test.go)
+# Guarded so this file can be `source`d (e.g. by tui/internal/adapters/overlaycli/release_backend_test.go)
 # to call an internal function directly for unit-style testing, without also
 # running the CLI dispatch below. Normal execution (./bin/labdrian-overlay or
 # via the bin/overlay wrapper) is unaffected: BASH_SOURCE[0] and $0 are

@@ -1,0 +1,987 @@
+@@@ status-before/claude
+exit 0
+--- stdout
+=== Branch ===
+main
+
+=== Diff stat upstream..main ===
+ skills/late/SKILL.md | 1 +
+ 1 file changed, 1 insertion(+)
+
+=== Status: claude ===
+  MISSING in target: skill-a/SKILL.md
+  MISSING in target: skill-a/refs/notes.md
+  MISSING in target: skill-b/SKILL.md
+  MISSING in target: shared/helper.md
+  MISSING in target: GADU.md
+  MISSING in target: claude-only.md
+  MISSING in target: weird/SKILL.md
+  MISSING in target: bare/SKILL.md
+  MISSING in target: dup/SKILL.md
+  MISSING in target: dup/SKILL.md
+  MISSING in repo: absent/SKILL.md
+  MISSING in target: late/SKILL.md
+  version: never deployed
+--- stderr
+(nothing)
+@@@ status-before/opencode
+exit 0
+--- stdout
+=== Branch ===
+main
+
+=== Diff stat upstream..main ===
+ skills/late/SKILL.md | 1 +
+ 1 file changed, 1 insertion(+)
+
+=== Status: opencode ===
+  MISSING in target: skill-a/SKILL.md
+  MISSING in target: skill-a/refs/notes.md
+  MISSING in target: skill-b/SKILL.md
+  MISSING in target: shared/helper.md
+  MISSING in target: opencode/agents/GADU.md
+  MISSING in target: weird/SKILL.md
+  MISSING in target: bare/SKILL.md
+  MISSING in target: dup/SKILL.md
+  MISSING in target: dup/SKILL.md
+  MISSING in repo: absent/SKILL.md
+  MISSING in target: late/SKILL.md
+  version: never deployed
+--- stderr
+(nothing)
+@@@ status-before/codex
+exit 0
+--- stdout
+=== Branch ===
+main
+
+=== Diff stat upstream..main ===
+ skills/late/SKILL.md | 1 +
+ 1 file changed, 1 insertion(+)
+
+=== Status: codex ===
+  MISSING in target: skill-a/SKILL.md
+  MISSING in target: skill-a/refs/notes.md
+  MISSING in target: skill-b/SKILL.md
+  MISSING in target: shared/helper.md
+  MISSING in target: weird/SKILL.md
+  MISSING in target: bare/SKILL.md
+  MISSING in target: dup/SKILL.md
+  MISSING in target: dup/SKILL.md
+  MISSING in repo: absent/SKILL.md
+  MISSING in target: late/SKILL.md
+  version: never deployed
+--- stderr
+(nothing)
+@@@ apply/claude
+exit 0
+--- stdout
+==> Merging upstream into main...
+Already up to date.
+
+=== Deploying to: claude ===
+  (created target directory: $HOME/.claude/skills)
+  WARNING: skills/absent/SKILL.md not found in overlay, skipping
+  claude: deployed=10 in-sync=1
+
+Deploy complete.
+==> Returned to branch: main
+==> No 'origin' remote — skipping main push
+--- stderr
+(nothing)
+@@@ apply/opencode
+exit 0
+--- stdout
+==> Merging upstream into main...
+Already up to date.
+
+=== Deploying to: opencode ===
+  (created target directory: $HOME/.config/opencode/skills)
+  WARNING: skills/absent/SKILL.md not found in overlay, skipping
+  opencode: deployed=9 in-sync=1
+
+Deploy complete.
+==> Returned to branch: main
+==> No 'origin' remote — skipping main push
+--- stderr
+(nothing)
+@@@ apply/codex
+exit 0
+--- stdout
+==> Merging upstream into main...
+Already up to date.
+
+=== Deploying to: codex ===
+  (created target directory: $HOME/.codex/skills)
+  WARNING: skills/absent/SKILL.md not found in overlay, skipping
+  codex: deployed=8 in-sync=1
+
+Deploy complete.
+==> Returned to branch: main
+==> No 'origin' remote — skipping main push
+--- stderr
+(nothing)
+@@@ apply/files
+.claude/agents/GADU.md: # GADU claude
+.claude/agents/claude-only.md: # claude only
+.claude/skills/bare/SKILL.md: # bare
+.claude/skills/dup/SKILL.md: # dup
+.claude/skills/late/SKILL.md: # late
+.claude/skills/shared/helper.md: # helper
+.claude/skills/skill-a/SKILL.md: # skill-a
+.claude/skills/skill-a/refs/notes.md: # skill-a notes
+.claude/skills/skill-b/SKILL.md: # skill-b
+.claude/skills/weird/SKILL.md: # weird
+.codex/skills/bare/SKILL.md: # bare
+.codex/skills/dup/SKILL.md: # dup
+.codex/skills/late/SKILL.md: # late
+.codex/skills/shared/helper.md: # helper
+.codex/skills/skill-a/SKILL.md: # skill-a
+.codex/skills/skill-a/refs/notes.md: # skill-a notes
+.codex/skills/skill-b/SKILL.md: # skill-b
+.codex/skills/weird/SKILL.md: # weird
+.config/opencode/agents/GADU.md: # GADU opencode
+.config/opencode/skills/bare/SKILL.md: # bare
+.config/opencode/skills/dup/SKILL.md: # dup
+.config/opencode/skills/late/SKILL.md: # late
+.config/opencode/skills/shared/helper.md: # helper
+.config/opencode/skills/skill-a/SKILL.md: # skill-a
+.config/opencode/skills/skill-a/refs/notes.md: # skill-a notes
+.config/opencode/skills/skill-b/SKILL.md: # skill-b
+.config/opencode/skills/weird/SKILL.md: # weird
+.labdrian-overlay/state.json: claude untagged 601180afa172544ce939bf6474e0e64934a2280bfd085928bf0eb2d96410fd86; codex untagged 5e33010b3bb9ecdc0a1ea1c3118b0be893d823b9800560df3543ab63e1ef9bed; opencode untagged a44136ac97f869a2ba4806e833b03997b8e3e877716d20d02967909b66ba7feb
+@@@ status-synced/claude
+exit 0
+--- stdout
+=== Branch ===
+main
+
+=== Diff stat upstream..main ===
+ skills/late/SKILL.md | 1 +
+ 1 file changed, 1 insertion(+)
+
+=== Status: claude ===
+  in sync  : skill-a/SKILL.md
+  in sync  : skill-a/refs/notes.md
+  in sync  : skill-b/SKILL.md
+  in sync  : shared/helper.md
+  in sync  : GADU.md
+  in sync  : claude-only.md
+  in sync  : weird/SKILL.md
+  in sync  : bare/SKILL.md
+  in sync  : dup/SKILL.md
+  in sync  : dup/SKILL.md
+  MISSING in repo: absent/SKILL.md
+  in sync  : late/SKILL.md
+  version: in sync at untagged
+--- stderr
+(nothing)
+@@@ sync-check-synced/claude
+exit 0
+--- stdout
+
+=== sync-check: claude ($HOME/.claude/skills) ===
+  IN_SYNC: skills/skill-a/SKILL.md
+  IN_SYNC: skills/skill-a/refs/notes.md
+  IN_SYNC: skills/skill-b/SKILL.md
+  IN_SYNC: skills/shared/helper.md
+  IN_SYNC: agents/GADU.md
+  IN_SYNC: agents/claude-only.md
+  UPSTREAM_CHANGED: weird/SKILL.md
+  IN_SYNC: skills/bare/SKILL.md
+  IN_SYNC: skills/dup/SKILL.md
+  IN_SYNC: skills/dup/SKILL.md
+  OVERLAY_NOT_DEPLOYED: skills/absent/SKILL.md (live missing)
+  IN_SYNC: skills/late/SKILL.md
+
+VERDICT:claude:UPSTREAM_CHANGED=1 OVERLAY_NOT_DEPLOYED=1 REPO_BEHIND_ORIGIN=NA REPO_BEHIND_RELEASE=NA RECORDED_VERSION=untagged DIGEST_MATCH=yes
+ACTION:claude: gentle-ai sync detected: run 'labdrian capture --target claude' then 'labdrian apply' to re-merge your customizations
+--- stderr
+SYNC_CHECK:(repo): no 'origin' remote configured -- REPO_BEHIND_ORIGIN unavailable
+SYNC_CHECK:(repo): no 'origin' remote configured -- REPO_BEHIND_RELEASE unavailable
+@@@ status-synced/opencode
+exit 0
+--- stdout
+=== Branch ===
+main
+
+=== Diff stat upstream..main ===
+ skills/late/SKILL.md | 1 +
+ 1 file changed, 1 insertion(+)
+
+=== Status: opencode ===
+  in sync  : skill-a/SKILL.md
+  in sync  : skill-a/refs/notes.md
+  in sync  : skill-b/SKILL.md
+  in sync  : shared/helper.md
+  in sync  : opencode/agents/GADU.md
+  in sync  : weird/SKILL.md
+  in sync  : bare/SKILL.md
+  in sync  : dup/SKILL.md
+  in sync  : dup/SKILL.md
+  MISSING in repo: absent/SKILL.md
+  in sync  : late/SKILL.md
+  version: in sync at untagged
+--- stderr
+(nothing)
+@@@ sync-check-synced/opencode
+exit 0
+--- stdout
+
+=== sync-check: opencode ($HOME/.config/opencode/skills) ===
+  IN_SYNC: skills/skill-a/SKILL.md
+  IN_SYNC: skills/skill-a/refs/notes.md
+  IN_SYNC: skills/skill-b/SKILL.md
+  IN_SYNC: skills/shared/helper.md
+  IN_SYNC: opencode/agents/GADU.md
+  UPSTREAM_CHANGED: weird/SKILL.md
+  IN_SYNC: skills/bare/SKILL.md
+  IN_SYNC: skills/dup/SKILL.md
+  IN_SYNC: skills/dup/SKILL.md
+  OVERLAY_NOT_DEPLOYED: skills/absent/SKILL.md (live missing)
+  IN_SYNC: skills/late/SKILL.md
+
+VERDICT:opencode:UPSTREAM_CHANGED=1 OVERLAY_NOT_DEPLOYED=1 REPO_BEHIND_ORIGIN=NA REPO_BEHIND_RELEASE=NA RECORDED_VERSION=untagged DIGEST_MATCH=yes
+ACTION:opencode: gentle-ai sync detected: run 'labdrian capture --target opencode' then 'labdrian apply' to re-merge your customizations
+--- stderr
+SYNC_CHECK:(repo): no 'origin' remote configured -- REPO_BEHIND_ORIGIN unavailable
+SYNC_CHECK:(repo): no 'origin' remote configured -- REPO_BEHIND_RELEASE unavailable
+@@@ status-synced/codex
+exit 0
+--- stdout
+=== Branch ===
+main
+
+=== Diff stat upstream..main ===
+ skills/late/SKILL.md | 1 +
+ 1 file changed, 1 insertion(+)
+
+=== Status: codex ===
+  in sync  : skill-a/SKILL.md
+  in sync  : skill-a/refs/notes.md
+  in sync  : skill-b/SKILL.md
+  in sync  : shared/helper.md
+  in sync  : weird/SKILL.md
+  in sync  : bare/SKILL.md
+  in sync  : dup/SKILL.md
+  in sync  : dup/SKILL.md
+  MISSING in repo: absent/SKILL.md
+  in sync  : late/SKILL.md
+  version: in sync at untagged
+--- stderr
+(nothing)
+@@@ sync-check-synced/codex
+exit 0
+--- stdout
+
+=== sync-check: codex ($HOME/.codex/skills) ===
+  IN_SYNC: skills/skill-a/SKILL.md
+  IN_SYNC: skills/skill-a/refs/notes.md
+  IN_SYNC: skills/skill-b/SKILL.md
+  IN_SYNC: skills/shared/helper.md
+  UPSTREAM_CHANGED: weird/SKILL.md
+  IN_SYNC: skills/bare/SKILL.md
+  IN_SYNC: skills/dup/SKILL.md
+  IN_SYNC: skills/dup/SKILL.md
+  OVERLAY_NOT_DEPLOYED: skills/absent/SKILL.md (live missing)
+  IN_SYNC: skills/late/SKILL.md
+
+VERDICT:codex:UPSTREAM_CHANGED=1 OVERLAY_NOT_DEPLOYED=1 REPO_BEHIND_ORIGIN=NA REPO_BEHIND_RELEASE=NA RECORDED_VERSION=untagged DIGEST_MATCH=yes
+ACTION:codex: gentle-ai sync detected: run 'labdrian capture --target codex' then 'labdrian apply' to re-merge your customizations
+--- stderr
+SYNC_CHECK:(repo): no 'origin' remote configured -- REPO_BEHIND_ORIGIN unavailable
+SYNC_CHECK:(repo): no 'origin' remote configured -- REPO_BEHIND_RELEASE unavailable
+@@@ status-drift/claude
+exit 0
+--- stdout
+=== Branch ===
+main
+
+=== Diff stat upstream..main ===
+ skills/late/SKILL.md    | 1 +
+ skills/skill-a/SKILL.md | 2 +-
+ 2 files changed, 2 insertions(+), 1 deletion(-)
+
+=== Status: claude ===
+  DIFFERS  : skill-a/SKILL.md
+  in sync  : skill-a/refs/notes.md
+  in sync  : skill-b/SKILL.md
+  DIFFERS  : shared/helper.md
+  in sync  : GADU.md
+  MISSING in target: claude-only.md
+  in sync  : weird/SKILL.md
+  in sync  : bare/SKILL.md
+  in sync  : dup/SKILL.md
+  in sync  : dup/SKILL.md
+  MISSING in repo: absent/SKILL.md
+  DIFFERS  : late/SKILL.md
+  version: untagged (drift detected -- run 'labdrian apply --target claude')
+--- stderr
+(nothing)
+@@@ sync-check-drift/claude
+exit 0
+--- stdout
+
+=== sync-check: claude ($HOME/.claude/skills) ===
+  OVERLAY_NOT_DEPLOYED: skills/skill-a/SKILL.md (live matches upstream, customization not deployed)
+  IN_SYNC: skills/skill-a/refs/notes.md
+  IN_SYNC: skills/skill-b/SKILL.md
+  UPSTREAM_CHANGED: skills/shared/helper.md
+  IN_SYNC: agents/GADU.md
+  OVERLAY_NOT_DEPLOYED: agents/claude-only.md (live missing)
+  UPSTREAM_CHANGED: weird/SKILL.md
+  IN_SYNC: skills/bare/SKILL.md
+  IN_SYNC: skills/dup/SKILL.md
+  IN_SYNC: skills/dup/SKILL.md
+  OVERLAY_NOT_DEPLOYED: skills/absent/SKILL.md (live missing)
+  OVERLAY_NOT_DEPLOYED: skills/late/SKILL.md (custom file, not deployed)
+
+VERDICT:claude:UPSTREAM_CHANGED=2 OVERLAY_NOT_DEPLOYED=4 REPO_BEHIND_ORIGIN=NA REPO_BEHIND_RELEASE=NA RECORDED_VERSION=untagged DIGEST_MATCH=no
+ACTION:claude: gentle-ai sync detected: run 'labdrian capture --target claude' then 'labdrian apply' to re-merge your customizations
+--- stderr
+SYNC_CHECK:(repo): no 'origin' remote configured -- REPO_BEHIND_ORIGIN unavailable
+SYNC_CHECK:(repo): no 'origin' remote configured -- REPO_BEHIND_RELEASE unavailable
+@@@ status-drift/opencode
+exit 0
+--- stdout
+=== Branch ===
+main
+
+=== Diff stat upstream..main ===
+ skills/late/SKILL.md    | 1 +
+ skills/skill-a/SKILL.md | 2 +-
+ 2 files changed, 2 insertions(+), 1 deletion(-)
+
+=== Status: opencode ===
+  DIFFERS  : skill-a/SKILL.md
+  in sync  : skill-a/refs/notes.md
+  in sync  : skill-b/SKILL.md
+  in sync  : shared/helper.md
+  DIFFERS  : opencode/agents/GADU.md
+  in sync  : weird/SKILL.md
+  in sync  : bare/SKILL.md
+  in sync  : dup/SKILL.md
+  in sync  : dup/SKILL.md
+  MISSING in repo: absent/SKILL.md
+  in sync  : late/SKILL.md
+  version: untagged (drift detected -- run 'labdrian apply --target opencode')
+--- stderr
+(nothing)
+@@@ sync-check-drift/opencode
+exit 0
+--- stdout
+
+=== sync-check: opencode ($HOME/.config/opencode/skills) ===
+  OVERLAY_NOT_DEPLOYED: skills/skill-a/SKILL.md (live matches upstream, customization not deployed)
+  IN_SYNC: skills/skill-a/refs/notes.md
+  IN_SYNC: skills/skill-b/SKILL.md
+  IN_SYNC: skills/shared/helper.md
+  UPSTREAM_CHANGED: opencode/agents/GADU.md
+  UPSTREAM_CHANGED: weird/SKILL.md
+  IN_SYNC: skills/bare/SKILL.md
+  IN_SYNC: skills/dup/SKILL.md
+  IN_SYNC: skills/dup/SKILL.md
+  OVERLAY_NOT_DEPLOYED: skills/absent/SKILL.md (live missing)
+  IN_SYNC: skills/late/SKILL.md
+
+VERDICT:opencode:UPSTREAM_CHANGED=2 OVERLAY_NOT_DEPLOYED=2 REPO_BEHIND_ORIGIN=NA REPO_BEHIND_RELEASE=NA RECORDED_VERSION=untagged DIGEST_MATCH=no
+ACTION:opencode: gentle-ai sync detected: run 'labdrian capture --target opencode' then 'labdrian apply' to re-merge your customizations
+--- stderr
+SYNC_CHECK:(repo): no 'origin' remote configured -- REPO_BEHIND_ORIGIN unavailable
+SYNC_CHECK:(repo): no 'origin' remote configured -- REPO_BEHIND_RELEASE unavailable
+@@@ status-drift/codex
+exit 0
+--- stdout
+=== Branch ===
+main
+
+=== Diff stat upstream..main ===
+ skills/late/SKILL.md    | 1 +
+ skills/skill-a/SKILL.md | 2 +-
+ 2 files changed, 2 insertions(+), 1 deletion(-)
+
+=== Status: codex ===
+  DIFFERS  : skill-a/SKILL.md
+  in sync  : skill-a/refs/notes.md
+  in sync  : skill-b/SKILL.md
+  in sync  : shared/helper.md
+  in sync  : weird/SKILL.md
+  in sync  : bare/SKILL.md
+  in sync  : dup/SKILL.md
+  in sync  : dup/SKILL.md
+  MISSING in repo: absent/SKILL.md
+  in sync  : late/SKILL.md
+  version: in sync at untagged
+--- stderr
+(nothing)
+@@@ sync-check-drift/codex
+exit 0
+--- stdout
+
+=== sync-check: codex ($HOME/.codex/skills) ===
+  OVERLAY_NOT_DEPLOYED: skills/skill-a/SKILL.md (live matches upstream, customization not deployed)
+  IN_SYNC: skills/skill-a/refs/notes.md
+  IN_SYNC: skills/skill-b/SKILL.md
+  IN_SYNC: skills/shared/helper.md
+  UPSTREAM_CHANGED: weird/SKILL.md
+  IN_SYNC: skills/bare/SKILL.md
+  IN_SYNC: skills/dup/SKILL.md
+  IN_SYNC: skills/dup/SKILL.md
+  OVERLAY_NOT_DEPLOYED: skills/absent/SKILL.md (live missing)
+  IN_SYNC: skills/late/SKILL.md
+
+VERDICT:codex:UPSTREAM_CHANGED=1 OVERLAY_NOT_DEPLOYED=2 REPO_BEHIND_ORIGIN=NA REPO_BEHIND_RELEASE=NA RECORDED_VERSION=untagged DIGEST_MATCH=yes
+ACTION:codex: gentle-ai sync detected: run 'labdrian capture --target codex' then 'labdrian apply' to re-merge your customizations
+--- stderr
+SYNC_CHECK:(repo): no 'origin' remote configured -- REPO_BEHIND_ORIGIN unavailable
+SYNC_CHECK:(repo): no 'origin' remote configured -- REPO_BEHIND_RELEASE unavailable
+@@@ apply-again/claude
+exit 0
+--- stdout
+==> Merging upstream into main...
+Already up to date.
+
+=== Deploying to: claude ===
+  backup: <STAMP>
+  WARNING: skills/absent/SKILL.md not found in overlay, skipping
+  claude: deployed=3 in-sync=8
+
+Deploy complete.
+==> Returned to branch: main
+==> No 'origin' remote — skipping main push
+--- stderr
+(nothing)
+@@@ apply-again/state
+backups/claude/<STAMP>/.meta: untagged	601180afa172544ce939bf6474e0e64934a2280bfd085928bf0eb2d96410fd86	<TIME>
+backups/claude/<STAMP>/agents/GADU.md: # GADU claude
+backups/claude/<STAMP>/skills/skill-a/SKILL.md: # skill-a
+backups/claude/<STAMP>/weird/SKILL.md: # weird
+state.json: claude untagged 6ba6ec3ac9925f84212b071ad82cf090e7b54680b78e78352f1a2efe184ec7b7; codex untagged 5e33010b3bb9ecdc0a1ea1c3118b0be893d823b9800560df3543ab63e1ef9bed; opencode untagged a44136ac97f869a2ba4806e833b03997b8e3e877716d20d02967909b66ba7feb
+@@@ restore/list
+exit 0
+--- stdout
+Backups for claude (newest last):
+  <STAMP> (untagged)
+--- stderr
+(nothing)
+@@@ restore/run
+exit 0
+--- stdout
+==> Restoring claude from backup <STAMP>...
+==> Restored claude from backup <STAMP> (version untagged).
+--- stderr
+(nothing)
+@@@ restore/files
+agents/GADU.md: # GADU claude
+agents/claude-only.md: # claude only
+skills/bare/SKILL.md: # bare
+skills/dup/SKILL.md: # dup
+skills/late/SKILL.md: # late
+skills/shared/helper.md: # helper
+skills/skill-a/SKILL.md: # skill-a
+skills/skill-a/refs/notes.md: # skill-a notes
+skills/skill-b/SKILL.md: # skill-b
+skills/weird/SKILL.md: # weird
+@@@ restore/state
+backups/claude/<STAMP>/.meta: untagged	601180afa172544ce939bf6474e0e64934a2280bfd085928bf0eb2d96410fd86	<TIME>
+backups/claude/<STAMP>/agents/GADU.md: # GADU claude
+backups/claude/<STAMP>/skills/skill-a/SKILL.md: # skill-a
+backups/claude/<STAMP>/weird/SKILL.md: # weird
+state.json: claude untagged 601180afa172544ce939bf6474e0e64934a2280bfd085928bf0eb2d96410fd86; codex untagged 5e33010b3bb9ecdc0a1ea1c3118b0be893d823b9800560df3543ab63e1ef9bed; opencode untagged a44136ac97f869a2ba4806e833b03997b8e3e877716d20d02967909b66ba7feb
+@@@ capture/claude
+exit 0
+--- stdout
+==> Capturing managed files from $HOME/.claude/skills
+==>   copied: skill-a/SKILL.md
+==>   copied: skill-a/refs/notes.md
+==>   copied: shared/helper.md
+==>   copied: GADU.md
+==>   copied: weird/SKILL.md
+==>   copied: dup/SKILL.md
+  WARNING: source file not found, skipping: $HOME/.claude/skills/absent/SKILL.md
+[upstream <SHA>] upstream: sync from gentle-ai <DAY>
+ 4 files changed, 4 insertions(+), 4 deletions(-)
+==> upstream updated
+==> No 'origin' remote — skipping upstream push
+==> Returned to branch: main
+--- stderr
+(nothing)
+@@@ capture/claude-upstream
+agents/GADU.md: # GADU claude live
+agents/claude-only.md: # claude only
+engine/go.mod: module engine
+opencode/agents/GADU.md: # GADU opencode
+other/stray.md: # stray
+skills.registry.yaml: skills: []
+skills/bare/SKILL.md: # bare
+skills/dup/SKILL.md: # dup
+skills/shared/helper.md: # helper live
+skills/skill-a/SKILL.md: # skill-a live
+skills/skill-a/refs/notes.md: # skill-a notes
+skills/skill-b/SKILL.md: # skill-b
+skills/weird/SKILL.md: # weird live
+weird/SKILL.md: # weird at its repository path
+@@@ capture/opencode
+exit 0
+--- stdout
+==> Capturing managed files from $HOME/.config/opencode/skills
+==>   copied: skill-a/SKILL.md
+==>   copied: skill-a/refs/notes.md
+==>   copied: shared/helper.md
+==>   copied: opencode/agents/GADU.md
+==>   copied: weird/SKILL.md
+==>   copied: dup/SKILL.md
+  WARNING: source file not found, skipping: $HOME/.config/opencode/skills/absent/SKILL.md
+[upstream <SHA>] upstream: sync from gentle-ai <DAY>
+ 4 files changed, 4 insertions(+), 4 deletions(-)
+==> upstream updated
+==> No 'origin' remote — skipping upstream push
+==> Returned to branch: main
+--- stderr
+(nothing)
+@@@ capture/opencode-upstream
+agents/GADU.md: # GADU claude live
+agents/claude-only.md: # claude only
+engine/go.mod: module engine
+opencode/agents/GADU.md: # GADU opencode live
+other/stray.md: # stray
+skills.registry.yaml: skills: []
+skills/bare/SKILL.md: # bare
+skills/dup/SKILL.md: # dup
+skills/shared/helper.md: # helper
+skills/skill-a/SKILL.md: # skill-a
+skills/skill-a/refs/notes.md: # skill-a notes
+skills/skill-b/SKILL.md: # skill-b
+skills/weird/SKILL.md: # weird
+weird/SKILL.md: # weird at its repository path
+@@@ capture-from-backup/run
+exit 0
+--- stdout
+==> Capturing managed files from tarball: $HOME/snapshot.tar.gz
+==>   extracted: skills/skill-a/SKILL.md
+==>   extracted: skills/skill-a/refs/notes.md
+==>   extracted: skills/shared/helper.md
+==>   extracted: agents/GADU.md
+==>   extracted: opencode/agents/GADU.md
+  WARNING: not found in tarball, skipping: files/home/labdrian/.claude/engine/go.mod
+==>   extracted: weird/SKILL.md
+==>   extracted: skills/dup/SKILL.md
+  WARNING: not found in tarball, skipping: files/home/labdrian/.claude/skills/absent/SKILL.md
+[upstream <SHA>] upstream: sync from gentle-ai <DAY>
+ 7 files changed, 7 insertions(+), 7 deletions(-)
+==> upstream updated
+==> No 'origin' remote — skipping upstream push
+==> Returned to branch: main
+--- stderr
+(nothing)
+@@@ capture-from-backup/upstream
+agents/GADU.md: # GADU claude backup
+agents/claude-only.md: # claude only
+engine/go.mod: module engine
+opencode/agents/GADU.md: # GADU opencode backup
+other/stray.md: # stray
+skills.registry.yaml: skills: []
+skills/bare/SKILL.md: # bare
+skills/dup/SKILL.md: # dup backup
+skills/shared/helper.md: # helper backup
+skills/skill-a/SKILL.md: # skill-a backup
+skills/skill-a/refs/notes.md: # notes backup
+skills/skill-b/SKILL.md: # skill-b
+skills/weird/SKILL.md: # weird backup
+weird/SKILL.md: # weird at its repository path
+@@@ bootstrap/run
+exit 0
+--- stdout
+==> Bootstrapping overlay repo at $OVERLAY
+Initialized empty Git repository in $OVERLAY/.git/
+[master (root-commit) <SHA>] chore: initial overlay scaffold
+ 4 files changed, 25 insertions(+)
+ create mode 100644 .gitignore
+ create mode 100644 README.md
+ create mode 100644 bin/overlay
+ create mode 100644 overlay.manifest
+==> Extracting managed files from tarball: $HOME/.gentle-ai/backups/upgrade-<STAMP>/snapshot.tar.gz
+==>   extracted: skills/skill-a/SKILL.md
+==>   extracted: skills/skill-a/refs/notes.md
+==>   extracted: skills/shared/helper.md
+==>   extracted: agents/GADU.md
+==>   extracted: opencode/agents/GADU.md
+  WARNING: not found in tarball, skipping: files/home/labdrian/.claude/engine/go.mod
+==>   extracted: weird/SKILL.md
+==>   extracted: skills/dup/SKILL.md
+  WARNING: not found in tarball, skipping: files/home/labdrian/.claude/skills/absent/SKILL.md
+[upstream <SHA>] upstream: baseline from gentle-ai 1.40.2
+ 7 files changed, 7 insertions(+)
+ create mode 100644 agents/GADU.md
+ create mode 100644 opencode/agents/GADU.md
+ create mode 100644 skills/dup/SKILL.md
+ create mode 100644 skills/shared/helper.md
+ create mode 100644 skills/skill-a/SKILL.md
+ create mode 100644 skills/skill-a/refs/notes.md
+ create mode 100644 skills/weird/SKILL.md
+==> Layering customized files onto main...
+==>   copied: skill-a/SKILL.md
+  WARNING: source file not found, skipping: $HOME/.claude/skills/skill-a/refs/notes.md
+  WARNING: source file not found, skipping: $HOME/.claude/skills/skill-b/SKILL.md
+  WARNING: source file not found, skipping: $HOME/.claude/skills/shared/helper.md
+==>   copied: GADU.md
+  WARNING: source file not found, skipping: $HOME/.claude/agents/claude-only.md
+  WARNING: source file not found, skipping: $HOME/.claude/skills/weird/SKILL.md
+==>   copied: bare/SKILL.md
+  WARNING: source file not found, skipping: $HOME/.claude/skills/dup/SKILL.md
+  WARNING: source file not found, skipping: $HOME/.claude/skills/dup/SKILL.md
+  WARNING: source file not found, skipping: $HOME/.claude/skills/absent/SKILL.md
+  WARNING: source file not found, skipping: $HOME/.claude/skills/late/SKILL.md
+[main <SHA>] overlay: EARS notation + stable R-NNN IDs
+ 3 files changed, 3 insertions(+), 2 deletions(-)
+ create mode 100644 skills/bare/SKILL.md
+
+Bootstrap complete.
+  upstream branch: pristine vendor baseline
+  main branch:     your customized overlay (current)
+
+<SHA> chore: initial overlay scaffold
+<SHA> overlay: EARS notation + stable R-NNN IDs
+<SHA> upstream: baseline from gentle-ai 1.40.2
+--- stderr
+(nothing)
+@@@ bootstrap/upstream
+.gitignore: *.swp\n*.swo\n*~\n.DS_Store
+README.md: # labdrian-sdd-overlay
+agents/GADU.md: # GADU claude backup
+bin/overlay: #!/bin/sh
+opencode/agents/GADU.md: # GADU opencode backup
+skills/dup/SKILL.md: # dup backup
+skills/shared/helper.md: # helper backup
+skills/skill-a/SKILL.md: # skill-a backup
+skills/skill-a/refs/notes.md: # notes backup
+skills/weird/SKILL.md: # weird backup
+@@@ bootstrap/main
+.gitignore: *.swp\n*.swo\n*~\n.DS_Store
+README.md: # labdrian-sdd-overlay
+agents/GADU.md: # GADU claude live
+bin/overlay: #!/bin/sh
+opencode/agents/GADU.md: # GADU opencode backup
+skills/bare/SKILL.md: # bare live
+skills/dup/SKILL.md: # dup backup
+skills/shared/helper.md: # helper backup
+skills/skill-a/SKILL.md: # skill-a live
+skills/skill-a/refs/notes.md: # notes backup
+skills/weird/SKILL.md: # weird backup
+@@@ quirks/status
+exit 0
+--- stdout
+=== Branch ===
+main
+
+=== Diff stat upstream..main ===
+
+=== Status: claude ===
+  MISSING in target: tabbed/SKILL.md
+  MISSING in target: padded/SKILL.md
+  MISSING in target: indented/SKILL.md
+  MISSING in target: crlf/SKILL.md
+  MISSING in target: noted/SKILL.md
+  MISSING in target: last/SKILL.md
+  version: never deployed
+--- stderr
+(nothing)
+@@@ quirks/apply
+exit 0
+--- stdout
+==> Merging upstream into main...
+Already up to date.
+
+=== Deploying to: claude ===
+  (created target directory: $HOME/.claude/skills)
+  claude: deployed=6 in-sync=0
+
+Deploy complete.
+==> Returned to branch: main
+==> No 'origin' remote — skipping main push
+--- stderr
+(nothing)
+@@@ quirks/files
+.claude/agents/indented/SKILL.md: # indented agent
+.claude/skills/crlf/SKILL.md: # crlf
+.claude/skills/last/SKILL.md: # last
+.claude/skills/noted/SKILL.md: # noted
+.claude/skills/padded/SKILL.md: # padded
+.claude/skills/tabbed/SKILL.md: # tabbed
+.labdrian-overlay/state.json: claude untagged 5c8802546197e79dd601127f9ba2950a493a7fb6854ba1b16ae1b4263bf126ac
+@@@ quirks/capture
+exit 0
+--- stdout
+==> Capturing managed files from $HOME/.claude/skills
+==>   copied: tabbed/SKILL.md
+==>   copied: padded/SKILL.md
+==>   copied: indented/SKILL.md
+==>   copied: noted/SKILL.md
+==>   copied: last/SKILL.md
+[upstream <SHA>] upstream: sync from gentle-ai <DAY>
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+==> upstream updated
+==> No 'origin' remote — skipping upstream push
+==> Returned to branch: main
+--- stderr
+(nothing)
+@@@ quirks/capture-upstream
+agents/crlf-agent.md: # crlf agent
+agents/indented/SKILL.md: # indented agent
+skills/crlf/SKILL.md: # crlf
+skills/last/SKILL.md: # last
+skills/noted/SKILL.md: # noted
+skills/padded/SKILL.md: # padded
+skills/tabbed/SKILL.md: # tabbed live
+@@@ refused-custom/status
+exit 1
+--- stdout
+=== Branch ===
+main
+
+=== Diff stat upstream..main ===
+
+=== Status: claude ===
+--- stderr
+route_resolve: longterm-mem row 'longterm-mem/internal/foo.go' declares no route (missing third column); must be one of: skill, agent, opencode-agent, mcp
+@@@ refused-custom/sync-check
+exit 1
+--- stdout
+
+=== sync-check: claude ($HOME/.claude/skills) ===
+--- stderr
+SYNC_CHECK:(repo): no 'origin' remote configured -- REPO_BEHIND_ORIGIN unavailable
+SYNC_CHECK:(repo): no 'origin' remote configured -- REPO_BEHIND_RELEASE unavailable
+route_resolve: longterm-mem row 'longterm-mem/internal/foo.go' declares no route (missing third column); must be one of: skill, agent, opencode-agent, mcp
+@@@ refused-custom/apply
+exit 1
+--- stdout
+==> Merging upstream into main...
+Already up to date.
+
+=== Deploying to: claude ===
+--- stderr
+route_resolve: longterm-mem row 'longterm-mem/internal/foo.go' declares no route (missing third column); must be one of: skill, agent, opencode-agent, mcp
+@@@ refused-custom/files
+(nothing)
+@@@ refused-custom/capture
+exit 0
+--- stdout
+==> Capturing managed files from $HOME/.claude/skills
+==>   copied: skill-a/SKILL.md
+  WARNING: source file not found, skipping: $HOME/.claude/agents/GADU.md
+[upstream <SHA>] upstream: sync from gentle-ai <DAY>
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+==> upstream updated
+==> No 'origin' remote — skipping upstream push
+==> Returned to branch: main
+--- stderr
+(nothing)
+@@@ refused-custom/capture-upstream
+agents/GADU.md: # GADU claude
+skills/skill-a/SKILL.md: # skill-a live
+skills/skill-b/SKILL.md: # skill-b
+@@@ refused-managed/status
+exit 1
+--- stdout
+=== Branch ===
+main
+
+=== Diff stat upstream..main ===
+
+=== Status: claude ===
+--- stderr
+route_resolve: longterm-mem row 'longterm-mem/internal/foo.go' declares an unrecognized route 'bogus'; must be one of: skill, agent, opencode-agent, mcp
+@@@ refused-managed/sync-check
+exit 1
+--- stdout
+
+=== sync-check: claude ($HOME/.claude/skills) ===
+--- stderr
+SYNC_CHECK:(repo): no 'origin' remote configured -- REPO_BEHIND_ORIGIN unavailable
+SYNC_CHECK:(repo): no 'origin' remote configured -- REPO_BEHIND_RELEASE unavailable
+route_resolve: longterm-mem row 'longterm-mem/internal/foo.go' declares an unrecognized route 'bogus'; must be one of: skill, agent, opencode-agent, mcp
+@@@ refused-managed/apply
+exit 1
+--- stdout
+==> Merging upstream into main...
+Already up to date.
+
+=== Deploying to: claude ===
+--- stderr
+route_resolve: longterm-mem row 'longterm-mem/internal/foo.go' declares an unrecognized route 'bogus'; must be one of: skill, agent, opencode-agent, mcp
+@@@ refused-managed/files
+(nothing)
+@@@ refused-managed/capture
+exit 1
+--- stdout
+==> Capturing managed files from $HOME/.claude/skills
+--- stderr
+route_resolve: longterm-mem row 'longterm-mem/internal/foo.go' declares an unrecognized route 'bogus'; must be one of: skill, agent, opencode-agent, mcp
+@@@ refused-managed/capture-upstream
+agents/GADU.md: # GADU claude
+skills/skill-a/SKILL.md: # skill-a
+skills/skill-b/SKILL.md: # skill-b
+@@@ refused-restore/run
+exit 1
+--- stdout
+==> Restoring claude from backup <STAMP>...
+--- stderr
+route_resolve: longterm-mem row 'longterm-mem/internal/foo.go' declares no route (missing third column); must be one of: skill, agent, opencode-agent, mcp
+@@@ refused-restore/files
+agents/GADU.md: # GADU claude
+agents/claude-only.md: # claude only
+skills/bare/SKILL.md: # bare
+skills/dup/SKILL.md: # dup
+skills/late/SKILL.md: # late
+skills/shared/helper.md: # helper
+skills/skill-a/SKILL.md: # skill-a edited
+skills/skill-a/refs/notes.md: # skill-a notes
+skills/skill-b/SKILL.md: # skill-b
+skills/weird/SKILL.md: # weird
+@@@ mcp/status
+exit 0
+--- stdout
+=== Branch ===
+main
+
+=== Diff stat upstream..main ===
+
+=== Status: claude ===
+  MISSING in target: skill-a/SKILL.md
+  version: never deployed
+--- stderr
+(nothing)
+@@@ mcp/sync-check
+exit 0
+--- stdout
+
+=== sync-check: claude ($HOME/.claude/skills) ===
+  OVERLAY_NOT_DEPLOYED: skills/skill-a/SKILL.md (live missing)
+
+VERDICT:claude:UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=1 REPO_BEHIND_ORIGIN=NA REPO_BEHIND_RELEASE=NA RECORDED_VERSION=NA DIGEST_MATCH=NA
+ACTION:claude: run 'labdrian apply --target claude'
+--- stderr
+SYNC_CHECK:(repo): no 'origin' remote configured -- REPO_BEHIND_ORIGIN unavailable
+SYNC_CHECK:(repo): no 'origin' remote configured -- REPO_BEHIND_RELEASE unavailable
+@@@ mcp/capture
+exit 0
+--- stdout
+==> Capturing managed files from $HOME/.claude/skills
+==>   copied: skill-a/SKILL.md
+[upstream <SHA>] upstream: sync from gentle-ai <DAY>
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+==> upstream updated
+==> No 'origin' remote — skipping upstream push
+==> Returned to branch: main
+--- stderr
+(nothing)
+@@@ mcp/capture-upstream
+longterm-mem/go.mod: module longterm-mem
+skills/skill-a/SKILL.md: # skill-a live
+@@@ no-manifest/status
+exit 0
+--- stdout
+=== Branch ===
+main
+
+=== Diff stat upstream..main ===
+
+=== Status: claude ===
+  version: never deployed
+@@@ no-manifest/sync-check
+exit 0
+--- stdout
+
+=== sync-check: claude ($HOME/.claude/skills) ===
+
+VERDICT:claude:UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=0 REPO_BEHIND_ORIGIN=NA REPO_BEHIND_RELEASE=NA RECORDED_VERSION=NA DIGEST_MATCH=NA
+ACTION:claude: in sync with gentle-ai (healthy)
+@@@ no-manifest/apply
+exit 0
+--- stdout
+==> Merging upstream into main...
+Already up to date.
+
+=== Deploying to: claude ===
+  claude: deployed=0 in-sync=0
+
+Deploy complete.
+==> Returned to branch: main
+==> No 'origin' remote — skipping main push
+@@@ no-manifest/capture
+exit 0
+--- stdout
+==> Capturing managed files from $HOME/.claude/skills
+==> No changes detected — upstream already up to date
+==> No 'origin' remote — skipping upstream push
+==> Returned to branch: main
+@@@ no-manifest/files
+.labdrian-overlay/state.json: claude untagged 01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b
+@@@ bootstrap-again/run
+exit 0
+--- stdout
+==> Bootstrapping overlay repo at $OVERLAY
+==> Extracting managed files from tarball: $HOME/.gentle-ai/backups/upgrade-<STAMP>/snapshot.tar.gz
+==>   extracted: skills/skill-a/SKILL.md
+==>   extracted: skills/skill-a/refs/notes.md
+==>   extracted: skills/shared/helper.md
+==>   extracted: agents/GADU.md
+==>   extracted: opencode/agents/GADU.md
+  WARNING: not found in tarball, skipping: files/home/labdrian/.claude/engine/go.mod
+==>   extracted: weird/SKILL.md
+==>   extracted: skills/dup/SKILL.md
+  WARNING: not found in tarball, skipping: files/home/labdrian/.claude/skills/absent/SKILL.md
+[upstream <SHA>] upstream: baseline from gentle-ai 1.40.2
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+==> Layering customized files onto main...
+==>   copied: skill-a/SKILL.md
+  WARNING: source file not found, skipping: $HOME/.claude/skills/skill-a/refs/notes.md
+  WARNING: source file not found, skipping: $HOME/.claude/skills/skill-b/SKILL.md
+  WARNING: source file not found, skipping: $HOME/.claude/skills/shared/helper.md
+==>   copied: GADU.md
+  WARNING: source file not found, skipping: $HOME/.claude/agents/claude-only.md
+  WARNING: source file not found, skipping: $HOME/.claude/skills/weird/SKILL.md
+==>   copied: bare/SKILL.md
+  WARNING: source file not found, skipping: $HOME/.claude/skills/dup/SKILL.md
+  WARNING: source file not found, skipping: $HOME/.claude/skills/dup/SKILL.md
+  WARNING: source file not found, skipping: $HOME/.claude/skills/absent/SKILL.md
+  WARNING: source file not found, skipping: $HOME/.claude/skills/late/SKILL.md
+[main <SHA>] overlay: EARS notation + stable R-NNN IDs
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+Bootstrap complete.
+  upstream branch: pristine vendor baseline
+  main branch:     your customized overlay (current)
+
+<SHA> chore: initial overlay scaffold
+<SHA> overlay: EARS notation + stable R-NNN IDs
+<SHA> overlay: EARS notation + stable R-NNN IDs
+<SHA> upstream: baseline from gentle-ai 1.40.2
+<SHA> upstream: baseline from gentle-ai 1.40.2
+--- stderr
+(nothing)
+@@@ bootstrap-again/upstream
+.gitignore: *.swp\n*.swo\n*~\n.DS_Store
+README.md: # labdrian-sdd-overlay
+agents/GADU.md: # GADU claude backup
+bin/overlay: #!/bin/sh
+opencode/agents/GADU.md: # GADU opencode backup
+skills/bare/SKILL.md: # bare live
+skills/dup/SKILL.md: # dup backup
+skills/shared/helper.md: # helper backup
+skills/skill-a/SKILL.md: # skill-a backup
+skills/skill-a/refs/notes.md: # notes backup
+skills/weird/SKILL.md: # weird backup
+@@@ bootstrap-again/main
+.gitignore: *.swp\n*.swo\n*~\n.DS_Store
+README.md: # labdrian-sdd-overlay
+agents/GADU.md: # GADU claude live
+bin/overlay: #!/bin/sh
+opencode/agents/GADU.md: # GADU opencode backup
+skills/bare/SKILL.md: # bare live
+skills/dup/SKILL.md: # dup backup
+skills/shared/helper.md: # helper backup
+skills/skill-a/SKILL.md: # skill-a live
+skills/skill-a/refs/notes.md: # notes backup
+skills/weird/SKILL.md: # weird backup
