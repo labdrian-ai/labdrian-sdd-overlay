@@ -139,9 +139,13 @@ func (w *pinWorld) installGentle(regenerated string, exit int) fakeGentle {
 }
 
 // gentleCalls are the calls a fake gentle-ai recorded, normalized, in order; none is nothing.
-func (w *pinWorld) gentleCalls(g fakeGentle) string {
+func (w *pinWorld) gentleCalls(g fakeGentle) string { return w.loggedCalls(g.log) }
+
+// loggedCalls are the calls a fake program recorded in the log at path, normalized, in order; none
+// is nothing.
+func (w *pinWorld) loggedCalls(log string) string {
 	w.t.Helper()
-	body, err := os.ReadFile(g.log)
+	body, err := os.ReadFile(log)
 	if os.IsNotExist(err) {
 		return pinText("")
 	}

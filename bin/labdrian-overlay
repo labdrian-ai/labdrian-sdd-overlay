@@ -599,8 +599,9 @@ Commands:
                                    present, hooks wired, contract readable. Exits 0 if all
                                    OK, 1 if any check fails. Safe to run at any time.
   doctor [--fix]                   Read-only host-toolchain preflight: checks go (required),
-                                   gentle-ai, bat/rg/fd/sd/eza, the engine binary, and a
-                                   non-empty skill-registry. Prints PASS/WARN/FAIL per check;
+                                   gentle-ai, bat/rg/fd/sd/eza, the engine binary, and the
+                                   skill-registry of the project, which the engine judges
+                                   (`status --only registry`). Prints PASS/WARN/FAIL per check;
                                    exits non-zero only on a hard FAIL. Safe to run at any time.
                                    --fix: after the checks, attempt to install any missing
                                    discovery tools (bat rg fd sd eza) via Homebrew (best-effort,
@@ -2927,6 +2928,46 @@ doctor_report_engine_binary() {
   fi
 }
 
+# doctor_report_registry prints, as one doctor line, what the engine says of the
+# skill registry of the project doctor looks at. The judgment is the engine's
+# (`status --only registry`, the same check `status-hooks` makes), so the
+# overlay has one rule for what a registry may be: absent is quiet (a project
+# that does not use the overlay is no problem), empty, white space only or
+# unreadable is a FAIL (never taken for "zero skills"), and one that lacks a
+# scoped block warns. This function only chooses the project -- the overlay
+# repository's registry when it has one, else the directory doctor runs in --
+# and puts the engine's level on the line: ok is PASS, a warning is WARN, a
+# failure is FAIL and the function returns 1, for the caller to fail the run.
+#
+# Doctor must still say something when the engine cannot answer, because
+# diagnosing a missing engine is part of its job: an absent binary, or one so
+# old that it does not know the question, is a WARN that says the registry was
+# not checked, never a silent pass.
+doctor_report_registry() {
+  local dir="$PWD"
+  [[ -f "$OVERLAY_DIR/.atl/skill-registry.md" ]] && dir="$OVERLAY_DIR"
+
+  if [[ ! -x "$ENGINE_BINARY" ]]; then
+    echo "WARN  registry not checked: the engine judges it and its binary is not at $ENGINE_BINARY. Rebuild it with 'labdrian doctor --fix'."
+    return 0
+  fi
+
+  local report rc=0
+  report="$("$ENGINE_BINARY" status --only registry --cwd "$dir" 2>&1)" || rc=$?
+  # One line, "[LEVEL] registry: ...": an engine older than this script ignores
+  # --only and prints its whole report, and then none of it is an answer.
+  if [[ "$report" != "["*"] registry: "* || "$report" == *$'\n'* ]]; then
+    echo "WARN  registry not checked: the engine at $ENGINE_BINARY did not answer 'status --only registry' (is it older than this overlay?). Rebuild it with 'labdrian doctor --fix'."
+    return 0
+  fi
+  local line="${report#*] }"
+  case "$rc" in
+    0) echo "PASS  $line" ;;
+    2) echo "WARN  $line" ;;
+    *) echo "FAIL  $line"; return 1 ;;
+  esac
+}
+
 doctor_fix_engine_binary() {
   local reason
   if [[ ! -x "$ENGINE_BINARY" ]]; then
@@ -2964,18 +3005,21 @@ doctor_fix_engine_binary() {
 # exits non-zero only on a hard FAIL (missing REQUIRED tool or empty registry).
 #
 # Honors the three robustness principles:
-#   - PORTABLE DISCOVERY: every tool is probed with 'command -v'; the registry
-#     check uses only POSIX 'test'. Never calls fd/eza/bat directly.
+#   - PORTABLE DISCOVERY: every tool is probed with 'command -v'. Never calls
+#     fd/eza/bat directly.
 #   - FAIL-LOUD: no bare '2>/dev/null' on discovery; command-not-found stays
 #     visible. A missing required tool or an empty registry is a hard FAIL with
 #     an actionable message.
-#   - REGISTRY-AUTHORITATIVE: the registry file is the source of truth. An empty
-#     or whitespace-only registry is reported as FAIL ("inconclusive, not zero
-#     skills"), never silently passed.
+#   - REGISTRY-AUTHORITATIVE: the registry file is the source of truth, and the
+#     engine judges it (doctor_report_registry): an empty or whitespace-only
+#     registry is reported as FAIL ("inconclusive, not zero skills"), never
+#     silently passed.
 #
 # Classification:
 #   FAIL  -> registry empty/whitespace-only or unreadable; go absent
-#   WARN  -> registry absent; gentle-ai absent; engine binary absent; fd/eza/bat absent
+#   WARN  -> registry without a scoped block, or not checked (no engine to ask);
+#            gentle-ai absent; engine binary absent; fd/eza/bat absent
+#   (a registry that is absent is PASS: a project that does not use the overlay is no problem)
 #   PASS  -> check satisfied
 
 cmd_doctor() {
@@ -3037,33 +3081,11 @@ cmd_doctor() {
   #     the command at hand, and an absent one is repairable from here.
   doctor_report_engine_binary
 
-  # (e) REGISTRY-AUTHORITATIVE + FAIL-LOUD: registry present AND non-empty.
-  #     Resolve under OVERLAY_DIR first, then CWD. A missing or empty/
-  #     whitespace-only registry is a hard FAIL.
-  local registry=""
-  if [[ -f "$OVERLAY_DIR/.atl/skill-registry.md" ]]; then
-    registry="$OVERLAY_DIR/.atl/skill-registry.md"
-  elif [[ -f "$PWD/.atl/skill-registry.md" ]]; then
-    registry="$PWD/.atl/skill-registry.md"
-  fi
-
-  if [[ -z "$registry" ]]; then
-    echo "WARN  skill-registry.md not found under $OVERLAY_DIR/.atl or $PWD/.atl — project may not use the overlay. Run skill-registry to generate it; do NOT conclude skills are absent."
-  elif [[ ! -s "$registry" ]]; then
-    echo "FAIL  registry empty (zero bytes): $registry — run skill-registry; do NOT conclude skills are absent."
-    fail=1
-  else
-    # Reject a whitespace-only file too. Capture content to a var (no pipe)
-    # to avoid SIGPIPE under 'set -euo pipefail'.
-    local registry_content
-    registry_content="$(tr -d '[:space:]' < "$registry")"
-    if [[ -z "$registry_content" ]]; then
-      echo "FAIL  registry whitespace-only: $registry — run skill-registry; an empty scan is INCONCLUSIVE, not zero skills."
-      fail=1
-    else
-      echo "PASS  registry present and non-empty: $registry"
-    fi
-  fi
+  # (e) REGISTRY-AUTHORITATIVE + FAIL-LOUD: the skill registry of the project,
+  #     judged by the engine (doctor_report_registry), not by a second rule of
+  #     this script. An empty, white-space-only or unreadable registry is a hard
+  #     FAIL; one that lacks a scoped block is a WARN.
+  doctor_report_registry || fail=1
 
   # (f) overlay-release-surfacing R-001: per-target deployed-version digest
   # consistency. A target with no recorded state (never deployed) has

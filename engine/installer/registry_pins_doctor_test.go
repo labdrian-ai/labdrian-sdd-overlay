@@ -82,9 +82,9 @@ func TestRegistryPins_DoctorLooksPastARegistryThatIsADirectory(t *testing.T) {
 	pin(t, "doctor/registry-overlay-one-is-a-directory", doctorRegistryPin(w.runIn(w.project(), "doctor")))
 }
 
-// A registry that cannot be read ends doctor where it reads it: the shell stops on the failed
-// read. What it says then is bash's own, with the line of the script in it, so it is not pinned;
-// that it fails, and sums nothing up, is.
+// A registry that cannot be read fails doctor. The script used to stop where it read it (the shell
+// stopped on the failed read, with bash's own words and the line of the script, so what it said was
+// not pinned); the engine now says "cannot read" and doctor goes on to sum up.
 func TestRegistryPins_DoctorFailsOnARegistryItCannotRead(t *testing.T) {
 	if os.Geteuid() == 0 {
 		t.Skip("a registry cannot be made unreadable to root")
@@ -95,8 +95,11 @@ func TestRegistryPins_DoctorFailsOnARegistryItCannotRead(t *testing.T) {
 		t.Fatal(err)
 	}
 	run := w.runIn(w.project(), "doctor")
-	if run.Exit == 0 || strings.Contains(run.Stdout+run.Stderr, "doctor: OK") {
+	if run.Exit != 1 || strings.Contains(run.Stdout+run.Stderr, "doctor: OK") {
 		t.Errorf("doctor of a registry it cannot read = %s, want it to fail and not to say the checks passed", pinRunText(run))
+	}
+	if lines := registryLines(run); len(lines) != 1 || !strings.HasPrefix(lines[0], "FAIL  registry: $HOME/proj/.atl/skill-registry.md — cannot read: ") {
+		t.Errorf("registry lines = %q, want one FAIL that says the registry cannot be read", lines)
 	}
 }
 

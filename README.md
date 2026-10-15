@@ -138,7 +138,7 @@ backups the backend cannot confirm is not offered a restore.
 | `install-hooks` | **modifies** | Build the Go engine binary + wire `UserPromptSubmit`/`PreToolUse`/`Agent` hooks, including the workflow projection family and the skills approve guard, into `~/.claude/settings.json` (backs up to `.bak` first). Run once to activate scoping; re-run it after an upgrade that adds a hook family, then restart Claude Code to load the hooks. |
 | `uninstall-hooks` | **modifies** | Remove the overlay hook entries (the minimalism and design pairs, the SessionEnd sync-trigger, the review-receipt and shaper guard entries, the three projection entries, and the two approve guard entries) from `~/.claude/settings.json`, including entries left by contracts retired in earlier versions, leaving all other keys intact. |
 | `status-hooks` | read-only | Check engine binary, hooks wired, contracts readable — exits 0 if all healthy; missing binary exits non-zero with `run 'overlay install-hooks'` guidance. |
-| `doctor [--fix]` | read-only | Host-toolchain preflight: go, gentle-ai, discovery tools (bat/rg/fd/sd/eza), engine binary, skill registry — plus a per-target version/digest consistency row (WARN only, never fails the exit code). `--fix` best-effort installs missing discovery tools via Homebrew. |
+| `doctor [--fix]` | read-only | Host-toolchain preflight: go, gentle-ai, discovery tools (bat/rg/fd/sd/eza), engine binary, the skill registry of the project (judged by the engine, with the check `status` makes: absent is fine, empty or unreadable fails, one without a scoped block warns) — plus a per-target version/digest consistency row (WARN only, never fails the exit code). `--fix` best-effort installs missing discovery tools via Homebrew. |
 | `validate-entry-contract --schema PATH --instance PATH` | read-only | Validate a pre-SDD entry candidate against the version-matched schema and deterministic cross-field rules. |
 | `install-alias [name]` | **modifies** | Symlink `labdrian` (or a custom name) into `~/.local/bin`. Run once per machine. |
 
@@ -382,7 +382,9 @@ overlay status-hooks
 
 overlay doctor [--fix]
     Read-only host-toolchain preflight: checks go (required), gentle-ai, bat/rg/fd/sd/eza,
-    the engine binary, a non-empty skill-registry, and a per-target release
+    the engine binary, the skill registry of the project (judged by the engine, the check
+    `status --only registry` makes: absent passes, empty or unreadable fails, one without
+    a scoped block warns; with no usable engine it warns that it was not checked), and a per-target release
     version/digest consistency row. Prints PASS/WARN/FAIL per check; exits non-zero
     only on a hard FAIL (the version/digest row is WARN-only, never fails the exit
     code). --fix: after the checks, attempt to install any missing discovery tools
