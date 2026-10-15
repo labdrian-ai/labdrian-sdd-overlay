@@ -752,8 +752,6 @@ main
 === Diff stat upstream..main ===
 
 === Status: claude ===
-  MISSING in target: skill-a/SKILL.md
-  MISSING in target: GADU.md
 --- stderr
 route_resolve: longterm-mem row 'longterm-mem/internal/foo.go' declares no route (missing third column); must be one of: skill, agent, opencode-agent, mcp
 @@@ refused-custom/sync-check
@@ -761,8 +759,6 @@ exit 1
 --- stdout
 
 === sync-check: claude ($HOME/.claude/skills) ===
-  OVERLAY_NOT_DEPLOYED: skills/skill-a/SKILL.md (live missing)
-  OVERLAY_NOT_DEPLOYED: agents/GADU.md (live missing)
 --- stderr
 SYNC_CHECK:(repo): no 'origin' remote configured -- REPO_BEHIND_ORIGIN unavailable
 SYNC_CHECK:(repo): no 'origin' remote configured -- REPO_BEHIND_RELEASE unavailable
@@ -778,14 +774,13 @@ Already up to date.
 Already on 'main'
 route_resolve: longterm-mem row 'longterm-mem/internal/foo.go' declares no route (missing third column); must be one of: skill, agent, opencode-agent, mcp
 @@@ refused-custom/files
-.claude/agents/GADU.md: # GADU claude
-.claude/skills/skill-a/SKILL.md: # skill-a
+(nothing)
 @@@ refused-custom/capture
 exit 0
 --- stdout
 ==> Capturing managed files from $HOME/.claude/skills
 ==>   copied: skill-a/SKILL.md
-==>   copied: GADU.md
+  WARNING: source file not found, skipping: $HOME/.claude/agents/GADU.md
 [upstream <SHA>] upstream: sync from gentle-ai <DAY>
  1 file changed, 1 insertion(+), 1 deletion(-)
 ==> upstream updated
@@ -807,7 +802,6 @@ main
 === Diff stat upstream..main ===
 
 === Status: claude ===
-  MISSING in target: skill-a/SKILL.md
 --- stderr
 route_resolve: longterm-mem row 'longterm-mem/internal/foo.go' declares an unrecognized route 'bogus'; must be one of: skill, agent, opencode-agent, mcp
 @@@ refused-managed/sync-check
@@ -815,7 +809,6 @@ exit 1
 --- stdout
 
 === sync-check: claude ($HOME/.claude/skills) ===
-  OVERLAY_NOT_DEPLOYED: skills/skill-a/SKILL.md (live missing)
 --- stderr
 SYNC_CHECK:(repo): no 'origin' remote configured -- REPO_BEHIND_ORIGIN unavailable
 SYNC_CHECK:(repo): no 'origin' remote configured -- REPO_BEHIND_RELEASE unavailable
@@ -830,14 +823,12 @@ Already up to date.
 --- stderr
 Already on 'main'
 route_resolve: longterm-mem row 'longterm-mem/internal/foo.go' declares an unrecognized route 'bogus'; must be one of: skill, agent, opencode-agent, mcp
-route_resolve: longterm-mem row 'longterm-mem/internal/foo.go' declares an unrecognized route 'bogus'; must be one of: skill, agent, opencode-agent, mcp
 @@@ refused-managed/files
-.claude/skills/skill-a/SKILL.md: # skill-a
+(nothing)
 @@@ refused-managed/capture
 exit 1
 --- stdout
 ==> Capturing managed files from $HOME/.claude/skills
-==>   copied: skill-a/SKILL.md
 --- stderr
 Switched to branch 'upstream'
 route_resolve: longterm-mem row 'longterm-mem/internal/foo.go' declares an unrecognized route 'bogus'; must be one of: skill, agent, opencode-agent, mcp
@@ -858,7 +849,7 @@ skills/bare/SKILL.md: # bare
 skills/dup/SKILL.md: # dup
 skills/late/SKILL.md: # late
 skills/shared/helper.md: # helper
-skills/skill-a/SKILL.md: # skill-a
+skills/skill-a/SKILL.md: # skill-a edited
 skills/skill-a/refs/notes.md: # skill-a notes
 skills/skill-b/SKILL.md: # skill-b
 skills/weird/SKILL.md: # weird

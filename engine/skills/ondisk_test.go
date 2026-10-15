@@ -2,8 +2,8 @@ package skills
 
 import (
 	"os"
-	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -31,7 +31,7 @@ func TestDeployableManifestPaths(t *testing.T) {
 		t.Fatalf("DeployableManifestPaths: unexpected error: %v", err)
 	}
 
-	// Only rows that route_resolve sends to skills/ belong here.
+	// Only rows that the routing (ResolveRoutes) sends to skills/ belong here.
 	want := []string{
 		"sdd-spec/SKILL.md",
 		"prespec-malandra/SKILL.md",
@@ -89,8 +89,8 @@ sdd-spec/SKILL.md managed
 // remediation: a row under longterm-mem/** with a missing third column must
 // be rejected with an explicit error, not silently resolved to a
 // skills-destination path (overlay-agent-route R-012, traces longterm-mem
-// R-035). The bash half of this guard (route_reject_unrouted_longterm_mem)
-// already existed; this pins the Go half that was missing.
+// R-035). The routing (ResolveRoutes) refuses the same row; this pins the
+// on-disk check's half of that guard.
 func TestDeployableManifestPaths_RejectsUnroutedLongtermMemRow(t *testing.T) {
 	const manifest = `longterm-mem/internal/foo.go managed
 sdd-spec/SKILL.md managed
@@ -128,13 +128,11 @@ sdd-spec/SKILL.md managed
 
 // TestDeployableManifestPaths_RejectsOneColumnLongtermMemRow pins WARNING-2
 // from the verify report: a longterm-mem/** row with only a path and no
-// other field (no tag, no route) must be rejected the same way bash's
-// route_reject_unrouted_longterm_mem rejects it, not silently skipped by the
-// generic "fewer than two fields" rule that applies to every other path
-// prefix. Bash's all_tracked_files (awk '{print $1}') still emits such a row,
-// and route_resolve's awk lookup still resolves an empty (undefaulted) third
-// column for it, so route_reject_unrouted_longterm_mem still fires and exits
-// 1 naming the row — Go must reach the same outcome.
+// other field (no tag, no route) must be rejected the same way the routing
+// rejects it (ResolveRoutes), not silently skipped by the generic "fewer than
+// two fields" rule that applies to every other path prefix. The routing still
+// reads such a row, with an empty (undefaulted) third column, and refuses it
+// naming the row — the on-disk check must reach the same outcome.
 func TestDeployableManifestPaths_RejectsOneColumnLongtermMemRow(t *testing.T) {
 	const manifest = `longterm-mem/only-one-field
 sdd-spec/SKILL.md managed
@@ -289,80 +287,66 @@ func skillsRepoRoot(t *testing.T) string {
 	return filepath.Join(wd, "..", "..")
 }
 
-// bashAcceptsLongtermMemRoute runs the real bin/labdrian-overlay
-// route_resolve (plus its route_reject_unrouted_longterm_mem guard) against a
-// longterm-mem/** row whose third column is set to route, and reports whether
-// bash accepted the row (exit 0) or rejected it (exit 1, per R-012 in
-// overlay-agent-route). This drives the parity check from the real script
-// rather than a second hardcoded list.
-func bashAcceptsLongtermMemRoute(t *testing.T, overlayPath, route string) bool {
-	t.Helper()
-
-	overlayDir := t.TempDir()
-	home := t.TempDir()
-	rowPath := "longterm-mem/parity-fixture.txt"
-	manifest := rowPath + "   custom   " + route + "\n"
-	manifestFile := filepath.Join(overlayDir, "overlay.manifest")
-	if err := os.WriteFile(manifestFile, []byte(manifest), 0o644); err != nil {
-		t.Fatalf("write manifest: %v", err)
-	}
-
-	scriptFile := filepath.Join(t.TempDir(), "run_route_resolve.sh")
-	script := "#!/usr/bin/env bash\n" +
-		"set -euo pipefail\n" +
-		"OVERLAY_DIR=" + shellQuote(overlayDir) + "\n" +
-		"MANIFEST=" + shellQuote(manifestFile) + "\n" +
-		"HOME=" + shellQuote(home) + "\n" +
-		"declare -A TARGET_PATHS=( [claude]=" + shellQuote(filepath.Join(home, ".claude", "skills")) +
-		" [opencode]=" + shellQuote(filepath.Join(home, ".config", "opencode", "skills")) +
-		" [codex]=" + shellQuote(filepath.Join(home, ".codex", "skills")) + " )\n" +
-		"declare -A AGENT_TARGET_PATHS=( [claude]=" + shellQuote(filepath.Join(home, ".claude", "agents")) +
-		" [opencode]=" + shellQuote(filepath.Join(home, ".config", "opencode", "agents")) + " )\n" +
-		`eval "$(awk '/^route_reject_unrouted_longterm_mem\(\)/,/^}$/ { print } /^route_resolve\(\)/,/^}$/ { print }' ` + shellQuote(overlayPath) + `)"` + "\n" +
-		"route_resolve " + shellQuote(rowPath) + " >/dev/null\n"
-	if err := os.WriteFile(scriptFile, []byte(script), 0o755); err != nil {
-		t.Fatalf("write runner script: %v", err)
-	}
-
-	cmd := exec.Command("bash", scriptFile)
-	err := cmd.Run()
+// routingAcceptsLongtermMemRoute reports whether the routing (ResolveRoutes) accepts a
+// longterm-mem/** row whose third column is route. The on-disk check is asked the same question by
+// TestRouteDomain_OnDiskCheckAndRoutingAgree, so that the two readers of the manifest in this
+// package cannot recognize different route domains without failing a test.
+func routingAcceptsLongtermMemRoute(route string) bool {
+	rows := []ManifestRow{{Path: "longterm-mem/parity-fixture.txt", Tag: "custom", Route: route}}
+	_, err := ResolveRoutes(rows, false, "/o", RouteDestinations{Target: "claude", SkillsRoot: "/s", AgentsRoot: "/a"})
 	return err == nil
 }
 
-// shellQuote wraps s in single quotes for embedding into a generated bash
-// script, escaping any embedded single quote.
-func shellQuote(s string) string {
-	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
+// TestRouteDomain_OnDiskCheckAndRoutingAgree pins that the on-disk check (DeployableManifestPaths,
+// which uses the route domain to refuse a longterm-mem/** row) and the routing (ResolveRoutes,
+// which the overlay script asks) recognize the identical four-value route domain {skill, agent,
+// opencode-agent, mcp} (overlay-agent-route R-006). The domain of the on-disk check is derived from
+// the real nonSkillRoutes map (plus the implicit "skill" default) rather than restated as a second
+// list, so the two cannot silently drift without failing this test. Before the routing moved into
+// the engine the other side of this comparison was the bash route_resolve.
+func TestRouteDomain_OnDiskCheckAndRoutingAgree(t *testing.T) {
+	onDiskDomain := map[string]bool{"skill": true}
+	for route := range nonSkillRoutes {
+		onDiskDomain[route] = true
+	}
+	if len(onDiskDomain) != 4 {
+		t.Fatalf("on-disk route domain (nonSkillRoutes + implicit skill default) has %d values, want 4: %v", len(onDiskDomain), onDiskDomain)
+	}
+
+	for _, route := range []string{"skill", "agent", "opencode-agent", "mcp", "bogus-route"} {
+		_, onDiskErr := DeployableManifestPaths(strings.NewReader("longterm-mem/parity-fixture.txt   custom   " + route + "\n"))
+		if onDiskAccepts, routingAccepts := onDiskErr == nil, routingAcceptsLongtermMemRoute(route); onDiskAccepts != routingAccepts || onDiskAccepts != onDiskDomain[route] {
+			t.Errorf("route %q: the on-disk check accepted=%v, the routing accepted=%v, the route domain has it=%v — the readers have drifted", route, onDiskAccepts, routingAccepts, onDiskDomain[route])
+		}
+	}
 }
 
-// TestRouteDomain_MatchesBashAndGo pins that the bash route_resolve dispatch
-// (bin/labdrian-overlay) and the Go nonSkillRoutes exclusion set recognize
-// the identical four-value route domain {skill, agent, opencode-agent, mcp}
-// (overlay-agent-route R-006). The Go side of the domain is derived from the
-// real nonSkillRoutes map (plus the implicit "skill" default) rather than
-// restated as a second hardcoded list, so the two parsers cannot silently
-// drift without failing this test.
-func TestRouteDomain_MatchesBashAndGo(t *testing.T) {
-	goDomain := map[string]bool{"skill": true}
-	for route := range nonSkillRoutes {
-		goDomain[route] = true
+// TestDeployableManifestPaths_AgreesWithTheRoutingOnWhatGoesToSkills pins that a row the on-disk
+// check expects under skills/ is a row the routing copies into the skills directories, and the
+// other way round: the rows with a tag of routingManifest, which holds a row of each kind.
+func TestDeployableManifestPaths_AgreesWithTheRoutingOnWhatGoesToSkills(t *testing.T) {
+	onDisk, err := DeployableManifestPaths(strings.NewReader(routingManifest + "weird/SKILL.md managed unknown-route\n"))
+	if err != nil {
+		t.Fatalf("DeployableManifestPaths: %v", err)
 	}
-	if len(goDomain) != 4 {
-		t.Fatalf("Go route domain (nonSkillRoutes + implicit skill default) has %d values, want 4: %v", len(goDomain), goDomain)
-	}
-
-	overlay := filepath.Join(skillsRepoRoot(t), "bin", "labdrian-overlay")
-	if _, err := os.Stat(overlay); err != nil {
-		t.Fatalf("overlay script not found at %s: %v", overlay, err)
-	}
-
-	candidates := []string{"skill", "agent", "opencode-agent", "mcp", "bogus-route"}
-	for _, route := range candidates {
-		bashAccepts := bashAcceptsLongtermMemRoute(t, overlay, route)
-		goAccepts := goDomain[route]
-		if bashAccepts != goAccepts {
-			t.Errorf("route %q: bash accepted=%v, Go nonSkillRoutes-derived domain accepted=%v — parsers have drifted", route, bashAccepts, goAccepts)
+	var tagged []ManifestRow
+	for _, row := range ReadManifestRows([]byte(routingManifest + "weird/SKILL.md managed unknown-route\n")) {
+		if row.Tag != "" {
+			tagged = append(tagged, row)
 		}
+	}
+	routed, err := ResolveRoutes(tagged, false, "/o", RouteDestinations{Target: "claude", SkillsRoot: "/s", AgentsRoot: "/a"})
+	if err != nil {
+		t.Fatalf("ResolveRoutes: %v", err)
+	}
+	toSkills := map[string]struct{}{}
+	for _, r := range routed {
+		if strings.HasPrefix(r.Dest, "/s/") {
+			toSkills[r.Path] = struct{}{}
+		}
+	}
+	if len(toSkills) == 0 || !reflect.DeepEqual(onDisk, toSkills) {
+		t.Errorf("the on-disk check expects %v under skills/, the routing copies %v into the skills directories", onDisk, toSkills)
 	}
 }
 

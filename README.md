@@ -88,7 +88,7 @@ Pi is a **package target**, not a per-file copy target: `--target pi` on `apply`
 **custom**: only on `main`. Never on upstream. Added as a customization with no vendor counterpart.
 **external**: `source.type: external` — records provenance metadata only (`repo` = origin URL, `ref` = vendored commit/ref). The overlay **never fetches, clones, or executes any remote resource**. Vendoring is a human responsibility; `--repo`/`--ref` are inert labels for a file you have already reviewed and committed locally.
 
-**`route` column (optional third column):** each manifest row may end with `skill` or `agent` (default: `skill` when omitted). Bare two-column rows are unchanged. The `agent` route tells the installer to source from `agents/<path>` and deploy to `~/.claude/agents` instead of any skills directory. Non-deployable rows (engine source files, root-level files) are recognized by the installer and skipped silently.
+**`route` column (optional third column):** each manifest row may end with `skill` or `agent` (default: `skill` when omitted). Bare two-column rows are unchanged. The `agent` route tells the installer to source from `agents/<path>` and deploy to `~/.claude/agents` instead of any skills directory. Non-deployable rows (engine source files, root-level files) are recognized by the installer and skipped silently. The route of every row is decided by the engine, not by the script: `apply`, `status`, `sync-check`, `capture`, `restore` and `bootstrap` ask `gentle-ai-overlay manifest routes` (see the CLI reference) for it, and the script builds the engine binary on first use when it is missing or older than its source (Go is already a prerequisite). A manifest with a `longterm-mem/` row that has no route, or one outside `skill`, `agent`, `opencode-agent` and `mcp`, is refused whole before any row is copied, said or restored.
 
 ## Usage
 
@@ -607,7 +607,8 @@ overlay workflow <verb>
 
 gentle-ai-overlay manifest routes --overlay-root <dir> --target <name> --skills-root <dir> [--agents-root <dir>] [--manifest <file>] [--managed]
     Engine verb (Phase 9, B1): there is no `overlay manifest` wrapper, so run it on the installed engine binary,
-    ~/.claude/bin/gentle-ai-overlay. It decides where each row of overlay.manifest goes. Read-only: it prints one line per
+    ~/.claude/bin/gentle-ai-overlay. It decides where each row of overlay.manifest goes, and is what `apply`, `status`,
+    `sync-check`, `capture`, `restore` and `bootstrap` ask. Read-only: it prints one line per
     row, in the order of the manifest, in five columns separated by a tab: the row's path; its route (`skill`, `agent`, `opencode-agent`, `mcp`,
     `non-deployable`, or the third column when it is none of these, which takes the skill route under its own name);
     where its file is in the overlay repository (`skills/<path>` for a skill, `agents/<path>`, the path itself for the

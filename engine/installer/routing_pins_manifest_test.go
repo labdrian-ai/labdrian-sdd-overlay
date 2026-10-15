@@ -52,6 +52,13 @@ func TestRoutingPins_ManifestReadingKeepsItsQuirks(t *testing.T) {
 
 // An unrouted longterm-mem row is refused wherever a command reaches it. The managed one is
 // reached by every command; the custom one only by the commands that read every row.
+//
+// The record of the commands that stop at the row (refused-*) is the one part of the pins that
+// changed when the routing moved into the engine. The script used to learn the route of a row
+// as it reached it, so a command had acted on every row before the refused one when it stopped:
+// apply had copied them, status and sync-check had said them, restore had put them back. The
+// engine answers for the whole manifest or not at all, so now the command stops before it acts
+// on any row. Everything else in the record is as it was.
 const pinUnroutedCustomManifest = `skill-a/SKILL.md   managed
 GADU.md   managed   agent
 longterm-mem/internal/foo.go   custom
@@ -73,8 +80,12 @@ func TestRoutingPins_AnUnroutedLongtermMemRowIsRefusedWhereItIsReached(t *testin
 	if testing.Short() {
 		t.Skip("skipping integration test in -short mode")
 	}
-	for name, manifest := range map[string]string{"custom": pinUnroutedCustomManifest, "managed": pinUnroutedManagedManifest} {
-		w := newPinWorld(t, manifest, pinUnroutedFiles)
+	for _, tc := range []struct{ name, manifest string }{
+		{"custom", pinUnroutedCustomManifest},
+		{"managed", pinUnroutedManagedManifest},
+	} {
+		name := tc.name
+		w := newPinWorld(t, tc.manifest, pinUnroutedFiles)
 		pin(t, "refused-"+name+"/status", pinRunText(w.run("status", "--target", "claude")))
 		if err := os.MkdirAll(filepath.Join(w.home, ".claude", "skills"), 0o755); err != nil {
 			t.Fatal(err)

@@ -185,14 +185,14 @@ func (w *pinWorld) tree(root string) string {
 		return nil
 	}
 	if _, err := os.Stat(root); err != nil {
-		return ""
+		return pinText("")
 	}
 	if err := filepath.Walk(root, walk); err != nil {
 		w.t.Fatalf("walk %s: %v", root, err)
 	}
 	sort.Strings(lines)
 	if len(lines) == 0 {
-		return ""
+		return pinText("")
 	}
 	return strings.Join(lines, "\n") + "\n"
 }
