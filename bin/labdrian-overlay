@@ -4392,7 +4392,7 @@ cmd_longterm_mem() {
 # dispatch
 # ---------------------------------------------------------------------------
 
-# Guarded so this file can be `source`d (e.g. by tui/release_backend_test.go)
+# Guarded so this file can be `source`d (e.g. by tui/internal/adapters/overlaycli/release_backend_test.go)
 # to call an internal function directly for unit-style testing, without also
 # running the CLI dispatch below. Normal execution (./bin/labdrian-overlay or
 # via the bin/overlay wrapper) is unaffected: BASH_SOURCE[0] and $0 are
