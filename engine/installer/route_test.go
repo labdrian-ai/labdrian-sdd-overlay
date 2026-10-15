@@ -25,7 +25,9 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/enginetest"
 )
 
-// overlayScript returns the absolute path to bin/labdrian-overlay.
+// overlayScript returns the absolute path to bin/labdrian-overlay, for the tests that run it (the
+// integration tests below, sync_check_test.go and the routing pins). The unit tests of the routing
+// ask the engine (callManifestRoutes) and do not need the script.
 // Go tests run with cwd = engine/installer/, so two levels up → repo root.
 func overlayScript(t *testing.T) string {
 	t.Helper()
@@ -43,8 +45,8 @@ func overlayScript(t *testing.T) string {
 	return p
 }
 
-// resolveResult holds what the routing says of one manifest row.
-type resolveResult struct {
+// routedRow holds what the routing says of one manifest row.
+type routedRow struct {
 	Route   string            // "skill", "agent", or "opencode-agent"
 	RepoSrc string            // absolute repo source path
 	Targets map[string]string // target_name -> absolute dest path
@@ -55,7 +57,7 @@ type resolveResult struct {
 // a target is among the Targets when the row goes somewhere for it. manifestContent is written to
 // the manifest of overlayDir. The skills and agents directories handed over are the ones the script
 // holds for the targets in a home of the given name.
-func callManifestRoutes(t *testing.T, engine, overlayDir, home, manifestContent, manifestPath string) (resolveResult, error) {
+func callManifestRoutes(t *testing.T, engine, overlayDir, home, manifestContent, manifestPath string) (routedRow, error) {
 	t.Helper()
 
 	manifestFile := filepath.Join(overlayDir, "overlay.manifest")
@@ -75,7 +77,7 @@ func callManifestRoutes(t *testing.T, engine, overlayDir, home, manifestContent,
 		"claude":   filepath.Join(home, ".claude", "agents"),
 		"opencode": filepath.Join(home, ".config", "opencode", "agents"),
 	}
-	result := resolveResult{Targets: map[string]string{}}
+	result := routedRow{Targets: map[string]string{}}
 	found := false
 	for _, target := range []string{"claude", "opencode", "codex"} {
 		args := []string{"manifest", "routes", "--overlay-root", overlayDir, "--manifest", manifestFile,
@@ -88,15 +90,15 @@ func callManifestRoutes(t *testing.T, engine, overlayDir, home, manifestContent,
 		if err != nil {
 			var ee *exec.ExitError
 			if errors.As(err, &ee) {
-				return resolveResult{}, fmt.Errorf("manifest routes failed (exit %d): stderr: %s stdout: %s",
+				return routedRow{}, fmt.Errorf("manifest routes failed (exit %d): stderr: %s stdout: %s",
 					ee.ExitCode(), ee.Stderr, out)
 			}
-			return resolveResult{}, fmt.Errorf("exec: %w", err)
+			return routedRow{}, fmt.Errorf("exec: %w", err)
 		}
 		for _, line := range strings.Split(strings.TrimRight(string(out), "\n"), "\n") {
 			columns := strings.Split(line, "\t")
 			if len(columns) != 5 {
-				return resolveResult{}, fmt.Errorf("expected 5 tab-separated columns, got %d: %q", len(columns), line)
+				return routedRow{}, fmt.Errorf("expected 5 tab-separated columns, got %d: %q", len(columns), line)
 			}
 			if columns[0] != manifestPath {
 				continue
@@ -109,7 +111,7 @@ func callManifestRoutes(t *testing.T, engine, overlayDir, home, manifestContent,
 		}
 	}
 	if !found {
-		return resolveResult{}, fmt.Errorf("manifest routes told nothing of %q", manifestPath)
+		return routedRow{}, fmt.Errorf("manifest routes told nothing of %q", manifestPath)
 	}
 	return result, nil
 }
@@ -230,10 +232,10 @@ const unrecognizedRouteLongtermMemFixture = fixtureManifest + "longterm-mem/inte
 // Unit tests — fast, always run
 // ---------------------------------------------------------------------------
 
-// TestRouteResolve_LegacySkillRow pins the back-compat invariant (D2):
+// TestManifestRoutes_LegacySkillRow pins the back-compat invariant (D2):
 // a bare two-column skill row resolves to route=skill, skills/ repo source,
 // and exactly the three skills destination paths.
-func TestRouteResolve_LegacySkillRow(t *testing.T) {
+func TestManifestRoutes_LegacySkillRow(t *testing.T) {
 	engine := enginetest.Binary(t)
 	overlayDir := t.TempDir()
 	home := t.TempDir()
@@ -265,9 +267,9 @@ func TestRouteResolve_LegacySkillRow(t *testing.T) {
 	}
 }
 
-// TestRouteResolve_GADUSkillRow verifies that the GADU skill row (no route column)
+// TestManifestRoutes_GADUSkillRow verifies that the GADU skill row (no route column)
 // resolves identically to a legacy skill row — 3 skills destinations.
-func TestRouteResolve_GADUSkillRow(t *testing.T) {
+func TestManifestRoutes_GADUSkillRow(t *testing.T) {
 	engine := enginetest.Binary(t)
 	overlayDir := t.TempDir()
 	home := t.TempDir()
@@ -298,9 +300,9 @@ func TestRouteResolve_GADUSkillRow(t *testing.T) {
 	}
 }
 
-// TestRouteResolve_GADUAgentRow verifies that the Claude Code GADU agent row (route=agent)
+// TestManifestRoutes_GADUAgentRow verifies that the Claude Code GADU agent row (route=agent)
 // resolves to route=agent, agents/ repo source, and exactly ONE claude target.
-func TestRouteResolve_GADUAgentRow(t *testing.T) {
+func TestManifestRoutes_GADUAgentRow(t *testing.T) {
 	engine := enginetest.Binary(t)
 	overlayDir := t.TempDir()
 	home := t.TempDir()
@@ -333,10 +335,10 @@ func TestRouteResolve_GADUAgentRow(t *testing.T) {
 	}
 }
 
-// TestRouteResolve_GADUOpenCodeAgentRow verifies that the OpenCode GADU agent
+// TestManifestRoutes_GADUOpenCodeAgentRow verifies that the OpenCode GADU agent
 // row resolves to the OpenCode-specific generated source and exactly one
 // OpenCode agent target.
-func TestRouteResolve_GADUOpenCodeAgentRow(t *testing.T) {
+func TestManifestRoutes_GADUOpenCodeAgentRow(t *testing.T) {
 	engine := enginetest.Binary(t)
 	overlayDir := t.TempDir()
 	home := t.TempDir()
@@ -368,12 +370,12 @@ func TestRouteResolve_GADUOpenCodeAgentRow(t *testing.T) {
 	}
 }
 
-// TestRouteResolve_NonDeployableRows pins that structurally non-deployable rows
+// TestManifestRoutes_NonDeployableRows pins that structurally non-deployable rows
 // — engine/*.go overlay-source rows and root-level files like skills.registry.yaml
 // — produce an empty target set from manifest routes so that the deploy and sync
 // loops skip them silently (no WARNING, no OVERLAY_NOT_DEPLOYED noise). The
 // back-compat invariant for real skill rows is preserved.
-func TestRouteResolve_NonDeployableRows(t *testing.T) {
+func TestManifestRoutes_NonDeployableRows(t *testing.T) {
 	engine := enginetest.Binary(t)
 	overlayDir := t.TempDir()
 	home := t.TempDir()
@@ -428,12 +430,12 @@ skills.registry.yaml   custom
 	}
 }
 
-// TestRouteResolve_McpRow verifies that a longterm-mem/** row routed "mcp"
+// TestManifestRoutes_McpRow verifies that a longterm-mem/** row routed "mcp"
 // resolves to route=mcp, the repo source path as written (no skills/ or
 // agents/ prefix rewriting), and zero copy targets — the longterm-mem
 // install path (build, copy, register) is dispatched separately, not via the
 // deploy loop. (overlay-agent-route R-006, traces longterm-mem R-013.)
-func TestRouteResolve_McpRow(t *testing.T) {
+func TestManifestRoutes_McpRow(t *testing.T) {
 	engine := enginetest.Binary(t)
 	overlayDir := t.TempDir()
 	home := t.TempDir()
@@ -454,10 +456,10 @@ func TestRouteResolve_McpRow(t *testing.T) {
 	}
 }
 
-// TestRouteResolve_OpencodeAgentUnaffected is the slice 9 regression guard:
+// TestManifestRoutes_OpencodeAgentUnaffected is the slice 9 regression guard:
 // an existing opencode-agent-routed row must resolve and deploy exactly as
 // before this change, with no regression from the mcp route addition.
-func TestRouteResolve_OpencodeAgentUnaffected(t *testing.T) {
+func TestManifestRoutes_OpencodeAgentUnaffected(t *testing.T) {
 	engine := enginetest.Binary(t)
 	overlayDir := t.TempDir()
 	home := t.TempDir()
@@ -484,11 +486,11 @@ func TestRouteResolve_OpencodeAgentUnaffected(t *testing.T) {
 	}
 }
 
-// TestRouteResolve_UnroutedLongtermMemRowRejected pins that a longterm-mem/**
+// TestManifestRoutes_UnroutedLongtermMemRowRejected pins that a longterm-mem/**
 // row with a missing third column is rejected loudly (exit 1, explicit
 // stderr naming the row) instead of silently falling through to route=skill.
 // (overlay-agent-route R-012, traces longterm-mem R-035.)
-func TestRouteResolve_UnroutedLongtermMemRowRejected(t *testing.T) {
+func TestManifestRoutes_UnroutedLongtermMemRowRejected(t *testing.T) {
 	engine := enginetest.Binary(t)
 	overlayDir := t.TempDir()
 	home := t.TempDir()
@@ -505,10 +507,10 @@ func TestRouteResolve_UnroutedLongtermMemRowRejected(t *testing.T) {
 	}
 }
 
-// TestRouteResolve_UnrecognizedRouteLongtermMemRowRejected pins the same
+// TestManifestRoutes_UnrecognizedRouteLongtermMemRowRejected pins the same
 // guard for a longterm-mem/** row whose third column holds a value outside
 // {skill, agent, opencode-agent, mcp}.
-func TestRouteResolve_UnrecognizedRouteLongtermMemRowRejected(t *testing.T) {
+func TestManifestRoutes_UnrecognizedRouteLongtermMemRowRejected(t *testing.T) {
 	engine := enginetest.Binary(t)
 	overlayDir := t.TempDir()
 	home := t.TempDir()
@@ -541,9 +543,9 @@ func intersectTargets(targets map[string]string, requested string) map[string]st
 	return map[string]string{}
 }
 
-// TestRouteResolve_TargetFlag_AgentRowOpencode pins that the Claude Code agent
+// TestManifestRoutes_TargetFlag_AgentRowOpencode pins that the Claude Code agent
 // row + --target opencode yields ZERO applicable targets.
-func TestRouteResolve_TargetFlag_AgentRowOpencode(t *testing.T) {
+func TestManifestRoutes_TargetFlag_AgentRowOpencode(t *testing.T) {
 	engine := enginetest.Binary(t)
 	overlayDir := t.TempDir()
 	home := t.TempDir()
@@ -559,9 +561,9 @@ func TestRouteResolve_TargetFlag_AgentRowOpencode(t *testing.T) {
 	}
 }
 
-// TestRouteResolve_TargetFlag_OpenCodeAgentRowOpencode pins that the OpenCode
+// TestManifestRoutes_TargetFlag_OpenCodeAgentRowOpencode pins that the OpenCode
 // native agent row + --target opencode yields the OpenCode agent destination.
-func TestRouteResolve_TargetFlag_OpenCodeAgentRowOpencode(t *testing.T) {
+func TestManifestRoutes_TargetFlag_OpenCodeAgentRowOpencode(t *testing.T) {
 	engine := enginetest.Binary(t)
 	overlayDir := t.TempDir()
 	home := t.TempDir()
@@ -581,9 +583,9 @@ func TestRouteResolve_TargetFlag_OpenCodeAgentRowOpencode(t *testing.T) {
 	}
 }
 
-// TestRouteResolve_TargetFlag_AgentRowClaude pins that agent row + --target claude
+// TestManifestRoutes_TargetFlag_AgentRowClaude pins that agent row + --target claude
 // yields exactly claude:~/.claude/agents/GADU.md.
-func TestRouteResolve_TargetFlag_AgentRowClaude(t *testing.T) {
+func TestManifestRoutes_TargetFlag_AgentRowClaude(t *testing.T) {
 	engine := enginetest.Binary(t)
 	overlayDir := t.TempDir()
 	home := t.TempDir()
@@ -603,9 +605,9 @@ func TestRouteResolve_TargetFlag_AgentRowClaude(t *testing.T) {
 	}
 }
 
-// TestRouteResolve_TargetFlag_SkillRowOpencode pins that a skill row + --target opencode
+// TestManifestRoutes_TargetFlag_SkillRowOpencode pins that a skill row + --target opencode
 // yields exactly one opencode skills destination (D2 back-compat).
-func TestRouteResolve_TargetFlag_SkillRowOpencode(t *testing.T) {
+func TestManifestRoutes_TargetFlag_SkillRowOpencode(t *testing.T) {
 	engine := enginetest.Binary(t)
 	overlayDir := t.TempDir()
 	home := t.TempDir()
