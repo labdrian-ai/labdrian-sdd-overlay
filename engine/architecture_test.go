@@ -92,6 +92,10 @@ import (
 //     overlay has installed longterm-mem for (how the record is read as evidence, which names it
 //     vouches for, when the shared binary and the engine's registration record may go). It reads and
 //     writes no file.
+//   - runtime/ownership/app holds the use case of `engine installed-targets` (B3): record a target,
+//     release one, report the record, assess what an uninstall comes to and retire the shared binary
+//     and the record, each read-modify-write one critical section, over the Store and Binaries ports
+//     it owns. It takes no time from the machine, prints nothing and exits nowhere.
 //   - sddregistry is a domain package (B2): the rule over text for the SDD executor rows of a
 //     project's skill registry (which skills are executors, how a row reads, how a registry that
 //     has none starts, how the rows of an earlier repair are replaced). It reads and writes no file.
@@ -158,6 +162,7 @@ var rings = map[string]archguard.Ring{
 	"runtime/core":              archguard.Domain,
 	"runtime/opencodeprompt":    archguard.Domain,
 	"runtime/ownership":         archguard.Domain,
+	"runtime/ownership/app":     archguard.Application,
 	"sddregistry":               archguard.Domain,
 	"sddregistry/app":           archguard.Application,
 	"sddregistry/fsstore":       archguard.Adapter,
