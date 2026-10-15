@@ -381,3 +381,452 @@ longterm-mem-registration.json (mode 644): "{\n  \"managed_by\": \"labdrian-sdd-
 longterm-mem/installed-targets (mode 644): "claude\n"
 --- calls of longterm-mem
 register --target claude --binary $HOME/.labdrian-overlay/bin/longterm-mem
+@@@ longterm/uninstall/one-of-three
+exit 0
+--- stdout
+  longterm-mem: unregistered the requested target(s); still installed for: codex
+opencode (shared binary and engine-owned tracking left untouched -- re-run uninstall for the remaining target(s), or pass --purge, to remove them)
+--- stderr
+(nothing)
+--- state directory
+bin/longterm-mem (mode 755): "<the fake longterm-mem>"
+longterm-mem/installed-targets (mode 600): "codex\nopencode\n"
+--- calls of longterm-mem
+unregister --target claude
+@@@ longterm/uninstall/sorted-and-once
+exit 0
+--- stdout
+  longterm-mem: unregistered the requested target(s); still installed for: claude (shared binary and engine-owned tracking left untouched -- re-run uninstall for the remaining target(s), or pass --purge, to remove them)
+--- stderr
+(nothing)
+--- state directory
+bin/longterm-mem (mode 755): "<the fake longterm-mem>"
+longterm-mem/installed-targets (mode 600): "claude\n"
+--- calls of longterm-mem
+unregister --target opencode
+@@@ longterm/uninstall/a-target-that-was-not-recorded
+exit 0
+--- stdout
+  longterm-mem: unregistered the requested target(s); still installed for: claude (shared binary and engine-owned tracking left untouched -- re-run uninstall for the remaining target(s), or pass --purge, to remove them)
+--- stderr
+(nothing)
+--- state directory
+bin/longterm-mem (mode 755): "<the fake longterm-mem>"
+longterm-mem/installed-targets (mode 600): "claude\n"
+--- calls of longterm-mem
+unregister --target codex
+@@@ longterm/uninstall/the-name-of-a-newer-build-stays
+exit 0
+--- stdout
+  longterm-mem: unregistered the requested target(s); still installed for: zed (shared binary and engine-owned tracking left untouched -- re-run uninstall for the remaining target(s), or pass --purge, to remove them)
+--- stderr
+(nothing)
+--- state directory
+bin/longterm-mem (mode 755): "<the fake longterm-mem>"
+longterm-mem/installed-targets (mode 600): "zed\n"
+--- calls of longterm-mem
+unregister --target claude
+unregister --target opencode
+unregister --target codex
+unregister --target pi --config-root $HOME/.labdrian-overlay/pi/labdrian-pi
+@@@ longterm/uninstall/last-target
+exit 0
+--- stdout
+[longterm-mem] uninstall: supported — longterm-mem registration was already absent — reasons: claude: runtime not installed on this machine; nothing to report; opencode: runtime not installed on this machine; nothing to report; codex: runtime not installed on this machine; nothing to report
+==> longterm-mem binary removed: $HOME/.labdrian-overlay/bin/longterm-mem
+--- stderr
+(nothing)
+--- state directory
+(nothing)
+--- calls of longterm-mem
+unregister --target codex
+@@@ longterm/uninstall/all-four
+exit 0
+--- stdout
+[longterm-mem] uninstall: supported — longterm-mem registration was already absent — reasons: claude: runtime not installed on this machine; nothing to report; opencode: runtime not installed on this machine; nothing to report; codex: runtime not installed on this machine; nothing to report
+==> longterm-mem binary removed: $HOME/.labdrian-overlay/bin/longterm-mem
+--- stderr
+(nothing)
+--- state directory
+(nothing)
+--- calls of longterm-mem
+unregister --target claude
+unregister --target opencode
+unregister --target codex
+unregister --target pi --config-root $HOME/.labdrian-overlay/pi/labdrian-pi
+@@@ longterm/uninstall/an-empty-record
+exit 0
+--- stdout
+[longterm-mem] uninstall: supported — longterm-mem registration was already absent — reasons: claude: runtime not installed on this machine; nothing to report; opencode: runtime not installed on this machine; nothing to report; codex: runtime not installed on this machine; nothing to report
+==> longterm-mem binary removed: $HOME/.labdrian-overlay/bin/longterm-mem
+--- stderr
+(nothing)
+--- state directory
+(nothing)
+--- calls of longterm-mem
+unregister --target claude
+@@@ longterm/uninstall/no-record
+exit 0
+--- stdout
+(nothing)
+--- stderr
+WARN: longterm-mem: no install tracking found at $HOME/.labdrian-overlay/longterm-mem/installed-targets; leaving the registration record and the shared binary untouched. Re-run with --purge to remove them anyway.
+--- state directory
+bin/longterm-mem (mode 755): "<the fake longterm-mem>"
+--- calls of longterm-mem
+unregister --target claude
+@@@ longterm/uninstall/no-record-purge
+exit 0
+--- stdout
+[longterm-mem] uninstall: supported — longterm-mem registration was already absent — reasons: claude: runtime not installed on this machine; nothing to report; opencode: runtime not installed on this machine; nothing to report; codex: runtime not installed on this machine; nothing to report
+==> longterm-mem binary removed: $HOME/.labdrian-overlay/bin/longterm-mem
+--- stderr
+(nothing)
+--- state directory
+(nothing)
+--- calls of longterm-mem
+unregister --target claude
+@@@ longterm/uninstall/no-record-no-binary-purge
+exit 0
+--- stdout
+[longterm-mem] uninstall: supported — longterm-mem registration was already absent — reasons: claude: runtime not installed on this machine; nothing to report; opencode: runtime not installed on this machine; nothing to report; codex: runtime not installed on this machine; nothing to report
+==> longterm-mem binary already absent: $HOME/.labdrian-overlay/bin/longterm-mem
+--- stderr
+WARN: longterm-mem: $HOME/.labdrian-overlay/bin/longterm-mem is missing or not executable, so the per-runtime MCP entries cannot be removed. Any entry longterm-mem installed stays in its runtime config -- remove it by hand, or reinstall and re-run uninstall.
+--- state directory
+(nothing)
+--- calls of longterm-mem
+(nothing)
+@@@ longterm/uninstall/purge-with-others-recorded
+exit 0
+--- stdout
+[longterm-mem] uninstall: supported — longterm-mem registration was already absent — reasons: claude: runtime not installed on this machine; nothing to report; opencode: runtime not installed on this machine; nothing to report; codex: runtime not installed on this machine; nothing to report
+==> longterm-mem binary removed: $HOME/.labdrian-overlay/bin/longterm-mem
+--- stderr
+(nothing)
+--- state directory
+(nothing)
+--- calls of longterm-mem
+unregister --target claude
+@@@ longterm/uninstall/purge-through-a-failed-unregister
+exit 1
+--- stdout
+[longterm-mem] uninstall: supported — longterm-mem registration was already absent — reasons: claude: runtime not installed on this machine; nothing to report; opencode: runtime not installed on this machine; nothing to report; codex: runtime not installed on this machine; nothing to report
+==> longterm-mem binary removed: $HOME/.labdrian-overlay/bin/longterm-mem
+--- stderr
+WARN: longterm-mem unregister --target claude failed (exit 1); keeping it tracked as installed
+--- state directory
+(nothing)
+--- calls of longterm-mem
+unregister --target claude
+@@@ longterm/uninstall/purge-binary-already-absent
+exit 0
+--- stdout
+[longterm-mem] uninstall: supported — longterm-mem registration was already absent — reasons: claude: runtime not installed on this machine; nothing to report; opencode: runtime not installed on this machine; nothing to report; codex: runtime not installed on this machine; nothing to report
+==> longterm-mem binary already absent: $HOME/.labdrian-overlay/bin/longterm-mem
+--- stderr
+WARN: longterm-mem: $HOME/.labdrian-overlay/bin/longterm-mem is missing or not executable, so the per-runtime MCP entries cannot be removed. Any entry longterm-mem installed stays in its runtime config -- remove it by hand, or reinstall and re-run uninstall.
+--- state directory
+(nothing)
+--- calls of longterm-mem
+(nothing)
+@@@ longterm/uninstall/unregister-unmanaged-entry
+exit 0
+--- stdout
+  longterm-mem: unregistered the requested target(s); still installed for: claude (shared binary and engine-owned tracking left untouched -- re-run uninstall for the remaining target(s), or pass --purge, to remove them)
+--- stderr
+WARN: longterm-mem unregister --target claude: unmanaged (an entry exists that longterm-mem does not own; left untouched). claude stays tracked as installed, because that entry was NOT removed and may be ours under a lost install-state.json -- inspect claude's config and remove the entry by hand, then re-run uninstall, or pass --purge to drop the shared binary regardless.
+--- state directory
+bin/longterm-mem (mode 755): "<the fake longterm-mem>"
+longterm-mem/installed-targets (mode 644): "claude\n"
+--- calls of longterm-mem
+unregister --target claude
+@@@ longterm/uninstall/unregister-version-skew-clears-it
+exit 0
+--- stdout
+[longterm-mem] uninstall: supported — longterm-mem registration was already absent — reasons: claude: runtime not installed on this machine; nothing to report; opencode: runtime not installed on this machine; nothing to report; codex: runtime not installed on this machine; nothing to report
+==> longterm-mem binary removed: $HOME/.labdrian-overlay/bin/longterm-mem
+--- stderr
+WARN: longterm-mem unregister --target claude: this binary does not accept the invocation (exit 2, version skew), so claude's entry stays in its runtime config -- remove it by hand, or reinstall and re-run uninstall. Not retried; every re-run reproduces this.
+--- state directory
+(nothing)
+--- calls of longterm-mem
+unregister --target claude
+@@@ longterm/uninstall/unregister-unresolvable-path
+exit 1
+--- stdout
+(nothing)
+--- stderr
+WARN: longterm-mem unregister --target claude: exit 8 — unregister could not resolve a path from the environment at all (no usable HOME means no runtime config root and no install-state.json directory), so nothing was attempted and claude's entry may still be in its runtime config. Keeping claude tracked as installed. The fix is the environment, not the runtime: set HOME to a writable home directory and re-run uninstall.
+WARN: longterm-mem: at least one target failed to unregister; leaving the registration record and the shared binary untouched (re-run uninstall for the failed target(s) once resolved, or pass --purge to force removal)
+--- state directory
+bin/longterm-mem (mode 755): "<the fake longterm-mem>"
+longterm-mem/installed-targets (mode 644): "claude\n"
+--- calls of longterm-mem
+unregister --target claude
+@@@ longterm/uninstall/unregister-hard-failure
+exit 1
+--- stdout
+(nothing)
+--- stderr
+WARN: longterm-mem unregister --target claude failed (exit 1); keeping it tracked as installed
+WARN: longterm-mem: at least one target failed to unregister; leaving the registration record and the shared binary untouched (re-run uninstall for the failed target(s) once resolved, or pass --purge to force removal)
+--- state directory
+bin/longterm-mem (mode 755): "<the fake longterm-mem>"
+longterm-mem/installed-targets (mode 644): "claude\n"
+--- calls of longterm-mem
+unregister --target claude
+@@@ longterm/uninstall/unregister-mixed-under-all
+exit 1
+--- stdout
+(nothing)
+--- stderr
+WARN: longterm-mem unregister --target opencode: unmanaged (an entry exists that longterm-mem does not own; left untouched). opencode stays tracked as installed, because that entry was NOT removed and may be ours under a lost install-state.json -- inspect opencode's config and remove the entry by hand, then re-run uninstall, or pass --purge to drop the shared binary regardless.
+WARN: longterm-mem unregister --target codex failed (exit 1); keeping it tracked as installed
+WARN: longterm-mem: at least one target failed to unregister; leaving the registration record and the shared binary untouched (re-run uninstall for the failed target(s) once resolved, or pass --purge to force removal)
+--- state directory
+bin/longterm-mem (mode 755): "<the fake longterm-mem>"
+longterm-mem/installed-targets (mode 600): "codex\nopencode\n"
+--- calls of longterm-mem
+unregister --target claude
+unregister --target opencode
+unregister --target codex
+unregister --target pi --config-root $HOME/.labdrian-overlay/pi/labdrian-pi
+@@@ longterm/uninstall/binary-missing-others-recorded
+exit 0
+--- stdout
+  longterm-mem: unregistered the requested target(s); still installed for: opencode (shared binary and engine-owned tracking left untouched -- re-run uninstall for the remaining target(s), or pass --purge, to remove them)
+--- stderr
+WARN: longterm-mem: $HOME/.labdrian-overlay/bin/longterm-mem is missing or not executable, so the per-runtime MCP entries cannot be removed. Any entry longterm-mem installed stays in its runtime config -- remove it by hand, or reinstall and re-run uninstall.
+--- state directory
+longterm-mem/installed-targets (mode 600): "opencode\n"
+--- calls of longterm-mem
+(nothing)
+@@@ longterm/uninstall/binary-missing-last-target
+exit 0
+--- stdout
+[longterm-mem] uninstall: supported — longterm-mem registration was already absent — reasons: claude: runtime not installed on this machine; nothing to report; opencode: runtime not installed on this machine; nothing to report; codex: runtime not installed on this machine; nothing to report
+==> longterm-mem binary already absent: $HOME/.labdrian-overlay/bin/longterm-mem
+--- stderr
+WARN: longterm-mem: $HOME/.labdrian-overlay/bin/longterm-mem is missing or not executable, so the per-runtime MCP entries cannot be removed. Any entry longterm-mem installed stays in its runtime config -- remove it by hand, or reinstall and re-run uninstall.
+--- state directory
+(nothing)
+--- calls of longterm-mem
+(nothing)
+@@@ longterm/uninstall/binary-not-executable
+exit 0
+--- stdout
+  longterm-mem: unregistered the requested target(s); still installed for: claude (shared binary and engine-owned tracking left untouched -- re-run uninstall for the remaining target(s), or pass --purge, to remove them)
+--- stderr
+WARN: longterm-mem: $HOME/.labdrian-overlay/bin/longterm-mem is missing or not executable, so the per-runtime MCP entries cannot be removed. Any entry longterm-mem installed stays in its runtime config -- remove it by hand, or reinstall and re-run uninstall.
+--- state directory
+bin/longterm-mem (mode 644): "<the fake longterm-mem>"
+longterm-mem/installed-targets (mode 600): "claude\n"
+--- calls of longterm-mem
+(nothing)
+@@@ longterm/uninstall/record-a-nul-byte-makes-a-name-garbage
+exit 0
+--- stdout
+[longterm-mem] uninstall: supported — longterm-mem registration was already absent — reasons: claude: runtime not installed on this machine; nothing to report; opencode: runtime not installed on this machine; nothing to report; codex: runtime not installed on this machine; nothing to report
+==> longterm-mem binary removed: $HOME/.labdrian-overlay/bin/longterm-mem
+--- stderr
+(nothing)
+--- state directory
+(nothing)
+--- calls of longterm-mem
+unregister --target claude
+@@@ longterm/uninstall/record-a-name-cut-short-is-garbage
+exit 0
+--- stdout
+[longterm-mem] uninstall: supported — longterm-mem registration was already absent — reasons: claude: runtime not installed on this machine; nothing to report; opencode: runtime not installed on this machine; nothing to report; codex: runtime not installed on this machine; nothing to report
+==> longterm-mem binary removed: $HOME/.labdrian-overlay/bin/longterm-mem
+--- stderr
+(nothing)
+--- state directory
+(nothing)
+--- calls of longterm-mem
+unregister --target claude
+@@@ longterm/uninstall/record-a-name-cut-short-keeps-the-lines-above
+exit 0
+--- stdout
+  longterm-mem: unregistered the requested target(s); still installed for: claude (shared binary and engine-owned tracking left untouched -- re-run uninstall for the remaining target(s), or pass --purge, to remove them)
+--- stderr
+(nothing)
+--- state directory
+bin/longterm-mem (mode 755): "<the fake longterm-mem>"
+longterm-mem/installed-targets (mode 600): "claude\n"
+--- calls of longterm-mem
+unregister --target codex
+@@@ longterm/uninstall/record-garbage-is-compacted-away
+exit 0
+--- stdout
+  longterm-mem: unregistered the requested target(s); still installed for: claude (shared binary and engine-owned tracking left untouched -- re-run uninstall for the remaining target(s), or pass --purge, to remove them)
+--- stderr
+(nothing)
+--- state directory
+bin/longterm-mem (mode 755): "<the fake longterm-mem>"
+longterm-mem/installed-targets (mode 600): "claude\n"
+--- calls of longterm-mem
+unregister --target opencode
+@@@ longterm/uninstall/record-a-carriage-return-is-garbage
+exit 0
+--- stdout
+[longterm-mem] uninstall: supported — longterm-mem registration was already absent — reasons: claude: runtime not installed on this machine; nothing to report; opencode: runtime not installed on this machine; nothing to report; codex: runtime not installed on this machine; nothing to report
+==> longterm-mem binary removed: $HOME/.labdrian-overlay/bin/longterm-mem
+--- stderr
+(nothing)
+--- state directory
+(nothing)
+--- calls of longterm-mem
+unregister --target codex
+@@@ longterm/uninstall/record-a-padded-name-is-garbage
+exit 0
+--- stdout
+[longterm-mem] uninstall: supported — longterm-mem registration was already absent — reasons: claude: runtime not installed on this machine; nothing to report; opencode: runtime not installed on this machine; nothing to report; codex: runtime not installed on this machine; nothing to report
+==> longterm-mem binary removed: $HOME/.labdrian-overlay/bin/longterm-mem
+--- stderr
+(nothing)
+--- state directory
+(nothing)
+--- calls of longterm-mem
+unregister --target codex
+@@@ longterm/uninstall/record-a-name-of-64-bytes-is-a-name
+exit 0
+--- stdout
+  longterm-mem: unregistered the requested target(s); still installed for: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa (shared binary and engine-owned tracking left untouched -- re-run uninstall for the remaining target(s), or pass --purge, to remove them)
+--- stderr
+(nothing)
+--- state directory
+bin/longterm-mem (mode 755): "<the fake longterm-mem>"
+longterm-mem/installed-targets (mode 600): "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+--- calls of longterm-mem
+unregister --target claude
+@@@ longterm/uninstall/record-a-name-of-65-bytes-is-garbage
+exit 0
+--- stdout
+[longterm-mem] uninstall: supported — longterm-mem registration was already absent — reasons: claude: runtime not installed on this machine; nothing to report; opencode: runtime not installed on this machine; nothing to report; codex: runtime not installed on this machine; nothing to report
+==> longterm-mem binary removed: $HOME/.labdrian-overlay/bin/longterm-mem
+--- stderr
+(nothing)
+--- state directory
+(nothing)
+--- calls of longterm-mem
+unregister --target claude
+@@@ longterm/uninstall/record-a-name-may-not-begin-with-a-dot
+exit 0
+--- stdout
+[longterm-mem] uninstall: supported — longterm-mem registration was already absent — reasons: claude: runtime not installed on this machine; nothing to report; opencode: runtime not installed on this machine; nothing to report; codex: runtime not installed on this machine; nothing to report
+==> longterm-mem binary removed: $HOME/.labdrian-overlay/bin/longterm-mem
+--- stderr
+(nothing)
+--- state directory
+(nothing)
+--- calls of longterm-mem
+unregister --target claude
+@@@ longterm/uninstall/record-dots-dashes-and-underscores-are-names
+exit 0
+--- stdout
+  longterm-mem: unregistered the requested target(s); still installed for: my-runtime_2.0 (shared binary and engine-owned tracking left untouched -- re-run uninstall for the remaining target(s), or pass --purge, to remove them)
+--- stderr
+(nothing)
+--- state directory
+bin/longterm-mem (mode 755): "<the fake longterm-mem>"
+longterm-mem/installed-targets (mode 600): "my-runtime_2.0\n"
+--- calls of longterm-mem
+unregister --target claude
+@@@ longterm/uninstall/record-only-the-whole-name-is-taken-out
+exit 0
+--- stdout
+  longterm-mem: unregistered the requested target(s); still installed for: claude-next
+my-claude (shared binary and engine-owned tracking left untouched -- re-run uninstall for the remaining target(s), or pass --purge, to remove them)
+--- stderr
+(nothing)
+--- state directory
+bin/longterm-mem (mode 755): "<the fake longterm-mem>"
+longterm-mem/installed-targets (mode 600): "claude-next\nmy-claude\n"
+--- calls of longterm-mem
+unregister --target claude
+@@@ longterm/uninstall/record-unreadable
+exit 1
+--- stdout
+(nothing)
+--- stderr
+WARN: longterm-mem: $HOME/.labdrian-overlay/longterm-mem/installed-targets exists but cannot be read; refusing to read it as empty install state
+ERROR: longterm-mem: could not read $HOME/.labdrian-overlay/longterm-mem/installed-targets; refusing to rewrite it from a file that could not be inspected
+--- state directory
+bin/longterm-mem (mode 755): "<the fake longterm-mem>"
+longterm-mem/installed-targets (mode 0): <cannot be read>
+--- calls of longterm-mem
+unregister --target claude
+@@@ longterm/uninstall/record-unreadable-purge
+exit 1
+--- stdout
+(nothing)
+--- stderr
+WARN: longterm-mem: $HOME/.labdrian-overlay/longterm-mem/installed-targets exists but cannot be read; refusing to read it as empty install state
+ERROR: longterm-mem: could not read $HOME/.labdrian-overlay/longterm-mem/installed-targets; refusing to rewrite it from a file that could not be inspected
+--- state directory
+bin/longterm-mem (mode 755): "<the fake longterm-mem>"
+longterm-mem/installed-targets (mode 0): <cannot be read>
+--- calls of longterm-mem
+unregister --target claude
+@@@ longterm/uninstall/record-unreadable-nothing-rewritten
+exit 0
+--- stdout
+(nothing)
+--- stderr
+WARN: longterm-mem unregister --target claude: unmanaged (an entry exists that longterm-mem does not own; left untouched). claude stays tracked as installed, because that entry was NOT removed and may be ours under a lost install-state.json -- inspect claude's config and remove the entry by hand, then re-run uninstall, or pass --purge to drop the shared binary regardless.
+WARN: longterm-mem: $HOME/.labdrian-overlay/longterm-mem/installed-targets exists but cannot be read; refusing to read it as empty install state
+WARN: longterm-mem: the install tracking file at $HOME/.labdrian-overlay/longterm-mem/installed-targets exists but could not be read, so whether any runtime still depends on the shared binary is unknown; leaving the registration record and the shared binary untouched. Fix its permissions and re-run uninstall, or pass --purge to remove them anyway.
+--- state directory
+bin/longterm-mem (mode 755): "<the fake longterm-mem>"
+longterm-mem/installed-targets (mode 0): <cannot be read>
+--- calls of longterm-mem
+unregister --target claude
+@@@ longterm/uninstall/record-unreadable-nothing-rewritten-purge
+exit 0
+--- stdout
+[longterm-mem] uninstall: supported — longterm-mem registration was already absent — reasons: claude: runtime not installed on this machine; nothing to report; opencode: runtime not installed on this machine; nothing to report; codex: runtime not installed on this machine; nothing to report
+==> longterm-mem binary removed: $HOME/.labdrian-overlay/bin/longterm-mem
+--- stderr
+WARN: longterm-mem unregister --target claude: unmanaged (an entry exists that longterm-mem does not own; left untouched). claude stays tracked as installed, because that entry was NOT removed and may be ours under a lost install-state.json -- inspect claude's config and remove the entry by hand, then re-run uninstall, or pass --purge to drop the shared binary regardless.
+WARN: longterm-mem: $HOME/.labdrian-overlay/longterm-mem/installed-targets exists but cannot be read; refusing to read it as empty install state
+WARN: longterm-mem: $HOME/.labdrian-overlay/longterm-mem/installed-targets exists but cannot be read; refusing to read it as empty install state
+--- state directory
+(nothing)
+--- calls of longterm-mem
+unregister --target claude
+@@@ longterm/uninstall/record-directory-is-read-only
+exit 1
+--- stdout
+(nothing)
+--- stderr
+<a tool of the machine says something>
+ERROR: longterm-mem: could not create a temporary file in $HOME/.labdrian-overlay/longterm-mem
+--- state directory
+bin/longterm-mem (mode 755): "<the fake longterm-mem>"
+longterm-mem/installed-targets (mode 644): "claude\nopencode\n"
+--- calls of longterm-mem
+unregister --target claude
+@@@ longterm/uninstall/lock-held
+exit 1
+--- stdout
+(nothing)
+--- stderr
+ERROR: longterm-mem: could not acquire the install-tracking lock at $HOME/.labdrian-overlay/.installed-targets.lock; another overlay invocation is updating install state. Nothing was changed — re-run once it finishes, or remove that directory if no other invocation is running.
+--- state directory
+bin/longterm-mem (mode 755): "<the fake longterm-mem>"
+longterm-mem/installed-targets (mode 644): "claude\nopencode\n"
+--- calls of longterm-mem
+unregister --target claude
+@@@ longterm/uninstall/lock-abandoned
+exit 0
+--- stdout
+  longterm-mem: unregistered the requested target(s); still installed for: opencode (shared binary and engine-owned tracking left untouched -- re-run uninstall for the remaining target(s), or pass --purge, to remove them)
+--- stderr
+WARN: longterm-mem: the install-tracking lock at $HOME/.labdrian-overlay/.installed-targets.lock is older than 5 minutes; treating it as abandoned by a killed run and taking it over
+--- state directory
+bin/longterm-mem (mode 755): "<the fake longterm-mem>"
+longterm-mem/installed-targets (mode 600): "opencode\n"
+--- calls of longterm-mem
+unregister --target claude
