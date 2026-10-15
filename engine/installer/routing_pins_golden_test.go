@@ -34,11 +34,20 @@ var routingPinsGolden string
 //go:embed testdata/registry_pins.golden
 var registryPinsGolden string
 
+// The third record is the longterm-mem pins (longterm_pins_install_test.go and
+// longterm_pins_uninstall_test.go): which targets the script records as installed, and when it removes
+// the shared binary and the engine's registration record, in testdata/longterm_pins.golden, read and
+// kept by the rules above.
+//
+//go:embed testdata/longterm_pins.golden
+var longtermPinsGolden string
+
 // recordedPins is the records by name. A record that cannot be read stops the test binary at
 // start, before any test could pass over it.
 var recordedPins = mustParseRecords(map[string]string{
 	"routing_pins.golden":  routingPinsGolden,
 	"registry_pins.golden": registryPinsGolden,
+	"longterm_pins.golden": longtermPinsGolden,
 })
 
 // mustParseRecords reads the records, and panics with what is wrong with them, a name in two of

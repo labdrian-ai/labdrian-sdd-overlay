@@ -1,0 +1,383 @@
+@@@ longterm/install/one-target
+exit 0
+--- stdout
+==> Building longterm-mem binary...
+==> longterm-mem binary deployed to: $HOME/.labdrian-overlay/bin/longterm-mem
+[longterm-mem] install: supported — longterm-mem per-runtime status — reasons: claude: supported — runtime not installed; opencode: supported — runtime not installed; codex: supported — runtime not installed
+--- stderr
+(nothing)
+--- state directory
+bin/longterm-mem (mode 711): "<the fake longterm-mem>"
+longterm-mem-registration.json (mode 644): "{\n  \"managed_by\": \"labdrian-sdd-overlay\",\n  \"targets\": {}\n}"
+longterm-mem/installed-targets (mode 644): "claude\n"
+--- calls of longterm-mem
+register --target claude --binary $HOME/.labdrian-overlay/bin/longterm-mem
+@@@ longterm/install/one-target-again
+exit 0
+--- stdout
+==> Building longterm-mem binary...
+==> longterm-mem binary deployed to: $HOME/.labdrian-overlay/bin/longterm-mem
+[longterm-mem] install: supported — longterm-mem per-runtime status — reasons: claude: supported — runtime not installed; opencode: supported — runtime not installed; codex: supported — runtime not installed
+--- stderr
+(nothing)
+--- state directory
+bin/longterm-mem (mode 711): "<the fake longterm-mem>"
+longterm-mem-registration.json (mode 644): "{\n  \"managed_by\": \"labdrian-sdd-overlay\",\n  \"targets\": {}\n}"
+longterm-mem/installed-targets (mode 644): "claude\n"
+--- calls of longterm-mem
+register --target claude --binary $HOME/.labdrian-overlay/bin/longterm-mem
+register --target claude --binary $HOME/.labdrian-overlay/bin/longterm-mem
+@@@ longterm/install/a-second-target
+exit 0
+--- stdout
+==> Building longterm-mem binary...
+==> longterm-mem binary deployed to: $HOME/.labdrian-overlay/bin/longterm-mem
+[longterm-mem] install: supported — longterm-mem per-runtime status — reasons: claude: supported — runtime not installed; opencode: supported — runtime not installed; codex: supported — runtime not installed
+--- stderr
+(nothing)
+--- state directory
+bin/longterm-mem (mode 711): "<the fake longterm-mem>"
+longterm-mem-registration.json (mode 644): "{\n  \"managed_by\": \"labdrian-sdd-overlay\",\n  \"targets\": {}\n}"
+longterm-mem/installed-targets (mode 644): "claude\ncodex\n"
+--- calls of longterm-mem
+register --target claude --binary $HOME/.labdrian-overlay/bin/longterm-mem
+register --target claude --binary $HOME/.labdrian-overlay/bin/longterm-mem
+register --target codex --binary $HOME/.labdrian-overlay/bin/longterm-mem
+@@@ longterm/install/all
+exit 0
+--- stdout
+==> Building longterm-mem binary...
+==> longterm-mem binary deployed to: $HOME/.labdrian-overlay/bin/longterm-mem
+[longterm-mem] install: supported — longterm-mem per-runtime status — reasons: claude: supported — runtime not installed; opencode: supported — runtime not installed; codex: supported — runtime not installed
+[longterm-mem] install: supported — longterm-mem per-runtime status — reasons: claude: supported — runtime not installed; opencode: supported — runtime not installed; codex: supported — runtime not installed
+[longterm-mem] install: supported — longterm-mem per-runtime status — reasons: claude: supported — runtime not installed; opencode: supported — runtime not installed; codex: supported — runtime not installed
+[longterm-mem] install: supported — longterm-mem per-runtime status — reasons: claude: supported — runtime not installed; opencode: supported — runtime not installed; codex: supported — runtime not installed
+--- stderr
+(nothing)
+--- state directory
+bin/longterm-mem (mode 711): "<the fake longterm-mem>"
+longterm-mem-registration.json (mode 644): "{\n  \"managed_by\": \"labdrian-sdd-overlay\",\n  \"targets\": {}\n}"
+longterm-mem/installed-targets (mode 644): "claude\nopencode\ncodex\npi\n"
+--- calls of longterm-mem
+register --target claude --binary $HOME/.labdrian-overlay/bin/longterm-mem
+register --target opencode --binary $HOME/.labdrian-overlay/bin/longterm-mem
+register --target codex --binary $HOME/.labdrian-overlay/bin/longterm-mem
+register --target pi --binary $HOME/.labdrian-overlay/bin/longterm-mem --config-root $HOME/.labdrian-overlay/pi/labdrian-pi
+@@@ longterm/install/register-refused
+exit 0
+--- stdout
+==> Building longterm-mem binary...
+==> longterm-mem binary deployed to: $HOME/.labdrian-overlay/bin/longterm-mem
+[longterm-mem] install: supported — longterm-mem per-runtime status — reasons: claude: supported — runtime not installed; opencode: supported — runtime not installed; codex: supported — runtime not installed
+--- stderr
+WARN: longterm-mem register --target claude: refused — an entry exists that longterm-mem does not own, and it was left untouched. claude is NOT recorded as installed; remove that entry by hand and re-run install to register claude.
+--- state directory
+bin/longterm-mem (mode 711): "<the fake longterm-mem>"
+longterm-mem-registration.json (mode 644): "{\n  \"managed_by\": \"labdrian-sdd-overlay\",\n  \"targets\": {}\n}"
+--- calls of longterm-mem
+register --target claude --binary $HOME/.labdrian-overlay/bin/longterm-mem
+@@@ longterm/install/register-hard-failure
+exit 1
+--- stdout
+==> Building longterm-mem binary...
+==> longterm-mem binary deployed to: $HOME/.labdrian-overlay/bin/longterm-mem
+[longterm-mem] install: supported — longterm-mem per-runtime status — reasons: claude: supported — runtime not installed; opencode: supported — runtime not installed; codex: supported — runtime not installed
+--- stderr
+WARN: longterm-mem register --target claude failed (exit 1); claude was not registered and is NOT recorded as installed
+--- state directory
+bin/longterm-mem (mode 711): "<the fake longterm-mem>"
+longterm-mem-registration.json (mode 644): "{\n  \"managed_by\": \"labdrian-sdd-overlay\",\n  \"targets\": {}\n}"
+--- calls of longterm-mem
+register --target claude --binary $HOME/.labdrian-overlay/bin/longterm-mem
+@@@ longterm/install/register-version-skew
+exit 1
+--- stdout
+==> Building longterm-mem binary...
+==> longterm-mem binary deployed to: $HOME/.labdrian-overlay/bin/longterm-mem
+[longterm-mem] install: supported — longterm-mem per-runtime status — reasons: claude: supported — runtime not installed; opencode: supported — runtime not installed; codex: supported — runtime not installed
+--- stderr
+WARN: longterm-mem register --target claude: this binary does not accept the invocation (exit 2, version skew), so claude was not registered and is NOT recorded as installed. Not retried; every re-run reproduces this -- deploy a longterm-mem build whose register subcommand matches this overlay.
+--- state directory
+bin/longterm-mem (mode 711): "<the fake longterm-mem>"
+longterm-mem-registration.json (mode 644): "{\n  \"managed_by\": \"labdrian-sdd-overlay\",\n  \"targets\": {}\n}"
+--- calls of longterm-mem
+register --target claude --binary $HOME/.labdrian-overlay/bin/longterm-mem
+@@@ longterm/install/register-unresolvable-path
+exit 1
+--- stdout
+==> Building longterm-mem binary...
+==> longterm-mem binary deployed to: $HOME/.labdrian-overlay/bin/longterm-mem
+[longterm-mem] install: supported — longterm-mem per-runtime status — reasons: claude: supported — runtime not installed; opencode: supported — runtime not installed; codex: supported — runtime not installed
+--- stderr
+WARN: longterm-mem register --target claude: exit 8 — register could not resolve a path from the environment at all (no usable HOME means no runtime config root and no install-state.json directory), so nothing was attempted and claude is NOT recorded as installed. The fix is the environment, not the runtime: set HOME to a writable home directory and re-run install.
+--- state directory
+bin/longterm-mem (mode 711): "<the fake longterm-mem>"
+longterm-mem-registration.json (mode 644): "{\n  \"managed_by\": \"labdrian-sdd-overlay\",\n  \"targets\": {}\n}"
+--- calls of longterm-mem
+register --target claude --binary $HOME/.labdrian-overlay/bin/longterm-mem
+@@@ longterm/install/all-mixed
+exit 0
+--- stdout
+==> Building longterm-mem binary...
+==> longterm-mem binary deployed to: $HOME/.labdrian-overlay/bin/longterm-mem
+[longterm-mem] install: supported — longterm-mem per-runtime status — reasons: claude: supported — runtime not installed; opencode: supported — runtime not installed; codex: supported — runtime not installed
+[longterm-mem] install: supported — longterm-mem per-runtime status — reasons: claude: supported — runtime not installed; opencode: supported — runtime not installed; codex: supported — runtime not installed
+[longterm-mem] install: supported — longterm-mem per-runtime status — reasons: claude: supported — runtime not installed; opencode: supported — runtime not installed; codex: supported — runtime not installed
+[longterm-mem] install: supported — longterm-mem per-runtime status — reasons: claude: supported — runtime not installed; opencode: supported — runtime not installed; codex: supported — runtime not installed
+--- stderr
+WARN: longterm-mem register --target opencode failed (exit 1); opencode was not registered and is NOT recorded as installed. Not failing the run: --target all asks for the runtimes this machine has, and a runtime it does not have looks exactly like this from here.
+WARN: longterm-mem register --target codex: refused — an entry exists that longterm-mem does not own, and it was left untouched. codex is NOT recorded as installed; remove that entry by hand and re-run install to register codex.
+--- state directory
+bin/longterm-mem (mode 711): "<the fake longterm-mem>"
+longterm-mem-registration.json (mode 644): "{\n  \"managed_by\": \"labdrian-sdd-overlay\",\n  \"targets\": {}\n}"
+longterm-mem/installed-targets (mode 644): "claude\npi\n"
+--- calls of longterm-mem
+register --target claude --binary $HOME/.labdrian-overlay/bin/longterm-mem
+register --target opencode --binary $HOME/.labdrian-overlay/bin/longterm-mem
+register --target codex --binary $HOME/.labdrian-overlay/bin/longterm-mem
+register --target pi --binary $HOME/.labdrian-overlay/bin/longterm-mem --config-root $HOME/.labdrian-overlay/pi/labdrian-pi
+@@@ longterm/install/all-every-register-fails
+exit 0
+--- stdout
+==> Building longterm-mem binary...
+==> longterm-mem binary deployed to: $HOME/.labdrian-overlay/bin/longterm-mem
+[longterm-mem] install: supported — longterm-mem per-runtime status — reasons: claude: supported — runtime not installed; opencode: supported — runtime not installed; codex: supported — runtime not installed
+[longterm-mem] install: supported — longterm-mem per-runtime status — reasons: claude: supported — runtime not installed; opencode: supported — runtime not installed; codex: supported — runtime not installed
+[longterm-mem] install: supported — longterm-mem per-runtime status — reasons: claude: supported — runtime not installed; opencode: supported — runtime not installed; codex: supported — runtime not installed
+[longterm-mem] install: supported — longterm-mem per-runtime status — reasons: claude: supported — runtime not installed; opencode: supported — runtime not installed; codex: supported — runtime not installed
+--- stderr
+WARN: longterm-mem register --target claude failed (exit 1); claude was not registered and is NOT recorded as installed. Not failing the run: --target all asks for the runtimes this machine has, and a runtime it does not have looks exactly like this from here.
+WARN: longterm-mem register --target opencode failed (exit 1); opencode was not registered and is NOT recorded as installed. Not failing the run: --target all asks for the runtimes this machine has, and a runtime it does not have looks exactly like this from here.
+WARN: longterm-mem register --target codex failed (exit 1); codex was not registered and is NOT recorded as installed. Not failing the run: --target all asks for the runtimes this machine has, and a runtime it does not have looks exactly like this from here.
+WARN: longterm-mem register --target pi failed (exit 1); pi was not registered and is NOT recorded as installed. Not failing the run: --target all asks for the runtimes this machine has, and a runtime it does not have looks exactly like this from here.
+--- state directory
+bin/longterm-mem (mode 711): "<the fake longterm-mem>"
+longterm-mem-registration.json (mode 644): "{\n  \"managed_by\": \"labdrian-sdd-overlay\",\n  \"targets\": {}\n}"
+--- calls of longterm-mem
+register --target claude --binary $HOME/.labdrian-overlay/bin/longterm-mem
+register --target opencode --binary $HOME/.labdrian-overlay/bin/longterm-mem
+register --target codex --binary $HOME/.labdrian-overlay/bin/longterm-mem
+register --target pi --binary $HOME/.labdrian-overlay/bin/longterm-mem --config-root $HOME/.labdrian-overlay/pi/labdrian-pi
+@@@ longterm/install/all-every-register-is-version-skewed
+exit 1
+--- stdout
+==> Building longterm-mem binary...
+==> longterm-mem binary deployed to: $HOME/.labdrian-overlay/bin/longterm-mem
+[longterm-mem] install: supported — longterm-mem per-runtime status — reasons: claude: supported — runtime not installed; opencode: supported — runtime not installed; codex: supported — runtime not installed
+[longterm-mem] install: supported — longterm-mem per-runtime status — reasons: claude: supported — runtime not installed; opencode: supported — runtime not installed; codex: supported — runtime not installed
+[longterm-mem] install: supported — longterm-mem per-runtime status — reasons: claude: supported — runtime not installed; opencode: supported — runtime not installed; codex: supported — runtime not installed
+[longterm-mem] install: supported — longterm-mem per-runtime status — reasons: claude: supported — runtime not installed; opencode: supported — runtime not installed; codex: supported — runtime not installed
+--- stderr
+WARN: longterm-mem register --target claude: this binary does not accept the invocation (exit 2, version skew), so claude was not registered and is NOT recorded as installed. Not retried; every re-run reproduces this -- deploy a longterm-mem build whose register subcommand matches this overlay.
+WARN: longterm-mem register --target opencode: this binary does not accept the invocation (exit 2, version skew), so opencode was not registered and is NOT recorded as installed. Not retried; every re-run reproduces this -- deploy a longterm-mem build whose register subcommand matches this overlay.
+WARN: longterm-mem register --target codex: this binary does not accept the invocation (exit 2, version skew), so codex was not registered and is NOT recorded as installed. Not retried; every re-run reproduces this -- deploy a longterm-mem build whose register subcommand matches this overlay.
+WARN: longterm-mem register --target pi: this binary does not accept the invocation (exit 2, version skew), so pi was not registered and is NOT recorded as installed. Not retried; every re-run reproduces this -- deploy a longterm-mem build whose register subcommand matches this overlay.
+--- state directory
+bin/longterm-mem (mode 711): "<the fake longterm-mem>"
+longterm-mem-registration.json (mode 644): "{\n  \"managed_by\": \"labdrian-sdd-overlay\",\n  \"targets\": {}\n}"
+--- calls of longterm-mem
+register --target claude --binary $HOME/.labdrian-overlay/bin/longterm-mem
+register --target opencode --binary $HOME/.labdrian-overlay/bin/longterm-mem
+register --target codex --binary $HOME/.labdrian-overlay/bin/longterm-mem
+register --target pi --binary $HOME/.labdrian-overlay/bin/longterm-mem --config-root $HOME/.labdrian-overlay/pi/labdrian-pi
+@@@ longterm/install/all-every-path-is-unresolvable
+exit 1
+--- stdout
+==> Building longterm-mem binary...
+==> longterm-mem binary deployed to: $HOME/.labdrian-overlay/bin/longterm-mem
+[longterm-mem] install: supported — longterm-mem per-runtime status — reasons: claude: supported — runtime not installed; opencode: supported — runtime not installed; codex: supported — runtime not installed
+[longterm-mem] install: supported — longterm-mem per-runtime status — reasons: claude: supported — runtime not installed; opencode: supported — runtime not installed; codex: supported — runtime not installed
+[longterm-mem] install: supported — longterm-mem per-runtime status — reasons: claude: supported — runtime not installed; opencode: supported — runtime not installed; codex: supported — runtime not installed
+[longterm-mem] install: supported — longterm-mem per-runtime status — reasons: claude: supported — runtime not installed; opencode: supported — runtime not installed; codex: supported — runtime not installed
+--- stderr
+WARN: longterm-mem register --target claude: exit 8 — register could not resolve a path from the environment at all (no usable HOME means no runtime config root and no install-state.json directory), so nothing was attempted and claude is NOT recorded as installed. The fix is the environment, not the runtime: set HOME to a writable home directory and re-run install.
+WARN: longterm-mem register --target opencode: exit 8 — register could not resolve a path from the environment at all (no usable HOME means no runtime config root and no install-state.json directory), so nothing was attempted and opencode is NOT recorded as installed. The fix is the environment, not the runtime: set HOME to a writable home directory and re-run install.
+WARN: longterm-mem register --target codex: exit 8 — register could not resolve a path from the environment at all (no usable HOME means no runtime config root and no install-state.json directory), so nothing was attempted and codex is NOT recorded as installed. The fix is the environment, not the runtime: set HOME to a writable home directory and re-run install.
+WARN: longterm-mem register --target pi: exit 8 — register could not resolve a path from the environment at all (no usable HOME means no runtime config root and no install-state.json directory), so nothing was attempted and pi is NOT recorded as installed. The fix is the environment, not the runtime: set HOME to a writable home directory and re-run install.
+--- state directory
+bin/longterm-mem (mode 711): "<the fake longterm-mem>"
+longterm-mem-registration.json (mode 644): "{\n  \"managed_by\": \"labdrian-sdd-overlay\",\n  \"targets\": {}\n}"
+--- calls of longterm-mem
+register --target claude --binary $HOME/.labdrian-overlay/bin/longterm-mem
+register --target opencode --binary $HOME/.labdrian-overlay/bin/longterm-mem
+register --target codex --binary $HOME/.labdrian-overlay/bin/longterm-mem
+register --target pi --binary $HOME/.labdrian-overlay/bin/longterm-mem --config-root $HOME/.labdrian-overlay/pi/labdrian-pi
+@@@ longterm/install/build-fails
+exit 1
+--- stdout
+==> Building longterm-mem binary...
+--- stderr
+ERROR: go build failed for longterm-mem; binary not deployed
+--- state directory
+(nothing)
+--- calls of longterm-mem
+(nothing)
+@@@ longterm/install/record-an-unknown-name-stays
+exit 0
+--- stdout
+==> Building longterm-mem binary...
+==> longterm-mem binary deployed to: $HOME/.labdrian-overlay/bin/longterm-mem
+[longterm-mem] install: supported — longterm-mem per-runtime status — reasons: claude: supported — runtime not installed; opencode: supported — runtime not installed; codex: supported — runtime not installed
+--- stderr
+(nothing)
+--- state directory
+bin/longterm-mem (mode 711): "<the fake longterm-mem>"
+longterm-mem-registration.json (mode 644): "{\n  \"managed_by\": \"labdrian-sdd-overlay\",\n  \"targets\": {}\n}"
+longterm-mem/installed-targets (mode 644): "zed\nclaude\n"
+--- calls of longterm-mem
+register --target claude --binary $HOME/.labdrian-overlay/bin/longterm-mem
+@@@ longterm/install/record-the-same-name-twice-is-recorded-once
+exit 0
+--- stdout
+==> Building longterm-mem binary...
+==> longterm-mem binary deployed to: $HOME/.labdrian-overlay/bin/longterm-mem
+[longterm-mem] install: supported — longterm-mem per-runtime status — reasons: claude: supported — runtime not installed; opencode: supported — runtime not installed; codex: supported — runtime not installed
+--- stderr
+(nothing)
+--- state directory
+bin/longterm-mem (mode 711): "<the fake longterm-mem>"
+longterm-mem-registration.json (mode 644): "{\n  \"managed_by\": \"labdrian-sdd-overlay\",\n  \"targets\": {}\n}"
+longterm-mem/installed-targets (mode 644): "claude\nclaude\n"
+--- calls of longterm-mem
+register --target claude --binary $HOME/.labdrian-overlay/bin/longterm-mem
+@@@ longterm/install/record-names-in-any-order
+exit 0
+--- stdout
+==> Building longterm-mem binary...
+==> longterm-mem binary deployed to: $HOME/.labdrian-overlay/bin/longterm-mem
+[longterm-mem] install: supported — longterm-mem per-runtime status — reasons: claude: supported — runtime not installed; opencode: supported — runtime not installed; codex: supported — runtime not installed
+--- stderr
+(nothing)
+--- state directory
+bin/longterm-mem (mode 711): "<the fake longterm-mem>"
+longterm-mem-registration.json (mode 644): "{\n  \"managed_by\": \"labdrian-sdd-overlay\",\n  \"targets\": {}\n}"
+longterm-mem/installed-targets (mode 644): "opencode\nclaude\ncodex\n"
+--- calls of longterm-mem
+register --target codex --binary $HOME/.labdrian-overlay/bin/longterm-mem
+@@@ longterm/install/record-bytes-that-are-not-names-stay
+exit 0
+--- stdout
+==> Building longterm-mem binary...
+==> longterm-mem binary deployed to: $HOME/.labdrian-overlay/bin/longterm-mem
+[longterm-mem] install: supported — longterm-mem per-runtime status — reasons: claude: supported — runtime not installed; opencode: supported — runtime not installed; codex: supported — runtime not installed
+--- stderr
+(nothing)
+--- state directory
+bin/longterm-mem (mode 711): "<the fake longterm-mem>"
+longterm-mem-registration.json (mode 644): "{\n  \"managed_by\": \"labdrian-sdd-overlay\",\n  \"targets\": {}\n}"
+longterm-mem/installed-targets (mode 644): "\x00garbage\n{not-a-target}\n\nclaude\n"
+--- calls of longterm-mem
+register --target claude --binary $HOME/.labdrian-overlay/bin/longterm-mem
+@@@ longterm/install/record-a-name-cut-short-runs-into-the-next-one
+exit 0
+--- stdout
+==> Building longterm-mem binary...
+==> longterm-mem binary deployed to: $HOME/.labdrian-overlay/bin/longterm-mem
+[longterm-mem] install: supported — longterm-mem per-runtime status — reasons: claude: supported — runtime not installed; opencode: supported — runtime not installed; codex: supported — runtime not installed
+--- stderr
+(nothing)
+--- state directory
+bin/longterm-mem (mode 711): "<the fake longterm-mem>"
+longterm-mem-registration.json (mode 644): "{\n  \"managed_by\": \"labdrian-sdd-overlay\",\n  \"targets\": {}\n}"
+longterm-mem/installed-targets (mode 644): "claude\nopencopencode\n"
+--- calls of longterm-mem
+register --target opencode --binary $HOME/.labdrian-overlay/bin/longterm-mem
+@@@ longterm/install/record-a-name-with-a-carriage-return
+exit 0
+--- stdout
+==> Building longterm-mem binary...
+==> longterm-mem binary deployed to: $HOME/.labdrian-overlay/bin/longterm-mem
+[longterm-mem] install: supported — longterm-mem per-runtime status — reasons: claude: supported — runtime not installed; opencode: supported — runtime not installed; codex: supported — runtime not installed
+--- stderr
+(nothing)
+--- state directory
+bin/longterm-mem (mode 711): "<the fake longterm-mem>"
+longterm-mem-registration.json (mode 644): "{\n  \"managed_by\": \"labdrian-sdd-overlay\",\n  \"targets\": {}\n}"
+longterm-mem/installed-targets (mode 644): "claude\r\nclaude\n"
+--- calls of longterm-mem
+register --target claude --binary $HOME/.labdrian-overlay/bin/longterm-mem
+@@@ longterm/install/record-an-empty-file
+exit 0
+--- stdout
+==> Building longterm-mem binary...
+==> longterm-mem binary deployed to: $HOME/.labdrian-overlay/bin/longterm-mem
+[longterm-mem] install: supported — longterm-mem per-runtime status — reasons: claude: supported — runtime not installed; opencode: supported — runtime not installed; codex: supported — runtime not installed
+--- stderr
+(nothing)
+--- state directory
+bin/longterm-mem (mode 711): "<the fake longterm-mem>"
+longterm-mem-registration.json (mode 644): "{\n  \"managed_by\": \"labdrian-sdd-overlay\",\n  \"targets\": {}\n}"
+longterm-mem/installed-targets (mode 644): "pi\n"
+--- calls of longterm-mem
+register --target pi --binary $HOME/.labdrian-overlay/bin/longterm-mem --config-root $HOME/.labdrian-overlay/pi/labdrian-pi
+@@@ longterm/install/record-unreadable
+exit 1
+--- stdout
+==> Building longterm-mem binary...
+==> longterm-mem binary deployed to: $HOME/.labdrian-overlay/bin/longterm-mem
+[longterm-mem] install: supported — longterm-mem per-runtime status — reasons: claude: supported — runtime not installed; opencode: supported — runtime not installed; codex: supported — runtime not installed
+--- stderr
+WARN: longterm-mem: $HOME/.labdrian-overlay/longterm-mem/installed-targets exists but cannot be read; refusing to read it as empty install state
+ERROR: longterm-mem: could not read $HOME/.labdrian-overlay/longterm-mem/installed-targets; refusing to record opencode against install state that cannot be inspected
+--- state directory
+bin/longterm-mem (mode 711): "<the fake longterm-mem>"
+longterm-mem-registration.json (mode 644): "{\n  \"managed_by\": \"labdrian-sdd-overlay\",\n  \"targets\": {}\n}"
+longterm-mem/installed-targets (mode 0): <cannot be read>
+--- calls of longterm-mem
+register --target opencode --binary $HOME/.labdrian-overlay/bin/longterm-mem
+@@@ longterm/install/record-directory-is-a-file
+exit 1
+--- stdout
+==> Building longterm-mem binary...
+==> longterm-mem binary deployed to: $HOME/.labdrian-overlay/bin/longterm-mem
+[longterm-mem] install: supported — longterm-mem per-runtime status — reasons: claude: supported — runtime not installed; opencode: supported — runtime not installed; codex: supported — runtime not installed
+--- stderr
+<a tool of the machine says something>
+ERROR: longterm-mem: could not create $HOME/.labdrian-overlay/longterm-mem
+--- state directory
+bin/longterm-mem (mode 711): "<the fake longterm-mem>"
+longterm-mem (mode 644): "in the way\n"
+longterm-mem-registration.json (mode 644): "{\n  \"managed_by\": \"labdrian-sdd-overlay\",\n  \"targets\": {}\n}"
+--- calls of longterm-mem
+register --target claude --binary $HOME/.labdrian-overlay/bin/longterm-mem
+@@@ longterm/install/state-directory-is-cleaned
+exit 0
+--- stdout
+==> Building longterm-mem binary...
+==> longterm-mem binary deployed to: $HOME/elsewhere/state/bin/longterm-mem
+[longterm-mem] install: supported — longterm-mem per-runtime status — reasons: claude: supported — runtime not installed; opencode: supported — runtime not installed; codex: supported — runtime not installed
+--- stderr
+(nothing)
+--- state directory
+bin/longterm-mem (mode 711): "<the fake longterm-mem>"
+longterm-mem-registration.json (mode 644): "{\n  \"managed_by\": \"labdrian-sdd-overlay\",\n  \"targets\": {}\n}"
+longterm-mem/installed-targets (mode 644): "claude\n"
+--- calls of longterm-mem
+register --target claude --binary $HOME/elsewhere/state/bin/longterm-mem
+@@@ longterm/install/lock-held
+exit 1
+--- stdout
+==> Building longterm-mem binary...
+==> longterm-mem binary deployed to: $HOME/.labdrian-overlay/bin/longterm-mem
+[longterm-mem] install: supported — longterm-mem per-runtime status — reasons: claude: supported — runtime not installed; opencode: supported — runtime not installed; codex: supported — runtime not installed
+--- stderr
+ERROR: longterm-mem: could not acquire the install-tracking lock at $HOME/.labdrian-overlay/.installed-targets.lock; another overlay invocation is updating install state. Nothing was changed — re-run once it finishes, or remove that directory if no other invocation is running.
+--- state directory
+bin/longterm-mem (mode 711): "<the fake longterm-mem>"
+longterm-mem-registration.json (mode 644): "{\n  \"managed_by\": \"labdrian-sdd-overlay\",\n  \"targets\": {}\n}"
+--- calls of longterm-mem
+register --target claude --binary $HOME/.labdrian-overlay/bin/longterm-mem
+@@@ longterm/install/lock-abandoned
+exit 0
+--- stdout
+==> Building longterm-mem binary...
+==> longterm-mem binary deployed to: $HOME/.labdrian-overlay/bin/longterm-mem
+[longterm-mem] install: supported — longterm-mem per-runtime status — reasons: claude: supported — runtime not installed; opencode: supported — runtime not installed; codex: supported — runtime not installed
+--- stderr
+WARN: longterm-mem: the install-tracking lock at $HOME/.labdrian-overlay/.installed-targets.lock is older than 5 minutes; treating it as abandoned by a killed run and taking it over
+--- state directory
+bin/longterm-mem (mode 711): "<the fake longterm-mem>"
+longterm-mem-registration.json (mode 644): "{\n  \"managed_by\": \"labdrian-sdd-overlay\",\n  \"targets\": {}\n}"
+longterm-mem/installed-targets (mode 644): "claude\n"
+--- calls of longterm-mem
+register --target claude --binary $HOME/.labdrian-overlay/bin/longterm-mem
