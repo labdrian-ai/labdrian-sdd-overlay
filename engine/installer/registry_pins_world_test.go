@@ -177,8 +177,10 @@ func (w *pinWorld) installDiscoveryTools() {
 			w.t.Fatalf("write the %s of the world: %v", tool, err)
 		}
 	}
+	// From here every change of the PATH of the world keeps this directory first (changePath), this
+	// one included: the PATH it is given is the world's own, with the directory put in front.
 	w.discoveryDir = dir
-	w.changePath(func(old string) string { return dir + string(os.PathListSeparator) + old })
+	w.changePath(func(old string) string { return old })
 }
 
 // registryWorld is a world whose PATH has a gentle-ai that only records and the five tools of

@@ -126,3 +126,101 @@ func TestTheWorldOfTheDoctorTestsHasTheToolsOfDiscoveryWhateverTheMachineHas(t *
 		t.Errorf("doctor in the world says %s, want it to find the five tools and give no advice about them", pinRunText(run))
 	}
 }
+
+// A world changes its PATH again and again after it is built: a second fake gentle-ai, a PATH made of
+// links to everything on the machine's but one tool, a fake go. The tools of discovery are pinned once
+// (installDiscoveryTools), so every one of those changes must leave them on the world's programs, ahead of
+// the machine's: the pin is a property of the world and not of the order its helpers were called in. Each
+// case is a change that a doctor or registry test of this package makes, or one of the shapes a change can
+// have (a directory put in front, a PATH replaced whole, another one altogether).
+func TestEveryChangeOfThePathOfAWorldKeepsTheToolsOfDiscoveryOnTheWorldsPrograms(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		change func(t *testing.T, w *pinWorld)
+	}{
+		{"the world as registryWorld makes it", func(t *testing.T, w *pinWorld) {}},
+		{"a second fake gentle-ai (the refresh tests)", func(t *testing.T, w *pinWorld) {
+			w.installGentle(gentleRegistry, 0)
+		}},
+		{"a third, that fails", func(t *testing.T, w *pinWorld) {
+			w.installGentle(gentleRegistry, 0)
+			w.installGentle("# regenerated, and then it failed\n", 3)
+		}},
+		{"a PATH without gentle-ai, whole (the tests of no gentle-ai)", func(t *testing.T, w *pinWorld) {
+			path := pathWithout(t, "gentle-ai")
+			w.changePath(func(string) string { return path })
+		}},
+		{"a fake gentle-ai first on a PATH without go (the tests of no engine)", func(t *testing.T, w *pinWorld) {
+			g := w.installGentle("", 0)
+			path := g.dir + string(os.PathListSeparator) + pathWithout(t, "go")
+			w.changePath(func(string) string { return path })
+		}},
+		{"neither the engine nor go (withoutEngineOrGo)", func(t *testing.T, w *pinWorld) {
+			w.withoutEngineOrGo()
+		}},
+		{"a fake go first (the bootstrap tests)", func(t *testing.T, w *pinWorld) {
+			w.installFakeGo()
+		}},
+		{"a directory put in front", func(t *testing.T, w *pinWorld) {
+			dir := t.TempDir()
+			w.changePath(func(old string) string { return dir + string(os.PathListSeparator) + old })
+		}},
+		{"a directory put behind", func(t *testing.T, w *pinWorld) {
+			dir := t.TempDir()
+			w.changePath(func(old string) string { return old + string(os.PathListSeparator) + dir })
+		}},
+		{"a PATH that is another one altogether", func(t *testing.T, w *pinWorld) {
+			w.changePath(func(string) string { return "/no/such/directory" })
+		}},
+		{"an empty PATH", func(t *testing.T, w *pinWorld) {
+			w.changePath(func(string) string { return "" })
+		}},
+		{"a PATH that has the directory of the tools in the middle", func(t *testing.T, w *pinWorld) {
+			w.changePath(func(old string) string {
+				return "/a" + string(os.PathListSeparator) + w.discoveryDir + string(os.PathListSeparator) + old
+			})
+		}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			w := registryWorld(t)
+
+			tc.change(t, w)
+
+			path := envValue(w.env, "PATH")
+			for _, tool := range discoveryTools {
+				if got, want := firstInPath(path, tool), filepath.Join(w.discoveryDir, tool); got != want {
+					t.Errorf("after the change, %s resolves to %q on the PATH of the world, want the program of the world, %q (PATH %q)", tool, got, want, path)
+				}
+			}
+			if dirs := filepath.SplitList(path); len(dirs) == 0 || dirs[0] != w.discoveryDir {
+				t.Errorf("after the change the directory of the tools is not the first of the PATH of the world: %q", path)
+			}
+			count := 0
+			for _, dir := range filepath.SplitList(path) {
+				if dir == w.discoveryDir {
+					count++
+				}
+			}
+			if count != 1 {
+				t.Errorf("after the change the directory of the tools is %d times on the PATH of the world, want once: %q", count, path)
+			}
+		})
+	}
+}
+
+// A world that has no tools of discovery (the worlds of the routing and bootstrap pins) has its PATH as the
+// change made it: no directory is put in front, not even an empty one, which would put the working directory
+// on the PATH.
+func TestAWorldWithoutToolsOfDiscoveryKeepsThePathItsChangeMade(t *testing.T) {
+	w := newPinWorld(t, "x managed\n", map[string]string{"skills/x/SKILL.md": "# x\n"})
+	if w.discoveryDir != "" {
+		t.Fatalf("a world of the routing pins has tools of discovery in %q", w.discoveryDir)
+	}
+	want := "/a" + string(os.PathListSeparator) + "/b"
+
+	w.changePath(func(string) string { return want })
+
+	if got := envValue(w.env, "PATH"); got != want {
+		t.Errorf("PATH = %q after a change to %q, want it as the change made it", got, want)
+	}
+}

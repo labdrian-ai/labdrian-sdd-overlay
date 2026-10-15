@@ -207,14 +207,35 @@ func TestWithPathChangesThePathEntryAndRefusesAnEnvironmentWithNone(t *testing.T
 	}
 }
 
-// changePath edits the PATH of the world, and fails the test when it has none.
+// changePath edits the PATH of the world, and fails the test when it has none. What the change makes of
+// it is then given the directory of the world's tools of discovery (installDiscoveryTools), if the
+// world has one, as its first directory and once, whatever the change did to it: a PATH replaced
+// whole, one that is another altogether, one that had the directory in the middle. The tools are pinned
+// by the world and not by the order its helpers were called in, so that no change a test makes can let
+// the machine's own tools decide what doctor says of them. (The directory holds nothing but the five
+// tools, so putting it first changes nothing a fake gentle-ai or a fake go resolves to.)
 func (w *pinWorld) changePath(change func(old string) string) {
 	w.t.Helper()
-	env, err := withPath(w.env, change)
+	env, err := withPath(w.env, func(old string) string { return w.withDiscoveryFirst(change(old)) })
 	if err != nil {
 		w.t.Fatal(err)
 	}
 	w.env = env
+}
+
+// withDiscoveryFirst is path with the directory of the world's tools of discovery as its first
+// directory, once; path itself when the world has none.
+func (w *pinWorld) withDiscoveryFirst(path string) string {
+	if w.discoveryDir == "" {
+		return path
+	}
+	dirs := []string{w.discoveryDir}
+	for _, dir := range filepath.SplitList(path) {
+		if dir != w.discoveryDir {
+			dirs = append(dirs, dir)
+		}
+	}
+	return strings.Join(dirs, string(os.PathListSeparator))
 }
 
 // write puts content at rel under root, making the directories it needs.
