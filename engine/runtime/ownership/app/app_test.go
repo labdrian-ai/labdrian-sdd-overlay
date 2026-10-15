@@ -12,14 +12,20 @@ import (
 )
 
 // fakeStore is the record in memory. It logs every call, and holds that what is read to be changed
-// and what changes it happen while the lock is taken.
+// and what changes it happen while the lock is taken. It models the two directories the real store
+// works in, because the contract of the port depends on them: Lock makes the state directory (the
+// lock lives there), MakeRecordDir makes the directory of the record, and Append and Replace fail in a
+// directory that is not there, as a file system does, while Exists, Read and Delete need none (a
+// record in a directory that is not there is absent, and removing it is already done).
 type fakeStore struct {
-	t       *testing.T
-	exists  bool
-	state   ownership.State
-	content []byte
-	locked  bool
-	calls   []string
+	t         *testing.T
+	exists    bool
+	state     ownership.State
+	content   []byte
+	locked    bool
+	stateDir  bool
+	recordDir bool
+	calls     []string
 
 	recordDirErr error
 	lockErr      error
@@ -32,7 +38,7 @@ type fakeStore struct {
 
 // recordHolding is a store whose record is there, readable, with this content.
 func recordHolding(t *testing.T, content string) *fakeStore {
-	return &fakeStore{t: t, exists: true, state: ownership.Readable, content: []byte(content)}
+	return &fakeStore{t: t, exists: true, state: ownership.Readable, content: []byte(content), stateDir: true, recordDir: true}
 }
 
 // noRecord is a store with no record.
@@ -54,7 +60,11 @@ func (f *fakeStore) Exists() bool {
 
 func (f *fakeStore) MakeRecordDir() error {
 	f.log("make-record-dir")
-	return f.recordDirErr
+	if f.recordDirErr != nil {
+		return f.recordDirErr
+	}
+	f.stateDir, f.recordDir = true, true
+	return nil
 }
 
 func (f *fakeStore) Lock() (func(), error) {
@@ -62,6 +72,7 @@ func (f *fakeStore) Lock() (func(), error) {
 	if f.lockErr != nil {
 		return nil, f.lockErr
 	}
+	f.stateDir = true
 	f.locked = true
 	if f.afterLock != nil {
 		f.afterLock(f)
@@ -83,6 +94,9 @@ func (f *fakeStore) Append(name string) error {
 	if f.appendErr != nil {
 		return f.appendErr
 	}
+	if !f.recordDir {
+		return errors.New("no such file or directory: the directory of the record was not made")
+	}
 	f.content = append(f.content, name+"\n"...)
 	f.exists, f.state = true, ownership.Readable
 	return nil
@@ -93,6 +107,9 @@ func (f *fakeStore) Replace(content []byte) error {
 	f.log("replace:" + string(content))
 	if f.replaceErr != nil {
 		return f.replaceErr
+	}
+	if !f.recordDir {
+		return &app.ReplaceError{Stage: app.StageCreate, Err: errors.New("no such file or directory: the directory of the record was not made")}
 	}
 	f.content = content
 	f.exists, f.state = true, ownership.Readable
@@ -652,6 +669,150 @@ func TestRetireStopsAtEachStepThatFails(t *testing.T) {
 		var remove *app.RecordRemoveError
 		if _, err := svc.Retire(app.RetireRequest{Binary: binary}); !errors.As(err, &remove) || !errors.Is(err, boom) {
 			t.Fatalf("Retire = %v, want a *RecordRemoveError", err)
+		}
+	})
+}
+
+// A store that fails a rewrite in a way it does not place (a plain error, not a *ReplaceError) is
+// still a failed rewrite, said the same way: the use case wraps it as it wraps a lock failure, and a
+// *ReplaceError the store did place is returned as it is.
+func TestReleaseSaysEveryFailedRewriteAsAReplaceError(t *testing.T) {
+	boom := errors.New("boom")
+	t.Run("a plain error is wrapped, with no stage", func(t *testing.T) {
+		store := recordHolding(t, "claude\nopencode\n")
+		store.replaceErr = boom
+		svc, _ := service(store, false)
+		err := svc.Release("claude")
+		var replace *app.ReplaceError
+		if !errors.As(err, &replace) || replace.Stage != 0 || !errors.Is(err, boom) {
+			t.Fatalf("Release = %v, want a *ReplaceError with no stage that wraps the cause", err)
+		}
+		if !strings.HasSuffix(store.trace(), "release") {
+			t.Errorf("calls = %q: the lock is let go on the way out", store.trace())
+		}
+	})
+	t.Run("a wrapped plain error is wrapped too", func(t *testing.T) {
+		store := recordHolding(t, "claude\n")
+		store.replaceErr = fmt.Errorf("while rewriting: %w", boom)
+		svc, _ := service(store, false)
+		var replace *app.ReplaceError
+		if err := svc.Release("claude"); !errors.As(err, &replace) || !errors.Is(err, boom) {
+			t.Fatalf("Release = %v, want a *ReplaceError that wraps the cause", err)
+		}
+	})
+	t.Run("a *ReplaceError the store placed keeps its stage", func(t *testing.T) {
+		store := recordHolding(t, "claude\n")
+		store.replaceErr = &app.ReplaceError{Stage: app.StageWrite, Err: boom}
+		svc, _ := service(store, false)
+		var replace *app.ReplaceError
+		if err := svc.Release("claude"); !errors.As(err, &replace) || replace.Stage != app.StageWrite {
+			t.Fatalf("Release = %v, want the stage the store gave", err)
+		}
+	})
+}
+
+// Record writes into the directory of the record, and makes it first: a machine that has never
+// recorded anything has no such directory, and the store (like a file system) refuses to write in one
+// that is not there.
+func TestRecordMakesTheDirectoryOfTheRecordBeforeItWritesIntoIt(t *testing.T) {
+	store := noRecord(t)
+	svc, _ := service(store, false)
+	if err := svc.Record("claude"); err != nil {
+		t.Fatalf("Record in a store with no directory = %v", err)
+	}
+	if got, want := store.trace(), "make-record-dir lock read append:claude release"; got != want {
+		t.Errorf("calls = %q, want %q: the directory is made before the lock is taken and the name written", got, want)
+	}
+}
+
+// Retire makes no directory and needs none: Lock makes the state directory, the record of a directory
+// that is not there is absent, and removing it is already done. The store models a machine that has
+// nothing yet.
+func TestRetireNeedsNoDirectoryOfTheRecordAndLockMakesTheStateDirectory(t *testing.T) {
+	store := noRecord(t)
+	svc, binaries := service(store, true)
+	got, err := svc.Retire(app.RetireRequest{Binary: binary, Purge: true})
+	if err != nil {
+		t.Fatalf("Retire in a store with no directory = %v", err)
+	}
+	if got.Binary != app.BinaryRemoved || binaries.there {
+		t.Errorf("Retire = %+v, binary there %v; want the binary removed", got, binaries.there)
+	}
+	if want := "lock read binary-exists binary-remove delete release"; store.trace() != want {
+		t.Errorf("calls = %q, want %q: no directory is made", store.trace(), want)
+	}
+	if !store.stateDir || store.recordDir {
+		t.Errorf("state directory made %v, directory of the record made %v; want the first made by the lock and the second not made", store.stateDir, store.recordDir)
+	}
+	// Without a record there is nothing that says no runtime depends on the binary: no purge, no removal,
+	// and still no directory made.
+	kept := noRecord(t)
+	svc, binaries = service(kept, true)
+	if got, err := svc.Retire(app.RetireRequest{Binary: binary}); err != nil || got.Disposal != ownership.KeepBinary || !binaries.there {
+		t.Errorf("Retire without purge and without a record = %+v, %v, binary there %v; want it kept", got, err, binaries.there)
+	}
+}
+
+// --purge does not skip the rewrite of an unreadable record, and does force the removal after it. Both
+// are pinned (engine/installer/testdata/longterm_pins.golden) and look as if they disagreed:
+//
+//	uninstall/record-unreadable-purge: unregister ends 0, so the script releases the target, and the
+//	  release refuses to rewrite a record nobody could read; exit 1, binary and record in place.
+//	uninstall/record-unreadable-nothing-rewritten-purge: unregister ends 6, so nothing is released and
+//	  the script goes on to assess and retire; purge overrides the unreadable record there; exit 0,
+//	  binary and record gone.
+//
+// Settle and Dispose, which let purge override an unreadable record, are the second half only: the
+// first never reaches them. The test follows the script's two paths through the use case.
+func TestPurgeDoesNotSkipTheRewriteOfAnUnreadableRecordButForcesTheRemovalAfterIt(t *testing.T) {
+	unreadable := func() *fakeStore {
+		store := recordHolding(t, "claude\nopencode\n")
+		store.state = ownership.Unreadable
+		return store
+	}
+
+	// uninstall/record-unreadable and uninstall/record-unreadable-purge: the release refuses, the run ends
+	// there, and nothing is assessed or removed.
+	for _, name := range []string{"without purge", "with purge"} {
+		t.Run("the release is refused "+name, func(t *testing.T) {
+			store := unreadable()
+			svc, binaries := service(store, true)
+			var refused *app.UnreadableError
+			if err := svc.Release("claude"); !errors.As(err, &refused) {
+				t.Fatalf("Release = %v, want an *UnreadableError whatever purge says: it takes no purge", err)
+			}
+			if strings.Contains(store.trace(), "replace") || strings.Contains(store.trace(), "delete") {
+				t.Errorf("calls = %q: the record that could not be read was written or removed", store.trace())
+			}
+			if !store.exists || !binaries.there {
+				t.Errorf("record there %v, binary there %v; want both in place", store.exists, binaries.there)
+			}
+		})
+	}
+
+	// uninstall/record-unreadable-nothing-rewritten: no purge, the guard holds everything.
+	t.Run("nothing was rewritten, no purge", func(t *testing.T) {
+		store := unreadable()
+		svc, binaries := service(store, true)
+		if got := svc.Assess(ownership.Intent{}); got.Verdict != ownership.UnreadableRecord {
+			t.Fatalf("Assess = %v, want UnreadableRecord", got.Verdict)
+		}
+		got, err := svc.Retire(app.RetireRequest{Binary: binary})
+		if err != nil || got.Disposal != ownership.HoldBinaryUnreadable || !binaries.there || !store.exists {
+			t.Errorf("Retire = %+v, %v, binary there %v, record there %v; want everything held", got, err, binaries.there, store.exists)
+		}
+	})
+
+	// uninstall/record-unreadable-nothing-rewritten-purge: purge overrides the unreadable record.
+	t.Run("nothing was rewritten, purge", func(t *testing.T) {
+		store := unreadable()
+		svc, binaries := service(store, true)
+		if got := svc.Assess(ownership.Intent{Purge: true}); got.Verdict != ownership.Retire || got.Observation.State != ownership.Unreadable {
+			t.Fatalf("Assess = %+v, want Retire over an unreadable record", got)
+		}
+		got, err := svc.Retire(app.RetireRequest{Binary: binary, Purge: true})
+		if err != nil || got.Disposal != ownership.DisposeOfBinary || got.Binary != app.BinaryRemoved || binaries.there || store.exists {
+			t.Errorf("Retire = %+v, %v, binary there %v, record there %v; want both gone", got, err, binaries.there, store.exists)
 		}
 	})
 }

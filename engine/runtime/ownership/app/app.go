@@ -28,12 +28,16 @@ var ErrBusy = errors.New("the lock of the record of the installed targets is hel
 type Store interface {
 	// Exists says whether there is a record: a regular file, a link to one followed.
 	Exists() bool
-	// MakeRecordDir makes the directory the record lives in, and its parents, when there is none.
+	// MakeRecordDir makes the directory the record lives in, and its parents (the state directory
+	// among them), when there is none. Append and Replace write into that directory and need it
+	// made; Exists, Read and Delete do not (a record in a directory that is not there is absent),
+	// and neither does Lock.
 	MakeRecordDir() error
 	// Lock takes the lock that makes a read-modify-write over the record one critical section, and
-	// returns the function that lets it go (which may be called twice). A lock that stays taken is
-	// an error for which errors.Is(err, ErrBusy) holds; a state directory the lock needs and cannot
-	// be made is a *StateDirError.
+	// returns the function that lets it go (which may be called twice). The lock lives in the state
+	// directory, which Lock makes when there is none: a caller that locks needs no other directory
+	// made first. A lock that stays taken is an error for which errors.Is(err, ErrBusy) holds; a
+	// state directory that cannot be made is a *StateDirError.
 	Lock() (release func(), err error)
 	// Read returns how the record is found and, when it is Readable, its content. A record that is
 	// there and cannot be read is Unreadable, never Absent and never empty.
@@ -102,7 +106,8 @@ const (
 	StagePublish
 )
 
-// ReplaceError is a rewrite of the record that failed at a stage. The record is as it was.
+// ReplaceError is a rewrite of the record that failed at a stage. The record is as it was. The zero
+// Stage is a failure the store did not place (see replaceFailure), which is said as a failed update.
 type ReplaceError struct {
 	Stage Stage
 	Err   error
@@ -220,7 +225,22 @@ func (s *Service) Release(name string) error {
 	if obs.State == ownership.Unreadable {
 		return &UnreadableError{}
 	}
-	return s.store.Replace(obs.Targets.Without(name).Content())
+	if err := s.store.Replace(obs.Targets.Without(name).Content()); err != nil {
+		return replaceFailure(err)
+	}
+	return nil
+}
+
+// replaceFailure normalizes what a store's Replace fails with, as lock() does for the lock: a
+// *ReplaceError is the store saying at which stage, and is returned as it is; any other error is a
+// rewrite that failed in a way the store did not place, and is wrapped in a *ReplaceError with no
+// stage, so the caller says every failed rewrite the same way.
+func replaceFailure(err error) error {
+	var replace *ReplaceError
+	if errors.As(err, &replace) {
+		return err
+	}
+	return &ReplaceError{Err: err}
 }
 
 // Tracked returns the record as it is now, read without the lock.
@@ -274,6 +294,12 @@ type Retirement struct {
 // nothing depends on the binary or when Purge forces it. A target recorded since the verdict that led
 // here keeps the binary. The binary goes first and the record after it: a binary that cannot be removed
 // leaves the record that vouches for it.
+//
+// Unlike Record and Release it does not make the directory of the record, on purpose, and needs none:
+// the lock lives in the state directory, which Lock makes (so a first retire on a machine that has
+// never recorded anything can take it), the record is read as absent when its directory is not there,
+// and removing a record that is not there is already done. Only a write into the record's directory
+// (Append, Replace) needs MakeRecordDir first.
 func (s *Service) Retire(req RetireRequest) (Retirement, error) {
 	release, err := s.lock()
 	if err != nil {
