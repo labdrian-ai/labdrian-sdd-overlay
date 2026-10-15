@@ -146,8 +146,7 @@ func provisionEngine(t *testing.T, home string) {
 	}
 	builtEngine.once.Do(func() {
 		root := filepath.Dir(filepath.Dir(realBackendBin(t)))
-		// Under the run's own home (testhome.Run), which goes when the run ends.
-		dir, err := os.MkdirTemp(os.Getenv("HOME"), "tui-engine-")
+		dir, err := engineBuildDir(t)
 		if err != nil {
 			builtEngine.err = err
 			return
