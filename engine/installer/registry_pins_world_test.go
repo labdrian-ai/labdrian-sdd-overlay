@@ -1,11 +1,16 @@
 package installer_test
 
-// The world the registry pins run in (registry_pins_repair_test.go, registry_pins_doctor_test.go).
-// They record what bin/labdrian-overlay does to a project's .atl/skill-registry.md -- the repair
-// of its SDD executor rows (`repair-sdd-registry` and `skill-registry refresh`) -- and what
-// `doctor` says of that registry, so that where the script gets the answer from can change
-// without the program changing. They were recorded from the script as it was before the repair
-// moved into the engine (`registry repair-sdd`), and they hold what that program did as it did it.
+// The world the registry pins run in. The pins are in registry_pins_repair_test.go (what
+// `repair-sdd-registry` does to a project's .atl/skill-registry.md) and registry_pins_doctor_test.go
+// (what `skill-registry refresh` and the refresh of `repair-sdd-registry` do around the repair, and
+// what `doctor` says of the registry). They record what bin/labdrian-overlay did, so that where the
+// script gets the answer from can change without the program changing; they were recorded from
+// the script as it was before the repair moved into the engine (`registry repair-sdd`), and they
+// hold what that program did as it did it, but for the lines a later commit changed on purpose
+// (the mode of the registry, the registry line of doctor), whose diffs are in the history of
+// testdata/registry_pins.golden. The same world serves two tests of what the script does now,
+// registry_engine_absent_test.go (no engine to repair with) and registry_doctor_engine_test.go
+// (what doctor asks the engine and does with its answer).
 //
 // The world is the routing pins' (routing_pins_world_test.go): an overlay repository and a home
 // that has the engine. The project the registry belongs to is $HOME/proj.

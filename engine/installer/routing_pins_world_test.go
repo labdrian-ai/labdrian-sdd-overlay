@@ -126,12 +126,36 @@ func TestPinClockDatesEveryCommitOneSecondAfterTheNewestOfTheRepository(t *testi
 	}
 }
 
+func TestTheHomeOfAPinWorldHasANameOfItsOwn(t *testing.T) {
+	// What a command says of the directory it runs in can carry its name (a registry is named after
+	// its project), and a pin must not hold a name that depends on how many temporary directories
+	// the test made before: the worlds of the pins keep their home under the name "home".
+	for name, home := range map[string]string{
+		"a world of the pins":     newPinWorld(t, "x managed\n", map[string]string{"skills/x/SKILL.md": "# x\n"}).home,
+		"a world that bootstraps": newBootstrapWorld(t).home,
+	} {
+		if got := filepath.Base(home); got != "home" {
+			t.Errorf("%s keeps its home in a directory called %q, want \"home\"", name, got)
+		}
+	}
+}
+
+// pinHome makes the home of a world: a directory called "home" in a temporary one.
+func pinHome(t *testing.T) string {
+	t.Helper()
+	home := filepath.Join(t.TempDir(), "home")
+	if err := os.MkdirAll(home, 0o755); err != nil {
+		t.Fatalf("make the home of the world: %v", err)
+	}
+	return home
+}
+
 // newPinWorld builds an overlay repository holding the manifest and the files, with the
 // 'upstream' and 'main' branches at the same commit, which is what apply, capture and the checks
 // expect to find.
 func newPinWorld(t *testing.T, manifest string, files map[string]string) *pinWorld {
 	t.Helper()
-	w := &pinWorld{t: t, script: overlayScript(t), home: t.TempDir(), overlay: t.TempDir()}
+	w := &pinWorld{t: t, script: overlayScript(t), home: pinHome(t), overlay: t.TempDir()}
 	all := map[string]string{"overlay.manifest": manifest}
 	for rel, content := range files {
 		all[rel] = content

@@ -1313,7 +1313,7 @@ WARN: missing codex SDD executor skill: $HOME/.codex/skills/sdd-tasks/SKILL.md
 WARN: missing codex SDD executor skill: $HOME/.codex/skills/sdd-time-estimation/SKILL.md
 WARN: missing codex SDD executor skill: $HOME/.codex/skills/sdd-verify/SKILL.md
 --- registry (file, mode 0644)
-# Skill Registry — 013
+# Skill Registry — home
 
 `sdd-*` phase skills are executor contracts. Gentle may skip them as user-invocable skills, but this registry keeps their paths visible so SDD delegation can resolve the existing installed files.
 

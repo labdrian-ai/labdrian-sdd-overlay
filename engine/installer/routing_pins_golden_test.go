@@ -27,9 +27,9 @@ import (
 //go:embed testdata/routing_pins.golden
 var routingPinsGolden string
 
-// The second record is the registry pins (registry_pins_test.go): what the script does to
-// .atl/skill-registry.md and what doctor says of it, in testdata/registry_pins.golden, read and
-// kept by the rules above.
+// The second record is the registry pins (registry_pins_repair_test.go and
+// registry_pins_doctor_test.go): what the script does to .atl/skill-registry.md and what doctor
+// says of it, in testdata/registry_pins.golden, read and kept by the rules above.
 //
 //go:embed testdata/registry_pins.golden
 var registryPinsGolden string
