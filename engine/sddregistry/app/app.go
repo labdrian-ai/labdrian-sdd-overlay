@@ -11,6 +11,7 @@ package app
 import (
 	"errors"
 	"io/fs"
+	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/sddregistry"
 )
@@ -113,8 +114,12 @@ func (s *Service) Repair(req Request) (Result, error) {
 
 	var rows []sddregistry.Executor
 	var missing []string
+	// The root is joined to the name by one slash. Only the slashes the root ends with are dropped,
+	// to make that one: the ones it has inside stay, because the path is written into the registry
+	// as it was joined and the script joined by concatenation.
+	root := strings.TrimRight(req.SkillsRoot, "/")
 	for _, name := range sddregistry.Executors() {
-		skillPath := req.SkillsRoot + "/" + name + "/SKILL.md"
+		skillPath := root + "/" + name + "/SKILL.md"
 		if !s.skills.IsFile(skillPath) {
 			missing = append(missing, skillPath)
 			continue

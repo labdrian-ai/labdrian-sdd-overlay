@@ -1487,3 +1487,34 @@ exit 1
 ERROR: --cwd is not a directory: $HOME/proj/.atl/file
 --- registry
 (absent)
+@@@ repair/home-with-a-trailing-slash
+exit 0
+--- stdout
+repair-sdd-registry: registry=$HOME/proj/.atl/skill-registry.md target=codex sdd_executors=1 missing=10
+--- stderr
+WARN: missing codex SDD executor skill: $HOME//.codex/skills/sdd-archive/SKILL.md
+WARN: missing codex SDD executor skill: $HOME//.codex/skills/sdd-design/SKILL.md
+WARN: missing codex SDD executor skill: $HOME//.codex/skills/sdd-explore/SKILL.md
+WARN: missing codex SDD executor skill: $HOME//.codex/skills/sdd-init/SKILL.md
+WARN: missing codex SDD executor skill: $HOME//.codex/skills/sdd-onboard/SKILL.md
+WARN: missing codex SDD executor skill: $HOME//.codex/skills/sdd-propose/SKILL.md
+WARN: missing codex SDD executor skill: $HOME//.codex/skills/sdd-spec/SKILL.md
+WARN: missing codex SDD executor skill: $HOME//.codex/skills/sdd-tasks/SKILL.md
+WARN: missing codex SDD executor skill: $HOME//.codex/skills/sdd-time-estimation/SKILL.md
+WARN: missing codex SDD executor skill: $HOME//.codex/skills/sdd-verify/SKILL.md
+--- registry (file, mode 0644)
+# Skill Registry — proj
+
+`sdd-*` phase skills are executor contracts. Gentle may skip them as user-invocable skills, but this registry keeps their paths visible so SDD delegation can resolve the existing installed files.
+
+## Skills
+
+| Skill | Trigger / description | Scope | Path |
+| --- | --- | --- | --- |
+
+| `sdd-apply` | Apply | executor | `$HOME//.codex/skills/sdd-apply/SKILL.md` |
+
+## Loading protocol
+
+1. Match task context and target files against the `Trigger / description` column.
+2. Pass only the matching `Path` values to the subagent under `## Skills to load before work`.

@@ -181,22 +181,36 @@ func TestRepairTellsAFailureToWrite(t *testing.T) {
 	}
 }
 
+// The file of a skill is its root, one slash, its name and SKILL.md: a root that ends with a slash
+// does not put a second one at the join. The slashes the root has inside are the root's own and stay
+// as they are: the script joins by concatenation, so a HOME that ends with a slash gave the rows of
+// the registry `$HOME//.codex/skills/...` (registry_pins.golden holds it,
+// repair/home-with-a-trailing-slash), and a path cleaned here would write another row for the same
+// file. The root the script hands over never ends with a slash; one handed by a person can.
 func TestRepairLooksForASkillAtItsRootAndItsNameAndNowhereElse(t *testing.T) {
-	reg := &fakeRegistry{}
-	asked := map[string]bool{}
-	skills := recordingSkills{asked: asked}
+	for _, tc := range []struct{ name, root, join string }{
+		{"a root as the script hands it over", "/h/.codex/skills", "/h/.codex/skills/"},
+		{"a root that ends with a slash", "/root/", "/root/"},
+		{"a root that ends with two", "/root//", "/root/"},
+		{"the root of the file system", "/", "/"},
+		{"slashes inside the root are its own", "/h//.codex/skills", "/h//.codex/skills/"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			asked := map[string]bool{}
 
-	_, err := New(reg, skills).Repair(Request{Registry: registryPath, SkillsRoot: "/root/"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, name := range sddregistry.Executors() {
-		if want := "/root//" + name + "/SKILL.md"; !asked[want] {
-			t.Errorf("the skill %s was not looked for at %q: %v", name, want, asked)
-		}
-	}
-	if len(asked) != 11 {
-		t.Errorf("%d paths were looked for, want 11: %v", len(asked), asked)
+			_, err := New(&fakeRegistry{}, recordingSkills{asked: asked}).Repair(Request{Registry: registryPath, SkillsRoot: tc.root})
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, name := range sddregistry.Executors() {
+				if want := tc.join + name + "/SKILL.md"; !asked[want] {
+					t.Errorf("the skill %s was not looked for at %q: %v", name, want, asked)
+				}
+			}
+			if len(asked) != 11 {
+				t.Errorf("%d paths were looked for, want 11: %v", len(asked), asked)
+			}
+		})
 	}
 }
 

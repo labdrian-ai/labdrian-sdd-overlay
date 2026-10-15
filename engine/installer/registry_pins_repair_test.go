@@ -216,6 +216,17 @@ func TestRegistryPins_RepairNamesTheProjectAfterItsDirectory(t *testing.T) {
 	pin(t, "repair/cwd-twice", pinRunText(run)+w.showRegistry(filepath.Join(w.home, ".atl", "skill-registry.md")))
 }
 
+// HOME is where the script keeps the skills of a target, and it joins paths by concatenation: a HOME
+// that ends with a slash gives the rows, and the warnings, a path with two slashes in the middle.
+// It is pinned as the script did it; the engine joins the skills root and the name of a skill the
+// same way and does not clean the path it is handed.
+func TestRegistryPins_RepairKeepsTheSlashesOfAHomeThatEndsWithOne(t *testing.T) {
+	w := registryWorld(t)
+	w.installSkill("codex", "sdd-apply", "---\ndescription: Apply\n---\n")
+	w.env = append(w.env, "HOME="+w.home+"/") // the last entry of a name is the one a run gets
+	pinRepair(t, w, "repair/home-with-a-trailing-slash", w.runIn(w.project(), "repair-sdd-registry", "--no-refresh"))
+}
+
 func TestRegistryPins_RepairReplacesARegistryThatIsASymbolicLink(t *testing.T) {
 	w := registryWorld(t)
 	target := filepath.Join(w.home, "elsewhere", "registry.md")
