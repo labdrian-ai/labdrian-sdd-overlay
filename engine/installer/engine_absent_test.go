@@ -55,11 +55,7 @@ func (w *pinWorld) withoutEngineOrGo() {
 		w.t.Fatalf("take the engine out of the home: %v", err)
 	}
 	path := pathWithout(w.t, "go")
-	for i, kv := range w.env {
-		if strings.HasPrefix(kv, "PATH=") {
-			w.env[i] = "PATH=" + path
-		}
-	}
+	w.changePath(func(string) string { return path })
 }
 
 const engineNotFound = "ERROR: engine binary not found at $HOME/.claude/bin/gentle-ai-overlay and go is not installed; cannot continue\n"
@@ -122,11 +118,7 @@ func TestWithNeitherTheEngineNorGoBootstrapStopsBeforeItWritesAnything(t *testin
 	w.write(w.overlay, "bin/overlay", "#!/bin/sh\n")
 	w.write(w.home, ".gentle-ai/backups/upgrade-20260615T175529Z/snapshot.tar.gz", "not read")
 	path := pathWithout(t, "go")
-	for i, kv := range w.env {
-		if strings.HasPrefix(kv, "PATH=") {
-			w.env[i] = "PATH=" + path
-		}
-	}
+	w.changePath(func(string) string { return path })
 
 	run := w.run("bootstrap")
 

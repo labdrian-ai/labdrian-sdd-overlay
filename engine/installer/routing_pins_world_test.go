@@ -16,6 +16,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"sort"
 	"strings"
@@ -79,6 +80,44 @@ func newPinWorld(t *testing.T, manifest string, files map[string]string) *pinWor
 	w.git("checkout", "-b", "main")
 	enginetest.Provision(t, w.home)
 	return w
+}
+
+// withPath returns a copy of env whose PATH entry is what change makes of it. An environment with no
+// PATH entry is an error: a test that edits the PATH of a world must not go on, as if it had, when
+// the script would run on whatever PATH the shell defaults to.
+func withPath(env []string, change func(old string) string) ([]string, error) {
+	out := append([]string(nil), env...)
+	for i, kv := range out {
+		if old, ok := strings.CutPrefix(kv, "PATH="); ok {
+			out[i] = "PATH=" + change(old)
+			return out, nil
+		}
+	}
+	return nil, errors.New("the environment of the world has no PATH entry to change")
+}
+
+func TestWithPathChangesThePathEntryAndRefusesAnEnvironmentWithNone(t *testing.T) {
+	env := []string{"HOME=/h", "PATH=/usr/bin", "LC_ALL=C"}
+	got, err := withPath(env, func(old string) string { return "/fake:" + old })
+	if err != nil || !reflect.DeepEqual(got, []string{"HOME=/h", "PATH=/fake:/usr/bin", "LC_ALL=C"}) {
+		t.Errorf("withPath = %q, %v, want the PATH entry changed and the rest as it was", got, err)
+	}
+	if env[1] != "PATH=/usr/bin" {
+		t.Errorf("withPath changed the environment it was given: %q", env)
+	}
+	if got, err := withPath([]string{"HOME=/h"}, func(old string) string { return "/fake" }); err == nil {
+		t.Errorf("withPath of an environment with no PATH = %q, nil, want an error: the test would go on as if the PATH had been changed", got)
+	}
+}
+
+// changePath edits the PATH of the world, and fails the test when it has none.
+func (w *pinWorld) changePath(change func(old string) string) {
+	w.t.Helper()
+	env, err := withPath(w.env, change)
+	if err != nil {
+		w.t.Fatal(err)
+	}
+	w.env = env
 }
 
 // write puts content at rel under root, making the directories it needs.

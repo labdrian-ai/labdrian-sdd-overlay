@@ -41,11 +41,7 @@ func (w *pinWorld) installFakeGo() string {
 		w.t.Fatalf("write the fake go: %v", err)
 	}
 	w.env = append(w.env, "FAKE_GO_LOG="+log, "FAKE_GO_ENGINE="+enginetest.Binary(w.t))
-	for i, kv := range w.env {
-		if strings.HasPrefix(kv, "PATH=") {
-			w.env[i] = "PATH=" + dir + string(os.PathListSeparator) + strings.TrimPrefix(kv, "PATH=")
-		}
-	}
+	w.changePath(func(old string) string { return dir + string(os.PathListSeparator) + old })
 	return log
 }
 
