@@ -2961,10 +2961,15 @@ doctor_report_registry() {
     return 0
   fi
   local line="${report#*] }"
+  # The engine's codes for a report are 0 (ok), 2 (a warning and no failure) and 1
+  # (a failure); a usage error is 1 too, but it has no line of this shape. Any
+  # other code is a crash or a program that was not found, and a line printed
+  # before it may be half an answer: the registry was not checked.
   case "$rc" in
     0) echo "PASS  $line" ;;
     2) echo "WARN  $line" ;;
-    *) echo "FAIL  $line"; return 1 ;;
+    1) echo "FAIL  $line"; return 1 ;;
+    *) echo "WARN  registry not checked: the engine at $ENGINE_BINARY ended with code $rc on 'status --only registry'; only 0 (ok), 2 (a warning) and 1 (a failure) are answers. Rebuild it with 'labdrian doctor --fix'." ;;
   esac
 }
 

@@ -101,7 +101,14 @@ func TestDoctorSaysTheRegistryWasNotCheckedWhenTheEngineCannotAnswer(t *testing.
 	notChecked := func(binary string) string {
 		return "WARN  registry not checked: the engine at " + binary + " did not answer 'status --only registry' (is it older than this overlay?). Rebuild it with 'labdrian doctor --fix'."
 	}
+	// An engine that ends with a code of its own, the code of a crash or of a program that was not
+	// found, after it printed a line of the right shape: the line may be a half of an answer, so the
+	// registry was not checked. Only 0, 2 and 1 are what the engine says of a registry.
+	endedWith := func(binary, code string) string {
+		return "WARN  registry not checked: the engine at " + binary + " ended with code " + code + " on 'status --only registry'; only 0 (ok), 2 (a warning) and 1 (a failure) are answers. Rebuild it with 'labdrian doctor --fix'."
+	}
 	const binary = "$HOME/.claude/bin/gentle-ai-overlay"
+	const aLine = "[FAIL] registry: r — present but EMPTY"
 	for _, tc := range []struct {
 		name  string
 		says  string
@@ -109,6 +116,11 @@ func TestDoctorSaysTheRegistryWasNotCheckedWhenTheEngineCannotAnswer(t *testing.
 		setup func(w *pinWorld)
 		want  string
 	}{
+		{"an engine that crashes after it printed a line (SIGSEGV)", aLine, "139", nil, endedWith(binary, "139")},
+		{"an engine that aborts after it printed a line (SIGABRT)", aLine, "134", nil, endedWith(binary, "134")},
+		{"an engine that is killed after it printed a line (SIGKILL)", aLine, "137", nil, endedWith(binary, "137")},
+		{"an engine that ends with a code of its own after a line", aLine, "3", nil, endedWith(binary, "3")},
+		{"an engine that ends with the highest code after a line", aLine, "255", nil, endedWith(binary, "255")},
 		{"an engine that ignores the question and prints its whole report", "[OK  ] binary: b\n[FAIL] hook: h\n[OK  ] registry: r", "1", nil, notChecked(binary)},
 		{"an engine that refuses the question", "error: status: unknown", "1", nil, notChecked(binary)},
 		{"an engine that says nothing", "", "1", nil, notChecked(binary)},
