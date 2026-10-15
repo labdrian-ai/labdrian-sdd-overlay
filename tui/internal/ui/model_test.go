@@ -339,8 +339,8 @@ func TestSpinnerAbsentOutsideRunning(t *testing.T) {
 			// For screenResult we need a result.
 			if tc.scr == screenResult {
 				m.result = domain.CommandResult{
-					Action: domain.Action{Name: "Estado", Command: "status"},
-					Output: "some output",
+					Action:      domain.Action{Name: "Estado", Command: "status"},
+					Invocations: printing("some output"),
 				}
 			}
 
@@ -378,8 +378,8 @@ func TestNoDoubleGapInAnyScreen(t *testing.T) {
 	// Result screen.
 	m.scr = screenResult
 	m.result = domain.CommandResult{
-		Action: domain.Action{Name: "Estado", Command: "status"},
-		Output: "ok",
+		Action:      domain.Action{Name: "Estado", Command: "status"},
+		Invocations: printing("ok"),
 	}
 	rendered = m.View()
 	if strings.Contains(rendered, "\n\n\n") {
@@ -399,8 +399,8 @@ func TestWidthResponsiveRendering(t *testing.T) {
 		m = updated.(model)
 		m.scr = screenResult
 		m.result = domain.CommandResult{
-			Action: domain.Action{Name: "Estado", Command: "status"},
-			Output: output,
+			Action:      domain.Action{Name: "Estado", Command: "status"},
+			Invocations: printing(output),
 		}
 		return m
 	}
@@ -493,8 +493,8 @@ func TestScrollClamp(t *testing.T) {
 		lines[i] = "line"
 	}
 	m.result = domain.CommandResult{
-		Action: domain.Action{Name: "Estado", Command: "status"},
-		Output: strings.Join(lines, "\n"),
+		Action:      domain.Action{Name: "Estado", Command: "status"},
+		Invocations: printing(strings.Join(lines, "\n")),
 	}
 
 	max := m.maxScroll()
@@ -554,9 +554,9 @@ func TestErrorBannerOnFailure(t *testing.T) {
 	m := newTestModel(t)
 	m.scr = screenResult
 	m.result = domain.CommandResult{
-		Action: domain.Action{Name: "Aplicar cambios", Command: "apply"},
-		Output: "error output",
-		Err:    fmt.Errorf("exit status 1"),
+		Action:      domain.Action{Name: "Aplicar cambios", Command: "apply"},
+		Invocations: printing("error output"),
+		Err:         fmt.Errorf("exit status 1"),
 	}
 
 	rendered := m.View()
@@ -578,10 +578,10 @@ func TestDegradedBannerOnExitTwo(t *testing.T) {
 	m := newTestModel(t)
 	m.scr = screenResult
 	m.result = domain.CommandResult{
-		Action:   domain.Action{Name: "Aplicar cambios", Command: "apply"},
-		Output:   "degraded output",
-		Err:      fmt.Errorf("exit status 2"),
-		ExitCode: 2,
+		Action:      domain.Action{Name: "Aplicar cambios", Command: "apply"},
+		Invocations: printing("degraded output"),
+		Err:         fmt.Errorf("exit status 2"),
+		ExitCode:    2,
 	}
 
 	rendered := m.View()
@@ -601,9 +601,9 @@ func TestEmptyVerdictNote(t *testing.T) {
 	m := newTestModel(t)
 	m.scr = screenResult
 	m.result = domain.CommandResult{
-		Action:   domain.Action{Name: "Verificar sincronización", Command: "sync-check", ResultKind: domain.ResultSyncDashboard},
-		Output:   "some raw output",
-		Verdicts: nil,
+		Action:      domain.Action{Name: "Verificar sincronización", Command: "sync-check", ResultKind: domain.ResultSyncDashboard},
+		Invocations: printing("some raw output"),
+		Verdicts:    nil,
 	}
 
 	rendered := m.View()
@@ -621,9 +621,9 @@ func TestEmptyVerdictNote(t *testing.T) {
 	// NEGATIVE PATH: an action that is only a transcript, with zero verdicts,
 	// must NOT show the note -- guards the ResultKind gate in viewResult.
 	m.result = domain.CommandResult{
-		Action:   domain.Action{Name: "Estado", Command: "status"},
-		Output:   "some output",
-		Verdicts: nil,
+		Action:      domain.Action{Name: "Estado", Command: "status"},
+		Invocations: printing("some output"),
+		Verdicts:    nil,
 	}
 	rendered = m.View()
 	if strings.Contains(rendered, "No se pudieron analizar veredictos") {
@@ -640,12 +640,12 @@ func TestEmptyVerdictNote_FollowsTheDeclaredKindNotTheCommand(t *testing.T) {
 	m := newTestModel(t)
 	m.scr = screenResult
 
-	m.result = domain.CommandResult{Action: domain.Action{Name: "Verificar", Command: "sync-check"}, Output: "raw"}
+	m.result = domain.CommandResult{Action: domain.Action{Name: "Verificar", Command: "sync-check"}, Invocations: printing("raw")}
 	if strings.Contains(m.View(), note) {
 		t.Error("an action called sync-check that declares no report showed the note: the command string is being read")
 	}
 
-	m.result = domain.CommandResult{Action: domain.Action{Name: "Comparar", Command: "compare", ResultKind: domain.ResultSyncDashboard}, Output: "raw"}
+	m.result = domain.CommandResult{Action: domain.Action{Name: "Comparar", Command: "compare", ResultKind: domain.ResultSyncDashboard}, Invocations: printing("raw")}
 	if !strings.Contains(m.View(), note) {
 		t.Error("an action that declares a report showed no note: it is being decided by the command string")
 	}
@@ -678,8 +678,8 @@ func TestFooterLegendCorrectness(t *testing.T) {
 	// Result screen footer.
 	m.scr = screenResult
 	m.result = domain.CommandResult{
-		Action: domain.Action{Name: "Estado", Command: "status"},
-		Output: "ok",
+		Action:      domain.Action{Name: "Estado", Command: "status"},
+		Invocations: printing("ok"),
 	}
 	rendered = m.View()
 	if !strings.Contains(rendered, "esc/enter") {
@@ -819,8 +819,8 @@ func TestSuccessBannerOnResult(t *testing.T) {
 	m := newTestModel(t)
 	m.scr = screenResult
 	m.result = domain.CommandResult{
-		Action: domain.Action{Name: "Estado", Command: "status"},
-		Output: "ok",
+		Action:      domain.Action{Name: "Estado", Command: "status"},
+		Invocations: printing("ok"),
 	}
 	rendered := m.View()
 	if !strings.Contains(rendered, "✓ Completado") {
@@ -1025,7 +1025,7 @@ func TestViewDashboardShowsAgentsSection(t *testing.T) {
 				},
 			},
 		},
-		Output: "ok",
+		Invocations: printing("ok"),
 	}
 
 	rendered := stripANSI(m.viewDashboard())
@@ -1048,7 +1048,7 @@ func TestViewDashboardNoAgentsSectionWhenEmpty(t *testing.T) {
 		Verdicts: []domain.TargetVerdict{
 			{Target: "opencode", Status: domain.SyncHealthy, Action: "in sync"},
 		},
-		Output: "ok",
+		Invocations: printing("ok"),
 	}
 
 	rendered := stripANSI(m.viewDashboard())

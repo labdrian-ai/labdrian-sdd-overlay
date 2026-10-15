@@ -34,7 +34,7 @@ func TestViewDashboard_ShowsOriginBehindIndicator(t *testing.T) {
 				Action:           "run 'git pull' to update your local clone",
 			},
 		},
-		Output: "ok",
+		Invocations: printing("ok"),
 	}
 
 	rendered := stripANSI(m.viewDashboard())
@@ -64,7 +64,7 @@ func TestViewDashboard_ZeroOriginBehind_NoIndicator(t *testing.T) {
 				Action:           "in sync with gentle-ai (healthy)",
 			},
 		},
-		Output: "ok",
+		Invocations: printing("ok"),
 	}
 
 	rendered := stripANSI(m.viewDashboard())
@@ -91,7 +91,7 @@ func TestViewDashboard_NeverHealthyWhileBehindOrigin(t *testing.T) {
 			Status:            domain.Classify(0, 0, 3, domain.RepoBehindOriginNA, false),
 			Action:            "run 'git pull' to update your local clone",
 		}},
-		Output: "ok",
+		Invocations: printing("ok"),
 	}
 
 	rendered := stripANSI(m.viewDashboard())
@@ -152,7 +152,7 @@ func TestViewDashboard_TheStatusOfAVerdictIsTheOneTheDashboardShows(t *testing.T
 					Action:             "next step",
 					Status:             domain.Classify(tc.upstream, tc.notDeployed, tc.behindOrigin, tc.behindRelease, tc.digestMismatch),
 				}},
-				Output: "ok",
+				Invocations: printing("ok"),
 			}
 
 			rendered := stripANSI(m.viewDashboard())
@@ -398,7 +398,7 @@ func TestViewDashboard_ShowsReleaseBehindIndicator(t *testing.T) {
 				Action:            "run 'labdrian self-update' to fetch release v1.4.0",
 			},
 		},
-		Output: "ok",
+		Invocations: printing("ok"),
 	}
 
 	rendered := stripANSI(m.viewDashboard())
@@ -442,9 +442,9 @@ func TestViewDashboard_VersionLineRendering(t *testing.T) {
 			m.width = 80
 			m.scr = screenResult
 			m.result = domain.CommandResult{
-				Action:   domain.Action{Name: "Verificar sincronización", Command: "sync-check"},
-				Verdicts: []domain.TargetVerdict{tc.verdict},
-				Output:   "ok",
+				Action:      domain.Action{Name: "Verificar sincronización", Command: "sync-check"},
+				Verdicts:    []domain.TargetVerdict{tc.verdict},
+				Invocations: printing("ok"),
 			}
 			rendered := stripANSI(m.viewDashboard())
 			if !strings.Contains(rendered, tc.wantSubstr) {
@@ -463,9 +463,9 @@ func TestViewDashboard_EmptyRecordedVersionRendersNoVersionLine(t *testing.T) {
 	m.width = 80
 	m.scr = screenResult
 	m.result = domain.CommandResult{
-		Action:   domain.Action{Name: "Verificar sincronización", Command: "sync-check"},
-		Verdicts: []domain.TargetVerdict{{Target: "claude", Status: domain.SyncHealthy}},
-		Output:   "ok",
+		Action:      domain.Action{Name: "Verificar sincronización", Command: "sync-check"},
+		Verdicts:    []domain.TargetVerdict{{Target: "claude", Status: domain.SyncHealthy}},
+		Invocations: printing("ok"),
 	}
 	rendered := stripANSI(m.viewDashboard())
 	if strings.Contains(rendered, "versión:") {

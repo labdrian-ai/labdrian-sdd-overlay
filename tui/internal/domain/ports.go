@@ -42,8 +42,8 @@ type Execution struct {
 	// Output is what the backend wrote, standard output and standard error
 	// together, in the order it wrote them.
 	Output string
-	// ExitCode is the exit status of the process; -1 when it did not end by
-	// exiting (it could not be started, or it was killed).
+	// ExitCode is the exit status of the process; NoExitStatus when it did not
+	// end by exiting (it could not be started, or it was killed).
 	ExitCode int
 	// Err is nil when the backend exited with status 0, and says why not
 	// otherwise.

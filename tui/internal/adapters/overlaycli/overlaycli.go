@@ -61,9 +61,9 @@ func (c CLI) Run(args []string) domain.Execution {
 	run := domain.Execution{Output: string(out), Err: err, Verdicts: parseSyncCheck(string(out))}
 	if err != nil {
 		// The exit code lets callers tell a hard failure (exit 1) from a
-		// degraded/warning result (exit 2); -1 when the process did not exit
-		// on its own.
-		run.ExitCode = -1
+		// degraded/warning result (exit 2); domain.NoExitStatus when the
+		// process did not exit on its own.
+		run.ExitCode = domain.NoExitStatus
 		var exited *exec.ExitError
 		if errors.As(err, &exited) {
 			run.ExitCode = exited.ExitCode()

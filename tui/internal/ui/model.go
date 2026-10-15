@@ -309,10 +309,11 @@ func (m model) contentWidth() int {
 // maxScroll returns the maximum valid scroll offset for the output pane,
 // clamped to max(0, totalLines-viewport).
 func (m model) maxScroll() int {
-	if m.result.Output == "" {
+	output := transcript(m.result.Invocations)
+	if output == "" {
 		return 0
 	}
-	lines := splitOutputLines(m.result.Output)
+	lines := splitOutputLines(output)
 	viewport := m.height - 10
 	if len(m.result.Verdicts) > 0 {
 		viewport -= len(m.result.Verdicts)*3 + 3

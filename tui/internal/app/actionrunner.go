@@ -4,9 +4,6 @@
 package app
 
 import (
-	"fmt"
-	"strings"
-
 	"github.com/labdrian-ai/labdrian-sdd-overlay/tui/internal/domain"
 )
 
@@ -38,62 +35,53 @@ func NewActionRunner(backend domain.Backend, catalog domain.TargetCatalog) Actio
 // --target is emitted at all. Nested Also actions contribute their own
 // invocations, routed and appended after the primary action's.
 //
-// The result carries a text transcript of the invocations (the "$ ..." line of
-// each, what it printed, and how it failed) because that is what the screen
-// shows; the structured form of an invocation and its outcome is the next
-// slice of T3.
+// The result records each invocation as a value, in order, with what the
+// backend left behind or why the call was refused; the screen renders the
+// transcript from them. The result's failure is the worst of the invocations',
+// and an action that declares its result a sync-check report carries the
+// verdicts the executions hold.
 func (r ActionRunner) Run(action domain.Action, selected, shown []domain.Target) domain.CommandResult {
 	res := domain.CommandResult{Action: action, Targets: selected}
 	scope := domain.TargetScope{Shown: shown, Catalog: r.catalog}
 
 	argSets := domain.AllArgSets(action, selected, scope.CoversAll(selected))
 
-	var sb strings.Builder
 	severity := 0
-	// Aggregate by worst severity seen across all invocations in this
-	// CommandResult, not "last failing invocation wins": a later degraded
-	// (exit 2) invocation must never mask an earlier hard failure (or vice
-	// versa) once the Also merge concatenates invocations from different
-	// backend subcommands into this loop.
-	fail := func(err error, exitCode int) {
-		if sev := domain.InvocationSeverity(err, exitCode); sev > severity {
-			severity = sev
-			res.Err = err
-			res.ExitCode = exitCode
-		}
-	}
-	for i, args := range argSets {
-		if i > 0 {
-			sb.WriteString("\n")
-		}
-		sb.WriteString(fmt.Sprintf("$ bin/labdrian-overlay %s\n", strings.Join(args, " ")))
+	for _, args := range argSets {
+		inv := r.invoke(scope, args)
+		res.Invocations = append(res.Invocations, inv)
 
-		// `all` is defined by the backend when it runs, so verify it still
-		// means what the operator saw; if it cannot be verified, do not run.
-		if domain.UsesTargetAll(args) {
-			if err := scope.ConfirmUnchanged(); err != nil {
-				sb.WriteString(fmt.Sprintf("[omitido: %v]\n", err))
-				fail(err, -1)
-				continue
-			}
-		}
-
-		run := r.backend.Run(args)
 		// An action that declares its result a sync-check report shows the
 		// verdicts of every invocation, in the order they ran; any other action
 		// shows its transcript only, whatever its output looked like.
 		if action.ResultKind == domain.ResultSyncDashboard {
-			res.Verdicts = append(res.Verdicts, run.Verdicts...)
+			res.Verdicts = append(res.Verdicts, inv.Run.Verdicts...)
 		}
-		sb.WriteString(run.Output)
-		if run.Err != nil {
-			sb.WriteString(fmt.Sprintf("\n[exit error: %v]\n", run.Err))
-			// The exit code lets callers tell a hard failure (exit 1) from a
-			// degraded/warning result (exit 2).
-			fail(run.Err, run.ExitCode)
+
+		// Aggregate by worst severity seen across all invocations in this
+		// CommandResult, not "last failing invocation wins": a later degraded
+		// (exit 2) invocation must never mask an earlier hard failure (or vice
+		// versa) once the Also merge concatenates invocations from different
+		// backend subcommands into this loop. The exit code lets callers tell a
+		// hard failure (exit 1) from a degraded/warning result (exit 2).
+		if sev := domain.InvocationSeverity(inv.Err(), inv.ExitCode()); sev > severity {
+			severity = sev
+			res.Err = inv.Err()
+			res.ExitCode = inv.ExitCode()
 		}
 	}
-
-	res.Output = sb.String()
 	return res
+}
+
+// invoke makes one invocation: it runs args through the backend, unless it is a
+// `--target all` that cannot be verified. `all` is defined by the backend when
+// it runs, so verify it still means what the operator saw; if it cannot be
+// verified, do not run, and say why.
+func (r ActionRunner) invoke(scope domain.TargetScope, args []string) domain.Invocation {
+	if domain.UsesTargetAll(args) {
+		if err := scope.ConfirmUnchanged(); err != nil {
+			return domain.Invocation{Args: args, Refusal: err}
+		}
+	}
+	return domain.Invocation{Args: args, Run: r.backend.Run(args)}
 }
