@@ -1314,6 +1314,25 @@ route_tar_path() {
 # bootstrap
 # ---------------------------------------------------------------------------
 
+# repo_has_commit succeeds when the repository in the current directory has a
+# commit and fails when it has none yet; it dies when git cannot say. "No commit
+# yet" is a HEAD that names a branch that does not exist, and nothing else:
+# a branch whose commit is gone, a ref that is not one, a HEAD that is a commit
+# that is gone, a repository git cannot open are all errors, not an empty
+# repository, and must not be committed over.
+repo_has_commit() {
+  if git rev-parse --verify --quiet 'HEAD^{commit}' >/dev/null 2>&1; then
+    return 0
+  fi
+  local head_ref status=0
+  if head_ref="$(git symbolic-ref --quiet HEAD 2>/dev/null)"; then
+    git show-ref --verify --quiet "$head_ref" >/dev/null 2>&1 || status=$?
+    # show-ref exits 1 for a ref that is not there; any other failure is git's.
+    [[ "$status" -eq 1 ]] && return 1
+  fi
+  die "cannot read the history of $(pwd): git cannot tell whether HEAD has a commit (a corrupt repository?); nothing was committed"
+}
+
 cmd_bootstrap() {
   # The engine says where each row goes (manifest_routes_load below), and
   # bootstrap writes a repository and commits to it before it asks: make the
@@ -1352,15 +1371,15 @@ cmd_bootstrap() {
   # 4. Stage scaffold (bin/overlay itself is already here; stage it too)
   git add README.md overlay.manifest .gitignore bin/overlay
 
-  # 5. Initial commit (only if none exists). The log is captured and then tested:
-  # `git log | head -1 | grep -q .` under pipefail loses a race, because head and
-  # grep leave as soon as they have a line, and when git log is still writing it
-  # is killed by SIGPIPE, the pipeline fails, and the guard reads "no commit yet"
-  # for a repository that has them (so a second bootstrap stopped here one run in
-  # three, trying to commit what is committed). Same reason as the tar listing below.
-  local commits
-  commits="$(git log --oneline 2>/dev/null || true)"
-  if [[ -z "$commits" ]]; then
+  # 5. Initial commit (only if none exists). Whether there is a commit is asked of
+  # git's plumbing and not of a pipeline: `git log | head -1 | grep -q .` under
+  # pipefail loses a race, because head and grep leave as soon as they have a
+  # line, and when git log is still writing it is killed by SIGPIPE, the pipeline
+  # fails, and the guard reads "no commit yet" for a repository that has them (so
+  # a second bootstrap stopped here one run in three, trying to commit what is
+  # committed). And `git log ... || true` read any failure as "no commit yet":
+  # see repo_has_commit.
+  if ! repo_has_commit; then
     git commit -m "chore: initial overlay scaffold"
   fi
 
