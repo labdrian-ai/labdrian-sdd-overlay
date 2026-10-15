@@ -4,84 +4,112 @@ exit 0
 PASS  registry: $HOME/proj/.atl/skill-registry.md — not present (project may not use the overlay)
 --- summary
 doctor: OK — required checks passed (review any WARN above).
+--- failed checks
+(nothing)
 @@@ doctor/registry-project-only
 exit 0
 --- registry
 WARN  registry: $HOME/proj/.atl/skill-registry.md — present but scoped block(s) missing: minimalism-contract-scope, anti-generic-design-scope (run 'labdrian install-hooks' or propagate)
 --- summary
 doctor: OK — required checks passed (review any WARN above).
+--- failed checks
+(nothing)
 @@@ doctor/registry-overlay-only
 exit 0
 --- registry
 WARN  registry: $OVERLAY/.atl/skill-registry.md — present but scoped block(s) missing: minimalism-contract-scope, anti-generic-design-scope (run 'labdrian install-hooks' or propagate)
 --- summary
 doctor: OK — required checks passed (review any WARN above).
+--- failed checks
+(nothing)
 @@@ doctor/registry-both-and-the-overlay-wins
 exit 0
 --- registry
 WARN  registry: $OVERLAY/.atl/skill-registry.md — present but scoped block(s) missing: minimalism-contract-scope, anti-generic-design-scope (run 'labdrian install-hooks' or propagate)
 --- summary
 doctor: OK — required checks passed (review any WARN above).
+--- failed checks
+(nothing)
 @@@ doctor/registry-overlay-empty-and-project-fine
 exit 1
 --- registry
 FAIL  registry: $OVERLAY/.atl/skill-registry.md — present but EMPTY — run skill-registry refresh; do NOT conclude skills are absent (an empty registry is inconclusive, not zero)
 --- summary
 doctor: FAIL — one or more required checks did not pass (see above).
+--- failed checks
+FAIL  registry: $OVERLAY/.atl/skill-registry.md — present but EMPTY — run skill-registry refresh; do NOT conclude skills are absent (an empty registry is inconclusive, not zero)
 @@@ doctor/registry-overlay-fine-and-project-empty
 exit 0
 --- registry
 WARN  registry: $OVERLAY/.atl/skill-registry.md — present but scoped block(s) missing: minimalism-contract-scope, anti-generic-design-scope (run 'labdrian install-hooks' or propagate)
 --- summary
 doctor: OK — required checks passed (review any WARN above).
+--- failed checks
+(nothing)
 @@@ doctor/registry-zero-bytes-in-the-overlay
 exit 1
 --- registry
 FAIL  registry: $OVERLAY/.atl/skill-registry.md — present but EMPTY — run skill-registry refresh; do NOT conclude skills are absent (an empty registry is inconclusive, not zero)
 --- summary
 doctor: FAIL — one or more required checks did not pass (see above).
+--- failed checks
+FAIL  registry: $OVERLAY/.atl/skill-registry.md — present but EMPTY — run skill-registry refresh; do NOT conclude skills are absent (an empty registry is inconclusive, not zero)
 @@@ doctor/registry-zero-bytes-in-the-project
 exit 1
 --- registry
 FAIL  registry: $HOME/proj/.atl/skill-registry.md — present but EMPTY — run skill-registry refresh; do NOT conclude skills are absent (an empty registry is inconclusive, not zero)
 --- summary
 doctor: FAIL — one or more required checks did not pass (see above).
+--- failed checks
+FAIL  registry: $HOME/proj/.atl/skill-registry.md — present but EMPTY — run skill-registry refresh; do NOT conclude skills are absent (an empty registry is inconclusive, not zero)
 @@@ doctor/registry-white-space-only
 exit 1
 --- registry
 FAIL  registry: $HOME/proj/.atl/skill-registry.md — present but EMPTY — run skill-registry refresh; do NOT conclude skills are absent (an empty registry is inconclusive, not zero)
 --- summary
 doctor: FAIL — one or more required checks did not pass (see above).
+--- failed checks
+FAIL  registry: $HOME/proj/.atl/skill-registry.md — present but EMPTY — run skill-registry refresh; do NOT conclude skills are absent (an empty registry is inconclusive, not zero)
 @@@ doctor/registry-a-single-newline
 exit 1
 --- registry
 FAIL  registry: $HOME/proj/.atl/skill-registry.md — present but EMPTY — run skill-registry refresh; do NOT conclude skills are absent (an empty registry is inconclusive, not zero)
 --- summary
 doctor: FAIL — one or more required checks did not pass (see above).
+--- failed checks
+FAIL  registry: $HOME/proj/.atl/skill-registry.md — present but EMPTY — run skill-registry refresh; do NOT conclude skills are absent (an empty registry is inconclusive, not zero)
 @@@ doctor/registry-no-scoped-block
 exit 0
 --- registry
 WARN  registry: $HOME/proj/.atl/skill-registry.md — present but scoped block(s) missing: minimalism-contract-scope, anti-generic-design-scope (run 'labdrian install-hooks' or propagate)
 --- summary
 doctor: OK — required checks passed (review any WARN above).
+--- failed checks
+(nothing)
 @@@ doctor/registry-both-scoped-blocks
 exit 0
 --- registry
 PASS  registry: $HOME/proj/.atl/skill-registry.md — scoped block present
 --- summary
 doctor: OK — required checks passed (review any WARN above).
+--- failed checks
+(nothing)
 @@@ doctor/registry-one-scoped-block
 exit 0
 --- registry
 WARN  registry: $HOME/proj/.atl/skill-registry.md — present but scoped block(s) missing: anti-generic-design-scope (run 'labdrian install-hooks' or propagate)
 --- summary
 doctor: OK — required checks passed (review any WARN above).
+--- failed checks
+(nothing)
 @@@ doctor/registry-overlay-one-is-a-directory
 exit 0
 --- registry
 WARN  registry: $HOME/proj/.atl/skill-registry.md — present but scoped block(s) missing: minimalism-contract-scope, anti-generic-design-scope (run 'labdrian install-hooks' or propagate)
 --- summary
 doctor: OK — required checks passed (review any WARN above).
+--- failed checks
+(nothing)
 @@@ refresh/by-default
 exit 0
 --- stdout

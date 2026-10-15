@@ -14,9 +14,12 @@ import (
 )
 
 // doctorRegistryPin is what a run of doctor says of the registry: how it ended, the lines that
-// speak of one, and the line that sums the run up (it is on stderr when a check failed).
+// speak of one, the line that sums the run up (it is on stderr when a check failed), and every
+// check that failed, whatever it checked. The last tells which check made a run fail: a failed
+// run whose only failed check is the registry's line is the registry's doing, and a failed check
+// of anything else shows in the pin and does not hide behind the exit code and the summary.
 func doctorRegistryPin(run pinRun) string {
-	var registry, summary []string
+	var registry, summary, failed []string
 	for _, line := range strings.Split(run.Stdout+run.Stderr, "\n") {
 		switch {
 		case strings.HasPrefix(line, "doctor:"):
@@ -24,9 +27,12 @@ func doctorRegistryPin(run pinRun) string {
 		case strings.Contains(strings.ToLower(line), "registry"):
 			registry = append(registry, line)
 		}
+		if strings.HasPrefix(line, "FAIL  ") {
+			failed = append(failed, line)
+		}
 	}
 	return "exit " + strconv.Itoa(run.Exit) + "\n--- registry\n" + linesText(registry) +
-		"--- summary\n" + linesText(summary)
+		"--- summary\n" + linesText(summary) + "--- failed checks\n" + linesText(failed)
 }
 
 // linesText is lines as a pin records them, one to a line.
