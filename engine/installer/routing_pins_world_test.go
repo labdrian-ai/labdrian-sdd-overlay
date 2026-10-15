@@ -40,6 +40,22 @@ type pinRun struct {
 	Exit   int
 }
 
+// pinEnv is the environment the script runs in: the home and the overlay it is told of, an identity
+// for git, the PATH of the machine, and the C locale, so that the words git and the tools say are
+// the ones of the record whatever the machine's own locale is.
+func pinEnv(home, overlay string) []string {
+	return []string{
+		"HOME=" + home,
+		"OVERLAY_DIR=" + overlay,
+		"GIT_AUTHOR_NAME=test",
+		"GIT_AUTHOR_EMAIL=test@test.com",
+		"GIT_COMMITTER_NAME=test",
+		"GIT_COMMITTER_EMAIL=test@test.com",
+		"LC_ALL=C",
+		"PATH=" + os.Getenv("PATH"),
+	}
+}
+
 // newPinWorld builds an overlay repository holding the manifest and the files, with the
 // 'upstream' and 'main' branches at the same commit, which is what apply, capture and the checks
 // expect to find.
@@ -53,15 +69,7 @@ func newPinWorld(t *testing.T, manifest string, files map[string]string) *pinWor
 	for rel, content := range all {
 		w.write(w.overlay, rel, content)
 	}
-	w.env = []string{
-		"HOME=" + w.home,
-		"OVERLAY_DIR=" + w.overlay,
-		"GIT_AUTHOR_NAME=test",
-		"GIT_AUTHOR_EMAIL=test@test.com",
-		"GIT_COMMITTER_NAME=test",
-		"GIT_COMMITTER_EMAIL=test@test.com",
-		"PATH=" + os.Getenv("PATH"),
-	}
+	w.env = pinEnv(w.home, w.overlay)
 	w.git("init")
 	w.git("config", "user.email", "test@test.com")
 	w.git("config", "user.name", "test")
@@ -108,7 +116,7 @@ func (w *pinWorld) run(args ...string) pinRun {
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	err := cmd.Run()
-	run := pinRun{Stdout: w.normalize(stdout.String()), Stderr: w.normalize(stderr.String())}
+	run := pinRun{Stdout: w.normalize(stdout.String()), Stderr: gitChatter.ReplaceAllString(w.normalize(stderr.String()), "")}
 	var exit *exec.ExitError
 	switch {
 	case err == nil:
@@ -122,7 +130,10 @@ func (w *pinWorld) run(args ...string) pinRun {
 
 // The parts of an output that a run makes up and that a pin must not carry: the places the world
 // lives in, the moment a backup or a deploy happened, the commit a branch is at, and the day; and
-// the advice git gives about a branch name, which its version decides.
+// the words git says on its own account, which its version decides: the advice it gives about a
+// branch name, the way it spells that a merge has nothing to do, and the notice of every checkout
+// it makes on stderr ("Already on", "Switched to"). What the script and the engine say is the pin;
+// what git says of the checkouts they make is not.
 var (
 	backupStamp = regexp.MustCompile(`[0-9]{8}T[0-9]{6}Z(-[0-9]+)?`)
 	commitLine  = regexp.MustCompile(`\[([^\]]+?) [0-9a-f]{7,}\]`)
@@ -130,6 +141,8 @@ var (
 	moment      = regexp.MustCompile(`[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z`)
 	calendarDay = regexp.MustCompile(`[0-9]{4}-[0-9]{2}-[0-9]{2}`)
 	gitAdvice   = regexp.MustCompile(`(?m)^hint:.*\n`)
+	upToDate    = regexp.MustCompile(`Already up-to-date\.`)
+	gitChatter  = regexp.MustCompile(`(?m)^(Already on '[^']*'|Switched to (a new )?branch '[^']*')\n`)
 )
 
 // normalize replaces what varies from one run to the next by a name.
@@ -141,6 +154,7 @@ func (w *pinWorld) normalize(s string) string {
 	s = oneLineLog.ReplaceAllString(s, "<SHA> ")
 	s = moment.ReplaceAllString(s, "<TIME>")
 	s = gitAdvice.ReplaceAllString(s, "")
+	s = upToDate.ReplaceAllString(s, "Already up to date.")
 	return calendarDay.ReplaceAllString(s, "<DAY>")
 }
 

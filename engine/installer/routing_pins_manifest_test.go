@@ -38,6 +38,20 @@ var pinQuirkyFiles = map[string]string{
 	"skills/last/SKILL.md":     "# last\n",
 }
 
+// The quirks the pins keep, and why they are kept and not fixed:
+//
+//   - A line that ends in a carriage return (a manifest with Windows line ends) keeps it on its
+//     last column, so "crlf/SKILL.md managed\r" is a row tagged "managed\r", which is not
+//     "managed". Apply, status and sync-check still handle the row (they read every row and need
+//     only its path), but capture, restore, the backup and the digest read the managed rows, and
+//     the row is not one of them: capture SKIPS it SILENTLY, with no line for it and no warning.
+//     That is what the script did (awk's $2 == "managed" is false for "managed\r"), the engine
+//     keeps it on purpose (skills.ReadManifestRows), and fixing it changes what a command prints
+//     and copies for such a manifest, which is a decision of the owner, not of this move. The
+//     live file the test writes for the row is there to show that capture leaves it alone.
+//   - A comment that starts after a column is a column ("noted/SKILL.md managed # not a column"
+//     is a row with the route "#", which no one knows, so the skill route), and a row with no
+//     tag, or a last line with no line end, is read as any other.
 func TestRoutingPins_ManifestReadingKeepsItsQuirks(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test in -short mode")
@@ -47,20 +61,16 @@ func TestRoutingPins_ManifestReadingKeepsItsQuirks(t *testing.T) {
 	pin(t, "quirks/apply", pinRunText(w.run("apply", "--target", "claude")))
 	pin(t, "quirks/files", w.tree(w.home))
 	w.write(w.home, ".claude/skills/tabbed/SKILL.md", "# tabbed live\n")
+	// The row of this file is tagged "managed\r": capture does not copy it (see above).
 	w.write(w.home, ".claude/skills/crlf/SKILL.md", "# crlf live\n")
 	pin(t, "quirks/capture", pinRunText(w.run("capture", "--target", "claude")))
 	pin(t, "quirks/capture-upstream", w.branchFiles("upstream"))
 }
 
-// An unrouted longterm-mem row is refused wherever a command reaches it. The managed one is
-// reached by every command; the custom one only by the commands that read every row.
-//
-// The record of the commands that stop at the row (refused-*) is the one part of the pins that
-// changed when the routing moved into the engine. The script used to learn the route of a row
-// as it reached it, so a command had acted on every row before the refused one when it stopped:
-// apply had copied them, status and sync-check had said them, restore had put them back. The
-// engine answers for the whole manifest or not at all, so now the command stops before it acts
-// on any row. Everything else in the record is as it was.
+// Two manifests with a longterm-mem row the script cannot place (no route, an unknown one). The
+// managed row is asked for by every command; the custom row only by the commands that read every
+// row (status, sync-check, apply), because capture, restore, the backup and the digest read the
+// managed rows alone and the engine places, and refuses, only the rows it is asked for.
 const pinUnroutedCustomManifest = `skill-a/SKILL.md   managed
 GADU.md   managed   agent
 longterm-mem/internal/foo.go   custom
@@ -78,6 +88,22 @@ var pinUnroutedFiles = map[string]string{
 	"agents/GADU.md":          "# GADU claude\n",
 }
 
+// The record of the commands that stop at the row (refused-*) is the one part of the pins that
+// changed when the routing moved into the engine. The script used to learn the route of a row as
+// it reached it, so a command had acted on every row before the refused one when it stopped:
+// apply had copied them, status and sync-check had said them, restore had put them back. The
+// engine answers for the whole manifest or not at all, so now the command stops before it acts on
+// any row (the owner's decision of 2026-10-15). Everything else in the record is as it was.
+//
+// Capture of the custom manifest still succeeds, as it did, and that is no asymmetry of this
+// change: capture reads the managed rows alone, and the row that cannot be placed is a custom
+// one, so capture never asks for it (before and after, exit 0 and the files of the managed rows
+// copied). What differs from the old record in its output is a consequence of the apply before
+// it: apply no longer deploys GADU.md before it refuses, so the live GADU.md that capture looks
+// for is not there and capture says so. The managed manifest shows capture refusing, as status
+// and apply do. Whether the commands that read the managed rows should also refuse a manifest
+// whose custom row cannot be placed is a rule the script never had, and is listed in the ledger
+// as a decision for the owner.
 func TestRoutingPins_AnUnroutedLongtermMemRowIsRefusedWhereItIsReached(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test in -short mode")

@@ -88,8 +88,7 @@ Deploy complete.
 ==> Returned to branch: main
 ==> No 'origin' remote — skipping main push
 --- stderr
-Already on 'main'
-Already on 'main'
+(nothing)
 @@@ apply/opencode
 exit 0
 --- stdout
@@ -105,8 +104,7 @@ Deploy complete.
 ==> Returned to branch: main
 ==> No 'origin' remote — skipping main push
 --- stderr
-Already on 'main'
-Already on 'main'
+(nothing)
 @@@ apply/codex
 exit 0
 --- stdout
@@ -122,8 +120,7 @@ Deploy complete.
 ==> Returned to branch: main
 ==> No 'origin' remote — skipping main push
 --- stderr
-Already on 'main'
-Already on 'main'
+(nothing)
 @@@ apply/files
 .claude/agents/GADU.md: # GADU claude
 .claude/agents/claude-only.md: # claude only
@@ -453,8 +450,7 @@ Deploy complete.
 ==> Returned to branch: main
 ==> No 'origin' remote — skipping main push
 --- stderr
-Already on 'main'
-Already on 'main'
+(nothing)
 @@@ apply-again/state
 backups/claude/<STAMP>/.meta: untagged	601180afa172544ce939bf6474e0e64934a2280bfd085928bf0eb2d96410fd86	<TIME>
 backups/claude/<STAMP>/agents/GADU.md: # GADU claude
@@ -509,8 +505,7 @@ exit 0
 ==> No 'origin' remote — skipping upstream push
 ==> Returned to branch: main
 --- stderr
-Switched to branch 'upstream'
-Switched to branch 'main'
+(nothing)
 @@@ capture/claude-upstream
 agents/GADU.md: # GADU claude live
 agents/claude-only.md: # claude only
@@ -543,8 +538,7 @@ exit 0
 ==> No 'origin' remote — skipping upstream push
 ==> Returned to branch: main
 --- stderr
-Switched to branch 'upstream'
-Switched to branch 'main'
+(nothing)
 @@@ capture/opencode-upstream
 agents/GADU.md: # GADU claude live
 agents/claude-only.md: # claude only
@@ -579,8 +573,7 @@ exit 0
 ==> No 'origin' remote — skipping upstream push
 ==> Returned to branch: main
 --- stderr
-Switched to branch 'upstream'
-Switched to branch 'main'
+(nothing)
 @@@ capture-from-backup/upstream
 agents/GADU.md: # GADU claude backup
 agents/claude-only.md: # claude only
@@ -651,8 +644,7 @@ Bootstrap complete.
 <SHA> chore: initial overlay scaffold
 <SHA> upstream: baseline from gentle-ai 1.40.2
 --- stderr
-Switched to a new branch 'upstream'
-Switched to a new branch 'main'
+(nothing)
 @@@ bootstrap/upstream
 .gitignore: *.swp\n*.swo\n*~\n.DS_Store
 README.md: # labdrian-sdd-overlay
@@ -708,8 +700,7 @@ Deploy complete.
 ==> Returned to branch: main
 ==> No 'origin' remote — skipping main push
 --- stderr
-Already on 'main'
-Already on 'main'
+(nothing)
 @@@ quirks/files
 .claude/agents/indented/SKILL.md: # indented agent
 .claude/skills/crlf/SKILL.md: # crlf
@@ -733,8 +724,7 @@ exit 0
 ==> No 'origin' remote — skipping upstream push
 ==> Returned to branch: main
 --- stderr
-Switched to branch 'upstream'
-Switched to branch 'main'
+(nothing)
 @@@ quirks/capture-upstream
 agents/crlf-agent.md: # crlf agent
 agents/indented/SKILL.md: # indented agent
@@ -771,7 +761,6 @@ Already up to date.
 
 === Deploying to: claude ===
 --- stderr
-Already on 'main'
 route_resolve: longterm-mem row 'longterm-mem/internal/foo.go' declares no route (missing third column); must be one of: skill, agent, opencode-agent, mcp
 @@@ refused-custom/files
 (nothing)
@@ -787,8 +776,7 @@ exit 0
 ==> No 'origin' remote — skipping upstream push
 ==> Returned to branch: main
 --- stderr
-Switched to branch 'upstream'
-Switched to branch 'main'
+(nothing)
 @@@ refused-custom/capture-upstream
 agents/GADU.md: # GADU claude
 skills/skill-a/SKILL.md: # skill-a live
@@ -821,7 +809,6 @@ Already up to date.
 
 === Deploying to: claude ===
 --- stderr
-Already on 'main'
 route_resolve: longterm-mem row 'longterm-mem/internal/foo.go' declares an unrecognized route 'bogus'; must be one of: skill, agent, opencode-agent, mcp
 @@@ refused-managed/files
 (nothing)
@@ -830,7 +817,6 @@ exit 1
 --- stdout
 ==> Capturing managed files from $HOME/.claude/skills
 --- stderr
-Switched to branch 'upstream'
 route_resolve: longterm-mem row 'longterm-mem/internal/foo.go' declares an unrecognized route 'bogus'; must be one of: skill, agent, opencode-agent, mcp
 @@@ refused-managed/capture-upstream
 agents/GADU.md: # GADU claude
@@ -889,8 +875,7 @@ exit 0
 ==> No 'origin' remote — skipping upstream push
 ==> Returned to branch: main
 --- stderr
-Switched to branch 'upstream'
-Switched to branch 'main'
+(nothing)
 @@@ mcp/capture-upstream
 longterm-mem/go.mod: module longterm-mem
 skills/skill-a/SKILL.md: # skill-a live

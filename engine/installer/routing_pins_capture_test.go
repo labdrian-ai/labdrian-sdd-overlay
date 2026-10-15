@@ -73,18 +73,9 @@ func TestRoutingPins_BootstrapExtractsAndLayersTheManagedAndTheTrackedRows(t *te
 		t.Skip("skipping integration test in -short mode")
 	}
 	w := &pinWorld{t: t, script: overlayScript(t), home: t.TempDir(), overlay: t.TempDir()}
-	w.env = []string{
-		"HOME=" + w.home,
-		"OVERLAY_DIR=" + w.overlay,
-		"GIT_AUTHOR_NAME=test",
-		"GIT_AUTHOR_EMAIL=test@test.com",
-		"GIT_COMMITTER_NAME=test",
-		"GIT_COMMITTER_EMAIL=test@test.com",
-		"GIT_CONFIG_COUNT=1",
-		"GIT_CONFIG_KEY_0=init.defaultBranch",
-		"GIT_CONFIG_VALUE_0=master",
-		"PATH=" + os.Getenv("PATH"),
-	}
+	// bootstrap makes the repository itself, with the first branch the configuration names.
+	w.env = append(pinEnv(w.home, w.overlay),
+		"GIT_CONFIG_COUNT=1", "GIT_CONFIG_KEY_0=init.defaultBranch", "GIT_CONFIG_VALUE_0=master")
 	enginetest.Provision(t, w.home)
 	w.write(w.overlay, "overlay.manifest", pinManifest)
 	w.write(w.overlay, "bin/overlay", "#!/bin/sh\n")

@@ -1,6 +1,7 @@
 package installer_test
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
@@ -13,10 +14,17 @@ import (
 // ignore and attributes files it finds under HOME and the XDG roots, and the script derives the overlay and state
 // directories from HOME and from the variables that override them. Without this the answers depend on how whoever
 // runs the tests has configured git and on what they exported. The tests that need a sandboxed home of their own
-// pass one to the script (HOME=...) as before; the go command is kept on the caches it had (testhome).
+// pass one to the script (HOME=...) as before; the go command is kept on the caches it had (testhome). After
+// the tests have passed it asks that every entry of the record of the routing pins was compared.
 func TestMain(m *testing.M) {
 	code := testhome.Run(m)
 	enginetest.Cleanup()
+	if code == 0 {
+		if err := checkEveryPinWasConsumed(); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			code = 1
+		}
+	}
 	os.Exit(code)
 }
 
