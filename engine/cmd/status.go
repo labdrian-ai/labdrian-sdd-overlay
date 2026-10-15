@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings/settingsfile"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/status"
@@ -71,31 +72,47 @@ const (
 )
 
 // parseStatusArgs reads the arguments strictly, left to right, as the other commands of the engine
-// do: every argument is --only or --cwd and the value that follows it, and what is not is refused.
-// A flag whose value is missing, empty or another flag ("--cwd --only registry" is a --cwd without a
-// value, not a directory called --only), a value of --only that names no check, and an argument
-// nobody named are each refused, saying which. A flag given twice takes its last value.
+// do: every argument is --only or --cwd and the value that follows it, in the next argument or after
+// an equals sign in its own (--cwd=<dir>, --only=<check>), and what is not is refused. A flag whose
+// value is missing, empty or another flag ("--cwd --only registry" is a --cwd without a value, not a
+// directory called --only), a value of --only that names no check, and an argument nobody named are
+// each refused, saying which. The equals form is how a value that starts with two dashes is given:
+// --cwd=--odd is the directory --odd. A flag given twice takes its last value.
 func parseStatusArgs(args []string) (statusArgs, error) {
 	var out statusArgs
 	for i := 0; i < len(args); i++ {
-		flag := args[i]
+		flag, value, hasValue := strings.Cut(args[i], "=")
 		if flag != flagOnly && flag != flagCwd {
-			return statusArgs{}, fmt.Errorf("status: unknown argument %q", flag)
+			return statusArgs{}, fmt.Errorf("status: unknown argument %q", args[i])
 		}
-		if i+1 >= len(args) || args[i+1] == "" || args[i+1] == flagOnly || args[i+1] == flagCwd {
+		if !hasValue {
+			// The value is the next argument, which is never a flag: "--cwd --only registry" is a --cwd
+			// with no value. A value that starts with two dashes is given as --cwd=<value>.
+			if i+1 >= len(args) || isStatusFlag(args[i+1]) {
+				return statusArgs{}, fmt.Errorf("status: flag %q requires a value", flag)
+			}
+			i++
+			value = args[i]
+		}
+		if value == "" {
 			return statusArgs{}, fmt.Errorf("status: flag %q requires a value", flag)
 		}
-		i++
 		if flag == flagCwd {
-			out.cwd = args[i]
+			out.cwd = value
 			continue
 		}
-		if args[i] != onlyRegistry {
-			return statusArgs{}, fmt.Errorf("status: --only %q names no check; expected %s", args[i], onlyRegistry)
+		if value != onlyRegistry {
+			return statusArgs{}, fmt.Errorf("status: --only %q names no check; expected %s", value, onlyRegistry)
 		}
-		out.only = args[i]
+		out.only = value
 	}
 	return out, nil
+}
+
+// isStatusFlag says whether arg is a flag of status, with its value after an equals sign or not.
+func isStatusFlag(arg string) bool {
+	name, _, _ := strings.Cut(arg, "=")
+	return name == flagOnly || name == flagCwd
 }
 
 // newStatusService is the status use case over the files of the machine: the one place the

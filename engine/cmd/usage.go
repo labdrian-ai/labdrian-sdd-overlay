@@ -17,7 +17,7 @@ func usage(w io.Writer) {
 	fmt.Fprintln(w, "  engine status [--only registry] [--cwd <dir>]")
 	fmt.Fprintln(w, "    the doctor of an installation: one line per check, [OK  ], [WARN] or [FAIL]; exit 0 healthy, 1 a check failed, 2 a warning and no failure. --cwd names the directory whose")
 	fmt.Fprintln(w, "    .atl/skill-registry.md is looked for (default the working directory). --only registry reports that registry alone, the one line, with the exit code of that check: it is")
-	fmt.Fprintln(w, "    how the overlay's doctor judges the registry of a project. Any other argument, a flag with no value (or an empty one, or another flag in its place) and an --only that names no check are usage errors: exit 1, not the 2 of a degraded report")
+	fmt.Fprintln(w, "    how the overlay's doctor judges the registry of a project. A flag takes its value as the next argument or after an equals sign (--cwd=<dir>, --only=registry); the second is how a directory whose name starts with two dashes is given. Any other argument, a flag with no value (or an empty one, or another flag in its place) and an --only that names no check are usage errors: exit 1, not the 2 of a degraded report")
 	fmt.Fprintln(w, "  engine prespec <verb>  (verbs: rank, lint, readiness, brief)")
 	fmt.Fprintln(w, "  engine runtime <action> [--target claude|opencode|codex|pi|all] [--config-root <path>]")
 	fmt.Fprintln(w, "                          [--component runtime-parity|longterm-mem] [--state-dir <path>]")

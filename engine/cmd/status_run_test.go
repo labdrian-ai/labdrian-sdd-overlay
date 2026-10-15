@@ -146,6 +146,13 @@ func TestRunStatusRefusesAnOptionItCannotUse(t *testing.T) {
 		{"a flag nobody named", []string{"--frobnicate"}, true, "error: status: unknown argument \"--frobnicate\"\n"},
 		{"a flag nobody named after the options", []string{"--only", "registry", "--cwd", "/p", "--frobnicate"}, true, "error: status: unknown argument \"--frobnicate\"\n"},
 		{"a word between the options", []string{"--only", "registry", "garbage", "--cwd", "/p"}, true, "error: status: unknown argument \"garbage\"\n"},
+		// The forms with an equals sign carry their value in the same argument: an empty one is no value
+		// either, an --only of no check is refused, and a name nobody gave is unknown with its value.
+		{"--cwd= with nothing after it", []string{"--cwd="}, true, "error: status: flag \"--cwd\" requires a value\n"},
+		{"--only= with nothing after it", []string{"--only="}, true, "error: status: flag \"--only\" requires a value\n"},
+		{"--only= of a check there is not", []string{"--only=binary"}, true, "error: status: --only \"binary\" names no check; expected registry\n"},
+		{"a flag nobody named, with a value", []string{"--frobnicate=x"}, true, "error: status: unknown argument \"--frobnicate=x\"\n"},
+		{"the value of the flag before it is not a flag", []string{"--cwd=/p", "--only"}, true, "error: status: flag \"--only\" requires a value\n"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			d := testDeps()
@@ -160,6 +167,40 @@ func TestRunStatusRefusesAnOptionItCannotUse(t *testing.T) {
 
 			if p.err.String() != tc.want || p.out.String() != "" || !equalInts(p.exits, []int{1}) {
 				t.Errorf("status %v = %q, %q, exits %v, want %q on stderr, nothing on stdout and exit 1", tc.args, p.out.String(), p.err.String(), p.exits, tc.want)
+			}
+		})
+	}
+}
+
+// Each flag takes its value in the next argument or after an equals sign in its own. The second is how
+// any directory can be given, one whose name starts with "--" included, which the first cannot be (a
+// flag is never taken for a value).
+func TestRunStatusTakesTheValueOfAFlagAfterAnEqualsSign(t *testing.T) {
+	project := t.TempDir()
+	for _, tc := range []struct {
+		name string
+		args []string
+		dir  string // the directory whose registry the line is about
+	}{
+		{"both flags with an equals sign", []string{"--only=registry", "--cwd=" + project}, project},
+		{"the value of --cwd apart and --only with an equals sign", []string{"--cwd", project, "--only=registry"}, project},
+		{"--only apart and --cwd with an equals sign", []string{"--only", "registry", "--cwd=" + project}, project},
+		{"a directory whose name starts with two dashes", []string{"--cwd=--odd", "--only=registry"}, "--odd"},
+		{"a directory called --only", []string{"--cwd=--only", "--only=registry"}, "--only"},
+		{"an equals sign in the value", []string{"--cwd=a=b", "--only=registry"}, "a=b"},
+		{"the last value of a flag given twice", []string{"--cwd=/not/this", "--cwd=--odd", "--only=registry"}, "--odd"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			d := testDeps()
+			d.getenv = environmentOf(map[string]string{"HOME": t.TempDir()})
+			d.getwd = func() (string, error) { return t.TempDir(), nil } // not the directory asked for
+			p := newCapturedProcess()
+
+			runStatus(p.process, d, tc.args)
+
+			want := "[OK  ] registry: " + filepath.Join(tc.dir, ".atl", "skill-registry.md") + " — not present (project may not use the overlay)\n"
+			if p.out.String() != want || p.err.String() != "" || len(p.exits) != 0 {
+				t.Errorf("status %v = %q, %q, exits %v, want %q", tc.args, p.out.String(), p.err.String(), p.exits, want)
 			}
 		})
 	}
@@ -209,7 +250,7 @@ func TestStatusOptionsAreDocumentedInTheUsageAndTheREADME(t *testing.T) {
 		"README":  docSection(t, string(readme), "gentle-ai-overlay status [--only registry]", "gentle-ai-overlay runtime capabilities"),
 		"usage()": docSection(t, captureUsage(t), "  engine status [--only registry]", "  engine prespec"),
 	} {
-		for _, want := range []string{"[--only registry] [--cwd <dir>]", "--only registry", "--cwd", "exit 0", "1", "2", "usage error"} {
+		for _, want := range []string{"[--only registry] [--cwd <dir>]", "--only registry", "--cwd", "exit 0", "1", "2", "usage error", "--cwd=<dir>", "equals sign"} {
 			if !strings.Contains(strings.ToLower(text), strings.ToLower(want)) {
 				t.Errorf("%s of status does not say %q", name, want)
 			}

@@ -658,9 +658,13 @@ gentle-ai-overlay status [--only registry] [--cwd <dir>]
     project that does not use the overlay is no problem), one that is empty or white space only or cannot be read fails, one
     that lacks a scoped block (`minimalism-contract-scope`, `anti-generic-design-scope`) warns, and one that has both is OK. It
     is how `overlay doctor` judges the registry of a project, so the two never judge it differently. The arguments are read
-    strictly, left to right: any other argument, a flag without its value (missing, empty, or another flag in its place, so
-    `--cwd --only registry` is a `--cwd` with no value), and an `--only` that names no check are usage errors, exit 1 with the
-    reason on stderr and nothing on stdout. A usage error is not exit 2, which is the code of a degraded report.
+    strictly, left to right. A flag takes its value as the next argument or after an equals sign in its own (`--cwd=<dir>`,
+    `--only=registry`); the second is how a directory whose name starts with two dashes is given (`--cwd=--odd`), since a
+    flag is never taken for the value of another. Any other argument, a flag without its value (missing, empty, or another
+    flag in its place, so `--cwd --only registry` is a `--cwd` with no value), and an `--only` that names no check are usage
+    errors, exit 1 with the reason on stderr and nothing on stdout. A usage error is not exit 2, which is the code of a
+    degraded report. The callers in this repository are the overlay script's `status-hooks` (no argument) and its `doctor`
+    (`--only registry --cwd <dir>`), and a test holds both.
 
 gentle-ai-overlay runtime capabilities [--target claude|codex|pi|opencode|all]
     Engine verb (Phase 7): there is no `overlay runtime` wrapper, so run it on the installed engine
