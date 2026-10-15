@@ -222,8 +222,14 @@ func (w *pinWorld) git(args ...string) string {
 // run runs the script with the arguments, from the overlay repository, and keeps its streams apart.
 func (w *pinWorld) run(args ...string) pinRun {
 	w.t.Helper()
+	return w.runIn(w.overlay, args...)
+}
+
+// runIn runs the script with the arguments from the directory dir, and keeps its streams apart.
+func (w *pinWorld) runIn(dir string, args ...string) pinRun {
+	w.t.Helper()
 	cmd := exec.Command("bash", append([]string{w.script}, args...)...)
-	cmd.Dir = w.overlay
+	cmd.Dir = dir
 	cmd.Env = w.env
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
