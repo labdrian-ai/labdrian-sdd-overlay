@@ -646,6 +646,18 @@ gentle-ai-overlay registry repair-sdd --registry <path> --target <name> --skills
     unknown flag), a registry without the headings `## Skills` and `## Loading protocol` (`ERROR: registry has no '<heading>'
     section: <path>`), a lock that stays taken, or a file that cannot be read or written, with the registry as it was.
 
+gentle-ai-overlay status [--only registry] [--cwd <dir>]
+    Engine verb: `overlay status-hooks` runs it on the installed engine binary, ~/.claude/bin/gentle-ai-overlay. It is the doctor
+    of an installation: one line per check -- the binary, the hook families and guards in Claude Code's settings.json, the
+    minimalism contract and the skill registry of the project -- as `[OK  ]`, `[WARN]` or `[FAIL]` with the words that say why.
+    Exit 0 when every check is OK, 1 when one failed, 2 when none failed and one warns. `--cwd` names the directory whose
+    `.atl/skill-registry.md` is looked for (the working directory by default). `--only registry` reports that registry alone, as
+    the one line the full report would give, and exits with the code of that one check: a registry that is not there is OK (a
+    project that does not use the overlay is no problem), one that is empty or white space only or cannot be read fails, one
+    that lacks a scoped block (`minimalism-contract-scope`, `anti-generic-design-scope`) warns, and one that has both is OK. It
+    is how `overlay doctor` judges the registry of a project, so the two never judge it differently. Any other argument is
+    ignored; a flag without its value, or an `--only` that names no check, is a usage error (exit 1).
+
 gentle-ai-overlay runtime capabilities [--target claude|codex|pi|opencode|all]
     Engine verb (Phase 7): there is no `overlay runtime` wrapper, so run it on the installed engine
     binary, ~/.claude/bin/gentle-ai-overlay. Read-only and declarative: it prints, as JSON, what

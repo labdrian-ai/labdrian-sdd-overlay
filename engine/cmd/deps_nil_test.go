@@ -43,7 +43,7 @@ func TestACommandRunOverAZeroDepsReadsNoEnvironmentAndEndsAsItShould(t *testing.
 	}{
 		{
 			name:      "status",
-			run:       func(p *capturedProcess) { runStatus(p.process, deps{}) },
+			run:       func(p *capturedProcess) { runStatus(p.process, deps{}, nil) },
 			wantExits: []int{1},
 			stream:    stdoutOf,
 			want:      "[FAIL] binary: .claude/bin/gentle-ai-overlay — not found",

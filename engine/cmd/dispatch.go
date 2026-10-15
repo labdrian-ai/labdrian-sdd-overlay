@@ -23,7 +23,7 @@ func run(p process, d deps, args []string) {
 	case "uninstall-hooks":
 		runUninstallHooks(p, rest)
 	case "status":
-		runStatus(p, d)
+		runStatus(p, d, rest)
 	case "prespec":
 		runPrespec(p, rest)
 	case "runtime":

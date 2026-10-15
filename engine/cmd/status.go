@@ -18,13 +18,73 @@ import (
 //	2 — no hard failure, but at least one check is DEGRADED (e.g. the registry
 //	    exists but its scoped block is missing). Distinct from 1 so callers can
 //	    tell "broken" from "present-but-needs-attention".
-func runStatus(p process, d deps) {
-	// A directory that cannot be determined is none: the registry is then not looked for.
-	cwd, _ := d.workingDir()
+//
+// Two options narrow it, for the callers that judge one thing (the doctor of the overlay script asks
+// for the registry of a project): --cwd names the directory whose registry is looked for instead of
+// the working directory, and --only registry reports that registry alone, with the exit code of
+// that one check. Anything else on the line is ignored, as it always was.
+func runStatus(p process, d deps, args []string) {
+	opts, err := parseStatusArgs(args)
+	if err != nil {
+		fmt.Fprintf(p.stderr, "error: %v\n", err)
+		p.exit(1)
+		return
+	}
+	cwd := opts.cwd
+	if cwd == "" {
+		// A directory that cannot be determined is none: the registry is then not looked for.
+		cwd, _ = d.workingDir()
+	}
+	if opts.only == onlyRegistry {
+		if cwd == "" {
+			fmt.Fprintln(p.stderr, "error: status --only registry: the working directory cannot be determined; give --cwd")
+			p.exit(1)
+			return
+		}
+		report := status.Report{Checks: []status.Check{newStatusService().Registry(cwd)}}
+		renderReport(p.stdout, report)
+		if code := statusExitCode(report.Outcome()); code != 0 {
+			p.exit(code)
+		}
+		return
+	}
 	outcome := statusCore(p.stdout, newStatusService(), status.Request{Home: d.env("HOME"), Cwd: cwd})
 	if code := statusExitCode(outcome); code != 0 {
 		p.exit(code)
 	}
+}
+
+// onlyRegistry is the one value of --only: the registry of the project.
+const onlyRegistry = "registry"
+
+// statusArgs are the two options of 'status', read.
+type statusArgs struct {
+	only string
+	cwd  string
+}
+
+// parseStatusArgs reads --only and --cwd. A flag of them that has no value, and a value of --only
+// that names no check, are refused, saying which; every other argument is ignored.
+func parseStatusArgs(args []string) (statusArgs, error) {
+	var out statusArgs
+	for i := 0; i < len(args); i++ {
+		if args[i] != "--only" && args[i] != "--cwd" {
+			continue
+		}
+		if i+1 >= len(args) {
+			return statusArgs{}, fmt.Errorf("status: flag %q requires a value", args[i])
+		}
+		i++
+		if args[i-1] == "--cwd" {
+			out.cwd = args[i]
+			continue
+		}
+		if args[i] != onlyRegistry {
+			return statusArgs{}, fmt.Errorf("status: --only %q names no check; expected %s", args[i], onlyRegistry)
+		}
+		out.only = args[i]
+	}
+	return out, nil
 }
 
 // newStatusService is the status use case over the files of the machine: the one place the
