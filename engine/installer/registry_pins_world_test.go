@@ -160,8 +160,29 @@ func (w *pinWorld) loggedCalls(log string) string {
 	return pinText(w.normalize(string(body)))
 }
 
-// registryWorld is a world whose PATH has a gentle-ai that only records, a project with no registry
-// yet, and no skill installed.
+// discoveryTools are the tools of discovery doctor looks for on the PATH (DISCOVERY_TOOLS in the
+// script; a test holds that the two are the same).
+var discoveryTools = []string{"bat", "rg", "fd", "sd", "eza"}
+
+// installDiscoveryTools puts a program for each tool of discovery first on the PATH of the world, so
+// that what doctor says of them is the same on every machine. A machine that lacks one gets, from
+// doctor, a line about it and advice wrapped under it, which names the registry; and which tools a
+// machine has is not the business of a test of what doctor says of the registry. The programs do
+// nothing; doctor only looks for them.
+func (w *pinWorld) installDiscoveryTools() {
+	w.t.Helper()
+	dir := w.t.TempDir()
+	for _, tool := range discoveryTools {
+		if err := os.WriteFile(filepath.Join(dir, tool), []byte("#!/bin/sh\nexit 0\n"), 0o755); err != nil {
+			w.t.Fatalf("write the %s of the world: %v", tool, err)
+		}
+	}
+	w.discoveryDir = dir
+	w.changePath(func(old string) string { return dir + string(os.PathListSeparator) + old })
+}
+
+// registryWorld is a world whose PATH has a gentle-ai that only records and the five tools of
+// discovery, a project with no registry yet, and no skill installed.
 func registryWorld(t *testing.T) *pinWorld {
 	t.Helper()
 	if testing.Short() {
@@ -169,6 +190,7 @@ func registryWorld(t *testing.T) *pinWorld {
 	}
 	w := newPinWorld(t, "skill-a/SKILL.md managed\n", map[string]string{"skills/skill-a/SKILL.md": "# skill-a\n"})
 	w.installGentle("", 0)
+	w.installDiscoveryTools()
 	if err := os.MkdirAll(w.project(), 0o755); err != nil {
 		t.Fatal(err)
 	}

@@ -13,8 +13,28 @@ import (
 	"testing"
 )
 
-// doctorRegistryPin is what a run of doctor says of the registry: how it ended, the lines that
-// speak of one, the line that sums the run up (it is on stderr when a check failed), and every
+// isCheckLine says whether line is the line of a check of doctor: it begins with the level of a check,
+// PASS, WARN or FAIL, and two spaces. The lines a check wraps under its own (advice, an indented
+// continuation) do not.
+func isCheckLine(line string) bool {
+	for _, level := range []string{"PASS  ", "WARN  ", "FAIL  "} {
+		if strings.HasPrefix(line, level) {
+			return true
+		}
+	}
+	return false
+}
+
+// isRegistryCheckLine says whether line is the line of the check of the registry: a line of a check
+// that speaks of the registry. Not any line that does: the advice doctor wraps under its line about
+// the tools of discovery, when the machine lacks one, names the registry too, and is not the
+// registry's.
+func isRegistryCheckLine(line string) bool {
+	return isCheckLine(line) && strings.Contains(strings.ToLower(line), "registry")
+}
+
+// doctorRegistryPin is what a run of doctor says of the registry: how it ended, the lines of its
+// check, the line that sums the run up (it is on stderr when a check failed), and every
 // check that failed, whatever it checked. The last tells which check made a run fail: a failed
 // run whose only failed check is the registry's line is the registry's doing, and a failed check
 // of anything else shows in the pin and does not hide behind the exit code and the summary.
@@ -24,7 +44,7 @@ func doctorRegistryPin(run pinRun) string {
 		switch {
 		case strings.HasPrefix(line, "doctor:"):
 			summary = append(summary, line)
-		case strings.Contains(strings.ToLower(line), "registry"):
+		case isRegistryCheckLine(line):
 			registry = append(registry, line)
 		}
 		if strings.HasPrefix(line, "FAIL  ") {

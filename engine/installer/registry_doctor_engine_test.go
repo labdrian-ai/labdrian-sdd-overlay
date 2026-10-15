@@ -30,11 +30,11 @@ func (w *pinWorld) fakeEngine(says string, exit string) (log string) {
 	return log
 }
 
-// registryLines are the lines of a run of doctor that speak of the registry.
+// registryLines are the lines of a run of doctor that are the line of the check of the registry.
 func registryLines(run pinRun) []string {
 	var lines []string
 	for _, line := range strings.Split(run.Stdout+run.Stderr, "\n") {
-		if strings.Contains(strings.ToLower(line), "registry") {
+		if isRegistryCheckLine(line) {
 			lines = append(lines, line)
 		}
 	}

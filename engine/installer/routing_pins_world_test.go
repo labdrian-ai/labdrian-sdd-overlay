@@ -36,6 +36,9 @@ type pinWorld struct {
 	// gitBin is the git the world runs for itself: the clock (startClock) when the world has one,
 	// and whatever the test process finds as "git" when it has none.
 	gitBin string
+	// discoveryDir is where the world keeps its programs for the tools of discovery (installDiscoveryTools),
+	// or "" for a world that has none.
+	discoveryDir string
 }
 
 // pinRun is what one run of the script left: what it wrote on each stream and how it ended.
