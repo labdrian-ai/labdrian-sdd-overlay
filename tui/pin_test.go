@@ -620,9 +620,28 @@ func TestPinned_Sessions(t *testing.T) {
 	}
 }
 
+// waitForInvocations waits until the backend has received invocations that satisfy ready, and fails the test when
+// they do not within five seconds. It waits on the stub's record, which is written when an invocation starts, so
+// what it waits for is an event of the program and not a text on a screen.
+func waitForInvocations(t *testing.T, stub *stubBackend, what string, ready func(received []string) bool) {
+	t.Helper()
+	for deadline := time.Now().Add(5 * time.Second); !ready(stub.invoked()); {
+		if time.Now().After(deadline) {
+			t.Fatalf("the backend received %q, never %s", stub.invoked(), what)
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+}
+
 // TestPinned_TheRunningProgram drives the program through the real event loop (the commands run concurrently, as
 // they do for an operator) from launch to a result and out, and pins what the backend received. The catalog and
 // the probe are asked for together at launch, so their order is not pinned; everything after them is.
+//
+// Every step waits for the event it needs and for nothing it could have seen before: the catalog on the screen
+// (the keys act on the targets screen), the catalog and the probe at the backend, then, after the keys, the last
+// invocation of Estado at the backend and its transcript on the screen, which is the first moment a quit is heard
+// (a model that is still running ignores keys). The transcript line waited for is the run's own: nothing
+// printed before the keys can contain it.
 func TestPinned_TheRunningProgram(t *testing.T) {
 	withColors(t, termenv.Ascii)
 	stub := newStubBackend(t)
@@ -632,17 +651,14 @@ func TestPinned_TheRunningProgram(t *testing.T) {
 	teatest.WaitFor(t, tm.Output(), func(b []byte) bool {
 		return strings.Count(string(b), "[✓]") >= 4
 	}, teatest.WithDuration(5*time.Second))
-	// The probe is started with the catalog; let it reach the backend before the operator's first key does.
-	for deadline := time.Now().Add(5 * time.Second); len(stub.invoked()) < 2; {
-		if time.Now().After(deadline) {
-			t.Fatalf("the backend received %q at launch, want the catalog and the probe", stub.invoked())
-		}
-		time.Sleep(5 * time.Millisecond)
-	}
+	waitForInvocations(t, stub, "both the catalog and the probe at launch", func(received []string) bool { return len(received) >= 2 })
 	tm.Send(keyNamed("enter")) // to the actions
 	tm.Send(keyNamed("enter")) // Estado
+	waitForInvocations(t, stub, "the last invocation of Estado (version)", func(received []string) bool {
+		return len(received) > 0 && received[len(received)-1] == "version"
+	})
 	teatest.WaitFor(t, tm.Output(), func(b []byte) bool {
-		return strings.Contains(string(b), "Completado")
+		return strings.Contains(string(b), "$ bin/labdrian-overlay version")
 	}, teatest.WithDuration(5*time.Second))
 	tm.Send(keyNamed("q"))
 	tm.WaitFinished(t, teatest.WithFinalTimeout(5*time.Second))
