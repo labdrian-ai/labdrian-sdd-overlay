@@ -7,7 +7,6 @@ package ui
 // *_backend_test.go file instead.
 
 import (
-	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -65,7 +64,11 @@ func (f *fakeRestore) Confirmation(action domain.Action, candidates []domain.Tar
 	if f.gate != nil {
 		<-f.gate
 	}
-	f.asked = append(f.asked, strings.Split(targetNames(candidates), ", "))
+	names := make([]string, len(candidates))
+	for i, c := range candidates {
+		names[i] = c.Name
+	}
+	f.asked = append(f.asked, names)
 	var have []domain.Target
 	for _, c := range candidates {
 		for _, name := range f.backed {

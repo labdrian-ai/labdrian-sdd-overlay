@@ -11,6 +11,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/tui/internal/domain"
 )
 
 // lookupResult runs a command and picks out the lookup's message.
@@ -132,6 +133,19 @@ func TestRestore_WhenThePlannerOffersNothingTheMenuStays(t *testing.T) {
 
 	if m.scr != screenActions || m.pendingAction.Command == "restore" {
 		t.Errorf("restore with nothing vouched for reached screen %v with pending %q; it must stay a no-op", m.scr, m.pendingAction.Command)
+	}
+}
+
+// The fake planner records the candidates it was asked about by name, as they
+// are: a name that holds the separator the display helper joins with must not be
+// split into two.
+func TestFakeRestore_RecordsTheCandidatesByNameAsTheyAre(t *testing.T) {
+	restore := &fakeRestore{}
+
+	restore.Confirmation(domain.Action{}, []domain.Target{{Name: "claude"}, {Name: "a, b"}})
+
+	if len(restore.asked) != 1 || len(restore.asked[0]) != 2 || restore.asked[0][0] != "claude" || restore.asked[0][1] != "a, b" {
+		t.Errorf("asked = %q, want [[claude a, b]]", restore.asked)
 	}
 }
 
