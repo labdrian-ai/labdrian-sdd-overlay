@@ -84,7 +84,7 @@ func TestViewDashboard_NeverHealthyWhileBehindOrigin(t *testing.T) {
 		verdicts: []TargetVerdict{
 			{
 				Target:             "claude",
-				Status:             classify(0, 0, 3, 0, false), // == SyncBehindOrigin per R-006
+				Status:             SyncBehindOrigin, // what classify gives for REPO_BEHIND_ORIGIN>0 (R-006); the domain tests it
 				UpstreamChanged:    0,
 				OverlayNotDeployed: 0,
 				RepoBehindOrigin:   3,

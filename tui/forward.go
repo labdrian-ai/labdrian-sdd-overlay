@@ -12,9 +12,27 @@ type (
 	TargetCatalog = domain.TargetCatalog
 	Backup        = domain.Backup
 	BackupQuery   = domain.BackupQuery
+
+	AgentFileEntry = domain.AgentFileEntry
+	SyncStatus     = domain.SyncStatus
+	TargetVerdict  = domain.TargetVerdict
 )
 
 const (
 	KindCopy    = domain.KindCopy
 	KindPackage = domain.KindPackage
+
+	SyncUnknown        = domain.SyncUnknown
+	SyncHealthy        = domain.SyncHealthy
+	SyncNeedsApply     = domain.SyncNeedsApply
+	SyncNeedsCapture   = domain.SyncNeedsCapture
+	SyncBehindOrigin   = domain.SyncBehindOrigin
+	SyncBehindRelease  = domain.SyncBehindRelease
+	RepoBehindOriginNA = domain.RepoBehindOriginNA
 )
+
+func ParseSyncCheck(output string) []TargetVerdict { return domain.ParseSyncCheck(output) }
+
+func probeBehind(output string) int { return domain.ProbeBehind(output) }
+
+func probeBehindRelease(output string) int { return domain.ProbeBehindRelease(output) }
