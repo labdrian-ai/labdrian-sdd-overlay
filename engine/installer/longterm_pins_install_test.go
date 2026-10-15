@@ -125,10 +125,14 @@ func TestLongtermPins_InstallKeepsTheRecordUnderTheCleanedStateDirectory(t *test
 
 func TestLongtermPins_InstallWaitsForTheLockOfTheRecordAndRefusesWhenItStaysTaken(t *testing.T) {
 	w := longtermWorld(t)
-	w.heldLock(0)
-	pinLongterm(t, w, "longterm/install/lock-held", w.runLongterm("longterm-mem", "install", "--target", "claude"))
+	release := w.holdLock()
+	run := w.runLongterm("longterm-mem", "install", "--target", "claude")
+	release()
+	pinLongterm(t, w, "longterm/install/lock-held", run)
 
+	// The lock the script used to take was a directory, and a run it killed left it behind. The
+	// engine's lock is another file: the directory is left alone, unwaited for and unmentioned.
 	stale := longtermWorld(t)
-	stale.heldLock(10 * time.Minute)
+	stale.leftLockDirectory(10 * time.Minute)
 	pinLongterm(t, stale, "longterm/install/lock-abandoned", stale.runLongterm("longterm-mem", "install", "--target", "claude"))
 }

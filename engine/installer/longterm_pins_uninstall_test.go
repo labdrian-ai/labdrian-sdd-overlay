@@ -197,10 +197,13 @@ func TestLongtermPins_UninstallStopsWhenTheRecordCannotBeRewritten(t *testing.T)
 
 func TestLongtermPins_UninstallWaitsForTheLockOfTheRecordAndRefusesWhenItStaysTaken(t *testing.T) {
 	w := uninstallWorld(t, "claude\nopencode\n")
-	w.heldLock(0)
-	pinLongterm(t, w, "longterm/uninstall/lock-held", w.runLongterm("longterm-mem", "uninstall", "--target", "claude"))
+	release := w.holdLock()
+	run := w.runLongterm("longterm-mem", "uninstall", "--target", "claude")
+	release()
+	pinLongterm(t, w, "longterm/uninstall/lock-held", run)
 
+	// The directory the script's lock used to be, left behind by a run that was killed, is left alone.
 	stale := uninstallWorld(t, "claude\nopencode\n")
-	stale.heldLock(10 * time.Minute)
+	stale.leftLockDirectory(10 * time.Minute)
 	pinLongterm(t, stale, "longterm/uninstall/lock-abandoned", stale.runLongterm("longterm-mem", "uninstall", "--target", "claude"))
 }

@@ -27,6 +27,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/filelock"
 )
 
 // fakeGoScript is the `go` of the world: `go build -o <path> ...` copies the fake longterm-mem to
@@ -280,10 +282,28 @@ func pinSkipped(t *testing.T, reason string, names ...string) {
 	t.Skip(reason)
 }
 
-// heldLock makes the lock the script takes around its record look taken by a run that is going on: a
-// directory a moment old, which the script waits for and then refuses. Its age is what tells a lock
-// that is held from one that was abandoned.
-func (w *pinWorld) heldLock(age time.Duration) {
+// holdLock takes the lock around the record of the installed targets, as another run of the overlay
+// that is going on would: an advisory file lock on a file of the state directory, which the engine
+// waits for and then refuses. It returns the function that lets it go. (Before the record moved into
+// the engine the lock was a directory called .installed-targets.lock, which the script waited for
+// about a second and then refused; see leftLockDirectory.)
+func (w *pinWorld) holdLock() func() {
+	w.t.Helper()
+	if err := os.MkdirAll(w.stateDir(), 0o755); err != nil {
+		w.t.Fatal(err)
+	}
+	release, err := filelock.Acquire(filepath.Join(w.stateDir(), ".installed-targets.flock"), filelock.Options{})
+	if err != nil {
+		w.t.Fatal(err)
+	}
+	return release
+}
+
+// leftLockDirectory leaves the lock the script used to take, a directory called
+// .installed-targets.lock, in the state directory, as old as the age says, as a run of the script that
+// was killed would have left it. The engine's lock is another file, so the directory is no lock of
+// its own and is not waited for, not broken into and not warned about.
+func (w *pinWorld) leftLockDirectory(age time.Duration) {
 	w.t.Helper()
 	lock := filepath.Join(w.stateDir(), ".installed-targets.lock")
 	if err := os.MkdirAll(lock, 0o755); err != nil {

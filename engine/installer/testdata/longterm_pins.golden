@@ -332,8 +332,7 @@ exit 1
 ==> longterm-mem binary deployed to: $HOME/.labdrian-overlay/bin/longterm-mem
 [longterm-mem] install: supported — longterm-mem per-runtime status — reasons: claude: supported — runtime not installed; opencode: supported — runtime not installed; codex: supported — runtime not installed
 --- stderr
-<a tool of the machine says something>
-ERROR: longterm-mem: could not create $HOME/.labdrian-overlay/longterm-mem
+ERROR: longterm-mem: could not create $HOME/.labdrian-overlay/longterm-mem: not a directory
 --- state directory
 bin/longterm-mem (mode 711): "<the fake longterm-mem>"
 longterm-mem (mode 644): "in the way\n"
@@ -361,7 +360,7 @@ exit 1
 ==> longterm-mem binary deployed to: $HOME/.labdrian-overlay/bin/longterm-mem
 [longterm-mem] install: supported — longterm-mem per-runtime status — reasons: claude: supported — runtime not installed; opencode: supported — runtime not installed; codex: supported — runtime not installed
 --- stderr
-ERROR: longterm-mem: could not acquire the install-tracking lock at $HOME/.labdrian-overlay/.installed-targets.lock; another overlay invocation is updating install state. Nothing was changed — re-run once it finishes, or remove that directory if no other invocation is running.
+ERROR: longterm-mem: could not acquire the install-tracking lock at $HOME/.labdrian-overlay/.installed-targets.flock; another overlay invocation is updating install state. Nothing was changed — re-run once it finishes.
 --- state directory
 bin/longterm-mem (mode 711): "<the fake longterm-mem>"
 longterm-mem-registration.json (mode 644): "{\n  \"managed_by\": \"labdrian-sdd-overlay\",\n  \"targets\": {}\n}"
@@ -374,7 +373,7 @@ exit 0
 ==> longterm-mem binary deployed to: $HOME/.labdrian-overlay/bin/longterm-mem
 [longterm-mem] install: supported — longterm-mem per-runtime status — reasons: claude: supported — runtime not installed; opencode: supported — runtime not installed; codex: supported — runtime not installed
 --- stderr
-WARN: longterm-mem: the install-tracking lock at $HOME/.labdrian-overlay/.installed-targets.lock is older than 5 minutes; treating it as abandoned by a killed run and taking it over
+(nothing)
 --- state directory
 bin/longterm-mem (mode 711): "<the fake longterm-mem>"
 longterm-mem-registration.json (mode 644): "{\n  \"managed_by\": \"labdrian-sdd-overlay\",\n  \"targets\": {}\n}"
@@ -801,8 +800,7 @@ exit 1
 --- stdout
 (nothing)
 --- stderr
-<a tool of the machine says something>
-ERROR: longterm-mem: could not create a temporary file in $HOME/.labdrian-overlay/longterm-mem
+ERROR: longterm-mem: could not create a temporary file in $HOME/.labdrian-overlay/longterm-mem: permission denied
 --- state directory
 bin/longterm-mem (mode 755): "<the fake longterm-mem>"
 longterm-mem/installed-targets (mode 644): "claude\nopencode\n"
@@ -813,7 +811,7 @@ exit 1
 --- stdout
 (nothing)
 --- stderr
-ERROR: longterm-mem: could not acquire the install-tracking lock at $HOME/.labdrian-overlay/.installed-targets.lock; another overlay invocation is updating install state. Nothing was changed — re-run once it finishes, or remove that directory if no other invocation is running.
+ERROR: longterm-mem: could not acquire the install-tracking lock at $HOME/.labdrian-overlay/.installed-targets.flock; another overlay invocation is updating install state. Nothing was changed — re-run once it finishes.
 --- state directory
 bin/longterm-mem (mode 755): "<the fake longterm-mem>"
 longterm-mem/installed-targets (mode 644): "claude\nopencode\n"
@@ -824,7 +822,7 @@ exit 0
 --- stdout
   longterm-mem: unregistered the requested target(s); still installed for: opencode (shared binary and engine-owned tracking left untouched -- re-run uninstall for the remaining target(s), or pass --purge, to remove them)
 --- stderr
-WARN: longterm-mem: the install-tracking lock at $HOME/.labdrian-overlay/.installed-targets.lock is older than 5 minutes; treating it as abandoned by a killed run and taking it over
+(nothing)
 --- state directory
 bin/longterm-mem (mode 755): "<the fake longterm-mem>"
 longterm-mem/installed-targets (mode 600): "opencode\n"
