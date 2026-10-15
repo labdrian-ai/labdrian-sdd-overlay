@@ -34,9 +34,13 @@ type CLI struct {
 	// root is the overlay repo root that holds bin/labdrian-overlay; empty
 	// when it could not be located.
 	root string
-	// env is the child process environment; nil inherits the caller's, which
-	// is what a real run wants (STATE_DIR and HOME must reach the backend
-	// unchanged). Tests set it to keep the backend off the real state.
+	// env is the environment of the backend's read-only questions (Targets,
+	// LatestBackup); nil inherits the caller's, which is what a real run wants
+	// (STATE_DIR and HOME must reach the backend unchanged). Tests set it to
+	// keep those questions off the real state. Running an action (Run) and
+	// reading the launch probe (Report) never take it: they run under the
+	// environment of the caller, as they always have, so no seam can change
+	// what an action runs under.
 	env []string
 }
 
@@ -53,7 +57,6 @@ func (c CLI) binary() string { return filepath.Join(c.root, "bin", "labdrian-ove
 func (c CLI) Run(args []string) domain.Execution {
 	cmd := exec.Command(c.binary(), args...)
 	cmd.Dir = c.root
-	cmd.Env = c.env
 	out, err := cmd.CombinedOutput()
 	run := domain.Execution{Output: string(out), Err: err}
 	if err != nil {
@@ -76,7 +79,6 @@ func (c CLI) Run(args []string) domain.Execution {
 func (c CLI) Report() string {
 	cmd := exec.Command(c.binary(), "sync-check")
 	cmd.Dir = c.root
-	cmd.Env = c.env
 	out, _ := cmd.CombinedOutput()
 	return string(out)
 }
