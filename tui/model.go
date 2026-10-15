@@ -439,8 +439,8 @@ func (m model) updateActions(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "enter":
 		action := m.actions[m.aCursor]
 		// Only the selected targets this action can actually run against.
-		targets := action.applicableTo(m.selectedTargets())
-		if action.usesTargets() && len(targets) == 0 {
+		targets := action.ApplicableTo(m.selectedTargets())
+		if action.UsesTargets() && len(targets) == 0 {
 			// Nothing to run it on -- no catalog was read, or every selected
 			// target is one the backend refuses for this action (capture on
 			// pi alone). Stay put: no confirm screen, no process.

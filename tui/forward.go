@@ -16,6 +16,8 @@ type (
 	AgentFileEntry = domain.AgentFileEntry
 	SyncStatus     = domain.SyncStatus
 	TargetVerdict  = domain.TargetVerdict
+
+	Action = domain.Action
 )
 
 const (
@@ -30,6 +32,8 @@ const (
 	SyncBehindRelease  = domain.SyncBehindRelease
 	RepoBehindOriginNA = domain.RepoBehindOriginNA
 )
+
+func Actions() []Action { return domain.Actions() }
 
 func ParseSyncCheck(output string) []TargetVerdict { return domain.ParseSyncCheck(output) }
 

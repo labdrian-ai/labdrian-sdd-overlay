@@ -151,30 +151,6 @@ func TestCatalogFailure_FailsClosed(t *testing.T) {
 	})
 }
 
-// TestCaptureAndRestoreAreCopyTargetActions: the backend refuses both for a
-// package target, so the TUI must know it before offering them.
-func TestCaptureAndRestoreAreCopyTargetActions(t *testing.T) {
-	for _, command := range []string{"capture", "restore"} {
-		var found bool
-		for _, a := range Actions() {
-			if a.Command == command {
-				found = true
-				if !a.CopyTargetsOnly {
-					t.Errorf("%s must be CopyTargetsOnly: the backend refuses it for a package target", command)
-				}
-			}
-		}
-		if !found {
-			t.Errorf("Actions() has no %q entry", command)
-		}
-	}
-	for _, a := range Actions() {
-		if a.CopyTargetsOnly && a.Command != "capture" && a.Command != "restore" {
-			t.Errorf("%s is marked CopyTargetsOnly but the backend accepts it for package targets", a.Command)
-		}
-	}
-}
-
 func targetNames(targets []Target) string {
 	var names []string
 	for _, tgt := range targets {

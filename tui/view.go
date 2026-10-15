@@ -422,7 +422,7 @@ func (m model) viewConfirm() string {
 	// Name the targets this action will actually run against, the same set
 	// updateActions computes: capture and restore skip package targets.
 	sel := []string{}
-	for _, t := range m.pendingAction.applicableTo(m.selectedTargets()) {
+	for _, t := range m.pendingAction.ApplicableTo(m.selectedTargets()) {
 		sel = append(sel, t.Name)
 	}
 
@@ -432,7 +432,7 @@ func (m model) viewConfirm() string {
 	}
 
 	var msg string
-	if !m.pendingAction.usesTargets() {
+	if !m.pendingAction.UsesTargets() {
 		msg = fmt.Sprintf(
 			"Ejecutar %s\n\n%s %s",
 			lipgloss.NewStyle().Bold(true).Foreground(colorYellow).Render(m.pendingAction.Name),
