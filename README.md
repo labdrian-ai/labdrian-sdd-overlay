@@ -605,6 +605,26 @@ overlay workflow <verb>
     the git binary or any other subprocess, and any part it cannot read is left empty rather
     than failing the operation.
 
+gentle-ai-overlay manifest routes --overlay-root <dir> --target <name> --skills-root <dir> [--agents-root <dir>] [--manifest <file>] [--managed]
+    Engine verb (Phase 9, B1): there is no `overlay manifest` wrapper, so run it on the installed engine binary,
+    ~/.claude/bin/gentle-ai-overlay. It decides where each row of overlay.manifest goes. Read-only: it prints one line per
+    row, in the order of the manifest, in five columns separated by a tab: the row's path; its route (`skill`, `agent`, `opencode-agent`, `mcp`,
+    `non-deployable`, or the third column when it is none of these, which takes the skill route under its own name);
+    where its file is in the overlay repository (`skills/<path>` for a skill, `agents/<path>`, the path itself for the
+    others); the absolute path the overlay copies it from (empty for a row that is never deployed); and the absolute
+    path it is copied to for --target (empty when the row goes nowhere for it: an agent for a runtime other than Claude
+    Code, a native agent for one other than OpenCode, an mcp row, a row that is never deployed). A column with nothing to
+    say is empty, and an empty column is never followed by one that is not. --managed keeps the rows whose second column
+    is `managed`. The script owns the directories of its targets and hands them over: --skills-root is where --target
+    keeps its skills, --agents-root where it keeps its native agents (needed when the manifest routes an agent to claude
+    or a native agent to opencode); --manifest defaults to <overlay-root>/overlay.manifest. A manifest is read as the script
+    always read it: a line is blank or a comment when only white space comes before its end or a `#`, and columns are
+    separated by spaces and tabs alone. A path named twice takes the route of the first row that names it. A row under
+    longterm-mem/ with no route, or one outside skill, agent, opencode-agent and mcp, is refused ("route_resolve:
+    longterm-mem row '<path>' declares ..." on stderr), so are an unknown --target and a manifest that cannot be read.
+    Exit 0 on success; 1 on a usage error (including an unknown flag) or a refusal, with nothing on stdout, so a caller
+    never acts on part of a manifest.
+
 gentle-ai-overlay runtime capabilities [--target claude|codex|pi|opencode|all]
     Engine verb (Phase 7): there is no `overlay runtime` wrapper, so run it on the installed engine
     binary, ~/.claude/bin/gentle-ai-overlay. Read-only and declarative: it prints, as JSON, what
