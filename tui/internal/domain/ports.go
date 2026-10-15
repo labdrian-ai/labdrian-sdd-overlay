@@ -48,6 +48,12 @@ type Execution struct {
 	// Err is nil when the backend exited with status 0, and says why not
 	// otherwise.
 	Err error
+	// Verdicts are the per-target verdicts of the sync-check report the output
+	// holds, read by the adapter, which is the one that knows how the backend
+	// spells them; none when the output holds no report. Whether the screen
+	// shows them is up to the action (Action.ResultKind), not to what the
+	// output happens to look like.
+	Verdicts []TargetVerdict
 }
 
 // Backend is where the TUI has an action run. It takes the arguments of one

@@ -27,9 +27,7 @@ const backendQueryTimeout = 15 * time.Second
 // CLI is the driven adapter behind the TUI's ports: it answers by
 // asking the bash backend, bin/labdrian-overlay, which stays the single
 // source of truth for everything it reports. It parses the backend's wire
-// formats into the TUI's own types; nothing outside this package knows them,
-// except the sync-check report, which domain.ParseSyncCheck still reads (it
-// moves here with the structured invocations).
+// formats into the TUI's own types; nothing outside this package knows them.
 type CLI struct {
 	// root is the overlay repo root that holds bin/labdrian-overlay; empty
 	// when it could not be located.
@@ -52,13 +50,15 @@ func (c CLI) binary() string { return filepath.Join(c.root, "bin", "labdrian-ove
 
 // Run implements domain.Backend: it runs one invocation of the backend script
 // from the repo root and returns what it printed, standard output and standard
-// error together, and how it ended. There is no deadline: an action (apply,
-// self-update) takes as long as it takes, and the operator can see it run.
+// error together, how it ended, and the sync-check verdicts the output holds
+// (none for any command that does not print a report). There is no deadline:
+// an action (apply, self-update) takes as long as it takes, and the operator
+// can see it run.
 func (c CLI) Run(args []string) domain.Execution {
 	cmd := exec.Command(c.binary(), args...)
 	cmd.Dir = c.root
 	out, err := cmd.CombinedOutput()
-	run := domain.Execution{Output: string(out), Err: err}
+	run := domain.Execution{Output: string(out), Err: err, Verdicts: parseSyncCheck(string(out))}
 	if err != nil {
 		// The exit code lets callers tell a hard failure (exit 1) from a
 		// degraded/warning result (exit 2); -1 when the process did not exit
@@ -82,7 +82,7 @@ func (c CLI) Report() []domain.TargetVerdict {
 	cmd := exec.Command(c.binary(), "sync-check")
 	cmd.Dir = c.root
 	out, _ := cmd.CombinedOutput()
-	return domain.ParseSyncCheck(string(out))
+	return parseSyncCheck(string(out))
 }
 
 // Targets implements TargetCatalog with `labdrian-overlay targets`.

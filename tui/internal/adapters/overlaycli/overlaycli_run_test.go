@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/tui/internal/domain"
 )
 
 // recordedRun reads the one invocation a stub backend recorded: the working
@@ -83,6 +85,46 @@ func TestOverlayCLI_Run_SaysHowTheBackendEnded(t *testing.T) {
 			t.Errorf("Run = %+v, want a failure with exit -1", run)
 		}
 	})
+}
+
+// TestOverlayCLI_Run_ReadsTheSyncCheckReportItsOutputHolds: the verdicts of a
+// report come back with the execution, whatever the exit status, and the output
+// they were read from is kept as it was printed. Output that holds no report
+// carries none.
+func TestOverlayCLI_Run_ReadsTheSyncCheckReportItsOutputHolds(t *testing.T) {
+	const report = "=== sync-check: claude ===\n" +
+		"VERDICT:claude:UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=2 REPO_BEHIND_ORIGIN=0\n" +
+		"ACTION:claude: run labdrian apply --target claude\n"
+	tests := []struct {
+		name         string
+		script       string
+		wantVerdicts int
+	}{
+		{"a clean report", "printf '%s' '" + report + "'", 1},
+		{"a report from a run that failed", "printf '%s' '" + report + "'; exit 1", 1},
+		{"output that is no report", `echo "claude: deployed"`, 0},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			root := t.TempDir()
+			writeScriptBackend(t, root, tc.script)
+
+			run := New(root).Run([]string{"sync-check", "--target", "claude"})
+
+			if len(run.Verdicts) != tc.wantVerdicts {
+				t.Fatalf("Run read %d verdicts from %q, want %d", len(run.Verdicts), run.Output, tc.wantVerdicts)
+			}
+			if tc.wantVerdicts == 1 {
+				v := run.Verdicts[0]
+				if v.Target != "claude" || v.OverlayNotDeployed != 2 || v.Status != domain.SyncNeedsApply {
+					t.Errorf("verdict = %+v, want claude with 2 files not deployed, needing apply", v)
+				}
+				if run.Output != report {
+					t.Errorf("Output = %q, want the report as the backend printed it", run.Output)
+				}
+			}
+		})
+	}
 }
 
 // TestOverlayCLI_Report_RunsACachedOnlySyncCheckFromTheRepoRoot proves the

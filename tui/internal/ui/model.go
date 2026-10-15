@@ -83,7 +83,8 @@ type model struct {
 	// (D4/D5). It is initialized to RepoBehindOriginNA in newModel, NOT left
 	// at Go's zero value — a bare `0` would collapse into "confirmed 0
 	// commits behind" before the probe ever resolves, reproducing the exact
-	// R-006 bug class ParseSyncCheck already guards against.
+	// R-006 bug class the reader of a report (domain.BehindOf) already guards
+	// against.
 	behindOrigin int
 	// behindRelease is the launch-time probe's REPO_BEHIND_RELEASE reading
 	// (D2). Initialized to RepoBehindOriginNA in newModel, same rationale as

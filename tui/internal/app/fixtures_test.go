@@ -70,15 +70,20 @@ func (f *fakeBackups) LatestBackup(target string) (domain.Backup, bool, error) {
 }
 
 // fakeBackend is a Backend that records every invocation and answers each
-// from the script by its subcommand (the first argument): no entry is a clean
-// run that printed nothing.
+// from the script: by the whole invocation when it has an entry for it, else
+// by its subcommand (the first argument); no entry is a clean run that printed
+// nothing.
 type fakeBackend struct {
 	script map[string]domain.Execution
 	ran    []string
 }
 
 func (f *fakeBackend) Run(args []string) domain.Execution {
-	f.ran = append(f.ran, strings.Join(args, " "))
+	call := strings.Join(args, " ")
+	f.ran = append(f.ran, call)
+	if run, ok := f.script[call]; ok {
+		return run
+	}
 	return f.script[args[0]]
 }
 

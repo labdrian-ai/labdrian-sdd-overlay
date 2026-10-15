@@ -79,6 +79,12 @@ func (r ActionRunner) Run(action domain.Action, selected, shown []domain.Target)
 		}
 
 		run := r.backend.Run(args)
+		// An action that declares its result a sync-check report shows the
+		// verdicts of every invocation, in the order they ran; any other action
+		// shows its transcript only, whatever its output looked like.
+		if action.ResultKind == domain.ResultSyncDashboard {
+			res.Verdicts = append(res.Verdicts, run.Verdicts...)
+		}
 		sb.WriteString(run.Output)
 		if run.Err != nil {
 			sb.WriteString(fmt.Sprintf("\n[exit error: %v]\n", run.Err))
@@ -89,8 +95,5 @@ func (r ActionRunner) Run(action domain.Action, selected, shown []domain.Target)
 	}
 
 	res.Output = sb.String()
-	if action.ResultKind == domain.ResultSyncDashboard {
-		res.Verdicts = domain.ParseSyncCheck(res.Output)
-	}
 	return res
 }

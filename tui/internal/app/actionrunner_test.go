@@ -312,16 +312,17 @@ func TestActionRunner_TheResultIsTheWorstOutcomeNotTheLastOne(t *testing.T) {
 	})
 }
 
-// An action is read as a sync-check report when it declares that its result is
-// one (ResultSyncDashboard), and only then: not because its command is called
-// sync-check, and not because its output happens to look like a report.
-func TestActionRunner_OnlyAnActionThatDeclaresAReportIsReadAsOne(t *testing.T) {
-	const report = "=== sync-check: claude ===\n" +
-		"VERDICT:claude:UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=1 REPO_BEHIND_ORIGIN=0\n" +
-		"ACTION:claude: run 'labdrian apply --target claude'\n"
+// An action shows the verdicts of a sync-check report when it declares that its
+// result is one (ResultSyncDashboard), and only then: not because its command
+// is called sync-check, and not because the backend's output happens to hold a
+// report. The verdicts come from the executions, read by the adapter; the
+// runner reads no text.
+func TestActionRunner_OnlyAnActionThatDeclaresAReportShowsItsVerdicts(t *testing.T) {
+	needsApply := domain.TargetVerdict{Target: "claude", OverlayNotDeployed: 1, Status: domain.SyncNeedsApply}
+	reports := domain.Execution{Output: "a report", Verdicts: []domain.TargetVerdict{needsApply}}
 	shown := threeCopyTargets()
 	backend := &fakeBackend{script: map[string]domain.Execution{
-		"sync-check": {Output: report}, "status": {Output: report}, "compare": {Output: report},
+		"sync-check": reports, "status": reports, "compare": reports,
 	}}
 	catalog := &fakeCatalog{targets: shown}
 
@@ -336,20 +337,48 @@ func TestActionRunner_OnlyAnActionThatDeclaresAReportIsReadAsOne(t *testing.T) {
 	t.Run("it need not be called sync-check", func(t *testing.T) {
 		action := domain.Action{Command: "compare", SupportsAll: true, ResultKind: domain.ResultSyncDashboard}
 		if res := run(action, shown, shown, catalog, backend); len(res.Verdicts) != 1 {
-			t.Errorf("verdicts = %+v, want the report read: the kind is declared", res.Verdicts)
+			t.Errorf("verdicts = %+v, want the report shown: the kind is declared", res.Verdicts)
 		}
 	})
 
-	t.Run("an action that shows its transcript is not read, whatever it printed", func(t *testing.T) {
+	t.Run("an action that shows its transcript shows no verdicts, whatever its execution carried", func(t *testing.T) {
 		if res := run(statusAction(), shown, shown, catalog, backend); len(res.Verdicts) != 0 {
-			t.Errorf("verdicts = %+v, want none: only a declared report is read", res.Verdicts)
+			t.Errorf("verdicts = %+v, want none: only a declared report is shown", res.Verdicts)
 		}
 	})
 
-	t.Run("a command called sync-check that declares nothing is not read", func(t *testing.T) {
+	t.Run("a command called sync-check that declares nothing shows none", func(t *testing.T) {
 		action := domain.Action{Command: "sync-check", SupportsAll: true}
 		if res := run(action, shown, shown, catalog, backend); len(res.Verdicts) != 0 {
 			t.Errorf("verdicts = %+v, want none: the command string is being read", res.Verdicts)
+		}
+	})
+
+	t.Run("a declared report that held no verdict shows none", func(t *testing.T) {
+		quiet := &fakeBackend{script: map[string]domain.Execution{"sync-check": {Output: "nothing to report\n"}}}
+		action := domain.Action{Command: "sync-check", SupportsAll: true, ResultKind: domain.ResultSyncDashboard}
+		if res := run(action, shown, shown, catalog, quiet); len(res.Verdicts) != 0 {
+			t.Errorf("verdicts = %+v, want none", res.Verdicts)
+		}
+	})
+
+	t.Run("the verdicts of every invocation are shown, in the order they ran", func(t *testing.T) {
+		// A partial selection is one sync-check per target, each reporting its own.
+		perTarget := &fakeBackend{script: map[string]domain.Execution{
+			"sync-check --target claude": {Verdicts: []domain.TargetVerdict{{Target: "claude"}}},
+			"sync-check --target codex":  {Verdicts: []domain.TargetVerdict{{Target: "codex"}}},
+		}}
+		action := domain.Action{Command: "sync-check", SupportsAll: true, ResultKind: domain.ResultSyncDashboard}
+		selected := []domain.Target{shown[0], shown[2]}
+
+		res := run(action, selected, shown, catalog, perTarget)
+
+		var got []string
+		for _, v := range res.Verdicts {
+			got = append(got, v.Target)
+		}
+		if strings.Join(got, ",") != "claude,codex" {
+			t.Errorf("verdicts of %v, want claude then codex, one per invocation", got)
 		}
 	})
 }
