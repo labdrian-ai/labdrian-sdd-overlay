@@ -186,9 +186,20 @@ func (s Service) Check(req Request) Report {
 		CheckContract(contractPath, s.Files),
 	}
 	if req.Cwd != "" {
-		checks = append(checks, checkRegistry(filepath.Join(req.Cwd, ".atl", "skill-registry.md"), s.Files))
+		checks = append(checks, s.Registry(req.Cwd))
 	}
 	return Report{Checks: checks}
+}
+
+// Registry is the check of the registry of the project in dir (dir/.atl/skill-registry.md) and of
+// nothing else: the one Check ends with when the request names a directory. It needs only the Files
+// port, so it can answer where the installation is not complete, as the doctor of the overlay asks
+// it, to judge the registry of a project by the same rules the status of an installation does.
+func (s Service) Registry(dir string) Check {
+	if s.Files == nil {
+		panic("status: Service.Files is nil")
+	}
+	return checkRegistry(filepath.Join(dir, ".atl", "skill-registry.md"), s.Files)
 }
 
 // loadedSettings is what reading settings.json gave: its object, nil when the file is absent or

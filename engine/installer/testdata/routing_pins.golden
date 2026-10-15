@@ -640,9 +640,9 @@ Bootstrap complete.
   upstream branch: pristine vendor baseline
   main branch:     your customized overlay (current)
 
-<SHA> chore: initial overlay scaffold
 <SHA> overlay: EARS notation + stable R-NNN IDs
 <SHA> upstream: baseline from gentle-ai 1.40.2
+<SHA> chore: initial overlay scaffold
 --- stderr
 (nothing)
 @@@ bootstrap/upstream
@@ -954,11 +954,11 @@ Bootstrap complete.
   upstream branch: pristine vendor baseline
   main branch:     your customized overlay (current)
 
+<SHA> overlay: EARS notation + stable R-NNN IDs
+<SHA> upstream: baseline from gentle-ai 1.40.2
+<SHA> overlay: EARS notation + stable R-NNN IDs
+<SHA> upstream: baseline from gentle-ai 1.40.2
 <SHA> chore: initial overlay scaffold
-<SHA> overlay: EARS notation + stable R-NNN IDs
-<SHA> overlay: EARS notation + stable R-NNN IDs
-<SHA> upstream: baseline from gentle-ai 1.40.2
-<SHA> upstream: baseline from gentle-ai 1.40.2
 --- stderr
 (nothing)
 @@@ bootstrap-again/upstream

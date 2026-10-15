@@ -19,6 +19,7 @@ import (
 	"reflect"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -32,6 +33,12 @@ type pinWorld struct {
 	home    string
 	overlay string
 	env     []string
+	// gitBin is the git the world runs for itself: the clock (startClock) when the world has one,
+	// and whatever the test process finds as "git" when it has none.
+	gitBin string
+	// discoveryDir is where the world keeps its programs for the tools of discovery (installDiscoveryTools),
+	// or "" for a world that has none.
+	discoveryDir string
 }
 
 // pinRun is what one run of the script left: what it wrote on each stream and how it ended.
@@ -57,12 +64,101 @@ func pinEnv(home, overlay string) []string {
 	}
 }
 
+// The clock of a world. `git log` lists commits by their dates, and commits made in the same
+// second tie: git then lists them in the order it happens to meet them, which for a few branches of
+// one history is not the order they were made in and varies from one run to the next. A pin that
+// holds the list as the script printed it needs a history whose commits have dates of their own,
+// so the world puts a `git` first on the PATH that dates each call one second after the newest
+// commit of the repository it runs in (and at pinClockEpoch + 1 in one that has none). It changes
+// nothing else: the real git does the work, with the dates it was told.
+const pinClockEpoch = 1_700_000_000
+
+const pinClockScript = `#!/bin/sh
+newest=$("$PIN_CLOCK_GIT" log -1 --all --format=%ct 2>/dev/null)
+tick=$(( ${newest:-$PIN_CLOCK_EPOCH} + 1 ))
+GIT_AUTHOR_DATE="$tick +0000"
+GIT_COMMITTER_DATE="$tick +0000"
+export GIT_AUTHOR_DATE GIT_COMMITTER_DATE
+exec "$PIN_CLOCK_GIT" "$@"
+`
+
+// startClock puts the clock first on the PATH of the world. It is called once the world has an
+// environment and before the first commit.
+func (w *pinWorld) startClock() {
+	w.t.Helper()
+	realGit, err := exec.LookPath("git")
+	if err != nil {
+		w.t.Fatalf("the clock of the world needs git: %v", err)
+	}
+	dir := w.t.TempDir()
+	w.gitBin = filepath.Join(dir, "git")
+	if err := os.WriteFile(w.gitBin, []byte(pinClockScript), 0o755); err != nil {
+		w.t.Fatalf("write the clock: %v", err)
+	}
+	w.env = append(w.env, "PIN_CLOCK_GIT="+realGit, "PIN_CLOCK_EPOCH="+strconv.Itoa(pinClockEpoch))
+	w.changePath(func(old string) string { return dir + string(os.PathListSeparator) + old })
+}
+
+// commitTimes are the committer times of every commit of the repository of the world, newest first
+// as `git log --all` lists them.
+func (w *pinWorld) commitTimes() []int {
+	w.t.Helper()
+	var times []int
+	for _, field := range strings.Fields(w.git("log", "--all", "--format=%ct")) {
+		n, err := strconv.Atoi(field)
+		if err != nil {
+			w.t.Fatalf("commit time %q: %v", field, err)
+		}
+		times = append(times, n)
+	}
+	return times
+}
+
+func TestPinClockDatesEveryCommitOneSecondAfterTheNewestOfTheRepository(t *testing.T) {
+	w := newPinWorld(t, "skill-a/SKILL.md managed\n", map[string]string{"skills/skill-a/SKILL.md": "# a\n"})
+	w.commitOnMain("main: one", map[string]string{"one.txt": "1\n"})
+	// A branch cut from the oldest commit: its commit is still the newest of the repository.
+	w.git("checkout", "-b", "side", "upstream")
+	w.commitOnMain("side: two", map[string]string{"two.txt": "2\n"})
+	w.git("checkout", "main")
+	w.git("merge", "--no-ff", "-m", "main: merge side", "side")
+
+	want := []int{pinClockEpoch + 4, pinClockEpoch + 3, pinClockEpoch + 2, pinClockEpoch + 1}
+	if got := w.commitTimes(); !reflect.DeepEqual(got, want) {
+		t.Errorf("committer times, newest first = %v, want %v: the clock dates a commit one second after the newest, in the order they were made", got, want)
+	}
+}
+
+func TestTheHomeOfAPinWorldHasANameOfItsOwn(t *testing.T) {
+	// What a command says of the directory it runs in can carry its name (a registry is named after
+	// its project), and a pin must not hold a name that depends on how many temporary directories
+	// the test made before: the worlds of the pins keep their home under the name "home".
+	for name, home := range map[string]string{
+		"a world of the pins":     newPinWorld(t, "x managed\n", map[string]string{"skills/x/SKILL.md": "# x\n"}).home,
+		"a world that bootstraps": newBootstrapWorld(t).home,
+	} {
+		if got := filepath.Base(home); got != "home" {
+			t.Errorf("%s keeps its home in a directory called %q, want \"home\"", name, got)
+		}
+	}
+}
+
+// pinHome makes the home of a world: a directory called "home" in a temporary one.
+func pinHome(t *testing.T) string {
+	t.Helper()
+	home := filepath.Join(t.TempDir(), "home")
+	if err := os.MkdirAll(home, 0o755); err != nil {
+		t.Fatalf("make the home of the world: %v", err)
+	}
+	return home
+}
+
 // newPinWorld builds an overlay repository holding the manifest and the files, with the
 // 'upstream' and 'main' branches at the same commit, which is what apply, capture and the checks
 // expect to find.
 func newPinWorld(t *testing.T, manifest string, files map[string]string) *pinWorld {
 	t.Helper()
-	w := &pinWorld{t: t, script: overlayScript(t), home: t.TempDir(), overlay: t.TempDir()}
+	w := &pinWorld{t: t, script: overlayScript(t), home: pinHome(t), overlay: t.TempDir()}
 	all := map[string]string{"overlay.manifest": manifest}
 	for rel, content := range files {
 		all[rel] = content
@@ -71,6 +167,7 @@ func newPinWorld(t *testing.T, manifest string, files map[string]string) *pinWor
 		w.write(w.overlay, rel, content)
 	}
 	w.env = pinEnv(w.home, w.overlay)
+	w.startClock()
 	w.git("init")
 	w.git("config", "user.email", "test@test.com")
 	w.git("config", "user.name", "test")
@@ -110,14 +207,35 @@ func TestWithPathChangesThePathEntryAndRefusesAnEnvironmentWithNone(t *testing.T
 	}
 }
 
-// changePath edits the PATH of the world, and fails the test when it has none.
+// changePath edits the PATH of the world, and fails the test when it has none. What the change makes of
+// it is then given the directory of the world's tools of discovery (installDiscoveryTools), if the
+// world has one, as its first directory and once, whatever the change did to it: a PATH replaced
+// whole, one that is another altogether, one that had the directory in the middle. The tools are pinned
+// by the world and not by the order its helpers were called in, so that no change a test makes can let
+// the machine's own tools decide what doctor says of them. (The directory holds nothing but the five
+// tools, so putting it first changes nothing a fake gentle-ai or a fake go resolves to.)
 func (w *pinWorld) changePath(change func(old string) string) {
 	w.t.Helper()
-	env, err := withPath(w.env, change)
+	env, err := withPath(w.env, func(old string) string { return w.withDiscoveryFirst(change(old)) })
 	if err != nil {
 		w.t.Fatal(err)
 	}
 	w.env = env
+}
+
+// withDiscoveryFirst is path with the directory of the world's tools of discovery as its first
+// directory, once; path itself when the world has none.
+func (w *pinWorld) withDiscoveryFirst(path string) string {
+	if w.discoveryDir == "" {
+		return path
+	}
+	dirs := []string{w.discoveryDir}
+	for _, dir := range filepath.SplitList(path) {
+		if dir != w.discoveryDir {
+			dirs = append(dirs, dir)
+		}
+	}
+	return strings.Join(dirs, string(os.PathListSeparator))
 }
 
 // write puts content at rel under root, making the directories it needs.
@@ -135,7 +253,11 @@ func (w *pinWorld) write(root, rel, content string) {
 // git runs git in the overlay repository and fails the test when it fails.
 func (w *pinWorld) git(args ...string) string {
 	w.t.Helper()
-	cmd := exec.Command("git", args...)
+	bin := w.gitBin
+	if bin == "" {
+		bin = "git"
+	}
+	cmd := exec.Command(bin, args...)
 	cmd.Dir = w.overlay
 	cmd.Env = w.env
 	out, err := cmd.CombinedOutput()
@@ -148,8 +270,14 @@ func (w *pinWorld) git(args ...string) string {
 // run runs the script with the arguments, from the overlay repository, and keeps its streams apart.
 func (w *pinWorld) run(args ...string) pinRun {
 	w.t.Helper()
+	return w.runIn(w.overlay, args...)
+}
+
+// runIn runs the script with the arguments from the directory dir, and keeps its streams apart.
+func (w *pinWorld) runIn(dir string, args ...string) pinRun {
+	w.t.Helper()
 	cmd := exec.Command("bash", append([]string{w.script}, args...)...)
-	cmd.Dir = w.overlay
+	cmd.Dir = dir
 	cmd.Env = w.env
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
@@ -190,40 +318,11 @@ func (w *pinWorld) normalize(s string) string {
 	s = strings.ReplaceAll(s, w.overlay, "$OVERLAY")
 	s = backupStamp.ReplaceAllString(s, "<STAMP>")
 	s = commitLine.ReplaceAllString(s, "[$1 <SHA>]")
-	s = sortCommitLists(oneLineLog.ReplaceAllString(s, "<SHA> "))
+	s = oneLineLog.ReplaceAllString(s, "<SHA> ")
 	s = moment.ReplaceAllString(s, "<TIME>")
 	s = gitAdvice.ReplaceAllString(s, "")
 	s = upToDate.ReplaceAllString(s, "Already up to date.")
 	return calendarDay.ReplaceAllString(s, "<DAY>")
-}
-
-// sortCommitLists puts each run of "<SHA> subject" lines (a `git log --oneline` that bootstrap ends
-// with) in the order of the subjects. Git lists commits of the same second in the order it happens
-// to meet them, so the order of a list of commits made in one run is not the script's, and a pin
-// must not hold it; what the list holds is.
-func sortCommitLists(s string) string {
-	lines := strings.Split(s, "\n")
-	for i := 0; i < len(lines); {
-		if !strings.HasPrefix(lines[i], "<SHA> ") {
-			i++
-			continue
-		}
-		j := i
-		for j < len(lines) && strings.HasPrefix(lines[j], "<SHA> ") {
-			j++
-		}
-		sort.Strings(lines[i:j])
-		i = j
-	}
-	return strings.Join(lines, "\n")
-}
-
-func TestSortCommitListsOrdersEachRunOfCommitsAndNothingElse(t *testing.T) {
-	in := "x\n<SHA> b\n<SHA> a\ny\n<SHA> d\n<SHA> c\n<SHA> c\nz"
-	want := "x\n<SHA> a\n<SHA> b\ny\n<SHA> c\n<SHA> c\n<SHA> d\nz"
-	if got := sortCommitLists(in); got != want {
-		t.Errorf("sortCommitLists(%q) = %q, want %q", in, got, want)
-	}
 }
 
 // recordedState shows state.json by what it records, a target at a time and sorted: the file

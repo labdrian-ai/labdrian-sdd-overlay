@@ -83,10 +83,11 @@ func newBootstrapWorld(t *testing.T) *pinWorld {
 	if testing.Short() {
 		t.Skip("skipping integration test in -short mode")
 	}
-	w := &pinWorld{t: t, script: overlayScript(t), home: t.TempDir(), overlay: t.TempDir()}
+	w := &pinWorld{t: t, script: overlayScript(t), home: pinHome(t), overlay: t.TempDir()}
 	// bootstrap makes the repository itself, with the first branch the configuration names.
 	w.env = append(pinEnv(w.home, w.overlay),
 		"GIT_CONFIG_COUNT=1", "GIT_CONFIG_KEY_0=init.defaultBranch", "GIT_CONFIG_VALUE_0=master")
+	w.startClock()
 	enginetest.Provision(t, w.home)
 	w.write(w.overlay, "overlay.manifest", pinManifest)
 	w.write(w.overlay, "bin/overlay", "#!/bin/sh\n")

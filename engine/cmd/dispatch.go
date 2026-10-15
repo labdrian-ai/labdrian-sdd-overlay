@@ -23,7 +23,7 @@ func run(p process, d deps, args []string) {
 	case "uninstall-hooks":
 		runUninstallHooks(p, rest)
 	case "status":
-		runStatus(p, d)
+		runStatus(p, d, rest)
 	case "prespec":
 		runPrespec(p, rest)
 	case "runtime":
@@ -36,6 +36,8 @@ func run(p process, d deps, args []string) {
 		runSkills(p, d, rest)
 	case "manifest":
 		runManifest(p, rest)
+	case "registry":
+		runRegistry(p, rest)
 	case "sync-trigger":
 		runSyncTrigger(p, d, rest)
 	case "review-receipt":

@@ -112,7 +112,7 @@ func TestWithNeitherTheEngineNorGoBootstrapStopsBeforeItWritesAnything(t *testin
 	if testing.Short() {
 		t.Skip("skipping integration test in -short mode")
 	}
-	w := &pinWorld{t: t, script: overlayScript(t), home: t.TempDir(), overlay: t.TempDir()}
+	w := &pinWorld{t: t, script: overlayScript(t), home: pinHome(t), overlay: t.TempDir()}
 	w.env = pinEnv(w.home, w.overlay)
 	w.write(w.overlay, "overlay.manifest", pinManifest)
 	w.write(w.overlay, "bin/overlay", "#!/bin/sh\n")

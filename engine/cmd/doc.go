@@ -4,7 +4,8 @@
 //	engine gate-task --contract-file <path> [--contract-path <str>]
 //	engine merge-settings --settings <path> --hook-command <binary-path>
 //	engine uninstall-hooks --settings <path> --hook-command <binary-path>
-//	engine status
+//	engine status [--only registry] [--cwd <dir>]
+//	engine registry repair-sdd --registry <path> --target <name> --skills-root <dir>
 //	engine skills <verb>  (verbs: list, status, validate, install, adopt, add, remove, sync-manifest, lint, approve, project-register, project-revise, project-status, project-retire)
 //
 // propagate: ensures the scoped minimalism-contract BEGIN/END marker block is

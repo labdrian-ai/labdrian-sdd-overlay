@@ -138,7 +138,7 @@ backups the backend cannot confirm is not offered a restore.
 | `install-hooks` | **modifies** | Build the Go engine binary + wire `UserPromptSubmit`/`PreToolUse`/`Agent` hooks, including the workflow projection family and the skills approve guard, into `~/.claude/settings.json` (backs up to `.bak` first). Run once to activate scoping; re-run it after an upgrade that adds a hook family, then restart Claude Code to load the hooks. |
 | `uninstall-hooks` | **modifies** | Remove the overlay hook entries (the minimalism and design pairs, the SessionEnd sync-trigger, the review-receipt and shaper guard entries, the three projection entries, and the two approve guard entries) from `~/.claude/settings.json`, including entries left by contracts retired in earlier versions, leaving all other keys intact. |
 | `status-hooks` | read-only | Check engine binary, hooks wired, contracts readable — exits 0 if all healthy; missing binary exits non-zero with `run 'overlay install-hooks'` guidance. |
-| `doctor [--fix]` | read-only | Host-toolchain preflight: go, gentle-ai, discovery tools (bat/rg/fd/sd/eza), engine binary, skill registry — plus a per-target version/digest consistency row (WARN only, never fails the exit code). `--fix` best-effort installs missing discovery tools via Homebrew. |
+| `doctor [--fix]` | read-only | Host-toolchain preflight: go, gentle-ai, discovery tools (bat/rg/fd/sd/eza), engine binary, the skill registry of the project (judged by the engine, with the check `status` makes: absent is fine, empty or unreadable fails, one without a scoped block warns) — plus a per-target version/digest consistency row (WARN only, never fails the exit code). `--fix` best-effort installs missing discovery tools via Homebrew. |
 | `validate-entry-contract --schema PATH --instance PATH` | read-only | Validate a pre-SDD entry candidate against the version-matched schema and deterministic cross-field rules. |
 | `install-alias [name]` | **modifies** | Symlink `labdrian` (or a custom name) into `~/.local/bin`. Run once per machine. |
 
@@ -382,7 +382,10 @@ overlay status-hooks
 
 overlay doctor [--fix]
     Read-only host-toolchain preflight: checks go (required), gentle-ai, bat/rg/fd/sd/eza,
-    the engine binary, a non-empty skill-registry, and a per-target release
+    the engine binary, the skill registry of the project (judged by the engine, the check
+    `status --only registry` makes: absent passes, empty or unreadable fails, one without
+    a scoped block warns; with no engine, or one too old to know the question, it warns that it was not checked, and an
+    engine that ran and ended with a code it does not give for a report fails doctor), and a per-target release
     version/digest consistency row. Prints PASS/WARN/FAIL per check; exits non-zero
     only on a hard FAIL (the version/digest row is WARN-only, never fails the exit
     code). --fix: after the checks, attempt to install any missing discovery tools
@@ -626,6 +629,43 @@ gentle-ai-overlay manifest routes --overlay-root <dir> --target <name> --skills-
     cannot be read; a manifest that is not there has no row, and a warning on stderr says so (as the script always
     read it). Exit 0 on success; 1 on a usage error (including an unknown flag) or a refusal, with nothing on stdout,
     so a caller never acts on part of a manifest.
+
+gentle-ai-overlay registry repair-sdd --registry <path> --target <name> --skills-root <dir>
+    Engine verb (Phase 9, B2): there is no `overlay registry` wrapper, so run it on the installed engine binary,
+    ~/.claude/bin/gentle-ai-overlay. It is what `overlay repair-sdd-registry` and `overlay skill-registry refresh` ask, after
+    gentle-ai has regenerated the registry. gentle-ai leaves the sdd-* phase skills out of the skill registry it writes, because
+    they are executor contracts and not skills a person invokes; SDD delegation still needs their paths, so this puts a row back
+    for each one installed in --skills-root (`<dir>/<name>/SKILL.md`; --target only names the target in what it says), with the
+    scope `executor`, above the `## Loading protocol` heading of the registry at --registry, and a note that says why above
+    the `## Skills` heading. The note and the rows of an earlier repair are replaced; every other line stays as it was. A project
+    that has no registry gets one. The description of a row is the text after the first `description:` line of the skill (one
+    double quote off each end, every `|` escaped), or `SDD phase executor: <name>.` when it has none. It takes the lock
+    `propagate` takes (`<registry>.lock`, waiting up to 2 seconds), so a repair and the `propagate` hook that runs on every prompt
+    take turns, and it writes the registry whole through a temporary file and a rename (mode 0644), so a reader never sees half of it.
+    Each executor that is not installed is said on stderr (`WARN: missing <target> SDD executor skill: <path>`), and the run is
+    summed up on stdout: `repair-sdd-registry: registry=<path> target=<name> sdd_executors=<n> missing=<m>`. Two things the script
+    always did and the engine keeps: the rows land after the blank line that precedes the loading protocol heading, and a second
+    repair adds a blank line above the note and one above that heading. Exit 0 on success; 1 on a usage error (including an
+    unknown flag), a registry without the headings `## Skills` and `## Loading protocol` (`ERROR: registry has no '<heading>'
+    section: <path>`), a lock that stays taken, or a file that cannot be read or written, with the registry as it was.
+
+gentle-ai-overlay status [--only registry] [--cwd <dir>]
+    Engine verb: `overlay status-hooks` runs it on the installed engine binary, ~/.claude/bin/gentle-ai-overlay. It is the doctor
+    of an installation: one line per check -- the binary, the hook families and guards in Claude Code's settings.json, the
+    minimalism contract and the skill registry of the project -- as `[OK  ]`, `[WARN]` or `[FAIL]` with the words that say why.
+    Exit 0 when every check is OK, 1 when one failed, 2 when none failed and one warns. `--cwd` names the directory whose
+    `.atl/skill-registry.md` is looked for (the working directory by default). `--only registry` reports that registry alone, as
+    the one line the full report would give, and exits with the code of that one check: a registry that is not there is OK (a
+    project that does not use the overlay is no problem), one that is empty or white space only or cannot be read fails, one
+    that lacks a scoped block (`minimalism-contract-scope`, `anti-generic-design-scope`) warns, and one that has both is OK. It
+    is how `overlay doctor` judges the registry of a project, so the two never judge it differently. The arguments are read
+    strictly, left to right. A flag takes its value as the next argument or after an equals sign in its own (`--cwd=<dir>`,
+    `--only=registry`); the second is how a directory whose name starts with two dashes is given (`--cwd=--odd`), since a
+    flag is never taken for the value of another. Any other argument, a flag without its value (missing, empty, or another
+    flag in its place, so `--cwd --only registry` is a `--cwd` with no value), and an `--only` that names no check are usage
+    errors, exit 1 with the reason on stderr and nothing on stdout. A usage error is not exit 2, which is the code of a
+    degraded report. The callers in this repository are the overlay script's `status-hooks` (no argument) and its `doctor`
+    (`--only registry --cwd <dir>`), and a test holds both.
 
 gentle-ai-overlay runtime capabilities [--target claude|codex|pi|opencode|all]
     Engine verb (Phase 7): there is no `overlay runtime` wrapper, so run it on the installed engine

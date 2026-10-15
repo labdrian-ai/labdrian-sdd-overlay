@@ -727,3 +727,33 @@ func TestEveryLevelAndOutcomeHasANameForAFailureMessage(t *testing.T) {
 		}
 	}
 }
+
+// The registry of a project can be asked about alone, as doctor asks it: the answer is the check a full
+// run makes, and nothing else of the installation is looked at.
+func TestTheRegistryAloneIsTheSameCheckAFullRunMakesAndLooksAtNothingElse(t *testing.T) {
+	for _, content := range []string{"", " \n", "# R\n", bothBlocksText} {
+		w := complete(t)
+		w.files.contents[registryPath] = content
+		want := w.check().named(t, labelRegistry)
+
+		alone := complete(t)
+		alone.files.contents[registryPath] = content
+		got := Service{Files: alone.files}.Registry("/p")
+
+		if got != want {
+			t.Errorf("Registry = %+v, want the check of a full run, %+v", got, want)
+		}
+		if asked := strings.Join(alone.files.asked, "|"); asked != "read "+registryPath {
+			t.Errorf("files asked: %q, want only %q", asked, "read "+registryPath)
+		}
+	}
+}
+
+func TestAServiceWithoutFilesSaysSoWhenAskedForTheRegistryAlone(t *testing.T) {
+	defer func() {
+		if got := recover(); got != "status: Service.Files is nil" {
+			t.Errorf("recovered %v, want the panic that says which port is missing", got)
+		}
+	}()
+	Service{}.Registry("/p")
+}
