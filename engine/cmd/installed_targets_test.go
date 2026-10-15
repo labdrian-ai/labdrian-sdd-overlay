@@ -14,6 +14,7 @@ import (
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/capability"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/filelock"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime/ownership"
 	ownershipapp "github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime/ownership/app"
 	ownershipfs "github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime/ownership/fsstore"
 )
@@ -247,8 +248,7 @@ func TestInstalledTargetsSayWhatTheyDoWithARecordNobodyCanRead(t *testing.T) {
 	t.Run("list fails", func(t *testing.T) {
 		w := newTargetsWorld(t)
 		w.seed(t, "claude\n")
-		w.unreadable(t)
-		run := runTargets(w.args("list")...)
+		run := runTargetsWith(unreadableWiring(), w.args("list")...)
 		if run.stdout != "" || run.stderr != readerWarning(w) || !equalInts(run.exits, []int{1}) {
 			t.Errorf("list = %q, %q, exits %v; want the warning, no name and exit 1", run.stdout, run.stderr, run.exits)
 		}
@@ -256,8 +256,7 @@ func TestInstalledTargetsSayWhatTheyDoWithARecordNobodyCanRead(t *testing.T) {
 	t.Run("record refuses to append", func(t *testing.T) {
 		w := newTargetsWorld(t)
 		w.seed(t, "claude\n")
-		w.unreadable(t)
-		run := runTargets(w.args("record", "--target", "opencode")...)
+		run := runTargetsWith(unreadableWiring(), w.args("record", "--target", "opencode")...)
 		want := readerWarning(w) + "ERROR: longterm-mem: could not read " + w.layout.Record() + "; refusing to record opencode against install state that cannot be inspected\n"
 		if run.stderr != want || !equalInts(run.exits, []int{1}) {
 			t.Errorf("stderr %q, exits %v; want %q", run.stderr, run.exits, want)
@@ -266,13 +265,27 @@ func TestInstalledTargetsSayWhatTheyDoWithARecordNobodyCanRead(t *testing.T) {
 	t.Run("release refuses to rewrite", func(t *testing.T) {
 		w := newTargetsWorld(t)
 		w.seed(t, "claude\nopencode\n")
-		w.unreadable(t)
-		run := runTargets(w.args("release", "--target", "claude")...)
+		run := runTargetsWith(unreadableWiring(), w.args("release", "--target", "claude")...)
 		want := readerWarning(w) + "ERROR: longterm-mem: could not read " + w.layout.Record() + "; refusing to rewrite it from a file that could not be inspected\n"
 		if run.stderr != want || !equalInts(run.exits, []int{1}) {
 			t.Errorf("stderr %q, exits %v; want %q", run.stderr, run.exits, want)
 		}
 	})
+}
+
+// The same with a file the system really refuses to read (a mode of 0). The tests above hold the words for
+// every user, with a store that answers Unreadable; this one holds that the real store does answer it, and
+// is skipped for a user who can read anything (root).
+func TestInstalledTargetsReadARecordWhoseModeIs0(t *testing.T) {
+	w := newTargetsWorld(t)
+	w.seed(t, "claude\n")
+	w.unreadable(t)
+	if run := runTargets(w.args("list")...); run.stdout != "" || run.stderr != readerWarning(w) || !equalInts(run.exits, []int{1}) {
+		t.Errorf("list = %q, %q, exits %v; want the warning, no name and exit 1", run.stdout, run.stderr, run.exits)
+	}
+	if run := runTargets(w.args("assess")...); !equalInts(run.exits, []int{3}) || !strings.HasPrefix(run.stderr, readerWarning(w)) {
+		t.Errorf("assess = %q, %q, exits %v; want the warning and exit 3", run.stdout, run.stderr, run.exits)
+	}
 }
 
 // stillInstalled is the sentence the script said when targets remain.
@@ -330,13 +343,12 @@ func TestInstalledTargetsAssessSaysWhatAnUninstallComesTo(t *testing.T) {
 func TestInstalledTargetsAssessOfARecordNobodyCanRead(t *testing.T) {
 	w := newTargetsWorld(t)
 	w.seed(t, "claude\n")
-	w.unreadable(t)
-	run := runTargets(w.args("assess")...)
+	run := runTargetsWith(unreadableWiring(), w.args("assess")...)
 	want := readerWarning(w) + "WARN: longterm-mem: the install tracking file at " + w.layout.Record() + " exists but could not be read, so whether any runtime still depends on the shared binary is unknown; leaving the registration record and the shared binary untouched. Fix its permissions and re-run uninstall, or pass --purge to remove them anyway.\n"
 	if run.stderr != want || run.stdout != "" || !equalInts(run.exits, []int{3}) {
 		t.Errorf("assess = %q, %q, exits %v; want %q and exit 3", run.stdout, run.stderr, run.exits, want)
 	}
-	purged := runTargets(w.args("assess", "--purge")...)
+	purged := runTargetsWith(unreadableWiring(), w.args("assess", "--purge")...)
 	if purged.stderr != readerWarning(w) || purged.stdout != "" || len(purged.exits) != 0 {
 		t.Errorf("assess --purge = %q, %q, exits %v; want the reader's warning and the go-ahead", purged.stdout, purged.stderr, purged.exits)
 	}
@@ -423,8 +435,7 @@ func TestInstalledTargetsRetireHoldsTheBinaryWhenTheRecordCannotBeRead(t *testin
 	w := newTargetsWorld(t)
 	w.seed(t, "claude\n")
 	w.placeBinary(t)
-	w.unreadable(t)
-	run := runTargets(w.args("retire", "--binary", w.binary)...)
+	run := runTargetsWith(unreadableWiring(), w.args("retire", "--binary", w.binary)...)
 	want := readerWarning(w) + "WARN: longterm-mem: the install tracking file could not be read, so whether any runtime still depends on the shared binary is unknown; leaving " + w.binary + " in place. Fix its permissions and re-run uninstall, or pass --purge to remove it anyway.\n"
 	if run.stderr != want || run.stdout != "" || len(run.exits) != 0 {
 		t.Errorf("retire = %q, %q, exits %v; want %q and no exit", run.stdout, run.stderr, run.exits, want)
@@ -438,6 +449,9 @@ func TestInstalledTargetsRetireHoldsTheBinaryWhenTheRecordCannotBeRead(t *testin
 type faultyStore struct {
 	*ownershipfs.Store
 	lockErr, appendErr, replaceErr, deleteErr error
+	// unreadable makes the record unreadable whatever its mode is, which a user who can read anything
+	// (root) cannot do with a file.
+	unreadable bool
 }
 
 func (f faultyStore) Lock() (func(), error) {
@@ -445,6 +459,13 @@ func (f faultyStore) Lock() (func(), error) {
 		return nil, f.lockErr
 	}
 	return f.Store.Lock()
+}
+
+func (f faultyStore) Read() (ownership.State, []byte) {
+	if f.unreadable {
+		return ownership.Unreadable, nil
+	}
+	return f.Store.Read()
 }
 
 func (f faultyStore) Append(name string) error {
@@ -466,6 +487,11 @@ func (f faultyStore) Delete() error {
 		return f.deleteErr
 	}
 	return f.Store.Delete()
+}
+
+// unreadableWiring is the production wiring over a record that is there and cannot be read.
+func unreadableWiring() ownershipWiring {
+	return faultyWiring(func(f *faultyStore) { f.unreadable = true })
 }
 
 func faultyWiring(mutate func(*faultyStore)) ownershipWiring {
@@ -506,6 +532,12 @@ func TestInstalledTargetsSaysEachFailureInTheWordsOfTheScriptAndEndsWithExit1(t 
 		{"the new record cannot take the place of the old", func(f *faultyStore) {
 			f.replaceErr = &ownershipapp.ReplaceError{Stage: ownershipapp.StagePublish, Err: boom}
 		}, "release", []string{"--target", "claude"}, "claude\n",
+			"ERROR: longterm-mem: could not update " + w.layout.Record() + ": boom\n"},
+		{"the directory of the record cannot be synced after the rename", func(f *faultyStore) {
+			f.replaceErr = &ownershipapp.ReplaceError{Stage: ownershipapp.StageSync, Err: boom}
+		}, "release", []string{"--target", "claude"}, "claude\n",
+			"ERROR: longterm-mem: could not sync " + w.layout.RecordDir() + " after rewriting the record: boom\n"},
+		{"a store that fails a rewrite in a way it does not place", func(f *faultyStore) { f.replaceErr = boom }, "release", []string{"--target", "claude"}, "claude\n",
 			"ERROR: longterm-mem: could not update " + w.layout.Record() + ": boom\n"},
 		{"the record cannot be removed", func(f *faultyStore) { f.deleteErr = boom }, "retire", []string{"--binary", w.binary}, "",
 			"ERROR: longterm-mem: could not remove " + w.layout.Record() + ": boom\n"},

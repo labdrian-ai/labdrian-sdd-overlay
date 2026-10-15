@@ -308,6 +308,8 @@ func (c installedTargets) refuse(err error, target, unreadable string) int {
 			return c.die(fmt.Sprintf("could not create a temporary file in %s: %v", c.layout.RecordDir(), cause(replace.Err)))
 		case ownershipapp.StageWrite:
 			return c.die(fmt.Sprintf("could not rewrite %s: %v", c.layout.Record(), cause(replace.Err)))
+		case ownershipapp.StageSync:
+			return c.die(fmt.Sprintf("could not sync %s after rewriting the record: %v", c.layout.RecordDir(), cause(replace.Err)))
 		default:
 			return c.die(fmt.Sprintf("could not update %s: %v", c.layout.Record(), cause(replace.Err)))
 		}

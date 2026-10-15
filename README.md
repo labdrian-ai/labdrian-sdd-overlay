@@ -659,9 +659,10 @@ gentle-ai-overlay installed-targets retire --state-dir <dir> --binary <path> [--
     keeps a record of the runtimes it registered it with: the file `<dir>/longterm-mem/installed-targets`, one name a line. It
     is the only thing that says whether a runtime still depends on the binary, and the binary goes when it is empty and not
     before. `record` adds `--target` to it, once, after longterm-mem has registered that runtime (a name this build cannot
-    install for is refused), and appends it after whatever the file held. `release` takes it out, after longterm-mem has
+    install for is refused), and appends it after whatever the file held, in one write (a write that stops short leaves a partial last line, which the reader drops). `release` takes it out, after longterm-mem has
     removed that runtime's entry, rewriting the record from the names it vouches for, through a temporary file and a rename
-    (mode 0600): garbage is compacted away, a name only a newer build knows stays, and the last name leaves an empty record,
+    (mode 0600), and a sync of the directory after it so that a crash cannot bring the old record back (a directory that cannot
+    be synced is exit 1, with the record already the new one): garbage is compacted away, a name only a newer build knows stays, and the last name leaves an empty record,
     which is not an absent one. `list` prints the names, one a line. A name is a bare word of at most 64 bytes that begins with a
     letter or a digit and goes on with letters, digits, dots, underscores and dashes; a NUL byte, a blank or padded line, a
     carriage return and a line the file ends in the middle of are not names and are dropped when the record is read. A

@@ -1,6 +1,7 @@
 package fsstore_test
 
 import (
+	"bytes"
 	"errors"
 	"os"
 	"os/exec"
@@ -477,34 +478,98 @@ func TestALockHeldByAProcessThatIsKilledIsFreeForTheNext(t *testing.T) {
 	store := newStore(t)
 	child := exec.Command(os.Args[0], "-test.run=^TestChildProcessHoldsTheLock$")
 	child.Env = append(os.Environ(), holdsTheLockEnv+"="+store.Layout.StateDir)
+	// What the child says goes into the failure of this test: a child that fails before it holds the lock
+	// would otherwise show up here as a timeout and nothing more. It is read only after the child has
+	// been waited for, when nothing writes to it any more.
+	var said bytes.Buffer
+	child.Stdout, child.Stderr = &said, &said
 	if err := child.Start(); err != nil {
 		t.Fatal(err)
 	}
-	defer child.Process.Kill()
+	exited := make(chan error, 1)
+	go func() { exited <- child.Wait() }()
+	killed := false
+	kill := func() {
+		if !killed {
+			killed = true
+			child.Process.Kill()
+			<-exited
+		}
+	}
+	defer kill()
+
 	ready := filepath.Join(store.Layout.StateDir, "child-holds-the-lock")
-	deadline := time.Now().Add(10 * time.Second)
-	for {
-		if _, err := os.Stat(ready); err == nil {
-			break
+	deadline := time.After(10 * time.Second)
+	for taken := false; !taken; {
+		select {
+		case err := <-exited:
+			killed = true
+			t.Fatalf("the child ended before it held the lock: %v\n--- what the child said\n%s", err, said.String())
+		case <-deadline:
+			kill()
+			t.Fatalf("the child did not take the lock in 10 s\n--- what the child said\n%s", said.String())
+		case <-time.After(10 * time.Millisecond):
+			_, err := os.Stat(ready)
+			taken = err == nil
 		}
-		if time.Now().After(deadline) {
-			t.Fatal("the child did not take the lock")
-		}
-		time.Sleep(10 * time.Millisecond)
 	}
 
 	if _, err := store.Lock(); !errors.Is(err, app.ErrBusy) {
-		t.Fatalf("Lock while the child holds it = %v, want app.ErrBusy", err)
+		kill()
+		t.Fatalf("Lock while the child holds it = %v, want app.ErrBusy\n--- what the child said\n%s", err, said.String())
 	}
-	if err := child.Process.Kill(); err != nil {
-		t.Fatal(err)
-	}
-	child.Wait()
+	kill()
 	release, err := store.Lock()
 	if err != nil {
-		t.Fatalf("Lock after the holder was killed = %v, want the lock at once", err)
+		t.Fatalf("Lock after the holder was killed = %v, want the lock at once\n--- what the child said\n%s", err, said.String())
 	}
 	release()
+}
+
+// A record the last write of which stopped short ends in a partial line, with no line end. The reader
+// drops it (it is not a name, it was still being written), the rest of the record is read as it was,
+// and the next append runs into it: the behavior the script had and a pin holds, and the reason
+// Append says it is not atomic against a crash.
+func TestARecordWithAPartialLastLineIsReadWithoutIt(t *testing.T) {
+	store := newStore(t)
+	seed(t, store, "claude\nopenc")
+	svc := app.New(store, fsstore.Binaries{}, knows)
+
+	if got := svc.Tracked().Targets.Names(); len(got) != 1 || got[0] != "claude" {
+		t.Errorf("the record reads as %q, want only claude: a partial last line is not install state", got)
+	}
+	if verdict := svc.Assess(ownership.Intent{}).Verdict; verdict != ownership.StillInstalled {
+		t.Errorf("Assess = %v, want StillInstalled: the lines above the partial one still hold the binary", verdict)
+	}
+
+	// A record that is only a partial line holds nothing.
+	only := newStore(t)
+	seed(t, only, "clau")
+	if verdict := app.New(only, fsstore.Binaries{}, knows).Assess(ownership.Intent{}).Verdict; verdict != ownership.Retire {
+		t.Errorf("Assess of a record that is only a partial line = %v, want Retire: nothing was recorded", verdict)
+	}
+
+	// The next append runs into the partial line, and the two are one name nobody knows, which holds
+	// the binary. Kept as the script had it.
+	if err := svc.Record("opencode"); err != nil {
+		t.Fatal(err)
+	}
+	if got := onDisk(t, store); got != "claude\nopencopencode\n" {
+		t.Errorf("record = %q, want the append to run into the partial line as it always did", got)
+	}
+	if got := svc.Tracked().Targets.Names(); len(got) != 2 || got[1] != "opencopencode" {
+		t.Errorf("the record reads as %q, want claude and the name the two made", got)
+	}
+
+	// A rewrite made while the partial line is still the last one compacts it away.
+	again := newStore(t)
+	seed(t, again, "claude\nopenc")
+	if err := app.New(again, fsstore.Binaries{}, knows).Release("codex"); err != nil {
+		t.Fatal(err)
+	}
+	if got := onDisk(t, again); got != "claude\n" {
+		t.Errorf("record = %q after a rewrite, want the partial line gone", got)
+	}
 }
 
 // The script rewrote the record through one fixed temporary path, <record>.tmp, until two runs

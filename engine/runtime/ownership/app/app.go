@@ -104,10 +104,14 @@ const (
 	StageWrite
 	// StagePublish: it could not be put in the place of the record.
 	StagePublish
+	// StageSync: the new record is in place, and the directory it was renamed in could not be synced
+	// to the disk. The only stage at which the record is the new one.
+	StageSync
 )
 
-// ReplaceError is a rewrite of the record that failed at a stage. The record is as it was. The zero
-// Stage is a failure the store did not place (see replaceFailure), which is said as a failed update.
+// ReplaceError is a rewrite of the record that failed at a stage. The record is as it was, except at
+// StageSync, where it is the new one. The zero Stage is a failure the store did not place (see
+// replaceFailure), which is said as a failed update.
 type ReplaceError struct {
 	Stage Stage
 	Err   error
@@ -119,6 +123,8 @@ func (e *ReplaceError) Error() string {
 		return "cannot make a temporary file for the record: " + e.Err.Error()
 	case StageWrite:
 		return "cannot write the new record: " + e.Err.Error()
+	case StageSync:
+		return "cannot sync the directory of the record: " + e.Err.Error()
 	default:
 		return "cannot replace the record: " + e.Err.Error()
 	}

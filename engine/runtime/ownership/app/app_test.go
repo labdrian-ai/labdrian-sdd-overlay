@@ -832,6 +832,8 @@ func TestTheErrorsSayWhatTheyAre(t *testing.T) {
 		{&app.ReplaceError{Stage: app.StageCreate, Err: boom}, "temporary", true},
 		{&app.ReplaceError{Stage: app.StageWrite, Err: boom}, "write", true},
 		{&app.ReplaceError{Stage: app.StagePublish, Err: boom}, "replace", true},
+		{&app.ReplaceError{Stage: app.StageSync, Err: boom}, "sync the directory", true},
+		{&app.ReplaceError{Err: boom}, "replace", true},
 		{&app.BinaryRemoveError{Path: binary, Err: boom}, binary, true},
 		{&app.RecordRemoveError{Err: boom}, "record", true},
 	} {
