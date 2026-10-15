@@ -52,6 +52,7 @@ func runBackendFunc(t *testing.T, overlayDir, home, funcName string, args ...str
 	t.Helper()
 	bin := realBackendBin(t)
 	script := `source "$1"; shift; "$@"`
+	provisionEngine(t, home)
 	cmdArgs := append([]string{"-c", script, "bash", bin, funcName}, args...)
 	cmd := exec.Command("bash", cmdArgs...)
 	cmd.Dir = overlayDir
@@ -74,6 +75,7 @@ func runBackendFunc(t *testing.T, overlayDir, home, funcName string, args ...str
 func runBackendSubcommandWithHome(t *testing.T, overlayDir, home string, args ...string) (string, int) {
 	t.Helper()
 	bin := realBackendBin(t)
+	provisionEngine(t, home)
 	cmd := exec.Command(bin, args...)
 	cmd.Dir = overlayDir
 	cmd.Env = append(gitTestEnv(), "OVERLAY_DIR="+overlayDir, "HOME="+home)
