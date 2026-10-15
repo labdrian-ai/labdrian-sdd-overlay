@@ -14,12 +14,11 @@ func NewRepoProber(probe domain.RepoProbe) RepoProber {
 }
 
 // Behind reads how many commits the repository is behind origin/main and how
-// many releases it is behind the latest tag, from one report (D2: no second
-// run is spent to pick up the release count). Either is
-// domain.RepoBehindOriginNA when the report does not say, which is not the
+// many it is behind the latest release tag, from one report (D2: no second run
+// is spent to pick up the release count, and the report is read once). Either
+// is domain.RepoBehindOriginNA when the report does not say, which is not the
 // same as "up to date": a report that cannot be read must never look like a
 // repository that is current.
-func (p RepoProber) Behind() (origin, release int) {
-	report := p.probe.Report()
-	return domain.ProbeBehind(report), domain.ProbeBehindRelease(report)
+func (p RepoProber) Behind() domain.RepoBehind {
+	return domain.BehindOf(p.probe.Report())
 }

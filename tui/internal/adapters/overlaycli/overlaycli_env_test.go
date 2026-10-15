@@ -21,6 +21,20 @@ const pinned = "TUI_PINNED_VARIABLE"
 // echoPinned is a backend that prints the variable as it sees it.
 const echoPinned = `printf '%s' "$` + pinned + `"`
 
+// echoPinnedReport is a backend whose sync-check report records the variable
+// as it sees it, as the version of the one target it reports.
+const echoPinnedReport = `printf 'VERDICT:claude:UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=0 RECORDED_VERSION=%s\n' "$` + pinned + `"`
+
+// probedValue is the variable as the launch probe's backend saw it.
+func probedValue(t *testing.T, cli CLI) string {
+	t.Helper()
+	verdicts := cli.Report()
+	if len(verdicts) != 1 {
+		t.Fatalf("Report = %+v, want the one verdict the backend printed", verdicts)
+	}
+	return verdicts[0].RecordedVersion
+}
+
 // withParentEnvironment sets the variable in the environment of the test
 // process, as an operator's shell would have set STATE_DIR.
 func withParentEnvironment(t *testing.T) {
@@ -47,9 +61,9 @@ func TestOverlayCLI_Run_RunsUnderTheEnvironmentOfTheCaller(t *testing.T) {
 func TestOverlayCLI_Report_RunsUnderTheEnvironmentOfTheCaller(t *testing.T) {
 	withParentEnvironment(t)
 	root := t.TempDir()
-	writeScriptBackend(t, root, echoPinned)
+	writeScriptBackend(t, root, echoPinnedReport)
 
-	if got := New(root).Report(); got != "from-the-parent" {
+	if got := probedValue(t, New(root)); got != "from-the-parent" {
 		t.Errorf("the probe ran with %s = %q, want the caller's value: it must inherit the environment", pinned, got)
 	}
 }
@@ -65,7 +79,8 @@ func TestOverlayCLI_ActionsAndTheProbeNeverTakeTheEnvOfTheAdapter(t *testing.T) 
 	if got := cli.Run([]string{"apply"}).Output; got != "from-the-parent" {
 		t.Errorf("an action ran with %s = %q, want the caller's value, not the adapter's", pinned, got)
 	}
-	if got := cli.Report(); got != "from-the-parent" {
+	writeScriptBackend(t, root, echoPinnedReport)
+	if got := probedValue(t, cli); got != "from-the-parent" {
 		t.Errorf("the probe ran with %s = %q, want the caller's value, not the adapter's", pinned, got)
 	}
 }

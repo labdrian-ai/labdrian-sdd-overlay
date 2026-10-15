@@ -98,10 +98,10 @@ func TestOverlayCLI_Report_RunsACachedOnlySyncCheckFromTheRepoRoot(t *testing.T)
 		"ACTION:claude: run 'git pull' to update your local clone\n"
 	writeStubBackend(t, root, recorder, sample, 1) // nonzero exit on purpose
 
-	report := New(root).Report()
+	verdicts := New(root).Report()
 
-	if !strings.Contains(report, "REPO_BEHIND_ORIGIN=7") {
-		t.Errorf("Report = %q, want the sync-check output even though the stub exits nonzero", report)
+	if len(verdicts) != 1 || verdicts[0].Target != "claude" || verdicts[0].RepoBehindOrigin != 7 {
+		t.Errorf("Report = %+v, want the claude verdict of the sync-check even though the stub exits nonzero", verdicts)
 	}
 	dir, args := recordedRun(t, recorder)
 	if args != "sync-check" {
@@ -113,10 +113,31 @@ func TestOverlayCLI_Report_RunsACachedOnlySyncCheckFromTheRepoRoot(t *testing.T)
 	}
 }
 
-// TestOverlayCLI_Report_WithNoBackendIsEmpty: a probe that cannot be run says
-// nothing, which the reader degrades to "unknown".
-func TestOverlayCLI_Report_WithNoBackendIsEmpty(t *testing.T) {
-	if report := New(t.TempDir()).Report(); report != "" {
-		t.Errorf("Report = %q, want nothing from a repo root without a backend", report)
+// TestOverlayCLI_Report_WithNothingToReadHasNoVerdicts: a probe that cannot be
+// run, or whose output holds no verdict, says nothing, which the domain
+// degrades to "unknown" (BehindOf) rather than to "up to date".
+func TestOverlayCLI_Report_WithNothingToReadHasNoVerdicts(t *testing.T) {
+	tests := []struct {
+		name  string
+		setup func(t *testing.T, root string)
+	}{
+		{"a repo root without a backend", func(*testing.T, string) {}},
+		{"a backend that prints nothing", func(t *testing.T, root string) { writeScriptBackend(t, root, `:`) }},
+		{"a target skipped, so no verdict", func(t *testing.T, root string) {
+			writeScriptBackend(t, root, `echo "SYNC_CHECK:claude: target dir not found -- skipping"`)
+		}},
+		{"output that is no report at all", func(t *testing.T, root string) {
+			writeScriptBackend(t, root, `printf 'not even close to a sync-check line\n\000\377 binary noise'`)
+		}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			root := t.TempDir()
+			tc.setup(t, root)
+
+			if verdicts := New(root).Report(); len(verdicts) != 0 {
+				t.Errorf("Report = %+v, want no verdict", verdicts)
+			}
+		})
 	}
 }

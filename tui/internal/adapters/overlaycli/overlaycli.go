@@ -75,12 +75,14 @@ func (c CLI) Run(args []string) domain.Execution {
 // Report implements domain.RepoProbe with a cached-only sync-check (no
 // --fetch/--check-origin, per R-001) from the repo root. Whatever the backend
 // printed is the report, even when the process exits non-zero: the probe reads
-// cached refs, it does not require a clean exit.
-func (c CLI) Report() string {
+// cached refs, it does not require a clean exit. The report is read once, into
+// the verdicts it holds; there are none when it holds none (or the backend
+// could not be run).
+func (c CLI) Report() []domain.TargetVerdict {
 	cmd := exec.Command(c.binary(), "sync-check")
 	cmd.Dir = c.root
 	out, _ := cmd.CombinedOutput()
-	return string(out)
+	return domain.ParseSyncCheck(string(out))
 }
 
 // Targets implements TargetCatalog with `labdrian-overlay targets`.

@@ -89,9 +89,9 @@ type fakeProbe struct {
 	asked           int
 }
 
-func (f *fakeProbe) Behind() (int, int) {
+func (f *fakeProbe) Behind() domain.RepoBehind {
 	f.asked++
-	return f.origin, f.release
+	return domain.RepoBehind{Origin: f.origin, Release: f.release}
 }
 
 // threeCopyTargets is the catalog most model tests run against: the three

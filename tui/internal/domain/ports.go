@@ -60,10 +60,10 @@ type Backend interface {
 
 // RepoProbe is where the TUI learns how far the repository is behind its
 // origin and its latest release, without the network: the report of a
-// cached-only sync-check, whatever the backend's exit status. The report is
-// the backend's own text (ParseSyncCheck reads it); a probe that cannot be
-// run answers with whatever it has, possibly nothing, and the reader degrades
-// that to "unknown" rather than to "up to date".
+// cached-only sync-check, whatever the backend's exit status, as the verdicts
+// it holds. A probe that cannot be run, or whose report holds no verdict,
+// answers with none, and BehindOf degrades that to "unknown" rather than to
+// "up to date".
 type RepoProbe interface {
-	Report() string
+	Report() []TargetVerdict
 }

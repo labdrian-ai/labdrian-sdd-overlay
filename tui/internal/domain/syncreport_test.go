@@ -163,49 +163,36 @@ func TestParseSyncCheckAgentFilesAllStatuses(t *testing.T) {
 	}
 }
 
-// TestProbeBehind covers the table from design.md's Testing Strategy: a
-// concrete count, an explicit NA, zero verdicts (e.g. every target dir
-// missing so sync-check emits no VERDICT line), and garbage/unparseable
-// output. Every failure mode must degrade to RepoBehindOriginNA rather than
-// Go's zero value, which would collapse into "confirmed 0 behind" (the
-// R-006 bug class ParseSyncCheck already guards against).
-func TestProbeBehind(t *testing.T) {
+// TestBehindOf covers what the launch-time probe makes of a report: the two
+// counts come from the same verdict, either may be unknown on its own, and a
+// report with no verdict says nothing -- which is "unknown", never "up to
+// date" (Go's zero value would collapse into "confirmed 0 behind", the R-006
+// bug class the parser of a report already guards against).
+func TestBehindOf(t *testing.T) {
+	verdict := func(target string, origin, release int) TargetVerdict {
+		return TargetVerdict{Target: target, RepoBehindOrigin: origin, RepoBehindRelease: release}
+	}
+	unknown := RepoBehind{Origin: RepoBehindOriginNA, Release: RepoBehindOriginNA}
+
 	cases := []struct {
-		name   string
-		output string
-		want   int
+		name     string
+		verdicts []TargetVerdict
+		want     RepoBehind
 	}{
-		{
-			name: "concrete count",
-			output: "\n=== sync-check: claude ===\n" +
-				"VERDICT:claude:UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=0 REPO_BEHIND_ORIGIN=4\n" +
-				"ACTION:claude: run 'git pull' to update your local clone\n",
-			want: 4,
-		},
-		{
-			name: "explicit NA",
-			output: "\n=== sync-check: claude ===\n" +
-				"VERDICT:claude:UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=0 REPO_BEHIND_ORIGIN=NA\n" +
-				"ACTION:claude: in sync with gentle-ai (healthy)\n",
-			want: RepoBehindOriginNA,
-		},
-		{
-			name:   "zero verdicts (e.g. every target dir missing)",
-			output: "\nSYNC_CHECK:claude: target dir not found -- skipping\n",
-			want:   RepoBehindOriginNA,
-		},
-		{
-			name:   "garbage output",
-			output: "not even close to a sync-check line\n\x00\xff binary noise",
-			want:   RepoBehindOriginNA,
-		},
+		{"both counts", []TargetVerdict{verdict("claude", 4, 3)}, RepoBehind{Origin: 4, Release: 3}},
+		{"both up to date", []TargetVerdict{verdict("claude", 0, 0)}, RepoBehind{}},
+		{"origin known, release not yet tagged", []TargetVerdict{verdict("claude", 3, RepoBehindOriginNA)}, RepoBehind{Origin: 3, Release: RepoBehindOriginNA}},
+		{"release known, origin not", []TargetVerdict{verdict("claude", RepoBehindOriginNA, 2)}, RepoBehind{Origin: RepoBehindOriginNA, Release: 2}},
+		{"explicit NA for both", []TargetVerdict{verdict("claude", RepoBehindOriginNA, RepoBehindOriginNA)}, unknown},
+		{"zero verdicts (e.g. every target dir missing)", []TargetVerdict{}, unknown},
+		{"nothing at all", nil, unknown},
+		{"the first verdict stands for the repository", []TargetVerdict{verdict("claude", 7, 4), verdict("codex", 1, 0)}, RepoBehind{Origin: 7, Release: 4}},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := ProbeBehind(tc.output)
-			if got != tc.want {
-				t.Errorf("ProbeBehind(%q) = %d, want %d", tc.name, got, tc.want)
+			if got := BehindOf(tc.verdicts); got != tc.want {
+				t.Errorf("BehindOf(%+v) = %+v, want %+v", tc.verdicts, got, tc.want)
 			}
 		})
 	}
@@ -285,50 +272,5 @@ func TestParseSyncCheck_ReleaseFieldsAbsentDefaultsBackwardsCompatible(t *testin
 	}
 	if v.Status != SyncHealthy {
 		t.Errorf("Status = %d, want SyncHealthy for a legacy all-zero verdict", v.Status)
-	}
-}
-
-// TestProbeBehindRelease mirrors TestProbeBehind's table for the D2
-// counterpart: a concrete count, an explicit NA, zero verdicts, and
-// unparseable output all handled with the same degrade-to-NA contract.
-func TestProbeBehindRelease(t *testing.T) {
-	cases := []struct {
-		name   string
-		output string
-		want   int
-	}{
-		{
-			name: "concrete count",
-			output: "\n=== sync-check: claude ===\n" +
-				"VERDICT:claude:UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=0 REPO_BEHIND_RELEASE=3\n" +
-				"ACTION:claude: run 'labdrian self-update'\n",
-			want: 3,
-		},
-		{
-			name: "explicit NA",
-			output: "\n=== sync-check: claude ===\n" +
-				"VERDICT:claude:UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=0 REPO_BEHIND_RELEASE=NA\n" +
-				"ACTION:claude: (no releases published yet)\n",
-			want: RepoBehindOriginNA,
-		},
-		{
-			name:   "zero verdicts",
-			output: "\nSYNC_CHECK:claude: target dir not found -- skipping\n",
-			want:   RepoBehindOriginNA,
-		},
-		{
-			name:   "garbage output",
-			output: "not even close to a sync-check line\n\x00\xff binary noise",
-			want:   RepoBehindOriginNA,
-		},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			got := ProbeBehindRelease(tc.output)
-			if got != tc.want {
-				t.Errorf("ProbeBehindRelease(%q) = %d, want %d", tc.name, got, tc.want)
-			}
-		})
 	}
 }

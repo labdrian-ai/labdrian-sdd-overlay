@@ -210,32 +210,31 @@ func ParseSyncCheck(output string) []TargetVerdict {
 	return result
 }
 
-// ProbeBehind extracts the launch-time origin-behind count from cached-only
-// sync-check output. It reuses ParseSyncCheck (D4) instead of re-deriving
-// REPO_BEHIND_ORIGIN detection, which stays owned by sync-check-verdicts —
-// this capability only reads that published value. Any failure to determine
-// a concrete count — zero verdicts (e.g. every target dir missing skips the
-// VERDICT line), an explicit "NA", or unparseable/garbage output — degrades
-// to RepoBehindOriginNA rather than Go's zero value, which would collapse
-// into "confirmed 0 behind" (the exact R-006 bug class ParseSyncCheck
-// already guards against for its own callers).
-func ProbeBehind(output string) int {
-	verdicts := ParseSyncCheck(output)
-	if len(verdicts) == 0 {
-		return RepoBehindOriginNA
-	}
-	return verdicts[0].RepoBehindOrigin
+// RepoBehind is how far the repository is behind, as one sync-check report
+// says it (the launch-time probe, D4 and D2). A count the report does not give
+// is RepoBehindOriginNA, which is not the same as "up to date".
+type RepoBehind struct {
+	// Origin is how many commits local main is behind origin/main.
+	Origin int
+	// Release is how many commits local main is behind the newest
+	// locally-known release tag.
+	Release int
 }
 
-// ProbeBehindRelease is ProbeBehind's D2 counterpart: it extracts
-// REPO_BEHIND_RELEASE instead of REPO_BEHIND_ORIGIN from the same
-// cached-only sync-check output, with the identical degrade-to-NA contract
-// (zero verdicts, explicit "NA", or unparseable output all resolve to
-// RepoBehindOriginNA — the sentinel is reused, per D2, not redefined).
-func ProbeBehindRelease(output string) int {
-	verdicts := ParseSyncCheck(output)
+// BehindOf reads how far the repository is behind from the verdicts of one
+// sync-check report. Both counts are the repository's, not a target's: the
+// backend works them out once and prints them on every VERDICT line, so the
+// first verdict stands for the repository and the two numbers come from the
+// same one.
+//
+// Any failure to determine a count -- no verdict at all (e.g. every target dir
+// missing skips the VERDICT line, or the report could not be read) or an
+// explicit "NA" -- degrades to RepoBehindOriginNA rather than Go's zero value,
+// which would collapse into "confirmed 0 behind" (the exact R-006 bug class
+// the parser of a report already guards against).
+func BehindOf(verdicts []TargetVerdict) RepoBehind {
 	if len(verdicts) == 0 {
-		return RepoBehindOriginNA
+		return RepoBehind{Origin: RepoBehindOriginNA, Release: RepoBehindOriginNA}
 	}
-	return verdicts[0].RepoBehindRelease
+	return RepoBehind{Origin: verdicts[0].RepoBehindOrigin, Release: verdicts[0].RepoBehindRelease}
 }

@@ -112,10 +112,10 @@ type RestorePlanner interface {
 }
 
 // RepoProber is what the model needs to show how far the repository is
-// behind: commits behind origin/main and releases behind the latest tag, each
+// behind: commits behind origin/main and behind the latest release tag, each
 // domain.RepoBehindOriginNA when unknown.
 type RepoProber interface {
-	Behind() (origin, release int)
+	Behind() domain.RepoBehind
 }
 
 // Deps is what the composition root (main) hands the model: the error of
@@ -174,8 +174,8 @@ func probeCmd(p RepoProber) tea.Cmd {
 		return nil
 	}
 	return func() tea.Msg {
-		origin, release := p.Behind()
-		return probeDoneMsg{behind: origin, behindRelease: release}
+		behind := p.Behind()
+		return probeDoneMsg{behind: behind.Origin, behindRelease: behind.Release}
 	}
 }
 
