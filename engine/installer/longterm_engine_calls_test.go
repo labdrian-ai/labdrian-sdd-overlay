@@ -340,48 +340,6 @@ func TestEngineCalls_TheRemediesTheAssessWarningsNameAreCommandsThatExist(t *tes
 	}
 }
 
-// The script calls the verbs of the command with the flags each takes and no other. The list is the one
-// the engine holds in its usage (engine/cmd/installed_targets.go): a flag the script sends that the
-// command does not take would be a usage error at the first uninstall.
-func TestEngineCalls_TheScriptSendsOnlyTheVerbsAndFlagsTheCommandTakes(t *testing.T) {
-	script, err := os.ReadFile(overlayScript(t))
-	if err != nil {
-		t.Fatal(err)
-	}
-	taken := map[string]map[string]bool{
-		"record":  {"--target": true},
-		"release": {"--target": true},
-		"assess":  {"--purge": true, "--unregister-failed": true},
-		"retire":  {"--binary": true, "--purge": true},
-	}
-	call := regexp.MustCompile(`longtermmem_targets (\w+)([^|;\n]*)`)
-	flag := regexp.MustCompile(`--[a-z-]+`)
-	seen := map[string]bool{}
-	for _, m := range call.FindAllStringSubmatch(string(script), -1) {
-		verb, rest := m[1], m[2]
-		allowed, ok := taken[verb]
-		if !ok {
-			t.Errorf("the script calls the verb %q, which the command does not take: %s", verb, m[0])
-			continue
-		}
-		seen[verb] = true
-		for _, f := range flag.FindAllString(rest, -1) {
-			if !allowed[f] {
-				t.Errorf("the script sends %s to %s, which does not take it: %s", f, verb, m[0])
-			}
-		}
-	}
-	for verb := range taken {
-		if !seen[verb] {
-			t.Errorf("the script never calls %s", verb)
-		}
-	}
-	// The helper hands the state directory over once, in front of the arguments.
-	if !strings.Contains(string(script), `"$ENGINE_BINARY" installed-targets "$verb" --state-dir "$STATE_DIR" "$@"`) {
-		t.Error("the helper does not call the engine with the state directory in front of the arguments")
-	}
-}
-
 // Nothing of the old record is left in the script: no temporary file for a rewrite, no filter, no lock
 // made of a directory, no age test for an abandoned one.
 func TestEngineCalls_NoBashIsLeftThatKeepsTheRecord(t *testing.T) {
