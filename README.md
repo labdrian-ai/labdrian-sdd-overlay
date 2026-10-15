@@ -622,9 +622,10 @@ gentle-ai-overlay manifest routes --overlay-root <dir> --target <name> --skills-
     always read it: a line is blank or a comment when only white space comes before its end or a `#`, and columns are
     separated by spaces and tabs alone. A path named twice takes the route of the first row that names it. A row under
     longterm-mem/ with no route, or one outside skill, agent, opencode-agent and mcp, is refused ("route_resolve:
-    longterm-mem row '<path>' declares ..." on stderr), so are an unknown --target and a manifest that cannot be read.
-    Exit 0 on success; 1 on a usage error (including an unknown flag) or a refusal, with nothing on stdout, so a caller
-    never acts on part of a manifest.
+    longterm-mem row '<path>' declares ..." on stderr), so are an unknown --target and a manifest that is there and
+    cannot be read; a manifest that is not there has no row, and a warning on stderr says so (as the script always
+    read it). Exit 0 on success; 1 on a usage error (including an unknown flag) or a refusal, with nothing on stdout,
+    so a caller never acts on part of a manifest.
 
 gentle-ai-overlay runtime capabilities [--target claude|codex|pi|opencode|all]
     Engine verb (Phase 7): there is no `overlay runtime` wrapper, so run it on the installed engine

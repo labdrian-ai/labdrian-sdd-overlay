@@ -77,8 +77,9 @@ func parseManifestRoutesArgs(args []string) (manifestRoutesArgs, error) {
 
 // runManifestCore is the testable core of the manifest subcommand: it names the verb, reads the
 // command line, asks the use case and tells the rows, one a line, five columns separated by a
-// tab (see the usage text). Exit 0 on success; 1 on a command line it refuses, a manifest it cannot
-// read and a row it cannot place, with nothing on stdout.
+// tab (see the usage text). A manifest that is not there is a manifest with no row, said in a
+// warning on stderr. Exit 0 on success; 1 on a command line it refuses, a manifest that is there and
+// cannot be read, and a row it cannot place, with nothing on stdout.
 func runManifestCore(ports app.RoutesPorts, args []string, stdout, stderr io.Writer, exit func(int)) {
 	if len(args) == 0 {
 		fmt.Fprintln(stderr, "error: manifest requires a verb: routes")
@@ -96,7 +97,7 @@ func runManifestCore(ports app.RoutesPorts, args []string, stdout, stderr io.Wri
 		exit(1)
 		return
 	}
-	routes, err := app.ManifestRoutes(ports, app.RoutesInput{
+	result, err := app.ManifestRoutes(ports, app.RoutesInput{
 		ManifestPath: parsed.manifest,
 		OverlayRoot:  parsed.overlayRoot,
 		Destinations: skills.RouteDestinations{Target: parsed.target, SkillsRoot: parsed.skillsRoot, AgentsRoot: parsed.agentsRoot},
@@ -107,7 +108,10 @@ func runManifestCore(ports app.RoutesPorts, args []string, stdout, stderr io.Wri
 		exit(1)
 		return
 	}
-	for _, route := range routes {
+	if result.ManifestMissing {
+		fmt.Fprintf(stderr, "warning: manifest routes: no manifest at %q: it has no row to route\n", parsed.manifest)
+	}
+	for _, route := range result.Routes {
 		fmt.Fprintf(stdout, "%s\t%s\t%s\t%s\t%s\n", route.Path, route.Route, route.RepoRel, route.RepoSource, route.Dest)
 	}
 	exit(0)

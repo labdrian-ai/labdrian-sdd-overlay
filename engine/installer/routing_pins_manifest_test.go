@@ -7,8 +7,10 @@ package installer_test
 // world).
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -133,4 +135,43 @@ func TestRoutingPins_AnMcpRowIsReadByEveryCommandAndCopiedNowhere(t *testing.T) 
 	w.write(w.home, ".claude/skills/skill-a/SKILL.md", "# skill-a live\n")
 	pin(t, "mcp/capture", pinRunText(w.run("capture", "--target", "claude")))
 	pin(t, "mcp/capture-upstream", w.branchFiles("upstream"))
+}
+
+// pinStdoutText is a run as a pin records it when its words on stderr are the words of whatever
+// reads the manifest: how it ended and what it said on stdout.
+func pinStdoutText(r pinRun) string {
+	return fmt.Sprintf("exit %d\n--- stdout\n%s", r.Exit, pinText(r.Stdout))
+}
+
+// A manifest that is not there is read as one with no row: the commands act on nothing, end as
+// they would for an empty manifest, and say on stderr that the manifest is missing. The pins hold
+// what they print on stdout and how they end; the words on stderr were grep's, and are now the
+// engine's, so they are only held to name the manifest.
+func TestRoutingPins_AManifestThatIsNotThereHasNoRow(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in -short mode")
+	}
+	w := newPinWorld(t, "skill-a/SKILL.md   managed\n", map[string]string{"skills/skill-a/SKILL.md": "# skill-a\n"})
+	// Capture reads the manifest of 'upstream', which it checks out, so the manifest goes from both.
+	w.git("checkout", "-q", "upstream")
+	w.git("rm", "-q", "overlay.manifest")
+	w.git("commit", "-q", "-m", "upstream: no manifest")
+	w.git("checkout", "-q", "main")
+	w.git("merge", "-q", "--ff-only", "upstream")
+	if err := os.MkdirAll(filepath.Join(w.home, ".claude", "skills"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, args := range [][]string{
+		{"status", "--target", "claude"},
+		{"sync-check", "--target", "claude"},
+		{"apply", "--target", "claude"},
+		{"capture", "--target", "claude"},
+	} {
+		run := w.run(args...)
+		pin(t, "no-manifest/"+args[0], pinStdoutText(run))
+		if !strings.Contains(run.Stderr, "overlay.manifest") {
+			t.Errorf("%s said nothing of the missing manifest on stderr: %q", args[0], run.Stderr)
+		}
+	}
+	pin(t, "no-manifest/files", w.tree(w.home))
 }

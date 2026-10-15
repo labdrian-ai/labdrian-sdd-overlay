@@ -44,25 +44,44 @@ func TestManifestRoutesRoutesTheRowsOfTheManifestItReads(t *testing.T) {
 		{Path: "GADU.md", Route: "agent", RepoRel: "agents/GADU.md", RepoSource: "/o/agents/GADU.md", Dest: "/h/.claude/agents/GADU.md"},
 		{Path: "engine/go.mod", Route: "non-deployable", RepoRel: "engine/go.mod"},
 	}
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("ManifestRoutes = %+v, want %+v", got, want)
+	if !reflect.DeepEqual(got.Routes, want) || got.ManifestMissing {
+		t.Errorf("ManifestRoutes = %+v, want the routes %+v of a manifest that is there", got, want)
 	}
 }
 
 func TestManifestRoutesKeepsOnlyTheManagedRowsWhenAsked(t *testing.T) {
 	ports := RoutesPorts{Manifest: manifestFiles(map[string]string{
-		"/o/overlay.manifest": "a/SKILL.md managed\nb/SKILL.md custom\n",
+		"/o/overlay.manifest": "a/SKILL.md managed\nb/SKILL.md custom\nc/SKILL.md\n",
 	})}
 	got, err := ManifestRoutes(ports, routesInput(true))
-	if err != nil || len(got) != 1 || got[0].Path != "a/SKILL.md" {
+	if err != nil || len(got.Routes) != 1 || got.Routes[0].Path != "a/SKILL.md" {
 		t.Errorf("ManifestRoutes = %+v, %v, want the managed row alone", got, err)
 	}
 }
 
-func TestManifestRoutesSaysWhyAManifestCouldNotBeRead(t *testing.T) {
-	_, err := ManifestRoutes(RoutesPorts{Manifest: manifestFiles(nil)}, routesInput(false))
+func TestManifestRoutesReadsAManifestThatIsNotThereAsOneWithNoRow(t *testing.T) {
+	got, err := ManifestRoutes(RoutesPorts{Manifest: manifestFiles(nil)}, routesInput(false))
+	if err != nil || len(got.Routes) != 0 || !got.ManifestMissing {
+		t.Errorf("ManifestRoutes = %+v, %v, want no row, no error, and the manifest said to be missing", got, err)
+	}
+}
+
+func TestManifestRoutesStillRefusesAnUnknownTargetWhenTheManifestIsNotThere(t *testing.T) {
+	in := routesInput(false)
+	in.Destinations.Target = "windsurf"
+	_, err := ManifestRoutes(RoutesPorts{Manifest: manifestFiles(nil)}, in)
+	var unknown *skills.UnknownTargetError
+	if !errors.As(err, &unknown) {
+		t.Errorf("ManifestRoutes error = %v, want an UnknownTargetError: a manifest that is not there does not excuse the question", err)
+	}
+}
+
+func TestManifestRoutesSaysWhyAManifestThatIsThereCouldNotBeRead(t *testing.T) {
+	denied := &fs.PathError{Op: "open", Path: "/o/overlay.manifest", Err: fs.ErrPermission}
+	ports := RoutesPorts{Manifest: func(string) ([]byte, error) { return nil, denied }}
+	_, err := ManifestRoutes(ports, routesInput(false))
 	var read *ManifestReadError
-	if !errors.As(err, &read) || read.Path != "/o/overlay.manifest" || !errors.Is(err, fs.ErrNotExist) {
+	if !errors.As(err, &read) || read.Path != "/o/overlay.manifest" || !errors.Is(err, fs.ErrPermission) {
 		t.Errorf("ManifestRoutes error = %v, want a ManifestReadError that names the manifest and wraps the cause", err)
 	}
 	if !strings.Contains(err.Error(), `reading manifest "/o/overlay.manifest"`) {
@@ -76,7 +95,7 @@ func TestManifestRoutesAnswersNothingForAManifestWithARowItCannotPlace(t *testin
 	})}
 	got, err := ManifestRoutes(ports, routesInput(false))
 	var unrouted *skills.UnroutedRowError
-	if !errors.As(err, &unrouted) || got != nil {
+	if !errors.As(err, &unrouted) || got.Routes != nil {
 		t.Errorf("ManifestRoutes = %+v, %v, want the refusal of the row and no route at all", got, err)
 	}
 }

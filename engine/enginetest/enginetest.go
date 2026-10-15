@@ -80,14 +80,18 @@ func Cleanup() {
 	}
 }
 
-// Provision puts the engine where the script looks for it in the given home.
+// Provision puts the engine where the script looks for it in the given home. A home that has it
+// keeps it: the script may be running it, and a file that is being run cannot be written.
 func Provision(t testing.TB, home string) {
 	t.Helper()
+	dst := filepath.Join(home, filepath.FromSlash(installedDir), installedName)
+	if _, err := os.Stat(dst); err == nil {
+		return
+	}
 	body, err := os.ReadFile(Binary(t))
 	if err != nil {
 		t.Fatalf("read the built engine: %v", err)
 	}
-	dst := filepath.Join(home, filepath.FromSlash(installedDir), installedName)
 	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 		t.Fatalf("mkdir %s: %v", filepath.Dir(dst), err)
 	}

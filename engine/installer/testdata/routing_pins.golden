@@ -894,3 +894,42 @@ Switched to branch 'main'
 @@@ mcp/capture-upstream
 longterm-mem/go.mod: module longterm-mem
 skills/skill-a/SKILL.md: # skill-a live
+@@@ no-manifest/status
+exit 0
+--- stdout
+=== Branch ===
+main
+
+=== Diff stat upstream..main ===
+
+=== Status: claude ===
+  version: never deployed
+@@@ no-manifest/sync-check
+exit 0
+--- stdout
+
+=== sync-check: claude ($HOME/.claude/skills) ===
+
+VERDICT:claude:UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=0 REPO_BEHIND_ORIGIN=NA REPO_BEHIND_RELEASE=NA RECORDED_VERSION=NA DIGEST_MATCH=NA
+ACTION:claude: in sync with gentle-ai (healthy)
+@@@ no-manifest/apply
+exit 0
+--- stdout
+==> Merging upstream into main...
+Already up to date.
+
+=== Deploying to: claude ===
+  claude: deployed=0 in-sync=0
+
+Deploy complete.
+==> Returned to branch: main
+==> No 'origin' remote — skipping main push
+@@@ no-manifest/capture
+exit 0
+--- stdout
+==> Capturing managed files from $HOME/.claude/skills
+==> No changes detected — upstream already up to date
+==> No 'origin' remote — skipping upstream push
+==> Returned to branch: main
+@@@ no-manifest/files
+.labdrian-overlay/state.json: claude untagged 01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b

@@ -59,6 +59,15 @@ func TestManifestRoutesTellsNothingForAManifestWithNoRow(t *testing.T) {
 	}
 }
 
+func TestManifestRoutesReadsAManifestThatIsNotThereAsOneWithNoRowAndSaysSo(t *testing.T) {
+	args := []string{"routes", "--overlay-root", "/elsewhere", "--target", "claude", "--skills-root", "/s"}
+	run := runManifestWith(manifestPorts(""), args...)
+	want := "warning: manifest routes: no manifest at \"/elsewhere/overlay.manifest\": it has no row to route\n"
+	if run.stdout != "" || run.stderr != want || run.exit != 0 {
+		t.Errorf("run = %+v, want nothing on stdout, %q on stderr and exit 0: the script always read a manifest that is not there as one with no row", run, want)
+	}
+}
+
 func TestManifestRoutesKeepsTheManagedRowsWhenAsked(t *testing.T) {
 	run := runManifestWith(manifestPorts("a/SKILL.md managed\nb/SKILL.md custom\nc/SKILL.md\n"), append(claudeArgs, "--managed")...)
 	if run.stdout != "a/SKILL.md\tskill\tskills/a/SKILL.md\t/o/skills/a/SKILL.md\t/h/.claude/skills/a/SKILL.md\n" || run.exit != 0 {
@@ -101,8 +110,9 @@ func TestManifestRoutesRefusesWhatItCannotPlaceAndTellsNothingOnStdout(t *testin
 			"route_resolve: longterm-mem row 'longterm-mem/internal/foo.go' declares no route (missing third column); must be one of: skill, agent, opencode-agent, mcp\n"},
 		{"a longterm-mem row with a route nobody knows", manifestPorts("a/SKILL.md managed\nlongterm-mem/internal/bar.go custom bogus\n"), claudeArgs,
 			"route_resolve: longterm-mem row 'longterm-mem/internal/bar.go' declares an unrecognized route 'bogus'; must be one of: skill, agent, opencode-agent, mcp\n"},
-		{"a manifest that is not there", manifestPorts(""), []string{"routes", "--overlay-root", "/elsewhere", "--target", "claude", "--skills-root", "/s"},
-			`error: manifest routes: reading manifest "/elsewhere/overlay.manifest": open /elsewhere/overlay.manifest: file does not exist` + "\n"},
+		{"a manifest that is there and cannot be read", app.RoutesPorts{Manifest: func(name string) ([]byte, error) {
+			return nil, &fs.PathError{Op: "open", Path: name, Err: fs.ErrPermission}
+		}}, claudeArgs, `error: manifest routes: reading manifest "/o/overlay.manifest": open /o/overlay.manifest: permission denied` + "\n"},
 		{"a target nobody knows", manifestPorts("a/SKILL.md managed\n"), []string{"routes", "--overlay-root", "/o", "--target", "windsurf", "--skills-root", "/s"},
 			"error: manifest routes: unknown target \"windsurf\"; must be one of: claude, codex, pi, opencode\n"},
 		{"an agent row and no agents directory", manifestPorts("GADU.md custom agent\n"), []string{"routes", "--overlay-root", "/o", "--target", "claude", "--skills-root", "/s"},
