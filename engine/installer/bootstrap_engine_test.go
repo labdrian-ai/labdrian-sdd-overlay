@@ -119,31 +119,19 @@ func TestBootstrapSaysWhatItDoesToTheEngineOnStderrAndGoesOn(t *testing.T) {
 	}
 }
 
-// bootstrapStoppedAtItsFirstCommit is what a second bootstrap of a repository says when it stops at
-// the guard of its first commit. The guard is `git log --oneline | head -1 | grep -q .` under
-// pipefail: on a repository that has commits, head and grep leave as soon as they have a line, and
-// when git log is still writing it is killed by SIGPIPE, the pipeline fails, the guard reads "no
-// commit yet" and bootstrap tries to commit what is already committed. That is the script's own
-// race, older than the engine: the script of 57560e3 stops there 9 times in 30. It does not
-// depend on what the engine says, so the test lets it happen and tries again.
-const bootstrapStoppedAtItsFirstCommit = "exit 1\n--- stdout\n==> Bootstrapping overlay repo at $OVERLAY\nOn branch main\nnothing to commit, working tree clean\n--- stderr\n(nothing)\n"
-
+// A second bootstrap of a repository that is already bootstrapped goes on as it did when the engine
+// was not asked anything (the record was made from the script of 57560e3). It is run once, with no
+// second chance: the guard of its first commit used to lose a race, `git log | head -1 | grep -q .`
+// under pipefail being killed by SIGPIPE, so that the script of 57560e3 stopped there ("nothing to
+// commit", exit 1) 9 times in 30. The guard tests a captured log now, and this test would show the
+// race again.
 func TestBootstrapAgainOnABootstrappedRepositoryDoesWhatItDidBefore(t *testing.T) {
 	w := newBootstrapWorld(t)
 	if first := w.run("bootstrap"); first.Exit != 0 {
 		t.Fatalf("the first bootstrap = %s", pinRunText(first))
 	}
 
-	var second pinRun
-	for attempt := 1; ; attempt++ {
-		second = w.run("bootstrap")
-		if pinRunText(second) != bootstrapStoppedAtItsFirstCommit {
-			break // it went on, or it stopped in some other way, which the pin below says
-		}
-		if attempt == 25 {
-			t.Fatalf("the second bootstrap stopped at its first commit %d times in a row", attempt)
-		}
-	}
+	second := w.run("bootstrap")
 
 	pin(t, "bootstrap-again/run", pinRunText(second))
 	pin(t, "bootstrap-again/upstream", w.branchFiles("upstream"))

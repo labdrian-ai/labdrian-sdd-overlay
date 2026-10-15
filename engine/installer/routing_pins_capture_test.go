@@ -46,7 +46,7 @@ func TestRoutingPins_CaptureCopiesTheLiveFilesOfManagedRows(t *testing.T) {
 // so that the path the script reports is the same on every machine.
 func writeSnapshot(t *testing.T, w *pinWorld, rel string) string {
 	t.Helper()
-	snapshot, err := os.ReadFile(createTarball(t, map[string]string{
+	return writeSnapshotOf(t, w, rel, map[string]string{
 		"files/home/labdrian/.claude/skills/skill-a/SKILL.md":      "# skill-a backup\n",
 		"files/home/labdrian/.claude/skills/skill-a/refs/notes.md": "# notes backup\n",
 		"files/home/labdrian/.claude/skills/shared/helper.md":      "# helper backup\n",
@@ -54,7 +54,14 @@ func writeSnapshot(t *testing.T, w *pinWorld, rel string) string {
 		"files/home/labdrian/.config/opencode/agents/GADU.md":      "# GADU opencode backup\n",
 		"files/home/labdrian/.claude/weird/SKILL.md":               "# weird backup\n",
 		"files/home/labdrian/.claude/skills/dup/SKILL.md":          "# dup backup\n",
-	}))
+	})
+}
+
+// writeSnapshotOf writes a snapshot of the given files (paths as they are in the archive) at rel
+// under the home of the world, and returns its path.
+func writeSnapshotOf(t *testing.T, w *pinWorld, rel string, files map[string]string) string {
+	t.Helper()
+	snapshot, err := os.ReadFile(createTarball(t, files))
 	if err != nil {
 		t.Fatal(err)
 	}

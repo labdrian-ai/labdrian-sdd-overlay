@@ -1352,8 +1352,15 @@ cmd_bootstrap() {
   # 4. Stage scaffold (bin/overlay itself is already here; stage it too)
   git add README.md overlay.manifest .gitignore bin/overlay
 
-  # 5. Initial commit (only if none exists)
-  if ! git log --oneline 2>/dev/null | head -1 | grep -q .; then
+  # 5. Initial commit (only if none exists). The log is captured and then tested:
+  # `git log | head -1 | grep -q .` under pipefail loses a race, because head and
+  # grep leave as soon as they have a line, and when git log is still writing it
+  # is killed by SIGPIPE, the pipeline fails, and the guard reads "no commit yet"
+  # for a repository that has them (so a second bootstrap stopped here one run in
+  # three, trying to commit what is committed). Same reason as the tar listing below.
+  local commits
+  commits="$(git log --oneline 2>/dev/null || true)"
+  if [[ -z "$commits" ]]; then
     git commit -m "chore: initial overlay scaffold"
   fi
 
@@ -1379,7 +1386,7 @@ cmd_bootstrap() {
     dest="$rr_src"
     ensure_parent "$dest"
 
-    if echo "$tar_listing" | grep -qF "$tar_path"; then
+    if grep -qF "$tar_path" <<< "$tar_listing"; then
       tar xzf "$TARBALL" --to-stdout "$tar_path" > "$dest"
       info "  extracted: ${rr_repo_rel}"
     else
@@ -1540,7 +1547,7 @@ cmd_capture() {
       dest="$rr_src"
       ensure_parent "$dest"
 
-      if echo "$cap_listing" | grep -qF "$tar_path"; then
+      if grep -qF "$tar_path" <<< "$cap_listing"; then
         tar xzf "$from_backup" --to-stdout "$tar_path" > "$dest"
         info "  extracted: ${rr_repo_rel}"
       else
