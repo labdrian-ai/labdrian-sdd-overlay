@@ -88,6 +88,10 @@ import (
 //     nowhere. The line a person reads and the exit code are the command's, in cmd.
 //   - status/fsfiles is the adapter of status's Files port (H30): the file system of the machine.
 //     The adapter of its SettingsSource port is settings/settingsfile.Reader.
+//   - runtime/ownership is a domain package (B3): the rule for the record of the runtimes the
+//     overlay has installed longterm-mem for (how the record is read as evidence, which names it
+//     vouches for, when the shared binary and the engine's registration record may go). It reads and
+//     writes no file.
 //   - sddregistry is a domain package (B2): the rule over text for the SDD executor rows of a
 //     project's skill registry (which skills are executors, how a row reads, how a registry that
 //     has none starts, how the rows of an earlier repair are replaced). It reads and writes no file.
@@ -153,6 +157,7 @@ var rings = map[string]archguard.Ring{
 	"runtime":                   archguard.Adapter,
 	"runtime/core":              archguard.Domain,
 	"runtime/opencodeprompt":    archguard.Domain,
+	"runtime/ownership":         archguard.Domain,
 	"sddregistry":               archguard.Domain,
 	"sddregistry/app":           archguard.Application,
 	"sddregistry/fsstore":       archguard.Adapter,
