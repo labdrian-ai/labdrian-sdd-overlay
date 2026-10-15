@@ -657,8 +657,10 @@ gentle-ai-overlay status [--only registry] [--cwd <dir>]
     the one line the full report would give, and exits with the code of that one check: a registry that is not there is OK (a
     project that does not use the overlay is no problem), one that is empty or white space only or cannot be read fails, one
     that lacks a scoped block (`minimalism-contract-scope`, `anti-generic-design-scope`) warns, and one that has both is OK. It
-    is how `overlay doctor` judges the registry of a project, so the two never judge it differently. Any other argument is
-    ignored; a flag without its value, or an `--only` that names no check, is a usage error (exit 1).
+    is how `overlay doctor` judges the registry of a project, so the two never judge it differently. The arguments are read
+    strictly, left to right: any other argument, a flag without its value (missing, empty, or another flag in its place, so
+    `--cwd --only registry` is a `--cwd` with no value), and an `--only` that names no check are usage errors, exit 1 with the
+    reason on stderr and nothing on stdout. A usage error is not exit 2, which is the code of a degraded report.
 
 gentle-ai-overlay runtime capabilities [--target claude|codex|pi|opencode|all]
     Engine verb (Phase 7): there is no `overlay runtime` wrapper, so run it on the installed engine

@@ -22,7 +22,8 @@ import (
 // Two options narrow it, for the callers that judge one thing (the doctor of the overlay script asks
 // for the registry of a project): --cwd names the directory whose registry is looked for instead of
 // the working directory, and --only registry reports that registry alone, with the exit code of
-// that one check. Anything else on the line is ignored, as it always was.
+// that one check. Anything else on the line is a usage error (exit 1; 2 is the code of a degraded
+// report), and so is a flag without a value (parseStatusArgs).
 func runStatus(p process, d deps, args []string) {
 	opts, err := parseStatusArgs(args)
 	if err != nil {
@@ -63,19 +64,29 @@ type statusArgs struct {
 	cwd  string
 }
 
-// parseStatusArgs reads --only and --cwd. A flag of them that has no value, and a value of --only
-// that names no check, are refused, saying which; every other argument is ignored.
+// The flags of 'status'.
+const (
+	flagOnly = "--only"
+	flagCwd  = "--cwd"
+)
+
+// parseStatusArgs reads the arguments strictly, left to right, as the other commands of the engine
+// do: every argument is --only or --cwd and the value that follows it, and what is not is refused.
+// A flag whose value is missing, empty or another flag ("--cwd --only registry" is a --cwd without a
+// value, not a directory called --only), a value of --only that names no check, and an argument
+// nobody named are each refused, saying which. A flag given twice takes its last value.
 func parseStatusArgs(args []string) (statusArgs, error) {
 	var out statusArgs
 	for i := 0; i < len(args); i++ {
-		if args[i] != "--only" && args[i] != "--cwd" {
-			continue
+		flag := args[i]
+		if flag != flagOnly && flag != flagCwd {
+			return statusArgs{}, fmt.Errorf("status: unknown argument %q", flag)
 		}
-		if i+1 >= len(args) {
-			return statusArgs{}, fmt.Errorf("status: flag %q requires a value", args[i])
+		if i+1 >= len(args) || args[i+1] == "" || args[i+1] == flagOnly || args[i+1] == flagCwd {
+			return statusArgs{}, fmt.Errorf("status: flag %q requires a value", flag)
 		}
 		i++
-		if args[i-1] == "--cwd" {
+		if flag == flagCwd {
 			out.cwd = args[i]
 			continue
 		}

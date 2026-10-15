@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/status"
 )
 
 func strPtr(s string) *string { return &s }
@@ -130,6 +132,20 @@ func TestRunStatusRefusesAnOptionItCannotUse(t *testing.T) {
 		{"--cwd with no value", []string{"--only", "registry", "--cwd"}, true, "error: status: flag \"--cwd\" requires a value\n"},
 		{"--only of a check there is not", []string{"--only", "binary"}, true, "error: status: --only \"binary\" names no check; expected registry\n"},
 		{"no directory to look in", []string{"--only", "registry"}, false, "error: status --only registry: the working directory cannot be determined; give --cwd\n"},
+		// A value that is empty is no value: it used to fall back to the working directory without a word.
+		{"--cwd with an empty value", []string{"--only", "registry", "--cwd", ""}, true, "error: status: flag \"--cwd\" requires a value\n"},
+		{"--cwd with an empty value, alone", []string{"--cwd", ""}, true, "error: status: flag \"--cwd\" requires a value\n"},
+		{"--only with an empty value", []string{"--only", ""}, true, "error: status: flag \"--only\" requires a value\n"},
+		// A flag is never the value of another: read left to right, "--cwd --only registry" is a --cwd
+		// that has no value, not a directory called --only.
+		{"--cwd followed by a flag", []string{"--cwd", "--only", "registry"}, true, "error: status: flag \"--cwd\" requires a value\n"},
+		{"--only followed by a flag", []string{"--only", "--cwd", "/p"}, true, "error: status: flag \"--only\" requires a value\n"},
+		{"--cwd followed by itself", []string{"--cwd", "--cwd", "/p"}, true, "error: status: flag \"--cwd\" requires a value\n"},
+		// What status does not know is refused, as the other commands of the engine refuse it.
+		{"a word", []string{"garbage"}, true, "error: status: unknown argument \"garbage\"\n"},
+		{"a flag nobody named", []string{"--frobnicate"}, true, "error: status: unknown argument \"--frobnicate\"\n"},
+		{"a flag nobody named after the options", []string{"--only", "registry", "--cwd", "/p", "--frobnicate"}, true, "error: status: unknown argument \"--frobnicate\"\n"},
+		{"a word between the options", []string{"--only", "registry", "garbage", "--cwd", "/p"}, true, "error: status: unknown argument \"garbage\"\n"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			d := testDeps()
@@ -149,18 +165,37 @@ func TestRunStatusRefusesAnOptionItCannotUse(t *testing.T) {
 	}
 }
 
-// What status was given and does not know it ignores, as it always did: a word, a flag nobody named.
-func TestRunStatusIgnoresWhatItDoesNotKnow(t *testing.T) {
+// A usage error of status exits 1, as the usage errors of the other commands of the engine do (the
+// README says so of manifest routes, registry repair-sdd, runtime and workflow). It is not 2: that is
+// the code of a report that is degraded (a warning and no failure), and the callers of status read it so
+// (the TUI shows exit 2 of 'engine status' as degraded, and the overlay's doctor as a warning).
+func TestRunStatusUsageErrorsDoNotExitWithTheCodeOfADegradedReport(t *testing.T) {
+	for _, args := range [][]string{{"--cwd"}, {"--only", ""}, {"garbage"}, {"--only", "binary"}} {
+		d := testDeps()
+		d.getenv = environmentOf(map[string]string{"HOME": t.TempDir()})
+		d.getwd = func() (string, error) { return t.TempDir(), nil }
+		p := newCapturedProcess()
+
+		runStatus(p.process, d, args)
+
+		if !equalInts(p.exits, []int{1}) || statusExitCode(status.Degraded) != 2 {
+			t.Errorf("status %v exits %v, want [1]; a degraded report exits %d", args, p.exits, statusExitCode(status.Degraded))
+		}
+	}
+}
+
+// Without arguments status is what it always was: the full report.
+func TestRunStatusWithNoArgumentsGivesTheFullReport(t *testing.T) {
 	project := t.TempDir()
 	d := testDeps()
 	d.getenv = environmentOf(map[string]string{"HOME": t.TempDir()})
 	d.getwd = func() (string, error) { return project, nil }
 	p := newCapturedProcess()
 
-	runStatus(p.process, d, []string{"garbage", "--frobnicate", "registry"})
+	runStatus(p.process, d, nil)
 
 	if !strings.Contains(p.out.String(), "binary:") || !strings.Contains(p.out.String(), filepath.Join(project, ".atl", "skill-registry.md")) || p.err.String() != "" {
-		t.Errorf("status with arguments it does not know = %q (stderr %q), want the full report", p.out.String(), p.err.String())
+		t.Errorf("status with no arguments = %q (stderr %q), want the full report", p.out.String(), p.err.String())
 	}
 }
 
@@ -174,7 +209,7 @@ func TestStatusOptionsAreDocumentedInTheUsageAndTheREADME(t *testing.T) {
 		"README":  docSection(t, string(readme), "gentle-ai-overlay status [--only registry]", "gentle-ai-overlay runtime capabilities"),
 		"usage()": docSection(t, captureUsage(t), "  engine status [--only registry]", "  engine prespec"),
 	} {
-		for _, want := range []string{"[--only registry] [--cwd <dir>]", "--only registry", "--cwd", "exit 0", "1", "2"} {
+		for _, want := range []string{"[--only registry] [--cwd <dir>]", "--only registry", "--cwd", "exit 0", "1", "2", "usage error"} {
 			if !strings.Contains(strings.ToLower(text), strings.ToLower(want)) {
 				t.Errorf("%s of status does not say %q", name, want)
 			}
