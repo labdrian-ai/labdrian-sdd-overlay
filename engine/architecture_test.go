@@ -88,6 +88,16 @@ import (
 //     nowhere. The line a person reads and the exit code are the command's, in cmd.
 //   - status/fsfiles is the adapter of status's Files port (H30): the file system of the machine.
 //     The adapter of its SettingsSource port is settings/settingsfile.Reader.
+//   - sddregistry is a domain package (B2): the rule over text for the SDD executor rows of a
+//     project's skill registry (which skills are executors, how a row reads, how a registry that
+//     has none starts, how the rows of an earlier repair are replaced). It reads and writes no file.
+//   - sddregistry/app holds the use case of `engine registry repair-sdd` (B2): it reads the
+//     registry, or starts one, reads the executor skills a target has installed and writes the
+//     registry back, over the RegistryStore and SkillSource ports it owns. It takes no lock, prints
+//     nothing and exits nowhere.
+//   - sddregistry/fsstore is the adapter of those two ports (B2): the registry as a file, written
+//     as `engine propagate` writes it (propagator/fsstore), and the skills of a target as files.
+//     The lock and the words a person reads are the command's, in cmd.
 //   - repotest is test support: the hand-made repositories the tests of gitfs and cmd share.
 //   - piguard is test support: the `pi` that refuses to run, put first on the PATH of a test
 //     run by a TestMain, so nothing started by accident reaches the real CLI.
@@ -143,6 +153,9 @@ var rings = map[string]archguard.Ring{
 	"runtime":                   archguard.Adapter,
 	"runtime/core":              archguard.Domain,
 	"runtime/opencodeprompt":    archguard.Domain,
+	"sddregistry":               archguard.Domain,
+	"sddregistry/app":           archguard.Application,
+	"sddregistry/fsstore":       archguard.Adapter,
 	"settings":                  archguard.Domain,
 	"settings/settingsfile":     archguard.Adapter,
 	"shaper":                    archguard.Domain,
