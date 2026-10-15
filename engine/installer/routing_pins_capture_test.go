@@ -68,7 +68,11 @@ func TestRoutingPins_CaptureFromABackupExtractsWhereEachRouteKeepsItsFile(t *tes
 	pin(t, "capture-from-backup/upstream", w.branchFiles("upstream"))
 }
 
-func TestRoutingPins_BootstrapExtractsAndLayersTheManagedAndTheTrackedRows(t *testing.T) {
+// newBootstrapWorld is what bootstrap runs over: an overlay directory that is no repository yet,
+// with the manifest, the snapshot it extracts and some live files of Claude to layer over it, and
+// a home that has the engine.
+func newBootstrapWorld(t *testing.T) *pinWorld {
+	t.Helper()
 	if testing.Short() {
 		t.Skip("skipping integration test in -short mode")
 	}
@@ -83,6 +87,11 @@ func TestRoutingPins_BootstrapExtractsAndLayersTheManagedAndTheTrackedRows(t *te
 	w.write(w.home, ".claude/skills/skill-a/SKILL.md", "# skill-a live\n")
 	w.write(w.home, ".claude/skills/bare/SKILL.md", "# bare live\n")
 	w.write(w.home, ".claude/agents/GADU.md", "# GADU claude live\n")
+	return w
+}
+
+func TestRoutingPins_BootstrapExtractsAndLayersTheManagedAndTheTrackedRows(t *testing.T) {
+	w := newBootstrapWorld(t)
 	pin(t, "bootstrap/run", pinRunText(w.run("bootstrap")))
 	pin(t, "bootstrap/upstream", w.branchFiles("upstream"))
 	pin(t, "bootstrap/main", w.branchFiles("main"))

@@ -142,7 +142,7 @@ var (
 	calendarDay = regexp.MustCompile(`[0-9]{4}-[0-9]{2}-[0-9]{2}`)
 	gitAdvice   = regexp.MustCompile(`(?m)^hint:.*\n`)
 	upToDate    = regexp.MustCompile(`Already up-to-date\.`)
-	gitChatter  = regexp.MustCompile(`(?m)^(Already on '[^']*'|Switched to (a new )?branch '[^']*')\n`)
+	gitChatter  = regexp.MustCompile(`(?m)^(Already on '[^']*'|Switched to (a new |and reset )?branch '[^']*')\n`)
 )
 
 // normalize replaces what varies from one run to the next by a name.
@@ -151,11 +151,40 @@ func (w *pinWorld) normalize(s string) string {
 	s = strings.ReplaceAll(s, w.overlay, "$OVERLAY")
 	s = backupStamp.ReplaceAllString(s, "<STAMP>")
 	s = commitLine.ReplaceAllString(s, "[$1 <SHA>]")
-	s = oneLineLog.ReplaceAllString(s, "<SHA> ")
+	s = sortCommitLists(oneLineLog.ReplaceAllString(s, "<SHA> "))
 	s = moment.ReplaceAllString(s, "<TIME>")
 	s = gitAdvice.ReplaceAllString(s, "")
 	s = upToDate.ReplaceAllString(s, "Already up to date.")
 	return calendarDay.ReplaceAllString(s, "<DAY>")
+}
+
+// sortCommitLists puts each run of "<SHA> subject" lines (a `git log --oneline` that bootstrap ends
+// with) in the order of the subjects. Git lists commits of the same second in the order it happens
+// to meet them, so the order of a list of commits made in one run is not the script's, and a pin
+// must not hold it; what the list holds is.
+func sortCommitLists(s string) string {
+	lines := strings.Split(s, "\n")
+	for i := 0; i < len(lines); {
+		if !strings.HasPrefix(lines[i], "<SHA> ") {
+			i++
+			continue
+		}
+		j := i
+		for j < len(lines) && strings.HasPrefix(lines[j], "<SHA> ") {
+			j++
+		}
+		sort.Strings(lines[i:j])
+		i = j
+	}
+	return strings.Join(lines, "\n")
+}
+
+func TestSortCommitListsOrdersEachRunOfCommitsAndNothingElse(t *testing.T) {
+	in := "x\n<SHA> b\n<SHA> a\ny\n<SHA> d\n<SHA> c\n<SHA> c\nz"
+	want := "x\n<SHA> a\n<SHA> b\ny\n<SHA> c\n<SHA> c\n<SHA> d\nz"
+	if got := sortCommitLists(in); got != want {
+		t.Errorf("sortCommitLists(%q) = %q, want %q", in, got, want)
+	}
 }
 
 // recordedState shows state.json by what it records, a target at a time and sorted: the file

@@ -640,8 +640,8 @@ Bootstrap complete.
   upstream branch: pristine vendor baseline
   main branch:     your customized overlay (current)
 
-<SHA> overlay: EARS notation + stable R-NNN IDs
 <SHA> chore: initial overlay scaffold
+<SHA> overlay: EARS notation + stable R-NNN IDs
 <SHA> upstream: baseline from gentle-ai 1.40.2
 --- stderr
 (nothing)
@@ -918,3 +918,70 @@ exit 0
 ==> Returned to branch: main
 @@@ no-manifest/files
 .labdrian-overlay/state.json: claude untagged 01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b
+@@@ bootstrap-again/run
+exit 0
+--- stdout
+==> Bootstrapping overlay repo at $OVERLAY
+==> Extracting managed files from tarball: $HOME/.gentle-ai/backups/upgrade-<STAMP>/snapshot.tar.gz
+==>   extracted: skills/skill-a/SKILL.md
+==>   extracted: skills/skill-a/refs/notes.md
+==>   extracted: skills/shared/helper.md
+==>   extracted: agents/GADU.md
+==>   extracted: opencode/agents/GADU.md
+  WARNING: not found in tarball, skipping: files/home/labdrian/.claude/engine/go.mod
+==>   extracted: weird/SKILL.md
+==>   extracted: skills/dup/SKILL.md
+  WARNING: not found in tarball, skipping: files/home/labdrian/.claude/skills/absent/SKILL.md
+[upstream <SHA>] upstream: baseline from gentle-ai 1.40.2
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+==> Layering customized files onto main...
+==>   copied: skill-a/SKILL.md
+  WARNING: source file not found, skipping: $HOME/.claude/skills/skill-a/refs/notes.md
+  WARNING: source file not found, skipping: $HOME/.claude/skills/skill-b/SKILL.md
+  WARNING: source file not found, skipping: $HOME/.claude/skills/shared/helper.md
+==>   copied: GADU.md
+  WARNING: source file not found, skipping: $HOME/.claude/agents/claude-only.md
+  WARNING: source file not found, skipping: $HOME/.claude/skills/weird/SKILL.md
+==>   copied: bare/SKILL.md
+  WARNING: source file not found, skipping: $HOME/.claude/skills/dup/SKILL.md
+  WARNING: source file not found, skipping: $HOME/.claude/skills/dup/SKILL.md
+  WARNING: source file not found, skipping: $HOME/.claude/skills/absent/SKILL.md
+  WARNING: source file not found, skipping: $HOME/.claude/skills/late/SKILL.md
+[main <SHA>] overlay: EARS notation + stable R-NNN IDs
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+Bootstrap complete.
+  upstream branch: pristine vendor baseline
+  main branch:     your customized overlay (current)
+
+<SHA> chore: initial overlay scaffold
+<SHA> overlay: EARS notation + stable R-NNN IDs
+<SHA> overlay: EARS notation + stable R-NNN IDs
+<SHA> upstream: baseline from gentle-ai 1.40.2
+<SHA> upstream: baseline from gentle-ai 1.40.2
+--- stderr
+(nothing)
+@@@ bootstrap-again/upstream
+.gitignore: *.swp\n*.swo\n*~\n.DS_Store
+README.md: # labdrian-sdd-overlay
+agents/GADU.md: # GADU claude backup
+bin/overlay: #!/bin/sh
+opencode/agents/GADU.md: # GADU opencode backup
+skills/bare/SKILL.md: # bare live
+skills/dup/SKILL.md: # dup backup
+skills/shared/helper.md: # helper backup
+skills/skill-a/SKILL.md: # skill-a backup
+skills/skill-a/refs/notes.md: # notes backup
+skills/weird/SKILL.md: # weird backup
+@@@ bootstrap-again/main
+.gitignore: *.swp\n*.swo\n*~\n.DS_Store
+README.md: # labdrian-sdd-overlay
+agents/GADU.md: # GADU claude live
+bin/overlay: #!/bin/sh
+opencode/agents/GADU.md: # GADU opencode backup
+skills/bare/SKILL.md: # bare live
+skills/dup/SKILL.md: # dup backup
+skills/shared/helper.md: # helper backup
+skills/skill-a/SKILL.md: # skill-a live
+skills/skill-a/refs/notes.md: # notes backup
+skills/weird/SKILL.md: # weird backup
