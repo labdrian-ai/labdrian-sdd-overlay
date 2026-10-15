@@ -153,6 +153,9 @@ func TestRunStatusRefusesAnOptionItCannotUse(t *testing.T) {
 		{"--only= of a check there is not", []string{"--only=binary"}, true, "error: status: --only \"binary\" names no check; expected registry\n"},
 		{"a flag nobody named, with a value", []string{"--frobnicate=x"}, true, "error: status: unknown argument \"--frobnicate=x\"\n"},
 		{"the value of the flag before it is not a flag", []string{"--cwd=/p", "--only"}, true, "error: status: flag \"--only\" requires a value\n"},
+		// A flag with its value after an equals sign is a flag, so it is not the value of the one before it.
+		{"--cwd followed by --only=registry", []string{"--cwd", "--only=registry"}, true, "error: status: flag \"--cwd\" requires a value\n"},
+		{"--only followed by --cwd=<dir>", []string{"--only", "--cwd=/p"}, true, "error: status: flag \"--only\" requires a value\n"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			d := testDeps()
