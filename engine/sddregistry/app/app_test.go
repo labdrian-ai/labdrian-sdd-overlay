@@ -2,6 +2,7 @@ package app
 
 import (
 	"errors"
+	"fmt"
 	"io/fs"
 	"reflect"
 	"strings"
@@ -149,6 +150,51 @@ func TestRepairTellsAFailureToReadFromARegistryThatIsNotThere(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "cannot read the registry "+registryPath+": permission denied") {
 		t.Errorf("the error says %q", err)
+	}
+}
+
+// What the use case takes for "there is no registry" is an error for which errors.Is(err,
+// fs.ErrNotExist) holds, however the store wrapped it, and nothing else: any other failure of the
+// read is a registry it could not read, said as such, and it is not started anew. (The use case takes
+// no lock; that a repair and a propagate of the same registry take turns is held where the lock is
+// taken, in engine/cmd/registry_test.go, and is not repeated here.)
+func TestRepairTakesAWrappedAbsenceForNoRegistry(t *testing.T) {
+	reg := &fakeRegistry{readErr: fmt.Errorf("the store of the project: %w", &fs.PathError{Op: "open", Path: registryPath, Err: fs.ErrNotExist})}
+
+	_, err := New(reg, fakeSkills{}).Repair(Request{Registry: registryPath, SkillsRoot: skillsRoot})
+
+	if err != nil {
+		t.Fatalf("Repair = %v, want a registry started for a project whose store says (wrapped) that there is none", err)
+	}
+	if len(reg.writes) != 1 || !strings.HasPrefix(reg.files[registryPath], "# Skill Registry — proj\n") {
+		t.Errorf("writes = %v, registry = %q, want one registry written, started for proj", reg.writes, reg.files[registryPath])
+	}
+}
+
+func TestRepairDoesNotTakeAnyOtherFailureToReadForNoRegistry(t *testing.T) {
+	for _, tc := range []struct{ name, says string }{
+		{"a path that is a directory", "is a directory"},
+		{"a parent that is a file", "not a directory"},
+		{"no permission", "permission denied"},
+		{"a name that reads like an absence", "no such file or directory"}, // the words are not the type
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			cause := &fs.PathError{Op: "read", Path: registryPath, Err: errors.New(tc.says)}
+			reg := &fakeRegistry{readErr: cause}
+
+			_, err := New(reg, fakeSkills{}).Repair(Request{Registry: registryPath, SkillsRoot: skillsRoot})
+
+			var read *RegistryReadError
+			if !errors.As(err, &read) || read.Path != registryPath || !errors.Is(err, cause) {
+				t.Errorf("Repair = %v, want a *RegistryReadError for %s that wraps the failure", err, registryPath)
+			}
+			if errors.Is(err, fs.ErrNotExist) {
+				t.Errorf("Repair = %v, which reads as an absence", err)
+			}
+			if len(reg.writes) != 0 {
+				t.Errorf("a registry that could not be read was started anew and written: %v", reg.writes)
+			}
+		})
 	}
 }
 

@@ -36,7 +36,10 @@ func (r Registry) Write(path string, content []byte) error {
 
 // Home makes the directory the registry at path lives in, and its parents, when there is none.
 // The lock that serializes the writers of a registry is a file beside it, so a caller that takes
-// the lock before it writes asks for the directory first.
+// the lock before it writes asks for the directory first. That caller is the command
+// (engine/cmd/registry.go, which holds the lock for the whole run); the use case does not call it,
+// because it takes no lock and its port says that Write makes the directory itself, which Write
+// does by calling this.
 func (Registry) Home(path string) error { return os.MkdirAll(filepath.Dir(path), directoryMode) }
 
 // Skills is the skills a target keeps, as files. It holds no state; the zero value is the adapter.

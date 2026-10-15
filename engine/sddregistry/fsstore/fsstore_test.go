@@ -35,6 +35,12 @@ func TestRegistryReadReturnsTheFileAndTellsAMissingOneApart(t *testing.T) {
 	if err == nil || errors.Is(err, fs.ErrNotExist) {
 		t.Errorf("Read of a directory = %v, want a failure that is not an absence", err)
 	}
+	// A registry under a path whose parent is a file cannot be there, and is not an absence either:
+	// the use case would start a registry that could never be written.
+	_, err = Registry{}.Read(filepath.Join(path, "skill-registry.md"))
+	if err == nil || errors.Is(err, fs.ErrNotExist) {
+		t.Errorf("Read of a path under a file = %v, want a failure that is not an absence", err)
+	}
 }
 
 func TestRegistryWriteMakesTheDirectoryOfARegistryThatHasNoneAndLeavesMode0644(t *testing.T) {
