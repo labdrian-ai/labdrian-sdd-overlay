@@ -1,5 +1,4 @@
 # shellcheck shell=bash
-# shellcheck disable=SC2164  # errexit is on (set -e in bin/labdrian-overlay): a failed cd ends the run
 #
 # restore
 #
