@@ -1,3 +1,5 @@
+//go:build backend
+
 package overlaycli
 
 // Contract tests between the TUI's CLI adapter and the REAL

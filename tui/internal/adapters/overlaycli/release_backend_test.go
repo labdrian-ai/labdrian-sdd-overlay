@@ -1,3 +1,5 @@
+//go:build backend
+
 package overlaycli
 
 // Integration harness for `bin/labdrian-overlay`'s release-identity, digest,
