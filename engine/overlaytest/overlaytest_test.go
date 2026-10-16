@@ -118,7 +118,8 @@ func TestWithGitConfigRefusesAKeyWithNoValue(t *testing.T) {
 			t.Errorf("WithGitConfig with a key and no value panicked with %q, want it to say a key has no value", got)
 		}
 	}()
-	overlaytest.WithGitConfig(nil, "init.defaultBranch")
+	lastKeyAlone := strings.Fields("init.defaultBranch")
+	overlaytest.WithGitConfig(nil, lastKeyAlone...)
 }
 
 func TestGitSettingsTakeNoConfigurationOfWhoeverRunsTheTests(t *testing.T) {
