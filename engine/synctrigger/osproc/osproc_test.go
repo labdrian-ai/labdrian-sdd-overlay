@@ -306,6 +306,43 @@ func TestAnAttemptKilledBeforeTheScriptWroteItsPidsIsRepeatedWithTwiceTheTime(t 
 	assertGone(t, "what it started", sleeper)
 }
 
+// An attempt counts only when both pid files hold a pid: a script killed after the first and
+// before the second, or between creating a file and writing it, leaves a partial record, and a
+// partial record is no proof of anything.
+func TestAnAttemptWhoseRecordOfPidsIsPartialIsRepeated(t *testing.T) {
+	const absent = "<no file>"
+	for name, partial := range map[string][2]string{
+		"only the shell":            {"111\n", absent},
+		"only what it started":      {absent, "222\n"},
+		"a shell file still empty":  {"", "222\n"},
+		"a shell that is no number": {"not a pid\n", "222\n"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			attempts := 0
+
+			shell, sleeper := untilTheProgramHasWrittenItsPids(t, func(_ time.Duration, shellFile, sleeperFile string) {
+				attempts++
+				content := [2]string{"111\n", "222\n"}
+				if attempts == 1 {
+					content = partial
+				}
+				for i, file := range []string{shellFile, sleeperFile} {
+					if content[i] == absent {
+						continue
+					}
+					if err := os.WriteFile(file, []byte(content[i]), 0o644); err != nil {
+						t.Fatal(err)
+					}
+				}
+			})
+
+			if attempts != 2 || shell != 111 || sleeper != 222 {
+				t.Errorf("%d attempts, pids (%d, %d), want 2 attempts and (111, 222)", attempts, shell, sleeper)
+			}
+		})
+	}
+}
+
 // The deadline of a run starts with the run, and a script needs a moment to start, a long one on a
 // machine under load. A run that was killed before the script wrote its pid files says nothing
 // about the kill, so it is repeated with twice the time (from 300 ms, six times at most, 18.9 s if
