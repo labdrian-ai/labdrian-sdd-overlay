@@ -1,5 +1,10 @@
 package installer_test
 
+// The sandboxes the integration tests of this package run bin/labdrian-overlay in: a throwaway
+// overlay repository with the branches the script merges and compares, a home of its own, and the
+// helpers that run the script over them. (The routing pins have a world of their own,
+// routing_pins_world_test.go.)
+
 import (
 	"os"
 	"os/exec"
@@ -121,10 +126,6 @@ func setupCaptureFromBackupSandbox(t *testing.T, home string) (string, []string)
 	enginetest.Provision(t, home)
 	return overlayDir, env
 }
-
-// ---------------------------------------------------------------------------
-// Integration tests — skip under -short
-// ---------------------------------------------------------------------------
 
 // setupSandboxOverlay creates a minimal overlay git repo with upstream+main
 // branches containing native GADU agent files, skills/test-skill/SKILL.md, overlay.manifest.
