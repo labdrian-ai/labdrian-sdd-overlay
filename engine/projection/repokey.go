@@ -1,9 +1,9 @@
 package projection
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"path/filepath"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/sha256hex"
 )
 
 // RepoLocator is how the use cases find the repository a directory belongs to. The domain owns
@@ -24,6 +24,5 @@ type RepoLocator interface {
 // the adapter's; a path that cannot be resolved is passed as it is, and its key then depends on
 // that spelling.
 func RepoKeyOf(commonDir string) string {
-	sum := sha256.Sum256([]byte(filepath.Clean(commonDir)))
-	return hex.EncodeToString(sum[:])
+	return sha256hex.Sum([]byte(filepath.Clean(commonDir)))
 }

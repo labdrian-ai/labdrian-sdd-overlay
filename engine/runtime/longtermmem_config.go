@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime/core"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/sha256hex"
 )
 
 // longtermMemObservation is what LongtermMemAdapter can determine about one
@@ -190,7 +191,7 @@ func (a LongtermMemAdapter) ownedCodexFingerprint() string {
 		return ""
 	}
 	section := fmt.Sprintf(ownedCodexSectionTemplate, "longterm-mem", a.BinaryPath)
-	return hashString(strings.TrimRight(section, "\n"))
+	return sha256hex.Sum([]byte(strings.TrimRight(section, "\n")))
 }
 
 // ownedJSONFingerprint routes the expected entry through the SAME
@@ -218,7 +219,7 @@ func (a LongtermMemAdapter) ownedJSONFingerprint(entry interface{}) string {
 	if err != nil {
 		return ""
 	}
-	return hashString(string(canonical))
+	return sha256hex.Sum(canonical)
 }
 
 // jsonMemberFingerprint reads a JSON config file (claude/opencode's own MCP
@@ -247,7 +248,7 @@ func jsonMemberFingerprint(path, section, key string) (present bool, fingerprint
 	if err != nil {
 		return false, "", err
 	}
-	return true, hashString(string(encoded)), nil
+	return true, sha256hex.Sum(encoded), nil
 }
 
 // readJSONObjectOrNil reads a JSON file and decodes it as a generic object.
@@ -328,5 +329,5 @@ func tomlSectionFingerprint(path, name string) (present bool, fingerprint string
 	}
 
 	section := strings.TrimRight(strings.Join(lines[headerIdx:end], "\n"), "\n")
-	return true, hashString(section), nil
+	return true, sha256hex.Sum([]byte(section)), nil
 }

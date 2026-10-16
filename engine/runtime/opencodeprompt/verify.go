@@ -1,11 +1,11 @@
 package opencodeprompt
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/sha256hex"
 )
 
 // Hash fingerprints the config: the hex SHA-256 of the JSON it is written as. A config that
@@ -19,8 +19,7 @@ func hashOf(data []byte, err error) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	sum := sha256.Sum256(data)
-	return hex.EncodeToString(sum[:]), nil
+	return sha256hex.Sum(data), nil
 }
 
 // MismatchError says that a recorded prompt config is not the current one: it is stale, or it was
