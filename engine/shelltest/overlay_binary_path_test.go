@@ -2,11 +2,11 @@ package shelltest
 
 import (
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/overlaytest"
 	runtimepkg "github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime"
 )
 
@@ -31,17 +31,7 @@ import (
 // the engine function that is the other half of the contract, rather than
 // against a hand-written expectation that could drift with it.
 func TestOverlayLongtermMemBinaryPathMatchesEngine(t *testing.T) {
-	if _, err := exec.LookPath("bash"); err != nil {
-		t.Skipf("bash is not available: %v", err)
-	}
-
-	overlay, err := filepath.Abs(filepath.Join("..", "..", "bin", "labdrian-overlay"))
-	if err != nil {
-		t.Fatalf("resolve overlay path: %v", err)
-	}
-	if _, err := os.Stat(overlay); err != nil {
-		t.Fatalf("overlay entrypoint not found at %s: %v", overlay, err)
-	}
+	overlay := overlayScript(t)
 
 	base := t.TempDir()
 	cases := []struct {
@@ -61,13 +51,11 @@ func TestOverlayLongtermMemBinaryPathMatchesEngine(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			cmd := exec.Command("bash", "-c", `source "$1"; printf '%s\n' "$LONGTERM_MEM_BINARY"`, "_", overlay)
-			cmd.Env = append(os.Environ(), "STATE_DIR="+tc.stateDir)
-			out, err := cmd.CombinedOutput()
+			out, err := overlaytest.Source(t, overlay, append(os.Environ(), "STATE_DIR="+tc.stateDir), "", `printf '%s\n' "$LONGTERM_MEM_BINARY"`)
 			if err != nil {
 				t.Fatalf("sourcing the overlay failed: %v\n%s", err, out)
 			}
-			got := strings.TrimSpace(string(out))
+			got := strings.TrimSpace(out)
 			want := runtimepkg.LongtermMemBinaryPathForStateDir(tc.stateDir)
 			if got != want {
 				t.Fatalf("shell and engine disagree on the longterm-mem binary path for STATE_DIR=%q:\n  shell:  %q\n  engine: %q\nownership is an exact string fingerprint, so this makes the overlay's own MCP entry read as unmanaged", tc.stateDir, got, want)

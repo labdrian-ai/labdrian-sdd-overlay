@@ -2,49 +2,22 @@ package shelltest
 
 import (
 	"os"
-	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/enginetest"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/overlaytest"
 )
-
-// piTargetOverlayPath resolves bin/labdrian-overlay the same way the other
-// shelltest files do, and skips (rather than fails) when bash is absent.
-func piTargetOverlayPath(t *testing.T) string {
-	t.Helper()
-	if _, err := exec.LookPath("bash"); err != nil {
-		t.Skipf("bash is not available: %v", err)
-	}
-	overlay, err := filepath.Abs(filepath.Join("..", "..", "bin", "labdrian-overlay"))
-	if err != nil {
-		t.Fatalf("resolve overlay path: %v", err)
-	}
-	if _, err := os.Stat(overlay); err != nil {
-		t.Fatalf("overlay entrypoint not found at %s: %v", overlay, err)
-	}
-	return overlay
-}
-
-// sourceAndRun sources bin/labdrian-overlay (guarded BASH_SOURCE dispatch,
-// see overlay_longterm_mem_test.sh) and evaluates script against its
-// internal functions directly, without invoking the CLI dispatch.
-func sourceAndRun(t *testing.T, overlay, script string) (string, error) {
-	t.Helper()
-	cmd := exec.Command("bash", "-c", `source "$1"; `+script, "_", overlay)
-	out, err := cmd.CombinedOutput()
-	return string(out), err
-}
 
 // TestResolveTargets_Pi (R-001, R-008): pi is a real, recognized --target;
 // "all" includes it alongside the three copy targets; an unknown name
 // still dies loudly rather than silently resolving to nothing.
 func TestResolveTargets_Pi(t *testing.T) {
-	overlay := piTargetOverlayPath(t)
+	overlay := overlayScript(t)
 
-	out, err := sourceAndRun(t, overlay, `resolve_targets all`)
+	out, err := overlaytest.Source(t, overlay, nil, "", `resolve_targets all`)
 	if err != nil {
 		t.Fatalf("resolve_targets all failed: %v\n%s", err, out)
 	}
@@ -52,7 +25,7 @@ func TestResolveTargets_Pi(t *testing.T) {
 		t.Fatalf("resolve_targets all = %q, want %q", got, "claude opencode codex pi")
 	}
 
-	out, err = sourceAndRun(t, overlay, `resolve_targets pi`)
+	out, err = overlaytest.Source(t, overlay, nil, "", `resolve_targets pi`)
 	if err != nil {
 		t.Fatalf("resolve_targets pi failed: %v\n%s", err, out)
 	}
@@ -60,7 +33,7 @@ func TestResolveTargets_Pi(t *testing.T) {
 		t.Fatalf("resolve_targets pi = %q, want %q", got, "pi")
 	}
 
-	out, err = sourceAndRun(t, overlay, `resolve_targets bogus`)
+	out, err = overlaytest.Source(t, overlay, nil, "", `resolve_targets bogus`)
 	if err == nil {
 		t.Fatalf("resolve_targets bogus should die (unknown target), got success: %s", out)
 	}
@@ -73,7 +46,7 @@ func TestResolveTargets_Pi(t *testing.T) {
 // keep their per-file TARGET_PATHS copy destination; pi is a package
 // target and must never be treated as one.
 func TestIsCopyTarget_ClaudeTrue_PiFalse(t *testing.T) {
-	overlay := piTargetOverlayPath(t)
+	overlay := overlayScript(t)
 
 	for _, tc := range []struct {
 		target string
@@ -84,7 +57,7 @@ func TestIsCopyTarget_ClaudeTrue_PiFalse(t *testing.T) {
 		{"codex", "copy"},
 		{"pi", "package"},
 	} {
-		out, err := sourceAndRun(t, overlay, `is_copy_target `+tc.target+` && echo copy || echo package`)
+		out, err := overlaytest.Source(t, overlay, nil, "", `is_copy_target `+tc.target+` && echo copy || echo package`)
 		if err != nil {
 			t.Fatalf("is_copy_target %s: run failed: %v\n%s", tc.target, err, out)
 		}
@@ -102,11 +75,8 @@ func TestIsCopyTarget_ClaudeTrue_PiFalse(t *testing.T) {
 // than silently succeeding, and `--target all` must still show
 // claude/opencode/codex results unmasked alongside pi's own honest failure.
 func TestOverlayStatusAndSyncCheck_PiStubNoEmptyMkdir(t *testing.T) {
-	overlay := piTargetOverlayPath(t)
-	overlayDir, err := filepath.Abs(filepath.Join("..", ".."))
-	if err != nil {
-		t.Fatalf("resolve overlay dir: %v", err)
-	}
+	overlay := overlayScript(t)
+	overlayDir := overlaytest.RepoRoot(t)
 
 	run := func(sub ...string) (string, int) {
 		t.Helper()
@@ -116,17 +86,12 @@ func TestOverlayStatusAndSyncCheck_PiStubNoEmptyMkdir(t *testing.T) {
 		if slices.Contains(sub, "all") {
 			enginetest.Provision(t, home)
 		}
-		cmd := exec.Command(overlay, sub...)
-		cmd.Env = append(os.Environ(), "HOME="+home)
-		cmd.Dir = overlayDir
-		out, runErr := cmd.CombinedOutput()
-		exitCode := 0
-		if exitErr, ok := runErr.(*exec.ExitError); ok {
-			exitCode = exitErr.ExitCode()
-		} else if runErr != nil {
+		out, runErr := overlaytest.Combined(t, overlay, append(os.Environ(), "HOME="+home), overlayDir, sub...)
+		exitCode := overlaytest.ExitCode(runErr)
+		if exitCode < 0 {
 			t.Fatalf("%v: run failed to even start/complete: %v\n%s", sub, runErr, out)
 		}
-		return string(out), exitCode
+		return out, exitCode
 	}
 
 	t.Run("status --target pi exits 1", func(t *testing.T) {
@@ -213,11 +178,8 @@ func TestOverlayStatusAndSyncCheck_PiStubNoEmptyMkdir(t *testing.T) {
 // landed), diffed under matched HOME/OVERLAY_DIR per the task's own
 // verification step.
 func TestOverlayStatusAndSyncCheckAll_ClaudeOpenCodeCodexOutputUnchanged(t *testing.T) {
-	overlay := piTargetOverlayPath(t)
-	overlayDir, err := filepath.Abs(filepath.Join("..", ".."))
-	if err != nil {
-		t.Fatalf("resolve overlay dir: %v", err)
-	}
+	overlay := overlayScript(t)
+	overlayDir := overlaytest.RepoRoot(t)
 
 	// Baseline: the pre-existing script at bin/labdrian-overlay checked out
 	// for claude/opencode/codex ONLY (--target claude, --target opencode,
@@ -238,20 +200,14 @@ func TestOverlayStatusAndSyncCheckAll_ClaudeOpenCodeCodexOutputUnchanged(t *test
 	enginetest.Provision(t, home)
 	runSingle := func(cmdName, target string) string {
 		t.Helper()
-		cmd := exec.Command(overlay, cmdName, "--target", target)
-		cmd.Env = append(os.Environ(), "HOME="+home)
-		cmd.Dir = overlayDir
-		out, _ := cmd.CombinedOutput()
-		return string(out)
+		out, _ := overlaytest.Combined(t, overlay, append(os.Environ(), "HOME="+home), overlayDir, cmdName, "--target", target)
+		return out
 	}
 
 	runAll := func(cmdName string) string {
 		t.Helper()
-		cmd := exec.Command(overlay, cmdName, "--target", "all")
-		cmd.Env = append(os.Environ(), "HOME="+home)
-		cmd.Dir = overlayDir
-		out, _ := cmd.CombinedOutput()
-		return string(out)
+		out, _ := overlaytest.Combined(t, overlay, append(os.Environ(), "HOME="+home), overlayDir, cmdName, "--target", "all")
+		return out
 	}
 
 	for _, cmdName := range []string{"status", "sync-check"} {
@@ -313,24 +269,19 @@ func extractTargetSection(t *testing.T, out, cmdName, target string) string {
 // target gets, not a special case carved out for pi. This pins that as
 // intentional (see apply-progress.md's Slice 1 section).
 func TestOverlayVersionAndUpdate_ListPiNeverDeployed(t *testing.T) {
-	overlay := piTargetOverlayPath(t)
+	overlay := overlayScript(t)
 	// The overlay this runs against is a repository made for the test, with no origin. `version` fetches the
 	// release tags from origin before it prints anything, and the repository these tests live in has one that
 	// is a network address: against it the test would write FETCH_HEAD into the checkout and reach GitHub with
 	// the credentials of whoever runs it.
 	overlayDir := t.TempDir()
-	if out, err := exec.Command("git", "-C", overlayDir, "init", "-q").CombinedOutput(); err != nil {
-		t.Fatalf("git init the overlay: %v\n%s", err, out)
-	}
+	overlaytest.Git(t, overlayDir, nil, "init", "-q")
 
-	cmd := exec.Command(overlay, "version")
-	cmd.Env = append(os.Environ(), "HOME="+t.TempDir(), "OVERLAY_DIR="+overlayDir)
-	cmd.Dir = overlayDir
-	out, err := cmd.CombinedOutput()
+	out, err := overlaytest.Combined(t, overlay, append(os.Environ(), "HOME="+t.TempDir(), "OVERLAY_DIR="+overlayDir), overlayDir, "version")
 	if err != nil {
 		t.Fatalf("overlay version failed: %v\n%s", err, out)
 	}
-	if !strings.Contains(string(out), "pi: never deployed") {
+	if !strings.Contains(out, "pi: never deployed") {
 		t.Fatalf("overlay version should list pi as never deployed via resolve_targets all, got %s", out)
 	}
 }
@@ -344,35 +295,16 @@ func TestOverlayVersionAndUpdate_ListPiNeverDeployed(t *testing.T) {
 // is that the run reaches the uninstall loop's own output at all, which
 // the removed die would have preempted.
 func TestLongtermMemUninstall_TargetPiNoLongerDies(t *testing.T) {
-	overlay := piTargetOverlayPath(t)
-	overlayDir, err := filepath.Abs(filepath.Join("..", ".."))
-	if err != nil {
-		t.Fatalf("resolve overlay dir: %v", err)
-	}
+	overlay := overlayScript(t)
+	overlayDir := overlaytest.RepoRoot(t)
 	home := t.TempDir()
-	seedFakeEngineBinary(t, home)
+	// An always-succeeding stand-in at the engine's fixed path, so ensure_engine_binary skips a real `go
+	// build`: the run only has to reach cmd_longterm_mem's own per-target loop.
+	overlaytest.StubEngine(t, home, "#!/bin/sh\nexit 0\n")
 
-	cmd := exec.Command(overlay, "longterm-mem", "uninstall", "--target", "pi")
-	cmd.Env = append(os.Environ(), "HOME="+home)
-	cmd.Dir = overlayDir
-	out, _ := cmd.CombinedOutput()
-	if strings.Contains(string(out), "does not support --target pi") {
+	out, _ := overlaytest.Combined(t, overlay, append(os.Environ(), "HOME="+home), overlayDir, "longterm-mem", "uninstall", "--target", "pi")
+	if strings.Contains(out, "does not support --target pi") {
 		t.Fatalf("longterm-mem uninstall --target pi should no longer be refused at argument parsing, got: %s", out)
-	}
-}
-
-// seedFakeEngineBinary writes an always-succeeding stand-in at
-// ENGINE_BINARY's fixed path so ensure_engine_binary skips a real `go
-// build` — shared by the two tests below that only need to reach
-// cmd_longterm_mem's own per-target loop.
-func seedFakeEngineBinary(t *testing.T, home string) {
-	t.Helper()
-	engineBin := filepath.Join(home, ".claude", "bin", "gentle-ai-overlay")
-	if err := os.MkdirAll(filepath.Dir(engineBin), 0o755); err != nil {
-		t.Fatalf("mkdir engine bin dir: %v", err)
-	}
-	if err := os.WriteFile(engineBin, []byte("#!/bin/sh\nexit 0\n"), 0o755); err != nil {
-		t.Fatalf("write fake engine binary: %v", err)
 	}
 }
 
@@ -385,11 +317,8 @@ func seedFakeEngineBinary(t *testing.T, home string) {
 // (cmd_longterm_mem's own "unregister_usable" guard) — proving pi is now
 // walked by the SAME loop as claude/opencode/codex, not skipped over.
 func TestLongtermMemUninstall_TargetAllIncludesPi(t *testing.T) {
-	overlay := piTargetOverlayPath(t)
-	overlayDir, err := filepath.Abs(filepath.Join("..", ".."))
-	if err != nil {
-		t.Fatalf("resolve overlay dir: %v", err)
-	}
+	overlay := overlayScript(t)
+	overlayDir := overlaytest.RepoRoot(t)
 
 	home := t.TempDir()
 	// The record of the installed targets is the engine's, so this test runs a real one.
@@ -404,10 +333,7 @@ func TestLongtermMemUninstall_TargetAllIncludesPi(t *testing.T) {
 		t.Fatalf("seed tracking file: %v", err)
 	}
 
-	cmd := exec.Command(overlay, "longterm-mem", "uninstall", "--target", "all")
-	cmd.Env = append(os.Environ(), "HOME="+home)
-	cmd.Dir = overlayDir
-	if out, _ := cmd.CombinedOutput(); strings.Contains(string(out), "does not support --target pi") {
+	if out, _ := overlaytest.Combined(t, overlay, append(os.Environ(), "HOME="+home), overlayDir, "longterm-mem", "uninstall", "--target", "all"); strings.Contains(out, "does not support --target pi") {
 		t.Fatalf("uninstall --target all must not refuse pi, got: %s", out)
 	}
 
@@ -426,11 +352,8 @@ func TestLongtermMemUninstall_TargetAllIncludesPi(t *testing.T) {
 // pi", because the tracking allowlist only knew the copy targets
 // (TARGET_PATHS keys). A package target must be recordable too.
 func TestLongtermMemInstall_TargetPiRecordsTracking(t *testing.T) {
-	overlay := piTargetOverlayPath(t)
-	overlayDir, err := filepath.Abs(filepath.Join("..", ".."))
-	if err != nil {
-		t.Fatalf("resolve overlay dir: %v", err)
-	}
+	overlay := overlayScript(t)
+	overlayDir := overlaytest.RepoRoot(t)
 	home := t.TempDir()
 	// The record of the installed targets is the engine's, so this test runs a real one.
 	enginetest.Provision(t, home)
@@ -452,16 +375,10 @@ func TestLongtermMemInstall_TargetPiRecordsTracking(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cmd := exec.Command(overlay, "longterm-mem", "install", "--target", "pi")
 	// install rebuilds the longterm-mem binary; keep Go's caches out of the
 	// temp HOME (a module cache there is read-only and breaks cleanup).
-	modCache, _ := exec.Command("go", "env", "GOMODCACHE").Output()
-	buildCache, _ := exec.Command("go", "env", "GOCACHE").Output()
-	cmd.Env = append(os.Environ(), "HOME="+home,
-		"GOMODCACHE="+strings.TrimSpace(string(modCache)),
-		"GOCACHE="+strings.TrimSpace(string(buildCache)))
-	cmd.Dir = overlayDir
-	out, runErr := cmd.CombinedOutput()
+	env := append(append(os.Environ(), "HOME="+home), overlaytest.ToolchainEnv(t)...)
+	out, runErr := overlaytest.Combined(t, overlay, env, overlayDir, "longterm-mem", "install", "--target", "pi")
 	if runErr != nil {
 		t.Fatalf("longterm-mem install --target pi must exit 0 after a successful register, got %v:\n%s", runErr, out)
 	}
