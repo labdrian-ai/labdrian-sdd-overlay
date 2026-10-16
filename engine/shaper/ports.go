@@ -56,7 +56,7 @@ type ClearanceStore interface {
 	// Path returns where the record for one key is, or would be, kept, as text for a
 	// person to read in a report, without touching the store. The key is refused if
 	// projectID or goalID is not one safe name or handoffSHA256 is not 64 lowercase hex
-	// characters (IsSHA256Hex).
+	// characters (sha256hex.IsValid).
 	Path(projectID, goalID, handoffSHA256 string) (string, error)
 
 	// Put strictly parses data as a clearance record (ParseRecord), stores it under the

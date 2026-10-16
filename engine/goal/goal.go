@@ -8,7 +8,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/fieldrule"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/jsonstrict"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/sha256hex"
 )
 
 // Goal is the versioned declarative intent contract. Its field order is also
@@ -111,7 +113,7 @@ func (g Goal) Validate() error {
 		{name: "non_goals", values: g.NonGoals},
 		{name: "acceptance_criteria", values: g.AcceptanceCriteria, minItems: 1},
 	} {
-		if err := validateStringArray(field.name, field.values, field.minItems); err != nil {
+		if err := fieldrule.CheckStringArray(field.name, field.values, field.minItems); err != nil {
 			return err
 		}
 	}
@@ -131,17 +133,15 @@ func (g Goal) Marshal() ([]byte, error) {
 	return append(data, '\n'), nil
 }
 
-func validateStringArray(name string, values []string, minItems int) error {
-	if values == nil {
-		return fmt.Errorf("%s must be a non-null string array", name)
+// Digest returns the lowercase hex SHA-256 of g's canonical Marshal encoding.
+// Marshal validates g and produces a deterministic, field-ordered encoding, so
+// the digest changes if and only if g's contents change, whatever bytes the
+// Goal was parsed from. A Goal that Marshal refuses has no digest, and the
+// error is Marshal's own.
+func (g Goal) Digest() (string, error) {
+	data, err := g.Marshal()
+	if err != nil {
+		return "", err
 	}
-	if len(values) < minItems {
-		return fmt.Errorf("%s must contain at least %d item(s)", name, minItems)
-	}
-	for i, value := range values {
-		if strings.TrimSpace(value) == "" {
-			return fmt.Errorf("%s item %d must be non-blank", name, i+1)
-		}
-	}
-	return nil
+	return sha256hex.Sum(data), nil
 }

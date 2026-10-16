@@ -1,0 +1,417 @@
+package projection
+
+// The text of the projection: every sentence a session or a user is told, built
+// from values and from nothing else. context.go decides what is said (Project,
+// and the memory plan it states); this file says it: the warnings, the note of a
+// closed workflow, the context of an open one, and the hygiene that keeps a field
+// of a workflow log from starting a line, filling the screen or carrying a
+// character a terminal would act on.
+
+import (
+	"errors"
+	"fmt"
+	"strconv"
+	"strings"
+	"unicode"
+	"unicode/utf8"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/capability"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow"
+)
+
+// MaxContextBytes bounds the projected context. A context this size costs a
+// session about four thousand tokens on every prompt, far more than the few
+// hundred a typical workflow needs; the bound only stops a workflow log that
+// was edited by hand from filling the session.
+const MaxContextBytes = 16384
+
+// maxDetailRunes bounds the explanation copied from an error into a warning. A
+// warning is shown to the user on every prompt while the problem lasts, so it
+// has to stay short.
+const maxDetailRunes = 200
+
+// maxPanicRunes bounds the text of a recovered panic in the warning the user
+// sees. A panic value can be any text, including a long dump, and the full
+// value already goes to stderr; the user needs only enough to report it.
+const maxPanicRunes = 120
+
+// goalDigestRunes is how many leading characters of the goal digest the context
+// shows. The digest is 64 hex digits; twelve are enough to tell two goals apart
+// at a glance and keep the line short. The full digest stays in the workflow log.
+const goalDigestRunes = 12
+
+// truncationMarker ends a context that had to be cut to MaxContextBytes. It
+// starts on a line of its own and is ASCII, so it can never be cut itself.
+var truncationMarker = "\n[labdrian: projected context truncated at " + strconv.Itoa(MaxContextBytes) + " bytes]"
+
+// AfterUnbind completes the note of a closed workflow with what the caller's
+// removal of the binding did, and returns the result; any other result is
+// returned unchanged. removed and err are what BindingStore.UnbindIfUnchanged returned:
+// the note says the binding was removed only when removed is true and err is
+// nil; when err is ErrBindingChanged, or there is neither an error nor a
+// removal (the binding was already gone), the note says the binding was left
+// alone; any other err is a failure, and the note says so, why, and that
+// 'labdrian workflow unbind' finishes it by hand (the same note would otherwise
+// repeat on every prompt with no way out). It may be
+// called more than once: it always starts from the same note.
+func (r ProjectionResult) AfterUnbind(removed bool, err error) ProjectionResult {
+	if !r.Unbind || r.closedNote == "" {
+		return r
+	}
+	switch {
+	case errors.Is(err, ErrBindingChanged):
+		// Not a failure: another process bound something else, which is not ours
+		// to remove.
+		r.Context = r.closedNote + " This repository's binding to it had already changed, so it was left alone."
+	case err != nil:
+		r.Context = r.closedNote + " Removing this repository's binding to it failed" + detailIn(err.Error()) +
+			", so it is still bound and this note repeats on every prompt until it is removed: run 'labdrian workflow unbind'."
+	case removed:
+		r.Context = r.closedNote + " This repository's binding to it was removed."
+	default:
+		r.Context = r.closedNote + " This repository's binding to it had already changed, so it was left alone."
+	}
+	return r
+}
+
+// StoreWarning is the one line shown to the user when the binding store could
+// not be opened or read: a real Go error, not a binding that is absent or
+// unusable, which Project reports itself. The hook cannot tell whether the
+// repository is bound, so it cannot project anything, and it says so instead of
+// staying silent. The error text is sanitized and bounded like every detail.
+func StoreWarning(err error) string {
+	return "labdrian: the workflow binding store could not be read" + detailIn(err.Error()) +
+		"; no workflow is projected, and if this repository is bound its workflow is not being followed in this session."
+}
+
+// PanicText renders a recovered panic value for a warning shown to the user: one
+// sanitized line, cut to a short length (see maxPanicRunes). It is the part of
+// PanicWarning that comes from outside, exported so that another hook that
+// words the rest itself (the skills approve guard) never prints an unbounded or
+// multi-line value.
+func PanicText(recovered any) string {
+	return clip(sanitizeLine(fmt.Sprint(recovered)), maxPanicRunes)
+}
+
+// Occasion is what the projection hook was doing when it recovered from an internal panic. The
+// consequence a warning states is the occasion's own, so each is told apart. The zero value is
+// an occasion nobody named.
+type Occasion int
+
+const (
+	// OccasionUnknown is an occasion nobody named: the warning claims neither consequence.
+	OccasionUnknown Occasion = iota
+	// OccasionPrompt is projecting the workflow into the context of a prompt.
+	OccasionPrompt
+	// OccasionToolCall is checking a tool call against the workflow.
+	OccasionToolCall
+)
+
+// PanicWarning is the one line shown to the user when the hook recovered from
+// an internal panic while answering on occasion. The panic value is sanitized and cut
+// to a short length, so it can never spread over lines or fill the screen; the
+// full value goes to stderr, where whoever debugs the hook reads it. The
+// consequence it states is the occasion's own: a prompt that went through with
+// nothing projected, or a tool call that went ahead unchecked. An occasion nobody
+// named gets wording that claims neither.
+func PanicWarning(occasion Occasion, recovered any) string {
+	head := "labdrian: the projection hook hit an internal error (" + PanicText(recovered) + "); "
+	switch occasion {
+	case OccasionPrompt:
+		return head + "nothing was projected this time and the prompt was not affected."
+	case OccasionToolCall:
+		return head + "this tool call was not checked against the workflow and was not denied."
+	default:
+		return head + "the hook did nothing this time and the session was not affected."
+	}
+}
+
+// --- warnings and the closed note -------------------------------------------
+
+func bindingWarning(l Loaded) string {
+	return "labdrian: this repository's workflow binding is " + sanitizeLine(string(l.Classification)) + detailIn(l.Detail) +
+		"; no workflow is projected. Run 'labdrian workflow binding' to inspect it. " +
+		"'labdrian workflow unbind' refuses to touch a binding file that is not usable, so fix or move that file by hand."
+}
+
+// workflowRef names the bound workflow in a message.
+func workflowRef(b Binding) string {
+	return "workflow " + sanitizeLine(b.WorkflowID) + " of project " + sanitizeLine(b.ProjectID)
+}
+
+// inspectAdvice tells the user how to look at a bound workflow and how to stop
+// following it.
+func inspectAdvice(b Binding) string {
+	return "Run 'labdrian workflow status --project " + sanitizeLine(b.ProjectID) + " --workflow " + sanitizeLine(b.WorkflowID) +
+		"' to inspect it, or 'labdrian workflow unbind' to stop following it."
+}
+
+func workflowWarning(b Binding, w *workflow.Loaded) string {
+	var problem string
+	switch {
+	case w == nil:
+		problem = "is unavailable (it was not loaded)"
+	case w.Classification == workflow.ClassificationAbsent:
+		problem = "does not exist"
+	case w.Classification == workflow.ClassificationForeign,
+		w.Classification == workflow.ClassificationMalformed,
+		w.Classification == workflow.ClassificationDrifted,
+		w.Classification == workflow.ClassificationUnavailable:
+		problem = "is " + string(w.Classification) + detailIn(w.Detail)
+	default:
+		problem = "is in an unrecognized state (" + sanitizeLine(string(w.Classification)) + ")" + detailIn(w.Detail)
+	}
+	return "labdrian: " + workflowRef(b) + ", which this repository is bound to, " + problem + "; nothing is projected. " + inspectAdvice(b)
+}
+
+func statusWarning(b Binding, status workflow.Status) string {
+	return "labdrian: " + workflowRef(b) + ", which this repository is bound to, has an unrecognized status " +
+		strconv.Quote(sanitizeLine(string(status))) + "; nothing is projected. " + inspectAdvice(b)
+}
+
+// closedNote is the start of the one line a session gets when its workflow has
+// closed. It claims nothing about the binding: the caller removes it after this
+// text is built, the removal is best effort, and AfterUnbind adds what happened.
+func closedNote(b Binding, s workflow.State) string {
+	outcome := ""
+	if s.CloseOutcome == workflow.OutcomeCompleted || s.CloseOutcome == workflow.OutcomeAbandoned {
+		outcome = " (" + string(s.CloseOutcome) + ")"
+	}
+	return "labdrian workflow projection: " + workflowRef(b) + " is closed" + outcome + ". No workflow is projected."
+}
+
+// detailIn renders an explanation as " (text)", or nothing when there is none.
+func detailIn(detail string) string {
+	text := clip(sanitizeLine(detail), maxDetailRunes)
+	if text == "" {
+		return ""
+	}
+	return " (" + text + ")"
+}
+
+// --- the context ------------------------------------------------------------
+
+// buildContext renders the context of an open (created, running, or paused)
+// workflow. The lines whose length the workflow log alone decides (the
+// unavailable dependencies, the recorded stages) come last, so that if the
+// whole has to be cut to MaxContextBytes it is only ever those that go.
+func buildContext(b Binding, w workflow.Loaded) string {
+	state := w.State
+	wf, project := sanitizeLine(b.WorkflowID), sanitizeLine(b.ProjectID)
+	flags := "--project " + project + " --workflow " + wf
+
+	lines := []string{
+		"labdrian workflow projection: this repository follows the workflow below. Its state is read from the workflow log on disk, not from this session.",
+		"workflow: " + wf + " (project: " + project + ")",
+		"profile: " + orElse(sanitizeLine(state.Profile), blankField),
+	}
+
+	switch state.Status {
+	case workflow.StatusCreated:
+		lines = append(lines, "status: created (not started yet: run 'labdrian workflow start "+flags+"' before recording stages)")
+	case workflow.StatusPaused:
+		lines = append(lines,
+			"status: paused",
+			"PAUSED: this workflow is paused, so do not advance it (record no stage, run no verify) until it is resumed with: labdrian workflow resume "+flags)
+	default:
+		lines = append(lines, "status: "+string(state.Status))
+	}
+
+	lines = append(lines, "goal: "+orElse(sanitizeLine(state.GoalID), blankField)+" (digest "+sanitizeLine(prefixRunes(state.GoalDigest, goalDigestRunes))+")")
+
+	recorded := state.Stages
+	current := "none yet"
+	if len(recorded) > 0 {
+		current = orElse(sanitizeLine(recorded[len(recorded)-1]), blankField)
+	}
+	lines = append(lines, "current stage: "+current, "next stage: "+nextStage(state, recorded))
+
+	lines = append(lines, memoryPlanLines(state, b.ProjectID)...)
+	lines = append(lines, claudeCapabilityLine())
+	lines = append(lines, "progress commands: labdrian workflow stage "+flags+" --stage <name>; "+
+		"labdrian workflow verify "+flags+" --goal <goal file>; "+
+		"labdrian workflow close "+flags+" --outcome completed|abandoned")
+
+	if unavailable := unavailableDependencies(w.Events); len(unavailable) > 0 {
+		lines = append(lines, "unavailable dependencies at the last recorded event: "+strings.Join(unavailable, ", "))
+	}
+	names := make([]string, len(recorded))
+	for i, stage := range recorded {
+		names[i] = orElse(sanitizeLine(stage), blankField)
+	}
+	listed := "none"
+	if len(names) > 0 {
+		listed = strings.Join(names, ", ")
+	}
+	lines = append(lines, "stages recorded ("+strconv.Itoa(len(recorded))+"): "+listed)
+
+	return strings.Join(lines, "\n")
+}
+
+// nextStage names the stage to record next. The workflow log never says: the
+// lifecycle admits exactly the profile's next declared stage, so the answer is
+// the entry of the profile's list after the ones recorded. When the profile does
+// not resolve, or the recorded stages are not a prefix of its list (a log that
+// was edited by hand), there is no next stage to name, and the line says so
+// instead of guessing.
+func nextStage(state workflow.State, recorded []string) string {
+	profile, err := builtInWorkflowProfile(state)
+	if err != nil {
+		return "not available: profile " + strconv.Quote(sanitizeLine(state.Profile)) + " does not resolve, so stage guidance is omitted"
+	}
+	if profile.CheckStagePrefix(recorded) != nil {
+		return "not available: the recorded stages do not follow the declared order of profile " + strconv.Quote(profile.Name) + ", so stage guidance is omitted"
+	}
+	next, more := profile.NextStage(len(recorded))
+	if !more {
+		return "none: every declared stage is recorded"
+	}
+	return sanitizeLine(next)
+}
+
+// memoryPlanLines renders the memory plan of the workflow's profile: the profile
+// ceiling, resolved for the project and goal, exactly as 'memory plan' prints it.
+// The plan is only a description of what may be read. It is stated as such,
+// because nothing here queries or enforces anything.
+func memoryPlanLines(state workflow.State, projectID string) []string {
+	plan, err := resolvePlan(state, projectID)
+	if err != nil {
+		return []string{"memory plan: not available: " + clip(sanitizeLine(err.Error()), maxDetailRunes)}
+	}
+	sources := make([]string, len(plan.Sources))
+	for i, source := range plan.Sources {
+		sources[i] = string(source)
+	}
+	lines := []string{"memory plan (read-only: it executes no query and grants no memory write): " +
+		"scope=" + string(plan.Scope) +
+		" sources=" + orElse(strings.Join(sources, ","), noneField) +
+		" project_id=" + orElse(sanitizeLine(plan.Filters.ProjectID), noneField) +
+		" goal_id=" + orElse(sanitizeLine(plan.Filters.GoalID), noneField) +
+		" write=" + plan.Write}
+	if len(plan.OmittedFilters) > 0 {
+		lines = append(lines, "omitted filters: "+strings.Join(plan.OmittedFilters, ", "))
+	}
+	return lines
+}
+
+// claudeCapabilityLine renders what the engine declares Claude Code does not
+// fully support, from the declaration itself.
+func claudeCapabilityLine() string {
+	d, err := capability.Declare(capability.TargetClaude)
+	if err != nil {
+		return "capability limits (" + capability.TargetClaude + "): not available: " + clip(sanitizeLine(err.Error()), maxDetailRunes)
+	}
+	return capabilityLimitsLine(d)
+}
+
+// capabilityLimitsLine lists the claims of d that are not supported, as
+// name=status in the declaration's order. It is generated from the declaration,
+// never written by hand, so it changes with it.
+func capabilityLimitsLine(d capability.Declaration) string {
+	var limits []string
+	for _, c := range d.Claims {
+		if c.Status != capability.Supported {
+			limits = append(limits, string(c.Capability)+"="+string(c.Status))
+		}
+	}
+	prefix := "capability limits (" + d.Target + "): "
+	if len(limits) == 0 {
+		return prefix + "none: every capability is supported"
+	}
+	return prefix + strings.Join(limits, ", ")
+}
+
+// unavailableDependencies names the capabilities the last recorded event
+// observed as unavailable, in the order it recorded them. Earlier events are
+// not consulted: each event probes every dependency again.
+func unavailableDependencies(events []workflow.WorkflowEvent) []string {
+	if len(events) == 0 {
+		return nil
+	}
+	var names []string
+	for _, o := range events[len(events)-1].Observations {
+		if o.Status == workflow.ObservationUnavailable {
+			names = append(names, orElse(sanitizeLine(o.Capability), blankField))
+		}
+	}
+	return names
+}
+
+// orElse returns s, or placeholder when s is empty, so a line never has a hole.
+// The placeholder says why the field is empty: "(blank)" for a field that
+// should have had a value and lost it in sanitizing, "none" for one that is
+// legitimately absent.
+func orElse(s, placeholder string) string {
+	if s == "" {
+		return placeholder
+	}
+	return s
+}
+
+const (
+	blankField = "(blank)"
+	noneField  = "none"
+)
+
+// --- text hygiene -----------------------------------------------------------
+
+// sanitizeLine makes s safe to place inside one line of the projected text. The
+// workflow log validates the shape of its free-text fields, not their
+// characters, so a log that was edited by hand can carry anything, and this
+// text goes into a model's context and a user's terminal.
+//
+// White space of every kind, line breaks included, collapses to a single space
+// (and is trimmed at both ends), so a field can never start a new line. Every
+// other character that is not printable is removed: control characters,
+// Unicode format characters (zero-width, bidirectional, tag), private-use and
+// unassigned code points, and bytes that are not UTF-8.
+func sanitizeLine(s string) string {
+	s = strings.ToValidUTF8(s, "")
+	var b strings.Builder
+	space := false
+	for _, r := range s {
+		switch {
+		case unicode.IsSpace(r):
+			space = b.Len() > 0
+		case unicode.IsPrint(r):
+			if space {
+				b.WriteByte(' ')
+				space = false
+			}
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
+}
+
+// prefixRunes returns the first n characters of s (all of s when it is shorter).
+func prefixRunes(s string, n int) string {
+	for i := range s {
+		if n == 0 {
+			return s[:i]
+		}
+		n--
+	}
+	return s
+}
+
+// clip returns s cut to at most maxRunes characters, with "..." when it was cut.
+func clip(s string, maxRunes int) string {
+	if utf8.RuneCountInString(s) <= maxRunes {
+		return s
+	}
+	return prefixRunes(s, maxRunes) + "..."
+}
+
+// boundContext cuts s to MaxContextBytes, ending it with truncationMarker, and
+// leaves it alone when it fits. The cut falls on a character boundary.
+func boundContext(s string) string {
+	if len(s) <= MaxContextBytes {
+		return s
+	}
+	cut := MaxContextBytes - len(truncationMarker)
+	for cut > 0 && !utf8.RuneStart(s[cut]) {
+		cut--
+	}
+	return s[:cut] + truncationMarker
+}

@@ -19,15 +19,16 @@ const crockfordAlphabet = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
 // The random source is an io.Reader (injectable for deterministic tests).
 // Format: 10-char timestamp ‖ 16-char random, all Crockford base32 uppercase,
 // 26 chars total — structurally impossible to confuse with a kebab slug (R-012, R-014).
+//
+// The timestamp is the low 48 bits of the milliseconds since the Unix epoch, written
+// most significant bit first in ten characters of five bits (the last two bits of the
+// tenth are zero); the random part is ten bytes read from rnd, 80 bits in sixteen
+// characters.
 func NewIDFrom(ts time.Time, rnd io.Reader) string {
-	// Timestamp: 48-bit milliseconds since Unix epoch, encoded in 10 base32 chars.
 	ms := uint64(ts.UnixMilli()) //nolint:gosec // milliseconds fit in uint64
 	var tsBuf [8]byte
 	binary.BigEndian.PutUint64(tsBuf[:], ms)
-	// Use the low 6 bytes (48 bits) from position 2..7.
-	ts6 := tsBuf[2:]
 
-	// Random: 10 bytes (80 bits) → encoded in 16 base32 chars.
 	var rndBuf [10]byte
 	if _, err := io.ReadFull(rnd, rndBuf[:]); err != nil {
 		// minimal: forced — ADR-3 requires zero external deps; panic is the
@@ -35,50 +36,30 @@ func NewIDFrom(ts time.Time, rnd io.Reader) string {
 		panic(fmt.Sprintf("prespec: ULID random source failed: %v", err))
 	}
 
-	// Encode: concatenate ts6 (6 bytes) + rndBuf (10 bytes) = 16 bytes total.
-	// 16 bytes = 128 bits; we need 130 bits for 26×5-bit chars; pad the first
-	// 5-bit group from the high side of ts6.
-	//
-	// Standard ULID encoding packs 128 bits into 26 base32 chars (5 bits each).
-	// Layout (bit positions, MSB first):
-	//   chars 0-9  : 48-bit timestamp (ts6, 6 bytes)
-	//   chars 10-25: 80-bit random    (rndBuf, 10 bytes)
-	//
-	// We encode by shifting through a 128-bit window the same way the spec does.
-	var result [26]byte
+	var id [26]byte
+	encodeBase32(id[:10], tsBuf[2:]) // the low 6 of the 8 bytes: 48 bits
+	encodeBase32(id[10:], rndBuf[:])
+	return string(id[:])
+}
 
-	// Encode timestamp (48 bits → 10 chars, 5 bits each).
-	result[0] = crockfordAlphabet[(ts6[0]>>3)&0x1F]
-	result[1] = crockfordAlphabet[((ts6[0]<<2)|(ts6[1]>>6))&0x1F]
-	result[2] = crockfordAlphabet[(ts6[1]>>1)&0x1F]
-	result[3] = crockfordAlphabet[((ts6[1]<<4)|(ts6[2]>>4))&0x1F]
-	result[4] = crockfordAlphabet[((ts6[2]<<1)|(ts6[3]>>7))&0x1F]
-	result[5] = crockfordAlphabet[(ts6[3]>>2)&0x1F]
-	result[6] = crockfordAlphabet[((ts6[3]<<3)|(ts6[4]>>5))&0x1F]
-	result[7] = crockfordAlphabet[ts6[4]&0x1F]
-	result[8] = crockfordAlphabet[(ts6[5]>>3)&0x1F]
-	result[9] = crockfordAlphabet[(ts6[5]<<2)&0x1F]
-
-	// Encode random (80 bits → 16 chars, 5 bits each).
-	r := rndBuf[:]
-	result[10] = crockfordAlphabet[(r[0]>>3)&0x1F]
-	result[11] = crockfordAlphabet[((r[0]<<2)|(r[1]>>6))&0x1F]
-	result[12] = crockfordAlphabet[(r[1]>>1)&0x1F]
-	result[13] = crockfordAlphabet[((r[1]<<4)|(r[2]>>4))&0x1F]
-	result[14] = crockfordAlphabet[((r[2]<<1)|(r[3]>>7))&0x1F]
-	result[15] = crockfordAlphabet[(r[3]>>2)&0x1F]
-	result[16] = crockfordAlphabet[((r[3]<<3)|(r[4]>>5))&0x1F]
-	result[17] = crockfordAlphabet[r[4]&0x1F]
-	result[18] = crockfordAlphabet[(r[5]>>3)&0x1F]
-	result[19] = crockfordAlphabet[((r[5]<<2)|(r[6]>>6))&0x1F]
-	result[20] = crockfordAlphabet[(r[6]>>1)&0x1F]
-	result[21] = crockfordAlphabet[((r[6]<<4)|(r[7]>>4))&0x1F]
-	result[22] = crockfordAlphabet[((r[7]<<1)|(r[8]>>7))&0x1F]
-	result[23] = crockfordAlphabet[(r[8]>>2)&0x1F]
-	result[24] = crockfordAlphabet[((r[8]<<3)|(r[9]>>5))&0x1F]
-	result[25] = crockfordAlphabet[r[9]&0x1F]
-
-	return string(result[:])
+// encodeBase32 writes src into dst as Crockford base32, most significant bit first, five
+// bits to a character. When the bits of src are not a multiple of five the last character
+// is padded with zero bits. dst must be as long as the characters src comes to.
+func encodeBase32(dst, src []byte) {
+	var window uint16 // the bits read and not yet written are its low `pending` bits
+	pending, n := 0, 0
+	for _, b := range src {
+		window = window<<8 | uint16(b)
+		pending += 8
+		for pending >= 5 {
+			pending -= 5
+			dst[n] = crockfordAlphabet[(window>>uint(pending))&0x1F]
+			n++
+		}
+	}
+	if pending > 0 {
+		dst[n] = crockfordAlphabet[(window<<uint(5-pending))&0x1F]
+	}
 }
 
 // Section keys for the six discovery sections (in order).

@@ -110,6 +110,13 @@ import (
 //   - sddregistry/fsstore is the adapter of those two ports (B2): the registry as a file, written
 //     as `engine propagate` writes it (propagator/fsstore), and the skills of a target as files.
 //     The lock and the words a person reads are the command's, in cmd.
+//   - sha256hex is a domain package (H34): what a SHA-256 digest looks like on the wire (64
+//     lowercase hex characters) and how one is made, which every record that carries a digest
+//     (the goal, the workflow event, the role handoff, the clearance, the approval, the project
+//     lock, the binding) shares. Pure standard library.
+//   - fieldrule is a domain package (H34): the rules for the shape of one field of a versioned
+//     document that more than one record shares (today the string array of a Goal and of a Shaper
+//     handoff). Pure standard library.
 //   - repotest is test support: the hand-made repositories the tests of gitfs and cmd share.
 //   - piguard is test support: the `pi` that refuses to run, put first on the PATH of a test
 //     run by a TestMain, so nothing started by accident reaches the real CLI.
@@ -133,6 +140,7 @@ var rings = map[string]archguard.Ring{
 	"contract":                  archguard.Domain,
 	"enginetest":                archguard.Support,
 	"execrunner":                archguard.Adapter,
+	"fieldrule":                 archguard.Domain,
 	"filelock":                  archguard.Adapter,
 	"gadu":                      archguard.Adapter,
 	"gate":                      archguard.Domain,
@@ -173,6 +181,7 @@ var rings = map[string]archguard.Ring{
 	"sddregistry/fsstore":       archguard.Adapter,
 	"settings":                  archguard.Domain,
 	"settings/settingsfile":     archguard.Adapter,
+	"sha256hex":                 archguard.Domain,
 	"shaper":                    archguard.Domain,
 	"shaper/fsadapter":          archguard.Adapter,
 	"shaper/shapertest":         archguard.Support,

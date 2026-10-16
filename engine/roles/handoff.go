@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"regexp"
-	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/jsonstrict"
 )
@@ -77,8 +75,6 @@ var (
 	evidenceItemFields = []string{"kind", "ref", "sha256"}
 	contextFields      = []string{"summary", "decisions", "open_questions"}
 )
-
-var sha256HexPattern = regexp.MustCompile(`^[0-9a-f]{64}$`)
 
 // MaxRecordBytes bounds the size of one RoleHandoff JSON document that
 // ParseRoleHandoff will decode, and that a chain store will read back. A record carries
@@ -156,93 +152,6 @@ func checkNestedHandoffFields(raw map[string]json.RawMessage) error {
 		if err := jsonstrict.CheckKnownFields(item, "role handoff evidence item", evidenceItemFields); err != nil {
 			return fmt.Errorf("evidence[%d]: %w", i, err)
 		}
-	}
-	return nil
-}
-
-// Validate checks every field shape of h. It is first-error-wins.
-func (h RoleHandoff) Validate() error {
-	if h.Version != HandoffVersion {
-		return fmt.Errorf("version must be %d, got %d", HandoffVersion, h.Version)
-	}
-	for _, f := range []struct{ name, value string }{
-		{"project_id", h.ProjectID},
-		{"goal_id", h.GoalID},
-		{"chain_id", h.ChainID},
-	} {
-		if strings.TrimSpace(f.value) == "" {
-			return fmt.Errorf("%s must not be blank", f.name)
-		}
-	}
-	if h.Seq < 1 {
-		return fmt.Errorf("seq must be >= 1, got %d", h.Seq)
-	}
-	if !IsKnownRole(h.FromRole) {
-		return fmt.Errorf("from_role %q is not a known role", h.FromRole)
-	}
-	if !IsKnownRole(h.ToRole) {
-		return fmt.Errorf("to_role %q is not a known role", h.ToRole)
-	}
-	if !IsValidTransition(h.FromRole, h.ToRole) {
-		return fmt.Errorf("transition from %q to %q is not allowed", h.FromRole, h.ToRole)
-	}
-	for _, f := range []struct{ name, value string }{
-		{"prev_sha256", h.PrevSHA256},
-		{"payload_sha256", h.PayloadSHA256},
-	} {
-		if !sha256HexPattern.MatchString(f.value) {
-			return fmt.Errorf("%s must be 64 lowercase hex characters, got %q", f.name, f.value)
-		}
-	}
-	if strings.TrimSpace(h.PayloadKind) == "" {
-		return fmt.Errorf("payload_kind must not be blank")
-	}
-	if h.Evidence == nil {
-		return fmt.Errorf("evidence must be a non-null array")
-	}
-	for i, e := range h.Evidence {
-		for _, f := range []struct{ name, value string }{
-			{"kind", e.Kind},
-			{"ref", e.Ref},
-		} {
-			if strings.TrimSpace(f.value) == "" {
-				return fmt.Errorf("evidence[%d].%s must not be blank", i, f.name)
-			}
-		}
-		if !sha256HexPattern.MatchString(e.SHA256) {
-			return fmt.Errorf("evidence[%d].sha256 must be 64 lowercase hex characters, got %q", i, e.SHA256)
-		}
-	}
-	if strings.TrimSpace(h.Context.Summary) == "" {
-		return fmt.Errorf("context.summary must not be blank")
-	}
-	if h.Context.Decisions == nil {
-		return fmt.Errorf("context.decisions must be a non-null array")
-	}
-	for i, d := range h.Context.Decisions {
-		if strings.TrimSpace(d) == "" {
-			return fmt.Errorf("context.decisions[%d] must not be blank", i)
-		}
-	}
-	if h.Context.OpenQuestions == nil {
-		return fmt.Errorf("context.open_questions must be a non-null array")
-	}
-	for i, q := range h.Context.OpenQuestions {
-		if strings.TrimSpace(q) == "" {
-			return fmt.Errorf("context.open_questions[%d] must not be blank", i)
-		}
-	}
-	switch h.Status {
-	case StatusCompleted:
-		if h.ResumeReason != nil {
-			return fmt.Errorf("resume_reason must be absent when status is %q", StatusCompleted)
-		}
-	case StatusInterrupted:
-		if h.ResumeReason == nil || strings.TrimSpace(*h.ResumeReason) == "" {
-			return fmt.Errorf("resume_reason must be present and non-blank when status is %q", StatusInterrupted)
-		}
-	default:
-		return fmt.Errorf("status must be %q or %q, got %q", StatusCompleted, StatusInterrupted, h.Status)
 	}
 	return nil
 }

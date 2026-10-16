@@ -8,8 +8,6 @@ package workflow
 
 import (
 	"bytes"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -19,6 +17,7 @@ import (
 	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/jsonstrict"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/sha256hex"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflowprofile"
 )
 
@@ -237,8 +236,6 @@ var (
 	snapshotMemoryKey = []string{"scope", "sources"}
 )
 
-var sha256HexPattern = regexp.MustCompile(`^[0-9a-f]{64}$`)
-
 // gitHeadPattern requires a full commit id: exactly 40 lowercase hex
 // characters (a full SHA-1 object id) or exactly 64 (a full SHA-256 object
 // id). Provenance.git_head exists specifically so a post-incident
@@ -435,7 +432,7 @@ func (e WorkflowEvent) Validate() error {
 		if e.PrevDigest != "" {
 			return fmt.Errorf("prev_digest must be empty at seq 0, got %q", e.PrevDigest)
 		}
-	} else if !sha256HexPattern.MatchString(e.PrevDigest) {
+	} else if !sha256hex.IsValid(e.PrevDigest) {
 		return fmt.Errorf("prev_digest must be 64 lowercase hex characters at seq > 0, got %q", e.PrevDigest)
 	}
 	if !knownKinds[e.Kind] {
@@ -534,7 +531,7 @@ func (e WorkflowEvent) validateCreatedPayload() error {
 	if len([]rune(e.GoalID)) > MaxGoalIDLength {
 		return fmt.Errorf("goal_id exceeds the maximum length of %d runes", MaxGoalIDLength)
 	}
-	if !sha256HexPattern.MatchString(e.GoalDigest) {
+	if !sha256hex.IsValid(e.GoalDigest) {
 		return fmt.Errorf("goal_digest must be 64 lowercase hex characters, got %q", e.GoalDigest)
 	}
 	if err := e.validateCreatedProfile(); err != nil {
@@ -544,7 +541,7 @@ func (e WorkflowEvent) validateCreatedPayload() error {
 		if err := ValidateIdentifier("role_chain_id", e.RoleChainID); err != nil {
 			return err
 		}
-		if !sha256HexPattern.MatchString(e.RoleChainHead) {
+		if !sha256hex.IsValid(e.RoleChainHead) {
 			return fmt.Errorf("role_chain_head must be 64 lowercase hex characters when role_chain_id is set, got %q", e.RoleChainHead)
 		}
 	} else if e.RoleChainHead != "" {
@@ -647,16 +644,16 @@ func (e WorkflowEvent) validateCheckedPayload() error {
 		return fmt.Errorf("checked must be present for kind %q", KindVerified)
 	}
 	c := *e.Checked
-	if !sha256HexPattern.MatchString(c.ChainDigest) {
+	if !sha256hex.IsValid(c.ChainDigest) {
 		return fmt.Errorf("checked.chain_digest must be 64 lowercase hex characters, got %q", c.ChainDigest)
 	}
-	if !sha256HexPattern.MatchString(c.GoalDigest) {
+	if !sha256hex.IsValid(c.GoalDigest) {
 		return fmt.Errorf("checked.goal_digest must be 64 lowercase hex characters, got %q", c.GoalDigest)
 	}
 	if err := e.validateCheckedProfile(c.Profile); err != nil {
 		return err
 	}
-	if c.RoleChainDigest != "" && !sha256HexPattern.MatchString(c.RoleChainDigest) {
+	if c.RoleChainDigest != "" && !sha256hex.IsValid(c.RoleChainDigest) {
 		return fmt.Errorf("checked.role_chain_digest must be 64 lowercase hex characters or empty, got %q", c.RoleChainDigest)
 	}
 	return nil
@@ -707,8 +704,7 @@ func EventDigest(e WorkflowEvent) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("workflow event digest: %w", err)
 	}
-	sum := sha256.Sum256(data)
-	return hex.EncodeToString(sum[:]), nil
+	return sha256hex.Sum(data), nil
 }
 
 // VerifyEvents checks one workflow's event log: every event parses and

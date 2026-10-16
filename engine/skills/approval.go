@@ -2,13 +2,13 @@ package skills
 
 import (
 	"bytes"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/sha256hex"
 )
 
 // ApprovalRecordName is the file name of a skill's human-approval record. The
@@ -74,8 +74,6 @@ type ApprovalStatus struct {
 	Detail string
 }
 
-var sha256HexRe = regexp.MustCompile(`^[0-9a-f]{64}$`)
-
 // utcTimestampRe matches the only timestamp shape a record carries:
 // RFC 3339, UTC, whole seconds. Ranges are checked by validUTCTimestamp.
 var utcTimestampRe = regexp.MustCompile(`^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})Z$`)
@@ -84,8 +82,7 @@ var utcTimestampRe = regexp.MustCompile(`^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}
 // It hashes the bytes as read, with no normalization of line endings, a BOM or
 // trailing whitespace: approval binds the file, not an interpretation of it.
 func SkillDigest(skillMD []byte) string {
-	sum := sha256.Sum256(skillMD)
-	return hex.EncodeToString(sum[:])
+	return sha256hex.Sum(skillMD)
 }
 
 // ApprovalRecordPath returns where the approval record for id lives under
@@ -153,7 +150,7 @@ func validateApprovalRecord(rec ApprovalRecord) error {
 	if !slugRe.MatchString(rec.Skill) {
 		return fmt.Errorf(`field "skill" %q is not a valid skill id`, rec.Skill)
 	}
-	if !sha256HexRe.MatchString(rec.SHA256) {
+	if !sha256hex.IsValid(rec.SHA256) {
 		return fmt.Errorf(`field "sha256" %q is not a lowercase 64-character hex digest`, rec.SHA256)
 	}
 	if !validUTCTimestamp(rec.ApprovedAt) {

@@ -3,6 +3,8 @@ package roles
 import (
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/sha256hex"
 )
 
 // AdmitRecord is the rule for joining a chain, on records alone: these tests build
@@ -13,7 +15,7 @@ func TestAdmitRecord(t *testing.T) {
 
 	next := func(t *testing.T, prev ChainRecord, seq int, from, to string) ChainRecord {
 		t.Helper()
-		return chainRecord(t, recordJSON(seq, sha256Hex(prev.Raw), from, to, "completed", ""))
+		return chainRecord(t, recordJSON(seq, sha256hex.Sum(prev.Raw), from, to, "completed", ""))
 	}
 
 	tests := []struct {

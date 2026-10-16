@@ -348,9 +348,9 @@ func TestLifecycleHappyPathAcrossRestarts(t *testing.T) {
 	if lastEvent.Kind != KindVerified || lastEvent.Checked == nil {
 		t.Fatalf("last event = %+v, want a verified event with checked", lastEvent)
 	}
-	wantGoalDigest, err := goalDigest(g)
+	wantGoalDigest, err := g.Digest()
 	if err != nil {
-		t.Fatalf("goalDigest() = %v, want nil", err)
+		t.Fatalf("g.Digest() = %v, want nil", err)
 	}
 	if lastEvent.Checked.GoalDigest != wantGoalDigest || lastEvent.Checked.Profile != profile.Name {
 		t.Fatalf("checked = %+v, want goal_digest=%s profile=%s", lastEvent.Checked, wantGoalDigest, profile.Name)

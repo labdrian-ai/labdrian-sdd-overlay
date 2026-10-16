@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/jsonstrict"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/sha256hex"
 )
 
 // ClearanceRecordVersion is the only clearance record wire version this
@@ -95,8 +95,6 @@ var (
 	hostTimeFields       = []string{"value", "informational"}
 )
 
-var sha256HexPattern = regexp.MustCompile(`^[0-9a-f]{64}$`)
-
 // MaxRecordBytes bounds the size of one clearance record that ParseRecord will decode, and
 // so of every record a ClearanceStore will accept and read back. A record carries
 // free-form text (the reason and the evidence of each flag resolution), none of which has
@@ -112,10 +110,6 @@ const MaxRecordBytes = 4 << 20
 
 // ErrRecordTooLarge is returned by ParseRecord when the input exceeds MaxRecordBytes.
 var ErrRecordTooLarge = errors.New("shaper: clearance record is too large")
-
-// IsSHA256Hex reports whether s is a SHA-256 digest as every digest in a clearance
-// record is written: exactly 64 lowercase hexadecimal characters.
-func IsSHA256Hex(s string) bool { return sha256HexPattern.MatchString(s) }
 
 // ParseRecord strictly parses one clearance record: bounded overall size
 // (MaxRecordBytes), valid UTF-8, no duplicate keys at any depth, no unknown fields at any
@@ -216,7 +210,7 @@ func (r ClearanceRecord) Validate() error {
 		{"subject.provenance_sha256", s.ProvenanceSHA256},
 		{"subject.view_sha256", s.ViewSHA256},
 	} {
-		if !sha256HexPattern.MatchString(f.value) {
+		if !sha256hex.IsValid(f.value) {
 			return fmt.Errorf("%s must be 64 lowercase hex characters, got %q", f.name, f.value)
 		}
 	}
@@ -406,7 +400,7 @@ func writeViewV3(b *bytes.Buffer, v *PresentedViewV3) {
 // ViewDigest is the lowercase hex SHA-256 of rendered view bytes. It detects
 // drift only and is not a signature.
 func ViewDigest(view []byte) string {
-	return sha256Hex(view)
+	return sha256hex.Sum(view)
 }
 
 // ProvenanceSHA256 is the lowercase hex SHA-256 of a length-prefixed encoding
@@ -424,7 +418,7 @@ func (s Subject) ProvenanceSHA256() string {
 	} {
 		writeViewValue(&b, f.name, []byte(f.value))
 	}
-	return sha256Hex(b.Bytes())
+	return sha256hex.Sum(b.Bytes())
 }
 
 // Verify is the only constructor of VerifiedClearance. It strictly parses

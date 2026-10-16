@@ -9,6 +9,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/sha256hex"
 )
 
 const readinessRoot = "/work/tree"
@@ -35,12 +37,12 @@ func inputWith(t *testing.T, handoffBytes, goalBytes []byte) ReadinessInput {
 		Handoff: HandoffSource{
 			SourcePath: "handoff.json",
 			Bytes:      handoffBytes,
-			SHA256:     sha256Hex(handoffBytes),
+			SHA256:     sha256hex.Sum(handoffBytes),
 		},
 		Goal: &GoalBinding{
 			SourcePath: "goal.json",
 			GoalBytes:  goalBytes,
-			GoalSHA256: sha256Hex(goalBytes),
+			GoalSHA256: sha256hex.Sum(goalBytes),
 		},
 		Provenance: &WorktreeProvenance{
 			Toplevel:  readinessRoot,
@@ -89,9 +91,9 @@ func TestEvaluateCompleteEvidenceWithNilClearanceStaysDraft(t *testing.T) {
 		ProjectID:         "standalone-shaper-handoff",
 		GoalID:            "goal-alpha",
 		HandoffSourcePath: "handoff.json",
-		HandoffSHA256:     sha256Hex([]byte(validHandoffJSON)),
+		HandoffSHA256:     sha256hex.Sum([]byte(validHandoffJSON)),
 		GoalSourcePath:    "goal.json",
-		GoalSHA256:        sha256Hex([]byte(goalV2JSONWithNonGoals(`[]`))),
+		GoalSHA256:        sha256hex.Sum([]byte(goalV2JSONWithNonGoals(`[]`))),
 		Worktree: WorktreeProvenance{
 			Toplevel:  readinessRoot,
 			GitDir:    readinessRoot + "/.git",
@@ -145,7 +147,7 @@ func TestEvaluateStructurallyInvalidHandoffIsInvalidWithoutSubject(t *testing.T)
 		t.Run(tc.name, func(t *testing.T) {
 			in := completeInput(t)
 			in.Handoff.Bytes = tc.data
-			in.Handoff.SHA256 = sha256Hex(tc.data)
+			in.Handoff.SHA256 = sha256hex.Sum(tc.data)
 
 			got := Evaluate(in, nil)
 
@@ -205,23 +207,23 @@ func TestEvaluateContradictoryEvidenceIsRefused(t *testing.T) {
 		mutate func(in *ReadinessInput)
 		want   Reason
 	}{
-		{name: "handoff digest mismatch", mutate: func(in *ReadinessInput) { in.Handoff.SHA256 = sha256Hex([]byte("x")) }, want: ReasonHandoffDigestMismatch},
-		{name: "goal digest mismatch", mutate: func(in *ReadinessInput) { in.Goal.GoalSHA256 = sha256Hex([]byte("x")) }, want: ReasonGoalDigestMismatch},
+		{name: "handoff digest mismatch", mutate: func(in *ReadinessInput) { in.Handoff.SHA256 = sha256hex.Sum([]byte("x")) }, want: ReasonHandoffDigestMismatch},
+		{name: "goal digest mismatch", mutate: func(in *ReadinessInput) { in.Goal.GoalSHA256 = sha256hex.Sum([]byte("x")) }, want: ReasonGoalDigestMismatch},
 		{name: "goal bytes invalid", mutate: func(in *ReadinessInput) {
 			in.Goal.GoalBytes = []byte(`{}`)
-			in.Goal.GoalSHA256 = sha256Hex(in.Goal.GoalBytes)
+			in.Goal.GoalSHA256 = sha256hex.Sum(in.Goal.GoalBytes)
 		}, want: ReasonGoalInvalid},
 		{name: "goal version one", mutate: func(in *ReadinessInput) {
 			in.Goal.GoalBytes = []byte(strings.Replace(strings.Replace(goalV2JSONWithNonGoals(`[]`), `"goal_id":"goal-alpha",`, "", 1), `"version":2`, `"version":1`, 1))
-			in.Goal.GoalSHA256 = sha256Hex(in.Goal.GoalBytes)
+			in.Goal.GoalSHA256 = sha256hex.Sum(in.Goal.GoalBytes)
 		}, want: ReasonGoalInvalid},
 		{name: "project_id mismatch", mutate: func(in *ReadinessInput) {
 			in.Goal.GoalBytes = []byte(otherProject)
-			in.Goal.GoalSHA256 = sha256Hex(in.Goal.GoalBytes)
+			in.Goal.GoalSHA256 = sha256hex.Sum(in.Goal.GoalBytes)
 		}, want: ReasonGoalIdentityMismatch},
 		{name: "goal_id mismatch", mutate: func(in *ReadinessInput) {
 			in.Goal.GoalBytes = []byte(otherGoal)
-			in.Goal.GoalSHA256 = sha256Hex(in.Goal.GoalBytes)
+			in.Goal.GoalSHA256 = sha256hex.Sum(in.Goal.GoalBytes)
 		}, want: ReasonGoalIdentityMismatch},
 		{name: "toplevel differs from worktree root", mutate: func(in *ReadinessInput) { in.Provenance.Toplevel = "/elsewhere" }, want: ReasonWorktreeProvenanceMismatch},
 		{name: "relative worktree root", mutate: func(in *ReadinessInput) { in.WorktreeRoot = "work/tree" }, want: ReasonWorktreeProvenanceMismatch},

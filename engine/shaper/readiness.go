@@ -1,11 +1,6 @@
 package shaper
 
-import (
-	"fmt"
-	"path/filepath"
-
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/goal"
-)
+import "fmt"
 
 // State is the readiness outcome of one evaluation. Readiness is a separate
 // assessment from structural validity, and it never grants execution
@@ -331,147 +326,12 @@ func Evaluate(in ReadinessInput, clearance *VerifiedClearance) Assessment {
 		}
 	}
 
-	var blockers []Blocker
-	block := func(r Reason, format string, args ...any) {
-		blockers = append(blockers, Blocker{Reason: r, Detail: fmt.Sprintf(format, args...)})
-	}
-	subjectOK := true
-
-	handoffSHA := sha256Hex(in.Handoff.Bytes)
-	if in.Handoff.SHA256 != handoffSHA {
-		block(ReasonHandoffDigestMismatch, "recorded handoff sha256 %q, bytes hash to %q", in.Handoff.SHA256, handoffSHA)
-		subjectOK = false
-	}
-	if in.Handoff.SourcePath == "" {
-		block(ReasonSourceUnrecorded, "handoff source path is empty")
-		subjectOK = false
-	}
-
-	var flags []Flag
-	var goalSHA string
-	var g goal.Goal
-	if in.Goal == nil {
-		block(ReasonGoalUnbound, "no Goal binding supplied")
-		subjectOK = false
-	} else {
-		goalSHA = sha256Hex(in.Goal.GoalBytes)
-		if in.Goal.GoalSHA256 != goalSHA {
-			block(ReasonGoalDigestMismatch, "recorded goal sha256 %q, bytes hash to %q", in.Goal.GoalSHA256, goalSHA)
-			subjectOK = false
-		}
-		if in.Goal.SourcePath == "" {
-			block(ReasonSourceUnrecorded, "goal source path is empty")
-			subjectOK = false
-		}
-		parsed, err := goal.Parse(in.Goal.GoalBytes)
-		g = parsed
-		switch {
-		case err != nil:
-			block(ReasonGoalInvalid, "%v", err)
-			subjectOK = false
-		case g.Version != 2:
-			block(ReasonGoalInvalid, "goal has version %d, want 2", g.Version)
-			subjectOK = false
-		case g.ProjectID != h.ProjectID || g.GoalID != h.GoalID:
-			block(ReasonGoalIdentityMismatch, "handoff (%q, %q), goal (%q, %q)", h.ProjectID, h.GoalID, g.ProjectID, g.GoalID)
-			subjectOK = false
-		default:
-			if h.Version == 3 {
-				blockers = append(blockers, od6Overlaps(h, g.NonGoals)...)
-			} else {
-				flags = nonGoalOverlapFlags(h, g.NonGoals)
-			}
-		}
-	}
-
-	var worktree WorktreeProvenance
-	switch p := in.Provenance; {
-	case p == nil:
-		block(ReasonWorktreeProvenanceUnobserved, "no worktree observation supplied")
-		subjectOK = false
-	case p.Toplevel == "" || p.GitDir == "" || p.CommonDir == "":
-		block(ReasonWorktreeProvenanceIncomplete, "observation lacks toplevel, git dir, or common dir")
-		subjectOK = false
-	case !filepath.IsAbs(in.WorktreeRoot) || filepath.Clean(in.WorktreeRoot) != in.WorktreeRoot || in.WorktreeRoot != p.Toplevel:
-		block(ReasonWorktreeProvenanceMismatch, "worktree root %q, observed toplevel %q", in.WorktreeRoot, p.Toplevel)
-		subjectOK = false
-	default:
-		worktree = *p
-	}
-
-	var subject *Subject
-	var view []byte
-	if subjectOK {
-		subject = &Subject{
-			ProjectID:         h.ProjectID,
-			GoalID:            h.GoalID,
-			HandoffSourcePath: in.Handoff.SourcePath,
-			HandoffSHA256:     handoffSHA,
-			GoalSourcePath:    in.Goal.SourcePath,
-			GoalSHA256:        goalSHA,
-			Worktree:          worktree,
-		}
-		presented := PresentedView{
-			GoalBytes:    in.Goal.GoalBytes,
-			PlanBytes:    in.Handoff.Bytes,
-			GoalScope:    g.Scope,
-			GoalNonGoals: g.NonGoals,
-			OutOfScope:   h.OutOfScope,
-			Acceptance:   h.AcceptanceItems,
-			Flags:        flags,
-		}
-		if h.Version == 3 {
-			presented.V3 = &PresentedViewV3{
-				Roles:                h.Roles,
-				Tests:                h.Tests,
-				Risks:                h.Risks,
-				Estimates:            h.Estimates,
-				MemoryScope:          h.MemoryScope,
-				GoalMemoryScope:      g.MemoryScope,
-				DeliveryLimit:        h.DeliveryLimit,
-				GoalDeliveryBoundary: g.DeliveryBoundary,
-			}
-		}
-		if err := checkPresentable(presented); err != nil {
-			// Refuse, never rewrite: withholding Subject and View means no
-			// caller can display this view and no clearance can match it.
-			block(ReasonViewUnpresentable, "%v", err)
-			subject = nil
-		} else {
-			view = RenderView(presented)
-		}
-	}
-
-	var clearanceBlocker *Blocker
-	cleared := false
-	switch {
-	case clearance == nil:
-		clearanceBlocker = &Blocker{Reason: ReasonClearanceMissing, Detail: "no host-owned clearance supplied"}
-	case !clearance.verified:
-		clearanceBlocker = &Blocker{Reason: ReasonClearanceUnverified, Detail: "clearance was not produced by Verify"}
-	case subject == nil:
-		clearanceBlocker = &Blocker{Reason: ReasonClearanceUnverified, Detail: "subject evidence is incomplete or refused, so the clearance cannot be matched"}
-	case !clearance.matches(*subject, ViewDigest(view), flags):
-		clearanceBlocker = &Blocker{Reason: ReasonClearanceMismatch, Detail: "clearance was verified against a different subject, view, or flag set"}
-	default:
-		cleared = true
-	}
-
-	if len(flags) > 0 && !cleared {
-		block(ReasonFlagsUnresolved, "%d flag(s) await a host-captured human resolution", len(flags))
-	}
-	if clearanceBlocker != nil {
-		blockers = append(blockers, *clearanceBlocker)
-	}
-	if h.Version == 1 {
-		block(ReasonAcceptanceVerificationUnrepresentable, "handoff version 1 has no per-criterion verification method or adjudication path")
-	}
-
-	a := Assessment{State: StateDraft, Blockers: blockers, Flags: flags, Subject: subject, View: view}
-	if len(blockers) == 0 {
-		a.State = StateReady
-	}
-	return a
+	ev := evaluation{in: in, h: h, subjectOK: true}
+	ev.checkHandoffSource()
+	ev.checkGoal()
+	ev.checkWorktree()
+	subject, view := ev.subjectAndView()
+	return ev.conclude(clearance, subject, view)
 }
 
 // nonGoalOverlapFlags raises a FlagGoalNonGoalOverlap for every stages or

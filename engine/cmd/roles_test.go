@@ -2,8 +2,6 @@ package main
 
 import (
 	"bytes"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -12,12 +10,8 @@ import (
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/roles"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/sha256hex"
 )
-
-func sha256HexTest(data []byte) string {
-	sum := sha256.Sum256(data)
-	return hex.EncodeToString(sum[:])
-}
 
 type rolesRun struct {
 	code   int
@@ -178,7 +172,7 @@ func TestRolesResumeReportsInterrupted(t *testing.T) {
 	// prev_sha256 must be the real digest of r1's bytes; recompute via a
 	// second append attempt using the CLI's own validate path is overkill
 	// here, so compute it the same way the store does.
-	r2 = withPrevSHA(r2, sha256HexTest([]byte(r1)))
+	r2 = withPrevSHA(r2, sha256hex.Sum([]byte(r1)))
 	if a := runRolesTest([]string{"append", "--project", "proj-1", "--goal", "goal-1", "--chain", "chain-1", "--stdin"}, r2); a.code != 0 {
 		t.Fatalf("append seq2 code=%d stdout=%q stderr=%q", a.code, a.stdout, a.stderr)
 	}

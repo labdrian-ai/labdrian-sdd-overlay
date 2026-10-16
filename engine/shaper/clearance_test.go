@@ -14,6 +14,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/sha256hex"
 )
 
 // overlapInput returns complete readiness evidence whose Goal non_goals
@@ -196,35 +198,6 @@ func TestParseRecordBoundsTheRecord(t *testing.T) {
 	}
 }
 
-// IsSHA256Hex is the one digest rule a store checks its keys by, so its boundary is pinned
-// at the function itself: exactly 64 lowercase hexadecimal characters, nothing else.
-func TestIsSHA256Hex(t *testing.T) {
-	for _, tc := range []struct {
-		name string
-		in   string
-		want bool
-	}{
-		{"64 lowercase hex digits", strings.Repeat("a1", 32), true},
-		{"all digits", strings.Repeat("0", 64), true},
-		{"empty", "", false},
-		{"one short", strings.Repeat("a", 63), false},
-		{"one long", strings.Repeat("a", 65), false},
-		{"uppercase", strings.Repeat("A", 64), false},
-		{"one uppercase among lowercase", strings.Repeat("a", 63) + "F", false},
-		{"a non-hex letter", strings.Repeat("a", 63) + "g", false},
-		{"embedded traversal", strings.Repeat("a", 30) + "/../" + strings.Repeat("b", 30), false},
-		{"trailing newline", strings.Repeat("a", 64) + "\n", false},
-		{"leading space", " " + strings.Repeat("a", 63), false},
-		{"0x prefix", "0x" + strings.Repeat("a", 62), false},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			if got := IsSHA256Hex(tc.in); got != tc.want {
-				t.Errorf("IsSHA256Hex(%q) = %v, want %v", tc.in, got, tc.want)
-			}
-		})
-	}
-}
-
 func TestParseRecordRejectsInvalidRecords(t *testing.T) {
 	a := freshAssessment(t, overlapInput(t))
 	base := recordFor(t, a)
@@ -362,7 +335,7 @@ func TestRenderViewIsDeterministicAndCoversEveryPresentedPart(t *testing.T) {
 	if got := ViewDigest(a.View); !regexp.MustCompile(`^[0-9a-f]{64}$`).MatchString(got) {
 		t.Errorf("ViewDigest = %q, want lowercase hex SHA-256", got)
 	}
-	if ViewDigest(a.View) != sha256Hex(a.View) {
+	if ViewDigest(a.View) != sha256hex.Sum(a.View) {
 		t.Errorf("ViewDigest is not the SHA-256 of the view bytes")
 	}
 }
@@ -527,8 +500,8 @@ func TestVerifyInvalidationMatrix(t *testing.T) {
 	}{
 		{name: "project_id", edit: func(s *Subject, _ *[]Flag, _ *[]byte) { s.ProjectID = "other-project" }, match: "project_id"},
 		{name: "goal_id", edit: func(s *Subject, _ *[]Flag, _ *[]byte) { s.GoalID = "goal-beta" }, match: "goal_id"},
-		{name: "goal digest", edit: func(s *Subject, _ *[]Flag, _ *[]byte) { s.GoalSHA256 = sha256Hex([]byte("g")) }, match: "goal_sha256"},
-		{name: "plan digest", edit: func(s *Subject, _ *[]Flag, _ *[]byte) { s.HandoffSHA256 = sha256Hex([]byte("p")) }, match: "handoff_sha256"},
+		{name: "goal digest", edit: func(s *Subject, _ *[]Flag, _ *[]byte) { s.GoalSHA256 = sha256hex.Sum([]byte("g")) }, match: "goal_sha256"},
+		{name: "plan digest", edit: func(s *Subject, _ *[]Flag, _ *[]byte) { s.HandoffSHA256 = sha256hex.Sum([]byte("p")) }, match: "handoff_sha256"},
 		{name: "handoff source path", edit: func(s *Subject, _ *[]Flag, _ *[]byte) { s.HandoffSourcePath = "other.json" }, match: "provenance_sha256"},
 		{name: "goal source path", edit: func(s *Subject, _ *[]Flag, _ *[]byte) { s.GoalSourcePath = "goals/goal.json" }, match: "provenance_sha256"},
 		{name: "toplevel", edit: func(s *Subject, _ *[]Flag, _ *[]byte) { s.Worktree.Toplevel = "/work/other" }, match: "provenance_sha256"},

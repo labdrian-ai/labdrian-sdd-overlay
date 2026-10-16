@@ -7,6 +7,7 @@ import (
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime/core"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime/opencodeprompt"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/sha256hex"
 )
 
 // OpenCodeAdapter installs the runtime-parity plugin into the OpenCode config directory and
@@ -113,7 +114,7 @@ func (a OpenCodeAdapter) status(action core.Action) core.LifecycleResult {
 		}
 		return a.result(action, core.CapabilityPartial, "OpenCode config missing or invalid: "+err.Error())
 	}
-	currentHash := hashString(string(plugin))
+	currentHash := sha256hex.Sum(plugin)
 	if cfg.InstalledHash != currentHash {
 		return a.result(action, core.CapabilityRestartRequired, "OpenCode plugin artifact changed; restart OpenCode after reinstall")
 	}

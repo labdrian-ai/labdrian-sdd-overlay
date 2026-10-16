@@ -53,7 +53,7 @@ func BindGoal(src ContainedSource, h Handoff, worktreeRoot, goalPath string) (Go
 	return GoalBinding{
 		SourcePath: cleaned,
 		GoalBytes:  data,
-		GoalSHA256: sha256Hex(data),
+		GoalSHA256: SourceSHA256(data),
 		Goal:       g,
 	}, nil
 }

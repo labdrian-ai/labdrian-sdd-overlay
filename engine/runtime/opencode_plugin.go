@@ -1,9 +1,9 @@
 package runtime
 
 import (
-	"crypto/sha256"
 	_ "embed"
-	"encoding/hex"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/sha256hex"
 )
 
 const openCodePluginFile = "labdrian-runtime-parity.js"
@@ -19,10 +19,5 @@ var openCodePluginSource string
 
 // OpenCodePluginHash is the hash of the plugin source the program carries.
 func OpenCodePluginHash() string {
-	return hashString(openCodePluginSource)
-}
-
-func hashString(value string) string {
-	sum := sha256.Sum256([]byte(value))
-	return hex.EncodeToString(sum[:])
+	return sha256hex.Sum([]byte(openCodePluginSource))
 }

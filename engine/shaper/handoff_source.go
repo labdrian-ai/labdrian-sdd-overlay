@@ -36,7 +36,7 @@ func LoadHandoff(src ContainedSource, worktreeRoot, handoffPath string) (Handoff
 	return HandoffSource{
 		SourcePath: cleaned,
 		Bytes:      data,
-		SHA256:     sha256Hex(data),
+		SHA256:     SourceSHA256(data),
 		Handoff:    h,
 	}, nil
 }

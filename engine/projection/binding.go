@@ -21,11 +21,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"regexp"
 	"strings"
 	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/jsonstrict"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/sha256hex"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow"
 )
 
@@ -60,11 +60,6 @@ type Binding struct {
 // bindingFields lists every wire field of a Binding, for the exact-case
 // unknown-field check.
 var bindingFields = []string{"version", "repo_key", "project_id", "workflow_id", "bound_at"}
-
-// repoKeyPattern is exactly 64 lowercase hex digits. In Go's regexp syntax "$"
-// matches only at the end of the text (not before a trailing newline), so a
-// key followed by a newline does not match.
-var repoKeyPattern = regexp.MustCompile(`^[0-9a-f]{64}$`)
 
 // ParseBinding strictly parses one Binding document: bounded size, valid
 // UTF-8, no duplicate keys, no unknown fields (exact case), no trailing data,
@@ -127,11 +122,12 @@ func (b Binding) Marshal() ([]byte, error) {
 	return append(data, '\n'), nil
 }
 
-// ValidateRepoKey requires key to be exactly 64 lowercase hex digits. The
+// ValidateRepoKey requires key to be exactly 64 lowercase hex digits (a
+// sha256hex.IsValid digest, so a key followed by a newline is refused). The
 // store also relies on it for safety: a key that passes is a plain file name
 // that cannot climb out of the bindings directory.
 func ValidateRepoKey(key string) error {
-	if !repoKeyPattern.MatchString(key) {
+	if !sha256hex.IsValid(key) {
 		return fmt.Errorf("repo_key must be 64 lowercase hex characters, got %q", key)
 	}
 	return nil
