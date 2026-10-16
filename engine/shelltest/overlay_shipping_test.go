@@ -10,6 +10,7 @@ package shelltest
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -47,6 +48,27 @@ func TestEveryFileTheScriptIsMadeOfIsOneGitCarries(t *testing.T) {
 		if !carried[filepath.ToSlash(rel)] {
 			t.Errorf("%s is part of the script and git does not carry it (is it ignored?): a clone would not have it", rel)
 		}
+		if ignoredByAPattern(t, root, rel) {
+			t.Errorf("a pattern of .gitignore matches %s, which is part of the script: it is tracked today, and the next module that a pattern like it swallows is not", rel)
+		}
+	}
+}
+
+// ignoredByAPattern says whether a pattern of the ignore files matches path, whether or not git tracks the
+// file (a tracked file is carried, and says nothing about the next file with a name like it).
+func ignoredByAPattern(t *testing.T, root, path string) bool {
+	t.Helper()
+	cmd := exec.Command("git", "check-ignore", "--no-index", "-q", "--", path)
+	cmd.Dir = root
+	cmd.Env = append(os.Environ(), overlaytest.GitSettings()...)
+	switch err := cmd.Run(); {
+	case err == nil:
+		return true
+	case overlaytest.ExitCode(err) == 1:
+		return false
+	default:
+		t.Fatalf("git check-ignore %s: %v", path, err)
+		return false
 	}
 }
 
