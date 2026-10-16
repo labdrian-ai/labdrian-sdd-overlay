@@ -1,10 +1,13 @@
 package gadu_test
 
 import (
+	"crypto/sha256"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gadu"
 )
@@ -55,21 +58,34 @@ func TestArtifactsHandsOutATableNoCallerCanChangeForTheNext(t *testing.T) {
 }
 
 // Check reads the files that are committed and compares them with the table, in memory. It writes
-// nothing, not even a scratch directory: it holds with no place to write one.
+// nothing, not even a scratch directory: it holds with no place to write one, and every path under
+// the root is the same afterwards in its size, its mode, its modification time and its content.
+// The modification times start long ago, so that a write of the same bytes, which leaves a size and
+// a content as they were, still shows in the time of the file or of the directory it went into.
 func TestCheckWritesNothingAnywhere(t *testing.T) {
 	root := t.TempDir()
 	if err := gadu.Generate(root); err != nil {
 		t.Fatalf("Generate: %v", err)
 	}
 	t.Setenv("TMPDIR", filepath.Join(root, "no-such-scratch-directory"))
+	longAgo := time.Date(2001, 2, 3, 4, 5, 6, 0, time.UTC)
+	if err := filepath.Walk(root, func(path string, _ os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		return os.Chtimes(path, longAgo, longAgo)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	before := snapshot(t, root)
 
-	if err := gadu.Check(root); err != nil {
-		t.Errorf("Check: %v", err)
+	for i := 1; i <= 2; i++ {
+		if err := gadu.Check(root); err != nil {
+			t.Errorf("Check, call %d: %v", i, err)
+		}
 	}
 
-	before := listing(t, root)
-	gadu.Check(root)
-	if after := listing(t, root); after != before {
+	if after := snapshot(t, root); after != before {
 		t.Errorf("Check changed the files under the root:\nbefore\n%s\nafter\n%s", before, after)
 	}
 	if _, err := os.Stat(filepath.Join(root, "no-such-scratch-directory")); err == nil {
@@ -77,15 +93,26 @@ func TestCheckWritesNothingAnywhere(t *testing.T) {
 	}
 }
 
-// listing is the paths, sizes and modification times under dir, one per line.
-func listing(t *testing.T, dir string) string {
+// snapshot is every path under dir with its size, its mode and its modification time, and for a
+// regular file the SHA-256 of what it holds, one per line. The hash is made here with the standard
+// library, not with the digest package of the engine, so the proof does not depend on the code it
+// checks.
+func snapshot(t *testing.T, dir string) string {
 	t.Helper()
 	var b strings.Builder
 	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
-		b.WriteString(path + " " + info.ModTime().String() + "\n")
+		digest := "-"
+		if info.Mode().IsRegular() {
+			data, err := os.ReadFile(path)
+			if err != nil {
+				return err
+			}
+			digest = fmt.Sprintf("%x", sha256.Sum256(data))
+		}
+		fmt.Fprintf(&b, "%s size=%d mode=%v mtime=%d sha256=%s\n", path, info.Size(), info.Mode(), info.ModTime().UnixNano(), digest)
 		return nil
 	})
 	if err != nil {
