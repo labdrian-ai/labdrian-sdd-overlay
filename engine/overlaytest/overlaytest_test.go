@@ -245,6 +245,18 @@ func TestCombinedAnswersTheErrorOfANonZeroExit(t *testing.T) {
 	if out != "said\n" || !errors.As(err, &exit) || exit.ExitCode() != 4 {
 		t.Errorf("Combined = %q, %v, want the output and an *exec.ExitError for exit 4", out, err)
 	}
+	if got := overlaytest.ExitCode(err); got != 4 {
+		t.Errorf("ExitCode(%v) = %d, want 4", err, got)
+	}
+}
+
+func TestExitCodeIsZeroForNoErrorAndMinusOneForAnErrorThatIsNoExit(t *testing.T) {
+	if got := overlaytest.ExitCode(nil); got != 0 {
+		t.Errorf("ExitCode(nil) = %d, want 0", got)
+	}
+	if got := overlaytest.ExitCode(errors.New("fork/exec: no such file")); got != -1 {
+		t.Errorf("ExitCode of an error that is not an exit = %d, want -1: the program never ran, so it ended with no code", got)
+	}
 }
 
 func TestSourceRunsTheSnippetAfterTheScriptDefinedItsFunctionsWithTheArguments(t *testing.T) {
@@ -253,10 +265,28 @@ func TestSourceRunsTheSnippetAfterTheScriptDefinedItsFunctionsWithTheArguments(t
 		t.Fatal(err)
 	}
 
-	out, err := overlaytest.Source(t, script, os.Environ(), `greet "$@"`, "to", "you")
+	out, err := overlaytest.Source(t, script, os.Environ(), "", `greet "$@"`, "to", "you")
 
 	if err != nil || out != "hello to you\n" {
 		t.Errorf("Source = %q, %v, want %q", out, err, "hello to you\n")
+	}
+}
+
+func TestSourceRunsFromTheDirectoryItIsGiven(t *testing.T) {
+	dir := t.TempDir()
+	script := filepath.Join(t.TempDir(), "lib")
+	if err := os.WriteFile(script, []byte(":\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	want, err := filepath.EvalSymlinks(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	out, err := overlaytest.Source(t, script, os.Environ(), dir, "pwd -P")
+
+	if err != nil || strings.TrimSpace(out) != want {
+		t.Errorf("Source = %q, %v, want it to run in %q", out, err, want)
 	}
 }
 

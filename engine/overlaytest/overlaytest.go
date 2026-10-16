@@ -108,12 +108,28 @@ func Combined(t testing.TB, script string, env []string, dir string, args ...str
 	return string(out), err
 }
 
-// Source runs snippet in a bash that has sourced the script, which when it is sourced only defines its
-// functions and variables, with args as "$@". It returns what the snippet wrote on both streams and
-// the error it ended with.
-func Source(t testing.TB, script string, env []string, snippet string, args ...string) (string, error) {
+// ExitCode is the code a run ended with, from the error Combined or Source answered: 0 for no error,
+// the code of the process for an *exec.ExitError, and -1 for any other error (the program could not
+// be started, so it ended with no code).
+func ExitCode(err error) int {
+	var exit *exec.ExitError
+	switch {
+	case err == nil:
+		return 0
+	case errors.As(err, &exit):
+		return exit.ExitCode()
+	default:
+		return -1
+	}
+}
+
+// Source runs snippet, from dir (the directory of the test when it is empty), in a bash that has sourced the
+// script, which when it is sourced only defines its functions and variables, with args as "$@". It
+// returns what the snippet wrote on both streams and the error it ended with.
+func Source(t testing.TB, script string, env []string, dir, snippet string, args ...string) (string, error) {
 	t.Helper()
 	cmd := exec.Command("bash", append([]string{"-c", `source "$1"; shift; ` + snippet, "_", script}, args...)...)
+	cmd.Dir = dir
 	cmd.Env = env
 	out, err := cmd.CombinedOutput()
 	return string(out), err
