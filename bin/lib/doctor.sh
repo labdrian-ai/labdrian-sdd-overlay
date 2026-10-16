@@ -98,7 +98,6 @@ doctor_report_registry() {
 # that could not happen is REPORTED as not-happened rather than claimed. That
 # is the whole point of the check — a repair reported but not performed is the
 # same invisible failure mode in a new place.
-
 doctor_fix_engine_binary() {
   local reason
   if [[ ! -x "$ENGINE_BINARY" ]]; then
