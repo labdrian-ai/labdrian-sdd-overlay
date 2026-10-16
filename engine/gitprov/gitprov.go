@@ -28,8 +28,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"strings"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gitobject"
 )
 
 // Observation is the worktree provenance git reported for one root. Every
@@ -82,8 +83,6 @@ var (
 	// also leaves include.* directives unfollowed.
 	argvCoreWorktree = []string{"config", "--local", "--get", "core.worktree"}
 )
-
-var objectName = regexp.MustCompile(`^(?:[0-9a-f]{40}|[0-9a-f]{64})$`)
 
 // Observe observes root with the real git binary found on PATH and the
 // process environment. See Observer.Observe.
@@ -255,7 +254,7 @@ func (o Observer) judge(resolvedRoot string, env []string, head headPolicy) (Obs
 		if err != nil {
 			return Observation{}, fmt.Errorf("HEAD does not name a commit: %w", err)
 		}
-		if !objectName.MatchString(headName) {
+		if !gitobject.IsName(headName) {
 			return Observation{}, fmt.Errorf("HEAD %q is not a full lowercase object name", headName)
 		}
 	}

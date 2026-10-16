@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gitobject"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/jsonstrict"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/sha256hex"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflowprofile"
@@ -153,6 +154,11 @@ type Observation struct {
 // not a lookup key: two worktrees of one project record different
 // provenance while observing the same workflow (state lives outside the
 // worktree, keyed by project_id).
+//
+// GitHead is empty or a full commit id (gitobject.IsName): it exists so a
+// post-incident investigation can pin down the exact commit an event was
+// produced from, and an abbreviated id is not reliably unique and defeats that
+// purpose.
 type Provenance struct {
 	WorktreeRoot string `json:"worktree_root"`
 	GitHead      string `json:"git_head"`
@@ -235,13 +241,6 @@ var (
 	snapshotStageKeys = []string{"name", "depends_on"}
 	snapshotMemoryKey = []string{"scope", "sources"}
 )
-
-// gitHeadPattern requires a full commit id: exactly 40 lowercase hex
-// characters (a full SHA-1 object id) or exactly 64 (a full SHA-256 object
-// id). Provenance.git_head exists specifically so a post-incident
-// investigation can pin down the exact commit an event was produced from;
-// an abbreviated id is not reliably unique and defeats that purpose.
-var gitHeadPattern = regexp.MustCompile(`^([0-9a-f]{40}|[0-9a-f]{64})$`)
 
 // identifierAllowed is the closed allowlist ValidateIdentifier enforces:
 // ASCII letters, digits, '.', '_', and '-'. Every character outside this
@@ -454,7 +453,7 @@ func (p Provenance) validate() error {
 	if p.WorktreeRoot != "" && !filepath.IsAbs(p.WorktreeRoot) {
 		return fmt.Errorf("provenance.worktree_root must be an absolute path or empty, got %q", p.WorktreeRoot)
 	}
-	if p.GitHead != "" && !gitHeadPattern.MatchString(p.GitHead) {
+	if p.GitHead != "" && !gitobject.IsName(p.GitHead) {
 		return fmt.Errorf("provenance.git_head must be a lowercase hex string or empty, got %q", p.GitHead)
 	}
 	return nil
