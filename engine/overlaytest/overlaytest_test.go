@@ -2,6 +2,7 @@ package overlaytest_test
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -92,10 +93,29 @@ func TestWithGitConfigAddsToWhatGitSettingsSetAndChangesNothingItWasGiven(t *tes
 	}
 }
 
+func TestWithGitConfigNumbersTheEntriesFromZeroInAnEnvironmentWithNone(t *testing.T) {
+	got := overlaytest.WithGitConfig([]string{"HOME=/h"}, "a.b", "c")
+
+	if want := []string{"HOME=/h", "GIT_CONFIG_KEY_0=a.b", "GIT_CONFIG_VALUE_0=c", "GIT_CONFIG_COUNT=1"}; !reflect.DeepEqual(got, want) {
+		t.Errorf("WithGitConfig = %q, want %q", got, want)
+	}
+}
+
+func TestWithGitConfigNeverWritesIntoTheSpaceTheEnvironmentItWasGivenHasLeft(t *testing.T) {
+	base := append(make([]string, 0, 64), "GIT_CONFIG_COUNT=0")
+
+	first := overlaytest.WithGitConfig(base, "a.b", "first")
+	second := overlaytest.WithGitConfig(base, "a.b", "second")
+
+	if first[2] != "GIT_CONFIG_VALUE_0=first" || second[2] != "GIT_CONFIG_VALUE_0=second" {
+		t.Errorf("the two results are %q and %q, want each to keep its own value: they share the space base had left", first, second)
+	}
+}
+
 func TestWithGitConfigRefusesAKeyWithNoValue(t *testing.T) {
 	defer func() {
-		if recover() == nil {
-			t.Error("WithGitConfig with a key and no value did not panic: the last key would be dropped without a word")
+		if got := fmt.Sprint(recover()); !strings.Contains(got, "a key with no value") {
+			t.Errorf("WithGitConfig with a key and no value panicked with %q, want it to say a key has no value", got)
 		}
 	}()
 	overlaytest.WithGitConfig(nil, "init.defaultBranch")
