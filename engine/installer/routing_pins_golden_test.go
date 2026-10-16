@@ -142,15 +142,28 @@ func pin(t *testing.T, name, got string) {
 	}
 }
 
+// flagValue is the value of a flag of the test binary, or "" when it has none.
+func flagValue(name string) string {
+	if f := flag.Lookup(name); f != nil {
+		return f.Value.String()
+	}
+	return ""
+}
+
+// everyPinCanBeCompared says whether a run of the test binary could have compared every entry of the
+// records: not with -short (it skips the integration tests that hold the pins), not with -run (it
+// chooses some of the tests), and not with -list (it runs none, so `go test -list . ./installer` would
+// otherwise fail on every pin).
+func everyPinCanBeCompared(short bool, run, list string) bool {
+	return !short && run == "" && list == ""
+}
+
 // checkEveryPinWasConsumed is what TestMain asks after the tests have passed: an entry of the
 // record that no test compared is a pin whose test was renamed or removed, and it would go on
 // looking like a guarantee. It asks nothing of a run that could not have compared them all (-short
-// skips the integration tests that hold the pins, and -run chooses some of the tests).
+// skips the integration tests that hold the pins, -run chooses some of the tests and -list runs none).
 func checkEveryPinWasConsumed() error {
-	if testing.Short() {
-		return nil
-	}
-	if run := flag.Lookup("test.run"); run != nil && run.Value.String() != "" {
+	if !everyPinCanBeCompared(testing.Short(), flagValue("test.run"), flagValue("test.list")) {
 		return nil
 	}
 	consumed.Lock()
@@ -218,5 +231,26 @@ func TestRoutingPinRecordKeepsTheBlankLinesAnEntryEndsWith(t *testing.T) {
 	}
 	if got["a"] != "x\n\n\n" || got["b"] != "y\n\n" || got["c"] != "z\n" || len(got) != 3 {
 		t.Errorf("parseRecord = %q, want the blank lines at the end of each entry kept", got)
+	}
+}
+
+func TestAPinIsAskedForOnlyOfARunThatCouldHaveComparedEveryOne(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		short     bool
+		run, list string
+		want      bool
+	}{
+		{"a whole run", false, "", "", true},
+		{"-short, which skips the integration tests that hold the pins", true, "", "", false},
+		{"-run, which chooses some of the tests", false, "TestX", "", false},
+		{"-list, which runs none", false, "", ".", false},
+		{"-run and -list", false, "TestX", ".", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := everyPinCanBeCompared(tc.short, tc.run, tc.list); got != tc.want {
+				t.Errorf("everyPinCanBeCompared(%v, %q, %q) = %v, want %v", tc.short, tc.run, tc.list, got, tc.want)
+			}
+		})
 	}
 }
