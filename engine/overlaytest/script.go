@@ -100,23 +100,28 @@ func CopyScriptOf(t testing.TB, src, root string) string {
 		if err != nil {
 			t.Fatalf("path of %s below the script: %v", from, err)
 		}
-		to := filepath.Join(filepath.Dir(dst), rel)
-		data, err := os.ReadFile(from)
-		if err != nil {
-			t.Fatalf("read %s: %v", from, err)
-		}
-		info, err := os.Stat(from)
-		if err != nil {
-			t.Fatalf("stat %s: %v", from, err)
-		}
-		if err := os.MkdirAll(filepath.Dir(to), 0o755); err != nil {
-			t.Fatalf("mkdir %s: %v", filepath.Dir(to), err)
-		}
-		if err := os.WriteFile(to, data, info.Mode().Perm()); err != nil {
-			t.Fatalf("write %s: %v", to, err)
-		}
+		CopyFile(t, from, filepath.Join(filepath.Dir(dst), rel))
 	}
 	return dst
+}
+
+// CopyFile copies the file at from to to, with its permission bits, making the directories to needs.
+func CopyFile(t testing.TB, from, to string) {
+	t.Helper()
+	data, err := os.ReadFile(from)
+	if err != nil {
+		t.Fatalf("read %s: %v", from, err)
+	}
+	info, err := os.Stat(from)
+	if err != nil {
+		t.Fatalf("stat %s: %v", from, err)
+	}
+	if err := os.MkdirAll(filepath.Dir(to), 0o755); err != nil {
+		t.Fatalf("mkdir %s: %v", filepath.Dir(to), err)
+	}
+	if err := os.WriteFile(to, data, info.Mode().Perm()); err != nil {
+		t.Fatalf("write %s: %v", to, err)
+	}
 }
 
 // CopyScript is CopyScriptOf for the script of this checkout.

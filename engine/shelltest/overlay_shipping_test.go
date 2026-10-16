@@ -94,21 +94,7 @@ func newClone(t *testing.T) theClone {
 	}
 	overlaytest.Git(t, seed, nil, "init", "-q", "-b", "main")
 	for _, rel := range gitCarriedFilesUnderBin(t) {
-		data, err := os.ReadFile(filepath.Join(root, rel))
-		if err != nil {
-			t.Fatal(err)
-		}
-		info, err := os.Stat(filepath.Join(root, rel))
-		if err != nil {
-			t.Fatal(err)
-		}
-		to := filepath.Join(seed, rel)
-		if err := os.MkdirAll(filepath.Dir(to), 0o755); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(to, data, info.Mode().Perm()); err != nil {
-			t.Fatal(err)
-		}
+		overlaytest.CopyFile(t, filepath.Join(root, rel), filepath.Join(seed, rel))
 	}
 	overlaytest.Git(t, seed, nil, "add", "-A")
 	overlaytest.Git(t, seed, nil, "commit", "-q", "-m", "chore: the script, first release")
@@ -123,10 +109,12 @@ func newClone(t *testing.T) theClone {
 	return theClone{dir: clone, seed: seed, script: filepath.Join(clone, "bin", "labdrian-overlay"), env: env}
 }
 
-// helpLine is the last line of the usage, which the new release changes.
+// helpLine is the line of the usage that describes --help, which the new release changes: any line the
+// usage prints would do, and this one is the least likely to be reworded. When the usage stops printing it
+// exactly, the release below fails saying so, and this constant is the one to update.
 const helpLine = "  --help                           Show this help"
 
-// release publishes a second release from the seed: the same script with the last line of its usage
+// release publishes a second release from the seed: the same script with the --help line of its usage
 // changed, in whichever file of the script holds it, tagged v2.0.0 and pushed to the origin. It returns the
 // path, relative to the seed, of the file it changed.
 func (c theClone) release(t *testing.T) string {
@@ -141,7 +129,11 @@ func (c theClone) release(t *testing.T) string {
 			continue
 		}
 		changed := strings.Replace(string(data), helpLine+"\n", helpLine+" (second release)\n", 1)
-		if err := os.WriteFile(file, []byte(changed), 0o755); err != nil {
+		info, err := os.Stat(file)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(file, []byte(changed), info.Mode().Perm()); err != nil {
 			t.Fatal(err)
 		}
 		rel, err := filepath.Rel(c.seed, file)
@@ -153,7 +145,7 @@ func (c theClone) release(t *testing.T) string {
 		overlaytest.Git(t, c.seed, nil, "push", "-q", "origin", "main", "v2.0.0")
 		return rel
 	}
-	t.Fatalf("no file of the script holds the line %q", helpLine)
+	t.Fatalf("no file of the script holds the line %q: the usage no longer prints it as it was, so set helpLine to the --help line the usage prints now", helpLine)
 	return ""
 }
 

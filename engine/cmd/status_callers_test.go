@@ -7,8 +7,8 @@ package main
 //
 // The callers of the engine's `status` in the repository (Phase 9, batch 46):
 //
-//   - bin/labdrian-overlay, status-hooks: `exec "$ENGINE_BINARY" status`, with no arguments;
-//   - bin/labdrian-overlay, doctor (doctor_report_registry): `"$ENGINE_BINARY" status --only registry
+//   - bin/lib/hooks.sh, status-hooks: `exec "$ENGINE_BINARY" status`, with no arguments;
+//   - bin/lib/doctor.sh, doctor (doctor_report_registry): `"$ENGINE_BINARY" status --only registry
 //     --cwd "$dir"`, the registry of one project;
 //   - the tests of this package, which call runStatus or run the built binary with `status` and the
 //     arguments they mean to try (status_run_test.go, status_golden_test.go, dispatch_routes_test.go);
@@ -36,25 +36,34 @@ import (
 var statusCallInScript = regexp.MustCompile(`"\$ENGINE_BINARY" status((?: [^\s)|]+)*)`)
 
 func TestEveryCallerOfStatusInTheRepositoryPassesOnlyWhatItAccepts(t *testing.T) {
-	var found []string
-	for _, m := range statusCallInScript.FindAllStringSubmatch(overlaytest.ScriptText(t), -1) {
-		var words []string
-		for _, w := range strings.Fields(m[1]) {
-			if !strings.Contains(w, ">") { // 2>&1 is the script's, not an argument
-				words = append(words, w)
-			}
+	// Each call is held as "<file of the script>: <arguments>", so that a call added, changed or moved to
+	// another file of the script is seen.
+	var found, calls []string
+	for _, file := range overlaytest.ScriptFilesOf(t, overlaytest.Script(t)) {
+		data, err := os.ReadFile(file)
+		if err != nil {
+			t.Fatal(err)
 		}
-		found = append(found, strings.Join(words, " "))
+		for _, m := range statusCallInScript.FindAllStringSubmatch(string(data), -1) {
+			var words []string
+			for _, w := range strings.Fields(m[1]) {
+				if !strings.Contains(w, ">") { // 2>&1 is the script's, not an argument
+					words = append(words, w)
+				}
+			}
+			call := strings.Join(words, " ")
+			found = append(found, filepath.Base(file)+": "+call)
+			calls = append(calls, call)
+		}
 	}
-	// The calls the script makes: status-hooks passes nothing and doctor the registry. Their order is the order
-	// of the modules that make them, which is nobody's business here.
+	// The calls the script makes: status-hooks passes nothing and doctor the registry.
+	want := []string{`doctor.sh: --only registry --cwd "$dir"`, `hooks.sh: `}
 	sort.Strings(found)
-	want := []string{``, `--only registry --cwd "$dir"`}
 	if !reflect.DeepEqual(found, want) {
-		t.Fatalf("the overlay script calls the engine's status with %q, want %q: a caller was added or changed, so add it to this test (and to the ledger) and check that status accepts what it passes", found, want)
+		t.Fatalf("the overlay script calls the engine's status with %q, want %q: a caller was added, changed or moved, so add it to this test (and to the ledger) and check that status accepts what it passes", found, want)
 	}
 
-	for _, call := range found {
+	for _, call := range calls {
 		dir := t.TempDir()
 		args := strings.Fields(strings.ReplaceAll(call, `"$dir"`, dir))
 		got, err := parseStatusArgs(args)
