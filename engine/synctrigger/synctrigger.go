@@ -68,8 +68,34 @@ type Outcome struct {
 	Dur  time.Duration
 }
 
+// The kinds of outcome the trigger reports, in its log and in an Outcome. The exit codes of
+// longterm-mem map onto them in classify.
+const (
+	kindOK                = "ok"
+	kindTimeout           = "timeout"
+	kindUsage             = "error:usage"
+	kindSpawn             = "error:spawn"
+	kindSelf              = "error:self"
+	kindLog               = "error:log"
+	kindNotExecutable     = "error:binary-not-executable"
+	kindNoBinary          = "skip:no-binary"
+	kindNoProject         = "skip:no-project"
+	kindNoVault           = "skip:no-vault"
+	kindEngramUnavailable = "failure:engram-unavailable"
+	kindVaultSubprocess   = "failure:vault-subprocess"
+	kindExitPrefix        = "failure:exit-"
+)
+
 const (
 	defaultTimeout = 60 * time.Second
+
+	// The names under the state directory: the log, and the binary the sync runs when
+	// Options.Binary is empty. syncCommand is the argument longterm-mem is started with.
+	logDirName        = "logs"
+	logFileName       = "sync-trigger.log"
+	binDirName        = "bin"
+	defaultBinaryName = "longterm-mem"
+	syncCommand       = "sync"
 
 	// notProjectMarker is the exact substring longterm-mem's own
 	// resolveProjectFlagWith emits (project_resolve.go) when --project is
@@ -89,6 +115,42 @@ func validArgs(event, cwd string) bool {
 	return validEvents[event] && filepath.IsAbs(cwd)
 }
 
+// stderr is where the trigger reports before it has a log.
+func (o Options) stderr() io.Writer {
+	if o.Stderr == nil {
+		return os.Stderr
+	}
+	return o.Stderr
+}
+
+// reportUsage says on stderr that the trigger was started with an event or a cwd it cannot use,
+// naming both as the caller gave them. It is the one place the line is written, for Run and for
+// RunChild, so the two cannot say it differently.
+func reportUsage(stderr io.Writer, event, cwd string) {
+	fmt.Fprintf(stderr, "sync-trigger: %s event=%q cwd=%q\n", kindUsage, event, cwd)
+}
+
+// reportFailure says on stderr that something the trigger needed failed, before there was a log
+// to say it in.
+func reportFailure(stderr io.Writer, kind string, detail any) {
+	fmt.Fprintf(stderr, "sync-trigger: %s: %v\n", kind, detail)
+}
+
+// absoluteCwd is cwd made absolute against the working directory of the process, which is how a
+// relative --cwd (from a "${CLAUDE_PROJECT_DIR:-$PWD}" hook fallback whose $PWD was itself
+// relative, or any other caller) never becomes a silent error:usage. An empty cwd stays empty,
+// because it must never inherit the caller's directory, and one that cannot be made absolute
+// stays as it is: validArgs then refuses it.
+func absoluteCwd(cwd string) string {
+	if cwd == "" || filepath.IsAbs(cwd) {
+		return cwd
+	}
+	if abs, err := filepath.Abs(cwd); err == nil {
+		return abs
+	}
+	return cwd
+}
+
 // Run is the parent entrypoint. It validates its own argv, opens the log,
 // locates itself, and detaches a re-exec of itself, with the arguments
 // Options.ChildArgv gives (the child that runs RunChild), under a new
@@ -98,38 +160,18 @@ func validArgs(event, cwd string) bool {
 // reported best-effort and swallowed, because the triggering host command
 // must never observe a non-zero exit or block on this runner (R-003).
 func Run(o Options) int {
-	stderr := o.Stderr
-	if stderr == nil {
-		stderr = os.Stderr
-	}
+	stderr := o.stderr()
 
-	if !validEvents[o.Event] {
-		fmt.Fprintf(stderr, "sync-trigger: error:usage event=%q cwd=%q\n", o.Event, o.Cwd)
+	cwd := absoluteCwd(o.Cwd)
+	if !validArgs(o.Event, cwd) {
+		reportUsage(stderr, o.Event, o.Cwd)
 		return 0
 	}
-
-	// A relative --cwd (e.g. from a "${CLAUDE_PROJECT_DIR:-$PWD}" hook
-	// fallback whose $PWD was itself relative, or any other caller) is
-	// resolved against the process's own working directory before the
-	// shared validation below, so a relative path never becomes a silent
-	// error:usage. An empty cwd stays invalid: it must never inherit the
-	// caller's directory.
-	if o.Cwd != "" && !filepath.IsAbs(o.Cwd) {
-		abs, absErr := filepath.Abs(o.Cwd)
-		if absErr != nil {
-			fmt.Fprintf(stderr, "sync-trigger: error:usage event=%q cwd=%q\n", o.Event, o.Cwd)
-			return 0
-		}
-		o.Cwd = abs
-	}
-	if !validArgs(o.Event, o.Cwd) {
-		fmt.Fprintf(stderr, "sync-trigger: error:usage event=%q cwd=%q\n", o.Event, o.Cwd)
-		return 0
-	}
+	o.Cwd = cwd
 
 	logFile, err := openLog(o.StateDir)
 	if err != nil {
-		fmt.Fprintf(stderr, "sync-trigger: error:log: %v\n", err)
+		reportFailure(stderr, kindLog, err)
 		return 0
 	}
 	defer logFile.Close()
@@ -138,15 +180,15 @@ func Run(o Options) int {
 	if self == "" {
 		self, err = os.Executable()
 		if err != nil {
-			fmt.Fprintf(stderr, "sync-trigger: error:self: %v\n", err)
-			appendLog(logFile, o.Event, o.Cwd, "error:self", 0, 0)
+			reportFailure(stderr, kindSelf, err)
+			appendLog(logFile, o.Event, o.Cwd, kindSelf, 0, 0)
 			return 0
 		}
 	}
 
 	if o.ChildArgv == nil {
-		fmt.Fprintf(stderr, "sync-trigger: error:spawn: no command line was given for the child\n")
-		appendLog(logFile, o.Event, o.Cwd, "error:spawn", 0, 0)
+		reportFailure(stderr, kindSpawn, "no command line was given for the child")
+		appendLog(logFile, o.Event, o.Cwd, kindSpawn, 0, 0)
 		return 0
 	}
 	cmd := exec.Command(self, o.ChildArgv(o.Event, o.Cwd, o.StateDir)...)
@@ -158,8 +200,8 @@ func Run(o Options) int {
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
 
 	if err := cmd.Start(); err != nil {
-		fmt.Fprintf(stderr, "sync-trigger: error:spawn: %v\n", err)
-		appendLog(logFile, o.Event, o.Cwd, "error:spawn", 0, 0)
+		reportFailure(stderr, kindSpawn, err)
+		appendLog(logFile, o.Event, o.Cwd, kindSpawn, 0, 0)
 		return 0
 	}
 
@@ -188,25 +230,21 @@ func RunChild(o Options) Outcome {
 	}
 
 	if !validArgs(o.Event, o.Cwd) {
-		stderr := o.Stderr
-		if stderr == nil {
-			stderr = os.Stderr
-		}
-		fmt.Fprintf(stderr, "sync-trigger: error:usage event=%q cwd=%q\n", o.Event, o.Cwd)
-		return logOutcome("error:usage", 0, time.Since(start))
+		reportUsage(o.stderr(), o.Event, o.Cwd)
+		return logOutcome(kindUsage, 0, time.Since(start))
 	}
 
 	binary := o.Binary
 	if binary == "" {
-		binary = filepath.Join(o.StateDir, "bin", "longterm-mem")
+		binary = filepath.Join(o.StateDir, binDirName, defaultBinaryName)
 	}
 
 	info, statErr := os.Stat(binary)
 	if statErr != nil || info.IsDir() {
-		return logOutcome("skip:no-binary", 0, time.Since(start))
+		return logOutcome(kindNoBinary, 0, time.Since(start))
 	}
 	if info.Mode()&0o111 == 0 {
-		return logOutcome("error:binary-not-executable", 0, time.Since(start))
+		return logOutcome(kindNotExecutable, 0, time.Since(start))
 	}
 
 	timeout := o.Timeout
@@ -217,7 +255,7 @@ func RunChild(o Options) Outcome {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, binary, "sync")
+	cmd := exec.CommandContext(ctx, binary, syncCommand)
 	cmd.Dir = o.Cwd
 	var stderrBuf bytes.Buffer
 	if logFile != nil {
@@ -238,17 +276,17 @@ func RunChild(o Options) Outcome {
 	dur := time.Since(start)
 
 	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-		return logOutcome("timeout", 0, dur)
+		return logOutcome(kindTimeout, 0, dur)
 	}
 	if runErr == nil {
-		return logOutcome("ok", 0, dur)
+		return logOutcome(kindOK, 0, dur)
 	}
 	var exitErr *exec.ExitError
 	if errors.As(runErr, &exitErr) {
 		exitCode := exitErr.ExitCode()
 		return logOutcome(classify(exitCode, stderrBuf.String()), exitCode, dur)
 	}
-	return logOutcome("error:spawn", 0, dur)
+	return logOutcome(kindSpawn, 0, dur)
 }
 
 // classify maps a longterm-mem sync exit code (and, for the ambiguous
@@ -258,31 +296,31 @@ func RunChild(o Options) Outcome {
 func classify(exitCode int, stderr string) string {
 	switch exitCode {
 	case 0:
-		return "ok"
+		return kindOK
 	case 2:
 		if strings.Contains(stderr, notProjectMarker) {
-			return "skip:no-project"
+			return kindNoProject
 		}
-		return "error:usage"
+		return kindUsage
 	case 3:
-		return "skip:no-vault"
+		return kindNoVault
 	case 4:
-		return "failure:engram-unavailable"
+		return kindEngramUnavailable
 	case 5:
-		return "failure:vault-subprocess"
+		return kindVaultSubprocess
 	default:
-		return "failure:exit-" + strconv.Itoa(exitCode)
+		return kindExitPrefix + strconv.Itoa(exitCode)
 	}
 }
 
 // openLog opens (creating and appending) the sync-trigger log under
 // stateDir, creating its parent directory if needed.
 func openLog(stateDir string) (*os.File, error) {
-	dir := filepath.Join(stateDir, "logs")
+	dir := filepath.Join(stateDir, logDirName)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return nil, err
 	}
-	return os.OpenFile(filepath.Join(dir, "sync-trigger.log"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	return os.OpenFile(filepath.Join(dir, logFileName), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 }
 
 // appendLog writes one summary line for a firing of the runner.
