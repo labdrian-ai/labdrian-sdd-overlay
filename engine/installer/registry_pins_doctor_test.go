@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/overlaytest"
 )
 
 // isCheckLine says whether line is the line of a check of doctor: it begins with the level of a check,
@@ -87,7 +89,7 @@ func TestRegistryPins_DoctorSaysWhatItFindsOfTheRegistry(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			w := registryWorld(t)
 			if tc.overlay != nil {
-				w.write(w.overlay, ".atl/skill-registry.md", *tc.overlay)
+				overlaytest.WriteFile(w.t, w.overlay, ".atl/skill-registry.md", *tc.overlay)
 			}
 			if tc.project != nil {
 				w.writeRegistry(*tc.project)

@@ -14,6 +14,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/enginetest"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/overlaytest"
 )
 
@@ -53,7 +54,7 @@ func pathWithout(t *testing.T, tool string) string {
 // withoutEngineOrGo takes the engine out of the home of the world and Go off its PATH.
 func (w *pinWorld) withoutEngineOrGo() {
 	w.t.Helper()
-	if err := os.Remove(filepath.Join(w.home, ".claude", "bin", "gentle-ai-overlay")); err != nil {
+	if err := os.Remove(enginetest.Path(w.home)); err != nil {
 		w.t.Fatalf("take the engine out of the home: %v", err)
 	}
 	path := pathWithout(w.t, "go")
@@ -116,9 +117,9 @@ func TestWithNeitherTheEngineNorGoBootstrapStopsBeforeItWritesAnything(t *testin
 	}
 	w := &pinWorld{t: t, script: overlaytest.Script(t), home: pinHome(t), overlay: t.TempDir()}
 	w.env = pinEnv(w.home, w.overlay)
-	w.write(w.overlay, "overlay.manifest", pinManifest)
-	w.write(w.overlay, "bin/overlay", "#!/bin/sh\n")
-	w.write(w.home, ".gentle-ai/backups/upgrade-20260615T175529Z/snapshot.tar.gz", "not read")
+	overlaytest.WriteFile(w.t, w.overlay, "overlay.manifest", pinManifest)
+	overlaytest.WriteFile(w.t, w.overlay, "bin/overlay", "#!/bin/sh\n")
+	overlaytest.WriteFile(w.t, w.home, ".gentle-ai/backups/upgrade-20260615T175529Z/snapshot.tar.gz", "not read")
 	path := pathWithout(t, "go")
 	w.changePath(func(string) string { return path })
 

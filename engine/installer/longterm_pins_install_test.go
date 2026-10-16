@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/overlaytest"
 )
 
 func TestLongtermPins_InstallRecordsTheTargetsItRegistered(t *testing.T) {
@@ -107,7 +109,7 @@ func TestLongtermPins_InstallRefusesToRecordAgainstARecordItCannotRead(t *testin
 func TestLongtermPins_InstallStopsWhenTheRecordCannotHaveItsDirectory(t *testing.T) {
 	w := longtermWorld(t)
 	// A file where the directory of the record should be.
-	w.write(w.stateDir(), "longterm-mem", "in the way\n")
+	overlaytest.WriteFile(w.t, w.stateDir(), "longterm-mem", "in the way\n")
 	if err := os.Chmod(filepath.Join(w.stateDir(), "longterm-mem"), 0o644); err != nil {
 		t.Fatal(err)
 	}

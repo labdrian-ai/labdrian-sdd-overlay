@@ -165,7 +165,7 @@ func TestEveryChangeOfThePathOfAWorldKeepsTheToolsOfDiscoveryOnTheWorldsPrograms
 		}},
 		{"a directory put in front", func(t *testing.T, w *pinWorld) {
 			dir := t.TempDir()
-			w.changePath(func(old string) string { return dir + string(os.PathListSeparator) + old })
+			w.putFirst(dir)
 		}},
 		{"a directory put behind", func(t *testing.T, w *pinWorld) {
 			dir := t.TempDir()

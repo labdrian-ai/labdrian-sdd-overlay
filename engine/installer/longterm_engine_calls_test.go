@@ -44,10 +44,7 @@ exit 0
 func recordingEngineWorld(t *testing.T) (*pinWorld, string) {
 	t.Helper()
 	w := longtermWorld(t)
-	engine := filepath.Join(w.home, ".claude", "bin", "gentle-ai-overlay")
-	if err := os.WriteFile(engine, []byte(recordingEngineScript), 0o755); err != nil {
-		t.Fatal(err)
-	}
+	overlaytest.StubEngine(t, w.home, recordingEngineScript)
 	log := filepath.Join(t.TempDir(), "engine.log")
 	w.setEnv("FAKE_ENGINE_LOG", log)
 	return w, log

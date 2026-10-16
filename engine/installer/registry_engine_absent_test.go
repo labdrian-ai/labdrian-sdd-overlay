@@ -8,9 +8,10 @@ package installer_test
 
 import (
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/enginetest"
 )
 
 func TestWithNeitherTheEngineNorGoTheRegistryIsNotRepairedAndNothingIsWritten(t *testing.T) {
@@ -27,7 +28,7 @@ func TestWithNeitherTheEngineNorGoTheRegistryIsNotRepairedAndNothingIsWritten(t 
 			w.installFew("codex")
 			// A gentle-ai that only records, first on a PATH that has every tool of the machine but go.
 			g := w.installGentle("", 0)
-			if err := os.Remove(filepath.Join(w.home, ".claude", "bin", "gentle-ai-overlay")); err != nil {
+			if err := os.Remove(enginetest.Path(w.home)); err != nil {
 				t.Fatalf("take the engine out of the home: %v", err)
 			}
 			path := g.dir + string(os.PathListSeparator) + pathWithout(t, "go")

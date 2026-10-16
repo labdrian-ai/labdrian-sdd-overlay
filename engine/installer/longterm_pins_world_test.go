@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/filelock"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/overlaytest"
 )
 
 // fakeGoScript is the `go` of the world: `go build -o <path> ...` copies the fake longterm-mem to
@@ -75,16 +76,14 @@ func longtermWorld(t *testing.T) *pinWorld {
 		t.Skip("skipping integration test in -short mode")
 	}
 	w := newPinWorld(t, "skill-a/SKILL.md managed\n", map[string]string{"skills/skill-a/SKILL.md": "# skill-a\n"})
-	w.write(w.overlay, "longterm-mem/README.md", "# the module the script looks for\n")
+	overlaytest.WriteFile(w.t, w.overlay, "longterm-mem/README.md", "# the module the script looks for\n")
 	dir := t.TempDir()
 	for name, body := range map[string]string{"go": fakeGoScript, "fake-longterm-mem": fakeLongtermMemScript} {
-		if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o755); err != nil {
-			t.Fatalf("write the fake %s: %v", name, err)
-		}
+		overlaytest.WriteTool(t, filepath.Join(dir, name), body)
 	}
 	w.setEnv("FAKE_LM_SOURCE", filepath.Join(dir, "fake-longterm-mem"))
 	w.setEnv("FAKE_LM_LOG", filepath.Join(dir, "longterm-mem.log"))
-	w.changePath(func(old string) string { return dir + string(os.PathListSeparator) + old })
+	w.putFirst(dir)
 	return w
 }
 
