@@ -211,6 +211,46 @@ func TestObserveRefusesALayoutThatDoesNotAgreeWithGitAndSaysWhyThroughTheFSItIsG
 	}
 }
 
+// A gitfile that names a git dir of its own (a separate git dir, a submodule) is accepted only
+// when the core.worktree of that git dir names this toplevel, as git writes it (absolute, or
+// relative to the git dir) and as the FS resolves it.
+func TestObserveJudgesTheCoreWorktreeOfAGitfileThroughTheFSItIsGiven(t *testing.T) {
+	const (
+		root   = "/virtual/sub"
+		gitDir = "/virtual/gitdirs/sub"
+	)
+	layout := func() *memFS {
+		return newMemFS().dir(root).dir(gitDir).dir("/virtual/other").file(root+"/.git", "gitdir: "+gitDir+"\n")
+	}
+	for _, tc := range []struct {
+		name         string
+		coreWorktree string
+		want         string // "" is accepted
+	}{
+		{"an absolute path to this toplevel", root, ""},
+		{"a path relative to the git dir that leads to this toplevel", "../../sub", ""},
+		{"a path to another directory", "/virtual/other", "gitfile mismatch: core.worktree of " + gitDir + " names /virtual/other, not " + root},
+		{"a path that does not exist", "/virtual/missing", "resolve core.worktree"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			repo, observer := virtualRepo(root, gitDir, gitDir, layout())
+			repo.answers["config --local --get core.worktree"] = tc.coreWorktree + "\n"
+
+			got, err := observer.Observe(root)
+
+			if tc.want == "" {
+				if err != nil || got.Toplevel != root || got.Linked {
+					t.Errorf("Observe = (%+v, %v), want the worktree accepted", got, err)
+				}
+				return
+			}
+			if err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Errorf("Observe = (%+v, %v), want a refusal that says %q", got, err, tc.want)
+			}
+		})
+	}
+}
+
 func TestObserveSaysWhichPathCouldNotBeResolvedThroughTheFSItIsGiven(t *testing.T) {
 	fsys := newMemFS().dir("/virtual/repo").dir("/virtual/repo/.git")
 	fsys.failing["/virtual/repo"] = errors.New("too many levels of symbolic links")
