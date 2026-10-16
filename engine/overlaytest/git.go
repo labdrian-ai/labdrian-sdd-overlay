@@ -1,9 +1,12 @@
 package overlaytest
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/enginetest"
@@ -29,6 +32,31 @@ func GitSettings() []string {
 		"GIT_AUTHOR_NAME=" + identityName, "GIT_AUTHOR_EMAIL=" + identityEmail,
 		"GIT_COMMITTER_NAME=" + identityName, "GIT_COMMITTER_EMAIL=" + identityEmail,
 	}
+}
+
+// WithGitConfig is env with more entries of git configuration (key, value, key, value, ...) added to the
+// ones GitSettings makes, which stay: the entries are numbered from the count env already holds. The
+// env it is given is not changed.
+func WithGitConfig(env []string, keyValues ...string) []string {
+	if len(keyValues)%2 != 0 {
+		panic("overlaytest.WithGitConfig: a key with no value")
+	}
+	count := 0
+	for _, kv := range env {
+		if v, ok := strings.CutPrefix(kv, "GIT_CONFIG_COUNT="); ok {
+			if n, err := strconv.Atoi(v); err == nil {
+				count = n
+			}
+		}
+	}
+	out := append([]string(nil), env...)
+	for i := 0; i < len(keyValues); i += 2 {
+		out = append(out,
+			fmt.Sprintf("GIT_CONFIG_KEY_%d=%s", count, keyValues[i]),
+			fmt.Sprintf("GIT_CONFIG_VALUE_%d=%s", count, keyValues[i+1]))
+		count++
+	}
+	return append(out, "GIT_CONFIG_COUNT="+strconv.Itoa(count))
 }
 
 // Git runs git in dir and fails the test when it fails; it returns what git wrote on both streams. A

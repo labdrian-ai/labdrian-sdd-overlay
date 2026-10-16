@@ -65,6 +65,42 @@ func TestGitSettingsTurnAutomaticMaintenanceOff(t *testing.T) {
 	}
 }
 
+func TestWithGitConfigAddsToWhatGitSettingsSetAndChangesNothingItWasGiven(t *testing.T) {
+	base := overlaytest.Env(t.TempDir(), t.TempDir())
+	before := append([]string(nil), base...)
+	dir := t.TempDir()
+	overlaytest.Git(t, dir, nil, "init", "-q")
+
+	env := overlaytest.WithGitConfig(base, "init.defaultBranch", "master", "core.abbrev", "9")
+
+	for key, want := range map[string]string{
+		"maintenance.auto": "false", "gc.auto": "0", "init.defaultBranch": "master", "core.abbrev": "9",
+	} {
+		if got, ok := gitConfig(t, dir, env, key); !ok || got != want {
+			t.Errorf("git config --get %s = %q, %v, want %q: the entries of GitSettings stay and the new ones are numbered after them", key, got, ok, want)
+		}
+	}
+	if !reflect.DeepEqual(base, before) {
+		t.Errorf("WithGitConfig changed the env it was given: %q, was %q", base, before)
+	}
+	again := overlaytest.WithGitConfig(env, "user.signingkey", "k")
+	if got, ok := gitConfig(t, dir, again, "core.abbrev"); !ok || got != "9" {
+		t.Errorf("git config --get core.abbrev = %q, %v after a second WithGitConfig, want 9: it is numbered from the count env holds, so it can be called again", got, ok)
+	}
+	if got, ok := gitConfig(t, dir, again, "user.signingkey"); !ok || got != "k" {
+		t.Errorf("git config --get user.signingkey = %q, %v, want k", got, ok)
+	}
+}
+
+func TestWithGitConfigRefusesAKeyWithNoValue(t *testing.T) {
+	defer func() {
+		if recover() == nil {
+			t.Error("WithGitConfig with a key and no value did not panic: the last key would be dropped without a word")
+		}
+	}()
+	overlaytest.WithGitConfig(nil, "init.defaultBranch")
+}
+
 func TestGitSettingsTakeNoConfigurationOfWhoeverRunsTheTests(t *testing.T) {
 	leak := t.TempDir()
 	global := filepath.Join(leak, "global")

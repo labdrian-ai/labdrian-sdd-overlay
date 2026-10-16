@@ -8,7 +8,8 @@
 // the two output streams and the exit code apart. They are here once.
 //
 //   - Script, RepoRoot: where the script and the checkout are.
-//   - Env, GitSettings: the environment a run takes, and the part of it every git of a fixture takes.
+//   - Env, GitSettings, WithGitConfig: the environment a run takes, and the part of it every git of a
+//     fixture takes, with room for more git configuration.
 //   - NewOverlay, InitOverlay, Git: the fixture repository.
 //   - Run, Combined, Source: running the script, or the functions it defines.
 //   - WriteTool, StubEngine, ToolchainEnv: programs of the test's own, and the caches of the go command.
