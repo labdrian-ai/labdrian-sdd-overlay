@@ -51,9 +51,25 @@ Wave 2 — engine, hooks, ports:
 - [ ] C8 — `skills uninstall`; `project-status` lists install records.
 - [ ] C10 — (the Pi `CommandRunner` with a deadline is done: batch 19, H24; the rest is open) longterm-mem: `doctor` report for frozen pages (Q4); detector status for candidates without an Engram record; the deploy path rebuilds longterm-mem; Pi `CommandRunner` with deadline; procedural-skills presence through a project-context port; guarded Pi global-tier test (Q11).
 
+Wave 2b — end-to-end memory wiring (added 2026-10-16 at the owner's request, "lo que si tenemos que agregar que noe sta por ningun lado es el wiring de la memoria ... y lo que no hayamos pensado de esto"; gap analysis in Engram #4133, G1–G15; runs after Phase I and before Wave 4):
+- [ ] C23 — Wire Engram, longterm-mem and procedural memory end to end, so that the memory plan is executed and not only computed. Units:
+  - [ ] M1 — ADR: the mapping from plan sources to tools and the goal filter; the owner decides each source mapping, one question at a time.
+  - [ ] M2 — One shared project identity for the workflow, Engram and longterm-mem (G7).
+  - [ ] M3 — Goal and handoff narrowers stored in the workflow log and the handoffs (G6).
+  - [ ] M4 — The memory gate enforces the plan's sources and covers Engram, `get` and `promote` (G3, G5).
+  - [ ] M5 — A goal filter in `longterm-mem query` (G4).
+  - [ ] M6 — The plan reaches the agent as instructions: SessionStart, a route for subagents, and one shared skill that loads the plan and the T1/T2 contract (G1, G2).
+  - [ ] M7 — A PostToolUse hook records memory-read evidence (G5).
+  - [ ] M8 — Availability probed at session time, with degradation lines (G10).
+  - [ ] M9 — The C10 deploy items (retry a failed longterm-mem MCP install, G12) and C7 hook quoting (G15).
+  - [ ] M10 — `skills candidates`: a typed candidate lifecycle and a list command, and the detector loaded (G8, G9).
+  - [ ] M11 — Claude Code end-to-end acceptance, plus one live session the owner authorizes (G14).
+  - [ ] M12 — The memory projection for Codex and Pi (G11).
+  - [ ] M13 — Memory metrics and smoke tests for Phases 10 and 11.
+
 Wave 3 — specs and ingestion:
 - [ ] C11 — Archive and spec-sync the four skill aliases with renumbering; archive `overlay-versioned-releases`.
-- [ ] C22 — Finish `longterm-mem-knowledge-ingestion` as an adapter behind an ingestion port (Q9).
+- [ ] C22 — Finish `longterm-mem-knowledge-ingestion` as an adapter behind an ingestion port (Q9). The port, the adapter and the guards are done (batch 42, L11); building the extraction (2b) waits for the owner's answer on the `Origin.URI` override.
 
 Wave 4 — skills for the sub-agent team (last):
 - [ ] C12 — Vault documentation in `~/labdrian-brain` (one page per skill and per role, comparisons, open questions), ingested through C22; research and thinking in the vault; a per-role design the user approves before any rewrite.
