@@ -100,6 +100,9 @@ import (
 //     script always kept (appended to, and rewritten through a temporary file and a rename), the lock
 //     around it as an advisory file lock on engine/filelock, and the shared binary as a file. The
 //     words a person reads are the command's, in cmd.
+//   - synctrigger/osproc is the adapter of the Runner port of synctrigger (H34): it starts the
+//     programs of the machine in sessions and process groups of their own and kills a group at a
+//     deadline. synctrigger itself reads neither the clock nor the process table: it is handed both.
 //   - sddregistry is a domain package (B2): the rule over text for the SDD executor rows of a
 //     project's skill registry (which skills are executors, how a row reads, how a registry that
 //     has none starts, how the rows of an earlier repair are replaced). It reads and writes no file.
@@ -200,6 +203,7 @@ var rings = map[string]archguard.Ring{
 	"status":                    archguard.Application,
 	"status/fsfiles":            archguard.Adapter,
 	"synctrigger":               archguard.Adapter,
+	"synctrigger/osproc":        archguard.Adapter,
 	"testhome":                  archguard.Support,
 	"workflow":                  archguard.Domain,
 	"workflow/filelog":          archguard.Adapter,
