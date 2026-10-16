@@ -11,12 +11,8 @@ engine/skills/types.go managed
 engine/skills/registryyaml/decode.go managed
 engine/skills/manifest.go managed
 engine/skills/validate.go managed
-engine/skills/list.go managed
-engine/skills/status.go managed
-engine/skills/skills.go managed
 engine/skills/sync.go managed
 engine/skills/sync_test.go managed
-engine/gate/gate_e2e_test.go managed
 engine/cmd/runtime_test.go managed
 engine/installer/agent_deploy_test.go managed
 engine/installer/gadu_wrapper_test.go managed
@@ -36,12 +32,9 @@ engine/skills/registryyaml/encode.go managed
 engine/skills/registryyaml/encode_test.go managed
 engine/skills/actuals_instrumentation_contract_test.go managed
 engine/skills/actuals_instrumentation_d2_anchor_test.go managed
-engine/skills/list_test.go managed
 engine/skills/manifest_test.go managed
 engine/skills/oo_quality_contract_artifact_test.go managed
 engine/skills/registryyaml/read_test.go managed
-engine/skills/skills_test.go managed
-engine/skills/status_test.go managed
 engine/skills/validate_test.go managed
 engine/skills/zero_fetch_test.go managed
 engine/runtime/core/lifecycle.go managed
