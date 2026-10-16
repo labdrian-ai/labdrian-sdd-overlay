@@ -213,13 +213,17 @@ func TestReadSkill_FollowsALinkInsideTheProjectAndRefusesOneOutsideIt(t *testing
 	}
 }
 
-// gitIn runs git in dir with an identity and a date of the test's own, and no configuration of whoever runs it.
+// gitIn runs git in dir with an identity and a date of the test's own, no configuration of whoever runs it, and no
+// automatic maintenance (a commit could otherwise leave a background `git maintenance` writing into `.git`).
 func gitIn(t *testing.T, dir string, args ...string) {
 	t.Helper()
 	command := exec.Command("git", args...)
 	command.Dir = dir
 	command.Env = append(os.Environ(),
 		"GIT_CONFIG_GLOBAL=/dev/null", "GIT_CONFIG_SYSTEM=/dev/null",
+		"GIT_CONFIG_COUNT=2",
+		"GIT_CONFIG_KEY_0=maintenance.auto", "GIT_CONFIG_VALUE_0=false",
+		"GIT_CONFIG_KEY_1=gc.auto", "GIT_CONFIG_VALUE_1=0",
 		"GIT_AUTHOR_NAME=fixture", "GIT_AUTHOR_EMAIL=fixture@example.com", "GIT_AUTHOR_DATE=2026-01-01T00:00:00Z",
 		"GIT_COMMITTER_NAME=fixture", "GIT_COMMITTER_EMAIL=fixture@example.com", "GIT_COMMITTER_DATE=2026-01-01T00:00:00Z",
 	)

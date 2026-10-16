@@ -46,17 +46,44 @@ func writeAt(t *testing.T, root, rel, content string, mode os.FileMode) {
 	}
 }
 
+// fixtureGitEnv is the environment the fixture's git runs in: no configuration of whoever runs it, an identity of
+// the test's own, and no automatic maintenance. A commit may otherwise start `git maintenance run --auto` in the
+// background, whose `.git/objects/maintenance.lock` comes and goes while the test compares two snapshots of the
+// tree, so the detector would be blamed for a file git wrote.
+func fixtureGitEnv() []string {
+	return append(os.Environ(),
+		"GIT_CONFIG_GLOBAL=/dev/null", "GIT_CONFIG_SYSTEM=/dev/null",
+		"GIT_CONFIG_COUNT=2",
+		"GIT_CONFIG_KEY_0=maintenance.auto", "GIT_CONFIG_VALUE_0=false",
+		"GIT_CONFIG_KEY_1=gc.auto", "GIT_CONFIG_VALUE_1=0",
+		"GIT_AUTHOR_NAME=fixture", "GIT_AUTHOR_EMAIL=fixture@example.com",
+		"GIT_COMMITTER_NAME=fixture", "GIT_COMMITTER_EMAIL=fixture@example.com",
+	)
+}
+
 func runGit(t *testing.T, dir string, args ...string) {
 	t.Helper()
 	command := exec.Command("git", args...)
 	command.Dir = dir
-	command.Env = append(os.Environ(),
-		"GIT_CONFIG_GLOBAL=/dev/null", "GIT_CONFIG_SYSTEM=/dev/null",
-		"GIT_AUTHOR_NAME=fixture", "GIT_AUTHOR_EMAIL=fixture@example.com",
-		"GIT_COMMITTER_NAME=fixture", "GIT_COMMITTER_EMAIL=fixture@example.com",
-	)
+	command.Env = fixtureGitEnv()
 	if out, err := command.CombinedOutput(); err != nil {
 		t.Fatalf("git %s: %v\n%s", strings.Join(args, " "), err, out)
+	}
+}
+
+// The fixture's git never maintains the repository on its own, so nothing but the detector could change the tree
+// between the two snapshots of TestDetectOverAProjectOnDisk_ReportsStaleSignalsAndDoesNotMutate.
+func TestFixtureGitRunsNoAutomaticMaintenance(t *testing.T) {
+	root := t.TempDir()
+	runGit(t, root, "init", "-q", "-b", "main")
+	for key, want := range map[string]string{"maintenance.auto": "false", "gc.auto": "0"} {
+		command := exec.Command("git", "config", "--get", key)
+		command.Dir = root
+		command.Env = fixtureGitEnv()
+		out, err := command.Output()
+		if got := strings.TrimSpace(string(out)); err != nil || got != want {
+			t.Errorf("git config --get %s = %q, %v; want %q", key, got, err, want)
+		}
 	}
 }
 
