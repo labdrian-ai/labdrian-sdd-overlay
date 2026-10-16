@@ -167,3 +167,33 @@ func TestSourcingTheScriptDefinesItsFunctionsAndPrintsNothingWhateverItIsSourced
 		})
 	}
 }
+
+// Loading the script, entry point and modules, uses bash and what finds the script (dirname and readlink)
+// and nothing else: the lint job of CI runs the guards of deterministic-checks on a PATH that holds exactly
+// those three and has no go, and expects the guard to answer for the missing go (exit 3 and its message) and
+// not a command that was not found while the modules loaded.
+func TestTheScriptLoadsWithOnlyBashDirnameAndReadlinkOnThePath(t *testing.T) {
+	overlaytest.RequireBash(t)
+	shadow := t.TempDir()
+	for _, program := range []string{"bash", "dirname", "readlink"} {
+		path, err := exec.LookPath(program)
+		if err != nil {
+			t.Skipf("%s is not available: %v", program, err)
+		}
+		if err := os.Symlink(path, filepath.Join(shadow, program)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	env := []string{"HOME=" + t.TempDir(), "PATH=" + shadow}
+	script := overlaytest.Script(t)
+
+	targets := overlaytest.Run(t, script, env, "", "targets")
+	guard := overlaytest.Run(t, script, env, "", "deterministic-checks", "check")
+
+	if targets.Exit != 0 || targets.Stdout != theCatalog || targets.Stderr != "" {
+		t.Errorf("targets on that PATH = exit %d, stdout %q, stderr %q, want exit 0, %q and nothing on stderr", targets.Exit, targets.Stdout, targets.Stderr, theCatalog)
+	}
+	if guard.Exit != 3 || !strings.Contains(guard.Stderr, "go is required to build the deterministic-check-runner") || guard.Stdout != "" {
+		t.Errorf("deterministic-checks check on that PATH = exit %d, stdout %q, stderr %q, want exit 3 and the message about go", guard.Exit, guard.Stdout, guard.Stderr)
+	}
+}

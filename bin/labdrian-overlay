@@ -14,160 +14,29 @@ SCRIPT_DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
 # Allow OVERLAY_DIR to be overridden via environment variable (useful for tests
 # and power-user workflows; normal use leaves it unset so it auto-detects here).
 OVERLAY_DIR="${OVERLAY_DIR:-"$(cd "$SCRIPT_DIR/.." && pwd)"}"
-TARBALL="$HOME/.gentle-ai/backups/upgrade-20260615T175529Z/snapshot.tar.gz"
-MANIFEST="${MANIFEST:-"$OVERLAY_DIR/overlay.manifest"}"
 
-# path_clean <path> prints <path> lexically normalized: duplicate separators
-# collapsed, "." elements removed, ".." elements resolved against the element
-# before them, and any trailing separator dropped. "" becomes ".", and ".."
-# above the root of a rooted path is the root.
-#
-# It reproduces Go's filepath.Clean on purpose, byte for byte, because that
-# is the OTHER half of a contract this script cannot see. The engine derives
-# the longterm-mem binary path with filepath.Join (which cleans), rebuilds
-# each runtime's MCP entry from it, and decides ownership by comparing that
-# rebuilt entry against the live one as an EXACT STRING fingerprint. This
-# script builds the same path by concatenation (which does not clean) and
-# hands that literal to `longterm-mem register --binary`, which is what
-# actually gets written into the config. The two therefore agreed only while
-# $STATE_DIR happened to be lexically clean already: one trailing slash and
-# the overlay wrote "<dir>//bin/longterm-mem" while the engine looked for
-# "<dir>/bin/longterm-mem" and reported the overlay's own freshly-written
-# entry as unmanaged.
-#
-# Purely lexical, deliberately: it never touches the filesystem and never
-# resolves a symlink, because the Go half it must agree with does not
-# either. `realpath` would be the wrong tool here even where it exists —
-# resolving symlinks would produce a path the engine never derives.
-#
-# Defined here, above the derived paths below, because those are assigned at
-# source time and a function must exist before it is called.
-path_clean() {
-  local path="${1:-}"
-  local rooted="" out="" elem rest
-
-  [[ "$path" == /* ]] && rooted=1
-  rest="$path"
-
-  while [[ -n "$rest" ]]; do
-    elem="${rest%%/*}"
-    if [[ "$rest" == */* ]]; then
-      rest="${rest#*/}"
-    else
-      rest=""
-    fi
-
-    case "$elem" in
-      '' | '.')
-        # A duplicate separator or a "." element names nothing.
-        ;;
-      '..')
-        if [[ -n "$rooted" || ( -n "$out" && "$out" != ".." && "$out" != *"/.." ) ]]; then
-          # Pop the previous element. A rooted path with nothing left to
-          # pop stays at the root: "/.." is "/".
-          if [[ "$out" == */* ]]; then
-            out="${out%/*}"
-          else
-            out=""
-          fi
-        else
-          # A RELATIVE path can lead with ".." elements that nothing
-          # cancels; those are part of the answer, not noise.
-          out="${out:+$out/}.."
-        fi
-        ;;
-      *)
-        out="${out:+$out/}$elem"
-        ;;
-    esac
-  done
-
-  if [[ -n "$rooted" ]]; then
-    printf '%s\n' "/$out"
-  elif [[ -n "$out" ]]; then
-    printf '%s\n' "$out"
-  else
-    printf '%s\n' "."
+# The program is this file and the modules in lib/ beside it, sourced in the order listed here. At
+# load time a module may use only what an earlier one assigned; at run time any function of any
+# module is available. lib/ is found from the REAL location of this file (SCRIPT_DIR: symlinks
+# resolved above), never from OVERLAY_DIR, which a caller may point at another checkout.
+OVERLAY_LIB_DIR="$SCRIPT_DIR/lib"
+_modules=(
+  common
+  locations
+  targets
+  engine_binary
+  manifest_routes
+)
+for _module in "${_modules[@]}"; do
+  if [[ ! -f "$OVERLAY_LIB_DIR/$_module.sh" ]]; then
+    echo "ERROR: labdrian-overlay is incomplete: the module '$_module' is missing (expected at $OVERLAY_LIB_DIR/$_module.sh)." >&2
+    echo "       The program is this file plus every module in lib/ beside it; restore them (git checkout -- bin/lib in the clone it came from)." >&2
+    exit 1
   fi
-}
-
-# Home-scoped per design decision D3: state describes deployments under
-# $HOME (TARGET_PATHS/AGENT_TARGET_PATHS are all $HOME-anchored), so a
-# repo-scoped file would let two clones of this repo hold divergent records
-# of the same live targets.
-#
-# Normalized ONCE, here, so every path derived from it below and every
-# `--state-dir "$STATE_DIR"` handed to the engine already looks the way the
-# engine's own filepath.Join will make it look. Doing it at the point of use
-# instead would mean remembering it at each of them, which is exactly the
-# kind of agreement that decays.
-STATE_DIR="$(path_clean "${STATE_DIR:-"$HOME/.labdrian-overlay"}")"
-STATE_FILE="$STATE_DIR/state.json"
-
-declare -A TARGET_PATHS=(
-  [claude]="$HOME/.claude/skills"
-  [opencode]="$HOME/.config/opencode/skills"
-  [codex]="$HOME/.codex/skills"
-)
-
-# Native agent-route destinations. Claude Code and OpenCode use different
-# frontmatter schemas, so they are deployed from separate generated files.
-declare -A AGENT_TARGET_PATHS=(
-  [claude]="$HOME/.claude/agents"
-  [opencode]="$HOME/.config/opencode/agents"
-)
-
-# Every recognized --target, in the order `--target all` expands to, each as
-# "<name>:<kind>" (pi-target-plumbing, R-001/R-008). "copy": per-file,
-# deployed via TARGET_PATHS above. "package": built and installed as a whole
-# (pi, via `pi install`/`pi remove` — engine/pipkg, wired starting in the
-# pi-package-build slice).
-#
-# This is the ONE place a target is declared. ALL_TARGETS (the order and the
-# `--target all` expansion, see resolve_targets), TARGET_KINDS (the lookup
-# behind is_valid_target/is_copy_target) and the `targets` subcommand (the
-# catalog the TUI reads) are all derived from it just below, so the set a
-# front-end shows and the set `all` acts on cannot drift apart. Add a target
-# here and nowhere else.
-TARGET_CATALOG=(
-  claude:copy
-  opencode:copy
-  codex:copy
-  pi:package
-)
-
-# Every call site that used to probe TARGET_PATHS directly for "is this a
-# known target at all" and "does it have a TARGET_PATHS entry" now goes
-# through is_valid_target/is_copy_target below instead, so a package target is
-# never silently treated as a copy target with an empty destination.
-declare -a ALL_TARGETS=()
-declare -A TARGET_KINDS=()
-for _catalog_entry in "${TARGET_CATALOG[@]}"; do
-  ALL_TARGETS+=("${_catalog_entry%%:*}")
-  TARGET_KINDS["${_catalog_entry%%:*}"]="${_catalog_entry#*:}"
+  # shellcheck source=/dev/null
+  source "$OVERLAY_LIB_DIR/$_module.sh"
 done
-unset _catalog_entry
-
-# True (exit 0) when $1 names any recognized target, copy or package.
-is_valid_target() {
-  [[ -v TARGET_KINDS["${1:-}"] ]]
-}
-
-# True (exit 0) when $1 is a per-file copy target with a TARGET_PATHS entry
-# (claude/opencode/codex). False for a package target (pi) or an unknown
-# name — callers must check is_valid_target first if they need to
-# distinguish "package" from "unknown".
-is_copy_target() {
-  [[ "${TARGET_KINDS[${1:-}]:-}" == "copy" ]]
-}
-
-# Emits the shared stub line for a recognized package target whose
-# package_target_stub_message is the honest fallback for a package-model
-# target that has no adapter wired yet (today every package target, i.e.
-# pi, is dispatched explicitly above this call).
-package_target_stub_message() {
-  echo "  $1: package target without a lifecycle adapter (not implemented)"
-}
+unset _modules _module
 
 # pipkg_dest_dir prints the built labdrian-pi package directory
 # ($STATE_DIR/pi/labdrian-pi), the single source of truth every pipkg call
@@ -281,75 +150,9 @@ pipkg_status_and_report() {
 #   - No native Codex agent-definition files are produced (R-009).
 #   - No SDD orchestrator auto-spawn wiring (R-009).
 
-# Path where the engine binary is deployed. Using ~/.claude/bin/ keeps all
-# Claude Code tooling co-located and makes the binary easy to find in hooks.
-ENGINE_BINARY="$HOME/.claude/bin/gentle-ai-overlay"
-ENGINE_SRC="$OVERLAY_DIR/engine"
-
-# LONGTERM_MEM_BINARY is the fixed, documented, persistent install path for
-# the longterm-mem binary (R-015): it never moves between an install and a
-# later inspection. STATE_DIR-scoped (not $HOME/.claude/-scoped like
-# ENGINE_BINARY) because longterm-mem is a cross-runtime component, not a
-# Claude-specific one (D4).
-#
-# Routed through path_clean even though $STATE_DIR is already clean: this
-# exact string is what `register --binary` writes into every runtime's MCP
-# entry, and what the engine re-derives with filepath.Join to decide whether
-# that entry is ours. path_clean here is what makes the two halves agree for
-# EVERY $STATE_DIR rather than only the already-clean ones — including the
-# one case normalizing $STATE_DIR alone does not cover, a state dir of "/",
-# where plain concatenation still yields "//bin/longterm-mem".
-LONGTERM_MEM_BINARY="$(path_clean "$STATE_DIR/bin/longterm-mem")"
-LONGTERM_MEM_SRC="$OVERLAY_DIR/longterm-mem"
-
 # The record of the runtimes this overlay has installed longterm-mem for is kept by the engine, not
 # here: `installed-targets` at $STATE_DIR/longterm-mem/installed-targets, under the lock
 # $STATE_DIR/.installed-targets.flock (see longtermmem_targets).
-
-# ---------------------------------------------------------------------------
-# helpers
-# ---------------------------------------------------------------------------
-
-die() { echo "ERROR: $*" >&2; exit 1; }
-info() { echo "==> $*"; }
-warn() { echo "WARN: $*" >&2; }
-
-# Ensure the parent directory of a path exists
-ensure_parent() {
-  local path="$1"
-  local parent
-  parent="$(dirname "$path")"
-  mkdir -p "$parent"
-}
-
-# Resolve --target argument to a space-separated list of target names.
-# `all` expands to ALL_TARGETS, the same list `targets` prints.
-resolve_targets() {
-  local arg="${1:-all}"
-  if [[ "$arg" == "all" ]]; then
-    echo "${ALL_TARGETS[*]}"
-  elif is_valid_target "$arg"; then
-    echo "$arg"
-  else
-    local valid
-    printf -v valid '%s, ' "${ALL_TARGETS[@]}"
-    die "Unknown target: $arg. Valid: ${valid}all"
-  fi
-}
-
-# cmd_targets: print the target catalog, one target per line, as
-# "<name><TAB><kind>" (kind is "copy" or "package"), in the order `--target
-# all` expands to. The TUI reads this instead of keeping a list of its own,
-# and a front-end that sends `--target all` only when the user selected every
-# line printed here can never act on a target the user did not see. Read-only:
-# it takes no arguments and touches no file.
-cmd_targets() {
-  [[ $# -eq 0 ]] || die "targets takes no arguments (got: $*)"
-  local name
-  for name in "${ALL_TARGETS[@]}"; do
-    printf '%s\t%s\n' "$name" "${TARGET_KINDS[$name]}"
-  done
-}
 
 # ---------------------------------------------------------------------------
 # usage
@@ -684,70 +487,6 @@ repair_sdd_registry_file() {
 }
 
 # ---------------------------------------------------------------------------
-# manifest routes — where each row of overlay.manifest goes
-# ---------------------------------------------------------------------------
-#
-# The decision is the engine's (`manifest routes`), not this script's: how a
-# manifest is read, which route a row takes, which rows are never deployed,
-# and the longterm-mem/** route-domain guard (R-012 in overlay-agent-route)
-# live in engine/skills, in one place. This script owns what the engine
-# cannot know -- the directories its targets keep their skills and native
-# agents in (TARGET_PATHS, AGENT_TARGET_PATHS) -- and hands them over.
-#
-# manifest_routes_load <target> [managed]
-#
-# Fills MANIFEST_ROUTES with one line per row of the manifest, in the order it
-# is written (only the rows tagged managed when the second argument is
-# "managed"), in five columns separated by a tab:
-#
-#   <path> <route> <repo_rel> <repo_source> <dest>
-#
-#   path         the first column of the row
-#   route        skill, agent, opencode-agent, mcp or non-deployable; a third
-#                column nobody knows keeps its own name and is the skill route
-#   repo_rel     the file's place in the overlay repository, which is how git
-#                knows it on the branches (skills/<path> for a skill)
-#   repo_source  the absolute path it is copied from; empty when non-deployable
-#   dest         the absolute path it is copied to for <target>; empty when it
-#                goes nowhere for that target (an agent for opencode, an mcp
-#                row, a row that is never deployed)
-#
-# An empty column is never followed by one that is not, so `IFS=$'\t' read -r`
-# (which drops empty trailing fields) reads every line whole. Callers skip a
-# row with an empty dest, as they always did.
-#
-# Any refusal ends the run: a longterm-mem/** row with no route or an unknown
-# one, a manifest that cannot be read, an engine that is not there. The engine
-# says why on stderr and answers nothing, so the run stops before it acts on
-# part of a manifest. (The `|| exit $?` is for the callers that run inside
-# $(...), where errexit is off and a plain failure would go unnoticed.)
-#
-# The engine is made on first use, or again when it is older than its source
-# (ensure_engine_binary), with its words on stderr: this runs inside $(...) too,
-# and a line on stdout there would end up in the value being computed.
-MANIFEST_ROUTES=""
-
-manifest_routes_load() {
-  local target="$1"
-  local -a args=(manifest routes --overlay-root "$OVERLAY_DIR" --manifest "$MANIFEST"
-    --target "$target" --skills-root "${TARGET_PATHS[$target]}")
-  if [[ -v AGENT_TARGET_PATHS["$target"] ]]; then
-    args+=(--agents-root "${AGENT_TARGET_PATHS[$target]}")
-  fi
-  if [[ "${2:-}" == "managed" ]]; then
-    args+=(--managed)
-  fi
-  ensure_engine_binary >&2
-  MANIFEST_ROUTES="$("$ENGINE_BINARY" "${args[@]}")" || exit $?
-}
-
-# manifest_routes_rows prints the lines manifest_routes_load filled, one per
-# row and none when there are none, for a `while read ... done < <(...)` loop.
-manifest_routes_rows() {
-  [[ -z "$MANIFEST_ROUTES" ]] || printf '%s\n' "$MANIFEST_ROUTES"
-}
-
-# ---------------------------------------------------------------------------
 # release identity, digest, and state (R-001..R-003)
 # ---------------------------------------------------------------------------
 
@@ -1046,23 +785,6 @@ prune_backups() {
   for ((i = 0; i < excess; i++)); do
     rm -rf "${backups_dir:?}/${entries[$i]}"
   done
-}
-
-# route_tar_path resolves where a manifest row is stored inside a backup tarball.
-# The legacy backup layout is under ~/.claude. OpenCode-native agent rows must use
-# ~/.config/opencode instead.
-route_tar_path() {
-  local route="$1"
-  local repo_rel="$2"  # the repo_rel column of manifest_routes_load
-
-  case "$route" in
-    opencode-agent)
-      printf 'files/home/labdrian/.config/opencode/%s' "${repo_rel#opencode/}"
-      ;;
-    *)
-      printf 'files/home/labdrian/.claude/%s' "$repo_rel"
-      ;;
-  esac
 }
 
 # ---------------------------------------------------------------------------
@@ -3355,111 +3077,6 @@ cmd_gadu_generate() {
 # longterm-mem (D4, D13, R-014/R-015)
 # ---------------------------------------------------------------------------
 
-# engine_stale_diagnosis prints the sentence a reader cannot reconstruct on
-# their own: that an unknown flag / unknown subcommand error coming OUT OF THE
-# ENGINE is this staleness and not an overlay bug. That mistaken reading, not
-# the staleness itself, is what made the original incident expensive, so every
-# operator-facing report of a stale binary uses this one text.
-#
-# It names 'doctor --fix' as the remedy, not 'install-hooks': the repair the
-# reader wants here is the engine binary, not a rewrite of settings.json.
-engine_stale_diagnosis() {
-  printf '%s' "engine binary at $ENGINE_BINARY is STALE — older than the engine source at $ENGINE_SRC, so it may not understand the flags and subcommands this overlay passes it. If a command fails with an unknown flag or unknown subcommand error from the engine, that is this staleness, not an overlay bug. Rebuild it with 'labdrian doctor --fix'."
-}
-
-# engine_binary_is_stale answers whether any Go source under $ENGINE_SRC is
-# NEWER than $ENGINE_BINARY, i.e. whether the compiled artifact predates the
-# source that defines it.
-#
-# The signal is mtime, not a recorded git revision, because mtime catches BOTH
-# a repository update (git stamps the files it writes) and an uncommitted
-# local edit during development; a recorded revision catches only the first.
-#
-# go.mod and go.sum count as source: a dependency bump changes behaviour as
-# surely as a source edit does.
-#
-# The find expression is deliberately plain POSIX. `-newer` is portable, but
-# `-print -quit` is GNU-only, and this script goes out of its way to stay
-# macOS-safe (see the mkdir-not-flock reasoning in the install-tracking lock),
-# so the "stop at the first hit" job goes to head instead.
-engine_binary_is_stale() {
-  [[ -d "$ENGINE_SRC" ]] || return 1
-  # The listing is captured whole rather than piped into `head -n 1`, for the
-  # reason this file already records twice elsewhere ("Pre-build tar listing
-  # once to avoid SIGPIPE issues with set -euo pipefail"): under pipefail a
-  # `find | head` whose output exceeds the pipe buffer leaves find killed by
-  # SIGPIPE and the substitution exiting 141, which errexit turns into an
-  # abort at any call site that is not a condition. Today the only call site
-  # IS a condition, so the hazard is latent -- and a fixture-sized source tree
-  # never reaches the buffer, so no test can catch it either. Both of those
-  # are reasons to write it safely now rather than to rely on staying lucky.
-  # An engine source tree is small; reading all of it costs nothing.
-  local newer
-  newer="$(
-    find "$ENGINE_SRC" -type f \
-      \( -name '*.go' -o -name 'go.mod' -o -name 'go.sum' \) \
-      -newer "$ENGINE_BINARY" -print 2>/dev/null
-  )"
-  [[ -n "$newer" ]]
-}
-
-# ensure_engine_binary builds $ENGINE_BINARY on demand if it is missing,
-# mirroring the existing cmd_uninstall_hooks fallback above — cmd_longterm_mem
-# needs the same binary to invoke 'engine runtime --component longterm-mem'.
-#
-# It also rebuilds when the binary is merely OUT OF DATE. Building only on
-# absence is what let a fast-forwarded repository keep running an eleven-day-old
-# engine against new expectations, until an overlay command died with
-# `unknown flag "--component"` — which reads as an overlay bug and is a binary
-# that predates the subcommand.
-#
-# This is the ONLY place that check lives, and it must stay that way. Every
-# path that needs the engine already calls ensure_engine_binary, so one
-# mechanism covers them all; adding the same check to self-update or apply
-# would be two mechanisms to drift apart, not one safety net plus a backup.
-#
-# WHEN STALE AND NOT REBUILDABLE the function WARNS AND CONTINUES, which is a
-# deliberate departure from the absent-binary path immediately above it:
-#   - an absent binary means nothing can run at all, so dying is the only
-#     option there;
-#   - a stale binary may well serve the command at hand perfectly, and
-#     refusing would brick every overlay command for a user whose Go toolchain
-#     disappeared;
-#   - what made this defect expensive was never the staleness itself, it was
-#     that the resulting failure looked like an overlay bug. So the warning
-#     names the staleness, PREDICTS the symptom (an unknown flag or unknown
-#     subcommand error coming out of the engine is this, not a bug), and says
-#     how to fix it.
-# That loud, diagnosed warning is NOT the silent skip this repository keeps
-# removing — a skip that reads as a pass is. Do not "tighten" this into a hard
-# failure without understanding that trade.
-ensure_engine_binary() {
-  if [[ ! -x "$ENGINE_BINARY" ]]; then
-    command -v go >/dev/null 2>&1 || die "engine binary not found at $ENGINE_BINARY and go is not installed; cannot continue"
-    [[ -d "$ENGINE_SRC" ]] || die "engine source not found at $ENGINE_SRC"
-    info "Engine binary not found; building..."
-    mkdir -p "$(dirname "$ENGINE_BINARY")"
-    (cd "$ENGINE_SRC" && go build -o "$ENGINE_BINARY" ./cmd/) \
-      || die "go build failed for the engine binary"
-    return 0
-  fi
-
-  engine_binary_is_stale || return 0
-
-  local stale_warning="the engine binary at $ENGINE_BINARY is OLDER than the engine source at $ENGINE_SRC, so it may not understand the flags and subcommands this overlay passes it. If a command below fails with an unknown flag or unknown subcommand error from the engine, that is this staleness, not an overlay bug. Fix it with 'labdrian install-hooks', or by installing a Go toolchain so the overlay can rebuild the engine itself."
-
-  if ! command -v go >/dev/null 2>&1; then
-    warn "Engine binary is stale and go is not installed: $stale_warning"
-    return 0
-  fi
-
-  info "Engine binary is out of date; rebuilding..."
-  if ! (cd "$ENGINE_SRC" && go build -o "$ENGINE_BINARY" ./cmd/); then
-    warn "Engine binary is stale and the rebuild failed: $stale_warning"
-    return 0
-  fi
-}
-
 # longtermmem_targets <verb> [args...] runs a verb of the engine's installed-targets command on this
 # overlay's state directory: the record of the runtimes longterm-mem is installed for (record, release,
 # list, assess, retire). The record is the engine's (Phase 9, B3). It is the only thing that says whether
@@ -4002,9 +3619,9 @@ cmd_longterm_mem() {
 
 # Guarded so this file can be `source`d (e.g. by tui/internal/adapters/overlaycli/release_backend_test.go)
 # to call an internal function directly for unit-style testing, without also
-# running the CLI dispatch below. Normal execution (./bin/labdrian-overlay or
-# via the bin/overlay wrapper) is unaffected: BASH_SOURCE[0] and $0 are
-# identical for a top-level executed script.
+# running the CLI dispatch below. Normal execution (./bin/labdrian-overlay, or a
+# symlink to it such as the one install-alias makes) is unaffected: BASH_SOURCE[0]
+# and $0 are identical for a top-level executed script.
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   COMMAND="${1:-}"
   shift || true

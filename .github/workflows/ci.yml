@@ -17,11 +17,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Syntax check bin/overlay
-        run: bash -n bin/overlay && bash -n bin/labdrian-overlay
+      - name: Syntax check bin/overlay, bin/labdrian-overlay and its modules
+        run: bash -n bin/overlay && bash -n bin/labdrian-overlay && for module in bin/lib/*.sh; do bash -n "$module"; done
 
-      - name: ShellCheck wrappers
-        run: shellcheck bin/overlay bin/labdrian-overlay || true
+      - name: ShellCheck wrappers and modules
+        run: shellcheck bin/overlay bin/labdrian-overlay bin/lib/*.sh || true
 
       - name: Deterministic-checks dispatch guard smoke test
         run: |
