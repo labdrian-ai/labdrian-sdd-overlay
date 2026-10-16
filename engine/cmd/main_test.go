@@ -1072,7 +1072,7 @@ func TestEmbeddedContract_AntiGenericDesign(t *testing.T) {
 	if !ok {
 		t.Fatalf("embeddedContract(\"anti-generic-design\"): expected ok=true, got ok=false")
 	}
-	if spec.content != assets.AntiGenericDesign {
+	if spec.content != assets.AntiGenericDesign() {
 		t.Errorf("embeddedContract: content should be assets.AntiGenericDesign")
 	}
 	if spec.beginMarker != propagator.AntiGenericDesignBeginMarker {

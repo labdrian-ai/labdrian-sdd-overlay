@@ -59,7 +59,7 @@ func (c *overlayContracts) Minimalism() (string, error) {
 	return string(content), nil
 }
 
-func (c *overlayContracts) AntiGenericDesign() string { return assets.AntiGenericDesign }
+func (c *overlayContracts) AntiGenericDesign() string { return assets.AntiGenericDesign() }
 
 // OOQuality is optional: a checkout without the file has no such contract, and any other failure
 // to read it is an error.

@@ -26,7 +26,7 @@ func embeddedContract(name string) (spec embeddedContractSpec, ok bool) {
 	switch name {
 	case embeddedAntiGenericDesign:
 		return embeddedContractSpec{
-			content:     assets.AntiGenericDesign,
+			content:     assets.AntiGenericDesign(),
 			beginMarker: propagator.AntiGenericDesignBeginMarker,
 			endMarker:   propagator.AntiGenericDesignEndMarker,
 			rowLabel:    embeddedAntiGenericDesign,
