@@ -337,7 +337,7 @@ func Evaluate(in ReadinessInput, clearance *VerifiedClearance) Assessment {
 	}
 	subjectOK := true
 
-	handoffSHA := sha256Hex(in.Handoff.Bytes)
+	handoffSHA := SourceSHA256(in.Handoff.Bytes)
 	if in.Handoff.SHA256 != handoffSHA {
 		block(ReasonHandoffDigestMismatch, "recorded handoff sha256 %q, bytes hash to %q", in.Handoff.SHA256, handoffSHA)
 		subjectOK = false
@@ -354,7 +354,7 @@ func Evaluate(in ReadinessInput, clearance *VerifiedClearance) Assessment {
 		block(ReasonGoalUnbound, "no Goal binding supplied")
 		subjectOK = false
 	} else {
-		goalSHA = sha256Hex(in.Goal.GoalBytes)
+		goalSHA = SourceSHA256(in.Goal.GoalBytes)
 		if in.Goal.GoalSHA256 != goalSHA {
 			block(ReasonGoalDigestMismatch, "recorded goal sha256 %q, bytes hash to %q", in.Goal.GoalSHA256, goalSHA)
 			subjectOK = false

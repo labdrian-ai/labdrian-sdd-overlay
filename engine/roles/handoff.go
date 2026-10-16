@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/jsonstrict"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/sha256hex"
 )
 
 // HandoffVersion is the only RoleHandoff wire version this package accepts.
@@ -77,8 +77,6 @@ var (
 	evidenceItemFields = []string{"kind", "ref", "sha256"}
 	contextFields      = []string{"summary", "decisions", "open_questions"}
 )
-
-var sha256HexPattern = regexp.MustCompile(`^[0-9a-f]{64}$`)
 
 // MaxRecordBytes bounds the size of one RoleHandoff JSON document that
 // ParseRoleHandoff will decode, and that a chain store will read back. A record carries
@@ -190,7 +188,7 @@ func (h RoleHandoff) Validate() error {
 		{"prev_sha256", h.PrevSHA256},
 		{"payload_sha256", h.PayloadSHA256},
 	} {
-		if !sha256HexPattern.MatchString(f.value) {
+		if !sha256hex.IsValid(f.value) {
 			return fmt.Errorf("%s must be 64 lowercase hex characters, got %q", f.name, f.value)
 		}
 	}
@@ -209,7 +207,7 @@ func (h RoleHandoff) Validate() error {
 				return fmt.Errorf("evidence[%d].%s must not be blank", i, f.name)
 			}
 		}
-		if !sha256HexPattern.MatchString(e.SHA256) {
+		if !sha256hex.IsValid(e.SHA256) {
 			return fmt.Errorf("evidence[%d].sha256 must be 64 lowercase hex characters, got %q", i, e.SHA256)
 		}
 	}

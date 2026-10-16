@@ -1,9 +1,9 @@
 package roles
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/sha256hex"
 )
 
 // ChainRecord pairs one parsed RoleHandoff with the exact raw bytes it was
@@ -12,12 +12,6 @@ import (
 type ChainRecord struct {
 	Raw     []byte
 	Handoff RoleHandoff
-}
-
-// sha256Hex returns the lowercase hex SHA-256 of data.
-func sha256Hex(data []byte) string {
-	sum := sha256.Sum256(data)
-	return hex.EncodeToString(sum[:])
 }
 
 // VerifyChain checks one chain's records, in seq order starting at 1: seq 1
@@ -45,7 +39,7 @@ func VerifyChain(records []ChainRecord) error {
 			continue
 		}
 		prev := records[i-1]
-		wantPrevSHA := sha256Hex(prev.Raw)
+		wantPrevSHA := sha256hex.Sum(prev.Raw)
 		if h.PrevSHA256 != wantPrevSHA {
 			return fmt.Errorf("role chain: seq %d prev_sha256 %q does not match seq %d bytes digest %q", h.Seq, h.PrevSHA256, prev.Handoff.Seq, wantPrevSHA)
 		}

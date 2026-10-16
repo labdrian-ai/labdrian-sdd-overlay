@@ -6,6 +6,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/sha256hex"
 )
 
 // validHandoffV2JSON is a structurally valid handoff version 2 with one
@@ -378,7 +380,7 @@ func TestEvaluateV2CriterionOverlappingOutOfScopeIsInvalid(t *testing.T) {
 	data := v2DocumentWith(t, map[string]any{"out_of_scope": []string{"The CLI help reads clearly."}})
 	in := completeV2Input(t)
 	in.Handoff.Bytes = data
-	in.Handoff.SHA256 = sha256Hex(data)
+	in.Handoff.SHA256 = sha256hex.Sum(data)
 	got := Evaluate(in, nil)
 	if got.State != StateInvalid {
 		t.Fatalf("State = %q, want invalid", got.State)

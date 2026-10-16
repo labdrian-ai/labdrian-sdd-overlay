@@ -1,12 +1,12 @@
 package shaper
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/sha256hex"
 )
 
 // cleanContainedRelPath applies the lexical half of the contained-read rules
@@ -83,11 +83,5 @@ func ReadContainedSource(src ContainedSource, worktreeRoot, relPath string) (str
 // SourceSHA256 is the lowercase hex SHA-256 of source bytes. It detects
 // drift only and is not a signature.
 func SourceSHA256(data []byte) string {
-	return sha256Hex(data)
-}
-
-// sha256Hex returns the lowercase hex SHA-256 of data.
-func sha256Hex(data []byte) string {
-	sum := sha256.Sum256(data)
-	return hex.EncodeToString(sum[:])
+	return sha256hex.Sum(data)
 }

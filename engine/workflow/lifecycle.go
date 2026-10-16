@@ -2,8 +2,6 @@ package workflow
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"strings"
@@ -12,6 +10,7 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/goal"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/memoryscope"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/roles"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/sha256hex"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflowprofile"
 )
 
@@ -411,16 +410,14 @@ func goalDigest(g goal.Goal) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("workflow lifecycle: goal digest: %w", err)
 	}
-	sum := sha256.Sum256(data)
-	return hex.EncodeToString(sum[:]), nil
+	return sha256hex.Sum(data), nil
 }
 
 // chainRecordDigest returns the SHA-256 hex digest of one role chain
 // record's raw bytes: the same digest the next record in that chain would
 // chain to via prev_sha256 (see roles.VerifyChain).
 func chainRecordDigest(record roles.ChainRecord) string {
-	sum := sha256.Sum256(record.Raw)
-	return hex.EncodeToString(sum[:])
+	return sha256hex.Sum(record.Raw)
 }
 
 // roleChainDigest returns records' last record's chainRecordDigest: its

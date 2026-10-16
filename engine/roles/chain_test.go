@@ -1,6 +1,10 @@
 package roles
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/sha256hex"
+)
 
 func mustParse(t *testing.T, data string) RoleHandoff {
 	t.Helper()
@@ -66,7 +70,7 @@ func chainToBuilder(t *testing.T) (c1, c2 ChainRecord) {
 	t.Helper()
 	r1 := recordJSON(1, EmptyChainDigest, "shaper", "estimator", "completed", "")
 	c1 = chainRecord(t, r1)
-	r2 := recordJSON(2, sha256Hex(c1.Raw), "estimator", "builder", "completed", "")
+	r2 := recordJSON(2, sha256hex.Sum(c1.Raw), "estimator", "builder", "completed", "")
 	c2 = chainRecord(t, r2)
 	return c1, c2
 }
@@ -76,9 +80,9 @@ func chainToBuilder(t *testing.T) (c1, c2 ChainRecord) {
 func chainToDelivery(t *testing.T) []ChainRecord {
 	t.Helper()
 	c1, c2 := chainToBuilder(t)
-	r3 := recordJSON(3, sha256Hex(c2.Raw), "builder", "reviewer", "completed", "")
+	r3 := recordJSON(3, sha256hex.Sum(c2.Raw), "builder", "reviewer", "completed", "")
 	c3 := chainRecord(t, r3)
-	r4 := recordJSON(4, sha256Hex(c3.Raw), "reviewer", "delivery", "completed", "")
+	r4 := recordJSON(4, sha256hex.Sum(c3.Raw), "reviewer", "delivery", "completed", "")
 	c4 := chainRecord(t, r4)
 	return []ChainRecord{c1, c2, c3, c4}
 }
@@ -118,7 +122,7 @@ func TestVerifyChainRejectsBrokenHash(t *testing.T) {
 func TestVerifyChainRejectsSeqGap(t *testing.T) {
 	r1 := recordJSON(1, EmptyChainDigest, "shaper", "estimator", "completed", "")
 	c1 := chainRecord(t, r1)
-	r3 := recordJSON(3, sha256Hex(c1.Raw), "estimator", "builder", "completed", "")
+	r3 := recordJSON(3, sha256hex.Sum(c1.Raw), "estimator", "builder", "completed", "")
 	c3 := chainRecord(t, r3)
 	if err := VerifyChain([]ChainRecord{c1, c3}); err == nil {
 		t.Fatalf("VerifyChain() = nil, want error: seq must be contiguous")
@@ -128,7 +132,7 @@ func TestVerifyChainRejectsSeqGap(t *testing.T) {
 func TestVerifyChainRejectsFromRoleNotMatchingPreviousToRole(t *testing.T) {
 	r1 := recordJSON(1, EmptyChainDigest, "shaper", "estimator", "completed", "")
 	c1 := chainRecord(t, r1)
-	r2 := recordJSON(2, sha256Hex(c1.Raw), "builder", "reviewer", "completed", "")
+	r2 := recordJSON(2, sha256hex.Sum(c1.Raw), "builder", "reviewer", "completed", "")
 	c2 := chainRecord(t, r2)
 	if err := VerifyChain([]ChainRecord{c1, c2}); err == nil {
 		t.Fatalf("VerifyChain() = nil, want error: from_role must equal previous to_role")
@@ -138,9 +142,9 @@ func TestVerifyChainRejectsFromRoleNotMatchingPreviousToRole(t *testing.T) {
 func TestVerifyChainAllowsRepeatAfterInterrupted(t *testing.T) {
 	r1 := recordJSON(1, EmptyChainDigest, "shaper", "estimator", "completed", "")
 	c1 := chainRecord(t, r1)
-	r2 := recordJSON(2, sha256Hex(c1.Raw), "estimator", "builder", "interrupted", "network down")
+	r2 := recordJSON(2, sha256hex.Sum(c1.Raw), "estimator", "builder", "interrupted", "network down")
 	c2 := chainRecord(t, r2)
-	r3 := recordJSON(3, sha256Hex(c2.Raw), "estimator", "builder", "completed", "")
+	r3 := recordJSON(3, sha256hex.Sum(c2.Raw), "estimator", "builder", "completed", "")
 	c3 := chainRecord(t, r3)
 	if err := VerifyChain([]ChainRecord{c1, c2, c3}); err != nil {
 		t.Fatalf("VerifyChain() = %v, want nil: a repeat of the interrupted transition is allowed", err)
@@ -150,9 +154,9 @@ func TestVerifyChainAllowsRepeatAfterInterrupted(t *testing.T) {
 func TestVerifyChainRejectsNonRepeatAfterInterrupted(t *testing.T) {
 	r1 := recordJSON(1, EmptyChainDigest, "shaper", "estimator", "completed", "")
 	c1 := chainRecord(t, r1)
-	r2 := recordJSON(2, sha256Hex(c1.Raw), "estimator", "builder", "interrupted", "network down")
+	r2 := recordJSON(2, sha256hex.Sum(c1.Raw), "estimator", "builder", "interrupted", "network down")
 	c2 := chainRecord(t, r2)
-	r3 := recordJSON(3, sha256Hex(c2.Raw), "builder", "reviewer", "completed", "")
+	r3 := recordJSON(3, sha256hex.Sum(c2.Raw), "builder", "reviewer", "completed", "")
 	c3 := chainRecord(t, r3)
 	if err := VerifyChain([]ChainRecord{c1, c2, c3}); err == nil {
 		t.Fatalf("VerifyChain() = nil, want error: after an interrupted record the next must repeat from/to")
@@ -166,7 +170,7 @@ func TestVerifyChainRejectsRecordAfterTerminalDelivery(t *testing.T) {
 		Handoff: RoleHandoff{
 			Version: HandoffVersion, ProjectID: "proj-1", GoalID: "goal-1", ChainID: "chain-1",
 			Seq: last.Handoff.Seq + 1, FromRole: RoleReviewer, ToRole: RoleBuilder,
-			PrevSHA256: sha256Hex(last.Raw), PayloadKind: "diff", PayloadSHA256: validDigest,
+			PrevSHA256: sha256hex.Sum(last.Raw), PayloadKind: "diff", PayloadSHA256: validDigest,
 			Evidence: []Evidence{}, Context: Context{Summary: "s", Decisions: []string{}, OpenQuestions: []string{}},
 			Status: StatusCompleted,
 		},
@@ -190,7 +194,7 @@ func TestResumeReportsRoleFromLastRecord(t *testing.T) {
 func TestResumeReportsInterruptedRoleAndReason(t *testing.T) {
 	r1 := recordJSON(1, EmptyChainDigest, "shaper", "estimator", "completed", "")
 	c1 := chainRecord(t, r1)
-	r2 := recordJSON(2, sha256Hex(c1.Raw), "estimator", "builder", "interrupted", "network down")
+	r2 := recordJSON(2, sha256hex.Sum(c1.Raw), "estimator", "builder", "interrupted", "network down")
 	c2 := chainRecord(t, r2)
 	state, err := Resume([]ChainRecord{c1, c2})
 	if err != nil {

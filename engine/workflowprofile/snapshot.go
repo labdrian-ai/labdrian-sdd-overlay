@@ -1,12 +1,12 @@
 package workflowprofile
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"slices"
 	"strings"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/sha256hex"
 )
 
 // Snapshot is a workflow profile as a workflow's log records it: everything the profile declares
@@ -68,8 +68,7 @@ func (s Snapshot) Digest() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("workflow profile snapshot digest: %w", err)
 	}
-	sum := sha256.Sum256(data)
-	return hex.EncodeToString(sum[:]), nil
+	return sha256hex.Sum(data), nil
 }
 
 // Validate says whether the snapshot is well formed, on its own: it asks nothing of the catalog, so

@@ -1,8 +1,6 @@
 package filechain
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -13,17 +11,13 @@ import (
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/roles"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/sha256hex"
 )
 
 const (
 	validDigest = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 	otherDigest = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
 )
-
-func sha256Hex(data []byte) string {
-	sum := sha256.Sum256(data)
-	return hex.EncodeToString(sum[:])
-}
 
 // recordJSON is one RoleHandoff v1 record of proj-1/goal-1/chain-1, in the layout
 // the golden chain was recorded in.
@@ -99,7 +93,7 @@ func TestChainStoreAppendsChainedRecordsAndLoads(t *testing.T) {
 	if _, err := s.Append([]byte(r1)); err != nil {
 		t.Fatalf("Append(seq1) = %v, want nil", err)
 	}
-	r2 := recordJSON(2, sha256Hex([]byte(r1)), "estimator", "builder", "completed", "")
+	r2 := recordJSON(2, sha256hex.Sum([]byte(r1)), "estimator", "builder", "completed", "")
 	if _, err := s.Append([]byte(r2)); err != nil {
 		t.Fatalf("Append(seq2) = %v, want nil", err)
 	}
@@ -148,7 +142,7 @@ func TestChainStoreAppendRejectsSeqGap(t *testing.T) {
 	if _, err := s.Append([]byte(r1)); err != nil {
 		t.Fatalf("Append(seq1) = %v, want nil", err)
 	}
-	r3 := recordJSON(3, sha256Hex([]byte(r1)), "estimator", "builder", "completed", "")
+	r3 := recordJSON(3, sha256hex.Sum([]byte(r1)), "estimator", "builder", "completed", "")
 	_, err := s.Append([]byte(r3))
 	want := "role chain store: append: seq 3 is neither the next seq (2) nor an existing one (chain has 1 records)"
 	if err == nil || err.Error() != want {
@@ -195,19 +189,19 @@ func TestChainStoreAppendRejectsAfterTerminalDelivery(t *testing.T) {
 	if _, err := s.Append([]byte(r1)); err != nil {
 		t.Fatalf("Append(seq1) = %v, want nil", err)
 	}
-	r2 := recordJSON(2, sha256Hex([]byte(r1)), "estimator", "builder", "completed", "")
+	r2 := recordJSON(2, sha256hex.Sum([]byte(r1)), "estimator", "builder", "completed", "")
 	if _, err := s.Append([]byte(r2)); err != nil {
 		t.Fatalf("Append(seq2) = %v, want nil", err)
 	}
-	r3 := recordJSON(3, sha256Hex([]byte(r2)), "builder", "reviewer", "completed", "")
+	r3 := recordJSON(3, sha256hex.Sum([]byte(r2)), "builder", "reviewer", "completed", "")
 	if _, err := s.Append([]byte(r3)); err != nil {
 		t.Fatalf("Append(seq3) = %v, want nil", err)
 	}
-	r4 := recordJSON(4, sha256Hex([]byte(r3)), "reviewer", "delivery", "completed", "")
+	r4 := recordJSON(4, sha256hex.Sum([]byte(r3)), "reviewer", "delivery", "completed", "")
 	if _, err := s.Append([]byte(r4)); err != nil {
 		t.Fatalf("Append(seq4) = %v, want nil", err)
 	}
-	r5 := recordJSON(5, sha256Hex([]byte(r4)), "reviewer", "builder", "completed", "")
+	r5 := recordJSON(5, sha256hex.Sum([]byte(r4)), "reviewer", "builder", "completed", "")
 	if _, err := s.Append([]byte(r5)); err == nil {
 		t.Fatalf("Append(seq5) = nil, want error: chain is terminal at delivery")
 	}
@@ -352,7 +346,7 @@ func TestChainStoreFollowsASymlinkedStateHome(t *testing.T) {
 // always used, and never repaired or rewritten.
 func TestChainStoreReportsAnUnusableChainOnDisk(t *testing.T) {
 	r1 := recordJSON(1, roles.EmptyChainDigest, "shaper", "estimator", "completed", "")
-	r2 := recordJSON(2, sha256Hex([]byte(r1)), "estimator", "builder", "completed", "")
+	r2 := recordJSON(2, sha256hex.Sum([]byte(r1)), "estimator", "builder", "completed", "")
 
 	tests := []struct {
 		name  string
@@ -568,7 +562,7 @@ func TestAChainWithARecordAtTheBoundLoadsAndGrows(t *testing.T) {
 	if _, err := s.Append([]byte(first)); err != nil {
 		t.Fatalf("Append(a record of MaxRecordBytes) = %v, want nil", err)
 	}
-	second := recordJSON(2, sha256Hex([]byte(first)), "estimator", "builder", "completed", "")
+	second := recordJSON(2, sha256hex.Sum([]byte(first)), "estimator", "builder", "completed", "")
 	if _, err := s.Append([]byte(second)); err != nil {
 		t.Fatalf("Append(the record after one of MaxRecordBytes) = %v, want nil", err)
 	}

@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/sha256hex"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/shaper"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/statestore"
 )
@@ -55,7 +56,7 @@ func (s ClearanceStore) Path(projectID, goalID, handoffSHA256 string) (string, e
 	if err != nil {
 		return "", err
 	}
-	if !shaper.IsSHA256Hex(handoffSHA256) {
+	if !sha256hex.IsValid(handoffSHA256) {
 		return "", fmt.Errorf("clearance store: handoff sha256 %q is not 64 lowercase hex characters", handoffSHA256)
 	}
 	return filepath.Join(append(dir, handoffSHA256+".json")...), nil
