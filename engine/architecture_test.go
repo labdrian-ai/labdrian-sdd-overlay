@@ -133,6 +133,10 @@ import (
 //   - enginetest is test support: the engine binary built once for a test binary and put in the
 //     home where bin/labdrian-overlay looks for it, which the tests that run the script over an
 //     overlay with no engine source need (the script asks the engine where each manifest row goes).
+//   - overlaytest is test support (H35): the world the tests of the overlay script run it in (where the
+//     script and the checkout are, the environment of a run, the fixture repository with the branches the
+//     script merges and compares, programs of the test's own, and a run that keeps the two streams and the
+//     exit code apart), which the tests of installer and shelltest share.
 //   - installer, shelltest, capabilitytest, shaper/shapertest (the documents the shaper's
 //     tests share), reviewreceipt/receipttest (the review documents the receipt capture's
 //     tests share) and this guard (the module root) are test-only.
@@ -160,6 +164,7 @@ var rings = map[string]archguard.Ring{
 	"guardmarkers":              archguard.Domain,
 	"jsonstrict":                archguard.Domain,
 	"memoryscope":               archguard.Domain,
+	"overlaytest":               archguard.Support,
 	"pathguard":                 archguard.Domain,
 	"pathguard/fsresolve":       archguard.Adapter,
 	"piguard":                   archguard.Support,
