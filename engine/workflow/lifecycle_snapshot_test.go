@@ -23,7 +23,7 @@ func catalogOf(profile workflowprofile.WorkflowProfile) ProfileCatalog {
 // before the snapshot wrote it: a created event of version 1 that names the profile and nothing else.
 func createVersion1Workflow(t *testing.T, log EventLog, projectID, workflowID string, g goal.Goal, profile string) {
 	t.Helper()
-	digest, err := goalDigest(g)
+	digest, err := g.Digest()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -270,7 +270,7 @@ func TestAnAbandonedCloseOfAVersion2WorkflowObservesItsDependenciesWhenTheCatalo
 func TestVerifyOfAVersion2WorkflowChecksTheRecordedStagesAgainstTheSnapshot(t *testing.T) {
 	w := newSnapshotWorld(t)
 	created := withSnapshot(t, validCreatedEvent(), snapshotOfBuiltIn(t, "odd"))
-	digest, err := goalDigest(w.g)
+	digest, err := w.g.Digest()
 	if err != nil {
 		t.Fatal(err)
 	}

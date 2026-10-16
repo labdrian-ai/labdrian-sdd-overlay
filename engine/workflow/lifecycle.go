@@ -400,19 +400,6 @@ func (l Lifecycle) probe(capabilities []string) ([]Observation, error) {
 	}
 }
 
-// goalDigest returns the SHA-256 hex digest of g's canonical Marshal
-// encoding. engine/goal defines no digest helper of its own, so this
-// package defines one clearly: Marshal already validates g and produces a
-// deterministic, field-ordered encoding, so hashing its bytes gives a
-// digest that changes if and only if g's contents change.
-func goalDigest(g goal.Goal) (string, error) {
-	data, err := g.Marshal()
-	if err != nil {
-		return "", fmt.Errorf("workflow lifecycle: goal digest: %w", err)
-	}
-	return sha256hex.Sum(data), nil
-}
-
 // chainRecordDigest returns the SHA-256 hex digest of one role chain
 // record's raw bytes: the same digest the next record in that chain would
 // chain to via prev_sha256 (see roles.VerifyChain).
@@ -499,9 +486,9 @@ func (l Lifecycle) Create(projectID, workflowID string, g goal.Goal, profileName
 		}
 		roleChainHead = roleChainDigest(records)
 	}
-	digest, err := goalDigest(g)
+	digest, err := g.Digest()
 	if err != nil {
-		return State{}, fmt.Errorf("workflow lifecycle: create: %w", err)
+		return State{}, fmt.Errorf("workflow lifecycle: create: goal digest: %w", err)
 	}
 
 	loaded, err := l.log.Load(projectID, workflowID)
@@ -637,9 +624,9 @@ func (l Lifecycle) Verify(projectID, workflowID string) (State, error) {
 	if err := g.Validate(); err != nil {
 		return State{}, fmt.Errorf("workflow lifecycle: verify: invalid goal: %w", err)
 	}
-	digest, err := goalDigest(g)
+	digest, err := g.Digest()
 	if err != nil {
-		return State{}, fmt.Errorf("workflow lifecycle: verify: %w", err)
+		return State{}, fmt.Errorf("workflow lifecycle: verify: goal digest: %w", err)
 	}
 	if digest != state.GoalDigest {
 		return State{}, fmt.Errorf("%w: goal %q digest is now %s, recorded %s", ErrGoalDigestMismatch, state.GoalID, digest, state.GoalDigest)

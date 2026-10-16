@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/jsonstrict"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/sha256hex"
 )
 
 // Goal is the versioned declarative intent contract. Its field order is also
@@ -129,6 +130,19 @@ func (g Goal) Marshal() ([]byte, error) {
 		return nil, fmt.Errorf("marshal goal: %w", err)
 	}
 	return append(data, '\n'), nil
+}
+
+// Digest returns the lowercase hex SHA-256 of g's canonical Marshal encoding.
+// Marshal validates g and produces a deterministic, field-ordered encoding, so
+// the digest changes if and only if g's contents change, whatever bytes the
+// Goal was parsed from. A Goal that Marshal refuses has no digest, and the
+// error is Marshal's own.
+func (g Goal) Digest() (string, error) {
+	data, err := g.Marshal()
+	if err != nil {
+		return "", err
+	}
+	return sha256hex.Sum(data), nil
 }
 
 func validateStringArray(name string, values []string, minItems int) error {
