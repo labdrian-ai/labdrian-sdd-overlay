@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/filelock"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/overlaytest"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/sddregistry"
 	sddfs "github.com/labdrian-ai/labdrian-sdd-overlay/engine/sddregistry/fsstore"
 )
@@ -352,11 +353,7 @@ func TestRegistryRepairSDDLetsGoOfTheLockWhenItEnds(t *testing.T) {
 // that builds the command line of the verb.
 func scriptCallOfRepairSDD(t *testing.T) string {
 	t.Helper()
-	script, err := os.ReadFile(filepath.Join("..", "..", "bin", "labdrian-overlay"))
-	if err != nil {
-		t.Fatalf("read the overlay script: %v", err)
-	}
-	text := string(script)
+	text := overlaytest.ScriptText(t)
 	start := strings.Index(text, "\nrepair_sdd_registry_file() {\n")
 	if start < 0 {
 		t.Fatal("the overlay script has no repair_sdd_registry_file")

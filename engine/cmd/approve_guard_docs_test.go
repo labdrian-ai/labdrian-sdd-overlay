@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/overlaytest"
 )
 
 // normalizeDocText collapses white space and drops backticks, so a wrapped or
@@ -72,15 +74,12 @@ func TestInstallHooksSummariesNameEveryFamilyWithoutCounting(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read README.md: %v", err)
 	}
-	overlay, err := os.ReadFile(filepath.Join("..", "..", "bin", "labdrian-overlay"))
-	if err != nil {
-		t.Fatalf("read bin/labdrian-overlay: %v", err)
-	}
+	overlay := overlaytest.ScriptText(t)
 	sections := map[string]string{
 		"README install-hooks":    docSection(t, string(readme), "overlay install-hooks\n", "overlay uninstall-hooks\n"),
 		"README uninstall-hooks":  docSection(t, string(readme), "overlay uninstall-hooks\n", "overlay status-hooks\n"),
-		"install-hooks summary":   docSection(t, string(overlay), `echo "install-hooks complete."`, "Run 'labdrian doctor'"),
-		"uninstall-hooks summary": docSection(t, string(overlay), `echo "uninstall-hooks complete."`, "Run 'labdrian doctor'"),
+		"install-hooks summary":   docSection(t, overlay, `echo "install-hooks complete."`, "Run 'labdrian doctor'"),
+		"uninstall-hooks summary": docSection(t, overlay, `echo "uninstall-hooks complete."`, "Run 'labdrian doctor'"),
 	}
 	for name, text := range sections {
 		for _, stale := range []string{"three hook families", "five entries", "five hook entries", "two pairs + SessionEnd"} {
@@ -100,7 +99,7 @@ func TestInstallHooksSummariesNameEveryFamilyWithoutCounting(t *testing.T) {
 		}
 	}
 	// The wrapper's own --help text says the same of install-hooks.
-	help := docSection(t, string(overlay), "  install-hooks                    Build + deploy", "  uninstall-hooks ")
+	help := docSection(t, overlay, "  install-hooks                    Build + deploy", "  uninstall-hooks ")
 	if !strings.Contains(help, "approve guard") || !strings.Contains(help, "restart Claude Code") {
 		t.Errorf("--help for install-hooks does not name the approve guard and the restart: %q", help)
 	}

@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/overlaytest"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills/app"
 )
@@ -170,11 +171,7 @@ func TestManifestRoutesIsReachedThroughTheProgramOverTheFilesOfTheMachine(t *tes
 // manifest_routes_load, the one function of the script that builds its command line.
 func scriptFlagsOfManifestRoutes(t *testing.T) []string {
 	t.Helper()
-	script, err := os.ReadFile(filepath.Join("..", "..", "bin", "labdrian-overlay"))
-	if err != nil {
-		t.Fatalf("read the overlay script: %v", err)
-	}
-	text := string(script)
+	text := overlaytest.ScriptText(t)
 	start := strings.Index(text, "\nmanifest_routes_load() {\n")
 	if start < 0 {
 		t.Fatal("the overlay script has no manifest_routes_load")

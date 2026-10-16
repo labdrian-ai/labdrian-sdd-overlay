@@ -23,8 +23,11 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"sort"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/overlaytest"
 )
 
 // statusCallInScript finds the arguments of each call of the engine's status verb in the overlay
@@ -33,12 +36,8 @@ import (
 var statusCallInScript = regexp.MustCompile(`"\$ENGINE_BINARY" status((?: [^\s)|]+)*)`)
 
 func TestEveryCallerOfStatusInTheRepositoryPassesOnlyWhatItAccepts(t *testing.T) {
-	script, err := os.ReadFile(filepath.Join("..", "..", "bin", "labdrian-overlay"))
-	if err != nil {
-		t.Fatalf("read the overlay script: %v", err)
-	}
 	var found []string
-	for _, m := range statusCallInScript.FindAllStringSubmatch(string(script), -1) {
+	for _, m := range statusCallInScript.FindAllStringSubmatch(overlaytest.ScriptText(t), -1) {
 		var words []string
 		for _, w := range strings.Fields(m[1]) {
 			if !strings.Contains(w, ">") { // 2>&1 is the script's, not an argument
@@ -47,7 +46,9 @@ func TestEveryCallerOfStatusInTheRepositoryPassesOnlyWhatItAccepts(t *testing.T)
 		}
 		found = append(found, strings.Join(words, " "))
 	}
-	// The calls the script makes, in the order it makes them: status-hooks, then doctor.
+	// The calls the script makes: status-hooks passes nothing and doctor the registry. Their order is the order
+	// of the modules that make them, which is nobody's business here.
+	sort.Strings(found)
 	want := []string{``, `--only registry --cwd "$dir"`}
 	if !reflect.DeepEqual(found, want) {
 		t.Fatalf("the overlay script calls the engine's status with %q, want %q: a caller was added or changed, so add it to this test (and to the ledger) and check that status accepts what it passes", found, want)
