@@ -205,6 +205,63 @@ func TestProvenanceUnresolvableSymbolicRefYieldsEmptyHead(t *testing.T) {
 	}
 }
 
+// TestProvenanceTakesOnlyAFullLowercaseObjectNameForHead pins the boundary of what the reader takes
+// for an object name wherever it reads one: a detached HEAD, a loose ref and a line of packed-refs.
+// 40 lowercase hex digits (SHA-1) or 64 (SHA-256) are a name; anything else leaves GitHead empty.
+func TestProvenanceTakesOnlyAFullLowercaseObjectNameForHead(t *testing.T) {
+	places := []struct {
+		name  string
+		write func(t *testing.T, gitDir, id string)
+	}{
+		{"a detached HEAD", func(t *testing.T, gitDir, id string) {
+			writeFixtureFile(t, filepath.Join(gitDir, "HEAD"), id+"\n")
+		}},
+		{"a loose ref", func(t *testing.T, gitDir, id string) {
+			writeFixtureFile(t, filepath.Join(gitDir, "HEAD"), "ref: refs/heads/main\n")
+			writeFixtureFile(t, filepath.Join(gitDir, "refs", "heads", "main"), id+"\n")
+		}},
+		{"packed-refs", func(t *testing.T, gitDir, id string) {
+			writeFixtureFile(t, filepath.Join(gitDir, "HEAD"), "ref: refs/heads/main\n")
+			writeFixtureFile(t, filepath.Join(gitDir, "packed-refs"), "# pack-refs with: peeled\n"+id+" refs/heads/main\n")
+		}},
+	}
+	ids := []struct {
+		name   string
+		id     string
+		accept bool
+	}{
+		{"40 lowercase", strings.Repeat("a1", 20), true},
+		{"64 lowercase", strings.Repeat("a1", 32), true},
+		{"39", strings.Repeat("a", 39), false},
+		{"41", strings.Repeat("a", 41), false},
+		{"63", strings.Repeat("a", 63), false},
+		{"65", strings.Repeat("a", 65), false},
+		{"40 uppercase", strings.Repeat("A", 40), false},
+		{"one non-hex among 40", strings.Repeat("a", 39) + "g", false},
+		{"an abbreviated name", "0123456", false},
+	}
+	for _, place := range places {
+		for _, tc := range ids {
+			t.Run(place.name+"/"+tc.name, func(t *testing.T) {
+				root := t.TempDir()
+				place.write(t, filepath.Join(root, ".git"), tc.id)
+
+				p := locator.Provenance(root)
+				if p.WorktreeRoot != root {
+					t.Fatalf("WorktreeRoot = %q, want %q", p.WorktreeRoot, root)
+				}
+				want := ""
+				if tc.accept {
+					want = tc.id
+				}
+				if p.GitHead != want {
+					t.Errorf("GitHead = %q, want %q", p.GitHead, want)
+				}
+			})
+		}
+	}
+}
+
 // TestProvenanceFollowsSymlinkedGitDirectory covers the decision
 // that a symlinked .git IS followed, matching git's own behavior: git
 // itself does not care whether .git is a plain directory or a symlink to

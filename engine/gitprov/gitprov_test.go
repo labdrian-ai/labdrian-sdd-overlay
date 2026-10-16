@@ -336,6 +336,52 @@ func TestObserveFailsClosedOnAmbiguousRepositories(t *testing.T) {
 	}
 }
 
+// TestObserveRecordsOnlyAFullLowercaseObjectNameAsHead pins the boundary of what Observe takes git's
+// answer for HEAD to be: 40 lowercase hex digits (SHA-1) or 64 (SHA-256), nothing before or after.
+// Anything else is refused, and the refusal names HEAD.
+func TestObserveRecordsOnlyAFullLowercaseObjectNameAsHead(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		head   string
+		accept bool
+	}{
+		{"40 lowercase", strings.Repeat("a1", 20), true},
+		{"64 lowercase", strings.Repeat("a1", 32), true},
+		{"39", strings.Repeat("a", 39), false},
+		{"41", strings.Repeat("a", 41), false},
+		{"63", strings.Repeat("a", 63), false},
+		{"65", strings.Repeat("a", 65), false},
+		{"40 uppercase", strings.Repeat("A", 40), false},
+		{"one uppercase among 40", strings.Repeat("a", 39) + "F", false},
+		{"one non-hex among 40", strings.Repeat("a", 39) + "g", false},
+		{"one non-hex among 64", strings.Repeat("a", 63) + "g", false},
+		{"40 and a space", strings.Repeat("a", 40) + " ", false},
+		{"an abbreviated name", "0123456", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			repo := newMainRepo(t)
+			repo.answers["rev-parse --verify HEAD^{commit}"] = tc.head + "\n"
+
+			got, err := repo.observer().Observe(repo.root)
+			if tc.accept {
+				if err != nil || got.Head != tc.head {
+					t.Fatalf("Observe = (%+v, %v), want Head %q", got, err, tc.head)
+				}
+				return
+			}
+			if err == nil {
+				t.Fatalf("Observe accepted %q as HEAD: %+v", tc.head, got)
+			}
+			if got != (Observation{}) {
+				t.Errorf("Observe returned %+v alongside the refusal", got)
+			}
+			if want := "is not a full lowercase object name"; !strings.Contains(err.Error(), want) {
+				t.Errorf("error %q does not say %q", err, want)
+			}
+		})
+	}
+}
+
 func TestObserveFailsClosedOnLinkedWorktreeMismatch(t *testing.T) {
 	cases := []struct {
 		name   string
