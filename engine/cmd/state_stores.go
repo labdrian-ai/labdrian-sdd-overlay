@@ -112,7 +112,7 @@ func newContainedSource() shaper.ContainedSource {
 // transaction stores through gitprov with the real git binary, asked in environ (the environment
 // of the process, which main hands over).
 func newReviewReceiptService(root string, environ []string) (*reviewreceipt.Service, error) {
-	store, err := receiptfs.New(root, gitprov.Observer{Run: gitprov.ExecRunner, Environ: environ})
+	store, err := receiptfs.New(root, gitprov.Observer{Run: gitprov.ExecRunner, Environ: environ, FS: gitprov.OSFS{}})
 	if err != nil {
 		return nil, err
 	}

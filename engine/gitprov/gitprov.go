@@ -20,11 +20,16 @@
 // Locate answers a narrower question with the same checks: which git directories
 // belong to the worktree that holds a directory, which may be any directory
 // inside the worktree, in a repository that may have no commit yet.
+//
+// Git is asked through a Runner and the layout of the worktree (what .git is, what a pointer
+// file says, where a path really leads) is read through an FS, both injected, so the
+// checks can be run without a git binary and without a disk.
 package gitprov
 
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -56,12 +61,39 @@ type Observation struct {
 // standard output. It is injected so tests never need a real git binary.
 type Runner func(dir string, env []string, args []string) ([]byte, error)
 
+// FS is the part of the file system the checks of Observe and Locate read: what .git is, what a
+// pointer file says, and where a path really leads. It is injected so a layout can be judged
+// without a disk.
+type FS interface {
+	Lstat(path string) (fs.FileInfo, error)
+	ReadFile(path string) ([]byte, error)
+	EvalSymlinks(path string) (string, error)
+}
+
+// OSFS is the file system of the machine.
+type OSFS struct{}
+
+func (OSFS) Lstat(path string) (fs.FileInfo, error)   { return os.Lstat(path) }
+func (OSFS) ReadFile(path string) ([]byte, error)     { return os.ReadFile(path) }
+func (OSFS) EvalSymlinks(path string) (string, error) { return filepath.EvalSymlinks(path) }
+
 // Observer observes worktree provenance through an injected Runner. Environ
 // is the ambient environment Observe inspects and scrubs before handing it to
-// Run; it is typically os.Environ().
+// Run; it is typically os.Environ(). FS is the file system the layout of the
+// worktree is read from; nil means the file system of the machine (OSFS), so
+// the zero value of the field is the production one.
 type Observer struct {
 	Run     Runner
 	Environ []string
+	FS      FS
+}
+
+// files is the file system the checks read.
+func (o Observer) files() FS {
+	if o.FS == nil {
+		return OSFS{}
+	}
+	return o.FS
 }
 
 // redirectingVars name environment variables that point git at a repository
@@ -87,13 +119,13 @@ var (
 // Observe observes root with the real git binary found on PATH and the
 // process environment. See Observer.Observe.
 func Observe(root string) (Observation, error) {
-	return Observer{Run: ExecRunner, Environ: os.Environ()}.Observe(root)
+	return Observer{Run: ExecRunner, Environ: os.Environ(), FS: OSFS{}}.Observe(root)
 }
 
 // Locate locates the worktree that holds dir with the real git binary found on
 // PATH and the process environment. See Observer.Locate.
 func Locate(dir string) (Observation, error) {
-	return Observer{Run: ExecRunner, Environ: os.Environ()}.Locate(dir)
+	return Observer{Run: ExecRunner, Environ: os.Environ(), FS: OSFS{}}.Locate(dir)
 }
 
 // ExecRunner is the production Runner: it executes the git binary found on
@@ -141,7 +173,7 @@ func (o Observer) Locate(dir string) (Observation, error) {
 	// runPath resolves the toplevel git reports (filepath.EvalSymlinks), as begin resolves
 	// a root given to Observe, so the toplevel is judged where it really is, and judge's
 	// consistency check compares two resolved paths.
-	toplevel, err := runPath(o.runner(resolvedDir, env), argvToplevel, "")
+	toplevel, err := runPath(o.files(), o.runner(resolvedDir, env), argvToplevel, "")
 	if err != nil {
 		return Observation{}, err
 	}
@@ -158,7 +190,7 @@ func (o Observer) begin(what, dir string) (resolved string, env []string, err er
 	if dir == "" || !filepath.IsAbs(dir) {
 		return "", nil, fmt.Errorf("%s %q is not an absolute path", what, dir)
 	}
-	resolved, err = filepath.EvalSymlinks(dir)
+	resolved, err = o.files().EvalSymlinks(dir)
 	if err != nil {
 		return "", nil, fmt.Errorf("resolve %s %q: %w", what, dir, err)
 	}
@@ -200,6 +232,7 @@ const (
 // symlink-free, and env is the scrubbed environment git is run in. It applies every check
 // there is to a worktree; head says whether HEAD is one of them.
 func (o Observer) judge(resolvedRoot string, env []string, head headPolicy) (Observation, error) {
+	fsys := o.files()
 	run := o.runner(resolvedRoot, env)
 
 	isBare, err := run(argvIsBare)
@@ -217,33 +250,33 @@ func (o Observer) judge(resolvedRoot string, env []string, head headPolicy) (Obs
 		return Observation{}, fmt.Errorf("%s is not inside a work tree (reported %q)", resolvedRoot, inWorkTree)
 	}
 
-	toplevel, err := runPath(run, argvToplevel, "")
+	toplevel, err := runPath(fsys, run, argvToplevel, "")
 	if err != nil {
 		return Observation{}, err
 	}
 	if toplevel != resolvedRoot {
 		return Observation{}, fmt.Errorf("root %s is not the worktree toplevel %s", resolvedRoot, toplevel)
 	}
-	gitDir, err := runPath(run, argvGitDir, "")
+	gitDir, err := runPath(fsys, run, argvGitDir, "")
 	if err != nil {
 		return Observation{}, err
 	}
-	commonDir, err := runPath(run, argvCommonDir, resolvedRoot)
+	commonDir, err := runPath(fsys, run, argvCommonDir, resolvedRoot)
 	if err != nil {
 		return Observation{}, err
 	}
-	dotGitIsFile, err := checkDotGit(toplevel, gitDir)
+	dotGitIsFile, err := checkDotGit(fsys, toplevel, gitDir)
 	if err != nil {
 		return Observation{}, err
 	}
 	linked := gitDir != commonDir
 	switch {
 	case linked:
-		if err := checkLinked(toplevel, gitDir, commonDir); err != nil {
+		if err := checkLinked(fsys, toplevel, gitDir, commonDir); err != nil {
 			return Observation{}, err
 		}
 	case dotGitIsFile:
-		if err := checkCoreWorktree(run, toplevel, gitDir); err != nil {
+		if err := checkCoreWorktree(fsys, run, toplevel, gitDir); err != nil {
 			return Observation{}, err
 		}
 	}
@@ -297,7 +330,7 @@ func singleLine(label string, out []byte) (string, error) {
 // runPath runs argv and resolves its single-line output to an absolute,
 // symlink-free path. When base is empty the output must already be absolute;
 // otherwise a relative output is joined to base.
-func runPath(run func([]string) (string, error), argv []string, base string) (string, error) {
+func runPath(fsys FS, run func([]string) (string, error), argv []string, base string) (string, error) {
 	p, err := run(argv)
 	if err != nil {
 		return "", err
@@ -308,7 +341,7 @@ func runPath(run func([]string) (string, error), argv []string, base string) (st
 		}
 		p = filepath.Join(base, p)
 	}
-	resolved, err := filepath.EvalSymlinks(p)
+	resolved, err := fsys.EvalSymlinks(p)
 	if err != nil {
 		return "", fmt.Errorf("git %s: resolve %q: %w", strings.Join(argv, " "), p, err)
 	}
@@ -320,9 +353,9 @@ func runPath(run func([]string) (string, error), argv []string, base string) (st
 // .git is a file, because a gitfile only proves where it points, not that
 // the git dir it names belongs to this toplevel: the caller must still
 // establish that from the git dir's side.
-func checkDotGit(toplevel, gitDir string) (bool, error) {
+func checkDotGit(fsys FS, toplevel, gitDir string) (bool, error) {
 	dotGit := filepath.Join(toplevel, ".git")
-	info, err := os.Lstat(dotGit)
+	info, err := fsys.Lstat(dotGit)
 	if err != nil {
 		return false, fmt.Errorf("inspect %s: %w", dotGit, err)
 	}
@@ -333,14 +366,14 @@ func checkDotGit(toplevel, gitDir string) (bool, error) {
 		target = dotGit
 	case info.Mode().IsRegular():
 		isFile = true
-		target, err = readPointer(dotGit, "gitdir: ", toplevel)
+		target, err = readPointer(fsys, dotGit, "gitdir: ", toplevel)
 		if err != nil {
 			return false, err
 		}
 	default:
 		return false, fmt.Errorf("%s is neither a directory nor a regular file", dotGit)
 	}
-	resolved, err := filepath.EvalSymlinks(target)
+	resolved, err := fsys.EvalSymlinks(target)
 	if err != nil {
 		return false, fmt.Errorf("resolve %s target %q: %w", dotGit, target, err)
 	}
@@ -356,7 +389,7 @@ func checkDotGit(toplevel, gitDir string) (bool, error) {
 // worktree of the git dir it names, so an unset, unreadable, or mismatched
 // core.worktree is refused. A relative value is resolved against gitDir, as
 // git does.
-func checkCoreWorktree(run func([]string) (string, error), toplevel, gitDir string) error {
+func checkCoreWorktree(fsys FS, run func([]string) (string, error), toplevel, gitDir string) error {
 	dotGit := filepath.Join(toplevel, ".git")
 	value, err := run(argvCoreWorktree)
 	if err != nil {
@@ -365,7 +398,7 @@ func checkCoreWorktree(run func([]string) (string, error), toplevel, gitDir stri
 	if !filepath.IsAbs(value) {
 		value = filepath.Join(gitDir, value)
 	}
-	resolved, err := filepath.EvalSymlinks(value)
+	resolved, err := fsys.EvalSymlinks(value)
 	if err != nil {
 		return fmt.Errorf("resolve core.worktree %q of %s: %w", value, gitDir, err)
 	}
@@ -377,16 +410,16 @@ func checkCoreWorktree(run func([]string) (string, error), toplevel, gitDir stri
 
 // checkLinked requires a linked worktree's git dir to sit directly under
 // commonDir/worktrees and its gitdir back-pointer to name toplevel/.git.
-func checkLinked(toplevel, gitDir, commonDir string) error {
+func checkLinked(fsys FS, toplevel, gitDir, commonDir string) error {
 	if filepath.Dir(gitDir) != filepath.Join(commonDir, "worktrees") {
 		return fmt.Errorf("linked git dir %s is not under %s", gitDir, filepath.Join(commonDir, "worktrees"))
 	}
 	backFile := filepath.Join(gitDir, "gitdir")
-	back, err := readPointer(backFile, "", gitDir)
+	back, err := readPointer(fsys, backFile, "", gitDir)
 	if err != nil {
 		return err
 	}
-	resolvedBack, err := filepath.EvalSymlinks(back)
+	resolvedBack, err := fsys.EvalSymlinks(back)
 	if err != nil {
 		return fmt.Errorf("resolve %s target %q: %w", backFile, back, err)
 	}
@@ -400,15 +433,15 @@ func checkLinked(toplevel, gitDir, commonDir string) error {
 // resolves a relative target against base. It refuses anything that is not a
 // regular file before opening it, so a symlink or a FIFO with no writer
 // cannot make it block forever instead of failing closed.
-func readPointer(path, prefix, base string) (string, error) {
-	info, err := os.Lstat(path)
+func readPointer(fsys FS, path, prefix, base string) (string, error) {
+	info, err := fsys.Lstat(path)
 	if err != nil {
 		return "", fmt.Errorf("inspect %s: %w", path, err)
 	}
 	if !info.Mode().IsRegular() {
 		return "", fmt.Errorf("%s is not a regular file", path)
 	}
-	data, err := os.ReadFile(path)
+	data, err := fsys.ReadFile(path)
 	if err != nil {
 		return "", fmt.Errorf("read %s: %w", path, err)
 	}
