@@ -7,6 +7,8 @@ import (
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/capability/presence"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/synctrigger"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/synctrigger/osproc"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflowprofile"
 )
@@ -84,6 +86,14 @@ type deps struct {
 	// (profiles); a test that wants the catalog to fail replaces it.
 	profileCatalog func() workflow.ProfileCatalog
 
+	// now is the clock of the verbs that date what they write (today the log of sync-trigger). Nil,
+	// as in the program, is the clock of the machine. syncRunner starts the programs sync-trigger
+	// needs, the detached child and the sync; nil, as in the program, is the operating system's
+	// (synctrigger/osproc), and a test that wants to see what the verb decides without a process
+	// gives it one that records.
+	now        func() time.Time
+	syncRunner synctrigger.Runner
+
 	// skillsLockWait is how long a skills verb waits for a taken lock before it gives up with
 	// exit 2. Zero means filelock.DefaultWait (2 s), the bound the workflow binding store uses.
 	skillsLockWait time.Duration
@@ -148,6 +158,22 @@ func (d deps) dependencyProber() workflow.DependencyProber {
 	}
 	home, path := runtimeProbeEnv(d)
 	return presence.Prober{Home: home, Path: path, ProbeFS: d.probeFS}
+}
+
+// clock is the clock the verbs read: the deps' own, or the machine's.
+func (d deps) clock() func() time.Time {
+	if d.now != nil {
+		return d.now
+	}
+	return time.Now
+}
+
+// syncTriggerRunner is the Runner of sync-trigger: the deps' own, or the operating system's.
+func (d deps) syncTriggerRunner() synctrigger.Runner {
+	if d.syncRunner != nil {
+		return d.syncRunner
+	}
+	return osproc.Runner{}
 }
 
 // probeBound is how long one probe run may take: the deps' own timeout when it is positive, and

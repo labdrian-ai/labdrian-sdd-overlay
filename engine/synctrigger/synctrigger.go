@@ -6,20 +6,22 @@
 // are contract-mapped so the triggering host command (a Claude Code hook,
 // or the archive closure-feedback step) never sees a non-zero exit or a
 // blocking call.
+//
+// The trigger starts no program and reads no clock itself. Programs are
+// started by the Runner it is given (engine/synctrigger/osproc is the one
+// for the operating system), and the time of a log line and the length of a
+// sync are read from the clock it is given, so what the trigger decides
+// can be seen without a process or a wait.
 package synctrigger
 
 import (
 	"bytes"
-	"context"
-	"errors"
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 )
 
@@ -27,9 +29,10 @@ import (
 // argv and spawn the detached child; RunChild uses it to locate and invoke
 // the longterm-mem binary. Callers (engine/cmd) are responsible for
 // resolving defaults that depend on the environment (e.g. the state
-// directory) before constructing Options -- this package accepts what it
-// is given and does not consult HOME itself, which keeps it testable
-// without environment coupling.
+// directory) and for handing in the clock and the Runner -- this package
+// accepts what it is given and does not consult HOME, the clock or the
+// process table itself, which keeps it testable without environment
+// coupling.
 type Options struct {
 	// Event is "session-end" or "archive".
 	Event string
@@ -45,7 +48,7 @@ type Options struct {
 	// StateDir/bin/longterm-mem.
 	Binary string
 	// Self overrides the path Run re-execs as the detached child. Empty
-	// means os.Executable().
+	// means the path Runner.Executable gives.
 	Self string
 	// ChildArgv gives the arguments Run starts Self with, from the event, the
 	// absolute cwd and the state directory Run settled on. The command line
@@ -59,6 +62,14 @@ type Options struct {
 	// Stderr is where Run reports best-effort pre-log errors. Nil means
 	// os.Stderr.
 	Stderr io.Writer
+	// Now is the clock: it dates every log line and times the sync. Nil
+	// means a clock that always says the zero time, so that a trigger
+	// started without one still never reads the machine's.
+	Now func() time.Time
+	// Runner starts the programs. Nil means none can be started: Run and
+	// RunChild report it as error:spawn (error:self when Self is empty and
+	// Run has to ask for its own path).
+	Runner Runner
 }
 
 // Outcome is the classified result of one child sync attempt.
@@ -123,6 +134,22 @@ func (o Options) stderr() io.Writer {
 	return o.Stderr
 }
 
+// now reads the clock the trigger was given.
+func (o Options) now() time.Time {
+	if o.Now == nil {
+		return time.Time{}
+	}
+	return o.Now()
+}
+
+// runner is the Runner the trigger was given, or the one that fails every call.
+func (o Options) runner() Runner {
+	if o.Runner == nil {
+		return noRunner{}
+	}
+	return o.Runner
+}
+
 // reportUsage says on stderr that the trigger was started with an event or a cwd it cannot use,
 // naming both as the caller gave them. It is the one place the line is written, for Run and for
 // RunChild, so the two cannot say it differently.
@@ -153,8 +180,9 @@ func absoluteCwd(cwd string) string {
 
 // Run is the parent entrypoint. It validates its own argv, opens the log,
 // locates itself, and detaches a re-exec of itself, with the arguments
-// Options.ChildArgv gives (the child that runs RunChild), under a new
-// session (Setsid) so it survives the caller's process-group teardown.
+// Options.ChildArgv gives (the child that runs RunChild), through the Runner,
+// which starts it in a session of its own so that it survives the caller's
+// process-group teardown.
 // It always returns 0: every failure in this path -- bad argv, an
 // unwritable log, a missing/rebuilding self, a spawn failure -- is
 // reported best-effort and swallowed, because the triggering host command
@@ -176,35 +204,28 @@ func Run(o Options) int {
 	}
 	defer logFile.Close()
 
+	fail := func(kind string) { appendLog(logFile, o.now(), o.Event, o.Cwd, kind, 0, 0) }
+	runner := o.runner()
+
 	self := o.Self
 	if self == "" {
-		self, err = os.Executable()
+		self, err = runner.Executable()
 		if err != nil {
 			reportFailure(stderr, kindSelf, err)
-			appendLog(logFile, o.Event, o.Cwd, kindSelf, 0, 0)
+			fail(kindSelf)
 			return 0
 		}
 	}
 
 	if o.ChildArgv == nil {
 		reportFailure(stderr, kindSpawn, "no command line was given for the child")
-		appendLog(logFile, o.Event, o.Cwd, kindSpawn, 0, 0)
+		fail(kindSpawn)
 		return 0
 	}
-	cmd := exec.Command(self, o.ChildArgv(o.Event, o.Cwd, o.StateDir)...)
-	if devnull, openErr := os.Open(os.DevNull); openErr == nil {
-		cmd.Stdin = devnull
-	}
-	cmd.Stdout = logFile
-	cmd.Stderr = logFile
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
-
-	if err := cmd.Start(); err != nil {
+	if err := runner.Detach(self, o.ChildArgv(o.Event, o.Cwd, o.StateDir), logFile); err != nil {
 		reportFailure(stderr, kindSpawn, err)
-		appendLog(logFile, o.Event, o.Cwd, kindSpawn, 0, 0)
-		return 0
+		fail(kindSpawn)
 	}
-
 	return 0
 }
 
@@ -214,24 +235,25 @@ func Run(o Options) int {
 // starts -- never by Run itself -- so it always runs in its own process,
 // already free of the caller's process group.
 func RunChild(o Options) Outcome {
-	start := time.Now()
+	start := o.now()
 
 	logFile, logErr := openLog(o.StateDir)
 	if logErr == nil {
 		defer logFile.Close()
 	}
 
-	logOutcome := func(kind string, exitCode int, dur time.Duration) Outcome {
-		outcome := Outcome{Kind: kind, Exit: exitCode, Dur: dur}
+	finish := func(kind string, exitCode int) Outcome {
+		end := o.now()
+		outcome := Outcome{Kind: kind, Exit: exitCode, Dur: end.Sub(start)}
 		if logFile != nil {
-			appendLog(logFile, o.Event, o.Cwd, outcome.Kind, outcome.Exit, outcome.Dur)
+			appendLog(logFile, end, o.Event, o.Cwd, outcome.Kind, outcome.Exit, outcome.Dur)
 		}
 		return outcome
 	}
 
 	if !validArgs(o.Event, o.Cwd) {
 		reportUsage(o.stderr(), o.Event, o.Cwd)
-		return logOutcome(kindUsage, 0, time.Since(start))
+		return finish(kindUsage, 0)
 	}
 
 	binary := o.Binary
@@ -241,10 +263,10 @@ func RunChild(o Options) Outcome {
 
 	info, statErr := os.Stat(binary)
 	if statErr != nil || info.IsDir() {
-		return logOutcome(kindNoBinary, 0, time.Since(start))
+		return finish(kindNoBinary, 0)
 	}
 	if info.Mode()&0o111 == 0 {
-		return logOutcome(kindNotExecutable, 0, time.Since(start))
+		return finish(kindNotExecutable, 0)
 	}
 
 	timeout := o.Timeout
@@ -252,41 +274,23 @@ func RunChild(o Options) Outcome {
 		timeout = defaultTimeout
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-
-	cmd := exec.CommandContext(ctx, binary, syncCommand)
-	cmd.Dir = o.Cwd
 	var stderrBuf bytes.Buffer
+	var stderr io.Writer = &stderrBuf
 	if logFile != nil {
-		cmd.Stderr = io.MultiWriter(&stderrBuf, logFile)
-	} else {
-		cmd.Stderr = &stderrBuf
+		stderr = io.MultiWriter(&stderrBuf, logFile)
 	}
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	cmd.Cancel = func() error {
-		if cmd.Process == nil {
-			return nil
-		}
-		return syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
-	}
-	cmd.WaitDelay = 5 * time.Second
 
-	runErr := cmd.Run()
-	dur := time.Since(start)
-
-	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-		return logOutcome(kindTimeout, 0, dur)
+	result, err := o.runner().Run(binary, []string{syncCommand}, o.Cwd, timeout, stderr)
+	switch {
+	case result.TimedOut:
+		return finish(kindTimeout, 0)
+	case err != nil:
+		return finish(kindSpawn, 0)
+	case result.Exit == 0:
+		return finish(kindOK, 0)
+	default:
+		return finish(classify(result.Exit, stderrBuf.String()), result.Exit)
 	}
-	if runErr == nil {
-		return logOutcome(kindOK, 0, dur)
-	}
-	var exitErr *exec.ExitError
-	if errors.As(runErr, &exitErr) {
-		exitCode := exitErr.ExitCode()
-		return logOutcome(classify(exitCode, stderrBuf.String()), exitCode, dur)
-	}
-	return logOutcome(kindSpawn, 0, dur)
 }
 
 // classify maps a longterm-mem sync exit code (and, for the ambiguous
@@ -323,8 +327,8 @@ func openLog(stateDir string) (*os.File, error) {
 	return os.OpenFile(filepath.Join(dir, logFileName), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 }
 
-// appendLog writes one summary line for a firing of the runner.
-func appendLog(w io.Writer, event, cwd, outcome string, exitCode int, dur time.Duration) {
+// appendLog writes one summary line for a firing of the runner, dated at.
+func appendLog(w io.Writer, at time.Time, event, cwd, outcome string, exitCode int, dur time.Duration) {
 	fmt.Fprintf(w, "%s event=%s cwd=%s outcome=%s exit=%d duration=%s\n",
-		time.Now().UTC().Format(time.RFC3339), event, cwd, outcome, exitCode, dur.Round(time.Millisecond))
+		at.UTC().Format(time.RFC3339), event, cwd, outcome, exitCode, dur.Round(time.Millisecond))
 }

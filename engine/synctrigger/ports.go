@@ -1,6 +1,7 @@
 package synctrigger
 
 import (
+	"errors"
 	"io"
 	"os"
 	"time"
@@ -35,4 +36,18 @@ type Result struct {
 	// TimedOut says that the program was killed because it did not end in time. Exit means
 	// nothing then.
 	TimedOut bool
+}
+
+// errNoRunner is what every call says when the trigger was started without a Runner.
+var errNoRunner = errors.New("no runner was given")
+
+// noRunner is the Runner of a trigger that was given none: a wiring mistake that the trigger,
+// which must never fail its caller, reports in its log and on stderr like any other failure to
+// start something, instead of failing on a nil.
+type noRunner struct{}
+
+func (noRunner) Executable() (string, error)             { return "", errNoRunner }
+func (noRunner) Detach(string, []string, *os.File) error { return errNoRunner }
+func (noRunner) Run(string, []string, string, time.Duration, io.Writer) (Result, error) {
+	return Result{}, errNoRunner
 }
