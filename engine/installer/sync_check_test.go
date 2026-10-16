@@ -3,9 +3,9 @@ package installer_test
 // TC-SYNC-CHECK: git-fixture integration tests for the REPO_BEHIND_ORIGIN
 // verdict field in `bin/labdrian-overlay cmd_sync_check` (spec R-001..R-004).
 //
-// These tests reuse the setupSandboxOverlay/runOverlay pattern from
-// route_test.go and extend it with a bare "origin" remote repo whose main
-// branch can be advanced independently, so tests can assert both the
+// These tests reuse setupSandboxOverlay (overlay_sandbox_test.go) and
+// overlaytest.Combined, and extend them with a bare "origin" remote repo whose
+// main branch can be advanced independently, so tests can assert both the
 // cached-ref default path (no live fetch) and the --check-origin/--fetch
 // live-fetch path.
 
