@@ -281,15 +281,19 @@ func RunChild(o Options) Outcome {
 	}
 
 	result, err := o.runner().Run(binary, []string{syncCommand}, o.Cwd, timeout, stderr)
+	// What the Result says the program did comes before the error, which is how it always was: a
+	// program killed at its time is a timeout, whatever it reported as it was stopped, and one
+	// that ended with an exit code is classified by it (an *exec.ExitError was never a failure to
+	// start). Only an error with nothing the program did is a failure to run it.
 	switch {
 	case result.TimedOut:
 		return finish(kindTimeout, 0)
+	case result.Exit != 0:
+		return finish(classify(result.Exit, stderrBuf.String()), result.Exit)
 	case err != nil:
 		return finish(kindSpawn, 0)
-	case result.Exit == 0:
-		return finish(kindOK, 0)
 	default:
-		return finish(classify(result.Exit, stderrBuf.String()), result.Exit)
+		return finish(kindOK, 0)
 	}
 }
 

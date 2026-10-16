@@ -24,8 +24,12 @@ type Runner interface {
 
 	// Run starts program with args in dir and waits for it, with what it prints on its standard
 	// error copied to stderr. When it has not ended after timeout, it and everything it started
-	// are killed and the Result says TimedOut. A program that ended is a Result, whatever its exit
-	// code; an error means it could not be run to an end.
+	// are killed and the Result says TimedOut. A program that ended is a Result with a nil error,
+	// whatever its exit code; an error means it could not be run to an end, and then the Result
+	// is the zero one. A Runner that hands back both is read by what its Result says the program
+	// did (a timeout, a non-zero exit) before the error, as an *exec.ExitError always was: the
+	// error is a failure to run only when the Result says the program did nothing. osproc never
+	// returns both.
 	Run(program string, args []string, dir string, timeout time.Duration, stderr io.Writer) (Result, error)
 }
 

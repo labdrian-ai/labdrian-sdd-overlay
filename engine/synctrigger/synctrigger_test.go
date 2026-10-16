@@ -191,6 +191,13 @@ func TestRunChild_WritesOneLineForEveryOutcomeWithTheClockItWasGiven(t *testing.
 		{"killed at the timeout", &fakeRunner{result: Result{TimedOut: true}}, Outcome{Kind: "timeout", Exit: 0, Dur: step}},
 		{"killed at the timeout, whatever it said while it was stopped", &fakeRunner{result: Result{TimedOut: true, Exit: 9}, runErr: errors.New("signal: killed"), prints: notProject}, Outcome{Kind: "timeout", Exit: 0, Dur: step}},
 		{"could not be run", &fakeRunner{runErr: errors.New("fork/exec: resource temporarily unavailable")}, Outcome{Kind: "error:spawn", Exit: 0, Dur: step}},
+		// A Runner may say that the program ended and also hand back an error (an adapter that
+		// wraps what the machine said): the exit is what the program did, as an *exec.ExitError
+		// always was, and the error does not take it away. osproc never returns both.
+		{"exit 4 with an error alongside", &fakeRunner{result: Result{Exit: 4}, runErr: errors.New("exit status 4")}, Outcome{Kind: "failure:engram-unavailable", Exit: 4, Dur: step}},
+		{"exit 2 with the words for no project and an error alongside", &fakeRunner{result: Result{Exit: 2}, runErr: errors.New("exit status 2"), prints: notProject}, Outcome{Kind: "skip:no-project", Exit: 2, Dur: step}},
+		{"exit 1 with an error alongside", &fakeRunner{result: Result{Exit: 1}, runErr: errors.New("exit status 1")}, Outcome{Kind: "failure:exit-1", Exit: 1, Dur: step}},
+		{"exit 0 with an error alongside is no exit at all", &fakeRunner{result: Result{Exit: 0}, runErr: errors.New("wait: no child")}, Outcome{Kind: "error:spawn", Exit: 0, Dur: step}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			o, stateDir := child(t, tc.runner)
