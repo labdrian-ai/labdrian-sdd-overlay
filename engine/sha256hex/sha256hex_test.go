@@ -68,7 +68,7 @@ func TestIsValid(t *testing.T) {
 		{"trailing newline in place of the last digit", strings.Repeat("a", 63) + "\n", false},
 		{"leading space", " " + strings.Repeat("a", 63), false},
 		{"0x prefix", "0x" + strings.Repeat("a", 62), false},
-		{"a multi-byte character that makes 64 bytes", strings.Repeat("a", 62) + "é", false},
+		{"a multi-byte character that makes 64 bytes", strings.Repeat("a", 62) + string(rune(0xE9)), false},
 		{"a NUL byte", strings.Repeat("a", 63) + "\x00", false},
 		{"a git object name of 40 digits", strings.Repeat("a", 40), false},
 	} {
