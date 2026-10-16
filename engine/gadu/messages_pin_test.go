@@ -52,6 +52,12 @@ func TestCheckSaysWhichArtifactsAreStaleAndWhichCannotBeReadAndPassesTheOthers(t
 	if err := os.Mkdir(unreadable, 0o755); err != nil {
 		t.Fatal(err)
 	}
+	// What the machine says of reading a directory is its own words, and differs between systems.
+	// Check says it after its own, so the expectation asks the machine the same question.
+	_, readErr := os.ReadFile(unreadable)
+	if readErr == nil {
+		t.Fatal("reading a directory as a file succeeded, so the case does not make an unreadable file")
+	}
 
 	err := gadu.Check(root)
 
@@ -65,7 +71,7 @@ func TestCheckSaysWhichArtifactsAreStaleAndWhichCannotBeReadAndPassesTheOthers(t
 	if want := "  opencode/agents/GADU.md: stale — committed content diverges from generator output (" + regenerate + ")"; lines[1] != want {
 		t.Errorf("first problem = %q, want %q", lines[1], want)
 	}
-	if want := "  pi/agents/GADU.md: cannot read committed file: read " + unreadable + ": is a directory"; lines[2] != want {
+	if want := "  pi/agents/GADU.md: cannot read committed file: " + readErr.Error(); lines[2] != want {
 		t.Errorf("second problem = %q, want %q", lines[2], want)
 	}
 }
@@ -78,9 +84,17 @@ func TestGenerateSaysWhichArtifactCouldNotBeWrittenAndWhy(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// The words of the failure to make a directory under a file are the machine's, and differ
+	// between systems; the generator says them after its own, so the expectation asks the machine
+	// the same question (the directory of the first artifact) and keeps the generator's words.
+	mkdirErr := os.MkdirAll(blocker, 0o755)
+	if mkdirErr == nil {
+		t.Fatal("making a directory where a file is succeeded, so the case does not make a failure")
+	}
+
 	err := gadu.Generate(root)
 
-	want := "writing agents/GADU.md: creating parent dir for " + filepath.Join(blocker, "GADU.md") + ": mkdir " + blocker + ": not a directory"
+	want := "writing agents/GADU.md: creating parent dir for " + filepath.Join(blocker, "GADU.md") + ": " + mkdirErr.Error()
 	if err == nil || err.Error() != want {
 		t.Errorf("Generate error = %v\nwant\n%s", err, want)
 	}
