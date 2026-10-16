@@ -80,11 +80,16 @@ func Cleanup() {
 	}
 }
 
+// Path is where the script looks for the engine in the given home.
+func Path(home string) string {
+	return filepath.Join(home, filepath.FromSlash(installedDir), installedName)
+}
+
 // Provision puts the engine where the script looks for it in the given home. A home that has it
 // keeps it: the script may be running it, and a file that is being run cannot be written.
 func Provision(t testing.TB, home string) {
 	t.Helper()
-	dst := filepath.Join(home, filepath.FromSlash(installedDir), installedName)
+	dst := Path(home)
 	if _, err := os.Stat(dst); err == nil {
 		return
 	}

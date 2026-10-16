@@ -16,6 +16,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/overlaytest"
 )
 
 // pinManifest is the manifest of the full world.
@@ -114,14 +116,14 @@ func TestRoutingPins_StatusAndSyncCheckTellEachKindOfDrift(t *testing.T) {
 	// A customization on main that the live copy does not have yet: upstream and live agree.
 	w.commitOnMain("main: customize skill-a", map[string]string{"skills/skill-a/SKILL.md": "# skill-a customized\n"})
 	// A live copy that is neither main's nor upstream's.
-	w.write(w.home, ".claude/skills/shared/helper.md", "# helper edited in place\n")
+	overlaytest.WriteFile(w.t, w.home, ".claude/skills/shared/helper.md", "# helper edited in place\n")
 	// A live copy that is gone.
 	if err := os.Remove(filepath.Join(w.home, ".claude", "agents", "claude-only.md")); err != nil {
 		t.Fatal(err)
 	}
 	// A file only main has, edited in place.
-	w.write(w.home, ".claude/skills/late/SKILL.md", "# late edited in place\n")
-	w.write(w.home, ".config/opencode/agents/GADU.md", "# GADU opencode edited in place\n")
+	overlaytest.WriteFile(w.t, w.home, ".claude/skills/late/SKILL.md", "# late edited in place\n")
+	overlaytest.WriteFile(w.t, w.home, ".config/opencode/agents/GADU.md", "# GADU opencode edited in place\n")
 	for _, target := range pinCopyTargets {
 		pin(t, "status-drift/"+target, pinRunText(w.run("status", "--target", target)))
 		pin(t, "sync-check-drift/"+target, pinRunText(w.run("sync-check", "--target", target)))

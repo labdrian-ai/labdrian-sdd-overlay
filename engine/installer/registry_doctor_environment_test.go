@@ -16,6 +16,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/overlaytest"
 )
 
 // The output of doctor on a machine without some of the tools of discovery, with the line of the
@@ -76,7 +78,7 @@ func TestTheLineOfTheRegistryCheckHasAnyLevelOfACheck(t *testing.T) {
 // discoveryToolsOfTheScript is DISCOVERY_TOOLS as the script spells it.
 func discoveryToolsOfTheScript(t *testing.T) []string {
 	t.Helper()
-	script, err := os.ReadFile(overlayScript(t))
+	script, err := os.ReadFile(overlaytest.Script(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -163,7 +165,7 @@ func TestEveryChangeOfThePathOfAWorldKeepsTheToolsOfDiscoveryOnTheWorldsPrograms
 		}},
 		{"a directory put in front", func(t *testing.T, w *pinWorld) {
 			dir := t.TempDir()
-			w.changePath(func(old string) string { return dir + string(os.PathListSeparator) + old })
+			w.putFirst(dir)
 		}},
 		{"a directory put behind", func(t *testing.T, w *pinWorld) {
 			dir := t.TempDir()

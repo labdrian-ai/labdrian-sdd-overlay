@@ -1,10 +1,11 @@
 package shelltest
 
 import (
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/overlaytest"
 )
 
 // TestOverlayPathCleanMatchesFilepathClean checks the POPULATION, not the
@@ -18,14 +19,7 @@ import (
 // One bash process handles the whole corpus: the loop is inside the shell,
 // so adding a case costs nothing.
 func TestOverlayPathCleanMatchesFilepathClean(t *testing.T) {
-	if _, err := exec.LookPath("bash"); err != nil {
-		t.Skipf("bash is not available: %v", err)
-	}
-
-	overlay, err := filepath.Abs(filepath.Join("..", "..", "bin", "labdrian-overlay"))
-	if err != nil {
-		t.Fatalf("resolve overlay path: %v", err)
-	}
+	overlay := overlayScript(t)
 
 	inputs := []string{
 		"", ".", "..", "/", "//", "/.", "/..", "/../..",
@@ -39,14 +33,12 @@ func TestOverlayPathCleanMatchesFilepathClean(t *testing.T) {
 		"/spaces in/a path/", "/a-b_c.d/e/", "/a/*/b", "/a/[x]/b",
 	}
 
-	script := `source "$1"; shift; for p in "$@"; do path_clean "$p"; done`
-	args := append([]string{"-c", script, "_", overlay}, inputs...)
-	out, err := exec.Command("bash", args...).CombinedOutput()
+	out, err := overlaytest.Source(t, overlay, overlaytest.Shell{}, `for p in "$@"; do path_clean "$p"; done`, inputs...)
 	if err != nil {
 		t.Fatalf("path_clean run failed: %v\n%s", err, out)
 	}
 
-	got := strings.Split(strings.TrimRight(string(out), "\n"), "\n")
+	got := strings.Split(strings.TrimRight(out, "\n"), "\n")
 	if len(got) != len(inputs) {
 		t.Fatalf("path_clean printed %d lines for %d inputs:\n%s", len(got), len(inputs), out)
 	}

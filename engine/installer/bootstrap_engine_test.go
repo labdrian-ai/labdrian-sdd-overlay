@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/enginetest"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/overlaytest"
 )
 
 // installFakeGo puts a `go` first on the PATH of the world that records its arguments, one call a
@@ -37,11 +38,9 @@ func (w *pinWorld) installFakeGo() string {
 		"  shift\n" +
 		"done\n" +
 		"cp \"$FAKE_GO_ENGINE\" \"$out\"\n"
-	if err := os.WriteFile(filepath.Join(dir, "go"), []byte(script), 0o755); err != nil {
-		w.t.Fatalf("write the fake go: %v", err)
-	}
+	overlaytest.WriteTool(w.t, filepath.Join(dir, "go"), script)
 	w.env = append(w.env, "FAKE_GO_LOG="+log, "FAKE_GO_ENGINE="+enginetest.Binary(w.t))
-	w.changePath(func(old string) string { return dir + string(os.PathListSeparator) + old })
+	w.putFirst(dir)
 	return log
 }
 
@@ -75,13 +74,13 @@ func TestBootstrapSaysWhatItDoesToTheEngineOnStderrAndGoesOn(t *testing.T) {
 			if err := os.Chtimes(engine, longAgo, longAgo); err != nil {
 				t.Fatal(err)
 			}
-			w.write(w.overlay, "engine/main.go", "package main\n") // newer than the engine
+			overlaytest.WriteFile(w.t, w.overlay, "engine/main.go", "package main\n") // newer than the engine
 		}, "==> Engine binary is out of date; rebuilding...\n", 1},
 		{"the engine is not there", func(t *testing.T, w *pinWorld, engine string) {
 			if err := os.Remove(engine); err != nil {
 				t.Fatal(err)
 			}
-			w.write(w.overlay, "engine/main.go", "package main\n") // the source it is built from
+			overlaytest.WriteFile(w.t, w.overlay, "engine/main.go", "package main\n") // the source it is built from
 		}, "==> Engine binary not found; building...\n", 1},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

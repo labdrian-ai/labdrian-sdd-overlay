@@ -11,7 +11,6 @@ package installer_test
 // and they hold what that program did as it did it.
 
 import (
-	"bytes"
 	"errors"
 	"os"
 	"os/exec"
@@ -24,6 +23,7 @@ import (
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/enginetest"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/overlaytest"
 )
 
 // pinWorld is one overlay repository and the home its script runs in.
@@ -48,21 +48,11 @@ type pinRun struct {
 	Exit   int
 }
 
-// pinEnv is the environment the script runs in: the home and the overlay it is told of, an identity
-// for git, the PATH of the machine, and the C locale, so that the words git and the tools say are
-// the ones of the record whatever the machine's own locale is.
-func pinEnv(home, overlay string) []string {
-	return []string{
-		"HOME=" + home,
-		"OVERLAY_DIR=" + overlay,
-		"GIT_AUTHOR_NAME=test",
-		"GIT_AUTHOR_EMAIL=test@test.com",
-		"GIT_COMMITTER_NAME=test",
-		"GIT_COMMITTER_EMAIL=test@test.com",
-		"LC_ALL=C",
-		"PATH=" + os.Getenv("PATH"),
-	}
-}
+// pinEnv is the environment the script runs in: what overlaytest.Env makes of the home and the overlay
+// it is told of (the PATH of the machine, an identity for git, no configuration of whoever runs the
+// tests), and the C locale, so that the words git and the tools say are the ones of the record whatever
+// the machine's own locale is.
+func pinEnv(home, overlay string) []string { return overlaytest.Env(home, overlay, "LC_ALL=C") }
 
 // The clock of a world. `git log` lists commits by their dates, and commits made in the same
 // second tie: git then lists them in the order it happens to meet them, which for a few branches of
@@ -92,11 +82,9 @@ func (w *pinWorld) startClock() {
 	}
 	dir := w.t.TempDir()
 	w.gitBin = filepath.Join(dir, "git")
-	if err := os.WriteFile(w.gitBin, []byte(pinClockScript), 0o755); err != nil {
-		w.t.Fatalf("write the clock: %v", err)
-	}
+	overlaytest.WriteTool(w.t, w.gitBin, pinClockScript)
 	w.env = append(w.env, "PIN_CLOCK_GIT="+realGit, "PIN_CLOCK_EPOCH="+strconv.Itoa(pinClockEpoch))
-	w.changePath(func(old string) string { return dir + string(os.PathListSeparator) + old })
+	w.putFirst(dir)
 }
 
 // commitTimes are the committer times of every commit of the repository of the world, newest first
@@ -158,23 +146,15 @@ func pinHome(t *testing.T) string {
 // expect to find.
 func newPinWorld(t *testing.T, manifest string, files map[string]string) *pinWorld {
 	t.Helper()
-	w := &pinWorld{t: t, script: overlayScript(t), home: pinHome(t), overlay: t.TempDir()}
+	w := &pinWorld{t: t, script: overlaytest.Script(t), home: pinHome(t), overlay: t.TempDir()}
 	all := map[string]string{"overlay.manifest": manifest}
 	for rel, content := range files {
 		all[rel] = content
 	}
-	for rel, content := range all {
-		w.write(w.overlay, rel, content)
-	}
+	overlaytest.WriteFiles(t, w.overlay, all)
 	w.env = pinEnv(w.home, w.overlay)
 	w.startClock()
-	w.git("init")
-	w.git("config", "user.email", "test@test.com")
-	w.git("config", "user.name", "test")
-	w.git("checkout", "-b", "upstream")
-	w.git("add", ".")
-	w.git("commit", "-m", "upstream: baseline")
-	w.git("checkout", "-b", "main")
+	overlaytest.InitOverlay(func(args ...string) { w.git(args...) })
 	enginetest.Provision(t, w.home)
 	return w
 }
@@ -223,6 +203,12 @@ func (w *pinWorld) changePath(change func(old string) string) {
 	w.env = env
 }
 
+// putFirst puts dir first on the PATH of the world: the programs in it are the ones the script finds.
+func (w *pinWorld) putFirst(dir string) {
+	w.t.Helper()
+	w.changePath(func(old string) string { return dir + string(os.PathListSeparator) + old })
+}
+
 // withDiscoveryFirst is path with the directory of the world's tools of discovery as its first
 // directory, once; path itself when the world has none.
 func (w *pinWorld) withDiscoveryFirst(path string) string {
@@ -238,18 +224,6 @@ func (w *pinWorld) withDiscoveryFirst(path string) string {
 	return strings.Join(dirs, string(os.PathListSeparator))
 }
 
-// write puts content at rel under root, making the directories it needs.
-func (w *pinWorld) write(root, rel, content string) {
-	w.t.Helper()
-	p := filepath.Join(root, rel)
-	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
-		w.t.Fatalf("mkdir %s: %v", filepath.Dir(p), err)
-	}
-	if err := os.WriteFile(p, []byte(content), 0o644); err != nil {
-		w.t.Fatalf("write %s: %v", rel, err)
-	}
-}
-
 // git runs git in the overlay repository and fails the test when it fails.
 func (w *pinWorld) git(args ...string) string {
 	w.t.Helper()
@@ -257,14 +231,7 @@ func (w *pinWorld) git(args ...string) string {
 	if bin == "" {
 		bin = "git"
 	}
-	cmd := exec.Command(bin, args...)
-	cmd.Dir = w.overlay
-	cmd.Env = w.env
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		w.t.Fatalf("git %v: %v\n%s", args, err, out)
-	}
-	return string(out)
+	return overlaytest.GitBin(w.t, bin, w.overlay, w.env, args...)
 }
 
 // run runs the script with the arguments, from the overlay repository, and keeps its streams apart.
@@ -276,23 +243,8 @@ func (w *pinWorld) run(args ...string) pinRun {
 // runIn runs the script with the arguments from the directory dir, and keeps its streams apart.
 func (w *pinWorld) runIn(dir string, args ...string) pinRun {
 	w.t.Helper()
-	cmd := exec.Command("bash", append([]string{w.script}, args...)...)
-	cmd.Dir = dir
-	cmd.Env = w.env
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	err := cmd.Run()
-	run := pinRun{Stdout: w.normalize(stdout.String()), Stderr: gitChatter.ReplaceAllString(w.normalize(stderr.String()), "")}
-	var exit *exec.ExitError
-	switch {
-	case err == nil:
-	case errors.As(err, &exit):
-		run.Exit = exit.ExitCode()
-	default:
-		w.t.Fatalf("run %v: %v", args, err)
-	}
-	return run
+	got := overlaytest.Run(w.t, w.script, w.env, dir, args...)
+	return pinRun{Stdout: w.normalize(got.Stdout), Stderr: gitChatter.ReplaceAllString(w.normalize(got.Stderr), ""), Exit: got.Exit}
 }
 
 // The parts of an output that a run makes up and that a pin must not carry: the places the world
@@ -388,7 +340,7 @@ func quoteBody(s string) string {
 func (w *pinWorld) commitOnMain(message string, files map[string]string) {
 	w.t.Helper()
 	for rel, content := range files {
-		w.write(w.overlay, rel, content)
+		overlaytest.WriteFile(w.t, w.overlay, rel, content)
 	}
 	w.git("add", ".")
 	w.git("commit", "-m", message)

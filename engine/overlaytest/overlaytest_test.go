@@ -1,0 +1,353 @@
+package overlaytest_test
+
+import (
+	"errors"
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"reflect"
+	"strings"
+	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/enginetest"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/overlaytest"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/testhome"
+)
+
+// TestMain runs the tests of this package in a home directory of their own (testhome), as every package
+// whose tests run git and the script does, and takes away the engine NewOverlay provisions.
+func TestMain(m *testing.M) {
+	code := testhome.Run(m)
+	enginetest.Cleanup()
+	os.Exit(code)
+}
+
+func TestTheTestsRunInAHomeOfTheirOwn(t *testing.T) { testhome.Check(t) }
+
+func TestEnvIsTheHomeTheOverlayThePathAndTheSettingsOfGitAndNothingOfTheProcess(t *testing.T) {
+	t.Setenv("STATE_DIR", "/the/state/of/whoever/runs/the/tests")
+	t.Setenv("PATH", "/the/path")
+
+	env := overlaytest.Env("/h", "/o")
+
+	want := append([]string{"HOME=/h", "OVERLAY_DIR=/o", "PATH=/the/path"}, overlaytest.GitSettings()...)
+	if !reflect.DeepEqual(env, want) {
+		t.Errorf("Env(\"/h\", \"/o\") = %q, want the home, the overlay, the PATH of the process and the settings of git, in that order: %q", env, want)
+	}
+}
+
+func TestEnvPutsWhatTheCallerAddsLast(t *testing.T) {
+	env := overlaytest.Env("/h", "/o", "LC_ALL=C", "PATH=/mine")
+
+	if got := env[len(env)-2:]; !reflect.DeepEqual(got, []string{"LC_ALL=C", "PATH=/mine"}) {
+		t.Errorf("the last entries of Env = %q, want what the caller added, in the order it added it (the last PATH wins when a program reads the environment)", got)
+	}
+}
+
+// gitConfig asks git what a key is set to in dir, in env: its answer and whether the key is set.
+func gitConfig(t *testing.T, dir string, env []string, key string) (string, bool) {
+	t.Helper()
+	cmd := exec.Command("git", "config", "--get", key)
+	cmd.Dir = dir
+	cmd.Env = env
+	out, err := cmd.Output()
+	return strings.TrimSpace(string(out)), err == nil
+}
+
+func TestGitSettingsTurnAutomaticMaintenanceOff(t *testing.T) {
+	dir := t.TempDir()
+	overlaytest.Git(t, dir, nil, "init", "-q")
+
+	for key, want := range map[string]string{"maintenance.auto": "false", "gc.auto": "0"} {
+		if got, ok := gitConfig(t, dir, overlaytest.Env(t.TempDir(), dir), key); !ok || got != want {
+			t.Errorf("git config --get %s = %q, %v in the environment of a run, want %q: a commit would start maintenance in the background", key, got, ok, want)
+		}
+	}
+}
+
+func TestWithGitConfigAddsToWhatGitSettingsSetAndChangesNothingItWasGiven(t *testing.T) {
+	base := overlaytest.Env(t.TempDir(), t.TempDir())
+	before := append([]string(nil), base...)
+	dir := t.TempDir()
+	overlaytest.Git(t, dir, nil, "init", "-q")
+
+	env := overlaytest.WithGitConfig(base, "init.defaultBranch", "master", "core.abbrev", "9")
+
+	for key, want := range map[string]string{
+		"maintenance.auto": "false", "gc.auto": "0", "init.defaultBranch": "master", "core.abbrev": "9",
+	} {
+		if got, ok := gitConfig(t, dir, env, key); !ok || got != want {
+			t.Errorf("git config --get %s = %q, %v, want %q: the entries of GitSettings stay and the new ones are numbered after them", key, got, ok, want)
+		}
+	}
+	if !reflect.DeepEqual(base, before) {
+		t.Errorf("WithGitConfig changed the env it was given: %q, was %q", base, before)
+	}
+	again := overlaytest.WithGitConfig(env, "user.signingkey", "k")
+	if got, ok := gitConfig(t, dir, again, "core.abbrev"); !ok || got != "9" {
+		t.Errorf("git config --get core.abbrev = %q, %v after a second WithGitConfig, want 9: it is numbered from the count env holds, so it can be called again", got, ok)
+	}
+	if got, ok := gitConfig(t, dir, again, "user.signingkey"); !ok || got != "k" {
+		t.Errorf("git config --get user.signingkey = %q, %v, want k", got, ok)
+	}
+}
+
+func TestWithGitConfigNumbersTheEntriesFromZeroInAnEnvironmentWithNone(t *testing.T) {
+	got := overlaytest.WithGitConfig([]string{"HOME=/h"}, "a.b", "c")
+
+	if want := []string{"HOME=/h", "GIT_CONFIG_KEY_0=a.b", "GIT_CONFIG_VALUE_0=c", "GIT_CONFIG_COUNT=1"}; !reflect.DeepEqual(got, want) {
+		t.Errorf("WithGitConfig = %q, want %q", got, want)
+	}
+}
+
+func TestWithGitConfigNeverWritesIntoTheSpaceTheEnvironmentItWasGivenHasLeft(t *testing.T) {
+	base := append(make([]string, 0, 64), "GIT_CONFIG_COUNT=0")
+
+	first := overlaytest.WithGitConfig(base, "a.b", "first")
+	second := overlaytest.WithGitConfig(base, "a.b", "second")
+
+	if first[2] != "GIT_CONFIG_VALUE_0=first" || second[2] != "GIT_CONFIG_VALUE_0=second" {
+		t.Errorf("the two results are %q and %q, want each to keep its own value: they share the space base had left", first, second)
+	}
+}
+
+func TestWithGitConfigRefusesAKeyWithNoValue(t *testing.T) {
+	defer func() {
+		if got := fmt.Sprint(recover()); !strings.Contains(got, "a key with no value") {
+			t.Errorf("WithGitConfig with a key and no value panicked with %q, want it to say a key has no value", got)
+		}
+	}()
+	lastKeyAlone := strings.Fields("init.defaultBranch")
+	overlaytest.WithGitConfig(nil, lastKeyAlone...)
+}
+
+func TestGitSettingsTakeNoConfigurationOfWhoeverRunsTheTests(t *testing.T) {
+	leak := t.TempDir()
+	global := filepath.Join(leak, "global")
+	system := filepath.Join(leak, "system")
+	if err := os.WriteFile(global, []byte("[leak]\n\tglobal = yes\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(system, []byte("[leak]\n\tsystem = yes\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("GIT_CONFIG_GLOBAL", global)
+	t.Setenv("GIT_CONFIG_SYSTEM", system)
+	dir := t.TempDir()
+	overlaytest.Git(t, dir, nil, "init", "-q")
+
+	// The control: the configuration the process was given is there for a git that is given nothing more.
+	if got, ok := gitConfig(t, dir, os.Environ(), "leak.global"); !ok || got != "yes" {
+		t.Fatalf("control: git config --get leak.global = %q, %v with the environment of the process, want yes: the configuration is not in force, so this test proves nothing", got, ok)
+	}
+	for _, key := range []string{"leak.global", "leak.system"} {
+		if got, ok := gitConfig(t, dir, overlaytest.Env(t.TempDir(), dir), key); ok {
+			t.Errorf("git config --get %s = %q in the environment of a run, want it unset: the configuration of whoever runs the tests reaches the fixture", key, got)
+		}
+		if got, ok := gitConfig(t, dir, append(os.Environ(), overlaytest.GitSettings()...), key); ok {
+			t.Errorf("git config --get %s = %q with the settings of git, want it unset", key, got)
+		}
+	}
+}
+
+func TestInitOverlayCommitsTheFilesOnUpstreamAndStartsMainThere(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		paths []string
+		want  [][]string
+	}{
+		{"all the files", nil, [][]string{
+			{"init"}, {"config", "user.email", "test@test.com"}, {"config", "user.name", "test"},
+			{"checkout", "-b", "upstream"}, {"add", "."}, {"commit", "-m", "upstream: baseline"}, {"checkout", "-b", "main"},
+		}},
+		{"the files it is told", []string{"overlay.manifest", "skills/"}, [][]string{
+			{"init"}, {"config", "user.email", "test@test.com"}, {"config", "user.name", "test"},
+			{"checkout", "-b", "upstream"}, {"add", "overlay.manifest", "skills/"}, {"commit", "-m", "upstream: baseline"}, {"checkout", "-b", "main"},
+		}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var got [][]string
+			overlaytest.InitOverlay(func(args ...string) { got = append(got, args) }, tc.paths...)
+
+			if !reflect.DeepEqual(got, tc.want) {
+				t.Errorf("InitOverlay ran git as %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestNewOverlayMakesUpstreamAndMainAtOneCommitHoldingTheFiles(t *testing.T) {
+	home := t.TempDir()
+	files := map[string]string{"overlay.manifest": "x managed\n", "skills/x/SKILL.md": "# x\n"}
+
+	dir, env := overlaytest.NewOverlay(t, home, files)
+
+	if upstream, main := overlaytest.Git(t, dir, env, "rev-parse", "upstream"), overlaytest.Git(t, dir, env, "rev-parse", "main"); upstream != main {
+		t.Errorf("upstream is at %q and main at %q, want both at the baseline commit", upstream, main)
+	}
+	if got := strings.TrimSpace(overlaytest.Git(t, dir, env, "branch", "--show-current")); got != "main" {
+		t.Errorf("the overlay is on branch %q, want main", got)
+	}
+	for rel, want := range files {
+		if got := overlaytest.Git(t, dir, env, "show", "upstream:"+rel); got != want {
+			t.Errorf("upstream:%s = %q, want %q", rel, got, want)
+		}
+	}
+	if got := strings.TrimSpace(overlaytest.Git(t, dir, env, "log", "-1", "--format=%an <%ae>", "upstream")); got != "test <test@test.com>" {
+		t.Errorf("the baseline commit is by %q, want the identity of the fixtures", got)
+	}
+	if want := []string{"HOME=" + home, "OVERLAY_DIR=" + dir}; !reflect.DeepEqual(env[:2], want) {
+		t.Errorf("the environment begins %q, want the home and the overlay it was made for: %q", env[:2], want)
+	}
+	if info, err := os.Stat(enginetest.Path(home)); err != nil || info.IsDir() || info.Mode().Perm()&0o111 == 0 {
+		t.Errorf("no executable engine at %s (%v): the script would build one", enginetest.Path(home), err)
+	}
+}
+
+func TestRunKeepsTheStreamsAndTheExitCodeApart(t *testing.T) {
+	script := filepath.Join(t.TempDir(), "say")
+	if err := os.WriteFile(script, []byte("echo \"out $*\"\necho \"err $*\" >&2\nexit 3\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	got := overlaytest.Run(t, script, os.Environ(), "", "a", "b c")
+
+	if want := (overlaytest.Result{Stdout: "out a b c\n", Stderr: "err a b c\n", Exit: 3}); got != want {
+		t.Errorf("Run = %+v, want %+v", got, want)
+	}
+}
+
+func TestCaptureRunsTheCommandAsTheCallerBuiltItAndKeepsItsStreamsApart(t *testing.T) {
+	dir := t.TempDir()
+	want, err := filepath.EvalSymlinks(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command("sh", "-c", `echo "out $FROM_THE_CALLER $(pwd -P)"; echo err >&2; exit 6`)
+	cmd.Dir = dir
+	cmd.Env = []string{"FROM_THE_CALLER=yes"}
+
+	got := overlaytest.Capture(t, cmd)
+
+	if wantResult := (overlaytest.Result{Stdout: "out yes " + want + "\n", Stderr: "err\n", Exit: 6}); got != wantResult {
+		t.Errorf("Capture = %+v, want %+v: the directory and the environment are the caller's", got, wantResult)
+	}
+}
+
+func TestRunRunsFromTheDirectoryItIsGiven(t *testing.T) {
+	dir := t.TempDir()
+	script := filepath.Join(t.TempDir(), "where")
+	if err := os.WriteFile(script, []byte("pwd -P\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	want, err := filepath.EvalSymlinks(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if got := overlaytest.Run(t, script, os.Environ(), dir); strings.TrimSpace(got.Stdout) != want {
+		t.Errorf("the script ran in %q, want %q", strings.TrimSpace(got.Stdout), want)
+	}
+}
+
+func TestCombinedAnswersTheErrorOfANonZeroExit(t *testing.T) {
+	script := filepath.Join(t.TempDir(), "fail")
+	if err := os.WriteFile(script, []byte("echo said\nexit 4\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	out, err := overlaytest.Combined(t, script, os.Environ(), "")
+
+	var exit *exec.ExitError
+	if out != "said\n" || !errors.As(err, &exit) || exit.ExitCode() != 4 {
+		t.Errorf("Combined = %q, %v, want the output and an *exec.ExitError for exit 4", out, err)
+	}
+	if got := overlaytest.ExitCode(err); got != 4 {
+		t.Errorf("ExitCode(%v) = %d, want 4", err, got)
+	}
+}
+
+func TestExitCodeIsZeroForNoErrorAndMinusOneForAnErrorThatIsNoExit(t *testing.T) {
+	if got := overlaytest.ExitCode(nil); got != 0 {
+		t.Errorf("ExitCode(nil) = %d, want 0", got)
+	}
+	if got := overlaytest.ExitCode(errors.New("fork/exec: no such file")); got != -1 {
+		t.Errorf("ExitCode of an error that is not an exit = %d, want -1: the program never ran, so it ended with no code", got)
+	}
+}
+
+func TestSourceRunsTheSnippetAfterTheScriptDefinedItsFunctionsWithTheArguments(t *testing.T) {
+	script := filepath.Join(t.TempDir(), "lib")
+	if err := os.WriteFile(script, []byte("greet() { echo \"hello $1 $2\"; }\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	out, err := overlaytest.Source(t, script, overlaytest.Shell{Env: os.Environ()}, `greet "$@"`, "to", "you")
+
+	if err != nil || out != "hello to you\n" {
+		t.Errorf("Source = %q, %v, want %q", out, err, "hello to you\n")
+	}
+}
+
+func TestSourceRunsFromTheDirectoryItIsGiven(t *testing.T) {
+	dir := t.TempDir()
+	script := filepath.Join(t.TempDir(), "lib")
+	if err := os.WriteFile(script, []byte(":\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	want, err := filepath.EvalSymlinks(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	out, err := overlaytest.Source(t, script, overlaytest.Shell{Env: os.Environ(), Dir: dir}, "pwd -P")
+
+	if err != nil || strings.TrimSpace(out) != want {
+		t.Errorf("Source = %q, %v, want it to run in %q", out, err, want)
+	}
+}
+
+// A nil environment is the environment of the test process, as it is, for each way of running the
+// script: none of them adds GitSettings to it, as Git does to its own nil environment.
+func TestANilEnvIsTheProcessEnvironmentWithNoGitSettingsForEveryWayOfRunningTheScript(t *testing.T) {
+	t.Setenv("OVERLAYTEST_MARKER", "from-the-process")
+	t.Setenv("GIT_CONFIG_COUNT", "")
+	t.Setenv("GIT_CONFIG_GLOBAL", "")
+	script := filepath.Join(t.TempDir(), "show")
+	body := "echo \"marker=$OVERLAYTEST_MARKER count=${GIT_CONFIG_COUNT-unset} global=${GIT_CONFIG_GLOBAL-unset}\"\n"
+	if err := os.WriteFile(script, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	const want = "marker=from-the-process count= global=\n"
+
+	for name, run := range map[string]func() (string, error){
+		"Run": func() (string, error) {
+			got := overlaytest.Run(t, script, nil, "")
+			return got.Stdout, nil
+		},
+		"Combined": func() (string, error) { return overlaytest.Combined(t, script, nil, "") },
+		"Source":   func() (string, error) { return overlaytest.Source(t, script, overlaytest.Shell{}, "") },
+	} {
+		if out, err := run(); err != nil || out != want {
+			t.Errorf("%s with a nil env = %q, %v, want %q: the process environment, with no GitSettings", name, out, err, want)
+		}
+	}
+}
+
+func TestStubEngineIsAnExecutableWhereTheScriptLooksForTheEngine(t *testing.T) {
+	home := t.TempDir()
+
+	overlaytest.StubEngine(t, home, "#!/bin/sh\nexit 0\n")
+
+	info, err := os.Stat(enginetest.Path(home))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode().Perm() != 0o755 {
+		t.Errorf("the stub has mode %v, want 0755", info.Mode().Perm())
+	}
+	if body, _ := os.ReadFile(enginetest.Path(home)); string(body) != "#!/bin/sh\nexit 0\n" {
+		t.Errorf("the stub holds %q, want what it was given", body)
+	}
+}

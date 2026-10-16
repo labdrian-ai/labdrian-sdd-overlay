@@ -11,6 +11,9 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/enginetest"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/overlaytest"
 )
 
 // fakeEngine replaces the engine of the home of the world with a program that records its
@@ -23,9 +26,7 @@ func (w *pinWorld) fakeEngine(says string, exit string) (log string) {
 		"echo \"$*\" >> \"$FAKE_ENGINE_LOG\"\n" +
 		"printf '%s\\n' \"$FAKE_ENGINE_SAYS\"\n" +
 		"exit \"$FAKE_ENGINE_EXIT\"\n"
-	if err := os.WriteFile(filepath.Join(w.home, ".claude", "bin", "gentle-ai-overlay"), []byte(script), 0o755); err != nil {
-		w.t.Fatal(err)
-	}
+	overlaytest.StubEngine(w.t, w.home, script)
 	w.env = append(w.env, "FAKE_ENGINE_LOG="+log, "FAKE_ENGINE_SAYS="+says, "FAKE_ENGINE_EXIT="+exit)
 	return log
 }
@@ -53,7 +54,7 @@ func TestDoctorAsksTheEngineAboutTheRegistryOfTheOverlayWhenItHasOneAndOfTheDire
 		t.Run(tc.name, func(t *testing.T) {
 			w := registryWorld(t)
 			if tc.overlayHasIt {
-				w.write(w.overlay, ".atl/skill-registry.md", "# registry\n")
+				overlaytest.WriteFile(w.t, w.overlay, ".atl/skill-registry.md", "# registry\n")
 			}
 			log := w.fakeEngine("[OK  ] registry: x — scoped block present", "0")
 
@@ -131,7 +132,7 @@ func TestDoctorSaysTheRegistryWasNotCheckedWhenTheEngineCannotAnswer(t *testing.
 		{"an engine that refuses the question", "error: status: unknown", "1", nil, notChecked(binary)},
 		{"an engine that says nothing", "", "1", nil, notChecked(binary)},
 		{"no engine at all", "", "0", func(w *pinWorld) {
-			if err := os.Remove(filepath.Join(w.home, ".claude", "bin", "gentle-ai-overlay")); err != nil {
+			if err := os.Remove(enginetest.Path(w.home)); err != nil {
 				t.Fatal(err)
 			}
 		}, "WARN  registry not checked: the engine judges it and its binary is not at " + binary + ". Rebuild it with 'labdrian doctor --fix'."},

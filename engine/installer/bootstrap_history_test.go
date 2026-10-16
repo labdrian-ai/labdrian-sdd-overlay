@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/overlaytest"
 )
 
 // gitState is what a command that committed, or moved a branch, would have changed in the
@@ -65,7 +67,7 @@ func TestBootstrapDoesNotCommitTheScaffoldAgainWhenGitLogCannotRun(t *testing.T)
 		t.Fatalf("the first bootstrap = %s", pinRunText(first))
 	}
 	w.git("config", "log.date", "bogus")
-	w.write(w.overlay, "README.md", "# changed after the scaffold was committed\n")
+	overlaytest.WriteFile(w.t, w.overlay, "README.md", "# changed after the scaffold was committed\n")
 
 	// Its last line, `git log`, fails on the configuration; what it committed is the question, and
 	// that it did not take the repository for one git cannot read.
@@ -87,13 +89,13 @@ func TestBootstrapStopsWhenGitCannotReadTheHistoryAndCommitsNothing(t *testing.T
 		corrupt func(t *testing.T, w *pinWorld)
 	}{
 		{"the branch points at a commit that is gone", func(t *testing.T, w *pinWorld) {
-			w.write(w.overlay, ".git/refs/heads/main", gone)
+			overlaytest.WriteFile(w.t, w.overlay, ".git/refs/heads/main", gone)
 		}},
 		{"the file of the branch is not a ref", func(t *testing.T, w *pinWorld) {
-			w.write(w.overlay, ".git/refs/heads/main", "not a ref\n")
+			overlaytest.WriteFile(w.t, w.overlay, ".git/refs/heads/main", "not a ref\n")
 		}},
 		{"HEAD is a commit that is gone", func(t *testing.T, w *pinWorld) {
-			w.write(w.overlay, ".git/HEAD", gone)
+			overlaytest.WriteFile(w.t, w.overlay, ".git/HEAD", gone)
 		}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

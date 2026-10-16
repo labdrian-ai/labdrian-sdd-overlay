@@ -2,11 +2,38 @@ package shelltest
 
 import (
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/enginetest"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/overlaytest"
 )
+
+// pipkgWorld is the world the pipkg_* helpers of the script run in: a home that has the engine, a state
+// directory in it, and runHelper, which sources the script and runs one of its helpers there from the
+// root of the checkout. runHelper returns the combined output alongside the error the helper ended
+// with. Callers assert on both explicitly -- these helpers now return honest non-zero exits for "not
+// built" and "drift" (R4-silent-package-skip), so a blanket t.Fatalf on any non-zero exit would defeat
+// the very thing the tests prove.
+func pipkgWorld(t *testing.T) (home, stateDir string, runHelper func(script string) (string, error)) {
+	t.Helper()
+	overlay := overlayScript(t)
+	overlayDir := overlaytest.RepoRoot(t)
+
+	home = t.TempDir()
+	enginetest.Provision(t, home)
+
+	stateDir = filepath.Join(home, "state")
+	runHelper = func(script string) (string, error) {
+		t.Helper()
+		env := append(os.Environ(), "HOME="+home, "STATE_DIR="+stateDir, "OVERLAY_DIR="+overlayDir,
+			// these tests build directly from the checkout (no apply, so no main checkout); pin the deploy ref to HEAD
+			"LABDRIAN_PI_DEPLOY_REF=HEAD")
+		return overlaytest.Source(t, overlay, overlaytest.Shell{Env: env, Dir: overlayDir}, script)
+	}
+	return home, stateDir, runHelper
+}
 
 // TestPipkgHelpers_BuildStatusSyncCheck (R-002, R-003, R-010, pi-package-
 // build slice 2.5): exercises the real pipkg_build_and_report /
@@ -15,40 +42,7 @@ import (
 // itself (which mutates git state) -- these are the same functions
 // cmd_apply/cmd_status/cmd_sync_check dispatch to for --target pi.
 func TestPipkgHelpers_BuildStatusSyncCheck(t *testing.T) {
-	overlay := piTargetOverlayPath(t)
-	overlayDir, err := filepath.Abs(filepath.Join("..", ".."))
-	if err != nil {
-		t.Fatalf("resolve overlay dir: %v", err)
-	}
-
-	home := t.TempDir()
-	engineDir := filepath.Join(home, ".claude", "bin")
-	if err := os.MkdirAll(engineDir, 0755); err != nil {
-		t.Fatalf("mkdir engine dir: %v", err)
-	}
-	enginePath := filepath.Join(engineDir, "gentle-ai-overlay")
-	build := exec.Command("go", "build", "-o", enginePath, "./cmd")
-	build.Dir = filepath.Join(overlayDir, "engine")
-	if out, err := build.CombinedOutput(); err != nil {
-		t.Fatalf("build engine binary: %v\n%s", err, out)
-	}
-
-	stateDir := filepath.Join(home, "state")
-	// runHelper runs the named bash helper and returns its combined output
-	// alongside its exit status. Callers assert on both explicitly --
-	// these helpers now return honest non-zero exits for "not built" and
-	// "drift" (R4-silent-package-skip), so a blanket t.Fatalf on any
-	// non-zero exit would defeat the very thing this test proves.
-	runHelper := func(script string) (string, error) {
-		t.Helper()
-		cmd := exec.Command("bash", "-c", `source "$1"; `+script, "_", overlay)
-		cmd.Dir = overlayDir
-		cmd.Env = append(os.Environ(), "HOME="+home, "STATE_DIR="+stateDir, "OVERLAY_DIR="+overlayDir,
-			// these tests build directly from the checkout (no apply, so no main checkout); pin the deploy ref to HEAD
-			"LABDRIAN_PI_DEPLOY_REF=HEAD")
-		out, err := cmd.CombinedOutput()
-		return string(out), err
-	}
+	_, stateDir, runHelper := pipkgWorld(t)
 
 	// Before any build: status honestly reports "not built" and exits
 	// non-zero; sync-check emits VERDICT:pi:NOT_BUILT and exits non-zero
@@ -149,35 +143,7 @@ func TestPipkgHelpers_BuildStatusSyncCheck(t *testing.T) {
 // PiAdapter.Status() proves -- see TestPiAdapter_StatusTriangulatesAllOwnedEntries
 // in engine/runtime/pi_test.go for the unit-level equivalent).
 func TestPipkgStatusAndReport_DelegatesHonestPartialThenSupported(t *testing.T) {
-	overlay := piTargetOverlayPath(t)
-	overlayDir, err := filepath.Abs(filepath.Join("..", ".."))
-	if err != nil {
-		t.Fatalf("resolve overlay dir: %v", err)
-	}
-
-	home := t.TempDir()
-	engineDir := filepath.Join(home, ".claude", "bin")
-	if err := os.MkdirAll(engineDir, 0755); err != nil {
-		t.Fatalf("mkdir engine dir: %v", err)
-	}
-	enginePath := filepath.Join(engineDir, "gentle-ai-overlay")
-	build := exec.Command("go", "build", "-o", enginePath, "./cmd")
-	build.Dir = filepath.Join(overlayDir, "engine")
-	if out, err := build.CombinedOutput(); err != nil {
-		t.Fatalf("build engine binary: %v\n%s", err, out)
-	}
-
-	stateDir := filepath.Join(home, "state")
-	runHelper := func(script string) (string, error) {
-		t.Helper()
-		cmd := exec.Command("bash", "-c", `source "$1"; `+script, "_", overlay)
-		cmd.Dir = overlayDir
-		cmd.Env = append(os.Environ(), "HOME="+home, "STATE_DIR="+stateDir, "OVERLAY_DIR="+overlayDir,
-			// these tests build directly from the checkout (no apply, so no main checkout); pin the deploy ref to HEAD
-			"LABDRIAN_PI_DEPLOY_REF=HEAD")
-		out, err := cmd.CombinedOutput()
-		return string(out), err
-	}
+	home, stateDir, runHelper := pipkgWorld(t)
 
 	buildOut, buildErr := runHelper("pipkg_build_and_report")
 	if buildErr != nil {

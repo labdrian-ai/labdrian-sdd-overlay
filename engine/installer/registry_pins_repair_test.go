@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/overlaytest"
 )
 
 // gentleRegistry is a registry as gentle-ai writes it, with the rows of two skills it knows, a
@@ -230,7 +232,7 @@ func TestRegistryPins_RepairKeepsTheSlashesOfAHomeThatEndsWithOne(t *testing.T) 
 func TestRegistryPins_RepairReplacesARegistryThatIsASymbolicLink(t *testing.T) {
 	w := registryWorld(t)
 	target := filepath.Join(w.home, "elsewhere", "registry.md")
-	w.write(w.home, "elsewhere/registry.md", gentleRegistry)
+	overlaytest.WriteFile(w.t, w.home, "elsewhere/registry.md", gentleRegistry)
 	if err := os.MkdirAll(filepath.Dir(w.registryPath()), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -258,7 +260,7 @@ func TestRegistryPins_RepairRefusesWhatItIsNotAskedRight(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			w := registryWorld(t)
-			w.write(w.project(), ".atl/file", "x")
+			overlaytest.WriteFile(w.t, w.project(), ".atl/file", "x")
 			args := []string{"repair-sdd-registry", "--no-refresh"}
 			for _, a := range tc.args {
 				args = append(args, strings.ReplaceAll(a, "$HOME", w.home))

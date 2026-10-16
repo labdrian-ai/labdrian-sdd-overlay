@@ -21,6 +21,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/overlaytest"
 )
 
 // sddExecutors are the skills the script keeps rows for, in the order of its rows.
@@ -47,13 +49,13 @@ func (w *pinWorld) registryPath() string {
 // writeRegistry puts content in the registry of the project, with the mode a person's editor would.
 func (w *pinWorld) writeRegistry(content string) {
 	w.t.Helper()
-	w.write(w.project(), ".atl/skill-registry.md", content)
+	overlaytest.WriteFile(w.t, w.project(), ".atl/skill-registry.md", content)
 }
 
 // installSkill puts a skill with the given text in the skills of a target.
 func (w *pinWorld) installSkill(target, name, text string) {
 	w.t.Helper()
-	w.write(w.home, filepath.Join(skillsRoots[target], name, "SKILL.md"), text)
+	overlaytest.WriteFile(w.t, w.home, filepath.Join(skillsRoots[target], name, "SKILL.md"), text)
 }
 
 // installExecutors installs every SDD executor skill for the target, each with the description the
@@ -135,11 +137,9 @@ func (w *pinWorld) installGentle(regenerated string, exit int) fakeGentle {
 		"  cp \"$FAKE_GENTLE_REGISTRY\" \"$cwd/.atl/skill-registry.md\"\n" +
 		"fi\n" +
 		"exit " + fmt.Sprint(exit) + "\n"
-	if err := os.WriteFile(filepath.Join(dir, "gentle-ai"), []byte(script), 0o755); err != nil {
-		w.t.Fatalf("write the fake gentle-ai: %v", err)
-	}
+	overlaytest.WriteTool(w.t, filepath.Join(dir, "gentle-ai"), script)
 	w.env = append(w.env, "FAKE_GENTLE_LOG="+log, "FAKE_GENTLE_REGISTRY="+body)
-	w.changePath(func(old string) string { return dir + string(os.PathListSeparator) + old })
+	w.putFirst(dir)
 	return fakeGentle{log: log, dir: dir}
 }
 
@@ -173,9 +173,7 @@ func (w *pinWorld) installDiscoveryTools() {
 	w.t.Helper()
 	dir := w.t.TempDir()
 	for _, tool := range discoveryTools {
-		if err := os.WriteFile(filepath.Join(dir, tool), []byte("#!/bin/sh\nexit 0\n"), 0o755); err != nil {
-			w.t.Fatalf("write the %s of the world: %v", tool, err)
-		}
+		overlaytest.WriteTool(w.t, filepath.Join(dir, tool), "#!/bin/sh\nexit 0\n")
 	}
 	// From here every change of the PATH of the world keeps this directory first (changePath), this
 	// one included: the PATH it is given is the world's own, with the directory put in front.

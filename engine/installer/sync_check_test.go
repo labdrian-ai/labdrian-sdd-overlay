@@ -3,19 +3,19 @@ package installer_test
 // TC-SYNC-CHECK: git-fixture integration tests for the REPO_BEHIND_ORIGIN
 // verdict field in `bin/labdrian-overlay cmd_sync_check` (spec R-001..R-004).
 //
-// These tests reuse the setupSandboxOverlay/runOverlay pattern from
-// route_test.go and extend it with a bare "origin" remote repo whose main
-// branch can be advanced independently, so tests can assert both the
+// These tests reuse setupSandboxOverlay (overlay_sandbox_test.go) and
+// overlaytest.Combined, and extend them with a bare "origin" remote repo whose
+// main branch can be advanced independently, so tests can assert both the
 // cached-ref default path (no live fetch) and the --check-origin/--fetch
 // live-fetch path.
 
 import (
 	"fmt"
-	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/overlaytest"
 )
 
 // advanceOriginMain adds n empty commits to the bare origin repo's main
@@ -30,39 +30,21 @@ func advanceOriginMain(t *testing.T, originPath string, n int) {
 	}
 
 	scratch := t.TempDir()
-	runGitIn := func(dir string, args ...string) {
-		t.Helper()
-		cmd := exec.Command("git", args...)
-		cmd.Dir = dir
-		cmd.Env = append(os.Environ(),
-			"GIT_AUTHOR_NAME=test",
-			"GIT_AUTHOR_EMAIL=test@test.com",
-			"GIT_COMMITTER_NAME=test",
-			"GIT_COMMITTER_EMAIL=test@test.com",
-		)
-		if out, err := cmd.CombinedOutput(); err != nil {
-			t.Fatalf("git %v: %v\n%s", args, err, out)
-		}
-	}
+	git := func(dir string, args ...string) { t.Helper(); overlaytest.Git(t, dir, nil, args...) }
 
-	runGitIn(filepath.Dir(scratch), "clone", originPath, scratch)
-	runGitIn(scratch, "checkout", "main")
+	git(filepath.Dir(scratch), "clone", originPath, scratch)
+	git(scratch, "checkout", "main")
 	for i := 0; i < n; i++ {
-		runGitIn(scratch, "commit", "--allow-empty", "-m", fmt.Sprintf("origin advance %d", i))
+		git(scratch, "commit", "--allow-empty", "-m", fmt.Sprintf("origin advance %d", i))
 	}
-	runGitIn(scratch, "push", "origin", "main")
+	git(scratch, "push", "origin", "main")
 }
 
 // breakOriginRemote repoints the overlay repo's origin remote at a
 // nonexistent path so `git fetch origin` fails deterministically.
 func breakOriginRemote(t *testing.T, overlayDir, home string) {
 	t.Helper()
-	cmd := exec.Command("git", "remote", "set-url", "origin", filepath.Join(t.TempDir(), "does-not-exist.git"))
-	cmd.Dir = overlayDir
-	cmd.Env = append(os.Environ(), "HOME="+home)
-	if out, err := cmd.CombinedOutput(); err != nil {
-		t.Fatalf("git remote set-url: %v\n%s", err, out)
-	}
+	overlaytest.Git(t, overlayDir, overlaytest.Env(home, overlayDir), "remote", "set-url", "origin", filepath.Join(t.TempDir(), "does-not-exist.git"))
 }
 
 // setupSandboxOverlayWithOrigin extends setupSandboxOverlay with a bare
@@ -88,21 +70,7 @@ func setupSandboxOverlayWithOrigin(t *testing.T, home string, aheadCommits int, 
 
 	originPath = filepath.Join(t.TempDir(), "origin.git")
 
-	runGit := func(dir string, args ...string) {
-		t.Helper()
-		cmd := exec.Command("git", args...)
-		cmd.Dir = dir
-		cmd.Env = append(os.Environ(),
-			"GIT_AUTHOR_NAME=test",
-			"GIT_AUTHOR_EMAIL=test@test.com",
-			"GIT_COMMITTER_NAME=test",
-			"GIT_COMMITTER_EMAIL=test@test.com",
-			"HOME="+home,
-		)
-		if out, err := cmd.CombinedOutput(); err != nil {
-			t.Fatalf("git %v: %v\n%s", args, err, out)
-		}
-	}
+	runGit := func(dir string, args ...string) { t.Helper(); overlaytest.Git(t, dir, env, args...) }
 
 	runGit(overlayDir, "clone", "--bare", overlayDir, originPath)
 
@@ -126,11 +94,11 @@ func TestSyncCheck_ReportsRepoBehindOrigin_CachedRef(t *testing.T) {
 		t.Skip("skipping integration test in -short mode")
 	}
 
-	overlay := overlayScript(t)
+	overlay := overlaytest.Script(t)
 	home := t.TempDir()
 	_, env, originPath := setupSandboxOverlayWithOrigin(t, home, 3, true)
 
-	if _, err := runOverlay(t, overlay, env, "apply", "--target", "claude"); err != nil {
+	if _, err := overlaytest.Combined(t, overlay, env, "", "apply", "--target", "claude"); err != nil {
 		t.Fatalf("overlay apply: %v", err)
 	}
 
@@ -139,7 +107,7 @@ func TestSyncCheck_ReportsRepoBehindOrigin_CachedRef(t *testing.T) {
 	// setup time (3), proving no live `git fetch` was invoked.
 	advanceOriginMain(t, originPath, 2)
 
-	out, err := runOverlay(t, overlay, env, "sync-check", "--target", "claude")
+	out, err := overlaytest.Combined(t, overlay, env, "", "sync-check", "--target", "claude")
 	if err != nil {
 		t.Fatalf("overlay sync-check: %v\noutput:\n%s", err, out)
 	}
@@ -160,15 +128,15 @@ func TestSyncCheck_BehindOriginOnly_ActionHintsGitPull(t *testing.T) {
 		t.Skip("skipping integration test in -short mode")
 	}
 
-	overlay := overlayScript(t)
+	overlay := overlaytest.Script(t)
 	home := t.TempDir()
 	_, env, _ := setupSandboxOverlayWithOrigin(t, home, 3, true)
 
-	if _, err := runOverlay(t, overlay, env, "apply", "--target", "claude"); err != nil {
+	if _, err := overlaytest.Combined(t, overlay, env, "", "apply", "--target", "claude"); err != nil {
 		t.Fatalf("overlay apply: %v", err)
 	}
 
-	out, err := runOverlay(t, overlay, env, "sync-check", "--target", "claude")
+	out, err := overlaytest.Combined(t, overlay, env, "", "sync-check", "--target", "claude")
 	if err != nil {
 		t.Fatalf("overlay sync-check: %v\noutput:\n%s", err, out)
 	}
@@ -187,15 +155,15 @@ func TestSyncCheck_EvenWithOrigin_ReportsZero(t *testing.T) {
 		t.Skip("skipping integration test in -short mode")
 	}
 
-	overlay := overlayScript(t)
+	overlay := overlaytest.Script(t)
 	home := t.TempDir()
 	_, env, _ := setupSandboxOverlayWithOrigin(t, home, 0, true)
 
-	if _, err := runOverlay(t, overlay, env, "apply", "--target", "claude"); err != nil {
+	if _, err := overlaytest.Combined(t, overlay, env, "", "apply", "--target", "claude"); err != nil {
 		t.Fatalf("overlay apply: %v", err)
 	}
 
-	out, err := runOverlay(t, overlay, env, "sync-check", "--target", "claude")
+	out, err := overlaytest.Combined(t, overlay, env, "", "sync-check", "--target", "claude")
 	if err != nil {
 		t.Fatalf("overlay sync-check: %v\noutput:\n%s", err, out)
 	}
@@ -212,15 +180,15 @@ func TestSyncCheck_NoOriginRemote_ReportsNA(t *testing.T) {
 		t.Skip("skipping integration test in -short mode")
 	}
 
-	overlay := overlayScript(t)
+	overlay := overlaytest.Script(t)
 	home := t.TempDir()
 	_, env := setupSandboxOverlay(t, home) // no origin remote configured
 
-	if _, err := runOverlay(t, overlay, env, "apply", "--target", "claude"); err != nil {
+	if _, err := overlaytest.Combined(t, overlay, env, "", "apply", "--target", "claude"); err != nil {
 		t.Fatalf("overlay apply: %v", err)
 	}
 
-	out, err := runOverlay(t, overlay, env, "sync-check", "--target", "claude")
+	out, err := overlaytest.Combined(t, overlay, env, "", "sync-check", "--target", "claude")
 	if err != nil {
 		t.Fatalf("overlay sync-check: %v\noutput:\n%s", err, out)
 	}
@@ -248,15 +216,15 @@ func TestSyncCheck_CheckOriginFlag_NoOriginRemote_ReportsNA(t *testing.T) {
 		t.Skip("skipping integration test in -short mode")
 	}
 
-	overlay := overlayScript(t)
+	overlay := overlaytest.Script(t)
 	home := t.TempDir()
 	_, env := setupSandboxOverlay(t, home) // no origin remote configured
 
-	if _, err := runOverlay(t, overlay, env, "apply", "--target", "claude"); err != nil {
+	if _, err := overlaytest.Combined(t, overlay, env, "", "apply", "--target", "claude"); err != nil {
 		t.Fatalf("overlay apply: %v", err)
 	}
 
-	out, err := runOverlay(t, overlay, env, "sync-check", "--target", "claude", "--check-origin")
+	out, err := overlaytest.Combined(t, overlay, env, "", "sync-check", "--target", "claude", "--check-origin")
 	if err != nil {
 		t.Fatalf("overlay sync-check --check-origin must not hard-fail with no origin remote: %v\noutput:\n%s", err, out)
 	}
@@ -278,15 +246,15 @@ func TestSyncCheck_NoCachedRef_ReportsNA(t *testing.T) {
 		t.Skip("skipping integration test in -short mode")
 	}
 
-	overlay := overlayScript(t)
+	overlay := overlaytest.Script(t)
 	home := t.TempDir()
 	_, env, _ := setupSandboxOverlayWithOrigin(t, home, 3, false) // configured, never fetched
 
-	if _, err := runOverlay(t, overlay, env, "apply", "--target", "claude"); err != nil {
+	if _, err := overlaytest.Combined(t, overlay, env, "", "apply", "--target", "claude"); err != nil {
 		t.Fatalf("overlay apply: %v", err)
 	}
 
-	out, err := runOverlay(t, overlay, env, "sync-check", "--target", "claude")
+	out, err := overlaytest.Combined(t, overlay, env, "", "sync-check", "--target", "claude")
 	if err != nil {
 		t.Fatalf("overlay sync-check: %v\noutput:\n%s", err, out)
 	}
@@ -308,18 +276,18 @@ func TestSyncCheck_CheckOriginFlag_FetchesLive(t *testing.T) {
 		t.Skip("skipping integration test in -short mode")
 	}
 
-	overlay := overlayScript(t)
+	overlay := overlaytest.Script(t)
 	home := t.TempDir()
 	_, env, originPath := setupSandboxOverlayWithOrigin(t, home, 3, true)
 
-	if _, err := runOverlay(t, overlay, env, "apply", "--target", "claude"); err != nil {
+	if _, err := overlaytest.Combined(t, overlay, env, "", "apply", "--target", "claude"); err != nil {
 		t.Fatalf("overlay apply: %v", err)
 	}
 
 	// Origin advances further after the initial cached fetch.
 	advanceOriginMain(t, originPath, 2)
 
-	out, err := runOverlay(t, overlay, env, "sync-check", "--target", "claude", "--check-origin")
+	out, err := overlaytest.Combined(t, overlay, env, "", "sync-check", "--target", "claude", "--check-origin")
 	if err != nil {
 		t.Fatalf("overlay sync-check --check-origin: %v\noutput:\n%s", err, out)
 	}
@@ -336,17 +304,17 @@ func TestSyncCheck_CheckOriginFlag_FetchFailure_DegradesToNA(t *testing.T) {
 		t.Skip("skipping integration test in -short mode")
 	}
 
-	overlay := overlayScript(t)
+	overlay := overlaytest.Script(t)
 	home := t.TempDir()
 	overlayDir, env, _ := setupSandboxOverlayWithOrigin(t, home, 0, true)
 
-	if _, err := runOverlay(t, overlay, env, "apply", "--target", "claude"); err != nil {
+	if _, err := overlaytest.Combined(t, overlay, env, "", "apply", "--target", "claude"); err != nil {
 		t.Fatalf("overlay apply: %v", err)
 	}
 
 	breakOriginRemote(t, overlayDir, home)
 
-	out, err := runOverlay(t, overlay, env, "sync-check", "--target", "claude", "--check-origin")
+	out, err := overlaytest.Combined(t, overlay, env, "", "sync-check", "--target", "claude", "--check-origin")
 	if err != nil {
 		t.Fatalf("overlay sync-check --check-origin must not hard-fail on fetch error: %v\noutput:\n%s", err, out)
 	}

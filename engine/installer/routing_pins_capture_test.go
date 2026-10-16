@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/enginetest"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/overlaytest"
 )
 
 // branchFiles lists the files of a branch with their content, as the world's tree does, but for
@@ -30,13 +31,13 @@ func (w *pinWorld) branchFiles(branch string) string {
 
 func TestRoutingPins_CaptureCopiesTheLiveFilesOfManagedRows(t *testing.T) {
 	w := deployed(t)
-	w.write(w.home, ".claude/skills/skill-a/SKILL.md", "# skill-a live\n")
-	w.write(w.home, ".claude/skills/shared/helper.md", "# helper live\n")
-	w.write(w.home, ".claude/agents/GADU.md", "# GADU claude live\n")
-	w.write(w.home, ".claude/skills/weird/SKILL.md", "# weird live\n")
+	overlaytest.WriteFile(w.t, w.home, ".claude/skills/skill-a/SKILL.md", "# skill-a live\n")
+	overlaytest.WriteFile(w.t, w.home, ".claude/skills/shared/helper.md", "# helper live\n")
+	overlaytest.WriteFile(w.t, w.home, ".claude/agents/GADU.md", "# GADU claude live\n")
+	overlaytest.WriteFile(w.t, w.home, ".claude/skills/weird/SKILL.md", "# weird live\n")
 	pin(t, "capture/claude", pinRunText(w.run("capture", "--target", "claude")))
 	pin(t, "capture/claude-upstream", w.branchFiles("upstream"))
-	w.write(w.home, ".config/opencode/agents/GADU.md", "# GADU opencode live\n")
+	overlaytest.WriteFile(w.t, w.home, ".config/opencode/agents/GADU.md", "# GADU opencode live\n")
 	pin(t, "capture/opencode", pinRunText(w.run("capture", "--target", "opencode")))
 	pin(t, "capture/opencode-upstream", w.branchFiles("upstream"))
 }
@@ -65,7 +66,7 @@ func writeSnapshotOf(t *testing.T, w *pinWorld, rel string, files map[string]str
 	if err != nil {
 		t.Fatal(err)
 	}
-	w.write(w.home, rel, string(snapshot))
+	overlaytest.WriteFile(w.t, w.home, rel, string(snapshot))
 	return filepath.Join(w.home, rel)
 }
 
@@ -83,18 +84,17 @@ func newBootstrapWorld(t *testing.T) *pinWorld {
 	if testing.Short() {
 		t.Skip("skipping integration test in -short mode")
 	}
-	w := &pinWorld{t: t, script: overlayScript(t), home: pinHome(t), overlay: t.TempDir()}
+	w := &pinWorld{t: t, script: overlaytest.Script(t), home: pinHome(t), overlay: t.TempDir()}
 	// bootstrap makes the repository itself, with the first branch the configuration names.
-	w.env = append(pinEnv(w.home, w.overlay),
-		"GIT_CONFIG_COUNT=1", "GIT_CONFIG_KEY_0=init.defaultBranch", "GIT_CONFIG_VALUE_0=master")
+	w.env = overlaytest.WithGitConfig(pinEnv(w.home, w.overlay), "init.defaultBranch", "master")
 	w.startClock()
 	enginetest.Provision(t, w.home)
-	w.write(w.overlay, "overlay.manifest", pinManifest)
-	w.write(w.overlay, "bin/overlay", "#!/bin/sh\n")
+	overlaytest.WriteFile(w.t, w.overlay, "overlay.manifest", pinManifest)
+	overlaytest.WriteFile(w.t, w.overlay, "bin/overlay", "#!/bin/sh\n")
 	writeSnapshot(t, w, ".gentle-ai/backups/upgrade-20260615T175529Z/snapshot.tar.gz")
-	w.write(w.home, ".claude/skills/skill-a/SKILL.md", "# skill-a live\n")
-	w.write(w.home, ".claude/skills/bare/SKILL.md", "# bare live\n")
-	w.write(w.home, ".claude/agents/GADU.md", "# GADU claude live\n")
+	overlaytest.WriteFile(w.t, w.home, ".claude/skills/skill-a/SKILL.md", "# skill-a live\n")
+	overlaytest.WriteFile(w.t, w.home, ".claude/skills/bare/SKILL.md", "# bare live\n")
+	overlaytest.WriteFile(w.t, w.home, ".claude/agents/GADU.md", "# GADU claude live\n")
 	return w
 }
 

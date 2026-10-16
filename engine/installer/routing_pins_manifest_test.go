@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/overlaytest"
 )
 
 // pinQuirkyManifest is a manifest written the way a hand edit leaves one: tabs between the
@@ -60,9 +62,9 @@ func TestRoutingPins_ManifestReadingKeepsItsQuirks(t *testing.T) {
 	pin(t, "quirks/status", pinRunText(w.run("status", "--target", "claude")))
 	pin(t, "quirks/apply", pinRunText(w.run("apply", "--target", "claude")))
 	pin(t, "quirks/files", w.tree(w.home))
-	w.write(w.home, ".claude/skills/tabbed/SKILL.md", "# tabbed live\n")
+	overlaytest.WriteFile(w.t, w.home, ".claude/skills/tabbed/SKILL.md", "# tabbed live\n")
 	// The row of this file is tagged "managed\r": capture does not copy it (see above).
-	w.write(w.home, ".claude/skills/crlf/SKILL.md", "# crlf live\n")
+	overlaytest.WriteFile(w.t, w.home, ".claude/skills/crlf/SKILL.md", "# crlf live\n")
 	pin(t, "quirks/capture", pinRunText(w.run("capture", "--target", "claude")))
 	pin(t, "quirks/capture-upstream", w.branchFiles("upstream"))
 }
@@ -121,7 +123,7 @@ func TestRoutingPins_AnUnroutedLongtermMemRowIsRefusedWhereItIsReached(t *testin
 		pin(t, "refused-"+name+"/sync-check", pinRunText(w.run("sync-check", "--target", "claude")))
 		pin(t, "refused-"+name+"/apply", pinRunText(w.run("apply", "--target", "claude")))
 		pin(t, "refused-"+name+"/files", w.tree(w.home))
-		w.write(w.home, ".claude/skills/skill-a/SKILL.md", "# skill-a live\n")
+		overlaytest.WriteFile(w.t, w.home, ".claude/skills/skill-a/SKILL.md", "# skill-a live\n")
 		pin(t, "refused-"+name+"/capture", pinRunText(w.run("capture", "--target", "claude")))
 		pin(t, "refused-"+name+"/capture-upstream", w.branchFiles("upstream"))
 	}
@@ -133,8 +135,8 @@ func TestRoutingPins_RestoreStopsAtAnUnroutedLongtermMemRow(t *testing.T) {
 	if run := w.run("apply", "--target", "claude"); run.Exit != 0 {
 		t.Fatalf("apply: %s", pinRunText(run))
 	}
-	w.write(w.overlay, "overlay.manifest", pinManifest+"longterm-mem/internal/foo.go   managed\n")
-	w.write(w.home, ".claude/skills/skill-a/SKILL.md", "# skill-a edited\n")
+	overlaytest.WriteFile(w.t, w.overlay, "overlay.manifest", pinManifest+"longterm-mem/internal/foo.go   managed\n")
+	overlaytest.WriteFile(w.t, w.home, ".claude/skills/skill-a/SKILL.md", "# skill-a edited\n")
 	pin(t, "refused-restore/run", pinRunText(w.run("restore", "--target", "claude")))
 	pin(t, "refused-restore/files", w.tree(filepath.Join(w.home, ".claude")))
 }
@@ -158,7 +160,7 @@ func TestRoutingPins_AnMcpRowIsReadByEveryCommandAndCopiedNowhere(t *testing.T) 
 		t.Fatal(err)
 	}
 	pin(t, "mcp/sync-check", pinRunText(w.run("sync-check", "--target", "claude")))
-	w.write(w.home, ".claude/skills/skill-a/SKILL.md", "# skill-a live\n")
+	overlaytest.WriteFile(w.t, w.home, ".claude/skills/skill-a/SKILL.md", "# skill-a live\n")
 	pin(t, "mcp/capture", pinRunText(w.run("capture", "--target", "claude")))
 	pin(t, "mcp/capture-upstream", w.branchFiles("upstream"))
 }

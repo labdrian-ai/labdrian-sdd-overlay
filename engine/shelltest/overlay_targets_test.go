@@ -2,9 +2,10 @@ package shelltest
 
 import (
 	"os"
-	"os/exec"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/overlaytest"
 )
 
 // targetsHermeticEnv returns an environment for running the overlay script
@@ -23,21 +24,11 @@ func targetsHermeticEnv(t *testing.T) (env []string, home string) {
 // a diagnostic on stderr must never be mistaken for a target line.
 func runOverlayTargets(t *testing.T, args ...string) (stdout, stderr string, exitCode int, home string) {
 	t.Helper()
-	overlay := piTargetOverlayPath(t)
+	overlay := overlayScript(t)
 	env, home := targetsHermeticEnv(t)
 
-	cmd := exec.Command(overlay, append([]string{"targets"}, args...)...)
-	cmd.Env = env
-	var outBuf, errBuf strings.Builder
-	cmd.Stdout = &outBuf
-	cmd.Stderr = &errBuf
-	err := cmd.Run()
-	if exitErr, ok := err.(*exec.ExitError); ok {
-		exitCode = exitErr.ExitCode()
-	} else if err != nil {
-		t.Fatalf("targets %v: failed to run: %v", args, err)
-	}
-	return outBuf.String(), errBuf.String(), exitCode, home
+	got := overlaytest.Run(t, overlay, env, "", append([]string{"targets"}, args...)...)
+	return got.Stdout, got.Stderr, got.Exit, home
 }
 
 // TestTargets_PrintsTheCatalogOneTargetPerLine pins the wire format the TUI
@@ -66,7 +57,7 @@ func TestTargets_PrintsTheCatalogOneTargetPerLine(t *testing.T) {
 // sides are read from the real script, so a second hardcoded list added to
 // either would fail here.
 func TestTargets_NamesAreExactlyWhatTargetAllExpandsTo(t *testing.T) {
-	overlay := piTargetOverlayPath(t)
+	overlay := overlayScript(t)
 
 	stdout, _, exitCode, _ := runOverlayTargets(t)
 	if exitCode != 0 {
@@ -78,7 +69,7 @@ func TestTargets_NamesAreExactlyWhatTargetAllExpandsTo(t *testing.T) {
 		names = append(names, name)
 	}
 
-	out, err := sourceAndRun(t, overlay, `resolve_targets all`)
+	out, err := overlaytest.Source(t, overlay, overlaytest.Shell{}, `resolve_targets all`)
 	if err != nil {
 		t.Fatalf("resolve_targets all failed: %v\n%s", err, out)
 	}
@@ -91,7 +82,7 @@ func TestTargets_NamesAreExactlyWhatTargetAllExpandsTo(t *testing.T) {
 // what tells the TUI that capture and restore refuse a package target, so it
 // must say "copy" exactly where the backend's own is_copy_target does.
 func TestTargets_KindsAgreeWithIsCopyTarget(t *testing.T) {
-	overlay := piTargetOverlayPath(t)
+	overlay := overlayScript(t)
 
 	stdout, _, exitCode, _ := runOverlayTargets(t)
 	if exitCode != 0 {
@@ -102,7 +93,7 @@ func TestTargets_KindsAgreeWithIsCopyTarget(t *testing.T) {
 		if !ok {
 			t.Fatalf("line %q has no tab-separated kind", line)
 		}
-		out, err := sourceAndRun(t, overlay, `is_copy_target `+name+` && echo copy || echo package`)
+		out, err := overlaytest.Source(t, overlay, overlaytest.Shell{}, `is_copy_target `+name+` && echo copy || echo package`)
 		if err != nil {
 			t.Fatalf("is_copy_target %s failed: %v\n%s", name, err, out)
 		}
@@ -153,16 +144,13 @@ func TestTargets_RefusesArguments(t *testing.T) {
 // TestUsage_DocumentsTheTargetsSubcommand: the format is a contract, so the
 // usage text states it.
 func TestUsage_DocumentsTheTargetsSubcommand(t *testing.T) {
-	overlay := piTargetOverlayPath(t)
+	overlay := overlayScript(t)
 	env, _ := targetsHermeticEnv(t)
 
-	cmd := exec.Command(overlay, "--help")
-	cmd.Env = env
-	out, err := cmd.CombinedOutput()
+	usage, err := overlaytest.Combined(t, overlay, env, "", "--help")
 	if err != nil {
-		t.Fatalf("--help failed: %v\n%s", err, out)
+		t.Fatalf("--help failed: %v\n%s", err, usage)
 	}
-	usage := string(out)
 	for _, fragment := range []string{"targets", "<name><TAB><kind>", "--target all"} {
 		if !strings.Contains(usage, fragment) {
 			t.Errorf("usage must mention %q for the targets subcommand", fragment)

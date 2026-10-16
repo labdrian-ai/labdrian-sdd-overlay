@@ -17,7 +17,6 @@ package installer_test
 
 import (
 	"bytes"
-	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -29,6 +28,7 @@ import (
 	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/filelock"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/overlaytest"
 )
 
 // fakeGoScript is the `go` of the world: `go build -o <path> ...` copies the fake longterm-mem to
@@ -75,16 +75,14 @@ func longtermWorld(t *testing.T) *pinWorld {
 		t.Skip("skipping integration test in -short mode")
 	}
 	w := newPinWorld(t, "skill-a/SKILL.md managed\n", map[string]string{"skills/skill-a/SKILL.md": "# skill-a\n"})
-	w.write(w.overlay, "longterm-mem/README.md", "# the module the script looks for\n")
+	overlaytest.WriteFile(w.t, w.overlay, "longterm-mem/README.md", "# the module the script looks for\n")
 	dir := t.TempDir()
 	for name, body := range map[string]string{"go": fakeGoScript, "fake-longterm-mem": fakeLongtermMemScript} {
-		if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o755); err != nil {
-			t.Fatalf("write the fake %s: %v", name, err)
-		}
+		overlaytest.WriteTool(t, filepath.Join(dir, name), body)
 	}
 	w.setEnv("FAKE_LM_SOURCE", filepath.Join(dir, "fake-longterm-mem"))
 	w.setEnv("FAKE_LM_LOG", filepath.Join(dir, "longterm-mem.log"))
-	w.changePath(func(old string) string { return dir + string(os.PathListSeparator) + old })
+	w.putFirst(dir)
 	return w
 }
 
@@ -126,12 +124,7 @@ func (w *pinWorld) placeBinary() {
 	if err != nil {
 		w.t.Fatal(err)
 	}
-	if err := os.MkdirAll(filepath.Dir(w.sharedBinary()), 0o755); err != nil {
-		w.t.Fatal(err)
-	}
-	if err := os.WriteFile(w.sharedBinary(), body, 0o755); err != nil {
-		w.t.Fatal(err)
-	}
+	overlaytest.WriteTool(w.t, w.sharedBinary(), string(body))
 	// The mode a person's umask would leave is not what the pins are about.
 	if err := os.Chmod(w.sharedBinary(), 0o755); err != nil {
 		w.t.Fatal(err)
@@ -180,23 +173,12 @@ func (w *pinWorld) runLongterm(args ...string) pinRun {
 	cmd := exec.Command("bash", append([]string{"-c", `umask 022; exec bash "$@"`, "bash", w.script}, args...)...)
 	cmd.Dir = w.overlay
 	cmd.Env = w.env
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	err := cmd.Run()
-	run := pinRun{
-		Stdout: toolChatter.ReplaceAllString(w.normalize(stdout.String()), "<a tool of the machine says something>"),
-		Stderr: toolChatter.ReplaceAllString(w.normalize(stderr.String()), "<a tool of the machine says something>"),
+	got := overlaytest.Capture(w.t, cmd)
+	return pinRun{
+		Stdout: toolChatter.ReplaceAllString(w.normalize(got.Stdout), "<a tool of the machine says something>"),
+		Stderr: toolChatter.ReplaceAllString(w.normalize(got.Stderr), "<a tool of the machine says something>"),
+		Exit:   got.Exit,
 	}
-	var exit *exec.ExitError
-	switch {
-	case err == nil:
-	case errors.As(err, &exit):
-		run.Exit = exit.ExitCode()
-	default:
-		w.t.Fatalf("run %v: %v", args, err)
-	}
-	return run
 }
 
 // longtermState shows what a run left under the state directory: every file with its mode and its
