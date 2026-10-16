@@ -301,6 +301,7 @@ func TestHelpBlockOfRunsFromTheLineAfterTheHeaderToTheNextHeader(t *testing.T) {
 		{"the last entry", "  b <verb>  two\n  a <verb>  one\n      detail\n", "      detail\n"},
 		{"a header with nothing under it", "  a <verb>  one\n  b <verb>  two\n", ""},
 		{"deeper lines are not headers", "  a <verb>  one\n    Two spaces deeper\n   x\n  b <verb>\n", "    Two spaces deeper\n   x"},
+		{"a line that only contains the header is not the header", "x  a <verb>\n      before\n  a <verb>  one\n      real\n  b <verb>\n", "      real"},
 		{"no such header", "  b <verb>  two\n      other\n", ""},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
