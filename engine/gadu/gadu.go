@@ -25,12 +25,26 @@ import (
 //go:embed persona/body.md
 var personaBody string
 
+// agentDescription is what the three agent files say GADU is. It is one text, so the three cannot
+// drift.
+const agentDescription = "High-judgment operator agent — invoke by name. Opinionated, red-teams the user's reasoning, recommends the highest-odds option, orchestrates sub-agents as lead, grounds claims in verified sources. Not a warm assistant."
+
+// The model id each agent file declares in its frontmatter.
+const (
+	// ClaudeAgentModel is the alias agents/GADU.md declares; Claude Code resolves it to its current
+	// Opus.
+	ClaudeAgentModel = "opus"
+	// OpenCodeAgentModel is the provider-prefixed id opencode/agents/GADU.md declares: OpenCode
+	// requires one.
+	OpenCodeAgentModel = "openai/gpt-5.5"
+)
+
 // agentFrontmatter is the generator-owned template for agents/GADU.md (D7).
 // Matching the existing hand-made Claude Code file so @GADU invocation works identically.
 const agentFrontmatter = `---
 name: GADU
-description: High-judgment operator agent — invoke by name. Opinionated, red-teams the user's reasoning, recommends the highest-odds option, orchestrates sub-agents as lead, grounds claims in verified sources. Not a warm assistant.
-model: opus
+description: ` + agentDescription + `
+model: ` + ClaudeAgentModel + `
 tools: '*'
 ---`
 
@@ -39,9 +53,9 @@ tools: '*'
 // rejects Claude Code's `tools: '*'` frontmatter, so this native file keeps the
 // same persona body while using OpenCode's agent schema.
 const opencodeAgentFrontmatter = `---
-description: High-judgment operator agent — invoke by name. Opinionated, red-teams the user's reasoning, recommends the highest-odds option, orchestrates sub-agents as lead, grounds claims in verified sources. Not a warm assistant.
+description: ` + agentDescription + `
 mode: all
-model: openai/gpt-5.5
+model: ` + OpenCodeAgentModel + `
 permission:
   task: allow
 ---`
@@ -70,7 +84,7 @@ const PiAgentModel = "pi-claude-cli/claude-sonnet-5"
 // parser (and gentle-pi's own) already accept.
 const piAgentFrontmatter = `---
 name: GADU
-description: High-judgment operator agent — invoke by name. Opinionated, red-teams the user's reasoning, recommends the highest-odds option, orchestrates sub-agents as lead, grounds claims in verified sources. Not a warm assistant.
+description: ` + agentDescription + `
 model: ` + PiAgentModel + `
 tools: '*'
 ---`
@@ -126,99 +140,58 @@ spawn_agent (codex) — never a runtime-specific workflow tool — so the behavi
 // It appears immediately after the closing frontmatter "---" in every output file.
 const doNotEditHeader = "<!-- GENERATED — DO NOT EDIT. Source: engine/gadu/persona/body.md. Run: gentle-ai-overlay gadu-generate -->"
 
-// Generate writes all delivery artifacts under repoRoot:
-//   - <repoRoot>/agents/GADU.md
-//   - <repoRoot>/opencode/agents/GADU.md
-//   - <repoRoot>/pi/agents/GADU.md
-//   - <repoRoot>/skills/gadu-operator/SKILL.md
+// Artifact is one file the generator emits: where it goes under the root of the repository, as a
+// slash-separated path, and what it holds.
+type Artifact struct {
+	Path    string
+	Content string
+}
+
+// Artifacts is the table of what the generator emits, in the order Generate writes it and Check
+// reports it:
+//   - agents/GADU.md
+//   - opencode/agents/GADU.md
+//   - pi/agents/GADU.md
+//   - skills/gadu-operator/SKILL.md
 //
-// Parent directories are created as needed. Generate is idempotent and
-// overwrites any existing files.
+// Each call builds the table afresh, so no caller can change what the next one sees.
+func Artifacts() []Artifact {
+	return []Artifact{
+		{Path: "agents/GADU.md", Content: buildAgentFile()},
+		{Path: "opencode/agents/GADU.md", Content: buildOpenCodeAgentFile()},
+		{Path: "pi/agents/GADU.md", Content: buildPiAgentFile()},
+		{Path: "skills/gadu-operator/SKILL.md", Content: buildSkillFile()},
+	}
+}
+
+// Generate writes every artifact of the table under repoRoot. Parent directories are created as
+// needed. Generate is idempotent and overwrites any existing files.
 func Generate(repoRoot string) error {
-	agentContent := buildAgentFile()
-	opencodeAgentContent := buildOpenCodeAgentFile()
-	piAgentContent := buildPiAgentFile()
-	skillContent := buildSkillFile()
-
-	agentPath := filepath.Join(repoRoot, "agents", "GADU.md")
-	opencodeAgentPath := filepath.Join(repoRoot, "opencode", "agents", "GADU.md")
-	piAgentPath := filepath.Join(repoRoot, "pi", "agents", "GADU.md")
-	skillPath := filepath.Join(repoRoot, "skills", "gadu-operator", "SKILL.md")
-
-	if err := writeFile(agentPath, agentContent); err != nil {
-		return fmt.Errorf("writing agents/GADU.md: %w", err)
-	}
-	if err := writeFile(opencodeAgentPath, opencodeAgentContent); err != nil {
-		return fmt.Errorf("writing opencode/agents/GADU.md: %w", err)
-	}
-	if err := writeFile(piAgentPath, piAgentContent); err != nil {
-		return fmt.Errorf("writing pi/agents/GADU.md: %w", err)
-	}
-	if err := writeFile(skillPath, skillContent); err != nil {
-		return fmt.Errorf("writing skills/gadu-operator/SKILL.md: %w", err)
+	for _, a := range Artifacts() {
+		if err := writeFile(filepath.Join(repoRoot, filepath.FromSlash(a.Path)), a.Content); err != nil {
+			return fmt.Errorf("writing %s: %w", a.Path, err)
+		}
 	}
 	return nil
 }
 
-// Check regenerates both artifacts into a temp directory and diffs them against
-// the committed copies under repoRoot. Returns a non-nil error with a
-// descriptive message if any file is missing, stale, or divergent. (R-003)
+// Check compares the committed copies under repoRoot with the table, in memory: it writes nothing,
+// not even a scratch directory. It returns a non-nil error with a descriptive message if any file
+// is missing, unreadable, stale or divergent. (R-003)
 func Check(repoRoot string) error {
-	tmpDir, err := os.MkdirTemp("", "gadu-check-*")
-	if err != nil {
-		return fmt.Errorf("creating temp dir: %w", err)
-	}
-	defer os.RemoveAll(tmpDir)
-
-	if err := Generate(tmpDir); err != nil {
-		return fmt.Errorf("regenerating for check: %w", err)
-	}
-
-	pairs := []struct {
-		label     string
-		committed string
-		generated string
-	}{
-		{
-			label:     "agents/GADU.md",
-			committed: filepath.Join(repoRoot, "agents", "GADU.md"),
-			generated: filepath.Join(tmpDir, "agents", "GADU.md"),
-		},
-		{
-			label:     "opencode/agents/GADU.md",
-			committed: filepath.Join(repoRoot, "opencode", "agents", "GADU.md"),
-			generated: filepath.Join(tmpDir, "opencode", "agents", "GADU.md"),
-		},
-		{
-			label:     "pi/agents/GADU.md",
-			committed: filepath.Join(repoRoot, "pi", "agents", "GADU.md"),
-			generated: filepath.Join(tmpDir, "pi", "agents", "GADU.md"),
-		},
-		{
-			label:     "skills/gadu-operator/SKILL.md",
-			committed: filepath.Join(repoRoot, "skills", "gadu-operator", "SKILL.md"),
-			generated: filepath.Join(tmpDir, "skills", "gadu-operator", "SKILL.md"),
-		},
-	}
-
 	var errs []string
-	for _, p := range pairs {
-		committedBytes, err := os.ReadFile(p.committed)
+	for _, a := range Artifacts() {
+		committed, err := os.ReadFile(filepath.Join(repoRoot, filepath.FromSlash(a.Path)))
 		if err != nil {
 			if os.IsNotExist(err) {
-				errs = append(errs, fmt.Sprintf("%s: missing (not yet generated — run: gentle-ai-overlay gadu-generate)", p.label))
+				errs = append(errs, fmt.Sprintf("%s: missing (not yet generated — run: gentle-ai-overlay gadu-generate)", a.Path))
 				continue
 			}
-			errs = append(errs, fmt.Sprintf("%s: cannot read committed file: %v", p.label, err))
+			errs = append(errs, fmt.Sprintf("%s: cannot read committed file: %v", a.Path, err))
 			continue
 		}
-		generatedBytes, err := os.ReadFile(p.generated)
-		if err != nil {
-			errs = append(errs, fmt.Sprintf("%s: cannot read regenerated file: %v", p.label, err))
-			continue
-		}
-		if string(committedBytes) != string(generatedBytes) {
-			errs = append(errs, fmt.Sprintf("%s: stale — committed content diverges from generator output (run: gentle-ai-overlay gadu-generate)", p.label))
+		if string(committed) != a.Content {
+			errs = append(errs, fmt.Sprintf("%s: stale — committed content diverges from generator output (run: gentle-ai-overlay gadu-generate)", a.Path))
 		}
 	}
 

@@ -21,7 +21,6 @@ import (
 	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/contract"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/propagator"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings"
 )
 
@@ -133,10 +132,25 @@ type Request struct {
 	Cwd  string
 }
 
-// Service makes the checks of an installation over the ports it is given.
+// ScopedBlock is a block that `engine propagate` scopes into the registry of a project, as the
+// check of that registry looks for it. The status of an installation names no contract: the
+// composition root hands it the blocks, from the table of the contracts it manages.
+type ScopedBlock struct {
+	// Name is what the report calls the block when it is missing.
+	Name string
+	// BeginMarker is the marker that opens the block. The registry holds the block when it holds
+	// this text; the closing marker is not read.
+	BeginMarker string
+}
+
+// Service makes the checks of an installation over the ports it is given and the blocks it is told
+// a registry holds.
 type Service struct {
 	Files    Files
 	Settings SettingsSource
+	// Blocks are the scoped blocks a registry is expected to hold, in the order the report names
+	// the ones that are missing.
+	Blocks []ScopedBlock
 }
 
 // binaryIdentity is the substring that tells the overlay's hook entries from every other
@@ -158,8 +172,8 @@ const (
 // whose absence is a failure; the four families added later, whose absence is a warning; the
 // contract; and, when the request names a directory, the registry of the project there.
 //
-// Both ports are required: a Service without one is a wiring mistake and Check panics saying which,
-// rather than answering a report that hides it.
+// Both ports and the blocks are required: a Service without one is a wiring mistake and Check panics
+// saying which, rather than answering a report that hides it.
 func (s Service) Check(req Request) Report {
 	if s.Files == nil {
 		panic("status: Service.Files is nil")
@@ -167,6 +181,7 @@ func (s Service) Check(req Request) Report {
 	if s.Settings == nil {
 		panic("status: Service.Settings is nil")
 	}
+	s.requireBlocks()
 	binaryPath := filepath.Join(req.Home, ".claude", "bin", binaryIdentity)
 	settingsPath := filepath.Join(req.Home, ".claude", "settings.json")
 	contractPath := filepath.Join(req.Home, ".claude", "skills", "_shared", "minimalism-contract.md")
@@ -199,7 +214,16 @@ func (s Service) Registry(dir string) Check {
 	if s.Files == nil {
 		panic("status: Service.Files is nil")
 	}
-	return checkRegistry(filepath.Join(dir, ".atl", "skill-registry.md"), s.Files)
+	s.requireBlocks()
+	return checkRegistry(filepath.Join(dir, ".atl", "skill-registry.md"), s.Files, s.Blocks)
+}
+
+// requireBlocks panics when the service was given no blocks: a service that expects nothing of a
+// registry would call every registry whole, and that is a wiring mistake to say, not a verdict to give.
+func (s Service) requireBlocks() {
+	if len(s.Blocks) == 0 {
+		panic("status: Service.Blocks is empty")
+	}
 }
 
 // loadedSettings is what reading settings.json gave: its object, nil when the file is absent or
@@ -372,8 +396,8 @@ func CheckContract(path string, files FileReader) Check {
 //   - present but empty or only white space: a failure. An emptied registry is the incident's
 //     misread state: it must be loud, never taken for zero skills.
 //   - present, a scoped block missing: a warning that names the blocks. Actionable, not fatal.
-//   - present with both scoped blocks: OK.
-func checkRegistry(path string, files FileReader) Check {
+//   - present with every scoped block: OK.
+func checkRegistry(path string, files FileReader, blocks []ScopedBlock) Check {
 	label := "registry: " + path
 	data, err := files.ReadFile(path)
 	if err != nil {
@@ -390,18 +414,14 @@ func checkRegistry(path string, files FileReader) Check {
 			Note:  "present but EMPTY — run skill-registry refresh; do NOT conclude skills are absent (an empty registry is inconclusive, not zero)",
 		}
 	}
-	hasMinimalism := strings.Contains(content, propagator.BeginMarker)
-	hasDesign := strings.Contains(content, propagator.AntiGenericDesignBeginMarker)
-	if hasMinimalism && hasDesign {
-		return Check{Label: label, Level: OK, Note: "scoped block present"}
-	}
-
 	var missing []string
-	if !hasMinimalism {
-		missing = append(missing, "minimalism-contract-scope")
+	for _, block := range blocks {
+		if !strings.Contains(content, block.BeginMarker) {
+			missing = append(missing, block.Name)
+		}
 	}
-	if !hasDesign {
-		missing = append(missing, "anti-generic-design-scope")
+	if len(missing) == 0 {
+		return Check{Label: label, Level: OK, Note: "scoped block present"}
 	}
 	return Check{Label: label, Level: Warn,
 		Note: fmt.Sprintf("present but scoped block(s) missing: %s (run 'labdrian install-hooks' or propagate)", strings.Join(missing, ", "))}

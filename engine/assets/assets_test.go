@@ -1,6 +1,9 @@
 package assets_test
 
 import (
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"os"
 	"path/filepath"
 	"strings"
@@ -9,6 +12,55 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/assets"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/contract"
 )
+
+// TestEmbeddedContentsAreNotExportedVariables holds the package to its accessors: the text a
+// caller reads is a function's answer, so no caller can assign over what every other caller
+// reads. It reads the source because a variable can be assigned from anywhere and no import
+// rule sees that.
+func TestEmbeddedContentsAreNotExportedVariables(t *testing.T) {
+	fset := token.NewFileSet()
+	pkgs, err := parser.ParseDir(fset, ".", func(info os.FileInfo) bool {
+		return !strings.HasSuffix(info.Name(), "_test.go")
+	}, parser.SkipObjectResolution)
+	if err != nil {
+		t.Fatalf("parse the package: %v", err)
+	}
+	if len(pkgs) != 1 {
+		t.Fatalf("want one package in the directory, got %d", len(pkgs))
+	}
+	for _, pkg := range pkgs {
+		for name, file := range pkg.Files {
+			for _, decl := range file.Decls {
+				gen, ok := decl.(*ast.GenDecl)
+				if !ok || gen.Tok != token.VAR {
+					continue
+				}
+				for _, spec := range gen.Specs {
+					for _, id := range spec.(*ast.ValueSpec).Names {
+						if id.IsExported() {
+							t.Errorf("%s: %s is an exported variable; hand the text out through a function", filepath.Base(name), id.Name)
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+// TestAntiGenericDesignIsTheFileItEmbeds pins what the accessor answers: the bytes of
+// anti-generic-design.md, whole, so an embed of another file or a cut one is seen.
+func TestAntiGenericDesignIsTheFileItEmbeds(t *testing.T) {
+	want, err := os.ReadFile("anti-generic-design.md")
+	if err != nil {
+		t.Fatalf("read the embedded file: %v", err)
+	}
+	if got := assets.AntiGenericDesign(); got != string(want) {
+		t.Errorf("AntiGenericDesign() is %d bytes, anti-generic-design.md is %d", len(got), len(want))
+	}
+	if len(want) == 0 {
+		t.Error("anti-generic-design.md is empty, and an empty contract guards nothing")
+	}
+}
 
 // repoRoot returns the overlay repo root, two levels above engine/assets/.
 func repoRoot(t *testing.T) string {
@@ -27,9 +79,9 @@ func repoRoot(t *testing.T) string {
 // gate-task/propagate would fail loud (propagate exits 1; gate-task logs a
 // stderr warning and passes through) instead of injecting the contract.
 func TestAntiGenericDesignFrontmatterParses(t *testing.T) {
-	phases, err := contract.Parse(assets.AntiGenericDesign)
+	phases, err := contract.Parse(assets.AntiGenericDesign())
 	if err != nil {
-		t.Fatalf("contract.Parse(assets.AntiGenericDesign): unexpected error: %v", err)
+		t.Fatalf("contract.Parse(assets.AntiGenericDesign()): unexpected error: %v", err)
 	}
 
 	want := []string{"sdd-tasks", "sdd-apply"}
@@ -58,10 +110,10 @@ func TestAntiGenericDesignStandaloneCopyMatchesEmbeddedAsset(t *testing.T) {
 		t.Fatalf("read standalone copy %s: %v", standalonePath, err)
 	}
 
-	if string(standaloneBytes) != assets.AntiGenericDesign {
+	if string(standaloneBytes) != assets.AntiGenericDesign() {
 		t.Errorf(
 			"skills/_shared/anti-generic-design.md has drifted from the embedded engine/assets/anti-generic-design.md asset — they must be byte-identical.\nstandalone length=%d, embedded length=%d",
-			len(standaloneBytes), len(assets.AntiGenericDesign),
+			len(standaloneBytes), len(assets.AntiGenericDesign()),
 		)
 	}
 }

@@ -18,17 +18,13 @@ package gitfs
 import (
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gitobject"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gitprov"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow"
 )
-
-// hexObjectID matches a full SHA-1 (40 hex) or SHA-256 (64 hex) git object
-// id, the same shape workflow.Provenance.GitHead requires.
-var hexObjectID = regexp.MustCompile(`^(?:[0-9a-f]{40}|[0-9a-f]{64})$`)
 
 // Locator reads repositories from the file system. The zero value is ready to use. It answers
 // projection.RepoLocator.
@@ -188,7 +184,7 @@ func resolveHead(gitDir string) string {
 		return ""
 	}
 	line := strings.TrimSpace(string(data))
-	if hexObjectID.MatchString(line) {
+	if gitobject.IsName(line) {
 		return line
 	}
 	ref, found := strings.CutPrefix(line, "ref:")
@@ -249,7 +245,7 @@ func commonDir(gitDir string) string {
 func lookupRef(dir, ref string) (string, bool) {
 	if data, err := os.ReadFile(filepath.Join(dir, filepath.FromSlash(ref))); err == nil {
 		candidate := strings.TrimSpace(string(data))
-		return candidate, hexObjectID.MatchString(candidate)
+		return candidate, gitobject.IsName(candidate)
 	}
 	packed, err := os.ReadFile(filepath.Join(dir, "packed-refs"))
 	if err != nil {
@@ -260,7 +256,7 @@ func lookupRef(dir, ref string) (string, bool) {
 			continue
 		}
 		id, name, found := strings.Cut(l, " ")
-		if found && name == ref && hexObjectID.MatchString(id) {
+		if found && name == ref && gitobject.IsName(id) {
 			return id, true
 		}
 	}

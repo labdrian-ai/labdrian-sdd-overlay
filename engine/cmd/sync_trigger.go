@@ -28,6 +28,8 @@ func runSyncTrigger(p process, d deps, args []string) {
 func runSyncTriggerCore(d deps, args []string, stderr io.Writer, exit func(int)) {
 	o, isChild := parseSyncTriggerArgs(args)
 	o.Stderr = stderr // where the runner reports what it can before it has a log
+	o.Now = d.clock()
+	o.Runner = d.syncTriggerRunner()
 	if o.StateDir == "" {
 		if home, err := d.homeDir(); err == nil {
 			o.StateDir = filepath.Join(home, defaultStateDirName)

@@ -3,6 +3,11 @@
 // survives registry regeneration. Each managed contract owns a DISTINCT marker
 // pair so multiple contracts can coexist without overwriting each other's block.
 //
+// The package names no contract. Which markers delimit the block of a contract
+// and what its row is called are the Config the caller hands in (the composition
+// root keeps the table of the contracts it manages), and a Config that leaves
+// one out is refused (ErrInvalidConfig).
+//
 // Regeneration-safety contract:
 //
 //	Each contract's row is wrapped in its own BEGIN/END pair, e.g.:
@@ -16,32 +21,16 @@
 package propagator
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/contract"
 )
 
-// Markers wrapping the scoped minimalism-contract row. These remain the package
-// defaults so existing callers and tests keep working; Config may override them
-// when a second contract (e.g. anti-generic-design) needs its own block.
-const (
-	BeginMarker = "<!-- BEGIN: minimalism-contract-scope (auto-generated) -->"
-	EndMarker   = "<!-- END: minimalism-contract-scope -->"
-)
-
-// Markers wrapping the scoped anti-generic-design row. A DISTINCT marker pair
-// is mandatory: reusing the minimalism-contract pair would make Propagate
-// overwrite that contract's block instead of the two coexisting (see package
-// doc).
-const (
-	AntiGenericDesignBeginMarker = "<!-- BEGIN: anti-generic-design-scope (auto-generated) -->"
-	AntiGenericDesignEndMarker   = "<!-- END: anti-generic-design-scope -->"
-)
-
-// DefaultRowLabel is the leading table-cell label used when Config.RowLabel is
-// empty, preserving the original minimalism-contract behavior.
-const DefaultRowLabel = "minimalism-contract"
+// ErrInvalidConfig is what Propagate returns, wrapped, for a Config that does not scope a block:
+// a marker or the row label missing, or a marker that does not open (or close) a marker block.
+var ErrInvalidConfig = errors.New("propagator: invalid config")
 
 // The shapes of the lines that delimit a marker block in the registry, and the heading of
 // the table a new row is appended to.
@@ -51,10 +40,9 @@ const (
 	sharedContractsHeader = "### Shared Contracts"
 )
 
-// Config holds the contract path used in the generated registry row, plus the
-// marker pair and row label that scope the block. The marker/label fields are
-// optional: when empty they default to the minimalism-contract values so the
-// original single-contract behavior is unchanged.
+// Config says how the block of one contract is written into a registry: the
+// path its row names, and the marker pair and row label that scope it. Every
+// field but ContractPath is required.
 type Config struct {
 	// ContractPath is the relative path to the contract markdown file, as it
 	// should appear in the registry table (e.g.
@@ -62,53 +50,38 @@ type Config struct {
 	ContractPath string
 
 	// BeginMarker / EndMarker delimit the regeneration-safe block this contract
-	// owns. When empty they default to the package BeginMarker / EndMarker
-	// (minimalism-contract-scope). A second contract MUST set a distinct pair
-	// (e.g. AntiGenericDesignBeginMarker / AntiGenericDesignEndMarker) so the two
-	// propagators do not overwrite each other's block.
+	// owns: a line that starts with "<!-- BEGIN:" and one that starts with
+	// "<!-- END:". Two contracts MUST have distinct pairs, or each would
+	// overwrite the other's block.
 	BeginMarker string
 	EndMarker   string
 
 	// RowLabel is the leading table-cell label for the generated row (the first
-	// markdown cell). When empty it defaults to "minimalism-contract".
+	// markdown cell), which is also how an unscoped row of the contract is found.
 	RowLabel string
 }
 
-// begin returns the effective BEGIN marker, falling back to the package default.
-func (c Config) begin() string {
-	if c.BeginMarker != "" {
-		return c.BeginMarker
+// validate says why cfg cannot scope a block, or returns nil.
+func (c Config) validate() error {
+	switch {
+	case c.BeginMarker == "":
+		return fmt.Errorf("%w: no begin marker", ErrInvalidConfig)
+	case c.EndMarker == "":
+		return fmt.Errorf("%w: no end marker", ErrInvalidConfig)
+	case c.RowLabel == "":
+		return fmt.Errorf("%w: no row label", ErrInvalidConfig)
+	case !strings.HasPrefix(c.BeginMarker, beginMarkerPrefix):
+		return fmt.Errorf("%w: the begin marker %q does not start with %q", ErrInvalidConfig, c.BeginMarker, beginMarkerPrefix)
+	case !strings.HasPrefix(c.EndMarker, endMarkerPrefix):
+		return fmt.Errorf("%w: the end marker %q does not start with %q", ErrInvalidConfig, c.EndMarker, endMarkerPrefix)
 	}
-	return BeginMarker
+	return nil
 }
 
-// end returns the effective END marker, falling back to the package default.
-func (c Config) end() string {
-	if c.EndMarker != "" {
-		return c.EndMarker
-	}
-	return EndMarker
-}
-
-// rowLabel returns the effective row label, falling back to the package default.
-func (c Config) rowLabel() string {
-	if c.RowLabel != "" {
-		return c.RowLabel
-	}
-	return DefaultRowLabel
-}
-
-// BuildScopedRow returns the three lines (begin-marker, table-row, end-marker)
-// that form the regeneration-safe block for the default minimalism-contract
-// markers and label. The description is derived from c.AppliesTo — never
-// hardcoded. Exported for testing; backward-compatible signature.
-func BuildScopedRow(contractPath string, c contract.Contract) string {
-	return buildScopedRowWith(Config{ContractPath: contractPath}, c)
-}
-
-// buildScopedRowWith builds the marker-delimited block using the marker pair and
-// row label resolved from cfg (with package defaults when unset).
-func buildScopedRowWith(cfg Config, c contract.Contract) string {
+// buildScopedRow builds the marker-delimited block for cfg: the begin marker,
+// the table row and the end marker. The description is derived from
+// c.AppliesTo and c.Excluded, never hardcoded.
+func buildScopedRow(cfg Config, c contract.Contract) string {
 	injectList := strings.Join(c.AppliesTo, " and ")
 	// Build the "do not inject into" part from excluded phases when present.
 	doNotInject := ""
@@ -123,24 +96,28 @@ func buildScopedRowWith(cfg Config, c contract.Contract) string {
 		injectList,
 		doNotInject,
 	)
-	row := fmt.Sprintf("| %s | %s | %s |", cfg.rowLabel(), cfg.ContractPath, desc)
-	return strings.Join([]string{cfg.begin(), row, cfg.end()}, "\n")
+	row := fmt.Sprintf("| %s | %s | %s |", cfg.RowLabel, cfg.ContractPath, desc)
+	return strings.Join([]string{cfg.BeginMarker, row, cfg.EndMarker}, "\n")
 }
 
-// Propagate ensures registry contains a correctly scoped minimalism-contract
-// row inside a marker block. It returns:
+// Propagate ensures registry contains the correctly scoped row of the contract
+// cfg describes, inside its marker block. It returns:
 //
 //   - out: the (potentially modified) registry content
 //   - changed: true when the content was modified
-//   - err: non-nil only on hard failures
+//   - err: non-nil only on hard failures, today a cfg that does not scope a
+//     block (ErrInvalidConfig), with the registry returned as it came
 //
 // Idempotent: calling Propagate on already-correct output returns changed=false
 // and an identical string.
 func Propagate(registry string, cfg Config, c contract.Contract) (out string, changed bool, err error) {
-	desiredBlock := buildScopedRowWith(cfg, c)
-	begin := cfg.begin()
-	end := cfg.end()
-	label := cfg.rowLabel()
+	if err := cfg.validate(); err != nil {
+		return registry, false, err
+	}
+	desiredBlock := buildScopedRow(cfg, c)
+	begin := cfg.BeginMarker
+	end := cfg.EndMarker
+	label := cfg.RowLabel
 
 	// Case 1: the registry already contains the exact desired block → no-op.
 	if strings.Contains(registry, desiredBlock) {
@@ -183,17 +160,8 @@ func replaceBlock(registry, newBlock, beginMarker, endMarker string) string {
 // given contract label that is NOT inside any marker block (neither ours nor a
 // foreign one).
 func hasUnscopedRow(registry, label string) bool {
-	lines := strings.Split(registry, "\n")
-	inAnyBlock := false
-	for _, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		if strings.HasPrefix(trimmed, beginMarkerPrefix) {
-			inAnyBlock = true
-		}
-		if strings.HasPrefix(trimmed, endMarkerPrefix) {
-			inAnyBlock = false
-		}
-		if !inAnyBlock && isContractRow(line, label) {
+	for scan := newLineScanner(strings.Split(registry, "\n")); scan.Next(); {
+		if line := scan.Line(); !line.InBlock && isContractRow(line.Text, label) {
 			return true
 		}
 	}
@@ -223,28 +191,20 @@ func isContractRow(line, label string) bool {
 	return false
 }
 
-// replaceUnscopedRow replaces the first unscoped table row for the given label
-// (one that is NOT inside any marker block) with the new marker block.
-// Rows inside any marker block (foreign or ours) are left untouched.
+// replaceUnscopedRow replaces every unscoped table row for the given label
+// (one that is NOT inside any marker block) with the new marker block, each
+// by a whole block. Rows inside any marker block (foreign or ours) are left
+// untouched.
 func replaceUnscopedRow(registry, newBlock, label string) string {
 	lines := strings.Split(registry, "\n")
-	inAnyBlock := false
-	var out []string
-	for _, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		if strings.HasPrefix(trimmed, beginMarkerPrefix) {
-			inAnyBlock = true
-		}
-		if strings.HasPrefix(trimmed, endMarkerPrefix) {
-			inAnyBlock = false
-			out = append(out, line)
-			continue
-		}
-		if !inAnyBlock && isContractRow(line, label) {
+	out := make([]string, 0, len(lines))
+	for scan := newLineScanner(lines); scan.Next(); {
+		line := scan.Line()
+		if !line.InBlock && isContractRow(line.Text, label) {
 			out = append(out, newBlock)
 			continue
 		}
-		out = append(out, line)
+		out = append(out, line.Text)
 	}
 	return strings.Join(out, "\n")
 }
@@ -260,38 +220,32 @@ func appendToSharedContracts(registry, newBlock string) string {
 	// bare table row in that section (skipping rows inside any marker block).
 	lines := strings.Split(registry, "\n")
 	inSharedContracts := false
-	inAnyMarkerBlock := false
 	lastTableRowIdx := -1
 
-	for i, line := range lines {
-		trimmed := strings.TrimSpace(line)
+	for scan := newLineScanner(lines); scan.Next(); {
+		line := scan.Line()
 
-		// Track entry/exit of ANY marker block (foreign or ours).
-		if strings.HasPrefix(trimmed, beginMarkerPrefix) {
-			inAnyMarkerBlock = true
-		}
-		if strings.HasPrefix(trimmed, endMarkerPrefix) {
-			inAnyMarkerBlock = false
+		if line.Closes {
 			// Record the END marker line itself as the last known position so
 			// we can insert after a closing marker that follows a section table.
 			if inSharedContracts {
-				lastTableRowIdx = i
+				lastTableRowIdx = line.Index
 			}
 			continue
 		}
 
-		if strings.HasPrefix(trimmed, sharedContractsHeader) {
+		if strings.HasPrefix(line.Trimmed, sharedContractsHeader) {
 			inSharedContracts = true
 		}
-		if inSharedContracts && !inAnyMarkerBlock {
-			if strings.HasPrefix(trimmed, "|") {
-				lastTableRowIdx = i
-			}
-			// Stop at the next section heading (after we've entered Shared Contracts).
-			if i > 0 && strings.HasPrefix(trimmed, "#") &&
-				!strings.HasPrefix(trimmed, sharedContractsHeader) {
-				break
-			}
+		if !inSharedContracts || line.InBlock {
+			continue
+		}
+		if strings.HasPrefix(line.Trimmed, "|") {
+			lastTableRowIdx = line.Index
+		}
+		// Stop at the next section heading (after we've entered Shared Contracts).
+		if strings.HasPrefix(line.Trimmed, "#") && !strings.HasPrefix(line.Trimmed, sharedContractsHeader) {
+			break
 		}
 	}
 

@@ -70,7 +70,7 @@ func TestTheExitCodeOfStatusSeparatesBrokenFromBehind(t *testing.T) {
 }
 
 func TestStatusCoreWritesTheWholeReportOfTheServiceAndAnswersItsOutcome(t *testing.T) {
-	service := status.Service{Files: cannedFiles{mode: 0o755}, Settings: cannedSettings{err: errors.New("boom")}}
+	service := status.Service{Files: cannedFiles{mode: 0o755}, Settings: cannedSettings{err: errors.New("boom")}, Blocks: scopedBlocks()}
 	var out bytes.Buffer
 	outcome := statusCore(&out, service, status.Request{Home: "/h"})
 	if outcome != status.Failed {

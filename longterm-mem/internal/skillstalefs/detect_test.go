@@ -46,15 +46,12 @@ func writeAt(t *testing.T, root, rel, content string, mode os.FileMode) {
 	}
 }
 
+// runGit runs git in dir in the environment of the package's fixture repositories (skillstalefs.FixtureGitEnv).
 func runGit(t *testing.T, dir string, args ...string) {
 	t.Helper()
 	command := exec.Command("git", args...)
 	command.Dir = dir
-	command.Env = append(os.Environ(),
-		"GIT_CONFIG_GLOBAL=/dev/null", "GIT_CONFIG_SYSTEM=/dev/null",
-		"GIT_AUTHOR_NAME=fixture", "GIT_AUTHOR_EMAIL=fixture@example.com",
-		"GIT_COMMITTER_NAME=fixture", "GIT_COMMITTER_EMAIL=fixture@example.com",
-	)
+	command.Env = skillstalefs.FixtureGitEnv()
 	if out, err := command.CombinedOutput(); err != nil {
 		t.Fatalf("git %s: %v\n%s", strings.Join(args, " "), err, out)
 	}

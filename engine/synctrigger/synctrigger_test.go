@@ -1,502 +1,487 @@
 package synctrigger
 
 import (
+	"errors"
+	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
-	"syscall"
 	"testing"
 	"time"
 )
 
-// newFakeLongtermMem writes an executable shell script that exits with the
-// given code, optionally writing stderrMsg to stderr first. If sleep > 0 it
-// sleeps that long instead of exiting immediately, and writes its own pid
-// to $SYNCTRIGGER_TEST_PIDFILE first (used by the timeout/orphan test).
-func newFakeLongtermMem(t *testing.T, exitCode int, stderrMsg string, sleep time.Duration) string {
+// The trigger is tested here with no process and no clock of the machine: a Runner that records
+// what it was asked and answers what the test says, and a clock that reads the same moments every
+// time. What starts real programs is engine/synctrigger/osproc, and its tests, and the ones that
+// run the two together, are there.
+//
+// The outcome words, the names under the state directory and the argument of the sync are
+// literals here on purpose: they are the wire, and a test that read them from the constants of
+// the code would follow a constant that changed (see usage_pin_test.go).
+
+// epoch is the moment the clock of these tests starts at, and step what each reading of it adds.
+var epoch = time.Date(2026, 3, 4, 5, 6, 7, 0, time.UTC)
+
+const step = 1500 * time.Millisecond
+
+// stepClock reads epoch the first time, and a step later each time after.
+func stepClock() func() time.Time {
+	reads := 0
+	return func() time.Time {
+		at := epoch.Add(time.Duration(reads) * step)
+		reads++
+		return at
+	}
+}
+
+// stamp is how the log writes the moment of the n-th reading of a stepClock (counting from 0),
+// to the second, which is how it writes it.
+func stamp(reads int) string {
+	return epoch.Add(time.Duration(reads) * step).UTC().Format(time.RFC3339)
+}
+
+type detachCall struct {
+	program string
+	args    []string
+	log     string
+}
+
+type runCall struct {
+	program string
+	args    []string
+	dir     string
+	timeout time.Duration
+}
+
+// fakeRunner answers what it was told to and records what it was asked.
+type fakeRunner struct {
+	executable    string
+	executableErr error
+
+	detachErr error
+	// childWrites is what the detached child prints: Detach writes it to the log file it was
+	// handed, as the child would through the descriptor it inherits.
+	childWrites string
+	detached    []detachCall
+
+	result Result
+	runErr error
+	// prints is what the program prints on standard error while it runs.
+	prints string
+	ran    []runCall
+}
+
+func (f *fakeRunner) Executable() (string, error) { return f.executable, f.executableErr }
+
+func (f *fakeRunner) Detach(program string, args []string, log *os.File) error {
+	f.detached = append(f.detached, detachCall{program: program, args: args, log: log.Name()})
+	if f.childWrites != "" {
+		if _, err := io.WriteString(log, f.childWrites); err != nil {
+			return err
+		}
+	}
+	return f.detachErr
+}
+
+func (f *fakeRunner) Run(program string, args []string, dir string, timeout time.Duration, stderr io.Writer) (Result, error) {
+	f.ran = append(f.ran, runCall{program: program, args: args, dir: dir, timeout: timeout})
+	if f.prints != "" {
+		io.WriteString(stderr, f.prints)
+	}
+	return f.result, f.runErr
+}
+
+// logPath is where the log of a state directory is.
+func logPath(stateDir string) string { return filepath.Join(stateDir, "logs", "sync-trigger.log") }
+
+// logText is the whole log of a state directory, "" if there is none.
+func logText(t *testing.T, stateDir string) string {
 	t.Helper()
-	dir := t.TempDir()
-	path := filepath.Join(dir, "longterm-mem")
-	var script strings.Builder
-	script.WriteString("#!/bin/sh\n")
-	if sleep > 0 {
-		script.WriteString("if [ -n \"$SYNCTRIGGER_TEST_PIDFILE\" ]; then echo $$ > \"$SYNCTRIGGER_TEST_PIDFILE\"; fi\n")
-		script.WriteString("sleep " + sleep.String() + "\n")
+	data, err := os.ReadFile(logPath(stateDir))
+	if err != nil {
+		return ""
 	}
-	if stderrMsg != "" {
-		script.WriteString("echo '" + stderrMsg + "' 1>&2\n")
+	return string(data)
+}
+
+// executableBinary writes a file the sync may be run from, and returns its path.
+func executableBinary(t *testing.T, mode os.FileMode) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "longterm-mem")
+	if err := os.WriteFile(path, []byte("#!/bin/sh\n"), mode); err != nil {
+		t.Fatal(err)
 	}
-	script.WriteString("exit " + strconv.Itoa(exitCode) + "\n")
-	if err := os.WriteFile(path, []byte(script.String()), 0o755); err != nil {
-		t.Fatalf("write fake binary: %v", err)
+	if err := os.Chmod(path, mode); err != nil {
+		t.Fatal(err)
 	}
 	return path
 }
 
-// lastLogLine returns the last non-empty line of the sync-trigger log under
-// stateDir, or "" if the log does not exist / is empty.
-func lastLogLine(t *testing.T, stateDir string) string {
+// child is the Options of a RunChild whose binary can be run.
+func child(t *testing.T, runner Runner) (Options, string) {
 	t.Helper()
-	data, err := os.ReadFile(filepath.Join(stateDir, "logs", "sync-trigger.log"))
-	if err != nil {
-		return ""
-	}
-	lines := strings.Split(strings.TrimRight(string(data), "\n"), "\n")
-	if len(lines) == 0 {
-		return ""
-	}
-	return lines[len(lines)-1]
+	stateDir := t.TempDir()
+	return Options{Event: "session-end", Cwd: "/project", StateDir: stateDir, Binary: executableBinary(t, 0o755), Now: stepClock(), Runner: runner}, stateDir
 }
 
-// exampleChildArgv is a command line a caller might give, invented for these tests: the scripts
-// below read the event as $3 and the cwd as $5. It is not the command line of the engine, which
-// synctrigger knows nothing of and which cmd pins (TestSyncTriggerChildArgv_...).
+// ---- RunChild ---------------------------------------------------------------------------------
+
+// The sync is run from the project, with the one argument longterm-mem takes, under the time
+// the options give, and the default when they give none.
+func TestRunChild_RunsTheSyncInTheProjectUnderTheTimeItIsGiven(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		timeout time.Duration
+		want    time.Duration
+	}{
+		{"the default when none is given", 0, 60 * time.Second},
+		{"the default when it is negative", -time.Second, 60 * time.Second},
+		{"the one given", 3 * time.Second, 3 * time.Second},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			runner := &fakeRunner{}
+			o, _ := child(t, runner)
+			o.Timeout = tc.timeout
+
+			RunChild(o)
+
+			want := []runCall{{program: o.Binary, args: []string{"sync"}, dir: "/project", timeout: tc.want}}
+			if len(runner.ran) != 1 || runner.ran[0].program != want[0].program || strings.Join(runner.ran[0].args, " ") != "sync" ||
+				runner.ran[0].dir != want[0].dir || runner.ran[0].timeout != want[0].timeout {
+				t.Errorf("the runner was asked %+v, want %+v", runner.ran, want)
+			}
+		})
+	}
+}
+
+func TestRunChild_WithoutABinaryRunsTheOneUnderTheStateDirectory(t *testing.T) {
+	runner := &fakeRunner{}
+	stateDir := t.TempDir()
+	bin := filepath.Join(stateDir, "bin", "longterm-mem")
+	if err := os.MkdirAll(filepath.Dir(bin), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(bin, []byte("#!/bin/sh\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	got := RunChild(Options{Event: "archive", Cwd: "/project", StateDir: stateDir, Now: stepClock(), Runner: runner})
+
+	if got.Kind != "ok" || len(runner.ran) != 1 || runner.ran[0].program != bin {
+		t.Errorf("RunChild = %+v, runner asked %+v, want ok from %s", got, runner.ran, bin)
+	}
+}
+
+// Every outcome is one line of the log, dated by the clock when the sync ended, with the time the
+// sync took (a step: the clock was read when the run began and when it ended) and the exit code.
+func TestRunChild_WritesOneLineForEveryOutcomeWithTheClockItWasGiven(t *testing.T) {
+	notProject := "longterm-mem: sync: --project is required: it could not be resolved from the working directory: not a git repo\n"
+	for _, tc := range []struct {
+		name   string
+		runner *fakeRunner
+		want   Outcome
+	}{
+		{"exit 0", &fakeRunner{}, Outcome{Kind: "ok", Exit: 0, Dur: step}},
+		{"exit 2 with the sentence for a directory that is no project", &fakeRunner{result: Result{Exit: 2}, prints: notProject}, Outcome{Kind: "skip:no-project", Exit: 2, Dur: step}},
+		{"exit 2 with any other words", &fakeRunner{result: Result{Exit: 2}, prints: "longterm-mem: sync: unknown flag --bogus\n"}, Outcome{Kind: "error:usage", Exit: 2, Dur: step}},
+		{"exit 2 with nothing said", &fakeRunner{result: Result{Exit: 2}}, Outcome{Kind: "error:usage", Exit: 2, Dur: step}},
+		{"exit 3, no vault", &fakeRunner{result: Result{Exit: 3}}, Outcome{Kind: "skip:no-vault", Exit: 3, Dur: step}},
+		{"exit 4, engram unavailable", &fakeRunner{result: Result{Exit: 4}}, Outcome{Kind: "failure:engram-unavailable", Exit: 4, Dur: step}},
+		{"exit 5, the vault subprocess failed", &fakeRunner{result: Result{Exit: 5}}, Outcome{Kind: "failure:vault-subprocess", Exit: 5, Dur: step}},
+		{"exit 1, any other", &fakeRunner{result: Result{Exit: 1}}, Outcome{Kind: "failure:exit-1", Exit: 1, Dur: step}},
+		{"exit 137", &fakeRunner{result: Result{Exit: 137}}, Outcome{Kind: "failure:exit-137", Exit: 137, Dur: step}},
+		{"ended by a signal", &fakeRunner{result: Result{Exit: -1}}, Outcome{Kind: "failure:exit--1", Exit: -1, Dur: step}},
+		{"killed at the timeout", &fakeRunner{result: Result{TimedOut: true}}, Outcome{Kind: "timeout", Exit: 0, Dur: step}},
+		{"killed at the timeout, whatever it said while it was stopped", &fakeRunner{result: Result{TimedOut: true, Exit: 9}, runErr: errors.New("signal: killed"), prints: notProject}, Outcome{Kind: "timeout", Exit: 0, Dur: step}},
+		{"could not be run", &fakeRunner{runErr: errors.New("fork/exec: resource temporarily unavailable")}, Outcome{Kind: "error:spawn", Exit: 0, Dur: step}},
+		// A Runner may say that the program ended and also hand back an error (an adapter that
+		// wraps what the machine said): the exit is what the program did, as an *exec.ExitError
+		// always was, and the error does not take it away. osproc never returns both.
+		{"exit 4 with an error alongside", &fakeRunner{result: Result{Exit: 4}, runErr: errors.New("exit status 4")}, Outcome{Kind: "failure:engram-unavailable", Exit: 4, Dur: step}},
+		{"exit 2 with the words for no project and an error alongside", &fakeRunner{result: Result{Exit: 2}, runErr: errors.New("exit status 2"), prints: notProject}, Outcome{Kind: "skip:no-project", Exit: 2, Dur: step}},
+		{"exit 1 with an error alongside", &fakeRunner{result: Result{Exit: 1}, runErr: errors.New("exit status 1")}, Outcome{Kind: "failure:exit-1", Exit: 1, Dur: step}},
+		{"exit 0 with an error alongside is no exit at all", &fakeRunner{result: Result{Exit: 0}, runErr: errors.New("wait: no child")}, Outcome{Kind: "error:spawn", Exit: 0, Dur: step}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			o, stateDir := child(t, tc.runner)
+
+			got := RunChild(o)
+
+			if got != tc.want {
+				t.Errorf("RunChild = %+v, want %+v", got, tc.want)
+			}
+			wantLine := stamp(1) + " event=session-end cwd=/project outcome=" + tc.want.Kind + " exit=" + strconv.Itoa(tc.want.Exit) + " duration=1.5s\n"
+			if text := logText(t, stateDir); !strings.HasSuffix(text, wantLine) || strings.Count(text, "outcome=") != 1 {
+				t.Errorf("log = %q, want its one outcome line to be %q", text, wantLine)
+			}
+		})
+	}
+}
+
+// What the program says on standard error is in the log before the line that summarizes the run,
+// and it is also what the exit code 2 is read with.
+func TestRunChild_PutsWhatTheProgramSaysInTheLogBeforeTheOutcomeLine(t *testing.T) {
+	runner := &fakeRunner{result: Result{Exit: 3}, prints: "vault not configured\n"}
+	o, stateDir := child(t, runner)
+
+	RunChild(o)
+
+	want := "vault not configured\n" + stamp(1) + " event=session-end cwd=/project outcome=skip:no-vault exit=3 duration=1.5s\n"
+	if got := logText(t, stateDir); got != want {
+		t.Errorf("log = %q, want %q", got, want)
+	}
+}
+
+func TestRunChild_SkipsAMissingBinaryWithoutRunningAnything(t *testing.T) {
+	runner := &fakeRunner{}
+	o, stateDir := child(t, runner)
+	o.Binary = filepath.Join(stateDir, "bin", "does-not-exist")
+
+	got := RunChild(o)
+
+	if got.Kind != "skip:no-binary" || len(runner.ran) != 0 {
+		t.Errorf("RunChild = %+v, runner asked %+v, want skip:no-binary and nothing run", got, runner.ran)
+	}
+	if want := stamp(1) + " event=session-end cwd=/project outcome=skip:no-binary exit=0 duration=1.5s\n"; logText(t, stateDir) != want {
+		t.Errorf("log = %q, want %q", logText(t, stateDir), want)
+	}
+}
+
+func TestRunChild_TakesADirectoryForAMissingBinary(t *testing.T) {
+	runner := &fakeRunner{}
+	o, _ := child(t, runner)
+	o.Binary = t.TempDir()
+
+	if got := RunChild(o); got.Kind != "skip:no-binary" || len(runner.ran) != 0 {
+		t.Errorf("RunChild = %+v, runner asked %+v, want skip:no-binary and nothing run", got, runner.ran)
+	}
+}
+
+func TestRunChild_RefusesABinaryThatCannotBeExecuted(t *testing.T) {
+	runner := &fakeRunner{}
+	o, stateDir := child(t, runner)
+	o.Binary = executableBinary(t, 0o644)
+
+	got := RunChild(o)
+
+	if got.Kind != "error:binary-not-executable" || len(runner.ran) != 0 {
+		t.Errorf("RunChild = %+v, runner asked %+v, want error:binary-not-executable and nothing run", got, runner.ran)
+	}
+	if want := stamp(1) + " event=session-end cwd=/project outcome=error:binary-not-executable exit=0 duration=1.5s\n"; logText(t, stateDir) != want {
+		t.Errorf("log = %q, want %q", logText(t, stateDir), want)
+	}
+}
+
+func TestRunChild_RefusesBadArgumentsWithoutRunningAnything(t *testing.T) {
+	for _, tc := range []struct{ name, event, cwd string }{
+		{"empty-cwd", "session-end", ""},
+		{"relative-cwd", "session-end", "relative/path"},
+		{"invalid-event", "bogus-event", "/tmp"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			runner := &fakeRunner{}
+			o, _ := child(t, runner)
+			o.Event, o.Cwd = tc.event, tc.cwd
+			var stderr strings.Builder
+			o.Stderr = &stderr
+
+			got := RunChild(o)
+
+			if got.Kind != "error:usage" || len(runner.ran) != 0 {
+				t.Errorf("RunChild = %+v, runner asked %+v, want error:usage and nothing run", got, runner.ran)
+			}
+			if stderr.String() != usageLine(tc.event, tc.cwd) {
+				t.Errorf("stderr = %q, want %q", stderr.String(), usageLine(tc.event, tc.cwd))
+			}
+		})
+	}
+}
+
+func TestRunChild_WithoutALogStillRunsTheSyncAndReturnsItsOutcome(t *testing.T) {
+	// A state directory that is a file: the log can be neither made nor opened.
+	stateDir := filepath.Join(t.TempDir(), "a-file")
+	if err := os.WriteFile(stateDir, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	runner := &fakeRunner{result: Result{Exit: 4}}
+	o, _ := child(t, runner)
+	o.StateDir = stateDir
+
+	got := RunChild(o)
+
+	if want := (Outcome{Kind: "failure:engram-unavailable", Exit: 4, Dur: step}); got != want || len(runner.ran) != 1 {
+		t.Errorf("RunChild = %+v, runner asked %d times, want %+v once", got, len(runner.ran), want)
+	}
+}
+
+// A trigger with no clock dates its lines with the zero time, and with no Runner it says it could
+// not start the program: neither fails its caller, and neither reads the machine.
+func TestRunChild_WithNoClockAndNoRunnerIsSaidInTheLog(t *testing.T) {
+	o, stateDir := child(t, nil)
+	o.Now = nil
+
+	got := RunChild(o)
+
+	if want := (Outcome{Kind: "error:spawn"}); got != want {
+		t.Errorf("RunChild = %+v, want %+v", got, want)
+	}
+	if want := "0001-01-01T00:00:00Z event=session-end cwd=/project outcome=error:spawn exit=0 duration=0s\n"; logText(t, stateDir) != want {
+		t.Errorf("log = %q, want %q", logText(t, stateDir), want)
+	}
+}
+
+// ---- Run --------------------------------------------------------------------------------------
+
 func exampleChildArgv(event, cwd, stateDir string) []string {
 	return []string{"a-child", "--event", event, "--cwd", cwd, "--state", stateDir}
 }
 
-const (
-	// recordName is the file the recording child leaves its arguments in, beside itself.
-	recordName = "arguments"
-	// unfinishedRecordName is the file it writes them to first, and renames to recordName.
-	unfinishedRecordName = recordName + ".tmp"
-)
-
-// recordingSelf writes a script that records the arguments it is started with, one per line,
-// into the file it returns.
-func recordingSelf(t *testing.T) (self, record string) {
+// parent is the Options of a Run that can start its child.
+func parent(t *testing.T, runner Runner) (Options, string, *strings.Builder) {
 	t.Helper()
-	return recordingSelfIn(t, t.TempDir())
+	var stderr strings.Builder
+	stateDir := t.TempDir()
+	return Options{Event: "archive", Cwd: "/project", StateDir: stateDir, Self: "/bin/self", ChildArgv: exampleChildArgv, Stderr: &stderr, Now: stepClock(), Runner: runner}, stateDir, &stderr
 }
 
-// recordingSelfIn is recordingSelf in the directory dir, which must exist.
-func recordingSelfIn(t *testing.T, dir string) (self, record string) {
-	t.Helper()
-	self, record = filepath.Join(dir, "self"), filepath.Join(dir, recordName)
-	// The child writes every argument to a temporary file and renames it into place, so a reader
-	// polling for the record sees all of the arguments or none of them, never a prefix. It finds its
-	// directory from $0, so the script names no path of the test's (none can break its quoting), it
-	// starts the temporary file afresh (a child that was killed before the rename left one behind),
-	// and `set -e` makes a child that cannot write say so, instead of renaming what it did not write.
-	// The only names it holds are the two constants below, which the tests that build the record's
-	// path read as well: a rename is made in one place.
-	const script = `#!/bin/sh
-set -e
-dir="${0%/*}"
-tmp="$dir/` + unfinishedRecordName + `"
-rm -f "$tmp"
-: > "$tmp"
-for a in "$@"; do
-	printf '%s\n' "$a" >> "$tmp"
-done
-mv "$tmp" "$dir/` + recordName + `"
-`
-	if err := os.WriteFile(self, []byte(script), 0o755); err != nil {
-		t.Fatalf("write self: %v", err)
-	}
-	return self, record
-}
-
-// The recording child does not care what the directory it lives in is called: a path with an apostrophe in it
-// (a user's home can have one) does not break the script, because the script names no path of the test's.
-func TestRecordingSelf_WorksInADirectoryWhoseNameHasAnApostrophe(t *testing.T) {
-	dir := filepath.Join(t.TempDir(), "it's here")
-	if err := os.Mkdir(dir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	self, record := recordingSelfIn(t, dir)
-
-	if out, err := exec.Command(self, "one", "two words").CombinedOutput(); err != nil {
-		t.Fatalf("the recording child failed: %v\n%s", err, out)
-	}
-
-	if got, want := waitForFile(t, record), "one\ntwo words\n"; got != want {
-		t.Errorf("the record = %q, want %q", got, want)
-	}
-}
-
-// A record that an earlier child left half written does not leak into the next one: a child starts its record
-// afresh, so what it holds is the arguments of that child alone.
-func TestRecordingSelf_StartsItsRecordAfresh(t *testing.T) {
-	dir := t.TempDir()
-	self, record := recordingSelfIn(t, dir)
-	if err := os.WriteFile(filepath.Join(dir, unfinishedRecordName), []byte("left by an earlier child\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	if out, err := exec.Command(self, "only").CombinedOutput(); err != nil {
-		t.Fatalf("the recording child failed: %v\n%s", err, out)
-	}
-
-	if got, want := waitForFile(t, record), "only\n"; got != want {
-		t.Errorf("the record = %q, want %q", got, want)
-	}
-}
-
-// A child that cannot write its record says so by its exit status and leaves no record: it does not go on to
-// rename what it did not write into place.
-func TestRecordingSelf_FailsWhenItCannotWriteItsRecord(t *testing.T) {
-	dir := t.TempDir()
-	self, record := recordingSelfIn(t, dir)
-	// A directory where the temporary file should go: appending to it fails.
-	if err := os.Mkdir(filepath.Join(dir, unfinishedRecordName), 0o755); err != nil {
-		t.Fatal(err)
-	}
-
-	err := exec.Command(self, "only").Run()
-
-	if err == nil {
-		t.Error("the recording child exited 0 though it could not write its record")
-	}
-	if info, statErr := os.Stat(record); statErr == nil && info.IsDir() {
-		t.Error("the recording child renamed what it could not write into place as the record")
-	}
-}
-
-func waitForFile(t *testing.T, path string) string {
-	t.Helper()
-	deadline := time.Now().Add(2 * time.Second)
-	for time.Now().Before(deadline) {
-		if data, err := os.ReadFile(path); err == nil && len(data) > 0 {
-			return string(data)
-		}
-		time.Sleep(20 * time.Millisecond)
-	}
-	t.Fatalf("%s was not written within 2s", path)
-	return ""
-}
-
-// The command line of the child is the caller's: Run starts Self with exactly the arguments
-// ChildArgv gives, made from the event, the absolute cwd it settled on and the state directory.
-func TestRun_StartsTheChildWithTheArgumentsTheCallerGives(t *testing.T) {
-	stateDir, projectDir := t.TempDir(), t.TempDir()
-	self, record := recordingSelf(t)
+// The child is started as the caller's command line says, with the log as its output and its
+// error, and Run says nothing and writes nothing of its own.
+func TestRun_StartsTheChildWithTheArgumentsTheCallerGivesAndTheLogForItsOutput(t *testing.T) {
+	runner := &fakeRunner{childWrites: "the child's line\n"}
+	o, stateDir, stderr := parent(t, runner)
 	var asked [][3]string
-	o := Options{Event: "archive", Cwd: projectDir, StateDir: stateDir, Self: self, ChildArgv: func(event, cwd, state string) []string {
+	o.ChildArgv = func(event, cwd, state string) []string {
 		asked = append(asked, [3]string{event, cwd, state})
 		return []string{"first", "--event=" + event, "a b", cwd, state}
-	}}
+	}
 
 	if got := Run(o); got != 0 {
 		t.Fatalf("Run() = %d, want 0", got)
 	}
 
-	want := strings.Join([]string{"first", "--event=archive", "a b", projectDir, stateDir}, "\n") + "\n"
-	if got := waitForFile(t, record); got != want {
-		t.Errorf("the child was started with\n%s\nwant\n%s", got, want)
+	if len(runner.detached) != 1 {
+		t.Fatalf("the child was started %d times, want once", len(runner.detached))
 	}
-	if len(asked) != 1 || asked[0] != [3]string{"archive", projectDir, stateDir} {
-		t.Errorf("ChildArgv was asked %v, want once, for (archive, %s, %s)", asked, projectDir, stateDir)
+	d := runner.detached[0]
+	if d.program != "/bin/self" || strings.Join(d.args, "\n") != "first\n--event=archive\na b\n/project\n"+stateDir {
+		t.Errorf("the child was started as %s %q, want /bin/self with the arguments the caller gave", d.program, d.args)
+	}
+	if d.log != logPath(stateDir) {
+		t.Errorf("the child's output goes to %s, want the log %s", d.log, logPath(stateDir))
+	}
+	if len(asked) != 1 || asked[0] != [3]string{"archive", "/project", stateDir} {
+		t.Errorf("ChildArgv was asked %v, want once, for (archive, /project, %s)", asked, stateDir)
+	}
+	if got := logText(t, stateDir); got != "the child's line\n" {
+		t.Errorf("log = %q, want only what the child wrote", got)
+	}
+	if stderr.Len() != 0 {
+		t.Errorf("stderr = %q, want nothing", stderr.String())
 	}
 }
 
-// A relative cwd is made absolute before the caller is asked for the command line, so the child
-// is never handed a path that depends on its own working directory.
-func TestRun_AsksForTheChildArgumentsWithTheAbsoluteCwd(t *testing.T) {
-	stateDir, projectDir := t.TempDir(), t.TempDir()
-	self, record := recordingSelf(t)
-	// Run resolves a relative cwd against the process's own directory, so this test has to move
-	// it. No test of this package runs in parallel (rg t.Parallel finds none), and the directory
-	// is put back when the test ends.
-	oldWd, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("Getwd: %v", err)
-	}
-	if err := os.Chdir(projectDir); err != nil {
-		t.Fatalf("Chdir: %v", err)
-	}
-	t.Cleanup(func() { os.Chdir(oldWd) })
-	var cwd string
-	o := Options{Event: "session-end", Cwd: ".", StateDir: stateDir, Self: self, ChildArgv: func(_, c, _ string) []string {
-		cwd = c
-		return []string{"x"}
-	}}
+// Without a Self, the path of the running program is the child.
+func TestRun_StartsThePathOfTheRunningProgramWhenNoSelfIsGiven(t *testing.T) {
+	runner := &fakeRunner{executable: "/usr/local/bin/engine"}
+	o, _, _ := parent(t, runner)
+	o.Self = ""
 
 	Run(o)
-	waitForFile(t, record)
 
-	if got, err := filepath.EvalSymlinks(cwd); err != nil || got != projectDir {
-		t.Errorf("ChildArgv was given cwd %q, want the absolute %q", cwd, projectDir)
+	if len(runner.detached) != 1 || runner.detached[0].program != "/usr/local/bin/engine" {
+		t.Errorf("started %+v, want the child to be /usr/local/bin/engine", runner.detached)
 	}
 }
 
-// Without a command line there is no child to start, and no guessing one: the log and stderr
-// say so. Self is a path that does not exist: had Run tried to start it, stderr would carry the
-// failure of the start (fork/exec) and not the absence of a command line, so the message tells
-// the two apart without waiting to see whether anything ran.
-func TestRun_WithoutChildArgv_ErrorSpawnAndNothingStarted(t *testing.T) {
-	stateDir := t.TempDir()
-	self := filepath.Join(t.TempDir(), "absent")
-	var stderr strings.Builder
-	o := Options{Event: "session-end", Cwd: t.TempDir(), StateDir: stateDir, Self: self, Stderr: &stderr}
+func TestRun_SaysItCouldNotFindItselfOnStderrAndInTheLog(t *testing.T) {
+	runner := &fakeRunner{executableErr: errors.New("no /proc")}
+	o, stateDir, stderr := parent(t, runner)
+	o.Self = ""
 
 	if got := Run(o); got != 0 {
 		t.Fatalf("Run() = %d, want 0", got)
 	}
 
-	if line := lastLogLine(t, stateDir); !strings.Contains(line, "outcome=error:spawn") {
-		t.Errorf("log line = %q, want outcome=error:spawn", line)
+	if want := "sync-trigger: error:self: no /proc\n"; stderr.String() != want {
+		t.Errorf("stderr = %q, want %q", stderr.String(), want)
 	}
+	if want := stamp(0) + " event=archive cwd=/project outcome=error:self exit=0 duration=0s\n"; logText(t, stateDir) != want {
+		t.Errorf("log = %q, want %q", logText(t, stateDir), want)
+	}
+	if len(runner.detached) != 0 {
+		t.Errorf("a child was started: %+v", runner.detached)
+	}
+}
+
+// Without a command line there is no child to start, and no guessing one: the log and stderr say
+// so, and nothing is started.
+func TestRun_WithoutChildArgv_ErrorSpawnAndNothingStarted(t *testing.T) {
+	runner := &fakeRunner{}
+	o, stateDir, stderr := parent(t, runner)
+	o.ChildArgv = nil
+
+	if got := Run(o); got != 0 {
+		t.Fatalf("Run() = %d, want 0", got)
+	}
+
 	if want := "sync-trigger: error:spawn: no command line was given for the child\n"; stderr.String() != want {
 		t.Errorf("stderr = %q, want %q", stderr.String(), want)
 	}
-}
-
-func TestRunChild_MissingBinary_SkipsWithoutRunning(t *testing.T) {
-	stateDir := t.TempDir()
-	o := Options{
-		Event:    "session-end",
-		Cwd:      t.TempDir(),
-		StateDir: stateDir,
-		Binary:   filepath.Join(stateDir, "bin", "does-not-exist"),
+	if want := stamp(0) + " event=archive cwd=/project outcome=error:spawn exit=0 duration=0s\n"; logText(t, stateDir) != want {
+		t.Errorf("log = %q, want %q", logText(t, stateDir), want)
 	}
-
-	got := RunChild(o)
-
-	if got.Kind != "skip:no-binary" {
-		t.Fatalf("Kind = %q, want %q", got.Kind, "skip:no-binary")
-	}
-	line := lastLogLine(t, stateDir)
-	if !strings.Contains(line, "outcome=skip:no-binary") {
-		t.Fatalf("log line = %q, want outcome=skip:no-binary", line)
+	if len(runner.detached) != 0 {
+		t.Errorf("a child was started: %+v", runner.detached)
 	}
 }
 
-func TestRunChild_Exit2_NotProjectStderr_SkipsNoProject(t *testing.T) {
-	stateDir := t.TempDir()
-	bin := newFakeLongtermMem(t, 2, "longterm-mem: sync: --project is required: it could not be resolved from the working directory: not a git repo", 0)
-	o := Options{Event: "archive", Cwd: t.TempDir(), StateDir: stateDir, Binary: bin}
+func TestRun_SaysAChildThatCouldNotStartOnStderrAndInTheLog(t *testing.T) {
+	runner := &fakeRunner{detachErr: errors.New("fork/exec /bin/self: permission denied")}
+	o, stateDir, stderr := parent(t, runner)
 
-	got := RunChild(o)
-
-	if got.Kind != "skip:no-project" {
-		t.Fatalf("Kind = %q, want %q", got.Kind, "skip:no-project")
-	}
-	if got.Exit != 2 {
-		t.Fatalf("Exit = %d, want 2", got.Exit)
-	}
-	line := lastLogLine(t, stateDir)
-	if !strings.Contains(line, "outcome=skip:no-project") {
-		t.Fatalf("log line = %q, want outcome=skip:no-project", line)
-	}
-}
-
-func TestRunChild_Exit2_OtherStderr_ErrorUsage(t *testing.T) {
-	stateDir := t.TempDir()
-	bin := newFakeLongtermMem(t, 2, "longterm-mem: sync: unknown flag --bogus", 0)
-	o := Options{Event: "session-end", Cwd: t.TempDir(), StateDir: stateDir, Binary: bin}
-
-	got := RunChild(o)
-
-	if got.Kind != "error:usage" {
-		t.Fatalf("Kind = %q, want %q", got.Kind, "error:usage")
-	}
-	line := lastLogLine(t, stateDir)
-	if !strings.Contains(line, "outcome=error:usage") {
-		t.Fatalf("log line = %q, want outcome=error:usage", line)
-	}
-}
-
-func TestRunChild_ExitMapping(t *testing.T) {
-	cases := []struct {
-		name     string
-		exitCode int
-		want     string
-	}{
-		{"vault-not-configured", 3, "skip:no-vault"},
-		{"engram-unavailable", 4, "failure:engram-unavailable"},
-		{"vault-subprocess-failed", 5, "failure:vault-subprocess"},
-		{"generic-internal", 1, "failure:exit-1"},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			stateDir := t.TempDir()
-			bin := newFakeLongtermMem(t, tc.exitCode, "", 0)
-			o := Options{Event: "session-end", Cwd: t.TempDir(), StateDir: stateDir, Binary: bin}
-
-			got := RunChild(o)
-
-			if got.Kind != tc.want {
-				t.Fatalf("Kind = %q, want %q", got.Kind, tc.want)
-			}
-			if got.Exit != tc.exitCode {
-				t.Fatalf("Exit = %d, want %d", got.Exit, tc.exitCode)
-			}
-		})
-	}
-}
-
-func TestRunChild_StderrReachesLogBeforeOutcomeLine(t *testing.T) {
-	stateDir := t.TempDir()
-	bin := newFakeLongtermMem(t, 3, "vault not configured", 0)
-	o := Options{Event: "session-end", Cwd: t.TempDir(), StateDir: stateDir, Binary: bin}
-
-	got := RunChild(o)
-
-	if got.Kind != "skip:no-vault" {
-		t.Fatalf("Kind = %q, want %q", got.Kind, "skip:no-vault")
-	}
-	data, err := os.ReadFile(filepath.Join(stateDir, "logs", "sync-trigger.log"))
-	if err != nil {
-		t.Fatalf("read log: %v", err)
-	}
-	log := string(data)
-	stderrIdx := strings.Index(log, "vault not configured")
-	if stderrIdx < 0 {
-		t.Fatalf("log = %q, want it to contain the child's stderr text", log)
-	}
-	outcomeIdx := strings.Index(log, "outcome=skip:no-vault")
-	if outcomeIdx < 0 {
-		t.Fatalf("log = %q, want it to contain the summary line", log)
-	}
-	if stderrIdx > outcomeIdx {
-		t.Fatalf("log = %q, want stderr text before the summary line", log)
-	}
-}
-
-func TestRunChild_NonExecutableBinary_ErrorBinaryNotExecutable(t *testing.T) {
-	stateDir := t.TempDir()
-	binDir := t.TempDir()
-	bin := filepath.Join(binDir, "longterm-mem")
-	if err := os.WriteFile(bin, []byte("#!/bin/sh\nexit 0\n"), 0o644); err != nil {
-		t.Fatalf("write non-executable binary: %v", err)
-	}
-	o := Options{Event: "session-end", Cwd: t.TempDir(), StateDir: stateDir, Binary: bin}
-
-	got := RunChild(o)
-
-	if got.Kind != "error:binary-not-executable" {
-		t.Fatalf("Kind = %q, want %q", got.Kind, "error:binary-not-executable")
-	}
-	line := lastLogLine(t, stateDir)
-	if !strings.Contains(line, "outcome=error:binary-not-executable") {
-		t.Fatalf("log line = %q, want outcome=error:binary-not-executable", line)
-	}
-}
-
-func TestRunChild_ExitZero_Ok(t *testing.T) {
-	stateDir := t.TempDir()
-	bin := newFakeLongtermMem(t, 0, "", 0)
-	o := Options{Event: "session-end", Cwd: t.TempDir(), StateDir: stateDir, Binary: bin}
-
-	got := RunChild(o)
-
-	if got.Kind != "ok" {
-		t.Fatalf("Kind = %q, want %q", got.Kind, "ok")
-	}
-	if got.Exit != 0 {
-		t.Fatalf("Exit = %d, want 0", got.Exit)
-	}
-	line := lastLogLine(t, stateDir)
-	if !strings.Contains(line, "outcome=ok") {
-		t.Fatalf("log line = %q, want outcome=ok", line)
-	}
-}
-
-func TestRunChild_Timeout_KillsProcessGroup_NoOrphan(t *testing.T) {
-	stateDir := t.TempDir()
-	pidFile := filepath.Join(t.TempDir(), "pid")
-	t.Setenv("SYNCTRIGGER_TEST_PIDFILE", pidFile)
-	bin := newFakeLongtermMem(t, 0, "", 5*time.Second)
-	o := Options{
-		Event:    "session-end",
-		Cwd:      t.TempDir(),
-		StateDir: stateDir,
-		Binary:   bin,
-		Timeout:  150 * time.Millisecond,
-	}
-
-	start := time.Now()
-	got := RunChild(o)
-	elapsed := time.Since(start)
-
-	if got.Kind != "timeout" {
-		t.Fatalf("Kind = %q, want %q", got.Kind, "timeout")
-	}
-	if elapsed > 3*time.Second {
-		t.Fatalf("RunChild took %s, want well under the 5s sleep (bounded by timeout)", elapsed)
-	}
-	line := lastLogLine(t, stateDir)
-	if !strings.Contains(line, "outcome=timeout") {
-		t.Fatalf("log line = %q, want outcome=timeout", line)
-	}
-
-	// No orphan: the sleeping process must not still be alive shortly after
-	// RunChild returns.
-	deadline := time.Now().Add(1 * time.Second)
-	for time.Now().Before(deadline) {
-		data, err := os.ReadFile(pidFile)
-		if err == nil && len(strings.TrimSpace(string(data))) > 0 {
-			break
-		}
-		time.Sleep(20 * time.Millisecond)
-	}
-	data, err := os.ReadFile(pidFile)
-	if err != nil {
-		t.Fatalf("read pidfile: %v", err)
-	}
-	pid, err := strconv.Atoi(strings.TrimSpace(string(data)))
-	if err != nil {
-		t.Fatalf("parse pid %q: %v", data, err)
-	}
-	proc, _ := os.FindProcess(pid)
-	if err := proc.Signal(syscall.Signal(0)); err == nil {
-		t.Fatalf("process %d is still alive after RunChild returned (orphan)", pid)
-	}
-}
-
-// TestRunChild_InvalidArgs_ErrorUsageWithoutSpawn pins R3-child-validation-bypass: a bad Cwd/Event must be rejected before spawning.
-func TestRunChild_InvalidArgs_ErrorUsageWithoutSpawn(t *testing.T) {
-	cases := []struct{ name, event, cwd string }{
-		{"empty-cwd", "session-end", ""},
-		{"relative-cwd", "session-end", "relative/path"},
-		{"invalid-event", "bogus-event", "/tmp"},
-	}
-	bin := newFakeLongtermMem(t, 0, "", 0)
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			var stderr strings.Builder
-			o := Options{Event: tc.event, Cwd: tc.cwd, StateDir: t.TempDir(), Binary: bin, Stderr: &stderr}
-			got := RunChild(o)
-			if got.Kind != "error:usage" {
-				t.Fatalf("Kind = %q, want %q", got.Kind, "error:usage")
-			}
-			if !strings.Contains(stderr.String(), "error:usage") {
-				t.Fatalf("stderr = %q, want it to mention error:usage", stderr.String())
-			}
-		})
-	}
-}
-
-func TestRun_BadEvent_ErrorUsage(t *testing.T) {
-	stateDir := t.TempDir()
-	var stderr strings.Builder
-	o := Options{Event: "bogus-event", Cwd: t.TempDir(), StateDir: stateDir, Stderr: &stderr}
-
-	got := Run(o)
-
-	if got != 0 {
+	if got := Run(o); got != 0 {
 		t.Fatalf("Run() = %d, want 0", got)
 	}
-	if !strings.Contains(stderr.String(), "error:usage") {
-		t.Fatalf("stderr = %q, want it to mention error:usage", stderr.String())
+
+	if want := "sync-trigger: error:spawn: fork/exec /bin/self: permission denied\n"; stderr.String() != want {
+		t.Errorf("stderr = %q, want %q", stderr.String(), want)
+	}
+	if want := stamp(0) + " event=archive cwd=/project outcome=error:spawn exit=0 duration=0s\n"; logText(t, stateDir) != want {
+		t.Errorf("log = %q, want %q", logText(t, stateDir), want)
 	}
 }
 
-// TestRun_RelativeCwd_ResolvesToAbsoluteBeforeValidation covers F1: a
-// relative --cwd (as produced by the "${CLAUDE_PROJECT_DIR:-$PWD}" hook
-// fallback if $PWD itself were ever relative, or by any other caller that
-// passes a relative path) must not be rejected as error:usage. Run must
-// resolve it to an absolute path via filepath.Abs before the
-// filepath.IsAbs validation, and the spawned child must receive that
-// absolute path.
-func TestRun_RelativeCwd_ResolvesToAbsoluteBeforeValidation(t *testing.T) {
-	stateDir := t.TempDir()
-	projectDir := t.TempDir()
+func TestRun_WithNoRunnerSaysSoLikeAnyOtherFailureToStart(t *testing.T) {
+	for _, tc := range []struct{ name, self, kind, said string }{
+		{"to start the child", "/bin/self", "error:spawn", "sync-trigger: error:spawn: no runner was given\n"},
+		{"to find itself", "", "error:self", "sync-trigger: error:self: no runner was given\n"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			o, stateDir, stderr := parent(t, nil)
+			o.Self = tc.self
 
+			if got := Run(o); got != 0 {
+				t.Fatalf("Run() = %d, want 0", got)
+			}
+
+			if stderr.String() != tc.said {
+				t.Errorf("stderr = %q, want %q", stderr.String(), tc.said)
+			}
+			if want := stamp(0) + " event=archive cwd=/project outcome=" + tc.kind + " exit=0 duration=0s\n"; logText(t, stateDir) != want {
+				t.Errorf("log = %q, want %q", logText(t, stateDir), want)
+			}
+		})
+	}
+}
+
+// A relative cwd (from a "${CLAUDE_PROJECT_DIR:-$PWD}" fallback whose $PWD was itself relative, or
+// any other caller) is not a usage error: it is made absolute before the caller is asked for the
+// command line, so the child is never handed a path that depends on its own working directory.
+func TestRun_RelativeCwdIsMadeAbsoluteBeforeTheCallerIsAsked(t *testing.T) {
+	projectDir := t.TempDir()
+	// Run resolves a relative cwd against the process's own directory, so this test has to move
+	// it. No test of this package runs in parallel, and the directory is put back when it ends.
 	oldWd, err := os.Getwd()
 	if err != nil {
 		t.Fatalf("Getwd: %v", err)
@@ -505,45 +490,29 @@ func TestRun_RelativeCwd_ResolvesToAbsoluteBeforeValidation(t *testing.T) {
 		t.Fatalf("Chdir: %v", err)
 	}
 	t.Cleanup(func() { os.Chdir(oldWd) })
-
-	self := filepath.Join(t.TempDir(), "fake-self")
-	// Same argv layout as TestRun_HappyPath_DetachesAndLogsWithin2s:
-	// $3=event, $5=cwd. Writes the received cwd verbatim so the test can
-	// assert it is absolute.
-	script := "#!/bin/sh\necho \"$(date -u +%Y-%m-%dT%H:%M:%SZ) event=$3 cwd=$5 outcome=ok exit=0 duration=1ms\" >> \"" + stateDir + "/logs/sync-trigger.log\"\n"
-	if err := os.WriteFile(self, []byte(script), 0o755); err != nil {
-		t.Fatalf("write self: %v", err)
+	resolved, err := os.Getwd() // the directory as the process names it, with its symlinks resolved
+	if err != nil {
+		t.Fatal(err)
+	}
+	runner := &fakeRunner{}
+	o, _, stderr := parent(t, runner)
+	o.Cwd = "."
+	var cwd string
+	o.ChildArgv = func(_, c, _ string) []string {
+		cwd = c
+		return []string{"x", c}
 	}
 
-	var stderr strings.Builder
-	o := Options{Event: "session-end", Cwd: ".", StateDir: stateDir, Self: self, ChildArgv: exampleChildArgv, Stderr: &stderr}
+	Run(o)
 
-	got := Run(o)
-
-	if got != 0 {
-		t.Fatalf("Run() = %d, want 0", got)
+	if cwd != resolved {
+		t.Errorf("ChildArgv was given cwd %q, want the absolute %q", cwd, resolved)
 	}
-	if strings.Contains(stderr.String(), "error:usage") {
-		t.Fatalf("stderr = %q, want relative cwd \".\" to be resolved, not rejected as error:usage", stderr.String())
+	if len(runner.detached) != 1 || runner.detached[0].args[1] != resolved {
+		t.Errorf("the child was started with %+v, want the absolute cwd %q", runner.detached, resolved)
 	}
-
-	deadline := time.Now().Add(2 * time.Second)
-	var line string
-	for time.Now().Before(deadline) {
-		line = lastLogLine(t, stateDir)
-		if strings.Contains(line, "outcome=ok") {
-			break
-		}
-		time.Sleep(20 * time.Millisecond)
-	}
-	if !strings.Contains(line, "outcome=ok") {
-		t.Fatalf("log line after 2s = %q, want it to contain outcome=ok", line)
-	}
-	if !strings.Contains(line, "cwd="+projectDir) {
-		t.Fatalf("log line = %q, want the child to receive the absolute cwd %q", line, projectDir)
-	}
-	if strings.Contains(line, "cwd=.") {
-		t.Fatalf("log line = %q, child received the unresolved relative cwd", line)
+	if stderr.Len() != 0 {
+		t.Errorf("stderr = %q, want a relative cwd resolved and not refused", stderr.String())
 	}
 }
 
@@ -551,83 +520,47 @@ func TestRun_UnwritableLogDir_ErrorLog(t *testing.T) {
 	if os.Getuid() == 0 {
 		t.Skip("root ignores directory permissions")
 	}
-	stateDir := t.TempDir()
+	runner := &fakeRunner{}
+	o, stateDir, stderr := parent(t, runner)
 	logsDir := filepath.Join(stateDir, "logs")
 	if err := os.MkdirAll(logsDir, 0o500); err != nil {
 		t.Fatalf("mkdir logs: %v", err)
 	}
 	t.Cleanup(func() { os.Chmod(logsDir, 0o700) })
 
-	var stderr strings.Builder
-	o := Options{Event: "session-end", Cwd: t.TempDir(), StateDir: stateDir, Stderr: &stderr}
-
-	got := Run(o)
-
-	if got != 0 {
+	if got := Run(o); got != 0 {
 		t.Fatalf("Run() = %d, want 0", got)
 	}
-	if !strings.Contains(stderr.String(), "error:log") {
-		t.Fatalf("stderr = %q, want it to mention error:log", stderr.String())
+
+	if !strings.HasPrefix(stderr.String(), "sync-trigger: error:log: ") || !strings.HasSuffix(stderr.String(), "\n") {
+		t.Errorf("stderr = %q, want one line that starts with `sync-trigger: error:log: `", stderr.String())
+	}
+	if len(runner.detached) != 0 {
+		t.Errorf("a child was started without a log: %+v", runner.detached)
 	}
 }
 
-func TestRun_NonExecutableSelf_ErrorSpawn(t *testing.T) {
-	stateDir := t.TempDir()
-	self := filepath.Join(t.TempDir(), "not-executable")
-	if err := os.WriteFile(self, []byte("#!/bin/sh\nexit 0\n"), 0o644); err != nil {
-		t.Fatalf("write self: %v", err)
-	}
+// ---- the rest ---------------------------------------------------------------------------------
 
-	var stderr strings.Builder
-	o := Options{Event: "session-end", Cwd: t.TempDir(), StateDir: stateDir, Self: self, ChildArgv: exampleChildArgv, Stderr: &stderr}
+func TestAppendLogWritesTheMomentTheEventTheDirectoryTheOutcomeTheExitAndTheDurationRounded(t *testing.T) {
+	var b strings.Builder
 
-	got := Run(o)
+	appendLog(&b, time.Date(2026, 3, 4, 7, 6, 7, 900_000_000, time.FixedZone("x", 2*3600)), "archive", "/p", "failure:exit-7", 7, 1234567*time.Microsecond)
 
-	if got != 0 {
-		t.Fatalf("Run() = %d, want 0", got)
-	}
-	line := lastLogLine(t, stateDir)
-	if !strings.Contains(line, "outcome=error:spawn") {
-		t.Fatalf("log line = %q, want outcome=error:spawn", line)
-	}
-	if !strings.Contains(stderr.String(), "error:spawn") {
-		t.Fatalf("stderr = %q, want it to mention error:spawn", stderr.String())
+	if want := "2026-03-04T05:06:07Z event=archive cwd=/p outcome=failure:exit-7 exit=7 duration=1.235s\n"; b.String() != want {
+		t.Errorf("appendLog wrote %q, want %q", b.String(), want)
 	}
 }
 
-func TestRun_HappyPath_DetachesAndLogsWithin2s(t *testing.T) {
-	stateDir := t.TempDir()
-	self := filepath.Join(t.TempDir(), "fake-self")
-	// Simulates the detached "--child" re-exec: it writes its own summary
-	// line to the log the real parent already opened (stdout/stderr are
-	// redirected to that same file, but this script writes directly to
-	// prove the file Run opened is genuinely shared with the child). Run
-	// invokes self as: sync-trigger --event <event> --cwd <cwd> --state-dir
-	// <dir> --child, so within this script $1=sync-trigger, $2=--event,
-	// $3=<event>, $4=--cwd, $5=<cwd>.
-	script := "#!/bin/sh\necho \"$(date -u +%Y-%m-%dT%H:%M:%SZ) event=$3 cwd=$5 outcome=ok exit=0 duration=1ms\" >> \"" + stateDir + "/logs/sync-trigger.log\"\n"
-	if err := os.WriteFile(self, []byte(script), 0o755); err != nil {
-		t.Fatalf("write self: %v", err)
+func TestNoRunnerFailsEveryCallWithTheSameWords(t *testing.T) {
+	var r Runner = noRunner{}
+	if _, err := r.Executable(); err == nil || err.Error() != "no runner was given" {
+		t.Errorf("Executable error = %v", err)
 	}
-
-	o := Options{Event: "session-end", Cwd: t.TempDir(), StateDir: stateDir, Self: self, ChildArgv: exampleChildArgv}
-
-	got := Run(o)
-
-	if got != 0 {
-		t.Fatalf("Run() = %d, want 0", got)
+	if err := r.Detach("x", nil, nil); err == nil || err.Error() != "no runner was given" {
+		t.Errorf("Detach error = %v", err)
 	}
-
-	deadline := time.Now().Add(2 * time.Second)
-	var line string
-	for time.Now().Before(deadline) {
-		line = lastLogLine(t, stateDir)
-		if strings.Contains(line, "outcome=ok") {
-			break
-		}
-		time.Sleep(20 * time.Millisecond)
-	}
-	if !strings.Contains(line, "outcome=ok") {
-		t.Fatalf("log line after 2s = %q, want it to contain outcome=ok", line)
+	if _, err := r.Run("x", nil, "", 0, nil); err == nil || err.Error() != "no runner was given" {
+		t.Errorf("Run error = %v", err)
 	}
 }

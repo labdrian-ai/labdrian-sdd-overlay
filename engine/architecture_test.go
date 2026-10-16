@@ -100,6 +100,9 @@ import (
 //     script always kept (appended to, and rewritten through a temporary file and a rename), the lock
 //     around it as an advisory file lock on engine/filelock, and the shared binary as a file. The
 //     words a person reads are the command's, in cmd.
+//   - synctrigger/osproc is the adapter of the Runner port of synctrigger (H34): it starts the
+//     programs of the machine in sessions and process groups of their own and kills a group at a
+//     deadline. synctrigger itself reads neither the clock nor the process table: it is handed both.
 //   - sddregistry is a domain package (B2): the rule over text for the SDD executor rows of a
 //     project's skill registry (which skills are executors, how a row reads, how a registry that
 //     has none starts, how the rows of an earlier repair are replaced). It reads and writes no file.
@@ -114,6 +117,10 @@ import (
 //     lowercase hex characters) and how one is made, which every record that carries a digest
 //     (the goal, the workflow event, the role handoff, the clearance, the approval, the project
 //     lock, the binding) shares. Pure standard library.
+//   - gitobject is a domain package (H34): what a full git object name looks like (40 lowercase
+//     hex characters, or 64), which the workflow event that records a commit, the observation of a
+//     worktree by the git binary (gitprov) and the reader of a repository's files (gitfs) share.
+//     Pure standard library.
 //   - fieldrule is a domain package (H34): the rules for the shape of one field of a versioned
 //     document that more than one record shares (today the string array of a Goal and of a Shaper
 //     handoff). Pure standard library.
@@ -145,6 +152,7 @@ var rings = map[string]archguard.Ring{
 	"gadu":                      archguard.Adapter,
 	"gate":                      archguard.Domain,
 	"gitfs":                     archguard.Adapter,
+	"gitobject":                 archguard.Domain,
 	"gitprov":                   archguard.Adapter,
 	"goal":                      archguard.Domain,
 	"hookwire":                  archguard.Adapter,
@@ -195,6 +203,7 @@ var rings = map[string]archguard.Ring{
 	"status":                    archguard.Application,
 	"status/fsfiles":            archguard.Adapter,
 	"synctrigger":               archguard.Adapter,
+	"synctrigger/osproc":        archguard.Adapter,
 	"testhome":                  archguard.Support,
 	"workflow":                  archguard.Domain,
 	"workflow/filelog":          archguard.Adapter,

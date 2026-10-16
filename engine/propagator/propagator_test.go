@@ -78,9 +78,7 @@ const registryStaleScopedBlock = `# Skill Registry — test-project
 
 // TC-A: registry MISSING the contract row → inserts a SCOPED row.
 func TestInsertsMissingRow(t *testing.T) {
-	cfg := propagator.Config{
-		ContractPath: "skills/_shared/minimalism-contract.md",
-	}
+	cfg := minimalismConfig()
 	phases, err := contract.Parse(contractFrontmatter)
 	if err != nil {
 		t.Fatalf("contract.Parse: %v", err)
@@ -109,9 +107,7 @@ func TestInsertsMissingRow(t *testing.T) {
 
 // TC-B: registry has the row UNSCOPED → corrects it to scoped.
 func TestCorrectsUnscopedRow(t *testing.T) {
-	cfg := propagator.Config{
-		ContractPath: "skills/_shared/minimalism-contract.md",
-	}
+	cfg := minimalismConfig()
 	phases, err := contract.Parse(contractFrontmatter)
 	if err != nil {
 		t.Fatalf("contract.Parse: %v", err)
@@ -153,9 +149,7 @@ func TestCorrectsUnscopedRow(t *testing.T) {
 
 // TC-C: registry already has the correct SCOPED row → no-op (IDEMPOTENT).
 func TestIdempotentWhenAlreadyScoped(t *testing.T) {
-	cfg := propagator.Config{
-		ContractPath: "skills/_shared/minimalism-contract.md",
-	}
+	cfg := minimalismConfig()
 	phases, err := contract.Parse(contractFrontmatter)
 	if err != nil {
 		t.Fatalf("contract.Parse: %v", err)
@@ -177,9 +171,7 @@ func TestIdempotentWhenAlreadyScoped(t *testing.T) {
 // already present with correct content), Propagate is a no-op and the marker
 // block content is preserved verbatim.
 func TestRegenerationSafety(t *testing.T) {
-	cfg := propagator.Config{
-		ContractPath: "skills/_shared/minimalism-contract.md",
-	}
+	cfg := minimalismConfig()
 	phases, err := contract.Parse(contractFrontmatter)
 	if err != nil {
 		t.Fatalf("contract.Parse: %v", err)
@@ -225,9 +217,7 @@ injection_point: "## Skills to load before work"
 ---
 # Alt Contract
 `
-	cfg := propagator.Config{
-		ContractPath: "skills/_shared/minimalism-contract.md",
-	}
+	cfg := minimalismConfig()
 	phases, err := contract.Parse(altFrontmatter)
 	if err != nil {
 		t.Fatalf("contract.Parse: %v", err)
@@ -276,9 +266,7 @@ injection_point: "## Skills to load before work"
 // TC-G: replaceBlock coverage — stale marker block (wrong phases) is corrected.
 // This directly exercises the replaceBlock path (Case 2 in Propagate).
 func TestReplaceStaleBlock(t *testing.T) {
-	cfg := propagator.Config{
-		ContractPath: "skills/_shared/minimalism-contract.md",
-	}
+	cfg := minimalismConfig()
 	phases, err := contract.Parse(contractFrontmatter)
 	if err != nil {
 		t.Fatalf("contract.Parse: %v", err)
@@ -303,12 +291,12 @@ func TestReplaceStaleBlock(t *testing.T) {
 		t.Error("corrected block should reference sdd-apply")
 	}
 	// Exactly one BEGIN marker.
-	if strings.Count(out, propagator.BeginMarker) != 1 {
-		t.Errorf("expected exactly 1 BEGIN marker, got %d", strings.Count(out, propagator.BeginMarker))
+	if strings.Count(out, minimalismBegin) != 1 {
+		t.Errorf("expected exactly 1 BEGIN marker, got %d", strings.Count(out, minimalismBegin))
 	}
 	// Exactly one END marker.
-	if strings.Count(out, propagator.EndMarker) != 1 {
-		t.Errorf("expected exactly 1 END marker, got %d", strings.Count(out, propagator.EndMarker))
+	if strings.Count(out, minimalismEnd) != 1 {
+		t.Errorf("expected exactly 1 END marker, got %d", strings.Count(out, minimalismEnd))
 	}
 }
 
@@ -332,9 +320,7 @@ func TestForeignBlockSurvival(t *testing.T) {
 ` + foreignBlock + `
 `
 
-	cfg := propagator.Config{
-		ContractPath: "skills/_shared/minimalism-contract.md",
-	}
+	cfg := minimalismConfig()
 	phases, err := contract.Parse(contractFrontmatter)
 	if err != nil {
 		t.Fatalf("contract.Parse: %v", err)
@@ -354,10 +340,10 @@ func TestForeignBlockSurvival(t *testing.T) {
 	}
 
 	// The minimalism block must be present.
-	if !strings.Contains(out, propagator.BeginMarker) {
+	if !strings.Contains(out, minimalismBegin) {
 		t.Error("minimalism BEGIN marker missing after Propagate with foreign block present")
 	}
-	if !strings.Contains(out, propagator.EndMarker) {
+	if !strings.Contains(out, minimalismEnd) {
 		t.Error("minimalism END marker missing after Propagate with foreign block present")
 	}
 	if !strings.Contains(out, "sdd-tasks") {
@@ -384,9 +370,7 @@ func TestAppendFallback_NoSharedContractsSection(t *testing.T) {
 |----------|------|-------------|
 | some-skill | skills/some/SKILL.md | Does something. |
 `
-	cfg := propagator.Config{
-		ContractPath: "skills/_shared/minimalism-contract.md",
-	}
+	cfg := minimalismConfig()
 	phases, err := contract.Parse(contractFrontmatter)
 	if err != nil {
 		t.Fatalf("contract.Parse: %v", err)
@@ -400,10 +384,10 @@ func TestAppendFallback_NoSharedContractsSection(t *testing.T) {
 		t.Fatal("expected changed=true when block is missing")
 	}
 	// The block must appear somewhere in the output.
-	if !strings.Contains(out, propagator.BeginMarker) {
+	if !strings.Contains(out, minimalismBegin) {
 		t.Error("BEGIN marker missing when no Shared Contracts section present")
 	}
-	if !strings.Contains(out, propagator.EndMarker) {
+	if !strings.Contains(out, minimalismEnd) {
 		t.Error("END marker missing when no Shared Contracts section present")
 	}
 	if !strings.Contains(out, "sdd-tasks") {
@@ -434,9 +418,7 @@ func TestReplaceUnscopedRow_ForeignBlockProtectsRow(t *testing.T) {
 | minimalism-contract | skills/_shared/minimalism-contract.md | Unscoped row inside foreign block. |
 <!-- END: some-other-tool -->
 `
-	cfg := propagator.Config{
-		ContractPath: "skills/_shared/minimalism-contract.md",
-	}
+	cfg := minimalismConfig()
 	phases, err := contract.Parse(contractFrontmatter)
 	if err != nil {
 		t.Fatalf("contract.Parse: %v", err)
@@ -453,7 +435,7 @@ func TestReplaceUnscopedRow_ForeignBlockProtectsRow(t *testing.T) {
 		t.Fatal("expected changed=true: the row inside the foreign block is not the scoped block")
 	}
 	// The minimalism BEGIN/END marker must now be present.
-	if !strings.Contains(out, propagator.BeginMarker) {
+	if !strings.Contains(out, minimalismBegin) {
 		t.Error("minimalism BEGIN marker missing after Propagate on registry with foreign-protected row")
 	}
 	// The foreign block must be preserved verbatim.
@@ -473,9 +455,7 @@ func TestReplaceUnscopedRow_ForeignBlockProtectsRow(t *testing.T) {
 // and BEGIN/END out of order) must leave the registry unchanged.
 // Exercises the start==-1 || end==-1 || end<start guard in replaceBlock.
 func TestReplaceBlock_MalformedMarkers(t *testing.T) {
-	cfg := propagator.Config{
-		ContractPath: "skills/_shared/minimalism-contract.md",
-	}
+	cfg := minimalismConfig()
 	phases, err := contract.Parse(contractFrontmatter)
 	if err != nil {
 		t.Fatalf("contract.Parse: %v", err)
@@ -488,7 +468,7 @@ func TestReplaceBlock_MalformedMarkers(t *testing.T) {
 ### Shared Contracts
 | Artifact | Path | Description |
 |----------|------|-------------|
-` + propagator.BeginMarker + `
+` + minimalismBegin + `
 | minimalism-contract | skills/_shared/minimalism-contract.md | stale row |
 `
 		out, changed, err := propagator.Propagate(registryLoneBegin, cfg, phases)
@@ -511,9 +491,9 @@ func TestReplaceBlock_MalformedMarkers(t *testing.T) {
 ### Shared Contracts
 | Artifact | Path | Description |
 |----------|------|-------------|
-` + propagator.EndMarker + `
+` + minimalismEnd + `
 | minimalism-contract | skills/_shared/minimalism-contract.md | stale row |
-` + propagator.BeginMarker + `
+` + minimalismBegin + `
 `
 		out, changed, err := propagator.Propagate(registryOutOfOrder, cfg, phases)
 		if err != nil {
@@ -550,9 +530,7 @@ func TestReplaceUnscopedRow_InAnyBlockBranches(t *testing.T) {
 | minimalism-contract | skills/_shared/minimalism-contract.md | Response-length and minimalism rules. |
 `
 
-	cfg := propagator.Config{
-		ContractPath: "skills/_shared/minimalism-contract.md",
-	}
+	cfg := minimalismConfig()
 	phases, err := contract.Parse(contractFrontmatter)
 	if err != nil {
 		t.Fatalf("contract.Parse: %v", err)
@@ -567,10 +545,10 @@ func TestReplaceUnscopedRow_InAnyBlockBranches(t *testing.T) {
 	}
 
 	// The unscoped row must be replaced with the scoped BEGIN/END block.
-	if !strings.Contains(out, propagator.BeginMarker) {
+	if !strings.Contains(out, minimalismBegin) {
 		t.Error("minimalism BEGIN marker must be present after correcting unscoped row")
 	}
-	if !strings.Contains(out, propagator.EndMarker) {
+	if !strings.Contains(out, minimalismEnd) {
 		t.Error("minimalism END marker must be present after correcting unscoped row")
 	}
 	if !strings.Contains(out, "sdd-tasks") {
@@ -629,9 +607,7 @@ func TestAppendToSharedContracts_NextHeadingBreak(t *testing.T) {
 | some-other | path | desc |
 `
 
-	cfg := propagator.Config{
-		ContractPath: "skills/_shared/minimalism-contract.md",
-	}
+	cfg := minimalismConfig()
 	phases, err := contract.Parse(contractFrontmatter)
 	if err != nil {
 		t.Fatalf("contract.Parse: %v", err)
@@ -646,13 +622,13 @@ func TestAppendToSharedContracts_NextHeadingBreak(t *testing.T) {
 	}
 
 	// The minimalism block must be present.
-	if !strings.Contains(out, propagator.BeginMarker) {
+	if !strings.Contains(out, minimalismBegin) {
 		t.Error("BEGIN marker missing from output")
 	}
 
 	// The block must be inserted BEFORE '## Other Section' (inside Shared Contracts),
 	// not after it. Verify correct insert position.
-	beginIdx := strings.Index(out, propagator.BeginMarker)
+	beginIdx := strings.Index(out, minimalismBegin)
 	otherSectionIdx := strings.Index(out, "## Other Section")
 	if otherSectionIdx != -1 && beginIdx > otherSectionIdx {
 		t.Errorf("minimalism block was inserted AFTER '## Other Section' — wrong position;\nbeginIdx=%d, otherSectionIdx=%d\nout:\n%s",
@@ -668,48 +644,12 @@ func TestAppendToSharedContracts_NextHeadingBreak(t *testing.T) {
 	}
 }
 
-// TestAntiGenericDesignMarkersAreDistinct: the second managed contract
-// (anti-generic-design) MUST own its own BEGIN/END marker pair, distinct from
-// the minimalism-contract defaults. Reusing that marker pair would make
-// Propagate overwrite a foreign contract's block instead of coexisting with
-// it (see package doc).
-func TestAntiGenericDesignMarkersAreDistinct(t *testing.T) {
-	if propagator.AntiGenericDesignBeginMarker == "" {
-		t.Fatal("AntiGenericDesignBeginMarker must not be empty")
-	}
-	if propagator.AntiGenericDesignEndMarker == "" {
-		t.Fatal("AntiGenericDesignEndMarker must not be empty")
-	}
-
-	pairs := map[string]string{
-		"minimalism-contract (Begin)": propagator.BeginMarker,
-		"minimalism-contract (End)":   propagator.EndMarker,
-	}
-
-	for label, marker := range pairs {
-		if propagator.AntiGenericDesignBeginMarker == marker {
-			t.Errorf("AntiGenericDesignBeginMarker collides with %s marker %q", label, marker)
-		}
-		if propagator.AntiGenericDesignEndMarker == marker {
-			t.Errorf("AntiGenericDesignEndMarker collides with %s marker %q", label, marker)
-		}
-	}
-
-	if propagator.AntiGenericDesignBeginMarker == propagator.AntiGenericDesignEndMarker {
-		t.Error("AntiGenericDesignBeginMarker and AntiGenericDesignEndMarker must not be equal")
-	}
-}
-
 // TestAntiGenericDesignPropagate_TwoBlockIsolationAndIdempotency is the
 // Phase 5 (R-101) isolation/lock test: propagating anti-generic-design into a
 // registry that ALREADY contains a correctly-scoped minimalism-contract block
 // must leave that pre-existing block byte-identical, add its own second
 // block, and be idempotent on re-run.
 func TestAntiGenericDesignPropagate_TwoBlockIsolationAndIdempotency(t *testing.T) {
-	const minimalismBlock = `<!-- BEGIN: minimalism-contract-scope (auto-generated) -->
-| minimalism-contract | skills/_shared/minimalism-contract.md | Inject ONLY into sdd-tasks and sdd-apply sub-agent prompts under '## Skills to load before work'. Do NOT inject into sdd-propose/sdd-spec/sdd-design/sdd-verify/sdd-archive. |
-<!-- END: minimalism-contract-scope -->`
-
 	registryWithOneBlock := `# Skill Registry — test-project
 
 ## Skills Index
@@ -722,12 +662,7 @@ func TestAntiGenericDesignPropagate_TwoBlockIsolationAndIdempotency(t *testing.T
 ` + minimalismBlock + `
 `
 
-	designCfg := propagator.Config{
-		ContractPath: "skills/_shared/anti-generic-design.md",
-		BeginMarker:  propagator.AntiGenericDesignBeginMarker,
-		EndMarker:    propagator.AntiGenericDesignEndMarker,
-		RowLabel:     "anti-generic-design",
-	}
+	designCfg := designConfig()
 	phases, err := contract.Parse(contractFrontmatter)
 	if err != nil {
 		t.Fatalf("contract.Parse: %v", err)
@@ -747,10 +682,10 @@ func TestAntiGenericDesignPropagate_TwoBlockIsolationAndIdempotency(t *testing.T
 	}
 
 	// The new anti-generic-design block must be present with its own markers.
-	if !strings.Contains(firstOut, propagator.AntiGenericDesignBeginMarker) {
+	if !strings.Contains(firstOut, designBegin) {
 		t.Error("anti-generic-design BEGIN marker missing after Propagate")
 	}
-	if !strings.Contains(firstOut, propagator.AntiGenericDesignEndMarker) {
+	if !strings.Contains(firstOut, designEnd) {
 		t.Error("anti-generic-design END marker missing after Propagate")
 	}
 
