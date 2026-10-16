@@ -109,6 +109,19 @@ func TestTheEntryPointSourcesExactlyTheModulesInLibOnceEach(t *testing.T) {
 	}
 }
 
+// The entry point is the strict mode, the finding of its own real location, the loading of the modules and
+// the dispatch of the command, and has no behavior of its own: a function that is defined in it is in the
+// wrong place.
+func TestTheEntryPointDefinesNoFunction(t *testing.T) {
+	entry, err := os.ReadFile(overlaytest.Script(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, d := range functionDefinition.FindAllStringSubmatch(string(entry), -1) {
+		t.Errorf("the entry point defines %s: it belongs to a module (bin/lib)", d[1])
+	}
+}
+
 func TestEveryFileOfTheScriptIsValidBash(t *testing.T) {
 	overlaytest.RequireBash(t)
 	for _, file := range overlaytest.ScriptFiles(t) {
