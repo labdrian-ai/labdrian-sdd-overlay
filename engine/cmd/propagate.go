@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/filelock"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/propagator"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/propagator/app"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/propagator/fsstore"
 )
@@ -138,27 +137,25 @@ func propagateCommand(
 	registry := filepath.Clean(opts.registry)
 
 	// Resolve the contract and its block scope. An embedded contract (engine-owned managed text)
-	// takes precedence and overrides marker and label so it writes a DISTINCT block that never
-	// collides with minimalism-contract.
-	cfg := propagator.Config{ContractPath: opts.contractPath}
-	rowLabel := propagator.DefaultRowLabel
+	// takes precedence and writes its own DISTINCT block, which never collides with
+	// minimalism-contract's.
+	managed := minimalism()
+	cfg := managed.config(opts.contractPath)
 	var source app.ContractSource
 	if opts.embeddedName != "" {
-		spec, ok := embeddedContract(opts.embeddedName)
+		embedded, ok := embeddedContract(opts.embeddedName)
 		if !ok {
 			fmt.Fprintf(stderr, "error: unknown embedded contract %q\n", opts.embeddedName)
 			exit(1)
 			return
 		}
-		source = textContract(spec.content)
-		cfg.BeginMarker = spec.beginMarker
-		cfg.EndMarker = spec.endMarker
-		cfg.RowLabel = spec.rowLabel
-		rowLabel = spec.rowLabel
+		managed = embedded
+		source = textContract(managed.content())
+		cfg = managed.config(opts.contractPath)
 		// Use the embedded contract's own path in the registry row unless the caller explicitly
 		// overrode --contract-path.
 		if !opts.contractPathExplicit {
-			cfg.ContractPath = spec.defaultPath
+			cfg.ContractPath = managed.defaultPath
 		}
 	} else {
 		if opts.contractFile == "" {
@@ -184,7 +181,7 @@ func propagateCommand(
 	case app.Absent:
 		fmt.Fprintf(stdout, "propagate: registry not found at %s — %s\n", registry, registryAbsentNote)
 	case app.Written:
-		fmt.Fprintf(stdout, "registry: %s scoped row inserted/updated\n", rowLabel)
+		fmt.Fprintf(stdout, "registry: %s scoped row inserted/updated\n", managed.name)
 	case app.Unchanged:
 		// A correct scoped row is the steady state on every prompt; stay silent so the hook only
 		// speaks when it changed something.

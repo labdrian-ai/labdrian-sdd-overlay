@@ -118,7 +118,7 @@ func isStatusFlag(arg string) bool {
 // newStatusService is the status use case over the files of the machine: the one place the
 // adapters of its two ports are named.
 func newStatusService() status.Service {
-	return status.Service{Files: fsfiles.Files{}, Settings: settingsfile.Reader{}}
+	return status.Service{Files: fsfiles.Files{}, Settings: settingsfile.Reader{}, Blocks: scopedBlocks()}
 }
 
 // statusCore runs the checks of an installation and writes the report to stdout, one line per

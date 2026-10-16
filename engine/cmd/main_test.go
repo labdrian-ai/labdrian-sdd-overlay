@@ -516,8 +516,8 @@ func TestPropagateCommand_WriteFileError(t *testing.T) {
 
 // TC-CLI-P7: no-op path — registry already correct → no file written, stdout silent.
 func TestPropagateCommand_NoOp_AlreadyCorrect(t *testing.T) {
-	// Build the already-correct registry using BuildScopedRow.
-	// We do this programmatically to avoid hardcoding the exact string.
+	// Build the already-correct registry from a first run of the command itself,
+	// so the fixture cannot drift from what it writes.
 	alreadyScopedContent := minimalRegistry
 
 	// Run once to get the correct output.
@@ -1072,17 +1072,17 @@ func TestEmbeddedContract_AntiGenericDesign(t *testing.T) {
 	if !ok {
 		t.Fatalf("embeddedContract(\"anti-generic-design\"): expected ok=true, got ok=false")
 	}
-	if spec.content != assets.AntiGenericDesign() {
+	if spec.content() != assets.AntiGenericDesign() {
 		t.Errorf("embeddedContract: content should be assets.AntiGenericDesign")
 	}
-	if spec.beginMarker != propagator.AntiGenericDesignBeginMarker {
-		t.Errorf("embeddedContract: beginMarker = %q, want %q", spec.beginMarker, propagator.AntiGenericDesignBeginMarker)
+	if spec.beginMarker() != designBeginMarker {
+		t.Errorf("embeddedContract: beginMarker = %q, want %q", spec.beginMarker(), designBeginMarker)
 	}
-	if spec.endMarker != propagator.AntiGenericDesignEndMarker {
-		t.Errorf("embeddedContract: endMarker = %q, want %q", spec.endMarker, propagator.AntiGenericDesignEndMarker)
+	if spec.endMarker() != designEndMarker {
+		t.Errorf("embeddedContract: endMarker = %q, want %q", spec.endMarker(), designEndMarker)
 	}
-	if spec.rowLabel != "anti-generic-design" {
-		t.Errorf("embeddedContract: rowLabel = %q, want %q", spec.rowLabel, "anti-generic-design")
+	if spec.name != "anti-generic-design" {
+		t.Errorf("embeddedContract: rowLabel = %q, want %q", spec.name, "anti-generic-design")
 	}
 	if spec.defaultPath != "skills/_shared/anti-generic-design.md" {
 		t.Errorf("embeddedContract: defaultPath = %q, want %q", spec.defaultPath, "skills/_shared/anti-generic-design.md")
@@ -1110,7 +1110,7 @@ func TestPropagateCommand_EmbeddedDesignContract_ResolvesAndWritesPath(t *testin
 		t.Errorf("embedded design: must not hit the unknown embedded contract branch; stderr: %s", stderr)
 	}
 	out := string(written[registryPath])
-	if !strings.Contains(out, propagator.AntiGenericDesignBeginMarker) {
+	if !strings.Contains(out, designBeginMarker) {
 		t.Errorf("embedded design: registry should contain the distinct BEGIN marker; out:\n%s", out)
 	}
 	if !strings.Contains(out, "skills/_shared/anti-generic-design.md") {
@@ -1319,7 +1319,7 @@ func TestPropagateCommand_FileStore_EndToEnd(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(got), propagator.BeginMarker) {
+	if !strings.Contains(string(got), minimalismBeginMarker) {
 		t.Errorf("registry on disk must contain scoped BEGIN marker; got:\n%s", string(got))
 	}
 	entries, _ := os.ReadDir(dir)
@@ -1434,10 +1434,10 @@ func TestPropagate_ConcurrentProcesses_RegistryNeverGutted(t *testing.T) {
 	if !strings.Contains(content, "pre-sdd-contracts") {
 		t.Errorf("original registry row was lost:\n%s", content)
 	}
-	if !strings.Contains(content, propagator.BeginMarker) {
+	if !strings.Contains(content, minimalismBeginMarker) {
 		t.Errorf("minimalism scoped block missing:\n%s", content)
 	}
-	if !strings.Contains(content, propagator.AntiGenericDesignBeginMarker) {
+	if !strings.Contains(content, designBeginMarker) {
 		t.Errorf("anti-generic-design scoped block missing:\n%s", content)
 	}
 }
@@ -1625,14 +1625,12 @@ func TestPropagateLoop_NoOpDoesNotRetryOrWrite(t *testing.T) {
 	const contractFilePath = "/fake/contract.md"
 
 	// Build the already-correctly-scoped registry via a real Propagate call so
-	// the fixture can never drift from what BuildScopedRow actually produces.
+	// the fixture can never drift from what Propagate actually writes.
 	phases, err := contract.Parse(testContractContent)
 	if err != nil {
 		t.Fatalf("contract.Parse: %v", err)
 	}
-	alreadyScoped, _, err := propagator.Propagate(minimalRegistry, propagator.Config{
-		ContractPath: "skills/_shared/minimalism-contract.md",
-	}, phases)
+	alreadyScoped, _, err := propagator.Propagate(minimalRegistry, minimalism().config("skills/_shared/minimalism-contract.md"), phases)
 	if err != nil {
 		t.Fatalf("Propagate: %v", err)
 	}

@@ -10,8 +10,6 @@ import (
 	"regexp"
 	"strings"
 	"testing"
-
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/propagator"
 )
 
 // The golden files under testdata/status-golden record what 'status' (the doctor of an
@@ -139,8 +137,8 @@ const (
 	statusContract = "---\napplies_to_phases: [sdd-tasks, sdd-apply]\n---\n# A contract\n\nThe body is not read.\n"
 )
 
-var statusRegistryBoth = "# Registry\n\n" + propagator.BeginMarker + "\nrow\n" + propagator.EndMarker + "\n" +
-	propagator.AntiGenericDesignBeginMarker + "\nrow\n" + propagator.AntiGenericDesignEndMarker + "\n"
+var statusRegistryBoth = "# Registry\n\n" + minimalismBeginMarker + "\nrow\n" + minimalismEndMarker + "\n" +
+	designBeginMarker + "\nrow\n" + designEndMarker + "\n"
 
 // complete puts a complete installation in the world: the hooks the installer writes, an
 // executable binary, a contract that parses and a registry with both scoped blocks. status
@@ -332,9 +330,9 @@ func statusGoldenCases() []registryGoldenCase {
 			set("an empty registry: FAIL, and the note says an empty registry is not zero skills", "")
 			set("only white space: the same", " \n\t\n")
 			set("text with neither block: WARN names both", "# Registry\n")
-			set("only the minimalism block: WARN names the other", "# Registry\n"+propagator.BeginMarker+"\n")
-			set("only the design block: WARN names the other", "# Registry\n"+propagator.AntiGenericDesignBeginMarker+"\n")
-			set("the begin markers are enough, the end markers are not read", propagator.BeginMarker+propagator.AntiGenericDesignBeginMarker)
+			set("only the minimalism block: WARN names the other", "# Registry\n"+minimalismBeginMarker+"\n")
+			set("only the design block: WARN names the other", "# Registry\n"+designBeginMarker+"\n")
+			set("the begin markers are enough, the end markers are not read", minimalismBeginMarker+designBeginMarker)
 			set("both blocks", statusRegistryBoth)
 			w.removeAll(projectRegistry)
 			w.mkdir(projectRegistry)

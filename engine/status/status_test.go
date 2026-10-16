@@ -3,12 +3,12 @@ package status
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/fs"
 	"strings"
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/contract"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/propagator"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings"
 )
 
@@ -34,8 +34,27 @@ const (
 	labelApprove    = "guard: skills approve (PreToolUse Bash + file tools)"
 	labelContract   = "contract: " + contractPath
 	labelRegistry   = "registry: " + registryPath
-	bothBlocksText  = "# R\n" + propagator.BeginMarker + "\n" + propagator.EndMarker + "\n" + propagator.AntiGenericDesignBeginMarker + "\n" + propagator.AntiGenericDesignEndMarker + "\n"
+	bothBlocksText  = "# R\n" + minimalismBegin + "\n" + minimalismEnd + "\n" + designBegin + "\n" + designEnd + "\n"
 )
+
+// The markers of the two blocks the registry check of these tests looks for. They are written out:
+// the status of an installation names no contract, and the markers are what the registries in the
+// field already hold.
+const (
+	minimalismBegin = "<!-- BEGIN: minimalism-contract-scope (auto-generated) -->"
+	minimalismEnd   = "<!-- END: minimalism-contract-scope -->"
+	designBegin     = "<!-- BEGIN: anti-generic-design-scope (auto-generated) -->"
+	designEnd       = "<!-- END: anti-generic-design-scope -->"
+)
+
+// testBlocks are the blocks a service of these tests expects a registry to hold, in the order the
+// report names the missing ones.
+func testBlocks() []ScopedBlock {
+	return []ScopedBlock{
+		{Name: "minimalism-contract-scope", BeginMarker: minimalismBegin},
+		{Name: "anti-generic-design-scope", BeginMarker: designBegin},
+	}
+}
 
 // memFiles is a file system in memory: the modes and the contents of the paths it holds, and the
 // error to answer for a path that is made to fail. Every path asked about is recorded.
@@ -149,7 +168,7 @@ func (w *world) editSettings(t *testing.T, edit func(root map[string]interface{}
 }
 
 func (w *world) check() Report {
-	return Service{Files: w.files, Settings: w.settings}.Check(Request{Home: home, Cwd: project})
+	return Service{Files: w.files, Settings: w.settings, Blocks: testBlocks()}.Check(Request{Home: home, Cwd: project})
 }
 
 // named is the check whose label is exactly label.
@@ -248,7 +267,7 @@ func TestTheSettingsAreLoadedOnceAndOnlyThePlacesOfTheInstallationAreAsked(t *te
 
 func TestWithoutADirectoryThereIsNoRegistryToLookFor(t *testing.T) {
 	w := complete(t)
-	report := Service{Files: w.files, Settings: w.settings}.Check(Request{Home: home})
+	report := Service{Files: w.files, Settings: w.settings, Blocks: testBlocks()}.Check(Request{Home: home})
 	for _, c := range report.Checks {
 		if strings.HasPrefix(c.Label, "registry:") {
 			t.Errorf("a registry check was made without a directory: %v", c)
@@ -270,9 +289,10 @@ func TestAServiceWithoutAPortSaysWhichInsteadOfFailingOnANilPointer(t *testing.T
 		service Service
 		want    string
 	}{
-		"no files":    {Service{Settings: w.settings}, "status: Service.Files is nil"},
-		"no settings": {Service{Files: w.files}, "status: Service.Settings is nil"},
-		"neither":     {Service{}, "status: Service.Files is nil"},
+		"no files":    {Service{Settings: w.settings, Blocks: testBlocks()}, "status: Service.Files is nil"},
+		"no settings": {Service{Files: w.files, Blocks: testBlocks()}, "status: Service.Settings is nil"},
+		"no blocks":   {Service{Files: w.files, Settings: w.settings}, "status: Service.Blocks is empty"},
+		"none":        {Service{}, "status: Service.Files is nil"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			defer func() {
@@ -288,7 +308,7 @@ func TestAServiceWithoutAPortSaysWhichInsteadOfFailingOnANilPointer(t *testing.T
 
 func TestTheLayoutFollowsTheHomeAsItIsGivenEvenWhenItIsEmpty(t *testing.T) {
 	w := complete(t)
-	report := Service{Files: w.files, Settings: w.settings}.Check(Request{Home: "", Cwd: "rel"})
+	report := Service{Files: w.files, Settings: w.settings, Blocks: testBlocks()}.Check(Request{Home: "", Cwd: "rel"})
 	want := []string{
 		"binary: .claude/bin/gentle-ai-overlay",
 		"contract: .claude/skills/_shared/minimalism-contract.md",
@@ -601,7 +621,7 @@ func TestTheApproveGuardNamesWhatIsMissingOrDriftedAndTheLimitOfAGuard(t *testin
 func TestTheProjectionAndApproveHooksAreMatchedByTheInstalledPathAndNotByTheIdentityAlone(t *testing.T) {
 	w := complete(t)
 	w.settings.docs["/other/.claude/settings.json"] = w.settings.docs[settingsPath]
-	report := Service{Files: w.files, Settings: w.settings}.Check(Request{Home: "/other", Cwd: project})
+	report := Service{Files: w.files, Settings: w.settings, Blocks: testBlocks()}.Check(Request{Home: "/other", Cwd: project})
 	// The entries name /h/.claude/bin/gentle-ai-overlay; under another home that is not the binary.
 	if report.named(t, "hooks: projection (UserPromptSubmit + PreToolUse gates)").Level != Warn {
 		t.Error("the projection hooks of another binary were taken for this one's")
@@ -655,6 +675,34 @@ func TestCheckContractIsTheContractCheckOfAnyPathOverAnyReader(t *testing.T) {
 	wantCheck(t, CheckContract("/virtual/none.md", files), Fail, "not found")
 }
 
+// The blocks a registry is expected to hold are the service's, not the package's: a registry is
+// judged by the blocks the service is given, named as it names them and in the order it lists them.
+func TestTheRegistryIsJudgedByTheBlocksTheServiceIsGiven(t *testing.T) {
+	const missing = "present but scoped block(s) missing: %s (run 'labdrian install-hooks' or propagate)"
+	blocks := []ScopedBlock{
+		{Name: "third-scope", BeginMarker: "<!-- BEGIN: third-scope -->"},
+		{Name: "first-scope", BeginMarker: "<!-- BEGIN: first-scope -->"},
+		{Name: "second-scope", BeginMarker: "<!-- BEGIN: second-scope -->"},
+	}
+	for _, c := range []struct {
+		name    string
+		content string
+		level   Level
+		note    string
+	}{
+		{"none of them", "# R\n", Warn, fmt.Sprintf(missing, "third-scope, first-scope, second-scope")},
+		{"the middle one", "# R\n<!-- BEGIN: first-scope -->\n", Warn, fmt.Sprintf(missing, "third-scope, second-scope")},
+		{"the markers of the default blocks mean nothing to it", bothBlocksText, Warn, fmt.Sprintf(missing, "third-scope, first-scope, second-scope")},
+		{"all of them", "<!-- BEGIN: second-scope --><!-- BEGIN: third-scope --><!-- BEGIN: first-scope -->", OK, "scoped block present"},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			w := complete(t)
+			w.files.contents[registryPath] = c.content
+			wantCheck(t, Service{Files: w.files, Blocks: blocks}.Registry("/p"), c.level, c.note)
+		})
+	}
+}
+
 func TestTheRegistryOfTheProjectIsQuietWhenAbsentLoudWhenEmptyOrUnreadableAndWarnsOfMissingBlocks(t *testing.T) {
 	missingBoth := "present but scoped block(s) missing: minimalism-contract-scope, anti-generic-design-scope (run 'labdrian install-hooks' or propagate)"
 	const empty = "present but EMPTY — run skill-registry refresh; do NOT conclude skills are absent (an empty registry is inconclusive, not zero)"
@@ -671,11 +719,11 @@ func TestTheRegistryOfTheProjectIsQuietWhenAbsentLoudWhenEmptyOrUnreadableAndWar
 		{"empty", "", false, nil, Fail, empty},
 		{"white space", " \n\t\n", false, nil, Fail, empty},
 		{"neither block", "# R\n", false, nil, Warn, missingBoth},
-		{"only the minimalism block", "# R\n" + propagator.BeginMarker + "\n", false, nil, Warn,
+		{"only the minimalism block", "# R\n" + minimalismBegin + "\n", false, nil, Warn,
 			"present but scoped block(s) missing: anti-generic-design-scope (run 'labdrian install-hooks' or propagate)"},
-		{"only the design block", propagator.AntiGenericDesignBeginMarker, false, nil, Warn,
+		{"only the design block", designBegin, false, nil, Warn,
 			"present but scoped block(s) missing: minimalism-contract-scope (run 'labdrian install-hooks' or propagate)"},
-		{"the end markers are not read", propagator.EndMarker + propagator.AntiGenericDesignEndMarker, false, nil, Warn, missingBoth},
+		{"the end markers are not read", minimalismEnd + designEnd, false, nil, Warn, missingBoth},
 		{"both blocks", bothBlocksText, false, nil, OK, "scoped block present"},
 	}
 	for _, c := range cases {
@@ -738,7 +786,7 @@ func TestTheRegistryAloneIsTheSameCheckAFullRunMakesAndLooksAtNothingElse(t *tes
 
 		alone := complete(t)
 		alone.files.contents[registryPath] = content
-		got := Service{Files: alone.files}.Registry("/p")
+		got := Service{Files: alone.files, Blocks: testBlocks()}.Registry("/p")
 
 		if got != want {
 			t.Errorf("Registry = %+v, want the check of a full run, %+v", got, want)
@@ -749,11 +797,23 @@ func TestTheRegistryAloneIsTheSameCheckAFullRunMakesAndLooksAtNothingElse(t *tes
 	}
 }
 
-func TestAServiceWithoutFilesSaysSoWhenAskedForTheRegistryAlone(t *testing.T) {
-	defer func() {
-		if got := recover(); got != "status: Service.Files is nil" {
-			t.Errorf("recovered %v, want the panic that says which port is missing", got)
-		}
-	}()
-	Service{}.Registry("/p")
+func TestAServiceWithoutFilesOrBlocksSaysSoWhenAskedForTheRegistryAlone(t *testing.T) {
+	for name, c := range map[string]struct {
+		service Service
+		want    string
+	}{
+		"no files":  {Service{Blocks: testBlocks()}, "status: Service.Files is nil"},
+		"no blocks": {Service{Files: complete(t).files}, "status: Service.Blocks is empty"},
+		"none":      {Service{}, "status: Service.Files is nil"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			defer func() {
+				if got := recover(); got != c.want {
+					t.Errorf("recovered %v, want the panic %q", got, c.want)
+				}
+			}()
+			c.service.Registry("/p")
+			t.Error("Registry returned a check from a service with something missing")
+		})
+	}
 }

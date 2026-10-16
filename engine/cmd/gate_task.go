@@ -79,7 +79,7 @@ func gateTaskCore(args []string, stdin io.Reader, stdout io.Writer, stderr io.Wr
 			fmt.Fprintln(stdout, "{}")
 			return
 		}
-		contractContent = spec.content
+		contractContent = spec.content()
 		// When --contract-path was not explicitly provided, use the embedded
 		// contract's own default path (mirrors the propagate command).
 		if !contractPathExplicit {
