@@ -1,11 +1,15 @@
 // Package shelltest carries no production code. It exists so the shell-level
 // tests for bin/labdrian-overlay run in CI without a workflow change: the
 // existing "Engine Tests" job already runs `go test ./...` from engine/, and
-// this test drives the bash harness next to it.
+// these tests drive the script, and a bash harness, next to it.
 //
-// The harness itself is a plain bash script, runnable on its own
+// The longterm-mem harness is a plain bash script, runnable on its own
 // (`engine/shelltest/overlay_longterm_mem_test.sh`), so a failure can be
-// reproduced and iterated on without Go in the loop.
+// reproduced and iterated on without Go in the loop. The dispatch of the
+// engine's commands (overlay_dispatch_test.go) is a table in Go, one row for
+// each command. The world the tests run the script in (where it is, an
+// environment, a repository, a fake engine, a run that keeps the streams
+// apart) is engine/overlaytest's.
 package shelltest
 
 import (
@@ -15,12 +19,19 @@ import (
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/enginetest"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/overlaytest"
 )
 
+// overlayScript is bin/labdrian-overlay for a test that runs it; the test is skipped on a machine with
+// no bash.
+func overlayScript(t *testing.T) string {
+	t.Helper()
+	overlaytest.RequireBash(t)
+	return overlaytest.Script(t)
+}
+
 func TestOverlayLongtermMemShellHarness(t *testing.T) {
-	if _, err := exec.LookPath("bash"); err != nil {
-		t.Skipf("bash is not available: %v", err)
-	}
+	overlaytest.RequireBash(t)
 
 	harness, err := filepath.Abs("overlay_longterm_mem_test.sh")
 	if err != nil {
