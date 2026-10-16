@@ -78,15 +78,11 @@ func TestTheLineOfTheRegistryCheckHasAnyLevelOfACheck(t *testing.T) {
 // discoveryToolsOfTheScript is DISCOVERY_TOOLS as the script spells it.
 func discoveryToolsOfTheScript(t *testing.T) []string {
 	t.Helper()
-	script, err := os.ReadFile(overlaytest.Script(t))
-	if err != nil {
-		t.Fatal(err)
-	}
-	m := regexp.MustCompile(`(?m)^DISCOVERY_TOOLS=\(([^)]*)\)`).FindSubmatch(script)
+	m := regexp.MustCompile(`(?m)^DISCOVERY_TOOLS=\(([^)]*)\)`).FindStringSubmatch(overlaytest.ScriptText(t))
 	if m == nil {
 		t.Fatal("the overlay script has no DISCOVERY_TOOLS")
 	}
-	return strings.Fields(string(m[1]))
+	return strings.Fields(m[1])
 }
 
 // envValue is the value a run gets for name: the last entry of it.

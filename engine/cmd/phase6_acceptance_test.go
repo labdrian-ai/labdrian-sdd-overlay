@@ -18,6 +18,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/overlaytest"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflowprofile"
 )
@@ -751,11 +752,7 @@ func TestPhase6Acceptance_OverlayLifecyclePreservation(t *testing.T) {
 // state path components at all.
 func TestPhase6Acceptance_OverlayNeverReferencesWorkflowState(t *testing.T) {
 	overlay := phase6OverlayPath(t)
-	data, err := os.ReadFile(overlay)
-	if err != nil {
-		t.Fatalf("os.ReadFile(%q) = %v, want nil", overlay, err)
-	}
-	lines := strings.Split(string(data), "\n")
+	lines := strings.Split(overlaytest.ScriptTextOf(t, overlay), "\n")
 
 	forbidden := []string{"labdrian/workflows", "XDG_STATE_HOME"}
 	for _, fn := range []string{"cmd_apply", "cmd_self_update", "cmd_update", "cmd_restore"} {

@@ -17,11 +17,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Syntax check bin/overlay
-        run: bash -n bin/overlay && bash -n bin/labdrian-overlay
+      - name: Syntax check bin/overlay, bin/labdrian-overlay and its modules
+        run: bash -n bin/overlay && bash -n bin/labdrian-overlay && for module in bin/lib/*.sh; do bash -n "$module"; done
 
-      - name: ShellCheck wrappers
-        run: shellcheck bin/overlay bin/labdrian-overlay || true
+      - name: ShellCheck wrappers and modules
+        run: shellcheck bin/overlay bin/labdrian-overlay bin/lib/*.sh || true
 
       - name: Deterministic-checks dispatch guard smoke test
         run: |
@@ -367,13 +367,16 @@ jobs:
         working-directory: tui
         run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
 
+      # The backend tests of the tui (`*_backend_test.go`, which build the engine and run the overlay
+      # script) are behind the `backend` build tag, so a local `go test ./...` is fast and needs no
+      # engine; every step here that reads test files passes the tag, so CI still vets, lints and runs them.
       - name: Vet
         working-directory: tui
-        run: go vet ./...
+        run: go vet -tags backend ./...
 
       - name: Staticcheck
         working-directory: tui
-        run: go run honnef.co/go/tools/cmd/staticcheck@v0.7.0 ./...
+        run: go run honnef.co/go/tools/cmd/staticcheck@v0.7.0 -tags backend ./...
 
       - name: Deadcode (informational)
         working-directory: tui
@@ -398,7 +401,7 @@ jobs:
 
       - name: Test
         working-directory: tui
-        run: go test ./... -cover
+        run: go test -tags backend ./... -cover
 
   test-longterm-mem:
     name: Longterm-Mem Tests

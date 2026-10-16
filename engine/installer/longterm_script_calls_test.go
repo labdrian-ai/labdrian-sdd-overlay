@@ -11,7 +11,6 @@ package installer_test
 // the script has none around these calls; a test below fails if a call is hidden in one.
 
 import (
-	"os"
 	"regexp"
 	"sort"
 	"strings"
@@ -240,22 +239,19 @@ func TestScriptEngineCallsAreFoundInEveryShapeTheShellCanWriteThem(t *testing.T)
 }
 
 func TestTheScriptSendsOnlyTheVerbsAndFlagsTheCommandTakes(t *testing.T) {
-	script, err := os.ReadFile(overlaytest.Script(t))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if problems := problemsWithEngineCalls(string(script)); len(problems) != 0 {
+	script := overlaytest.ScriptText(t)
+	if problems := problemsWithEngineCalls(script); len(problems) != 0 {
 		t.Errorf("the calls of the script to the command:\n%s", strings.Join(problems, "\n"))
 	}
 	// The helper hands the state directory over once, in front of the arguments.
-	if !strings.Contains(string(script), `"$ENGINE_BINARY" installed-targets "$verb" --state-dir "$STATE_DIR" "$@"`) {
+	if !strings.Contains(script, `"$ENGINE_BINARY" installed-targets "$verb" --state-dir "$STATE_DIR" "$@"`) {
 		t.Error("the helper does not call the engine with the state directory in front of the arguments")
 	}
 	// The engine is called through the helper and nowhere else: a call written out would escape the check. The
 	// one call that is not the helper's is the probe of an engine that may be too old, which asks the bare
 	// command (it is one word of a command substitution, not a statement of its own).
 	const helper = "$ENGINE_BINARY installed-targets $verb --state-dir $STATE_DIR $@"
-	for _, statement := range scriptWords(string(script)) {
+	for _, statement := range scriptWords(script) {
 		for i, word := range statement {
 			if word == "installed-targets" && i > 0 && strings.HasSuffix(statement[i-1], "ENGINE_BINARY") && strings.Join(statement, " ") != helper {
 				t.Errorf("a call of the engine's installed-targets that does not go through longtermmem_targets: %q", strings.Join(statement, " "))
@@ -268,11 +264,7 @@ func TestTheScriptSendsOnlyTheVerbsAndFlagsTheCommandTakes(t *testing.T) {
 // command does not take put in, one shape at a time, and the check has to name it; a shape it cannot
 // see would pass the mutant, and the test would fail.
 func TestAFlagTheCommandDoesNotTakeIsFoundWhereverTheScriptHidesIt(t *testing.T) {
-	script, err := os.ReadFile(overlaytest.Script(t))
-	if err != nil {
-		t.Fatal(err)
-	}
-	text := string(script)
+	text := overlaytest.ScriptText(t)
 	if problems := problemsWithEngineCalls(text); len(problems) != 0 {
 		t.Fatalf("the script has problems before it is mutated:\n%s", strings.Join(problems, "\n"))
 	}

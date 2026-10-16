@@ -94,6 +94,8 @@ Pi is a **package target**, not a per-file copy target: `--target pi` on `apply`
 
 `labdrian` is the alias to `bin/labdrian-overlay`, installed via `labdrian-overlay install-alias`. All commands below work as `labdrian <command>` or `bin/labdrian-overlay <command>` from the repo root. (The pristine `bin/overlay` is a vendored copy of gentle-ai upstream — labdrian never edits it, so it never conflicts on sync.)
 
+`bin/labdrian-overlay` is an entry point and the code is in the modules of `bin/lib/`, one concern each (`targets.sh`, `manifest_routes.sh`, `deploy_state.sh`, `apply.sh`, `longterm_mem.sh`, `doctor.sh`, ...). The entry point finds its own real location (a symlink, such as the one `install-alias` makes, or another directory changes nothing), sources the modules in the order of its `_modules` list, which is an order of dependency, and dispatches the command. The script is the entry point and `bin/lib/` together: copy or package them together, and a clone that is missing a module stops with an error that names it. They ship as git ships the rest of the clone, so `self-update` and `apply` bring them.
+
 ### Launch
 
 ```bash

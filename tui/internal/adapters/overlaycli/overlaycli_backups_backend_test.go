@@ -1,3 +1,5 @@
+//go:build backend
+
 package overlaycli
 
 // Contract tests between the CLI backup query and the REAL

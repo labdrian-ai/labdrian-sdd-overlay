@@ -1,3 +1,5 @@
+//go:build backend
+
 package overlaycli
 
 // Integration harness for `bin/labdrian-overlay self-update` (D1-D3, R-004

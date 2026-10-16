@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/overlaytest"
 )
 
 // The four project verbs' usage lines put the verb, a space, and then the flags in
@@ -29,15 +31,12 @@ func TestDocsDescribeTheSkillsLockAndTheBusyExit(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read README.md: %v", err)
 	}
-	overlay, err := os.ReadFile(filepath.Join("..", "..", "bin", "labdrian-overlay"))
-	if err != nil {
-		t.Fatalf("read bin/labdrian-overlay: %v", err)
-	}
+	overlay := overlaytest.ScriptText(t)
 	// Each document's own description of the skills verbs, not the rest of the text.
 	sections := map[string]string{
 		"README":  docSection(t, string(readme), "overlay skills <verb>\n", "overlay shaper <verb>\n"),
 		"usage()": docSection(t, captureUsage(t), "  engine skills <verb>", "  engine skills guard-hook\n"),
-		"help":    docSection(t, string(overlay), "  skills <verb>                    Forward", "  shaper <verb>                    Forward"),
+		"help":    docSection(t, overlay, "  skills <verb>                    Forward", "  shaper <verb>                    Forward"),
 	}
 	for name, text := range sections {
 		for _, want := range []string{

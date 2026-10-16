@@ -477,8 +477,8 @@ const unavailableExitCode = 127
 
 // toolExecTimeout bounds every tool subprocess run by check and normalize
 // (correction D1). The repo already solved this exact problem for its own
-// network fetch: bin/labdrian-overlay:823-828 wraps `git fetch` in `timeout
-// 10` specifically so a stalled network path cannot hang verification
+// network fetch: compute_repo_behind_origin in bin/lib/release.sh wraps `git
+// fetch` in `timeout 10` specifically so a stalled network path cannot hang verification
 // indefinitely, and buffers no partial evidence until the fetch resolves.
 // This follows that shape, scoped per module rather than per whole check
 // (matching correction B1's per-module isolation, so one stuck module never

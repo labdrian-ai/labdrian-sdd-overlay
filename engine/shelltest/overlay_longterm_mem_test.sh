@@ -1533,12 +1533,16 @@ case_archive_sync_trigger_call_site_is_only_in_inception_pipeline() {
 # `labdrian` (install-alias symlinks it). Every "run 'overlay <something>'"
 # handed the operator a command that cannot run.
 #
-# This asserts over the WHOLE file against the script's OWN dispatch table,
-# not against a fixed list of messages, so a subcommand added later is covered
-# without editing this case and the wrong name cannot come back one message at
-# a time.
+# This asserts over the WHOLE script (the entry point and every module in
+# bin/lib) against the script's OWN dispatch table, not against a fixed list of
+# messages, so a subcommand added later is covered without editing this case
+# and the wrong name cannot come back one message at a time.
 case_no_message_names_a_command_called_overlay() {
-  local subs sub offenders=""
+  local subs sub offenders="" module
+  local -a files=("$OVERLAY")
+  for module in "$REPO_ROOT"/bin/lib/*.sh; do
+    [[ -f "$module" ]] && files+=("$module")
+  done
   subs="$(
     awk '/^  case "\$COMMAND" in$/{inside=1; next} inside && /^  esac$/{exit} inside' "$OVERLAY" \
       | grep -oE '^ *[a-z][a-z-]*\)' \
@@ -1557,7 +1561,7 @@ case_no_message_names_a_command_called_overlay() {
     local hits
     # The leading class rejects 'labdrian-overlay ...' and 'bin/overlay ...',
     # which are file paths, not the invented command name.
-    hits="$(grep -nE "(^|[^-a-zA-Z0-9_./])overlay[[:space:]]+${sub}([^-a-zA-Z0-9_]|$)" "$OVERLAY" || true)"
+    hits="$(grep -nE "(^|[^-a-zA-Z0-9_./])overlay[[:space:]]+${sub}([^-a-zA-Z0-9_]|$)" "${files[@]}" || true)"
     if [[ -n "$hits" ]]; then
       offenders="$offenders
 $hits"

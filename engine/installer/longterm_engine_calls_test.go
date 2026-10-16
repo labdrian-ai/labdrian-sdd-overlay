@@ -298,11 +298,7 @@ func TestEngineCalls_AnEngineTooOldForTheCommandIsToldFromOneThatFailed(t *testi
 // it that rebuilds an engine that is stale or absent (a test of the harness runs that). A remedy that
 // does not exist is a dead end for the person who reads it.
 func TestEngineCalls_TheRemediesTheAssessWarningsNameAreCommandsThatExist(t *testing.T) {
-	script, err := os.ReadFile(overlaytest.Script(t))
-	if err != nil {
-		t.Fatal(err)
-	}
-	text := string(script)
+	text := overlaytest.ScriptText(t)
 	tooOld, _, _ := whatTheUninstallSays(t, "6", map[string]string{"FAKE_ENGINE_TOO_OLD": "1"})
 	failed, _, _ := whatTheUninstallSays(t, "0", map[string]string{"FAKE_ASSESS_EXIT": "2"})
 	named := regexp.MustCompile(`'(labdrian [^']+)'`)
@@ -342,17 +338,14 @@ func TestEngineCalls_TheRemediesTheAssessWarningsNameAreCommandsThatExist(t *tes
 // Nothing of the old record is left in the script: no temporary file for a rewrite, no filter, no lock
 // made of a directory, no age test for an abandoned one.
 func TestEngineCalls_NoBashIsLeftThatKeepsTheRecord(t *testing.T) {
-	script, err := os.ReadFile(overlaytest.Script(t))
-	if err != nil {
-		t.Fatal(err)
-	}
+	script := overlaytest.ScriptText(t)
 	for _, gone := range []string{
 		"LONGTERM_MEM_INSTALLED_TARGETS", "LONGTERM_MEM_TARGETS_LOCK", "LONGTERM_MEM_TARGETS_LOCK_STALE_MINUTES",
 		"longtermmem_installed_targets_", "longtermmem_targets_lock_", "longtermmem_maybe_remove_binary",
 		"longtermmem_target_name_is_wellformed", ".installed-targets.XXXXXX", "grep -v -x -F", "tr '\\000' '\\001'",
 		"-mmin", "tracking_known", "tracking_readable",
 	} {
-		if strings.Contains(string(script), gone) {
+		if strings.Contains(script, gone) {
 			t.Errorf("the script still has %q, which belonged to the record it used to keep", gone)
 		}
 	}

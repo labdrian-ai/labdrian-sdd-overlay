@@ -7,8 +7,8 @@ package main
 //
 // The callers of the engine's `status` in the repository (Phase 9, batch 46):
 //
-//   - bin/labdrian-overlay, status-hooks: `exec "$ENGINE_BINARY" status`, with no arguments;
-//   - bin/labdrian-overlay, doctor (doctor_report_registry): `"$ENGINE_BINARY" status --only registry
+//   - bin/lib/hooks.sh, status-hooks: `exec "$ENGINE_BINARY" status`, with no arguments;
+//   - bin/lib/doctor.sh, doctor (doctor_report_registry): `"$ENGINE_BINARY" status --only registry
 //     --cwd "$dir"`, the registry of one project;
 //   - the tests of this package, which call runStatus or run the built binary with `status` and the
 //     arguments they mean to try (status_run_test.go, status_golden_test.go, dispatch_routes_test.go);
@@ -23,8 +23,11 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"sort"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/overlaytest"
 )
 
 // statusCallInScript finds the arguments of each call of the engine's status verb in the overlay
@@ -33,27 +36,34 @@ import (
 var statusCallInScript = regexp.MustCompile(`"\$ENGINE_BINARY" status((?: [^\s)|]+)*)`)
 
 func TestEveryCallerOfStatusInTheRepositoryPassesOnlyWhatItAccepts(t *testing.T) {
-	script, err := os.ReadFile(filepath.Join("..", "..", "bin", "labdrian-overlay"))
-	if err != nil {
-		t.Fatalf("read the overlay script: %v", err)
-	}
-	var found []string
-	for _, m := range statusCallInScript.FindAllStringSubmatch(string(script), -1) {
-		var words []string
-		for _, w := range strings.Fields(m[1]) {
-			if !strings.Contains(w, ">") { // 2>&1 is the script's, not an argument
-				words = append(words, w)
-			}
+	// Each call is held as "<file of the script>: <arguments>", so that a call added, changed or moved to
+	// another file of the script is seen.
+	var found, calls []string
+	for _, file := range overlaytest.ScriptFilesOf(t, overlaytest.Script(t)) {
+		data, err := os.ReadFile(file)
+		if err != nil {
+			t.Fatal(err)
 		}
-		found = append(found, strings.Join(words, " "))
+		for _, m := range statusCallInScript.FindAllStringSubmatch(string(data), -1) {
+			var words []string
+			for _, w := range strings.Fields(m[1]) {
+				if !strings.Contains(w, ">") { // 2>&1 is the script's, not an argument
+					words = append(words, w)
+				}
+			}
+			call := strings.Join(words, " ")
+			found = append(found, filepath.Base(file)+": "+call)
+			calls = append(calls, call)
+		}
 	}
-	// The calls the script makes, in the order it makes them: status-hooks, then doctor.
-	want := []string{``, `--only registry --cwd "$dir"`}
+	// The calls the script makes: status-hooks passes nothing and doctor the registry.
+	want := []string{`doctor.sh: --only registry --cwd "$dir"`, `hooks.sh: `}
+	sort.Strings(found)
 	if !reflect.DeepEqual(found, want) {
-		t.Fatalf("the overlay script calls the engine's status with %q, want %q: a caller was added or changed, so add it to this test (and to the ledger) and check that status accepts what it passes", found, want)
+		t.Fatalf("the overlay script calls the engine's status with %q, want %q: a caller was added, changed or moved, so add it to this test (and to the ledger) and check that status accepts what it passes", found, want)
 	}
 
-	for _, call := range found {
+	for _, call := range calls {
 		dir := t.TempDir()
 		args := strings.Fields(strings.ReplaceAll(call, `"$dir"`, dir))
 		got, err := parseStatusArgs(args)
