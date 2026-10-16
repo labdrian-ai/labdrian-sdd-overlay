@@ -73,15 +73,24 @@ type Result struct {
 	Exit   int
 }
 
-// Run runs the script with the arguments, from dir (the directory of the test when it is empty), in
-// env (the environment of the test process when it is nil), and keeps the two streams apart. A script
-// that ends with a code is a Result; one that could not be started fails the test.
-func Run(t testing.TB, script string, env []string, dir string, args ...string) Result {
-	t.Helper()
-	cmd := exec.Command("bash", append([]string{script}, args...)...)
+// bash is the one way every helper here starts bash: with the arguments, from dir (the directory of the
+// test when it is empty), in env exactly as it is given. A nil env is the environment of the test process
+// and nothing more (exec.Cmd's rule): Run, Combined and Source add no GitSettings to it, as Git does to
+// its nil env, because a script run takes what Env made for it and nothing else.
+func bash(env []string, dir string, args ...string) *exec.Cmd {
+	cmd := exec.Command("bash", args...)
 	cmd.Dir = dir
 	cmd.Env = env
-	return Capture(t, cmd)
+	return cmd
+}
+
+// Run runs the script with the arguments, from dir (the directory of the test when it is empty), in
+// env (the environment of the test process, without GitSettings, when it is nil), and keeps the two
+// streams apart. A script that ends with a code is a Result; one that could not be started fails the
+// test.
+func Run(t testing.TB, script string, env []string, dir string, args ...string) Result {
+	t.Helper()
+	return Capture(t, bash(env, dir, append([]string{script}, args...)...))
 }
 
 // Capture runs cmd, which the caller has built and given its directory and its environment, and keeps
@@ -106,14 +115,12 @@ func Capture(t testing.TB, cmd *exec.Cmd) Result {
 	return result
 }
 
-// Combined runs the script as Run does and returns what it wrote on both streams, in the order it
-// wrote it, and the error the run ended with (an *exec.ExitError for a non-zero exit).
+// Combined runs the script as Run does, from dir in env (a nil env as Run reads it), and returns what it
+// wrote on both streams, in the order it wrote it, and the error the run ended with (an *exec.ExitError
+// for a non-zero exit).
 func Combined(t testing.TB, script string, env []string, dir string, args ...string) (string, error) {
 	t.Helper()
-	cmd := exec.Command("bash", append([]string{script}, args...)...)
-	cmd.Dir = dir
-	cmd.Env = env
-	out, err := cmd.CombinedOutput()
+	out, err := bash(env, dir, append([]string{script}, args...)...).CombinedOutput()
 	return string(out), err
 }
 
@@ -132,14 +139,19 @@ func ExitCode(err error) int {
 	}
 }
 
-// Source runs snippet, from dir (the directory of the test when it is empty), in a bash that has sourced the
-// script, which when it is sourced only defines its functions and variables, with args as "$@". It
-// returns what the snippet wrote on both streams and the error it ended with.
-func Source(t testing.TB, script string, env []string, dir, snippet string, args ...string) (string, error) {
+// Shell is where Source runs a snippet: in Env (a nil Env as Run reads it) and from Dir (the directory of
+// the test when it is empty). It is a type of its own so that the directory and the snippet, both
+// strings, cannot change places in a call and still compile.
+type Shell struct {
+	Env []string
+	Dir string
+}
+
+// Source runs snippet, in the shell it is given, in a bash that has sourced the script, which when it is
+// sourced only defines its functions and variables, with args as "$@". It returns what the snippet wrote
+// on both streams and the error it ended with.
+func Source(t testing.TB, script string, in Shell, snippet string, args ...string) (string, error) {
 	t.Helper()
-	cmd := exec.Command("bash", append([]string{"-c", `source "$1"; shift; ` + snippet, "_", script}, args...)...)
-	cmd.Dir = dir
-	cmd.Env = env
-	out, err := cmd.CombinedOutput()
+	out, err := bash(in.Env, in.Dir, append([]string{"-c", `source "$1"; shift; ` + snippet, "_", script}, args...)...).CombinedOutput()
 	return string(out), err
 }

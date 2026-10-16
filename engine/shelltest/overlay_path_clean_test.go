@@ -33,7 +33,7 @@ func TestOverlayPathCleanMatchesFilepathClean(t *testing.T) {
 		"/spaces in/a path/", "/a-b_c.d/e/", "/a/*/b", "/a/[x]/b",
 	}
 
-	out, err := overlaytest.Source(t, overlay, nil, "", `for p in "$@"; do path_clean "$p"; done`, inputs...)
+	out, err := overlaytest.Source(t, overlay, overlaytest.Shell{}, `for p in "$@"; do path_clean "$p"; done`, inputs...)
 	if err != nil {
 		t.Fatalf("path_clean run failed: %v\n%s", err, out)
 	}

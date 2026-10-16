@@ -30,7 +30,7 @@ func pipkgWorld(t *testing.T) (home, stateDir string, runHelper func(script stri
 		env := append(os.Environ(), "HOME="+home, "STATE_DIR="+stateDir, "OVERLAY_DIR="+overlayDir,
 			// these tests build directly from the checkout (no apply, so no main checkout); pin the deploy ref to HEAD
 			"LABDRIAN_PI_DEPLOY_REF=HEAD")
-		return overlaytest.Source(t, overlay, env, overlayDir, script)
+		return overlaytest.Source(t, overlay, overlaytest.Shell{Env: env, Dir: overlayDir}, script)
 	}
 	return home, stateDir, runHelper
 }

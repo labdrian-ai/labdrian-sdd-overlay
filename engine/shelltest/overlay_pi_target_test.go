@@ -17,7 +17,7 @@ import (
 func TestResolveTargets_Pi(t *testing.T) {
 	overlay := overlayScript(t)
 
-	out, err := overlaytest.Source(t, overlay, nil, "", `resolve_targets all`)
+	out, err := overlaytest.Source(t, overlay, overlaytest.Shell{}, `resolve_targets all`)
 	if err != nil {
 		t.Fatalf("resolve_targets all failed: %v\n%s", err, out)
 	}
@@ -25,7 +25,7 @@ func TestResolveTargets_Pi(t *testing.T) {
 		t.Fatalf("resolve_targets all = %q, want %q", got, "claude opencode codex pi")
 	}
 
-	out, err = overlaytest.Source(t, overlay, nil, "", `resolve_targets pi`)
+	out, err = overlaytest.Source(t, overlay, overlaytest.Shell{}, `resolve_targets pi`)
 	if err != nil {
 		t.Fatalf("resolve_targets pi failed: %v\n%s", err, out)
 	}
@@ -33,7 +33,7 @@ func TestResolveTargets_Pi(t *testing.T) {
 		t.Fatalf("resolve_targets pi = %q, want %q", got, "pi")
 	}
 
-	out, err = overlaytest.Source(t, overlay, nil, "", `resolve_targets bogus`)
+	out, err = overlaytest.Source(t, overlay, overlaytest.Shell{}, `resolve_targets bogus`)
 	if err == nil {
 		t.Fatalf("resolve_targets bogus should die (unknown target), got success: %s", out)
 	}
@@ -57,7 +57,7 @@ func TestIsCopyTarget_ClaudeTrue_PiFalse(t *testing.T) {
 		{"codex", "copy"},
 		{"pi", "package"},
 	} {
-		out, err := overlaytest.Source(t, overlay, nil, "", `is_copy_target `+tc.target+` && echo copy || echo package`)
+		out, err := overlaytest.Source(t, overlay, overlaytest.Shell{}, `is_copy_target `+tc.target+` && echo copy || echo package`)
 		if err != nil {
 			t.Fatalf("is_copy_target %s: run failed: %v\n%s", tc.target, err, out)
 		}

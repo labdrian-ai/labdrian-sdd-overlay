@@ -69,7 +69,7 @@ func TestTargets_NamesAreExactlyWhatTargetAllExpandsTo(t *testing.T) {
 		names = append(names, name)
 	}
 
-	out, err := overlaytest.Source(t, overlay, nil, "", `resolve_targets all`)
+	out, err := overlaytest.Source(t, overlay, overlaytest.Shell{}, `resolve_targets all`)
 	if err != nil {
 		t.Fatalf("resolve_targets all failed: %v\n%s", err, out)
 	}
@@ -93,7 +93,7 @@ func TestTargets_KindsAgreeWithIsCopyTarget(t *testing.T) {
 		if !ok {
 			t.Fatalf("line %q has no tab-separated kind", line)
 		}
-		out, err := overlaytest.Source(t, overlay, nil, "", `is_copy_target `+name+` && echo copy || echo package`)
+		out, err := overlaytest.Source(t, overlay, overlaytest.Shell{}, `is_copy_target `+name+` && echo copy || echo package`)
 		if err != nil {
 			t.Fatalf("is_copy_target %s failed: %v\n%s", name, err, out)
 		}

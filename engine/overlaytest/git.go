@@ -22,10 +22,11 @@ const (
 // configuration of whoever runs the tests (neither the global nor the system one), an identity of the
 // test's own, and no automatic maintenance. A commit may otherwise start `git maintenance run --auto`
 // in the background, whose files in .git come and go while a test compares two snapshots of a tree,
-// and the program under test would be blamed for a file git wrote.
+// and the program under test would be blamed for a file git wrote. The empty configuration is the
+// null device of the machine (os.DevNull), not a path of one system.
 func GitSettings() []string {
 	return []string{
-		"GIT_CONFIG_GLOBAL=/dev/null", "GIT_CONFIG_SYSTEM=/dev/null",
+		"GIT_CONFIG_GLOBAL=" + os.DevNull, "GIT_CONFIG_SYSTEM=" + os.DevNull,
 		"GIT_CONFIG_COUNT=2",
 		"GIT_CONFIG_KEY_0=maintenance.auto", "GIT_CONFIG_VALUE_0=false",
 		"GIT_CONFIG_KEY_1=gc.auto", "GIT_CONFIG_VALUE_1=0",

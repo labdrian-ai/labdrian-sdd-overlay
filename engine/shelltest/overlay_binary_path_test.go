@@ -51,7 +51,7 @@ func TestOverlayLongtermMemBinaryPathMatchesEngine(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			out, err := overlaytest.Source(t, overlay, append(os.Environ(), "STATE_DIR="+tc.stateDir), "", `printf '%s\n' "$LONGTERM_MEM_BINARY"`)
+			out, err := overlaytest.Source(t, overlay, overlaytest.Shell{Env: append(os.Environ(), "STATE_DIR="+tc.stateDir)}, `printf '%s\n' "$LONGTERM_MEM_BINARY"`)
 			if err != nil {
 				t.Fatalf("sourcing the overlay failed: %v\n%s", err, out)
 			}
