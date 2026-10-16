@@ -50,13 +50,13 @@ func TestEvaluateListsEveryBlockerInTheOrderOfTheEvidence(t *testing.T) {
 				return in
 			},
 			want: []Blocker{
-				{ReasonHandoffDigestMismatch, `recorded handoff sha256 "stale-handoff", bytes hash to "` + handoffSum + `"`},
-				{ReasonSourceUnrecorded, "handoff source path is empty"},
-				{ReasonGoalDigestMismatch, `recorded goal sha256 "stale-goal", bytes hash to "` + goalSum + `"`},
-				{ReasonSourceUnrecorded, "goal source path is empty"},
-				{ReasonWorktreeProvenanceUnobserved, unobserved},
-				{ReasonClearanceMissing, noClearance},
-				{ReasonAcceptanceVerificationUnrepresentable, v1Cap},
+				{Reason: ReasonHandoffDigestMismatch, Detail: `recorded handoff sha256 "stale-handoff", bytes hash to "` + handoffSum + `"`},
+				{Reason: ReasonSourceUnrecorded, Detail: "handoff source path is empty"},
+				{Reason: ReasonGoalDigestMismatch, Detail: `recorded goal sha256 "stale-goal", bytes hash to "` + goalSum + `"`},
+				{Reason: ReasonSourceUnrecorded, Detail: "goal source path is empty"},
+				{Reason: ReasonWorktreeProvenanceUnobserved, Detail: unobserved},
+				{Reason: ReasonClearanceMissing, Detail: noClearance},
+				{Reason: ReasonAcceptanceVerificationUnrepresentable, Detail: v1Cap},
 			},
 			noSubject: true,
 		},
@@ -69,9 +69,9 @@ func TestEvaluateListsEveryBlockerInTheOrderOfTheEvidence(t *testing.T) {
 				return in
 			},
 			want: []Blocker{
-				{ReasonGoalUnbound, "no Goal binding supplied"},
-				{ReasonWorktreeProvenanceIncomplete, incomplete},
-				{ReasonClearanceMissing, noClearance},
+				{Reason: ReasonGoalUnbound, Detail: "no Goal binding supplied"},
+				{Reason: ReasonWorktreeProvenanceIncomplete, Detail: incomplete},
+				{Reason: ReasonClearanceMissing, Detail: noClearance},
 			},
 			noSubject: true,
 		},
@@ -85,10 +85,10 @@ func TestEvaluateListsEveryBlockerInTheOrderOfTheEvidence(t *testing.T) {
 				return in
 			},
 			want: []Blocker{
-				{ReasonGoalInvalid, goalParseErr.Error()},
-				{ReasonWorktreeProvenanceMismatch, `worktree root "work/tree", observed toplevel "/work/tree"`},
-				{ReasonClearanceMissing, noClearance},
-				{ReasonAcceptanceVerificationUnrepresentable, v1Cap},
+				{Reason: ReasonGoalInvalid, Detail: goalParseErr.Error()},
+				{Reason: ReasonWorktreeProvenanceMismatch, Detail: `worktree root "work/tree", observed toplevel "/work/tree"`},
+				{Reason: ReasonClearanceMissing, Detail: noClearance},
+				{Reason: ReasonAcceptanceVerificationUnrepresentable, Detail: v1Cap},
 			},
 			noSubject: true,
 		},
@@ -102,10 +102,10 @@ func TestEvaluateListsEveryBlockerInTheOrderOfTheEvidence(t *testing.T) {
 				return in
 			},
 			want: []Blocker{
-				{ReasonGoalIdentityMismatch, `handoff ("standalone-shaper-handoff", "goal-alpha"), goal ("other-project", "goal-alpha")`},
-				{ReasonWorktreeProvenanceMismatch, `worktree root "/work/tree", observed toplevel "/elsewhere"`},
-				{ReasonClearanceMissing, noClearance},
-				{ReasonAcceptanceVerificationUnrepresentable, v1Cap},
+				{Reason: ReasonGoalIdentityMismatch, Detail: `handoff ("standalone-shaper-handoff", "goal-alpha"), goal ("other-project", "goal-alpha")`},
+				{Reason: ReasonWorktreeProvenanceMismatch, Detail: `worktree root "/work/tree", observed toplevel "/elsewhere"`},
+				{Reason: ReasonClearanceMissing, Detail: noClearance},
+				{Reason: ReasonAcceptanceVerificationUnrepresentable, Detail: v1Cap},
 			},
 			noSubject: true,
 		},
@@ -113,9 +113,9 @@ func TestEvaluateListsEveryBlockerInTheOrderOfTheEvidence(t *testing.T) {
 			name:  "flags unresolved are said before the clearance",
 			input: overlapInput,
 			want: []Blocker{
-				{ReasonFlagsUnresolved, "1 flag(s) await a host-captured human resolution"},
-				{ReasonClearanceMissing, noClearance},
-				{ReasonAcceptanceVerificationUnrepresentable, v1Cap},
+				{Reason: ReasonFlagsUnresolved, Detail: "1 flag(s) await a host-captured human resolution"},
+				{Reason: ReasonClearanceMissing, Detail: noClearance},
+				{Reason: ReasonAcceptanceVerificationUnrepresentable, Detail: v1Cap},
 			},
 		},
 		{
@@ -124,8 +124,8 @@ func TestEvaluateListsEveryBlockerInTheOrderOfTheEvidence(t *testing.T) {
 				return inputWith(t, []byte(validHandoffV3JSON), []byte(goalV2JSONWithNonGoals(`["Extract jsonstrict."]`)))
 			},
 			want: []Blocker{
-				{ReasonGoalNonGoalOverlap, `stages item 1 "Extract jsonstrict." is byte-identical to a Goal non_goals item (OD6)`},
-				{ReasonClearanceMissing, noClearance},
+				{Reason: ReasonGoalNonGoalOverlap, Detail: `stages item 1 "Extract jsonstrict." is byte-identical to a Goal non_goals item (OD6)`},
+				{Reason: ReasonClearanceMissing, Detail: noClearance},
 			},
 		},
 		{
@@ -135,8 +135,8 @@ func TestEvaluateListsEveryBlockerInTheOrderOfTheEvidence(t *testing.T) {
 				return inputWith(t, []byte(data), goalBytes)
 			},
 			want: []Blocker{
-				{ReasonViewUnpresentable, "view section memory_scope at rune offset 7 holds U+001B, a terminal control or invisible formatting character; the view is unpresentable and is refused, not rewritten"},
-				{ReasonClearanceMissing, noClearance},
+				{Reason: ReasonViewUnpresentable, Detail: "view section memory_scope at rune offset 7 holds U+001B, a terminal control or invisible formatting character; the view is unpresentable and is refused, not rewritten"},
+				{Reason: ReasonClearanceMissing, Detail: noClearance},
 			},
 			noSubject: true,
 		},
@@ -144,7 +144,7 @@ func TestEvaluateListsEveryBlockerInTheOrderOfTheEvidence(t *testing.T) {
 			name:      "a clearance nobody verified",
 			input:     completeV3Input,
 			clearance: func(*testing.T, ReadinessInput) *VerifiedClearance { return &VerifiedClearance{} },
-			want:      []Blocker{{ReasonClearanceUnverified, unverified}},
+			want:      []Blocker{{Reason: ReasonClearanceUnverified, Detail: unverified}},
 		},
 		{
 			name: "a verified clearance when the subject evidence is not complete",
@@ -155,8 +155,8 @@ func TestEvaluateListsEveryBlockerInTheOrderOfTheEvidence(t *testing.T) {
 			},
 			clearance: func(t *testing.T, _ ReadinessInput) *VerifiedClearance { return verifiedFor(t, completeV3Input(t)) },
 			want: []Blocker{
-				{ReasonWorktreeProvenanceUnobserved, unobserved},
-				{ReasonClearanceUnverified, cannotMatch},
+				{Reason: ReasonWorktreeProvenanceUnobserved, Detail: unobserved},
+				{Reason: ReasonClearanceUnverified, Detail: cannotMatch},
 			},
 			noSubject: true,
 		},
@@ -168,7 +168,7 @@ func TestEvaluateListsEveryBlockerInTheOrderOfTheEvidence(t *testing.T) {
 				return in
 			},
 			clearance: func(t *testing.T, _ ReadinessInput) *VerifiedClearance { return verifiedFor(t, completeV3Input(t)) },
-			want:      []Blocker{{ReasonClearanceMismatch, differentFrom}},
+			want:      []Blocker{{Reason: ReasonClearanceMismatch, Detail: differentFrom}},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -183,9 +183,10 @@ func TestEvaluateListsEveryBlockerInTheOrderOfTheEvidence(t *testing.T) {
 			if got.State != StateDraft {
 				t.Fatalf("State = %q, want %q (blockers %v)", got.State, StateDraft, blockerReasons(got))
 			}
-			gotLines := got.Blockers
-			if !reflect.DeepEqual(gotLines, tc.want) {
-				t.Errorf("blockers =\n%v\nwant\n%v", gotLines, tc.want)
+			// A Blocker is its Reason and its Detail and nothing else, so DeepEqual compares every
+			// field of every blocker, and the keyed literals above say which is which.
+			if !reflect.DeepEqual(got.Blockers, tc.want) {
+				t.Errorf("blockers =\n%v\nwant\n%v", got.Blockers, tc.want)
 			}
 			if tc.noSubject && (got.Subject != nil || got.View != nil) {
 				t.Errorf("Subject = %v, View = %q, want neither", got.Subject, got.View)
