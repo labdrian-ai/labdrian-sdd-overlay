@@ -68,10 +68,11 @@ is_copy_target() {
   [[ "${TARGET_KINDS[${1:-}]:-}" == "copy" ]]
 }
 
-# Emits the shared stub line for a recognized package target whose
-# package_target_stub_message is the honest fallback for a package-model
-# target that has no adapter wired yet (today every package target, i.e.
-# pi, is dispatched explicitly above this call).
+# package_target_stub_message emits the shared stub line for a recognized
+# package target that has no lifecycle adapter wired yet: the honest fallback
+# of apply, status and sync-check. Today no target reaches it, because each
+# of those commands dispatches the one package target, pi, to its adapter
+# before it would fall back here.
 package_target_stub_message() {
   echo "  $1: package target without a lifecycle adapter (not implemented)"
 }

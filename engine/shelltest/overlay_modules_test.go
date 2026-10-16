@@ -20,6 +20,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -282,19 +283,75 @@ func TestTheLintJobOfCIChecksEveryModule(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	runs := workflowRuns(string(ci))
 	for _, tool := range []string{"bash -n", "shellcheck"} {
-		var runs []string
-		for _, line := range strings.Split(string(ci), "\n") {
-			if strings.Contains(line, "run: ") && strings.Contains(line, tool+" ") && strings.Contains(line, "bin/labdrian-overlay") {
-				runs = append(runs, line)
+		var onEntry, onModules bool
+		for _, run := range runs {
+			if strings.Contains(run, tool+" ") {
+				onEntry = onEntry || strings.Contains(run, "bin/labdrian-overlay")
+				onModules = onModules || strings.Contains(run, "bin/lib/*.sh")
 			}
 		}
-		if len(runs) != 1 {
-			t.Errorf("found %d lines of ci.yml that run %s on bin/labdrian-overlay, want 1: %q", len(runs), tool, runs)
+		if !onEntry {
+			t.Errorf("no step of ci.yml runs %s on bin/labdrian-overlay", tool)
+		}
+		if !onModules {
+			t.Errorf("no step of ci.yml runs %s on bin/lib/*.sh: the modules would not be checked", tool)
+		}
+	}
+}
+
+// workflowRuns is the script of every run of a workflow, read as text: a single-line run is its value, and a
+// run given as a block scalar (`run: |` or `run: >`) is its lines, joined, so that a step may be written in
+// either form, and split into several steps, without the check above losing sight of it.
+func workflowRuns(workflow string) []string {
+	var runs []string
+	lines := strings.Split(workflow, "\n")
+	for i := 0; i < len(lines); i++ {
+		rest := strings.TrimLeft(lines[i], " ")
+		rest = strings.TrimLeft(strings.TrimPrefix(rest, "- "), " ")
+		value, ok := strings.CutPrefix(rest, "run:")
+		if !ok {
 			continue
 		}
-		if !strings.Contains(runs[0], "bin/lib/*.sh") {
-			t.Errorf("the CI line %q does not run %s on bin/lib/*.sh: the modules would not be checked", strings.TrimSpace(runs[0]), tool)
+		value = strings.TrimSpace(value)
+		if !strings.HasPrefix(value, "|") && !strings.HasPrefix(value, ">") {
+			runs = append(runs, value)
+			continue
 		}
+		keyIndent := len(lines[i]) - len(rest)
+		var block []string
+		for i+1 < len(lines) {
+			next := lines[i+1]
+			if strings.TrimSpace(next) != "" && len(next)-len(strings.TrimLeft(next, " ")) <= keyIndent {
+				break
+			}
+			i++
+			block = append(block, strings.TrimSpace(next))
+		}
+		runs = append(runs, strings.Join(block, "\n"))
+	}
+	return runs
+}
+
+func TestWorkflowRunsReadsSingleLineAndBlockRuns(t *testing.T) {
+	workflow := strings.Join([]string{
+		"    steps:",
+		"      - name: One",
+		"        run: bash -n bin/labdrian-overlay",
+		"      - run: |",
+		"          for module in bin/lib/*.sh; do",
+		"",
+		"            shellcheck \"$module\"",
+		"          done",
+		"        continue-on-error: true",
+		"      - name: Folded",
+		"        run: >-",
+		"          echo folded",
+	}, "\n")
+	got := workflowRuns(workflow)
+	want := []string{"bash -n bin/labdrian-overlay", "for module in bin/lib/*.sh; do\n\nshellcheck \"$module\"\ndone", "echo folded"}
+	if !slices.Equal(got, want) {
+		t.Errorf("workflowRuns = %q, want %q", got, want)
 	}
 }
