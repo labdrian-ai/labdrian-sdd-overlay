@@ -132,13 +132,14 @@ func hasLine(out, want string) bool {
 }
 
 // helpLineAfter is the line of help under the header that begins with prefix: the line after the last
-// one that does, or that line itself when it is the last of the text. No such header gives "".
+// one that does. No such header, or a last such header with no line under it, gives "", so that a help
+// that lost the line under a header fails the check of it instead of passing on the header's own words.
 func helpLineAfter(help, prefix string) string {
 	lines := strings.Split(help, "\n")
 	found := ""
 	for i, line := range lines {
 		if strings.HasPrefix(line, prefix) {
-			found = line
+			found = ""
 			if i+1 < len(lines) {
 				found = lines[i+1]
 			}
@@ -173,14 +174,12 @@ func TestOverlayDispatch(t *testing.T) {
 	for _, row := range dispatchRows {
 		t.Run(row.command, func(t *testing.T) {
 			overlay := overlayScript(t)
-			// run is the overlay under a home of its own whose engine is the fake, which ends with status
-			// when it is not empty.
+			// run is the overlay under a home of its own whose engine is the fake, which ends with status.
+			// The status is always set, 0 included, so that a FAKE_ENGINE_STATUS the process inherited
+			// never decides how the fake ends.
 			run := func(t *testing.T, home string, status int, args ...string) (string, int) {
 				t.Helper()
-				env := append(os.Environ(), "HOME="+home)
-				if status > 0 {
-					env = append(env, "FAKE_ENGINE_STATUS="+strconv.Itoa(status))
-				}
+				env := append(os.Environ(), "HOME="+home, "FAKE_ENGINE_STATUS="+strconv.Itoa(status))
 				out, err := overlaytest.Combined(t, overlay, env, "", args...)
 				return out, overlaytest.ExitCode(err)
 			}
@@ -280,7 +279,9 @@ func TestHelpLineAfterIsTheLineUnderTheLastMatchingHeader(t *testing.T) {
 		name, help, want string
 	}{
 		{"a header with a line under it", "  a <verb>  one\n    under a\n  b <verb>  two\n    under b\n", "    under a"},
-		{"the header is the last line", "  a <verb>  one\n  b <verb>  two", "  b <verb>  two"},
+		{"the next line is another header", "  a <verb>  one\n  b <verb>  two", "  b <verb>  two"},
+		{"the header is the last line", "  b <verb>  two\n  a <verb>  one", ""},
+		{"an earlier header with a line, the last one with none", "  a <verb>  one\n    under a\n  a <verb>  again", ""},
 		{"the header twice", "  a <verb>  one\n    first\n  a <verb>  again\n    second\n", "    second"},
 		{"a header that only contains the prefix", "x  a <verb>\n    no\n", ""},
 		{"no such header", "  b <verb>  two\n    under b\n", ""},
