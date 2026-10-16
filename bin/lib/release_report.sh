@@ -46,7 +46,7 @@ cmd_update() {
   fi
 
   for t in $(resolve_targets all); do
-    local recorded recorded_version recorded_digest
+    local recorded recorded_version
     recorded="$(state_read_target "$t")"
 
     if [[ "$recorded" == "NEVER_DEPLOYED" ]]; then
@@ -54,7 +54,7 @@ cmd_update() {
       continue
     fi
 
-    IFS=$'\t' read -r recorded_version recorded_digest _ <<< "$recorded"
+    IFS=$'\t' read -r recorded_version _ <<< "$recorded"
 
     if [[ "$release_version" == "none" ]]; then
       echo "  $t: $recorded_version (no releases published yet)"
@@ -88,7 +88,7 @@ cmd_version() {
   fi
 
   for t in $(resolve_targets all); do
-    local recorded recorded_version recorded_digest
+    local recorded recorded_version
     recorded="$(state_read_target "$t")"
 
     if [[ "$recorded" == "NEVER_DEPLOYED" ]]; then
@@ -96,7 +96,7 @@ cmd_version() {
       continue
     fi
 
-    IFS=$'\t' read -r recorded_version recorded_digest _ <<< "$recorded"
+    IFS=$'\t' read -r recorded_version _ <<< "$recorded"
 
     if [[ "$repo_version" != "none" && "$recorded_version" != "$repo_version" ]]; then
       echo "  $t: $recorded_version (behind)"

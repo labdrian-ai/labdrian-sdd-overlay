@@ -53,8 +53,6 @@ cmd_status() {
       continue
     fi
 
-    local tpath="${TARGET_PATHS[$t]}"
-
     local rel_path rr_src rr_dest
     manifest_routes_load "$t"
     while IFS=$'\t' read -r rel_path _ _ rr_src rr_dest; do
