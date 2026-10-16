@@ -105,6 +105,10 @@ func scanJSONValue(dec *json.Decoder) error {
 // the error message so callers can identify which record rejected the
 // field. A non-object root (array, string, number, null, or malformed JSON)
 // is rejected by the underlying unmarshal error.
+//
+// When several fields are unknown the error names the smallest of them by
+// bytes, so the same document is refused with the same words every time,
+// whatever order its members were written in.
 func CheckKnownFields(data []byte, recordName string, allowedFields []string) error {
 	var fields map[string]json.RawMessage
 	if err := json.Unmarshal(data, &fields); err != nil {
@@ -117,10 +121,17 @@ func CheckKnownFields(data []byte, recordName string, allowedFields []string) er
 	for _, name := range allowedFields {
 		allowed[name] = struct{}{}
 	}
+	unknown, found := "", false
 	for field := range fields {
-		if _, ok := allowed[field]; !ok {
-			return fmt.Errorf("unknown %s field %q", recordName, field)
+		if _, ok := allowed[field]; ok {
+			continue
 		}
+		if !found || field < unknown {
+			unknown, found = field, true
+		}
+	}
+	if found {
+		return fmt.Errorf("unknown %s field %q", recordName, unknown)
 	}
 	return nil
 }
