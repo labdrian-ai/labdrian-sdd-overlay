@@ -17,7 +17,6 @@ package installer_test
 
 import (
 	"bytes"
-	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -174,23 +173,12 @@ func (w *pinWorld) runLongterm(args ...string) pinRun {
 	cmd := exec.Command("bash", append([]string{"-c", `umask 022; exec bash "$@"`, "bash", w.script}, args...)...)
 	cmd.Dir = w.overlay
 	cmd.Env = w.env
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	err := cmd.Run()
-	run := pinRun{
-		Stdout: toolChatter.ReplaceAllString(w.normalize(stdout.String()), "<a tool of the machine says something>"),
-		Stderr: toolChatter.ReplaceAllString(w.normalize(stderr.String()), "<a tool of the machine says something>"),
+	got := overlaytest.Capture(w.t, cmd)
+	return pinRun{
+		Stdout: toolChatter.ReplaceAllString(w.normalize(got.Stdout), "<a tool of the machine says something>"),
+		Stderr: toolChatter.ReplaceAllString(w.normalize(got.Stderr), "<a tool of the machine says something>"),
+		Exit:   got.Exit,
 	}
-	var exit *exec.ExitError
-	switch {
-	case err == nil:
-	case errors.As(err, &exit):
-		run.Exit = exit.ExitCode()
-	default:
-		w.t.Fatalf("run %v: %v", args, err)
-	}
-	return run
 }
 
 // longtermState shows what a run left under the state directory: every file with its mode and its

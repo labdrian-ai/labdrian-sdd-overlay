@@ -218,6 +218,23 @@ func TestRunKeepsTheStreamsAndTheExitCodeApart(t *testing.T) {
 	}
 }
 
+func TestCaptureRunsTheCommandAsTheCallerBuiltItAndKeepsItsStreamsApart(t *testing.T) {
+	dir := t.TempDir()
+	want, err := filepath.EvalSymlinks(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command("sh", "-c", `echo "out $FROM_THE_CALLER $(pwd -P)"; echo err >&2; exit 6`)
+	cmd.Dir = dir
+	cmd.Env = []string{"FROM_THE_CALLER=yes"}
+
+	got := overlaytest.Capture(t, cmd)
+
+	if wantResult := (overlaytest.Result{Stdout: "out yes " + want + "\n", Stderr: "err\n", Exit: 6}); got != wantResult {
+		t.Errorf("Capture = %+v, want %+v: the directory and the environment are the caller's", got, wantResult)
+	}
+}
+
 func TestRunRunsFromTheDirectoryItIsGiven(t *testing.T) {
 	dir := t.TempDir()
 	script := filepath.Join(t.TempDir(), "where")

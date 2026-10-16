@@ -11,7 +11,6 @@ package installer_test
 // and they hold what that program did as it did it.
 
 import (
-	"bytes"
 	"errors"
 	"os"
 	"os/exec"
@@ -244,23 +243,8 @@ func (w *pinWorld) run(args ...string) pinRun {
 // runIn runs the script with the arguments from the directory dir, and keeps its streams apart.
 func (w *pinWorld) runIn(dir string, args ...string) pinRun {
 	w.t.Helper()
-	cmd := exec.Command("bash", append([]string{w.script}, args...)...)
-	cmd.Dir = dir
-	cmd.Env = w.env
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	err := cmd.Run()
-	run := pinRun{Stdout: w.normalize(stdout.String()), Stderr: gitChatter.ReplaceAllString(w.normalize(stderr.String()), "")}
-	var exit *exec.ExitError
-	switch {
-	case err == nil:
-	case errors.As(err, &exit):
-		run.Exit = exit.ExitCode()
-	default:
-		w.t.Fatalf("run %v: %v", args, err)
-	}
-	return run
+	got := overlaytest.Run(w.t, w.script, w.env, dir, args...)
+	return pinRun{Stdout: w.normalize(got.Stdout), Stderr: gitChatter.ReplaceAllString(w.normalize(got.Stderr), ""), Exit: got.Exit}
 }
 
 // The parts of an output that a run makes up and that a pin must not carry: the places the world

@@ -6,7 +6,6 @@ package installer_test
 
 import (
 	"os"
-	"os/exec"
 	"path/filepath"
 	"testing"
 
@@ -48,14 +47,9 @@ func TestCaptureFromBackup_UsesRouteAwareTarPaths(t *testing.T) {
 	}
 
 	assertFileEquals := func(relPath, want string) {
-		cmd := exec.Command("git", "show", "upstream:"+relPath)
-		cmd.Dir = overlayDir
-		got, err := cmd.Output()
-		if err != nil {
-			t.Fatalf("git show upstream:%s: %v", relPath, err)
-		}
-		if string(got) != want {
-			t.Fatalf("upstream:%s content mismatch:\n  got:  %q\n  want: %q\noutput:\n%s", relPath, string(got), want, out)
+		got := overlaytest.Git(t, overlayDir, nil, "show", "upstream:"+relPath)
+		if got != want {
+			t.Fatalf("upstream:%s content mismatch:\n  got:  %q\n  want: %q\noutput:\n%s", relPath, got, want, out)
 		}
 	}
 
@@ -127,14 +121,9 @@ func TestBootstrap_UsesRouteAwareTarPaths(t *testing.T) {
 	}
 
 	assertBranchFileEquals := func(branch, relPath, want string) {
-		cmd := exec.Command("git", "show", branch+":"+relPath)
-		cmd.Dir = overlayDir
-		got, err := cmd.Output()
-		if err != nil {
-			t.Fatalf("git show %s:%s: %v", branch, relPath, err)
-		}
-		if string(got) != want {
-			t.Fatalf("%s:%s content mismatch:\n  got:  %q\n  want: %q\noutput:\n%s", branch, relPath, string(got), want, out)
+		got := overlaytest.Git(t, overlayDir, nil, "show", branch+":"+relPath)
+		if got != want {
+			t.Fatalf("%s:%s content mismatch:\n  got:  %q\n  want: %q\noutput:\n%s", branch, relPath, got, want, out)
 		}
 	}
 

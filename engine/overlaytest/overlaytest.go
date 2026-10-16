@@ -11,7 +11,7 @@
 //   - Env, GitSettings, WithGitConfig: the environment a run takes, and the part of it every git of a
 //     fixture takes, with room for more git configuration.
 //   - NewOverlay, InitOverlay, Git: the fixture repository.
-//   - Run, Combined, Source: running the script, or the functions it defines.
+//   - Run, Capture, Combined, Source, ExitCode: running the script, or the functions it defines.
 //   - WriteTool, StubEngine, ToolchainEnv: programs of the test's own, and the caches of the go command.
 //
 // The engine the script asks for is enginetest's.
@@ -81,6 +81,15 @@ func Run(t testing.TB, script string, env []string, dir string, args ...string) 
 	cmd := exec.Command("bash", append([]string{script}, args...)...)
 	cmd.Dir = dir
 	cmd.Env = env
+	return Capture(t, cmd)
+}
+
+// Capture runs cmd, which the caller has built and given its directory and its environment, and keeps
+// its two streams apart; it is what Run does for the script, for a test that starts it another way (under
+// a umask of its own, say). A program that ends with a code is a Result; one that could not be started
+// fails the test.
+func Capture(t testing.TB, cmd *exec.Cmd) Result {
+	t.Helper()
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -92,7 +101,7 @@ func Run(t testing.TB, script string, env []string, dir string, args ...string) 
 	case errors.As(err, &exit):
 		result.Exit = exit.ExitCode()
 	default:
-		t.Fatalf("run %v: %v", args, err)
+		t.Fatalf("run %v: %v", cmd.Args, err)
 	}
 	return result
 }
