@@ -1,8 +1,6 @@
 package skills
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/fs"
@@ -12,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/pathguard"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/sha256hex"
 )
 
 // ProceduralAuthor is the fixed metadata.author value stamped into every
@@ -92,7 +91,7 @@ func validateInstalls(l ProjectLock, what string) error {
 				return fmt.Errorf("%s: install record %q lists %q twice (duplicate path)", what, in.ID, f.Path)
 			}
 			paths[f.Path] = true
-			if !validDigest(f.SHA256) {
+			if !sha256hex.IsValid(f.SHA256) {
 				return fmt.Errorf("%s: install record %q file %q has an invalid sha256 %q (want 64 lowercase hex digits)", what, in.ID, f.Path, f.SHA256)
 			}
 		}
@@ -111,19 +110,6 @@ func validInstallPath(p string) bool {
 		return false
 	}
 	return p != ApprovalRecordName
-}
-
-// validDigest reports whether s is a lowercase hex SHA-256.
-func validDigest(s string) bool {
-	if len(s) != 64 {
-		return false
-	}
-	for _, c := range s {
-		if (c < '0' || c > '9') && (c < 'a' || c > 'f') {
-			return false
-		}
-	}
-	return true
 }
 
 // ProjectLockEntry records one project-tier procedural skill: its identity,
@@ -424,8 +410,7 @@ func StampProvenance(draft []byte, candidateKey string) ([]byte, error) {
 // false-positive direction (a core.autocrlf checkout reading as human-owned)
 // is the safe one, because the agent then stops.
 func HashSkill(data []byte) string {
-	sum := sha256.Sum256(data)
-	return hex.EncodeToString(sum[:])
+	return sha256hex.Sum(data)
 }
 
 // candidateKeyPrefix is the fixed item-30 prefix every candidate topic key

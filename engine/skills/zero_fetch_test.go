@@ -24,10 +24,12 @@ import (
 //
 // The module-internal exceptions are pathguardImport, a pure path-containment helper,
 // jsonstrictImport (Phase 9, H19), the strict JSON checks the two records the domain reads are
-// decoded through, and capabilityImport (Phase 9, H23), the one vocabulary of runtime targets a
-// registry entry names. Their own imports are held to this same allowlist by
-// TestZeroFetchCoversPathguardImports, TestZeroFetchCoversJsonstrictImports and
-// TestZeroFetchCoversCapabilityImports, so the exceptions cannot widen the transitive surface of
+// decoded through, capabilityImport (Phase 9, H23), the one vocabulary of runtime targets a
+// registry entry names, and sha256hexImport (Phase 9, H34), the one rule for what a SHA-256 digest
+// is, which took the place of the crypto/sha256 and encoding/hex imports of this package. Their own
+// imports are held to this same allowlist by TestZeroFetchCoversPathguardImports,
+// TestZeroFetchCoversJsonstrictImports, TestZeroFetchCoversCapabilityImports and
+// TestZeroFetchCoversSha256hexImports, so the exceptions cannot widen the transitive surface of
 // engine/skills.
 var allowedImports = importSet(stdlibImports, internalImports)
 
@@ -36,8 +38,6 @@ var allowedImports = importSet(stdlibImports, internalImports)
 var stdlibImports = []string{
 	"bufio",
 	"bytes",
-	"crypto/sha256",
-	"encoding/hex",
 	"encoding/json",
 	"errors",
 	"fmt",
@@ -60,14 +60,15 @@ var internalImports = map[string]bool{
 	pathguardImport:  true,
 	jsonstrictImport: true,
 	capabilityImport: true,
+	sha256hexImport:  true,
 }
 
 // wantStdlibImports and wantInternalImports are how many of each the lists above hold, and the
 // counts the test checks: a change to either list changes its number here, in the same commit, and
 // so passes through the reviewer approval the guard exists to force.
 const (
-	wantStdlibImports   = 15
-	wantInternalImports = 3
+	wantStdlibImports   = 13
+	wantInternalImports = 4
 )
 
 // importSet is the union of a list of imports and a set of them.
@@ -93,6 +94,19 @@ var capabilityImportExtras = map[string]bool{
 // of runtime targets (H23), which a registry entry's install.targets is validated against. Like
 // the other two it is exempted from the git-package ban by exact match, never by prefix.
 const capabilityImport = "github.com/labdrian-ai/labdrian-sdd-overlay/engine/capability"
+
+// sha256hexImportExtras is what engine/sha256hex imports beyond allowedImports: the hash and its hex
+// encoding, the two packages engine/skills imported itself before it hashed through sha256hex.
+var sha256hexImportExtras = map[string]bool{
+	"crypto/sha256": true,
+	"encoding/hex":  true,
+}
+
+// sha256hexImport is the fourth module-internal package engine/skills may import (Phase 9, H34):
+// the one rule for what a SHA-256 digest is on the wire and how one is made, which the approval
+// record, the project lock and the skill hashes share with every other record that carries a digest.
+// Like the other three it is exempted from the git-package ban by exact match, never by prefix.
+const sha256hexImport = "github.com/labdrian-ai/labdrian-sdd-overlay/engine/sha256hex"
 
 // jsonstrictImportExtras is what engine/jsonstrict imports beyond allowedImports: the UTF-8 check,
 // pure like the rest of the standard library it uses.
@@ -154,9 +168,10 @@ func TestZeroFetchImportAllowlist(t *testing.T) {
 // TestZeroFetchAllowlistExcludesExecAndNet makes task 3a-ii.4's confirmation
 // executable rather than a one-time reading: after the project-lock-format
 // widening (encoding/json) and the project-lock-ownership widening
-// (crypto/sha256, encoding/hex), os/exec, every net package and anything
-// git-related must still be absent from the allowlist itself — so no future
-// widening can smuggle one in without turning this test RED.
+// (crypto/sha256, encoding/hex, which engine/sha256hex now carries), os/exec,
+// every net package and anything git-related must still be absent from the
+// allowlist itself — so no future widening can smuggle one in without turning
+// this test RED.
 func TestZeroFetchAllowlistExcludesExecAndNet(t *testing.T) {
 	for imp := range allowedImports {
 		switch {
@@ -168,12 +183,16 @@ func TestZeroFetchAllowlistExcludesExecAndNet(t *testing.T) {
 			t.Errorf("allowedImports must never contain a git-related package %q", imp)
 		}
 	}
-	// The two ownership widenings are present and are the only ones this
-	// slice added.
-	for _, want := range []string{"crypto/sha256", "encoding/hex"} {
-		if !allowedImports[want] {
-			t.Errorf("expected %q in allowedImports after the project-lock-ownership widening", want)
+	// The two ownership widenings are gone from engine/skills itself: it hashes through
+	// engine/sha256hex (Phase 9, H34), and TestZeroFetchCoversSha256hexImports holds that
+	// package to the hash and the hex encoding.
+	for _, gone := range []string{"crypto/sha256", "encoding/hex"} {
+		if allowedImports[gone] {
+			t.Errorf("%q is in allowedImports: engine/skills hashes through engine/sha256hex, not by itself", gone)
 		}
+	}
+	if !allowedImports[sha256hexImport] {
+		t.Errorf("expected %q in allowedImports: it is how engine/skills hashes", sha256hexImport)
 	}
 	// The allowlist is the standard library packages plus the module-internal exceptions, counted
 	// apart so that neither figure is the other's remainder. errors is the stdlib package the
@@ -297,5 +316,39 @@ func TestZeroFetchCoversCapabilityImports(t *testing.T) {
 	}
 	if totalFiles == 0 {
 		t.Fatal("no production .go files found under ../capability; the transitive guard walk may be broken")
+	}
+}
+
+// TestZeroFetchCoversSha256hexImports is TestZeroFetchCoversJsonstrictImports for sha256hexImport:
+// every import in the production files of engine/sha256hex must be an allowlisted stdlib package or
+// one of its two extras (the hash and its hex encoding), so nothing else can reach engine/skills
+// transitively through it.
+func TestZeroFetchCoversSha256hexImports(t *testing.T) {
+	fset := token.NewFileSet()
+	pkgs, err := parser.ParseDir(fset, filepath.Join("..", "sha256hex"), func(fi fs.FileInfo) bool {
+		return !strings.HasSuffix(fi.Name(), "_test.go")
+	}, parser.ImportsOnly)
+	if err != nil {
+		t.Fatalf("go/parser.ParseDir(../sha256hex): %v", err)
+	}
+
+	totalFiles := 0
+	for _, pkg := range pkgs {
+		for filename, file := range pkg.Files {
+			totalFiles++
+			base := filepath.Base(filename)
+			for _, imp := range file.Imports {
+				path := strings.Trim(imp.Path.Value, `"`)
+				if sha256hexImportExtras[path] {
+					continue
+				}
+				if internalImports[path] || !allowedImports[path] {
+					t.Errorf("engine/sha256hex imports %q in %s; it may import only allowlisted stdlib packages", path, base)
+				}
+			}
+		}
+	}
+	if totalFiles == 0 {
+		t.Fatal("no production .go files found under ../sha256hex; the transitive guard walk may be broken")
 	}
 }
