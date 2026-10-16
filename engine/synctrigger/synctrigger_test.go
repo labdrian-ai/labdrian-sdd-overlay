@@ -19,7 +19,7 @@ import (
 // epoch is the moment the clock of these tests starts at, and step what each reading of it adds.
 var epoch = time.Date(2026, 3, 4, 5, 6, 7, 0, time.UTC)
 
-const step = 250 * time.Millisecond
+const step = 1500 * time.Millisecond
 
 // stepClock reads epoch the first time, and a step later each time after.
 func stepClock() func() time.Time {
@@ -200,7 +200,7 @@ func TestRunChild_WritesOneLineForEveryOutcomeWithTheClockItWasGiven(t *testing.
 			if got != tc.want {
 				t.Errorf("RunChild = %+v, want %+v", got, tc.want)
 			}
-			wantLine := stamp(1) + " event=session-end cwd=/project outcome=" + tc.want.Kind + " exit=" + strconv.Itoa(tc.want.Exit) + " duration=250ms\n"
+			wantLine := stamp(1) + " event=session-end cwd=/project outcome=" + tc.want.Kind + " exit=" + strconv.Itoa(tc.want.Exit) + " duration=1.5s\n"
 			if text := logText(t, stateDir); !strings.HasSuffix(text, wantLine) || strings.Count(text, "outcome=") != 1 {
 				t.Errorf("log = %q, want its one outcome line to be %q", text, wantLine)
 			}
@@ -216,7 +216,7 @@ func TestRunChild_PutsWhatTheProgramSaysInTheLogBeforeTheOutcomeLine(t *testing.
 
 	RunChild(o)
 
-	want := "vault not configured\n" + stamp(1) + " event=session-end cwd=/project outcome=skip:no-vault exit=3 duration=250ms\n"
+	want := "vault not configured\n" + stamp(1) + " event=session-end cwd=/project outcome=skip:no-vault exit=3 duration=1.5s\n"
 	if got := logText(t, stateDir); got != want {
 		t.Errorf("log = %q, want %q", got, want)
 	}
@@ -232,7 +232,7 @@ func TestRunChild_SkipsAMissingBinaryWithoutRunningAnything(t *testing.T) {
 	if got.Kind != "skip:no-binary" || len(runner.ran) != 0 {
 		t.Errorf("RunChild = %+v, runner asked %+v, want skip:no-binary and nothing run", got, runner.ran)
 	}
-	if want := stamp(1) + " event=session-end cwd=/project outcome=skip:no-binary exit=0 duration=250ms\n"; logText(t, stateDir) != want {
+	if want := stamp(1) + " event=session-end cwd=/project outcome=skip:no-binary exit=0 duration=1.5s\n"; logText(t, stateDir) != want {
 		t.Errorf("log = %q, want %q", logText(t, stateDir), want)
 	}
 }
@@ -257,7 +257,7 @@ func TestRunChild_RefusesABinaryThatCannotBeExecuted(t *testing.T) {
 	if got.Kind != "error:binary-not-executable" || len(runner.ran) != 0 {
 		t.Errorf("RunChild = %+v, runner asked %+v, want error:binary-not-executable and nothing run", got, runner.ran)
 	}
-	if want := stamp(1) + " event=session-end cwd=/project outcome=error:binary-not-executable exit=0 duration=250ms\n"; logText(t, stateDir) != want {
+	if want := stamp(1) + " event=session-end cwd=/project outcome=error:binary-not-executable exit=0 duration=1.5s\n"; logText(t, stateDir) != want {
 		t.Errorf("log = %q, want %q", logText(t, stateDir), want)
 	}
 }
