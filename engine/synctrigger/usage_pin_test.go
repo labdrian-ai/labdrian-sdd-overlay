@@ -13,6 +13,13 @@ import (
 // cannot use, and where it says it. They never reach a program, so they hold for the trigger as
 // it is whatever starts the programs and whatever tells it the time: the line on stderr, the
 // absence of a log when Run is refused, and the line in the log when RunChild is.
+//
+// The values on the wire are written out as literals in these tests and in synctrigger_test.go
+// ("error:usage" and the other kinds of outcome, "logs", "sync-trigger.log", "sync"), not taken
+// from the constants the code names them with (kindUsage, logDirName, logFileName, syncCommand):
+// the words of an outcome and the place of the log are what the hooks, the goldens of cmd and the
+// people who read the log hold the trigger to, so a test that derived them from the constants
+// would follow a constant that changed instead of failing on it.
 
 // usageLine is what the trigger says on stderr for an event and a cwd, as the caller gave them.
 func usageLine(event, cwd string) string {

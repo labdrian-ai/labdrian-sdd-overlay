@@ -15,6 +15,10 @@ import (
 // what it was asked and answers what the test says, and a clock that reads the same moments every
 // time. What starts real programs is engine/synctrigger/osproc, and its tests, and the ones that
 // run the two together, are there.
+//
+// The outcome words, the names under the state directory and the argument of the sync are
+// literals here on purpose: they are the wire, and a test that read them from the constants of
+// the code would follow a constant that changed (see usage_pin_test.go).
 
 // epoch is the moment the clock of these tests starts at, and step what each reading of it adds.
 var epoch = time.Date(2026, 3, 4, 5, 6, 7, 0, time.UTC)
