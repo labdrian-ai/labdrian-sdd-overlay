@@ -102,6 +102,36 @@ func TestRunChildPutsTheProgramsStandardErrorInTheLogBeforeTheOutcomeLine(t *tes
 	}
 }
 
+// RunChild runs the sync through the Runner, so the kill of the process group at the deadline is
+// the one in effect for the sync a hook starts: the sync here is a shell that starts a sleep, and
+// when the run is over, at its time, neither is alive. This is the test that fails if the trigger
+// ever runs the sync by some other way than the Runner it is given.
+func TestRunChildKillsEverythingTheSyncStartedWhenItOutlivesItsTime(t *testing.T) {
+	shell, sleeper := untilTheProgramHasWrittenItsPids(t, func(timeout time.Duration, shellFile, sleeperFile string) {
+		stateDir := t.TempDir()
+		o := options(stateDir)
+		o.Binary = script(t, pidScript(shellFile, sleeperFile))
+		o.Timeout = timeout
+
+		start := time.Now()
+		got := synctrigger.RunChild(o)
+		elapsed := time.Since(start)
+
+		if got.Kind != "timeout" {
+			t.Fatalf("RunChild = %+v, want timeout", got)
+		}
+		if elapsed > 20*time.Second {
+			t.Errorf("RunChild took %s, want it bound by the %s it was given and not by the 30s sleep", elapsed, timeout)
+		}
+		if line := lastLogLine(stateDir); !strings.Contains(line, "outcome=timeout") {
+			t.Errorf("log line = %q, want outcome=timeout", line)
+		}
+	})
+
+	assertGone(t, "the sync", shell)
+	assertGone(t, "what the sync started", sleeper)
+}
+
 // A sync that outlives its time is a timeout in the log, and it ends the run at the time and not
 // when the sync would have.
 func TestRunChildReportsASyncThatOutlivesItsTimeAsATimeout(t *testing.T) {
