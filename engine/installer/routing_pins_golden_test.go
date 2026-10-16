@@ -260,8 +260,20 @@ func TestAPinIsAskedForOnlyOfARunThatCouldHaveComparedEveryOne(t *testing.T) {
 // The list of the tests of this package can be had: the test binary asked for it with -test.list says
 // them and ends with 0, which is what `go test -list . ./installer` runs. (This is the wiring of the table
 // above to the flags, which the table cannot reach.)
+//
+// The child is this same binary (a -race or -cover build is compiled in, not a wrapper around it), run
+// with -test.list alone, so it runs no test: its TestMain makes a home of its own, builds no engine, and
+// reads -test.list as a run that compares no pin, so it asks for none to have been compared. Its environment is
+// this process's without GOCOVERDIR, so that a -cover run of the parent does not have the child write
+// coverage of its own into the parent's directory of it.
 func TestTheTestBinaryCanListItsTests(t *testing.T) {
-	out, err := exec.Command(os.Args[0], "-test.list", "^TestRoutingPinRecord").CombinedOutput()
+	cmd := exec.Command(os.Args[0], "-test.list", "^TestRoutingPinRecord")
+	for _, kv := range os.Environ() {
+		if !strings.HasPrefix(kv, "GOCOVERDIR=") {
+			cmd.Env = append(cmd.Env, kv)
+		}
+	}
+	out, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("%s -test.list: %v\n%s", os.Args[0], err, out)
 	}
