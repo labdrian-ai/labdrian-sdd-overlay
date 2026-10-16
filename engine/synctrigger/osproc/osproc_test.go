@@ -263,33 +263,99 @@ func TestRunSaysWhyAProgramCouldNotBeRun(t *testing.T) {
 // to hold the machine: here the program is a shell and the thing it started a sleep, and neither
 // is alive when Run returns, which it does long before the sleep would have ended.
 func TestRunKillsAProgramThatOutlivesItsTimeWithEverythingItStarted(t *testing.T) {
-	dir := t.TempDir()
-	shellPid, sleeperPid := filepath.Join(dir, "shell"), filepath.Join(dir, "sleeper")
-	program := script(t, `echo $$ > "`+shellPid+`"`+"\n"+`sleep 30 &`+"\n"+`echo $! > "`+sleeperPid+`"`+"\n"+`wait`+"\n")
+	shell, sleeper := untilTheProgramHasWrittenItsPids(t, func(timeout time.Duration, shellFile, sleeperFile string) {
+		start := time.Now()
+		got, err := osproc.Runner{}.Run(script(t, pidScript(shellFile, sleeperFile)), nil, t.TempDir(), timeout, &bytes.Buffer{})
+		elapsed := time.Since(start)
 
-	start := time.Now()
-	got, err := osproc.Runner{}.Run(program, nil, t.TempDir(), 300*time.Millisecond, &bytes.Buffer{})
-	elapsed := time.Since(start)
+		if err != nil || got != (synctrigger.Result{TimedOut: true}) {
+			t.Fatalf("Run = (%+v, %v), want (TimedOut, nil)", got, err)
+		}
+		if elapsed > 20*time.Second {
+			t.Errorf("Run took %s, want it bound by the %s it was given and not by the 30s sleep", elapsed, timeout)
+		}
+	})
 
-	if err != nil || got != (synctrigger.Result{TimedOut: true}) {
-		t.Fatalf("Run = (%+v, %v), want (TimedOut, nil)", got, err)
+	assertGone(t, "the shell", shell)
+	assertGone(t, "what it started", sleeper)
+}
+
+// The retry is what makes the test above hold on a loaded machine, so it is shown on a script that
+// is slow on purpose: it takes half a second to write anything, the first deadline of 300 ms kills
+// it before it has, and the run is repeated with twice the time (and again if that is still early).
+func TestAnAttemptKilledBeforeTheScriptWroteItsPidsIsRepeatedWithTwiceTheTime(t *testing.T) {
+	var timeouts []time.Duration
+
+	shell, sleeper := untilTheProgramHasWrittenItsPids(t, func(timeout time.Duration, shellFile, sleeperFile string) {
+		timeouts = append(timeouts, timeout)
+		got, err := osproc.Runner{}.Run(script(t, "sleep 0.5\n"+pidScript(shellFile, sleeperFile)), nil, t.TempDir(), timeout, &bytes.Buffer{})
+		if err != nil || !got.TimedOut {
+			t.Fatalf("Run = (%+v, %v), want (TimedOut, nil)", got, err)
+		}
+	})
+
+	if len(timeouts) < 2 || timeouts[0] != 300*time.Millisecond || timeouts[1] != 600*time.Millisecond {
+		t.Errorf("the deadlines were %v, want 300ms and then twice that (and twice again if still early)", timeouts)
 	}
-	if elapsed > 10*time.Second {
-		t.Errorf("Run took %s, want it bound by the 300ms it was given and not by the 30s sleep", elapsed)
+	for i := 1; i < len(timeouts); i++ {
+		if timeouts[i] != 2*timeouts[i-1] {
+			t.Errorf("deadline %d is %v after %v, want twice", i, timeouts[i], timeouts[i-1])
+		}
 	}
-	for name, file := range map[string]string{"the shell": shellPid, "what it started": sleeperPid} {
-		pid, err := strconv.Atoi(strings.TrimSpace(waitForFile(t, file)))
-		if err != nil {
-			t.Fatalf("%s: pid: %v", name, err)
+	assertGone(t, "the shell", shell)
+	assertGone(t, "what it started", sleeper)
+}
+
+// The deadline of a run starts with the run, and a script needs a moment to start, a long one on a
+// machine under load. A run that was killed before the script wrote its pid files says nothing
+// about the kill, so it is repeated with twice the time (from 300 ms, six times at most, 18.9 s if
+// every one is needed) until the script has written both before it was killed; a test that fails
+// does so for what the kill did, never for being early.
+func untilTheProgramHasWrittenItsPids(t *testing.T, attempt func(timeout time.Duration, shellFile, sleeperFile string)) (shell, sleeper int) {
+	t.Helper()
+	timeout := 300 * time.Millisecond
+	for i := 0; i < 6; i++ {
+		dir := t.TempDir()
+		shellFile, sleeperFile := filepath.Join(dir, "shell"), filepath.Join(dir, "sleeper")
+		attempt(timeout, shellFile, sleeperFile)
+		s, errS := readPid(shellFile)
+		p, errP := readPid(sleeperFile)
+		if errS == nil && errP == nil {
+			return s, p
 		}
-		proc, _ := os.FindProcess(pid)
-		deadline := time.Now().Add(2 * time.Second)
-		for proc.Signal(syscall.Signal(0)) == nil && time.Now().Before(deadline) {
-			time.Sleep(20 * time.Millisecond)
-		}
-		if proc.Signal(syscall.Signal(0)) == nil {
-			t.Errorf("%s (pid %d) is still alive after Run returned (orphan)", name, pid)
-		}
+		timeout *= 2
+	}
+	t.Fatal("the program was killed before it wrote its pid files on every attempt, up to a deadline of 9.6s")
+	return 0, 0
+}
+
+// pidScript is a shell that writes its pid to shellFile, starts a sleep of 30 seconds, writes the
+// pid of the sleep to sleeperFile and waits for it.
+func pidScript(shellFile, sleeperFile string) string {
+	return `echo $$ > "` + shellFile + `"` + "\n" + `sleep 30 &` + "\n" + `echo $! > "` + sleeperFile + `"` + "\n" + `wait` + "\n"
+}
+
+// readPid is the pid a file holds, or an error when it is absent, empty or not a number.
+func readPid(file string) (int, error) {
+	data, err := os.ReadFile(file)
+	if err != nil {
+		return 0, err
+	}
+	return strconv.Atoi(strings.TrimSpace(string(data)))
+}
+
+// assertGone fails the test when the process is still there after up to 5 seconds. A process the
+// kill has just orphaned is reaped by init a moment later, so it is waited for; one that is never
+// gone was never killed.
+func assertGone(t *testing.T, what string, pid int) {
+	t.Helper()
+	proc, _ := os.FindProcess(pid)
+	deadline := time.Now().Add(5 * time.Second)
+	for proc.Signal(syscall.Signal(0)) == nil && time.Now().Before(deadline) {
+		time.Sleep(20 * time.Millisecond)
+	}
+	if proc.Signal(syscall.Signal(0)) == nil {
+		t.Errorf("%s (pid %d) is still alive after Run returned (orphan)", what, pid)
 	}
 }
 
