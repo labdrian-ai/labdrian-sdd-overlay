@@ -48,9 +48,9 @@ type dispatchRow struct {
 	wantStatus int
 	// noEngine is an invocation to run in a home that has no engine.
 	noEngine []string
-	// The line --help prints under "  <command> <verb>" must contain helpLine, and says it of this
-	// command and not of otherCommand (a verb of which it would be if the help were attached to the
-	// wrong entry).
+	// The line --help prints under "  <command> <verb>" must contain helpLine, a word of the verbs of
+	// this command. otherCommand is the command whose verbs the entry would show if its help were
+	// attached to the wrong one, which the failure names.
 	helpLine     string
 	otherCommand string
 	helpBlocks   []helpBlock
