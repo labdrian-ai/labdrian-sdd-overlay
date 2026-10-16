@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/fieldrule"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/jsonstrict"
 )
 
@@ -244,7 +245,7 @@ func (h Handoff) Validate() error {
 		{name: "acceptance", values: h.Acceptance, minItems: 1},
 		{name: "out_of_scope", values: h.OutOfScope, minItems: 0},
 	} {
-		if err := validateStringArray(field.name, field.values, field.minItems); err != nil {
+		if err := fieldrule.CheckStringArray(field.name, field.values, field.minItems); err != nil {
 			return err
 		}
 	}
@@ -258,21 +259,6 @@ func (h Handoff) Validate() error {
 	} {
 		if err := checkNoExactOverlap(field.name, field.values, h.OutOfScope); err != nil {
 			return err
-		}
-	}
-	return nil
-}
-
-func validateStringArray(name string, values []string, minItems int) error {
-	if values == nil {
-		return fmt.Errorf("%s must be a non-null string array", name)
-	}
-	if len(values) < minItems {
-		return fmt.Errorf("%s must contain at least %d item(s)", name, minItems)
-	}
-	for i, value := range values {
-		if strings.TrimSpace(value) == "" {
-			return fmt.Errorf("%s item %d must be non-blank", name, i+1)
 		}
 	}
 	return nil
@@ -504,7 +490,7 @@ func (h Handoff) validateAcceptanceCore() error {
 			return fmt.Errorf("%s must be a non-blank string", field.name)
 		}
 	}
-	if err := validateStringArray("stages", h.Stages, 1); err != nil {
+	if err := fieldrule.CheckStringArray("stages", h.Stages, 1); err != nil {
 		return err
 	}
 	if h.Acceptance != nil {
@@ -524,7 +510,7 @@ func (h Handoff) validateAcceptanceCore() error {
 			return err
 		}
 	}
-	if err := validateStringArray("out_of_scope", h.OutOfScope, 0); err != nil {
+	if err := fieldrule.CheckStringArray("out_of_scope", h.OutOfScope, 0); err != nil {
 		return err
 	}
 	if err := checkNoExactOverlap("stages", h.Stages, h.OutOfScope); err != nil {
@@ -547,7 +533,7 @@ func (h Handoff) validateV3() error {
 	if err := validateRoles(h.Roles); err != nil {
 		return err
 	}
-	if err := validateStringArray("tests", h.Tests, 1); err != nil {
+	if err := fieldrule.CheckStringArray("tests", h.Tests, 1); err != nil {
 		return err
 	}
 	if err := validateRisks(h.Risks); err != nil {

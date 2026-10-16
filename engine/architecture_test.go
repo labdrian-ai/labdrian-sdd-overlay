@@ -114,6 +114,9 @@ import (
 //     lowercase hex characters) and how one is made, which every record that carries a digest
 //     (the goal, the workflow event, the role handoff, the clearance, the approval, the project
 //     lock, the binding) shares. Pure standard library.
+//   - fieldrule is a domain package (H34): the rules for the shape of one field of a versioned
+//     document that more than one record shares (today the string array of a Goal and of a Shaper
+//     handoff). Pure standard library.
 //   - repotest is test support: the hand-made repositories the tests of gitfs and cmd share.
 //   - piguard is test support: the `pi` that refuses to run, put first on the PATH of a test
 //     run by a TestMain, so nothing started by accident reaches the real CLI.
@@ -137,6 +140,7 @@ var rings = map[string]archguard.Ring{
 	"contract":                  archguard.Domain,
 	"enginetest":                archguard.Support,
 	"execrunner":                archguard.Adapter,
+	"fieldrule":                 archguard.Domain,
 	"filelock":                  archguard.Adapter,
 	"gadu":                      archguard.Adapter,
 	"gate":                      archguard.Domain,

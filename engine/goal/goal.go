@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/fieldrule"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/jsonstrict"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/sha256hex"
 )
@@ -112,7 +113,7 @@ func (g Goal) Validate() error {
 		{name: "non_goals", values: g.NonGoals},
 		{name: "acceptance_criteria", values: g.AcceptanceCriteria, minItems: 1},
 	} {
-		if err := validateStringArray(field.name, field.values, field.minItems); err != nil {
+		if err := fieldrule.CheckStringArray(field.name, field.values, field.minItems); err != nil {
 			return err
 		}
 	}
@@ -143,19 +144,4 @@ func (g Goal) Digest() (string, error) {
 		return "", err
 	}
 	return sha256hex.Sum(data), nil
-}
-
-func validateStringArray(name string, values []string, minItems int) error {
-	if values == nil {
-		return fmt.Errorf("%s must be a non-null string array", name)
-	}
-	if len(values) < minItems {
-		return fmt.Errorf("%s must contain at least %d item(s)", name, minItems)
-	}
-	for i, value := range values {
-		if strings.TrimSpace(value) == "" {
-			return fmt.Errorf("%s item %d must be non-blank", name, i+1)
-		}
-	}
-	return nil
 }
