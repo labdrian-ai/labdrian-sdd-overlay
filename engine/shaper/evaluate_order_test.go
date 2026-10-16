@@ -9,20 +9,6 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/sha256hex"
 )
 
-// blockerLine is a Blocker as the pins below write it: the reason and the words said with it.
-type blockerLine struct {
-	Reason Reason
-	Detail string
-}
-
-func blockerLines(a Assessment) []blockerLine {
-	lines := make([]blockerLine, 0, len(a.Blockers))
-	for _, b := range a.Blockers {
-		lines = append(lines, blockerLine{b.Reason, b.Detail})
-	}
-	return lines
-}
-
 // TestEvaluateListsEveryBlockerInTheOrderOfTheEvidence pins what Evaluate says when several things
 // are wrong at once: every blocker, with its words, in the order the evidence is looked at (the
 // handoff, the Goal, the worktree, the view, the flags, the clearance, the acceptance cap). Evaluate
@@ -51,7 +37,7 @@ func TestEvaluateListsEveryBlockerInTheOrderOfTheEvidence(t *testing.T) {
 		name      string
 		input     func(t *testing.T) ReadinessInput
 		clearance func(t *testing.T, in ReadinessInput) *VerifiedClearance
-		want      []blockerLine
+		want      []Blocker
 		noSubject bool
 	}{
 		{
@@ -63,7 +49,7 @@ func TestEvaluateListsEveryBlockerInTheOrderOfTheEvidence(t *testing.T) {
 				in.Provenance = nil
 				return in
 			},
-			want: []blockerLine{
+			want: []Blocker{
 				{ReasonHandoffDigestMismatch, `recorded handoff sha256 "stale-handoff", bytes hash to "` + handoffSum + `"`},
 				{ReasonSourceUnrecorded, "handoff source path is empty"},
 				{ReasonGoalDigestMismatch, `recorded goal sha256 "stale-goal", bytes hash to "` + goalSum + `"`},
@@ -82,7 +68,7 @@ func TestEvaluateListsEveryBlockerInTheOrderOfTheEvidence(t *testing.T) {
 				in.Provenance.GitDir = ""
 				return in
 			},
-			want: []blockerLine{
+			want: []Blocker{
 				{ReasonGoalUnbound, "no Goal binding supplied"},
 				{ReasonWorktreeProvenanceIncomplete, incomplete},
 				{ReasonClearanceMissing, noClearance},
@@ -98,7 +84,7 @@ func TestEvaluateListsEveryBlockerInTheOrderOfTheEvidence(t *testing.T) {
 				in.WorktreeRoot = "work/tree"
 				return in
 			},
-			want: []blockerLine{
+			want: []Blocker{
 				{ReasonGoalInvalid, goalParseErr.Error()},
 				{ReasonWorktreeProvenanceMismatch, `worktree root "work/tree", observed toplevel "/work/tree"`},
 				{ReasonClearanceMissing, noClearance},
@@ -115,7 +101,7 @@ func TestEvaluateListsEveryBlockerInTheOrderOfTheEvidence(t *testing.T) {
 				in.Provenance.Toplevel = "/elsewhere"
 				return in
 			},
-			want: []blockerLine{
+			want: []Blocker{
 				{ReasonGoalIdentityMismatch, `handoff ("standalone-shaper-handoff", "goal-alpha"), goal ("other-project", "goal-alpha")`},
 				{ReasonWorktreeProvenanceMismatch, `worktree root "/work/tree", observed toplevel "/elsewhere"`},
 				{ReasonClearanceMissing, noClearance},
@@ -126,7 +112,7 @@ func TestEvaluateListsEveryBlockerInTheOrderOfTheEvidence(t *testing.T) {
 		{
 			name:  "flags unresolved are said before the clearance",
 			input: overlapInput,
-			want: []blockerLine{
+			want: []Blocker{
 				{ReasonFlagsUnresolved, "1 flag(s) await a host-captured human resolution"},
 				{ReasonClearanceMissing, noClearance},
 				{ReasonAcceptanceVerificationUnrepresentable, v1Cap},
@@ -137,7 +123,7 @@ func TestEvaluateListsEveryBlockerInTheOrderOfTheEvidence(t *testing.T) {
 			input: func(t *testing.T) ReadinessInput {
 				return inputWith(t, []byte(validHandoffV3JSON), []byte(goalV2JSONWithNonGoals(`["Extract jsonstrict."]`)))
 			},
-			want: []blockerLine{
+			want: []Blocker{
 				{ReasonGoalNonGoalOverlap, `stages item 1 "Extract jsonstrict." is byte-identical to a Goal non_goals item (OD6)`},
 				{ReasonClearanceMissing, noClearance},
 			},
@@ -148,7 +134,7 @@ func TestEvaluateListsEveryBlockerInTheOrderOfTheEvidence(t *testing.T) {
 				data := strings.Replace(validHandoffV3JSON, `"Project-scoped."`, `"Project`+"\\"+`u001b[8m-scoped."`, 1)
 				return inputWith(t, []byte(data), goalBytes)
 			},
-			want: []blockerLine{
+			want: []Blocker{
 				{ReasonViewUnpresentable, "view section memory_scope at rune offset 7 holds U+001B, a terminal control or invisible formatting character; the view is unpresentable and is refused, not rewritten"},
 				{ReasonClearanceMissing, noClearance},
 			},
@@ -158,7 +144,7 @@ func TestEvaluateListsEveryBlockerInTheOrderOfTheEvidence(t *testing.T) {
 			name:      "a clearance nobody verified",
 			input:     completeV3Input,
 			clearance: func(*testing.T, ReadinessInput) *VerifiedClearance { return &VerifiedClearance{} },
-			want:      []blockerLine{{ReasonClearanceUnverified, unverified}},
+			want:      []Blocker{{ReasonClearanceUnverified, unverified}},
 		},
 		{
 			name: "a verified clearance when the subject evidence is not complete",
@@ -168,7 +154,7 @@ func TestEvaluateListsEveryBlockerInTheOrderOfTheEvidence(t *testing.T) {
 				return in
 			},
 			clearance: func(t *testing.T, _ ReadinessInput) *VerifiedClearance { return verifiedFor(t, completeV3Input(t)) },
-			want: []blockerLine{
+			want: []Blocker{
 				{ReasonWorktreeProvenanceUnobserved, unobserved},
 				{ReasonClearanceUnverified, cannotMatch},
 			},
@@ -182,7 +168,7 @@ func TestEvaluateListsEveryBlockerInTheOrderOfTheEvidence(t *testing.T) {
 				return in
 			},
 			clearance: func(t *testing.T, _ ReadinessInput) *VerifiedClearance { return verifiedFor(t, completeV3Input(t)) },
-			want:      []blockerLine{{ReasonClearanceMismatch, differentFrom}},
+			want:      []Blocker{{ReasonClearanceMismatch, differentFrom}},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -197,7 +183,7 @@ func TestEvaluateListsEveryBlockerInTheOrderOfTheEvidence(t *testing.T) {
 			if got.State != StateDraft {
 				t.Fatalf("State = %q, want %q (blockers %v)", got.State, StateDraft, blockerReasons(got))
 			}
-			gotLines := blockerLines(got)
+			gotLines := got.Blockers
 			if !reflect.DeepEqual(gotLines, tc.want) {
 				t.Errorf("blockers =\n%v\nwant\n%v", gotLines, tc.want)
 			}
