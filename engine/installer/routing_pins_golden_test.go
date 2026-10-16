@@ -18,6 +18,8 @@ import (
 	_ "embed"
 	"flag"
 	"fmt"
+	"os"
+	"os/exec"
 	"sort"
 	"strings"
 	"sync"
@@ -252,5 +254,18 @@ func TestAPinIsAskedForOnlyOfARunThatCouldHaveComparedEveryOne(t *testing.T) {
 				t.Errorf("everyPinCanBeCompared(%v, %q, %q) = %v, want %v", tc.short, tc.run, tc.list, got, tc.want)
 			}
 		})
+	}
+}
+
+// The list of the tests of this package can be had: the test binary asked for it with -test.list says
+// them and ends with 0, which is what `go test -list . ./installer` runs. (This is the wiring of the table
+// above to the flags, which the table cannot reach.)
+func TestTheTestBinaryCanListItsTests(t *testing.T) {
+	out, err := exec.Command(os.Args[0], "-test.list", "^TestRoutingPinRecord").CombinedOutput()
+	if err != nil {
+		t.Fatalf("%s -test.list: %v\n%s", os.Args[0], err, out)
+	}
+	if !strings.Contains(string(out), "TestRoutingPinRecordIsWellFormed") {
+		t.Errorf("-test.list did not list the tests, said:\n%s", out)
 	}
 }
