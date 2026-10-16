@@ -39,12 +39,7 @@ func TestStatusUninstall_SkipBuildStep(t *testing.T) {
 	placeDummyBinary := func(t *testing.T, stateDir string) (string, os.FileInfo) {
 		t.Helper()
 		binPath := filepath.Join(stateDir, "bin", "longterm-mem")
-		if err := os.MkdirAll(filepath.Dir(binPath), 0o755); err != nil {
-			t.Fatalf("mkdir bin dir: %v", err)
-		}
-		if err := os.WriteFile(binPath, []byte(dummyContent), 0o755); err != nil {
-			t.Fatalf("write dummy binary: %v", err)
-		}
+		overlaytest.WriteTool(t, binPath, dummyContent)
 		info, err := os.Stat(binPath)
 		if err != nil {
 			t.Fatalf("stat dummy binary: %v", err)
@@ -392,9 +387,7 @@ func TestUninstall_VersionSkewStillConverges(t *testing.T) {
 	if err := os.Remove(binPath); err != nil {
 		t.Fatalf("remove installed binary: %v", err)
 	}
-	if err := os.WriteFile(binPath, []byte("#!/bin/sh\necho 'unknown subcommand: unregister' >&2\nexit 2\n"), 0o755); err != nil {
-		t.Fatalf("install version-skewed binary: %v", err)
-	}
+	overlaytest.WriteTool(t, binPath, "#!/bin/sh\necho 'unknown subcommand: unregister' >&2\nexit 2\n")
 
 	uninstallOut, err := overlaytest.Combined(t, overlay, env, "", "longterm-mem", "uninstall", "--target", "claude")
 	if err != nil {

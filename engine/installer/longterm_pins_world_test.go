@@ -125,12 +125,7 @@ func (w *pinWorld) placeBinary() {
 	if err != nil {
 		w.t.Fatal(err)
 	}
-	if err := os.MkdirAll(filepath.Dir(w.sharedBinary()), 0o755); err != nil {
-		w.t.Fatal(err)
-	}
-	if err := os.WriteFile(w.sharedBinary(), body, 0o755); err != nil {
-		w.t.Fatal(err)
-	}
+	overlaytest.WriteTool(w.t, w.sharedBinary(), string(body))
 	// The mode a person's umask would leave is not what the pins are about.
 	if err := os.Chmod(w.sharedBinary(), 0o755); err != nil {
 		w.t.Fatal(err)
