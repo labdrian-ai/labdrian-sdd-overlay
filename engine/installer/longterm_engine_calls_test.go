@@ -16,6 +16,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/overlaytest"
 )
 
 // recordingEngineScript is an engine that writes its arguments, one call a line, in FAKE_ENGINE_LOG and
@@ -299,7 +301,7 @@ func TestEngineCalls_AnEngineTooOldForTheCommandIsToldFromOneThatFailed(t *testi
 // it that rebuilds an engine that is stale or absent (a test of the harness runs that). A remedy that
 // does not exist is a dead end for the person who reads it.
 func TestEngineCalls_TheRemediesTheAssessWarningsNameAreCommandsThatExist(t *testing.T) {
-	script, err := os.ReadFile(overlayScript(t))
+	script, err := os.ReadFile(overlaytest.Script(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -343,7 +345,7 @@ func TestEngineCalls_TheRemediesTheAssessWarningsNameAreCommandsThatExist(t *tes
 // Nothing of the old record is left in the script: no temporary file for a rewrite, no filter, no lock
 // made of a directory, no age test for an abandoned one.
 func TestEngineCalls_NoBashIsLeftThatKeepsTheRecord(t *testing.T) {
-	script, err := os.ReadFile(overlayScript(t))
+	script, err := os.ReadFile(overlaytest.Script(t))
 	if err != nil {
 		t.Fatal(err)
 	}

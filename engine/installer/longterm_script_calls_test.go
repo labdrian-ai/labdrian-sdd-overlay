@@ -16,6 +16,8 @@ import (
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/overlaytest"
 )
 
 // engineCall is a call of the helper longtermmem_targets: the verb and the flags it hands over, the
@@ -238,7 +240,7 @@ func TestScriptEngineCallsAreFoundInEveryShapeTheShellCanWriteThem(t *testing.T)
 }
 
 func TestTheScriptSendsOnlyTheVerbsAndFlagsTheCommandTakes(t *testing.T) {
-	script, err := os.ReadFile(overlayScript(t))
+	script, err := os.ReadFile(overlaytest.Script(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -266,7 +268,7 @@ func TestTheScriptSendsOnlyTheVerbsAndFlagsTheCommandTakes(t *testing.T) {
 // command does not take put in, one shape at a time, and the check has to name it; a shape it cannot
 // see would pass the mutant, and the test would fail.
 func TestAFlagTheCommandDoesNotTakeIsFoundWhereverTheScriptHidesIt(t *testing.T) {
-	script, err := os.ReadFile(overlayScript(t))
+	script, err := os.ReadFile(overlaytest.Script(t))
 	if err != nil {
 		t.Fatal(err)
 	}

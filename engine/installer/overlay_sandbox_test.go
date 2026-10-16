@@ -1,39 +1,18 @@
 package installer_test
 
 // The sandboxes the integration tests of this package run bin/labdrian-overlay in: a throwaway
-// overlay repository with the branches the script merges and compares, a home of its own, and the
-// helpers that run the script over them. (The routing pins have a world of their own,
-// routing_pins_world_test.go.)
+// overlay repository with the branches the script merges and compares (overlaytest.NewOverlay), a
+// home of its own, and the helpers that run the script over them. (The routing pins have a world of
+// their own, routing_pins_world_test.go.)
 
 import (
-	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/enginetest"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/overlaytest"
 )
-
-// overlayScript returns the absolute path to bin/labdrian-overlay, for the tests that run it (the
-// integration tests below, sync_check_test.go and the routing pins). The unit tests of the routing
-// ask the engine (callManifestRoutes) and do not need the script.
-// Go tests run with cwd = engine/installer/, so two levels up → repo root.
-func overlayScript(t *testing.T) string {
-	t.Helper()
-	wd, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("getwd: %v", err)
-	}
-	p, err := filepath.Abs(filepath.Join(wd, "..", "..", "bin", "labdrian-overlay"))
-	if err != nil {
-		t.Fatalf("abs: %v", err)
-	}
-	if _, err := os.Stat(p); err != nil {
-		t.Fatalf("overlay script not found at %s: %v", p, err)
-	}
-	return p
-}
 
 // createTarball writes the provided relative paths into a temporary directory and
 // returns a tar.gz path containing them under a `files/` root.
@@ -41,15 +20,7 @@ func createTarball(t *testing.T, files map[string]string) string {
 	t.Helper()
 
 	tarRoot := t.TempDir()
-	for rel, body := range files {
-		p := filepath.Join(tarRoot, rel)
-		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
-			t.Fatalf("mkdir %s: %v", filepath.Dir(p), err)
-		}
-		if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
-			t.Fatalf("write tar fixture %s: %v", rel, err)
-		}
-	}
+	overlaytest.WriteFiles(t, tarRoot, files)
 
 	// Tarball naming can be deterministic per test path; keep this stable but
 	// unique by placing it in a temp dir.
@@ -67,64 +38,16 @@ func createTarball(t *testing.T, files map[string]string) string {
 func setupCaptureFromBackupSandbox(t *testing.T, home string) (string, []string) {
 	t.Helper()
 
-	overlayDir := t.TempDir()
-
 	const manifest = "test-skill/SKILL.md   managed\n" +
 		"GADU.md   managed   agent\n" +
 		"opencode/agents/GADU.md   managed   opencode-agent\n"
 
-	files := map[string]string{
+	return overlaytest.NewOverlay(t, home, map[string]string{
 		"overlay.manifest":           manifest,
 		"skills/test-skill/SKILL.md": "# overlay skill\n",
 		"agents/GADU.md":             "---\nname: GADU\n---\n# overlay agent\n",
 		"opencode/agents/GADU.md":    "---\nname: GADU\n---\n# overlay open-agent\n",
-	}
-
-	for rel, content := range files {
-		p := filepath.Join(overlayDir, rel)
-		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
-			t.Fatalf("mkdir %s: %v", filepath.Dir(p), err)
-		}
-		if err := os.WriteFile(p, []byte(content), 0o644); err != nil {
-			t.Fatalf("write %s: %v", rel, err)
-		}
-	}
-
-	runGit := func(dir string, args ...string) {
-		t.Helper()
-		cmd := exec.Command("git", args...)
-		cmd.Dir = dir
-		cmd.Env = append(os.Environ(),
-			"GIT_AUTHOR_NAME=test",
-			"GIT_AUTHOR_EMAIL=test@test.com",
-			"GIT_COMMITTER_NAME=test",
-			"GIT_COMMITTER_EMAIL=test@test.com",
-			"HOME="+home,
-		)
-		if out, err := cmd.CombinedOutput(); err != nil {
-			t.Fatalf("git %v: %v\n%s", args, err, out)
-		}
-	}
-
-	runGit(overlayDir, "init")
-	runGit(overlayDir, "config", "user.email", "test@test.com")
-	runGit(overlayDir, "config", "user.name", "test")
-	runGit(overlayDir, "checkout", "-b", "upstream")
-	runGit(overlayDir, "add", ".")
-	runGit(overlayDir, "commit", "-m", "upstream: baseline")
-	runGit(overlayDir, "checkout", "-b", "main")
-
-	env := []string{
-		"HOME=" + home,
-		"OVERLAY_DIR=" + overlayDir,
-		"GIT_AUTHOR_NAME=test",
-		"GIT_AUTHOR_EMAIL=test@test.com",
-		"GIT_COMMITTER_NAME=test",
-		"GIT_COMMITTER_EMAIL=test@test.com",
-		"PATH=" + os.Getenv("PATH"),
-	}
-	enginetest.Provision(t, home)
-	return overlayDir, env
+	})
 }
 
 // setupSandboxOverlay creates a minimal overlay git repo with upstream+main
@@ -133,7 +56,6 @@ func setupCaptureFromBackupSandbox(t *testing.T, home string) (string, []string)
 // environment slice for exec.Command (includes OVERLAY_DIR and HOME overrides).
 func setupSandboxOverlay(t *testing.T, home string) (string, []string) {
 	t.Helper()
-	overlayDir := t.TempDir()
 
 	const (
 		fixtureManifestInteg = "test-skill/SKILL.md   managed\n" +
@@ -152,7 +74,7 @@ func setupSandboxOverlay(t *testing.T, home string) (string, []string) {
 		fixtureOpenCodeAgentContent = "---\ndescription: test agent\nmode: all\nmodel: openai/gpt-5.5\npermission:\n  task: allow\n---\n# GADU\n"
 	)
 
-	files := map[string]string{
+	return overlaytest.NewOverlay(t, home, map[string]string{
 		"overlay.manifest":                          fixtureManifestInteg,
 		"skills/test-skill/SKILL.md":                fixtureSkillContent,
 		"skills/inception-pipeline/SKILL.md":        fixtureInceptionContent,
@@ -161,63 +83,7 @@ func setupSandboxOverlay(t *testing.T, home string) (string, []string) {
 		"skills/_shared/actuals-record.schema.json": fixtureActualsSchemaContent,
 		"agents/GADU.md":                            fixtureAgentContent,
 		"opencode/agents/GADU.md":                   fixtureOpenCodeAgentContent,
-	}
-	for rel, content := range files {
-		p := filepath.Join(overlayDir, rel)
-		if err := os.MkdirAll(filepath.Dir(p), 0755); err != nil {
-			t.Fatalf("mkdir %s: %v", filepath.Dir(p), err)
-		}
-		if err := os.WriteFile(p, []byte(content), 0644); err != nil {
-			t.Fatalf("write %s: %v", rel, err)
-		}
-	}
-
-	runGit := func(dir string, args ...string) {
-		t.Helper()
-		cmd := exec.Command("git", args...)
-		cmd.Dir = dir
-		cmd.Env = append(os.Environ(),
-			"GIT_AUTHOR_NAME=test",
-			"GIT_AUTHOR_EMAIL=test@test.com",
-			"GIT_COMMITTER_NAME=test",
-			"GIT_COMMITTER_EMAIL=test@test.com",
-			"HOME="+home,
-		)
-		if out, err := cmd.CombinedOutput(); err != nil {
-			t.Fatalf("git %v: %v\n%s", args, err, out)
-		}
-	}
-
-	runGit(overlayDir, "init")
-	runGit(overlayDir, "config", "user.email", "test@test.com")
-	runGit(overlayDir, "config", "user.name", "test")
-	runGit(overlayDir, "checkout", "-b", "upstream")
-	runGit(overlayDir, "add", ".")
-	runGit(overlayDir, "commit", "-m", "upstream: baseline")
-	// main starts at the same commit as upstream — git merge upstream is a no-op
-	runGit(overlayDir, "checkout", "-b", "main")
-
-	env := []string{
-		"HOME=" + home,
-		"OVERLAY_DIR=" + overlayDir,
-		"GIT_AUTHOR_NAME=test",
-		"GIT_AUTHOR_EMAIL=test@test.com",
-		"GIT_COMMITTER_NAME=test",
-		"GIT_COMMITTER_EMAIL=test@test.com",
-		"PATH=" + os.Getenv("PATH"),
-	}
-	enginetest.Provision(t, home)
-	return overlayDir, env
-}
-
-// runOverlay executes the overlay script with the given args and env.
-// It returns combined stdout+stderr and any error.
-func runOverlay(t *testing.T, overlayPath string, env []string, args ...string) (string, error) {
-	t.Helper()
-	cmd := exec.Command("bash", append([]string{overlayPath}, args...)...)
-	cmd.Env = env
-	out, err := cmd.CombinedOutput()
-	return string(out), err
+	})
 }
 
 // runApplyAllTolerantOfPi runs `apply --target all` and tolerates ONLY the
@@ -232,7 +98,7 @@ func runOverlay(t *testing.T, overlayPath string, env []string, args ...string) 
 // failure still must.
 func runApplyAllTolerantOfPi(t *testing.T, overlay string, env []string) string {
 	t.Helper()
-	out, err := runOverlay(t, overlay, env, "apply", "--target", "all")
+	out, err := overlaytest.Combined(t, overlay, env, "", "apply", "--target", "all")
 	if err != nil && !strings.Contains(out, "pi: package build failed") {
 		t.Fatalf("apply --target all failed for a reason other than pi's known incompleteness: %v\noutput:\n%s", err, out)
 	}
@@ -245,7 +111,7 @@ func runApplyAllTolerantOfPi(t *testing.T, overlay string, env []string) string 
 // fixtures, so pipkg_status_and_report honestly reports "not built".
 func runStatusAllTolerantOfPi(t *testing.T, overlay string, env []string) string {
 	t.Helper()
-	out, err := runOverlay(t, overlay, env, "status", "--target", "all")
+	out, err := overlaytest.Combined(t, overlay, env, "", "status", "--target", "all")
 	if err != nil && !strings.Contains(out, "pi: not built") {
 		t.Fatalf("status --target all failed for a reason other than pi's known incompleteness: %v\noutput:\n%s", err, out)
 	}

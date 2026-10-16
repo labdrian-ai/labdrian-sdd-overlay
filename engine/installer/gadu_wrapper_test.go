@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/overlaytest"
 )
 
 // TestGaduGenerate_ForwardsThroughWrapper validates that wrapper dispatch forwards
@@ -21,39 +23,26 @@ func TestGaduGenerate_ForwardsThroughWrapper(t *testing.T) {
 	}
 
 	// Missing engine must fail loudly first.
-	overlay := overlayScript(t)
+	overlay := overlaytest.Script(t)
 	home := t.TempDir()
 	overlayDir := t.TempDir()
-	env := []string{
-		"HOME=" + home,
-		"OVERLAY_DIR=" + overlayDir,
-		"PATH=" + os.Getenv("PATH"),
-	}
+	env := overlaytest.Env(home, overlayDir)
 
-	if out, err := runOverlay(t, overlay, env, "gadu-generate", "--check"); err == nil {
+	if out, err := overlaytest.Combined(t, overlay, env, "", "gadu-generate", "--check"); err == nil {
 		t.Fatalf("expected gadu-generate without binary to fail, but exit was 0\noutput:\n%s", out)
 	} else if !strings.Contains(out, "engine binary not found") {
 		t.Fatalf("expected missing-engine guidance, got: %s", out)
 	}
 
 	// Fake binary logs invocation details.
-	fakeBinaryDir := filepath.Join(home, ".claude", "bin")
-	fakeBinaryPath := filepath.Join(fakeBinaryDir, "gentle-ai-overlay")
 	logPath := filepath.Join(home, "gadu-wrapper.log")
-	if err := os.MkdirAll(fakeBinaryDir, 0755); err != nil {
-		t.Fatalf("mkdir fake binary dir: %v", err)
-	}
-	fakeScript := "#!/usr/bin/env bash\n" +
-		"set -euo pipefail\n" +
-		"printf 'OVERLAY_DIR=%s\\n' \"$OVERLAY_DIR\" >" + logPath + "\n" +
-		"printf 'ARGC:%s\\n' \"$#\" >>" + logPath + "\n" +
-		"for arg in \"$@\"; do printf 'ARG:%s\\n' \"$arg\" >>" + logPath + "; done\n"
-	if err := os.WriteFile(fakeBinaryPath, []byte(fakeScript), 0755); err != nil {
-		t.Fatalf("write fake engine: %v", err)
-	}
+	overlaytest.StubEngine(t, home, "#!/usr/bin/env bash\n"+
+		"set -euo pipefail\n"+
+		"printf 'OVERLAY_DIR=%s\\n' \"$OVERLAY_DIR\" >"+logPath+"\n"+
+		"printf 'ARGC:%s\\n' \"$#\" >>"+logPath+"\n"+
+		"for arg in \"$@\"; do printf 'ARG:%s\\n' \"$arg\" >>"+logPath+"; done\n")
 
-	env = append(env, "HOME="+home)
-	out, err := runOverlay(t, overlay, env, "gadu-generate", "--check", "--future", "value with spaces")
+	out, err := overlaytest.Combined(t, overlay, env, "", "gadu-generate", "--check", "--future", "value with spaces")
 	if err != nil {
 		t.Fatalf("gadu-generate with fake engine failed: %v\noutput:\n%s", err, out)
 	}
@@ -87,16 +76,12 @@ func TestStatusHooks_IsReadOnlyAndFailLoudOnMissingBinary(t *testing.T) {
 		t.Skip("skipping integration test in -short mode")
 	}
 
-	overlay := overlayScript(t)
+	overlay := overlaytest.Script(t)
 	home := t.TempDir()
 	overlayDir := t.TempDir()
-	env := []string{
-		"HOME=" + home,
-		"OVERLAY_DIR=" + overlayDir,
-		"PATH=" + os.Getenv("PATH"),
-	}
+	env := overlaytest.Env(home, overlayDir)
 
-	out, err := runOverlay(t, overlay, env, "status-hooks")
+	out, err := overlaytest.Combined(t, overlay, env, "", "status-hooks")
 	if err == nil {
 		t.Fatalf("expected status-hooks without binary to fail, but exit was 0\noutput:\n%s", out)
 	}
@@ -112,9 +97,9 @@ func TestStatusHooks_IsReadOnlyAndFailLoudOnMissingBinary(t *testing.T) {
 // TestOverlay_HelpContainsGaduGenerateAndStatusHooksGuidance asserts the updated
 // inline usage text exposes the new command and read-only status-hooks contract.
 func TestOverlay_HelpContainsGaduGenerateAndStatusHooksGuidance(t *testing.T) {
-	overlay := overlayScript(t)
+	overlay := overlaytest.Script(t)
 	home := t.TempDir()
-	output, err := runOverlay(t, overlay, []string{"HOME=" + home, "PATH=" + os.Getenv("PATH")}, "--help")
+	output, err := overlaytest.Combined(t, overlay, overlaytest.Env(home, t.TempDir()), "", "--help")
 	if err != nil {
 		t.Fatalf("--help should exit 0: %v\noutput:\n%s", err, output)
 	}

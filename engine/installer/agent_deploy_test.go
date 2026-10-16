@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/overlaytest"
 )
 
 // TestApply_AgentsLandInNativeAgentDirs asserts that after overlay apply:
@@ -24,7 +26,7 @@ func TestApply_AgentsLandInNativeAgentDirs(t *testing.T) {
 		t.Skip("skipping integration test in -short mode")
 	}
 
-	overlay := overlayScript(t)
+	overlay := overlaytest.Script(t)
 	home := t.TempDir()
 	_, env := setupSandboxOverlay(t, home)
 
@@ -70,7 +72,7 @@ func TestStatus_ReportsAgentFile(t *testing.T) {
 		t.Skip("skipping integration test in -short mode")
 	}
 
-	overlay := overlayScript(t)
+	overlay := overlaytest.Script(t)
 	home := t.TempDir()
 	_, env := setupSandboxOverlay(t, home)
 
@@ -104,7 +106,7 @@ func TestSyncCheck_DetectsMissingAgentFile(t *testing.T) {
 		t.Skip("skipping integration test in -short mode")
 	}
 
-	overlay := overlayScript(t)
+	overlay := overlaytest.Script(t)
 	home := t.TempDir()
 	_, env := setupSandboxOverlay(t, home)
 
@@ -112,7 +114,7 @@ func TestSyncCheck_DetectsMissingAgentFile(t *testing.T) {
 	runApplyAllTolerantOfPi(t, overlay, env)
 
 	// Deployed agent row must report IN_SYNC — pins L511 fix
-	outSync, err := runOverlay(t, overlay, env, "sync-check", "--target", "claude")
+	outSync, err := overlaytest.Combined(t, overlay, env, "", "sync-check", "--target", "claude")
 	if err != nil {
 		t.Fatalf("overlay sync-check (after deploy): %v\noutput:\n%s", err, outSync)
 	}
@@ -130,7 +132,7 @@ func TestSyncCheck_DetectsMissingAgentFile(t *testing.T) {
 		t.Fatalf("remove GADU.md: %v", err)
 	}
 
-	outMissing, _ := runOverlay(t, overlay, env, "sync-check", "--target", "claude")
+	outMissing, _ := overlaytest.Combined(t, overlay, env, "", "sync-check", "--target", "claude")
 	if !strings.Contains(outMissing, "OVERLAY_NOT_DEPLOYED: ") {
 		t.Errorf("sync-check should report OVERLAY_NOT_DEPLOYED after agent file removed\noutput:\n%s", outMissing)
 	}
@@ -144,7 +146,7 @@ func TestSyncCheck_DetectsMissingAgentFile(t *testing.T) {
 		t.Errorf("agent file not restored at %s after reapply: %v", agentDest, err)
 	}
 
-	outRestored, err := runOverlay(t, overlay, env, "sync-check", "--target", "claude")
+	outRestored, err := overlaytest.Combined(t, overlay, env, "", "sync-check", "--target", "claude")
 	if err != nil {
 		t.Fatalf("overlay sync-check (after reapply): %v\noutput:\n%s", err, outRestored)
 	}
@@ -163,7 +165,7 @@ func TestUnrelatedSkillUnchanged(t *testing.T) {
 		t.Skip("skipping integration test in -short mode")
 	}
 
-	overlay := overlayScript(t)
+	overlay := overlaytest.Script(t)
 	home := t.TempDir()
 	overlayDir, env := setupSandboxOverlay(t, home)
 
@@ -196,7 +198,7 @@ func TestEntryContractBundlePropagatesAndReportsIntegrityDrift(t *testing.T) {
 		t.Skip("skipping integration test in -short mode")
 	}
 
-	overlay := overlayScript(t)
+	overlay := overlaytest.Script(t)
 	home := t.TempDir()
 	overlayDir, env := setupSandboxOverlay(t, home)
 
@@ -240,7 +242,7 @@ func TestEntryContractBundlePropagatesAndReportsIntegrityDrift(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	statusOut, err := runOverlay(t, overlay, env, "status", "--target", "opencode")
+	statusOut, err := overlaytest.Combined(t, overlay, env, "", "status", "--target", "opencode")
 	if err != nil {
 		t.Fatalf("overlay status: %v\noutput:\n%s", err, statusOut)
 	}
@@ -251,7 +253,7 @@ func TestEntryContractBundlePropagatesAndReportsIntegrityDrift(t *testing.T) {
 		t.Errorf("status did not report drifted shared asset\noutput:\n%s", statusOut)
 	}
 
-	syncOut, err := runOverlay(t, overlay, env, "sync-check", "--target", "opencode")
+	syncOut, err := overlaytest.Combined(t, overlay, env, "", "sync-check", "--target", "opencode")
 	if err != nil {
 		t.Fatalf("overlay sync-check: %v\noutput:\n%s", err, syncOut)
 	}

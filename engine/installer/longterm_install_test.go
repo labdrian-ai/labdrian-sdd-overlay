@@ -4,8 +4,11 @@ package installer_test
 // row routed "mcp"), run through bin/labdrian-overlay with a sandbox HOME and STATE_DIR and a REAL
 // `go build` of the real longterm-mem and engine modules (R-014/R-015): the binary lands at its fixed
 // path, outlives the process that built it and keeps its path across inspections, and `apply` asks for
-// one install. The helpers at the top (realOverlayDir, goToolchainEnv, copyTree) are used by
-// longterm_uninstall_test.go too.
+// one install. Unlike the synthetic sandboxes of the other tests, these run against the repository
+// itself (overlaytest.RepoRoot): a real build needs the real modules, which only exist in the checked
+// out repo. Only HOME and STATE_DIR are sandboxed, and no test here calls a git-mutating branch of
+// apply or capture against that directory, so its git state is never touched. The helpers at the top
+// (buildEnv, copyTree) are used by longterm_uninstall_test.go too.
 
 import (
 	"errors"
@@ -14,56 +17,16 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/overlaytest"
 )
 
-// ---------------------------------------------------------------------------
-// longterm-mem install/status/uninstall — Slice 10b (R-014 shell half, R-015)
-// ---------------------------------------------------------------------------
-
-// realOverlayDir returns the actual repository root (two levels up from
-// engine/installer, same resolution overlayScript already uses). Unlike the
-// synthetic sandboxes used elsewhere in this file, longterm-mem install must
-// perform a REAL `go build` of the REAL longterm-mem and engine modules
-// (R-014/R-015) — those only exist in the checked-out repo itself. Only
-// HOME/STATE_DIR are sandboxed via t.TempDir(); these tests never call any
-// git-mutating cmd_apply/cmd_capture branch against this directory, so its
-// real git state is never touched.
-func realOverlayDir(t *testing.T) string {
+// buildEnv is the environment of a run that builds longterm-mem for real: the home and the repository
+// the script is told of, a state directory of the test's, and the caches of the go command, so that
+// the build reuses the warm module cache and does not start a cold one under the sandboxed home.
+func buildEnv(t *testing.T, home, overlayDir, stateDir string) []string {
 	t.Helper()
-	wd, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("getwd: %v", err)
-	}
-	p, err := filepath.Abs(filepath.Join(wd, "..", ".."))
-	if err != nil {
-		t.Fatalf("abs: %v", err)
-	}
-	if _, err := os.Stat(filepath.Join(p, "longterm-mem", "go.mod")); err != nil {
-		t.Fatalf("longterm-mem module not found under %s: %v", p, err)
-	}
-	return p
-}
-
-// goToolchainEnv forwards this host's resolved GOCACHE/GOMODCACHE/GOPATH so
-// a sandboxed subprocess's real `go build` calls reuse the warm build and
-// module cache instead of a cold, network-dependent rebuild under a fresh
-// sandboxed HOME (longterm-mem has real third-party dependencies; a cold,
-// unforwarded module cache could otherwise require network access).
-func goToolchainEnv(t *testing.T) []string {
-	t.Helper()
-	out, err := exec.Command("go", "env", "GOCACHE", "GOMODCACHE", "GOPATH").Output()
-	if err != nil {
-		t.Fatalf("go env: %v", err)
-	}
-	lines := strings.Split(strings.TrimRight(string(out), "\n"), "\n")
-	if len(lines) != 3 {
-		t.Fatalf("expected 3 go env lines, got %d: %q", len(lines), out)
-	}
-	return []string{
-		"GOCACHE=" + lines[0],
-		"GOMODCACHE=" + lines[1],
-		"GOPATH=" + lines[2],
-	}
+	return overlaytest.Env(home, overlayDir, append([]string{"STATE_DIR=" + stateDir}, overlaytest.ToolchainEnv(t)...)...)
 }
 
 // copyTree copies the directory tree rooted at src into dst (created if
@@ -115,18 +78,13 @@ func TestInstall_BuildsCopiesThenReportsPerRuntimeStatus(t *testing.T) {
 		t.Skip("skipping integration test in -short mode")
 	}
 
-	overlay := overlayScript(t)
-	overlayDir := realOverlayDir(t)
+	overlay := overlaytest.Script(t)
+	overlayDir := overlaytest.RepoRoot(t)
 	home := t.TempDir()
 	stateDir := t.TempDir()
-	env := append([]string{
-		"HOME=" + home,
-		"OVERLAY_DIR=" + overlayDir,
-		"STATE_DIR=" + stateDir,
-		"PATH=" + os.Getenv("PATH"),
-	}, goToolchainEnv(t)...)
+	env := buildEnv(t, home, overlayDir, stateDir)
 
-	out, err := runOverlay(t, overlay, env, "longterm-mem", "install", "--target", "all")
+	out, err := overlaytest.Combined(t, overlay, env, "", "longterm-mem", "install", "--target", "all")
 	if err != nil {
 		t.Fatalf("longterm-mem install --target all failed: %v\noutput:\n%s", err, out)
 	}
@@ -156,18 +114,13 @@ func TestInstall_BinaryPersistsAfterProcessExits(t *testing.T) {
 		t.Skip("skipping integration test in -short mode")
 	}
 
-	overlay := overlayScript(t)
-	overlayDir := realOverlayDir(t)
+	overlay := overlaytest.Script(t)
+	overlayDir := overlaytest.RepoRoot(t)
 	home := t.TempDir()
 	stateDir := t.TempDir()
-	env := append([]string{
-		"HOME=" + home,
-		"OVERLAY_DIR=" + overlayDir,
-		"STATE_DIR=" + stateDir,
-		"PATH=" + os.Getenv("PATH"),
-	}, goToolchainEnv(t)...)
+	env := buildEnv(t, home, overlayDir, stateDir)
 
-	out, err := runOverlay(t, overlay, env, "longterm-mem", "install", "--target", "all")
+	out, err := overlaytest.Combined(t, overlay, env, "", "longterm-mem", "install", "--target", "all")
 	if err != nil {
 		t.Fatalf("install failed: %v\noutput:\n%s", err, out)
 	}
@@ -199,18 +152,13 @@ func TestInstall_BinaryPathStableAcrossInspections(t *testing.T) {
 		t.Skip("skipping integration test in -short mode")
 	}
 
-	overlay := overlayScript(t)
-	overlayDir := realOverlayDir(t)
+	overlay := overlaytest.Script(t)
+	overlayDir := overlaytest.RepoRoot(t)
 	home := t.TempDir()
 	stateDir := t.TempDir()
-	env := append([]string{
-		"HOME=" + home,
-		"OVERLAY_DIR=" + overlayDir,
-		"STATE_DIR=" + stateDir,
-		"PATH=" + os.Getenv("PATH"),
-	}, goToolchainEnv(t)...)
+	env := buildEnv(t, home, overlayDir, stateDir)
 
-	out, err := runOverlay(t, overlay, env, "longterm-mem", "install", "--target", "all")
+	out, err := overlaytest.Combined(t, overlay, env, "", "longterm-mem", "install", "--target", "all")
 	if err != nil {
 		t.Fatalf("install failed: %v\noutput:\n%s", err, out)
 	}
@@ -221,7 +169,7 @@ func TestInstall_BinaryPathStableAcrossInspections(t *testing.T) {
 		t.Fatalf("stat after install: %v", statErr)
 	}
 
-	statusOut, statusErr := runOverlay(t, overlay, env, "longterm-mem", "status")
+	statusOut, statusErr := overlaytest.Combined(t, overlay, env, "", "longterm-mem", "status")
 	if statusErr != nil {
 		t.Fatalf("status failed: %v\noutput:\n%s", statusErr, statusOut)
 	}
@@ -248,26 +196,17 @@ func TestApply_InvokesLongtermMemInstallOnceForMcpRow(t *testing.T) {
 		t.Skip("skipping integration test in -short mode")
 	}
 
-	repoRoot := realOverlayDir(t)
+	repoRoot := overlaytest.RepoRoot(t)
 	home := t.TempDir()
 	overlayDir := t.TempDir()
 
 	const manifest = "test-skill/SKILL.md   managed\n" +
 		"longterm-mem/go.mod   custom   mcp\n"
 
-	files := map[string]string{
+	overlaytest.WriteFiles(t, overlayDir, map[string]string{
 		"overlay.manifest":           manifest,
 		"skills/test-skill/SKILL.md": "# overlay skill\n",
-	}
-	for rel, content := range files {
-		p := filepath.Join(overlayDir, rel)
-		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
-			t.Fatalf("mkdir %s: %v", filepath.Dir(p), err)
-		}
-		if err := os.WriteFile(p, []byte(content), 0o644); err != nil {
-			t.Fatalf("write %s: %v", rel, err)
-		}
-	}
+	})
 
 	copyTree(t, filepath.Join(repoRoot, "engine"), filepath.Join(overlayDir, "engine"))
 	copyTree(t, filepath.Join(repoRoot, "longterm-mem"), filepath.Join(overlayDir, "longterm-mem"))
@@ -275,42 +214,16 @@ func TestApply_InvokesLongtermMemInstallOnceForMcpRow(t *testing.T) {
 	// runs finds the module beside it as it does in the whole repository.
 	copyTree(t, filepath.Join(repoRoot, "identity"), filepath.Join(overlayDir, "identity"))
 
-	runGit := func(dir string, args ...string) {
-		t.Helper()
-		cmd := exec.Command("git", args...)
-		cmd.Dir = dir
-		cmd.Env = append(os.Environ(),
-			"GIT_AUTHOR_NAME=test",
-			"GIT_AUTHOR_EMAIL=test@test.com",
-			"GIT_COMMITTER_NAME=test",
-			"GIT_COMMITTER_EMAIL=test@test.com",
-			"HOME="+home,
-		)
-		if out, err := cmd.CombinedOutput(); err != nil {
-			t.Fatalf("git %v: %v\n%s", args, err, out)
-		}
-	}
-	runGit(overlayDir, "init")
-	runGit(overlayDir, "config", "user.email", "test@test.com")
-	runGit(overlayDir, "config", "user.name", "test")
-	runGit(overlayDir, "checkout", "-b", "upstream")
-	runGit(overlayDir, "add", "overlay.manifest", "skills/")
-	runGit(overlayDir, "commit", "-m", "upstream: baseline")
-	runGit(overlayDir, "checkout", "-b", "main")
-
 	stateDir := t.TempDir()
-	env := append([]string{
-		"HOME=" + home,
-		"OVERLAY_DIR=" + overlayDir,
-		"STATE_DIR=" + stateDir,
-		"GIT_AUTHOR_NAME=test",
-		"GIT_AUTHOR_EMAIL=test@test.com",
-		"GIT_COMMITTER_NAME=test",
-		"GIT_COMMITTER_EMAIL=test@test.com",
-		"PATH=" + os.Getenv("PATH"),
-	}, goToolchainEnv(t)...)
+	env := buildEnv(t, home, overlayDir, stateDir)
+	// The engine is not provisioned in the home: the build the hook runs makes it from the sources copied above.
+	git := func(args ...string) {
+		t.Helper()
+		overlaytest.Git(t, overlayDir, env, args...)
+	}
+	overlaytest.InitOverlay(git, "overlay.manifest", "skills/")
 
-	overlay := overlayScript(t)
+	overlay := overlaytest.Script(t)
 	out := runApplyAllTolerantOfPi(t, overlay, env)
 
 	binPath := filepath.Join(stateDir, "bin", "longterm-mem")
@@ -342,10 +255,10 @@ func TestApply_InvokesLongtermMemInstallOnceForMcpRow(t *testing.T) {
 		if err := os.WriteFile(manifestPath, []byte("test-skill/SKILL.md   managed\n"), 0o644); err != nil {
 			t.Fatalf("rewrite manifest without the mcp row: %v", err)
 		}
-		runGit(overlayDir, "checkout", "upstream")
-		runGit(overlayDir, "add", "overlay.manifest")
-		runGit(overlayDir, "commit", "-m", "upstream: drop the mcp row")
-		runGit(overlayDir, "checkout", "main")
+		git("checkout", "upstream")
+		git("add", "overlay.manifest")
+		git("commit", "-m", "upstream: drop the mcp row")
+		git("checkout", "main")
 
 		out := runApplyAllTolerantOfPi(t, overlay, env)
 		if n := strings.Count(out, "running install once"); n != 0 {

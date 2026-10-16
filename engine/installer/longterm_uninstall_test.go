@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/overlaytest"
 )
 
 // TestStatusUninstall_SkipBuildStep proves R-014's second scenario
@@ -26,19 +28,11 @@ func TestStatusUninstall_SkipBuildStep(t *testing.T) {
 		t.Skip("skipping integration test in -short mode")
 	}
 
-	overlay := overlayScript(t)
-	overlayDir := realOverlayDir(t)
+	overlay := overlaytest.Script(t)
+	overlayDir := overlaytest.RepoRoot(t)
 	home := t.TempDir()
-	goEnv := goToolchainEnv(t)
 
-	newEnv := func(stateDir string) []string {
-		return append([]string{
-			"HOME=" + home,
-			"OVERLAY_DIR=" + overlayDir,
-			"STATE_DIR=" + stateDir,
-			"PATH=" + os.Getenv("PATH"),
-		}, goEnv...)
-	}
+	newEnv := func(t *testing.T, stateDir string) []string { return buildEnv(t, home, overlayDir, stateDir) }
 
 	const dummyContent = "#!/bin/sh\necho dummy\n"
 
@@ -92,7 +86,7 @@ func TestStatusUninstall_SkipBuildStep(t *testing.T) {
 		stateDir := t.TempDir()
 		binPath, before := placeDummyBinary(t, stateDir)
 
-		out, err := runOverlay(t, overlay, newEnv(stateDir), "longterm-mem", "status")
+		out, err := overlaytest.Combined(t, overlay, newEnv(t, stateDir), "", "longterm-mem", "status")
 		if err != nil {
 			t.Fatalf("longterm-mem status failed: %v\noutput:\n%s", err, out)
 		}
@@ -108,7 +102,7 @@ func TestStatusUninstall_SkipBuildStep(t *testing.T) {
 		// those still-installed targets depend on.
 		trackFile := seedInstalledTargets(t, stateDir, "claude\nopencode\ncodex\n")
 
-		out, err := runOverlay(t, overlay, newEnv(stateDir), "longterm-mem", "uninstall", "--target", "claude")
+		out, err := overlaytest.Combined(t, overlay, newEnv(t, stateDir), "", "longterm-mem", "uninstall", "--target", "claude")
 		if err != nil {
 			t.Fatalf("longterm-mem uninstall --target claude failed: %v\noutput:\n%s", err, out)
 		}
@@ -136,7 +130,7 @@ func TestStatusUninstall_SkipBuildStep(t *testing.T) {
 		// install-state targets, which must remove the binary (D4/10b.5).
 		seedInstalledTargets(t, stateDir, "codex\n")
 
-		out, err := runOverlay(t, overlay, newEnv(stateDir), "longterm-mem", "uninstall", "--target", "codex")
+		out, err := overlaytest.Combined(t, overlay, newEnv(t, stateDir), "", "longterm-mem", "uninstall", "--target", "codex")
 		if err != nil {
 			t.Fatalf("longterm-mem uninstall --target codex failed: %v\noutput:\n%s", err, out)
 		}
@@ -156,7 +150,7 @@ func TestStatusUninstall_SkipBuildStep(t *testing.T) {
 		stateDir := t.TempDir()
 		binPath, _ := placeDummyBinary(t, stateDir)
 		// Deliberately no seedInstalledTargets: the file does not exist.
-		out, err := runOverlay(t, overlay, newEnv(stateDir), "longterm-mem", "uninstall", "--target", "claude")
+		out, err := overlaytest.Combined(t, overlay, newEnv(t, stateDir), "", "longterm-mem", "uninstall", "--target", "claude")
 		if err != nil {
 			t.Fatalf("longterm-mem uninstall --target claude failed: %v\noutput:\n%s", err, out)
 		}
@@ -184,8 +178,8 @@ func TestInstall_UninstallRoundTripRemovesTheMcpEntry(t *testing.T) {
 		t.Skip("skipping integration test in -short mode")
 	}
 
-	overlay := overlayScript(t)
-	overlayDir := realOverlayDir(t)
+	overlay := overlaytest.Script(t)
+	overlayDir := overlaytest.RepoRoot(t)
 	home := t.TempDir()
 	// STATE_DIR is deliberately a directory OUTSIDE $HOME/.labdrian-overlay
 	// — the exact condition that exposed CRITICAL-1: install and uninstall
@@ -193,12 +187,7 @@ func TestInstall_UninstallRoundTripRemovesTheMcpEntry(t *testing.T) {
 	// default, ~/.labdrian-overlay/longterm-mem, D9) regardless of where
 	// STATE_DIR (the shared binary's own location) happens to point.
 	stateDir := t.TempDir()
-	env := append([]string{
-		"HOME=" + home,
-		"OVERLAY_DIR=" + overlayDir,
-		"STATE_DIR=" + stateDir,
-		"PATH=" + os.Getenv("PATH"),
-	}, goToolchainEnv(t)...)
+	env := buildEnv(t, home, overlayDir, stateDir)
 
 	claudeConfig := filepath.Join(home, ".claude.json")
 	const seedContent = `{"mcpServers":{"unrelated":{"type":"stdio","command":"/bin/true","args":[]}}}`
@@ -206,7 +195,7 @@ func TestInstall_UninstallRoundTripRemovesTheMcpEntry(t *testing.T) {
 		t.Fatalf("seed .claude.json: %v", err)
 	}
 
-	installOut, err := runOverlay(t, overlay, env, "longterm-mem", "install", "--target", "claude")
+	installOut, err := overlaytest.Combined(t, overlay, env, "", "longterm-mem", "install", "--target", "claude")
 	if err != nil {
 		t.Fatalf("longterm-mem install --target claude failed: %v\noutput:\n%s", err, installOut)
 	}
@@ -222,7 +211,7 @@ func TestInstall_UninstallRoundTripRemovesTheMcpEntry(t *testing.T) {
 		t.Fatalf("install must not disturb the unrelated pre-existing entry, got:\n%s", afterInstall)
 	}
 
-	uninstallOut, err := runOverlay(t, overlay, env, "longterm-mem", "uninstall", "--target", "claude")
+	uninstallOut, err := overlaytest.Combined(t, overlay, env, "", "longterm-mem", "uninstall", "--target", "claude")
 	if err != nil {
 		t.Fatalf("longterm-mem uninstall --target claude failed: %v\noutput:\n%s", err, uninstallOut)
 	}
@@ -252,23 +241,18 @@ func TestUninstall_HardFailureKeepsTrackingAndSharedBinary(t *testing.T) {
 		t.Skip("skipping integration test in -short mode")
 	}
 
-	overlay := overlayScript(t)
-	overlayDir := realOverlayDir(t)
+	overlay := overlaytest.Script(t)
+	overlayDir := overlaytest.RepoRoot(t)
 	home := t.TempDir()
 	stateDir := t.TempDir()
-	env := append([]string{
-		"HOME=" + home,
-		"OVERLAY_DIR=" + overlayDir,
-		"STATE_DIR=" + stateDir,
-		"PATH=" + os.Getenv("PATH"),
-	}, goToolchainEnv(t)...)
+	env := buildEnv(t, home, overlayDir, stateDir)
 
 	claudeConfig := filepath.Join(home, ".claude.json")
 	if err := os.WriteFile(claudeConfig, []byte(`{"mcpServers":{}}`), 0o600); err != nil {
 		t.Fatalf("seed .claude.json: %v", err)
 	}
 
-	installOut, err := runOverlay(t, overlay, env, "longterm-mem", "install", "--target", "claude")
+	installOut, err := overlaytest.Combined(t, overlay, env, "", "longterm-mem", "install", "--target", "claude")
 	if err != nil {
 		t.Fatalf("install failed: %v\noutput:\n%s", err, installOut)
 	}
@@ -293,7 +277,7 @@ func TestUninstall_HardFailureKeepsTrackingAndSharedBinary(t *testing.T) {
 		t.Fatalf("expected binary at %s after install: %v", binPath, statErr)
 	}
 
-	uninstallOut, err := runOverlay(t, overlay, env, "longterm-mem", "uninstall", "--target", "claude")
+	uninstallOut, err := overlaytest.Combined(t, overlay, env, "", "longterm-mem", "uninstall", "--target", "claude")
 	if err == nil {
 		t.Fatalf("expected uninstall to report failure (corrupted install-state.json forces unregister exit 1), got success\noutput:\n%s", uninstallOut)
 	}
@@ -327,23 +311,18 @@ func TestUninstall_MissingBinaryStillConverges(t *testing.T) {
 		t.Skip("skipping integration test in -short mode")
 	}
 
-	overlay := overlayScript(t)
-	overlayDir := realOverlayDir(t)
+	overlay := overlaytest.Script(t)
+	overlayDir := overlaytest.RepoRoot(t)
 	home := t.TempDir()
 	stateDir := t.TempDir()
-	env := append([]string{
-		"HOME=" + home,
-		"OVERLAY_DIR=" + overlayDir,
-		"STATE_DIR=" + stateDir,
-		"PATH=" + os.Getenv("PATH"),
-	}, goToolchainEnv(t)...)
+	env := buildEnv(t, home, overlayDir, stateDir)
 
 	claudeConfig := filepath.Join(home, ".claude.json")
 	if err := os.WriteFile(claudeConfig, []byte(`{"mcpServers":{}}`), 0o600); err != nil {
 		t.Fatalf("seed .claude.json: %v", err)
 	}
 
-	installOut, err := runOverlay(t, overlay, env, "longterm-mem", "install", "--target", "claude")
+	installOut, err := overlaytest.Combined(t, overlay, env, "", "longterm-mem", "install", "--target", "claude")
 	if err != nil {
 		t.Fatalf("install failed: %v\noutput:\n%s", err, installOut)
 	}
@@ -355,7 +334,7 @@ func TestUninstall_MissingBinaryStillConverges(t *testing.T) {
 		t.Fatalf("remove binary: %v", err)
 	}
 
-	uninstallOut, err := runOverlay(t, overlay, env, "longterm-mem", "uninstall", "--target", "claude")
+	uninstallOut, err := overlaytest.Combined(t, overlay, env, "", "longterm-mem", "uninstall", "--target", "claude")
 	if err != nil {
 		t.Fatalf("uninstall did not converge with the binary missing: %v\noutput:\n%s", err, uninstallOut)
 	}
@@ -389,23 +368,18 @@ func TestUninstall_VersionSkewStillConverges(t *testing.T) {
 		t.Skip("skipping integration test in -short mode")
 	}
 
-	overlay := overlayScript(t)
-	overlayDir := realOverlayDir(t)
+	overlay := overlaytest.Script(t)
+	overlayDir := overlaytest.RepoRoot(t)
 	home := t.TempDir()
 	stateDir := t.TempDir()
-	env := append([]string{
-		"HOME=" + home,
-		"OVERLAY_DIR=" + overlayDir,
-		"STATE_DIR=" + stateDir,
-		"PATH=" + os.Getenv("PATH"),
-	}, goToolchainEnv(t)...)
+	env := buildEnv(t, home, overlayDir, stateDir)
 
 	claudeConfig := filepath.Join(home, ".claude.json")
 	if err := os.WriteFile(claudeConfig, []byte(`{"mcpServers":{}}`), 0o600); err != nil {
 		t.Fatalf("seed .claude.json: %v", err)
 	}
 
-	installOut, err := runOverlay(t, overlay, env, "longterm-mem", "install", "--target", "claude")
+	installOut, err := overlaytest.Combined(t, overlay, env, "", "longterm-mem", "install", "--target", "claude")
 	if err != nil {
 		t.Fatalf("install failed: %v\noutput:\n%s", err, installOut)
 	}
@@ -422,7 +396,7 @@ func TestUninstall_VersionSkewStillConverges(t *testing.T) {
 		t.Fatalf("install version-skewed binary: %v", err)
 	}
 
-	uninstallOut, err := runOverlay(t, overlay, env, "longterm-mem", "uninstall", "--target", "claude")
+	uninstallOut, err := overlaytest.Combined(t, overlay, env, "", "longterm-mem", "uninstall", "--target", "claude")
 	if err != nil {
 		t.Fatalf("uninstall did not converge against a version-skewed binary: %v\noutput:\n%s", err, uninstallOut)
 	}
@@ -459,16 +433,11 @@ func TestUninstall_PurgeForcesRemovalWithAnotherTargetStillTracked(t *testing.T)
 		t.Skip("skipping integration test in -short mode")
 	}
 
-	overlay := overlayScript(t)
-	overlayDir := realOverlayDir(t)
+	overlay := overlaytest.Script(t)
+	overlayDir := overlaytest.RepoRoot(t)
 	home := t.TempDir()
 	stateDir := t.TempDir()
-	env := append([]string{
-		"HOME=" + home,
-		"OVERLAY_DIR=" + overlayDir,
-		"STATE_DIR=" + stateDir,
-		"PATH=" + os.Getenv("PATH"),
-	}, goToolchainEnv(t)...)
+	env := buildEnv(t, home, overlayDir, stateDir)
 
 	claudeConfig := filepath.Join(home, ".claude.json")
 	if err := os.WriteFile(claudeConfig, []byte(`{"mcpServers":{}}`), 0o600); err != nil {
@@ -488,7 +457,7 @@ func TestUninstall_PurgeForcesRemovalWithAnotherTargetStillTracked(t *testing.T)
 	// so opencode.json above must exist before this call for opencode to
 	// end up with a real, ownership-tagged entry.
 	for _, target := range []string{"claude", "opencode"} {
-		out, err := runOverlay(t, overlay, env, "longterm-mem", "install", "--target", target)
+		out, err := overlaytest.Combined(t, overlay, env, "", "longterm-mem", "install", "--target", target)
 		if err != nil {
 			t.Fatalf("install --target %s failed: %v\noutput:\n%s", target, err, out)
 		}
@@ -519,7 +488,7 @@ func TestUninstall_PurgeForcesRemovalWithAnotherTargetStillTracked(t *testing.T)
 		t.Fatalf("expected engine registration record at %s after install: %v", regPath, statErr)
 	}
 
-	uninstallOut, err := runOverlay(t, overlay, env, "longterm-mem", "uninstall", "--target", "claude", "--purge")
+	uninstallOut, err := overlaytest.Combined(t, overlay, env, "", "longterm-mem", "uninstall", "--target", "claude", "--purge")
 	if err != nil {
 		t.Fatalf("uninstall --target claude --purge failed: %v\noutput:\n%s", err, uninstallOut)
 	}
@@ -565,23 +534,18 @@ func TestUninstall_PurgeForcesRemovalThroughHardUnregisterFailure(t *testing.T) 
 		t.Skip("skipping integration test in -short mode")
 	}
 
-	overlay := overlayScript(t)
-	overlayDir := realOverlayDir(t)
+	overlay := overlaytest.Script(t)
+	overlayDir := overlaytest.RepoRoot(t)
 	home := t.TempDir()
 	stateDir := t.TempDir()
-	env := append([]string{
-		"HOME=" + home,
-		"OVERLAY_DIR=" + overlayDir,
-		"STATE_DIR=" + stateDir,
-		"PATH=" + os.Getenv("PATH"),
-	}, goToolchainEnv(t)...)
+	env := buildEnv(t, home, overlayDir, stateDir)
 
 	claudeConfig := filepath.Join(home, ".claude.json")
 	if err := os.WriteFile(claudeConfig, []byte(`{"mcpServers":{}}`), 0o600); err != nil {
 		t.Fatalf("seed .claude.json: %v", err)
 	}
 
-	installOut, err := runOverlay(t, overlay, env, "longterm-mem", "install", "--target", "claude")
+	installOut, err := overlaytest.Combined(t, overlay, env, "", "longterm-mem", "install", "--target", "claude")
 	if err != nil {
 		t.Fatalf("install failed: %v\noutput:\n%s", err, installOut)
 	}
@@ -603,7 +567,7 @@ func TestUninstall_PurgeForcesRemovalThroughHardUnregisterFailure(t *testing.T) 
 		t.Fatalf("expected engine registration record at %s after install: %v", regPath, statErr)
 	}
 
-	uninstallOut, err := runOverlay(t, overlay, env, "longterm-mem", "uninstall", "--target", "claude", "--purge")
+	uninstallOut, err := overlaytest.Combined(t, overlay, env, "", "longterm-mem", "uninstall", "--target", "claude", "--purge")
 	if err == nil {
 		t.Fatalf("expected uninstall --purge to still surface the hard unregister failure on the exit code, got success\noutput:\n%s", uninstallOut)
 	}

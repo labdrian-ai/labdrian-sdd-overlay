@@ -24,6 +24,7 @@ import (
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/enginetest"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/overlaytest"
 )
 
 // pinWorld is one overlay repository and the home its script runs in.
@@ -158,7 +159,7 @@ func pinHome(t *testing.T) string {
 // expect to find.
 func newPinWorld(t *testing.T, manifest string, files map[string]string) *pinWorld {
 	t.Helper()
-	w := &pinWorld{t: t, script: overlayScript(t), home: pinHome(t), overlay: t.TempDir()}
+	w := &pinWorld{t: t, script: overlaytest.Script(t), home: pinHome(t), overlay: t.TempDir()}
 	all := map[string]string{"overlay.manifest": manifest}
 	for rel, content := range files {
 		all[rel] = content

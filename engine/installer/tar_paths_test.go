@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/enginetest"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/overlaytest"
 )
 
 // TestCaptureFromBackup_UsesRouteAwareTarPaths asserts that managed rows are
@@ -20,7 +21,7 @@ func TestCaptureFromBackup_UsesRouteAwareTarPaths(t *testing.T) {
 		t.Skip("skipping integration test in -short mode")
 	}
 
-	overlay := overlayScript(t)
+	overlay := overlaytest.Script(t)
 	home := t.TempDir()
 	overlayDir, env := setupCaptureFromBackupSandbox(t, home)
 
@@ -41,7 +42,7 @@ func TestCaptureFromBackup_UsesRouteAwareTarPaths(t *testing.T) {
 		t.Fatalf("write backup: %v", err)
 	}
 
-	out, err := runOverlay(t, overlay, env, "capture", "--from-backup", backup)
+	out, err := overlaytest.Combined(t, overlay, env, "", "capture", "--from-backup", backup)
 	if err != nil {
 		t.Fatalf("overlay capture --from-backup: %v\noutput:\n%s", err, out)
 	}
@@ -70,7 +71,7 @@ func TestBootstrap_UsesRouteAwareTarPaths(t *testing.T) {
 		t.Skip("skipping integration test in -short mode")
 	}
 
-	overlay := overlayScript(t)
+	overlay := overlaytest.Script(t)
 	home := t.TempDir()
 	overlayDir := t.TempDir()
 
@@ -120,7 +121,7 @@ func TestBootstrap_UsesRouteAwareTarPaths(t *testing.T) {
 	}
 	enginetest.Provision(t, home)
 
-	out, err := runOverlay(t, overlay, env, "bootstrap")
+	out, err := overlaytest.Combined(t, overlay, env, "", "bootstrap")
 	if err != nil {
 		t.Fatalf("overlay bootstrap: %v\noutput:\n%s", err, out)
 	}
