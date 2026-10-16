@@ -312,25 +312,31 @@ func TestSourceRunsFromTheDirectoryItIsGiven(t *testing.T) {
 // script: none of them adds GitSettings to it, as Git does to its own nil environment.
 func TestANilEnvIsTheProcessEnvironmentWithNoGitSettingsForEveryWayOfRunningTheScript(t *testing.T) {
 	t.Setenv("OVERLAYTEST_MARKER", "from-the-process")
-	t.Setenv("GIT_CONFIG_COUNT", "")
-	t.Setenv("GIT_CONFIG_GLOBAL", "")
+	// Unset, not empty, so that a value GitSettings added could not pass for one the process had: t.Setenv
+	// puts back what the process held when the test ends.
+	for _, name := range []string{"GIT_CONFIG_COUNT", "GIT_CONFIG_GLOBAL"} {
+		t.Setenv(name, "")
+		if err := os.Unsetenv(name); err != nil {
+			t.Fatal(err)
+		}
+	}
 	script := filepath.Join(t.TempDir(), "show")
 	body := "echo \"marker=$OVERLAYTEST_MARKER count=${GIT_CONFIG_COUNT-unset} global=${GIT_CONFIG_GLOBAL-unset}\"\n"
 	if err := os.WriteFile(script, []byte(body), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	const want = "marker=from-the-process count= global=\n"
+	const want = "marker=from-the-process count=unset global=unset\n"
 
-	for name, run := range map[string]func() (string, error){
-		"Run": func() (string, error) {
-			got := overlaytest.Run(t, script, nil, "")
-			return got.Stdout, nil
-		},
-		"Combined": func() (string, error) { return overlaytest.Combined(t, script, nil, "") },
-		"Source":   func() (string, error) { return overlaytest.Source(t, script, overlaytest.Shell{}, "") },
+	for _, way := range []struct {
+		name string
+		run  func() (string, error)
+	}{
+		{"Run", func() (string, error) { return overlaytest.Run(t, script, nil, "").Stdout, nil }},
+		{"Combined", func() (string, error) { return overlaytest.Combined(t, script, nil, "") }},
+		{"Source", func() (string, error) { return overlaytest.Source(t, script, overlaytest.Shell{}, "") }},
 	} {
-		if out, err := run(); err != nil || out != want {
-			t.Errorf("%s with a nil env = %q, %v, want %q: the process environment, with no GitSettings", name, out, err, want)
+		if out, err := way.run(); err != nil || out != want {
+			t.Errorf("%s with a nil env = %q, %v, want %q: the process environment, with no GitSettings", way.name, out, err, want)
 		}
 	}
 }
