@@ -8,6 +8,11 @@
 # Sourced by bin/labdrian-overlay in the order it lists, never run: it defines functions and
 # variables and does nothing else.
 
+# cmd_validate_entry_contract builds tools/entry-contract-validator and runs it on its
+# arguments, a relative --schema or --instance taken from the caller's directory.
+# Every failure to reach the validator (no source, no go, no temporary file, no
+# build) is exit 3, "could not determine", never 0; the validator's own exit
+# code is propagated verbatim.
 cmd_validate_entry_contract() {
   local validator_src="$OVERLAY_DIR/tools/entry-contract-validator"
   if [[ ! -f "$validator_src/go.mod" || ! -f "$validator_src/main.go" ]]; then
@@ -66,6 +71,9 @@ cmd_validate_entry_contract() {
   return "$status"
 }
 
+# cmd_deterministic_checks builds tools/deterministic-check-runner and runs it from
+# the caller's directory, under the same exit-3 convention as
+# cmd_validate_entry_contract above.
 cmd_deterministic_checks() {
   local runner_src="$OVERLAY_DIR/tools/deterministic-check-runner"
   if [[ ! -f "$runner_src/go.mod" || ! -f "$runner_src/main.go" ]]; then

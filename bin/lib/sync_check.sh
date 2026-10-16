@@ -1,5 +1,4 @@
 # shellcheck shell=bash
-# shellcheck disable=SC2164  # errexit is on (set -e in bin/labdrian-overlay): a failed cd ends the run
 #
 # sync_check
 #
@@ -19,6 +18,7 @@
 # target is disclosed rather than silently assumed to be the current
 # checkout.
 cmd_sync_check() {
+  # shellcheck disable=SC2164  # errexit is on (set -e in bin/labdrian-overlay): a failed cd ends the run
   cd "$OVERLAY_DIR"
 
   local target_arg="all"

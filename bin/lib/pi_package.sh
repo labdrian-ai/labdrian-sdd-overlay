@@ -9,8 +9,8 @@
 # variables and does nothing else.
 
 # pipkg_dest_dir prints the built labdrian-pi package directory
-# ($STATE_DIR/pi/labdrian-pi), the single source of truth every pipkg call
-# site below (apply/status/sync-check) resolves it from.
+# ($STATE_DIR/pi/labdrian-pi), the single source of truth every pipkg function
+# resolves it from, and through them apply, status and sync-check.
 pipkg_dest_dir() {
   echo "$STATE_DIR/pi/labdrian-pi"
 }

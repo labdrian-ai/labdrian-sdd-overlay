@@ -1,5 +1,4 @@
 # shellcheck shell=bash
-# shellcheck disable=SC2164  # errexit is on (set -e in bin/labdrian-overlay): a failed cd ends the run
 #
 # tui
 #
@@ -23,6 +22,7 @@ cmd_tui() {
   # Export repo root so the Go program can locate bin/labdrian-overlay reliably.
   export OVERLAY_DIR
   # Run from inside the module dir (repo root is not a Go module).
+  # shellcheck disable=SC2164  # errexit is on (set -e in bin/labdrian-overlay): a failed cd ends the run
   cd "$OVERLAY_DIR/tui"
   exec go run .
 }

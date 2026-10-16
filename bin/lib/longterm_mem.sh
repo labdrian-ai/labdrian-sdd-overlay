@@ -9,16 +9,13 @@
 # Sourced by bin/labdrian-overlay in the order it lists, never run: it defines functions and
 # variables and does nothing else.
 
-# The record of the runtimes this overlay has installed longterm-mem for is kept by the engine, not
-# here: `installed-targets` at $STATE_DIR/longterm-mem/installed-targets, under the lock
-# $STATE_DIR/.installed-targets.flock (see longtermmem_targets).
-
 # longtermmem_targets <verb> [args...] runs a verb of the engine's installed-targets command on this
 # overlay's state directory: the record of the runtimes longterm-mem is installed for (record, release,
 # list, assess, retire). The record is the engine's (Phase 9, B3). It is the only thing that says whether
 # a runtime still depends on the shared binary at $LONGTERM_MEM_BINARY -- the binary is removed only
-# when the record is empty, or with --purge -- and it is read as evidence, written under a lock, and
-# judged by the engine, which says why on stderr, in the words this script always used, when a verb
+# when the record is empty, or with --purge -- and it is read as evidence, written under a lock
+# ($STATE_DIR/longterm-mem/installed-targets, under $STATE_DIR/.installed-targets.flock), and judged by
+# the engine, which says why on stderr, in the words this script always used, when a verb
 # fails; the caller then ends the run. True per-runtime un-registration in each runtime's own config
 # file is the longterm-mem module's (register, unregister); the engine's registration.json (engine
 # runtime install|uninstall --component longterm-mem) records per-runtime state but is removed whole,
@@ -397,8 +394,9 @@ cmd_longterm_mem() {
       # entry from $t's own runtime config, byte-preserving everything
       # else, and clears $t's own install-state.json record. It never
       # touches another target's entry or record, which is exactly what
-      # makes the bash-level tracking removed below, and the binary guard
-      # after it, safe to key off "$remaining" alone.
+      # makes releasing $t from the installed-targets record below, and the
+      # binary guard after it (the engine's `installed-targets assess`), safe
+      # to key off that record alone.
       #
       # No --state-dir here either: it MUST resolve to the exact same
       # install-state.json the install path above wrote to (register's own

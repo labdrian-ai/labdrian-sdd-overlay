@@ -1,5 +1,4 @@
 # shellcheck shell=bash
-# shellcheck disable=SC2164  # errexit is on (set -e in bin/labdrian-overlay): a failed cd ends the run
 #
 # release_report
 #
@@ -17,6 +16,7 @@
 # running this twice in a row leaves every git ref, target file, and
 # state-file byte identical (R-001's zero-mutation scenario).
 cmd_update() {
+  # shellcheck disable=SC2164  # errexit is on (set -e in bin/labdrian-overlay): a failed cd ends the run
   cd "$OVERLAY_DIR"
 
   [[ $# -eq 0 ]] || die "Unknown option: $1"
@@ -74,6 +74,7 @@ cmd_update() {
 # target with no recorded state is reported as "never deployed" rather than
 # a stale or fabricated version (R-002).
 cmd_version() {
+  # shellcheck disable=SC2164  # errexit is on (set -e in bin/labdrian-overlay): a failed cd ends the run
   cd "$OVERLAY_DIR"
 
   [[ $# -eq 0 ]] || die "Unknown option: $1"

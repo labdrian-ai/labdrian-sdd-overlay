@@ -35,9 +35,9 @@ resolve_latest_release_tag() {
   local do_fetch="${2:-true}"
 
   if [[ "$do_fetch" == true ]] && git remote get-url origin >/dev/null 2>&1; then
-    # Bounded like every other network call this file makes (compute_repo_behind_origin,
-    # compute_repo_behind_release, cmd_self_update's main fetch): this function is now
-    # called from cmd_self_update, cmd_update, and cmd_sync_check's release_version line
+    # Bounded like every other network call of the script (compute_repo_behind_origin
+    # and compute_repo_behind_release below, the main fetch of cmd_self_update in
+    # self_update.sh): this function is now called from cmd_self_update, cmd_update, and cmd_sync_check's release_version line
     # (Slice 2), so a stalled connection here can no longer be a silent, unbounded hang.
     if command -v timeout >/dev/null 2>&1; then
       timeout 10 git -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=10 \
@@ -68,8 +68,8 @@ resolve_latest_release_tag() {
 #
 # When check_origin is "true", runs `git fetch origin` first for a live
 # comparison. Every new git invocation here is wrapped in the same
-# `if <cmd> 2>/dev/null; then ... else ...NA...; fi` guard idiom already used
-# elsewhere in this function (precedent: line ~854, `if git cat-file -e
+# `if <cmd> 2>/dev/null; then ... else ...NA...; fi` guard idiom cmd_sync_check
+# already uses (sync_check.sh: `if git cat-file -e
 # "main:${rr_repo_rel}" 2>/dev/null; then ...`), so a missing remote/ref or a
 # failed fetch degrades to NA instead of aborting the script under
 # `set -euo pipefail`.
@@ -84,7 +84,7 @@ resolve_latest_release_tag() {
 # (not stdout, so it never contaminates the count/NA value captured by
 # callers via command substitution) using the `SYNC_CHECK:(repo):` prefix --
 # "(repo)" is a deliberate, documented repo-scope marker distinct from the
-# `SYNC_CHECK:$t:` per-target prefix used elsewhere in this file (this
+# `SYNC_CHECK:$t:` per-target prefix of cmd_sync_check (sync_check.sh; this
 # comparison is repo-level, not target-scoped, and no real target name would
 # fit here). The fetch-failure branch additionally includes the first line
 # of git's own error text, so a security-relevant failure (e.g. a host-key
@@ -127,7 +127,7 @@ compute_repo_behind_origin() {
   # isn't main -- the TUI's "Actualizar repositorio" button would fast-forward
   # main for real but its own banner would never report convergence. This is
   # also the same ref cmd_sync_check's own per-file comparisons already use
-  # ("main:${rr_repo_rel}" below), so this makes the diagnostic agree with
+  # ("main:${rr_repo_rel}" in sync_check.sh), so this makes the diagnostic agree with
   # both its producer (self-update) and its sibling check (per-file drift).
   if ! git rev-parse --verify -q refs/heads/main >/dev/null 2>&1; then
     echo "SYNC_CHECK:(repo): no local 'main' branch -- REPO_BEHIND_ORIGIN unavailable" >&2

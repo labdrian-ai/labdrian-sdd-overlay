@@ -1,5 +1,4 @@
 # shellcheck shell=bash
-# shellcheck disable=SC2164  # errexit is on (set -e in bin/labdrian-overlay): a failed cd ends the run
 #
 # apply
 #
@@ -10,6 +9,7 @@
 # variables and does nothing else.
 
 cmd_apply() {
+  # shellcheck disable=SC2164  # errexit is on (set -e in bin/labdrian-overlay): a failed cd ends the run
   cd "$OVERLAY_DIR"
 
   local target_arg="all"
@@ -111,7 +111,7 @@ cmd_apply() {
     local deployed=0
     local in_sync=0
 
-    local rr_route rr_repo_rel rr_src rr_dest
+    local rr_route rr_repo_rel rr_src rr_dest src dest
     manifest_routes_load "$t"
     while IFS=$'\t' read -r _ rr_route rr_repo_rel rr_src rr_dest; do
       # D13: mcp-routed rows have no destination and would otherwise be

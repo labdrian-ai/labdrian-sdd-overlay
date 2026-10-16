@@ -1,5 +1,4 @@
 # shellcheck shell=bash
-# shellcheck disable=SC2164  # errexit is on (set -e in bin/labdrian-overlay): a failed cd ends the run
 #
 # capture
 #
@@ -10,6 +9,7 @@
 # variables and does nothing else.
 
 cmd_capture() {
+  # shellcheck disable=SC2164  # errexit is on (set -e in bin/labdrian-overlay): a failed cd ends the run
   cd "$OVERLAY_DIR"
 
   local from_backup=""
@@ -100,7 +100,7 @@ cmd_capture() {
     local cap_listing
     cap_listing="$(tar tzf "$from_backup" 2>/dev/null)"
 
-    local rr_route rr_repo_rel rr_src
+    local rr_route rr_repo_rel rr_src tar_path dest
     manifest_routes_load "$target_arg" managed
     while IFS=$'\t' read -r _ rr_route rr_repo_rel rr_src _; do
       tar_path="$(route_tar_path "$rr_route" "$rr_repo_rel")"
@@ -116,7 +116,7 @@ cmd_capture() {
     done < <(manifest_routes_rows)
   else
     info "Capturing managed files from $target_dir"
-    local rel_path rr_src rr_dest
+    local rel_path rr_src rr_dest src dest
     manifest_routes_load "$target_arg" managed
     while IFS=$'\t' read -r rel_path _ _ rr_src rr_dest; do
       # Live path for the requested target; skip if not applicable (e.g. native agent + codex)

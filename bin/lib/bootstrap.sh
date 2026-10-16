@@ -1,5 +1,4 @@
 # shellcheck shell=bash
-# shellcheck disable=SC2164  # errexit is on (set -e in bin/labdrian-overlay): a failed cd ends the run
 #
 # bootstrap
 #
@@ -9,7 +8,7 @@
 # Sourced by bin/labdrian-overlay in the order it lists, never run: it defines functions and
 # variables and does nothing else.
 
-# Known limitations (explicitly out of scope for this change, R-009):
+# Known limitations of bootstrap (left out of scope by requirement R-009):
 #   - The bootstrap init block's human-readable info echoes (dir creation) remain
 #     skills-first. They are a no-op for GADU (custom rows) and only matter for a
 #     hypothetical future managed agent row.
@@ -49,6 +48,8 @@ cmd_bootstrap() {
   if [[ ! -d "$OVERLAY_DIR/.git" ]]; then
     git init "$OVERLAY_DIR"
   fi
+
+  # shellcheck disable=SC2164  # errexit is on (set -e in bin/labdrian-overlay): a failed cd ends the run
 
   cd "$OVERLAY_DIR"
 
@@ -100,7 +101,7 @@ cmd_bootstrap() {
 
   # The destination of a row is not read here (the files go into the
   # repository); claude is only the target the engine is asked to answer for.
-  local rr_route rr_repo_rel rr_src rr_dest
+  local rr_route rr_repo_rel rr_src rr_dest tar_path dest
   manifest_routes_load claude managed
   while IFS=$'\t' read -r _ rr_route rr_repo_rel rr_src _; do
     tar_path="$(route_tar_path "$rr_route" "$rr_repo_rel")"
@@ -120,7 +121,7 @@ cmd_bootstrap() {
   test -d agents && git add agents/ || true
   test -d opencode && git add opencode/ || true
   if [[ -n "$(git status --porcelain)" ]]; then
-    git commit -m "upstream: baseline from gentle-ai 1.40.2"
+    git commit -m "upstream: baseline from gentle-ai $TARBALL_GENTLE_AI_VERSION"
   else
     info "No changes to commit on upstream (already up to date)"
   fi
@@ -130,7 +131,7 @@ cmd_bootstrap() {
 
   # 10. Copy current customized files from live targets onto main
   info "Layering customized files onto main..."
-  local rel_path
+  local rel_path src
   manifest_routes_load claude
   while IFS=$'\t' read -r rel_path _ _ rr_src rr_dest; do
     # Source from the claude live location when applicable (bootstrap layers from claude).

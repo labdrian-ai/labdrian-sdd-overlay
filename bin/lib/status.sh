@@ -1,5 +1,4 @@
 # shellcheck shell=bash
-# shellcheck disable=SC2164  # errexit is on (set -e in bin/labdrian-overlay): a failed cd ends the run
 #
 # status
 #
@@ -9,6 +8,7 @@
 # variables and does nothing else.
 
 cmd_status() {
+  # shellcheck disable=SC2164  # errexit is on (set -e in bin/labdrian-overlay): a failed cd ends the run
   cd "$OVERLAY_DIR"
 
   local target_arg="all"
@@ -53,7 +53,7 @@ cmd_status() {
       continue
     fi
 
-    local rel_path rr_src rr_dest
+    local rel_path rr_src rr_dest repo_file live_file
     manifest_routes_load "$t"
     while IFS=$'\t' read -r rel_path _ _ rr_src rr_dest; do
       # Skip if the route does not apply to this target

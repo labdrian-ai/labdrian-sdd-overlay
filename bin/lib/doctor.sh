@@ -91,8 +91,8 @@ doctor_report_registry() {
 # purpose". ensure_engine_binary heals silently on the way to running
 # something; this is the DELIBERATE repair, and until it existed the only way
 # to rebuild the engine was 'labdrian install-hooks', which also rewrites
-# ~/.claude/settings.json — a hammer for this tack, and so nobody ran it after
-# a repository update.
+# ~/.claude/settings.json — far more than a rebuild needs, and so nobody ran
+# it after a repository update.
 #
 # It never fails the run: doctor's engine-binary check is a WARN, and a repair
 # that could not happen is REPORTED as not-happened rather than claimed. That

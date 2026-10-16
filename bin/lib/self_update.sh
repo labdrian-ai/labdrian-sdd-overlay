@@ -1,5 +1,4 @@
 # shellcheck shell=bash
-# shellcheck disable=SC2164  # errexit is on (set -e in bin/labdrian-overlay): a failed cd ends the run
 #
 # self_update
 #
@@ -9,27 +8,6 @@
 # Sourced by bin/labdrian-overlay in the order it lists, never run: it defines functions and
 # variables and does nothing else.
 
-# Fast-forwards ONLY the local 'main' branch, and NEVER changes the branch
-# the caller is standing on -- see selfupdate_converge_main for how.
-#
-# This used to check main out and restore the caller's branch through an EXIT
-# trap. The restore was silenced with `|| true`, so when it failed the
-# operator was left standing on main with nothing saying so; they kept working
-# and committed there. That is the divergence this was reported for. The
-# checkout is gone: off main the ref is moved on its own, so there is nothing
-# to restore and no window in which an interruption can strand anyone.
-#
-# Every refusal (no origin, dirty tree, local-ahead divergence) still fires
-# BEFORE anything is fetched or moved, and every refusal now names the branch
-# the caller is on. Flagless: this signal is repo-level, not target-scoped.
-#
-# R-004 (MODIFIED): once at least one release tag exists anywhere, main
-# converges to the highest semver-ordered release tag reachable from
-# origin/main -- NEVER to origin/main's raw HEAD, which may carry untagged
-# commits beyond the latest tag. D1's pre-first-tag bootstrap keeps the
-# original origin/main-HEAD convergence verbatim (legacy path below) until
-# the very first release tag is cut, so every zero-tag caller keeps its
-# exact documented behavior.
 # selfupdate_converge_main <target_commit> [<label suffix>]
 #
 # Fast-forwards local main to <target_commit> WITHOUT ever leaving the branch
@@ -93,7 +71,29 @@ selfupdate_converge_main() {
   info "main is now at ${new_main:0:12}; you are on '$current_branch' (working tree untouched)"
 }
 
+# cmd_self_update fast-forwards ONLY the local 'main' branch, and NEVER changes the branch
+# the caller is standing on -- see selfupdate_converge_main for how.
+#
+# This used to check main out and restore the caller's branch through an EXIT
+# trap. The restore was silenced with `|| true`, so when it failed the
+# operator was left standing on main with nothing saying so; they kept working
+# and committed there. That is the divergence this was reported for. The
+# checkout is gone: off main the ref is moved on its own, so there is nothing
+# to restore and no window in which an interruption can strand anyone.
+#
+# Every refusal (no origin, dirty tree, local-ahead divergence) still fires
+# BEFORE anything is fetched or moved, and every refusal now names the branch
+# the caller is on. Flagless: this signal is repo-level, not target-scoped.
+#
+# R-004 (MODIFIED): once at least one release tag exists anywhere, main
+# converges to the highest semver-ordered release tag reachable from
+# origin/main -- NEVER to origin/main's raw HEAD, which may carry untagged
+# commits beyond the latest tag. D1's pre-first-tag bootstrap keeps the
+# original origin/main-HEAD convergence verbatim (legacy path below) until
+# the very first release tag is cut, so every zero-tag caller keeps its
+# exact documented behavior.
 cmd_self_update() {
+  # shellcheck disable=SC2164  # errexit is on (set -e in bin/labdrian-overlay): a failed cd ends the run
   cd "$OVERLAY_DIR"
 
   [[ $# -eq 0 ]] || die "Unknown option: $1"

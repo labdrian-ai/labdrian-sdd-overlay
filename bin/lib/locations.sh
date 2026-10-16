@@ -11,6 +11,9 @@
 # variables and does nothing else.
 
 TARBALL="$HOME/.gentle-ai/backups/upgrade-20260615T175529Z/snapshot.tar.gz"
+# The gentle-ai version the snapshot at TARBALL was taken from: bootstrap names it in the upstream
+# baseline commit, so the two change together.
+TARBALL_GENTLE_AI_VERSION="1.40.2"
 MANIFEST="${MANIFEST:-"$OVERLAY_DIR/overlay.manifest"}"
 
 # Home-scoped per design decision D3: state describes deployments under
