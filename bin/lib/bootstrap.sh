@@ -50,7 +50,6 @@ cmd_bootstrap() {
   fi
 
   # shellcheck disable=SC2164  # errexit is on (set -e in bin/labdrian-overlay): a failed cd ends the run
-
   cd "$OVERLAY_DIR"
 
   # 2. Ensure all required directories exist

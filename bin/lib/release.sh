@@ -37,8 +37,9 @@ resolve_latest_release_tag() {
   if [[ "$do_fetch" == true ]] && git remote get-url origin >/dev/null 2>&1; then
     # Bounded like every other network call of the script (compute_repo_behind_origin
     # and compute_repo_behind_release below, the main fetch of cmd_self_update in
-    # self_update.sh): this function is now called from cmd_self_update, cmd_update, and cmd_sync_check's release_version line
-    # (Slice 2), so a stalled connection here can no longer be a silent, unbounded hang.
+    # self_update.sh): this function is now called from cmd_self_update, cmd_update,
+    # and cmd_sync_check's release_version line (Slice 2), so a stalled connection
+    # here can no longer be a silent, unbounded hang.
     if command -v timeout >/dev/null 2>&1; then
       timeout 10 git -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=10 \
         fetch origin '+refs/tags/v*:refs/tags/v*' >/dev/null 2>&1 || true
@@ -127,8 +128,9 @@ compute_repo_behind_origin() {
   # isn't main -- the TUI's "Actualizar repositorio" button would fast-forward
   # main for real but its own banner would never report convergence. This is
   # also the same ref cmd_sync_check's own per-file comparisons already use
-  # ("main:${rr_repo_rel}" in sync_check.sh), so this makes the diagnostic agree with
-  # both its producer (self-update) and its sibling check (per-file drift).
+  # ("main:${rr_repo_rel}" in sync_check.sh), so this makes the diagnostic
+  # agree with both its producer (self-update) and its sibling check (per-file
+  # drift).
   if ! git rev-parse --verify -q refs/heads/main >/dev/null 2>&1; then
     echo "SYNC_CHECK:(repo): no local 'main' branch -- REPO_BEHIND_ORIGIN unavailable" >&2
     echo "NA"

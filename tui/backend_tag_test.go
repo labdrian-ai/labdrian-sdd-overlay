@@ -71,14 +71,12 @@ func tuiCommands(workflow string) []string {
 	lines := strings.Split(workflow, "\n")
 	for i := 0; i < len(lines); i++ {
 		line := lines[i]
-		trimmed := strings.TrimSpace(line)
-		indent := len(line) - len(strings.TrimLeft(line, " "))
-		if indent == 2 && trimmed != "" || strings.HasPrefix(trimmed, "- ") {
+		entry, column, startsItem := yamlEntry(line)
+		startsJob := indentOf(line) == 2 && entry != ""
+		if startsJob || startsItem {
 			flush()
-			trimmed = strings.TrimSpace(strings.TrimPrefix(trimmed, "- "))
-			indent = len(line) - len(strings.TrimLeft(strings.TrimPrefix(strings.TrimLeft(line, " "), "- "), " "))
 		}
-		key, value, ok := strings.Cut(trimmed, ":")
+		key, value, ok := strings.Cut(entry, ":")
 		if !ok {
 			continue
 		}
@@ -93,7 +91,7 @@ func tuiCommands(workflow string) []string {
 			}
 			for i+1 < len(lines) {
 				next := lines[i+1]
-				if strings.TrimSpace(next) != "" && len(next)-len(strings.TrimLeft(next, " ")) <= indent {
+				if strings.TrimSpace(next) != "" && indentOf(next) <= column {
 					break
 				}
 				i++
@@ -105,6 +103,22 @@ func tuiCommands(workflow string) []string {
 	}
 	flush()
 	return commands
+}
+
+// indentOf is the number of spaces a line begins with.
+func indentOf(line string) int {
+	return len(line) - len(strings.TrimLeft(line, " "))
+}
+
+// yamlEntry reads one line of the workflow: the entry it holds (the line without its indentation and,
+// for the first line of a list item, without the "- " that begins the item), the column at which that
+// entry begins, and whether the line begins a list item, as the first line of a step does.
+func yamlEntry(line string) (entry string, column int, startsItem bool) {
+	rest := strings.TrimLeft(line, " ")
+	if item, ok := strings.CutPrefix(rest, "- "); ok {
+		rest, startsItem = strings.TrimLeft(item, " "), true
+	}
+	return strings.TrimSpace(rest), len(line) - len(rest), startsItem
 }
 
 // testFileReader is the kind of a command that builds or analyses test files: "vet", "test" or

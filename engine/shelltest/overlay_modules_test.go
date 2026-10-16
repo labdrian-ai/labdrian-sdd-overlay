@@ -355,3 +355,26 @@ func TestWorkflowRunsReadsSingleLineAndBlockRuns(t *testing.T) {
 		t.Errorf("workflowRuns = %q, want %q", got, want)
 	}
 }
+
+// The snapshot bootstrap extracts (TARBALL) and the gentle-ai version it names in the upstream baseline
+// commit (TARBALL_GENTLE_AI_VERSION) are two values of locations.sh that only a person can keep in step:
+// the version is a fact about the file, which no test can read. So the pair is held here, and a change to
+// either fails until whoever made it checks the other and writes the new pair below.
+func TestTheBaselineSnapshotAndItsGentleAIVersionChangeTogether(t *testing.T) {
+	data, err := os.ReadFile(filepath.Join(overlaytest.RepoRoot(t), "bin", "lib", "locations.sh"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	value := func(name string) string {
+		m := regexp.MustCompile(`(?m)^` + name + `="([^"]*)"$`).FindStringSubmatch(string(data))
+		if m == nil {
+			t.Fatalf("locations.sh does not assign %s on a line of its own", name)
+		}
+		return m[1]
+	}
+	got := [2]string{value("TARBALL"), value("TARBALL_GENTLE_AI_VERSION")}
+	want := [2]string{"$HOME/.gentle-ai/backups/upgrade-20260615T175529Z/snapshot.tar.gz", "1.40.2"}
+	if got != want {
+		t.Errorf("the baseline snapshot and its version are %q, want %q: when one changes, check that the other still describes it, then write the new pair here", got, want)
+	}
+}
