@@ -183,17 +183,8 @@ func replaceBlock(registry, newBlock, beginMarker, endMarker string) string {
 // given contract label that is NOT inside any marker block (neither ours nor a
 // foreign one).
 func hasUnscopedRow(registry, label string) bool {
-	lines := strings.Split(registry, "\n")
-	inAnyBlock := false
-	for _, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		if strings.HasPrefix(trimmed, beginMarkerPrefix) {
-			inAnyBlock = true
-		}
-		if strings.HasPrefix(trimmed, endMarkerPrefix) {
-			inAnyBlock = false
-		}
-		if !inAnyBlock && isContractRow(line, label) {
+	for scan := newLineScanner(strings.Split(registry, "\n")); scan.Next(); {
+		if line := scan.Line(); !line.InBlock && isContractRow(line.Text, label) {
 			return true
 		}
 	}
@@ -223,28 +214,20 @@ func isContractRow(line, label string) bool {
 	return false
 }
 
-// replaceUnscopedRow replaces the first unscoped table row for the given label
-// (one that is NOT inside any marker block) with the new marker block.
-// Rows inside any marker block (foreign or ours) are left untouched.
+// replaceUnscopedRow replaces every unscoped table row for the given label
+// (one that is NOT inside any marker block) with the new marker block, each
+// by a whole block. Rows inside any marker block (foreign or ours) are left
+// untouched.
 func replaceUnscopedRow(registry, newBlock, label string) string {
 	lines := strings.Split(registry, "\n")
-	inAnyBlock := false
-	var out []string
-	for _, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		if strings.HasPrefix(trimmed, beginMarkerPrefix) {
-			inAnyBlock = true
-		}
-		if strings.HasPrefix(trimmed, endMarkerPrefix) {
-			inAnyBlock = false
-			out = append(out, line)
-			continue
-		}
-		if !inAnyBlock && isContractRow(line, label) {
+	out := make([]string, 0, len(lines))
+	for scan := newLineScanner(lines); scan.Next(); {
+		line := scan.Line()
+		if !line.InBlock && isContractRow(line.Text, label) {
 			out = append(out, newBlock)
 			continue
 		}
-		out = append(out, line)
+		out = append(out, line.Text)
 	}
 	return strings.Join(out, "\n")
 }
@@ -260,38 +243,32 @@ func appendToSharedContracts(registry, newBlock string) string {
 	// bare table row in that section (skipping rows inside any marker block).
 	lines := strings.Split(registry, "\n")
 	inSharedContracts := false
-	inAnyMarkerBlock := false
 	lastTableRowIdx := -1
 
-	for i, line := range lines {
-		trimmed := strings.TrimSpace(line)
+	for scan := newLineScanner(lines); scan.Next(); {
+		line := scan.Line()
 
-		// Track entry/exit of ANY marker block (foreign or ours).
-		if strings.HasPrefix(trimmed, beginMarkerPrefix) {
-			inAnyMarkerBlock = true
-		}
-		if strings.HasPrefix(trimmed, endMarkerPrefix) {
-			inAnyMarkerBlock = false
+		if line.Closes {
 			// Record the END marker line itself as the last known position so
 			// we can insert after a closing marker that follows a section table.
 			if inSharedContracts {
-				lastTableRowIdx = i
+				lastTableRowIdx = line.Index
 			}
 			continue
 		}
 
-		if strings.HasPrefix(trimmed, sharedContractsHeader) {
+		if strings.HasPrefix(line.Trimmed, sharedContractsHeader) {
 			inSharedContracts = true
 		}
-		if inSharedContracts && !inAnyMarkerBlock {
-			if strings.HasPrefix(trimmed, "|") {
-				lastTableRowIdx = i
-			}
-			// Stop at the next section heading (after we've entered Shared Contracts).
-			if i > 0 && strings.HasPrefix(trimmed, "#") &&
-				!strings.HasPrefix(trimmed, sharedContractsHeader) {
-				break
-			}
+		if !inSharedContracts || line.InBlock {
+			continue
+		}
+		if strings.HasPrefix(line.Trimmed, "|") {
+			lastTableRowIdx = line.Index
+		}
+		// Stop at the next section heading (after we've entered Shared Contracts).
+		if strings.HasPrefix(line.Trimmed, "#") && !strings.HasPrefix(line.Trimmed, sharedContractsHeader) {
+			break
 		}
 	}
 
