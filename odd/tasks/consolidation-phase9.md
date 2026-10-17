@@ -53,7 +53,7 @@ Wave 2 — engine, hooks, ports:
 
 Wave 2b — end-to-end memory wiring (added 2026-10-16 at the owner's request, "lo que si tenemos que agregar que noe sta por ningun lado es el wiring de la memoria ... y lo que no hayamos pensado de esto"; gap analysis in Engram #4133, G1–G15; runs after Phase I and before Wave 4):
 - [ ] C23 — Wire Engram, longterm-mem and procedural memory end to end, so that the memory plan is executed and not only computed. Units:
-  - [ ] M1 — ADR: the mapping from plan sources to tools and the goal filter; the owner decides each source mapping, one question at a time.
+  - [x] M1 — ADR: the mapping from plan sources to tools and the goal filter; the owner decides each source mapping, one question at a time. Done in batch 52 (the owner's five decisions of 2026-10-16/17). ADR: docs/architecture/adr-c23-m1-memory-sources.md.
   - [ ] M2 — One shared project identity for the workflow, Engram and longterm-mem (G7).
   - [ ] M3 — Goal and handoff narrowers stored in the workflow log and the handoffs (G6).
   - [ ] M4 — The memory gate enforces the plan's sources and covers Engram, `get` and `promote` (G3, G5).
