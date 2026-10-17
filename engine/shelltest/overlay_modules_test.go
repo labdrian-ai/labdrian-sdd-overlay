@@ -368,7 +368,7 @@ func TestTheBaselineSnapshotAndItsGentleAIVersionChangeTogether(t *testing.T) {
 	value := func(name string) string {
 		m := regexp.MustCompile(`(?m)^` + name + `="([^"]*)"$`).FindStringSubmatch(string(data))
 		if m == nil {
-			t.Fatalf("locations.sh does not assign %s on a line of its own", name)
+			t.Fatalf("locations.sh does not assign %s as a line of its own of the form %s=\"...\" (double quotes, nothing after the closing quote); this test reads that format, so if the assignment was reformatted on purpose, update the pattern in this test", name, name)
 		}
 		return m[1]
 	}
