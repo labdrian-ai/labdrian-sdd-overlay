@@ -105,7 +105,9 @@ code as it stands; it is not a quotation of the owner's reasons.
   with no identity. A log written now carries `project_identity`, and an older engine refuses it,
   because it reads only the fields it knows.
 - **`workflow create` warns, not refuses, when the identity cannot be resolved** (a broken `.git`
-  pointer, a declared file that is not one line). It records no identity, and the gate treats the
+  pointer, a declared file that is not one line) **or cannot be recorded** (a name the log refuses,
+  such as one with a control character or over 512 runes; `workflow.ValidateProjectIdentity`, checked
+  in `engine/cmd/workflow.go` before `Create`). It records no identity, and the gate treats the
   workflow as one created before M2. This keeps create working in every layout it worked in before;
   decision 5 is the only new refusal. This is an implementation choice of batch 53, not an owner
   decision (accepted by the coordinator on 2026-10-18): the owner's decisions say what create
@@ -135,11 +137,16 @@ code as it stands; it is not a quotation of the owner's reasons.
   but `identity/gitfs` reads the file system, so a guard fails when any longterm-mem package other
   than `internal/projectidfs` (and the composition root) imports it
   (`longterm-mem/projectidfs_adapter_guard_test.go:40`). archguard is unchanged.
-- **Left open, outside batch 53's edit surface.** `longterm-mem/README.md:108` and the package
-  comment of `longterm-mem/internal/identityledger/ledger.go:6` still describe the common-dir
-  realpath as the last rule of the chain. `skills-stale` of a root in no repository with no
-  `--project` now acts on the directory's name and reports the missing lock (exit 1) instead of
-  refusing (exit 2), as decision 4 implies.
+- **Other visible changes.** `skills-stale` of a root in no repository with no `--project` now acts
+  on the directory's name and reports the missing lock (exit 1) instead of refusing (exit 2), as
+  decision 4 implies. `skills install` in a repository whose `.longterm-mem-project` is not one line
+  now fails (exit 1) even with an origin, since the declared file comes first (decision 1). The
+  identity ledger of a repository with a remote also records its directory name, as a loose entry
+  that is never adopted (decision 6). The `longterm-mem` README and the package comment of
+  `internal/identityledger` describe the shared chain.
+- **Left open.** `engine/gitfs/locator.go` and `engine/gitprov/gitprov.go` still read `gitdir:` and
+  `commondir` on their own, for the binding's repository key and for provenance, not for the
+  project identity; this predates batch 53.
 - **Accepted costs.** A repository that declares nothing and has no origin changes name in
   longterm-mem once, from the common dir's realpath to the directory's name (memory stored under
   the realpath stays reachable through adoption); after a rename it starts a new identity unless
