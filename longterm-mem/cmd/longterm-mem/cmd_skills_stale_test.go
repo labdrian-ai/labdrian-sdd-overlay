@@ -23,6 +23,27 @@ func TestRun_DispatchesSkillsStaleSubcommand(t *testing.T) {
 	}
 }
 
+// Since C23 M2 (decision 4) a root in no git repository has a project, its directory's name, so
+// skills-stale with no --project no longer refuses there for want of one (it was exit 2, "--project
+// is required when the project root cannot be resolved"): it goes on to the memory it checks, here
+// an Engram that cannot be opened (exit 4). With an Engram and no lock, the golden
+// project-identity-73 pins the missing lock (exit 1).
+func TestCmdSkillsStale_ARootInNoRepositoryIsNamedByItsDirectory(t *testing.T) {
+	root := t.TempDir()
+	t.Setenv(engramDBEnvVar, filepath.Join(t.TempDir(), "missing-engram.db"))
+
+	var exit int
+	stderr := captureStderr(t, func() {
+		exit = run([]string{"skills-stale", "--project-root", root})
+	})
+	if exit != exitEngramUnavailable {
+		t.Fatalf("skills-stale of a root in no repository = %d, want %d (it reaches Engram, not a refusal for want of a project)", exit, exitEngramUnavailable)
+	}
+	if strings.Contains(stderr, "--project is required") || !strings.Contains(stderr, "engram:") {
+		t.Fatalf("stderr = %q, want Engram's failure and no demand for --project", stderr)
+	}
+}
+
 func TestCmdSkillsStale_RequiresAbsoluteProjectRoot(t *testing.T) {
 	var exit int
 	stderr := captureStderr(t, func() {

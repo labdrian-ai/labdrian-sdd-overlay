@@ -18,6 +18,9 @@ type RepositoryInspector = resolve.Repositories
 // Resolver applies the shared identity rules to the repositories its inspector answers for, and adds what this
 // module needs on top of them: the correspondence of a given name, and adoption.
 type Resolver struct {
+	// repositories answers only CommonDir: where a repository's git common directory is, a question
+	// the shared rules never ask on a caller's behalf. Everything that names a project goes through
+	// rules, so the chain's order is decided in one place.
 	repositories RepositoryInspector
 	rules        resolve.Resolver
 }

@@ -77,11 +77,16 @@ func (r Resolver) AdoptWith(dir string, opts AdoptOptions) (Adoption, error) {
 		return Adoption{}, err
 	}
 	canonical := identityOf(resolved.Repository, resolved.Project, ruleOf(resolved.Source))
-	derived := []DerivedName{{Name: canonical.Project, Rule: canonical.Rule, Strict: false}}
+	// In a repository every name it derives is a candidate, which reads its declaration and its
+	// configuration a second time (a read that fails now fails adoption, never a silent rename).
+	// Outside one, the directory's name is the one name there is.
+	var derived []DerivedName
 	if resolved.InRepository {
 		if derived, err = r.derivableNames(resolved.Repository); err != nil {
 			return Adoption{}, err
 		}
+	} else {
+		derived = []DerivedName{{Name: canonical.Project, Rule: canonical.Rule, Strict: false}}
 	}
 	repo := resolved.Repository
 
