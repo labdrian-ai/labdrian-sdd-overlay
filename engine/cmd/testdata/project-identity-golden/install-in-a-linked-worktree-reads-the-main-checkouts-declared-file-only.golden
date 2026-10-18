@@ -1,0 +1,21 @@
+# the main checkout declares chosen, the worktree's own file says stranger: the worktree is chosen
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in feature-x)
+exit: 0
+--- stdout ---
+installed: by-choice
+--- stderr ---
+
+--- tree of feature-x ---
+.agents/
+.agents/skills/
+.agents/skills/by-choice/
+.agents/skills/by-choice/SKILL.md
+.claude/
+.claude/skills/
+.claude/skills/by-choice/
+.claude/skills/by-choice/SKILL.md
+.git
+.labdrian/
+.labdrian/procedural-skills.lock.json
+.longterm-mem-project
+

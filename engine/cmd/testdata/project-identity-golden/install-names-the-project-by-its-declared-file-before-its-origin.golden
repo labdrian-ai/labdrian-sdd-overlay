@@ -1,0 +1,30 @@
+# a repository named demo whose origin is github.com/acme/demo and whose declared file says chosen: the skill admitted to chosen
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 0
+--- stdout ---
+installed: by-choice
+--- stderr ---
+
+--- tree of demo ---
+.agents/
+.agents/skills/
+.agents/skills/by-choice/
+.agents/skills/by-choice/SKILL.md (296 bytes)
+.claude/
+.claude/skills/
+.claude/skills/by-choice/
+.claude/skills/by-choice/SKILL.md (296 bytes)
+.git/
+.git/HEAD (21 bytes)
+.git/config (135 bytes)
+.labdrian/
+.labdrian/procedural-skills.lock.json (255 bytes)
+.longterm-mem-project (7 bytes)
+
+# and --project-id still comes first
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills --project-id demo (in demo)
+exit: 0
+--- stdout ---
+installed: by-directory
+--- stderr ---
+

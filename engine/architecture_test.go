@@ -47,11 +47,10 @@ import (
 //   - skills/app holds the use cases of `engine skills` (H20): typed inputs and results over the
 //     ports of the skills domain, no argument vector, no printing, no exit. The command line and
 //     the words a person reads are the CLI adapter in cmd.
-//   - skills/projectidentity is the adapter of the skills domain's ProjectIdentity port (H18): the
-//     sources that name the project a directory is (the id the person gave, the origin remote read
-//     from .git/config without running git, the name of the directory) and the chain that asks them
-//     in order. The rule that reduces a remote url to a name is the identity module's, shared with
-//     longterm-mem (D2); the order of the chain is the composition root's.
+//   - skills/projectidentity is the adapter of the skills domain's ProjectIdentity port (H18): it
+//     asks the shared resolver of the identity module (identity/resolve, C23 M2), whose chain and
+//     disk adapter (identity/gitfs) are shared with longterm-mem; the composition root hands it the
+//     adapter.
 //   - execrunner is the adapter of the CommandRunner port the Pi adapter owns (H24): it looks a
 //     program up on the PATH and runs it with a fixed argument vector and a deadline. It is
 //     the one place in the module that starts the CLI of a runtime.
