@@ -72,6 +72,8 @@ func tuiCommands(workflow string) []string {
 	for i := 0; i < len(lines); i++ {
 		line := lines[i]
 		entry, column, startsItem := yamlEntry(line)
+		// A job key (a line indented by two spaces) and a list item each end the current step: the
+		// first because the next job's steps are not this step's, the second because a new step begins.
 		startsJob := indentOf(line) == 2 && entry != ""
 		if startsJob || startsItem {
 			flush()
@@ -203,13 +205,23 @@ func TestTuiCommandsReadsEveryLayoutOfAStep(t *testing.T) {
 		"      - name: Other directory",
 		"        working-directory: engine",
 		"        run: go test ./...",
+		// The block scalar begins on the line of the list item itself, so the column of the key is
+		// the column after "- ", and the key that follows the block (working-directory) sits at that
+		// column, which ends the scalar.
+		"      - run: |",
+		"          go test -tags backend ./...",
+		"          go build ./...",
+		"        working-directory: tui",
 		"  other-job:",
 		"    working-directory: tui",
 		"    steps:",
 		"      - run: go test ./other",
 	}, "\n")
 	got := tuiCommands(workflow)
-	want := []string{"go vet ./...", "go test ./...", "echo one", "go run honnef.co/go/tools/cmd/staticcheck@v0.7.0 ./..."}
+	want := []string{
+		"go vet ./...", "go test ./...", "echo one", "go run honnef.co/go/tools/cmd/staticcheck@v0.7.0 ./...",
+		"go test -tags backend ./...", "go build ./...",
+	}
 	if !slices.Equal(got, want) {
 		t.Errorf("tuiCommands = %q, want %q", got, want)
 	}
