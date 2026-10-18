@@ -234,15 +234,16 @@ func runWorkflowCreate(d deps, args []string, cwd string, stdout, stderr io.Writ
 	// recorded with no identity at all is one created before M2, which the gate allows unchecked,
 	// and a workflow created now must not get that lifelong pass from a repository it could not read.
 	// That is said in one line.
-	identity, err := sharedProjectRules("").Resolve(cwd, "")
+	resolved, err := sharedProjectRules("").Resolve(cwd, "")
+	projectIdentity := resolved.Project
 	if err == nil {
-		err = workflow.ValidateProjectIdentity(identity.Project)
+		err = workflow.ValidateProjectIdentity(projectIdentity)
 	}
 	if err != nil {
-		identity.Project = o.project
+		projectIdentity = o.project
 		fmt.Fprintf(stderr, "warning: workflow create: the project identity could not be resolved (%s), so the workflow records its slug, %s, as its identity\n", strings.NewReplacer("\n", " ", "\r", " ").Replace(err.Error()), o.project)
 	}
-	state, err := lc.Create(o.project, o.workflowID, identity.Project, g, o.profile, o.roleChain)
+	state, err := lc.Create(o.project, o.workflowID, projectIdentity, g, o.profile, o.roleChain)
 	if err != nil {
 		fmt.Fprintf(stderr, "error: workflow create: %v\n", err)
 		exit(2)

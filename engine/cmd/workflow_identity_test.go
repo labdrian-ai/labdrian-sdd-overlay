@@ -115,8 +115,8 @@ func TestWorkflowCreateRefusesAGoalOfAnotherProject(t *testing.T) {
 }
 
 // create never needed a repository it can read, and still does not: in one the shared resolver
-// cannot read, it creates the workflow as before, records no identity (an unknown, which the gate
-// allows) and says so in one line.
+// cannot read, it creates the workflow as before, records its slug as its identity (what the gate
+// checked before C23 M2, not the unchecked pass of a workflow with none) and says so in one line.
 func TestWorkflowCreateStillCreatesWhenTheProjectIdentityCannotBeResolved(t *testing.T) {
 	workflowTestStateHome(t)
 	dir := t.TempDir()
@@ -143,7 +143,8 @@ func TestWorkflowCreateStillCreatesWhenTheProjectIdentityCannotBeResolved(t *tes
 
 // An identity the resolver gives but a workflow log cannot hold (here a directory name with a tab,
 // which the directory rule answers outside git) is treated like one that cannot be resolved: create
-// still creates, records none and says so in one line. Decision 5 stays its only new refusal.
+// still creates, records its slug as its identity and says so in one line. Decision 5 stays its
+// only new refusal.
 func TestWorkflowCreateStillCreatesWhenTheProjectIdentityCannotBeRecorded(t *testing.T) {
 	workflowTestStateHome(t)
 	dir := t.TempDir()
