@@ -69,22 +69,34 @@ func (g Repositories) Locate(dir string) (resolve.Repository, error) {
 			if err != nil {
 				return resolve.Repository{}, err
 			}
-			main := cur
-			if linked {
-				main = filepath.Dir(common)
-			}
-			return resolve.Repository{WorktreeRoot: cur, MainWorktreeRoot: main, CommonDir: common}, nil
+			return resolve.Repository{WorktreeRoot: cur, MainWorktreeRoot: mainCheckoutOf(cur, common, linked), CommonDir: common}, nil
 		case !os.IsNotExist(err):
 			// The search goes through every directory above dir, so the one it names is the one that
 			// stopped it. Naming the project is the way past it: the rules ask the explicit id first and
 			// then never look.
-			return resolve.Repository{}, fmt.Errorf("cannot look for a git repository in %s (%w)%s", cur, unwrapPathError(err), g.wayOn(" without looking"))
+			return resolve.Repository{}, fmt.Errorf("cannot look for a git repository in %s (%w)%s", cur, unwrapPathError(err), g.wayOnWithoutLooking())
 		}
 		parent := filepath.Dir(cur)
 		if parent == cur {
 			return resolve.Repository{}, fmt.Errorf("%w: %s", resolve.ErrNotARepository, start)
 		}
 		cur = parent
+	}
+}
+
+// mainCheckoutOf is the main checkout of the worktree at root, whose common directory is common. A
+// worktree that is not linked is its own. A linked worktree's is the directory its common .git
+// directory sits in; when the common directory is not a .git directory (a bare repository, which
+// has no checkout), the repository is that directory itself, so it is not named by whatever
+// directory it happens to sit in.
+func mainCheckoutOf(root, common string, linked bool) string {
+	switch {
+	case !linked:
+		return root
+	case filepath.Base(common) != ".git":
+		return common
+	default:
+		return filepath.Dir(common)
 	}
 }
 
@@ -162,23 +174,32 @@ func (g Repositories) requireGitDir(pointerFile, dir string) error {
 	info, err := g.stat(filepath.Join(dir, "HEAD"))
 	switch {
 	case err == nil && info.IsDir():
-		return fmt.Errorf("%s points to %s, which is not a git directory (its HEAD is a directory)%s", pointerFile, dir, g.wayOn(""))
+		return fmt.Errorf("%s points to %s, which is not a git directory (its HEAD is a directory)%s", pointerFile, dir, g.wayOn())
 	case err == nil:
 		return nil
 	case os.IsNotExist(err):
-		return fmt.Errorf("%s points to %s, which is not a git directory (it has no HEAD; was the worktree or the repository moved or removed?)%s", pointerFile, dir, g.wayOn(""))
+		return fmt.Errorf("%s points to %s, which is not a git directory (it has no HEAD; was the worktree or the repository moved or removed?)%s", pointerFile, dir, g.wayOn())
 	default:
-		return fmt.Errorf("%s points to %s, whose HEAD cannot be looked at (%w)%s", pointerFile, dir, unwrapPathError(err), g.wayOn(""))
+		return fmt.Errorf("%s points to %s, whose HEAD cannot be looked at (%w)%s", pointerFile, dir, unwrapPathError(err), g.wayOn())
 	}
 }
 
-// wayOn is how a refusal ends: the project can be named without looking, through the caller's
-// flag. It is empty when the caller has none.
-func (g Repositories) wayOn(suffix string) string {
+// wayOn is how a refusal ends: the project can be named through the caller's flag. It is empty
+// when the caller has none.
+func (g Repositories) wayOn() string {
 	if g.ExplicitFlag == "" {
 		return ""
 	}
-	return "; give " + g.ExplicitFlag + " to name the project" + suffix
+	return "; give " + g.ExplicitFlag + " to name the project"
+}
+
+// wayOnWithoutLooking is wayOn for a refusal that came of looking: the flag names the project
+// without looking.
+func (g Repositories) wayOnWithoutLooking() string {
+	if way := g.wayOn(); way != "" {
+		return way + " without looking"
+	}
+	return ""
 }
 
 // canonical makes p absolute, clean and symlink-free. Where the links cannot be resolved (a

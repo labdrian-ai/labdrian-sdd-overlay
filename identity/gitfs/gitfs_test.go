@@ -242,6 +242,31 @@ func TestASubmoduleIsItsOwnMainCheckout(t *testing.T) {
 	}
 }
 
+// A linked worktree of a bare repository has no main checkout: its common directory is the bare
+// repository itself, not a .git directory inside one. The repository is then that directory, so
+// with no origin it is named by it, not by the directory the bare repository happens to sit in.
+func TestALinkedWorktreeOfABareRepositoryIsNamedByTheRepository(t *testing.T) {
+	base := t.TempDir()
+	bare := filepath.Join(base, "demo.git")
+	put(t, filepath.Join(bare, "HEAD"), "ref: refs/heads/main\n")
+	put(t, filepath.Join(bare, "config"), "[core]\n\tbare = true\n")
+	gitDir := filepath.Join(bare, "worktrees", "wt")
+	put(t, filepath.Join(gitDir, "HEAD"), "ref: refs/heads/wt\n")
+	put(t, filepath.Join(gitDir, "commondir"), "../..\n")
+	wt := filepath.Join(base, "wt")
+	put(t, filepath.Join(wt, ".git"), "gitdir: "+gitDir+"\n")
+
+	got, err := gitfs.Repositories{}.Locate(wt)
+
+	want := resolve.Repository{WorktreeRoot: realpath(t, wt), MainWorktreeRoot: realpath(t, bare), CommonDir: realpath(t, bare)}
+	if err != nil || got != want {
+		t.Errorf("Locate = %+v, %v; want %+v", got, err, want)
+	}
+	if id := resolveIn(t, wt); id.Project != "demo.git" {
+		t.Errorf("Resolve for a worktree of a bare repository with no origin = %q, want demo.git", id.Project)
+	}
+}
+
 func TestNoOriginFallsThroughToTheDirectory(t *testing.T) {
 	noOrigin := mainCheckout(t, "[core]\n\tbare = false\n")
 	localOrigin := mainCheckout(t, originConfig("/srv/git/demo.git"))
