@@ -44,9 +44,9 @@ func (f *fakeRepositories) DeclaredProject(root string) (string, bool, error) {
 	return text, ok, nil
 }
 
-func (f *fakeRepositories) GitConfig(commonDir string) string {
+func (f *fakeRepositories) GitConfig(commonDir string) (string, error) {
 	f.configRead = append(f.configRead, commonDir)
-	return f.configs[commonDir]
+	return f.configs[commonDir], nil
 }
 
 // originConfig is the text of a git configuration that names url as origin.

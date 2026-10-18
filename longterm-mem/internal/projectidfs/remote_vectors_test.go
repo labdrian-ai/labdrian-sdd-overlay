@@ -53,8 +53,8 @@ func TestResolve_EveryOriginConfigVectorGivesTheRecordedIdentity(t *testing.T) {
 		t.Run(strings.ReplaceAll(v.Config, "\n", "|"), func(t *testing.T) {
 			id := resolve(t, repositoryWithConfig(t, v.Config))
 			if v.Want == "" {
-				if id.Rule != projectid.RuleCommonDir {
-					t.Errorf("config %q resolved by rule %q to %q, want the common dir rule: it names no origin to key on", v.Config, id.Rule, id.Project)
+				if id.Rule != projectid.RuleDirectory || id.Project != "repo" {
+					t.Errorf("config %q resolved by rule %q to %q, want the directory rule (\"repo\"): it names no origin to key on", v.Config, id.Rule, id.Project)
 				}
 				return
 			}
@@ -79,8 +79,8 @@ func TestResolve_EveryRemoteVectorGivesTheRecordedIdentity(t *testing.T) {
 		t.Run(v.URL, func(t *testing.T) {
 			id := resolve(t, repositoryWithConfig(t, "[remote \"origin\"]\n\turl = "+v.URL+"\n"))
 			if v.Want == "" {
-				if id.Rule != projectid.RuleCommonDir {
-					t.Errorf("remote %q resolved by rule %q to %q, want the common dir rule: it has no host to key on", v.URL, id.Rule, id.Project)
+				if id.Rule != projectid.RuleDirectory || id.Project != "repo" {
+					t.Errorf("remote %q resolved by rule %q to %q, want the directory rule (\"repo\"): it has no host to key on", v.URL, id.Rule, id.Project)
 				}
 				return
 			}

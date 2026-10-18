@@ -38,7 +38,7 @@ func (i inspector) DeclaredProject(root string) (string, bool, error) {
 	return i.declaration, i.declaration != "", nil
 }
 
-func (i inspector) GitConfig(string) string { return i.config }
+func (i inspector) GitConfig(string) (string, error) { return i.config, nil }
 
 const widgetsOrigin = "[remote \"origin\"]\n\turl = https://github.com/acme/widgets.git\n"
 
@@ -176,8 +176,9 @@ func TestAdopt_OnlyTheAdoptableNamesOfTheLedgerAreRemembered(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Derived names first, remembered ones after, in the ledger's order: storage was asked about each once.
-	want := []string{common, "widgets", "newest", "oldest"}
+	// Derived names first (the main checkout's name, then the realpath of the common directory, C23 M2),
+	// remembered ones after, in the ledger's order: storage was asked about each once.
+	want := []string{"widgets", common, "newest", "oldest"}
 	if !reflect.DeepEqual(s.askedFor, want) {
 		t.Errorf("storage was asked about %v, want %v (the loose name is not offered)", s.askedFor, want)
 	}
@@ -279,15 +280,18 @@ func TestAdopt_AStoreThatCannotAnswerFailsTheAdoption(t *testing.T) {
 	}
 }
 
-// A directory in no repository is told as it is, before the ledger is asked anything or written, and the stores
-// that were opened are closed.
-func TestAdopt_ADirectoryInNoRepositoryIsTheAnswerAndTheStoresAreClosed(t *testing.T) {
+// A directory in no repository is named by its name (C23 M2, decision 4); it has no ledger, so the ledger is
+// neither asked anything nor written, and the stores that were opened are closed.
+func TestAdopt_ADirectoryInNoRepositoryIsNamedByItsNameAndTheStoresAreClosed(t *testing.T) {
 	s, l := &stores{notes: []string{"a store was not consulted"}}, &ledger{}
 
 	got, notes, err := useCase(inspector{locateErr: projectid.ErrNotARepository}, s, l).Adopt("/elsewhere", adoption.RecordDerived)
 
-	if !errors.Is(err, projectid.ErrNotARepository) || !reflect.DeepEqual(got, projectid.Adoption{}) {
-		t.Errorf("Adopt = %+v, %v; want ErrNotARepository", got, err)
+	if err != nil || got.Identity != (projectid.Identity{Project: "elsewhere", Rule: projectid.RuleDirectory}) || got.Adopted {
+		t.Errorf("Adopt = %+v, %v; want the directory's name, not adopted", got, err)
+	}
+	if !reflect.DeepEqual(s.askedFor, []string{"elsewhere"}) {
+		t.Errorf("storage was asked about %v, want the directory's name only", s.askedFor)
 	}
 	if len(notes) != 1 {
 		t.Errorf("notes = %q, want the store's", notes)

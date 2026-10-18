@@ -170,17 +170,19 @@ func TestResolve_MainCheckoutAndWorktreeAgree_Remote(t *testing.T) {
 	}
 }
 
-func TestResolve_MainCheckoutAndWorktreeAgree_CommonDir(t *testing.T) {
+// With no declaration and no remote, the main checkout's name is the identity (C23 M2), and a linked worktree
+// whose own directory is named otherwise answers it too.
+func TestResolve_MainCheckoutAndWorktreeAgree_Directory(t *testing.T) {
 	tmp := t.TempDir()
 	repo := newRepo(t, tmp, "repo") // no declared file, no remote
 	wt := addWorktree(t, repo, filepath.Join(tmp, "wt"))
 
 	main, linked := resolve(t, repo), resolve(t, wt)
 	if main.Project != linked.Project {
-		t.Fatalf("common-dir rule fragments across worktrees: main=%q worktree=%q", main.Project, linked.Project)
+		t.Fatalf("directory rule fragments across worktrees: main=%q worktree=%q", main.Project, linked.Project)
 	}
-	if main.Rule != projectid.RuleCommonDir || linked.Rule != projectid.RuleCommonDir {
-		t.Fatalf("rule = %q/%q, want %q for both", main.Rule, linked.Rule, projectid.RuleCommonDir)
+	if main.Rule != projectid.RuleDirectory || linked.Rule != projectid.RuleDirectory || main.Project != "repo" {
+		t.Fatalf("rule = %q/%q, project %q; want %q for both and \"repo\"", main.Rule, linked.Rule, main.Project, projectid.RuleDirectory)
 	}
 }
 
@@ -201,21 +203,21 @@ func TestResolve_CommonDirIsAbsoluteAndSymlinkFree(t *testing.T) {
 	}
 
 	main, linked := resolve(t, repo), resolve(t, wt)
-	if main.Project != linked.Project {
-		t.Fatalf("common-dir identity fragments: main=%q worktree=%q (git answered %q vs %q)", main.Project, linked.Project, fromMain, fromWorktree)
+	if main.CommonDir != linked.CommonDir {
+		t.Fatalf("common dir fragments: main=%q worktree=%q (git answered %q vs %q)", main.CommonDir, linked.CommonDir, fromMain, fromWorktree)
 	}
-	if !filepath.IsAbs(main.Project) {
-		t.Fatalf("common-dir identity %q is not absolute; git's own relative answer must never survive as a key", main.Project)
+	if !filepath.IsAbs(main.CommonDir) {
+		t.Fatalf("common dir %q is not absolute; git's own relative answer must never survive as a key", main.CommonDir)
 	}
-	if strings.Contains(main.Project, "..") {
-		t.Fatalf("common-dir identity %q still carries an unresolved %q segment", main.Project, "..")
+	if strings.Contains(main.CommonDir, "..") {
+		t.Fatalf("common dir %q still carries an unresolved %q segment", main.CommonDir, "..")
 	}
 	wantReal, err := filepath.EvalSymlinks(filepath.Join(repo, ".git"))
 	if err != nil {
 		t.Fatalf("EvalSymlinks: %v", err)
 	}
-	if main.Project != wantReal {
-		t.Fatalf("common-dir identity = %q, want the realpath %q", main.Project, wantReal)
+	if main.CommonDir != wantReal {
+		t.Fatalf("common dir = %q, want the realpath %q", main.CommonDir, wantReal)
 	}
 }
 
@@ -348,23 +350,27 @@ func TestResolve_DifferentRepositoriesDiffer(t *testing.T) {
 	})
 }
 
-// --- (f) not a repository: a named failure, never "" ---
+// --- (f) not a repository: the directory's name (C23 M2, decision 4), never "" ---
 
 func TestResolve_NotARepository(t *testing.T) {
-	dir := t.TempDir()
-	id, err := resolver().Resolve(dir)
-	if !errors.Is(err, projectid.ErrNotARepository) {
-		t.Fatalf("Resolve(%s) = (%+v, %v), want ErrNotARepository", dir, id, err)
+	dir := filepath.Join(t.TempDir(), "notes")
+	if err := os.Mkdir(dir, 0o755); err != nil {
+		t.Fatal(err)
 	}
-	if id.Project != "" {
-		t.Fatalf("failed resolution still produced project %q; an empty or junk project name must never reach Engram", id.Project)
+	id, err := resolver().Resolve(dir)
+	if want := (projectid.Identity{Project: "notes", Rule: projectid.RuleDirectory}); err != nil || id != want {
+		t.Fatalf("Resolve(%s) = (%+v, %v), want %+v", dir, id, err, want)
 	}
 }
 
-func TestResolve_MissingDirectoryIsNamedFailure(t *testing.T) {
+// A directory that is not there is in no repository either: it is named by its name, as the walk up finds no
+// .git above it. (Until M2 it was an error, because the path could not be made symlink-free; the shared adapter
+// keeps the absolute path where the links cannot be resolved.)
+func TestResolve_MissingDirectoryIsNamedByItsName(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "does-not-exist")
-	if _, err := resolver().Resolve(dir); err == nil {
-		t.Fatal("Resolve on a nonexistent directory returned no error")
+	id, err := resolver().Resolve(dir)
+	if want := (projectid.Identity{Project: "does-not-exist", Rule: projectid.RuleDirectory}); err != nil || id != want {
+		t.Fatalf("Resolve(%s) = (%+v, %v), want %+v", dir, id, err, want)
 	}
 }
 
