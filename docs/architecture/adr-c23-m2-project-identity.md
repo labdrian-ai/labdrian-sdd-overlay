@@ -107,9 +107,13 @@ code as it stands; it is not a quotation of the owner's reasons.
 - **`workflow create` warns, not refuses, when the identity cannot be resolved** (a broken `.git`
   pointer, a declared file that is not one line) **or cannot be recorded** (a name the log refuses,
   such as one with a control character or over 512 runes; `workflow.ValidateProjectIdentity`, checked
-  in `engine/cmd/workflow.go` before `Create`). It records no identity, and the gate treats the
-  workflow as one created before M2. This keeps create working in every layout it worked in before;
-  decision 5 is the only new refusal. This is an implementation choice of batch 53, not an owner
+  in `engine/cmd/workflow.go` before `Create`). It records its slug (`--project`) as its identity,
+  which is what the gate compared before M2, so the gate keeps checking its queries. (The first
+  version recorded no identity, so the gate allowed every query of such a workflow for its whole
+  life; review group B, R1-001 and R4-create-resolve-failopen, found that a fail-open the owner's
+  "unknown is an allow" was never meant for: that rule is for workflows created before M2.) This
+  keeps create working in every layout it worked in before; decision 5 is the only new refusal.
+  This is an implementation choice of batch 53, not an owner
   decision (accepted by the coordinator on 2026-10-18): the owner's decisions say what create
   records, not what it does when nothing can be resolved.
 - **The gate stays total.** An unknown identity is an allow with one warning; scope none still
