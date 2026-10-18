@@ -69,7 +69,14 @@ type phase7World struct {
 func newPhase7World(t *testing.T, binary string) phase7World {
 	t.Helper()
 	home, state := phase6IsolatedHome(t)
-	return phase7World{t: t, binary: binary, home: home, state: state, bin: t.TempDir(), dir: t.TempDir(), repo: fixtureRepo(t, "repo")}
+	// The scratch directory is where 'workflow create' runs, and it is in no repository, so
+	// the shared resolver names the project by its basename (C23 M2): it is called proj-1 so
+	// that the identity a workflow records is the project its slug names.
+	dir := filepath.Join(t.TempDir(), "proj-1")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	return phase7World{t: t, binary: binary, home: home, state: state, bin: t.TempDir(), dir: dir, repo: fixtureRepo(t, "repo")}
 }
 
 // phase7Run is one finished process.

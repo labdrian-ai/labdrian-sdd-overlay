@@ -18,7 +18,10 @@ package projection
 //     that only reads.
 //   - The memory gate. A call to the longterm-mem query tool is checked against
 //     the workflow's memory plan: its project argument must be the plan's project,
-//     and a plan with no project (scope none) permits no query at all. The tools
+//     which is the shared identity the workflow recorded at create (C23 M2), and a
+//     plan with no project (scope none) permits no query at all. A workflow that
+//     recorded no identity (created before M2) does not say which project
+//     longterm-mem knows it by, so its queries pass, with a warning. The tools
 //     that carry no project (get), promote, every Engram tool, and every write
 //     are never touched: the plan grants no write, and it does not forbid one.
 //
@@ -174,6 +177,12 @@ func memoryGate(b Binding, s workflow.State, query QueryArguments) GateResult {
 		return GateResult{Deny: true, Reason: "labdrian: " + workflowRef(b) + " (profile " + strconv.Quote(sanitizeLine(s.Profile)) +
 			") permits no project in its memory plan (scope none), so every longterm-mem query is denied. " +
 			"Stop following this workflow with 'labdrian workflow unbind' to query."}
+	}
+	if s.ProjectIdentity == "" {
+		// A workflow created before C23 M2 recorded no shared identity, so the project
+		// longterm-mem names it by is unknown here: an unknown is an allow.
+		return GateResult{Warning: "labdrian: " + workflowRef(b) + " records no project identity (it was created before workflows recorded one), " +
+			"so the project of this longterm-mem query was not checked against its memory plan."}
 	}
 	planProject := plan.Filters.ProjectID
 	if planProject == "" {

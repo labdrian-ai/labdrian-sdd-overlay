@@ -390,6 +390,39 @@ func TestGateComparesTheQueryProjectWithThePlanProject(t *testing.T) {
 	}
 }
 
+// The gate compares a query's project with the shared identity the workflow recorded at create, not
+// with the slug that keys its directory (C23, decision 2 of M2), by exact equality.
+func TestGateComparesTheQueryProjectWithTheWorkflowsProjectIdentity(t *testing.T) {
+	w := loadedWorkflow("odd", workflow.StatusRunning)
+	w.State.ProjectIdentity = "github.com/acme/proj-1"
+
+	allowed(t, "the identity", gate(w, queryTool, named("github.com/acme/proj-1")))
+	allowed(t, "the identity, through a plugin prefix", gate(w, pluginQueryTool, named("github.com/acme/proj-1")))
+	denied(t, "the slug", gate(w, queryTool, named("proj-1")), `"proj-1"`, `"github.com/acme/proj-1"`, "labdrian workflow unbind")
+	denied(t, "the last segment", gate(w, queryTool, named("proj-1")), `"github.com/acme/proj-1"`)
+	denied(t, "another project", gate(w, queryTool, named("github.com/acme/other")), `"github.com/acme/other"`, `"github.com/acme/proj-1"`)
+	denied(t, "no project", gate(w, queryTool, named("")), "no project", `"github.com/acme/proj-1"`)
+}
+
+// A workflow created before M2 recorded no identity: the gate does not know the project, so a query
+// passes (an unknown is an allow, and the gate stays total), said once in one line. Scope none still
+// permits no project, which needs no identity to know.
+func TestGateAllowsTheQueryOfAWorkflowThatRecordedNoIdentity(t *testing.T) {
+	w := loadedWorkflow("odd", workflow.StatusRunning)
+	w.State.ProjectIdentity = ""
+	for _, query := range []projection.QueryArguments{named("proj-1"), named("anything"), named("")} {
+		got := gate(w, queryTool, query)
+		if got.Deny || got.Reason != "" || !strings.Contains(got.Warning, "records no project identity") ||
+			!strings.Contains(got.Warning, "not checked") || strings.ContainsAny(got.Warning, "\n\r") {
+			t.Errorf("Gate(%+v) = %+v, want an allow with a one-line warning that the project was not checked", query, got)
+		}
+	}
+
+	minimal := loadedWorkflow("standalone-minimal", workflow.StatusRunning)
+	minimal.State.ProjectIdentity = ""
+	denied(t, "scope none with no identity", gate(minimal, queryTool, named("proj-1")), "permits no project")
+}
+
 func TestGateDeniesEveryQueryWhenThePlanHasNoProject(t *testing.T) {
 	// standalone-minimal is scope none: no project is permitted.
 	w := loadedWorkflow("standalone-minimal", workflow.StatusRunning)

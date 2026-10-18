@@ -15,6 +15,7 @@ $ projection hook --event PreToolUse
 --- exit ---
 0
 --- stdout ---
+{"systemMessage":"labdrian: workflow wf-1 of project proj-1 records no project identity (it was created before workflows recorded one), so the project of this longterm-mem query was not checked against its memory plan."}
 --- stderr ---
 
 $ projection hook --event PreToolUse
@@ -24,7 +25,7 @@ $ projection hook --event PreToolUse
 --- exit ---
 0
 --- stdout ---
-{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian: this longterm-mem query asks for project \"proj-2\", but the memory plan of workflow wf-1 of project proj-1 permits only project \"proj-1\". Query project \"proj-1\", or stop following this workflow with 'labdrian workflow unbind'."}}
+{"systemMessage":"labdrian: workflow wf-1 of project proj-1 records no project identity (it was created before workflows recorded one), so the project of this longterm-mem query was not checked against its memory plan."}
 --- stderr ---
 
 $ projection hook --event UserPromptSubmit
@@ -44,6 +45,7 @@ $ projection hook --event PreToolUse
 --- exit ---
 0
 --- stdout ---
+{"systemMessage":"labdrian: workflow wf-1 of project proj-1 records no project identity (it was created before workflows recorded one), so the project of this longterm-mem query was not checked against its memory plan."}
 --- stderr ---
 
 $ projection hook --event PreToolUse
@@ -53,7 +55,7 @@ $ projection hook --event PreToolUse
 --- exit ---
 0
 --- stdout ---
-{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian: this longterm-mem query asks for project \"proj-2\", but the memory plan of workflow wf-1 of project proj-1 permits only project \"proj-1\". Query project \"proj-1\", or stop following this workflow with 'labdrian workflow unbind'."}}
+{"systemMessage":"labdrian: workflow wf-1 of project proj-1 records no project identity (it was created before workflows recorded one), so the project of this longterm-mem query was not checked against its memory plan."}
 --- stderr ---
 
 $ projection hook --event UserPromptSubmit
@@ -103,6 +105,7 @@ $ projection hook --event PreToolUse
 --- exit ---
 0
 --- stdout ---
+{"systemMessage":"labdrian: workflow wf-1 of project proj-1 records no project identity (it was created before workflows recorded one), so the project of this longterm-mem query was not checked against its memory plan."}
 --- stderr ---
 
 $ projection hook --event PreToolUse
@@ -112,7 +115,7 @@ $ projection hook --event PreToolUse
 --- exit ---
 0
 --- stdout ---
-{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian: this longterm-mem query asks for project \"proj-2\", but the memory plan of workflow wf-1 of project proj-1 permits only project \"proj-1\". Query project \"proj-1\", or stop following this workflow with 'labdrian workflow unbind'."}}
+{"systemMessage":"labdrian: workflow wf-1 of project proj-1 records no project identity (it was created before workflows recorded one), so the project of this longterm-mem query was not checked against its memory plan."}
 --- stderr ---
 
 $ projection hook --event UserPromptSubmit
@@ -132,6 +135,7 @@ $ projection hook --event PreToolUse
 --- exit ---
 0
 --- stdout ---
+{"systemMessage":"labdrian: workflow wf-1 of project proj-1 records no project identity (it was created before workflows recorded one), so the project of this longterm-mem query was not checked against its memory plan."}
 --- stderr ---
 
 $ projection hook --event PreToolUse
@@ -141,6 +145,6 @@ $ projection hook --event PreToolUse
 --- exit ---
 0
 --- stdout ---
-{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian: this longterm-mem query asks for project \"proj-2\", but the memory plan of workflow wf-1 of project proj-1 permits only project \"proj-1\". Query project \"proj-1\", or stop following this workflow with 'labdrian workflow unbind'."}}
+{"systemMessage":"labdrian: workflow wf-1 of project proj-1 records no project identity (it was created before workflows recorded one), so the project of this longterm-mem query was not checked against its memory plan."}
 --- stderr ---
 
