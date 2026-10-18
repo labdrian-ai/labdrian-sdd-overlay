@@ -221,6 +221,27 @@ func TestAGitDirectoryWithNoCommondirIsTheCommonDirectory(t *testing.T) {
 	}
 }
 
+// A submodule (a .git file whose git directory has no commondir file) is a repository of its own: its working
+// tree is its main checkout, so with no origin it is named by its own directory, not by the directory its git
+// directory happens to sit in (".git/modules").
+func TestASubmoduleIsItsOwnMainCheckout(t *testing.T) {
+	base := t.TempDir()
+	modules := filepath.Join(base, ".git", "modules", "vendored")
+	put(t, filepath.Join(modules, "HEAD"), "ref: refs/heads/main\n")
+	put(t, filepath.Join(base, "vendored", ".git"), "gitdir: ../.git/modules/vendored\n")
+
+	got, err := gitfs.Repositories{}.Locate(filepath.Join(base, "vendored"))
+
+	sub := realpath(t, filepath.Join(base, "vendored"))
+	want := resolve.Repository{WorktreeRoot: sub, MainWorktreeRoot: sub, CommonDir: realpath(t, modules)}
+	if err != nil || got != want {
+		t.Errorf("Locate = %+v, %v; want %+v", got, err, want)
+	}
+	if id := resolveIn(t, filepath.Join(base, "vendored")); id.Project != "vendored" {
+		t.Errorf("Resolve for a submodule with no origin = %q, want vendored", id.Project)
+	}
+}
+
 func TestNoOriginFallsThroughToTheDirectory(t *testing.T) {
 	noOrigin := mainCheckout(t, "[core]\n\tbare = false\n")
 	localOrigin := mainCheckout(t, originConfig("/srv/git/demo.git"))

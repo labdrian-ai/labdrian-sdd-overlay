@@ -62,13 +62,18 @@ func (g Repositories) Locate(dir string) (resolve.Repository, error) {
 			// A main checkout: its root is cur, which is known here, and .git is the common directory.
 			return resolve.Repository{WorktreeRoot: cur, MainWorktreeRoot: cur, CommonDir: canonical(dotGit)}, nil
 		case err == nil:
-			// A linked worktree or a submodule. The main checkout's root can only be derived, as the
-			// parent of the common directory, which is how git presents it too.
-			common, err := g.commonDirOfPointer(dotGit, cur)
+			// A linked worktree or a submodule. A linked worktree's main checkout can only be derived, as
+			// the parent of the common directory, which is how git presents it too. A submodule (a git
+			// directory with no commondir file) is a repository of its own, whose main checkout is cur.
+			common, linked, err := g.commonDirOfPointer(dotGit, cur)
 			if err != nil {
 				return resolve.Repository{}, err
 			}
-			return resolve.Repository{WorktreeRoot: cur, MainWorktreeRoot: filepath.Dir(common), CommonDir: common}, nil
+			main := cur
+			if linked {
+				main = filepath.Dir(common)
+			}
+			return resolve.Repository{WorktreeRoot: cur, MainWorktreeRoot: main, CommonDir: common}, nil
 		case !os.IsNotExist(err):
 			// The search goes through every directory above dir, so the one it names is the one that
 			// stopped it. Naming the project is the way past it: the rules ask the explicit id first and
@@ -111,43 +116,44 @@ func (g Repositories) GitConfig(commonDir string) (string, error) {
 
 // commonDirOfPointer follows the .git file of a linked worktree or a submodule: its gitdir line
 // names the git directory of the worktree, and the commondir file in that directory, relative to
-// it, names the shared one. Without a commondir file the git directory is the shared one.
-func (g Repositories) commonDirOfPointer(gitFile, root string) (string, error) {
+// it, names the shared one: the worktree is linked. Without a commondir file (a submodule) the git
+// directory is the shared one and the worktree is not linked.
+func (g Repositories) commonDirOfPointer(gitFile, root string) (common string, linked bool, err error) {
 	raw, err := os.ReadFile(gitFile)
 	if err != nil {
-		return "", fmt.Errorf("reading %s: %w", gitFile, unwrapPathError(err))
+		return "", false, fmt.Errorf("reading %s: %w", gitFile, unwrapPathError(err))
 	}
 	rest, ok := strings.CutPrefix(strings.TrimSpace(string(raw)), "gitdir:")
 	gitDir := strings.TrimSpace(rest)
 	if !ok || gitDir == "" {
-		return "", fmt.Errorf("%s is a file and holds no \"gitdir:\" line, so it names no git directory", gitFile)
+		return "", false, fmt.Errorf("%s is a file and holds no \"gitdir:\" line, so it names no git directory", gitFile)
 	}
 	if !filepath.IsAbs(gitDir) {
 		gitDir = filepath.Join(root, gitDir)
 	}
 	if err := g.requireGitDir(gitFile, gitDir); err != nil {
-		return "", err
+		return "", false, err
 	}
 	pointer := filepath.Join(gitDir, "commondir")
 	raw, err = os.ReadFile(pointer)
 	switch {
 	case os.IsNotExist(err):
-		return canonical(gitDir), nil
+		return canonical(gitDir), false, nil
 	case err != nil:
-		return "", fmt.Errorf("reading %s: %w", pointer, unwrapPathError(err))
+		return "", false, fmt.Errorf("reading %s: %w", pointer, unwrapPathError(err))
 	}
 	target := strings.TrimSpace(string(raw))
 	if target == "" {
-		return canonical(gitDir), nil
+		return canonical(gitDir), false, nil
 	}
 	if !filepath.IsAbs(target) {
 		target = filepath.Join(gitDir, target)
 	}
 	target = filepath.Clean(target)
 	if err := g.requireGitDir(gitFile, target); err != nil {
-		return "", err
+		return "", false, err
 	}
-	return canonical(target), nil
+	return canonical(target), true, nil
 }
 
 // requireGitDir says why dir, which the pointer file names, cannot be the git directory it is
