@@ -228,17 +228,19 @@ func runWorkflowCreate(d deps, args []string, cwd string, stdout, stderr io.Writ
 	// The project's shared identity, as the skills verbs and longterm-mem name it (C23 M2): the
 	// memory gate compares a longterm-mem query's project with it. The slug (--project) stays the key
 	// of the workflow's directory. A repository that cannot be read does not stop create, which never
-	// needed one: the workflow records no identity, which the gate reads as unknown, and that is said
-	// in one line. An identity the log cannot hold (a control character, too long) is treated the
-	// same way, so the goal/slug check stays create's only new refusal.
+	// needed one, and an identity the log cannot hold (a control character, too long) is treated the
+	// same way, so the goal/slug check stays create's only new refusal. Either way the workflow
+	// records its slug as its identity, which is what the gate checked before C23 M2: a workflow
+	// recorded with no identity at all is one created before M2, which the gate allows unchecked,
+	// and a workflow created now must not get that lifelong pass from a repository it could not read.
+	// That is said in one line.
 	identity, err := sharedProjectRules("").Resolve(cwd, "")
 	if err == nil {
-		if err = workflow.ValidateProjectIdentity(identity.Project); err != nil {
-			identity.Project = ""
-		}
+		err = workflow.ValidateProjectIdentity(identity.Project)
 	}
 	if err != nil {
-		fmt.Fprintf(stderr, "warning: workflow create: the project identity could not be resolved (%s), so the workflow records none and its longterm-mem queries are not checked against one\n", strings.NewReplacer("\n", " ", "\r", " ").Replace(err.Error()))
+		identity.Project = o.project
+		fmt.Fprintf(stderr, "warning: workflow create: the project identity could not be resolved (%s), so the workflow records its slug, %s, as its identity\n", strings.NewReplacer("\n", " ", "\r", " ").Replace(err.Error()), o.project)
 	}
 	state, err := lc.Create(o.project, o.workflowID, identity.Project, g, o.profile, o.roleChain)
 	if err != nil {

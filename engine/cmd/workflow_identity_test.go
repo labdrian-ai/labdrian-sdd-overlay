@@ -132,12 +132,12 @@ func TestWorkflowCreateStillCreatesWhenTheProjectIdentityCannotBeResolved(t *tes
 		t.Fatalf("create: code=%d stdout=%q stderr=%q, want exit 0 and the created state", r.code, r.stdout, r.stderr)
 	}
 	if !strings.HasPrefix(r.stderr, "warning: workflow create: the project identity could not be resolved (") ||
-		!strings.Contains(r.stderr, "gitdir:") || strings.Count(r.stderr, "\n") != 1 {
+		!strings.Contains(r.stderr, "gitdir:") || !strings.HasSuffix(r.stderr, "so the workflow records its slug, proj-1, as its identity\n") || strings.Count(r.stderr, "\n") != 1 {
 		t.Errorf("stderr = %q, want one warning line naming the resolution error", r.stderr)
 	}
 	log, ok := workflowLog(t, "proj-1", "wf-1")
-	if !ok || strings.Contains(log, "project_identity") {
-		t.Errorf("the log is %q (written %v), want a workflow with no project_identity", log, ok)
+	if !ok || !strings.Contains(log, `"project_identity":"proj-1"`) {
+		t.Errorf("the log is %q (written %v), want a workflow whose project_identity is its slug, proj-1", log, ok)
 	}
 }
 
@@ -158,11 +158,11 @@ func TestWorkflowCreateStillCreatesWhenTheProjectIdentityCannotBeRecorded(t *tes
 		t.Fatalf("create: code=%d stdout=%q stderr=%q, want exit 0 and the created state", r.code, r.stdout, r.stderr)
 	}
 	if !strings.HasPrefix(r.stderr, "warning: workflow create: the project identity could not be resolved (") ||
-		!strings.Contains(r.stderr, "control character") || strings.Count(r.stderr, "\n") != 1 {
+		!strings.Contains(r.stderr, "control character") || !strings.HasSuffix(r.stderr, "so the workflow records its slug, proj-1, as its identity\n") || strings.Count(r.stderr, "\n") != 1 {
 		t.Errorf("stderr = %q, want one warning line naming why the identity cannot be recorded", r.stderr)
 	}
 	log, ok := workflowLog(t, "proj-1", "wf-1")
-	if !ok || strings.Contains(log, "project_identity") {
-		t.Errorf("the log is %q (written %v), want a workflow with no project_identity", log, ok)
+	if !ok || !strings.Contains(log, `"project_identity":"proj-1"`) {
+		t.Errorf("the log is %q (written %v), want a workflow whose project_identity is its slug, proj-1", log, ok)
 	}
 }

@@ -578,7 +578,7 @@ func ValidateProjectIdentity(identity string) error {
 		return fmt.Errorf("project_identity must be valid UTF-8")
 	case strings.TrimSpace(identity) == "":
 		return fmt.Errorf("project_identity must not be blank when present")
-	case len([]rune(identity)) > MaxProjectIdentityLength:
+	case utf8.RuneCountInString(identity) > MaxProjectIdentityLength:
 		return fmt.Errorf("project_identity exceeds the maximum length of %d runes", MaxProjectIdentityLength)
 	case strings.IndexFunc(identity, unicode.IsControl) >= 0:
 		return fmt.Errorf("project_identity %q contains a control character", identity)

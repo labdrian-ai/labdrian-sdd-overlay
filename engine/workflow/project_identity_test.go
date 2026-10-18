@@ -122,11 +122,9 @@ func TestOnlyACreatedEventCarriesAProjectIdentity(t *testing.T) {
 	if _, err := memLifecycle(t, store).Create("proj-1", "wf-1", testIdentity, validGoal("proj-1", "goal-1"), "odd", ""); err != nil {
 		t.Fatal(err)
 	}
-	started, err := memLifecycle(t, store).Start("proj-1", "wf-1")
-	if err != nil {
+	if _, err := memLifecycle(t, store).Start("proj-1", "wf-1"); err != nil {
 		t.Fatal(err)
 	}
-	_ = started
 	loaded := store.classify("proj-1", "wf-1")
 	if len(loaded.Events) < 2 {
 		t.Fatalf("loaded %d events, want 2", len(loaded.Events))
