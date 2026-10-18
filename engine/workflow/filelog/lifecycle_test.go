@@ -65,7 +65,7 @@ func TestALifecycleRunsToCompletionOverTheFileLogAcrossRestarts(t *testing.T) {
 		do   func(workflow.Lifecycle) (workflow.State, error)
 	}{
 		{"create", func(lc workflow.Lifecycle) (workflow.State, error) {
-			return lc.Create("proj-1", "wf-1", g, profile.Name, "")
+			return lc.Create("proj-1", "wf-1", "github.com/acme/proj-1", g, profile.Name, "")
 		}},
 		{"start", func(lc workflow.Lifecycle) (workflow.State, error) { return lc.Start("proj-1", "wf-1") }},
 	}

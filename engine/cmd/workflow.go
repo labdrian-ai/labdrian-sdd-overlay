@@ -225,7 +225,16 @@ func runWorkflowCreate(d deps, args []string, cwd string, stdout, stderr io.Writ
 		exit(2)
 		return
 	}
-	state, err := lc.Create(o.project, o.workflowID, g, o.profile, o.roleChain)
+	// The project's shared identity, as the skills verbs and longterm-mem name it (C23 M2): the
+	// memory gate compares a longterm-mem query's project with it. The slug (--project) stays the key
+	// of the workflow's directory. A repository that cannot be read does not stop create, which never
+	// needed one: the workflow records no identity, which the gate reads as unknown, and that is said
+	// in one line.
+	identity, err := sharedProjectRules("").Resolve(cwd, "")
+	if err != nil {
+		fmt.Fprintf(stderr, "warning: workflow create: the project identity could not be resolved (%s), so the workflow records none and its longterm-mem queries are not checked against one\n", strings.NewReplacer("\n", " ", "\r", " ").Replace(err.Error()))
+	}
+	state, err := lc.Create(o.project, o.workflowID, identity.Project, g, o.profile, o.roleChain)
 	if err != nil {
 		fmt.Fprintf(stderr, "error: workflow create: %v\n", err)
 		exit(2)

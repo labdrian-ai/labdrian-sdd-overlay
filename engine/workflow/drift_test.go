@@ -109,7 +109,7 @@ func TestACatalogThatFailsForAnotherReasonIsAnErrorAndNotAFinding(t *testing.T) 
 // a workflow that is not owned has no drift to report.
 func TestLifecycleReportsTheProfileDriftOfAWorkflowAndAppendsNothing(t *testing.T) {
 	w := newSnapshotWorld(t)
-	if _, err := w.lifecycle(builtInProfiles).Create("proj-1", "wf-1", w.g, "sdd", ""); err != nil {
+	if _, err := w.lifecycle(builtInProfiles).Create("proj-1", "wf-1", "github.com/acme/proj-1", w.g, "sdd", ""); err != nil {
 		t.Fatal(err)
 	}
 	appends := w.store.appends
@@ -137,7 +137,7 @@ func TestLifecycleReportsTheProfileDriftOfAWorkflowAndAppendsNothing(t *testing.
 // verb.
 func TestADriftedWorkflowGoesOnFromItsSnapshot(t *testing.T) {
 	w := newSnapshotWorld(t)
-	if _, err := w.lifecycle(builtInProfiles).Create("proj-1", "wf-1", w.g, "standalone-minimal", ""); err != nil {
+	if _, err := w.lifecycle(builtInProfiles).Create("proj-1", "wf-1", "github.com/acme/proj-1", w.g, "standalone-minimal", ""); err != nil {
 		t.Fatal(err)
 	}
 	lc := w.lifecycle(retiredCatalog)

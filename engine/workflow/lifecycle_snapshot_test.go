@@ -94,7 +94,7 @@ func TestCreateRecordsTheSnapshotOfTheProfileTheCatalogGave(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			w := newSnapshotWorld(t)
 			profile := builtIn(t, name)
-			if _, err := w.lifecycle(builtInProfiles).Create("proj-1", "wf-1", w.g, name, ""); err != nil {
+			if _, err := w.lifecycle(builtInProfiles).Create("proj-1", "wf-1", "github.com/acme/proj-1", w.g, name, ""); err != nil {
 				t.Fatalf("Create() = %v, want nil", err)
 			}
 			created := w.events()[0]
@@ -123,7 +123,7 @@ func TestCreateRecordsTheProfileTheCatalogGaveWhateverItDeclares(t *testing.T) {
 	custom.Stages[1].DependsOn = []string{"custom-first"}
 	custom.MemoryDefault.Sources = []workflowprofile.MemorySource{workflowprofile.MemorySourceEngram}
 	custom.ReliesOnGentleReview = false
-	if _, err := w.lifecycle(catalogOf(custom)).Create("proj-1", "wf-1", w.g, "maintenance", ""); err != nil {
+	if _, err := w.lifecycle(catalogOf(custom)).Create("proj-1", "wf-1", "github.com/acme/proj-1", w.g, "maintenance", ""); err != nil {
 		t.Fatalf("Create() = %v, want nil", err)
 	}
 	if got := w.events()[0].ProfileSnapshot; got == nil || !reflect.DeepEqual(*got, custom.Snapshot()) {
@@ -133,7 +133,7 @@ func TestCreateRecordsTheProfileTheCatalogGaveWhateverItDeclares(t *testing.T) {
 
 func TestCreateRefusesACatalogThatGivesAProfileOfAnotherName(t *testing.T) {
 	w := newSnapshotWorld(t)
-	_, err := w.lifecycle(catalogOf(builtIn(t, "sdd"))).Create("proj-1", "wf-1", w.g, "odd", "")
+	_, err := w.lifecycle(catalogOf(builtIn(t, "sdd"))).Create("proj-1", "wf-1", "github.com/acme/proj-1", w.g, "odd", "")
 	if err == nil {
 		t.Fatal("Create() = nil, want an error: the catalog gave sdd for odd")
 	}
@@ -146,7 +146,7 @@ func TestCreateAppendsNothingWhenTheProfileTheCatalogGaveIsMalformed(t *testing.
 	w := newSnapshotWorld(t)
 	malformed := builtIn(t, "odd")
 	malformed.Roles = nil
-	if _, err := w.lifecycle(catalogOf(malformed)).Create("proj-1", "wf-1", w.g, "odd", ""); err == nil {
+	if _, err := w.lifecycle(catalogOf(malformed)).Create("proj-1", "wf-1", "github.com/acme/proj-1", w.g, "odd", ""); err == nil {
 		t.Fatal("Create() = nil, want an error")
 	}
 	// The append is attempted and refused (the store counts attempts), so what must be none is what
@@ -181,7 +181,7 @@ func TestAVersion2WorkflowGoesOnFromItsSnapshotWhateverTheCatalogSays(t *testing
 	} {
 		t.Run(name, func(t *testing.T) {
 			w := newSnapshotWorld(t)
-			if _, err := w.lifecycle(builtInProfiles).Create("proj-1", "wf-1", w.g, "maintenance", ""); err != nil {
+			if _, err := w.lifecycle(builtInProfiles).Create("proj-1", "wf-1", "github.com/acme/proj-1", w.g, "maintenance", ""); err != nil {
 				t.Fatalf("Create() = %v, want nil", err)
 			}
 			lc := w.lifecycle(catalogFor(t))
@@ -224,7 +224,7 @@ func TestAVersion2WorkflowGoesOnFromItsSnapshotWhateverTheCatalogSays(t *testing
 // The dependencies a version 2 event records are those of the snapshot, not the catalog's.
 func TestAVersion2WorkflowObservesTheDependenciesOfItsSnapshot(t *testing.T) {
 	w := newSnapshotWorld(t)
-	if _, err := w.lifecycle(builtInProfiles).Create("proj-1", "wf-1", w.g, "maintenance", ""); err != nil {
+	if _, err := w.lifecycle(builtInProfiles).Create("proj-1", "wf-1", "github.com/acme/proj-1", w.g, "maintenance", ""); err != nil {
 		t.Fatal(err)
 	}
 	none := builtIn(t, "maintenance")
@@ -248,7 +248,7 @@ func TestAVersion2WorkflowObservesTheDependenciesOfItsSnapshot(t *testing.T) {
 // the dependencies as any other event does.
 func TestAnAbandonedCloseOfAVersion2WorkflowObservesItsDependenciesWhenTheCatalogHasRetiredTheProfile(t *testing.T) {
 	w := newSnapshotWorld(t)
-	if _, err := w.lifecycle(builtInProfiles).Create("proj-1", "wf-1", w.g, "odd", ""); err != nil {
+	if _, err := w.lifecycle(builtInProfiles).Create("proj-1", "wf-1", "github.com/acme/proj-1", w.g, "odd", ""); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := w.lifecycle(retiredCatalog).Close("proj-1", "wf-1", OutcomeAbandoned, "done with it"); err != nil {
