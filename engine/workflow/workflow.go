@@ -548,7 +548,7 @@ func (e WorkflowEvent) validateCreatedPayload() error {
 	if err := e.validateCreatedProfile(); err != nil {
 		return err
 	}
-	if err := validateProjectIdentity(e.ProjectIdentity); err != nil {
+	if err := ValidateProjectIdentity(e.ProjectIdentity); err != nil {
 		return err
 	}
 	if e.RoleChainID != "" {
@@ -564,11 +564,12 @@ func (e WorkflowEvent) validateCreatedPayload() error {
 	return nil
 }
 
-// validateProjectIdentity checks the project_identity of a created event. It is optional, since a
+// ValidateProjectIdentity checks the project_identity of a created event. It is optional, since a
 // log written before C23 M2 has none; when present it is one line of valid UTF-8, not blank, with no
 // control character, within MaxProjectIdentityLength runes. It is text a repository chose, not a
-// path component, so a slash and a space are allowed.
-func validateProjectIdentity(identity string) error {
+// path component, so a slash and a space are allowed. It is exported for the caller that resolves
+// an identity and must know, before Create, whether a workflow log can hold it.
+func ValidateProjectIdentity(identity string) error {
 	if identity == "" {
 		return nil
 	}

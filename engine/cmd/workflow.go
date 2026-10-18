@@ -229,8 +229,14 @@ func runWorkflowCreate(d deps, args []string, cwd string, stdout, stderr io.Writ
 	// memory gate compares a longterm-mem query's project with it. The slug (--project) stays the key
 	// of the workflow's directory. A repository that cannot be read does not stop create, which never
 	// needed one: the workflow records no identity, which the gate reads as unknown, and that is said
-	// in one line.
+	// in one line. An identity the log cannot hold (a control character, too long) is treated the
+	// same way, so the goal/slug check stays create's only new refusal.
 	identity, err := sharedProjectRules("").Resolve(cwd, "")
+	if err == nil {
+		if err = workflow.ValidateProjectIdentity(identity.Project); err != nil {
+			identity.Project = ""
+		}
+	}
 	if err != nil {
 		fmt.Fprintf(stderr, "warning: workflow create: the project identity could not be resolved (%s), so the workflow records none and its longterm-mem queries are not checked against one\n", strings.NewReplacer("\n", " ", "\r", " ").Replace(err.Error()))
 	}

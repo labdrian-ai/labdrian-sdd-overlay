@@ -140,3 +140,29 @@ func TestWorkflowCreateStillCreatesWhenTheProjectIdentityCannotBeResolved(t *tes
 		t.Errorf("the log is %q (written %v), want a workflow with no project_identity", log, ok)
 	}
 }
+
+// An identity the resolver gives but a workflow log cannot hold (here a directory name with a tab,
+// which the directory rule answers outside git) is treated like one that cannot be resolved: create
+// still creates, records none and says so in one line. Decision 5 stays its only new refusal.
+func TestWorkflowCreateStillCreatesWhenTheProjectIdentityCannotBeRecorded(t *testing.T) {
+	workflowTestStateHome(t)
+	dir := t.TempDir()
+	odd := filepath.Join(dir, "a\tb")
+	if err := os.MkdirAll(odd, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	goalPath := writeMemoryTestFile(t, dir, "goal.json", memoryTestGoalJSON("proj-1", "goal-1"))
+
+	r := runWorkflowTest([]string{"create", "--project", "proj-1", "--workflow", "wf-1", "--goal", goalPath, "--profile", "odd"}, odd)
+	if r.code != 0 || !strings.Contains(r.stdout, `"status": "created"`) {
+		t.Fatalf("create: code=%d stdout=%q stderr=%q, want exit 0 and the created state", r.code, r.stdout, r.stderr)
+	}
+	if !strings.HasPrefix(r.stderr, "warning: workflow create: the project identity could not be resolved (") ||
+		!strings.Contains(r.stderr, "control character") || strings.Count(r.stderr, "\n") != 1 {
+		t.Errorf("stderr = %q, want one warning line naming why the identity cannot be recorded", r.stderr)
+	}
+	log, ok := workflowLog(t, "proj-1", "wf-1")
+	if !ok || strings.Contains(log, "project_identity") {
+		t.Errorf("the log is %q (written %v), want a workflow with no project_identity", log, ok)
+	}
+}

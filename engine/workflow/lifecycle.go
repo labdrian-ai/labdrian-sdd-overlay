@@ -475,7 +475,7 @@ func (l Lifecycle) Create(projectID, workflowID, projectIdentity string, g goal.
 	if g.ProjectID != projectID {
 		return State{}, fmt.Errorf("%w: its project_id is %q and the workflow's project is %q", ErrGoalProjectMismatch, g.ProjectID, projectID)
 	}
-	if err := validateProjectIdentity(projectIdentity); err != nil {
+	if err := ValidateProjectIdentity(projectIdentity); err != nil {
 		return State{}, fmt.Errorf("workflow lifecycle: create: %w", err)
 	}
 	profile, err := l.profiles.Resolve(profileName)
