@@ -22,9 +22,10 @@ func resolveWith(t *testing.T, f *fakeRepositories, dir string) Identity {
 	return id
 }
 
-// The chain is declared, then the normalized origin, then the common directory, and the first link that answers
-// wins: a link that answers is never overruled by one below it.
-func TestResolve_ChainOrderIsDeclaredThenRemoteThenCommonDir(t *testing.T) {
+// The chain is declared, then the normalized origin, then the main checkout's name (C23 M2: the common directory
+// is no longer derived as the identity), and the first link that answers wins: a link that answers is never
+// overruled by one below it.
+func TestResolve_ChainOrderIsDeclaredThenRemoteThenDirectory(t *testing.T) {
 	for _, tc := range []struct {
 		name        string
 		declaration string
@@ -34,8 +35,8 @@ func TestResolve_ChainOrderIsDeclaredThenRemoteThenCommonDir(t *testing.T) {
 	}{
 		{"all three answer", "chosen-name\n", originConfig("https://github.com/acme/widgets.git"), "chosen-name", RuleDeclared},
 		{"no declaration", "", originConfig("https://github.com/acme/widgets.git"), "github.com/acme/widgets", RuleRemote},
-		{"no declaration and no origin", "", "[core]\n\tbare = false\n", commonDir, RuleCommonDir},
-		{"no declaration and no configuration", "", "", commonDir, RuleCommonDir},
+		{"no declaration and no origin", "", "[core]\n\tbare = false\n", "widgets", RuleDirectory},
+		{"no declaration and no configuration", "", "", "widgets", RuleDirectory},
 		{"a declaration and no origin", "chosen-name\n", "", "chosen-name", RuleDeclared},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -76,7 +77,7 @@ func TestResolve_AMainCheckoutAndALinkedWorktreeAgreeAtEveryLevel(t *testing.T) 
 	}{
 		{"declared", "chosen-name\n", originConfig("https://github.com/acme/widgets.git")},
 		{"remote", "", originConfig("https://github.com/acme/widgets.git")},
-		{"common dir", "", ""},
+		{"directory", "", ""},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			f := widgets(tc.config)
@@ -185,21 +186,36 @@ func TestResolve_ADeclarationThatCannotBeReadIsTheAnswer(t *testing.T) {
 	}
 }
 
-// Where the directory is no repository, or the repository cannot be read, the inspector's error is the answer
-// as it was given, and nothing else is asked.
+// Where the repository cannot be read, the inspector's error is the answer as it was given, and nothing else is
+// asked.
 func TestResolve_AnErrorOfTheInspectorIsTheAnswer(t *testing.T) {
-	for _, err := range []error{ErrNotARepository, errors.New("projectid: inspecting /x/.git: denied")} {
-		f := widgets("")
-		f.locateErr = err
+	err := errors.New("projectid: inspecting /x/.git: denied")
+	f := widgets("")
+	f.locateErr = err
 
-		id, got := NewResolver(f).Resolve(mainRoot)
+	id, got := NewResolver(f).Resolve(mainRoot)
 
-		if got != err || id != (Identity{}) {
-			t.Errorf("Resolve = %+v, %v; want %v and no identity", id, got, err)
-		}
-		if len(f.declared) != 0 || len(f.configRead) != 0 {
-			t.Errorf("declaration %v and configuration %v were read of a repository that could not be located", f.declared, f.configRead)
-		}
+	if got != err || id != (Identity{}) {
+		t.Errorf("Resolve = %+v, %v; want %v and no identity", id, got, err)
+	}
+	if len(f.declared) != 0 || len(f.configRead) != 0 {
+		t.Errorf("declaration %v and configuration %v were read of a repository that could not be located", f.declared, f.configRead)
+	}
+}
+
+// Outside a git repository the identity is the directory's name (C23 M2, decision 4), with no worktree and no
+// common directory, and nothing else is asked: there is no declaration and no configuration to read.
+func TestResolve_OutsideARepositoryIsTheDirectorysName(t *testing.T) {
+	f := widgets("")
+	f.locateErr = ErrNotARepository
+
+	id, err := NewResolver(f).Resolve(filepath.FromSlash("/srv/scratch/notes"))
+
+	if want := (Identity{Project: "notes", Rule: RuleDirectory}); err != nil || id != want {
+		t.Errorf("Resolve = %+v, %v; want %+v", id, err, want)
+	}
+	if len(f.declared) != 0 || len(f.configRead) != 0 {
+		t.Errorf("declaration %v and configuration %v were read outside a repository", f.declared, f.configRead)
 	}
 }
 
@@ -208,10 +224,10 @@ func TestResolve_AnErrorOfTheInspectorIsTheAnswer(t *testing.T) {
 func TestResolve_AsksTheInspectorForTheDirectoryAsGiven(t *testing.T) {
 	f := widgets("")
 
-	_, err := NewResolver(f).Resolve("./relative/../dir")
+	id, err := NewResolver(f).Resolve("./relative/../dir")
 
-	if !errors.Is(err, ErrNotARepository) {
-		t.Fatalf("Resolve = %v, want the fixture to know no such directory", err)
+	if err != nil || id.Project != "dir" || id.Rule != RuleDirectory {
+		t.Fatalf("Resolve = %+v, %v; want the fixture to know no such directory, so its name", id, err)
 	}
 	if want := []string{"./relative/../dir"}; !reflect.DeepEqual(f.located, want) {
 		t.Errorf("the inspector was asked for %v, want %v", f.located, want)
@@ -229,8 +245,8 @@ func TestResolve_ReadsTheOriginFromTheTextOfTheConfiguration(t *testing.T) {
 	}{
 		{"an https origin", originConfig("https://GitHub.com/acme/widgets.git"), "github.com/acme/widgets"},
 		{"an origin in the scp form", originConfig("git@example.com:acme/widgets.git"), "example.com/acme/widgets"},
-		{"an origin that is a path on this machine", originConfig("/srv/git/widgets.git"), commonDir},
-		{"a remote that is not origin", "[remote \"upstream\"]\n\turl = https://github.com/acme/widgets.git\n", commonDir},
+		{"an origin that is a path on this machine", originConfig("/srv/git/widgets.git"), "widgets"},
+		{"a remote that is not origin", "[remote \"upstream\"]\n\turl = https://github.com/acme/widgets.git\n", "widgets"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			f := widgets(tc.config)
@@ -247,8 +263,8 @@ func TestResolve_ReadsTheOriginFromTheTextOfTheConfiguration(t *testing.T) {
 	}
 }
 
-// CheckCorrespondence is looser than equality, on purpose: two of the three rules answer something no operator
-// types, so the repository's directory name and the origin's last segment count as naming it.
+// CheckCorrespondence is looser than equality, on purpose: the remote rule answers something no operator types,
+// so the origin's last segment counts as naming it. With no remote the directory's name is the identity itself.
 func TestCheckCorrespondence_NamesThatCountAsNamingTheProject(t *testing.T) {
 	for _, tc := range []struct {
 		name        string
@@ -264,7 +280,7 @@ func TestCheckCorrespondence_NamesThatCountAsNamingTheProject(t *testing.T) {
 		{"white space around a name", "", originConfig("https://github.com/acme/widgets.git"), "  widgets \n", true},
 		{"a segment that is not the last", "", originConfig("https://github.com/acme/widgets.git"), "acme", false},
 		{"the directory of a repository with no remote", "", "", "widgets", true},
-		{"the common directory itself", "", "", commonDir, true},
+		{"the common directory, which no longer names it", "", "", commonDir, false},
 		{"another name than the directory", "", "", "gadgets", false},
 		{"nothing at all", "", "", "", false},
 	} {
@@ -291,19 +307,14 @@ func TestCheckCorrespondence_NamesThatCountAsNamingTheProject(t *testing.T) {
 
 // An empty name corresponds to nothing, not even to an identity that is empty itself: a project called "" is the
 // failure the named errors of this package exist to prevent, and it must not read as a match.
+//
+// No rule of the chain answers an empty name any more, so the identity is built here: the guard is in
+// corresponds, which CheckCorrespondence decides with.
 func TestCheckCorrespondence_AnEmptyNameNeverCorresponds(t *testing.T) {
-	nowhere := &fakeRepositories{repos: map[string]Repository{mainRoot: {WorktreeRoot: mainRoot, MainWorktreeRoot: mainRoot}}}
-
-	c, err := NewResolver(nowhere).CheckCorrespondence(mainRoot, "")
-
-	if err != nil {
-		t.Fatalf("CheckCorrespondence: %v", err)
-	}
-	if c.Canonical.Project != "" {
-		t.Fatalf("the fixture was meant to resolve to an empty project, got %q", c.Canonical.Project)
-	}
-	if c.Match {
-		t.Error("an empty name corresponded to an empty identity")
+	for _, rule := range []Rule{RuleDeclared, RuleRemote, RuleDirectory, RuleCommonDir} {
+		if corresponds(Identity{Rule: rule}, "") {
+			t.Errorf("an empty name corresponded to an empty identity of the %s rule", rule)
+		}
 	}
 }
 

@@ -19,7 +19,7 @@ longterm-mem: stale: --project not given, resolved "example.com/acme/widgets" fr
     },
     {
       "name": "checkout",
-      "rule": "common_dir",
+      "rule": "directory",
       "adoptable": false,
       "first_seen": "<run>",
       "last_seen": "<run>"

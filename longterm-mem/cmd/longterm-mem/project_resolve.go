@@ -22,12 +22,14 @@ const projectFlagUsage = "project name (default: resolved from the working direc
 // Two behaviours meet here.
 //
 // When --project is omitted, the project is resolved from the working
-// directory through projectid's chain (declared file, normalized origin
-// remote, realpath of the git common dir). When that resolution fails, the
-// command refuses exactly as it did before -- an unresolved project must
-// never become an empty one, because Engram is queried
-// `WHERE project = ?` with whatever it is handed -- but the refusal now
-// says why resolution failed instead of only restating the flag's name.
+// directory through projectid's chain, the one the engine shares (declared
+// file, normalized origin remote, name of the main checkout; outside a git
+// repository, the directory's name). When that resolution fails (a
+// repository that cannot be read), the command refuses exactly as it did
+// before -- an unresolved project must never become an empty one, because
+// Engram is queried `WHERE project = ?` with whatever it is handed -- but
+// the refusal now says why resolution failed instead of only restating the
+// flag's name.
 //
 // When --project IS given and the working directory is inside a git
 // repository whose canonical identity does not correspond to it, the

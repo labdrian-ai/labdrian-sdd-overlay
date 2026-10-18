@@ -15,6 +15,8 @@ import (
 	"regexp"
 	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gitobject"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/jsonstrict"
@@ -85,6 +87,10 @@ const (
 	MaxObservationCapabilityLength = 128
 	MaxObservationDetailLength     = 4096
 )
+
+// MaxProjectIdentityLength bounds the project_identity of a created event: a declared name or a
+// normalized remote ("host/owner/name"), which a forge keeps far below 512 runes.
+const MaxProjectIdentityLength = 512
 
 // MaxEventBytes bounds the overall size of one WorkflowEvent JSON document
 // that ParseWorkflowEvent will decode, independent of the field-level
@@ -193,6 +199,12 @@ type WorkflowEvent struct {
 	GoalID     string `json:"goal_id,omitempty"`
 	GoalDigest string `json:"goal_digest,omitempty"`
 	Profile    string `json:"profile,omitempty"`
+	// ProjectIdentity is the shared identity of the project (identity/resolve, C23 M2) where the
+	// workflow was created: a declared name, a normalized origin remote or the main checkout's name.
+	// ProjectID stays the key of the workflow's directory; this is what the memory gate compares a
+	// longterm-mem query's project with. A log written before M2 has none, and the gate reads that
+	// as unknown.
+	ProjectIdentity string `json:"project_identity,omitempty"`
 	// ProfileSnapshot is the profile named by Profile as it was when the workflow was created, and
 	// ProfileDigest is its digest (workflowprofile.Snapshot.Digest). Both are present if and only if
 	// Version is EventVersionSnapshot; a version 1 event has neither, and its profile is the
@@ -227,7 +239,7 @@ type WorkflowEvent struct {
 var workflowEventFields = []string{
 	"version", "workflow_id", "project_id", "seq", "prev_digest", "kind", "at",
 	"provenance", "observations",
-	"goal_id", "goal_digest", "profile", "profile_snapshot", "profile_digest", "role_chain_id", "role_chain_head",
+	"goal_id", "goal_digest", "profile", "project_identity", "profile_snapshot", "profile_digest", "role_chain_id", "role_chain_head",
 	"stage",
 	"checked",
 	"outcome", "reason",
@@ -483,7 +495,7 @@ func validateObservations(observations []Observation) error {
 // validatePayload checks that e carries exactly the payload fields its Kind
 // requires and that every other kind-specific field is zero-valued.
 func (e WorkflowEvent) validatePayload() error {
-	blankCreated := e.GoalID == "" && e.GoalDigest == "" && e.Profile == "" && e.ProfileSnapshot == nil && e.ProfileDigest == "" && e.RoleChainID == "" && e.RoleChainHead == ""
+	blankCreated := e.GoalID == "" && e.GoalDigest == "" && e.Profile == "" && e.ProjectIdentity == "" && e.ProfileSnapshot == nil && e.ProfileDigest == "" && e.RoleChainID == "" && e.RoleChainHead == ""
 	blankStage := e.Stage == ""
 	blankChecked := e.Checked == nil
 	blankClosed := e.Outcome == "" && e.Reason == ""
@@ -536,6 +548,9 @@ func (e WorkflowEvent) validateCreatedPayload() error {
 	if err := e.validateCreatedProfile(); err != nil {
 		return err
 	}
+	if err := ValidateProjectIdentity(e.ProjectIdentity); err != nil {
+		return err
+	}
 	if e.RoleChainID != "" {
 		if err := ValidateIdentifier("role_chain_id", e.RoleChainID); err != nil {
 			return err
@@ -545,6 +560,28 @@ func (e WorkflowEvent) validateCreatedPayload() error {
 		}
 	} else if e.RoleChainHead != "" {
 		return fmt.Errorf("role_chain_head must be empty when role_chain_id is not set")
+	}
+	return nil
+}
+
+// ValidateProjectIdentity checks the project_identity of a created event. It is optional, since a
+// log written before C23 M2 has none; when present it is one line of valid UTF-8, not blank, with no
+// control character, within MaxProjectIdentityLength runes. It is text a repository chose, not a
+// path component, so a slash and a space are allowed. It is exported for the caller that resolves
+// an identity and must know, before Create, whether a workflow log can hold it.
+func ValidateProjectIdentity(identity string) error {
+	if identity == "" {
+		return nil
+	}
+	switch {
+	case !utf8.ValidString(identity):
+		return fmt.Errorf("project_identity must be valid UTF-8")
+	case strings.TrimSpace(identity) == "":
+		return fmt.Errorf("project_identity must not be blank when present")
+	case utf8.RuneCountInString(identity) > MaxProjectIdentityLength:
+		return fmt.Errorf("project_identity exceeds the maximum length of %d runes", MaxProjectIdentityLength)
+	case strings.IndexFunc(identity, unicode.IsControl) >= 0:
+		return fmt.Errorf("project_identity %q contains a control character", identity)
 	}
 	return nil
 }

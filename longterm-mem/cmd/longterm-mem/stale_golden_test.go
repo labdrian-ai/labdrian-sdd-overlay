@@ -381,6 +381,12 @@ func runStaleCase(t *testing.T, tc staleCase) (w *skillsStaleWorld, rendering st
 	t.Helper()
 	w = newSkillsStaleWorld(t, true)
 	w.goldenDir = filepath.Join(filepath.Dir(w.goldenDir), "stale-golden")
+	// The repository is a directory with a name of its own: with no remote and no declaration its name is the
+	// project's (C23 M2), and a temporary directory's name ("006") is not one a golden can keep.
+	w.root = filepath.Join(w.root, "checkout")
+	if err := os.Mkdir(w.root, 0o755); err != nil {
+		t.Fatal(err)
+	}
 	if tc.setup != nil {
 		tc.setup(t, w)
 	}

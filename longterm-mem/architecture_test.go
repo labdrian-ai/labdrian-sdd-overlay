@@ -101,7 +101,10 @@ var knownDebt = archguard.Debt{}
 
 // pureModules are the modules of this repository that the domain may import: the rules both this
 // module and the engine need (the identity of a project) live in a module of the standard library
-// alone, whose own test holds it to that (Phase 9, D2).
+// alone, whose own test holds it to that (Phase 9, D2). Since C23 M2 that module also holds the shared
+// disk adapter of those rules, identity/gitfs, which reads the file system: archguard judges a pure
+// module as a whole, so TestOnlyTheProjectIDAdapterImportsTheSharedDiskAdapter
+// (projectidfs_adapter_guard_test.go) keeps gitfs out of every package but the adapter's.
 var pureModules = []string{"github.com/labdrian-ai/labdrian-sdd-overlay/identity"}
 
 // TestArchitectureFollowsTheDependencyRule is the fitness function: it fails on

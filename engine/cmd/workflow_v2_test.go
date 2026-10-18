@@ -89,7 +89,7 @@ func TestWorkflowCreateWritesAVersion2LogOfTheProfileWhateverTheVerbs(t *testing
 					t.Fatal(err)
 				}
 			}
-			want := []string{"version", "workflow_id", "project_id", "seq", "prev_digest", "kind", "at", "provenance", "observations", "goal_id", "goal_digest", "profile", "profile_snapshot", "profile_digest"}
+			want := []string{"version", "workflow_id", "project_id", "seq", "prev_digest", "kind", "at", "provenance", "observations", "goal_id", "goal_digest", "profile", "project_identity", "profile_snapshot", "profile_digest"}
 			if !reflect.DeepEqual(fields, want) {
 				t.Errorf("the created event's fields are %v, want %v", fields, want)
 			}

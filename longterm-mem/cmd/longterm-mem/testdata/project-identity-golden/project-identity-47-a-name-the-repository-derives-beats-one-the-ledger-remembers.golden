@@ -20,7 +20,7 @@ WARN stale: "former-name" also hold memory and are the same repository as "curre
     },
     {
       "name": "checkout",
-      "rule": "common_dir",
+      "rule": "directory",
       "adoptable": false,
       "first_seen": "<run>",
       "last_seen": "<run>"

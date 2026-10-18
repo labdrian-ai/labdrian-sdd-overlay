@@ -20,7 +20,7 @@ WARN stale: the vault registry could not be read (vaultreg: parse <home>/.labdri
     },
     {
       "name": "checkout",
-      "rule": "common_dir",
+      "rule": "directory",
       "adoptable": false,
       "first_seen": "<run>",
       "last_seen": "<run>"

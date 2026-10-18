@@ -2,6 +2,6 @@ args: stale
 exit: 2
 --- stdout ---
 --- stderr ---
-longterm-mem: stale: --project is required: it could not be resolved from the working directory: projectid: directory is not inside a git repository: <project>
+longterm-mem: stale: <project> is in no git repository, and stale checks memories against the history of one: run it inside the repository the memories are about
 --- ledger ---
 no ledger

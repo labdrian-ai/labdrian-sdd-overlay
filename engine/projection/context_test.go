@@ -38,7 +38,10 @@ func loadedWorkflow(profile string, status workflow.Status, stages ...string) *w
 				{Capability: "gentle-ai-review", Status: workflow.ObservationUnavailable},
 			}},
 		},
-		State: workflow.State{Status: status, Profile: profile, GoalID: "goal-1", GoalDigest: hex64("c"), Stages: stages},
+		// The identity the workflow recorded at create is the slug here, so the cases written before
+		// C23 M2 compare against the same project; the cases of an identity that differs from the slug,
+		// or of none, set their own.
+		State: workflow.State{Status: status, Profile: profile, GoalID: "goal-1", GoalDigest: hex64("c"), Stages: stages, ProjectIdentity: "proj-1"},
 	}
 }
 
@@ -548,6 +551,26 @@ func TestProjectContextStatesTheMemoryPlanOfTheProfile(t *testing.T) {
 				t.Errorf("no line %q in:\n%s", tt.wantOmitted, ctx)
 			}
 		})
+	}
+}
+
+// The plan's project is the identity the workflow recorded at create (C23, decision 2 of M2), the
+// one the gate compares a query with, so the context tells the agent the project the gate permits.
+// A workflow created before M2 recorded none, and its plan names the slug, as it always did.
+func TestProjectContextStatesTheProjectIdentityTheWorkflowRecorded(t *testing.T) {
+	const preface = "memory plan (read-only: it executes no query and grants no memory write): "
+	w := loadedWorkflow("odd", workflow.StatusRunning)
+	w.State.ProjectIdentity = "github.com/acme/proj-1"
+	ctx := project(ownedBinding(), w).Context
+	if want := preface + "scope=project sources=engram,longterm-mem,procedural-skills project_id=github.com/acme/proj-1 goal_id=none write=none"; !hasLine(ctx, want) {
+		t.Errorf("no memory plan line %q in:\n%s", want, ctx)
+	}
+
+	old := loadedWorkflow("odd", workflow.StatusRunning)
+	old.State.ProjectIdentity = ""
+	ctx = project(ownedBinding(), old).Context
+	if want := preface + "scope=project sources=engram,longterm-mem,procedural-skills project_id=proj-1 goal_id=none write=none"; !hasLine(ctx, want) {
+		t.Errorf("a workflow with no identity: no memory plan line %q in:\n%s", want, ctx)
 	}
 }
 

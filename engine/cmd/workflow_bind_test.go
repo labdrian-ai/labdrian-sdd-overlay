@@ -31,11 +31,20 @@ type bindEnv struct {
 	deps deps
 }
 
+// newBindEnv builds the world. Its scratch directory, where workflows are created, is named proj-1
+// and is no repository, so the shared identity create records for a workflow (C23 M2) is proj-1,
+// the slug most cases use: the cases written before workflows recorded an identity compare a query
+// with the same project they always did. The cases of an identity that differs from the slug build
+// their own directory (workflow_identity_test.go).
 func newBindEnv(t *testing.T) bindEnv {
 	t.Helper()
 	state := t.TempDir()
 	t.Setenv("XDG_STATE_HOME", state)
-	return bindEnv{state: state, repo: fixtureRepo(t, "repo"), dir: t.TempDir(), deps: testDeps()}
+	dir := filepath.Join(t.TempDir(), "proj-1")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	return bindEnv{state: state, repo: fixtureRepo(t, "repo"), dir: dir, deps: testDeps()}
 }
 
 // bindingFile is where the binding of the repository at cwd is stored.

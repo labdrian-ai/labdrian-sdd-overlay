@@ -2,6 +2,7 @@ package projectid
 
 import (
 	"errors"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -127,14 +128,43 @@ func TestAdopt_UnreadableStorageIsReportedNotAssumedEmpty(t *testing.T) {
 	}
 }
 
-// A repository that is in no repository, or cannot be read, is told as it is: nothing is asked of the storage.
+// A repository that cannot be read is told as it is: nothing is asked of the storage.
 func TestAdopt_ALocationErrorIsTheAnswerAndTheStorageIsNotAsked(t *testing.T) {
 	var asked []string
+	boom := errors.New("projectid: inspecting /x/.git: denied")
+	f := widgets("")
+	f.locateErr = boom
 
-	_, err := NewResolver(widgets("")).AdoptWith("/elsewhere", AdoptOptions{Established: established(&asked)})
+	_, err := NewResolver(f).AdoptWith(mainRoot, AdoptOptions{Established: established(&asked)})
 
-	if !errors.Is(err, ErrNotARepository) || len(asked) != 0 {
-		t.Errorf("AdoptWith = %v (storage asked about %v); want ErrNotARepository and no question", err, asked)
+	if !errors.Is(err, boom) || len(asked) != 0 {
+		t.Errorf("AdoptWith = %v (storage asked about %v); want the inspector's error and no question", err, asked)
+	}
+}
+
+// A directory in no repository is named by its name (C23 M2, decision 4), which is the one name it derives and
+// the one the storage is asked about; it is adopted as such when it already holds memory.
+func TestAdoptWith_OutsideARepositoryTheDirectorysNameIsTheOneName(t *testing.T) {
+	for _, holds := range []bool{false, true} {
+		var asked []string
+		var est Established = established(&asked)
+		if holds {
+			est = established(&asked, "elsewhere")
+		}
+
+		got := adoptWith(t, widgets(""), filepath.FromSlash("/elsewhere"), AdoptOptions{Established: est, Remembered: []string{"former"}})
+
+		want := Adoption{
+			Identity: Identity{Project: "elsewhere", Rule: RuleDirectory},
+			Adopted:  holds,
+			Derived:  []DerivedName{{Name: "elsewhere", Rule: RuleDirectory, Strict: false}},
+		}
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("holds %v: AdoptWith = %+v, want %+v", holds, got, want)
+		}
+		if w := []string{"elsewhere", "former"}; !reflect.DeepEqual(asked, w) {
+			t.Errorf("holds %v: the storage was asked about %v, want %v", holds, asked, w)
+		}
 	}
 }
 
@@ -201,7 +231,9 @@ func TestAdoptWith_AsksAboutEveryNameOnceDerivedFirst(t *testing.T) {
 
 // What a repository derives is what the caller writes to its ledger, so the rule and the strictness of each name
 // are part of the answer: the loose spellings (a bare directory name, the last segment of an origin) may not be
-// adopted later on a ledger's word alone, because they can name somebody else's repository.
+// adopted later on a ledger's word alone, because they can name somebody else's repository. The main checkout's
+// name comes in the chain's place, before the realpath of the common directory, which the chain no longer derives
+// as the identity (C23 M2) and which is kept as a name to adopt.
 func TestDerivableNames_ListsEveryNameWithItsRuleAndItsStrictness(t *testing.T) {
 	for _, tc := range []struct {
 		name        string
@@ -218,12 +250,12 @@ func TestDerivableNames_ListsEveryNameWithItsRuleAndItsStrictness(t *testing.T) 
 		{"remote and path", "", originConfig("https://github.com/acme/gadgets.git"), []DerivedName{
 			{Name: "github.com/acme/gadgets", Rule: RuleRemote, Strict: true},
 			{Name: "gadgets", Rule: RuleRemote, Strict: false},
+			{Name: "widgets", Rule: RuleDirectory, Strict: false},
 			{Name: commonDir, Rule: RuleCommonDir, Strict: true},
-			{Name: "widgets", Rule: RuleCommonDir, Strict: false},
 		}},
 		{"path alone", "", "", []DerivedName{
+			{Name: "widgets", Rule: RuleDirectory, Strict: false},
 			{Name: commonDir, Rule: RuleCommonDir, Strict: true},
-			{Name: "widgets", Rule: RuleCommonDir, Strict: false},
 		}},
 		{"a declared name that is also the directory's", "widgets\n", "", []DerivedName{
 			{Name: "widgets", Rule: RuleDeclared, Strict: true},

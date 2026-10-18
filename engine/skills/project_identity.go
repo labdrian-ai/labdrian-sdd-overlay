@@ -18,8 +18,9 @@ type ProjectQuery struct {
 
 // ProjectIdentity says which project a directory is. The skills domain owns the question and
 // holds no answer of its own: the id of a project is whatever the person said, what its repository
-// says of itself, or what its directory is called, in the order the composition root puts the
-// sources that know (Phase 9, decision Q8), and the domain asks once.
+// declares or says of itself, or what its main checkout is called, as the shared resolver of the
+// identity module answers it for the workflow and longterm-mem too (C23 M2), and the domain asks
+// once.
 //
 // Identify reports ok=false when this source has no answer for the query, so that a chain of
 // sources can ask the next; the chain as a whole reports it when none had one, and then a verb

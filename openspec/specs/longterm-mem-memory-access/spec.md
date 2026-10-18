@@ -182,17 +182,26 @@ ID: R-040
 Traces to: longterm-mem R-040
 
 WHEN the project identity of a directory is resolved, the longterm-mem
-component SHALL apply a first-match-wins chain of a declared project file
-read from the main checkout's working-tree root, then the normalized
-`origin` remote URL, then the absolute, symlink-resolved git common
-directory, and SHALL report which rule produced the identity.
+component SHALL apply the chain it shares with the engine (`identity/resolve`,
+C23 M2), first match wins: a declared project file read from the main
+checkout's working-tree root, then the normalized `origin` remote URL, then
+the name of the main checkout's root directory; outside a git repository the
+identity SHALL be the name of the directory itself. It SHALL report which
+rule produced the identity. The absolute, symlink-resolved git common
+directory, the chain's last rule before M2, SHALL no longer be derived as the
+identity, and SHALL remain a name a repository may adopt (R-044). A directory
+name the chain answered SHALL NOT be adopted on the identity ledger's word
+alone (decision 6 of C23 M2, the owner, 2026-10-18): a repository with no
+remote and no declared file whose directory is renamed starts a new identity,
+and keeps its memory only by declaring the old name in `.longterm-mem-project`.
 
 #### Scenario: The same repository resolves identically from every worktree
 
 - GIVEN a repository's main checkout and any number of linked worktrees
 - WHEN each directory's project identity is resolved
 - THEN every one of them yields the identical identity, independently at
-  each of the three chain rules
+  each of the three chain rules (a linked worktree is named by its main
+  checkout's directory, not its own)
 
 #### Scenario: A declaration is a property of the repository, not of a worktree
 
@@ -217,8 +226,9 @@ directory, and SHALL report which rule produced the identity.
 
 - GIVEN `git rev-parse --git-common-dir` answers relatively from a main
   checkout and absolutely from a linked worktree
-- WHEN the common-directory rule produces an identity
-- THEN that identity is absolute, free of unresolved parent segments, and
+- WHEN the common directory of the repository is found (it is where the
+  identity ledger lives, and an adoption candidate)
+- THEN it is absolute, free of unresolved parent segments, and
   symlink-resolved, so a symlinked worktree path or a symlinked parent
   directory resolves to the same identity as the real path
 
@@ -233,8 +243,8 @@ directory, and SHALL report which rule produced the identity.
 
 - GIVEN a repository carrying a declared project file
 - WHEN its identity is resolved
-- THEN the declared name is used in preference to the remote and the common
-  directory, and an empty or multi-line declaration is rejected with a
+- THEN the declared name is used in preference to the remote and the
+  directory name, and an empty or multi-line declaration is rejected with a
   declared-invalid error rather than silently falling through
 
 #### Scenario: Distinct repositories never collide
@@ -243,12 +253,29 @@ directory, and SHALL report which rule produced the identity.
 - WHEN each one's identity is resolved by the same chain rule
 - THEN the two identities differ
 
-#### Scenario: A non-repository directory is a named failure
+#### Scenario: A non-repository directory is named by its name
 
 - GIVEN a directory that is not inside a git repository
 - WHEN its project identity is resolved
-- THEN resolution fails with a not-a-repository error and produces no
-  project name, empty or otherwise
+- THEN the identity is the directory's name, by the directory rule, and
+  never an empty name
+
+#### Scenario: A broken repository is a named failure
+
+- GIVEN a directory whose `.git` file names no git directory, or points to a
+  directory that has no `HEAD`
+- WHEN its project identity is resolved
+- THEN resolution fails with an error naming the file, and produces no
+  project name rather than falling through to a lesser rule
+
+#### Scenario: A renamed repository with nothing declared starts a new identity
+
+- GIVEN a repository with no remote and no declared file that was known by
+  its directory name, which its identity ledger remembers
+- WHEN the directory is renamed and its project identity is resolved again
+- THEN the new directory name is the identity, the old one is not adopted
+  from the ledger, and declaring the old name in `.longterm-mem-project`
+  restores it
 
 ### Requirement: Working-Directory Project Default
 
@@ -257,9 +284,11 @@ Traces to: longterm-mem R-041
 
 WHERE a CLI subcommand accepts `--project` and the flag is omitted, the
 longterm-mem component SHALL resolve the project from the working directory
-via the canonical identity chain, and IF that resolution fails THEN it
-SHALL refuse with the existing `--project is required` rejection, naming
-why resolution failed.
+via the canonical identity chain (outside a git repository, the directory's
+name), and IF that resolution fails THEN it SHALL refuse with the existing
+`--project is required` rejection, naming why resolution failed. A command
+that needs a repository (`stale`) SHALL refuse outside one itself, saying
+that it checks memories against the history of a git repository.
 
 #### Scenario: An omitted flag resolves from the working directory
 
@@ -268,9 +297,18 @@ why resolution failed.
 - WHEN a subcommand that takes `--project` runs without the flag
 - THEN it acts on the resolved project instead of refusing
 
-#### Scenario: An unresolvable directory still refuses
+#### Scenario: Outside a repository the directory's name is the project
 
 - GIVEN the working directory is not inside a git repository
+- WHEN a subcommand that takes `--project` runs without the flag
+- THEN it acts on the directory's name, saying it was resolved by the
+  directory rule; `stale` instead refuses, because it has no repository to
+  check memories against
+
+#### Scenario: An unresolvable directory still refuses
+
+- GIVEN the working directory is inside a repository that cannot be read (a
+  `.git` file that names no git directory)
 - WHEN a subcommand that takes `--project` runs without the flag
 - THEN it refuses with the `--project is required` rejection, names the
   resolution failure, and passes no project name onward

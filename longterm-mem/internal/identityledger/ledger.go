@@ -3,11 +3,14 @@
 //
 // Why it exists. internal/projectid derives a repository's identity from
 // what the repository looks like RIGHT NOW: its declared file, its origin
-// remote, the realpath of its git common directory. Derivation alone has a
-// hole in it, and the hole is one-directional in the way that always costs
-// memory: a repository that MOVES stops deriving its old path, so memory
-// stored under that path becomes unreachable -- not wrong, unreachable, and
-// silently so. Nothing in a purely derived identity can reunite it.
+// remote, the name of its main checkout's directory (before C23 M2, the
+// realpath of its git common directory, which stays an adoption candidate).
+// Derivation alone has a hole in it, and the hole is one-directional in the
+// way that always costs memory: a repository that MOVES stops deriving its
+// old path, so memory stored under that path becomes unreachable -- not
+// wrong, unreachable, and silently so. Nothing in a purely derived identity
+// can reunite it. A directory name is loose and is never adopted from the
+// ledger on its word alone (C23 M2 decision 6).
 //
 // The ledger closes that hole by writing what was derived, when it was
 // derived, under the git COMMON directory: the one directory a main

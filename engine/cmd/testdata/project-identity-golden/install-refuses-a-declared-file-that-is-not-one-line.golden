@@ -1,0 +1,20 @@
+# a declared file of two lines: refused, and neither the origin nor the directory is used in its place
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills install: resolving project identity: projectid: declared project file is not a single non-empty line: <WORLD>/demo/.longterm-mem-project
+
+--- tree of demo ---
+.git/
+.git/HEAD (21 bytes)
+.git/config (135 bytes)
+.longterm-mem-project (16 bytes)
+
+# naming the project goes past it
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills --project-id demo (in demo)
+exit: 0
+--- stdout ---
+installed: by-directory
+--- stderr ---
+

@@ -1,6 +1,10 @@
 package projectid
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/identity/resolve"
+)
 
 // Established reports whether name already holds memory. It is the seam
 // between this package, which knows what a repository DERIVES, and storage,
@@ -64,15 +68,27 @@ type AdoptOptions struct {
 // so it cannot merge two repositories whose names happen to resemble each
 // other, which is the one mistake this package must never make. What it
 // cannot prove, it reports.
+//
+// Outside a git repository the directory's name is the identity (the chain's
+// last rule), and it is the one name there is to adopt.
 func (r Resolver) AdoptWith(dir string, opts AdoptOptions) (Adoption, error) {
-	repo, err := r.repositories.Locate(dir)
+	resolved, err := r.rules.Resolve(dir, "")
 	if err != nil {
 		return Adoption{}, err
 	}
-	derived, err := r.derivableNames(repo)
-	if err != nil {
-		return Adoption{}, err
+	canonical := identityOf(resolved.Repository, resolved.Project, ruleOf(resolved.Source))
+	// In a repository every name it derives is a candidate, which reads its declaration and its
+	// configuration a second time (a read that fails now fails adoption, never a silent rename).
+	// Outside one, the directory's name is the one name there is.
+	var derived []DerivedName
+	if resolved.InRepository {
+		if derived, err = r.derivableNames(resolved.Repository); err != nil {
+			return Adoption{}, err
+		}
+	} else {
+		derived = []DerivedName{{Name: canonical.Project, Rule: canonical.Rule, Strict: false}}
 	}
+	repo := resolved.Repository
 
 	names := derived
 	seen := make(map[string]bool, len(derived))
@@ -103,11 +119,7 @@ func (r Resolver) AdoptWith(dir string, opts AdoptOptions) (Adoption, error) {
 	}
 
 	if len(found) == 0 {
-		id, err := r.Resolve(dir)
-		if err != nil {
-			return Adoption{}, err
-		}
-		return Adoption{Identity: id, Derived: derived}, nil
+		return Adoption{Identity: canonical, Derived: derived}, nil
 	}
 
 	a := Adoption{Identity: found[0], Adopted: true, Derived: derived}
@@ -150,13 +162,16 @@ func (r Resolver) CommonDir(dir string) (string, error) {
 // that decides which of them becomes canonical when several are
 // established: the chain's own order, and within each rule the strict
 // identity before the looser spellings that correspondingNames already
-// accepts as naming it.
+// accepts as naming it; then the realpath of the git common directory,
+// which was the chain's last rule until M2 and may still hold memory.
 //
 // The looser spellings are here for the same reason CheckCorrespondence
-// accepts them: two of the three rules produce identities no operator would
-// ever type, so the name the memory actually lives under is far more often
-// the plain one. Leaving them out would make adoption miss the only case it
-// exists for.
+// accepts them: the remote rule produces an identity no operator would ever
+// type, so the name the memory actually lives under is far more often the
+// plain one. Leaving them out would make adoption miss the only case it
+// exists for. The main checkout's name is loose too, although the chain may
+// answer it: a bare directory name can equally name somebody else's
+// repository, so a ledger must not adopt it on its word alone.
 func (r Resolver) derivableNames(repo Repository) ([]DerivedName, error) {
 	var names []DerivedName
 	seen := map[string]bool{}
@@ -168,7 +183,7 @@ func (r Resolver) derivableNames(repo Repository) ([]DerivedName, error) {
 		names = append(names, DerivedName{Name: name, Rule: rule, Strict: strict})
 	}
 
-	declaredName, ok, err := r.declared(repo)
+	declaredName, ok, err := r.rules.Declared(repo)
 	if err != nil {
 		return nil, err
 	}
@@ -176,15 +191,22 @@ func (r Resolver) derivableNames(repo Repository) ([]DerivedName, error) {
 		add(declaredName, RuleDeclared, true)
 	}
 
-	if remoteName, ok := r.remote(repo.CommonDir); ok {
+	remoteName, ok, err := r.rules.Remote(repo)
+	if err != nil {
+		return nil, err
+	}
+	if ok {
 		add(remoteName, RuleRemote, true)
 		add(lastSegment(remoteName), RuleRemote, false)
 	}
 
+	add(resolve.MainCheckoutName(repo), RuleDirectory, false)
+
 	commonDirID := identityOf(repo, repo.CommonDir, RuleCommonDir)
 	for i, n := range correspondingNames(commonDirID) {
 		// correspondingNames puts the strict identity -- the absolute
-		// common-dir path -- first, and the loose directory name after it.
+		// common-dir path -- first, and the loose directory name after it
+		// (usually the main checkout's name, already listed above).
 		add(n, RuleCommonDir, i == 0)
 	}
 	return names, nil

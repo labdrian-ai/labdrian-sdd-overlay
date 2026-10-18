@@ -225,7 +225,25 @@ func runWorkflowCreate(d deps, args []string, cwd string, stdout, stderr io.Writ
 		exit(2)
 		return
 	}
-	state, err := lc.Create(o.project, o.workflowID, g, o.profile, o.roleChain)
+	// The project's shared identity, as the skills verbs and longterm-mem name it (C23 M2): the
+	// memory gate compares a longterm-mem query's project with it. The slug (--project) stays the key
+	// of the workflow's directory. A repository that cannot be read does not stop create, which never
+	// needed one, and an identity the log cannot hold (a control character, too long) is treated the
+	// same way, so the goal/slug check stays create's only new refusal. Either way the workflow
+	// records its slug as its identity, which is what the gate checked before C23 M2: a workflow
+	// recorded with no identity at all is one created before M2, which the gate allows unchecked,
+	// and a workflow created now must not get that lifelong pass from a repository it could not read.
+	// That is said in one line.
+	resolved, err := sharedProjectRules("").Resolve(cwd, "")
+	projectIdentity := resolved.Project
+	if err == nil {
+		err = workflow.ValidateProjectIdentity(projectIdentity)
+	}
+	if err != nil {
+		projectIdentity = o.project
+		fmt.Fprintf(stderr, "warning: workflow create: the project identity could not be resolved (%s), so the workflow records its slug, %s, as its identity\n", strings.NewReplacer("\n", " ", "\r", " ").Replace(err.Error()), o.project)
+	}
+	state, err := lc.Create(o.project, o.workflowID, projectIdentity, g, o.profile, o.roleChain)
 	if err != nil {
 		fmt.Fprintf(stderr, "error: workflow create: %v\n", err)
 		exit(2)

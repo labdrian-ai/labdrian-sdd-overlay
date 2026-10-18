@@ -228,7 +228,9 @@ func TestLifecycleRunsOverAnyEventLogAndProfileCatalog(t *testing.T) {
 		name string
 		do   func() (State, error)
 	}{
-		{"create", func() (State, error) { return lc.Create("proj-1", "wf-1", g, profile.Name, "") }},
+		{"create", func() (State, error) {
+			return lc.Create("proj-1", "wf-1", "github.com/acme/proj-1", g, profile.Name, "")
+		}},
 		{"start", func() (State, error) { return lc.Start("proj-1", "wf-1") }},
 		{"stage", func() (State, error) { return lc.RecordStage("proj-1", "wf-1", profile.Stages[0].Name) }},
 		{"verify", func() (State, error) { return lc.Verify("proj-1", "wf-1") }},
@@ -283,7 +285,7 @@ func TestLifecycleHappyPathAcrossRestarts(t *testing.T) {
 		t.Fatalf("workflowprofile.Resolve() = %v, want nil", err)
 	}
 
-	state, err := newLC().Create(projectID, workflowID, g, profile.Name, "")
+	state, err := newLC().Create(projectID, workflowID, "github.com/acme/proj-1", g, profile.Name, "")
 	if err != nil {
 		t.Fatalf("Create() = %v, want nil", err)
 	}
@@ -382,7 +384,7 @@ func TestLifecycleCreateRejectsUnknownProfile(t *testing.T) {
 	g := validGoal("proj-1", "goal-1")
 	goals.set("proj-1", "goal-1", g)
 
-	if _, err := lc.Create("proj-1", "wf-1", g, "not-a-real-profile", ""); err == nil {
+	if _, err := lc.Create("proj-1", "wf-1", "github.com/acme/proj-1", g, "not-a-real-profile", ""); err == nil {
 		t.Fatalf("Create() = nil, want error for an unknown profile")
 	}
 	loaded, err := store.Load("proj-1", "wf-1")
@@ -402,7 +404,7 @@ func TestLifecycleCreateRejectsInvalidGoal(t *testing.T) {
 
 	g := validGoal("proj-1", "goal-1")
 	g.Objective = "" // invalid: blank objective
-	if _, err := lc.Create("proj-1", "wf-1", g, "odd", ""); err == nil {
+	if _, err := lc.Create("proj-1", "wf-1", "github.com/acme/proj-1", g, "odd", ""); err == nil {
 		t.Fatalf("Create() = nil, want error for an invalid goal")
 	}
 }
@@ -416,7 +418,7 @@ func TestLifecycleCreateRejectsBrokenRoleChain(t *testing.T) {
 	g := validGoal("proj-1", "goal-1")
 	goals.set("proj-1", "goal-1", g)
 	// No chain registered under this id: LoadChain returns an empty slice.
-	if _, err := lc.Create("proj-1", "wf-1", g, "odd", "chain-1"); err == nil {
+	if _, err := lc.Create("proj-1", "wf-1", "github.com/acme/proj-1", g, "odd", "chain-1"); err == nil {
 		t.Fatalf("Create() = nil, want error for a missing role chain")
 	}
 	loaded, err := store.Load("proj-1", "wf-1")
@@ -438,7 +440,7 @@ func TestLifecycleCreateWithValidRoleChainSucceeds(t *testing.T) {
 	goals.set("proj-1", "goal-1", g)
 	chains.set("proj-1", "goal-1", "chain-1", validRoleChain("proj-1", "goal-1", "chain-1"))
 
-	state, err := lc.Create("proj-1", "wf-1", g, "odd", "chain-1")
+	state, err := lc.Create("proj-1", "wf-1", "github.com/acme/proj-1", g, "odd", "chain-1")
 	if err != nil {
 		t.Fatalf("Create() = %v, want nil", err)
 	}
@@ -457,7 +459,7 @@ func TestLifecycleVerifyFailsWhenGoalDigestChanged(t *testing.T) {
 
 	g := validGoal("proj-1", "goal-1")
 	goals.set("proj-1", "goal-1", g)
-	if _, err := newLC().Create("proj-1", "wf-1", g, "standalone-minimal", ""); err != nil {
+	if _, err := newLC().Create("proj-1", "wf-1", "github.com/acme/proj-1", g, "standalone-minimal", ""); err != nil {
 		t.Fatalf("Create() = %v, want nil", err)
 	}
 	if _, err := newLC().Start("proj-1", "wf-1"); err != nil {
@@ -499,7 +501,7 @@ func TestLifecycleVerifyFailsWhenRoleChainBreaks(t *testing.T) {
 	goals.set("proj-1", "goal-1", g)
 	chains.set("proj-1", "goal-1", "chain-1", validRoleChain("proj-1", "goal-1", "chain-1"))
 
-	if _, err := newLC().Create("proj-1", "wf-1", g, "odd", "chain-1"); err != nil {
+	if _, err := newLC().Create("proj-1", "wf-1", "github.com/acme/proj-1", g, "odd", "chain-1"); err != nil {
 		t.Fatalf("Create() = %v, want nil", err)
 	}
 	if _, err := newLC().Start("proj-1", "wf-1"); err != nil {
@@ -542,7 +544,7 @@ func TestLifecycleRecordStageRejectsOutOfOrder(t *testing.T) {
 	if err != nil {
 		t.Fatalf("workflowprofile.Resolve() = %v, want nil", err)
 	}
-	if _, err := newLC().Create("proj-1", "wf-1", g, profile.Name, ""); err != nil {
+	if _, err := newLC().Create("proj-1", "wf-1", "github.com/acme/proj-1", g, profile.Name, ""); err != nil {
 		t.Fatalf("Create() = %v, want nil", err)
 	}
 	if _, err := newLC().Start("proj-1", "wf-1"); err != nil {
@@ -577,7 +579,7 @@ func TestLifecycleCloseCompletedRequiresPriorVerify(t *testing.T) {
 
 	g := validGoal("proj-1", "goal-1")
 	goals.set("proj-1", "goal-1", g)
-	if _, err := newLC().Create("proj-1", "wf-1", g, "standalone-minimal", ""); err != nil {
+	if _, err := newLC().Create("proj-1", "wf-1", "github.com/acme/proj-1", g, "standalone-minimal", ""); err != nil {
 		t.Fatalf("Create() = %v, want nil", err)
 	}
 	if _, err := newLC().Start("proj-1", "wf-1"); err != nil {
@@ -613,7 +615,7 @@ func TestLifecycleCloseAbandonedFromEachState(t *testing.T) {
 
 			g := validGoal("proj-1", "goal-1")
 			goals.set("proj-1", "goal-1", g)
-			if _, err := lc.Create("proj-1", "wf-1", g, "standalone-minimal", ""); err != nil {
+			if _, err := lc.Create("proj-1", "wf-1", "github.com/acme/proj-1", g, "standalone-minimal", ""); err != nil {
 				t.Fatalf("Create() = %v, want nil", err)
 			}
 			if err := tt.run(lc, "proj-1", "wf-1"); err != nil {
@@ -645,7 +647,7 @@ func TestLifecycleDependenciesUnavailableNeverBlock(t *testing.T) {
 	g := validGoal("proj-1", "goal-1")
 	goals.set("proj-1", "goal-1", g)
 
-	if _, err := newLC().Create("proj-1", "wf-1", g, "odd", ""); err != nil {
+	if _, err := newLC().Create("proj-1", "wf-1", "github.com/acme/proj-1", g, "odd", ""); err != nil {
 		t.Fatalf("Create() = %v, want nil", err)
 	}
 	if _, err := newLC().Start("proj-1", "wf-1"); err != nil {
@@ -695,7 +697,7 @@ func TestLifecycleReviewCapabilityDerivedFromProfileData(t *testing.T) {
 
 			g := validGoal("proj-1", "goal-1")
 			goals.set("proj-1", "goal-1", g)
-			if _, err := lc.Create("proj-1", "wf-1", g, tt.profile, ""); err != nil {
+			if _, err := lc.Create("proj-1", "wf-1", "github.com/acme/proj-1", g, tt.profile, ""); err != nil {
 				t.Fatalf("Create() = %v, want nil", err)
 			}
 			loaded, err := store.Load("proj-1", "wf-1")
@@ -761,7 +763,7 @@ func TestLifecycleObservesTheDependenciesTheCatalogsProfileDeclares(t *testing.T
 			lc.profiles = ProfileCatalogFunc(func(string) (workflowprofile.WorkflowProfile, error) { return custom, nil })
 			g := validGoal("proj-1", "goal-1")
 			goals.set("proj-1", "goal-1", g)
-			if _, err := lc.Create("proj-1", "wf-1", g, "maintenance", ""); err != nil {
+			if _, err := lc.Create("proj-1", "wf-1", "github.com/acme/proj-1", g, "maintenance", ""); err != nil {
 				t.Fatalf("Create() = %v, want nil", err)
 			}
 			loaded, err := store.Load("proj-1", "wf-1")
@@ -869,7 +871,7 @@ func TestLifecycleCreateBindsRoleChainHeadAndVerifyRequiresIt(t *testing.T) {
 	original := validRoleChain("proj-1", "goal-1", "chain-1")
 	chains.set("proj-1", "goal-1", "chain-1", original)
 
-	if _, err := newLC().Create("proj-1", "wf-1", g, "odd", "chain-1"); err != nil {
+	if _, err := newLC().Create("proj-1", "wf-1", "github.com/acme/proj-1", g, "odd", "chain-1"); err != nil {
 		t.Fatalf("Create() = %v, want nil", err)
 	}
 	if _, err := newLC().Start("proj-1", "wf-1"); err != nil {
@@ -936,7 +938,7 @@ func TestLifecycleObservationsForProbeTimeout(t *testing.T) {
 	lc.probeTimeout = 20 * time.Millisecond
 
 	start := time.Now()
-	state, err := lc.Create("proj-1", "wf-1", g, "odd", "")
+	state, err := lc.Create("proj-1", "wf-1", "github.com/acme/proj-1", g, "odd", "")
 	elapsed := time.Since(start)
 	if err != nil {
 		t.Fatalf("Create() = %v, want nil even when the prober blocks past the deadline", err)
@@ -988,7 +990,7 @@ func TestLifecycleObservationsForTreatsMismatchedProberCountAsUnavailable(t *tes
 	goals.set("proj-1", "goal-1", g)
 
 	lc := newTestLifecycle(t, store, stepClock(), goals, chains, mismatchedCountProber{})
-	if _, err := lc.Create("proj-1", "wf-1", g, "odd", ""); err != nil {
+	if _, err := lc.Create("proj-1", "wf-1", "github.com/acme/proj-1", g, "odd", ""); err != nil {
 		t.Fatalf("Create() = %v, want nil even when the prober returns the wrong observation count", err)
 	}
 	loaded, err := store.Load("proj-1", "wf-1")
@@ -1112,7 +1114,7 @@ func TestLifecycleRecordStageRejectsWhenAllStagesRecorded(t *testing.T) {
 	if err != nil {
 		t.Fatalf("workflowprofile.Resolve() = %v, want nil", err)
 	}
-	if _, err := newLC().Create("proj-1", "wf-1", g, profile.Name, ""); err != nil {
+	if _, err := newLC().Create("proj-1", "wf-1", "github.com/acme/proj-1", g, profile.Name, ""); err != nil {
 		t.Fatalf("Create() = %v, want nil", err)
 	}
 	if _, err := newLC().Start("proj-1", "wf-1"); err != nil {
@@ -1142,7 +1144,7 @@ func TestLifecycleVerifyRecordsExactLastVerifiedSeq(t *testing.T) {
 
 	g := validGoal("proj-1", "goal-1")
 	goals.set("proj-1", "goal-1", g)
-	if _, err := newLC().Create("proj-1", "wf-1", g, "standalone-minimal", ""); err != nil {
+	if _, err := newLC().Create("proj-1", "wf-1", "github.com/acme/proj-1", g, "standalone-minimal", ""); err != nil {
 		t.Fatalf("Create() = %v, want nil", err)
 	}
 	if _, err := newLC().Start("proj-1", "wf-1"); err != nil {
@@ -1187,7 +1189,7 @@ func TestLifecycleDegradedHookNotifiesOnProberError(t *testing.T) {
 	var calls []string
 	lc = lc.WithDegradedHook(func(detail string) { calls = append(calls, detail) })
 
-	state, err := lc.Create("proj-1", "wf-1", g, "odd", "")
+	state, err := lc.Create("proj-1", "wf-1", "github.com/acme/proj-1", g, "odd", "")
 	if err != nil {
 		t.Fatalf("Create() = %v, want nil even when the prober errors", err)
 	}
@@ -1215,7 +1217,7 @@ func TestLifecycleDegradedHookNotifiesOnMismatchedCount(t *testing.T) {
 	calls := 0
 	lc = lc.WithDegradedHook(func(string) { calls++ })
 
-	if _, err := lc.Create("proj-1", "wf-1", g, "odd", ""); err != nil {
+	if _, err := lc.Create("proj-1", "wf-1", "github.com/acme/proj-1", g, "odd", ""); err != nil {
 		t.Fatalf("Create() = %v, want nil", err)
 	}
 	if calls != 1 {
@@ -1234,7 +1236,7 @@ func TestLifecycleNilDegradedHookIsNoop(t *testing.T) {
 	goals.set("proj-1", "goal-1", g)
 
 	lc := newTestLifecycle(t, store, stepClock(), goals, chains, erroringProber{err: errors.New("boom")})
-	if _, err := lc.Create("proj-1", "wf-1", g, "odd", ""); err != nil {
+	if _, err := lc.Create("proj-1", "wf-1", "github.com/acme/proj-1", g, "odd", ""); err != nil {
 		t.Fatalf("Create() = %v, want nil", err)
 	}
 }
@@ -1256,7 +1258,7 @@ func TestLifecycleCreateRefusesAProfileTheResolverRefusesBeforeReadingAnythingEl
 		return workflowprofile.WorkflowProfile{}, retired
 	})
 
-	_, err := lc.Create("proj-1", "wf-1", validGoal("proj-1", "goal-1"), "odd", "chain-1")
+	_, err := lc.Create("proj-1", "wf-1", "github.com/acme/proj-1", validGoal("proj-1", "goal-1"), "odd", "chain-1")
 	if !errors.Is(err, retired) {
 		t.Fatalf("Create() err = %v, want the resolver's refusal", err)
 	}

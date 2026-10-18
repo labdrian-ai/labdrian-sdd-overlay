@@ -19,7 +19,7 @@ longterm-mem: stale: --project not given, adopted "/moved/from/here/.git" from t
     },
     {
       "name": "checkout",
-      "rule": "common_dir",
+      "rule": "directory",
       "adoptable": false,
       "first_seen": "<run>",
       "last_seen": "<run>"

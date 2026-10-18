@@ -10,15 +10,19 @@ import (
 
 // The golden files under testdata/project-identity-golden record how the verbs of `skills` that
 // depend on the id of the project name it: 'install' and 'adopt', which admit the skills of a
-// registry to a project by the project's id, and say that id in what they print. The id is, in
-// the owner's order (Phase 9, decision Q8): what --project-id gives, then the origin remote of the
-// repository the program runs in (read from its .git/config without running git), then the name of
-// that directory. A repository whose origin is github.com/acme/demo is that project whatever its
-// directory is called, also from a subdirectory or a linked worktree. These files were first
+// registry to a project by the project's id, and say that id in what they print. The id is the
+// shared identity of the project (identity/resolve, C23 M2), in the owner's order of 2026-10-18:
+// what --project-id gives, then the file .longterm-mem-project at the root of the main checkout,
+// then the origin remote of the repository the program runs in (read from its .git/config without
+// running git), then the name of the main checkout's root, and outside a repository the name of the
+// directory. A repository whose origin is github.com/acme/demo is that project whatever its
+// directory is called, also from a subdirectory or a linked worktree, and one with no origin is its
+// main checkout's name from a subdirectory and a linked worktree too. These files were first
 // recorded from the program as it was before Phase 9 unit H18 (docs/architecture/
 // hexagonal-target.md) put the id behind a ProjectIdentity port, which named the project by its
 // directory; the owner then put the origin in the chain (2026-10-06), and the cases that changed
-// were renamed for what they pin now.
+// were renamed for what they pin now. M2 added the cases of the declared file and of the main
+// checkout's name; the cases recorded before it did not change.
 //
 // Rewrite them deliberately with
 //
@@ -226,6 +230,48 @@ func projectIdentityCases() []registryGoldenCase {
 			w.mkdir("demo")
 			w.symlink(".git", "demo/.git")
 			w.label("a .git that cannot be inspected (a link to itself): the directory is named, and --project-id is the way on")
+			w.runIn("demo", w.identityArgs("install")...)
+			w.tree("demo")
+			w.label("naming the project goes past it")
+			w.runIn("demo", w.identityArgs("install", "--project-id", "demo")...)
+		}},
+		{"install-names-the-project-by-its-declared-file-before-its-origin", func(w *registryWorld) {
+			w.identityWorld()
+			w.repository("demo", origin)
+			w.put("demo/.longterm-mem-project", "chosen\n")
+			w.label("a repository named demo whose origin is github.com/acme/demo and whose declared file says chosen: the skill admitted to chosen")
+			w.runIn("demo", w.identityArgs("install")...)
+			w.tree("demo")
+			w.label("and --project-id still comes first")
+			w.runIn("demo", w.identityArgs("install", "--project-id", "demo")...)
+		}},
+		{"install-in-a-linked-worktree-reads-the-main-checkouts-declared-file-only", func(w *registryWorld) {
+			w.identityWorld()
+			w.repository("demo", "")
+			w.put("demo/.longterm-mem-project", "chosen\n")
+			w.linkedWorktree("demo", "feature-x", "feature-x")
+			w.put("feature-x/.longterm-mem-project", "stranger\n")
+			w.label("the main checkout declares chosen, the worktree's own file says stranger: the worktree is chosen")
+			w.runIn("feature-x", w.identityArgs("install")...)
+			w.treeOf("feature-x", false) // the .git file holds a path of the world, whose length varies
+		}},
+		{"install-names-a-repository-with-no-origin-by-its-main-checkout", func(w *registryWorld) {
+			w.identityWorld()
+			w.repository("demo", "")
+			w.mkdir("demo/sub")
+			w.label("below the root of a repository named demo with no origin: the project is demo, not sub")
+			w.runIn("demo/sub", w.identityArgs("install")...)
+			w.tree("demo")
+			w.linkedWorktree("demo", "feature-x", "feature-x")
+			w.label("a linked worktree of it: the project is demo, not feature-x")
+			w.runIn("feature-x", w.identityArgs("install")...)
+			w.treeOf("feature-x", false) // the .git file holds a path of the world, whose length varies
+		}},
+		{"install-refuses-a-declared-file-that-is-not-one-line", func(w *registryWorld) {
+			w.identityWorld()
+			w.repository("demo", origin)
+			w.put("demo/.longterm-mem-project", "chosen\nstranger\n")
+			w.label("a declared file of two lines: refused, and neither the origin nor the directory is used in its place")
 			w.runIn("demo", w.identityArgs("install")...)
 			w.tree("demo")
 			w.label("naming the project goes past it")

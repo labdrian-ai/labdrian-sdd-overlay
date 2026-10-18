@@ -11,54 +11,53 @@
 // of long-term memory. There is precedent: an observation was once bound
 // to the wrong project because identity was resolved by cwd.
 //
-// The rule is a chain, first match wins:
+// The rule is the one the engine uses too (identity/resolve, C23 M2), a chain
+// where the first match wins:
 //
-//  1. DECLARED -- a .longterm-mem-project file at the repository root
-//     naming the project. It wins over everything: it is the only rule a
-//     human controls, and the only escape hatch when the two derived rules
-//     answer something the operator does not want.
+//  1. DECLARED -- a .longterm-mem-project file at the root of the main
+//     checkout naming the project. It wins over every derived rule: it is the
+//     only rule a human controls, and the only escape hatch when a derived
+//     rule answers something the operator does not want.
 //  2. NORMALIZED REMOTE -- origin's URL reduced to "host/path", so that
 //     git@host:owner/name.git, https://host/owner/name and
 //     https://host/owner/name.git all collapse to host/owner/name.
-//  3. REALPATH OF THE GIT COMMON DIR -- always available, even with no
-//     remote, and shared by a repository's main checkout and every linked
-//     worktree.
+//  3. DIRECTORY -- the name of the main checkout's root, shared by the main
+//     checkout, every linked worktree and every directory below them. Outside
+//     a git repository it is the name of the directory asked about, so the
+//     module works there too (decision 4 of M2).
+//
+// (The engine's chain starts with its --project-id; this module's explicit
+// name is --project, which never reaches Resolve.)
 //
 // THE PROPERTY: for any two directories inside the same repository -- the
 // main checkout and any number of linked worktrees -- Resolve returns the
 // IDENTICAL identity, at every level of the chain independently.
 //
-// Rule 3 carries a measured trap. `git rev-parse --git-common-dir` answers
-// ".git" from a main checkout and "/abs/path/repo/.git" from a linked
-// worktree, and the on-disk metadata has the same shape: a worktree's
-// .git file points at <repo>/.git/worktrees/<name>, whose commondir file
-// holds the relative "../..". Using either answer raw as a key fragments a
-// repository exactly the way this package exists to prevent, so the common
-// dir is always made absolute, cleaned, and symlink-resolved -- by the
-// inspector that locates the repository, which hands the rules a Repository
-// whose paths are already so.
+// Until M2 the third rule was the realpath of the git common directory. It is
+// no longer derived as the identity, but a repository may hold memory under
+// it, so adoption still offers it (RuleCommonDir): a repository is never cut
+// off from what it stored under its former name.
 //
-// The rules read the repository through RepositoryInspector, a port they
-// own: where the repository is, the declaration file of its main checkout,
-// and its git configuration. They walk no directory, read no file and run no
-// process; internal/projectidfs answers the port from the metadata git keeps
-// on a disk (it never shells out, R-021), and the composition root hands the
-// rules that adapter.
+// The rules read the repository through RepositoryInspector, the shared
+// rules' port: where the repository is, the declaration file of its main
+// checkout, and its git configuration. They walk no directory, read no file
+// and run no process; internal/projectidfs names the shared disk adapter
+// (identity/gitfs, which never shells out, R-021), and the composition root
+// hands the rules that adapter.
 package projectid
 
 import (
-	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/identity"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/identity/resolve"
 )
 
 // DeclaredFileName is the file a repository carries to name its project
-// explicitly. It sits at the root of the working tree, holds exactly one
-// non-empty line, and beats both derived rules.
-const DeclaredFileName = ".longterm-mem-project"
+// explicitly. It sits at the root of the main checkout, holds exactly one
+// non-empty line, and beats every derived rule.
+const DeclaredFileName = resolve.DeclaredFileName
 
 // Rule names which link of the chain produced an identity. A caller that
 // cannot tell a declared name from a path-derived fallback cannot warn
@@ -70,10 +69,14 @@ const (
 	RuleDeclared Rule = "declared"
 	// RuleRemote: origin's URL normalized to "host/path".
 	RuleRemote Rule = "remote"
+	// RuleDirectory: the name of the main checkout's root, or, outside a git
+	// repository, of the directory itself. It is the chain's last rule.
+	RuleDirectory Rule = "directory"
 	// RuleCommonDir: the absolute, symlink-resolved git common directory.
-	// This one is a fallback: it is stable across worktrees but tied to
-	// where the repository happens to live, so it does not survive the
-	// repository being moved or re-cloned elsewhere.
+	// It was the chain's last rule until M2 and is no longer derived as the
+	// identity; adoption still offers it, so memory stored under it stays
+	// reachable. It is tied to where the repository happens to live, so it
+	// does not survive the repository being moved or re-cloned elsewhere.
 	RuleCommonDir Rule = "common_dir"
 	// RuleRemembered: a name this repository was known by before, recovered
 	// from a caller's ledger rather than derived from the repository as it
@@ -83,102 +86,67 @@ const (
 )
 
 var (
-	// ErrNotARepository is returned when the directory is not inside a git
-	// repository. It is a named failure on purpose: an empty string would
-	// later become a project called "".
-	ErrNotARepository = errors.New("projectid: directory is not inside a git repository")
+	// ErrNotARepository says that a directory is not inside a git repository.
+	// Resolve no longer returns it (outside a repository the directory's name
+	// is the identity); CheckCorrespondence and CommonDir still do, because
+	// outside a repository there is nothing to check and no ledger to keep.
+	ErrNotARepository = resolve.ErrNotARepository
 
 	// ErrDeclaredInvalid is returned when DeclaredFileName exists but does
 	// not hold exactly one non-empty line. A broken declaration is
 	// reported rather than skipped: silently falling through to a derived
 	// rule would hide the very thing the human wrote the file to control.
-	ErrDeclaredInvalid = errors.New("projectid: declared project file is not a single non-empty line")
+	ErrDeclaredInvalid = resolve.ErrDeclaredInvalid
 )
 
 // Identity is a canonical project identity plus the rule that produced it.
 type Identity struct {
 	// Project is the canonical identity string. Its shape depends on Rule:
-	// a bare name for RuleDeclared, "host/owner/name" for RuleRemote, an
-	// absolute path for RuleCommonDir.
+	// a bare name for RuleDeclared and RuleDirectory, "host/owner/name" for
+	// RuleRemote, an absolute path for an adopted RuleCommonDir.
 	Project string `json:"project"`
 	// Rule names the chain link that produced Project.
 	Rule Rule `json:"rule"`
 	// WorktreeRoot is the root of the working tree dir belongs to, and
 	// differs between a main checkout and each linked worktree. It is
 	// reported for diagnostics and is deliberately NOT part of the
-	// identity -- it is the value that fragments.
+	// identity -- it is the value that fragments. It is empty outside a
+	// repository.
 	WorktreeRoot string `json:"worktree_root"`
 	// CommonDir is the absolute, symlink-resolved git common directory,
-	// shared by the main checkout and every linked worktree.
+	// shared by the main checkout and every linked worktree. It is empty
+	// outside a repository.
 	CommonDir string `json:"common_dir"`
 }
 
-// Resolve returns the canonical identity of the project containing dir.
+// Resolve returns the canonical identity of the project containing dir,
+// by the shared chain (identity/resolve). The declaration is read from
+// EXACTLY ONE location, the main checkout's root: a file that only a linked
+// worktree's branch carries would give that worktree a second name, which is
+// the fragmentation this package exists to prevent.
 func (r Resolver) Resolve(dir string) (Identity, error) {
-	repo, err := r.repositories.Locate(dir)
+	id, err := r.rules.Resolve(dir, "")
 	if err != nil {
 		return Identity{}, err
 	}
+	return identityOf(id.Repository, id.Project, ruleOf(id.Source)), nil
+}
 
-	if name, ok, err := r.declared(repo); err != nil {
-		return Identity{}, err
-	} else if ok {
-		return identityOf(repo, name, RuleDeclared), nil
+// ruleOf is the rule of this module that names a source of the shared chain.
+// The chain is asked with no explicit id, so it never answers explicit.
+func ruleOf(source resolve.Source) Rule {
+	switch source {
+	case resolve.SourceDeclared:
+		return RuleDeclared
+	case resolve.SourceRemote:
+		return RuleRemote
+	default:
+		return RuleDirectory
 	}
-
-	if name, ok := r.remote(repo.CommonDir); ok {
-		return identityOf(repo, name, RuleRemote), nil
-	}
-
-	return identityOf(repo, repo.CommonDir, RuleCommonDir), nil
 }
 
 func identityOf(repo Repository, project string, rule Rule) Identity {
 	return Identity{Project: project, Rule: rule, WorktreeRoot: repo.WorktreeRoot, CommonDir: repo.CommonDir}
-}
-
-// declared reads DeclaredFileName from EXACTLY ONE location: the main
-// checkout's working-tree root. Not the caller's worktree, and not "the
-// caller's worktree, falling back to the main one".
-//
-// That fallback was the first implementation, and it fragmented. A file
-// present on a linked worktree's branch but absent on the main checkout's
-// made the worktree resolve by the declared rule while the main checkout
-// resolved by the remote — two identities for one repository, which is the
-// exact defect this package exists to prevent, arriving through its own
-// convenience. Searching both roots can only ever be one-directional; the
-// direction it misses always fragments.
-//
-// So the declaration is a property of the REPOSITORY, and the main checkout
-// is the repository's canonical working tree. A per-worktree declaration is
-// not a convenience this package can offer, because a per-worktree
-// declaration IS fragmentation. When the main checkout's root cannot be
-// located or carries no file, the declaration simply does not exist for this
-// repository, whatever any linked worktree holds, and the chain moves on.
-func (r Resolver) declared(repo Repository) (string, bool, error) {
-	root := repo.MainWorktreeRoot
-	if root == "" {
-		root = repo.WorktreeRoot
-	}
-
-	text, found, err := r.repositories.DeclaredProject(root)
-	if err != nil || !found {
-		return "", false, err
-	}
-
-	name := strings.TrimSpace(text)
-	if name == "" || strings.ContainsAny(name, "\n\r") {
-		return "", false, fmt.Errorf("%w: %s", ErrDeclaredInvalid, filepath.Join(root, DeclaredFileName))
-	}
-	return name, true, nil
-}
-
-// remote reads origin's URL out of the common dir's config and normalizes
-// it. The text is the inspector's, because this module may not shell out
-// (R-021); what the text means is the identity module's rule, shared with
-// the engine.
-func (r Resolver) remote(commonDir string) (string, bool) {
-	return identity.OriginRemote(r.repositories.GitConfig(commonDir))
 }
 
 // Correspondence is the result of checking a caller-supplied project name
@@ -194,29 +162,43 @@ type Correspondence struct {
 
 // CheckCorrespondence resolves dir's canonical identity and reports whether
 // given corresponds to it. Outside a git repository it returns
-// ErrNotARepository and the caller has nothing to check.
+// ErrNotARepository and the caller has nothing to check: there the identity
+// is only the name of the directory the command happens to run in, and an
+// operator naming a project from such a place (a CI job, a scratch
+// directory) fragments no repository.
 //
-// Correspondence is deliberately looser than string equality. Two of the
-// three rules produce an identity no operator would ever type -- a
-// "host/owner/name" remote form, or an absolute path -- so the repository's
-// own directory name and the remote's last segment count as corresponding
-// too. Without that, every command run in a repository with no declared
-// file would warn, and a warning that fires on every correct call teaches
-// operators to stop reading warnings, which costs more than it catches.
+// Correspondence is deliberately looser than string equality. The remote
+// rule produces an identity no operator would ever type -- a
+// "host/owner/name" form -- so the remote's last segment counts as
+// corresponding too, as the directory name of an adopted common-dir path
+// does. Without that, every command run in a repository with a remote and no
+// declared file would warn, and a warning that fires on every correct call
+// teaches operators to stop reading warnings, which costs more than it
+// catches.
 func (r Resolver) CheckCorrespondence(dir, given string) (Correspondence, error) {
-	id, err := r.Resolve(dir)
+	resolved, err := r.rules.Resolve(dir, "")
 	if err != nil {
 		return Correspondence{}, err
 	}
+	if !resolved.InRepository {
+		return Correspondence{}, fmt.Errorf("%w: %s", ErrNotARepository, dir)
+	}
+	id := identityOf(resolved.Repository, resolved.Project, ruleOf(resolved.Source))
 
 	c := Correspondence{Given: strings.TrimSpace(given), Canonical: id}
+	c.Match = corresponds(id, c.Given)
+	return c, nil
+}
+
+// corresponds reports whether given names id. An empty name names nothing, not even an identity that is empty
+// itself: a project called "" is the failure the named errors of this package exist to prevent.
+func corresponds(id Identity, given string) bool {
 	for _, candidate := range correspondingNames(id) {
-		if candidate != "" && candidate == c.Given {
-			c.Match = true
-			break
+		if candidate != "" && candidate == given {
+			return true
 		}
 	}
-	return c, nil
+	return false
 }
 
 // correspondingNames lists the strings that count as naming id.
@@ -251,8 +233,8 @@ func lastSegment(s string) string {
 // repository and deliberately promoting into another project's vault, a CI
 // job running from a checkout that is not the project being addressed, or
 // an overlay repository operating on every project it manages. Refusing
-// would also be unsound as a rule, because two of the three chain rules
-// produce an identity no operator would ever type, so "differs from
+// would also be unsound as a rule, because the remote rule produces an
+// identity no operator would ever type, so "differs from
 // canonical" is not the same claim as "wrong". An explicit --project stays
 // the operator's decision; it just stops being an invisible one.
 func (c Correspondence) Warning() string {

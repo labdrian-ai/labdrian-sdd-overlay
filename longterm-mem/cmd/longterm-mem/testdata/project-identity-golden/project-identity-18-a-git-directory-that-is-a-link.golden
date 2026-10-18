@@ -1,10 +1,10 @@
 args: stale
 exit: 0
 --- stdout ---
-longterm-mem: stale: 0 observations in <outside>/elsewhere/.git, checked against <project>
+longterm-mem: stale: 0 observations in checkout, checked against <project>
   nothing this repository disagrees with
 --- stderr ---
-longterm-mem: stale: --project not given, resolved "<outside>/elsewhere/.git" from the working directory (via the common_dir rule)
+longterm-mem: stale: --project not given, resolved "checkout" from the working directory (via the directory rule)
 --- ledger ---
 {
   "schema": "longterm-mem.identity-ledger/v1",
@@ -14,6 +14,13 @@ longterm-mem: stale: --project not given, resolved "<outside>/elsewhere/.git" fr
       "name": "<outside>/elsewhere/.git",
       "rule": "common_dir",
       "adoptable": true,
+      "first_seen": "<run>",
+      "last_seen": "<run>"
+    },
+    {
+      "name": "checkout",
+      "rule": "directory",
+      "adoptable": false,
       "first_seen": "<run>",
       "last_seen": "<run>"
     },

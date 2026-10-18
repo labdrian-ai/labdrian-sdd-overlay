@@ -63,6 +63,9 @@ type State struct {
 	// that name. It is shared by every State replayed from the log and is never modified.
 	ProfileSnapshot *workflowprofile.Snapshot
 	GoalID          string
+	// ProjectIdentity is the shared identity of the project the created event recorded (C23 M2), and
+	// "" for a log written before it existed.
+	ProjectIdentity string
 	GoalDigest      string
 	RoleChainID     string
 	RoleChainHead   string
@@ -206,6 +209,7 @@ func applyEvent(state State, e WorkflowEvent) State {
 		state.GoalID = e.GoalID
 		state.GoalDigest = e.GoalDigest
 		state.Profile = e.Profile
+		state.ProjectIdentity = e.ProjectIdentity
 		state.ProfileSnapshot = e.ProfileSnapshot
 		state.RoleChainID = e.RoleChainID
 		state.RoleChainHead = e.RoleChainHead

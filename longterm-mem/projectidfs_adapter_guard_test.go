@@ -28,6 +28,25 @@ func TestOnlyTheCompositionRootImportsTheProjectIDAdapter(t *testing.T) {
 	}
 }
 
+// gitfsAdapter is the shared disk adapter of the identity rules (C23 M2). It lives in the identity module,
+// which architecture_test.go vouches for as pure (pureModules), and archguard judges a pure module as a whole;
+// gitfs reads the file system, so this guard keeps it where the disk is met: projectidfs names it for the
+// module, and only the composition root reaches projectidfs.
+const gitfsAdapter = "github.com/labdrian-ai/labdrian-sdd-overlay/identity/gitfs"
+
+// TestOnlyTheProjectIDAdapterImportsTheSharedDiskAdapter keeps identity/gitfs out of every package of this
+// module but projectidfs (and the composition root, which the walk lets through as it does for every adapter):
+// the pure module may not carry the disk into the domain behind archguard's back.
+func TestOnlyTheProjectIDAdapterImportsTheSharedDiskAdapter(t *testing.T) {
+	importers, err := importersOf(".", gitfsAdapter, projectidfsDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range importers {
+		t.Errorf("%s imports %s: only %s may; read the repository through the port projectid owns", path, gitfsAdapter, projectidfsDir)
+	}
+}
+
 // The walk is the rule, so it is tested on a tree built for it: the composition root and the adapter are let
 // through, every other package is flagged.
 func TestImportersOfTheProjectIDAdapterFlagsEveryoneButTheCompositionRootAndTheAdapter(t *testing.T) {

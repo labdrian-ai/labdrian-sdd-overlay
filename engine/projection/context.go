@@ -101,6 +101,12 @@ func builtInWorkflowProfile(state workflow.State) (workflowprofile.WorkflowProfi
 // profile's ceiling, resolved for the project and goal. The context states this
 // plan and the PreToolUse gate enforces it, so both call this function, and can
 // never disagree about which project is permitted.
+//
+// The plan's project is the shared identity the workflow recorded at create
+// (C23 M2: a declared name, a normalized origin remote or the main checkout's
+// name), the name longterm-mem gives the project; projectID, the slug that keys
+// the workflow's directory, stands in only for a workflow created before it,
+// whose identity is unknown (and whose queries the gate does not check).
 func resolvePlan(state workflow.State, projectID string) (memoryscope.Plan, error) {
 	profile, err := builtInWorkflowProfile(state)
 	if err != nil {
@@ -110,5 +116,9 @@ func resolvePlan(state workflow.State, projectID string) (memoryscope.Plan, erro
 	if err != nil {
 		return memoryscope.Plan{}, err
 	}
-	return memoryscope.Resolve(directive, projectID, state.GoalID)
+	project := state.ProjectIdentity
+	if project == "" {
+		project = projectID
+	}
+	return memoryscope.Resolve(directive, project, state.GoalID)
 }

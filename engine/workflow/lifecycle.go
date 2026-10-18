@@ -26,6 +26,9 @@ var (
 	// exists for this workflow (owned or otherwise); a workflow may be
 	// created only once (see CheckTransition's ErrAlreadyCreated).
 	ErrCreateRefused = errors.New("workflow lifecycle: cannot create: on-disk state already exists for this workflow")
+	// ErrGoalProjectMismatch is returned by Create when the Goal names another project than the
+	// workflow's slug (C23, decision 5 of M2); nothing is appended.
+	ErrGoalProjectMismatch = errors.New("workflow lifecycle: cannot create: the goal belongs to another project")
 	// ErrStageOutOfOrder is returned by RecordStage when stage is not the
 	// exact next stage in the Workflow Profile's declared order (including
 	// when stage is not one of the Profile's declared stages at all, or
@@ -454,15 +457,26 @@ func (l Lifecycle) loadVerifiedRoleChain(projectID, goalID, roleChainID string) 
 // Create validates g (a Goal v2) and profileName, optionally verifies a
 // referenced role chain, and appends the workflow's created event: data
 // only, binding goal_id, goal_digest, profile, a snapshot of the profile the
-// catalog gave for profileName (and the snapshot's digest), and (if given)
-// role_chain_id. The workflow goes on from that snapshot, not from the
-// catalog. It fails, appending nothing, when g is invalid, profileName is unknown,
+// catalog gave for profileName (and the snapshot's digest), the project's
+// shared identity (projectIdentity, which the caller resolves; C23 M2) and (if
+// given) role_chain_id. projectID stays the key of the workflow's directory. An
+// empty projectIdentity records none: the caller could not resolve it, and the
+// memory gate reads that as unknown. The workflow goes on from that snapshot,
+// not from the catalog. It fails, appending nothing, when g is invalid, g names
+// another project than projectID (ErrGoalProjectMismatch), projectIdentity is
+// present but blank or not one bounded line, profileName is unknown,
 // roleChainID is non-blank but the chain has no records or fails
 // roles.VerifyChain, or on-disk state already exists for this workflow
 // (ErrCreateRefused).
-func (l Lifecycle) Create(projectID, workflowID string, g goal.Goal, profileName, roleChainID string) (State, error) {
+func (l Lifecycle) Create(projectID, workflowID, projectIdentity string, g goal.Goal, profileName, roleChainID string) (State, error) {
 	if err := g.Validate(); err != nil {
 		return State{}, fmt.Errorf("workflow lifecycle: create: invalid goal: %w", err)
+	}
+	if g.ProjectID != projectID {
+		return State{}, fmt.Errorf("%w: its project_id is %q and the workflow's project is %q", ErrGoalProjectMismatch, g.ProjectID, projectID)
+	}
+	if err := ValidateProjectIdentity(projectIdentity); err != nil {
+		return State{}, fmt.Errorf("workflow lifecycle: create: %w", err)
 	}
 	profile, err := l.profiles.Resolve(profileName)
 	if err != nil {
@@ -506,6 +520,7 @@ func (l Lifecycle) Create(projectID, workflowID string, g goal.Goal, profileName
 	event.GoalID = g.GoalID
 	event.GoalDigest = digest
 	event.Profile = profileName
+	event.ProjectIdentity = projectIdentity
 	event.ProfileSnapshot = &snapshot
 	event.ProfileDigest = snapshotDigest
 	event.RoleChainID = roleChainID
