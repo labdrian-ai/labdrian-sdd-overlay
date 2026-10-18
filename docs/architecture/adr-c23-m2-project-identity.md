@@ -52,8 +52,7 @@ remote is the last path segment of the repository.
    (`engine/workflow/statemachine.go:68`, set at `:212`). The memory plan is resolved for the
    identity (`engine/projection/context.go:119`), so the context and the gate name the same project.
    A workflow created before M2 has no identity: its plan still names the slug, and the gate allows
-   its queries with one warning (`engine/projection/gate.go:181`). No migration. (The two
-   projection lines are the batch's uncommitted gate change; see "Left open".)
+   its queries with one warning (`engine/projection/gate.go:181`). No migration.
 3. **Engram, for M4 only.** M2 gives `identity.EngramName` (`identity/engram.go:13`), the last path
    segment of an identity, with a table test. Nothing calls it yet; the gate does not check Engram.
 4. **Outside git, the directory's name.** With no flag and no declared file, a directory that is in
@@ -95,26 +94,35 @@ code as it stands; it is not a quotation of the owner's reasons.
 - **`workflow create` warns, not refuses, when the identity cannot be resolved** (a broken `.git`
   pointer, a declared file that is not one line). It records no identity, and the gate treats the
   workflow as one created before M2. This keeps create working in every layout it worked in before;
-  decision 5 is the only new refusal.
+  decision 5 is the only new refusal. This is an implementation choice of batch 53, not an owner
+  decision (accepted by the coordinator on 2026-10-18): the owner's decisions say what create
+  records, not what it does when nothing can be resolved.
 - **The gate stays total.** An unknown identity is an allow with one warning; scope none still
   denies every query.
 - **M4** turns on the Engram project check of M1 decision 4. It compares the `project` an Engram
   read names with `identity.EngramName(state.ProjectIdentity)`, not with the identity itself, since
   Engram names a remote repository by its last segment. A workflow with no identity is an allow, as
   for longterm-mem.
-- **Left open: the gate.** The plan resolved for the identity and the no-identity allow are written
-  and tested in `engine/projection`, but `TestPhase7Acceptance`
-  (`engine/cmd/phase7_acceptance_test.go:72`) creates its workflow in a temporary directory, so the
-  identity is that directory's name and four of its subtests fail. Naming that directory `proj-1`
-  fixes it; the file was outside the batch's edit surface.
-- **Left open: longterm-mem.** longterm-mem still resolves with `projectid.Resolver` and
-  `projectidfs.Inspector`, so in a repository with no remote it still names the project by the
-  realpath of its common directory, and outside git it still fails. Moving it onto
-  `identity/resolve` changes behavior that the `projectidfs` tests assert
-  (`longterm-mem/internal/projectidfs/identity_test.go:182`, `remote_vectors_test.go:56,82`,
-  `inspector_test.go:81`), and those tests, its wiring and its architecture test were outside the
-  batch's edit surface. When it moves, the old common-dir realpath stays an adoption candidate, so a
-  page promoted under it can be adopted, and the MCP server stays excluded from cwd adoption.
+- **Left open: longterm-mem.** Committed longterm-mem still resolves with its own chain, so in a
+  repository with no remote it names the project by the realpath of its common directory, and
+  outside git it refuses. The move onto `identity/resolve` is written in the worktree of batch 53
+  but not committed, for two reasons found while doing it:
+  - `stale` reads the repository to check against from `projectid.Resolve`'s worktree root
+    (`longterm-mem/cmd/longterm-mem/cmd_stale.go:38,56`) and relied on `Resolve` failing outside
+    git; with decision 4 it proceeds with no repository and fails with `staleness:  does not exist`.
+    It needs to refuse there itself, in a file outside the batch's surface, as do two tests of
+    `cmd/longterm-mem/project_resolve_test.go` (`:68` asserts the old refusal outside git).
+  - A repository with no remote and no declaration that is **renamed** loses its memory. Before M2
+    its name was the realpath of its common directory, which the identity ledger records as strict,
+    so after a move the ledger's word was enough to adopt it again
+    (`TestResolveProjectFlag_AMovedRepositoryIsReunitedWithItsMemory`, `project_resolve_test.go:313`). Now its name is its
+    directory's, which the ledger records as loose (a bare directory name can name somebody else's
+    repository), so a renamed directory is not reunited with its memory. A repository moved
+    without being renamed keeps its name. Whether a directory name the chain answered may be
+    adopted on the ledger's word is a decision for the owner.
+
+  When it lands, the old common-dir realpath stays an adoption candidate, after the chain's names,
+  and the MCP server stays excluded from cwd adoption.
 - **Accepted costs.** A repository that declares nothing and has no origin changes name in
   longterm-mem once it moves (from the common dir's realpath to the directory's name), and workflows
   created before M2 are not checked by the gate until they are recreated.
