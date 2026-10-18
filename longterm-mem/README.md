@@ -105,16 +105,22 @@ directory by a chain, first match wins (`internal/projectid`):
 2. **Normalized origin remote** — reduced to `host/owner/name`, so
    `git@github.com:acme/widgets.git`, `https://github.com/acme/widgets`
    and `https://github.com/acme/widgets.git` all collapse to one value.
-3. **Realpath of the git common directory** — always available, even with
-   no remote; absolute and symlink-resolved so a linked worktree and the
-   main checkout answer identically.
+3. **Name of the main checkout's directory** — available even with no
+   remote, so a linked worktree and the main checkout answer identically.
+   It is a loose name: another repository can have a directory of the same
+   name, so it is never adopted from the identity ledger, and a renamed
+   repository with no remote starts a new identity unless it declares its
+   name in `.longterm-mem-project`.
 
-Every rule answers the same identity from a repository's main checkout and
-from any of its linked worktrees. That is the point: one repository
-addressed under several names becomes several memories that never find each
-other. Outside a git repository, an omitted `--project` is refused with the
-reason resolution failed — an unresolved project must never become an empty
-one.
+This is the shared resolver of the `identity` module, the same chain the
+engine uses (see `docs/architecture/adr-c23-m2-project-identity.md`). Every
+rule answers the same identity from a repository's main checkout and from
+any of its linked worktrees. That is the point: one repository addressed
+under several names becomes several memories that never find each other.
+Outside a git repository the identity is the working directory's name;
+`stale`, which checks memories against a repository's history, refuses
+there. Memory stored under the old common-directory path stays reachable
+through adoption.
 
 When `--project` **is** given and the working directory is inside a git
 repository that resolves to a different identity, the command prints a
