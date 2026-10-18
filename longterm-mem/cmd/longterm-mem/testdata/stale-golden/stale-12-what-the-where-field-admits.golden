@@ -11,4 +11,4 @@ longterm-mem: stale: 3 observations in skillsgolden, checked against <project>
   Nothing was changed. Each REMOVED line carries the commit that removed it: read it before
   deciding, then record the removal so the next agent does not reintroduce what it describes.
 --- stderr ---
-WARN stale: --project skillsgolden does not correspond to this directory's project, which resolves to "<project>/.git" (via the common_dir rule); proceeding as asked, but if this was not deliberate the memory you write lands in a project that will never be searched back
+WARN stale: --project skillsgolden does not correspond to this directory's project, which resolves to "checkout" (via the directory rule); proceeding as asked, but if this was not deliberate the memory you write lands in a project that will never be searched back

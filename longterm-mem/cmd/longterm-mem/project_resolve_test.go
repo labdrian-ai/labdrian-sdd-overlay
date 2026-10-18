@@ -62,18 +62,46 @@ func TestResolveProjectFlag_OmittedResolvesFromWorkingDirectory(t *testing.T) {
 	}
 }
 
-// TestResolveProjectFlag_UnresolvableKeepsTheRefusalAndNamesWhy: outside a
-// repository the old behaviour stands -- refuse -- but the message now
-// says what failed instead of only restating the flag.
+// TestResolveProjectFlag_OutsideARepositoryIsTheDirectorysName: outside a
+// repository the project is the working directory's name (C23 M2, decision
+// 4), and the operator is told which name and by which rule, as everywhere
+// else.
+func TestResolveProjectFlag_OutsideARepositoryIsTheDirectorysName(t *testing.T) {
+	t.Setenv(engramDBEnvVar, filepath.Join(t.TempDir(), "absent.db"))
+	t.Setenv(vaultsFileEnvVar, writeVaults(t))
+	dir := filepath.Join(t.TempDir(), "notes")
+	if err := os.Mkdir(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Chdir(dir)
+
+	var project string
+	var exit int
+	stderr := captureStderr(t, func() { project, exit = identityCommands().resolveProjectFlag("query", "") })
+
+	if exit != exitOK || project != "notes" {
+		t.Fatalf("resolveProjectFlag outside a repository = %q, exit %d; want \"notes\", exit %d; stderr=%q", project, exit, exitOK, stderr)
+	}
+	if want := `longterm-mem: query: --project not given, resolved "notes" from the working directory (via the directory rule)`; !strings.Contains(stderr, want) {
+		t.Errorf("stderr %q does not say %q", stderr, want)
+	}
+}
+
+// A directory that cannot be resolved keeps the refusal, and the message says
+// what failed instead of only restating the flag.
 func TestResolveProjectFlag_UnresolvableKeepsTheRefusalAndNamesWhy(t *testing.T) {
-	t.Chdir(t.TempDir())
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, ".git"), []byte("not a pointer\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Chdir(dir)
 
 	var project string
 	var exit int
 	stderr := captureStderr(t, func() { project, exit = identityCommands().resolveProjectFlag("query", "") })
 
 	if exit != exitUsage {
-		t.Fatalf("resolveProjectFlag outside a repository exited %d, want %d (usage)", exit, exitUsage)
+		t.Fatalf("resolveProjectFlag in a broken repository exited %d, want %d (usage)", exit, exitUsage)
 	}
 	if project != "" {
 		t.Fatalf("a failed resolution produced project %q; an empty or junk project name must never reach Engram", project)
@@ -81,7 +109,7 @@ func TestResolveProjectFlag_UnresolvableKeepsTheRefusalAndNamesWhy(t *testing.T)
 	if !strings.Contains(stderr, "--project is required") {
 		t.Errorf("refusal %q no longer carries the existing --project is required shape", stderr)
 	}
-	if !strings.Contains(stderr, "not inside a git repository") {
+	if !strings.Contains(stderr, `holds no "gitdir:" line`) {
 		t.Errorf("refusal %q does not name why resolution failed", stderr)
 	}
 }
@@ -305,40 +333,75 @@ func TestResolveProjectFlag_ReportsDerivableNamesOwedAnIntegration(t *testing.T)
 	}
 }
 
-// The hole derivation alone cannot close, end to end: a repository with no
-// declaration and no remote is known only by its path. Move it, and that
-// name stops being derivable -- and the memory stored under it becomes
-// unreachable, silently, forever. The ledger travels inside .git, so it
-// moves WITH the repository and reunites the two.
-func TestResolveProjectFlag_AMovedRepositoryIsReunitedWithItsMemory(t *testing.T) {
+// A repository with no declaration and no remote is known by its directory's
+// name (C23 M2). Moved without being renamed, it keeps that name, so its
+// memory stays where it is.
+func TestResolveProjectFlag_AMovedRepositoryKeepsItsName(t *testing.T) {
 	t.Setenv(engramDBEnvVar, filepath.Join(t.TempDir(), "absent.db"))
-	parent := t.TempDir()
-	before := filepath.Join(parent, "before")
+	before := filepath.Join(t.TempDir(), "widgets")
 	plainRepo(t, before)
-
-	// Live once at the old path, so the ledger records that name.
 	t.Setenv(vaultsFileEnvVar, writeVaults(t))
 	t.Chdir(before)
 	var oldName string
 	captureStderr(t, func() { oldName, _ = identityCommands().resolveProjectFlag("query", "") })
-	if oldName == "" {
-		t.Fatal("the first resolution produced no name")
-	}
 
-	// The repository moves. Nothing derives its old name any more.
-	after := filepath.Join(parent, "after")
+	after := filepath.Join(t.TempDir(), "widgets")
 	if err := os.Rename(before, after); err != nil {
 		t.Fatalf("move the repository: %v", err)
 	}
-
-	// The memory is still filed under the old name.
 	t.Setenv(vaultsFileEnvVar, writeVaults(t, oldName))
 	t.Chdir(after)
 
 	var got string
 	stderr := captureStderr(t, func() { got, _ = identityCommands().resolveProjectFlag("query", "") })
-	if got != oldName {
-		t.Fatalf("a moved repository lost its memory: resolved %q, want the remembered %q; stderr=%q", got, oldName, stderr)
+	if oldName != "widgets" || got != oldName {
+		t.Fatalf("resolved %q before the move and %q after, want \"widgets\" both times; stderr=%q", oldName, got, stderr)
+	}
+}
+
+// Decision 6 of C23 M2 (the owner, 2026-10-18): a repository with no
+// declaration and no remote whose directory is RENAMED starts a new
+// identity. The ledger remembers the old directory name, but a bare
+// directory name is not adopted on the ledger's word: another repository
+// with the same name (an "api", say) would silently take this one's memory.
+// The memory is kept by declaring the name in .longterm-mem-project.
+func TestResolveProjectFlag_ARenamedRepositoryDoesNotAdoptItsOldDirectoryName(t *testing.T) {
+	t.Setenv(engramDBEnvVar, filepath.Join(t.TempDir(), "absent.db"))
+	parent := t.TempDir()
+	before := filepath.Join(parent, "before")
+	plainRepo(t, before)
+
+	// Live once at the old name, so the ledger records it.
+	t.Setenv(vaultsFileEnvVar, writeVaults(t))
+	t.Chdir(before)
+	var oldName string
+	captureStderr(t, func() { oldName, _ = identityCommands().resolveProjectFlag("query", "") })
+	if oldName != "before" {
+		t.Fatalf("the first resolution = %q, want \"before\"", oldName)
+	}
+
+	after := filepath.Join(parent, "after")
+	if err := os.Rename(before, after); err != nil {
+		t.Fatalf("rename the repository: %v", err)
+	}
+
+	// The memory is still filed under the old name, and the ledger remembers it.
+	t.Setenv(vaultsFileEnvVar, writeVaults(t, oldName))
+	t.Chdir(after)
+
+	var got string
+	stderr := captureStderr(t, func() { got, _ = identityCommands().resolveProjectFlag("query", "") })
+	if got != "after" {
+		t.Fatalf("a renamed repository resolved %q, want its new name \"after\": an old directory name must not be adopted from the ledger; stderr=%q", got, stderr)
+	}
+
+	// Declaring the old name is how the owner keeps the memory.
+	if err := os.WriteFile(filepath.Join(after, projectid.DeclaredFileName), []byte("before\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	captureStderr(t, func() { got, _ = identityCommands().resolveProjectFlag("query", "") })
+	if got != "before" {
+		t.Fatalf("with the old name declared, resolved %q, want \"before\"", got)
 	}
 }
 

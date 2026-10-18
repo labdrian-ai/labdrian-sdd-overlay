@@ -26,11 +26,10 @@ func (c commands) cmdStale(args []string) int {
 		return exitUsage
 	}
 	a := c.newApp("stale")
-	resolvedProject, exit := a.project(*project, false)
-	if exit != exitOK {
-		return exit
-	}
 
+	// The repository is looked for first: stale has nothing to check memories against without one, and since
+	// C23 M2 a directory in no repository still has a project (its name), so resolving the project no longer
+	// refuses there on its behalf.
 	wd, err := os.Getwd()
 	if err != nil {
 		return a.refuse(fmt.Errorf("reading the working directory: %w", err), exitUsage)
@@ -38,6 +37,14 @@ func (c commands) cmdStale(args []string) int {
 	id, err := identityRules().Resolve(wd)
 	if err != nil {
 		return a.refuse(err, exitUsage)
+	}
+	if id.WorktreeRoot == "" {
+		return a.refuse(fmt.Errorf("%s is in no git repository, and stale checks memories against the history of one: run it inside the repository the memories are about", wd), exitUsage)
+	}
+
+	resolvedProject, exit := a.project(*project, false)
+	if exit != exitOK {
+		return exit
 	}
 
 	store, exit := a.memory()

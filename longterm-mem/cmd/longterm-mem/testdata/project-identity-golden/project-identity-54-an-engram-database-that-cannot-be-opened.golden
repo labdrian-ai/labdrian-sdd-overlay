@@ -19,7 +19,7 @@ longterm-mem: stale: engram: connect <outside>/no/such/directory/engram.db: prim
     },
     {
       "name": "checkout",
-      "rule": "common_dir",
+      "rule": "directory",
       "adoptable": false,
       "first_seen": "<run>",
       "last_seen": "<run>"

@@ -2,6 +2,6 @@ args: stale
 exit: 2
 --- stdout ---
 --- stderr ---
-longterm-mem: stale: --project is required: it could not be resolved from the working directory: projectid: declared project file is not a single non-empty line: <project>/.longterm-mem-project
+longterm-mem: stale: projectid: declared project file is not a single non-empty line: <project>/.longterm-mem-project
 --- ledger ---
 no ledger

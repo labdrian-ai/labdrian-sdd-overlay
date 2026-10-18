@@ -1,10 +1,10 @@
 args: stale
 exit: 0
 --- stdout ---
-longterm-mem: stale: 0 observations in <project>/.git, checked against <project>
+longterm-mem: stale: 0 observations in checkout, checked against <project>
   nothing this repository disagrees with
 --- stderr ---
-longterm-mem: stale: --project not given, resolved "<project>/.git" from the working directory (via the common_dir rule)
+longterm-mem: stale: --project not given, resolved "checkout" from the working directory (via the directory rule)
 WARN stale: this repository's identity ledger could not be read (identityledger: ledger does not match its own digest: <project>/.git/longterm-mem/identity-ledger.json does not parse: <json syntax error>), so an identity the memory already uses may have been missed; the ledger is left as it is and nothing was recorded
 --- ledger ---
 { not json

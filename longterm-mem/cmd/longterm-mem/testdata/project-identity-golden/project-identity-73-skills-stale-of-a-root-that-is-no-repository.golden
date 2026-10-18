@@ -1,7 +1,7 @@
 args: skills-stale --project-root <outside>
-exit: 2
+exit: 1
 --- stdout ---
 --- stderr ---
-longterm-mem: skills-stale: --project is required when the project root cannot be resolved: projectid: directory is not inside a git repository: <outside>
+longterm-mem: skills-stale: skillstale: read .labdrian/procedural-skills.lock.json: open <outside>/.labdrian/procedural-skills.lock.json: no such file or directory
 --- ledger ---
 no ledger

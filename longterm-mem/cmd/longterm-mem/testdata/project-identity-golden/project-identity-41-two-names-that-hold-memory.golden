@@ -20,7 +20,7 @@ WARN stale: "github.com/acme/widgets", "widgets" also hold memory and are the sa
     },
     {
       "name": "checkout",
-      "rule": "common_dir",
+      "rule": "directory",
       "adoptable": false,
       "first_seen": "<run>",
       "last_seen": "<run>"

@@ -1,10 +1,10 @@
 args: stale
 exit: 0
 --- stdout ---
-longterm-mem: stale: 0 observations in <project>/.git/modules/vendored, checked against <project>/vendored
+longterm-mem: stale: 0 observations in vendored, checked against <project>/vendored
   nothing this repository disagrees with
 --- stderr ---
-longterm-mem: stale: --project not given, resolved "<project>/.git/modules/vendored" from the working directory (via the common_dir rule)
+longterm-mem: stale: --project not given, resolved "vendored" from the working directory (via the directory rule)
 --- ledger ---
 {
   "schema": "longterm-mem.identity-ledger/v1",
@@ -20,6 +20,13 @@ longterm-mem: stale: --project not given, resolved "<project>/.git/modules/vendo
     {
       "name": "modules",
       "rule": "common_dir",
+      "adoptable": false,
+      "first_seen": "<run>",
+      "last_seen": "<run>"
+    },
+    {
+      "name": "vendored",
+      "rule": "directory",
       "adoptable": false,
       "first_seen": "<run>",
       "last_seen": "<run>"

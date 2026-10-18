@@ -2,5 +2,5 @@ args: stale --project skillsgolden
 exit: 1
 --- stdout ---
 --- stderr ---
-WARN stale: --project skillsgolden does not correspond to this directory's project, which resolves to "<project>/.git" (via the common_dir rule); proceeding as asked, but if this was not deliberate the memory you write lands in a project that will never be searched back
+WARN stale: --project skillsgolden does not correspond to this directory's project, which resolves to "checkout" (via the directory rule); proceeding as asked, but if this was not deliberate the memory you write lands in a project that will never be searched back
 longterm-mem: stale: staleness: walking <project>: open <project>/locked: permission denied
