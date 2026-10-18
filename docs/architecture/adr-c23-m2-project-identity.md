@@ -1,7 +1,7 @@
 # ADR: one shared project identity for the workflow, Engram and longterm-mem (C23, M2)
 
-- **Status:** Accepted, 2026-10-18. Implementation partial: the engine side is done, longterm-mem
-  still names projects with its own resolver (see "Left open").
+- **Status:** Accepted and implemented, 2026-10-18. The engine and longterm-mem both name projects
+  with `identity/resolve` through `identity/gitfs`.
 - **Decided by:** the owner, on 2026-10-18.
 - **Ledger:** `odd/tasks/consolidation-phase9.md`, task C23, unit M2 (gap G7). M1's record is
   `docs/architecture/adr-c23-m1-memory-sources.md`.
@@ -32,7 +32,7 @@ remote is the last path segment of the repository.
 
 ## Decision
 
-### The five decisions
+### The six decisions
 
 1. **One resolver, in the shared module.** `identity/resolve` holds the rule and its port;
    `identity/gitfs` is the one disk adapter. The order is fixed, first match wins:
@@ -41,7 +41,7 @@ remote is the last path segment of the repository.
    root. The rule is `Resolver.Resolve` (`identity/resolve/resolve.go:118`); the declared file is
    `DeclaredFileName` (`:34`) read by `Declared` (`:149`); the remote by `Remote` (`:164`); the last
    fallback is `MainCheckoutName` (`:175`). The port is `Repositories` (`:79`) and its adapter
-   `gitfs.Repositories` (`identity/gitfs/gitfs.go:55`, `:87`, `:100`), which carries the walk-up,
+   `gitfs.Repositories` (`identity/gitfs/gitfs.go:35`, `:55`, `:92`, `:105`), which carries the walk-up,
    the `.git` pointer following and the HEAD check that used to be the engine's `GitOrigin`. The
    engine reaches it through `sharedProjectRules` (`engine/cmd/skills_deps.go:51`), for the skills
    (`newProjectIdentity`, `:44`) and for `workflow create` (`engine/cmd/workflow.go:233`).
@@ -61,6 +61,17 @@ remote is the last path segment of the repository.
 5. **`workflow create` refuses a goal of another project.** When `goal.project_id` differs from the
    `--project` slug, create fails and appends nothing (`ErrGoalProjectMismatch`,
    `engine/workflow/lifecycle.go:31`, checked at `:476`); otherwise it records the identity (`:523`).
+6. **A directory name is declared, not adopted** (the owner, 2026-10-18, answering whether a
+   directory name the chain answered may be adopted on the identity ledger's word: "No; la
+   solución es declararlo"). The main checkout's name, rule `directory`
+   (`longterm-mem/internal/projectid/projectid.go:74`), stays loose on the identity ledger: it is
+   recorded but never adopted on the ledger's word alone. A repository with no remote and no
+   declaration that is renamed therefore starts a new identity; to keep its memory, the owner
+   declares the old name in `.longterm-mem-project`. Pinned by
+   `TestResolveProjectFlag_ARenamedRepositoryDoesNotAdoptItsOldDirectoryName`
+   (`longterm-mem/cmd/longterm-mem/project_resolve_test.go:368`), which also shows the declaration
+   restoring the old name; a repository moved without being renamed keeps its name
+   (`TestResolveProjectFlag_AMovedRepositoryKeepsItsName`, `:339`).
 
 ### Alternatives considered
 
@@ -79,6 +90,8 @@ code as it stands; it is not a quotation of the owner's reasons.
 | 4 | The cwd's name only in the engine | The two programs would disagree outside git, which is the gap M2 closes. |
 | 5 | Warn and continue | A workflow whose goal names another project would be created, and its plan would describe the wrong memory. |
 | 5 | No check | As before M2: the goal's `project_id` and the slug were never compared. |
+| 6 | Adopt directory names from the ledger | A same-named repository (two checkouts called `api`, say) would silently take the other's memory. |
+| 6 | Keep the common-dir realpath in longterm-mem for repositories with no remote | The two programs would name such a repository differently again, against decision 1. |
 
 ## Consequences
 
@@ -103,26 +116,32 @@ code as it stands; it is not a quotation of the owner's reasons.
   read names with `identity.EngramName(state.ProjectIdentity)`, not with the identity itself, since
   Engram names a remote repository by its last segment. A workflow with no identity is an allow, as
   for longterm-mem.
-- **Left open: longterm-mem.** Committed longterm-mem still resolves with its own chain, so in a
-  repository with no remote it names the project by the realpath of its common directory, and
-  outside git it refuses. The move onto `identity/resolve` is written in the worktree of batch 53
-  but not committed, for two reasons found while doing it:
-  - `stale` reads the repository to check against from `projectid.Resolve`'s worktree root
-    (`longterm-mem/cmd/longterm-mem/cmd_stale.go:38,56`) and relied on `Resolve` failing outside
-    git; with decision 4 it proceeds with no repository and fails with `staleness:  does not exist`.
-    It needs to refuse there itself, in a file outside the batch's surface, as do two tests of
-    `cmd/longterm-mem/project_resolve_test.go` (`:68` asserts the old refusal outside git).
-  - A repository with no remote and no declaration that is **renamed** loses its memory. Before M2
-    its name was the realpath of its common directory, which the identity ledger records as strict,
-    so after a move the ledger's word was enough to adopt it again
-    (`TestResolveProjectFlag_AMovedRepositoryIsReunitedWithItsMemory`, `project_resolve_test.go:313`). Now its name is its
-    directory's, which the ledger records as loose (a bare directory name can name somebody else's
-    repository), so a renamed directory is not reunited with its memory. A repository moved
-    without being renamed keeps its name. Whether a directory name the chain answered may be
-    adopted on the ledger's word is a decision for the owner.
-
-  When it lands, the old common-dir realpath stays an adoption candidate, after the chain's names,
-  and the MCP server stays excluded from cwd adoption.
+- **longterm-mem resolves with the shared chain.** `projectid.Resolver.Resolve`
+  (`longterm-mem/internal/projectid/projectid.go:127`) delegates to `identity/resolve`, and
+  `projectidfs.Inspector` is an alias of `gitfs.Repositories`
+  (`longterm-mem/internal/projectidfs/projectidfs.go:21`); its own walk-up and config read are gone.
+  The old common-dir realpath (`RuleCommonDir`, `projectid.go:80`) is still offered for adoption,
+  strict, after the chain's names (`derivableNames`, `longterm-mem/internal/projectid/adopt.go:170`),
+  so memory stored under it stays reachable; the MCP server stays excluded from cwd adoption.
+- **`stale` refuses outside git.** It checks memories against a repository's history, and a
+  directory in no repository now has a project, so it looks for the repository first and refuses
+  with exit 2 when there is none (`longterm-mem/cmd/longterm-mem/cmd_stale.go:42`).
+- **A submodule is its own main checkout.** A `.git` file whose git directory has no `commondir`
+  file is a submodule, so its main checkout is its own working tree; only a linked worktree takes
+  its main checkout from the shared git directory (`commonDirOfPointer`,
+  `identity/gitfs/gitfs.go:121`, used at `:68-73`). Before this a submodule with no origin was named
+  `modules`.
+- **The disk stays out of the pure module's users.** archguard judges `identity` as one pure module,
+  but `identity/gitfs` reads the file system, so a guard fails when any longterm-mem package other
+  than `internal/projectidfs` (and the composition root) imports it
+  (`longterm-mem/projectidfs_adapter_guard_test.go:40`). archguard is unchanged.
+- **Left open, outside batch 53's edit surface.** `longterm-mem/README.md:108` and the package
+  comment of `longterm-mem/internal/identityledger/ledger.go:6` still describe the common-dir
+  realpath as the last rule of the chain. `skills-stale` of a root in no repository with no
+  `--project` now acts on the directory's name and reports the missing lock (exit 1) instead of
+  refusing (exit 2), as decision 4 implies.
 - **Accepted costs.** A repository that declares nothing and has no origin changes name in
-  longterm-mem once it moves (from the common dir's realpath to the directory's name), and workflows
-  created before M2 are not checked by the gate until they are recreated.
+  longterm-mem once, from the common dir's realpath to the directory's name (memory stored under
+  the realpath stays reachable through adoption); after a rename it starts a new identity unless
+  the old name is declared (decision 6). Workflows created before M2 are not checked by the gate
+  until they are recreated.
