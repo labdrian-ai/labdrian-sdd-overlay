@@ -331,14 +331,16 @@ func startsFromAnInstallBeforeTheMemoryReadMatchers(doc goldenDocument, c golden
 const sessionStartCommand = settings.LabdrianProjectionIdentity + " --event SessionStart"
 
 // withoutTheSessionStartEntry is text, a settings.json the program wrote, without the SessionStart
-// entry of the projection family (C23 M6), and how many it took out. The hook list sits at an
-// indent of four spaces and its entries at six in the program's output: a list that holds that entry
-// alone goes with its key and the comma that separates it from its neighbor; in a list with other
-// entries only the entry and its comma go.
+// entry of the projection family (C23 M6), and how many it took out. It cuts text, not parsed JSON,
+// because what remains is compared byte for byte with a recording, formatting included, as
+// withoutEntriesAddedSinceTheRecording does. The hook list sits at an indent of four spaces and its
+// entries at six in the program's output: a list that holds that entry alone goes with its key; in
+// a list with other entries only the entry goes; either way with the comma beside it.
 func withoutTheSessionStartEntry(t *testing.T, label, text string) (string, int) {
 	t.Helper()
-	const key, listEnd, open, close = "\n    \"SessionStart\": [", "\n    ]", "\n      {", "\n      }"
-	start := strings.Index(text, key)
+	const listStart, listEnd = "\n    \"SessionStart\": [", "\n    ]"
+	const entryStart, entryEnd = "\n      {", "\n      }"
+	start := strings.Index(text, listStart)
 	if start < 0 {
 		return text, 0
 	}
@@ -351,25 +353,28 @@ func withoutTheSessionStartEntry(t *testing.T, label, text string) (string, int)
 	if !strings.Contains(list, sessionStartCommand) {
 		return text, 0
 	}
-	if strings.Count(list, open) > 1 {
-		i := start + strings.Index(list, sessionStartCommand)
-		from, to := strings.LastIndex(text[:i], open), i+strings.Index(text[i:], close)+len(close)
-		switch {
-		case to < len(text) && text[to] == ',':
-			return text[:from] + text[to+1:], 1
-		case text[from-1] == ',':
-			return text[:from-1] + text[to:], 1
-		}
-		t.Fatalf("%s: the SessionStart entry is neither followed nor preceded by a comma", label)
+	if strings.Count(list, entryStart) == 1 {
+		return cutWithComma(t, label+": the SessionStart list", text, start, end), 1
 	}
+	at := start + strings.Index(list, sessionStartCommand)
+	from := strings.LastIndex(text[:at], entryStart)
+	to := at + strings.Index(text[at:], entryEnd) + len(entryEnd)
+	return cutWithComma(t, label+": the SessionStart entry", text, from, to), 1
+}
+
+// cutWithComma is text without text[from:to] and the comma that separates it from its neighbor in
+// its JSON list or object: the one after it, or else the one before it. what names the cut part
+// when it has neither.
+func cutWithComma(t *testing.T, what, text string, from, to int) string {
+	t.Helper()
 	switch {
-	case end < len(text) && text[end] == ',':
-		return text[:start] + text[end+1:], 1
-	case text[start-1] == ',':
-		return text[:start-1] + text[end:], 1
+	case to < len(text) && text[to] == ',':
+		return text[:from] + text[to+1:]
+	case from > 0 && text[from-1] == ',':
+		return text[:from-1] + text[to:]
 	}
-	t.Fatalf("%s: the SessionStart list is neither followed nor preceded by a comma", label)
-	return text, 0
+	t.Fatalf("%s is neither followed nor preceded by a comma", what)
+	return text
 }
 
 // withoutEntriesAddedSinceTheRecording is text, a settings.json the program wrote, without the
