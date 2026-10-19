@@ -40,12 +40,18 @@ func occasionOf(event string) projection.Occasion {
 // gateCall is a tool call of a PreToolUse input as the projection gate reads it. The arguments
 // are read as those of a memory read, and only when the gate asks for them (projection.ToolCall):
 // reading them decodes the whole input of the call, which for a file edit is the file, and the
-// gate wants them for a memory read that names a project alone.
+// gate wants them for a memory read that names a project alone. So are the skill of a Skill call and
+// the file of a Read (C23 M4 decision 5), each for its own tool alone.
 func gateCall(in hookwire.PreToolUse) projection.ToolCall {
-	return projection.ToolCall{Name: in.Tool, ReadQuery: func() projection.QueryArguments {
-		q := in.Query()
-		return projection.QueryArguments{Named: q.Named, Project: q.Project, AllProjects: q.AllProjects}
-	}}
+	return projection.ToolCall{
+		Name: in.Tool,
+		ReadQuery: func() projection.QueryArguments {
+			q := in.Query()
+			return projection.QueryArguments{Named: q.Named, Project: q.Project, AllProjects: q.AllProjects}
+		},
+		ReadSkill:    in.Skill,
+		ReadFilePath: in.FilePath,
+	}
 }
 
 // gateReply is what a decision of the projection gate says to Claude Code. Only a denial has a

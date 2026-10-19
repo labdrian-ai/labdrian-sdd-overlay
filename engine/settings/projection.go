@@ -32,6 +32,12 @@ const (
 	// of the gate's two Engram patterns, with a plugin prefix such as
 	// mcp__plugin_engram_engram__mem_search allowed, and no Engram write.
 	ProjectionEngramReadMatcher = `^mcp__([A-Za-z0-9-]+_)*engram__(mem_search|mem_context|mem_get_observation|mem_timeline)$`
+	// ProjectionProceduralSkillMatcher is the PreToolUse matcher of the entry
+	// that runs the memory gate for the tools that can use a procedural skill
+	// (C23 M4 decision 5): the Skill tool and Read. Made of letters and a pipe,
+	// Claude Code reads it as a list of exact tool names. The hook itself answers
+	// a Read of any file but a SKILL.md before it reads anything.
+	ProjectionProceduralSkillMatcher = "Skill|Read"
 )
 
 // projectionFamily is the whole family in install order: one UserPromptSubmit
@@ -45,6 +51,7 @@ var projectionFamily = hookFamily{
 		{event: "PreToolUse", matcher: ProjectionMemoryQueryMatcher},
 		{event: "PreToolUse", matcher: ProjectionMemoryGetMatcher},
 		{event: "PreToolUse", matcher: ProjectionEngramReadMatcher},
+		{event: "PreToolUse", matcher: ProjectionProceduralSkillMatcher},
 	},
 	build: buildProjectionEntry,
 }

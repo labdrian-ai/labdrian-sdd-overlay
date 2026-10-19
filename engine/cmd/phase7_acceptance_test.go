@@ -1007,6 +1007,7 @@ func phase7Settings(t *testing.T, binary string) {
 		{"PreToolUse", `^mcp__([A-Za-z0-9-]+_)*longterm-mem__query$`, ""},
 		{"PreToolUse", `^mcp__([A-Za-z0-9-]+_)*longterm-mem__get$`, ""},
 		{"PreToolUse", `^mcp__([A-Za-z0-9-]+_)*engram__(mem_search|mem_context|mem_get_observation|mem_timeline)$`, ""},
+		{"PreToolUse", "Skill|Read", ""},
 	}
 	if len(installed) != len(wantEntries) {
 		t.Fatalf("projection entries = %+v, want %d", installed, len(wantEntries))
@@ -1035,6 +1036,9 @@ func phase7Settings(t *testing.T, binary string) {
 		assertDenied(t, "installed memory gate", w.run(w.dir, gateInput(t, w.repo, "s", "mcp__plugin_longterm-mem_longterm-mem__query", queryArgs("other")), "sh", "-c", installed[2].command).asHook(), `permits only project "proj-1"`)
 		assertSilent(t, "installed get gate", w.run(w.dir, gateInput(t, w.repo, "s", "mcp__longterm-mem__get", map[string]any{"id": "obs-1"}), "sh", "-c", installed[3].command).asHook())
 		assertDenied(t, "installed Engram gate", w.run(w.dir, gateInput(t, w.repo, "s", "mcp__plugin_engram_engram__mem_search", queryArgs("other")), "sh", "-c", installed[4].command).asHook(), `Engram read asks for project "other"`)
+		// odd includes procedural-skills, and a Read of another file is not looked at.
+		assertSilent(t, "installed skill gate, Skill", w.run(w.dir, gateInput(t, w.repo, "s", "Skill", map[string]any{"skill": "deploy-checks"}), "sh", "-c", installed[5].command).asHook())
+		assertSilent(t, "installed skill gate, Read", w.run(w.dir, gateInput(t, w.repo, "s", "Read", map[string]any{"file_path": filepath.Join(w.repo, "main.go")}), "sh", "-c", installed[5].command).asHook())
 		// A missing binary is a no-op, not a failure.
 		gone := strings.Replace(installed[0].command, hookCommand, filepath.Join(claudeDir, "bin", "missing"), -1)
 		assertSilent(t, "installed command, binary missing", w.run(w.dir, hookInput(t, w.repo, "s", "p"), "sh", "-c", gone).asHook())

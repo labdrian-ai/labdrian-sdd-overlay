@@ -35,9 +35,11 @@ func TestInstalledEditMatcherListsExactlyTheGatedEditTools(t *testing.T) {
 // installedMatchersCover reports whether a PreToolUse matcher of the projection family routes the
 // tool name to the hook: an exact name of a list matcher, or a match of a pattern matcher.
 func installedMatchersCover(name string) bool {
-	for _, tool := range strings.Split(settings.ProjectionEditToolMatcher, "|") {
-		if tool == name {
-			return true
+	for _, list := range []string{settings.ProjectionEditToolMatcher, settings.ProjectionProceduralSkillMatcher} {
+		for _, tool := range strings.Split(list, "|") {
+			if tool == name {
+				return true
+			}
 		}
 	}
 	for _, pattern := range []string{settings.ProjectionMemoryQueryMatcher, settings.ProjectionMemoryGetMatcher, settings.ProjectionEngramReadMatcher} {
@@ -55,9 +57,12 @@ func TestInstalledMatchersCoverEveryToolTheGateHasAnOpinionAbout(t *testing.T) {
 		"mcp__longterm-mem__get", "mcp__plugin_x_longterm-mem__get",
 		"mcp__engram__mem_search", "mcp__plugin_engram_engram__mem_search", "mcp__plugin_engram_engram__mem_context",
 		"mcp__plugin_engram_engram__mem_get_observation", "mcp__plugin_engram_engram__mem_timeline",
+		// The tools that can use a procedural skill (C23 M4 decision 5); the hook narrows Read to a
+		// SKILL.md itself, from the path, before it reads anything.
+		"Skill", "Read",
 	}
 	ignored := []string{
-		"Bash", "Read", "Grep", "mcp__longterm-memx__query", "mcp__a__longterm-mem__query", "longterm-mem__query",
+		"Bash", "skill", "Grep", "Glob", "mcp__longterm-memx__query", "mcp__a__longterm-mem__query", "longterm-mem__query",
 		"mcp__longterm-memx__get", "mcp__longterm-mem__promote", "mcp__engramx__mem_search", "mcp__a__engram__mem_search",
 		"mcp__plugin_engram_engram__mem_save", "mcp__plugin_engram_engram__mem_update", "mcp__engram__mem_session_summary", "",
 	}

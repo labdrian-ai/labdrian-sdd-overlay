@@ -301,7 +301,7 @@ func checkGoldenFile(t *testing.T, doc goldenDocument, root, label, path string,
 // program wrote before it is compared with the recording, after checking, for a file a merge just
 // wrote, that each is there as often as the query entry (a starting file, or its backup, predates
 // them). Everything else must still be byte for byte what was recorded.
-var addedProjectionMatchers = []string{settings.ProjectionMemoryGetMatcher, settings.ProjectionEngramReadMatcher}
+var addedProjectionMatchers = []string{settings.ProjectionMemoryGetMatcher, settings.ProjectionEngramReadMatcher, settings.ProjectionProceduralSkillMatcher}
 
 // startsFromAnInstallBeforeTheMemoryReadMatchers reports whether a case merges, first, into a
 // settings.json that already holds the projection family as it was recorded, without the matchers

@@ -319,6 +319,104 @@ func TestOnToolCallGivesTheGateTheEngramNamingRuleItWasGiven(t *testing.T) {
 	}
 }
 
+// fakeLock is a procedural skills lock reader that counts what it was asked.
+type fakeLock struct {
+	lock  projection.ProceduralSkills
+	asked []string
+}
+
+func (f *fakeLock) Load(dir string) projection.ProceduralSkills {
+	f.asked = append(f.asked, dir)
+	return f.lock
+}
+
+const lockedSkillFile = "/work/repo/.claude/skills/deploy-checks/SKILL.md"
+
+// sddWorld is a repository bound to a running sdd workflow, whose plan excludes procedural-skills,
+// with a lock that records deploy-checks.
+func sddWorld() (*hookWorld, *fakeLock) {
+	w := newHookWorld(workflow.StatusRunning)
+	running := owned(workflow.StatusRunning)
+	running.State.Profile = "sdd"
+	w.workflows.put("proj-1", "wf-1", running)
+	lock := &fakeLock{lock: projection.ProceduralSkills{Skills: []projection.ProceduralSkill{{ID: "deploy-checks", SkillFiles: []string{lockedSkillFile}}}}}
+	w.service.ProceduralSkills = lock
+	return w, lock
+}
+
+func skillRequest(skill string) app.ToolCallRequest {
+	return app.ToolCallRequest{InputDir: repoDir, Call: projection.ToolCall{Name: "Skill", ReadSkill: func() string { return skill }}}
+}
+
+func readRequest(path string, reads *int) app.ToolCallRequest {
+	return app.ToolCallRequest{InputDir: repoDir, Call: projection.ToolCall{Name: "Read", ReadFilePath: func() string { *reads++; return path }}}
+}
+
+// TestOnToolCallReadsTheLockOnlyForACallThatCanUseASkill (C23 M4 decision 5): the lock is read
+// through its port, from the directory the session works in, for the Skill tool and a Read of a
+// SKILL.md, and the gate denies a procedural skill the plan excludes. A Read of any other file is
+// answered without the binding, the workflow or the lock, and so is every other tool's call.
+func TestOnToolCallReadsTheLockOnlyForACallThatCanUseASkill(t *testing.T) {
+	w, lock := sddWorld()
+	got := w.service.OnToolCall(skillRequest("deploy-checks"))
+	if !got.Decided || !got.Result.Deny || !strings.Contains(got.Result.Reason, `procedural skill "deploy-checks"`) {
+		t.Errorf("Skill deploy-checks: OnToolCall = %+v, want a denial naming the skill", got)
+	}
+	if strings.Join(lock.asked, ",") != repoDir {
+		t.Errorf("the lock was read from %q, want once from %q", lock.asked, repoDir)
+	}
+
+	w, lock = sddWorld()
+	reads := 0
+	if got := w.service.OnToolCall(readRequest(lockedSkillFile, &reads)); !got.Decided || !got.Result.Deny {
+		t.Errorf("Read of the skill's SKILL.md: OnToolCall = %+v, want a denial", got)
+	}
+	if len(lock.asked) != 1 || reads != 1 {
+		t.Errorf("the lock was read %d times and the path %d times, want 1 and 1", len(lock.asked), reads)
+	}
+
+	w, lock = sddWorld()
+	reads = 0
+	for _, path := range []string{"/work/repo/main.go", "/work/repo/.claude/skills/deploy-checks/notes.md", ""} {
+		if got := w.service.OnToolCall(readRequest(path, &reads)); got.Decided {
+			t.Errorf("Read %q: OnToolCall = %+v, want it undecided", path, got)
+		}
+	}
+	for _, name := range []string{"Edit", "mcp__longterm-mem__query", "Bash"} {
+		w.service.OnToolCall(toolCall(name))
+	}
+	if len(lock.asked) != 0 {
+		t.Errorf("the lock was read %d times for calls that cannot use a skill, want 0", len(lock.asked))
+	}
+	if w.locator.asked != 2 || w.bindings.loads != 2 {
+		t.Errorf("the stores were asked (%d repositories, %d bindings) for the other reads, want only the edit's and the query's", w.locator.asked, w.bindings.loads)
+	}
+}
+
+// TestOnToolCallReadsNoLockWithoutABindingOfOurs: the lock matters only for a workflow the
+// repository follows.
+func TestOnToolCallReadsNoLockWithoutABindingOfOurs(t *testing.T) {
+	w, lock := sddWorld()
+	w.bindings.loadErr = errStoreDown
+	w.service.OnToolCall(skillRequest("deploy-checks"))
+	req := skillRequest("deploy-checks")
+	req.InputDir = "/elsewhere"
+	w.service.OnToolCall(req)
+	if len(lock.asked) != 0 {
+		t.Errorf("the lock was read %d times with no binding to follow, want 0", len(lock.asked))
+	}
+}
+
+// TestOnToolCallWithNoLockReaderChecksNoSkill: a service wired with no lock reader knows of no
+// procedural skill, so it allows the Skill tool silently.
+func TestOnToolCallWithNoLockReaderChecksNoSkill(t *testing.T) {
+	w, _ := sddWorld()
+	w.service.ProceduralSkills = nil
+	if got := w.service.OnToolCall(skillRequest("deploy-checks")); got.Result.Deny || got.Result.Warning != "" {
+		t.Errorf("OnToolCall = %+v, want an allow with nothing to say", got)
+	}
+}
+
 func TestAPolicyThatPanicsIsNotCaughtHere(t *testing.T) {
 	// The command that serves the hook recovers a panic and turns it into one warning; the service
 	// must let it through, not swallow it into silence.

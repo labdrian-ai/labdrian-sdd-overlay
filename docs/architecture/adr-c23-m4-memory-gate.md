@@ -70,3 +70,19 @@ The alternatives of decisions 1-3 and 5 are recorded in the M1 and M2 ADRs.
 - **Accepted cost (M1).** A skill file can still be read through `Bash`.
 - **Not in M4.** The goal filter of `longterm-mem query` (M5), the plan as instructions (M6), and the
   evidence of memory reads (M7).
+
+## Implementation
+
+- Decisions 1-4: `engine/projection/gate.go` (`memoryReads`, `memoryGate`, `engramProjectGate`);
+  `all_projects` is read by `engine/hookwire/decode.go` (`PreToolUse.Query`) and the Engram name rule
+  (`identity.EngramName`) is injected in `engine/cmd/binding_wiring.go`, because the projection rings
+  do not import the `identity` module. Tests: `engine/projection/gate_memory_test.go`,
+  `engine/cmd/projection_gate_test.go`.
+- Decision 5: the gate rule is `proceduralGate` in `engine/projection/gate.go`, with
+  `GateRelevantCall` deciding a `Read` from its path; the port is
+  `app.ProceduralSkillsReader` (`engine/projection/app/ports.go`), read by `HookService.OnToolCall`
+  only for a call that can use a skill; the adapter is `engine/cmd/procedural_lock.go`. Tests:
+  `engine/projection/gate_procedural_test.go`, `engine/projection/app/hook_test.go`,
+  `engine/cmd/procedural_lock_test.go`, `engine/cmd/projection_gate_test.go`.
+- Decision 6: `engine/settings/projection.go` (`ProjectionMemoryGetMatcher`,
+  `ProjectionEngramReadMatcher`, `ProjectionProceduralSkillMatcher`), installed by `install-hooks`.

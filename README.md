@@ -795,8 +795,9 @@ gentle-ai-overlay projection hook --event UserPromptSubmit|PreToolUse
     each tool call (PreToolUse); a person does
     not. There is no `overlay projection` wrapper, so it runs on the installed engine binary,
     ~/.claude/bin/gentle-ai-overlay. `install-hooks` installs it into Claude Code settings.json
-    (one UserPromptSubmit entry and four PreToolUse entries: the file-edit tools, the longterm-mem query tool, the
-    longterm-mem get tool, and the Engram reads mem_search, mem_context, mem_get_observation and mem_timeline);
+    (one UserPromptSubmit entry and five PreToolUse entries: the file-edit tools, the longterm-mem query tool, the
+    longterm-mem get tool, the Engram reads mem_search, mem_context, mem_get_observation and mem_timeline, and
+    the Skill and Read tools);
     on an existing install, re-run `install-hooks` and restart Claude Code to load it, because Claude Code reads
     hooks only at start and `status-hooks` reports degraded until the entries are in place. Its tests feed it hook JSON.
     UserPromptSubmit and PreToolUse are the events supported.
@@ -854,7 +855,16 @@ gentle-ai-overlay projection hook --event UserPromptSubmit|PreToolUse
         github.com/acme/proj-1 is proj-1), or when it sets `all_projects` to true. A read by id (`get`,
         `mem_get_observation`, `mem_timeline`) passes once its source is in the plan. A workflow that
         recorded no project identity (created before workflows recorded one) has its project checks
-        skipped with one warning. It never denies `promote`, an Engram write, or any other write.
+        skipped with one warning. The project's procedural skills are of source `procedural-skills`: the
+        Skill tool for a skill the project's procedural skills lock records
+        (`.labdrian/procedural-skills.lock.json` at the worktree root), and a Read whose absolute path,
+        cleaned, is one of that skill's SKILL.md files (the lock's targets under the worktree root), are
+        denied when the plan does not include that source (sdd), naming the skill. A skill the lock does
+        not record, a skill the lock records as a registry install, and a global skill pass. A Read of any
+        other file is not looked at: the hook decides that from the path before it reads the binding,
+        the workflow, or the lock. No lock means no procedural skill. A lock that cannot be read allows,
+        with one warning, when the plan would have denied a procedural skill.
+        It never denies `promote`, an Engram write, or any other write.
       - Everything else is allowed: no binding, a binding or workflow it cannot follow (foreign, malformed,
         drifted, unavailable, gone), a closed workflow, an unrecognized status, a plan that cannot be
         computed, or input it cannot use. It never blocks on an unknown state.
@@ -862,7 +872,7 @@ gentle-ai-overlay projection hook --event UserPromptSubmit|PreToolUse
     {"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"..."}},
     with exit 0 (the JSON decides; exit 2 is never used). An allow prints nothing, or only a
     {"systemMessage":"..."} warning when the gate had something to check and could not (a memory plan it
-    cannot compute, a query or Engram read whose input is not an object, a recovered internal error, which also goes to
+    cannot compute, a query or Engram read whose input is not an object, a procedural skills lock it cannot read, a recovered internal error, which also goes to
     stderr in full); it never prints permissionDecision "allow", which would bypass Claude Code's normal
     permission flow. It stays silent for a binding or workflow it cannot follow, because it runs on every
     tool call and UserPromptSubmit already warns once per prompt. An in-flight tool call cannot be

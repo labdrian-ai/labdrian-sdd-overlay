@@ -25,6 +25,10 @@ type HookService struct {
 	// project check compares a read's project with. The caller says how (identity.EngramName in the
 	// engine); with none, the gate checks no Engram project and says so.
 	EngramName func(identity string) string
+	// ProceduralSkills reads the procedural skills lock, which the service does only for a call that
+	// can use a skill (projection.CanUseASkill: the Skill tool, or a Read of a SKILL.md) in a
+	// repository bound to a workflow of ours. With none, the gate knows of no procedural skill.
+	ProceduralSkills ProceduralSkillsReader
 	// Project and Gate are the policies the service asks. They are fields so that a test can wrap
 	// them. A nil one is the domain's (projection.Project, projection.Gate): the service falls
 	// back to it in its own methods project and gate, so the zero value of the field is the
@@ -115,13 +119,16 @@ type ToolCallOutcome struct {
 }
 
 // OnToolCall decides whether a tool call is allowed. It answers for every tool the gate never
-// checks without reading the binding or the workflow: only a file-edit tool or a memory read
-// needs them. It is strictly read-only.
+// checks without reading the binding or the workflow: only a file-edit tool, a memory read, the
+// Skill tool or a Read of a SKILL.md needs them, and only the last two need the procedural skills
+// lock, which is read for them alone and only for a binding of ours. It is strictly read-only.
 func (s HookService) OnToolCall(req ToolCallRequest) ToolCallOutcome {
-	if !projection.GateRelevant(s.EditTools, req.Call.Name) {
+	call := readOnce(req.Call)
+	if !projection.GateRelevantCall(s.EditTools, call) {
 		return ToolCallOutcome{}
 	}
-	repoKey, ok := s.Repositories.RepoKey(directoryOf(req.InputDir, req.ProcessDir))
+	dir := directoryOf(req.InputDir, req.ProcessDir)
+	repoKey, ok := s.Repositories.RepoKey(dir)
 	if !ok {
 		return ToolCallOutcome{}
 	}
@@ -130,12 +137,39 @@ func (s HookService) OnToolCall(req ToolCallRequest) ToolCallOutcome {
 		return ToolCallOutcome{}
 	}
 
-	input := projection.GateInput{Binding: binding, EditTools: s.EditTools, EngramName: s.EngramName, Call: req.Call}
+	input := projection.GateInput{Binding: binding, EditTools: s.EditTools, EngramName: s.EngramName, Call: call}
 	if binding.Classification == projection.ClassificationOwned {
 		w := s.Workflows.Load(binding.Binding.ProjectID, binding.Binding.WorkflowID)
 		input.Workflow = &w
+		if s.ProceduralSkills != nil && projection.CanUseASkill(call) {
+			input.Procedural = s.ProceduralSkills.Load(dir)
+		}
 	}
 	return ToolCallOutcome{Decided: true, Result: s.gate(input)}
+}
+
+// readOnce makes the call read each of its skill and file arguments at most once, however many
+// times the service and the gate ask: reading them is the caller's work.
+func readOnce(call projection.ToolCall) projection.ToolCall {
+	call.ReadSkill = onceString(call.ReadSkill)
+	call.ReadFilePath = onceString(call.ReadFilePath)
+	return call
+}
+
+func onceString(read func() string) func() string {
+	if read == nil {
+		return nil
+	}
+	var (
+		done  bool
+		value string
+	)
+	return func() string {
+		if !done {
+			value, done = read(), true
+		}
+		return value
+	}
 }
 
 // directoryOf is the directory the session works in: the one the hook input names when it names

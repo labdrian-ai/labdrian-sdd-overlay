@@ -19,6 +19,7 @@ import (
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/hookwire"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
 )
 
 // --- harness ----------------------------------------------------------------
@@ -309,6 +310,97 @@ func TestPreToolUseChecksTheProjectOfAnEngramReadAgainstItsEngramName(t *testing
 	}
 }
 
+// writeProceduralLock writes the procedural skills lock of the repository at root: deploy-checks
+// written to both targets, and go-testing as a registry install, which is not procedural.
+func writeProceduralLock(t *testing.T, root string) {
+	t.Helper()
+	data, err := skills.SerializeProjectLock(skills.ProjectLock{
+		Skills: []skills.ProjectLockEntry{{
+			ID: "deploy-checks", Provenance: "p", Candidate: "c", SHA256: strings.Repeat("a", 64), Revision: 1,
+			Targets: []string{".claude/skills/deploy-checks/SKILL.md", ".agents/skills/deploy-checks/SKILL.md"},
+		}},
+		Installs: []skills.ProjectInstallEntry{{ID: "go-testing", Files: []skills.ProjectInstallFile{{Path: "SKILL.md", SHA256: strings.Repeat("b", 64)}}}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	writeFixtureFile(t, filepath.Join(root, filepath.FromSlash(skills.ProjectLockRelPath)), string(data))
+}
+
+// TestPreToolUseGatesTheProceduralSkillsOfTheLock (C23 M4 decision 5): with the lock of the
+// repository, the Skill tool for a procedural skill and a Read of its SKILL.md under either target
+// are denied when the plan excludes procedural-skills (sdd), and pass when it includes them (odd).
+// Another skill, an installed one, another file and a SKILL.md outside the repository pass.
+func TestPreToolUseGatesTheProceduralSkillsOfTheLock(t *testing.T) {
+	e := newHookEnv(t)
+	writeProceduralLock(t, e.repo)
+	e.running(t, "proj-1", "wf-1", "sdd")
+	claudeFile := filepath.Join(e.repo, ".claude", "skills", "deploy-checks", "SKILL.md")
+	agentsFile := filepath.Join(e.repo, ".agents", "skills", "deploy-checks", "SKILL.md")
+
+	assertDenied(t, "Skill", e.gate(t, e.repo, "Skill", map[string]any{"skill": "deploy-checks"}),
+		`use of procedural skill "deploy-checks"`, `does not include source "procedural-skills"`, `profile "sdd"`, "labdrian workflow unbind")
+	for _, file := range []string{claudeFile, agentsFile, filepath.Join(e.repo, ".claude", "skills", "x", "..", "deploy-checks", "SKILL.md")} {
+		assertDenied(t, "Read "+file, e.gate(t, e.repo, "Read", map[string]any{"file_path": file}), `SKILL.md of procedural skill "deploy-checks"`)
+	}
+	sub := filepath.Join(e.repo, "sub")
+	if err := os.MkdirAll(sub, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	assertDenied(t, "Skill from a subdirectory", e.gate(t, sub, "Skill", map[string]any{"skill": "deploy-checks"}), `"deploy-checks"`)
+
+	for label, call := range map[string]struct {
+		tool  string
+		input any
+	}{
+		"another skill":               {"Skill", map[string]any{"skill": "release-notes"}},
+		"an installed skill":          {"Skill", map[string]any{"skill": "go-testing"}},
+		"an installed SKILL.md":       {"Read", map[string]any{"file_path": filepath.Join(e.repo, ".claude", "skills", "go-testing", "SKILL.md")}},
+		"another file of the skill":   {"Read", map[string]any{"file_path": filepath.Join(e.repo, ".claude", "skills", "deploy-checks", "notes.md")}},
+		"a SKILL.md elsewhere":        {"Read", map[string]any{"file_path": filepath.Join(e.dir, ".claude", "skills", "deploy-checks", "SKILL.md")}},
+		"a relative path":             {"Read", map[string]any{"file_path": ".claude/skills/deploy-checks/SKILL.md"}},
+		"a Skill call with no skill":  {"Skill", map[string]any{"args": "x"}},
+		"a Skill input not an object": {"Skill", "deploy-checks"},
+	} {
+		assertSilent(t, label, e.gate(t, e.repo, call.tool, call.input))
+	}
+
+	odd := newHookEnv(t)
+	writeProceduralLock(t, odd.repo)
+	odd.running(t, "proj-1", "wf-1", "odd")
+	assertSilent(t, "odd/Skill", odd.gate(t, odd.repo, "Skill", map[string]any{"skill": "deploy-checks"}))
+	assertSilent(t, "odd/Read", odd.gate(t, odd.repo, "Read", map[string]any{"file_path": filepath.Join(odd.repo, ".claude", "skills", "deploy-checks", "SKILL.md")}))
+}
+
+// TestPreToolUseWithoutALockChecksNoSkill: no lock means no procedural skill: silent.
+func TestPreToolUseWithoutALockChecksNoSkill(t *testing.T) {
+	e := newHookEnv(t)
+	e.running(t, "proj-1", "wf-1", "sdd")
+	assertSilent(t, "Skill", e.gate(t, e.repo, "Skill", map[string]any{"skill": "deploy-checks"}))
+	assertSilent(t, "Read", e.gate(t, e.repo, "Read", map[string]any{"file_path": filepath.Join(e.repo, ".claude", "skills", "deploy-checks", "SKILL.md")}))
+}
+
+// TestPreToolUseWarnsOnceWhenTheLockCannotBeRead: an invalid lock is an allow with one warning
+// when the plan excludes procedural-skills, and silent when it includes them.
+func TestPreToolUseWarnsOnceWhenTheLockCannotBeRead(t *testing.T) {
+	for name, content := range map[string]string{"invalid JSON": "{", "another version": `{"version":2,"skills":[]}`} {
+		e := newHookEnv(t)
+		writeFixtureFile(t, filepath.Join(e.repo, filepath.FromSlash(skills.ProjectLockRelPath)), content)
+		e.running(t, "proj-1", "wf-1", "sdd")
+		r := e.gate(t, e.repo, "Skill", map[string]any{"skill": "deploy-checks"})
+		msg := decodeHookOutput(t, r)
+		if strings.Contains(r.stdout, "permissionDecision") || !strings.Contains(msg.Warning, "procedural skills lock") ||
+			!strings.Contains(msg.Warning, "could not be read") || strings.Contains(msg.Warning, "\n") {
+			t.Errorf("%s: stdout %q, want an allow with one warning about the lock", name, r.stdout)
+		}
+
+		odd := newHookEnv(t)
+		writeFixtureFile(t, filepath.Join(odd.repo, filepath.FromSlash(skills.ProjectLockRelPath)), content)
+		odd.running(t, "proj-1", "wf-1", "odd")
+		assertSilent(t, name+"/odd", odd.gate(t, odd.repo, "Skill", map[string]any{"skill": "deploy-checks"}))
+	}
+}
+
 func TestPreToolUseAppliesTheMemoryGateWhilePausedToo(t *testing.T) {
 	e := pausedEnv(t, "odd")
 	assertDenied(t, "paused, wrong project", e.gate(t, e.repo, "mcp__longterm-mem__query", queryArgs("other")), `"other"`)
@@ -547,8 +639,23 @@ func TestPreToolUseTouchesNoStoreForAToolTheGateDoesNotCheck(t *testing.T) {
 	for _, tool := range []string{"Bash", "Read", "Grep", "Task", "mcp__longterm-mem__promote", "mcp__engram__mem_save", ""} {
 		assertSilent(t, "irrelevant/"+tool, e.gateWith(d, t, e.repo, tool, map[string]any{"command": "ls"}))
 	}
+	// A Read is checked only for a SKILL.md (C23 M4 decision 5): a Read of any other file is
+	// answered before the stores, and so before the lock.
+	for _, file := range []string{filepath.Join(e.repo, "main.go"), filepath.Join(e.repo, ".claude", "skills", "a", "notes.md"), filepath.Join(e.repo, "skill.md")} {
+		assertSilent(t, "Read "+file, e.gateWith(d, t, e.repo, "Read", map[string]any{"file_path": file}))
+	}
 	if accesses != 0 {
 		t.Fatalf("the hook went to the stores %d times for tools the gate never checks, want 0", accesses)
+	}
+	for _, call := range []struct {
+		tool  string
+		input any
+	}{{"Skill", map[string]any{"skill": "a"}}, {"Read", map[string]any{"file_path": filepath.Join(e.repo, ".claude", "skills", "a", "SKILL.md")}}} {
+		before := accesses
+		e.gateWith(d, t, e.repo, call.tool, call.input)
+		if accesses != before+1 {
+			t.Errorf("%s: the hook went to the stores %d times, want exactly once", call.tool, accesses-before)
+		}
 	}
 
 	// The seam is live: the tools the gate does check do reach the stores.
@@ -595,6 +702,9 @@ func TestUsageDocumentsThePreToolUseGate(t *testing.T) {
 		"a read of a source the plan excludes",
 		"all_projects",
 		"never touches promote, an Engram write, or any write",
+		"the Skill tool for a procedural skill of the lock",
+		"a Read of its SKILL.md",
+		"a lock it cannot read gives one warning",
 		"exit 0 always",
 	} {
 		if !strings.Contains(text, want) {
@@ -612,7 +722,11 @@ func TestReadmeDocumentsTheMemoryGateOfC23M4(t *testing.T) {
 	}
 	text := strings.Join(strings.Fields(strings.ReplaceAll(string(readme), "`", "")), " ")
 	for _, want := range []string{
-		"one UserPromptSubmit entry and four PreToolUse entries",
+		"one UserPromptSubmit entry and five PreToolUse entries",
+		"the Skill and Read tools",
+		"the Skill tool for a skill the project's procedural skills lock records",
+		"A Read of any other file is not looked at",
+		"A lock that cannot be read allows, with one warning",
 		"the longterm-mem query and get tools, and the Engram mem_search, mem_context, mem_get_observation and mem_timeline tools",
 		"a read of a source the plan does not include is denied",
 		"sets all_projects to true",

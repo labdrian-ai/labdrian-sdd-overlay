@@ -32,6 +32,16 @@ package projection
 //     and every other tool are never touched: the plan grants no write, and it
 //     does not forbid one.
 //
+//     The project's procedural skills (C23 M4 decision 5) are of source
+//     procedural-skills too: the Skill tool for a skill the procedural skills lock
+//     records, and a Read whose absolute path, cleaned, is one of that skill's
+//     SKILL.md files, are checked like a read by id. The caller reads the lock
+//     (GateInput.Procedural) and only for such a call: a Read of any other file is
+//     never looked at. A skill the lock does not record (a registry install, a
+//     global skill) is never touched; no lock means no procedural skill, and a
+//     lock that cannot be read is an allow, with one warning when the plan would
+//     have denied a procedural skill.
+//
 // The gate denies only when it has a valid workflow state and a clear violation.
 // Every unknown (no binding, a binding or workflow it cannot follow, a closed
 // workflow, an unrecognized status, a plan it cannot compute, input it cannot
@@ -40,6 +50,7 @@ package projection
 // workflow is the prompt hook's job.
 
 import (
+	"path/filepath"
 	"regexp"
 	"slices"
 	"strconv"
@@ -66,7 +77,31 @@ type GateInput struct {
 	// the gate has no rule of its own, and with none it cannot check an Engram project, which is an
 	// allow with a warning.
 	EngramName func(identity string) string
+	// Procedural is what the project's procedural skills lock says, as the caller read it: the gate
+	// reads no file. The caller reads it only for a call that can use a procedural skill (the Skill
+	// tool, or a Read of a SKILL.md); its zero value is a project with no lock.
+	Procedural ProceduralSkills
 	Call       ToolCall
+}
+
+// ProceduralSkills is the part of the project's procedural skills lock
+// (.labdrian/procedural-skills.lock.json) the gate decides from: the procedural
+// skills it records, which are the only skills of source procedural-skills (C23
+// M1 decision 3). The skills a registry install wrote, and global skills, are not
+// in it.
+type ProceduralSkills struct {
+	Skills []ProceduralSkill
+	// Unreadable says why the lock could not be read or is not a valid lock. It is
+	// empty when the lock was read, and when there is none.
+	Unreadable string
+}
+
+// ProceduralSkill is one procedural skill of the lock: its id, which the Skill
+// tool names, and the absolute paths of its SKILL.md, one per target it was
+// written to.
+type ProceduralSkill struct {
+	ID         string
+	SkillFiles []string
 }
 
 // ToolCall is the tool call the gate is asked about, as the gate reads it.
@@ -79,6 +114,11 @@ type ToolCall struct {
 	// mem_search or mem_context), at most once, and never for any other call. It is nil for a
 	// caller with no way to read them, which is read as arguments that are not named.
 	ReadQuery func() QueryArguments
+	// ReadSkill reads the skill a Skill call names, and ReadFilePath the file a Read call names:
+	// "" when the argument is missing or not text. Gate calls each only for the tool it belongs
+	// to. Either is nil for a caller with no way to read it, which is read as "".
+	ReadSkill    func() string
+	ReadFilePath func() string
 }
 
 // query reads the arguments of the call as those of a memory query.
@@ -133,7 +173,64 @@ func (r GateResult) Explanation() string {
 // workflow. Gate itself denies or warns only for tools this reports true for.
 func GateRelevant(editTools []string, toolName string) bool {
 	_, read := memoryReadOf(toolName)
-	return slices.Contains(editTools, toolName) || read
+	return slices.Contains(editTools, toolName) || read || toolName == skillTool || toolName == readTool
+}
+
+// GateRelevantCall is GateRelevant for a call, narrowed for a Read: a Read is
+// relevant only when the file it names is a SKILL.md, which is decided from the
+// path alone (C23 M4 decision 5), so a caller answers every other Read without
+// reading the binding, the workflow, or the procedural skills lock.
+func GateRelevantCall(editTools []string, call ToolCall) bool {
+	_, relevant := relevantUse(editTools, call)
+	return relevant
+}
+
+// The tools that can use a skill: the Skill tool names one by its id, and a Read
+// can read its SKILL.md.
+const (
+	skillTool     = "Skill"
+	readTool      = "Read"
+	skillFileName = "SKILL.md"
+)
+
+// skillUse is how a call can use a procedural skill: by its id (the Skill tool)
+// or by reading a file (a Read of a SKILL.md). It is the zero value for a call
+// that cannot use one.
+type skillUse struct {
+	skill, file string
+	isSkill     bool
+	isRead      bool
+}
+
+// relevantUse reads, once, what a call can use a skill by, and whether the gate
+// can have an opinion about the call at all.
+func relevantUse(editTools []string, call ToolCall) (skillUse, bool) {
+	switch call.Name {
+	case skillTool:
+		return skillUse{isSkill: true, skill: readArg(call.ReadSkill)}, true
+	case readTool:
+		file := readArg(call.ReadFilePath)
+		if file == "" || filepath.Base(filepath.Clean(file)) != skillFileName {
+			return skillUse{}, slices.Contains(editTools, readTool)
+		}
+		return skillUse{isRead: true, file: file}, true
+	}
+	return skillUse{}, GateRelevant(editTools, call.Name)
+}
+
+// CanUseASkill reports whether a call can use a procedural skill: the Skill tool,
+// or a Read of a SKILL.md. It is the call a caller reads the procedural skills
+// lock for, and no other.
+func CanUseASkill(call ToolCall) bool {
+	use, _ := relevantUse(nil, call)
+	return use.isSkill || use.isRead
+}
+
+func readArg(read func() string) string {
+	if read == nil {
+		return ""
+	}
+	return read()
 }
 
 // The MCP names of the memory reads, each matched as strictly as the others and
@@ -203,7 +300,8 @@ func memoryReadOf(toolName string) (memoryRead, bool) {
 // for the rules. It is total: it never fails and never panics, and anything it
 // does not understand is an allow.
 func Gate(in GateInput) GateResult {
-	if !GateRelevant(in.EditTools, in.Call.Name) {
+	use, relevant := relevantUse(in.EditTools, in.Call)
+	if !relevant {
 		return GateResult{}
 	}
 	if in.Binding.Classification != ClassificationOwned {
@@ -227,7 +325,64 @@ func Gate(in GateInput) GateResult {
 	if read, ok := memoryReadOf(in.Call.Name); ok {
 		return memoryGate(in, w.State, read)
 	}
+	if use.isSkill || use.isRead {
+		return proceduralGate(in, w.State, use)
+	}
 	return GateResult{}
+}
+
+// proceduralGate checks a use of a skill (C23 M4 decision 5): a skill the lock
+// records is of source procedural-skills and goes through the memory gate like a
+// read by id; any other skill is not the gate's business. A lock that could not be
+// read leaves the gate unable to tell, which it says once when the plan would
+// deny a procedural skill, and not at all when the plan includes them.
+func proceduralGate(in GateInput, s workflow.State, use skillUse) GateResult {
+	if in.Procedural.Unreadable != "" {
+		b := in.Binding.Binding
+		plan, err := resolvePlan(s, b.ProjectID)
+		if err == nil && plan.Scope != memoryscope.ScopeNone && slices.Contains(plan.Sources, memoryscope.SourceProceduralSkills) {
+			return GateResult{}
+		}
+		return GateResult{Warning: "labdrian: the procedural skills lock of this repository could not be read" + detailIn(in.Procedural.Unreadable) +
+			", so whether this " + use.what() + " uses a procedural skill was not checked against the memory plan of " + workflowRef(b) + "."}
+	}
+	id, ok := in.Procedural.match(use)
+	if !ok {
+		return GateResult{}
+	}
+	what := "use of procedural skill " + quoteValue(id)
+	if use.isRead {
+		what = "read of the SKILL.md of procedural skill " + quoteValue(id)
+	}
+	return memoryGate(in, s, memoryRead{source: memoryscope.SourceProceduralSkills, what: what, unbindTo: "use it", check: checkSourceOnly})
+}
+
+// what names a use of a skill whose skill is not known to be procedural.
+func (u skillUse) what() string {
+	if u.isRead {
+		return "read of a SKILL.md"
+	}
+	return "use of skill " + quoteValue(u.skill)
+}
+
+// match is the id of the procedural skill a use uses: the skill a Skill call
+// names, exactly; or the skill one of whose SKILL.md files a Read names, compared
+// as cleaned paths. The lock's files are absolute, so a relative path never
+// matches one: the gate does not guess what it is relative to.
+func (p ProceduralSkills) match(use skillUse) (string, bool) {
+	for _, skill := range p.Skills {
+		if use.isSkill && use.skill != "" && use.skill == skill.ID {
+			return skill.ID, true
+		}
+		if use.isRead {
+			for _, file := range skill.SkillFiles {
+				if filepath.Clean(use.file) == filepath.Clean(file) {
+					return skill.ID, true
+				}
+			}
+		}
+	}
+	return "", false
 }
 
 func pausedReason(b Binding, tool string) string {

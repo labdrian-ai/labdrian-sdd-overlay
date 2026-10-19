@@ -92,19 +92,21 @@ func denied(t *testing.T, label string, got projection.GateResult, wantIn ...str
 // --- which tools the gate has an opinion about --------------------------------
 
 // TestGateRelevantSelectsOnlyTheToolsTheGateChecks: the gate needs the binding and the workflow
-// only for a file-edit tool (of the list the caller gives) or a memory read; every other tool is
+// only for a file-edit tool (of the list the caller gives), a memory read, or a tool that can use a
+// skill (Skill, and Read, which GateRelevantCall narrows to a SKILL.md); every other tool is
 // decided from its name alone, so the hook never touches the stores for it.
 func TestGateRelevantSelectsOnlyTheToolsTheGateChecks(t *testing.T) {
 	for _, tool := range []string{
 		"Write", "Edit", "MultiEdit", "NotebookEdit", "mcp__longterm-mem__query", "mcp__plugin_x_longterm-mem__query",
 		"mcp__longterm-mem__get", "mcp__engram__mem_search", "mcp__plugin_engram_engram__mem_get_observation",
+		"Skill", "Read",
 	} {
 		if !projection.GateRelevant(editTools, tool) {
 			t.Errorf("GateRelevant(%q) = false, want true", tool)
 		}
 	}
 	for _, tool := range []string{
-		"", "Bash", "Read", "Grep", "Glob", "Task", "WebFetch", "TodoWrite", "write", "Writer",
+		"", "Bash", "skill", "read", "Grep", "Glob", "Task", "WebFetch", "TodoWrite", "write", "Writer",
 		"mcp__longterm-mem__promote", "mcp__longterm-memx__query", "mcp__engram__mem_save",
 	} {
 		if projection.GateRelevant(editTools, tool) {

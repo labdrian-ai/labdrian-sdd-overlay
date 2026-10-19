@@ -110,6 +110,26 @@ func TestGateCallOfAnotherToolKeepsOnlyItsName(t *testing.T) {
 	}
 }
 
+// TestGateCallReadsTheSkillAndTheFilePathOnRequest: the gate reads the skill of a Skill call and the
+// file of a Read through the call (C23 M4 decision 5).
+func TestGateCallReadsTheSkillAndTheFilePathOnRequest(t *testing.T) {
+	skill := gateCall(decodePreToolUse(t, `{"tool_name":"Skill","tool_input":{"skill":"deploy-checks"}}`))
+	if skill.ReadSkill == nil || skill.ReadSkill() != "deploy-checks" {
+		t.Errorf("a Skill call: ReadSkill reads %q, want deploy-checks", read(skill.ReadSkill))
+	}
+	file := gateCall(decodePreToolUse(t, `{"tool_name":"Read","tool_input":{"file_path":"/r/SKILL.md"}}`))
+	if file.ReadFilePath == nil || file.ReadFilePath() != "/r/SKILL.md" {
+		t.Errorf("a Read call: ReadFilePath reads %q, want /r/SKILL.md", read(file.ReadFilePath))
+	}
+}
+
+func read(f func() string) string {
+	if f == nil {
+		return "<nil>"
+	}
+	return f()
+}
+
 // --- what a decision of the gate says --------------------------------------------------------
 
 func TestGateReplySaysWhatTheGateDecided(t *testing.T) {

@@ -66,8 +66,8 @@ func installFresh(t *testing.T) (string, *settingsInstaller) {
 
 // projectionFamilySize is the number of entries of the projection family: one UserPromptSubmit
 // entry and a PreToolUse entry per matcher (the edit tools, the longterm-mem query and get, and the
-// Engram reads).
-const projectionFamilySize = 5
+// Engram reads, and the tools that can use a procedural skill).
+const projectionFamilySize = 6
 
 func TestInstall_AddsTheProjectionFamily(t *testing.T) {
 	path, _ := installFresh(t)
@@ -81,6 +81,7 @@ func TestInstall_AddsTheProjectionFamily(t *testing.T) {
 		{"PreToolUse", settings.ProjectionMemoryQueryMatcher, "PreToolUse"},
 		{"PreToolUse", settings.ProjectionMemoryGetMatcher, "PreToolUse"},
 		{"PreToolUse", settings.ProjectionEngramReadMatcher, "PreToolUse"},
+		{"PreToolUse", settings.ProjectionProceduralSkillMatcher, "PreToolUse"},
 	}
 	for i, w := range want {
 		e := got[i]
@@ -107,6 +108,9 @@ func TestProjectionMatchersAreTheDocumentedOnes(t *testing.T) {
 	if settings.ProjectionMemoryGetMatcher != `^mcp__([A-Za-z0-9-]+_)*longterm-mem__get$` {
 		t.Errorf("ProjectionMemoryGetMatcher = %q", settings.ProjectionMemoryGetMatcher)
 	}
+	if settings.ProjectionProceduralSkillMatcher != "Skill|Read" {
+		t.Errorf("ProjectionProceduralSkillMatcher = %q", settings.ProjectionProceduralSkillMatcher)
+	}
 	if settings.ProjectionEngramReadMatcher != `^mcp__([A-Za-z0-9-]+_)*engram__(mem_search|mem_context|mem_get_observation|mem_timeline)$` {
 		t.Errorf("ProjectionEngramReadMatcher = %q", settings.ProjectionEngramReadMatcher)
 	}
@@ -122,7 +126,7 @@ func TestInstall_AddsTheMemoryReadMatchersToAnInstallThatPredatesThem(t *testing
 	var kept []interface{}
 	for _, e := range hooks["PreToolUse"].([]interface{}) {
 		em := e.(map[string]interface{})
-		if em["matcher"] == settings.ProjectionMemoryGetMatcher || em["matcher"] == settings.ProjectionEngramReadMatcher {
+		if em["matcher"] == settings.ProjectionMemoryGetMatcher || em["matcher"] == settings.ProjectionEngramReadMatcher || em["matcher"] == settings.ProjectionProceduralSkillMatcher {
 			continue
 		}
 		kept = append(kept, e)
@@ -137,8 +141,9 @@ func TestInstall_AddsTheMemoryReadMatchersToAnInstallThatPredatesThem(t *testing
 		t.Fatalf("test bug: the older install has %d entries, want 3", len(older))
 	}
 	parts := settings.MissingProjectionHookParts(parseJSON(t, path), testHookCommand)
-	if len(parts) != 2 || !strings.Contains(parts[0], settings.ProjectionMemoryGetMatcher) || !strings.Contains(parts[1], settings.ProjectionEngramReadMatcher) {
-		t.Fatalf("missing parts = %q, want exactly the get matcher and the Engram read matcher", parts)
+	if len(parts) != 3 || !strings.Contains(parts[0], settings.ProjectionMemoryGetMatcher) || !strings.Contains(parts[1], settings.ProjectionEngramReadMatcher) ||
+		!strings.Contains(parts[2], `matcher="Skill|Read"`) {
+		t.Fatalf("missing parts = %q, want exactly the get matcher, the Engram read matcher and the skill matcher", parts)
 	}
 
 	if err := m.Install(); err != nil {
@@ -335,6 +340,9 @@ func TestHasProjectionHooks_ReportsMissingAndDriftedParts(t *testing.T) {
 		{"Engram read matcher removed", mutate(func(h map[string]interface{}) {
 			dropWhere(h, "PreToolUse", func(e map[string]interface{}) bool { return e["matcher"] == settings.ProjectionEngramReadMatcher })
 		}), settings.ProjectionEngramReadMatcher},
+		{"skill matcher removed", mutate(func(h map[string]interface{}) {
+			dropWhere(h, "PreToolUse", func(e map[string]interface{}) bool { return e["matcher"] == settings.ProjectionProceduralSkillMatcher })
+		}), settings.ProjectionProceduralSkillMatcher},
 		{"Engram read matcher narrowed", mutate(func(h map[string]interface{}) {
 			for _, e := range h["PreToolUse"].([]interface{}) {
 				em := e.(map[string]interface{})
