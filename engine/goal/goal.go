@@ -65,7 +65,7 @@ func Parse(data []byte) (Goal, error) {
 	}
 	var directive *memoryscope.Directive
 	if v3 {
-		d, err := parseDirectiveField(data)
+		d, err := memoryscope.ParseDirectiveMember(data, "memory_directive")
 		if err != nil {
 			return Goal{}, fmt.Errorf("parse goal: %w", err)
 		}
@@ -122,26 +122,6 @@ func isVersion3(data []byte) bool {
 		return false
 	}
 	return bytes.Equal(bytes.TrimSpace(fields["version"]), []byte("3"))
-}
-
-// parseDirectiveField strictly parses the memory_directive member of a
-// version 3 Goal with memoryscope.ParseDirective, so its nested keys get the
-// same exact-case unknown-field check as the Goal's own. An absent or null
-// member returns nil, left to Validate to refuse.
-func parseDirectiveField(data []byte) (*memoryscope.Directive, error) {
-	var fields map[string]json.RawMessage
-	if err := json.Unmarshal(data, &fields); err != nil {
-		return nil, err
-	}
-	raw, ok := fields["memory_directive"]
-	if !ok || bytes.Equal(bytes.TrimSpace(raw), []byte("null")) {
-		return nil, nil
-	}
-	d, err := memoryscope.ParseDirective(raw)
-	if err != nil {
-		return nil, fmt.Errorf("memory_directive: %w", err)
-	}
-	return &d, nil
 }
 
 // Validate checks the version and deterministic structural requirements of a

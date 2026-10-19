@@ -6,8 +6,6 @@ package shaper
 // the dispatch on the version is Parse, in shaper.go.
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -54,7 +52,7 @@ func parseV4(data []byte) (Handoff, error) {
 	if err := checkV3NestedFields(data); err != nil {
 		return Handoff{}, err
 	}
-	directive, err := parseDirectiveMember(data)
+	directive, err := memoryscope.ParseDirectiveMember(data, "memory_directive")
 	if err != nil {
 		return Handoff{}, err
 	}
@@ -83,23 +81,12 @@ func parseV4(data []byte) (Handoff, error) {
 	return h, nil
 }
 
-// parseDirectiveMember strictly parses the memory_directive member of data
-// with memoryscope.ParseDirective. An absent or null member returns nil, left
-// to Validate to refuse.
-func parseDirectiveMember(data []byte) (*memoryscope.Directive, error) {
-	var raw map[string]json.RawMessage
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return nil, err
-	}
-	v, ok := raw["memory_directive"]
-	if !ok || bytes.Equal(bytes.TrimSpace(v), []byte("null")) {
-		return nil, nil
-	}
-	d, err := memoryscope.ParseDirective(v)
-	if err != nil {
-		return nil, fmt.Errorf("memory_directive: %w", err)
-	}
-	return &d, nil
+// PairedGoalVersion is the Goal version a handoff of handoffVersion pairs with,
+// the version BindGoal requires: 3 for a version 4 handoff and 2 for every
+// other. It is exported for a caller that holds an already-parsed handoff and
+// Goal (the workflow lifecycle) and must refuse the pairing BindGoal refuses.
+func PairedGoalVersion(handoffVersion int) int {
+	return goalVersionFor(handoffVersion)
 }
 
 // validateV4 applies every version 3 rule, with a valid memory_directive

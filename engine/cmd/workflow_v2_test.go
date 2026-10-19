@@ -11,10 +11,11 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflowprofile"
 )
 
-// A workflow created by the program is a log of version 2: its created event records a snapshot of the
-// built-in profile whole, and the digest of it, and every event after it, whatever the verb, is of
-// version 2 and carries neither. The profile transcripts under testdata/profile-golden show that
-// nothing the verbs print differs; this is what the log holds.
+// A workflow created by the program is a log of the current version (3 since C23 M3, which adds the
+// memory narrowers to version 2): its created event records a snapshot of the built-in profile whole,
+// and the digest of it, and every event after it, whatever the verb, is of that version and carries
+// neither. A workflow created with no narrower holds no narrower field. The profile transcripts under
+// testdata/profile-golden show that nothing the verbs print differs; this is what the log holds.
 func TestWorkflowCreateWritesAVersion2LogOfTheProfileWhateverTheVerbs(t *testing.T) {
 	bin := engineBinary(t)
 	for _, p := range profileStages {
@@ -48,8 +49,8 @@ func TestWorkflowCreateWritesAVersion2LogOfTheProfileWhateverTheVerbs(t *testing
 				t.Fatalf("the log has %d events, want %d", len(loaded.Events), want)
 			}
 			for i, e := range loaded.Events {
-				if e.Version != workflow.EventVersionSnapshot {
-					t.Errorf("event %d (%s) is of version %d, want %d", i, e.Kind, e.Version, workflow.EventVersionSnapshot)
+				if e.Version != workflow.EventVersion {
+					t.Errorf("event %d (%s) is of version %d, want %d", i, e.Kind, e.Version, workflow.EventVersion)
 				}
 				if i > 0 && (e.ProfileSnapshot != nil || e.ProfileDigest != "") {
 					t.Errorf("event %d (%s) carries the snapshot, which belongs to the created event alone", i, e.Kind)

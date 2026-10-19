@@ -97,10 +97,13 @@ func builtInWorkflowProfile(state workflow.State) (workflowprofile.WorkflowProfi
 	return workflow.ProfileOf(state, workflow.ProfileCatalogFunc(workflowprofile.Resolve))
 }
 
-// resolvePlan is the one place the memory plan of a workflow is computed: the
-// profile's ceiling, resolved for the project and goal. The context states this
-// plan and the PreToolUse gate enforces it, so both call this function, and can
-// never disagree about which project is permitted.
+// resolvePlan is the one place the projection computes the memory plan of a
+// workflow: workflow.PlanOf over the workflow's profile, that is the profile's
+// ceiling narrowed by the directives its log stored (C23 M3: the Goal's, the
+// shaper handoff's, then the role directive in force), resolved for the project
+// and goal. The context states this plan and the PreToolUse gate enforces it, so
+// both call this function, and can never disagree about which project is
+// permitted.
 //
 // The plan's project is the shared identity the workflow recorded at create
 // (C23 M2: a declared name, a normalized origin remote or the main checkout's
@@ -112,13 +115,5 @@ func resolvePlan(state workflow.State, projectID string) (memoryscope.Plan, erro
 	if err != nil {
 		return memoryscope.Plan{}, err
 	}
-	directive, err := memoryscope.DefaultFor(profile)
-	if err != nil {
-		return memoryscope.Plan{}, err
-	}
-	project := state.ProjectIdentity
-	if project == "" {
-		project = projectID
-	}
-	return memoryscope.Resolve(directive, project, state.GoalID)
+	return workflow.PlanOf(state, projectID, profile)
 }

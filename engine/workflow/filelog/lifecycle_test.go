@@ -104,11 +104,11 @@ func TestALifecycleRunsToCompletionOverTheFileLogAcrossRestarts(t *testing.T) {
 		t.Errorf("log = %q with %d events, state %+v; want the closed, completed workflow of %d events, owned", loaded.Classification, len(loaded.Events), loaded.State, len(steps))
 	}
 
-	// What the file kept is a log of version 2: read back by a fresh process, the workflow carries the
-	// snapshot of its profile, which is what every later step went on from.
-	if loaded.State.Version != workflow.EventVersionSnapshot || loaded.State.ProfileSnapshot == nil ||
+	// What the file kept is a log of the current version: read back by a fresh process, the workflow
+	// carries the snapshot of its profile, which is what every later step went on from.
+	if loaded.State.Version != workflow.EventVersion || loaded.State.ProfileSnapshot == nil ||
 		loaded.State.ProfileSnapshot.Name != profile.Name {
-		t.Errorf("state = version %d, snapshot %+v; want a version 2 log carrying the snapshot of %s", loaded.State.Version, loaded.State.ProfileSnapshot, profile.Name)
+		t.Errorf("state = version %d, snapshot %+v; want a version %d log carrying the snapshot of %s", loaded.State.Version, loaded.State.ProfileSnapshot, workflow.EventVersion, profile.Name)
 	}
 
 	// A closed workflow takes nothing more, and the refusal leaves the log alone.
