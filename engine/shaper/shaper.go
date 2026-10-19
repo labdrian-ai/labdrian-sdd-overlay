@@ -9,10 +9,7 @@
 package shaper
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/fieldrule"
@@ -108,7 +105,9 @@ func Parse(data []byte) (Handoff, error) {
 	if err := jsonstrict.CheckNoDuplicateKeys(data); err != nil {
 		return Handoff{}, fmt.Errorf("parse shaper handoff: %w", err)
 	}
-	version := wireVersion(data)
+	// Any value that names no version 2 to 4, including 2.0, 02 or a string, is left to the
+	// version 1 path, which reports it exactly as before the later versions existed.
+	version := jsonstrict.WireVersion(data)
 	allowedFields := handoffAllowedFields
 	switch version {
 	case HandoffVersionPlan:
@@ -218,22 +217,4 @@ func checkNoExactOverlap(name string, values []string, outOfScope []string) erro
 		}
 	}
 	return nil
-}
-
-// wireVersion is the version Parse dispatches on: the top-level, exact-case
-// version member of data when it is a JSON integer written as Go's strconv.Itoa
-// writes it, and 0 otherwise. Any value that names no version 2 to 4,
-// including 2.0, 02, or a string, is left to the version 1 path, which reports
-// it exactly as before the later versions existed.
-func wireVersion(data []byte) int {
-	var fields map[string]json.RawMessage
-	if err := json.Unmarshal(data, &fields); err != nil {
-		return 0
-	}
-	raw := string(bytes.TrimSpace(fields["version"]))
-	version, err := strconv.Atoi(raw)
-	if err != nil || strconv.Itoa(version) != raw {
-		return 0
-	}
-	return version
 }

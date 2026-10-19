@@ -46,14 +46,17 @@ func PlanOf(state State, projectID string, profile workflowprofile.WorkflowProfi
 		{handoffNarrowerName, state.HandoffDirective},
 		{roleNarrowerName, state.RoleDirectiveInForce()},
 	}
-	var names []string
-	var narrowers []memoryscope.Directive
+	// present holds the directives there are, in order, each with its name, so the index a
+	// NarrowerError gives is the index of its name too.
+	var present []namedDirective
 	for _, c := range candidates {
-		if c.directive == nil {
-			continue
+		if c.directive != nil {
+			present = append(present, c)
 		}
-		names = append(names, c.name)
-		narrowers = append(narrowers, *c.directive)
+	}
+	narrowers := make([]memoryscope.Directive, len(present))
+	for i, c := range present {
+		narrowers[i] = *c.directive
 	}
 	project := state.ProjectIdentity
 	if project == "" {
@@ -63,9 +66,9 @@ func PlanOf(state State, projectID string, profile workflowprofile.WorkflowProfi
 	var refused *memoryscope.NarrowerError
 	if errors.As(err, &refused) {
 		if refused.Widens {
-			return memoryscope.Plan{}, fmt.Errorf("the %s memory directive widens the plan: %w", names[refused.Index], refused.Err)
+			return memoryscope.Plan{}, fmt.Errorf("the %s memory directive widens the plan: %w", present[refused.Index].name, refused.Err)
 		}
-		return memoryscope.Plan{}, fmt.Errorf("the %s memory directive: %w", names[refused.Index], refused.Err)
+		return memoryscope.Plan{}, fmt.Errorf("the %s memory directive: %w", present[refused.Index].name, refused.Err)
 	}
 	return plan, err
 }

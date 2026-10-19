@@ -200,8 +200,9 @@ type Plan struct {
 // Resolve narrows base by narrowers, applied in order, into one query Plan.
 // Each narrower must not exceed the running scope (none < goal < project)
 // and must use a subset of the running sources; either violation, like an
-// invalid narrower, refuses with a NarrowerError that names it. The effective directive is the most narrowed one:
-// base if there are no narrowers, otherwise the last narrower applied.
+// invalid narrower, refuses with a NarrowerError that names it. The effective
+// directive is the most narrowed one: base if there are no narrowers,
+// otherwise the last narrower applied.
 // projectID and goalID come from the caller (typically a strictly parsed
 // Goal v2); they populate Plan.Filters and are validated against the
 // effective scope: project_id is required for scope goal and project,

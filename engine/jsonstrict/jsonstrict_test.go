@@ -181,3 +181,29 @@ func TestDecodeStrictRejectsTrailingDataAndDecodesValidDocument(t *testing.T) {
 		}
 	})
 }
+
+// WireVersion names a version only for a top-level, exact-case version member written as a
+// canonical integer; every other spelling, and a document that is not an object, is 0.
+func TestWireVersionReadsOnlyACanonicalIntegerVersion(t *testing.T) {
+	tests := []struct {
+		data string
+		want int
+	}{
+		{`{"version":3}`, 3},
+		{`{"version": 4 ,"a":1}`, 4},
+		{`{"version":3.0}`, 0},
+		{`{"version":3e0}`, 0},
+		{`{"version":03}`, 0},
+		{`{"version":-0}`, 0},
+		{`{"version":"3"}`, 0},
+		{`{"Version":3}`, 0},
+		{`{"a":1}`, 0},
+		{`[3]`, 0},
+		{`not json`, 0},
+	}
+	for _, tt := range tests {
+		if got := WireVersion([]byte(tt.data)); got != tt.want {
+			t.Errorf("WireVersion(%s) = %d, want %d", tt.data, got, tt.want)
+		}
+	}
+}

@@ -4,10 +4,8 @@
 package goal
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/fieldrule"
@@ -67,7 +65,9 @@ func Parse(data []byte) (Goal, error) {
 	if err := jsonstrict.CheckNoDuplicateKeys(data); err != nil {
 		return Goal{}, fmt.Errorf("parse goal: %w", err)
 	}
-	v3 := wireVersion(data) == VersionDirective
+	// Any value other than 3, including 3.0, 03 or a string, takes the version 1 and 2 path,
+	// which reports it exactly as before version 3 existed.
+	v3 := jsonstrict.WireVersion(data) == VersionDirective
 	allowedFields := goalAllowedFields
 	if v3 {
 		allowedFields = goalAllowedFieldsV3
@@ -123,24 +123,6 @@ var goalAllowedFieldsV3 = []string{
 	"version", "project_id", "goal_id", "objective", "scope", "constraints",
 	"non_goals", "acceptance_criteria", "memory_directive", "runtime_scope",
 	"delivery_boundary",
-}
-
-// wireVersion is the version Parse dispatches on: the top-level, exact-case
-// version member of data when it is a JSON integer written as Go's strconv.Itoa
-// writes it, and 0 otherwise. Any value other than 3, including 3.0, 03, or a
-// string, takes the version 1 and 2 path, which reports it exactly as before
-// version 3 existed.
-func wireVersion(data []byte) int {
-	var fields map[string]json.RawMessage
-	if err := json.Unmarshal(data, &fields); err != nil {
-		return 0
-	}
-	raw := string(bytes.TrimSpace(fields["version"]))
-	version, err := strconv.Atoi(raw)
-	if err != nil || strconv.Itoa(version) != raw {
-		return 0
-	}
-	return version
 }
 
 // Validate checks the version and deterministic structural requirements of a
