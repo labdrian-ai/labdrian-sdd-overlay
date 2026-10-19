@@ -67,6 +67,6 @@ If a sub-agent reports anything other than `paths-injected`, the orchestrator MU
 
 ## Integration Points
 
-- **ODD Orchestrator**: resolves paths for bounded exploration, implementation and verification delegations.
+- **ATL Orchestrator**: resolves paths for all SDD and non-SDD delegations.
 - **judgment-day**: resolves paths before Judge A, Judge B, and Fix Agent.
 - **pr-review and future delegators**: use this protocol when launching sub-agents.
