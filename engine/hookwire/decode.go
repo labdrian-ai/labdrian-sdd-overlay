@@ -78,6 +78,9 @@ type QueryArguments struct {
 	// Project is the project the query names: the value of its "project" argument, which is
 	// empty when there is none, when it is null, when it is not text, or when it is empty.
 	Project string
+	// AllProjects is true when the "all_projects" argument is the JSON value true, and false for
+	// every other value and when there is none.
+	AllProjects bool
 }
 
 // Query reads the input of the call as the arguments of a memory query. A key is matched
@@ -92,7 +95,11 @@ func (p PreToolUse) Query() QueryArguments {
 	if err := json.Unmarshal(fields["project"], &project); err != nil {
 		project = ""
 	}
-	return QueryArguments{Named: true, Project: project}
+	var all bool
+	if err := json.Unmarshal(fields["all_projects"], &all); err != nil {
+		all = false
+	}
+	return QueryArguments{Named: true, Project: project, AllProjects: all}
 }
 
 // decodeEnvelope is the lenient reading both events share: the input is at most MaxEnvelopeBytes,

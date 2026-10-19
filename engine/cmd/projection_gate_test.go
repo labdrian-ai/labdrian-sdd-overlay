@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -199,7 +200,7 @@ func TestPreToolUseNeverDeniesOtherToolsOfAPausedWorkflow(t *testing.T) {
 	e := pausedEnv(t, "odd")
 	for _, tool := range []string{
 		"Bash", "Read", "Grep", "Glob", "Task", "WebFetch", "TodoWrite", "write", "Writer",
-		"mcp__longterm-mem__get", "mcp__longterm-mem__promote", "mcp__engram__mem_save", "mcp__engram__mem_search",
+		"mcp__longterm-mem__get", "mcp__longterm-mem__promote", "mcp__engram__mem_save", "mcp__engram__mem_get_observation",
 	} {
 		assertSilent(t, "paused/"+tool, e.gate(t, e.repo, tool, map[string]any{"command": "ls", "id": "x"}))
 	}
@@ -235,14 +236,25 @@ func TestPreToolUseChecksTheProjectOfALongtermMemQuery(t *testing.T) {
 	}
 }
 
+// TestPreToolUseNeverTouchesTheMemoryToolsThatCarryNoProject: the plan grants no write and forbids none (C23 M4
+// decision 2), and a name that only looks like a memory read is not one. A read by id passes once
+// its source is in the plan, whatever it carries (decision 4).
 func TestPreToolUseNeverTouchesTheMemoryToolsThatCarryNoProject(t *testing.T) {
+	for _, profile := range []string{"odd", "standalone-minimal"} {
+		e := newHookEnv(t)
+		e.running(t, "proj-1", "wf-1", profile)
+		for _, tool := range []string{
+			"mcp__longterm-mem__promote", "mcp__engram__mem_save", "mcp__plugin_engram_engram__mem_save", "mcp__plugin_engram_engram__mem_update",
+			"mcp__plugin_engram_engram__mem_session_summary", "mcp__longterm-memx__query", "mcp__other__query", "longterm-mem__query",
+			"mcp__engramx__mem_search", "mcp__longterm-memx__get",
+		} {
+			assertSilent(t, profile+"/"+tool, e.gate(t, e.repo, tool, map[string]any{"engine_id": "e1", "project": "other", "all_projects": true}))
+		}
+	}
 	e := newHookEnv(t)
 	e.running(t, "proj-1", "wf-1", "odd")
-	for _, tool := range []string{
-		"mcp__longterm-mem__get", "mcp__longterm-mem__promote", "mcp__engram__mem_save", "mcp__engram__mem_search",
-		"mcp__longterm-memx__query", "mcp__other__query", "longterm-mem__query",
-	} {
-		assertSilent(t, tool, e.gate(t, e.repo, tool, map[string]any{"engine_id": "e1", "project": "other"}))
+	for _, tool := range []string{"mcp__longterm-mem__get", "mcp__plugin_engram_engram__mem_get_observation", "mcp__engram__mem_timeline"} {
+		assertSilent(t, "odd/"+tool, e.gate(t, e.repo, tool, map[string]any{"id": "x", "project": "other", "all_projects": true}))
 	}
 }
 
@@ -251,9 +263,50 @@ func TestPreToolUseDeniesEveryQueryWhenThePlanHasNoProject(t *testing.T) {
 	e.running(t, "proj-1", "wf-1", "standalone-minimal")
 	for _, project := range []any{"proj-1", "other", nil, ""} {
 		assertDenied(t, "scope none", e.gate(t, e.repo, "mcp__longterm-mem__query", queryArgs(project)),
-			"standalone-minimal", "permits no project", "labdrian workflow unbind")
+			"standalone-minimal", "permits no project", "every longterm-mem query is denied", "labdrian workflow unbind")
 	}
-	assertSilent(t, "get under scope none", e.gate(t, e.repo, "mcp__longterm-mem__get", map[string]any{"engine_id": "e1"}))
+	assertDenied(t, "get under scope none", e.gate(t, e.repo, "mcp__longterm-mem__get", map[string]any{"engine_id": "e1"}),
+		"permits no project", "every longterm-mem get is denied", "labdrian workflow unbind")
+	for _, tool := range []string{"mcp__plugin_engram_engram__mem_search", "mcp__plugin_engram_engram__mem_context", "mcp__plugin_engram_engram__mem_get_observation", "mcp__plugin_engram_engram__mem_timeline"} {
+		assertDenied(t, tool+" under scope none", e.gate(t, e.repo, tool, queryArgs("proj-1")),
+			"permits no project", "every Engram read is denied", "labdrian workflow unbind")
+	}
+}
+
+// TestPreToolUseDeniesTheReadsOfASourceThePlanExcludes: sdd's plan holds engram alone (C23 M4
+// decision 1).
+func TestPreToolUseDeniesTheReadsOfASourceThePlanExcludes(t *testing.T) {
+	e := newHookEnv(t)
+	e.running(t, "proj-1", "wf-1", "sdd")
+	for _, tool := range append([]string{"mcp__longterm-mem__get", "mcp__plugin_x_longterm-mem__get"}, queryTools...) {
+		assertDenied(t, tool, e.gate(t, e.repo, tool, queryArgs("proj-1")),
+			`the memory plan of workflow wf-1 of project proj-1 (profile "sdd") does not include source "longterm-mem"`, "labdrian workflow unbind")
+	}
+	assertSilent(t, "an Engram read of the project", e.gate(t, e.repo, "mcp__plugin_engram_engram__mem_search", queryArgs("proj-1")))
+	assertSilent(t, "an Engram read by id", e.gate(t, e.repo, "mcp__plugin_engram_engram__mem_get_observation", map[string]any{"id": 1}))
+}
+
+// TestPreToolUseChecksTheProjectOfAnEngramReadAgainstItsEngramName: the workflow records the
+// identity its directory's origin names, github.com/acme/proj-1, and Engram knows that project by
+// its last segment (identity.EngramName, C23 M4 decision 3), which the engine wires.
+func TestPreToolUseChecksTheProjectOfAnEngramReadAgainstItsEngramName(t *testing.T) {
+	e := newHookEnv(t)
+	writeFixtureFile(t, filepath.Join(e.dir, ".git", "HEAD"), "ref: refs/heads/main\n")
+	writeFixtureFile(t, filepath.Join(e.dir, ".git", "config"),
+		"[core]\n\trepositoryformatversion = 0\n[remote \"origin\"]\n\turl = git@github.com:acme/proj-1.git\n")
+	e.running(t, "proj-1", "wf-1", "odd")
+	assertSilent(t, "the query names the identity", e.gate(t, e.repo, "mcp__longterm-mem__query", queryArgs("github.com/acme/proj-1")))
+
+	for _, tool := range []string{"mcp__plugin_engram_engram__mem_search", "mcp__engram__mem_context"} {
+		assertSilent(t, tool+" the Engram name", e.gate(t, e.repo, tool, queryArgs("proj-1")))
+		assertDenied(t, tool+" the identity", e.gate(t, e.repo, tool, queryArgs("github.com/acme/proj-1")),
+			`asks for project "github.com/acme/proj-1"`, `permits only project "proj-1"`, `Name project "proj-1" without all_projects`)
+		assertDenied(t, tool+" no project", e.gate(t, e.repo, tool, queryArgs(nil)), "names no project")
+		assertDenied(t, tool+" a project of the wrong type", e.gate(t, e.repo, tool, queryArgs(7)), "names no project")
+		assertDenied(t, tool+" every project", e.gate(t, e.repo, tool, map[string]any{"query": "q", "project": "proj-1", "all_projects": true}),
+			"asks for every project (all_projects is true)", "labdrian workflow unbind")
+		assertSilent(t, tool+" all_projects false", e.gate(t, e.repo, tool, map[string]any{"query": "q", "project": "proj-1", "all_projects": false}))
+	}
 }
 
 func TestPreToolUseAppliesTheMemoryGateWhilePausedToo(t *testing.T) {
@@ -482,7 +535,7 @@ func TestPreToolUsePanicWarningSpeaksOfTheToolCallNotThePrompt(t *testing.T) {
 }
 
 // TestPreToolUseTouchesNoStoreForAToolTheGateDoesNotCheck: relevance is decided
-// from the tool name first. Only a file-edit tool or a longterm-mem query needs
+// from the tool name first. Only a file-edit tool or a memory read needs
 // the binding and the workflow; for every other tool the hook answers before it
 // opens either store, because it runs on every tool call of a bound session. The
 // seam counts the moments the hook goes to the stores.
@@ -491,7 +544,7 @@ func TestPreToolUseTouchesNoStoreForAToolTheGateDoesNotCheck(t *testing.T) {
 	accesses := 0
 	d := e.deps.withBindingSeams(bindingSeams{beforeLoad: func() { accesses++ }})
 
-	for _, tool := range []string{"Bash", "Read", "Grep", "Task", "mcp__longterm-mem__get", "mcp__engram__mem_save", ""} {
+	for _, tool := range []string{"Bash", "Read", "Grep", "Task", "mcp__longterm-mem__promote", "mcp__engram__mem_save", ""} {
 		assertSilent(t, "irrelevant/"+tool, e.gateWith(d, t, e.repo, tool, map[string]any{"command": "ls"}))
 	}
 	if accesses != 0 {
@@ -499,7 +552,8 @@ func TestPreToolUseTouchesNoStoreForAToolTheGateDoesNotCheck(t *testing.T) {
 	}
 
 	// The seam is live: the tools the gate does check do reach the stores.
-	for _, tool := range append([]string{"Write", "Edit", "MultiEdit", "NotebookEdit"}, queryTools...) {
+	for _, tool := range append([]string{"Write", "Edit", "MultiEdit", "NotebookEdit", "mcp__longterm-mem__get",
+		"mcp__plugin_engram_engram__mem_search", "mcp__plugin_engram_engram__mem_timeline"}, queryTools...) {
 		before := accesses
 		e.gateWith(d, t, e.repo, tool, editInput)
 		if accesses != before+1 {
@@ -536,12 +590,42 @@ func TestUsageDocumentsThePreToolUseGate(t *testing.T) {
 		"permissionDecision",
 		"Write, Edit, MultiEdit, and NotebookEdit",
 		"never Bash",
-		"longterm-mem query",
-		"get, promote",
+		"longterm-mem query or get",
+		"mem_search, mem_context, mem_get_observation or mem_timeline",
+		"a read of a source the plan excludes",
+		"all_projects",
+		"never touches promote, an Engram write, or any write",
 		"exit 0 always",
 	} {
 		if !strings.Contains(text, want) {
 			t.Errorf("usage does not contain %q", want)
+		}
+	}
+}
+
+// TestReadmeDocumentsTheMemoryGateOfC23M4: the README names the entries install-hooks writes and
+// what the memory gate checks since C23 M4, and no longer says it leaves get and Engram alone.
+func TestReadmeDocumentsTheMemoryGateOfC23M4(t *testing.T) {
+	readme, err := os.ReadFile(filepath.Join("..", "..", "README.md"))
+	if err != nil {
+		t.Fatalf("read README.md: %v", err)
+	}
+	text := strings.Join(strings.Fields(strings.ReplaceAll(string(readme), "`", "")), " ")
+	for _, want := range []string{
+		"one UserPromptSubmit entry and four PreToolUse entries",
+		"the longterm-mem query and get tools, and the Engram mem_search, mem_context, mem_get_observation and mem_timeline tools",
+		"a read of a source the plan does not include is denied",
+		"sets all_projects to true",
+		"A read by id (get, mem_get_observation, mem_timeline) passes once its source is in the plan",
+		"It never denies promote, an Engram write, or any other write",
+	} {
+		if !strings.Contains(text, want) {
+			t.Errorf("README does not say %q", want)
+		}
+	}
+	for _, stale := range []string{"It never denies get, promote, Engram tools", "it does not check the plan's sources"} {
+		if strings.Contains(text, stale) {
+			t.Errorf("README still says %q", stale)
 		}
 	}
 }

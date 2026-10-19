@@ -93,7 +93,33 @@ func toolHookGoldenCases() []hookGoldenCase {
 			for _, in := range []string{`{"project":"proj-1"}`, `{"project":"other"}`, `{}`, `{"project":""}`, `"a string"`} {
 				w.toolHook("scope none, "+in, e, e.repo, queryTool, in)
 			}
-			w.toolHook("a tool that carries no project is never touched", e, e.repo, "mcp__longterm-mem__get", `{"engine_id":"e1"}`)
+			w.toolHook("a read by id is denied too: scope none has no source", e, e.repo, "mcp__longterm-mem__get", `{"engine_id":"e1"}`)
+			w.toolHook("so is an Engram read", e, e.repo, "mcp__plugin_engram_engram__mem_search", `{"query":"q","project":"proj-1"}`)
+			w.toolHook("a write is never touched", e, e.repo, "mcp__longterm-mem__promote", `{"engine_id":"e1"}`)
+		}},
+		// C23 M4: the Engram reads and longterm-mem get are gated by the plan's sources, and an Engram
+		// read that names a project must name the workflow's.
+		{"pretooluse-gates-the-engram-reads-and-longterm-mem-get", func(w *hookWorld) {
+			e := w.env()
+			e.running(w.t, "proj-1", "wf-1", "odd")
+			for _, tool := range []string{"mcp__plugin_engram_engram__mem_search", "mcp__engram__mem_context"} {
+				w.toolHook(tool+", the plan's project", e, e.repo, tool, `{"query":"q","project":"proj-1"}`)
+				w.toolHook(tool+", another project", e, e.repo, tool, `{"query":"q","project":"proj-2"}`)
+				w.toolHook(tool+", no project", e, e.repo, tool, `{"query":"q"}`)
+				w.toolHook(tool+", every project", e, e.repo, tool, `{"query":"q","project":"proj-1","all_projects":true}`)
+				w.toolHook(tool+", a tool input that is not an object", e, e.repo, tool, `"a string"`)
+			}
+			for _, tool := range []string{"mcp__plugin_engram_engram__mem_get_observation", "mcp__plugin_engram_engram__mem_timeline", "mcp__longterm-mem__get"} {
+				w.toolHook(tool+", a read by id passes", e, e.repo, tool, `{"id":42,"project":"proj-2","all_projects":true}`)
+			}
+			w.toolHook("an Engram write is never touched", e, e.repo, "mcp__plugin_engram_engram__mem_save", `{"title":"t","project":"proj-2"}`)
+		}},
+		{"pretooluse-denies-the-reads-of-a-source-the-plan-excludes", func(w *hookWorld) {
+			sdd := w.env()
+			sdd.running(w.t, "proj-1", "wf-1", "sdd")
+			w.toolHook("sdd excludes longterm-mem: a query", sdd, sdd.repo, queryTool, `{"query":"q","project":"proj-1"}`)
+			w.toolHook("sdd excludes longterm-mem: a get", sdd, sdd.repo, "mcp__longterm-mem__get", `{"id":"obs-1"}`)
+			w.toolHook("sdd includes engram", sdd, sdd.repo, "mcp__plugin_engram_engram__mem_search", `{"query":"q","project":"proj-1"}`)
 		}},
 		{"pretooluse-applies-the-memory-gate-while-paused-too", func(w *hookWorld) {
 			e := w.env()

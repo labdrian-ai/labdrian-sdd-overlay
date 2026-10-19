@@ -17,10 +17,14 @@ type HookService struct {
 	// Workflows reads the workflow a binding names.
 	Workflows WorkflowReader
 	// EditTools are the names of the tools that edit a file. They decide which tools the gate looks
-	// at (projection.GateRelevant: these and a longterm-mem query; any other tool is answered
+	// at (projection.GateRelevant: these and the memory reads; any other tool is answered
 	// without reading either store) and which it denies while the workflow is paused. The caller
 	// says which; with none, the gate denies no edit.
 	EditTools []string
+	// EngramName is how Engram names the project of a shared identity, which the gate's Engram
+	// project check compares a read's project with. The caller says how (identity.EngramName in the
+	// engine); with none, the gate checks no Engram project and says so.
+	EngramName func(identity string) string
 	// Project and Gate are the policies the service asks. They are fields so that a test can wrap
 	// them. A nil one is the domain's (projection.Project, projection.Gate): the service falls
 	// back to it in its own methods project and gate, so the zero value of the field is the
@@ -111,8 +115,8 @@ type ToolCallOutcome struct {
 }
 
 // OnToolCall decides whether a tool call is allowed. It answers for every tool the gate never
-// checks without reading the binding or the workflow: only a file-edit tool or a longterm-mem
-// query needs them. It is strictly read-only.
+// checks without reading the binding or the workflow: only a file-edit tool or a memory read
+// needs them. It is strictly read-only.
 func (s HookService) OnToolCall(req ToolCallRequest) ToolCallOutcome {
 	if !projection.GateRelevant(s.EditTools, req.Call.Name) {
 		return ToolCallOutcome{}
@@ -126,7 +130,7 @@ func (s HookService) OnToolCall(req ToolCallRequest) ToolCallOutcome {
 		return ToolCallOutcome{}
 	}
 
-	input := projection.GateInput{Binding: binding, EditTools: s.EditTools, Call: req.Call}
+	input := projection.GateInput{Binding: binding, EditTools: s.EditTools, EngramName: s.EngramName, Call: req.Call}
 	if binding.Classification == projection.ClassificationOwned {
 		w := s.Workflows.Load(binding.Binding.ProjectID, binding.Binding.WorkflowID)
 		input.Workflow = &w

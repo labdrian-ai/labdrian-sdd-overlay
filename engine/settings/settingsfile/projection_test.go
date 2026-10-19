@@ -64,16 +64,23 @@ func installFresh(t *testing.T) (string, *settingsInstaller) {
 	return path, m
 }
 
+// projectionFamilySize is the number of entries of the projection family: one UserPromptSubmit
+// entry and a PreToolUse entry per matcher (the edit tools, the longterm-mem query and get, and the
+// Engram reads).
+const projectionFamilySize = 5
+
 func TestInstall_AddsTheProjectionFamily(t *testing.T) {
 	path, _ := installFresh(t)
 	got := projectionEntries(t, parseJSON(t, path))
-	if len(got) != 3 {
-		t.Fatalf("projection entries = %d, want 3: %+v", len(got), got)
+	if len(got) != projectionFamilySize {
+		t.Fatalf("projection entries = %d, want %d: %+v", len(got), projectionFamilySize, got)
 	}
 	want := []struct{ event, matcher, hookEvent string }{
 		{"UserPromptSubmit", "", "UserPromptSubmit"},
 		{"PreToolUse", settings.ProjectionEditToolMatcher, "PreToolUse"},
 		{"PreToolUse", settings.ProjectionMemoryQueryMatcher, "PreToolUse"},
+		{"PreToolUse", settings.ProjectionMemoryGetMatcher, "PreToolUse"},
+		{"PreToolUse", settings.ProjectionEngramReadMatcher, "PreToolUse"},
 	}
 	for i, w := range want {
 		e := got[i]
@@ -96,6 +103,55 @@ func TestProjectionMatchersAreTheDocumentedOnes(t *testing.T) {
 	}
 	if settings.ProjectionMemoryQueryMatcher != `^mcp__([A-Za-z0-9-]+_)*longterm-mem__query$` {
 		t.Errorf("ProjectionMemoryQueryMatcher = %q", settings.ProjectionMemoryQueryMatcher)
+	}
+	if settings.ProjectionMemoryGetMatcher != `^mcp__([A-Za-z0-9-]+_)*longterm-mem__get$` {
+		t.Errorf("ProjectionMemoryGetMatcher = %q", settings.ProjectionMemoryGetMatcher)
+	}
+	if settings.ProjectionEngramReadMatcher != `^mcp__([A-Za-z0-9-]+_)*engram__(mem_search|mem_context|mem_get_observation|mem_timeline)$` {
+		t.Errorf("ProjectionEngramReadMatcher = %q", settings.ProjectionEngramReadMatcher)
+	}
+}
+
+// TestInstall_AddsTheMemoryReadMatchersToAnInstallThatPredatesThem: an install made before C23 M4
+// holds the prompt entry, the edit matcher and the query matcher. Status reports exactly the two
+// matchers it lacks, and Install appends them and leaves the three it had as they were.
+func TestInstall_AddsTheMemoryReadMatchersToAnInstallThatPredatesThem(t *testing.T) {
+	path, m := installFresh(t)
+	root := parseJSON(t, path)
+	hooks := root["hooks"].(map[string]interface{})
+	var kept []interface{}
+	for _, e := range hooks["PreToolUse"].([]interface{}) {
+		em := e.(map[string]interface{})
+		if em["matcher"] == settings.ProjectionMemoryGetMatcher || em["matcher"] == settings.ProjectionEngramReadMatcher {
+			continue
+		}
+		kept = append(kept, e)
+	}
+	hooks["PreToolUse"] = kept
+	b, _ := json.Marshal(root)
+	if err := os.WriteFile(path, b, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	older := projectionEntries(t, parseJSON(t, path))
+	if len(older) != 3 {
+		t.Fatalf("test bug: the older install has %d entries, want 3", len(older))
+	}
+	parts := settings.MissingProjectionHookParts(parseJSON(t, path), testHookCommand)
+	if len(parts) != 2 || !strings.Contains(parts[0], settings.ProjectionMemoryGetMatcher) || !strings.Contains(parts[1], settings.ProjectionEngramReadMatcher) {
+		t.Fatalf("missing parts = %q, want exactly the get matcher and the Engram read matcher", parts)
+	}
+
+	if err := m.Install(); err != nil {
+		t.Fatal(err)
+	}
+	after := projectionEntries(t, parseJSON(t, path))
+	if len(after) != projectionFamilySize || !settings.HasProjectionHooks(parseJSON(t, path), testHookCommand) {
+		t.Fatalf("after Install: %d entries, missing %v", len(after), settings.MissingProjectionHookParts(parseJSON(t, path), testHookCommand))
+	}
+	for i, e := range older {
+		if !reflect.DeepEqual(after[i].raw, e.raw) {
+			t.Errorf("entry %d changed: %s, was %s", i, mustJSON(t, after[i].raw), mustJSON(t, e.raw))
+		}
 	}
 }
 
@@ -125,8 +181,8 @@ func TestInstall_ProjectionFamilyIsIdempotent(t *testing.T) {
 	if string(first) != string(second) {
 		t.Errorf("second Install changed the file")
 	}
-	if n := len(projectionEntries(t, parseJSON(t, path))); n != 3 {
-		t.Errorf("projection entries after two installs = %d, want 3", n)
+	if n := len(projectionEntries(t, parseJSON(t, path))); n != projectionFamilySize {
+		t.Errorf("projection entries after two installs = %d, want %d", n, projectionFamilySize)
 	}
 }
 
@@ -185,8 +241,8 @@ func TestProjectionFamilyPreservesForeignEntriesByteForByte(t *testing.T) {
 		t.Fatal(err)
 	}
 	check("after Install")
-	if n := len(projectionEntries(t, parseJSON(t, path))); n != 3 {
-		t.Errorf("projection entries = %d, want 3 next to same-matcher foreign entries", n)
+	if n := len(projectionEntries(t, parseJSON(t, path))); n != projectionFamilySize {
+		t.Errorf("projection entries = %d, want %d next to same-matcher foreign entries", n, projectionFamilySize)
 	}
 	if err := m.Uninstall(); err != nil {
 		t.Fatal(err)
@@ -273,6 +329,20 @@ func TestHasProjectionHooks_ReportsMissingAndDriftedParts(t *testing.T) {
 		{"memory matcher removed", mutate(func(h map[string]interface{}) {
 			dropWhere(h, "PreToolUse", func(e map[string]interface{}) bool { return e["matcher"] == settings.ProjectionMemoryQueryMatcher })
 		}), settings.ProjectionMemoryQueryMatcher},
+		{"get matcher removed", mutate(func(h map[string]interface{}) {
+			dropWhere(h, "PreToolUse", func(e map[string]interface{}) bool { return e["matcher"] == settings.ProjectionMemoryGetMatcher })
+		}), settings.ProjectionMemoryGetMatcher},
+		{"Engram read matcher removed", mutate(func(h map[string]interface{}) {
+			dropWhere(h, "PreToolUse", func(e map[string]interface{}) bool { return e["matcher"] == settings.ProjectionEngramReadMatcher })
+		}), settings.ProjectionEngramReadMatcher},
+		{"Engram read matcher narrowed", mutate(func(h map[string]interface{}) {
+			for _, e := range h["PreToolUse"].([]interface{}) {
+				em := e.(map[string]interface{})
+				if em["matcher"] == settings.ProjectionEngramReadMatcher {
+					em["matcher"] = "mcp__engram__mem_search"
+				}
+			}
+		}), "drifted"},
 		{"memory matcher narrowed", mutate(func(h map[string]interface{}) {
 			for _, e := range h["PreToolUse"].([]interface{}) {
 				em := e.(map[string]interface{})
@@ -335,8 +405,8 @@ func TestInstall_RepairsADriftedProjectionFamilyWithoutDuplicates(t *testing.T) 
 	if !settings.HasProjectionHooks(after, testHookCommand) {
 		t.Fatalf("still drifted: %v", settings.MissingProjectionHookParts(after, testHookCommand))
 	}
-	if n := len(projectionEntries(t, after)); n != 3 {
-		t.Errorf("projection entries after repair = %d, want 3", n)
+	if n := len(projectionEntries(t, after)); n != projectionFamilySize {
+		t.Errorf("projection entries after repair = %d, want %d", n, projectionFamilySize)
 	}
 }
 

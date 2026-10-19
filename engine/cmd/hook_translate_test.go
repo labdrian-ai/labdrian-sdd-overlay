@@ -80,6 +80,7 @@ func TestGateCallCarriesTheNameAndReadsTheArgumentsOfAMemoryQueryWhenAsked(t *te
 		"arguments that are not named": {query + `[1]}`, projection.QueryArguments{}},
 		"arguments that are a string":  {query + `"proj-1"}`, projection.QueryArguments{}},
 		"no arguments":                 {`{"tool_name":"mcp__longterm-mem__query"}`, projection.QueryArguments{}},
+		"every project":                {query + `{"project":"p","all_projects":true}}`, projection.QueryArguments{Named: true, Project: "p", AllProjects: true}},
 	} {
 		t.Run(name, func(t *testing.T) {
 			call := gateCall(decodePreToolUse(t, tc.input))

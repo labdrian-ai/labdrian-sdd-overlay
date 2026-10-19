@@ -1,0 +1,29 @@
+$ projection hook --event PreToolUse
+# sdd excludes longterm-mem: a query
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"mcp__longterm-mem__query","tool_input":{"query":"q","project":"proj-1"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian: the memory plan of workflow wf-1 of project proj-1 (profile \"sdd\") does not include source \"longterm-mem\", so this longterm-mem query is denied. Stop following this workflow with 'labdrian workflow unbind' to query."}}
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# sdd excludes longterm-mem: a get
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"mcp__longterm-mem__get","tool_input":{"id":"obs-1"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian: the memory plan of workflow wf-1 of project proj-1 (profile \"sdd\") does not include source \"longterm-mem\", so this longterm-mem get is denied. Stop following this workflow with 'labdrian workflow unbind' to read it."}}
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# sdd includes engram
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"mcp__plugin_engram_engram__mem_search","tool_input":{"query":"q","project":"proj-1"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+

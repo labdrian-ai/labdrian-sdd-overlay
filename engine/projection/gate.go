@@ -16,14 +16,21 @@ package projection
 //     names Write, Edit, MultiEdit, and NotebookEdit). Bash is never gated
 //     (a shell command cannot be classified reliably), and neither is anything
 //     that only reads.
-//   - The memory gate. A call to the longterm-mem query tool is checked against
-//     the workflow's memory plan: its project argument must be the plan's project,
-//     which is the shared identity the workflow recorded at create (C23 M2), and a
-//     plan with no project (scope none) permits no query at all. A workflow that
-//     recorded no identity (created before M2) does not say which project
-//     longterm-mem knows it by, so its queries pass, with a warning. The tools
-//     that carry no project (get), promote, every Engram tool, and every write
-//     are never touched: the plan grants no write, and it does not forbid one.
+//   - The memory gate (C23 M4, docs/architecture/adr-c23-m4-memory-gate.md). A
+//     memory read is checked against the workflow's memory plan: the longterm-mem
+//     query and get, and the Engram mem_search, mem_context, mem_get_observation
+//     and mem_timeline. A plan with no project (scope none) permits no read at
+//     all, and a plan that does not include the read's source denies it. Then a
+//     longterm-mem query must name the plan's project, which is the shared
+//     identity the workflow recorded at create (C23 M2), and an Engram mem_search
+//     or mem_context must name the project Engram knows that identity by (the
+//     caller's GateInput.EngramName) and must not ask for every project. A read
+//     by id (get, mem_get_observation, mem_timeline) names no project and passes
+//     once its source is in the plan. A workflow that recorded no identity
+//     (created before M2) does not say which project the stores know it by, so
+//     its reads pass, with a warning. Every write (promote, every Engram write)
+//     and every other tool are never touched: the plan grants no write, and it
+//     does not forbid one.
 //
 // The gate denies only when it has a valid workflow state and a clear violation.
 // Every unknown (no binding, a binding or workflow it cannot follow, a closed
@@ -54,18 +61,23 @@ type GateInput struct {
 	// gate denies, matched exactly. The caller says which: the gate has no list of
 	// its own, and with none it gates no edit.
 	EditTools []string
-	Call      ToolCall
+	// EngramName is how Engram names the project of a shared identity (identity.EngramName in the
+	// engine), which the Engram project check compares a read's project with. The caller says how:
+	// the gate has no rule of its own, and with none it cannot check an Engram project, which is an
+	// allow with a warning.
+	EngramName func(identity string) string
+	Call       ToolCall
 }
 
 // ToolCall is the tool call the gate is asked about, as the gate reads it.
 type ToolCall struct {
 	// Name is the name of the tool, or empty when the call has none.
 	Name string
-	// ReadQuery reads what the call names as the project of a memory query. Reading the
+	// ReadQuery reads what the call names as the project of a memory read. Reading the
 	// arguments of a call is the caller's work and costs a decode of its whole input, so Gate
-	// calls it only for a longterm-mem query, at most once, and never for any other call. It
-	// is nil for a caller with no way to read them, which is read as arguments that are not
-	// named.
+	// calls it only for a read whose project it checks (a longterm-mem query, an Engram
+	// mem_search or mem_context), at most once, and never for any other call. It is nil for a
+	// caller with no way to read them, which is read as arguments that are not named.
 	ReadQuery func() QueryArguments
 }
 
@@ -85,6 +97,9 @@ type QueryArguments struct {
 	// Project is the project the query names: empty when it names none, which is the case
 	// when the argument is missing, null, not text, or empty.
 	Project string
+	// AllProjects is true when the "all_projects" argument is the JSON value true: the read asks
+	// for every project. Any other value, or none, is false.
+	AllProjects bool
 }
 
 // GateResult is what Gate decides. Deny is true for a denial, and Reason then
@@ -111,22 +126,78 @@ func (r GateResult) Explanation() string {
 }
 
 // GateRelevant reports whether Gate can ever have an opinion about a tool: a
-// file-edit tool of editTools (paused edit gate) or the longterm-mem query tool
-// (memory gate). It is decided from the name alone, so a caller can answer for every
-// other tool without reading the binding or the workflow. Gate itself denies or
-// warns only for tools this reports true for.
+// file-edit tool of editTools (paused edit gate) or a memory read (memory gate:
+// the longterm-mem query and get, and the Engram mem_search, mem_context,
+// mem_get_observation and mem_timeline). It is decided from the name alone, so a
+// caller can answer for every other tool without reading the binding or the
+// workflow. Gate itself denies or warns only for tools this reports true for.
 func GateRelevant(editTools []string, toolName string) bool {
-	return slices.Contains(editTools, toolName) || longtermQueryTool.MatchString(toolName)
+	_, read := memoryReadOf(toolName)
+	return slices.Contains(editTools, toolName) || read
 }
 
-// longtermQueryTool matches the MCP name of the longterm-mem query tool and
+// The MCP names of the memory reads, each matched as strictly as the others and
 // nothing looser: "mcp__", an optional plugin prefix made of one or more
-// [A-Za-z0-9-] segments each followed by a single underscore, the server name
-// "longterm-mem", and "__query". So "mcp__longterm-mem__query" and
-// "mcp__plugin_x_longterm-mem__query" match, and "mcp__longterm-memx__query",
-// "mcp__longterm-mem__get", "mcp__a__longterm-mem__query", and
-// "longterm-mem__query" do not.
-var longtermQueryTool = regexp.MustCompile(`^mcp__([A-Za-z0-9-]+_)*longterm-mem__query$`)
+// [A-Za-z0-9-] segments each followed by a single underscore, the server name,
+// and the tool. So "mcp__longterm-mem__query", "mcp__plugin_x_longterm-mem__query"
+// and "mcp__plugin_engram_engram__mem_search" match, and
+// "mcp__longterm-memx__query", "mcp__a__longterm-mem__query",
+// "mcp__engramx__mem_search", "longterm-mem__query", and every write
+// ("mcp__longterm-mem__promote", "mcp__engram__mem_save") do not.
+var (
+	longtermQueryTool = regexp.MustCompile(`^mcp__([A-Za-z0-9-]+_)*longterm-mem__query$`)
+	longtermGetTool   = regexp.MustCompile(`^mcp__([A-Za-z0-9-]+_)*longterm-mem__get$`)
+	// engramProjectReadTool reads name a project; engramIDReadTool reads look an
+	// observation up by its id.
+	engramProjectReadTool = regexp.MustCompile(`^mcp__([A-Za-z0-9-]+_)*engram__(mem_search|mem_context)$`)
+	engramIDReadTool      = regexp.MustCompile(`^mcp__([A-Za-z0-9-]+_)*engram__(mem_get_observation|mem_timeline)$`)
+)
+
+// memoryRead is one kind of memory read the gate checks: the source of the plan it
+// reads, how a sentence names it, and the project check it carries.
+type memoryRead struct {
+	source memoryscope.Source
+	// what names the read in a reason: "longterm-mem query", "Engram read".
+	what string
+	// unbindTo ends the advice to unbind: "... 'labdrian workflow unbind' to query."
+	unbindTo string
+	check    projectCheck
+}
+
+// projectCheck is what a memory read is checked for once its source is in the plan.
+type projectCheck int
+
+const (
+	// checkSourceOnly is a read by id: it names no project, so its source is all
+	// there is to check (C23 M4, decision 4).
+	checkSourceOnly projectCheck = iota
+	// checkLongtermProject compares the project argument with the plan's project.
+	checkLongtermProject
+	// checkEngramProject compares the project argument with the Engram name of the
+	// workflow's identity, and refuses every project (C23 M4, decision 3).
+	checkEngramProject
+)
+
+// memoryReads are the memory reads, by the pattern of their tool name.
+var memoryReads = []struct {
+	tool *regexp.Regexp
+	read memoryRead
+}{
+	{longtermQueryTool, memoryRead{source: memoryscope.SourceLongtermMem, what: "longterm-mem query", unbindTo: "query", check: checkLongtermProject}},
+	{longtermGetTool, memoryRead{source: memoryscope.SourceLongtermMem, what: "longterm-mem get", unbindTo: "read it", check: checkSourceOnly}},
+	{engramProjectReadTool, memoryRead{source: memoryscope.SourceEngram, what: "Engram read", unbindTo: "read it", check: checkEngramProject}},
+	{engramIDReadTool, memoryRead{source: memoryscope.SourceEngram, what: "Engram read", unbindTo: "read it", check: checkSourceOnly}},
+}
+
+// memoryReadOf is the memory read a tool is, by its name.
+func memoryReadOf(toolName string) (memoryRead, bool) {
+	for _, r := range memoryReads {
+		if r.tool.MatchString(toolName) {
+			return r.read, true
+		}
+	}
+	return memoryRead{}, false
+}
 
 // Gate decides whether the tool call in in may go ahead. See the file comment
 // for the rules. It is total: it never fails and never panics, and anything it
@@ -153,8 +224,8 @@ func Gate(in GateInput) GateResult {
 		// enforces anything in.
 		return GateResult{}
 	}
-	if longtermQueryTool.MatchString(in.Call.Name) {
-		return memoryGate(in.Binding.Binding, w.State, in.Call.query())
+	if read, ok := memoryReadOf(in.Call.Name); ok {
+		return memoryGate(in, w.State, read)
 	}
 	return GateResult{}
 }
@@ -165,34 +236,48 @@ func pausedReason(b Binding, tool string) string {
 		"Resume it with 'labdrian workflow resume " + flags + "', or stop following it with 'labdrian workflow unbind'."
 }
 
-// memoryGate checks one longterm-mem query against the memory plan of the
-// workflow, computed exactly as the projected context computes it.
-func memoryGate(b Binding, s workflow.State, query QueryArguments) GateResult {
+// memoryGate checks one memory read against the memory plan of the workflow,
+// computed exactly as the projected context computes it: its source first, then
+// the project it names, for a read that names one.
+func memoryGate(in GateInput, s workflow.State, read memoryRead) GateResult {
+	b := in.Binding.Binding
 	plan, err := resolvePlan(s, b.ProjectID)
 	if err != nil {
 		return GateResult{Warning: "labdrian: the memory plan of " + workflowRef(b) + " could not be computed" + detailIn(err.Error()) +
-			", so this longterm-mem query was not checked against it."}
+			", so this " + read.what + " was not checked against it."}
 	}
 	if plan.Scope == memoryscope.ScopeNone {
 		return GateResult{Deny: true, Reason: "labdrian: " + workflowRef(b) + " (profile " + strconv.Quote(sanitizeLine(s.Profile)) +
-			") permits no project in its memory plan (scope none), so every longterm-mem query is denied. " +
-			"Stop following this workflow with 'labdrian workflow unbind' to query."}
+			") permits no project in its memory plan (scope none), so every " + read.what + " is denied. " +
+			"Stop following this workflow with 'labdrian workflow unbind' to " + read.unbindTo + "."}
+	}
+	if !slices.Contains(plan.Sources, read.source) {
+		return GateResult{Deny: true, Reason: "labdrian: the memory plan of " + workflowRef(b) + " (profile " + strconv.Quote(sanitizeLine(s.Profile)) +
+			") does not include source " + strconv.Quote(string(read.source)) + ", so this " + read.what + " is denied. " +
+			"Stop following this workflow with 'labdrian workflow unbind' to " + read.unbindTo + "."}
+	}
+	if read.check == checkSourceOnly {
+		return GateResult{}
 	}
 	if s.ProjectIdentity == "" {
 		// A workflow created before C23 M2 recorded no shared identity, so the project
-		// longterm-mem names it by is unknown here: an unknown is an allow.
+		// the store names it by is unknown here: an unknown is an allow.
 		return GateResult{Warning: "labdrian: " + workflowRef(b) + " records no project identity (it was created before workflows recorded one), " +
-			"so the project of this longterm-mem query was not checked against its memory plan."}
+			"so the project of this " + read.what + " was not checked against its memory plan."}
 	}
-	planProject := plan.Filters.ProjectID
-	if planProject == "" {
+	if plan.Filters.ProjectID == "" {
 		// A plan with a scope that names a project always has one; this cannot be
 		// reached through Resolve, and the gate does not deny on what it cannot
 		// explain.
 		return GateResult{Warning: "labdrian: the memory plan of " + workflowRef(b) + " names no project although its scope is " +
-			strconv.Quote(sanitizeLine(string(plan.Scope))) + ", so this longterm-mem query was not checked against it."}
+			strconv.Quote(sanitizeLine(string(plan.Scope))) + ", so this " + read.what + " was not checked against it."}
+	}
+	if read.check == checkEngramProject {
+		return engramProjectGate(b, in.EngramName, s.ProjectIdentity, in.Call)
 	}
 
+	planProject := plan.Filters.ProjectID
+	query := in.Call.query()
 	if !query.Named {
 		return GateResult{Warning: "labdrian: the input of this longterm-mem query is not a JSON object, so its project was not checked against the memory plan of " +
 			workflowRef(b) + "."}
@@ -208,6 +293,41 @@ func memoryGate(b Binding, s workflow.State, query QueryArguments) GateResult {
 			", but the memory plan of " + workflowRef(b) + " permits only project " + strconv.Quote(sanitizeLine(planProject)) + ". " + queryAdvice(planProject)}
 	}
 	return GateResult{}
+}
+
+// engramProjectGate checks the project an Engram mem_search or mem_context names
+// against the name Engram gives the workflow's identity (engramName of identity,
+// C23 M2 decision 3): another project, none, or every project is denied.
+func engramProjectGate(b Binding, engramName func(string) string, identity string, call ToolCall) GateResult {
+	var want string
+	if engramName != nil {
+		want = engramName(identity)
+	}
+	if want == "" {
+		return GateResult{Warning: "labdrian: the Engram name of the project of " + workflowRef(b) +
+			" is not known here, so the project of this Engram read was not checked against its memory plan."}
+	}
+	read := call.query()
+	if !read.Named {
+		return GateResult{Warning: "labdrian: the input of this Engram read is not a JSON object, so its project was not checked against the memory plan of " +
+			workflowRef(b) + "."}
+	}
+	permits := "the memory plan of " + workflowRef(b) + " permits only project " + strconv.Quote(sanitizeLine(want)) + ". " + engramAdvice(want)
+	switch {
+	case read.AllProjects:
+		return GateResult{Deny: true, Reason: "labdrian: this Engram read asks for every project (all_projects is true), but " + permits}
+	case read.Project == "":
+		// Absent, null, not text, or empty: the read names no project.
+		return GateResult{Deny: true, Reason: "labdrian: this Engram read names no project (the project argument is missing, not a string, or empty), but " + permits}
+	case read.Project != want:
+		return GateResult{Deny: true, Reason: "labdrian: this Engram read asks for project " + quoteValue(read.Project) + ", but " + permits}
+	}
+	return GateResult{}
+}
+
+// engramAdvice tells the model and the user how to go on after a denied Engram read.
+func engramAdvice(want string) string {
+	return "Name project " + strconv.Quote(sanitizeLine(want)) + " without all_projects, or stop following this workflow with 'labdrian workflow unbind'."
 }
 
 // quoteValue renders a value taken from the tool input as a quoted Go string cut

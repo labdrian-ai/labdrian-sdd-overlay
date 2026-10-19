@@ -38,13 +38,13 @@ func occasionOf(event string) projection.Occasion {
 }
 
 // gateCall is a tool call of a PreToolUse input as the projection gate reads it. The arguments
-// are read as those of a memory query, and only when the gate asks for them (projection.ToolCall):
+// are read as those of a memory read, and only when the gate asks for them (projection.ToolCall):
 // reading them decodes the whole input of the call, which for a file edit is the file, and the
-// gate wants them for a memory query alone.
+// gate wants them for a memory read that names a project alone.
 func gateCall(in hookwire.PreToolUse) projection.ToolCall {
 	return projection.ToolCall{Name: in.Tool, ReadQuery: func() projection.QueryArguments {
 		q := in.Query()
-		return projection.QueryArguments{Named: q.Named, Project: q.Project}
+		return projection.QueryArguments{Named: q.Named, Project: q.Project, AllProjects: q.AllProjects}
 	}}
 }
 

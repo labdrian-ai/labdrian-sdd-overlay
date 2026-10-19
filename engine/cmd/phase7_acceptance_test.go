@@ -535,16 +535,23 @@ func phase7MemoryGate(t *testing.T, binary string) {
 	// The two spellings of the tool name a session really sees: a bare server
 	// and a plugin-provided one.
 	queryTools := []string{"mcp__longterm-mem__query", "mcp__plugin_longterm-mem_longterm-mem__query"}
-	// Tools the gate must never touch: they carry no project it could check (get
-	// carries only an id), or they are not longterm-mem at all.
+	// The reads by id (C23 M4 decision 4): they name no project, so their source is all the gate checks.
+	byID := map[string]any{
+		"mcp__longterm-mem__get":                         map[string]any{"id": "obs-1"},
+		"mcp__plugin_longterm-mem_longterm-mem__get":     map[string]any{"id": "obs-1"},
+		"mcp__plugin_engram_engram__mem_get_observation": map[string]any{"id": 4133},
+		"mcp__engram__mem_timeline":                      map[string]any{"observation_id": 4133},
+	}
+	// The Engram reads that name a project (decision 3).
+	engramReads := []string{"mcp__plugin_engram_engram__mem_search", "mcp__engram__mem_context"}
+	// Tools the gate must never touch: every write (decision 2), and names that only look like a
+	// memory read.
 	untouched := map[string]any{
-		"mcp__longterm-mem__get":                        map[string]any{"id": "obs-1"},
-		"mcp__plugin_longterm-mem_longterm-mem__get":    map[string]any{"id": "obs-1"},
 		"mcp__longterm-mem__promote":                    map[string]any{"id": "obs-1", "project": "other"},
-		"mcp__plugin_engram_engram__mem_search":         map[string]any{"query": "q", "project": "other"},
 		"mcp__plugin_engram_engram__mem_save":           map[string]any{"title": "t", "content": "c", "project": "other"},
-		"mcp__engram__mem_context":                      map[string]any{"project": "other"},
+		"mcp__plugin_engram_engram__mem_update":         map[string]any{"id": 1, "project": "other"},
 		"mcp__plugin_longterm-mem_longterm-mem__query2": map[string]any{"query": "q", "project": "other"},
+		"mcp__engramx__mem_search":                      map[string]any{"query": "q", "project": "other"},
 	}
 	assertUntouched := func(t *testing.T, w phase7World) {
 		t.Helper()
@@ -563,10 +570,32 @@ func phase7MemoryGate(t *testing.T, binary string) {
 			assertDenied(t, tool+" no project", w.toolHook(w.repo, tool, queryArgs(nil)).asHook(), "names no project", `"proj-1"`)
 			assertSilent(t, tool+" the workflow's project", w.toolHook(w.repo, tool, queryArgs("proj-1")).asHook())
 		}
+		for _, tool := range engramReads {
+			assertDenied(t, tool+" other project", w.toolHook(w.repo, tool, queryArgs("other")).asHook(),
+				`Engram read asks for project "other"`, `permits only project "proj-1"`, "labdrian workflow unbind")
+			assertDenied(t, tool+" every project", w.toolHook(w.repo, tool, map[string]any{"query": "q", "project": "proj-1", "all_projects": true}).asHook(), "all_projects")
+			assertSilent(t, tool+" the workflow's project", w.toolHook(w.repo, tool, queryArgs("proj-1")).asHook())
+		}
+		for tool, input := range byID {
+			assertSilent(t, tool, w.toolHook(w.repo, tool, input).asHook())
+		}
 		assertUntouched(t, w)
 		if after := w.stateSnapshot(); !reflect.DeepEqual(after, before) {
 			t.Errorf("the memory gate changed the state directory")
 		}
+	})
+
+	t.Run("a plan without a source denies its reads", func(t *testing.T) {
+		w := newPhase7World(t, binary)
+		w.bindRunning("proj-1", "wf-1", "sdd")
+		for _, tool := range queryTools {
+			assertDenied(t, tool, w.toolHook(w.repo, tool, queryArgs("proj-1")).asHook(), `does not include source "longterm-mem"`, `profile "sdd"`, "labdrian workflow unbind")
+		}
+		assertDenied(t, "get", w.toolHook(w.repo, "mcp__longterm-mem__get", byID["mcp__longterm-mem__get"]).asHook(), `does not include source "longterm-mem"`)
+		for _, tool := range engramReads {
+			assertSilent(t, tool+" the workflow's project", w.toolHook(w.repo, tool, queryArgs("proj-1")).asHook())
+		}
+		assertUntouched(t, w)
 	})
 
 	t.Run("scope none denies every query", func(t *testing.T) {
@@ -576,6 +605,12 @@ func phase7MemoryGate(t *testing.T, binary string) {
 			for label, input := range map[string]any{"the workflow's project": queryArgs("proj-1"), "another project": queryArgs("other"), "no project": queryArgs(nil)} {
 				assertDenied(t, tool+" "+label, w.toolHook(w.repo, tool, input).asHook(), "scope none", "every longterm-mem query is denied", "labdrian workflow unbind")
 			}
+		}
+		for _, tool := range engramReads {
+			assertDenied(t, tool, w.toolHook(w.repo, tool, queryArgs("proj-1")).asHook(), "scope none", "every Engram read is denied")
+		}
+		for tool, input := range byID {
+			assertDenied(t, tool, w.toolHook(w.repo, tool, input).asHook(), "scope none")
 		}
 		assertUntouched(t, w)
 	})
@@ -970,6 +1005,8 @@ func phase7Settings(t *testing.T, binary string) {
 		{"UserPromptSubmit", "", ""},
 		{"PreToolUse", "Write|Edit|MultiEdit|NotebookEdit", ""},
 		{"PreToolUse", `^mcp__([A-Za-z0-9-]+_)*longterm-mem__query$`, ""},
+		{"PreToolUse", `^mcp__([A-Za-z0-9-]+_)*longterm-mem__get$`, ""},
+		{"PreToolUse", `^mcp__([A-Za-z0-9-]+_)*engram__(mem_search|mem_context|mem_get_observation|mem_timeline)$`, ""},
 	}
 	if len(installed) != len(wantEntries) {
 		t.Fatalf("projection entries = %+v, want %d", installed, len(wantEntries))
@@ -996,18 +1033,25 @@ func phase7Settings(t *testing.T, binary string) {
 		assertDenied(t, "installed edit gate", w.run(w.dir, gateInput(t, w.repo, "s", "Edit", phase7EditInputs["Edit"]), "sh", "-c", installed[1].command).asHook(), "is paused")
 		assertSilent(t, "installed edit gate, Bash", w.run(w.dir, gateInput(t, w.repo, "s", "Bash", phase7OtherInputs["Bash"]), "sh", "-c", installed[1].command).asHook())
 		assertDenied(t, "installed memory gate", w.run(w.dir, gateInput(t, w.repo, "s", "mcp__plugin_longterm-mem_longterm-mem__query", queryArgs("other")), "sh", "-c", installed[2].command).asHook(), `permits only project "proj-1"`)
+		assertSilent(t, "installed get gate", w.run(w.dir, gateInput(t, w.repo, "s", "mcp__longterm-mem__get", map[string]any{"id": "obs-1"}), "sh", "-c", installed[3].command).asHook())
+		assertDenied(t, "installed Engram gate", w.run(w.dir, gateInput(t, w.repo, "s", "mcp__plugin_engram_engram__mem_search", queryArgs("other")), "sh", "-c", installed[4].command).asHook(), `Engram read asks for project "other"`)
 		// A missing binary is a no-op, not a failure.
 		gone := strings.Replace(installed[0].command, hookCommand, filepath.Join(claudeDir, "bin", "missing"), -1)
 		assertSilent(t, "installed command, binary missing", w.run(w.dir, hookInput(t, w.repo, "s", "p"), "sh", "-c", gone).asHook())
 	}
 	// The matchers the settings hold cover the tool names the gate checks.
-	memoryMatcher := regexp.MustCompile(installed[2].matcher)
+	memoryMatchers := []*regexp.Regexp{regexp.MustCompile(installed[2].matcher), regexp.MustCompile(installed[3].matcher), regexp.MustCompile(installed[4].matcher)}
 	for tool, want := range map[string]bool{
 		"mcp__longterm-mem__query": true, "mcp__plugin_longterm-mem_longterm-mem__query": true,
-		"mcp__longterm-mem__get": false, "mcp__longterm-mem__promote": false, "mcp__plugin_engram_engram__mem_search": false,
+		"mcp__longterm-mem__get": true, "mcp__plugin_engram_engram__mem_search": true, "mcp__plugin_engram_engram__mem_timeline": true,
+		"mcp__longterm-mem__promote": false, "mcp__plugin_engram_engram__mem_save": false, "mcp__engramx__mem_search": false,
 	} {
-		if memoryMatcher.MatchString(tool) != want {
-			t.Errorf("installed memory matcher matches %s = %v, want %v", tool, !want, want)
+		matched := false
+		for _, m := range memoryMatchers {
+			matched = matched || m.MatchString(tool)
+		}
+		if matched != want {
+			t.Errorf("installed memory matchers match %s = %v, want %v", tool, matched, want)
 		}
 	}
 	if got := strings.Split(installed[1].matcher, "|"); !reflect.DeepEqual(got, phase7OrderedEditTools) {

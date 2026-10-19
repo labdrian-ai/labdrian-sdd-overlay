@@ -123,8 +123,8 @@ func TestAnEmptyHookCommandClaimsNothing(t *testing.T) {
 
 	t.Run("status", func(t *testing.T) {
 		parts := settings.MissingProjectionHookParts(doc, "")
-		if len(parts) != 3 {
-			t.Errorf("parts = %v, want the three entries reported missing", parts)
+		if len(parts) != projectionFamilySize {
+			t.Errorf("parts = %v, want every entry of the family reported missing", parts)
 		}
 		if strings.Contains(strings.Join(parts, "|"), "drifted") {
 			t.Errorf("parts = %v: an empty hook command adopted a foreign entry as drifted", parts)
@@ -189,8 +189,8 @@ func malformedHooks() map[string]map[string]interface{} {
 // never panics and never mistakes garbage for a hook.
 func TestMissingProjectionHookPartsToleratesMalformedSettings(t *testing.T) {
 	want := settings.MissingProjectionHookParts(map[string]interface{}{}, testHookCommand)
-	if len(want) != 3 {
-		t.Fatalf("test bug: empty settings report %v, want the three entries", want)
+	if len(want) != projectionFamilySize {
+		t.Fatalf("test bug: empty settings report %v, want every entry of the family", want)
 	}
 	for name, root := range malformedHooks() {
 		t.Run(name, func(t *testing.T) {

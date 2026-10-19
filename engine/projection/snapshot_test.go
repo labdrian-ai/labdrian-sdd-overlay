@@ -119,8 +119,13 @@ func TestGateHoldsAMemoryQueryToThePlanOfTheSnapshot(t *testing.T) {
 	denied(t, "a snapshot with scope none", gate(withSnapshot(loadedWorkflow("odd", workflow.StatusRunning), none), queryTool, named("proj-1")), "scope none")
 
 	// A profile in no catalog is gated by its snapshot: the plan's project is allowed, another is not,
-	// and nothing is left unchecked.
-	w := withSnapshot(loadedWorkflow("", workflow.StatusRunning), snapshotProfile())
+	// and nothing is left unchecked. Its sources are the snapshot's too (C23 M4): engram alone denies
+	// every query, and with longterm-mem added the query is held to the project.
+	retired := snapshotProfile()
+	denied(t, "a snapshot without longterm-mem", gate(withSnapshot(loadedWorkflow("", workflow.StatusRunning), retired), queryTool, named("proj-1")),
+		`does not include source "longterm-mem"`, `profile "retired-profile"`)
+	retired.MemoryDefault.Sources = []workflowprofile.MemorySource{workflowprofile.MemorySourceEngram, workflowprofile.MemorySourceLongtermMem}
+	w := withSnapshot(loadedWorkflow("", workflow.StatusRunning), retired)
 	if got := gate(w, queryTool, named("proj-1")); got.Deny || got.Warning != "" {
 		t.Errorf("a query to the plan's project: Gate() = %+v, want an allow without a warning", got)
 	}

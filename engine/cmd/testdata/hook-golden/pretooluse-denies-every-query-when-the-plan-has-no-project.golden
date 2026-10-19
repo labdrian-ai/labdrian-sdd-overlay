@@ -49,9 +49,29 @@ $ projection hook --event PreToolUse
 --- stderr ---
 
 $ projection hook --event PreToolUse
-# a tool that carries no project is never touched
+# a read by id is denied too: scope none has no source
 --- stdin ---
 {"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"mcp__longterm-mem__get","tool_input":{"engine_id":"e1"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian: workflow wf-1 of project proj-1 (profile \"standalone-minimal\") permits no project in its memory plan (scope none), so every longterm-mem get is denied. Stop following this workflow with 'labdrian workflow unbind' to read it."}}
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# so is an Engram read
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"mcp__plugin_engram_engram__mem_search","tool_input":{"query":"q","project":"proj-1"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian: workflow wf-1 of project proj-1 (profile \"standalone-minimal\") permits no project in its memory plan (scope none), so every Engram read is denied. Stop following this workflow with 'labdrian workflow unbind' to read it."}}
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# a write is never touched
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"mcp__longterm-mem__promote","tool_input":{"engine_id":"e1"},"tool_use_id":"toolu_01"}
 --- exit ---
 0
 --- stdout ---

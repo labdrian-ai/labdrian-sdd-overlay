@@ -294,6 +294,31 @@ func TestOnToolCallAsksThePolicyItWasGiven(t *testing.T) {
 	}
 }
 
+// TestOnToolCallGivesTheGateTheEngramNamingRuleItWasGiven: the service has no rule of its own for
+// how Engram names a project; it hands the gate the one its caller wires (identity.EngramName in
+// the engine), and an Engram read reaches the stores like any other memory read.
+func TestOnToolCallGivesTheGateTheEngramNamingRuleItWasGiven(t *testing.T) {
+	w := newHookWorld(workflow.StatusRunning)
+	running := owned(workflow.StatusRunning)
+	running.State.Profile, running.State.ProjectIdentity = "odd", "github.com/acme/proj-1"
+	w.workflows.put("proj-1", "wf-1", running)
+	w.service.EngramName = func(identity string) string { return "engram:" + identity }
+	search := func(project string) app.ToolCallRequest {
+		return app.ToolCallRequest{InputDir: repoDir, Call: projection.ToolCall{Name: "mcp__plugin_engram_engram__mem_search",
+			ReadQuery: func() projection.QueryArguments { return projection.QueryArguments{Named: true, Project: project} }}}
+	}
+
+	if got := w.service.OnToolCall(search("engram:github.com/acme/proj-1")); !got.Decided || got.Result.Deny || got.Result.Warning != "" {
+		t.Errorf("a read of the name the rule gives: OnToolCall = %+v, want it decided and allowed", got)
+	}
+	if got := w.service.OnToolCall(search("proj-1")); !got.Decided || !got.Result.Deny || !strings.Contains(got.Result.Reason, `"engram:github.com/acme/proj-1"`) {
+		t.Errorf("a read of another name: OnToolCall = %+v, want a denial naming the rule's name", got)
+	}
+	if w.bindings.loads != 2 {
+		t.Errorf("the binding store was read %d times for two Engram reads, want 2", w.bindings.loads)
+	}
+}
+
 func TestAPolicyThatPanicsIsNotCaughtHere(t *testing.T) {
 	// The command that serves the hook recovers a panic and turns it into one warning; the service
 	// must let it through, not swallow it into silence.
