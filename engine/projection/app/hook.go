@@ -73,20 +73,11 @@ type PromptOutcome struct {
 // the binding it read (BindingStore.UnbindIfUnchanged), so a fresh binding made since stays. What
 // the removal did goes into the note.
 func (s HookService) OnPrompt(req PromptRequest) PromptOutcome {
-	repoKey, ok := s.Repositories.RepoKey(directoryOf(req.InputDir, req.ProcessDir))
-	if !ok {
-		return PromptOutcome{Kind: PromptSilent}
+	repoKey, input, stop := s.readBound(req)
+	if stop != nil {
+		return *stop
 	}
-	binding, err := s.Bindings.Load(repoKey)
-	if err != nil {
-		return PromptOutcome{Kind: PromptWarning, Warning: projection.StoreWarning(err)}
-	}
-
-	input := projection.ProjectionInput{Binding: binding}
-	if binding.Classification == projection.ClassificationOwned {
-		w := s.Workflows.Load(binding.Binding.ProjectID, binding.Binding.WorkflowID)
-		input.Workflow = &w
-	}
+	binding := input.Binding
 	result := s.project(input)
 	if result.Unbind && binding.Classification == projection.ClassificationOwned {
 		// Only a binding of ours that was read is removed: the domain asks for a removal only for
@@ -100,6 +91,49 @@ func (s HookService) OnPrompt(req PromptRequest) PromptOutcome {
 		result = result.AfterUnbind(removed, unbindErr)
 	}
 	return PromptOutcome{Kind: PromptProjection, Result: result}
+}
+
+// readBound reads what the repository of req is bound to: the repository's key, and the binding
+// and, when the binding is owned, the workflow it names, as the domain takes them. stop is the
+// outcome to answer with instead when there is no repository to look in (silence) or the binding
+// store cannot be read (its warning).
+func (s HookService) readBound(req PromptRequest) (repoKey string, input projection.ProjectionInput, stop *PromptOutcome) {
+	repoKey, ok := s.Repositories.RepoKey(directoryOf(req.InputDir, req.ProcessDir))
+	if !ok {
+		return "", input, &PromptOutcome{Kind: PromptSilent}
+	}
+	binding, err := s.Bindings.Load(repoKey)
+	if err != nil {
+		return "", input, &PromptOutcome{Kind: PromptWarning, Warning: projection.StoreWarning(err)}
+	}
+	input.Binding = binding
+	if binding.Classification == projection.ClassificationOwned {
+		w := s.Workflows.Load(binding.Binding.ProjectID, binding.Binding.WorkflowID)
+		input.Workflow = &w
+	}
+	return repoKey, input, nil
+}
+
+// InstructionsOutcome is the answer to a request for the memory instructions: Kind as for a
+// prompt (silence, the warning of a store that cannot be read, or the domain's decision), with the
+// warning or Result set as for PromptOutcome.
+type InstructionsOutcome struct {
+	Kind    PromptKind
+	Warning string
+	Result  projection.InstructionsResult
+}
+
+// OnInstructions decides the memory instructions of the workflow the repository of req follows
+// (C23 M6): it reads the binding and the workflow as OnPrompt does and asks the domain
+// (projection.Instructions) with the service's Engram naming rule, the one the gate checks with. The
+// session-start hook, the gate-task rewrite and 'memory plan --instructions' ask it. It is strictly
+// read-only: the binding of a closed workflow is left for the prompt hook to remove.
+func (s HookService) OnInstructions(req PromptRequest) InstructionsOutcome {
+	_, input, stop := s.readBound(req)
+	if stop != nil {
+		return InstructionsOutcome{Kind: stop.Kind, Warning: stop.Warning}
+	}
+	return InstructionsOutcome{Kind: PromptProjection, Result: projection.Instructions(input, s.EngramName)}
 }
 
 // ToolCallRequest is a tool call about to run: the working directory the hook input names, or ""

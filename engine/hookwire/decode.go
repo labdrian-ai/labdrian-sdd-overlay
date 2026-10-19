@@ -38,6 +38,31 @@ func DecodeUserPromptSubmit(data []byte) (UserPromptSubmit, error) {
 	return UserPromptSubmit{Event: wire.HookEventName, Cwd: cleanCwd(wire.Cwd)}, nil
 }
 
+// SessionStart is what is kept of the JSON a SessionStart hook receives: the event's name and the
+// working directory of the session. The source (startup, resume, clear, compact) is not read:
+// the hook answers every one the same.
+type SessionStart struct {
+	// Event is hook_event_name, or empty when the input has none.
+	Event string
+	// Cwd is the session's working directory as a cleaned absolute path, or empty when the
+	// input has none or it is not an absolute path.
+	Cwd string
+}
+
+// DecodeSessionStart reads a SessionStart hook's stdin by the rules DecodeUserPromptSubmit reads
+// its own: one JSON object no larger than MaxEnvelopeBytes, the fields it does not name ignored,
+// a relative cwd read as missing, and a field it reads of the wrong type an error.
+func DecodeSessionStart(data []byte) (SessionStart, error) {
+	var wire struct {
+		HookEventName string `json:"hook_event_name"`
+		Cwd           string `json:"cwd"`
+	}
+	if err := decodeEnvelope(data, &wire); err != nil {
+		return SessionStart{}, err
+	}
+	return SessionStart{Event: wire.HookEventName, Cwd: cleanCwd(wire.Cwd)}, nil
+}
+
 // PreToolUse is what is kept of the JSON a PreToolUse hook receives: the event's name, the
 // working directory of the session, the tool's name, and the tool's input, which is read only
 // by Query and only when asked: its shape depends on the tool. Nothing else is read, in
@@ -168,6 +193,10 @@ type AgentCall struct {
 	SubagentType string
 	// Model is the model the call asked for, or nil when it asked for none.
 	Model *string
+	// Cwd is the session's working directory as a cleaned absolute path, or empty when the input
+	// has none, it is not text, or it is not an absolute path. It is not part of the call, so no
+	// reply echoes it; a policy finds the repository's binding from it (C23 M6).
+	Cwd string
 }
 
 // DecodeAgentCall reads the Agent tool call of a PreToolUse hook's stdin. It reads tool_name as
@@ -187,6 +216,9 @@ func DecodeAgentCall(data []byte) (AgentCall, error) {
 	var envelope struct {
 		ToolName  string          `json:"tool_name"`
 		ToolInput json.RawMessage `json:"tool_input"`
+		// Cwd is read raw and taken only when it is text: the decoder never refused a cwd of any
+		// type, and a call it read before is still read.
+		Cwd json.RawMessage `json:"cwd"`
 	}
 	if err := json.Unmarshal(data, &envelope); err != nil {
 		return AgentCall{}, fmt.Errorf("decode agent call: %w", err)
@@ -203,5 +235,9 @@ func DecodeAgentCall(data []byte) (AgentCall, error) {
 	if err := json.Unmarshal(envelope.ToolInput, &wire); err != nil {
 		return AgentCall{}, fmt.Errorf("decode agent call: tool_input: %w", err)
 	}
-	return AgentCall{Description: wire.Description, Prompt: wire.Prompt, SubagentType: wire.SubagentType, Model: wire.Model}, nil
+	var cwd string
+	if json.Unmarshal(envelope.Cwd, &cwd) != nil {
+		cwd = ""
+	}
+	return AgentCall{Description: wire.Description, Prompt: wire.Prompt, SubagentType: wire.SubagentType, Model: wire.Model, Cwd: cleanCwd(cwd)}, nil
 }

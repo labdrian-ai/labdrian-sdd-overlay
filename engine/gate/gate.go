@@ -9,6 +9,8 @@
 //   - STRIP the minimalism-contract path when the sub-agent type is in the excluded_phases set
 //     and the path is present.
 //   - LEAVE THE PROMPT UNCHANGED on any unknown type, empty prompt, or broken frontmatter.
+//   - APPEND the memory instructions block the caller hands it (Config.Instructions, while a
+//     workflow is bound: C23 M6) to every non-empty prompt, once, in the same rewrite.
 //
 // VERIFIED REALITY (Claude Code 2.1.185), which engine/hookwire encodes: the sub-agent spawn
 // tool is named "Agent", NOT "Task"; a PreToolUse hook on "Agent" DOES fire and updatedInput
@@ -42,6 +44,13 @@ type Config struct {
 	// WorkContext is trusted work metadata supplied by the runtime adapter. It is
 	// the only source used for context-aware contracts; prompt text is ignored.
 	WorkContext *WorkContext
+
+	// Instructions is the memory instructions block of the workflow the repository is bound to
+	// (C23 M6, docs/architecture/adr-c23-m6-plan-instructions.md, decision 2), which the rewrite
+	// appends to every sub-agent's prompt after the contracts. The caller reads the binding and
+	// renders it (engine/projection's Instructions): the gate reads nothing. Empty, as for a
+	// repository nothing is bound to, the rewrite is what it was before.
+	Instructions string
 }
 
 // ContractConfig describes one managed guidance contract.
@@ -77,22 +86,35 @@ type Call struct {
 // should be given, and whether it differs from call.Prompt. It never fails: a call it can do
 // nothing with (no sub-agent type, no prompt), a type no contract names and a contract that
 // cannot be read all leave the prompt as it is, and every contract that can be read is still
-// applied.
+// applied. The instructions block of cfg is appended last to every prompt, whatever the type of
+// the sub-agent, once: a prompt that already carries it is left as it is.
 func Rewrite(call Call, cfg Config) (string, bool) {
-	// The sub-agent type must be non-empty, and the prompt present, to take any action.
-	if call.SubagentType == "" || call.Prompt == "" {
+	// The prompt must be present to take any action, and the contracts need a sub-agent type.
+	if call.Prompt == "" {
 		return call.Prompt, false
 	}
 
 	newPrompt := call.Prompt
-	for _, managed := range cfg.Contracts {
-		candidate, ok := evaluateContract(newPrompt, call.SubagentType, managed, cfg.WorkContext)
-		if !ok {
-			continue
+	if call.SubagentType != "" {
+		for _, managed := range cfg.Contracts {
+			candidate, ok := evaluateContract(newPrompt, call.SubagentType, managed, cfg.WorkContext)
+			if !ok {
+				continue
+			}
+			newPrompt = candidate
 		}
-		newPrompt = candidate
 	}
+	newPrompt = appendInstructions(newPrompt, cfg.Instructions)
 	return newPrompt, newPrompt != call.Prompt
+}
+
+// appendInstructions ends prompt with block, after one blank line, and leaves it alone when block
+// is empty or the prompt already carries it, so a rewrite of a rewritten prompt changes nothing.
+func appendInstructions(prompt, block string) string {
+	if block == "" || strings.Contains(prompt, block) {
+		return prompt
+	}
+	return strings.TrimRight(prompt, "\n") + "\n\n" + block + "\n"
 }
 
 // evaluateContract applies one managed contract to the prompt of a sub-agent of the given

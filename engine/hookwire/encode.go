@@ -100,6 +100,25 @@ func (r PromptReply) Encode() ([]byte, error) {
 	return encodeLine(out)
 }
 
+// --- SessionStart: context -------------------------------------------------------------------
+
+// SessionStartReply is what a SessionStart hook tells Claude Code: text to add to the session's
+// context. It has no warning: the prompt hook already warns about what the session-start hook
+// cannot say.
+type SessionStartReply struct {
+	Context string
+}
+
+// Encode renders r as the one JSON object a SessionStart hook writes to stdout, followed by a line
+// break: {"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"..."}}, the
+// shape of a prompt's context with the event's own name. An empty context yields no output at all.
+func (r SessionStartReply) Encode() ([]byte, error) {
+	if r.Context == "" {
+		return nil, nil
+	}
+	return encodeLine(userPromptSubmitOutput{HookSpecificOutput: &userPromptSubmitSpecific{HookEventName: EventSessionStart, AdditionalContext: r.Context}})
+}
+
 // encodeLine writes v as JSON followed by a line break, without escaping <, > and &.
 func encodeLine(v any) ([]byte, error) {
 	var buf bytes.Buffer
