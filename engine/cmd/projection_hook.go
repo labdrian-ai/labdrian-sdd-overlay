@@ -1,6 +1,6 @@
 package main
 
-// projection subcommand: 'projection hook --event UserPromptSubmit|PreToolUse|SessionStart'.
+// projection subcommand: 'projection hook --event UserPromptSubmit|PreToolUse|SessionStart|PostToolUse'.
 // It is an internal Claude Code hook command, not one a person runs: Claude Code
 // starts it, hands it the event as JSON on stdin, and reads what it prints.
 // `install-hooks` installs it (the settings projection family); Claude Code loads
@@ -119,6 +119,8 @@ func runProjectionHook(d deps, args []string, processCwd string, stdin io.Reader
 		out = preToolUse(d, stdin, processCwd)
 	case hookwire.EventSessionStart:
 		out = sessionStart(d, stdin, processCwd)
+	case hookwire.EventPostToolUse:
+		out = postToolUse(d, stdin, processCwd)
 	default:
 		out = userPromptSubmit(d, stdin, processCwd)
 	}
@@ -129,8 +131,8 @@ func runProjectionHook(d deps, args []string, processCwd string, stdin io.Reader
 }
 
 // parseHookArgs checks the arguments of 'projection hook': --event, with the
-// event to answer, and nothing else, and returns the event. UserPromptSubmit and
-// PreToolUse are the events supported. The last occurrence of a repeated flag
+// event to answer, and nothing else, and returns the event. UserPromptSubmit,
+// PreToolUse, SessionStart and PostToolUse are the events supported. The last occurrence of a repeated flag
 // wins, as for the other verbs.
 func parseHookArgs(args []string) (string, error) {
 	event := ""
@@ -149,11 +151,13 @@ func parseHookArgs(args []string) (string, error) {
 			return "", fmt.Errorf("unexpected argument %q", a)
 		}
 	}
-	supported := hookwire.EventUserPromptSubmit + ", " + hookwire.EventPreToolUse + ", " + hookwire.EventSessionStart
+	supported := hookwire.EventUserPromptSubmit + ", " + hookwire.EventPreToolUse + ", " + hookwire.EventSessionStart + ", " + hookwire.EventPostToolUse
 	if event == "" {
 		return "", fmt.Errorf("--event is required (supported: %s)", supported)
 	}
-	if event != hookwire.EventUserPromptSubmit && event != hookwire.EventPreToolUse && event != hookwire.EventSessionStart {
+	switch event {
+	case hookwire.EventUserPromptSubmit, hookwire.EventPreToolUse, hookwire.EventSessionStart, hookwire.EventPostToolUse:
+	default:
 		return "", fmt.Errorf("unsupported --event %q (supported: %s)", event, supported)
 	}
 	return event, nil
@@ -162,13 +166,17 @@ func parseHookArgs(args []string) (string, error) {
 // warningOutput renders one warning line as the hook's only output, in the shape
 // of event's own output builder, or nothing when it cannot be encoded (a warning
 // must never be able to fail the prompt or the tool call). For PreToolUse it is a
-// systemMessage and never a permission decision.
+// systemMessage and never a permission decision; for PostToolUse it is the agent's context, the one
+// thing that hook says.
 func warningOutput(event, warning string) []byte {
 	var out []byte
 	var err error
-	if event == hookwire.EventPreToolUse {
+	switch event {
+	case hookwire.EventPreToolUse:
 		out, err = hookwire.PreToolUseReply{Warning: warning}.Encode()
-	} else {
+	case hookwire.EventPostToolUse:
+		out, err = hookwire.PostToolUseReply{Context: warning}.Encode()
+	default:
 		out, err = hookwire.PromptReply{Warning: warning}.Encode()
 	}
 	if err != nil {
@@ -275,4 +283,29 @@ func preToolUse(d deps, stdin io.Reader, processCwd string) []byte {
 		return nil
 	}
 	return out
+}
+
+// postToolUse does the PostToolUse hook's work (C23 M7) and returns what it prints on stdout:
+// nothing, or the one line that tells the agent the evidence of its memory read was not recorded.
+// It decodes the input, which carries the tool's whole response and so has a wider bound
+// (hookwire.MaxPostToolUseBytes), and hands the call to the use case (HookService.OnToolResult),
+// which records the reads the gate checks. Every step that cannot go on ends in silence, as for
+// the gate: unusable input, another event's input, a directory outside every repository, a binding
+// or workflow that cannot be followed. Its one write is the evidence.
+func postToolUse(d deps, stdin io.Reader, processCwd string) []byte {
+	in, err := hookwire.DecodePostToolUse(stdin)
+	if err != nil {
+		return nil
+	}
+	if in.Event != "" && in.Event != hookwire.EventPostToolUse {
+		return nil
+	}
+	outcome := d.promptHook().OnToolResult(app.ToolResultRequest{
+		InputDir: in.Cwd, ProcessDir: processCwd, Call: resultCall(in),
+		CallID: in.CallID, SessionID: in.SessionID, ResponseSHA256: in.ResponseSHA256, ResponseBytes: in.ResponseBytes,
+	})
+	if outcome.Warning == "" {
+		return nil
+	}
+	return warningOutput(hookwire.EventPostToolUse, outcome.Warning)
 }

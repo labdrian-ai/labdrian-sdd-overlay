@@ -6,6 +6,7 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gitfs"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gitprov"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection/evidencelog"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection/fsstore"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/reviewreceipt"
 	receiptfs "github.com/labdrian-ai/labdrian-sdd-overlay/engine/reviewreceipt/fsstore"
@@ -19,7 +20,7 @@ import (
 )
 
 // This file is where the file-backed stores of the domain are built: the workflow
-// event log, the role handoff chain, the session binding store and the shaper's
+// event log and its memory-read evidence, the role handoff chain, the session binding store and the shaper's
 // clearance store, and the finder of the repository a directory belongs to. Each adapter is
 // handed the state home and reads no environment variable, so the composition root is the
 // one place that learns where the state lives
@@ -52,6 +53,20 @@ func newWorkflowStore() (workflow.EventLog, error) {
 		return nil, err
 	}
 	return store, nil
+}
+
+// newEvidenceLog builds the memory-read evidence log (C23 M7): the file-backed adapter over the
+// state home.
+func newEvidenceLog() (projection.ReadEvidenceLog, error) {
+	stateHome, err := resolveStateHome("memory-read evidence")
+	if err != nil {
+		return nil, err
+	}
+	log, err := evidencelog.New(stateHome)
+	if err != nil {
+		return nil, err
+	}
+	return log, nil
 }
 
 // newRoleChainStore builds the role handoff chain log: the file-backed adapter over

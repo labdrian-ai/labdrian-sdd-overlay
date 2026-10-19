@@ -35,9 +35,11 @@ no PostToolUse hook and no memory evidence in the workflow log or handoffs."
    of a `SKILL.md` the lock names). It reuses the gate's classifiers; writes (`mem_save`,
    `mem_update`, `promote`) are not recorded and get no classifier.
 3. **A digest and a size, never content (the owner, 2026-10-19).** From `tool_response` the record
-   keeps only its SHA-256 and its length in bytes. Project, goal and ids come from `tool_input`. The
-   hook reads its input hashing `tool_response` as it streams, so a response over 1 MiB is still
-   recorded; the rest of the envelope keeps today's bound.
+   keeps only the SHA-256 and the length of its JSON value as sent. Project, goal and ids come from
+   `tool_input`. The hook reads its input as a stream of tokens, up to `MaxPostToolUseBytes`
+   (64 MiB), so a response over today's 1 MiB envelope bound is still recorded; the response is
+   hashed and dropped, never kept. An input over 64 MiB is input the hook cannot use, which is
+   silence, as for every projection hook.
 4. **A failure warns and goes on (the owner, 2026-10-19).** The hook exits 0, as every projection hook
    does. When the record cannot be written (the lock, the disk, permissions), it returns one
    `additionalContext` line telling the agent that the evidence of that read was not recorded, and
@@ -48,9 +50,11 @@ no PostToolUse hook and no memory evidence in the workflow log or handoffs."
 One JSON object per line, `version` 1:
 
 ```
-{"version":1,"at":"2026-10-19T22:40:00Z","tool":"mcp__plugin_engram_engram__mem_search","source":"engram","project":"labdrian-sdd-overlay","goal":"","ids":[],"skill":"","tool_use_id":"toolu_...","session_id":"...","response_sha256":"<64 hex>","response_bytes":5120}
+{"version":1,"at":"2026-10-19T22:40:00Z","tool":"mcp__plugin_engram_engram__mem_search","source":"engram","project":"labdrian-sdd-overlay","goal":"","ids":[],"skill":"","call_id":"toolu_...","session":"...","response_sha256":"<64 hex>","response_bytes":5120}
 ```
 
+- `call_id` is Claude Code's `tool_use_id` and `session` its `session_id`; the hook protocol's own
+  names stay in `engine/hookwire` (`TestNoHookWireFormatOutsideHookwire`).
 - `source` is `engram`, `longterm-mem` or `procedural-skills`, the plan's source names.
 - `ids` holds the id a read by id names (`mem_get_observation`, `mem_timeline`, `longterm-mem get`);
   it is empty otherwise. `skill` names a procedural skill read; it is empty otherwise.

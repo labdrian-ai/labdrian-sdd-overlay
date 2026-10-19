@@ -803,17 +803,28 @@ gentle-ai-overlay runtime probe [--target claude|codex|pi|all]
     at the default state directory only (~/.labdrian-overlay), not under a custom --state-dir. Exit 0 on success,
     2 on an unknown --target value, 1 on a usage error (including an unknown flag).
 
-gentle-ai-overlay projection hook --event UserPromptSubmit|PreToolUse|SessionStart
+gentle-ai-overlay projection hook --event UserPromptSubmit|PreToolUse|SessionStart|PostToolUse
     Internal hook command (Phase 7): Claude Code is meant to run it before each prompt (UserPromptSubmit),
-    before each tool call (PreToolUse) and when a session starts (SessionStart); a person does
+    before each tool call (PreToolUse), when a session starts (SessionStart) and after a memory read has run (PostToolUse); a person does
     not. There is no `overlay projection` wrapper, so it runs on the installed engine binary,
     ~/.claude/bin/gentle-ai-overlay. `install-hooks` installs it into Claude Code settings.json
     (one UserPromptSubmit entry and five PreToolUse entries: the file-edit tools, the longterm-mem query tool, the
     longterm-mem get tool, the Engram reads mem_search, mem_context, mem_get_observation and mem_timeline, and
-    the Skill and Read tools; plus one SessionStart entry); removing the hooks removes all of them;
+    the Skill and Read tools; plus one SessionStart entry, and four PostToolUse entries with the same memory-read
+    matchers: the longterm-mem query, the longterm-mem get, the Engram reads, and Skill and Read); removing the hooks removes all of them;
     on an existing install, re-run `install-hooks` and restart Claude Code to load it, because Claude Code reads
     hooks only at start and `status-hooks` reports degraded until the entries are in place. Its tests feed it hook JSON.
-    UserPromptSubmit, PreToolUse and SessionStart are the events supported.
+    UserPromptSubmit, PreToolUse, SessionStart and PostToolUse are the events supported.
+    PostToolUse (C23 M7, docs/architecture/adr-c23-m7-read-evidence.md): after a memory read the PreToolUse
+    gate checks has run (an Engram mem_search, mem_context, mem_get_observation or mem_timeline; a longterm-mem
+    query or get; the Skill tool for a procedural skill of the lock, or a Read of its SKILL.md), while an open
+    workflow is bound, append one line to `<state home>/labdrian/workflows/<project>/<workflow>.memory.jsonl`
+    (0600, its own lock; the workflow log is never touched): the tool, the source, the project and goal or
+    the id or skill the call named, the call and session ids, and the SHA-256 and length of tool_response,
+    never the response itself. Its input may be up to 64 MiB. Writes and promote are not recorded. Silent,
+    or, when the line cannot be written, one
+    {"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"..."}} telling the agent the
+    evidence of that read was not recorded and why.
     SessionStart (C23 M6): when a session starts, resumes, is cleared or is compacted, put the memory
     instructions of the workflow the repository is bound to into its context, once, as
     {"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"..."}}: the block

@@ -56,6 +56,21 @@ func gateCall(in hookwire.PreToolUse) projection.ToolCall {
 	}
 }
 
+// resultCall is a tool call of a PostToolUse input as the evidence of a read reads it (C23 M7): the
+// call as gateCall reads a PreToolUse one, and the record a read by id names.
+func resultCall(in hookwire.PostToolUse) projection.ToolCall {
+	return projection.ToolCall{
+		Name: in.Tool,
+		ReadQuery: func() projection.QueryArguments {
+			q := in.Query()
+			return projection.QueryArguments{Named: q.Named, Project: q.Project, AllProjects: q.AllProjects, Goal: q.Goal}
+		},
+		ReadSkill:    in.Skill,
+		ReadFilePath: onceString(func() string { return realSkillFile(in.FilePath()) }),
+		ReadRecordID: in.RecordID,
+	}
+}
+
 // onceString is read, called at most once: the hook asks for the file of a Read several times
 // (whether the gate looks at it, whether the lock is read, and the rule itself), and resolving its
 // links each time could give the questions different answers if a link changed in between.
