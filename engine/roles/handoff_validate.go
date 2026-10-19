@@ -19,6 +19,7 @@ func (h RoleHandoff) Validate() error {
 		h.checkEvidence,
 		h.checkContext,
 		h.checkStatus,
+		h.checkMemoryDirective,
 	} {
 		if err := check(); err != nil {
 			return err
@@ -27,10 +28,10 @@ func (h RoleHandoff) Validate() error {
 	return nil
 }
 
-// checkVersion requires the one wire version this package accepts.
+// checkVersion requires one of the wire versions this package accepts.
 func (h RoleHandoff) checkVersion() error {
-	if h.Version != HandoffVersion {
-		return fmt.Errorf("version must be %d, got %d", HandoffVersion, h.Version)
+	if h.Version != HandoffVersion && h.Version != HandoffVersionV2 {
+		return fmt.Errorf("version must be %d or %d, got %d", HandoffVersion, HandoffVersionV2, h.Version)
 	}
 	return nil
 }
@@ -125,6 +126,21 @@ func (h RoleHandoff) checkStatus() error {
 		}
 	default:
 		return fmt.Errorf("status must be %q or %q, got %q", StatusCompleted, StatusInterrupted, h.Status)
+	}
+	return nil
+}
+
+// checkMemoryDirective requires a directive to be on a version 2 record only, and to be a valid
+// MemoryDirective by memoryscope's own rules. No directive is valid at either version.
+func (h RoleHandoff) checkMemoryDirective() error {
+	if h.MemoryDirective == nil {
+		return nil
+	}
+	if h.Version != HandoffVersionV2 {
+		return fmt.Errorf("memory_directive requires version %d, got version %d", HandoffVersionV2, h.Version)
+	}
+	if err := h.MemoryDirective.Validate(); err != nil {
+		return fmt.Errorf("memory_directive: %w", err)
 	}
 	return nil
 }
