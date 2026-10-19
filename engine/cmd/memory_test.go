@@ -168,6 +168,38 @@ func TestMemoryPlanNarrowsWithGoalAndHandoffDirectives(t *testing.T) {
 	}
 }
 
+// A Goal v3's own memory directive narrows the profile's ceiling first, as it does in a workflow
+// created from that Goal, and a --goal-directive file narrows after it and may not widen it.
+func TestMemoryPlanNarrowsWithTheDirectiveOfAGoalV3(t *testing.T) {
+	dir := t.TempDir()
+	goalPath := writeMemoryTestFile(t, dir, "goal.json", memoryTestGoalV3JSON("proj-1", "goal-1", memoryTestDirectiveJSON("goal", "engram")))
+
+	r := runMemoryTest([]string{"plan", "--profile", "odd", "--goal", goalPath})
+	if r.code != 0 {
+		t.Fatalf("code=%d stderr=%q, want exit 0", r.code, r.stderr)
+	}
+	var plan struct {
+		Scope   string   `json:"scope"`
+		Sources []string `json:"sources"`
+		Filters struct {
+			ProjectID string `json:"project_id"`
+			GoalID    string `json:"goal_id"`
+		} `json:"filters"`
+	}
+	if err := json.Unmarshal([]byte(r.stdout), &plan); err != nil {
+		t.Fatalf("unmarshal stdout: %v\nstdout=%s", err, r.stdout)
+	}
+	if plan.Scope != "goal" || strings.Join(plan.Sources, ",") != "engram" || plan.Filters.ProjectID != "proj-1" || plan.Filters.GoalID != "goal-1" {
+		t.Errorf("plan = %+v, want the Goal's scope goal with engram only, for proj-1/goal-1", plan)
+	}
+
+	wideningPath := writeMemoryTestFile(t, dir, "widening.json", memoryTestDirectiveJSON("goal", "engram", "longterm-mem"))
+	r = runMemoryTest([]string{"plan", "--profile", "odd", "--goal", goalPath, "--goal-directive", wideningPath})
+	if r.code != 2 || r.stdout != "" || r.stderr != "error: memory plan: narrower[1] adds source longterm-mem not present in the current scope\n" {
+		t.Errorf("code=%d stdout=%q stderr=%q, want exit 2 refusing the widening --goal-directive", r.code, r.stdout, r.stderr)
+	}
+}
+
 func TestMemoryPlanRefusesWideningNarrower(t *testing.T) {
 	dir := t.TempDir()
 	goalPath := writeMemoryTestFile(t, dir, "goal.json", memoryTestGoalJSON("proj-1", "goal-1"))

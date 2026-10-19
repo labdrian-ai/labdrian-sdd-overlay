@@ -60,3 +60,55 @@ So a goal or a handoff could not narrow the memory a workflow reads.
   parse.
 - The plan the gate enforces can now be narrower than the profile's ceiling. M4 makes the gate
   enforce the plan's sources; M5 uses `Filters.GoalID` for the goal filter.
+
+## Implementation
+
+Batch 54 of phase 9: M3a (Goal v3, shaper handoff v4, `f22e1081`), M3b (role handoff v2,
+`42a90199`) and M3c (decisions 3 to 7, below). Paths are under `engine/`.
+
+- **One nested-directive reader.** `memoryscope.ParseDirectiveMember`
+  (`memoryscope/memoryscope.go:101`) reads an optional directive member strictly (exact-case keys,
+  no unknown or repeated key; absent or null is none). The Goal v3 (`goal/goal.go`), the shaper
+  handoff v4 (`shaper/handoff_v4.go`) and the workflow log use it; the role handoff keeps its own
+  check, since a null directive is an error there and not "none". `memoryscope.CheckNarrows`
+  (`memoryscope/memoryscope.go:232`) is the step `Resolve` applies to each narrower, exported so a
+  caller can name the narrower that widens; `Resolve`'s refusals keep their words.
+- **EventVersion 3 (decision 6).** `EventVersionNarrowers = 3` (`workflow/workflow.go:45`) is what
+  `Create` writes. Version 3 is version 2 plus the created event's optional `goal_directive`,
+  `handoff_digest` and `handoff_directive` (together or not at all) and `role_directive` (needs a
+  role chain), and the kind `narrowed` with its payload `narrowed: {role_chain_head,
+  memory_directive?}` (`workflow/workflow.go:196`). The nested objects are read strictly
+  (`checkNestedNarrowerFields`, `workflow/workflow.go:382`); their shapes and the refusal of all of
+  them in versions 1 and 2 are `validateCreatedNarrowers` and `validateNarrowedPayload`
+  (`workflow/workflow.go:650`, `:683`). Logs of versions 1 and 2 replay, verify and plan as before.
+- **The state (decisions 3, 4).** `State` carries the stored directives, the handoff digest and the
+  latest narrowed head and directive apart from `RoleChainHead`, which stays the head bound at
+  creation, so `Verify` and its messages are unchanged. `narrowed` is legal while created, running
+  or paused, needs a role chain and changes no status (`workflow/statemachine.go:195`); a completed
+  close still needs a verified event right before it. `LastRoleChainHead` and
+  `RoleDirectiveInForce` (`workflow/statemachine.go:104`, `:114`) say which head and which role
+  directive are current.
+- **One plan (decisions 4, 5).** `workflow.PlanOf` (`workflow/plan.go:38`) is the profile's ceiling
+  narrowed by the Goal's directive, the shaper handoff's, then the role directive in force, for the
+  recorded project identity (or the slug) and the goal. A widening directive is refused by name:
+  "the goal", "the shaper handoff" or "the role handoff memory directive widens the plan: ...".
+  The projection's `resolvePlan` (`projection/context.go:113`) calls it, so the context line and
+  the memory gate apply the stored narrowers; a plan it cannot compute is still a warning.
+- **Create (decisions 3, 5).** `Lifecycle.CreateWithHandoff` (`workflow/lifecycle.go:507`) takes a
+  parsed `ShaperHandoff` and the SHA-256 of its bytes; `Create` keeps its signature and records the
+  Goal's and the role chain head's directives. `checkShaperHandoff` (`workflow/lifecycle.go:512`)
+  refuses (`ErrHandoffRefused`) a handoff that is not a valid version 4, is of another project or
+  goal, or does not pair with the Goal's version as `shaper.BindGoal` pairs them
+  (`shaper.PairedGoalVersion`, `shaper/handoff_v4.go:88`). The plan of the created payload is
+  resolved before anything is probed or written (`workflow/lifecycle.go:598`).
+- **Narrow (decision 3).** `Lifecycle.Narrow` (`workflow/lifecycle.go:639`) refuses a log of
+  version 1 or 2 (`ErrNarrowersNeedVersion3`: create the workflow again), a closed workflow, one
+  with no role chain, a chain that does not verify or no longer holds the last recorded head
+  (`ErrRoleChainInvalid`), a chain whose head is that last head (`ErrNothingToNarrow`) and a
+  widening directive (`workflow/lifecycle.go:672`); otherwise it appends one `narrowed` event with
+  the head and its record's directive.
+- **CLI (decisions 3, 7).** `workflow create --handoff <path>` reads the file as `--goal` is read
+  (`readShaperHandoff`, `cmd/workflow.go:220`); `workflow narrow` (`cmd/workflow.go:73`) prints the
+  state, which shows the narrowers only when there are any. `memory plan --project --workflow`
+  (`cmd/memory.go:97`, `workflowMemoryPlan` at `:116`) prints `PlanOf` of the log and refuses to
+  combine with the directive flags.
