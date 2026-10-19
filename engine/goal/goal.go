@@ -10,7 +10,19 @@ import (
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/fieldrule"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/jsonstrict"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/memoryscope"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/sha256hex"
+)
+
+// The Goal versions Parse accepts, each the one before it with one change.
+const (
+	// VersionProjectOnly identifies a Goal by its project_id alone.
+	VersionProjectOnly = 1
+	// VersionGoalID adds goal_id, which distinguishes Goals within a project.
+	VersionGoalID = 2
+	// VersionDirective replaces memory_scope with memory_directive, a strict
+	// MemoryDirective v1 object.
+	VersionDirective = 3
 )
 
 // Goal is the versioned declarative intent contract. Its field order is also
@@ -18,7 +30,7 @@ import (
 type Goal struct {
 	Version   int    `json:"version"`
 	ProjectID string `json:"project_id"`
-	// GoalID distinguishes Goals within ProjectID in version 2; it is not
+	// GoalID distinguishes Goals within ProjectID in versions 2 and 3; it is not
 	// globally unique. It is an opaque caller-supplied string: Validate requires
 	// at least one rune that is not Unicode whitespace (unicode.IsSpace) and
 	// imposes no character-set or path format. Values decoded by Parse are valid
@@ -29,14 +41,23 @@ type Goal struct {
 	Constraints        []string `json:"constraints"`
 	NonGoals           []string `json:"non_goals"`
 	AcceptanceCriteria []string `json:"acceptance_criteria"`
-	MemoryScope        string   `json:"memory_scope"`
-	RuntimeScope       string   `json:"runtime_scope"`
-	DeliveryBoundary   string   `json:"delivery_boundary"`
+	// MemoryScope is the free-text memory scope of versions 1 and 2; it is ""
+	// for version 3, whose Marshal omits it.
+	MemoryScope string `json:"memory_scope,omitempty"`
+	// MemoryDirective is the version 3 typed memory narrower, a strict
+	// MemoryDirective v1 object; it is nil for versions 1 and 2, which narrow
+	// nothing.
+	MemoryDirective  *memoryscope.Directive `json:"memory_directive,omitempty"`
+	RuntimeScope     string                 `json:"runtime_scope"`
+	DeliveryBoundary string                 `json:"delivery_boundary"`
 }
 
 // Parse parses and validates one strict versioned Goal JSON document. It
 // rejects duplicate or unknown fields, trailing input, and structurally
-// invalid Goal values without rewriting authored strings.
+// invalid Goal values without rewriting authored strings. A document whose
+// version member is the JSON number 3 is parsed as version 3, whose
+// memory_directive is parsed by memoryscope.ParseDirective; every other
+// document takes the version 1 and 2 path unchanged.
 func Parse(data []byte) (Goal, error) {
 	if err := jsonstrict.CheckUTF8(data); err != nil {
 		return Goal{}, fmt.Errorf("parse goal: %w", err)
@@ -44,15 +65,31 @@ func Parse(data []byte) (Goal, error) {
 	if err := jsonstrict.CheckNoDuplicateKeys(data); err != nil {
 		return Goal{}, fmt.Errorf("parse goal: %w", err)
 	}
-	if err := jsonstrict.CheckKnownFields(data, "Goal", goalAllowedFields); err != nil {
+	// Any value other than 3, including 3.0, 03 or a string, takes the version 1 and 2 path,
+	// which reports it exactly as before version 3 existed.
+	v3 := jsonstrict.WireVersion(data) == VersionDirective
+	allowedFields := goalAllowedFields
+	if v3 {
+		allowedFields = goalAllowedFieldsV3
+	}
+	if err := jsonstrict.CheckKnownFields(data, "Goal", allowedFields); err != nil {
 		return Goal{}, fmt.Errorf("parse goal: %w", err)
+	}
+	var directive *memoryscope.Directive
+	if v3 {
+		d, err := memoryscope.ParseDirectiveMember(data, "memory_directive")
+		if err != nil {
+			return Goal{}, fmt.Errorf("parse goal: %w", err)
+		}
+		directive = d
 	}
 
 	var g Goal
 	if err := jsonstrict.DecodeStrict(data, "Goal", &g); err != nil {
 		return Goal{}, fmt.Errorf("parse goal: %w", err)
 	}
-	if g.Version == 1 {
+	g.MemoryDirective = directive
+	if g.Version == VersionProjectOnly {
 		var raw map[string]json.RawMessage
 		if err := json.Unmarshal(data, &raw); err != nil {
 			return Goal{}, fmt.Errorf("parse goal: %w", err)
@@ -67,8 +104,8 @@ func Parse(data []byte) (Goal, error) {
 	return g, nil
 }
 
-// goalAllowedFields lists every known Goal wire field across supported
-// versions. goal_id is only meaningful in version 2; Parse rejects the key in
+// goalAllowedFields lists every known Goal wire field of versions 1 and 2.
+// goal_id is only meaningful in version 2; Parse rejects the key in
 // any form (including "" or null) alongside version 1, and Validate rejects a
 // non-empty GoalID on a version-1 Goal.
 var goalAllowedFields = []string{
@@ -77,32 +114,44 @@ var goalAllowedFields = []string{
 	"delivery_boundary",
 }
 
+// goalAllowedFieldsV3 lists every wire field of a version 3 Goal: version 2's
+// fields with memory_scope replaced by memory_directive. Parse selects it only
+// when the top-level version member is exactly the JSON number 3, so a version
+// 1 or 2 document carrying memory_directive, and a version 3 document carrying
+// memory_scope, are each refused as an unknown field.
+var goalAllowedFieldsV3 = []string{
+	"version", "project_id", "goal_id", "objective", "scope", "constraints",
+	"non_goals", "acceptance_criteria", "memory_directive", "runtime_scope",
+	"delivery_boundary",
+}
+
 // Validate checks the version and deterministic structural requirements of a
 // Goal. It does not interpret natural-language meaning or infer permissions.
 func (g Goal) Validate() error {
-	if g.Version != 1 && g.Version != 2 {
-		return fmt.Errorf("unsupported version %d, want 1 or 2", g.Version)
+	if g.Version < VersionProjectOnly || g.Version > VersionDirective {
+		return fmt.Errorf("unsupported version %d, want 1, 2, or 3", g.Version)
 	}
-	if g.Version == 1 && g.GoalID != "" {
+	if g.Version == VersionProjectOnly && g.GoalID != "" {
 		return fmt.Errorf("goal_id is only valid in version 2")
 	}
-	if g.Version == 2 && strings.TrimSpace(g.GoalID) == "" {
+	if g.Version >= VersionGoalID && strings.TrimSpace(g.GoalID) == "" {
 		return fmt.Errorf("goal_id must be a non-blank string")
 	}
-	for _, field := range []struct {
-		name  string
-		value string
-	}{
-		{name: "project_id", value: g.ProjectID},
-		{name: "objective", value: g.Objective},
-		{name: "scope", value: g.Scope},
-		{name: "memory_scope", value: g.MemoryScope},
-		{name: "runtime_scope", value: g.RuntimeScope},
-		{name: "delivery_boundary", value: g.DeliveryBoundary},
-	} {
-		if strings.TrimSpace(field.value) == "" {
-			return fmt.Errorf("%s must be a non-blank string", field.name)
-		}
+	if err := checkNonBlank(
+		namedValue{name: "project_id", value: g.ProjectID},
+		namedValue{name: "objective", value: g.Objective},
+		namedValue{name: "scope", value: g.Scope},
+	); err != nil {
+		return err
+	}
+	if err := g.validateMemory(); err != nil {
+		return err
+	}
+	if err := checkNonBlank(
+		namedValue{name: "runtime_scope", value: g.RuntimeScope},
+		namedValue{name: "delivery_boundary", value: g.DeliveryBoundary},
+	); err != nil {
+		return err
 	}
 	for _, field := range []struct {
 		name     string
@@ -116,6 +165,44 @@ func (g Goal) Validate() error {
 		if err := fieldrule.CheckStringArray(field.name, field.values, field.minItems); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+// namedValue is one named string a Goal requires to be non-blank.
+type namedValue struct {
+	name  string
+	value string
+}
+
+// checkNonBlank returns the error of the first field that is blank.
+func checkNonBlank(fields ...namedValue) error {
+	for _, f := range fields {
+		if strings.TrimSpace(f.value) == "" {
+			return fmt.Errorf("%s must be a non-blank string", f.name)
+		}
+	}
+	return nil
+}
+
+// validateMemory keeps each memory field to its version: versions 1 and 2
+// require a non-blank memory_scope and carry no directive; version 3 requires
+// a valid memory_directive (memoryscope's own Validate) and no memory_scope.
+func (g Goal) validateMemory() error {
+	if g.Version != VersionDirective {
+		if g.MemoryDirective != nil {
+			return fmt.Errorf("memory_directive is only valid in version 3")
+		}
+		return checkNonBlank(namedValue{name: "memory_scope", value: g.MemoryScope})
+	}
+	if g.MemoryScope != "" {
+		return fmt.Errorf("memory_scope is only valid in version 1 or 2")
+	}
+	if g.MemoryDirective == nil {
+		return fmt.Errorf("memory_directive must be a non-null object")
+	}
+	if err := g.MemoryDirective.Validate(); err != nil {
+		return fmt.Errorf("memory_directive: %w", err)
 	}
 	return nil
 }

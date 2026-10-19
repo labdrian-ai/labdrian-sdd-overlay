@@ -6,6 +6,8 @@
 package memoryscope
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -86,6 +88,30 @@ func ParseDirective(data []byte) (Directive, error) {
 		return Directive{}, fmt.Errorf("parse memory directive: %w", err)
 	}
 	return d, nil
+}
+
+// ParseDirectiveMember strictly parses the optional MemoryDirective member named member of the
+// JSON object data, with ParseDirective, so the directive's nested keys get the same exact-case
+// unknown-field and duplicate-key checks as a directive on its own. An absent or null member is no
+// directive: it returns nil and no error, and whether the record may omit it is the record's own
+// rule. A refusal of the directive is prefixed with the member's name ("<member>: parse memory
+// directive: ..."); data that is not a JSON object is refused with the unmarshal error, unwrapped.
+// Every record that nests a directive (the Goal v3, the shaper handoff v4, the workflow log) reads
+// it through this one function.
+func ParseDirectiveMember(data []byte, member string) (*Directive, error) {
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(data, &fields); err != nil {
+		return nil, err
+	}
+	raw, ok := fields[member]
+	if !ok || bytes.Equal(bytes.TrimSpace(raw), []byte("null")) {
+		return nil, nil
+	}
+	d, err := ParseDirective(raw)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", member, err)
+	}
+	return &d, nil
 }
 
 // Validate checks every field shape of d. It is first-error-wins.
@@ -173,9 +199,10 @@ type Plan struct {
 
 // Resolve narrows base by narrowers, applied in order, into one query Plan.
 // Each narrower must not exceed the running scope (none < goal < project)
-// and must use a subset of the running sources; either violation refuses
-// with a named reason. The effective directive is the most narrowed one:
-// base if there are no narrowers, otherwise the last narrower applied.
+// and must use a subset of the running sources; either violation, like an
+// invalid narrower, refuses with a NarrowerError that names it. The effective
+// directive is the most narrowed one: base if there are no narrowers,
+// otherwise the last narrower applied.
 // projectID and goalID come from the caller (typically a strictly parsed
 // Goal v2); they populate Plan.Filters and are validated against the
 // effective scope: project_id is required for scope goal and project,
@@ -188,20 +215,54 @@ func Resolve(base Directive, projectID, goalID string, narrowers ...Directive) (
 	running := base
 	for i, narrower := range narrowers {
 		if err := narrower.Validate(); err != nil {
-			return Plan{}, fmt.Errorf("narrower[%d]: %w", i, err)
+			return Plan{}, &NarrowerError{Index: i, Err: err}
 		}
-		if scopeOrder[narrower.Scope] > scopeOrder[running.Scope] {
-			return Plan{}, fmt.Errorf("narrower[%d] widens scope from %s to %s", i, running.Scope, narrower.Scope)
-		}
-		runningSources := toSourceSet(running.Sources)
-		for _, s := range narrower.Sources {
-			if !runningSources[s] {
-				return Plan{}, fmt.Errorf("narrower[%d] adds source %s not present in the current scope", i, s)
-			}
+		if err := CheckNarrows(running, narrower); err != nil {
+			return Plan{}, &NarrowerError{Index: i, Widens: true, Err: err}
 		}
 		running = narrower
 	}
 	return newPlan(running, projectID, goalID)
+}
+
+// NarrowerError is Resolve's refusal of one narrower: the one at Index of the narrowers it was
+// given, which is not a valid directive (Err is its Validate error) or, when Widens, widens the
+// running directive (Err is CheckNarrows's). Its text names the narrower by its position,
+// "narrower[i]: <invalid>" or "narrower[i] <widens>"; a caller that knows what each narrower came
+// from names it instead from Index, Widens and Err.
+type NarrowerError struct {
+	Index  int
+	Widens bool
+	Err    error
+}
+
+func (e *NarrowerError) Error() string {
+	if e.Widens {
+		return fmt.Sprintf("narrower[%d] %v", e.Index, e.Err)
+	}
+	return fmt.Sprintf("narrower[%d]: %v", e.Index, e.Err)
+}
+
+// Unwrap returns Err.
+func (e *NarrowerError) Unwrap() error { return e.Err }
+
+// CheckNarrows reports whether narrower only narrows running: its scope does not exceed running's
+// (none < goal < project) and every one of its sources is one of running's. The refusal says what
+// widens, as "widens scope from <running> to <narrower>" or "adds source <source> not present in
+// the current scope", with no subject, so the caller names the directive (Resolve names it by its
+// position, "narrower[i]", in a NarrowerError). Both directives are assumed valid; it checks
+// nothing else.
+func CheckNarrows(running, narrower Directive) error {
+	if scopeOrder[narrower.Scope] > scopeOrder[running.Scope] {
+		return fmt.Errorf("widens scope from %s to %s", running.Scope, narrower.Scope)
+	}
+	runningSources := toSourceSet(running.Sources)
+	for _, s := range narrower.Sources {
+		if !runningSources[s] {
+			return fmt.Errorf("adds source %s not present in the current scope", s)
+		}
+	}
+	return nil
 }
 
 // newPlan builds a Plan's Filters from the caller-supplied projectID and

@@ -9,50 +9,72 @@
 package shaper
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/fieldrule"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/jsonstrict"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/memoryscope"
+)
+
+// The Shaper handoff versions Parse accepts, each the one before it with one
+// change.
+const (
+	// HandoffVersionCriteria fills acceptance with plain criterion strings.
+	HandoffVersionCriteria = 1
+	// HandoffVersionVerified fills acceptance with items, each a criterion
+	// with its planned verification.
+	HandoffVersionVerified = 2
+	// HandoffVersionPlan adds the plan: roles, tests, risks, estimates,
+	// memory_scope, and delivery_limit.
+	HandoffVersionPlan = 3
+	// HandoffVersionDirective replaces memory_scope with memory_directive, a
+	// strict MemoryDirective v1 object.
+	HandoffVersionDirective = 4
 )
 
 // Handoff is the approved core of the Shaper handoff wire contract, in
-// version 1 or version 2. Its field order is also the canonical known-fields
-// order. The two versions share every field and differ only in the shape of
-// acceptance: a version 1 handoff fills Acceptance with plain criterion
-// strings, and a version 2 handoff fills AcceptanceItems instead. Exactly one
-// of the two is non-nil for a handoff Parse returns.
+// versions 1 to 4; the fields after OutOfScope belong to the later versions.
+// Its field order is also the canonical known-fields order. Version 1 fills
+// Acceptance with plain criterion strings; version 2 fills AcceptanceItems
+// instead, so exactly one of the two is non-nil for a handoff Parse returns.
+// Version 3 adds the plan (Roles, Tests, Risks, Estimates, MemoryScope, and
+// DeliveryLimit), and version 4 replaces MemoryScope with MemoryDirective.
 type Handoff struct {
 	Version      int      `json:"version"`
 	ProjectID    string   `json:"project_id"`
 	GoalID       string   `json:"goal_id"`
 	Architecture string   `json:"architecture"`
 	Stages       []string `json:"stages"`
-	// Acceptance holds the version 1 criteria; it is nil for version 2.
+	// Acceptance holds the version 1 criteria; it is nil for version 2 to 4.
 	Acceptance []string `json:"acceptance"`
 	OutOfScope []string `json:"out_of_scope"`
-	// AcceptanceItems holds the version 2 and version 3 criteria, each with
-	// its planned verification; it is nil for version 1. It is decoded from
-	// the same "acceptance" wire field by the version 2 and 3 parsers, never
-	// from its own wire name.
+	// AcceptanceItems holds the version 2 to 4 criteria, each with its
+	// planned verification; it is nil for version 1. It is decoded from the
+	// same "acceptance" wire field by the version 2 to 4 parsers, never from
+	// its own wire name.
 	AcceptanceItems []AcceptanceItem `json:"-"`
-	// Roles holds the version 3 role list; it is nil for version 1 and 2.
-	Roles []Role `json:"-"`
-	// Tests holds the version 3 planned test list; it is nil for version 1
-	// and 2.
-	Tests []string `json:"-"`
-	// Risks holds the version 3 risk list; it is nil for version 1 and 2.
-	Risks []Risk `json:"-"`
-	// Estimates holds the version 3 per-stage estimate list; it is nil for
-	// version 1 and 2.
-	Estimates []Estimate `json:"-"`
-	// MemoryScope is the version 3 memory scope; it is "" for version 1 and
+	// Roles holds the version 3 and 4 role list; it is nil for version 1 and
 	// 2.
+	Roles []Role `json:"-"`
+	// Tests holds the version 3 and 4 planned test list; it is nil for
+	// version 1 and 2.
+	Tests []string `json:"-"`
+	// Risks holds the version 3 and 4 risk list; it is nil for version 1 and
+	// 2.
+	Risks []Risk `json:"-"`
+	// Estimates holds the version 3 and 4 per-stage estimate list; it is nil
+	// for version 1 and 2.
+	Estimates []Estimate `json:"-"`
+	// MemoryScope is the version 3 memory scope; it is "" for version 1, 2,
+	// and 4.
 	MemoryScope string `json:"-"`
-	// DeliveryLimit is the version 3 delivery limit; it is "" for version 1
-	// and 2.
+	// MemoryDirective is the version 4 typed memory narrower, a strict
+	// MemoryDirective v1 object that replaces memory_scope; it is nil for
+	// version 1 to 3, which narrow nothing.
+	MemoryDirective *memoryscope.Directive `json:"-"`
+	// DeliveryLimit is the version 3 and 4 delivery limit; it is "" for
+	// version 1 and 2.
 	DeliveryLimit string `json:"-"`
 }
 
@@ -72,8 +94,10 @@ var handoffAllowedFields = []string{
 // item and its verification object. A document whose version member is the
 // JSON number 3 is parsed as version 3, version 2 plus roles, tests, risks,
 // estimates, memory_scope, and delivery_limit, applying the same strict
-// nested-key checks to every new nested object. Every other document takes
-// the version 1 path unchanged.
+// nested-key checks to every new nested object. A document whose version
+// member is the JSON number 4 is parsed as version 4, version 3 with
+// memory_scope replaced by memory_directive, a strict MemoryDirective v1
+// object. Every other document takes the version 1 path unchanged.
 func Parse(data []byte) (Handoff, error) {
 	if err := jsonstrict.CheckUTF8(data); err != nil {
 		return Handoff{}, fmt.Errorf("parse shaper handoff: %w", err)
@@ -81,22 +105,30 @@ func Parse(data []byte) (Handoff, error) {
 	if err := jsonstrict.CheckNoDuplicateKeys(data); err != nil {
 		return Handoff{}, fmt.Errorf("parse shaper handoff: %w", err)
 	}
+	// Any value that names no version 2 to 4, including 2.0, 02 or a string, is left to the
+	// version 1 path, which reports it exactly as before the later versions existed.
+	version := jsonstrict.WireVersion(data)
 	allowedFields := handoffAllowedFields
-	if isVersion3(data) {
+	switch version {
+	case HandoffVersionPlan:
 		allowedFields = handoffAllowedFieldsV3
+	case HandoffVersionDirective:
+		allowedFields = handoffAllowedFieldsV4
 	}
 	if err := jsonstrict.CheckKnownFields(data, "Shaper handoff", allowedFields); err != nil {
 		return Handoff{}, fmt.Errorf("parse shaper handoff: %w", err)
 	}
-	switch {
-	case isVersion3(data):
-		h, err := parseV3(data)
-		if err != nil {
-			return Handoff{}, fmt.Errorf("parse shaper handoff: %w", err)
-		}
-		return h, nil
-	case isVersion2(data):
-		h, err := parseV2(data)
+	var parseVersion func([]byte) (Handoff, error)
+	switch version {
+	case HandoffVersionDirective:
+		parseVersion = parseV4
+	case HandoffVersionPlan:
+		parseVersion = parseV3
+	case HandoffVersionVerified:
+		parseVersion = parseV2
+	}
+	if parseVersion != nil {
+		h, err := parseVersion(data)
 		if err != nil {
 			return Handoff{}, fmt.Errorf("parse shaper handoff: %w", err)
 		}
@@ -117,13 +149,16 @@ func Parse(data []byte) (Handoff, error) {
 // Shaper handoff, first error wins. It does not interpret natural-language
 // meaning, infer permissions, or prove semantic scope consistency.
 func (h Handoff) Validate() error {
-	if h.Version == 3 {
+	switch h.Version {
+	case HandoffVersionDirective:
+		return h.validateV4()
+	case HandoffVersionPlan:
 		return h.validateV3()
-	}
-	if h.Version == 2 {
+	case HandoffVersionVerified:
 		return h.validateV2()
-	}
-	if h.Version != 1 {
+	case HandoffVersionCriteria:
+		// Checked below.
+	default:
 		return fmt.Errorf("unsupported version %d, want 1", h.Version)
 	}
 	if h.AcceptanceItems != nil {
@@ -182,25 +217,4 @@ func checkNoExactOverlap(name string, values []string, outOfScope []string) erro
 		}
 	}
 	return nil
-}
-
-// isVersion2 reports whether the top-level version member of data is exactly
-// the JSON number 2. Any other value, including 2.0 or a string, is left to
-// the version 1 path, which reports it exactly as before version 2 existed.
-func isVersion2(data []byte) bool {
-	var fields map[string]json.RawMessage
-	if err := json.Unmarshal(data, &fields); err != nil {
-		return false
-	}
-	return bytes.Equal(bytes.TrimSpace(fields["version"]), []byte("2"))
-}
-
-// isVersion3 reports whether the top-level version member of data is exactly
-// the JSON number 3. Any other value is left to the version 1 or 2 path.
-func isVersion3(data []byte) bool {
-	var fields map[string]json.RawMessage
-	if err := json.Unmarshal(data, &fields); err != nil {
-		return false
-	}
-	return bytes.Equal(bytes.TrimSpace(fields["version"]), []byte("3"))
 }

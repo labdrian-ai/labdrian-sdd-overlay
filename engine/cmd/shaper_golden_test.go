@@ -206,12 +206,13 @@ func TestShaperGoldenDraftOutput(t *testing.T) {
 // before and after the clearance, the stored record's report, and the disclosure that
 // version must carry.
 func TestShaperGoldenReadyOutput(t *testing.T) {
-	for _, tc := range []struct{ name, handoff string }{
-		{"ready-v2", shaperTestHandoffV2},
-		{"ready-v3", shaperTestHandoffV3},
+	for _, tc := range []struct{ name, handoff, goal string }{
+		{"ready-v2", shaperTestHandoffV2, shaperTestGoal("standalone-shaper-handoff", `[]`)},
+		{"ready-v3", shaperTestHandoffV3, shaperTestGoal("standalone-shaper-handoff", `[]`)},
+		{"ready-v4", shaperTestHandoffV4, shaperTestGoalV3("standalone-shaper-handoff", `[]`)},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			root, home := shaperWorktree(t, tc.handoff, shaperTestGoal("standalone-shaper-handoff", `[]`))
+			root, home := shaperWorktree(t, tc.handoff, tc.goal)
 			g := newGoldenTranscript(root, home)
 
 			before := runShaperTest(assessArgs(root), "")

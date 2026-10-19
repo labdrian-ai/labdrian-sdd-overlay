@@ -20,6 +20,7 @@ import (
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gitobject"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/jsonstrict"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/memoryscope"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/sha256hex"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflowprofile"
 )
@@ -36,13 +37,19 @@ const (
 	// it names, and a digest of that snapshot (profile_snapshot, profile_digest). The workflow is
 	// carried on from the snapshot, so it does not depend on the catalog that served it.
 	EventVersionSnapshot = 2
+	// EventVersionNarrowers is version 2 (the profile snapshot is required) plus the memory
+	// narrowers (C23 M3): the created event may record the Goal's directive (goal_directive), the
+	// shaper handoff's digest and directive (handoff_digest, handoff_directive) and the directive of
+	// the bound role chain's head record (role_directive), and the narrowed kind records each later
+	// role handoff. None of them exists in versions 1 and 2, whose plan stays the profile's ceiling.
+	EventVersionNarrowers = 3
 )
 
 // EventVersion is the WorkflowEvent wire version this package writes for a new workflow: the newest.
 // Lifecycle.Create writes it (eventWith: the created event of a workflow with no log), and every
 // later event of that workflow has the version of its log, which is this one for a log Create made
-// and EventVersionNameOnly for one an earlier program made.
-const EventVersion = EventVersionSnapshot
+// and an older one for a log an earlier program made.
+const EventVersion = EventVersionNarrowers
 
 // Bounds on the snapshot of a profile in a created event, from an untrusted log. The stages are
 // bounded by MaxStages and MaxStageLength; a role, a check or a policy is free text like Reason, and
@@ -119,6 +126,9 @@ const (
 	KindStageRecorded Kind = "stage_recorded"
 	KindVerified      Kind = "verified"
 	KindClosed        Kind = "closed"
+	// KindNarrowed records a later role handoff of the bound role chain: its head and the memory
+	// directive it carries. It exists only in a log of version EventVersionNarrowers.
+	KindNarrowed Kind = "narrowed"
 )
 
 // knownKinds lists every Kind in the closed vocabulary.
@@ -130,6 +140,7 @@ var knownKinds = map[Kind]bool{
 	KindStageRecorded: true,
 	KindVerified:      true,
 	KindClosed:        true,
+	KindNarrowed:      true,
 }
 
 // Outcome is the closed vocabulary for a closed event's outcome.
@@ -179,6 +190,14 @@ type Checked struct {
 	RoleChainDigest string `json:"role_chain_digest,omitempty"`
 }
 
+// Narrowed is the narrowed-kind payload: the digest of the bound role chain's head record when the
+// event was produced, and the memory directive that record carries (nil when it carries none, which
+// means the base plan: the profile's ceiling narrowed by the Goal and the shaper handoff).
+type Narrowed struct {
+	RoleChainHead   string                 `json:"role_chain_head"`
+	MemoryDirective *memoryscope.Directive `json:"memory_directive,omitempty"`
+}
+
 // WorkflowEvent is one record of a workflow's append-only event log: data
 // only, no execution authority. It binds to the previous record in its
 // chain by prev_digest (see EventDigest and VerifyEvents), and carries
@@ -207,7 +226,7 @@ type WorkflowEvent struct {
 	ProjectIdentity string `json:"project_identity,omitempty"`
 	// ProfileSnapshot is the profile named by Profile as it was when the workflow was created, and
 	// ProfileDigest is its digest (workflowprofile.Snapshot.Digest). Both are present if and only if
-	// Version is EventVersionSnapshot; a version 1 event has neither, and its profile is the
+	// Version is EventVersionSnapshot or later; a version 1 event has neither, and its profile is the
 	// catalog's of that name.
 	ProfileSnapshot *workflowprofile.Snapshot `json:"profile_snapshot,omitempty"`
 	ProfileDigest   string                    `json:"profile_digest,omitempty"`
@@ -219,6 +238,15 @@ type WorkflowEvent struct {
 	// (possibly grown) chain, rather than merely that some chain with the
 	// same id currently verifies.
 	RoleChainHead string `json:"role_chain_head,omitempty"`
+	// The memory narrowers, version 3 only (EventVersionNarrowers), each optional. GoalDirective is
+	// the Goal v3's memory_directive. HandoffDigest is the SHA-256 of the bytes of the shaper handoff
+	// v4 given at create and HandoffDirective its memory_directive: both or neither. RoleDirective is
+	// the memory_directive of the role chain's head record at create, and needs RoleChainID. The plan
+	// is the profile's ceiling narrowed by them, in that order (see PlanOf).
+	GoalDirective    *memoryscope.Directive `json:"goal_directive,omitempty"`
+	HandoffDigest    string                 `json:"handoff_digest,omitempty"`
+	HandoffDirective *memoryscope.Directive `json:"handoff_directive,omitempty"`
+	RoleDirective    *memoryscope.Directive `json:"role_directive,omitempty"`
 
 	// stage_recorded-only payload.
 	Stage string `json:"stage,omitempty"`
@@ -229,6 +257,9 @@ type WorkflowEvent struct {
 	// closed-only payload.
 	Outcome string `json:"outcome,omitempty"`
 	Reason  string `json:"reason,omitempty"`
+
+	// narrowed-only payload (version 3).
+	Narrowed *Narrowed `json:"narrowed,omitempty"`
 }
 
 // workflowEventFields lists every known top-level WorkflowEvent wire field
@@ -240,15 +271,21 @@ var workflowEventFields = []string{
 	"version", "workflow_id", "project_id", "seq", "prev_digest", "kind", "at",
 	"provenance", "observations",
 	"goal_id", "goal_digest", "profile", "project_identity", "profile_snapshot", "profile_digest", "role_chain_id", "role_chain_head",
+	"goal_directive", "handoff_digest", "handoff_directive", "role_directive",
 	"stage",
 	"checked",
 	"outcome", "reason",
+	"narrowed",
 }
+
+// createdDirectiveFields are the created event's members that hold a MemoryDirective.
+var createdDirectiveFields = []string{"goal_directive", "handoff_directive", "role_directive"}
 
 var (
 	provenanceFields  = []string{"worktree_root", "git_head"}
 	observationFields = []string{"capability", "status", "detail"}
 	checkedFields     = []string{"chain_digest", "goal_digest", "profile", "role_chain_digest"}
+	narrowedFields    = []string{"role_chain_head", "memory_directive"}
 	snapshotFields    = []string{"name", "stages", "roles", "checks", "memory_policy", "review_policy", "delivery_policy", "memory_default", "relies_on_gentle_review"}
 	snapshotStageKeys = []string{"name", "depends_on"}
 	snapshotMemoryKey = []string{"scope", "sources"}
@@ -282,7 +319,7 @@ func ParseWorkflowEvent(data []byte) (WorkflowEvent, error) {
 	if err := json.Unmarshal(data, &raw); err != nil {
 		return WorkflowEvent{}, fmt.Errorf("parse workflow event: %w", err)
 	}
-	if err := checkNestedWorkflowFields(raw); err != nil {
+	if err := checkNestedWorkflowFields(data, raw); err != nil {
 		return WorkflowEvent{}, fmt.Errorf("parse workflow event: %w", err)
 	}
 
@@ -301,7 +338,7 @@ func ParseWorkflowEvent(data []byte) (WorkflowEvent, error) {
 // without regard to case and the last matching key wins, so a case-variant
 // key could carry a value a case-sensitive reader of the same bytes would
 // never see.
-func checkNestedWorkflowFields(raw map[string]json.RawMessage) error {
+func checkNestedWorkflowFields(data []byte, raw map[string]json.RawMessage) error {
 	isNull := func(v json.RawMessage) bool { return bytes.Equal(bytes.TrimSpace(v), []byte("null")) }
 
 	if v, ok := raw["provenance"]; ok && !isNull(v) {
@@ -319,6 +356,9 @@ func checkNestedWorkflowFields(raw map[string]json.RawMessage) error {
 			return fmt.Errorf("profile_snapshot: %w", err)
 		}
 	}
+	if err := checkNestedNarrowerFields(data, raw, isNull); err != nil {
+		return err
+	}
 	v, ok := raw["observations"]
 	if !ok || isNull(v) {
 		return nil
@@ -331,6 +371,29 @@ func checkNestedWorkflowFields(raw map[string]json.RawMessage) error {
 		if err := jsonstrict.CheckKnownFields(item, "workflow event observation", observationFields); err != nil {
 			return fmt.Errorf("observations[%d]: %w", i, err)
 		}
+	}
+	return nil
+}
+
+// checkNestedNarrowerFields reads every memory directive of the event (data, whose members are raw)
+// with memoryscope.ParseDirectiveMember, so its keys are matched exactly and none is unknown or
+// repeated, and rejects unknown keys, with exact-case matching, in the narrowed object. Which kind
+// and version may carry them is Validate's rule.
+func checkNestedNarrowerFields(data []byte, raw map[string]json.RawMessage, isNull func(json.RawMessage) bool) error {
+	for _, field := range createdDirectiveFields {
+		if _, err := memoryscope.ParseDirectiveMember(data, field); err != nil {
+			return err
+		}
+	}
+	v, ok := raw["narrowed"]
+	if !ok || isNull(v) {
+		return nil
+	}
+	if err := jsonstrict.CheckKnownFields(v, "workflow event narrowed", narrowedFields); err != nil {
+		return fmt.Errorf("narrowed: %w", err)
+	}
+	if _, err := memoryscope.ParseDirectiveMember(v, "memory_directive"); err != nil {
+		return fmt.Errorf("narrowed: %w", err)
 	}
 	return nil
 }
@@ -427,8 +490,8 @@ func ValidateIdentifier(name, value string) error {
 // payload fields its Kind requires are populated and every other
 // kind-specific field is zero-valued. It is first-error-wins.
 func (e WorkflowEvent) Validate() error {
-	if e.Version != EventVersionNameOnly && e.Version != EventVersionSnapshot {
-		return fmt.Errorf("version must be %d or %d, got %d", EventVersionNameOnly, EventVersionSnapshot, e.Version)
+	if e.Version < EventVersionNameOnly || e.Version > EventVersionNarrowers {
+		return fmt.Errorf("version must be %d, %d, or %d, got %d", EventVersionNameOnly, EventVersionSnapshot, EventVersionNarrowers, e.Version)
 	}
 	if err := ValidateIdentifier("workflow_id", e.WorkflowID); err != nil {
 		return err
@@ -495,10 +558,26 @@ func validateObservations(observations []Observation) error {
 // validatePayload checks that e carries exactly the payload fields its Kind
 // requires and that every other kind-specific field is zero-valued.
 func (e WorkflowEvent) validatePayload() error {
-	blankCreated := e.GoalID == "" && e.GoalDigest == "" && e.Profile == "" && e.ProjectIdentity == "" && e.ProfileSnapshot == nil && e.ProfileDigest == "" && e.RoleChainID == "" && e.RoleChainHead == ""
+	blankCreated := e.GoalID == "" && e.GoalDigest == "" && e.Profile == "" && e.ProjectIdentity == "" && e.ProfileSnapshot == nil && e.ProfileDigest == "" && e.RoleChainID == "" && e.RoleChainHead == "" &&
+		e.GoalDirective == nil && e.HandoffDigest == "" && e.HandoffDirective == nil && e.RoleDirective == nil
 	blankStage := e.Stage == ""
 	blankChecked := e.Checked == nil
 	blankClosed := e.Outcome == "" && e.Reason == ""
+
+	// The narrowed payload is checked apart, so the refusals of the kinds that predate it keep
+	// their words.
+	if e.Kind == KindNarrowed {
+		if e.Version < EventVersionNarrowers {
+			return fmt.Errorf("kind %q is not part of version %d", e.Kind, e.Version)
+		}
+		if !blankCreated || !blankStage || !blankChecked || !blankClosed {
+			return fmt.Errorf("kind %q must not carry created, stage, checked, or closed payload fields", e.Kind)
+		}
+		return e.validateNarrowedPayload()
+	}
+	if e.Narrowed != nil {
+		return fmt.Errorf("kind %q must not carry the narrowed payload", e.Kind)
+	}
 
 	switch e.Kind {
 	case KindCreated:
@@ -561,6 +640,59 @@ func (e WorkflowEvent) validateCreatedPayload() error {
 	} else if e.RoleChainHead != "" {
 		return fmt.Errorf("role_chain_head must be empty when role_chain_id is not set")
 	}
+	return e.validateCreatedNarrowers()
+}
+
+// validateCreatedNarrowers checks the memory narrowers of a created event: none before version 3;
+// in version 3 each is optional and a valid directive, the shaper handoff's digest and directive come
+// together, and a role directive needs a role chain. Whether they narrow the profile's ceiling is
+// PlanOf's question, which the lifecycle asks before writing them.
+func (e WorkflowEvent) validateCreatedNarrowers() error {
+	if e.Version < EventVersionNarrowers {
+		if e.GoalDirective != nil || e.HandoffDigest != "" || e.HandoffDirective != nil || e.RoleDirective != nil {
+			return fmt.Errorf("goal_directive, handoff_digest, handoff_directive and role_directive are not part of version %d", e.Version)
+		}
+		return nil
+	}
+	if (e.HandoffDigest == "") != (e.HandoffDirective == nil) {
+		return fmt.Errorf("handoff_digest and handoff_directive must be present together")
+	}
+	if e.HandoffDigest != "" && !sha256hex.IsValid(e.HandoffDigest) {
+		return fmt.Errorf("handoff_digest must be 64 lowercase hex characters, got %q", e.HandoffDigest)
+	}
+	if e.RoleDirective != nil && e.RoleChainID == "" {
+		return fmt.Errorf("role_directive must be empty when role_chain_id is not set")
+	}
+	directives := []struct {
+		field     string
+		directive *memoryscope.Directive
+	}{{"goal_directive", e.GoalDirective}, {"handoff_directive", e.HandoffDirective}, {"role_directive", e.RoleDirective}}
+	for _, d := range directives {
+		if d.directive == nil {
+			continue
+		}
+		if err := d.directive.Validate(); err != nil {
+			return fmt.Errorf("%s: %w", d.field, err)
+		}
+	}
+	return nil
+}
+
+// validateNarrowedPayload checks the payload of a narrowed event: the head of the role chain it
+// records, and the directive of that record, when it has one.
+func (e WorkflowEvent) validateNarrowedPayload() error {
+	if e.Narrowed == nil {
+		return fmt.Errorf("narrowed must be present for kind %q", KindNarrowed)
+	}
+	n := *e.Narrowed
+	if !sha256hex.IsValid(n.RoleChainHead) {
+		return fmt.Errorf("narrowed.role_chain_head must be 64 lowercase hex characters, got %q", n.RoleChainHead)
+	}
+	if n.MemoryDirective != nil {
+		if err := n.MemoryDirective.Validate(); err != nil {
+			return fmt.Errorf("narrowed.memory_directive: %w", err)
+		}
+	}
 	return nil
 }
 
@@ -605,7 +737,7 @@ func (e WorkflowEvent) validateCreatedProfile() error {
 		return err
 	}
 	if e.ProfileSnapshot == nil {
-		return fmt.Errorf("profile_snapshot must be present in a version %d created event", EventVersionSnapshot)
+		return fmt.Errorf("profile_snapshot must be present in a version %d created event", e.Version)
 	}
 	snapshot := *e.ProfileSnapshot
 	if snapshot.Name != e.Profile {

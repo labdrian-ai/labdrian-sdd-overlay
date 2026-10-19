@@ -17,7 +17,9 @@ type ChainRecord struct {
 // VerifyChain checks one chain's records, in seq order starting at 1: seq 1
 // has prev_sha256 equal to EmptyChainDigest and from_role prototyper or
 // shaper; each later record's prev_sha256 equals the SHA-256 of the previous
-// record's raw bytes; seq is contiguous; from_role equals the previous
+// record's raw bytes (so the digest covers every member, a memory_directive
+// included); no record has an older version than the one before it (a chain
+// may move from v1 to v2, never back); seq is contiguous; from_role equals the previous
 // record's to_role, except that a record following an interrupted record
 // must repeat that record's exact from_role and to_role; and nothing follows
 // a completed record whose to_role is delivery (terminal). It does not
@@ -42,6 +44,10 @@ func VerifyChain(records []ChainRecord) error {
 		wantPrevSHA := sha256hex.Sum(prev.Raw)
 		if h.PrevSHA256 != wantPrevSHA {
 			return fmt.Errorf("role chain: seq %d prev_sha256 %q does not match seq %d bytes digest %q", h.Seq, h.PrevSHA256, prev.Handoff.Seq, wantPrevSHA)
+		}
+		if h.Version < prev.Handoff.Version {
+			return fmt.Errorf("role chain: seq %d has version %d after seq %d version %d; a chain never moves back to an older version",
+				h.Seq, h.Version, prev.Handoff.Seq, prev.Handoff.Version)
 		}
 		if prev.Handoff.Status == StatusInterrupted {
 			if h.FromRole != prev.Handoff.FromRole || h.ToRole != prev.Handoff.ToRole {

@@ -100,7 +100,7 @@ func TestRoleHandoffValidate(t *testing.T) {
 
 	t.Run("wrong version rejected", func(t *testing.T) {
 		h := base()
-		h.Version = 2
+		h.Version = 3
 		if err := h.Validate(); err == nil {
 			t.Fatalf("Validate() = nil, want error for wrong version")
 		}

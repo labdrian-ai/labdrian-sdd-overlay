@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/memoryscope"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflowprofile"
 )
 
@@ -68,11 +69,23 @@ type State struct {
 	ProjectIdentity string
 	GoalDigest      string
 	RoleChainID     string
-	RoleChainHead   string
-	Stages          []string
-	LastVerifiedSeq int
-	CloseOutcome    Outcome
-	CloseReason     string
+	// RoleChainHead is the head of the role chain bound at creation; Verify requires the chain to
+	// still contain it. A narrowed event does not move it (see NarrowedHead).
+	RoleChainHead string
+	// GoalDirective, HandoffDigest, HandoffDirective and RoleDirective are the memory narrowers the
+	// created event recorded (version 3; all absent in a log of version 1 or 2).
+	GoalDirective    *memoryscope.Directive
+	HandoffDigest    string
+	HandoffDirective *memoryscope.Directive
+	RoleDirective    *memoryscope.Directive
+	// NarrowedHead is the role chain head the latest narrowed event recorded, "" when there is
+	// none, and NarrowedDirective is the directive it recorded (nil for none, which is the base).
+	NarrowedHead      string
+	NarrowedDirective *memoryscope.Directive
+	Stages            []string
+	LastVerifiedSeq   int
+	CloseOutcome      Outcome
+	CloseReason       string
 
 	// lastEventKind is the kind of the most recently applied event; it is
 	// used only to enforce that a completed close immediately follows a
@@ -84,6 +97,25 @@ type State struct {
 	// above: it is grown in place, not copied, on the assumption that State
 	// is used linearly.
 	stageSet map[string]bool
+}
+
+// LastRoleChainHead is the role chain head the log recorded last: that of the latest narrowed
+// event, or, before any, the head bound at creation ("" for a workflow with no role chain).
+func (s State) LastRoleChainHead() string {
+	if s.NarrowedHead != "" {
+		return s.NarrowedHead
+	}
+	return s.RoleChainHead
+}
+
+// RoleDirectiveInForce is the role handoff's memory directive the plan applies over the base: that
+// of the latest narrowed event (nil when it recorded none, so the base rules), or, before any, the
+// one the created event recorded. A later role replaces an earlier one; it never stacks on it.
+func (s State) RoleDirectiveInForce() *memoryscope.Directive {
+	if s.NarrowedHead != "" {
+		return s.NarrowedDirective
+	}
+	return s.RoleDirective
 }
 
 // hasStage reports whether stage was already recorded, in O(1) via
@@ -103,6 +135,8 @@ func (s State) hasStage(stage string) bool {
 //   - stage_recorded is legal only while running, and never records the
 //     same stage twice;
 //   - verified is legal from any non-closed state;
+//   - narrowed is legal from any non-closed state of a workflow bound to a role
+//     chain, and changes no status;
 //   - closed with outcome completed is legal only when the immediately
 //     preceding event was a verified event (a verify after the last
 //     change); closed with outcome abandoned is legal from any non-closed
@@ -155,8 +189,15 @@ func CheckTransition(state State, next WorkflowEvent) error {
 		// Legal from any non-closed state; StatusClosed already rejected above. In a log that
 		// carries the profile (version 2) the profile a verification checked is that profile; a
 		// version 1 log never compared them, and still does not.
-		if state.Version == EventVersionSnapshot && next.Checked != nil && next.Checked.Profile != state.Profile {
+		if state.Version >= EventVersionSnapshot && next.Checked != nil && next.Checked.Profile != state.Profile {
 			return fmt.Errorf("%w: verified checked profile %q, but the workflow's profile is %q", ErrInvalidTransition, next.Checked.Profile, state.Profile)
+		}
+	case KindNarrowed:
+		// Legal in any non-closed state (closed is rejected above), and it changes no status. It
+		// records a later handoff of the bound role chain, so a workflow with none has nothing to
+		// narrow from.
+		if state.RoleChainID == "" {
+			return fmt.Errorf("%w: narrowed needs a workflow bound to a role chain, and this one has none", ErrInvalidTransition)
 		}
 	case KindClosed:
 		switch Outcome(next.Outcome) {
@@ -213,6 +254,10 @@ func applyEvent(state State, e WorkflowEvent) State {
 		state.ProfileSnapshot = e.ProfileSnapshot
 		state.RoleChainID = e.RoleChainID
 		state.RoleChainHead = e.RoleChainHead
+		state.GoalDirective = e.GoalDirective
+		state.HandoffDigest = e.HandoffDigest
+		state.HandoffDirective = e.HandoffDirective
+		state.RoleDirective = e.RoleDirective
 		state.Stages = []string{}
 		state.LastVerifiedSeq = -1
 	case KindStarted, KindResumed:
@@ -232,6 +277,9 @@ func applyEvent(state State, e WorkflowEvent) State {
 		state.stageSet = stageSet
 	case KindVerified:
 		state.LastVerifiedSeq = e.Seq
+	case KindNarrowed:
+		state.NarrowedHead = e.Narrowed.RoleChainHead
+		state.NarrowedDirective = e.Narrowed.MemoryDirective
 	case KindClosed:
 		state.Status = StatusClosed
 		state.CloseOutcome = Outcome(e.Outcome)

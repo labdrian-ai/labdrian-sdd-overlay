@@ -3,6 +3,8 @@ package roles
 import (
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/memoryscope"
 )
 
 // TestRoleHandoffValidateSaysFirstWhatItFindsFirst pins what Validate answers for each rule it
@@ -29,7 +31,7 @@ func TestRoleHandoffValidateSaysFirstWhatItFindsFirst(t *testing.T) {
 		want   string
 	}{
 		// One rule at a time, in the order of the record.
-		{"version", func(h *RoleHandoff) { h.Version = 2 }, "version must be 1, got 2"},
+		{"version", func(h *RoleHandoff) { h.Version = 3 }, "version must be 1 or 2, got 3"},
 		{"project_id", func(h *RoleHandoff) { h.ProjectID = "  " }, "project_id must not be blank"},
 		{"goal_id", func(h *RoleHandoff) { h.GoalID = "" }, "goal_id must not be blank"},
 		{"chain_id", func(h *RoleHandoff) { h.ChainID = "\t" }, "chain_id must not be blank"},
@@ -56,7 +58,7 @@ func TestRoleHandoffValidateSaysFirstWhatItFindsFirst(t *testing.T) {
 		{"interrupted with a blank reason", func(h *RoleHandoff) { h.Status, h.ResumeReason = StatusInterrupted, &blank }, `resume_reason must be present and non-blank when status is "interrupted"`},
 
 		// Two problems at once: the first in this order is the one said.
-		{"version before the ids", func(h *RoleHandoff) { h.Version, h.ProjectID = 2, "" }, "version must be 1, got 2"},
+		{"version before the ids", func(h *RoleHandoff) { h.Version, h.ProjectID = 3, "" }, "version must be 1 or 2, got 3"},
 		{"project_id before goal_id", func(h *RoleHandoff) { h.ProjectID, h.GoalID = "", "" }, "project_id must not be blank"},
 		{"goal_id before chain_id", func(h *RoleHandoff) { h.GoalID, h.ChainID = "", "" }, "goal_id must not be blank"},
 		{"ids before seq", func(h *RoleHandoff) { h.ChainID, h.Seq = "", 0 }, "chain_id must not be blank"},
@@ -79,6 +81,9 @@ func TestRoleHandoffValidateSaysFirstWhatItFindsFirst(t *testing.T) {
 		{"decisions null before decisions items", func(h *RoleHandoff) { h.Context.Decisions, h.Context.OpenQuestions = nil, nil }, "context.decisions must be a non-null array"},
 		{"decisions items before open_questions", func(h *RoleHandoff) { h.Context.Decisions, h.Context.OpenQuestions = []string{""}, nil }, "context.decisions[0] must not be blank"},
 		{"open_questions before the status", func(h *RoleHandoff) { h.Context.OpenQuestions, h.Status = []string{""}, Status("paused") }, "context.open_questions[0] must not be blank"},
+		{"the status before the memory directive", func(h *RoleHandoff) {
+			h.Status, h.MemoryDirective = Status("paused"), &memoryscope.Directive{Version: 1, Scope: memoryscope.ScopeNone, Sources: []memoryscope.Source{}, Write: "none"}
+		}, `status must be "completed" or "interrupted", got "paused"`},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			h := base(t)

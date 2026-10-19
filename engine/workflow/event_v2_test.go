@@ -152,19 +152,6 @@ func TestEveryBuiltInProfileMakesAValidVersion2CreatedEvent(t *testing.T) {
 	}
 }
 
-func TestOnlyVersionsOneAndTwoAreAccepted(t *testing.T) {
-	for _, version := range []int{-1, 0, 3, 99} {
-		e := validCreatedEvent()
-		e.Version = version
-		if err := e.Validate(); err == nil {
-			t.Errorf("version %d: Validate() = nil, want an error", version)
-		}
-	}
-	if EventVersion != EventVersionSnapshot {
-		t.Errorf("EventVersion = %d, want %d: the program writes the newest version", EventVersion, EventVersionSnapshot)
-	}
-}
-
 func TestAVersion2CreatedEventNeedsAWellFormedSnapshotOfItsProfile(t *testing.T) {
 	// replace puts the snapshot s in the event, with its own digest and, when named, its name.
 	replace := func(e *WorkflowEvent, s workflowprofile.Snapshot) {

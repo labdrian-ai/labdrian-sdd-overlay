@@ -11,6 +11,7 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/memoryscope"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/roles"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/sha256hex"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/shaper"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflowprofile"
 )
 
@@ -53,7 +54,28 @@ var (
 	// ErrRoleChainInvalid is returned by Create and Verify when a
 	// referenced role chain has no records or fails roles.VerifyChain.
 	ErrRoleChainInvalid = errors.New("workflow lifecycle: referenced role chain does not verify")
+	// ErrHandoffRefused is returned by CreateWithHandoff when the shaper handoff does not fit the
+	// workflow: it is not of version 4 (the only one that carries a memory directive), it is not of
+	// the Goal (project_id, goal_id), it does not pair with the Goal's version (shaper.BindGoal's
+	// rule), it is invalid, or its digest is not one. Nothing is appended.
+	ErrHandoffRefused = errors.New("workflow lifecycle: cannot create: the shaper handoff does not fit this workflow")
+	// ErrNarrowersNeedVersion3 is returned by Narrow for a workflow whose log is of version 1 or 2,
+	// which holds no narrower: it must be created again to be narrowed.
+	ErrNarrowersNeedVersion3 = errors.New("workflow lifecycle: narrow: narrowers need a workflow created by this version")
+	// ErrNoRoleChain is returned by Narrow for a workflow bound to no role chain.
+	ErrNoRoleChain = errors.New("workflow lifecycle: narrow: the workflow is bound to no role chain")
+	// ErrNothingToNarrow is returned by Narrow when the head of the role chain is the last head the
+	// log recorded: no handoff came since, so there is nothing new to narrow by.
+	ErrNothingToNarrow = errors.New("workflow lifecycle: narrow: the role chain has no handoff the workflow has not recorded")
 )
+
+// ShaperHandoff is the shaper handoff a workflow is created from: the parsed Handoff and the SHA-256
+// of the exact bytes it was parsed from. The caller reads and parses it (this package reads no file);
+// CreateWithHandoff records the digest and the handoff's memory directive in the created event.
+type ShaperHandoff struct {
+	Handoff shaper.Handoff
+	Digest  string
+}
 
 // gentleAIReviewCapability is the capability name recorded when a Workflow
 // Profile's review policy relies on Gentle AI's native review (receipt-
@@ -268,11 +290,18 @@ func (l Lifecycle) catalogProfileOf(state State) (workflowprofile.WorkflowProfil
 // observations for profile. The caller fills in any kind-specific
 // payload fields before appending.
 func (l Lifecycle) baseEvent(loaded Loaded, projectID, workflowID string, kind Kind, profile workflowprofile.WorkflowProfile) (WorkflowEvent, error) {
+	return l.payloadEvent(loaded, projectID, workflowID, WorkflowEvent{Kind: kind}, profile)
+}
+
+// payloadEvent is baseEvent for an event whose payload is already built: payload holds its kind and
+// its kind-specific fields, set once where it is built, and payloadEvent adds the fields common to
+// every event (see eventWith).
+func (l Lifecycle) payloadEvent(loaded Loaded, projectID, workflowID string, payload WorkflowEvent, profile workflowprofile.WorkflowProfile) (WorkflowEvent, error) {
 	observations, err := l.observationsFor(profile)
 	if err != nil {
 		return WorkflowEvent{}, err
 	}
-	return l.eventWith(loaded, projectID, workflowID, kind, observations)
+	return l.withHeader(loaded, projectID, workflowID, payload, observations)
 }
 
 // stateEvent is baseEvent for an event of the workflow loaded holds, which goes on from the profile
@@ -289,6 +318,12 @@ func (l Lifecycle) stateEvent(loaded Loaded, projectID, workflowID string, kind 
 // observations. Its version is the log's, that of the created event, and the
 // current one for the created event of a workflow that has no log yet.
 func (l Lifecycle) eventWith(loaded Loaded, projectID, workflowID string, kind Kind, observations []Observation) (WorkflowEvent, error) {
+	return l.withHeader(loaded, projectID, workflowID, WorkflowEvent{Kind: kind}, observations)
+}
+
+// withHeader is event, whose kind and payload are set, with the fields eventWith describes set over
+// it: the header every event carries, set here alone.
+func (l Lifecycle) withHeader(loaded Loaded, projectID, workflowID string, event WorkflowEvent, observations []Observation) (WorkflowEvent, error) {
 	var seq int
 	var prevDigest string
 	version := EventVersion
@@ -301,17 +336,15 @@ func (l Lifecycle) eventWith(loaded Loaded, projectID, workflowID string, kind K
 		}
 		prevDigest = digest
 	}
-	return WorkflowEvent{
-		Version:      version,
-		WorkflowID:   workflowID,
-		ProjectID:    projectID,
-		Seq:          seq,
-		PrevDigest:   prevDigest,
-		Kind:         kind,
-		At:           l.clock().UTC().Format(time.RFC3339),
-		Provenance:   l.provenance,
-		Observations: observations,
-	}, nil
+	event.Version = version
+	event.WorkflowID = workflowID
+	event.ProjectID = projectID
+	event.Seq = seq
+	event.PrevDigest = prevDigest
+	event.At = l.clock().UTC().Format(time.RFC3339)
+	event.Provenance = l.provenance
+	event.Observations = observations
+	return event, nil
 }
 
 // commit appends event and, on success, returns the State that results from
@@ -468,7 +501,53 @@ func (l Lifecycle) loadVerifiedRoleChain(projectID, goalID, roleChainID string) 
 // roleChainID is non-blank but the chain has no records or fails
 // roles.VerifyChain, or on-disk state already exists for this workflow
 // (ErrCreateRefused).
+//
+// The created event also records the memory narrowers there are (C23 M3, see PlanOf): the Goal's
+// directive (a Goal v3) and the directive of the role chain's head record (a role handoff v2 that
+// carries one). It fails, appending nothing, when one of them widens the plan, naming it. A shaper
+// handoff is given with CreateWithHandoff.
 func (l Lifecycle) Create(projectID, workflowID, projectIdentity string, g goal.Goal, profileName, roleChainID string) (State, error) {
+	return l.create(projectID, workflowID, projectIdentity, g, profileName, roleChainID, nil)
+}
+
+// CreateWithHandoff is Create for a workflow shaped by the shaper handoff h: the created event also
+// records h's digest and memory directive, which narrows the plan after the Goal's. It fails,
+// appending nothing, with ErrHandoffRefused when h is not a valid version 4 handoff of g (its
+// project_id and goal_id) paired with g's version as shaper.BindGoal pairs them, or its digest is not
+// a SHA-256, and when its directive widens the plan; and as Create fails.
+func (l Lifecycle) CreateWithHandoff(projectID, workflowID, projectIdentity string, g goal.Goal, profileName, roleChainID string, h ShaperHandoff) (State, error) {
+	return l.create(projectID, workflowID, projectIdentity, g, profileName, roleChainID, &h)
+}
+
+// checkShaperHandoff is the fit of h to the Goal g that CreateWithHandoff requires; g is valid.
+func checkShaperHandoff(g goal.Goal, h ShaperHandoff) error {
+	if err := h.Handoff.Validate(); err != nil {
+		return fmt.Errorf("invalid shaper handoff: %v", err)
+	}
+	if h.Handoff.Version != shaper.HandoffVersionDirective {
+		return fmt.Errorf("it is of version %d, and only a version %d handoff carries a memory directive", h.Handoff.Version, shaper.HandoffVersionDirective)
+	}
+	if !sha256hex.IsValid(h.Digest) {
+		return fmt.Errorf("its digest %q is not 64 lowercase hex characters", h.Digest)
+	}
+	want, err := shaper.PairedGoalVersion(h.Handoff.Version)
+	if err != nil {
+		return err
+	}
+	if g.Version != want {
+		return fmt.Errorf("a version %d handoff pairs with a Goal of version %d, and the goal is of version %d", h.Handoff.Version, want, g.Version)
+	}
+	if h.Handoff.ProjectID != g.ProjectID {
+		return fmt.Errorf("its project_id is %q and the goal's is %q", h.Handoff.ProjectID, g.ProjectID)
+	}
+	if h.Handoff.GoalID != g.GoalID {
+		return fmt.Errorf("its goal_id is %q and the goal's is %q", h.Handoff.GoalID, g.GoalID)
+	}
+	return nil
+}
+
+// create is Create and CreateWithHandoff; handoff is nil for Create.
+func (l Lifecycle) create(projectID, workflowID, projectIdentity string, g goal.Goal, profileName, roleChainID string, handoff *ShaperHandoff) (State, error) {
 	if err := g.Validate(); err != nil {
 		return State{}, fmt.Errorf("workflow lifecycle: create: invalid goal: %w", err)
 	}
@@ -477,6 +556,11 @@ func (l Lifecycle) Create(projectID, workflowID, projectIdentity string, g goal.
 	}
 	if err := ValidateProjectIdentity(projectIdentity); err != nil {
 		return State{}, fmt.Errorf("workflow lifecycle: create: %w", err)
+	}
+	if handoff != nil {
+		if err := checkShaperHandoff(g, *handoff); err != nil {
+			return State{}, fmt.Errorf("%w: %v", ErrHandoffRefused, err)
+		}
 	}
 	profile, err := l.profiles.Resolve(profileName)
 	if err != nil {
@@ -490,6 +574,7 @@ func (l Lifecycle) Create(projectID, workflowID, projectIdentity string, g goal.
 		return State{}, fmt.Errorf("workflow lifecycle: create: %w", err)
 	}
 	var roleChainHead string
+	var roleDirective *memoryscope.Directive
 	if roleChainID != "" {
 		if err := ValidateIdentifier("role_chain_id", roleChainID); err != nil {
 			return State{}, fmt.Errorf("workflow lifecycle: create: %w", err)
@@ -499,10 +584,34 @@ func (l Lifecycle) Create(projectID, workflowID, projectIdentity string, g goal.
 			return State{}, fmt.Errorf("workflow lifecycle: create: %w", err)
 		}
 		roleChainHead = roleChainDigest(records)
+		roleDirective = records[len(records)-1].Handoff.MemoryDirective
 	}
 	digest, err := g.Digest()
 	if err != nil {
 		return State{}, fmt.Errorf("workflow lifecycle: create: goal digest: %w", err)
+	}
+
+	// The created payload, built before anything is probed or loaded, so that the plan it makes is
+	// checked first: a narrower that widens is refused here and never reaches the log.
+	payload := WorkflowEvent{
+		Kind:            KindCreated,
+		GoalID:          g.GoalID,
+		GoalDigest:      digest,
+		Profile:         profileName,
+		ProjectIdentity: projectIdentity,
+		ProfileSnapshot: &snapshot,
+		ProfileDigest:   snapshotDigest,
+		RoleChainID:     roleChainID,
+		RoleChainHead:   roleChainHead,
+		GoalDirective:   g.MemoryDirective,
+		RoleDirective:   roleDirective,
+	}
+	if handoff != nil {
+		payload.HandoffDigest = handoff.Digest
+		payload.HandoffDirective = handoff.Handoff.MemoryDirective
+	}
+	if _, err := PlanOf(applyEvent(State{}, payload), projectID, profile); err != nil {
+		return State{}, fmt.Errorf("workflow lifecycle: create: %w", err)
 	}
 
 	loaded, err := l.log.Load(projectID, workflowID)
@@ -513,19 +622,62 @@ func (l Lifecycle) Create(projectID, workflowID, projectIdentity string, g goal.
 		return State{}, fmt.Errorf("%w: on-disk classification is %q", ErrCreateRefused, loaded.Classification)
 	}
 
-	event, err := l.baseEvent(loaded, projectID, workflowID, KindCreated, profile)
+	event, err := l.payloadEvent(loaded, projectID, workflowID, payload, profile)
 	if err != nil {
 		return State{}, err
 	}
-	event.GoalID = g.GoalID
-	event.GoalDigest = digest
-	event.Profile = profileName
-	event.ProjectIdentity = projectIdentity
-	event.ProfileSnapshot = &snapshot
-	event.ProfileDigest = snapshotDigest
-	event.RoleChainID = roleChainID
-	event.RoleChainHead = roleChainHead
+	return l.commit(projectID, workflowID, loaded, event)
+}
 
+// Narrow appends a narrowed event for the role handoff the bound role chain has received since the
+// log last recorded its head (C23 M3, decision 3): the new head's digest and the memory directive
+// that head record carries (none, which means the base plan, when it carries none). Only the newest
+// role directive applies (see PlanOf), so a role chain that grew by several records is narrowed by
+// its last one. It fails, appending nothing, when the log is of version 1 or 2
+// (ErrNarrowersNeedVersion3), the workflow is closed (ErrClosed), it is bound to no role chain
+// (ErrNoRoleChain), the chain has no records, fails roles.VerifyChain or no longer contains the last
+// head the log recorded (ErrRoleChainInvalid), its head is that last head (ErrNothingToNarrow), or
+// the head's directive widens the plan, named as PlanOf names it.
+func (l Lifecycle) Narrow(projectID, workflowID string) (State, error) {
+	loaded, err := l.loadOwned(projectID, workflowID)
+	if err != nil {
+		return State{}, err
+	}
+	state := loaded.State
+	if state.Version < EventVersionNarrowers {
+		return State{}, fmt.Errorf("%w: the log is of version %d, and narrowers need version %d: create the workflow again", ErrNarrowersNeedVersion3, state.Version, EventVersionNarrowers)
+	}
+	if state.Status == StatusClosed {
+		return State{}, fmt.Errorf("workflow lifecycle: narrow: %w", ErrClosed)
+	}
+	if state.RoleChainID == "" {
+		return State{}, ErrNoRoleChain
+	}
+	records, err := l.loadVerifiedRoleChain(projectID, state.GoalID, state.RoleChainID)
+	if err != nil {
+		return State{}, fmt.Errorf("workflow lifecycle: narrow: %w", err)
+	}
+	last := state.LastRoleChainHead()
+	if !roleChainContainsDigest(records, last) {
+		return State{}, fmt.Errorf("workflow lifecycle: narrow: %w: role chain %q no longer contains the last head this workflow recorded (%s)", ErrRoleChainInvalid, state.RoleChainID, last)
+	}
+	head := roleChainDigest(records)
+	if head == last {
+		return State{}, fmt.Errorf("%w: its head is %s", ErrNothingToNarrow, head)
+	}
+	payload := WorkflowEvent{Kind: KindNarrowed, Narrowed: &Narrowed{RoleChainHead: head, MemoryDirective: records[len(records)-1].Handoff.MemoryDirective}}
+
+	profile, err := l.catalogProfileOf(state)
+	if err != nil {
+		return State{}, fmt.Errorf("workflow lifecycle: narrow: %w", err)
+	}
+	if _, err := PlanOf(applyEvent(state, payload), projectID, profile); err != nil {
+		return State{}, fmt.Errorf("workflow lifecycle: narrow: %w", err)
+	}
+	event, err := l.payloadEvent(loaded, projectID, workflowID, payload, profile)
+	if err != nil {
+		return State{}, err
+	}
 	return l.commit(projectID, workflowID, loaded, event)
 }
 

@@ -142,7 +142,7 @@ func TestValidateRejectsInvalidGoalValues(t *testing.T) {
 		name   string
 		mutate func(*Goal)
 	}{
-		{name: "unsupported version", mutate: func(g *Goal) { g.Version = 3 }},
+		{name: "unsupported version", mutate: func(g *Goal) { g.Version = 4 }},
 		{name: "goal id forbidden in version one", mutate: func(g *Goal) { g.GoalID = "goal-alpha" }},
 		{name: "blank version two goal id", mutate: func(g *Goal) { g.Version = 2 }},
 		{name: "blank project id", mutate: func(g *Goal) { g.ProjectID = " \t " }},
@@ -371,7 +371,7 @@ func TestVersionTwoIdentityAndStrictFieldValidation(t *testing.T) {
 		{name: "duplicate goal_id", data: []byte(duplicateGoalID)},
 		{name: "malformed goal_id", data: documentWith(t, map[string]any{"version": 2, "goal_id": 17})},
 		{name: "wrong-case goal field", data: documentWith(t, map[string]any{"version": 2, "goal_id": "goal-alpha", "GOAL_ID": "goal-beta"})},
-		{name: "unsupported version", data: documentWith(t, map[string]any{"version": 3, "goal_id": "goal-alpha"})},
+		{name: "unsupported version", data: documentWith(t, map[string]any{"version": 4, "goal_id": "goal-alpha"})},
 		{name: "v1 rejects goal_id", data: documentWith(t, map[string]any{"goal_id": "goal-alpha"})},
 		{name: "v1 rejects empty goal_id", data: documentWith(t, map[string]any{"goal_id": ""})},
 		{name: "v1 rejects null goal_id", data: documentWith(t, map[string]any{"goal_id": nil})},

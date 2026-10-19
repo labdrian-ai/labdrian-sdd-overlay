@@ -83,6 +83,24 @@ func TestWorkflowCreateRejectsUnknownFlag(t *testing.T) {
 	}
 }
 
+// --handoff takes a value on create alone; every other verb refuses it as an unknown flag.
+func TestWorkflowHandoffFlagIsCreateAlone(t *testing.T) {
+	workflowTestStateHome(t)
+	for _, tt := range []struct {
+		args []string
+		want string
+	}{
+		{[]string{"create", "--project", "p", "--workflow", "w", "--goal", "g.json", "--profile", "odd", "--handoff"}, "--handoff requires a value"},
+		{[]string{"start", "--project", "p", "--workflow", "w", "--handoff", "h.json"}, `unknown flag "--handoff"`},
+		{[]string{"narrow", "--project", "p", "--workflow", "w", "--handoff", "h.json"}, `unknown flag "--handoff"`},
+	} {
+		r := runWorkflowTest(tt.args, t.TempDir())
+		if r.code != 1 || r.stdout != "" || !strings.Contains(r.stderr, tt.want) {
+			t.Errorf("args=%v: code=%d stdout=%q stderr=%q, want exit 1 containing %q", tt.args, r.code, r.stdout, r.stderr, tt.want)
+		}
+	}
+}
+
 func TestWorkflowCreateRejectsMissingGoalFile(t *testing.T) {
 	workflowTestStateHome(t)
 	dir := t.TempDir()

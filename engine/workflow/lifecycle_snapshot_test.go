@@ -98,8 +98,8 @@ func TestCreateRecordsTheSnapshotOfTheProfileTheCatalogGave(t *testing.T) {
 				t.Fatalf("Create() = %v, want nil", err)
 			}
 			created := w.events()[0]
-			if created.Version != EventVersionSnapshot {
-				t.Errorf("version = %d, want %d", created.Version, EventVersionSnapshot)
+			if created.Version != EventVersion {
+				t.Errorf("version = %d, want %d", created.Version, EventVersion)
 			}
 			if created.ProfileSnapshot == nil || !reflect.DeepEqual(*created.ProfileSnapshot, profile.Snapshot()) {
 				t.Errorf("profile_snapshot = %+v, want %+v", created.ProfileSnapshot, profile.Snapshot())

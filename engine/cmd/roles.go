@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/memoryscope"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/roles"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/shaper"
 )
@@ -111,9 +112,10 @@ func parseRolesArgs(args []string, allowStdin bool, required []string) (rolesOpt
 }
 
 // runRolesValidate implements 'roles validate --file <path>'. It is
-// read-only: it strictly parses and validates one RoleHandoff record from
-// disk, read through the record bound (roles.MaxRecordBytes), and reports the
-// result. It never touches the chain store.
+// read-only: it strictly parses and validates one RoleHandoff record (v1 or
+// v2) from disk, read through the record bound (roles.MaxRecordBytes), and
+// reports the result, with a v2 record's memory_directive when it carries one.
+// It never touches the chain store.
 func runRolesValidate(args []string, stdout, stderr io.Writer, exit func(int)) {
 	o, err := parseRolesArgs(args, false, []string{"--file"})
 	if err != nil {
@@ -133,15 +135,18 @@ func runRolesValidate(args []string, stdout, stderr io.Writer, exit func(int)) {
 		exit(1)
 		return
 	}
+	// memory_directive is shown only when a version 2 record carries one, so a v1 record's
+	// output is what it always was.
 	out := struct {
-		Valid     bool   `json:"valid"`
-		FromRole  string `json:"from_role"`
-		ToRole    string `json:"to_role"`
-		Status    string `json:"status"`
-		Authority string `json:"authority"`
+		Valid           bool                   `json:"valid"`
+		FromRole        string                 `json:"from_role"`
+		ToRole          string                 `json:"to_role"`
+		Status          string                 `json:"status"`
+		MemoryDirective *memoryscope.Directive `json:"memory_directive,omitempty"`
+		Authority       string                 `json:"authority"`
 	}{
 		Valid: true, FromRole: string(h.FromRole), ToRole: string(h.ToRole), Status: string(h.Status),
-		Authority: rolesAuthorityNote,
+		MemoryDirective: h.MemoryDirective, Authority: rolesAuthorityNote,
 	}
 	writeRolesJSON(stdout, stderr, out, exit)
 }

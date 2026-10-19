@@ -62,8 +62,8 @@ const (
 	// ReasonHandoffDigestMismatch (refused): the recorded handoff SHA-256
 	// does not match the handoff bytes.
 	ReasonHandoffDigestMismatch Reason = "handoff_digest_mismatch"
-	// ReasonGoalInvalid (refused): the Goal bytes are not a valid version 2
-	// Goal.
+	// ReasonGoalInvalid (refused): the Goal bytes are not a valid Goal of the
+	// version the handoff pairs with: 2, or 3 for a handoff version 4.
 	ReasonGoalInvalid Reason = "goal_invalid"
 	// ReasonGoalDigestMismatch (refused): the recorded Goal SHA-256 does not
 	// match the Goal bytes.

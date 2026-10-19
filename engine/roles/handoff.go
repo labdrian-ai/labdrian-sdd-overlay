@@ -7,10 +7,18 @@ import (
 	"fmt"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/jsonstrict"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/memoryscope"
 )
 
-// HandoffVersion is the only RoleHandoff wire version this package accepts.
-const HandoffVersion = 1
+// The RoleHandoff wire versions this package accepts. A version 2 record is a version 1
+// record that may also carry a memory_directive; a version 1 record refuses that member as
+// unknown, so it parses exactly as it always did.
+const (
+	// HandoffVersion is version 1, the original RoleHandoff.
+	HandoffVersion = 1
+	// HandoffVersionV2 adds the optional memory_directive.
+	HandoffVersionV2 = 2
+)
 
 // Status is the outcome of one role's work on a handoff record.
 type Status string
@@ -63,13 +71,22 @@ type RoleHandoff struct {
 	// ResumeReason must be present and non-blank when Status is
 	// StatusInterrupted, and absent when Status is StatusCompleted.
 	ResumeReason *string `json:"resume_reason,omitempty"`
+	// MemoryDirective is the memory the handing-off role lets the next role read, a strict
+	// MemoryDirective v1 object. It exists only in a version 2 record and is optional there:
+	// nil means the record carries no directive, which a workflow reads as its base plan.
+	MemoryDirective *memoryscope.Directive `json:"memory_directive,omitempty"`
 }
 
+// roleHandoffFields are the members of a version 1 record.
 var roleHandoffFields = []string{
 	"version", "project_id", "goal_id", "chain_id", "seq", "from_role", "to_role",
 	"prev_sha256", "payload_kind", "payload_sha256", "evidence", "context", "status",
 	"resume_reason",
 }
+
+// roleHandoffV2Fields are the members of a version 2 record: those of version 1 and the
+// optional memory_directive.
+var roleHandoffV2Fields = append(append([]string{}, roleHandoffFields...), "memory_directive")
 
 var (
 	evidenceItemFields = []string{"kind", "ref", "sha256"}
@@ -95,7 +112,9 @@ var ErrRecordTooLarge = errors.New("roles: handoff record is too large")
 
 // ParseRoleHandoff strictly parses one RoleHandoff record: bounded overall size, valid
 // UTF-8, no duplicate keys at any depth, no unknown fields at any depth (exact case),
-// no trailing data, the pinned version, and every field shape via Validate.
+// no trailing data, a known version, and every field shape via Validate. The members a record
+// may have are those of its version: memory_directive is known only to a version 2 record, and
+// is parsed there by memoryscope.ParseDirective, as strictly as a directive on its own.
 func ParseRoleHandoff(data []byte) (RoleHandoff, error) {
 	if len(data) > MaxRecordBytes {
 		return RoleHandoff{}, fmt.Errorf("parse role handoff: %w: %d bytes, the maximum is %d", ErrRecordTooLarge, len(data), MaxRecordBytes)
@@ -106,7 +125,7 @@ func ParseRoleHandoff(data []byte) (RoleHandoff, error) {
 	if err := jsonstrict.CheckNoDuplicateKeys(data); err != nil {
 		return RoleHandoff{}, fmt.Errorf("parse role handoff: %w", err)
 	}
-	if err := jsonstrict.CheckKnownFields(data, "role handoff", roleHandoffFields); err != nil {
+	if err := jsonstrict.CheckKnownFields(data, "role handoff", fieldsOfVersion(data)); err != nil {
 		return RoleHandoff{}, fmt.Errorf("parse role handoff: %w", err)
 	}
 	var raw map[string]json.RawMessage
@@ -127,6 +146,22 @@ func ParseRoleHandoff(data []byte) (RoleHandoff, error) {
 	return h, nil
 }
 
+// fieldsOfVersion returns the members a record of data's version may have. Only a record whose
+// exact-case "version" member is the number 2 gets the version 2 members; every other document,
+// including one that is not an object or names another version, gets the version 1 members, so
+// it is refused with the words it always was.
+func fieldsOfVersion(data []byte) []string {
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return roleHandoffFields
+	}
+	var version int
+	if err := json.Unmarshal(raw["version"], &version); err != nil || version != HandoffVersionV2 {
+		return roleHandoffFields
+	}
+	return roleHandoffV2Fields
+}
+
 // checkNestedHandoffFields rejects unknown keys in every nested record
 // object with exact-case matching, the same defense clearance.go applies:
 // encoding/json matches struct fields without regard to case and the last
@@ -140,17 +175,23 @@ func checkNestedHandoffFields(raw map[string]json.RawMessage) error {
 			return fmt.Errorf("context: %w", err)
 		}
 	}
-	v, ok := raw["evidence"]
-	if !ok || isNull(v) {
-		return nil
+	if v, ok := raw["evidence"]; ok && !isNull(v) {
+		var items []json.RawMessage
+		if err := json.Unmarshal(v, &items); err != nil {
+			return fmt.Errorf("evidence: %w", err)
+		}
+		for i, item := range items {
+			if err := jsonstrict.CheckKnownFields(item, "role handoff evidence item", evidenceItemFields); err != nil {
+				return fmt.Errorf("evidence[%d]: %w", i, err)
+			}
+		}
 	}
-	var items []json.RawMessage
-	if err := json.Unmarshal(v, &items); err != nil {
-		return fmt.Errorf("evidence: %w", err)
-	}
-	for i, item := range items {
-		if err := jsonstrict.CheckKnownFields(item, "role handoff evidence item", evidenceItemFields); err != nil {
-			return fmt.Errorf("evidence[%d]: %w", i, err)
+	// A memory_directive member is present only in a version 2 record (the version 1 members
+	// refuse it). It is parsed by the directive's own parser, null included: absent is how a
+	// record says it carries no directive.
+	if v, ok := raw["memory_directive"]; ok {
+		if _, err := memoryscope.ParseDirective(v); err != nil {
+			return fmt.Errorf("memory_directive: %w", err)
 		}
 	}
 	return nil

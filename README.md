@@ -490,7 +490,7 @@ overlay shaper <verb>
                                                                                    the Pi /shaper-clear dialog; deny guards block model-run invocations)
     A ready result is not a signature: any process running as the same OS user, including any installed
     Pi extension, can forge a clearance record. Readiness grants no execution authority.
-    Handoff versions 2 and 3 can reach ready: each acceptance item is {"criterion": ..., "verification":
+    Handoff versions 2 to 4 can reach ready: each acceptance item is {"criterion": ..., "verification":
     {"check": ...} or {"adjudication": ...}}, and the presented view shows every criterion with its planned
     check or adjudication. Checks are planned verification only; nothing runs them, and their results are
     downstream fulfillment evidence, not a readiness prerequisite. Handoff version 1 stays draft
@@ -502,13 +502,22 @@ overlay shaper <verb>
     such a handoff is invalid and never ready. Any item byte-identical to a Goal non_goal is refused. The presented view shows
     memory_scope and delivery_limit beside the Goal's memory_scope and delivery_boundary for human judgment.
     A version 2 ready output states that those plan fields are absent; a version 3 one states they are present.
+    Version 4 is version 3 with memory_scope replaced by memory_directive, a strict MemoryDirective v1 object
+    ({"version": 1, "scope": "none"|"goal"|"project", "sources": [...], "write": "none"}, the same object
+    `memory plan` reads); an unknown or case-variant key inside it is refused. A version 4 handoff pairs with a
+    Goal version 3, which likewise replaces memory_scope with memory_directive; handoff versions 1 to 3 pair
+    with a Goal version 2, and any other pairing is refused (goal_invalid). Goals versions 1 and 2, and handoff
+    versions 1 to 3, still parse and narrow nothing. The version 4 view (headed view 4) shows each directive on
+    one line, for example memory_directive "version=1 scope=goal sources=[engram,longterm-mem] write=none"
+    beside goal_memory_directive.
 
 overlay roles <verb>
     Forward reusable-role handoff verbs to the engine unchanged. Roles are data only: a closed
     vocabulary (prototyper, shaper, estimator, builder, sweeper, polisher, reviewer, delivery,
-    with sweeper and polisher optional) and a typed RoleHandoff v1 record chained by SHA-256 to
-    the previous record. No verb launches an agent, dispatches work, or grants execution
-    authority.
+    with sweeper and polisher optional) and a typed RoleHandoff record chained by SHA-256 to
+    the previous record. A v2 record may carry an optional `memory_directive` (a MemoryDirective
+    v1 object) that narrows what the next role reads; a chain may move from v1 to v2, never
+    back. No verb launches an agent, dispatches work, or grants execution authority.
     validate --file <path>                                                       read-only: strictly parse and validate one RoleHandoff record
     next    --project <id> --goal <id> --chain <id>                              read-only: allowed next roles from the chain's current position
     resume  --project <id> --goal <id> --chain <id>                              read-only: current role, whether it is interrupted, and why
@@ -529,13 +538,27 @@ overlay memory <verb>
         --goal-directive and
         then --handoff-directive (each narrower may only shrink scope and reuse a subset of the
         running sources; any widening is refused with a named reason), and print the resulting
-        query plan as JSON. --goal, when given, is parsed with the Goal v2 schema and supplies
-        the plan's project_id (and goal_id, for scope goal) filters. Exit 0 on a resolved plan,
-        2 on a refused or invalid input, 1 on a usage error or a failed write of the plan.
+        query plan as JSON. --goal, when given, is parsed with the Goal v2 or v3 schema and
+        supplies the plan's project_id (and goal_id, for scope goal) filters; a Goal v3's own
+        memory_directive narrows first, before --goal-directive, as it does in a workflow created
+        from that Goal. Exit 0 on a resolved
+        plan, 2 on a refused or invalid input, 1 on a usage error or a failed write of the plan.
+        This form tries a directive before a workflow records it.
+    plan --project <id> --workflow <id>
+        Print the plan the memory gate applies to the workflow, computed from its log alone, in
+        the same JSON: the profile's ceiling (from the profile snapshot the log carries) narrowed
+        by the Goal's directive, then the shaper handoff's, then the role handoff directive in
+        force (the latest narrowed event's, or the one recorded at create; a role handoff with no
+        directive means the base). The project filter is the identity the workflow recorded, or
+        its slug when it recorded none. A workflow created before narrowers (a log of version 1
+        or 2) holds none, so its plan is the profile's ceiling. It does not combine with
+        --profile, --goal, --goal-directive or --handoff-directive (a usage error, exit 1), and
+        --project and --workflow go together. Exit 2 for a workflow that is not owned or a plan
+        that cannot be computed.
 
 overlay workflow <verb>
     Forward standalone workflow lifecycle verbs (Phase 6) to the engine unchanged: create,
-    start, pause, resume, stage, verify, close, and status, plus the session-binding verbs bind,
+    start, pause, resume, narrow, stage, verify, close, and status, plus the session-binding verbs bind,
     unbind, and binding (Phase 7, described after status). A workflow is its own append-only,
     hash-chained event log stored outside the repository at
     $XDG_STATE_HOME/labdrian/workflows/<project_id>/<workflow_id>.jsonl (or
@@ -547,12 +570,32 @@ overlay workflow <verb>
     database, the longterm-mem registration record, gentle-ai on PATH), never opened, run, or
     trusted, and the detail says what presence does not prove. No verb here executes a workflow step or check; that is a runtime adapter's
     responsibility outside this overlay (Phase 7).
-    create --project <id> --workflow <id> --goal <path> --profile <name> [--role-chain <id>]
+    create --project <id> --workflow <id> --goal <path> --profile <name> [--role-chain <id>] [--handoff <path>]
         Create a workflow: binds the Goal's SHA-256 digest, the named Workflow Profile, and,
         when --role-chain is given, that role chain's current head digest (the chain may grow
-        afterward, but verify requires this exact record to still be present).
+        afterward, but verify requires this exact record to still be present). A new workflow
+        is a log of version 3, which also records the memory narrowers there are: the
+        memory_directive of a Goal v3, the directive of the role chain's head record (a role
+        handoff v2 that carries one), and, with --handoff, the SHA-256 of the shaper handoff
+        file's bytes and its memory_directive. --handoff is read like --goal and must be a
+        shaper handoff v4 (the only version with a directive) of the Goal's project_id and
+        goal_id, paired with a Goal v3; any other is refused. A directive that widens the plan
+        (a scope above the running one, or a source not in it) is refused with its name, for
+        example "the role handoff memory directive widens the plan: adds source longterm-mem not
+        present in the current scope", and nothing is written.
     start | pause | resume --project <id> --workflow <id>
         Advance the workflow's status (created -> running -> paused -> running -> ...).
+    narrow --project <id> --workflow <id>
+        Record the role handoff the bound role chain received since the log last recorded its
+        head: one narrowed event with the chain's new head digest and the directive that record
+        carries (none when it carries none, which means the base: the ceiling narrowed by the Goal
+        and the shaper handoff). Only the latest role directive applies, over the base, so a later
+        role can get back to the base and never past it. Legal while created, running, or paused;
+        it changes no status, and a completed close still needs a verify right before it. Refused,
+        writing nothing, for a workflow with no role chain, a chain that no longer verifies or no
+        longer holds the last recorded head, a chain with no new handoff, a directive that widens
+        the plan, and a workflow created before narrowers (version 1 or 2: create it again).
+        Prints the state; the narrowers appear in it only when there are any.
     stage --project <id> --workflow <id> --stage <name>
         Record the Workflow Profile's next declared stage; rejected if <name> is not exactly
         that next stage.
@@ -767,7 +810,8 @@ gentle-ai-overlay projection hook --event UserPromptSubmit|PreToolUse
     with either part left out when it is empty. additionalContext (at most 16 KiB, the same bytes for
     the same state, no timestamps) states the workflow id and project, the profile, the status, the
     goal id and a short digest, the recorded, current, and next stage, the memory plan (a read-only
-    plan: scope, sources, project_id, goal_id, write=none), the dependencies the last event recorded
+    plan: scope, sources, project_id, goal_id, write=none; the profile ceiling narrowed by the
+    directives the workflow log stored, exactly as `memory plan --project --workflow` prints it), the dependencies the last event recorded
     as unavailable, and the Claude Code capabilities the engine declares partial or unsupported. A
     paused workflow is announced as paused, to be advanced only after `workflow resume`. systemMessage is
     one warning line for the user.
@@ -795,7 +839,8 @@ gentle-ai-overlay projection hook --event UserPromptSubmit|PreToolUse
       - Memory gate, for a created, running, or paused workflow: a call to the longterm-mem `query` tool
         (the MCP name mcp__longterm-mem__query, or a plugin-prefixed mcp__<plugin>_longterm-mem__query) is
         denied when its `project` argument is missing, not a string, empty, or different from the project
-        of the workflow's memory plan (the profile ceiling the context states; the reason names both
+        of the workflow's memory plan (the plan the context states: the profile ceiling narrowed by the
+        directives the log stored; the reason names both
         projects and says to query the plan's project or unbind). A plan with no project (scope none, the
         standalone-minimal profile) permits no query at all. It never denies `get`, `promote`, Engram
         tools, or any write, and it does not check the plan's sources: a plan that omits longterm-mem does

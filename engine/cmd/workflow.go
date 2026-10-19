@@ -31,6 +31,8 @@ import (
 	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/goal"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/memoryscope"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/shaper"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow"
 )
 
@@ -46,7 +48,7 @@ func runWorkflow(p process, d deps, args []string) {
 // directory.
 func runWorkflowCore(d deps, args []string, cwd string, stdout, stderr io.Writer, exit func(int)) {
 	if len(args) == 0 {
-		fmt.Fprintln(stderr, "error: workflow requires a verb: create, start, pause, resume, stage, verify, close, status, bind, unbind, binding")
+		fmt.Fprintln(stderr, "error: workflow requires a verb: create, start, pause, resume, stage, verify, close, narrow, status, bind, unbind, binding")
 		exit(1)
 		return
 	}
@@ -68,6 +70,8 @@ func runWorkflowCore(d deps, args []string, cwd string, stdout, stderr io.Writer
 		runWorkflowClose(d, rest, cwd, stdout, stderr, exit)
 	case "status":
 		runWorkflowStatus(d, rest, cwd, stdout, stderr, exit)
+	case "narrow":
+		runWorkflowTransition(d, rest, cwd, stdout, stderr, exit, "narrow", workflow.Lifecycle.Narrow)
 	case "bind":
 		runWorkflowBind(d, rest, cwd, stdout, stderr, exit)
 	case "unbind":
@@ -75,7 +79,7 @@ func runWorkflowCore(d deps, args []string, cwd string, stdout, stderr io.Writer
 	case "binding":
 		runWorkflowBinding(d, rest, cwd, stdout, stderr, exit)
 	default:
-		fmt.Fprintf(stderr, "error: workflow: unknown verb %q (expected create, start, pause, resume, stage, verify, close, status, bind, unbind, or binding)\n", verb)
+		fmt.Fprintf(stderr, "error: workflow: unknown verb %q (expected create, start, pause, resume, stage, verify, close, narrow, status, bind, unbind, or binding)\n", verb)
 		exit(1)
 	}
 }
@@ -83,7 +87,7 @@ func runWorkflowCore(d deps, args []string, cwd string, stdout, stderr io.Writer
 // workflowOpts are the parsed workflow flags. Not every verb uses every
 // field.
 type workflowOpts struct {
-	project, workflowID, goalFile, profile, roleChain, stage, outcome, reason string
+	project, workflowID, goalFile, profile, roleChain, stage, outcome, reason, handoffFile string
 }
 
 // parseWorkflowArgs parses --project/--workflow/--goal/--profile/
@@ -91,11 +95,18 @@ type workflowOpts struct {
 // flag, a flag without its value, a positional argument, or a missing
 // required flag.
 func parseWorkflowArgs(args []string, required []string) (workflowOpts, error) {
+	return parseWorkflowFlags(args, required, false)
+}
+
+// parseWorkflowFlags is parseWorkflowArgs, which also takes --handoff when
+// allowHandoff (create alone takes it; every other verb refuses it as an
+// unknown flag, as before).
+func parseWorkflowFlags(args []string, required []string, allowHandoff bool) (workflowOpts, error) {
 	var o workflowOpts
 	for i := 0; i < len(args); i++ {
 		a := args[i]
-		switch a {
-		case "--project", "--workflow", "--goal", "--profile", "--role-chain", "--stage", "--outcome", "--reason":
+		switch {
+		case isWorkflowValueFlag(a, allowHandoff):
 			if i+1 >= len(args) {
 				return o, fmt.Errorf("%s requires a value", a)
 			}
@@ -117,6 +128,8 @@ func parseWorkflowArgs(args []string, required []string) (workflowOpts, error) {
 				o.outcome = args[i]
 			case "--reason":
 				o.reason = args[i]
+			case "--handoff":
+				o.handoffFile = args[i]
 			}
 		default:
 			if strings.HasPrefix(a, "-") {
@@ -135,6 +148,18 @@ func parseWorkflowArgs(args []string, required []string) (workflowOpts, error) {
 		}
 	}
 	return o, nil
+}
+
+// isWorkflowValueFlag reports whether a is a workflow flag that takes a value:
+// every one parseWorkflowArgs parses, and --handoff when allowHandoff.
+func isWorkflowValueFlag(a string, allowHandoff bool) bool {
+	switch a {
+	case "--project", "--workflow", "--goal", "--profile", "--role-chain", "--stage", "--outcome", "--reason":
+		return true
+	case "--handoff":
+		return allowHandoff
+	}
+	return false
 }
 
 // pathGoalReader is the workflow.GoalReader the CLI uses: it re-reads and
@@ -195,10 +220,25 @@ func newWorkflowLifecycle(d deps, cwd, goalFile string, stderr io.Writer) (workf
 	}), nil
 }
 
+// readShaperHandoff reads and strictly parses the --handoff file the way --goal
+// is read (a path as given, read whole), and pairs the handoff with the SHA-256
+// of the exact bytes read, which the created event records.
+func readShaperHandoff(path string) (workflow.ShaperHandoff, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return workflow.ShaperHandoff{}, fmt.Errorf("read --handoff: %w", err)
+	}
+	h, err := shaper.Parse(data)
+	if err != nil {
+		return workflow.ShaperHandoff{}, fmt.Errorf("parse --handoff: %w", err)
+	}
+	return workflow.ShaperHandoff{Handoff: h, Digest: shaper.SourceSHA256(data)}, nil
+}
+
 // runWorkflowCreate implements 'workflow create --project --workflow --goal
-// --profile [--role-chain]'.
+// --profile [--role-chain] [--handoff]'.
 func runWorkflowCreate(d deps, args []string, cwd string, stdout, stderr io.Writer, exit func(int)) {
-	o, err := parseWorkflowArgs(args, []string{"--project", "--workflow", "--goal", "--profile"})
+	o, err := parseWorkflowFlags(args, []string{"--project", "--workflow", "--goal", "--profile"}, true)
 	if err != nil {
 		fmt.Fprintf(stderr, "error: workflow create: %v\n", err)
 		exit(1)
@@ -215,6 +255,16 @@ func runWorkflowCreate(d deps, args []string, cwd string, stdout, stderr io.Writ
 		fmt.Fprintf(stderr, "error: workflow create: parse --goal: %v\n", err)
 		exit(2)
 		return
+	}
+	var handoff *workflow.ShaperHandoff
+	if o.handoffFile != "" {
+		h, err := readShaperHandoff(o.handoffFile)
+		if err != nil {
+			fmt.Fprintf(stderr, "error: workflow create: %v\n", err)
+			exit(2)
+			return
+		}
+		handoff = &h
 	}
 	// "" here, not o.goalFile: Create takes the already-read-and-parsed g
 	// directly and never calls the injected GoalReader (only Verify does),
@@ -243,7 +293,12 @@ func runWorkflowCreate(d deps, args []string, cwd string, stdout, stderr io.Writ
 		projectIdentity = o.project
 		fmt.Fprintf(stderr, "warning: workflow create: the project identity could not be resolved (%s), so the workflow records its slug, %s, as its identity\n", strings.NewReplacer("\n", " ", "\r", " ").Replace(err.Error()), o.project)
 	}
-	state, err := lc.Create(o.project, o.workflowID, projectIdentity, g, o.profile, o.roleChain)
+	var state workflow.State
+	if handoff != nil {
+		state, err = lc.CreateWithHandoff(o.project, o.workflowID, projectIdentity, g, o.profile, o.roleChain, *handoff)
+	} else {
+		state, err = lc.Create(o.project, o.workflowID, projectIdentity, g, o.profile, o.roleChain)
+	}
 	if err != nil {
 		fmt.Fprintf(stderr, "error: workflow create: %v\n", err)
 		exit(2)
@@ -252,8 +307,10 @@ func runWorkflowCreate(d deps, args []string, cwd string, stdout, stderr io.Writ
 	writeWorkflowState(stdout, stderr, workflow.ClassificationOwned, state, nil, exit)
 }
 
-// runWorkflowTransition implements the three verbs that need only
-// --project/--workflow: start, pause, resume.
+// runWorkflowTransition implements the verbs that need only
+// --project/--workflow and append one event: start, pause, resume, and narrow
+// (a narrowed event for the role handoff the bound role chain received since
+// the log last recorded its head; C23 M3).
 func runWorkflowTransition(d deps, args []string, cwd string, stdout, stderr io.Writer, exit func(int), label string, op func(workflow.Lifecycle, string, string) (workflow.State, error)) {
 	o, err := parseWorkflowArgs(args, []string{"--project", "--workflow"})
 	if err != nil {
@@ -404,17 +461,27 @@ func runWorkflowStatus(d deps, args []string, cwd string, stdout, stderr io.Writ
 // so the CLI's wire shape does not depend on engine/workflow.State's
 // internal field names or its unexported bookkeeping fields.
 type workflowStateJSON struct {
-	Classification  string   `json:"classification"`
-	Status          string   `json:"status"`
-	Profile         string   `json:"profile,omitempty"`
-	GoalID          string   `json:"goal_id,omitempty"`
-	GoalDigest      string   `json:"goal_digest,omitempty"`
-	RoleChainID     string   `json:"role_chain_id,omitempty"`
-	RoleChainHead   string   `json:"role_chain_head,omitempty"`
-	Stages          []string `json:"stages"`
-	LastVerifiedSeq int      `json:"last_verified_seq"`
-	CloseOutcome    string   `json:"close_outcome,omitempty"`
-	CloseReason     string   `json:"close_reason,omitempty"`
+	Classification string `json:"classification"`
+	Status         string `json:"status"`
+	Profile        string `json:"profile,omitempty"`
+	GoalID         string `json:"goal_id,omitempty"`
+	GoalDigest     string `json:"goal_digest,omitempty"`
+	RoleChainID    string `json:"role_chain_id,omitempty"`
+	RoleChainHead  string `json:"role_chain_head,omitempty"`
+	// The memory narrowers the log stored (C23 M3), each absent when there is none, so the state of a
+	// workflow with none, and of every log of version 1 or 2, keeps its bytes: the Goal's, the shaper
+	// handoff's digest and directive, the role directive recorded at create, and the head and
+	// directive of the latest narrowed event.
+	GoalDirective         *memoryscope.Directive `json:"goal_directive,omitempty"`
+	HandoffDigest         string                 `json:"handoff_digest,omitempty"`
+	HandoffDirective      *memoryscope.Directive `json:"handoff_directive,omitempty"`
+	RoleDirective         *memoryscope.Directive `json:"role_directive,omitempty"`
+	NarrowedRoleChainHead string                 `json:"narrowed_role_chain_head,omitempty"`
+	NarrowedRoleDirective *memoryscope.Directive `json:"narrowed_role_directive,omitempty"`
+	Stages                []string               `json:"stages"`
+	LastVerifiedSeq       int                    `json:"last_verified_seq"`
+	CloseOutcome          string                 `json:"close_outcome,omitempty"`
+	CloseReason           string                 `json:"close_reason,omitempty"`
 	// ProfileDrift is present only in the answer of 'workflow status', and only when the profile a
 	// workflow recorded is no longer the built-in profile of its name; without drift the field is
 	// absent, so every status that did not report drift keeps its bytes.
@@ -461,18 +528,24 @@ func newWorkflowStateJSON(classification workflow.Classification, s workflow.Sta
 		stages = []string{}
 	}
 	return workflowStateJSON{
-		ProfileDrift:    newProfileDriftJSON(drift),
-		Classification:  string(classification),
-		Status:          string(s.Status),
-		Profile:         s.Profile,
-		GoalID:          s.GoalID,
-		GoalDigest:      s.GoalDigest,
-		RoleChainID:     s.RoleChainID,
-		RoleChainHead:   s.RoleChainHead,
-		Stages:          stages,
-		LastVerifiedSeq: s.LastVerifiedSeq,
-		CloseOutcome:    string(s.CloseOutcome),
-		CloseReason:     s.CloseReason,
+		ProfileDrift:          newProfileDriftJSON(drift),
+		Classification:        string(classification),
+		Status:                string(s.Status),
+		Profile:               s.Profile,
+		GoalID:                s.GoalID,
+		GoalDigest:            s.GoalDigest,
+		RoleChainID:           s.RoleChainID,
+		RoleChainHead:         s.RoleChainHead,
+		GoalDirective:         s.GoalDirective,
+		HandoffDigest:         s.HandoffDigest,
+		HandoffDirective:      s.HandoffDirective,
+		RoleDirective:         s.RoleDirective,
+		NarrowedRoleChainHead: s.NarrowedHead,
+		NarrowedRoleDirective: s.NarrowedDirective,
+		Stages:                stages,
+		LastVerifiedSeq:       s.LastVerifiedSeq,
+		CloseOutcome:          string(s.CloseOutcome),
+		CloseReason:           s.CloseReason,
 	}
 }
 

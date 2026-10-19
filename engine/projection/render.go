@@ -269,8 +269,9 @@ func nextStage(state workflow.State, recorded []string) string {
 	return sanitizeLine(next)
 }
 
-// memoryPlanLines renders the memory plan of the workflow's profile: the profile
-// ceiling, resolved for the project and goal, exactly as 'memory plan' prints it.
+// memoryPlanLines renders the memory plan of the workflow (resolvePlan): the
+// profile ceiling narrowed by the directives its log stored, resolved for the
+// project and goal, exactly as 'memory plan --project --workflow' prints it.
 // The plan is only a description of what may be read. It is stated as such,
 // because nothing here queries or enforces anything.
 func memoryPlanLines(state workflow.State, projectID string) []string {
