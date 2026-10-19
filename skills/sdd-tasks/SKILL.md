@@ -41,7 +41,7 @@ From the orchestrator:
 
 > Follow **Section B** (retrieval) and **Section C** (persistence) from `skills/_shared/sdd-phase-common.md`.
 
-- **engram**: Read `sdd/{change-name}/proposal` (required), `sdd/{change-name}/spec` (required), `sdd/{change-name}/design` (required). Save as `sdd/{change-name}/tasks`.
+- **engram**: Read `sdd/{change-name}/proposal` (required), `sdd/{change-name}/spec` (required), `sdd/{change-name}/design` (required), `sdd/{change-name}/entry` (optional). Save as `sdd/{change-name}/tasks`.
 - **openspec**: Read and follow `skills/_shared/openspec-convention.md`.
 - **hybrid**: Follow BOTH conventions — persist to Engram AND write `tasks.md` to filesystem. Retrieve dependencies from Engram (primary) with filesystem fallback.
 - **none**: Return result only. Never create or modify project files.
@@ -87,11 +87,11 @@ openspec/changes/{change-name}/
 | Chained PRs recommended | Yes / No |
 | Suggested split | <single PR or PR 1 → PR 2 → PR 3> |
 | Delivery strategy | <ask-on-risk / auto-chain / single-pr / exception-ok> |
-| Chain strategy | <stacked-to-main / feature-branch-chain / size-exception / pending> |
+| Chain strategy | <stacked-to-main / feature-branch-chain / none> |
 
 Decision needed before apply: <Yes|No>
 Chained PRs recommended: <Yes|No>
-Chain strategy: <stacked-to-main|feature-branch-chain|size-exception|pending>
+Chain strategy: <stacked-to-main|feature-branch-chain|none>
 400-line budget risk: <Low|Medium|High>
 
 ### Suggested Work Units
@@ -169,7 +169,7 @@ The forecast MUST include these exact plain-text lines so downstream guards can 
 ```text
 Decision needed before apply: Yes|No
 Chained PRs recommended: Yes|No
-Chain strategy: stacked-to-main|feature-branch-chain|size-exception|pending
+Chain strategy: stacked-to-main|feature-branch-chain|none
 400-line budget risk: Low|Medium|High
 ```
 

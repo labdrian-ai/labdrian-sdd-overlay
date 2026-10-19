@@ -42,7 +42,7 @@ From the orchestrator:
 
 > Follow **Section B** (retrieval) and **Section C** (persistence) from `skills/_shared/sdd-phase-common.md`.
 
-**Reads are store-blind.** Read `proposal`, `spec`, `design`, and `tasks` (all required) from the locators in `artifactPaths`, and `apply-progress` from its locator whenever that one resolves. Do not detect the store and do not assemble locators yourself.
+**Reads are store-blind.** Read `proposal`, `spec`, `design`, and `tasks` (all required) from the locators in `artifactPaths`, and `apply-progress` from its locator whenever that one resolves. Also read `entry` (i.e. `sdd/{change-name}/entry`) whenever its locator resolves — it is optional, so a missing entry contract never blocks apply. Do not detect the store and do not assemble locators yourself.
 
 Writes name a mechanism because writing a file and saving an observation are different operations, but the reported store selects it — you do not:
 
@@ -89,15 +89,21 @@ If the forecast says any of the following:
 
 Then you MUST confirm the orchestrator/user provided a resolved delivery path:
 
-1. **`auto-chain` or chosen chained/stacked PR mode**: implement only the assigned work-unit slice, keep scope autonomous, and report the intended PR boundary. Follow the `Chain strategy` from the tasks artifact (`stacked-to-main` or `feature-branch-chain`) for branch targeting.
+1. **`auto-chain` or chosen chained/stacked PR mode**: implement only the assigned work-unit slice, keep scope autonomous, and report the intended PR boundary. Follow the `Chain strategy` from the tasks artifact for branch targeting, per the routing table below.
 2. **`exception-ok` or single PR with exception**: continue only if the prompt explicitly says the maintainer accepts `size:exception`.
 3. **`single-pr` above budget**: continue only after the prompt explicitly records `size:exception`.
 
-Also check for `Chain strategy` in the tasks artifact. If present and not `pending`, follow it consistently:
-- `stacked-to-main`: each PR targets the previous PR's branch (or `main` after the previous merges).
-- `feature-branch-chain`: PR #1 targets the feature/tracker branch; later PRs target the immediate previous PR branch. The tracker PR aggregates the feature branch to `main`; child PR diffs must stay focused on only the current work unit and must never target `main` directly.
+Check for `Chain strategy` in the tasks artifact and route it through this table. Every value the schema can store gets exactly one route:
 
-If neither delivery decision nor chain strategy is present, STOP before writing code and return `blocked` with: `Workload decision required before apply: estimated work may exceed 400 changed lines. Ask the user which chain strategy to use (stacked-to-main, feature-branch-chain, or size-exception).`
+| `chain_strategy` | How apply routes it |
+|---|---|
+| `stacked-to-main` | Each PR targets the previous PR's branch (or `main` after the previous merges). |
+| `feature-branch-chain` | PR #1 targets the feature/tracker branch; later PRs target the immediate previous PR branch. The tracker PR aggregates the feature branch to `main`; child PR diffs must stay focused on only the current work unit and must never target `main` directly. |
+| `none` | No chaining is needed; route the PR by `delivery_strategy` alone. |
+
+**Unknown-value guard (MANDATORY, and it must fire HERE).** A value that is not a row in the table above has no route in this skill. Do NOT pick the nearest topology, and do NOT default to `stacked-to-main` because it is the common case. Do NOT proceed either: STOP before writing code and return `blocked`, naming the unrecognised value and where it came from (tasks artifact, prompt, or entry contract). The orchestrator carries the same guard, but it cannot fire on a value minted inside this phase agent, so the check has to exist on both sides of the handoff.
+
+If the tasks artifact carries neither a delivery decision nor a chain strategy value at all, STOP before writing code and return `blocked` with: `Workload decision required before apply: estimated work may exceed 400 changed lines. Ask the user which chain strategy to use.`
 
 The budget constrains how work is sliced, never the code itself. Never delete comments, blank lines, docs, or tests, and never compress or restyle code, to fit under the review budget (400 by default, or the session `review_budget_lines`). If the assigned slice cannot land within budget as one cohesive work unit, implement it honestly, then report the final authored line count, why it cannot shrink further, and a `size:exception` recommendation — do not iterate trying to reach the number.
 
@@ -196,6 +202,7 @@ Follow **Section C** from `skills/_shared/sdd-phase-common.md`.
 - topic_key: `sdd/{change-name}/apply-progress`
 - type: `architecture`
 - Also mark completed tasks `[x]` at the `tasks` locator, using the write mechanism the reported store requires.
+- Plan vs Realized Slice Count (MANDATORY, per `skills/_shared/sdd-orchestrator-workflow.md`): when the orchestrator's plan-vs-realized check applies to this batch, record its verdict literally in `apply-progress` — `slices planned=P realized=R` when within tolerance, or `slice drift: planned=P realized=R` when drifted, with `P` and `R` replaced by the actual counts.
 
 #### Merge Protocol
 
