@@ -11,6 +11,7 @@ package projection_test
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 	"unicode/utf8"
@@ -48,14 +49,22 @@ func reading(q projection.QueryArguments) func() projection.QueryArguments {
 }
 
 // gate runs the gate for an owned binding to wf-1 of proj-1 and the workflow w, with the edit
-// tools of editTools.
+// tools of editTools, and lastSegment as the rule of how Engram names a project.
 func gate(w *workflow.Loaded, tool string, query projection.QueryArguments) projection.GateResult {
 	return projection.Gate(projection.GateInput{
-		Binding:   ownedBinding(),
-		Workflow:  w,
-		EditTools: editTools,
-		Call:      projection.ToolCall{Name: tool, ReadQuery: reading(query)},
+		Binding:    ownedBinding(),
+		Workflow:   w,
+		EditTools:  editTools,
+		EngramName: lastSegment,
+		Call:       projection.ToolCall{Name: tool, ReadQuery: reading(query)},
 	})
+}
+
+// lastSegment is what identity.EngramName does, which the engine gives the gate: the gate has no
+// rule of its own (TestTheEngramProjectCheckUsesTheCallersNamingRule), and the commands test that
+// the engine wires the real one.
+func lastSegment(identity string) string {
+	return identity[strings.LastIndex(identity, "/")+1:]
 }
 
 func allowed(t *testing.T, label string, got projection.GateResult) {
@@ -83,17 +92,22 @@ func denied(t *testing.T, label string, got projection.GateResult, wantIn ...str
 // --- which tools the gate has an opinion about --------------------------------
 
 // TestGateRelevantSelectsOnlyTheToolsTheGateChecks: the gate needs the binding and the workflow
-// only for a file-edit tool (of the list the caller gives) or a longterm-mem query; every other
-// tool is decided from its name alone, so the hook never touches the stores for it.
+// only for a file-edit tool (of the list the caller gives), a memory read, or a tool that can use a
+// skill (Skill, and Read, which GateRelevantCall narrows to a SKILL.md); every other tool is
+// decided from its name alone, so the hook never touches the stores for it.
 func TestGateRelevantSelectsOnlyTheToolsTheGateChecks(t *testing.T) {
-	for _, tool := range []string{"Write", "Edit", "MultiEdit", "NotebookEdit", "mcp__longterm-mem__query", "mcp__plugin_x_longterm-mem__query"} {
+	for _, tool := range []string{
+		"Write", "Edit", "MultiEdit", "NotebookEdit", "mcp__longterm-mem__query", "mcp__plugin_x_longterm-mem__query",
+		"mcp__longterm-mem__get", "mcp__engram__mem_search", "mcp__plugin_engram_engram__mem_get_observation",
+		"Skill", "Read",
+	} {
 		if !projection.GateRelevant(editTools, tool) {
 			t.Errorf("GateRelevant(%q) = false, want true", tool)
 		}
 	}
 	for _, tool := range []string{
-		"", "Bash", "Read", "Grep", "Glob", "Task", "WebFetch", "TodoWrite", "write", "Writer",
-		"mcp__longterm-mem__get", "mcp__longterm-mem__promote", "mcp__longterm-memx__query", "mcp__engram__mem_save",
+		"", "Bash", "skill", "read", "Grep", "Glob", "Task", "WebFetch", "TodoWrite", "write", "Writer",
+		"mcp__longterm-mem__promote", "mcp__longterm-memx__query", "mcp__engram__mem_save",
 	} {
 		if projection.GateRelevant(editTools, tool) {
 			t.Errorf("GateRelevant(%q) = true, want false", tool)
@@ -103,23 +117,25 @@ func TestGateRelevantSelectsOnlyTheToolsTheGateChecks(t *testing.T) {
 
 // TestTheArgumentsOfACallAreReadOnlyForAMemoryQuery: reading the arguments of a call costs the
 // caller a decode of the whole input, which for a file edit is the file, so the gate asks for
-// them only for the one tool whose arguments it checks, and at most once. It is the gate that
-// decides that, and not its caller, who would have to know which tool it is.
+// them only for the tools whose project it checks (a longterm-mem query, an Engram mem_search or
+// mem_context), and at most once. It is the gate that decides that, and not its caller, who would
+// have to know which tool it is.
 func TestTheArgumentsOfACallAreReadOnlyForAMemoryQuery(t *testing.T) {
-	tools := append(append([]string{}, editTools...), "Bash", "Read", "mcp__longterm-mem__get", queryTool, pluginQueryTool)
+	tools := append(append([]string{}, editTools...), "Bash", "Read", "mcp__longterm-mem__get", "mcp__engram__mem_get_observation", queryTool, pluginQueryTool, "mcp__engram__mem_search", "mcp__plugin_engram_engram__mem_context")
 	for _, status := range []workflow.Status{workflow.StatusCreated, workflow.StatusRunning, workflow.StatusPaused, workflow.StatusClosed} {
 		for _, tool := range tools {
 			t.Run(string(status)+"/"+tool, func(t *testing.T) {
 				reads := 0
 				projection.Gate(projection.GateInput{
-					Binding: ownedBinding(), Workflow: loadedWorkflow("odd", status), EditTools: editTools,
+					Binding: ownedBinding(), Workflow: loadedWorkflow("odd", status), EditTools: editTools, EngramName: lastSegment,
 					Call: projection.ToolCall{Name: tool, ReadQuery: func() projection.QueryArguments {
 						reads++
 						return named("proj-1")
 					}},
 				})
 				want := 0
-				if (tool == queryTool || tool == pluginQueryTool) && status != workflow.StatusClosed {
+				projectRead := tool == queryTool || tool == pluginQueryTool || tool == "mcp__engram__mem_search" || tool == "mcp__plugin_engram_engram__mem_context"
+				if projectRead && status != workflow.StatusClosed {
 					want = 1
 				}
 				if reads != want {
@@ -319,7 +335,6 @@ func TestGateRecognizesOnlyTheLongtermMemQueryToolName(t *testing.T) {
 		{"mcp__xlongterm-mem__query", false},
 		{"mcp__plugin_xlongterm-mem__query", false},
 		{"mcp__plugin_x_longterm-mem_y__query", false},
-		{"mcp__engram__mem_search", false},
 		{"mcp__engram__query", false},
 		{"mcp__other__query", false},
 		{"longterm-mem__query", false},
@@ -433,8 +448,9 @@ func TestGateDeniesEveryQueryWhenThePlanHasNoProject(t *testing.T) {
 				"standalone-minimal", "permits no project", "labdrian workflow unbind")
 		}
 	}
-	// Tools other than the query stay open, so is every edit tool while running.
-	for _, tool := range []string{"mcp__longterm-mem__get", "mcp__longterm-mem__promote", "mcp__engram__mem_save", "Bash", "Edit", "Write"} {
+	// The writes stay open, and so is every edit tool while running. The other memory reads are
+	// denied too (gate_memory_test.go).
+	for _, tool := range []string{"mcp__longterm-mem__promote", "mcp__engram__mem_save", "Bash", "Edit", "Write"} {
 		allowed(t, "scope none/"+tool, gate(w, tool, unnamed))
 	}
 }
@@ -449,8 +465,8 @@ func TestGateAppliesTheMemoryGateInEveryOpenStatusAndOnlyThen(t *testing.T) {
 
 func TestGateUsesTheProfilesPlanForEveryProfile(t *testing.T) {
 	// The gate and the context must agree on the plan, so the same inputs are
-	// used: the context's memory line says which project (or none) is permitted,
-	// and the gate must permit exactly that.
+	// used: the context's memory line says which project (or none) is permitted
+	// and from which sources, and the gate must permit exactly that.
 	for _, profile := range []string{"odd", "sdd", "standalone-minimal", "maintenance", "incident-recovery"} {
 		t.Run(profile, func(t *testing.T) {
 			w := loadedWorkflow(profile, workflow.StatusRunning)
@@ -460,6 +476,13 @@ func TestGateUsesTheProfilesPlanForEveryProfile(t *testing.T) {
 			if permitted && !strings.Contains(line, "project_id=proj-1") {
 				t.Fatalf("test bug: line %q names neither a project nor none", line)
 			}
+			var sources string
+			for _, field := range strings.Fields(line) {
+				if value, ok := strings.CutPrefix(field, "sources="); ok {
+					sources = value
+				}
+			}
+			permitted = permitted && slices.Contains(strings.Split(sources, ","), "longterm-mem")
 
 			right := gate(w, queryTool, named("proj-1"))
 			wrong := gate(w, queryTool, named("proj-2"))
@@ -487,8 +510,8 @@ func TestGateAllowsAndWarnsWhenThePlanCannotBeComputed(t *testing.T) {
 			t.Errorf("%s: Gate() = %+v, want an allow with a one-line warning that names the profile and says the query was not checked", tool, got)
 		}
 	}
-	// Nothing else is affected, and nothing else warns.
-	for _, tool := range []string{"Bash", "Edit", "mcp__longterm-mem__get", "mcp__longterm-mem__promote"} {
+	// Nothing but the memory reads is affected, and nothing else warns.
+	for _, tool := range []string{"Bash", "Edit", "mcp__longterm-mem__promote"} {
 		allowed(t, "unresolvable profile/"+tool, gate(w, tool, unnamed))
 	}
 	// A paused workflow with such a profile still gates its edit tools: the paused

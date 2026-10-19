@@ -45,7 +45,7 @@ $ projection hook --event PreToolUse
 --- exit ---
 0
 --- stdout ---
-{"systemMessage":"labdrian: workflow wf-1 of project proj-1 records no project identity (it was created before workflows recorded one), so the project of this longterm-mem query was not checked against its memory plan."}
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian: the memory plan of workflow wf-1 of project proj-1 (profile \"sdd\") does not include source \"longterm-mem\", so this longterm-mem query is denied. Stop following this workflow with 'labdrian workflow unbind' to query."}}
 --- stderr ---
 
 $ projection hook --event PreToolUse
@@ -55,7 +55,7 @@ $ projection hook --event PreToolUse
 --- exit ---
 0
 --- stdout ---
-{"systemMessage":"labdrian: workflow wf-1 of project proj-1 records no project identity (it was created before workflows recorded one), so the project of this longterm-mem query was not checked against its memory plan."}
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian: the memory plan of workflow wf-1 of project proj-1 (profile \"sdd\") does not include source \"longterm-mem\", so this longterm-mem query is denied. Stop following this workflow with 'labdrian workflow unbind' to query."}}
 --- stderr ---
 
 $ projection hook --event UserPromptSubmit
@@ -135,7 +135,7 @@ $ projection hook --event PreToolUse
 --- exit ---
 0
 --- stdout ---
-{"systemMessage":"labdrian: workflow wf-1 of project proj-1 records no project identity (it was created before workflows recorded one), so the project of this longterm-mem query was not checked against its memory plan."}
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian: the memory plan of workflow wf-1 of project proj-1 (profile \"incident-recovery\") does not include source \"longterm-mem\", so this longterm-mem query is denied. Stop following this workflow with 'labdrian workflow unbind' to query."}}
 --- stderr ---
 
 $ projection hook --event PreToolUse
@@ -145,6 +145,6 @@ $ projection hook --event PreToolUse
 --- exit ---
 0
 --- stdout ---
-{"systemMessage":"labdrian: workflow wf-1 of project proj-1 records no project identity (it was created before workflows recorded one), so the project of this longterm-mem query was not checked against its memory plan."}
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian: the memory plan of workflow wf-1 of project proj-1 (profile \"incident-recovery\") does not include source \"longterm-mem\", so this longterm-mem query is denied. Stop following this workflow with 'labdrian workflow unbind' to query."}}
 --- stderr ---
 

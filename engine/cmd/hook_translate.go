@@ -8,6 +8,8 @@ package main
 // reply that says it.
 
 import (
+	"path/filepath"
+
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gate"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/hookwire"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection"
@@ -38,14 +40,48 @@ func occasionOf(event string) projection.Occasion {
 }
 
 // gateCall is a tool call of a PreToolUse input as the projection gate reads it. The arguments
-// are read as those of a memory query, and only when the gate asks for them (projection.ToolCall):
+// are read as those of a memory read, and only when the gate asks for them (projection.ToolCall):
 // reading them decodes the whole input of the call, which for a file edit is the file, and the
-// gate wants them for a memory query alone.
+// gate wants them for a memory read that names a project alone. So are the skill of a Skill call and
+// the file of a Read (C23 M4 decision 5), each for its own tool alone.
 func gateCall(in hookwire.PreToolUse) projection.ToolCall {
-	return projection.ToolCall{Name: in.Tool, ReadQuery: func() projection.QueryArguments {
-		q := in.Query()
-		return projection.QueryArguments{Named: q.Named, Project: q.Project}
-	}}
+	return projection.ToolCall{
+		Name: in.Tool,
+		ReadQuery: func() projection.QueryArguments {
+			q := in.Query()
+			return projection.QueryArguments{Named: q.Named, Project: q.Project, AllProjects: q.AllProjects}
+		},
+		ReadSkill:    in.Skill,
+		ReadFilePath: onceString(func() string { return realSkillFile(in.FilePath()) }),
+	}
+}
+
+// onceString is read, called at most once: the hook asks for the file of a Read several times
+// (whether the gate looks at it, whether the lock is read, and the rule itself), and resolving its
+// links each time could give the questions different answers if a link changed in between.
+func onceString(read func() string) func() string {
+	var value string
+	done := false
+	return func() string {
+		if !done {
+			value, done = read(), true
+		}
+		return value
+	}
+}
+
+// realSkillFile is path with its symbolic links resolved when it is an absolute path to a SKILL.md
+// that exists, so a skill file read through a link to the repository is the file the lock names
+// (proceduralLockReader lists the real paths too); any other path is returned as it is, without
+// touching the file system.
+func realSkillFile(path string) string {
+	if filepath.Base(path) != "SKILL.md" || !filepath.IsAbs(path) {
+		return path
+	}
+	if real, err := filepath.EvalSymlinks(path); err == nil {
+		return real
+	}
+	return path
 }
 
 // gateReply is what a decision of the projection gate says to Claude Code. Only a denial has a

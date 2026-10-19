@@ -34,6 +34,7 @@ $ projection hook --event PreToolUse
 --- exit ---
 0
 --- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian: the memory plan of workflow wf-1 of project proj-1 (profile \"sdd\") does not include source \"longterm-mem\", so this longterm-mem query is denied. Stop following this workflow with 'labdrian workflow unbind' to query."}}
 --- stderr ---
 
 $ projection hook --event PreToolUse
@@ -43,7 +44,7 @@ $ projection hook --event PreToolUse
 --- exit ---
 0
 --- stdout ---
-{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian: this longterm-mem query asks for project \"proj-2\", but the memory plan of workflow wf-1 of project proj-1 permits only project \"proj-1\". Query project \"proj-1\", or stop following this workflow with 'labdrian workflow unbind'."}}
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian: the memory plan of workflow wf-1 of project proj-1 (profile \"sdd\") does not include source \"longterm-mem\", so this longterm-mem query is denied. Stop following this workflow with 'labdrian workflow unbind' to query."}}
 --- stderr ---
 
 $ projection hook --event PreToolUse
@@ -53,7 +54,7 @@ $ projection hook --event PreToolUse
 --- exit ---
 0
 --- stdout ---
-{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian: this longterm-mem query names no project (the project argument is missing, not a string, or empty), but the memory plan of workflow wf-1 of project proj-1 permits only project \"proj-1\". Query project \"proj-1\", or stop following this workflow with 'labdrian workflow unbind'."}}
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian: the memory plan of workflow wf-1 of project proj-1 (profile \"sdd\") does not include source \"longterm-mem\", so this longterm-mem query is denied. Stop following this workflow with 'labdrian workflow unbind' to query."}}
 --- stderr ---
 
 $ projection hook --event PreToolUse
@@ -122,6 +123,7 @@ $ projection hook --event PreToolUse
 --- exit ---
 0
 --- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian: the memory plan of workflow wf-1 of project proj-1 (profile \"incident-recovery\") does not include source \"longterm-mem\", so this longterm-mem query is denied. Stop following this workflow with 'labdrian workflow unbind' to query."}}
 --- stderr ---
 
 $ projection hook --event PreToolUse
@@ -131,7 +133,7 @@ $ projection hook --event PreToolUse
 --- exit ---
 0
 --- stdout ---
-{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian: this longterm-mem query asks for project \"proj-2\", but the memory plan of workflow wf-1 of project proj-1 permits only project \"proj-1\". Query project \"proj-1\", or stop following this workflow with 'labdrian workflow unbind'."}}
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian: the memory plan of workflow wf-1 of project proj-1 (profile \"incident-recovery\") does not include source \"longterm-mem\", so this longterm-mem query is denied. Stop following this workflow with 'labdrian workflow unbind' to query."}}
 --- stderr ---
 
 $ projection hook --event PreToolUse
@@ -141,6 +143,6 @@ $ projection hook --event PreToolUse
 --- exit ---
 0
 --- stdout ---
-{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian: this longterm-mem query names no project (the project argument is missing, not a string, or empty), but the memory plan of workflow wf-1 of project proj-1 permits only project \"proj-1\". Query project \"proj-1\", or stop following this workflow with 'labdrian workflow unbind'."}}
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian: the memory plan of workflow wf-1 of project proj-1 (profile \"incident-recovery\") does not include source \"longterm-mem\", so this longterm-mem query is denied. Stop following this workflow with 'labdrian workflow unbind' to query."}}
 --- stderr ---
 

@@ -693,14 +693,14 @@ func TestRunMergeSettings_Idempotent(t *testing.T) {
 	// Two pairs install (minimalism + anti-generic-design) → 2 entries under
 	// UserPromptSubmit; PreToolUse additionally carries the review-receipt
 	// entry and the two shaper clearance guard entries → 5. The projection
-	// family adds one UserPromptSubmit entry and two PreToolUse entries →
-	// 3 and 7, and the approve guard adds two more PreToolUse entries → 9.
+	// family adds one UserPromptSubmit entry and five PreToolUse entries →
+	// 3 and 10, and the approve guard adds two more PreToolUse entries → 12.
 	// merge-settings run twice stays at these counts (idempotent).
 	if n := countEntries("UserPromptSubmit"); n != 3 {
 		t.Errorf("UserPromptSubmit: expected 3 entries, got %d", n)
 	}
-	if n := countEntries("PreToolUse"); n != 9 {
-		t.Errorf("PreToolUse: expected 9 entries, got %d", n)
+	if n := countEntries("PreToolUse"); n != 12 {
+		t.Errorf("PreToolUse: expected 12 entries, got %d", n)
 	}
 }
 

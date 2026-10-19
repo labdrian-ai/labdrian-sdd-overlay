@@ -20,16 +20,38 @@ const (
 	// install-specific prefixes such as mcp__plugin_x_longterm-mem__query, and it
 	// is not narrower than what the hook itself re-checks.
 	ProjectionMemoryQueryMatcher = `^mcp__([A-Za-z0-9-]+_)*longterm-mem__query$`
+	// ProjectionMemoryGetMatcher is the PreToolUse matcher of the entry that
+	// runs the memory gate for a longterm-mem get, a read by id that passes only
+	// when the plan includes longterm-mem (C23 M4). Like the query matcher, it is
+	// the gate's own tool-name pattern.
+	ProjectionMemoryGetMatcher = `^mcp__([A-Za-z0-9-]+_)*longterm-mem__get$`
+	// ProjectionEngramReadMatcher is the PreToolUse matcher of the entry that
+	// runs the memory gate for the Engram reads (C23 M4): mem_search and
+	// mem_context, which must name the workflow's project, and
+	// mem_get_observation and mem_timeline, which read by id. It is the union
+	// of the gate's two Engram patterns, with a plugin prefix such as
+	// mcp__plugin_engram_engram__mem_search allowed, and no Engram write.
+	ProjectionEngramReadMatcher = `^mcp__([A-Za-z0-9-]+_)*engram__(mem_search|mem_context|mem_get_observation|mem_timeline)$`
+	// ProjectionProceduralSkillMatcher is the PreToolUse matcher of the entry
+	// that runs the memory gate for the tools that can use a procedural skill
+	// (C23 M4 decision 5): the Skill tool and Read. Made of letters and a pipe,
+	// Claude Code reads it as a list of exact tool names. The hook itself answers
+	// a Read of any file but a SKILL.md before it reads anything.
+	ProjectionProceduralSkillMatcher = "Skill|Read"
 )
 
 // projectionFamily is the whole family in install order: one UserPromptSubmit
-// entry and two PreToolUse entries.
+// entry and a PreToolUse entry per matcher. The entries added by C23 M4 come
+// last, so an install made before it gains them at the end and keeps the rest.
 var projectionFamily = hookFamily{
 	identity: LabdrianProjectionIdentity,
 	specs: []hookSpec{
 		{event: "UserPromptSubmit"},
 		{event: "PreToolUse", matcher: ProjectionEditToolMatcher},
 		{event: "PreToolUse", matcher: ProjectionMemoryQueryMatcher},
+		{event: "PreToolUse", matcher: ProjectionMemoryGetMatcher},
+		{event: "PreToolUse", matcher: ProjectionEngramReadMatcher},
+		{event: "PreToolUse", matcher: ProjectionProceduralSkillMatcher},
 	},
 	build: buildProjectionEntry,
 }

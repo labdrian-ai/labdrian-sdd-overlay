@@ -11,6 +11,7 @@ import (
 	"errors"
 	"reflect"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"unicode/utf8"
@@ -80,6 +81,7 @@ func TestGateCallCarriesTheNameAndReadsTheArgumentsOfAMemoryQueryWhenAsked(t *te
 		"arguments that are not named": {query + `[1]}`, projection.QueryArguments{}},
 		"arguments that are a string":  {query + `"proj-1"}`, projection.QueryArguments{}},
 		"no arguments":                 {`{"tool_name":"mcp__longterm-mem__query"}`, projection.QueryArguments{}},
+		"every project":                {query + `{"project":"p","all_projects":true}}`, projection.QueryArguments{Named: true, Project: "p", AllProjects: true}},
 	} {
 		t.Run(name, func(t *testing.T) {
 			call := gateCall(decodePreToolUse(t, tc.input))
@@ -107,6 +109,45 @@ func TestGateCallOfAnotherToolKeepsOnlyItsName(t *testing.T) {
 	if got := gateCall(decodePreToolUse(t, `{}`)); got.Name != "" {
 		t.Errorf("a call with no tool name = %+v, want the empty name", got)
 	}
+}
+
+// TestGateCallReadsTheSkillAndTheFilePathOnRequest: the gate reads the skill of a Skill call and the
+// file of a Read through the call (C23 M4 decision 5).
+func TestGateCallReadsTheSkillAndTheFilePathOnRequest(t *testing.T) {
+	skill := gateCall(decodePreToolUse(t, `{"tool_name":"Skill","tool_input":{"skill":"deploy-checks"}}`))
+	if skill.ReadSkill == nil || skill.ReadSkill() != "deploy-checks" {
+		t.Errorf("a Skill call: ReadSkill reads %q, want deploy-checks", argumentOf(skill.ReadSkill))
+	}
+	file := gateCall(decodePreToolUse(t, `{"tool_name":"Read","tool_input":{"file_path":"/r/SKILL.md"}}`))
+	if file.ReadFilePath == nil || file.ReadFilePath() != "/r/SKILL.md" {
+		t.Errorf("a Read call: ReadFilePath reads %q, want /r/SKILL.md", argumentOf(file.ReadFilePath))
+	}
+}
+
+// TestOnceStringReadsTheArgumentOnce: the file of a Read is resolved once however often the hook
+// asks for it, and every answer is the first one.
+func TestOnceStringReadsTheArgumentOnce(t *testing.T) {
+	calls := 0
+	read := onceString(func() string { calls++; return "answer-" + strconv.Itoa(calls) })
+	for i := 0; i < 3; i++ {
+		if got := read(); got != "answer-1" {
+			t.Errorf("read %d = %q, want answer-1", i, got)
+		}
+	}
+	if calls != 1 {
+		t.Errorf("the reader ran %d times, want 1", calls)
+	}
+}
+
+// argumentOf is the argument a lazy reader of a projection.ToolCall reads, or "<nil>" for a nil
+// reader, so a failure message tells a missing reader from an empty argument.
+// The projection package's tests keep their own copy, as a test helper cannot be shared across
+// packages.
+func argumentOf(f func() string) string {
+	if f == nil {
+		return "<nil>"
+	}
+	return f()
 }
 
 // --- what a decision of the gate says --------------------------------------------------------

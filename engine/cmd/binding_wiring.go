@@ -4,6 +4,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/identity"
+
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection/app"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow"
@@ -33,6 +35,11 @@ func (d deps) promptHook() app.HookService {
 		Bindings:     d.runBindings(),
 		Workflows:    workflowReader{},
 		EditTools:    gatedEditTools(),
+		// Engram names a project by the last segment of its shared identity (C23 M2 decision 3),
+		// which the gate's Engram project check compares a read with.
+		EngramName: identity.EngramName,
+		// The procedural skills of the lock are of source procedural-skills (C23 M4 decision 5).
+		ProceduralSkills: newProceduralLockReader(),
 	}
 }
 

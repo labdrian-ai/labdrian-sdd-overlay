@@ -795,7 +795,9 @@ gentle-ai-overlay projection hook --event UserPromptSubmit|PreToolUse
     each tool call (PreToolUse); a person does
     not. There is no `overlay projection` wrapper, so it runs on the installed engine binary,
     ~/.claude/bin/gentle-ai-overlay. `install-hooks` installs it into Claude Code settings.json
-    (one UserPromptSubmit entry and two PreToolUse entries, the file-edit tools and the longterm-mem query tool);
+    (one UserPromptSubmit entry and five PreToolUse entries: the file-edit tools, the longterm-mem query tool, the
+    longterm-mem get tool, the Engram reads mem_search, mem_context, mem_get_observation and mem_timeline, and
+    the Skill and Read tools);
     on an existing install, re-run `install-hooks` and restart Claude Code to load it, because Claude Code reads
     hooks only at start and `status-hooks` reports degraded until the entries are in place. Its tests feed it hook JSON.
     UserPromptSubmit and PreToolUse are the events supported.
@@ -836,15 +838,33 @@ gentle-ai-overlay projection hook --event UserPromptSubmit|PreToolUse
         workflow and project and the two ways out, `labdrian workflow resume --project <p> --workflow <w>`
         or `labdrian workflow unbind`. It never denies Bash (a shell command cannot be classified
         reliably), a read, or any other tool.
-      - Memory gate, for a created, running, or paused workflow: a call to the longterm-mem `query` tool
-        (the MCP name mcp__longterm-mem__query, or a plugin-prefixed mcp__<plugin>_longterm-mem__query) is
-        denied when its `project` argument is missing, not a string, empty, or different from the project
-        of the workflow's memory plan (the plan the context states: the profile ceiling narrowed by the
-        directives the log stored; the reason names both
-        projects and says to query the plan's project or unbind). A plan with no project (scope none, the
-        standalone-minimal profile) permits no query at all. It never denies `get`, `promote`, Engram
-        tools, or any write, and it does not check the plan's sources: a plan that omits longterm-mem does
-        not deny a query to its own project.
+      - Memory gate, for a created, running, or paused workflow, against the workflow's memory plan (the
+        plan the context states: the profile ceiling narrowed by the directives the log stored). It checks
+        the memory reads: the longterm-mem `query` and `get` tools, and the Engram `mem_search`,
+        `mem_context`, `mem_get_observation` and `mem_timeline` tools, each by its MCP name, bare
+        (mcp__longterm-mem__query, mcp__engram__mem_search) or plugin-prefixed
+        (mcp__<plugin>_longterm-mem__query, mcp__plugin_engram_engram__mem_search); a lookalike server
+        name (mcp__engramx__mem_search) is not one. A plan with no project (scope none, the
+        standalone-minimal profile) permits no read at all, and a read of a source the plan does not
+        include is denied (the sdd profile's plan holds engram alone, so a longterm-mem query or get is
+        denied; the reason names the source and the profile and says to unbind). Then a `query` is
+        denied when its `project` argument is missing, not a string, empty, or different from the plan's
+        project (the reason names both projects and says to query the plan's project or unbind), and a
+        `mem_search` or `mem_context` is denied when its `project` is missing, not a string, empty, or
+        other than the name Engram gives the workflow's identity (its last path segment:
+        github.com/acme/proj-1 is proj-1), or when it sets `all_projects` to true. A read by id (`get`,
+        `mem_get_observation`, `mem_timeline`) passes once its source is in the plan. A workflow that
+        recorded no project identity (created before workflows recorded one) has its project checks
+        skipped with one warning. The project's procedural skills are of source `procedural-skills`: the
+        Skill tool for a skill the project's procedural skills lock records
+        (`.labdrian/procedural-skills.lock.json` at the worktree root), and a Read whose absolute path,
+        cleaned, is one of that skill's SKILL.md files (the lock's targets under the worktree root), are
+        denied when the plan does not include that source (sdd), naming the skill. A skill the lock does
+        not record, a skill the lock records as a registry install, and a global skill pass. A Read of any
+        other file is not looked at: the hook decides that from the path before it reads the binding,
+        the workflow, or the lock. No lock means no procedural skill. A lock that cannot be read allows,
+        with one warning, when the plan would have denied a procedural skill.
+        It never denies `promote`, an Engram write, or any other write.
       - Everything else is allowed: no binding, a binding or workflow it cannot follow (foreign, malformed,
         drifted, unavailable, gone), a closed workflow, an unrecognized status, a plan that cannot be
         computed, or input it cannot use. It never blocks on an unknown state.
@@ -852,7 +872,7 @@ gentle-ai-overlay projection hook --event UserPromptSubmit|PreToolUse
     {"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"..."}},
     with exit 0 (the JSON decides; exit 2 is never used). An allow prints nothing, or only a
     {"systemMessage":"..."} warning when the gate had something to check and could not (a memory plan it
-    cannot compute, a query whose input is not an object, a recovered internal error, which also goes to
+    cannot compute, a query or Engram read whose input is not an object, a procedural skills lock it cannot read, a recovered internal error, which also goes to
     stderr in full); it never prints permissionDecision "allow", which would bypass Claude Code's normal
     permission flow. It stays silent for a binding or workflow it cannot follow, because it runs on every
     tool call and UserPromptSubmit already warns once per prompt. An in-flight tool call cannot be

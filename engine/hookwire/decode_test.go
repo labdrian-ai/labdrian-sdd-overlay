@@ -299,6 +299,15 @@ func TestQueryArgumentsAreReadTheWayTheMemoryGateReadThem(t *testing.T) {
 		{"a key in another case is another key", `{"PROJECT":"proj-1"}`, hookwire.QueryArguments{Named: true}},
 		{"the last of two keys wins", `{"project":"a","project":"proj-1"}`, hookwire.QueryArguments{Named: true, Project: "proj-1"}},
 		{"an empty object", `{}`, hookwire.QueryArguments{Named: true}},
+		// all_projects is true only for the JSON value true (an Engram read that asks for every project).
+		{"all projects", `{"project":"proj-1","all_projects":true}`, hookwire.QueryArguments{Named: true, Project: "proj-1", AllProjects: true}},
+		{"all projects with no project", `{"all_projects":true}`, hookwire.QueryArguments{Named: true, AllProjects: true}},
+		{"all projects false", `{"all_projects":false}`, hookwire.QueryArguments{Named: true}},
+		{"all projects as text", `{"all_projects":"true"}`, hookwire.QueryArguments{Named: true}},
+		{"all projects as a number", `{"all_projects":1}`, hookwire.QueryArguments{Named: true}},
+		{"all projects null", `{"all_projects":null}`, hookwire.QueryArguments{Named: true}},
+		{"all projects in another case", `{"ALL_PROJECTS":true}`, hookwire.QueryArguments{Named: true}},
+		{"the last of two all projects wins", `{"all_projects":true,"all_projects":false}`, hookwire.QueryArguments{Named: true}},
 		{"a string", `"proj-1"`, hookwire.QueryArguments{}},
 		{"an array", `[1]`, hookwire.QueryArguments{}},
 		{"a number", `5`, hookwire.QueryArguments{}},
@@ -316,6 +325,42 @@ func TestQueryArgumentsAreReadTheWayTheMemoryGateReadThem(t *testing.T) {
 			}
 			if q := got.Query(); q != tt.want {
 				t.Errorf("Query() = %+v, want %+v", q, tt.want)
+			}
+		})
+	}
+}
+
+// TestTheSkillAndTheFilePathAreReadAsText: the skill a Skill call names and the file a Read names
+// are their "skill" and "file_path" arguments when those are text, and "" otherwise (C23 M4
+// decision 5).
+func TestTheSkillAndTheFilePathAreReadAsText(t *testing.T) {
+	for _, tt := range []struct {
+		name, toolInput, skill, path string
+	}{
+		{"a skill", `{"skill":"deploy-checks","args":"x"}`, "deploy-checks", ""},
+		{"a file path", `{"file_path":"/r/.claude/skills/a/SKILL.md","limit":5}`, "", "/r/.claude/skills/a/SKILL.md"},
+		{"both", `{"skill":"a","file_path":"/b"}`, "a", "/b"},
+		{"not text", `{"skill":1,"file_path":["/b"]}`, "", ""},
+		{"null", `{"skill":null,"file_path":null}`, "", ""},
+		{"another case", `{"Skill":"a","FILE_PATH":"/b"}`, "", ""},
+		{"the last of two wins", `{"skill":"a","skill":"b"}`, "b", ""},
+		{"not an object", `"deploy-checks"`, "", ""},
+		{"absent", ``, "", ""},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			data := `{"tool_name":"Skill"`
+			if tt.toolInput != "" {
+				data += `,"tool_input":` + tt.toolInput
+			}
+			got, err := hookwire.DecodePreToolUse([]byte(data + `}`))
+			if err != nil {
+				t.Fatalf("DecodePreToolUse() = %v", err)
+			}
+			if s := got.Skill(); s != tt.skill {
+				t.Errorf("Skill() = %q, want %q", s, tt.skill)
+			}
+			if p := got.FilePath(); p != tt.path {
+				t.Errorf("FilePath() = %q, want %q", p, tt.path)
 			}
 		})
 	}

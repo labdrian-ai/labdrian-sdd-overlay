@@ -3,6 +3,7 @@ package app
 import (
 	"time"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow"
 )
 
@@ -16,6 +17,16 @@ import (
 // data and not an error. The identifiers must already be valid.
 type WorkflowReader interface {
 	Load(projectID, workflowID string) workflow.Loaded
+}
+
+// ProceduralSkillsReader is how the hook reads the procedural skills lock of the repository a
+// directory belongs to (C23 M4 decision 5). The use case owns the port; an adapter at the edge reads
+// the lock file and the composition root wires the two.
+//
+// Load never fails: no lock is the zero value (no procedural skill), and a lock that cannot be read
+// or is not valid is reported in ProceduralSkills.Unreadable, which the gate turns into one warning.
+type ProceduralSkillsReader interface {
+	Load(dir string) projection.ProceduralSkills
 }
 
 // Clock tells the time a binding is made at. The use case owns the port so that none of the inner

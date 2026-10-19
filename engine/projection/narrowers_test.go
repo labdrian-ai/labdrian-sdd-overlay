@@ -73,12 +73,17 @@ func TestTheGateEnforcesThePlanTheStoredNarrowersMake(t *testing.T) {
 	none := narrowedWorkflow(narrowerDirective(memoryscope.ScopeProject, memoryscope.SourceEngram), nil, narrowerDirective(memoryscope.ScopeNone))
 	denied(t, "a role directive of scope none", gate(none, queryTool, named("proj-1")), "scope none")
 
-	// A later role handoff with no directive gets back to the base, which permits proj-1.
-	back := narrowedWorkflow(narrowerDirective(memoryscope.ScopeProject, memoryscope.SourceEngram), nil, narrowerDirective(memoryscope.ScopeNone))
+	// A later role handoff with no directive gets back to the base, which permits proj-1 from
+	// longterm-mem.
+	back := narrowedWorkflow(narrowerDirective(memoryscope.ScopeProject, memoryscope.SourceEngram, memoryscope.SourceLongtermMem), nil, narrowerDirective(memoryscope.ScopeNone))
 	back.State.NarrowedHead = hex64("2")
 	if got := gate(back, queryTool, named("proj-1")); got.Deny || got.Warning != "" {
 		t.Errorf("after a role with no directive: Gate() = %+v, want an allow without a warning", got)
 	}
+	// The sources a narrower keeps are enforced too: a goal directive of engram alone denies the
+	// query (C23 M4, decision 1).
+	engramOnly := narrowedWorkflow(narrowerDirective(memoryscope.ScopeProject, memoryscope.SourceEngram), nil, nil)
+	denied(t, "a goal directive of engram alone", gate(engramOnly, queryTool, named("proj-1")), `does not include source "longterm-mem"`)
 
 	// A narrower the plan cannot apply: the gate allows, and says it could not check.
 	widening := narrowedWorkflow(narrowerDirective(memoryscope.ScopeGoal, memoryscope.SourceEngram), narrowerDirective(memoryscope.ScopeProject, memoryscope.SourceEngram), nil)

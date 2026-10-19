@@ -1,0 +1,134 @@
+$ projection hook --event PreToolUse
+# mcp__plugin_engram_engram__mem_search, the plan's project
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"mcp__plugin_engram_engram__mem_search","tool_input":{"query":"q","project":"proj-1"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# mcp__plugin_engram_engram__mem_search, another project
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"mcp__plugin_engram_engram__mem_search","tool_input":{"query":"q","project":"proj-2"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian: this Engram read asks for project \"proj-2\", but the memory plan of workflow wf-1 of project proj-1 permits only project \"proj-1\". Name project \"proj-1\" without all_projects, or stop following this workflow with 'labdrian workflow unbind'."}}
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# mcp__plugin_engram_engram__mem_search, no project
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"mcp__plugin_engram_engram__mem_search","tool_input":{"query":"q"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian: this Engram read names no project (the project argument is missing, not a string, or empty), but the memory plan of workflow wf-1 of project proj-1 permits only project \"proj-1\". Name project \"proj-1\" without all_projects, or stop following this workflow with 'labdrian workflow unbind'."}}
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# mcp__plugin_engram_engram__mem_search, every project
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"mcp__plugin_engram_engram__mem_search","tool_input":{"query":"q","project":"proj-1","all_projects":true},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian: this Engram read asks for every project (all_projects is true), but the memory plan of workflow wf-1 of project proj-1 permits only project \"proj-1\". Name project \"proj-1\" without all_projects, or stop following this workflow with 'labdrian workflow unbind'."}}
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# mcp__plugin_engram_engram__mem_search, a tool input that is not an object
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"mcp__plugin_engram_engram__mem_search","tool_input":"a string","tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+{"systemMessage":"labdrian: the input of this Engram read is not a JSON object, so its project was not checked against the memory plan of workflow wf-1 of project proj-1."}
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# mcp__engram__mem_context, the plan's project
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"mcp__engram__mem_context","tool_input":{"query":"q","project":"proj-1"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# mcp__engram__mem_context, another project
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"mcp__engram__mem_context","tool_input":{"query":"q","project":"proj-2"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian: this Engram read asks for project \"proj-2\", but the memory plan of workflow wf-1 of project proj-1 permits only project \"proj-1\". Name project \"proj-1\" without all_projects, or stop following this workflow with 'labdrian workflow unbind'."}}
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# mcp__engram__mem_context, no project
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"mcp__engram__mem_context","tool_input":{"query":"q"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian: this Engram read names no project (the project argument is missing, not a string, or empty), but the memory plan of workflow wf-1 of project proj-1 permits only project \"proj-1\". Name project \"proj-1\" without all_projects, or stop following this workflow with 'labdrian workflow unbind'."}}
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# mcp__engram__mem_context, every project
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"mcp__engram__mem_context","tool_input":{"query":"q","project":"proj-1","all_projects":true},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian: this Engram read asks for every project (all_projects is true), but the memory plan of workflow wf-1 of project proj-1 permits only project \"proj-1\". Name project \"proj-1\" without all_projects, or stop following this workflow with 'labdrian workflow unbind'."}}
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# mcp__engram__mem_context, a tool input that is not an object
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"mcp__engram__mem_context","tool_input":"a string","tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+{"systemMessage":"labdrian: the input of this Engram read is not a JSON object, so its project was not checked against the memory plan of workflow wf-1 of project proj-1."}
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# mcp__plugin_engram_engram__mem_get_observation, a read by id passes
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"mcp__plugin_engram_engram__mem_get_observation","tool_input":{"id":42,"project":"proj-2","all_projects":true},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# mcp__plugin_engram_engram__mem_timeline, a read by id passes
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"mcp__plugin_engram_engram__mem_timeline","tool_input":{"id":42,"project":"proj-2","all_projects":true},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# mcp__longterm-mem__get, a read by id passes
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"mcp__longterm-mem__get","tool_input":{"id":42,"project":"proj-2","all_projects":true},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# an Engram write is never touched
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"mcp__plugin_engram_engram__mem_save","tool_input":{"title":"t","project":"proj-2"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+

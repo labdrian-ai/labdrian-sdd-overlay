@@ -272,7 +272,7 @@ func checkNothingNamesTheWorld(t *testing.T, label, world string, paths ...strin
 	}
 }
 
-func checkGoldenFile(t *testing.T, doc goldenDocument, root, label, path string, want *goldenFile) {
+func checkGoldenFile(t *testing.T, doc goldenDocument, root, label, path string, want *goldenFile, merged bool) {
 	t.Helper()
 	text, mode, present := readGoldenFile(t, path)
 	if want == nil {
@@ -285,12 +285,101 @@ func checkGoldenFile(t *testing.T, doc goldenDocument, root, label, path string,
 		t.Errorf("%s is missing", label)
 		return
 	}
+	text = withoutEntriesAddedSinceTheRecording(t, label, text, merged)
 	if wantText := strings.ReplaceAll(doc.Blobs[want.Blob], "$W", root); text != wantText {
 		t.Errorf("%s differs from what the program wrote:\n got: %q\nwant: %q", label, text, wantText)
 	}
 	if wantMode := modeOf(t, want.Mode); mode != wantMode {
 		t.Errorf("%s has mode %v, the program left %v", label, mode, wantMode)
 	}
+}
+
+// THE MEMORY GATE OF C23 M4 adds PreToolUse entries to the projection family, which the recording
+// does not hold, and this file says so in code and leaves the recorded data as it was: wherever the
+// program writes the family's longterm-mem query entry it now writes one entry per matcher of
+// addedProjectionMatchers too, which withoutEntriesAddedSinceTheRecording takes out of what the
+// program wrote before it is compared with the recording, after checking, for a file a merge just
+// wrote, that each is there as often as the query entry (a starting file, or its backup, predates
+// them). Everything else must still be byte for byte what was recorded.
+var addedProjectionMatchers = []string{settings.ProjectionMemoryGetMatcher, settings.ProjectionEngramReadMatcher, settings.ProjectionProceduralSkillMatcher}
+
+// startsFromAnInstallBeforeTheMemoryReadMatchers reports whether a case merges, first, into a
+// settings.json that already holds the projection family as it was recorded, without the matchers
+// C23 M4 added, and the recording has that merge write nothing (formatting, line endings and mode
+// kept). The merge now completes the family and writes the file, so what the case recorded no
+// longer applies. A case whose first merge rewrote the file anyway, or that uninstalls first, is
+// replayed as recorded.
+func startsFromAnInstallBeforeTheMemoryReadMatchers(doc goldenDocument, c goldenCase) bool {
+	if c.Before.Settings == nil || len(c.Steps) == 0 || c.Steps[0].Op != "merge" ||
+		c.Steps[0].After.Settings == nil || c.Steps[0].After.Settings.Blob != c.Before.Settings.Blob {
+		return false
+	}
+	text := doc.Blobs[c.Before.Settings.Blob]
+	if !strings.Contains(text, settings.LabdrianProjectionIdentity) || !strings.Contains(text, settings.ProjectionMemoryQueryMatcher) {
+		return false
+	}
+	for _, matcher := range addedProjectionMatchers {
+		if !strings.Contains(text, matcher) {
+			return true
+		}
+	}
+	return false
+}
+
+// withoutEntriesAddedSinceTheRecording is text, a settings.json the program wrote, without the
+// projection entries of addedProjectionMatchers. An entry of the PreToolUse list sits at an indent of
+// six spaces in the program's output; the entry is cut with the comma that separates it from its
+// neighbor, so the list reads as the program wrote it before.
+func withoutEntriesAddedSinceTheRecording(t *testing.T, label, text string, merged bool) string {
+	t.Helper()
+	const open, close = "\n      {", "\n      }"
+	owned := func(block string) bool { return strings.Contains(block, settings.LabdrianProjectionIdentity) }
+	count := func(matcher string) int {
+		n := 0
+		for rest := text; ; {
+			i := strings.Index(rest, `"matcher": "`+matcher+`"`)
+			if i < 0 {
+				return n
+			}
+			start := strings.LastIndex(rest[:i], open)
+			if start >= 0 && owned(rest[start:i]) {
+				n++
+			}
+			rest = rest[i+1:]
+		}
+	}
+	queries := count(settings.ProjectionMemoryQueryMatcher)
+	for _, matcher := range addedProjectionMatchers {
+		removed := 0
+		for from := 0; ; {
+			i := strings.Index(text[from:], `"matcher": "`+matcher+`"`)
+			if i < 0 {
+				break
+			}
+			i += from
+			start := strings.LastIndex(text[:i], open)
+			end := strings.Index(text[i:], close)
+			if start < 0 || end < 0 || !owned(text[start:i]) {
+				from = i + 1
+				continue
+			}
+			end += i + len(close)
+			switch {
+			case end < len(text) && text[end] == ',':
+				text = text[:start] + text[end+1:]
+			case start > 0 && text[start-1] == ',':
+				text = text[:start-1] + text[end:]
+			default:
+				t.Fatalf("%s: the entry of matcher %q is neither followed nor preceded by a comma", label, matcher)
+			}
+			removed++
+			from = start - 1
+		}
+		if merged && removed != queries {
+			t.Errorf("%s: %d projection entries of matcher %q, want one per query entry (%d)", label, removed, matcher, queries)
+		}
+	}
+	return text
 }
 
 func dirFiles(t *testing.T, dir string) []string {
@@ -342,6 +431,9 @@ func TestSettingsJSONIsWhatTheProgramWroteBeforeH27(t *testing.T) {
 			if keepsAReadOnlyBackup(c) {
 				t.Skip("recorded: a read-only backup stopped the write; since owner decision 2 it is replaced (TestAReadOnlyBackupIsReplacedAtTheModeOfTheOriginal)")
 			}
+			if startsFromAnInstallBeforeTheMemoryReadMatchers(golden, c) {
+				t.Skip("recorded: a merge of a complete install wrote nothing; since C23 M4 an install made before it lacks the memory read matchers, so the merge adds them (TestInstall_AddsTheMemoryReadMatchersToAnInstallThatPredatesThem)")
+			}
 			world := t.TempDir()
 			claude := filepath.Join(world, "home", ".claude")
 			path := filepath.Join(claude, "settings.json")
@@ -378,9 +470,9 @@ func TestSettingsJSONIsWhatTheProgramWroteBeforeH27(t *testing.T) {
 					}
 				}
 				label := "step " + strconv.Itoa(n) + " (" + step.Op + ")"
-				checkGoldenFile(t, golden, goldenRoot, label+" settings.json", path, step.After.Settings)
+				checkGoldenFile(t, golden, goldenRoot, label+" settings.json", path, step.After.Settings, step.Op == "merge" && err == nil)
 				kept = backupAfter(previous, kept, step.After)
-				checkGoldenFile(t, golden, goldenRoot, label+" settings.json.bak", path+".bak", kept)
+				checkGoldenFile(t, golden, goldenRoot, label+" settings.json.bak", path+".bak", kept, false)
 				checkNothingNamesTheWorld(t, label, world, path, path+".bak")
 				previous = step.After
 				if got := dirFiles(t, claude); strings.Join(got, "|") != strings.Join(step.After.DirFiles, "|") {

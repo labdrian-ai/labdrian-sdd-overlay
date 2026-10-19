@@ -78,6 +78,9 @@ type QueryArguments struct {
 	// Project is the project the query names: the value of its "project" argument, which is
 	// empty when there is none, when it is null, when it is not text, or when it is empty.
 	Project string
+	// AllProjects is true when the "all_projects" argument is the JSON value true, and false for
+	// every other value and when there is none.
+	AllProjects bool
 }
 
 // Query reads the input of the call as the arguments of a memory query. A key is matched
@@ -92,7 +95,31 @@ func (p PreToolUse) Query() QueryArguments {
 	if err := json.Unmarshal(fields["project"], &project); err != nil {
 		project = ""
 	}
-	return QueryArguments{Named: true, Project: project}
+	var all bool
+	if err := json.Unmarshal(fields["all_projects"], &all); err != nil {
+		all = false
+	}
+	return QueryArguments{Named: true, Project: project, AllProjects: all}
+}
+
+// Skill is the skill a Skill call names: its "skill" argument when that is text, else "".
+func (p PreToolUse) Skill() string { return p.textArgument("skill") }
+
+// FilePath is the file a Read call names: its "file_path" argument when that is text, else "".
+func (p PreToolUse) FilePath() string { return p.textArgument("file_path") }
+
+// textArgument is the argument of the input named key, matched exactly, when the input is an
+// object and the argument is text; "" otherwise. The last of a repeated key wins.
+func (p PreToolUse) textArgument(key string) string {
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(p.input, &fields); err != nil {
+		return ""
+	}
+	var text string
+	if err := json.Unmarshal(fields[key], &text); err != nil {
+		return ""
+	}
+	return text
 }
 
 // decodeEnvelope is the lenient reading both events share: the input is at most MaxEnvelopeBytes,
