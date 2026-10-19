@@ -202,7 +202,7 @@ On any partial-write failure (any of the three written, another not), **report t
 labdrian longterm-mem sync-trigger --event archive --cwd "$root" || true
 ```
 
-This is a **best-effort, non-blocking, informational** call — it runs strictly after the STOP-on-partial-write rule above, never before, and its outcome (including the `|| true` swallowing a non-zero exit) never blocks or reverses closure. `labdrian longterm-mem sync-trigger` itself always exits 0 regardless of whether the sync it schedules actually ran (`bin/labdrian-overlay`'s `sync-trigger` branch), so the trailing `|| true` here is a second, redundant safety net — kept because closure-feedback must stay non-blocking even if that guarantee ever regresses.
+This is a **best-effort, non-blocking, informational** call — it runs strictly after the STOP-on-partial-write rule above, never before, and its outcome (including the `|| true` swallowing a non-zero exit) never blocks or reverses closure. `labdrian longterm-mem sync-trigger` itself always exits 0 regardless of whether the sync it schedules actually ran (the `sync-trigger` branch of `cmd_longterm_mem` in `bin/lib/longterm_mem.sh`), so the trailing `|| true` here is a second, redundant safety net — kept because closure-feedback must stay non-blocking even if that guarantee ever regresses.
 
 Downstream consumers read on their next run — you do NOT push to them:
 - **roadmap-maker** reads `sdd/{change}/actuals` on its next render.
