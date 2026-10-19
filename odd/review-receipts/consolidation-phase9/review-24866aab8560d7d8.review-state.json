@@ -1,0 +1,471 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:1bec376c73e2fb308760ce600221439f81601f95161d0d8caddb031f8471df95",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-24866aab8560d7d8",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "178ae689100797712b693b76744a7bf7db2e34ee",
+      "candidate_tree": "8fe09ca43ce29d54fa82bec1c16dd0150870d1e3",
+      "paths_digest": "sha256:11a6b75ede2dc26c2595955cb62bb5a5d7d1d1022c03568e6bcbebd56c53df54",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/cmd/review_receipt.go",
+        "engine/cmd/review_receipt_feature_test.go",
+        "engine/cmd/review_receipt_golden_test.go",
+        "engine/cmd/testdata/review-receipt-golden/capture-into-a-feature-twice.golden",
+        "engine/cmd/testdata/review-receipt-golden/capture-into-a-feature-without-openspec.golden",
+        "engine/cmd/testdata/review-receipt-golden/capture-refuses-a-change-and-a-feature-together.golden",
+        "engine/cmd/testdata/review-receipt-golden/capture-refuses-a-feature-destination-that-differs.golden",
+        "engine/cmd/testdata/review-receipt-golden/capture-refuses-a-feature-name-that-is-not-a-path-component.golden",
+        "engine/cmd/testdata/review-receipt-golden/capture-refuses-ambiguous-changes.golden",
+        "engine/cmd/testdata/review-receipt-golden/hook-allows-once-another-run-captured-it.golden",
+        "engine/cmd/testdata/review-receipt-golden/hook-allows-once-the-receipts-are-captured-into-a-feature.golden",
+        "engine/cmd/testdata/review-receipt-golden/hook-denies-a-feature-receipt-that-differs.golden",
+        "engine/cmd/testdata/review-receipt-golden/hook-denies-an-ambiguous-change.golden",
+        "engine/cmd/testdata/review-receipt-golden/hook-denies-while-one-shape-of-a-lineage-is-unpersisted.golden",
+        "engine/cmd/testdata/review-receipt-golden/hook-with-one-change-captures-into-it-beside-a-feature.golden",
+        "engine/cmd/usage.go",
+        "engine/reviewreceipt/feature_test.go",
+        "engine/reviewreceipt/fsstore/feature_test.go",
+        "engine/reviewreceipt/fsstore/store.go",
+        "engine/reviewreceipt/fsstore/store_test.go",
+        "engine/reviewreceipt/ports.go",
+        "engine/reviewreceipt/reviewreceipt.go",
+        "engine/reviewreceipt/service.go",
+        "engine/reviewreceipt/service_test.go"
+      ],
+      "identity": "sha256:07d9d1539fc72b6dce5147a7b69ff985497a06c5e6609b817576052eb74a71a4"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "178ae689100797712b693b76744a7bf7db2e34ee",
+      "candidate_tree": "8fe09ca43ce29d54fa82bec1c16dd0150870d1e3",
+      "paths_digest": "sha256:11a6b75ede2dc26c2595955cb62bb5a5d7d1d1022c03568e6bcbebd56c53df54",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/cmd/review_receipt.go",
+        "engine/cmd/review_receipt_feature_test.go",
+        "engine/cmd/review_receipt_golden_test.go",
+        "engine/cmd/testdata/review-receipt-golden/capture-into-a-feature-twice.golden",
+        "engine/cmd/testdata/review-receipt-golden/capture-into-a-feature-without-openspec.golden",
+        "engine/cmd/testdata/review-receipt-golden/capture-refuses-a-change-and-a-feature-together.golden",
+        "engine/cmd/testdata/review-receipt-golden/capture-refuses-a-feature-destination-that-differs.golden",
+        "engine/cmd/testdata/review-receipt-golden/capture-refuses-a-feature-name-that-is-not-a-path-component.golden",
+        "engine/cmd/testdata/review-receipt-golden/capture-refuses-ambiguous-changes.golden",
+        "engine/cmd/testdata/review-receipt-golden/hook-allows-once-another-run-captured-it.golden",
+        "engine/cmd/testdata/review-receipt-golden/hook-allows-once-the-receipts-are-captured-into-a-feature.golden",
+        "engine/cmd/testdata/review-receipt-golden/hook-denies-a-feature-receipt-that-differs.golden",
+        "engine/cmd/testdata/review-receipt-golden/hook-denies-an-ambiguous-change.golden",
+        "engine/cmd/testdata/review-receipt-golden/hook-denies-while-one-shape-of-a-lineage-is-unpersisted.golden",
+        "engine/cmd/testdata/review-receipt-golden/hook-with-one-change-captures-into-it-beside-a-feature.golden",
+        "engine/cmd/usage.go",
+        "engine/reviewreceipt/feature_test.go",
+        "engine/reviewreceipt/fsstore/feature_test.go",
+        "engine/reviewreceipt/fsstore/store.go",
+        "engine/reviewreceipt/fsstore/store_test.go",
+        "engine/reviewreceipt/ports.go",
+        "engine/reviewreceipt/reviewreceipt.go",
+        "engine/reviewreceipt/service.go",
+        "engine/reviewreceipt/service_test.go"
+      ],
+      "identity": "sha256:07d9d1539fc72b6dce5147a7b69ff985497a06c5e6609b817576052eb74a71a4"
+    },
+    "genesis_paths": [
+      "engine/cmd/review_receipt.go",
+      "engine/cmd/review_receipt_feature_test.go",
+      "engine/cmd/review_receipt_golden_test.go",
+      "engine/cmd/testdata/review-receipt-golden/capture-into-a-feature-twice.golden",
+      "engine/cmd/testdata/review-receipt-golden/capture-into-a-feature-without-openspec.golden",
+      "engine/cmd/testdata/review-receipt-golden/capture-refuses-a-change-and-a-feature-together.golden",
+      "engine/cmd/testdata/review-receipt-golden/capture-refuses-a-feature-destination-that-differs.golden",
+      "engine/cmd/testdata/review-receipt-golden/capture-refuses-a-feature-name-that-is-not-a-path-component.golden",
+      "engine/cmd/testdata/review-receipt-golden/capture-refuses-ambiguous-changes.golden",
+      "engine/cmd/testdata/review-receipt-golden/hook-allows-once-another-run-captured-it.golden",
+      "engine/cmd/testdata/review-receipt-golden/hook-allows-once-the-receipts-are-captured-into-a-feature.golden",
+      "engine/cmd/testdata/review-receipt-golden/hook-denies-a-feature-receipt-that-differs.golden",
+      "engine/cmd/testdata/review-receipt-golden/hook-denies-an-ambiguous-change.golden",
+      "engine/cmd/testdata/review-receipt-golden/hook-denies-while-one-shape-of-a-lineage-is-unpersisted.golden",
+      "engine/cmd/testdata/review-receipt-golden/hook-with-one-change-captures-into-it-beside-a-feature.golden",
+      "engine/cmd/usage.go",
+      "engine/reviewreceipt/feature_test.go",
+      "engine/reviewreceipt/fsstore/feature_test.go",
+      "engine/reviewreceipt/fsstore/store.go",
+      "engine/reviewreceipt/fsstore/store_test.go",
+      "engine/reviewreceipt/ports.go",
+      "engine/reviewreceipt/reviewreceipt.go",
+      "engine/reviewreceipt/service.go",
+      "engine/reviewreceipt/service_test.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-risk",
+      "review-resilience",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 1222,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "the fail-closed acknowledgement guard of the review-receipt hook now accepts receipts persisted in odd/review-receipts/\u003cfeature\u003e (security guard), a new capture destination writing files (partial writes, unreadable folders), a changed deny message and help text, and the port change the hook and capture share",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:8bcdbbb84515e30d0c7ba310c85229f63d9323787faedebb669a6a8a6c369724",
+    "capture_phase_revision": "sha256:4dd3dddbb24964d9796ec29287064272365294ffac9b776aa510e5743c7fd79b",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:07d9d1539fc72b6dce5147a7b69ff985497a06c5e6609b817576052eb74a71a4",
+        "capture_phase_revision": "sha256:4dd3dddbb24964d9796ec29287064272365294ffac9b776aa510e5743c7fd79b",
+        "artifact_digest": "sha256:6fd64d1156dd7fcbc5cca824a01dd6e1117e8cb216a8b6ca8b7d928496e3e4d0",
+        "result_hash": "sha256:0a8f6066f2eb04a1afa1ec99a31c7110b3b61b8f47dd9715556c1749e7df7746",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:92b6caefc3bbd0a4348ae0543a6cd12f9a36f883d2b00d4eb7799c48b9462d5f",
+            "lineage_id": "review-24866aab8560d7d8",
+            "authority_revision": "sha256:4dd3dddbb24964d9796ec29287064272365294ffac9b776aa510e5743c7fd79b",
+            "target_identity": "sha256:07d9d1539fc72b6dce5147a7b69ff985497a06c5e6609b817576052eb74a71a4",
+            "base_tree": "178ae689100797712b693b76744a7bf7db2e34ee",
+            "candidate_tree": "8fe09ca43ce29d54fa82bec1c16dd0150870d1e3",
+            "changed_path_manifest_sha256": "sha256:4096e735219750c2e60706b7da80589b4e46472abb67ddf0180d936d170a88a9",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:92b6caefc3bbd0a4348ae0543a6cd12f9a36f883d2b00d4eb7799c48b9462d5f",
+            "raw_sha256": "sha256:55e2293a0753921adacc56d5c26694aa462267f692951f11f35949c99e936404",
+            "canonical_sha256": "sha256:d79db3cb5c5a208f22fe3617caecec316374cf0f519043ea8a7042a42f55d327",
+            "result_hash": "sha256:0a8f6066f2eb04a1afa1ec99a31c7110b3b61b8f47dd9715556c1749e7df7746",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:92b6caefc3bbd0a4348ae0543a6cd12f9a36f883d2b00d4eb7799c48b9462d5f",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/cmd/review_receipt.go",
+                "engine/cmd/review_receipt_feature_test.go",
+                "engine/cmd/review_receipt_golden_test.go",
+                "engine/cmd/testdata/review-receipt-golden/capture-into-a-feature-twice.golden",
+                "engine/cmd/testdata/review-receipt-golden/capture-into-a-feature-without-openspec.golden",
+                "engine/cmd/testdata/review-receipt-golden/capture-refuses-a-change-and-a-feature-together.golden",
+                "engine/cmd/testdata/review-receipt-golden/capture-refuses-a-feature-destination-that-differs.golden",
+                "engine/cmd/testdata/review-receipt-golden/capture-refuses-a-feature-name-that-is-not-a-path-component.golden",
+                "engine/cmd/testdata/review-receipt-golden/capture-refuses-ambiguous-changes.golden",
+                "engine/cmd/testdata/review-receipt-golden/hook-allows-once-another-run-captured-it.golden",
+                "engine/cmd/testdata/review-receipt-golden/hook-allows-once-the-receipts-are-captured-into-a-feature.golden",
+                "engine/cmd/testdata/review-receipt-golden/hook-denies-a-feature-receipt-that-differs.golden",
+                "engine/cmd/testdata/review-receipt-golden/hook-denies-an-ambiguous-change.golden",
+                "engine/cmd/testdata/review-receipt-golden/hook-denies-while-one-shape-of-a-lineage-is-unpersisted.golden",
+                "engine/cmd/testdata/review-receipt-golden/hook-with-one-change-captures-into-it-beside-a-feature.golden",
+                "engine/cmd/usage.go",
+                "engine/reviewreceipt/feature_test.go",
+                "engine/reviewreceipt/fsstore/feature_test.go",
+                "engine/reviewreceipt/fsstore/store.go",
+                "engine/reviewreceipt/fsstore/store_test.go",
+                "engine/reviewreceipt/ports.go",
+                "engine/reviewreceipt/reviewreceipt.go",
+                "engine/reviewreceipt/service.go",
+                "engine/reviewreceipt/service_test.go"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "Feature name is validated as a single path component (empty/blank, dot segments, separators, padded whitespace, control chars) in service.go capture() before any sink call; the unsafe-name golden confirms nothing is created for ../escaped, a/b, and similar inputs.",
+              "In the hook's ambiguous-change path, feature folders listed by the sink are re-validated with CheckPathComponent in unpersisted() before Read, so a hostile directory name under odd/review-receipts cannot cause traversal. It results in a denial, which is fail-closed.",
+              "Features() returns only real directories; symlinks are excluded because DirEntry.IsDir is false for them. Read failures other than not-persisted deny the hook, so the new allow path is fail-closed.",
+              "The new allow path requires byte-for-byte equality of persisted receipts, and the hook never writes in the ambiguous branch. Capture never overwrites differing files. Written files get mode 0600 via the existing Write path.",
+              "--change together with --feature is refused with exit 1, so neither flag is silently ignored. A trailing --feature with no value counts as not given, the same as the baseline --change behavior, which falls through to auto-detect. This is a minor edge and not a security impact.",
+              "The only changes to existing output are the multiple-active-changes remedy message, which now names --feature as well. That is part of the requested feature, and the goldens and tests are updated consistently."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-resilience",
+        "selected_order": 1,
+        "target_identity": "sha256:07d9d1539fc72b6dce5147a7b69ff985497a06c5e6609b817576052eb74a71a4",
+        "capture_phase_revision": "sha256:4dd3dddbb24964d9796ec29287064272365294ffac9b776aa510e5743c7fd79b",
+        "artifact_digest": "sha256:5d7b40b01760781e8e295aaba93c2a536beed6d47609496ce5a4d389337da2ce",
+        "result_hash": "sha256:eaf0c4074ee96e9fa149dc0074e7a1178adef0cc7ff651f052e3d055832a4158",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:9921da5a1bcd5ba08a61f26df83dc2a3a2d43010696fb84a3139887e71beec3d",
+            "lineage_id": "review-24866aab8560d7d8",
+            "authority_revision": "sha256:4dd3dddbb24964d9796ec29287064272365294ffac9b776aa510e5743c7fd79b",
+            "target_identity": "sha256:07d9d1539fc72b6dce5147a7b69ff985497a06c5e6609b817576052eb74a71a4",
+            "base_tree": "178ae689100797712b693b76744a7bf7db2e34ee",
+            "candidate_tree": "8fe09ca43ce29d54fa82bec1c16dd0150870d1e3",
+            "changed_path_manifest_sha256": "sha256:4096e735219750c2e60706b7da80589b4e46472abb67ddf0180d936d170a88a9",
+            "lens": "review-resilience",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:9921da5a1bcd5ba08a61f26df83dc2a3a2d43010696fb84a3139887e71beec3d",
+            "raw_sha256": "sha256:21d1fe8bed2f5a7d5c9737052a25624e5eaf4b65ed4a691604d70e3b8a7a8fac",
+            "canonical_sha256": "sha256:b9552da5fd6f031098da5ebe2c5995ae363c1c831b1dfc2d0636ee3e149a3938",
+            "result_hash": "sha256:eaf0c4074ee96e9fa149dc0074e7a1178adef0cc7ff651f052e3d055832a4158",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:9921da5a1bcd5ba08a61f26df83dc2a3a2d43010696fb84a3139887e71beec3d",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/cmd/review_receipt.go",
+                "engine/cmd/review_receipt_feature_test.go",
+                "engine/cmd/review_receipt_golden_test.go",
+                "engine/cmd/testdata/review-receipt-golden/capture-into-a-feature-twice.golden",
+                "engine/cmd/testdata/review-receipt-golden/capture-into-a-feature-without-openspec.golden",
+                "engine/cmd/testdata/review-receipt-golden/capture-refuses-a-change-and-a-feature-together.golden",
+                "engine/cmd/testdata/review-receipt-golden/capture-refuses-a-feature-destination-that-differs.golden",
+                "engine/cmd/testdata/review-receipt-golden/capture-refuses-a-feature-name-that-is-not-a-path-component.golden",
+                "engine/cmd/testdata/review-receipt-golden/capture-refuses-ambiguous-changes.golden",
+                "engine/cmd/testdata/review-receipt-golden/hook-allows-once-another-run-captured-it.golden",
+                "engine/cmd/testdata/review-receipt-golden/hook-allows-once-the-receipts-are-captured-into-a-feature.golden",
+                "engine/cmd/testdata/review-receipt-golden/hook-denies-a-feature-receipt-that-differs.golden",
+                "engine/cmd/testdata/review-receipt-golden/hook-denies-an-ambiguous-change.golden",
+                "engine/cmd/testdata/review-receipt-golden/hook-denies-while-one-shape-of-a-lineage-is-unpersisted.golden",
+                "engine/cmd/testdata/review-receipt-golden/hook-with-one-change-captures-into-it-beside-a-feature.golden",
+                "engine/cmd/usage.go",
+                "engine/reviewreceipt/feature_test.go",
+                "engine/reviewreceipt/fsstore/feature_test.go",
+                "engine/reviewreceipt/fsstore/store.go",
+                "engine/reviewreceipt/fsstore/store_test.go",
+                "engine/reviewreceipt/ports.go",
+                "engine/reviewreceipt/reviewreceipt.go",
+                "engine/reviewreceipt/service.go",
+                "engine/reviewreceipt/service_test.go"
+              ]
+            },
+            "lens": "review-resilience",
+            "findings": [
+              {
+                "id": "R4-001",
+                "lens": "resilience",
+                "location": "engine/reviewreceipt/service.go:243-246",
+                "severity": "WARNING",
+                "claim": "In the ambiguous-change hook path, an unreadable or malformed odd/review-receipts folder now makes the hook deny with an error. Previously the hook did not depend on that folder. The error only occurs when a receipt is persisted under no change, which was already a deny at the baseline, so it only changes the denial message and does not turn an allow into a deny. Features() also lists every directory, so a stray directory with an unsafe name (for example one with trailing whitespace) makes the check return an error before any valid feature is considered. The effect is a denial with a different reason, not a new block.",
+                "proof_refs": [
+                  "engine/reviewreceipt/service.go:243-246",
+                  "engine/reviewreceipt/fsstore/store.go:268-284"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Checked the new capture --feature path and the Destination plumbing. Writes stay atomic, idempotent and never overwrite a differing file.",
+              "Checked that the feature name is validated before any sink access. Both flags together are refused before the service is built.",
+              "Checked the hook. The single-change and zero-change branches never call Features(). The multi-change branch lists feature folders only after the per-change check fails. Every failure there is a denial, so the hook fails closed.",
+              "No BLOCKER or CRITICAL resilience regression found for state that was valid at the baseline."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "selected_order": 2,
+        "target_identity": "sha256:07d9d1539fc72b6dce5147a7b69ff985497a06c5e6609b817576052eb74a71a4",
+        "capture_phase_revision": "sha256:4dd3dddbb24964d9796ec29287064272365294ffac9b776aa510e5743c7fd79b",
+        "artifact_digest": "sha256:e44a3839ba39fd370879ce27bb8eb2d62ff0216febdd018e348614f7499d9afd",
+        "result_hash": "sha256:efaf2c9f1407263c2cc7f378f5425d2ca8d93e56475be66baa82413a2a7cfc20",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:948aa25c5a308d5b861371013785f7a41e1263c73c852476a34ddeaac65a8eaa",
+            "lineage_id": "review-24866aab8560d7d8",
+            "authority_revision": "sha256:4dd3dddbb24964d9796ec29287064272365294ffac9b776aa510e5743c7fd79b",
+            "target_identity": "sha256:07d9d1539fc72b6dce5147a7b69ff985497a06c5e6609b817576052eb74a71a4",
+            "base_tree": "178ae689100797712b693b76744a7bf7db2e34ee",
+            "candidate_tree": "8fe09ca43ce29d54fa82bec1c16dd0150870d1e3",
+            "changed_path_manifest_sha256": "sha256:4096e735219750c2e60706b7da80589b4e46472abb67ddf0180d936d170a88a9",
+            "lens": "review-readability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:948aa25c5a308d5b861371013785f7a41e1263c73c852476a34ddeaac65a8eaa",
+            "raw_sha256": "sha256:f57cb3fb7c950fac6f440c6cea174fd1e6a729c801fed8803ab785be2ba7c888",
+            "canonical_sha256": "sha256:59a94164e31c4c7c25f487a270125d721c3581780596689f0d068d11c5c24cb8",
+            "result_hash": "sha256:efaf2c9f1407263c2cc7f378f5425d2ca8d93e56475be66baa82413a2a7cfc20",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:948aa25c5a308d5b861371013785f7a41e1263c73c852476a34ddeaac65a8eaa",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/cmd/review_receipt.go",
+                "engine/cmd/review_receipt_feature_test.go",
+                "engine/cmd/review_receipt_golden_test.go",
+                "engine/cmd/testdata/review-receipt-golden/capture-into-a-feature-twice.golden",
+                "engine/cmd/testdata/review-receipt-golden/capture-into-a-feature-without-openspec.golden",
+                "engine/cmd/testdata/review-receipt-golden/capture-refuses-a-change-and-a-feature-together.golden",
+                "engine/cmd/testdata/review-receipt-golden/capture-refuses-a-feature-destination-that-differs.golden",
+                "engine/cmd/testdata/review-receipt-golden/capture-refuses-a-feature-name-that-is-not-a-path-component.golden",
+                "engine/cmd/testdata/review-receipt-golden/capture-refuses-ambiguous-changes.golden",
+                "engine/cmd/testdata/review-receipt-golden/hook-allows-once-another-run-captured-it.golden",
+                "engine/cmd/testdata/review-receipt-golden/hook-allows-once-the-receipts-are-captured-into-a-feature.golden",
+                "engine/cmd/testdata/review-receipt-golden/hook-denies-a-feature-receipt-that-differs.golden",
+                "engine/cmd/testdata/review-receipt-golden/hook-denies-an-ambiguous-change.golden",
+                "engine/cmd/testdata/review-receipt-golden/hook-denies-while-one-shape-of-a-lineage-is-unpersisted.golden",
+                "engine/cmd/testdata/review-receipt-golden/hook-with-one-change-captures-into-it-beside-a-feature.golden",
+                "engine/cmd/usage.go",
+                "engine/reviewreceipt/feature_test.go",
+                "engine/reviewreceipt/fsstore/feature_test.go",
+                "engine/reviewreceipt/fsstore/store.go",
+                "engine/reviewreceipt/fsstore/store_test.go",
+                "engine/reviewreceipt/ports.go",
+                "engine/reviewreceipt/reviewreceipt.go",
+                "engine/reviewreceipt/service.go",
+                "engine/reviewreceipt/service_test.go"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-dead-parse-wrapper",
+                "lens": "readability",
+                "location": "engine/cmd/review_receipt.go:48-51",
+                "severity": "SUGGESTION",
+                "claim": "parseReviewReceiptArgs is now a thin wrapper over parseReviewReceiptFlags, and the capture verb no longer uses it. If the hook verb is its only caller, two parsers coexist; if it has no callers, it is dead code. Consolidating would make it clear which parser is authoritative.",
+                "proof_refs": [
+                  "engine/cmd/review_receipt.go:48-51"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Reviewed all 24 changed paths. The change is readable overall: the Destination type, the doc comments and the tests explain the new feature path and its reasons.",
+              "The only readability concern is the retained parseReviewReceiptArgs wrapper beside the new parseReviewReceiptFlags."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 3,
+        "target_identity": "sha256:07d9d1539fc72b6dce5147a7b69ff985497a06c5e6609b817576052eb74a71a4",
+        "capture_phase_revision": "sha256:4dd3dddbb24964d9796ec29287064272365294ffac9b776aa510e5743c7fd79b",
+        "artifact_digest": "sha256:3d8521f719cd886b74f32534a84216d3e83d75668a274bf40f0655f2e0bffd47",
+        "result_hash": "sha256:3fceeb7e671e223980b3d7a10561dc7db1d53e361f513b78f96bb4c7b15bee7e",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:a41ff71aa6319fa24534209375b740ffad1827fbb6f6f2c27dd0a042ea0a81d4",
+            "lineage_id": "review-24866aab8560d7d8",
+            "authority_revision": "sha256:4dd3dddbb24964d9796ec29287064272365294ffac9b776aa510e5743c7fd79b",
+            "target_identity": "sha256:07d9d1539fc72b6dce5147a7b69ff985497a06c5e6609b817576052eb74a71a4",
+            "base_tree": "178ae689100797712b693b76744a7bf7db2e34ee",
+            "candidate_tree": "8fe09ca43ce29d54fa82bec1c16dd0150870d1e3",
+            "changed_path_manifest_sha256": "sha256:4096e735219750c2e60706b7da80589b4e46472abb67ddf0180d936d170a88a9",
+            "lens": "review-reliability",
+            "selected_order": 3
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:a41ff71aa6319fa24534209375b740ffad1827fbb6f6f2c27dd0a042ea0a81d4",
+            "raw_sha256": "sha256:7e923ee2f2948c9a627a98de5787c7555df64c788871b0d3bed815d227316c73",
+            "canonical_sha256": "sha256:21b86c63cce5b6f53349cc138cc388c2fdcfffe520242be525ca9005abdcaff9",
+            "result_hash": "sha256:3fceeb7e671e223980b3d7a10561dc7db1d53e361f513b78f96bb4c7b15bee7e",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:a41ff71aa6319fa24534209375b740ffad1827fbb6f6f2c27dd0a042ea0a81d4",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/cmd/review_receipt.go",
+                "engine/cmd/review_receipt_feature_test.go",
+                "engine/cmd/review_receipt_golden_test.go",
+                "engine/cmd/testdata/review-receipt-golden/capture-into-a-feature-twice.golden",
+                "engine/cmd/testdata/review-receipt-golden/capture-into-a-feature-without-openspec.golden",
+                "engine/cmd/testdata/review-receipt-golden/capture-refuses-a-change-and-a-feature-together.golden",
+                "engine/cmd/testdata/review-receipt-golden/capture-refuses-a-feature-destination-that-differs.golden",
+                "engine/cmd/testdata/review-receipt-golden/capture-refuses-a-feature-name-that-is-not-a-path-component.golden",
+                "engine/cmd/testdata/review-receipt-golden/capture-refuses-ambiguous-changes.golden",
+                "engine/cmd/testdata/review-receipt-golden/hook-allows-once-another-run-captured-it.golden",
+                "engine/cmd/testdata/review-receipt-golden/hook-allows-once-the-receipts-are-captured-into-a-feature.golden",
+                "engine/cmd/testdata/review-receipt-golden/hook-denies-a-feature-receipt-that-differs.golden",
+                "engine/cmd/testdata/review-receipt-golden/hook-denies-an-ambiguous-change.golden",
+                "engine/cmd/testdata/review-receipt-golden/hook-denies-while-one-shape-of-a-lineage-is-unpersisted.golden",
+                "engine/cmd/testdata/review-receipt-golden/hook-with-one-change-captures-into-it-beside-a-feature.golden",
+                "engine/cmd/usage.go",
+                "engine/reviewreceipt/feature_test.go",
+                "engine/reviewreceipt/fsstore/feature_test.go",
+                "engine/reviewreceipt/fsstore/store.go",
+                "engine/reviewreceipt/fsstore/store_test.go",
+                "engine/reviewreceipt/ports.go",
+                "engine/reviewreceipt/reviewreceipt.go",
+                "engine/reviewreceipt/service.go",
+                "engine/reviewreceipt/service_test.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [],
+            "evidence": [
+              "Reviewed all 24 paths. --feature is parsed with explicit presence tracking, so an empty value is refused by name (golden test covers empty, blank, traversal, separator, dot-segment and padded names) rather than silently ignored.",
+              "--change together with --feature is refused before a service is built, in every flag order, and writes nothing (golden and binary-level tests).",
+              "Feature capture reuses the same idempotent persist path, never replaces differing bytes, and does not consult the change catalog (service and golden tests).",
+              "The hook's single-change and zero-change branches are unchanged and never list features; with several changes it lists features only when a receipt is persisted under no change, and denies if the listing fails or a listed feature name is unsafe (feature_test.go).",
+              "The only change to existing output is the multiple-change denial text, which now names --feature too; every affected golden file and unit-test expectation was updated to match.",
+              "The fsstore Features listing returns only real directories, returns nothing when the folder is absent, and returns an error that names the folder when it cannot be read. A destination of unknown kind is refused without touching the filesystem."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "273fd08ee71c339583b94d80de627fe3c7c216663cc0eecf1cc1063d50d0107f",
+    "initial_atomic_start": {
+      "lineage_id": "review-24866aab8560d7d8",
+      "worktree_identity": "sha256:8455002f227f033663d0e7d8b8ff6a885e1c85b482ec52e34017c303452eed87",
+      "target_identity": "sha256:07d9d1539fc72b6dce5147a7b69ff985497a06c5e6609b817576052eb74a71a4",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "178ae689100797712b693b76744a7bf7db2e34ee",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-risk",
+        "review-resilience",
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 1222,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "the fail-closed acknowledgement guard of the review-receipt hook now accepts receipts persisted in odd/review-receipts/\u003cfeature\u003e (security guard), a new capture destination writing files (partial writes, unreadable folders), a changed deny message and help text, and the port change the hook and capture share"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

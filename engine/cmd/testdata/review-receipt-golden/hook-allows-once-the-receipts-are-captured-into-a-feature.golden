@@ -1,0 +1,59 @@
+$ review-receipt hook --cwd <ROOT>
+--- stdin ---
+{"tool_name":"Bash","tool_input":{"command":"gentle-ai review acknowledge-approved --cwd /repo --lineage review-x"}}
+exit: 2
+--- stdout ---
+--- stderr ---
+reviewreceipt: multiple active changes (change-a, change-b); run `review-receipt capture --change <name>` or `review-receipt capture --feature <name>` before acknowledging
+
+$ review-receipt capture --cwd <ROOT> --feature consolidation-phase9
+exit: 0
+--- stdout ---
+review-receipt capture: 1 receipt(s) captured for feature "consolidation-phase9"
+--- stderr ---
+
+$ review-receipt hook --cwd <ROOT>
+--- stdin ---
+{"tool_name":"Bash","tool_input":{"command":"gentle-ai review acknowledge-approved --cwd /repo --lineage review-x"}}
+exit: 0
+--- stdout ---
+--- stderr ---
+
+$ review-receipt hook --cwd <ROOT>
+--- stdin ---
+{"tool_name":"Bash","tool_input":{"command":"gentle-ai review acknowledge-approved --cwd /repo --lineage review-x"}}
+exit: 2
+--- stdout ---
+--- stderr ---
+reviewreceipt: multiple active changes (change-a, change-b); run `review-receipt capture --change <name>` or `review-receipt capture --feature <name>` before acknowledging
+
+$ review-receipt capture --cwd <ROOT> --change change-b
+exit: 0
+--- stdout ---
+review-receipt capture: 2 receipt(s) captured for "change-b"
+--- stderr ---
+
+$ review-receipt hook --cwd <ROOT>
+--- stdin ---
+{"tool_name":"Bash","tool_input":{"command":"gentle-ai review acknowledge-approved --cwd /repo --lineage review-x"}}
+exit: 0
+--- stdout ---
+--- stderr ---
+
+=== odd after ===
+dir  odd
+dir  odd/review-receipts
+dir  odd/review-receipts/consolidation-phase9
+file odd/review-receipts/consolidation-phase9/review-939c22285467c2b0.review-state.json 0600 397 09b4c2c6e26e
+
+=== openspec after ===
+dir  openspec
+dir  openspec/changes
+dir  openspec/changes/change-a
+file openspec/changes/change-a/tasks.md 0644 8 b23b81c926c4
+dir  openspec/changes/change-b
+dir  openspec/changes/change-b/review-receipts
+file openspec/changes/change-b/review-receipts/review-939c22285467c2b0.review-state.json 0600 397 09b4c2c6e26e
+file openspec/changes/change-b/review-receipts/review-later.json 0600 203 7381146fb3b7
+file openspec/changes/change-b/tasks.md 0644 8 b23b81c926c4
+

@@ -22,8 +22,8 @@ package projection
 //     and mem_timeline. A plan with no project (scope none) permits no read at
 //     all, and a plan that does not include the read's source denies it. Then a
 //     longterm-mem query must name the plan's project, which is the shared
-//     identity the workflow recorded at create (C23 M2), and an Engram mem_search
-//     or mem_context must name the project Engram knows that identity by (the
+//     identity the workflow recorded at create (C23 M2). An Engram mem_search or
+//     mem_context must name the project Engram knows that identity by (the
 //     caller's GateInput.EngramName) and must not ask for every project. A read
 //     by id (get, mem_get_observation, mem_timeline) names no project and passes
 //     once its source is in the plan. A workflow that recorded no identity
@@ -31,6 +31,10 @@ package projection
 //     its reads pass, with a warning. Every write (promote, every Engram write)
 //     and every other tool are never touched: the plan grants no write, and it
 //     does not forbid one.
+//   - The goal of a query (C23 M5, docs/architecture/adr-c23-m5-goal-filter.md).
+//     Under scope goal, a longterm-mem query must also name the plan's goal; its
+//     goal argument is checked after its project, and under any other scope it is
+//     never looked at.
 //
 //     The project's procedural skills (C23 M4 decision 5) are of source
 //     procedural-skills too: the Skill tool for a skill the procedural skills lock
@@ -140,6 +144,9 @@ type QueryArguments struct {
 	// AllProjects is true when the "all_projects" argument is the JSON value true: the read asks
 	// for every project. Any other value, or none, is false.
 	AllProjects bool
+	// Goal is the goal the query names (C23 M5): empty when it names none, which is the case when
+	// the argument is missing, null, not text, or empty.
+	Goal string
 }
 
 // GateResult is what Gate decides. Deny is true for a denial, and Reason then
@@ -443,13 +450,15 @@ func memoryGate(in GateInput, s workflow.State, read memoryRead) GateResult {
 	if read.check == checkEngramProject {
 		return engramProjectGate(b, in.EngramName, s.ProjectIdentity, in.Call)
 	}
-	return longtermProjectGate(b, plan.Filters.ProjectID, in.Call)
+	return longtermProjectGate(b, plan, in.Call)
 }
 
 // longtermProjectGate checks the project a longterm-mem query names against the
 // plan's project, which is the workflow's shared identity (C23 M2): another
-// project, or none, is denied.
-func longtermProjectGate(b Binding, planProject string, call ToolCall) GateResult {
+// project, or none, is denied. Under scope goal the goal it names is checked
+// next (longtermGoalGate).
+func longtermProjectGate(b Binding, plan memoryscope.Plan, call ToolCall) GateResult {
+	planProject := plan.Filters.ProjectID
 	query := call.query()
 	if !query.Named {
 		return GateResult{Warning: "labdrian: the input of this longterm-mem query is not a JSON object, so its project was not checked against the memory plan of " +
@@ -465,7 +474,40 @@ func longtermProjectGate(b Binding, planProject string, call ToolCall) GateResul
 		return GateResult{Deny: true, Reason: "labdrian: this longterm-mem query asks for project " + quoteValue(given) +
 			", but the memory plan of " + workflowRef(b) + " permits only project " + strconv.Quote(sanitizeLine(planProject)) + ". " + queryAdvice(planProject)}
 	}
+	if plan.Scope == memoryscope.ScopeGoal {
+		return longtermGoalGate(b, plan, query.Goal)
+	}
 	return GateResult{}
+}
+
+// longtermGoalGate checks the goal a longterm-mem query names against the plan's
+// goal under scope goal (C23 M5 decision 3, docs/architecture/adr-c23-m5-goal-filter.md):
+// another goal, or none, is denied, as another project or none is. Under any other
+// scope the goal is never looked at.
+func longtermGoalGate(b Binding, plan memoryscope.Plan, given string) GateResult {
+	planProject, planGoal := plan.Filters.ProjectID, plan.Filters.GoalID
+	if planGoal == "" {
+		// A plan of scope goal always has a goal; this cannot be reached through
+		// Resolve, and the gate does not deny on what it cannot explain.
+		return GateResult{Warning: "labdrian: the memory plan of " + workflowRef(b) + " names no goal although its scope is " +
+			strconv.Quote(string(memoryscope.ScopeGoal)) + ", so the goal of this longterm-mem query was not checked against it."}
+	}
+	if given == "" {
+		// Absent, null, not text, or empty: the query names no goal.
+		return GateResult{Deny: true, Reason: "labdrian: this longterm-mem query names no goal (the goal argument is missing, not a string, or empty), " +
+			"but the memory plan of " + workflowRef(b) + " permits only goal " + strconv.Quote(sanitizeLine(planGoal)) + ". " + goalAdvice(planProject, planGoal)}
+	}
+	if given != planGoal {
+		return GateResult{Deny: true, Reason: "labdrian: this longterm-mem query asks for goal " + quoteValue(given) +
+			", but the memory plan of " + workflowRef(b) + " permits only goal " + strconv.Quote(sanitizeLine(planGoal)) + ". " + goalAdvice(planProject, planGoal)}
+	}
+	return GateResult{}
+}
+
+// goalAdvice tells the model and the user how to go on after a query denied for its goal.
+func goalAdvice(planProject, planGoal string) string {
+	return "Query project " + strconv.Quote(sanitizeLine(planProject)) + " with goal " + strconv.Quote(sanitizeLine(planGoal)) +
+		", or stop following this workflow with 'labdrian workflow unbind'."
 }
 
 // engramProjectGate checks the project an Engram mem_search or mem_context names

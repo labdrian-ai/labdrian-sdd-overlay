@@ -1,0 +1,12 @@
+$ review-receipt capture --cwd <ROOT> --feature the-feature
+exit: 1
+--- stdout ---
+--- stderr ---
+error: review-receipt capture: reviewreceipt: <ROOT>/odd/review-receipts/the-feature/review-one.json already exists with different content
+
+=== after ===
+dir  odd
+dir  odd/review-receipts
+dir  odd/review-receipts/the-feature
+file odd/review-receipts/the-feature/review-one.json 0644 2 44136fa355b3
+

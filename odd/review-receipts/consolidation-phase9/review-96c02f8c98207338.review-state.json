@@ -1,0 +1,629 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:9d6420e7526092b6c243f0ef26825a181b2a47dbeca4d32e9aca231cb2202d76",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-96c02f8c98207338",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "186438fba8b2395bc6c57c09dc7e02dc154e6094",
+      "candidate_tree": "d38413aa28dcd70494170d101f842303f23b2586",
+      "paths_digest": "sha256:dd3f19f6c444fbd23c2c71121b2ca8359669976b83bdf0ba6ac7b21f01ef0854",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/skills/actuals_instrumentation_contract_test.go",
+        "engine/skills/actuals_instrumentation_d2_anchor_test.go",
+        "engine/skills/testdata/corrected-actuals-skills-validate-ondisk-gate.json",
+        "engine/skills/testdata/corrected-actuals-sync-check-repo-behind-origin.json"
+      ],
+      "identity": "sha256:96c02f8c982073386291d093062697119bc1e5f8e398e905772865b87398863f"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "186438fba8b2395bc6c57c09dc7e02dc154e6094",
+      "candidate_tree": "d38413aa28dcd70494170d101f842303f23b2586",
+      "paths_digest": "sha256:dd3f19f6c444fbd23c2c71121b2ca8359669976b83bdf0ba6ac7b21f01ef0854",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/skills/actuals_instrumentation_contract_test.go",
+        "engine/skills/actuals_instrumentation_d2_anchor_test.go",
+        "engine/skills/testdata/corrected-actuals-skills-validate-ondisk-gate.json",
+        "engine/skills/testdata/corrected-actuals-sync-check-repo-behind-origin.json"
+      ],
+      "identity": "sha256:96c02f8c982073386291d093062697119bc1e5f8e398e905772865b87398863f"
+    },
+    "genesis_paths": [
+      "engine/skills/actuals_instrumentation_contract_test.go",
+      "engine/skills/actuals_instrumentation_d2_anchor_test.go",
+      "engine/skills/testdata/corrected-actuals-skills-validate-ondisk-gate.json",
+      "engine/skills/testdata/corrected-actuals-sync-check-repo-behind-origin.json"
+    ],
+    "policy_hash": "sha256:34fb63d7f29f8613cd4431382b1057398a4816f8a4c20fc34677fffc80a184f6",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-risk",
+      "review-resilience",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 785,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_results": [
+      {
+        "lens": "review-risk",
+        "findings": [
+          {
+            "id": "R1-001",
+            "lens": "risk",
+            "location": "engine/skills/actuals_instrumentation_d2_anchor_test.go:406",
+            "severity": "WARNING",
+            "claim": "runGitReadOnly invokes exec.Command with the bare name \"git\" and never sets cmd.Env, so the subprocess resolves its binary through a PATH search and inherits the caller's full environment unfiltered. Exploiting this requires an attacker who already controls the local test or CI environment — an earlier-in-PATH executable named git, an injected environment variable, or write access to this repository's own unversioned git config — so the marginal risk this candidate adds is a defense-in-depth gap in test-only code, not a reachable vulnerability.",
+            "proof_refs": [
+              "engine/skills/actuals_instrumentation_d2_anchor_test.go:406 — runGitReadOnly builds the command from the bare name git with no absolute path and no cmd.Env assignment before Run",
+              "engine/skills/actuals_instrumentation_d2_anchor_test.go:304 — the show call issues -s with a format string only, never -p, so no diff is produced and diff-time filters are never reached",
+              "engine/skills/actuals_instrumentation_d2_anchor_test.go:349 — the log call likewise issues a format string only",
+              "engine/skills/actuals_instrumentation_d2_anchor_test.go:408 — stdout and stderr are bound to bytes.Buffer values, so the subprocess never sees a terminal and the pager path is not exercised"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R1-002",
+            "lens": "risk",
+            "location": "engine/skills/actuals_instrumentation_d2_anchor_test.go:304",
+            "severity": "SUGGESTION",
+            "claim": "No call site places an end-of-options separator before the trailing revision or ref argument, so a value beginning with a dash could in principle be parsed as an option rather than a revision. This is unreachable in this candidate because every call site passes a hardcoded literal, and is recorded only as a hardening note should the helper ever be reused with derived input.",
+            "proof_refs": [
+              "engine/skills/actuals_instrumentation_d2_anchor_test.go:304 — the revision argument is appended directly after the format string with no separator",
+              "engine/skills/actuals_instrumentation_d2_anchor_test.go:349 — the ref argument is appended directly after the format string with no separator",
+              "engine/skills/actuals_instrumentation_d2_anchor_test.go:376 — the same shape repeats in the third call site",
+              "engine/skills/actuals_instrumentation_d2_anchor_test.go:69 — the only values ever passed are hardcoded literals, so no externally supplied string reaches these arguments in this candidate"
+            ],
+            "evidence_class": "inferential",
+            "causal_disposition": "introduced"
+          }
+        ],
+        "evidence": [
+          "Reviewed all four changed_path_manifest paths against base_tree 186438fba8b2395bc6c57c09dc7e02dc154e6094 and candidate_tree d38413aa28dcd70494170d101f842303f23b2586. Evidence scope complete: full verbatim diffs and full verbatim content, nothing reduced.",
+          "Traced the sole process-invocation site in this candidate. Every call passes hardcoded literals — a hex commit SHA or the literal string main — never externally supplied data, so argument injection has no reachable input path within this candidate.",
+          "Assessed the read-only claim against the exact subcommands issued. Only `show -s --format=%T %cI` and `log --format=%H %T` are ever run; neither uses `-p`, so no diff content is produced and external-diff and gitattributes textconv, clean and smudge filters are never invoked for these calls.",
+          "Assessed pager exposure: stdout and stderr are both redirected into bytes.Buffer values rather than a terminal, so git's pager path is not exercised.",
+          "Assessed transport-scoped configuration: credential helpers and ssh command overrides apply only to network transport, which these local object reads never perform.",
+          "Assessed data exposure across both JSON fixtures. They carry internal project metrics, host-local timestamps, commit SHAs already present in this repository's history, and internal observation identifiers. No credentials, tokens, keys or personal data are present.",
+          "Confirmed the privilege boundary the file claims: the new process-invoking code lives in a _test.go file, which the Go toolchain excludes from any production build of this package, so the exec surface is not reachable from a shipped binary."
+        ],
+        "result_hash": "sha256:679fed5c751334cea5b89614c99e7657d424fa73df8ac224e20fb967773a339c"
+      },
+      {
+        "lens": "review-resilience",
+        "findings": [
+          {
+            "id": "R4-001",
+            "lens": "resilience",
+            "location": "engine/skills/actuals_instrumentation_d2_anchor_test.go:158-187",
+            "severity": "WARNING",
+            "claim": "The suite hardcodes the ref main and specific commit SHAs and asserts an exact carrier count against live repository history, so any checkout that never fetched that branch or those objects errors instead of running. The failure is loud rather than silently wrong, but the count-mismatch message attributes the cause to fixture drift, which would send a maintainer to investigate the wrong thing when the real cause is checkout completeness.",
+            "proof_refs": [
+              "engine/skills/actuals_instrumentation_d2_anchor_test.go:172 — the carrier scan is invoked against the literal ref main",
+              "engine/skills/actuals_instrumentation_d2_anchor_test.go:174 — the exact-count assertion's failure text blames fixture drift and names three commit SHAs, offering no reading in which the checkout itself is incomplete",
+              "engine/skills/actuals_instrumentation_d2_anchor_test.go:69 — three subtests additionally hardcode the same landing commit SHA, so they too depend on that object being present",
+              "engine/skills/actuals_instrumentation_d2_anchor_test.go:349 — the underlying scan resolves the ref through git log, which errors when the ref is absent"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R4-002",
+            "lens": "resilience",
+            "location": "engine/skills/actuals_instrumentation_d2_anchor_test.go:406",
+            "severity": "WARNING",
+            "claim": "The subprocess inherits the caller's full environment because cmd.Env is never set, so system and global git configuration and any config-overriding environment variables reach it. Output-shape-altering settings could add tokens to the format output that the fixed-field-count parsers were never exercised against; the strict field-count checks make a loud failure or a skipped line the likely outcome rather than a proven silent misparse, but this was not verified against config variation.",
+            "proof_refs": [
+              "engine/skills/actuals_instrumentation_d2_anchor_test.go:406 — the command is constructed and run with no cmd.Env assignment",
+              "engine/skills/actuals_instrumentation_d2_anchor_test.go:308 — the whole-output parse requires exactly two fields and errors with the raw text otherwise",
+              "engine/skills/actuals_instrumentation_d2_anchor_test.go:355 — the per-line parse silently skips any line that does not carry exactly two fields, which absorbs unexpected tokens rather than reporting them"
+            ],
+            "evidence_class": "inferential",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R4-003",
+            "lens": "resilience",
+            "location": "engine/skills/actuals_instrumentation_contract_test.go:1497",
+            "severity": "SUGGESTION",
+            "claim": "The reviewer could not confirm from its carried evidence whether the nine table-driven section-stripping cases are implemented as executable assertions, because the block was summarised rather than carried verbatim while its hunk header claimed a much larger line count. The reviewer correctly declined to assert a defect and marked the causality unknown. The orchestrator has since verified the block is real executable code and the nine cases are present, so this records a resolved evidence gap rather than a candidate defect.",
+            "proof_refs": [
+              "engine/skills/actuals_instrumentation_contract_test.go:1497 — the section-stripping subtest opens here and is followed by the table literal, the nine cases and the assertion loop, verified by the orchestrator against the frozen candidate tree",
+              "engine/skills/actuals_instrumentation_contract_test.go:1518 — one of the nine case names sits well inside the block, confirming the table is populated rather than empty"
+            ],
+            "evidence_class": "inferential",
+            "causal_disposition": "unknown"
+          },
+          {
+            "id": "R4-004",
+            "lens": "resilience",
+            "location": "engine/skills/actuals_instrumentation_d2_anchor_test.go:299",
+            "severity": "SUGGESTION",
+            "claim": "Every error path returns the outcome as the empty string rather than a dedicated sentinel distinct from the four named outcome values. All current call sites check the error before reading the outcome, so no misuse is proven, but the zero value offers no type-level protection against a future caller that reads the outcome first.",
+            "proof_refs": [
+              "engine/skills/actuals_instrumentation_d2_anchor_test.go:306 — the first error path returns an empty outcome",
+              "engine/skills/actuals_instrumentation_d2_anchor_test.go:310 — the unexpected-output path does the same",
+              "engine/skills/actuals_instrumentation_d2_anchor_test.go:264 — the four named outcome constants are declared here, none of which is an error sentinel"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          }
+        ],
+        "evidence": [
+          "Reviewed all four changed_path_manifest paths against base_tree 186438fba8b2395bc6c57c09dc7e02dc154e6094 and candidate_tree d38413aa28dcd70494170d101f842303f23b2586.",
+          "ORCHESTRATOR EMPIRICAL REPRODUCTION, added to this artifact because it materially sizes the lens finding below. The reviewer graded the git-history coupling as failing loudly. A shallow single-branch clone of this exact candidate branch was created and the suite run inside it: the ref main does not resolve, the hardcoded landing commit object is absent, and go test on the skills package exits 1 with four of the six subtests failing. The two that pass are the only two that never invoke git. This repository's CI workflow checks out with the action's default fetch depth of one and runs the engine module's tests, and it triggers on push and pull_request for every branch, so the failure reaches CI on the first push rather than only at the final merge.",
+          "Timezone assessment, resolved as NOT a defect: the expected committer timestamp is parsed with time.Parse into a time.Time and compared with Equal, which compares instants rather than wall-clock text, so a runner in a different zone does not change the outcome.",
+          "Parser robustness assessment: both parse sites impose a strict two-field expectation. The whole-output parse errors out and includes the raw text when the count differs; the per-line parse skips non-conforming lines. Output-shape-altering git configuration would therefore surface as a loud error or a skipped line rather than a proven silent misparse, though this was not exercised against config variation.",
+          "Pager assessment: stdout is redirected into a bytes.Buffer rather than a terminal, so core.pager is not a realistic corruption vector here.",
+          "Error-path observability: every error return wraps the underlying failure with the full command and the raw stderr, so a failure in a foreign environment is diagnosable from the test output alone.",
+          "ORCHESTRATOR CORRECTION to the third finding below: the reviewer could not confirm whether the nine table-driven cases exist because the evidence it received summarised that block instead of carrying it verbatim, and it correctly marked the causality unknown rather than asserting a defect. The orchestrator independently read the frozen candidate tree and confirms the block is real executable code spanning roughly lines 1497 to 1590, with the nine cases present and each error case asserting an empty return. The finding is an artifact of evidence assembly, not a property of the candidate."
+        ],
+        "result_hash": "sha256:2def440ec4495fef8653a4c2da6bbce91425d749dce7427f47f66e66520bc533"
+      },
+      {
+        "lens": "review-readability",
+        "findings": [
+          {
+            "id": "R2-001",
+            "lens": "readability",
+            "location": "engine/skills/actuals_instrumentation_d2_anchor_test.go:347-399",
+            "severity": "WARNING",
+            "claim": "The two carrier-scanning functions duplicate the same output-parsing loop byte for byte instead of sharing one implementation, which undercuts the stated reason the first exists: it is meant to independently double-check the second's ambiguity verdict, but both derive their answer by identical construction, so a future change to the output format or the field-parsing rule must be applied in both places or the two silently agree on the wrong thing.",
+            "proof_refs": [
+              "engine/skills/actuals_instrumentation_d2_anchor_test.go:347 — the first function opens and issues the log command, then runs the split-trim-fields-compare loop",
+              "engine/skills/actuals_instrumentation_d2_anchor_test.go:375 — the second function issues the same command and runs the identical loop before switching on the carrier count",
+              "engine/skills/actuals_instrumentation_d2_anchor_test.go:344 — the first function's own doc states its purpose is to confirm the collision independently of the second, which is the claim the shared construction weakens"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R2-002",
+            "lens": "readability",
+            "location": "engine/skills/actuals_instrumentation_contract_test.go:590",
+            "severity": "WARNING",
+            "claim": "This candidate is 785 changed lines against a 400-line budget, roughly twice over, and the seam that would split it is real rather than absent: the new anchor-proof file and the boundary-provenance work share no symbol in either direction, so splitting at that existing file boundary yields groups of 415 and 369. The overrun is asserted rather than forced by an atomic unit.",
+            "proof_refs": [
+              "engine/skills/actuals_instrumentation_contract_test.go:590 — the boundary-provenance sweep guard, one of the two independent concerns, referencing nothing the anchor-proof file introduces",
+              "engine/skills/actuals_instrumentation_contract_test.go:419 — the fixture-mirror subtest, part of the same concern group",
+              "engine/skills/actuals_instrumentation_contract_test.go:979 — the section-stripping helper this group depends on, likewise unreferenced by the anchor-proof file",
+              "engine/skills/actuals_instrumentation_d2_anchor_test.go:60 — the other concern group, a self-contained new file whose types and functions nothing else in this candidate references"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R2-003",
+            "lens": "readability",
+            "location": "engine/skills/actuals_instrumentation_d2_anchor_test.go:137",
+            "severity": "SUGGESTION",
+            "claim": "A failure message that will be read while debugging a CI break ends with an internal review-round identifier that has no location in the repository to look it up. The substantive half of the message already states the rule being enforced, so the citation adds noise without adding anything a maintainer can act on.",
+            "proof_refs": [
+              "engine/skills/actuals_instrumentation_d2_anchor_test.go:137 — the assertion's failure text states the rule and then appends a review-round and warning identifier",
+              "engine/skills/actuals_instrumentation_d2_anchor_test.go:134 — the immediately preceding assertion in the same subtest states its rule without any such citation, showing the actionable form is already used elsewhere in the file"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R2-004",
+            "lens": "readability",
+            "location": "engine/skills/actuals_instrumentation_d2_anchor_test.go:299-340",
+            "severity": "SUGGESTION",
+            "claim": "The committer-timestamp parse and its error wrapping are duplicated between the self-asserted branch and the verified branch, although the raw value is available before the branch splits. A future change to timestamp handling has two call sites to keep in sync with nothing forcing it.",
+            "proof_refs": [
+              "engine/skills/actuals_instrumentation_d2_anchor_test.go:321 — the parse and wrap inside the self-asserted branch",
+              "engine/skills/actuals_instrumentation_d2_anchor_test.go:335 — the identical parse and wrap after the rejection check",
+              "engine/skills/actuals_instrumentation_d2_anchor_test.go:312 — the raw value both branches parse is assigned before either branch is taken"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R2-005",
+            "lens": "readability",
+            "location": "engine/skills/actuals_instrumentation_contract_test.go:979",
+            "severity": "SUGGESTION",
+            "claim": "Two different section-boundary strategies now coexist in the same file for similarly named operations: one terminates by heading level, the new one by exact terminator text. The doc comment grounds the divergence in a defeated defect so the complexity is earned, but a maintainer skimming the two similarly named helpers could reach for the wrong termination semantics without rereading it.",
+            "proof_refs": [
+              "engine/skills/actuals_instrumentation_contract_test.go:979 — the new helper and its doc comment explaining why exact-text termination is load-bearing rather than stylistic",
+              "engine/skills/actuals_instrumentation_contract_test.go:590 — the sole caller, which depends on the exact-text semantics being chosen deliberately"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R2-006",
+            "lens": "readability",
+            "location": "engine/skills/testdata/corrected-actuals-sync-check-repo-behind-origin.json:12",
+            "severity": "SUGGESTION",
+            "claim": "The narrative field is stored as one physical line, so appending a single sentence renders as a whole-line replacement in the diff. The real delta is hidden from this review and from any future diff or blame on the field, and the new sibling fixture added by this candidate repeats the same shape.",
+            "proof_refs": [
+              "engine/skills/testdata/corrected-actuals-sync-check-repo-behind-origin.json:12 — the entire multi-thousand-character narrative is one physical line and shows as fully changed although only a trailing sentence was appended",
+              "engine/skills/testdata/corrected-actuals-skills-validate-ondisk-gate.json:14 — the new fixture stores its narrative the same way, so the next append to it will read the same way"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          }
+        ],
+        "evidence": [
+          "Reviewed all four changed_path_manifest paths against base_tree 186438fba8b2395bc6c57c09dc7e02dc154e6094 and candidate_tree d38413aa28dcd70494170d101f842303f23b2586.",
+          "Review-size assessment against this project's 400-line budget: this candidate is 785 changed lines, roughly twice the budget. The reviewer found a clean seam and judged the overrun unjustified rather than forced.",
+          "ORCHESTRATOR VERIFICATION of that seam, run against the frozen candidate tree rather than taken on the reviewer's word: the new anchor-proof file references none of the three symbols the contract-test diff introduces, and the contract test references none of the seven types and functions the anchor file introduces. Both directions return zero matches. The anchor file borrows exactly three symbols, all of which already exist in the base tree. The seam is real and the two groups are independent.",
+          "The stated justification carried into this review — that the candidate cannot be rebalanced because the anchor test alone is 299 lines — is contradicted by the candidate itself: the file is 415 lines, and splitting at the new-file boundary yields groups of 415 and 369 rather than one group of 785.",
+          "Comment-density assessment: this candidate is unusually heavily commented, with several rationale blocks longer than the code they describe. The reviewer judged the rationale earned where it encodes a defeated defect that explains a pin's shape, and noise where it cites internal review-round identifiers a reader cannot resolve from the repository.",
+          "Naming assessment: the outcome constants and the anchor type read clearly and the four-state vocabulary is unambiguous. The two carrier-scanning functions are the weak point, being near-identical in body while differing in name and purpose.",
+          "Failure-message assessment: most assertions state the rule being enforced, which is actionable. The exceptions are messages carrying process-archaeology citations."
+        ],
+        "result_hash": "sha256:8feeb66fb9d9ff9f0b1811cc6910c1d7d8a034ee74540a73fcc98ca8993f0bab"
+      },
+      {
+        "lens": "review-reliability",
+        "findings": [
+          {
+            "id": "R3-001",
+            "lens": "reliability",
+            "location": "engine/skills/actuals_instrumentation_d2_anchor_test.go:299",
+            "severity": "WARNING",
+            "claim": "The resolution functions this suite exercises are declared inside the same test file and are invoked by nothing else, so the test proves its own Go mirror of the documented rule rather than any shipped behavior. The file's own rationale states the production path is agent-run shell commands, not Go, which means a future divergence between the real procedure and this mirror leaves the suite green while behavior drifts.",
+            "proof_refs": [
+              "engine/skills/actuals_instrumentation_d2_anchor_test.go:299 — the resolution function is defined in the test file itself, below the test that calls it",
+              "engine/skills/actuals_instrumentation_d2_anchor_test.go:375 — the ambiguity helper is likewise defined here and called only from this file",
+              "engine/skills/actuals_instrumentation_d2_anchor_test.go:60 — the test invokes only these file-local definitions",
+              "engine/skills/actuals_instrumentation_d2_anchor_test.go:53 — the file's own doc states the production path is shell commands run by the orchestrating agent and that this test does not implement the runtime path"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-002",
+            "lens": "reliability",
+            "location": "engine/skills/actuals_instrumentation_d2_anchor_test.go:158-187",
+            "severity": "WARNING",
+            "claim": "This subtest's outcome is coupled to the literal commit graph reachable from a hardcoded ref at run time rather than to a hermetic fixture, with an exact-count assertion and hardcoded SHAs, so history-altering operations unrelated to any code regression can flip it. That is a determinism defect independent of whether the failure is loud.",
+            "proof_refs": [
+              "engine/skills/actuals_instrumentation_d2_anchor_test.go:172 — the carrier scan runs against live history reachable from a hardcoded ref",
+              "engine/skills/actuals_instrumentation_d2_anchor_test.go:174 — the assertion demands an exact carrier count of three",
+              "engine/skills/actuals_instrumentation_d2_anchor_test.go:82 — a sibling subtest additionally expects one exact committer timestamp from a hardcoded commit",
+              "engine/skills/actuals_instrumentation_d2_anchor_test.go:406 — resolution runs a real subprocess against the working checkout rather than reading a fixture"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-003",
+            "lens": "reliability",
+            "location": "engine/skills/actuals_instrumentation_contract_test.go:1518",
+            "severity": "WARNING",
+            "claim": "The demoted-terminator case's document also contains a heading at the carve-out's own level, which trips the span-integrity guard before the loop can reach end of document. Because the case asserts only the shared sentinel and an empty return, and the end-of-document path returns that same sentinel, it cannot distinguish a working span-integrity guard from an absent one. It does still catch a level-blind terminator match, which is the bug its name targets, but it does not isolate the mechanism the way the two neighbouring cases do.",
+            "proof_refs": [
+              "engine/skills/actuals_instrumentation_contract_test.go:1518 — the case's document places a same-level heading after the demoted one, so the span guard fires first",
+              "engine/skills/actuals_instrumentation_contract_test.go:1013 — the span-integrity guard that fires, returning the wrapped sentinel",
+              "engine/skills/actuals_instrumentation_contract_test.go:1018 — the end-of-document path returns the identical sentinel, which is why the two are indistinguishable to this case's assertions",
+              "engine/skills/actuals_instrumentation_contract_test.go:1497 — the neighbouring cases in the same table do isolate the two mechanisms cleanly"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-004",
+            "lens": "reliability",
+            "location": "engine/skills/actuals_instrumentation_contract_test.go:419",
+            "severity": "SUGGESTION",
+            "claim": "The fixture value is compared with exact float equality against a source literal. This is deterministic today because both sides are correctly-rounded parses of the same decimal text with no arithmetic on either side, but the assertion carries no tolerance and would regress silently if either side ever became computed rather than parsed.",
+            "proof_refs": [
+              "engine/skills/actuals_instrumentation_contract_test.go:419 — the subtest decodes the fixture and compares the decoded value with an untoleranced literal",
+              "engine/skills/testdata/corrected-actuals-skills-validate-ondisk-gate.json:6 — the fixture carries the identical decimal text with no exponent or trailing zeros"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-005",
+            "lens": "reliability",
+            "location": "engine/skills/actuals_instrumentation_d2_anchor_test.go:304",
+            "severity": "SUGGESTION",
+            "claim": "No subtest exercises the resolution function's error-returning branches. All four anchor subtests pass the same known-good commit and vary only the recorded tree, so neither the unreadable-commit path nor the unexpected-output path is ever reached, and a regression in either would go undetected.",
+            "proof_refs": [
+              "engine/skills/actuals_instrumentation_d2_anchor_test.go:304 — the unreadable-commit error path, never reached by any subtest",
+              "engine/skills/actuals_instrumentation_d2_anchor_test.go:309 — the unexpected-output error path, likewise never reached",
+              "engine/skills/actuals_instrumentation_d2_anchor_test.go:69 — the four subtests all pass the same hardcoded known-good commit, varying only the recorded tree"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          }
+        ],
+        "evidence": [
+          "Reviewed all four changed_path_manifest paths against base_tree 186438fba8b2395bc6c57c09dc7e02dc154e6094 and candidate_tree d38413aa28dcd70494170d101f842303f23b2586. Evidence scope complete, including the nine section-stripping table cases carried verbatim.",
+          "Hand-traced the section-stripping helper's two loops against six of the nine table cases, following fence toggling, heading matching, terminator matching and the span-integrity guard on each line.",
+          "Newline-handling check on the returned string: the join places a single newline between the retained prefix and the retained suffix. This reproduces the expected values in every case, including the two whose expectation begins with a leading newline because the carve-out heading is the document's first line and the prefix join is therefore empty.",
+          "Exact-float-equality assessment on the fixture value: both sides are correctly-rounded parses of the identical decimal text with no intervening arithmetic, so the comparison is deterministic today. Recorded below only as a zero-tolerance pattern that would regress silently if either side ever gained computation.",
+          "Coverage assessment of the two distinct guard mechanisms the helper implements — exact-text terminator matching and same-or-shallower-level span integrity — checking for each case whether it can distinguish a working guard from an absent one.",
+          "Determinism assessment of every new assertion: the contract-test additions read committed repository bytes and compare literal substrings or decoded structure, and are deterministic. The anchor-proof additions instead resolve their inputs from live repository history at run time, which is the coupling recorded below.",
+          "Traced every call site of the three new functions: all are local to the anchor-proof file, and none of them is invoked from any other path in this candidate."
+        ],
+        "result_hash": "sha256:821936ab20f6b9af63fe4c1289f38a518c839a061353f80e0265f45987d2e405"
+      }
+    ],
+    "findings": [
+      {
+        "id": "R1-001",
+        "lens": "risk",
+        "location": "engine/skills/actuals_instrumentation_d2_anchor_test.go:406",
+        "severity": "WARNING",
+        "claim": "runGitReadOnly invokes exec.Command with the bare name \"git\" and never sets cmd.Env, so the subprocess resolves its binary through a PATH search and inherits the caller's full environment unfiltered. Exploiting this requires an attacker who already controls the local test or CI environment — an earlier-in-PATH executable named git, an injected environment variable, or write access to this repository's own unversioned git config — so the marginal risk this candidate adds is a defense-in-depth gap in test-only code, not a reachable vulnerability.",
+        "proof_refs": [
+          "engine/skills/actuals_instrumentation_d2_anchor_test.go:406 — runGitReadOnly builds the command from the bare name git with no absolute path and no cmd.Env assignment before Run",
+          "engine/skills/actuals_instrumentation_d2_anchor_test.go:304 — the show call issues -s with a format string only, never -p, so no diff is produced and diff-time filters are never reached",
+          "engine/skills/actuals_instrumentation_d2_anchor_test.go:349 — the log call likewise issues a format string only",
+          "engine/skills/actuals_instrumentation_d2_anchor_test.go:408 — stdout and stderr are bound to bytes.Buffer values, so the subprocess never sees a terminal and the pager path is not exercised"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R1-002",
+        "lens": "risk",
+        "location": "engine/skills/actuals_instrumentation_d2_anchor_test.go:304",
+        "severity": "SUGGESTION",
+        "claim": "No call site places an end-of-options separator before the trailing revision or ref argument, so a value beginning with a dash could in principle be parsed as an option rather than a revision. This is unreachable in this candidate because every call site passes a hardcoded literal, and is recorded only as a hardening note should the helper ever be reused with derived input.",
+        "proof_refs": [
+          "engine/skills/actuals_instrumentation_d2_anchor_test.go:304 — the revision argument is appended directly after the format string with no separator",
+          "engine/skills/actuals_instrumentation_d2_anchor_test.go:349 — the ref argument is appended directly after the format string with no separator",
+          "engine/skills/actuals_instrumentation_d2_anchor_test.go:376 — the same shape repeats in the third call site",
+          "engine/skills/actuals_instrumentation_d2_anchor_test.go:69 — the only values ever passed are hardcoded literals, so no externally supplied string reaches these arguments in this candidate"
+        ],
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R4-001",
+        "lens": "resilience",
+        "location": "engine/skills/actuals_instrumentation_d2_anchor_test.go:158-187",
+        "severity": "WARNING",
+        "claim": "The suite hardcodes the ref main and specific commit SHAs and asserts an exact carrier count against live repository history, so any checkout that never fetched that branch or those objects errors instead of running. The failure is loud rather than silently wrong, but the count-mismatch message attributes the cause to fixture drift, which would send a maintainer to investigate the wrong thing when the real cause is checkout completeness.",
+        "proof_refs": [
+          "engine/skills/actuals_instrumentation_d2_anchor_test.go:172 — the carrier scan is invoked against the literal ref main",
+          "engine/skills/actuals_instrumentation_d2_anchor_test.go:174 — the exact-count assertion's failure text blames fixture drift and names three commit SHAs, offering no reading in which the checkout itself is incomplete",
+          "engine/skills/actuals_instrumentation_d2_anchor_test.go:69 — three subtests additionally hardcode the same landing commit SHA, so they too depend on that object being present",
+          "engine/skills/actuals_instrumentation_d2_anchor_test.go:349 — the underlying scan resolves the ref through git log, which errors when the ref is absent"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R4-002",
+        "lens": "resilience",
+        "location": "engine/skills/actuals_instrumentation_d2_anchor_test.go:406",
+        "severity": "WARNING",
+        "claim": "The subprocess inherits the caller's full environment because cmd.Env is never set, so system and global git configuration and any config-overriding environment variables reach it. Output-shape-altering settings could add tokens to the format output that the fixed-field-count parsers were never exercised against; the strict field-count checks make a loud failure or a skipped line the likely outcome rather than a proven silent misparse, but this was not verified against config variation.",
+        "proof_refs": [
+          "engine/skills/actuals_instrumentation_d2_anchor_test.go:406 — the command is constructed and run with no cmd.Env assignment",
+          "engine/skills/actuals_instrumentation_d2_anchor_test.go:308 — the whole-output parse requires exactly two fields and errors with the raw text otherwise",
+          "engine/skills/actuals_instrumentation_d2_anchor_test.go:355 — the per-line parse silently skips any line that does not carry exactly two fields, which absorbs unexpected tokens rather than reporting them"
+        ],
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R4-003",
+        "lens": "resilience",
+        "location": "engine/skills/actuals_instrumentation_contract_test.go:1497",
+        "severity": "SUGGESTION",
+        "claim": "The reviewer could not confirm from its carried evidence whether the nine table-driven section-stripping cases are implemented as executable assertions, because the block was summarised rather than carried verbatim while its hunk header claimed a much larger line count. The reviewer correctly declined to assert a defect and marked the causality unknown. The orchestrator has since verified the block is real executable code and the nine cases are present, so this records a resolved evidence gap rather than a candidate defect.",
+        "proof_refs": [
+          "engine/skills/actuals_instrumentation_contract_test.go:1497 — the section-stripping subtest opens here and is followed by the table literal, the nine cases and the assertion loop, verified by the orchestrator against the frozen candidate tree",
+          "engine/skills/actuals_instrumentation_contract_test.go:1518 — one of the nine case names sits well inside the block, confirming the table is populated rather than empty"
+        ],
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown"
+      },
+      {
+        "id": "R4-004",
+        "lens": "resilience",
+        "location": "engine/skills/actuals_instrumentation_d2_anchor_test.go:299",
+        "severity": "SUGGESTION",
+        "claim": "Every error path returns the outcome as the empty string rather than a dedicated sentinel distinct from the four named outcome values. All current call sites check the error before reading the outcome, so no misuse is proven, but the zero value offers no type-level protection against a future caller that reads the outcome first.",
+        "proof_refs": [
+          "engine/skills/actuals_instrumentation_d2_anchor_test.go:306 — the first error path returns an empty outcome",
+          "engine/skills/actuals_instrumentation_d2_anchor_test.go:310 — the unexpected-output path does the same",
+          "engine/skills/actuals_instrumentation_d2_anchor_test.go:264 — the four named outcome constants are declared here, none of which is an error sentinel"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R2-001",
+        "lens": "readability",
+        "location": "engine/skills/actuals_instrumentation_d2_anchor_test.go:347-399",
+        "severity": "WARNING",
+        "claim": "The two carrier-scanning functions duplicate the same output-parsing loop byte for byte instead of sharing one implementation, which undercuts the stated reason the first exists: it is meant to independently double-check the second's ambiguity verdict, but both derive their answer by identical construction, so a future change to the output format or the field-parsing rule must be applied in both places or the two silently agree on the wrong thing.",
+        "proof_refs": [
+          "engine/skills/actuals_instrumentation_d2_anchor_test.go:347 — the first function opens and issues the log command, then runs the split-trim-fields-compare loop",
+          "engine/skills/actuals_instrumentation_d2_anchor_test.go:375 — the second function issues the same command and runs the identical loop before switching on the carrier count",
+          "engine/skills/actuals_instrumentation_d2_anchor_test.go:344 — the first function's own doc states its purpose is to confirm the collision independently of the second, which is the claim the shared construction weakens"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R2-002",
+        "lens": "readability",
+        "location": "engine/skills/actuals_instrumentation_contract_test.go:590",
+        "severity": "WARNING",
+        "claim": "This candidate is 785 changed lines against a 400-line budget, roughly twice over, and the seam that would split it is real rather than absent: the new anchor-proof file and the boundary-provenance work share no symbol in either direction, so splitting at that existing file boundary yields groups of 415 and 369. The overrun is asserted rather than forced by an atomic unit.",
+        "proof_refs": [
+          "engine/skills/actuals_instrumentation_contract_test.go:590 — the boundary-provenance sweep guard, one of the two independent concerns, referencing nothing the anchor-proof file introduces",
+          "engine/skills/actuals_instrumentation_contract_test.go:419 — the fixture-mirror subtest, part of the same concern group",
+          "engine/skills/actuals_instrumentation_contract_test.go:979 — the section-stripping helper this group depends on, likewise unreferenced by the anchor-proof file",
+          "engine/skills/actuals_instrumentation_d2_anchor_test.go:60 — the other concern group, a self-contained new file whose types and functions nothing else in this candidate references"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R2-003",
+        "lens": "readability",
+        "location": "engine/skills/actuals_instrumentation_d2_anchor_test.go:137",
+        "severity": "SUGGESTION",
+        "claim": "A failure message that will be read while debugging a CI break ends with an internal review-round identifier that has no location in the repository to look it up. The substantive half of the message already states the rule being enforced, so the citation adds noise without adding anything a maintainer can act on.",
+        "proof_refs": [
+          "engine/skills/actuals_instrumentation_d2_anchor_test.go:137 — the assertion's failure text states the rule and then appends a review-round and warning identifier",
+          "engine/skills/actuals_instrumentation_d2_anchor_test.go:134 — the immediately preceding assertion in the same subtest states its rule without any such citation, showing the actionable form is already used elsewhere in the file"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R2-004",
+        "lens": "readability",
+        "location": "engine/skills/actuals_instrumentation_d2_anchor_test.go:299-340",
+        "severity": "SUGGESTION",
+        "claim": "The committer-timestamp parse and its error wrapping are duplicated between the self-asserted branch and the verified branch, although the raw value is available before the branch splits. A future change to timestamp handling has two call sites to keep in sync with nothing forcing it.",
+        "proof_refs": [
+          "engine/skills/actuals_instrumentation_d2_anchor_test.go:321 — the parse and wrap inside the self-asserted branch",
+          "engine/skills/actuals_instrumentation_d2_anchor_test.go:335 — the identical parse and wrap after the rejection check",
+          "engine/skills/actuals_instrumentation_d2_anchor_test.go:312 — the raw value both branches parse is assigned before either branch is taken"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R2-005",
+        "lens": "readability",
+        "location": "engine/skills/actuals_instrumentation_contract_test.go:979",
+        "severity": "SUGGESTION",
+        "claim": "Two different section-boundary strategies now coexist in the same file for similarly named operations: one terminates by heading level, the new one by exact terminator text. The doc comment grounds the divergence in a defeated defect so the complexity is earned, but a maintainer skimming the two similarly named helpers could reach for the wrong termination semantics without rereading it.",
+        "proof_refs": [
+          "engine/skills/actuals_instrumentation_contract_test.go:979 — the new helper and its doc comment explaining why exact-text termination is load-bearing rather than stylistic",
+          "engine/skills/actuals_instrumentation_contract_test.go:590 — the sole caller, which depends on the exact-text semantics being chosen deliberately"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R2-006",
+        "lens": "readability",
+        "location": "engine/skills/testdata/corrected-actuals-sync-check-repo-behind-origin.json:12",
+        "severity": "SUGGESTION",
+        "claim": "The narrative field is stored as one physical line, so appending a single sentence renders as a whole-line replacement in the diff. The real delta is hidden from this review and from any future diff or blame on the field, and the new sibling fixture added by this candidate repeats the same shape.",
+        "proof_refs": [
+          "engine/skills/testdata/corrected-actuals-sync-check-repo-behind-origin.json:12 — the entire multi-thousand-character narrative is one physical line and shows as fully changed although only a trailing sentence was appended",
+          "engine/skills/testdata/corrected-actuals-skills-validate-ondisk-gate.json:14 — the new fixture stores its narrative the same way, so the next append to it will read the same way"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-001",
+        "lens": "reliability",
+        "location": "engine/skills/actuals_instrumentation_d2_anchor_test.go:299",
+        "severity": "WARNING",
+        "claim": "The resolution functions this suite exercises are declared inside the same test file and are invoked by nothing else, so the test proves its own Go mirror of the documented rule rather than any shipped behavior. The file's own rationale states the production path is agent-run shell commands, not Go, which means a future divergence between the real procedure and this mirror leaves the suite green while behavior drifts.",
+        "proof_refs": [
+          "engine/skills/actuals_instrumentation_d2_anchor_test.go:299 — the resolution function is defined in the test file itself, below the test that calls it",
+          "engine/skills/actuals_instrumentation_d2_anchor_test.go:375 — the ambiguity helper is likewise defined here and called only from this file",
+          "engine/skills/actuals_instrumentation_d2_anchor_test.go:60 — the test invokes only these file-local definitions",
+          "engine/skills/actuals_instrumentation_d2_anchor_test.go:53 — the file's own doc states the production path is shell commands run by the orchestrating agent and that this test does not implement the runtime path"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-002",
+        "lens": "reliability",
+        "location": "engine/skills/actuals_instrumentation_d2_anchor_test.go:158-187",
+        "severity": "WARNING",
+        "claim": "This subtest's outcome is coupled to the literal commit graph reachable from a hardcoded ref at run time rather than to a hermetic fixture, with an exact-count assertion and hardcoded SHAs, so history-altering operations unrelated to any code regression can flip it. That is a determinism defect independent of whether the failure is loud.",
+        "proof_refs": [
+          "engine/skills/actuals_instrumentation_d2_anchor_test.go:172 — the carrier scan runs against live history reachable from a hardcoded ref",
+          "engine/skills/actuals_instrumentation_d2_anchor_test.go:174 — the assertion demands an exact carrier count of three",
+          "engine/skills/actuals_instrumentation_d2_anchor_test.go:82 — a sibling subtest additionally expects one exact committer timestamp from a hardcoded commit",
+          "engine/skills/actuals_instrumentation_d2_anchor_test.go:406 — resolution runs a real subprocess against the working checkout rather than reading a fixture"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-003",
+        "lens": "reliability",
+        "location": "engine/skills/actuals_instrumentation_contract_test.go:1518",
+        "severity": "WARNING",
+        "claim": "The demoted-terminator case's document also contains a heading at the carve-out's own level, which trips the span-integrity guard before the loop can reach end of document. Because the case asserts only the shared sentinel and an empty return, and the end-of-document path returns that same sentinel, it cannot distinguish a working span-integrity guard from an absent one. It does still catch a level-blind terminator match, which is the bug its name targets, but it does not isolate the mechanism the way the two neighbouring cases do.",
+        "proof_refs": [
+          "engine/skills/actuals_instrumentation_contract_test.go:1518 — the case's document places a same-level heading after the demoted one, so the span guard fires first",
+          "engine/skills/actuals_instrumentation_contract_test.go:1013 — the span-integrity guard that fires, returning the wrapped sentinel",
+          "engine/skills/actuals_instrumentation_contract_test.go:1018 — the end-of-document path returns the identical sentinel, which is why the two are indistinguishable to this case's assertions",
+          "engine/skills/actuals_instrumentation_contract_test.go:1497 — the neighbouring cases in the same table do isolate the two mechanisms cleanly"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-004",
+        "lens": "reliability",
+        "location": "engine/skills/actuals_instrumentation_contract_test.go:419",
+        "severity": "SUGGESTION",
+        "claim": "The fixture value is compared with exact float equality against a source literal. This is deterministic today because both sides are correctly-rounded parses of the same decimal text with no arithmetic on either side, but the assertion carries no tolerance and would regress silently if either side ever became computed rather than parsed.",
+        "proof_refs": [
+          "engine/skills/actuals_instrumentation_contract_test.go:419 — the subtest decodes the fixture and compares the decoded value with an untoleranced literal",
+          "engine/skills/testdata/corrected-actuals-skills-validate-ondisk-gate.json:6 — the fixture carries the identical decimal text with no exponent or trailing zeros"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-005",
+        "lens": "reliability",
+        "location": "engine/skills/actuals_instrumentation_d2_anchor_test.go:304",
+        "severity": "SUGGESTION",
+        "claim": "No subtest exercises the resolution function's error-returning branches. All four anchor subtests pass the same known-good commit and vary only the recorded tree, so neither the unreadable-commit path nor the unexpected-output path is ever reached, and a regression in either would go undetected.",
+        "proof_refs": [
+          "engine/skills/actuals_instrumentation_d2_anchor_test.go:304 — the unreadable-commit error path, never reached by any subtest",
+          "engine/skills/actuals_instrumentation_d2_anchor_test.go:309 — the unexpected-output error path, likewise never reached",
+          "engine/skills/actuals_instrumentation_d2_anchor_test.go:69 — the four subtests all pass the same hardcoded known-good commit, varying only the recorded tree"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      }
+    ],
+    "classifications": {},
+    "outcomes": {
+      "R1-001": "info",
+      "R1-002": "info",
+      "R2-001": "info",
+      "R2-002": "info",
+      "R2-003": "info",
+      "R2-004": "info",
+      "R2-005": "info",
+      "R2-006": "info",
+      "R3-001": "info",
+      "R3-002": "info",
+      "R3-003": "info",
+      "R3-004": "info",
+      "R3-005": "info",
+      "R4-001": "info",
+      "R4-002": "info",
+      "R4-003": "info",
+      "R4-004": "info"
+    },
+    "fix_finding_ids": [],
+    "follow_ups": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:de51e717adf3682a0df1050830033d7b1a5161c39472b3b854f344147abb829a",
+    "evidence_record_digest": "sha256:5fee12201a8b8bdc50ff61a5345d3eec9cd1e7a8518a1b2e1eff9787dbe2a04d",
+    "evidence_outcome": "passed",
+    "evidence_target_identity": "sha256:96c02f8c982073386291d093062697119bc1e5f8e398e905772865b87398863f",
+    "evidence_authority_revision": "sha256:0676ff6e8f3c18c04071de773ab3c7685acad1d9df56d090452fa0ed8e93d695"
+  }
+}

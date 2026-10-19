@@ -1,0 +1,129 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:23217ad51bfa0cd78dce8ea3111f84501ae4d52838172217b98a1c29ec95150c",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-518ef304c80c8a3a",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "current-changes",
+      "base_tree": "f2d6b135612ccf53f5e0219a3f097b0f7dd17d80",
+      "candidate_tree": "0096a16715e1f4ece9949070ed2612b486f85ed1",
+      "paths_digest": "sha256:02de5d6a3c727ee7cb006227cbfe265b189e7064ff82a8a179ea9367d919aad1",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/skills/actuals_instrumentation_contract_test.go"
+      ],
+      "identity": "sha256:518ef304c80c8a3a88d484f98b72470bb713ede064c9e4fa86a8a8abc777b257"
+    },
+    "current_snapshot": {
+      "kind": "current-changes",
+      "base_tree": "f2d6b135612ccf53f5e0219a3f097b0f7dd17d80",
+      "candidate_tree": "0096a16715e1f4ece9949070ed2612b486f85ed1",
+      "paths_digest": "sha256:02de5d6a3c727ee7cb006227cbfe265b189e7064ff82a8a179ea9367d919aad1",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/skills/actuals_instrumentation_contract_test.go"
+      ],
+      "identity": "sha256:518ef304c80c8a3a88d484f98b72470bb713ede064c9e4fa86a8a8abc777b257"
+    },
+    "genesis_paths": [
+      "engine/skills/actuals_instrumentation_contract_test.go"
+    ],
+    "policy_hash": "sha256:34fb63d7f29f8613cd4431382b1057398a4816f8a4c20fc34677fffc80a184f6",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-reliability"
+    ],
+    "original_changed_lines": 17,
+    "correction_budget": 9,
+    "lens_results": [
+      {
+        "lens": "review-reliability",
+        "findings": [
+          {
+            "id": "R3-cr-normalisation-pair-only",
+            "lens": "reliability",
+            "location": "engine/skills/actuals_instrumentation_contract_test.go:331",
+            "severity": "SUGGESTION",
+            "claim": "The new normalisation collapses only the exact \\r\\n pair, so a lone-CR or double-CR document still fails the heading lookup and takes the whole gate down - the same failure class the hunk set out to remove.",
+            "proof_refs": [
+              "engine/skills/actuals_instrumentation_contract_test.go:331 'lines := strings.Split(strings.ReplaceAll(doc, \"\\r\\n\", \"\\n\"), \"\\n\")' normalises only the CRLF pair, while the deciding comparison at engine/skills/actuals_instrumentation_contract_test.go:339 remains 'if !inFence \u0026\u0026 strings.TrimRight(line, \" \\t\") == heading' - the trim set is space and tab, never \\r.",
+              "Failure scenario: a doc re-saved with classic-Mac \\r-only endings is never split, so the single resulting line does not equal '## Hard Rules' and markdownSectionBody hits engine/skills/actuals_instrumentation_contract_test.go:345, 'section heading %q not found - was the section renamed or removed?', failing R001_R002_three_units_never_blended and R012_actuals_output_separate_labels for an encoding-only change. The same happens for \\r\\r\\n, where normalisation leaves one trailing \\r on the heading line. Both outcomes are identical on the base tree, so this is the residual of a pre-existing class rather than a regression; adding \\r to the TrimRight set at line 339 (and to the blank-line/list-item comparisons) would close it in one token."
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "pre-existing"
+          },
+          {
+            "id": "R3-new-branches-unexercised",
+            "lens": "reliability",
+            "location": "engine/skills/actuals_instrumentation_contract_test.go:226",
+            "severity": "SUGGESTION",
+            "claim": "Both new behaviours are unreachable from any executable test, so the fixes themselves carry no regression protection and would drift silently.",
+            "proof_refs": [
+              "engine/skills/actuals_instrumentation_contract_test.go:226-228 'if closedRecord == nil { t.Fatalf(\"schema additionalProperties must be the boolean false, got %s: a null flag does not close the record\", schema.AdditionalProperties) }' is driven only by committed repository content, which declares the boolean false; likewise the normalisation at engine/skills/actuals_instrumentation_contract_test.go:331 and :369 is a no-op because the pinned document contains no 0x0D byte.",
+              "Failure scenario: if a later refactor reverted the decode target at engine/skills/actuals_instrumentation_contract_test.go:222 from '*bool' back to 'bool', or dropped one ReplaceAll, 'go test ./...' would stay green on today's content and the loss would surface only on the day a null flag or a CRLF re-save actually lands - exactly the situation both hunks exist to prevent. A small table test over markdownSectionBody/markdownListItemContaining with CRLF input and over the three-way additionalProperties decode (absent, null, true) would pin them; the helpers are package-local and need no repository fixture."
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          }
+        ],
+        "evidence": [
+          "Inspection was performed exclusively through read-only Git against the two frozen trees (base f2d6b135612ccf53f5e0219a3f097b0f7dd17d80, candidate 0096a16715e1f4ece9949070ed2612b486f85ed1) with inherited environment cleared and system/global config, attributes, replacement objects and external diff disabled. Subcommands actually run: 'diff --name-status --no-renames \u003cbase\u003e \u003ccandidate\u003e', 'diff --numstat \u003cbase\u003e \u003ccandidate\u003e', 'diff --text --no-ext-diff --diff-algorithm=myers --no-indent-heuristic -U8 \u003cbase\u003e \u003ccandidate\u003e -- engine/skills/actuals_instrumentation_contract_test.go', and 'cat-file -p \u003ctree\u003e:\u003cpath\u003e' against both trees for the manifest path plus two supporting documents referred to in prose only (the shared actuals-record schema document and the time-estimation skill document). The live worktree, the index and HEAD were never read; nothing was checked out and no mutating Git command was run.",
+          "Diff scope: exactly one changed path, 13 insertions / 4 deletions, three hunks. Hunk arithmetic reconciles with numstat exactly (hunk A +8/-2 inside the closed-schema group, hunk B +4/-1 in the section helper, hunk C +1/-1 in the list-item helper = +13/-4), so the candidate carries no change beyond the two described fixes.",
+          "additionalProperties branch walk on the candidate, lines 216-231. Key absent: the struct field is a json.RawMessage that stays nil, so 'if schema.AdditionalProperties == nil' fires 'schema must declare additionalProperties: the closed-record flag is absent'. JSON null: encoding/json routes a null literal into *json.RawMessage's UnmarshalJSON (indirect() cannot break early because the Addr()-derived pointer is not settable), so the field holds the 4 bytes 'null' and is non-nil; 'json.Unmarshal(...)' into the **bool target then sets the pointer to nil and returns no error, so the new 'if closedRecord == nil' fires the distinct message 'a null flag does not close the record'. Object, string, number or array: Unmarshal returns a type error and the pre-existing Fatalf prints both the raw bytes and the error. Boolean true: '*closedRecord' is true and the inverted-flag Fatal fires. Boolean false is the single passing value. The dereference at line 229 is guarded by the nil check at line 226, and the Fatalf at 227 uses %s on a []byte-backed RawMessage, so no input reachable from the decode above can panic. This closes the base defect exactly: on the base side 'var closedRecord bool' plus a null literal is a documented no-op that returns no error, so null read as a passing false.",
+          "Carriage-return reach analysis. After 'strings.ReplaceAll(doc, \"\\r\\n\", \"\\n\")' at line 331 every line handed to the comparisons inside markdownSectionBody is CR-free for CRLF input, so heading equality (line 339, strings.TrimRight(line, \" \\t\") == heading), fence detection (isMarkdownFence, which TrimSpace-es and was already CR-tolerant) and heading-level detection (markdownHeadingLevel, which only inspects the leading '#' run and the byte after it) all behave as on LF input. markdownSectionBody returns a joined, already-normalised body, so the second ReplaceAll at line 369 is idempotent for both current call sites (lines 160 and 178) and only guards a hypothetical future caller that passes raw document text; list-item matching and the blank-line terminator at line 390 are therefore also CR-clean. Normalisation cannot corrupt legitimate content in practice: every pinned needle in the file is a single-line, CR-free literal, and the normalised text is consumed only by strings.Contains, so collapsing CRLF can only widen matching, never narrow it.",
+          "All ten t.Run group names are byte-identical between the two trees, in the same order, and even at identical line numbers 33, 59, 69, 87, 101, 116, 154, 175, 185, 202 (R004_R005_schema_temporal_boundary_and_interruption, R015_R006_R007_R008_checkpoint_count_description, R009_calibration_excludes_calendar_time, R010_R011_delivery_window_formula_shape, R006_R007_R015_inception_round_trip_and_explicit_zero, R014_amendedR007_fixture_pins, R001_R002_three_units_never_blended, R012_actuals_output_separate_labels, R013_roadmap_maker_no_compute_time_source_invariant, D2_D5_closed_schema_invariant). Nothing was renamed, deleted, skipped, or made unreachable; no assertion was loosened - the closed-schema group gained two failure paths and lost none.",
+          "Both GREEN-by-construction groups keep their invariant labelling. Lines 186-190 still state that the roadmap-maker FORBID guard is 'GREEN-by-construction on both main and HEAD. It is NOT RED coverage', and lines 203-208 still state the closed-schema group is 'Deliberately not part of the RED gate ... so it is NOT RED coverage'. Neither is presented as RED coverage for a requirement.",
+          "Over-tightening check against real content, read from the candidate tree. The shared actuals-record schema document declares '\"additionalProperties\": false' at its top level, so the tightened check still passes on the committed schema and the new null branch is unreachable today. The pinned time-estimation skill document contains zero 0x0D bytes, so ReplaceAll is a byte-for-byte no-op on today's content and the passing run is behaviourally identical to the base run. Neither new failure can fire on a legitimate schema: only an explicit JSON null now fails where it previously passed, and null is never a valid way to close a record.",
+          "Determinism: the hunks add no map iteration, no filesystem ordering, no absolute-path handling, no environment or locale dependency and no timing. strings.ReplaceAll and strings.Split operate on bytes and are locale-independent. The pre-existing non-determinism in this file (map-range over the decoded fixture at line 249, which only affects which of several equivalent failures reports first, and the cwd-relative repo-root resolution at line 264) is present identically on the base side and is untouched by this candidate."
+        ],
+        "result_hash": "sha256:e3d4e9c06511b01a0c37a1996c5d5f08cd486a810a4b999d5a590bba22fd0d1b"
+      }
+    ],
+    "findings": [
+      {
+        "id": "R3-cr-normalisation-pair-only",
+        "lens": "reliability",
+        "location": "engine/skills/actuals_instrumentation_contract_test.go:331",
+        "severity": "SUGGESTION",
+        "claim": "The new normalisation collapses only the exact \\r\\n pair, so a lone-CR or double-CR document still fails the heading lookup and takes the whole gate down - the same failure class the hunk set out to remove.",
+        "proof_refs": [
+          "engine/skills/actuals_instrumentation_contract_test.go:331 'lines := strings.Split(strings.ReplaceAll(doc, \"\\r\\n\", \"\\n\"), \"\\n\")' normalises only the CRLF pair, while the deciding comparison at engine/skills/actuals_instrumentation_contract_test.go:339 remains 'if !inFence \u0026\u0026 strings.TrimRight(line, \" \\t\") == heading' - the trim set is space and tab, never \\r.",
+          "Failure scenario: a doc re-saved with classic-Mac \\r-only endings is never split, so the single resulting line does not equal '## Hard Rules' and markdownSectionBody hits engine/skills/actuals_instrumentation_contract_test.go:345, 'section heading %q not found - was the section renamed or removed?', failing R001_R002_three_units_never_blended and R012_actuals_output_separate_labels for an encoding-only change. The same happens for \\r\\r\\n, where normalisation leaves one trailing \\r on the heading line. Both outcomes are identical on the base tree, so this is the residual of a pre-existing class rather than a regression; adding \\r to the TrimRight set at line 339 (and to the blank-line/list-item comparisons) would close it in one token."
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "pre-existing"
+      },
+      {
+        "id": "R3-new-branches-unexercised",
+        "lens": "reliability",
+        "location": "engine/skills/actuals_instrumentation_contract_test.go:226",
+        "severity": "SUGGESTION",
+        "claim": "Both new behaviours are unreachable from any executable test, so the fixes themselves carry no regression protection and would drift silently.",
+        "proof_refs": [
+          "engine/skills/actuals_instrumentation_contract_test.go:226-228 'if closedRecord == nil { t.Fatalf(\"schema additionalProperties must be the boolean false, got %s: a null flag does not close the record\", schema.AdditionalProperties) }' is driven only by committed repository content, which declares the boolean false; likewise the normalisation at engine/skills/actuals_instrumentation_contract_test.go:331 and :369 is a no-op because the pinned document contains no 0x0D byte.",
+          "Failure scenario: if a later refactor reverted the decode target at engine/skills/actuals_instrumentation_contract_test.go:222 from '*bool' back to 'bool', or dropped one ReplaceAll, 'go test ./...' would stay green on today's content and the loss would surface only on the day a null flag or a CRLF re-save actually lands - exactly the situation both hunks exist to prevent. A small table test over markdownSectionBody/markdownListItemContaining with CRLF input and over the three-way additionalProperties decode (absent, null, true) would pin them; the helpers are package-local and need no repository fixture."
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      }
+    ],
+    "classifications": {},
+    "outcomes": {
+      "R3-cr-normalisation-pair-only": "info",
+      "R3-new-branches-unexercised": "info"
+    },
+    "fix_finding_ids": [],
+    "follow_ups": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:e5c9bd944067843fd55bba84e71689f7646076c02a87708ec1992f5705f5eef7",
+    "evidence_record_digest": "sha256:a416740686b35c487c2b678b36da0e225e6ddfda654d9ee61386ad36138f8e6e",
+    "evidence_outcome": "passed",
+    "evidence_target_identity": "sha256:518ef304c80c8a3a88d484f98b72470bb713ede064c9e4fa86a8a8abc777b257",
+    "evidence_authority_revision": "sha256:be4bf2eb0740851d3ff63b10cd098a0dbb9807de10a0ffcb3675d3c719a5d214"
+  }
+}

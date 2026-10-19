@@ -22,11 +22,13 @@ var (
 )
 
 // latestCandidates reads the Status and LastObserved of the newest observation of each topic key: the one
-// updated last, and among those updated together the one with the highest id.
+// updated last, and among those updated together the one with the highest id. A record made under a goal is a
+// record of the topic under its goal prefix (ADR C23 M5), whichever goal made it.
 func latestCandidates(observations []memory.Observation) map[string]candidateRecord {
 	out := make(map[string]candidateRecord)
 	for _, observation := range observations {
-		if observation.TopicKey == "" {
+		topic := memory.TopicWithoutGoal(observation.TopicKey)
+		if topic == "" {
 			continue
 		}
 		candidate := candidateRecord{
@@ -35,10 +37,10 @@ func latestCandidates(observations []memory.Observation) map[string]candidateRec
 			updatedAt:    observation.UpdatedAt,
 			id:           observation.ID,
 		}
-		if previous, ok := out[observation.TopicKey]; ok && !newerCandidate(candidate, previous) {
+		if previous, ok := out[topic]; ok && !newerCandidate(candidate, previous) {
 			continue
 		}
-		out[observation.TopicKey] = candidate
+		out[topic] = candidate
 	}
 	return out
 }

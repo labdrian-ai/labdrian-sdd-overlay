@@ -52,7 +52,7 @@ func TestTheStoreAnswersInTheTypesOfTheDomainModel(t *testing.T) {
 		t.Fatalf("CoverageSnapshot = %d, %v, %v, want two live and two resolved", live, byID, err)
 	}
 	var result memory.SearchResult
-	if result, err = store.Search(project, "first", 5); err != nil || result.MatchMode != memory.MatchAll || len(result.Rows) != 1 {
+	if result, err = store.Search(project, "first", 5, memory.SearchFilter{}); err != nil || result.MatchMode != memory.MatchAll || len(result.Rows) != 1 {
 		t.Fatalf("Search = %+v, %v, want one row matched on every token", result, err)
 	}
 	var row memory.Row = result.Rows[0]

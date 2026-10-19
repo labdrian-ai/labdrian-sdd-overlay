@@ -24,7 +24,7 @@ func TestSearch_AMatchLateInABodyHasItsOffsetAndASnippetCentredOnIt(t *testing.T
 	}
 	defer store.Close()
 
-	got, err := store.Search("p", "needle", 5)
+	got, err := store.Search("p", "needle", 5, memory.SearchFilter{})
 	if err != nil || len(got.Rows) != 1 {
 		t.Fatalf("Search = %+v, %v, want one row", got, err)
 	}

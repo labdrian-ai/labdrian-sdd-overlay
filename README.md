@@ -849,7 +849,9 @@ gentle-ai-overlay projection hook --event UserPromptSubmit|PreToolUse
         include is denied (the sdd profile's plan holds engram alone, so a longterm-mem query or get is
         denied; the reason names the source and the profile and says to unbind). Then a `query` is
         denied when its `project` argument is missing, not a string, empty, or different from the plan's
-        project (the reason names both projects and says to query the plan's project or unbind), and a
+        project (the reason names both projects and says to query the plan's project or unbind), or,
+        under scope goal, when its `goal` argument is missing, not a string, empty, or different from
+        the plan's goal (the reason names the plan's goal and says to query the plan's goal or unbind), and a
         `mem_search` or `mem_context` is denied when its `project` is missing, not a string, empty, or
         other than the name Engram gives the workflow's identity (its last path segment:
         github.com/acme/proj-1 is proj-1), or when it sets `all_projects` to true. A read by id (`get`,

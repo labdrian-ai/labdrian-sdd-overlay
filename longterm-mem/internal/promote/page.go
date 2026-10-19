@@ -53,7 +53,7 @@ func EmitPage(obs memory.Observation, address string, related []Link, at time.Ti
 	fm := frontmatter{
 		Title: obs.Title, Address: address, Aliases: []string{obs.Title},
 		Created: today, Updated: today,
-		Tags: []string{"memory", obs.Type}, Status: statusFor(obs),
+		Tags: pageTags(obs), Status: statusFor(obs),
 		Related:        relatedWikilinks(related),
 		EngramID:       obs.ID,
 		EngramSyncID:   obs.SyncID,
@@ -68,6 +68,19 @@ func EmitPage(obs memory.Observation, address string, related []Link, at time.Ti
 		Frontmatter: fm.Render(),
 		Body:        renderBody(obs),
 	}, nil
+}
+
+// pageTags are a promoted page's tags: memory and the observation's type, and,
+// when the observation's topic carries the goal prefix (memory.GoalOfTopic),
+// the goal's tag after them (ADR C23 M5, decision 2), so a query under a goal
+// can tell the page's goal from its frontmatter. An observation of no goal
+// gets the two tags every page had before goals.
+func pageTags(obs memory.Observation) []string {
+	tags := []string{"memory", obs.Type}
+	if goal, ok := memory.GoalOfTopic(obs.TopicKey); ok {
+		tags = append(tags, memory.GoalTag(goal))
+	}
+	return tags
 }
 
 // statusFor derives the fresh-promotion status: mature for a pinned

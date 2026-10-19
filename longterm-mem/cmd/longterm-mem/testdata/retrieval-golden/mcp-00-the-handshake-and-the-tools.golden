@@ -162,6 +162,10 @@
                 "type": "string"
               },
               "description": "sources to query: engram-fts, engram-embed, vault (default: engram-fts plus engram-embed once the project's embedding index exists, else engram-fts only; vault is not queried unless named)"
+            },
+            "goal": {
+              "type": "string",
+              "description": "a goal id: return that goal's records (an Engram topic beginning goal:\u003cid\u003e/, a vault page tagged goal:\u003cid\u003e) and the records of no goal, leaving out other goals' (default: every record)"
             }
           },
           "required": [

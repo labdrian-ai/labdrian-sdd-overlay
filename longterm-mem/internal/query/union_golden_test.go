@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 
 	_ "modernc.org/sqlite"
 )
@@ -221,7 +222,7 @@ func TestUnionGoldenFixtureUsesLiveFTSSchema(t *testing.T) {
 	// substring straddling its two halves that is never a whole token
 	// under any word-based tokenizer. Only trigram indexing -- every
 	// three-character window is its own token -- can match it.
-	search, err := store.Search(unionGoldenProject, "tionKi", 5)
+	search, err := store.Search(unionGoldenProject, "tionKi", 5, memory.SearchFilter{})
 	if err != nil {
 		t.Fatalf("search: %v", err)
 	}

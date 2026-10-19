@@ -1,0 +1,27 @@
+$ review-receipt capture --cwd <ROOT> --change the-change --feature the-feature
+exit: 1
+--- stdout ---
+--- stderr ---
+error: review-receipt capture: --change and --feature cannot be given together
+
+$ review-receipt capture --cwd <ROOT> --feature the-feature --change the-change
+exit: 1
+--- stdout ---
+--- stderr ---
+error: review-receipt capture: --change and --feature cannot be given together
+
+$ review-receipt capture --change the-change --feature the-feature
+exit: 1
+--- stdout ---
+--- stderr ---
+error: --cwd is required
+
+=== odd after ===
+(no odd directory)
+
+=== openspec after ===
+dir  openspec
+dir  openspec/changes
+dir  openspec/changes/the-change
+file openspec/changes/the-change/tasks.md 0644 8 b23b81c926c4
+

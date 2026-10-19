@@ -1,0 +1,677 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:df1fcba141c3d24109f24170f0b46d7fca4ffd623a2aa90793992063ce9eeb80",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-357c481d1bf4e6fd",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "4a56885675c06733b6faccfe91e3a7611898cadd",
+      "candidate_tree": "aaae3588daed2c5fc2dc2f889291ca209b8d4c10",
+      "paths_digest": "sha256:7147ca6fd43e75fa412de781b822fd176c562eab800f68c0a17ff8646f7cc246",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "docs/e1-durability-probe.md",
+        "engine/installer/route_test.go",
+        "openspec/changes/archive/2026-06-27-gadu-portable-operator/apply-progress.md",
+        "openspec/changes/archive/2026-06-27-gadu-portable-operator/archive-report.md",
+        "openspec/changes/archive/2026-06-27-gadu-portable-operator/specs/gadu-canonical-source/spec.md",
+        "openspec/changes/archive/2026-06-27-gadu-portable-operator/specs/overlay-agent-route/spec.md",
+        "openspec/changes/archive/2026-06-27-gadu-portable-operator/verify-report.md",
+        "openspec/specs/gadu-canonical-source/spec.md",
+        "openspec/specs/gadu-generator/spec.md",
+        "openspec/specs/overlay-agent-route/spec.md"
+      ],
+      "identity": "sha256:357c481d1bf4e6fdc5cc2da10723eeba84edac2ab5b91230d586d08a2396d7fc"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "4a56885675c06733b6faccfe91e3a7611898cadd",
+      "candidate_tree": "aaae3588daed2c5fc2dc2f889291ca209b8d4c10",
+      "paths_digest": "sha256:7147ca6fd43e75fa412de781b822fd176c562eab800f68c0a17ff8646f7cc246",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "docs/e1-durability-probe.md",
+        "engine/installer/route_test.go",
+        "openspec/changes/archive/2026-06-27-gadu-portable-operator/apply-progress.md",
+        "openspec/changes/archive/2026-06-27-gadu-portable-operator/archive-report.md",
+        "openspec/changes/archive/2026-06-27-gadu-portable-operator/specs/gadu-canonical-source/spec.md",
+        "openspec/changes/archive/2026-06-27-gadu-portable-operator/specs/overlay-agent-route/spec.md",
+        "openspec/changes/archive/2026-06-27-gadu-portable-operator/verify-report.md",
+        "openspec/specs/gadu-canonical-source/spec.md",
+        "openspec/specs/gadu-generator/spec.md",
+        "openspec/specs/overlay-agent-route/spec.md"
+      ],
+      "identity": "sha256:357c481d1bf4e6fdc5cc2da10723eeba84edac2ab5b91230d586d08a2396d7fc"
+    },
+    "genesis_paths": [
+      "docs/e1-durability-probe.md",
+      "engine/installer/route_test.go",
+      "openspec/changes/archive/2026-06-27-gadu-portable-operator/apply-progress.md",
+      "openspec/changes/archive/2026-06-27-gadu-portable-operator/archive-report.md",
+      "openspec/changes/archive/2026-06-27-gadu-portable-operator/specs/gadu-canonical-source/spec.md",
+      "openspec/changes/archive/2026-06-27-gadu-portable-operator/specs/overlay-agent-route/spec.md",
+      "openspec/changes/archive/2026-06-27-gadu-portable-operator/verify-report.md",
+      "openspec/specs/gadu-canonical-source/spec.md",
+      "openspec/specs/gadu-generator/spec.md",
+      "openspec/specs/overlay-agent-route/spec.md"
+    ],
+    "policy_hash": "sha256:34fb63d7f29f8613cd4431382b1057398a4816f8a4c20fc34677fffc80a184f6",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-risk",
+      "review-resilience",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 1357,
+    "correction_budget": 200,
+    "lens_results": [
+      {
+        "lens": "review-risk",
+        "findings": [],
+        "evidence": [
+          "Inspected all 10 changed paths via the prompt-carried diffs against base_tree 4a56885675c06733b6faccfe91e3a7611898cadd and candidate_tree aaae3588daed2c5fc2dc2f889291ca209b8d4c10: nine Markdown documentation/spec/report files and one Go test file; no production code, dependency manifest (go.mod/go.sum untouched), CI configuration, credential store, or executable script is modified, and no file mode changes or type changes appear in the changed_path_manifest.",
+          "engine/installer/route_test.go is the only code change and is additive test-only: the new restoration half of TestSyncCheck_DetectsMissingAgentFile reuses the pre-existing sandboxed fixture (overlayScript/setupSandboxOverlay/runOverlay with a test-scoped home), calls the overlay CLI with fixed literal arguments (apply --target all, sync-check --target claude), and asserts via os.Stat on filepath.Join(home, \".claude\", \"agents\", \"GADU.md\") plus strings.Contains on captured output — no new privileged filesystem access outside the sandbox, no network access, no user-controlled or unsanitized input surface, and no authorization logic is introduced.",
+          "Scanned every added/modified hunk for secret material: content consists of sha256 digests, git commit SHAs, PR numbers, public repository-relative paths, and home-directory path templates (~/.claude, ~/.codex, ~/.config/opencode); no API keys, tokens, passwords, private hostnames, or environment values are embedded in any added line.",
+          "Data-loss/durability posture is documented, not weakened: the candidate explicitly records that the binary-mutating `gentle-ai upgrade` command was deliberately NOT executed (docs/e1-durability-probe.md 2026-08-11 correction sections), and the spec/doc edits (R-008 rewrite, R-009 narrowing to Codex-only, R-013 exclusion from promotion) describe already-shipped overlay behavior without changing any enforcement code, so no reachable security, authorization-bypass, data-exposure, or data-loss impact is introduced by this candidate; zero risk-lens findings."
+        ],
+        "result_hash": "sha256:e36ec8c39be2c30e88a413abc6ae77f074a1255c473156d88f177a1bd99eb933"
+      },
+      {
+        "lens": "review-resilience",
+        "findings": [
+          {
+            "id": "R4-001",
+            "lens": "resilience",
+            "location": "docs/e1-durability-probe.md:96",
+            "severity": "WARNING",
+            "claim": "The candidate's AC-5 correction states the restoration regression test covers 'both artifacts present + managed', but the restoration half added in this change exercises exactly one artifact: it removes and restores only the Claude agent file at ~/.claude/agents/GADU.md, and the integration fixture manifest contains no skills/gadu-operator/SKILL.md row, so the skill artifact is never removed or restored by any test and no assertion checks managed state. Concrete failure mode: if cmd_apply's skill-route restoration regresses, a gentle-ai sync or upgrade that clobbers the deployed skill copies in any of the three skills destinations passes CI silently, while this document tells an operator responding to drift that both artifacts are guarded by the named test.",
+            "proof_refs": [
+              "docs/e1-durability-probe.md:96 — added correction sentence restates AC-5 as covering both artifacts present and managed, naming TestSyncCheck_DetectsMissingAgentFile as the regression test that exercises it.",
+              "engine/installer/route_test.go:889 — the added restoration half builds and checks only the Claude agent destination; no added assertion removes or restores the skill artifact or checks managed state.",
+              "openspec/changes/archive/2026-06-27-gadu-portable-operator/verify-report.md:148 — verify pass 5 WARNING-1 confirms the sandbox fixture manifest contains no skill-artifact row, so no test ever removes or restores that artifact."
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R4-002",
+            "lens": "resilience",
+            "location": "engine/installer/route_test.go:901",
+            "severity": "WARNING",
+            "claim": "The added assertion strings.Contains(outRestored, \"IN_SYNC\") is near-vacuous as a restoration check: sync-check emits IN_SYNC for every in-sync manifest row, so this whole-output substring match stays satisfied by unrelated rows even when the GADU agent file was not restored — empirically recorded by the candidate's own verify pass 5 neutralization run, where this assertion did not fire under a simulated restoration bug while its two sibling assertions did. Failure mode: if the sibling assertions are later weakened or refactored away, the durability regression net silently degrades to always-green; the assertion should be scoped to the agent file's own sync-check output line.",
+            "proof_refs": [
+              "engine/installer/route_test.go:901 — added assertion performs a substring match for IN_SYNC over the aggregate sync-check output rather than the agent file's own row.",
+              "openspec/changes/archive/2026-06-27-gadu-portable-operator/verify-report.md:78 — recorded neutralization experiment: with restoration disabled this assertion still did not fire because unrelated manifest rows print IN_SYNC.",
+              "engine/installer/route_test.go:890 — the sibling stat assertion currently carries the restoration proof, so today this is a robustness gap in the safety net, not a live false negative."
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R4-003",
+            "lens": "resilience",
+            "location": "engine/installer/route_test.go:885",
+            "severity": "SUGGESTION",
+            "claim": "The restoration half exercises only the absent-file drift state: the agent file is fully removed, then reapplied. The promoted R-008 durability guarantee also covers content drift — the file present but differing, e.g. a gentle-ai sync overwriting the deployed GADU.md with stale bytes — which cmd_apply restores through its content-differs branch, but no test drives that branch. A regression that restores absent files while skipping present-but-differing ones would pass CI. Add a variant that overwrites the deployed file with divergent content, reapplies, and asserts the bytes match the overlay source.",
+            "proof_refs": [
+              "engine/installer/route_test.go:885 — the added restoration half reapplies only after full removal of the agent file; no step overwrites the deployed file with divergent content before reapplying.",
+              "openspec/specs/overlay-agent-route/spec.md:87 — promoted R-008 promises drift detected by cmd_sync_check and restored by cmd_apply, which includes the present-but-differing state the new test never drives."
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R4-004",
+            "lens": "resilience",
+            "location": "openspec/specs/overlay-agent-route/spec.md:89",
+            "severity": "SUGGESTION",
+            "claim": "The promoted canonical R-008 retains the clause 'sized after experiment E1 (see R-013) is run and its result is documented', but R-013 was deliberately excluded from promotion, so the canonical spec's durability requirement now cross-references a requirement that exists nowhere under openspec/specs/. A maintainer auditing the guard's sizing rationale after a real clobber incident follows the reference and finds nothing; the explanation lives only in the archive report outside the canonical tree. Either replace the R-013 reference with a direct pointer to docs/e1-durability-probe.md or drop the reference at promotion.",
+            "proof_refs": [
+              "openspec/specs/overlay-agent-route/spec.md:89 — promoted R-008 text ends with the cross-reference to R-013, and the promoted file defines no requirement with that ID.",
+              "openspec/changes/archive/2026-06-27-gadu-portable-operator/archive-report.md:82 — archive report records that R-013 was deliberately excluded in its entirety from promotion."
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          }
+        ],
+        "evidence": [
+          "Inspected all 10 changed-path diffs carried in the review input; the only executable change in the candidate is the additive restoration extension of TestSyncCheck_DetectsMissingAgentFile in engine/installer/route_test.go — no production code path, retry logic, rollback mechanism, or latency-bearing behavior of the overlay itself is modified by this candidate.",
+          "Failure handling inside the added test block is sound: the reapply invocation and the post-reapply sync-check invocation both fail the test immediately via t.Fatalf on error, so later assertions cannot run against stale or missing output.",
+          "The deliberate refusal to execute the gentle-ai upgrade durability probe is documented in docs/e1-durability-probe.md with its safety rationale, and the guard selection is explicitly re-based on the sync-half evidence only; this was treated as an accepted, recorded evidence gap rather than reported as a new resilience defect.",
+          "openspec/specs/gadu-canonical-source/spec.md and openspec/specs/gadu-generator/spec.md are verbatim promotions describing generator freshness-test and capture-exclusion behavior; no operational failure-handling surface changes there, and the MANUAL annotations honestly mark the genuinely non-automatable runtime-load scenarios.",
+          "Line anchors were derived from the supplied hunk headers and cross-checked against the line numbers the candidate's own verify report cites for the same sites (the restoration stat assertion and the IN_SYNC assertion match its recorded neutralization failure output), so the anchored lines are lines this candidate added."
+        ],
+        "result_hash": "sha256:6730e371a1d532cdb13cce0c5902793ee8c5e1af78f46cc134926c640ecd9f95"
+      },
+      {
+        "lens": "review-readability",
+        "findings": [
+          {
+            "id": "R2-dangling-r013-reference",
+            "lens": "readability",
+            "location": "openspec/specs/overlay-agent-route/spec.md:89",
+            "severity": "WARNING",
+            "claim": "The promoted canonical R-008 retains the clause 'sized after experiment E1 (see R-013) is run and its result is documented', but R-013 was deliberately excluded from promotion, so the brand-new canonical file's only cross-reference points at a requirement ID that exists nowhere under openspec/specs/; the clause also asserts as standing canonical fact a process event (E1 run and documented) that the same candidate's archive report records as only half-executed and permanently unsatisfiable, and the archive report's explicit claim that R-013 'is not present in openspec/specs/overlay-agent-route/spec.md in any modified or narrowed form' is contradicted by this surviving reference. A future reader following '(see R-013)' finds nothing and cannot tell whether the omission is an error or a decision.",
+            "proof_refs": [
+              "openspec/specs/overlay-agent-route/spec.md:84-89 (R-008 normative text ending '(see R-013) is run and its result is documented')",
+              "openspec/changes/archive/2026-06-27-gadu-portable-operator/archive-report.md:104-119 ('the gentle-ai upgrade half of E1 ... never executed'; R-013 'structurally unsatisfiable regardless of future effort')",
+              "openspec/changes/archive/2026-06-27-gadu-portable-operator/archive-report.md:121-125 ('It is not present in openspec/specs/overlay-agent-route/spec.md in any modified or narrowed form')",
+              "changed_path_manifest: openspec/specs/overlay-agent-route/spec.md is a new file (status A) containing no R-013 requirement block"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R2-archive-report-arithmetic",
+            "lens": "readability",
+            "location": "openspec/changes/archive/2026-06-27-gadu-portable-operator/archive-report.md:73",
+            "severity": "WARNING",
+            "claim": "The terminal audit record's promotion accounting does not add up and conflates scopes: the overlay-agent-route table row claims '12 of 13 requirements promoted' (the change-wide total — that domain actually promoted 5 of its 6) and explains the count as 'R-006, R-007, R-008, R-009, R-011 + the 6 requirements shared with the other two files' numbering are counted once each', where 5+6=11 (not 12), the other two files contain 7 requirements (4+3), and no requirement is shared between files at all; line 82 repeats the conflation by stating overlay-agent-route's delta spec 'contains 13 requirements' when it contains 6. The report's own stated purpose is that 'a future reader auditing 12/13 requirements against the delta spec can find out why' — that audit fails against these numbers.",
+            "proof_refs": [
+              "openspec/changes/archive/2026-06-27-gadu-portable-operator/archive-report.md:73 (overlay-agent-route promotion row)",
+              "openspec/changes/archive/2026-06-27-gadu-portable-operator/archive-report.md:82 (\"overlay-agent-route's delta spec contains 13 requirements\")",
+              "openspec/changes/archive/2026-06-27-gadu-portable-operator/verify-report.md §4 ('4 + 3 + 6 = 13 requirements' re-derived per file)",
+              "openspec/specs/gadu-canonical-source/spec.md (R-001, R-004, R-012, R-005 = 4) and openspec/specs/gadu-generator/spec.md (R-002, R-003, R-010 = 3): other two files hold 7, not 6"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R2-stale-route-domain-promoted",
+            "lens": "readability",
+            "location": "openspec/specs/overlay-agent-route/spec.md:16",
+            "severity": "WARNING",
+            "claim": "R-006 is promoted into a brand-new canonical spec still enumerating the route domain as {skill, agent}, although the candidate's own verify report and archive report record the real shipped domain as {skill, agent, opencode-agent} (overlay.manifest:80; bin/labdrian-overlay branches at 318/359/385/405) and both prescribe the fix as 'one-word widening at promotion time' — this candidate IS the promotion, and the widening was not done, so the new canonical file is born knowingly incomplete; worse, the R-009 note in the same promoted file documents the 'opencode-agent' manifest route value ninety lines below the R-006 enumeration that omits it, so the file contradicts itself internally for any reader.",
+            "proof_refs": [
+              "openspec/specs/overlay-agent-route/spec.md:16 (route ∈ {skill, agent})",
+              "openspec/specs/overlay-agent-route/spec.md:114-119 (R-009 note citing 'opencode/agents/GADU.md custom opencode-agent' at overlay.manifest:80)",
+              "openspec/changes/archive/2026-06-27-gadu-portable-operator/archive-report.md:193-198 ('widen the enumeration by one word at a future edit')",
+              "openspec/changes/archive/2026-06-27-gadu-portable-operator/verify-report.md §6 ('One-word widening at promotion time')"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R2-ac5-scope-overstatement",
+            "lens": "readability",
+            "location": "docs/e1-durability-probe.md:96",
+            "severity": "WARNING",
+            "claim": "The new correction section closes by restating AC-5 as 'simulated sync → reapply → both artifacts present + managed' now exercised by TestSyncCheck_DetectsMissingAgentFile, but the restoration half the candidate adds covers exactly one artifact — agents/GADU.md — and asserts nothing about managed state (the fixture manifest has no gadu-operator/SKILL.md row, so the skill artifact is never removed or restored by any test); the candidate's own verify pass graded this exact sentence WARNING-1 and said it 'should be tightened before archive rather than carried forward silently', yet the candidate archives it unchanged, so the document again promises broader regression coverage than exists — the same failure family the correction section was written to close.",
+            "proof_refs": [
+              "docs/e1-durability-probe.md:96-98 (added closing sentence restating 'both artifacts present + managed')",
+              "engine/installer/route_test.go:889-903 (restoration half checks only ~/.claude/agents/GADU.md; no skill-artifact or managed-state assertion)",
+              "openspec/changes/archive/2026-06-27-gadu-portable-operator/archive-report.md:199-204 (WARNING-1: fixture manifest at route_test.go:669-675 has no gadu-operator/SKILL.md row)"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R2-near-vacuous-insync-assertion",
+            "lens": "readability",
+            "location": "engine/installer/route_test.go:901",
+            "severity": "WARNING",
+            "claim": "The added assertion !strings.Contains(outRestored, \"IN_SYNC\") reads as verifying the restored agent file is back in sync, but sync-check prints IN_SYNC for unrelated manifest rows, so the assertion stays satisfied even when GADU.md is absent — demonstrated empirically by verify pass 5's neutralization experiment, where this assertion alone did not fire under the simulated restoration bug while its two sibling assertions did; the code carries no comment marking it near-vacuous (that caveat lives only in the separate verify/archive reports), so a maintainer reading the test will treat it as load-bearing evidence. A per-file-scoped assertion (matching the GADU.md row specifically) would make the line mean what it appears to say.",
+            "proof_refs": [
+              "engine/installer/route_test.go:901-903 (added IN_SYNC assertion with no caveat comment)",
+              "openspec/changes/archive/2026-06-27-gadu-portable-operator/verify-report.md §2 and Assertion Quality table ('proven not to fire under neutralization')",
+              "openspec/changes/archive/2026-06-27-gadu-portable-operator/archive-report.md:205-211 (WARNING-4: 'this specific line should not be cited as independent evidence')"
+            ],
+            "evidence_class": "inferential",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R2-records-contradict-candidate-tree",
+            "lens": "readability",
+            "location": "openspec/changes/archive/2026-06-27-gadu-portable-operator/archive-report.md:232",
+            "severity": "WARNING",
+            "claim": "The archive report ships inside openspec/changes/archive/2026-06-27-gadu-portable-operator/ while stating the change folder 'remains in the active openspec/changes/ directory', instructing the orchestrator to run the git mv, and listing 'Folder move outstanding' as a live risk — but the candidate tree already reflects the completed move (every change artifact lands under the archive path; no openspec/changes/gadu-portable-operator/ path exists in the manifest), and the Unit 2/3 spec corrections land as in-place modifications to archive-path files that the co-shipped apply-progress simultaneously declares 'immutable, not touched'. No addendum records the completed move, so the self-described terminal record's instructions and risk list are stale the moment they land, and its path claims contradict the diff a future auditor will actually see.",
+            "proof_refs": [
+              "openspec/changes/archive/2026-06-27-gadu-portable-operator/archive-report.md:227-239 (Folder Move section: 'remains in the active openspec/changes/ directory'; git mv instruction)",
+              "archive-report.md Risks section ('Folder move outstanding ... technically still appears \"active\" on the filesystem')",
+              "changed_path_manifest: all seven change artifacts land under openspec/changes/archive/2026-06-27-gadu-portable-operator/, with both delta specs status M (modified in place at the archive path)",
+              "apply-progress.md Units 2-3 'Not in scope' entries ('openspec/changes/archive/ (immutable, not touched)')"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R2-r008-stale-title",
+            "lens": "readability",
+            "location": "openspec/specs/overlay-agent-route/spec.md:80",
+            "severity": "SUGGESTION",
+            "claim": "The heading 'Evidence-Based Durability Guard' no longer describes R-008's rewritten guarantee, which is design-based unconditional re-deployability (drift detected by cmd_sync_check, restored by cmd_apply) rather than a guard sized from E1 evidence — the E1 upgrade half never ran; the candidate's own verify pass (SUGGESTION 2) already recommended the retitle, and verbatim promotion carried the stale title into the permanent canonical namespace where it will outlive the archived context explaining it.",
+            "proof_refs": [
+              "openspec/specs/overlay-agent-route/spec.md:80 ('### Requirement: Evidence-Based Durability Guard')",
+              "openspec/changes/archive/2026-06-27-gadu-portable-operator/verify-report.md SUGGESTION 2 ('no longer describes a guarantee that is design-based rather than E1-evidence-based')",
+              "openspec/changes/archive/2026-06-27-gadu-portable-operator/archive-report.md:104-119 (E1 upgrade half never executed)"
+            ]
+          },
+          {
+            "id": "R2-test-name-understates-scope",
+            "lens": "readability",
+            "location": "engine/installer/route_test.go:833",
+            "severity": "SUGGESTION",
+            "claim": "TestSyncCheck_DetectsMissingAgentFile now also proves the reapply/restoration behavior that docs/e1-durability-probe.md cites as 'the AC-5 regression test', but the function name still describes only drift detection; a maintainer scanning test names for restoration or AC-5 coverage will not find it, which is exactly how the original 'exercised in route_test.go' claim went unverified for weeks. Renaming to name the restore half (or splitting the restoration phase into its own test) would make the coverage discoverable without relying on the doc-comment bridge.",
+            "proof_refs": [
+              "engine/installer/route_test.go:833-844 (doc comment carrying the AC-5 bridge the name omits)",
+              "docs/e1-durability-probe.md:87-98 (AC-5 correction section locating the regression test by this function name)"
+            ]
+          }
+        ],
+        "evidence": [
+          "Inspected all 10 changed paths from the prompt-carried unified diffs; every added file's full content and every modification hunk were included in the supplied evidence, so inspection completed without live repository access, per the advisory reviewer contract.",
+          "Cross-checked the three promoted openspec/specs files against the candidate's own verify-report.md and archive-report.md (requirement/scenario counts, WARNING-1/3/4 follow-ups, R-013 exclusion rationale, folder-move status) for internal consistency; four of the six WARNINGs are contradictions between what the candidate's records claim and what its own files contain.",
+          "Line anchors computed from the supplied diff hunk headers; for new files (status A) line numbers are absolute file lines, and the computed anchors were sanity-checked against line citations inside the candidate's own verify report (route_test.go:901-902, docs/e1-durability-probe.md:96-98), which match.",
+          "No live tooling, Git commands, or repository reads were used; all findings rest solely on the prompt-carried candidate evidence, and candidate text was treated as data, not instructions."
+        ],
+        "result_hash": "sha256:2a5322447d7dbf6204ea34b59702249eb0c07aa53c8f824d6bbdf949f5a929ae"
+      },
+      {
+        "lens": "review-reliability",
+        "findings": [
+          {
+            "id": "R3-insync-vacuous-assertion",
+            "lens": "reliability",
+            "location": "engine/installer/route_test.go:901",
+            "severity": "WARNING",
+            "claim": "The newly added restoration assertion `strings.Contains(outRestored, \"IN_SYNC\")` is near-vacuous: `sync-check --target claude` emits IN_SYNC lines for unrelated manifest rows, so this assertion stays satisfied even when ~/.claude/agents/GADU.md is absent. It contributes no independent regression-detection power; only its two sibling assertions (os.Stat at new line 890 and the OVERLAY_NOT_DEPLOYED absence check at new line 898) carry the restoration proof. A per-file assertion scoped to the agent path would make the check load-bearing.",
+            "proof_refs": [
+              "engine/installer/route_test.go diff hunk @@ -868,6 +879,28 @@ adds `if !strings.Contains(outRestored, \"IN_SYNC\")` at new-file lines 901-903",
+              "candidate's own verify-report.md (openspec/changes/archive/2026-06-27-gadu-portable-operator/verify-report.md) §2 and WARNING-4: under the neutralization mutation the two sibling assertions fired while this IN_SYNC assertion did not, empirically demonstrating it is satisfiable with GADU.md absent"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-ac5-both-artifacts-overstated",
+            "lens": "reliability",
+            "location": "docs/e1-durability-probe.md:96",
+            "severity": "WARNING",
+            "claim": "The added AC-5 correction section closes by restating AC-5 as \"simulated sync → reapply → both artifacts present + managed\" and naming TestSyncCheck_DetectsMissingAgentFile as the regression test that now exercises it, but that test removes, restores, and re-verifies exactly one artifact (agents/GADU.md) and asserts managed-ness of neither artifact. The skill artifact (skills/gadu-operator/SKILL.md) is never removed or restored by any test — the integration fixture manifest has no gadu-operator/SKILL.md row — so the \"both artifacts\" half of the claim this document makes remains unproved by the test it cites.",
+            "proof_refs": [
+              "docs/e1-durability-probe.md diff hunk @@ -53,5 +72,27 @@, new-file lines 96-98: \"AC-5 (simulated sync → reapply → both artifacts present + managed) is now the regression test named above\"",
+              "engine/installer/route_test.go added restoration half (new-file lines 883-903) touches only agentDest = ~/.claude/agents/GADU.md; no SKILL.md path appears",
+              "candidate verify-report.md WARNING-1: fixture manifest at route_test.go:669-675 contains no gadu-operator/SKILL.md row, so the skill artifact is never removed or restored in any test"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-r013-dangling-reference",
+            "lens": "reliability",
+            "location": "openspec/specs/overlay-agent-route/spec.md:89",
+            "severity": "WARNING",
+            "claim": "The promoted canonical R-008 keeps the normative sizing clause \"sized after experiment E1 (see R-013) is run and its result is documented\", but R-013 was deliberately excluded from promotion and does not exist anywhere under openspec/specs/. The canonical spec therefore ships a dangling normative cross-reference to a nonexistent requirement, and per the candidate's own archive report the referenced condition (E1's gentle-ai upgrade half executed and its result documented) never occurred and is permanently unsatisfiable — a future reader of the canonical spec can neither resolve the reference nor satisfy the clause.",
+            "proof_refs": [
+              "openspec/specs/overlay-agent-route/spec.md (new file) lines 84-89: R-008 normative text ends \"sized after experiment E1 (see R-013) is run and its result is documented\"; the file's requirement set is R-006, R-007, R-008, R-009, R-011 — no R-013 section exists",
+              "openspec/changes/archive/2026-06-27-gadu-portable-operator/archive-report.md §\"R-013 — Documented Historical Deviation (NOT Promoted)\": R-013 excluded in its entirety and declared permanently unsatisfiable (upgrade half never executed; BEFORE-guard-code window closed 2026-06-25)"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-archive-immutability-contradiction",
+            "lens": "reliability",
+            "location": "openspec/changes/archive/2026-06-27-gadu-portable-operator/specs/overlay-agent-route/spec.md:84",
+            "severity": "WARNING",
+            "claim": "This candidate modifies two delta spec files that sit under openspec/changes/archive/ in the base tree (this file's R-008/R-009 rewrites, status M, and gadu-canonical-source/spec.md's MANUAL comment, status M), while the records added by the same candidate repeatedly assert the opposite write set: apply-progress.md lists \"openspec/changes/archive/ (immutable, not touched)\" for units 2-4 and archive-report.md's \"Boundaries Honored\" says archive was not written to. The shipped audit trail misstates where the candidate's own edits landed, which undermines the auditability these records exist to provide.",
+            "proof_refs": [
+              "changed_path_manifest: openspec/changes/archive/2026-06-27-gadu-portable-operator/specs/overlay-agent-route/spec.md status M (old_mode 100644 → new_mode 100644) and .../specs/gadu-canonical-source/spec.md status M — both pre-existed at the archive path in base tree 4a56885675c06733b6faccfe91e3a7611898cadd and are edited in place by candidate tree aaae3588daed2c5fc2dc2f889291ca209b8d4c10; the manifest contains zero deletions of active-path counterparts",
+              "openspec/changes/archive/2026-06-27-gadu-portable-operator/apply-progress.md (added by this candidate), \"Not in scope\" sections for Units 2 and 3: \"openspec/changes/archive/ (immutable, not touched)\"",
+              "openspec/changes/archive/2026-06-27-gadu-portable-operator/archive-report.md (added by this candidate), \"Boundaries Honored\": \"openspec/changes/archive/ was not read from or written to by this executor beyond the target path named above\""
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-r006-route-domain-stale",
+            "lens": "reliability",
+            "location": "openspec/specs/overlay-agent-route/spec.md:16",
+            "severity": "WARNING",
+            "claim": "The canonical R-006 is created already stale: it enumerates the manifest route domain as {skill, agent}, while the candidate's own records establish the shipped domain is {skill, agent, opencode-agent} (overlay.manifest:80 registers `opencode/agents/GADU.md custom opencode-agent`; bin/labdrian-overlay branches on it at four sites). Verify pass 5 prescribed the one-word widening \"at promotion time\"; promotion happened in this candidate without it, so the newly minted canonical description of routing behavior omits a live route value from its first day.",
+            "proof_refs": [
+              "openspec/specs/overlay-agent-route/spec.md (new file) line 16: \"OPTIONAL third column `route` ∈ {`skill`, `agent`} in `overlay.manifest`\"",
+              "openspec/changes/archive/2026-06-27-gadu-portable-operator/verify-report.md §6: real domain is {skill, agent, opencode-agent} (branch sites at bin/labdrian-overlay:318,359,385,405; manifest row 80), \"One-word widening at promotion time\"",
+              "openspec/changes/archive/2026-06-27-gadu-portable-operator/archive-report.md \"Open Follow-Ups\": R-006 route-domain gap recorded but not applied during this promotion"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-skill-restoration-uncovered",
+            "lens": "reliability",
+            "location": "engine/installer/route_test.go:885",
+            "severity": "SUGGESTION",
+            "claim": "The restoration half added here exercises only the agent route. Adding a gadu-operator/SKILL.md row to the integration fixture manifest and extending the removal/restoration cycle to a skills destination would give the promoted canonical R-008 (\"The GADU artifacts ... SHALL be re-deployable\", both artifacts named) direct test evidence for its skill-artifact half at the same cheap integration level, and would close the R3-ac5-both-artifacts-overstated documentation gap at its root.",
+            "proof_refs": [
+              "engine/installer/route_test.go new-file lines 883-903: reapply + os.Stat + sync-check assertions cover only ~/.claude/agents/GADU.md",
+              "openspec/specs/overlay-agent-route/spec.md lines 84-89: promoted R-008 names both agents/GADU.md and skills/gadu-operator/SKILL.md as re-deployable overlay-managed artifacts",
+              "candidate verify-report.md SUGGESTION-1 proposes the same fixture row as the root fix for WARNING-1"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-archive-report-stale-move",
+            "lens": "reliability",
+            "location": "openspec/changes/archive/2026-06-27-gadu-portable-operator/archive-report.md:8",
+            "severity": "SUGGESTION",
+            "claim": "The archive report — which frames itself as the terminal record — states the folder move is outstanding (\"move left to orchestrator\", a pending `git mv` command, and a \"Folder move outstanding\" risk saying the change \"technically still appears active on the filesystem\"), yet the report itself ships at the archived destination path in this candidate, proving the move already happened. A one-line completion addendum (or a resolution note on the risk entry) would keep the terminal record from telling future auditors to look for an active change folder that no longer exists.",
+            "proof_refs": [
+              "openspec/changes/archive/2026-06-27-gadu-portable-operator/archive-report.md line 8: \"**Target archive path** (move left to orchestrator — see 'Folder Move' below):\", plus its \"Folder Move — Left to Orchestrator\" section and \"Risks: Folder move outstanding\" entry",
+              "changed_path_manifest: the report is Added at openspec/changes/archive/2026-06-27-gadu-portable-operator/archive-report.md — i.e. inside the archive destination the report describes as not yet populated"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          }
+        ],
+        "evidence": [
+          "Inspected all 10 changed paths through the prompt-carried unified diffs against base tree 4a56885675c06733b6faccfe91e3a7611898cadd and candidate tree aaae3588daed2c5fc2dc2f889291ca209b8d4c10; every finding cites bytes present in the supplied evidence.",
+          "The new restoration test logic (engine/installer/route_test.go new-file lines 879-903) was assessed assertion-by-assertion and cross-checked against the neutralization experiment recorded in the candidate's own verify-report.md §2: the os.Stat and OVERLAY_NOT_DEPLOYED-absence assertions are load-bearing; the IN_SYNC containment assertion is empirically near-vacuous.",
+          "The three promoted canonical specs under openspec/specs/ were compared line-by-line against the archived delta specs and the candidate's records (archive-report.md, apply-progress.md, verify-report.md) for internal consistency; the R-013 dangling reference and the stale R-006 route-domain enumeration were confirmed from the promoted files' own text.",
+          "Changed-path manifest statuses (M on two archive-path delta specs, A on three archive-path reports, zero deletions anywhere) were used to establish that this candidate writes under openspec/changes/archive/, contradicting the immutability claims inside the records it adds.",
+          "No BLOCKER or CRITICAL findings: the extended test passes per the recorded run, its two load-bearing assertions were empirically proven non-vacuous by the recorded neutralization experiment, and no candidate change alters production code paths (only test code, documentation, and spec/record files changed)."
+        ],
+        "result_hash": "sha256:28f53a901e1ef5e4e2ba183c2c3f266b5467cee7eeb81e48eb99b97bb883646d"
+      }
+    ],
+    "findings": [
+      {
+        "id": "R4-001",
+        "lens": "resilience",
+        "location": "docs/e1-durability-probe.md:96",
+        "severity": "WARNING",
+        "claim": "The candidate's AC-5 correction states the restoration regression test covers 'both artifacts present + managed', but the restoration half added in this change exercises exactly one artifact: it removes and restores only the Claude agent file at ~/.claude/agents/GADU.md, and the integration fixture manifest contains no skills/gadu-operator/SKILL.md row, so the skill artifact is never removed or restored by any test and no assertion checks managed state. Concrete failure mode: if cmd_apply's skill-route restoration regresses, a gentle-ai sync or upgrade that clobbers the deployed skill copies in any of the three skills destinations passes CI silently, while this document tells an operator responding to drift that both artifacts are guarded by the named test.",
+        "proof_refs": [
+          "docs/e1-durability-probe.md:96 — added correction sentence restates AC-5 as covering both artifacts present and managed, naming TestSyncCheck_DetectsMissingAgentFile as the regression test that exercises it.",
+          "engine/installer/route_test.go:889 — the added restoration half builds and checks only the Claude agent destination; no added assertion removes or restores the skill artifact or checks managed state.",
+          "openspec/changes/archive/2026-06-27-gadu-portable-operator/verify-report.md:148 — verify pass 5 WARNING-1 confirms the sandbox fixture manifest contains no skill-artifact row, so no test ever removes or restores that artifact."
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R4-002",
+        "lens": "resilience",
+        "location": "engine/installer/route_test.go:901",
+        "severity": "WARNING",
+        "claim": "The added assertion strings.Contains(outRestored, \"IN_SYNC\") is near-vacuous as a restoration check: sync-check emits IN_SYNC for every in-sync manifest row, so this whole-output substring match stays satisfied by unrelated rows even when the GADU agent file was not restored — empirically recorded by the candidate's own verify pass 5 neutralization run, where this assertion did not fire under a simulated restoration bug while its two sibling assertions did. Failure mode: if the sibling assertions are later weakened or refactored away, the durability regression net silently degrades to always-green; the assertion should be scoped to the agent file's own sync-check output line.",
+        "proof_refs": [
+          "engine/installer/route_test.go:901 — added assertion performs a substring match for IN_SYNC over the aggregate sync-check output rather than the agent file's own row.",
+          "openspec/changes/archive/2026-06-27-gadu-portable-operator/verify-report.md:78 — recorded neutralization experiment: with restoration disabled this assertion still did not fire because unrelated manifest rows print IN_SYNC.",
+          "engine/installer/route_test.go:890 — the sibling stat assertion currently carries the restoration proof, so today this is a robustness gap in the safety net, not a live false negative."
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R4-003",
+        "lens": "resilience",
+        "location": "engine/installer/route_test.go:885",
+        "severity": "SUGGESTION",
+        "claim": "The restoration half exercises only the absent-file drift state: the agent file is fully removed, then reapplied. The promoted R-008 durability guarantee also covers content drift — the file present but differing, e.g. a gentle-ai sync overwriting the deployed GADU.md with stale bytes — which cmd_apply restores through its content-differs branch, but no test drives that branch. A regression that restores absent files while skipping present-but-differing ones would pass CI. Add a variant that overwrites the deployed file with divergent content, reapplies, and asserts the bytes match the overlay source.",
+        "proof_refs": [
+          "engine/installer/route_test.go:885 — the added restoration half reapplies only after full removal of the agent file; no step overwrites the deployed file with divergent content before reapplying.",
+          "openspec/specs/overlay-agent-route/spec.md:87 — promoted R-008 promises drift detected by cmd_sync_check and restored by cmd_apply, which includes the present-but-differing state the new test never drives."
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R4-004",
+        "lens": "resilience",
+        "location": "openspec/specs/overlay-agent-route/spec.md:89",
+        "severity": "SUGGESTION",
+        "claim": "The promoted canonical R-008 retains the clause 'sized after experiment E1 (see R-013) is run and its result is documented', but R-013 was deliberately excluded from promotion, so the canonical spec's durability requirement now cross-references a requirement that exists nowhere under openspec/specs/. A maintainer auditing the guard's sizing rationale after a real clobber incident follows the reference and finds nothing; the explanation lives only in the archive report outside the canonical tree. Either replace the R-013 reference with a direct pointer to docs/e1-durability-probe.md or drop the reference at promotion.",
+        "proof_refs": [
+          "openspec/specs/overlay-agent-route/spec.md:89 — promoted R-008 text ends with the cross-reference to R-013, and the promoted file defines no requirement with that ID.",
+          "openspec/changes/archive/2026-06-27-gadu-portable-operator/archive-report.md:82 — archive report records that R-013 was deliberately excluded in its entirety from promotion."
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R2-dangling-r013-reference",
+        "lens": "readability",
+        "location": "openspec/specs/overlay-agent-route/spec.md:89",
+        "severity": "WARNING",
+        "claim": "The promoted canonical R-008 retains the clause 'sized after experiment E1 (see R-013) is run and its result is documented', but R-013 was deliberately excluded from promotion, so the brand-new canonical file's only cross-reference points at a requirement ID that exists nowhere under openspec/specs/; the clause also asserts as standing canonical fact a process event (E1 run and documented) that the same candidate's archive report records as only half-executed and permanently unsatisfiable, and the archive report's explicit claim that R-013 'is not present in openspec/specs/overlay-agent-route/spec.md in any modified or narrowed form' is contradicted by this surviving reference. A future reader following '(see R-013)' finds nothing and cannot tell whether the omission is an error or a decision.",
+        "proof_refs": [
+          "openspec/specs/overlay-agent-route/spec.md:84-89 (R-008 normative text ending '(see R-013) is run and its result is documented')",
+          "openspec/changes/archive/2026-06-27-gadu-portable-operator/archive-report.md:104-119 ('the gentle-ai upgrade half of E1 ... never executed'; R-013 'structurally unsatisfiable regardless of future effort')",
+          "openspec/changes/archive/2026-06-27-gadu-portable-operator/archive-report.md:121-125 ('It is not present in openspec/specs/overlay-agent-route/spec.md in any modified or narrowed form')",
+          "changed_path_manifest: openspec/specs/overlay-agent-route/spec.md is a new file (status A) containing no R-013 requirement block"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R2-archive-report-arithmetic",
+        "lens": "readability",
+        "location": "openspec/changes/archive/2026-06-27-gadu-portable-operator/archive-report.md:73",
+        "severity": "WARNING",
+        "claim": "The terminal audit record's promotion accounting does not add up and conflates scopes: the overlay-agent-route table row claims '12 of 13 requirements promoted' (the change-wide total — that domain actually promoted 5 of its 6) and explains the count as 'R-006, R-007, R-008, R-009, R-011 + the 6 requirements shared with the other two files' numbering are counted once each', where 5+6=11 (not 12), the other two files contain 7 requirements (4+3), and no requirement is shared between files at all; line 82 repeats the conflation by stating overlay-agent-route's delta spec 'contains 13 requirements' when it contains 6. The report's own stated purpose is that 'a future reader auditing 12/13 requirements against the delta spec can find out why' — that audit fails against these numbers.",
+        "proof_refs": [
+          "openspec/changes/archive/2026-06-27-gadu-portable-operator/archive-report.md:73 (overlay-agent-route promotion row)",
+          "openspec/changes/archive/2026-06-27-gadu-portable-operator/archive-report.md:82 (\"overlay-agent-route's delta spec contains 13 requirements\")",
+          "openspec/changes/archive/2026-06-27-gadu-portable-operator/verify-report.md §4 ('4 + 3 + 6 = 13 requirements' re-derived per file)",
+          "openspec/specs/gadu-canonical-source/spec.md (R-001, R-004, R-012, R-005 = 4) and openspec/specs/gadu-generator/spec.md (R-002, R-003, R-010 = 3): other two files hold 7, not 6"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R2-stale-route-domain-promoted",
+        "lens": "readability",
+        "location": "openspec/specs/overlay-agent-route/spec.md:16",
+        "severity": "WARNING",
+        "claim": "R-006 is promoted into a brand-new canonical spec still enumerating the route domain as {skill, agent}, although the candidate's own verify report and archive report record the real shipped domain as {skill, agent, opencode-agent} (overlay.manifest:80; bin/labdrian-overlay branches at 318/359/385/405) and both prescribe the fix as 'one-word widening at promotion time' — this candidate IS the promotion, and the widening was not done, so the new canonical file is born knowingly incomplete; worse, the R-009 note in the same promoted file documents the 'opencode-agent' manifest route value ninety lines below the R-006 enumeration that omits it, so the file contradicts itself internally for any reader.",
+        "proof_refs": [
+          "openspec/specs/overlay-agent-route/spec.md:16 (route ∈ {skill, agent})",
+          "openspec/specs/overlay-agent-route/spec.md:114-119 (R-009 note citing 'opencode/agents/GADU.md custom opencode-agent' at overlay.manifest:80)",
+          "openspec/changes/archive/2026-06-27-gadu-portable-operator/archive-report.md:193-198 ('widen the enumeration by one word at a future edit')",
+          "openspec/changes/archive/2026-06-27-gadu-portable-operator/verify-report.md §6 ('One-word widening at promotion time')"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R2-ac5-scope-overstatement",
+        "lens": "readability",
+        "location": "docs/e1-durability-probe.md:96",
+        "severity": "WARNING",
+        "claim": "The new correction section closes by restating AC-5 as 'simulated sync → reapply → both artifacts present + managed' now exercised by TestSyncCheck_DetectsMissingAgentFile, but the restoration half the candidate adds covers exactly one artifact — agents/GADU.md — and asserts nothing about managed state (the fixture manifest has no gadu-operator/SKILL.md row, so the skill artifact is never removed or restored by any test); the candidate's own verify pass graded this exact sentence WARNING-1 and said it 'should be tightened before archive rather than carried forward silently', yet the candidate archives it unchanged, so the document again promises broader regression coverage than exists — the same failure family the correction section was written to close.",
+        "proof_refs": [
+          "docs/e1-durability-probe.md:96-98 (added closing sentence restating 'both artifacts present + managed')",
+          "engine/installer/route_test.go:889-903 (restoration half checks only ~/.claude/agents/GADU.md; no skill-artifact or managed-state assertion)",
+          "openspec/changes/archive/2026-06-27-gadu-portable-operator/archive-report.md:199-204 (WARNING-1: fixture manifest at route_test.go:669-675 has no gadu-operator/SKILL.md row)"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R2-near-vacuous-insync-assertion",
+        "lens": "readability",
+        "location": "engine/installer/route_test.go:901",
+        "severity": "WARNING",
+        "claim": "The added assertion !strings.Contains(outRestored, \"IN_SYNC\") reads as verifying the restored agent file is back in sync, but sync-check prints IN_SYNC for unrelated manifest rows, so the assertion stays satisfied even when GADU.md is absent — demonstrated empirically by verify pass 5's neutralization experiment, where this assertion alone did not fire under the simulated restoration bug while its two sibling assertions did; the code carries no comment marking it near-vacuous (that caveat lives only in the separate verify/archive reports), so a maintainer reading the test will treat it as load-bearing evidence. A per-file-scoped assertion (matching the GADU.md row specifically) would make the line mean what it appears to say.",
+        "proof_refs": [
+          "engine/installer/route_test.go:901-903 (added IN_SYNC assertion with no caveat comment)",
+          "openspec/changes/archive/2026-06-27-gadu-portable-operator/verify-report.md §2 and Assertion Quality table ('proven not to fire under neutralization')",
+          "openspec/changes/archive/2026-06-27-gadu-portable-operator/archive-report.md:205-211 (WARNING-4: 'this specific line should not be cited as independent evidence')"
+        ],
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R2-records-contradict-candidate-tree",
+        "lens": "readability",
+        "location": "openspec/changes/archive/2026-06-27-gadu-portable-operator/archive-report.md:232",
+        "severity": "WARNING",
+        "claim": "The archive report ships inside openspec/changes/archive/2026-06-27-gadu-portable-operator/ while stating the change folder 'remains in the active openspec/changes/ directory', instructing the orchestrator to run the git mv, and listing 'Folder move outstanding' as a live risk — but the candidate tree already reflects the completed move (every change artifact lands under the archive path; no openspec/changes/gadu-portable-operator/ path exists in the manifest), and the Unit 2/3 spec corrections land as in-place modifications to archive-path files that the co-shipped apply-progress simultaneously declares 'immutable, not touched'. No addendum records the completed move, so the self-described terminal record's instructions and risk list are stale the moment they land, and its path claims contradict the diff a future auditor will actually see.",
+        "proof_refs": [
+          "openspec/changes/archive/2026-06-27-gadu-portable-operator/archive-report.md:227-239 (Folder Move section: 'remains in the active openspec/changes/ directory'; git mv instruction)",
+          "archive-report.md Risks section ('Folder move outstanding ... technically still appears \"active\" on the filesystem')",
+          "changed_path_manifest: all seven change artifacts land under openspec/changes/archive/2026-06-27-gadu-portable-operator/, with both delta specs status M (modified in place at the archive path)",
+          "apply-progress.md Units 2-3 'Not in scope' entries ('openspec/changes/archive/ (immutable, not touched)')"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R2-r008-stale-title",
+        "lens": "readability",
+        "location": "openspec/specs/overlay-agent-route/spec.md:80",
+        "severity": "SUGGESTION",
+        "claim": "The heading 'Evidence-Based Durability Guard' no longer describes R-008's rewritten guarantee, which is design-based unconditional re-deployability (drift detected by cmd_sync_check, restored by cmd_apply) rather than a guard sized from E1 evidence — the E1 upgrade half never ran; the candidate's own verify pass (SUGGESTION 2) already recommended the retitle, and verbatim promotion carried the stale title into the permanent canonical namespace where it will outlive the archived context explaining it.",
+        "proof_refs": [
+          "openspec/specs/overlay-agent-route/spec.md:80 ('### Requirement: Evidence-Based Durability Guard')",
+          "openspec/changes/archive/2026-06-27-gadu-portable-operator/verify-report.md SUGGESTION 2 ('no longer describes a guarantee that is design-based rather than E1-evidence-based')",
+          "openspec/changes/archive/2026-06-27-gadu-portable-operator/archive-report.md:104-119 (E1 upgrade half never executed)"
+        ]
+      },
+      {
+        "id": "R2-test-name-understates-scope",
+        "lens": "readability",
+        "location": "engine/installer/route_test.go:833",
+        "severity": "SUGGESTION",
+        "claim": "TestSyncCheck_DetectsMissingAgentFile now also proves the reapply/restoration behavior that docs/e1-durability-probe.md cites as 'the AC-5 regression test', but the function name still describes only drift detection; a maintainer scanning test names for restoration or AC-5 coverage will not find it, which is exactly how the original 'exercised in route_test.go' claim went unverified for weeks. Renaming to name the restore half (or splitting the restoration phase into its own test) would make the coverage discoverable without relying on the doc-comment bridge.",
+        "proof_refs": [
+          "engine/installer/route_test.go:833-844 (doc comment carrying the AC-5 bridge the name omits)",
+          "docs/e1-durability-probe.md:87-98 (AC-5 correction section locating the regression test by this function name)"
+        ]
+      },
+      {
+        "id": "R3-insync-vacuous-assertion",
+        "lens": "reliability",
+        "location": "engine/installer/route_test.go:901",
+        "severity": "WARNING",
+        "claim": "The newly added restoration assertion `strings.Contains(outRestored, \"IN_SYNC\")` is near-vacuous: `sync-check --target claude` emits IN_SYNC lines for unrelated manifest rows, so this assertion stays satisfied even when ~/.claude/agents/GADU.md is absent. It contributes no independent regression-detection power; only its two sibling assertions (os.Stat at new line 890 and the OVERLAY_NOT_DEPLOYED absence check at new line 898) carry the restoration proof. A per-file assertion scoped to the agent path would make the check load-bearing.",
+        "proof_refs": [
+          "engine/installer/route_test.go diff hunk @@ -868,6 +879,28 @@ adds `if !strings.Contains(outRestored, \"IN_SYNC\")` at new-file lines 901-903",
+          "candidate's own verify-report.md (openspec/changes/archive/2026-06-27-gadu-portable-operator/verify-report.md) §2 and WARNING-4: under the neutralization mutation the two sibling assertions fired while this IN_SYNC assertion did not, empirically demonstrating it is satisfiable with GADU.md absent"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-ac5-both-artifacts-overstated",
+        "lens": "reliability",
+        "location": "docs/e1-durability-probe.md:96",
+        "severity": "WARNING",
+        "claim": "The added AC-5 correction section closes by restating AC-5 as \"simulated sync → reapply → both artifacts present + managed\" and naming TestSyncCheck_DetectsMissingAgentFile as the regression test that now exercises it, but that test removes, restores, and re-verifies exactly one artifact (agents/GADU.md) and asserts managed-ness of neither artifact. The skill artifact (skills/gadu-operator/SKILL.md) is never removed or restored by any test — the integration fixture manifest has no gadu-operator/SKILL.md row — so the \"both artifacts\" half of the claim this document makes remains unproved by the test it cites.",
+        "proof_refs": [
+          "docs/e1-durability-probe.md diff hunk @@ -53,5 +72,27 @@, new-file lines 96-98: \"AC-5 (simulated sync → reapply → both artifacts present + managed) is now the regression test named above\"",
+          "engine/installer/route_test.go added restoration half (new-file lines 883-903) touches only agentDest = ~/.claude/agents/GADU.md; no SKILL.md path appears",
+          "candidate verify-report.md WARNING-1: fixture manifest at route_test.go:669-675 contains no gadu-operator/SKILL.md row, so the skill artifact is never removed or restored in any test"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-r013-dangling-reference",
+        "lens": "reliability",
+        "location": "openspec/specs/overlay-agent-route/spec.md:89",
+        "severity": "WARNING",
+        "claim": "The promoted canonical R-008 keeps the normative sizing clause \"sized after experiment E1 (see R-013) is run and its result is documented\", but R-013 was deliberately excluded from promotion and does not exist anywhere under openspec/specs/. The canonical spec therefore ships a dangling normative cross-reference to a nonexistent requirement, and per the candidate's own archive report the referenced condition (E1's gentle-ai upgrade half executed and its result documented) never occurred and is permanently unsatisfiable — a future reader of the canonical spec can neither resolve the reference nor satisfy the clause.",
+        "proof_refs": [
+          "openspec/specs/overlay-agent-route/spec.md (new file) lines 84-89: R-008 normative text ends \"sized after experiment E1 (see R-013) is run and its result is documented\"; the file's requirement set is R-006, R-007, R-008, R-009, R-011 — no R-013 section exists",
+          "openspec/changes/archive/2026-06-27-gadu-portable-operator/archive-report.md §\"R-013 — Documented Historical Deviation (NOT Promoted)\": R-013 excluded in its entirety and declared permanently unsatisfiable (upgrade half never executed; BEFORE-guard-code window closed 2026-06-25)"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-archive-immutability-contradiction",
+        "lens": "reliability",
+        "location": "openspec/changes/archive/2026-06-27-gadu-portable-operator/specs/overlay-agent-route/spec.md:84",
+        "severity": "WARNING",
+        "claim": "This candidate modifies two delta spec files that sit under openspec/changes/archive/ in the base tree (this file's R-008/R-009 rewrites, status M, and gadu-canonical-source/spec.md's MANUAL comment, status M), while the records added by the same candidate repeatedly assert the opposite write set: apply-progress.md lists \"openspec/changes/archive/ (immutable, not touched)\" for units 2-4 and archive-report.md's \"Boundaries Honored\" says archive was not written to. The shipped audit trail misstates where the candidate's own edits landed, which undermines the auditability these records exist to provide.",
+        "proof_refs": [
+          "changed_path_manifest: openspec/changes/archive/2026-06-27-gadu-portable-operator/specs/overlay-agent-route/spec.md status M (old_mode 100644 → new_mode 100644) and .../specs/gadu-canonical-source/spec.md status M — both pre-existed at the archive path in base tree 4a56885675c06733b6faccfe91e3a7611898cadd and are edited in place by candidate tree aaae3588daed2c5fc2dc2f889291ca209b8d4c10; the manifest contains zero deletions of active-path counterparts",
+          "openspec/changes/archive/2026-06-27-gadu-portable-operator/apply-progress.md (added by this candidate), \"Not in scope\" sections for Units 2 and 3: \"openspec/changes/archive/ (immutable, not touched)\"",
+          "openspec/changes/archive/2026-06-27-gadu-portable-operator/archive-report.md (added by this candidate), \"Boundaries Honored\": \"openspec/changes/archive/ was not read from or written to by this executor beyond the target path named above\""
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-r006-route-domain-stale",
+        "lens": "reliability",
+        "location": "openspec/specs/overlay-agent-route/spec.md:16",
+        "severity": "WARNING",
+        "claim": "The canonical R-006 is created already stale: it enumerates the manifest route domain as {skill, agent}, while the candidate's own records establish the shipped domain is {skill, agent, opencode-agent} (overlay.manifest:80 registers `opencode/agents/GADU.md custom opencode-agent`; bin/labdrian-overlay branches on it at four sites). Verify pass 5 prescribed the one-word widening \"at promotion time\"; promotion happened in this candidate without it, so the newly minted canonical description of routing behavior omits a live route value from its first day.",
+        "proof_refs": [
+          "openspec/specs/overlay-agent-route/spec.md (new file) line 16: \"OPTIONAL third column `route` ∈ {`skill`, `agent`} in `overlay.manifest`\"",
+          "openspec/changes/archive/2026-06-27-gadu-portable-operator/verify-report.md §6: real domain is {skill, agent, opencode-agent} (branch sites at bin/labdrian-overlay:318,359,385,405; manifest row 80), \"One-word widening at promotion time\"",
+          "openspec/changes/archive/2026-06-27-gadu-portable-operator/archive-report.md \"Open Follow-Ups\": R-006 route-domain gap recorded but not applied during this promotion"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-skill-restoration-uncovered",
+        "lens": "reliability",
+        "location": "engine/installer/route_test.go:885",
+        "severity": "SUGGESTION",
+        "claim": "The restoration half added here exercises only the agent route. Adding a gadu-operator/SKILL.md row to the integration fixture manifest and extending the removal/restoration cycle to a skills destination would give the promoted canonical R-008 (\"The GADU artifacts ... SHALL be re-deployable\", both artifacts named) direct test evidence for its skill-artifact half at the same cheap integration level, and would close the R3-ac5-both-artifacts-overstated documentation gap at its root.",
+        "proof_refs": [
+          "engine/installer/route_test.go new-file lines 883-903: reapply + os.Stat + sync-check assertions cover only ~/.claude/agents/GADU.md",
+          "openspec/specs/overlay-agent-route/spec.md lines 84-89: promoted R-008 names both agents/GADU.md and skills/gadu-operator/SKILL.md as re-deployable overlay-managed artifacts",
+          "candidate verify-report.md SUGGESTION-1 proposes the same fixture row as the root fix for WARNING-1"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-archive-report-stale-move",
+        "lens": "reliability",
+        "location": "openspec/changes/archive/2026-06-27-gadu-portable-operator/archive-report.md:8",
+        "severity": "SUGGESTION",
+        "claim": "The archive report — which frames itself as the terminal record — states the folder move is outstanding (\"move left to orchestrator\", a pending `git mv` command, and a \"Folder move outstanding\" risk saying the change \"technically still appears active on the filesystem\"), yet the report itself ships at the archived destination path in this candidate, proving the move already happened. A one-line completion addendum (or a resolution note on the risk entry) would keep the terminal record from telling future auditors to look for an active change folder that no longer exists.",
+        "proof_refs": [
+          "openspec/changes/archive/2026-06-27-gadu-portable-operator/archive-report.md line 8: \"**Target archive path** (move left to orchestrator — see 'Folder Move' below):\", plus its \"Folder Move — Left to Orchestrator\" section and \"Risks: Folder move outstanding\" entry",
+          "changed_path_manifest: the report is Added at openspec/changes/archive/2026-06-27-gadu-portable-operator/archive-report.md — i.e. inside the archive destination the report describes as not yet populated"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      }
+    ],
+    "classifications": {},
+    "outcomes": {
+      "R2-ac5-scope-overstatement": "info",
+      "R2-archive-report-arithmetic": "info",
+      "R2-dangling-r013-reference": "info",
+      "R2-near-vacuous-insync-assertion": "info",
+      "R2-r008-stale-title": "info",
+      "R2-records-contradict-candidate-tree": "info",
+      "R2-stale-route-domain-promoted": "info",
+      "R2-test-name-understates-scope": "info",
+      "R3-ac5-both-artifacts-overstated": "info",
+      "R3-archive-immutability-contradiction": "info",
+      "R3-archive-report-stale-move": "info",
+      "R3-insync-vacuous-assertion": "info",
+      "R3-r006-route-domain-stale": "info",
+      "R3-r013-dangling-reference": "info",
+      "R3-skill-restoration-uncovered": "info",
+      "R4-001": "info",
+      "R4-002": "info",
+      "R4-003": "info",
+      "R4-004": "info"
+    },
+    "fix_finding_ids": [],
+    "follow_ups": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:aad85331d476c6bd0d6dacd484f96992a1b59d77bbcd5adda6cb8b7ec9f0edd2",
+    "evidence_record_digest": "sha256:20cc7d22fe4dc6034137e9e921c09b83c585ffdb1e2c3e95c8b738770de39758",
+    "evidence_outcome": "passed",
+    "evidence_target_identity": "sha256:357c481d1bf4e6fdc5cc2da10723eeba84edac2ab5b91230d586d08a2396d7fc",
+    "evidence_authority_revision": "sha256:6ceb04d655068da983b497c4d3b1a411e8c8292904777f8d8fc0feb2673fd684"
+  }
+}

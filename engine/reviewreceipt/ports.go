@@ -3,7 +3,7 @@ package reviewreceipt
 import "errors"
 
 // The ports are what the domain asks of the world. It asks for no file, no process and no
-// git: where review transactions live, where a change keeps its persisted receipts, and what
+// git: where review transactions live, where a change or a feature keeps its persisted receipts, and what
 // the openspec/changes directory holds are all answered by an adapter that the composition
 // root hands in (engine/reviewreceipt/fsstore is the one made of files and git). Each
 // adapter is built over the project the hook was started for, so the domain never names it.
@@ -48,21 +48,66 @@ type ReceiptSource interface {
 // been persisted.
 var ErrNotPersisted = errors.New("no such persisted receipt")
 
-// ReceiptSink keeps receipts where the project versions them: a change's review-receipts
-// folder. The change and the name every method is given are single safe path components
-// (CheckPathComponent): the Service checks them before it asks, so an adapter may join them
-// into a path without checking them again.
+// DestinationKind says which kind of folder a Destination names.
+type DestinationKind int
+
+const (
+	// DestinationChange is the review-receipts folder of an SDD change.
+	DestinationChange DestinationKind = iota + 1
+	// DestinationFeature is the review-receipts folder of an ODD feature, beside the feature's
+	// task document.
+	DestinationFeature
+)
+
+// Destination is the folder a receipt is persisted in: the review-receipts folder of a change,
+// or the one of a feature. Where each is on disk is the sink's to know; the domain only names
+// it. Build one with InChange or InFeature; the zero value names no folder.
+type Destination struct {
+	Kind DestinationKind
+	// Name is the change name or the feature name, one path component (CheckPathComponent).
+	Name string
+}
+
+// InChange is the review-receipts folder of the change.
+func InChange(change string) Destination { return Destination{Kind: DestinationChange, Name: change} }
+
+// InFeature is the review-receipts folder of the feature.
+func InFeature(feature string) Destination {
+	return Destination{Kind: DestinationFeature, Name: feature}
+}
+
+// kindName is what the destination's name is for, as an UnsafeNameError says it.
+func (d Destination) kindName() string {
+	if d.Kind == DestinationFeature {
+		return kindFeature
+	}
+	return kindChange
+}
+
+// FeatureCatalog lists the features the project keeps persisted receipts for.
+type FeatureCatalog interface {
+	// Features lists the feature folders that hold persisted receipts, by name. A project
+	// with none has none; a folder that is there and cannot be listed is an error, never an
+	// absence, since the hook counts the receipts persisted in them.
+	Features() ([]string, error)
+}
+
+// ReceiptSink keeps receipts where the project versions them: the review-receipts folder of a
+// change or of a feature (a Destination), and it lists the feature folders it keeps
+// (FeatureCatalog). The destination's name and the name every method is given are single safe
+// path components (CheckPathComponent): the Service checks them before it asks, so an adapter
+// may join them into a path without checking them again.
 type ReceiptSink interface {
-	// Read returns the bytes persisted under name in change's review-receipts folder, or
-	// an error satisfying errors.Is(err, ErrNotPersisted) when there are none.
-	Read(change, name string) ([]byte, error)
-	// Write persists data under name in change's review-receipts folder, atomically and
-	// creating the folder if it must. The domain reads first and never asks to replace a
-	// file whose bytes differ.
-	Write(change, name string, data []byte) error
+	FeatureCatalog
+	// Read returns the bytes persisted under name in the destination, or an error satisfying
+	// errors.Is(err, ErrNotPersisted) when there are none.
+	Read(dest Destination, name string) ([]byte, error)
+	// Write persists data under name in the destination, atomically and creating the folder
+	// if it must. The domain reads first and never asks to replace a file whose bytes differ.
+	Write(dest Destination, name string, data []byte) error
 	// Location says where a receipt is, or would be, for a message and for Captured.Path.
 	// It touches nothing.
-	Location(change, name string) string
+	Location(dest Destination, name string) string
 }
 
 // ChangeCatalog lists the changes the project has under openspec/changes.

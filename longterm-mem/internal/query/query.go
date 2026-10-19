@@ -61,6 +61,15 @@ type Request struct {
 	// named explicitly). An unknown name is rejected with ErrUnknownSource
 	// rather than silently skipped.
 	Sources []string
+	// Goal, when set, narrows every source to that goal's records and the
+	// records of no goal, leaving out another goal's (ADR C23 M5): the
+	// lexical search in its SQL, the embedding source on each observation's
+	// topic before its cut, and the vault on each page's frontmatter tags
+	// after an enlarged retrieval (VaultGoalCandidateBound). What belongs to
+	// a goal is memory.TopicVisibleUnderGoal and memory.TagsVisibleUnderGoal.
+	// Like ExcludeTypes it filters and never re-ranks. Empty changes nothing:
+	// every source is asked exactly as it was before goals.
+	Goal string
 }
 
 // Deps are Run's dependencies. Memory and Vault are ports the package owns (a
@@ -72,6 +81,11 @@ type Deps struct {
 	// vault is a requested source (R-060); a call that names the vault with
 	// none wired is refused with ErrNoVault.
 	Vault VaultRetriever
+	// VaultTags reads the frontmatter tags of a page the vault offered. It
+	// is asked only under a goal, for the vault's candidates; none wired (or
+	// a nil pointer) is a page whose tags cannot be read, which a goal
+	// leaves out and names (DiagnosticVaultPageTagsUnreadable).
+	VaultTags VaultPageTags
 	// ResolveLink reports the Engram id an existing promotion links to
 	// vault page pageAddress (D6 store, not built until slice 4/5).
 	ResolveLink func(pageAddress string) (engramID int64, ok bool)
@@ -159,7 +173,7 @@ func Run(ctx context.Context, deps Deps, req Request) (Result, error) {
 
 	var embedRows []ResultRow
 	if wantEmbed {
-		rows, coverage, diags := embeddingArm{Memory: deps.Memory, Index: deps.Index, Builder: deps.IndexBuilder, Embed: deps.Embed, Reading: reading}.run(ctx, req.Project, req.Query, top)
+		rows, coverage, diags := embeddingArm{Memory: deps.Memory, Index: deps.Index, Builder: deps.IndexBuilder, Embed: deps.Embed, Reading: reading, Goal: req.Goal}.run(ctx, req.Project, req.Query, top)
 		embedRows = rows
 		result.Coverage = append(result.Coverage, coverage)
 		result.Diagnostics = append(result.Diagnostics, diags...)
@@ -172,7 +186,7 @@ func Run(ctx context.Context, deps Deps, req Request) (Result, error) {
 	result.VaultStatus = VaultStatusNotRequested
 	if wantVault {
 		var diags []Diagnostic
-		result.VaultStatus, vaultRows, diags = askVault(ctx, deps.Vault, req, top)
+		result.VaultStatus, vaultRows, diags = askVault(ctx, deps.Vault, deps.VaultTags, req, top)
 		result.Diagnostics = append(result.Diagnostics, diags...)
 	}
 
@@ -189,7 +203,7 @@ func searchLexically(store interface {
 	Searcher
 	DegradationReporter
 }, req Request, top int) (memory.SearchResult, []Diagnostic, error) {
-	search, err := store.Search(req.Project, req.Query, top, req.ExcludeTypes...)
+	search, err := store.Search(req.Project, req.Query, top, memory.SearchFilter{ExcludeTypes: req.ExcludeTypes, Goal: req.Goal})
 	if err != nil {
 		return memory.SearchResult{}, nil, fmt.Errorf("query: search engram: %w", err)
 	}
@@ -222,9 +236,10 @@ func searchLexically(store interface {
 }
 
 // askVault is the vault source: the retriever's candidates, the status that says what the vault gave, and the
-// diagnostic of a retrieval that failed.
-func askVault(ctx context.Context, retriever VaultRetriever, req Request, top int) (status string, rows []VaultCandidate, diags []Diagnostic) {
-	candidates, err := retriever.RetrieveVault(ctx, req.Project, req.Query, top)
+// diagnostic of a retrieval that failed. Under a goal it asks for more (vaultRetrievalSize) and keeps the first top
+// candidates the goal lets through (keepGoalPages).
+func askVault(ctx context.Context, retriever VaultRetriever, tags VaultPageTags, req Request, top int) (status string, rows []VaultCandidate, diags []Diagnostic) {
+	candidates, err := retriever.RetrieveVault(ctx, req.Project, req.Query, vaultRetrievalSize(req.Goal, top))
 	switch {
 	case errors.Is(err, ErrVaultNotProvisioned):
 		return VaultStatusNotProvisioned, nil, nil
@@ -234,6 +249,9 @@ func askVault(ctx context.Context, retriever VaultRetriever, req Request, top in
 		// runner's synthetic timeout exit (124) once the retriever
 		// exposes exit codes typed.
 		return VaultStatusError, nil, []Diagnostic{{Code: DiagnosticVaultSubprocessFailed, Detail: err.Error()}}
+	case req.Goal != "":
+		kept, diags := keepGoalPages(ctx, tags, candidates, req.Goal, top)
+		return VaultStatusOK, kept, diags
 	default:
 		return VaultStatusOK, candidates, nil
 	}

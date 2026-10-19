@@ -3,12 +3,13 @@ package query
 import "github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 
 // Searcher is the port through which the lexical source reads memory: a search scoped to project that
-// excludes soft-deleted rows (R-020), in the store's own rank order, limited to limit rows, leaving out
-// the observation types named in excludeTypes. It answers how it had to ask as well as what it found
+// excludes soft-deleted rows (R-020), in the store's own rank order, limited to limit rows, keeping only
+// the rows filter lets through (the observation types it excludes are left out, and under its goal another
+// goal's records are; the filter applies before the limit). It answers how it had to ask as well as what it found
 // (memory.SearchResult): a widened search and the words it never searched change how far the rows can
 // be trusted.
 type Searcher interface {
-	Search(project, query string, limit int, excludeTypes ...string) (memory.SearchResult, error)
+	Search(project, query string, limit int, filter memory.SearchFilter) (memory.SearchResult, error)
 }
 
 // StandingReader is the port through which a result is annotated with what the relation ledger says

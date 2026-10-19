@@ -33,23 +33,40 @@ func runReviewReceipt(p process, d deps, args []string) {
 	}
 }
 
-// parseReviewReceiptArgs extracts --cwd and --change from args.
-func parseReviewReceiptArgs(args []string) (cwd, change string) {
+// reviewReceiptArgs is what the verbs read from their arguments. A flag counts as given when it
+// is followed by a value, as --change always has: a flag at the end, with no value, is not given.
+type reviewReceiptArgs struct {
+	cwd     string
+	change  string
+	feature string
+	// hasChange and hasFeature say the flag was given, an empty value included.
+	hasChange  bool
+	hasFeature bool
+}
+
+// parseReviewReceiptFlags extracts --cwd, --change and --feature from args.
+func parseReviewReceiptFlags(args []string) reviewReceiptArgs {
+	var a reviewReceiptArgs
 	for i := 0; i < len(args); i++ {
 		switch args[i] {
 		case "--cwd":
 			i++
 			if i < len(args) {
-				cwd = args[i]
+				a.cwd = args[i]
 			}
 		case "--change":
 			i++
 			if i < len(args) {
-				change = args[i]
+				a.change, a.hasChange = args[i], true
+			}
+		case "--feature":
+			i++
+			if i < len(args) {
+				a.feature, a.hasFeature = args[i], true
 			}
 		}
 	}
-	return
+	return a
 }
 
 // buildReviewReceiptService builds the review receipt capture both verbs run on, asking git in
@@ -69,14 +86,23 @@ func buildReviewReceiptService(cwd string, environ []string, stderr io.Writer, e
 }
 
 // runReviewReceiptCapture implements 'review-receipt capture --cwd <repo>
-// [--change <name>]'. With --change, captures directly into that change.
-// Without it, auto-detects the single active change: zero active changes is
-// a no-op (exit 0); more than one is a loud failure (exit 1) naming
-// --change as the remedy.
+// [--change <name> | --feature <name>]'. With --change, captures directly into
+// that change. With --feature, captures into the ODD feature's folder,
+// odd/review-receipts/<feature>/, beside odd/tasks/<feature>.md, for a review
+// that belongs to no SDD change. The two cannot be given together. With
+// neither, auto-detects the single active change: zero active changes is a
+// no-op (exit 0); more than one is a loud failure (exit 1) naming --change and
+// --feature as the remedies.
 func runReviewReceiptCapture(p process, d deps, args []string) {
-	cwd, change := parseReviewReceiptArgs(args)
+	a := parseReviewReceiptFlags(args)
+	cwd, change := a.cwd, a.change
 	if cwd == "" {
 		fmt.Fprintln(p.stderr, "error: --cwd is required")
+		p.exit(1)
+		return
+	}
+	if a.hasChange && a.hasFeature {
+		fmt.Fprintln(p.stderr, "error: review-receipt capture: --change and --feature cannot be given together")
 		p.exit(1)
 		return
 	}
@@ -84,6 +110,17 @@ func runReviewReceiptCapture(p process, d deps, args []string) {
 	svc := buildReviewReceiptService(cwd, d.environment(), p.stderr, p.exit, "error: review-receipt capture", 1)
 	if svc == nil {
 		return // the exit returned (a test's does): there is no service to go on with
+	}
+
+	if a.hasFeature {
+		captured, err := svc.CaptureFeature(a.feature)
+		if err != nil {
+			fmt.Fprintf(p.stderr, "error: review-receipt capture: %v\n", err)
+			p.exit(1)
+			return
+		}
+		fmt.Fprintf(p.stdout, "review-receipt capture: %d receipt(s) captured for feature %q\n", len(captured), a.feature)
+		return
 	}
 
 	if change == "" {
@@ -115,7 +152,7 @@ func runReviewReceiptCapture(p process, d deps, args []string) {
 // reviewreceipt.Service.CheckCommand, and exits with the status of its
 // verdict, printing its reason (if any) to stderr.
 func runReviewReceiptHook(p process, d deps, args []string) {
-	cwd, _ := parseReviewReceiptArgs(args)
+	cwd := parseReviewReceiptFlags(args).cwd
 	if cwd == "" {
 		fmt.Fprintln(p.stderr, "error: --cwd is required")
 		p.exit(hookwire.ExitBlock)

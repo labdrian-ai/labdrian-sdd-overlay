@@ -11,8 +11,10 @@
 //     lives under the working tree's own).
 //   - ReceiptSource: the documents of those stores, one directory per lineage holding the
 //     legacy review-receipt.json and the lifecycle review-state.json.
-//   - ReceiptSink: openspec/changes/<change>/review-receipts/ under the openspec root, where
-//     the project versions what it captured.
+//   - ReceiptSink: openspec/changes/<change>/review-receipts/ for a change, and
+//     odd/review-receipts/<feature>/ for an ODD feature, under the openspec root, where the
+//     project versions what it captured; and the FeatureCatalog it embeds, the directories
+//     under odd/review-receipts.
 //   - ChangeCatalog: the directories under <openspec root>/openspec/changes.
 //
 // The project root is where git is asked to start: it may be the working tree's toplevel or
@@ -221,24 +223,69 @@ func (s Store) Documents(store reviewreceipt.Store) ([]reviewreceipt.Document, e
 	return documents, nil
 }
 
-// folder is the review-receipts folder of a change.
-func (s Store) folder(change string) (string, error) {
+// folderUnder is the review-receipts folder of the destination under root: a change's is
+// openspec/changes/<change>/review-receipts, a feature's is odd/review-receipts/<feature>,
+// beside the feature's task document odd/tasks/<feature>.md. A destination of no kind the
+// domain names is refused.
+func folderUnder(root string, dest reviewreceipt.Destination) (string, error) {
+	switch dest.Kind {
+	case reviewreceipt.DestinationChange:
+		return filepath.Join(root, "openspec", "changes", dest.Name, receiptsFolder), nil
+	case reviewreceipt.DestinationFeature:
+		return filepath.Join(root, featuresFolder, dest.Name), nil
+	}
+	return "", fmt.Errorf("review receipt store: a destination of unknown kind %d", dest.Kind)
+}
+
+// featuresFolder is the folder, under the openspec root, that holds one review-receipts folder
+// per ODD feature.
+var featuresFolder = filepath.Join("odd", "review-receipts")
+
+// folder is the review-receipts folder of a destination, under the openspec root.
+func (s Store) folder(dest reviewreceipt.Destination) (string, error) {
 	root, err := s.openspecRoot()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(root, "openspec", "changes", change, receiptsFolder), nil
+	return folderUnder(root, dest)
 }
 
 // Location is reviewreceipt.ReceiptSink.Location. It only says where a receipt is, for a person to
 // read: when the toplevel's openspec cannot be looked at it says the directory the store was
 // given, and nothing is read from or written to it (Read and Write refuse).
-func (s Store) Location(change, name string) string {
-	folder, err := s.folder(change)
+func (s Store) Location(dest reviewreceipt.Destination, name string) string {
+	folder, err := s.folder(dest)
 	if err != nil {
-		folder = filepath.Join(s.root, "openspec", "changes", change, receiptsFolder)
+		if folder, err = folderUnder(s.root, dest); err != nil {
+			folder = s.root
+		}
 	}
 	return filepath.Join(folder, name)
+}
+
+// Features is reviewreceipt.FeatureCatalog: the directories under odd/review-receipts of the
+// openspec root. Only a directory is a feature, so a stray file or a link is not one. A project
+// without the folder has none; one that is there and cannot be read is an error that names it.
+func (s Store) Features() ([]string, error) {
+	root, err := s.openspecRoot()
+	if err != nil {
+		return nil, err
+	}
+	dir := filepath.Join(root, featuresFolder)
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("read %s: %w", dir, unwrapPathError(err))
+	}
+	var names []string
+	for _, e := range entries {
+		if e.IsDir() {
+			names = append(names, e.Name())
+		}
+	}
+	return names, nil
 }
 
 // notPersisted is the error for a receipt with no file. Its text is the file system's own
@@ -252,8 +299,8 @@ func (e notPersisted) Error() string   { return fmt.Sprintf("read %s: %v", e.pat
 func (e notPersisted) Unwrap() []error { return []error{reviewreceipt.ErrNotPersisted, e.err} }
 
 // Read is reviewreceipt.ReceiptSink.Read.
-func (s Store) Read(change, name string) ([]byte, error) {
-	folder, err := s.folder(change)
+func (s Store) Read(dest reviewreceipt.Destination, name string) ([]byte, error) {
+	folder, err := s.folder(dest)
 	if err != nil {
 		return nil, err
 	}
@@ -271,8 +318,8 @@ func (s Store) Read(change, name string) ([]byte, error) {
 // Write is reviewreceipt.ReceiptSink.Write: a temporary file in the folder, flushed, then
 // put in place by rename, so a reader sees all of the receipt or none and a failure leaves
 // no file behind.
-func (s Store) Write(change, name string, data []byte) error {
-	folder, err := s.folder(change)
+func (s Store) Write(dest reviewreceipt.Destination, name string, data []byte) error {
+	folder, err := s.folder(dest)
 	if err != nil {
 		return err
 	}

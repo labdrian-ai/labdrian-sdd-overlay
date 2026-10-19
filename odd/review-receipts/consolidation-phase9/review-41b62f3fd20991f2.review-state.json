@@ -1,0 +1,120 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:87b7cdaf14c64a6890122a6018cbdb8d84bf2d2cc38c4e501fe3b9971ee6635c",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-41b62f3fd20991f2",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "b12a481d6478eb33cd153c499cc5fe91b07241ef",
+      "candidate_tree": "b2014266cccd81c832bd7e155d151eef7f25805d",
+      "paths_digest": "sha256:b67dedbd9c874974af54b51f1f98d846b4c747837441223bc3f5e8fbc9c2aea9",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/skills/actuals_instrumentation_contract_test.go",
+        "openspec/changes/sdd-cycle-timestamp-instrumentation/design.md",
+        "openspec/changes/sdd-cycle-timestamp-instrumentation/exploration.md",
+        "openspec/changes/sdd-cycle-timestamp-instrumentation/proposal.md",
+        "openspec/changes/sdd-cycle-timestamp-instrumentation/specs/actuals-instrumentation/spec.md",
+        "skills/_shared/actuals-record.schema.json",
+        "skills/sdd-time-estimation/SKILL.md"
+      ],
+      "identity": "sha256:41b62f3fd20991f22e2931fa359f3cf6ddbbf22cac0d05acf2291e6f3cad9674"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "b12a481d6478eb33cd153c499cc5fe91b07241ef",
+      "candidate_tree": "b2014266cccd81c832bd7e155d151eef7f25805d",
+      "paths_digest": "sha256:b67dedbd9c874974af54b51f1f98d846b4c747837441223bc3f5e8fbc9c2aea9",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/skills/actuals_instrumentation_contract_test.go",
+        "openspec/changes/sdd-cycle-timestamp-instrumentation/design.md",
+        "openspec/changes/sdd-cycle-timestamp-instrumentation/exploration.md",
+        "openspec/changes/sdd-cycle-timestamp-instrumentation/proposal.md",
+        "openspec/changes/sdd-cycle-timestamp-instrumentation/specs/actuals-instrumentation/spec.md",
+        "skills/_shared/actuals-record.schema.json",
+        "skills/sdd-time-estimation/SKILL.md"
+      ],
+      "identity": "sha256:41b62f3fd20991f22e2931fa359f3cf6ddbbf22cac0d05acf2291e6f3cad9674"
+    },
+    "genesis_paths": [
+      "engine/skills/actuals_instrumentation_contract_test.go",
+      "openspec/changes/sdd-cycle-timestamp-instrumentation/design.md",
+      "openspec/changes/sdd-cycle-timestamp-instrumentation/exploration.md",
+      "openspec/changes/sdd-cycle-timestamp-instrumentation/proposal.md",
+      "openspec/changes/sdd-cycle-timestamp-instrumentation/specs/actuals-instrumentation/spec.md",
+      "skills/_shared/actuals-record.schema.json",
+      "skills/sdd-time-estimation/SKILL.md"
+    ],
+    "policy_hash": "sha256:34fb63d7f29f8613cd4431382b1057398a4816f8a4c20fc34677fffc80a184f6",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-reliability"
+    ],
+    "original_changed_lines": 669,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_results": [
+      {
+        "lens": "review-reliability",
+        "findings": [
+          {
+            "id": "R3-001",
+            "lens": "reliability",
+            "location": "engine/skills/actuals_instrumentation_contract_test.go:510-522",
+            "severity": "SUGGESTION",
+            "claim": "validateAgainstActualsSchema only checks that every schema.Required name is present as a record key and that every record key is declared in schema.Properties; it never inspects a property's declared JSON Schema type/format/enum. Its sole caller (R019_required_drops_compute_time_fields) uses this minimal check to back the stronger-sounding claim 'must validate against the shipped schema', so the test proves presence/shape conformance only, not full JSON Schema conformance of the fixture record.",
+            "proof_refs": [
+              "engine/skills/actuals_instrumentation_contract_test.go new function validateAgainstActualsSchema(schema actualsSchemaDocument, record map[string]any) error: body is exactly a loop over schema.Required checking key presence, followed by a loop over record keys checking declaration in schema.Properties — no comparison against each property's own JSON Schema type/format/enum constraint.",
+              "engine/skills/actuals_instrumentation_contract_test.go R019_required_drops_compute_time_fields subtest calls validateAgainstActualsSchema and fails with the message 'an R-019-conforming record (three compute-time fields absent) must validate against the shipped schema' — the failure message asserts full schema validation while the called function only proves required-presence and additionalProperties closure."
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          }
+        ],
+        "evidence": [
+          "Inspected all 7 GENTLE_AI_REVIEW_PATCH sections (0-6) in full as the sole source of the candidate, per the review's explicit prohibition on reading the working tree, index, HEAD, or any other file.",
+          "Cross-checked every new/changed 'want' and 'forbidden' string literal added to engine/skills/actuals_instrumentation_contract_test.go (wallClock and checkpoint_count boundary pins, the three-entry schema FORBID loop, the CALIBRATION-scoped R009 pins, and the new R019_calibration_absent_numerators_fallback pins) against the literal description/paragraph text shipped in skills/_shared/actuals-record.schema.json and skills/sdd-time-estimation/SKILL.md in this same diff; every asserted Contains/NotContains claim holds against the shipped text.",
+          "Verified the new exact-list assertion on schema.Required matches skills/_shared/actuals-record.schema.json's post-patch required array exactly (4 names removed: implementation_hours, review_gate_hours, total_wall_clock_hours, post_review_fix_hours), and that r019ConformingRecordFixture()'s 5 keys match that same list.",
+          "Verified skills/_shared/actuals-record.schema.json's numstat (2 insertions, 6 deletions) reconciles exactly against the visible diff hunk: 4 removed required-array lines plus 2 changed description lines.",
+          "Reviewed the four openspec artifacts for internal consistency and for contradiction with the shipped schema/test/skill changes in this same diff; found the D5 required-list drop and the R-019 compute-time-field drop are each internally consistent between the delta spec, design rationale, and the shipped schema and test changes, and that the proposal's Success Criteria and the design's Open Questions and Migration sections correctly leave unimplemented items (D7 historical-record re-basing, R-020 annotations) unchecked rather than falsely claiming completion.",
+          "No BLOCKER, CRITICAL, or WARNING finding met the candidate-causal proof bar: the Go test changes strengthen prior whole-file and single-string pins into scoped list-item and exact-list assertions without weakening any existing check, and every cross-file textual claim was directly verified to match across the supplied patches."
+        ],
+        "result_hash": "sha256:7e637cad12b74f842a7920c0d83b3aa71c68fb5641463fadad987466fb8e4def"
+      }
+    ],
+    "findings": [
+      {
+        "id": "R3-001",
+        "lens": "reliability",
+        "location": "engine/skills/actuals_instrumentation_contract_test.go:510-522",
+        "severity": "SUGGESTION",
+        "claim": "validateAgainstActualsSchema only checks that every schema.Required name is present as a record key and that every record key is declared in schema.Properties; it never inspects a property's declared JSON Schema type/format/enum. Its sole caller (R019_required_drops_compute_time_fields) uses this minimal check to back the stronger-sounding claim 'must validate against the shipped schema', so the test proves presence/shape conformance only, not full JSON Schema conformance of the fixture record.",
+        "proof_refs": [
+          "engine/skills/actuals_instrumentation_contract_test.go new function validateAgainstActualsSchema(schema actualsSchemaDocument, record map[string]any) error: body is exactly a loop over schema.Required checking key presence, followed by a loop over record keys checking declaration in schema.Properties — no comparison against each property's own JSON Schema type/format/enum constraint.",
+          "engine/skills/actuals_instrumentation_contract_test.go R019_required_drops_compute_time_fields subtest calls validateAgainstActualsSchema and fails with the message 'an R-019-conforming record (three compute-time fields absent) must validate against the shipped schema' — the failure message asserts full schema validation while the called function only proves required-presence and additionalProperties closure."
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      }
+    ],
+    "classifications": {},
+    "outcomes": {
+      "R3-001": "info"
+    },
+    "fix_finding_ids": [],
+    "follow_ups": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:409180c72c28a8fd454a205c2ba4c7d3e7276e89b8ccfcbc293861e28c6d5b40",
+    "evidence_record_digest": "sha256:e9db974aa85ef1add854480d74df5e2c90f8fa9bb9bde466a8c8964b7a8c405a",
+    "evidence_outcome": "passed",
+    "evidence_target_identity": "sha256:41b62f3fd20991f22e2931fa359f3cf6ddbbf22cac0d05acf2291e6f3cad9674",
+    "evidence_authority_revision": "sha256:0ba426916c6d93415bc58d00cfc08aa0c953b7b1862dd98a65761a5bccc56504",
+    "reviewer_context_level": "provider_command"
+  }
+}

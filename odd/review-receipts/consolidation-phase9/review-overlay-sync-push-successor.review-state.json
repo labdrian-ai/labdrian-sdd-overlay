@@ -1,0 +1,260 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:5f45dd092405063b5243452060bb501acdee085792dfe6c47d6038c003de7aa7",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-overlay-sync-push-successor",
+    "generation": 2,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "1ea82a02b54ed097bb3a8f9aa79e1ed0047737b6",
+      "candidate_tree": "b12a481d6478eb33cd153c499cc5fe91b07241ef",
+      "paths_digest": "sha256:0668d7c10ec972dcd840e473f9f53d9d6f937ae1e73ef6146a9dd7f0551d7259",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "bin/labdrian-overlay"
+      ],
+      "identity": "sha256:f99cb25409d5e614e9ff16b8f48dde54909f42a8929a708c6bc8c422e3ffb499"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "1ea82a02b54ed097bb3a8f9aa79e1ed0047737b6",
+      "candidate_tree": "b12a481d6478eb33cd153c499cc5fe91b07241ef",
+      "paths_digest": "sha256:0668d7c10ec972dcd840e473f9f53d9d6f937ae1e73ef6146a9dd7f0551d7259",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "bin/labdrian-overlay"
+      ],
+      "identity": "sha256:f99cb25409d5e614e9ff16b8f48dde54909f42a8929a708c6bc8c422e3ffb499"
+    },
+    "genesis_paths": [
+      "bin/labdrian-overlay"
+    ],
+    "policy_hash": "sha256:34fb63d7f29f8613cd4431382b1057398a4816f8a4c20fc34677fffc80a184f6",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-reliability"
+    ],
+    "original_changed_lines": 75,
+    "correction_budget": 38,
+    "correction_budget_policy": "floor_two",
+    "lens_results": [
+      {
+        "lens": "review-reliability",
+        "findings": [
+          {
+            "id": "R3-apply-detached-head-restore",
+            "lens": "reliability",
+            "location": "bin/labdrian-overlay:720",
+            "severity": "WARNING",
+            "claim": "cmd_apply's new branch-restore captures the branch with `git rev-parse --abbrev-ref HEAD`, which emits the literal string `HEAD` when the overlay repo is on a detached HEAD. The restore then runs `git checkout HEAD` after `git checkout main` has already moved HEAD, leaving the session detached at main's tip instead of the original commit, while line 796 reports `Returned to branch: HEAD` as a success. The EXIT trap installed at line 727 fails the same way on the error path, so no path restores the original checkout.",
+            "proof_refs": [
+              "bin/labdrian-overlay:720 — `current_branch=\"$(git rev-parse --abbrev-ref HEAD)\"` records `HEAD`, not a branch, when HEAD is detached",
+              "bin/labdrian-overlay:729 — `git checkout main` moves HEAD before any restore runs",
+              "bin/labdrian-overlay:794 — `git checkout \"$current_branch\"` resolves to `git checkout HEAD`, which re-detaches at main's tip rather than the original commit",
+              "bin/labdrian-overlay:796 — the info line unconditionally claims the original branch was restored"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-no-coverage-for-new-behavior",
+            "lens": "reliability",
+            "location": "bin/labdrian-overlay:672",
+            "severity": "WARNING",
+            "claim": "The candidate adds five new externally observable behaviors — the dirty-tree refusal in capture and apply, automatic `upstream` push with a no-origin skip branch, the `--push` flag, apply's branch restoration, and the ahead-of-origin notice — and the changed-path manifest contains only this script, so no test asserts any of them. The comment at line 670 names `tests` as a caller that runs without an `origin` remote, so a suite exists that could pin the skip branch, the refusal exit, and the notice text, yet the three-way branch at 672/674/679 (no origin / existing origin-upstream / first push) is entirely unexercised.",
+            "proof_refs": [
+              "bin/labdrian-overlay:672 — new three-way push branch with no accompanying assertion anywhere in the changed-path manifest",
+              "bin/labdrian-overlay:670 — the code's own comment names `tests` as a no-origin caller, confirming a suite exists that this branch is not wired into",
+              "bin/labdrian-overlay:717 — new `die` refusal path in apply, an observable exit-status change with no test",
+              "bin/labdrian-overlay:810 — new NOTICE output contract with no test pinning its text or trigger condition"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-dirty-guard-fails-open",
+            "lens": "reliability",
+            "location": "bin/labdrian-overlay:586",
+            "severity": "WARNING",
+            "claim": "Both new dirty-tree guards test the *output* of `git status`, never its exit status. Under `set -euo pipefail`, a command substitution inside `[[ ]]` does not trip `set -e`, so any `git status` failure (index.lock contention from a concurrent git process, a corrupt index, an unreadable submodule) yields empty output and the guard passes as though the tree were clean. The guard therefore fails open on exactly the transient conditions that make a mid-flight branch switch most dangerous, instead of failing closed like its stated intent at line 585.",
+            "proof_refs": [
+              "bin/labdrian-overlay:586 — `[[ -z \"$(git status --porcelain --untracked-files=no)\" ]]` discards the exit status; a failed `git status` is indistinguishable from a clean tree",
+              "bin/labdrian-overlay:716 — the apply guard repeats the same output-only test before its merge",
+              "bin/labdrian-overlay:585 — the stated invariant is that a dirty tree must never be mixed in, which an empty-on-failure result silently violates"
+            ],
+            "evidence_class": "inferential",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-ahead-count-misreads-divergence",
+            "lens": "reliability",
+            "location": "bin/labdrian-overlay:807",
+            "severity": "SUGGESTION",
+            "claim": "The ahead notice compares against the remote-tracking ref `origin/main` without any fetch in cmd_apply, and `git rev-list --count origin/main..main` counts only one direction. When main and origin/main have diverged — or when origin/main is simply stale because main was pushed from another machine — the notice still reports `local main is N commit(s) ahead` and recommends `overlay apply --push`, which the remote will reject as non-fast-forward. The advice is actively wrong in the case the notice exists to catch.",
+            "proof_refs": [
+              "bin/labdrian-overlay:807 — `git rev-list --count origin/main..main` measures one direction only and cannot distinguish ahead from diverged",
+              "bin/labdrian-overlay:805 — the branch is gated on the remote-tracking ref existing, not on it being current; nothing in cmd_apply fetches",
+              "bin/labdrian-overlay:811 — the emitted remedy `overlay apply --push` fails on a diverged main"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-trap-string-quote-injection",
+            "lens": "reliability",
+            "location": "bin/labdrian-overlay:596",
+            "severity": "SUGGESTION",
+            "claim": "Both traps are now built by interpolating the branch name into a double-quoted string that wraps it in single quotes. `git check-ref-format` permits an apostrophe in a branch name, so a branch such as `adrian's-wip` produces the trap body `git checkout 'adrian's-wip' \u003e/dev/null 2\u003e\u00261 || true`. That string is a syntax error when the trap fires, so the restore never runs and the session is stranded on `upstream` (capture) or `main` (apply) — the precise failure the trap was added to prevent.",
+            "proof_refs": [
+              "bin/labdrian-overlay:596 — `trap \"git checkout '${current_branch}' ...\" EXIT` interpolates an untrusted ref name into a single-quoted shell fragment",
+              "bin/labdrian-overlay:727 — the apply trap repeats the identical construction",
+              "bin/labdrian-overlay:593 — the comment states the trap exists to prevent stranding the working tree, which this input class defeats"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-untracked-exempt-from-guard",
+            "lens": "reliability",
+            "location": "bin/labdrian-overlay:587",
+            "severity": "SUGGESTION",
+            "claim": "The capture guard passes `--untracked-files=no`, so untracked files are exempt — but untracked files survive a branch switch and are exactly what capture is about to write. If a managed file exists untracked on the current branch, `git checkout upstream` at line 598 aborts with \"untracked working tree files would be overwritten by checkout\", failing after the guard has already declared the tree acceptable. The failure is loud rather than silent, but the guard's error message tells the user to commit or stash *tracked* changes, which does not resolve the untracked case.",
+            "proof_refs": [
+              "bin/labdrian-overlay:587 — the die message directs the user at tracked changes only",
+              "bin/labdrian-overlay:586 — `--untracked-files=no` removes untracked paths from the cleanliness test",
+              "bin/labdrian-overlay:598 — `git checkout upstream` runs immediately after and can still refuse over untracked paths the guard ignored"
+            ],
+            "evidence_class": "inferential",
+            "causal_disposition": "introduced"
+          }
+        ],
+        "evidence": [
+          "bin/labdrian-overlay:581-599 — inspected the new capture dirty-tree guard and the rewritten EXIT trap, checking guard failure modes, quoting, and interaction with the following `git checkout upstream`",
+          "bin/labdrian-overlay:665-686 — inspected the new upstream auto-push block, its three-way no-origin / existing-ref / first-push branching, `set -e` behavior of `git rev-parse --verify -q` inside an elif condition, and ordering relative to the branch restore",
+          "bin/labdrian-overlay:694-731 — inspected the `--push` option parsing, the apply dirty-tree guard, branch capture, and trap installation ordering relative to `git checkout main`",
+          "bin/labdrian-overlay:790-814 — inspected the apply branch restore, trap teardown, unconditional `--push` path, and the ahead-of-origin notice including its one-directional rev-list comparison",
+          "changed_path_manifest — the candidate modifies only bin/labdrian-overlay with no mode or type change; no test or fixture path accompanies the new observable behaviors"
+        ],
+        "result_hash": "sha256:dbe33b4db357fe99e7a558a32f989f3066353360974ae7464ce3916079849400"
+      }
+    ],
+    "findings": [
+      {
+        "id": "R3-apply-detached-head-restore",
+        "lens": "reliability",
+        "location": "bin/labdrian-overlay:720",
+        "severity": "WARNING",
+        "claim": "cmd_apply's new branch-restore captures the branch with `git rev-parse --abbrev-ref HEAD`, which emits the literal string `HEAD` when the overlay repo is on a detached HEAD. The restore then runs `git checkout HEAD` after `git checkout main` has already moved HEAD, leaving the session detached at main's tip instead of the original commit, while line 796 reports `Returned to branch: HEAD` as a success. The EXIT trap installed at line 727 fails the same way on the error path, so no path restores the original checkout.",
+        "proof_refs": [
+          "bin/labdrian-overlay:720 — `current_branch=\"$(git rev-parse --abbrev-ref HEAD)\"` records `HEAD`, not a branch, when HEAD is detached",
+          "bin/labdrian-overlay:729 — `git checkout main` moves HEAD before any restore runs",
+          "bin/labdrian-overlay:794 — `git checkout \"$current_branch\"` resolves to `git checkout HEAD`, which re-detaches at main's tip rather than the original commit",
+          "bin/labdrian-overlay:796 — the info line unconditionally claims the original branch was restored"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-no-coverage-for-new-behavior",
+        "lens": "reliability",
+        "location": "bin/labdrian-overlay:672",
+        "severity": "WARNING",
+        "claim": "The candidate adds five new externally observable behaviors — the dirty-tree refusal in capture and apply, automatic `upstream` push with a no-origin skip branch, the `--push` flag, apply's branch restoration, and the ahead-of-origin notice — and the changed-path manifest contains only this script, so no test asserts any of them. The comment at line 670 names `tests` as a caller that runs without an `origin` remote, so a suite exists that could pin the skip branch, the refusal exit, and the notice text, yet the three-way branch at 672/674/679 (no origin / existing origin-upstream / first push) is entirely unexercised.",
+        "proof_refs": [
+          "bin/labdrian-overlay:672 — new three-way push branch with no accompanying assertion anywhere in the changed-path manifest",
+          "bin/labdrian-overlay:670 — the code's own comment names `tests` as a no-origin caller, confirming a suite exists that this branch is not wired into",
+          "bin/labdrian-overlay:717 — new `die` refusal path in apply, an observable exit-status change with no test",
+          "bin/labdrian-overlay:810 — new NOTICE output contract with no test pinning its text or trigger condition"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-dirty-guard-fails-open",
+        "lens": "reliability",
+        "location": "bin/labdrian-overlay:586",
+        "severity": "WARNING",
+        "claim": "Both new dirty-tree guards test the *output* of `git status`, never its exit status. Under `set -euo pipefail`, a command substitution inside `[[ ]]` does not trip `set -e`, so any `git status` failure (index.lock contention from a concurrent git process, a corrupt index, an unreadable submodule) yields empty output and the guard passes as though the tree were clean. The guard therefore fails open on exactly the transient conditions that make a mid-flight branch switch most dangerous, instead of failing closed like its stated intent at line 585.",
+        "proof_refs": [
+          "bin/labdrian-overlay:586 — `[[ -z \"$(git status --porcelain --untracked-files=no)\" ]]` discards the exit status; a failed `git status` is indistinguishable from a clean tree",
+          "bin/labdrian-overlay:716 — the apply guard repeats the same output-only test before its merge",
+          "bin/labdrian-overlay:585 — the stated invariant is that a dirty tree must never be mixed in, which an empty-on-failure result silently violates"
+        ],
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-ahead-count-misreads-divergence",
+        "lens": "reliability",
+        "location": "bin/labdrian-overlay:807",
+        "severity": "SUGGESTION",
+        "claim": "The ahead notice compares against the remote-tracking ref `origin/main` without any fetch in cmd_apply, and `git rev-list --count origin/main..main` counts only one direction. When main and origin/main have diverged — or when origin/main is simply stale because main was pushed from another machine — the notice still reports `local main is N commit(s) ahead` and recommends `overlay apply --push`, which the remote will reject as non-fast-forward. The advice is actively wrong in the case the notice exists to catch.",
+        "proof_refs": [
+          "bin/labdrian-overlay:807 — `git rev-list --count origin/main..main` measures one direction only and cannot distinguish ahead from diverged",
+          "bin/labdrian-overlay:805 — the branch is gated on the remote-tracking ref existing, not on it being current; nothing in cmd_apply fetches",
+          "bin/labdrian-overlay:811 — the emitted remedy `overlay apply --push` fails on a diverged main"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-trap-string-quote-injection",
+        "lens": "reliability",
+        "location": "bin/labdrian-overlay:596",
+        "severity": "SUGGESTION",
+        "claim": "Both traps are now built by interpolating the branch name into a double-quoted string that wraps it in single quotes. `git check-ref-format` permits an apostrophe in a branch name, so a branch such as `adrian's-wip` produces the trap body `git checkout 'adrian's-wip' \u003e/dev/null 2\u003e\u00261 || true`. That string is a syntax error when the trap fires, so the restore never runs and the session is stranded on `upstream` (capture) or `main` (apply) — the precise failure the trap was added to prevent.",
+        "proof_refs": [
+          "bin/labdrian-overlay:596 — `trap \"git checkout '${current_branch}' ...\" EXIT` interpolates an untrusted ref name into a single-quoted shell fragment",
+          "bin/labdrian-overlay:727 — the apply trap repeats the identical construction",
+          "bin/labdrian-overlay:593 — the comment states the trap exists to prevent stranding the working tree, which this input class defeats"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-untracked-exempt-from-guard",
+        "lens": "reliability",
+        "location": "bin/labdrian-overlay:587",
+        "severity": "SUGGESTION",
+        "claim": "The capture guard passes `--untracked-files=no`, so untracked files are exempt — but untracked files survive a branch switch and are exactly what capture is about to write. If a managed file exists untracked on the current branch, `git checkout upstream` at line 598 aborts with \"untracked working tree files would be overwritten by checkout\", failing after the guard has already declared the tree acceptable. The failure is loud rather than silent, but the guard's error message tells the user to commit or stash *tracked* changes, which does not resolve the untracked case.",
+        "proof_refs": [
+          "bin/labdrian-overlay:587 — the die message directs the user at tracked changes only",
+          "bin/labdrian-overlay:586 — `--untracked-files=no` removes untracked paths from the cleanliness test",
+          "bin/labdrian-overlay:598 — `git checkout upstream` runs immediately after and can still refuse over untracked paths the guard ignored"
+        ],
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced"
+      }
+    ],
+    "classifications": {},
+    "outcomes": {
+      "R3-ahead-count-misreads-divergence": "info",
+      "R3-apply-detached-head-restore": "info",
+      "R3-dirty-guard-fails-open": "info",
+      "R3-no-coverage-for-new-behavior": "info",
+      "R3-trap-string-quote-injection": "info",
+      "R3-untracked-exempt-from-guard": "info"
+    },
+    "fix_finding_ids": [],
+    "follow_ups": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:67c110a879ec055acab62782952e81d91a23f600c5da5f23bea6c11943dbb357",
+    "evidence_record_digest": "sha256:126c031feede5a02a22804c15349fe92d674320e48efd3ba44af3cf8f1955c50",
+    "evidence_outcome": "passed",
+    "evidence_target_identity": "sha256:f99cb25409d5e614e9ff16b8f48dde54909f42a8929a708c6bc8c422e3ffb499",
+    "evidence_authority_revision": "sha256:92a4009b57668bca046d2c4ade9e3360b056cc87c78bbcff3fb107879d0ef6ea",
+    "recovery": {
+      "predecessor_lineage_id": "review-fe05e579d704a78e",
+      "predecessor_revision": "sha256:e48c4f9ca4114109a408fb1222193b1312a565691f8a5373c2005a1b52c5d6eb",
+      "disposition": "scope_changed",
+      "reason": "candidate changed after approval: CI caught an unbound variable in the EXIT trap (TestCaptureFromBackup_UsesRouteAwareTarPaths); bin/labdrian-overlay scope changed beyond the approved receipt",
+      "actor": "labdrian-ai \u003clabradoradrian770@gmail.com\u003e",
+      "recovered_at": "2026-08-12T21:08:45.482919896Z",
+      "maintainer_authorization": "gentle-ai.review-recovery-authorization/v1\npredecessor_lineage=review-fe05e579d704a78e\npredecessor_revision=sha256:e48c4f9ca4114109a408fb1222193b1312a565691f8a5373c2005a1b52c5d6eb\ntarget_identity=sha256:f99cb25409d5e614e9ff16b8f48dde54909f42a8929a708c6bc8c422e3ffb499\nactor=labdrian-ai \u003clabradoradrian770@gmail.com\u003e\nreason=candidate changed after approval: CI caught an unbound variable in the EXIT trap (TestCaptureFromBackup_UsesRouteAwareTarPaths); bin/labdrian-overlay scope changed beyond the approved receipt"
+    }
+  }
+}

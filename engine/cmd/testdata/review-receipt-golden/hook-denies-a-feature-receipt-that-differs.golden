@@ -1,0 +1,14 @@
+$ review-receipt hook --cwd <ROOT>
+--- stdin ---
+{"tool_name":"Bash","tool_input":{"command":"gentle-ai review acknowledge-approved --cwd /repo --lineage review-x"}}
+exit: 2
+--- stdout ---
+--- stderr ---
+reviewreceipt: multiple active changes (change-a, change-b); run `review-receipt capture --change <name>` or `review-receipt capture --feature <name>` before acknowledging
+
+=== odd after ===
+dir  odd
+dir  odd/review-receipts
+dir  odd/review-receipts/consolidation-phase9
+file odd/review-receipts/consolidation-phase9/review-939c22285467c2b0.review-state.json 0644 2 44136fa355b3
+

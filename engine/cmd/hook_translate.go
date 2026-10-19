@@ -49,7 +49,7 @@ func gateCall(in hookwire.PreToolUse) projection.ToolCall {
 		Name: in.Tool,
 		ReadQuery: func() projection.QueryArguments {
 			q := in.Query()
-			return projection.QueryArguments{Named: q.Named, Project: q.Project, AllProjects: q.AllProjects}
+			return projection.QueryArguments{Named: q.Named, Project: q.Project, AllProjects: q.AllProjects, Goal: q.Goal}
 		},
 		ReadSkill:    in.Skill,
 		ReadFilePath: onceString(func() string { return realSkillFile(in.FilePath()) }),

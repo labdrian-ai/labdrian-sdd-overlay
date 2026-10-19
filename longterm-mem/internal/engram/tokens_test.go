@@ -28,7 +28,7 @@ func TestUnionGoldenUsesProductionTokenizer(t *testing.T) {
 	defer store.Close()
 
 	query := "what is the register writer"
-	got, err := store.Search("labdrian-sdd-overlay", query, 10)
+	got, err := store.Search("labdrian-sdd-overlay", query, 10, memory.SearchFilter{})
 	if err != nil {
 		t.Fatalf("Search: %v", err)
 	}

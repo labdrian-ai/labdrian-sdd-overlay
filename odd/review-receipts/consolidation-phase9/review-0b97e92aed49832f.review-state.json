@@ -1,0 +1,110 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:54fb772eab354b4cd24b77abc58066ead12ce92202d9caa3dc92d39182a73350",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-0b97e92aed49832f",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "90fc5436a50bd659ea05ac3eaa68580be634ed0e",
+      "candidate_tree": "186438fba8b2395bc6c57c09dc7e02dc154e6094",
+      "paths_digest": "sha256:c7b116b1fbcda4606a1f0a1b726c14ddd719f43f4eea249d62ed423570023cda",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/skills/actuals_instrumentation_contract_test.go",
+        "skills/inception-pipeline/SKILL.md"
+      ],
+      "identity": "sha256:0b97e92aed49832f5ce502baeec7b457bc77c2147ac64d35572348d21f6214c8"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "90fc5436a50bd659ea05ac3eaa68580be634ed0e",
+      "candidate_tree": "186438fba8b2395bc6c57c09dc7e02dc154e6094",
+      "paths_digest": "sha256:c7b116b1fbcda4606a1f0a1b726c14ddd719f43f4eea249d62ed423570023cda",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/skills/actuals_instrumentation_contract_test.go",
+        "skills/inception-pipeline/SKILL.md"
+      ],
+      "identity": "sha256:0b97e92aed49832f5ce502baeec7b457bc77c2147ac64d35572348d21f6214c8"
+    },
+    "genesis_paths": [
+      "engine/skills/actuals_instrumentation_contract_test.go",
+      "skills/inception-pipeline/SKILL.md"
+    ],
+    "policy_hash": "sha256:34fb63d7f29f8613cd4431382b1057398a4816f8a4c20fc34677fffc80a184f6",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-reliability"
+    ],
+    "original_changed_lines": 192,
+    "correction_budget": 96,
+    "correction_budget_policy": "floor_two",
+    "lens_results": [
+      {
+        "lens": "review-reliability",
+        "findings": [
+          {
+            "id": "R3-001",
+            "lens": "reliability",
+            "location": "engine/skills/actuals_instrumentation_contract_test.go:208-213",
+            "severity": "SUGGESTION",
+            "claim": "The comment justifying the operative-clause rejection pin states that a bare \"REJECTED\" pin would also match the unrelated outcome-naming sentence, but that sentence spells the word in lowercase while the claimed colliding token is uppercase; Go's strings.Contains is case-sensitive, so the collision the comment describes does not exist in the shipped prose. The pin itself is correct and strictly stronger than the bare word — only its written rationale is inaccurate.",
+            "proof_refs": [
+              "engine/skills/actuals_instrumentation_contract_test.go:208-210 — the comment claims the bare word also appears in the unrelated outcome-naming sentence",
+              "engine/skills/actuals_instrumentation_contract_test.go:213 — the shipped pin is the full operative clause spelling the word in uppercase",
+              "skills/inception-pipeline/SKILL.md — the uppercase spelling occurs exactly once in the shipped prose, in the operative rejection clause itself",
+              "skills/inception-pipeline/SKILL.md — the outcome-naming sentence and the Execute item 3 outcome list both spell the word in lowercase, which a case-sensitive substring check would never match against the uppercase token"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          }
+        ],
+        "evidence": [
+          "Reviewed both changed_path_manifest paths against base_tree 90fc5436a50bd659ea05ac3eaa68580be634ed0e and candidate_tree 186438fba8b2395bc6c57c09dc7e02dc154e6094. Evidence scope complete: both paths carried as full verbatim diffs with ten lines of context, nothing reduced or sampled.",
+          "Every want string in the three new subtests was located byte-for-byte in the shipped SKILL.md prose carried in the same diff, including the long operative clauses: the REJECTED rejection rule, the git show -s --format=%T verification command, the verify-never-discover clause, the approved_tree MUST NOT be recorded at all clause, the self-asserted clause, the four-way outcome enumeration, the Cycle Timestamps Execute item and the append-only carve-out clause.",
+          "Cross-checked the want list against the forbidden list for unsatisfiability: no string required to be present is a substring of any forbidden string, and no forbidden string occurs inside any required string. The suite is satisfiable against the shipped prose.",
+          "Checked each forbidden entry against the shipped SKILL.md: \"through archive\", \"receipt-bound\", \"path-scan\", \"first-parent\", \"carrying that tree MUST be chosen\" and \"otherwise `landing_commit`'s own tree\" are all genuinely absent, and the boundary sentence now reads \"through merge, not archive\", which does not contain the forbidden \"through archive\" substring.",
+          "Non-vacuity spot-check on the pins whose comments claim a prior bare-word pin was mutation-proven non-covering: \"bookkeeping\" does occur on both the total_wall_clock_hours sentence and the checkpoint_count sentence, so the operative-clause pin \"excluded from this count as post-boundary bookkeeping\" is genuinely stronger than the bare word; likewise \"append-only carve-out\" occurs both in Execute item 3 and in the Gotchas cross-reference, and \"Cycle Timestamps\" occurs at those same two sites, so both operative-clause pins are justified.",
+          "R021_required_drops_wall_clock binds the schema relaxation to shipped producer behavior rather than to schema shape alone: beyond the negative membership check and the still-declared-property check, it pins the two Validate-step clauses that make the write-anyway rule operative.",
+          "Determinism check: all three new subtests read committed repository bytes through readRepoFile and compare literal substrings or decoded JSON structure. None depends on wall-clock time, environment, map iteration order, network, or live git history.",
+          "R019_compute_time_deferral_rationale's six want strings all resolve against the shipped R-019 paragraph, which states the three field names plus the three technical reasons session-transient, no timestamp fields, and no structured subagent durations."
+        ],
+        "result_hash": "sha256:e9cf9cea12f55bf7e05c483764745d8424c9b2b72aa6fdd2bf0e19f3197b2909"
+      }
+    ],
+    "findings": [
+      {
+        "id": "R3-001",
+        "lens": "reliability",
+        "location": "engine/skills/actuals_instrumentation_contract_test.go:208-213",
+        "severity": "SUGGESTION",
+        "claim": "The comment justifying the operative-clause rejection pin states that a bare \"REJECTED\" pin would also match the unrelated outcome-naming sentence, but that sentence spells the word in lowercase while the claimed colliding token is uppercase; Go's strings.Contains is case-sensitive, so the collision the comment describes does not exist in the shipped prose. The pin itself is correct and strictly stronger than the bare word — only its written rationale is inaccurate.",
+        "proof_refs": [
+          "engine/skills/actuals_instrumentation_contract_test.go:208-210 — the comment claims the bare word also appears in the unrelated outcome-naming sentence",
+          "engine/skills/actuals_instrumentation_contract_test.go:213 — the shipped pin is the full operative clause spelling the word in uppercase",
+          "skills/inception-pipeline/SKILL.md — the uppercase spelling occurs exactly once in the shipped prose, in the operative rejection clause itself",
+          "skills/inception-pipeline/SKILL.md — the outcome-naming sentence and the Execute item 3 outcome list both spell the word in lowercase, which a case-sensitive substring check would never match against the uppercase token"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      }
+    ],
+    "classifications": {},
+    "outcomes": {
+      "R3-001": "info"
+    },
+    "fix_finding_ids": [],
+    "follow_ups": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:e3080831dbf8a4445ff4bee505c3dfcb6fd4f8a00cf42bbeced0ad816b773fee",
+    "evidence_record_digest": "sha256:d4d2ef4d7dd6ebb941cce70c7ee5a4af31767752b05804fa8eac0e261d7474da",
+    "evidence_outcome": "passed",
+    "evidence_target_identity": "sha256:0b97e92aed49832f5ce502baeec7b457bc77c2147ac64d35572348d21f6214c8",
+    "evidence_authority_revision": "sha256:42ae786b59f84c21c8ca63d163d9863d125b1ef07c8d80b947c06bafc8066e7f"
+  }
+}

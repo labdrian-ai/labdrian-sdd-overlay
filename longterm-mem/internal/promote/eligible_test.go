@@ -49,6 +49,21 @@ func TestEligible(t *testing.T) {
 			want: false,
 		},
 		{
+			name: "a goal's sdd/-prefixed topic_key is excluded: the goal prefix is not the first segment",
+			obs:  memory.Observation{Type: "decision", RevisionCount: 5, Pinned: false, TopicKey: "goal:g-42/sdd/some-change/tasks"},
+			want: false,
+		},
+		{
+			name: "a goal's curated topic_key is eligible",
+			obs:  memory.Observation{Type: "discovery", Pinned: false, TopicKey: "goal:g-42/longterm-mem/promotion-eligibility-policy"},
+			want: true,
+		},
+		{
+			name: "a goal's topic with nothing under the prefix is not eligible",
+			obs:  memory.Observation{Type: "decision", Pinned: false, TopicKey: "goal:g-42/"},
+			want: false,
+		},
+		{
 			name: "review/-prefixed topic_key is excluded",
 			obs:  memory.Observation{Type: "decision", RevisionCount: 5, Pinned: false, TopicKey: "review/some-change/verdict"},
 			want: false,

@@ -157,7 +157,7 @@ func TestQuery_LinkedPairEmittedOnce(t *testing.T) {
 	store := newFixtureEngramStore(t, []fixtureObservation{
 		{title: "linked observation", content: "shared topic notes", project: "proj-a"},
 	})
-	search, err := store.Search("proj-a", "shared", 10)
+	search, err := store.Search("proj-a", "shared", 10, memory.SearchFilter{})
 	if err != nil || len(search.Rows) != 1 {
 		t.Fatalf("fixture setup: Search = %+v, %v", search, err)
 	}

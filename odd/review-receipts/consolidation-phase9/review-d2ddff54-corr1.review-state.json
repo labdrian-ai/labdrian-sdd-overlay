@@ -1,0 +1,409 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:fce6c50c1c9c64cd4559d97dac2d06592179bb67f6ec8b5ff8b08f86d3fbc78a",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-d2ddff54-corr1",
+    "generation": 2,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "70bdf778de78a6e87524cad168a5c38834e605df",
+      "candidate_tree": "1ec9c578d9772609cac6ab7adb807e57e347b1c4",
+      "paths_digest": "sha256:ed2c25e190b23888ff1bdbf1552383c9b8e1669c4403b9bc831e88634859413c",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/skills/actuals_instrumentation_contract_test.go",
+        "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/apply-progress.md",
+        "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/archive-report.md",
+        "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/design.md",
+        "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/exploration.md",
+        "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/proposal.md",
+        "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/specs/actuals-instrumentation/spec.md",
+        "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/tasks.md",
+        "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/verify-report.md",
+        "openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md",
+        "openspec/changes/sdd-cycle-timestamp-instrumentation/design.md",
+        "openspec/changes/sdd-cycle-timestamp-instrumentation/exploration.md",
+        "openspec/changes/sdd-cycle-timestamp-instrumentation/proposal.md",
+        "openspec/changes/sdd-cycle-timestamp-instrumentation/specs/actuals-instrumentation/spec.md",
+        "openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md",
+        "openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md",
+        "openspec/specs/actuals-instrumentation/spec.md"
+      ],
+      "identity": "sha256:7dc81d713e2a9445213b5656cae7dfdf2636ade48f8964163c020cc1267efe27"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "70bdf778de78a6e87524cad168a5c38834e605df",
+      "candidate_tree": "aaf431c0eb5682c33213e368d1da75968c70a2d7",
+      "paths_digest": "sha256:ed2c25e190b23888ff1bdbf1552383c9b8e1669c4403b9bc831e88634859413c",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/skills/actuals_instrumentation_contract_test.go",
+        "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/apply-progress.md",
+        "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/archive-report.md",
+        "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/design.md",
+        "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/exploration.md",
+        "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/proposal.md",
+        "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/specs/actuals-instrumentation/spec.md",
+        "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/tasks.md",
+        "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/verify-report.md",
+        "openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md",
+        "openspec/changes/sdd-cycle-timestamp-instrumentation/design.md",
+        "openspec/changes/sdd-cycle-timestamp-instrumentation/exploration.md",
+        "openspec/changes/sdd-cycle-timestamp-instrumentation/proposal.md",
+        "openspec/changes/sdd-cycle-timestamp-instrumentation/specs/actuals-instrumentation/spec.md",
+        "openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md",
+        "openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md",
+        "openspec/specs/actuals-instrumentation/spec.md"
+      ],
+      "identity": "sha256:ab3ccd35b407f28048bb53bb6f629eb2c4822404cc1b136d16f4a47389f8e7bc"
+    },
+    "genesis_paths": [
+      "engine/skills/actuals_instrumentation_contract_test.go",
+      "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/apply-progress.md",
+      "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/archive-report.md",
+      "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/design.md",
+      "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/exploration.md",
+      "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/proposal.md",
+      "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/specs/actuals-instrumentation/spec.md",
+      "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/tasks.md",
+      "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/verify-report.md",
+      "openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md",
+      "openspec/changes/sdd-cycle-timestamp-instrumentation/design.md",
+      "openspec/changes/sdd-cycle-timestamp-instrumentation/exploration.md",
+      "openspec/changes/sdd-cycle-timestamp-instrumentation/proposal.md",
+      "openspec/changes/sdd-cycle-timestamp-instrumentation/specs/actuals-instrumentation/spec.md",
+      "openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md",
+      "openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md",
+      "openspec/specs/actuals-instrumentation/spec.md"
+    ],
+    "policy_hash": "sha256:34fb63d7f29f8613cd4431382b1057398a4816f8a4c20fc34677fffc80a184f6",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-reliability"
+    ],
+    "original_changed_lines": 6930,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_results": [
+      {
+        "lens": "review-reliability",
+        "findings": [
+          {
+            "id": "R3-archive-report-abolished-resolution-path",
+            "lens": "reliability",
+            "location": "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/archive-report.md:73",
+            "severity": "CRITICAL",
+            "claim": "The new archive-report states the t1 resolution path as receipt-bound. That is the exact abolished mechanism this change spent multiple remediation phases eradicating, and the requirement text this same candidate merges into the canonical spec forbids the review-receipt store as a resolution source outright. The archive-report is the artifact the requirement designates as the sole versioned authority for t1, so the one field naming how the anchor was resolved names a mechanism the shipped rule disallows. It also contradicts line 71 of the same file, which correctly says the anchor was explicitly recorded and never discovered. This reproduces, in a newly created artifact, the same defect class that was previously raised as a blocking finding against this change when the abolished vocabulary appeared in shipped record data.",
+            "proof_refs": [
+              "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/archive-report.md:73",
+              "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/archive-report.md:71",
+              "openspec/specs/actuals-instrumentation/spec.md:141",
+              "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/tasks.md",
+              "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/apply-progress.md"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-sweep-retarget-on-false-premise",
+            "lens": "reliability",
+            "location": "engine/skills/actuals_instrumentation_contract_test.go:611-617",
+            "severity": "WARNING",
+            "claim": "The comment justifying the retarget asserts the delta spec no longer exists as a standalone shipped artifact, but this same candidate adds that delta spec at the archive path listed in its own changed-path manifest. The retarget therefore drops a shipped artifact from the abolished-vocabulary sweep on a premise the candidate itself falsifies, and simultaneously aims the sweep at a different document (the merged canonical spec) whose pre-existing body this candidate does not display and which was never swept before. No test-run evidence accompanies either the retarget or the seven-file move; the archived round-9 result was produced against the pre-move tree, so nothing in the candidate proves this guard still loads its inputs or still guards the same text.",
+            "proof_refs": [
+              "engine/skills/actuals_instrumentation_contract_test.go:611-614",
+              "engine/skills/actuals_instrumentation_contract_test.go:617",
+              "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/specs/actuals-instrumentation/spec.md",
+              "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/verify-report.md"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-delta-marker-leaked-into-canonical-spec",
+            "lens": "reliability",
+            "location": "openspec/specs/actuals-instrumentation/spec.md:131",
+            "severity": "WARNING",
+            "claim": "The delta-document section marker heading for added requirements was carried verbatim into the canonical capability spec during the merge, while its sibling modified-requirements marker correctly was not. The canonical spec otherwise holds a flat list of third-level requirement headings, so this inserts a lone second-level heading, with no blank line separating it from the preceding scenario bullet, into a file whose consumers segment it by heading level. The marker is also semantically empty in a canonical spec, which has no delta baseline for anything to be added relative to, and the asymmetry with the dropped modified-requirements marker shows the merge was applied inconsistently.",
+            "proof_refs": [
+              "openspec/specs/actuals-instrumentation/spec.md:130-131",
+              "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/specs/actuals-instrumentation/spec.md"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-anchor-recorded-as-abbreviations",
+            "lens": "reliability",
+            "location": "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/archive-report.md:71",
+            "severity": "WARNING",
+            "claim": "The two values the merged requirement makes the entire basis of t1 verification are recorded only in abbreviated form in the artifact the requirement designates as the versioned record: a seven-character landing commit and a tree hash truncated to sixteen characters followed by a Unicode ellipsis. The approved tree is additionally attributed to the review receipt store, which the same requirement states is not versioned and cannot serve as the resolution source for anyone who did not perform the review, rather than being recorded as a first-class value in the archive-report itself. A future reader cannot apply the requirement's own equality check against a truncated, ellipsis-terminated value without re-deriving it, and the report's central thesis is that anchors must be recorded rather than re-derived.",
+            "proof_refs": [
+              "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/archive-report.md:66",
+              "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/archive-report.md:71",
+              "openspec/specs/actuals-instrumentation/spec.md:139-141"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-requirement-count-contradicts-own-table",
+            "lens": "reliability",
+            "location": "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/archive-report.md:119",
+            "severity": "WARNING",
+            "claim": "The archived contents summary states that five new requirements were added to the canonical spec. The report's own Spec Merge Summary table lists four Added rows plus one Modified row, and the merged canonical spec gains exactly four new requirement headings. The co-archived verify report independently counts one modified plus four added. This is a fresh instance of the self-describing count claim contradicted by the artifact set, the recurring class the archived verify report itself flags as having produced repeated blocking and warning findings across earlier rounds, and no test binds any count claim in this new file.",
+            "proof_refs": [
+              "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/archive-report.md:119",
+              "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/archive-report.md:56-60",
+              "openspec/specs/actuals-instrumentation/spec.md:133",
+              "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/verify-report.md"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-actuals-record-half-of-dual-store-rule-unevidenced",
+            "lens": "reliability",
+            "location": "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/archive-report.md:10-18",
+            "severity": "WARNING",
+            "claim": "The requirement this candidate promotes to canonical mandates that both anchors be recorded in the actuals record variance narrative AND in an archive-report cycle timestamps section. This candidate ships only the archive-report half. The artifact index asserts that all phase artifacts were persisted, yet lists no actuals observation, and the same report elsewhere marks the closure task as merely unblocked rather than done. The instrument's own first live application is therefore half evidenced, and no assertion can catch the gap because the suite reads no live store, a limitation the archived progress record states explicitly when explaining why one scenario needed a committed fixture mirror instead.",
+            "proof_refs": [
+              "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/archive-report.md:10-18",
+              "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/archive-report.md:43",
+              "openspec/specs/actuals-instrumentation/spec.md:147",
+              "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/apply-progress.md"
+            ],
+            "evidence_class": "inferential",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-verdict-predates-what-it-certifies",
+            "lens": "reliability",
+            "location": "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/archive-report.md:26",
+            "severity": "SUGGESTION",
+            "claim": "The verification status line dates the round-9 verdict six days before the merge that round 9 certifies. The co-archived verify report states its own date as the merge day and records that it inspected the merged default branch at the post-merge head, so the date stamped on the verdict is contradicted by the report it summarises. The date matches the artifact index creation column instead, which is stable across topic-key upserts by this change's own design note, so it identifies when the observation was first written rather than when the round ran.",
+            "proof_refs": [
+              "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/archive-report.md:26",
+              "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/archive-report.md:18",
+              "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/verify-report.md",
+              "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/design.md"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          }
+        ],
+        "evidence": [
+          "Inspected all 17 changed paths in full from the supplied patch sections only; ran no command and read no file outside them.",
+          "Verified that seven of the eight archive additions are pure renames of the corresponding deleted paths by comparing the blob object identifiers in each pair of diff index lines, which are equal in every case; archive-report.md is the only genuinely new content under the archive directory.",
+          "Confirmed the merged canonical spec reproduces the delta's modified requirement body and all three of its scenarios, and appends the delta's four added requirements, so the merge is content-complete; the only structural residue is the delta's added-requirements marker heading, reported as a finding.",
+          "Checked the archive-report's cycle-duration arithmetic against its own stated anchors: six days plus roughly two hours and four minutes reconciles with both the stated hour figure and the stated day figure, so the duration is internally consistent and is not reported as a defect.",
+          "Checked the archive-report's subtest tally, warning and suggestion counts, task totals and required-list before and after names against the co-archived verify report and against the merged spec; all agree except the new-requirement count, reported as a finding.",
+          "Cross-read the archived progress record and task list to establish which vocabulary the change treats as abolished and which artifacts the existing sweep guard covers, then checked the newly added archive-report against that vocabulary; one abolished term is present in it.",
+          "The candidate contains no test execution output. The archived round-9 result was produced against the pre-archive tree, before the file move and before the guard's path constants were retargeted, so it does not cover this candidate's own edits."
+        ],
+        "result_hash": "sha256:d888ab32298632719fb0f6a87fe24efd2162d9bfdc3307749acfec430869a74e"
+      }
+    ],
+    "findings": [
+      {
+        "id": "R3-archive-report-abolished-resolution-path",
+        "lens": "reliability",
+        "location": "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/archive-report.md:73",
+        "severity": "CRITICAL",
+        "claim": "The new archive-report states the t1 resolution path as receipt-bound. That is the exact abolished mechanism this change spent multiple remediation phases eradicating, and the requirement text this same candidate merges into the canonical spec forbids the review-receipt store as a resolution source outright. The archive-report is the artifact the requirement designates as the sole versioned authority for t1, so the one field naming how the anchor was resolved names a mechanism the shipped rule disallows. It also contradicts line 71 of the same file, which correctly says the anchor was explicitly recorded and never discovered. This reproduces, in a newly created artifact, the same defect class that was previously raised as a blocking finding against this change when the abolished vocabulary appeared in shipped record data.",
+        "proof_refs": [
+          "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/archive-report.md:73",
+          "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/archive-report.md:71",
+          "openspec/specs/actuals-instrumentation/spec.md:141",
+          "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/tasks.md",
+          "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/apply-progress.md"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-sweep-retarget-on-false-premise",
+        "lens": "reliability",
+        "location": "engine/skills/actuals_instrumentation_contract_test.go:611-617",
+        "severity": "WARNING",
+        "claim": "The comment justifying the retarget asserts the delta spec no longer exists as a standalone shipped artifact, but this same candidate adds that delta spec at the archive path listed in its own changed-path manifest. The retarget therefore drops a shipped artifact from the abolished-vocabulary sweep on a premise the candidate itself falsifies, and simultaneously aims the sweep at a different document (the merged canonical spec) whose pre-existing body this candidate does not display and which was never swept before. No test-run evidence accompanies either the retarget or the seven-file move; the archived round-9 result was produced against the pre-move tree, so nothing in the candidate proves this guard still loads its inputs or still guards the same text.",
+        "proof_refs": [
+          "engine/skills/actuals_instrumentation_contract_test.go:611-614",
+          "engine/skills/actuals_instrumentation_contract_test.go:617",
+          "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/specs/actuals-instrumentation/spec.md",
+          "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/verify-report.md"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-delta-marker-leaked-into-canonical-spec",
+        "lens": "reliability",
+        "location": "openspec/specs/actuals-instrumentation/spec.md:131",
+        "severity": "WARNING",
+        "claim": "The delta-document section marker heading for added requirements was carried verbatim into the canonical capability spec during the merge, while its sibling modified-requirements marker correctly was not. The canonical spec otherwise holds a flat list of third-level requirement headings, so this inserts a lone second-level heading, with no blank line separating it from the preceding scenario bullet, into a file whose consumers segment it by heading level. The marker is also semantically empty in a canonical spec, which has no delta baseline for anything to be added relative to, and the asymmetry with the dropped modified-requirements marker shows the merge was applied inconsistently.",
+        "proof_refs": [
+          "openspec/specs/actuals-instrumentation/spec.md:130-131",
+          "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/specs/actuals-instrumentation/spec.md"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-anchor-recorded-as-abbreviations",
+        "lens": "reliability",
+        "location": "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/archive-report.md:71",
+        "severity": "WARNING",
+        "claim": "The two values the merged requirement makes the entire basis of t1 verification are recorded only in abbreviated form in the artifact the requirement designates as the versioned record: a seven-character landing commit and a tree hash truncated to sixteen characters followed by a Unicode ellipsis. The approved tree is additionally attributed to the review receipt store, which the same requirement states is not versioned and cannot serve as the resolution source for anyone who did not perform the review, rather than being recorded as a first-class value in the archive-report itself. A future reader cannot apply the requirement's own equality check against a truncated, ellipsis-terminated value without re-deriving it, and the report's central thesis is that anchors must be recorded rather than re-derived.",
+        "proof_refs": [
+          "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/archive-report.md:66",
+          "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/archive-report.md:71",
+          "openspec/specs/actuals-instrumentation/spec.md:139-141"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-requirement-count-contradicts-own-table",
+        "lens": "reliability",
+        "location": "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/archive-report.md:119",
+        "severity": "WARNING",
+        "claim": "The archived contents summary states that five new requirements were added to the canonical spec. The report's own Spec Merge Summary table lists four Added rows plus one Modified row, and the merged canonical spec gains exactly four new requirement headings. The co-archived verify report independently counts one modified plus four added. This is a fresh instance of the self-describing count claim contradicted by the artifact set, the recurring class the archived verify report itself flags as having produced repeated blocking and warning findings across earlier rounds, and no test binds any count claim in this new file.",
+        "proof_refs": [
+          "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/archive-report.md:119",
+          "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/archive-report.md:56-60",
+          "openspec/specs/actuals-instrumentation/spec.md:133",
+          "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/verify-report.md"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-actuals-record-half-of-dual-store-rule-unevidenced",
+        "lens": "reliability",
+        "location": "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/archive-report.md:10-18",
+        "severity": "WARNING",
+        "claim": "The requirement this candidate promotes to canonical mandates that both anchors be recorded in the actuals record variance narrative AND in an archive-report cycle timestamps section. This candidate ships only the archive-report half. The artifact index asserts that all phase artifacts were persisted, yet lists no actuals observation, and the same report elsewhere marks the closure task as merely unblocked rather than done. The instrument's own first live application is therefore half evidenced, and no assertion can catch the gap because the suite reads no live store, a limitation the archived progress record states explicitly when explaining why one scenario needed a committed fixture mirror instead.",
+        "proof_refs": [
+          "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/archive-report.md:10-18",
+          "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/archive-report.md:43",
+          "openspec/specs/actuals-instrumentation/spec.md:147",
+          "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/apply-progress.md"
+        ],
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-verdict-predates-what-it-certifies",
+        "lens": "reliability",
+        "location": "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/archive-report.md:26",
+        "severity": "SUGGESTION",
+        "claim": "The verification status line dates the round-9 verdict six days before the merge that round 9 certifies. The co-archived verify report states its own date as the merge day and records that it inspected the merged default branch at the post-merge head, so the date stamped on the verdict is contradicted by the report it summarises. The date matches the artifact index creation column instead, which is stable across topic-key upserts by this change's own design note, so it identifies when the observation was first written rather than when the round ran.",
+        "proof_refs": [
+          "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/archive-report.md:26",
+          "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/archive-report.md:18",
+          "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/verify-report.md",
+          "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/design.md"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      }
+    ],
+    "classifications": {
+      "R3-archive-report-abolished-resolution-path": {
+        "finding_id": "R3-archive-report-abolished-resolution-path",
+        "class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof": "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/archive-report.md:73; openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/archive-report.md:71; openspec/specs/actuals-instrumentation/spec.md:141; openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/tasks.md; openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/apply-progress.md"
+      }
+    },
+    "outcomes": {
+      "R3-actuals-record-half-of-dual-store-rule-unevidenced": "info",
+      "R3-anchor-recorded-as-abbreviations": "info",
+      "R3-archive-report-abolished-resolution-path": "corroborated",
+      "R3-delta-marker-leaked-into-canonical-spec": "info",
+      "R3-requirement-count-contradicts-own-table": "info",
+      "R3-sweep-retarget-on-false-premise": "info",
+      "R3-verdict-predates-what-it-certifies": "info"
+    },
+    "fix_finding_ids": [
+      "R3-archive-report-abolished-resolution-path"
+    ],
+    "follow_ups": [
+      {
+        "observation": "The regression guard the finding cites (`TestAbolishedVocabularySweptFromCurrentSections`, subtest `other_shipped_artifacts_have_no_carve_out`) does not include archive-report.md in its checked-file list, despite the finding describing it as 'the guard that is supposed to catch this vocabulary in shipped artifacts.' A future edit could reintroduce 'receipt-bound' into this specific file and the automated suite would stay green. Worth a future change adding archive-report.md (and likely other archived changes' archive-report.md twins) to that subtest's path list.",
+        "proof_refs": [
+          "engine/skills/actuals_instrumentation_contract_test.go:668-685 (other_shipped_artifacts_have_no_carve_out's checked-path list: proposalRelPath, specRelPath, inceptionPipelineSkillRelPath, timeEstimationSkillRelPath, actualsSchemaRelPath, correctedActualsFixtureRelPath, correctedActualsSkillsValidateOndiskGateFixtureRelPath — no archive-report path constant present)"
+        ]
+      }
+    ],
+    "proposed_correction_lines": 4,
+    "actual_correction_lines": 4,
+    "fix_delta_hash": "sha256:25ea0d88cf5df0373cda2a7eab67c2fce9da8abbd9d39d9db6fdafd6d0db1c52",
+    "original_criteria": {
+      "evidence_hash": "sha256:d54e2d8e6e9e5e897accdb485babbfe57c4b7279609f2e64039b8c6683295f3e",
+      "fix_delta_hash": "sha256:25ea0d88cf5df0373cda2a7eab67c2fce9da8abbd9d39d9db6fdafd6d0db1c52",
+      "passed": true
+    },
+    "correction_regression": {
+      "evidence_hash": "sha256:e0af74cf1b01c43d87f5cb77c9e78d8bba9d3d0beb31c6af7a332bd74737fb4b",
+      "fix_delta_hash": "sha256:25ea0d88cf5df0373cda2a7eab67c2fce9da8abbd9d39d9db6fdafd6d0db1c52",
+      "passed": true
+    },
+    "evidence_hash": "sha256:3ed468f93b61d7be9e34a914ac2daa1fcef8fff586fbb001e096f0948668b63c",
+    "evidence_record_digest": "sha256:246a167454e738fd785a833d577daa006a2e9a6a4bd873f33299ee416d53350c",
+    "evidence_outcome": "passed",
+    "evidence_target_identity": "sha256:765fe7000e0f3aa3ff4626c48e3d85e22b5811a8f7aa02009f522edf65ec6173",
+    "evidence_authority_revision": "sha256:80d43cbd6b3fa3916f470835eacc5d731fb0f5b410e7b995a5cbcd798fd49c91",
+    "recovery": {
+      "predecessor_lineage_id": "review-d2ddff54c94f83b4",
+      "predecessor_revision": "sha256:5f0b25f7d7643f871b4538f15719800ac1913a474e5f3eeb767f21b29058f9cb",
+      "disposition": "scope_changed",
+      "reason": "self-recovery: correction-required authority, recover action available",
+      "actor": "labdrian-ai \u003clabradoradrian770@gmail.com\u003e",
+      "recovered_at": "2026-08-19T22:45:19.990110086Z",
+      "maintainer_authorization": "gentle-ai.review-recovery-authorization/v1\npredecessor_lineage=review-d2ddff54c94f83b4\npredecessor_revision=sha256:5f0b25f7d7643f871b4538f15719800ac1913a474e5f3eeb767f21b29058f9cb\ntarget_identity=sha256:7dc81d713e2a9445213b5656cae7dfdf2636ade48f8964163c020cc1267efe27\nactor=labdrian-ai \u003clabradoradrian770@gmail.com\u003e\nreason=self-recovery: correction-required authority, recover action available"
+    },
+    "correction_attempts": [
+      {
+        "snapshot": {
+          "kind": "fix-diff",
+          "base_tree": "1ec9c578d9772609cac6ab7adb807e57e347b1c4",
+          "candidate_tree": "aaf431c0eb5682c33213e368d1da75968c70a2d7",
+          "paths_digest": "sha256:6321739d5842d8f91d2cd88c71d91ae704f7b71c2ed00faa1e239ad998bb1b06",
+          "intended_untracked": [],
+          "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+          "ledger_ids": [
+            "R3-archive-report-abolished-resolution-path"
+          ],
+          "paths": [
+            "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/archive-report.md"
+          ],
+          "identity": "sha256:765fe7000e0f3aa3ff4626c48e3d85e22b5811a8f7aa02009f522edf65ec6173"
+        },
+        "proposed_lines": 4,
+        "actual_lines": 4,
+        "fix_delta_hash": "sha256:25ea0d88cf5df0373cda2a7eab67c2fce9da8abbd9d39d9db6fdafd6d0db1c52",
+        "original_criteria": {
+          "evidence_hash": "sha256:d54e2d8e6e9e5e897accdb485babbfe57c4b7279609f2e64039b8c6683295f3e",
+          "fix_delta_hash": "sha256:25ea0d88cf5df0373cda2a7eab67c2fce9da8abbd9d39d9db6fdafd6d0db1c52",
+          "passed": true
+        },
+        "correction_regression": {
+          "evidence_hash": "sha256:e0af74cf1b01c43d87f5cb77c9e78d8bba9d3d0beb31c6af7a332bd74737fb4b",
+          "fix_delta_hash": "sha256:25ea0d88cf5df0373cda2a7eab67c2fce9da8abbd9d39d9db6fdafd6d0db1c52",
+          "passed": true
+        },
+        "targeted_validation_request_hash": "sha256:dd466eec130c8a16a429d21366dee6e92c1bcb6341b0f131bbfe15ccfd4ea6d5",
+        "correction_target_identity": "sha256:765fe7000e0f3aa3ff4626c48e3d85e22b5811a8f7aa02009f522edf65ec6173"
+      }
+    ],
+    "cumulative_correction_lines": 4,
+    "reviewer_context_level": "provider_command"
+  }
+}

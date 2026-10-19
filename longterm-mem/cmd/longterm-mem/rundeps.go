@@ -102,6 +102,7 @@ func queryDeps(store *engram.Store, vaultRoot string, wiring queryWiring) query.
 	return query.Deps{
 		Memory:       store,
 		Vault:        vault.Retriever{Root: vaultRoot},
+		VaultTags:    vault.PageTagReader{Root: vaultRoot},
 		ResolveLink:  query.NoLinkResolver,
 		Embed:        wiring.embed,
 		Index:        index,

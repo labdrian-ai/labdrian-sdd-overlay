@@ -1,0 +1,164 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:c4c0ce0c4aad78a19cf78d6466562fc4376de0cd6a6b829a333b00d70d43294c",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-ee1769dc1542991a",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "current-changes",
+      "base_tree": "1f78dd2ba136c35e7d27a9954377e631894bd604",
+      "candidate_tree": "0daffdf300b66b94fb724500e37bb19e1d4b873f",
+      "paths_digest": "sha256:02de5d6a3c727ee7cb006227cbfe265b189e7064ff82a8a179ea9367d919aad1",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/skills/actuals_instrumentation_contract_test.go"
+      ],
+      "identity": "sha256:ee1769dc1542991a72399c7b21e33ff6ef208b8faaab24bdd587bee37c6ce4ae"
+    },
+    "current_snapshot": {
+      "kind": "current-changes",
+      "base_tree": "1f78dd2ba136c35e7d27a9954377e631894bd604",
+      "candidate_tree": "0daffdf300b66b94fb724500e37bb19e1d4b873f",
+      "paths_digest": "sha256:02de5d6a3c727ee7cb006227cbfe265b189e7064ff82a8a179ea9367d919aad1",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/skills/actuals_instrumentation_contract_test.go"
+      ],
+      "identity": "sha256:ee1769dc1542991a72399c7b21e33ff6ef208b8faaab24bdd587bee37c6ce4ae"
+    },
+    "genesis_paths": [
+      "engine/skills/actuals_instrumentation_contract_test.go"
+    ],
+    "policy_hash": "sha256:34fb63d7f29f8613cd4431382b1057398a4816f8a4c20fc34677fffc80a184f6",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-reliability"
+    ],
+    "original_changed_lines": 104,
+    "correction_budget": 52,
+    "lens_results": [
+      {
+        "lens": "review-reliability",
+        "findings": [
+          {
+            "id": "R3-mixed-endings-invariant-unenforced",
+            "lens": "reliability",
+            "location": "engine/skills/actuals_instrumentation_contract_test.go:618",
+            "severity": "WARNING",
+            "claim": "Replacing the modulus rotation with a hand-maintained terminator list removed the structural guarantee that the mixed document contains all three conventions, and the comment that now states the invariant is backed by no assertion, so the mixed endings case can silently degrade into a duplicate of the lf endings case.",
+            "proof_refs": [
+              "engine/skills/actuals_instrumentation_contract_test.go:618 states the invariant in prose only: `// All three conventions must stay represented, otherwise the mixed case stops being mixed.` The only runtime check added, at engine/skills/actuals_instrumentation_contract_test.go:638, is `if len(lines)-1 != len(terminators) {` — it compares counts and never inspects the terminator values.",
+              "On the base side the guarantee was structural: `terminators := []string{\"\\n\", \"\\r\\n\", \"\\r\"}` combined with `b.WriteString(terminators[i%len(terminators)])` forced all three conventions into any document of three or more terminated lines, and no edit to the fixture constant could reduce that. The candidate deletes both lines, so the property now depends entirely on the values a maintainer types into engine/skills/actuals_instrumentation_contract_test.go:619-628.",
+              "Failure scenario, executed against the candidate bytes reconstructed from the frozen candidate tree: replace every element of lineEndingFixtureTerminators with \"\\n\" so the mixed document contains zero CRLF pairs and zero lone carriage returns. The length check still sees 8 and 8, mixLineEndings returns a document byte-identical to the plain lf endings fixture, and `go test -run TestActualsInstrumentationGateHelpers` is GREEN with all four line-ending leaves passing. The mixed endings case then asserts nothing the lf endings case does not already assert — the decorative-case defect this candidate exists to remove, reintroduced in the fixture it was fixing. Adding a check that the terminator set contains \"\\n\", \"\\r\\n\" and \"\\r\" would close it."
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-terminator-position-unchecked",
+            "lens": "reliability",
+            "location": "engine/skills/actuals_instrumentation_contract_test.go:638",
+            "severity": "SUGGESTION",
+            "claim": "The length check catches a missing or surplus terminator but not a terminator written at the wrong index, so the misleading failure the change exists to remove is narrowed rather than closed: appending a new line's terminator at the end of the list still reddens only the mixed endings case with a message blaming the section slicer.",
+            "proof_refs": [
+              "engine/skills/actuals_instrumentation_contract_test.go:638-641 is the entire divergence guard: `if len(lines)-1 != len(terminators) {` followed by `t.Fatalf(\"fixture error: document has %d terminated lines but %d terminators were named — \"+ \"name the new line's terminator in lineEndingFixtureTerminators\", len(lines)-1, len(terminators))`. Terminators are consumed positionally at engine/skills/actuals_instrumentation_contract_test.go:645 via `b.WriteString(terminators[i])`, and nothing ties an entry to the line its trailing comment names.",
+              "Failure scenario, executed against the candidate bytes reconstructed from the frozen candidate tree: a maintainer adds `\"- another rule\\n\"` to lineEndingFixture after `\"- unrelated rule\\n\"`, updates wantBody accordingly, and — following engine/skills/actuals_instrumentation_contract_test.go:607-608, which only says a terminator must be added — appends `\"\\n\"` at the end of lineEndingFixtureTerminators instead of inserting it at index 5. Counts are 9 and 9, so the guard passes. The new line inherits index 5's `\"\\r\"` and the blank separator slides to index 6's `\"\\n\"`, so the emitted bytes contain `- another rule\\r` immediately followed by the separator's `\\n`; normaliseLineEndings collapses that pair to one newline, the separator disappears and the section body loses its trailing newline. Observed result: lf endings, crlf endings and lone cr endings all PASS and only mixed endings FAILs, with `sliceMarkdownSection() = \"...- another rule\", want \"...- another rule\\n\"` — the slicer blamed for a fixture defect, which is the exact outcome recorded on the base side. Asserting `normaliseLineEndings(mixLineEndings(...)) == lineEndingFixture` would turn any such collapse into a fixture error regardless of cause.",
+              "Admission note: the identical outcome is reachable on the base side by adding a fixture line with no terminator-list edit at all, so this is the pre-existing failure class, and the candidate strictly narrows its trigger rather than widening it."
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "pre-existing"
+          },
+          {
+            "id": "R3-blank-separator-comment-false",
+            "lens": "reliability",
+            "location": "engine/skills/actuals_instrumentation_contract_test.go:625",
+            "severity": "SUGGESTION",
+            "claim": "The trailing comment on the blank separator's terminator states a collapse rule that is false for the list as written, because the entry above it is CRLF rather than a lone carriage return, so a maintainer who tests the claim will find it does not hold and may distrust the surrounding rationale.",
+            "proof_refs": [
+              "engine/skills/actuals_instrumentation_contract_test.go:625 reads `\"\\r\",   // blank separator — a \"\\n\" here would pair with a lone \"\\r\" above and collapse`, but the entry immediately above at engine/skills/actuals_instrumentation_contract_test.go:624 is `\"\\r\\n\", // - unrelated rule`, not a lone carriage return. The collapse described belongs to the historical rotation, correctly narrated in the block comment at engine/skills/actuals_instrumentation_contract_test.go:610-616, not to the explicit list.",
+              "Failure scenario, executed against the candidate bytes reconstructed from the frozen candidate tree: change engine/skills/actuals_instrumentation_contract_test.go:625 from `\"\\r\"` to `\"\\n\"`, exactly the edit the comment warns collapses the separator. The emitted bytes are `- unrelated rule\\r\\n` then the empty separator then `\\n`, which normalises to two newlines with the separator intact, and `go test -run TestActualsInstrumentationGateHelpers/line_ending` stays GREEN. The comment predicts a red case that does not occur; rewording it to say the separator's terminator must not begin with a newline whenever the preceding terminator ends with a lone carriage return would make it true of the current list."
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          }
+        ],
+        "evidence": [
+          "Inspection ran entirely through read-only Git against the two frozen trees (base 1f78dd2ba136c35e7d27a9954377e631894bd604, candidate 0daffdf300b66b94fb724500e37bb19e1d4b873f) with an environment-cleared, config-disabled invocation. Subcommands actually run: `diff --name-status --no-renames \u003cbase\u003e \u003ccandidate\u003e`, `diff --numstat \u003cbase\u003e \u003ccandidate\u003e`, `diff --text --no-ext-diff --diff-algorithm=myers --no-indent-heuristic \u003cbase\u003e \u003ccandidate\u003e -- engine/skills/actuals_instrumentation_contract_test.go`, `cat-file -p \u003cbase\u003e:engine/skills/actuals_instrumentation_contract_test.go` and `cat-file -p \u003ccandidate\u003e:engine/skills/actuals_instrumentation_contract_test.go`, plus `cat-file -p \u003ccandidate\u003e:engine/skills` and `cat-file -p \u003ccandidate\u003e` and `cat-file -p \u003ccandidate\u003e:engine` for tree orientation. The live working tree, the index and HEAD were never read.",
+          "Manifest confirmed as exactly one modified path with +94/-10, matching the stated scope.",
+          "Group-name comparison: TestActualsInstrumentationContract has exactly 10 top-level t.Run groups on both trees, byte-identical names in identical order and even at identical line numbers (35 R004_R005_schema_temporal_boundary_and_interruption, 61 R015_R006_R007_R008_checkpoint_count_description, 71 R009_calibration_excludes_calendar_time, 89 R010_R011_delivery_window_formula_shape, 103 R006_R007_R015_inception_round_trip_and_explicit_zero, 118 R014_amendedR007_fixture_pins, 156 R001_R002_three_units_never_blended, 177 R012_actuals_output_separate_labels, 187 R013_roadmap_maker_no_compute_time_source_invariant, 204 D2_D5_closed_schema_invariant). The single new group heading_line_matching was added to TestActualsInstrumentationGateHelpers only, which the diff leaves as a separate top-level function.",
+          "Extraction fidelity is exact. Base line reads `if !inFence \u0026\u0026 strings.TrimRight(line, \" \\t\\r\") == heading {`; candidate line 472 reads `if !inFence \u0026\u0026 markdownHeadingLineMatches(line, heading) {` and candidate line 449 reads `return strings.TrimRight(line, \" \\t\\r\") == heading`. Same cutset, same order, same comparison, so no input can be accepted or rejected differently by the slicer.",
+          "Honest labeling preserved: the diff contains no hunk inside lines 187-249, so R013_roadmap_maker_no_compute_time_source_invariant still carries `It is NOT RED coverage for R-013` (candidate line 191) and D2_D5_closed_schema_invariant still carries `The group stays GREEN before and after the fix, so it is NOT RED coverage` (candidate lines 208-209). Neither is counted as RED coverage.",
+          "Reconstruction check: the file bytes were materialised from the frozen trees via cat-file into an isolated scratch module with only two stubs for the sibling helpers readRepoFile and assertStringList; TestActualsInstrumentationContract was never run because it reads repository content absent from the reconstruction. `gofmt -l` reports no diff and `go vet` is clean on the candidate bytes. `go test -run TestActualsInstrumentationGateHelpers` is GREEN on both the base and the candidate bytes, 38 leaf cases on the candidate.",
+          "New cases genuinely pin, verified by mutation against the reconstructed candidate bytes. Deleting `\\r` from the cutset so line 449 reads `strings.TrimRight(line, \" \\t\")` turns the suite RED on three leaves: trailing_carriage_return_is_trimmed, trailing_carriage_return_before_spaces_is_trimmed and trailing_carriage_return_after_spaces_is_trimmed. Reducing the cutset to `\\r` alone is also RED. So the previously unreachable byte is now pinned, and the SUGGESTION it answers is genuinely closed.",
+          "Empty-body case genuinely pins: mutating sliceMarkdownSection's tail so an empty join returns errMarkdownSectionNotFound instead of (\"\", nil) turns section_slicing RED. Behaviour probe against the candidate bytes confirms the asserted result is right for both shapes the lens asked about: `# Doc\\nbody\\n## Hard Rules\\n` returns (\"\", nil) and `# Doc\\nbody\\n## Hard Rules` without the trailing newline also returns (\"\", nil), because start equals len(lines) and `strings.Join(lines[start:], \"\\n\")` on a full-length low bound is a legal empty slice. The untested shape therefore has identical behaviour and is not a coverage gap of consequence.",
+          "The mixed fixture is still genuinely mixed today and byte-identical to the base encoding. The explicit list at candidate lines 619-628 reproduces the base rotation `terminators[i%len(terminators)]` over `[]string{\"\\n\", \"\\r\\n\", \"\\r\"}` exactly for the current 8-line fixture; a counting probe reports lf=3 crlf=3 loneCR=2 on both the base and the candidate mixed document.",
+          "Length check behaviour, enumerated: a fixture line added without a terminator gives 9 vs 8 and fatals; a terminator added without a fixture line gives 8 vs 9 and fatals; a fixture line removed without removing its terminator fatals. Reordering, or appending an otherwise-correct terminator at the wrong index, keeps the counts equal and is not caught - see the terminator-position finding.",
+          "Determinism reviewed and clean for the new code: no map iteration, no filesystem access, no time, no locale, no absolute paths and no environment reads were added. The pre-existing `for key := range fixture` map walk at candidate line 239 is untouched by this diff and is order-independent in outcome. Subtest names in the new heading_line_matching and section_slicing tables are unique, and table order is slice order, so run order is fixed.",
+          "mixLineEndings is now invoked during construction of the table literal at candidate line 710 with the parent subtest's *testing.T; a fatal there aborts line_ending_conventions_are_equivalent on the same goroutine before any case runs, which is correct Go and produces the intended fixture-error message rather than a panic or a truncated document."
+        ],
+        "result_hash": "sha256:584a8e8d309c82eec28deb2f669299cdff1e8b5323c4d4b07d7f657f1efc3add"
+      }
+    ],
+    "findings": [
+      {
+        "id": "R3-mixed-endings-invariant-unenforced",
+        "lens": "reliability",
+        "location": "engine/skills/actuals_instrumentation_contract_test.go:618",
+        "severity": "WARNING",
+        "claim": "Replacing the modulus rotation with a hand-maintained terminator list removed the structural guarantee that the mixed document contains all three conventions, and the comment that now states the invariant is backed by no assertion, so the mixed endings case can silently degrade into a duplicate of the lf endings case.",
+        "proof_refs": [
+          "engine/skills/actuals_instrumentation_contract_test.go:618 states the invariant in prose only: `// All three conventions must stay represented, otherwise the mixed case stops being mixed.` The only runtime check added, at engine/skills/actuals_instrumentation_contract_test.go:638, is `if len(lines)-1 != len(terminators) {` — it compares counts and never inspects the terminator values.",
+          "On the base side the guarantee was structural: `terminators := []string{\"\\n\", \"\\r\\n\", \"\\r\"}` combined with `b.WriteString(terminators[i%len(terminators)])` forced all three conventions into any document of three or more terminated lines, and no edit to the fixture constant could reduce that. The candidate deletes both lines, so the property now depends entirely on the values a maintainer types into engine/skills/actuals_instrumentation_contract_test.go:619-628.",
+          "Failure scenario, executed against the candidate bytes reconstructed from the frozen candidate tree: replace every element of lineEndingFixtureTerminators with \"\\n\" so the mixed document contains zero CRLF pairs and zero lone carriage returns. The length check still sees 8 and 8, mixLineEndings returns a document byte-identical to the plain lf endings fixture, and `go test -run TestActualsInstrumentationGateHelpers` is GREEN with all four line-ending leaves passing. The mixed endings case then asserts nothing the lf endings case does not already assert — the decorative-case defect this candidate exists to remove, reintroduced in the fixture it was fixing. Adding a check that the terminator set contains \"\\n\", \"\\r\\n\" and \"\\r\" would close it."
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-terminator-position-unchecked",
+        "lens": "reliability",
+        "location": "engine/skills/actuals_instrumentation_contract_test.go:638",
+        "severity": "SUGGESTION",
+        "claim": "The length check catches a missing or surplus terminator but not a terminator written at the wrong index, so the misleading failure the change exists to remove is narrowed rather than closed: appending a new line's terminator at the end of the list still reddens only the mixed endings case with a message blaming the section slicer.",
+        "proof_refs": [
+          "engine/skills/actuals_instrumentation_contract_test.go:638-641 is the entire divergence guard: `if len(lines)-1 != len(terminators) {` followed by `t.Fatalf(\"fixture error: document has %d terminated lines but %d terminators were named — \"+ \"name the new line's terminator in lineEndingFixtureTerminators\", len(lines)-1, len(terminators))`. Terminators are consumed positionally at engine/skills/actuals_instrumentation_contract_test.go:645 via `b.WriteString(terminators[i])`, and nothing ties an entry to the line its trailing comment names.",
+          "Failure scenario, executed against the candidate bytes reconstructed from the frozen candidate tree: a maintainer adds `\"- another rule\\n\"` to lineEndingFixture after `\"- unrelated rule\\n\"`, updates wantBody accordingly, and — following engine/skills/actuals_instrumentation_contract_test.go:607-608, which only says a terminator must be added — appends `\"\\n\"` at the end of lineEndingFixtureTerminators instead of inserting it at index 5. Counts are 9 and 9, so the guard passes. The new line inherits index 5's `\"\\r\"` and the blank separator slides to index 6's `\"\\n\"`, so the emitted bytes contain `- another rule\\r` immediately followed by the separator's `\\n`; normaliseLineEndings collapses that pair to one newline, the separator disappears and the section body loses its trailing newline. Observed result: lf endings, crlf endings and lone cr endings all PASS and only mixed endings FAILs, with `sliceMarkdownSection() = \"...- another rule\", want \"...- another rule\\n\"` — the slicer blamed for a fixture defect, which is the exact outcome recorded on the base side. Asserting `normaliseLineEndings(mixLineEndings(...)) == lineEndingFixture` would turn any such collapse into a fixture error regardless of cause.",
+          "Admission note: the identical outcome is reachable on the base side by adding a fixture line with no terminator-list edit at all, so this is the pre-existing failure class, and the candidate strictly narrows its trigger rather than widening it."
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "pre-existing"
+      },
+      {
+        "id": "R3-blank-separator-comment-false",
+        "lens": "reliability",
+        "location": "engine/skills/actuals_instrumentation_contract_test.go:625",
+        "severity": "SUGGESTION",
+        "claim": "The trailing comment on the blank separator's terminator states a collapse rule that is false for the list as written, because the entry above it is CRLF rather than a lone carriage return, so a maintainer who tests the claim will find it does not hold and may distrust the surrounding rationale.",
+        "proof_refs": [
+          "engine/skills/actuals_instrumentation_contract_test.go:625 reads `\"\\r\",   // blank separator — a \"\\n\" here would pair with a lone \"\\r\" above and collapse`, but the entry immediately above at engine/skills/actuals_instrumentation_contract_test.go:624 is `\"\\r\\n\", // - unrelated rule`, not a lone carriage return. The collapse described belongs to the historical rotation, correctly narrated in the block comment at engine/skills/actuals_instrumentation_contract_test.go:610-616, not to the explicit list.",
+          "Failure scenario, executed against the candidate bytes reconstructed from the frozen candidate tree: change engine/skills/actuals_instrumentation_contract_test.go:625 from `\"\\r\"` to `\"\\n\"`, exactly the edit the comment warns collapses the separator. The emitted bytes are `- unrelated rule\\r\\n` then the empty separator then `\\n`, which normalises to two newlines with the separator intact, and `go test -run TestActualsInstrumentationGateHelpers/line_ending` stays GREEN. The comment predicts a red case that does not occur; rewording it to say the separator's terminator must not begin with a newline whenever the preceding terminator ends with a lone carriage return would make it true of the current list."
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      }
+    ],
+    "classifications": {},
+    "outcomes": {
+      "R3-blank-separator-comment-false": "info",
+      "R3-mixed-endings-invariant-unenforced": "info",
+      "R3-terminator-position-unchecked": "info"
+    },
+    "fix_finding_ids": [],
+    "follow_ups": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:b010940dc62b199a6468cfa2eb3d5448956f21dbe1f2193d543c481852518a0d",
+    "evidence_record_digest": "sha256:7a04ec3b9385b6b05674203846f5e92ff8b5f90ef0090575cb483d57b1b87750",
+    "evidence_outcome": "passed",
+    "evidence_target_identity": "sha256:ee1769dc1542991a72399c7b21e33ff6ef208b8faaab24bdd587bee37c6ce4ae",
+    "evidence_authority_revision": "sha256:0db8fe6597efcb902e376f8ebd5a445f97ee2e63caaaa707ddd9481a25c54aff"
+  }
+}

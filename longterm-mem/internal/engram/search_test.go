@@ -45,7 +45,7 @@ func TestSearch_ScopesProjectAndExcludesSoftDeleted(t *testing.T) {
 	}
 	defer store.Close()
 
-	got, err := store.Search("labdrian-sdd-overlay", "alpha", 10)
+	got, err := store.Search("labdrian-sdd-overlay", "alpha", 10, memory.SearchFilter{})
 	if err != nil {
 		t.Fatalf("Search: %v", err)
 	}
@@ -85,7 +85,7 @@ func TestSearch_TokenStartingWithMinusIsTreatedAsLiteralText(t *testing.T) {
 	}
 	defer store.Close()
 
-	got, err := store.Search("labdrian-sdd-overlay", "-secret", 10)
+	got, err := store.Search("labdrian-sdd-overlay", "-secret", 10, memory.SearchFilter{})
 	if err != nil {
 		t.Fatalf("Search(-secret) returned an unexpected error (a leading '-' token must be quoted as literal text, not sent as an FTS5 NOT operator): %v", err)
 	}
@@ -119,7 +119,7 @@ func TestSearch_FixtureIndexMatchesLiveTokenizer(t *testing.T) {
 	}
 	defer store.Close()
 
-	got, err := store.Search("labdrian-sdd-overlay", "onvention", 10)
+	got, err := store.Search("labdrian-sdd-overlay", "onvention", 10, memory.SearchFilter{})
 	if err != nil {
 		t.Fatalf("Search: %v", err)
 	}
@@ -150,7 +150,7 @@ func TestSearch_NaturalQuestionIsNotAndedIntoSilence(t *testing.T) {
 	}
 	defer store.Close()
 
-	got, err := store.Search("labdrian-sdd-overlay", "what conventions apply when editing the register writer", 10)
+	got, err := store.Search("labdrian-sdd-overlay", "what conventions apply when editing the register writer", 10, memory.SearchFilter{})
 	if err != nil {
 		t.Fatalf("Search: %v", err)
 	}
@@ -179,7 +179,7 @@ func TestSearch_KeepsEveryTokenRequiredWhenThatFindsSomething(t *testing.T) {
 	}
 	defer store.Close()
 
-	got, err := store.Search("labdrian-sdd-overlay", "canonical identity", 10)
+	got, err := store.Search("labdrian-sdd-overlay", "canonical identity", 10, memory.SearchFilter{})
 	if err != nil {
 		t.Fatalf("Search: %v", err)
 	}
@@ -207,7 +207,7 @@ func TestSearch_StopwordOnlyQueryStillSearchesItsWords(t *testing.T) {
 	}
 	defer store.Close()
 
-	got, err := store.Search("labdrian-sdd-overlay", "the way that", 10)
+	got, err := store.Search("labdrian-sdd-overlay", "the way that", 10, memory.SearchFilter{})
 	if err != nil {
 		t.Fatalf("Search: %v", err)
 	}
@@ -231,7 +231,7 @@ func TestSearch_ReportsTheStopwordsItDropped(t *testing.T) {
 	}
 	defer store.Close()
 
-	got, err := store.Search("labdrian-sdd-overlay", "what is the register writer", 10)
+	got, err := store.Search("labdrian-sdd-overlay", "what is the register writer", 10, memory.SearchFilter{})
 	if err != nil {
 		t.Fatalf("Search: %v", err)
 	}
@@ -271,7 +271,7 @@ func TestSearch_SnippetIsCentredOnTheMatch(t *testing.T) {
 	}
 	defer store.Close()
 
-	got, err := store.Search("labdrian-sdd-overlay", "zephyr", 10)
+	got, err := store.Search("labdrian-sdd-overlay", "zephyr", 10, memory.SearchFilter{})
 	if err != nil {
 		t.Fatalf("Search: %v", err)
 	}
@@ -301,7 +301,7 @@ func TestSearch_SnippetIsCappedAndSaysSo(t *testing.T) {
 	}
 	defer store.Close()
 
-	got, err := store.Search("labdrian-sdd-overlay", "zephyr", 10)
+	got, err := store.Search("labdrian-sdd-overlay", "zephyr", 10, memory.SearchFilter{})
 	if err != nil {
 		t.Fatalf("Search: %v", err)
 	}
@@ -336,7 +336,7 @@ func TestSearch_ShortBodyIsNotMarkedTruncated(t *testing.T) {
 	}
 	defer store.Close()
 
-	got, err := store.Search("labdrian-sdd-overlay", "zephyr", 10)
+	got, err := store.Search("labdrian-sdd-overlay", "zephyr", 10, memory.SearchFilter{})
 	if err != nil {
 		t.Fatalf("Search: %v", err)
 	}
@@ -364,7 +364,7 @@ func TestSearch_MatchMarkersNeverReachTheCaller(t *testing.T) {
 	}
 	defer store.Close()
 
-	got, err := store.Search("labdrian-sdd-overlay", "zephyr", 10)
+	got, err := store.Search("labdrian-sdd-overlay", "zephyr", 10, memory.SearchFilter{})
 	if err != nil {
 		t.Fatalf("Search: %v", err)
 	}

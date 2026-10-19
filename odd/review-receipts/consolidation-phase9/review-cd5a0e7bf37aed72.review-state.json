@@ -1,0 +1,308 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:244b3488931aec0751fcf4f5e4f98e37a69a6995e6a220aa099ba774ba104522",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-cd5a0e7bf37aed72",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "b12a481d6478eb33cd153c499cc5fe91b07241ef",
+      "candidate_tree": "7f2e634fec4164789b37ca6825dd771a81e9429f",
+      "paths_digest": "sha256:67096dd22862fccd0b573fc153b88e1d0812636dda12ca9aea13eca4e4d4e9ce",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/assets/anti-generic-design.md",
+        "engine/assets/skill-discovery-safety.md",
+        "engine/runtime/opencode.go",
+        "engine/runtime/opencode_test.go",
+        "skills/_shared/anti-generic-design.md",
+        "skills/_shared/skill-discovery-safety.md"
+      ],
+      "identity": "sha256:cd5a0e7bf37aed72b3deaaefa190d572271df173a601753ef6abf8385a8f509a"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "b12a481d6478eb33cd153c499cc5fe91b07241ef",
+      "candidate_tree": "7f2e634fec4164789b37ca6825dd771a81e9429f",
+      "paths_digest": "sha256:67096dd22862fccd0b573fc153b88e1d0812636dda12ca9aea13eca4e4d4e9ce",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/assets/anti-generic-design.md",
+        "engine/assets/skill-discovery-safety.md",
+        "engine/runtime/opencode.go",
+        "engine/runtime/opencode_test.go",
+        "skills/_shared/anti-generic-design.md",
+        "skills/_shared/skill-discovery-safety.md"
+      ],
+      "identity": "sha256:cd5a0e7bf37aed72b3deaaefa190d572271df173a601753ef6abf8385a8f509a"
+    },
+    "genesis_paths": [
+      "engine/assets/anti-generic-design.md",
+      "engine/assets/skill-discovery-safety.md",
+      "engine/runtime/opencode.go",
+      "engine/runtime/opencode_test.go",
+      "skills/_shared/anti-generic-design.md",
+      "skills/_shared/skill-discovery-safety.md"
+    ],
+    "policy_hash": "sha256:34fb63d7f29f8613cd4431382b1057398a4816f8a4c20fc34677fffc80a184f6",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-risk",
+      "review-resilience",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 58,
+    "correction_budget": 29,
+    "correction_budget_policy": "floor_two",
+    "lens_results": [
+      {
+        "lens": "review-risk",
+        "findings": [],
+        "evidence": [
+          "engine/runtime/opencode.go:495 — the only executable change appends a contract built by openCodeContractFromContent from the compile-time embedded asset assets.AntiGenericDesign, using a fixed literal join of \"skills\" and \"_shared\"; no caller-supplied, environment-supplied, or filesystem-supplied value reaches the path or the content, so there is no path traversal, untrusted-input, or injection surface introduced.",
+          "engine/runtime/opencode.go:496 — the added error branch returns openCodePromptConfig{} plus the error, matching the surrounding failure handling for the preceding contracts; it neither swallows the error nor emits a partially populated config, so no fail-open authorization or silent-degradation path is created.",
+          "engine/runtime/opencode_test.go:105 — the count-based length assertion is replaced by name-based membership assertions over four contract paths, which strengthens rather than relaxes verification; no credential, token, fixture secret, or network dependency is added.",
+          "engine/assets/anti-generic-design.md:8 — the change is confined to the advisory-scope prose block describing where the frontmatter is consumed; the frontmatter keys, injection_point value, and contract body are untouched, so no gate matching or injection behavior is altered by this file.",
+          "skills/_shared/skill-discovery-safety.md:8 — same prose-only edit as its engine/assets counterpart, keeping the two copies byte-aligned; no executable content, permission, mode, or dependency declaration changes.",
+          "engine/assets/skill-discovery-safety.md:8 — reviewed alongside skills/_shared/skill-discovery-safety.md; both carry identical replacement text, so the deployed-asset and source-of-truth copies remain consistent and no divergent contract can be served.",
+          "skills/_shared/anti-generic-design.md:8 — this is the file whose embedded twin the new Go append now loads; its content is repository-controlled contract prose reviewed here, not attacker-influenced data, so promoting it into the OpenCode prompt config exposes no secret, credential, or private path.",
+          "engine/runtime/opencode.go:492 — no changed line in the candidate adds, removes, or modifies any dependency, module requirement, network call, file write outside the existing prompt-config flow, permission check, or file mode; the manifest confirms all six paths keep mode 100644 with no type changes and no deletions."
+        ],
+        "result_hash": "sha256:5eef9da2b40be9249fd0ea234990ead93aba590eebeed9cb718388e29f091c77"
+      },
+      {
+        "lens": "review-resilience",
+        "findings": [],
+        "evidence": [
+          "engine/runtime/opencode.go:495 — the added anti-generic-design contract is sourced from the compiled-in embed assets.AntiGenericDesign, not from disk, so it has no filesystem-dependent failure mode at load time; the error branch returns the zero openCodePromptConfig plus err, matching the immediately preceding projection append and the following oo-quality os.ReadFile branch, so failure handling stays uniform and fail-closed rather than partially populating the config.",
+          "engine/runtime/opencode.go:495 — append order is deterministic (minimalism, discovery-safety, projection, anti-generic-design, oo-quality) with no map iteration or concurrency introduced, so prompt_config content and its hash remain reproducible across runs; no retry, rollback, or partial-write path is added by this change.",
+          "engine/runtime/opencode_test.go:105 — replacing the len(contracts) \u003c 3 count bound with explicit by-name assertions for all four unconditional contracts removes the degradation blind spot that let a deployed-but-unwired contract pass; the added review-projection-contract.md and anti-generic-design.md assertions make silent contract loss a test failure instead of a silent runtime no-op.",
+          "engine/assets/anti-generic-design.md:8 and skills/_shared/anti-generic-design.md:8 — the doc edits are prose-only inside an existing blockquote; frontmatter keys, injection_point, and applies_to_phases are untouched, so the gate.go subagent_type match and the propagate empty-applies_to_phases failure path are unchanged by this candidate.",
+          "engine/assets/skill-discovery-safety.md:8 and skills/_shared/skill-discovery-safety.md:8 — the embedded asset copy and the on-disk skills copy received byte-identical edits, so the embed mirror stays aligned and no new drift or IN_SYNC/OUT_OF_SYNC divergence is introduced by the documentation change.",
+          "Reviewed the complete candidate scope: the four markdown edits carry no executable or operational behavior, and the single Go behavior change adds one embed-backed contract with no new failure, retry, rollback, latency, or load characteristic. No concrete production failure mode or measured impact met the resilience reporting bar, so no finding is raised; generic upgrade-drift speculation about prompt_config_hash was deliberately not reported because the supplied evidence does not include the consumer's hash-mismatch handling."
+        ],
+        "result_hash": "sha256:00a324d2994895169d6767f37d124ef7d6d720e032539a0e43d506a2a9337fba"
+      },
+      {
+        "lens": "review-readability",
+        "findings": [
+          {
+            "id": "R2-split-contract-assertion",
+            "lens": "readability",
+            "location": "engine/runtime/opencode_test.go:105",
+            "severity": "WARNING",
+            "claim": "The new comment declares that the loop asserts \"every unconditional contract by name\", but a fifth unconditionally-loaded contract (oo-quality-contract.md) is still asserted by a separate hand-written check immediately after the loop. The authoritative list of expected contracts is therefore split across two constructs while the comment claims one of them is complete, so the next person adding a contract has no single obvious place to register it and can extend the loop while believing coverage is total.",
+            "proof_refs": [
+              "engine/runtime/opencode_test.go:105 — comment states the loop names \"every unconditional contract\", framing the string slice as the complete list",
+              "engine/runtime/opencode_test.go:118 — skills/_shared/oo-quality-contract.md is asserted by a standalone check outside that loop, contradicting the comment's \"every\"",
+              "engine/runtime/opencode.go:505 — loadOpenCodePromptConfig loads the oo-quality contract in the same straight-line append sequence as the four looped ones, not behind a conditional, so it is not the \"optional one\" the comment contrasts against"
+            ],
+            "evidence_class": "inferential",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R2-doc-omits-opencode-path",
+            "lens": "readability",
+            "location": "skills/_shared/anti-generic-design.md:10",
+            "severity": "WARNING",
+            "claim": "The rewritten advisory-scope note now presents gate.go's subagent_type/applies_to_phases matching as the binding that decides injection, but the same candidate adds a second, unconditional injection path in loadOpenCodePromptConfig that performs no phase or subagent_type check. The note never mentions that path, and the Go comment added alongside it states the on-disk contract was never read by anything on OpenCode — so a reader consulting this doc to answer \"which agents and phases actually receive this contract\" gets an answer that is wrong for the OpenCode runtime this candidate just wired up. The identical wording is duplicated into three sibling copies, multiplying the stale explanation.",
+            "proof_refs": [
+              "skills/_shared/anti-generic-design.md:10 — the added line states that gate.go matches subagent_type against the frontmatter \"to decide whether to inject\", presented as the single load-bearing binding",
+              "engine/runtime/opencode.go:504 — the candidate appends the same contract to the OpenCode prompt config unconditionally, with no phase or subagent_type check anywhere in the added block",
+              "engine/runtime/opencode.go:498 — the added comment records that on OpenCode the deployed contract \"was never read by anything\", so the frontmatter mechanism the note documents does not govern that runtime",
+              "engine/assets/anti-generic-design.md:10 — the same sentence is duplicated verbatim into the embedded-asset copy, and skills/_shared/skill-discovery-safety.md carries the same wording"
+            ],
+            "evidence_class": "inferential",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R2-positional-comment-reference",
+            "lens": "readability",
+            "location": "engine/runtime/opencode.go:496",
+            "severity": "SUGGESTION",
+            "claim": "The justification comment anchors on \"the two above\", a positional and uncounted reference to unnamed neighbouring appends. To verify or maintain it a reader must scroll up, enumerate every preceding append, and classify each by whether it reads an embedded asset or a disk file; and inserting, removing, or reordering any contract above silently falsifies the sentence with no compiler or test signal. Naming the two contracts would make the comment self-checking.",
+            "proof_refs": [
+              "engine/runtime/opencode.go:496 — the comment justifies the new append \"for the same reason the two above do\" without naming either referent",
+              "engine/runtime/opencode.go:494 — only the immediately preceding append (projection) is visible at the comment; the other referent is further up and unnamed",
+              "engine/runtime/opencode_test.go:109 — the test enumerates four unconditional contracts by name, so the number of preceding embedded-asset appends is not self-evident from the comment's vantage point"
+            ],
+            "evidence_class": "inferential",
+            "causal_disposition": "introduced"
+          }
+        ],
+        "evidence": [
+          "Inspected all six manifest paths via the supplied candidate-vs-base diffs: two Go files under engine/runtime and four markdown contract files (two engine/assets copies and their two skills/_shared twins, byte-identical per matching blob indexes).",
+          "engine/runtime/opencode.go — reviewed the ten added lines (comment plus openCodeContractFromContent call, error branch, and append) and their surrounding context, including the following oo-quality load that reads from disk rather than the embedded asset.",
+          "engine/runtime/opencode_test.go — reviewed the replacement of the count-only bound and two name checks with a four-entry name loop, and the retained standalone oo-quality assertion that follows it.",
+          "engine/assets/anti-generic-design.md and skills/_shared/anti-generic-design.md — reviewed the rewritten advisory-scope paragraph describing gate.go frontmatter matching and the reversed provenance claim about .atl/skill-registry.md.",
+          "engine/assets/skill-discovery-safety.md and skills/_shared/skill-discovery-safety.md — reviewed the parallel rewrite of the same advisory-scope paragraph; wording matches the anti-generic-design copies.",
+          "Findings are limited to maintainability defects that obscure behavior: a comment that overstates the completeness of a test's contract list, documentation that omits an injection path added in the same candidate, and a brittle positional comment reference."
+        ],
+        "result_hash": "sha256:6f75fbc0633fdea504ef42547bb80a6015ef27817b000ac299abfbc32e145398"
+      },
+      {
+        "lens": "review-reliability",
+        "findings": [
+          {
+            "id": "R3-unconditional-phase-scope",
+            "lens": "reliability",
+            "location": "engine/runtime/opencode.go:504",
+            "severity": "WARNING",
+            "claim": "The new contract is appended to the OpenCode prompt-config slice with no phase predicate, so on OpenCode every phase receives a contract the asset itself scopes to the UI-generating phases through its applies_to_phases frontmatter; the documentation edit shipped in the same candidate still states the narrow two-phase scope, and no test pins either scope, so the intended per-phase behavior of the newly wired contract is unproved.",
+            "proof_refs": [
+              "engine/runtime/opencode.go:504 — the added append places the design contract in the same unconditional slice as the projection contract on line 494, with no phase filter anywhere in the added block.",
+              "engine/assets/anti-generic-design.md:9 — the rewritten advisory-scope note still limits injection to the phases that generate or refine UI/design and points at subagent_type matching in engine/gate/gate.go as the deciding mechanism.",
+              "engine/runtime/opencode_test.go:112 — the only added assertion for this contract is membership of its path in the contracts list; nothing asserts which phases receive it."
+            ],
+            "evidence_class": "inferential",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-path-only-assertion",
+            "lens": "reliability",
+            "location": "engine/runtime/opencode_test.go:114",
+            "severity": "WARNING",
+            "claim": "The replacement assertions match contracts by path string only, so they prove the entry is listed but never that the embedded asset bytes are the ones carried; pairing the anti-generic-design path with the wrong or empty embedded asset would still satisfy every assertion in this test, leaving the change vulnerable to the same listed-but-inert failure class it exists to close.",
+            "proof_refs": [
+              "engine/runtime/opencode_test.go:114 — hasPromptContract is keyed on the contract path alone, so the loop over the four wanted names checks registration, not content.",
+              "engine/runtime/opencode.go:500 — the path literal and the embedded asset are independent arguments to openCodeContractFromContent, so nothing in the production call ties the registered path to the content it names.",
+              "engine/runtime/opencode_test.go:101 — prompt_config_hash is asserted to exist but never compared against an expected value, so a contract entry with wrong or empty content is not caught there either."
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-reaffirmed-narrow-scope",
+            "lens": "reliability",
+            "location": "engine/assets/skill-discovery-safety.md:9",
+            "severity": "SUGGESTION",
+            "claim": "The rewrite promotes the frontmatter from documentation to the load-bearing binding while keeping the four-phase scope sentence, but this contract is also appended unconditionally to the OpenCode prompt config, so the strengthened claim now describes only one of two live injection paths and overstates how load-bearing applies_to_phases actually is at runtime.",
+            "proof_refs": [
+              "engine/assets/skill-discovery-safety.md:9 — the added sentence keeps the four named phases while newly asserting that the frontmatter decides injection.",
+              "engine/runtime/opencode.go:494 — the surrounding unconditional appends show contracts entering the OpenCode prompt config without any applies_to_phases consultation."
+            ],
+            "evidence_class": "inferential",
+            "causal_disposition": "worsened"
+          }
+        ],
+        "evidence": [
+          "engine/runtime/opencode.go:495 — read the ten added lines that construct and append the anti-generic-design contract from the embedded asset.",
+          "engine/runtime/opencode_test.go:105 — read the twelve added lines replacing the count-based bound with a name loop over four contract paths, plus the retained OO quality assertion.",
+          "engine/assets/anti-generic-design.md:9 — read the four added advisory-scope lines and compared them against the new unconditional runtime injection.",
+          "engine/assets/skill-discovery-safety.md:9 — read the five added advisory-scope lines making the same frontmatter claim.",
+          "skills/_shared/anti-generic-design.md:9 — confirmed byte-identical blob identity with the embedded asset copy in both base and candidate trees.",
+          "skills/_shared/skill-discovery-safety.md:9 — confirmed byte-identical blob identity with the embedded asset copy in both base and candidate trees."
+        ],
+        "result_hash": "sha256:885ef4397a9ed82e62c919e21ee1ad22fa4e93585e2258138914ebd2955a1169"
+      }
+    ],
+    "findings": [
+      {
+        "id": "R2-split-contract-assertion",
+        "lens": "readability",
+        "location": "engine/runtime/opencode_test.go:105",
+        "severity": "WARNING",
+        "claim": "The new comment declares that the loop asserts \"every unconditional contract by name\", but a fifth unconditionally-loaded contract (oo-quality-contract.md) is still asserted by a separate hand-written check immediately after the loop. The authoritative list of expected contracts is therefore split across two constructs while the comment claims one of them is complete, so the next person adding a contract has no single obvious place to register it and can extend the loop while believing coverage is total.",
+        "proof_refs": [
+          "engine/runtime/opencode_test.go:105 — comment states the loop names \"every unconditional contract\", framing the string slice as the complete list",
+          "engine/runtime/opencode_test.go:118 — skills/_shared/oo-quality-contract.md is asserted by a standalone check outside that loop, contradicting the comment's \"every\"",
+          "engine/runtime/opencode.go:505 — loadOpenCodePromptConfig loads the oo-quality contract in the same straight-line append sequence as the four looped ones, not behind a conditional, so it is not the \"optional one\" the comment contrasts against"
+        ],
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R2-doc-omits-opencode-path",
+        "lens": "readability",
+        "location": "skills/_shared/anti-generic-design.md:10",
+        "severity": "WARNING",
+        "claim": "The rewritten advisory-scope note now presents gate.go's subagent_type/applies_to_phases matching as the binding that decides injection, but the same candidate adds a second, unconditional injection path in loadOpenCodePromptConfig that performs no phase or subagent_type check. The note never mentions that path, and the Go comment added alongside it states the on-disk contract was never read by anything on OpenCode — so a reader consulting this doc to answer \"which agents and phases actually receive this contract\" gets an answer that is wrong for the OpenCode runtime this candidate just wired up. The identical wording is duplicated into three sibling copies, multiplying the stale explanation.",
+        "proof_refs": [
+          "skills/_shared/anti-generic-design.md:10 — the added line states that gate.go matches subagent_type against the frontmatter \"to decide whether to inject\", presented as the single load-bearing binding",
+          "engine/runtime/opencode.go:504 — the candidate appends the same contract to the OpenCode prompt config unconditionally, with no phase or subagent_type check anywhere in the added block",
+          "engine/runtime/opencode.go:498 — the added comment records that on OpenCode the deployed contract \"was never read by anything\", so the frontmatter mechanism the note documents does not govern that runtime",
+          "engine/assets/anti-generic-design.md:10 — the same sentence is duplicated verbatim into the embedded-asset copy, and skills/_shared/skill-discovery-safety.md carries the same wording"
+        ],
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R2-positional-comment-reference",
+        "lens": "readability",
+        "location": "engine/runtime/opencode.go:496",
+        "severity": "SUGGESTION",
+        "claim": "The justification comment anchors on \"the two above\", a positional and uncounted reference to unnamed neighbouring appends. To verify or maintain it a reader must scroll up, enumerate every preceding append, and classify each by whether it reads an embedded asset or a disk file; and inserting, removing, or reordering any contract above silently falsifies the sentence with no compiler or test signal. Naming the two contracts would make the comment self-checking.",
+        "proof_refs": [
+          "engine/runtime/opencode.go:496 — the comment justifies the new append \"for the same reason the two above do\" without naming either referent",
+          "engine/runtime/opencode.go:494 — only the immediately preceding append (projection) is visible at the comment; the other referent is further up and unnamed",
+          "engine/runtime/opencode_test.go:109 — the test enumerates four unconditional contracts by name, so the number of preceding embedded-asset appends is not self-evident from the comment's vantage point"
+        ],
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-unconditional-phase-scope",
+        "lens": "reliability",
+        "location": "engine/runtime/opencode.go:504",
+        "severity": "WARNING",
+        "claim": "The new contract is appended to the OpenCode prompt-config slice with no phase predicate, so on OpenCode every phase receives a contract the asset itself scopes to the UI-generating phases through its applies_to_phases frontmatter; the documentation edit shipped in the same candidate still states the narrow two-phase scope, and no test pins either scope, so the intended per-phase behavior of the newly wired contract is unproved.",
+        "proof_refs": [
+          "engine/runtime/opencode.go:504 — the added append places the design contract in the same unconditional slice as the projection contract on line 494, with no phase filter anywhere in the added block.",
+          "engine/assets/anti-generic-design.md:9 — the rewritten advisory-scope note still limits injection to the phases that generate or refine UI/design and points at subagent_type matching in engine/gate/gate.go as the deciding mechanism.",
+          "engine/runtime/opencode_test.go:112 — the only added assertion for this contract is membership of its path in the contracts list; nothing asserts which phases receive it."
+        ],
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-path-only-assertion",
+        "lens": "reliability",
+        "location": "engine/runtime/opencode_test.go:114",
+        "severity": "WARNING",
+        "claim": "The replacement assertions match contracts by path string only, so they prove the entry is listed but never that the embedded asset bytes are the ones carried; pairing the anti-generic-design path with the wrong or empty embedded asset would still satisfy every assertion in this test, leaving the change vulnerable to the same listed-but-inert failure class it exists to close.",
+        "proof_refs": [
+          "engine/runtime/opencode_test.go:114 — hasPromptContract is keyed on the contract path alone, so the loop over the four wanted names checks registration, not content.",
+          "engine/runtime/opencode.go:500 — the path literal and the embedded asset are independent arguments to openCodeContractFromContent, so nothing in the production call ties the registered path to the content it names.",
+          "engine/runtime/opencode_test.go:101 — prompt_config_hash is asserted to exist but never compared against an expected value, so a contract entry with wrong or empty content is not caught there either."
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-reaffirmed-narrow-scope",
+        "lens": "reliability",
+        "location": "engine/assets/skill-discovery-safety.md:9",
+        "severity": "SUGGESTION",
+        "claim": "The rewrite promotes the frontmatter from documentation to the load-bearing binding while keeping the four-phase scope sentence, but this contract is also appended unconditionally to the OpenCode prompt config, so the strengthened claim now describes only one of two live injection paths and overstates how load-bearing applies_to_phases actually is at runtime.",
+        "proof_refs": [
+          "engine/assets/skill-discovery-safety.md:9 — the added sentence keeps the four named phases while newly asserting that the frontmatter decides injection.",
+          "engine/runtime/opencode.go:494 — the surrounding unconditional appends show contracts entering the OpenCode prompt config without any applies_to_phases consultation."
+        ],
+        "evidence_class": "inferential",
+        "causal_disposition": "worsened"
+      }
+    ],
+    "classifications": {},
+    "outcomes": {
+      "R2-doc-omits-opencode-path": "info",
+      "R2-positional-comment-reference": "info",
+      "R2-split-contract-assertion": "info",
+      "R3-path-only-assertion": "info",
+      "R3-reaffirmed-narrow-scope": "info",
+      "R3-unconditional-phase-scope": "info"
+    },
+    "fix_finding_ids": [],
+    "follow_ups": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:a888126b2748b464bebaab6f4726d6420c0a51910c31c440f0cb397f3551d7ad",
+    "evidence_record_digest": "sha256:c44b8fede3caeccc65adf472c412c3d099b51ba39b9ba6b9018fcd84e9a2e688",
+    "evidence_outcome": "passed",
+    "evidence_target_identity": "sha256:cd5a0e7bf37aed72b3deaaefa190d572271df173a601753ef6abf8385a8f509a",
+    "evidence_authority_revision": "sha256:13d13d0df8a368b10f1010ed9e80d11df0f9bcc4f9b40322f4f01a6cb0679aff"
+  }
+}

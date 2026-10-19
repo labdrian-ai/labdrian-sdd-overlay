@@ -1,0 +1,218 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:ecb821007cfe98e08b149d0e9edb019f897353fa44f63a392ac94d977eda4bd4",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-bd3ee1b26f0e7a28",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "current-changes",
+      "base_tree": "73080c8839448ea835b5b0d0609b43b94c53bcdf",
+      "candidate_tree": "1f780fc1da0dde0376a4f98ed3139faf3c87ded7",
+      "paths_digest": "sha256:7f595970fb98dbb983d43af4b3245626d8be7f8624149e0bf093505afd81b9ff",
+      "intended_untracked": [
+        "engine/skills/ondisk.go",
+        "engine/skills/ondisk_test.go"
+      ],
+      "intended_untracked_proof": "sha256:a9a38522f8f379bc39cf772458e81c0a8899c51436fa0b459c1d9ca78a70b0f8",
+      "paths": [
+        "engine/assets/assets_test.go",
+        "engine/skills/ondisk.go",
+        "engine/skills/ondisk_test.go",
+        "openspec/specs/anti-generic-design/spec.md"
+      ],
+      "identity": "sha256:bd3ee1b26f0e7a28b5701481e09c6507bd425228e8ed7e9ca18d3ded8d3c26d7"
+    },
+    "current_snapshot": {
+      "kind": "current-changes",
+      "base_tree": "73080c8839448ea835b5b0d0609b43b94c53bcdf",
+      "candidate_tree": "1f780fc1da0dde0376a4f98ed3139faf3c87ded7",
+      "paths_digest": "sha256:7f595970fb98dbb983d43af4b3245626d8be7f8624149e0bf093505afd81b9ff",
+      "intended_untracked": [
+        "engine/skills/ondisk.go",
+        "engine/skills/ondisk_test.go"
+      ],
+      "intended_untracked_proof": "sha256:a9a38522f8f379bc39cf772458e81c0a8899c51436fa0b459c1d9ca78a70b0f8",
+      "paths": [
+        "engine/assets/assets_test.go",
+        "engine/skills/ondisk.go",
+        "engine/skills/ondisk_test.go",
+        "openspec/specs/anti-generic-design/spec.md"
+      ],
+      "identity": "sha256:bd3ee1b26f0e7a28b5701481e09c6507bd425228e8ed7e9ca18d3ded8d3c26d7"
+    },
+    "genesis_paths": [
+      "engine/assets/assets_test.go",
+      "engine/skills/ondisk.go",
+      "engine/skills/ondisk_test.go",
+      "openspec/specs/anti-generic-design/spec.md"
+    ],
+    "policy_hash": "sha256:34fb63d7f29f8613cd4431382b1057398a4816f8a4c20fc34677fffc80a184f6",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-reliability"
+    ],
+    "original_changed_lines": 514,
+    "correction_budget": 200,
+    "lens_results": [
+      {
+        "lens": "review-reliability",
+        "findings": [
+          {
+            "id": "R3-001",
+            "lens": "reliability",
+            "location": "engine/skills/ondisk.go:57",
+            "severity": "WARNING",
+            "claim": "DeployableManifestPaths drops any manifest row with fewer than two whitespace fields, but neither route_resolve nor the deploy enumerator imposes a field-count requirement, so a single-column row is deployed by overlay apply while the new guard reports it as UNREGISTERED_ON_DISK.",
+            "proof_refs": [
+              "engine/skills/ondisk.go:57 reads `if len(fields) \u003c 2 {` followed by `continue`",
+              "engine/skills/ondisk.go:42 states `A row needs at least two fields; the first is the path.` as part of the claim at engine/skills/ondisk.go:39-40 that the function mirrors route_resolve, the single source of truth for row to routing",
+              "bin/labdrian-overlay:64-66 defines all_tracked_files as parse_manifest piped to awk '{ print $1 }', printing field 1 of every surviving line regardless of how many fields it has",
+              "bin/labdrian-overlay:730 has `done \u003c \u003c(all_tracked_files)` closing the cmd_apply deploy loop opened at bin/labdrian-overlay:701 with `while IFS= read -r rel_path; do`",
+              "bin/labdrian-overlay:317-321 shows route_resolve reading awk field 3 with `route=\"${route:-skill}\"`, so a one-field row yields an empty third field, defaults to skill, and reaches the else branch at bin/labdrian-overlay:356-357 where repo_source becomes the overlay directory joined with the skills subdirectory and the row path"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-002",
+            "lens": "reliability",
+            "location": "engine/skills/ondisk_test.go:178",
+            "severity": "WARNING",
+            "claim": "TestRepositorySkillsAreFullyRegistered walks the live working tree and consults no ignore rules, and the dot-prefix skip does not cover the tilde-suffixed editor-backup pattern this repository itself gitignores, so an untracked tilde-suffixed backup of any SKILL file inside the skills subtree fails the entire engine test suite for a file that is never deployed.",
+            "proof_refs": [
+              "engine/skills/ondisk_test.go:186-189 calls ScanSkillFiles(filepath.Join(root, \"skills\")) with root resolved from os.Getwd() via skillsRepoRoot at engine/skills/ondisk_test.go:208-215, i.e. the live filesystem rather than the index",
+              "engine/skills/ondisk.go:106 has `if strings.HasPrefix(d.Name(), \".\") {` as the only exclusion in the walk besides directories and non-regular files",
+              "engine/skills/ondisk.go:85-88 documents that entries whose name begins with a dot are skipped so editor scratch files and VCS metadata are not reported as unregistered content",
+              "the third line of the repository ignore file, read as a blob from the candidate tree, is the tilde glob, listed alongside the two vim swap globs as this repository's editor-scratch ignore set; unlike the swap patterns, a tilde-suffixed backup is not dot-prefixed and is therefore collected by ScanSkillFiles",
+              "engine/skills/ondisk.go:141-152 turns an entry collected by the walk with no matching manifest key into Class DivUnregisteredOnDisk, which engine/skills/ondisk_test.go:191-197 turns into t.Fatalf"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-003",
+            "lens": "reliability",
+            "location": "engine/skills/ondisk_test.go:67",
+            "severity": "SUGGESTION",
+            "claim": "The dot-prefix skip and the non-regular-file skip in ScanSkillFiles are documented behavior with no test coverage: the fixture creates only four ordinary files, so deleting either branch would leave every test in the package green.",
+            "proof_refs": [
+              "engine/skills/ondisk_test.go:69-73 lists four ordinary fixture entries written into a t.TempDir, covering two skill directories, one nested references directory and one underscore-prefixed directory name, with no dot-prefixed file, no dot-prefixed directory and no symlink among them",
+              "engine/skills/ondisk.go:106-112 contains the dot-prefix branch including the filepath.SkipDir path, which is unreachable from any existing test",
+              "engine/skills/ondisk.go:115 has `if !d.Type().IsRegular() {`, untested, and ls-tree -r 1f780fc -- skills/ shows all 56 entries are mode 100644 so no live symlink currently exercises it either"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-004",
+            "lens": "reliability",
+            "location": "engine/skills/ondisk_test.go:13",
+            "severity": "SUGGESTION",
+            "claim": "The routing fixture pins agent, opencode-agent, engine/* and root-level rows but never an unknown third-column value, leaving the one branch where the Go allow-list and the bash else fall-through could silently diverge unpinned.",
+            "proof_refs": [
+              "engine/skills/ondisk_test.go:13-25 defines routingManifest containing only managed, custom, custom agent, managed agent and custom opencode-agent rows",
+              "engine/skills/ondisk.go:44-45 asserts that a third column of agent or opencode-agent routes outside skills/ and that any other third-column value falls through to the skill route, with no corresponding case in engine/skills/ondisk_test.go:27-65",
+              "bin/labdrian-overlay:345-357 shows the if agent / elif opencode-agent / else chain whose else branch sets repo_source to the overlay directory joined with the skills subdirectory and the row path, the fall-through the contract describes"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          }
+        ],
+        "evidence": [
+          "ACTOR SUBSTITUTION DISCLOSED: the dedicated review-reliability subagent in this runtime has no Bash tool and cannot execute the contract-mandated read-only Git inspection against the frozen trees. This report was produced by a shell-capable substitute running the SAME provider-selected R3 lens under the identical read-only recipe. No other lens was substituted or merged.",
+          "Recipe honored on every command: the environment was cleared with env -i, HOME pointed at a nonexistent directory, locale pinned with LC_ALL and LANG, GIT_CONFIG_NOSYSTEM and GIT_ATTR_NOSYSTEM set, system and global Git config disabled, and Git invoked in the session repository with --no-replace-objects plus core.attributesFile, core.excludesFile and core.autocrlf disabled. --no-ext-diff was passed on every diff and --text --diff-algorithm=myers --no-indent-heuristic on every selective diff. No --binary, no worktree, index or HEAD read, no checkout, and no piping of candidate bytes through another command.",
+          "Discovery: diff --no-ext-diff --name-status 73080c8 1f780fc gives M engine/assets/assets_test.go; A engine/skills/ondisk.go; A engine/skills/ondisk_test.go; M openspec/specs/anti-generic-design/spec.md. --numstat gives 95/0, 174/0, 215/0, 26/4. The manifest matches the 4 declared paths exactly; all 4 were inspected in the declared order.",
+          "One deviation self-reported and reverted: an early command redirected a cat-file read of the overlay entrypoint script into a scratchpad file. The file was deleted immediately with rm -f before being read, no candidate bytes were consumed from it, and all subsequent inspection used git grep -n with context against the frozen tree only.",
+          "ROUTING FIDELITY verified against the overlay entrypoint script in the candidate tree lines 317-364 (route_resolve) read via git grep. Bash computes route from awk field 3 with default skill; the non-deployable first-segment test at 333-339 is gated on route != agent and fires when first_seg equals the whole path or equals engine; the dispatch at 345-361 is agent to agents/, elif opencode-agent to opencode/agents/, else to skills/. The critical UNKNOWN third-column case therefore falls through the else to the SKILL route. Go DeployableManifestPaths at engine/skills/ondisk.go:48-77 skips only the allow-list {agent, opencode-agent} at engine/skills/ondisk.go:29-33 and 60-62, so an unknown third column is retained as deployable, which MATCHES bash. The no-slash rule at engine/skills/ondisk.go:64-67 and the engine first-segment rule at engine/skills/ondisk.go:68-70 match lines 334-335. No routing false positive or false negative for any third-column value.",
+          "LIVE INVARIANT REPRODUCED BY HAND: listing the skills subtree of the candidate returns exactly 56 blobs, all mode 100644, with no symlinks, no submodules and no dot-prefixed segment anywhere. Reading overlay.manifest from the candidate gives 79 rows; applying the Go rules removes the 19 engine infra rows, the one root-level bookkeeping row that carries no path separator, the two rows whose third column selects the agent route, and the one row whose third column selects the opencode-agent route, leaving exactly 56 deployable rows. Both 56-element sets were compared element by element and are equal in both directions. TestRepositorySkillsAreFullyRegistered genuinely passes on this candidate rather than being green by accident.",
+          "DOT-FILE BLIND SPOT CHECKED: no manifest-deployed path contains a segment beginning with a dot, since the shared-contract directory is underscore-prefixed rather than dot-prefixed, so the dot-skip at engine/skills/ondisk.go:106-112 hides nothing the manifest deploys today.",
+          "DETERMINISM CHECKED: DiffOnDisk at engine/skills/ondisk.go:137-174 emits unregistered entries by iterating the diskPaths slice, which ScanSkillFiles returns sort.Strings-sorted, and the map-ranged manifestPaths side is buffered into missing and sort.Strings-sorted before emission. Output order is stable across Go's randomized map iteration. No determinism defect.",
+          "DRIFT GUARD NON-VACUOUS: git grep for headings shows Forbidden patterns (the gap) at skills/_shared/anti-generic-design.md:25 followed by Steer toward at :38, and at skills/anti-generic-design/SKILL.md:29 followed by Steer toward at :42, so the newline-hash-hash delimiter at engine/assets/assets_test.go:101 captures exactly the intended body with no over- or under-capture. A fixed-string grep returns exactly one hit per file, so strings.Index cannot latch onto a stray occurrence. Both sides are explicitly t.Fatalf-guarded against the empty string at engine/assets/assets_test.go:127-132. Word-by-word comparison of skills/_shared/anti-generic-design.md:27-36 against skills/anti-generic-design/SKILL.md:31-40 shows the only difference is line wrapping, which strings.Fields collapses, so the test passes for the right reason.",
+          "ANTI-MIMICRY TEST VERIFIED: git grep for the anti-mimicry line returns skills/anti-generic-design/SKILL.md:71 and skills/anti-generic-design/references/critique-template.md:16, exactly the two files asserted at engine/assets/assets_test.go:156.",
+          "COMPILE-SAFETY VERIFIED: git grep confirms Divergence with fields Class, Path and Detail at engine/skills/validate.go:23-26 and type DivergenceClass string at :9; the new constants UNREGISTERED_ON_DISK and MISSING_ON_DISK do not collide with the existing MISSING_IN_MANIFEST, MISSING_IN_REGISTRY, TAG_MISMATCH or MIXED_TAG names or values.",
+          "DEPLOY-PATH ENUMERATOR TRACED: parse_manifest at bin/labdrian-overlay:54-56 filters comments and blank lines, and all_tracked_files at :64-66 prints awk field 1 of every surviving line; done \u003c \u003c(all_tracked_files) at :730 closes the cmd_apply deploy loop that begins at :701. The comment and blank-line filters match Go's TrimSpace and hash-prefix rules; the field-count filter does not, which is finding 1."
+        ],
+        "result_hash": "sha256:448828dcac919babe7df0d6d99822022d52d3551ad770a7016c19b3482d6f3be"
+      }
+    ],
+    "findings": [
+      {
+        "id": "R3-001",
+        "lens": "reliability",
+        "location": "engine/skills/ondisk.go:57",
+        "severity": "WARNING",
+        "claim": "DeployableManifestPaths drops any manifest row with fewer than two whitespace fields, but neither route_resolve nor the deploy enumerator imposes a field-count requirement, so a single-column row is deployed by overlay apply while the new guard reports it as UNREGISTERED_ON_DISK.",
+        "proof_refs": [
+          "engine/skills/ondisk.go:57 reads `if len(fields) \u003c 2 {` followed by `continue`",
+          "engine/skills/ondisk.go:42 states `A row needs at least two fields; the first is the path.` as part of the claim at engine/skills/ondisk.go:39-40 that the function mirrors route_resolve, the single source of truth for row to routing",
+          "bin/labdrian-overlay:64-66 defines all_tracked_files as parse_manifest piped to awk '{ print $1 }', printing field 1 of every surviving line regardless of how many fields it has",
+          "bin/labdrian-overlay:730 has `done \u003c \u003c(all_tracked_files)` closing the cmd_apply deploy loop opened at bin/labdrian-overlay:701 with `while IFS= read -r rel_path; do`",
+          "bin/labdrian-overlay:317-321 shows route_resolve reading awk field 3 with `route=\"${route:-skill}\"`, so a one-field row yields an empty third field, defaults to skill, and reaches the else branch at bin/labdrian-overlay:356-357 where repo_source becomes the overlay directory joined with the skills subdirectory and the row path"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-002",
+        "lens": "reliability",
+        "location": "engine/skills/ondisk_test.go:178",
+        "severity": "WARNING",
+        "claim": "TestRepositorySkillsAreFullyRegistered walks the live working tree and consults no ignore rules, and the dot-prefix skip does not cover the tilde-suffixed editor-backup pattern this repository itself gitignores, so an untracked tilde-suffixed backup of any SKILL file inside the skills subtree fails the entire engine test suite for a file that is never deployed.",
+        "proof_refs": [
+          "engine/skills/ondisk_test.go:186-189 calls ScanSkillFiles(filepath.Join(root, \"skills\")) with root resolved from os.Getwd() via skillsRepoRoot at engine/skills/ondisk_test.go:208-215, i.e. the live filesystem rather than the index",
+          "engine/skills/ondisk.go:106 has `if strings.HasPrefix(d.Name(), \".\") {` as the only exclusion in the walk besides directories and non-regular files",
+          "engine/skills/ondisk.go:85-88 documents that entries whose name begins with a dot are skipped so editor scratch files and VCS metadata are not reported as unregistered content",
+          "the third line of the repository ignore file, read as a blob from the candidate tree, is the tilde glob, listed alongside the two vim swap globs as this repository's editor-scratch ignore set; unlike the swap patterns, a tilde-suffixed backup is not dot-prefixed and is therefore collected by ScanSkillFiles",
+          "engine/skills/ondisk.go:141-152 turns an entry collected by the walk with no matching manifest key into Class DivUnregisteredOnDisk, which engine/skills/ondisk_test.go:191-197 turns into t.Fatalf"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-003",
+        "lens": "reliability",
+        "location": "engine/skills/ondisk_test.go:67",
+        "severity": "SUGGESTION",
+        "claim": "The dot-prefix skip and the non-regular-file skip in ScanSkillFiles are documented behavior with no test coverage: the fixture creates only four ordinary files, so deleting either branch would leave every test in the package green.",
+        "proof_refs": [
+          "engine/skills/ondisk_test.go:69-73 lists four ordinary fixture entries written into a t.TempDir, covering two skill directories, one nested references directory and one underscore-prefixed directory name, with no dot-prefixed file, no dot-prefixed directory and no symlink among them",
+          "engine/skills/ondisk.go:106-112 contains the dot-prefix branch including the filepath.SkipDir path, which is unreachable from any existing test",
+          "engine/skills/ondisk.go:115 has `if !d.Type().IsRegular() {`, untested, and ls-tree -r 1f780fc -- skills/ shows all 56 entries are mode 100644 so no live symlink currently exercises it either"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-004",
+        "lens": "reliability",
+        "location": "engine/skills/ondisk_test.go:13",
+        "severity": "SUGGESTION",
+        "claim": "The routing fixture pins agent, opencode-agent, engine/* and root-level rows but never an unknown third-column value, leaving the one branch where the Go allow-list and the bash else fall-through could silently diverge unpinned.",
+        "proof_refs": [
+          "engine/skills/ondisk_test.go:13-25 defines routingManifest containing only managed, custom, custom agent, managed agent and custom opencode-agent rows",
+          "engine/skills/ondisk.go:44-45 asserts that a third column of agent or opencode-agent routes outside skills/ and that any other third-column value falls through to the skill route, with no corresponding case in engine/skills/ondisk_test.go:27-65",
+          "bin/labdrian-overlay:345-357 shows the if agent / elif opencode-agent / else chain whose else branch sets repo_source to the overlay directory joined with the skills subdirectory and the row path, the fall-through the contract describes"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      }
+    ],
+    "classifications": {},
+    "outcomes": {
+      "R3-001": "info",
+      "R3-002": "info",
+      "R3-003": "info",
+      "R3-004": "info"
+    },
+    "fix_finding_ids": [],
+    "follow_ups": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:36973cf94de72aa1dc4f5332e1bdba594c3dd66197567d138c9f9e4517170da5",
+    "evidence_record_digest": "sha256:564b1c5442a6b78ab339b4e666d7e67541b56474829fb7ad26d78f7671a82330",
+    "evidence_outcome": "passed",
+    "evidence_target_identity": "sha256:bd3ee1b26f0e7a28b5701481e09c6507bd425228e8ed7e9ca18d3ded8d3c26d7",
+    "evidence_authority_revision": "sha256:a49c00686da32a779fbf6d80fe79924c287007915620bce5619d8bfd87d22a83"
+  }
+}

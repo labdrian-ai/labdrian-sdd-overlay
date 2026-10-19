@@ -2590,9 +2590,9 @@ func TestRunSyncTriggerCore_ChildNoEventNoCwd_ExitsZeroWithoutSpawn(t *testing.T
 // TestParseReviewReceiptArgs_BothFlags pins the mechanical --cwd/--change
 // flag parsing shared by the capture and hook verbs.
 func TestParseReviewReceiptArgs_BothFlags(t *testing.T) {
-	cwd, change := parseReviewReceiptArgs([]string{"--cwd", "/repo", "--change", "my-change"})
-	if cwd != "/repo" || change != "my-change" {
-		t.Fatalf("parseReviewReceiptArgs = (%q, %q), want (/repo, my-change)", cwd, change)
+	a := parseReviewReceiptFlags([]string{"--cwd", "/repo", "--change", "my-change"})
+	if a.cwd != "/repo" || a.change != "my-change" || !a.hasChange || a.hasFeature {
+		t.Fatalf("parseReviewReceiptFlags = %+v, want --cwd /repo and --change my-change alone", a)
 	}
 }
 
