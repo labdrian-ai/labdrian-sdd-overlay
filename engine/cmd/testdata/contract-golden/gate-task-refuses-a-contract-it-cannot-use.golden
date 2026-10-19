@@ -6,7 +6,7 @@ $ gate-task
 --- stdout ---
 {}
 --- stderr ---
-gate-task: warning: --contract-file not provided; all Agent hooks will pass through
+gate-task: warning: --contract-file not provided; no contract is injected into Agent calls
 
 $ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
 # a contract file that is missing

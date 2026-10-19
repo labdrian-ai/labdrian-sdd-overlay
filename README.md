@@ -147,7 +147,7 @@ backups the backend cannot confirm is not offered a restore.
 ### The 3 workflows
 
 **1. Day-to-day — nothing to do.**
-The hooks run in the background: `UserPromptSubmit` (propagate) keeps skill registries fresh across sessions; `PreToolUse`/`Agent` (gate-task) injects the minimalism and anti-generic-design contracts into `sdd-tasks`/`sdd-apply` automatically, and, while a workflow is bound to the repository, appends the memory instructions of that workflow to every sub-agent's prompt (C23 M6), the block `SessionStart` puts into the session itself. Review candidate coverage and skill discovery are handled by gentle-ai itself since v2.7.0; the overlay no longer ships contracts for them.
+The hooks run in the background: `UserPromptSubmit` (propagate) keeps skill registries fresh across sessions; `PreToolUse`/`Agent` (gate-task) injects the minimalism and anti-generic-design contracts into `sdd-tasks`/`sdd-apply` automatically, and, while a workflow is bound to the repository, appends the memory instructions of that workflow to every sub-agent's prompt through the minimalism entry alone (C23 M6), the block `SessionStart` puts into the session itself. Review candidate coverage and skill discovery are handled by gentle-ai itself since v2.7.0; the overlay no longer ships contracts for them.
 
 **2. gentle-ai released an update.**
 ```bash

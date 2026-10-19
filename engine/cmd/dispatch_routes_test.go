@@ -19,7 +19,7 @@ func TestRunRoutesEachSubcommandThroughTheProcessItWasHanded(t *testing.T) {
 		wantExits  []int
 	}{
 		{"propagate", "stderr", "error: --registry is required\n", []int{1}},
-		{"gate-task", "stderr", "gate-task: warning: --contract-file not provided; all Agent hooks will pass through\n", nil},
+		{"gate-task", "stderr", "gate-task: warning: --contract-file not provided; no contract is injected into Agent calls\n", nil},
 		{"merge-settings", "stderr", "error: --settings is required\n", []int{1}},
 		{"uninstall-hooks", "stderr", "error: --settings is required\n", []int{1}},
 		{"status", "stdout", "[FAIL] binary: ", []int{1}},

@@ -78,6 +78,10 @@ func gateTaskCore(args []string, stdin io.Reader, stdout io.Writer, stderr io.Wr
 	managed := true
 
 	if embeddedName != "" {
+		// The block rides the --contract-file entry alone (C23 M6, one rewrite per Agent call):
+		// install-hooks runs both entries on every Agent call, in parallel, and Claude Code names no
+		// winner between two rewritten inputs, so this entry answers bound as it answers unbound.
+		instructions = nil
 		// Engine-owned managed contract: content ships in the binary, so the
 		// guard injects even when no external contract file exists. Unknown
 		// names stay fail-safe (pass-through) per the gate-task contract.
@@ -96,7 +100,7 @@ func gateTaskCore(args []string, stdin io.Reader, stdout io.Writer, stderr io.Wr
 	} else if contractFilePath == "" {
 		// F3: emit a diagnostic when --contract-file is missing so wiring mistakes
 		// during PR-B integration are immediately visible. Still fail-safe (exit 0).
-		fmt.Fprintln(stderr, "gate-task: warning: --contract-file not provided; all Agent hooks will pass through")
+		fmt.Fprintln(stderr, "gate-task: warning: --contract-file not provided; no contract is injected into Agent calls")
 		managed = false
 	} else if b, err := readFile(contractFilePath); err != nil {
 		// Fail-safe: if contract file cannot be read, emit diagnostic + pass-through.

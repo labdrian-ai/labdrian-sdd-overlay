@@ -80,7 +80,10 @@ projection already does.
 
 - **One rewrite per `Agent` call.** The plan block joins the contract paths in the same `gate-task`
   rewrite, which reads the repository's binding as the projection does. A second PreToolUse hook
-  rewriting the same call would race the first.
+  rewriting the same call would race the first: Claude Code runs matching hooks in parallel and
+  names no winner between two rewritten inputs. `install-hooks` already runs two `gate-task`
+  entries on every `Agent` call, so the block rides the `--contract-file` (minimalism) entry alone,
+  and the `--embedded-contract` entry answers bound as it answers unbound.
 - **A new hook event.** `install-hooks` installs a `SessionStart` entry in the projection family, and
   `projection hook` accepts the event. Removing the family removes it, as for its other entries.
 - **`memory plan --instructions`.** Without `--project` and `--workflow` it reads the repository's

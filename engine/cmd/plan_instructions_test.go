@@ -256,6 +256,30 @@ func TestGateTaskAppendsTheInstructionsWhileAWorkflowIsBound(t *testing.T) {
 	}
 }
 
+// Two gate-task entries run on every Agent call, in parallel, and Claude Code names no winner
+// between two rewritten inputs (C23 M6, one rewrite per Agent call). The block rides the
+// --contract-file entry alone: the --embedded-contract entry answers while bound exactly as it
+// answers unbound, so it never rewrites a call the other entry would answer otherwise.
+func TestGateTaskWithAnEmbeddedContractNeverAppendsTheInstructions(t *testing.T) {
+	embedded := func(e hookEnv, input string) string {
+		var stdout, stderr bytes.Buffer
+		gateTaskCore([]string{"--embedded-contract", "anti-generic-design"},
+			strings.NewReader(input), &stdout, &stderr, inMemoryFiles(nil), boundInstructions(e.deps, ""))
+		return stdout.String()
+	}
+	unbound := newHookEnv(t)
+	unbound.create(t, "proj-1", "wf-1", "odd")
+	bound := newHookEnv(t)
+	bound.running(t, "proj-1", "wf-1", "odd")
+	for _, subagentType := range []string{"general-purpose", "sdd-verify", "sdd-apply", "frontend", ""} {
+		got := embedded(bound, agentInputIn(bound.repo, subagentType, "Do the task."))
+		want := embedded(unbound, agentInputIn(unbound.repo, subagentType, "Do the task."))
+		if got != want || strings.Contains(got, "labdrian memory instructions") {
+			t.Errorf("%q: bound gate-task --embedded-contract printed %q, want the unbound answer %q", subagentType, got, want)
+		}
+	}
+}
+
 // Without a binding gate-task answers exactly as it did before M6.
 func TestGateTaskWithoutABindingAnswersAsBefore(t *testing.T) {
 	e := newHookEnv(t)
