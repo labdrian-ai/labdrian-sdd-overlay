@@ -109,12 +109,14 @@ func Rewrite(call Call, cfg Config) (string, bool) {
 }
 
 // appendInstructions ends prompt with block, after one blank line, and leaves it alone when block
-// is empty or the prompt already carries it, so a rewrite of a rewritten prompt changes nothing.
+// is empty or already ends the prompt, so a rewrite of a rewritten prompt changes nothing. A block
+// quoted earlier in the prompt does not count: only the end is where the rewrite puts it.
 func appendInstructions(prompt, block string) string {
-	if block == "" || strings.Contains(prompt, block) {
+	trimmed := strings.TrimRight(prompt, "\n")
+	if block == "" || strings.HasSuffix(trimmed, block) {
 		return prompt
 	}
-	return strings.TrimRight(prompt, "\n") + "\n\n" + block + "\n"
+	return trimmed + "\n\n" + block + "\n"
 }
 
 // evaluateContract applies one managed contract to the prompt of a sub-agent of the given

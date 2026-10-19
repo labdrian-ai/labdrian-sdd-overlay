@@ -50,6 +50,17 @@ func TestTheInstructionsAreNotAppendedTwice(t *testing.T) {
 	}
 }
 
+// Only a block that ends the prompt counts as given: a prompt that quotes the block and goes on
+// after it is still given the block at its end (C23 M6 review A, R1-001).
+func TestAPromptThatQuotesTheBlockIsStillGivenItAtTheEnd(t *testing.T) {
+	cfg := withInstructions(gate.Config{})
+	prompt := "Compare this block with the plan:\n\n" + instructionsBlock + "\n\nThen report."
+	got, changed := rewrite(cfg, "general-purpose", prompt)
+	if want := prompt + "\n\n" + instructionsBlock + "\n"; !changed || got != want {
+		t.Errorf("Rewrite() = %q, %v, want the block appended at the end %q", got, changed, want)
+	}
+}
+
 // An empty prompt is left alone, block or not, as it always was.
 func TestAnEmptyPromptIsNotGivenTheInstructions(t *testing.T) {
 	if got, changed := rewrite(withInstructions(gate.Config{}), "sdd-apply", ""); changed || got != "" {

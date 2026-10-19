@@ -72,15 +72,15 @@ type PromptReply struct {
 	Warning string
 }
 
-// userPromptSubmitOutput is the JSON object a UserPromptSubmit hook prints. additionalContext
-// must sit inside hookSpecificOutput, next to the event name: at the top level Claude Code
-// ignores it without a word.
-type userPromptSubmitOutput struct {
-	HookSpecificOutput *userPromptSubmitSpecific `json:"hookSpecificOutput,omitempty"`
-	SystemMessage      string                    `json:"systemMessage,omitempty"`
+// contextOutput is the JSON object a hook that adds context prints, UserPromptSubmit and
+// SessionStart alike. additionalContext must sit inside hookSpecificOutput, next to the event
+// name: at the top level Claude Code ignores it without a word.
+type contextOutput struct {
+	HookSpecificOutput *contextSpecific `json:"hookSpecificOutput,omitempty"`
+	SystemMessage      string           `json:"systemMessage,omitempty"`
 }
 
-type userPromptSubmitSpecific struct {
+type contextSpecific struct {
 	HookEventName     string `json:"hookEventName"`
 	AdditionalContext string `json:"additionalContext"`
 }
@@ -93,9 +93,9 @@ func (r PromptReply) Encode() ([]byte, error) {
 	if r.Context == "" && r.Warning == "" {
 		return nil, nil
 	}
-	out := userPromptSubmitOutput{SystemMessage: r.Warning}
+	out := contextOutput{SystemMessage: r.Warning}
 	if r.Context != "" {
-		out.HookSpecificOutput = &userPromptSubmitSpecific{HookEventName: EventUserPromptSubmit, AdditionalContext: r.Context}
+		out.HookSpecificOutput = &contextSpecific{HookEventName: EventUserPromptSubmit, AdditionalContext: r.Context}
 	}
 	return encodeLine(out)
 }
@@ -116,7 +116,7 @@ func (r SessionStartReply) Encode() ([]byte, error) {
 	if r.Context == "" {
 		return nil, nil
 	}
-	return encodeLine(userPromptSubmitOutput{HookSpecificOutput: &userPromptSubmitSpecific{HookEventName: EventSessionStart, AdditionalContext: r.Context}})
+	return encodeLine(contextOutput{HookSpecificOutput: &contextSpecific{HookEventName: EventSessionStart, AdditionalContext: r.Context}})
 }
 
 // encodeLine writes v as JSON followed by a line break, without escaping <, > and &.
