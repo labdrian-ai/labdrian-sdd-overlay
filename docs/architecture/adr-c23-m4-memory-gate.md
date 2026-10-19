@@ -46,7 +46,7 @@ Claude Code runs the gate only for the tools a settings matcher routes to it
    procedural skills count; installed registry skills and global skills are untouched (M1
    decision 3). `Bash` stays ungated.
 6. **The hook is routed to the new tools.** The projection family gains the PreToolUse matchers
-   for the Engram reads, longterm-mem `get`, `Skill` and `Read`; `labdrian apply` installs them,
+   for the Engram reads, longterm-mem `get`, `Skill` and `Read`; `labdrian install-hooks` installs them (activation stays deliberate, as for the family's other entries),
    and the tool-name patterns stay as strict as the `query` pattern (a plugin prefix is allowed, a
    lookalike server name is not).
 

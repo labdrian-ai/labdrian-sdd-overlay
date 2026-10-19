@@ -228,8 +228,8 @@ func TestClaudeCodeSessionClaimsStateTheirScope(t *testing.T) {
 			"tells the session", installs, "in-flight tool call cannot be interrupted", "Bash is never gated", "the gate denies nothing when the binding or the workflow cannot be followed", "restart", "no test observes a real session being denied",
 		},
 		capability.MemoryEnforcement: {
-			"longterm-mem query", "project", "memory plan", "no project",
-			"Not enforced, because the tool input cannot verify these: ", "a get call (it carries no project)", "Engram tools", "the mapping between the plan's sources and a query's sources", "Writes are never blocked", installs, "no narrower than the gate's tool-name pattern", "restart", "no test observes a real session being denied",
+			"source the plan excludes", "Engram reads", "longterm-mem query and get", "procedural skill of the project lock", "no project", "must name the plan's project",
+			"Not enforced: ", "a skill file read through Bash", "the project of a read by id", "Writes are never blocked", installs, "no narrower than its tool-name patterns", "restart", "no test observes a real session being denied",
 		},
 	} {
 		detail := claims[name].Detail
