@@ -55,7 +55,10 @@ Wave 2b — end-to-end memory wiring (added 2026-10-16 at the owner's request, "
 - [ ] C23 — Wire Engram, longterm-mem and procedural memory end to end, so that the memory plan is executed and not only computed. Units:
   - [x] M1 — ADR: the mapping from plan sources to tools and the goal filter; the owner decides each source mapping, one question at a time. Done in batch 52 (the owner's five decisions of 2026-10-16/17). ADR: docs/architecture/adr-c23-m1-memory-sources.md.
   - [x] M2 — One shared project identity for the workflow, Engram and longterm-mem (G7). Done in batch 53: the shared resolver (`identity/resolve`, `identity/gitfs`), `identity.EngramName`, the engine's skills and longterm-mem on it, `workflow create` recording `project_identity` and refusing a goal of another project, and the gate comparing against the identity. ADR: docs/architecture/adr-c23-m2-project-identity.md.
-  - [ ] M3 — Goal and handoff narrowers stored in the workflow log and the handoffs (G6).
+  - [ ] M3 — Goal and handoff narrowers stored in the workflow log and the handoffs (G6). Batch 54, branch `feat/phase9-b54`; the owner's seven decisions of 2026-10-18/19 are in docs/architecture/adr-c23-m3-memory-narrowers.md. Tasks:
+    - [ ] M3a — Goal v3 and shaper handoff v4 with a typed `memory_directive` (decisions 1-2). Delegated writer (parallel with M3b; the shaper reads the Goal, so they are one unit).
+    - [ ] M3b — Role handoff v2 with an optional `memory_directive` (decision 2). Delegated writer (parallel with M3a).
+    - [ ] M3c — Workflow EventVersion 3: the created event's directives, `workflow create --handoff`, the `narrowed` event and `workflow narrow`, refusal of a widening directive, the plan resolved from the log, and `memory plan --project/--workflow` (decisions 3-7). After M3a and M3b.
   - [ ] M4 — The memory gate enforces the plan's sources and covers Engram, `get` and `promote` (G3, G5).
   - [ ] M5 — A goal filter in `longterm-mem query` (G4).
   - [ ] M6 — The plan reaches the agent as instructions: SessionStart, a route for subagents, and one shared skill that loads the plan and the T1/T2 contract (G1, G2).
