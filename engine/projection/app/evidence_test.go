@@ -69,6 +69,21 @@ func TestOnToolResultAppendsTheEvidenceOfAMemoryRead(t *testing.T) {
 	}
 }
 
+func TestOnToolResultKeepsTheCallAndSessionIDsOnOneBoundedLine(t *testing.T) {
+	w, log := evidenceWorld(workflow.StatusRunning)
+	req := resultRequest("mcp__engram__mem_search")
+	req.SessionID, req.CallID = "sess\nX"+strings.Repeat("s", 1000), "tu\x1b[31m"+strings.Repeat("c", 1000)
+	w.service.OnToolResult(req)
+	if len(log.records) != 1 {
+		t.Fatalf("%d records, want 1", len(log.records))
+	}
+	r := log.records[0]
+	if !strings.HasPrefix(r.SessionID, "sess X") || strings.ContainsAny(r.SessionID+r.CallID, "\n\x1b") ||
+		!strings.HasSuffix(r.SessionID, "...") || !strings.HasSuffix(r.CallID, "...") || len(r.SessionID) > 210 || len(r.CallID) > 210 {
+		t.Errorf("session %q (%d bytes), call %q (%d bytes)", r.SessionID[:10], len(r.SessionID), r.CallID[:10], len(r.CallID))
+	}
+}
+
 func TestOnToolResultRecordsNothingForAnotherToolWithoutTouchingAnyStore(t *testing.T) {
 	w, log := evidenceWorld(workflow.StatusRunning)
 	for _, tool := range []string{"Edit", "Bash", "mcp__engram__mem_save", "mcp__longterm-mem__promote"} {

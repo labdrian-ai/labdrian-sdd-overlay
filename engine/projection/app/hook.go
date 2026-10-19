@@ -239,8 +239,7 @@ func (s HookService) OnToolResult(req ToolResultRequest) ToolResultOutcome {
 	if s.Evidence == nil || s.Clock == nil {
 		return ToolResultOutcome{Warning: projection.EvidenceWarning(ev, errNoEvidenceLog)}
 	}
-	rec := projection.ReadRecord{Evidence: ev, At: s.Clock.Now(), CallID: req.CallID, SessionID: req.SessionID,
-		ResponseSHA256: req.ResponseSHA256, ResponseBytes: req.ResponseBytes}
+	rec := projection.NewReadRecord(ev, s.Clock.Now(), req.CallID, req.SessionID, req.ResponseSHA256, req.ResponseBytes)
 	if err := s.Evidence.Append(rec); err != nil {
 		return ToolResultOutcome{Warning: projection.EvidenceWarning(ev, err)}
 	}

@@ -38,6 +38,14 @@ type ReadRecord struct {
 	ResponseBytes  int64
 }
 
+// NewReadRecord is the record of ev, seen at at, with what the runtime says of the call and its
+// response; the call and session ids are each one sanitized line of at most maxDetailRunes runes,
+// as every value of ev is. The digest and the length are kept as given.
+func NewReadRecord(ev ReadEvidence, at time.Time, callID, sessionID, responseSHA256 string, responseBytes int64) ReadRecord {
+	return ReadRecord{Evidence: ev, At: at, CallID: evidenceLine(callID), SessionID: evidenceLine(sessionID),
+		ResponseSHA256: responseSHA256, ResponseBytes: responseBytes}
+}
+
 // ReadEvidenceLog is where the memory-read evidence of each workflow is appended (decision 1: a
 // sidecar of its own, beside the workflow log, which it never touches).
 type ReadEvidenceLog interface {

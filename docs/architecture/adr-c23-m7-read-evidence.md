@@ -36,10 +36,12 @@ no PostToolUse hook and no memory evidence in the workflow log or handoffs."
    `mem_update`, `promote`) are not recorded and get no classifier.
 3. **A digest and a size, never content (the owner, 2026-10-19).** From `tool_response` the record
    keeps only the SHA-256 and the length of its JSON value as sent. Project, goal and ids come from
-   `tool_input`. The hook reads its input as a stream of tokens, up to `MaxPostToolUseBytes`
-   (64 MiB), so a response over today's 1 MiB envelope bound is still recorded; the response is
-   hashed and dropped, never kept. An input over 64 MiB is input the hook cannot use, which is
-   silence, as for every projection hook.
+   `tool_input`. The hook reads the envelope as a stream of tokens, up to `MaxPostToolUseBytes`
+   (64 MiB), so a response over today's 1 MiB envelope bound is still recorded. The response's JSON
+   value is held in memory only while it is hashed, then dropped; it never reaches disk. An input
+   over 64 MiB is input the hook cannot use, which is silence, as for every projection hook. An
+   input with no `tool_response` is still a read that ran, recorded with an empty digest and a
+   length of 0.
 4. **A failure warns and goes on (the owner, 2026-10-19).** The hook exits 0, as every projection hook
    does. When the record cannot be written (the lock, the disk, permissions), it returns one
    `additionalContext` line telling the agent that the evidence of that read was not recorded, and
@@ -79,6 +81,9 @@ One JSON object per line, `version` 1:
   the sidecar's own lock, so concurrent reads of parallel subagents serialize on one small file, never
   on the workflow log.
 - **Only reads that ran.** A read the gate denied never runs, so it has no record.
+- **Every `Read` reaches the hook.** The `Skill|Read` matcher cannot name a file, so the hook runs
+  after every `Read`: it decodes the input, hashing its response, and answers a file that is not a
+  `SKILL.md` before it reads the binding or the workflow.
 - **Nothing without a binding (assumption, following `readBound`).** No bound workflow, a binding the
   workflow does not own, or a closed workflow: the hook records nothing and says nothing.
 - **Handoffs are not rewritten.** Nothing copies the sidecar into a handoff; a role that cites its
