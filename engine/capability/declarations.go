@@ -94,7 +94,7 @@ var declarations = []Declaration{
 				"cmd:TestRuntimeProbeSourceOpensNoFile",
 			),
 			partial(MemoryEnforcement,
-				"The PreToolUse gate denies a memory read of a source the plan excludes (Engram reads, longterm-mem query and get, a procedural skill of the project lock), and all with no project; a query, Engram search/context must name the plan's project, a goal-scoped query its goal. Not enforced: a skill file read through Bash, the project of a read by id. Writes are never blocked. install-hooks installs matchers no narrower than its tool-name patterns; hooks need a restart; no test observes a real session being denied.",
+				"The PreToolUse gate denies a memory read of a source the plan excludes (Engram reads, longterm-mem query and get, a procedural skill of the project lock), and all with no project; queries and Engram searches must name the plan's project, goal-scoped queries its goal. Not enforced: a skill file read through Bash, the project of a read by id. Writes are never blocked. install-hooks installs matchers no narrower than its tool-name patterns; hooks need a restart; no test observes a real session being denied.",
 				"cmd:TestInstalledMatchersCoverEveryToolTheGateHasAnOpinionAbout",
 				"cmd:TestPhase7Acceptance",
 				"cmd:TestPreToolUseChecksTheGoalOfALongtermMemQueryUnderScopeGoal",
