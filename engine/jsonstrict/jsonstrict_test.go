@@ -198,6 +198,7 @@ func TestWireVersionReadsOnlyACanonicalIntegerVersion(t *testing.T) {
 		{`{"version":+3}`, 0},
 		{`{"version":3_0}`, 0},
 		{`{"version":null}`, 0},
+		{`{"version":99999999999999999999}`, 0},
 		{`{"version":"3"}`, 0},
 		{`{"Version":3}`, 0},
 		{`{"a":1}`, 0},
