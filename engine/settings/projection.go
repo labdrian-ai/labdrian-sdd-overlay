@@ -41,8 +41,11 @@ const (
 )
 
 // projectionFamily is the whole family in install order: one UserPromptSubmit
-// entry and a PreToolUse entry per matcher. The entries added by C23 M4 come
-// last, so an install made before it gains them at the end and keeps the rest.
+// entry, a PreToolUse entry per matcher, and one SessionStart entry, which gives
+// a session the memory instructions of its workflow when it starts, resumes, is
+// cleared or is compacted (C23 M6; no matcher, so every source). The entries
+// added by C23 M4 and M6 come last, so an install made before them gains them at
+// the end and keeps the rest.
 var projectionFamily = hookFamily{
 	identity: LabdrianProjectionIdentity,
 	specs: []hookSpec{
@@ -52,6 +55,7 @@ var projectionFamily = hookFamily{
 		{event: "PreToolUse", matcher: ProjectionMemoryGetMatcher},
 		{event: "PreToolUse", matcher: ProjectionEngramReadMatcher},
 		{event: "PreToolUse", matcher: ProjectionProceduralSkillMatcher},
+		{event: "SessionStart"},
 	},
 	build: buildProjectionEntry,
 }
