@@ -490,7 +490,7 @@ overlay shaper <verb>
                                                                                    the Pi /shaper-clear dialog; deny guards block model-run invocations)
     A ready result is not a signature: any process running as the same OS user, including any installed
     Pi extension, can forge a clearance record. Readiness grants no execution authority.
-    Handoff versions 2 and 3 can reach ready: each acceptance item is {"criterion": ..., "verification":
+    Handoff versions 2 to 4 can reach ready: each acceptance item is {"criterion": ..., "verification":
     {"check": ...} or {"adjudication": ...}}, and the presented view shows every criterion with its planned
     check or adjudication. Checks are planned verification only; nothing runs them, and their results are
     downstream fulfillment evidence, not a readiness prerequisite. Handoff version 1 stays draft
@@ -502,13 +502,22 @@ overlay shaper <verb>
     such a handoff is invalid and never ready. Any item byte-identical to a Goal non_goal is refused. The presented view shows
     memory_scope and delivery_limit beside the Goal's memory_scope and delivery_boundary for human judgment.
     A version 2 ready output states that those plan fields are absent; a version 3 one states they are present.
+    Version 4 is version 3 with memory_scope replaced by memory_directive, a strict MemoryDirective v1 object
+    ({"version": 1, "scope": "none"|"goal"|"project", "sources": [...], "write": "none"}, the same object
+    `memory plan` reads); an unknown or case-variant key inside it is refused. A version 4 handoff pairs with a
+    Goal version 3, which likewise replaces memory_scope with memory_directive; handoff versions 1 to 3 pair
+    with a Goal version 2, and any other pairing is refused (goal_invalid). Goals versions 1 and 2, and handoff
+    versions 1 to 3, still parse and narrow nothing. The version 4 view (headed view 4) shows each directive on
+    one line, for example memory_directive "version=1 scope=goal sources=[engram,longterm-mem] write=none"
+    beside goal_memory_directive.
 
 overlay roles <verb>
     Forward reusable-role handoff verbs to the engine unchanged. Roles are data only: a closed
     vocabulary (prototyper, shaper, estimator, builder, sweeper, polisher, reviewer, delivery,
-    with sweeper and polisher optional) and a typed RoleHandoff v1 record chained by SHA-256 to
-    the previous record. No verb launches an agent, dispatches work, or grants execution
-    authority.
+    with sweeper and polisher optional) and a typed RoleHandoff record chained by SHA-256 to
+    the previous record. A v2 record may carry an optional `memory_directive` (a MemoryDirective
+    v1 object) that narrows what the next role reads; a chain may move from v1 to v2, never
+    back. No verb launches an agent, dispatches work, or grants execution authority.
     validate --file <path>                                                       read-only: strictly parse and validate one RoleHandoff record
     next    --project <id> --goal <id> --chain <id>                              read-only: allowed next roles from the chain's current position
     resume  --project <id> --goal <id> --chain <id>                              read-only: current role, whether it is interrupted, and why

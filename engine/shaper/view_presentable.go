@@ -58,7 +58,8 @@ func checkPresentableText(section string, value []byte) error {
 // unpresentable rune, first section in render order wins. Sections are named
 // goal, plan, goal_scope, goal_non_goals[i], out_of_scope[i],
 // acceptance[i].criterion, .check, or .adjudication (handoff version 2), the
-// version 3 sections named below, and flags[i].id, .kind, .field, or .item,
+// version 3 sections named below (memory_directive and goal_memory_directive
+// in place of the memory_scope pair for handoff version 4), and flags[i].id, .kind, .field, or .item,
 // with 0-based indexes.
 func checkPresentable(v PresentedView) error {
 	type section struct {
@@ -84,9 +85,10 @@ func checkPresentable(v PresentedView) error {
 		)
 	}
 	if v3 := v.V3; v3 != nil {
+		for _, s := range v3.memorySections() {
+			sections = append(sections, section{s.name, []byte(s.value)})
+		}
 		sections = append(sections,
-			section{"memory_scope", []byte(v3.MemoryScope)},
-			section{"goal_memory_scope", []byte(v3.GoalMemoryScope)},
 			section{"delivery_limit", []byte(v3.DeliveryLimit)},
 			section{"goal_delivery_boundary", []byte(v3.GoalDeliveryBoundary)},
 		)

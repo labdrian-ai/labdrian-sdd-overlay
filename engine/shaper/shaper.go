@@ -16,11 +16,12 @@ import (
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/fieldrule"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/jsonstrict"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/memoryscope"
 )
 
 // Handoff is the approved core of the Shaper handoff wire contract, in
-// version 1 or version 2. Its field order is also the canonical known-fields
-// order. The two versions share every field and differ only in the shape of
+// versions 1 to 4; the fields after OutOfScope belong to the later versions.
+// Its field order is also the canonical known-fields order. The two versions share every field and differ only in the shape of
 // acceptance: a version 1 handoff fills Acceptance with plain criterion
 // strings, and a version 2 handoff fills AcceptanceItems instead. Exactly one
 // of the two is non-nil for a handoff Parse returns.
@@ -48,9 +49,13 @@ type Handoff struct {
 	// Estimates holds the version 3 per-stage estimate list; it is nil for
 	// version 1 and 2.
 	Estimates []Estimate `json:"-"`
-	// MemoryScope is the version 3 memory scope; it is "" for version 1 and
-	// 2.
+	// MemoryScope is the version 3 memory scope; it is "" for version 1, 2,
+	// and 4.
 	MemoryScope string `json:"-"`
+	// MemoryDirective is the version 4 typed memory narrower, a strict
+	// MemoryDirective v1 object that replaces memory_scope; it is nil for
+	// version 1 to 3, which narrow nothing.
+	MemoryDirective *memoryscope.Directive `json:"-"`
 	// DeliveryLimit is the version 3 delivery limit; it is "" for version 1
 	// and 2.
 	DeliveryLimit string `json:"-"`
@@ -72,8 +77,10 @@ var handoffAllowedFields = []string{
 // item and its verification object. A document whose version member is the
 // JSON number 3 is parsed as version 3, version 2 plus roles, tests, risks,
 // estimates, memory_scope, and delivery_limit, applying the same strict
-// nested-key checks to every new nested object. Every other document takes
-// the version 1 path unchanged.
+// nested-key checks to every new nested object. A document whose version
+// member is the JSON number 4 is parsed as version 4, version 3 with
+// memory_scope replaced by memory_directive, a strict MemoryDirective v1
+// object. Every other document takes the version 1 path unchanged.
 func Parse(data []byte) (Handoff, error) {
 	if err := jsonstrict.CheckUTF8(data); err != nil {
 		return Handoff{}, fmt.Errorf("parse shaper handoff: %w", err)
@@ -82,13 +89,22 @@ func Parse(data []byte) (Handoff, error) {
 		return Handoff{}, fmt.Errorf("parse shaper handoff: %w", err)
 	}
 	allowedFields := handoffAllowedFields
-	if isVersion3(data) {
+	switch {
+	case isVersion3(data):
 		allowedFields = handoffAllowedFieldsV3
+	case isVersion4(data):
+		allowedFields = handoffAllowedFieldsV4
 	}
 	if err := jsonstrict.CheckKnownFields(data, "Shaper handoff", allowedFields); err != nil {
 		return Handoff{}, fmt.Errorf("parse shaper handoff: %w", err)
 	}
 	switch {
+	case isVersion4(data):
+		h, err := parseV4(data)
+		if err != nil {
+			return Handoff{}, fmt.Errorf("parse shaper handoff: %w", err)
+		}
+		return h, nil
 	case isVersion3(data):
 		h, err := parseV3(data)
 		if err != nil {
@@ -117,6 +133,9 @@ func Parse(data []byte) (Handoff, error) {
 // Shaper handoff, first error wins. It does not interpret natural-language
 // meaning, infer permissions, or prove semantic scope consistency.
 func (h Handoff) Validate() error {
+	if h.Version == 4 {
+		return h.validateV4()
+	}
 	if h.Version == 3 {
 		return h.validateV3()
 	}
@@ -203,4 +222,14 @@ func isVersion3(data []byte) bool {
 		return false
 	}
 	return bytes.Equal(bytes.TrimSpace(fields["version"]), []byte("3"))
+}
+
+// isVersion4 reports whether the top-level version member of data is exactly
+// the JSON number 4. Any other value is left to the version 1 to 3 paths.
+func isVersion4(data []byte) bool {
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(data, &fields); err != nil {
+		return false
+	}
+	return bytes.Equal(bytes.TrimSpace(fields["version"]), []byte("4"))
 }

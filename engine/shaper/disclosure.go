@@ -50,11 +50,24 @@ const PlanCompleteDisclosureV3 = "Plan completeness: ready covers the full Phase
 // lack any Phase 3 plan field.
 const ReadyDisclosureV3 = ForgeryDisclosure + " " + PlanCompleteDisclosureV3
 
+// PlanCompleteDisclosureV4 is PlanCompleteDisclosureV3 for a version 4
+// handoff, whose memory_directive replaces memory_scope.
+const PlanCompleteDisclosureV4 = "Plan completeness: ready covers the full Phase 3 plan: roles, tests, risks, estimates, memory_directive, and delivery_limit are present, alongside the approved handoff core and each acceptance criterion's planned verification. " +
+	"Planned checks, adjudications, and tests were not executed; their results are downstream fulfillment evidence, not proof that any criterion or test was met. Readiness grants no execution authority."
+
+// ReadyDisclosureV4 is what every output reporting StateReady for a version 4
+// handoff must print: the forgery limit first, then PlanCompleteDisclosureV4.
+const ReadyDisclosureV4 = ForgeryDisclosure + " " + PlanCompleteDisclosureV4
+
 // ReadyDisclosureFor returns the disclosure a caller reporting StateReady
-// must print for a handoff of the given version: ReadyDisclosureV3 for
-// version 3, ReadyDisclosure for every other version.
+// must print for a handoff of the given version: ReadyDisclosureV4 for
+// version 4, ReadyDisclosureV3 for version 3, ReadyDisclosure for every other
+// version.
 func ReadyDisclosureFor(version int) string {
-	if version == 3 {
+	switch version {
+	case 4:
+		return ReadyDisclosureV4
+	case 3:
 		return ReadyDisclosureV3
 	}
 	return ReadyDisclosure

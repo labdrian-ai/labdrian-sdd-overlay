@@ -156,6 +156,21 @@ func checkV3NestedFields(data []byte) error {
 // memory_scope and delivery_limit. The out_of_scope overlap rule extends to
 // tests and role responsibilities.
 func (h Handoff) validateV3() error {
+	return h.validatePlan(func() error {
+		if h.MemoryDirective != nil {
+			return fmt.Errorf("memory_directive is only valid in version 4")
+		}
+		if strings.TrimSpace(h.MemoryScope) == "" {
+			return fmt.Errorf("memory_scope must be a non-blank string")
+		}
+		return nil
+	})
+}
+
+// validatePlan holds the rules versions 3 and 4 share, in order, with memory
+// checking the version's own memory field where version 3 checks
+// memory_scope.
+func (h Handoff) validatePlan(memory func() error) error {
 	if err := h.validateAcceptanceCore(); err != nil {
 		return err
 	}
@@ -171,16 +186,11 @@ func (h Handoff) validateV3() error {
 	if err := validateEstimates(h.Stages, h.Estimates); err != nil {
 		return err
 	}
-	for _, field := range []struct {
-		name  string
-		value string
-	}{
-		{name: "memory_scope", value: h.MemoryScope},
-		{name: "delivery_limit", value: h.DeliveryLimit},
-	} {
-		if strings.TrimSpace(field.value) == "" {
-			return fmt.Errorf("%s must be a non-blank string", field.name)
-		}
+	if err := memory(); err != nil {
+		return err
+	}
+	if strings.TrimSpace(h.DeliveryLimit) == "" {
+		return fmt.Errorf("delivery_limit must be a non-blank string")
 	}
 	if err := checkNoExactOverlap("tests", h.Tests, h.OutOfScope); err != nil {
 		return err

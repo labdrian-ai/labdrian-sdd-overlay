@@ -65,11 +65,12 @@ func TestReadyDisclosureForSelectsByVersion(t *testing.T) {
 		{1, ReadyDisclosure},
 		{2, ReadyDisclosure},
 		{3, ReadyDisclosureV3},
-		{4, ReadyDisclosure},
+		{4, ReadyDisclosureV4},
+		{5, ReadyDisclosure},
 	} {
 		got := ReadyDisclosureFor(tc.version)
 		if got != tc.want {
-			t.Errorf("ReadyDisclosureFor(%d) = %q, want the %s statement", tc.version, got, map[bool]string{true: "version 3", false: "version 2"}[tc.want == ReadyDisclosureV3])
+			t.Errorf("ReadyDisclosureFor(%d) = %q, want %q", tc.version, got, tc.want)
 		}
 		if !strings.HasPrefix(got, ForgeryDisclosure) {
 			t.Errorf("ReadyDisclosureFor(%d) does not keep the forgery limit first", tc.version)

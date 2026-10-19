@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/jsonstrict"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/memoryscope"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/sha256hex"
 )
 
@@ -292,6 +293,13 @@ type PresentedViewV3 struct {
 	// GoalMemoryScope.
 	MemoryScope     string
 	GoalMemoryScope string
+	// MemoryDirective is a version 4 handoff's memory_directive, shown next
+	// to GoalMemoryDirective, the paired Goal v3's. When non-nil the view is
+	// headed view version 4 and shows memory_directive in place of
+	// memory_scope; each directive is rendered on one line by
+	// formatDirective.
+	MemoryDirective     *memoryscope.Directive
+	GoalMemoryDirective *memoryscope.Directive
 	// DeliveryLimit is the handoff's delivery_limit, shown next to
 	// GoalDeliveryBoundary.
 	DeliveryLimit        string
@@ -315,10 +323,15 @@ type PresentedViewV3 struct {
 // the acceptance section, the six version 3 fields: memory_scope paired with
 // goal_memory_scope, delivery_limit paired with goal_delivery_boundary, then
 // roles, tests, risks, and estimates. Planned tests and estimates are shown,
-// never executed or treated as a calendar commitment.
+// never executed or treated as a calendar commitment. A V3 holding a
+// MemoryDirective (a version 4 handoff) is headed view version 4, and shows
+// memory_directive paired with goal_memory_directive in place of the two
+// memory_scope sections.
 func RenderView(v PresentedView) []byte {
 	var b bytes.Buffer
 	switch {
+	case v.V3 != nil && v.V3.MemoryDirective != nil:
+		b.WriteString("labdrian shaper clearance view 4\n")
 	case v.V3 != nil:
 		b.WriteString("labdrian shaper clearance view 3\n")
 	case v.Acceptance != nil:
@@ -370,12 +383,34 @@ func writeViewList(b *bytes.Buffer, name string, values []string) {
 	}
 }
 
+// viewSection is one named text section of a presented view.
+type viewSection struct {
+	name  string
+	value string
+}
+
+// memorySections returns the two memory sections of v in render order: the
+// handoff's then the Goal's, as memory_directive and goal_memory_directive
+// for a version 4 handoff and as memory_scope and goal_memory_scope
+// otherwise.
+func (v *PresentedViewV3) memorySections() []viewSection {
+	if v.MemoryDirective == nil {
+		return []viewSection{{"memory_scope", v.MemoryScope}, {"goal_memory_scope", v.GoalMemoryScope}}
+	}
+	goalDirective := ""
+	if v.GoalMemoryDirective != nil {
+		goalDirective = formatDirective(*v.GoalMemoryDirective)
+	}
+	return []viewSection{{"memory_directive", formatDirective(*v.MemoryDirective)}, {"goal_memory_directive", goalDirective}}
+}
+
 // writeViewV3 renders the six version 3 fields: memory_scope paired with
 // goal_memory_scope, delivery_limit paired with goal_delivery_boundary, then
 // roles, tests, risks, and estimates, every string value length-prefixed.
 func writeViewV3(b *bytes.Buffer, v *PresentedViewV3) {
-	writeViewValue(b, "memory_scope", []byte(v.MemoryScope))
-	writeViewValue(b, "goal_memory_scope", []byte(v.GoalMemoryScope))
+	for _, s := range v.memorySections() {
+		writeViewValue(b, s.name, []byte(s.value))
+	}
 	writeViewValue(b, "delivery_limit", []byte(v.DeliveryLimit))
 	writeViewValue(b, "goal_delivery_boundary", []byte(v.GoalDeliveryBoundary))
 	fmt.Fprintf(b, "roles %d\n", len(v.Roles))

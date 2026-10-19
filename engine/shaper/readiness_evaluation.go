@@ -51,9 +51,10 @@ func (e *evaluation) checkHandoffSource() {
 }
 
 // checkGoal holds the Goal binding to the same rules as the handoff source, then parses the Goal
-// bytes and requires a version 2 Goal of the handoff's own project and goal id. A Goal that passes
-// raises the overlap with its non_goals: refused as blockers for a version 3 handoff (OD6),
-// flagged for human review for the others.
+// bytes and requires a Goal of goalVersionFor the handoff's version (2, or 3 for a version 4
+// handoff) and of the handoff's own project and goal id. A Goal that passes raises the overlap
+// with its non_goals: refused as blockers for a version 3 or 4 handoff (OD6), flagged for human
+// review for the others.
 func (e *evaluation) checkGoal() {
 	binding := e.in.Goal
 	if binding == nil {
@@ -72,12 +73,12 @@ func (e *evaluation) checkGoal() {
 	switch {
 	case err != nil:
 		e.refuse(ReasonGoalInvalid, "%v", err)
-	case e.g.Version != 2:
-		e.refuse(ReasonGoalInvalid, "goal has version %d, want 2", e.g.Version)
+	case e.g.Version != goalVersionFor(e.h.Version):
+		e.refuse(ReasonGoalInvalid, "goal has version %d, want %d", e.g.Version, goalVersionFor(e.h.Version))
 	case e.g.ProjectID != e.h.ProjectID || e.g.GoalID != e.h.GoalID:
 		e.refuse(ReasonGoalIdentityMismatch, "handoff (%q, %q), goal (%q, %q)", e.h.ProjectID, e.h.GoalID, e.g.ProjectID, e.g.GoalID)
 	default:
-		if e.h.Version == 3 {
+		if e.h.Version >= 3 {
 			e.blockers = append(e.blockers, od6Overlaps(e.h, e.g.NonGoals)...)
 		} else {
 			e.flags = nonGoalOverlapFlags(e.h, e.g.NonGoals)
@@ -129,7 +130,7 @@ func (e *evaluation) subjectAndView() (*Subject, []byte) {
 }
 
 // presentedView is the content the view is rendered from: the Goal and the plan as bytes and in
-// their parts, the flags, and for a version 3 handoff the six sections it adds.
+// their parts, the flags, and for a version 3 or 4 handoff the six sections it adds.
 func (e *evaluation) presentedView() PresentedView {
 	presented := PresentedView{
 		GoalBytes:    e.in.Goal.GoalBytes,
@@ -140,7 +141,7 @@ func (e *evaluation) presentedView() PresentedView {
 		Acceptance:   e.h.AcceptanceItems,
 		Flags:        e.flags,
 	}
-	if e.h.Version == 3 {
+	if e.h.Version >= 3 {
 		presented.V3 = &PresentedViewV3{
 			Roles:                e.h.Roles,
 			Tests:                e.h.Tests,
@@ -148,6 +149,8 @@ func (e *evaluation) presentedView() PresentedView {
 			Estimates:            e.h.Estimates,
 			MemoryScope:          e.h.MemoryScope,
 			GoalMemoryScope:      e.g.MemoryScope,
+			MemoryDirective:      e.h.MemoryDirective,
+			GoalMemoryDirective:  e.g.MemoryDirective,
 			DeliveryLimit:        e.h.DeliveryLimit,
 			GoalDeliveryBoundary: e.g.DeliveryBoundary,
 		}
