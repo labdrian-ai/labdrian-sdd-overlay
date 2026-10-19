@@ -162,6 +162,14 @@ func TestGateWarnsWhenItCannotComputeThePlanOfAProceduralSkill(t *testing.T) {
 	w := loadedWorkflow("no-such-profile", workflow.StatusRunning)
 	warned(t, "Skill", proceduralGate(w, skillCall("deploy-checks"), lockOf()), "no-such-profile", "not checked")
 	allowed(t, "another skill", proceduralGate(w, skillCall("go-testing"), lockOf()))
+	// With the lock unreadable too, the plan is what could not be computed first, and the warning
+	// says so rather than blaming the lock.
+	broken := projection.ProceduralSkills{Unreadable: "parse project lock: unsupported version 2"}
+	got := proceduralGate(w, skillCall("deploy-checks"), broken)
+	warned(t, "Skill with a broken lock", got, "memory plan", "could not be computed", "no-such-profile", "not checked")
+	if strings.Contains(got.Warning, "lock") {
+		t.Errorf("warning %q blames the lock for a plan that could not be computed", got.Warning)
+	}
 }
 
 // TestTheProceduralRuleAppliesInEveryOpenStatusAndOnlyThen.

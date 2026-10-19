@@ -49,6 +49,11 @@ func (r proceduralLockReader) Load(dir string) projection.ProceduralSkills {
 		for _, target := range entry.Targets {
 			if file, ok := skillFileIn(root, target); ok {
 				skill.SkillFiles = append(skill.SkillFiles, file)
+				// A session that entered through a link names the root by the link; the gate
+				// compares the real path of a Read (realSkillFile), so the real path is listed too.
+				if real, err := filepath.EvalSymlinks(file); err == nil && real != file {
+					skill.SkillFiles = append(skill.SkillFiles, real)
+				}
 			}
 		}
 		out.Skills = append(out.Skills, skill)

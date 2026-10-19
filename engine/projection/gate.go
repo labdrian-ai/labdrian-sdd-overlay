@@ -340,7 +340,12 @@ func proceduralGate(in GateInput, s workflow.State, use skillUse) GateResult {
 	if in.Procedural.Unreadable != "" {
 		b := in.Binding.Binding
 		plan, err := resolvePlan(s, b.ProjectID)
-		if err == nil && plan.Scope != memoryscope.ScopeNone && slices.Contains(plan.Sources, memoryscope.SourceProceduralSkills) {
+		if err != nil {
+			// The plan is the first thing the gate could not read, so the warning names it.
+			return GateResult{Warning: "labdrian: the memory plan of " + workflowRef(b) + " could not be computed" + detailIn(err.Error()) +
+				", so this " + use.what() + " was not checked against it."}
+		}
+		if plan.Scope != memoryscope.ScopeNone && slices.Contains(plan.Sources, memoryscope.SourceProceduralSkills) {
 			return GateResult{}
 		}
 		return GateResult{Warning: "labdrian: the procedural skills lock of this repository could not be read" + detailIn(in.Procedural.Unreadable) +

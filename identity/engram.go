@@ -7,9 +7,9 @@ import "strings"
 // where there is no remote, the name of the directory, which the shared identity already is. So it
 // is the last segment of project, and project itself when it has no slash. The case is kept.
 //
-// It exists for the memory gate's Engram project check (C23, decision 3 of M2; wired by M4), which
-// compares the project an Engram read names with EngramName of the workflow's identity by exact
-// equality. Nothing calls it yet.
+// It exists for the memory gate's Engram project check (C23, decision 3 of M2; wired by M4 in
+// engine/cmd), which compares the project an Engram read names with EngramName of the workflow's
+// identity by exact equality.
 func EngramName(project string) string {
 	if i := strings.LastIndex(project, "/"); i >= 0 {
 		return project[i+1:]

@@ -8,6 +8,8 @@ package main
 // reply that says it.
 
 import (
+	"path/filepath"
+
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gate"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/hookwire"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection"
@@ -50,8 +52,22 @@ func gateCall(in hookwire.PreToolUse) projection.ToolCall {
 			return projection.QueryArguments{Named: q.Named, Project: q.Project, AllProjects: q.AllProjects}
 		},
 		ReadSkill:    in.Skill,
-		ReadFilePath: in.FilePath,
+		ReadFilePath: func() string { return realSkillFile(in.FilePath()) },
 	}
+}
+
+// realSkillFile is path with its symbolic links resolved when it is an absolute path to a SKILL.md
+// that exists, so a skill file read through a link to the repository is the file the lock names
+// (proceduralLockReader lists the real paths too); any other path is returned as it is, without
+// touching the file system.
+func realSkillFile(path string) string {
+	if filepath.Base(path) != "SKILL.md" || !filepath.IsAbs(path) {
+		return path
+	}
+	if real, err := filepath.EvalSymlinks(path); err == nil {
+		return real
+	}
+	return path
 }
 
 // gateReply is what a decision of the projection gate says to Claude Code. Only a denial has a

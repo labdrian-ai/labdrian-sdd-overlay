@@ -372,6 +372,29 @@ func TestPreToolUseGatesTheProceduralSkillsOfTheLock(t *testing.T) {
 	assertSilent(t, "odd/Read", odd.gate(t, odd.repo, "Read", map[string]any{"file_path": filepath.Join(odd.repo, ".claude", "skills", "deploy-checks", "SKILL.md")}))
 }
 
+// TestPreToolUseMatchesASkillFileThroughASymbolicLink: a SKILL.md of the lock read through a link
+// to the repository, or read by its real path from a session that entered through the link, is
+// the same file and is denied like it.
+func TestPreToolUseMatchesASkillFileThroughASymbolicLink(t *testing.T) {
+	e := newHookEnv(t)
+	writeProceduralLock(t, e.repo)
+	writeFixtureFile(t, filepath.Join(e.repo, ".claude", "skills", "deploy-checks", "SKILL.md"), "# deploy-checks\n")
+	e.running(t, "proj-1", "wf-1", "sdd")
+	link := filepath.Join(e.dir, "link-to-repo")
+	if err := os.Symlink(e.repo, link); err != nil {
+		t.Fatal(err)
+	}
+	realFile := filepath.Join(e.repo, ".claude", "skills", "deploy-checks", "SKILL.md")
+	linkedFile := filepath.Join(link, ".claude", "skills", "deploy-checks", "SKILL.md")
+
+	assertDenied(t, "a linked path from the repository", e.gate(t, e.repo, "Read", map[string]any{"file_path": linkedFile}),
+		`SKILL.md of procedural skill "deploy-checks"`)
+	assertDenied(t, "the real path from the link", e.gate(t, link, "Read", map[string]any{"file_path": realFile}),
+		`SKILL.md of procedural skill "deploy-checks"`)
+	assertDenied(t, "a linked path from the link", e.gate(t, link, "Read", map[string]any{"file_path": linkedFile}),
+		`SKILL.md of procedural skill "deploy-checks"`)
+}
+
 // TestPreToolUseWithoutALockChecksNoSkill: no lock means no procedural skill: silent.
 func TestPreToolUseWithoutALockChecksNoSkill(t *testing.T) {
 	e := newHookEnv(t)
