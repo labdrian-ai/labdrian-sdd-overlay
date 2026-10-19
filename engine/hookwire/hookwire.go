@@ -57,8 +57,9 @@ const (
 
 // MaxPostToolUseBytes bounds the input DecodePostToolUse accepts. The input carries the tool's
 // whole response, which for a memory read can be far over MaxEnvelopeBytes, and the hook keeps
-// only its digest, so the bound is wider; it exists so that a runaway writer cannot make the hook
-// read without end.
+// only its digest, hashed as it is read, so the bound is wider; it exists so that a runaway writer
+// cannot make the hook read without end. The other fields of the input are still bounded by
+// MaxEnvelopeBytes.
 const MaxPostToolUseBytes = 64 << 20
 
 // MaxEnvelopeBytes bounds the input DecodeUserPromptSubmit and DecodePreToolUse accept. A

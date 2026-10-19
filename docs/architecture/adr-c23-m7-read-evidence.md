@@ -36,9 +36,11 @@ no PostToolUse hook and no memory evidence in the workflow log or handoffs."
    `mem_update`, `promote`) are not recorded and get no classifier.
 3. **A digest and a size, never content (the owner, 2026-10-19).** From `tool_response` the record
    keeps only the SHA-256 and the length of its JSON value as sent. Project, goal and ids come from
-   `tool_input`. The hook reads the envelope as a stream of tokens, up to `MaxPostToolUseBytes`
-   (64 MiB), so a response over today's 1 MiB envelope bound is still recorded. The response's JSON
-   value is held in memory only while it is hashed, then dropped; it never reaches disk. An input
+   `tool_input`. The hook reads its input in one pass, up to `MaxPostToolUseBytes` (64 MiB), so a
+   response over today's 1 MiB envelope bound is still recorded. The response's JSON value is
+   checked and hashed as it is read, a buffer at a time, and never held whole; it never reaches
+   disk. Every other field is kept, and bounded by the 1 MiB envelope bound, as for the other
+   events (review A, R4-buffered-response: the first version held the whole response). An input
    over 64 MiB is input the hook cannot use, which is silence, as for every projection hook. An
    input with no `tool_response` is still a read that ran, recorded with an empty digest and a
    length of 0.
