@@ -8,7 +8,8 @@ import (
 )
 
 // Search runs an FTS5 search scoped to project, excluding soft-deleted rows
-// (R-020), in Engram's own bm25 order, limited to limit rows.
+// (R-020), in Engram's own bm25 order, limited to limit rows, keeping only the
+// rows filter lets through (applied before the limit).
 //
 // It asks twice at most. The first attempt requires every token; only if
 // that finds nothing does it retry requiring any one of them. Ordering the
@@ -22,14 +23,14 @@ import (
 //
 // The words searched, and the stopwords dropped, are the model's own
 // (memory.SearchTokens); this method only turns them into a MATCH expression.
-func (s *Store) Search(project, query string, limit int, excludeTypes ...string) (memory.SearchResult, error) {
+func (s *Store) Search(project, query string, limit int, filter memory.SearchFilter) (memory.SearchResult, error) {
 	tokens, dropped := memory.SearchTokens(query)
 	if len(tokens) == 0 {
 		return memory.SearchResult{MatchMode: memory.MatchAll}, nil
 	}
 	result := memory.SearchResult{MatchMode: memory.MatchAll, DroppedTokens: dropped}
 
-	rows, err := s.searchMatching(project, joinTokens(tokens, " AND "), limit, excludeTypes)
+	rows, err := s.searchMatching(project, joinTokens(tokens, " AND "), limit, filter)
 	if err != nil {
 		return memory.SearchResult{}, err
 	}
@@ -40,7 +41,7 @@ func (s *Store) Search(project, query string, limit int, excludeTypes ...string)
 		return result, nil
 	}
 
-	rows, err = s.searchMatching(project, joinTokens(tokens, " OR "), limit, excludeTypes)
+	rows, err = s.searchMatching(project, joinTokens(tokens, " OR "), limit, filter)
 	if err != nil {
 		return memory.SearchResult{}, err
 	}
@@ -67,18 +68,23 @@ func (s *Store) Search(project, query string, limit int, excludeTypes ...string)
 // offset. The window around that offset is then a character budget the
 // model controls (memory.SnippetAt), and it behaves identically whatever
 // tokenizer the index was built with.
-func (s *Store) searchMatching(project, match string, limit int, excludeTypes []string) ([]memory.Row, error) {
-	// The exclusion is a filter, applied in SQL beside the existing
-	// project and soft-delete filters. It changes which rows are
-	// eligible, never their order: the surviving rows come back in the
-	// same bm25 sequence they would have without it (R-006).
+func (s *Store) searchMatching(project, match string, limit int, filter memory.SearchFilter) ([]memory.Row, error) {
+	// The exclusion and the goal are filters, applied in SQL beside the
+	// existing project and soft-delete filters and before the LIMIT. They
+	// change which rows are eligible, never their order: the surviving rows
+	// come back in the same bm25 sequence they would have without them
+	// (R-006).
 	args := []any{matchOpen, matchClose, match, project}
 	exclusion := ""
-	if len(excludeTypes) > 0 {
-		exclusion = " AND o.type NOT IN (?" + strings.Repeat(", ?", len(excludeTypes)-1) + ")"
-		for _, t := range excludeTypes {
+	if len(filter.ExcludeTypes) > 0 {
+		exclusion = " AND o.type NOT IN (?" + strings.Repeat(", ?", len(filter.ExcludeTypes)-1) + ")"
+		for _, t := range filter.ExcludeTypes {
 			args = append(args, t)
 		}
+	}
+	if filter.Goal != "" {
+		exclusion += goalClause
+		args = append(args, filter.Goal)
 	}
 	args = append(args, limit)
 
@@ -113,6 +119,22 @@ func (s *Store) searchMatching(project, match string, limit int, excludeTypes []
 	}
 	return results, nil
 }
+
+// goalClause keeps a row when memory.TopicVisibleUnderGoal would, for the goal
+// bound to its one placeholder: a row with no goal (no topic, a topic that does
+// not begin with the prefix, or one whose id is empty or not closed by a "/"),
+// or a row whose id -- the text between the prefix and the first "/" after it
+// -- equals the goal. It compares the parsed id rather than matching a pattern,
+// so no character of a goal id (a "_", a "%", a "/") can widen the match, and a
+// goal containing "/" keeps no goal's rows, as the domain rule does. The test
+// TestSearch_UnderAGoalKeepsThatGoalAndNoGoal holds the two together.
+var goalClause = func() string {
+	prefix := memory.GoalPrefix
+	n := len(prefix)
+	rest := fmt.Sprintf("substr(o.topic_key, %d)", n+1)
+	return fmt.Sprintf(" AND (o.topic_key IS NULL OR substr(o.topic_key, 1, %d) <> '%s'"+
+		" OR instr(%s, '/') <= 1 OR substr(%s, 1, instr(%s, '/') - 1) = ?)", n, prefix, rest, rest, rest)
+}()
 
 // matchOpen and matchClose bracket each match inside highlight()'s
 // output. They are Unicode private-use characters because no text ever

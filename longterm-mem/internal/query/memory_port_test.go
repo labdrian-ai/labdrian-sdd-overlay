@@ -27,13 +27,15 @@ type fakeMemory struct {
 	searchedQuery   string
 	searchedLimit   int
 	searchedExclude []string
+	searchedFilter  memory.SearchFilter
 	standingsFor    []int64
 	snapshotProject string
 	snapshotIDs     []int64
 }
 
-func (f *fakeMemory) Search(project, query string, limit int, excludeTypes ...string) (memory.SearchResult, error) {
-	f.searchedProject, f.searchedQuery, f.searchedLimit, f.searchedExclude = project, query, limit, excludeTypes
+func (f *fakeMemory) Search(project, query string, limit int, filter memory.SearchFilter) (memory.SearchResult, error) {
+	f.searchedProject, f.searchedQuery, f.searchedLimit, f.searchedExclude = project, query, limit, filter.ExcludeTypes
+	f.searchedFilter = filter
 	return f.search, f.searchErr
 }
 

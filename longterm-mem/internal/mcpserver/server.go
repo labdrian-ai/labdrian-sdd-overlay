@@ -107,6 +107,9 @@ type QueryIn struct {
 	// the vault is never defaulted in, only queried when named here
 	// explicitly.
 	Sources []string `json:"sources,omitempty" jsonschema:"sources to query: engram-fts, engram-embed, vault (default: engram-fts plus engram-embed once the project's embedding index exists, else engram-fts only; vault is not queried unless named)"`
+	// Goal mirrors query.Request.Goal (ADR C23 M5): that goal's records and
+	// the records of no goal, never another goal's. Omitted, nothing changes.
+	Goal string `json:"goal,omitempty" jsonschema:"a goal id: return that goal's records (an Engram topic beginning goal:<id>/, a vault page tagged goal:<id>) and the records of no goal, leaving out other goals' (default: every record)"`
 }
 
 // QueryOut is the query tool's output: query.Result's own JSON shape,
@@ -208,7 +211,7 @@ func queryHandler(deps Deps) mcp.ToolHandlerFor[QueryIn, QueryOut] {
 		if deps.Query == nil {
 			return nil, QueryOut{}, fmt.Errorf("mcpserver: query dependency is not configured")
 		}
-		result, err := deps.Query(ctx, query.Request{Project: in.Project, Query: in.Query, Top: in.Top, ExcludeTypes: in.ExcludeTypes, Sources: in.Sources})
+		result, err := deps.Query(ctx, query.Request{Project: in.Project, Query: in.Query, Top: in.Top, ExcludeTypes: in.ExcludeTypes, Sources: in.Sources, Goal: in.Goal})
 		if err != nil {
 			return nil, QueryOut{}, err
 		}

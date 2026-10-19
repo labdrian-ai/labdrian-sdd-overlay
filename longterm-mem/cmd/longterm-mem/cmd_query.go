@@ -20,7 +20,9 @@ const maxTopN = 50
 const unsetTopN = -1
 
 // cmdQuery implements `longterm-mem query --project P "<text>" [--top N]
-// [--vault DIR] [--json]` (R-006, R-026). A query text beginning with "-"
+// [--exclude-types T,...] [--goal ID] [--vault DIR] [--json]` (R-006, R-026;
+// --goal is ADR C23 M5: that goal's records and the records of no goal, never
+// another goal's; without it nothing changes). A query text beginning with "-"
 // needs no dedicated guard: flag.Parse already rejects a leading-dash
 // positional as an unrecognized flag (exit 2) unless "--" precedes it, at
 // which point it is stdlib's own literal positional arg (2b-2 advisory).
@@ -31,6 +33,7 @@ func (c commands) cmdQuery(args []string) int {
 	vaultDir := fs.String("vault", "", "vault path override")
 	top := fs.Int("top", unsetTopN, "results per source, 1-50 (default 5)")
 	excludeTypes := fs.String("exclude-types", "", "comma-separated Engram observation types to leave out (default: none)")
+	goal := fs.String("goal", "", "a goal id: return that goal's records and the records of no goal, leaving out other goals' (default: every record)")
 	asJSON := fs.Bool("json", false, "print the result as JSON")
 	if err := fs.Parse(args); err != nil {
 		return exitUsage
@@ -67,7 +70,7 @@ func (c commands) cmdQuery(args []string) int {
 
 	result, err := a.runQuery(context.Background(), store, vaultRoot, query.Request{
 		Project: resolvedProject, Query: rest[0], Top: requestedTop,
-		ExcludeTypes: splitTypes(*excludeTypes),
+		ExcludeTypes: splitTypes(*excludeTypes), Goal: *goal,
 	})
 	if err != nil {
 		// query.Run degrades a failing vault to a diagnostic and only

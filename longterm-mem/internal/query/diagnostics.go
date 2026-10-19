@@ -104,4 +104,8 @@ const (
 	// or trusted (a corrupted manifest, for example). The query answers without embedding rows, as it does for an
 	// index nobody built, and this diagnostic carries the load error so the failure is not read as "no index".
 	DiagnosticEmbeddingIndexUnreadable = "embedding_index_unreadable"
+	// DiagnosticVaultPageTagsUnreadable names the vault pages a query under a goal left out because their
+	// frontmatter tags could not be read: such a page may be another goal's, so it is not shown, and the
+	// narrowing is said rather than left to look like a vault with nothing more to offer.
+	DiagnosticVaultPageTagsUnreadable = "vault_page_tags_unreadable"
 )

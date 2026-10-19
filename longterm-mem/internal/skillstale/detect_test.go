@@ -358,6 +358,27 @@ func TestDetect_ReadsTheNewestRecordOfACandidate(t *testing.T) {
 	}
 }
 
+// A record made under a goal carries the topic prefix `goal:<id>/` (ADR C23 M5, decision 1); it is still a record of
+// the candidate its topic names under the prefix, and the newest record wins whichever goal made it.
+func TestDetect_ReadsACandidateRecordMadeUnderAGoal(t *testing.T) {
+	observation := func(id int64, updated, lastObserved, topic string) memory.Observation {
+		return memory.Observation{ID: id, TopicKey: topic, UpdatedAt: updated,
+			Content: "**Status**: status-" + fmt.Sprint(id) + "\n**LastObserved**: " + lastObserved + "\n"}
+	}
+	w := newWorld().skill("s", text("Nothing to run.\n"))
+	w.observations.observations = []memory.Observation{
+		observation(1, "2026-01-01 00:00:00", "2000-01-01T00:00:00Z", candidateOf("s")),
+		observation(2, "2026-02-01 00:00:00", "2000-02-02T00:00:00Z", "goal:g-42/"+candidateOf("s")),
+	}
+
+	findings := w.detect(t)
+
+	finding := findingOf(t, findings, "s")
+	if finding.Status != "status-2" || finding.Signals[0].Since != "2000-02-02T00:00:00Z" {
+		t.Errorf("finding = %+v, want the record of observation 2, made under goal g-42", finding)
+	}
+}
+
 func TestDetect_ReadsTheCandidatesOfTheProjectItWasGiven(t *testing.T) {
 	w := newWorld().skill("s", text("Nothing to run.\n"))
 

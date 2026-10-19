@@ -81,7 +81,7 @@ The binary (`longterm-mem <subcommand> [flags]`) currently dispatches:
 
 | Subcommand | Flags | Purpose |
 |---|---|---|
-| `query` | `[--project P]` `"<text>"` `[--top N]` `[--exclude-types T,...]` `[--vault DIR]` `[--json]` | Query Engram FTS5 (always) and, when named in `sources`, the embedding index and the vault; results are unioned and ranked. The CLI queries FTS only. |
+| `query` | `[--project P]` `"<text>"` `[--top N]` `[--exclude-types T,...]` `[--goal ID]` `[--vault DIR]` `[--json]` | Query Engram FTS5 (always) and, when named in `sources`, the embedding index and the vault; results are unioned and ranked. The CLI queries FTS only. `--goal` returns that goal's records and the records of no goal, never another goal's (see [Goals](#goals)). |
 | `index` | `[--project P]` `[--vault DIR]` `[--rebuild]` | Provision/refresh the vault's local retrieval index (no LLM). |
 | `index --embeddings` | `[--project P]` `[--embed-model M]` `[--embed-dimension N]` `[--embed-input-limit C]` `[--embed-endpoint URL]` `[--allow-remote-embedder]` | Build or incrementally update the embedding index over Engram rows against a loopback Ollama backend (`nomic-embed-text`, 768 dims by default). Unchanged rows are fingerprinted and reused, so a re-run after a few new observations takes well under a second. |
 | `sync` | `[--project P]` `[--vault DIR]` `[--dry-run]` | Promote eligible Engram observations into vault pages; `--dry-run` reports without writing. An observation is eligible only if it is pinned, explicitly targeted, or carries a curated `topic_key` whose first path segment is not `sdd`, `review`, or `delivery` — an untopiced observation is not automatically eligible. A page already promoted under a previous, looser eligibility rule is neither retracted nor refreshed by `sync` once its observation stops being eligible under the current rule; use an explicit `promote` or a pin to keep such a page current. |
@@ -138,6 +138,23 @@ Global env overrides: `LONGTERM_MEM_ENGRAM_DB` (Engram database path),
 registry path), `LONGTERM_MEM_STATE_DIR` (state directory, default
 `~/.labdrian-overlay/longterm-mem`).
 
+### Goals
+
+A record created under a goal carries it (`docs/architecture/adr-c23-m5-goal-filter.md`
+in the overlay repository): an Engram observation's `topic_key` begins with
+`goal:<id>/` (for example `goal:g-42/architecture/auth`; the id ends at the
+first `/`), and `promote` tags its page `goal:<id>` after `memory` and the
+type. Any other topic belongs to no goal, and a page promoted from it has the
+same tags as before goals.
+
+`query --goal <id>` (the MCP `goal` argument) keeps that goal's records and the
+records of no goal, and leaves out another goal's: `engram-fts` in its SQL,
+before the limit; `engram-embed` on each observation's topic, before its cut;
+`vault` on each page's frontmatter `tags`, after asking the vault for three
+times `top` candidates (at most 100). A vault page whose tags cannot be read is
+left out under a goal and named in a `vault_page_tags_unreadable` diagnostic.
+Without a goal nothing changes.
+
 ## MCP registration
 
 `longterm-mem mcp` is the stdio MCP server that `register` wires each runtime
@@ -145,12 +162,13 @@ to. It exposes three tools. `query` and `promote` take an explicit `project`
 field and get no working-directory default (the server's cwd is the host
 runtime's, not the project's):
 
-- `query` — `project`, `query`, optional `top`, `exclude_types`, and
-  `sources`. `sources` names which arms answer: `engram-fts` (the default and
+- `query` — `project`, `query`, optional `top`, `exclude_types`, `sources`
+  and `goal`. `sources` names which arms answer: `engram-fts` (the default and
   the only default), `engram-embed` (the embedding index; requires a prior
   `index --embeddings`, and the response's `coverage` reports how many live
-  rows the index covers), `vault`. Responses are byte-budgeted and carry
-  `diagnostics` naming anything that degraded.
+  rows the index covers), `vault`. `goal` narrows every arm to that goal's
+  records and the records of no goal (see [Goals](#goals)). Responses are
+  byte-budgeted and carry `diagnostics` naming anything that degraded.
 - `get` — read one Engram observation whole by `engram_id`.
 - `promote` — explicitly promote one observation into the vault.
 

@@ -75,6 +75,10 @@ The gate checks a query's `project` only (`engine/projection/gate.go`, `longterm
 - **The gate stays total.** A plan that cannot be computed, or a call whose arguments cannot be read,
   is an allow, as before. A workflow without a goal id under scope goal cannot exist (`Resolve`
   requires one).
+- **The prefix says only the goal.** Every other rule that reads a topic reads what follows the
+  prefix (`memory.TopicWithoutGoal`): promotion's curated topics, so `goal:g-42/sdd/x` is excluded
+  as `sdd/x` is, and the skill candidates, so a candidate record made under a goal is still that
+  candidate's.
 - **M6** tells the agent to create records under a goal with the topic prefix and to pass `goal` to
   `query`.
 - **Accepted cost.** A record created under a goal without the prefix is visible to every goal, as

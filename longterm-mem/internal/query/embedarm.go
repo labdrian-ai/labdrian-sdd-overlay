@@ -107,6 +107,9 @@ type embeddingArm struct {
 	// of the sources and the answer cannot describe two indexes. None reads the index, as a call that names the
 	// embedding source does.
 	Reading *indexReading
+	// Goal, when set, leaves out another goal's observations, by each live observation's topic
+	// (memory.TopicVisibleUnderGoal), before the cut at top. Empty keeps every observation.
+	Goal string
 }
 
 // indexReading is one reading of a project's embedding index through the port: the index, or the error that says
@@ -235,7 +238,7 @@ func (a embeddingArm) run(ctx context.Context, project, queryText string, top in
 			break
 		}
 		obs, ok := liveByID[c.entry.EngramID]
-		if !ok {
+		if !ok || !memory.TopicVisibleUnderGoal(obs.TopicKey, a.Goal) {
 			continue
 		}
 		// a.Index is not missing here: idx came from a load that returned no error, and loadEmbeddingIndex

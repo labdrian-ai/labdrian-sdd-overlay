@@ -30,6 +30,16 @@ const (
 	MatchAny = "any"
 )
 
+// SearchFilter narrows which rows a search may return. It filters and never re-ranks: the rows that survive keep
+// the store's own rank order, and the limit applies after the filter. The zero value narrows nothing.
+type SearchFilter struct {
+	// ExcludeTypes are observation types to leave out.
+	ExcludeTypes []string
+	// Goal, when set, keeps that goal's records and the records of no goal, and leaves out another goal's
+	// (TopicVisibleUnderGoal). Empty keeps every record.
+	Goal string
+}
+
 // SearchResult is what a search found and how it had to ask.
 //
 // The two are inseparable on purpose. Rows alone cannot distinguish a precise hit from a

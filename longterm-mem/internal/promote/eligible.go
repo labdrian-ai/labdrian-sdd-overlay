@@ -34,9 +34,10 @@ func Eligible(obs memory.Observation, explicit bool) bool {
 // segments are "sdd-init" and "sddx", not "sdd". A key starting with "/"
 // (e.g. "/sdd/auth" or "/") splits into an empty first segment, which is
 // treated as uncurated rather than falling through the exclusion map by
-// accident.
+// accident. A goal's topic (`goal:<id>/...`, ADR C23 M5) is judged by what
+// follows its goal prefix.
 func curatedTopicKey(key string) bool {
-	key = strings.TrimSpace(key)
+	key = memory.TopicWithoutGoal(strings.TrimSpace(key))
 	if key == "" {
 		return false
 	}
