@@ -1,0 +1,332 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:bc5916967f42843e9500ce98c543d86a725a81d4b6916dafca4be722aeeb099c",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-ff6e780419769436",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "2e7d35ca884414ae0676387442f9d006c72d6324",
+      "candidate_tree": "c4c2238158dd7ef1931d4cae99c8ea661a436d28",
+      "paths_digest": "sha256:55373b06ab48c0432bdd09cf97cbca55af64c10790f4383d33c2efaee2cfd0cf",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/cmd/status_command_test.go",
+        "engine/cmd/testdata/status-golden/status-binary-states.golden",
+        "engine/cmd/testdata/status-golden/status-contract-states.golden",
+        "engine/cmd/testdata/status-golden/status-families-missing-or-drifted.golden",
+        "engine/cmd/testdata/status-golden/status-in-an-empty-home.golden",
+        "engine/cmd/testdata/status-golden/status-of-a-complete-install.golden",
+        "engine/cmd/testdata/status-golden/status-registry-states.golden",
+        "engine/cmd/testdata/status-golden/status-settings-that-are-not-an-object.golden",
+        "engine/cmd/testdata/status-golden/status-settings-without-the-hooks.golden",
+        "engine/cmd/testdata/status-golden/status-with-no-home.golden",
+        "engine/settings/merge.go",
+        "engine/settings/projection.go",
+        "engine/settings/settingsfile/golden_unix_test.go",
+        "engine/settings/settingsfile/projection_test.go",
+        "engine/status/status.go",
+        "engine/status/status_test.go"
+      ],
+      "identity": "sha256:983e363907f8fccab5af678aa6b79d7fabec7975a1af209bee4ca641070bf869"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "2e7d35ca884414ae0676387442f9d006c72d6324",
+      "candidate_tree": "c4c2238158dd7ef1931d4cae99c8ea661a436d28",
+      "paths_digest": "sha256:55373b06ab48c0432bdd09cf97cbca55af64c10790f4383d33c2efaee2cfd0cf",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/cmd/status_command_test.go",
+        "engine/cmd/testdata/status-golden/status-binary-states.golden",
+        "engine/cmd/testdata/status-golden/status-contract-states.golden",
+        "engine/cmd/testdata/status-golden/status-families-missing-or-drifted.golden",
+        "engine/cmd/testdata/status-golden/status-in-an-empty-home.golden",
+        "engine/cmd/testdata/status-golden/status-of-a-complete-install.golden",
+        "engine/cmd/testdata/status-golden/status-registry-states.golden",
+        "engine/cmd/testdata/status-golden/status-settings-that-are-not-an-object.golden",
+        "engine/cmd/testdata/status-golden/status-settings-without-the-hooks.golden",
+        "engine/cmd/testdata/status-golden/status-with-no-home.golden",
+        "engine/settings/merge.go",
+        "engine/settings/projection.go",
+        "engine/settings/settingsfile/golden_unix_test.go",
+        "engine/settings/settingsfile/projection_test.go",
+        "engine/status/status.go",
+        "engine/status/status_test.go"
+      ],
+      "identity": "sha256:983e363907f8fccab5af678aa6b79d7fabec7975a1af209bee4ca641070bf869"
+    },
+    "genesis_paths": [
+      "engine/cmd/status_command_test.go",
+      "engine/cmd/testdata/status-golden/status-binary-states.golden",
+      "engine/cmd/testdata/status-golden/status-contract-states.golden",
+      "engine/cmd/testdata/status-golden/status-families-missing-or-drifted.golden",
+      "engine/cmd/testdata/status-golden/status-in-an-empty-home.golden",
+      "engine/cmd/testdata/status-golden/status-of-a-complete-install.golden",
+      "engine/cmd/testdata/status-golden/status-registry-states.golden",
+      "engine/cmd/testdata/status-golden/status-settings-that-are-not-an-object.golden",
+      "engine/cmd/testdata/status-golden/status-settings-without-the-hooks.golden",
+      "engine/cmd/testdata/status-golden/status-with-no-home.golden",
+      "engine/settings/merge.go",
+      "engine/settings/projection.go",
+      "engine/settings/settingsfile/golden_unix_test.go",
+      "engine/settings/settingsfile/projection_test.go",
+      "engine/status/status.go",
+      "engine/status/status_test.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-risk",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 239,
+    "correction_budget": 120,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "install-hooks writes a new SessionStart entry into the user's Claude Code settings and removes it with the family (risk: settings others consume); the status label and remediation text (readability); merge idempotence and status goldens pinned by tests (reliability)",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:0fc09adbb06107975c47d1274718014f1695a587b8a1a96ed8335c2e288dbfd2",
+    "capture_phase_revision": "sha256:fbf9e96fb8f3f59c51e42fd5673256c65e890ad903f4a8d26aa87c2559bc852b",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:983e363907f8fccab5af678aa6b79d7fabec7975a1af209bee4ca641070bf869",
+        "capture_phase_revision": "sha256:fbf9e96fb8f3f59c51e42fd5673256c65e890ad903f4a8d26aa87c2559bc852b",
+        "artifact_digest": "sha256:274d939351a3be3d9117b2f605bd1aae199a980a9211a0ada31528cd8f241ad1",
+        "result_hash": "sha256:9b3503f38ab26ef30638b0c40bca94c562f7e3511af390ee73dbb0a5eb77b03b",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:caab3a33502f1efccabda4c3fba70c840f626f91164e959a64e7ee837428810d",
+            "lineage_id": "review-ff6e780419769436",
+            "authority_revision": "sha256:fbf9e96fb8f3f59c51e42fd5673256c65e890ad903f4a8d26aa87c2559bc852b",
+            "target_identity": "sha256:983e363907f8fccab5af678aa6b79d7fabec7975a1af209bee4ca641070bf869",
+            "base_tree": "2e7d35ca884414ae0676387442f9d006c72d6324",
+            "candidate_tree": "c4c2238158dd7ef1931d4cae99c8ea661a436d28",
+            "changed_path_manifest_sha256": "sha256:82ea39b102c2c146d0ef934870f895a7c449a9ae84426f9e4094560b1ff5287c",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:caab3a33502f1efccabda4c3fba70c840f626f91164e959a64e7ee837428810d",
+            "raw_sha256": "sha256:748f9474719bb70c4208acc1543d030b75103ad5d51f8d871f70d3c16049e9ae",
+            "canonical_sha256": "sha256:672642c847fcf84fff9f25060d1011b586f4d48391415864e9d4d42f6f582ce7",
+            "result_hash": "sha256:9b3503f38ab26ef30638b0c40bca94c562f7e3511af390ee73dbb0a5eb77b03b",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:caab3a33502f1efccabda4c3fba70c840f626f91164e959a64e7ee837428810d",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/cmd/status_command_test.go",
+                "engine/cmd/testdata/status-golden/status-binary-states.golden",
+                "engine/cmd/testdata/status-golden/status-contract-states.golden",
+                "engine/cmd/testdata/status-golden/status-families-missing-or-drifted.golden",
+                "engine/cmd/testdata/status-golden/status-in-an-empty-home.golden",
+                "engine/cmd/testdata/status-golden/status-of-a-complete-install.golden",
+                "engine/cmd/testdata/status-golden/status-registry-states.golden",
+                "engine/cmd/testdata/status-golden/status-settings-that-are-not-an-object.golden",
+                "engine/cmd/testdata/status-golden/status-settings-without-the-hooks.golden",
+                "engine/cmd/testdata/status-golden/status-with-no-home.golden",
+                "engine/settings/merge.go",
+                "engine/settings/projection.go",
+                "engine/settings/settingsfile/golden_unix_test.go",
+                "engine/settings/settingsfile/projection_test.go",
+                "engine/status/status.go",
+                "engine/status/status_test.go"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "Reviewed all 16 patches. The behavioral change adds a SessionStart entry to the projection hook family in engine/settings/projection.go and extends removeHooks in engine/settings/merge.go to scan SessionStart, so uninstall removes the new entry.",
+              "Uninstall removal still uses the owned-entry identity check (ownedByAFamily). Foreign SessionStart entries are therefore not removed. projection_test.go checks this: a foreign SessionStart entry survives uninstall.",
+              "The hook command is the Labdrian binary with the fixed event argument SessionStart. The patch shows no user-controlled input reaching a shell, no secrets, and no new dependencies.",
+              "The status label changes and golden updates are consistent with each other. The new 'SessionStart projection hook' missing part appears in the drifted-state goldens.",
+              "Test-only helper changes in golden_unix_test.go edit recorded text. They have no production reach."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "selected_order": 1,
+        "target_identity": "sha256:983e363907f8fccab5af678aa6b79d7fabec7975a1af209bee4ca641070bf869",
+        "capture_phase_revision": "sha256:fbf9e96fb8f3f59c51e42fd5673256c65e890ad903f4a8d26aa87c2559bc852b",
+        "artifact_digest": "sha256:a76b0431b88d4eeb6d3556b8b3c52a0514efe8a07f32e5a2763d2b5436a80d5d",
+        "result_hash": "sha256:bad44045fb7f290776eb56197ff06a6d598e414172e2b3e9bc1edcdb34552b7a",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:91c5e7583b9f57624b2a033611575fe317cb6f685bf6d7e607b4e16d955185e8",
+            "lineage_id": "review-ff6e780419769436",
+            "authority_revision": "sha256:fbf9e96fb8f3f59c51e42fd5673256c65e890ad903f4a8d26aa87c2559bc852b",
+            "target_identity": "sha256:983e363907f8fccab5af678aa6b79d7fabec7975a1af209bee4ca641070bf869",
+            "base_tree": "2e7d35ca884414ae0676387442f9d006c72d6324",
+            "candidate_tree": "c4c2238158dd7ef1931d4cae99c8ea661a436d28",
+            "changed_path_manifest_sha256": "sha256:82ea39b102c2c146d0ef934870f895a7c449a9ae84426f9e4094560b1ff5287c",
+            "lens": "review-readability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:91c5e7583b9f57624b2a033611575fe317cb6f685bf6d7e607b4e16d955185e8",
+            "raw_sha256": "sha256:863c0240947da9b43b38328d7788f88ac6a8eeb6b3f28bb76b1cfcfd81846ed3",
+            "canonical_sha256": "sha256:6ef0d139b94667ef3767346285a30daa6c46d919fe440c7dc874c71bf5793c7d",
+            "result_hash": "sha256:bad44045fb7f290776eb56197ff06a6d598e414172e2b3e9bc1edcdb34552b7a",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:91c5e7583b9f57624b2a033611575fe317cb6f685bf6d7e607b4e16d955185e8",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/cmd/status_command_test.go",
+                "engine/cmd/testdata/status-golden/status-binary-states.golden",
+                "engine/cmd/testdata/status-golden/status-contract-states.golden",
+                "engine/cmd/testdata/status-golden/status-families-missing-or-drifted.golden",
+                "engine/cmd/testdata/status-golden/status-in-an-empty-home.golden",
+                "engine/cmd/testdata/status-golden/status-of-a-complete-install.golden",
+                "engine/cmd/testdata/status-golden/status-registry-states.golden",
+                "engine/cmd/testdata/status-golden/status-settings-that-are-not-an-object.golden",
+                "engine/cmd/testdata/status-golden/status-settings-without-the-hooks.golden",
+                "engine/cmd/testdata/status-golden/status-with-no-home.golden",
+                "engine/settings/merge.go",
+                "engine/settings/projection.go",
+                "engine/settings/settingsfile/golden_unix_test.go",
+                "engine/settings/settingsfile/projection_test.go",
+                "engine/status/status.go",
+                "engine/status/status_test.go"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-sessionstart-helper-complexity",
+                "lens": "readability",
+                "location": "engine/settings/settingsfile/golden_unix_test.go:340-372",
+                "severity": "WARNING",
+                "claim": "withoutTheSessionStartEntry strips JSON from recorded text using hard-coded indentation, brace and comma string searches. It shadows the builtin `close` and has several branches that depend on the exact output format. A formatting change would make the test helper fail in confusing ways, and the logic is hard to verify by reading it. Parsing the JSON and removing the entry structurally would be clearer.",
+                "proof_refs": [
+                  "engine/settings/settingsfile/golden_unix_test.go:340-372"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Reviewed all 16 changed paths. The label rename is applied consistently across status.go, the tests and the golden files. The SessionStart spec and the removeHooks scan key line up with each other.",
+              "The goldens now list the SessionStart projection hook as a missing part in the same order as projectionFamily, so the output is consistent with the family definition.",
+              "The only readability concern is the text-surgery helper in the golden test. Its stray 'C23 M6' comment references are consistent with the existing 'C23 M4' convention."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 2,
+        "target_identity": "sha256:983e363907f8fccab5af678aa6b79d7fabec7975a1af209bee4ca641070bf869",
+        "capture_phase_revision": "sha256:fbf9e96fb8f3f59c51e42fd5673256c65e890ad903f4a8d26aa87c2559bc852b",
+        "artifact_digest": "sha256:cff897bb60ea74aa966a4a0dcf0074b9f3aa9831edf9cce2e0772ed907aaed04",
+        "result_hash": "sha256:160e66fe816b3032cf0615b7476ce4c1912fd8564b1785e4c69d3e585aa2bf0c",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:b5d60b54272e3c7c0cda2979431ea3e9e8195366dadd4d5a56a87be19d80ae2e",
+            "lineage_id": "review-ff6e780419769436",
+            "authority_revision": "sha256:fbf9e96fb8f3f59c51e42fd5673256c65e890ad903f4a8d26aa87c2559bc852b",
+            "target_identity": "sha256:983e363907f8fccab5af678aa6b79d7fabec7975a1af209bee4ca641070bf869",
+            "base_tree": "2e7d35ca884414ae0676387442f9d006c72d6324",
+            "candidate_tree": "c4c2238158dd7ef1931d4cae99c8ea661a436d28",
+            "changed_path_manifest_sha256": "sha256:82ea39b102c2c146d0ef934870f895a7c449a9ae84426f9e4094560b1ff5287c",
+            "lens": "review-reliability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:b5d60b54272e3c7c0cda2979431ea3e9e8195366dadd4d5a56a87be19d80ae2e",
+            "raw_sha256": "sha256:82c4cba4a280058551b5846a10400fb3a9973e2c8f500a75d3522e1acde03c54",
+            "canonical_sha256": "sha256:7fdd290e9ee3ffb16f8da4712e3a4e7d00ec7725070392b92105efc1838d7ad9",
+            "result_hash": "sha256:160e66fe816b3032cf0615b7476ce4c1912fd8564b1785e4c69d3e585aa2bf0c",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:b5d60b54272e3c7c0cda2979431ea3e9e8195366dadd4d5a56a87be19d80ae2e",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/cmd/status_command_test.go",
+                "engine/cmd/testdata/status-golden/status-binary-states.golden",
+                "engine/cmd/testdata/status-golden/status-contract-states.golden",
+                "engine/cmd/testdata/status-golden/status-families-missing-or-drifted.golden",
+                "engine/cmd/testdata/status-golden/status-in-an-empty-home.golden",
+                "engine/cmd/testdata/status-golden/status-of-a-complete-install.golden",
+                "engine/cmd/testdata/status-golden/status-registry-states.golden",
+                "engine/cmd/testdata/status-golden/status-settings-that-are-not-an-object.golden",
+                "engine/cmd/testdata/status-golden/status-settings-without-the-hooks.golden",
+                "engine/cmd/testdata/status-golden/status-with-no-home.golden",
+                "engine/settings/merge.go",
+                "engine/settings/projection.go",
+                "engine/settings/settingsfile/golden_unix_test.go",
+                "engine/settings/settingsfile/projection_test.go",
+                "engine/status/status.go",
+                "engine/status/status_test.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [],
+            "evidence": [
+              "The SessionStart spec is appended last in projectionFamily (engine/settings/projection.go). removeHooks now scans SessionStart (engine/settings/merge.go), so uninstall removes the new entry. Uninstall is covered by TestUninstall_RemovesOnlyTheProjectionFamilyWhenTheRestIsGone, which now includes SessionStart and a foreign entry.",
+              "Upgrade from an older install is covered. TestInstall_AddsTheMemoryReadMatchersToAnInstallThatPredatesThem asserts that the missing part 'SessionStart projection hook' is reported last, and then that Install completes the family.",
+              "The status label change in engine/status/status.go is mirrored in status_test.go, status_command_test.go and every golden file. The reported missing-parts list in the settings-without-hooks golden now ends with the SessionStart entry, which matches the family order.",
+              "Minor and unproved: startsFromAnInstallBeforeTheMemoryReadMatchers in engine/settings/settingsfile/golden_unix_test.go now returns true for any case whose text lacks the SessionStart command. That skips replay of those recorded cases. The candidate does not show how many cases this affects, so I am not reporting it as a finding."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "447399762e808a89f3eb4a7fe4c7678a0f3200564ebdc865448e04bc539c2099",
+    "initial_atomic_start": {
+      "lineage_id": "review-ff6e780419769436",
+      "worktree_identity": "sha256:8455002f227f033663d0e7d8b8ff6a885e1c85b482ec52e34017c303452eed87",
+      "target_identity": "sha256:983e363907f8fccab5af678aa6b79d7fabec7975a1af209bee4ca641070bf869",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "2e7d35ca884414ae0676387442f9d006c72d6324",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-risk",
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 239,
+      "correction_budget": 120,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "install-hooks writes a new SessionStart entry into the user's Claude Code settings and removes it with the family (risk: settings others consume); the status label and remediation text (readability); merge idempotence and status goldens pinned by tests (reliability)"
+    },
+    "runtime_agent": "claude-code"
+  }
+}
