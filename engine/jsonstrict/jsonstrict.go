@@ -11,7 +11,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"strconv"
 	"unicode/utf8"
 )
 
@@ -140,18 +139,20 @@ func CheckKnownFields(data []byte, recordName string, allowedFields []string) er
 // WireVersion is the version a versioned record's parser dispatches on: the
 // top-level, exact-case version member of data when it is a JSON integer
 // written in digits, and 0 otherwise (another spelling such as 3.0, 3e0 or
-// "3", no version member, or data that is not a JSON object). JSON itself
-// refuses a leading zero or a plus sign, so a member strconv.Atoi reads is
-// already written as strconv.Itoa writes it. A parser leaves 0 and every
-// version it does not know to its oldest path, which reports the value exactly
-// as it did before the later versions existed.
+// "3", null, no version member, or data that is not a JSON object). JSON
+// itself refuses a leading zero or a plus sign, and decoding into an int
+// refuses a fraction, an exponent and a string, so the member is read as it
+// is written. A parser leaves 0 and every version it does not know to its
+// oldest path, which reports the value exactly as it did before the later
+// versions existed.
 func WireVersion(data []byte) int {
 	var fields map[string]json.RawMessage
 	if err := json.Unmarshal(data, &fields); err != nil {
 		return 0
 	}
-	version, err := strconv.Atoi(string(bytes.TrimSpace(fields["version"])))
-	if err != nil {
+	// An absent member is empty input, which json.Unmarshal refuses like any other non-integer.
+	var version int
+	if err := json.Unmarshal(fields["version"], &version); err != nil {
 		return 0
 	}
 	return version
