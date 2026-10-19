@@ -288,7 +288,7 @@ func (w *hookWorld) gateTask(label, stdin string, args ...string) {
 func (w *hookWorld) gateTaskReader(label string, stdin io.Reader, stdinNote string, args ...string) {
 	w.t.Helper()
 	var stdout, stderr bytes.Buffer
-	gateTaskCore(args, stdin, &stdout, &stderr, w.readFile)
+	gateTaskCore(args, stdin, &stdout, &stderr, w.readFile, nil)
 	w.record("gate-task "+strings.Join(args, " "), label, stdinNote, nil, stdout.String(), stderr.String())
 }
 

@@ -17,7 +17,7 @@ func run(p process, d deps, args []string) {
 	case "propagate":
 		runPropagate(p, rest)
 	case "gate-task":
-		runGateTask(p, rest)
+		runGateTask(p, d, rest)
 	case "merge-settings":
 		runMergeSettings(p, rest)
 	case "uninstall-hooks":
@@ -49,7 +49,7 @@ func run(p process, d deps, args []string) {
 	case "roles":
 		runRoles(p, rest)
 	case "memory":
-		runMemory(p, rest)
+		runMemory(p, d, rest)
 	case "workflow":
 		runWorkflow(p, d, rest)
 	case "projection":

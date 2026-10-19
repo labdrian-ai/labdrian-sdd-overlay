@@ -59,7 +59,7 @@ func captureGateTask(args []string, stdinContent string, content []byte, readErr
 		return content, readErr
 	}
 
-	gateTaskCore(args, stdinReader, &outBuf, &errBuf, mockReadFile)
+	gateTaskCore(args, stdinReader, &outBuf, &errBuf, mockReadFile, nil)
 	return outBuf.String(), errBuf.String()
 }
 
@@ -75,6 +75,7 @@ func TestGateTaskCore_StdinReadError(t *testing.T) {
 		&outBuf,
 		&errBuf,
 		func(_ string) ([]byte, error) { return []byte(testContractContent), nil },
+		nil,
 	)
 
 	outStr := strings.TrimSpace(outBuf.String())
@@ -174,6 +175,7 @@ func TestGateTaskCore_InputCapPassThrough(t *testing.T) {
 		&outBuf,
 		&errBuf,
 		func(_ string) ([]byte, error) { return []byte(testContractContent), nil },
+		nil,
 	)
 
 	outStr := strings.TrimSpace(outBuf.String())
@@ -1133,6 +1135,7 @@ func TestGateTaskCore_EmbeddedDesignContract_Injects(t *testing.T) {
 		[]string{"--embedded-contract", "anti-generic-design", "--contract-path", contractAbsPath},
 		strings.NewReader(input), &outBuf, &errBuf,
 		func(_ string) ([]byte, error) { return nil, errors.New("must not read a file in embedded mode") },
+		nil,
 	)
 
 	out := outBuf.String()

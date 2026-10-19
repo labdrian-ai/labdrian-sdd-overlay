@@ -1,6 +1,6 @@
 package main
 
-// projection subcommand: 'projection hook --event UserPromptSubmit|PreToolUse'.
+// projection subcommand: 'projection hook --event UserPromptSubmit|PreToolUse|SessionStart'.
 // It is an internal Claude Code hook command, not one a person runs: Claude Code
 // starts it, hands it the event as JSON on stdin, and reads what it prints.
 // `install-hooks` installs it (the settings projection family); Claude Code loads
@@ -15,8 +15,10 @@ package main
 // and writes the answer; hook_translate.go maps between it and the policy).
 // PreToolUse gates a tool call against the same two: engine/projection's Gate
 // denies the file-edit tools while the workflow is paused and checks a
-// longterm-mem query's project against the workflow's memory plan. The contract
-// with Claude Code:
+// longterm-mem query's project against the workflow's memory plan. SessionStart
+// (C23 M6) puts into the session the memory instructions of the bound workflow
+// (engine/projection's Instructions), once per start, resume, clear or compact,
+// and is silent otherwise. The contract with Claude Code:
 //
 //   - stdout is empty, or exactly one JSON object that begins with '{'.
 //     UserPromptSubmit: {"hookSpecificOutput":{"hookEventName":"UserPromptSubmit",
@@ -112,9 +114,12 @@ func runProjectionHook(d deps, args []string, processCwd string, stdin io.Reader
 		}
 	}()
 	var out []byte
-	if event == hookwire.EventPreToolUse {
+	switch event {
+	case hookwire.EventPreToolUse:
 		out = preToolUse(d, stdin, processCwd)
-	} else {
+	case hookwire.EventSessionStart:
+		out = sessionStart(d, stdin, processCwd)
+	default:
 		out = userPromptSubmit(d, stdin, processCwd)
 	}
 	if len(out) > 0 {
@@ -144,11 +149,11 @@ func parseHookArgs(args []string) (string, error) {
 			return "", fmt.Errorf("unexpected argument %q", a)
 		}
 	}
-	supported := hookwire.EventUserPromptSubmit + ", " + hookwire.EventPreToolUse
+	supported := hookwire.EventUserPromptSubmit + ", " + hookwire.EventPreToolUse + ", " + hookwire.EventSessionStart
 	if event == "" {
 		return "", fmt.Errorf("--event is required (supported: %s)", supported)
 	}
-	if event != hookwire.EventUserPromptSubmit && event != hookwire.EventPreToolUse {
+	if event != hookwire.EventUserPromptSubmit && event != hookwire.EventPreToolUse && event != hookwire.EventSessionStart {
 		return "", fmt.Errorf("unsupported --event %q (supported: %s)", event, supported)
 	}
 	return event, nil
@@ -208,6 +213,33 @@ func userPromptSubmit(d deps, stdin io.Reader, processCwd string) []byte {
 		return out
 	}
 	return nil
+}
+
+// sessionStart does the SessionStart hook's work (C23 M6) and returns what it prints on stdout:
+// the memory instructions of the workflow the repository is bound to, as the session's
+// additionalContext, or nothing. Every case with no block to give is silent: unusable input,
+// another event's input, a directory outside every repository, nothing bound, and a binding,
+// workflow or store that cannot be followed or read, which the prompt hook warns about on the
+// session's first prompt. It reads and never writes: the binding of a closed workflow is left for
+// the prompt hook to remove.
+func sessionStart(d deps, stdin io.Reader, processCwd string) []byte {
+	data, err := io.ReadAll(io.LimitReader(stdin, hookwire.MaxEnvelopeBytes+1))
+	if err != nil {
+		return nil
+	}
+	in, err := hookwire.DecodeSessionStart(data)
+	if err != nil {
+		return nil
+	}
+	if in.Event != "" && in.Event != hookwire.EventSessionStart {
+		return nil
+	}
+	block := boundInstructions(d, processCwd)(in.Cwd)
+	out, err := hookwire.SessionStartReply{Context: block}.Encode()
+	if err != nil {
+		return nil
+	}
+	return out
 }
 
 // preToolUse does the PreToolUse gate's work and returns what it prints on

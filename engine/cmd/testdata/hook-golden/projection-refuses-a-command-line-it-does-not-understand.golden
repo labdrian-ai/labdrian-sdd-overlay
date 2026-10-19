@@ -36,7 +36,7 @@ $ projection hook
 1
 --- stdout ---
 --- stderr ---
-error: projection hook: --event is required (supported: UserPromptSubmit, PreToolUse)
+error: projection hook: --event is required (supported: UserPromptSubmit, PreToolUse, SessionStart)
 
 $ projection hook --event
 # an event flag with no value
@@ -56,7 +56,7 @@ $ projection hook --event Stop
 1
 --- stdout ---
 --- stderr ---
-error: projection hook: unsupported --event "Stop" (supported: UserPromptSubmit, PreToolUse)
+error: projection hook: unsupported --event "Stop" (supported: UserPromptSubmit, PreToolUse, SessionStart)
 
 $ projection hook --event userpromptsubmit
 # an event written in lower case
@@ -66,7 +66,7 @@ $ projection hook --event userpromptsubmit
 1
 --- stdout ---
 --- stderr ---
-error: projection hook: unsupported --event "userpromptsubmit" (supported: UserPromptSubmit, PreToolUse)
+error: projection hook: unsupported --event "userpromptsubmit" (supported: UserPromptSubmit, PreToolUse, SessionStart)
 
 $ projection hook --bogus
 # a flag the hook does not know

@@ -101,9 +101,12 @@ func promptReply(r projection.ProjectionResult) hookwire.PromptReply {
 
 // agentGateAnswer is what 'gate-task' prints for the hook input raw: the call with the prompt
 // the gate gives it, or, for everything the gate leaves alone and everything it cannot read, the
-// pass-through that leaves the call as it is. It never fails, and never denies.
-func agentGateAnswer(raw []byte, cfg gate.Config) []byte {
-	if out, ok := rewrittenAgentCall(raw, cfg, hookwire.AgentCall.UpdatedInput); ok {
+// pass-through that leaves the call as it is. It never fails, and never denies. instructions is
+// the memory instructions block of the workflow the repository of a directory is bound to ("" for
+// none), asked for the directory the call names, and only for a call with a prompt; nil asks
+// nothing.
+func agentGateAnswer(raw []byte, cfg gate.Config, instructions func(inputDir string) string) []byte {
+	if out, ok := rewrittenAgentCall(raw, cfg, instructions, hookwire.AgentCall.UpdatedInput); ok {
 		return out
 	}
 	return hookwire.PassThrough()
@@ -114,11 +117,15 @@ func agentGateAnswer(raw []byte, cfg gate.Config) []byte {
 // gate leaves the call alone, and when the answer cannot be written. The caller says the same
 // thing in each of the three cases, the pass-through, which is why they are one. encode is the
 // writing of the answer, a parameter so that its failure, which cannot happen for text, is
-// tested instead of read.
-func rewrittenAgentCall(raw []byte, cfg gate.Config, encode func(hookwire.AgentCall, string) ([]byte, error)) ([]byte, bool) {
+// tested instead of read. The instructions block joins the contracts in the same rewrite (C23 M6
+// decision 2), so an Agent call is rewritten once.
+func rewrittenAgentCall(raw []byte, cfg gate.Config, instructions func(inputDir string) string, encode func(hookwire.AgentCall, string) ([]byte, error)) ([]byte, bool) {
 	call, err := hookwire.DecodeAgentCall(raw)
 	if err != nil {
 		return nil, false
+	}
+	if instructions != nil && call.Prompt != "" {
+		cfg.Instructions = instructions(call.Cwd)
 	}
 	prompt, changed := gate.Rewrite(gate.Call{SubagentType: call.SubagentType, Prompt: call.Prompt}, cfg)
 	if !changed {

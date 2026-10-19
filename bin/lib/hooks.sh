@@ -44,7 +44,7 @@ cmd_install_hooks() {
   echo "install-hooks complete."
   echo "  binary  : $ENGINE_BINARY"
   echo "  settings: $settings_path (backup at ${settings_path}.bak)"
-  echo "  hooks   : the overlay hook families, wired into UserPromptSubmit, PreToolUse, and SessionEnd:"
+  echo "  hooks   : the overlay hook families, wired into SessionStart, UserPromptSubmit, PreToolUse, and SessionEnd:"
   echo "            deterministic scoping (minimalism-contract and anti-generic-design),"
   echo "            the SessionEnd longterm-mem sync, the review-receipt and shaper clearance guards,"
   echo "            the workflow projection hooks, and the skills approve guard"

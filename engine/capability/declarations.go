@@ -44,6 +44,7 @@ var declarations = []Declaration{
 				"cmd:TestPhase7Acceptance",
 				"cmd:TestProjectionHookOutputShape",
 				"cmd:TestProjectionHookProjectsEachOpenStatus",
+				"cmd:TestSessionStartGivesTheInstructionsOfTheBoundWorkflow",
 				"projection:TestProjectContextOfARunningWorkflowExactly",
 				"runtime:TestClaudeInstallWritesTheProjectionHookFamily",
 				"runtime:TestClaudeStatusIsPartialUntilInstallHooksIsRerunForTheProjectionFamily",

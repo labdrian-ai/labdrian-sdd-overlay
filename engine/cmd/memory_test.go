@@ -20,7 +20,7 @@ func runMemoryTest(args []string) memoryRun {
 	var out, errBuf bytes.Buffer
 	code := -1
 	exited := false
-	runMemoryCore(args, &out, &errBuf, func(c int) {
+	runMemoryCore(testDeps(), "", args, &out, &errBuf, func(c int) {
 		if !exited {
 			code = c
 			exited = true
@@ -254,7 +254,7 @@ func (failingMemoryWriter) Write([]byte) (int, error) {
 func TestMemoryPlanReportsFailedStdoutWrite(t *testing.T) {
 	var errBuf bytes.Buffer
 	code := -1
-	runMemoryCore([]string{"plan", "--profile", "standalone-minimal"}, failingMemoryWriter{}, &errBuf, func(c int) {
+	runMemoryCore(testDeps(), "", []string{"plan", "--profile", "standalone-minimal"}, failingMemoryWriter{}, &errBuf, func(c int) {
 		if code == -1 {
 			code = c
 		}

@@ -81,7 +81,7 @@ func gateTaskAnswer(t *testing.T, input, content string) string {
 	files := map[string]string{"/virtual/contract.md": content}
 	var stdout, stderr bytes.Buffer
 	gateTaskCore([]string{"--contract-file", "/virtual/contract.md", "--contract-path", absoluteContractPath},
-		strings.NewReader(input), &stdout, &stderr, inMemoryFiles(files))
+		strings.NewReader(input), &stdout, &stderr, inMemoryFiles(files), nil)
 	out := stdout.String()
 	if strings.Count(out, "\n") != 1 || !strings.HasSuffix(out, "\n") {
 		t.Fatalf("gate-task printed %q, want exactly one line", out)
@@ -280,7 +280,7 @@ func TestE2E_MalformedInput_PassThrough(t *testing.T) {
 func TestE2E_MissingContractFile_PassThrough(t *testing.T) {
 	var stdout, stderr bytes.Buffer
 	gateTaskCore([]string{"--contract-file", "/virtual/missing.md", "--contract-path", absoluteContractPath},
-		strings.NewReader(buildAgentInput("sdd-tasks", "desc", "do tasks", false)), &stdout, &stderr, inMemoryFiles(map[string]string{"/virtual/contract.md": contractContentForE2E}))
+		strings.NewReader(buildAgentInput("sdd-tasks", "desc", "do tasks", false)), &stdout, &stderr, inMemoryFiles(map[string]string{"/virtual/contract.md": contractContentForE2E}), nil)
 	if stdout.String() != "{}\n" {
 		t.Errorf("gate-task printed %q for a contract file that does not exist, want the pass-through", stdout.String())
 	}

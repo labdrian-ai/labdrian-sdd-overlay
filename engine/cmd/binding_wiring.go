@@ -51,6 +51,29 @@ func (d deps) gateHook() app.HookService {
 	return hook
 }
 
+// boundInstructions returns how the hooks ask for the memory instructions block of the workflow the
+// repository of a directory is bound to (C23 M6): the block, or "" when there is none to give
+// (nothing bound, no repository, a binding or workflow that cannot be followed, a store that
+// cannot be read: the prompt hook already warns about those). The directory is the one the hook
+// input names, and processCwd stands in when it names none. The reading is the prompt hook's
+// (HookService.OnInstructions), with the Engram naming rule the gate checks with, so the block the
+// hooks inject and the gate cannot disagree. A panic in it is an empty block: the hooks that ask
+// must never fail the call they serve.
+func boundInstructions(d deps, processCwd string) func(inputDir string) string {
+	return func(inputDir string) (block string) {
+		defer func() {
+			if recover() != nil {
+				block = ""
+			}
+		}()
+		outcome := d.promptHook().OnInstructions(app.PromptRequest{InputDir: inputDir, ProcessDir: processCwd})
+		if outcome.Kind != app.PromptProjection {
+			return ""
+		}
+		return outcome.Result.Block
+	}
+}
+
 // runBindings is the binding store of one run of a command: built on first use from the store the
 // deps open. It is the one place the stack is put together, so the three use cases cannot differ in
 // it.
