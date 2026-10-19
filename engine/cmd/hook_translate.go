@@ -52,7 +52,21 @@ func gateCall(in hookwire.PreToolUse) projection.ToolCall {
 			return projection.QueryArguments{Named: q.Named, Project: q.Project, AllProjects: q.AllProjects}
 		},
 		ReadSkill:    in.Skill,
-		ReadFilePath: func() string { return realSkillFile(in.FilePath()) },
+		ReadFilePath: onceString(func() string { return realSkillFile(in.FilePath()) }),
+	}
+}
+
+// onceString is read, called at most once: the hook asks for the file of a Read several times
+// (whether the gate looks at it, whether the lock is read, and the rule itself), and resolving its
+// links each time could give the questions different answers if a link changed in between.
+func onceString(read func() string) func() string {
+	var value string
+	done := false
+	return func() string {
+		if !done {
+			value, done = read(), true
+		}
+		return value
 	}
 }
 

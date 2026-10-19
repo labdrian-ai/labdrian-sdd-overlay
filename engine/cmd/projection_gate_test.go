@@ -395,6 +395,29 @@ func TestPreToolUseMatchesASkillFileThroughASymbolicLink(t *testing.T) {
 		`SKILL.md of procedural skill "deploy-checks"`)
 }
 
+// TestPreToolUseMatchesASkillDirectoryThatIsASymbolicLink: a target directory of the lock that is a
+// link to a directory elsewhere names the same SKILL.md as its real path, which is denied too.
+func TestPreToolUseMatchesASkillDirectoryThatIsASymbolicLink(t *testing.T) {
+	e := newHookEnv(t)
+	writeProceduralLock(t, e.repo)
+	elsewhere := filepath.Join(e.dir, "shared-skills", "deploy-checks")
+	writeFixtureFile(t, filepath.Join(elsewhere, "SKILL.md"), "# deploy-checks\n")
+	if err := os.MkdirAll(filepath.Join(e.repo, ".claude", "skills"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(elsewhere, filepath.Join(e.repo, ".claude", "skills", "deploy-checks")); err != nil {
+		t.Fatal(err)
+	}
+	e.running(t, "proj-1", "wf-1", "sdd")
+
+	for label, file := range map[string]string{
+		"the path under the repository": filepath.Join(e.repo, ".claude", "skills", "deploy-checks", "SKILL.md"),
+		"the real path":                 filepath.Join(elsewhere, "SKILL.md"),
+	} {
+		assertDenied(t, label, e.gate(t, e.repo, "Read", map[string]any{"file_path": file}), `SKILL.md of procedural skill "deploy-checks"`)
+	}
+}
+
 // TestPreToolUseWithoutALockChecksNoSkill: no lock means no procedural skill: silent.
 func TestPreToolUseWithoutALockChecksNoSkill(t *testing.T) {
 	e := newHookEnv(t)

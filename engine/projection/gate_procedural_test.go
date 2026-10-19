@@ -76,8 +76,8 @@ func TestTheGateLooksAtTheSkillToolAndAReadOfASkillFileOnly(t *testing.T) {
 	}
 }
 
-// argumentOf is the argument a lazy reader of a ToolCall reads, or "" for a nil reader, for the
-// messages of a failing test.
+// argumentOf is the argument a lazy reader of a ToolCall reads, or "<nil>" for a nil reader, for
+// the messages of a failing test.
 func argumentOf(f func() string) string {
 	if f == nil {
 		return "<nil>"

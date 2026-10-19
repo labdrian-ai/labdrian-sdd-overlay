@@ -11,6 +11,7 @@ import (
 	"errors"
 	"reflect"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"unicode/utf8"
@@ -123,7 +124,23 @@ func TestGateCallReadsTheSkillAndTheFilePathOnRequest(t *testing.T) {
 	}
 }
 
-// argumentOf is the argument a lazy reader of a projection.ToolCall reads, or "" for a nil reader.
+// TestOnceStringReadsTheArgumentOnce: the file of a Read is resolved once however often the hook
+// asks for it, and every answer is the first one.
+func TestOnceStringReadsTheArgumentOnce(t *testing.T) {
+	calls := 0
+	read := onceString(func() string { calls++; return "answer-" + strconv.Itoa(calls) })
+	for i := 0; i < 3; i++ {
+		if got := read(); got != "answer-1" {
+			t.Errorf("read %d = %q, want answer-1", i, got)
+		}
+	}
+	if calls != 1 {
+		t.Errorf("the reader ran %d times, want 1", calls)
+	}
+}
+
+// argumentOf is the argument a lazy reader of a projection.ToolCall reads, or "<nil>" for a nil
+// reader, so a failure message tells a missing reader from an empty argument.
 // The projection package's tests keep their own copy, as a test helper cannot be shared across
 // packages.
 func argumentOf(f func() string) string {

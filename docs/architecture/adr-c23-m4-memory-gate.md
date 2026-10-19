@@ -46,9 +46,10 @@ Claude Code runs the gate only for the tools a settings matcher routes to it
    procedural skills count; installed registry skills and global skills are untouched (M1
    decision 3). `Bash` stays ungated.
 6. **The hook is routed to the new tools.** The projection family gains the PreToolUse matchers
-   for the Engram reads, longterm-mem `get`, `Skill` and `Read`; `labdrian install-hooks` installs them (activation stays deliberate, as for the family's other entries),
-   and the tool-name patterns stay as strict as the `query` pattern (a plugin prefix is allowed, a
-   lookalike server name is not).
+   for the Engram reads, longterm-mem `get`, `Skill` and `Read`. `labdrian install-hooks` installs
+   them, so activation stays deliberate, as for the family's other entries. The tool-name patterns
+   stay as strict as the `query` pattern (a plugin prefix is allowed, a lookalike server name is
+   not).
 
 ## Alternatives considered
 
@@ -76,6 +77,8 @@ The alternatives of decisions 1-3 and 5 are recorded in the M1 and M2 ADRs.
 - **A skill file read through a link is the same file.** The hook resolves the symbolic links of a
   `Read` of a `SKILL.md`, and the lock reader lists the real path of each skill file beside its path
   under the worktree root, so a session that entered the repository through a link is checked alike.
+  A relative path and a file that does not exist are compared as they are written: Claude Code's
+  `Read` takes an absolute path, and a file that does not exist has nothing to read.
 - **Accepted cost (M1).** A skill file can still be read through `Bash`.
 - **Not in M4.** The goal filter of `longterm-mem query` (M5), the plan as instructions (M6), and the
   evidence of memory reads (M7).
