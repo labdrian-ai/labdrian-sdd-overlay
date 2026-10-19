@@ -4,7 +4,7 @@ $ review-receipt hook --cwd <ROOT>
 exit: 2
 --- stdout ---
 --- stderr ---
-reviewreceipt: multiple active changes (change-a, change-b); run `review-receipt capture --change <name>` before acknowledging
+reviewreceipt: multiple active changes (change-a, change-b); run `review-receipt capture --change <name>` or `review-receipt capture --feature <name>` before acknowledging
 
 === after ===
 dir  openspec

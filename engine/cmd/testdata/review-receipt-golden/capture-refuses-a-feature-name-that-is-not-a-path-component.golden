@@ -1,0 +1,45 @@
+$ review-receipt capture --cwd <ROOT> --feature 
+exit: 1
+--- stdout ---
+--- stderr ---
+error: review-receipt capture: reviewreceipt: feature name is required
+
+$ review-receipt capture --cwd <ROOT> --feature    
+exit: 1
+--- stdout ---
+--- stderr ---
+error: review-receipt capture: reviewreceipt: feature name is required
+
+$ review-receipt capture --cwd <ROOT> --feature ../escaped
+exit: 1
+--- stdout ---
+--- stderr ---
+error: review-receipt capture: reviewreceipt: feature name "../escaped" is not a safe path component: it holds a path separator
+
+$ review-receipt capture --cwd <ROOT> --feature a/b
+exit: 1
+--- stdout ---
+--- stderr ---
+error: review-receipt capture: reviewreceipt: feature name "a/b" is not a safe path component: it holds a path separator
+
+$ review-receipt capture --cwd <ROOT> --feature ..
+exit: 1
+--- stdout ---
+--- stderr ---
+error: review-receipt capture: reviewreceipt: feature name ".." is not a safe path component: it is a dot segment
+
+$ review-receipt capture --cwd <ROOT> --feature  padded
+exit: 1
+--- stdout ---
+--- stderr ---
+error: review-receipt capture: reviewreceipt: feature name " padded" is not a safe path component: it has leading or trailing white space
+
+$ review-receipt capture --cwd <ROOT> --feature padded 
+exit: 1
+--- stdout ---
+--- stderr ---
+error: review-receipt capture: reviewreceipt: feature name "padded " is not a safe path component: it has leading or trailing white space
+
+=== after ===
+(no odd directory)
+

@@ -34,7 +34,17 @@
 // so a caller fails closed instead of guessing which change owns the
 // receipt.
 //
-// Names: the change name and the file name a receipt is persisted under are each
+// ODD features: a review of ODD work belongs to no SDD change, so CaptureFeature
+// persists the same receipts, by the same rules, into the feature's folder,
+// odd/review-receipts/<feature>/ beside odd/tasks/<feature>.md (the sink's
+// Destination names which folder). With more than one active change, the hook
+// lets an acknowledgement through once every surviving approved receipt is
+// persisted byte-for-byte under one of those changes or in any feature folder
+// the sink lists (FeatureCatalog); `review-receipt capture --change <name>`
+// and `review-receipt capture --feature <name>` are the two remedies its
+// denial names.
+//
+// Names: the change name, the feature name and the file name a receipt is persisted under are each
 // joined into a path by the sink, so each must be exactly one path component
 // (CheckPathComponent: not empty, not a dot segment, no separator, no white space
 // at either end, no control character). The lineage id that makes a file name is
@@ -98,7 +108,7 @@ type MultipleActiveChangesError struct {
 
 func (e *MultipleActiveChangesError) Error() string {
 	return fmt.Sprintf(
-		"reviewreceipt: multiple active changes (%s); run `review-receipt capture --change <name>` before acknowledging",
+		"reviewreceipt: multiple active changes (%s); run `review-receipt capture --change <name>` or `review-receipt capture --feature <name>` before acknowledging",
 		strings.Join(e.Changes, ", "),
 	)
 }

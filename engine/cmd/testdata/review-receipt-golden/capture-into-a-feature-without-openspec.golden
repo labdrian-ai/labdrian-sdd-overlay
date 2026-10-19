@@ -1,0 +1,15 @@
+$ review-receipt capture --cwd <ROOT> --feature a-feature
+exit: 0
+--- stdout ---
+review-receipt capture: 1 receipt(s) captured for feature "a-feature"
+--- stderr ---
+
+=== odd after ===
+dir  odd
+dir  odd/review-receipts
+dir  odd/review-receipts/a-feature
+file odd/review-receipts/a-feature/review-solo.review-state.json 0600 385 59def738c180
+
+=== openspec after ===
+(no openspec directory)
+

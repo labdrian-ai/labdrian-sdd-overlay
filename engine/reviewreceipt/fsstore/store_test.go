@@ -192,7 +192,7 @@ func TestADocumentThatIsThereAndCannotBeReadIsAnErrorThatNamesIt(t *testing.T) {
 func TestLocationIsUnderTheChangesReviewReceiptsOfTheRootAsGiven(t *testing.T) {
 	s := newStore(t, "rel/root", &locator{})
 	want := filepath.Join("rel", "root", "openspec", "changes", "my-change", "review-receipts", "review-a.json")
-	if got := s.Location("my-change", "review-a.json"); got != want {
+	if got := s.Location(reviewreceipt.InChange("my-change"), "review-a.json"); got != want {
 		t.Errorf("Location = %q, want %q", got, want)
 	}
 }
@@ -234,10 +234,10 @@ func TestOpenspecIsLookedForFromTheToplevelTheLocatorReports(t *testing.T) {
 				t.Errorf("HasArtifact = %v, %v, want the change's tasks.md found under the same root", found, err)
 			}
 			want := filepath.Join(tc.wantRoot, "openspec", "changes", tc.wantChange, "review-receipts", "review-a.json")
-			if got := s.Location(tc.wantChange, "review-a.json"); got != want {
+			if got := s.Location(reviewreceipt.InChange(tc.wantChange), "review-a.json"); got != want {
 				t.Errorf("Location = %q, want %q", got, want)
 			}
-			if err := s.Write(tc.wantChange, "review-a.json", []byte("{}")); err != nil {
+			if err := s.Write(reviewreceipt.InChange(tc.wantChange), "review-a.json", []byte("{}")); err != nil {
 				t.Fatal(err)
 			}
 			if _, err := os.Stat(want); err != nil {
@@ -253,25 +253,25 @@ func TestOpenspecIsLookedForFromTheToplevelTheLocatorReports(t *testing.T) {
 func TestReadReturnsWhatWasPersistedAndSaysWhenNothingWas(t *testing.T) {
 	root := t.TempDir()
 	s := newStore(t, root, &locator{})
-	write(t, s.Location("c", "review-a.json"), "persisted")
+	write(t, s.Location(reviewreceipt.InChange("c"), "review-a.json"), "persisted")
 
-	got, err := s.Read("c", "review-a.json")
+	got, err := s.Read(reviewreceipt.InChange("c"), "review-a.json")
 	if err != nil || string(got) != "persisted" {
 		t.Errorf("Read = %q, %v", got, err)
 	}
 
-	_, err = s.Read("c", "review-b.json")
+	_, err = s.Read(reviewreceipt.InChange("c"), "review-b.json")
 	if !errors.Is(err, reviewreceipt.ErrNotPersisted) || !errors.Is(err, fs.ErrNotExist) {
 		t.Errorf("Read of an absent receipt = %v, want ErrNotPersisted (and the file system's own)", err)
 	}
-	if want := "read " + s.Location("c", "review-b.json") + ": "; !strings.HasPrefix(err.Error(), want) {
+	if want := "read " + s.Location(reviewreceipt.InChange("c"), "review-b.json") + ": "; !strings.HasPrefix(err.Error(), want) {
 		t.Errorf("Read error = %q, want it to start with %q", err, want)
 	}
 
-	if err := os.MkdirAll(s.Location("c", "a-directory.json"), 0o755); err != nil {
+	if err := os.MkdirAll(s.Location(reviewreceipt.InChange("c"), "a-directory.json"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.Read("c", "a-directory.json"); err == nil || errors.Is(err, reviewreceipt.ErrNotPersisted) {
+	if _, err := s.Read(reviewreceipt.InChange("c"), "a-directory.json"); err == nil || errors.Is(err, reviewreceipt.ErrNotPersisted) {
 		t.Errorf("Read of a directory = %v, want an error that is not 'not persisted'", err)
 	}
 }
@@ -283,11 +283,11 @@ func TestWritePersistsTheExactBytesPrivatelyAndLeavesNothingElse(t *testing.T) {
 	s := newStore(t, root, &locator{})
 	data := []byte("{\"exact\": \"bytes\"}\r\n\x00")
 
-	if err := s.Write("my-change", "review-a.review-state.json", data); err != nil {
+	if err := s.Write(reviewreceipt.InChange("my-change"), "review-a.review-state.json", data); err != nil {
 		t.Fatalf("Write: %v", err)
 	}
 
-	dest := s.Location("my-change", "review-a.review-state.json")
+	dest := s.Location(reviewreceipt.InChange("my-change"), "review-a.review-state.json")
 	got, err := os.ReadFile(dest)
 	if err != nil || string(got) != string(data) {
 		t.Errorf("persisted %q, %v, want %q", got, err, data)
@@ -307,7 +307,7 @@ func TestWriteFailsInTheWordsOfTheStepThatFailedAndLeavesNoTemporaryFile(t *test
 
 	// A file where the change folder should be: the folder cannot be created.
 	write(t, filepath.Join(root, "openspec", "changes", "blocked"), "a file")
-	err := s.Write("blocked", "review-a.json", []byte("x"))
+	err := s.Write(reviewreceipt.InChange("blocked"), "review-a.json", []byte("x"))
 	if wantDir := filepath.Join(root, "openspec", "changes", "blocked", "review-receipts"); err == nil || !strings.HasPrefix(err.Error(), "create "+wantDir+": ") {
 		t.Errorf("Write under a file = %v, want an error that names the folder it could not create", err)
 	}
@@ -316,7 +316,7 @@ func TestWriteFailsInTheWordsOfTheStepThatFailedAndLeavesNoTemporaryFile(t *test
 		return
 	}
 	// A folder that refuses a new file.
-	dir := filepath.Dir(s.Location("closed", "x"))
+	dir := filepath.Dir(s.Location(reviewreceipt.InChange("closed"), "x"))
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -324,7 +324,7 @@ func TestWriteFailsInTheWordsOfTheStepThatFailedAndLeavesNoTemporaryFile(t *test
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { os.Chmod(dir, 0o700) })
-	if err := s.Write("closed", "review-a.json", []byte("x")); err == nil || !strings.HasPrefix(err.Error(), "atomicfile: create temporary file: ") {
+	if err := s.Write(reviewreceipt.InChange("closed"), "review-a.json", []byte("x")); err == nil || !strings.HasPrefix(err.Error(), "atomicfile: create temporary file: ") {
 		t.Errorf("Write into a closed folder = %v, want the words of the write that failed", err)
 	}
 	if entries, _ := os.ReadDir(dir); len(entries) != 0 {
@@ -431,7 +431,7 @@ func TestLocationNamesTheDirectoryTheStoreWasGivenWhenTheToplevelCannotBeLookedA
 	s := newStore(t, sub, &locator{obs: gitprov.Observation{Toplevel: top}})
 
 	want := filepath.Join(sub, "openspec", "changes", "sub-change", "review-receipts", "review-a.json")
-	if got := s.Location("sub-change", "review-a.json"); got != want {
+	if got := s.Location(reviewreceipt.InChange("sub-change"), "review-a.json"); got != want {
 		t.Errorf("Location = %q, want %q", got, want)
 	}
 }
@@ -487,10 +487,10 @@ func TestAToplevelOpenspecThatCannotBeLookedAtIsAnErrorAndNotAnAbsence(t *testin
 	if changes, err := s.Changes(); err == nil || !strings.HasPrefix(err.Error(), wantStat) || changes != nil {
 		t.Errorf("Changes = %v, %v, want no changes and an error that starts %q", changes, err, wantStat)
 	}
-	if _, err := s.Read("sub-change", "review-a.json"); err == nil || !strings.HasPrefix(err.Error(), wantStat) || errors.Is(err, reviewreceipt.ErrNotPersisted) {
+	if _, err := s.Read(reviewreceipt.InChange("sub-change"), "review-a.json"); err == nil || !strings.HasPrefix(err.Error(), wantStat) || errors.Is(err, reviewreceipt.ErrNotPersisted) {
 		t.Errorf("Read = %v, want the error of the stat, which is not an absence of the receipt", err)
 	}
-	if err := s.Write("sub-change", "review-a.json", []byte("{}")); err == nil || !strings.HasPrefix(err.Error(), wantStat) {
+	if err := s.Write(reviewreceipt.InChange("sub-change"), "review-a.json", []byte("{}")); err == nil || !strings.HasPrefix(err.Error(), wantStat) {
 		t.Errorf("Write = %v, want the error of the stat", err)
 	}
 	if _, err := os.Stat(filepath.Join(sub, "openspec", "changes", "sub-change", "review-receipts")); !os.IsNotExist(err) {

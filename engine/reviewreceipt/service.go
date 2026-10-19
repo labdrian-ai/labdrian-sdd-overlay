@@ -11,6 +11,7 @@ import (
 // What a name is for, as an UnsafeNameError says it.
 const (
 	kindChange      = "change name"
+	kindFeature     = "feature name"
 	kindReceiptFile = "receipt file name"
 )
 
@@ -59,10 +60,22 @@ func (s *Service) ready() error {
 // every file name are checked to be one path component (CheckPathComponent) before the sink
 // is asked anything, so a receipt is never put outside the change's folder.
 func (s *Service) Capture(change string) ([]Captured, error) {
-	if strings.TrimSpace(change) == "" {
-		return nil, errors.New("reviewreceipt: change name is required")
+	return s.capture(InChange(change))
+}
+
+// CaptureFeature is Capture into the review-receipts folder of an ODD feature instead of a
+// change's: the same receipts, kept by the same rules, for work that belongs to no SDD change.
+// The feature name is checked to be one path component as a change name is.
+func (s *Service) CaptureFeature(feature string) ([]Captured, error) {
+	return s.capture(InFeature(feature))
+}
+
+// capture persists every surviving approved receipt into dest.
+func (s *Service) capture(dest Destination) ([]Captured, error) {
+	if strings.TrimSpace(dest.Name) == "" {
+		return nil, fmt.Errorf("reviewreceipt: %s is required", dest.kindName())
 	}
-	if err := CheckPathComponent(kindChange, change); err != nil {
+	if err := CheckPathComponent(dest.kindName(), dest.Name); err != nil {
 		return nil, err
 	}
 	if err := s.ready(); err != nil {
@@ -71,10 +84,10 @@ func (s *Service) Capture(change string) ([]Captured, error) {
 
 	var captured []Captured
 	err := s.eachApproved(func(sv surviving) error {
-		if err := s.persist(change, sv); err != nil {
+		if err := s.persist(dest, sv); err != nil {
 			return err
 		}
-		captured = append(captured, Captured{LineageID: sv.Receipt.Lineage, Path: s.ports.Sink.Location(change, sv.Receipt.FileName())})
+		captured = append(captured, Captured{LineageID: sv.Receipt.Lineage, Path: s.ports.Sink.Location(dest, sv.Receipt.FileName())})
 		return nil
 	})
 	return captured, err
@@ -82,19 +95,19 @@ func (s *Service) Capture(change string) ([]Captured, error) {
 
 // persist keeps one receipt: nothing to do when exactly these bytes are already persisted,
 // a refusal when other bytes are, and a write when none are.
-func (s *Service) persist(change string, sv surviving) error {
+func (s *Service) persist(dest Destination, sv surviving) error {
 	name := sv.Receipt.FileName()
-	existing, err := s.ports.Sink.Read(change, name)
+	existing, err := s.ports.Sink.Read(dest, name)
 	switch {
 	case err == nil:
 		if bytes.Equal(existing, sv.Data) {
 			return nil
 		}
-		return fmt.Errorf("reviewreceipt: %s already exists with different content", s.ports.Sink.Location(change, name))
+		return fmt.Errorf("reviewreceipt: %s already exists with different content", s.ports.Sink.Location(dest, name))
 	case !errors.Is(err, ErrNotPersisted):
 		return fmt.Errorf("reviewreceipt: %w", err)
 	}
-	if err := s.ports.Sink.Write(change, name, sv.Data); err != nil {
+	if err := s.ports.Sink.Write(dest, name, sv.Data); err != nil {
 		return fmt.Errorf("reviewreceipt: %w", err)
 	}
 	return nil
@@ -143,31 +156,50 @@ func (s *Service) eachApproved(visit func(surviving) error) error {
 }
 
 // AllSurvivingApprovedPersisted reports whether every currently-approved receipt is already
-// persisted byte-for-byte under some change in changes (the explicit capture remedy already
-// ran); zero surviving receipts is true.
-func (s *Service) AllSurvivingApprovedPersisted(changes []string) (bool, error) {
+// persisted byte-for-byte in some destination of dests (the explicit capture remedy already
+// ran); zero surviving receipts is true. Each destination's name is checked to be one path
+// component before the sink is asked about it.
+func (s *Service) AllSurvivingApprovedPersisted(dests []Destination) (bool, error) {
 	if err := s.ready(); err != nil {
 		return false, err
 	}
-	var all []surviving
-	if err := s.eachApproved(func(sv surviving) error {
-		all = append(all, sv)
-		return nil
-	}); err != nil {
+	all, err := s.survivors()
+	if err != nil {
 		return false, err
 	}
+	rest, err := s.unpersisted(all, dests)
+	if err != nil {
+		return false, err
+	}
+	return len(rest) == 0, nil
+}
+
+// survivors is every currently-approved receipt, as eachApproved walks them.
+func (s *Service) survivors() ([]surviving, error) {
+	var all []surviving
+	err := s.eachApproved(func(sv surviving) error {
+		all = append(all, sv)
+		return nil
+	})
+	return all, err
+}
+
+// unpersisted is the receipts of all that are persisted byte for byte in no destination of
+// dests, in their order.
+func (s *Service) unpersisted(all []surviving, dests []Destination) ([]surviving, error) {
+	var rest []surviving
 	for _, sv := range all {
 		found := false
-		for _, change := range changes {
-			if err := CheckPathComponent(kindChange, change); err != nil {
-				return false, err
+		for _, dest := range dests {
+			if err := CheckPathComponent(dest.kindName(), dest.Name); err != nil {
+				return nil, err
 			}
-			persisted, err := s.ports.Sink.Read(change, sv.Receipt.FileName())
+			persisted, err := s.ports.Sink.Read(dest, sv.Receipt.FileName())
 			if errors.Is(err, ErrNotPersisted) {
 				continue
 			}
 			if err != nil {
-				return false, fmt.Errorf("reviewreceipt: %w", err)
+				return nil, fmt.Errorf("reviewreceipt: %w", err)
 			}
 			if bytes.Equal(persisted, sv.Data) {
 				found = true
@@ -175,10 +207,44 @@ func (s *Service) AllSurvivingApprovedPersisted(changes []string) (bool, error) 
 			}
 		}
 		if !found {
-			return false, nil
+			rest = append(rest, sv)
 		}
 	}
-	return true, nil
+	return rest, nil
+}
+
+// persistedAcrossChangesOrFeatures reports whether every surviving approved receipt is
+// persisted byte for byte under one of changes or in any feature folder the sink keeps. The
+// feature folders are listed only when a receipt is persisted under no change, so a project
+// whose receipts are all under its changes never depends on them.
+func (s *Service) persistedAcrossChangesOrFeatures(changes []string) (bool, error) {
+	all, err := s.survivors()
+	if err != nil {
+		return false, err
+	}
+	dests := make([]Destination, 0, len(changes))
+	for _, c := range changes {
+		dests = append(dests, InChange(c))
+	}
+	rest, err := s.unpersisted(all, dests)
+	if err != nil {
+		return false, err
+	}
+	if len(rest) == 0 {
+		return true, nil
+	}
+	features, err := s.ports.Sink.Features()
+	if err != nil {
+		return false, fmt.Errorf("reviewreceipt: %w", err)
+	}
+	inFeatures := make([]Destination, 0, len(features))
+	for _, f := range features {
+		inFeatures = append(inFeatures, InFeature(f))
+	}
+	if rest, err = s.unpersisted(rest, inFeatures); err != nil {
+		return false, err
+	}
+	return len(rest) == 0, nil
 }
 
 // DetectActiveChange returns the single non-archive change under openspec/changes/ that
@@ -243,8 +309,10 @@ func deny(reason string) Verdict { return Verdict{Deny: true, Reason: reason} }
 //     there is no active change to attach a receipt to.
 //   - an allow: exactly one active change existed and Capture succeeded.
 //   - an allow: more than one active change exists, but every surviving approved receipt is
-//     already persisted under some active change (the `capture --change <name>` remedy
-//     already ran) -- a fix-forward path for a retried acknowledgement.
+//     already persisted byte for byte under some active change or in some feature folder the
+//     sink keeps (the `capture --change <name>` or `capture --feature <name>` remedy already
+//     ran) -- a fix-forward path for a retried acknowledgement. The feature folders are asked
+//     for only when a receipt is under no change.
 //   - a denial, with its reason: more than one active change exists and at least one surviving
 //     approved receipt is unpersisted, or Capture itself failed. Fail-closed.
 //
@@ -263,7 +331,7 @@ func (s *Service) CheckCommand(command string) Verdict {
 	if err != nil {
 		var multi *MultipleActiveChangesError
 		if errors.As(err, &multi) {
-			allPersisted, perr := s.AllSurvivingApprovedPersisted(multi.Changes)
+			allPersisted, perr := s.persistedAcrossChangesOrFeatures(multi.Changes)
 			if perr != nil {
 				return deny(fmt.Sprintf("review-receipt: %v", perr))
 			}

@@ -33,6 +33,10 @@ type world struct {
 	readErr   map[string]error
 	writeErr  map[string]error
 
+	// features is the feature folders the sink keeps, featuresErr why it cannot list them.
+	features    []string
+	featuresErr error
+
 	calls  []string
 	writes []string
 }
@@ -80,32 +84,59 @@ func (w *world) HasArtifact(change, name string) (bool, error) {
 	return false, nil
 }
 
-func key(change, name string) string { return change + "/" + name }
+// key is how the world files a receipt: "<change>/<name>" for a change, and
+// "feature:<feature>/<name>" for a feature.
+func key(dest reviewreceipt.Destination, name string) string {
+	switch dest.Kind {
+	case reviewreceipt.DestinationChange:
+		return dest.Name + "/" + name
+	case reviewreceipt.DestinationFeature:
+		return "feature:" + dest.Name + "/" + name
+	}
+	panic(fmt.Sprintf("the service named a destination of no kind: %+v", dest))
+}
 
-func (w *world) Read(change, name string) ([]byte, error) {
-	w.calls = append(w.calls, "Read "+key(change, name))
-	if err := w.readErr[key(change, name)]; err != nil {
+func (w *world) Read(dest reviewreceipt.Destination, name string) ([]byte, error) {
+	w.calls = append(w.calls, "Read "+key(dest, name))
+	if err := w.readErr[key(dest, name)]; err != nil {
 		return nil, err
 	}
-	data, ok := w.persisted[key(change, name)]
+	data, ok := w.persisted[key(dest, name)]
 	if !ok {
-		return nil, fmt.Errorf("read %s: %w", w.Location(change, name), reviewreceipt.ErrNotPersisted)
+		return nil, fmt.Errorf("read %s: %w", w.Location(dest, name), reviewreceipt.ErrNotPersisted)
 	}
 	return data, nil
 }
 
-func (w *world) Write(change, name string, data []byte) error {
-	w.calls = append(w.calls, "Write "+key(change, name))
-	if err := w.writeErr[key(change, name)]; err != nil {
+func (w *world) Write(dest reviewreceipt.Destination, name string, data []byte) error {
+	w.calls = append(w.calls, "Write "+key(dest, name))
+	if err := w.writeErr[key(dest, name)]; err != nil {
 		return err
 	}
-	w.persisted[key(change, name)] = data
-	w.writes = append(w.writes, key(change, name))
+	w.persisted[key(dest, name)] = data
+	w.writes = append(w.writes, key(dest, name))
 	return nil
 }
 
-func (w *world) Location(change, name string) string {
-	return "/project/openspec/changes/" + change + "/review-receipts/" + name
+func (w *world) Location(dest reviewreceipt.Destination, name string) string {
+	if dest.Kind == reviewreceipt.DestinationFeature {
+		return "/project/odd/review-receipts/" + dest.Name + "/" + name
+	}
+	return "/project/openspec/changes/" + dest.Name + "/review-receipts/" + name
+}
+
+func (w *world) Features() ([]string, error) {
+	w.calls = append(w.calls, "Features")
+	return w.features, w.featuresErr
+}
+
+// inChanges is the destinations of the changes, in order.
+func inChanges(changes ...string) []reviewreceipt.Destination {
+	var dests []reviewreceipt.Destination
+	for _, c := range changes {
+		dests = append(dests, reviewreceipt.InChange(c))
+	}
+	return dests
 }
 
 // the documents a store holds
@@ -157,7 +188,7 @@ func TestCapturePersistsEachApprovedReceiptOnceInStoreOrder(t *testing.T) {
 	if want := []string{"review-a", "review-a", "review-shared", "review-b"}; !reflect.DeepEqual(lineages(captured), want) {
 		t.Errorf("captured lineages = %v, want %v", lineages(captured), want)
 	}
-	if want := w.Location("my-change", "review-a.review-state.json"); captured[1].Path != want {
+	if want := w.Location(reviewreceipt.InChange("my-change"), "review-a.review-state.json"); captured[1].Path != want {
 		t.Errorf("captured[1].Path = %q, want where the sink says it is, %q", captured[1].Path, want)
 	}
 	if string(w.persisted["my-change/review-shared.json"]) != string(approvedReceiptDoc("review-shared").Data) {
@@ -211,7 +242,7 @@ func TestCaptureIsIdempotentAndNeverReplacesADifferingFile(t *testing.T) {
 
 	captured, err := w.service().Capture("c")
 
-	wantErr := "reviewreceipt: " + w.Location("c", "review-b.json") + " already exists with different content"
+	wantErr := "reviewreceipt: " + w.Location(reviewreceipt.InChange("c"), "review-b.json") + " already exists with different content"
 	if err == nil || err.Error() != wantErr {
 		t.Fatalf("Capture error = %v, want %q", err, wantErr)
 	}
@@ -415,7 +446,7 @@ func TestARefusedApprovedReceiptNamesItsDocumentAndTheRemedy(t *testing.T) {
 	if err.Error() != want {
 		t.Errorf("Capture error =\n%s\nwant\n%s", err, want)
 	}
-	if _, err := w.service().AllSurvivingApprovedPersisted([]string{"c1"}); !errors.As(err, &unusable) || unusable.Origin != bad.Origin {
+	if _, err := w.service().AllSurvivingApprovedPersisted(inChanges("c1")); !errors.As(err, &unusable) || unusable.Origin != bad.Origin {
 		t.Errorf("AllSurvivingApprovedPersisted error = %v, want the same *UnusableReceiptError", err)
 	}
 }
@@ -426,7 +457,7 @@ func TestAllSurvivingApprovedPersistedRefusesNamesThatAreNotOnePathComponent(t *
 	w := newWorld()
 	w.stores = []reviewreceipt.Store{"s"}
 	w.docs["s"] = []reviewreceipt.Document{approvedReceiptDoc("../out")}
-	got, err := w.service().AllSurvivingApprovedPersisted([]string{"c1"})
+	got, err := w.service().AllSurvivingApprovedPersisted(inChanges("c1"))
 	var unsafe *reviewreceipt.UnsafeNameError
 	if !errors.As(err, &unsafe) || unsafe.Kind != "receipt file name" || got {
 		t.Errorf("unsafe lineage: AllSurvivingApprovedPersisted = %v, %v, want a refusal", got, err)
@@ -435,7 +466,7 @@ func TestAllSurvivingApprovedPersistedRefusesNamesThatAreNotOnePathComponent(t *
 	w = newWorld()
 	w.stores = []reviewreceipt.Store{"s"}
 	w.docs["s"] = []reviewreceipt.Document{approvedReceiptDoc("review-a")}
-	got, err = w.service().AllSurvivingApprovedPersisted([]string{"c1", "../c2"})
+	got, err = w.service().AllSurvivingApprovedPersisted(inChanges("c1", "../c2"))
 	if !errors.As(err, &unsafe) || unsafe.Kind != "change name" || unsafe.Name != "../c2" || got {
 		t.Errorf("unsafe change: AllSurvivingApprovedPersisted = %v, %v, want a refusal naming the change", got, err)
 	}
@@ -556,7 +587,7 @@ func TestHookDeniesWhenAChangeCannotBeLookedInto(t *testing.T) {
 
 func TestMultipleActiveChangesErrorNamesTheRemedy(t *testing.T) {
 	err := &reviewreceipt.MultipleActiveChangesError{Changes: []string{"a", "b"}}
-	want := "reviewreceipt: multiple active changes (a, b); run `review-receipt capture --change <name>` before acknowledging"
+	want := "reviewreceipt: multiple active changes (a, b); run `review-receipt capture --change <name>` or `review-receipt capture --feature <name>` before acknowledging"
 	if err.Error() != want {
 		t.Errorf("Error() = %q, want %q", err.Error(), want)
 	}
@@ -585,7 +616,7 @@ func TestAllSurvivingApprovedPersisted(t *testing.T) {
 				w.persisted[k] = v
 			}
 
-			got, err := w.service().AllSurvivingApprovedPersisted([]string{"c1", "c2"})
+			got, err := w.service().AllSurvivingApprovedPersisted(inChanges("c1", "c2"))
 			if err != nil || got != tc.want {
 				t.Errorf("AllSurvivingApprovedPersisted = %v, %v, want %v", got, err, tc.want)
 			}
@@ -596,7 +627,7 @@ func TestAllSurvivingApprovedPersisted(t *testing.T) {
 func TestAllSurvivingApprovedPersistedIsTrueWhenNothingSurvives(t *testing.T) {
 	w := newWorld()
 	w.stores = []reviewreceipt.Store{"s"}
-	if got, err := w.service().AllSurvivingApprovedPersisted([]string{"c1"}); err != nil || !got {
+	if got, err := w.service().AllSurvivingApprovedPersisted(inChanges("c1")); err != nil || !got {
 		t.Errorf("AllSurvivingApprovedPersisted with no receipts = %v, %v, want true", got, err)
 	}
 	for _, call := range w.calls {
@@ -621,7 +652,7 @@ func TestAllSurvivingApprovedPersistedReportsWhatFails(t *testing.T) {
 			w.stores = []reviewreceipt.Store{"s"}
 			w.docs["s"] = []reviewreceipt.Document{approvedReceiptDoc("review-a")}
 			tc.arm(w)
-			got, err := w.service().AllSurvivingApprovedPersisted([]string{"c1"})
+			got, err := w.service().AllSurvivingApprovedPersisted(inChanges("c1"))
 			if err == nil || err.Error() != tc.want || got {
 				t.Errorf("AllSurvivingApprovedPersisted = %v, %v, want a refusal %q", got, err, tc.want)
 			}
@@ -733,7 +764,7 @@ func TestHookDeniesAnAmbiguousChangeUnlessEveryReceiptIsPersisted(t *testing.T) 
 
 	w := setup()
 	v := w.service().CheckCommand(ackCommand)
-	wantDeny := "reviewreceipt: multiple active changes (a, b); run `review-receipt capture --change <name>` before acknowledging"
+	wantDeny := "reviewreceipt: multiple active changes (a, b); run `review-receipt capture --change <name>` or `review-receipt capture --feature <name>` before acknowledging"
 	if !v.Deny || v.Reason != wantDeny {
 		t.Errorf("unpersisted: CheckCommand = %+v, want a denial %q", v, wantDeny)
 	}
@@ -779,7 +810,7 @@ func TestAServiceMissingAPortRefusesInsteadOfGuessing(t *testing.T) {
 		if _, err := svc.DetectActiveChange(); err == nil {
 			t.Error("DetectActiveChange accepted a service with a missing port")
 		}
-		if _, err := svc.AllSurvivingApprovedPersisted([]string{"c"}); err == nil {
+		if _, err := svc.AllSurvivingApprovedPersisted(inChanges("c")); err == nil {
 			t.Error("AllSurvivingApprovedPersisted accepted a service with a missing port")
 		}
 		if v := svc.CheckCommand(ackCommand); !v.Deny || !strings.HasPrefix(v.Reason, "review-receipt: ") {

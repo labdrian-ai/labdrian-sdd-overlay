@@ -229,8 +229,20 @@ const acknowledgeCommand = "gentle-ai review acknowledge-approved --cwd /repo --
 // its digest, in path order, and every directory.
 func (w *receiptWorld) tree(label, dir string) {
 	w.t.Helper()
+	w.treeOf(label, dir, "openspec")
+}
+
+// oddTree records what is under dir/odd, as tree does for openspec: where a capture into an ODD
+// feature puts its receipts.
+func (w *receiptWorld) oddTree(label, dir string) {
+	w.t.Helper()
+	w.treeOf(label, dir, "odd")
+}
+
+func (w *receiptWorld) treeOf(label, dir, top string) {
+	w.t.Helper()
 	var lines []string
-	base := filepath.Join(dir, "openspec")
+	base := filepath.Join(dir, top)
 	err := filepath.WalkDir(base, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -254,7 +266,7 @@ func (w *receiptWorld) tree(label, dir string) {
 		return nil
 	})
 	if errors.Is(err, fs.ErrNotExist) {
-		w.write("=== %s ===\n(no openspec directory)\n\n", label)
+		w.write("=== %s ===\n(no %s directory)\n\n", label, top)
 		return
 	}
 	if err != nil {
@@ -808,6 +820,93 @@ func receiptGoldenCases() []receiptGoldenCase {
 			w.run("", "capture", "--cwd", dir)
 			w.run("", "capture", "--cwd", dir, "--change", "the-change")
 			w.tree("after", dir)
+		}},
+		// An ODD review belongs to no SDD change (C23 M5d): its receipts are captured into
+		// odd/review-receipts/<feature>/, beside odd/tasks/<feature>.md, with several active
+		// changes or none, and a second capture of the same bytes changes nothing.
+		{"capture-into-a-feature-twice", func(w *receiptWorld) {
+			root := w.repo("<ROOT>", false)
+			gitDir := filepath.Join(root, ".git")
+			w.change(root, "change-a")
+			w.change(root, "change-b")
+			w.putReceipt(gitDir, "review-one", legacyReceipt("review-one", receiptSchemaV2, approved))
+			w.putState(gitDir, "review-939c22285467c2b0", lifecycleState("review-939c22285467c2b0", approved))
+			w.putState(gitDir, "review-busy", lifecycleState("review-busy", "reviewing"))
+			w.run("", "capture", "--cwd", root, "--feature", "consolidation-phase9")
+			w.run("", "capture", "--cwd", root, "--feature", "consolidation-phase9")
+			w.oddTree("odd after", root)
+			w.tree("openspec after", root)
+		}},
+		{"capture-into-a-feature-without-openspec", func(w *receiptWorld) {
+			root := w.repo("<ROOT>", false)
+			w.putState(filepath.Join(root, ".git"), "review-solo", lifecycleState("review-solo", approved))
+			w.run("", "capture", "--cwd", root, "--feature", "a-feature")
+			w.oddTree("odd after", root)
+			w.tree("openspec after", root)
+		}},
+		{"capture-refuses-a-feature-destination-that-differs", func(w *receiptWorld) {
+			root := w.repo("<ROOT>", false)
+			w.putReceipt(filepath.Join(root, ".git"), "review-one", legacyReceipt("review-one", receiptSchemaV2, approved))
+			w.put(filepath.Join(root, "odd", "review-receipts", "the-feature", "review-one.json"), "{}")
+			w.run("", "capture", "--cwd", root, "--feature", "the-feature")
+			w.oddTree("after", root)
+		}},
+		{"capture-refuses-a-feature-name-that-is-not-a-path-component", func(w *receiptWorld) {
+			root := w.repo("<ROOT>", false)
+			w.putReceipt(filepath.Join(root, ".git"), "review-one", legacyReceipt("review-one", receiptSchemaV2, approved))
+			for _, feature := range []string{"", "   ", "../escaped", "a/b", "..", " padded", "padded "} {
+				w.run("", "capture", "--cwd", root, "--feature", feature)
+			}
+			w.oddTree("after", root)
+		}},
+		{"capture-refuses-a-change-and-a-feature-together", func(w *receiptWorld) {
+			root := w.repo("<ROOT>", false)
+			w.change(root, "the-change")
+			w.putReceipt(filepath.Join(root, ".git"), "review-one", legacyReceipt("review-one", receiptSchemaV2, approved))
+			w.run("", "capture", "--cwd", root, "--change", "the-change", "--feature", "the-feature")
+			w.run("", "capture", "--cwd", root, "--feature", "the-feature", "--change", "the-change")
+			w.run("", "capture", "--change", "the-change", "--feature", "the-feature")
+			w.oddTree("odd after", root)
+			w.tree("openspec after", root)
+		}},
+		// The owner's case: with several active changes the hook denies, naming both remedies;
+		// after capture --feature it allows; a new approved receipt is denied again until it too
+		// is captured.
+		{"hook-allows-once-the-receipts-are-captured-into-a-feature", func(w *receiptWorld) {
+			root := w.repo("<ROOT>", false)
+			gitDir := filepath.Join(root, ".git")
+			w.change(root, "change-a")
+			w.change(root, "change-b")
+			w.putState(gitDir, "review-939c22285467c2b0", lifecycleState("review-939c22285467c2b0", approved))
+			w.hook(root, acknowledgeCommand)
+			w.run("", "capture", "--cwd", root, "--feature", "consolidation-phase9")
+			w.hook(root, acknowledgeCommand)
+			w.putReceipt(gitDir, "review-later", legacyReceipt("review-later", receiptSchemaV2, approved))
+			w.hook(root, acknowledgeCommand)
+			w.run("", "capture", "--cwd", root, "--change", "change-b")
+			w.hook(root, acknowledgeCommand)
+			w.oddTree("odd after", root)
+			w.tree("openspec after", root)
+		}},
+		{"hook-denies-a-feature-receipt-that-differs", func(w *receiptWorld) {
+			root := w.repo("<ROOT>", false)
+			w.change(root, "change-a")
+			w.change(root, "change-b")
+			w.putState(filepath.Join(root, ".git"), "review-939c22285467c2b0", lifecycleState("review-939c22285467c2b0", approved))
+			w.put(filepath.Join(root, "odd", "review-receipts", "consolidation-phase9", "review-939c22285467c2b0.review-state.json"), "{}")
+			w.hook(root, acknowledgeCommand)
+			w.oddTree("odd after", root)
+		}},
+		// With one active change the hook captures into it as it always did, whatever a feature
+		// folder holds.
+		{"hook-with-one-change-captures-into-it-beside-a-feature", func(w *receiptWorld) {
+			root := w.repo("<ROOT>", false)
+			w.change(root, "only-change")
+			state := lifecycleState("review-solo", approved)
+			w.putState(filepath.Join(root, ".git"), "review-solo", state)
+			w.put(filepath.Join(root, "odd", "review-receipts", "a-feature", "review-solo.review-state.json"), state)
+			w.hook(root, acknowledgeCommand)
+			w.tree("openspec after", root)
 		}},
 		{"verbs-must-be-named", func(w *receiptWorld) {
 			w.run("")

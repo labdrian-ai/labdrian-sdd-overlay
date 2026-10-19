@@ -1,0 +1,27 @@
+$ review-receipt capture --cwd <ROOT> --feature consolidation-phase9
+exit: 0
+--- stdout ---
+review-receipt capture: 2 receipt(s) captured for feature "consolidation-phase9"
+--- stderr ---
+
+$ review-receipt capture --cwd <ROOT> --feature consolidation-phase9
+exit: 0
+--- stdout ---
+review-receipt capture: 2 receipt(s) captured for feature "consolidation-phase9"
+--- stderr ---
+
+=== odd after ===
+dir  odd
+dir  odd/review-receipts
+dir  odd/review-receipts/consolidation-phase9
+file odd/review-receipts/consolidation-phase9/review-939c22285467c2b0.review-state.json 0600 397 09b4c2c6e26e
+file odd/review-receipts/consolidation-phase9/review-one.json 0600 201 130e405e6318
+
+=== openspec after ===
+dir  openspec
+dir  openspec/changes
+dir  openspec/changes/change-a
+file openspec/changes/change-a/tasks.md 0644 8 b23b81c926c4
+dir  openspec/changes/change-b
+file openspec/changes/change-b/tasks.md 0644 8 b23b81c926c4
+

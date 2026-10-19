@@ -2,7 +2,7 @@ $ review-receipt capture --cwd <ROOT>
 exit: 1
 --- stdout ---
 --- stderr ---
-error: reviewreceipt: multiple active changes (change-a, change-b); run `review-receipt capture --change <name>` before acknowledging
+error: reviewreceipt: multiple active changes (change-a, change-b); run `review-receipt capture --change <name>` or `review-receipt capture --feature <name>` before acknowledging
 
 === after ===
 dir  openspec
