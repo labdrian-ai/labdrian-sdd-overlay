@@ -12,5 +12,8 @@ const Supported = false
 // ErrUnsupported. It exists so that this build target compiles.
 func OpenNoFollow(path string) (*os.File, error) { return nil, ErrUnsupported }
 
+// OpenAppendNoFollow is unavailable on this platform and always fails with ErrUnsupported.
+func OpenAppendNoFollow(path string, perm os.FileMode) (*os.File, error) { return nil, ErrUnsupported }
+
 // IsSymlinkRefusal is never true here, because OpenNoFollow never opens.
 func IsSymlinkRefusal(err error) bool { return false }

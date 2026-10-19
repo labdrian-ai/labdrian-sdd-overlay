@@ -173,6 +173,7 @@ var rings = map[string]archguard.Ring{
 	"projection":                archguard.Domain,
 	"projection/app":            archguard.Application,
 	"projection/fsstore":        archguard.Adapter,
+	"projection/evidencelog":    archguard.Adapter,
 	"propagator":                archguard.Domain,
 	"propagator/app":            archguard.Application,
 	"propagator/fsstore":        archguard.Adapter,
