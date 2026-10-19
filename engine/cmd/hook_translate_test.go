@@ -115,15 +115,18 @@ func TestGateCallOfAnotherToolKeepsOnlyItsName(t *testing.T) {
 func TestGateCallReadsTheSkillAndTheFilePathOnRequest(t *testing.T) {
 	skill := gateCall(decodePreToolUse(t, `{"tool_name":"Skill","tool_input":{"skill":"deploy-checks"}}`))
 	if skill.ReadSkill == nil || skill.ReadSkill() != "deploy-checks" {
-		t.Errorf("a Skill call: ReadSkill reads %q, want deploy-checks", read(skill.ReadSkill))
+		t.Errorf("a Skill call: ReadSkill reads %q, want deploy-checks", argumentOf(skill.ReadSkill))
 	}
 	file := gateCall(decodePreToolUse(t, `{"tool_name":"Read","tool_input":{"file_path":"/r/SKILL.md"}}`))
 	if file.ReadFilePath == nil || file.ReadFilePath() != "/r/SKILL.md" {
-		t.Errorf("a Read call: ReadFilePath reads %q, want /r/SKILL.md", read(file.ReadFilePath))
+		t.Errorf("a Read call: ReadFilePath reads %q, want /r/SKILL.md", argumentOf(file.ReadFilePath))
 	}
 }
 
-func read(f func() string) string {
+// argumentOf is the argument a lazy reader of a projection.ToolCall reads, or "" for a nil reader.
+// The projection package's tests keep their own copy, as a test helper cannot be shared across
+// packages.
+func argumentOf(f func() string) string {
 	if f == nil {
 		return "<nil>"
 	}

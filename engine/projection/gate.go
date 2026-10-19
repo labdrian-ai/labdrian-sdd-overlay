@@ -181,8 +181,16 @@ func GateRelevant(editTools []string, toolName string) bool {
 // path alone (C23 M4 decision 5), so a caller answers every other Read without
 // reading the binding, the workflow, or the procedural skills lock.
 func GateRelevantCall(editTools []string, call ToolCall) bool {
-	_, relevant := relevantUse(editTools, call)
-	return relevant
+	return relevantWith(editTools, call.Name, skillUseOf(call))
+}
+
+// relevantWith is whether the gate can have an opinion about a call named name
+// that uses a skill as use says: a file-edit tool of editTools, a memory read, or
+// a use of a skill. A Skill or Read call that uses none (a Read of another file)
+// is relevant only as a file-edit tool.
+func relevantWith(editTools []string, name string, use skillUse) bool {
+	_, read := memoryReadOf(name)
+	return slices.Contains(editTools, name) || read || use.isSkill || use.isRead
 }
 
 // The tools that can use a skill: the Skill tool names one by its id, and a Read
@@ -202,27 +210,27 @@ type skillUse struct {
 	isRead      bool
 }
 
-// relevantUse reads, once, what a call can use a skill by, and whether the gate
-// can have an opinion about the call at all.
-func relevantUse(editTools []string, call ToolCall) (skillUse, bool) {
+// skillUseOf reads what a call uses a skill by, reading its argument once: the
+// skill a Skill call names, or the file a Read of a SKILL.md names. It is the zero
+// value for every other call, a Read of another file included.
+func skillUseOf(call ToolCall) skillUse {
 	switch call.Name {
 	case skillTool:
-		return skillUse{isSkill: true, skill: readArg(call.ReadSkill)}, true
+		return skillUse{isSkill: true, skill: readArg(call.ReadSkill)}
 	case readTool:
 		file := readArg(call.ReadFilePath)
-		if file == "" || filepath.Base(filepath.Clean(file)) != skillFileName {
-			return skillUse{}, slices.Contains(editTools, readTool)
+		if file != "" && filepath.Base(filepath.Clean(file)) == skillFileName {
+			return skillUse{isRead: true, file: file}
 		}
-		return skillUse{isRead: true, file: file}, true
 	}
-	return skillUse{}, GateRelevant(editTools, call.Name)
+	return skillUse{}
 }
 
 // CanUseASkill reports whether a call can use a procedural skill: the Skill tool,
 // or a Read of a SKILL.md. It is the call a caller reads the procedural skills
 // lock for, and no other.
 func CanUseASkill(call ToolCall) bool {
-	use, _ := relevantUse(nil, call)
+	use := skillUseOf(call)
 	return use.isSkill || use.isRead
 }
 
@@ -300,8 +308,8 @@ func memoryReadOf(toolName string) (memoryRead, bool) {
 // for the rules. It is total: it never fails and never panics, and anything it
 // does not understand is an allow.
 func Gate(in GateInput) GateResult {
-	use, relevant := relevantUse(in.EditTools, in.Call)
-	if !relevant {
+	use := skillUseOf(in.Call)
+	if !relevantWith(in.EditTools, in.Call.Name, use) {
 		return GateResult{}
 	}
 	if in.Binding.Classification != ClassificationOwned {
@@ -435,9 +443,14 @@ func memoryGate(in GateInput, s workflow.State, read memoryRead) GateResult {
 	if read.check == checkEngramProject {
 		return engramProjectGate(b, in.EngramName, s.ProjectIdentity, in.Call)
 	}
+	return longtermProjectGate(b, plan.Filters.ProjectID, in.Call)
+}
 
-	planProject := plan.Filters.ProjectID
-	query := in.Call.query()
+// longtermProjectGate checks the project a longterm-mem query names against the
+// plan's project, which is the workflow's shared identity (C23 M2): another
+// project, or none, is denied.
+func longtermProjectGate(b Binding, planProject string, call ToolCall) GateResult {
+	query := call.query()
 	if !query.Named {
 		return GateResult{Warning: "labdrian: the input of this longterm-mem query is not a JSON object, so its project was not checked against the memory plan of " +
 			workflowRef(b) + "."}

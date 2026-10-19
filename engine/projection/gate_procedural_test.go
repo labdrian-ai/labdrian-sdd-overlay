@@ -71,12 +71,14 @@ func TestTheGateLooksAtTheSkillToolAndAReadOfASkillFileOnly(t *testing.T) {
 		{projection.ToolCall{Name: "Bash"}, false},
 	} {
 		if got := projection.GateRelevantCall(editTools, tt.call); got != tt.want {
-			t.Errorf("GateRelevantCall(%s, skill %q, path %q) = %v, want %v", tt.call.Name, read(tt.call.ReadSkill), read(tt.call.ReadFilePath), got, tt.want)
+			t.Errorf("GateRelevantCall(%s, skill %q, path %q) = %v, want %v", tt.call.Name, argumentOf(tt.call.ReadSkill), argumentOf(tt.call.ReadFilePath), got, tt.want)
 		}
 	}
 }
 
-func read(f func() string) string {
+// argumentOf is the argument a lazy reader of a ToolCall reads, or "" for a nil reader, for the
+// messages of a failing test.
+func argumentOf(f func() string) string {
 	if f == nil {
 		return "<nil>"
 	}
@@ -123,7 +125,7 @@ func TestGateLeavesEveryOtherSkillAlone(t *testing.T) {
 		readCall("/work/repo/.claude/skills/deploy-checks/skill.md"),
 		{Name: "Read"},
 	} {
-		allowed(t, call.Name+" "+read(call.ReadSkill)+read(call.ReadFilePath), proceduralGate(sdd, call, lockOf()))
+		allowed(t, call.Name+" "+argumentOf(call.ReadSkill)+argumentOf(call.ReadFilePath), proceduralGate(sdd, call, lockOf()))
 	}
 	// A Skill call that names no skill uses none, even beside a lock entry with no id.
 	noID := projection.ProceduralSkills{Skills: []projection.ProceduralSkill{{ID: ""}}}
