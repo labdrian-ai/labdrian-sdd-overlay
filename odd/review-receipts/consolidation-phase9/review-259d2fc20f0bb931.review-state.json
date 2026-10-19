@@ -1,0 +1,242 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:84adcff06ce639c24efdf6fae275b066440b4ce800b8084624c70acb5b3343e9",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-259d2fc20f0bb931",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "34b666aacf330c87b3c93debc574094870cb5674",
+      "candidate_tree": "fab126c41d9f1160e6100b96ec67c81797b4c4e5",
+      "paths_digest": "sha256:97f13d0ed83001e41fc3669b77e0d40f6d2a70ba113ee26ef543eecbfe669476",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "tools/entry-contract-validator/main.go",
+        "tools/entry-contract-validator/main_test.go",
+        "tools/entry-contract-validator/token_domain_test.go"
+      ],
+      "identity": "sha256:259d2fc20f0bb931c2f3e1332456b854fdff337a7cfc9d892043ddb90cd71d29"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "34b666aacf330c87b3c93debc574094870cb5674",
+      "candidate_tree": "fab126c41d9f1160e6100b96ec67c81797b4c4e5",
+      "paths_digest": "sha256:97f13d0ed83001e41fc3669b77e0d40f6d2a70ba113ee26ef543eecbfe669476",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "tools/entry-contract-validator/main.go",
+        "tools/entry-contract-validator/main_test.go",
+        "tools/entry-contract-validator/token_domain_test.go"
+      ],
+      "identity": "sha256:259d2fc20f0bb931c2f3e1332456b854fdff337a7cfc9d892043ddb90cd71d29"
+    },
+    "genesis_paths": [
+      "tools/entry-contract-validator/main.go",
+      "tools/entry-contract-validator/main_test.go",
+      "tools/entry-contract-validator/token_domain_test.go"
+    ],
+    "policy_hash": "sha256:34fb63d7f29f8613cd4431382b1057398a4816f8a4c20fc34677fffc80a184f6",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-risk",
+      "review-resilience",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 255,
+    "correction_budget": 128,
+    "lens_results": [
+      {
+        "lens": "review-risk",
+        "findings": [],
+        "evidence": [
+          "diff --name-status and --numstat confirm 3 changed paths matching the manifest",
+          "full patch inspected for main.go: adds nextRecommendationField const, diagnoseNextRecommendationRejection, findEnumRejection, and one call site in validateFiles; no new process-spawning, file-write, or network code",
+          "full patch inspected for main_test.go: adds one wantDetail field and one new test TestSelfDiagnosingMessageForUnknownDispatcherToken that calls validateMutation (in-process call to validateFiles via a t.TempDir() file), no subprocess execution added",
+          "cat-file of candidate token_domain_test.go (new file, 159 lines): reads local repo files (schema JSON, SKILL.md) via os.ReadFile with paths built from repoRoot(t)/schemaPath(t); no process execution, no network I/O, no attacker-controlled input",
+          "confirmed the only process-spawning code in main_test.go (os/exec, exec.Command in TestOverlayCLIResolvesValidationPathsFromCaller) is pre-existing: byte-for-byte identical between base tree (lines 400-438) and candidate tree (lines 438-476), shifted only by the +38 lines inserted earlier in the file by this diff's single-line change; it is not touched by either diff hunk (hunks are at line ~135 and ~239 only) and its exec.Command args (bash, a fixed repo-relative wrapper script path, and two fixed testdata fixture paths) contain no candidate-introduced or attacker-influenced input, so the native risk trigger is pre-existing/base-only, not introduced or worsened by this candidate",
+          "reviewed the new error-message text in diagnoseNextRecommendationRejection: it interpolates only the constant field name expected_native_next_recommendation and the rejected token value already present in the validated instance file (the caller's own local input file), via %q (safe Go quoting, not used as a format string); this is local CLI validator output describing the caller's own submitted value, equivalent in sensitivity to the generic jsonschema enum error it replaces, and does not surface any secret, credential, or unrelated filesystem path",
+          "confirmed via go.mod that jsonschema/v6 remains pinned at v6.0.2 (unchanged, not a manifest path) so the new import of its kind subpackage adds no new external dependency"
+        ],
+        "result_hash": "sha256:bfccf63ea4515bafffb2fb7fb687ed96c9faccf45c018c827a4d7c53042e1286"
+      },
+      {
+        "lens": "review-resilience",
+        "findings": [
+          {
+            "id": "R4-001",
+            "lens": "resilience",
+            "location": "tools/entry-contract-validator/main.go:187",
+            "severity": "WARNING",
+            "claim": "When the enum rejection on expected_native_next_recommendation co-occurs with any other schema violation on the same instance, the new diagnostic branch discards the full validation error and replaces it with a template that only names the recommendation-token problem, silently dropping all sibling violations from the user-facing message.",
+            "proof_refs": [
+              "main.go:185-189 branches on diagnoseNextRecommendationRejection(err); when ok, it returns fmt.Errorf(\"schema validation: %s\", diagnostic) using %s on a hand-built string, not %w on err, so the original *jsonschema.ValidationError (and any other Causes it carries) is not referenced anywhere in the returned message; the non-diagnostic branch at line 189 still uses %w err, proving the diagnostic branch is the one that loses information",
+              "findEnumRejection (main.go:229-243) does a DFS over validationErr.Causes and returns on the FIRST match of the target field's enum failure, never continuing to collect or surface any other Cause in the tree",
+              "skills/_shared/entry-contract.schema.json defines many independently-validated sibling properties on the same top-level object (e.g. tier enum [1,2,3] at line 43, contract_version const \"2.0.0\" at line 28, expected_native_next_recommendation enum at line 241), so an instance can trip the recommendation-token enum violation together with an unrelated violation (e.g. bad tier) in a single Validate() call",
+              "main_test.go's new TestSelfDiagnosingMessageForUnknownDispatcherToken and the 'stale prefixed dispatcher phase' table case (main_test.go:133-139, 243-278) only mutate the single expected_native_next_recommendation field, so no test exercises or guards the simultaneous-violation case; the message-completeness regression is unprotected"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          }
+        ],
+        "evidence": [
+          "git diff --name-status/--numstat 34b666a..fab126c for the 3-file manifest",
+          "git diff --patch for tools/entry-contract-validator/main.go, main_test.go, token_domain_test.go",
+          "git cat-file -p fab126c:tools/entry-contract-validator/main.go (full file, 412 lines) to read diagnoseNextRecommendationRejection and findEnumRejection in context",
+          "git cat-file -p fab126c:tools/entry-contract-validator/main_test.go (full file) to confirm repoRoot()/schemaPath() are pre-existing unchanged helpers (base-only, not candidate-introduced) that use a hardcoded '../..' relative path rather than a .git walk, and that every read failure path (missing schema/SKILL.md/property/enum/marker) calls t.Fatalf, i.e. fails loudly rather than silently passing when inputs are missing — no defect found for the .git-resolution concern",
+          "git cat-file -p fab126c:skills/_shared/entry-contract.schema.json to confirm the expected_native_next_recommendation enum (12 tokens) and sibling independently-validated properties (tier, contract_version, etc.) are unchanged and structurally support simultaneous multi-property violations",
+          "git cat-file -p fab126c:skills/inception-pipeline/SKILL.md to confirm the new pin test's line-matching assumptions ('Preserve the native token exactly' at line 105, 'Cold-start exemption' + 'nextRecommended is' on the same line 107) hold against the actual prose, and that the 12 tokens listed in prose match the schema enum exactly"
+        ],
+        "result_hash": "sha256:62982592080306ade253d07bc69559ef6dd829d76e3647ee85f3a31b91b435b0"
+      },
+      {
+        "lens": "review-readability",
+        "findings": [
+          {
+            "id": "R2-001",
+            "lens": "readability",
+            "location": "tools/entry-contract-validator/token_domain_test.go:15",
+            "severity": "WARNING",
+            "claim": "token_domain_test.go declares its own constant nextRecommendationFieldName holding the literal \"expected_native_next_recommendation\", duplicating the constant nextRecommendationField already declared in main.go for the identical literal, even though both files compile as the same package main and the test file could reference the existing constant instead of redeclaring it under a near-identical name.",
+            "proof_refs": [
+              "tools/entry-contract-validator/main.go:33 `const nextRecommendationField = \"expected_native_next_recommendation\"` (new in this diff)",
+              "tools/entry-contract-validator/token_domain_test.go:15 `const nextRecommendationFieldName = \"expected_native_next_recommendation\"` (new file in this diff)",
+              "tools/entry-contract-validator/main.go:1 and tools/entry-contract-validator/token_domain_test.go:1 both declare `package main`, so token_domain_test.go has direct access to nextRecommendationField without redeclaring it",
+              "the change's stated goal is to stop a hardcoded mirror of this field/domain from silently drifting, yet the diff itself introduces a second, differently-named constant carrying the same field-name literal with nothing enforcing the two stay equal"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R2-002",
+            "lens": "readability",
+            "location": "tools/entry-contract-validator/token_domain_test.go:72",
+            "severity": "WARNING",
+            "claim": "The new pin test locates its anchor sentence in skills/inception-pipeline/SKILL.md by matching the literal substring \"Preserve the native token exactly\" (asserted at token_domain_test.go:101), but that sentence (SKILL.md:105) carries no comment marking it as mechanically load-bearing for a Go test in a different directory, and the failure path when the substring is absent (token_domain_test.go:72) reports only \"skills/inception-pipeline/SKILL.md has no line containing %q\" without stating that the fix is to update the marker in token_domain_test.go to match the reworded prose.",
+            "proof_refs": [
+              "tools/entry-contract-validator/token_domain_test.go:101 `proseLine := findLineContaining(t, inceptionPipelineSkillLines(t), \"Preserve the native token exactly\")`",
+              "the anchor sentence the test matches lives in the inception-pipeline skill prose, which is NOT part of this frozen candidate, so nothing in the reviewed scope marks it as mechanically load-bearing",
+              "tools/entry-contract-validator/token_domain_test.go:72 `t.Fatalf(\"skills/inception-pipeline/SKILL.md has no line containing %q\", marker)` names the symptom but not the required remediation or the coupled file"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          }
+        ],
+        "evidence": [
+          "git diff --name-status and --numstat between base 34b666aacf330c87b3c93debc574094870cb5674 and candidate fab126c41d9f1160e6100b96ec67c81797b4c4e5 confirmed the 3-file manifest",
+          "git diff --patch (myers, unified=3) read for each of the 3 changed paths to inspect every added/modified hunk",
+          "git cat-file -p on the candidate tree for tools/entry-contract-validator/main.go, main_test.go, token_domain_test.go, skills/inception-pipeline/SKILL.md, and skills/_shared/entry-contract.schema.json to verify constant declarations, the enum token list, and the exact prose anchors the new pin test depends on"
+        ],
+        "result_hash": "sha256:cf5ad2857502b001b2952bfaa7fe847effb06b1660262d60aa2af79f5db87860"
+      },
+      {
+        "lens": "review-reliability",
+        "findings": [
+          {
+            "id": "R3-001",
+            "lens": "reliability",
+            "location": "tools/entry-contract-validator/main.go:187",
+            "severity": "WARNING",
+            "claim": "When diagnoseNextRecommendationRejection finds an enum rejection anywhere in the validation error tree, the returned error entirely replaces the original err (fmt.Errorf with %s, not %w, and no reference to err at all) instead of augmenting it, so any other concurrent schema violation on the same instance (e.g. an unknown top-level property, since the schema root sets additionalProperties:false) is silently dropped from the reported message even though the underlying jsonschema.ValidationError still carries it as a sibling Cause.",
+            "proof_refs": [
+              "tools/entry-contract-validator/main.go:185-189: the new branch `if diagnostic, ok := diagnoseNextRecommendationRejection(err); ok { return \u0026contractError{code: exitSchemaValidation, err: fmt.Errorf(\"schema validation: %s\", diagnostic)} }` returns before reaching the pre-existing `fmt.Errorf(\"schema validation: %w\", err)` fallback, so the diagnostic string is the only detail surfaced whenever the match succeeds",
+              "tools/entry-contract-validator/main.go:229-243: findEnumRejection returns on the first matching Cause found anywhere in the tree and never inspects sibling Causes, so an unrelated violation elsewhere in the same instance is never surfaced once the token match is found",
+              "skills/_shared/entry-contract.schema.json:7 sets root `\"additionalProperties\": false`, so an instance with both an unknown top-level property and an invalid expected_native_next_recommendation token is a real, constructible input that would trigger this masking",
+              "no test added in this diff (main_test.go or token_domain_test.go) constructs an instance with two simultaneous violations, so this loss of diagnostic completeness is uncovered"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          }
+        ],
+        "evidence": [
+          "Ran the mandated diff --name-status/--numstat/--patch and cat-file commands against base 34b666aacf330c87b3c93debc574094870cb5674 and candidate fab126c41d9f1160e6100b96ec67c81797b4c4e5 for all three manifest paths",
+          "Read the full candidate main.go and main_test.go via cat-file to see diagnoseNextRecommendationRejection/findEnumRejection in context and the new TestSelfDiagnosingMessageForUnknownDispatcherToken assertions",
+          "Read the full candidate token_domain_test.go via cat-file and cross-checked its extraction logic against the live schema enum (skills/_shared/entry-contract.schema.json:241, 12 tokens) and the SKILL.md prose lines it pins (lines 105 and 107), confirming the set-difference check can fail in both directions (token added to enum but not prose, and vice versa) and that every helper (findLineContaining, extractSchemaNextRecommendationEnum, the zero-control-token guard) fails loudly via t.Fatalf rather than passing silently on missing/unparseable input",
+          "Verified the self-diagnosing message's required substrings (token, mirror-drift sentence, both file paths, gentle-ai sdd-status, nextRecommended) all appear in the exact fmt.Sprintf template at main.go:215-223, and that the fallback generic jsonschema error text would not incidentally contain those custom phrases, so TestSelfDiagnosingMessageForUnknownDispatcherToken is not vacuously satisfiable by the old code path",
+          "Confirmed exitSchemaValidation (5) is unchanged on both the diagnostic and fallback branches"
+        ],
+        "result_hash": "sha256:8d22a23ec69225a03253fceaca2015fb79232a9bd5a87304b1717f37c4b25f02"
+      }
+    ],
+    "findings": [
+      {
+        "id": "R4-001",
+        "lens": "resilience",
+        "location": "tools/entry-contract-validator/main.go:187",
+        "severity": "WARNING",
+        "claim": "When the enum rejection on expected_native_next_recommendation co-occurs with any other schema violation on the same instance, the new diagnostic branch discards the full validation error and replaces it with a template that only names the recommendation-token problem, silently dropping all sibling violations from the user-facing message.",
+        "proof_refs": [
+          "main.go:185-189 branches on diagnoseNextRecommendationRejection(err); when ok, it returns fmt.Errorf(\"schema validation: %s\", diagnostic) using %s on a hand-built string, not %w on err, so the original *jsonschema.ValidationError (and any other Causes it carries) is not referenced anywhere in the returned message; the non-diagnostic branch at line 189 still uses %w err, proving the diagnostic branch is the one that loses information",
+          "findEnumRejection (main.go:229-243) does a DFS over validationErr.Causes and returns on the FIRST match of the target field's enum failure, never continuing to collect or surface any other Cause in the tree",
+          "skills/_shared/entry-contract.schema.json defines many independently-validated sibling properties on the same top-level object (e.g. tier enum [1,2,3] at line 43, contract_version const \"2.0.0\" at line 28, expected_native_next_recommendation enum at line 241), so an instance can trip the recommendation-token enum violation together with an unrelated violation (e.g. bad tier) in a single Validate() call",
+          "main_test.go's new TestSelfDiagnosingMessageForUnknownDispatcherToken and the 'stale prefixed dispatcher phase' table case (main_test.go:133-139, 243-278) only mutate the single expected_native_next_recommendation field, so no test exercises or guards the simultaneous-violation case; the message-completeness regression is unprotected"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R2-001",
+        "lens": "readability",
+        "location": "tools/entry-contract-validator/token_domain_test.go:15",
+        "severity": "WARNING",
+        "claim": "token_domain_test.go declares its own constant nextRecommendationFieldName holding the literal \"expected_native_next_recommendation\", duplicating the constant nextRecommendationField already declared in main.go for the identical literal, even though both files compile as the same package main and the test file could reference the existing constant instead of redeclaring it under a near-identical name.",
+        "proof_refs": [
+          "tools/entry-contract-validator/main.go:33 `const nextRecommendationField = \"expected_native_next_recommendation\"` (new in this diff)",
+          "tools/entry-contract-validator/token_domain_test.go:15 `const nextRecommendationFieldName = \"expected_native_next_recommendation\"` (new file in this diff)",
+          "tools/entry-contract-validator/main.go:1 and tools/entry-contract-validator/token_domain_test.go:1 both declare `package main`, so token_domain_test.go has direct access to nextRecommendationField without redeclaring it",
+          "the change's stated goal is to stop a hardcoded mirror of this field/domain from silently drifting, yet the diff itself introduces a second, differently-named constant carrying the same field-name literal with nothing enforcing the two stay equal"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R2-002",
+        "lens": "readability",
+        "location": "tools/entry-contract-validator/token_domain_test.go:72",
+        "severity": "WARNING",
+        "claim": "The new pin test locates its anchor sentence in skills/inception-pipeline/SKILL.md by matching the literal substring \"Preserve the native token exactly\" (asserted at token_domain_test.go:101), but that sentence (SKILL.md:105) carries no comment marking it as mechanically load-bearing for a Go test in a different directory, and the failure path when the substring is absent (token_domain_test.go:72) reports only \"skills/inception-pipeline/SKILL.md has no line containing %q\" without stating that the fix is to update the marker in token_domain_test.go to match the reworded prose.",
+        "proof_refs": [
+          "tools/entry-contract-validator/token_domain_test.go:101 `proseLine := findLineContaining(t, inceptionPipelineSkillLines(t), \"Preserve the native token exactly\")`",
+          "the anchor sentence the test matches lives in the inception-pipeline skill prose, which is NOT part of this frozen candidate, so nothing in the reviewed scope marks it as mechanically load-bearing",
+          "tools/entry-contract-validator/token_domain_test.go:72 `t.Fatalf(\"skills/inception-pipeline/SKILL.md has no line containing %q\", marker)` names the symptom but not the required remediation or the coupled file"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-001",
+        "lens": "reliability",
+        "location": "tools/entry-contract-validator/main.go:187",
+        "severity": "WARNING",
+        "claim": "When diagnoseNextRecommendationRejection finds an enum rejection anywhere in the validation error tree, the returned error entirely replaces the original err (fmt.Errorf with %s, not %w, and no reference to err at all) instead of augmenting it, so any other concurrent schema violation on the same instance (e.g. an unknown top-level property, since the schema root sets additionalProperties:false) is silently dropped from the reported message even though the underlying jsonschema.ValidationError still carries it as a sibling Cause.",
+        "proof_refs": [
+          "tools/entry-contract-validator/main.go:185-189: the new branch `if diagnostic, ok := diagnoseNextRecommendationRejection(err); ok { return \u0026contractError{code: exitSchemaValidation, err: fmt.Errorf(\"schema validation: %s\", diagnostic)} }` returns before reaching the pre-existing `fmt.Errorf(\"schema validation: %w\", err)` fallback, so the diagnostic string is the only detail surfaced whenever the match succeeds",
+          "tools/entry-contract-validator/main.go:229-243: findEnumRejection returns on the first matching Cause found anywhere in the tree and never inspects sibling Causes, so an unrelated violation elsewhere in the same instance is never surfaced once the token match is found",
+          "skills/_shared/entry-contract.schema.json:7 sets root `\"additionalProperties\": false`, so an instance with both an unknown top-level property and an invalid expected_native_next_recommendation token is a real, constructible input that would trigger this masking",
+          "no test added in this diff (main_test.go or token_domain_test.go) constructs an instance with two simultaneous violations, so this loss of diagnostic completeness is uncovered"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      }
+    ],
+    "classifications": {},
+    "outcomes": {
+      "R2-001": "info",
+      "R2-002": "info",
+      "R3-001": "info",
+      "R4-001": "info"
+    },
+    "fix_finding_ids": [],
+    "follow_ups": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:1794afa2e58b60210905d34ac5baed1499113db12e6328dbd28e2d9f3884a9cc",
+    "evidence_record_digest": "sha256:feda2ca01e8c07bc9195ba6971beece950c52e5f716456e57689fbf6aad11a44",
+    "evidence_outcome": "passed",
+    "evidence_target_identity": "sha256:259d2fc20f0bb931c2f3e1332456b854fdff337a7cfc9d892043ddb90cd71d29",
+    "evidence_authority_revision": "sha256:6b7a8ee21021b3f542678e931ed03c68b212f416fe631212107408589a1ce6a8"
+  }
+}

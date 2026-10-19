@@ -1,0 +1,271 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:11d6baac30e6e5fa06c4cdb7d3029d4d2e7fbc0d16f99c4983b929dea1493f32",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-caaf6029cba603a1",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "current-changes",
+      "base_tree": "da524f70fb5077d91ef7c65565679bc67d356d44",
+      "candidate_tree": "8471d756c18843e4222fbb05b9e9b58a3f764299",
+      "paths_digest": "sha256:8e7c2b74bf090896befbb509160dc9b9cedacdecd5b952f2354d736d852fbbc7",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "bin/labdrian-overlay",
+        "tui/capture_backend_test.go"
+      ],
+      "identity": "sha256:caaf6029cba603a16abb01ca43204180d68b65acfe84142428179c882d3b5faa"
+    },
+    "current_snapshot": {
+      "kind": "current-changes",
+      "base_tree": "da524f70fb5077d91ef7c65565679bc67d356d44",
+      "candidate_tree": "8471d756c18843e4222fbb05b9e9b58a3f764299",
+      "paths_digest": "sha256:8e7c2b74bf090896befbb509160dc9b9cedacdecd5b952f2354d736d852fbbc7",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "bin/labdrian-overlay",
+        "tui/capture_backend_test.go"
+      ],
+      "identity": "sha256:caaf6029cba603a16abb01ca43204180d68b65acfe84142428179c882d3b5faa"
+    },
+    "genesis_paths": [
+      "bin/labdrian-overlay",
+      "tui/capture_backend_test.go"
+    ],
+    "policy_hash": "sha256:34fb63d7f29f8613cd4431382b1057398a4816f8a4c20fc34677fffc80a184f6",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-risk",
+      "review-resilience",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 199,
+    "correction_budget": 100,
+    "correction_budget_policy": "floor_two",
+    "lens_results": [
+      {
+        "lens": "review-risk",
+        "findings": [],
+        "evidence": [
+          "Reviewed bin/labdrian-overlay's new reconcile block in cmd_capture (fetch + ff-only/merge origin/upstream, die on conflict); only fixed branch/remote literals used, no injectable/untrusted input, no secrets, no auth logic changed.",
+          "Reviewed new file tui/capture_backend_test.go in full: hermetic Go test harness using t.TempDir() and fixed exec.Command arguments; no attacker-controlled input, no secrets, no new dependencies introduced."
+        ],
+        "result_hash": "sha256:af99b9cc185a248cb76f53033e989e33bd3956d65b60200c03d098634bf0c069"
+      },
+      {
+        "lens": "review-resilience",
+        "findings": [
+          {
+            "id": "R4-001",
+            "lens": "resilience",
+            "location": "bin/labdrian-overlay:624-628",
+            "severity": "WARNING",
+            "claim": "The die() path on a real merge conflict leaves MERGE_HEAD set on 'upstream'; simply re-running capture re-enters the same merge logic while MERGE_HEAD is still present, which git rejects with 'You have not concluded your merge', reproducing the same generic die message instead of guiding the user to run git merge --abort or commit first.",
+            "proof_refs": [
+              "bin/labdrian-overlay:625-626 unconditionally reruns git merge --no-edit origin/upstream on every capture invocation with no MERGE_HEAD check first",
+              "bin/labdrian-overlay:626 die message never mentions git merge --abort or committing the resolution before retrying"
+            ],
+            "evidence_class": "inferential",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R4-002",
+            "lens": "resilience",
+            "location": "bin/labdrian-overlay:624",
+            "severity": "SUGGESTION",
+            "claim": "When git merge --ff-only succeeds directly (the common case), the reconcile step silently advances local upstream with no log line, while the rarer merge path logs an explicit Reconciled info line.",
+            "proof_refs": [
+              "the info call sits only inside the if-not-ff-only block, so it never executes when git merge --ff-only succeeds directly"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R4-003",
+            "lens": "resilience",
+            "location": "bin/labdrian-overlay:630-632",
+            "severity": "SUGGESTION",
+            "claim": "The fetch-failure graceful-degradation branch (warn and proceed without reconciling) has no regression test in this candidate.",
+            "proof_refs": [
+              "bin/labdrian-overlay:630-632 is the sole fetch-failure fallback branch added by this diff",
+              "neither new test breaks or omits network access to exercise the git fetch-failure branch"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          }
+        ],
+        "evidence": [
+          "Inspected the full added reconcile block bin/labdrian-overlay:605-634 and the complete new file tui/capture_backend_test.go:1-169; these two patches are the entire candidate view.",
+          "The pre-existing push and anything-to-push logic this diff's comment references lies outside the shown diff hunks and outside the changed-path manifest, so no claim is made about its behavior."
+        ],
+        "result_hash": "sha256:bf6c27fc45b068e910682ea5924478a11aaf3a8d31e376e4df29c056202c9fb5"
+      },
+      {
+        "lens": "review-readability",
+        "findings": [
+          {
+            "id": "R2-001",
+            "lens": "readability",
+            "location": "tui/capture_backend_test.go:7-8",
+            "severity": "WARNING",
+            "claim": "The header comment states runBackendSubcommand is one of the shared helpers this file reuses, but it is never called anywhere in the file; runCapture implements its own equivalent run/capture/exit-code logic instead, so the stated reuse is inaccurate.",
+            "proof_refs": [
+              "tui/capture_backend_test.go:7-8 lists runBackendSubcommand among the reused shared helpers in the file header comment",
+              "tui/capture_backend_test.go:81-97 defines runCapture, a locally implemented run/capture/exit-code helper; runBackendSubcommand is not called anywhere in lines 1-169"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R2-002",
+            "lens": "readability",
+            "location": "bin/labdrian-overlay:621-633",
+            "severity": "SUGGESTION",
+            "claim": "The upstream reconcile flow nests four levels of if/then directly inside cmd_capture() and needs a 16-line comment to explain itself; extracting a named helper function would make the control flow self-documenting and independently testable.",
+            "proof_refs": [
+              "bin/labdrian-overlay:621-633 nests remote-check, fetch-check, rev-parse-check, and ff-only-check four levels deep inline in cmd_capture(), with no extracted function"
+            ],
+            "evidence_class": "inferential",
+            "causal_disposition": "introduced"
+          }
+        ],
+        "evidence": [
+          "Inspected the complete unified diff for both manifest paths exactly as provided."
+        ],
+        "result_hash": "sha256:f079b5df408ca91b92ba95ee8a6d02a3b09554efe73fe9e275901e2858201808"
+      },
+      {
+        "lens": "review-reliability",
+        "findings": [
+          {
+            "id": "R3-001",
+            "lens": "reliability",
+            "location": "bin/labdrian-overlay:621-633",
+            "severity": "WARNING",
+            "claim": "The new reconcile block's real-merge failure path (die on unresolved conflict) is introduced but never exercised by any test in this candidate.",
+            "proof_refs": [
+              "bin/labdrian-overlay:625-627 is the only die branch for a failed auto-merge",
+              "both new tests touch only disjoint filenames, never inducing a real conflict"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          }
+        ],
+        "evidence": [
+          "Inspected both manifest patches in full: the 30-line reconcile insertion in bin/labdrian-overlay and the 169-line new test file tui/capture_backend_test.go; no other paths in scope."
+        ],
+        "result_hash": "sha256:30a8ac8d81e4fff643df774a9f2b3082a59c7b9782abdced850b95ca068e2595"
+      }
+    ],
+    "findings": [
+      {
+        "id": "R4-001",
+        "lens": "resilience",
+        "location": "bin/labdrian-overlay:624-628",
+        "severity": "WARNING",
+        "claim": "The die() path on a real merge conflict leaves MERGE_HEAD set on 'upstream'; simply re-running capture re-enters the same merge logic while MERGE_HEAD is still present, which git rejects with 'You have not concluded your merge', reproducing the same generic die message instead of guiding the user to run git merge --abort or commit first.",
+        "proof_refs": [
+          "bin/labdrian-overlay:625-626 unconditionally reruns git merge --no-edit origin/upstream on every capture invocation with no MERGE_HEAD check first",
+          "bin/labdrian-overlay:626 die message never mentions git merge --abort or committing the resolution before retrying"
+        ],
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R4-002",
+        "lens": "resilience",
+        "location": "bin/labdrian-overlay:624",
+        "severity": "SUGGESTION",
+        "claim": "When git merge --ff-only succeeds directly (the common case), the reconcile step silently advances local upstream with no log line, while the rarer merge path logs an explicit Reconciled info line.",
+        "proof_refs": [
+          "the info call sits only inside the if-not-ff-only block, so it never executes when git merge --ff-only succeeds directly"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R4-003",
+        "lens": "resilience",
+        "location": "bin/labdrian-overlay:630-632",
+        "severity": "SUGGESTION",
+        "claim": "The fetch-failure graceful-degradation branch (warn and proceed without reconciling) has no regression test in this candidate.",
+        "proof_refs": [
+          "bin/labdrian-overlay:630-632 is the sole fetch-failure fallback branch added by this diff",
+          "neither new test breaks or omits network access to exercise the git fetch-failure branch"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R2-001",
+        "lens": "readability",
+        "location": "tui/capture_backend_test.go:7-8",
+        "severity": "WARNING",
+        "claim": "The header comment states runBackendSubcommand is one of the shared helpers this file reuses, but it is never called anywhere in the file; runCapture implements its own equivalent run/capture/exit-code logic instead, so the stated reuse is inaccurate.",
+        "proof_refs": [
+          "tui/capture_backend_test.go:7-8 lists runBackendSubcommand among the reused shared helpers in the file header comment",
+          "tui/capture_backend_test.go:81-97 defines runCapture, a locally implemented run/capture/exit-code helper; runBackendSubcommand is not called anywhere in lines 1-169"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R2-002",
+        "lens": "readability",
+        "location": "bin/labdrian-overlay:621-633",
+        "severity": "SUGGESTION",
+        "claim": "The upstream reconcile flow nests four levels of if/then directly inside cmd_capture() and needs a 16-line comment to explain itself; extracting a named helper function would make the control flow self-documenting and independently testable.",
+        "proof_refs": [
+          "bin/labdrian-overlay:621-633 nests remote-check, fetch-check, rev-parse-check, and ff-only-check four levels deep inline in cmd_capture(), with no extracted function"
+        ],
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-001",
+        "lens": "reliability",
+        "location": "bin/labdrian-overlay:621-633",
+        "severity": "WARNING",
+        "claim": "The new reconcile block's real-merge failure path (die on unresolved conflict) is introduced but never exercised by any test in this candidate.",
+        "proof_refs": [
+          "bin/labdrian-overlay:625-627 is the only die branch for a failed auto-merge",
+          "both new tests touch only disjoint filenames, never inducing a real conflict"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      }
+    ],
+    "classifications": {},
+    "outcomes": {
+      "R2-001": "info",
+      "R2-002": "info",
+      "R3-001": "info",
+      "R4-001": "info",
+      "R4-002": "info",
+      "R4-003": "info"
+    },
+    "fix_finding_ids": [],
+    "follow_ups": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:f1196f744939d08147cac7c7d4ca2f5e500577495251ac3c960ad7ba27c78e77",
+    "evidence_record_digest": "sha256:bf0867897e8d38304bab914a91dbb217380313852668f27f6b1341febc3fecbc",
+    "evidence_outcome": "passed",
+    "evidence_target_identity": "sha256:caaf6029cba603a16abb01ca43204180d68b65acfe84142428179c882d3b5faa",
+    "evidence_authority_revision": "sha256:bb8b3a79912b17d317985a30b98e4f08fd0b3c8b853779d216c65e8f29adad8a",
+    "reviewer_context_level": "provider_command"
+  },
+  "effect_intents": [
+    {
+      "class": "repository_context",
+      "destination": "rctx1_d51c8ddb70ee3e008f02c3b9776a4fb1eb5322f4d9b7be4c2b47652cb82aaf0c",
+      "payload_hash": "sha256:c692bfe1e9506a4e5f49483bd0e543e13af02486642208121b076a9ffc930b58",
+      "binding_revision": "sha256:05f51a4feab897dc8aec6249bf2cf972d9f8c870c28d263d492724dce43b412b",
+      "event_id": "sha256:54b2b33fe1f417d2c0d1271d550eca6ef437f52054f49a761cbd2fc2b8fd8c00"
+    }
+  ]
+}

@@ -1,0 +1,153 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:8b754a2b93bd46eaf26f83d823f9c101704da01b37b61e5f3df1da8ad54093e3",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-270a5e0f9b44565b",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "current-changes",
+      "base_tree": "7404551c935a68ba384a83140587bb472202b98b",
+      "candidate_tree": "2e860ffb6292d0cf3352e6cf2090619d3d92bca4",
+      "paths_digest": "sha256:b05390f51bf3fb01318c0c6d5952d068b431a3c687aa6f7bb56c9e9cd64ac29d",
+      "intended_untracked": [
+        "openspec/changes/overlay-versioned-releases/verify-report.md"
+      ],
+      "intended_untracked_proof": "sha256:424ea05e6c8c7956f9a13df475cf6bcb9955809ed8148ff44ac51f984143bba1",
+      "paths": [
+        "openspec/changes/overlay-versioned-releases/verify-report.md"
+      ],
+      "identity": "sha256:270a5e0f9b44565bf92e1f8c55d6084b6e4b6065dc46cd286d0fe58392443697"
+    },
+    "current_snapshot": {
+      "kind": "current-changes",
+      "base_tree": "7404551c935a68ba384a83140587bb472202b98b",
+      "candidate_tree": "2e860ffb6292d0cf3352e6cf2090619d3d92bca4",
+      "paths_digest": "sha256:b05390f51bf3fb01318c0c6d5952d068b431a3c687aa6f7bb56c9e9cd64ac29d",
+      "intended_untracked": [
+        "openspec/changes/overlay-versioned-releases/verify-report.md"
+      ],
+      "intended_untracked_proof": "sha256:424ea05e6c8c7956f9a13df475cf6bcb9955809ed8148ff44ac51f984143bba1",
+      "paths": [
+        "openspec/changes/overlay-versioned-releases/verify-report.md"
+      ],
+      "identity": "sha256:270a5e0f9b44565bf92e1f8c55d6084b6e4b6065dc46cd286d0fe58392443697"
+    },
+    "genesis_paths": [
+      "openspec/changes/overlay-versioned-releases/verify-report.md"
+    ],
+    "policy_hash": "sha256:34fb63d7f29f8613cd4431382b1057398a4816f8a4c20fc34677fffc80a184f6",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-reliability"
+    ],
+    "original_changed_lines": 442,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_results": [
+      {
+        "lens": "review-reliability",
+        "findings": [
+          {
+            "id": "R3-001",
+            "lens": "reliability",
+            "location": "openspec/changes/overlay-versioned-releases/verify-report.md:326-329",
+            "severity": "WARNING",
+            "claim": "CRITICAL-1's 'proven by execution, not inference' claim is supported only by narrative prose, unlike every other execution claim in this same document which shows literal command/output/exit-code transcripts.",
+            "proof_refs": [
+              "Build \u0026 Tests Execution section (lines 41-63) shows literal '$ command' followed by output and exit code for every claim, e.g. '$ cd tui \u0026\u0026 go build ./...' / '(no output) exit 0'.",
+              "CRITICAL-1's execution claim (lines 326-329) reads 'Proven by execution, not inference. In a scratch clone cloned with --no-tags ... running bin/labdrian-overlay sync-check with no --fetch and no --check-origin left git tag -l reporting v1.2.3.' with no shown command transcript or literal 'git tag -l' output."
+            ]
+          },
+          {
+            "id": "R3-002",
+            "lens": "reliability",
+            "location": "openspec/changes/overlay-versioned-releases/verify-report.md:430-432",
+            "severity": "WARNING",
+            "claim": "The Verdict section states 'all 8 design decisions honoured' without qualification, while the Coherence table marks D2 as honoured only 'Yes (with a caveat, see CRITICAL-1)' -- the caveat being the exact defect driving this report's FAIL verdict.",
+            "proof_refs": [
+              "Coherence table (line 219): 'D2 — REPO_BEHIND_RELEASE primacy | Yes (with a caveat, see CRITICAL-1)'.",
+              "Verdict section (lines 430-432): '... all 8 design decisions honoured, both independent-review bug fixes confirmed present with real regression tests, and zero regressions in the pre-existing suite.'"
+            ]
+          },
+          {
+            "id": "R3-003",
+            "lens": "reliability",
+            "location": "openspec/changes/overlay-versioned-releases/verify-report.md:265-270",
+            "severity": "SUGGESTION",
+            "claim": "The Test Layer Distribution table's Unit row (62 tests) gives no per-file breakdown, unlike the Integration row's explicit per-file composition -- the figure is internally consistent on manual recomputation but not shown as directly.",
+            "proof_refs": [
+              "Integration row: 'release_backend_test.go (29), restore_backend_test.go (21), selfupdate_backend_test.go (10), capture_backend_test.go (2), plus latestBackup/probe FS+exec tests in main_test.go (19)'.",
+              "Unit row: 'main_test.go, view_test.go, logo_test.go' with total 62 and no per-file numeric breakdown."
+            ]
+          }
+        ],
+        "evidence": [
+          "Read the complete added file openspec/changes/overlay-versioned-releases/verify-report.md (443 lines) in full, provided as prompt-carried candidate content per the GENTLE_AI_REVIEW_BINDING protocol.",
+          "Cross-checked test counts, coverage percentages, requirement IDs, and line-number citations against the document's own internal tables for consistency.",
+          "No BLOCKER or CRITICAL findings surfaced; 2 WARNING and 1 SUGGESTION found, none blocking the document's own FAIL verdict."
+        ],
+        "result_hash": "sha256:af3b96cae3a222eafd152bf26bda70bc95c75afeee3efb896610d2e24408a2c2"
+      }
+    ],
+    "findings": [
+      {
+        "id": "R3-001",
+        "lens": "reliability",
+        "location": "openspec/changes/overlay-versioned-releases/verify-report.md:326-329",
+        "severity": "WARNING",
+        "claim": "CRITICAL-1's 'proven by execution, not inference' claim is supported only by narrative prose, unlike every other execution claim in this same document which shows literal command/output/exit-code transcripts.",
+        "proof_refs": [
+          "Build \u0026 Tests Execution section (lines 41-63) shows literal '$ command' followed by output and exit code for every claim, e.g. '$ cd tui \u0026\u0026 go build ./...' / '(no output) exit 0'.",
+          "CRITICAL-1's execution claim (lines 326-329) reads 'Proven by execution, not inference. In a scratch clone cloned with --no-tags ... running bin/labdrian-overlay sync-check with no --fetch and no --check-origin left git tag -l reporting v1.2.3.' with no shown command transcript or literal 'git tag -l' output."
+        ]
+      },
+      {
+        "id": "R3-002",
+        "lens": "reliability",
+        "location": "openspec/changes/overlay-versioned-releases/verify-report.md:430-432",
+        "severity": "WARNING",
+        "claim": "The Verdict section states 'all 8 design decisions honoured' without qualification, while the Coherence table marks D2 as honoured only 'Yes (with a caveat, see CRITICAL-1)' -- the caveat being the exact defect driving this report's FAIL verdict.",
+        "proof_refs": [
+          "Coherence table (line 219): 'D2 — REPO_BEHIND_RELEASE primacy | Yes (with a caveat, see CRITICAL-1)'.",
+          "Verdict section (lines 430-432): '... all 8 design decisions honoured, both independent-review bug fixes confirmed present with real regression tests, and zero regressions in the pre-existing suite.'"
+        ]
+      },
+      {
+        "id": "R3-003",
+        "lens": "reliability",
+        "location": "openspec/changes/overlay-versioned-releases/verify-report.md:265-270",
+        "severity": "SUGGESTION",
+        "claim": "The Test Layer Distribution table's Unit row (62 tests) gives no per-file breakdown, unlike the Integration row's explicit per-file composition -- the figure is internally consistent on manual recomputation but not shown as directly.",
+        "proof_refs": [
+          "Integration row: 'release_backend_test.go (29), restore_backend_test.go (21), selfupdate_backend_test.go (10), capture_backend_test.go (2), plus latestBackup/probe FS+exec tests in main_test.go (19)'.",
+          "Unit row: 'main_test.go, view_test.go, logo_test.go' with total 62 and no per-file numeric breakdown."
+        ]
+      }
+    ],
+    "classifications": {},
+    "outcomes": {
+      "R3-001": "info",
+      "R3-002": "info",
+      "R3-003": "info"
+    },
+    "fix_finding_ids": [],
+    "follow_ups": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:866822bf6493bfb411856ac65142f32c0547f1e062f0786ecfc711c4c7fc9f5d",
+    "evidence_record_digest": "sha256:0a04805d58b0582be348f4dd73ae355670d386f28ee5652d47c7b5909e59f0f7",
+    "evidence_outcome": "passed",
+    "evidence_target_identity": "sha256:270a5e0f9b44565bf92e1f8c55d6084b6e4b6065dc46cd286d0fe58392443697",
+    "evidence_authority_revision": "sha256:031c569b1ab4f4d44b0747325bdb9ff6e1c4f5d9b78e71834be3504020632308"
+  },
+  "effect_intents": [
+    {
+      "class": "repository_context",
+      "destination": "rctx1_1e0a1939ab8f446b02da4081b69e72f9db9741594720ff1dc1d2ecc9dbb8da4b",
+      "payload_hash": "sha256:d279d7661c7e9640528ea8999cbe0c6ab248f7ea569f6ec840a92c94ff5e51c1",
+      "binding_revision": "sha256:7c3b84059c5405c0c54b8b571220fe2da243be9bc0476e456e77947adc1c2562",
+      "event_id": "sha256:4999ce94f730060971d2e8d282d111260ff3a5c8ec4502ca5e5e36ba647e69da"
+    }
+  ]
+}

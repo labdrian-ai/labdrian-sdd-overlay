@@ -1,0 +1,76 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:ed99c953e29379bf6a3f604136b773c5719693bcf84ae9791e08a9bc3472e38d",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-6359d03a8270791e",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "73e6f938d2fec67d57053322bf4caff6d141af73",
+      "candidate_tree": "70bdf778de78a6e87524cad168a5c38834e605df",
+      "paths_digest": "sha256:a56e8241058e85d9d40ef4bf811629dee4b7f6308143136661e90b9c90f5724a",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "openspec/changes/sdd-cycle-timestamp-instrumentation/design.md"
+      ],
+      "identity": "sha256:6359d03a8270791ea82d6773b203e9d8375e0a23b0a06ec55c9b6443e3fec38e"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "73e6f938d2fec67d57053322bf4caff6d141af73",
+      "candidate_tree": "70bdf778de78a6e87524cad168a5c38834e605df",
+      "paths_digest": "sha256:a56e8241058e85d9d40ef4bf811629dee4b7f6308143136661e90b9c90f5724a",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "openspec/changes/sdd-cycle-timestamp-instrumentation/design.md"
+      ],
+      "identity": "sha256:6359d03a8270791ea82d6773b203e9d8375e0a23b0a06ec55c9b6443e3fec38e"
+    },
+    "genesis_paths": [
+      "openspec/changes/sdd-cycle-timestamp-instrumentation/design.md"
+    ],
+    "policy_hash": "sha256:34fb63d7f29f8613cd4431382b1057398a4816f8a4c20fc34677fffc80a184f6",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-reliability"
+    ],
+    "original_changed_lines": 4,
+    "correction_budget": 2,
+    "correction_budget_policy": "floor_two",
+    "lens_results": [
+      {
+        "lens": "review-reliability",
+        "findings": [],
+        "evidence": [
+          "Inspected the complete unified diff hunk (openspec/changes/sdd-cycle-timestamp-instrumentation/design.md:133-142), the sole entry in changed_path_manifest: one table-row description was expanded with an additional clause describing a referenced skill file's CALIBRATION fallback sentence, and two new table rows were appended describing a planned Go anchor-resolution test and a planned JSON fixture; every added or modified markdown table cell has balanced pipe and backtick delimiters, no executable code, test, or runtime boundary logic anywhere in the repository is touched by this diff, and the unchanged closure-feedback paragraph present in the same hunk remained byte-identical context, so no introduced, behavior-activated, or worsened reliability defect exists within the changed lines."
+        ],
+        "result_hash": "sha256:69b3600aa95deae4b17029e69b0c68afc69c58aeaedd5583b1370daf2cf681c7"
+      }
+    ],
+    "findings": [],
+    "classifications": {},
+    "outcomes": {},
+    "fix_finding_ids": [],
+    "follow_ups": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:097fcaab4a8930c657258d92df1134b56373cb8eeaf60f2c3f55d45bf8cc1910",
+    "evidence_record_digest": "sha256:67990843935641e7328674b17422f041749236a6eed4603927824849a134ab85",
+    "evidence_outcome": "passed",
+    "evidence_target_identity": "sha256:6359d03a8270791ea82d6773b203e9d8375e0a23b0a06ec55c9b6443e3fec38e",
+    "evidence_authority_revision": "sha256:c01115dd0da33638d91500d2764dcefa8af16b6076071c3842896068d3a0cb5a",
+    "reviewer_context_level": "provider_command"
+  },
+  "effect_intents": [
+    {
+      "class": "repository_context",
+      "destination": "rctx1_23ee489c45d04c2e723290a26b472387294748cd525067a517dedb723e021e1a",
+      "payload_hash": "sha256:8bca2ba25bcc8129fce4d54e9e919fb4644fb22f0019caa81efa040dad16d924",
+      "binding_revision": "sha256:54fefd1b7051b5cfe63a01a4301a52d5f6f8f519538f6964804c52f4887b7103",
+      "event_id": "sha256:7df4ea21fcae653c664db3493d515b0d0c0b154f8586b08f281e2ae5be0087db"
+    }
+  ]
+}

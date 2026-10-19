@@ -1,0 +1,1087 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:73ba1ad3846b1cef2f64c7e9d8e5e02d504adb8e48945452932e0cd9794c87ce",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-63ebfacf07d9e333",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "current-changes",
+      "base_tree": "518dc2a62a385f1a9201bc5b5e99ccdb29105a5e",
+      "candidate_tree": "f5e880759c268d2155a69ca56c36a0933645c786",
+      "paths_digest": "sha256:1917fdec37772e1490c17e0dad866dea011d20e9899fd66d65c3b284b96ee623",
+      "intended_untracked": [
+        "longterm-mem/README.md",
+        "longterm-mem/docs/bridge-probe.md",
+        "longterm-mem/docs/feasibility.md",
+        "openspec/changes/longterm-mem/design.md",
+        "openspec/changes/longterm-mem/entry.json",
+        "openspec/changes/longterm-mem/proposal.md",
+        "openspec/changes/longterm-mem/specs/longterm-mem-install/spec.md",
+        "openspec/changes/longterm-mem/specs/longterm-mem-mcp-registration/spec.md",
+        "openspec/changes/longterm-mem/specs/longterm-mem-memory-access/spec.md",
+        "openspec/changes/longterm-mem/specs/longterm-mem-ops/spec.md",
+        "openspec/changes/longterm-mem/specs/longterm-mem-promotion/spec.md",
+        "openspec/changes/longterm-mem/specs/longterm-mem-query/spec.md",
+        "openspec/changes/longterm-mem/specs/overlay-agent-route/spec.md",
+        "openspec/changes/longterm-mem/specs/runtime-lifecycle/spec.md",
+        "openspec/changes/longterm-mem/specs/skills-ondisk-validation/spec.md",
+        "openspec/changes/longterm-mem/tasks.md"
+      ],
+      "intended_untracked_proof": "sha256:8749cbbc9904468569ae4926ac3c9751fb17afd7532e8a917bebf20ba2e1873b",
+      "paths": [
+        "longterm-mem/README.md",
+        "longterm-mem/docs/bridge-probe.md",
+        "longterm-mem/docs/feasibility.md",
+        "openspec/changes/longterm-mem/design.md",
+        "openspec/changes/longterm-mem/entry.json",
+        "openspec/changes/longterm-mem/proposal.md",
+        "openspec/changes/longterm-mem/specs/longterm-mem-install/spec.md",
+        "openspec/changes/longterm-mem/specs/longterm-mem-mcp-registration/spec.md",
+        "openspec/changes/longterm-mem/specs/longterm-mem-memory-access/spec.md",
+        "openspec/changes/longterm-mem/specs/longterm-mem-ops/spec.md",
+        "openspec/changes/longterm-mem/specs/longterm-mem-promotion/spec.md",
+        "openspec/changes/longterm-mem/specs/longterm-mem-query/spec.md",
+        "openspec/changes/longterm-mem/specs/overlay-agent-route/spec.md",
+        "openspec/changes/longterm-mem/specs/runtime-lifecycle/spec.md",
+        "openspec/changes/longterm-mem/specs/skills-ondisk-validation/spec.md",
+        "openspec/changes/longterm-mem/tasks.md",
+        "openspec/project/roadmap.md"
+      ],
+      "identity": "sha256:63ebfacf07d9e33383ba0cb75566a2b2ac86573fdfeee2964ae9663300c174bd"
+    },
+    "current_snapshot": {
+      "kind": "current-changes",
+      "base_tree": "518dc2a62a385f1a9201bc5b5e99ccdb29105a5e",
+      "candidate_tree": "f5e880759c268d2155a69ca56c36a0933645c786",
+      "paths_digest": "sha256:1917fdec37772e1490c17e0dad866dea011d20e9899fd66d65c3b284b96ee623",
+      "intended_untracked": [
+        "longterm-mem/README.md",
+        "longterm-mem/docs/bridge-probe.md",
+        "longterm-mem/docs/feasibility.md",
+        "openspec/changes/longterm-mem/design.md",
+        "openspec/changes/longterm-mem/entry.json",
+        "openspec/changes/longterm-mem/proposal.md",
+        "openspec/changes/longterm-mem/specs/longterm-mem-install/spec.md",
+        "openspec/changes/longterm-mem/specs/longterm-mem-mcp-registration/spec.md",
+        "openspec/changes/longterm-mem/specs/longterm-mem-memory-access/spec.md",
+        "openspec/changes/longterm-mem/specs/longterm-mem-ops/spec.md",
+        "openspec/changes/longterm-mem/specs/longterm-mem-promotion/spec.md",
+        "openspec/changes/longterm-mem/specs/longterm-mem-query/spec.md",
+        "openspec/changes/longterm-mem/specs/overlay-agent-route/spec.md",
+        "openspec/changes/longterm-mem/specs/runtime-lifecycle/spec.md",
+        "openspec/changes/longterm-mem/specs/skills-ondisk-validation/spec.md",
+        "openspec/changes/longterm-mem/tasks.md"
+      ],
+      "intended_untracked_proof": "sha256:8749cbbc9904468569ae4926ac3c9751fb17afd7532e8a917bebf20ba2e1873b",
+      "paths": [
+        "longterm-mem/README.md",
+        "longterm-mem/docs/bridge-probe.md",
+        "longterm-mem/docs/feasibility.md",
+        "openspec/changes/longterm-mem/design.md",
+        "openspec/changes/longterm-mem/entry.json",
+        "openspec/changes/longterm-mem/proposal.md",
+        "openspec/changes/longterm-mem/specs/longterm-mem-install/spec.md",
+        "openspec/changes/longterm-mem/specs/longterm-mem-mcp-registration/spec.md",
+        "openspec/changes/longterm-mem/specs/longterm-mem-memory-access/spec.md",
+        "openspec/changes/longterm-mem/specs/longterm-mem-ops/spec.md",
+        "openspec/changes/longterm-mem/specs/longterm-mem-promotion/spec.md",
+        "openspec/changes/longterm-mem/specs/longterm-mem-query/spec.md",
+        "openspec/changes/longterm-mem/specs/overlay-agent-route/spec.md",
+        "openspec/changes/longterm-mem/specs/runtime-lifecycle/spec.md",
+        "openspec/changes/longterm-mem/specs/skills-ondisk-validation/spec.md",
+        "openspec/changes/longterm-mem/tasks.md",
+        "openspec/project/roadmap.md"
+      ],
+      "identity": "sha256:63ebfacf07d9e33383ba0cb75566a2b2ac86573fdfeee2964ae9663300c174bd"
+    },
+    "genesis_paths": [
+      "longterm-mem/README.md",
+      "longterm-mem/docs/bridge-probe.md",
+      "longterm-mem/docs/feasibility.md",
+      "openspec/changes/longterm-mem/design.md",
+      "openspec/changes/longterm-mem/entry.json",
+      "openspec/changes/longterm-mem/proposal.md",
+      "openspec/changes/longterm-mem/specs/longterm-mem-install/spec.md",
+      "openspec/changes/longterm-mem/specs/longterm-mem-mcp-registration/spec.md",
+      "openspec/changes/longterm-mem/specs/longterm-mem-memory-access/spec.md",
+      "openspec/changes/longterm-mem/specs/longterm-mem-ops/spec.md",
+      "openspec/changes/longterm-mem/specs/longterm-mem-promotion/spec.md",
+      "openspec/changes/longterm-mem/specs/longterm-mem-query/spec.md",
+      "openspec/changes/longterm-mem/specs/overlay-agent-route/spec.md",
+      "openspec/changes/longterm-mem/specs/runtime-lifecycle/spec.md",
+      "openspec/changes/longterm-mem/specs/skills-ondisk-validation/spec.md",
+      "openspec/changes/longterm-mem/tasks.md",
+      "openspec/project/roadmap.md"
+    ],
+    "policy_hash": "sha256:34fb63d7f29f8613cd4431382b1057398a4816f8a4c20fc34677fffc80a184f6",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-risk",
+      "review-resilience",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 2437,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_results": [
+      {
+        "lens": "review-risk",
+        "findings": [
+          {
+            "id": "R1-vault-root-is-untrusted-exec-root",
+            "lens": "risk",
+            "location": "openspec/changes/longterm-mem/design.md:54",
+            "severity": "WARNING",
+            "claim": "The threat matrix's subprocess row constrains only WHERE subprocesses run (vault-root-bounded runner, argv-only, timeouts) and never establishes that the vault root itself is trusted. Combined with the resolution chain the candidate specifies, the vault root is a fully user/config-controlled directory whose scripts are then executed: design.md:17 (D5) resolves it from `--vault` \u003e environment variable \u003e an editable JSON registry row, and openspec/changes/longterm-mem/specs/longterm-mem-memory-access/spec.md:143-147 requires invoking 'the vault's retrieval entrypoint inside P's resolved vault'. No requirement in any added spec validates the vault directory's provenance, ownership, or script integrity before execution, so anyone who can write the registry file or set the vault environment variable in the agent's environment converts an ordinary `query`/`index`/`sync` call into arbitrary local code execution as the invoking user. Recommend an explicit requirement (trusted-root allowlist, ownership/mode check, or refusal of non-user-owned or world-writable vault roots) before the runner slice is authored.",
+            "proof_refs": [
+              "openspec/changes/longterm-mem/design.md:54",
+              "openspec/changes/longterm-mem/design.md:17",
+              "openspec/changes/longterm-mem/specs/longterm-mem-memory-access/spec.md:143-147",
+              "openspec/changes/longterm-mem/specs/longterm-mem-query/spec.md:20-24",
+              "openspec/changes/longterm-mem/tasks.md declares the vault runner as the sole os/exec importer and limits its environment to PATH/HOME/LANG, which keeps an inherited PATH in play for the `python3` lookup but says nothing about trusting the scripts being run"
+            ],
+            "evidence_class": "inferential",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R1-credential-bearing-config-backups",
+            "lens": "risk",
+            "location": "openspec/changes/longterm-mem/specs/longterm-mem-mcp-registration/spec.md:16-18",
+            "severity": "WARNING",
+            "claim": "Registration mandates an 'atomic, backed-up config-merge pattern' over the three runtime configuration files, and design.md:21 (D9) makes `.bak` copies part of every writer. Two of the targeted files (the Claude Code user config and the codex config named in the Affected Areas table of openspec/changes/longterm-mem/proposal.md) routinely hold runtime credentials and MCP server secrets, yet no added requirement specifies the permission mode, lifetime, or cleanup of the `.bak` copies. As specified, install/uninstall duplicates credential-bearing files with unspecified modes and leaves them on disk indefinitely, widening credential exposure without any spec-level control. Recommend requiring 0600 creation mode and post-success removal of the backup.",
+            "proof_refs": [
+              "openspec/changes/longterm-mem/specs/longterm-mem-mcp-registration/spec.md:16-18",
+              "openspec/changes/longterm-mem/design.md:21",
+              "openspec/changes/longterm-mem/specs/longterm-mem-mcp-registration/spec.md:47-52"
+            ],
+            "evidence_class": "inferential",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R1-promotion-copies-unscrubbed-memory",
+            "lens": "risk",
+            "location": "openspec/changes/longterm-mem/specs/longterm-mem-promotion/spec.md:55-61",
+            "severity": "SUGGESTION",
+            "claim": "Page emission copies Engram observation content verbatim into vault pages with no redaction, classification, or secret-scanning requirement anywhere in the promotion spec. Engram observations are auto-captured session memory, and openspec/changes/longterm-mem/proposal.md's rollback section states promoted pages land in the vault's own git history via the plugin's auto-commit, so any credential or token captured into an eligible observation is silently and durably committed by `sync`. Recommend an explicit emission-time scrubbing or opt-out requirement rather than leaving content sanitization unspecified.",
+            "proof_refs": [
+              "openspec/changes/longterm-mem/specs/longterm-mem-promotion/spec.md:55-61",
+              "openspec/changes/longterm-mem/specs/longterm-mem-promotion/spec.md:19-22",
+              "longterm-mem/docs/bridge-probe.md:56-58"
+            ],
+            "evidence_class": "inferential",
+            "causal_disposition": "introduced"
+          }
+        ],
+        "evidence": [
+          "Inspected all 17 changed paths supplied in the GENTLE_AI_REVIEW_PATCH sections; no working-tree, index, or out-of-scope reads were performed.",
+          "The candidate is documentation-and-specification only: 16 added markdown/JSON planning artifacts plus a regenerated roadmap mirror. No executable source, dependency manifest, CI workflow, or credential material is added, so there is no reachable runtime exploit and no scanner-detectable dependency vulnerability introduced by this candidate.",
+          "Scanned every added file for secrets: longterm-mem/docs/feasibility.md and longterm-mem/docs/bridge-probe.md record local paths, an unauthenticated loopback Engram HTTP surface, and vault index sizes, but contain no keys, tokens, or credentials. The unauthenticated local Engram service is a property of an external pre-existing system being described, not something this candidate creates or configures.",
+          "openspec/changes/longterm-mem/tasks.md contains a shell-metacharacter string only as prose describing a negative subprocess test asserting argv-only handling; it is a test-fixture description, not executable content.",
+          "Positive security controls the candidate does specify and which I confirmed are present: read-only Engram SQLite DSN with query_only, a single-package os/exec boundary with a static import-allowlist guard, argv-only invocation with timeouts and outside-root refusal, byte-splice config editors with post-write validation and untagged-conflict refusal, ownership-tagged selective uninstall, no background daemon, and a local-only indexing flag that keeps page bodies off any network egress path.",
+          "The three findings are specification-level gaps in this candidate's own added requirements (untrusted vault execution root, unspecified backup handling for credential-bearing configs, unscrubbed memory promotion); none is a reachable exploit today because no implementing code exists yet, which is why all three are non-blocking.",
+          "openspec/project/roadmap.md is the only modified file; its changes are status, sequencing, and rationale prose with no security-relevant behavior, and I raised no finding against it."
+        ],
+        "result_hash": "sha256:2e76111b7496a80099eabf6d01f9ef5d348047a0eef5a249fff18e175c790009"
+      },
+      {
+        "lens": "review-resilience",
+        "findings": [
+          {
+            "id": "R4-query-degrade-asymmetry",
+            "lens": "resilience",
+            "location": "openspec/changes/longterm-mem/specs/longterm-mem-query/spec.md:90-92",
+            "severity": "WARNING",
+            "claim": "The unified query contract specifies exactly one degrade path — vault not provisioned yields Engram-only results — and none for the mirror case. When the Engram side is unavailable (its SQLite file locked by the live WAL writer, missing, or busy) the design's contract turns that into a hard exit `engram_unavailable`, so the whole MCP `query` call fails even though the long-term vault tier is healthy and answerable. The same asymmetry applies to a vault subprocess failure: only the not-provisioned exit status is mapped to a status value, so a missing python3 or a failing retrieval script fails the call rather than degrading to Engram-only. Net production effect: a single-tier outage removes both tiers of memory from every agent session instead of degrading to the tier that still works.",
+            "proof_refs": [
+              "openspec/changes/longterm-mem/specs/longterm-mem-query/spec.md:90-92 — degrade path defined only for the not-provisioned vault case",
+              "openspec/changes/longterm-mem/design.md:33 — `engram_unavailable` is a terminal exit code, with no partial-result contract beside it",
+              "openspec/changes/longterm-mem/specs/longterm-mem-memory-access/spec.md:167-169 — only the not-provisioned exit status is mapped to a status; other vault failures stay generic errors"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R4-promote-leaves-page-unindexed",
+            "lens": "resilience",
+            "location": "openspec/changes/longterm-mem/specs/longterm-mem-promotion/spec.md:275-278",
+            "severity": "WARNING",
+            "claim": "The explicit promote surface is specified to reuse the page-emission, addressing and registration path only; index rebuild is bound exclusively to `sync`. An agent that calls the MCP `promote` tool and then immediately calls `query` will not find the page it just promoted, because the vault tier is answered by the BM25 index which nothing rebuilt. This is the same silent-invisibility failure the bridge probe recorded for the rejected export path (pages present on disk, zero chunks in the index, retrieval returning only pre-existing pages), reintroduced through the promote entrypoint rather than the export one.",
+            "proof_refs": [
+              "openspec/changes/longterm-mem/specs/longterm-mem-promotion/spec.md:275-278 — promote path enumerates emission/addressing/registration, not index rebuild",
+              "openspec/changes/longterm-mem/specs/longterm-mem-promotion/spec.md:215-217 — index rebuild is required only on sync completion",
+              "longterm-mem/docs/bridge-probe.md:34-36 — measured precedent: pages written but zero chunks indexed, retrieval returned only previously indexed pages"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R4-no-index-staleness-observability",
+            "lens": "resilience",
+            "location": "openspec/changes/longterm-mem/specs/longterm-mem-ops/spec.md:46-49",
+            "severity": "WARNING",
+            "claim": "The four named diagnostic checks cover vault-config resolvability, address-map integrity, wiki-registration consistency and runtime prerequisites, but none reports whether the retrieval index is current with respect to the promoted pages, and `status` reports only reachability, a boolean provisioning state, and a last-sync timestamp. After a rebuild step fails (the failure the rebuild requirement forces to be reported at the moment it happens) the pages remain on disk and unindexed, and from that point on every subsequent `status` and `doctor` run reports a provisioned vault and a healthy system while queries silently omit the newest canonical decisions. The condition has no operator-visible signal after the failing command's own output scrolls away.",
+            "proof_refs": [
+              "openspec/changes/longterm-mem/specs/longterm-mem-ops/spec.md:46-49 — the four diagnostic checks, none of them index freshness",
+              "openspec/changes/longterm-mem/specs/longterm-mem-ops/spec.md:17-19 — status reports only reachability, provisioning, last sync time",
+              "openspec/changes/longterm-mem/specs/longterm-mem-query/spec.md:43-44 — a failed rebuild must report failure, but no requirement makes the resulting stale-index state discoverable later"
+            ],
+            "evidence_class": "inferential",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R4-sync-partial-failure-unspecified",
+            "lens": "resilience",
+            "location": "openspec/changes/longterm-mem/design.md:60",
+            "severity": "WARNING",
+            "claim": "Rollout and rollback are specified only for code (reverse-order revert, uninstall/purge); there is no failure-atomicity or resume contract for the promotion write itself, which mutates at least five separate artifacts per run — the page file, the vault address and source manifest, the master catalog, the append-only log, and the precedence sidecar — plus the sync-state record. A sync interrupted between those writes (crash, SIGINT, disk full, a subprocess timeout in the address allocation step) leaves the vault in a state no requirement defines: an address allocated but not recorded in the manifest, or a page written but absent from catalog and log. Because re-promotion is specified to reuse an existing address only when one is already recorded, the retry after such an interruption can allocate a second address and emit a duplicate page for the same observation, and the leftover inconsistency is only detectable, never repairable, through the doctor checks.",
+            "proof_refs": [
+              "openspec/changes/longterm-mem/design.md:60 — rollback covers code revert and uninstall only, nothing about partially written vault state",
+              "openspec/changes/longterm-mem/specs/longterm-mem-promotion/spec.md:97-99 — address allocation and manifest recording specified as one obligation with no failure ordering",
+              "openspec/changes/longterm-mem/specs/longterm-mem-promotion/spec.md:110-112 — address reuse is conditioned on the observation already being addressed",
+              "openspec/changes/longterm-mem/specs/longterm-mem-promotion/spec.md:119-121 — catalog and log registration is a further separate write"
+            ],
+            "evidence_class": "inferential",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R4-engram-dsn-divergence",
+            "lens": "resilience",
+            "location": "openspec/changes/longterm-mem/design.md:13",
+            "severity": "WARNING",
+            "claim": "The design decision row and the task anchors give two different, non-interchangeable connection strings for the same read-only Engram handle: the design row uses bare query keys for the read-only pragma and the busy timeout, while the task anchors use the driver's pragma-parameter form and add a lock-mode key. Whichever form is not understood by the chosen driver is either rejected at open time or silently ignored, and the silent case is the damaging one: without the busy timeout actually applied, every read that lands while the live Engram writer holds the WAL write lock returns immediately as busy instead of waiting, surfacing as intermittent `engram_unavailable` failures on `query` and `sync` under exactly the concurrent conditions the design assumes (a running Engram server writing the same database). The read-only guarantee itself rests on the same unresolved key.",
+            "proof_refs": [
+              "openspec/changes/longterm-mem/design.md:13 — decision row's DSN uses bare query keys for read-only and busy timeout",
+              "openspec/changes/longterm-mem/tasks.md:107 — anchors give a different DSN using pragma-form parameters plus a lock-mode key",
+              "longterm-mem/docs/feasibility.md:20 — the Engram database is plain SQLite in WAL mode with a live server writing it, so busy contention is the expected steady state"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R4-precedence-store-loss",
+            "lens": "resilience",
+            "location": "openspec/changes/longterm-mem/specs/longterm-mem-promotion/spec.md:161-164",
+            "severity": "SUGGESTION",
+            "claim": "Local-edit precedence is defined entirely as a comparison against a sidecar store kept inside the vault, with no specified behavior when that store is absent, truncated, or unparseable — a realistic state given it lives beside vault content under the plugin's own auto-commit and can be lost by a vault restore, a revert, or an interrupted write. With no entries, every promoted page trivially satisfies the divergence condition, so the implementation must pick between two unspecified extremes: skip everything, turning every later sync into a permanent silent no-op while Engram and the vault drift apart, or treat the missing record as no divergence and overwrite, which is precisely the human-edit clobber this requirement exists to prevent. Naming the required behavior (rebuild-and-skip, or fail loud) removes the coin flip.",
+            "proof_refs": [
+              "openspec/changes/longterm-mem/specs/longterm-mem-promotion/spec.md:161-164 — divergence is defined only relative to the sidecar store, with no missing/corrupt-store case",
+              "openspec/changes/longterm-mem/specs/longterm-mem-promotion/spec.md:231-237 — the status patch also depends on the same store to avoid misreading its own writes as human edits",
+              "openspec/changes/longterm-mem/proposal.md:139 — the change's own success criterion is that a locally edited page's body is never rewritten"
+            ],
+            "evidence_class": "inferential",
+            "causal_disposition": "introduced"
+          }
+        ],
+        "evidence": [
+          "Inspected all 17 changed paths as supplied in the GENTLE_AI_REVIEW_PATCH sections; the candidate is entirely documentation, specification, planning, and a regenerated roadmap mirror, so every resilience finding is a contract-level gap in the specified failure behavior rather than a defect in executing code.",
+          "Cross-read the six capability specs against openspec/changes/longterm-mem/design.md and openspec/changes/longterm-mem/tasks.md to check that each specified failure mode has one and only one defined response; the degrade contract in the query spec, the index-rebuild binding in the promotion spec, and the diagnostic list in the ops spec are the three places where a defined failure has no defined recovery or signal.",
+          "The measured precedent for the index-staleness findings comes from the candidate's own probe record at longterm-mem/docs/bridge-probe.md:33-36, where 517 written files produced zero indexed chunks and retrieval silently returned only previously indexed pages.",
+          "The DSN divergence is a direct textual conflict between openspec/changes/longterm-mem/design.md:13 and openspec/changes/longterm-mem/tasks.md:107 for the same read-only connection; the concurrency premise it interacts with is recorded at longterm-mem/docs/feasibility.md:20.",
+          "openspec/project/roadmap.md is a generated mirror of sequencing and status data and carries no runtime behavior; it was read in full and produced no resilience finding.",
+          "No BLOCKER or CRITICAL finding is reported: none of the gaps found regress behavior that exists today, since the component this candidate specifies does not yet exist in the base."
+        ],
+        "result_hash": "sha256:b777ded01e1d93e0812d8a0243b376b74f0fa06598fc48a7769a26dfcb1ee1b7"
+      },
+      {
+        "lens": "review-readability",
+        "findings": [
+          {
+            "id": "R2-dsn-conflict",
+            "lens": "readability",
+            "location": "openspec/changes/longterm-mem/design.md:13",
+            "severity": "WARNING",
+            "claim": "Decision D1 fixes the read-only database connection string in one spelling (a plain query parameter for the read-only pragma plus a plain busy-timeout parameter), while the Anchors block at openspec/changes/longterm-mem/tasks.md:107 fixes a different spelling for the same connection (a pragma-prefixed parameter form, plus an extra transaction-lock parameter that D1 never mentions). Both files are presented as the authoritative anchor for the same constant, so an implementer cannot tell which literal to write, and the two forms are not interchangeable for the driver named in D1. Pick one spelling and have the other document cite it rather than restate it.",
+            "proof_refs": [
+              "openspec/changes/longterm-mem/design.md:13",
+              "openspec/changes/longterm-mem/tasks.md:107",
+              "openspec/changes/longterm-mem/tasks.md:103"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R2-hash-count-conflict",
+            "lens": "readability",
+            "location": "openspec/changes/longterm-mem/proposal.md:65",
+            "severity": "WARNING",
+            "claim": "The proposal's State-files bullet specifies the precedence sidecar as holding a single content hash per page, while decision D6 at openspec/changes/longterm-mem/design.md:18 mandates two separate hashes (body and frontmatter) and states in the same cell that one hash launders edits. Task 6.1 at openspec/changes/longterm-mem/tasks.md:212 and the propagation task at :246 both depend on the two-hash split so that a status-only patch can update the frontmatter hash while leaving the body hash untouched. The single-hash wording left in the proposal describes a design that the change's own local-edit-precedence and canon-wins behavior cannot be built on; it should be corrected rather than left as a competing description.",
+            "proof_refs": [
+              "openspec/changes/longterm-mem/proposal.md:65",
+              "openspec/changes/longterm-mem/proposal.md:67",
+              "openspec/changes/longterm-mem/design.md:18",
+              "openspec/changes/longterm-mem/specs/longterm-mem-promotion/spec.md:236-244"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R2-slice4-budget-mismatch",
+            "lens": "readability",
+            "location": "openspec/changes/longterm-mem/tasks.md:14",
+            "severity": "WARNING",
+            "claim": "The forecast row for the promotion-writer slice states an upper bound of 410 authored lines, while the same slice in openspec/changes/longterm-mem/entry.json:105 states 400, and entry.json:39-41 declares a hard per-slice budget of 400 with size_exception state not-needed. The prose note at openspec/changes/longterm-mem/tasks.md:33 acknowledges the 10-line overrun and prescribes an unplanned mid-chain split as the remedy, so the machine-readable contract and the human-readable plan disagree about whether this slice is inside budget. One number should be authoritative, and if 410 is the real estimate the declared budget state needs to say so.",
+            "proof_refs": [
+              "openspec/changes/longterm-mem/tasks.md:14",
+              "openspec/changes/longterm-mem/tasks.md:33",
+              "openspec/changes/longterm-mem/entry.json:39-41",
+              "openspec/changes/longterm-mem/entry.json:105",
+              "openspec/changes/longterm-mem/proposal.md:37"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R2-slice-numbering-drift",
+            "lens": "readability",
+            "location": "openspec/changes/longterm-mem/proposal.md:20",
+            "severity": "WARNING",
+            "claim": "The In-Scope heading asserts that the entry's slice ids and order are kept, but three incompatible numbering schemes for the same work ship in this candidate: the proposal table at openspec/changes/longterm-mem/proposal.md:24-35 numbers 1-12 with ids such as scaffold-vault and overlay-route at position 9; openspec/changes/longterm-mem/entry.json:59-202 numbers 1-18 with split ids and places overlay-route at order 12; openspec/changes/longterm-mem/tasks.md:9-26 uses a third scheme (1, 2a, 2b, ... 12b). Cross-references such as 'slices 4-7' and 'slices 11-12' in the proposal risk table therefore resolve to different slices depending on which document the reader holds, which makes the traceability between requirements, slices, and PRs unsafe to follow.",
+            "proof_refs": [
+              "openspec/changes/longterm-mem/proposal.md:20",
+              "openspec/changes/longterm-mem/proposal.md:24-35",
+              "openspec/changes/longterm-mem/proposal.md:92-93",
+              "openspec/changes/longterm-mem/entry.json:59-66",
+              "openspec/changes/longterm-mem/tasks.md:9-26",
+              "openspec/changes/longterm-mem/design.md:43-45"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R2-route-default-vs-reject",
+            "lens": "readability",
+            "location": "openspec/changes/longterm-mem/specs/overlay-agent-route/spec.md:12-13",
+            "severity": "WARNING",
+            "claim": "The modified route requirement states without qualification that an absent third column defaults the row to the skill route, while the added requirement in the same file at :73-75 states that a row under the new component's tree with no route must be rejected. The two rules cover the same input and the modified requirement carries no 'except' clause pointing at the added one, so an implementer reading only the modified requirement (or only its backward-compatibility scenario at :40-45) will implement the silent default that the added requirement exists to forbid. The default clause should be narrowed in place, not corrected only in a separate requirement.",
+            "proof_refs": [
+              "openspec/changes/longterm-mem/specs/overlay-agent-route/spec.md:12-13",
+              "openspec/changes/longterm-mem/specs/overlay-agent-route/spec.md:40-45",
+              "openspec/changes/longterm-mem/specs/overlay-agent-route/spec.md:73-75",
+              "openspec/changes/longterm-mem/tasks.md:301"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R2-parser-count-conflict",
+            "lens": "readability",
+            "location": "openspec/changes/longterm-mem/proposal.md:32",
+            "severity": "WARNING",
+            "claim": "The scope row for the route slice states that the new route domain must land in two parsers plus one test contract, explicitly 'not three parsers'. The item added in the same candidate to openspec/project/roadmap.md states the opposite in capitals: that the route must be registered in THREE parsers, 'not the two the brief names', and enumerates a third parser distinct from the two. Nothing in this candidate reconciles the two statements, so the reader of either document is told the other is wrong about how many code sites change. One of the two must be corrected, or the roadmap item must cite the proposal as superseding it.",
+            "proof_refs": [
+              "openspec/changes/longterm-mem/proposal.md:32",
+              "openspec/changes/longterm-mem/specs/overlay-agent-route/spec.md:20-21",
+              "openspec/project/roadmap.md"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R2-unexplained-revision-threshold",
+            "lens": "readability",
+            "location": "openspec/changes/longterm-mem/specs/longterm-mem-promotion/spec.md:19-22",
+            "severity": "SUGGESTION",
+            "claim": "The eligibility predicate makes a revision count of at least 3 a promotion trigger, and the number is restated as a bare literal in openspec/changes/longterm-mem/entry.json:102 and in the task-level test table at openspec/changes/longterm-mem/tasks.md:184, but no artifact in this candidate says why 3 rather than 2 or 5, or what happens to the vault if the value is later tuned. Since this threshold decides which mid-term observations become permanent long-term pages, the constant needs a one-line rationale in the spec so a maintainer can change it deliberately instead of guessing.",
+            "proof_refs": [
+              "openspec/changes/longterm-mem/specs/longterm-mem-promotion/spec.md:19-22",
+              "openspec/changes/longterm-mem/entry.json:102",
+              "openspec/changes/longterm-mem/tasks.md:184"
+            ],
+            "evidence_class": "inferential",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R2-requirement-id-scheme",
+            "lens": "readability",
+            "location": "openspec/changes/longterm-mem/specs/overlay-agent-route/spec.md:7-8",
+            "severity": "SUGGESTION",
+            "claim": "The delta requirement ids collide with the change's own requirement numbering and with each other: this modified requirement is labelled R-006 while tracing to longterm-mem R-013, even though R-006 is already the unified-query requirement in openspec/changes/longterm-mem/specs/longterm-mem-query/spec.md:59-60; the added requirement here is labelled R-012 at :70, and a different added requirement in openspec/changes/longterm-mem/specs/skills-ondisk-validation/spec.md:8-9 is also labelled R-012; and the added requirement in openspec/changes/longterm-mem/specs/runtime-lifecycle/spec.md:5-7 carries no ID line at all while every other spec file in the change does. Any reader or tool that indexes these files by id gets three different meanings for the same token and one requirement with none.",
+            "proof_refs": [
+              "openspec/changes/longterm-mem/specs/overlay-agent-route/spec.md:7-8",
+              "openspec/changes/longterm-mem/specs/overlay-agent-route/spec.md:70-71",
+              "openspec/changes/longterm-mem/specs/skills-ondisk-validation/spec.md:8-9",
+              "openspec/changes/longterm-mem/specs/runtime-lifecycle/spec.md:5-7",
+              "openspec/changes/longterm-mem/specs/longterm-mem-query/spec.md:59-60"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R2-rationale-offrepo",
+            "lens": "readability",
+            "location": "openspec/changes/longterm-mem/design.md:3",
+            "severity": "SUGGESTION",
+            "claim": "The design document delegates all long-form rationale and every schema to an external memory record identified only by an opaque topic key and number, and then compresses thirteen architecture decisions into single table cells (design.md:13-25) whose justifications are one- or two-word tradeoff fragments. One decision cell even cites a line inside a third-party driver source file that is not part of this repository. A maintainer with only the repository cannot reconstruct why the driver, the toolchain pin, the two-hash sidecar, or the byte-splice config editors were chosen, which is exactly the review context this document is supposed to carry. Inline at least the tradeoff sentence per decision, or commit the long-form notes alongside the design.",
+            "proof_refs": [
+              "openspec/changes/longterm-mem/design.md:3",
+              "openspec/changes/longterm-mem/design.md:13-25",
+              "openspec/changes/longterm-mem/tasks.md:103"
+            ],
+            "evidence_class": "inferential",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R2-readme-stale-status",
+            "lens": "readability",
+            "location": "longterm-mem/README.md:17",
+            "severity": "SUGGESTION",
+            "claim": "The component README declares 'scaffold only — design pending' in the same commit that lands a complete design, an eighteen-slice entry contract, nine capability specs, and a full task plan, so the file is stale on arrival. The proposal's affected-areas table at openspec/changes/longterm-mem/proposal.md:76 also lists this README as Modified when it is newly added here, and defers its real content to a task far down the chain. A one-line pointer to the change folder would keep the entry point honest until that task lands.",
+            "proof_refs": [
+              "longterm-mem/README.md:17",
+              "openspec/changes/longterm-mem/proposal.md:76",
+              "openspec/changes/longterm-mem/tasks.md:352"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          }
+        ],
+        "evidence": [
+          "Inspected all 17 manifest paths as supplied in the GENTLE_AI_REVIEW_PATCH sections; no working tree, index, or command access was used.",
+          "The candidate is documentation and specification only: sixteen added markdown/JSON planning artifacts under longterm-mem/ and openspec/changes/longterm-mem/, plus a full regeneration of openspec/project/roadmap.md. No executable source is present in this candidate, so readability findings concern cross-artifact consistency, unexplained constants, and missing rationale rather than code structure.",
+          "Cross-checked the four planning artifacts that restate the same facts (openspec/changes/longterm-mem/proposal.md, design.md, entry.json, tasks.md) field by field for the connection string, sidecar hash model, per-slice line budgets, slice numbering, and parser count; the divergences reported above are the ones where two documents give a reader different instructions for the same decision.",
+          "Cross-checked the nine spec deltas for requirement-id uniqueness and for internal rule conflicts; openspec/changes/longterm-mem/specs/overlay-agent-route/spec.md carries both a blanket default-to-skill rule and a reject-unrouted rule over the same input, and the requirement-id labels collide across three delta files with one delta carrying no id.",
+          "Confirmed line anchors by reading each cited file end to end: openspec/changes/longterm-mem/design.md is 65 lines, entry.json is 205 lines with eighteen slice objects beginning at line 59, proposal.md is 142 lines, and specs/overlay-agent-route/spec.md is 83 lines, matching the numstat totals supplied with the candidate.",
+          "No BLOCKER or CRITICAL defect was identified: every issue found is a maintainability or consistency defect inside newly added planning documents, all introduced by this candidate, none of which alters existing behavior in the frozen repository."
+        ],
+        "result_hash": "sha256:d5250ffe900fe66d7f449d7b3c0c8a9ad5462aec0911f7a8064abbf67515a19b"
+      },
+      {
+        "lens": "review-reliability",
+        "findings": [
+          {
+            "id": "R3-engram-unavailable-path-unspecified",
+            "lens": "reliability",
+            "location": "openspec/changes/longterm-mem/specs/longterm-mem-ops/spec.md:12-39",
+            "severity": "WARNING",
+            "claim": "The candidate defines an `engram_unavailable` exit code but no requirement or scenario anywhere specifies behavior when Engram is unreachable. R-010's status requirement lists 'Engram reachability' as a reported field, yet its only three scenarios all assume Engram is reachable; the query, sync and promotion specs likewise contain no unreachable-Engram scenario. The primary dependency-failure path of the whole component is therefore unproved and left to implementer discretion.",
+            "proof_refs": [
+              "openspec/changes/longterm-mem/specs/longterm-mem-ops/spec.md:17-19 names Engram reachability as a reported status field",
+              "openspec/changes/longterm-mem/specs/longterm-mem-ops/spec.md:21-39 contains only healthy / never-provisioned / never-synced scenarios",
+              "openspec/changes/longterm-mem/design.md:33 defines exit code 4 engram_unavailable with no scenario that exercises it",
+              "openspec/changes/longterm-mem/proposal.md:107 lists acceptance evidence for status under healthy, not-provisioned and never-synced only"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-vault-generic-failure-undefined",
+            "lens": "reliability",
+            "location": "openspec/changes/longterm-mem/specs/longterm-mem-memory-access/spec.md:162-176",
+            "severity": "WARNING",
+            "claim": "R-024 maps only the single not-provisioned exit status of the vault retrieval entrypoint; no requirement covers any other non-zero exit (crash, missing interpreter, malformed output). Combined with the query spec, whose only degrade path is the not-provisioned one, a generic vault-retrieval failure has undefined behavior: it is unspecified whether the unified query fails, silently returns Engram-only results, or reports a wrong status. That is exactly the silent-degrade mode the design says it wants to avoid.",
+            "proof_refs": [
+              "openspec/changes/longterm-mem/specs/longterm-mem-memory-access/spec.md:167-176 maps only the not-provisioned exit code",
+              "openspec/changes/longterm-mem/specs/longterm-mem-query/spec.md:85-99 specifies degrade behavior only for the not-provisioned case",
+              "openspec/changes/longterm-mem/design.md:20 states silent degrade hides misconfiguration, yet no requirement covers the non-not-provisioned failure"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-provision-step-failure-unproved",
+            "lens": "reliability",
+            "location": "openspec/changes/longterm-mem/specs/longterm-mem-query/spec.md:38-50",
+            "severity": "WARNING",
+            "claim": "R-025's failure requirement is scoped to 'the index-rebuild step', while R-005 adds a distinct first-provision step that runs before the rebuild on a never-indexed vault. No requirement or scenario covers a failing provision step, and the corresponding task only forces the rebuild step to fail. A provisioning failure could therefore be followed by a rebuild that reports success, producing the false-green outcome R-025 exists to prevent.",
+            "proof_refs": [
+              "openspec/changes/longterm-mem/specs/longterm-mem-query/spec.md:18-20 introduces provisioning as a separate step before the rebuild",
+              "openspec/changes/longterm-mem/specs/longterm-mem-query/spec.md:43-50 restricts the failure requirement and its only scenario to the rebuild step",
+              "openspec/changes/longterm-mem/tasks.md documents a single forced-failure fixture for the rebuild script in slice 3a and none for the provisioning script"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-frontmatter-edit-laundered",
+            "lens": "reliability",
+            "location": "openspec/changes/longterm-mem/specs/longterm-mem-promotion/spec.md:260-268",
+            "severity": "WARNING",
+            "claim": "R-033's canon-wins scenario requires the precedence store's recorded content to be updated after a status patch on a locally edited page so a later sync does not read the patch as a human edit. No requirement distinguishes a human edit confined to frontmatter from the tool's own patch, so once the frontmatter fingerprint is refreshed a purely frontmatter-level human edit becomes indistinguishable from tool output and loses R-030's protection on the next promotion. The design's two-hash mitigation exists but no scenario proves the frontmatter-only-human-edit case, leaving the interaction between R-030 and R-033 unverified.",
+            "proof_refs": [
+              "openspec/changes/longterm-mem/specs/longterm-mem-promotion/spec.md:161-164 defines local-edit precedence over on-disk divergence generally",
+              "openspec/changes/longterm-mem/specs/longterm-mem-promotion/spec.md:236-237 requires the patch to be recorded so a later sync does not see it as a human edit",
+              "openspec/changes/longterm-mem/design.md:18 records the two-hash sidecar and states the patch updates the frontmatter hash only",
+              "openspec/changes/longterm-mem/specs/longterm-mem-promotion/spec.md:166-179 covers only whole-page edited versus unmodified cases"
+            ],
+            "evidence_class": "inferential",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-dsn-contract-contradiction",
+            "lens": "reliability",
+            "location": "openspec/changes/longterm-mem/design.md:13",
+            "severity": "WARNING",
+            "claim": "The design decision table and the task anchors document two different read-only connection strings for the same R-002 invariant (one using a plain query-only key with a busy-timeout key, the other using pragma-style parameters plus a transaction-lock parameter). Only one form can be honored by the chosen driver; the other is silently ignored. Because the R-002 tests assert only that a write fails — which the read-only mode flag alone already guarantees — a driver that ignores the query-only or busy-timeout parameter would still pass, so the concurrency and query-only guarantees are asserted nowhere.",
+            "proof_refs": [
+              "openspec/changes/longterm-mem/design.md:13 records one DSN form for the read-only Engram connection",
+              "openspec/changes/longterm-mem/tasks.md:107 records a different DSN form for the same connection",
+              "openspec/changes/longterm-mem/specs/longterm-mem-memory-access/spec.md:46-57 asserts only that a write attempt fails, which does not discriminate between the two forms"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-parser-count-unsettled",
+            "lens": "reliability",
+            "location": "openspec/changes/longterm-mem/specs/overlay-agent-route/spec.md:53-57",
+            "severity": "WARNING",
+            "claim": "The route scenario asserts that Go route handling in two distinct engine packages recognizes the new route, but the candidate contradicts itself about how many production parsers exist: the proposal claims two parsers plus one test contract, the roadmap item states the route must be registered in three parsers, and the slice-9 task list changes only one Go production file plus the shell dispatch, leaving the installer-side route file as a test-only edit. As written the scenario cannot be proved for the installer path, and if a second production parser really exists it stays unrouted and would fall through to the default skills route.",
+            "proof_refs": [
+              "openspec/changes/longterm-mem/specs/overlay-agent-route/spec.md:56 names Go route handling in two engine packages",
+              "openspec/changes/longterm-mem/proposal.md:64 asserts two parsers plus one test contract, explicitly not three parsers",
+              "openspec/project/roadmap.md states the new route must be registered in three parsers, not the two the brief names",
+              "openspec/changes/longterm-mem/tasks.md slice 9 changes one Go production route table, the shell route resolver, and one Go test file"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-rejection-guard-path-scoped",
+            "lens": "reliability",
+            "location": "openspec/changes/longterm-mem/specs/overlay-agent-route/spec.md:73-83",
+            "severity": "WARNING",
+            "claim": "The unrouted-row rejection is scoped by path prefix rather than by intent: only rows under the new component's directory are rejected when their route column is missing or unrecognized, while every other row keeps the silent default-to-skill behavior. An unrecognized route value on any other path is therefore still resolved to a skills destination without an error, which is the same misrouting failure this requirement exists to prevent, and no scenario covers an unrecognized route outside the guarded prefix.",
+            "proof_refs": [
+              "openspec/changes/longterm-mem/specs/overlay-agent-route/spec.md:73-75 scopes the rejection to rows under the new component directory",
+              "openspec/changes/longterm-mem/specs/overlay-agent-route/spec.md:12-13 keeps the absent-column default-to-skill behavior for all other rows",
+              "openspec/changes/longterm-mem/specs/overlay-agent-route/spec.md:77-83 provides the only rejection scenario, also prefix-scoped"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-residual-process-assertion-nondeterministic",
+            "lens": "reliability",
+            "location": "openspec/changes/longterm-mem/specs/longterm-mem-ops/spec.md:112-116",
+            "severity": "WARNING",
+            "claim": "The no-residual-process scenario is stated as an assertion over the machine's process list, and the corresponding tasks implement it as an unchanged-process-list comparison plus a parent-scoped process lookup. Both are nondeterministic on a shared or containerized runner and platform-dependent, so the test will either flake or be skipped in the short mode the tasks themselves define, leaving the no-daemon property effectively unasserted in the default test run.",
+            "proof_refs": [
+              "openspec/changes/longterm-mem/specs/longterm-mem-ops/spec.md:114-116 asserts over the process list after each subcommand",
+              "openspec/changes/longterm-mem/tasks.md marks both residual-process tests as skippable in short mode and relies on a parent-scoped process lookup",
+              "openspec/changes/longterm-mem/design.md:37 places the lifecycle checks in the short-mode-gated integration bucket"
+            ],
+            "evidence_class": "inferential",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-linked-pair-depends-on-later-slice",
+            "lens": "reliability",
+            "location": "openspec/changes/longterm-mem/specs/longterm-mem-query/spec.md:70-76",
+            "severity": "SUGGESTION",
+            "claim": "The linked-pair merge scenario depends on the promotion link between an Engram id and a vault page address, but the sidecar precedence store that holds that link is only introduced three slices later in the chained delivery order. At the slice where the scenario is proved, the join key must be faked, so the merge behavior is verified against a fixture shape that no earlier slice owns and no later slice re-verifies end to end.",
+            "proof_refs": [
+              "openspec/changes/longterm-mem/specs/longterm-mem-query/spec.md:72-76 requires an existing promotion link between the two results",
+              "openspec/changes/longterm-mem/tasks.md places the linked-pair matcher and its precedence-store lookup in the query slice while the precedence store itself is created in the later mutability slice",
+              "openspec/changes/longterm-mem/entry.json:88-96 orders the mutability slice after the query merge slice"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-duplicate-requirement-ids",
+            "lens": "reliability",
+            "location": "openspec/changes/longterm-mem/specs/skills-ondisk-validation/spec.md:7",
+            "severity": "SUGGESTION",
+            "claim": "Three different requirements inside this one change all carry the identifier R-012 while tracing to three different upstream requirements, and the second scenario in this delta is vacuously true: a file that does not live under the skills directory is never enumerated by a skills-directory scan, so no implementation change can make that scenario fail. The duplicate identifiers make the change's traceability table ambiguous and the vacuous scenario contributes no evidence.",
+            "proof_refs": [
+              "openspec/changes/longterm-mem/specs/skills-ondisk-validation/spec.md:7-8 declares R-012 tracing to upstream R-013",
+              "openspec/changes/longterm-mem/specs/overlay-agent-route/spec.md:70-71 declares a different R-012 tracing to upstream R-035",
+              "openspec/changes/longterm-mem/specs/longterm-mem-ops/spec.md:79-80 declares a third R-012 tracing to upstream R-012",
+              "openspec/changes/longterm-mem/specs/skills-ondisk-validation/spec.md:22-27 asserts the absence of a diagnostic for a file outside the scanned directory"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          }
+        ],
+        "evidence": [
+          "Inspected all 17 manifest paths in full from the supplied patch sections only; no working tree, index, or command access was used.",
+          "The candidate is documentation and specification only: 16 added markdown/JSON planning artifacts plus one rewritten roadmap mirror. No executable code, no test code, and no build or CI configuration is changed by this candidate, so no runtime regression can be introduced by it directly; reliability review therefore targets whether the specified behavior is provable as written.",
+          "Cross-read every requirement in the six new capability specs and the three delta specs against the design decision table, the slice/task plan, and the entry contract to find contradictions and unproved failure paths.",
+          "Confirmed positive coverage: idempotent reinstall, untagged-conflict refusal and byte-identical preservation are each given explicit scenarios per runtime in openspec/changes/longterm-mem/specs/longterm-mem-mcp-registration/spec.md, and the address allocate/reuse and catalog/log registration paths each carry a scenario in openspec/changes/longterm-mem/specs/longterm-mem-promotion/spec.md:92-128.",
+          "Confirmed the traceability table in openspec/changes/longterm-mem/tasks.md maps all 35 upstream requirements to slices and task ids with no orphaned requirement, and that openspec/changes/longterm-mem/entry.json enumerates 18 slices whose dependency edges form a single acyclic chain.",
+          "Findings concentrate on failure-path and boundary gaps: Engram-unreachable behavior is unspecified everywhere despite a dedicated exit code, only one vault subprocess exit code is mapped, the first-provision step has no failure scenario, and the interaction between local-edit precedence and the canon-wins status patch is unproved for a frontmatter-only human edit.",
+          "One internal contract contradiction is deterministic: the design decision table and the task anchors record two different read-only database connection strings for the same requirement, and the only assertion on that requirement cannot distinguish them.",
+          "The route-domain change is internally inconsistent about how many production parsers must learn the new route (proposal says two plus a test contract, the roadmap mirror says three, the task plan edits one Go production table plus the shell resolver), which leaves one of the route scenarios unprovable as written."
+        ],
+        "result_hash": "sha256:e84e1f91c9b2f8c025586bf15f15621a2cee1b4eabf2be1ba3f5255e149f5b82"
+      }
+    ],
+    "findings": [
+      {
+        "id": "R1-vault-root-is-untrusted-exec-root",
+        "lens": "risk",
+        "location": "openspec/changes/longterm-mem/design.md:54",
+        "severity": "WARNING",
+        "claim": "The threat matrix's subprocess row constrains only WHERE subprocesses run (vault-root-bounded runner, argv-only, timeouts) and never establishes that the vault root itself is trusted. Combined with the resolution chain the candidate specifies, the vault root is a fully user/config-controlled directory whose scripts are then executed: design.md:17 (D5) resolves it from `--vault` \u003e environment variable \u003e an editable JSON registry row, and openspec/changes/longterm-mem/specs/longterm-mem-memory-access/spec.md:143-147 requires invoking 'the vault's retrieval entrypoint inside P's resolved vault'. No requirement in any added spec validates the vault directory's provenance, ownership, or script integrity before execution, so anyone who can write the registry file or set the vault environment variable in the agent's environment converts an ordinary `query`/`index`/`sync` call into arbitrary local code execution as the invoking user. Recommend an explicit requirement (trusted-root allowlist, ownership/mode check, or refusal of non-user-owned or world-writable vault roots) before the runner slice is authored.",
+        "proof_refs": [
+          "openspec/changes/longterm-mem/design.md:54",
+          "openspec/changes/longterm-mem/design.md:17",
+          "openspec/changes/longterm-mem/specs/longterm-mem-memory-access/spec.md:143-147",
+          "openspec/changes/longterm-mem/specs/longterm-mem-query/spec.md:20-24",
+          "openspec/changes/longterm-mem/tasks.md declares the vault runner as the sole os/exec importer and limits its environment to PATH/HOME/LANG, which keeps an inherited PATH in play for the `python3` lookup but says nothing about trusting the scripts being run"
+        ],
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R1-credential-bearing-config-backups",
+        "lens": "risk",
+        "location": "openspec/changes/longterm-mem/specs/longterm-mem-mcp-registration/spec.md:16-18",
+        "severity": "WARNING",
+        "claim": "Registration mandates an 'atomic, backed-up config-merge pattern' over the three runtime configuration files, and design.md:21 (D9) makes `.bak` copies part of every writer. Two of the targeted files (the Claude Code user config and the codex config named in the Affected Areas table of openspec/changes/longterm-mem/proposal.md) routinely hold runtime credentials and MCP server secrets, yet no added requirement specifies the permission mode, lifetime, or cleanup of the `.bak` copies. As specified, install/uninstall duplicates credential-bearing files with unspecified modes and leaves them on disk indefinitely, widening credential exposure without any spec-level control. Recommend requiring 0600 creation mode and post-success removal of the backup.",
+        "proof_refs": [
+          "openspec/changes/longterm-mem/specs/longterm-mem-mcp-registration/spec.md:16-18",
+          "openspec/changes/longterm-mem/design.md:21",
+          "openspec/changes/longterm-mem/specs/longterm-mem-mcp-registration/spec.md:47-52"
+        ],
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R1-promotion-copies-unscrubbed-memory",
+        "lens": "risk",
+        "location": "openspec/changes/longterm-mem/specs/longterm-mem-promotion/spec.md:55-61",
+        "severity": "SUGGESTION",
+        "claim": "Page emission copies Engram observation content verbatim into vault pages with no redaction, classification, or secret-scanning requirement anywhere in the promotion spec. Engram observations are auto-captured session memory, and openspec/changes/longterm-mem/proposal.md's rollback section states promoted pages land in the vault's own git history via the plugin's auto-commit, so any credential or token captured into an eligible observation is silently and durably committed by `sync`. Recommend an explicit emission-time scrubbing or opt-out requirement rather than leaving content sanitization unspecified.",
+        "proof_refs": [
+          "openspec/changes/longterm-mem/specs/longterm-mem-promotion/spec.md:55-61",
+          "openspec/changes/longterm-mem/specs/longterm-mem-promotion/spec.md:19-22",
+          "longterm-mem/docs/bridge-probe.md:56-58"
+        ],
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R4-query-degrade-asymmetry",
+        "lens": "resilience",
+        "location": "openspec/changes/longterm-mem/specs/longterm-mem-query/spec.md:90-92",
+        "severity": "WARNING",
+        "claim": "The unified query contract specifies exactly one degrade path — vault not provisioned yields Engram-only results — and none for the mirror case. When the Engram side is unavailable (its SQLite file locked by the live WAL writer, missing, or busy) the design's contract turns that into a hard exit `engram_unavailable`, so the whole MCP `query` call fails even though the long-term vault tier is healthy and answerable. The same asymmetry applies to a vault subprocess failure: only the not-provisioned exit status is mapped to a status value, so a missing python3 or a failing retrieval script fails the call rather than degrading to Engram-only. Net production effect: a single-tier outage removes both tiers of memory from every agent session instead of degrading to the tier that still works.",
+        "proof_refs": [
+          "openspec/changes/longterm-mem/specs/longterm-mem-query/spec.md:90-92 — degrade path defined only for the not-provisioned vault case",
+          "openspec/changes/longterm-mem/design.md:33 — `engram_unavailable` is a terminal exit code, with no partial-result contract beside it",
+          "openspec/changes/longterm-mem/specs/longterm-mem-memory-access/spec.md:167-169 — only the not-provisioned exit status is mapped to a status; other vault failures stay generic errors"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R4-promote-leaves-page-unindexed",
+        "lens": "resilience",
+        "location": "openspec/changes/longterm-mem/specs/longterm-mem-promotion/spec.md:275-278",
+        "severity": "WARNING",
+        "claim": "The explicit promote surface is specified to reuse the page-emission, addressing and registration path only; index rebuild is bound exclusively to `sync`. An agent that calls the MCP `promote` tool and then immediately calls `query` will not find the page it just promoted, because the vault tier is answered by the BM25 index which nothing rebuilt. This is the same silent-invisibility failure the bridge probe recorded for the rejected export path (pages present on disk, zero chunks in the index, retrieval returning only pre-existing pages), reintroduced through the promote entrypoint rather than the export one.",
+        "proof_refs": [
+          "openspec/changes/longterm-mem/specs/longterm-mem-promotion/spec.md:275-278 — promote path enumerates emission/addressing/registration, not index rebuild",
+          "openspec/changes/longterm-mem/specs/longterm-mem-promotion/spec.md:215-217 — index rebuild is required only on sync completion",
+          "longterm-mem/docs/bridge-probe.md:34-36 — measured precedent: pages written but zero chunks indexed, retrieval returned only previously indexed pages"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R4-no-index-staleness-observability",
+        "lens": "resilience",
+        "location": "openspec/changes/longterm-mem/specs/longterm-mem-ops/spec.md:46-49",
+        "severity": "WARNING",
+        "claim": "The four named diagnostic checks cover vault-config resolvability, address-map integrity, wiki-registration consistency and runtime prerequisites, but none reports whether the retrieval index is current with respect to the promoted pages, and `status` reports only reachability, a boolean provisioning state, and a last-sync timestamp. After a rebuild step fails (the failure the rebuild requirement forces to be reported at the moment it happens) the pages remain on disk and unindexed, and from that point on every subsequent `status` and `doctor` run reports a provisioned vault and a healthy system while queries silently omit the newest canonical decisions. The condition has no operator-visible signal after the failing command's own output scrolls away.",
+        "proof_refs": [
+          "openspec/changes/longterm-mem/specs/longterm-mem-ops/spec.md:46-49 — the four diagnostic checks, none of them index freshness",
+          "openspec/changes/longterm-mem/specs/longterm-mem-ops/spec.md:17-19 — status reports only reachability, provisioning, last sync time",
+          "openspec/changes/longterm-mem/specs/longterm-mem-query/spec.md:43-44 — a failed rebuild must report failure, but no requirement makes the resulting stale-index state discoverable later"
+        ],
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R4-sync-partial-failure-unspecified",
+        "lens": "resilience",
+        "location": "openspec/changes/longterm-mem/design.md:60",
+        "severity": "WARNING",
+        "claim": "Rollout and rollback are specified only for code (reverse-order revert, uninstall/purge); there is no failure-atomicity or resume contract for the promotion write itself, which mutates at least five separate artifacts per run — the page file, the vault address and source manifest, the master catalog, the append-only log, and the precedence sidecar — plus the sync-state record. A sync interrupted between those writes (crash, SIGINT, disk full, a subprocess timeout in the address allocation step) leaves the vault in a state no requirement defines: an address allocated but not recorded in the manifest, or a page written but absent from catalog and log. Because re-promotion is specified to reuse an existing address only when one is already recorded, the retry after such an interruption can allocate a second address and emit a duplicate page for the same observation, and the leftover inconsistency is only detectable, never repairable, through the doctor checks.",
+        "proof_refs": [
+          "openspec/changes/longterm-mem/design.md:60 — rollback covers code revert and uninstall only, nothing about partially written vault state",
+          "openspec/changes/longterm-mem/specs/longterm-mem-promotion/spec.md:97-99 — address allocation and manifest recording specified as one obligation with no failure ordering",
+          "openspec/changes/longterm-mem/specs/longterm-mem-promotion/spec.md:110-112 — address reuse is conditioned on the observation already being addressed",
+          "openspec/changes/longterm-mem/specs/longterm-mem-promotion/spec.md:119-121 — catalog and log registration is a further separate write"
+        ],
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R4-engram-dsn-divergence",
+        "lens": "resilience",
+        "location": "openspec/changes/longterm-mem/design.md:13",
+        "severity": "WARNING",
+        "claim": "The design decision row and the task anchors give two different, non-interchangeable connection strings for the same read-only Engram handle: the design row uses bare query keys for the read-only pragma and the busy timeout, while the task anchors use the driver's pragma-parameter form and add a lock-mode key. Whichever form is not understood by the chosen driver is either rejected at open time or silently ignored, and the silent case is the damaging one: without the busy timeout actually applied, every read that lands while the live Engram writer holds the WAL write lock returns immediately as busy instead of waiting, surfacing as intermittent `engram_unavailable` failures on `query` and `sync` under exactly the concurrent conditions the design assumes (a running Engram server writing the same database). The read-only guarantee itself rests on the same unresolved key.",
+        "proof_refs": [
+          "openspec/changes/longterm-mem/design.md:13 — decision row's DSN uses bare query keys for read-only and busy timeout",
+          "openspec/changes/longterm-mem/tasks.md:107 — anchors give a different DSN using pragma-form parameters plus a lock-mode key",
+          "longterm-mem/docs/feasibility.md:20 — the Engram database is plain SQLite in WAL mode with a live server writing it, so busy contention is the expected steady state"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R4-precedence-store-loss",
+        "lens": "resilience",
+        "location": "openspec/changes/longterm-mem/specs/longterm-mem-promotion/spec.md:161-164",
+        "severity": "SUGGESTION",
+        "claim": "Local-edit precedence is defined entirely as a comparison against a sidecar store kept inside the vault, with no specified behavior when that store is absent, truncated, or unparseable — a realistic state given it lives beside vault content under the plugin's own auto-commit and can be lost by a vault restore, a revert, or an interrupted write. With no entries, every promoted page trivially satisfies the divergence condition, so the implementation must pick between two unspecified extremes: skip everything, turning every later sync into a permanent silent no-op while Engram and the vault drift apart, or treat the missing record as no divergence and overwrite, which is precisely the human-edit clobber this requirement exists to prevent. Naming the required behavior (rebuild-and-skip, or fail loud) removes the coin flip.",
+        "proof_refs": [
+          "openspec/changes/longterm-mem/specs/longterm-mem-promotion/spec.md:161-164 — divergence is defined only relative to the sidecar store, with no missing/corrupt-store case",
+          "openspec/changes/longterm-mem/specs/longterm-mem-promotion/spec.md:231-237 — the status patch also depends on the same store to avoid misreading its own writes as human edits",
+          "openspec/changes/longterm-mem/proposal.md:139 — the change's own success criterion is that a locally edited page's body is never rewritten"
+        ],
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R2-dsn-conflict",
+        "lens": "readability",
+        "location": "openspec/changes/longterm-mem/design.md:13",
+        "severity": "WARNING",
+        "claim": "Decision D1 fixes the read-only database connection string in one spelling (a plain query parameter for the read-only pragma plus a plain busy-timeout parameter), while the Anchors block at openspec/changes/longterm-mem/tasks.md:107 fixes a different spelling for the same connection (a pragma-prefixed parameter form, plus an extra transaction-lock parameter that D1 never mentions). Both files are presented as the authoritative anchor for the same constant, so an implementer cannot tell which literal to write, and the two forms are not interchangeable for the driver named in D1. Pick one spelling and have the other document cite it rather than restate it.",
+        "proof_refs": [
+          "openspec/changes/longterm-mem/design.md:13",
+          "openspec/changes/longterm-mem/tasks.md:107",
+          "openspec/changes/longterm-mem/tasks.md:103"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R2-hash-count-conflict",
+        "lens": "readability",
+        "location": "openspec/changes/longterm-mem/proposal.md:65",
+        "severity": "WARNING",
+        "claim": "The proposal's State-files bullet specifies the precedence sidecar as holding a single content hash per page, while decision D6 at openspec/changes/longterm-mem/design.md:18 mandates two separate hashes (body and frontmatter) and states in the same cell that one hash launders edits. Task 6.1 at openspec/changes/longterm-mem/tasks.md:212 and the propagation task at :246 both depend on the two-hash split so that a status-only patch can update the frontmatter hash while leaving the body hash untouched. The single-hash wording left in the proposal describes a design that the change's own local-edit-precedence and canon-wins behavior cannot be built on; it should be corrected rather than left as a competing description.",
+        "proof_refs": [
+          "openspec/changes/longterm-mem/proposal.md:65",
+          "openspec/changes/longterm-mem/proposal.md:67",
+          "openspec/changes/longterm-mem/design.md:18",
+          "openspec/changes/longterm-mem/specs/longterm-mem-promotion/spec.md:236-244"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R2-slice4-budget-mismatch",
+        "lens": "readability",
+        "location": "openspec/changes/longterm-mem/tasks.md:14",
+        "severity": "WARNING",
+        "claim": "The forecast row for the promotion-writer slice states an upper bound of 410 authored lines, while the same slice in openspec/changes/longterm-mem/entry.json:105 states 400, and entry.json:39-41 declares a hard per-slice budget of 400 with size_exception state not-needed. The prose note at openspec/changes/longterm-mem/tasks.md:33 acknowledges the 10-line overrun and prescribes an unplanned mid-chain split as the remedy, so the machine-readable contract and the human-readable plan disagree about whether this slice is inside budget. One number should be authoritative, and if 410 is the real estimate the declared budget state needs to say so.",
+        "proof_refs": [
+          "openspec/changes/longterm-mem/tasks.md:14",
+          "openspec/changes/longterm-mem/tasks.md:33",
+          "openspec/changes/longterm-mem/entry.json:39-41",
+          "openspec/changes/longterm-mem/entry.json:105",
+          "openspec/changes/longterm-mem/proposal.md:37"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R2-slice-numbering-drift",
+        "lens": "readability",
+        "location": "openspec/changes/longterm-mem/proposal.md:20",
+        "severity": "WARNING",
+        "claim": "The In-Scope heading asserts that the entry's slice ids and order are kept, but three incompatible numbering schemes for the same work ship in this candidate: the proposal table at openspec/changes/longterm-mem/proposal.md:24-35 numbers 1-12 with ids such as scaffold-vault and overlay-route at position 9; openspec/changes/longterm-mem/entry.json:59-202 numbers 1-18 with split ids and places overlay-route at order 12; openspec/changes/longterm-mem/tasks.md:9-26 uses a third scheme (1, 2a, 2b, ... 12b). Cross-references such as 'slices 4-7' and 'slices 11-12' in the proposal risk table therefore resolve to different slices depending on which document the reader holds, which makes the traceability between requirements, slices, and PRs unsafe to follow.",
+        "proof_refs": [
+          "openspec/changes/longterm-mem/proposal.md:20",
+          "openspec/changes/longterm-mem/proposal.md:24-35",
+          "openspec/changes/longterm-mem/proposal.md:92-93",
+          "openspec/changes/longterm-mem/entry.json:59-66",
+          "openspec/changes/longterm-mem/tasks.md:9-26",
+          "openspec/changes/longterm-mem/design.md:43-45"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R2-route-default-vs-reject",
+        "lens": "readability",
+        "location": "openspec/changes/longterm-mem/specs/overlay-agent-route/spec.md:12-13",
+        "severity": "WARNING",
+        "claim": "The modified route requirement states without qualification that an absent third column defaults the row to the skill route, while the added requirement in the same file at :73-75 states that a row under the new component's tree with no route must be rejected. The two rules cover the same input and the modified requirement carries no 'except' clause pointing at the added one, so an implementer reading only the modified requirement (or only its backward-compatibility scenario at :40-45) will implement the silent default that the added requirement exists to forbid. The default clause should be narrowed in place, not corrected only in a separate requirement.",
+        "proof_refs": [
+          "openspec/changes/longterm-mem/specs/overlay-agent-route/spec.md:12-13",
+          "openspec/changes/longterm-mem/specs/overlay-agent-route/spec.md:40-45",
+          "openspec/changes/longterm-mem/specs/overlay-agent-route/spec.md:73-75",
+          "openspec/changes/longterm-mem/tasks.md:301"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R2-parser-count-conflict",
+        "lens": "readability",
+        "location": "openspec/changes/longterm-mem/proposal.md:32",
+        "severity": "WARNING",
+        "claim": "The scope row for the route slice states that the new route domain must land in two parsers plus one test contract, explicitly 'not three parsers'. The item added in the same candidate to openspec/project/roadmap.md states the opposite in capitals: that the route must be registered in THREE parsers, 'not the two the brief names', and enumerates a third parser distinct from the two. Nothing in this candidate reconciles the two statements, so the reader of either document is told the other is wrong about how many code sites change. One of the two must be corrected, or the roadmap item must cite the proposal as superseding it.",
+        "proof_refs": [
+          "openspec/changes/longterm-mem/proposal.md:32",
+          "openspec/changes/longterm-mem/specs/overlay-agent-route/spec.md:20-21",
+          "openspec/project/roadmap.md"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R2-unexplained-revision-threshold",
+        "lens": "readability",
+        "location": "openspec/changes/longterm-mem/specs/longterm-mem-promotion/spec.md:19-22",
+        "severity": "SUGGESTION",
+        "claim": "The eligibility predicate makes a revision count of at least 3 a promotion trigger, and the number is restated as a bare literal in openspec/changes/longterm-mem/entry.json:102 and in the task-level test table at openspec/changes/longterm-mem/tasks.md:184, but no artifact in this candidate says why 3 rather than 2 or 5, or what happens to the vault if the value is later tuned. Since this threshold decides which mid-term observations become permanent long-term pages, the constant needs a one-line rationale in the spec so a maintainer can change it deliberately instead of guessing.",
+        "proof_refs": [
+          "openspec/changes/longterm-mem/specs/longterm-mem-promotion/spec.md:19-22",
+          "openspec/changes/longterm-mem/entry.json:102",
+          "openspec/changes/longterm-mem/tasks.md:184"
+        ],
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R2-requirement-id-scheme",
+        "lens": "readability",
+        "location": "openspec/changes/longterm-mem/specs/overlay-agent-route/spec.md:7-8",
+        "severity": "SUGGESTION",
+        "claim": "The delta requirement ids collide with the change's own requirement numbering and with each other: this modified requirement is labelled R-006 while tracing to longterm-mem R-013, even though R-006 is already the unified-query requirement in openspec/changes/longterm-mem/specs/longterm-mem-query/spec.md:59-60; the added requirement here is labelled R-012 at :70, and a different added requirement in openspec/changes/longterm-mem/specs/skills-ondisk-validation/spec.md:8-9 is also labelled R-012; and the added requirement in openspec/changes/longterm-mem/specs/runtime-lifecycle/spec.md:5-7 carries no ID line at all while every other spec file in the change does. Any reader or tool that indexes these files by id gets three different meanings for the same token and one requirement with none.",
+        "proof_refs": [
+          "openspec/changes/longterm-mem/specs/overlay-agent-route/spec.md:7-8",
+          "openspec/changes/longterm-mem/specs/overlay-agent-route/spec.md:70-71",
+          "openspec/changes/longterm-mem/specs/skills-ondisk-validation/spec.md:8-9",
+          "openspec/changes/longterm-mem/specs/runtime-lifecycle/spec.md:5-7",
+          "openspec/changes/longterm-mem/specs/longterm-mem-query/spec.md:59-60"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R2-rationale-offrepo",
+        "lens": "readability",
+        "location": "openspec/changes/longterm-mem/design.md:3",
+        "severity": "SUGGESTION",
+        "claim": "The design document delegates all long-form rationale and every schema to an external memory record identified only by an opaque topic key and number, and then compresses thirteen architecture decisions into single table cells (design.md:13-25) whose justifications are one- or two-word tradeoff fragments. One decision cell even cites a line inside a third-party driver source file that is not part of this repository. A maintainer with only the repository cannot reconstruct why the driver, the toolchain pin, the two-hash sidecar, or the byte-splice config editors were chosen, which is exactly the review context this document is supposed to carry. Inline at least the tradeoff sentence per decision, or commit the long-form notes alongside the design.",
+        "proof_refs": [
+          "openspec/changes/longterm-mem/design.md:3",
+          "openspec/changes/longterm-mem/design.md:13-25",
+          "openspec/changes/longterm-mem/tasks.md:103"
+        ],
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R2-readme-stale-status",
+        "lens": "readability",
+        "location": "longterm-mem/README.md:17",
+        "severity": "SUGGESTION",
+        "claim": "The component README declares 'scaffold only — design pending' in the same commit that lands a complete design, an eighteen-slice entry contract, nine capability specs, and a full task plan, so the file is stale on arrival. The proposal's affected-areas table at openspec/changes/longterm-mem/proposal.md:76 also lists this README as Modified when it is newly added here, and defers its real content to a task far down the chain. A one-line pointer to the change folder would keep the entry point honest until that task lands.",
+        "proof_refs": [
+          "longterm-mem/README.md:17",
+          "openspec/changes/longterm-mem/proposal.md:76",
+          "openspec/changes/longterm-mem/tasks.md:352"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-engram-unavailable-path-unspecified",
+        "lens": "reliability",
+        "location": "openspec/changes/longterm-mem/specs/longterm-mem-ops/spec.md:12-39",
+        "severity": "WARNING",
+        "claim": "The candidate defines an `engram_unavailable` exit code but no requirement or scenario anywhere specifies behavior when Engram is unreachable. R-010's status requirement lists 'Engram reachability' as a reported field, yet its only three scenarios all assume Engram is reachable; the query, sync and promotion specs likewise contain no unreachable-Engram scenario. The primary dependency-failure path of the whole component is therefore unproved and left to implementer discretion.",
+        "proof_refs": [
+          "openspec/changes/longterm-mem/specs/longterm-mem-ops/spec.md:17-19 names Engram reachability as a reported status field",
+          "openspec/changes/longterm-mem/specs/longterm-mem-ops/spec.md:21-39 contains only healthy / never-provisioned / never-synced scenarios",
+          "openspec/changes/longterm-mem/design.md:33 defines exit code 4 engram_unavailable with no scenario that exercises it",
+          "openspec/changes/longterm-mem/proposal.md:107 lists acceptance evidence for status under healthy, not-provisioned and never-synced only"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-vault-generic-failure-undefined",
+        "lens": "reliability",
+        "location": "openspec/changes/longterm-mem/specs/longterm-mem-memory-access/spec.md:162-176",
+        "severity": "WARNING",
+        "claim": "R-024 maps only the single not-provisioned exit status of the vault retrieval entrypoint; no requirement covers any other non-zero exit (crash, missing interpreter, malformed output). Combined with the query spec, whose only degrade path is the not-provisioned one, a generic vault-retrieval failure has undefined behavior: it is unspecified whether the unified query fails, silently returns Engram-only results, or reports a wrong status. That is exactly the silent-degrade mode the design says it wants to avoid.",
+        "proof_refs": [
+          "openspec/changes/longterm-mem/specs/longterm-mem-memory-access/spec.md:167-176 maps only the not-provisioned exit code",
+          "openspec/changes/longterm-mem/specs/longterm-mem-query/spec.md:85-99 specifies degrade behavior only for the not-provisioned case",
+          "openspec/changes/longterm-mem/design.md:20 states silent degrade hides misconfiguration, yet no requirement covers the non-not-provisioned failure"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-provision-step-failure-unproved",
+        "lens": "reliability",
+        "location": "openspec/changes/longterm-mem/specs/longterm-mem-query/spec.md:38-50",
+        "severity": "WARNING",
+        "claim": "R-025's failure requirement is scoped to 'the index-rebuild step', while R-005 adds a distinct first-provision step that runs before the rebuild on a never-indexed vault. No requirement or scenario covers a failing provision step, and the corresponding task only forces the rebuild step to fail. A provisioning failure could therefore be followed by a rebuild that reports success, producing the false-green outcome R-025 exists to prevent.",
+        "proof_refs": [
+          "openspec/changes/longterm-mem/specs/longterm-mem-query/spec.md:18-20 introduces provisioning as a separate step before the rebuild",
+          "openspec/changes/longterm-mem/specs/longterm-mem-query/spec.md:43-50 restricts the failure requirement and its only scenario to the rebuild step",
+          "openspec/changes/longterm-mem/tasks.md documents a single forced-failure fixture for the rebuild script in slice 3a and none for the provisioning script"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-frontmatter-edit-laundered",
+        "lens": "reliability",
+        "location": "openspec/changes/longterm-mem/specs/longterm-mem-promotion/spec.md:260-268",
+        "severity": "WARNING",
+        "claim": "R-033's canon-wins scenario requires the precedence store's recorded content to be updated after a status patch on a locally edited page so a later sync does not read the patch as a human edit. No requirement distinguishes a human edit confined to frontmatter from the tool's own patch, so once the frontmatter fingerprint is refreshed a purely frontmatter-level human edit becomes indistinguishable from tool output and loses R-030's protection on the next promotion. The design's two-hash mitigation exists but no scenario proves the frontmatter-only-human-edit case, leaving the interaction between R-030 and R-033 unverified.",
+        "proof_refs": [
+          "openspec/changes/longterm-mem/specs/longterm-mem-promotion/spec.md:161-164 defines local-edit precedence over on-disk divergence generally",
+          "openspec/changes/longterm-mem/specs/longterm-mem-promotion/spec.md:236-237 requires the patch to be recorded so a later sync does not see it as a human edit",
+          "openspec/changes/longterm-mem/design.md:18 records the two-hash sidecar and states the patch updates the frontmatter hash only",
+          "openspec/changes/longterm-mem/specs/longterm-mem-promotion/spec.md:166-179 covers only whole-page edited versus unmodified cases"
+        ],
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-dsn-contract-contradiction",
+        "lens": "reliability",
+        "location": "openspec/changes/longterm-mem/design.md:13",
+        "severity": "WARNING",
+        "claim": "The design decision table and the task anchors document two different read-only connection strings for the same R-002 invariant (one using a plain query-only key with a busy-timeout key, the other using pragma-style parameters plus a transaction-lock parameter). Only one form can be honored by the chosen driver; the other is silently ignored. Because the R-002 tests assert only that a write fails — which the read-only mode flag alone already guarantees — a driver that ignores the query-only or busy-timeout parameter would still pass, so the concurrency and query-only guarantees are asserted nowhere.",
+        "proof_refs": [
+          "openspec/changes/longterm-mem/design.md:13 records one DSN form for the read-only Engram connection",
+          "openspec/changes/longterm-mem/tasks.md:107 records a different DSN form for the same connection",
+          "openspec/changes/longterm-mem/specs/longterm-mem-memory-access/spec.md:46-57 asserts only that a write attempt fails, which does not discriminate between the two forms"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-parser-count-unsettled",
+        "lens": "reliability",
+        "location": "openspec/changes/longterm-mem/specs/overlay-agent-route/spec.md:53-57",
+        "severity": "WARNING",
+        "claim": "The route scenario asserts that Go route handling in two distinct engine packages recognizes the new route, but the candidate contradicts itself about how many production parsers exist: the proposal claims two parsers plus one test contract, the roadmap item states the route must be registered in three parsers, and the slice-9 task list changes only one Go production file plus the shell dispatch, leaving the installer-side route file as a test-only edit. As written the scenario cannot be proved for the installer path, and if a second production parser really exists it stays unrouted and would fall through to the default skills route.",
+        "proof_refs": [
+          "openspec/changes/longterm-mem/specs/overlay-agent-route/spec.md:56 names Go route handling in two engine packages",
+          "openspec/changes/longterm-mem/proposal.md:64 asserts two parsers plus one test contract, explicitly not three parsers",
+          "openspec/project/roadmap.md states the new route must be registered in three parsers, not the two the brief names",
+          "openspec/changes/longterm-mem/tasks.md slice 9 changes one Go production route table, the shell route resolver, and one Go test file"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-rejection-guard-path-scoped",
+        "lens": "reliability",
+        "location": "openspec/changes/longterm-mem/specs/overlay-agent-route/spec.md:73-83",
+        "severity": "WARNING",
+        "claim": "The unrouted-row rejection is scoped by path prefix rather than by intent: only rows under the new component's directory are rejected when their route column is missing or unrecognized, while every other row keeps the silent default-to-skill behavior. An unrecognized route value on any other path is therefore still resolved to a skills destination without an error, which is the same misrouting failure this requirement exists to prevent, and no scenario covers an unrecognized route outside the guarded prefix.",
+        "proof_refs": [
+          "openspec/changes/longterm-mem/specs/overlay-agent-route/spec.md:73-75 scopes the rejection to rows under the new component directory",
+          "openspec/changes/longterm-mem/specs/overlay-agent-route/spec.md:12-13 keeps the absent-column default-to-skill behavior for all other rows",
+          "openspec/changes/longterm-mem/specs/overlay-agent-route/spec.md:77-83 provides the only rejection scenario, also prefix-scoped"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-residual-process-assertion-nondeterministic",
+        "lens": "reliability",
+        "location": "openspec/changes/longterm-mem/specs/longterm-mem-ops/spec.md:112-116",
+        "severity": "WARNING",
+        "claim": "The no-residual-process scenario is stated as an assertion over the machine's process list, and the corresponding tasks implement it as an unchanged-process-list comparison plus a parent-scoped process lookup. Both are nondeterministic on a shared or containerized runner and platform-dependent, so the test will either flake or be skipped in the short mode the tasks themselves define, leaving the no-daemon property effectively unasserted in the default test run.",
+        "proof_refs": [
+          "openspec/changes/longterm-mem/specs/longterm-mem-ops/spec.md:114-116 asserts over the process list after each subcommand",
+          "openspec/changes/longterm-mem/tasks.md marks both residual-process tests as skippable in short mode and relies on a parent-scoped process lookup",
+          "openspec/changes/longterm-mem/design.md:37 places the lifecycle checks in the short-mode-gated integration bucket"
+        ],
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-linked-pair-depends-on-later-slice",
+        "lens": "reliability",
+        "location": "openspec/changes/longterm-mem/specs/longterm-mem-query/spec.md:70-76",
+        "severity": "SUGGESTION",
+        "claim": "The linked-pair merge scenario depends on the promotion link between an Engram id and a vault page address, but the sidecar precedence store that holds that link is only introduced three slices later in the chained delivery order. At the slice where the scenario is proved, the join key must be faked, so the merge behavior is verified against a fixture shape that no earlier slice owns and no later slice re-verifies end to end.",
+        "proof_refs": [
+          "openspec/changes/longterm-mem/specs/longterm-mem-query/spec.md:72-76 requires an existing promotion link between the two results",
+          "openspec/changes/longterm-mem/tasks.md places the linked-pair matcher and its precedence-store lookup in the query slice while the precedence store itself is created in the later mutability slice",
+          "openspec/changes/longterm-mem/entry.json:88-96 orders the mutability slice after the query merge slice"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-duplicate-requirement-ids",
+        "lens": "reliability",
+        "location": "openspec/changes/longterm-mem/specs/skills-ondisk-validation/spec.md:7",
+        "severity": "SUGGESTION",
+        "claim": "Three different requirements inside this one change all carry the identifier R-012 while tracing to three different upstream requirements, and the second scenario in this delta is vacuously true: a file that does not live under the skills directory is never enumerated by a skills-directory scan, so no implementation change can make that scenario fail. The duplicate identifiers make the change's traceability table ambiguous and the vacuous scenario contributes no evidence.",
+        "proof_refs": [
+          "openspec/changes/longterm-mem/specs/skills-ondisk-validation/spec.md:7-8 declares R-012 tracing to upstream R-013",
+          "openspec/changes/longterm-mem/specs/overlay-agent-route/spec.md:70-71 declares a different R-012 tracing to upstream R-035",
+          "openspec/changes/longterm-mem/specs/longterm-mem-ops/spec.md:79-80 declares a third R-012 tracing to upstream R-012",
+          "openspec/changes/longterm-mem/specs/skills-ondisk-validation/spec.md:22-27 asserts the absence of a diagnostic for a file outside the scanned directory"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      }
+    ],
+    "classifications": {},
+    "outcomes": {
+      "R1-credential-bearing-config-backups": "info",
+      "R1-promotion-copies-unscrubbed-memory": "info",
+      "R1-vault-root-is-untrusted-exec-root": "info",
+      "R2-dsn-conflict": "info",
+      "R2-hash-count-conflict": "info",
+      "R2-parser-count-conflict": "info",
+      "R2-rationale-offrepo": "info",
+      "R2-readme-stale-status": "info",
+      "R2-requirement-id-scheme": "info",
+      "R2-route-default-vs-reject": "info",
+      "R2-slice-numbering-drift": "info",
+      "R2-slice4-budget-mismatch": "info",
+      "R2-unexplained-revision-threshold": "info",
+      "R3-dsn-contract-contradiction": "info",
+      "R3-duplicate-requirement-ids": "info",
+      "R3-engram-unavailable-path-unspecified": "info",
+      "R3-frontmatter-edit-laundered": "info",
+      "R3-linked-pair-depends-on-later-slice": "info",
+      "R3-parser-count-unsettled": "info",
+      "R3-provision-step-failure-unproved": "info",
+      "R3-rejection-guard-path-scoped": "info",
+      "R3-residual-process-assertion-nondeterministic": "info",
+      "R3-vault-generic-failure-undefined": "info",
+      "R4-engram-dsn-divergence": "info",
+      "R4-no-index-staleness-observability": "info",
+      "R4-precedence-store-loss": "info",
+      "R4-promote-leaves-page-unindexed": "info",
+      "R4-query-degrade-asymmetry": "info",
+      "R4-sync-partial-failure-unspecified": "info"
+    },
+    "fix_finding_ids": [],
+    "follow_ups": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:ab60be65d2d9d6b849c3ea40de641d9045701e469aea56ea4c4c179453190c5e",
+    "evidence_record_digest": "sha256:bcb1629224c86b8c2fd826a7d4e5266637f3953c3d6de3169143c0d4f5678b43",
+    "evidence_outcome": "passed",
+    "evidence_target_identity": "sha256:63ebfacf07d9e33383ba0cb75566a2b2ac86573fdfeee2964ae9663300c174bd",
+    "evidence_authority_revision": "sha256:06602123f24f98466259d578419411e762dca34ba6c3ec09f36877d3c6651923",
+    "reviewer_context_level": "provider_contract"
+  },
+  "effect_intents": [
+    {
+      "class": "repository_context",
+      "destination": "rctx1_20be934460587169a82f3f380e7866e4899a7aec405ed8bc3c16e13a39ee404b",
+      "payload_hash": "sha256:80b132c25d583b80c42f5396e09652fdd2b4566448bbfd6c7dd436005442d047",
+      "binding_revision": "sha256:2d3b179011d46a1f9641dc1d9a1235207b859f1d6b7de7eedd3753e0bbf8b995",
+      "event_id": "sha256:58a3cda51b6be00c71befdda7256c2e744967eb5c5ca8a25d2a17d674a2e2388"
+    }
+  ]
+}

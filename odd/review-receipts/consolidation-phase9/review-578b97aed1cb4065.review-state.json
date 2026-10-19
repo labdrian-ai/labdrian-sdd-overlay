@@ -1,0 +1,340 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:aa82dcd40b493537e283a8104bb9e933ed8573fba714fe4bae18dc6e8370e1d4",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-578b97aed1cb4065",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "2ad8e42e4f1ef4ff3e46c447d70e6123664f2180",
+      "candidate_tree": "4f146dc18845ee36be18fa3441219d6f0d3dbdb5",
+      "paths_digest": "sha256:816d41e8ba0a9ee5c2dc4ddaeec3eb82801e18c63873cb68ca6e647884586241",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        ".github/workflows/ci.yml",
+        "README.md",
+        "bin/labdrian-overlay",
+        "engine/cmd/main.go",
+        "engine/skills/ondisk.go",
+        "engine/skills/ondisk_test.go",
+        "engine/skills/skills.go",
+        "engine/skills/skills_test.go",
+        "openspec/changes/deterministic-verification-evidence/specs/verification-evidence-capture/spec.md",
+        "openspec/changes/skill-manifest-gen/proposal.md",
+        "openspec/changes/skills-validate-ondisk-gate/design.md",
+        "openspec/changes/skills-validate-ondisk-gate/entry.json",
+        "openspec/changes/skills-validate-ondisk-gate/proposal.md",
+        "openspec/changes/skills-validate-ondisk-gate/requirements.md",
+        "openspec/changes/skills-validate-ondisk-gate/specs/skill-package-manager/spec.md",
+        "openspec/changes/skills-validate-ondisk-gate/specs/skills-ondisk-validation/spec.md",
+        "openspec/changes/skills-validate-ondisk-gate/tasks.md"
+      ],
+      "identity": "sha256:578b97aed1cb40652829e3231f7548cb842ff9cdedca63a0fed6164417a094fa"
+    },
+    "current_snapshot": {
+      "kind": "fix-diff",
+      "base_tree": "4f146dc18845ee36be18fa3441219d6f0d3dbdb5",
+      "candidate_tree": "b654d2d006d4d151145fd6452817f97d1ddc9ebb",
+      "paths_digest": "sha256:2e7d91282782b0372bdf56a447b687c6ad1bc7f7513ccd4c150728561eaa9ae3",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "ledger_ids": [
+        "R4-001"
+      ],
+      "paths": [
+        "engine/skills/skills.go",
+        "engine/skills/skills_test.go"
+      ],
+      "identity": "sha256:3a6f95f6830dc875c3177ed500c5362c8a4cb3c294ca6a7a09b880f2a0598572"
+    },
+    "genesis_paths": [
+      ".github/workflows/ci.yml",
+      "README.md",
+      "bin/labdrian-overlay",
+      "engine/cmd/main.go",
+      "engine/skills/ondisk.go",
+      "engine/skills/ondisk_test.go",
+      "engine/skills/skills.go",
+      "engine/skills/skills_test.go",
+      "openspec/changes/deterministic-verification-evidence/specs/verification-evidence-capture/spec.md",
+      "openspec/changes/skill-manifest-gen/proposal.md",
+      "openspec/changes/skills-validate-ondisk-gate/design.md",
+      "openspec/changes/skills-validate-ondisk-gate/entry.json",
+      "openspec/changes/skills-validate-ondisk-gate/proposal.md",
+      "openspec/changes/skills-validate-ondisk-gate/requirements.md",
+      "openspec/changes/skills-validate-ondisk-gate/specs/skill-package-manager/spec.md",
+      "openspec/changes/skills-validate-ondisk-gate/specs/skills-ondisk-validation/spec.md",
+      "openspec/changes/skills-validate-ondisk-gate/tasks.md"
+    ],
+    "policy_hash": "sha256:34fb63d7f29f8613cd4431382b1057398a4816f8a4c20fc34677fffc80a184f6",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-risk",
+      "review-resilience",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 1417,
+    "correction_budget": 200,
+    "lens_results": [
+      {
+        "lens": "review-risk",
+        "findings": [],
+        "evidence": [
+          "diff --name-status and --numstat over 2ad8e42..4f146dc confirm 17 changed paths: 10 Go/CI/doc modifications plus 7 net-new openspec files (design/entry/proposal/requirements/specs/tasks) for skills-validate-ondisk-gate.",
+          "Full patch review of .github/workflows/ci.yml shows the only change is appending the static string literal ' --source-root ../skills' to an existing 'go run ./cmd/ skills validate' invocation; no variable interpolation, secrets, or externally-controlled data enters this run: line, so the native shell_source trigger is a false positive on plain flag text, not shell injection.",
+          "Full patch review of bin/labdrian-overlay shows only a help-text/usage-string update; no executable logic changed.",
+          "Full patch of engine/cmd/main.go: doc-comment and usage-string updates only, no behavior change.",
+          "Full source read of engine/skills/ondisk.go: ScanSkillFiles(skillsDir) takes a CLI-operator-supplied local path, os.Stat's it, then filepath.WalkDir's it; entries are compared only as strings via map lookups and fmt.Sprintf %q for error text (never passed to exec/shell, SQL, or any interpreter), so untrusted input handling and injection do not apply. Dot-prefixed entries are skipped via SkipDir; no symlink-following beyond default Go WalkDir/Lstat semantics that flags reparse points as non-dir so a symlinked directory is not recursed as one.",
+          "Full patch of engine/skills/skills.go: RenderValidateCore gained a required --source-root flag (fails loud with exit 1 and a stderr message naming the flag when absent, per test TestRenderValidateCoreOnDiskGate/absent_source_root_fails_loud_naming_the_flag) and wires DeployableManifestPaths + injected scanSkills into a second, additive on-disk divergence check; no new external inputs, no auth/authorization surface, no secrets, no dependency changes (no go.mod/go.sum in the manifest).",
+          "engine/skills/ondisk_test.go and skills_test.go additions are net-new/expanded unit tests exercising the same functions with temp-dir fixtures and a stubbed scanSkills; no production behavior change beyond what ondisk.go/skills.go show.",
+          "README.md, openspec proposal/spec/design/tasks/entry.json changes are documentation only; scanned for embedded secrets/tokens/credentials — none present.",
+          "This is a local CI/dev-tooling manifest-consistency gate with no network exposure, no authentication/authorization boundary, no persisted or transmitted user data, and no dependency manifest changes; scope items (auth, data exposure/loss, unsafe input handling, secrets, dependency vulnerabilities) all inspected with no reachable impact found."
+        ],
+        "result_hash": "sha256:5904d8db2491e82f5203e75fdc73d8251399eba5df17b9d9405f735c0f949011"
+      },
+      {
+        "lens": "review-resilience",
+        "findings": [
+          {
+            "id": "R4-001",
+            "lens": "resilience",
+            "location": "engine/skills/skills.go:110",
+            "severity": "CRITICAL",
+            "claim": "RenderValidateCore computes regDivs/regErr from the registry/manifest cross-check at line 110, then runs three new fatal-error early-returns (readFile(manifestPath) at 112-116, DeployableManifestPaths at 118-122, scanSkills(sourceRoot) at 124-128) before ever reaching the print loop at 134-141; any one of those three failing silently discards the already-computed regDivs and reports only the later error, contradicting the function's own stated guarantee two lines above the print loop: 'Full-scan reporting (R-007): print every divergence from both checks in this one run, never stopping at the first error.'",
+            "proof_refs": [
+              "engine/skills/skills.go changed hunk: regDivs/regErr computed at line 110 (git diff 2ad8e42..4f146dc -- engine/skills/skills.go, hunk starting '// Validate loads the manifest via os.Open(manifestPath) and runs Diff.')",
+              "engine/skills/skills.go lines 112-129: three new early-return error paths (readFile, DeployableManifestPaths, scanSkills) added by this diff, none of which print regDivs before exit(1)",
+              "engine/skills/skills.go lines 132-141: the print block (guarded by 'if regErr != nil { for _, d := range regDivs ... }') is only reached if all three new stages succeed, so a scanSkills failure (e.g. a bad/inaccessible --source-root) combined with a real registry/manifest divergence reports only the scan error and drops the divergence diagnostics an operator needs",
+              "engine/skills/skills_test.go TestRenderValidateCoreOnDiskGate: covers absent --source-root, unregistered-file, orphan-row, and mixed-divergence-success cases, but has no subtest combining a real regErr with a failing scanSkills/readFile/DeployableManifestPaths stage, so this gap ships untested",
+              "openspec/changes/skills-validate-ondisk-gate/requirements.md:75-77 (R-007) explicitly requires 'GIVEN on-disk divergences and registry/manifest divergences in the same run ... THEN both sets are reported' — this diff's own acceptance requirement is violated for the fatal-error subset of that interleaving"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          }
+        ],
+        "evidence": [
+          "Ran the four required env -i git diff/cat-file commands against base 2ad8e42e4f1ef4ff3e46c447d70e6123664f2180 and candidate 4f146dc18845ee36be18fa3441219d6f0d3dbdb5 for all 17 manifest paths",
+          "Read full candidate-tree contents of engine/skills/skills.go, engine/skills/ondisk.go, engine/skills/validate.go, engine/skills/manifest.go (LoadManifestView), engine/skills/skills_test.go, engine/skills/ondisk_test.go, bin/labdrian-overlay (cmd_skills at both revisions), tui/run.go Actions(), and openspec/changes/skills-validate-ondisk-gate/requirements.md to trace every consumer of `skills validate`'s exit code and the new --source-root requirement",
+          "Confirmed bin/labdrian-overlay's cmd_skills already injected --source-root (and --registry/--manifest) defaults before this change (identical at base and candidate commits, lines ~1542-1566), so the TUI's `skills validate` invocation via the bash wrapper is not broken by the new required flag; only direct engine-binary callers must supply it, and the only such caller (.github/workflows/ci.yml) was updated correctly with --source-root ../skills, and skills/ exists at repo root so that path resolves",
+          "Repo-wide git grep for 'skills validate' across the candidate tree found no other direct engine-binary invocation (Makefile, hooks, scripts) lacking --source-root",
+          "Confirmed via Validate()/LoadManifestView() semantics (engine/skills/validate.go) that regErr can be non-nil either because LoadManifestView failed to open/parse the manifest or because Diff found real divergences, and in the latter case regDivs is a populated, informative slice that the new code path can silently drop"
+        ],
+        "result_hash": "sha256:0d384db73259d3cb72e2b476eb093e487972db9925613c16fca4347182682d12"
+      },
+      {
+        "lens": "review-readability",
+        "findings": [
+          {
+            "id": "R2-001",
+            "lens": "readability",
+            "location": "openspec/changes/skills-validate-ondisk-gate/proposal.md:51",
+            "severity": "WARNING",
+            "claim": "proposal.md's Affected Areas table lists `tui/run.go` as \"Modified\" for \"TUI disposition\", and its Approach section (line 35) claims a blast radius of \"9 consumers\", but design.md (the same change's settled Revision 2) explicitly decided `tui/run.go` gets \"No change\" and closes the consumer table at 11 rows — and the actual diff touches no file under tui/. A reader of proposal.md alone is told a file was modified, and given a stale count, that the shipped diff contradicts.",
+            "proof_refs": [
+              "openspec/changes/skills-validate-ondisk-gate/proposal.md:35 states 'Exit-code blast radius is 9 consumers, not 3'",
+              "openspec/changes/skills-validate-ondisk-gate/proposal.md:51 lists 'tui/run.go' under 'Modified' in the Affected Areas table",
+              "openspec/changes/skills-validate-ondisk-gate/design.md:3 states 'Revision 2 ... consumer table closed at 11 rows'",
+              "openspec/changes/skills-validate-ondisk-gate/design.md:63 states for the TUI row: 'No change: invokes via wrapper (gets flag)'",
+              "changed_path_manifest for this candidate contains no tui/ entry — git diff --name-status confirms tui/run.go is absent from the 17 changed paths",
+              "tui/run.go:389-402 shells out to bin/labdrian-overlay, whose cmd_skills (bin/labdrian-overlay:1551-1561, unchanged by this diff) already injects a default --source-root, confirming design.md's 'gets flag' claim and that no tui/run.go edit was ever required"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R2-002",
+            "lens": "readability",
+            "location": "engine/skills/skills.go:110",
+            "severity": "SUGGESTION",
+            "claim": "RenderValidateCore now reads the manifest file at manifestPath through two different I/O paths in the same function: the injected, mockable `readFile` (for the new on-disk check) and Validate()'s internal `os.Open` via LoadManifestView (for the registry/manifest check) — the seam is only half-applied to this function's own manifest access.",
+            "proof_refs": [
+              "engine/skills/skills.go:110 'regDivs, regErr := Validate(reg, manifestPath)' — Validate calls LoadManifestView(manifestPath) which does os.Open(path) directly (engine/skills/manifest.go:39)",
+              "engine/skills/skills.go:112-118 'manifestData, err := readFile(manifestPath)' then 'DeployableManifestPaths(bytes.NewReader(manifestData))' — this is a second, independent read/parse of the same manifestPath added by this diff, using the injected seam that Validate's internal call does not use"
+            ],
+            "evidence_class": "inferential",
+            "causal_disposition": "introduced"
+          }
+        ],
+        "evidence": [
+          "git diff --name-status/--numstat 2ad8e42e..4f146dc across all 17 manifest paths",
+          "full unified diff (--patch, myers, unified=3) for every path in the manifest",
+          "cat-file reads of engine/skills/skills.go, ondisk.go, manifest.go, validate.go (base and candidate) to trace RenderValidateCore, DeployableManifestPaths, LoadManifestView, and Validate",
+          "cat-file reads of the full new openspec/changes/skills-validate-ondisk-gate/{proposal.md,design.md,requirements.md,tasks.md,entry.json,specs/*} content for internal consistency against the code diff and against each other",
+          "cat-file read of bin/labdrian-overlay:1542-1566 (cmd_skills) and tui/run.go (skills entry + exec dispatch) to verify the TUI's actual invocation path and the design.md 'gets flag'/'no change' claim",
+          "grep across .github/workflows/*.yml confirmed the only skills-validate CI invocation is the one already updated with --source-root in this diff"
+        ],
+        "result_hash": "sha256:90a7749ef2385a277f48d152f3d448b0a0a0b6d3231ed94e9fb3aec252c15efc"
+      },
+      {
+        "lens": "review-reliability",
+        "findings": [
+          {
+            "id": "R3-001",
+            "lens": "reliability",
+            "location": "engine/skills/skills_test.go:389",
+            "severity": "WARNING",
+            "claim": "TestRenderValidateCoreOnDiskGate's 'cwd_independence_with_absolute_source_root' subtest is documented as the one case that walks a real skills tree to prove --source-root/ScanSkillFiles resolve correctly regardless of cwd (including when cwd is engine/, a real 28-file Go package), but the subtest actually passes stubScan([]string{\"sdd-spec/SKILL.md\"}) and the placeholder value \"/does-not-matter-because-stubbed\" for --source-root, so ScanSkillFiles is never invoked and the chdir into engine/ has no effect on the assertion; the R-002 cwd/source-root resolution property this change exists to guarantee is left completely unproven by any test in the diff.",
+            "proof_refs": [
+              "engine/skills/skills_test.go:232-235 doc comment: \"Every subtest but the cwd-independence one uses a stubbed scanSkills so the core is exercised without ever walking a real tree (R-003)\" — implying the cwd-independence subtest is the exception that DOES walk a real tree",
+              "engine/skills/skills_test.go:389: `scan := stubScan([]string{\"sdd-spec/SKILL.md\"})` inside that exact subtest — contradicts the doc comment, no real tree is ever walked",
+              "engine/skills/skills_test.go:399: inline comment \"One of the three cwds is engine/ itself: a real 28-file Go package that must never be treated as an implicit skills directory (R-002)\" — the chdir into engineDir is a no-op for the assertion because scan ignores both its argument and cwd",
+              "engine/skills/skills_test.go:408: `--source-root \"/does-not-matter-because-stubbed\"` — the flag value is never resolved against any filesystem, real or fake",
+              "openspec/changes/skills-validate-ondisk-gate/requirements.md:307: traceability row marks 'spec.md:145 ../-relative invocation | R-002 | source-root, cwd, path resolution | CI cwd engine/ resolves overlay skills/ | Multi-cwd core test | Covered' — this exact property is not exercised by the only 'multi-cwd' test in the diff",
+              "no test in engine/skills/ondisk_test.go calls ScanSkillFiles with a relative path across a changed working directory either (only absolute t.TempDir() paths at lines 85 and 192), so the relative '--source-root ../skills' invocation actually used in .github/workflows/ci.yml:158 has no unit-test equivalent anywhere in the changeset"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          }
+        ],
+        "evidence": [
+          "git diff --name-status/--numstat 2ad8e42e4f1ef4ff3e46c447d70e6123664f2180..4f146dc18845ee36be18fa3441219d6f0d3dbdb5 to enumerate the 17 changed paths",
+          "git diff --patch (myers, --unified=3) for engine/skills/ondisk.go, engine/skills/skills.go, engine/skills/ondisk_test.go, engine/skills/skills_test.go, engine/cmd/main.go, bin/labdrian-overlay, .github/workflows/ci.yml, README.md, openspec/changes/deterministic-verification-evidence/specs/verification-evidence-capture/spec.md, openspec/changes/skill-manifest-gen/proposal.md",
+          "git cat-file -p of engine/skills/skills.go, engine/skills/ondisk.go, engine/skills/validate.go, engine/skills/manifest.go, engine/skills/skills_test.go, engine/cmd/main.go, bin/labdrian-overlay (route_resolve/route_repo_rel/route_tar_path), overlay.manifest, and the skills/ tree listing at candidate_tree 4f146dc18845ee36be18fa3441219d6f0d3dbdb5 to trace RenderValidateCore's new dual-check control flow, confirm production wiring (os.ReadFile for readFile, ScanSkillFiles for scanSkills), confirm nonSkillRoutes mirrors route_resolve's agent/opencode-agent branches exactly, and manually verify the 57 skill-route-deployable overlay.manifest rows equal the 57 real files under skills/ (no UNREGISTERED_ON_DISK/MISSING_ON_DISK on the repo's own tree, so the new required CI flag in .github/workflows/ci.yml does not break the existing pipeline)",
+          "git cat-file -p of the base-tree (2ad8e42e4f1ef4ff3e46c447d70e6123664f2180) engine/skills/skills.go to diff old vs new RenderValidateCore control flow and confirm the regErr/regDivs nil-slice print pattern (silent exit(1) when Validate's internal LoadManifestView I/O error is distinct from a divergence) is byte-identical pre-existing logic, not introduced or worsened by this candidate, since production readFile==os.ReadFile makes the newly added second manifest read fail identically and surface an explicit error message before that branch is ever reached"
+        ],
+        "result_hash": "sha256:e726372cb7878ac58dd056b7ce10d334502439cf144cfce4c71804a006a11b12"
+      }
+    ],
+    "findings": [
+      {
+        "id": "R4-001",
+        "lens": "resilience",
+        "location": "engine/skills/skills.go:110",
+        "severity": "CRITICAL",
+        "claim": "RenderValidateCore computes regDivs/regErr from the registry/manifest cross-check at line 110, then runs three new fatal-error early-returns (readFile(manifestPath) at 112-116, DeployableManifestPaths at 118-122, scanSkills(sourceRoot) at 124-128) before ever reaching the print loop at 134-141; any one of those three failing silently discards the already-computed regDivs and reports only the later error, contradicting the function's own stated guarantee two lines above the print loop: 'Full-scan reporting (R-007): print every divergence from both checks in this one run, never stopping at the first error.'",
+        "proof_refs": [
+          "engine/skills/skills.go changed hunk: regDivs/regErr computed at line 110 (git diff 2ad8e42..4f146dc -- engine/skills/skills.go, hunk starting '// Validate loads the manifest via os.Open(manifestPath) and runs Diff.')",
+          "engine/skills/skills.go lines 112-129: three new early-return error paths (readFile, DeployableManifestPaths, scanSkills) added by this diff, none of which print regDivs before exit(1)",
+          "engine/skills/skills.go lines 132-141: the print block (guarded by 'if regErr != nil { for _, d := range regDivs ... }') is only reached if all three new stages succeed, so a scanSkills failure (e.g. a bad/inaccessible --source-root) combined with a real registry/manifest divergence reports only the scan error and drops the divergence diagnostics an operator needs",
+          "engine/skills/skills_test.go TestRenderValidateCoreOnDiskGate: covers absent --source-root, unregistered-file, orphan-row, and mixed-divergence-success cases, but has no subtest combining a real regErr with a failing scanSkills/readFile/DeployableManifestPaths stage, so this gap ships untested",
+          "openspec/changes/skills-validate-ondisk-gate/requirements.md:75-77 (R-007) explicitly requires 'GIVEN on-disk divergences and registry/manifest divergences in the same run ... THEN both sets are reported' — this diff's own acceptance requirement is violated for the fatal-error subset of that interleaving"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R2-001",
+        "lens": "readability",
+        "location": "openspec/changes/skills-validate-ondisk-gate/proposal.md:51",
+        "severity": "WARNING",
+        "claim": "proposal.md's Affected Areas table lists `tui/run.go` as \"Modified\" for \"TUI disposition\", and its Approach section (line 35) claims a blast radius of \"9 consumers\", but design.md (the same change's settled Revision 2) explicitly decided `tui/run.go` gets \"No change\" and closes the consumer table at 11 rows — and the actual diff touches no file under tui/. A reader of proposal.md alone is told a file was modified, and given a stale count, that the shipped diff contradicts.",
+        "proof_refs": [
+          "openspec/changes/skills-validate-ondisk-gate/proposal.md:35 states 'Exit-code blast radius is 9 consumers, not 3'",
+          "openspec/changes/skills-validate-ondisk-gate/proposal.md:51 lists 'tui/run.go' under 'Modified' in the Affected Areas table",
+          "openspec/changes/skills-validate-ondisk-gate/design.md:3 states 'Revision 2 ... consumer table closed at 11 rows'",
+          "openspec/changes/skills-validate-ondisk-gate/design.md:63 states for the TUI row: 'No change: invokes via wrapper (gets flag)'",
+          "changed_path_manifest for this candidate contains no tui/ entry — git diff --name-status confirms tui/run.go is absent from the 17 changed paths",
+          "tui/run.go:389-402 shells out to bin/labdrian-overlay, whose cmd_skills (bin/labdrian-overlay:1551-1561, unchanged by this diff) already injects a default --source-root, confirming design.md's 'gets flag' claim and that no tui/run.go edit was ever required"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R2-002",
+        "lens": "readability",
+        "location": "engine/skills/skills.go:110",
+        "severity": "SUGGESTION",
+        "claim": "RenderValidateCore now reads the manifest file at manifestPath through two different I/O paths in the same function: the injected, mockable `readFile` (for the new on-disk check) and Validate()'s internal `os.Open` via LoadManifestView (for the registry/manifest check) — the seam is only half-applied to this function's own manifest access.",
+        "proof_refs": [
+          "engine/skills/skills.go:110 'regDivs, regErr := Validate(reg, manifestPath)' — Validate calls LoadManifestView(manifestPath) which does os.Open(path) directly (engine/skills/manifest.go:39)",
+          "engine/skills/skills.go:112-118 'manifestData, err := readFile(manifestPath)' then 'DeployableManifestPaths(bytes.NewReader(manifestData))' — this is a second, independent read/parse of the same manifestPath added by this diff, using the injected seam that Validate's internal call does not use"
+        ],
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-001",
+        "lens": "reliability",
+        "location": "engine/skills/skills_test.go:389",
+        "severity": "WARNING",
+        "claim": "TestRenderValidateCoreOnDiskGate's 'cwd_independence_with_absolute_source_root' subtest is documented as the one case that walks a real skills tree to prove --source-root/ScanSkillFiles resolve correctly regardless of cwd (including when cwd is engine/, a real 28-file Go package), but the subtest actually passes stubScan([]string{\"sdd-spec/SKILL.md\"}) and the placeholder value \"/does-not-matter-because-stubbed\" for --source-root, so ScanSkillFiles is never invoked and the chdir into engine/ has no effect on the assertion; the R-002 cwd/source-root resolution property this change exists to guarantee is left completely unproven by any test in the diff.",
+        "proof_refs": [
+          "engine/skills/skills_test.go:232-235 doc comment: \"Every subtest but the cwd-independence one uses a stubbed scanSkills so the core is exercised without ever walking a real tree (R-003)\" — implying the cwd-independence subtest is the exception that DOES walk a real tree",
+          "engine/skills/skills_test.go:389: `scan := stubScan([]string{\"sdd-spec/SKILL.md\"})` inside that exact subtest — contradicts the doc comment, no real tree is ever walked",
+          "engine/skills/skills_test.go:399: inline comment \"One of the three cwds is engine/ itself: a real 28-file Go package that must never be treated as an implicit skills directory (R-002)\" — the chdir into engineDir is a no-op for the assertion because scan ignores both its argument and cwd",
+          "engine/skills/skills_test.go:408: `--source-root \"/does-not-matter-because-stubbed\"` — the flag value is never resolved against any filesystem, real or fake",
+          "openspec/changes/skills-validate-ondisk-gate/requirements.md:307: traceability row marks 'spec.md:145 ../-relative invocation | R-002 | source-root, cwd, path resolution | CI cwd engine/ resolves overlay skills/ | Multi-cwd core test | Covered' — this exact property is not exercised by the only 'multi-cwd' test in the diff",
+          "no test in engine/skills/ondisk_test.go calls ScanSkillFiles with a relative path across a changed working directory either (only absolute t.TempDir() paths at lines 85 and 192), so the relative '--source-root ../skills' invocation actually used in .github/workflows/ci.yml:158 has no unit-test equivalent anywhere in the changeset"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      }
+    ],
+    "classifications": {
+      "R4-001": {
+        "finding_id": "R4-001",
+        "class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof": "engine/skills/skills.go changed hunk: regDivs/regErr computed at line 110 (git diff 2ad8e42..4f146dc -- engine/skills/skills.go, hunk starting '// Validate loads the manifest via os.Open(manifestPath) and runs Diff.'); engine/skills/skills.go lines 112-129: three new early-return error paths (readFile, DeployableManifestPaths, scanSkills) added by this diff, none of which print regDivs before exit(1); engine/skills/skills.go lines 132-141: the print block (guarded by 'if regErr != nil { for _, d := range regDivs ... }') is only reached if all three new stages succeed, so a scanSkills failure (e.g. a bad/inaccessible --source-root) combined with a real registry/manifest divergence reports only the scan error and drops the divergence diagnostics an operator needs; engine/skills/skills_test.go TestRenderValidateCoreOnDiskGate: covers absent --source-root, unregistered-file, orphan-row, and mixed-divergence-success cases, but has no subtest combining a real regErr with a failing scanSkills/readFile/DeployableManifestPaths stage, so this gap ships untested; openspec/changes/skills-validate-ondisk-gate/requirements.md:75-77 (R-007) explicitly requires 'GIVEN on-disk divergences and registry/manifest divergences in the same run ... THEN both sets are reported' — this diff's own acceptance requirement is violated for the fatal-error subset of that interleaving"
+      }
+    },
+    "outcomes": {
+      "R2-001": "info",
+      "R2-002": "info",
+      "R3-001": "info",
+      "R4-001": "corroborated"
+    },
+    "fix_finding_ids": [
+      "R4-001"
+    ],
+    "follow_ups": [],
+    "proposed_correction_lines": 47,
+    "actual_correction_lines": 47,
+    "fix_delta_hash": "sha256:0f8d3599554fb94c0bed580166c74f8337ba931d654e77fe96740d0af1e8320a",
+    "original_criteria": {
+      "evidence_hash": "sha256:b68af0259393b40a7e0940e1e3fe56ae2a5aad4c57fbc21de64e2b94319ebfe4",
+      "fix_delta_hash": "sha256:0f8d3599554fb94c0bed580166c74f8337ba931d654e77fe96740d0af1e8320a",
+      "passed": true
+    },
+    "correction_regression": {
+      "evidence_hash": "sha256:52b1373982b380fbb9bc52ebc9d33e62efed50b47759655c88b6b52edb79ec35",
+      "fix_delta_hash": "sha256:0f8d3599554fb94c0bed580166c74f8337ba931d654e77fe96740d0af1e8320a",
+      "passed": true
+    },
+    "evidence_hash": "sha256:cbd995b4d1dc9092cd47eb9d8ddf7c71e55265352123fd93b471cd8c8960bbbf",
+    "evidence_record_digest": "sha256:d02500b9d12927448dd30933f49c041a3566b0cafd7700006a38256f07c60342",
+    "evidence_outcome": "passed",
+    "evidence_target_identity": "sha256:3a6f95f6830dc875c3177ed500c5362c8a4cb3c294ca6a7a09b880f2a0598572",
+    "evidence_authority_revision": "sha256:abc26b6f3caab5aec75bb08ce0641b82489a3ba676bd5ec2f2a7438659970e3b",
+    "correction_attempts": [
+      {
+        "snapshot": {
+          "kind": "fix-diff",
+          "base_tree": "4f146dc18845ee36be18fa3441219d6f0d3dbdb5",
+          "candidate_tree": "b654d2d006d4d151145fd6452817f97d1ddc9ebb",
+          "paths_digest": "sha256:2e7d91282782b0372bdf56a447b687c6ad1bc7f7513ccd4c150728561eaa9ae3",
+          "intended_untracked": [],
+          "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+          "ledger_ids": [
+            "R4-001"
+          ],
+          "paths": [
+            "engine/skills/skills.go",
+            "engine/skills/skills_test.go"
+          ],
+          "identity": "sha256:3a6f95f6830dc875c3177ed500c5362c8a4cb3c294ca6a7a09b880f2a0598572"
+        },
+        "proposed_lines": 47,
+        "actual_lines": 47,
+        "fix_delta_hash": "sha256:0f8d3599554fb94c0bed580166c74f8337ba931d654e77fe96740d0af1e8320a",
+        "original_criteria": {
+          "evidence_hash": "sha256:b68af0259393b40a7e0940e1e3fe56ae2a5aad4c57fbc21de64e2b94319ebfe4",
+          "fix_delta_hash": "sha256:0f8d3599554fb94c0bed580166c74f8337ba931d654e77fe96740d0af1e8320a",
+          "passed": true
+        },
+        "correction_regression": {
+          "evidence_hash": "sha256:52b1373982b380fbb9bc52ebc9d33e62efed50b47759655c88b6b52edb79ec35",
+          "fix_delta_hash": "sha256:0f8d3599554fb94c0bed580166c74f8337ba931d654e77fe96740d0af1e8320a",
+          "passed": true
+        },
+        "targeted_validation_request_hash": "sha256:e9823ae0195f4c840ed3a3bf7e995b03e8d6399ea2fb3b0ade61a809b1001aed",
+        "correction_target_identity": "sha256:3a6f95f6830dc875c3177ed500c5362c8a4cb3c294ca6a7a09b880f2a0598572"
+      }
+    ],
+    "cumulative_correction_lines": 47
+  }
+}

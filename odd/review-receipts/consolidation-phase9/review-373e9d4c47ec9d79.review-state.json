@@ -1,0 +1,135 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:aa18f07523a431c50c3b550fc14b65c0250479d6aa60c76d457351713e6256ed",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-373e9d4c47ec9d79",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "fab126c41d9f1160e6100b96ec67c81797b4c4e5",
+      "candidate_tree": "186585af438e92989c2d7f77d24f6f77a063fc68",
+      "paths_digest": "sha256:97f13d0ed83001e41fc3669b77e0d40f6d2a70ba113ee26ef543eecbfe669476",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "tools/entry-contract-validator/main.go",
+        "tools/entry-contract-validator/main_test.go",
+        "tools/entry-contract-validator/token_domain_test.go"
+      ],
+      "identity": "sha256:373e9d4c47ec9d79b209d5ccd5bdac60fc6200defd05f2025b341e91e5a27fc9"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "fab126c41d9f1160e6100b96ec67c81797b4c4e5",
+      "candidate_tree": "186585af438e92989c2d7f77d24f6f77a063fc68",
+      "paths_digest": "sha256:97f13d0ed83001e41fc3669b77e0d40f6d2a70ba113ee26ef543eecbfe669476",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "tools/entry-contract-validator/main.go",
+        "tools/entry-contract-validator/main_test.go",
+        "tools/entry-contract-validator/token_domain_test.go"
+      ],
+      "identity": "sha256:373e9d4c47ec9d79b209d5ccd5bdac60fc6200defd05f2025b341e91e5a27fc9"
+    },
+    "genesis_paths": [
+      "tools/entry-contract-validator/main.go",
+      "tools/entry-contract-validator/main_test.go",
+      "tools/entry-contract-validator/token_domain_test.go"
+    ],
+    "policy_hash": "sha256:34fb63d7f29f8613cd4431382b1057398a4816f8a4c20fc34677fffc80a184f6",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-risk",
+      "review-resilience",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 63,
+    "correction_budget": 32,
+    "lens_results": [
+      {
+        "lens": "review-risk",
+        "findings": [],
+        "evidence": [
+          "main.go line 187: the process-starting exec.Command block in main_test.go (TestOverlayCLIResolvesValidationPathsFromCaller, lines ~492-505 candidate / ~442-455 base) is byte-identical between base_tree fab126c41d9f1160e6100b96ec67c81797b4c4e5 and candidate_tree 186585af438e92989c2d7f77d24f6f77a063fc68 (verified via cat-file), confirming the native risk trigger's subprocess-starting code is pre-existing and untouched by this candidate.",
+          "main.go line 187: the only production change wraps the underlying *jsonschema.ValidationError with %w alongside the existing %s diagnostic (was previously discarded); the sibling non-diagnostic branch at main.go line 189 already used fmt.Errorf(\"schema validation: %w\", err) with the same err.Error() content, so this candidate does not introduce a new class of exposed detail, only makes the diagnostic path consistent with the pre-existing generic path — both surface to local stderr via run() at main.go line 149 (fmt.Fprintf(stderr, \"error: %v\\n\", err)) for a locally-invoked CLI validating a local entry-contract JSON file, not sensitive/secret data.",
+          "token_domain_test.go: the duplicated constant nextRecommendationFieldName was removed and both use sites replaced with the existing production constant nextRecommendationField from main.go (same package), a pure deduplication with no behavior change.",
+          "main_test.go: the new import github.com/santhosh-tekuri/jsonschema/v6 is an already-pinned dependency (verified elsewhere in the same file, TestOverlayCLIResolvesValidationPathsFromCaller checks the module pins jsonschema/v6 v6.0.2); no go.mod/go.sum changes in this diff (git diff --name-status confirms neither file appears in the changed-path manifest), so no new/altered dependency was introduced.",
+          "Both new tests (TestSelfDiagnosingMessageSurfacesSiblingViolations, TestSelfDiagnosingMessageWrapsUnderlyingValidationError) call validateMutation -\u003e validateFiles in-process; neither uses exec.Command or starts any subprocess."
+        ],
+        "result_hash": "sha256:8ac7ed72fd2d99e903be15d4cde4c5db0bb07c422b58cea3079cca55d9f88f3a"
+      },
+      {
+        "lens": "review-resilience",
+        "findings": [],
+        "evidence": [
+          "tools/entry-contract-validator/main.go:187 fmt.Errorf(\"schema validation: %s: %w\", diagnostic, err) wraps the root *jsonschema.ValidationError with %w instead of discarding it; the pinned jsonschema/v6 module source (external dependency, outside the frozen candidate) ValidationError.display() recurses through every e.Causes entry (not only the matched enum cause), so err.Error() renders the full sibling-violation tree, meaning the wrap genuinely surfaces siblings rather than only appearing to; TestSelfDiagnosingMessageSurfacesSiblingViolations (tools/entry-contract-validator/main_test.go) and TestSelfDiagnosingMessageWrapsUnderlyingValidationError (tools/entry-contract-validator/main_test.go) both pass when executed against the exact candidate tree (HEAD^{tree}=186585af438e92989c2d7f77d24f6f77a063fc68, confirmed identical to candidate_tree); run()'s errors.As(err, \u0026classified) in tools/entry-contract-validator/main.go and diagnoseNextRecommendationRejection's own errors.As(err, \u0026validationErr) both sit at unaffected positions in the wrap chain, so errors.Is/As behavior for existing callers is unchanged; grep across the repository for stderr/message-text parsing of this validator (the shell wrapper that invokes this validator (outside the frozen candidate)) shows only exit-code propagation, never message-content inspection, so no caller depends on the old shorter message shape; the non-diagnostic branch (tools/entry-contract-validator/main.go, the following return statement) already wrapped the same full ValidationError tree with bare %w before this change, so any tree-size/verbosity growth is pre-existing baseline behavior, not newly introduced by this diff; the diagnostic sentence (naming the field, the rejected token, and the two mirror files plus the diagnostic command) still renders first in the composed message, ahead of the appended raw tree, so the added detail does not obscure or displace the actionable guidance."
+        ],
+        "result_hash": "sha256:b8f87274297c0ce5530a00d47a802668dac1dad56da3a3dfbaf31ca9837ae0d5"
+      },
+      {
+        "lens": "review-readability",
+        "findings": [
+          {
+            "id": "R2-001",
+            "lens": "readability",
+            "location": "tools/entry-contract-validator/main.go:187",
+            "severity": "WARNING",
+            "claim": "The candidate's one-line change composes the schema-validation error as fmt.Errorf(\"schema validation: %s: %w\", diagnostic, err); diagnostic is the fixed sentence from diagnoseNextRecommendationRejection which already ends in a period (\"...and reading nextRecommended.\"), so the rendered message contains the sequence \"nextRecommended.: \u003clibrary error text\u003e\" — a sentence-terminating period immediately followed by a colon introducing the wrapped *jsonschema.ValidationError text, which reads as incoherent punctuation to an operator.",
+            "proof_refs": [
+              "tools/entry-contract-validator/main.go:187",
+              "tools/entry-contract-validator/main.go:221"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          }
+        ],
+        "evidence": [
+          "diff --patch on tools/entry-contract-validator/main.go shows the sole production hunk changing line 187 from fmt.Errorf(\"schema validation: %s\", diagnostic) to fmt.Errorf(\"schema validation: %s: %w\", diagnostic, err), i.e. this diff is what introduces the colon-plus-wrapped-error suffix.",
+          "git cat-file -p 186585af...:tools/entry-contract-validator/main.go line 221 shows the diagnostic Sprintf's final format segment is \"and reading nextRecommended.\" (literal trailing period, unchanged by this diff), which line 187 now appends \": %w\" onto without any separator adjustment, producing the period-colon collision proven by static composition of the two literals.",
+          "The duplicated-constant fix in tools/entry-contract-validator/token_domain_test.go is confirmed genuine: the local const nextRecommendationFieldName = \"expected_native_next_recommendation\" was deleted and both its use sites now reference tools/entry-contract-validator/main.go's nextRecommendationField (cat-file + diff on tools/entry-contract-validator/token_domain_test.go); no new near-duplicate constant was introduced in the three manifest files — tools/entry-contract-validator/main_test.go's raw \"expected_native_next_recommendation\" map-key literals in the new tests follow the same pre-existing convention already used by untouched neighboring tests in that file (map keys mirroring JSON field names), not a re-duplication of the Go constant.",
+          "The two new tests read as behavior specifications rather than incidental-string assertions: TestSelfDiagnosingMessageWrapsUnderlyingValidationError asserts via errors.As(err, \u0026validationErr) on the concrete *jsonschema.ValidationError type (structural, not string-based), and TestSelfDiagnosingMessageSurfacesSiblingViolations asserts the composed message contains the sibling property name, which is precisely the fact the %w change is meant to preserve (previously %s discarded it) rather than an incidental formatting detail of the third-party library."
+        ],
+        "result_hash": "sha256:24c94ee8c7f9fdec9f49c433b2a306c1e020dbc152f6ac2a47fb317f86acb794"
+      },
+      {
+        "lens": "review-reliability",
+        "findings": [],
+        "evidence": [
+          "tools/entry-contract-validator/main.go:187 changes `fmt.Errorf(\"schema validation: %s\", diagnostic)` to `fmt.Errorf(\"schema validation: %s: %w\", diagnostic, err)`; under the old form the composed error has no Unwrap chain at all (a %s-only fmt.Errorf produces no wrapped error) and its text is limited to the fixed diagnostic template (tools/entry-contract-validator/main.go:215-224, interpolating only nextRecommendationField and the rejected token), so it could never contain an unrelated property name nor let errors.As reach *jsonschema.ValidationError. tools/entry-contract-validator/main_test.go's new TestSelfDiagnosingMessageSurfacesSiblingViolations (adds `unknown_property` at top level, root schema has additionalProperties:false confirmed via the entry-contract schema (outside the frozen candidate), no patternProperties) asserts the message contains \"unknown_property\", which only the %w-preserved *jsonschema.ValidationError.Error() (which recursively renders every Causes node, confirmed in the vendored the pinned jsonschema/v6 module source (external dependency, outside the frozen candidate))/Error()) can supply — so this test fails against the pre-fix code and passes against the candidate. TestSelfDiagnosingMessageWrapsUnderlyingValidationError's errors.As(err, \u0026validationErr) also fails against the pre-fix code (no Unwrap chain past contractError) and succeeds against the candidate (contractError.Unwrap -\u003e %w chain -\u003e *jsonschema.ValidationError). exitSchemaValidation(=5) is still asserted in the first new test. tools/entry-contract-validator/token_domain_test.go's removal of the duplicated nextRecommendationFieldName constant is a pure reference swap to tools/entry-contract-validator/main.go's existing nextRecommendationField (same package, same value \"expected_native_next_recommendation\"); TestNextRecommendationTokenDomainMatchesInceptionPipelineProse's body and its Fatalf on onlyInSchema/onlyInProse mismatch are unchanged and remain able to fail. Both new tests use t.TempDir() and the existing repoRoot(t)/schemaPath(t) helpers with no shared mutable state, so they are order-independent and not sensitive to the test process's working directory beyond the pre-existing convention already used by every other test in the package."
+        ],
+        "result_hash": "sha256:d62358333ab949e47e7db2a686b168e0d4316659fe1d447164cba49847cc945b"
+      }
+    ],
+    "findings": [
+      {
+        "id": "R2-001",
+        "lens": "readability",
+        "location": "tools/entry-contract-validator/main.go:187",
+        "severity": "WARNING",
+        "claim": "The candidate's one-line change composes the schema-validation error as fmt.Errorf(\"schema validation: %s: %w\", diagnostic, err); diagnostic is the fixed sentence from diagnoseNextRecommendationRejection which already ends in a period (\"...and reading nextRecommended.\"), so the rendered message contains the sequence \"nextRecommended.: \u003clibrary error text\u003e\" — a sentence-terminating period immediately followed by a colon introducing the wrapped *jsonschema.ValidationError text, which reads as incoherent punctuation to an operator.",
+        "proof_refs": [
+          "tools/entry-contract-validator/main.go:187",
+          "tools/entry-contract-validator/main.go:221"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      }
+    ],
+    "classifications": {},
+    "outcomes": {
+      "R2-001": "info"
+    },
+    "fix_finding_ids": [],
+    "follow_ups": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:78f7ba08aeedef1ab3fc5db1e9f9d5211a9346ca95e341f8124bd8a764f6eead",
+    "evidence_record_digest": "sha256:43664a3c9bf058636eea4577b0bdcf34362b10c789bc482e2a53adef848cb312",
+    "evidence_outcome": "passed",
+    "evidence_target_identity": "sha256:373e9d4c47ec9d79b209d5ccd5bdac60fc6200defd05f2025b341e91e5a27fc9",
+    "evidence_authority_revision": "sha256:bab107a92584d9224c6454a0a8d02ebad96a4033902785734baab2bc1ff211a5"
+  }
+}

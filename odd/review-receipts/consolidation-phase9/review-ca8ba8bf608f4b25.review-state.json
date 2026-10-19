@@ -1,0 +1,176 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:7d8392ccbb48b84038c7fb432690db4fe5c971ee8f411ebbae2eb6b4aae93ed9",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-ca8ba8bf608f4b25",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "current-changes",
+      "base_tree": "c8cd0814067abc7b7b0b0e045beefd80f2a1fc62",
+      "candidate_tree": "83db62ff2b21f202c76986b85f967cbd54e9876e",
+      "paths_digest": "sha256:1435ae1c01ae12f359238b651fc3f86806da3f940b1d9d9c8efde55468a5b430",
+      "intended_untracked": [
+        "openspec/changes/actuals-calendar-checkpoint-instrumentation/verify-report.md"
+      ],
+      "intended_untracked_proof": "sha256:c06e1fc44bfe8fef328e4440882bde431556285cae4c65dd60e49062c60ff4d7",
+      "paths": [
+        "engine/skills/actuals_instrumentation_contract_test.go",
+        "openspec/changes/actuals-calendar-checkpoint-instrumentation/specs/actuals-instrumentation/spec.md",
+        "openspec/changes/actuals-calendar-checkpoint-instrumentation/verify-report.md"
+      ],
+      "identity": "sha256:ca8ba8bf608f4b25d23c66a68fb4ac22179aeca0c68730a88c6f81eff7595ec0"
+    },
+    "current_snapshot": {
+      "kind": "current-changes",
+      "base_tree": "c8cd0814067abc7b7b0b0e045beefd80f2a1fc62",
+      "candidate_tree": "83db62ff2b21f202c76986b85f967cbd54e9876e",
+      "paths_digest": "sha256:1435ae1c01ae12f359238b651fc3f86806da3f940b1d9d9c8efde55468a5b430",
+      "intended_untracked": [
+        "openspec/changes/actuals-calendar-checkpoint-instrumentation/verify-report.md"
+      ],
+      "intended_untracked_proof": "sha256:c06e1fc44bfe8fef328e4440882bde431556285cae4c65dd60e49062c60ff4d7",
+      "paths": [
+        "engine/skills/actuals_instrumentation_contract_test.go",
+        "openspec/changes/actuals-calendar-checkpoint-instrumentation/specs/actuals-instrumentation/spec.md",
+        "openspec/changes/actuals-calendar-checkpoint-instrumentation/verify-report.md"
+      ],
+      "identity": "sha256:ca8ba8bf608f4b25d23c66a68fb4ac22179aeca0c68730a88c6f81eff7595ec0"
+    },
+    "genesis_paths": [
+      "engine/skills/actuals_instrumentation_contract_test.go",
+      "openspec/changes/actuals-calendar-checkpoint-instrumentation/specs/actuals-instrumentation/spec.md",
+      "openspec/changes/actuals-calendar-checkpoint-instrumentation/verify-report.md"
+    ],
+    "policy_hash": "sha256:34fb63d7f29f8613cd4431382b1057398a4816f8a4c20fc34677fffc80a184f6",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-reliability"
+    ],
+    "original_changed_lines": 199,
+    "correction_budget": 100,
+    "lens_results": [
+      {
+        "lens": "review-reliability",
+        "findings": [
+          {
+            "id": "R3-spec-forbid-scope-wider-than-requirement",
+            "lens": "reliability",
+            "location": "openspec/changes/actuals-calendar-checkpoint-instrumentation/specs/actuals-instrumentation/spec.md:93",
+            "severity": "WARNING",
+            "claim": "The narrowed R-012/R-013 requirement sentence restricts the roadmap-maker obligation to 'the agent-compute-time field' (singular), but its own paired scenario and the shipped R013 assertion enforce a broader five-field prohibition spanning all three independently tracked units, so requirement text and enforced contract disagree in scope.",
+            "proof_refs": [
+              "openspec/changes/actuals-calendar-checkpoint-instrumentation/specs/actuals-instrumentation/spec.md:93 states \"MUST NOT source tracking-line figures from the agent-compute-time field\", while line 104 of the same file scans for five structured field names: total_wall_clock_hours, checkpoint_count, implementation_hours, review_gate_hours, post_review_fix_hours.",
+              "engine/skills/actuals_instrumentation_contract_test.go:162-165 forbids that identical five-name list, so the enforced contract is the five-field one, not the single-field one the requirement sentence states.",
+              "openspec/changes/actuals-calendar-checkpoint-instrumentation/specs/actuals-instrumentation/spec.md:63 defines the compute-time baseline as built only from implementation_hours, review_gate_hours, and post_review_fix_hours, so only three of the five forbidden names are compute-time fields; total_wall_clock_hours and checkpoint_count are the two other independently tracked units.",
+              "Failure scenario: non-blocking today, because the roadmap-maker skill document is untouched by this candidate and contains none of the five names. Latent risk: a future edit adding a legitimate ownership-attributing prose mention of checkpoint_count or total_wall_clock_hours to that document, which the paired scenario's own 'prose correctly attributing ownership' clause treats as valid, would still trip the literal five-name prohibition and fail the build."
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-marker-pins-file-scoped-not-section-scoped",
+            "lens": "reliability",
+            "location": "engine/skills/actuals_instrumentation_contract_test.go:135",
+            "severity": "WARNING",
+            "claim": "Both new RED groups pin their markers with a whole-file strings.Contains and no anchor to the section the marker is supposed to live in, and R001_R002_three_units_never_blended never asserts its own scenario's 'all three units are named' clause, only the requirement tag and the never-blended phrase.",
+            "proof_refs": [
+              "engine/skills/actuals_instrumentation_contract_test.go:137-144 ranges over the literal slice {\"R-001/R-002\", \"never summed or averaged into one figure\"} and calls strings.Contains against the whole file contents with no section scoping; lines 149-152 do the same for the single R-012 marker \"elapsed-calendar-time, and checkpoint count under separate labels, never blended\".",
+              "Neither group asserts the three unit-name substrings agent-compute-time, elapsed-calendar-time, and human-confirmation-checkpoint-count that openspec/changes/actuals-calendar-checkpoint-instrumentation/specs/actuals-instrumentation/spec.md:17 requires to be present.",
+              "Failure scenario: non-blocking today, because each pinned marker is a unique single-occurrence string in the time-estimation skill document. Latent risk: because the checks are file-scoped rather than section-scoped, relocating the pinned bytes into an unrelated section would still pass; separately, an edit that dropped the explicit three-unit naming from the Hard Rules bullet while leaving the requirement tag and the never-blended phrase intact elsewhere in the file would still pass R001_R002_three_units_never_blended even though the paired scenario at line 17 of the spec would then be violated."
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-r013-only-clause-imprecise-and-unasserted",
+            "lens": "reliability",
+            "location": "openspec/changes/actuals-calendar-checkpoint-instrumentation/specs/actuals-instrumentation/spec.md:105",
+            "severity": "SUGGESTION",
+            "claim": "The new R-013 scenario's THEN clause asserts that the roadmap-maker document's 'only' actuals-related mention is ownership-attributing prose; no shipped assertion checks that exclusivity clause, and the word 'only' is literally inaccurate against the current document, though every mention there is substantively consistent with the ownership claim.",
+            "proof_refs": [
+              "openspec/changes/actuals-calendar-checkpoint-instrumentation/specs/actuals-instrumentation/spec.md:105 reads \"THEN none appear as a tracking-line data source, and its only actuals-related mention is prose correctly attributing ownership of those fields to inception-pipeline closure-feedback\".",
+              "A case-insensitive search for the word actuals in the roadmap-maker skill document matches nine distinct lines, not one; every match is consistent with the ownership attribution, so the clause is substantively right but its quantifier 'only' is wrong.",
+              "engine/skills/actuals_instrumentation_contract_test.go:155-170 asserts only the five-name prohibition and nothing about exclusivity, so this clause is unasserted.",
+              "Failure scenario: not a wrong outcome. No shipped assertion claims to verify the exclusivity clause, so there is no false pass and no false failure tied to it; the imprecision is confined to the scenario's own prose."
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          }
+        ],
+        "evidence": [
+          "Inspected all three changed manifest paths in the given order; no path was inaccessible and inspection is complete.",
+          "Read the three added assertion groups in engine/skills/actuals_instrumentation_contract_test.go (R001_R002_three_units_never_blended at lines 135-145, R012_actuals_output_separate_labels at lines 147-153, R013_roadmap_maker_no_compute_time_source_invariant at lines 155-170) and confirmed each pinned marker string resolves to real bytes in the skill document it targets.",
+          "Confirmed in engine/skills/actuals_instrumentation_contract_test.go that no pre-existing assertion group was weakened, deleted, shadowed by a duplicate t.Run name, or made unreachable; every range loop iterates a non-empty literal slice and no added group contains a conditional early return that could silently neutralize it.",
+          "Confirmed engine/skills/actuals_instrumentation_contract_test.go lines 156-160 label R013_roadmap_maker_no_compute_time_source_invariant as GREEN-by-construction and exclude it from RED coverage, matching the D2_D5_closed_schema_invariant precedent later in the same file.",
+          "Cross-read the amended R-012/R-013 requirement and its two split scenarios at openspec/changes/actuals-calendar-checkpoint-instrumentation/specs/actuals-instrumentation/spec.md lines 91-107 against the assertions shipped in engine/skills/actuals_instrumentation_contract_test.go, checking contract fidelity in both directions: no requirement left without coverage, no assertion contradicting its requirement.",
+          "Read openspec/changes/actuals-calendar-checkpoint-instrumentation/verify-report.md in full and found its verdict, counts, and per-group RED-capability claims internally consistent with the assertions present in the candidate.",
+          "Found no determinism hazard in engine/skills/actuals_instrumentation_contract_test.go: no dependence on map iteration order, absolute paths, environment variables, or timing in any added group.",
+          "No SEVERE or merge-blocking defect found within the frozen candidate scope."
+        ],
+        "result_hash": "sha256:7ff27ee8ebfd46b7d56e3e520535c53f37483ee746505bdbbbd30e3aacccf9c2"
+      }
+    ],
+    "findings": [
+      {
+        "id": "R3-spec-forbid-scope-wider-than-requirement",
+        "lens": "reliability",
+        "location": "openspec/changes/actuals-calendar-checkpoint-instrumentation/specs/actuals-instrumentation/spec.md:93",
+        "severity": "WARNING",
+        "claim": "The narrowed R-012/R-013 requirement sentence restricts the roadmap-maker obligation to 'the agent-compute-time field' (singular), but its own paired scenario and the shipped R013 assertion enforce a broader five-field prohibition spanning all three independently tracked units, so requirement text and enforced contract disagree in scope.",
+        "proof_refs": [
+          "openspec/changes/actuals-calendar-checkpoint-instrumentation/specs/actuals-instrumentation/spec.md:93 states \"MUST NOT source tracking-line figures from the agent-compute-time field\", while line 104 of the same file scans for five structured field names: total_wall_clock_hours, checkpoint_count, implementation_hours, review_gate_hours, post_review_fix_hours.",
+          "engine/skills/actuals_instrumentation_contract_test.go:162-165 forbids that identical five-name list, so the enforced contract is the five-field one, not the single-field one the requirement sentence states.",
+          "openspec/changes/actuals-calendar-checkpoint-instrumentation/specs/actuals-instrumentation/spec.md:63 defines the compute-time baseline as built only from implementation_hours, review_gate_hours, and post_review_fix_hours, so only three of the five forbidden names are compute-time fields; total_wall_clock_hours and checkpoint_count are the two other independently tracked units.",
+          "Failure scenario: non-blocking today, because the roadmap-maker skill document is untouched by this candidate and contains none of the five names. Latent risk: a future edit adding a legitimate ownership-attributing prose mention of checkpoint_count or total_wall_clock_hours to that document, which the paired scenario's own 'prose correctly attributing ownership' clause treats as valid, would still trip the literal five-name prohibition and fail the build."
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-marker-pins-file-scoped-not-section-scoped",
+        "lens": "reliability",
+        "location": "engine/skills/actuals_instrumentation_contract_test.go:135",
+        "severity": "WARNING",
+        "claim": "Both new RED groups pin their markers with a whole-file strings.Contains and no anchor to the section the marker is supposed to live in, and R001_R002_three_units_never_blended never asserts its own scenario's 'all three units are named' clause, only the requirement tag and the never-blended phrase.",
+        "proof_refs": [
+          "engine/skills/actuals_instrumentation_contract_test.go:137-144 ranges over the literal slice {\"R-001/R-002\", \"never summed or averaged into one figure\"} and calls strings.Contains against the whole file contents with no section scoping; lines 149-152 do the same for the single R-012 marker \"elapsed-calendar-time, and checkpoint count under separate labels, never blended\".",
+          "Neither group asserts the three unit-name substrings agent-compute-time, elapsed-calendar-time, and human-confirmation-checkpoint-count that openspec/changes/actuals-calendar-checkpoint-instrumentation/specs/actuals-instrumentation/spec.md:17 requires to be present.",
+          "Failure scenario: non-blocking today, because each pinned marker is a unique single-occurrence string in the time-estimation skill document. Latent risk: because the checks are file-scoped rather than section-scoped, relocating the pinned bytes into an unrelated section would still pass; separately, an edit that dropped the explicit three-unit naming from the Hard Rules bullet while leaving the requirement tag and the never-blended phrase intact elsewhere in the file would still pass R001_R002_three_units_never_blended even though the paired scenario at line 17 of the spec would then be violated."
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-r013-only-clause-imprecise-and-unasserted",
+        "lens": "reliability",
+        "location": "openspec/changes/actuals-calendar-checkpoint-instrumentation/specs/actuals-instrumentation/spec.md:105",
+        "severity": "SUGGESTION",
+        "claim": "The new R-013 scenario's THEN clause asserts that the roadmap-maker document's 'only' actuals-related mention is ownership-attributing prose; no shipped assertion checks that exclusivity clause, and the word 'only' is literally inaccurate against the current document, though every mention there is substantively consistent with the ownership claim.",
+        "proof_refs": [
+          "openspec/changes/actuals-calendar-checkpoint-instrumentation/specs/actuals-instrumentation/spec.md:105 reads \"THEN none appear as a tracking-line data source, and its only actuals-related mention is prose correctly attributing ownership of those fields to inception-pipeline closure-feedback\".",
+          "A case-insensitive search for the word actuals in the roadmap-maker skill document matches nine distinct lines, not one; every match is consistent with the ownership attribution, so the clause is substantively right but its quantifier 'only' is wrong.",
+          "engine/skills/actuals_instrumentation_contract_test.go:155-170 asserts only the five-name prohibition and nothing about exclusivity, so this clause is unasserted.",
+          "Failure scenario: not a wrong outcome. No shipped assertion claims to verify the exclusivity clause, so there is no false pass and no false failure tied to it; the imprecision is confined to the scenario's own prose."
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      }
+    ],
+    "classifications": {},
+    "outcomes": {
+      "R3-marker-pins-file-scoped-not-section-scoped": "info",
+      "R3-r013-only-clause-imprecise-and-unasserted": "info",
+      "R3-spec-forbid-scope-wider-than-requirement": "info"
+    },
+    "fix_finding_ids": [],
+    "follow_ups": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:15fa63d616c5edd6df78596318b5a2451c2e5da202e7dbbad4ba9d442c5c3f01",
+    "evidence_record_digest": "sha256:abcfb95698a73d7617e14ff78001edc38bd6120208a43a1b9eb220b8c3211e3c",
+    "evidence_outcome": "passed",
+    "evidence_target_identity": "sha256:ca8ba8bf608f4b25d23c66a68fb4ac22179aeca0c68730a88c6f81eff7595ec0",
+    "evidence_authority_revision": "sha256:a5092b13235c508156a5e712bf7a406545f14d793d427d7df0e9a75b7cf5ef1d"
+  }
+}

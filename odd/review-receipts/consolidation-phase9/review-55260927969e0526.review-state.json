@@ -1,0 +1,461 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:2c54d91cea072c051a6723fbc89b53d236408464b291ab16df693929fff23434",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-55260927969e0526",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "c8057cca609a032f154abb683c1330f8004ad357",
+      "candidate_tree": "f15c57b9af6eff884a50889568f3cf729f313a0a",
+      "paths_digest": "sha256:2d8c7b6fc43ee113917e846f0efea6f0638020001e973bc2e8ad0eb5a3042003",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        ".github/workflows/ci.yml",
+        ".gitignore",
+        "bin/labdrian-overlay",
+        "tools/archive-reconcile/go.mod",
+        "tools/archive-reconcile/main.go",
+        "tools/archive-reconcile/main_test.go"
+      ],
+      "identity": "sha256:55260927969e05261b196d032584c01ad3722813d0637c71be399294e64e8f60"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "c8057cca609a032f154abb683c1330f8004ad357",
+      "candidate_tree": "0504f5a44eceea39c5fc1fc0a7a9c707f7de384d",
+      "paths_digest": "sha256:2d8c7b6fc43ee113917e846f0efea6f0638020001e973bc2e8ad0eb5a3042003",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        ".github/workflows/ci.yml",
+        ".gitignore",
+        "bin/labdrian-overlay",
+        "tools/archive-reconcile/go.mod",
+        "tools/archive-reconcile/main.go",
+        "tools/archive-reconcile/main_test.go"
+      ],
+      "identity": "sha256:1312ea827e5b7a097e53c0111bc00502e122f2b11092591a8c278f1a8ffccd69"
+    },
+    "genesis_paths": [
+      ".github/workflows/ci.yml",
+      ".gitignore",
+      "bin/labdrian-overlay",
+      "tools/archive-reconcile/go.mod",
+      "tools/archive-reconcile/main.go",
+      "tools/archive-reconcile/main_test.go"
+    ],
+    "policy_hash": "sha256:34fb63d7f29f8613cd4431382b1057398a4816f8a4c20fc34677fffc80a184f6",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-risk",
+      "review-resilience",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 1101,
+    "correction_budget": 200,
+    "lens_results": [
+      {
+        "lens": "review-risk",
+        "findings": [],
+        "evidence": [
+          ".github/workflows/ci.yml:264 adds job test-archive-reconcile with the same runs-on value, the same checkout step, and no permissions block, matching the sibling job test-review-preflight at .github/workflows/ci.yml:211; the whole file has no permissions block anywhere, so both jobs inherit the identical repository-default token scope, and both run under the pull_request trigger, never pull_request_target.",
+          ".github/workflows/ci.yml:299 runs bin/labdrian-overlay archive-reconcile with no expression interpolation of any GitHub context value such as branch name or PR title in that step.",
+          "bin/labdrian-overlay:1719 through bin/labdrian-overlay:1766 define cmd_archive_reconcile, which mirrors the sibling cmd_review_preflight handling of a missing toolchain and missing source (existence check, go toolchain check, mktemp, go build, then invocation of the built guard with the caller's arguments passed as a literal argument list rather than an interpolated string, so no caller-controlled value reaches a shell command).",
+          "tools/archive-reconcile/go.mod declares no dependency beyond the Go standard library, so there is no third-party dependency surface.",
+          "tools/archive-reconcile/main.go:167 through tools/archive-reconcile/main.go:211, and tools/archive-reconcile/main.go:363 through tools/archive-reconcile/main.go:387, perform only read-only filesystem calls rooted at the directory resolved by resolveRepoRoot at tools/archive-reconcile/main.go:119 through tools/archive-reconcile/main.go:140; the --repo flag is a local CLI argument never populated from untrusted input, since .github/workflows/ci.yml:299 invokes the guard with no arguments.",
+          ".gitignore:24 through .gitignore:30 add four patterns anchored at the repository root with a single wildcard path segment, each requiring an exact match to one full path segment equal to a known guard binary name with no trailing wildcard or extension, so no source file such as tools/archive-reconcile/main.go or tools/archive-reconcile/go.mod can be matched."
+        ],
+        "result_hash": "sha256:591c060d0047cde392f4e27d15704872a0c4f7c361d608e1874829efbe8f7e57"
+      },
+      {
+        "lens": "review-resilience",
+        "findings": [
+          {
+            "id": "R4-001",
+            "lens": "resilience",
+            "location": "tools/archive-reconcile/main.go:282",
+            "severity": "CRITICAL",
+            "claim": "countTasks applies checkboxPattern (and checkboxLikePattern) with an unconditional leading \\s*, so a checkbox-shaped line indented four or more spaces — a CommonMark indented code block, the one block construct this parser does not model — is counted as a real task instead of being ignored, unlike the fenced-block and HTML-comment constructs the function explicitly skips.",
+            "proof_refs": [
+              "tools/archive-reconcile/main.go:218 defines checkboxPattern as `^\\s*[-*+]\\s*\\[([ xX])\\]`, with no upper bound on the leading whitespace it consumes.",
+              "tools/archive-reconcile/main.go:282 applies that pattern to every line not currently inside a recognized fence or comment state, with no separate indent check.",
+              "tools/archive-reconcile/main.go:319 shows the author was aware of and handled this exact CommonMark boundary for fences (`indent \u003e 3` rejects a deeply indented ``` as a fence opener, per its own comment, because 4+ spaces makes it an indented code block) but the identical exclusion is not applied to checkboxPattern's own match, leaving the indented-code-block construct completely unmodeled by the skip machinery that otherwise protects fences and comments.",
+              "tools/archive-reconcile/main_test.go:537 (TestRunTreatsDeeplyIndentedBackticksAsNotAFence) is the only test exercising 4-space indentation, and it indents only the backtick fence markers while keeping the two real checkboxes between them unindented at column 0; no test places a checkbox literal itself at four or more spaces of indentation, so this gap ships untested.",
+              "Given a tasks.md whose real work is fully checked (e.g. two unindented `- [x]` lines) plus an ordinary trailing example shown as a 4-space-indented line shaped like `- [ ] example item` (a standard way to show sample list output without a fence), checkboxPattern matches the indented line too: total and unchecked both increment. scanChanges (main.go line 199, `if unchecked \u003e 0`) then takes the still-in-progress branch and never adds the change to findings, so run() reports exit 0 clean for a change that is in fact complete and stranded — reproducing, via an unmodeled indentation vector, the exact silent fail-open the fence/comment skip machinery was built and already once patched to prevent."
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          }
+        ],
+        "evidence": [
+          "Traced every return path out of countTasks and confirmed the previously-fixed unterminated-fence and unterminated-comment fail-open (checked via scanner.Err() ordering and the two explicit inFence/inComment post-loop checks) is genuinely closed: both states are checked after the scan loop and both return the undetermined outcome rather than falling through to a zero count, matching TestRunFailsClosedOnUnterminatedFenceOrComment in tools/archive-reconcile/main_test.go. The fence state machine's crossover cases (a fence marker inside a comment, a `--\u003e` inside a fence, mismatched fence characters or lengths, a deeply indented ``` fence) were traced and are each handled correctly. The one remaining gap is the indented-code-block vector documented in the finding above, which is real, deterministic, and untested rather than merely stylistic."
+        ],
+        "result_hash": "sha256:c1e0f3c87097a261a49f042c75b38387f823b4115c744f51fb44e1fe9f1897ea"
+      },
+      {
+        "lens": "review-readability",
+        "findings": [
+          {
+            "id": "R2-001",
+            "lens": "readability",
+            "location": "tools/archive-reconcile/main.go:274",
+            "severity": "CRITICAL",
+            "claim": "countTasks's inline HTML comment handling skips the whole line whenever it contains the literal open marker, even when that same line also contains a closing marker followed by real content such as a checkbox; the line that closes a multi line comment gets the identical unconditional skip, so anything after the close marker on that line is dropped too. The function's own doc comment states that an HTML comment is ignored entirely and only a checkbox shaped example inside one must not contribute to total or unchecked; it does not say that unrelated content sharing a line with a comment delimiter is also dropped. A genuinely unchecked task placed on a comment boundary line is silently excluded from the unchecked count, so a change that is still in progress can be misreported as fully checked and therefore stranded, or a real completed task can be undercounted in the displayed total.",
+            "proof_refs": [
+              "tools/archive-reconcile/main.go:232",
+              "tools/archive-reconcile/main.go:233",
+              "tools/archive-reconcile/main.go:234",
+              "tools/archive-reconcile/main.go:235",
+              "tools/archive-reconcile/main.go:263",
+              "tools/archive-reconcile/main.go:264",
+              "tools/archive-reconcile/main.go:267",
+              "tools/archive-reconcile/main.go:274",
+              "tools/archive-reconcile/main.go:275",
+              "tools/archive-reconcile/main.go:279"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R2-002",
+            "lens": "readability",
+            "location": "tools/archive-reconcile/main.go:219",
+            "severity": "WARNING",
+            "claim": "checkboxLikePattern is documented as catching a line that looks like an attempt at a checkbox, but the regex actually matches any bullet line whose first non blank character after the marker is an open bracket, regardless of what follows. Ordinary task text that legitimately starts with a bracketed tag right after the bullet, and was never meant as a checkbox attempt, takes the same malformed checkbox error path in countTasks and fails the entire tasks.md scan closed with exit 3, even though nothing about that line was actually an attempted checkbox.",
+            "proof_refs": [
+              "tools/archive-reconcile/main.go:214",
+              "tools/archive-reconcile/main.go:215",
+              "tools/archive-reconcile/main.go:216",
+              "tools/archive-reconcile/main.go:218",
+              "tools/archive-reconcile/main.go:219",
+              "tools/archive-reconcile/main.go:289",
+              "tools/archive-reconcile/main.go:290"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R2-003",
+            "lens": "readability",
+            "location": "tools/archive-reconcile/main.go:252",
+            "severity": "SUGGESTION",
+            "claim": "The scanner buffer sizing (an initial size and a maximum size, both introduced as bare numeric literals) has no comment explaining why those two figures were chosen, unlike every other constant in this file, including the exit codes, the fixed openspec directory names, and the consequence and undetermined note text, all of which carry an explanatory comment.",
+            "proof_refs": [
+              "tools/archive-reconcile/main.go:251",
+              "tools/archive-reconcile/main.go:252"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          }
+        ],
+        "evidence": [
+          "diff --name-status confirms exactly the six manifest paths, with tools/archive-reconcile/go.mod, main.go, and main_test.go added and .github/workflows/ci.yml, .gitignore, and bin/labdrian-overlay modified; no other paths changed between the frozen trees.",
+          "tools/archive-reconcile/main.go:236-320 (countTasks, fenceOpen, isFenceClose) and the surrounding doc comments were read in full from the candidate tree; the stranded-change rule (at least one checkbox and zero unchecked) is stated plainly at the run doc comment, the strandedChange type doc comment, and inline at the two continue sites in scanChanges, satisfying the discoverability concern raised for this review.",
+          "The live repository dogfood test (tools/archive-reconcile/main_test.go:466-504, TestRunAgainstLiveRepository) carries an explicit maintainer note plus a failure message that names the exact remediation (update wantStranded) rather than reading as a bare regression, satisfying the coupling-transparency concern raised for this review.",
+          ".gitignore's four new entries carry one shared comment explaining the general mechanism (go build writes the binary next to its module source) that applies uniformly to all four listed guard binaries, including the archive-reconcile binary this same change introduces at tools/archive-reconcile/go.mod."
+        ],
+        "result_hash": "sha256:3deb5ed9a7d5dc62c24d9b50538e01eab53d71eb35334c3b4eb8081b1010b3c4"
+      },
+      {
+        "lens": "review-reliability",
+        "findings": [
+          {
+            "id": "R3-001",
+            "lens": "reliability",
+            "location": "tools/archive-reconcile/main.go:279",
+            "severity": "BLOCKER",
+            "claim": "In countTasks, the HTML-comment branch runs continue unconditionally whenever a line contains the substring \u003c!--, even when a real checkbox appears earlier on that same line and the comment already closes with --\u003e later on that same line. That checkbox is skipped entirely and never reaches checkboxPattern, so it contributes to neither total nor unchecked.",
+            "proof_refs": [
+              "tools/archive-reconcile/main.go:274",
+              "tools/archive-reconcile/main.go:275",
+              "tools/archive-reconcile/main.go:279",
+              "tools/archive-reconcile/main.go:282"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-002",
+            "lens": "reliability",
+            "location": "tools/archive-reconcile/main.go:279",
+            "severity": "BLOCKER",
+            "claim": "Concrete failure trace: a change whose tasks.md is exactly \"- [x] 1.1 done \u003c!-- verified --\u003e\\n\" has that single checkbox line skipped by the comment branch before the checkbox check ever runs, so countTasks returns total 0. scanChanges then takes the total-equals-zero planning-only branch and never reports the change, even though it is actually complete and stranded. This is the precise silent-miss outcome the guard's own comments (for example the reasoning documented around the outcome constants and again around the fence and comment skipping logic) say must never happen.",
+            "proof_refs": [
+              "tools/archive-reconcile/main.go:195",
+              "tools/archive-reconcile/main.go:274",
+              "tools/archive-reconcile/main.go:279"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-003",
+            "lens": "reliability",
+            "location": "tools/archive-reconcile/main.go:219",
+            "severity": "CRITICAL",
+            "claim": "checkboxLikePattern is anchored on a bullet marker followed by an open bracket only (a bullet then a literal open-bracket), with no requirement that the bracket look like an attempted checkbox. An ordinary non-checkbox bullet that happens to start with a markdown link, such as a line reading like a bullet followed by [some link text](some/path) as its first token, matches checkboxLikePattern but not checkboxPattern, so countTasks returns it as a malformed task checkbox and the whole run exits with the undetermined outcome for content that was never an attempted checkbox.",
+            "proof_refs": [
+              "tools/archive-reconcile/main.go:218",
+              "tools/archive-reconcile/main.go:219",
+              "tools/archive-reconcile/main.go:282",
+              "tools/archive-reconcile/main.go:289",
+              "tools/archive-reconcile/main.go:290"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          }
+        ],
+        "evidence": [
+          "tools/archive-reconcile/main.go:274-280 (single continue at line 279 applies to the whole if-block starting at line 274): every line containing \u003c!-- is skipped in full regardless of what precedes the marker on that line or whether --\u003e also appears later on the same line, unlike the fence and comment tests actually exercised.",
+          "tools/archive-reconcile/main_test.go:384 and tools/archive-reconcile/main_test.go:516 are the only two places \u003c!-- appears in the test file, and in both cases \u003c!-- opens on its own line with no checkbox preceding it on that line, so the same-line checkbox-plus-inline-comment path has no test.",
+          "tools/archive-reconcile/main.go:219 defines checkboxLikePattern as a bullet marker followed by an open bracket with no further constraint, and main_test.go contains no case starting a non-checkbox bullet with an open bracket (for example a markdown-link-style bullet), so the false malformed-checkbox path is unverified."
+        ],
+        "result_hash": "sha256:95f16bd57f6c00de29592b90e369f98444c8d09cf7444a209812cad051efbe95"
+      }
+    ],
+    "findings": [
+      {
+        "id": "R4-001",
+        "lens": "resilience",
+        "location": "tools/archive-reconcile/main.go:282",
+        "severity": "CRITICAL",
+        "claim": "countTasks applies checkboxPattern (and checkboxLikePattern) with an unconditional leading \\s*, so a checkbox-shaped line indented four or more spaces — a CommonMark indented code block, the one block construct this parser does not model — is counted as a real task instead of being ignored, unlike the fenced-block and HTML-comment constructs the function explicitly skips.",
+        "proof_refs": [
+          "tools/archive-reconcile/main.go:218 defines checkboxPattern as `^\\s*[-*+]\\s*\\[([ xX])\\]`, with no upper bound on the leading whitespace it consumes.",
+          "tools/archive-reconcile/main.go:282 applies that pattern to every line not currently inside a recognized fence or comment state, with no separate indent check.",
+          "tools/archive-reconcile/main.go:319 shows the author was aware of and handled this exact CommonMark boundary for fences (`indent \u003e 3` rejects a deeply indented ``` as a fence opener, per its own comment, because 4+ spaces makes it an indented code block) but the identical exclusion is not applied to checkboxPattern's own match, leaving the indented-code-block construct completely unmodeled by the skip machinery that otherwise protects fences and comments.",
+          "tools/archive-reconcile/main_test.go:537 (TestRunTreatsDeeplyIndentedBackticksAsNotAFence) is the only test exercising 4-space indentation, and it indents only the backtick fence markers while keeping the two real checkboxes between them unindented at column 0; no test places a checkbox literal itself at four or more spaces of indentation, so this gap ships untested.",
+          "Given a tasks.md whose real work is fully checked (e.g. two unindented `- [x]` lines) plus an ordinary trailing example shown as a 4-space-indented line shaped like `- [ ] example item` (a standard way to show sample list output without a fence), checkboxPattern matches the indented line too: total and unchecked both increment. scanChanges (main.go line 199, `if unchecked \u003e 0`) then takes the still-in-progress branch and never adds the change to findings, so run() reports exit 0 clean for a change that is in fact complete and stranded — reproducing, via an unmodeled indentation vector, the exact silent fail-open the fence/comment skip machinery was built and already once patched to prevent."
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R2-001",
+        "lens": "readability",
+        "location": "tools/archive-reconcile/main.go:274",
+        "severity": "CRITICAL",
+        "claim": "countTasks's inline HTML comment handling skips the whole line whenever it contains the literal open marker, even when that same line also contains a closing marker followed by real content such as a checkbox; the line that closes a multi line comment gets the identical unconditional skip, so anything after the close marker on that line is dropped too. The function's own doc comment states that an HTML comment is ignored entirely and only a checkbox shaped example inside one must not contribute to total or unchecked; it does not say that unrelated content sharing a line with a comment delimiter is also dropped. A genuinely unchecked task placed on a comment boundary line is silently excluded from the unchecked count, so a change that is still in progress can be misreported as fully checked and therefore stranded, or a real completed task can be undercounted in the displayed total.",
+        "proof_refs": [
+          "tools/archive-reconcile/main.go:232",
+          "tools/archive-reconcile/main.go:233",
+          "tools/archive-reconcile/main.go:234",
+          "tools/archive-reconcile/main.go:235",
+          "tools/archive-reconcile/main.go:263",
+          "tools/archive-reconcile/main.go:264",
+          "tools/archive-reconcile/main.go:267",
+          "tools/archive-reconcile/main.go:274",
+          "tools/archive-reconcile/main.go:275",
+          "tools/archive-reconcile/main.go:279"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R2-002",
+        "lens": "readability",
+        "location": "tools/archive-reconcile/main.go:219",
+        "severity": "WARNING",
+        "claim": "checkboxLikePattern is documented as catching a line that looks like an attempt at a checkbox, but the regex actually matches any bullet line whose first non blank character after the marker is an open bracket, regardless of what follows. Ordinary task text that legitimately starts with a bracketed tag right after the bullet, and was never meant as a checkbox attempt, takes the same malformed checkbox error path in countTasks and fails the entire tasks.md scan closed with exit 3, even though nothing about that line was actually an attempted checkbox.",
+        "proof_refs": [
+          "tools/archive-reconcile/main.go:214",
+          "tools/archive-reconcile/main.go:215",
+          "tools/archive-reconcile/main.go:216",
+          "tools/archive-reconcile/main.go:218",
+          "tools/archive-reconcile/main.go:219",
+          "tools/archive-reconcile/main.go:289",
+          "tools/archive-reconcile/main.go:290"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R2-003",
+        "lens": "readability",
+        "location": "tools/archive-reconcile/main.go:252",
+        "severity": "SUGGESTION",
+        "claim": "The scanner buffer sizing (an initial size and a maximum size, both introduced as bare numeric literals) has no comment explaining why those two figures were chosen, unlike every other constant in this file, including the exit codes, the fixed openspec directory names, and the consequence and undetermined note text, all of which carry an explanatory comment.",
+        "proof_refs": [
+          "tools/archive-reconcile/main.go:251",
+          "tools/archive-reconcile/main.go:252"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-001",
+        "lens": "reliability",
+        "location": "tools/archive-reconcile/main.go:279",
+        "severity": "BLOCKER",
+        "claim": "In countTasks, the HTML-comment branch runs continue unconditionally whenever a line contains the substring \u003c!--, even when a real checkbox appears earlier on that same line and the comment already closes with --\u003e later on that same line. That checkbox is skipped entirely and never reaches checkboxPattern, so it contributes to neither total nor unchecked.",
+        "proof_refs": [
+          "tools/archive-reconcile/main.go:274",
+          "tools/archive-reconcile/main.go:275",
+          "tools/archive-reconcile/main.go:279",
+          "tools/archive-reconcile/main.go:282"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-002",
+        "lens": "reliability",
+        "location": "tools/archive-reconcile/main.go:279",
+        "severity": "BLOCKER",
+        "claim": "Concrete failure trace: a change whose tasks.md is exactly \"- [x] 1.1 done \u003c!-- verified --\u003e\\n\" has that single checkbox line skipped by the comment branch before the checkbox check ever runs, so countTasks returns total 0. scanChanges then takes the total-equals-zero planning-only branch and never reports the change, even though it is actually complete and stranded. This is the precise silent-miss outcome the guard's own comments (for example the reasoning documented around the outcome constants and again around the fence and comment skipping logic) say must never happen.",
+        "proof_refs": [
+          "tools/archive-reconcile/main.go:195",
+          "tools/archive-reconcile/main.go:274",
+          "tools/archive-reconcile/main.go:279"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-003",
+        "lens": "reliability",
+        "location": "tools/archive-reconcile/main.go:219",
+        "severity": "CRITICAL",
+        "claim": "checkboxLikePattern is anchored on a bullet marker followed by an open bracket only (a bullet then a literal open-bracket), with no requirement that the bracket look like an attempted checkbox. An ordinary non-checkbox bullet that happens to start with a markdown link, such as a line reading like a bullet followed by [some link text](some/path) as its first token, matches checkboxLikePattern but not checkboxPattern, so countTasks returns it as a malformed task checkbox and the whole run exits with the undetermined outcome for content that was never an attempted checkbox.",
+        "proof_refs": [
+          "tools/archive-reconcile/main.go:218",
+          "tools/archive-reconcile/main.go:219",
+          "tools/archive-reconcile/main.go:282",
+          "tools/archive-reconcile/main.go:289",
+          "tools/archive-reconcile/main.go:290"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      }
+    ],
+    "classifications": {
+      "R2-001": {
+        "finding_id": "R2-001",
+        "class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof": "tools/archive-reconcile/main.go:232; tools/archive-reconcile/main.go:233; tools/archive-reconcile/main.go:234; tools/archive-reconcile/main.go:235; tools/archive-reconcile/main.go:263; tools/archive-reconcile/main.go:264; tools/archive-reconcile/main.go:267; tools/archive-reconcile/main.go:274; tools/archive-reconcile/main.go:275; tools/archive-reconcile/main.go:279"
+      },
+      "R3-001": {
+        "finding_id": "R3-001",
+        "class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof": "tools/archive-reconcile/main.go:274; tools/archive-reconcile/main.go:275; tools/archive-reconcile/main.go:279; tools/archive-reconcile/main.go:282"
+      },
+      "R3-002": {
+        "finding_id": "R3-002",
+        "class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof": "tools/archive-reconcile/main.go:195; tools/archive-reconcile/main.go:274; tools/archive-reconcile/main.go:279"
+      },
+      "R3-003": {
+        "finding_id": "R3-003",
+        "class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof": "tools/archive-reconcile/main.go:218; tools/archive-reconcile/main.go:219; tools/archive-reconcile/main.go:282; tools/archive-reconcile/main.go:289; tools/archive-reconcile/main.go:290"
+      },
+      "R4-001": {
+        "finding_id": "R4-001",
+        "class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof": "tools/archive-reconcile/main.go:218 defines checkboxPattern as `^\\s*[-*+]\\s*\\[([ xX])\\]`, with no upper bound on the leading whitespace it consumes.; tools/archive-reconcile/main.go:282 applies that pattern to every line not currently inside a recognized fence or comment state, with no separate indent check.; tools/archive-reconcile/main.go:319 shows the author was aware of and handled this exact CommonMark boundary for fences (`indent \u003e 3` rejects a deeply indented ``` as a fence opener, per its own comment, because 4+ spaces makes it an indented code block) but the identical exclusion is not applied to checkboxPattern's own match, leaving the indented-code-block construct completely unmodeled by the skip machinery that otherwise protects fences and comments.; tools/archive-reconcile/main_test.go:537 (TestRunTreatsDeeplyIndentedBackticksAsNotAFence) is the only test exercising 4-space indentation, and it indents only the backtick fence markers while keeping the two real checkboxes between them unindented at column 0; no test places a checkbox literal itself at four or more spaces of indentation, so this gap ships untested.; Given a tasks.md whose real work is fully checked (e.g. two unindented `- [x]` lines) plus an ordinary trailing example shown as a 4-space-indented line shaped like `- [ ] example item` (a standard way to show sample list output without a fence), checkboxPattern matches the indented line too: total and unchecked both increment. scanChanges (main.go line 199, `if unchecked \u003e 0`) then takes the still-in-progress branch and never adds the change to findings, so run() reports exit 0 clean for a change that is in fact complete and stranded — reproducing, via an unmodeled indentation vector, the exact silent fail-open the fence/comment skip machinery was built and already once patched to prevent."
+      }
+    },
+    "outcomes": {
+      "R2-001": "corroborated",
+      "R2-002": "info",
+      "R2-003": "info",
+      "R3-001": "corroborated",
+      "R3-002": "corroborated",
+      "R3-003": "corroborated",
+      "R4-001": "corroborated"
+    },
+    "fix_finding_ids": [
+      "R2-001",
+      "R3-001",
+      "R3-002",
+      "R3-003",
+      "R4-001"
+    ],
+    "follow_ups": [
+      {
+        "observation": "The checkbox-counting signal is unsound on this repository's own corpus, independently of parser quality, so the corrected scanner still cannot see a class of completed changes. Four of the seventeen changes under the archive directory were complete when archived yet present either zero bullet checkboxes or an all-unchecked count, so the counting rule classifies them as planning-only or as still in progress and skips them. No further parser correction moves any of those four.",
+        "proof_refs": [
+          "openspec/changes/archive/2026-06-20-minimalism-contract-lite/tasks.md",
+          "openspec/changes/archive/2026-07-08-anti-generic-ai-design-skill/tasks.md",
+          "openspec/changes/archive/2026-07-10-skill-external-provenance/tasks.md",
+          "openspec/changes/archive/2026-06-25-prespec-malandra/tasks.md"
+        ]
+      },
+      {
+        "observation": "A stranded change is live on this repository today and is outside the scope of these findings. The change directory named skill-lifecycle records completion as ten status markers in bold label form rather than as bullet checkboxes, so it presents zero bullet checkboxes, is classified planning-only, and is skipped. The guard reports two stranded changes where three exist. This is a consequence of the signal choice recorded in the previous follow-up, not of the corrected scanning logic.",
+        "proof_refs": [
+          "openspec/changes/skill-lifecycle/tasks.md",
+          "tools/archive-reconcile/main.go"
+        ]
+      }
+    ],
+    "proposed_correction_lines": 125,
+    "actual_correction_lines": 112,
+    "fix_delta_hash": "sha256:faf7bd60b0a38a20c0dd70a986a6638b7f84552dddbf30b5a4b1af452d69cbe4",
+    "original_criteria": {
+      "evidence_hash": "sha256:f4df54b02f780f2e731d6bae99fbcd42ac51c841d417f91cd454c7955fdaed19",
+      "fix_delta_hash": "sha256:faf7bd60b0a38a20c0dd70a986a6638b7f84552dddbf30b5a4b1af452d69cbe4",
+      "passed": true
+    },
+    "correction_regression": {
+      "evidence_hash": "sha256:b546a89721356a908b02d9aa67a282124ea70094a347d731f244cb5759a54346",
+      "fix_delta_hash": "sha256:faf7bd60b0a38a20c0dd70a986a6638b7f84552dddbf30b5a4b1af452d69cbe4",
+      "passed": true
+    },
+    "evidence_hash": "sha256:cfb1877c6e6b2ab32554ea44d5c3050f9d935a578488c3e651ba4b0746edcb71",
+    "evidence_record_digest": "sha256:f075c46263f0aedc8f46c82f44dd57bcdff1cdf5c5b83d39ea66f65b8001e177",
+    "evidence_outcome": "passed",
+    "evidence_target_identity": "sha256:e28561a3eed35346b7067e525cb5bbcffd488b2728583ff6203381ddae80184c",
+    "evidence_authority_revision": "sha256:4943f8d091b5a7bdb64652696dd9de5245fa5ccf98f543fcf4c23e407d4df4ce",
+    "correction_attempts": [
+      {
+        "snapshot": {
+          "kind": "fix-diff",
+          "base_tree": "f15c57b9af6eff884a50889568f3cf729f313a0a",
+          "candidate_tree": "0504f5a44eceea39c5fc1fc0a7a9c707f7de384d",
+          "paths_digest": "sha256:53c28a2d41d05a8f5a376fbcacd3b411126cd463bb5e9ed3f5fb876443228338",
+          "intended_untracked": [],
+          "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+          "ledger_ids": [
+            "R2-001",
+            "R3-001",
+            "R3-002",
+            "R3-003",
+            "R4-001"
+          ],
+          "paths": [
+            "tools/archive-reconcile/main.go",
+            "tools/archive-reconcile/main_test.go"
+          ],
+          "identity": "sha256:e28561a3eed35346b7067e525cb5bbcffd488b2728583ff6203381ddae80184c"
+        },
+        "proposed_lines": 125,
+        "actual_lines": 112,
+        "fix_delta_hash": "sha256:faf7bd60b0a38a20c0dd70a986a6638b7f84552dddbf30b5a4b1af452d69cbe4",
+        "original_criteria": {
+          "evidence_hash": "sha256:f4df54b02f780f2e731d6bae99fbcd42ac51c841d417f91cd454c7955fdaed19",
+          "fix_delta_hash": "sha256:faf7bd60b0a38a20c0dd70a986a6638b7f84552dddbf30b5a4b1af452d69cbe4",
+          "passed": true
+        },
+        "correction_regression": {
+          "evidence_hash": "sha256:b546a89721356a908b02d9aa67a282124ea70094a347d731f244cb5759a54346",
+          "fix_delta_hash": "sha256:faf7bd60b0a38a20c0dd70a986a6638b7f84552dddbf30b5a4b1af452d69cbe4",
+          "passed": true
+        },
+        "targeted_validation_request_hash": "sha256:059f6e80ce410c53b07bcfeb66cad24542797835d551bf79658344f5dc037480",
+        "correction_target_identity": "sha256:e28561a3eed35346b7067e525cb5bbcffd488b2728583ff6203381ddae80184c"
+      }
+    ],
+    "cumulative_correction_lines": 112
+  }
+}

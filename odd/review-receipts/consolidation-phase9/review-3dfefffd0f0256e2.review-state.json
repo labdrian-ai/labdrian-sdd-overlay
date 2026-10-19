@@ -1,0 +1,847 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:abb4b4f8fadff3539572228de033e1ce2a0a65bdaefda076fde26e4a2f29bcf3",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-3dfefffd0f0256e2",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "2ba11e52b4837fce3290b4c506f2aac6c30d5059",
+      "candidate_tree": "53e4971de63dd256952f478840ce90fc8d7fd7f3",
+      "paths_digest": "sha256:449ff79536443081df10fe4d7809f4cd6bbf3a1573b374b5d2753640849964c9",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "README.md",
+        "bin/labdrian-overlay",
+        "engine/cmd/live_guard_test.go",
+        "engine/cmd/main.go",
+        "engine/cmd/runtime_test.go",
+        "engine/pipkg/pipkg.go",
+        "engine/pipkg/pipkg_test.go",
+        "engine/runtime/live_guard_test.go",
+        "engine/runtime/pi.go",
+        "engine/runtime/pi_test.go",
+        "engine/runtime/runtime_test.go",
+        "engine/shelltest/overlay_pi_package_build_test.go",
+        "longterm-mem/cmd/longterm-mem/main_test.go",
+        "longterm-mem/cmd/longterm-mem/register_paths.go",
+        "openspec/changes/pi-runtime-target/apply-progress.md",
+        "openspec/changes/pi-runtime-target/entry.json",
+        "openspec/changes/pi-runtime-target/research.md",
+        "openspec/changes/pi-runtime-target/specs/pi-runtime-target/spec.md",
+        "openspec/changes/pi-runtime-target/tasks.md",
+        "openspec/changes/pi-runtime-target/verify-report.md"
+      ],
+      "identity": "sha256:6938272c8eb0347a7bb5a55f4ccdeebebb4d39ac34269812c8353c12032c11b8"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "2ba11e52b4837fce3290b4c506f2aac6c30d5059",
+      "candidate_tree": "53e4971de63dd256952f478840ce90fc8d7fd7f3",
+      "paths_digest": "sha256:449ff79536443081df10fe4d7809f4cd6bbf3a1573b374b5d2753640849964c9",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "README.md",
+        "bin/labdrian-overlay",
+        "engine/cmd/live_guard_test.go",
+        "engine/cmd/main.go",
+        "engine/cmd/runtime_test.go",
+        "engine/pipkg/pipkg.go",
+        "engine/pipkg/pipkg_test.go",
+        "engine/runtime/live_guard_test.go",
+        "engine/runtime/pi.go",
+        "engine/runtime/pi_test.go",
+        "engine/runtime/runtime_test.go",
+        "engine/shelltest/overlay_pi_package_build_test.go",
+        "longterm-mem/cmd/longterm-mem/main_test.go",
+        "longterm-mem/cmd/longterm-mem/register_paths.go",
+        "openspec/changes/pi-runtime-target/apply-progress.md",
+        "openspec/changes/pi-runtime-target/entry.json",
+        "openspec/changes/pi-runtime-target/research.md",
+        "openspec/changes/pi-runtime-target/specs/pi-runtime-target/spec.md",
+        "openspec/changes/pi-runtime-target/tasks.md",
+        "openspec/changes/pi-runtime-target/verify-report.md"
+      ],
+      "identity": "sha256:6938272c8eb0347a7bb5a55f4ccdeebebb4d39ac34269812c8353c12032c11b8"
+    },
+    "genesis_paths": [
+      "README.md",
+      "bin/labdrian-overlay",
+      "engine/cmd/live_guard_test.go",
+      "engine/cmd/main.go",
+      "engine/cmd/runtime_test.go",
+      "engine/pipkg/pipkg.go",
+      "engine/pipkg/pipkg_test.go",
+      "engine/runtime/live_guard_test.go",
+      "engine/runtime/pi.go",
+      "engine/runtime/pi_test.go",
+      "engine/runtime/runtime_test.go",
+      "engine/shelltest/overlay_pi_package_build_test.go",
+      "longterm-mem/cmd/longterm-mem/main_test.go",
+      "longterm-mem/cmd/longterm-mem/register_paths.go",
+      "openspec/changes/pi-runtime-target/apply-progress.md",
+      "openspec/changes/pi-runtime-target/entry.json",
+      "openspec/changes/pi-runtime-target/research.md",
+      "openspec/changes/pi-runtime-target/specs/pi-runtime-target/spec.md",
+      "openspec/changes/pi-runtime-target/tasks.md",
+      "openspec/changes/pi-runtime-target/verify-report.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-risk",
+      "review-resilience",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 1694,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:fae05723bc8fb0a00524727846bb3584b98778f14c17742bf1fd54f1d4b1b09d",
+    "capture_phase_revision": "sha256:c59f45c724c9c5128c137f5dcced6f19227a358a2cdeff5da281ff8ad24f38c2",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:6938272c8eb0347a7bb5a55f4ccdeebebb4d39ac34269812c8353c12032c11b8",
+        "capture_phase_revision": "sha256:c59f45c724c9c5128c137f5dcced6f19227a358a2cdeff5da281ff8ad24f38c2",
+        "artifact_digest": "sha256:5a5b2df3cfa1291bbb89145ae6204480ab4565105a3744943bc00673baf89a2c",
+        "result_hash": "sha256:7b60df516824197a7c11c15a91ffe4bc2f83450fb9239c97309cf447351b6485",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:407b591a0b0be4fbfa1bbc8820adbdf5269b1da5cb7a0184a95f4bfb0130f48f",
+            "lineage_id": "review-3dfefffd0f0256e2",
+            "authority_revision": "sha256:c59f45c724c9c5128c137f5dcced6f19227a358a2cdeff5da281ff8ad24f38c2",
+            "target_identity": "sha256:6938272c8eb0347a7bb5a55f4ccdeebebb4d39ac34269812c8353c12032c11b8",
+            "base_tree": "2ba11e52b4837fce3290b4c506f2aac6c30d5059",
+            "candidate_tree": "53e4971de63dd256952f478840ce90fc8d7fd7f3",
+            "changed_path_manifest_sha256": "sha256:345fb1cd26829e070c85989e48bb8ff59f0679844ee82f2ead4ebdb2d504f5ac",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:407b591a0b0be4fbfa1bbc8820adbdf5269b1da5cb7a0184a95f4bfb0130f48f",
+            "raw_sha256": "sha256:084ca9de0b1cea02ea375174bbccb343ccf73ce3fa4fe711cfb20371e2d143c9",
+            "canonical_sha256": "sha256:084ca9de0b1cea02ea375174bbccb343ccf73ce3fa4fe711cfb20371e2d143c9",
+            "result_hash": "sha256:7b60df516824197a7c11c15a91ffe4bc2f83450fb9239c97309cf447351b6485",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:407b591a0b0be4fbfa1bbc8820adbdf5269b1da5cb7a0184a95f4bfb0130f48f",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "README.md",
+                "bin/labdrian-overlay",
+                "engine/cmd/live_guard_test.go",
+                "engine/cmd/main.go",
+                "engine/cmd/runtime_test.go",
+                "engine/pipkg/pipkg.go",
+                "engine/pipkg/pipkg_test.go",
+                "engine/runtime/live_guard_test.go",
+                "engine/runtime/pi.go",
+                "engine/runtime/pi_test.go",
+                "engine/runtime/runtime_test.go",
+                "engine/shelltest/overlay_pi_package_build_test.go",
+                "longterm-mem/cmd/longterm-mem/main_test.go",
+                "longterm-mem/cmd/longterm-mem/register_paths.go",
+                "openspec/changes/pi-runtime-target/apply-progress.md",
+                "openspec/changes/pi-runtime-target/entry.json",
+                "openspec/changes/pi-runtime-target/research.md",
+                "openspec/changes/pi-runtime-target/specs/pi-runtime-target/spec.md",
+                "openspec/changes/pi-runtime-target/tasks.md",
+                "openspec/changes/pi-runtime-target/verify-report.md"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "Inspected all 20 manifest paths in the supplied patch sections. No reachable security, authorization, data-loss, secret, or dependency finding was attributable to this candidate.",
+              "Subprocess execution: in engine/runtime/pi.go, runPiCommand calls exec.Command with a fixed argv (the verb plus the package path) and no shell. engine/runtime/pi_test.go exercises this with a package directory whose name contains shell metacharacters and asserts the argv is recorded byte-for-byte. The bash caller pipkg_apply_and_report in bin/labdrian-overlay quotes every expansion. No injection path is reachable.",
+              "Binary resolution: resolvePiBinary in engine/runtime/pi.go honors the LABDRIAN_PI_BIN environment override and otherwise uses exec.LookPath. Only a party that already controls the invoking user's environment or PATH can influence it, so it grants no privilege escalation.",
+              "Destructive operation: Uninstall in engine/runtime/pi.go calls os.RemoveAll only on the adapter's destDir. That directory is derived from STATE_DIR plus a fixed pi/labdrian-pi suffix. The call is gated on package.json existing there and runs only after `pi remove` succeeds. No attacker-controlled path reaches it.",
+              "Read-only probes: isPiPackageListed and isPiMcpRegistered in engine/runtime/pi.go, and piInstalled in longterm-mem/cmd/longterm-mem/register_paths.go, only read and JSON-parse ~/.pi/agent/settings.json and the package's own mcp.json. Relative entries are resolved against the settings directory and compared after filepath.Clean. Nothing is written to gentle-pi- or pi-engram-owned files, and the relaxed match only enables writes into the overlay-owned package mcp.json.",
+              "Drift and preservation: engine/pipkg/pipkg.go now also carries mcp.json.bak across a rebuild and excludes it from Check. The file is copied verbatim from the existing destDir with mode 0644, the same treatment mcp.json already receives, so no new exposure or loss is introduced.",
+              "Status aggregation: engine/cmd/main.go removes the Pi status-only exemption, so an unsupported Pi now fails `status --target all`. This makes failures more visible and masks nothing.",
+              "Test isolation: engine/cmd/live_guard_test.go and engine/runtime/live_guard_test.go add TestMain guards that redirect HOME and STATE_DIR, unset OVERLAY_DIR, and point LABDRIAN_PI_BIN at a non-existent path. Tests in those packages therefore cannot mutate a developer's real Pi installation. engine/shelltest/overlay_pi_package_build_test.go only runs the build and status helpers, which never execute pi.",
+              "Documentation and openspec files (README.md, openspec/changes/pi-runtime-target/verify-report.md, apply-progress.md, entry.json, research.md, spec.md, tasks.md) contain no secrets or credentials; they only record developer-local absolute paths in prose."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-resilience",
+        "selected_order": 1,
+        "target_identity": "sha256:6938272c8eb0347a7bb5a55f4ccdeebebb4d39ac34269812c8353c12032c11b8",
+        "capture_phase_revision": "sha256:c59f45c724c9c5128c137f5dcced6f19227a358a2cdeff5da281ff8ad24f38c2",
+        "artifact_digest": "sha256:a844d0039cf850dc75ee637e82eb79cd19285f93cd81ac920491c67e849d9963",
+        "result_hash": "sha256:2efb258e13ed13d6d0d9b3cb14c47299c5f13d732b285957c2e253eb47bc55ec",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:947528175cfdfce8ebaa768025f081fa8bd10bf5327f2a3e4413559876fe77fd",
+            "lineage_id": "review-3dfefffd0f0256e2",
+            "authority_revision": "sha256:c59f45c724c9c5128c137f5dcced6f19227a358a2cdeff5da281ff8ad24f38c2",
+            "target_identity": "sha256:6938272c8eb0347a7bb5a55f4ccdeebebb4d39ac34269812c8353c12032c11b8",
+            "base_tree": "2ba11e52b4837fce3290b4c506f2aac6c30d5059",
+            "candidate_tree": "53e4971de63dd256952f478840ce90fc8d7fd7f3",
+            "changed_path_manifest_sha256": "sha256:345fb1cd26829e070c85989e48bb8ff59f0679844ee82f2ead4ebdb2d504f5ac",
+            "lens": "review-resilience",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:947528175cfdfce8ebaa768025f081fa8bd10bf5327f2a3e4413559876fe77fd",
+            "raw_sha256": "sha256:94522cdf92e4a74fae087ef080ae38e4bea81d4694c5464bcd57f62937b00e81",
+            "canonical_sha256": "sha256:ccb2fa73bc440286f7fe2a529a25a009cbdd6ef6030fde45fbd5b6e863747d51",
+            "result_hash": "sha256:2efb258e13ed13d6d0d9b3cb14c47299c5f13d732b285957c2e253eb47bc55ec",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:947528175cfdfce8ebaa768025f081fa8bd10bf5327f2a3e4413559876fe77fd",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "README.md",
+                "bin/labdrian-overlay",
+                "engine/cmd/live_guard_test.go",
+                "engine/cmd/main.go",
+                "engine/cmd/runtime_test.go",
+                "engine/pipkg/pipkg.go",
+                "engine/pipkg/pipkg_test.go",
+                "engine/runtime/live_guard_test.go",
+                "engine/runtime/pi.go",
+                "engine/runtime/pi_test.go",
+                "engine/runtime/runtime_test.go",
+                "engine/shelltest/overlay_pi_package_build_test.go",
+                "longterm-mem/cmd/longterm-mem/main_test.go",
+                "longterm-mem/cmd/longterm-mem/register_paths.go",
+                "openspec/changes/pi-runtime-target/apply-progress.md",
+                "openspec/changes/pi-runtime-target/entry.json",
+                "openspec/changes/pi-runtime-target/research.md",
+                "openspec/changes/pi-runtime-target/specs/pi-runtime-target/spec.md",
+                "openspec/changes/pi-runtime-target/tasks.md",
+                "openspec/changes/pi-runtime-target/verify-report.md"
+              ]
+            },
+            "lens": "review-resilience",
+            "findings": [
+              {
+                "id": "R4-pi-aggregate-status-always-fails-without-pi",
+                "lens": "resilience",
+                "location": "engine/cmd/main.go:414",
+                "severity": "WARNING",
+                "claim": "This change removes the status-only Pi exemption, and `PiAdapter.Status` now returns unsupported whenever the package is not built. Together, these make `engine runtime status --target all` exit 1 on every host that has not opted into Pi, even when claude, opencode, and codex are all healthy. The engine does not gate Pi on being installed, although the README describes `all` as including pi only when it is genuinely installed. The exit code of the all-targets status check can no longer tell a broken claude/opencode deployment apart from a host that simply does not use Pi. Any health check or automation keyed on that exit code will either alarm permanently or be ignored, which masks real failures. Suggested fix: exclude a never-built Pi from the aggregate the way the bin surface does, and keep failing the aggregate for a built-but-unproven Pi.",
+                "proof_refs": [
+                  "engine/cmd/main.go:402-406",
+                  "engine/runtime/pi.go:105-108",
+                  "engine/cmd/runtime_test.go:728-738",
+                  "README.md:60"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R4-pi-uninstall-not-fix-forward",
+                "lens": "resilience",
+                "location": "engine/runtime/pi.go:142-154",
+                "severity": "WARNING",
+                "claim": "`PiAdapter.Uninstall` only deletes the package directory after `pi remove` succeeds. That creates two stuck states.\n\n- **No `pi` on PATH.** The candidate's own apply path supports building without `pi` on PATH (Install returns partial with a hint, and the bash helper returns 0). On such a host, uninstall returns partial at the resolvePiBinary check every time. The built package, including its mcp.json holding the longterm-mem registration, can never be removed through the adapter.\n- **Retry after a failed delete.** If `pi remove` succeeds but the directory removal fails, a retry sees package.json still present and runs `pi remove` again against an entry that is no longer listed. Uninstall never checks whether the package is listed before calling `pi remove`. If Pi rejects removing an unknown source, the retry also stays partial and never deletes the directory, so there is no fix-forward path.\n\nSuggested fix: skip `pi remove` when the package is not listed (or `pi` is absent), and always attempt the directory removal.",
+                "proof_refs": [
+                  "engine/runtime/pi.go:77-81",
+                  "engine/runtime/pi.go:137-141",
+                  "bin/labdrian-overlay:186"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R4-pi-settings-object-entry-false-unlisted",
+                "lens": "resilience",
+                "location": "engine/runtime/pi.go:222-226",
+                "severity": "WARNING",
+                "claim": "`isPiPackageListed` decodes the whole settings.json `packages` array as a list of strings. If any entry is not a string, `json.Unmarshal` fails and the probe returns false for every entry, including a correctly listed labdrian-pi. Pi settings can carry object-form package entries, for example a gentle-pi entry with resource filters. On such a host, Status reports the package as not listed, its message tells the user to run `pi install` even though that is already done, and Status stays permanently partial, which also permanently fails the all-targets aggregate. The new tests only write string-array settings, so this path is untested. The same string-only decoding is pre-existing in the longterm-mem installed probe, which this candidate extends without changing that decoding. Suggested fix: decode entries as raw JSON and accept either a string or an object with a source field.",
+                "proof_refs": [
+                  "engine/runtime/pi.go:116-118",
+                  "engine/runtime/pi_test.go:436-451",
+                  "longterm-mem/cmd/longterm-mem/register_paths.go:71"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Reviewed all 20 manifest paths from the provided patch sections only.",
+              "engine/cmd/main.go:414 removes the Pi status exemption. engine/cmd/runtime_test.go:728-738 deterministically asserts exit 1 for status across all targets when claude/opencode are supported, codex is partial and Pi is merely unbuilt, confirming the permanent non-zero aggregate on non-Pi hosts.",
+              "engine/runtime/pi.go:137-157 gates the package directory removal on `pi` resolving and `pi remove` succeeding, with no listing pre-check; engine/runtime/pi.go:77-81 plus bin/labdrian-overlay:186 show the supported build-without-pi path that produces a built but uninstallable package.",
+              "engine/runtime/pi.go:222-226 decodes the settings packages field as a string slice, so a single non-string entry makes the whole listing probe false.",
+              "Checked for resilience defects and found none in: the pipkg mcp.json.bak preservation and exclusion (engine/pipkg/pipkg.go:122-146, engine/pipkg/pipkg.go:191-196); the bash status delegation, whose not-built early return still avoids the engine binary; and the TestMain guards (engine/cmd/live_guard_test.go, engine/runtime/live_guard_test.go).",
+              "Did not report the missing subprocess timeout in runPiCommand (engine/runtime/pi.go:204) as a finding, because no concrete hang mode for a local-path `pi install` or `pi remove` is evidenced in the candidate."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "selected_order": 2,
+        "target_identity": "sha256:6938272c8eb0347a7bb5a55f4ccdeebebb4d39ac34269812c8353c12032c11b8",
+        "capture_phase_revision": "sha256:c59f45c724c9c5128c137f5dcced6f19227a358a2cdeff5da281ff8ad24f38c2",
+        "artifact_digest": "sha256:9701a41eab907948a08ffb14875209afa97427e7b23505e4bb914714879ffbbb",
+        "result_hash": "sha256:0373fad5b3599a81ba3c1d9fd47413ff487371906e0cb769eb14bfa2a347fd6f",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:5176af0eff08cdb6c05693c7c4ba706c5ca5566007030c376a9005bf7f6616a0",
+            "lineage_id": "review-3dfefffd0f0256e2",
+            "authority_revision": "sha256:c59f45c724c9c5128c137f5dcced6f19227a358a2cdeff5da281ff8ad24f38c2",
+            "target_identity": "sha256:6938272c8eb0347a7bb5a55f4ccdeebebb4d39ac34269812c8353c12032c11b8",
+            "base_tree": "2ba11e52b4837fce3290b4c506f2aac6c30d5059",
+            "candidate_tree": "53e4971de63dd256952f478840ce90fc8d7fd7f3",
+            "changed_path_manifest_sha256": "sha256:345fb1cd26829e070c85989e48bb8ff59f0679844ee82f2ead4ebdb2d504f5ac",
+            "lens": "review-readability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:5176af0eff08cdb6c05693c7c4ba706c5ca5566007030c376a9005bf7f6616a0",
+            "raw_sha256": "sha256:46e3dc0aa6f6823c4a946964e1a40427eda8610158b640a3f60ada224354d81a",
+            "canonical_sha256": "sha256:a95c70e29362bcda48d75e79128ccff5536ba9ab0400e64aa6ffd0d82173bb02",
+            "result_hash": "sha256:0373fad5b3599a81ba3c1d9fd47413ff487371906e0cb769eb14bfa2a347fd6f",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:5176af0eff08cdb6c05693c7c4ba706c5ca5566007030c376a9005bf7f6616a0",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "README.md",
+                "bin/labdrian-overlay",
+                "engine/cmd/live_guard_test.go",
+                "engine/cmd/main.go",
+                "engine/cmd/runtime_test.go",
+                "engine/pipkg/pipkg.go",
+                "engine/pipkg/pipkg_test.go",
+                "engine/runtime/live_guard_test.go",
+                "engine/runtime/pi.go",
+                "engine/runtime/pi_test.go",
+                "engine/runtime/runtime_test.go",
+                "engine/shelltest/overlay_pi_package_build_test.go",
+                "longterm-mem/cmd/longterm-mem/main_test.go",
+                "longterm-mem/cmd/longterm-mem/register_paths.go",
+                "openspec/changes/pi-runtime-target/apply-progress.md",
+                "openspec/changes/pi-runtime-target/entry.json",
+                "openspec/changes/pi-runtime-target/research.md",
+                "openspec/changes/pi-runtime-target/specs/pi-runtime-target/spec.md",
+                "openspec/changes/pi-runtime-target/tasks.md",
+                "openspec/changes/pi-runtime-target/verify-report.md"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-stale-no-alias-disclosure",
+                "lens": "readability",
+                "location": "bin/labdrian-overlay:241",
+                "severity": "WARNING",
+                "claim": "The candidate moves the bash copy of the R-007 disclosure into the not-built branch but keeps its old wording, \"there is no short alias for either flag\". The same candidate corrects this fact everywhere else: the Go constant, the spec, and the research note now say the -ne and -ns aliases exist. The duplicated disclosure text has already drifted. A not-built `status --target pi` therefore prints the opposite claim from a built one, which delegates to the Go constant.",
+                "proof_refs": [
+                  "bin/labdrian-overlay:241",
+                  "bin/labdrian-overlay:231-234",
+                  "engine/runtime/pi.go:56-59",
+                  "openspec/changes/pi-runtime-target/specs/pi-runtime-target/spec.md:114",
+                  "openspec/changes/pi-runtime-target/research.md:31"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-apply-double-build-and-gate-mismatch",
+                "lens": "readability",
+                "location": "bin/labdrian-overlay:185-188",
+                "severity": "WARNING",
+                "claim": "The comment on pipkg_apply_and_report says it builds and then runs `pi install`. In fact it builds with pipkg_build_and_report and then calls `engine runtime install --target pi`, and PiAdapter.Install runs pipkg.Build again before installing. Every apply builds twice. There are also two different pi discovery rules. The bash side decides whether to install by checking `command -v pi`. The adapter resolves the binary through the LABDRIAN_PI_BIN override first, then exec.LookPath. When those disagree, the result depends on which rule wins, and the comment does not say so.",
+                "proof_refs": [
+                  "bin/labdrian-overlay:180-188",
+                  "engine/runtime/pi.go:70-88",
+                  "engine/runtime/pi.go:191-199"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-supported-message-omits-mcp-entry",
+                "lens": "readability",
+                "location": "engine/runtime/pi.go:123-125",
+                "severity": "WARNING",
+                "claim": "Status now requires three proven entries before it reports supported: in sync, listed in the Pi settings packages, and longterm-mem registered in the package MCP config. The supported message still says only \"built, in sync, and listed\". The README status bullet repeats the same two-entry description. Anyone reading the success text or the README would expect `pi install` alone to reach supported, and would not know that `longterm-mem register --target pi` is also required.",
+                "proof_refs": [
+                  "engine/runtime/pi.go:100-103",
+                  "engine/runtime/pi.go:119-121",
+                  "README.md:69",
+                  "openspec/changes/pi-runtime-target/verify-report.md:45"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-rollback-aliases-update",
+                "lens": "readability",
+                "location": "engine/runtime/pi.go:131-132",
+                "severity": "WARNING",
+                "claim": "Rollback() and Update() now have the same body. Both rebuild the package from the current source and restore no prior state. The only rollback-specific code is the special-cased OVERLAY_DIR message in stub(), which says rollback \"cannot rebuild\". The build() comment says it serves \"Update/Rollback\" but never explains what Rollback rolls back to. Its success message tells the user to re-run `pi install`. The name Rollback suggests reverting a change, and nothing in the code documents that it is intentionally a plain rebuild. That rationale exists only in the apply-progress deviations note.",
+                "proof_refs": [
+                  "engine/runtime/pi.go:131-132",
+                  "engine/runtime/pi.go:167-169",
+                  "engine/runtime/pi.go:178",
+                  "engine/runtime/pi.go:184-187",
+                  "openspec/changes/pi-runtime-target/apply-progress.md:953"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-duplicated-settings-listing-probe",
+                "lens": "readability",
+                "location": "engine/runtime/pi.go:228-238",
+                "severity": "WARNING",
+                "claim": "isPiPackageListed re-implements the settings-packages listing probe that piInstalled already implements in longterm-mem. Both hardcode the settings location and the rule for resolving relative entries. The candidate itself shows the cost: the relative-path bug found during live verification had to be patched separately in both copies, with the same comment in each. Nothing records that the two probes must stay in lockstep, so the next fix to Pi's listing semantics can easily land in only one module.",
+                "proof_refs": [
+                  "engine/runtime/pi.go:211-241",
+                  "longterm-mem/cmd/longterm-mem/register_paths.go:74-82",
+                  "openspec/changes/pi-runtime-target/apply-progress.md:1106"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-testmain-dead-defer",
+                "lens": "readability",
+                "location": "engine/runtime/live_guard_test.go:20-25",
+                "severity": "WARNING",
+                "claim": "Both new TestMain guards register `defer os.RemoveAll(home)` and then call os.Exit(m.Run()). os.Exit does not run deferred functions, so the cleanup is dead code that looks like it cleans up. Every test run leaks a temp HOME directory. The guard is also duplicated verbatim in two packages, so this defect and any future fix must be kept in sync in both copies.",
+                "proof_refs": [
+                  "engine/runtime/live_guard_test.go:20",
+                  "engine/runtime/live_guard_test.go:25",
+                  "engine/cmd/live_guard_test.go:20",
+                  "engine/cmd/live_guard_test.go:25"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-codex-partial-test-no-longer-proves-its-name",
+                "lens": "readability",
+                "location": "engine/cmd/runtime_test.go:728-738",
+                "severity": "WARNING",
+                "claim": "TestRunRuntimeCore_AllTargetsStatusAllowsCodexPartialWithoutFailing now asserts exit 1. Its new comment says it still proves that codex's partial status does not fail the aggregate. With Pi unsupported, though, exit 1 is expected whether or not the Codex exemption exists, so the test can no longer detect that exemption being removed. It has also become a near-duplicate of the new Pi-unsupported test. After this change the Codex partial carve-out in main.go has no test that isolates it, while the test name still claims it does. The change records also disagree about this test: one says it was updated to prove Pi reaching supported, and another says it asserts exit 1 while still proving the codex exemption. Neither matches the code.",
+                "proof_refs": [
+                  "engine/cmd/runtime_test.go:628-679",
+                  "engine/cmd/main.go:415",
+                  "openspec/changes/pi-runtime-target/apply-progress.md:1001",
+                  "openspec/changes/pi-runtime-target/apply-progress.md:1069"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-task-6-2-checked-without-observation",
+                "lens": "readability",
+                "location": "openspec/changes/pi-runtime-target/tasks.md:71",
+                "severity": "WARNING",
+                "claim": "Task 6.2 (observe gate injection in the real sdd-tasks/sdd-apply system prompt and confirm other agents are unaffected) is now checked. The candidate's own manual-verification log says the comparison of the injected prompt with and without extensions could not be observed headlessly, and that the node-driven unit tests remain the only evidence. The checkbox therefore overstates what was verified.",
+                "proof_refs": [
+                  "openspec/changes/pi-runtime-target/tasks.md:71",
+                  "openspec/changes/pi-runtime-target/apply-progress.md:1107"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-stale-verify-report-and-missing-remediation-context",
+                "lens": "readability",
+                "location": "openspec/changes/pi-runtime-target/verify-report.md:45",
+                "severity": "WARNING",
+                "claim": "The added verify-report records verdict fail with W-02 NOT RESOLVED, W-04 open, and tasks 6.1-6.3 incomplete. The same candidate fixes the delta spec's uninstall wording, renames the gate filename in the spec, adds the ADDED header, and checks tasks 6.1-6.3. No re-verification or remediation entry covers those later edits. apply-progress still states that the delta had nothing to amend. A reader of the change artifacts sees a FAIL report and remediation notes that contradict the spec and tasks files committed alongside them.",
+                "proof_refs": [
+                  "openspec/changes/pi-runtime-target/verify-report.md:4",
+                  "openspec/changes/pi-runtime-target/verify-report.md:57",
+                  "openspec/changes/pi-runtime-target/apply-progress.md:1057",
+                  "openspec/changes/pi-runtime-target/specs/pi-runtime-target/spec.md:11",
+                  "openspec/changes/pi-runtime-target/specs/pi-runtime-target/spec.md:125",
+                  "openspec/changes/pi-runtime-target/tasks.md:70-72"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-install-build-failure-classification",
+                "lens": "readability",
+                "location": "engine/runtime/pi.go:74-75",
+                "severity": "SUGGESTION",
+                "claim": "Install reports a pipkg.Build failure as CapabilityUnsupported, while build() (used by Update/Rollback) reports the same build failure as CapabilityPartial. Nothing explains why one failure maps to different capability states depending on the action. stub() also calls every OVERLAY_DIR-less action \"pipkg build/install\", including SyncCheck.",
+                "proof_refs": [
+                  "engine/runtime/pi.go:74-75",
+                  "engine/runtime/pi.go:175",
+                  "engine/runtime/pi.go:184"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-problem-labels-read-as-positive",
+                "lens": "readability",
+                "location": "engine/runtime/pi.go:112-120",
+                "severity": "SUGGESTION",
+                "claim": "Each unproven-entry string starts with the positive property name, such as \"in sync (...drift...)\" or \"listed in ... (not listed ...)\". The partial message then reads \"status is unproven: in sync (labdrian-pi package drift ...)\", which at first glance says the opposite of the problem. Prefixing with a negative label, such as \"not in sync: ...\", would make the message unambiguous.",
+                "proof_refs": [
+                  "engine/runtime/pi.go:112-120",
+                  "engine/runtime/pi.go:127-128"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-hardcoded-mcp-literals",
+                "lens": "readability",
+                "location": "engine/runtime/pi.go:257",
+                "severity": "SUGGESTION",
+                "claim": "isPiMcpRegistered hardcodes the package MCP config filename and the \"longterm-mem\" server key. The filename is already a named constant in pipkg, and the key is owned by longterm-mem's register writer. If either side renames it, Status will silently stay partial forever, with no shared constant tying the two together.",
+                "proof_refs": [
+                  "engine/runtime/pi.go:247",
+                  "engine/runtime/pi.go:257",
+                  "engine/pipkg/pipkg.go:81"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-status-helper-duplicate-branches",
+                "lens": "readability",
+                "location": "bin/labdrian-overlay:245-246",
+                "severity": "SUGGESTION",
+                "claim": "Both branches of the delegated status call run the same `echo \"  $result\"` and differ only in their return code. Unlike the apply helper, the command substitution also does not capture stderr. If the engine call itself fails, its error bypasses $result and the helper echoes an empty line.",
+                "proof_refs": [
+                  "bin/labdrian-overlay:245-246",
+                  "bin/labdrian-overlay:249",
+                  "bin/labdrian-overlay:188"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-weak-substring-assertions",
+                "lens": "readability",
+                "location": "engine/shelltest/overlay_pi_package_build_test.go:218",
+                "severity": "SUGGESTION",
+                "claim": "The assertion `strings.Contains(statusSupported, \"supported\")` also matches \"unsupported\", so it does not check what its message says. The rewritten tamper assertion now looks for \"package.json\" while its failure message still says \"should report drift detected\". The assertion and its diagnostic text no longer describe the same check.",
+                "proof_refs": [
+                  "engine/shelltest/overlay_pi_package_build_test.go:218",
+                  "engine/shelltest/overlay_pi_package_build_test.go:134"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-spec-cli-sentence-garbled",
+                "lens": "readability",
+                "location": "openspec/changes/pi-runtime-target/specs/pi-runtime-target/spec.md:16",
+                "severity": "SUGGESTION",
+                "claim": "The amended requirement now reads \"The `labdrian-overlay` CLI MUST accept `pi` ... on `apply`, `status`, and `sync-check`, and to `engine runtime uninstall`\". The sentence is ungrammatical, and it puts a verb owned by a different binary under a requirement scoped to the labdrian-overlay CLI. Which surface must accept which verb is left unclear.",
+                "proof_refs": [
+                  "openspec/changes/pi-runtime-target/specs/pi-runtime-target/spec.md:16",
+                  "openspec/changes/pi-runtime-target/specs/pi-runtime-target/spec.md:19"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-readme-uninstall-no-entrypoint",
+                "lens": "readability",
+                "location": "README.md:70",
+                "severity": "SUGGESTION",
+                "claim": "The new README Pi section says \"Uninstalling runs `pi remove \u003cpath\u003e`\" but never names the command that does it. The only entry point is `engine runtime uninstall --target pi`, and labdrian-overlay has no uninstall verb, so readers will look for a command that does not exist.",
+                "proof_refs": [
+                  "README.md:70",
+                  "openspec/changes/pi-runtime-target/specs/pi-runtime-target/spec.md:125"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-shadowed-builtin-real",
+                "lens": "readability",
+                "location": "engine/runtime/live_guard_test.go:32",
+                "severity": "SUGGESTION",
+                "claim": "TestLiveGuard_IsolatesHomeAndPiBinary names the home directory `real`, which shadows the Go builtin. The value is also the overridden temp HOME rather than the real one, so the name misleads twice.",
+                "proof_refs": [
+                  "engine/runtime/live_guard_test.go:32-34"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Inspected all 20 manifest paths from the patch sections only. The code findings cover the Pi adapter lifecycle, the bash delegation helpers, the TestMain guards, and the reworked aggregate tests. The documentation findings cover the openspec artifacts and the README.",
+              "The disclosure drift is deterministic. bin/labdrian-overlay:241 still says there is no short alias. engine/runtime/pi.go:59, openspec/changes/pi-runtime-target/specs/pi-runtime-target/spec.md:114 and openspec/changes/pi-runtime-target/research.md:31 now document -ne and -ns.",
+              "The Status message under-report is deterministic. engine/runtime/pi.go:119-121 requires the longterm-mem MCP entry, while engine/runtime/pi.go:125 and README.md:69 omit it.",
+              "The dead defer is deterministic. Deferred calls do not run on os.Exit, which engine/runtime/live_guard_test.go:25 and engine/cmd/live_guard_test.go:25 call immediately after registering the defer.",
+              "The pipkg preserveIfExists refactor and the backup-sibling exclusion in engine/pipkg/pipkg.go are clearly named and commented. No readability defect was found there, or in entry.json's arithmetic (2624+407+453=3484).",
+              "All findings are WARNING or SUGGESTION. None rises to BLOCKER or CRITICAL for the readability lens."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 3,
+        "target_identity": "sha256:6938272c8eb0347a7bb5a55f4ccdeebebb4d39ac34269812c8353c12032c11b8",
+        "capture_phase_revision": "sha256:c59f45c724c9c5128c137f5dcced6f19227a358a2cdeff5da281ff8ad24f38c2",
+        "artifact_digest": "sha256:b90fcb44b315c59fc7a99471d57a114c77fb2e57b13ebe1b5baabe74c7ecae79",
+        "result_hash": "sha256:9f6f7879c060682946ddf5bd62539e7c9f80061f9135979048bbe40013446107",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:cc0dd0de2f0c452e83aeb76a647b6bc92db23a7529d8a2dd3cb91924f9afa560",
+            "lineage_id": "review-3dfefffd0f0256e2",
+            "authority_revision": "sha256:c59f45c724c9c5128c137f5dcced6f19227a358a2cdeff5da281ff8ad24f38c2",
+            "target_identity": "sha256:6938272c8eb0347a7bb5a55f4ccdeebebb4d39ac34269812c8353c12032c11b8",
+            "base_tree": "2ba11e52b4837fce3290b4c506f2aac6c30d5059",
+            "candidate_tree": "53e4971de63dd256952f478840ce90fc8d7fd7f3",
+            "changed_path_manifest_sha256": "sha256:345fb1cd26829e070c85989e48bb8ff59f0679844ee82f2ead4ebdb2d504f5ac",
+            "lens": "review-reliability",
+            "selected_order": 3
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:cc0dd0de2f0c452e83aeb76a647b6bc92db23a7529d8a2dd3cb91924f9afa560",
+            "raw_sha256": "sha256:3c3e0d465ae25dc7a467f4513a878c93982c395559d55edcdf6bb13a4691702d",
+            "canonical_sha256": "sha256:dea8c139a963e60bdfdde6e22273b59f29b36cb6473b945a32deabd19c13ab0b",
+            "result_hash": "sha256:9f6f7879c060682946ddf5bd62539e7c9f80061f9135979048bbe40013446107",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:cc0dd0de2f0c452e83aeb76a647b6bc92db23a7529d8a2dd3cb91924f9afa560",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "README.md",
+                "bin/labdrian-overlay",
+                "engine/cmd/live_guard_test.go",
+                "engine/cmd/main.go",
+                "engine/cmd/runtime_test.go",
+                "engine/pipkg/pipkg.go",
+                "engine/pipkg/pipkg_test.go",
+                "engine/runtime/live_guard_test.go",
+                "engine/runtime/pi.go",
+                "engine/runtime/pi_test.go",
+                "engine/runtime/runtime_test.go",
+                "engine/shelltest/overlay_pi_package_build_test.go",
+                "longterm-mem/cmd/longterm-mem/main_test.go",
+                "longterm-mem/cmd/longterm-mem/register_paths.go",
+                "openspec/changes/pi-runtime-target/apply-progress.md",
+                "openspec/changes/pi-runtime-target/entry.json",
+                "openspec/changes/pi-runtime-target/research.md",
+                "openspec/changes/pi-runtime-target/specs/pi-runtime-target/spec.md",
+                "openspec/changes/pi-runtime-target/tasks.md",
+                "openspec/changes/pi-runtime-target/verify-report.md"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-001",
+                "lens": "reliability",
+                "location": "engine/cmd/main.go:414",
+                "severity": "WARNING",
+                "claim": "Removing the status-only Pi exemption makes `runtime status --target all` exit 1 in every environment where Pi is not built, installed and longterm-mem-registered. Machines that never use Pi can no longer get a clean aggregate status. This contradicts the README's new statement that `all` adds pi only when it is genuinely installed. The candidate's own rewritten test locks in exit 1 for a machine with no Pi at all.",
+                "proof_refs": [
+                  "engine/cmd/main.go:402-406",
+                  "engine/cmd/runtime_test.go:737-738",
+                  "README.md:60",
+                  "engine/runtime/pi.go:105-108"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "behavior-activated"
+              },
+              {
+                "id": "R3-002",
+                "lens": "reliability",
+                "location": "engine/cmd/runtime_test.go:728-738",
+                "severity": "WARNING",
+                "claim": "TestRunRuntimeCore_AllTargetsStatusAllowsCodexPartialWithoutFailing now asserts exit 1, and Pi's unsupported state drives that result. The new Pi test also asserts exit 1. No exit-code assertion in the candidate still proves that codex `partial` does not fail the aggregate. Deleting the codex carve-out in the status switch would leave both tests passing, so the exemption the test is named for is now unproven.",
+                "proof_refs": [
+                  "engine/cmd/runtime_test.go:664-666",
+                  "engine/cmd/runtime_test.go:737-738",
+                  "engine/cmd/main.go:414"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-003",
+                "lens": "reliability",
+                "location": "bin/labdrian-overlay:184-193",
+                "severity": "WARNING",
+                "claim": "The new pipkg_apply_and_report helper has no automated coverage, and cmd_apply now routes pi through it. Its comment promises a non-zero exit when `pi install` fails. That depends on `engine runtime install --target pi` exiting non-zero when PiAdapter.Install returns CapabilityPartial, but the install-aggregation exit semantics are not shown or tested in the candidate. The success path also depends on restart_required exiting 0. A failed `pi install` could therefore be reported as a successful apply without any test noticing.",
+                "proof_refs": [
+                  "bin/labdrian-overlay:1655",
+                  "engine/runtime/pi.go:82-87",
+                  "engine/shelltest/overlay_pi_package_build_test.go:91-97"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-004",
+                "lens": "reliability",
+                "location": "bin/labdrian-overlay:186",
+                "severity": "WARNING",
+                "claim": "The bash apply helper decides whether to run a real install by probing `command -v pi` on the real PATH, and it ignores the LABDRIAN_PI_BIN override. The new live-machine guard (TestMain setting a non-existent LABDRIAN_PI_BIN and a scratch HOME) exists only in the engine/cmd and engine/runtime packages. Shell-level test packages that source or run the overlay have no equivalent guard. Any shelltest that drives cmd_apply for pi on a developer machine with pi installed would invoke the real Pi CLI, which is the incident class the guard was added for.",
+                "proof_refs": [
+                  "engine/runtime/pi.go:194-199",
+                  "engine/runtime/live_guard_test.go:21-24",
+                  "engine/cmd/live_guard_test.go:21-24",
+                  "engine/shelltest/overlay_pi_package_build_test.go:170-176"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-005",
+                "lens": "reliability",
+                "location": "engine/runtime/pi.go:147-154",
+                "severity": "WARNING",
+                "claim": "Uninstall only deletes the package directory after `pi remove` succeeds, so it is not retry-safe in two cases. If a previous run removed the listing but os.RemoveAll failed, or the user already ran `pi remove` by hand, the next Uninstall calls `pi remove` on an unlisted source. That call is likely to fail, and the directory is then never removed. The failure branches are also unasserted. Tests only use a stub that exits 0, so nothing proves that a failed `pi remove` preserves the directory and returns partial.",
+                "proof_refs": [
+                  "engine/runtime/pi.go:137-157",
+                  "engine/runtime/pi_test.go:536-552"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-006",
+                "lens": "reliability",
+                "location": "engine/runtime/pi.go:222-227",
+                "severity": "WARNING",
+                "claim": "isPiPackageListed decodes the Pi settings `packages` array as []string. Pi supports object-form package entries (source plus filters). If any single entry, including a gentle-pi or other third-party one, is an object, json.Unmarshal fails for the whole file and the probe returns false. Status would then report Pi as permanently partial and never listed, even when this package is listed as a plain string. The longterm-mem installed-probe has the same []string decode, which is pre-existing; the candidate only added relative-path resolution there.",
+                "proof_refs": [
+                  "engine/runtime/pi.go:228-240",
+                  "longterm-mem/cmd/longterm-mem/register_paths.go:77-82"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-007",
+                "lens": "reliability",
+                "location": "openspec/changes/pi-runtime-target/verify-report.md:222",
+                "severity": "WARNING",
+                "claim": "The newly added verify report marks the 'Target all includes Pi support' scenario COMPLIANT. It cites TestRunRuntimeCore_AllTargetsStatusAllowsCodexPartialWithoutFailing as rewritten to prove Pi reaching supported. In the candidate, that test asserts pi unsupported and exit 1, and no test shows Pi reaching supported in the aggregate. The report also predates candidate edits it contradicts: it says there is no -ns alias and says tasks 6.1-6.3 are unchecked. Its compliance evidence is stale and does not match the tests it cites.",
+                "proof_refs": [
+                  "engine/cmd/runtime_test.go:737-738",
+                  "engine/cmd/runtime_test.go:749-751",
+                  "engine/runtime/pi.go:59",
+                  "openspec/changes/pi-runtime-target/tasks.md:70-73"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-008",
+                "lens": "reliability",
+                "location": "engine/runtime/pi_test.go:386-389",
+                "severity": "SUGGESTION",
+                "claim": "TestPiAdapter_InstallNoShellInjection only asserts that Install is not unsupported. An Install that returns partial because `pi install` failed would still pass. Install's restart_required success status and its 'pi not on PATH, print install hint' branch are never asserted. Under the new TestMain, LABDRIAN_PI_BIN is always set, so the exec.LookPath branch cannot be reached in this package.",
+                "proof_refs": [
+                  "engine/runtime/pi.go:77-87",
+                  "engine/runtime/live_guard_test.go:24"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-009",
+                "lens": "reliability",
+                "location": "engine/shelltest/overlay_pi_package_build_test.go:134",
+                "severity": "SUGGESTION",
+                "claim": "After delegation, status already exits non-zero before tampering because the package is unlisted and unregistered. The post-tamper non-zero-exit assertion therefore no longer discriminates drift. Drift detection now rests only on a bare 'package.json' substring, and the failure message still says 'drift detected'. A drift-naming token specific to the in-sync problem entry would keep this assertion meaningful.",
+                "proof_refs": [
+                  "engine/shelltest/overlay_pi_package_build_test.go:99-103",
+                  "engine/runtime/pi.go:113-114"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-010",
+                "lens": "reliability",
+                "location": "engine/runtime/live_guard_test.go:20",
+                "severity": "SUGGESTION",
+                "claim": "TestMain registers `defer os.RemoveAll(home)` and then calls os.Exit(m.Run()). os.Exit skips deferred calls, so every test run leaks a scratch HOME directory in the system temp dir. The same pattern appears in the engine/cmd guard.",
+                "proof_refs": [
+                  "engine/runtime/live_guard_test.go:25",
+                  "engine/cmd/live_guard_test.go:20-25"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Inspected all 20 manifest paths from the supplied patch sections only; no working tree, index or command was used.",
+              "engine/runtime/pi.go now wires Install (build, then `pi install` via fixed argv), Status (three-entry proof: in sync, listed in the Pi settings packages array, longterm-mem MCP entry), Uninstall (`pi remove`, then RemoveAll) and Update/Rollback (rebuild, partial). Fixed-argv exec and read-only probes are correctly implemented; the findings concern retry safety, decode tolerance and unasserted failure branches.",
+              "engine/pipkg/pipkg.go preserveIfExists and the Check-side exclusion of the MCP config backup are covered by two independent tests in engine/pipkg/pipkg_test.go that assert observable file bytes and a nil Check error.",
+              "engine/cmd/main.go removal of the Pi status exemption is covered for the failing direction, but the codex-partial exemption lost its only passing-direction exit assertion (engine/cmd/runtime_test.go:737-738).",
+              "bin/labdrian-overlay pipkg_status_and_report delegation is exercised end to end by TestPipkgStatusAndReport_DelegatesHonestPartialThenSupported, which builds a real engine binary. The new pipkg_apply_and_report helper wired into cmd_apply has no test.",
+              "longterm-mem/cmd/longterm-mem/register_paths.go relative-listing resolution is covered by TestCmdRegister_TargetPi_AcceptsRelativePackageListing. The []string packages decode is pre-existing there.",
+              "openspec documentation changes (apply-progress, entry.json, research, spec, tasks) were reviewed for consistency with the code; the added verify report contains stale compliance claims that the candidate's tests contradict."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "ce330e35f495f06d6c8ee01b164464c9b85e2acecc5ab411ee14b9402203ebd6",
+    "initial_atomic_start": {
+      "lineage_id": "review-3dfefffd0f0256e2",
+      "worktree_identity": "sha256:acea9aceda9cfd53b0f03ae8a316bb189b01ebf998da9c983b214706330b819d",
+      "target_identity": "sha256:6938272c8eb0347a7bb5a55f4ccdeebebb4d39ac34269812c8353c12032c11b8",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "2ba11e52b4837fce3290b4c506f2aac6c30d5059",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "high",
+      "selected_lenses": [
+        "review-risk",
+        "review-resilience",
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 1694,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

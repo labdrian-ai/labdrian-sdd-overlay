@@ -1,0 +1,74 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:651508476d92594c90880756ce0af99a94ef0b77a6adaa8ea3470ad2bcf0fb38",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-de39bbef08719275",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "21d95f9987dc17fc7666a00a6105562874e4b5bd",
+      "candidate_tree": "1f0bdfeef8e20f88f0c24d4044eddc7ec60690dd",
+      "paths_digest": "sha256:bd8aee20e1b78dd5ae670163ab59777f68cdbf7ad72b0b8a40f2ecf3d62528f0",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "CHANGELOG.md",
+        "docs/architecture/hexagonal-target.md",
+        "odd/tasks/consolidation-phase9.md"
+      ],
+      "identity": "sha256:4499a80663dc05dbdeb4c964b10cbeca2b3560ba879b766ec3c6766652dc1d99"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "21d95f9987dc17fc7666a00a6105562874e4b5bd",
+      "candidate_tree": "1f0bdfeef8e20f88f0c24d4044eddc7ec60690dd",
+      "paths_digest": "sha256:bd8aee20e1b78dd5ae670163ab59777f68cdbf7ad72b0b8a40f2ecf3d62528f0",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "CHANGELOG.md",
+        "docs/architecture/hexagonal-target.md",
+        "odd/tasks/consolidation-phase9.md"
+      ],
+      "identity": "sha256:4499a80663dc05dbdeb4c964b10cbeca2b3560ba879b766ec3c6766652dc1d99"
+    },
+    "genesis_paths": [
+      "CHANGELOG.md",
+      "docs/architecture/hexagonal-target.md",
+      "odd/tasks/consolidation-phase9.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "low",
+    "selected_lenses": [],
+    "original_changed_lines": 25,
+    "correction_budget": 13,
+    "correction_budget_policy": "floor_two",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:ad4f3bfc7e2ff4bf61cdca0e7a9fa3d28a833046f0cd7e7986057665db740db8",
+    "capture_phase_revision": "sha256:719db635c6eed136f504a40bc4bec757183f1406d08b08a311877cee784584a4",
+    "approved_ack_token": "e913c790a0a0760792f3c8959a66890cfd3e9c5c7b68e86795532a5251612ac2",
+    "initial_atomic_start": {
+      "lineage_id": "review-de39bbef08719275",
+      "worktree_identity": "sha256:6d8947646304823cf3d9bce8d9a3ed74d51f8411208d1ca79ad4fce387af8590",
+      "target_identity": "sha256:4499a80663dc05dbdeb4c964b10cbeca2b3560ba879b766ec3c6766652dc1d99",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "21d95f9987dc17fc7666a00a6105562874e4b5bd",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "low",
+      "selected_lenses": null,
+      "original_changed_lines": 25,
+      "correction_budget": 13,
+      "correction_budget_policy": "floor_two"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

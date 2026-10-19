@@ -1,0 +1,163 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:b34e3aa0e329e49e089605933f596b5a5bddbc96e4d9b8fa1fdd821c4793861d",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-76dfa05d5fe23b09",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "current-changes",
+      "base_tree": "0daffdf300b66b94fb724500e37bb19e1d4b873f",
+      "candidate_tree": "9ca32bb2012bfef977e3fa3a5ce2ece239f70a47",
+      "paths_digest": "sha256:02de5d6a3c727ee7cb006227cbfe265b189e7064ff82a8a179ea9367d919aad1",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/skills/actuals_instrumentation_contract_test.go"
+      ],
+      "identity": "sha256:76dfa05d5fe23b096e70667ef6f26125660de4558b35d5413874afcfd10fd9ff"
+    },
+    "current_snapshot": {
+      "kind": "current-changes",
+      "base_tree": "0daffdf300b66b94fb724500e37bb19e1d4b873f",
+      "candidate_tree": "9ca32bb2012bfef977e3fa3a5ce2ece239f70a47",
+      "paths_digest": "sha256:02de5d6a3c727ee7cb006227cbfe265b189e7064ff82a8a179ea9367d919aad1",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/skills/actuals_instrumentation_contract_test.go"
+      ],
+      "identity": "sha256:76dfa05d5fe23b096e70667ef6f26125660de4558b35d5413874afcfd10fd9ff"
+    },
+    "genesis_paths": [
+      "engine/skills/actuals_instrumentation_contract_test.go"
+    ],
+    "policy_hash": "sha256:34fb63d7f29f8613cd4431382b1057398a4816f8a4c20fc34677fffc80a184f6",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-reliability"
+    ],
+    "original_changed_lines": 30,
+    "correction_budget": 15,
+    "lens_results": [
+      {
+        "lens": "review-reliability",
+        "findings": [
+          {
+            "id": "R3-round-trip-guard-blames-fixture-for-code-regression",
+            "lens": "reliability",
+            "location": "engine/skills/actuals_instrumentation_contract_test.go:670",
+            "severity": "WARNING",
+            "claim": "The new round-trip guard validates the fixture by calling normaliseLineEndings — the very function the group exists to protect — so a regression in that function is reported as a fixture defect and aborts all four line-ending equivalence cases before any of them runs. The candidate's own comment at line 668 asserts the opposite ('the fixture is wrong rather than the slicer'), and the failure message hard-codes that misattribution.",
+            "proof_refs": [
+              "Candidate bytes at engine/skills/actuals_instrumentation_contract_test.go:670-673: 'if got := normaliseLineEndings(mixed); got != doc {' followed by 't.Fatalf(\"fixture error: mixed document does not normalise back to the LF fixture — \"+ \"a terminator is named at the wrong index or out of order.\\n got %q\\nwant %q\", got, doc)'. normaliseLineEndings is defined at engine/skills/actuals_instrumentation_contract_test.go:436 and is the production helper under test.",
+              "Failure scenario, reproduced: delete the second ReplaceAll pass of normaliseLineEndings so it becomes strings.ReplaceAll(doc, \"\\r\\n\", \"\\n\") — the exact regression documented at engine/skills/actuals_instrumentation_contract_test.go:427-430. On the base version of engine/skills/actuals_instrumentation_contract_test.go the group reports 'sliceMarkdownSection() error = section heading not found, want nil' for lone_cr_endings and a value mismatch for mixed_endings, with lf_endings and crlf_endings green — the reader is pointed at the slicer. On the candidate version the same regression produces one line-736 failure reading 'fixture error: mixed document does not normalise back to the LF fixture — a terminator is named at the wrong index or out of order', and zero of the four cases execute, because mixLineEndings runs during construction of the tests slice at engine/skills/actuals_instrumentation_contract_test.go:736 and t.Fatalf ends the enclosing group via runtime.Goexit. A future editor is sent to audit lineEndingFixtureTerminators for a defect that is not there, and the lone-CR/CRLF equivalence signal for the actual regression is lost.",
+              "Not merge-blocking: engine/skills/actuals_instrumentation_contract_test.go:773 in the sibling double_carriage_return_leaves_no_residual_cr group still fails accurately under the same regression, so the suite stays red."
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-round-trip-message-names-only-one-of-three-causes",
+            "lens": "reliability",
+            "location": "engine/skills/actuals_instrumentation_contract_test.go:672",
+            "severity": "SUGGESTION",
+            "claim": "The round-trip failure message states a single cause as fact — 'a terminator is named at the wrong index or out of order' — but the assertion also fires for at least two other causes: a carriage-return byte added to the LF fixture constant, and a regression in normaliseLineEndings itself.",
+            "proof_refs": [
+              "Candidate bytes at engine/skills/actuals_instrumentation_contract_test.go:671-672: 't.Fatalf(\"fixture error: mixed document does not normalise back to the LF fixture — \"+ \"a terminator is named at the wrong index or out of order.\\n got %q\\nwant %q\", got, doc)'.",
+              "Failure scenario: embed a literal carriage return inside one line of the lineEndingFixture constant declared at engine/skills/actuals_instrumentation_contract_test.go:596-603 (for example '- unrelated\\rrule'). Replaying the guard over bytes reconstructed from the candidate tree, normaliseLineEndings(mixed) rewrites that content carriage return to a newline, the comparison against doc fails, and the message tells the editor to look for a misordered terminator while the committed terminator list is in fact correct. The 'fixture error:' prefix is right; only the named cause is too narrow. Naming the possibilities, or asserting the mismatch position, would keep the guard's diagnostic value."
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-replacement-comment-repeats-the-unpinned-claim-pattern",
+            "lens": "reliability",
+            "location": "engine/skills/actuals_instrumentation_contract_test.go:626",
+            "severity": "SUGGESTION",
+            "claim": "The comment that replaced a factually false one is true today, but it states an unenforced count ('one of the two lone-CR entries') and can go stale in exactly the same way the comment it replaced did, because no guard in the candidate pins how many lone-CR entries exist.",
+            "proof_refs": [
+              "Candidate bytes at engine/skills/actuals_instrumentation_contract_test.go:626: '\"\\r\",   // blank separator — one of the two lone-CR entries; mixLineEndings enforces the rest'. Counting the list at engine/skills/actuals_instrumentation_contract_test.go:620-629, lone \"\\r\" appears at index 2 and index 5, so 'two' is correct as committed.",
+              "Failure scenario: change the index-2 entry at engine/skills/actuals_instrumentation_contract_test.go:623 from \"\\r\" to \"\\r\\n\". The convention guard at engine/skills/actuals_instrumentation_contract_test.go:648-653 only requires each convention to appear at least once, and the surviving index-5 lone \"\\r\" satisfies it; the round-trip guard at engine/skills/actuals_instrumentation_contract_test.go:670 also still holds. The suite stays green while the line-626 comment now claims two lone-CR entries where one remains — the same silently-false-comment condition the candidate set out to fix. Phrasing the note as an invariant the guards actually enforce ('at least one lone CR must exist; mixLineEndings enforces that') would not decay."
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          }
+        ],
+        "evidence": [
+          "Inspection ran exclusively through read-only Git against the two frozen trees (base 0daffdf300b66b94fb724500e37bb19e1d4b873f, candidate 9ca32bb2012bfef977e3fa3a5ce2ece239f70a47). Subcommands run: 'diff --name-status --no-renames \u003cbase\u003e \u003ccandidate\u003e', 'diff --numstat \u003cbase\u003e \u003ccandidate\u003e', 'diff --text --no-ext-diff --diff-algorithm=myers --no-indent-heuristic \u003cbase\u003e \u003ccandidate\u003e -- engine/skills/actuals_instrumentation_contract_test.go', and 'cat-file -p \u003ctree\u003e:\u003cpath\u003e' against both trees. The live worktree, the index and HEAD were never read.",
+          "Manifest confirmed as a single modified path, engine/skills/actuals_instrumentation_contract_test.go, +28/-2. The whole diff is three hunks: one new standard-library import, one rewritten comment on the blank-separator terminator entry, and two new fixture guards inside mixLineEndings.",
+          "Behaviour preservation confirmed by extracting both blob versions with 'cat-file -p' and listing every top-level t.Run in each. TestActualsInstrumentationContract has exactly 10 groups on both sides, byte-identical and in the same order: R004_R005_schema_temporal_boundary_and_interruption, R015_R006_R007_R008_checkpoint_count_description, R009_calibration_excludes_calendar_time, R010_R011_delivery_window_formula_shape, R006_R007_R015_inception_round_trip_and_explicit_zero, R014_amendedR007_fixture_pins, R001_R002_three_units_never_blended, R012_actuals_output_separate_labels, R013_roadmap_maker_no_compute_time_source_invariant, D2_D5_closed_schema_invariant. TestActualsInstrumentationGateHelpers likewise keeps its 6 groups unchanged. The diff touches no line inside any group body.",
+          "The two GREEN-by-construction groups remain labelled invariants and are still explicitly disclaimed as not RED coverage. Candidate lines 189-193 state 'It is NOT RED coverage for R-013' and lines 206-211 state 'The group stays GREEN before and after the fix, so it is NOT RED coverage'. Neither comment nor group is touched by the diff.",
+          "New import is used and legal. Candidate line 8 adds \"slices\" to the import block in correct gofmt alphabetical order, immediately before the sort import and after the filepath import, and it is used exactly once at candidate line 649 as slices.Contains(terminators, convention). The engine module declaration read via 'cat-file -p 9ca32bb2012bfef977e3fa3a5ce2ece239f70a47:\u003cmodule file\u003e' declares Go 1.21, and slices.Contains is listed in the Go 1.21 API manifest shipped with the local toolchain ('pkg slices, func Contains[$0 interface{ ~[]$1 }, $1 comparable]($0, $1) bool #57433'), so the import is available at the declared language version.",
+          "Comment accuracy verified. The rewritten candidate line 626 reads '\\r\",   // blank separator — one of the two lone-CR entries; mixLineEndings enforces the rest'. The terminator list at candidate lines 620-629 contains lone \"\\r\" at exactly two positions, index 2 and index 5, so the replacement claim is true. The base wording it replaced ('a \"\\n\" here would pair with a lone \"\\r\" above and collapse') was false because the entry above index 5 is index 4, which is \"\\r\\n\", not a lone \"\\r\".",
+          "Convention guard soundness established by exhaustive enumeration of all 3^8 = 6561 terminator assignments over the fixture's 8 terminated lines, replayed outside the repository from bytes reconstructed with 'cat-file -p'. 765 assignments are rejected by the convention guard alone, 665 further assignments are rejected by the round-trip guard alone, and 5131 are accepted. Every one of the 5131 accepted assignments manifests all three conventions at byte level (a lone LF, a CRLF pair, and a lone CR), and none of them produces a document byte-identical to the lf, crlf or lone-cr table cases. No harmful arrangement escapes the pair of guards for this fixture.",
+          "The round-trip assertion at candidate line 670 is NOT tautological. It fails for 665 of the 6561 assignments. Concrete failing arrangement: set index 4 to \"\\r\" and index 5 to \"\\n\". Index 5 terminates the empty blank-separator line, so those two bytes land adjacent as \"\\r\\n\", the first ReplaceAll pass collapses them into one newline, and the normalised document is one line short of the LF fixture. The convention guard passes in that arrangement because all three conventions are still named, so the round-trip guard is doing independent work. Conversely, flattening every entry to \"\\n\" round-trips perfectly (mixed == doc), so the convention guard is doing work the round trip cannot. The two guards are non-redundant and both are load-bearing.",
+          "The swap the lens flagged is genuinely benign, not an escape. Swapping index 2 (\"\\r\") with index 4 (\"\\r\\n\") round-trips cleanly and still yields a document containing all three conventions at byte level, so it is an equally valid mixed fixture rather than a harmful arrangement the guard misses. Likewise, an arrangement placing a lone CR immediately before a blank line whose terminator is \"\\r\\n\" produces \"\\r\\r\\n\", which normalises to two newlines and still contains a genuine lone-CR terminator, so it is accepted correctly.",
+          "Ordering and reachability confirmed: mixLineEndings has exactly one call site, candidate line 736, inside the tests slice literal of the line_ending_conventions_are_equivalent group. Both guards therefore execute during table construction, before any of the four cases consume the mixed document. t.Helper() at candidate line 637 attributes failures to line 736, and both new messages are prefixed 'fixture error:'.",
+          "Toolchain checks against the reconstructed package (never against the repository): 'gofmt -l' does not list engine/skills/actuals_instrumentation_contract_test.go, 'go vet' is clean for the package, and 'go test -run TestActualsInstrumentationGateHelpers -v' runs all 6 groups and all 39 leaf cases green, including the mixed_endings case of the line_ending_conventions_are_equivalent group. Four sibling files unrelated to this diff are gofmt-dirty identically on the base side, so they are pre-existing and out of scope.",
+          "Diagnostic-attribution regression reproduced empirically. Two copies of the package were reconstructed from the frozen trees and the second normalisation pass of normaliseLineEndings was deleted in each, simulating exactly the regression this group exists to catch. On the base copy the group reported two accurate failures naming sliceMarkdownSection (lone_cr_endings and mixed_endings) while lf_endings and crlf_endings correctly stayed green. On the candidate copy the group aborted during table construction with 'fixture error: mixed document does not normalise back to the LF fixture — a terminator is named at the wrong index or out of order' at line 736, and none of the four cases ran at all. The suite remains red overall because double_carriage_return_leaves_no_residual_cr still reports accurately, so this degrades diagnosis rather than losing the gate.",
+          "Determinism: both guards read a package-level string slice and a compile-time constant, iterate a fixed literal slice in fixed order, and involve no map iteration, clock, filesystem or randomness. Output is fully deterministic across runs."
+        ],
+        "result_hash": "sha256:dd8aba8aae8a8bef734c473f426976e13a47ff96e646715a8c6a69f2eaa39eec"
+      }
+    ],
+    "findings": [
+      {
+        "id": "R3-round-trip-guard-blames-fixture-for-code-regression",
+        "lens": "reliability",
+        "location": "engine/skills/actuals_instrumentation_contract_test.go:670",
+        "severity": "WARNING",
+        "claim": "The new round-trip guard validates the fixture by calling normaliseLineEndings — the very function the group exists to protect — so a regression in that function is reported as a fixture defect and aborts all four line-ending equivalence cases before any of them runs. The candidate's own comment at line 668 asserts the opposite ('the fixture is wrong rather than the slicer'), and the failure message hard-codes that misattribution.",
+        "proof_refs": [
+          "Candidate bytes at engine/skills/actuals_instrumentation_contract_test.go:670-673: 'if got := normaliseLineEndings(mixed); got != doc {' followed by 't.Fatalf(\"fixture error: mixed document does not normalise back to the LF fixture — \"+ \"a terminator is named at the wrong index or out of order.\\n got %q\\nwant %q\", got, doc)'. normaliseLineEndings is defined at engine/skills/actuals_instrumentation_contract_test.go:436 and is the production helper under test.",
+          "Failure scenario, reproduced: delete the second ReplaceAll pass of normaliseLineEndings so it becomes strings.ReplaceAll(doc, \"\\r\\n\", \"\\n\") — the exact regression documented at engine/skills/actuals_instrumentation_contract_test.go:427-430. On the base version of engine/skills/actuals_instrumentation_contract_test.go the group reports 'sliceMarkdownSection() error = section heading not found, want nil' for lone_cr_endings and a value mismatch for mixed_endings, with lf_endings and crlf_endings green — the reader is pointed at the slicer. On the candidate version the same regression produces one line-736 failure reading 'fixture error: mixed document does not normalise back to the LF fixture — a terminator is named at the wrong index or out of order', and zero of the four cases execute, because mixLineEndings runs during construction of the tests slice at engine/skills/actuals_instrumentation_contract_test.go:736 and t.Fatalf ends the enclosing group via runtime.Goexit. A future editor is sent to audit lineEndingFixtureTerminators for a defect that is not there, and the lone-CR/CRLF equivalence signal for the actual regression is lost.",
+          "Not merge-blocking: engine/skills/actuals_instrumentation_contract_test.go:773 in the sibling double_carriage_return_leaves_no_residual_cr group still fails accurately under the same regression, so the suite stays red."
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-round-trip-message-names-only-one-of-three-causes",
+        "lens": "reliability",
+        "location": "engine/skills/actuals_instrumentation_contract_test.go:672",
+        "severity": "SUGGESTION",
+        "claim": "The round-trip failure message states a single cause as fact — 'a terminator is named at the wrong index or out of order' — but the assertion also fires for at least two other causes: a carriage-return byte added to the LF fixture constant, and a regression in normaliseLineEndings itself.",
+        "proof_refs": [
+          "Candidate bytes at engine/skills/actuals_instrumentation_contract_test.go:671-672: 't.Fatalf(\"fixture error: mixed document does not normalise back to the LF fixture — \"+ \"a terminator is named at the wrong index or out of order.\\n got %q\\nwant %q\", got, doc)'.",
+          "Failure scenario: embed a literal carriage return inside one line of the lineEndingFixture constant declared at engine/skills/actuals_instrumentation_contract_test.go:596-603 (for example '- unrelated\\rrule'). Replaying the guard over bytes reconstructed from the candidate tree, normaliseLineEndings(mixed) rewrites that content carriage return to a newline, the comparison against doc fails, and the message tells the editor to look for a misordered terminator while the committed terminator list is in fact correct. The 'fixture error:' prefix is right; only the named cause is too narrow. Naming the possibilities, or asserting the mismatch position, would keep the guard's diagnostic value."
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-replacement-comment-repeats-the-unpinned-claim-pattern",
+        "lens": "reliability",
+        "location": "engine/skills/actuals_instrumentation_contract_test.go:626",
+        "severity": "SUGGESTION",
+        "claim": "The comment that replaced a factually false one is true today, but it states an unenforced count ('one of the two lone-CR entries') and can go stale in exactly the same way the comment it replaced did, because no guard in the candidate pins how many lone-CR entries exist.",
+        "proof_refs": [
+          "Candidate bytes at engine/skills/actuals_instrumentation_contract_test.go:626: '\"\\r\",   // blank separator — one of the two lone-CR entries; mixLineEndings enforces the rest'. Counting the list at engine/skills/actuals_instrumentation_contract_test.go:620-629, lone \"\\r\" appears at index 2 and index 5, so 'two' is correct as committed.",
+          "Failure scenario: change the index-2 entry at engine/skills/actuals_instrumentation_contract_test.go:623 from \"\\r\" to \"\\r\\n\". The convention guard at engine/skills/actuals_instrumentation_contract_test.go:648-653 only requires each convention to appear at least once, and the surviving index-5 lone \"\\r\" satisfies it; the round-trip guard at engine/skills/actuals_instrumentation_contract_test.go:670 also still holds. The suite stays green while the line-626 comment now claims two lone-CR entries where one remains — the same silently-false-comment condition the candidate set out to fix. Phrasing the note as an invariant the guards actually enforce ('at least one lone CR must exist; mixLineEndings enforces that') would not decay."
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      }
+    ],
+    "classifications": {},
+    "outcomes": {
+      "R3-replacement-comment-repeats-the-unpinned-claim-pattern": "info",
+      "R3-round-trip-guard-blames-fixture-for-code-regression": "info",
+      "R3-round-trip-message-names-only-one-of-three-causes": "info"
+    },
+    "fix_finding_ids": [],
+    "follow_ups": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:674ce27416557b872c6517dc00d6e5acb9a08de8e5a70aa16fda4b2eae6731ab",
+    "evidence_record_digest": "sha256:0a4d9cf879f6c3f79ac3b6aae14ea2052c67ac8350b1ffd5418d8dd01302246c",
+    "evidence_outcome": "passed",
+    "evidence_target_identity": "sha256:76dfa05d5fe23b096e70667ef6f26125660de4558b35d5413874afcfd10fd9ff",
+    "evidence_authority_revision": "sha256:d4910f39589b84987e7bd087e2835a06e916c22c0c4abd0f257dbf945ad22fe6"
+  }
+}

@@ -1,0 +1,149 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:2bc83a652ce60442997a5a9ef2f1e263ddc95009e978353e36a90e725c082abb",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-40fdc89863238ebb",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "9d4f87c6e2e3ef7bc064827d40ce5193985b8058",
+      "candidate_tree": "5a46dc4fabddffe631d916b152ac20f4f3df02cb",
+      "paths_digest": "sha256:37b9b012d6842810b8896a0b8b4c8cb591edfd21b0536d81706b1cc7940a8b37",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "openspec/changes/tui-self-update-offer/tasks.md",
+        "tui/main_test.go",
+        "tui/model.go",
+        "tui/run.go"
+      ],
+      "identity": "sha256:40fdc89863238ebb05f620bb2b559021d7a49a441cae3974ba5dc9f7669ef451"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "9d4f87c6e2e3ef7bc064827d40ce5193985b8058",
+      "candidate_tree": "5a46dc4fabddffe631d916b152ac20f4f3df02cb",
+      "paths_digest": "sha256:37b9b012d6842810b8896a0b8b4c8cb591edfd21b0536d81706b1cc7940a8b37",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "openspec/changes/tui-self-update-offer/tasks.md",
+        "tui/main_test.go",
+        "tui/model.go",
+        "tui/run.go"
+      ],
+      "identity": "sha256:40fdc89863238ebb05f620bb2b559021d7a49a441cae3974ba5dc9f7669ef451"
+    },
+    "genesis_paths": [
+      "openspec/changes/tui-self-update-offer/tasks.md",
+      "tui/main_test.go",
+      "tui/model.go",
+      "tui/run.go"
+    ],
+    "policy_hash": "sha256:34fb63d7f29f8613cd4431382b1057398a4816f8a4c20fc34677fffc80a184f6",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-risk",
+      "review-resilience",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 181,
+    "correction_budget": 91,
+    "correction_budget_policy": "floor_two",
+    "lens_results": [
+      {
+        "lens": "review-risk",
+        "findings": [],
+        "evidence": [
+          "Inspected all 4 diff hunks: tasks.md is checkbox-only status edits; main_test.go adds only test functions with no production code; model.go adds a 6-line conditional in the runDoneMsg case that re-fires the pre-existing probeBehindOriginCmd(m.repoRoot) call only when action.Command==\"self-update\" and err==nil, introducing no new input surface; run.go adds one static Action struct literal with static string fields and no dynamic construction.",
+          "No new external/untrusted input handling, secrets, authorization logic, or dependency-manifest changes appear in any changed hunk; the backend self-update execution/safety-check logic itself is not part of this changeset."
+        ],
+        "result_hash": "sha256:067b5398a95878102eb2a2db4cc328a6c38dbd7aade2f4d2a1a97eb800050a7b"
+      },
+      {
+        "lens": "review-resilience",
+        "findings": [],
+        "evidence": [
+          "Inspected all four manifest patches in full: tasks.md is checklist-only; main_test.go adds three new tests including a three-way success/failure/other-action re-probe triangulation; model.go adds one small conditional that re-fires the existing, already-tested probeBehindOriginCmd only when the self-update action completed with a nil error; run.go only appends one new Action struct literal.",
+          "The re-probe trigger is additive, gated on an exact command match plus a nil-error check, does not alter or duplicate any existing retry or failure-handling path, and reuses pre-existing infrastructure left unmodified by this candidate; no concrete resilience regression evidenced."
+        ],
+        "result_hash": "sha256:0fbf3f95110d942a7ba8c3a165a0654fcc474fdbc5e3688930d9d0edf6f4eae5"
+      },
+      {
+        "lens": "review-readability",
+        "findings": [
+          {
+            "id": "R2-001",
+            "lens": "readability",
+            "location": "tui/main_test.go:1604-1615",
+            "severity": "SUGGESTION",
+            "claim": "TestSelfUpdateConfirmScreen re-implements the same 'scan Actions() for Command==self-update' lookup already written moments earlier in TestSelfUpdateActionRegistered, using a different idiom (found bool vs idx int) for identical intent.",
+            "proof_refs": [
+              "tui/main_test.go:1556-1566 has the idx-based lookup loop",
+              "tui/main_test.go:1604-1615 has the found-bool lookup loop with the same body"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          }
+        ],
+        "evidence": [
+          "Inspected all 4 patches in manifest order: tasks.md checkbox-only status flips, main_test.go's import/count/want-slice edits and three new test functions, model.go's new re-probe branch, and run.go's new self-update Action entry plus doc-comment update.",
+          "Cross-checked Phase 5 tasks.md items 5.1-5.5 against the corresponding test/implementation hunks and found a consistent one-to-one mapping.",
+          "Verified the model.go re-probe guard is exercised by all three subtests in TestUpdate_SelfUpdateSuccess_RefiresProbe with correct triangulation."
+        ],
+        "result_hash": "sha256:7aa1915cc6dd64f203c637bcfd1963f29ff7ffecef90182c6ac0e6b4602d8ade"
+      },
+      {
+        "lens": "review-reliability",
+        "findings": [],
+        "evidence": [
+          "Inspected tasks.md: checkbox-only status edits, no executable behavior change.",
+          "Inspected run.go: new self-update Action struct literal inserted between apply and the hooks-lifecycle entry, matching the order asserted by tests.",
+          "Inspected model.go: new branch in the runDoneMsg case re-fires probeBehindOriginCmd(m.repoRoot) only when msg.result.action.Command==\"self-update\" \u0026\u0026 msg.result.err==nil; gating is unambiguous.",
+          "Inspected main_test.go: TestSelfUpdateActionRegistered, TestSelfUpdateConfirmScreen, and TestUpdate_SelfUpdateSuccess_RefiresProbe (a three-case differential test) directly cover the new model.go branch with no gap in observable behavior."
+        ],
+        "result_hash": "sha256:2f30a844d4e719826c2668c64ba428b7b7ef452ff6e0398cd2c6fb00fee72f98"
+      }
+    ],
+    "findings": [
+      {
+        "id": "R2-001",
+        "lens": "readability",
+        "location": "tui/main_test.go:1604-1615",
+        "severity": "SUGGESTION",
+        "claim": "TestSelfUpdateConfirmScreen re-implements the same 'scan Actions() for Command==self-update' lookup already written moments earlier in TestSelfUpdateActionRegistered, using a different idiom (found bool vs idx int) for identical intent.",
+        "proof_refs": [
+          "tui/main_test.go:1556-1566 has the idx-based lookup loop",
+          "tui/main_test.go:1604-1615 has the found-bool lookup loop with the same body"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      }
+    ],
+    "classifications": {},
+    "outcomes": {
+      "R2-001": "info"
+    },
+    "fix_finding_ids": [],
+    "follow_ups": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:e123ac1cec50c2ff91576f04133583226d4155d163704eef9d4f8ae03f97fac6",
+    "evidence_record_digest": "sha256:b31a48486cea2c40a428cbade00c2304698949a2d87e7a7710b0b166c949c8cb",
+    "evidence_outcome": "passed",
+    "evidence_target_identity": "sha256:40fdc89863238ebb05f620bb2b559021d7a49a441cae3974ba5dc9f7669ef451",
+    "evidence_authority_revision": "sha256:0ea7010c2cd1f2046952be938b38bacca8ae8afd963b212c92a935ea5445473c",
+    "reviewer_context_level": "provider_command"
+  },
+  "effect_intents": [
+    {
+      "class": "repository_context",
+      "destination": "rctx1_d10afa33bb3198839e64cadf45032439665a423efd1c551aaab618e636062614",
+      "payload_hash": "sha256:c4fb0ea5485bbfc13113de726380054ae208f8cd5e4faf6517f21465a68b9c4e",
+      "binding_revision": "sha256:48db1aecbd8db90fe9d74e5fd50d44b2d8ec8b6b3194942655f9ce61a8a65329",
+      "event_id": "sha256:e751a97d300bbf84dd780a071ee69bbb7d22d970bbbcd0b91594da04197bfabb"
+    }
+  ]
+}

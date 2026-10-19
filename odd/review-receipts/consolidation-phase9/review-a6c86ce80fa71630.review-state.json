@@ -1,0 +1,656 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:80162048804c02af1f13fd9487116d2f831c6dca2063a0f22361cf3b4cde924f",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-a6c86ce80fa71630",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "current-changes",
+      "base_tree": "9555e76b8438276f98ea9dbc81197aa9093680c9",
+      "candidate_tree": "9773630db7b612668160b438a4415ed65ae12e67",
+      "paths_digest": "sha256:3858842b142e49d1f29473dac9a18d440a8487f1df7368896d3d5bcdb5d29597",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "tools/deterministic-check-runner/main.go",
+        "tools/deterministic-check-runner/main_test.go"
+      ],
+      "identity": "sha256:a6c86ce80fa7163048a038f53e1b8a3c5555a09e75aa0d089375b3a4855081db"
+    },
+    "current_snapshot": {
+      "kind": "fix-diff",
+      "base_tree": "9773630db7b612668160b438a4415ed65ae12e67",
+      "candidate_tree": "a657d537315b27453fe5a67c7b61a37409ea7c2f",
+      "paths_digest": "sha256:3858842b142e49d1f29473dac9a18d440a8487f1df7368896d3d5bcdb5d29597",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "ledger_ids": [
+        "R4-01"
+      ],
+      "paths": [
+        "tools/deterministic-check-runner/main.go",
+        "tools/deterministic-check-runner/main_test.go"
+      ],
+      "identity": "sha256:92fcb30437206d291780aa3f997323192f6813ac637138c0f27efc2d628dc566"
+    },
+    "genesis_paths": [
+      "tools/deterministic-check-runner/main.go",
+      "tools/deterministic-check-runner/main_test.go"
+    ],
+    "policy_hash": "sha256:34fb63d7f29f8613cd4431382b1057398a4816f8a4c20fc34677fffc80a184f6",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-risk",
+      "review-resilience",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 651,
+    "correction_budget": 200,
+    "lens_results": [
+      {
+        "lens": "review-risk",
+        "findings": [
+          {
+            "id": "R1-01",
+            "lens": "risk",
+            "location": "tools/deterministic-check-runner/main.go:989",
+            "severity": "CRITICAL",
+            "claim": "The --out-dir containment guard is check-then-use. resolveNearestExisting resolves symlinks only on the nearest existing ancestor and re-appends the not-yet-existing remainder as literal, unchecked segments; the guard runs once in runCheckMode while writeLog's os.MkdirAll/os.WriteFile run later, and those follow symlinks on intermediate components. A remainder segment that becomes a symlink into the repository root between guard and write lands the log inside the frozen candidate. Refuted as a blocker for this candidate: the base guard resolved no symlinks at all, so a symlink planted before the run was accepted outright with no race required. The candidate narrows this class from static to race-only; the residual exposure is pre-existing, and the attacker capability it requires (timed writes into the out-dir's parent) already subsumes the impact via simpler routes such as poisoning the tools exec.LookPath resolves.",
+            "proof_refs": [
+              "tools/deterministic-check-runner/main.go:1005-1026 resolveNearestExisting joins the resolved ancestor with an unchecked literal remainder",
+              "tools/deterministic-check-runner/main.go:73 resolveOutDir is called once, before the registry loop at main.go:81-84",
+              "tools/deterministic-check-runner/main.go:412-417 writeLog calls os.MkdirAll then os.WriteFile with no containment re-validation",
+              "tools/deterministic-check-runner/main.go:977-982 states the previous version compared filepath.Abs results and never resolved symlinks",
+              "tools/deterministic-check-runner/main_test.go:1301-1308 plants the symlink before run() is called, a zero-timing attack the base accepted"
+            ],
+            "evidence_class": "inferential",
+            "causal_disposition": "pre-existing"
+          },
+          {
+            "id": "R1-02",
+            "lens": "risk",
+            "location": "tools/deterministic-check-runner/main.go:248",
+            "severity": "WARNING",
+            "claim": "reportNormalizeKill writes each scanned recovery-artifact path into stderr with an unescaped %s. normalizeBackupPattern uses Go's default non-multiline regexp semantics, so $ anchors at end-of-string and a filename containing an embedded newline before an otherwise-matching .go.\u003cdigits\u003e suffix still matches and reaches the diagnostic stream verbatim. The --out-dir path screens control bytes via firstControlByte; this path does not.",
+            "proof_refs": [
+              "tools/deterministic-check-runner/main.go:269 normalizeBackupPattern uses a plain end-of-string anchor",
+              "tools/deterministic-check-runner/main.go:280-303 scanNormalizeRecoveryArtifacts matches on d.Name() and appends the full name",
+              "tools/deterministic-check-runner/main.go:248 fmt.Fprintf writes the path with %s and no control-byte escaping",
+              "tools/deterministic-check-runner/main.go:123-131 resolveOutDir screens the flag value with firstControlByte, showing the asymmetry"
+            ],
+            "evidence_class": "inferential",
+            "causal_disposition": "introduced"
+          }
+        ],
+        "evidence": [
+          "Read tools/deterministic-check-runner/main.go in full (1114 lines) and main_test.go in full (1997 lines) in the candidate working tree.",
+          "Traced the --out-dir boundary end to end: resolveOutDir -\u003e pathInsideRoot -\u003e resolveNearestExisting -\u003e pathContainedIn, and the write path runCheck -\u003e writeLog -\u003e os.MkdirAll/os.WriteFile.",
+          "No shell or git available in this runtime; base tree 44b1afc was not read directly. Base behaviour was established from the candidate's own doc comment at main.go:977-982 and from the construction of TestOutDirGuardRejectsSymlinkResolvingInsideRoot at main_test.go:1286-1316.",
+          "R1-01 was submitted to an independent read-only refuter batch, which held the mechanism real but established the causal disposition as pre-existing: the base guard compared filepath.Abs results only and accepted a pre-planted symlink with no race required, a strictly larger exposure than the candidate's residual race-only window."
+        ],
+        "result_hash": "sha256:32bd5ed4f869f59191e2fd78e8d3e972fd5de1b3a2424a2c190bf2f869b2d87c"
+      },
+      {
+        "lens": "review-resilience",
+        "findings": [
+          {
+            "id": "R4-01",
+            "lens": "resilience",
+            "location": "tools/deterministic-check-runner/main.go:248",
+            "severity": "CRITICAL",
+            "claim": "reportNormalizeKill prints an unconditional instruction to restore every matched artifact over its original file, with no staleness or provenance check tying that artifact to the kill being reported. scanNormalizeRecoveryArtifacts matches any file under the module whose name ends in .go.\u003cdigits\u003e and whose stripped-suffix sibling exists, so a backup left by an earlier, unrelated interrupted run is presented identically to a genuine one. An operator following the instruction for a stale artifact silently reverts an already-repaired file back to its pre-fix bytes. This is the only one of the function's three branches with no hedge: the scan-incomplete branch warns the list may be partial and the zero-found branch warns that finding nothing is not evidence the module is intact, but the branch that issues an actionable destructive instruction carries no caveat at all.",
+            "proof_refs": [
+              "tools/deterministic-check-runner/main.go:247-249 the per-artifact loop prints restore-it-over guidance for every match",
+              "tools/deterministic-check-runner/main.go:280-303 scanNormalizeRecoveryArtifacts matches on name pattern and sibling existence only, with no recency or provenance test",
+              "tools/deterministic-check-runner/main.go:295 os.Lstat is the sole admission test for a matched artifact",
+              "tools/deterministic-check-runner/main.go:250-253 the scan-incomplete branch does carry an explicit partial-list caveat",
+              "tools/deterministic-check-runner/main.go:254-256 the zero-found branch does carry an explicit not-evidence-of-intact caveat"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R4-02",
+            "lens": "resilience",
+            "location": "tools/deterministic-check-runner/main.go:138",
+            "severity": "WARNING",
+            "claim": "The TMPDIR-inside-root rejection tells the operator only to change TMPDIR and never reprints usageText or mentions --out-dir, unlike the sibling flag rejection two branches above it which does print usageText. Because outDir is resolved from the flag before TMPDIR is consulted, passing --out-dir explicitly always bypasses the rejected default, so an operator in an environment with a platform-pinned TMPDIR is left with no route out of exit 3 from the message alone.",
+            "proof_refs": [
+              "tools/deterministic-check-runner/main.go:133-136 the flag branch prints its message and then usageText",
+              "tools/deterministic-check-runner/main.go:138-139 the default branch prints only the TMPDIR remedy and returns",
+              "tools/deterministic-check-runner/main.go:119-122 the flag is resolved before TMPDIR is consulted",
+              "tools/deterministic-check-runner/main_test.go:1382-1412 asserts only that stderr contains TMPDIR"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R4-03",
+            "lens": "resilience",
+            "location": "tools/deterministic-check-runner/main.go:282",
+            "severity": "WARNING",
+            "claim": "scanNormalizeRecoveryArtifacts walks the whole module with filepath.WalkDir under no context, no wall-clock bound, no entry cap and no progress output, and it runs synchronously immediately after a subprocess was killed for exceeding its deadline. On a large or network-mounted tree the recovery diagnostic itself can stall silently, which an operator cannot distinguish from the hang the deadline just ended. A single unreadable subdirectory anywhere in walk order also aborts the entire scan rather than skipping that subtree; the partial outcome is disclosed honestly, but reachable artifacts elsewhere are then missed.",
+            "proof_refs": [
+              "tools/deterministic-check-runner/main.go:282 filepath.WalkDir is called with no context and no budget",
+              "tools/deterministic-check-runner/main.go:283-285 an unconditional error return aborts the whole walk",
+              "tools/deterministic-check-runner/main.go:200 reportNormalizeKill is called synchronously from runNormalize's error path"
+            ],
+            "evidence_class": "inferential",
+            "causal_disposition": "introduced"
+          }
+        ],
+        "evidence": [
+          "Read tools/deterministic-check-runner/main.go in full (1114 lines) and main_test.go in full (1997 lines) in the candidate working tree.",
+          "Traced the killed-fixer recovery path end to end: runNormalize's timeout branch -\u003e reportNormalizeKill -\u003e scanNormalizeRecoveryArtifacts, including all three of its output branches (artifacts found, scan incomplete, scan clean with zero hits).",
+          "Traced resolveOutDir's two rejection branches and compared the diagnostics they emit against the remediation actually available to an operator on each.",
+          "No shell or git available in this runtime; base tree 44b1afc was not read directly. Causality was established from the candidate's own correction labels and doc comments plus the commit subjects of HEAD and its parents, none of which mention reportNormalizeKill or scanNormalizeRecoveryArtifacts."
+        ],
+        "result_hash": "sha256:1bd774089a1c2fd436f9312406004c42aa1d29af0cab183eb751b1484731f5d4"
+      },
+      {
+        "lens": "review-readability",
+        "findings": [
+          {
+            "id": "R2-01",
+            "lens": "readability",
+            "location": "tools/deterministic-check-runner/main.go:826",
+            "severity": "WARNING",
+            "claim": "selectOutcome's gate-3 doc attributes the introduction of the per-module coverage fields to correction B1, and the matching test comment repeats it, while three other sites in the same file attribute the identical modulesAttempted/modulesUsable fields to correction B2. B1's own paragraph describes only per-module buffer isolation and the combination rule and never mentions those fields. A maintainer following the B1 label before reordering the gates, which the surrounding doc calls load-bearing in both directions, lands on the wrong correction.",
+            "proof_refs": [
+              "tools/deterministic-check-runner/main.go:826-828 attributes the coverage fields to B1",
+              "tools/deterministic-check-runner/main_test.go:1950-1952 repeats the B1 attribution",
+              "tools/deterministic-check-runner/main.go:360 attributes the same fields to B2",
+              "tools/deterministic-check-runner/main.go:530 attributes the same fields to B2",
+              "tools/deterministic-check-runner/main.go:792-793 attributes the same fields to B2",
+              "tools/deterministic-check-runner/main.go:305-332 B1's own paragraph never mentions the coverage fields"
+            ]
+          },
+          {
+            "id": "R2-02",
+            "lens": "readability",
+            "location": "tools/deterministic-check-runner/main.go:810",
+            "severity": "WARNING",
+            "claim": "selectOutcome's doc numbers four prose gates that do not map one-to-one onto the function's four for-loops: prose gate 1 spans two loops, so prose gate 2 and gate 3 are the third and fourth loops. Because the counts coincide, a positional reading looks natural and is wrong, and the ordering it governs is the ordering whose reversal reintroduces a CRITICAL.",
+            "proof_refs": [
+              "tools/deterministic-check-runner/main.go:811-813 merges runnerErr and unavailable-blocking into one prose tier",
+              "tools/deterministic-check-runner/main.go:847-850 the runnerErr loop",
+              "tools/deterministic-check-runner/main.go:852-855 the unavailable-blocking loop",
+              "tools/deterministic-check-runner/main.go:857-860 the loop the prose calls gate 2",
+              "tools/deterministic-check-runner/main.go:862-865 the loop the prose calls gate 3"
+            ]
+          },
+          {
+            "id": "R2-03",
+            "lens": "readability",
+            "location": "tools/deterministic-check-runner/main_test.go:1420",
+            "severity": "WARNING",
+            "claim": "TestOutDirRejectsControlCharacters's doc says its fixture is deliberately unformatted so gofmt reports a finding, but the control-byte rejection fires inside resolveOutDir before any check subprocess runs, and the test itself asserts stdout is empty. The stated rationale cannot be why the test works.",
+            "proof_refs": [
+              "tools/deterministic-check-runner/main.go:123-127 the rejection returns before the results loop",
+              "tools/deterministic-check-runner/main.go:73-84 shows resolveOutDir precedes module discovery and the loop",
+              "tools/deterministic-check-runner/main_test.go:1447-1449 asserts stdout.Len() == 0"
+            ]
+          },
+          {
+            "id": "R2-04",
+            "lens": "readability",
+            "location": "tools/deterministic-check-runner/main.go:796",
+            "severity": "WARNING",
+            "claim": "The result struct doc says the module coverage fields stay zero for two early-return results, naming a LookPath failure and usage/procedural errors, but only the LookPath site constructs a result at all. Usage and procedural rejections return an exit code directly from run/runCheckMode and never build a result or reach selectOutcome.",
+            "proof_refs": [
+              "tools/deterministic-check-runner/main.go:336 the LookPath early-return result literal",
+              "tools/deterministic-check-runner/main.go:397 the runCheck loop result literal",
+              "tools/deterministic-check-runner/main.go:483 the buildResult literal",
+              "tools/deterministic-check-runner/main.go:73-80 usage and procedural rejections return an int directly"
+            ],
+            "causal_disposition": "unknown"
+          },
+          {
+            "id": "R2-05",
+            "lens": "readability",
+            "location": "tools/deterministic-check-runner/main_test.go:245",
+            "severity": "SUGGESTION",
+            "claim": "TestSelectOutcomePrecedence's doc claims to cover the full amended precedence matrix, but none of its nine cases set the module coverage fields to unequal values, so the new gate is never exercised there and is covered only by a separate test.",
+            "proof_refs": [
+              "tools/deterministic-check-runner/main_test.go:260-268 every case leaves both coverage fields at zero",
+              "tools/deterministic-check-runner/main.go:862-865 the gate condition requires modulesAttempted greater than modulesUsable"
+            ]
+          },
+          {
+            "id": "R2-06",
+            "lens": "readability",
+            "location": "tools/deterministic-check-runner/main.go:271",
+            "severity": "WARNING",
+            "claim": "scanNormalizeRecoveryArtifacts, normalizeBackupPattern and reportNormalizeKill have no direct unit test; one integration test covers only the single-artifact happy path. Untested are the Lstat exclusion that distinguishes a real artifact from a coincidentally named file, the .git skip branch, the partial-scan diagnostic and the zero-found diagnostic, in code whose entire purpose is a trustworthy recovery diagnosis after file corruption.",
+            "proof_refs": [
+              "tools/deterministic-check-runner/main_test.go:605-646 the only test, creating exactly one artifact whose original exists",
+              "tools/deterministic-check-runner/main.go:295-297 the untested Lstat exclusion",
+              "tools/deterministic-check-runner/main.go:287-289 the untested .git skip",
+              "tools/deterministic-check-runner/main.go:250-253 the untested partial-scan diagnostic",
+              "tools/deterministic-check-runner/main.go:254-256 the untested zero-found diagnostic"
+            ]
+          },
+          {
+            "id": "R2-07",
+            "lens": "readability",
+            "location": "tools/deterministic-check-runner/main.go:1",
+            "severity": "SUGGESTION",
+            "claim": "The 651-line candidate bundles three independent fixes and their tests into one review unit. The three touch disjoint functions and disjoint tests with no shared code path, and splitting by fix would likely have surfaced the B1/B2 mislabeling, which is invisible unless a reader cross-checks correction labels from one fix while reviewing another.",
+            "proof_refs": [
+              "tools/deterministic-check-runner/main.go:862-865 fix one, selectOutcome only",
+              "tools/deterministic-check-runner/main.go:219-303 fix two, the normalize recovery path only",
+              "tools/deterministic-check-runner/main.go:89-142 fix three, the out-dir boundary only"
+            ]
+          }
+        ],
+        "evidence": [
+          "Read tools/deterministic-check-runner/main.go in full (1114 lines) and main_test.go in full (1997 lines) in the candidate working tree.",
+          "Traced every doc-comment claim on the six new functions and the new selectOutcome gate against the code and tests they describe; all three fixed defects behave as their comments state, so every finding below is comment-truth, coverage or discoverability, not runtime behaviour.",
+          "Cross-checked the correction labels B1 and B2 across all five sites in main.go that attribute the per-module coverage fields, plus the matching test comment.",
+          "No shell or git available in this runtime; base tree 44b1afc was not read directly. Origin outside the surface this round names as new was inferred from internal cross-file consistency and marked unknown where that was not possible."
+        ],
+        "result_hash": "sha256:5b327704517ddbc32b436dce25e153367a1958574fdda0b4acbe994f52f6d3ce"
+      },
+      {
+        "lens": "review-reliability",
+        "findings": [
+          {
+            "id": "R3-01",
+            "lens": "reliability",
+            "location": "tools/deterministic-check-runner/main_test.go:245",
+            "severity": "WARNING",
+            "claim": "TestSelectOutcomePrecedence's docstring claims to cover the full amended precedence matrix, but every one of its nine cases leaves both module coverage fields at zero, so the new gate never fires there. Deleting the entire gate from selectOutcome leaves all nine subtests passing byte for byte, so the test that names itself the exhaustive precedence reference provides no protection for the tier this round added.",
+            "proof_refs": [
+              "tools/deterministic-check-runner/main_test.go:260-268 every result literal omits the coverage fields",
+              "tools/deterministic-check-runner/main.go:862-866 the gate condition requires modulesAttempted greater than modulesUsable",
+              "tools/deterministic-check-runner/main_test.go:1963-1995 the separate test that does cover the gate"
+            ]
+          },
+          {
+            "id": "R3-02",
+            "lens": "reliability",
+            "location": "tools/deterministic-check-runner/main.go:1016",
+            "severity": "SUGGESTION",
+            "claim": "resolveNearestExisting's fail-closed branch for a resolution error that is not a not-exist error is reachable but has no dedicated test. Both callers rely on it to reject rather than silently accept an out-dir whose ancestor is untraversable or is a regular file, so a refactor that folded this error into the not-exist case would defeat the fail-closed guarantee without any test failing.",
+            "proof_refs": [
+              "tools/deterministic-check-runner/main.go:1016-1017 the non-not-exist error return",
+              "tools/deterministic-check-runner/main.go:989-996 pathInsideRoot's reliance on it"
+            ]
+          },
+          {
+            "id": "R3-03",
+            "lens": "reliability",
+            "location": "tools/deterministic-check-runner/main.go:129",
+            "severity": "SUGGESTION",
+            "claim": "The control-character rejection for the default out-dir sourced from TMPDIR has no integration test, while its flag-sourced sibling does. Only firstControlByte is unit-tested directly, so a regression that special-cased or bypassed the default branch would not be caught the way the flag branch's regression would be.",
+            "proof_refs": [
+              "tools/deterministic-check-runner/main.go:123-131 the branch on flag versus default",
+              "tools/deterministic-check-runner/main_test.go:1424-1450 covers only the flag path end to end"
+            ]
+          },
+          {
+            "id": "R3-04",
+            "lens": "reliability",
+            "location": "tools/deterministic-check-runner/main_test.go:1151",
+            "severity": "WARNING",
+            "claim": "goldenRowBlockResults bakes the live os.TempDir value into a row compared byte for byte against a fixture that hardcodes the literal /tmp, so the golden test and the unavailable-row test fail on any host where TMPDIR is set or assigned by the OS, which this codebase's own comments name as a documented host. This is real but pre-existing: the fixture and both tests are outside this round's three changes and HEAD's own commit subject matches the second test's stated purpose. Every test this round added uses dynamic temp paths and self-skips where the host lacks a needed capability.",
+            "proof_refs": [
+              "tools/deterministic-check-runner/main_test.go:1151-1152 constructs log paths from the live os.TempDir",
+              "tools/deterministic-check-runner/main_test.go:1163 compares with bytes.Equal against the fixture",
+              "tools/deterministic-check-runner/main_test.go:1203 reuses the same fixture",
+              "tools/deterministic-check-runner/main.go:1032 names macOS as a documented host"
+            ],
+            "causal_disposition": "base-only"
+          }
+        ],
+        "evidence": [
+          "Read tools/deterministic-check-runner/main.go in full (1114 lines) and main_test.go in full (1997 lines) in the candidate working tree, and cross-checked caller reachability for resolveOutDir, pathInsideRoot, reportNormalizeKill, scanNormalizeRecoveryArtifacts, runNormalize and selectOutcome via codegraph.",
+          "Enumerated selectOutcome across every reachable combination of runnerErr, unavailable, classify, failed and the module coverage fields; the new gate's placement after the failed loop and before the final passed return is verified load-bearing in both directions, pinned by the mismatch-plus-finding test on one side and the partial-coverage test on the other.",
+          "Searched for a ninth instance of the compute-but-never-consume pattern across all three changes and found none: resolveOutDir's outDir, rejection and ok are all read by runCheckMode; pathInsideRoot's two resolved paths are both read by pathContainedIn; firstControlByte's byte and flag are both consumed; reportNormalizeKill consumes both the artifact list and the scan error; and the coverage fields are now read by the new gate.",
+          "Verified the two-pipe row contract and the trailing full-clause position are untouched: emitRows, renderRowBlock, renderRowSummary and renderSummary are unmodified by this candidate, and the new control-byte rejection exists specifically to keep that contract intact.",
+          "Confirmed no test in the package calls t.Parallel, so the several tests that swap package-level state cannot interleave.",
+          "No shell or git available in this runtime; base tree 44b1afc was not read directly. Causality was inferred from the candidate's own doc comments describing pre-fix behaviour and from HEAD's commit subject, and marked base where the evidence pointed there."
+        ],
+        "result_hash": "sha256:44a0c16e2fd6ef9097f67ac90be06522aef626679e6e78e775d0daebf587fa7f"
+      }
+    ],
+    "findings": [
+      {
+        "id": "R1-01",
+        "lens": "risk",
+        "location": "tools/deterministic-check-runner/main.go:989",
+        "severity": "CRITICAL",
+        "claim": "The --out-dir containment guard is check-then-use. resolveNearestExisting resolves symlinks only on the nearest existing ancestor and re-appends the not-yet-existing remainder as literal, unchecked segments; the guard runs once in runCheckMode while writeLog's os.MkdirAll/os.WriteFile run later, and those follow symlinks on intermediate components. A remainder segment that becomes a symlink into the repository root between guard and write lands the log inside the frozen candidate. Refuted as a blocker for this candidate: the base guard resolved no symlinks at all, so a symlink planted before the run was accepted outright with no race required. The candidate narrows this class from static to race-only; the residual exposure is pre-existing, and the attacker capability it requires (timed writes into the out-dir's parent) already subsumes the impact via simpler routes such as poisoning the tools exec.LookPath resolves.",
+        "proof_refs": [
+          "tools/deterministic-check-runner/main.go:1005-1026 resolveNearestExisting joins the resolved ancestor with an unchecked literal remainder",
+          "tools/deterministic-check-runner/main.go:73 resolveOutDir is called once, before the registry loop at main.go:81-84",
+          "tools/deterministic-check-runner/main.go:412-417 writeLog calls os.MkdirAll then os.WriteFile with no containment re-validation",
+          "tools/deterministic-check-runner/main.go:977-982 states the previous version compared filepath.Abs results and never resolved symlinks",
+          "tools/deterministic-check-runner/main_test.go:1301-1308 plants the symlink before run() is called, a zero-timing attack the base accepted"
+        ],
+        "evidence_class": "inferential",
+        "causal_disposition": "pre-existing"
+      },
+      {
+        "id": "R1-02",
+        "lens": "risk",
+        "location": "tools/deterministic-check-runner/main.go:248",
+        "severity": "WARNING",
+        "claim": "reportNormalizeKill writes each scanned recovery-artifact path into stderr with an unescaped %s. normalizeBackupPattern uses Go's default non-multiline regexp semantics, so $ anchors at end-of-string and a filename containing an embedded newline before an otherwise-matching .go.\u003cdigits\u003e suffix still matches and reaches the diagnostic stream verbatim. The --out-dir path screens control bytes via firstControlByte; this path does not.",
+        "proof_refs": [
+          "tools/deterministic-check-runner/main.go:269 normalizeBackupPattern uses a plain end-of-string anchor",
+          "tools/deterministic-check-runner/main.go:280-303 scanNormalizeRecoveryArtifacts matches on d.Name() and appends the full name",
+          "tools/deterministic-check-runner/main.go:248 fmt.Fprintf writes the path with %s and no control-byte escaping",
+          "tools/deterministic-check-runner/main.go:123-131 resolveOutDir screens the flag value with firstControlByte, showing the asymmetry"
+        ],
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R4-01",
+        "lens": "resilience",
+        "location": "tools/deterministic-check-runner/main.go:248",
+        "severity": "CRITICAL",
+        "claim": "reportNormalizeKill prints an unconditional instruction to restore every matched artifact over its original file, with no staleness or provenance check tying that artifact to the kill being reported. scanNormalizeRecoveryArtifacts matches any file under the module whose name ends in .go.\u003cdigits\u003e and whose stripped-suffix sibling exists, so a backup left by an earlier, unrelated interrupted run is presented identically to a genuine one. An operator following the instruction for a stale artifact silently reverts an already-repaired file back to its pre-fix bytes. This is the only one of the function's three branches with no hedge: the scan-incomplete branch warns the list may be partial and the zero-found branch warns that finding nothing is not evidence the module is intact, but the branch that issues an actionable destructive instruction carries no caveat at all.",
+        "proof_refs": [
+          "tools/deterministic-check-runner/main.go:247-249 the per-artifact loop prints restore-it-over guidance for every match",
+          "tools/deterministic-check-runner/main.go:280-303 scanNormalizeRecoveryArtifacts matches on name pattern and sibling existence only, with no recency or provenance test",
+          "tools/deterministic-check-runner/main.go:295 os.Lstat is the sole admission test for a matched artifact",
+          "tools/deterministic-check-runner/main.go:250-253 the scan-incomplete branch does carry an explicit partial-list caveat",
+          "tools/deterministic-check-runner/main.go:254-256 the zero-found branch does carry an explicit not-evidence-of-intact caveat"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R4-02",
+        "lens": "resilience",
+        "location": "tools/deterministic-check-runner/main.go:138",
+        "severity": "WARNING",
+        "claim": "The TMPDIR-inside-root rejection tells the operator only to change TMPDIR and never reprints usageText or mentions --out-dir, unlike the sibling flag rejection two branches above it which does print usageText. Because outDir is resolved from the flag before TMPDIR is consulted, passing --out-dir explicitly always bypasses the rejected default, so an operator in an environment with a platform-pinned TMPDIR is left with no route out of exit 3 from the message alone.",
+        "proof_refs": [
+          "tools/deterministic-check-runner/main.go:133-136 the flag branch prints its message and then usageText",
+          "tools/deterministic-check-runner/main.go:138-139 the default branch prints only the TMPDIR remedy and returns",
+          "tools/deterministic-check-runner/main.go:119-122 the flag is resolved before TMPDIR is consulted",
+          "tools/deterministic-check-runner/main_test.go:1382-1412 asserts only that stderr contains TMPDIR"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R4-03",
+        "lens": "resilience",
+        "location": "tools/deterministic-check-runner/main.go:282",
+        "severity": "WARNING",
+        "claim": "scanNormalizeRecoveryArtifacts walks the whole module with filepath.WalkDir under no context, no wall-clock bound, no entry cap and no progress output, and it runs synchronously immediately after a subprocess was killed for exceeding its deadline. On a large or network-mounted tree the recovery diagnostic itself can stall silently, which an operator cannot distinguish from the hang the deadline just ended. A single unreadable subdirectory anywhere in walk order also aborts the entire scan rather than skipping that subtree; the partial outcome is disclosed honestly, but reachable artifacts elsewhere are then missed.",
+        "proof_refs": [
+          "tools/deterministic-check-runner/main.go:282 filepath.WalkDir is called with no context and no budget",
+          "tools/deterministic-check-runner/main.go:283-285 an unconditional error return aborts the whole walk",
+          "tools/deterministic-check-runner/main.go:200 reportNormalizeKill is called synchronously from runNormalize's error path"
+        ],
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R2-01",
+        "lens": "readability",
+        "location": "tools/deterministic-check-runner/main.go:826",
+        "severity": "WARNING",
+        "claim": "selectOutcome's gate-3 doc attributes the introduction of the per-module coverage fields to correction B1, and the matching test comment repeats it, while three other sites in the same file attribute the identical modulesAttempted/modulesUsable fields to correction B2. B1's own paragraph describes only per-module buffer isolation and the combination rule and never mentions those fields. A maintainer following the B1 label before reordering the gates, which the surrounding doc calls load-bearing in both directions, lands on the wrong correction.",
+        "proof_refs": [
+          "tools/deterministic-check-runner/main.go:826-828 attributes the coverage fields to B1",
+          "tools/deterministic-check-runner/main_test.go:1950-1952 repeats the B1 attribution",
+          "tools/deterministic-check-runner/main.go:360 attributes the same fields to B2",
+          "tools/deterministic-check-runner/main.go:530 attributes the same fields to B2",
+          "tools/deterministic-check-runner/main.go:792-793 attributes the same fields to B2",
+          "tools/deterministic-check-runner/main.go:305-332 B1's own paragraph never mentions the coverage fields"
+        ]
+      },
+      {
+        "id": "R2-02",
+        "lens": "readability",
+        "location": "tools/deterministic-check-runner/main.go:810",
+        "severity": "WARNING",
+        "claim": "selectOutcome's doc numbers four prose gates that do not map one-to-one onto the function's four for-loops: prose gate 1 spans two loops, so prose gate 2 and gate 3 are the third and fourth loops. Because the counts coincide, a positional reading looks natural and is wrong, and the ordering it governs is the ordering whose reversal reintroduces a CRITICAL.",
+        "proof_refs": [
+          "tools/deterministic-check-runner/main.go:811-813 merges runnerErr and unavailable-blocking into one prose tier",
+          "tools/deterministic-check-runner/main.go:847-850 the runnerErr loop",
+          "tools/deterministic-check-runner/main.go:852-855 the unavailable-blocking loop",
+          "tools/deterministic-check-runner/main.go:857-860 the loop the prose calls gate 2",
+          "tools/deterministic-check-runner/main.go:862-865 the loop the prose calls gate 3"
+        ]
+      },
+      {
+        "id": "R2-03",
+        "lens": "readability",
+        "location": "tools/deterministic-check-runner/main_test.go:1420",
+        "severity": "WARNING",
+        "claim": "TestOutDirRejectsControlCharacters's doc says its fixture is deliberately unformatted so gofmt reports a finding, but the control-byte rejection fires inside resolveOutDir before any check subprocess runs, and the test itself asserts stdout is empty. The stated rationale cannot be why the test works.",
+        "proof_refs": [
+          "tools/deterministic-check-runner/main.go:123-127 the rejection returns before the results loop",
+          "tools/deterministic-check-runner/main.go:73-84 shows resolveOutDir precedes module discovery and the loop",
+          "tools/deterministic-check-runner/main_test.go:1447-1449 asserts stdout.Len() == 0"
+        ]
+      },
+      {
+        "id": "R2-04",
+        "lens": "readability",
+        "location": "tools/deterministic-check-runner/main.go:796",
+        "severity": "WARNING",
+        "claim": "The result struct doc says the module coverage fields stay zero for two early-return results, naming a LookPath failure and usage/procedural errors, but only the LookPath site constructs a result at all. Usage and procedural rejections return an exit code directly from run/runCheckMode and never build a result or reach selectOutcome.",
+        "proof_refs": [
+          "tools/deterministic-check-runner/main.go:336 the LookPath early-return result literal",
+          "tools/deterministic-check-runner/main.go:397 the runCheck loop result literal",
+          "tools/deterministic-check-runner/main.go:483 the buildResult literal",
+          "tools/deterministic-check-runner/main.go:73-80 usage and procedural rejections return an int directly"
+        ],
+        "causal_disposition": "unknown"
+      },
+      {
+        "id": "R2-05",
+        "lens": "readability",
+        "location": "tools/deterministic-check-runner/main_test.go:245",
+        "severity": "SUGGESTION",
+        "claim": "TestSelectOutcomePrecedence's doc claims to cover the full amended precedence matrix, but none of its nine cases set the module coverage fields to unequal values, so the new gate is never exercised there and is covered only by a separate test.",
+        "proof_refs": [
+          "tools/deterministic-check-runner/main_test.go:260-268 every case leaves both coverage fields at zero",
+          "tools/deterministic-check-runner/main.go:862-865 the gate condition requires modulesAttempted greater than modulesUsable"
+        ]
+      },
+      {
+        "id": "R2-06",
+        "lens": "readability",
+        "location": "tools/deterministic-check-runner/main.go:271",
+        "severity": "WARNING",
+        "claim": "scanNormalizeRecoveryArtifacts, normalizeBackupPattern and reportNormalizeKill have no direct unit test; one integration test covers only the single-artifact happy path. Untested are the Lstat exclusion that distinguishes a real artifact from a coincidentally named file, the .git skip branch, the partial-scan diagnostic and the zero-found diagnostic, in code whose entire purpose is a trustworthy recovery diagnosis after file corruption.",
+        "proof_refs": [
+          "tools/deterministic-check-runner/main_test.go:605-646 the only test, creating exactly one artifact whose original exists",
+          "tools/deterministic-check-runner/main.go:295-297 the untested Lstat exclusion",
+          "tools/deterministic-check-runner/main.go:287-289 the untested .git skip",
+          "tools/deterministic-check-runner/main.go:250-253 the untested partial-scan diagnostic",
+          "tools/deterministic-check-runner/main.go:254-256 the untested zero-found diagnostic"
+        ]
+      },
+      {
+        "id": "R2-07",
+        "lens": "readability",
+        "location": "tools/deterministic-check-runner/main.go:1",
+        "severity": "SUGGESTION",
+        "claim": "The 651-line candidate bundles three independent fixes and their tests into one review unit. The three touch disjoint functions and disjoint tests with no shared code path, and splitting by fix would likely have surfaced the B1/B2 mislabeling, which is invisible unless a reader cross-checks correction labels from one fix while reviewing another.",
+        "proof_refs": [
+          "tools/deterministic-check-runner/main.go:862-865 fix one, selectOutcome only",
+          "tools/deterministic-check-runner/main.go:219-303 fix two, the normalize recovery path only",
+          "tools/deterministic-check-runner/main.go:89-142 fix three, the out-dir boundary only"
+        ]
+      },
+      {
+        "id": "R3-01",
+        "lens": "reliability",
+        "location": "tools/deterministic-check-runner/main_test.go:245",
+        "severity": "WARNING",
+        "claim": "TestSelectOutcomePrecedence's docstring claims to cover the full amended precedence matrix, but every one of its nine cases leaves both module coverage fields at zero, so the new gate never fires there. Deleting the entire gate from selectOutcome leaves all nine subtests passing byte for byte, so the test that names itself the exhaustive precedence reference provides no protection for the tier this round added.",
+        "proof_refs": [
+          "tools/deterministic-check-runner/main_test.go:260-268 every result literal omits the coverage fields",
+          "tools/deterministic-check-runner/main.go:862-866 the gate condition requires modulesAttempted greater than modulesUsable",
+          "tools/deterministic-check-runner/main_test.go:1963-1995 the separate test that does cover the gate"
+        ]
+      },
+      {
+        "id": "R3-02",
+        "lens": "reliability",
+        "location": "tools/deterministic-check-runner/main.go:1016",
+        "severity": "SUGGESTION",
+        "claim": "resolveNearestExisting's fail-closed branch for a resolution error that is not a not-exist error is reachable but has no dedicated test. Both callers rely on it to reject rather than silently accept an out-dir whose ancestor is untraversable or is a regular file, so a refactor that folded this error into the not-exist case would defeat the fail-closed guarantee without any test failing.",
+        "proof_refs": [
+          "tools/deterministic-check-runner/main.go:1016-1017 the non-not-exist error return",
+          "tools/deterministic-check-runner/main.go:989-996 pathInsideRoot's reliance on it"
+        ]
+      },
+      {
+        "id": "R3-03",
+        "lens": "reliability",
+        "location": "tools/deterministic-check-runner/main.go:129",
+        "severity": "SUGGESTION",
+        "claim": "The control-character rejection for the default out-dir sourced from TMPDIR has no integration test, while its flag-sourced sibling does. Only firstControlByte is unit-tested directly, so a regression that special-cased or bypassed the default branch would not be caught the way the flag branch's regression would be.",
+        "proof_refs": [
+          "tools/deterministic-check-runner/main.go:123-131 the branch on flag versus default",
+          "tools/deterministic-check-runner/main_test.go:1424-1450 covers only the flag path end to end"
+        ]
+      },
+      {
+        "id": "R3-04",
+        "lens": "reliability",
+        "location": "tools/deterministic-check-runner/main_test.go:1151",
+        "severity": "WARNING",
+        "claim": "goldenRowBlockResults bakes the live os.TempDir value into a row compared byte for byte against a fixture that hardcodes the literal /tmp, so the golden test and the unavailable-row test fail on any host where TMPDIR is set or assigned by the OS, which this codebase's own comments name as a documented host. This is real but pre-existing: the fixture and both tests are outside this round's three changes and HEAD's own commit subject matches the second test's stated purpose. Every test this round added uses dynamic temp paths and self-skips where the host lacks a needed capability.",
+        "proof_refs": [
+          "tools/deterministic-check-runner/main_test.go:1151-1152 constructs log paths from the live os.TempDir",
+          "tools/deterministic-check-runner/main_test.go:1163 compares with bytes.Equal against the fixture",
+          "tools/deterministic-check-runner/main_test.go:1203 reuses the same fixture",
+          "tools/deterministic-check-runner/main.go:1032 names macOS as a documented host"
+        ],
+        "causal_disposition": "base-only"
+      }
+    ],
+    "classifications": {
+      "R1-01": {
+        "finding_id": "R1-01",
+        "class": "inferential",
+        "causal_disposition": "pre-existing",
+        "proof": "tools/deterministic-check-runner/main.go:1005-1026 resolveNearestExisting joins the resolved ancestor with an unchecked literal remainder; tools/deterministic-check-runner/main.go:73 resolveOutDir is called once, before the registry loop at main.go:81-84; tools/deterministic-check-runner/main.go:412-417 writeLog calls os.MkdirAll then os.WriteFile with no containment re-validation; tools/deterministic-check-runner/main.go:977-982 states the previous version compared filepath.Abs results and never resolved symlinks; tools/deterministic-check-runner/main_test.go:1301-1308 plants the symlink before run() is called, a zero-timing attack the base accepted"
+      },
+      "R4-01": {
+        "finding_id": "R4-01",
+        "class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof": "tools/deterministic-check-runner/main.go:247-249 the per-artifact loop prints restore-it-over guidance for every match; tools/deterministic-check-runner/main.go:280-303 scanNormalizeRecoveryArtifacts matches on name pattern and sibling existence only, with no recency or provenance test; tools/deterministic-check-runner/main.go:295 os.Lstat is the sole admission test for a matched artifact; tools/deterministic-check-runner/main.go:250-253 the scan-incomplete branch does carry an explicit partial-list caveat; tools/deterministic-check-runner/main.go:254-256 the zero-found branch does carry an explicit not-evidence-of-intact caveat"
+      }
+    },
+    "outcomes": {
+      "R1-01": "info",
+      "R1-02": "info",
+      "R2-01": "info",
+      "R2-02": "info",
+      "R2-03": "info",
+      "R2-04": "info",
+      "R2-05": "info",
+      "R2-06": "info",
+      "R2-07": "info",
+      "R3-01": "info",
+      "R3-02": "info",
+      "R3-03": "info",
+      "R3-04": "info",
+      "R4-01": "corroborated",
+      "R4-02": "info",
+      "R4-03": "info"
+    },
+    "fix_finding_ids": [
+      "R4-01"
+    ],
+    "follow_ups": [
+      {
+        "observation": "The --out-dir containment guard is check-then-use. resolveNearestExisting resolves symlinks only on the nearest existing ancestor and re-appends the not-yet-existing remainder as literal, unchecked segments; the guard runs once in runCheckMode while writeLog's os.MkdirAll/os.WriteFile run later, and those follow symlinks on intermediate components. A remainder segment that becomes a symlink into the repository root between guard and write lands the log inside the frozen candidate. Refuted as a blocker for this candidate: the base guard resolved no symlinks at all, so a symlink planted before the run was accepted outright with no race required. The candidate narrows this class from static to race-only; the residual exposure is pre-existing, and the attacker capability it requires (timed writes into the out-dir's parent) already subsumes the impact via simpler routes such as poisoning the tools exec.LookPath resolves.",
+        "proof_refs": [
+          "tools/deterministic-check-runner/main.go:1005-1026 resolveNearestExisting joins the resolved ancestor with an unchecked literal remainder",
+          "tools/deterministic-check-runner/main.go:73 resolveOutDir is called once, before the registry loop at main.go:81-84",
+          "tools/deterministic-check-runner/main.go:412-417 writeLog calls os.MkdirAll then os.WriteFile with no containment re-validation",
+          "tools/deterministic-check-runner/main.go:977-982 states the previous version compared filepath.Abs results and never resolved symlinks",
+          "tools/deterministic-check-runner/main_test.go:1301-1308 plants the symlink before run() is called, a zero-timing attack the base accepted",
+          "tools/deterministic-check-runner/main.go:1005-1026 resolveNearestExisting joins the resolved ancestor with an unchecked literal remainder; tools/deterministic-check-runner/main.go:73 resolveOutDir is called once, before the registry loop at main.go:81-84; tools/deterministic-check-runner/main.go:412-417 writeLog calls os.MkdirAll then os.WriteFile with no containment re-validation; tools/deterministic-check-runner/main.go:977-982 states the previous version compared filepath.Abs results and never resolved symlinks; tools/deterministic-check-runner/main_test.go:1301-1308 plants the symlink before run() is called, a zero-timing attack the base accepted"
+        ]
+      },
+      {
+        "observation": "The unreadable-modification-time branch is correct by inspection but is the one provenance outcome with no test pinning it. The gate's modTimeErr == nil conjunct and the could-not-be-read wording could both be deleted and the suite would stay green; only the backdated-mtime path is covered.",
+        "proof_refs": [
+          "tools/deterministic-check-runner/main.go:268",
+          "tools/deterministic-check-runner/main.go:308",
+          "tools/deterministic-check-runner/main_test.go:677"
+        ]
+      },
+      {
+        "observation": "The freshness test compares a wall-clock instant against a filesystem timestamp, assuming granularity finer than the gap between fixerStart and the backup write. On a coarse-granularity filesystem a genuine artifact could be classified stale. Production fails in the safe direction, but the fresh-artifact assertion would flake there.",
+        "proof_refs": [
+          "tools/deterministic-check-runner/main.go:268",
+          "tools/deterministic-check-runner/main_test.go:700"
+        ]
+      }
+    ],
+    "proposed_correction_lines": 152,
+    "actual_correction_lines": 152,
+    "fix_delta_hash": "sha256:7408bde392e21fee3e6e09d6381534d8d7fd4c65c1504e78d30beb0f62062801",
+    "original_criteria": {
+      "evidence_hash": "sha256:606ded895f173e6c42b07df90f46237fc833e7e0d546ef4b155748eafaeba3ae",
+      "fix_delta_hash": "sha256:7408bde392e21fee3e6e09d6381534d8d7fd4c65c1504e78d30beb0f62062801",
+      "passed": true
+    },
+    "correction_regression": {
+      "evidence_hash": "sha256:0ef8c344de9ea0f80d0ba26b38278276ac89391b85c52607b74a2ea2cf270b01",
+      "fix_delta_hash": "sha256:7408bde392e21fee3e6e09d6381534d8d7fd4c65c1504e78d30beb0f62062801",
+      "passed": true
+    },
+    "evidence_hash": "sha256:7b75eadf1ef9e257b5f051e80a824fc9efd70e1742b4020a448812553b5b587a",
+    "evidence_record_digest": "sha256:1a5d1f159e64f42ffa38a8e28724712ac57c57351cdf18905cdfc86e25a06f0d",
+    "evidence_outcome": "passed",
+    "evidence_target_identity": "sha256:92fcb30437206d291780aa3f997323192f6813ac637138c0f27efc2d628dc566",
+    "evidence_authority_revision": "sha256:1cf5d52e4b9cf4595bc2c3c5e91f5e60aa7af6e35d3ae28b6f5b0a308c4a72ab",
+    "correction_attempts": [
+      {
+        "snapshot": {
+          "kind": "fix-diff",
+          "base_tree": "9773630db7b612668160b438a4415ed65ae12e67",
+          "candidate_tree": "a657d537315b27453fe5a67c7b61a37409ea7c2f",
+          "paths_digest": "sha256:3858842b142e49d1f29473dac9a18d440a8487f1df7368896d3d5bcdb5d29597",
+          "intended_untracked": [],
+          "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+          "ledger_ids": [
+            "R4-01"
+          ],
+          "paths": [
+            "tools/deterministic-check-runner/main.go",
+            "tools/deterministic-check-runner/main_test.go"
+          ],
+          "identity": "sha256:92fcb30437206d291780aa3f997323192f6813ac637138c0f27efc2d628dc566"
+        },
+        "proposed_lines": 152,
+        "actual_lines": 152,
+        "fix_delta_hash": "sha256:7408bde392e21fee3e6e09d6381534d8d7fd4c65c1504e78d30beb0f62062801",
+        "original_criteria": {
+          "evidence_hash": "sha256:606ded895f173e6c42b07df90f46237fc833e7e0d546ef4b155748eafaeba3ae",
+          "fix_delta_hash": "sha256:7408bde392e21fee3e6e09d6381534d8d7fd4c65c1504e78d30beb0f62062801",
+          "passed": true
+        },
+        "correction_regression": {
+          "evidence_hash": "sha256:0ef8c344de9ea0f80d0ba26b38278276ac89391b85c52607b74a2ea2cf270b01",
+          "fix_delta_hash": "sha256:7408bde392e21fee3e6e09d6381534d8d7fd4c65c1504e78d30beb0f62062801",
+          "passed": true
+        },
+        "targeted_validation_request_hash": "sha256:aa077ce71950bba63a4392ec73bd5bd400070d838c3859600414e6a5c65976c9",
+        "correction_target_identity": "sha256:92fcb30437206d291780aa3f997323192f6813ac637138c0f27efc2d628dc566"
+      }
+    ],
+    "cumulative_correction_lines": 152
+  }
+}

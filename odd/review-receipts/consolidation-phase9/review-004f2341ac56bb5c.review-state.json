@@ -1,0 +1,141 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:0dcf114b2f3f99ab07dea70ab948ba6b93994a489f14104e4bd7a809d8aa2bee",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-004f2341ac56bb5c",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "current-changes",
+      "base_tree": "8bb46c739bf236024c2fdfb603e44b75a9c72229",
+      "candidate_tree": "f2d6b135612ccf53f5e0219a3f097b0f7dd17d80",
+      "paths_digest": "sha256:fb833b9dd9e19ab77f202a6e9c5049a6570fc8550dd55bf339fda0eaa14fb0a5",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/skills/actuals_instrumentation_contract_test.go",
+        "openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/archive-report.md",
+        "openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/tasks.md",
+        "openspec/specs/actuals-instrumentation/spec.md",
+        "skills/inception-pipeline/SKILL.md"
+      ],
+      "identity": "sha256:004f2341ac56bb5c74a1ace9356277554258ee51e9aa4836a01cd3487a8b313c"
+    },
+    "current_snapshot": {
+      "kind": "current-changes",
+      "base_tree": "8bb46c739bf236024c2fdfb603e44b75a9c72229",
+      "candidate_tree": "f2d6b135612ccf53f5e0219a3f097b0f7dd17d80",
+      "paths_digest": "sha256:fb833b9dd9e19ab77f202a6e9c5049a6570fc8550dd55bf339fda0eaa14fb0a5",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/skills/actuals_instrumentation_contract_test.go",
+        "openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/archive-report.md",
+        "openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/tasks.md",
+        "openspec/specs/actuals-instrumentation/spec.md",
+        "skills/inception-pipeline/SKILL.md"
+      ],
+      "identity": "sha256:004f2341ac56bb5c74a1ace9356277554258ee51e9aa4836a01cd3487a8b313c"
+    },
+    "genesis_paths": [
+      "engine/skills/actuals_instrumentation_contract_test.go",
+      "openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/archive-report.md",
+      "openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/tasks.md",
+      "openspec/specs/actuals-instrumentation/spec.md",
+      "skills/inception-pipeline/SKILL.md"
+    ],
+    "policy_hash": "sha256:34fb63d7f29f8613cd4431382b1057398a4816f8a4c20fc34677fffc80a184f6",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-reliability"
+    ],
+    "original_changed_lines": 261,
+    "correction_budget": 131,
+    "lens_results": [
+      {
+        "lens": "review-reliability",
+        "findings": [
+          {
+            "id": "R3-additionalproperties-null-gap",
+            "lens": "reliability",
+            "location": "engine/skills/actuals_instrumentation_contract_test.go:220",
+            "severity": "WARNING",
+            "claim": "The closed-schema invariant's additionalProperties check silently treats a JSON null value the same as false, so it does not distinguish every non-boolean case it claims to catch.",
+            "proof_refs": [
+              "engine/skills/actuals_instrumentation_contract_test.go:216 checks for a nil raw message to detect an absent key, and lines 219-221 declare a plain bool destination and unmarshal the raw additionalProperties bytes into it. Go's encoding/json leaves a non-pointer bool destination untouched and returns a nil error when the source token is the literal null, so a present-but-null value silently decodes to the zero value false instead of surfacing as a type error.",
+              "Failure scenario: the additionalProperties value in the actuals-record schema, read through the path constant declared at engine/skills/actuals_instrumentation_contract_test.go:12, is edited from false to null. The absent-key check at line 216 does not fire because the key is present, the unmarshal at line 220 returns no error, the destination stays at its zero value false, and the D2_D5_closed_schema_invariant subtest passes even though the record is no longer provably closed. This contradicts that group's own in-code claim at lines 203-208 of distinguishing absent, non-boolean, and inverted values."
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-crlf-heading-match-fail-closed",
+            "lens": "reliability",
+            "location": "engine/skills/actuals_instrumentation_contract_test.go:330",
+            "severity": "WARNING",
+            "claim": "The section helper's heading match trims only trailing spaces and tabs, not a carriage return, so a CRLF line ending on the target heading makes the whole section lookup fail closed instead of matching.",
+            "proof_refs": [
+              "engine/skills/actuals_instrumentation_contract_test.go:330 compares a right-trimmed line against the heading constant with equality, where the trim cutset is a two-character literal containing only a space and a tab. A carriage-return byte is not in that cutset, and splitting the document on line feeds leaves a trailing carriage return on every line of a CRLF-encoded document, so a CRLF heading line can never equal the line-feed-only heading constant.",
+              "Failure scenario: the skill document read by the R001_R002_three_units_never_blended and R012_actuals_output_separate_labels groups is re-saved with CRLF line endings, an encoding-only change that leaves every visible character identical. The heading search loop never finds its target, so the Fatal at engine/skills/actuals_instrumentation_contract_test.go:336 fires for both groups and the test binary fails on a change that altered nothing but line endings."
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          }
+        ],
+        "evidence": [
+          "Read engine/skills/actuals_instrumentation_contract_test.go in full and confirmed all ten t.Run group names and their order are unchanged from the archived verification report's ten-row RED-capability table: R004_R005_schema_temporal_boundary_and_interruption, R015_R006_R007_R008_checkpoint_count_description, R009_calibration_excludes_calendar_time, R010_R011_delivery_window_formula_shape, R006_R007_R015_inception_round_trip_and_explicit_zero, R014_amendedR007_fixture_pins, R001_R002_three_units_never_blended, R012_actuals_output_separate_labels, R013_roadmap_maker_no_compute_time_source_invariant, D2_D5_closed_schema_invariant. No group was deleted, renamed, reordered, weakened, or made unreachable.",
+          "Traced the new additionalProperties handling at engine/skills/actuals_instrumentation_contract_test.go:216-225 against four mutation scenarios: an absent key, a true value, and an object value all correctly trigger a Fatal; a JSON null value does not, which is recorded as a finding below.",
+          "Hand-traced the two new markdown helpers at engine/skills/actuals_instrumentation_contract_test.go:315-413 against the real section content, confirmed each anchored heading occurs exactly once, confirmed a missing heading triggers a Fatal rather than returning an empty string that would make enclosed assertions vacuously pass, and confirmed the terminator search correctly ignores heading-like lines inside fenced code blocks. One carriage-return handling gap is recorded as a finding below.",
+          "Verified the amended R-013 wording in openspec/specs/actuals-instrumentation/spec.md against the roadmap-maker skill document read as context outside the frozen manifest: exactly nine actuals-related prose lines and zero occurrences of any of the five forbidden structured field names, so the amended requirement text is factually accurate and its description of the enforcing gate matches exactly what the shipped R013 group checks. No requirement-versus-assertion gap remains.",
+          "Confirmed the Post-Archive Amendment table in openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/tasks.md cites five archived line numbers that all resolve correctly to their described content after the stated twenty-one-line shift, and that the change is a pure insertion consistent with the plus-twenty-one minus-zero diff, leaving every historical line below the insertion point unmodified.",
+          "Confirmed skills/inception-pipeline/SKILL.md still contains both marker strings the fifth assertion group requires and still omits the forbidden legacy phrase, and that its reworded durable-floor sentence now states the ambiguity floor applies regardless of which tier-selection rule fired rather than only rule four. That group reads this file with a plain whole-file substring check, not the new section helper, so the rewording cannot interact with the helper.",
+          "Confirmed the actuals-record schema, read as context outside the frozen manifest, matches every marker the schema-related groups require: additionalProperties is the literal false, the properties key set is exactly the thirteen asserted names, and the wall-clock and checkpoint-count descriptions contain every required marker with the forbidden legacy phrases absent.",
+          "Read openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/archive-report.md in full; its single added bullet documents that the dead-branch weakness was not resolved in the archived candidate but is addressed in this follow-up, which matches the actual current state of the closed-schema group, whose early-return branch is gone."
+        ],
+        "result_hash": "sha256:3c51463fd2fbe9dc94911236a81b58fe90e2348315dc6a1392ce4d8c4054e617"
+      }
+    ],
+    "findings": [
+      {
+        "id": "R3-additionalproperties-null-gap",
+        "lens": "reliability",
+        "location": "engine/skills/actuals_instrumentation_contract_test.go:220",
+        "severity": "WARNING",
+        "claim": "The closed-schema invariant's additionalProperties check silently treats a JSON null value the same as false, so it does not distinguish every non-boolean case it claims to catch.",
+        "proof_refs": [
+          "engine/skills/actuals_instrumentation_contract_test.go:216 checks for a nil raw message to detect an absent key, and lines 219-221 declare a plain bool destination and unmarshal the raw additionalProperties bytes into it. Go's encoding/json leaves a non-pointer bool destination untouched and returns a nil error when the source token is the literal null, so a present-but-null value silently decodes to the zero value false instead of surfacing as a type error.",
+          "Failure scenario: the additionalProperties value in the actuals-record schema, read through the path constant declared at engine/skills/actuals_instrumentation_contract_test.go:12, is edited from false to null. The absent-key check at line 216 does not fire because the key is present, the unmarshal at line 220 returns no error, the destination stays at its zero value false, and the D2_D5_closed_schema_invariant subtest passes even though the record is no longer provably closed. This contradicts that group's own in-code claim at lines 203-208 of distinguishing absent, non-boolean, and inverted values."
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-crlf-heading-match-fail-closed",
+        "lens": "reliability",
+        "location": "engine/skills/actuals_instrumentation_contract_test.go:330",
+        "severity": "WARNING",
+        "claim": "The section helper's heading match trims only trailing spaces and tabs, not a carriage return, so a CRLF line ending on the target heading makes the whole section lookup fail closed instead of matching.",
+        "proof_refs": [
+          "engine/skills/actuals_instrumentation_contract_test.go:330 compares a right-trimmed line against the heading constant with equality, where the trim cutset is a two-character literal containing only a space and a tab. A carriage-return byte is not in that cutset, and splitting the document on line feeds leaves a trailing carriage return on every line of a CRLF-encoded document, so a CRLF heading line can never equal the line-feed-only heading constant.",
+          "Failure scenario: the skill document read by the R001_R002_three_units_never_blended and R012_actuals_output_separate_labels groups is re-saved with CRLF line endings, an encoding-only change that leaves every visible character identical. The heading search loop never finds its target, so the Fatal at engine/skills/actuals_instrumentation_contract_test.go:336 fires for both groups and the test binary fails on a change that altered nothing but line endings."
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      }
+    ],
+    "classifications": {},
+    "outcomes": {
+      "R3-additionalproperties-null-gap": "info",
+      "R3-crlf-heading-match-fail-closed": "info"
+    },
+    "fix_finding_ids": [],
+    "follow_ups": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:a988b21cbaca73fbea91f73a6be66fa4cf1efdfb20ca7748811846840d8a2f27",
+    "evidence_record_digest": "sha256:9014d73f6553ab81d1b94424fe0cab405da4a54c5442a6aaa8a4498432c85cce",
+    "evidence_outcome": "passed",
+    "evidence_target_identity": "sha256:004f2341ac56bb5c74a1ace9356277554258ee51e9aa4836a01cd3487a8b313c",
+    "evidence_authority_revision": "sha256:b7aa2a119054f1fe98dd094753713d7c4de315464271e32a2e59501f321cd4bc"
+  }
+}

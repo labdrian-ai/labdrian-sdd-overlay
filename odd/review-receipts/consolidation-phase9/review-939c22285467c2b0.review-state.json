@@ -1,0 +1,328 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:406ca09767476d873c9a95c41659bc55f7b8e6527d7ed60834e5456e582c2ea3",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-939c22285467c2b0",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "6ec636aa28f59514b7ec43180196b716f9e1dbca",
+      "candidate_tree": "452c812215029f7838432cac8c0c5183f6683e9b",
+      "paths_digest": "sha256:c2504b757c31bb0ef05bcf1ed304923382c0bcbf020035014d2516fada2351c3",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "README.md",
+        "engine/capability/declarations.go",
+        "engine/capability/declarations_test.go",
+        "engine/cmd/hook_translate.go",
+        "engine/cmd/hook_translate_test.go",
+        "engine/cmd/projection_gate_goal_test.go",
+        "engine/cmd/usage.go",
+        "engine/hookwire/decode.go",
+        "engine/hookwire/decode_test.go",
+        "engine/projection/gate.go",
+        "engine/projection/gate_goal_test.go",
+        "engine/projection/snapshot_test.go"
+      ],
+      "identity": "sha256:7adbd9e0bca42875bb633ba0f5236451d82856fc8fd3db4661bcef851169700a"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "6ec636aa28f59514b7ec43180196b716f9e1dbca",
+      "candidate_tree": "452c812215029f7838432cac8c0c5183f6683e9b",
+      "paths_digest": "sha256:c2504b757c31bb0ef05bcf1ed304923382c0bcbf020035014d2516fada2351c3",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "README.md",
+        "engine/capability/declarations.go",
+        "engine/capability/declarations_test.go",
+        "engine/cmd/hook_translate.go",
+        "engine/cmd/hook_translate_test.go",
+        "engine/cmd/projection_gate_goal_test.go",
+        "engine/cmd/usage.go",
+        "engine/hookwire/decode.go",
+        "engine/hookwire/decode_test.go",
+        "engine/projection/gate.go",
+        "engine/projection/gate_goal_test.go",
+        "engine/projection/snapshot_test.go"
+      ],
+      "identity": "sha256:7adbd9e0bca42875bb633ba0f5236451d82856fc8fd3db4661bcef851169700a"
+    },
+    "genesis_paths": [
+      "README.md",
+      "engine/capability/declarations.go",
+      "engine/capability/declarations_test.go",
+      "engine/cmd/hook_translate.go",
+      "engine/cmd/hook_translate_test.go",
+      "engine/cmd/projection_gate_goal_test.go",
+      "engine/cmd/usage.go",
+      "engine/hookwire/decode.go",
+      "engine/hookwire/decode_test.go",
+      "engine/projection/gate.go",
+      "engine/projection/gate_goal_test.go",
+      "engine/projection/snapshot_test.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-risk",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 228,
+    "correction_budget": 114,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "a new deny rule in the PreToolUse memory gate (a guard), its hook decode and wiring, its deny messages, and the help/README text",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:3ce6599e95be6c6014d25a087bf025af1ececfd48fdb536dc8ff2d38df48ce30",
+    "capture_phase_revision": "sha256:0c58e2002825480118e5522bb032f7c4da4acfe5e296d487caa890f3d669a80d",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:7adbd9e0bca42875bb633ba0f5236451d82856fc8fd3db4661bcef851169700a",
+        "capture_phase_revision": "sha256:0c58e2002825480118e5522bb032f7c4da4acfe5e296d487caa890f3d669a80d",
+        "artifact_digest": "sha256:1243ca68e463b3139d136e1abfbc3d59a9efb7510bc777303fcfbe568d6f08f9",
+        "result_hash": "sha256:5e1a53f74822458e51de2db6d0cbfdc74b0bb38f231fdba2851d547def33dab0",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:ad3e1b79b008b49cf20b35ccb8eef6a895da7d222759718718c992a7edc030b6",
+            "lineage_id": "review-939c22285467c2b0",
+            "authority_revision": "sha256:0c58e2002825480118e5522bb032f7c4da4acfe5e296d487caa890f3d669a80d",
+            "target_identity": "sha256:7adbd9e0bca42875bb633ba0f5236451d82856fc8fd3db4661bcef851169700a",
+            "base_tree": "6ec636aa28f59514b7ec43180196b716f9e1dbca",
+            "candidate_tree": "452c812215029f7838432cac8c0c5183f6683e9b",
+            "changed_path_manifest_sha256": "sha256:658a87233bf36ea934111b734d48f437fbb78df1439008f93af4b95f2673bde6",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:ad3e1b79b008b49cf20b35ccb8eef6a895da7d222759718718c992a7edc030b6",
+            "raw_sha256": "sha256:e2d24c9eb33e24190f2b0cfaa745600da88a83498aa0a09596103f412b211d3d",
+            "canonical_sha256": "sha256:22fa58d3f41fd844126d1b28e36697ba6d9deada53e51b477ec75c9d4556d1f5",
+            "result_hash": "sha256:5e1a53f74822458e51de2db6d0cbfdc74b0bb38f231fdba2851d547def33dab0",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:ad3e1b79b008b49cf20b35ccb8eef6a895da7d222759718718c992a7edc030b6",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "README.md",
+                "engine/capability/declarations.go",
+                "engine/capability/declarations_test.go",
+                "engine/cmd/hook_translate.go",
+                "engine/cmd/hook_translate_test.go",
+                "engine/cmd/projection_gate_goal_test.go",
+                "engine/cmd/usage.go",
+                "engine/hookwire/decode.go",
+                "engine/hookwire/decode_test.go",
+                "engine/projection/gate.go",
+                "engine/projection/gate_goal_test.go",
+                "engine/projection/snapshot_test.go"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "Reviewed all 12 changed paths. The change adds a goal check to the longterm-mem query gate. It applies only under scope goal, and only after the project check.",
+              "The goal argument is decoded the same way project is. A missing, null, non-string or empty goal becomes an empty string, which is denied under scope goal. A different goal is also denied. This tightens enforcement and does not widen access.",
+              "If a goal-scoped plan has an empty goal, the gate allows the query with a warning. This is fail-open. It is unreachable through Resolve, as the code comment and a test state, and it matches the existing handling of a plan with no project. I treated it as hypothetical, not as a reachable exploit.",
+              "Denial messages pass the plan's goal and project through sanitizeLine, and the caller-supplied goal through quoteValue. I saw no injection or data exposure in the new reason strings.",
+              "No dependency, secret or lockfile changes. The change adds no new I/O and no new input parsing beyond one extra JSON string field.",
+              "Under scope project the goal argument is deliberately unchecked. This is the requested behavior and the tests document it. Baseline behavior is unchanged for that case."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "selected_order": 1,
+        "target_identity": "sha256:7adbd9e0bca42875bb633ba0f5236451d82856fc8fd3db4661bcef851169700a",
+        "capture_phase_revision": "sha256:0c58e2002825480118e5522bb032f7c4da4acfe5e296d487caa890f3d669a80d",
+        "artifact_digest": "sha256:431c2d77d0b4b950d2e7c8d166ce946ed021c32608c72a84df58c2e153952a24",
+        "result_hash": "sha256:91bf655327a5ae68c80025311bf48e76380583af006dfc75c8aa54089777f223",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:f7eb948f6826d535cab48af6fd8d1755dd6ce1d9534205d05586024ec37ef989",
+            "lineage_id": "review-939c22285467c2b0",
+            "authority_revision": "sha256:0c58e2002825480118e5522bb032f7c4da4acfe5e296d487caa890f3d669a80d",
+            "target_identity": "sha256:7adbd9e0bca42875bb633ba0f5236451d82856fc8fd3db4661bcef851169700a",
+            "base_tree": "6ec636aa28f59514b7ec43180196b716f9e1dbca",
+            "candidate_tree": "452c812215029f7838432cac8c0c5183f6683e9b",
+            "changed_path_manifest_sha256": "sha256:658a87233bf36ea934111b734d48f437fbb78df1439008f93af4b95f2673bde6",
+            "lens": "review-readability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:f7eb948f6826d535cab48af6fd8d1755dd6ce1d9534205d05586024ec37ef989",
+            "raw_sha256": "sha256:471abcf32857b95aea816cc69c6956cf4c25498497611482496cbf245e018bd5",
+            "canonical_sha256": "sha256:b96c21c712ea07d390314288450173cdc1b1e8286c79dfd0087bb7c2367265d2",
+            "result_hash": "sha256:91bf655327a5ae68c80025311bf48e76380583af006dfc75c8aa54089777f223",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:f7eb948f6826d535cab48af6fd8d1755dd6ce1d9534205d05586024ec37ef989",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "README.md",
+                "engine/capability/declarations.go",
+                "engine/capability/declarations_test.go",
+                "engine/cmd/hook_translate.go",
+                "engine/cmd/hook_translate_test.go",
+                "engine/cmd/projection_gate_goal_test.go",
+                "engine/cmd/usage.go",
+                "engine/hookwire/decode.go",
+                "engine/hookwire/decode_test.go",
+                "engine/projection/gate.go",
+                "engine/projection/gate_goal_test.go",
+                "engine/projection/snapshot_test.go"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-1",
+                "lens": "readability",
+                "location": "engine/projection/gate.go:25-28",
+                "severity": "SUGGESTION",
+                "claim": "The package doc comment for the gate now has the goal clause spliced into the middle of a long sentence. This pushes the Engram clause onto an awkwardly broken line and makes the flow hard to follow. The doc also points to an ADR path that readers cannot check from this change.",
+                "proof_refs": [
+                  "engine/projection/gate.go:25-28"
+                ]
+              },
+              {
+                "id": "R2-2",
+                "lens": "readability",
+                "location": "engine/capability/declarations.go:97",
+                "severity": "SUGGESTION",
+                "claim": "The memory enforcement claim text was compressed (for example 'Engram search/context', 'hooks need a restart', 'installs matchers'). The rewrite touches unrelated wording, which makes the diff harder to review. The test checks substrings, so the rewording risks drift from the phrases the test asserts.",
+                "proof_refs": [
+                  "engine/capability/declarations.go:97",
+                  "engine/capability/declarations_test.go:231"
+                ]
+              }
+            ],
+            "evidence": [
+              "Reviewed all 12 changed paths. The goal check is split cleanly into longtermGoalGate and goalAdvice, and the tests cover the ordering, the scopes, and the empty-goal fallback.",
+              "No blocker or critical readability defects were found. The two findings are minor documentation and wording points."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 2,
+        "target_identity": "sha256:7adbd9e0bca42875bb633ba0f5236451d82856fc8fd3db4661bcef851169700a",
+        "capture_phase_revision": "sha256:0c58e2002825480118e5522bb032f7c4da4acfe5e296d487caa890f3d669a80d",
+        "artifact_digest": "sha256:1b39a2b7f017132df4abd1a6b2e565b8e9932870484d1e20c80bd5f69d531ff8",
+        "result_hash": "sha256:18b94de11592c54e42c31a250c61fe56b154cd867a55e46c902e7029d1cf02c9",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:a3ddd5f04f8787d3d40af2887cdc2baca7af90ee72de279029ca5e92f06e4207",
+            "lineage_id": "review-939c22285467c2b0",
+            "authority_revision": "sha256:0c58e2002825480118e5522bb032f7c4da4acfe5e296d487caa890f3d669a80d",
+            "target_identity": "sha256:7adbd9e0bca42875bb633ba0f5236451d82856fc8fd3db4661bcef851169700a",
+            "base_tree": "6ec636aa28f59514b7ec43180196b716f9e1dbca",
+            "candidate_tree": "452c812215029f7838432cac8c0c5183f6683e9b",
+            "changed_path_manifest_sha256": "sha256:658a87233bf36ea934111b734d48f437fbb78df1439008f93af4b95f2673bde6",
+            "lens": "review-reliability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:a3ddd5f04f8787d3d40af2887cdc2baca7af90ee72de279029ca5e92f06e4207",
+            "raw_sha256": "sha256:bcd785f0d373e32c18d380d0e741dc7d9889d0444eeba3279c716a0d26d59ada",
+            "canonical_sha256": "sha256:76a75715df276a43732b2a0f391d75b3121f9aae3988b0525e9eb1936da890ef",
+            "result_hash": "sha256:18b94de11592c54e42c31a250c61fe56b154cd867a55e46c902e7029d1cf02c9",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:a3ddd5f04f8787d3d40af2887cdc2baca7af90ee72de279029ca5e92f06e4207",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "README.md",
+                "engine/capability/declarations.go",
+                "engine/capability/declarations_test.go",
+                "engine/cmd/hook_translate.go",
+                "engine/cmd/hook_translate_test.go",
+                "engine/cmd/projection_gate_goal_test.go",
+                "engine/cmd/usage.go",
+                "engine/hookwire/decode.go",
+                "engine/hookwire/decode_test.go",
+                "engine/projection/gate.go",
+                "engine/projection/gate_goal_test.go",
+                "engine/projection/snapshot_test.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-goal-sanitize-nonempty",
+                "lens": "reliability",
+                "location": "engine/projection/gate.go:497-503",
+                "severity": "SUGGESTION",
+                "claim": "The goal denial reasons are built from the model-supplied goal via quoteValue and from the plan goal via sanitizeLine. Tests cover case and whitespace differences, but none covers a goal containing control characters or newlines. The sanitization is reused from the project path, so the risk is low.",
+                "proof_refs": [
+                  "engine/projection/gate.go:497-503",
+                  "engine/projection/gate_goal_test.go:31-35"
+                ]
+              }
+            ],
+            "evidence": [
+              "I reviewed all 12 changed paths. The goal is decoded as text, with a missing, null or non-text value becoming empty. It is checked after the project, and only when the scope is goal.",
+              "The new tests cover each of these cases: a matching goal, a missing goal, another goal, a goal of the wrong type, and the project check running first. They also cover scope project leaving the goal unchecked, unnamed arguments, and an empty plan goal, which gives a warning instead of a denial. The hookwire decoder, the gateCall translation and an end-to-end hook run are each tested.",
+              "I found no regression on input that was valid before this change. The only changed behavior is that a goal-scoped longterm-mem query is now denied unless it names the plan's goal, which is the requested behavior."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "13dad310385423e4c547dca0c7697de98c170157134281f06b67b29d9114da24",
+    "initial_atomic_start": {
+      "lineage_id": "review-939c22285467c2b0",
+      "worktree_identity": "sha256:8455002f227f033663d0e7d8b8ff6a885e1c85b482ec52e34017c303452eed87",
+      "target_identity": "sha256:7adbd9e0bca42875bb633ba0f5236451d82856fc8fd3db4661bcef851169700a",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "6ec636aa28f59514b7ec43180196b716f9e1dbca",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-risk",
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 228,
+      "correction_budget": 114,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "a new deny rule in the PreToolUse memory gate (a guard), its hook decode and wiring, its deny messages, and the help/README text"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "schema": "gentle-ai.review-receipt/v2",
+  "lineage_id": "review-6dca2f525c80220c",
+  "generation": 1,
+  "base_tree": "83db62ff2b21f202c76986b85f967cbd54e9876e",
+  "initial_review_tree": "8bb46c739bf236024c2fdfb603e44b75a9c72229",
+  "final_candidate_tree": "8bb46c739bf236024c2fdfb603e44b75a9c72229",
+  "paths_digest": "sha256:0041decb891703d509d79e7e0069c5ea2fed2cb12c395472d7d80883dd582be9",
+  "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "policy_hash": "sha256:34fb63d7f29f8613cd4431382b1057398a4816f8a4c20fc34677fffc80a184f6",
+  "evidence_hash": "sha256:66870138463734223559504bd7046e5447d5a37fe7c6f80055356408eb1779e2",
+  "evidence_record_digest": "sha256:d494a1743e43c7a941216feb733426ae2cc7c1578acdf102e65578cf8c7ce11e",
+  "evidence_outcome": "passed",
+  "evidence_target_identity": "sha256:6dca2f525c80220cb098930db9d0ae17fdda4f52b2ce41d701afcc2a7bc99181",
+  "evidence_authority_revision": "sha256:44d2d2300050bc2c1f164015ec0b0c5ddd8fa2d71395999639b4a564187b034d",
+  "risk_level": "medium",
+  "selected_lenses": [
+    "review-reliability"
+  ],
+  "resolved_finding_ids": null,
+  "terminal_state": "approved"
+}

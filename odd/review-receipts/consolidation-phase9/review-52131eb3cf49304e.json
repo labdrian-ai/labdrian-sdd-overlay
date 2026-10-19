@@ -1,0 +1,19 @@
+{
+  "schema": "gentle-ai.review-receipt/v2",
+  "lineage_id": "review-52131eb3cf49304e",
+  "projection": "staged",
+  "generation": 1,
+  "base_tree": "30985f932d3606978fc903299455e6a3671371bd",
+  "initial_review_tree": "0f5ad68a7eb99e9c1cd73a95399727de1d296ff7",
+  "final_candidate_tree": "0f5ad68a7eb99e9c1cd73a95399727de1d296ff7",
+  "paths_digest": "sha256:ab2518843a4a56c2750417bd173f05116db93859a768030797a5428d6e337e9a",
+  "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "policy_hash": "sha256:34fb63d7f29f8613cd4431382b1057398a4816f8a4c20fc34677fffc80a184f6",
+  "evidence_hash": "sha256:e1a86ba4c5e42f1b434a9384bbbe086c17b962ef31d019086aa3a4f05b334b70",
+  "risk_level": "medium",
+  "selected_lenses": [
+    "review-reliability"
+  ],
+  "resolved_finding_ids": null,
+  "terminal_state": "approved"
+}
