@@ -199,8 +199,8 @@ type Plan struct {
 
 // Resolve narrows base by narrowers, applied in order, into one query Plan.
 // Each narrower must not exceed the running scope (none < goal < project)
-// and must use a subset of the running sources; either violation refuses
-// with a named reason. The effective directive is the most narrowed one:
+// and must use a subset of the running sources; either violation, like an
+// invalid narrower, refuses with a NarrowerError that names it. The effective directive is the most narrowed one:
 // base if there are no narrowers, otherwise the last narrower applied.
 // projectID and goalID come from the caller (typically a strictly parsed
 // Goal v2); they populate Plan.Filters and are validated against the
@@ -214,21 +214,43 @@ func Resolve(base Directive, projectID, goalID string, narrowers ...Directive) (
 	running := base
 	for i, narrower := range narrowers {
 		if err := narrower.Validate(); err != nil {
-			return Plan{}, fmt.Errorf("narrower[%d]: %w", i, err)
+			return Plan{}, &NarrowerError{Index: i, Err: err}
 		}
 		if err := CheckNarrows(running, narrower); err != nil {
-			return Plan{}, fmt.Errorf("narrower[%d] %w", i, err)
+			return Plan{}, &NarrowerError{Index: i, Widens: true, Err: err}
 		}
 		running = narrower
 	}
 	return newPlan(running, projectID, goalID)
 }
 
+// NarrowerError is Resolve's refusal of one narrower: the one at Index of the narrowers it was
+// given, which is not a valid directive (Err is its Validate error) or, when Widens, widens the
+// running directive (Err is CheckNarrows's). Its text names the narrower by its position,
+// "narrower[i]: <invalid>" or "narrower[i] <widens>"; a caller that knows what each narrower came
+// from names it instead from Index, Widens and Err.
+type NarrowerError struct {
+	Index  int
+	Widens bool
+	Err    error
+}
+
+func (e *NarrowerError) Error() string {
+	if e.Widens {
+		return fmt.Sprintf("narrower[%d] %v", e.Index, e.Err)
+	}
+	return fmt.Sprintf("narrower[%d]: %v", e.Index, e.Err)
+}
+
+// Unwrap returns Err.
+func (e *NarrowerError) Unwrap() error { return e.Err }
+
 // CheckNarrows reports whether narrower only narrows running: its scope does not exceed running's
 // (none < goal < project) and every one of its sources is one of running's. The refusal says what
 // widens, as "widens scope from <running> to <narrower>" or "adds source <source> not present in
 // the current scope", with no subject, so the caller names the directive (Resolve names it by its
-// position, "narrower[i]"). Both directives are assumed valid; it checks nothing else.
+// position, "narrower[i]", in a NarrowerError). Both directives are assumed valid; it checks
+// nothing else.
 func CheckNarrows(running, narrower Directive) error {
 	if scopeOrder[narrower.Scope] > scopeOrder[running.Scope] {
 		return fmt.Errorf("widens scope from %s to %s", running.Scope, narrower.Scope)

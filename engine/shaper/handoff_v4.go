@@ -81,14 +81,6 @@ func parseV4(data []byte) (Handoff, error) {
 	return h, nil
 }
 
-// PairedGoalVersion is the Goal version a handoff of handoffVersion pairs with,
-// the version BindGoal requires: 3 for a version 4 handoff and 2 for every
-// other. It is exported for a caller that holds an already-parsed handoff and
-// Goal (the workflow lifecycle) and must refuse the pairing BindGoal refuses.
-func PairedGoalVersion(handoffVersion int) int {
-	return goalVersionFor(handoffVersion)
-}
-
 // validateV4 applies every version 3 rule, with a valid memory_directive
 // (memoryscope's own Validate) required in place of memory_scope.
 func (h Handoff) validateV4() error {

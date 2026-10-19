@@ -65,9 +65,9 @@ const ReadyDisclosureV4 = ForgeryDisclosure + " " + PlanCompleteDisclosureV4
 // version.
 func ReadyDisclosureFor(version int) string {
 	switch version {
-	case 4:
+	case HandoffVersionDirective:
 		return ReadyDisclosureV4
-	case 3:
+	case HandoffVersionPlan:
 		return ReadyDisclosureV3
 	}
 	return ReadyDisclosure

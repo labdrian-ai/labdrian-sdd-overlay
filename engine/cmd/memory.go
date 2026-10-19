@@ -210,12 +210,12 @@ func runMemoryPlan(args []string, stdout, stderr io.Writer, exit func(int)) {
 	}
 
 	fileNarrowers, err := loadMemoryDirectiveNarrowers(o)
-	narrowers = append(narrowers, fileNarrowers...)
 	if err != nil {
 		fmt.Fprintf(stderr, "error: memory plan: %v\n", err)
 		exit(2)
 		return
 	}
+	narrowers = append(narrowers, fileNarrowers...)
 
 	plan, err := memoryscope.Resolve(base, projectID, goalID, narrowers...)
 	if err != nil {

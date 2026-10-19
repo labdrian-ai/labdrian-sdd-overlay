@@ -105,16 +105,8 @@ func parseWorkflowFlags(args []string, required []string, allowHandoff bool) (wo
 	var o workflowOpts
 	for i := 0; i < len(args); i++ {
 		a := args[i]
-		if a == "--handoff" && allowHandoff {
-			if i+1 >= len(args) {
-				return o, fmt.Errorf("%s requires a value", a)
-			}
-			i++
-			o.handoffFile = args[i]
-			continue
-		}
-		switch a {
-		case "--project", "--workflow", "--goal", "--profile", "--role-chain", "--stage", "--outcome", "--reason":
+		switch {
+		case isWorkflowValueFlag(a, allowHandoff):
 			if i+1 >= len(args) {
 				return o, fmt.Errorf("%s requires a value", a)
 			}
@@ -136,6 +128,8 @@ func parseWorkflowFlags(args []string, required []string, allowHandoff bool) (wo
 				o.outcome = args[i]
 			case "--reason":
 				o.reason = args[i]
+			case "--handoff":
+				o.handoffFile = args[i]
 			}
 		default:
 			if strings.HasPrefix(a, "-") {
@@ -154,6 +148,18 @@ func parseWorkflowFlags(args []string, required []string, allowHandoff bool) (wo
 		}
 	}
 	return o, nil
+}
+
+// isWorkflowValueFlag reports whether a is a workflow flag that takes a value:
+// every one parseWorkflowArgs parses, and --handoff when allowHandoff.
+func isWorkflowValueFlag(a string, allowHandoff bool) bool {
+	switch a {
+	case "--project", "--workflow", "--goal", "--profile", "--role-chain", "--stage", "--outcome", "--reason":
+		return true
+	case "--handoff":
+		return allowHandoff
+	}
+	return false
 }
 
 // pathGoalReader is the workflow.GoalReader the CLI uses: it re-reads and

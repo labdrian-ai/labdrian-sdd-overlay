@@ -51,7 +51,7 @@ func (e *evaluation) checkHandoffSource() {
 }
 
 // checkGoal holds the Goal binding to the same rules as the handoff source, then parses the Goal
-// bytes and requires a Goal of goalVersionFor the handoff's version (2, or 3 for a version 4
+// bytes and requires a Goal of PairedGoalVersion the handoff's version (2, or 3 for a version 4
 // handoff) and of the handoff's own project and goal id. A Goal that passes raises the overlap
 // with its non_goals: refused as blockers for a version 3 or 4 handoff (OD6), flagged for human
 // review for the others.
@@ -70,15 +70,20 @@ func (e *evaluation) checkGoal() {
 	}
 	parsed, err := goal.Parse(binding.GoalBytes)
 	e.g = parsed
+	// Evaluate holds a parsed handoff, of a version that pairs with a Goal; the
+	// pairing's own refusal is kept so that no version falls back to another's Goal.
+	want, pairErr := PairedGoalVersion(e.h.Version)
 	switch {
 	case err != nil:
 		e.refuse(ReasonGoalInvalid, "%v", err)
-	case e.g.Version != goalVersionFor(e.h.Version):
-		e.refuse(ReasonGoalInvalid, "goal has version %d, want %d", e.g.Version, goalVersionFor(e.h.Version))
+	case pairErr != nil:
+		e.refuse(ReasonGoalInvalid, "%v", pairErr)
+	case e.g.Version != want:
+		e.refuse(ReasonGoalInvalid, "goal has version %d, want %d", e.g.Version, want)
 	case e.g.ProjectID != e.h.ProjectID || e.g.GoalID != e.h.GoalID:
 		e.refuse(ReasonGoalIdentityMismatch, "handoff (%q, %q), goal (%q, %q)", e.h.ProjectID, e.h.GoalID, e.g.ProjectID, e.g.GoalID)
 	default:
-		if e.h.Version >= 3 {
+		if e.h.Version >= HandoffVersionPlan {
 			e.blockers = append(e.blockers, od6Overlaps(e.h, e.g.NonGoals)...)
 		} else {
 			e.flags = nonGoalOverlapFlags(e.h, e.g.NonGoals)
@@ -141,7 +146,7 @@ func (e *evaluation) presentedView() PresentedView {
 		Acceptance:   e.h.AcceptanceItems,
 		Flags:        e.flags,
 	}
-	if e.h.Version >= 3 {
+	if e.h.Version >= HandoffVersionPlan {
 		presented.V3 = &PresentedViewV3{
 			Roles:                e.h.Roles,
 			Tests:                e.h.Tests,
@@ -170,7 +175,7 @@ func (e *evaluation) conclude(clearance *VerifiedClearance, subject *Subject, vi
 	if clearanceBlocker != nil {
 		e.blockers = append(e.blockers, *clearanceBlocker)
 	}
-	if e.h.Version == 1 {
+	if e.h.Version == HandoffVersionCriteria {
 		e.block(ReasonAcceptanceVerificationUnrepresentable, "handoff version 1 has no per-criterion verification method or adjudication path")
 	}
 

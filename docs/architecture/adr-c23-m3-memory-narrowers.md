@@ -70,9 +70,9 @@ Batch 54 of phase 9: M3a (Goal v3, shaper handoff v4, `f22e1081`), M3b (role han
   (`memoryscope/memoryscope.go:101`) reads an optional directive member strictly (exact-case keys,
   no unknown or repeated key; absent or null is none). The Goal v3 (`goal/goal.go`), the shaper
   handoff v4 (`shaper/handoff_v4.go`) and the workflow log use it; the role handoff keeps its own
-  check, since a null directive is an error there and not "none". `memoryscope.CheckNarrows`
-  (`memoryscope/memoryscope.go:232`) is the step `Resolve` applies to each narrower, exported so a
-  caller can name the narrower that widens; `Resolve`'s refusals keep their words.
+  check, since a null directive is an error there and not "none". `Resolve` refuses a narrower with
+  a `*memoryscope.NarrowerError` (`memoryscope/memoryscope.go:232`) that carries the narrower's
+  index and whether it widens, so a caller can name it; its text is `Resolve`'s refusal as before.
 - **EventVersion 3 (decision 6).** `EventVersionNarrowers = 3` (`workflow/workflow.go:45`) is what
   `Create` writes. Version 3 is version 2 plus the created event's optional `goal_directive`,
   `handoff_digest` and `handoff_directive` (together or not at all) and `role_directive` (needs a
@@ -88,24 +88,26 @@ Batch 54 of phase 9: M3a (Goal v3, shaper handoff v4, `f22e1081`), M3b (role han
   close still needs a verified event right before it. `LastRoleChainHead` and
   `RoleDirectiveInForce` (`workflow/statemachine.go:104`, `:114`) say which head and which role
   directive are current.
-- **One plan (decisions 4, 5).** `workflow.PlanOf` (`workflow/plan.go:38`) is the profile's ceiling
+- **One plan (decisions 4, 5).** `workflow.PlanOf` (`workflow/plan.go:39`) is the profile's ceiling
   narrowed by the Goal's directive, the shaper handoff's, then the role directive in force, for the
   recorded project identity (or the slug) and the goal. A widening directive is refused by name:
-  "the goal", "the shaper handoff" or "the role handoff memory directive widens the plan: ...".
+  "the goal", "the shaper handoff" or "the role handoff memory directive widens the plan: ...",
+  calling `Resolve` once and mapping its `NarrowerError` to that name (`workflow/plan.go:66`).
   The projection's `resolvePlan` (`projection/context.go:113`) calls it, so the context line and
   the memory gate apply the stored narrowers; a plan it cannot compute is still a warning.
-- **Create (decisions 3, 5).** `Lifecycle.CreateWithHandoff` (`workflow/lifecycle.go:507`) takes a
+- **Create (decisions 3, 5).** `Lifecycle.CreateWithHandoff` (`workflow/lifecycle.go:518`) takes a
   parsed `ShaperHandoff` and the SHA-256 of its bytes; `Create` keeps its signature and records the
-  Goal's and the role chain head's directives. `checkShaperHandoff` (`workflow/lifecycle.go:512`)
-  refuses (`ErrHandoffRefused`) a handoff that is not a valid version 4, is of another project or
-  goal, or does not pair with the Goal's version as `shaper.BindGoal` pairs them
-  (`shaper.PairedGoalVersion`, `shaper/handoff_v4.go:88`). The plan of the created payload is
-  resolved before anything is probed or written (`workflow/lifecycle.go:598`).
-- **Narrow (decision 3).** `Lifecycle.Narrow` (`workflow/lifecycle.go:639`) refuses a log of
+  Goal's and the role chain head's directives. `checkShaperHandoff` (`workflow/lifecycle.go:523`)
+  refuses (`ErrHandoffRefused`) a handoff that is not a valid version 4
+  (`shaper.HandoffVersionDirective`), is of another project or goal, or does not pair with the
+  Goal's version as `shaper.BindGoal` pairs them (`shaper.PairedGoalVersion`,
+  `shaper/binding.go:35`, which refuses an unknown handoff version). The plan of the created
+  payload is resolved before anything is probed or written (`workflow/lifecycle.go:613`).
+- **Narrow (decision 3).** `Lifecycle.Narrow` (`workflow/lifecycle.go:641`) refuses a log of
   version 1 or 2 (`ErrNarrowersNeedVersion3`: create the workflow again), a closed workflow, one
   with no role chain, a chain that does not verify or no longer holds the last recorded head
   (`ErrRoleChainInvalid`), a chain whose head is that last head (`ErrNothingToNarrow`) and a
-  widening directive (`workflow/lifecycle.go:672`); otherwise it appends one `narrowed` event with
+  widening directive (`workflow/lifecycle.go:674`); otherwise it appends one `narrowed` event with
   the head and its record's directive.
 - **CLI (decisions 3, 7).** `workflow create --handoff <path>` reads the file as `--goal` is read
   (`readShaperHandoff`, `cmd/workflow.go:220`); `workflow narrow` (`cmd/workflow.go:73`) prints the

@@ -290,11 +290,18 @@ func (l Lifecycle) catalogProfileOf(state State) (workflowprofile.WorkflowProfil
 // observations for profile. The caller fills in any kind-specific
 // payload fields before appending.
 func (l Lifecycle) baseEvent(loaded Loaded, projectID, workflowID string, kind Kind, profile workflowprofile.WorkflowProfile) (WorkflowEvent, error) {
+	return l.payloadEvent(loaded, projectID, workflowID, WorkflowEvent{Kind: kind}, profile)
+}
+
+// payloadEvent is baseEvent for an event whose payload is already built: payload holds its kind and
+// its kind-specific fields, set once where it is built, and payloadEvent adds the fields common to
+// every event (see eventWith).
+func (l Lifecycle) payloadEvent(loaded Loaded, projectID, workflowID string, payload WorkflowEvent, profile workflowprofile.WorkflowProfile) (WorkflowEvent, error) {
 	observations, err := l.observationsFor(profile)
 	if err != nil {
 		return WorkflowEvent{}, err
 	}
-	return l.eventWith(loaded, projectID, workflowID, kind, observations)
+	return l.withHeader(loaded, projectID, workflowID, payload, observations)
 }
 
 // stateEvent is baseEvent for an event of the workflow loaded holds, which goes on from the profile
@@ -311,6 +318,12 @@ func (l Lifecycle) stateEvent(loaded Loaded, projectID, workflowID string, kind 
 // observations. Its version is the log's, that of the created event, and the
 // current one for the created event of a workflow that has no log yet.
 func (l Lifecycle) eventWith(loaded Loaded, projectID, workflowID string, kind Kind, observations []Observation) (WorkflowEvent, error) {
+	return l.withHeader(loaded, projectID, workflowID, WorkflowEvent{Kind: kind}, observations)
+}
+
+// withHeader is event, whose kind and payload are set, with the fields eventWith describes set over
+// it: the header every event carries, set here alone.
+func (l Lifecycle) withHeader(loaded Loaded, projectID, workflowID string, event WorkflowEvent, observations []Observation) (WorkflowEvent, error) {
 	var seq int
 	var prevDigest string
 	version := EventVersion
@@ -323,17 +336,15 @@ func (l Lifecycle) eventWith(loaded Loaded, projectID, workflowID string, kind K
 		}
 		prevDigest = digest
 	}
-	return WorkflowEvent{
-		Version:      version,
-		WorkflowID:   workflowID,
-		ProjectID:    projectID,
-		Seq:          seq,
-		PrevDigest:   prevDigest,
-		Kind:         kind,
-		At:           l.clock().UTC().Format(time.RFC3339),
-		Provenance:   l.provenance,
-		Observations: observations,
-	}, nil
+	event.Version = version
+	event.WorkflowID = workflowID
+	event.ProjectID = projectID
+	event.Seq = seq
+	event.PrevDigest = prevDigest
+	event.At = l.clock().UTC().Format(time.RFC3339)
+	event.Provenance = l.provenance
+	event.Observations = observations
+	return event, nil
 }
 
 // commit appends event and, on success, returns the State that results from
@@ -513,13 +524,17 @@ func checkShaperHandoff(g goal.Goal, h ShaperHandoff) error {
 	if err := h.Handoff.Validate(); err != nil {
 		return fmt.Errorf("invalid shaper handoff: %v", err)
 	}
-	if h.Handoff.Version != 4 {
-		return fmt.Errorf("it is of version %d, and only a version 4 handoff carries a memory directive", h.Handoff.Version)
+	if h.Handoff.Version != shaper.HandoffVersionDirective {
+		return fmt.Errorf("it is of version %d, and only a version %d handoff carries a memory directive", h.Handoff.Version, shaper.HandoffVersionDirective)
 	}
 	if !sha256hex.IsValid(h.Digest) {
 		return fmt.Errorf("its digest %q is not 64 lowercase hex characters", h.Digest)
 	}
-	if want := shaper.PairedGoalVersion(h.Handoff.Version); g.Version != want {
+	want, err := shaper.PairedGoalVersion(h.Handoff.Version)
+	if err != nil {
+		return err
+	}
+	if g.Version != want {
 		return fmt.Errorf("a version %d handoff pairs with a Goal of version %d, and the goal is of version %d", h.Handoff.Version, want, g.Version)
 	}
 	if h.Handoff.ProjectID != g.ProjectID {
@@ -607,23 +622,10 @@ func (l Lifecycle) create(projectID, workflowID, projectIdentity string, g goal.
 		return State{}, fmt.Errorf("%w: on-disk classification is %q", ErrCreateRefused, loaded.Classification)
 	}
 
-	event, err := l.baseEvent(loaded, projectID, workflowID, KindCreated, profile)
+	event, err := l.payloadEvent(loaded, projectID, workflowID, payload, profile)
 	if err != nil {
 		return State{}, err
 	}
-	event.GoalID = payload.GoalID
-	event.GoalDigest = payload.GoalDigest
-	event.Profile = payload.Profile
-	event.ProjectIdentity = payload.ProjectIdentity
-	event.ProfileSnapshot = payload.ProfileSnapshot
-	event.ProfileDigest = payload.ProfileDigest
-	event.RoleChainID = payload.RoleChainID
-	event.RoleChainHead = payload.RoleChainHead
-	event.GoalDirective = payload.GoalDirective
-	event.HandoffDigest = payload.HandoffDigest
-	event.HandoffDirective = payload.HandoffDirective
-	event.RoleDirective = payload.RoleDirective
-
 	return l.commit(projectID, workflowID, loaded, event)
 }
 
@@ -672,11 +674,10 @@ func (l Lifecycle) Narrow(projectID, workflowID string) (State, error) {
 	if _, err := PlanOf(applyEvent(state, payload), projectID, profile); err != nil {
 		return State{}, fmt.Errorf("workflow lifecycle: narrow: %w", err)
 	}
-	event, err := l.baseEvent(loaded, projectID, workflowID, KindNarrowed, profile)
+	event, err := l.payloadEvent(loaded, projectID, workflowID, payload, profile)
 	if err != nil {
 		return State{}, err
 	}
-	event.Narrowed = payload.Narrowed
 	return l.commit(projectID, workflowID, loaded, event)
 }
 

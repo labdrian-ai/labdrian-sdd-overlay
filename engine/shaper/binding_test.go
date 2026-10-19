@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -146,5 +147,45 @@ func TestBindGoalSHA256ChangesOnWhitespaceOnlyEdit(t *testing.T) {
 	}
 	if before.GoalSHA256 == after.GoalSHA256 {
 		t.Errorf("GoalSHA256 did not change on a whitespace-only edit: %q", before.GoalSHA256)
+	}
+}
+
+// Each handoff version pairs with one Goal version, and a version the shaper does not know pairs
+// with none: it is refused, never bound to the Goal of another version.
+func TestPairedGoalVersionNamesTheGoalOfEachHandoffVersionAndNoneForAnUnknownOne(t *testing.T) {
+	for _, tt := range []struct {
+		handoffVersion int
+		want           int
+	}{
+		{handoffVersion: 1, want: 2},
+		{handoffVersion: 2, want: 2},
+		{handoffVersion: 3, want: 2},
+		{handoffVersion: 4, want: 3},
+	} {
+		got, err := PairedGoalVersion(tt.handoffVersion)
+		if err != nil || got != tt.want {
+			t.Errorf("PairedGoalVersion(%d) = %d, %v, want %d, nil", tt.handoffVersion, got, err, tt.want)
+		}
+	}
+	for _, unknown := range []int{0, 5} {
+		got, err := PairedGoalVersion(unknown)
+		want := fmt.Sprintf("unsupported handoff version %d, want 1, 2, 3, or 4", unknown)
+		if err == nil || err.Error() != want || got != 0 {
+			t.Errorf("PairedGoalVersion(%d) = %d, %v, want 0, %q", unknown, got, err, want)
+		}
+
+		// A Goal the version 1 to 3 handoffs would bind is not bound to an unknown one, and the
+		// source is not read.
+		h := sampleHandoff()
+		h.Version = unknown
+		src := &fakeSource{files: map[string][]byte{"goal.json": []byte(goalV2JSON(h.ProjectID, h.GoalID))}}
+		binding, err := BindGoal(src, h, sourceRoot, "goal.json")
+		assertRejectedWithoutPartialBinding(t, binding, err, "a handoff of an unknown version")
+		if wantBind := "bind goal: " + want; err.Error() != wantBind {
+			t.Errorf("BindGoal(version %d) error = %q, want %q", unknown, err, wantBind)
+		}
+		if len(src.calls) != 0 {
+			t.Errorf("BindGoal(version %d) read the source %+v, want no read", unknown, src.calls)
+		}
 	}
 }

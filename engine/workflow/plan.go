@@ -1,6 +1,7 @@
 package workflow
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/memoryscope"
@@ -45,24 +46,26 @@ func PlanOf(state State, projectID string, profile workflowprofile.WorkflowProfi
 		{handoffNarrowerName, state.HandoffDirective},
 		{roleNarrowerName, state.RoleDirectiveInForce()},
 	}
-	running := ceiling
+	var names []string
 	var narrowers []memoryscope.Directive
 	for _, c := range candidates {
 		if c.directive == nil {
 			continue
 		}
-		if err := c.directive.Validate(); err != nil {
-			return memoryscope.Plan{}, fmt.Errorf("the %s memory directive: %w", c.name, err)
-		}
-		if err := memoryscope.CheckNarrows(running, *c.directive); err != nil {
-			return memoryscope.Plan{}, fmt.Errorf("the %s memory directive widens the plan: %w", c.name, err)
-		}
-		running = *c.directive
+		names = append(names, c.name)
 		narrowers = append(narrowers, *c.directive)
 	}
 	project := state.ProjectIdentity
 	if project == "" {
 		project = projectID
 	}
-	return memoryscope.Resolve(ceiling, project, state.GoalID, narrowers...)
+	plan, err := memoryscope.Resolve(ceiling, project, state.GoalID, narrowers...)
+	var refused *memoryscope.NarrowerError
+	if errors.As(err, &refused) {
+		if refused.Widens {
+			return memoryscope.Plan{}, fmt.Errorf("the %s memory directive widens the plan: %w", names[refused.Index], refused.Err)
+		}
+		return memoryscope.Plan{}, fmt.Errorf("the %s memory directive: %w", names[refused.Index], refused.Err)
+	}
+	return plan, err
 }

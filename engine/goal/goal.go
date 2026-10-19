@@ -7,12 +7,24 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/fieldrule"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/jsonstrict"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/memoryscope"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/sha256hex"
+)
+
+// The Goal versions Parse accepts, each the one before it with one change.
+const (
+	// VersionProjectOnly identifies a Goal by its project_id alone.
+	VersionProjectOnly = 1
+	// VersionGoalID adds goal_id, which distinguishes Goals within a project.
+	VersionGoalID = 2
+	// VersionDirective replaces memory_scope with memory_directive, a strict
+	// MemoryDirective v1 object.
+	VersionDirective = 3
 )
 
 // Goal is the versioned declarative intent contract. Its field order is also
@@ -55,7 +67,7 @@ func Parse(data []byte) (Goal, error) {
 	if err := jsonstrict.CheckNoDuplicateKeys(data); err != nil {
 		return Goal{}, fmt.Errorf("parse goal: %w", err)
 	}
-	v3 := isVersion3(data)
+	v3 := wireVersion(data) == VersionDirective
 	allowedFields := goalAllowedFields
 	if v3 {
 		allowedFields = goalAllowedFieldsV3
@@ -77,7 +89,7 @@ func Parse(data []byte) (Goal, error) {
 		return Goal{}, fmt.Errorf("parse goal: %w", err)
 	}
 	g.MemoryDirective = directive
-	if g.Version == 1 {
+	if g.Version == VersionProjectOnly {
 		var raw map[string]json.RawMessage
 		if err := json.Unmarshal(data, &raw); err != nil {
 			return Goal{}, fmt.Errorf("parse goal: %w", err)
@@ -113,27 +125,34 @@ var goalAllowedFieldsV3 = []string{
 	"delivery_boundary",
 }
 
-// isVersion3 reports whether the top-level version member of data is exactly
-// the JSON number 3. Any other value takes the version 1 and 2 path, which
-// reports it exactly as before version 3 existed.
-func isVersion3(data []byte) bool {
+// wireVersion is the version Parse dispatches on: the top-level, exact-case
+// version member of data when it is a JSON integer written as Go's strconv.Itoa
+// writes it, and 0 otherwise. Any value other than 3, including 3.0, 03, or a
+// string, takes the version 1 and 2 path, which reports it exactly as before
+// version 3 existed.
+func wireVersion(data []byte) int {
 	var fields map[string]json.RawMessage
 	if err := json.Unmarshal(data, &fields); err != nil {
-		return false
+		return 0
 	}
-	return bytes.Equal(bytes.TrimSpace(fields["version"]), []byte("3"))
+	raw := string(bytes.TrimSpace(fields["version"]))
+	version, err := strconv.Atoi(raw)
+	if err != nil || strconv.Itoa(version) != raw {
+		return 0
+	}
+	return version
 }
 
 // Validate checks the version and deterministic structural requirements of a
 // Goal. It does not interpret natural-language meaning or infer permissions.
 func (g Goal) Validate() error {
-	if g.Version < 1 || g.Version > 3 {
+	if g.Version < VersionProjectOnly || g.Version > VersionDirective {
 		return fmt.Errorf("unsupported version %d, want 1, 2, or 3", g.Version)
 	}
-	if g.Version == 1 && g.GoalID != "" {
+	if g.Version == VersionProjectOnly && g.GoalID != "" {
 		return fmt.Errorf("goal_id is only valid in version 2")
 	}
-	if g.Version >= 2 && strings.TrimSpace(g.GoalID) == "" {
+	if g.Version >= VersionGoalID && strings.TrimSpace(g.GoalID) == "" {
 		return fmt.Errorf("goal_id must be a non-blank string")
 	}
 	if err := checkNonBlank(
@@ -188,7 +207,7 @@ func checkNonBlank(fields ...namedValue) error {
 // require a non-blank memory_scope and carry no directive; version 3 requires
 // a valid memory_directive (memoryscope's own Validate) and no memory_scope.
 func (g Goal) validateMemory() error {
-	if g.Version != 3 {
+	if g.Version != VersionDirective {
 		if g.MemoryDirective != nil {
 			return fmt.Errorf("memory_directive is only valid in version 3")
 		}
