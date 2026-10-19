@@ -47,6 +47,9 @@ const (
 	// EventUserPromptSubmit runs when the user submits a prompt; what it prints becomes part of
 	// the session's context.
 	EventUserPromptSubmit = "UserPromptSubmit"
+	// EventSessionStart runs when a session starts, resumes, is cleared or is compacted; what it
+	// prints becomes part of the session's context.
+	EventSessionStart = "SessionStart"
 )
 
 // MaxEnvelopeBytes bounds the input DecodeUserPromptSubmit and DecodePreToolUse accept. A

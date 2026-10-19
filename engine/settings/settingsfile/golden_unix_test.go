@@ -305,7 +305,7 @@ var addedProjectionMatchers = []string{settings.ProjectionMemoryGetMatcher, sett
 
 // startsFromAnInstallBeforeTheMemoryReadMatchers reports whether a case merges, first, into a
 // settings.json that already holds the projection family as it was recorded, without the matchers
-// C23 M4 added, and the recording has that merge write nothing (formatting, line endings and mode
+// C23 M4 added or the SessionStart entry of C23 M6, and the recording has that merge write nothing (formatting, line endings and mode
 // kept). The merge now completes the family and writes the file, so what the case recorded no
 // longer applies. A case whose first merge rewrote the file anyway, or that uninstalls first, is
 // replayed as recorded.
@@ -323,7 +323,58 @@ func startsFromAnInstallBeforeTheMemoryReadMatchers(doc goldenDocument, c golden
 			return true
 		}
 	}
-	return false
+	return !strings.Contains(text, sessionStartCommand)
+}
+
+// sessionStartCommand is what the command of the SessionStart entry C23 M6 added to the projection
+// family runs; the recording holds no SessionStart entry of the family.
+const sessionStartCommand = settings.LabdrianProjectionIdentity + " --event SessionStart"
+
+// withoutTheSessionStartEntry is text, a settings.json the program wrote, without the SessionStart
+// entry of the projection family (C23 M6), and how many it took out. It cuts text, not parsed JSON,
+// because what remains is compared byte for byte with a recording, formatting included, as
+// withoutEntriesAddedSinceTheRecording does. The hook list sits at an indent of four spaces and its
+// entries at six in the program's output: a list that holds that entry alone goes with its key; in
+// a list with other entries only the entry goes; either way with the comma beside it.
+func withoutTheSessionStartEntry(t *testing.T, label, text string) (string, int) {
+	t.Helper()
+	const listStart, listEnd = "\n    \"SessionStart\": [", "\n    ]"
+	const entryStart, entryEnd = "\n      {", "\n      }"
+	start := strings.Index(text, listStart)
+	if start < 0 {
+		return text, 0
+	}
+	end := strings.Index(text[start:], listEnd)
+	if end < 0 {
+		t.Fatalf("%s: the SessionStart list has no end", label)
+	}
+	end += start + len(listEnd)
+	list := text[start:end]
+	if !strings.Contains(list, sessionStartCommand) {
+		return text, 0
+	}
+	if strings.Count(list, entryStart) == 1 {
+		return cutWithComma(t, label+": the SessionStart list", text, start, end), 1
+	}
+	at := start + strings.Index(list, sessionStartCommand)
+	from := strings.LastIndex(text[:at], entryStart)
+	to := at + strings.Index(text[at:], entryEnd) + len(entryEnd)
+	return cutWithComma(t, label+": the SessionStart entry", text, from, to), 1
+}
+
+// cutWithComma is text without text[from:to] and the comma that separates it from its neighbor in
+// its JSON list or object: the one after it, or else the one before it. what names the cut part
+// when it has neither.
+func cutWithComma(t *testing.T, what, text string, from, to int) string {
+	t.Helper()
+	switch {
+	case to < len(text) && text[to] == ',':
+		return text[:from] + text[to+1:]
+	case from > 0 && text[from-1] == ',':
+		return text[:from-1] + text[to:]
+	}
+	t.Fatalf("%s is neither followed nor preceded by a comma", what)
+	return text
 }
 
 // withoutEntriesAddedSinceTheRecording is text, a settings.json the program wrote, without the
@@ -379,6 +430,10 @@ func withoutEntriesAddedSinceTheRecording(t *testing.T, label, text string, merg
 			t.Errorf("%s: %d projection entries of matcher %q, want one per query entry (%d)", label, removed, matcher, queries)
 		}
 	}
+	text, removed := withoutTheSessionStartEntry(t, label, text)
+	if merged && removed != queries {
+		t.Errorf("%s: %d SessionStart projection entries, want one per query entry (%d)", label, removed, queries)
+	}
 	return text
 }
 
@@ -432,7 +487,7 @@ func TestSettingsJSONIsWhatTheProgramWroteBeforeH27(t *testing.T) {
 				t.Skip("recorded: a read-only backup stopped the write; since owner decision 2 it is replaced (TestAReadOnlyBackupIsReplacedAtTheModeOfTheOriginal)")
 			}
 			if startsFromAnInstallBeforeTheMemoryReadMatchers(golden, c) {
-				t.Skip("recorded: a merge of a complete install wrote nothing; since C23 M4 an install made before it lacks the memory read matchers, so the merge adds them (TestInstall_AddsTheMemoryReadMatchersToAnInstallThatPredatesThem)")
+				t.Skip("recorded: a merge of a complete install wrote nothing; since C23 M4 and M6 an install made before them lacks the memory read matchers and the SessionStart entry, so the merge adds them (TestInstall_AddsTheMemoryReadMatchersToAnInstallThatPredatesThem)")
 			}
 			world := t.TempDir()
 			claude := filepath.Join(world, "home", ".claude")

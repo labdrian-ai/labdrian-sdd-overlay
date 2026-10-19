@@ -90,6 +90,43 @@ func projectOwned(b Binding, w *workflow.Loaded) ProjectionResult {
 	}
 }
 
+// InstructionsResult is what Instructions decides: the memory instructions
+// block to give a session or a subagent, or a warning that says why there is
+// none. Both are empty for a repository nothing is bound to.
+type InstructionsResult struct {
+	Block   string
+	Warning string
+}
+
+// Instructions decides whether the workflow a repository is bound to gives
+// memory instructions (C23 M6): the block (InstructionsBlock) for a created,
+// running or paused workflow of ours, nothing without a binding, and otherwise
+// the warning Project gives for the same input, or the note of a closed
+// workflow, which no longer has a plan to follow. It never asks for an unbind:
+// only the prompt hook removes the binding of a closed workflow. engramName is
+// the caller's Engram naming rule, as for the gate. It is pure.
+func Instructions(in ProjectionInput, engramName func(identity string) string) InstructionsResult {
+	switch in.Binding.Classification {
+	case ClassificationAbsent:
+		return InstructionsResult{}
+	case ClassificationOwned:
+	default:
+		return InstructionsResult{Warning: bindingWarning(in.Binding)}
+	}
+	b, w := in.Binding.Binding, in.Workflow
+	if w == nil || w.Classification != workflow.ClassificationOwned {
+		return InstructionsResult{Warning: workflowWarning(b, w)}
+	}
+	switch w.State.Status {
+	case workflow.StatusClosed:
+		return InstructionsResult{Warning: closedNote(b, w.State)}
+	case workflow.StatusCreated, workflow.StatusRunning, workflow.StatusPaused:
+		return InstructionsResult{Block: InstructionsBlock(b, w.State, engramName)}
+	default:
+		return InstructionsResult{Warning: statusWarning(b, w.State.Status)}
+	}
+}
+
 // builtInWorkflowProfile is the profile the workflow in state goes on from, the one the lifecycle
 // goes on from: workflow.ProfileOf over the built-in catalog, that is the snapshot its log
 // recorded, or, for a log that recorded only a name, the built-in profile of that name.

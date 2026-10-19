@@ -30,7 +30,7 @@ const (
 	labelSession    = "hook: SessionEnd (sync-trigger)"
 	labelReceipt    = `hook: PreToolUse matcher="Bash" (review-receipt)`
 	labelShaper     = "guard: shaper clearance record (PreToolUse + permissions.deny)"
-	labelProj       = "hooks: projection (UserPromptSubmit + PreToolUse gates)"
+	labelProj       = "hooks: projection (SessionStart + UserPromptSubmit + PreToolUse gates)"
 	labelApprove    = "guard: skills approve (PreToolUse Bash + file tools)"
 	labelContract   = "contract: " + contractPath
 	labelRegistry   = "registry: " + registryPath
@@ -623,7 +623,7 @@ func TestTheProjectionAndApproveHooksAreMatchedByTheInstalledPathAndNotByTheIden
 	w.settings.docs["/other/.claude/settings.json"] = w.settings.docs[settingsPath]
 	report := Service{Files: w.files, Settings: w.settings, Blocks: testBlocks()}.Check(Request{Home: "/other", Cwd: project})
 	// The entries name /h/.claude/bin/gentle-ai-overlay; under another home that is not the binary.
-	if report.named(t, "hooks: projection (UserPromptSubmit + PreToolUse gates)").Level != Warn {
+	if report.named(t, "hooks: projection (SessionStart + UserPromptSubmit + PreToolUse gates)").Level != Warn {
 		t.Error("the projection hooks of another binary were taken for this one's")
 	}
 	if report.named(t, "guard: skills approve (PreToolUse Bash + file tools)").Level != Warn {

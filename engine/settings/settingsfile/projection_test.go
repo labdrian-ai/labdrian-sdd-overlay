@@ -25,7 +25,7 @@ func projectionEntries(t *testing.T, root map[string]interface{}) []projectionEn
 	t.Helper()
 	var out []projectionEntry
 	hooks, _ := root["hooks"].(map[string]interface{})
-	for _, key := range []string{"UserPromptSubmit", "PreToolUse", "SessionEnd", "Stop"} {
+	for _, key := range []string{"UserPromptSubmit", "PreToolUse", "SessionEnd", "Stop", "SessionStart"} {
 		entries, _ := hooks[key].([]interface{})
 		for _, e := range entries {
 			em, _ := e.(map[string]interface{})
@@ -66,8 +66,8 @@ func installFresh(t *testing.T) (string, *settingsInstaller) {
 
 // projectionFamilySize is the number of entries of the projection family: one UserPromptSubmit
 // entry and a PreToolUse entry per matcher (the edit tools, the longterm-mem query and get, and the
-// Engram reads, and the tools that can use a procedural skill).
-const projectionFamilySize = 6
+// Engram reads, and the tools that can use a procedural skill), and one SessionStart entry (C23 M6).
+const projectionFamilySize = 7
 
 func TestInstall_AddsTheProjectionFamily(t *testing.T) {
 	path, _ := installFresh(t)
@@ -132,6 +132,8 @@ func TestInstall_AddsTheMemoryReadMatchersToAnInstallThatPredatesThem(t *testing
 		kept = append(kept, e)
 	}
 	hooks["PreToolUse"] = kept
+	// An install made before M4 predates the SessionStart entry of M6 too.
+	delete(hooks, "SessionStart")
 	b, _ := json.Marshal(root)
 	if err := os.WriteFile(path, b, 0o600); err != nil {
 		t.Fatal(err)
@@ -141,9 +143,9 @@ func TestInstall_AddsTheMemoryReadMatchersToAnInstallThatPredatesThem(t *testing
 		t.Fatalf("test bug: the older install has %d entries, want 3", len(older))
 	}
 	parts := settings.MissingProjectionHookParts(parseJSON(t, path), testHookCommand)
-	if len(parts) != 3 || !strings.Contains(parts[0], settings.ProjectionMemoryGetMatcher) || !strings.Contains(parts[1], settings.ProjectionEngramReadMatcher) ||
-		!strings.Contains(parts[2], `matcher="Skill|Read"`) {
-		t.Fatalf("missing parts = %q, want exactly the get matcher, the Engram read matcher and the skill matcher", parts)
+	if len(parts) != 4 || !strings.Contains(parts[0], settings.ProjectionMemoryGetMatcher) || !strings.Contains(parts[1], settings.ProjectionEngramReadMatcher) ||
+		!strings.Contains(parts[2], `matcher="Skill|Read"`) || parts[3] != "SessionStart projection hook" {
+		t.Fatalf("missing parts = %q, want exactly the get matcher, the Engram read matcher, the skill matcher and the SessionStart entry", parts)
 	}
 
 	if err := m.Install(); err != nil {
@@ -263,7 +265,7 @@ func TestUninstall_RemovesOnlyTheProjectionFamilyWhenTheRestIsGone(t *testing.T)
 	root := parseJSON(t, path)
 	hooks := root["hooks"].(map[string]interface{})
 	// Keep only the projection entries plus one foreign entry per key.
-	for _, key := range []string{"UserPromptSubmit", "PreToolUse"} {
+	for _, key := range []string{"UserPromptSubmit", "PreToolUse", "SessionStart"} {
 		kept := []interface{}{map[string]interface{}{"hooks": []interface{}{map[string]interface{}{"type": "command", "command": "/x/foreign-" + key}}}}
 		for _, e := range hooks[key].([]interface{}) {
 			if entryContainsBinarySubstring(e, settings.LabdrianProjectionIdentity) {
@@ -283,7 +285,7 @@ func TestUninstall_RemovesOnlyTheProjectionFamilyWhenTheRestIsGone(t *testing.T)
 	if n := len(projectionEntries(t, after)); n != 0 {
 		t.Errorf("projection entries left: %d", n)
 	}
-	for _, key := range []string{"UserPromptSubmit", "PreToolUse"} {
+	for _, key := range []string{"UserPromptSubmit", "PreToolUse", "SessionStart"} {
 		entries := after["hooks"].(map[string]interface{})[key].([]interface{})
 		if len(entries) != 1 || !strings.Contains(mustJSON(t, entries[0]), "/x/foreign-"+key) {
 			t.Errorf("%s = %s, want only the foreign entry", key, mustJSON(t, entries))
@@ -482,7 +484,7 @@ func withProjectionFamily(root map[string]interface{}, hookCommand string) map[s
 		panic(err)
 	}
 	hooks := root["hooks"].(map[string]interface{})
-	for _, key := range []string{"UserPromptSubmit", "PreToolUse"} {
+	for _, key := range []string{"UserPromptSubmit", "PreToolUse", "SessionStart"} {
 		existing, _ := hooks[key].([]interface{})
 		for _, e := range full["hooks"].(map[string]interface{})[key].([]interface{}) {
 			if entryContainsBinarySubstring(e, settings.LabdrianProjectionIdentity) {

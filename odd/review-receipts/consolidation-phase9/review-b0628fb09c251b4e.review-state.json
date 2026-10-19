@@ -1,0 +1,402 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:05c9354a8c53ba3fdba41825ba360b3c885a374a17fa9e839367546a265a0664",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-b0628fb09c251b4e",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "077876844a718fae3dfbf1bbbde9f0dfc8d35c60",
+      "candidate_tree": "2e7d35ca884414ae0676387442f9d006c72d6324",
+      "paths_digest": "sha256:8d13a393e4ef424e1b2b84d7ce41a7717584e2c44ba609870bc7fa1b137cedf2",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "docs/architecture/adr-c23-m6-plan-instructions.md",
+        "engine/gate/gate.go",
+        "engine/gate/instructions_test.go",
+        "engine/hookwire/decode.go",
+        "engine/hookwire/encode.go",
+        "engine/hookwire/hookwire.go",
+        "engine/hookwire/sessionstart_test.go",
+        "engine/projection/app/hook.go",
+        "engine/projection/app/instructions_test.go",
+        "engine/projection/context.go",
+        "engine/projection/instructions_test.go",
+        "engine/projection/render.go",
+        "odd/tasks/consolidation-phase9.md"
+      ],
+      "identity": "sha256:d6a559c5ae3f58fede80d6f071b25e08fa8d58feef783d90de2434b28e9efc0e"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "077876844a718fae3dfbf1bbbde9f0dfc8d35c60",
+      "candidate_tree": "2e7d35ca884414ae0676387442f9d006c72d6324",
+      "paths_digest": "sha256:8d13a393e4ef424e1b2b84d7ce41a7717584e2c44ba609870bc7fa1b137cedf2",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "docs/architecture/adr-c23-m6-plan-instructions.md",
+        "engine/gate/gate.go",
+        "engine/gate/instructions_test.go",
+        "engine/hookwire/decode.go",
+        "engine/hookwire/encode.go",
+        "engine/hookwire/hookwire.go",
+        "engine/hookwire/sessionstart_test.go",
+        "engine/projection/app/hook.go",
+        "engine/projection/app/instructions_test.go",
+        "engine/projection/context.go",
+        "engine/projection/instructions_test.go",
+        "engine/projection/render.go",
+        "odd/tasks/consolidation-phase9.md"
+      ],
+      "identity": "sha256:d6a559c5ae3f58fede80d6f071b25e08fa8d58feef783d90de2434b28e9efc0e"
+    },
+    "genesis_paths": [
+      "docs/architecture/adr-c23-m6-plan-instructions.md",
+      "engine/gate/gate.go",
+      "engine/gate/instructions_test.go",
+      "engine/hookwire/decode.go",
+      "engine/hookwire/encode.go",
+      "engine/hookwire/hookwire.go",
+      "engine/hookwire/sessionstart_test.go",
+      "engine/projection/app/hook.go",
+      "engine/projection/app/instructions_test.go",
+      "engine/projection/context.go",
+      "engine/projection/instructions_test.go",
+      "engine/projection/render.go",
+      "odd/tasks/consolidation-phase9.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-risk",
+      "review-resilience",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 736,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "The memory instructions block rendered from the plan, the SessionStart decode and encode, and the gate's prompt rewrite appending the block (risk: prompt injection into subagents; resilience: malformed hook input; readability: ADR and block text; reliability: rendering and idempotence pinned by tests)",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:e1095fff5d32138e3dd5c0b4def87090c8e5f0db1553dff370e0e0f8cf384d77",
+    "capture_phase_revision": "sha256:0aaf94c9b4fd6cd2142da57f05ce11763c5414dc3b52f4d69537a5e5671fd03e",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:d6a559c5ae3f58fede80d6f071b25e08fa8d58feef783d90de2434b28e9efc0e",
+        "capture_phase_revision": "sha256:0aaf94c9b4fd6cd2142da57f05ce11763c5414dc3b52f4d69537a5e5671fd03e",
+        "artifact_digest": "sha256:ad6798609a8b07b98e7fcb67a7805b46f8344fefcfdaeceec27148da1cce748c",
+        "result_hash": "sha256:c678cc2f661bec351d1d0663da968170e3dd18ed08567a83e1378fd7a5948f96",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:445314dff1d52c88a285370eeae9e38e188eb042da277b78b506639335b278f1",
+            "lineage_id": "review-b0628fb09c251b4e",
+            "authority_revision": "sha256:0aaf94c9b4fd6cd2142da57f05ce11763c5414dc3b52f4d69537a5e5671fd03e",
+            "target_identity": "sha256:d6a559c5ae3f58fede80d6f071b25e08fa8d58feef783d90de2434b28e9efc0e",
+            "base_tree": "077876844a718fae3dfbf1bbbde9f0dfc8d35c60",
+            "candidate_tree": "2e7d35ca884414ae0676387442f9d006c72d6324",
+            "changed_path_manifest_sha256": "sha256:99c8e3e30c125e50aba67a6535201c4610db592a86534bd76e8c445ea1793a3d",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:445314dff1d52c88a285370eeae9e38e188eb042da277b78b506639335b278f1",
+            "raw_sha256": "sha256:c61bfdefb260b2de8560332b64be33f59aec24fe9b0bb52be81f675e758cd2ef",
+            "canonical_sha256": "sha256:15a27d7ed955bb2de5572998c2e941a16f57efd8fadff92a2aebfa57a4b86318",
+            "result_hash": "sha256:c678cc2f661bec351d1d0663da968170e3dd18ed08567a83e1378fd7a5948f96",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:445314dff1d52c88a285370eeae9e38e188eb042da277b78b506639335b278f1",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "docs/architecture/adr-c23-m6-plan-instructions.md",
+                "engine/gate/gate.go",
+                "engine/gate/instructions_test.go",
+                "engine/hookwire/decode.go",
+                "engine/hookwire/encode.go",
+                "engine/hookwire/hookwire.go",
+                "engine/hookwire/sessionstart_test.go",
+                "engine/projection/app/hook.go",
+                "engine/projection/app/instructions_test.go",
+                "engine/projection/context.go",
+                "engine/projection/instructions_test.go",
+                "engine/projection/render.go",
+                "odd/tasks/consolidation-phase9.md"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [
+              {
+                "id": "R1-001",
+                "lens": "risk",
+                "location": "engine/gate/gate.go:98-108",
+                "severity": "WARNING",
+                "claim": "Rewrite now appends instructions even for empty SubagentType. Instructions are only workflow-derived and sanitized, so no exploit path is shown. The change is behavior the ADR requested. The idempotence check uses a substring match, so a prompt that quotes the block would skip it. That only affects delivery of instructions and carries no security impact.",
+                "proof_refs": [
+                  "engine/gate/gate.go:98-108"
+                ]
+              }
+            ],
+            "evidence": [
+              "Reviewed all 13 changed paths in the patch.",
+              "Instruction values from the workflow (goal, project, identity, sources) pass through sanitizeLine and strconv.Quote and are bounded by boundContext. The test at engine/projection/instructions_test.go covers a goal containing a newline and an escape sequence, so prompt injection through a newline is not reachable.",
+              "The new OnInstructions path is read-only and never unbinds. The cwd added to DecodeAgentCall is cleaned and must be absolute; non-text values are ignored, so no new decode failure is introduced.",
+              "No secrets, new dependencies, or authorization changes are introduced. The block adds no enforcement and only describes the existing M4 and M5 rules."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-resilience",
+        "selected_order": 1,
+        "target_identity": "sha256:d6a559c5ae3f58fede80d6f071b25e08fa8d58feef783d90de2434b28e9efc0e",
+        "capture_phase_revision": "sha256:0aaf94c9b4fd6cd2142da57f05ce11763c5414dc3b52f4d69537a5e5671fd03e",
+        "artifact_digest": "sha256:4edf53deeb90aca8cc9c4773ef5def486ad76981bcb0e23ff3c3dd4453a7a6c3",
+        "result_hash": "sha256:e2d43286c0e4f0d4b1bad82c1d211e84940aa275bce378337a949142cbea553a",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:9fb00d72783aa819e0d4e7291455313cd3898399784b2e8623f693abcf0dd0bf",
+            "lineage_id": "review-b0628fb09c251b4e",
+            "authority_revision": "sha256:0aaf94c9b4fd6cd2142da57f05ce11763c5414dc3b52f4d69537a5e5671fd03e",
+            "target_identity": "sha256:d6a559c5ae3f58fede80d6f071b25e08fa8d58feef783d90de2434b28e9efc0e",
+            "base_tree": "077876844a718fae3dfbf1bbbde9f0dfc8d35c60",
+            "candidate_tree": "2e7d35ca884414ae0676387442f9d006c72d6324",
+            "changed_path_manifest_sha256": "sha256:99c8e3e30c125e50aba67a6535201c4610db592a86534bd76e8c445ea1793a3d",
+            "lens": "review-resilience",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:9fb00d72783aa819e0d4e7291455313cd3898399784b2e8623f693abcf0dd0bf",
+            "raw_sha256": "sha256:90499d082fde3930118ed951ec6a05094a1d44c521a7e81cb2cf6e23237afe41",
+            "canonical_sha256": "sha256:8097fd9089f4ba636d9e5a8d9516479d036c228f8b1699e9375a7106c57ba38b",
+            "result_hash": "sha256:e2d43286c0e4f0d4b1bad82c1d211e84940aa275bce378337a949142cbea553a",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:9fb00d72783aa819e0d4e7291455313cd3898399784b2e8623f693abcf0dd0bf",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "docs/architecture/adr-c23-m6-plan-instructions.md",
+                "engine/gate/gate.go",
+                "engine/gate/instructions_test.go",
+                "engine/hookwire/decode.go",
+                "engine/hookwire/encode.go",
+                "engine/hookwire/hookwire.go",
+                "engine/hookwire/sessionstart_test.go",
+                "engine/projection/app/hook.go",
+                "engine/projection/app/instructions_test.go",
+                "engine/projection/context.go",
+                "engine/projection/instructions_test.go",
+                "engine/projection/render.go",
+                "odd/tasks/consolidation-phase9.md"
+              ]
+            },
+            "lens": "review-resilience",
+            "findings": [],
+            "evidence": [
+              "I found no concrete production failure caused by this candidate.",
+              "Rewrite appends the block only when it is non-empty and the prompt doesn't already contain it, so a retried or repeated hook call changes nothing. An empty prompt is still left alone.",
+              "DecodeAgentCall reads cwd leniently. A missing, null or wrongly typed cwd becomes an empty string and never causes a decode error, so Agent calls the baseline could rewrite still work.",
+              "OnInstructions is read-only. It never removes a closed workflow's binding. A binding-store failure returns a warning or silence instead of a panic.",
+              "InstructionsBlock returns one line when the plan can't be computed, and it sanitizes and bounds its output.",
+              "The extra work per Agent call is one binding load and one workflow load, which is small and not a measurable load or latency problem.",
+              "The ADR describes the settings and cmd wiring, and the 'memory plan --instructions' command. Those paths are not in this candidate, so I could not review them."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "selected_order": 2,
+        "target_identity": "sha256:d6a559c5ae3f58fede80d6f071b25e08fa8d58feef783d90de2434b28e9efc0e",
+        "capture_phase_revision": "sha256:0aaf94c9b4fd6cd2142da57f05ce11763c5414dc3b52f4d69537a5e5671fd03e",
+        "artifact_digest": "sha256:e325141f6321fef02df6aa0a46d9b4054db59592f69bbef94a4cd98e6023b35b",
+        "result_hash": "sha256:fa4676f37565edcdf0e70c0cecf7e625fd9572a672ff15cda14f950980ecdee5",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:beb209af58e628c8d49660425ce5e26d379fa46cac5a5fe258953173c3be6422",
+            "lineage_id": "review-b0628fb09c251b4e",
+            "authority_revision": "sha256:0aaf94c9b4fd6cd2142da57f05ce11763c5414dc3b52f4d69537a5e5671fd03e",
+            "target_identity": "sha256:d6a559c5ae3f58fede80d6f071b25e08fa8d58feef783d90de2434b28e9efc0e",
+            "base_tree": "077876844a718fae3dfbf1bbbde9f0dfc8d35c60",
+            "candidate_tree": "2e7d35ca884414ae0676387442f9d006c72d6324",
+            "changed_path_manifest_sha256": "sha256:99c8e3e30c125e50aba67a6535201c4610db592a86534bd76e8c445ea1793a3d",
+            "lens": "review-readability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:beb209af58e628c8d49660425ce5e26d379fa46cac5a5fe258953173c3be6422",
+            "raw_sha256": "sha256:58e140db15d84c19618e21e1808355ff1c1f40492aa007d0f4463bec7a1377b2",
+            "canonical_sha256": "sha256:88653a42e46eb741f5cbd5b3841eb6f5e275caa185ea71780069c685f791d33c",
+            "result_hash": "sha256:fa4676f37565edcdf0e70c0cecf7e625fd9572a672ff15cda14f950980ecdee5",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:beb209af58e628c8d49660425ce5e26d379fa46cac5a5fe258953173c3be6422",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "docs/architecture/adr-c23-m6-plan-instructions.md",
+                "engine/gate/gate.go",
+                "engine/gate/instructions_test.go",
+                "engine/hookwire/decode.go",
+                "engine/hookwire/encode.go",
+                "engine/hookwire/hookwire.go",
+                "engine/hookwire/sessionstart_test.go",
+                "engine/projection/app/hook.go",
+                "engine/projection/app/instructions_test.go",
+                "engine/projection/context.go",
+                "engine/projection/instructions_test.go",
+                "engine/projection/render.go",
+                "odd/tasks/consolidation-phase9.md"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-reply-type-reuse",
+                "lens": "readability",
+                "location": "engine/hookwire/encode.go:119",
+                "severity": "SUGGESTION",
+                "claim": "SessionStartReply.Encode reuses the userPromptSubmitOutput and userPromptSubmitSpecific wire types, so a SessionStart reply is built from types named for a different event. The shared shape is intentional and documented in the comment, but the names mislead a reader and a future divergence between the two events would require untangling.",
+                "proof_refs": [
+                  "engine/hookwire/encode.go:119"
+                ]
+              },
+              {
+                "id": "R2-instructions-doc-drift",
+                "lens": "readability",
+                "location": "engine/projection/app/hook.go:131",
+                "severity": "SUGGESTION",
+                "claim": "The OnInstructions doc comment describes the gate-task rewrite and 'memory plan --instructions' as callers, but neither consumer is part of this candidate (the ledger lists them under M6b as not yet done). The comment states wiring that a maintainer cannot find in the code, and the gate's Config.Instructions comment says the caller renders it with no caller visible either.",
+                "proof_refs": [
+                  "engine/projection/app/hook.go:131",
+                  "odd/tasks/consolidation-phase9.md:72"
+                ]
+              }
+            ],
+            "evidence": [
+              "Reviewed all 13 manifest paths in the patch. Logic is consistent with the ADR: the block renderer, Instructions decision, gate append with idempotency, SessionStart decode/encode and AgentCall.Cwd are tested, and readBound removes duplication between OnPrompt and OnInstructions.",
+              "No BLOCKER or CRITICAL readability defects found; the two findings are minor naming and documentation issues."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 3,
+        "target_identity": "sha256:d6a559c5ae3f58fede80d6f071b25e08fa8d58feef783d90de2434b28e9efc0e",
+        "capture_phase_revision": "sha256:0aaf94c9b4fd6cd2142da57f05ce11763c5414dc3b52f4d69537a5e5671fd03e",
+        "artifact_digest": "sha256:80b15c97e0eed1a17fb54c4f3a0146c15213ec13d7e07f33e873756efdfd661b",
+        "result_hash": "sha256:d931b59240ddb8cab256ef45fb91e0349779f2eafc31217abda125adffbd2b79",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:c90265a54cff116af0b95d00c0c0804860aec6dada39c4ee828e213bfb57ea42",
+            "lineage_id": "review-b0628fb09c251b4e",
+            "authority_revision": "sha256:0aaf94c9b4fd6cd2142da57f05ce11763c5414dc3b52f4d69537a5e5671fd03e",
+            "target_identity": "sha256:d6a559c5ae3f58fede80d6f071b25e08fa8d58feef783d90de2434b28e9efc0e",
+            "base_tree": "077876844a718fae3dfbf1bbbde9f0dfc8d35c60",
+            "candidate_tree": "2e7d35ca884414ae0676387442f9d006c72d6324",
+            "changed_path_manifest_sha256": "sha256:99c8e3e30c125e50aba67a6535201c4610db592a86534bd76e8c445ea1793a3d",
+            "lens": "review-reliability",
+            "selected_order": 3
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:c90265a54cff116af0b95d00c0c0804860aec6dada39c4ee828e213bfb57ea42",
+            "raw_sha256": "sha256:1068e50cef1368e0196498430ca4eb714e54776d636aa36d88671236f0496626",
+            "canonical_sha256": "sha256:b170dcb1fabadc7c2e88203a2dbf7824692697f1d1d045c1923a183bfe26f8c9",
+            "result_hash": "sha256:d931b59240ddb8cab256ef45fb91e0349779f2eafc31217abda125adffbd2b79",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:c90265a54cff116af0b95d00c0c0804860aec6dada39c4ee828e213bfb57ea42",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "docs/architecture/adr-c23-m6-plan-instructions.md",
+                "engine/gate/gate.go",
+                "engine/gate/instructions_test.go",
+                "engine/hookwire/decode.go",
+                "engine/hookwire/encode.go",
+                "engine/hookwire/hookwire.go",
+                "engine/hookwire/sessionstart_test.go",
+                "engine/projection/app/hook.go",
+                "engine/projection/app/instructions_test.go",
+                "engine/projection/context.go",
+                "engine/projection/instructions_test.go",
+                "engine/projection/render.go",
+                "odd/tasks/consolidation-phase9.md"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [],
+            "evidence": [
+              "The gate rewrite is unchanged when Config.Instructions is empty. engine/gate/instructions_test.go checks this for contract types, unknown types and an empty type.",
+              "Appending the block twice is prevented by the strings.Contains check in appendInstructions. engine/gate/instructions_test.go asserts idempotence for prompts with and without trailing newlines.",
+              "DecodeAgentCall reads cwd as raw JSON and drops it when it is not a string. A missing, null, numeric or object cwd therefore does not cause an error, so calls that decoded before still decode. engine/hookwire/sessionstart_test.go covers these cases.",
+              "OnInstructions is read-only. It never unbinds, and it does not query the workflow store when nothing is bound. engine/projection/app/instructions_test.go covers both.",
+              "The OnPrompt refactor into readBound keeps the same order of outcomes: silence, then the store warning, then the workflow load. The existing OnPrompt tests are not in this patch, so I did not see them re-run.",
+              "InstructionsBlock sanitizes every value it writes, and its tests cover a goal containing a newline. An uncomputable plan gives one line, and scope none and scope project are tested.",
+              "This is a partial implementation: the ledger marks M6b and M6c as not done, so the missing wiring is not a defect of this patch. The patch contains no code for installing the hook, for `memory plan --instructions`, or for the gate-task caller."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "4c50274860794cb1728c79c5e18107e3fab356e7d7cf7a0fd69e927a255a26e7",
+    "initial_atomic_start": {
+      "lineage_id": "review-b0628fb09c251b4e",
+      "worktree_identity": "sha256:8455002f227f033663d0e7d8b8ff6a885e1c85b482ec52e34017c303452eed87",
+      "target_identity": "sha256:d6a559c5ae3f58fede80d6f071b25e08fa8d58feef783d90de2434b28e9efc0e",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "077876844a718fae3dfbf1bbbde9f0dfc8d35c60",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-risk",
+        "review-resilience",
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 736,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "The memory instructions block rendered from the plan, the SessionStart decode and encode, and the gate's prompt rewrite appending the block (risk: prompt injection into subagents; resilience: malformed hook input; readability: ADR and block text; reliability: rendering and idempotence pinned by tests)"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

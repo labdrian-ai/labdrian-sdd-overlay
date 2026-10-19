@@ -295,7 +295,7 @@ var sdApplyGateConfig = gate.Config{Contracts: []gate.ContractConfig{{Path: abso
 const sdApplyCallInput = `{"tool_name":"Agent","tool_input":{"description":"d","prompt":"do it","subagent_type":"sdd-apply"}}`
 
 func TestAgentGateAnswerRewritesWhatTheGateChanges(t *testing.T) {
-	out := agentGateAnswer([]byte(sdApplyCallInput), sdApplyGateConfig)
+	out := agentGateAnswer([]byte(sdApplyCallInput), sdApplyGateConfig, nil)
 	if !strings.Contains(string(out), `"updatedInput"`) || !strings.Contains(string(out), absoluteContractPath) || !strings.HasSuffix(string(out), "}\n") {
 		t.Errorf("agentGateAnswer() = %q, want the call with the contract injected, on one line", out)
 	}
@@ -317,7 +317,7 @@ func TestAgentGateAnswerPassesThroughWhatItLeavesAloneOrCannotRead(t *testing.T)
 		"input over the bound that holds a good call": strings.Replace(sdApplyCallInput, `"do it"`, `"`+strings.Repeat("x", hookwire.MaxAgentCallBytes)+`"`, 1),
 	} {
 		t.Run(name, func(t *testing.T) {
-			if got := string(agentGateAnswer([]byte(raw), sdApplyGateConfig)); got != "{}\n" {
+			if got := string(agentGateAnswer([]byte(raw), sdApplyGateConfig, nil)); got != "{}\n" {
 				t.Errorf("agentGateAnswer() = %q, want the pass-through {}", clip(got))
 			}
 		})
@@ -328,7 +328,7 @@ func TestAgentGateAnswerPassesThroughWhatItLeavesAloneOrCannotRead(t *testing.T)
 // encoder of the answer cannot fail for text, but if it did the hook would still never block.
 func TestAnAnswerThatCannotBeEncodedIsThePassThrough(t *testing.T) {
 	failing := func(hookwire.AgentCall, string) ([]byte, error) { return nil, errors.New("cannot encode") }
-	if out, ok := rewrittenAgentCall([]byte(sdApplyCallInput), sdApplyGateConfig, failing); ok || out != nil {
+	if out, ok := rewrittenAgentCall([]byte(sdApplyCallInput), sdApplyGateConfig, nil, failing); ok || out != nil {
 		t.Errorf("rewrittenAgentCall with an encoder that fails = %q, %v, want no rewrite", out, ok)
 	}
 	var got hookwire.AgentCall
@@ -337,7 +337,7 @@ func TestAnAnswerThatCannotBeEncodedIsThePassThrough(t *testing.T) {
 		got, gotPrompt = call, prompt
 		return []byte("encoded\n"), nil
 	}
-	out, ok := rewrittenAgentCall([]byte(sdApplyCallInput), sdApplyGateConfig, recording)
+	out, ok := rewrittenAgentCall([]byte(sdApplyCallInput), sdApplyGateConfig, nil, recording)
 	if !ok || string(out) != "encoded\n" {
 		t.Fatalf("rewrittenAgentCall = %q, %v, want what the encoder wrote", out, ok)
 	}

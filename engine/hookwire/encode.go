@@ -72,15 +72,15 @@ type PromptReply struct {
 	Warning string
 }
 
-// userPromptSubmitOutput is the JSON object a UserPromptSubmit hook prints. additionalContext
-// must sit inside hookSpecificOutput, next to the event name: at the top level Claude Code
-// ignores it without a word.
-type userPromptSubmitOutput struct {
-	HookSpecificOutput *userPromptSubmitSpecific `json:"hookSpecificOutput,omitempty"`
-	SystemMessage      string                    `json:"systemMessage,omitempty"`
+// contextOutput is the JSON object a hook that adds context prints, UserPromptSubmit and
+// SessionStart alike. additionalContext must sit inside hookSpecificOutput, next to the event
+// name: at the top level Claude Code ignores it without a word.
+type contextOutput struct {
+	HookSpecificOutput *contextSpecific `json:"hookSpecificOutput,omitempty"`
+	SystemMessage      string           `json:"systemMessage,omitempty"`
 }
 
-type userPromptSubmitSpecific struct {
+type contextSpecific struct {
 	HookEventName     string `json:"hookEventName"`
 	AdditionalContext string `json:"additionalContext"`
 }
@@ -93,11 +93,30 @@ func (r PromptReply) Encode() ([]byte, error) {
 	if r.Context == "" && r.Warning == "" {
 		return nil, nil
 	}
-	out := userPromptSubmitOutput{SystemMessage: r.Warning}
+	out := contextOutput{SystemMessage: r.Warning}
 	if r.Context != "" {
-		out.HookSpecificOutput = &userPromptSubmitSpecific{HookEventName: EventUserPromptSubmit, AdditionalContext: r.Context}
+		out.HookSpecificOutput = &contextSpecific{HookEventName: EventUserPromptSubmit, AdditionalContext: r.Context}
 	}
 	return encodeLine(out)
+}
+
+// --- SessionStart: context -------------------------------------------------------------------
+
+// SessionStartReply is what a SessionStart hook tells Claude Code: text to add to the session's
+// context. It has no warning: the prompt hook already warns about what the session-start hook
+// cannot say.
+type SessionStartReply struct {
+	Context string
+}
+
+// Encode renders r as the one JSON object a SessionStart hook writes to stdout, followed by a line
+// break: {"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"..."}}, the
+// shape of a prompt's context with the event's own name. An empty context yields no output at all.
+func (r SessionStartReply) Encode() ([]byte, error) {
+	if r.Context == "" {
+		return nil, nil
+	}
+	return encodeLine(contextOutput{HookSpecificOutput: &contextSpecific{HookEventName: EventSessionStart, AdditionalContext: r.Context}})
 }
 
 // encodeLine writes v as JSON followed by a line break, without escaping <, > and &.

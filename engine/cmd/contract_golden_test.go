@@ -132,7 +132,7 @@ const (
 func (w *contractWorld) gate(label, stdin string, args ...string) {
 	w.t.Helper()
 	var stdout, stderr bytes.Buffer
-	gateTaskCore(args, strings.NewReader(stdin), &stdout, &stderr, w.readFile)
+	gateTaskCore(args, strings.NewReader(stdin), &stdout, &stderr, w.readFile, nil)
 	w.write("$ gate-task %s\n# %s\n--- stdin ---\n%s\n--- stdout ---\n%s--- stderr ---\n%s\n",
 		strings.Join(args, " "), label, ensureNewline(stdin), ensureNewline(stdout.String()), ensureNewline(stderr.String()))
 }

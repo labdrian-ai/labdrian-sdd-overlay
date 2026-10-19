@@ -84,7 +84,7 @@ func TestStatusCoreWritesTheWholeReportOfTheServiceAndAnswersItsOutcome(t *testi
 		"hook: SessionEnd (sync-trigger)",
 		`hook: PreToolUse matcher="Bash" (review-receipt)`,
 		"guard: shaper clearance record (PreToolUse + permissions.deny)",
-		"hooks: projection (UserPromptSubmit + PreToolUse gates)",
+		"hooks: projection (SessionStart + UserPromptSubmit + PreToolUse gates)",
 		"guard: skills approve (PreToolUse Bash + file tools)",
 	} {
 		want += "[FAIL] " + label + unreadable

@@ -8,8 +8,12 @@ package main
 // (in that order), and prints the resulting query plan as JSON: it tries
 // directives before a workflow records them. The second prints the plan the
 // memory gate applies to a workflow, computed from its log alone
-// (workflow.PlanOf, C23 M3). No verb here executes a memory query or grants a
-// memory write; that belongs to a runtime adapter outside this package
+// (workflow.PlanOf, C23 M3). 'memory plan --instructions [--project <id>
+// --workflow <id>]' prints that plan as the memory instructions an agent
+// follows (C23 M6, engine/projection's InstructionsBlock), of the named
+// workflow or, without the two flags, of the workflow the repository of the
+// working directory is bound to. No verb here executes a memory query or grants
+// a memory write; that belongs to a runtime adapter outside this package
 // (Phase 7).
 
 import (
@@ -19,20 +23,27 @@ import (
 	"os"
 	"strings"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/identity"
+
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/goal"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/memoryscope"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection/app"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflowprofile"
 )
 
 // runMemory implements the 'memory <verb>' subcommand.
-func runMemory(p process, args []string) {
-	runMemoryCore(args, p.stdout, p.stderr, p.exit)
+func runMemory(p process, d deps, args []string) {
+	cwd, _ := d.workingDir() // best-effort; "" is no repository, so no binding.
+	runMemoryCore(d, cwd, args, p.stdout, p.stderr, p.exit)
 }
 
 // runMemoryCore is the testable core of the memory subcommand. Every exit(n)
 // is followed by a return, because tests inject a non-terminating exit.
-func runMemoryCore(args []string, stdout, stderr io.Writer, exit func(int)) {
+// processCwd is the working directory whose repository's binding 'memory plan
+// --instructions' reads.
+func runMemoryCore(d deps, processCwd string, args []string, stdout, stderr io.Writer, exit func(int)) {
 	if len(args) == 0 {
 		fmt.Fprintln(stderr, "error: memory requires a verb: plan")
 		exit(1)
@@ -40,7 +51,7 @@ func runMemoryCore(args []string, stdout, stderr io.Writer, exit func(int)) {
 	}
 	switch args[0] {
 	case "plan":
-		runMemoryPlan(args[1:], stdout, stderr, exit)
+		runMemoryPlan(d, processCwd, args[1:], stdout, stderr, exit)
 	default:
 		fmt.Fprintf(stderr, "error: memory: unknown verb %q (expected plan)\n", args[0])
 		exit(1)
@@ -53,6 +64,10 @@ type memoryPlanOpts struct {
 	// project and workflowID name a workflow whose log the plan is read from
 	// (C23 M3, decision 7); they do not combine with the flags above.
 	project, workflowID string
+	// instructions prints the plan of a workflow as memory instructions (C23
+	// M6): of the one --project and --workflow name, or else of the one the
+	// repository is bound to.
+	instructions bool
 }
 
 // fromWorkflow reports whether the plan is read from a workflow's log.
@@ -62,12 +77,15 @@ func (o memoryPlanOpts) fromWorkflow() bool { return o.project != "" || o.workfl
 // --handoff-directive, or --project/--workflow. It fails loud on an unknown
 // flag, a flag without its value, a positional argument, a missing --profile
 // (in the flag form), --project without --workflow or the other way round, and
-// --project/--workflow given with any flag of the other form.
+// --project/--workflow given with any flag of the other form, and
+// --instructions given with a flag of the first form.
 func parseMemoryPlanArgs(args []string) (memoryPlanOpts, error) {
 	var o memoryPlanOpts
 	for i := 0; i < len(args); i++ {
 		a := args[i]
 		switch a {
+		case "--instructions":
+			o.instructions = true
 		case "--profile", "--goal", "--goal-directive", "--handoff-directive", "--project", "--workflow":
 			if i+1 >= len(args) {
 				return o, fmt.Errorf("%s requires a value", a)
@@ -103,6 +121,12 @@ func parseMemoryPlanArgs(args []string) (memoryPlanOpts, error) {
 		}
 		return o, nil
 	}
+	if o.instructions {
+		if o.profile != "" || o.goalFile != "" || o.goalDirectiveFile != "" || o.handoffDirectiveFile != "" {
+			return o, fmt.Errorf("--instructions reads the plan of a workflow and does not combine with --profile, --goal, --goal-directive or --handoff-directive")
+		}
+		return o, nil
+	}
 	if o.profile == "" {
 		return o, fmt.Errorf("--profile is required")
 	}
@@ -114,26 +138,67 @@ func parseMemoryPlanArgs(args []string) (memoryPlanOpts, error) {
 // from (its snapshot, or for a version 1 log the built-in profile of its name),
 // exactly as the projection computes it.
 func workflowMemoryPlan(project, workflowID string) (memoryscope.Plan, error) {
-	store, err := newWorkflowStore()
+	state, err := ownedWorkflowState(project, workflowID)
 	if err != nil {
 		return memoryscope.Plan{}, err
 	}
-	loaded, err := store.Load(project, workflowID)
+	profile, err := workflow.ProfileOf(state, workflow.ProfileCatalogFunc(workflowprofile.Resolve))
 	if err != nil {
 		return memoryscope.Plan{}, err
+	}
+	return workflow.PlanOf(state, project, profile)
+}
+
+// ownedWorkflowState is the state of the workflow project/workflowID read from
+// its log, or the reason it cannot be read or is not ours.
+func ownedWorkflowState(project, workflowID string) (workflow.State, error) {
+	store, err := newWorkflowStore()
+	if err != nil {
+		return workflow.State{}, err
+	}
+	loaded, err := store.Load(project, workflowID)
+	if err != nil {
+		return workflow.State{}, err
 	}
 	if loaded.Classification != workflow.ClassificationOwned {
 		detail := ""
 		if loaded.Detail != "" {
 			detail = " (" + loaded.Detail + ")"
 		}
-		return memoryscope.Plan{}, fmt.Errorf("workflow %s/%s is not owned: its log is %s%s", project, workflowID, loaded.Classification, detail)
+		return workflow.State{}, fmt.Errorf("workflow %s/%s is not owned: its log is %s%s", project, workflowID, loaded.Classification, detail)
 	}
-	profile, err := workflow.ProfileOf(loaded.State, workflow.ProfileCatalogFunc(workflowprofile.Resolve))
-	if err != nil {
-		return memoryscope.Plan{}, err
+	return loaded.State, nil
+}
+
+// noBoundInstructions is what 'memory plan --instructions' prints for a
+// repository nothing is bound to, or a directory outside every repository.
+const noBoundInstructions = "labdrian memory instructions: no workflow is bound to this repository, so the memory plan sets no rule."
+
+// memoryInstructions is the text 'memory plan --instructions' prints, or the
+// reason it refuses: the block of the named workflow, whatever its status, or,
+// without one, what the projection decides for the workflow the repository of
+// processCwd is bound to (app.HookService.OnInstructions, the reading the hooks
+// do), with noBoundInstructions when nothing is bound. A binding or workflow
+// that cannot be followed, a closed one, and a binding store that cannot be read
+// are refused with the hook's own words.
+func memoryInstructions(d deps, processCwd string, o memoryPlanOpts) (string, error) {
+	if o.fromWorkflow() {
+		state, err := ownedWorkflowState(o.project, o.workflowID)
+		if err != nil {
+			return "", err
+		}
+		return projection.InstructionsBlock(projection.Binding{ProjectID: o.project, WorkflowID: o.workflowID}, state, identity.EngramName), nil
 	}
-	return workflow.PlanOf(loaded.State, project, profile)
+	outcome := d.promptHook().OnInstructions(app.PromptRequest{ProcessDir: processCwd})
+	switch {
+	case outcome.Kind == app.PromptWarning:
+		return "", fmt.Errorf("%s", outcome.Warning)
+	case outcome.Result.Warning != "":
+		return "", fmt.Errorf("%s", outcome.Result.Warning)
+	case outcome.Result.Block != "":
+		return outcome.Result.Block, nil
+	}
+	return noBoundInstructions, nil
 }
 
 // writeMemoryPlan prints plan as indented JSON and exits 0, or exits 2 on a
@@ -156,12 +221,29 @@ func writeMemoryPlan(stdout, stderr io.Writer, plan memoryscope.Plan, exit func(
 // runMemoryPlan implements 'memory plan'. Exit 0 on a resolved plan, exit 2
 // on a refused or invalid input (unknown profile, unparseable Goal or
 // directive file, or a narrowing refusal), exit 1 on a usage error or a failed
-// write of the plan.
-func runMemoryPlan(args []string, stdout, stderr io.Writer, exit func(int)) {
+// write of the plan. --instructions exits 0 on the instructions, and on a
+// repository nothing is bound to, and 2 on a workflow that cannot be read or
+// followed.
+func runMemoryPlan(d deps, processCwd string, args []string, stdout, stderr io.Writer, exit func(int)) {
 	o, err := parseMemoryPlanArgs(args)
 	if err != nil {
 		fmt.Fprintf(stderr, "error: memory plan: %v\n", err)
 		exit(1)
+		return
+	}
+	if o.instructions {
+		text, err := memoryInstructions(d, processCwd, o)
+		if err != nil {
+			fmt.Fprintf(stderr, "error: memory plan: %v\n", err)
+			exit(2)
+			return
+		}
+		if _, err := io.WriteString(stdout, text+"\n"); err != nil {
+			fmt.Fprintf(stderr, "error: memory plan: writing instructions: %v\n", err)
+			exit(1)
+			return
+		}
+		exit(0)
 		return
 	}
 	if o.fromWorkflow() {

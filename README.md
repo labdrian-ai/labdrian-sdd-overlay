@@ -147,7 +147,7 @@ backups the backend cannot confirm is not offered a restore.
 ### The 3 workflows
 
 **1. Day-to-day — nothing to do.**
-The hooks run in the background: `UserPromptSubmit` (propagate) keeps skill registries fresh across sessions; `PreToolUse`/`Agent` (gate-task) injects the minimalism and anti-generic-design contracts into `sdd-tasks`/`sdd-apply` automatically. Review candidate coverage and skill discovery are handled by gentle-ai itself since v2.7.0; the overlay no longer ships contracts for them.
+The hooks run in the background: `UserPromptSubmit` (propagate) keeps skill registries fresh across sessions; `PreToolUse`/`Agent` (gate-task) injects the minimalism and anti-generic-design contracts into `sdd-tasks`/`sdd-apply` automatically, and, while a workflow is bound to the repository, appends the memory instructions of that workflow to every sub-agent's prompt through the minimalism entry alone (C23 M6), the block `SessionStart` puts into the session itself. Review candidate coverage and skill discovery are handled by gentle-ai itself since v2.7.0; the overlay no longer ships contracts for them.
 
 **2. gentle-ai released an update.**
 ```bash
@@ -555,6 +555,19 @@ overlay memory <verb>
         --profile, --goal, --goal-directive or --handoff-directive (a usage error, exit 1), and
         --project and --workflow go together. Exit 2 for a workflow that is not owned or a plan
         that cannot be computed.
+    plan --instructions [--project <id> --workflow <id>]
+        Print that plan as the memory instructions an agent follows (C23 M6), the same block the
+        SessionStart hook puts into a session and gate-task appends to a sub-agent's prompt:
+        the sources to read from, the project each source is read with (Engram by the name it
+        gives the workflow's identity, longterm-mem by the plan's project), under scope goal the
+        goal to pass to every longterm-mem query and the `goal:<id>/` topic_key prefix of a goal's
+        Engram records, that writes are not limited, and the T1/T2 procedural-candidate contract;
+        under scope none it says to read no memory. With --project and --workflow it is that
+        workflow's; without them, `labdrian memory plan --instructions` reads the binding of the
+        repository of the working directory, and when no workflow is bound it prints that no
+        workflow is bound to this repository and exits 0. A binding or workflow that cannot be
+        followed, or a closed one, is refused with the hook's own warning (exit 2). It does not
+        combine with --profile, --goal, --goal-directive or --handoff-directive (exit 1).
 
 overlay workflow <verb>
     Forward standalone workflow lifecycle verbs (Phase 6) to the engine unchanged: create,
@@ -790,17 +803,24 @@ gentle-ai-overlay runtime probe [--target claude|codex|pi|all]
     at the default state directory only (~/.labdrian-overlay), not under a custom --state-dir. Exit 0 on success,
     2 on an unknown --target value, 1 on a usage error (including an unknown flag).
 
-gentle-ai-overlay projection hook --event UserPromptSubmit|PreToolUse
-    Internal hook command (Phase 7): Claude Code is meant to run it before each prompt (UserPromptSubmit) and before
-    each tool call (PreToolUse); a person does
+gentle-ai-overlay projection hook --event UserPromptSubmit|PreToolUse|SessionStart
+    Internal hook command (Phase 7): Claude Code is meant to run it before each prompt (UserPromptSubmit),
+    before each tool call (PreToolUse) and when a session starts (SessionStart); a person does
     not. There is no `overlay projection` wrapper, so it runs on the installed engine binary,
     ~/.claude/bin/gentle-ai-overlay. `install-hooks` installs it into Claude Code settings.json
     (one UserPromptSubmit entry and five PreToolUse entries: the file-edit tools, the longterm-mem query tool, the
     longterm-mem get tool, the Engram reads mem_search, mem_context, mem_get_observation and mem_timeline, and
-    the Skill and Read tools);
+    the Skill and Read tools; plus one SessionStart entry); removing the hooks removes all of them;
     on an existing install, re-run `install-hooks` and restart Claude Code to load it, because Claude Code reads
     hooks only at start and `status-hooks` reports degraded until the entries are in place. Its tests feed it hook JSON.
-    UserPromptSubmit and PreToolUse are the events supported.
+    UserPromptSubmit, PreToolUse and SessionStart are the events supported.
+    SessionStart (C23 M6): when a session starts, resumes, is cleared or is compacted, put the memory
+    instructions of the workflow the repository is bound to into its context, once, as
+    {"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"..."}}: the block
+    `labdrian memory plan --instructions` prints. Silent when no workflow is bound, and for a binding or
+    workflow it cannot follow, a closed one, a store it cannot read, or input it cannot use (the next
+    prompt warns about those); read-only, it never removes a binding. Each UserPromptSubmit keeps its
+    one-line memory plan, so a workflow bound or narrowed in the middle of a session is still seen.
     UserPromptSubmit: put the workflow the repository is bound to (see `workflow bind`) into the session's
     context, so a new or restarted session is told the same thing as the last one. PreToolUse: gate a tool
     call against that workflow (below).

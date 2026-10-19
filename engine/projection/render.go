@@ -10,12 +10,14 @@ package projection
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"unicode"
 	"unicode/utf8"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/capability"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/memoryscope"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow"
 )
 
@@ -293,6 +295,66 @@ func memoryPlanLines(state workflow.State, projectID string) []string {
 		lines = append(lines, "omitted filters: "+strings.Join(plan.OmittedFilters, ", "))
 	}
 	return lines
+}
+
+// InstructionsBlock renders the memory instructions of the workflow b names
+// (C23 M6, docs/architecture/adr-c23-m6-plan-instructions.md) from the plan
+// resolvePlan computes, the one the context states and the gate enforces, so
+// the SessionStart hook, the gate-task rewrite and 'memory plan --instructions'
+// say the same thing. A project is named only for a source the plan includes;
+// the Engram name is engramName of the identity the workflow recorded, the rule
+// the gate's Engram project check compares with, and is left out when there is
+// no identity or no rule, as the gate then checks no Engram project. The goal
+// line appears only under scope goal; under scope none the block says to read
+// no memory. A plan that cannot be computed is one line saying so. The block
+// adds no rule: M4 and M5 enforce what it says.
+func InstructionsBlock(b Binding, state workflow.State, engramName func(identity string) string) string {
+	head := "labdrian memory instructions (workflow " + sanitizeLine(b.WorkflowID)
+	plan, err := resolvePlan(state, b.ProjectID)
+	if err != nil {
+		return head + "): not available: the memory plan could not be computed" + detailIn(err.Error()) + "."
+	}
+	lines := []string{head + ", scope " + sanitizeLine(string(plan.Scope)) + "):"}
+	if plan.Scope == memoryscope.ScopeNone {
+		lines = append(lines, "- Read no memory: the plan permits no source, so every memory read is denied.")
+	} else {
+		sources := make([]string, len(plan.Sources))
+		for i, source := range plan.Sources {
+			sources[i] = sanitizeLine(string(source))
+		}
+		lines = append(lines, "- Read memory only from: "+orElse(strings.Join(sources, ", "), noneField)+". A read from any other source is denied.")
+		if line := instructionsProjectLine(plan, state.ProjectIdentity, engramName); line != "" {
+			lines = append(lines, line)
+		}
+		if goal := sanitizeLine(plan.Filters.GoalID); plan.Scope == memoryscope.ScopeGoal && goal != "" {
+			quoted := strconv.Quote(goal)
+			lines = append(lines, "- Under goal "+quoted+": pass goal "+quoted+" to every longterm-mem query, and give every Engram record you create for this goal a topic_key that begins with "+
+				strconv.Quote("goal:"+goal+"/")+", for example "+strconv.Quote("goal:"+goal+"/architecture/auth")+".")
+		}
+	}
+	lines = append(lines,
+		"- Memory writes (mem_save, promote) are not limited by the plan.",
+		"- Procedural candidates: T1 right after a proactive mem_save of type bugfix, pattern, discovery or decision; T2 at session close, beside mem_session_summary (skills/_shared/procedural-candidate-detection.md, section 5).")
+	return boundContext(strings.Join(lines, "\n"))
+}
+
+// instructionsProjectLine names the project each source of plan that names one
+// must be read with: Engram reads the Engram name of identity, longterm-mem the
+// plan's project. It is "" when no source of the plan names a known project.
+func instructionsProjectLine(plan memoryscope.Plan, identity string, engramName func(string) string) string {
+	var parts []string
+	if slices.Contains(plan.Sources, memoryscope.SourceEngram) && identity != "" && engramName != nil {
+		if name := sanitizeLine(engramName(identity)); name != "" {
+			parts = append(parts, "Engram reads (mem_search, mem_context) name project "+strconv.Quote(name))
+		}
+	}
+	if project := sanitizeLine(plan.Filters.ProjectID); slices.Contains(plan.Sources, memoryscope.SourceLongtermMem) && project != "" {
+		parts = append(parts, "longterm-mem query and get name project "+strconv.Quote(project))
+	}
+	if len(parts) == 0 {
+		return ""
+	}
+	return "- " + strings.Join(parts, "; ") + "."
 }
 
 // claudeCapabilityLine renders what the engine declares Claude Code does not

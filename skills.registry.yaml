@@ -505,3 +505,15 @@ skills:
         - pi
     lifecycle:
       updateStrategy: overlay-only
+  - id: memory-plan
+    path: memory-plan
+    source:
+      type: custom
+    install:
+      defaultScope: global
+      targets:
+        - claude
+        - codex
+        - pi
+    lifecycle:
+      updateStrategy: overlay-only

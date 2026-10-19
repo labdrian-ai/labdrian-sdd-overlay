@@ -89,9 +89,10 @@ func addClearanceDenyRule(root map[string]interface{}) bool {
 // removeHooks removes our hook entries. Returns true if any change was made.
 // Identity is Labdrian-owned entry shape: an entry of any family, installed or
 // retired (ownedByAFamily), not merely any entry that happens to reference the
-// same binary path. SessionEnd is scanned alongside UserPromptSubmit/PreToolUse
-// so an owned sync-trigger entry there is removed the same way; Stop is
-// never scanned because nothing owned is ever installed there.
+// same binary path. SessionEnd and SessionStart are scanned alongside
+// UserPromptSubmit/PreToolUse so an owned sync-trigger entry, or the projection
+// family's SessionStart entry (C23 M6), is removed the same way; Stop is never
+// scanned because nothing owned is ever installed there.
 func removeHooks(root map[string]interface{}, hookCommand string) bool {
 	hooks, ok := root["hooks"].(map[string]interface{})
 	if !ok {
@@ -99,7 +100,7 @@ func removeHooks(root map[string]interface{}, hookCommand string) bool {
 	}
 
 	changed := false
-	for _, key := range []string{"UserPromptSubmit", "PreToolUse", "SessionEnd"} {
+	for _, key := range []string{"UserPromptSubmit", "PreToolUse", "SessionEnd", "SessionStart"} {
 		entries, ok := hooks[key].([]interface{})
 		if !ok {
 			continue
