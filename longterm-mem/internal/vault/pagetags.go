@@ -39,8 +39,9 @@ func (r PageTagReader) PageTags(_ context.Context, candidate query.VaultCandidat
 	return tags, nil
 }
 
-// pageInside answers path cleaned when it is absolute and lies inside Root, and an error otherwise: the reader
-// reads only the vault's own pages, whatever path a retrieval reports.
+// pageInside answers the real path of path when it is absolute and, links resolved, lies inside the real Root, and
+// an error otherwise: the reader reads only the vault's own pages, whatever path a retrieval reports, and a link in
+// the vault to a file outside it is not one of them.
 func (r PageTagReader) pageInside(path string) (string, error) {
 	if !filepath.IsAbs(path) {
 		return "", fmt.Errorf("vault: page path %q is not absolute", path)
@@ -49,7 +50,12 @@ func (r PageTagReader) pageInside(path string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("vault: resolve the vault root %q: %w", r.Root, err)
 	}
-	path = filepath.Clean(path)
+	if root, err = filepath.EvalSymlinks(root); err != nil {
+		return "", fmt.Errorf("vault: resolve the vault root %q: %w", r.Root, err)
+	}
+	if path, err = filepath.EvalSymlinks(path); err != nil {
+		return "", fmt.Errorf("vault: resolve page path: %w", err)
+	}
 	rel, err := filepath.Rel(root, path)
 	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
 		return "", fmt.Errorf("vault: page path %q is outside the vault %q", path, root)

@@ -61,6 +61,17 @@ func TestPageTagReaderReadsTheFrontmatterTags(t *testing.T) {
 func TestPageTagReaderRefusesWhatItCannotRead(t *testing.T) {
 	root := t.TempDir()
 	outside := writePage(t, t.TempDir(), "elsewhere.md", "---\ntags: [memory]\n---\n")
+	if err := os.MkdirAll(filepath.Join(root, "wiki"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	linkedPage := filepath.Join(root, "wiki/linked.md")
+	if err := os.Symlink(outside, linkedPage); err != nil {
+		t.Fatal(err)
+	}
+	linkedDir := filepath.Join(root, "wiki/away")
+	if err := os.Symlink(filepath.Dir(outside), linkedDir); err != nil {
+		t.Fatal(err)
+	}
 	for _, tc := range []struct {
 		name, path string
 	}{
@@ -68,6 +79,8 @@ func TestPageTagReaderRefusesWhatItCannotRead(t *testing.T) {
 		{"an unclosed frontmatter", writePage(t, root, "wiki/open.md", "---\ntags:\n  - memory\n")},
 		{"an unclosed flow list", writePage(t, root, "wiki/flow.md", "---\ntags: [memory, goal:g-7\n---\n")},
 		{"a page outside the vault", outside},
+		{"a link in the vault to a page outside it", linkedPage},
+		{"a page under a link in the vault to a directory outside it", filepath.Join(linkedDir, "elsewhere.md")},
 		{"a relative path", "wiki/c-000001.md"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -76,5 +89,25 @@ func TestPageTagReaderRefusesWhatItCannotRead(t *testing.T) {
 				t.Fatalf("PageTags = %q, nil; want an error", got)
 			}
 		})
+	}
+}
+
+// A vault reached through a link, and a link in the vault to another of its pages, are inside it.
+func TestPageTagReaderReadsAPageThroughALinkInsideTheVault(t *testing.T) {
+	real := t.TempDir()
+	page := writePage(t, real, "wiki/c-000001.md", "---\ntags: [memory, goal:g-7]\n---\n")
+	linkedRoot := filepath.Join(t.TempDir(), "vault")
+	if err := os.Symlink(real, linkedRoot); err != nil {
+		t.Fatal(err)
+	}
+	alias := filepath.Join(real, "wiki/alias.md")
+	if err := os.Symlink(page, alias); err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range []string{filepath.Join(linkedRoot, "wiki/c-000001.md"), alias} {
+		got, err := PageTagReader{Root: linkedRoot}.PageTags(context.Background(), query.VaultCandidate{PageAddress: "c-000001", AbsolutePath: path})
+		if err != nil || !reflect.DeepEqual(got, []string{"memory", "goal:g-7"}) {
+			t.Errorf("PageTags(%s) = %q, %v; want [memory goal:g-7]", path, got, err)
+		}
 	}
 }
