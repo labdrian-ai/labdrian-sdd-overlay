@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -218,11 +219,12 @@ func (s *Service) unpersisted(all []surviving, dests []Destination) ([]surviving
 // feature folders are listed only when a receipt is persisted under no change, so a project
 // whose receipts are all under its changes never depends on them. A folder whose name capture
 // would refuse is not a feature: no receipt counts as persisted in it, and it is passed over so
-// that a stray folder does not stop the features beside it from counting.
-func (s *Service) persistedAcrossChangesOrFeatures(changes []string) (bool, error) {
+// that a stray folder does not stop the features beside it from counting; the folders passed over
+// are answered, so a denial can name them.
+func (s *Service) persistedAcrossChangesOrFeatures(changes []string) (ok bool, passedOver []string, err error) {
 	all, err := s.survivors()
 	if err != nil {
-		return false, err
+		return false, nil, err
 	}
 	dests := make([]Destination, 0, len(changes))
 	for _, c := range changes {
@@ -230,26 +232,40 @@ func (s *Service) persistedAcrossChangesOrFeatures(changes []string) (bool, erro
 	}
 	rest, err := s.unpersisted(all, dests)
 	if err != nil {
-		return false, err
+		return false, nil, err
 	}
 	if len(rest) == 0 {
-		return true, nil
+		return true, nil, nil
 	}
 	features, err := s.ports.Sink.Features()
 	if err != nil {
-		return false, fmt.Errorf("reviewreceipt: %w", err)
+		return false, nil, fmt.Errorf("reviewreceipt: %w", err)
 	}
 	inFeatures := make([]Destination, 0, len(features))
 	for _, f := range features {
 		if CheckPathComponent(kindFeature, f) != nil {
+			passedOver = append(passedOver, f)
 			continue
 		}
 		inFeatures = append(inFeatures, InFeature(f))
 	}
 	if rest, err = s.unpersisted(rest, inFeatures); err != nil {
-		return false, err
+		return false, nil, err
 	}
-	return len(rest) == 0, nil
+	return len(rest) == 0, passedOver, nil
+}
+
+// passedOverNote is what a denial adds about the folders persistedAcrossChangesOrFeatures passed
+// over: nothing when there were none.
+func passedOverNote(folders []string) string {
+	if len(folders) == 0 {
+		return ""
+	}
+	quoted := make([]string, len(folders))
+	for i, f := range folders {
+		quoted[i] = strconv.Quote(f)
+	}
+	return "; passed over folder(s) of odd/review-receipts that capture would refuse as a feature name: " + strings.Join(quoted, ", ")
 }
 
 // DetectActiveChange returns the single non-archive change under openspec/changes/ that
@@ -336,14 +352,14 @@ func (s *Service) CheckCommand(command string) Verdict {
 	if err != nil {
 		var multi *MultipleActiveChangesError
 		if errors.As(err, &multi) {
-			allPersisted, perr := s.persistedAcrossChangesOrFeatures(multi.Changes)
+			allPersisted, passedOver, perr := s.persistedAcrossChangesOrFeatures(multi.Changes)
 			if perr != nil {
 				return deny(fmt.Sprintf("review-receipt: %v", perr))
 			}
 			if allPersisted {
 				return Verdict{}
 			}
-			return deny(multi.Error())
+			return deny(multi.Error() + passedOverNote(passedOver))
 		}
 		return deny(fmt.Sprintf("review-receipt: %v", err))
 	}

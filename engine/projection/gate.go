@@ -24,16 +24,17 @@ package projection
 //     longterm-mem query must name the plan's project, which is the shared
 //     identity the workflow recorded at create (C23 M2). An Engram mem_search or
 //     mem_context must name the project Engram knows that identity by (the
-//     caller's GateInput.EngramName) and must not ask for every project.
-//   - The goal of a query (C23 M5). Under scope goal, a longterm-mem query must
-//     also name the plan's goal; its goal argument is checked after its project,
-//     and under any other scope it is never looked at. A read
+//     caller's GateInput.EngramName) and must not ask for every project. A read
 //     by id (get, mem_get_observation, mem_timeline) names no project and passes
 //     once its source is in the plan. A workflow that recorded no identity
 //     (created before M2) does not say which project the stores know it by, so
 //     its reads pass, with a warning. Every write (promote, every Engram write)
 //     and every other tool are never touched: the plan grants no write, and it
 //     does not forbid one.
+//   - The goal of a query (C23 M5, docs/architecture/adr-c23-m5-goal-filter.md).
+//     Under scope goal, a longterm-mem query must also name the plan's goal; its
+//     goal argument is checked after its project, and under any other scope it is
+//     never looked at.
 //
 //     The project's procedural skills (C23 M4 decision 5) are of source
 //     procedural-skills too: the Skill tool for a skill the procedural skills lock

@@ -199,8 +199,9 @@ func TestHookStillDeniesAnAmbiguousChangeWhileAReceiptIsNotPersisted(t *testing.
 	w.features = []string{"bad name "}
 	w.persisted["a/review-1.json"] = r.Data
 	w.persisted["feature:bad name /review-2.review-state.json"] = st.Data
-	if v := w.service().CheckCommand(ackCommand); !v.Deny || v.Reason != wantDeny {
-		t.Errorf("a receipt only in an unsafe folder: CheckCommand = %+v, want a denial %q", v, wantDeny)
+	wantPassedOver := wantDeny + `; passed over folder(s) of odd/review-receipts that capture would refuse as a feature name: "bad name "`
+	if v := w.service().CheckCommand(ackCommand); !v.Deny || v.Reason != wantPassedOver {
+		t.Errorf("a receipt only in an unsafe folder: CheckCommand = %+v, want a denial %q", v, wantPassedOver)
 	}
 }
 
