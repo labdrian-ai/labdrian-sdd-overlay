@@ -19,12 +19,13 @@ Do not create a skill when the pattern is trivial, one-off, or better served by 
 
 ## Hard Rules
 
-- Follow `references/skill-style-guide.md` as the normative source before creating or updating skills.
-- Run `labdrian skills lint <path>` on the new or updated `SKILL.md`; a hard error blocks the skill, and a warning should be resolved before finishing. If the `labdrian` binary is unavailable, apply the rule table in `references/skill-style-guide.md` (the generated block) manually instead.
+- When working in this repo, first follow `docs/skill-style-guide.md` as the normative source before creating or updating skills.
+- For installed global skills, use `references/skill-style-guide.md` as the bundled local copy of that guide when `docs/skill-style-guide.md` is unavailable.
+- If neither guide is available, use the compact inline rules below.
 - A skill is a runtime instruction contract for an LLM, not human documentation.
 - Do not add a `Keywords` section; preserve essential trigger words in `description`.
 - References must point to local files.
-- Keep the skill body concise: target 180–450 tokens; `labdrian skills lint` enforces the recommended and hard token maximums.
+- Keep the skill body concise: target 180–450 tokens, recommended max 700, hard max 1000.
 
 ## Decision Gates
 
@@ -37,9 +38,10 @@ Do not create a skill when the pattern is trivial, one-off, or better served by 
 
 ## Execution Steps
 
-1. Read `references/skill-style-guide.md` and apply it before the inline fallback rules.
-2. Confirm the skill does not already exist and the pattern is reusable.
-3. Create or update `skills/{skill-name}/SKILL.md` using this required structure:
+1. Check whether `docs/skill-style-guide.md` exists; if it does, apply it before the bundled local copy or inline fallback rules.
+2. If the repo guide is unavailable, read `references/skill-style-guide.md` and apply it before the inline fallback rules.
+3. Confirm the skill does not already exist and the pattern is reusable.
+4. Create or update `skills/{skill-name}/SKILL.md` using this required structure:
 
 ```
 skills/{skill-name}/
@@ -50,7 +52,7 @@ skills/{skill-name}/
 └── references/           # Optional - links to local docs
     └── docs.md           # Points to docs/developer-guide/*.mdx
 ```
-4. Use this frontmatter shape:
+5. Use this frontmatter shape:
 
 ```markdown
 ---
@@ -62,14 +64,13 @@ metadata:
   version: "1.0"
 ---
 ```
-5. Write sections in this order: Activation Contract, Hard Rules, Decision Gates, Execution Steps, Output Contract, References.
-6. Register the skill in `AGENTS.md` when it is a project skill.
-7. Run `labdrian skills lint <path>` and fix any hard error before finishing.
+6. Write sections in this order: Activation Contract, Hard Rules, Decision Gates, Execution Steps, Output Contract, References.
+7. Register the skill in `AGENTS.md` when it is a project skill.
 
 ## Inline Fallback Rules
 
 - `description` MUST be one physical line, quoted, YAML-safe, and include essential trigger words first.
-- `description` length and body token budget are machine-checked by `labdrian skills lint`; see `references/skill-style-guide.md` for the exact bounds.
+- `description` SHOULD be <=160 chars and MUST be <=250 chars.
 - Frontmatter MUST include `name`, `description`, `license`, `metadata.author`, and `metadata.version`.
 - Use imperative instructions, not tutorials or background prose.
 - Put supporting material in `assets/` or `references/`, not the main skill body.
@@ -93,11 +94,11 @@ Keywords: jira, task
 
 Return:
 - Files created or modified.
-- Whether the style guide or inline fallback rules were used.
-- The `labdrian skills lint` result (hard errors and warnings, if any).
+- Whether the repo style guide or inline fallback rules were used.
 - Any AGENTS.md registration change.
 - Any supporting files added under `assets/` or `references/`.
 
 ## References
 
-- `references/skill-style-guide.md` — normative LLM-first skill style guide, including the machine-checked lint rule table.
+- `docs/skill-style-guide.md` — normative LLM-first skill style guide for this repo.
+- `references/skill-style-guide.md` — bundled local copy for installed global skills when the repo doc is unavailable.
