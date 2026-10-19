@@ -59,7 +59,10 @@ Wave 2b — end-to-end memory wiring (added 2026-10-16 at the owner's request, "
     - [x] M3a — Goal v3 and shaper handoff v4 with a typed `memory_directive` (decisions 1-2). Delegated writer (parallel with M3b; the shaper reads the Goal, so they are one unit). `f22e1081`; a v4 handoff pairs with a Goal v3 only, v1-v3 handoffs with a Goal v2; 19 mutants killed.
     - [x] M3b — Role handoff v2 with an optional `memory_directive` (decision 2). Delegated writer (parallel with M3a). `42a90199`; a chain moves from v1 to v2, never back; 10 mutants killed.
     - [x] M3c — Workflow EventVersion 3: the created event's directives, `workflow create --handoff`, the `narrowed` event and `workflow narrow`, refusal of a widening directive, the plan resolved from the log, and `memory plan --project/--workflow` (decisions 3-7). After M3a and M3b. Delegated writer (context backstop: one unit of several hundred lines across workflow, projection and cmd).
-  - [ ] M4 — The memory gate enforces the plan's sources and covers Engram, `get` and `promote` (G3, G5).
+  - [ ] M4 — The memory gate enforces the plan's sources and covers Engram, `get` and `promote` (G3, G5). Batch 55, branch `feat/phase9-b55`; the owner's decision of 2026-10-19 (a read by id passes) and the M1/M2 decisions it applies are in docs/architecture/adr-c23-m4-memory-gate.md. Tasks:
+    - [ ] M4a — The ADR (inline).
+    - [ ] M4b — Sources enforced for Engram reads and longterm-mem `query`/`get`; the Engram project check; writes and `promote` untouched; the matchers (decisions 1-4, 6). Delegated writer (context backstop: the batch also carries a verifier and native review in groups).
+    - [ ] M4c — Procedural skills: the lock read through a port by the hook service, the `Skill` and `Read` rules (decision 5). Same writer, after M4b (it shares `gate.go`).
   - [ ] M5 — A goal filter in `longterm-mem query` (G4).
   - [ ] M6 — The plan reaches the agent as instructions: SessionStart, a route for subagents, and one shared skill that loads the plan and the T1/T2 contract (G1, G2).
   - [ ] M7 — A PostToolUse hook records memory-read evidence (G5).
