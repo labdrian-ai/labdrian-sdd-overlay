@@ -23,7 +23,7 @@ import (
 // the name of a field of a Bash input, but also of the entries of a settings file, which are
 // not the hook format.
 var protocolTags = []string{
-	"hook_event_name", "tool_name", "tool_input", "tool_use_id", "subagent_type", "file_path", "notebook_path",
+	"hook_event_name", "tool_name", "tool_input", "tool_use_id", "tool_response", "session_id", "subagent_type", "file_path", "notebook_path",
 	"hookEventName", "hookSpecificOutput", "permissionDecision", "permissionDecisionReason",
 	"additionalContext", "systemMessage", "updatedInput",
 }

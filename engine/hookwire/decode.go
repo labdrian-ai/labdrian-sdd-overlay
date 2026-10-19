@@ -114,9 +114,13 @@ type QueryArguments struct {
 // Query reads the input of the call as the arguments of a memory query. A key is matched
 // exactly and the last of a repeated key wins. It never fails: what it cannot read it reports
 // as not named, or as no project.
-func (p PreToolUse) Query() QueryArguments {
+func (p PreToolUse) Query() QueryArguments { return queryArguments(p.input) }
+
+// queryArguments reads input, a tool call's input, as the arguments of a memory query, by the
+// rules of PreToolUse.Query.
+func queryArguments(input json.RawMessage) QueryArguments {
 	var fields map[string]json.RawMessage
-	if err := json.Unmarshal(p.input, &fields); err != nil || fields == nil {
+	if err := json.Unmarshal(input, &fields); err != nil || fields == nil {
 		return QueryArguments{}
 	}
 	var project string
@@ -135,16 +139,16 @@ func (p PreToolUse) Query() QueryArguments {
 }
 
 // Skill is the skill a Skill call names: its "skill" argument when that is text, else "".
-func (p PreToolUse) Skill() string { return p.textArgument("skill") }
+func (p PreToolUse) Skill() string { return textArgument(p.input, "skill") }
 
 // FilePath is the file a Read call names: its "file_path" argument when that is text, else "".
-func (p PreToolUse) FilePath() string { return p.textArgument("file_path") }
+func (p PreToolUse) FilePath() string { return textArgument(p.input, "file_path") }
 
-// textArgument is the argument of the input named key, matched exactly, when the input is an
-// object and the argument is text; "" otherwise. The last of a repeated key wins.
-func (p PreToolUse) textArgument(key string) string {
+// textArgument is the argument of input named key, matched exactly, when input is an object and
+// the argument is text; "" otherwise. The last of a repeated key wins.
+func textArgument(input json.RawMessage, key string) string {
 	var fields map[string]json.RawMessage
-	if err := json.Unmarshal(p.input, &fields); err != nil {
+	if err := json.Unmarshal(input, &fields); err != nil {
 		return ""
 	}
 	var text string
