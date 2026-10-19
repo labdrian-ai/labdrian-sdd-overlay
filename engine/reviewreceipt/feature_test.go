@@ -186,11 +186,21 @@ func TestHookStillDeniesAnAmbiguousChangeWhileAReceiptIsNotPersisted(t *testing.
 	if v := w.service().CheckCommand(ackCommand); v.Deny {
 		t.Errorf("every receipt under a change: CheckCommand = %+v, want an allow before any feature is asked", v)
 	}
-	w, r, _ = ambiguous()
+	// A folder whose name capture would refuse is no feature: no receipt counts as persisted there,
+	// and it does not stop the receipts in the features beside it from counting.
+	w, r, st = ambiguous()
+	w.features = []string{" bad", feature}
+	w.persisted["a/review-1.json"] = r.Data
+	w.persisted["feature:"+feature+"/review-2.review-state.json"] = st.Data
+	if v := w.service().CheckCommand(ackCommand); v.Deny {
+		t.Errorf("an unsafe folder beside the feature: CheckCommand = %+v, want an allow", v)
+	}
+	w, r, st = ambiguous()
 	w.features = []string{"bad name "}
 	w.persisted["a/review-1.json"] = r.Data
-	if v := w.service().CheckCommand(ackCommand); !v.Deny || !strings.Contains(v.Reason, `feature name "bad name "`) {
-		t.Errorf("unsafe feature folder: CheckCommand = %+v, want a denial naming the feature", v)
+	w.persisted["feature:bad name /review-2.review-state.json"] = st.Data
+	if v := w.service().CheckCommand(ackCommand); !v.Deny || v.Reason != wantDeny {
+		t.Errorf("a receipt only in an unsafe folder: CheckCommand = %+v, want a denial %q", v, wantDeny)
 	}
 }
 

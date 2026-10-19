@@ -44,12 +44,6 @@ type reviewReceiptArgs struct {
 	hasFeature bool
 }
 
-// parseReviewReceiptArgs extracts --cwd and --change from args.
-func parseReviewReceiptArgs(args []string) (cwd, change string) {
-	a := parseReviewReceiptFlags(args)
-	return a.cwd, a.change
-}
-
 // parseReviewReceiptFlags extracts --cwd, --change and --feature from args.
 func parseReviewReceiptFlags(args []string) reviewReceiptArgs {
 	var a reviewReceiptArgs
@@ -158,7 +152,7 @@ func runReviewReceiptCapture(p process, d deps, args []string) {
 // reviewreceipt.Service.CheckCommand, and exits with the status of its
 // verdict, printing its reason (if any) to stderr.
 func runReviewReceiptHook(p process, d deps, args []string) {
-	cwd, _ := parseReviewReceiptArgs(args)
+	cwd := parseReviewReceiptFlags(args).cwd
 	if cwd == "" {
 		fmt.Fprintln(p.stderr, "error: --cwd is required")
 		p.exit(hookwire.ExitBlock)

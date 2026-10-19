@@ -216,7 +216,9 @@ func (s *Service) unpersisted(all []surviving, dests []Destination) ([]surviving
 // persistedAcrossChangesOrFeatures reports whether every surviving approved receipt is
 // persisted byte for byte under one of changes or in any feature folder the sink keeps. The
 // feature folders are listed only when a receipt is persisted under no change, so a project
-// whose receipts are all under its changes never depends on them.
+// whose receipts are all under its changes never depends on them. A folder whose name capture
+// would refuse is not a feature: no receipt counts as persisted in it, and it is passed over so
+// that a stray folder does not stop the features beside it from counting.
 func (s *Service) persistedAcrossChangesOrFeatures(changes []string) (bool, error) {
 	all, err := s.survivors()
 	if err != nil {
@@ -239,6 +241,9 @@ func (s *Service) persistedAcrossChangesOrFeatures(changes []string) (bool, erro
 	}
 	inFeatures := make([]Destination, 0, len(features))
 	for _, f := range features {
+		if CheckPathComponent(kindFeature, f) != nil {
+			continue
+		}
 		inFeatures = append(inFeatures, InFeature(f))
 	}
 	if rest, err = s.unpersisted(rest, inFeatures); err != nil {
