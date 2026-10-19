@@ -43,9 +43,10 @@ const (
 // projectionFamily is the whole family in install order: one UserPromptSubmit
 // entry, a PreToolUse entry per matcher, and one SessionStart entry, which gives
 // a session the memory instructions of its workflow when it starts, resumes, is
-// cleared or is compacted (C23 M6; no matcher, so every source). The entries
-// added by C23 M4 and M6 come last, so an install made before them gains them at
-// the end and keeps the rest.
+// cleared or is compacted (C23 M6; no matcher, so every source), and a PostToolUse
+// entry per memory-read matcher of the gate, which records the evidence of a read
+// that ran (C23 M7). The entries added by C23 M4, M6 and M7 come last, so an
+// install made before them gains them at the end and keeps the rest.
 var projectionFamily = hookFamily{
 	identity: LabdrianProjectionIdentity,
 	specs: []hookSpec{
@@ -56,6 +57,10 @@ var projectionFamily = hookFamily{
 		{event: "PreToolUse", matcher: ProjectionEngramReadMatcher},
 		{event: "PreToolUse", matcher: ProjectionProceduralSkillMatcher},
 		{event: "SessionStart"},
+		{event: "PostToolUse", matcher: ProjectionMemoryQueryMatcher},
+		{event: "PostToolUse", matcher: ProjectionMemoryGetMatcher},
+		{event: "PostToolUse", matcher: ProjectionEngramReadMatcher},
+		{event: "PostToolUse", matcher: ProjectionProceduralSkillMatcher},
 	},
 	build: buildProjectionEntry,
 }

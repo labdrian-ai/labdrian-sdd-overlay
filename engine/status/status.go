@@ -345,7 +345,7 @@ func checkShaperClearanceGuard(s loadedSettings) Check {
 // Installing the hooks is not enough for a running session: Claude Code loads hook changes only
 // when it starts, so the note says to restart it.
 func checkProjectionHooks(s loadedSettings, hookCommand string) Check {
-	label := "hooks: projection (SessionStart + UserPromptSubmit + PreToolUse gates)"
+	label := "hooks: projection (SessionStart + UserPromptSubmit + PreToolUse gates + PostToolUse read evidence)"
 	if c, done := s.beforeEntries(label, Warn, "; "+remediation+"; "+restartNote); done {
 		return c
 	}
