@@ -1,0 +1,341 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:3fef301ccc8730703c178fe834ff3852ccd4aa2b113107f2af79ddcc15ab483b",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-b3652f73d9a6a356",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "8fe09ca43ce29d54fa82bec1c16dd0150870d1e3",
+      "candidate_tree": "87eb551062fd79c5389959373613a4f7e8a5c276",
+      "paths_digest": "sha256:2671411ede973c90168ac4165d379fec95475623b14bd0a9d1af4e32ff8630f6",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/capability/declarations.go",
+        "engine/capability/declarations_test.go",
+        "engine/cmd/main_test.go",
+        "engine/cmd/review_receipt.go",
+        "engine/projection/gate.go",
+        "engine/projection/gate_goal_test.go",
+        "engine/reviewreceipt/feature_test.go",
+        "engine/reviewreceipt/service.go",
+        "odd/tasks/consolidation-phase9.md"
+      ],
+      "identity": "sha256:451cca42a27778a7c5fef49ae3a75f5af6f11df0c8d656f06bcc17eedceedff4"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "8fe09ca43ce29d54fa82bec1c16dd0150870d1e3",
+      "candidate_tree": "87eb551062fd79c5389959373613a4f7e8a5c276",
+      "paths_digest": "sha256:2671411ede973c90168ac4165d379fec95475623b14bd0a9d1af4e32ff8630f6",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/capability/declarations.go",
+        "engine/capability/declarations_test.go",
+        "engine/cmd/main_test.go",
+        "engine/cmd/review_receipt.go",
+        "engine/projection/gate.go",
+        "engine/projection/gate_goal_test.go",
+        "engine/reviewreceipt/feature_test.go",
+        "engine/reviewreceipt/service.go",
+        "odd/tasks/consolidation-phase9.md"
+      ],
+      "identity": "sha256:451cca42a27778a7c5fef49ae3a75f5af6f11df0c8d656f06bcc17eedceedff4"
+    },
+    "genesis_paths": [
+      "engine/capability/declarations.go",
+      "engine/capability/declarations_test.go",
+      "engine/cmd/main_test.go",
+      "engine/cmd/review_receipt.go",
+      "engine/projection/gate.go",
+      "engine/projection/gate_goal_test.go",
+      "engine/reviewreceipt/feature_test.go",
+      "engine/reviewreceipt/service.go",
+      "odd/tasks/consolidation-phase9.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-risk",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 80,
+    "correction_budget": 40,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "review fixes: the acknowledgement guard now passes over a feature folder capture would refuse (a guard), one parser for the review-receipt verbs, the gate's package comment and memory claim reworded, a control-character goal test, and the ledger",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:4cb76592d20f365d65ca70c9f5bb7a35423acef8b4736cc36cf96657ccf7ec6d",
+    "capture_phase_revision": "sha256:0dd502f37a1d293537a86f7d5f103146236d392cec6da7404e953dc1ed493b72",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:451cca42a27778a7c5fef49ae3a75f5af6f11df0c8d656f06bcc17eedceedff4",
+        "capture_phase_revision": "sha256:0dd502f37a1d293537a86f7d5f103146236d392cec6da7404e953dc1ed493b72",
+        "artifact_digest": "sha256:58b792747ef5f20f4950d0742064c2aee367b4d92fba011a728e323bd6ab6c44",
+        "result_hash": "sha256:d572db22a8b068e36f88a49324a09df8534cc6b0ad50e651019c65342605f6ab",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:63a96746aa234b67224d103ab7f4972abdfc61dee20a86cd9030513bb2a3f1b9",
+            "lineage_id": "review-b3652f73d9a6a356",
+            "authority_revision": "sha256:0dd502f37a1d293537a86f7d5f103146236d392cec6da7404e953dc1ed493b72",
+            "target_identity": "sha256:451cca42a27778a7c5fef49ae3a75f5af6f11df0c8d656f06bcc17eedceedff4",
+            "base_tree": "8fe09ca43ce29d54fa82bec1c16dd0150870d1e3",
+            "candidate_tree": "87eb551062fd79c5389959373613a4f7e8a5c276",
+            "changed_path_manifest_sha256": "sha256:9b2b034517533c80abca57366977e5870beeb49b2fcd78321f9b2dd42ac489a8",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:63a96746aa234b67224d103ab7f4972abdfc61dee20a86cd9030513bb2a3f1b9",
+            "raw_sha256": "sha256:fe098742f080f0ae927ade0dfad08a51d387eccb6730b78fab9556d78a22f993",
+            "canonical_sha256": "sha256:8bad5dddb68081589e9763c57176052f59eef4a545f5962cce31c1af17904941",
+            "result_hash": "sha256:d572db22a8b068e36f88a49324a09df8534cc6b0ad50e651019c65342605f6ab",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:63a96746aa234b67224d103ab7f4972abdfc61dee20a86cd9030513bb2a3f1b9",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/capability/declarations.go",
+                "engine/capability/declarations_test.go",
+                "engine/cmd/main_test.go",
+                "engine/cmd/review_receipt.go",
+                "engine/projection/gate.go",
+                "engine/projection/gate_goal_test.go",
+                "engine/reviewreceipt/feature_test.go",
+                "engine/reviewreceipt/service.go",
+                "odd/tasks/consolidation-phase9.md"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [
+              {
+                "id": "R1-001",
+                "lens": "risk",
+                "location": "engine/reviewreceipt/service.go:244-246",
+                "severity": "WARNING",
+                "claim": "Folders whose names fail CheckPathComponent are now silently skipped when checking whether receipts are persisted. This fails open only in the sense that a stray folder no longer denies. A receipt can still count as persisted only in a valid feature folder, so no unreviewed receipt is accepted. This is an intended relaxation with no reachable bypass.",
+                "proof_refs": [
+                  "engine/reviewreceipt/service.go:244-246",
+                  "engine/reviewreceipt/feature_test.go:189-205"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Reviewed all 9 manifest paths. The changes are a refactor of the flag parser, comment and doc edits, a new test that a control-character goal is denied on one line, and the skip of unsafe feature folders.",
+              "The skip only drops unsafe-named folders from the set of destinations that can satisfy persistence. A receipt persisted only in such a folder still yields a denial, which the updated test asserts. An unsafe folder therefore cannot be used to bypass the hook.",
+              "engine/cmd/review_receipt.go keeps the behavior of the hook's --cwd handling: parseReviewReceiptFlags(args).cwd replaces the removed wrapper with the same result.",
+              "engine/projection/gate.go has only comment changes. The new test in engine/projection/gate_goal_test.go adds coverage and no production code change is visible. I found no data exposure, injection, secret, or dependency issue."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "selected_order": 1,
+        "target_identity": "sha256:451cca42a27778a7c5fef49ae3a75f5af6f11df0c8d656f06bcc17eedceedff4",
+        "capture_phase_revision": "sha256:0dd502f37a1d293537a86f7d5f103146236d392cec6da7404e953dc1ed493b72",
+        "artifact_digest": "sha256:c474a8827a485c71f6e63402fa26f21d0af603012e3dd6e820cf57649bee2dcd",
+        "result_hash": "sha256:6f0453393fb8e49b7801bcc508c9400e98a3b79f638acf1a5ef862a728d0e041",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:b45fa3108abe70d337dd8f02d081b029dc5d7d7a6b365d7e5ba5720f5b0ddedb",
+            "lineage_id": "review-b3652f73d9a6a356",
+            "authority_revision": "sha256:0dd502f37a1d293537a86f7d5f103146236d392cec6da7404e953dc1ed493b72",
+            "target_identity": "sha256:451cca42a27778a7c5fef49ae3a75f5af6f11df0c8d656f06bcc17eedceedff4",
+            "base_tree": "8fe09ca43ce29d54fa82bec1c16dd0150870d1e3",
+            "candidate_tree": "87eb551062fd79c5389959373613a4f7e8a5c276",
+            "changed_path_manifest_sha256": "sha256:9b2b034517533c80abca57366977e5870beeb49b2fcd78321f9b2dd42ac489a8",
+            "lens": "review-readability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:b45fa3108abe70d337dd8f02d081b029dc5d7d7a6b365d7e5ba5720f5b0ddedb",
+            "raw_sha256": "sha256:ae77178390e536b88f2bb49aa62f803d4ec9a5b29766892ed93fe9651d38692d",
+            "canonical_sha256": "sha256:5fc960362345ba8a4fab0182f098d1ceb009c2c9c6155f49ed344dd5988bb038",
+            "result_hash": "sha256:6f0453393fb8e49b7801bcc508c9400e98a3b79f638acf1a5ef862a728d0e041",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:b45fa3108abe70d337dd8f02d081b029dc5d7d7a6b365d7e5ba5720f5b0ddedb",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/capability/declarations.go",
+                "engine/capability/declarations_test.go",
+                "engine/cmd/main_test.go",
+                "engine/cmd/review_receipt.go",
+                "engine/projection/gate.go",
+                "engine/projection/gate_goal_test.go",
+                "engine/reviewreceipt/feature_test.go",
+                "engine/reviewreceipt/service.go",
+                "odd/tasks/consolidation-phase9.md"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-001",
+                "lens": "readability",
+                "location": "engine/projection/gate.go:25-30",
+                "severity": "SUGGESTION",
+                "claim": "The reworked package comment splits the goal-of-a-query rule into a new bullet, but the sentence that follows ('A read by id ...') still continues the previous bullet's thought and now sits inside the goal bullet, so it reads as part of the goal rule rather than the general memory-read rule. Reflow so the by-id sentence belongs to the memory-read bullet.",
+                "proof_refs": [
+                  "engine/projection/gate.go:25-30"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-002",
+                "lens": "readability",
+                "location": "engine/reviewreceipt/service.go:244-246",
+                "severity": "SUGGESTION",
+                "claim": "Unsafe feature folders are silently skipped in persistedAcrossChangesOrFeatures; the doc comment explains it, but no diagnostic is produced, so a stray folder is invisible to the user (the ledger notes the earlier fail-closed behavior was an advisory). Behavior is documented and tested, so this is only a maintainability note.",
+                "proof_refs": [
+                  "engine/reviewreceipt/service.go:244-246",
+                  "engine/reviewreceipt/feature_test.go:189-205"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Reviewed all 9 changed paths. The parseReviewReceiptArgs removal is complete in the visible patch: its test and its hook caller were both updated.",
+              "Capability wording change and its test substring stay consistent (goal-scoped queries its goal).",
+              "The new gate_goal_test pins control-character escaping with a clear comment.",
+              "The new feature_test cases cover both the skip of an unsafe folder beside a feature and the deny when a receipt exists only in an unsafe folder, matching the new comment in service.go.",
+              "No blocker or critical readability defects found."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 2,
+        "target_identity": "sha256:451cca42a27778a7c5fef49ae3a75f5af6f11df0c8d656f06bcc17eedceedff4",
+        "capture_phase_revision": "sha256:0dd502f37a1d293537a86f7d5f103146236d392cec6da7404e953dc1ed493b72",
+        "artifact_digest": "sha256:09bb5dea2b13b8c1643467b773f784462719b5286fa48e6778902e434080bda8",
+        "result_hash": "sha256:edc0fb09f7bb2b8d4939fdb422e09dcf00368eae47902a01c4a7f5d013e57734",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:ca24662c867913366cf169a3968c51ec46ee80aa68334d243096b63ee337bdfa",
+            "lineage_id": "review-b3652f73d9a6a356",
+            "authority_revision": "sha256:0dd502f37a1d293537a86f7d5f103146236d392cec6da7404e953dc1ed493b72",
+            "target_identity": "sha256:451cca42a27778a7c5fef49ae3a75f5af6f11df0c8d656f06bcc17eedceedff4",
+            "base_tree": "8fe09ca43ce29d54fa82bec1c16dd0150870d1e3",
+            "candidate_tree": "87eb551062fd79c5389959373613a4f7e8a5c276",
+            "changed_path_manifest_sha256": "sha256:9b2b034517533c80abca57366977e5870beeb49b2fcd78321f9b2dd42ac489a8",
+            "lens": "review-reliability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:ca24662c867913366cf169a3968c51ec46ee80aa68334d243096b63ee337bdfa",
+            "raw_sha256": "sha256:8c4c9c925ff8e39b35d99523623f8c156094fec04741b5e0b27e575b5ef0e7ad",
+            "canonical_sha256": "sha256:5744487f975b7ac4a37520acdeeda8f2e089a8e8d38f2171bcefa2c446e2d852",
+            "result_hash": "sha256:edc0fb09f7bb2b8d4939fdb422e09dcf00368eae47902a01c4a7f5d013e57734",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:ca24662c867913366cf169a3968c51ec46ee80aa68334d243096b63ee337bdfa",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/capability/declarations.go",
+                "engine/capability/declarations_test.go",
+                "engine/cmd/main_test.go",
+                "engine/cmd/review_receipt.go",
+                "engine/projection/gate.go",
+                "engine/projection/gate_goal_test.go",
+                "engine/reviewreceipt/feature_test.go",
+                "engine/reviewreceipt/service.go",
+                "odd/tasks/consolidation-phase9.md"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-001",
+                "lens": "reliability",
+                "location": "engine/projection/gate_goal_test.go:43-54",
+                "severity": "SUGGESTION",
+                "claim": "The new control-character test asserts the denial reason contains no raw control characters and carries the permitted-goal text, which proves the one-line behavior for the four sampled inputs. It does not cover empty or very long goals, but the candidate adds no production change for those, so this is optional.",
+                "proof_refs": [
+                  "engine/projection/gate_goal_test.go:43-54"
+                ]
+              },
+              {
+                "id": "R3-002",
+                "lens": "reliability",
+                "location": "engine/reviewreceipt/service.go:244-246",
+                "severity": "WARNING",
+                "claim": "Unsafe feature folders are now silently skipped when checking persistence. This fails closed only when no safe feature holds the receipt. A stray folder no longer makes the hook deny every multi-change acknowledgement, which is the intended fix, and the feature_test covers both the skip and the deny case. A residual risk is that a CheckPathComponent error other than unsafe-name would also be swallowed, but the function takes only the name, so this is unlikely.",
+                "proof_refs": [
+                  "engine/reviewreceipt/service.go:244-246",
+                  "engine/reviewreceipt/feature_test.go:189-205"
+                ]
+              }
+            ],
+            "evidence": [
+              "Reviewed all 9 manifest paths in full.",
+              "service.go skips folders that CheckPathComponent refuses; feature_test.go asserts an allow when a valid feature beside an unsafe folder holds the receipts, and a deny with the standard message when the receipts exist only in the unsafe folder.",
+              "review_receipt.go removes the parseReviewReceiptArgs wrapper; the hook now reads parseReviewReceiptFlags(args).cwd, and main_test.go is updated to the flags struct with identical parsing behavior.",
+              "gate.go and declarations.go changes are comment and description wording only, and declarations_test.go matches the new capability text.",
+              "gate_goal_test.go adds a control-character goal denial test; the production quoting it relies on is already in the base, so this adds coverage only."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "42010c8f8ed62a64a618c6a6a0c1b7b2d9c4319739142955656ed1ee16db9188",
+    "initial_atomic_start": {
+      "lineage_id": "review-b3652f73d9a6a356",
+      "worktree_identity": "sha256:8455002f227f033663d0e7d8b8ff6a885e1c85b482ec52e34017c303452eed87",
+      "target_identity": "sha256:451cca42a27778a7c5fef49ae3a75f5af6f11df0c8d656f06bcc17eedceedff4",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "8fe09ca43ce29d54fa82bec1c16dd0150870d1e3",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-risk",
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 80,
+      "correction_budget": 40,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "review fixes: the acknowledgement guard now passes over a feature folder capture would refuse (a guard), one parser for the review-receipt verbs, the gate's package comment and memory claim reworded, a control-character goal test, and the ledger"
+    },
+    "runtime_agent": "claude-code"
+  }
+}
