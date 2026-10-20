@@ -1,0 +1,310 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:8c361454ebd116e3236d02c9948ead600f850bc6e8c6735bfb3502d6c375a834",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-4ea0f939bc6b428c",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "8ff62d79d633fe01d40bfd9763620f045a793dc1",
+      "candidate_tree": "820017e206c74a3bb40e65f504032216b9f9832b",
+      "paths_digest": "sha256:afc6c410ac77701b4e98323e81e748b5976d7863956152a4a494e009dcbed3eb",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "docs/architecture/adr-c23-m7-read-evidence.md",
+        "engine/hookwire/boundary_test.go",
+        "engine/hookwire/decode.go",
+        "engine/hookwire/hookwire.go",
+        "engine/hookwire/posttooluse.go",
+        "engine/hookwire/posttooluse_test.go",
+        "engine/projection/app/evidence_test.go",
+        "engine/projection/app/hook.go",
+        "engine/projection/evidence.go",
+        "engine/projection/evidence_test.go",
+        "engine/projection/gate.go",
+        "odd/tasks/consolidation-phase9.md"
+      ],
+      "identity": "sha256:f7676645a5f39a6f868658d964e7a22f430b146efb98a6bcc1ad2474435c8a79"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "8ff62d79d633fe01d40bfd9763620f045a793dc1",
+      "candidate_tree": "820017e206c74a3bb40e65f504032216b9f9832b",
+      "paths_digest": "sha256:afc6c410ac77701b4e98323e81e748b5976d7863956152a4a494e009dcbed3eb",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "docs/architecture/adr-c23-m7-read-evidence.md",
+        "engine/hookwire/boundary_test.go",
+        "engine/hookwire/decode.go",
+        "engine/hookwire/hookwire.go",
+        "engine/hookwire/posttooluse.go",
+        "engine/hookwire/posttooluse_test.go",
+        "engine/projection/app/evidence_test.go",
+        "engine/projection/app/hook.go",
+        "engine/projection/evidence.go",
+        "engine/projection/evidence_test.go",
+        "engine/projection/gate.go",
+        "odd/tasks/consolidation-phase9.md"
+      ],
+      "identity": "sha256:f7676645a5f39a6f868658d964e7a22f430b146efb98a6bcc1ad2474435c8a79"
+    },
+    "genesis_paths": [
+      "docs/architecture/adr-c23-m7-read-evidence.md",
+      "engine/hookwire/boundary_test.go",
+      "engine/hookwire/decode.go",
+      "engine/hookwire/hookwire.go",
+      "engine/hookwire/posttooluse.go",
+      "engine/hookwire/posttooluse_test.go",
+      "engine/projection/app/evidence_test.go",
+      "engine/projection/app/hook.go",
+      "engine/projection/evidence.go",
+      "engine/projection/evidence_test.go",
+      "engine/projection/gate.go",
+      "odd/tasks/consolidation-phase9.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-risk",
+      "review-resilience",
+      "review-reliability"
+    ],
+    "original_changed_lines": 842,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "Adds a hook-input decoder that reads untrusted stdin up to 64 MiB and hashes the tool response (bounds, malformed input), and a pure domain rule plus use case deciding which memory reads are recorded and how a failed write is reported; new tests pin both.",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:2b9fdbb18e943f073593aa7c757444acf80e7baa67e8dac65f4b5c56469cb717",
+    "capture_phase_revision": "sha256:19efbddcedaf130cce6e9705476e3ce6c3cbca21964e2152a698d735cb70a244",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:f7676645a5f39a6f868658d964e7a22f430b146efb98a6bcc1ad2474435c8a79",
+        "capture_phase_revision": "sha256:19efbddcedaf130cce6e9705476e3ce6c3cbca21964e2152a698d735cb70a244",
+        "artifact_digest": "sha256:f97cc5d9a866bebd34c980946dfa2ad46039b200c54c198fdda55a3e17e08cfd",
+        "result_hash": "sha256:861adca4a66b4852bd8fdc0107f225237d9779ffc94125fec1d6b50e56361675",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:40d3271943400f1bd433aeb97b093b1e9e9362e21085dd0408828352e78c34d2",
+            "lineage_id": "review-4ea0f939bc6b428c",
+            "authority_revision": "sha256:19efbddcedaf130cce6e9705476e3ce6c3cbca21964e2152a698d735cb70a244",
+            "target_identity": "sha256:f7676645a5f39a6f868658d964e7a22f430b146efb98a6bcc1ad2474435c8a79",
+            "base_tree": "8ff62d79d633fe01d40bfd9763620f045a793dc1",
+            "candidate_tree": "820017e206c74a3bb40e65f504032216b9f9832b",
+            "changed_path_manifest_sha256": "sha256:e23374953dbe002578b18b4de2c067ade4dd62d98d8f7b27f56747753c6c2490",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:40d3271943400f1bd433aeb97b093b1e9e9362e21085dd0408828352e78c34d2",
+            "raw_sha256": "sha256:7373ee4497c40b1b22c2165739d5d9a575be695a18d2f9e98d6677bcd78cf3ce",
+            "canonical_sha256": "sha256:5b2ff2dcbc657e64b2bfb6554834540b714887179ce0bd11a54ff077e82b3e55",
+            "result_hash": "sha256:861adca4a66b4852bd8fdc0107f225237d9779ffc94125fec1d6b50e56361675",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:40d3271943400f1bd433aeb97b093b1e9e9362e21085dd0408828352e78c34d2",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "docs/architecture/adr-c23-m7-read-evidence.md",
+                "engine/hookwire/boundary_test.go",
+                "engine/hookwire/decode.go",
+                "engine/hookwire/hookwire.go",
+                "engine/hookwire/posttooluse.go",
+                "engine/hookwire/posttooluse_test.go",
+                "engine/projection/app/evidence_test.go",
+                "engine/projection/app/hook.go",
+                "engine/projection/evidence.go",
+                "engine/projection/evidence_test.go",
+                "engine/projection/gate.go",
+                "odd/tasks/consolidation-phase9.md"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "I read all 12 changed paths and found no exploitable risk caused by this candidate.",
+              "The decoder hashes tool_response and drops it, so no response content reaches disk. Input is capped at 64 MiB, which is a bounded memory cost.",
+              "Strings taken from tool_input go through evidenceLine, which sanitizes them to one line and clips them. The call and session ids are not sanitized, but they are written as JSON, so they cannot break the line format.",
+              "The recording path runs only when the binding and the workflow are owned and open. A failed write returns a single sanitized warning line and the hook does not fail.",
+              "The patch contains only the hook-side changes. The sidecar file adapter, its 0600 mode and its lock are not in this candidate, so I could not judge them."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-resilience",
+        "selected_order": 1,
+        "target_identity": "sha256:f7676645a5f39a6f868658d964e7a22f430b146efb98a6bcc1ad2474435c8a79",
+        "capture_phase_revision": "sha256:19efbddcedaf130cce6e9705476e3ce6c3cbca21964e2152a698d735cb70a244",
+        "artifact_digest": "sha256:0afaf6db7198b93a582c9f3af05f1ceff9bdaec688e5fc5a305621058e0df735",
+        "result_hash": "sha256:f4f9bde9699bab342b1e1904b19a1d85e58000b0ade132139ffe0409c65adb62",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:9082feadc545fd4fa6c90aa8f9c777a631cbb8161f9950e9cf52667df164088f",
+            "lineage_id": "review-4ea0f939bc6b428c",
+            "authority_revision": "sha256:19efbddcedaf130cce6e9705476e3ce6c3cbca21964e2152a698d735cb70a244",
+            "target_identity": "sha256:f7676645a5f39a6f868658d964e7a22f430b146efb98a6bcc1ad2474435c8a79",
+            "base_tree": "8ff62d79d633fe01d40bfd9763620f045a793dc1",
+            "candidate_tree": "820017e206c74a3bb40e65f504032216b9f9832b",
+            "changed_path_manifest_sha256": "sha256:e23374953dbe002578b18b4de2c067ade4dd62d98d8f7b27f56747753c6c2490",
+            "lens": "review-resilience",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:9082feadc545fd4fa6c90aa8f9c777a631cbb8161f9950e9cf52667df164088f",
+            "raw_sha256": "sha256:ae3fb1dbf58d4d2012e435e966e68e3de568e29df4af4eea785d6304482fddd1",
+            "canonical_sha256": "sha256:843ff6554d32501acf0ee3193cff22c2774ae5f41fa094ee1140a359e65b0c6c",
+            "result_hash": "sha256:f4f9bde9699bab342b1e1904b19a1d85e58000b0ade132139ffe0409c65adb62",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:9082feadc545fd4fa6c90aa8f9c777a631cbb8161f9950e9cf52667df164088f",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "docs/architecture/adr-c23-m7-read-evidence.md",
+                "engine/hookwire/boundary_test.go",
+                "engine/hookwire/decode.go",
+                "engine/hookwire/hookwire.go",
+                "engine/hookwire/posttooluse.go",
+                "engine/hookwire/posttooluse_test.go",
+                "engine/projection/app/evidence_test.go",
+                "engine/projection/app/hook.go",
+                "engine/projection/evidence.go",
+                "engine/projection/evidence_test.go",
+                "engine/projection/gate.go",
+                "odd/tasks/consolidation-phase9.md"
+              ]
+            },
+            "lens": "review-resilience",
+            "findings": [
+              {
+                "id": "R4-buffered-response",
+                "lens": "resilience",
+                "location": "engine/hookwire/posttooluse.go:101-102",
+                "severity": "WARNING",
+                "claim": "The decoder is documented as streaming tool_response and hashing it as it goes. In fact `dec.Decode(\u0026raw)` into a json.RawMessage buffers the whole response value in memory. The json.Decoder also keeps its own read buffer, and a second copy is made. A response near the 64 MiB bound could therefore take several times that in memory in a short-lived hook process, for every memory read. The bound itself is intact, so this is a memory-cost and documentation mismatch, not a correctness failure.",
+                "proof_refs": [
+                  "engine/hookwire/posttooluse.go:101-102",
+                  "engine/hookwire/hookwire.go:58-62"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Read all 12 patches. I found no BLOCKER or CRITICAL resilience defect that this candidate causes.",
+              "A failed evidence write degrades to a single additionalContext warning and the hook exits 0. A missing store, a missing clock, an unreadable binding, or a closed workflow all fail silent or warn. They never block the tool call.",
+              "Input size is bounded by the LimitReader plus the counting check, so a runaway writer cannot make the hook read without end.",
+              "The sidecar adapter and the command wiring are not in this candidate, so I could not check lock contention or retry behavior there."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 2,
+        "target_identity": "sha256:f7676645a5f39a6f868658d964e7a22f430b146efb98a6bcc1ad2474435c8a79",
+        "capture_phase_revision": "sha256:19efbddcedaf130cce6e9705476e3ce6c3cbca21964e2152a698d735cb70a244",
+        "artifact_digest": "sha256:5f129de2472c71eb036719a322ed3c34602e5ed40e4c4c313202c81b83a629b9",
+        "result_hash": "sha256:33314c7a0c1ed7b25dfb709edb847dc9821210638865a972c587bbb4ba5f9b09",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:67ece3b932803b5b763d76ea159e0a9842f2fbc60193bde07d89bffbddf23050",
+            "lineage_id": "review-4ea0f939bc6b428c",
+            "authority_revision": "sha256:19efbddcedaf130cce6e9705476e3ce6c3cbca21964e2152a698d735cb70a244",
+            "target_identity": "sha256:f7676645a5f39a6f868658d964e7a22f430b146efb98a6bcc1ad2474435c8a79",
+            "base_tree": "8ff62d79d633fe01d40bfd9763620f045a793dc1",
+            "candidate_tree": "820017e206c74a3bb40e65f504032216b9f9832b",
+            "changed_path_manifest_sha256": "sha256:e23374953dbe002578b18b4de2c067ade4dd62d98d8f7b27f56747753c6c2490",
+            "lens": "review-reliability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:67ece3b932803b5b763d76ea159e0a9842f2fbc60193bde07d89bffbddf23050",
+            "raw_sha256": "sha256:3717cdcc2c12af265b2fdc30d8987569bb147f7e89bed6637cb9629228064c5f",
+            "canonical_sha256": "sha256:3717cdcc2c12af265b2fdc30d8987569bb147f7e89bed6637cb9629228064c5f",
+            "result_hash": "sha256:33314c7a0c1ed7b25dfb709edb847dc9821210638865a972c587bbb4ba5f9b09",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:67ece3b932803b5b763d76ea159e0a9842f2fbc60193bde07d89bffbddf23050",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "docs/architecture/adr-c23-m7-read-evidence.md",
+                "engine/hookwire/boundary_test.go",
+                "engine/hookwire/decode.go",
+                "engine/hookwire/hookwire.go",
+                "engine/hookwire/posttooluse.go",
+                "engine/hookwire/posttooluse_test.go",
+                "engine/projection/app/evidence_test.go",
+                "engine/projection/app/hook.go",
+                "engine/projection/evidence.go",
+                "engine/projection/evidence_test.go",
+                "engine/projection/gate.go",
+                "odd/tasks/consolidation-phase9.md"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [],
+            "evidence": [
+              "Reviewed all 12 changed paths. The PostToolUse decoder rejects non-object input, empty input, wrong-typed fields, two objects, truncated input and input over the bound. It hashes tool_response as sent and keeps a response over the 1 MiB envelope bound. posttooluse_test.go covers each of these cases.",
+              "OnToolResult returns early for non-memory tools without reading the binding, and it is silent for an unbound repository, an unreadable binding store, a closed workflow or a foreign binding. A failed write, a missing log and a missing clock each produce a single-line warning. evidence_test.go in the app package covers all of these. Evidence classifies exactly the calls the gate checks, and evidence_test.go in the projection package asserts that writes and promote are not recorded.",
+              "Refactoring queryArguments and textArgument into package-level functions keeps PreToolUse behavior unchanged. The RecordID parsing handles absent keys, numbers, quoted numbers, text and booleans correctly.",
+              "Not provable from this candidate: the file-backed sidecar adapter, the projection hook CLI wiring for PostToolUse, the installer entries and the status label. None of these is in the diff, and the ledger marks M7b as incomplete. Their absence is declared scope, not a regression. The decoder buffers each tool_response up to 64 MiB in memory before hashing it, so the 'streaming' wording in the ADR is loose. I rated this too minor to report as a finding."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "1823adbba96f0579f895616edba96811b1ed2810a1d305da288d71ca4fdc5a94",
+    "initial_atomic_start": {
+      "lineage_id": "review-4ea0f939bc6b428c",
+      "worktree_identity": "sha256:8455002f227f033663d0e7d8b8ff6a885e1c85b482ec52e34017c303452eed87",
+      "target_identity": "sha256:f7676645a5f39a6f868658d964e7a22f430b146efb98a6bcc1ad2474435c8a79",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "8ff62d79d633fe01d40bfd9763620f045a793dc1",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-risk",
+        "review-resilience",
+        "review-reliability"
+      ],
+      "original_changed_lines": 842,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "Adds a hook-input decoder that reads untrusted stdin up to 64 MiB and hashes the tool response (bounds, malformed input), and a pure domain rule plus use case deciding which memory reads are recorded and how a failed write is reported; new tests pin both."
+    },
+    "runtime_agent": "claude-code"
+  }
+}
