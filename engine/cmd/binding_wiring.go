@@ -76,13 +76,28 @@ func (d deps) gateHook() app.HookService {
 // hooks inject and the gate cannot disagree. A panic in it is an empty block: the hooks that ask
 // must never fail the call they serve.
 func boundInstructions(d deps, processCwd string) func(inputDir string) string {
+	return boundInstructionsWith(d, processCwd, app.HookService.OnInstructions)
+}
+
+// sessionInstructions is boundInstructions for the SessionStart hook (C23 M8): the same block, with
+// a line for each source of the plan that the deps' probe found unavailable. With no probe in the
+// deps it is boundInstructions.
+func sessionInstructions(d deps, processCwd string) func(inputDir string) string {
+	return boundInstructionsWith(d, processCwd, app.HookService.OnSessionStart)
+}
+
+func boundInstructionsWith(d deps, processCwd string, ask func(app.HookService, app.PromptRequest) app.InstructionsOutcome) func(inputDir string) string {
 	return func(inputDir string) (block string) {
 		defer func() {
 			if recover() != nil {
 				block = ""
 			}
 		}()
-		outcome := d.promptHook().OnInstructions(app.PromptRequest{InputDir: inputDir, ProcessDir: processCwd})
+		hook := d.promptHook()
+		if d.sourceProber != nil {
+			hook.Availability = d.sourceProber()
+		}
+		outcome := ask(hook, app.PromptRequest{InputDir: inputDir, ProcessDir: processCwd})
 		if outcome.Kind != app.PromptProjection {
 			return ""
 		}

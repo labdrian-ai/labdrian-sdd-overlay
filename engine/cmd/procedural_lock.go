@@ -43,7 +43,7 @@ func (r proceduralLockReader) Load(dir string) projection.ProceduralSkills {
 	if err != nil {
 		return projection.ProceduralSkills{Unreadable: err.Error()}
 	}
-	out := projection.ProceduralSkills{Skills: make([]projection.ProceduralSkill, 0, len(lock.Skills))}
+	out := projection.ProceduralSkills{Locked: true, Skills: make([]projection.ProceduralSkill, 0, len(lock.Skills))}
 	for _, entry := range lock.Skills {
 		skill := projection.ProceduralSkill{ID: entry.ID}
 		for _, target := range entry.Targets {

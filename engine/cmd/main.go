@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection/app"
 )
 
 // main is the composition root of the engine command, and the one place that touches the
@@ -22,7 +23,7 @@ func productionProcess() process {
 // productionDeps is the deps of the program: the environment of the process, which a command reads
 // when it needs a variable, and the facts main resolves from it once.
 func productionDeps() deps {
-	return deps{
+	d := deps{
 		getwd:       os.Getwd,
 		getenv:      os.Getenv,
 		environ:     os.Environ,
@@ -35,4 +36,8 @@ func productionDeps() deps {
 		// workflowProber stays nil: the verbs probe the presence of the home and PATH of the
 		// deps they are given.
 	}
+	// The session-start hook asks the real sources which of them can be read (C23 M8), with the
+	// environment these deps carry.
+	d.sourceProber = func() app.SourceAvailabilityProber { return newSessionAvailability(d) }
+	return d
 }

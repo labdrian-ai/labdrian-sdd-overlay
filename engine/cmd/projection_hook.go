@@ -242,7 +242,7 @@ func sessionStart(d deps, stdin io.Reader, processCwd string) []byte {
 	if in.Event != "" && in.Event != hookwire.EventSessionStart {
 		return nil
 	}
-	block := boundInstructions(d, processCwd)(in.Cwd)
+	block := sessionInstructions(d, processCwd)(in.Cwd)
 	out, err := hookwire.SessionStartReply{Context: block}.Encode()
 	if err != nil {
 		return nil

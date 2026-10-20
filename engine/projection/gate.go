@@ -95,6 +95,9 @@ type GateInput struct {
 // in it.
 type ProceduralSkills struct {
 	Skills []ProceduralSkill
+	// Locked is true when the lock exists and is a valid lock, even if it lists no procedural skill
+	// (C23 M8: the session-time probe tells a project with a lock from one with none).
+	Locked bool
 	// Unreadable says why the lock could not be read or is not a valid lock. It is
 	// empty when the lock was read, and when there is none.
 	Unreadable string
