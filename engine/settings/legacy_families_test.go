@@ -1,6 +1,7 @@
 package settings
 
 import (
+	"reflect"
 	"testing"
 )
 
@@ -54,32 +55,25 @@ func TestEveryEntryAFamilyBuildsIsOwnedByIt(t *testing.T) {
 // reason.
 func TestNoEntryIsOwnedByTwoFamilies(t *testing.T) {
 	families := namedFamilies()
-	for builder, family := range families {
-		for _, spec := range family.specs {
-			entry := family.build(toyBinary, spec)
-			for other, candidate := range families {
-				if other != builder && candidate.owns(entry, toyBinary) {
-					t.Errorf("the %s entry %q is also owned by the %s family", builder, spec.event, other)
+	for _, binary := range []string{toyBinary, "/my dir/it's here/overlay"} {
+		for builder, family := range families {
+			for _, spec := range family.specs {
+				entry := family.build(binary, spec)
+				for other, candidate := range families {
+					if other != builder && candidate.owns(entry, binary) {
+						t.Errorf("the %s entry %q for %q is also owned by the %s family", builder, spec.event, binary, other)
+					}
 				}
 			}
 		}
 	}
 }
 
-// An entry of a keeping family that an older version of the overlay wrote, with another command
-// line, is left exactly as it is: installing again neither rewrites it nor adds a second one.
-// (Upgrading installed entries in place is a separate decision, C7.) The projection and approve
-// guard families repair; which family does which is stated here, so a family cannot change its
-// upkeep without this table changing.
-func TestAKeepingFamilyLeavesAnInstalledEntryWithAnOlderCommandAsItIs(t *testing.T) {
-	keeping := map[string]bool{"minimalism": true, "design": true, "sync": true, "receipt": true, "shaper": true, "projection": false, "approve": false}
+// An entry of any family that an older version of the overlay wrote, with another command line, is
+// replaced by the one this version writes: installing again leaves exactly one entry per spec and
+// a second install changes nothing.
+func TestEveryFamilyReplacesAnInstalledEntryWithAnOlderCommand(t *testing.T) {
 	for name, family := range namedFamilies() {
-		if (family.upkeep != repairing) != keeping[name] {
-			t.Errorf("%s: keeping = %v, want %v", name, family.upkeep != repairing, keeping[name])
-		}
-		if !keeping[name] {
-			continue
-		}
 		t.Run(name, func(t *testing.T) {
 			hooks := map[string]interface{}{}
 			for _, spec := range family.specs {
@@ -89,13 +83,17 @@ func TestAKeepingFamilyLeavesAnInstalledEntryWithAnOlderCommandAsItIs(t *testing
 				existing, _ := hooks[spec.event].([]interface{})
 				hooks[spec.event] = append(existing, entry)
 			}
-			before := len(hooks)
 
-			if family.merge(hooks, toyBinary) {
-				t.Errorf("merge() rewrote or added an entry although the family is installed: %v", hooks)
+			if !family.merge(hooks, toyBinary) {
+				t.Fatal("merge() left the older entries as they were")
 			}
-			if len(hooks) != before {
-				t.Errorf("merge() changed the events: %v", hooks)
+			for event, want := range family.entries(toyBinary) {
+				if got := hooks[event]; !reflect.DeepEqual(got, interface{}(want)) {
+					t.Errorf("%s = %v, want exactly the entries this version writes: %v", event, got, want)
+				}
+			}
+			if family.merge(hooks, toyBinary) {
+				t.Error("a second merge() changed the file")
 			}
 		})
 	}

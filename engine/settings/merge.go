@@ -174,7 +174,8 @@ func hasEntryMatching(hooks map[string]interface{}, key string, match func(inter
 }
 
 // entryContainsBinary returns true if the hook entry (an outer object) contains
-// hookCommand as a substring in any of its inner hooks[].command strings.
+// hookCommand as a substring in any of its inner hooks[].command strings, bare (as entries written
+// before the commands were quoted have it) or shell-quoted (as they are written now).
 func entryContainsBinary(e interface{}, hookCommand string) bool {
 	em, ok := e.(map[string]interface{})
 	if !ok {
@@ -190,7 +191,7 @@ func entryContainsBinary(e interface{}, hookCommand string) bool {
 			continue
 		}
 		if cmdStr, ok := ihm["command"].(string); ok {
-			if strings.Contains(cmdStr, hookCommand) {
+			if strings.Contains(cmdStr, hookCommand) || strings.Contains(cmdStr, shellQuote(hookCommand)) {
 				return true
 			}
 		}

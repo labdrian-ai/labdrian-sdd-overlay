@@ -1375,16 +1375,24 @@ func TestInstall_UpgradesOnePairToTwo_PreservesExisting(t *testing.T) {
 		t.Errorf("expected exactly 1 design entry under PreToolUse after upgrade install; got %d", n)
 	}
 
-	// Pre-existing minimalism entries must be unchanged, field for field — not
-	// merely "still present".
+	// The seed's minimalism entries are an older command line, so the install
+	// repairs them in place: each becomes the entry this version writes, and a
+	// second install leaves them as they are.
 	newMinimalismPrompt := findEntry(t, root, "UserPromptSubmit", testHookCommand, settings.LabdrianMinimalismIdentity)
 	newMinimalismPreTool := findEntry(t, root, "PreToolUse", testHookCommand, settings.LabdrianMinimalismIdentity)
 
-	if !reflect.DeepEqual(origMinimalismPrompt, newMinimalismPrompt) {
-		t.Errorf("minimalism UserPromptSubmit entry changed after upgrade install:\nbefore: %v\nafter:  %v", origMinimalismPrompt, newMinimalismPrompt)
+	if reflect.DeepEqual(origMinimalismPrompt, newMinimalismPrompt) {
+		t.Errorf("minimalism UserPromptSubmit entry was left as the older command line: %v", newMinimalismPrompt)
 	}
-	if !reflect.DeepEqual(origMinimalismPreTool, newMinimalismPreTool) {
-		t.Errorf("minimalism PreToolUse entry changed after upgrade install:\nbefore: %v\nafter:  %v", origMinimalismPreTool, newMinimalismPreTool)
+	if reflect.DeepEqual(origMinimalismPreTool, newMinimalismPreTool) {
+		t.Errorf("minimalism PreToolUse entry was left as the older command line: %v", newMinimalismPreTool)
+	}
+	if err := m.Install(); err != nil {
+		t.Fatalf("second Install: %v", err)
+	}
+	again := parseJSON(t, path)
+	if !reflect.DeepEqual(root, again) {
+		t.Errorf("a second install changed the repaired file:\nfirst:  %v\nsecond: %v", root, again)
 	}
 
 	// Sanity: exactly one minimalism entry remains per key — the upgrade
@@ -1433,15 +1441,16 @@ func TestInstall_UpgradesTwoFamiliesToThree_PreservesExisting(t *testing.T) {
 		t.Errorf("expected exactly 1 SessionEnd sync-trigger entry after upgrade install; got %d", n)
 	}
 
-	// Pre-existing pairs must be unchanged, field for field.
+	// The seed's pairs are an older command line, so each entry is repaired to
+	// the one this version writes, and still there exactly once.
 	newMinimalismPrompt := findEntry(t, root, "UserPromptSubmit", testHookCommand, settings.LabdrianMinimalismIdentity)
 	newDesignPreTool := findEntry(t, root, "PreToolUse", testHookCommand, settings.LabdrianDesignIdentity)
 
-	if !reflect.DeepEqual(origMinimalismPrompt, newMinimalismPrompt) {
-		t.Errorf("minimalism UserPromptSubmit entry changed after upgrade install:\nbefore: %v\nafter:  %v", origMinimalismPrompt, newMinimalismPrompt)
+	if reflect.DeepEqual(origMinimalismPrompt, newMinimalismPrompt) {
+		t.Errorf("minimalism UserPromptSubmit entry was left as the older command line: %v", newMinimalismPrompt)
 	}
-	if !reflect.DeepEqual(origDesignPreTool, newDesignPreTool) {
-		t.Errorf("design PreToolUse entry changed after upgrade install:\nbefore: %v\nafter:  %v", origDesignPreTool, newDesignPreTool)
+	if reflect.DeepEqual(origDesignPreTool, newDesignPreTool) {
+		t.Errorf("design PreToolUse entry was left as the older command line: %v", newDesignPreTool)
 	}
 }
 

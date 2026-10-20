@@ -15,16 +15,15 @@ import (
 
 // minimalismFamily is the minimalism-contract pair: the UserPromptSubmit entry that propagates
 // the contract into the project's registry, and the PreToolUse/Agent entry that injects its path
-// into sub-agent prompts. An installed entry is kept as it is (keepingOne), so an older command
-// line stays until the owner decides how an installed entry is upgraded (C7).
+// into sub-agent prompts. Like every family it is repaired on install: an owned entry that differs
+// from what this version writes is replaced.
 var minimalismFamily = hookFamily{
 	identity: LabdrianMinimalismIdentity,
 	specs: []hookSpec{
 		{event: "UserPromptSubmit"},
 		{event: "PreToolUse", matcher: "Agent"},
 	},
-	build:  buildMinimalismEntry,
-	upkeep: keepingOne,
+	build: buildMinimalismEntry,
 }
 
 // buildMinimalismEntry returns the entry of the minimalism family for one spec.
@@ -43,8 +42,7 @@ var designFamily = hookFamily{
 		{event: "UserPromptSubmit"},
 		{event: "PreToolUse", matcher: "Agent"},
 	},
-	build:  buildDesignEntry,
-	upkeep: keepingOne,
+	build: buildDesignEntry,
 }
 
 // buildDesignEntry returns the entry of the design family for one spec.
@@ -74,9 +72,10 @@ func buildUserPromptSubmitEntry(hookCommand string) map[string]interface{} {
 	// the project root. The :- fallback to "." keeps the command functional
 	// when the env var is absent (e.g. local testing), but the primary path
 	// is always anchored to the project root when Claude Code fires the hook.
+	bin := shellQuote(hookCommand)
 	cmd := fmt.Sprintf(
 		`command -v %s &>/dev/null && %s propagate --registry "${CLAUDE_PROJECT_DIR:-.}/.atl/skill-registry.md" --contract-file ~/.claude/skills/_shared/minimalism-contract.md || true`,
-		hookCommand, hookCommand,
+		bin, bin,
 	)
 	return map[string]interface{}{
 		"hooks": []interface{}{map[string]interface{}{
@@ -101,9 +100,10 @@ func buildUserPromptSubmitEntry(hookCommand string) map[string]interface{} {
 //
 // Missing-binary safety: same guard pattern as UserPromptSubmit.
 func buildPreToolUseEntry(hookCommand string) map[string]interface{} {
+	bin := shellQuote(hookCommand)
 	cmd := fmt.Sprintf(
 		`command -v %s &>/dev/null && %s gate-task --contract-file ~/.claude/skills/_shared/minimalism-contract.md --contract-path "$HOME/.claude/skills/_shared/minimalism-contract.md" || true`,
-		hookCommand, hookCommand,
+		bin, bin,
 	)
 	return map[string]interface{}{
 		"matcher": "Agent",
@@ -122,9 +122,10 @@ func buildPreToolUseEntry(hookCommand string) map[string]interface{} {
 //
 // Same missing-binary guard as the minimalism entry.
 func buildDesignUserPromptSubmitEntry(hookCommand string) map[string]interface{} {
+	bin := shellQuote(hookCommand)
 	cmd := fmt.Sprintf(
 		`command -v %s &>/dev/null && %s propagate --registry "${CLAUDE_PROJECT_DIR:-.}/.atl/skill-registry.md" --embedded-contract %s || true`,
-		hookCommand, hookCommand, embeddedDesignName,
+		bin, bin, embeddedDesignName,
 	)
 	return map[string]interface{}{
 		"hooks": []interface{}{map[string]interface{}{
@@ -142,9 +143,10 @@ func buildDesignUserPromptSubmitEntry(hookCommand string) map[string]interface{}
 //
 // Same missing-binary guard and matcher="Agent" as the minimalism entry.
 func buildDesignPreToolUseEntry(hookCommand string) map[string]interface{} {
+	bin := shellQuote(hookCommand)
 	cmd := fmt.Sprintf(
 		`command -v %s &>/dev/null && %s gate-task --embedded-contract %s --contract-path "$HOME/.claude/skills/_shared/anti-generic-design.md" || true`,
-		hookCommand, hookCommand, embeddedDesignName,
+		bin, bin, embeddedDesignName,
 	)
 	return map[string]interface{}{
 		"matcher": "Agent",
@@ -161,7 +163,6 @@ var syncTriggerFamily = hookFamily{
 	identity: LabdrianSyncTriggerIdentity,
 	specs:    []hookSpec{{event: "SessionEnd"}},
 	build:    buildSyncTriggerSessionEndEntry,
-	upkeep:   keepingOne,
 }
 
 // reviewReceiptFamily is the single PreToolUse/Bash entry that captures review receipts before an
@@ -170,7 +171,6 @@ var reviewReceiptFamily = hookFamily{
 	identity: LabdrianReviewReceiptIdentity,
 	specs:    []hookSpec{{event: "PreToolUse", matcher: "Bash"}},
 	build:    buildReviewReceiptPreToolUseEntry,
-	upkeep:   keepingOne,
 }
 
 // buildSyncTriggerSessionEndEntry returns the SessionEnd entry that invokes
@@ -197,9 +197,10 @@ var reviewReceiptFamily = hookFamily{
 // Code invokes hooks via "sh -c" (dash on most systems), where "&>" is not
 // a redirection operator and the guard would be silently inert.
 func buildSyncTriggerSessionEndEntry(hookCommand string, _ hookSpec) map[string]interface{} {
+	bin := shellQuote(hookCommand)
 	cmd := fmt.Sprintf(
 		`command -v %s >/dev/null 2>&1 && %s %s --event session-end --cwd "${CLAUDE_PROJECT_DIR:-$PWD}" || true`,
-		hookCommand, hookCommand, LabdrianSyncTriggerIdentity,
+		bin, bin, LabdrianSyncTriggerIdentity,
 	)
 	return map[string]interface{}{
 		"hooks": []interface{}{map[string]interface{}{
@@ -226,9 +227,10 @@ func buildSyncTriggerSessionEndEntry(hookCommand string, _ hookSpec) map[string]
 // own exit code — 0 (allow) or 2 (deny) for the verdict of reviewreceipt.Service.CheckCommand — is the
 // command's exit code, unmasked by "|| true".
 func buildReviewReceiptPreToolUseEntry(hookCommand string, _ hookSpec) map[string]interface{} {
+	bin := shellQuote(hookCommand)
 	cmd := fmt.Sprintf(
 		`command -v %s >/dev/null 2>&1 || exit 0; %s %s hook --cwd "${CLAUDE_PROJECT_DIR:-$PWD}"`,
-		hookCommand, hookCommand, LabdrianReviewReceiptIdentity,
+		bin, bin, LabdrianReviewReceiptIdentity,
 	)
 	return map[string]interface{}{
 		"matcher": "Bash",
@@ -240,7 +242,7 @@ func buildReviewReceiptPreToolUseEntry(hookCommand string, _ hookSpec) map[strin
 }
 
 // shaperGuardFamily is the shaper clearance deny guard: one PreToolUse entry for Bash and one for the
-// file tools. Each is kept per matcher (keepingOnePerMatcher), because both run the same binary with
+// file tools. Each is told apart by its matcher, because both run the same binary with
 // the same verb and differ only by the tools they watch. The permissions.deny rule that backs them
 // up is not an entry of the hooks and is merged and removed beside the family (see denyRule).
 var shaperGuardFamily = hookFamily{
@@ -249,8 +251,7 @@ var shaperGuardFamily = hookFamily{
 		{event: "PreToolUse", matcher: "Bash"},
 		{event: "PreToolUse", matcher: ShaperGuardFileToolMatcher},
 	},
-	build:  buildShaperGuardPreToolUseEntry,
-	upkeep: keepingOnePerMatcher,
+	build: buildShaperGuardPreToolUseEntry,
 }
 
 // buildShaperGuardPreToolUseEntry returns one PreToolUse entry of the shaper
@@ -265,9 +266,10 @@ var shaperGuardFamily = hookFamily{
 // fallback does not collapse whitespace. Both paths match text only: this
 // guard is a speed bump, not a security boundary.
 func buildShaperGuardPreToolUseEntry(hookCommand string, s hookSpec) map[string]interface{} {
+	bin := shellQuote(hookCommand)
 	cmd := fmt.Sprintf(
 		`command -v %s >/dev/null 2>&1 || { case "$(cat)" in *'%s'*|*'%s'*) echo 'labdrian shaper clearance guard: gentle-ai-overlay is missing; denying a clearance record or store access (a speed bump, not a security boundary)' >&2; exit 2;; esac; exit 0; }; %s %s`,
-		hookCommand, guardmarkers.Command, guardmarkers.Store, hookCommand, LabdrianShaperGuardIdentity,
+		bin, guardmarkers.Command, guardmarkers.Store, bin, LabdrianShaperGuardIdentity,
 	)
 	return map[string]interface{}{
 		"matcher": s.matcher,
