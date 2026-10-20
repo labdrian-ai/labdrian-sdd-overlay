@@ -40,7 +40,23 @@ func (d deps) promptHook() app.HookService {
 		EngramName: identity.EngramName,
 		// The procedural skills of the lock are of source procedural-skills (C23 M4 decision 5).
 		ProceduralSkills: newProceduralLockReader(),
+		// The memory-read evidence of a workflow is a sidecar beside its log (C23 M7 decision 1).
+		Evidence: evidenceLog{},
+		Clock:    wallClock{},
 	}
+}
+
+// evidenceLog appends memory-read evidence through a log built from the environment on every call,
+// as workflowReader builds its store: a state home that cannot be resolved is the error of the
+// append, which the hook turns into its warning.
+type evidenceLog struct{}
+
+func (evidenceLog) Append(rec projection.ReadRecord) error {
+	log, err := newEvidenceLog()
+	if err != nil {
+		return err
+	}
+	return log.Append(rec)
 }
 
 // gateHook builds the use case of the projection hook for a tool call: the prompt's, deciding with

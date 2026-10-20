@@ -50,7 +50,17 @@ const (
 	// EventSessionStart runs when a session starts, resumes, is cleared or is compacted; what it
 	// prints becomes part of the session's context.
 	EventSessionStart = "SessionStart"
+	// EventPostToolUse runs after a tool call has run; what it prints as additionalContext is
+	// given to the agent (C23 M7).
+	EventPostToolUse = "PostToolUse"
 )
+
+// MaxPostToolUseBytes bounds the input DecodePostToolUse accepts. The input carries the tool's
+// whole response, which for a memory read can be far over MaxEnvelopeBytes, and the hook keeps
+// only its digest, hashed as it is read, so the bound is wider; it exists so that a runaway writer
+// cannot make the hook read without end. The other fields of the input are still bounded by
+// MaxEnvelopeBytes.
+const MaxPostToolUseBytes = 64 << 20
 
 // MaxEnvelopeBytes bounds the input DecodeUserPromptSubmit and DecodePreToolUse accept. A
 // prompt can be long, and Claude Code sends it in the input, so the bound is generous; it

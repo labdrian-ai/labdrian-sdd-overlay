@@ -155,7 +155,7 @@ func TestSessionStartIsSilentWithoutAWorkflowToFollow(t *testing.T) {
 
 func TestProjectionHookNamesSessionStartAmongTheSupportedEvents(t *testing.T) {
 	r := runProjectionArgs([]string{"hook", "--event", "Stop"}, "", "")
-	want := "error: projection hook: unsupported --event \"Stop\" (supported: UserPromptSubmit, PreToolUse, SessionStart)\n"
+	want := "error: projection hook: unsupported --event \"Stop\" (supported: UserPromptSubmit, PreToolUse, SessionStart, PostToolUse)\n"
 	if len(r.codes) != 1 || r.codes[0] != 1 || r.stderr != want {
 		t.Errorf("exits %v, stderr %q, want exit 1 and %q", r.codes, r.stderr, want)
 	}
@@ -176,7 +176,7 @@ func TestUsageAndReadmeDocumentTheMemoryInstructions(t *testing.T) {
 		"usage()": {flat(captureUsage(t)), []string{
 			"engine memory plan --instructions [--project <id> --workflow <id>]",
 			"no workflow is bound",
-			"engine projection hook --event UserPromptSubmit|PreToolUse|SessionStart",
+			"engine projection hook --event UserPromptSubmit|PreToolUse|SessionStart|PostToolUse",
 			`SessionStart prints {"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":...}}`,
 			"appends the memory instructions of the bound workflow to every sub-agent's prompt",
 		}},

@@ -123,6 +123,10 @@ type ToolCall struct {
 	// to. Either is nil for a caller with no way to read it, which is read as "".
 	ReadSkill    func() string
 	ReadFilePath func() string
+	// ReadRecordID reads the record a read by id names, as text, or "" when it names none. Only
+	// the evidence of a read that ran (Evidence, C23 M7) asks for it; the gate never does. It is
+	// nil for a caller with no way to read it, which is read as "".
+	ReadRecordID func() string
 }
 
 // query reads the arguments of the call as those of a memory query.

@@ -1,0 +1,470 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:83e8cebcb07673519206feda6ea75b9ab8728278823f2e36313fed25dc7cd999",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-4936cf54f63aa090",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "ca8116fc492872478ad54956b5207ec30a3d4d82",
+      "candidate_tree": "fe3075bf331d067de55004812d14463ddfb79a08",
+      "paths_digest": "sha256:0b423e6836bcb48c86120539e3a7d83b515bb23cdc5ae5f312fe419772b515a7",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "README.md",
+        "docs/architecture/adr-c23-m7-read-evidence.md",
+        "engine/cmd/binding_wiring.go",
+        "engine/cmd/hook_translate.go",
+        "engine/cmd/plan_instructions_test.go",
+        "engine/cmd/projection_hook.go",
+        "engine/cmd/read_evidence_test.go",
+        "engine/cmd/state_stores.go",
+        "engine/cmd/testdata/hook-golden/projection-refuses-a-command-line-it-does-not-understand.golden",
+        "engine/cmd/usage.go",
+        "engine/hookwire/hookwire.go",
+        "engine/hookwire/posttooluse.go",
+        "engine/hookwire/posttooluse_test.go",
+        "engine/projection/app/evidence_test.go",
+        "engine/projection/app/hook.go",
+        "engine/projection/evidence.go",
+        "engine/projection/evidencelog/log.go",
+        "engine/projection/evidencelog/log_test.go",
+        "engine/projection/evidencelog/log_unix_test.go",
+        "engine/statestore/statestore.go",
+        "engine/statestore/statestore_unix.go",
+        "engine/statestore/statestore_unix_test.go",
+        "odd/tasks/consolidation-phase9.md"
+      ],
+      "identity": "sha256:2e1926bf6381452a86b903e89c943b9d787edca270faa82c1be1f012c9862def"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "ca8116fc492872478ad54956b5207ec30a3d4d82",
+      "candidate_tree": "fe3075bf331d067de55004812d14463ddfb79a08",
+      "paths_digest": "sha256:0b423e6836bcb48c86120539e3a7d83b515bb23cdc5ae5f312fe419772b515a7",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "README.md",
+        "docs/architecture/adr-c23-m7-read-evidence.md",
+        "engine/cmd/binding_wiring.go",
+        "engine/cmd/hook_translate.go",
+        "engine/cmd/plan_instructions_test.go",
+        "engine/cmd/projection_hook.go",
+        "engine/cmd/read_evidence_test.go",
+        "engine/cmd/state_stores.go",
+        "engine/cmd/testdata/hook-golden/projection-refuses-a-command-line-it-does-not-understand.golden",
+        "engine/cmd/usage.go",
+        "engine/hookwire/hookwire.go",
+        "engine/hookwire/posttooluse.go",
+        "engine/hookwire/posttooluse_test.go",
+        "engine/projection/app/evidence_test.go",
+        "engine/projection/app/hook.go",
+        "engine/projection/evidence.go",
+        "engine/projection/evidencelog/log.go",
+        "engine/projection/evidencelog/log_test.go",
+        "engine/projection/evidencelog/log_unix_test.go",
+        "engine/statestore/statestore.go",
+        "engine/statestore/statestore_unix.go",
+        "engine/statestore/statestore_unix_test.go",
+        "odd/tasks/consolidation-phase9.md"
+      ],
+      "identity": "sha256:2e1926bf6381452a86b903e89c943b9d787edca270faa82c1be1f012c9862def"
+    },
+    "genesis_paths": [
+      "README.md",
+      "docs/architecture/adr-c23-m7-read-evidence.md",
+      "engine/cmd/binding_wiring.go",
+      "engine/cmd/hook_translate.go",
+      "engine/cmd/plan_instructions_test.go",
+      "engine/cmd/projection_hook.go",
+      "engine/cmd/read_evidence_test.go",
+      "engine/cmd/state_stores.go",
+      "engine/cmd/testdata/hook-golden/projection-refuses-a-command-line-it-does-not-understand.golden",
+      "engine/cmd/usage.go",
+      "engine/hookwire/hookwire.go",
+      "engine/hookwire/posttooluse.go",
+      "engine/hookwire/posttooluse_test.go",
+      "engine/projection/app/evidence_test.go",
+      "engine/projection/app/hook.go",
+      "engine/projection/evidence.go",
+      "engine/projection/evidencelog/log.go",
+      "engine/projection/evidencelog/log_test.go",
+      "engine/projection/evidencelog/log_unix_test.go",
+      "engine/statestore/statestore.go",
+      "engine/statestore/statestore_unix.go",
+      "engine/statestore/statestore_unix_test.go",
+      "odd/tasks/consolidation-phase9.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-risk",
+      "review-resilience",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 1068,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "agent_escalation": {
+      "item": 2,
+      "reason": "statestore OpenAppendNoFollow changes the guard that refuses symlinks, FIFOs and non-regular files at the sidecar path"
+    },
+    "lens_selection_reason": "changes the sidecar file guard (risk), the hook's failure and torn-line paths (resilience), the PostToolUse CLI event, usage text and README (readability), and the streaming JSON scanner and hook wiring logic (reliability)",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:3bc89ec9c01d3cbf5156750ad72e6c2f1b6c100aeaaac02cda07fb5494362016",
+    "capture_phase_revision": "sha256:667df1d5552bd39bfd3af6669c003df1f8cdfe4c170db57c1db881d27e6c9794",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:2e1926bf6381452a86b903e89c943b9d787edca270faa82c1be1f012c9862def",
+        "capture_phase_revision": "sha256:667df1d5552bd39bfd3af6669c003df1f8cdfe4c170db57c1db881d27e6c9794",
+        "artifact_digest": "sha256:9bb91a782d1e8182561272931cf9225bceb6e6be198631d63692f04bfef2e6a5",
+        "result_hash": "sha256:d2b870f62abfca848dddded95b3f03ab7e4dee3065b920f2eb79c2d99bf4ea24",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:7b44fe9df030470719de9894654321d879e26ee75d88bb3dcaa863d5d6317bd3",
+            "lineage_id": "review-4936cf54f63aa090",
+            "authority_revision": "sha256:667df1d5552bd39bfd3af6669c003df1f8cdfe4c170db57c1db881d27e6c9794",
+            "target_identity": "sha256:2e1926bf6381452a86b903e89c943b9d787edca270faa82c1be1f012c9862def",
+            "base_tree": "ca8116fc492872478ad54956b5207ec30a3d4d82",
+            "candidate_tree": "fe3075bf331d067de55004812d14463ddfb79a08",
+            "changed_path_manifest_sha256": "sha256:24430b9f49ec29c7dee3fe652fde554c45797da27f5adf945bdd14164366e201",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:7b44fe9df030470719de9894654321d879e26ee75d88bb3dcaa863d5d6317bd3",
+            "raw_sha256": "sha256:465020099b2b64019c1e8cea750f533328a6db1ed786451be599110b8e064524",
+            "canonical_sha256": "sha256:9081c9874279f5d1de7cd584f08c10dd6c8778aa7e7df38a98a359a8ca8ef8b8",
+            "result_hash": "sha256:d2b870f62abfca848dddded95b3f03ab7e4dee3065b920f2eb79c2d99bf4ea24",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:7b44fe9df030470719de9894654321d879e26ee75d88bb3dcaa863d5d6317bd3",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "README.md",
+                "docs/architecture/adr-c23-m7-read-evidence.md",
+                "engine/cmd/binding_wiring.go",
+                "engine/cmd/hook_translate.go",
+                "engine/cmd/plan_instructions_test.go",
+                "engine/cmd/projection_hook.go",
+                "engine/cmd/read_evidence_test.go",
+                "engine/cmd/state_stores.go",
+                "engine/cmd/testdata/hook-golden/projection-refuses-a-command-line-it-does-not-understand.golden",
+                "engine/cmd/usage.go",
+                "engine/hookwire/hookwire.go",
+                "engine/hookwire/posttooluse.go",
+                "engine/hookwire/posttooluse_test.go",
+                "engine/projection/app/evidence_test.go",
+                "engine/projection/app/hook.go",
+                "engine/projection/evidence.go",
+                "engine/projection/evidencelog/log.go",
+                "engine/projection/evidencelog/log_test.go",
+                "engine/projection/evidencelog/log_unix_test.go",
+                "engine/statestore/statestore.go",
+                "engine/statestore/statestore_unix.go",
+                "engine/statestore/statestore_unix_test.go",
+                "odd/tasks/consolidation-phase9.md"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "Reviewed all 23 changed paths for security, data exposure and unsafe input handling. I found no reachable exploit.",
+              "The PostToolUse decoder in engine/hookwire/posttooluse.go caps total input at 64 MiB. It streams tool_response into a hash and never stores it. It caps the other fields at the 1 MiB envelope bound and the nesting depth at 10000. Oversized or malformed input ends in silence.",
+              "The record keeps only the SHA-256 and byte length of the response, so no response content reaches disk. engine/projection/evidence.go sanitizes and bounds the call and session ids, which stops log injection.",
+              "OpenAppendNoFollow in engine/statestore/statestore_unix.go keeps O_NOFOLLOW and O_NONBLOCK and now refuses non-regular files. The new tests cover a FIFO, a directory and a symlinked directory. Opening read-write only lets the tail-byte check use the same descriptor.",
+              "The torn-line repair in engine/projection/evidencelog/log.go reads the last byte through the open descriptor under the existing lock, so it opens no path race."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-resilience",
+        "selected_order": 1,
+        "target_identity": "sha256:2e1926bf6381452a86b903e89c943b9d787edca270faa82c1be1f012c9862def",
+        "capture_phase_revision": "sha256:667df1d5552bd39bfd3af6669c003df1f8cdfe4c170db57c1db881d27e6c9794",
+        "artifact_digest": "sha256:6c1b2f62ef60a5b9e74477e0174c833a0637da3e6a4708e2ef939bb9cc49b3d2",
+        "result_hash": "sha256:5fa0a4367c45145695ec3aea7d64992fadc10079b52fffdf30d7cf43ff41b083",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:215342037c918771d40ef3b72030fbdc4265000d8ff56da64547b5c07cd24836",
+            "lineage_id": "review-4936cf54f63aa090",
+            "authority_revision": "sha256:667df1d5552bd39bfd3af6669c003df1f8cdfe4c170db57c1db881d27e6c9794",
+            "target_identity": "sha256:2e1926bf6381452a86b903e89c943b9d787edca270faa82c1be1f012c9862def",
+            "base_tree": "ca8116fc492872478ad54956b5207ec30a3d4d82",
+            "candidate_tree": "fe3075bf331d067de55004812d14463ddfb79a08",
+            "changed_path_manifest_sha256": "sha256:24430b9f49ec29c7dee3fe652fde554c45797da27f5adf945bdd14164366e201",
+            "lens": "review-resilience",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:215342037c918771d40ef3b72030fbdc4265000d8ff56da64547b5c07cd24836",
+            "raw_sha256": "sha256:cf0c81bd4ce17d7030b03c1d9f2bd511b639da2914eede7c7f7a60de83192cc1",
+            "canonical_sha256": "sha256:d72b91abfd716fe595ff338d9e0038e07cf200f6fa931188a552d195f526d83f",
+            "result_hash": "sha256:5fa0a4367c45145695ec3aea7d64992fadc10079b52fffdf30d7cf43ff41b083",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:215342037c918771d40ef3b72030fbdc4265000d8ff56da64547b5c07cd24836",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "README.md",
+                "docs/architecture/adr-c23-m7-read-evidence.md",
+                "engine/cmd/binding_wiring.go",
+                "engine/cmd/hook_translate.go",
+                "engine/cmd/plan_instructions_test.go",
+                "engine/cmd/projection_hook.go",
+                "engine/cmd/read_evidence_test.go",
+                "engine/cmd/state_stores.go",
+                "engine/cmd/testdata/hook-golden/projection-refuses-a-command-line-it-does-not-understand.golden",
+                "engine/cmd/usage.go",
+                "engine/hookwire/hookwire.go",
+                "engine/hookwire/posttooluse.go",
+                "engine/hookwire/posttooluse_test.go",
+                "engine/projection/app/evidence_test.go",
+                "engine/projection/app/hook.go",
+                "engine/projection/evidence.go",
+                "engine/projection/evidencelog/log.go",
+                "engine/projection/evidencelog/log_test.go",
+                "engine/projection/evidencelog/log_unix_test.go",
+                "engine/statestore/statestore.go",
+                "engine/statestore/statestore_unix.go",
+                "engine/statestore/statestore_unix_test.go",
+                "odd/tasks/consolidation-phase9.md"
+              ]
+            },
+            "lens": "review-resilience",
+            "findings": [],
+            "evidence": [
+              "I read all 23 changed paths and found no concrete resilience failure that this change causes.",
+              "The PostToolUse decoder in engine/hookwire/posttooluse.go reads the input in one pass. It hashes tool_response through a 32 KiB buffer and caps the other fields at the 1 MiB envelope bound. Malformed or oversized input ends in silence, and the hook still exits 0.",
+              "A failed evidence write returns one additionalContext warning and the hook still exits 0 (engine/cmd/projection_hook.go, postToolUse). Tests cover a directory sitting at the sidecar path.",
+              "engine/projection/evidencelog/log.go checks through the locked descriptor whether the file ends in a torn line, so one broken record does not corrupt the next. engine/statestore/statestore_unix.go refuses a FIFO or device without blocking.",
+              "Minor, below the reporting bar: the decoder handles each byte through ReadByte and put, so a 64 MiB response costs some CPU. The input is bounded, so I did not report it. OpenAppendNoFollow now opens with O_RDWR, which would fail on a file that is write-only. I saw no realistic case where that happens."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "selected_order": 2,
+        "target_identity": "sha256:2e1926bf6381452a86b903e89c943b9d787edca270faa82c1be1f012c9862def",
+        "capture_phase_revision": "sha256:667df1d5552bd39bfd3af6669c003df1f8cdfe4c170db57c1db881d27e6c9794",
+        "artifact_digest": "sha256:1d8c03cdeb49019fa83248d39e97fa3d3fb410f2d5677b9b3f44126aea3aca60",
+        "result_hash": "sha256:12064f515117d7b279dce0be8cac6b1059c5d19a2ee68e0dd78b8f0b69610045",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:4e69b6ba82605efc2c4311d065aa1bfbbf1ed1d5faea1708ea21c95b7692e108",
+            "lineage_id": "review-4936cf54f63aa090",
+            "authority_revision": "sha256:667df1d5552bd39bfd3af6669c003df1f8cdfe4c170db57c1db881d27e6c9794",
+            "target_identity": "sha256:2e1926bf6381452a86b903e89c943b9d787edca270faa82c1be1f012c9862def",
+            "base_tree": "ca8116fc492872478ad54956b5207ec30a3d4d82",
+            "candidate_tree": "fe3075bf331d067de55004812d14463ddfb79a08",
+            "changed_path_manifest_sha256": "sha256:24430b9f49ec29c7dee3fe652fde554c45797da27f5adf945bdd14164366e201",
+            "lens": "review-readability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:4e69b6ba82605efc2c4311d065aa1bfbbf1ed1d5faea1708ea21c95b7692e108",
+            "raw_sha256": "sha256:e50ede7019b23c5c906b41ae3ad1761c8fd1e2ee1c2fe25061e9d3d0b81368bf",
+            "canonical_sha256": "sha256:3ec8b5d66f43ccfd2148a1b9cede5089f9ffa870ce67e6f89fc6573e55e1f4b6",
+            "result_hash": "sha256:12064f515117d7b279dce0be8cac6b1059c5d19a2ee68e0dd78b8f0b69610045",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:4e69b6ba82605efc2c4311d065aa1bfbbf1ed1d5faea1708ea21c95b7692e108",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "README.md",
+                "docs/architecture/adr-c23-m7-read-evidence.md",
+                "engine/cmd/binding_wiring.go",
+                "engine/cmd/hook_translate.go",
+                "engine/cmd/plan_instructions_test.go",
+                "engine/cmd/projection_hook.go",
+                "engine/cmd/read_evidence_test.go",
+                "engine/cmd/state_stores.go",
+                "engine/cmd/testdata/hook-golden/projection-refuses-a-command-line-it-does-not-understand.golden",
+                "engine/cmd/usage.go",
+                "engine/hookwire/hookwire.go",
+                "engine/hookwire/posttooluse.go",
+                "engine/hookwire/posttooluse_test.go",
+                "engine/projection/app/evidence_test.go",
+                "engine/projection/app/hook.go",
+                "engine/projection/evidence.go",
+                "engine/projection/evidencelog/log.go",
+                "engine/projection/evidencelog/log_test.go",
+                "engine/projection/evidencelog/log_unix_test.go",
+                "engine/statestore/statestore.go",
+                "engine/statestore/statestore_unix.go",
+                "engine/statestore/statestore_unix_test.go",
+                "odd/tasks/consolidation-phase9.md"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-handwritten-json-scanner",
+                "lens": "readability",
+                "location": "engine/hookwire/posttooluse.go:91-537",
+                "severity": "WARNING",
+                "claim": "The change replaces the standard json.Decoder token loop with a roughly 400-line hand-written JSON scanner (splitter, composite, text, escape, number, digits, literal, sink). It re-implements JSON grammar byte by byte, including number and escape rules and nesting depth. This is a high-complexity, hard-to-audit surface, and any divergence from encoding/json is a latent defect. The sink type also has two modes (hash-through-writer versus keep-in-buffer) selected by whether w is nil, and put() branches on that, which obscures its behavior. The tests cover many cases, but the parser's size and the double-mode sink make later maintenance risky.",
+                "proof_refs": [
+                  "engine/hookwire/posttooluse.go:91-537",
+                  "engine/hookwire/posttooluse_test.go:78-177"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-sink-put-bytewise",
+                "lens": "readability",
+                "location": "engine/hookwire/posttooluse.go:495-537",
+                "severity": "SUGGESTION",
+                "claim": "sink.put is called once per byte and checks its mode on every call. The limit logic compares against k.n while buf is reused after flush, so n and len(buf) mean different things in the two modes. A comment on the invariant would help future readers. The ErrTooLarge size argument is also computed as int(k.n)+1, which is easy to misread.",
+                "proof_refs": [
+                  "engine/hookwire/posttooluse.go:495-537"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Reviewed all 23 manifest paths from the full patches.",
+              "The main readability risk is the hand-written JSON scanner in engine/hookwire/posttooluse.go. The rest of the change is well commented: the ADR, README, usage text and task notes explain the new behavior and why call_id and session are named as they are.",
+              "No BLOCKER or CRITICAL readability defect was found. The new evidence log, the torn-line handling and the statestore regular-file check are each small and documented."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 3,
+        "target_identity": "sha256:2e1926bf6381452a86b903e89c943b9d787edca270faa82c1be1f012c9862def",
+        "capture_phase_revision": "sha256:667df1d5552bd39bfd3af6669c003df1f8cdfe4c170db57c1db881d27e6c9794",
+        "artifact_digest": "sha256:9809f3f81e83de15c6b129b7f301a6af5e381229ca0f9394f6e0e93029baa275",
+        "result_hash": "sha256:688a7d8323caf752032c05e28a6885d7c8bc3f541bd0c7b94e0bab102e14f931",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:db8cf66044b6fdc681562b26fe14f0fe7140d1f519e7d68a485c9c22d7797c3c",
+            "lineage_id": "review-4936cf54f63aa090",
+            "authority_revision": "sha256:667df1d5552bd39bfd3af6669c003df1f8cdfe4c170db57c1db881d27e6c9794",
+            "target_identity": "sha256:2e1926bf6381452a86b903e89c943b9d787edca270faa82c1be1f012c9862def",
+            "base_tree": "ca8116fc492872478ad54956b5207ec30a3d4d82",
+            "candidate_tree": "fe3075bf331d067de55004812d14463ddfb79a08",
+            "changed_path_manifest_sha256": "sha256:24430b9f49ec29c7dee3fe652fde554c45797da27f5adf945bdd14164366e201",
+            "lens": "review-reliability",
+            "selected_order": 3
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:db8cf66044b6fdc681562b26fe14f0fe7140d1f519e7d68a485c9c22d7797c3c",
+            "raw_sha256": "sha256:fdd67b36479b532673dc13195586a5b13ac6e0eba76a39f3c9b355bbda23e163",
+            "canonical_sha256": "sha256:e1470f6028302b57f1f9c5888a02af48c5d40e9d305d057b33307bd3c12db73b",
+            "result_hash": "sha256:688a7d8323caf752032c05e28a6885d7c8bc3f541bd0c7b94e0bab102e14f931",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:db8cf66044b6fdc681562b26fe14f0fe7140d1f519e7d68a485c9c22d7797c3c",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "README.md",
+                "docs/architecture/adr-c23-m7-read-evidence.md",
+                "engine/cmd/binding_wiring.go",
+                "engine/cmd/hook_translate.go",
+                "engine/cmd/plan_instructions_test.go",
+                "engine/cmd/projection_hook.go",
+                "engine/cmd/read_evidence_test.go",
+                "engine/cmd/state_stores.go",
+                "engine/cmd/testdata/hook-golden/projection-refuses-a-command-line-it-does-not-understand.golden",
+                "engine/cmd/usage.go",
+                "engine/hookwire/hookwire.go",
+                "engine/hookwire/posttooluse.go",
+                "engine/hookwire/posttooluse_test.go",
+                "engine/projection/app/evidence_test.go",
+                "engine/projection/app/hook.go",
+                "engine/projection/evidence.go",
+                "engine/projection/evidencelog/log.go",
+                "engine/projection/evidencelog/log_test.go",
+                "engine/projection/evidencelog/log_unix_test.go",
+                "engine/statestore/statestore.go",
+                "engine/statestore/statestore_unix.go",
+                "engine/statestore/statestore_unix_test.go",
+                "odd/tasks/consolidation-phase9.md"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [],
+            "evidence": [
+              "Reviewed the streaming splitter in engine/hookwire/posttooluse.go: the number, string-escape, literal and nesting-depth paths, duplicate and escaped field names, trailing-content rejection, and the envelope and 64 MiB bounds. I found no reachable defect. Tests in engine/hookwire/posttooluse_test.go cover as-sent hashing, invalid JSON, the envelope bound and a streamed 48 MiB response.",
+              "The torn-line repair in engine/projection/evidencelog/log.go reads the last byte through the locked descriptor. Tests cover a torn line, no blank line on a whole file, and FIFO, directory and symlink refusals.",
+              "OpenAppendNoFollow in engine/statestore/statestore_unix.go now opens read-write and refuses non-regular files, with a FIFO test. Other callers of this shared helper are outside the candidate, so I could not check them for the added read-permission requirement. That is not evidence of a defect.",
+              "The hook's silent paths and its warning path are covered at the cmd level in engine/cmd/read_evidence_test.go. The usage text, README and golden outputs agree on the added PostToolUse event."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "a5acf8595e066bb2da03721e05e44e306fbab8552ce3f9e6dc524bccf864210e",
+    "initial_atomic_start": {
+      "lineage_id": "review-4936cf54f63aa090",
+      "worktree_identity": "sha256:8455002f227f033663d0e7d8b8ff6a885e1c85b482ec52e34017c303452eed87",
+      "target_identity": "sha256:2e1926bf6381452a86b903e89c943b9d787edca270faa82c1be1f012c9862def",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "ca8116fc492872478ad54956b5207ec30a3d4d82",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "high",
+      "selected_lenses": [
+        "review-risk",
+        "review-resilience",
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 1068,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two",
+      "agent_escalation": {
+        "item": 2,
+        "reason": "statestore OpenAppendNoFollow changes the guard that refuses symlinks, FIFOs and non-regular files at the sidecar path"
+      },
+      "lens_selection_reason": "changes the sidecar file guard (risk), the hook's failure and torn-line paths (resilience), the PostToolUse CLI event, usage text and README (readability), and the streaming JSON scanner and hook wiring logic (reliability)"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

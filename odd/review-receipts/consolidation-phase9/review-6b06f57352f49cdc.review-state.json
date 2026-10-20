@@ -1,0 +1,387 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:e3eaa60ab640a757861fbc3ff86c8acc6e194ddc96bbf6c5788e0e7a59a65d88",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-6b06f57352f49cdc",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "820017e206c74a3bb40e65f504032216b9f9832b",
+      "candidate_tree": "ca8116fc492872478ad54956b5207ec30a3d4d82",
+      "paths_digest": "sha256:9782997536cf8454151a2ebe4957e9736d60a72cff5c2728c9e1ee82c582e22d",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/architecture_test.go",
+        "engine/cmd/status_command_test.go",
+        "engine/cmd/testdata/status-golden/status-binary-states.golden",
+        "engine/cmd/testdata/status-golden/status-contract-states.golden",
+        "engine/cmd/testdata/status-golden/status-families-missing-or-drifted.golden",
+        "engine/cmd/testdata/status-golden/status-in-an-empty-home.golden",
+        "engine/cmd/testdata/status-golden/status-of-a-complete-install.golden",
+        "engine/cmd/testdata/status-golden/status-registry-states.golden",
+        "engine/cmd/testdata/status-golden/status-settings-that-are-not-an-object.golden",
+        "engine/cmd/testdata/status-golden/status-settings-without-the-hooks.golden",
+        "engine/cmd/testdata/status-golden/status-with-no-home.golden",
+        "engine/projection/evidencelog/log.go",
+        "engine/projection/evidencelog/log_test.go",
+        "engine/settings/merge.go",
+        "engine/settings/projection.go",
+        "engine/settings/settingsfile/golden_unix_test.go",
+        "engine/settings/settingsfile/projection_test.go",
+        "engine/statestore/statestore_other.go",
+        "engine/statestore/statestore_unix.go",
+        "engine/status/status.go",
+        "engine/status/status_test.go"
+      ],
+      "identity": "sha256:ef29da74945495ddac017e9e9c51b6e7908a57d5b5b2e202c78aa8d5ac980261"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "820017e206c74a3bb40e65f504032216b9f9832b",
+      "candidate_tree": "ca8116fc492872478ad54956b5207ec30a3d4d82",
+      "paths_digest": "sha256:9782997536cf8454151a2ebe4957e9736d60a72cff5c2728c9e1ee82c582e22d",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/architecture_test.go",
+        "engine/cmd/status_command_test.go",
+        "engine/cmd/testdata/status-golden/status-binary-states.golden",
+        "engine/cmd/testdata/status-golden/status-contract-states.golden",
+        "engine/cmd/testdata/status-golden/status-families-missing-or-drifted.golden",
+        "engine/cmd/testdata/status-golden/status-in-an-empty-home.golden",
+        "engine/cmd/testdata/status-golden/status-of-a-complete-install.golden",
+        "engine/cmd/testdata/status-golden/status-registry-states.golden",
+        "engine/cmd/testdata/status-golden/status-settings-that-are-not-an-object.golden",
+        "engine/cmd/testdata/status-golden/status-settings-without-the-hooks.golden",
+        "engine/cmd/testdata/status-golden/status-with-no-home.golden",
+        "engine/projection/evidencelog/log.go",
+        "engine/projection/evidencelog/log_test.go",
+        "engine/settings/merge.go",
+        "engine/settings/projection.go",
+        "engine/settings/settingsfile/golden_unix_test.go",
+        "engine/settings/settingsfile/projection_test.go",
+        "engine/statestore/statestore_other.go",
+        "engine/statestore/statestore_unix.go",
+        "engine/status/status.go",
+        "engine/status/status_test.go"
+      ],
+      "identity": "sha256:ef29da74945495ddac017e9e9c51b6e7908a57d5b5b2e202c78aa8d5ac980261"
+    },
+    "genesis_paths": [
+      "engine/architecture_test.go",
+      "engine/cmd/status_command_test.go",
+      "engine/cmd/testdata/status-golden/status-binary-states.golden",
+      "engine/cmd/testdata/status-golden/status-contract-states.golden",
+      "engine/cmd/testdata/status-golden/status-families-missing-or-drifted.golden",
+      "engine/cmd/testdata/status-golden/status-in-an-empty-home.golden",
+      "engine/cmd/testdata/status-golden/status-of-a-complete-install.golden",
+      "engine/cmd/testdata/status-golden/status-registry-states.golden",
+      "engine/cmd/testdata/status-golden/status-settings-that-are-not-an-object.golden",
+      "engine/cmd/testdata/status-golden/status-settings-without-the-hooks.golden",
+      "engine/cmd/testdata/status-golden/status-with-no-home.golden",
+      "engine/projection/evidencelog/log.go",
+      "engine/projection/evidencelog/log_test.go",
+      "engine/settings/merge.go",
+      "engine/settings/projection.go",
+      "engine/settings/settingsfile/golden_unix_test.go",
+      "engine/settings/settingsfile/projection_test.go",
+      "engine/statestore/statestore_other.go",
+      "engine/statestore/statestore_unix.go",
+      "engine/status/status.go",
+      "engine/status/status_test.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-risk",
+      "review-resilience",
+      "review-reliability"
+    ],
+    "original_changed_lines": 540,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "adds the evidence sidecar adapter with file locking and no-follow append (risk, resilience), and install/uninstall/status logic for new PostToolUse settings entries pinned by goldens (reliability)",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:351315c19afd89830ea9a642aba7937e3d79320e18e2f9a180aa25f64ca8ca9c",
+    "capture_phase_revision": "sha256:8fab97245e57c244f2ac5df31481d3a54fce427ac143d8738d94b944d6c0e2ab",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:ef29da74945495ddac017e9e9c51b6e7908a57d5b5b2e202c78aa8d5ac980261",
+        "capture_phase_revision": "sha256:8fab97245e57c244f2ac5df31481d3a54fce427ac143d8738d94b944d6c0e2ab",
+        "artifact_digest": "sha256:d0618fe3e84a731ef34ae6bec53a4f4b05f6ed212df511b19ce37780a4fa9c2f",
+        "result_hash": "sha256:faf2942ad0c1529ad0cd4b407b34ade4dbdbf6457a845152826d3adc8dcd453e",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:38a7c0e4146ebd4c0595dcfd08c6f1cae7338a63331bf55b4d5bebb036d6ef53",
+            "lineage_id": "review-6b06f57352f49cdc",
+            "authority_revision": "sha256:8fab97245e57c244f2ac5df31481d3a54fce427ac143d8738d94b944d6c0e2ab",
+            "target_identity": "sha256:ef29da74945495ddac017e9e9c51b6e7908a57d5b5b2e202c78aa8d5ac980261",
+            "base_tree": "820017e206c74a3bb40e65f504032216b9f9832b",
+            "candidate_tree": "ca8116fc492872478ad54956b5207ec30a3d4d82",
+            "changed_path_manifest_sha256": "sha256:8393343cb1f12bf2452a4c70a0bc9ac9b9f8233a1aba092ff20b4c4d81065585",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:38a7c0e4146ebd4c0595dcfd08c6f1cae7338a63331bf55b4d5bebb036d6ef53",
+            "raw_sha256": "sha256:e77b920fb1b2bf45b4860a9f0dfce6d8fcbac38d00932926b490cfbf52ca8449",
+            "canonical_sha256": "sha256:4785608a63f7434f7d65bd1832040c5620864654e4730c6d8f616d2f3f1ebf74",
+            "result_hash": "sha256:faf2942ad0c1529ad0cd4b407b34ade4dbdbf6457a845152826d3adc8dcd453e",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:38a7c0e4146ebd4c0595dcfd08c6f1cae7338a63331bf55b4d5bebb036d6ef53",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/architecture_test.go",
+                "engine/cmd/status_command_test.go",
+                "engine/cmd/testdata/status-golden/status-binary-states.golden",
+                "engine/cmd/testdata/status-golden/status-contract-states.golden",
+                "engine/cmd/testdata/status-golden/status-families-missing-or-drifted.golden",
+                "engine/cmd/testdata/status-golden/status-in-an-empty-home.golden",
+                "engine/cmd/testdata/status-golden/status-of-a-complete-install.golden",
+                "engine/cmd/testdata/status-golden/status-registry-states.golden",
+                "engine/cmd/testdata/status-golden/status-settings-that-are-not-an-object.golden",
+                "engine/cmd/testdata/status-golden/status-settings-without-the-hooks.golden",
+                "engine/cmd/testdata/status-golden/status-with-no-home.golden",
+                "engine/projection/evidencelog/log.go",
+                "engine/projection/evidencelog/log_test.go",
+                "engine/settings/merge.go",
+                "engine/settings/projection.go",
+                "engine/settings/settingsfile/golden_unix_test.go",
+                "engine/settings/settingsfile/projection_test.go",
+                "engine/statestore/statestore_other.go",
+                "engine/statestore/statestore_unix.go",
+                "engine/status/status.go",
+                "engine/status/status_test.go"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [
+              {
+                "id": "R1-001",
+                "lens": "risk",
+                "location": "engine/projection/evidencelog/log.go:78-115",
+                "severity": "SUGGESTION",
+                "claim": "The sidecar append is guarded: identifiers are validated, directories are created via statestore.EnsureDirs, the final component is opened with O_NOFOLLOW, and the file is created at 0600 under a lock. A pre-planted FIFO is not blocked on because of O_NONBLOCK, though O_WRONLY on a FIFO with no reader fails with ENXIO and surfaces as an error. No reachable exploit was found. The sidecar stores only the response hash and byte count, not the response body, so no data exposure was found.",
+                "proof_refs": [
+                  "engine/projection/evidencelog/log.go:78-115",
+                  "engine/statestore/statestore_unix.go:23-28"
+                ]
+              }
+            ],
+            "evidence": [
+              "Reviewed all 21 manifest paths. Most are golden and test updates for the new PostToolUse projection family entries.",
+              "Uninstall (engine/settings/merge.go) now also scans PostToolUse, and ownership is still checked by entry shape, so foreign PostToolUse entries are preserved. The updated test covers this.",
+              "The new evidencelog adapter enforces symlink refusal, 0600/0700 permissions, identifier validation (rejecting path traversal), and a lock. The test covers symlink and unsafe-ID refusal.",
+              "No secrets, new dependencies, or unsafe input handling were introduced."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-resilience",
+        "selected_order": 1,
+        "target_identity": "sha256:ef29da74945495ddac017e9e9c51b6e7908a57d5b5b2e202c78aa8d5ac980261",
+        "capture_phase_revision": "sha256:8fab97245e57c244f2ac5df31481d3a54fce427ac143d8738d94b944d6c0e2ab",
+        "artifact_digest": "sha256:8518e95c1ddf0448aa90fee657cbb9857a96f2403cf808917e4e5c65f0c16827",
+        "result_hash": "sha256:46ea4e8ad5154c4b5719386a4b5152b88ab71443f364cc68314efcfa9bcf57ed",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:1e60db5c3c22c263e947c818f390a3f8c91f5cb8b84522fd35783a38d4b7c156",
+            "lineage_id": "review-6b06f57352f49cdc",
+            "authority_revision": "sha256:8fab97245e57c244f2ac5df31481d3a54fce427ac143d8738d94b944d6c0e2ab",
+            "target_identity": "sha256:ef29da74945495ddac017e9e9c51b6e7908a57d5b5b2e202c78aa8d5ac980261",
+            "base_tree": "820017e206c74a3bb40e65f504032216b9f9832b",
+            "candidate_tree": "ca8116fc492872478ad54956b5207ec30a3d4d82",
+            "changed_path_manifest_sha256": "sha256:8393343cb1f12bf2452a4c70a0bc9ac9b9f8233a1aba092ff20b4c4d81065585",
+            "lens": "review-resilience",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:1e60db5c3c22c263e947c818f390a3f8c91f5cb8b84522fd35783a38d4b7c156",
+            "raw_sha256": "sha256:d73a0c1357c2880563da1063f9f8416f08252ce4c37f1d4e73ca08a356a395f8",
+            "canonical_sha256": "sha256:82247e5d33d1524e04947cda5409b447eb02b64dfff9534cd4554d72c7b78d53",
+            "result_hash": "sha256:46ea4e8ad5154c4b5719386a4b5152b88ab71443f364cc68314efcfa9bcf57ed",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:1e60db5c3c22c263e947c818f390a3f8c91f5cb8b84522fd35783a38d4b7c156",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/architecture_test.go",
+                "engine/cmd/status_command_test.go",
+                "engine/cmd/testdata/status-golden/status-binary-states.golden",
+                "engine/cmd/testdata/status-golden/status-contract-states.golden",
+                "engine/cmd/testdata/status-golden/status-families-missing-or-drifted.golden",
+                "engine/cmd/testdata/status-golden/status-in-an-empty-home.golden",
+                "engine/cmd/testdata/status-golden/status-of-a-complete-install.golden",
+                "engine/cmd/testdata/status-golden/status-registry-states.golden",
+                "engine/cmd/testdata/status-golden/status-settings-that-are-not-an-object.golden",
+                "engine/cmd/testdata/status-golden/status-settings-without-the-hooks.golden",
+                "engine/cmd/testdata/status-golden/status-with-no-home.golden",
+                "engine/projection/evidencelog/log.go",
+                "engine/projection/evidencelog/log_test.go",
+                "engine/settings/merge.go",
+                "engine/settings/projection.go",
+                "engine/settings/settingsfile/golden_unix_test.go",
+                "engine/settings/settingsfile/projection_test.go",
+                "engine/statestore/statestore_other.go",
+                "engine/statestore/statestore_unix.go",
+                "engine/status/status.go",
+                "engine/status/status_test.go"
+              ]
+            },
+            "lens": "review-resilience",
+            "findings": [],
+            "evidence": [
+              "evidencelog.Append takes a per-workflow lock with a bounded wait and returns a wrapped error if it fails. It writes one O_APPEND line and joins the write, sync and close errors, so a failed append is reported to the caller and never silently dropped.",
+              "The sidecar is opened with O_NOFOLLOW and O_NONBLOCK. A symlink is refused with a specific error, and a FIFO with no reader fails instead of blocking, so a bad sidecar cannot hang the hook.",
+              "Append-only writes under a lock keep the cost of a read independent of file size. The per-append fsync adds latency, but this diff shows no measured impact and no code path that calls it, so I report no finding.",
+              "The new PostToolUse projection entries are added after the existing entries, so an older install is completed by the next merge without disturbing existing entries. removeHooks now also scans PostToolUse, so uninstall removes the new entries. The tests cover both.",
+              "Status now reports an older install as missing the PostToolUse parts until the user reinstalls the hooks. This follows from the requested change, and the golden files were updated to match."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 2,
+        "target_identity": "sha256:ef29da74945495ddac017e9e9c51b6e7908a57d5b5b2e202c78aa8d5ac980261",
+        "capture_phase_revision": "sha256:8fab97245e57c244f2ac5df31481d3a54fce427ac143d8738d94b944d6c0e2ab",
+        "artifact_digest": "sha256:846559d94dd157d7df954fcab7dd98660750aedcbbc04d38e11fec927eea8160",
+        "result_hash": "sha256:ac58322dae00ffd9da5102e41e02759da4c7e8353a88742b2bcfa3bbc045b29f",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:0aa3908c6fd7316f705b2b06875e4f35d62ed2b3a2be50bc517b3a768dfd293a",
+            "lineage_id": "review-6b06f57352f49cdc",
+            "authority_revision": "sha256:8fab97245e57c244f2ac5df31481d3a54fce427ac143d8738d94b944d6c0e2ab",
+            "target_identity": "sha256:ef29da74945495ddac017e9e9c51b6e7908a57d5b5b2e202c78aa8d5ac980261",
+            "base_tree": "820017e206c74a3bb40e65f504032216b9f9832b",
+            "candidate_tree": "ca8116fc492872478ad54956b5207ec30a3d4d82",
+            "changed_path_manifest_sha256": "sha256:8393343cb1f12bf2452a4c70a0bc9ac9b9f8233a1aba092ff20b4c4d81065585",
+            "lens": "review-reliability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:0aa3908c6fd7316f705b2b06875e4f35d62ed2b3a2be50bc517b3a768dfd293a",
+            "raw_sha256": "sha256:3917f732d608f54db977e3a8d7ba1130aed3f0d5891bff6a865fc79497132cfc",
+            "canonical_sha256": "sha256:a23f2519210916255b1e88171558705126cc14a103238313b68520367623b2b0",
+            "result_hash": "sha256:ac58322dae00ffd9da5102e41e02759da4c7e8353a88742b2bcfa3bbc045b29f",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:0aa3908c6fd7316f705b2b06875e4f35d62ed2b3a2be50bc517b3a768dfd293a",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/architecture_test.go",
+                "engine/cmd/status_command_test.go",
+                "engine/cmd/testdata/status-golden/status-binary-states.golden",
+                "engine/cmd/testdata/status-golden/status-contract-states.golden",
+                "engine/cmd/testdata/status-golden/status-families-missing-or-drifted.golden",
+                "engine/cmd/testdata/status-golden/status-in-an-empty-home.golden",
+                "engine/cmd/testdata/status-golden/status-of-a-complete-install.golden",
+                "engine/cmd/testdata/status-golden/status-registry-states.golden",
+                "engine/cmd/testdata/status-golden/status-settings-that-are-not-an-object.golden",
+                "engine/cmd/testdata/status-golden/status-settings-without-the-hooks.golden",
+                "engine/cmd/testdata/status-golden/status-with-no-home.golden",
+                "engine/projection/evidencelog/log.go",
+                "engine/projection/evidencelog/log_test.go",
+                "engine/settings/merge.go",
+                "engine/settings/projection.go",
+                "engine/settings/settingsfile/golden_unix_test.go",
+                "engine/settings/settingsfile/projection_test.go",
+                "engine/statestore/statestore_other.go",
+                "engine/statestore/statestore_unix.go",
+                "engine/status/status.go",
+                "engine/status/status_test.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-append-nonblock-regular",
+                "lens": "reliability",
+                "location": "engine/statestore/statestore_unix.go:27-29",
+                "severity": "WARNING",
+                "claim": "OpenAppendNoFollow opens with O_NONBLOCK and O_WRONLY. Opening a FIFO write-only with O_NONBLOCK and no reader fails with ENXIO, so it does not hang, but the error surfaces as a generic 'open' failure with no test covering the FIFO or non-regular-file case. The evidence log also does not check that the opened file is regular. The path is a state-home sidecar, so exposure is low.",
+                "proof_refs": [
+                  "engine/statestore/statestore_unix.go:27-29",
+                  "engine/projection/evidencelog/log_test.go:107-127"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-no-failure-path-test",
+                "lens": "reliability",
+                "location": "engine/projection/evidencelog/log_test.go:107-127",
+                "severity": "SUGGESTION",
+                "claim": "Tests cover symlink refusal, an unsafe identifier and a relative state home, but not an unsafe project_id, a lock-acquire failure, or a partial-write failure. Those paths are small and delegate to shared helpers, so the gap is minor.",
+                "proof_refs": [
+                  "engine/projection/evidencelog/log.go:63-98"
+                ]
+              }
+            ],
+            "evidence": [
+              "Reviewed all 21 manifest paths.",
+              "Golden status outputs consistently reflect the new label and the four new PostToolUse parts, matching projection.go specs and status.go label; status_command_test and status_test labels agree.",
+              "Migration test asserts the exact ordered missing parts for a pre-M4 install, and uninstall/removeHooks now scan PostToolUse, covered by the updated uninstall test.",
+              "The evidencelog append path takes the lock, uses O_APPEND with no-follow, and syncs; the concurrent test with 16 appenders proves whole lines.",
+              "No BLOCKER or CRITICAL regression found."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "6b7f87259d2f8fd05a6f55dfbf0ac9d7ed8a5c2b12bf82dac891c66f59d93882",
+    "initial_atomic_start": {
+      "lineage_id": "review-6b06f57352f49cdc",
+      "worktree_identity": "sha256:8455002f227f033663d0e7d8b8ff6a885e1c85b482ec52e34017c303452eed87",
+      "target_identity": "sha256:ef29da74945495ddac017e9e9c51b6e7908a57d5b5b2e202c78aa8d5ac980261",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "820017e206c74a3bb40e65f504032216b9f9832b",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-risk",
+        "review-resilience",
+        "review-reliability"
+      ],
+      "original_changed_lines": 540,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "adds the evidence sidecar adapter with file locking and no-follow append (risk, resilience), and install/uninstall/status logic for new PostToolUse settings entries pinned by goldens (reliability)"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

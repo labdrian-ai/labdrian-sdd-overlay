@@ -1,6 +1,10 @@
 package app
 
-import "github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection"
+import (
+	"errors"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection"
+)
 
 // HookService is the use case of the projection hook: what the session is told about the workflow
 // its repository follows when a prompt is submitted, and whether a tool call is allowed while the
@@ -29,6 +33,11 @@ type HookService struct {
 	// can use a skill (projection.CanUseASkill: the Skill tool, or a Read of a SKILL.md) in a
 	// repository bound to a workflow of ours. With none, the gate knows of no procedural skill.
 	ProceduralSkills ProceduralSkillsReader
+	// Evidence is where the evidence of a memory read that ran is appended (C23 M7), and Clock
+	// dates it. With either missing, a read that would be recorded gives the warning of one that
+	// could not be.
+	Evidence projection.ReadEvidenceLog
+	Clock    Clock
 	// Project and Gate are the policies the service asks. They are fields so that a test can wrap
 	// them. A nil one is the domain's (projection.Project, projection.Gate): the service falls
 	// back to it in its own methods project and gate, so the zero value of the field is the
@@ -181,6 +190,63 @@ func (s HookService) OnToolCall(req ToolCallRequest) ToolCallOutcome {
 	}
 	return ToolCallOutcome{Decided: true, Result: s.gate(input)}
 }
+
+// ToolResultRequest is a tool call that has run: the working directories as for a ToolCallRequest,
+// the call, and what the runtime says of it (its id and session) and of its response (a digest and
+// a length).
+type ToolResultRequest struct {
+	InputDir, ProcessDir string
+	Call                 projection.ToolCall
+	CallID, SessionID    string
+	ResponseSHA256       string
+	ResponseBytes        int64
+}
+
+// ToolResultOutcome is the answer to a call that has run: Warning is the one line the agent is given
+// when the evidence of its read could not be written, and empty otherwise.
+type ToolResultOutcome struct {
+	Warning string
+}
+
+// OnToolResult records the evidence of a memory read that ran (C23 M7): the reads the gate checks,
+// in a repository bound to an open workflow of ours (projection.Evidence), are appended to Evidence.
+// Every other tool is answered without reading the binding or the workflow, and every case where
+// the hook cannot follow the binding is silent, as for OnToolCall. Its one write is the evidence;
+// one it cannot make is a warning, never a failure.
+func (s HookService) OnToolResult(req ToolResultRequest) ToolResultOutcome {
+	call := readOnce(req.Call)
+	if !projection.GateRelevantCall(nil, call) {
+		return ToolResultOutcome{}
+	}
+	dir := directoryOf(req.InputDir, req.ProcessDir)
+	repoKey, ok := s.Repositories.RepoKey(dir)
+	if !ok {
+		return ToolResultOutcome{}
+	}
+	binding, err := s.Bindings.Load(repoKey)
+	if err != nil || binding.Classification != projection.ClassificationOwned {
+		return ToolResultOutcome{}
+	}
+	w := s.Workflows.Load(binding.Binding.ProjectID, binding.Binding.WorkflowID)
+	input := projection.GateInput{Binding: binding, Workflow: &w, Call: call}
+	if s.ProceduralSkills != nil && projection.CanUseASkill(call) {
+		input.Procedural = s.ProceduralSkills.Load(dir)
+	}
+	ev, ok := projection.Evidence(input)
+	if !ok {
+		return ToolResultOutcome{}
+	}
+	if s.Evidence == nil || s.Clock == nil {
+		return ToolResultOutcome{Warning: projection.EvidenceWarning(ev, errNoEvidenceLog)}
+	}
+	rec := projection.NewReadRecord(ev, s.Clock.Now(), req.CallID, req.SessionID, req.ResponseSHA256, req.ResponseBytes)
+	if err := s.Evidence.Append(rec); err != nil {
+		return ToolResultOutcome{Warning: projection.EvidenceWarning(ev, err)}
+	}
+	return ToolResultOutcome{}
+}
+
+var errNoEvidenceLog = errors.New("no memory-read evidence log or clock is configured")
 
 // readOnce makes the call read each of its skill and file arguments at most once, however many
 // times the service and the gate ask: reading them is the caller's work.
