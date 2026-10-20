@@ -3,6 +3,7 @@ package app
 import (
 	"errors"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/memoryscope"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection"
 )
 
@@ -38,6 +39,9 @@ type HookService struct {
 	// could not be.
 	Evidence projection.ReadEvidenceLog
 	Clock    Clock
+	// Availability probes the sources of the plan when a session starts (C23 M8), for OnSessionStart
+	// alone. With none, the session-start block has no degradation lines.
+	Availability SourceAvailabilityProber
 	// Project and Gate are the policies the service asks. They are fields so that a test can wrap
 	// them. A nil one is the domain's (projection.Project, projection.Gate): the service falls
 	// back to it in its own methods project and gate, so the zero value of the field is the
@@ -138,11 +142,31 @@ type InstructionsOutcome struct {
 // session-start hook, the gate-task rewrite and 'memory plan --instructions' ask it. It is strictly
 // read-only: the binding of a closed workflow is left for the prompt hook to remove.
 func (s HookService) OnInstructions(req PromptRequest) InstructionsOutcome {
+	return s.instructions(req, nil)
+}
+
+// OnSessionStart is OnInstructions with the session-time probe of the plan's sources (C23 M8): the
+// block says, for each source the plan includes and the probe found unavailable, not to read it and
+// why. Only the SessionStart hook asks it; the gate-task rewrite runs on every Agent call and
+// 'memory plan --instructions' is a command, so both keep the block without a probe. The probe runs
+// only when there is a block to give, and for the directory of the session. With no Availability it
+// is OnInstructions.
+func (s HookService) OnSessionStart(req PromptRequest) InstructionsOutcome {
+	if s.Availability == nil {
+		return s.instructions(req, nil)
+	}
+	dir := directoryOf(req.InputDir, req.ProcessDir)
+	return s.instructions(req, func(sources []memoryscope.Source) []projection.SourceAvailability {
+		return s.Availability.Probe(dir, sources)
+	})
+}
+
+func (s HookService) instructions(req PromptRequest, probe projection.SourceProber) InstructionsOutcome {
 	_, input, stop := s.readBound(req)
 	if stop != nil {
 		return InstructionsOutcome{Kind: stop.Kind, Warning: stop.Warning}
 	}
-	return InstructionsOutcome{Kind: PromptProjection, Result: projection.Instructions(input, s.EngramName)}
+	return InstructionsOutcome{Kind: PromptProjection, Result: projection.Instructions(input, s.EngramName, probe)}
 }
 
 // ToolCallRequest is a tool call about to run: the working directory the hook input names, or ""

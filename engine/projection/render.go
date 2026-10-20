@@ -307,8 +307,9 @@ func memoryPlanLines(state workflow.State, projectID string) []string {
 // no identity or no rule, as the gate then checks no Engram project. The goal
 // line appears only under scope goal; under scope none the block says to read
 // no memory. A plan that cannot be computed is one line saying so. The block
-// adds no rule: M4 and M5 enforce what it says.
-func InstructionsBlock(b Binding, state workflow.State, engramName func(identity string) string) string {
+// adds no rule: M4 and M5 enforce what it says. A probe (C23 M8) adds one line after the sources
+// line for each source of the plan it found unavailable; with a nil probe the block has none.
+func InstructionsBlock(b Binding, state workflow.State, engramName func(identity string) string, probe SourceProber) string {
 	head := "labdrian memory instructions (workflow " + sanitizeLine(b.WorkflowID)
 	plan, err := resolvePlan(state, b.ProjectID)
 	if err != nil {
@@ -323,6 +324,7 @@ func InstructionsBlock(b Binding, state workflow.State, engramName func(identity
 			sources[i] = sanitizeLine(string(source))
 		}
 		lines = append(lines, "- Read memory only from: "+orElse(strings.Join(sources, ", "), noneField)+". A read from any other source is denied.")
+		lines = append(lines, degradationLines(plan.Sources, probe)...)
 		if line := instructionsProjectLine(plan, state.ProjectIdentity, engramName); line != "" {
 			lines = append(lines, line)
 		}

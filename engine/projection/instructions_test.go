@@ -27,7 +27,7 @@ func withIdentity(w *workflow.Loaded, identity string) *workflow.Loaded {
 }
 
 func block(w *workflow.Loaded) string {
-	return projection.InstructionsBlock(validBinding(), w.State, lastSegment)
+	return projection.InstructionsBlock(validBinding(), w.State, lastSegment, nil)
 }
 
 // Under scope goal the block is the ADR's, line for line: the sources, the two projects, the goal
@@ -96,7 +96,7 @@ func TestTheInstructionsNameAProjectOnlyForASourceThePlanIncludes(t *testing.T) 
 	if line := lineWithPrefix(t, got, "- longterm-mem"); line != `- longterm-mem query and get name project "proj-1".` {
 		t.Errorf("a workflow with no identity: project line %q", line)
 	}
-	if got := projection.InstructionsBlock(validBinding(), engramOnly.State, nil); strings.Contains(got, "Engram reads") {
+	if got := projection.InstructionsBlock(validBinding(), engramOnly.State, nil, nil); strings.Contains(got, "Engram reads") {
 		t.Errorf("with no naming rule the block names an Engram project:\n%s", got)
 	}
 }
@@ -131,7 +131,7 @@ func TestTheInstructionsSanitizeEveryValue(t *testing.T) {
 // nothing, and a binding or workflow that cannot be followed, or a closed one, is a warning.
 func TestInstructionsGivesTheBlockOnlyForAnOpenWorkflowOfOurs(t *testing.T) {
 	instructions := func(b projection.Loaded, w *workflow.Loaded) projection.InstructionsResult {
-		return projection.Instructions(projection.ProjectionInput{Binding: b, Workflow: w}, lastSegment)
+		return projection.Instructions(projection.ProjectionInput{Binding: b, Workflow: w}, lastSegment, nil)
 	}
 	if got := instructions(projection.Loaded{Classification: projection.ClassificationAbsent}, nil); got != (projection.InstructionsResult{}) {
 		t.Errorf("no binding: %+v, want nothing", got)

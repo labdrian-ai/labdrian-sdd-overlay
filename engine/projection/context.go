@@ -104,8 +104,9 @@ type InstructionsResult struct {
 // the warning Project gives for the same input, or the note of a closed
 // workflow, which no longer has a plan to follow. It never asks for an unbind:
 // only the prompt hook removes the binding of a closed workflow. engramName is
-// the caller's Engram naming rule, as for the gate. It is pure.
-func Instructions(in ProjectionInput, engramName func(identity string) string) InstructionsResult {
+// the caller's Engram naming rule, as for the gate, and probe (C23 M8) the session-time probe of the
+// plan's sources, nil for a caller that has none. It is pure: the probe is the caller's.
+func Instructions(in ProjectionInput, engramName func(identity string) string, probe SourceProber) InstructionsResult {
 	switch in.Binding.Classification {
 	case ClassificationAbsent:
 		return InstructionsResult{}
@@ -121,7 +122,7 @@ func Instructions(in ProjectionInput, engramName func(identity string) string) I
 	case workflow.StatusClosed:
 		return InstructionsResult{Warning: closedNote(b, w.State)}
 	case workflow.StatusCreated, workflow.StatusRunning, workflow.StatusPaused:
-		return InstructionsResult{Block: InstructionsBlock(b, w.State, engramName)}
+		return InstructionsResult{Block: InstructionsBlock(b, w.State, engramName, probe)}
 	default:
 		return InstructionsResult{Warning: statusWarning(b, w.State.Status)}
 	}
