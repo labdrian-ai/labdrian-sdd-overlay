@@ -136,3 +136,32 @@ func TestNewRefusesARelativeStateHome(t *testing.T) {
 		t.Error("a relative state home was accepted")
 	}
 }
+
+func splitLines(s string) []string {
+	return strings.Split(strings.TrimSuffix(s, "\n"), "\n")
+}
+
+func decodeLine(t *testing.T, s string) map[string]any {
+	t.Helper()
+	var m map[string]any
+	if err := json.Unmarshal([]byte(s), &m); err != nil {
+		t.Fatalf("line %q: %v", s, err)
+	}
+	return m
+}
+
+func TestAppendDoesNotAddABlankLineToAWholeFile(t *testing.T) {
+	log, path := newLog(t)
+	for _, id := range []string{"toolu_1", "toolu_2"} {
+		if err := log.Append(record(id)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(data), "\n\n") || strings.HasPrefix(string(data), "\n") {
+		t.Errorf("a blank line was written: %q", data)
+	}
+}

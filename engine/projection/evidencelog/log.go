@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -105,11 +106,40 @@ func (l Log) Append(rec projection.ReadRecord) error {
 		}
 		return fmt.Errorf("memory-read evidence: open: %w", err)
 	}
-	_, werr := f.Write(append(data, '\n'))
+	data = append(data, '\n')
+	// A line torn by an earlier append that failed or was cut short (a crash, a full disk) has no
+	// newline at its end; this one starts a line of its own instead of being glued onto it, so one
+	// broken record never costs a second.
+	torn, err := endsTorn(f)
+	if err != nil {
+		f.Close()
+		return fmt.Errorf("memory-read evidence: %w", err)
+	}
+	if torn {
+		data = append([]byte{'\n'}, data...)
+	}
+	_, werr := f.Write(data)
 	serr := f.Sync()
 	cerr := f.Close()
 	if err := errors.Join(werr, serr, cerr); err != nil {
 		return fmt.Errorf("memory-read evidence: write: %w", err)
 	}
 	return nil
+}
+
+// endsTorn reports whether f, the sidecar opened under its lock, ends in a line that has no newline.
+// It reads the last byte through the same descriptor, never through the path.
+func endsTorn(f *os.File) (bool, error) {
+	info, err := f.Stat()
+	if err != nil {
+		return false, err
+	}
+	if info.Size() == 0 {
+		return false, nil
+	}
+	last := make([]byte, 1)
+	if _, err := f.ReadAt(last, info.Size()-1); err != nil {
+		return false, err
+	}
+	return last[0] != '\n', nil
 }

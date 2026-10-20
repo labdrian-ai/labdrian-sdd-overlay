@@ -13,7 +13,8 @@
 //     symlink or a non-directory at any component below the state home; the state
 //     home itself may be a symlink, because it is the user's own choice.
 //   - OpenNoFollow and ReadFile read a record without following a final symlink and
-//     without blocking on a FIFO, and require a regular file.
+//     without blocking on a FIFO, and require a regular file. OpenAppendNoFollow opens
+//     one for appending the same way, and refuses anything but a regular file itself.
 //   - Publish stores an immutable record: idempotent for identical bytes, a refusal
 //     for different bytes, never a replacement, safe against racing writers.
 //

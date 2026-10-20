@@ -20,11 +20,27 @@ func OpenNoFollow(path string) (*os.File, error) {
 	return os.OpenFile(path, os.O_RDONLY|syscall.O_NOFOLLOW|syscall.O_NONBLOCK, 0)
 }
 
-// OpenAppendNoFollow opens path for appending, creating it with perm when it does not exist,
+// OpenAppendNoFollow opens path for appending (and reading, so that a caller can look at what is
+// already there through the same descriptor), creating it with perm when it does not exist,
 // without following a final-component symlink and without blocking on a FIFO. A symlink is refused
-// with the kernel's ELOOP (see IsSymlinkRefusal).
+// with the kernel's ELOOP (see IsSymlinkRefusal). What it opens must be a regular file: a FIFO with
+// a reader, or a device, would take the bytes and keep nothing, so it is closed and refused with
+// ErrNotRegular.
 func OpenAppendNoFollow(path string, perm os.FileMode) (*os.File, error) {
-	return os.OpenFile(path, os.O_WRONLY|os.O_APPEND|os.O_CREATE|syscall.O_NOFOLLOW|syscall.O_NONBLOCK, perm)
+	f, err := os.OpenFile(path, os.O_RDWR|os.O_APPEND|os.O_CREATE|syscall.O_NOFOLLOW|syscall.O_NONBLOCK, perm)
+	if err != nil {
+		return nil, err
+	}
+	info, err := f.Stat()
+	if err != nil {
+		f.Close()
+		return nil, err
+	}
+	if !info.Mode().IsRegular() {
+		f.Close()
+		return nil, refuse(ErrNotRegular, "%q is not a regular file", path)
+	}
+	return f, nil
 }
 
 // IsSymlinkRefusal reports whether err is the kernel's refusal, under O_NOFOLLOW,
