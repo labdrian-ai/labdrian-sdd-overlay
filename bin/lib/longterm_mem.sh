@@ -68,7 +68,7 @@ longtermmem_install_step() {
   local status=0
   ( cmd_longterm_mem install --target "$target_arg" ) || status=$?
   if [[ "$status" -ne 0 ]]; then
-    warn "longterm-mem install FAILED after per-target state was already written: the MCP server is not installed. Target state now records a successful deploy, so re-running apply will NOT retry this step — run 'labdrian longterm-mem install --target $target_arg' directly."
+    warn "longterm-mem install FAILED after per-target state was already written: the MCP server is not installed. Target state now records a successful deploy; re-running apply runs this step again once the cause is fixed, or run 'labdrian longterm-mem install --target $target_arg' directly."
   fi
   return "$status"
 }

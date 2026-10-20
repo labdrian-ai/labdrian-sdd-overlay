@@ -158,11 +158,12 @@ cmd_apply() {
   #
   # Its exit status is inspected, because this runs AFTER the loop above has
   # already committed each target's state row. An unchecked failure would
-  # leave apply reporting success with no MCP server installed, and — since
-  # the digests it just wrote are unchanged — a later apply would see
-  # nothing to do and never retry. That degraded state would be sticky
-  # rather than self-healing, so the failure is named loudly, the exact
-  # recovery command is printed, and apply itself exits non-zero.
+  # leave apply reporting success with no MCP server installed. The step is
+  # not tied to those digests: saw_mcp_row is set on every apply that has an
+  # mcp-routed row, so the next apply runs the install again. The failure
+  # is still named loudly, the exact recovery command is printed, and apply
+  # itself exits non-zero, so the owner sees it without waiting for the next
+  # apply.
   #
   # The step goes through longtermmem_install_step rather than calling
   # cmd_longterm_mem here: see that function for why a bare call in this

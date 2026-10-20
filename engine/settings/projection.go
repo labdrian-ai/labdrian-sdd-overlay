@@ -73,9 +73,10 @@ var projectionFamily = hookFamily{
 // ("|| true"), and a missing binary is a silent no-op. Claude Code runs hooks
 // with "sh -c", so the guard uses POSIX redirection, not "&>".
 func buildProjectionEntry(hookCommand string, s hookSpec) map[string]interface{} {
+	bin := shellQuote(hookCommand)
 	cmd := fmt.Sprintf(
 		`command -v %s >/dev/null 2>&1 && %s %s --event %s || true`,
-		hookCommand, hookCommand, LabdrianProjectionIdentity, s.event,
+		bin, bin, LabdrianProjectionIdentity, s.event,
 	)
 	entry := map[string]interface{}{
 		"hooks": []interface{}{map[string]interface{}{

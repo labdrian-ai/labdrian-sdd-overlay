@@ -1,0 +1,269 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:e6a44e4b74f77611444606d0bd0e2789cc7b27c792c4957a3ff7c9383594654c",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-f1de6f0628da03f7",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "4c567243371c2c8e34a9cdd736c3ebfd79bcfb69",
+      "candidate_tree": "55c16b2cddd1f5f5c5f6c3bf296c67876c6d38d5",
+      "paths_digest": "sha256:0519384de165aa71a7859c7498dbea01ef471d1b6c6196a521b73e910f51a382",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "CHANGELOG.md",
+        "bin/lib/apply.sh",
+        "bin/lib/longterm_mem.sh",
+        "engine/settings/approve_guard.go",
+        "engine/settings/family.go",
+        "engine/settings/family_test.go",
+        "engine/settings/legacy_entries.go",
+        "engine/settings/legacy_families_test.go",
+        "engine/settings/merge.go",
+        "engine/settings/projection.go",
+        "engine/settings/quote.go",
+        "engine/settings/quoting_test.go",
+        "engine/settings/settingsfile/golden_unix_test.go",
+        "engine/settings/settingsfile/settings_test.go",
+        "engine/shelltest/overlay_longterm_mem_test.sh",
+        "odd/tasks/consolidation-phase9.md"
+      ],
+      "identity": "sha256:3cc0ece7c25f99bed299bd0907d8b4c0ca00af96027cf408dc730a5094f8e442"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "4c567243371c2c8e34a9cdd736c3ebfd79bcfb69",
+      "candidate_tree": "55c16b2cddd1f5f5c5f6c3bf296c67876c6d38d5",
+      "paths_digest": "sha256:0519384de165aa71a7859c7498dbea01ef471d1b6c6196a521b73e910f51a382",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "CHANGELOG.md",
+        "bin/lib/apply.sh",
+        "bin/lib/longterm_mem.sh",
+        "engine/settings/approve_guard.go",
+        "engine/settings/family.go",
+        "engine/settings/family_test.go",
+        "engine/settings/legacy_entries.go",
+        "engine/settings/legacy_families_test.go",
+        "engine/settings/merge.go",
+        "engine/settings/projection.go",
+        "engine/settings/quote.go",
+        "engine/settings/quoting_test.go",
+        "engine/settings/settingsfile/golden_unix_test.go",
+        "engine/settings/settingsfile/settings_test.go",
+        "engine/shelltest/overlay_longterm_mem_test.sh",
+        "odd/tasks/consolidation-phase9.md"
+      ],
+      "identity": "sha256:3cc0ece7c25f99bed299bd0907d8b4c0ca00af96027cf408dc730a5094f8e442"
+    },
+    "genesis_paths": [
+      "CHANGELOG.md",
+      "bin/lib/apply.sh",
+      "bin/lib/longterm_mem.sh",
+      "engine/settings/approve_guard.go",
+      "engine/settings/family.go",
+      "engine/settings/family_test.go",
+      "engine/settings/legacy_entries.go",
+      "engine/settings/legacy_families_test.go",
+      "engine/settings/merge.go",
+      "engine/settings/projection.go",
+      "engine/settings/quote.go",
+      "engine/settings/quoting_test.go",
+      "engine/settings/settingsfile/golden_unix_test.go",
+      "engine/settings/settingsfile/settings_test.go",
+      "engine/shelltest/overlay_longterm_mem_test.sh",
+      "odd/tasks/consolidation-phase9.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-risk",
+      "review-reliability"
+    ],
+    "original_changed_lines": 514,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "Changes the text of every installed hook command and the merge rule of five families (data in users' settings.json, ownership by substring), with tests that must pin it",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:10f80ddbd8bb9cea4f730cf1854f5406027919ea762aec92e1986cd635b12aa6",
+    "capture_phase_revision": "sha256:692f84a3b8cb92b6a62d12f88626d5b9a84474be57da9aa323e69c122b8e658a",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:3cc0ece7c25f99bed299bd0907d8b4c0ca00af96027cf408dc730a5094f8e442",
+        "capture_phase_revision": "sha256:692f84a3b8cb92b6a62d12f88626d5b9a84474be57da9aa323e69c122b8e658a",
+        "artifact_digest": "sha256:875424f2e543bf0fcf1498527b37e656e823bf42acad21686b5221edeed1562c",
+        "result_hash": "sha256:8783bb6dcb0deec6da5559722cf7120b990269dfab270b892d5c63ab26cf084a",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:0abb759faa650b08e7c823c71b9af4fc879fae295d58d61182d30cbb0dde597a",
+            "lineage_id": "review-f1de6f0628da03f7",
+            "authority_revision": "sha256:692f84a3b8cb92b6a62d12f88626d5b9a84474be57da9aa323e69c122b8e658a",
+            "target_identity": "sha256:3cc0ece7c25f99bed299bd0907d8b4c0ca00af96027cf408dc730a5094f8e442",
+            "base_tree": "4c567243371c2c8e34a9cdd736c3ebfd79bcfb69",
+            "candidate_tree": "55c16b2cddd1f5f5c5f6c3bf296c67876c6d38d5",
+            "changed_path_manifest_sha256": "sha256:bb207136537dd8c478132e04fdc1ba9e698aeae8f19b482bd41a62353b80a66e",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:0abb759faa650b08e7c823c71b9af4fc879fae295d58d61182d30cbb0dde597a",
+            "raw_sha256": "sha256:13d845a61e5ffa4fbb0d1b597aae4be707b4154ac97c0a847ae0c00ef90e9b6f",
+            "canonical_sha256": "sha256:f2dbcac1bc1ac14024ef04a7eac7792a293f4359dab2d4b309d782c544c17208",
+            "result_hash": "sha256:8783bb6dcb0deec6da5559722cf7120b990269dfab270b892d5c63ab26cf084a",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:0abb759faa650b08e7c823c71b9af4fc879fae295d58d61182d30cbb0dde597a",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "CHANGELOG.md",
+                "bin/lib/apply.sh",
+                "bin/lib/longterm_mem.sh",
+                "engine/settings/approve_guard.go",
+                "engine/settings/family.go",
+                "engine/settings/family_test.go",
+                "engine/settings/legacy_entries.go",
+                "engine/settings/legacy_families_test.go",
+                "engine/settings/merge.go",
+                "engine/settings/projection.go",
+                "engine/settings/quote.go",
+                "engine/settings/quoting_test.go",
+                "engine/settings/settingsfile/golden_unix_test.go",
+                "engine/settings/settingsfile/settings_test.go",
+                "engine/shelltest/overlay_longterm_mem_test.sh",
+                "odd/tasks/consolidation-phase9.md"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "engine/settings/quote.go: shellQuote returns a path made only of letters, digits and _@%+=:,./- unchanged. Anything else is wrapped in single quotes with each embedded single quote written as quote, backslash, quote, quote. That is the standard POSIX-safe form. A binary path holding $, backticks, spaces or newlines cannot break out of the command, so the change closes an injection and breakage vector rather than opening one.",
+              "All nine hook builders (approve guard, projection, minimalism and design in both events, sync trigger, review receipt, shaper guard) now quote the binary in both the command -v check and the call. The shaper guard fallback text still holds fixed guardmarkers constants, with no user input spliced in.",
+              "engine/settings/merge.go entryContainsBinary also accepts the quoted path, so entries written before this change are still recognised and replaced, not duplicated. Uninstall ownership stays by substring, as it was at the base.",
+              "Making the five legacy families repair means a foreign entry that holds our path inside a longer binary name and carries a family token is now replaced by merge. It was kept before. This is documented as a known owner-visible consequence, pinned by a test, and uninstall already removed such entries. The loss is limited to hooks that look like ours and the original stays in the .bak file, so I rate it at most a WARNING and report no finding.",
+              "The G12 changes in bin/lib/apply.sh and bin/lib/longterm_mem.sh are comment and warning text only. The shell test covers the second-run behaviour. No security or data-loss impact.",
+              "Five golden merge cases are skipped by name with recorded reasons. This reduces regression coverage but is not a reachable security harm."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 1,
+        "target_identity": "sha256:3cc0ece7c25f99bed299bd0907d8b4c0ca00af96027cf408dc730a5094f8e442",
+        "capture_phase_revision": "sha256:692f84a3b8cb92b6a62d12f88626d5b9a84474be57da9aa323e69c122b8e658a",
+        "artifact_digest": "sha256:af8258a57e584e616d5bf754f70055d3145d0d2d76ad0285023e9a999adb79a0",
+        "result_hash": "sha256:8e78600ee754e29bb5dddd6c9689891ac1d1046914e963c10360ffeeb6f9bd9d",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:264ffd4f1cba10a48ea7f3192f0c0c734abcc902a11680e59875e307e78845e2",
+            "lineage_id": "review-f1de6f0628da03f7",
+            "authority_revision": "sha256:692f84a3b8cb92b6a62d12f88626d5b9a84474be57da9aa323e69c122b8e658a",
+            "target_identity": "sha256:3cc0ece7c25f99bed299bd0907d8b4c0ca00af96027cf408dc730a5094f8e442",
+            "base_tree": "4c567243371c2c8e34a9cdd736c3ebfd79bcfb69",
+            "candidate_tree": "55c16b2cddd1f5f5c5f6c3bf296c67876c6d38d5",
+            "changed_path_manifest_sha256": "sha256:bb207136537dd8c478132e04fdc1ba9e698aeae8f19b482bd41a62353b80a66e",
+            "lens": "review-reliability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:264ffd4f1cba10a48ea7f3192f0c0c734abcc902a11680e59875e307e78845e2",
+            "raw_sha256": "sha256:e4567b877f48874eefa2dc9ea612ca6f8965e9e4030cac1376e0f1bc0e771a6c",
+            "canonical_sha256": "sha256:fea3a77d0c4a663e80f2fea66f5a2e7bf8e823cf996037526d1b23dd9135bb1a",
+            "result_hash": "sha256:8e78600ee754e29bb5dddd6c9689891ac1d1046914e963c10360ffeeb6f9bd9d",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:264ffd4f1cba10a48ea7f3192f0c0c734abcc902a11680e59875e307e78845e2",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "CHANGELOG.md",
+                "bin/lib/apply.sh",
+                "bin/lib/longterm_mem.sh",
+                "engine/settings/approve_guard.go",
+                "engine/settings/family.go",
+                "engine/settings/family_test.go",
+                "engine/settings/legacy_entries.go",
+                "engine/settings/legacy_families_test.go",
+                "engine/settings/merge.go",
+                "engine/settings/projection.go",
+                "engine/settings/quote.go",
+                "engine/settings/quoting_test.go",
+                "engine/settings/settingsfile/golden_unix_test.go",
+                "engine/settings/settingsfile/settings_test.go",
+                "engine/shelltest/overlay_longterm_mem_test.sh",
+                "odd/tasks/consolidation-phase9.md"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-001",
+                "lens": "reliability",
+                "location": "engine/shelltest/overlay_longterm_mem_test.sh:133-140",
+                "severity": "WARNING",
+                "claim": "The new warning text and comments say that the next `apply` runs the longterm-mem install again. The new case calls `longtermmem_install_step` twice directly and never runs `cmd_apply`. The claim that `saw_mcp_row` triggers the step on every apply is therefore not proved by any assertion in this candidate. A regression in the apply gating would leave this test green while the message stays wrong.",
+                "proof_refs": [
+                  "engine/shelltest/overlay_longterm_mem_test.sh:133-140",
+                  "bin/lib/longterm_mem.sh:71"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Every manifest path was reviewed.",
+              "shellQuote returns safe paths unchanged and single-quotes all others, so installed commands for normal paths are byte-identical. The test in quoting_test.go checks this, and another test there runs each builder's command under `sh -c` with a path containing a space and an apostrophe.",
+              "entryContainsBinary now matches both the bare and the quoted path, so entries written before quoting are still treated as owned and are replaced rather than duplicated. A test in quoting_test.go covers this, including a second merge that changes nothing.",
+              "The `holds` rewrite compares the entry's matcher with nil or a string, so it cannot panic on odd matcher types. Its callers, the status helpers, are not shown in this candidate.",
+              "Five golden merge cases are skipped by name because all families now repair owned entries that differ. This is a deliberate, documented behavior change. It does mean those cases no longer give backward-compatibility coverage."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "471b24d740d365d0a718b1065ff17c7f6197f581a6c4f3d4d0b708d76a035871",
+    "initial_atomic_start": {
+      "lineage_id": "review-f1de6f0628da03f7",
+      "worktree_identity": "sha256:8455002f227f033663d0e7d8b8ff6a885e1c85b482ec52e34017c303452eed87",
+      "target_identity": "sha256:3cc0ece7c25f99bed299bd0907d8b4c0ca00af96027cf408dc730a5094f8e442",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "4c567243371c2c8e34a9cdd736c3ebfd79bcfb69",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "high",
+      "selected_lenses": [
+        "review-risk",
+        "review-reliability"
+      ],
+      "original_changed_lines": 514,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "Changes the text of every installed hook command and the merge rule of five families (data in users' settings.json, ownership by substring), with tests that must pin it"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

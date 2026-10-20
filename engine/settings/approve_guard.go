@@ -58,9 +58,10 @@ var approveGuardFamily = hookFamily{
 // missing binary is reported by status-hooks, not enforced here. Claude Code runs
 // hooks with "sh -c", so the guard uses POSIX redirection, not "&>".
 func buildApproveGuardEntry(hookCommand string, s hookSpec) map[string]interface{} {
+	bin := shellQuote(hookCommand)
 	cmd := fmt.Sprintf(
 		`command -v %s >/dev/null 2>&1 && %s %s || true`,
-		hookCommand, hookCommand, LabdrianApproveGuardIdentity,
+		bin, bin, LabdrianApproveGuardIdentity,
 	)
 	return map[string]interface{}{
 		"matcher": s.matcher,

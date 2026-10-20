@@ -491,6 +491,9 @@ func TestSettingsJSONIsWhatTheProgramWroteBeforeH27(t *testing.T) {
 	}
 	for _, c := range golden.Cases {
 		t.Run(c.Name, func(t *testing.T) {
+			if reason, ok := casesRepairedSinceM9[c.Name]; ok {
+				t.Skip("recorded: " + reason + "; since C23 M9 every family repairs an owned entry that differs from what this version writes (TestEveryFamilyReplacesAnInstalledEntryWithAnOlderCommand)")
+			}
 			if rootDefeatsBackupProtection(os.Geteuid(), c) {
 				t.Skip("root writes through a read-only backup, so the refusal the case records cannot happen")
 			}
@@ -547,6 +550,18 @@ func TestSettingsJSONIsWhatTheProgramWroteBeforeH27(t *testing.T) {
 			}
 		})
 	}
+}
+
+// casesRepairedSinceM9 names the recorded cases whose merge left an owned entry that differed from
+// what the program writes as it was, and the reason: the minimalism, design, sync, receipt and shaper
+// families kept such an entry, and since C23 M9 they repair it like the projection and approve
+// families always did.
+var casesRepairedSinceM9 = map[string]string{
+	"hook-command-prefix-of-longer-path.merge": "a merge kept an entry the program takes for its own by substring although it runs another binary",
+	"hook-command-substring-of-owner.merge":    "a merge kept an entry the program takes for its own by substring although it runs another binary",
+	"old-unquoted-entry-edited-command.merge":  "a merge kept an owned entry whose command was edited",
+	"shaper-guard-edited-matcher.merge":        "a merge kept an owned shaper entry whose matcher was edited",
+	"shaper-guard-without-matcher.merge":       "a merge kept an owned shaper entry that had no matcher",
 }
 
 // The files are the ones that were recorded, all of them read: the cases and steps add up, and none

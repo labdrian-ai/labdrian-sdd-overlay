@@ -81,8 +81,10 @@ real_engine() {
 # ---------------------------------------------------------------------------
 
 # cmd_apply prints a recovery line when the longterm-mem install step fails,
-# because apply has already written each target's state row by then and will
-# never retry the step on its own. Every likely failure in that step is a
+# because apply has already written each target's state row by then and the
+# owner should not have to wait for the next apply to learn of it (which
+# does run the step again: see case_a_second_apply_runs_the_install_again).
+# Every likely failure in that step is a
 # `die`, and `die` exits the process — so the recovery line was unreachable
 # for exactly the failures it exists to explain.
 case_install_failure_is_reported_with_recovery_text() {
@@ -126,6 +128,68 @@ case_install_failure_is_reported_with_recovery_text() {
     return
   fi
   pass "a forced install failure returns non-zero and prints the recovery text"
+}
+
+# The recovery text must not claim a later apply skips the step: apply runs it on
+# every invocation that has an mcp-routed row, and the step keeps no memory of an
+# earlier failure, so a second run attempts the install again and says so again.
+case_a_second_apply_runs_the_install_again() {
+  local dir out first second
+  dir="$(new_case_dir install-again)"
+
+  local engine_stub="$dir/engine-stub"
+  printf '#!/usr/bin/env bash\nexit 0\n' > "$engine_stub"
+  chmod +x "$engine_stub"
+
+  out="$(
+    STATE_DIR="$dir/state" bash -c '
+      source "$1"
+      set +e
+      ENGINE_BINARY="$2"
+      LONGTERM_MEM_SRC="$3/definitely-not-a-module"
+      longtermmem_install_step all
+      echo "FIRST-DONE"
+      longtermmem_install_step all
+      echo "SECOND-DONE"
+    ' _ "$OVERLAY" "$engine_stub" "$dir" 2>&1
+  )"
+
+  first="$(grep -c -F -e "longterm-mem install FAILED" <<<"$out")"
+  second="$(grep -c -F -e "SECOND-DONE" <<<"$out")"
+  if [[ "$first" -ne 2 || "$second" -ne 1 ]]; then
+    fail "the second install attempt did not run and fail again ($first failure lines)" "$out"
+    return
+  fi
+  if grep -q -F -e "will NOT retry" <<<"$out"; then
+    fail "the recovery text still says a later apply will not retry" "$out"
+    return
+  fi
+  pass "a second install attempt runs again, and the recovery text does not say it will not"
+}
+
+# apply itself is not driven here (it needs a release checkout), so the part of
+# the claim that lives in apply.sh is pinned by its shape: the mcp sighting is
+# recorded before the guard that skips a row with no destination, and the install
+# is gated on that sighting alone, never on a digest, a deploy or an in-sync flag.
+case_apply_gates_the_install_on_the_mcp_row_alone() {
+  local apply="$REPO_ROOT/bin/lib/apply.sh" sighting skip gate
+  sighting="$(grep -n -F -e 'saw_mcp_row=1' "$apply" | head -n 1 | cut -d: -f1)"
+  skip="$(grep -n -F -e '[[ -z "$rr_dest" ]] && continue' "$apply" | tail -n 1 | cut -d: -f1)"
+  gate="$(grep -n -F -e 'if [[ -n "$saw_mcp_row" ]]; then' "$apply" | head -n 1 | cut -d: -f1)"
+
+  if [[ -z "$sighting" || -z "$skip" || -z "$gate" ]]; then
+    fail "apply.sh no longer has the mcp sighting, the skip guard or the install gate this case reads" "sighting=$sighting skip=$skip gate=$gate"
+    return
+  fi
+  if [[ "$sighting" -ge "$skip" ]]; then
+    fail "the mcp sighting (line $sighting) is not recorded before the skip guard (line $skip)" ""
+    return
+  fi
+  if [[ "$gate" -le "$skip" ]]; then
+    fail "the install gate (line $gate) is not after the row loop (skip guard at line $skip)" ""
+    return
+  fi
+  pass "apply runs the longterm-mem install on every apply that has an mcp-routed row"
 }
 
 # ---------------------------------------------------------------------------
@@ -1967,6 +2031,8 @@ case_self_update_refuses_a_dirty_tracked_tree() {
 # ---------------------------------------------------------------------------
 
 case_install_failure_is_reported_with_recovery_text
+case_a_second_apply_runs_the_install_again
+case_apply_gates_the_install_on_the_mcp_row_alone
 case_register_refusal_does_not_mark_target_installed
 case_register_hard_failure_fails_the_run
 case_register_failure_under_target_all_converges
