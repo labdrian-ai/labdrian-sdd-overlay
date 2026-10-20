@@ -45,6 +45,19 @@ func (a LongtermMemAdapter) observeAllTargets() map[string]longtermMemObservatio
 	}
 }
 
+// EntryInAnyRuntime reports whether the config of at least one of the runtimes (Claude Code,
+// OpenCode, Codex) has a longterm-mem MCP entry, whoever wrote it (C23 M8 decision 3: the
+// session-time probe counts any runtime). It reads and never writes, and it does not say the entry
+// works: a config that cannot be read counts as no entry.
+func (a LongtermMemAdapter) EntryInAnyRuntime() bool {
+	for _, obs := range a.observeAllTargets() {
+		if obs.entryPresent {
+			return true
+		}
+	}
+	return false
+}
+
 func (a LongtermMemAdapter) binaryExecutable() bool {
 	if a.BinaryPath == "" {
 		return false

@@ -187,7 +187,7 @@ func memoryInstructions(d deps, processCwd string, o memoryPlanOpts) (string, er
 		if err != nil {
 			return "", err
 		}
-		return projection.InstructionsBlock(projection.Binding{ProjectID: o.project, WorkflowID: o.workflowID}, state, identity.EngramName), nil
+		return projection.InstructionsBlock(projection.Binding{ProjectID: o.project, WorkflowID: o.workflowID}, state, identity.EngramName, nil), nil
 	}
 	outcome := d.promptHook().OnInstructions(app.PromptRequest{ProcessDir: processCwd})
 	switch {

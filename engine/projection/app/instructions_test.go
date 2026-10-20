@@ -24,7 +24,7 @@ func TestOnInstructionsGivesTheDomainsBlockForTheWorkflowTheRepositoryFollows(t 
 	want := projection.Instructions(projection.ProjectionInput{
 		Binding:  projection.Loaded{Classification: projection.ClassificationOwned, Binding: w.bindings.bound(repoKey)},
 		Workflow: ptr(owned(workflow.StatusRunning)),
-	}, engramName)
+	}, engramName, nil)
 	if got.Kind != app.PromptProjection || got.Result != want || want.Block == "" {
 		t.Fatalf("OnInstructions = %+v, want the domain's block %+v", got, want)
 	}

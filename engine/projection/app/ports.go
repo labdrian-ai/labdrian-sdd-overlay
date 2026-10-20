@@ -3,6 +3,7 @@ package app
 import (
 	"time"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/memoryscope"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow"
 )
@@ -27,6 +28,19 @@ type WorkflowReader interface {
 // or is not valid is reported in ProceduralSkills.Unreadable, which the gate turns into one warning.
 type ProceduralSkillsReader interface {
 	Load(dir string) projection.ProceduralSkills
+}
+
+// SourceAvailabilityProber is how the SessionStart hook finds out, when a session begins, which of
+// the memory sources of its plan can be read (C23 M8, docs/architecture/adr-c23-m8-session-availability.md).
+// The use case owns the port; an adapter at the edge asks each source, with a deadline, and the
+// composition root wires the two. dir is the directory of the session, which decides the project a
+// source belongs to.
+//
+// Probe never fails and never waits without a bound: a source that does not answer in time, or at
+// all, is reported unavailable with the reason, and the sources it was not asked about are not
+// reported.
+type SourceAvailabilityProber interface {
+	Probe(dir string, sources []memoryscope.Source) []projection.SourceAvailability
 }
 
 // Clock tells the time a binding is made at. The use case owns the port so that none of the inner

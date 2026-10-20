@@ -39,7 +39,7 @@ exit: 0
 
 observations of the created event:
   memory:engram: unavailable (the Engram database file was not found: no such file)
-  memory:procedural-skills: unavailable (no presence check exists for procedural skills)
+  memory:procedural-skills: unavailable (the project directory is unknown, so the procedural skills lock was not looked for)
   gentle-ai-review: unavailable (the gentle-ai binary was not found in the absolute PATH directories)
 
 $ workflow start --project proj-1 --workflow wf-1

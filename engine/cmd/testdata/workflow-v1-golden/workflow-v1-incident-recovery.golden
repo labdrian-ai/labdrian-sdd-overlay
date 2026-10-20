@@ -144,13 +144,13 @@ the log, line by line (version, seq, kind, payload, observations, SHA-256 of the
   v1 1 started [memory:engram=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] ee685becbcb6ebe39f507f18c4ce11b44492aec8bd676e28f7459b7af15a41c5
   v1 2 stage_recorded stage="preserve-evidence" [memory:engram=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 44123276fa48122d42cb1faf3952a15630a9dc379a7e674c9c6ac2b3e291d54d
   v1 3 stage_recorded stage="classify" [memory:engram=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 9eca5a4fc63856e483b44bcb4a7cb8666c88740b2fa69702782f6decaea8e12d
-  v1 4 stage_recorded stage="identify-supported-recovery" [memory:engram=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 865e12e11f631250ed90e7a8347f9f8920f660c2e7e787e67914ec1ae8324046
-  v1 5 stage_recorded stage="obtain-required-authorization" [memory:engram=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] fbaab78a9e6805b853eaec6681defdc66f9d024fc84459ce183392b29dfae0d2
-  v1 6 stage_recorded stage="recover" [memory:engram=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 8538f1de925759bd55d6048f0051b9e227b6696869eeed8c9b4fa7647625959f
-  v1 7 stage_recorded stage="verify" [memory:engram=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] c0a0b2a8e77fcf2c9581bcf7071451a1b3db95d77cee8e6e6ef5cc62747caf75
-  v1 8 stage_recorded stage="report" [memory:engram=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 46ee9b40e146af1c191449bc2ed0ccab7223f0081a9c9ac488fb7014ee701628
-  v1 9 verified checked.profile="incident-recovery" [memory:engram=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 9ed78579e1309b5afe871b214bb114aa87d80196e98a37bd3728d2a084f58606
-  v1 10 closed outcome="completed" [memory:engram=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 4b35a5603fe642a3abfc66688b537632d7d0f1b7844d9d18ee45d68372ddcacc
+  v1 4 stage_recorded stage="identify-supported-recovery" [memory:engram=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] ebed3c4fc3a53e0a9642140b1e882b10663ac5655026e70614d0d534da5b642e
+  v1 5 stage_recorded stage="obtain-required-authorization" [memory:engram=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 6174848fc82efb2e8fd8a980c6203fb22bafa4a296e546f73438dd7f841a424c
+  v1 6 stage_recorded stage="recover" [memory:engram=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 62660ca0f94e305daea9637dd8cafe1bd432fb23256094286a87dc58ad7080d3
+  v1 7 stage_recorded stage="verify" [memory:engram=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 19beb720a34e9209be22ff0d33318cf3e491e6049bff770fe4db157ba1e53a97
+  v1 8 stage_recorded stage="report" [memory:engram=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 9658d31fd9ef576d1ae3f2ecaf509695a7878bb99a4c4a5bdae232a7c002119e
+  v1 9 verified checked.profile="incident-recovery" [memory:engram=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 4c9253d25fb623115c69f6c390a3fe3bebc709737ca8de21d6a8297db960050d
+  v1 10 closed outcome="completed" [memory:engram=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 0b35582e92f83eeb0437153e8e058fa497cf80446578a85d7cb81b8261dda9b2
 
 == incident-recovery, from its created log ==
 
@@ -270,10 +270,10 @@ exit: 0
 
 the log, line by line (version, seq, kind, payload, observations, SHA-256 of the line with the timestamp and chain digests masked):
   v1 0 created [memory:engram=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] d86ee709fb058eab7c3c9e529555eae176f396f91f6b3135a1ba63f57e524e4f
-  v1 1 started [memory:engram=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] ee685becbcb6ebe39f507f18c4ce11b44492aec8bd676e28f7459b7af15a41c5
-  v1 2 paused [memory:engram=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 5a3c9a6bde1e8f2f492b392bf66a2822262651112b8ac24b15d753eedd33b995
-  v1 3 resumed [memory:engram=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] e68cb6ef3ff4654eff7abd9d1e509c1efe4689a66f0787cb01742a38f6f70736
-  v1 4 stage_recorded stage="preserve-evidence" [memory:engram=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 582d59c48af5ace87f49906c776277027c8b6b494b128fc714ca2c3190b96f3f
-  v1 5 verified checked.profile="incident-recovery" [memory:engram=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] c6edc434388c8f7cc6b175e6c5a049b0278a09152455a9e194a6186a91aaeabc
-  v1 6 closed outcome="abandoned" reason="no longer needed" [memory:engram=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 24d9b9cf9582cede5682f57e6248b08f382cc8843040d45f49ff05ffeee1a969
+  v1 1 started [memory:engram=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 5674346822ce659c2484bc3a0a690ef3d1c7d8781b8a48f3a6d368584d61bfe9
+  v1 2 paused [memory:engram=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 37c9882be9377ec26762e28e3cb1d5339fcee8bc2a045ca9c294c8efa282c4e1
+  v1 3 resumed [memory:engram=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] cfcff46184823e50a2d05d73c2839bc029b17b8c382c46242c3410a873b05756
+  v1 4 stage_recorded stage="preserve-evidence" [memory:engram=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] b02eb90804e850eaf8dbb0f9d4b05f8ca521754b366416b72ce52e8d38b542fc
+  v1 5 verified checked.profile="incident-recovery" [memory:engram=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 16df90488ba1bbab20d06f74074a567a7d2d84fcda020fa6fc14c6c528682f22
+  v1 6 closed outcome="abandoned" reason="no longer needed" [memory:engram=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 7bf19a2923d9269fbaad0de46481da51388bf4b4f78199b84900b9ece5526467
 

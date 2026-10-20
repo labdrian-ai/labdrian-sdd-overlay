@@ -42,7 +42,7 @@ exit: 0
 observations of the created event:
   memory:engram: available (the Engram database file is present (not opened, so its contents and health are unverified))
   memory:longterm-mem: available (the longterm-mem registration record is present (not opened; whether a runtime has the MCP server loaded is unverified))
-  memory:procedural-skills: unavailable (no presence check exists for procedural skills)
+  memory:procedural-skills: unavailable (the project directory is unknown, so the procedural skills lock was not looked for)
   gentle-ai-review: available (the gentle-ai binary is on PATH (not executed; review mode and consent are unverified))
 
 $ workflow start --project proj-1 --workflow wf-1

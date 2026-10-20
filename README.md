@@ -828,7 +828,11 @@ gentle-ai-overlay projection hook --event UserPromptSubmit|PreToolUse|SessionSta
     SessionStart (C23 M6): when a session starts, resumes, is cleared or is compacted, put the memory
     instructions of the workflow the repository is bound to into its context, once, as
     {"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"..."}}: the block
-    `labdrian memory plan --instructions` prints. Silent when no workflow is bound, and for a binding or
+    `labdrian memory plan --instructions` prints, plus (C23 M8) one line, "Do not read <source>: it is
+    unavailable in this session (<reason>).", for each source of the plan that the hook found it cannot read:
+    it runs `engram stats` and the longterm-mem binary and looks for a longterm-mem MCP entry in any runtime
+    and for the project's procedural skills lock, each with a three-second deadline, all at once. The line
+    only informs; the gate is unchanged. Silent when no workflow is bound, and for a binding or
     workflow it cannot follow, a closed one, a store it cannot read, or input it cannot use (the next
     prompt warns about those); read-only, it never removes a binding. Each UserPromptSubmit keeps its
     one-line memory plan, so a workflow bound or narrowed in the middle of a session is still seen.

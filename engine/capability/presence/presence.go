@@ -77,6 +77,11 @@ type Prober struct {
 	Path string
 	// ProbeFS is the stat access; nil means the operating system's.
 	ProbeFS StatFS
+	// ProceduralLock is the absolute path of the procedural skills lock of the project the workflow
+	// is created in (C23 M8). Empty, or not absolute, means the project is unknown: the
+	// memory:procedural-skills signal is unavailable, and the prober never looks for the lock in
+	// the working directory on its own.
+	ProceduralLock string
 }
 
 var _ workflow.DependencyProber = Prober{}
@@ -159,7 +164,7 @@ func gentleAIBinaryName() string {
 func (p Prober) observe(ctx context.Context, name string) workflow.Observation {
 	switch name {
 	case CapabilityMemoryProcedural:
-		return unavailable(name, "no presence check exists for procedural skills")
+		return p.observeProcedural(name)
 	case CapabilityGentleAIReview:
 		return p.observeGentleAI(ctx, name)
 	}
@@ -182,6 +187,25 @@ func (p Prober) observe(ctx context.Context, name string) workflow.Observation {
 	default:
 		return unavailable(name, check.subject+" was not found: "+found.why)
 	}
+}
+
+// observeProcedural stats the procedural skills lock of the project, at the path ProceduralLock
+// names. Like every signal here it never opens the file, so a lock that is present may still not be
+// valid; the session-time probe reads it (docs/architecture/adr-c23-m8-session-availability.md).
+func (p Prober) observeProcedural(name string) workflow.Observation {
+	const subject = "the procedural skills lock"
+	if !filepath.IsAbs(p.ProceduralLock) {
+		return unavailable(name, "the project directory is unknown, so "+subject+" was not looked for")
+	}
+	found := p.statRegular(p.ProceduralLock)
+	if !found.present {
+		return unavailable(name, subject+" was not found: "+found.why)
+	}
+	detail := subject + " is present (not opened, so its validity is unverified)"
+	if found.symlink {
+		detail += "; the checked path is a symlink"
+	}
+	return workflow.Observation{Capability: name, Status: workflow.ObservationAvailable, Detail: detail}
 }
 
 // observeGentleAI scans the absolute PATH directories, by name, for an

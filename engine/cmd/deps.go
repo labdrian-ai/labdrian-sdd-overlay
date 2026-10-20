@@ -3,10 +3,13 @@ package main
 import (
 	"errors"
 	"io"
+	"path/filepath"
 	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/capability/presence"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection/app"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/synctrigger"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/synctrigger/osproc"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow"
@@ -72,6 +75,10 @@ type deps struct {
 	// gate decides whether a tool call is allowed against the workflow a repository is bound to
 	// (projection.Gate in the program). A test that wants the decision to fail replaces it.
 	gate func(projection.GateInput) projection.GateResult
+	// sourceProber returns the probe the SessionStart hook asks which sources of the memory plan
+	// can be read (C23 M8): it runs programs, so the program installs it (newSessionAvailability)
+	// and a test leaves it nil, which is a hook that probes nothing and adds no degradation line.
+	sourceProber func() app.SourceAvailabilityProber
 	// workflowProber returns the DependencyProber the workflow verbs record observations with.
 	// Nil, as in the program, is the presence prober over the home and PATH of these deps and
 	// their probeFS (dependencyProber): it looks at paths with stat and at PATH entries by name,
@@ -157,7 +164,23 @@ func (d deps) dependencyProber() workflow.DependencyProber {
 		return d.workflowProber()
 	}
 	home, path := runtimeProbeEnv(d)
-	return presence.Prober{Home: home, Path: path, ProbeFS: d.probeFS}
+	return presence.Prober{Home: home, Path: path, ProbeFS: d.probeFS, ProceduralLock: d.proceduralLockPath()}
+}
+
+// proceduralLockPath is where the procedural skills lock of the project the process runs in would
+// be (C23 M8): under the root of the worktree that holds the working directory. It is "" when
+// there is no working directory or it is in no worktree, which the presence prober reads as a
+// project it does not know.
+func (d deps) proceduralLockPath() string {
+	dir, err := d.workingDir()
+	if err != nil {
+		return ""
+	}
+	root := newRepoLocator().Provenance(dir).WorktreeRoot
+	if root == "" {
+		return ""
+	}
+	return filepath.Join(root, filepath.FromSlash(skills.ProjectLockRelPath))
 }
 
 // clock is the clock the verbs read: the deps' own, or the machine's.

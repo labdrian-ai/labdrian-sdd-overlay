@@ -23,12 +23,33 @@ func TestTheLockReaderGivesTheAbsoluteSkillFilesOfTheProceduralSkillsOnly(t *tes
 	reader := proceduralLockReader{worktreeRoot: func(string) string { return root }}
 
 	got := reader.Load("/any")
-	want := projection.ProceduralSkills{Skills: []projection.ProceduralSkill{{ID: "deploy-checks", SkillFiles: []string{
+	want := projection.ProceduralSkills{Locked: true, Skills: []projection.ProceduralSkill{{ID: "deploy-checks", SkillFiles: []string{
 		filepath.Join(root, ".claude", "skills", "deploy-checks", "SKILL.md"),
 		filepath.Join(root, ".agents", "skills", "deploy-checks", "SKILL.md"),
 	}}}}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("Load = %+v, want %+v", got, want)
+	}
+}
+
+// TestTheLockReaderTellsAValidLockWithNoSkillFromNoLock (C23 M8 decision 2): a valid lock that lists
+// no procedural skill is Locked, so the session-time probe can say the source is available; no lock,
+// and a lock that cannot be read, are not.
+func TestTheLockReaderTellsAValidLockWithNoSkillFromNoLock(t *testing.T) {
+	root := t.TempDir()
+	writeFixtureFile(t, filepath.Join(root, filepath.FromSlash(skills.ProjectLockRelPath)), `{"version":1,"skills":[]}`)
+	got := proceduralLockReader{worktreeRoot: func(string) string { return root }}.Load("/any")
+	if !got.Locked || got.Unreadable != "" || len(got.Skills) != 0 {
+		t.Errorf("a valid lock with no skill: Load = %+v, want Locked with no skill and no fault", got)
+	}
+	none := proceduralLockReader{worktreeRoot: func(string) string { return t.TempDir() }}.Load("/any")
+	if none.Locked {
+		t.Errorf("no lock: Load = %+v, want it not Locked", none)
+	}
+	invalid := t.TempDir()
+	writeFixtureFile(t, filepath.Join(invalid, filepath.FromSlash(skills.ProjectLockRelPath)), `{"version":2,"skills":[]}`)
+	if bad := (proceduralLockReader{worktreeRoot: func(string) string { return invalid }}).Load("/any"); bad.Locked || bad.Unreadable == "" {
+		t.Errorf("an invalid lock: Load = %+v, want it unreadable and not Locked", bad)
 	}
 }
 

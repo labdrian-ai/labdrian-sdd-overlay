@@ -167,8 +167,8 @@ func TestPresenceProberReportsAMissingFileAsUnavailableWithoutThePath(t *testing
 
 func TestPresenceProberFixedSignalsAndUnknownCapabilities(t *testing.T) {
 	p := presence.Prober{Home: fixtureHome(t), Path: binDir(t)}
-	if got := probeOne(t, p, "memory:procedural-skills"); got.Status != workflow.ObservationUnavailable || got.Detail != "no presence check exists for procedural skills" {
-		t.Errorf("procedural skills = %+v, want unavailable with the fixed detail even when everything else is present", got)
+	if got := probeOne(t, p, "memory:procedural-skills"); got.Status != workflow.ObservationUnavailable || got.Detail != "the project directory is unknown, so the procedural skills lock was not looked for" {
+		t.Errorf("procedural skills = %+v, want unavailable because the project is unknown, even when everything else is present", got)
 	}
 	for _, name := range []string{"memory:other", "credentials:opencode", "credentials:", "", "gentle-ai", "GENTLE-AI-REVIEW"} {
 		got := probeOne(t, p, name)
