@@ -82,7 +82,7 @@ func runRuntimeProbe(d deps, args []string, stdout, stderr io.Writer, exit func(
 	}
 
 	home, path := runtimeProbeEnv(d)
-	observations, err := probeWithin(presence.Prober{Home: home, Path: path, ProbeFS: d.probeFS}, names, d.probeBound())
+	observations, err := probeWithin(presence.Prober{Home: home, Path: path, ProbeFS: d.probeFS, ProceduralLock: d.proceduralLockPath()}, names, d.probeBound())
 	if err != nil {
 		fmt.Fprintf(stderr, "error: runtime probe: %v\n", err)
 		exit(1)

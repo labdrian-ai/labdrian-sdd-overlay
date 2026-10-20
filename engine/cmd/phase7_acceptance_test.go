@@ -803,7 +803,7 @@ func phase7PresenceProber(t *testing.T, binary string) {
 		"credentials:pi":           {"available", "the Pi credentials file is present (not opened; this does not prove the runtime is authenticated)"},
 		"memory:engram":            {"available", "the Engram database file is present (not opened, so its contents and health are unverified)"},
 		"memory:longterm-mem":      {"unavailable", "was not found"},
-		"memory:procedural-skills": {"unavailable", "no presence check exists"},
+		"memory:procedural-skills": {"unavailable", "the procedural skills lock"},
 		"gentle-ai-review":         {"available", "not executed; review mode and consent are unverified"},
 	}
 	if len(report.Observations) != len(want) {

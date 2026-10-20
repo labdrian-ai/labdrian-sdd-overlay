@@ -144,13 +144,13 @@ the log, line by line (version, seq, kind, payload, observations, SHA-256 of the
   v1 1 started [memory:engram=unavailable memory:longterm-mem=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 5a767cb9f502176b63a71b23fdfa9fc651ef911870c03ff39d0f76435c1dbeda
   v1 2 stage_recorded stage="authorize" [memory:engram=unavailable memory:longterm-mem=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 000cc3f917c56a1eba9aa40dc5c407f7c8b9e9acdec579b323648700cfbcd508
   v1 3 stage_recorded stage="explore" [memory:engram=unavailable memory:longterm-mem=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 293cda4b7642633d42107eba3f17c65185e652b5a357324e5f658d79de5b7e94
-  v1 4 stage_recorded stage="resolve-uncertainty" [memory:engram=unavailable memory:longterm-mem=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 0eb82c95b39755ad9e5b93f21454f9f5b81c4ae6a14ecbe1dc066300b7604a56
-  v1 5 stage_recorded stage="classify" [memory:engram=unavailable memory:longterm-mem=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 6dc98fd807736a4d6fd5949cc31657e93177d8a322003181996a14a8841629e8
-  v1 6 stage_recorded stage="track-if-substantial" [memory:engram=unavailable memory:longterm-mem=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] eed8adc78c7347e682d4a50ad45e58f3710248167d5569c85f4057ee4061587e
-  v1 7 stage_recorded stage="implement-task-by-task" [memory:engram=unavailable memory:longterm-mem=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 0bfa33999e1edbe42acfbda3e3cf8baefc0cc2be586ddbe0ad91c5dd0a46d25c
-  v1 8 stage_recorded stage="close" [memory:engram=unavailable memory:longterm-mem=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 920dcf2a6deb1893951577a6d4a212faf273c9a10ba495701dfc7bb14baafdfd
-  v1 9 verified checked.profile="odd" [memory:engram=unavailable memory:longterm-mem=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 7cf46ffd802a1ec1b00983672ffa4825de4f9c8403a105644a9298f92185490c
-  v1 10 closed outcome="completed" [memory:engram=unavailable memory:longterm-mem=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 7c8a6d8920fe58c7855c2c2e737dd8e7dcde0c36042d309b7caa3a0bda7ac4d2
+  v1 4 stage_recorded stage="resolve-uncertainty" [memory:engram=unavailable memory:longterm-mem=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 4854dd2a8a564c9668d6482e9b553345a64d859f03982c04ae7b6d83cdb5a51b
+  v1 5 stage_recorded stage="classify" [memory:engram=unavailable memory:longterm-mem=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 576d8f4d00cdc2ec49aaa876d069fbb5180f70bea4960dd6cc479507ad0bfa83
+  v1 6 stage_recorded stage="track-if-substantial" [memory:engram=unavailable memory:longterm-mem=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] e5701cdaf429d2c8a4b2822c573b5b176793d485208f0e7c92dff28ffc7f9dd8
+  v1 7 stage_recorded stage="implement-task-by-task" [memory:engram=unavailable memory:longterm-mem=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 901fc44d08a82daeb2e9c60928833acb2de41d75c1971e274172c243c9367fc8
+  v1 8 stage_recorded stage="close" [memory:engram=unavailable memory:longterm-mem=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 993e1539aacdfa33893c23005234d7ef62376e7c088ad76033784a69ac1ff556
+  v1 9 verified checked.profile="odd" [memory:engram=unavailable memory:longterm-mem=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] b30d9e8ff998ab87310fc782e26149f8c7500014280e342e516bfd41c93473a2
+  v1 10 closed outcome="completed" [memory:engram=unavailable memory:longterm-mem=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] bd49abc4bfb46aad027da9e350603acab3b91375b49c2c997ee740f82ddeab4a
 
 == odd, from its created log ==
 
@@ -270,10 +270,10 @@ exit: 0
 
 the log, line by line (version, seq, kind, payload, observations, SHA-256 of the line with the timestamp and chain digests masked):
   v1 0 created [memory:engram=unavailable memory:longterm-mem=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] fffbab92dd0b63a979b5f6817c8a8fa5e09114db26de97dcfa4a306f76bb5d27
-  v1 1 started [memory:engram=unavailable memory:longterm-mem=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 5a767cb9f502176b63a71b23fdfa9fc651ef911870c03ff39d0f76435c1dbeda
-  v1 2 paused [memory:engram=unavailable memory:longterm-mem=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 9d8e84b67a67e6e724c7f416acd3920568a956480376675561635ea56b4a3328
-  v1 3 resumed [memory:engram=unavailable memory:longterm-mem=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 220f6002ed31aa76b6ae885c39cf5c8e7127bb85f7ed6809d2513467869096ee
-  v1 4 stage_recorded stage="authorize" [memory:engram=unavailable memory:longterm-mem=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 323c6a6cddd7b32c6b3418c6664b2718cf634d640b3c912a8c072e70320e7c4b
-  v1 5 verified checked.profile="odd" [memory:engram=unavailable memory:longterm-mem=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] a769a7e33c62e05a69c74dc47bf7bbc0be3080ad84ddbcd6529eb5883d91f9a2
-  v1 6 closed outcome="abandoned" reason="no longer needed" [memory:engram=unavailable memory:longterm-mem=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 8a3e441eca0eee0d78b2727d7f48317e365c3ec463d5e76cc89bdb7a48b1a5b2
+  v1 1 started [memory:engram=unavailable memory:longterm-mem=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] bdf6c83b9af792a6288809802f0e19280e5d49e0157e449d28addaaab8379e9e
+  v1 2 paused [memory:engram=unavailable memory:longterm-mem=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 2c2c5bab60b21df392a9afe78a73915a2b8e78098d96029b5c78b6d400df2dce
+  v1 3 resumed [memory:engram=unavailable memory:longterm-mem=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 86d0a0d1e5fca49c0a34e2784da64fac05ae378bda030212bdedbaee73a4df8d
+  v1 4 stage_recorded stage="authorize" [memory:engram=unavailable memory:longterm-mem=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 77c670dbd5ec8fd2c623fedb2e1e39ffd2efc787b81189e12fab730a3ceff8bf
+  v1 5 verified checked.profile="odd" [memory:engram=unavailable memory:longterm-mem=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 926cc77cf6b2bffbddaa74a3947e12d3b0c59f88f373d2c69bccf15b81be25b7
+  v1 6 closed outcome="abandoned" reason="no longer needed" [memory:engram=unavailable memory:longterm-mem=unavailable memory:procedural-skills=unavailable gentle-ai-review=unavailable] 170c21ebbb2a39eff61331cafb25f95cf61a5548f77244ec89251901ed2cff2f
 

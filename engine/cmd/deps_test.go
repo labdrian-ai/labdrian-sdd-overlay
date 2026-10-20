@@ -33,7 +33,14 @@ func newCapturedProcess() *capturedProcess {
 
 // testDeps is the deps of the program, as main builds them from the process the tests run in:
 // its environment is the one TestMain pinned under a temporary directory.
-func testDeps() deps { return productionDeps() }
+func testDeps() deps {
+	d := productionDeps()
+	// The program's session-time probe runs 'engram stats' and 'longterm-mem status' on the machine
+	// (C23 M8); a test must not reach the machine's memory, so it probes nothing unless it installs
+	// a probe of its own.
+	d.sourceProber = nil
+	return d
+}
 
 // environmentOf is a getenv that answers from a map and is empty for anything else.
 func environmentOf(vars map[string]string) func(string) string {
