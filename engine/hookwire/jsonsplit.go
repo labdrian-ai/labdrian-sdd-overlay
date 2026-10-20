@@ -369,11 +369,7 @@ func (s *splitter) number(first byte, out *sink) error {
 			if err := out.put(b); err != nil {
 				return err
 			}
-			if b, err = s.next(); err != nil {
-				return err
-			}
-		}
-		if err := s.r.UnreadByte(); err != nil {
+		} else if err := s.r.UnreadByte(); err != nil {
 			return err
 		}
 		if n, err := s.digits(out); err != nil || n == 0 {
