@@ -167,6 +167,31 @@ case_a_second_apply_runs_the_install_again() {
   pass "a second install attempt runs again, and the recovery text does not say it will not"
 }
 
+# apply itself is not driven here (it needs a release checkout), so the part of
+# the claim that lives in apply.sh is pinned by its shape: the mcp sighting is
+# recorded before the guard that skips a row with no destination, and the install
+# is gated on that sighting alone, never on a digest, a deploy or an in-sync flag.
+case_apply_gates_the_install_on_the_mcp_row_alone() {
+  local apply="$REPO_ROOT/bin/lib/apply.sh" sighting skip gate
+  sighting="$(grep -n -F -e 'saw_mcp_row=1' "$apply" | head -n 1 | cut -d: -f1)"
+  skip="$(grep -n -F -e '[[ -z "$rr_dest" ]] && continue' "$apply" | tail -n 1 | cut -d: -f1)"
+  gate="$(grep -n -F -e 'if [[ -n "$saw_mcp_row" ]]; then' "$apply" | head -n 1 | cut -d: -f1)"
+
+  if [[ -z "$sighting" || -z "$skip" || -z "$gate" ]]; then
+    fail "apply.sh no longer has the mcp sighting, the skip guard or the install gate this case reads" "sighting=$sighting skip=$skip gate=$gate"
+    return
+  fi
+  if [[ "$sighting" -ge "$skip" ]]; then
+    fail "the mcp sighting (line $sighting) is not recorded before the skip guard (line $skip)" ""
+    return
+  fi
+  if [[ "$gate" -le "$skip" ]]; then
+    fail "the install gate (line $gate) is not after the row loop (skip guard at line $skip)" ""
+    return
+  fi
+  pass "apply runs the longterm-mem install on every apply that has an mcp-routed row"
+}
+
 # ---------------------------------------------------------------------------
 # finding A2: register's exit status must be inspected, not discarded
 # ---------------------------------------------------------------------------
@@ -2007,6 +2032,7 @@ case_self_update_refuses_a_dirty_tracked_tree() {
 
 case_install_failure_is_reported_with_recovery_text
 case_a_second_apply_runs_the_install_again
+case_apply_gates_the_install_on_the_mcp_row_alone
 case_register_refusal_does_not_mark_target_installed
 case_register_hard_failure_fails_the_run
 case_register_failure_under_target_all_converges
