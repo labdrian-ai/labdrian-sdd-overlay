@@ -24,7 +24,7 @@ Claude Code: 84,977 calls; 23.63B context tokens (97.7% cache read); 78.7M outpu
 | ID | Specs | Route | Status | Commit |
 |---|---|---|---|---|
 | T1 Normalized `Call` record and Claude Code + Pi log readers (dedupe by message id, main vs subagent, `agentType` from meta.json) | S1 S3 S4 S5 S6 | delegated writer | done (verified) | see git log |
-| T2 Aggregation: totals, ratios, percentiles, groupings by model/project/day/role | S2 S4 | delegated writer | pending | |
+| T2 Aggregation: totals, ratios, percentiles, groupings by model/project/day/role | S2 S4 | delegated writer | done (verified) | see git log |
 | T3 CLI `telemetry report` (table and `--json`), golden fixtures, determinism test | S2 S5 S6 | delegated writer | pending | |
 | T4 Cost: Pi `cost` as recorded, optional price table, explicit "unavailable" otherwise | S3 | delegated writer | pending | |
 | T5 Role/phase attribution report | S4 | delegated writer | pending | |
@@ -43,3 +43,4 @@ Route declaration: T1–T5 are dependent units written one at a time. Writer tri
 - **L2** (user, earlier, goal): "mejorar todo o que tenemos hacerlo mas eficiente mas productivo mas rapido mas beneficioso con menos recuersos para construir software a medida cada vez mejor realizar a menor costo"
 - **L3** (parent, 2026-10-21): main checkout `~/labdrian-sdd-overlay` is on `feat/phase9-b62` and another session committed there minutes earlier, so it is left untouched; `~/labdrian-standalone` is 1,375 commits behind `main`. Work happens in its own worktree from `main`.
 - **L4** (parent, 2026-10-21): T1 verified. Writer reported RED/GREEN, gofmt/vet/build/test clean. Parent re-ran the suite and ran the readers over the real corpus from a scratch module outside the repo (aggregates only): Claude 84,977 calls, 23.63B ctx, main 23,848 / sub 61,129, ctx/call 432,138 / 217,999 and 7.8 s: identical to the hand analysis. Pi gave 2,828 calls / $78.86 vs 2,796 / $73.67 by hand: unexplained difference, probably the live session growing since; not verified. Diff is 520 lines (target ~400), accepted by the parent. Writer could not save to Engram (server too old).
+- **L5** (parent, 2026-10-21): T2 verified. Writer: RED/GREEN, gofmt/vet/build/test clean, 374 lines, Risk none. Parent re-ran tests and fed the real corpus (87,831 calls) through Aggregator from a scratch module outside the repo: two runs byte-identical (S6), ~9 s, 95 KB JSON with by_source/role/model/project/day/agent_type. One call with 3,083,209 context tokens seen in the distribution max: not investigated.
