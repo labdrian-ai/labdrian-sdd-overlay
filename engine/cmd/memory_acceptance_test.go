@@ -232,6 +232,7 @@ func TestMemoryWiringAcceptance(t *testing.T) {
 		unchanged(t, before)
 		instructions(t)
 	}
+	var codexCommand string // the installed hook command, set by codexHook for the availability proof
 	codexHook := func(t *testing.T) {
 		t.Helper()
 		// The hook is merged into a scratch CODEX_HOME and run as installed, through sh -c, with
@@ -273,6 +274,7 @@ func TestMemoryWiringAcceptance(t *testing.T) {
 				}
 			}
 		}
+		codexCommand = ours
 		if ours == "" || !strings.Contains(string(data), "moshi notify") {
 			t.Fatalf("our entry or the foreign one is missing: %s", data)
 		}
@@ -288,6 +290,22 @@ func TestMemoryWiringAcceptance(t *testing.T) {
 			check(t, "codex SessionStart "+source, hw.run(hw.dir, sessionStartInput(t, hw.repo, source), "sh", "-c", ours), sessionOutput(block))
 		}
 		unchanged(t, before)
+	}
+	codexAvailability := func(t *testing.T) {
+		t.Helper()
+		// The hook shares Claude's SessionStart renderer, so the session-time probe of C23 M8 runs
+		// in the hook process too: a stub engram that fails is reported in the block.
+		if codexCommand == "" {
+			t.Fatal("the instructions proof did not install the Codex hook")
+		}
+		hw := w
+		hw.bin = t.TempDir()
+		if err := os.WriteFile(filepath.Join(hw.bin, "engram"), []byte("#!/bin/sh\nexit 1\n"), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		line := "- Do not read engram: it is unavailable in this session (the engram program failed: exit status 1).\n"
+		want := sessionOutput(strings.Replace(block, "- Engram reads", line+"- Engram reads", 1))
+		check(t, "codex SessionStart availability", hw.run(hw.dir, sessionStartInput(t, hw.repo, "startup"), "sh", "-c", codexCommand), want)
 	}
 	piDelivery := func(t *testing.T) {
 		dest := filepath.Join(w.dir, "pkg")
@@ -330,7 +348,7 @@ func TestMemoryWiringAcceptance(t *testing.T) {
 			"instructions": {capability.Supported, "Engine hook process only, once the owner trusts the hook in the Codex TUI; the skills stay deliverable but Codex's sandbox may hide them; no live session before trust.", func(t *testing.T) { codexDelivery(t); codexHook(t) }},
 			"enforcement":  unsupported("Codex has no memory enforcement; its gate is M12b."),
 			"evidence":     unsupported("Codex has no memory-read evidence hook yet; it is M12b."),
-			"availability": unsupported("Codex has no session memory availability probe yet; it is M12b."),
+			"availability": {capability.Partial, "Session-time Engram availability shared with Claude through the same hook renderer, not runtime authentication; only after the owner trusts the hook.", codexAvailability},
 		},
 		"pi": {
 			"instructions": {capability.Partial, "Package delivery and manual skill invocation, not automatic projection.", piDelivery},

@@ -36,11 +36,12 @@
    keeps the dependence on a skill file and a binary outside the workspace.
 2. **Instructions only in this unit (the owner, option A).** Codex has `PreToolUse` and `PostToolUse` hooks, so
    the gate and the read evidence can follow, but that needs the mapping of Codex's tool names and its
-   input and denial formats and touches a guard. It is a separate unit (M12b). After this unit the table of
-   M11 says: Codex instructions supported through the hook; enforcement, evidence and availability still
-   unsupported with the limit written.
+   input and denial formats and touches a guard. It is a separate unit (M12b). After this unit the table of M11 says: Codex instructions supported through the hook, and the
+   session-time availability line partial, because the hook shares Claude's `SessionStart` renderer and so
+   also runs the probe of M8 (found by the independent verifier: the table first said Codex had no probe); enforcement and evidence
+   still unsupported with the limit written.
 3. **Pi stays as it is (the owner, option A).** Pi obtains the plan when the agent runs the command and passed
-   the live session. The table says so: instructions supported, invoked by the agent, nothing enforced.
+   the live session. The table says so: instructions partial (invoked by the agent), nothing enforced.
 
 ## Assumptions of the implementer
 
@@ -52,7 +53,7 @@
 - **Input and output formats come from the pinned schema** (`codex-rs/hooks/schema/generated/` of
   `rust-v0.148.0`), not from memory; the hook reads the working directory from the hook input as the Claude
   path does. A hook that cannot be used (unreadable input, no bound workflow) prints nothing and exits 0.
-- **Not done here.** The gate, the evidence and the availability line for Codex; an `AGENTS.md` block
+- **Not done here.** The gate and the evidence for Codex; an `AGENTS.md` block
   (static, and the plan changes per workflow); any change to Pi.
 
 ## Consequences
