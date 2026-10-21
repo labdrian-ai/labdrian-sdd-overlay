@@ -51,6 +51,8 @@ import (
 //     asks the shared resolver of the identity module (identity/resolve, C23 M2), whose chain and
 //     disk adapter (identity/gitfs) are shared with longterm-mem; the composition root hands it the
 //     adapter.
+//   - skills/engramexport adapts the read-only `engram export` command to the CandidateSource port
+//     owned by skills and consumed by skills/app (C23 M10); it filters topics and never writes Engram.
 //   - execrunner is the adapter of the CommandRunner port the Pi adapter owns (H24): it looks a
 //     program up on the PATH and runs it with a fixed argument vector and a deadline. It is
 //     the one place in the module that starts the CLI of a runtime.
@@ -201,6 +203,7 @@ var rings = map[string]archguard.Ring{
 	"shelltest":                 archguard.Support,
 	"skills":                    archguard.Domain,
 	"skills/app":                archguard.Application,
+	"skills/engramexport":       archguard.Adapter,
 	"skills/projectidentity":    archguard.Adapter,
 	"skills/registryyaml":       archguard.Adapter,
 	"skills/skillsfs":           archguard.Adapter,
