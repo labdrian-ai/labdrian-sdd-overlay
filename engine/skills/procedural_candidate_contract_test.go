@@ -62,6 +62,21 @@ func errFenceUnterminated(line int) error {
 	return fenceUnterminatedError{line: line}
 }
 
+// Codex receives the memory plan from a SessionStart hook (C23 M12), so the skill must not tell
+// the agent that it is Codex's only route.
+func TestMemoryPlanSkillSaysCodexReceivesTheHook(t *testing.T) {
+	repoRoot := ooQualityContractRepoRoot(t)
+	text := strings.Join(strings.Fields(readRepoFile(t, repoRoot, "skills/memory-plan/SKILL.md")), " ")
+	if strings.Contains(text, "in Codex and Pi this skill is the only") {
+		t.Fatal("memory-plan still says its skill is Codex's only route")
+	}
+	for _, want := range []string{"Codex", "SessionStart hook", "install-hooks", "hooks.json", "trusts it"} {
+		if !strings.Contains(text, want) {
+			t.Errorf("memory-plan does not mention %q for Codex", want)
+		}
+	}
+}
+
 func TestProceduralCandidatesOperationalSkillContract(t *testing.T) {
 	repoRoot := ooQualityContractRepoRoot(t)
 	operational := readRepoFile(t, repoRoot, "skills/procedural-candidates/SKILL.md")

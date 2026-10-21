@@ -11,8 +11,7 @@ metadata:
 
 The memory plan says what memory a workflow may read. The engine computes it from the workflow
 log; this skill only loads it. In Claude Code the overlay's hooks already put the same
-instructions in the session and in every subagent prompt; in Codex and Pi this skill is the only
-way they arrive.
+instructions in the session and in every subagent prompt; in Codex a SessionStart hook that install-hooks merges into hooks.json (once the owner trusts it in the Codex TUI) delivers it, and in Pi this skill is the only way it arrives.
 
 ## Load the plan
 
