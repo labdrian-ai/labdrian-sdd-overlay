@@ -196,6 +196,7 @@ var rings = map[string]archguard.Ring{
 	"sddregistry/fsstore":       archguard.Adapter,
 	"settings":                  archguard.Domain,
 	"settings/settingsfile":     archguard.Adapter,
+	"settings/codexhooks":       archguard.Domain,
 	"sha256hex":                 archguard.Domain,
 	"shaper":                    archguard.Domain,
 	"shaper/fsadapter":          archguard.Adapter,

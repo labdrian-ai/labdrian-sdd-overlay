@@ -137,9 +137,9 @@ backups the backend cannot confirm is not offered a restore.
 | `restore --target claude\|opencode\|codex [--list] [--backup TIMESTAMP]` | **modifies** | Roll a single target back to one of its retained backups (up to 3, auto-pruned; default: most recent). Refuses `--target all`. `--list` shows retained backups without changing anything. |
 | `targets` | read-only | Print the target catalog, one target per line as `<name><TAB><kind>` (`copy` or `package`), in the order `--target all` expands to. The TUI reads it instead of keeping its own list. |
 | `version` (also: `--version`) | read-only | Print this clone's current release version and each target's recorded deployed version. |
-| `install-hooks` | **modifies** | Build the Go engine binary + wire `UserPromptSubmit`/`PreToolUse`/`Agent` hooks, including the workflow projection family and the skills approve guard, into `~/.claude/settings.json` (backs up to `.bak` first). Run once to activate scoping; re-run it after an upgrade that adds a hook family, then restart Claude Code to load the hooks. |
-| `uninstall-hooks` | **modifies** | Remove the overlay hook entries (the minimalism and design pairs, the SessionEnd sync-trigger, the review-receipt and shaper guard entries, the three projection entries, and the two approve guard entries) from `~/.claude/settings.json`, including entries left by contracts retired in earlier versions, leaving all other keys intact. |
-| `status-hooks` | read-only | Check engine binary, hooks wired, contracts readable — exits 0 if all healthy; missing binary exits non-zero with `run 'overlay install-hooks'` guidance. |
+| `install-hooks` | **modifies** | Build the Go engine binary + wire `UserPromptSubmit`/`PreToolUse`/`Agent` hooks, including the workflow projection family and the skills approve guard, into `~/.claude/settings.json` (backs up to `.bak` first). Run once to activate scoping; re-run it after an upgrade that adds a hook family, then restart Claude Code to load the hooks. If `$CODEX_HOME` (default `~/.codex`) already exists, also merge the Codex SessionStart memory-instructions hook into `hooks.json`, with a `.bak` backup. Trust it once in the Codex TUI (`/hooks`, key `t`); never edits trust state or `config.toml`. |
+| `uninstall-hooks` | **modifies** | Remove the overlay hook entries (the minimalism and design pairs, the SessionEnd sync-trigger, the review-receipt and shaper guard entries, the workflow projection hooks, and the approve guard entries) from `~/.claude/settings.json`, including entries left by contracts retired in earlier versions, and remove our Codex SessionStart entry from `$CODEX_HOME/hooks.json` (default `~/.codex`). Foreign entries and keys are preserved. |
+| `status-hooks` | read-only | Check engine binary, hooks wired, contracts readable; when Codex's home exists, report its SessionStart entry as present, never as trusted (`/hooks`, key `t`). No Codex home means no extra line. Exit 0 healthy, 1 failed, 2 warnings alone. |
 | `doctor [--fix]` | read-only | Host-toolchain preflight: go, gentle-ai, discovery tools (bat/rg/fd/sd/eza), engine binary, the skill registry of the project (judged by the engine, with the check `status` makes: absent is fine, empty or unreadable fails, one without a scoped block warns) — plus a per-target version/digest consistency row (WARN only, never fails the exit code). `--fix` best-effort installs missing discovery tools via Homebrew. |
 | `validate-entry-contract --schema PATH --instance PATH` | read-only | Validate a pre-SDD entry candidate against the version-matched schema and deterministic cross-field rules. |
 | `install-alias [name]` | **modifies** | Symlink `labdrian` (or a custom name) into `~/.local/bin`. Run once per machine. |
@@ -371,16 +371,24 @@ overlay install-hooks
     to settings.json.bak before modifying. Run once to activate; inert until then.
     Re-run it after an upgrade that adds a hook family, then restart Claude Code, which
     loads hooks only when it starts.
+    If CODEX_HOME (default ~/.codex) already exists, also merge a SessionStart hook into
+    hooks.json by ownership, preserving foreign bytes, with an atomic .bak backup. A second
+    identical merge writes nothing. Trust it once in the Codex TUI (/hooks, key t); no trust
+    state or config.toml is changed. Never creates a Codex home. Instructions only: no Codex
+    gate, memory-read evidence or availability support is claimed by this unit.
 
 overlay uninstall-hooks
     Remove every overlay hook entry (each family install-hooks wires, projection and approve
     guard included) from ~/.claude/settings.json, including entries left by contracts retired
-    in earlier versions, leaving all other keys and hooks intact.
+    in earlier versions, leaving all other keys and hooks intact. Also removes only our Codex
+    SessionStart entry from CODEX_HOME/hooks.json (default ~/.codex), if that home exists.
 
 overlay status-hooks
     Check overlay installation health: binary present, hooks wired, contracts readable.
     If the engine binary is missing, exits non-zero and directs users to run `overlay install-hooks`.
-    Exits 0 if all OK, 1 if any check fails. Safe to run at any time.
+    Exits 0 if all OK, 1 if any check fails, 2 for warnings alone. Safe to run at any time.
+    Reports the Codex SessionStart entry only when CODEX_HOME (default ~/.codex) exists;
+    present does not mean trusted: it still needs human trust in the Codex TUI (/hooks, key t).
 
 overlay doctor [--fix]
     Read-only host-toolchain preflight: checks go (required), gentle-ai, bat/rg/fd/sd/eza,
@@ -743,6 +751,17 @@ gentle-ai-overlay installed-targets retire --state-dir <dir> --binary <path> [--
     1 on a usage error (including an unknown flag), a lock that stays taken, or a file that cannot be read or written, with the
     record as it was; and 3 from `assess` when the registration record and the binary are kept.
 
+gentle-ai-overlay merge-codex-hooks --hooks <path> --hook-command <binary-path>
+gentle-ai-overlay uninstall-codex-hooks --hooks <path> --hook-command <binary-path>
+    Merge/remove the owned Codex SessionStart entry, matcher startup|resume|clear|compact,
+    running the existing projection hook --event SessionStart with the binary quoted by the
+    Claude command builder. Ownership requires the binary path and projection hook in the
+    same command. Foreign handlers, groups, events and unknown keys keep their bytes.
+    Writes atomically with <path>.bak; identical merge or absent uninstall writes nothing.
+    Malformed hooks.json is refused unchanged. Exit 0 success, 1 usage error, 2 invalid or
+    unwritable file. The parent directory must exist. Neither verb edits config.toml, trusts a
+    hook, or starts Codex. install-hooks says to trust it once in the Codex TUI (/hooks, key t).
+
 gentle-ai-overlay status [--only registry] [--cwd <dir>]
     Engine verb: `overlay status-hooks` runs it on the installed engine binary, ~/.claude/bin/gentle-ai-overlay. It is the doctor
     of an installation: one line per check -- the binary, the hook families and guards in Claude Code's settings.json, the
@@ -817,6 +836,9 @@ gentle-ai-overlay projection hook --event UserPromptSubmit|PreToolUse|SessionSta
     on an existing install, re-run `install-hooks` and restart Claude Code to load it, because Claude Code reads
     hooks only at start and `status-hooks` reports degraded until the entries are in place. Its tests feed it hook JSON.
     UserPromptSubmit, PreToolUse, SessionStart and PostToolUse are the events supported.
+    Codex uses this same SessionStart command and renderer, with cwd from its hook stdin;
+    no bound workflow or unusable input prints nothing and exits 0. Its hook must first be
+    trusted by the human in the Codex TUI (/hooks, key t). This unit adds no Codex gate or evidence.
     PostToolUse (C23 M7, docs/architecture/adr-c23-m7-read-evidence.md): after a memory read the PreToolUse
     gate checks has run (an Engram mem_search, mem_context, mem_get_observation or mem_timeline; a longterm-mem
     query or get; the Skill tool for a procedural skill of the lock, or a Read of its SKILL.md), while an open

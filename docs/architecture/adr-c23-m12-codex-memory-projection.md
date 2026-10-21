@@ -29,8 +29,9 @@
 1. **The plan reaches Codex through a `SessionStart` hook (the owner, option A).** `install-hooks` writes an
    entry in `~/.codex/hooks.json` (under `CODEX_HOME` when set) that runs the same `projection hook --event
    SessionStart` the Claude family runs, so one renderer writes the block for both. The entry is merged by
-   ownership like the Claude settings (our entry is recognized and replaced, every foreign entry and key is
-   kept byte for byte), and `uninstall-hooks` removes only ours. The alternative of widening the `gentle-dev`
+   ownership like the Claude settings (our entry is recognized and replaced; every foreign value, key and number spelling is
+   kept byte for byte, and only the whitespace layout of the one `SessionStart` array we edit is rewritten, which
+   Codex does not see because it trusts a hook by the hash of its normalized configuration), and `uninstall-hooks` removes only ours (the foreign values come back identical; the array layout is not restored). The alternative of widening the `gentle-dev`
    permission profile was rejected: it edits another tool's configuration, loosens the owner's sandbox, and
    keeps the dependence on a skill file and a binary outside the workspace.
 2. **Instructions only in this unit (the owner, option A).** Codex has `PreToolUse` and `PostToolUse` hooks, so
