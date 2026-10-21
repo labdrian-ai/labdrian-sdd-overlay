@@ -1,0 +1,1 @@
+{"type":"assistant","timestamp":"2026-10-21T00:00:00Z","message":{"id":"sub","model":"a-haiku","content":"PRIVATE_SENTINEL","usage":{"input_tokens":200,"cache_read_input_tokens":1800,"output_tokens":50}}}
