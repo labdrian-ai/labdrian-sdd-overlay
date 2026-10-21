@@ -27,8 +27,8 @@ Claude Code: 84,977 calls; 23.63B context tokens (97.7% cache read); 78.7M outpu
 | T2 Aggregation: totals, ratios, percentiles, groupings by model/project/day/role | S2 S4 | delegated writer | done (verified) | see git log |
 | T3 CLI `telemetry report` (table and `--json`), golden fixtures, determinism test | S2 S5 S6 | delegated writer | done (verified) | see git log |
 | T4 Cost: Pi `cost` as recorded, optional price table, explicit "unavailable" otherwise | S3 | delegated writer | done (verified) | see git log |
-| T5 Role/phase attribution report | S4 | delegated writer | pending | |
-| T6 CI job, README, ADR, close | S7 | inline | pending | |
+| T5 Role/phase attribution report | S4 | delegated writer | blocked: per-agentType report exists (T2/T3); mapping roles to phases needs the owner's criterion for `general-purpose` | |
+| T6 CI job, README, ADR, close | S7 | inline | done (verified) | see git log |
 
 Route declaration: T1–T5 are dependent units written one at a time. Writer trigger evidence: the runtime signalled the context backstop (parent context far past 150k tokens). T6 is small and inline. Each writer gets `## Allowed edit surfaces` `telemetry/**` only.
 
@@ -47,3 +47,4 @@ Route declaration: T1–T5 are dependent units written one at a time. Writer tri
 - **L6** (parent, 2026-10-21): T3 verified. Writer: RED/GREEN, 438 lines, Risk item 1 (scratch dir, cleaned by parent). Parent re-ran the suite and ran the binary on the real corpus (aggregates only): exit codes 0/1/2 as specified. Two consecutive runs on live logs differed once because logs grew (Pi 2,885 -> 2,894 calls); with no growth stdout was byte-identical; fixtures determinism test covers S6.
 - **L7** (parent): first findings from the report: `general-purpose` subagents hold 38.8% of all context tokens (33.2k calls, p5 74k) vs `sdd-apply` 9.3% and `sdd-verify` 1.2%; main thread 44.7%; the max single-call context is 3.08M tokens (not investigated). Known limitation: readers use filepath.WalkDir, so symlinked project directories inside a root are not followed (default roots are real directories); candidate follow-up.
 - **L8** (parent, 2026-10-21): T4 verified. Writer: RED/GREEN, Risk item 3 (shared Totals/JSON/table). Parent differential on the real corpus, previous binary (a401a38a) vs new, without --prices: stdout identical for `report --top 4`, `--json`, `--top 1`; stderr identical modulo live-growth counters; exit codes equal. Placeholder table (1/1/1/1, not committed) confirmed coverage reporting: 43,413 estimated, 41,570 unpriced calls; invalid table and missing file exit 1. No real prices are shipped; the user must supply them.
+- **L9** (parent, 2026-10-21): T6 inline. Added CI job `test-telemetry` (gofmt, vet, staticcheck v0.7.0, test) copied from the `identity` job, `telemetry/README.md` and `docs/architecture/adr-telemetry-cost-baseline.md`. Verified: gofmt, vet, `go test -count=1 ./...`, staticcheck exit 0, actionlint (container, read-only mount) exit 0. The CI job itself has not run on GitHub: not pushed. Feature stops here pending D1 and the T5 mapping; nothing pushed, no PR opened.
