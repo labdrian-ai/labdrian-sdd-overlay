@@ -20,7 +20,7 @@ const oddInstructions = "labdrian memory instructions (workflow wf-1, scope proj
 	"- Read memory only from: engram, longterm-mem, procedural-skills. A read from any other source is denied.\n" +
 	`- Engram reads (mem_search, mem_context) name project "proj-1"; longterm-mem query and get name project "proj-1".` + "\n" +
 	"- Memory writes (mem_save, promote) are not limited by the plan.\n" +
-	"- Procedural candidates: T1 right after a proactive mem_save of type bugfix, pattern, discovery or decision; T2 at session close, beside mem_session_summary (skills/_shared/procedural-candidate-detection.md, section 5)."
+	"- Procedural candidates: T1 right after a proactive mem_save of type bugfix, pattern, discovery or decision; T2 at session close, beside mem_session_summary (skills/_shared/procedural-candidate-detection.md, section 5). Load skills/procedural-candidates/SKILL.md for the procedure; run `skills candidates` before creating or updating a candidate."
 
 const noWorkflowBound = "labdrian memory instructions: no workflow is bound to this repository, so the memory plan sets no rule.\n"
 

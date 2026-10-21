@@ -422,6 +422,8 @@ overlay skills <verb>
     Manage the skills registry (skills.registry.yaml) and overlay.manifest.
     list         [--registry <path>]                                               print sorted registry entries (id, source type, update strategy, targets)
     status       [--registry <path>]                                               print count summary (total / core / custom)
+    candidates   [--project-root <abs>] [--status <status>]... [--kind <kind>] [--drafts] [--json]
+                 read-only Engram candidate and draft listing with reconciliation anomalies; source failures exit 2
     validate     [--registry <path>] [--manifest <path>] --source-root <path>      cross-check registry vs manifest and skills/ on disk vs manifest, and that every global skill has a valid approval record (the 37 global skills present at the Phase 8 base, which is `main` at `53f545d`, the commit the skill lifecycle was built on, are grandfathered while their bytes are unchanged); exit 1 on any divergence
     install      [--registry <path>] [--source-root <path>] [--project-id <id>]   install the project-scoped skills admitted for the project into <cwd>/.claude/skills/ and <cwd>/.agents/skills/, replacing only what it installed and left unmodified (see below)
     adopt        [--registry <path>] [--source-root <path>] [--project-id <id>]   record skill directories already in the project as installed by `skills install`, only when they are exactly the current source

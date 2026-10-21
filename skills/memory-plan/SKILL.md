@@ -48,11 +48,11 @@ narrow`): the plan can only shrink, and the old block may name a source that is 
 
 ## Procedural candidates (T1/T2)
 
-The trigger contract is section 5 of `skills/_shared/procedural-candidate-detection.md`:
+Load `skills/procedural-candidates/SKILL.md` for the operational procedure, including the required read-only `skills candidates` check before creating or updating a candidate. The normative trigger contract is section 5 of `skills/_shared/procedural-candidate-detection.md`:
 
 - **T1**, right after a proactive `mem_save` of type `bugfix`, `pattern`, `discovery` or
   `decision`: check whether the saved occurrence makes a procedural candidate.
 - **T2**, at session close, beside `mem_session_summary`: sweep the session for candidates T1
   missed.
 
-Follow that section for what counts as a candidate and how it is recorded.
+Follow the operational skill and that section for what counts as a candidate and how it is recorded.

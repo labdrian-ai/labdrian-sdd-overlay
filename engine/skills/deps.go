@@ -16,6 +16,8 @@ type FileStatter func(name string) (fs.FileInfo, error)
 // holds no os call of its own (Phase 9 unit H17). A field left nil is a wiring that was
 // forgotten: a verb that needs it refuses, or, for the lock and the clock, says so.
 type Deps struct {
+	// Candidates reads candidate and draft observations from the project's Engram.
+	Candidates CandidateSource
 	// ReadFile reads a file by name: the registry's neighbours, the manifest, the approval
 	// records, the files of a project.
 	ReadFile FileReader

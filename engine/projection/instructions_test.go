@@ -17,7 +17,7 @@ import (
 
 const (
 	instructionsWrites     = "- Memory writes (mem_save, promote) are not limited by the plan."
-	instructionsProcedural = "- Procedural candidates: T1 right after a proactive mem_save of type bugfix, pattern, discovery or decision; T2 at session close, beside mem_session_summary (skills/_shared/procedural-candidate-detection.md, section 5)."
+	instructionsProcedural = "- Procedural candidates: T1 right after a proactive mem_save of type bugfix, pattern, discovery or decision; T2 at session close, beside mem_session_summary (skills/_shared/procedural-candidate-detection.md, section 5). Load skills/procedural-candidates/SKILL.md for the procedure; run `skills candidates` before creating or updating a candidate."
 )
 
 // withIdentity is w with the identity the workflow recorded at create set to identity.

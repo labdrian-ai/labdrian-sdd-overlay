@@ -53,6 +53,8 @@ type skillsFlagSpec struct {
 type skillsArgs struct {
 	// values holds the last value given to each value flag that was given one.
 	values map[string]string
+	// repeatedValues holds every value in input order; most verbs use only values.
+	repeatedValues map[string][]string
 	// switches holds the switches that were given.
 	switches map[string]bool
 	// words are the words that are no flag, in order.
@@ -65,6 +67,11 @@ func (a skillsArgs) value(flag, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+// allValues returns every supplied value in input order without exposing parser-owned storage.
+func (a skillsArgs) allValues(flag string) []string {
+	return append([]string(nil), a.repeatedValues[flag]...)
 }
 
 // skillsUsageError is a command line the verb refuses, in the words of its refusal. The adapter
@@ -89,7 +96,7 @@ func (s skillsFlagSpec) parseAfterVerb(args []string) (skillsArgs, error) {
 }
 
 func (s skillsFlagSpec) parseArgs(args []string, verbAmongArgs bool) (skillsArgs, error) {
-	out := skillsArgs{values: map[string]string{}, switches: map[string]bool{}}
+	out := skillsArgs{values: map[string]string{}, repeatedValues: map[string][]string{}, switches: map[string]bool{}}
 	firstWord := true
 	endOfOptions := false
 	for i := 0; i < len(args); i++ {
@@ -108,6 +115,7 @@ func (s skillsFlagSpec) parseArgs(args []string, verbAmongArgs bool) (skillsArgs
 				}
 				if taken {
 					out.values[arg] = value
+					out.repeatedValues[arg] = append(out.repeatedValues[arg], value)
 					i++
 				}
 				continue
@@ -179,6 +187,18 @@ const (
 	flagManifest   = "--manifest"
 	flagSourceRoot = "--source-root"
 )
+
+// skillsCandidatesSpec is the read-only candidate listing command: status may be repeated to
+// select several lifecycle states, while --project-root and --kind each take one value.
+var skillsCandidatesSpec = skillsFlagSpec{
+	verb:              "candidates",
+	values:            []string{flagProjectRoot, flagCandidateStatus, flagCandidateKind},
+	switches:          []string{flagCandidateDrafts, flagCandidateJSON},
+	wrapper:           []string{flagRegistry, flagManifest, flagSourceRoot},
+	words:             0,
+	extraWord:         "skills candidates: unexpected argument %q",
+	valueIsNeverAFlag: true,
+}
 
 // skillsRegistryReaderSpec is the command line of a verb that only reads the registry and says
 // something of it (list, status): --registry is the flag it reads, the other two of the wrapper
@@ -281,11 +301,15 @@ func skillsInstallSpec(verb string) skillsFlagSpec {
 
 // Flags of the verbs that work on a project.
 const (
-	flagProjectRoot  = "--project-root"
-	flagCandidate    = "--candidate"
-	flagReason       = "--reason"
-	flagAbsorbedInto = "--absorbed-into"
-	flagDryRun       = "--dry-run"
+	flagProjectRoot     = "--project-root"
+	flagCandidateStatus = "--status"
+	flagCandidateKind   = "--kind"
+	flagCandidateDrafts = "--drafts"
+	flagCandidateJSON   = "--json"
+	flagCandidate       = "--candidate"
+	flagReason          = "--reason"
+	flagAbsorbedInto    = "--absorbed-into"
+	flagDryRun          = "--dry-run"
 )
 
 // The project verbs take every value of their flags as a value that is never a flag, so that a

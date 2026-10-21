@@ -62,6 +62,34 @@ func errFenceUnterminated(line int) error {
 	return fenceUnterminatedError{line: line}
 }
 
+func TestProceduralCandidatesOperationalSkillContract(t *testing.T) {
+	repoRoot := ooQualityContractRepoRoot(t)
+	operational := readRepoFile(t, repoRoot, "skills/procedural-candidates/SKILL.md")
+	contract := readRepoFile(t, repoRoot, "skills/_shared/procedural-candidate-detection.md")
+	for _, required := range []string{
+		"skills/_shared/procedural-candidate-detection.md",
+		"section 5",
+		"T1",
+		"T2",
+		"skills candidates",
+		"do-not-capture",
+		"Engram `mem_save`",
+	} {
+		if !strings.Contains(operational, required) {
+			t.Errorf("operational skill must contain %q", required)
+		}
+	}
+	for _, required := range []string{
+		"## 5.",
+		"## 7.",
+		"## 8.",
+	} {
+		if !strings.Contains(contract, required) {
+			t.Errorf("normative contract must retain section marker %q", required)
+		}
+	}
+}
+
 func TestProceduralCandidateContractArtifact(t *testing.T) {
 	repoRoot := ooQualityContractRepoRoot(t)
 	contract := readRepoFile(t, repoRoot, "skills/_shared/procedural-candidate-detection.md")
