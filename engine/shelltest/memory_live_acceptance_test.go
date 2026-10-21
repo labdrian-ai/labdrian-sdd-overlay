@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -34,7 +35,10 @@ func TestMemoryLive(t *testing.T) {
 		optIn, missing, keep, sidecar bool
 		cliCode                       int
 	}
-	const report = "MEMORY_PLAN_SOURCES=engram; PROJECT=proj-1"
+	// Only plan-reading stubs replace @GOAL@; guessed answers never read it.
+	const report = "MEMORY_PLAN_SOURCES=engram,procedural-skills; PROJECT=proj-1; GOAL=@GOAL@"
+	seenGoals := map[string]bool{}
+	goalPattern := regexp.MustCompile(`g-[0-9a-f]{8}`)
 	cases := []testCase{
 		{name: "opt-in absent", runtime: "claude", reason: "live memory acceptance requires LABDRIAN_LIVE_MEMORY=1 (authorize one runtime per run)"},
 		{name: "opt-in not one", runtime: "pi", reason: "live memory acceptance requires LABDRIAN_LIVE_MEMORY=1 (authorize one runtime per run)"},
@@ -45,7 +49,9 @@ func TestMemoryLive(t *testing.T) {
 		{name: "claude pass", runtime: "claude", optIn: true, sidecar: true, output: "Called mem_context once for proj-1.\n" + report + "\n"},
 		{name: "longterm readable", runtime: "pi", optIn: true, output: "MEMORY_PLAN_SOURCES=engram,longterm-mem; PROJECT=proj-1\n", reason: "agent reported: MEMORY_PLAN_SOURCES=engram,longterm-mem; PROJECT=proj-1"},
 		{name: "procedural readable", runtime: "codex", optIn: true, output: "MEMORY_PLAN_SOURCES=engram,procedural-skills; PROJECT=proj-1\n", reason: "agent reported: MEMORY_PLAN_SOURCES=engram,procedural-skills; PROJECT=proj-1"},
-		{name: "denial with correct report", runtime: "codex", optIn: true, output: "longterm-mem: not allowed\nprocedural-skills: not allowed\n" + report + "\n"},
+		{name: "old guessable report", runtime: "codex", optIn: true, output: "MEMORY_PLAN_SOURCES=engram; PROJECT=proj-1\n", reason: "agent reported: MEMORY_PLAN_SOURCES=engram; PROJECT=proj-1"},
+		{name: "wrong goal", runtime: "codex", optIn: true, output: "MEMORY_PLAN_SOURCES=engram,procedural-skills; PROJECT=proj-1; GOAL=wrong\n", reason: "agent reported: MEMORY_PLAN_SOURCES=engram,procedural-skills; PROJECT=proj-1; GOAL=wrong"},
+		{name: "denial with correct report", runtime: "codex", optIn: true, output: "longterm-mem: not allowed\n" + report + "\n"},
 		{name: "prompt echo only", runtime: "codex", optIn: true, keep: true, reason: "no MEMORY_PLAN_SOURCES line"},
 		{name: "backtick wrapped", runtime: "pi", optIn: true, output: "`" + report + "`\n"},
 		{name: "whitespace and asterisks", runtime: "pi", optIn: true, output: " \t**``" + report + "``** \t\r\n"},
@@ -77,7 +83,7 @@ func TestMemoryLive(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
-			for _, utility := range []string{"git", "mkdir", "rm", "grep", "cat", "timeout"} {
+			for _, utility := range []string{"git", "mkdir", "rm", "grep", "cat", "timeout", "od"} {
 				path, err := exec.LookPath(utility)
 				if err != nil {
 					t.Fatal(err)
@@ -101,6 +107,30 @@ func TestMemoryLive(t *testing.T) {
 set -euo pipefail
 printf '%s\n' "$PWD" "$XDG_STATE_HOME" "$HOME" "$@" > "$MARKER"
 [[ "$XDG_STATE_HOME" == "${PWD%/proj-1}/state" ]]
+# Audit repo paths and contents before the answer, while even non-KEEP runs exist.
+if grep -rE 'g-[0-9a-f]{8}' "$PWD"; then
+  printf 'goal leaked into repository\n' >&2
+  exit 93
+fi
+shopt -s globstar dotglob nullglob
+for file in "$PWD"/**; do
+  if [[ "$file" =~ g-[0-9a-f]{8} ]]; then
+    printf 'goal leaked into repository path\n' >&2
+    exit 94
+  fi
+done
+if [[ "$ANSWER" == *'@GOAL@'* ]]; then
+  # This is the actual delivery boundary, not the goal JSON or a canned plan.
+  plan=$(labdrian memory plan --instructions)
+  goal=''
+  while IFS= read -r line; do
+    if [[ "$line" =~ ^-\ Under\ goal\ \"([^\"]+)\": ]]; then
+      goal=${BASH_REMATCH[1]}
+    fi
+  done <<< "$plan"
+  [[ -n "$goal" ]]
+  ANSWER=${ANSWER//@GOAL@/$goal}
+fi
 if [[ "$SIDECAR" == 1 ]]; then
   mkdir -p "$XDG_STATE_HOME/labdrian/workflows/proj-1"
   printf '{}\n' > "$XDG_STATE_HOME/labdrian/workflows/proj-1/wf-1.memory.jsonl"
@@ -207,17 +237,32 @@ exit "$CLI_CODE"
 				t.Errorf("runtime arguments: %q", called)
 			}
 			prompt := strings.TrimSuffix(strings.Join(lines[3+len(args):], "\n"), "\n")
-			for _, required := range []string{"labdrian memory plan --instructions", "mem_context", "claude", "one line", "MEMORY_PLAN_SOURCES=<comma-separated readable sources>; PROJECT=<project name for Engram reads>"} {
+			for _, required := range []string{"labdrian memory plan --instructions", "mem_context", "claude", "one line", "MEMORY_PLAN_SOURCES=<comma-separated readable sources, alphabetical>; PROJECT=<project name for Engram reads>; GOAL=<goal id of the plan>"} {
 				if !strings.Contains(prompt, required) {
 					t.Errorf("prompt missing %q", required)
 				}
 			}
-			if strings.Contains(prompt, report) {
-				t.Error("prompt leaks the expected report into the runtime transcript")
+			firstLine, _, _ := strings.Cut(stdout.String(), "\n")
+			_, goalID, found := strings.Cut(firstLine, "; GOAL=")
+			// A FAIL reason may itself contain a GOAL field; the last is the verdict's.
+			if i := strings.LastIndex(firstLine, "; GOAL="); i >= 0 {
+				goalID = firstLine[i+len("; GOAL="):]
 			}
-			wantCode, verdict := 0, "PASS "+tc.runtime+"\n"
-			if tc.reason != "" {
-				wantCode, verdict = 1, "FAIL "+tc.runtime+": "+tc.reason+"\n"
+			if !found || goalPattern.FindString(goalID) != goalID || len(goalID) != 10 {
+				t.Fatalf("verdict lacks random goal id: %q", stdout.String())
+			}
+			if seenGoals[goalID] {
+				t.Errorf("goal reused across runs: %s", goalID)
+			}
+			seenGoals[goalID] = true
+			if goalPattern.MatchString(prompt) || strings.Contains(prompt, "proj-1") || strings.Contains(prompt, "engram,procedural-skills") {
+				t.Error("prompt leaks the expected plan values")
+			}
+			answer := strings.ReplaceAll(tc.output, "@GOAL@", goalID)
+			reason := strings.ReplaceAll(tc.reason, "@GOAL@", goalID)
+			wantCode, verdict := 0, "PASS "+tc.runtime+"; GOAL="+goalID+"\n"
+			if reason != "" {
+				wantCode, verdict = 1, "FAIL "+tc.runtime+": "+reason+"; GOAL="+goalID+"\n"
 			}
 			want := verdict + "Transcript: " + filepath.Join(scratch, tc.runtime+".out") + "\nA pass is one session on one day, not a guarantee.\n"
 			if tc.keep {
@@ -236,7 +281,7 @@ exit "$CLI_CODE"
 				t.Fatal("KEEP must retain exactly one scratch directory")
 			}
 			transcript, err := os.ReadFile(filepath.Join(scratch, tc.runtime+".out"))
-			wantTranscript := "stub diagnostic\n" + tc.output
+			wantTranscript := "stub diagnostic\n" + answer
 			if tc.name == "prompt echo only" {
 				wantTranscript = "stub diagnostic\nCodex CLI\nworkdir: " + repo + "\nuser\n" + prompt + "\n"
 			}
@@ -245,10 +290,10 @@ exit "$CLI_CODE"
 			}
 			goal, err := os.ReadFile(filepath.Join(scratch, "goal.json"))
 			var decoded map[string]any
-			const wantGoal = `{
+			wantGoal := `{
   "version": 2,
   "project_id": "proj-1",
-  "goal_id": "goal-1",
+  "goal_id": "` + goalID + `",
   "objective": "obj",
   "scope": "scope",
   "constraints": [],
@@ -266,16 +311,22 @@ exit "$CLI_CODE"
 			plan := exec.CommandContext(ctx, enginetest.Binary(t), "memory", "plan", "--instructions")
 			plan.Dir, plan.Env = repo, append(cmd.Env, "XDG_STATE_HOME="+filepath.Join(scratch, "state"))
 			out, err := plan.CombinedOutput()
-			if err != nil || !strings.Contains(string(out), "workflow wf-1, scope project") || !strings.Contains(string(out), "Read memory only from: engram.") || !strings.Contains(string(out), `name project "proj-1"`) {
+			if err != nil || !strings.Contains(string(out), "workflow wf-1, scope goal") || !strings.Contains(string(out), "Read memory only from: engram, procedural-skills.") || !strings.Contains(string(out), `name project "proj-1"`) || !strings.Contains(string(out), `- Under goal "`+goalID+`": pass goal "`+goalID+`"`) || !strings.Contains(string(out), `topic_key that begins with "goal:`+goalID+`/"`) {
 				t.Errorf("bound plan: %s (%v)", out, err)
+			}
+			setupOutput, err := os.ReadFile(filepath.Join(scratch, "setup.out"))
+			if err != nil || bytes.Contains(setupOutput, []byte(goalID)) {
+				t.Errorf("setup output leaks goal: %q (%v)", setupOutput, err)
 			}
 			status := exec.CommandContext(ctx, enginetest.Binary(t), "workflow", "status", "--project", "proj-1", "--workflow", "wf-1")
 			status.Dir, status.Env = plan.Dir, plan.Env
 			out, err = status.CombinedOutput()
 			var state struct {
-				Status string `json:"status"`
+				Status  string `json:"status"`
+				Profile string `json:"profile"`
+				GoalID  string `json:"goal_id"`
 			}
-			if err != nil || json.Unmarshal(out, &state) != nil || state.Status != "running" {
+			if err != nil || json.Unmarshal(out, &state) != nil || state.Status != "running" || state.Profile != "incident-recovery" || state.GoalID != goalID {
 				t.Errorf("workflow not running: %s (%v)", out, err)
 			}
 		})
