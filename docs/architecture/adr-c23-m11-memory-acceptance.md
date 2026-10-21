@@ -40,6 +40,11 @@
    directory, the real home only for the credentials. A run passes when the agent states the sources of the
    plan; for Claude, also when a memory read leaves a line in the evidence sidecar. The result goes into the
    ledger. It never runs in CI and never runs by default.
+   **Amended 2026-10-21 after the first live runs:** the verdict is one exact report line that carries a per-run
+   random goal id, which exists only in the workflow state and the plan (profile `incident-recovery`, scope
+   goal), never in the prompt, the repository or its name. The first verdict looked for `engram` and `proj-1`
+   in the transcript, and Codex passed it by guessing both from the prompt and the directory name without ever
+   having received the plan.
 4. **The Pi package carries what its skills cite.** A skill copied into the package may cite
    `skills/_shared/<name>.md`; the build copies each cited document and refuses a citation the overlay cannot
    satisfy. The alternative of a fixed extra file was rejected: it would break every fixture, and an
