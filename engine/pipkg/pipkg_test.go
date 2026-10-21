@@ -667,3 +667,58 @@ func TestPipkgBuild_PreservesRegisteredMcpJSONBak(t *testing.T) {
 		t.Errorf("mcp.json.bak after rebuild = %s, want preserved unchanged:\n%s", got, registeredBak)
 	}
 }
+
+// A skill built into the package may cite a shared document by its repository path
+// (skills/_shared/<name>.md). The package carries what its skills cite, or the agent
+// that loads the skill cannot resolve the reference.
+func TestPipkgBuild_CarriesTheSharedDocumentsASkillCites(t *testing.T) {
+	overlayRoot, registryPath := fixtureOverlay(t)
+	writeFile(t, filepath.Join(overlayRoot, "skills", "pi-skill", "SKILL.md"),
+		"---\nname: pi-skill\n---\nNormative reference: `skills/_shared/detector.md`, section 5.\n")
+	writeFile(t, filepath.Join(overlayRoot, "skills", "pi-skill", "references", "notes.md"),
+		"See also skills/_shared/second.md.\n")
+	writeFile(t, filepath.Join(overlayRoot, "skills", "_shared", "detector.md"), "detector bytes\n")
+	writeFile(t, filepath.Join(overlayRoot, "skills", "_shared", "second.md"), "second bytes\n")
+	writeFile(t, filepath.Join(overlayRoot, "skills", "_shared", "uncited.md"), "uncited bytes\n")
+	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
+
+	if err := packagesOf(fileRegistries).Build(overlayRoot, registryPath, destDir); err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+
+	for name, want := range map[string]string{"detector.md": "detector bytes\n", "second.md": "second bytes\n"} {
+		got, err := os.ReadFile(filepath.Join(destDir, "skills", "_shared", name))
+		if err != nil {
+			t.Errorf("a cited shared document is not in the package: %v", err)
+		} else if string(got) != want {
+			t.Errorf("skills/_shared/%s = %q, want %q", name, got, want)
+		}
+	}
+	// What no skill cites stays out, as before: the package ships the two gate contracts and
+	// what its skills cite, not the whole folder.
+	if _, err := os.Stat(filepath.Join(destDir, "skills", "_shared", "uncited.md")); err == nil {
+		t.Error("an uncited shared document was shipped in the package")
+	}
+}
+
+// A citation of a shared document that is not in the overlay is refused, naming the skill
+// and the document, and nothing is left built.
+func TestPipkgBuild_RefusesACitedSharedDocumentThatIsMissing(t *testing.T) {
+	overlayRoot, registryPath := fixtureOverlay(t)
+	writeFile(t, filepath.Join(overlayRoot, "skills", "pi-skill", "SKILL.md"),
+		"---\nname: pi-skill\n---\nSee skills/_shared/gone.md.\n")
+	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
+
+	err := packagesOf(fileRegistries).Build(overlayRoot, registryPath, destDir)
+	if err == nil {
+		t.Fatal("Build accepted a skill that cites a shared document the overlay does not have")
+	}
+	for _, want := range []string{"pi-skill", "skills/_shared/gone.md"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("error %q does not name %q", err, want)
+		}
+	}
+	if _, statErr := os.Stat(destDir); statErr == nil {
+		t.Error("a refused build left the package directory behind")
+	}
+}

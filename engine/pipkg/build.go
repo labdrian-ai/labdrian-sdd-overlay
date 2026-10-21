@@ -112,6 +112,7 @@ func (p Packages) buildInto(overlayRoot string, reg skills.Registry, dir string,
 	if err := os.MkdirAll(skillsDir, 0755); err != nil {
 		return fmt.Errorf("pipkg: creating skills dir: %w", err)
 	}
+	var citations []sharedCitation
 	for _, e := range reg.Skills {
 		if !containsTarget(e.Install.Targets, piTarget) {
 			continue
@@ -136,6 +137,13 @@ func (p Packages) buildInto(overlayRoot string, reg skills.Registry, dir string,
 		if err := copyTree(src, dst); err != nil {
 			return fmt.Errorf("pipkg: copying skill %q: %w", e.ID, err)
 		}
+		cited, err := citedSharedDocuments(src)
+		if err != nil {
+			return fmt.Errorf("pipkg: entry %q: %w", e.ID, err)
+		}
+		for _, name := range cited {
+			citations = append(citations, sharedCitation{skill: e.ID, name: name})
+		}
 	}
 
 	agentsDir := filepath.Join(dir, "agents")
@@ -156,6 +164,23 @@ func (p Packages) buildInto(overlayRoot string, reg skills.Registry, dir string,
 		if err := copyFile(src, filepath.Join(sharedDir, name)); err != nil {
 			return fmt.Errorf("pipkg: copying skills/_shared/%s: %w", name, err)
 		}
+	}
+
+	// A skill may cite a shared document by its repository path; the package carries what its
+	// skills cite, and a citation the overlay cannot satisfy is refused.
+	carried := map[string]bool{}
+	for _, name := range gateContractFiles {
+		carried[name] = true
+	}
+	for _, c := range citations {
+		if carried[c.name] {
+			continue
+		}
+		src := filepath.Join(overlayRoot, "skills", "_shared", c.name)
+		if err := copyFile(src, filepath.Join(sharedDir, c.name)); err != nil {
+			return fmt.Errorf("pipkg: skill %q cites skills/_shared/%s: %w", c.skill, c.name, err)
+		}
+		carried[c.name] = true
 	}
 
 	extensionsDir := filepath.Join(dir, "extensions")
