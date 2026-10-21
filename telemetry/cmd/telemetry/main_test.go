@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"crypto/sha256"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -198,6 +199,95 @@ func hashes(t *testing.T) map[string][32]byte {
 	}
 	return result
 }
+func TestPricesHumanColumn(t *testing.T) {
+	before := hashes(t)
+	code, out, err := invoke(t, "report", "--claude-root", data+"/claude", "--pi-root", data+"/pi", "--prices", data+"/prices.example.json")
+	if code != 0 || err != stats+"prices: models=4 estimated_calls=2 unpriced_calls=0\n" {
+		t.Fatalf("code=%d stderr=%q", code, err)
+	}
+	summary := strings.Split(out, "By role\n")[0]
+	if !strings.Contains(summary, "Cost") || !strings.Contains(summary, "Est. cost") || !strings.Contains(summary, "$3.75 (2 calls)") || !strings.Contains(summary, "~$6.40 (2 calls)") {
+		t.Fatalf("summary: %s", summary)
+	}
+	for _, line := range strings.Split(out, "\n") {
+		if strings.HasPrefix(strings.TrimSpace(line), "b-gpt ") && !strings.HasSuffix(strings.TrimSpace(line), "-") {
+			t.Fatalf("unestimated row missing dash: %s", line)
+		}
+	}
+	for _, forbidden := range []string{"PRIVATE_SENTINEL", "synthetic", "malformed", "session"} {
+		if strings.Contains(out, forbidden) {
+			t.Fatalf("content leak: %q", forbidden)
+		}
+	}
+	if !reflect.DeepEqual(before, hashes(t)) {
+		t.Fatal("pricing modified logs")
+	}
+}
+
+func TestPricesJSONRecordedFixture(t *testing.T) {
+	code, out, stderr := invoke(t, "report", "--claude-root", data+"/claude", "--pi-root", data+"/pi", "--prices", data+"/prices.example.json", "--json")
+	var r telemetry.Report
+	if err := json.Unmarshal([]byte(out), &r); err != nil {
+		t.Fatal(err)
+	}
+	if code != 0 || stderr != stats+"prices: models=4 estimated_calls=2 unpriced_calls=0\n" || r.Summary.EstimatedCalls != 2 || r.Summary.EstimatedCostUSD == nil || *r.Summary.EstimatedCostUSD != 6.4 || r.Summary.CostUSD == nil || *r.Summary.CostUSD != 3.75 || r.Summary.CostCalls != 2 {
+		t.Fatalf("code=%d stderr=%q summary=%+v", code, stderr, r.Summary)
+	}
+	for _, g := range r.BySource {
+		if g.Key == "pi" && (g.EstimatedCalls != 0 || g.EstimatedCostUSD != nil || g.CostUSD == nil || *g.CostUSD != 3.75) {
+			t.Fatalf("Pi re-estimated: %+v", g)
+		}
+	}
+}
+
+func TestPricesCoverageStats(t *testing.T) {
+	for _, tc := range []struct {
+		model               string
+		estimated, unpriced int
+	}{
+		{"z-sonnet", 1, 1}, {"b-gpt", 0, 2},
+	} {
+		t.Run(tc.model, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "prices.json")
+			table := fmt.Sprintf(`{"unit":"usd_per_million_tokens","models":{%q:{"input":1000,"cache_read":2000,"cache_write":3000,"output":4000}}}`, tc.model)
+			if err := os.WriteFile(path, []byte(table), 0444); err != nil {
+				t.Fatal(err)
+			}
+			code, out, stderr := invoke(t, "report", "--claude-root", data+"/claude", "--pi-root", data+"/pi", "--prices", path)
+			wantStats := stats + fmt.Sprintf("prices: models=1 estimated_calls=%d unpriced_calls=%d\n", tc.estimated, tc.unpriced)
+			if code != 0 || stderr != wantStats {
+				t.Fatalf("code=%d stderr=%q want=%q", code, stderr, wantStats)
+			}
+			if tc.estimated == 0 && out != fixtures(t) {
+				t.Fatal("price table without matches changed human output")
+			}
+			after, err := os.ReadFile(path)
+			if err != nil || string(after) != table {
+				t.Fatal("price table modified")
+			}
+		})
+	}
+}
+
+func TestPricesFileErrors(t *testing.T) {
+	before := hashes(t)
+	path := filepath.Join(t.TempDir(), "prices.json")
+	for _, invalid := range []bool{false, true} {
+		if invalid {
+			if err := os.WriteFile(path, []byte(`{"unit":"wrong","models":{}}`), 0444); err != nil {
+				t.Fatal(err)
+			}
+		}
+		code, out, stderr := invoke(t, "report", "--claude-root", data+"/claude", "--pi-root", data+"/pi", "--prices", path)
+		if code != 1 || out != "" || !strings.HasPrefix(stderr, "prices: ") || !strings.HasSuffix(stderr, "\n") || strings.Contains(stderr, "files=") {
+			t.Fatalf("code=%d out=%q stderr=%q", code, out, stderr)
+		}
+	}
+	if !reflect.DeepEqual(before, hashes(t)) {
+		t.Fatal("rejected price table modified fixtures")
+	}
+}
+
 func TestReadOnly(t *testing.T) {
 	before := hashes(t)
 	fixtures(t)

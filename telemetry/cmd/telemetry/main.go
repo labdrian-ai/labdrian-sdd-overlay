@@ -14,11 +14,12 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/telemetry"
 )
 
-const usage = `Usage: telemetry report [--claude-root DIR] [--pi-root DIR] [--json] [--top N]
+const usage = `Usage: telemetry report [--claude-root DIR] [--pi-root DIR] [--json] [--top N] [--prices FILE]
   --claude-root DIR  Claude logs (default $HOME/.claude/projects)
   --pi-root DIR      Pi logs (default $HOME/.pi/agent/sessions)
   --json             Print exactly Report.JSON(); stats stay on stderr
   --top N            Model/agent/project rows and latest days (default 10; positive)
+  --prices FILE      User-supplied USD/million-token prices; estimates are separate
 Missing default roots are skipped; explicit missing roots are errors.
 `
 
@@ -38,12 +39,22 @@ func run(args []string, stdout, stderr io.Writer, home string) int {
 	pi := fs.String("pi-root", filepath.Join(home, ".pi/agent/sessions"), "")
 	jsonOutput := fs.Bool("json", false, "")
 	top := fs.Int("top", 10, "")
+	pricesPath := fs.String("prices", "", "")
 	if fs.Parse(args[1:]) != nil || fs.NArg() != 0 || *top <= 0 {
 		return badUsage()
 	}
 	explicit := map[string]bool{}
 	fs.Visit(func(f *flag.Flag) { explicit[f.Name] = true })
-	var a telemetry.Aggregator
+	var prices telemetry.PriceTable
+	if explicit["prices"] {
+		var err error
+		prices, err = telemetry.LoadPrices(*pricesPath)
+		if err != nil {
+			fmt.Fprintf(stderr, "prices: %v\n", err)
+			return 1
+		}
+	}
+	a := telemetry.NewAggregator(prices)
 	readable := false
 	for _, source := range []struct {
 		name, root string
@@ -66,6 +77,9 @@ func run(args []string, stdout, stderr io.Writer, home string) int {
 		return 1
 	}
 	r := a.Report()
+	if explicit["prices"] {
+		fmt.Fprintf(stderr, "prices: models=%d estimated_calls=%d unpriced_calls=%d\n", prices.Len(), r.Summary.EstimatedCalls, r.Summary.Calls-r.Summary.CostCalls-r.Summary.EstimatedCalls)
+	}
 	var err error
 	if *jsonOutput {
 		var b []byte
@@ -131,7 +145,11 @@ func human(out io.Writer, r telemetry.Report, top int) error {
 			fmt.Fprintln(w)
 		}
 		fmt.Fprintln(w, section.name)
-		fmt.Fprintln(w, "Key\tCalls\tContext\tCache read\tCtx/out\tP5\tP50\tP90\tMax\tOutput\tCost\t")
+		header := "Key\tCalls\tContext\tCache read\tCtx/out\tP5\tP50\tP90\tMax\tOutput\tCost\t"
+		if r.Summary.EstimatedCalls > 0 {
+			header += "Est. cost\t"
+		}
+		fmt.Fprintln(w, header)
 		rows := append([]telemetry.Group(nil), section.groups...)
 		cut := 0
 		if section.rank {
@@ -157,7 +175,15 @@ func human(out io.Writer, r telemetry.Report, top int) error {
 			if d := g.ContextPerCallDistribution; d != nil {
 				p = []string{compact(d.P5), compact(d.P50), compact(d.P90), compact(d.Max)}
 			}
-			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t\n", g.Key, compact(g.Calls), compact(g.ContextTokens), ratio(g.CacheReadShare, true), ratio(g.ContextPerOutput, false), p[0], p[1], p[2], p[3], compact(g.Output), cost)
+			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t", g.Key, compact(g.Calls), compact(g.ContextTokens), ratio(g.CacheReadShare, true), ratio(g.ContextPerOutput, false), p[0], p[1], p[2], p[3], compact(g.Output), cost)
+			if r.Summary.EstimatedCalls > 0 {
+				estimate := "-"
+				if g.EstimatedCalls > 0 && g.EstimatedCostUSD != nil {
+					estimate = fmt.Sprintf("~$%.2f (%d calls)", *g.EstimatedCostUSD, g.EstimatedCalls)
+				}
+				fmt.Fprintf(w, "%s\t", estimate)
+			}
+			fmt.Fprintln(w)
 		}
 		if cut > 0 {
 			fmt.Fprintf(w, "… and %d more\n", cut)

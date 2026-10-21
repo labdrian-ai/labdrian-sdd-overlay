@@ -17,6 +17,8 @@ type Totals struct {
 	ContextTokens    int64    `json:"context_tokens"`
 	CostUSD          *float64 `json:"cost_usd"`
 	CostCalls        int64    `json:"cost_calls"`
+	EstimatedCostUSD *float64 `json:"estimated_cost_usd,omitempty"`
+	EstimatedCalls   int64    `json:"estimated_calls,omitempty"`
 	CacheReadShare   *float64 `json:"cache_read_share"`
 	ContextPerOutput *float64 `json:"context_per_output"`
 	ContextPerCall   *float64 `json:"context_per_call"`
@@ -61,17 +63,23 @@ func (r Report) JSON() ([]byte, error) {
 // Aggregator accumulates calls; its zero value is ready to use. Retained
 // per-call context and cost values require O(calls) memory across dimensions.
 type Aggregator struct {
+	prices  PriceTable
 	summary accumulator
 	groups  [6]map[string]*accumulator // source, role, model, project, day, agent type
 }
 
 type accumulator struct {
-	totals   Totals
-	contexts []int64
-	costs    []float64
+	totals    Totals
+	contexts  []int64
+	costs     []float64
+	estimates []float64
 }
 
-func (a *accumulator) add(c Call) {
+// NewAggregator creates an aggregator with optional user-supplied prices.
+// PriceTable is immutable after parsing; no caller-owned mutable data is kept.
+func NewAggregator(prices PriceTable) *Aggregator { return &Aggregator{prices: prices} }
+
+func (a *accumulator) add(c Call, estimate *float64) {
 	t := &a.totals
 	t.Calls++
 	t.Input += c.Input
@@ -86,12 +94,17 @@ func (a *accumulator) add(c Call) {
 		a.costs = append(a.costs, *c.CostUSD)
 		t.CostCalls++
 	}
+	if estimate != nil {
+		a.estimates = append(a.estimates, *estimate)
+		t.EstimatedCalls++
+	}
 }
 
 // Add records a call without retaining caller-owned pointers. Empty agent types
 // are grouped as "(none)"; supplied types are kept regardless of role.
 func (a *Aggregator) Add(c Call) {
-	a.summary.add(c)
+	estimate := a.prices.estimate(c)
+	a.summary.add(c, estimate)
 	agent := c.AgentType
 	if agent == "" {
 		agent = "(none)"
@@ -104,7 +117,7 @@ func (a *Aggregator) Add(c Call) {
 		if a.groups[i][key] == nil {
 			a.groups[i][key] = &accumulator{}
 		}
-		a.groups[i][key].add(c)
+		a.groups[i][key].add(c, estimate)
 	}
 }
 
@@ -116,21 +129,28 @@ func ratio(numerator, denominator int64) *float64 {
 	return &value
 }
 
+// canonicalCost sums in a canonical order because floating-point addition is
+// order-sensitive. Recorded and estimated costs use the same invariant.
+func canonicalCost(values []float64) *float64 {
+	if len(values) == 0 {
+		return nil
+	}
+	costs := append([]float64(nil), values...)
+	sort.Float64s(costs)
+	var sum float64
+	for _, cost := range costs {
+		sum += cost
+	}
+	return &sum
+}
+
 func (a *accumulator) group(key string) Group {
 	t := a.totals
 	t.CacheReadShare = ratio(t.CacheRead, t.ContextTokens)
 	t.ContextPerOutput = ratio(t.ContextTokens, t.Output)
 	t.ContextPerCall = ratio(t.ContextTokens, t.Calls)
-	if len(a.costs) > 0 {
-		// Floating-point addition is order-sensitive; canonicalize before summing.
-		costs := append([]float64(nil), a.costs...)
-		sort.Float64s(costs)
-		var sum float64
-		for _, cost := range costs {
-			sum += cost
-		}
-		t.CostUSD = &sum
-	}
+	t.CostUSD = canonicalCost(a.costs)
+	t.EstimatedCostUSD = canonicalCost(a.estimates)
 	g := Group{Key: key, Totals: t}
 	if len(a.contexts) > 0 {
 		contexts := append([]int64(nil), a.contexts...)

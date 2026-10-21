@@ -199,6 +199,101 @@ func TestJSON(t *testing.T) {
 	}
 }
 
+func parsedPrices(t *testing.T) PriceTable {
+	t.Helper()
+	p, err := ParsePrices([]byte(validPrices))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return p
+}
+
+func TestEstimateArithmetic(t *testing.T) {
+	a := NewAggregator(parsedPrices(t))
+	a.Add(Call{Model: "exact", Input: 1e6, CacheRead: 2e6, CacheWrite: 3e6, Output: 4e6, Reasoning: 99e6})
+	r := a.Report()
+	for _, groups := range [][]Group{{r.Summary}, r.BySource, r.ByRole, r.ByModel, r.ByProject, r.ByDay, r.ByAgentType} {
+		for _, g := range groups {
+			if g.EstimatedCostUSD == nil || *g.EstimatedCostUSD != 30 || g.EstimatedCalls != 1 || g.CostUSD != nil || g.CostCalls != 0 {
+				t.Fatalf("estimate = %+v, want $30 estimated only", g)
+			}
+		}
+	}
+	b, err := r.JSON()
+	if err != nil || !bytes.Contains(b, []byte(`"estimated_cost_usd": 30`)) || !bytes.Contains(b, []byte(`"estimated_calls": 1`)) {
+		t.Fatalf("estimated JSON: %s %v", b, err)
+	}
+}
+
+func TestEstimateExactMatchOnly(t *testing.T) {
+	for _, model := range []string{"exact", "exact-prefix", "exac", "EXACT", "unknown", ""} {
+		t.Run(model, func(t *testing.T) {
+			a := NewAggregator(parsedPrices(t))
+			a.Add(Call{Model: model, Input: 1e6})
+			g := a.Report().Summary
+			b, err := a.Report().JSON()
+			if model == "exact" {
+				if g.EstimatedCalls != 1 || g.EstimatedCostUSD == nil || *g.EstimatedCostUSD != 1 {
+					t.Fatalf("matching control unpriced: %+v", g)
+				}
+			} else if g.Calls != 1 || g.CostCalls != 0 || g.CostUSD != nil || g.EstimatedCalls != 0 || g.EstimatedCostUSD != nil || err != nil || bytes.Contains(b, []byte("estimated_")) {
+				t.Fatalf("unmatched model priced: %+v %s %v", g, b, err)
+			}
+		})
+	}
+}
+
+func TestRecordedCostNeverEstimated(t *testing.T) {
+	a := NewAggregator(parsedPrices(t))
+	a.Add(Call{Model: "exact", Input: 1e6, CostUSD: cost(7)})
+	a.Add(Call{Model: "exact", Input: 1e6, CostUSD: cost(0)})
+	a.Add(Call{Model: "exact", Input: 1e6})
+	g := a.Report().Summary
+	if g.CostUSD == nil || *g.CostUSD != 7 || g.CostCalls != 2 || g.EstimatedCalls != 1 || g.EstimatedCostUSD == nil || *g.EstimatedCostUSD != 1 {
+		t.Fatalf("recorded calls re-estimated: %+v", g)
+	}
+}
+
+func TestEstimatedInsertionOrder(t *testing.T) {
+	prices, err := ParsePrices([]byte(`{"unit":"usd_per_million_tokens","models":{"exact":{"input":1000000,"cache_read":0,"cache_write":0,"output":0}}}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Estimates 1e16, 1, 1 exercise order-sensitive floating-point addition.
+	calls := []Call{{Model: "exact", Input: 10000000000000000}, {Model: "exact", Input: 1}, {Model: "exact", Input: 1}, {Model: "unknown", Input: 2}, {Model: "exact", CostUSD: cost(3)}}
+	rng := rand.New(rand.NewSource(42))
+	var want []byte
+	for i := 0; i < 20; i++ {
+		rng.Shuffle(len(calls), func(i, j int) { calls[i], calls[j] = calls[j], calls[i] })
+		a := NewAggregator(prices)
+		for _, c := range calls {
+			a.Add(c)
+		}
+		r := a.Report()
+		if r.Summary.EstimatedCalls != 3 || r.Summary.EstimatedCostUSD == nil {
+			t.Fatalf("missing estimates: %+v", r.Summary)
+		}
+		got, err := r.JSON()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if i > 0 && !bytes.Equal(want, got) {
+			t.Fatal("estimated JSON changed with insertion order")
+		}
+		want = got
+	}
+}
+
+func TestNoPricesOmitsEstimates(t *testing.T) {
+	var a Aggregator
+	a.Add(Call{Model: "exact", Input: 1e6, CostUSD: cost(2)})
+	a.Add(Call{Model: "exact", Input: 1e6})
+	got, err := a.Report().JSON()
+	if err != nil || bytes.Contains(got, []byte("estimated_")) {
+		t.Fatalf("no-price JSON changed: %s %v", got, err)
+	}
+}
+
 func TestAddCopiesCost(t *testing.T) {
 	var a Aggregator
 	c := Call{CostUSD: cost(2)}
