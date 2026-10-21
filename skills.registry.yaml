@@ -517,3 +517,15 @@ skills:
         - pi
     lifecycle:
       updateStrategy: overlay-only
+  - id: procedural-candidates
+    path: procedural-candidates
+    source:
+      type: custom
+    install:
+      defaultScope: global
+      targets:
+        - claude
+        - codex
+        - pi
+    lifecycle:
+      updateStrategy: overlay-only

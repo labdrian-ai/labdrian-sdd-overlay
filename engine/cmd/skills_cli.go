@@ -24,13 +24,14 @@ const defaultSkillsRegistry = "skills.registry.yaml"
 type skillsVerb func(deps skills.Deps, args []string, stdout, stderr io.Writer, exit func(int))
 
 // skillsVerbList names every verb of `engine skills`, in the order the usage says them.
-const skillsVerbList = "list, status, validate, install, adopt, add, remove, sync-manifest, lint, approve, project-register, project-revise, project-status, project-retire"
+const skillsVerbList = "list, status, candidates, validate, install, adopt, add, remove, sync-manifest, lint, approve, project-register, project-revise, project-status, project-retire"
 
 // skillsCLIVerbs are the verbs of `engine skills`: each runs as a use case behind this adapter, which
 // reads its arguments with the one strict parser and takes the locks it needs.
 var skillsCLIVerbs = map[string]skillsVerb{
 	"list":             skillsList,
 	"status":           skillsStatus,
+	"candidates":       skillsCandidates,
 	"validate":         skillsValidate,
 	"add":              skillsAdd,
 	"remove":           skillsRemove,

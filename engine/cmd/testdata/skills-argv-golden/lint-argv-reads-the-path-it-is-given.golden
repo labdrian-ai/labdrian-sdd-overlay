@@ -35,5 +35,5 @@ $ skills <WORLD>/good/SKILL.md lint
 exit: 1
 --- stdout ---
 --- stderr ---
-error: unknown skills verb "<WORLD>/good/SKILL.md" (supported: list, status, validate, install, adopt, add, remove, sync-manifest, lint, approve, project-register, project-revise, project-status, project-retire)
+error: unknown skills verb "<WORLD>/good/SKILL.md" (supported: list, status, candidates, validate, install, adopt, add, remove, sync-manifest, lint, approve, project-register, project-revise, project-status, project-retire)
 

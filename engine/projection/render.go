@@ -336,7 +336,7 @@ func InstructionsBlock(b Binding, state workflow.State, engramName func(identity
 	}
 	lines = append(lines,
 		"- Memory writes (mem_save, promote) are not limited by the plan.",
-		"- Procedural candidates: T1 right after a proactive mem_save of type bugfix, pattern, discovery or decision; T2 at session close, beside mem_session_summary (skills/_shared/procedural-candidate-detection.md, section 5).")
+		"- Procedural candidates: T1 right after a proactive mem_save of type bugfix, pattern, discovery or decision; T2 at session close, beside mem_session_summary (skills/_shared/procedural-candidate-detection.md, section 5). Load skills/procedural-candidates/SKILL.md for the procedure; run `skills candidates` before creating or updating a candidate.")
 	return boundContext(strings.Join(lines, "\n"))
 }
 
