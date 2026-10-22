@@ -2,7 +2,11 @@
 
 ## Purpose
 
-Defines the actuals-record measurement contract for agent-orchestrated SDD delivery: three independently-tracked units (agent-compute-time, elapsed-calendar-time, human-confirmation-checkpoint-count), one shared capture boundary, a uniform checkpoint-counting rule, and a declared, evidence-disclosed delivery-window formula — spanning the actuals schema, `sdd-time-estimation`, `inception-pipeline` closure-feedback, and `roadmap-maker`.
+Defines the actuals-record measurement contract for agent-orchestrated SDD delivery: three independently-tracked units (agent-compute-time, elapsed-calendar-time, human-confirmation-checkpoint-count), one shared capture boundary, and a uniform checkpoint-counting rule — spanning the actuals schema, `sdd-time-estimation`, `inception-pipeline` closure-feedback, and `roadmap-maker`.
+
+## Retired Requirements
+
+R-009, R-010, R-011 and R-012 were retired on 2026-10-22 by owner decision OD2 (`docs/architecture/role-design/per-role-estimation-skill.md`, section 8), together with their gate subtests and the review-slice worked-example pin. Reason: the rewritten `sdd-time-estimation` no longer carries the compute-hour calibration, the delivery-window formula or the Actuals and Calibration output (the design marks them DROP, section 1), and R-019 froze the three compute-time fields, so there is no data to calibrate against. The ids are not reused. R-001/R-002 and R-013 stay in force; the R-001/R-002 gate now pins the rewritten Hard Rules, which also bind the shaper's `low_minutes`/`high_minutes` to agent-compute-time only.
 
 ## Requirements
 
@@ -65,45 +69,9 @@ Elapsed-calendar-time MUST be measured independently of the compute-time sum, co
 - WHEN the record is closed
 - THEN `variance_vs_plan` explicitly states that all counted checkpoints were durably observed and that zero were reconstructed from the closure narrative, not silently omitting comment — the zero case names BOTH halves of the split, because the half-disclosure rule rejects prose that names only one
 
-### Requirement: Compute-Time Baseline Built From Three Phase Fields Only (R-009)
+### Requirement: Roadmap Tracking Never Sources Figures From Structured Actuals Fields (R-013)
 
-The CALIBRATION rule's per-phase agent-compute-time baseline MUST exclude the elapsed-calendar-time field, and MUST be built only from `implementation_hours`, `review_gate_hours`, and `post_review_fix_hours`.
-
-#### Scenario: Baseline text is unambiguous
-
-- GIVEN the CALIBRATION rule (`sdd-time-estimation/SKILL.md` line 27)
-- WHEN read
-- THEN its baseline inputs are exactly those three fields; `total_wall_clock_hours` is absent
-
-### Requirement: Delivery Window From a Declared Formula, With a Separate Fixed Uncalibrated Allowance (R-010)
-
-The delivery-window output MUST derive from a declared formula (checkpoint count × round-trip latency + interruption allowance) with all inputs disclosed. Until explicit interruption evidence exists, the separate interruption allowance MUST be a fixed, explicitly-disclosed buffer marked "uncalibrated," and MUST NOT scale with expected checkpoint count.
-
-#### Scenario: Formula, inputs, and fixed buffer disclosed
-
-- GIVEN a pre-start report without explicit interruption evidence
-- WHEN it states a delivery window
-- THEN it discloses checkpoint count, latency rate, and a separate fixed interruption buffer marked uncalibrated, independent of expected checkpoint count
-
-### Requirement: Latency Rate Is a Formula Shape, Not a Shipped Calibrated Number (R-011)
-
-This change MUST define the round-trip-latency-rate formula and begin populating its inputs; it MUST NOT ship the rate as a calibrated figure. Calibration MUST use only interruption-clean residual samples with positive `checkpoint_count`; session/rate-limit/provider-interruption samples MUST be excluded, never adjusted by subtracting guessed interruption duration. WHEN no eligible clean sample exists, a disclosed bootstrap default MUST be used with confidence marked Low; otherwise the rate MUST cite its eligible clean sample and disclosed n.
-
-#### Scenario: Interrupted n=1 leaves no eligible clean sample
-
-- GIVEN exactly one corrected actuals record and it contains a provider interruption
-- WHEN a delivery-window estimate is produced
-- THEN the interruption-contaminated record is excluded, eligible clean-sample n=0 is disclosed, and the rate is marked Low-confidence/bootstrap — never adjusted or presented as calibrated
-
-### Requirement: Actuals Output and Roadmap Tracking Report Units Distinctly (R-012, R-013)
-
-The Actuals and Calibration output section (`sdd-time-estimation/SKILL.md` Output item 14) MUST report elapsed-calendar-time and checkpoint count under labels separate from agent-compute-time, never blended. `skills/roadmap-maker/SKILL.md` MUST NOT reference any structured actuals field name — `total_wall_clock_hours`, `checkpoint_count`, `implementation_hours`, `review_gate_hours`, `post_review_fix_hours` — as a tracking-line data source. The enforcing gate is a whole-file forbid list over those five names, so the prohibition is absolute: none of them may appear anywhere in the file, including inside ownership-attribution prose. `roadmap-maker` refers to the actuals record by its topic (`sdd/{change}/actuals`) and describes the effort it consumes in prose instead of naming fields.
-
-#### Scenario: Actuals output labels units distinctly
-
-- GIVEN a completed change's Actuals and Calibration output section
-- WHEN it is read
-- THEN elapsed-calendar-time and checkpoint count appear under their own labels, separate from agent-compute-time, never summed into one figure
+`skills/roadmap-maker/SKILL.md` MUST NOT reference any structured actuals field name — `total_wall_clock_hours`, `checkpoint_count`, `implementation_hours`, `review_gate_hours`, `post_review_fix_hours` — as a tracking-line data source. The enforcing gate is a whole-file forbid list over those five names, so the prohibition is absolute: none of them may appear anywhere in the file, including inside ownership-attribution prose. `roadmap-maker` refers to the actuals record by its topic (`sdd/{change}/actuals`) and describes the effort it consumes in prose instead of naming fields.
 
 #### Scenario: roadmap-maker never sources tracking figures from compute-time
 
@@ -134,7 +102,7 @@ The two statements are not in conflict once the OWNER is named, which the origin
 
 ### Requirement: Boundary Anchors: Named, Derived, Legible, or Omitted (R-016, R-017, R-018)
 
-Traces to: R-009, R-011
+Traces to: R-009, R-011 (both retired 2026-10-22; see Retired Requirements)
 
 Both anchors MUST come from typed, content-bound sources; neither may be parsed out of rendered display text.
 

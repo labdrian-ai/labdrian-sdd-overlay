@@ -47,19 +47,19 @@ Every flow finishes with the identical tail: **assemble a temporary entry candid
 ### Tier 1 — New project
 1. Delegate **requirements-from-transcripts** (if a transcript/brief exists) → writes `project/{project}/requirements/{change}`, derives `change-name`.
 2. Delegate **project-inception** with `inception_mode: full` and `requirements_brief_ref: {change}` → manifest + architect + roadmap.
-3. Delegate **sdd-time-estimation** → writes `sdd/{change}/estimate`.
+3. Delegate **sdd-time-estimation** → its inception row (the entry estimate cache); it no longer writes `sdd/{change}/estimate`.
 4. Assemble + validate entry → dispatcher gate → engine → closure-feedback.
 
 ### Tier 2 — Feature/chore on existing project
 1. Delegate **requirements-from-transcripts** (per feature) → writes the requirements brief, derives `change-name`.
 2. Delegate **project-inception** with `inception_mode: reuse` (loads manifest + architect READ-ONLY; falls back to `full` if either is missing) — this internally drives **roadmap-maker** in `incremental-insert` mode to splice the new item.
-3. Delegate **sdd-time-estimation** → writes `sdd/{change}/estimate`.
+3. Delegate **sdd-time-estimation** → its inception row (the entry estimate cache); it no longer writes `sdd/{change}/estimate`.
 4. Assemble + validate entry → dispatcher gate → engine → closure-feedback.
 
 ### Tier 3 — Small fix
 1. Delegate **requirements-from-transcripts** (lightweight) → derives `change-name`, captures the fix scope.
 2. Delegate **roadmap-maker** directly with `mode: incremental-insert`, `tier: 3` → splice the fix item; preserve all actuals/history.
-3. Delegate **sdd-time-estimation** → writes `sdd/{change}/estimate`.
+3. Delegate **sdd-time-estimation** → its inception row (the entry estimate cache); it no longer writes `sdd/{change}/estimate`.
 4. Assemble + validate entry → dispatcher gate → engine (recommend a **slim slice**) → closure-feedback.
 
 ## Entry Contract Assembly & Validation (v2; fail closed)
@@ -70,11 +70,11 @@ Assemble one candidate JSON object in a temporary file. It MUST contain every re
 
 - Identity: `contract_version`, inherited `change_name`, `project`, selected `tier`, `interaction_mode`, and `artifact_store_mode`.
 - `artifact_refs`: entry, requirements, manifest context/mission/rules, architecture, roadmap, estimate, SDD init, pipeline state, and delivery plan.
-- Estimate cache: `planned_range_hours`, lowercase-normalized `complexity` (`Critical` → `critical`), `confidence`, and `human_review_included: true`. Keep richer estimate-only calibration fields in `sdd/{change}/estimate`; do not duplicate them here.
+- Estimate cache: `planned_range_hours`, lowercase-normalized `complexity` (`Critical` → `critical`), `confidence`, and `human_review_included: true`, taken from sdd-time-estimation's inception row; never estimate them yourself. `sdd/{change}/estimate` is no longer written, so there are no richer estimate-only fields to keep there.
 - Delivery decision: `requested_pr_strategy`, normalized `delivery_strategy`, `chaining_required`, `chain_strategy`, and `review_budget` including size-exception state.
 - Test/review plan: `strict_tdd.enabled`, non-empty focused and broad test command lists, ordered requirement-linked `review_slices`, and `expected_native_next_recommendation`.
 
-Artifact references carry the stable topic keys defined by the shared authority. Before validation, assert every producer artifact exists. Include `openspec_path` only for a real, normalized repository-relative path below `openspec/`; omit it when no such artifact exists. Never synthesize a path from a topic key. In `engram` or `none` mode, omit every `openspec_path`.
+Artifact references carry the stable topic keys defined by the shared authority. Before validation, assert every producer artifact exists, except `estimate`, which `sdd-time-estimation` no longer writes. Include `openspec_path` only for a real, normalized repository-relative path below `openspec/`; omit it when no such artifact exists. Never synthesize a path from a topic key. In `engram` or `none` mode, omit every `openspec_path`.
 
 Normalize delivery before validation:
 
@@ -120,7 +120,7 @@ When sequencing producers and handing off, the orchestrator MUST honor every sta
 
 - **SDD Init Guard** — before any SDD command, confirm `sdd-init` ran for the project; if not, run it first.
 - **Version-matched entry gate** — all v2 bundle assets must exist and the deterministic validator must return 0 before the entry is persisted or the dispatcher runs.
-- **Artifact-reference truthfulness** — every topic key resolves; every declared OpenSpec path is real and normalized. Missing evidence stops the flow.
+- **Artifact-reference truthfulness** — every topic key resolves (except `estimate`, no longer written); every declared OpenSpec path is real and normalized. Missing evidence stops the flow.
 - **Model gate** — every Agent / sub-agent call MUST include `model`. No model → no call.
 - **Launch dedup** — track `(phase, fingerprint)` pairs; emit exactly one launch per distinct task.
 - **Skill-resolver injection** — resolve matching `SKILL.md` paths from the registry and inject them as `## Skills to load before work` in each sub-agent prompt (pass paths, not summaries).
@@ -169,9 +169,9 @@ t1 is `landing_commit`'s committer timestamp, once resolved. The resolution outc
 
 **`checkpoint_count` counts one unit per distinct human round-trip reply (R-015), uniformly regardless of how many decisions a single reply resolved. It shares total_wall_clock_hours' tiering-go-ahead-through-merge boundary.** inception-pipeline hands routing of proposal → spec → design → tasks → apply → verify → archive to the SDD engine and does not durably observe every live confirmation exchanged during those phases (e.g. mid-design product decisions, judgment-day rounds, chained-PR split confirmation, merge authorization) — do not claim "your own record" of checkpoints you never routed, and do not invent a field on `sdd/{change}/entry` to proxy them. Always include the durable floor `sdd/{change}/pipeline-state` actually carries: tiering go-ahead (always 1) + ambiguity clarifying question if fired (0-1) — any blocking ambiguity resolved by asking the user, whatever phase surfaced it and whichever tier-selection rule fired, not only a rule-4 tier ambiguity — this floor is guaranteed, never dropped. If a fuller count is reconstructable from the session narrative, fold it into the single `checkpoint_count` total (never a separate field) and itemize in `variance_vs_plan` free text which checkpoints were durably observed (via `pipeline-state`) versus reconstructed from the closure narrative. If no non-durable checkpoints occurred, `variance_vs_plan` MUST state this explicitly zero, and MUST still name the other half with it — which checkpoints were durably observed via `pipeline-state`, AND that zero were reconstructed from the closure narrative — never silently omitting either. The validator's half-disclosure rule rejects prose naming only one half, so "all durably observed" alone and "zero reconstructed" alone are both hard stops. Post-merge archive-authorization replies are excluded from this count as post-boundary bookkeeping, same as `total_wall_clock_hours`.
 
-**Two more figures are yours to WRITE, and both live in `variance_vs_plan` prose because the schema is closed (R-003/R-004/R-005 forbid adding a property, and `additionalProperties: false` is unchanged).** Each is already MANDATORY on the reading side — `sdd-time-estimation/SKILL.md` tells the estimator to use them and `roadmap-maker/assets/roadmap-template.md` gives each a tracking row — so an unwritten one leaves both mechanisms inert, reading a field nobody fills. They ride the same prose-disclosure precedent as the durable-vs-reconstructed checkpoint split, and they inherit its stated cost: free text is not machine-verifiable.
+**Two more figures are yours to WRITE, and both live in `variance_vs_plan` prose because the schema is closed (R-003/R-004/R-005 forbid adding a property, and `additionalProperties: false` is unchanged).** Each was MANDATORY on the reading side through `sdd-time-estimation/SKILL.md`, which no longer reads either figure since its rewrite; `roadmap-maker/assets/roadmap-template.md` still gives `realized_slices` a tracking row, so an unwritten one leaves that mechanism inert, reading a field nobody fills. They ride the same prose-disclosure precedent as the durable-vs-reconstructed checkpoint split, and they inherit its stated cost: free text is not machine-verifiable.
 
-- **`interruption_hours: <n>`** — the observed interruption duration for this change, naming its cause (session reset, provider rate limit, human unavailability). Record it whenever an interruption occurred; record `interruption_hours: 0` explicitly when none did, because "no line" and "no interruption" are different facts and a reader cannot tell them apart. This is what stops R-011 from silently deleting the pessimistic sample: the rule excludes an interruption-contaminated residual from the round-trip-latency calibration, which selects for exactly the short single-session changes least like the work anyone asks to be estimated. Recording the duration keeps the sample readable even while R-011 forbids adjusting with it.
+- **`interruption_hours: <n>`** — the observed interruption duration for this change, naming its cause (session reset, provider rate limit, human unavailability). Record it whenever an interruption occurred; record `interruption_hours: 0` explicitly when none did, because "no line" and "no interruption" are different facts and a reader cannot tell them apart. R-011, which excluded interruption-contaminated samples from the round-trip-latency calibration, was retired together with that calibration, so no skill reads this figure now; it stays a record of what interrupted the change.
 - **`realized_slices: <n>`** — how many review candidates actually landed, counted from what exists (PRs opened under the chosen `chain_strategy`, or the apply batches that carried their own review boundary), never from the plan. The planned side is `len(review_slices)` in `sdd/{change}/entry`; there is no structured field for the realized side anywhere in the record. When the realized count genuinely cannot be established, write `realized slice count not recorded` — never reuse the planned number as though it were the outcome, which is precisely how an overrun disappears into a plan that looks like it held.
 
 **Validate** — compute the actuals object **once** (implementation_hours, review_gate_hours, total_wall_clock_hours when resolved, post_review_fix_hours, approval_decision, scope_drift_notes, variance_vs_plan, plus the optional complexity-unit fields `requirement_count`, `changed_lines`, `review_lens_count`, `checkpoint_count` when their source artifact is readable) and validate it with the **deterministic validator**, never by reading it:
@@ -185,13 +185,13 @@ go run -C "$root/tools/actuals-record-validator" . \
   --instance /absolute/path/to/actuals-candidate.json
 ```
 
-**Fail-closed rule.** Exit `0` is the only result that authorises the write. Any non-zero exit — and a missing or unbuildable validator, which is not the same thing as a pass — is a hard stop: report it and write nothing. Reading the JSON, checking that the fields look present, or attesting that you were careful is NOT validation; the record's author cannot be its validator. Beyond schema shape the validator enforces what shape cannot express: `approval_decision` inside the closed outcome vocabulary, non-negative hours and counts, the durable-vs-reconstructed disclosure a recorded `checkpoint_count` owes, the measured-vs-reconstructed disclosure a recorded `total_wall_clock_hours` owes, and — the rule that exists because it was actually broken — that `scope_drift_notes` and `variance_vs_plan` carry their own content instead of deferring it to some other section ("see the narrative below — this field is summarised there rather than duplicated" satisfies every required-field check JSON Schema can make while recording nothing). Cross-reference in ADDITION to the content, never INSTEAD of it. The complexity-unit fields feed `sdd-time-estimation`'s per-unit calibration rate (hours per requirement, hours per changed line) once a project accumulates enough actuals — omit any field whose source artifact could not be read rather than guessing; `total_wall_clock_hours` is validly absent when its anchors do not resolve (R-021), and `implementation_hours`, `review_gate_hours`, and `post_review_fix_hours` are validly absent while no durable source exists for them (R-019) — every other resolved field is still required. If validation fails for any other reason, report and STOP — do not partial-write.
+**Fail-closed rule.** Exit `0` is the only result that authorises the write. Any non-zero exit — and a missing or unbuildable validator, which is not the same thing as a pass — is a hard stop: report it and write nothing. Reading the JSON, checking that the fields look present, or attesting that you were careful is NOT validation; the record's author cannot be its validator. Beyond schema shape the validator enforces what shape cannot express: `approval_decision` inside the closed outcome vocabulary, non-negative hours and counts, the durable-vs-reconstructed disclosure a recorded `checkpoint_count` owes, the measured-vs-reconstructed disclosure a recorded `total_wall_clock_hours` owes, and — the rule that exists because it was actually broken — that `scope_drift_notes` and `variance_vs_plan` carry their own content instead of deferring it to some other section ("see the narrative below — this field is summarised there rather than duplicated" satisfies every required-field check JSON Schema can make while recording nothing). Cross-reference in ADDITION to the content, never INSTEAD of it. The complexity-unit fields are recorded for reference only (`sdd-time-estimation` no longer derives a per-unit calibration rate from them) — omit any field whose source artifact could not be read rather than guessing; `total_wall_clock_hours` is validly absent when its anchors do not resolve (R-021), and `implementation_hours`, `review_gate_hours`, and `post_review_fix_hours` are validly absent while no durable source exists for them (R-019) — every other resolved field is still required. If validation fails for any other reason, report and STOP — do not partial-write.
 
 **`implementation_hours`, `review_gate_hours`, and `post_review_fix_hours` stay unpopulated (R-019) — state why, do not leave it silent.** No durable source exists for any of the three yet: orchestrator telemetry is session-transient, the `sdd-attempt` ledger has no timestamp fields, and transcripts carry no structured subagent durations. None of the three MAY be filled with `total_wall_clock_hours` or any other elapsed-time proxy while this remains true.
 
 **Execute** — write, in order:
 1. `sdd/{change}/actuals` (the authoritative single actuals notebook).
-2. `project/{project}/estimation-calibration` (append/update — variance patterns for future pre-start estimates).
+2. `project/{project}/estimation-calibration` (append/update — variance patterns; no skill reads it since `sdd-time-estimation` was rewritten).
 3. Append a `## Cycle Timestamps` section to the archived `archive-report.md` — a named, delimited, append-only carve-out to closure-feedback's own "do NOT modify engine outputs" rule (engine bytes elsewhere untouched, the Engram archive-report topic untouched): a 2-row table with t0 (topic key, observation id, `created_at`, primary-or-fallback source) and t1 (`landing_commit`, `approved_tree` when recorded, committer timestamp, and the verified/self-asserted/rejected outcome).
 
 On any partial-write failure (any of the three written, another not), **report the inconsistency and STOP**. Do not silently leave the stores out of sync.
@@ -206,7 +206,7 @@ This is a **best-effort, non-blocking, informational** call — it runs strictly
 
 Downstream consumers read on their next run — you do NOT push to them:
 - **roadmap-maker** reads `sdd/{change}/actuals` on its next render.
-- **sdd-time-estimation** reads `project/{project}/estimation-calibration` on its next pre-start estimate.
+- **sdd-time-estimation** no longer reads `project/{project}/estimation-calibration`; its reference class comes from the `odd/tasks/*.md` and archived `tasks.md` ledgers.
 
 ## Gotchas (real traps)
 

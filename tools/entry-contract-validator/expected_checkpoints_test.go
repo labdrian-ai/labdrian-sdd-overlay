@@ -8,13 +8,14 @@ import (
 // The entry contract's `estimate` object is additionalProperties:false, so a
 // property it does not declare is not merely ignored — it is REJECTED with exit
 // 5. Before this change the object declared no checkpoint field, which meant a
-// producer carrying the one number sdd-time-estimation calls "the real calendar
-// time driver for agent-orchestrated delivery" had its whole contract refused.
+// producer carrying the one number the old sdd-time-estimation (rewritten
+// 2026-10-22) called "the real calendar time driver for agent-orchestrated
+// delivery" had its whole contract refused.
 //
 // That is not a thin cache; it is a cache that actively refuses the plan side of
 // a pair whose actual side (`checkpoint_count`) the actuals record already
-// carries. Without both sides recorded, the checkpoint variance the estimator is
-// told to report has nowhere to come from.
+// carries. Without both sides recorded, the checkpoint variance the old
+// estimator was told to report has nowhere to come from.
 
 func TestEstimateAcceptsExpectedCheckpoints(t *testing.T) {
 	err := validateMutation(t, func(contract map[string]any) {

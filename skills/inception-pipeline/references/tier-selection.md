@@ -17,7 +17,7 @@ The checklist, repeated for reference (evaluate in order, stop at the first matc
 
 **Rule fired:** #1 — no manifest.
 
-**Tier:** 1. Run the full flow: requirements-from-transcripts (if a transcript exists) → project-inception `inception_mode: full` → sdd-time-estimation. Foundation is built from scratch.
+**Tier:** 1. Run the full flow: requirements-from-transcripts (if a transcript exists) → project-inception `inception_mode: full` → sdd-time-estimation (sizing only). Foundation is built from scratch.
 
 **Why not lower:** Without a manifest, architecture would invent context and the roadmap would invent dependencies. Stated intent ("just a small service") does NOT override the missing-manifest evidence.
 
@@ -29,7 +29,7 @@ The checklist, repeated for reference (evaluate in order, stop at the first matc
 
 **Rule fired:** #3 — feature/capability needing roadmap sequencing.
 
-**Tier:** 2. requirements-from-transcripts (per feature) → project-inception `inception_mode: reuse` (drives roadmap-maker `incremental-insert`) → sdd-time-estimation. Manifest/architect are read-only constraints — never rewritten for one feature.
+**Tier:** 2. requirements-from-transcripts (per feature) → project-inception `inception_mode: reuse` (drives roadmap-maker `incremental-insert`) → sdd-time-estimation (sizing only). Manifest/architect are read-only constraints — never rewritten for one feature.
 
 **Why not Tier 3:** It adds a new architectural surface (currency handling, FX integration) and cross-cuts modules; it is not a self-contained single-surface change.
 
@@ -51,7 +51,7 @@ The checklist, repeated for reference (evaluate in order, stop at the first matc
 
 **Rule fired:** #2 — self-contained, single surface, no new architectural surface, no schema/integration/prod risk.
 
-**Tier:** 3. Lightweight path: requirements-from-transcripts (lightweight) → roadmap-maker `incremental-insert` `tier: 3` → sdd-time-estimation → engine runs a slim slice. No full inception, no architecture rework.
+**Tier:** 3. Lightweight path: requirements-from-transcripts (lightweight) → roadmap-maker `incremental-insert` `tier: 3` → sdd-time-estimation (sizing only) → engine runs a slim slice. No full inception, no architecture rework.
 
 ---
 

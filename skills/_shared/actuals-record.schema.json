@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://labdrian.ai/schemas/actuals-record/2.1.0",
   "title": "SDD Closure Actuals Record",
-  "description": "Single closure actuals notebook written only by inception-pipeline closure-feedback after the SDD engine archives the change (it reads the engine's native archive-report, verify-report, and apply-progress; it does not modify the managed sdd-archive skill). Read by roadmap-maker and sdd-time-estimation for calibration. Eliminates dual-notebook drift (seam S5).",
+  "description": "Single closure actuals notebook written only by inception-pipeline closure-feedback after the SDD engine archives the change (it reads the engine's native archive-report, verify-report, and apply-progress; it does not modify the managed sdd-archive skill). Read by roadmap-maker for its tracking rows; sdd-time-estimation no longer reads it (rewritten 2026-10-22). Eliminates dual-notebook drift (seam S5).",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -51,15 +51,15 @@
     },
     "requirement_count": {
       "type": "integer",
-      "description": "Optional. Number of EARS requirements (R-NNN) in the change's spec, read from sdd/{change}/spec. Complexity-unit divisor for sdd-time-estimation's agent-compute-time-per-requirement calibration rate. Omit if the spec could not be read."
+      "description": "Optional. Number of EARS requirements (R-NNN) in the change's spec, read from sdd/{change}/spec. Recorded for reference; sdd-time-estimation no longer derives a calibration rate from it. Omit if the spec could not be read."
     },
     "changed_lines": {
       "type": "integer",
-      "description": "Optional. Actual realized changed-line count at archive (e.g. a diff-stat total against the base commit, or the archive-report's recorded total). Do NOT source this from sdd/{change}/tasks's Review Workload Forecast — that figure is a pre-implementation planning guard, not an exact diff count (see sdd-tasks/SKILL.md). Complexity-unit divisor for the agent-compute-time-per-changed-line calibration rate. Omit if not available."
+      "description": "Optional. Actual realized changed-line count at archive (e.g. a diff-stat total against the base commit, or the archive-report's recorded total). Do NOT source this from sdd/{change}/tasks's Review Workload Forecast — that figure is a pre-implementation planning guard, not an exact diff count (see sdd-tasks/SKILL.md). Recorded for reference; no calibration rate is derived from it. Omit if not available."
     },
     "review_lens_count": {
       "type": "integer",
-      "description": "Optional. Number of review lenses actually run during the review gate (0, 1, or up to 4 under the 4R tier) — the length of `selected_lenses` in the native `gentle-ai.review-receipt/v2`, if one exists for this change. Complexity-unit divisor for the review_gate_hours calibration rate. Omit if not available."
+      "description": "Optional. Number of review lenses actually run during the review gate (0, 1, or up to 4 under the 4R tier) — the length of `selected_lenses` in the native `gentle-ai.review-receipt/v2`, if one exists for this change. Recorded for reference; no calibration rate is derived from it. Omit if not available."
     },
     "checkpoint_count": {
       "type": "integer",
