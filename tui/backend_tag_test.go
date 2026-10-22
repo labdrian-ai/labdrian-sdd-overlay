@@ -124,13 +124,15 @@ func yamlEntry(line string) (entry string, column int, startsItem bool) {
 }
 
 // testFileReader is the kind of a command that builds or analyses test files: "vet", "test" or
-// "staticcheck", and "" for any other command.
+// "staticcheck", and "" for any other command. CI builds staticcheck from tools/lint and runs the binary,
+// so the staticcheck command is the one whose program is named staticcheck: the command that builds it
+// is a go build and reads no test file.
 func testFileReader(command string) string {
 	fields := strings.Fields(command)
 	switch {
 	case len(fields) >= 2 && fields[0] == "go" && (fields[1] == "vet" || fields[1] == "test"):
 		return fields[1]
-	case slices.ContainsFunc(fields, func(f string) bool { return strings.Contains(f, "staticcheck@") }):
+	case len(fields) > 0 && filepath.Base(strings.Trim(fields[0], `"`)) == "staticcheck":
 		return "staticcheck"
 	}
 	return ""
@@ -250,11 +252,12 @@ func TestPassesBackendTagAcceptsEveryFormOfTheFlag(t *testing.T) {
 
 func TestTestFileReaderKnowsTheCommandsThatReadTestFiles(t *testing.T) {
 	for command, want := range map[string]string{
-		"go vet -tags backend ./...":                             "vet",
-		"go test ./... -cover":                                   "test",
-		"go run honnef.co/go/tools/cmd/staticcheck@v0.7.0 ./...": "staticcheck",
-		"go run golang.org/x/tools/cmd/deadcode@v0.48.0 ./...":   "",
-		`test -z "$(gofmt -l .)"`:                                "",
+		"go vet -tags backend ./...":                     "vet",
+		"go test ./... -cover":                           "test",
+		`"$RUNNER_TEMP/staticcheck" -tags backend ./...`: "staticcheck",
+		`go build -C "$GITHUB_WORKSPACE/tools/lint" -o "$RUNNER_TEMP/staticcheck" honnef.co/go/tools/cmd/staticcheck`: "",
+		"go run golang.org/x/tools/cmd/deadcode@v0.48.0 ./...":                                                        "",
+		`test -z "$(gofmt -l .)"`: "",
 	} {
 		if got := testFileReader(command); got != want {
 			t.Errorf("testFileReader(%q) = %q, want %q", command, got, want)
