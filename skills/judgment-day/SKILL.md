@@ -13,11 +13,12 @@ Load only when the user explicitly requests Judgment Day or equivalent dual/adve
 
 ## Hard Rules
 
-- Resolve matching project skills before starting and pass the same paths to both judges (`jd-judge-a`, `jd-judge-b`) and the fix actor (`jd-fix-agent`).
+- Resolve matching project skills before starting and pass the same paths to both judges (two `polisher` launches) and the fix actor (a `builder` launch).
 - Build one complete immutable target, then launch two blind read-only judges in parallel with identical scope and criteria.
+- Both judges are `polisher` launches with the same prompt: judge A on the agent file's model (`sonnet`), judge B on a different per-launch `model` (`opus`), so the judgments differ in model as well as in context.
 - Each judge returns one neutral findings result and terminates. Wait for both; never accept a partial judgment.
 - Never launch `review-refuter`; two-judge agreement is the corroboration mechanism.
-- Only the parent orchestrator merges/persists findings, launches the fix actor (`jd-fix-agent`), and launches scoped re-judgment.
+- Only the parent orchestrator merges/persists findings, launches the fix actor (a `builder` launch), and launches scoped re-judgment.
 - Fix only severe findings confirmed by both judges. WARNING/SUGGESTION rows remain `info`.
 - Permit at most two fix rounds and two scoped re-judgments. Re-judgment sees only the frozen ledger plus fix delta and may record fix-caused defects.
 - The only terminal verdicts are `APPROVED | ESCALATED`; never reset or extend an exhausted round budget.
@@ -37,10 +38,10 @@ Load only when the user explicitly requests Judgment Day or equivalent dual/adve
 ## Execution Steps
 
 1. Build the complete immutable target and freeze the scope both judges will inspect.
-2. Launch both read-only judges in parallel (`jd-judge-a`, `jd-judge-b`) against the same immutable target.
+2. Launch both read-only judges in parallel as `polisher` launches (model split above) against the same immutable target.
 3. Merge findings into the frozen ledger and persist it through the selected artifact store.
-4. Ask before round-one correction; run the fix actor (`jd-fix-agent`) only for confirmed severe IDs.
-5. Run both judges again (`jd-judge-a`, `jd-judge-b`) only over the frozen ledger plus immutable fix delta.
+4. Ask before round-one correction; run the fix actor (`builder`, prompted with the confirmed ledger IDs only) only for confirmed severe IDs.
+5. Run both judges again (same launches, same model split) only over the frozen ledger plus immutable fix delta.
 6. Repeat once at most, then run independent final verification and return the terminal verdict.
 
 ## Output Contract

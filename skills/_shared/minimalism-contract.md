@@ -1,13 +1,16 @@
 ---
-applies_to_phases: [sdd-tasks, sdd-apply]
-excluded_phases: [sdd-propose, sdd-spec, sdd-design, sdd-verify, sdd-archive]
+applies_to_phases: [sdd-tasks, sdd-apply, shaper, builder]
+excluded_phases: [sdd-propose, sdd-spec, sdd-design, sdd-verify, sdd-archive, reviewer, verifier]
 injection_point: "## Skills to load before work"
 ---
 # Minimalism Contract
 
-> Advisory scope: this contract is injected ONLY into `sdd-tasks` and `sdd-apply` prompts
-> (via the scoped registry Trigger row). The frontmatter above is documentation only — the
-> resolver does not parse it. See `.atl/skill-registry.md` for the load-bearing binding.
+> Scope: this contract is injected ONLY into `shaper` and `builder` prompts, and into the
+> `sdd-tasks` and `sdd-apply` prompts until those agents are removed. The frontmatter above is
+> load-bearing: `engine gate-task` (the PreToolUse `Agent` hook) parses it on every sub-agent
+> launch to inject or strip the contract path, `engine propagate` renders the scoped Trigger
+> row of `.atl/skill-registry.md` from it, and the Pi gate and the OpenCode prompt config read
+> the same lists.
 
 ## Preference ladder
 

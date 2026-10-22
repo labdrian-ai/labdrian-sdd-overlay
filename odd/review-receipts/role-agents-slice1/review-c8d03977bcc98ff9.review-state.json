@@ -1,0 +1,461 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:76c4294264153ad4ce632671b5092085f598faf854117942f2cac0722203a2e9",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-c8d03977bcc98ff9",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "eaa64d738016adf222918cd33714f048acd4856f",
+      "candidate_tree": "797b236aa245d9137c8d17f195bb5ce5fa248479",
+      "paths_digest": "sha256:e19e923516395683995e2722263315cd2620b7e08bbeb3b9930515b40d29adb7",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "agents/builder.md",
+        "agents/delivery.md",
+        "agents/polisher.md",
+        "agents/prototyper.md",
+        "agents/shaper.md",
+        "agents/sweeper.md",
+        "engine/gate/role_scope_test.go",
+        "engine/propagator/role_scope_pin_test.go",
+        "engine/runtime/opencode_test.go",
+        "engine/skills/role_agents_artifact_test.go",
+        "odd/tasks/role-agents-slice1.md",
+        "overlay.manifest",
+        "roles/builder/body.md",
+        "roles/delivery/body.md",
+        "roles/polisher/body.md",
+        "roles/prototyper/body.md",
+        "roles/shaper/body.md",
+        "roles/sweeper/body.md",
+        "skills/_shared/minimalism-contract.md",
+        "skills/judgment-day/.approval.json",
+        "skills/judgment-day/SKILL.md"
+      ],
+      "identity": "sha256:e5019a312f2e90c118568a51023de1abcde814264f47f1a9999bb40e0cdb3fe0"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "eaa64d738016adf222918cd33714f048acd4856f",
+      "candidate_tree": "797b236aa245d9137c8d17f195bb5ce5fa248479",
+      "paths_digest": "sha256:e19e923516395683995e2722263315cd2620b7e08bbeb3b9930515b40d29adb7",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "agents/builder.md",
+        "agents/delivery.md",
+        "agents/polisher.md",
+        "agents/prototyper.md",
+        "agents/shaper.md",
+        "agents/sweeper.md",
+        "engine/gate/role_scope_test.go",
+        "engine/propagator/role_scope_pin_test.go",
+        "engine/runtime/opencode_test.go",
+        "engine/skills/role_agents_artifact_test.go",
+        "odd/tasks/role-agents-slice1.md",
+        "overlay.manifest",
+        "roles/builder/body.md",
+        "roles/delivery/body.md",
+        "roles/polisher/body.md",
+        "roles/prototyper/body.md",
+        "roles/shaper/body.md",
+        "roles/sweeper/body.md",
+        "skills/_shared/minimalism-contract.md",
+        "skills/judgment-day/.approval.json",
+        "skills/judgment-day/SKILL.md"
+      ],
+      "identity": "sha256:e5019a312f2e90c118568a51023de1abcde814264f47f1a9999bb40e0cdb3fe0"
+    },
+    "genesis_paths": [
+      "agents/builder.md",
+      "agents/delivery.md",
+      "agents/polisher.md",
+      "agents/prototyper.md",
+      "agents/shaper.md",
+      "agents/sweeper.md",
+      "engine/gate/role_scope_test.go",
+      "engine/propagator/role_scope_pin_test.go",
+      "engine/runtime/opencode_test.go",
+      "engine/skills/role_agents_artifact_test.go",
+      "odd/tasks/role-agents-slice1.md",
+      "overlay.manifest",
+      "roles/builder/body.md",
+      "roles/delivery/body.md",
+      "roles/polisher/body.md",
+      "roles/prototyper/body.md",
+      "roles/shaper/body.md",
+      "roles/sweeper/body.md",
+      "skills/_shared/minimalism-contract.md",
+      "skills/judgment-day/.approval.json",
+      "skills/judgment-day/SKILL.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-risk",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 840,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "new agent and role prose files, judgment-day actor rename, and the minimalism contract frontmatter consumed by the Claude gate, propagate, Pi gate and OpenCode, with new pin tests",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:5d8031c4aa490422bd821591dbf42f74314e4b3b03c90701af6ec06e645f7fab",
+    "capture_phase_revision": "sha256:74389eefc94fcfafae1ec5ece21682a45296b2168ebce2b99f4bed8f1888127e",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:e5019a312f2e90c118568a51023de1abcde814264f47f1a9999bb40e0cdb3fe0",
+        "capture_phase_revision": "sha256:74389eefc94fcfafae1ec5ece21682a45296b2168ebce2b99f4bed8f1888127e",
+        "artifact_digest": "sha256:0452c62ba3813ca6f1928e1a69768504f7b1b08613259927b4dbe462b803ce07",
+        "result_hash": "sha256:1ff0a20cee582965c65bec5c777768a4449e3ebfb7247565d1f19c33e11a1bea",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:fc980755a2207b825d8cea1a7611925f8d7cced55ffe36457a636a56a240fa73",
+            "lineage_id": "review-c8d03977bcc98ff9",
+            "authority_revision": "sha256:74389eefc94fcfafae1ec5ece21682a45296b2168ebce2b99f4bed8f1888127e",
+            "target_identity": "sha256:e5019a312f2e90c118568a51023de1abcde814264f47f1a9999bb40e0cdb3fe0",
+            "base_tree": "eaa64d738016adf222918cd33714f048acd4856f",
+            "candidate_tree": "797b236aa245d9137c8d17f195bb5ce5fa248479",
+            "changed_path_manifest_sha256": "sha256:31c2afce99b037c3d3f80083075a866b268ee2ea47578d0d3230c122a2dd01ca",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:fc980755a2207b825d8cea1a7611925f8d7cced55ffe36457a636a56a240fa73",
+            "raw_sha256": "sha256:3ef877091ff0f7540fa79c907bcc81f6bb1a96af5a26e6210377071d2b6a0d89",
+            "canonical_sha256": "sha256:b25394efe0805a693b7fcdef957c58227bded8b2558e0ed9d25decbe9e8b0a4d",
+            "result_hash": "sha256:1ff0a20cee582965c65bec5c777768a4449e3ebfb7247565d1f19c33e11a1bea",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:fc980755a2207b825d8cea1a7611925f8d7cced55ffe36457a636a56a240fa73",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "agents/builder.md",
+                "agents/delivery.md",
+                "agents/polisher.md",
+                "agents/prototyper.md",
+                "agents/shaper.md",
+                "agents/sweeper.md",
+                "engine/gate/role_scope_test.go",
+                "engine/propagator/role_scope_pin_test.go",
+                "engine/runtime/opencode_test.go",
+                "engine/skills/role_agents_artifact_test.go",
+                "odd/tasks/role-agents-slice1.md",
+                "overlay.manifest",
+                "roles/builder/body.md",
+                "roles/delivery/body.md",
+                "roles/polisher/body.md",
+                "roles/prototyper/body.md",
+                "roles/shaper/body.md",
+                "roles/sweeper/body.md",
+                "skills/_shared/minimalism-contract.md",
+                "skills/judgment-day/.approval.json",
+                "skills/judgment-day/SKILL.md"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [
+              {
+                "id": "R1-001",
+                "lens": "risk",
+                "location": "agents/prototyper.md:5",
+                "severity": "WARNING",
+                "claim": "The prototyper agent has Bash, Write and Edit with no harness-level path restriction. Confinement to the spike worktree and the report path, and the use of an isolated HOME/TMPDIR, are enforced only by prompt text. A model deviation could write outside the worktree. This is new agent capability that the base did not have, but it needs a model to disobey the prompt, and no concrete exploit is shown, so it stays at WARNING.",
+                "proof_refs": [
+                  "agents/prototyper.md:5",
+                  "agents/prototyper.md:12-13"
+                ]
+              },
+              {
+                "id": "R1-002",
+                "lens": "risk",
+                "location": "agents/delivery.md:5",
+                "severity": "WARNING",
+                "claim": "The delivery agent has Bash, Write and Edit. Its 'mechanical copy only' and 'do not rewrite history' rules are prompt-only, and it can run mv/git mv over archive paths. The risk of data loss is bounded by the prompt-named paths and is not enforced by the harness.",
+                "proof_refs": [
+                  "agents/delivery.md:5",
+                  "agents/delivery.md:15-16"
+                ]
+              },
+              {
+                "id": "R1-003",
+                "lens": "risk",
+                "location": "skills/judgment-day/.approval.json:1-7",
+                "severity": "WARNING",
+                "claim": "The approval record's sha256 and approver are asserted in the file itself and cannot be verified from this candidate. The task log says the owner approved it via the CLI, so this is a provenance note rather than a demonstrated bypass.",
+                "proof_refs": [
+                  "skills/judgment-day/.approval.json:4-6",
+                  "odd/tasks/role-agents-slice1.md:26"
+                ]
+              }
+            ],
+            "evidence": [
+              "Inspected all 21 manifest paths in the patch.",
+              "No secrets, credentials, unsafe input handling, or dependency changes appear in the diff. It adds agent prompts, manifest rows, test files, and a minimalism-contract frontmatter change.",
+              "The new agent files carry no Agent/Task/Web tools, and the tool lists are checked by the tests in engine/skills/role_agents_artifact_test.go.",
+              "The polisher is read-only (no Write/Edit/Bash). The gate tests show the minimalism contract is stripped from the reviewer and verifier and injected only for the writing roles.",
+              "The manifest rows are custom/agent routes only, with no routes to other runtimes, and the tests check this."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "selected_order": 1,
+        "target_identity": "sha256:e5019a312f2e90c118568a51023de1abcde814264f47f1a9999bb40e0cdb3fe0",
+        "capture_phase_revision": "sha256:74389eefc94fcfafae1ec5ece21682a45296b2168ebce2b99f4bed8f1888127e",
+        "artifact_digest": "sha256:654154b914c08fa914c4cd1e8d6d60d1a189c3cb5192fe8c5a67b52711664207",
+        "result_hash": "sha256:fa434e4f44f7d1be2a5f4a1f16f25324559cd5e15265e71b337280144dfea454",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:3461a41ff4a5fb952a6dcd16085f34896317cf02aeccc937b50b3375541bf5d7",
+            "lineage_id": "review-c8d03977bcc98ff9",
+            "authority_revision": "sha256:74389eefc94fcfafae1ec5ece21682a45296b2168ebce2b99f4bed8f1888127e",
+            "target_identity": "sha256:e5019a312f2e90c118568a51023de1abcde814264f47f1a9999bb40e0cdb3fe0",
+            "base_tree": "eaa64d738016adf222918cd33714f048acd4856f",
+            "candidate_tree": "797b236aa245d9137c8d17f195bb5ce5fa248479",
+            "changed_path_manifest_sha256": "sha256:31c2afce99b037c3d3f80083075a866b268ee2ea47578d0d3230c122a2dd01ca",
+            "lens": "review-readability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:3461a41ff4a5fb952a6dcd16085f34896317cf02aeccc937b50b3375541bf5d7",
+            "raw_sha256": "sha256:1574236df5c78cf6befe9b313d534e3e3c76e99ffe9a52584bf0775123376350",
+            "canonical_sha256": "sha256:140fbda361fdee94b29a238198536cb1294d41f09695beaf7f516e5ed493c273",
+            "result_hash": "sha256:fa434e4f44f7d1be2a5f4a1f16f25324559cd5e15265e71b337280144dfea454",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:3461a41ff4a5fb952a6dcd16085f34896317cf02aeccc937b50b3375541bf5d7",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "agents/builder.md",
+                "agents/delivery.md",
+                "agents/polisher.md",
+                "agents/prototyper.md",
+                "agents/shaper.md",
+                "agents/sweeper.md",
+                "engine/gate/role_scope_test.go",
+                "engine/propagator/role_scope_pin_test.go",
+                "engine/runtime/opencode_test.go",
+                "engine/skills/role_agents_artifact_test.go",
+                "odd/tasks/role-agents-slice1.md",
+                "overlay.manifest",
+                "roles/builder/body.md",
+                "roles/delivery/body.md",
+                "roles/polisher/body.md",
+                "roles/prototyper/body.md",
+                "roles/shaper/body.md",
+                "roles/sweeper/body.md",
+                "skills/_shared/minimalism-contract.md",
+                "skills/judgment-day/.approval.json",
+                "skills/judgment-day/SKILL.md"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-polisher-description-mismatch",
+                "lens": "readability",
+                "location": "agents/polisher.md:3",
+                "severity": "WARNING",
+                "claim": "The polisher description says it is a 'blind judge ... for judgment-day', which ties a general role agent name to one skill. The role is named polisher, but its body and description are judge-specific. A reader may not realise the role is the judge in judgment-day only, and the name does not convey that. Minor naming/maintainability friction.",
+                "proof_refs": [
+                  "agents/polisher.md:3",
+                  "roles/polisher/body.md:8-10"
+                ]
+              },
+              {
+                "id": "R2-duplicated-agent-body",
+                "lens": "readability",
+                "location": "agents/builder.md:8-18",
+                "severity": "WARNING",
+                "claim": "Each agents/\u003crole\u003e.md duplicates the full text of roles/\u003crole\u003e/body.md by hand-copy. Only a test enforces equality, with no generator, so every edit has to be made twice and a drift is caught only at test time. The error message does instruct editing the source and copying, but the duplication remains a maintenance hazard until the planned generator lands.",
+                "proof_refs": [
+                  "engine/skills/role_agents_artifact_test.go:150-153",
+                  "roles/builder/body.md:1-11"
+                ]
+              },
+              {
+                "id": "R2-hardcoded-tool-lists",
+                "lens": "readability",
+                "location": "engine/skills/role_agents_artifact_test.go:41-45",
+                "severity": "SUGGESTION",
+                "claim": "Tool lists are repeated as long literal constants in the test and again in each agent frontmatter. The sweeper list is derived from the builder list, which is clear, but the others duplicate strings with no shared source. A change in one place needs matching edits in two.",
+                "proof_refs": [
+                  "engine/skills/role_agents_artifact_test.go:41-45",
+                  "agents/builder.md:5"
+                ]
+              }
+            ],
+            "evidence": [
+              "Reviewed all 21 changed paths in the candidate for readability.",
+              "Agent files and role bodies are consistent with each other, and the test enforces that they match.",
+              "The contract note was updated to name its real readers, which fixes a previously misleading comment.",
+              "No BLOCKER or CRITICAL findings; the issues above are maintainability warnings."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 2,
+        "target_identity": "sha256:e5019a312f2e90c118568a51023de1abcde814264f47f1a9999bb40e0cdb3fe0",
+        "capture_phase_revision": "sha256:74389eefc94fcfafae1ec5ece21682a45296b2168ebce2b99f4bed8f1888127e",
+        "artifact_digest": "sha256:70ad8f0cc6b0384b7208b053c3b5a5fd842eac60cabd5936f7d582545e1187f9",
+        "result_hash": "sha256:8a27d80a25e63dc560a372aec9509d102b40c420323ca167b183bc20091a4f02",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:9f35ab2a638fd2dc0ec56d26ff757729fa24f313a9a5283c5dd5d3b8bc677aac",
+            "lineage_id": "review-c8d03977bcc98ff9",
+            "authority_revision": "sha256:74389eefc94fcfafae1ec5ece21682a45296b2168ebce2b99f4bed8f1888127e",
+            "target_identity": "sha256:e5019a312f2e90c118568a51023de1abcde814264f47f1a9999bb40e0cdb3fe0",
+            "base_tree": "eaa64d738016adf222918cd33714f048acd4856f",
+            "candidate_tree": "797b236aa245d9137c8d17f195bb5ce5fa248479",
+            "changed_path_manifest_sha256": "sha256:31c2afce99b037c3d3f80083075a866b268ee2ea47578d0d3230c122a2dd01ca",
+            "lens": "review-reliability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:9f35ab2a638fd2dc0ec56d26ff757729fa24f313a9a5283c5dd5d3b8bc677aac",
+            "raw_sha256": "sha256:b38da1696197d518beff9df5963af00e1343bad8ccb5c88e25bbd6ee25621331",
+            "canonical_sha256": "sha256:5739decb50c1ecc5953423af40ae1b07c1c10d8a9ba4262b61be5ecddf719143",
+            "result_hash": "sha256:8a27d80a25e63dc560a372aec9509d102b40c420323ca167b183bc20091a4f02",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:9f35ab2a638fd2dc0ec56d26ff757729fa24f313a9a5283c5dd5d3b8bc677aac",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "agents/builder.md",
+                "agents/delivery.md",
+                "agents/polisher.md",
+                "agents/prototyper.md",
+                "agents/shaper.md",
+                "agents/sweeper.md",
+                "engine/gate/role_scope_test.go",
+                "engine/propagator/role_scope_pin_test.go",
+                "engine/runtime/opencode_test.go",
+                "engine/skills/role_agents_artifact_test.go",
+                "odd/tasks/role-agents-slice1.md",
+                "overlay.manifest",
+                "roles/builder/body.md",
+                "roles/delivery/body.md",
+                "roles/polisher/body.md",
+                "roles/prototyper/body.md",
+                "roles/shaper/body.md",
+                "roles/sweeper/body.md",
+                "skills/_shared/minimalism-contract.md",
+                "skills/judgment-day/.approval.json",
+                "skills/judgment-day/SKILL.md"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-polisher-envelope-conflict",
+                "lens": "reliability",
+                "location": "agents/polisher.md:11-17",
+                "severity": "WARNING",
+                "claim": "The polisher's shared core prefix tells it to end with a return envelope (status, summary, artifacts, next, risks, skill_resolution), while its delta says the whole return is the single JSON findings object with none of the envelope fields. The contradiction is resolved only by the phrase 'none of the envelope fields above', so a model can still emit an envelope, and judgment-day merging would then fail to parse the findings. No test asserts the polisher's output behaviour; the tests only check that the text is present.",
+                "proof_refs": [
+                  "agents/polisher.md:11-17",
+                  "roles/polisher/body.md:5-10",
+                  "engine/skills/role_agents_artifact_test.go:78-80"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-sweeper-readonly-commit",
+                "lens": "reliability",
+                "location": "agents/sweeper.md:4-18",
+                "severity": "WARNING",
+                "claim": "The sweeper must commit one chore(sweep) commit and run tests, deadcode and staticcheck, but its tool list has no Write and its only shell access is Bash. Committing works through Bash, so this is not a blocker. The tool-limit tests only assert absence of banned tools and do not check that the tools needed by the prose (Bash for git) are present, so a later edit that drops Bash would pass.",
+                "proof_refs": [
+                  "agents/sweeper.md:4-18",
+                  "engine/skills/role_agents_artifact_test.go:130-150"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-judge-model-test-weak",
+                "lens": "reliability",
+                "location": "skills/judgment-day/SKILL.md:16-18",
+                "severity": "WARNING",
+                "claim": "The judge model split (sonnet versus opus) is asserted only by checking that the strings sonnet and opus appear somewhere in the skill text. It does not bind judge A to sonnet and judge B to opus, so a swap or a duplicated model would still pass. The task log also records the fix actor's move from opus/xhigh to a sonnet builder as an open advisory, a behaviour change in the fix path that no test covers.",
+                "proof_refs": [
+                  "skills/judgment-day/SKILL.md:16-18",
+                  "engine/skills/role_agents_artifact_test.go:392-401",
+                  "odd/tasks/role-agents-slice1.md:27"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Inspected all 21 manifest paths in the patch.",
+              "Gate, propagator and runtime tests pin the new applies_to_phases and excluded_phases lists consistently: sdd-tasks and sdd-apply are retained for legacy agents, shaper and builder are added, and reviewer and verifier are excluded.",
+              "The artifact tests check that each agents/\u003crole\u003e.md equals its frontmatter plus roles/\u003crole\u003e/body.md, check the manifest rows and routes, and check that the pre-existing agent rows are unchanged.",
+              "The judgment-day SKILL.md change is covered by the new .approval.json. I could not recompute its sha256 from the patch, so approval correctness is unverified.",
+              "No blocker or critical reliability regression found in the candidate."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "9f23bf832fd6c5aa4e45ad96aee262859e20dae6d20d504d988591619c1790a1",
+    "initial_atomic_start": {
+      "lineage_id": "review-c8d03977bcc98ff9",
+      "worktree_identity": "sha256:2dec42b96a14f7e92921a7b16c2b88da3656766f6f8498c39b82b9631b035632",
+      "target_identity": "sha256:e5019a312f2e90c118568a51023de1abcde814264f47f1a9999bb40e0cdb3fe0",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "eaa64d738016adf222918cd33714f048acd4856f",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-risk",
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 840,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "new agent and role prose files, judgment-day actor rename, and the minimalism contract frontmatter consumed by the Claude gate, propagate, Pi gate and OpenCode, with new pin tests"
+    },
+    "runtime_agent": "claude-code"
+  }
+}
