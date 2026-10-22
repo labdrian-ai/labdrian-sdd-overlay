@@ -237,7 +237,7 @@ exit "$CLI_CODE"
 				t.Errorf("runtime arguments: %q", called)
 			}
 			prompt := strings.TrimSuffix(strings.Join(lines[3+len(args):], "\n"), "\n")
-			for _, required := range []string{"labdrian memory plan --instructions", "mem_context", "claude", "one line", "MEMORY_PLAN_SOURCES=<comma-separated readable sources, alphabetical>; PROJECT=<project name for Engram reads>; GOAL=<goal id of the plan>"} {
+			for _, required := range []string{"labdrian memory plan --instructions", "mem_context", "claude", "one line", "MEMORY_PLAN_SOURCES=<comma-separated sources the plan names, alphabetical>; PROJECT=<project name for Engram reads>; GOAL=<goal id of the plan>"} {
 				if !strings.Contains(prompt, required) {
 					t.Errorf("prompt missing %q", required)
 				}
