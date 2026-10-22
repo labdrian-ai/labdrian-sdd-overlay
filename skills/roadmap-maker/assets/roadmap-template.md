@@ -42,7 +42,7 @@ such measurement exists" identically is lying about which one it is.
 | Field | Value | Source |
 |-------|-------|--------|
 | Estimate (before start) | {… or `[PENDING]`} | `sdd/{change}/entry` — `estimate.planned_range_hours` (the entry contract's estimate cache; nothing is written to `sdd/{change}/estimate` any more) |
-| Expected human checkpoints (planned) | {… or `[PENDING]`} | `sdd/{change}/entry` — `estimate.expected_checkpoints` |
+| Expected human checkpoints (planned) | {… or `[PENDING]`} | `sdd/{change}/entry` — `estimate.expected_checkpoints` (optional; no producer since the 2026-10-22 estimation rewrite, so it stays `[PENDING]` unless the human sets it) |
 | Planned review slices | {… or `[PENDING]`} | `sdd/{change}/entry` — number of `review_slices` entries |
 | **Elapsed calendar time, tiering go-ahead → merge** | {… or `[PENDING]`} | `sdd/{change}/actuals` — `total_wall_clock_hours`. Includes interruption gaps. Right edge is the merge-commit committer timestamp, NOT archive: post-merge archive-authorization lag is bookkeeping and does not count as development time. Mark the value **reconstructed** rather than measured when the record says so. |
 | **Human checkpoints realized (same boundary)** | {… or `[PENDING]`} | `sdd/{change}/actuals` — `checkpoint_count`. One unit per distinct human round-trip reply. Note the durable-vs-reconstructed split the record discloses in prose. |

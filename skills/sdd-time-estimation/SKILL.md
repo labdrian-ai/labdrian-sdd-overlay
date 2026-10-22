@@ -31,7 +31,11 @@ Load before a prototyper spike, a shaper handoff (`estimates[]`), a builder unit
 
 ## Execution Steps
 
-1. List the pieces (behaviors, files, tests, fixtures, docs). 2. Place the package in the reference class; give a lines range. 3. Split what exceeds a slice. 4. Shaper: minutes, wide, `n=0`. 5. Write basis and confidence beside every range.
+1. List the pieces (behaviors, files, tests, fixtures, docs).
+2. Place the package in the reference class; give a lines range.
+3. Split what exceeds a slice.
+4. Shaper: minutes, wide, `n=0`.
+5. Write basis and confidence beside every range.
 
 ## Output Contract
 

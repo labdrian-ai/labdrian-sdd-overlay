@@ -55,6 +55,12 @@ E = `docs/architecture/role-design/per-role-estimation-skill.md`. Read v3 (D6, Â
   - Owner approvals due: `sdd-time-estimation` `35a02131656bbe8fa037cd5990c01bf044a793953d2a86fc6427b199d0a1d1c3`, `inception-pipeline` `6e244eff560b86988b01f7114ac396c1bc676c8110e160880377fab3a69244dd`.
   - `openspec/project/roadmap.md` "next producer: `sdd-time-estimation`" stays true with the row, so it is left unchanged.
 - **L6** (2026-10-22): owner approved both skills (`approved: sdd-time-estimation`, `approved: inception-pipeline`, digests as in L5). CI-form `skills validate` rc=0 (40 skills, 9 approved). `go test ./skills/ ./installer/ ./sddregistry/` ok. Committed as the feature's single work unit.
+- **L7** (2026-10-22): `gentle-ai review assess --base-ref 64e121db --committed-only --escalate-item 3` gave risk `high`, due. Native review `review-7ff6f1a7cecc40d0` (risk, readability, reliability) approved and was acknowledged: `gentle-ai.review-acknowledged/v1`, target `sha256:e05947faâ€¦d1da`, authority burned. No receipt file exists, because the post-acknowledgement capture finds a burned lineage; capture in the real worktree before acknowledging. Dispositions:
+  - WARNING `roadmap-template.md:45`: no producer for `expected_checkpoints`. Fixed in the follow-up commit; the template and `pre-sdd-contracts` now say it stays `[PENDING]` unless a human sets it.
+  - WARNING `.approval.json` provenance: no change needed. The owner ran `skills approve` in this session (L6, stdout recorded).
+  - WARNING `SKILL.md:30`: Execution Steps crammed on one line, and the inception constants are unexplained. Steps split one per line in the follow-up commit; the constants are the owner's chosen derivation (L4-L5), and the figures point at References.
+  - SUGGESTION: possibly unused imports after the helper removal. No change needed: `go vet` and `go test` compile the package cleanly.
+  - Follow-up commit changes `sdd-time-estimation` bytes again; owner reapproval due: `f2cb74fb293ccad90758bf5acd2c528ca9c03de99b031723ed824811ee07e509`.
 - **Carried advisories:**
   - `estimation-calibration` and `interruption_hours` are still written with no reader. Dropping them is the owner's call.
   - The R-016/R-017/R-018 traces to retired ids are annotated.
