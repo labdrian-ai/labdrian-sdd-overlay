@@ -1,0 +1,96 @@
+# Per-role design: sweeper (designed from zero) — DRAFT for owner approval
+
+Method: no legacy agent exists, so every element below cites repo history (ledgers `odd/tasks/`, `openspec/changes/archive`, git, memory notes) or an owner rule, else it is in "Considered and cut". Ladder: `skills/_shared/minimalism-contract.md:12-26`. Fixed: 6-line core prefix (`per-role-design-v2.md:49-54`) + a ≤4-line delta; closed vocabulary and `RoleHandoff` unchanged (`engine/roles/roles.go:17-26`, `handoff.go:57-78`); estimator is a skill, not an agent. Catalog text: sweeper = "loose ends: dead code, stale comments, and leftover scaffolding", optional (`roles.go:77-82`, skippable `:113-117`, `:131-151`). Paths are repository-relative; web sources fetched 2026-10-22.
+
+## 1. Demonstrated need (what actually slipped through)
+
+Counting distinct review-finding ids by name class (ids like `R2-001` carry no class and are excluded, so the class counts are lower bounds):
+
+| Source | Distinct ids | Leftover class (`stale\|orphan\|dead\|unused\|leftover\|stray`) | Duplication (`dup`) | Comment/doc presentation (`comment\|doc\|wrap\|reflow`) |
+|---|---|---|---|---|
+| `odd/tasks/consolidation-phase9.md` (Phase 9, batches 1-54) | 518 | 48 (9%) | 36 (7%) | 75 (14%) |
+| `openspec/changes/archive/**/review-receipts/*.json` | 194 | 17 (9%) | — | — |
+
+Classes, each with the evidence that it happened here:
+1. **Stale prose naming something the change removed or renamed** (≈25 of the 48): comments "that apologised for a `Validate` that is gone", found "already resolved on main" one batch later (`consolidation-phase9.md:353`); a test comment naming a deleted shell function (`:1109`); a guard comment naming the wrong test file (`:1025`); `R2-stale-name`, `R2-stale-test-names`, `R2-stale-hooks-ref`, `R2-stale-line-ref`, `R3-stale-failure-cases-ref` (`:340`); a doc comment citing a transient task id "3b.8" and the receipt finding that test comments cite transient review ids (`openspec/changes/archive/2026-09-07-union-retrieval/judgment/ledger-pr5-round1.md:47-51`; `…/2026-09-21-procedural-memory-lifecycle/review-receipts/review-6353816f626756f1.review-state.json:259`).
+2. **Dead code** (≈12): an unused helper that passed the writer and the review and failed CI staticcheck after PR #530 merged (`:204`); `var _` import keepers (`:331`); a dead `Itoa` round-trip proven by a surviving mutant (`:1238`); `R2-dead-helper` (`:1040`), `R2-dead-parse-wrapper` (`:1268`), `R2-test-dead-var` (`:1222`), `R2-dead-runner-port` (`:1142`, transitional wiring dead for exactly one commit); a dead EXPORTED matcher "left exported and unmodified … zero callers" (`ledger-pr5-round1.md:39-45`); three shell variables assigned and never read, hidden until each module was linted alone (`git show 3161f543`). Today's residue, measured: `deadcode -test ./...` reports 2 unreachable exported functions in `engine` (`settings/projection.go:109 ProjectionHookEntries`, `skills/approval_write.go:17 BaselineLintDecision`; `rg` finds no caller), 0 in the other 10 modules.
+3. **Stale rows in config/manifests** : `R3-manifest-stale-rows`; seven `overlay.manifest` rows for files "earlier refactors deleted" survived several batches until `2f2666d2` (2026-10-16). No CI step checks that a manifest row exists on disk (`ci.yml:125-127` compares registry vs manifest only).
+4. **Scaffolding and scratch left in the tree**: a built binary left under `tools/*/archive-anchor-gate`, fixed by a `.gitignore` line (`…/2026-09-13-pi-package-hardening/verify-report.md:256`); an orphan untracked `engine/goal/` copy in the primary checkout that corrupted an evidence search (`odd/tasks/shaper-handoff-contract.md:179`); 5 stale worktrees and 3 orphan branches pruned in C2 (`consolidation-phase9.md:25,110`); a scratchpad worktree that broke the review stop-hook (memory `no-worktrees-under-scratchpad`).
+5. **False positives are part of the record**: "`path` is still used in the error message, so it is not dead code" (`:308`); `R2-unused-deps-param` had three uses (`:567`); `R2-duplicate-env-read` was already deleted (`:419`). Any sweep must prove "dead" the way the ledger does, by evidence, and record "live" findings.
+
+Cost today: these are found by the reviewer's readability lens and fixed in fix rounds; the owner's complaint is the rounds, not the defects: batch 18 took 4 extra rounds, ≈1.5 h, with no product defect (memory `resolve-every-review-finding`), and verification, not code, dominated batches 40-41 (memory `lean-verification-per-round`). A sweep before review removes the ≈9% leftover-class findings from round 1; it does nothing for the 7% duplication and 14% presentation findings (polisher/builder). That bounds the sweeper's value: real, modest, conditional. Hence optional with a trigger, never a ritual.
+
+Deterministic first (rungs 2-4) vs agent: class 2 unexported → staticcheck U1000 (already blocking in CI, 0 findings today); class 2 exported/unreachable → `deadcode -test` (installed; CI runs it without `-test` and informational, see §2); shell → shellcheck per module (CI runs it `|| true`, `ci.yml:23-24`); class 3 → a path-existence loop over `overlay.manifest` (rung 5, absent today); class 4 → `git status --porcelain --untracked-files=all` and `git worktree prune` (rung 2, parent-side); class 1 → `rg -w` of each deleted/renamed name finds the candidates (rung 2), but deciding whether a hit is stale and rewording it is the only genuinely LLM work. The sweeper exists for class 1 plus the judgment left over from classes 2-4.
+
+## 2. Detector inventory (verified in CI config and by non-mutating local runs)
+
+- CI (`.github/workflows/ci.yml`): gofmt (`:88-90`), `go vet` (`:92-94`), staticcheck v0.7.0 (`:96-98`) blocking in every Go job; `deadcode@v0.48.0` informational, `continue-on-error`, no `-test`, prints a count to the step summary (`:100-112`, `:381-393`); shellcheck `|| true` (`:23-24`); `skills validate --registry --manifest --source-root` (`:125-127`); fixture/entry-contract/actuals validators (`:146-186`, `:235`). No markdown lint, no link checker (none configured, none installed).
+- Local: `staticcheck`, `deadcode` installed (`~/go/bin`); `golangci-lint`, `gofumpt`, `goimports`, `markdownlint`, `lychee`, `vale`, `misspell`, `govulncheck` absent. Runs on this worktree: gofmt 0 files; staticcheck 0 in all 11 modules; deadcode without `-test`: engine 113 lines, longterm-mem 42, tui 3 (test-support packages such as `enginetest`, `capabilitytest`); with `-test`: engine 2, others 0. The CI step therefore reports ≈113 lines of noise for 2 real candidates, which is why it is informational and unread.
+- Overlay runner: `bin/labdrian-overlay deterministic-checks` builds `tools/deterministic-check-runner` (gofmt, vet, staticcheck blocking; deadcode warning-only "amended R-016"; `check` read-only, `normalize` mutating; `main.go:637-649`). No skill references it today (`rg` over `skills/`, `docs/`, `README.md`: none).
+- `engine/skills/lint.go:289-376`: SKILL.md files only (frontmatter, body budget, banned shell utilities, home-path leak, incident-log shape). Not a code detector.
+- Left for LLM judgment: (a) stale prose at the `rg` hits of removed/renamed names; (b) exported unreachable symbols: delete vs keep as API (Task Size item 3, parent decides); (c) scaffolding a detector cannot see (placeholder branches still reachable, transitional wiring like `R2-dead-runner-port`); (d) deadcode is conservative for reflection/interfaces and unsound only for assembly and `go:linkname` (go.dev/blog/deadcode), neither used here (`rg go:linkname`: 0; `*.s`: 0), so its `-test` output is a safe candidate list.
+
+## 3. Design
+
+**Trigger (parent-side, deterministic, seconds; the sweeper launches only if one fires).** After the builder's work-unit commit, with `base` = the unit's parent commit:
+- T1 names: `git diff --diff-filter=DR --name-only base..HEAD` non-empty, or the diff removes a top-level declaration (`^-(func|type|var|const) `, shell `^-name() {`), AND `rg -w <name>` finds hits outside the diff's files. Evidence: class 1 and class 3 above; memory `consumer-impact-rule` ("do not touch X" must never mean "do not read X"); `skills/systemic-issue-triage/SKILL.md:28` (retiring a verb: grep its user-facing string repo-wide).
+- T2 detectors: lines of `deadcode -test ./...`, `staticcheck ./...` (per module) and `shellcheck bin/lib/*.sh` on HEAD that are not in the same run on `base` (base = a `mktemp -d` copy, as the ODD differential check already does, `~/.claude/CLAUDE.md:582`). Evidence: class 2; `:204` (staticcheck caught after merge); the "deadcode ratchet" the triage skill already names (`SKILL.md:29`).
+- T3 tree: `git status --porcelain --untracked-files=all` non-empty after the commit. Evidence: class 4.
+Nothing fires → no sweeper record at all: builder → polisher/reviewer, which the chain allows (`roles.go:131-151`). This snippet (≈10 shell lines) lives in the orchestrator-run `skills/sweeper/SKILL.md` within the lint budget (`engine/skills/lint.go:42-44`), rung 5; the runner gains nothing (rung 6, no need).
+
+**Scope (challenges v1's "edit only files already in that diff", `per-role-design-draft.md:128-129,136`).** Four of the recorded leftovers lived OUTSIDE the diff that created them: the exported matcher "left exported and unmodified" (`ledger-pr5-round1.md:41-42`), the manifest rows of files deleted by earlier refactors (`2f2666d2`), the comments in other files apologising for the renamed `Validate` (`:353`), the test comment naming a function deleted elsewhere (`:1109`). Diff-only scope misses the main class by construction. Scope = the unit's diff + the T1 hit files + the T2 new lines + the T3 paths, listed in the prompt. Not the whole repository: pre-existing debt is a builder unit of its own (shaped and estimated), never a sweep.
+
+**Shared code (Task Size high-risk item 3, `~/.claude/CLAUDE.md:535,537`; `AGENTS.md:473,475`).** The sweeper never deletes an exported symbol, CLI verb or flag, config key, manifest row, or published export, even with zero callers in all 11 modules (today's two in `engine`): it reports each as a finding with its `rg` evidence; the parent decides, in its own commit with a Risk line and the verifier that item 3 fires (`CLAUDE.md:518`). Unexported dead code, `var _` keepers, stray files and stale prose carry `Risk: none`.
+
+**Behaviour-preservation proof (reuses the ODD rules, no new mechanism).** Before editing: the touched packages' tests must be green (memory `lean-verification-per-round`: fix rounds test touched packages only); red before, not named in `## Known environmental failures`, → `blocked`, no sweep. After: touched packages' tests, `go build ./...`, `deadcode -test` and `staticcheck` on the touched modules, then the suite once (`CLAUDE.md:533`: focused test and suite, once each). CLI output is pinned by goldens in this repository, so the differential check (`CLAUDE.md:582`) is required only when a sweep touches code a command shares. **Red after a deletion** = the symbol was live (test, interface satisfaction, build tag): restore that hunk, keep the rest, record `<symbol>: live, proved by <test>`, exactly as the ledger does (`:308`, `:567`). Never edit a test, a golden or an assertion to get green (v1 rule kept; `systemic-issue-triage/SKILL.md:31` "test taught to agree").
+
+**Output.** One `chore(sweep): …` commit or none; the handoff needs no new vocabulary: `context.summary` lists every candidate as `removed | corrected | live (<proof>) | item-3 finding`; `evidence[]` = the commit and the detector outputs as files with digests (`handoff.go:36-43`). "Nothing to sweep" when launched = `completed`, no commit, every candidate `live` or `current` with proof. Scratch outside the worktree is reported, never deleted (`CLAUDE.md:582`).
+
+**Agent file `sweeper.md`.** `model: sonnet` (as builder, `per-role-design-v2.md:34`; minimal-rules prefix ≈$0.06/run, memory `subagent-prefix-experiment-round2`); `tools`: builder's list (`agents/sdd-apply.md:8`) minus `Write`, `mem_save`, `mem_update`: no new files (scaffolding cannot grow, enforced by the harness, not prose) and no side channel: the sweep's only outputs are edits and the envelope. Core prefix (6 lines, `v2:49-54`) + this delta (4 lines):
+```
+Sweep only the candidates the prompt lists (detector lines, hits of removed names, stray paths): delete what is dead, correct or delete prose that names what no longer exists, nothing else; behaviour, public names, CLI output, goldens and test assertions stay identical.
+Never delete an exported symbol, verb, flag, config key or manifest row: report it as a finding with its rg evidence.
+Run the touched packages' tests before and after, deadcode -test and staticcheck after, the suite once; a deletion that turns a test red was live: restore it and record the test that proved it.
+Commit the sweep as one chore(sweep) commit or none, and report every candidate as removed | corrected | live | finding; "nothing to sweep" is a valid result.
+```
+**Estimation.** The sweeper does not estimate. The parent sizes the sweep from the trigger counts (T1 hits + T2 lines + T3 paths); a sweep that would exceed the inline unit size (≈100 changed lines, `CLAUDE.md` Writer trigger) is not a sweep but a debt-removal unit the shaper/builder plan with the estimation skill.
+
+## 4. Boundaries
+
+| Neighbour | Sweeper does | Sweeper does not | Why |
+|---|---|---|---|
+| polisher (judgment-day, presentation) | remove or correct prose that is WRONG because its referent is gone | reword prose that is right but unclear; rename for clarity | catalog `roles.go:86`; 14% presentation findings stay the polisher's |
+| reviewer (4 lenses / verifier) | run BEFORE review so round-1 R2 findings shrink | resolve review findings; carried suggestions stay the next batch's first commit (owner carry rule, memory `resolve-every-review-finding`) | review stays the verdict; no loop-until-clean |
+| builder | the consumer side the unit did not look at (T1 hits), detector residue | behaviour, design, duplication (36 ids), tests | builder deletes what its own diff makes dead as part of implementing |
+| `/simplify` (Claude Code bundled skill: "Review the changed code for cleanup opportunities and apply the fixes. Four review agents … reuse of existing helpers, simplification, efficiency, … right level of abstraction", code.claude.com/docs/en/commands, fetched 2026-10-22) | removal only, runtime-neutral, recorded in the handoff | simplification/rewrites (behaviour risk, §6), Claude-Code-only (Codex and Pi are in use, memory `agent-runtimes-in-use`) | not used by the chain |
+
+## 5. Considered and cut (rung)
+
+- A `sweep-report` payload kind, finding schema or evidence vocabulary (v1 `draft.md:127,135`): rung 6, no consumer; `context.summary` + existing `Evidence` suffice (v2 §3 rule).
+- Running the sweeper on every unit: no evidence of value where T1-T3 are silent; the chain's own optionality (`roles.go:113-117`) is the mechanism.
+- Diff-only edit scope (v1): refuted by four out-of-diff leftovers (§3 Scope).
+- The sweeper as the home of carried review suggestions (v1 `draft.md:130`): the owner's carry rule already assigns them to the builder's next batch; most are presentation (polisher class).
+- Duplication hunting: 36 ids, but it is design/readability (polisher, reviewer R2), and merging code changes behaviour risk.
+- Extending `deterministic-check-runner` with the trigger, or an `engine` verb: rung 6; ≈10 shell lines in the skill do it (rung 5). Revisit only if the snippet drifts across runtimes.
+- Opus or a second model: deletions are detector-listed; the judgment residue is small; no failure recorded that sonnet caused.
+- A per-project `simplify` skill that Claude Code runs before each commit (code.claude.com/docs/en/skills.md: "Claude Code's commit instructions tell Claude to run it right before each commit, except for changes to docs or tests"; bundled ones do not count): Claude-Code-only and outside the handoff chain; rung 3 on one runtime, not a chain mechanism.
+- Markdown/link linting: no incident recorded; nothing installed; YAGNI.
+- Memory saves by the sweeper: findings travel in the handoff; the parent saves what matters.
+
+## 6. External practice (only what changed the design)
+
+- Go `deadcode` (A. Donovan, go.dev/blog/deadcode, 2023-12-12; verified-in-source): RTA from `main` roots; `-test` includes test mains; sound for dynamic calls and conservative for reflection; unsound only for assembly and `go:linkname`. → T2 uses `-test` (turns 113 noise lines into 2 candidates); `deadcode -test` output is a safe deletion list here.
+- staticcheck `unused` rules (raw.githubusercontent.com/dominikh/go-tools/master/unused/unused.go; verified-in-source): "(1.2) exported functions (but not methods!)", exported types/vars/consts count as used. → U1000 (already blocking) cannot see exported dead code; `deadcode -test` is the detector for class 2 exported, and item 3 governs the deletion.
+- Meta SCARF (engineering.fb.com/2023/10/24/data-infrastructure/automating-dead-code-cleanup/, 2023-10-24; verified): static + runtime analysis at symbol level; deletions proposed as change requests "for engineers to review"; auto-merge only where confidence is high; "False-positives caught by engineers during code review are triaged and used to improve the analysis"; "these deletions can make it to production". → candidates from tools, deletion visible as its own commit to the reviewer role, false positives recorded as `live` evidence; no auto-merge.
+- CodeScene, "Refactoring vs Refuctoring" (codescene.com whitepaper, 2024-01-09; industry report, verified-in-source PDF): out-of-the-box LLM refactorings functionally correct in 37% of cases (JS/TS, tests as oracle); observed failures "drops entire branches", "inverts boolean logic". → removal-only mandate, no rewrites; tests + goldens as the oracle; revert-on-red.
+- RefactorBench (arXiv 2503.07832, ICLR 2025, 2025-03-10; abstract verified): agents solve 22% of 100 multi-file refactoring tasks vs 87% for a human; failure mode: tracking past actions. → the candidate list is computed by tools and handed in the prompt; one pass; no open-ended "find anything to clean".
+- Inferred, not design-changing: Midolo et al. (arXiv 2601.13139, 2026-01-19) report GPT-4o refactorings generally behaviour-preserving with lower readability, consistent with keeping presentation out of the sweep.
+
+## 7. Open decisions (one line each)
+
+1. Make the CI deadcode step `-test` and ratchet it (new lines vs base fail): turns T2 into a gate; a ≈5-line `ci.yml` change, item 5 (delivery), owner's call.
+2. Today's two exported unreachable functions in `engine`: delete (item 3, own commit) or keep as API.
+3. The sweeper commits its own `chore(sweep)` commit (sequential, recommended) or hands the diff to the parent (v2 parallel-writer rule).
+4. Manifest path-existence check (rung 5, CI): a separate small unit, not the sweeper.
+
+Not verified: platform enforcement of the `tools` allowlist (v2 §6); the local `deadcode` binary's version vs CI's v0.48.0 (counts above are local); `/simplify`'s four-agent behaviour is docs text, not run here; the trigger snippet is a design, not yet written or timed.
