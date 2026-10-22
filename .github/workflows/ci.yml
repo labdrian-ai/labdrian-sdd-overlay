@@ -500,3 +500,32 @@ jobs:
       - name: Test
         working-directory: identity
         run: go test ./... -cover
+
+  test-telemetry:
+    name: Telemetry Cost Baseline
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: telemetry/go.mod
+
+      - name: Gofmt
+        working-directory: telemetry
+        run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+
+      - name: Vet
+        working-directory: telemetry
+        run: go vet ./...
+
+      - name: Staticcheck
+        working-directory: telemetry
+        run: go run honnef.co/go/tools/cmd/staticcheck@v0.7.0 ./...
+
+      - name: Test
+        working-directory: telemetry
+        run: go test -count=1 ./... -cover

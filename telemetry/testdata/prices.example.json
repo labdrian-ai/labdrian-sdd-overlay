@@ -1,0 +1,9 @@
+{
+  "unit": "usd_per_million_tokens",
+  "models": {
+    "z-sonnet": {"input": 1000, "cache_read": 2000, "cache_write": 3000, "output": 4000},
+    "a-haiku": {"input": 1000, "cache_read": 2000, "cache_write": 3000, "output": 4000},
+    "b-gpt": {"input": 1000, "cache_read": 2000, "cache_write": 3000, "output": 4000},
+    "c-gpt": {"input": 1000, "cache_read": 2000, "cache_write": 3000, "output": 4000}
+  }
+}
