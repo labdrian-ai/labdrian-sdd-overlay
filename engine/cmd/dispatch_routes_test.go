@@ -22,6 +22,8 @@ func TestRunRoutesEachSubcommandThroughTheProcessItWasHanded(t *testing.T) {
 		{"gate-task", "stderr", "gate-task: warning: --contract-file not provided; no contract is injected into Agent calls\n", nil},
 		{"merge-settings", "stderr", "error: --settings is required\n", []int{1}},
 		{"uninstall-hooks", "stderr", "error: --settings is required\n", []int{1}},
+		{"merge-codex-hooks", "stderr", "error: merge-codex-hooks: --hooks and --hook-command are required\n", []int{1}},
+		{"uninstall-codex-hooks", "stderr", "error: uninstall-codex-hooks: --hooks and --hook-command are required\n", []int{1}},
 		{"status", "stdout", "[FAIL] binary: ", []int{1}},
 		{"prespec", "stderr", "error: prespec requires a verb: rank, lint, readiness, brief\n", []int{1}},
 		{"runtime", "stderr", "error: runtime requires an action\nUsage:\n", []int{1}},

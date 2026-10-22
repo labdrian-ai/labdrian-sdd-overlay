@@ -50,7 +50,7 @@ func runStatus(p process, d deps, args []string) {
 		}
 		return
 	}
-	outcome := statusCore(p.stdout, newStatusService(), status.Request{Home: d.env("HOME"), Cwd: cwd})
+	outcome := statusCore(p.stdout, newStatusService(), status.Request{Home: d.env("HOME"), Cwd: cwd, CodexHome: d.env("CODEX_HOME")})
 	if code := statusExitCode(outcome); code != 0 {
 		p.exit(code)
 	}

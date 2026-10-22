@@ -22,6 +22,10 @@ func run(p process, d deps, args []string) {
 		runMergeSettings(p, rest)
 	case "uninstall-hooks":
 		runUninstallHooks(p, rest)
+	case "merge-codex-hooks":
+		runCodexHooks(p, rest, false)
+	case "uninstall-codex-hooks":
+		runCodexHooks(p, rest, true)
 	case "status":
 		runStatus(p, d, rest)
 	case "prespec":

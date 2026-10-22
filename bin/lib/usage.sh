@@ -69,16 +69,23 @@ Commands:
                                    ~/.claude/settings.json. Re-run it after an
                                    upgrade that adds a hook family, then restart Claude Code
                                    to load the hooks.
+                                   If CODEX_HOME (default ~/.codex) already exists, merge
+                                   the Codex SessionStart memory-instructions hook into
+                                   hooks.json, with an atomic .bak backup. Trust it once
+                                   in the Codex TUI (/hooks, key t); config.toml is untouched.
                                    DELIBERATE ACTION — not called by 'apply'. Run once to
                                    activate; the hooks are INERT until this command runs.
                                    Also best-effort installs discovery tools (bat rg fd sd
                                    eza) via Homebrew so agents never hit the silent-empty
                                    footgun. Set OVERLAY_SKIP_TOOL_INSTALL=1 to opt out.
   uninstall-hooks                  Remove our hook entries from ~/.claude/settings.json,
-                                   leaving all other keys and hooks intact.
+                                   and our Codex SessionStart hook from CODEX_HOME/hooks.json
+                                   (default ~/.codex), leaving foreign bytes intact.
   status-hooks                     Read-only check of overlay installation health: binary
                                    present, hooks wired, contract readable. Exits 0 if all
-                                   OK, 1 if any check fails. Safe to run at any time.
+                                   OK, 1 if any check fails, 2 for warnings alone.
+                                   Codex is reported only if its home exists; presence
+                                   does not prove trust (/hooks, key t). Read-only.
   doctor [--fix]                   Read-only host-toolchain preflight: checks go (required),
                                    gentle-ai, bat/rg/fd/sd/eza, the engine binary, and the
                                    skill-registry of the project, which the engine judges

@@ -259,7 +259,7 @@ func TestTheSettingsAreLoadedOnceAndOnlyThePlacesOfTheInstallationAreAsked(t *te
 	if strings.Join(w.settings.loaded, "|") != settingsPath {
 		t.Errorf("settings loaded: %q, want only %q, once", w.settings.loaded, settingsPath)
 	}
-	want := "stat " + binaryPath + "|read " + contractPath + "|read " + registryPath
+	want := "stat " + binaryPath + "|read " + contractPath + "|stat /h/.codex|read " + registryPath
 	if got := strings.Join(w.files.asked, "|"); got != want {
 		t.Errorf("files asked: %q, want %q", got, want)
 	}

@@ -99,6 +99,12 @@ func (f File) Write(doc settings.Document) error {
 	if err != nil {
 		return err
 	}
+	return f.WriteBytes(data)
+}
+
+// WriteBytes publishes already-rendered JSON with the same mode, symlink and atomic backup
+// semantics as Write. Codex's shared hooks document uses it without re-marshaling foreign bytes.
+func (f File) WriteBytes(data []byte) error {
 	target, err := f.resolve()
 	if err != nil {
 		return err

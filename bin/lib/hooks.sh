@@ -40,6 +40,14 @@ cmd_install_hooks() {
     --hook-command "$ENGINE_BINARY" \
     || die "merge-settings failed"
 
+  local codex_home="${CODEX_HOME:-$HOME/.codex}"
+  if [[ -d "$codex_home" ]]; then
+    "$ENGINE_BINARY" merge-codex-hooks \
+      --hooks "$codex_home/hooks.json" --hook-command "$ENGINE_BINARY" \
+      || die "merge-codex-hooks failed"
+    echo "Codex SessionStart hook installed; trust it once in the Codex TUI (/hooks, key t)."
+  fi
+
   echo ""
   echo "install-hooks complete."
   echo "  binary  : $ENGINE_BINARY"
@@ -121,6 +129,13 @@ cmd_uninstall_hooks() {
     --settings "$settings_path" \
     --hook-command "$ENGINE_BINARY" \
     || die "uninstall-hooks failed"
+
+  local codex_home="${CODEX_HOME:-$HOME/.codex}"
+  if [[ -d "$codex_home" ]]; then
+    "$ENGINE_BINARY" uninstall-codex-hooks \
+      --hooks "$codex_home/hooks.json" --hook-command "$ENGINE_BINARY" \
+      || die "uninstall-codex-hooks failed"
+  fi
 
   echo ""
   echo "uninstall-hooks complete."

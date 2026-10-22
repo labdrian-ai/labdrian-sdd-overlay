@@ -130,6 +130,8 @@ type SettingsSource interface {
 type Request struct {
 	Home string
 	Cwd  string
+	// CodexHome overrides Home/.codex, matching Codex's CODEX_HOME convention.
+	CodexHome string
 }
 
 // ScopedBlock is a block that `engine propagate` scopes into the registry of a project, as the
@@ -199,6 +201,9 @@ func (s Service) Check(req Request) Report {
 		checkProjectionHooks(loaded, binaryPath),
 		checkApproveGuard(loaded, binaryPath),
 		CheckContract(contractPath, s.Files),
+	}
+	if check := s.codexHook(req, binaryPath); check != nil {
+		checks = append(checks, *check)
 	}
 	if req.Cwd != "" {
 		checks = append(checks, s.Registry(req.Cwd))

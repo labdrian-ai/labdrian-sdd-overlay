@@ -10,7 +10,7 @@
 # The random goal can only be learned from the bound plan (state outside the repo).
 set -euo pipefail
 
-PROMPT='For this session, identify the memory sources you may read, the project name to use for Engram reads, and the goal id of the plan. Take these from the memory plan instructions you were given, or run labdrian memory plan --instructions. For claude only, also call the Engram mem_context read tool exactly once for that project and say that you did. For codex and pi, do not call a memory read tool. END your reply with exactly one line in this format, replacing the placeholders with the plan values: MEMORY_PLAN_SOURCES=<comma-separated readable sources, alphabetical>; PROJECT=<project name for Engram reads>; GOAL=<goal id of the plan>'
+PROMPT='For this session, list every memory source the plan names after "Read memory only from" (include one even if the session says it is unavailable), the project name to use for Engram reads, and the goal id of the plan. Take these from the memory plan instructions you were given, or run labdrian memory plan --instructions. For claude only, also call the Engram mem_context read tool exactly once for that project and say that you did. For codex and pi, do not call a memory read tool. END your reply with exactly one line in this format, replacing the placeholders with the plan values: MEMORY_PLAN_SOURCES=<comma-separated sources the plan names, alphabetical>; PROJECT=<project name for Engram reads>; GOAL=<goal id of the plan>'
 
 if [[ ${LABDRIAN_LIVE_MEMORY:-} != 1 ]]; then
     printf '%s\n' 'live memory acceptance requires LABDRIAN_LIVE_MEMORY=1 (authorize one runtime per run)' >&2

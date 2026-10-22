@@ -207,7 +207,7 @@ func declaredOnlyClaims(runtime, authDetail string, skills Claim) []Claim {
 		unsupported(Persistence, "Not implemented: no binding between a "+runtime+" session and a workflow is stored."+scope),
 		unsupported(Restart, "Not implemented: a new "+runtime+" session does not re-bind to an on-disk workflow."+scope),
 		unsupported(Authentication, authDetail+scope),
-		unsupported(MemoryEnforcement, "Not implemented: no memory plan is projected into or enforced in a "+runtime+" session."+scope),
+		unsupported(MemoryEnforcement, memoryEnforcementDetail(runtime, scope)),
 		skills,
 	}
 }
@@ -266,4 +266,14 @@ func (d Declaration) clone() Declaration {
 		out.Claims[i] = c
 	}
 	return out
+}
+
+// memoryEnforcementDetail says why memory enforcement is unsupported for a declared-only runtime.
+// Codex now receives the plan as instructions (C23 M12), so it must not say that nothing is
+// projected; it still enforces nothing.
+func memoryEnforcementDetail(runtime, scope string) string {
+	if runtime == "Codex" {
+		return "Not enforced: a SessionStart hook that install-hooks merges into hooks.json projects the memory plan into a Codex session as instructions once the owner trusts it in the Codex TUI, but no hook gates a read and none records evidence (M12b). Proven by an engine hook process, not by a live session."
+	}
+	return "Not implemented: no memory plan is projected into or enforced in a " + runtime + " session." + scope
 }
