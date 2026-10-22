@@ -69,7 +69,7 @@ func run(args []string, stdout, stderr io.Writer, home string) int {
 			fmt.Fprintf(stderr, "%s: %v\n", source.name, err)
 			return 1
 		}
-		fmt.Fprintf(stderr, "%s: files=%d lines=%d calls=%d skipped=%d duplicates=%d unreadable_files=%d\n", source.name, stats.Files, stats.Lines, stats.Calls, stats.Skipped, stats.Duplicates, stats.UnreadableFiles)
+		fmt.Fprintf(stderr, "%s: files=%d lines=%d calls=%d skipped=%d no_id=%d duplicates=%d unreadable_files=%d\n", source.name, stats.Files, stats.Lines, stats.Calls, stats.Skipped, stats.NoID, stats.Duplicates, stats.UnreadableFiles)
 		readable = readable || stats.Read > 0
 	}
 	if !readable {
@@ -128,18 +128,26 @@ func ratio(v *float64, percent bool) string {
 	return fmt.Sprintf("%.0f", *v)
 }
 
+// keepMode says which rows of a section --top leaves in the human output.
+type keepMode int
+
+const (
+	keepAll    keepMode = iota // every row, in key order
+	keepTop                    // the N rows with the most context, then a note counting the rest
+	keepLatest                 // the last N rows (already in key order), with no note
+)
+
 func human(out io.Writer, r telemetry.Report, top int) error {
 	w := tabwriter.NewWriter(out, 0, 4, 2, ' ', tabwriter.AlignRight)
 	sections := []struct {
 		name   string
 		groups []telemetry.Group
-		rank   bool // sort by context, keep the top N
-		latest bool // keep the last N rows (already in key order)
+		keep   keepMode
 	}{
-		{"Summary", []telemetry.Group{r.Summary}, false, false},
-		{"By role", r.ByRole, false, false}, {"By model", r.ByModel, true, false},
-		{"By agent type", r.ByAgentType, true, false}, {"By project", r.ByProject, true, false},
-		{"By source", r.BySource, false, false}, {"By day", r.ByDay, false, true},
+		{"Summary", []telemetry.Group{r.Summary}, keepAll},
+		{"By role", r.ByRole, keepAll}, {"By model", r.ByModel, keepTop},
+		{"By agent type", r.ByAgentType, keepTop}, {"By project", r.ByProject, keepTop},
+		{"By source", r.BySource, keepAll}, {"By day", r.ByDay, keepLatest},
 	}
 	for i, section := range sections {
 		if i > 0 {
@@ -153,7 +161,8 @@ func human(out io.Writer, r telemetry.Report, top int) error {
 		fmt.Fprintln(w, header)
 		rows := append([]telemetry.Group(nil), section.groups...)
 		cut := 0
-		if section.rank {
+		switch section.keep {
+		case keepTop:
 			sort.Slice(rows, func(i, j int) bool {
 				if rows[i].ContextTokens == rows[j].ContextTokens {
 					return rows[i].Key < rows[j].Key
@@ -164,8 +173,10 @@ func human(out io.Writer, r telemetry.Report, top int) error {
 				cut = len(rows) - top
 				rows = rows[:top]
 			}
-		} else if section.latest && len(rows) > top {
-			rows = rows[len(rows)-top:]
+		case keepLatest:
+			if len(rows) > top {
+				rows = rows[len(rows)-top:]
+			}
 		}
 		for _, g := range rows {
 			cost := "n/a"

@@ -8,6 +8,14 @@ Missing default roots are skipped with a stderr note; explicit missing roots
 and no readable source exit 1. Invalid commands/flags exit 2 with usage.
 Stats always go to stderr. Logs are read-only; no network is used.
 
+Each source that is read prints one stats line on stderr, after its name:
+`files=F lines=L calls=C skipped=S no_id=N duplicates=D unreadable_files=U`.
+`skipped` counts lines that are not calls (non-assistant, no usage, synthetic
+model, malformed JSON). `no_id` counts lines that would be calls but carry no
+usable ID (Claude: neither `message.id` nor `uuid`; Pi: neither
+`message.responseId` nor `id`). Such a call cannot be deduplicated, so it is
+left out of the report and counted under `no_id`, not `skipped`.
+
 Human output shows summary, role, model, agent type, project, source, and day.
 Model/agent/project rows rank by context descending, then key ascending;
 `--top` limits those rows and selects the latest N dates. Other rows show all.

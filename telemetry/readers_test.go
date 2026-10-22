@@ -250,6 +250,29 @@ func TestNonAssistantIgnored(t *testing.T) {
 	}
 }
 
+// A line that would be a call but has no usable ID cannot be deduplicated: it
+// is dropped and counted as NoID, never as a duplicate of another such line,
+// while lines that are not calls stay Skipped.
+func TestNoIDCounted(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		read       reader
+		call, noID string
+	}{
+		{"claude", ReadClaude, claude("m", 1), strings.Replace(claude("", 1), `,"uuid":"fallback"`, "", 1)},
+		{"pi", ReadPi, pi("r", ""), strings.Replace(pi("", ""), `"id":"fallback",`, "", 1)},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			root := t.TempDir()
+			fixture(t, root, "p/ts_session.jsonl", tc.noID+tc.noID+`{"type":"user"}`+"\n"+tc.call)
+			calls, s := collect(t, tc.read, root)
+			if len(calls) != 1 || s != (Stats{Files: 1, Read: 1, Lines: 4, Calls: 1, Skipped: 1, NoID: 2}) {
+				t.Fatalf("%+v %+v", calls, s)
+			}
+		})
+	}
+}
+
 func TestUnreadableFile(t *testing.T) {
 	for _, read := range []reader{ReadClaude, ReadPi} {
 		root := t.TempDir()

@@ -93,9 +93,12 @@ jobs:
         working-directory: engine
         run: go vet ./...
 
+      # Built from tools/lint, whose go.mod and go.sum pin the version (see its README).
       - name: Staticcheck
         working-directory: engine
-        run: go run honnef.co/go/tools/cmd/staticcheck@v0.7.0 ./...
+        run: |
+          go build -C "$GITHUB_WORKSPACE/tools/lint" -o "$RUNNER_TEMP/staticcheck" honnef.co/go/tools/cmd/staticcheck
+          "$RUNNER_TEMP/staticcheck" ./...
 
       - name: Deadcode (informational)
         working-directory: engine
@@ -374,9 +377,12 @@ jobs:
         working-directory: tui
         run: go vet -tags backend ./...
 
+      # Built from tools/lint, whose go.mod and go.sum pin the version (see its README).
       - name: Staticcheck
         working-directory: tui
-        run: go run honnef.co/go/tools/cmd/staticcheck@v0.7.0 -tags backend ./...
+        run: |
+          go build -C "$GITHUB_WORKSPACE/tools/lint" -o "$RUNNER_TEMP/staticcheck" honnef.co/go/tools/cmd/staticcheck
+          "$RUNNER_TEMP/staticcheck" -tags backend ./...
 
       - name: Deadcode (informational)
         working-directory: tui
@@ -424,9 +430,12 @@ jobs:
         working-directory: longterm-mem
         run: go vet ./...
 
+      # Built from tools/lint, whose go.mod and go.sum pin the version (see its README).
       - name: Staticcheck
         working-directory: longterm-mem
-        run: go run honnef.co/go/tools/cmd/staticcheck@v0.7.0 ./...
+        run: |
+          go build -C "$GITHUB_WORKSPACE/tools/lint" -o "$RUNNER_TEMP/staticcheck" honnef.co/go/tools/cmd/staticcheck
+          "$RUNNER_TEMP/staticcheck" ./...
 
       - name: Test
         working-directory: longterm-mem
@@ -458,9 +467,12 @@ jobs:
         working-directory: archguard
         run: go vet ./...
 
+      # Built from tools/lint, whose go.mod and go.sum pin the version (see its README).
       - name: Staticcheck
         working-directory: archguard
-        run: go run honnef.co/go/tools/cmd/staticcheck@v0.7.0 ./...
+        run: |
+          go build -C "$GITHUB_WORKSPACE/tools/lint" -o "$RUNNER_TEMP/staticcheck" honnef.co/go/tools/cmd/staticcheck
+          "$RUNNER_TEMP/staticcheck" ./...
 
       - name: Test
         working-directory: archguard
@@ -493,9 +505,12 @@ jobs:
         working-directory: identity
         run: go vet ./...
 
+      # Built from tools/lint, whose go.mod and go.sum pin the version (see its README).
       - name: Staticcheck
         working-directory: identity
-        run: go run honnef.co/go/tools/cmd/staticcheck@v0.7.0 ./...
+        run: |
+          go build -C "$GITHUB_WORKSPACE/tools/lint" -o "$RUNNER_TEMP/staticcheck" honnef.co/go/tools/cmd/staticcheck
+          "$RUNNER_TEMP/staticcheck" ./...
 
       - name: Test
         working-directory: identity
@@ -522,9 +537,12 @@ jobs:
         working-directory: telemetry
         run: go vet ./...
 
+      # Built from tools/lint, whose go.mod and go.sum pin the version (see its README).
       - name: Staticcheck
         working-directory: telemetry
-        run: go run honnef.co/go/tools/cmd/staticcheck@v0.7.0 ./...
+        run: |
+          go build -C "$GITHUB_WORKSPACE/tools/lint" -o "$RUNNER_TEMP/staticcheck" honnef.co/go/tools/cmd/staticcheck
+          "$RUNNER_TEMP/staticcheck" ./...
 
       - name: Test
         working-directory: telemetry

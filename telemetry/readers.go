@@ -25,19 +25,23 @@ type Call struct {
 // Stats counts JSONL files, files read to the end, physical lines, emitted
 // calls, unusable lines, and repeated IDs. UnreadableFiles counts files that
 // could not be opened or completely read (they emit nothing) and directories
-// that could not be listed. Non-assistant and usage-free lines count as
-// Skipped; meta files do not count.
+// that could not be listed. Lines that are not calls (non-assistant,
+// usage-free, synthetic or malformed) count as Skipped. A line that would be a
+// call but has neither of the source's IDs cannot be deduplicated: it emits
+// nothing and counts as NoID instead. Meta files do not count.
 type Stats struct {
-	Files, Read, Lines, Calls, Skipped, Duplicates, UnreadableFiles int64
+	Files, Read, Lines, Calls, Skipped, NoID, Duplicates, UnreadableFiles int64
 }
 
-// ReadClaude keeps the last occurrence of each message ID (or UUID) per file.
+// ReadClaude keeps the last occurrence of each message ID (or UUID) per file;
+// lines with neither are dropped and counted as NoID.
 func ReadClaude(root string, emit func(Call)) (Stats, error) {
 	return readLogs(root, "claude", emit)
 }
 
 // ReadPi keeps the first occurrence of each response ID across root; lines
-// without one fall back to their line ID, deduplicated within their file.
+// without one fall back to their line ID, deduplicated within their file, and
+// lines with neither are dropped and counted as NoID.
 func ReadPi(root string, emit func(Call)) (Stats, error) {
 	return readLogs(root, "pi", emit)
 }
@@ -65,6 +69,8 @@ type entry struct {
 	local     bool // id is a Pi line ID, unique only within its file
 }
 
+// parse reports whether line is a call. The entry's id is empty when the line
+// carries none of the source's IDs, so the caller cannot deduplicate it.
 func parse(line []byte, source string) (entry, bool) {
 	var r record
 	if !bytes.Contains(line, []byte(`"usage"`)) || json.Unmarshal(line, &r) != nil || r.Message.Usage == nil {
@@ -109,7 +115,7 @@ func parse(line []byte, source string) (entry, bool) {
 			}
 		}
 	}
-	return entry{c, r.Timestamp, id, local}, id != ""
+	return entry{c, r.Timestamp, id, local}, true
 }
 
 func agentType(path string) string {
@@ -184,9 +190,10 @@ func readLogs(root, source string, emit func(Call)) (Stats, error) {
 	return stats, err
 }
 
-// readFile parses one log, letting keep store each parsed row and report
-// whether it repeated an ID. It returns false when the file cannot be read to
-// the end; its rows are then dropped so a file counts wholly or not at all.
+// readFile parses one log, letting keep store each call that has an ID and
+// report whether it repeated one; a call without an ID never reaches keep. It
+// returns false when the file cannot be read to the end; its rows are then
+// dropped so a file counts wholly or not at all.
 func readFile(r io.Reader, source string, keep func(map[string]entry, entry) bool, stats *Stats) (map[string]entry, bool) {
 	rows := make(map[string]entry)
 	reader := bufio.NewReader(r)
@@ -196,6 +203,8 @@ func readFile(r io.Reader, source string, keep func(map[string]entry, entry) boo
 			stats.Lines++
 			if e, ok := parse(line, source); !ok {
 				stats.Skipped++
+			} else if e.id == "" {
+				stats.NoID++
 			} else if keep(rows, e) {
 				stats.Duplicates++
 			}
