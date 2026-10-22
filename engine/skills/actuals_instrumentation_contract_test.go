@@ -29,8 +29,7 @@ const (
 	// Section anchors for the marker pins below. A pinned marker only counts when it
 	// lives in the section that owns it, so relocating it into an unrelated section
 	// fails the gate instead of passing on a whole-file substring hit.
-	timeEstimationHardRulesHeading      = "## Hard Rules"
-	timeEstimationOutputContractHeading = "## Output Contract"
+	timeEstimationHardRulesHeading = "## Hard Rules"
 )
 
 // TestActualsInstrumentationContract is the committed content gate (design D3) for the
@@ -120,80 +119,6 @@ func TestActualsInstrumentationContract(t *testing.T) {
 		}
 		if strings.Contains(schema, "LOWER BOUND") {
 			t.Fatal("checkpoint_count description must drop the structural LOWER BOUND framing")
-		}
-	})
-
-	t.Run("R009_calibration_excludes_calendar_time", func(t *testing.T) {
-		skill := readRepoFile(t, repoRoot, timeEstimationSkillRelPath)
-		// The REQUIRE pins are scoped to the CALIBRATION list item itself, matching
-		// R019_calibration_absent_numerators_fallback below. A positive pin checked
-		// whole-file is satisfied by the same wording appearing anywhere in the
-		// document, so relocating a clause out of the CALIBRATION rule into an
-		// unrelated section would keep this gate green while the rule it guards no
-		// longer says it.
-		hardRules := markdownSectionBody(t, skill, timeEstimationHardRulesHeading)
-		rule := markdownListItemContaining(t, hardRules, timeEstimationHardRulesHeading, "CALIBRATION")
-		for _, want := range []string{
-			"NEVER an input to the agent-compute-time baseline",
-			"interruption-clean residual samples with positive `checkpoint_count`",
-			"`(total_wall_clock_hours − sum(phase hours)) / checkpoint_count`",
-			"Exclude any residual known or narrated to include a session, rate-limit, or provider interruption",
-			"never subtract a guessed interruption amount",
-			// D4: boundary co-move, archive → merge (task 4.1). Previously
-			// unpinned entirely — reverting "merge" to "archive" on this line
-			// left the whole suite green (verify round 3, W4).
-			"tiering-go-ahead to merge, including interruption gaps",
-		} {
-			if !strings.Contains(rule, want) {
-				t.Fatalf("%s CALIBRATION rule must contain %q, got %q", timeEstimationHardRulesHeading, want, rule)
-			}
-		}
-		// The FORBID stays whole-file on purpose, for the same reason the schema
-		// FORBID above does: for a negative assertion, whole-file scope is strictly
-		// stronger than list-item scope. The retired boundary phrase must not
-		// reappear ANYWHERE in the skill, not merely outside this one rule.
-		for _, forbidden := range []string{
-			"and `total_wall_clock_hours`, build a per-phase agent-compute-time baseline",
-			"tiering-go-ahead to archive",
-		} {
-			if strings.Contains(skill, forbidden) {
-				t.Fatalf("CALIBRATION rule must not retain %q", forbidden)
-			}
-		}
-	})
-
-	t.Run("R019_calibration_absent_numerators_fallback", func(t *testing.T) {
-		// R-019 mandates implementation_hours/review_gate_hours/post_review_fix_hours stay
-		// unpopulated until a durable source exists, which starves this skill's own compute-time
-		// numerators — the CALIBRATION rule builds its baseline from exactly these three fields
-		// "ONLY" (R009 above). Scoped to the CALIBRATION list item itself, not the whole file, so
-		// a substring hit elsewhere in Hard Rules cannot satisfy this gate.
-		skill := readRepoFile(t, repoRoot, timeEstimationSkillRelPath)
-		hardRules := markdownSectionBody(t, skill, timeEstimationHardRulesHeading)
-		rule := markdownListItemContaining(t, hardRules, timeEstimationHardRulesHeading, "CALIBRATION")
-		for _, want := range []string{
-			"WHEN one or more of these three fields is absent under R-019",
-			"the record supplies NO compute-time numerator for the affected phase",
-			"never substitute `total_wall_clock_hours` or any other elapsed-time figure in its place",
-			"the per-unit compute-time rate cannot be computed, so confidence falls back to the disclosed bootstrap defaults / qualitative scaling regardless of calibration `n`",
-		} {
-			if !strings.Contains(rule, want) {
-				t.Fatalf("%s CALIBRATION rule must contain %q, got %q", timeEstimationHardRulesHeading, want, rule)
-			}
-		}
-	})
-
-	t.Run("R010_R011_delivery_window_formula_shape", func(t *testing.T) {
-		skill := readRepoFile(t, repoRoot, timeEstimationSkillRelPath)
-		for _, want := range []string{
-			"expected checkpoints × round-trip latency + interruption allowance",
-			"does not scale with checkpoint count",
-			"no interruption-clean residual sample exists",
-			"fixed, explicitly-disclosed buffer marked \"uncalibrated\"",
-		} {
-			if !strings.Contains(skill, want) {
-				t.Fatalf("Output item 6 must contain %q", want)
-			}
 		}
 	})
 
@@ -496,6 +421,13 @@ func TestActualsInstrumentationContract(t *testing.T) {
 			"elapsed-calendar-time",
 			"human-confirmation-checkpoint-count",
 			"never summed or averaged into one figure",
+			// The rewritten skill (OD2, 2026-10-22) emits one time unit: the shaper's
+			// `estimates[]` minutes. The rule binds them to agent-compute-time so a
+			// handoff range cannot be read as a calendar ETA or a checkpoint count.
+			// Neither phrase exists in the retired body.
+			"`low_minutes`/`high_minutes`",
+			"agent-compute-time only",
+			"never a calendar ETA",
 		} {
 			if !strings.Contains(rule, want) {
 				t.Fatalf("%s R-001/R-002 rule must contain %q, got %q", timeEstimationHardRulesHeading, want, rule)
@@ -503,13 +435,27 @@ func TestActualsInstrumentationContract(t *testing.T) {
 		}
 	})
 
-	t.Run("R012_actuals_output_separate_labels", func(t *testing.T) {
+	t.Run("inception_row_fills_the_entry_estimate_cache", func(t *testing.T) {
+		// The entry contract requires estimate.planned_range_hours and complexity
+		// (skills/_shared/entry-contract.schema.json); after the rewrite the skill is their
+		// only producer, so its Decision Gates must carry an inception row that states the
+		// derivation instead of leaving inception-pipeline to invent them (owner, 2026-10-22).
 		skill := readRepoFile(t, repoRoot, timeEstimationSkillRelPath)
-		outputContract := markdownSectionBody(t, skill, timeEstimationOutputContractHeading)
-		item := markdownListItemContaining(t, outputContract, timeEstimationOutputContractHeading, "Actuals and Calibration")
-		want := "elapsed-calendar-time, and checkpoint count under separate labels, never blended"
-		if !strings.Contains(item, want) {
-			t.Fatalf("%s Actuals and Calibration item must contain %q, got %q", timeEstimationOutputContractHeading, want, item)
+		gates := markdownSectionBody(t, skill, "## Decision Gates")
+		var row string
+		for _, line := range strings.Split(gates, "\n") {
+			if strings.HasPrefix(line, "| inception |") {
+				row = line
+				break
+			}
+		}
+		if row == "" {
+			t.Fatalf("Decision Gates must have a row starting with %q, got %q", "| inception |", gates)
+		}
+		for _, want := range []string{"`planned_range_hours`", "`complexity`", "`no-actuals n=0`", "pieces"} {
+			if !strings.Contains(row, want) {
+				t.Fatalf("Decision Gates inception row must contain %q, got %q", want, row)
+			}
 		}
 	})
 

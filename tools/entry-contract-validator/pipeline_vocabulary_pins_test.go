@@ -28,7 +28,6 @@ const (
 	sddVerifySkillRelPath     = "skills/sdd-verify/SKILL.md"
 	sddArchiveSkillRelPath    = "skills/sdd-archive/SKILL.md"
 	orchestratorWorkflowPath  = "skills/_shared/sdd-orchestrator-workflow.md"
-	timeEstimationSkillPath   = "skills/sdd-time-estimation/SKILL.md"
 	chainStrategyField        = "chain_strategy"
 	chainStrategyNoneToken    = "none"
 	applyStep2aHeading        = "#### Step 2a: Enforce Review Workload Decision"
@@ -799,86 +798,4 @@ func TestApplyProgressSliceRecordingRuleHasAnOwner(t *testing.T) {
 				orchestratorWorkflowPath, token, sddApplySkillRelPath)
 		}
 	}
-}
-
-var reviewSliceExamplePattern = regexp.MustCompile("`([a-z0-9-]+)` planned ([0-9]+) slices and delivered ([0-9]+)")
-
-// countEntryContractReviewSlices counts the review_slices entries of a change's
-// committed entry contract, searching both the live and the archived change
-// directories.
-func countEntryContractReviewSlices(t *testing.T, change string) (int, string) {
-	t.Helper()
-	root := repoRoot(t)
-	var found string
-	err := filepath.Walk(filepath.Join(root, "openspec", "changes"), func(path string, info os.FileInfo, walkErr error) error {
-		if walkErr != nil || info.IsDir() || found != "" {
-			return nil
-		}
-		if filepath.Base(path) != "entry.json" {
-			return nil
-		}
-		dir := filepath.Base(filepath.Dir(path))
-		if dir == change || strings.HasSuffix(dir, "-"+change) {
-			found = path
-		}
-		return nil
-	})
-	if err != nil {
-		t.Fatalf("walking openspec/changes: %v", err)
-	}
-	if found == "" {
-		t.Fatalf("no committed entry.json found for change %q — the worked example cites a record that does not exist", change)
-	}
-	data, err := os.ReadFile(found)
-	if err != nil {
-		t.Fatalf("read %s: %v", found, err)
-	}
-	var contract struct {
-		ReviewSlices []json.RawMessage `json:"review_slices"`
-	}
-	if err := json.Unmarshal(data, &contract); err != nil {
-		t.Fatalf("decode %s: %v", found, err)
-	}
-	rel, relErr := filepath.Rel(root, found)
-	if relErr != nil {
-		rel = found
-	}
-	return len(contract.ReviewSlices), filepath.ToSlash(rel)
-}
-
-// TestReviewSlicesWorkedExampleReproduces pins sdd-time-estimation's review-slice
-// worked example against the record it cites. The plan side is
-// `len(review_slices)` in that change's entry contract, and the skill's own
-// SINGLE-SAMPLE HONESTY rule demands a figure be reproducible from a cited
-// record — so an example whose plan number disagrees with the contract shows no
-// variance at all, it just misreads one.
-func TestReviewSlicesWorkedExampleReproduces(t *testing.T) {
-	doc := readRepoDoc(t, timeEstimationSkillPath)
-	matches := reviewSliceExamplePattern.FindAllStringSubmatch(doc, -1)
-	if len(matches) == 0 {
-		t.Fatalf("%s carries no `<change>` planned N slices and delivered M worked example", timeEstimationSkillPath)
-	}
-	for _, match := range matches {
-		change, plannedText, deliveredText := match[1], match[2], match[3]
-		planned := mustAtoi(t, plannedText)
-		delivered := mustAtoi(t, deliveredText)
-		actual, source := countEntryContractReviewSlices(t, change)
-		if planned != actual {
-			t.Errorf("worked example claims %s planned %d slices, but %s carries %d review_slices",
-				change, planned, source, actual)
-		}
-		if delivered == planned {
-			t.Errorf("worked example for %s shows no variance (planned %d, delivered %d) — it cannot demonstrate the failure it is cited for",
-				change, planned, delivered)
-		}
-	}
-}
-
-func mustAtoi(t *testing.T, s string) int {
-	t.Helper()
-	var n int
-	if _, err := fmt.Sscanf(s, "%d", &n); err != nil {
-		t.Fatalf("parse %q as an integer: %v", s, err)
-	}
-	return n
 }

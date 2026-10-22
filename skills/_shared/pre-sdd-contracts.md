@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This file defines the persistence contracts, language rule, identifier rule, and registry-block format shared by requirements-from-transcripts, project-manifest, project-architect, roadmap-maker, sdd-time-estimation, and inception-pipeline. Each skill references this file instead of re-deciding these conventions independently.
+This file defines the persistence contracts, language rule, identifier rule, and registry-block format shared by requirements-from-transcripts, project-manifest, project-architect, roadmap-maker, and inception-pipeline. Each skill references this file instead of re-deciding these conventions independently.
 
 Contract bundle version: `2.1.0`. The inception skill, this authority, both schemas, and the deterministic validator MUST remain version-matched. Missing or mismatched bundle assets are a hard stop.
 
@@ -38,10 +38,10 @@ Slug rules:
 | Manifest | `project/{project}/manifest/{context,mission,rules}` | project-manifest |
 | Architecture | `project/{project}/architect/final` | project-architect |
 | Roadmap | `project/{project}/roadmap` | roadmap-maker |
-| Estimate (pre-start) | `sdd/{change}/estimate` | sdd-time-estimation |
+| Estimate (pre-start) | `sdd/{change}/estimate` | none: no longer written (see Estimate Record Shape) |
 | Entry contract | `sdd/{change}/entry` | inception-pipeline |
 | Closure actuals | `sdd/{change}/actuals` | inception-pipeline closure-feedback (ONLY writer) |
-| Estimation calibration | `project/{project}/estimation-calibration` | inception-pipeline closure-feedback |
+| Estimation calibration | `project/{project}/estimation-calibration` | inception-pipeline closure-feedback (no reader since the 2026-10-22 estimation rewrite) |
 | Pipeline state | `sdd/{change}/pipeline-state` | inception-pipeline |
 | SDD initialization | `sdd-init/{project}` | sdd-init |
 | Delivery plan | `delivery/{change}` | inception-pipeline entry assembly |
@@ -69,7 +69,7 @@ EARS-formatted requirement items (R-NNN), each carrying a `scope` enum of `new-c
 
 ### Estimate Record Shape
 
-Two effort ranges — `planned_range_hours` (low/high, agent-compute-time basis) and `human_equivalent_hours` (low/high, secondary complexity/tiering signal only, never the headline) — plus `expected_checkpoints` (count of human-confirmation checkpoints), a human-readable `complexity` assessment, a `confidence` level, and the calibration sample size (`n`) the estimate was built from. See `sdd-time-estimation/SKILL.md` for the full agent-compute-time model.
+Retired 2026-10-22: `sdd-time-estimation` no longer writes `sdd/{change}/estimate`, so no estimate record carries `human_equivalent_hours`, a calibration sample size, or the agent-compute-time hour model. The skill's output (per-package line ranges and the shaper's `estimates[]` minutes) travels in the shaper handoff; see `sdd-time-estimation/SKILL.md`. What remains of the shape is the `estimate` cache inside the entry contract, below.
 
 ### Entry Contract v2 Shape
 
@@ -77,7 +77,7 @@ The entry contract is one closed object with these groups:
 
 - Identity and execution: `contract_version`, `change_name`, `project`, `tier`, `interaction_mode`, and `artifact_store_mode`.
 - Artifact references: `entry`, `requirements`, manifest `context` / `mission` / `rules`, `architecture`, `roadmap`, `estimate`, `sdd_init`, `pipeline_state`, and `delivery`.
-- Estimate cache: planned range, complexity, confidence, confirmation that human review is included, and the optional `expected_checkpoints` count. The richer estimate artifact remains authoritative for human-equivalent hours and calibration sample size. `expected_checkpoints` is the one exception to "the cache stays thin", and it earns it: it is the PLAN side of the only planning quantity with a recorded actual counterpart (`checkpoint_count` in `sdd/{change}/actuals`), measured over the same tiering-go-ahead-to-merge boundary, so a checkpoint variance is computable from the two records alone. Because the `estimate` object is `additionalProperties: false`, its absence was not a thin cache but an active rejection — a producer carrying the field failed the whole contract with exit 5. Optional, so contracts written before it stay valid; the validator additionally enforces a floor of 1, since the tiering go-ahead checkpoint fires on every change.
+- Estimate cache: planned range, complexity, confidence, confirmation that human review is included, and the optional `expected_checkpoints` count. sdd-time-estimation's inception row fills the planned range, complexity and confidence; nothing produces `expected_checkpoints` since the 2026-10-22 retirement, so it is set only when a human gives the count, and no richer estimate artifact backs the cache. `expected_checkpoints` is the one exception to "the cache stays thin", and it earns it: it is the PLAN side of the only planning quantity with a recorded actual counterpart (`checkpoint_count` in `sdd/{change}/actuals`), measured over the same tiering-go-ahead-to-merge boundary, so a checkpoint variance is computable from the two records alone. Because the `estimate` object is `additionalProperties: false`, its absence was not a thin cache but an active rejection — a producer carrying the field failed the whole contract with exit 5. Optional, so contracts written before it stay valid; the validator additionally enforces a floor of 1, since the tiering go-ahead checkpoint fires on every change.
 - Delivery normalization: requested PR strategy, resolved delivery strategy, chaining flag/topology, per-slice review budget, and any approved size exception.
 - Verification inputs: strict-TDD focused/broad commands, ordered requirement-linked review slices, and the expected native `nextRecommended` value.
 
