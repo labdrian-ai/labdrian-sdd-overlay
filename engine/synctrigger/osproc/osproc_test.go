@@ -113,28 +113,56 @@ func TestDetachReturnsWhileTheProgramIsStillRunning(t *testing.T) {
 }
 
 // The program runs in a session of its own, which is what lets it outlive the process group of the
-// caller: it is the leader of a session that is not the caller's.
+// caller: it is the leader of a session that is not the caller's. The program the test detaches
+// must still end with the test, or every run of the suite leaves one behind.
 func TestDetachStartsTheProgramInASessionOfItsOwn(t *testing.T) {
-	dir := t.TempDir()
-	pidFile, release := filepath.Join(dir, "pid"), filepath.Join(dir, "release")
-	program := script(t, `echo $$ > "`+pidFile+`"; while [ ! -e "`+release+`" ]; do sleep 0.02; done`+"\n")
+	pid := 0
+	t.Run("session", func(t *testing.T) {
+		pidFile := filepath.Join(t.TempDir(), "pid")
+		// The program runs while its own script exists: removing the test's directories, however
+		// the test ended, is what ends it.
+		program := script(t, `echo $$ > "`+pidFile+`"; while [ -e "$0" ]; do sleep 0.02; done`+"\n")
 
-	if err := (osproc.Runner{}).Detach(program, nil, logFile(t)); err != nil {
-		t.Fatalf("Detach: %v", err)
-	}
-	defer os.WriteFile(release, nil, 0o644)
+		if err := (osproc.Runner{}).Detach(program, nil, logFile(t)); err != nil {
+			t.Fatalf("Detach: %v", err)
+		}
 
-	pid, err := strconv.Atoi(strings.TrimSpace(waitForFile(t, pidFile)))
-	if err != nil {
-		t.Fatalf("pid: %v", err)
+		var err error
+		pid, err = strconv.Atoi(strings.TrimSpace(waitForFile(t, pidFile)))
+		if err != nil {
+			t.Fatalf("pid: %v", err)
+		}
+		sid, mine := sessionOf(t, pid), sessionOf(t, os.Getpid())
+		if sid == mine {
+			t.Errorf("the program (pid %d) is in session %s, the caller's, want a session of its own", pid, sid)
+		}
+		if pgid, err := syscall.Getpgid(pid); err != nil || pgid != pid {
+			t.Errorf("the program (pid %d) is in process group %d (err %v), want it the leader of one of its own", pid, pgid, err)
+		}
+	})
+	if pid != 0 {
+		assertEnded(t, pid)
 	}
-	sid, mine := sessionOf(t, pid), sessionOf(t, os.Getpid())
-	if sid == mine {
-		t.Errorf("the program (pid %d) is in session %s, the caller's, want a session of its own", pid, sid)
+}
+
+// assertEnded waits for a program this process started and never waited for. Such a program stays
+// a zombie until reaped, and a zombie still answers signals, so ending is proved by reaping it.
+func assertEnded(t *testing.T, pid int) {
+	t.Helper()
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		var status syscall.WaitStatus
+		got, err := syscall.Wait4(pid, &status, syscall.WNOHANG, nil)
+		if err != nil {
+			t.Errorf("waiting for the detached program (pid %d): %v", pid, err)
+			return
+		}
+		if got == pid {
+			return
+		}
+		time.Sleep(20 * time.Millisecond)
 	}
-	if pgid, err := syscall.Getpgid(pid); err != nil || pgid != pid {
-		t.Errorf("the program (pid %d) is in process group %d (err %v), want it the leader of one of its own", pid, pgid, err)
-	}
+	t.Errorf("the detached program (pid %d) is still running after its test ended (orphan)", pid)
 }
 
 // sessionOf is the session of a process as ps says it (the same word for the processes of one
