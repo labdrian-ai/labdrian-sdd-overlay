@@ -1,0 +1,497 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:11582e0243ee5158d80cceca49d28cd3bd2cacc5591337b6c4090680f0adf5e8",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-37c64b778f5c4caf",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "14c21ba94b2b7802ef36872ff4491e741a4408a3",
+      "candidate_tree": "491ab41b6912bade1413d311cb3acdf0844247ec",
+      "paths_digest": "sha256:3a20fd652d778ef60bd5ccc7be3ab293377b57755512ae3dad35b4eafbfd72e8",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        ".github/workflows/ci.yml",
+        "docs/architecture/adr-telemetry-cost-baseline.md",
+        "odd/review-receipts/telemetry-cost-baseline/review-1ffec8254b2aa300.review-state.json",
+        "odd/review-receipts/telemetry-cost-baseline/review-2e0441ebecb3c3a0.review-state.json",
+        "odd/review-receipts/telemetry-cost-baseline/review-faf4b1daeb57be25.review-state.json",
+        "odd/tasks/telemetry-cost-baseline.md",
+        "telemetry/README.md",
+        "telemetry/aggregate.go",
+        "telemetry/aggregate_test.go",
+        "telemetry/cmd/telemetry/README.md",
+        "telemetry/cmd/telemetry/main.go",
+        "telemetry/cmd/telemetry/main_test.go",
+        "telemetry/go.mod",
+        "telemetry/prices.go",
+        "telemetry/prices_test.go",
+        "telemetry/readers.go",
+        "telemetry/readers_test.go",
+        "telemetry/testdata/claude/alpha/session.jsonl",
+        "telemetry/testdata/claude/alpha/session/subagents/agent-a.jsonl",
+        "telemetry/testdata/claude/alpha/session/subagents/agent-a.meta.json",
+        "telemetry/testdata/golden/report.txt",
+        "telemetry/testdata/pi/beta/2026_session.jsonl",
+        "telemetry/testdata/prices.example.json"
+      ],
+      "identity": "sha256:694534b52b9b6b992c16428b4ca1ca2cb5f97faecb8c4fe44a0db512e56f9035"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "14c21ba94b2b7802ef36872ff4491e741a4408a3",
+      "candidate_tree": "491ab41b6912bade1413d311cb3acdf0844247ec",
+      "paths_digest": "sha256:3a20fd652d778ef60bd5ccc7be3ab293377b57755512ae3dad35b4eafbfd72e8",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        ".github/workflows/ci.yml",
+        "docs/architecture/adr-telemetry-cost-baseline.md",
+        "odd/review-receipts/telemetry-cost-baseline/review-1ffec8254b2aa300.review-state.json",
+        "odd/review-receipts/telemetry-cost-baseline/review-2e0441ebecb3c3a0.review-state.json",
+        "odd/review-receipts/telemetry-cost-baseline/review-faf4b1daeb57be25.review-state.json",
+        "odd/tasks/telemetry-cost-baseline.md",
+        "telemetry/README.md",
+        "telemetry/aggregate.go",
+        "telemetry/aggregate_test.go",
+        "telemetry/cmd/telemetry/README.md",
+        "telemetry/cmd/telemetry/main.go",
+        "telemetry/cmd/telemetry/main_test.go",
+        "telemetry/go.mod",
+        "telemetry/prices.go",
+        "telemetry/prices_test.go",
+        "telemetry/readers.go",
+        "telemetry/readers_test.go",
+        "telemetry/testdata/claude/alpha/session.jsonl",
+        "telemetry/testdata/claude/alpha/session/subagents/agent-a.jsonl",
+        "telemetry/testdata/claude/alpha/session/subagents/agent-a.meta.json",
+        "telemetry/testdata/golden/report.txt",
+        "telemetry/testdata/pi/beta/2026_session.jsonl",
+        "telemetry/testdata/prices.example.json"
+      ],
+      "identity": "sha256:694534b52b9b6b992c16428b4ca1ca2cb5f97faecb8c4fe44a0db512e56f9035"
+    },
+    "genesis_paths": [
+      ".github/workflows/ci.yml",
+      "docs/architecture/adr-telemetry-cost-baseline.md",
+      "odd/review-receipts/telemetry-cost-baseline/review-1ffec8254b2aa300.review-state.json",
+      "odd/review-receipts/telemetry-cost-baseline/review-2e0441ebecb3c3a0.review-state.json",
+      "odd/review-receipts/telemetry-cost-baseline/review-faf4b1daeb57be25.review-state.json",
+      "odd/tasks/telemetry-cost-baseline.md",
+      "telemetry/README.md",
+      "telemetry/aggregate.go",
+      "telemetry/aggregate_test.go",
+      "telemetry/cmd/telemetry/README.md",
+      "telemetry/cmd/telemetry/main.go",
+      "telemetry/cmd/telemetry/main_test.go",
+      "telemetry/go.mod",
+      "telemetry/prices.go",
+      "telemetry/prices_test.go",
+      "telemetry/readers.go",
+      "telemetry/readers_test.go",
+      "telemetry/testdata/claude/alpha/session.jsonl",
+      "telemetry/testdata/claude/alpha/session/subagents/agent-a.jsonl",
+      "telemetry/testdata/claude/alpha/session/subagents/agent-a.meta.json",
+      "telemetry/testdata/golden/report.txt",
+      "telemetry/testdata/pi/beta/2026_session.jsonl",
+      "telemetry/testdata/prices.example.json"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-risk",
+      "review-resilience",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 3454,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:ed05abb3f267f58de8061f24f9e3486125fbf31cae7cd1a6ca19eb5e392bec6a",
+    "capture_phase_revision": "sha256:d7849c806e0bb711527b576870e14f5f00805e897c82ce76caf6c88d2a911d1f",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:694534b52b9b6b992c16428b4ca1ca2cb5f97faecb8c4fe44a0db512e56f9035",
+        "capture_phase_revision": "sha256:d7849c806e0bb711527b576870e14f5f00805e897c82ce76caf6c88d2a911d1f",
+        "artifact_digest": "sha256:c50d6a523d19bedc7079672696936881def896b8b72a04c3c916848f3ade733f",
+        "result_hash": "sha256:c5bc90b323c789fb5453194a3cad2dbb7fb3c6c0ac9360aa6e7eb1bffc389c9f",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:6503b0d446d3b29ded0c3bbd15ce0079d44621b3c66b48f634be103a4bccd39c",
+            "lineage_id": "review-37c64b778f5c4caf",
+            "authority_revision": "sha256:d7849c806e0bb711527b576870e14f5f00805e897c82ce76caf6c88d2a911d1f",
+            "target_identity": "sha256:694534b52b9b6b992c16428b4ca1ca2cb5f97faecb8c4fe44a0db512e56f9035",
+            "base_tree": "14c21ba94b2b7802ef36872ff4491e741a4408a3",
+            "candidate_tree": "491ab41b6912bade1413d311cb3acdf0844247ec",
+            "changed_path_manifest_sha256": "sha256:13bcc903370773876ab5d34762a7e30b2f1f9aec98099b4f745da69aadb44c69",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:6503b0d446d3b29ded0c3bbd15ce0079d44621b3c66b48f634be103a4bccd39c",
+            "raw_sha256": "sha256:c4ed8f496e58e0cca4aab7879935fa25d527bb9fe5354adbb6a6e8cf57d00cce",
+            "canonical_sha256": "sha256:df6b217fdaf46267e202b90540af945c1d796fd88e425b07ec6f3166a0eb3962",
+            "result_hash": "sha256:c5bc90b323c789fb5453194a3cad2dbb7fb3c6c0ac9360aa6e7eb1bffc389c9f",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:6503b0d446d3b29ded0c3bbd15ce0079d44621b3c66b48f634be103a4bccd39c",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                ".github/workflows/ci.yml",
+                "docs/architecture/adr-telemetry-cost-baseline.md",
+                "odd/review-receipts/telemetry-cost-baseline/review-1ffec8254b2aa300.review-state.json",
+                "odd/review-receipts/telemetry-cost-baseline/review-2e0441ebecb3c3a0.review-state.json",
+                "odd/review-receipts/telemetry-cost-baseline/review-faf4b1daeb57be25.review-state.json",
+                "odd/tasks/telemetry-cost-baseline.md",
+                "telemetry/README.md",
+                "telemetry/aggregate.go",
+                "telemetry/aggregate_test.go",
+                "telemetry/cmd/telemetry/README.md",
+                "telemetry/cmd/telemetry/main.go",
+                "telemetry/cmd/telemetry/main_test.go",
+                "telemetry/go.mod",
+                "telemetry/prices.go",
+                "telemetry/prices_test.go",
+                "telemetry/readers.go",
+                "telemetry/readers_test.go",
+                "telemetry/testdata/claude/alpha/session.jsonl",
+                "telemetry/testdata/claude/alpha/session/subagents/agent-a.jsonl",
+                "telemetry/testdata/claude/alpha/session/subagents/agent-a.meta.json",
+                "telemetry/testdata/golden/report.txt",
+                "telemetry/testdata/pi/beta/2026_session.jsonl",
+                "telemetry/testdata/prices.example.json"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [
+              {
+                "id": "R1-001",
+                "lens": "risk",
+                "location": ".github/workflows/ci.yml:524-526",
+                "severity": "WARNING",
+                "claim": "The CI job runs staticcheck via go run at a version tag, which fetches third-party code from the Go module proxy. The Go checksum database verifies the module and the job has only default checkout permissions. No exploit is reachable from this change, so this is a hardening note only.",
+                "proof_refs": [
+                  ".github/workflows/ci.yml:524-526"
+                ],
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "I reviewed all 23 manifest paths. The change adds a standard-library-only Go module, so it adds no third-party runtime dependency and no lockfile.",
+              "Log files and meta files are opened read-only in telemetry/readers.go. The record struct decodes only usage, id, model and timestamp fields. Output holds aggregates only, and the tests in telemetry/cmd/telemetry/main_test.go assert that the sentinel content in the fixtures never reaches stdout.",
+              "Log roots and the price file path come from local CLI flags. There is no network input, no shell execution, no privilege boundary and no secret handling, so I found no reachable injection, traversal or data exposure.",
+              "Price parsing in telemetry/prices.go rejects duplicate keys, unknown fields, trailing data, NaN, Infinity and negative rates. This limits unsafe input handling.",
+              "The three review-receipt JSON files and the ledger and ADR documents are metadata only. They contain no secrets or credentials."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-resilience",
+        "selected_order": 1,
+        "target_identity": "sha256:694534b52b9b6b992c16428b4ca1ca2cb5f97faecb8c4fe44a0db512e56f9035",
+        "capture_phase_revision": "sha256:d7849c806e0bb711527b576870e14f5f00805e897c82ce76caf6c88d2a911d1f",
+        "artifact_digest": "sha256:9cd602474c540cef57ee52c917ab4b62cd837403b5ab00811c91873aafe9b6e9",
+        "result_hash": "sha256:c0f75057d20f9fbfe64a22eb1918ecde3273d5bda837f511089ea4159961b9b6",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:30caae8746e7f1a54414073bdbfadddaadb2a03f2f92fc37edc2130a30c59749",
+            "lineage_id": "review-37c64b778f5c4caf",
+            "authority_revision": "sha256:d7849c806e0bb711527b576870e14f5f00805e897c82ce76caf6c88d2a911d1f",
+            "target_identity": "sha256:694534b52b9b6b992c16428b4ca1ca2cb5f97faecb8c4fe44a0db512e56f9035",
+            "base_tree": "14c21ba94b2b7802ef36872ff4491e741a4408a3",
+            "candidate_tree": "491ab41b6912bade1413d311cb3acdf0844247ec",
+            "changed_path_manifest_sha256": "sha256:13bcc903370773876ab5d34762a7e30b2f1f9aec98099b4f745da69aadb44c69",
+            "lens": "review-resilience",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:30caae8746e7f1a54414073bdbfadddaadb2a03f2f92fc37edc2130a30c59749",
+            "raw_sha256": "sha256:9f610038d18121602e610de943e37d3c4671b01cd1270ab3c7a6ae477a6cc67d",
+            "canonical_sha256": "sha256:d5329ad882f2864819e0ba9784246dd3e52539c6d69cf11c58467b72a9c927bf",
+            "result_hash": "sha256:c0f75057d20f9fbfe64a22eb1918ecde3273d5bda837f511089ea4159961b9b6",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:30caae8746e7f1a54414073bdbfadddaadb2a03f2f92fc37edc2130a30c59749",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                ".github/workflows/ci.yml",
+                "docs/architecture/adr-telemetry-cost-baseline.md",
+                "odd/review-receipts/telemetry-cost-baseline/review-1ffec8254b2aa300.review-state.json",
+                "odd/review-receipts/telemetry-cost-baseline/review-2e0441ebecb3c3a0.review-state.json",
+                "odd/review-receipts/telemetry-cost-baseline/review-faf4b1daeb57be25.review-state.json",
+                "odd/tasks/telemetry-cost-baseline.md",
+                "telemetry/README.md",
+                "telemetry/aggregate.go",
+                "telemetry/aggregate_test.go",
+                "telemetry/cmd/telemetry/README.md",
+                "telemetry/cmd/telemetry/main.go",
+                "telemetry/cmd/telemetry/main_test.go",
+                "telemetry/go.mod",
+                "telemetry/prices.go",
+                "telemetry/prices_test.go",
+                "telemetry/readers.go",
+                "telemetry/readers_test.go",
+                "telemetry/testdata/claude/alpha/session.jsonl",
+                "telemetry/testdata/claude/alpha/session/subagents/agent-a.jsonl",
+                "telemetry/testdata/claude/alpha/session/subagents/agent-a.meta.json",
+                "telemetry/testdata/golden/report.txt",
+                "telemetry/testdata/pi/beta/2026_session.jsonl",
+                "telemetry/testdata/prices.example.json"
+              ]
+            },
+            "lens": "review-resilience",
+            "findings": [],
+            "evidence": [
+              "Reviewed all 23 manifest paths. The change adds a new read-only standard-library Go module and one CI job. It alters no existing runtime behavior, so there is no baseline regression surface.",
+              "Failure handling in telemetry/readers.go degrades gracefully. Walk errors and unopenable files increment UnreadableFiles and the walk continues. A file that fails mid-read is dropped whole and its Pi IDs are not marked as seen. ReadBytes means oversized lines do not abort the read. Malformed lines are counted as Skipped. A missing or invalid meta file gives an empty agentType.",
+              "telemetry/cmd/telemetry/main.go skips a missing default root with a stderr note. An explicit missing root exits 1. When no source was read to the end it exits 1 with 'no readable source'. A bad price file exits 1 before any log is read.",
+              "Memory is O(calls) for the retained context and cost slices and the per-file row map. The ledger records about 87k calls and about 9 s on the real corpus. I found no measured load or latency failure.",
+              "Retry safety holds. Logs are opened read-only, and the same input gives byte-identical output through sorted emission and canonical-order cost sums.",
+              "I found no concrete production failure that this change caused and that realistic input can reach."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "selected_order": 2,
+        "target_identity": "sha256:694534b52b9b6b992c16428b4ca1ca2cb5f97faecb8c4fe44a0db512e56f9035",
+        "capture_phase_revision": "sha256:d7849c806e0bb711527b576870e14f5f00805e897c82ce76caf6c88d2a911d1f",
+        "artifact_digest": "sha256:fe2267ac405097f138020fc412a4ed7319d0b9bc08e86a48d6e0be36287d686a",
+        "result_hash": "sha256:974fdb9f678a404aa7db0eab4422deeb964d8d4590d88d172519c07163edb178",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:4ebbbb856049695f962b884d9353ea0f60f83578a88b1ce2e5d42e4f7ed8aa56",
+            "lineage_id": "review-37c64b778f5c4caf",
+            "authority_revision": "sha256:d7849c806e0bb711527b576870e14f5f00805e897c82ce76caf6c88d2a911d1f",
+            "target_identity": "sha256:694534b52b9b6b992c16428b4ca1ca2cb5f97faecb8c4fe44a0db512e56f9035",
+            "base_tree": "14c21ba94b2b7802ef36872ff4491e741a4408a3",
+            "candidate_tree": "491ab41b6912bade1413d311cb3acdf0844247ec",
+            "changed_path_manifest_sha256": "sha256:13bcc903370773876ab5d34762a7e30b2f1f9aec98099b4f745da69aadb44c69",
+            "lens": "review-readability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:4ebbbb856049695f962b884d9353ea0f60f83578a88b1ce2e5d42e4f7ed8aa56",
+            "raw_sha256": "sha256:c8f0cd20496fcb6ca5dff06320cececa401a5ef96f3163621a0beb4f9fe4d742",
+            "canonical_sha256": "sha256:ca64d9970912d308a2369f165517e19ef8f71d1e9cd7059f0be38e3d0cb0da05",
+            "result_hash": "sha256:974fdb9f678a404aa7db0eab4422deeb964d8d4590d88d172519c07163edb178",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:4ebbbb856049695f962b884d9353ea0f60f83578a88b1ce2e5d42e4f7ed8aa56",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                ".github/workflows/ci.yml",
+                "docs/architecture/adr-telemetry-cost-baseline.md",
+                "odd/review-receipts/telemetry-cost-baseline/review-1ffec8254b2aa300.review-state.json",
+                "odd/review-receipts/telemetry-cost-baseline/review-2e0441ebecb3c3a0.review-state.json",
+                "odd/review-receipts/telemetry-cost-baseline/review-faf4b1daeb57be25.review-state.json",
+                "odd/tasks/telemetry-cost-baseline.md",
+                "telemetry/README.md",
+                "telemetry/aggregate.go",
+                "telemetry/aggregate_test.go",
+                "telemetry/cmd/telemetry/README.md",
+                "telemetry/cmd/telemetry/main.go",
+                "telemetry/cmd/telemetry/main_test.go",
+                "telemetry/go.mod",
+                "telemetry/prices.go",
+                "telemetry/prices_test.go",
+                "telemetry/readers.go",
+                "telemetry/readers_test.go",
+                "telemetry/testdata/claude/alpha/session.jsonl",
+                "telemetry/testdata/claude/alpha/session/subagents/agent-a.jsonl",
+                "telemetry/testdata/claude/alpha/session/subagents/agent-a.meta.json",
+                "telemetry/testdata/golden/report.txt",
+                "telemetry/testdata/pi/beta/2026_session.jsonl",
+                "telemetry/testdata/prices.example.json"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-001",
+                "lens": "readability",
+                "location": "telemetry/aggregate.go:63-63",
+                "severity": "SUGGESTION",
+                "claim": "The six grouping dimensions are tied together only by position: the groups array, the keys array in Add and the outputs slice in Report must stay in the same order, and a trailing comment is the only link. Named index constants would prevent silent misassignment on reorder.",
+                "proof_refs": [
+                  "telemetry/aggregate.go:63-63",
+                  "telemetry/aggregate.go:104-104",
+                  "telemetry/aggregate.go:174-174"
+                ]
+              },
+              {
+                "id": "R2-002",
+                "lens": "readability",
+                "location": "telemetry/cmd/telemetry/main.go:104-111",
+                "severity": "SUGGESTION",
+                "claim": "The human() section table uses two positional booleans (rank, latest) in unnamed literals, so rows read as false,false or true,false. A named mode field would make the --top limiting rules self-explanatory.",
+                "proof_refs": [
+                  "telemetry/cmd/telemetry/main.go:104-111"
+                ]
+              }
+            ],
+            "evidence": [
+              "Read all 23 manifest paths. This is a new standalone module plus one CI job, so there is no baseline behavior to regress.",
+              "No BLOCKER or CRITICAL readability defect found. The ADR, ledger and READMEs give adequate change context, and the 1e6 divisor is documented by the usd_per_million_tokens unit and the README formula.",
+              "The Claude and Pi dedupe rules in telemetry/readers.go are split into the named helpers keepLast and keepFirst with doc comments, so the dedupe logic is explicit."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 3,
+        "target_identity": "sha256:694534b52b9b6b992c16428b4ca1ca2cb5f97faecb8c4fe44a0db512e56f9035",
+        "capture_phase_revision": "sha256:d7849c806e0bb711527b576870e14f5f00805e897c82ce76caf6c88d2a911d1f",
+        "artifact_digest": "sha256:cabd22de2fa1747a308ae499600d9b7101126a2c268f2f8566d888d65b00f687",
+        "result_hash": "sha256:0b6dbf32f98f65358f9c3c8cd011006d229abd2c67ec2d8a2dc14b8355149f87",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:9b51f2eb60c193ef36c41b44da24dd038b4106d254eda4dfd8f907f13790639a",
+            "lineage_id": "review-37c64b778f5c4caf",
+            "authority_revision": "sha256:d7849c806e0bb711527b576870e14f5f00805e897c82ce76caf6c88d2a911d1f",
+            "target_identity": "sha256:694534b52b9b6b992c16428b4ca1ca2cb5f97faecb8c4fe44a0db512e56f9035",
+            "base_tree": "14c21ba94b2b7802ef36872ff4491e741a4408a3",
+            "candidate_tree": "491ab41b6912bade1413d311cb3acdf0844247ec",
+            "changed_path_manifest_sha256": "sha256:13bcc903370773876ab5d34762a7e30b2f1f9aec98099b4f745da69aadb44c69",
+            "lens": "review-reliability",
+            "selected_order": 3
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:9b51f2eb60c193ef36c41b44da24dd038b4106d254eda4dfd8f907f13790639a",
+            "raw_sha256": "sha256:2e853e76091badd10578c64d4f93adbbdd362d4b407127660c99d72b2b0127ba",
+            "canonical_sha256": "sha256:977b852be72c603405ae62620c66d8f44b1087c501893d623e68d598b73a82d3",
+            "result_hash": "sha256:0b6dbf32f98f65358f9c3c8cd011006d229abd2c67ec2d8a2dc14b8355149f87",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:9b51f2eb60c193ef36c41b44da24dd038b4106d254eda4dfd8f907f13790639a",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                ".github/workflows/ci.yml",
+                "docs/architecture/adr-telemetry-cost-baseline.md",
+                "odd/review-receipts/telemetry-cost-baseline/review-1ffec8254b2aa300.review-state.json",
+                "odd/review-receipts/telemetry-cost-baseline/review-2e0441ebecb3c3a0.review-state.json",
+                "odd/review-receipts/telemetry-cost-baseline/review-faf4b1daeb57be25.review-state.json",
+                "odd/tasks/telemetry-cost-baseline.md",
+                "telemetry/README.md",
+                "telemetry/aggregate.go",
+                "telemetry/aggregate_test.go",
+                "telemetry/cmd/telemetry/README.md",
+                "telemetry/cmd/telemetry/main.go",
+                "telemetry/cmd/telemetry/main_test.go",
+                "telemetry/go.mod",
+                "telemetry/prices.go",
+                "telemetry/prices_test.go",
+                "telemetry/readers.go",
+                "telemetry/readers_test.go",
+                "telemetry/testdata/claude/alpha/session.jsonl",
+                "telemetry/testdata/claude/alpha/session/subagents/agent-a.jsonl",
+                "telemetry/testdata/claude/alpha/session/subagents/agent-a.meta.json",
+                "telemetry/testdata/golden/report.txt",
+                "telemetry/testdata/pi/beta/2026_session.jsonl",
+                "telemetry/testdata/prices.example.json"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-001",
+                "lens": "reliability",
+                "location": "telemetry/readers.go:163-165",
+                "severity": "WARNING",
+                "claim": "Pi dedupe uses a root-wide seen map populated only after a file is fully read, so rows with the same responseId inside different files are all kept if they are read before the first file's IDs are recorded. This is not a concern in practice because files are processed sequentially. The real residual gap is that a Pi line with neither responseId nor id is dropped and counted only as Skipped, with no distinct counter. This is low-impact and no test asserts it.",
+                "proof_refs": [
+                  "telemetry/readers.go:163-165",
+                  "telemetry/readers_test.go:178-186"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-002",
+                "lens": "reliability",
+                "location": "telemetry/cmd/telemetry/main.go:108-121",
+                "severity": "SUGGESTION",
+                "claim": "The 'By day' truncation depends on the positional boolean in the section table. TestTop covers --top 1 on days, but there is no test for a day count between 1 and the total with multiple retained days, so the 'latest N' ordering (relying on key sort order) is only proved for N=1.",
+                "proof_refs": [
+                  "telemetry/cmd/telemetry/main.go:108-121",
+                  "telemetry/cmd/telemetry/main_test.go:150-170"
+                ]
+              }
+            ],
+            "evidence": [
+              "Reviewed all 23 manifest paths. The change adds a new standalone module and one CI job, so there is no baseline behavior to regress.",
+              "Failure paths are asserted with observable Stats and Call values in telemetry/readers_test.go: malformed lines, 2 MB lines, missing root, broken symlink, unreadable directory, mid-read I/O error that drops the file, bad or missing meta files, and per-file scoping of Pi fallback IDs.",
+              "Determinism is covered by shuffled-insertion tests for recorded and estimated costs in telemetry/aggregate_test.go and by sorted emission in the readers.",
+              "CLI exit codes 0, 1 and 2, missing default roots, explicit missing roots, no-readable-source, and price-file errors are asserted in telemetry/cmd/telemetry/main_test.go; golden output matches the fixtures.",
+              "Price parsing rejects duplicate keys, unknown fields, trailing data, NaN, Infinity, overflow, negative and null or missing rates (telemetry/prices_test.go).",
+              "I found no candidate-caused BLOCKER or CRITICAL reliability defect."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "ba71da1bfbfaa000563f0e5c13333edff517c8c4bdf5af2f9fe1df86b2627d07",
+    "initial_atomic_start": {
+      "lineage_id": "review-37c64b778f5c4caf",
+      "worktree_identity": "sha256:e3a7e06de9ce5818369ddef757a578c387ad7e19dc5d4a8601f71f80b2254a29",
+      "target_identity": "sha256:694534b52b9b6b992c16428b4ca1ca2cb5f97faecb8c4fe44a0db512e56f9035",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "14c21ba94b2b7802ef36872ff4491e741a4408a3",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "high",
+      "selected_lenses": [
+        "review-risk",
+        "review-resilience",
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 3454,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two"
+    },
+    "runtime_agent": "claude-code"
+  }
+}
