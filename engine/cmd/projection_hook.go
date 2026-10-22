@@ -88,12 +88,12 @@ func runProjectionCore(d deps, args []string, processCwd string, stdin io.Reader
 	}
 }
 
-// runProjectionHook implements 'projection hook --event <event>'. From the
+// runProjectionHook implements 'projection hook --event <event> [--source claude|codex]'. From the
 // moment the command line has been understood, nothing it does can change the
 // exit code from 0: a hook that fails must not fail the prompt or the tool call
 // it serves.
 func runProjectionHook(d deps, args []string, processCwd string, stdin io.Reader, stdout, stderr io.Writer, exit func(int)) {
-	event, err := parseHookArgs(args)
+	event, source, err := parseHookArgs(args)
 	if err != nil {
 		fmt.Fprintf(stderr, "error: projection hook: %v\n", err)
 		exit(1)
@@ -116,11 +116,11 @@ func runProjectionHook(d deps, args []string, processCwd string, stdin io.Reader
 	var out []byte
 	switch event {
 	case hookwire.EventPreToolUse:
-		out = preToolUse(d, stdin, processCwd)
+		out = preToolUse(d, stdin, processCwd, source)
 	case hookwire.EventSessionStart:
 		out = sessionStart(d, stdin, processCwd)
 	case hookwire.EventPostToolUse:
-		out = postToolUse(d, stdin, processCwd)
+		out = postToolUse(d, stdin, processCwd, source)
 	default:
 		out = userPromptSubmit(d, stdin, processCwd)
 	}
@@ -130,37 +130,45 @@ func runProjectionHook(d deps, args []string, processCwd string, stdin io.Reader
 	exit(0)
 }
 
-// parseHookArgs checks the arguments of 'projection hook': --event, with the
-// event to answer, and nothing else, and returns the event. UserPromptSubmit,
-// PreToolUse, SessionStart and PostToolUse are the events supported. The last occurrence of a repeated flag
-// wins, as for the other verbs.
-func parseHookArgs(args []string) (string, error) {
-	event := ""
+// parseHookArgs checks --event and the optional --source (default: claude).
+// The last occurrence of a repeated flag wins, as for the other verbs. Source
+// validation uses the adapter's own accepted vocabulary, before stdin is read.
+func parseHookArgs(args []string) (event, source string, err error) {
+	source = "claude"
 	for i := 0; i < len(args); i++ {
 		a := args[i]
 		switch {
 		case a == "--event":
 			if i+1 >= len(args) {
-				return "", fmt.Errorf("--event requires a value")
+				return "", "", fmt.Errorf("--event requires a value")
 			}
 			i++
 			event = args[i]
+		case a == "--source":
+			if i+1 >= len(args) {
+				return "", "", fmt.Errorf("--source requires a value (supported: claude, codex)")
+			}
+			i++
+			source = args[i]
 		case strings.HasPrefix(a, "-"):
-			return "", fmt.Errorf("unknown flag %q", a)
+			return "", "", fmt.Errorf("unknown flag %q", a)
 		default:
-			return "", fmt.Errorf("unexpected argument %q", a)
+			return "", "", fmt.Errorf("unexpected argument %q", a)
 		}
 	}
 	supported := hookwire.EventUserPromptSubmit + ", " + hookwire.EventPreToolUse + ", " + hookwire.EventSessionStart + ", " + hookwire.EventPostToolUse
 	if event == "" {
-		return "", fmt.Errorf("--event is required (supported: %s)", supported)
+		return "", "", fmt.Errorf("--event is required (supported: %s)", supported)
 	}
 	switch event {
 	case hookwire.EventUserPromptSubmit, hookwire.EventPreToolUse, hookwire.EventSessionStart, hookwire.EventPostToolUse:
 	default:
-		return "", fmt.Errorf("unsupported --event %q (supported: %s)", event, supported)
+		return "", "", fmt.Errorf("unsupported --event %q (supported: %s)", event, supported)
 	}
-	return event, nil
+	if _, err := hookwire.AdaptToolName(source, ""); err != nil {
+		return "", "", err
+	}
+	return event, source, nil
 }
 
 // warningOutput renders one warning line as the hook's only output, in the shape
@@ -258,7 +266,7 @@ func sessionStart(d deps, stdin io.Reader, processCwd string) []byte {
 // read, a binding or workflow that cannot be followed. The gate runs on every
 // tool call, and the prompt hook already warns about those, so it does not
 // repeat the warning. It reads and never writes.
-func preToolUse(d deps, stdin io.Reader, processCwd string) []byte {
+func preToolUse(d deps, stdin io.Reader, processCwd, source string) []byte {
 	data, err := io.ReadAll(io.LimitReader(stdin, hookwire.MaxEnvelopeBytes+1))
 	if err != nil {
 		return nil
@@ -268,6 +276,11 @@ func preToolUse(d deps, stdin io.Reader, processCwd string) []byte {
 		return nil
 	}
 	if in.Event != "" && in.Event != hookwire.EventPreToolUse {
+		return nil
+	}
+	// Adapt only the decoded name, before the use case classifies the call.
+	in.Tool, err = hookwire.AdaptToolName(source, in.Tool)
+	if err != nil {
 		return nil
 	}
 	// The use case decides relevance first, from the tool name alone: the gate
@@ -292,12 +305,17 @@ func preToolUse(d deps, stdin io.Reader, processCwd string) []byte {
 // which records the reads the gate checks. Every step that cannot go on ends in silence, as for
 // the gate: unusable input, another event's input, a directory outside every repository, a binding
 // or workflow that cannot be followed. Its one write is the evidence.
-func postToolUse(d deps, stdin io.Reader, processCwd string) []byte {
+func postToolUse(d deps, stdin io.Reader, processCwd, source string) []byte {
 	in, err := hookwire.DecodePostToolUse(stdin)
 	if err != nil {
 		return nil
 	}
 	if in.Event != "" && in.Event != hookwire.EventPostToolUse {
+		return nil
+	}
+	// IDs, input, cwd and response metadata remain exactly as decoded.
+	in.Tool, err = hookwire.AdaptToolName(source, in.Tool)
+	if err != nil {
 		return nil
 	}
 	outcome := d.promptHook().OnToolResult(app.ToolResultRequest{

@@ -824,7 +824,10 @@ gentle-ai-overlay runtime probe [--target claude|codex|pi|all]
     at the default state directory only (~/.labdrian-overlay), not under a custom --state-dir. Exit 0 on success,
     2 on an unknown --target value, 1 on a usage error (including an unknown flag).
 
-gentle-ai-overlay projection hook --event UserPromptSubmit|PreToolUse|SessionStart|PostToolUse
+gentle-ai-overlay projection hook --event UserPromptSubmit|PreToolUse|SessionStart|PostToolUse [--source claude|codex]
+    --source (default: claude) names the runtime that sent the hook; codex maps the tool names Codex sends
+    for longterm-mem reads (mcp__longterm_mem__query, mcp__longterm_mem__get) to the ones the gate knows, before
+    the gate or the evidence sees the call. Nothing else changes; another value is a usage error (exit 1).
     Internal hook command (Phase 7): Claude Code is meant to run it before each prompt (UserPromptSubmit),
     before each tool call (PreToolUse), when a session starts (SessionStart) and after a memory read has run (PostToolUse); a person does
     not. There is no `overlay projection` wrapper, so it runs on the installed engine binary,
