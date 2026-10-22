@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -81,6 +82,7 @@ func roleAgentSpecs() []roleAgentSpec {
 		}},
 		{"polisher", "sonnet", polisherTools, 3, []string{
 			"Modify nothing", "immutable target", `{"findings":[],"evidence":`,
+			"This replaces the return envelope of the line above",
 		}},
 		{"prototyper", "sonnet", prototypeTools, 4, []string{
 			"spike worktree", "mktemp -d", "positive control", "open_questions", "kill | narrow | continue", "lookup/spike box",
@@ -149,10 +151,25 @@ func TestRoleAgentToolsCarryTheLimitsOfTheirRole(t *testing.T) {
 		"sweeper":    {"Write", "mem_save", "mem_update"},
 		"delivery":   {},
 	}
+	// The tools the prose of a role needs: the roles that run commands or commit need Bash, and the
+	// roles that edit files need Edit.
+	required := map[string][]string{
+		"builder":    {"Bash", "Edit", "Write"},
+		"shaper":     {"Write"},
+		"polisher":   {"Read"},
+		"prototyper": {"Bash", "Write"},
+		"sweeper":    {"Bash", "Edit"},
+		"delivery":   {"Bash", "Edit"},
+	}
 	for _, spec := range roleAgentSpecs() {
 		t.Run(spec.role, func(t *testing.T) {
 			_, frontmatter, _ := agentFile(t, root, spec.role)
 			tools := strings.Split(parseYAMLScalar(t, frontmatter, "tools"), ", ")
+			for _, need := range required[spec.role] {
+				if !slices.Contains(tools, need) {
+					t.Errorf("%s needs the tool %q for what its prose asks of it", spec.role, need)
+				}
+			}
 			for _, tool := range tools {
 				for _, banned := range append([]string{"Agent", "Task", "WebFetch", "WebSearch", "NotebookEdit"}, forbidden[spec.role]...) {
 					if tool == banned || strings.Contains(tool, banned) {
@@ -401,10 +418,10 @@ func TestJudgmentDayLaunchesTheRoleAgentsForItsActors(t *testing.T) {
 			t.Errorf("the skill must name %s", named)
 		}
 	}
-	for _, model := range []string{"`sonnet`", "`opus`"} {
-		if !strings.Contains(skill, model) {
-			t.Errorf("the skill must say which model each judge runs: %s is missing", model)
-		}
+	// Each judge is bound to its model, so a swap or a repeated model is caught.
+	split := "judge A on the agent file's model (`sonnet`), judge B on a different per-launch `model` (`opus`)"
+	if !strings.Contains(skill, split) {
+		t.Errorf("the skill must bind judge A to sonnet and judge B to opus: %q is missing", split)
 	}
 }
 
