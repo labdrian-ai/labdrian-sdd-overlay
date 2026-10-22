@@ -18,7 +18,7 @@ import (
 var update = flag.Bool("update", false, "update human golden under testdata")
 
 const data = "../../testdata"
-const stats = "claude: files=2 lines=5 calls=2 skipped=2 duplicates=1 unreadable_files=0\npi: files=1 lines=2 calls=2 skipped=0 duplicates=0 unreadable_files=0\n"
+const stats = "claude: files=2 lines=5 calls=2 skipped=2 no_id=0 duplicates=1 unreadable_files=0\npi: files=1 lines=2 calls=2 skipped=0 no_id=0 duplicates=0 unreadable_files=0\n"
 
 func invoke(t *testing.T, args ...string) (int, string, string) {
 	t.Helper()
@@ -77,13 +77,43 @@ func TestDeterministic(t *testing.T) {
 func TestStatsAndPrivacy(t *testing.T) {
 	for _, args := range [][]string{nil, {"--json"}} {
 		out := fixtures(t, args...)
-		for _, forbidden := range []string{"files=", "lines=", "skipped=", "PRIVATE_SENTINEL", "synthetic", "malformed", "session"} {
+		for _, forbidden := range []string{"files=", "lines=", "skipped=", "no_id=", "PRIVATE_SENTINEL", "synthetic", "malformed", "session"} {
 			if strings.Contains(out, forbidden) {
 				t.Fatalf("stdout contains %q", forbidden)
 			}
 		}
 	}
 }
+
+// Call lines without a usable ID are counted on the stats line's own no_id
+// counter, apart from skipped lines; the counter never reaches stdout.
+func TestStatsNoID(t *testing.T) {
+	const at = `"timestamp":"2026-10-20T13:57:50.903Z"`
+	claudeRoot, piRoot := t.TempDir(), t.TempDir()
+	for path, lines := range map[string][]string{
+		filepath.Join(claudeRoot, "p", "s.jsonl"): {
+			`{"type":"assistant",` + at + `,"message":{"id":"m","model":"a","usage":{"input_tokens":1}}}`,
+			`{"type":"assistant",` + at + `,"message":{"model":"a","usage":{"input_tokens":1}}}`,
+		},
+		filepath.Join(piRoot, "p", "t_s.jsonl"): {
+			`{"type":"message","id":"l",` + at + `,"message":{"role":"assistant","model":"b","responseId":"r","usage":{"input":1}}}`,
+			`{"type":"message",` + at + `,"message":{"role":"assistant","model":"b","usage":{"input":1}}}`,
+		},
+	} {
+		if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	code, out, err := invoke(t, "report", "--claude-root", claudeRoot, "--pi-root", piRoot)
+	want := "claude: files=1 lines=2 calls=1 skipped=0 no_id=1 duplicates=0 unreadable_files=0\npi: files=1 lines=2 calls=1 skipped=0 no_id=1 duplicates=0 unreadable_files=0\n"
+	if code != 0 || err != want || strings.Contains(out, "no_id") {
+		t.Fatalf("code=%d stderr=%q stdout=%q", code, err, out)
+	}
+}
+
 func TestMissingRoots(t *testing.T) {
 	home := t.TempDir()
 	var out, err bytes.Buffer
@@ -116,7 +146,7 @@ func TestNoReadableSource(t *testing.T) {
 		want := fmt.Sprintf("claude: not found: %s (skipped default root)\npi: not found: %s (skipped default root)\n", filepath.Join(home, ".claude/projects"), filepath.Join(home, ".pi/agent/sessions"))
 		if empty {
 			args = append(args, "--claude-root", home, "--pi-root", home)
-			want = "claude: files=0 lines=0 calls=0 skipped=0 duplicates=0 unreadable_files=0\npi: files=0 lines=0 calls=0 skipped=0 duplicates=0 unreadable_files=0\n"
+			want = "claude: files=0 lines=0 calls=0 skipped=0 no_id=0 duplicates=0 unreadable_files=0\npi: files=0 lines=0 calls=0 skipped=0 no_id=0 duplicates=0 unreadable_files=0\n"
 		}
 		var out, err bytes.Buffer
 		code := run(args, &out, &err, home)
@@ -155,6 +185,34 @@ func TestTop(t *testing.T) {
 		t.Fatalf("model ordering: %s", models)
 	}
 }
+
+// With N between 1 and the number of days, --top keeps the latest N days in
+// date order and, unlike the ranked sections, adds no truncation note.
+func TestTopLatestDays(t *testing.T) {
+	out := fixtures(t, "--top", "2")
+	if got, want := rowKeys(t, out, "By day"), []string{"2026-10-21", "2026-10-22"}; !reflect.DeepEqual(got, want) {
+		t.Fatalf("By day = %q, want %q:\n%s", got, want, out)
+	}
+}
+
+// rowKeys returns the first column of every row of one human-output section in
+// print order, a truncation note included (as "…").
+func rowKeys(t *testing.T, out, section string) []string {
+	t.Helper()
+	_, rest, ok := strings.Cut(out, section+"\n")
+	if !ok {
+		t.Fatalf("no %q section:\n%s", section, out)
+	}
+	body, _, _ := strings.Cut(rest, "\n\n")
+	var keys []string
+	for _, line := range strings.Split(body, "\n")[1:] { // the first line is the header
+		if fields := strings.Fields(line); len(fields) > 0 {
+			keys = append(keys, fields[0])
+		}
+	}
+	return keys
+}
+
 func TestCost(t *testing.T) {
 	if out := fixtures(t); !strings.Contains(out, "$3.75 (2 calls)") || !strings.Contains(out, "n/a") {
 		t.Fatal(out)

@@ -60,12 +60,25 @@ func (r Report) JSON() ([]byte, error) {
 	return append(b, '\n'), nil
 }
 
+// The grouping dimensions index Aggregator.groups, the keys Add builds and the
+// Report slices it fills. All three spell them out by name, so reordering this
+// list cannot silently pair a key with the wrong slice.
+const (
+	bySource = iota
+	byRole
+	byModel
+	byProject
+	byDay
+	byAgentType
+	dimensions // the number of dimensions; keep last
+)
+
 // Aggregator accumulates calls; its zero value is ready to use. Retained
 // per-call context and cost values require O(calls) memory across dimensions.
 type Aggregator struct {
 	prices  PriceTable
 	summary accumulator
-	groups  [6]map[string]*accumulator // source, role, model, project, day, agent type
+	groups  [dimensions]map[string]*accumulator
 }
 
 type accumulator struct {
@@ -109,7 +122,7 @@ func (a *Aggregator) Add(c Call) {
 	if agent == "" {
 		agent = "(none)"
 	}
-	keys := [6]string{c.Source, c.Role, c.Model, c.Project, c.Day, agent}
+	keys := [dimensions]string{bySource: c.Source, byRole: c.Role, byModel: c.Model, byProject: c.Project, byDay: c.Day, byAgentType: agent}
 	for i, key := range keys {
 		if a.groups[i] == nil {
 			a.groups[i] = make(map[string]*accumulator)
@@ -168,7 +181,7 @@ func (a *accumulator) group(key string) Group {
 // Report returns an independent snapshot of the accumulated usage.
 func (a *Aggregator) Report() Report {
 	r := Report{Summary: a.summary.group("all")}
-	outputs := []*[]Group{&r.BySource, &r.ByRole, &r.ByModel, &r.ByProject, &r.ByDay, &r.ByAgentType}
+	outputs := [dimensions]*[]Group{bySource: &r.BySource, byRole: &r.ByRole, byModel: &r.ByModel, byProject: &r.ByProject, byDay: &r.ByDay, byAgentType: &r.ByAgentType}
 	for i, groups := range a.groups {
 		keys := make([]string, 0, len(groups))
 		for key := range groups {
