@@ -417,15 +417,12 @@ var pinnedInvocationPattern = regexp.MustCompile(`go run (\S+)@(\S+) \./\.\.\.`)
 var staticcheckRequirePattern = regexp.MustCompile(`(?m)^\s*(?:require\s+)?honnef\.co/go/tools (v\S+)`)
 
 // TestCheckArgvPinnedToCIInvocation holds the registry's checkArgv for
-// staticcheck and deadcode to the versions CI pins. deadcode is a pinned
-// "go run <module>@<version> ./..." step of .github/workflows/ci.yml;
-// staticcheck is built by CI from tools/lint, whose go.mod and go.sum pin it,
-// so its version is the one required there and ci.yml must carry no other
-// staticcheck pin. This is the audit-finding regression guard (obs #2714): the
-// runner previously resolved staticcheck/deadcode as bare PATH binaries
-// (exit 127 when absent) while CI always uses a pinned version, so a future
-// CI version bump not mirrored here must fail loud rather than silently
-// drift.
+// staticcheck and deadcode to the versions CI uses. This is the audit-finding
+// regression guard (obs #2714): the runner previously resolved
+// staticcheck/deadcode as bare PATH binaries (exit 127 when absent) while CI
+// always uses a pinned version, so a future CI version bump not mirrored here
+// must fail loud rather than silently drift. The runner itself still runs
+// both tools with "go run <module>@<version> ./...".
 func TestCheckArgvPinnedToCIInvocation(t *testing.T) {
 	root := repoRoot(t)
 	data, err := os.ReadFile(filepath.Join(root, ".github", "workflows", "ci.yml"))
@@ -433,22 +430,25 @@ func TestCheckArgvPinnedToCIInvocation(t *testing.T) {
 		t.Fatalf("read ci.yml: %v", err)
 	}
 
-	pinned := map[string]string{}
+	// deadcode: CI runs it as a pinned "go run <module>@<version> ./..." step.
+	// staticcheck: CI builds it from tools/lint, whose go.sum pins it, so
+	// ci.yml must not pin it with go run as well.
+	deadcode := ""
 	for _, m := range pinnedInvocationPattern.FindAllStringSubmatch(string(data), -1) {
 		module, invocation := m[1], m[0]
-		var tool string
-		switch {
-		case strings.Contains(module, "staticcheck"):
+		if strings.Contains(module, "staticcheck") {
 			t.Fatalf("ci.yml pins staticcheck with %q: CI builds it from tools/lint, where go.sum pins it", invocation)
-		case strings.Contains(module, "deadcode"):
-			tool = "deadcode"
-		default:
+		}
+		if !strings.Contains(module, "deadcode") {
 			continue
 		}
-		if prev, ok := pinned[tool]; ok && prev != invocation {
-			t.Fatalf("ci.yml pins %s inconsistently across jobs: %q vs %q", tool, prev, invocation)
+		if deadcode != "" && deadcode != invocation {
+			t.Fatalf("ci.yml pins deadcode inconsistently across jobs: %q vs %q", deadcode, invocation)
 		}
-		pinned[tool] = invocation
+		deadcode = invocation
+	}
+	if deadcode == "" {
+		t.Fatal("ci.yml has no pinned 'go run <module>@<version> ./...' invocation for deadcode")
 	}
 
 	toolsLint, err := os.ReadFile(filepath.Join(root, "tools", "lint", "go.mod"))
@@ -459,17 +459,12 @@ func TestCheckArgvPinnedToCIInvocation(t *testing.T) {
 	if m == nil {
 		t.Fatal("tools/lint/go.mod has no honnef.co/go/tools requirement")
 	}
-	pinned["staticcheck"] = "go run honnef.co/go/tools/cmd/staticcheck@" + string(m[1]) + " ./..."
+	staticcheck := "go run honnef.co/go/tools/cmd/staticcheck@" + string(m[1]) + " ./..."
 
-	for _, tool := range []string{"staticcheck", "deadcode"} {
-		want, ok := pinned[tool]
-		if !ok {
-			t.Fatalf("ci.yml has no pinned 'go run <module>@<version> ./...' invocation for %s", tool)
-		}
+	for tool, want := range map[string]string{"deadcode": deadcode, "staticcheck": staticcheck} {
 		c := findRegistryCheck(t, tool)
-		got := strings.Join(c.checkArgv, " ")
-		if got != want {
-			t.Errorf("registry checkArgv for %s = %q, want %q (parity with ci.yml pinned invocation)", tool, got, want)
+		if got := strings.Join(c.checkArgv, " "); got != want {
+			t.Errorf("registry checkArgv for %s = %q, want %q (the version CI uses)", tool, got, want)
 		}
 	}
 }

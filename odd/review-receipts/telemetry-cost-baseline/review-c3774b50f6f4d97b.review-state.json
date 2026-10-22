@@ -1,0 +1,345 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:de3c4ffbf11a709a4a8460b96e3e55e2c9b55f1b5179524b1e10b6ac283894b9",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-c3774b50f6f4d97b",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "4dc137f6c628e29b50961c02a3a3620e3c915806",
+      "candidate_tree": "65ae81fe424c01b9f1e5f0764a31efb056ab4afb",
+      "paths_digest": "sha256:df4923239144243a0962948be5a41ed00f20783981bdcf344dc96708b538b33f",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        ".github/workflows/ci.yml",
+        "odd/tasks/telemetry-cost-baseline.md",
+        "telemetry/aggregate.go",
+        "telemetry/cmd/telemetry/README.md",
+        "telemetry/cmd/telemetry/main.go",
+        "telemetry/cmd/telemetry/main_test.go",
+        "telemetry/readers.go",
+        "telemetry/readers_test.go",
+        "tools/deterministic-check-runner/main_test.go",
+        "tools/lint/README.md",
+        "tools/lint/doc.go",
+        "tools/lint/go.mod",
+        "tools/lint/go.sum",
+        "tui/backend_tag_test.go"
+      ],
+      "identity": "sha256:293c159fc4613dcefc1335c6cd8ce75b96b9724708456275569b3f53cc78266d"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "4dc137f6c628e29b50961c02a3a3620e3c915806",
+      "candidate_tree": "65ae81fe424c01b9f1e5f0764a31efb056ab4afb",
+      "paths_digest": "sha256:df4923239144243a0962948be5a41ed00f20783981bdcf344dc96708b538b33f",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        ".github/workflows/ci.yml",
+        "odd/tasks/telemetry-cost-baseline.md",
+        "telemetry/aggregate.go",
+        "telemetry/cmd/telemetry/README.md",
+        "telemetry/cmd/telemetry/main.go",
+        "telemetry/cmd/telemetry/main_test.go",
+        "telemetry/readers.go",
+        "telemetry/readers_test.go",
+        "tools/deterministic-check-runner/main_test.go",
+        "tools/lint/README.md",
+        "tools/lint/doc.go",
+        "tools/lint/go.mod",
+        "tools/lint/go.sum",
+        "tui/backend_tag_test.go"
+      ],
+      "identity": "sha256:293c159fc4613dcefc1335c6cd8ce75b96b9724708456275569b3f53cc78266d"
+    },
+    "genesis_paths": [
+      ".github/workflows/ci.yml",
+      "odd/tasks/telemetry-cost-baseline.md",
+      "telemetry/aggregate.go",
+      "telemetry/cmd/telemetry/README.md",
+      "telemetry/cmd/telemetry/main.go",
+      "telemetry/cmd/telemetry/main_test.go",
+      "telemetry/readers.go",
+      "telemetry/readers_test.go",
+      "tools/deterministic-check-runner/main_test.go",
+      "tools/lint/README.md",
+      "tools/lint/doc.go",
+      "tools/lint/go.mod",
+      "tools/lint/go.sum",
+      "tui/backend_tag_test.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-risk",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 332,
+    "correction_budget": 166,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "pins a CI tool through a new go.sum module (supply chain), changes tests that guard the CI spelling and telemetry counters (reliability), and edits CI steps, a README and report code others read (readability)",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:173fca7e83f10e6a00f8abd3b942c9dc37ef41fb3b81d5a0b1ec5990d44f6792",
+    "capture_phase_revision": "sha256:3142b5c710f059edac44cbd1685961118eb208ae7bd714c6c055d381cf805db2",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:293c159fc4613dcefc1335c6cd8ce75b96b9724708456275569b3f53cc78266d",
+        "capture_phase_revision": "sha256:3142b5c710f059edac44cbd1685961118eb208ae7bd714c6c055d381cf805db2",
+        "artifact_digest": "sha256:4b160df93317470d4cd4b920faa35e64a52ea09fbe180ce04cbed4414ded6b7e",
+        "result_hash": "sha256:d2db35f92b22695d9df062476618b1f59985d533e49a62ba7d57dc6e3725938a",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:421a86197a458b07d52860df5feb398a6e6d9ba207bd9acf35f2129e102cd791",
+            "lineage_id": "review-c3774b50f6f4d97b",
+            "authority_revision": "sha256:3142b5c710f059edac44cbd1685961118eb208ae7bd714c6c055d381cf805db2",
+            "target_identity": "sha256:293c159fc4613dcefc1335c6cd8ce75b96b9724708456275569b3f53cc78266d",
+            "base_tree": "4dc137f6c628e29b50961c02a3a3620e3c915806",
+            "candidate_tree": "65ae81fe424c01b9f1e5f0764a31efb056ab4afb",
+            "changed_path_manifest_sha256": "sha256:97fb4db6da1228d59774eeecbdb3084eff44f9768a9ff6384d9b11b843f66937",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:421a86197a458b07d52860df5feb398a6e6d9ba207bd9acf35f2129e102cd791",
+            "raw_sha256": "sha256:dac0ec3ad4296f55c611eb240ef345c1fc2d60c25f59894e13feda0f340028d3",
+            "canonical_sha256": "sha256:75951ab966a0210e7023bd092b2077e5502c8919c8ed4130dac5dea32262ca4d",
+            "result_hash": "sha256:d2db35f92b22695d9df062476618b1f59985d533e49a62ba7d57dc6e3725938a",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:421a86197a458b07d52860df5feb398a6e6d9ba207bd9acf35f2129e102cd791",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                ".github/workflows/ci.yml",
+                "odd/tasks/telemetry-cost-baseline.md",
+                "telemetry/aggregate.go",
+                "telemetry/cmd/telemetry/README.md",
+                "telemetry/cmd/telemetry/main.go",
+                "telemetry/cmd/telemetry/main_test.go",
+                "telemetry/readers.go",
+                "telemetry/readers_test.go",
+                "tools/deterministic-check-runner/main_test.go",
+                "tools/lint/README.md",
+                "tools/lint/doc.go",
+                "tools/lint/go.mod",
+                "tools/lint/go.sum",
+                "tui/backend_tag_test.go"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "Reviewed all 14 manifest paths from a security/risk lens.",
+              "CI change replaces `go run staticcheck@v0.7.0` with a build from tools/lint, whose go.sum pins checksums for every module; this reduces supply-chain risk (go build verifies against go.sum, fails on mismatch or missing entry). No secrets, new network endpoints, or elevated permissions are added in .github/workflows/ci.yml.",
+              "Workflow shell uses only $GITHUB_WORKSPACE and $RUNNER_TEMP, which are runner-controlled and not attacker-influenced; no untrusted github.event context is interpolated into run scripts.",
+              "tools/lint/go.mod and go.sum list honnef.co/go/tools v0.7.0 and its dependencies with h1 hashes; no known-vulnerable dependency evidence is visible in the patch. deadcode remains pinned via go run @v0.48.0, which is unchanged pre-existing behavior.",
+              "Telemetry changes add a NoID counter and refactor to named constants and a keepMode type; calls without an ID were previously dropped as skipped and are now counted separately, with no new data exposure (tests assert no_id never reaches stdout) and no new input-handling surface.",
+              "Test-only changes in tui/backend_tag_test.go and tools/deterministic-check-runner/main_test.go adapt guards to the new CI spelling; they do not affect production behavior."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "selected_order": 1,
+        "target_identity": "sha256:293c159fc4613dcefc1335c6cd8ce75b96b9724708456275569b3f53cc78266d",
+        "capture_phase_revision": "sha256:3142b5c710f059edac44cbd1685961118eb208ae7bd714c6c055d381cf805db2",
+        "artifact_digest": "sha256:fa40ad04eefa21641a02e48de3fb365b5e7558a0b5d6d6fe2c4b10858cc9aea6",
+        "result_hash": "sha256:1156c13c3386701eb242261d36f4fe54577ec4e6fc65dae0f2737d22cdb3f7f1",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:b423f17c19e53ff339fda61e8dde754d47be4c3a7c8489b4b2d81cd0054dd0e7",
+            "lineage_id": "review-c3774b50f6f4d97b",
+            "authority_revision": "sha256:3142b5c710f059edac44cbd1685961118eb208ae7bd714c6c055d381cf805db2",
+            "target_identity": "sha256:293c159fc4613dcefc1335c6cd8ce75b96b9724708456275569b3f53cc78266d",
+            "base_tree": "4dc137f6c628e29b50961c02a3a3620e3c915806",
+            "candidate_tree": "65ae81fe424c01b9f1e5f0764a31efb056ab4afb",
+            "changed_path_manifest_sha256": "sha256:97fb4db6da1228d59774eeecbdb3084eff44f9768a9ff6384d9b11b843f66937",
+            "lens": "review-readability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:b423f17c19e53ff339fda61e8dde754d47be4c3a7c8489b4b2d81cd0054dd0e7",
+            "raw_sha256": "sha256:ca5cc163a5ddb32d6f1c23c8815f6fb1e76916b0cb90c463089bd03207773533",
+            "canonical_sha256": "sha256:02e28e9f674ef4c3139c2d06c55c7554c42f7083ce5f8a21efae16f77d5c6495",
+            "result_hash": "sha256:1156c13c3386701eb242261d36f4fe54577ec4e6fc65dae0f2737d22cdb3f7f1",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:b423f17c19e53ff339fda61e8dde754d47be4c3a7c8489b4b2d81cd0054dd0e7",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                ".github/workflows/ci.yml",
+                "odd/tasks/telemetry-cost-baseline.md",
+                "telemetry/aggregate.go",
+                "telemetry/cmd/telemetry/README.md",
+                "telemetry/cmd/telemetry/main.go",
+                "telemetry/cmd/telemetry/main_test.go",
+                "telemetry/readers.go",
+                "telemetry/readers_test.go",
+                "tools/deterministic-check-runner/main_test.go",
+                "tools/lint/README.md",
+                "tools/lint/doc.go",
+                "tools/lint/go.mod",
+                "tools/lint/go.sum",
+                "tui/backend_tag_test.go"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-001",
+                "lens": "readability",
+                "location": "tools/deterministic-check-runner/main_test.go:442",
+                "severity": "WARNING",
+                "claim": "The regression guard's comment still describes a pinned `go run` invocation for staticcheck, but the staticcheck case now only calls t.Fatalf. The staticcheck version is derived from tools/lint/go.mod and synthesized into a fake `go run ...@vX ./...` string, which no longer exists in CI. This makes the test's logic indirect and easy to misread. The `tool` variable is also unused on that branch.",
+                "proof_refs": [
+                  "tools/deterministic-check-runner/main_test.go:442",
+                  "tools/deterministic-check-runner/main_test.go:463"
+                ],
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-002",
+                "lens": "readability",
+                "location": "tools/lint/go.mod:7",
+                "severity": "SUGGESTION",
+                "claim": "The `// indirect` marker on honnef.co/go/tools is explained only in the README. Anyone editing go.mod by hand may 'fix' it, and the runner test's regex depends on this line shape. The dependency between the two is implicit.",
+                "proof_refs": [
+                  "tools/lint/go.mod:13",
+                  "tools/deterministic-check-runner/main_test.go:417"
+                ],
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-003",
+                "lens": "readability",
+                "location": ".github/workflows/ci.yml:96-101",
+                "severity": "SUGGESTION",
+                "claim": "The same two-line build-and-run staticcheck block is copy-pasted into six jobs. Any change to the build step (flags, path) must be made six times, and the tui test's parsing of the command shape depends on it.",
+                "proof_refs": [
+                  ".github/workflows/ci.yml:96-101",
+                  ".github/workflows/ci.yml:380-385"
+                ],
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Reviewed all 14 manifest paths. The telemetry changes (named dimension constants, keepMode, NoID counter) improve clarity, and tests cover them. Findings are limited to maintainability concerns in the staticcheck pinning change; none obscures behavior in a way that makes the change unsafe."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 2,
+        "target_identity": "sha256:293c159fc4613dcefc1335c6cd8ce75b96b9724708456275569b3f53cc78266d",
+        "capture_phase_revision": "sha256:3142b5c710f059edac44cbd1685961118eb208ae7bd714c6c055d381cf805db2",
+        "artifact_digest": "sha256:51e73e3504806b09239b41e8c983fabe9eef39ad31a4e0704986745e9e0d6a16",
+        "result_hash": "sha256:8a1b9ff9401cea68f593ee7f75e7fbeaf1ed63b21ad1f4e3c417786ac083aefb",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:53a82eac369255684dbc186a694cc67992569c8e3dff62bf25a0d2952c76ccde",
+            "lineage_id": "review-c3774b50f6f4d97b",
+            "authority_revision": "sha256:3142b5c710f059edac44cbd1685961118eb208ae7bd714c6c055d381cf805db2",
+            "target_identity": "sha256:293c159fc4613dcefc1335c6cd8ce75b96b9724708456275569b3f53cc78266d",
+            "base_tree": "4dc137f6c628e29b50961c02a3a3620e3c915806",
+            "candidate_tree": "65ae81fe424c01b9f1e5f0764a31efb056ab4afb",
+            "changed_path_manifest_sha256": "sha256:97fb4db6da1228d59774eeecbdb3084eff44f9768a9ff6384d9b11b843f66937",
+            "lens": "review-reliability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:53a82eac369255684dbc186a694cc67992569c8e3dff62bf25a0d2952c76ccde",
+            "raw_sha256": "sha256:6ca2396b6fa351fbbd2c234aed999d6cb6427e6d9f39bb38d51063d8f6e80d3d",
+            "canonical_sha256": "sha256:fec6825af481ec428b7e83bda46f6c7e4b1ab6a082ec7cd5c0f4628fde73fc9f",
+            "result_hash": "sha256:8a1b9ff9401cea68f593ee7f75e7fbeaf1ed63b21ad1f4e3c417786ac083aefb",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:53a82eac369255684dbc186a694cc67992569c8e3dff62bf25a0d2952c76ccde",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                ".github/workflows/ci.yml",
+                "odd/tasks/telemetry-cost-baseline.md",
+                "telemetry/aggregate.go",
+                "telemetry/cmd/telemetry/README.md",
+                "telemetry/cmd/telemetry/main.go",
+                "telemetry/cmd/telemetry/main_test.go",
+                "telemetry/readers.go",
+                "telemetry/readers_test.go",
+                "tools/deterministic-check-runner/main_test.go",
+                "tools/lint/README.md",
+                "tools/lint/doc.go",
+                "tools/lint/go.mod",
+                "tools/lint/go.sum",
+                "tui/backend_tag_test.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [],
+            "evidence": [
+              "telemetry/readers.go: parse now returns true for a call line with no ID, and readFile counts it as NoID without calling keep. Such lines are therefore never treated as duplicates and are no longer counted as Skipped. This is the requested R3-001 change. telemetry/readers_test.go (TestNoIDCounted) and telemetry/cmd/telemetry/main_test.go (TestStatsNoID) assert the exact Stats and stderr values for both Claude and Pi, and that no_id does not reach stdout.",
+              "telemetry/cmd/telemetry/main.go: the keepMode refactor keeps the old behavior. keepTop sorts, cuts and prints the note as before, and keepLatest keeps the last N rows with no note. TestTopLatestDays covers N between 1 and the number of days, which was the requested gap.",
+              "telemetry/aggregate.go: the named index constants use keyed array literals for both keys and outputs, so each dimension is paired with its slice by name. The array size is the `dimensions` constant, which makes a mismatch a compile-time error.",
+              "tools/deterministic-check-runner/main_test.go: staticcheckRequirePattern matches only a `honnef.co/go/tools vX` requirement line. It does not match the `tool honnef.co/go/tools/cmd/staticcheck` line. The test fails if ci.yml re-pins staticcheck with `@`, and it fails if the go.mod requirement is missing.",
+              "tui/backend_tag_test.go: testFileReader now recognizes the staticcheck binary invocation and classifies the `go build` line that produces it as reading no test files. The table test covers both lines.",
+              ".github/workflows/ci.yml: all six jobs build staticcheck from tools/lint, where go.sum pins it. I found no reliability regression visible in the diff. Whether the go 1.21 jobs switch toolchain through GOTOOLCHAIN=auto depends on workflow setup that this diff does not show. The candidate's notes record that this was verified."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "9c568c4d609ee4487fa030394c23dd8959da07934a1dbe5135ff9aebe7435cd1",
+    "initial_atomic_start": {
+      "lineage_id": "review-c3774b50f6f4d97b",
+      "worktree_identity": "sha256:1e6bdf585767671f668676d2d417bbb91474c12df19fefae95d25582a4d8efee",
+      "target_identity": "sha256:293c159fc4613dcefc1335c6cd8ce75b96b9724708456275569b3f53cc78266d",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "4dc137f6c628e29b50961c02a3a3620e3c915806",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "high",
+      "selected_lenses": [
+        "review-risk",
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 332,
+      "correction_budget": 166,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "pins a CI tool through a new go.sum module (supply chain), changes tests that guard the CI spelling and telemetry counters (reliability), and edits CI steps, a README and report code others read (readability)"
+    },
+    "runtime_agent": "claude-code"
+  }
+}
