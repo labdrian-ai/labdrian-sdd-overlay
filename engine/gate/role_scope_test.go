@@ -1,9 +1,10 @@
 package gate_test
 
 // Tests for what the gate does with the minimalism contract the repository really ships, for the
-// sub-agent types of the role agents (Phase 9, per-role design v3, section 6, PR 1): the contract
-// is injected into the prompts of the shaper and the builder, kept out of the prompts of the
-// reviewer and the verifier, and the other roles are left alone. The tests of gate_test.go give
+// sub-agent types of the role agents (Phase 9, per-role design v3, section 6, PR 1 and PR 2): the
+// contract is injected into the prompts of the shaper and the builder, kept out of the prompts of
+// the reviewer and the verifier (whose agent files are named for it), and the other roles are left
+// alone. The tests of gate_test.go give
 // the gate a contract written in the test; these read skills/_shared/minimalism-contract.md, so a
 // change to its frontmatter is checked against the sub-agent types it is meant for.
 
@@ -63,6 +64,50 @@ func TestRealContractIsStrippedFromTheRolesItExcludes(t *testing.T) {
 				t.Fatalf("the gate left the prompt of %s alone, want the contract stripped", role)
 			}
 			assertNoCanonicalEntry(t, got)
+		})
+	}
+}
+
+// agentName is the name an agent file declares in its frontmatter, which is the sub-agent type the
+// gate decides by when that agent is launched.
+func agentName(t *testing.T, file string) string {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join("..", "..", "agents", file+".md"))
+	if err != nil {
+		t.Fatalf("reading the agent file %s.md: %v", file, err)
+	}
+	parts := strings.SplitN(string(data), "---", 3)
+	if len(parts) < 3 {
+		t.Fatalf("agents/%s.md has no frontmatter", file)
+	}
+	for _, line := range strings.Split(parts[1], "\n") {
+		if name, ok := strings.CutPrefix(line, "name:"); ok {
+			return strings.TrimSpace(name)
+		}
+	}
+	t.Fatalf("agents/%s.md declares no name", file)
+	return ""
+}
+
+// The files of the reviewer and the verifier (Phase 9, per-role design v3, section 6, PR 2) are
+// named for the roles the contract excludes, so a launch of either keeps the contract out of its
+// prompt: one that lists it has it taken out, and one that does not is left as it is, with nothing
+// injected. A rename of a file would let the contract into a prompt it is kept out of.
+func TestTheFilesOfTheReviewAgentsAreNamedForTheRolesTheContractExcludes(t *testing.T) {
+	for _, role := range []string{"reviewer", "verifier"} {
+		t.Run(role, func(t *testing.T) {
+			name := agentName(t, role)
+			if name != role {
+				t.Fatalf("agents/%[1]s.md is named %q, want %[1]q: the contract excludes the sub-agent type %[1]s", role, name)
+			}
+			stripped, changed := rewrite(realContract(t), name, listedPrompt)
+			if !changed {
+				t.Fatalf("the gate left the prompt of %s alone, want the contract stripped", name)
+			}
+			assertNoCanonicalEntry(t, stripped)
+			if got, changed := rewrite(realContract(t), name, "Do the work."); changed || got != "Do the work." {
+				t.Errorf("the gate changed a prompt of %s that did not list the contract (changed=%v); got:\n%s", name, changed, got)
+			}
 		})
 	}
 }
