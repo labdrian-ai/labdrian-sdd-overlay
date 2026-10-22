@@ -70,7 +70,7 @@ func run(args []string, stdout, stderr io.Writer, home string) int {
 			return 1
 		}
 		fmt.Fprintf(stderr, "%s: files=%d lines=%d calls=%d skipped=%d duplicates=%d unreadable_files=%d\n", source.name, stats.Files, stats.Lines, stats.Calls, stats.Skipped, stats.Duplicates, stats.UnreadableFiles)
-		readable = readable || stats.Calls > 0 || stats.Files > stats.UnreadableFiles
+		readable = readable || stats.Read > 0
 	}
 	if !readable {
 		fmt.Fprintln(stderr, "no readable source")

@@ -3,11 +3,14 @@ package telemetry
 import (
 	"crypto/sha256"
 	"encoding/json"
+	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
+	"testing/iotest"
 )
 
 func fixture(t *testing.T, root, name, data string) {
@@ -52,7 +55,7 @@ func TestClaudeDedupeLast(t *testing.T) {
 	fixture(t, root, "project/session.jsonl", claude("msg", 1)+claude("msg", 6))
 	calls, s := collect(t, ReadClaude, root)
 	want := Call{Source: "claude", Project: "project", SessionID: "session", Provider: "anthropic", Model: "claude-sonnet-5-5", Role: "main", Day: "2026-10-20", Input: 3, CacheRead: 4, CacheWrite: 5, Output: 6}
-	if len(calls) != 1 || !reflect.DeepEqual(calls[0], want) || s != (Stats{Files: 1, Lines: 2, Calls: 1, Duplicates: 1}) {
+	if len(calls) != 1 || !reflect.DeepEqual(calls[0], want) || s != (Stats{Files: 1, Read: 1, Lines: 2, Calls: 1, Duplicates: 1}) {
 		t.Fatalf("calls=%+v stats=%+v", calls, s)
 	}
 }
@@ -169,7 +172,7 @@ func TestPiCost(t *testing.T) {
 				v := 0.25
 				want.CostUSD = &v
 			}
-			if len(calls) != 1 || !reflect.DeepEqual(calls[0], want) || s != (Stats{Files: 1, Lines: 1, Calls: 1}) {
+			if len(calls) != 1 || !reflect.DeepEqual(calls[0], want) || s != (Stats{Files: 1, Read: 1, Lines: 1, Calls: 1}) {
 				t.Fatalf("%+v %+v", calls, s)
 			}
 		})
@@ -177,12 +180,56 @@ func TestPiCost(t *testing.T) {
 }
 
 func TestPiDedupeFirst(t *testing.T) {
-	for _, id := range []string{"response", ""} {
+	root := t.TempDir()
+	fixture(t, root, "p/a_session.jsonl", pi("response", "0.25")+pi("response", "0.5"))
+	fixture(t, root, "q/b_session.jsonl", pi("response", "0.75"))
+	calls, s := collect(t, ReadPi, root)
+	if len(calls) != 1 || calls[0].CostUSD == nil || *calls[0].CostUSD != 0.25 || s.Duplicates != 2 {
+		t.Fatalf("%+v %+v", calls, s)
+	}
+}
+
+// Lines without a response ID fall back to their line ID, which is only
+// unique within one session file.
+func TestPiLineIDScopedToFile(t *testing.T) {
+	root := t.TempDir()
+	fixture(t, root, "p/a_session.jsonl", pi("", "0.25")+pi("", "0.5"))
+	fixture(t, root, "q/b_session.jsonl", pi("", "0.75"))
+	calls, s := collect(t, ReadPi, root)
+	if len(calls) != 2 || *calls[0].CostUSD != 0.25 || *calls[1].CostUSD != 0.75 || s.Duplicates != 1 {
+		t.Fatalf("%+v %+v", calls, s)
+	}
+}
+
+// A file that fails mid-read contributes no calls, and its IDs do not hide
+// copies in later files.
+func TestPartialFileDropped(t *testing.T) {
+	for _, tc := range []struct {
+		source, line string
+	}{{"claude", claude("m", 1)}, {"pi", pi("r", "")}} {
+		var s Stats
+		r := io.MultiReader(strings.NewReader(tc.line), iotest.ErrReader(errors.New("disk")))
+		rows, ok := readFile(r, tc.source, func(rows map[string]entry, e entry) bool { rows[e.id] = e; return false }, &s)
+		if ok || rows != nil || s.Lines != 1 {
+			t.Fatalf("%s: %v %+v %+v", tc.source, ok, rows, s)
+		}
+	}
+}
+
+func TestUnreadableDirectory(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root reads any directory")
+	}
+	for _, read := range []reader{ReadClaude, ReadPi} {
 		root := t.TempDir()
-		fixture(t, root, "p/a_session.jsonl", pi(id, "0.25")+pi(id, "0.5"))
-		fixture(t, root, "q/b_session.jsonl", pi(id, "0.75"))
-		calls, s := collect(t, ReadPi, root)
-		if len(calls) != 1 || calls[0].CostUSD == nil || *calls[0].CostUSD != 0.25 || s.Duplicates != 2 {
+		fixture(t, root, "p/ts_session.jsonl", `{"type":"user"}`+"\n")
+		locked := filepath.Join(root, "q")
+		if err := os.Mkdir(locked, 0); err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { os.Chmod(locked, 0700) })
+		calls, s := collect(t, read, root)
+		if len(calls) != 0 || s != (Stats{Files: 1, Read: 1, Lines: 1, Skipped: 1, UnreadableFiles: 1}) {
 			t.Fatalf("%+v %+v", calls, s)
 		}
 	}
