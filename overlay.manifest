@@ -144,6 +144,12 @@ inception-pipeline/references/tier-selection.md custom
 skills.registry.yaml custom
 GADU.md                  custom   agent
 opencode/agents/GADU.md custom   opencode-agent
+builder.md               custom   agent
+shaper.md                custom   agent
+polisher.md              custom   agent
+prototyper.md            custom   agent
+sweeper.md               custom   agent
+delivery.md              custom   agent
 sdd-apply.md managed agent
 sdd-archive.md managed agent
 sdd-design.md managed agent
