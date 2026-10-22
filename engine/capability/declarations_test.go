@@ -123,24 +123,17 @@ func TestEveryTargetDeclaresInstallationWithEvidence(t *testing.T) {
 	}
 }
 
-// TestRuntimesOtherThanClaudeAreDeclaredOnly pins the Phase 7 scope: Codex,
-// Pi, and OpenCode receive an honest declaration of what is proven today
-// (installation), and every other capability stays unsupported with its
-// limit written, because Phase 7 implements projection for Claude Code only.
-//
-// Skills is the one capability this rule does not cover. Phase 8 adds it, and
-// its claim is stated by each runtime from the tests that prove it, not from
-// Phase 7 scope: the rule about what each runtime may say, and what tests a
-// status needs, is TestSkillsClaimsAreBoundedByTheirEvidence and
-// TestSkillsClaimsStateTheirScope. The rule here stays exact for the eight
-// capabilities Phase 7 defined.
+// Phase 7's declared-only limits remain except for installation, Phase 8 skills,
+// and C23 M12b's bounded Codex memory enforcement. Each exception has its own
+// status and scope pins; Pi and OpenCode memory enforcement stay unsupported.
 func TestRuntimesOtherThanClaudeAreDeclaredOnly(t *testing.T) {
 	for _, d := range capability.All() {
 		if d.Target == capability.TargetClaude {
 			continue
 		}
 		for _, c := range d.Claims {
-			if c.Capability == capability.Installation || c.Capability == capability.Skills {
+			if c.Capability == capability.Installation || c.Capability == capability.Skills ||
+				(d.Target == capability.TargetCodex && c.Capability == capability.MemoryEnforcement) {
 				continue
 			}
 			if c.Status != capability.Unsupported {

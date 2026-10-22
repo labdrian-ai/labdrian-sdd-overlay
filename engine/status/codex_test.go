@@ -1,6 +1,7 @@
 package status
 
 import (
+	"encoding/json"
 	"io/fs"
 	"strings"
 	"testing"
@@ -21,7 +22,7 @@ func TestCodexHookStatusUsesDefaultOrExplicitHomeAndNeverClaimsTrust(t *testing.
 			t.Fatalf("absent Codex changed the old outcome: %+v", got)
 		}
 		w.files.modes[codex] = fs.ModeDir | 0o700
-		label := "hook: Codex SessionStart (memory instructions)"
+		label := "hook: Codex memory (SessionStart, PreToolUse, PostToolUse)"
 		if got := service.Check(req); got.named(t, label).Level != Warn || got.Outcome() != Degraded {
 			t.Fatalf("missing hook: %+v", got)
 		}
@@ -41,6 +42,19 @@ func TestCodexHookStatusUsesDefaultOrExplicitHomeAndNeverClaimsTrust(t *testing.
 				t.Fatal("status read trust state")
 			}
 		}
+		// An old install containing only SessionStart must not report a complete gate.
+		var document map[string]map[string]json.RawMessage
+		if err := json.Unmarshal(data, &document); err != nil {
+			t.Fatal(err)
+		}
+		delete(document["hooks"], "PreToolUse")
+		delete(document["hooks"], "PostToolUse")
+		old, err := json.Marshal(document)
+		if err != nil {
+			t.Fatal(err)
+		}
+		w.files.contents[codex+"/hooks.json"] = string(old)
+		wantCheck(t, service.Check(req).named(t, label), Warn, "missing or drifted: PreToolUse, PostToolUse; run 'labdrian install-hooks'")
 		w.files.contents[codex+"/hooks.json"] = `{"hooks":[]}`
 		check = service.Check(req).named(t, label)
 		wantCheck(t, check, Warn, "cannot parse hooks.json: hooks must be an object")

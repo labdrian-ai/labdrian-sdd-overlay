@@ -138,12 +138,12 @@ func TestStatusCodexPresenceAndAbsence(t *testing.T) {
 	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
 		t.Fatal(err)
 	}
-	if out := check(); !strings.Contains(out, "[WARN] hook: Codex SessionStart") {
+	if out := check(); !strings.Contains(out, "[WARN] hook: Codex memory (SessionStart, PreToolUse, PostToolUse)") {
 		t.Fatalf("CODEX_HOME=%q: %s", d.env("CODEX_HOME"), out)
 	}
 	p := newCapturedProcess()
 	run(p.process, d, []string{"merge-codex-hooks", "--hooks", path, "--hook-command", filepath.Join(home, ".claude/bin/gentle-ai-overlay")})
-	if out := check(); !strings.Contains(out, "[OK  ] hook: Codex SessionStart") || !strings.Contains(out, "trust") || !strings.Contains(out, "/hooks") || !strings.Contains(out, "key t") {
+	if out := check(); !strings.Contains(out, "[OK  ] hook: Codex memory (SessionStart, PreToolUse, PostToolUse)") || !strings.Contains(out, "trust") || !strings.Contains(out, "/hooks") || !strings.Contains(out, "key t") {
 		t.Fatal(out)
 	}
 }

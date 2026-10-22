@@ -10,7 +10,8 @@ import (
 // directory must already exist; installation never provisions a Codex home or touches trust state.
 type CodexHooks struct{}
 
-// Install replaces the owned SessionStart entry, writing nothing on a second identical merge.
+// Install replaces the owned SessionStart, PreToolUse and PostToolUse entries, writing nothing
+// on a second identical merge.
 func (CodexHooks) Install(path, binary string) error {
 	return editCodex(path, binary, codexhooks.Merge)
 }

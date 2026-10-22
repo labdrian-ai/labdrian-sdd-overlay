@@ -19,9 +19,10 @@ import (
 // Code claim is upgraded in the commit that adds the tests proving it, so the
 // table states only what the tests at that commit prove. Codex, Pi, and
 // OpenCode are declared only: they state what is proven today (installation)
-// and an honest unsupported, with the limit written, for the rest. OpenCode is
-// also declared untested: it is installed here but outside the regular runtime
-// set, and no test exercises it (one recorded live probe aside).
+// and an honest unsupported, with the limit written, for the rest, except for
+// Codex's partial MCP memory gate (C23 M12b). OpenCode is also declared untested:
+// it is installed here but outside the regular runtime set, and no test exercises
+// it (one recorded live probe aside).
 //
 // Skills, added in Phase 8, is the exception to "declared only": every runtime
 // states what its own tests prove about carrying skills into it, and all four are
@@ -197,9 +198,17 @@ var declarations = []Declaration{
 // which is the one capability Phase 8 states from the tests that exist. runtime is
 // the display name used in the sentences, and authDetail is the authentication
 // limit, which differs by runtime because only some runtimes have a credentials
-// presence check.
+// presence check. C23 M12b upgrades only Codex memory enforcement, using the
+// same ordered declaration and proof scheme as every other claim.
 func declaredOnlyClaims(runtime, authDetail string, skills Claim) []Claim {
 	const scope = " This runtime is declared only: Phase 7 writes no code for it."
+	memory := unsupported(MemoryEnforcement, memoryEnforcementDetail(runtime, scope))
+	if runtime == "Codex" {
+		memory = partial(MemoryEnforcement, memoryEnforcementDetail(runtime, scope),
+			"cmd:TestCodexSourceProcesses",
+			"cmd:TestMemoryWiringAcceptance",
+		)
+	}
 	return []Claim{
 		unsupported(Projection, "No code projects the active workflow (Goal, Profile, stage) into a "+runtime+" session."+scope),
 		unsupported(Dispatch, "Not implemented. The engine never starts sessions by design, and dispatch means projecting the active workflow into an existing session, which does not exist for "+runtime+"."+scope),
@@ -207,7 +216,7 @@ func declaredOnlyClaims(runtime, authDetail string, skills Claim) []Claim {
 		unsupported(Persistence, "Not implemented: no binding between a "+runtime+" session and a workflow is stored."+scope),
 		unsupported(Restart, "Not implemented: a new "+runtime+" session does not re-bind to an on-disk workflow."+scope),
 		unsupported(Authentication, authDetail+scope),
-		unsupported(MemoryEnforcement, memoryEnforcementDetail(runtime, scope)),
+		memory,
 		skills,
 	}
 }
@@ -268,12 +277,11 @@ func (d Declaration) clone() Declaration {
 	return out
 }
 
-// memoryEnforcementDetail says why memory enforcement is unsupported for a declared-only runtime.
-// Codex now receives the plan as instructions (C23 M12), so it must not say that nothing is
-// projected; it still enforces nothing.
+// memoryEnforcementDetail bounds the Codex MCP gate and the remaining
+// declared-only runtimes without changing any other runtime's claim.
 func memoryEnforcementDetail(runtime, scope string) string {
 	if runtime == "Codex" {
-		return "Not enforced: a SessionStart hook that install-hooks merges into hooks.json projects the memory plan into a Codex session as instructions once the owner trusts it in the Codex TUI, but no hook gates a read and none records evidence (M12b). Proven by an engine hook process, not by a live session."
+		return "PreToolUse checks plan sources for MCP Engram reads and longterm-mem query/get; searches/queries check project, goal-scoped queries check goal. install-hooks installs --source codex; trust each handler in the Codex TUI. Limits: Codex fails open on hook failure; no procedural skills, Bash or apply_patch enforcement; no project check for reads by id; agent_id ignored. PostToolUse records successful MCP reads only. Proven by engine hook processes, not live validation."
 	}
 	return "Not implemented: no memory plan is projected into or enforced in a " + runtime + " session." + scope
 }

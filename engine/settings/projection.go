@@ -65,6 +65,20 @@ var projectionFamily = hookFamily{
 	build: buildProjectionEntry,
 }
 
+// ProjectionCommand is the never-blocking command of one projection hook entry: the binary is
+// quoted when it needs it, a missing binary is a silent no-op, and the exit is always 0. The
+// extra arguments are fixed flags written by the caller (such as --source codex), never user
+// input: they are appended as they are. Claude's entries pass none, so what they install does not
+// change; the Codex hooks of C23 M12b pass the source flag.
+func ProjectionCommand(hookCommand, event string, extraArgs ...string) string {
+	bin := shellQuote(hookCommand)
+	cmd := fmt.Sprintf(`command -v %s >/dev/null 2>&1 && %s %s --event %s`, bin, bin, LabdrianProjectionIdentity, event)
+	for _, arg := range extraArgs {
+		cmd += " " + arg
+	}
+	return cmd + " || true"
+}
+
 // buildProjectionEntry returns the settings entry for one spec.
 //
 // NEVER-BLOCKING COMMAND: the projection hooks report through JSON on stdout
@@ -73,15 +87,10 @@ var projectionFamily = hookFamily{
 // ("|| true"), and a missing binary is a silent no-op. Claude Code runs hooks
 // with "sh -c", so the guard uses POSIX redirection, not "&>".
 func buildProjectionEntry(hookCommand string, s hookSpec) map[string]interface{} {
-	bin := shellQuote(hookCommand)
-	cmd := fmt.Sprintf(
-		`command -v %s >/dev/null 2>&1 && %s %s --event %s || true`,
-		bin, bin, LabdrianProjectionIdentity, s.event,
-	)
 	entry := map[string]interface{}{
 		"hooks": []interface{}{map[string]interface{}{
 			"type":    "command",
-			"command": cmd,
+			"command": ProjectionCommand(hookCommand, s.event),
 		}},
 	}
 	if s.matcher != "" {

@@ -1,4 +1,6 @@
-// Package codexhooks owns the SessionStart memory-instructions entry in Codex's shared hooks.json.
+// Package codexhooks owns the memory entries of Codex's shared hooks.json: SessionStart (the plan as
+// instructions, C23 M12) and PreToolUse and PostToolUse (the memory gate and the read evidence,
+// C23 M12b).
 // It edits bytes, not files. Foreign values, including unknown fields, number spellings and string
 // escapes, are never marshaled again. The command is built by settings' existing projection family,
 // so shell quoting and missing-binary safety remain identical to Claude's.
@@ -13,7 +15,26 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings"
 )
 
-const matcher = "startup|resume|clear|compact"
+// memoryMatcher is the matcher of the tool entries: the narrowest one the gate acts on once the
+// adapter has translated Codex's names. Codex reads a matcher that holds more than letters, digits,
+// "_" and "|" as an unanchored Rust regex, so it is anchored here. It names the four Engram reads
+// (with an optional alphanumeric plugin prefix) and longterm-mem query and
+// get, in the spelling Codex sends (the server name has its hyphen replaced by an underscore).
+const memoryMatcher = `^mcp__(([A-Za-z0-9]+_)*engram__mem_(search|context|get_observation|timeline)|longterm_mem__(query|get))$`
+
+// spec is one entry this package owns: the event, its matcher, and the flags its command carries.
+type spec struct {
+	event, matcher string
+	extra          []string
+}
+
+// specs are the owned entries, in the order they are installed. Only the tool entries pass the
+// source flag; the SessionStart entry is the one M12 installed and stays as it was.
+var specs = []spec{
+	{event: "SessionStart", matcher: "startup|resume|clear|compact"},
+	{event: "PreToolUse", matcher: memoryMatcher, extra: []string{"--source", "codex"}},
+	{event: "PostToolUse", matcher: memoryMatcher, extra: []string{"--source", "codex"}},
+}
 
 // Merge replaces owned handlers once, keeping foreign handlers and groups untouched.
 func Merge(data []byte, binary string) ([]byte, bool, error) { return change(data, binary, true) }
@@ -21,22 +42,36 @@ func Merge(data []byte, binary string) ([]byte, bool, error) { return change(dat
 // Remove removes only owned handlers and groups/events emptied by their removal.
 func Remove(data []byte, binary string) ([]byte, bool, error) { return change(data, binary, false) }
 
-// Present says an owned handler is installed; it does not claim that Codex trusts it.
-func Present(data []byte, binary string) (bool, error) {
-	_, groups, err := parse(data)
+// Missing names the events whose exact desired entry is not installed, in install order. A document that
+// cannot be read is an error.
+func Missing(data []byte, binary string) ([]string, error) {
+	_, events, err := parse(data)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
-	for _, group := range groups {
-		_, owned := filter(group, binary)
-		if owned {
-			return true, nil
+	var missing []string
+	for _, sp := range specs {
+		found := false
+		for _, group := range events[sp.event] {
+			if equivalent(group, desired(binary, sp)) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			missing = append(missing, sp.event)
 		}
 	}
-	return false, nil
+	return missing, nil
 }
 
-func parse(data []byte) ([]byte, []json.RawMessage, error) {
+// Present says every owned entry is installed; it does not claim that Codex trusts them.
+func Present(data []byte, binary string) (bool, error) {
+	missing, err := Missing(data, binary)
+	return err == nil && len(missing) == 0, err
+}
+
+func parse(data []byte) ([]byte, map[string][]json.RawMessage, error) {
 	// nil means no file; a non-nil empty slice is an existing malformed document.
 	if data == nil {
 		data = []byte(`{}`)
@@ -58,27 +93,36 @@ func parse(data []byte) ([]byte, []json.RawMessage, error) {
 	if hooks == nil {
 		hooks = []byte(`{}`)
 	}
-	var events map[string]json.RawMessage
-	if err := json.Unmarshal(hooks, &events); err != nil || events == nil {
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(hooks, &raw); err != nil || raw == nil {
 		return nil, nil, fmt.Errorf("hooks must be an object")
 	}
-	var groups []json.RawMessage
-	if event, ok := events["SessionStart"]; ok {
+	events := map[string][]json.RawMessage{}
+	for _, sp := range specs {
+		event, ok := raw[sp.event]
+		if !ok {
+			continue
+		}
+		var groups []json.RawMessage
 		if err := json.Unmarshal(event, &groups); err != nil || groups == nil {
-			return nil, nil, fmt.Errorf("SessionStart must be an array")
+			return nil, nil, fmt.Errorf("%s must be an array", sp.event)
 		}
 		for _, group := range groups {
 			var g map[string]json.RawMessage
 			if err := json.Unmarshal(group, &g); err != nil || g == nil {
-				return nil, nil, fmt.Errorf("SessionStart group must be an object")
+				return nil, nil, fmt.Errorf("%s group must be an object", sp.event)
 			}
 			var handlers []json.RawMessage
 			if err := json.Unmarshal(g["hooks"], &handlers); err != nil || handlers == nil {
-				return nil, nil, fmt.Errorf("group hooks must be an array")
+				if sp.event == "SessionStart" {
+					return nil, nil, fmt.Errorf("group hooks must be an array")
+				}
+				return nil, nil, fmt.Errorf("%s group hooks must be an array", sp.event)
 			}
 		}
+		events[sp.event] = groups
 	}
-	return hooks, groups, nil
+	return hooks, events, nil
 }
 
 // owns checks one command, not tokens split across two handlers in the same group. The settings
@@ -118,9 +162,17 @@ func filter(group json.RawMessage, binary string) (json.RawMessage, bool) {
 	return setMember(group, "hooks", array(kept)), true
 }
 
-func desired(binary string) json.RawMessage {
-	entry := settings.ProjectionHookEntries(binary)["SessionStart"][0].(map[string]any)
-	entry["matcher"] = matcher
+// desired is the entry of one spec, built by the same projection command builder the Claude entries
+// use, so the shell quoting and the missing-binary guard are identical. Its keys are marshaled in
+// sorted order, which is how the SessionStart entry of M12 was written, so it stays byte-identical.
+func desired(binary string, sp spec) json.RawMessage {
+	entry := map[string]any{
+		"hooks": []any{map[string]any{
+			"type":    "command",
+			"command": settings.ProjectionCommand(binary, sp.event, sp.extra...),
+		}},
+		"matcher": sp.matcher,
+	}
 	data, _ := json.Marshal(entry) // only our freshly built entry is marshaled
 	return data
 }
@@ -129,11 +181,35 @@ func change(data []byte, binary string, install bool) ([]byte, bool, error) {
 	if binary == "" {
 		return data, false, settings.ErrEmptyHookCommand
 	}
-	hooks, groups, err := parse(data)
+	hooks, events, err := parse(data)
 	if err != nil {
 		return data, false, err
 	}
-	wanted := desired(binary)
+	changed := false
+	for _, sp := range specs {
+		kept, eventChanged := editEvent(events[sp.event], binary, desired(binary, sp), install)
+		if !eventChanged {
+			continue
+		}
+		changed = true
+		var event []byte
+		if len(kept) > 0 {
+			event = array(kept)
+		}
+		hooks = setMember(hooks, sp.event, event)
+	}
+	if !changed {
+		return data, false, nil
+	}
+	if data == nil {
+		data = []byte(`{}`)
+	}
+	return setMember(data, "hooks", hooks), true, nil
+}
+
+// editEvent installs or removes the owned handlers of one event's groups. An exact, sole owned
+// entry stays byte-identical; duplicates and older commands of ours are repaired into one.
+func editEvent(groups []json.RawMessage, binary string, wanted json.RawMessage, install bool) ([]json.RawMessage, bool) {
 	kept := make([]json.RawMessage, 0, len(groups)+1)
 	installed := false
 	changed := false
@@ -143,7 +219,6 @@ func change(data []byte, binary string, install bool) ([]byte, bool, error) {
 			kept = append(kept, group)
 			continue
 		}
-		// An exact, sole owned entry stays byte-identical. Duplicates and older commands are repaired.
 		if install && !installed && equivalent(group, wanted) {
 			kept = append(kept, group)
 			installed = true
@@ -162,18 +237,7 @@ func change(data []byte, binary string, install bool) ([]byte, bool, error) {
 		kept = append(kept, wanted)
 		changed = true
 	}
-	if !changed {
-		return data, false, nil
-	}
-	var event []byte
-	if len(kept) > 0 {
-		event = array(kept)
-	}
-	hooks = setMember(hooks, "SessionStart", event)
-	if data == nil {
-		data = []byte(`{}`)
-	}
-	return setMember(data, "hooks", hooks), true, nil
+	return kept, changed
 }
 
 func equivalent(a, b []byte) bool {
