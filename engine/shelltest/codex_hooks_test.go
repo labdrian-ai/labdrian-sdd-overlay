@@ -65,7 +65,7 @@ cmd_install_hooks
 				if _, err := os.Stat(codex); !os.IsNotExist(err) {
 					t.Fatalf("created codex home: %v", err)
 				}
-				if strings.Contains(out, "Codex SessionStart") || strings.Contains(out, "merge-codex-hooks:") {
+				if strings.Contains(out, "Codex memory hooks") || strings.Contains(out, "merge-codex-hooks:") {
 					t.Fatal(out)
 				}
 			} else {
@@ -73,12 +73,22 @@ cmd_install_hooks
 				if err != nil || !strings.Contains(string(data), "projection hook") {
 					t.Fatalf("%s %v", data, err)
 				}
-				if !strings.Contains(out, "/hooks") || !strings.Contains(out, "t") || !strings.Contains(out, "trust") {
+				for _, event := range []string{"SessionStart", "PreToolUse", "PostToolUse"} {
+					if !strings.Contains(string(data), "--event "+event) {
+						t.Fatalf("missing %s: %s", event, data)
+					}
+				}
+				if !strings.Contains(out, "Codex memory hooks (SessionStart, PreToolUse, PostToolUse) installed") ||
+					!strings.Contains(out, "trust each new handler once") || !strings.Contains(out, "/hooks, key t") ||
+					!strings.Contains(out, "two more trusts") || !strings.Contains(out, "no trust state or config.toml is changed") {
 					t.Fatal(out)
+				}
+				if _, err := os.Stat(filepath.Join(codex, "config.toml")); !os.IsNotExist(err) {
+					t.Fatalf("created Codex configuration: %v", err)
 				}
 				// status is delegated to the same engine; a missing Claude contract can make it exit 1.
 				status := run(strings.Replace(script, "cmd_install_hooks", "(cmd_status_hooks) || true", 1))
-				if !strings.Contains(status, "[OK  ] hook: Codex SessionStart") || !strings.Contains(status, "trust") {
+				if !strings.Contains(status, "[OK  ] hook: Codex memory (SessionStart, PreToolUse, PostToolUse)") || !strings.Contains(status, "trust") {
 					t.Fatal(status)
 				}
 			}
@@ -89,7 +99,7 @@ cmd_install_hooks
 				if err != nil || strings.Contains(string(data), "projection hook") {
 					t.Fatalf("uninstall: %s %v", data, err)
 				}
-			} else if strings.Contains(out, "Codex SessionStart") || strings.Contains(out, "uninstall-codex-hooks:") {
+			} else if strings.Contains(out, "Codex memory hooks") || strings.Contains(out, "uninstall-codex-hooks:") {
 				t.Fatal(out)
 			}
 			if _, err := os.Stat(filepath.Join(home, ".codex")); !os.IsNotExist(err) {

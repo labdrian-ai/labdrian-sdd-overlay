@@ -25,6 +25,9 @@ import (
 )
 
 func TestMemoryWiringAcceptance(t *testing.T) {
+	if testing.Short() {
+		t.Skip("builds and runs engine processes")
+	}
 	binary := phase6BuildEngineBinary(t)
 	w := newPhase7World(t, binary)
 	root, err := filepath.Abs("../..")
@@ -232,7 +235,8 @@ func TestMemoryWiringAcceptance(t *testing.T) {
 		unchanged(t, before)
 		instructions(t)
 	}
-	var codexCommand string // the installed hook command, set by codexHook for the availability proof
+	var codexCommand string              // the installed SessionStart command, used by the availability proof
+	codexCommands := map[string]string{} // installed tool commands, not hand-written invocations
 	codexHook := func(t *testing.T) {
 		t.Helper()
 		// The hook is merged into a scratch CODEX_HOME and run as installed, through sh -c, with
@@ -263,17 +267,38 @@ func TestMemoryWiringAcceptance(t *testing.T) {
 		if err := json.Unmarshal(data, &doc); err != nil {
 			t.Fatal(err)
 		}
-		var ours string
-		for _, group := range doc.Hooks["SessionStart"] {
-			for _, h := range group.Hooks {
-				if strings.Contains(h.Command, "projection hook") {
-					ours = h.Command
-					if group.Matcher != "startup|resume|clear|compact" {
-						t.Fatalf("matcher %q", group.Matcher)
+		for _, event := range []string{"SessionStart", "PreToolUse", "PostToolUse"} {
+			for _, group := range doc.Hooks[event] {
+				for _, h := range group.Hooks {
+					if !strings.Contains(h.Command, "projection hook") {
+						continue
+					}
+					if codexCommands[event] != "" {
+						t.Fatalf("duplicate owned %s handler", event)
+					}
+					codexCommands[event] = h.Command
+					if event == "SessionStart" {
+						if group.Matcher != "startup|resume|clear|compact" {
+							t.Fatalf("matcher %q", group.Matcher)
+						}
+						continue
+					}
+					if !strings.Contains(h.Command, "--source codex") {
+						t.Fatalf("%s lacks the boundary adapter: %q", event, h.Command)
+					}
+					matcher := regexp.MustCompile(group.Matcher)
+					for _, tool := range []string{allowedTool, "mcp__longterm_mem__get", "mcp__longterm_mem__query"} {
+						if !matcher.MatchString(tool) {
+							t.Fatalf("%s matcher excludes acceptance tool %s", event, tool)
+						}
 					}
 				}
 			}
+			if codexCommands[event] == "" {
+				t.Fatalf("missing owned %s handler", event)
+			}
 		}
+		ours := codexCommands["SessionStart"]
 		codexCommand = ours
 		if ours == "" || !strings.Contains(string(data), "moshi notify") {
 			t.Fatalf("our entry or the foreign one is missing: %s", data)
@@ -306,6 +331,52 @@ func TestMemoryWiringAcceptance(t *testing.T) {
 		line := "- Do not read engram: it is unavailable in this session (the engram program failed: exit status 1).\n"
 		want := sessionOutput(strings.Replace(block, "- Engram reads", line+"- Engram reads", 1))
 		check(t, "codex SessionStart availability", hw.run(hw.dir, sessionStartInput(t, hw.repo, "startup"), "sh", "-c", codexCommand), want)
+	}
+	codexTool := func(t *testing.T, event, tool string, input any) phase7Run {
+		t.Helper()
+		command := codexCommands[event]
+		if command == "" {
+			t.Fatalf("instructions proof did not install %s", event)
+		}
+		return w.run(w.dir, codexSourceInput(t, w.repo, event, tool, input), "sh", "-c", command)
+	}
+	codexEnforcement := func(t *testing.T) {
+		before := w.stateSnapshot()
+		check(t, "Codex included source", codexTool(t, "PreToolUse", allowedTool, allowedInput), "")
+		for _, tt := range []struct{ name, action string }{{"query", "query"}, {"get", "read it"}} {
+			reason := "labdrian: the memory plan of workflow wf-1 of project proj-1 (profile \"sdd\") does not include source \"longterm-mem\", so this longterm-mem " + tt.name + " is denied. Stop following this workflow with 'labdrian workflow unbind' to " + tt.action + "."
+			check(t, "Codex excluded "+tt.name, codexTool(t, "PreToolUse", "mcp__longterm_mem__"+tt.name, map[string]any{"id": "obs-1", "project": "proj-1", "query": "q"}),
+				`{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":`+strconv.Quote(reason)+"}}\n")
+		}
+		unchanged(t, before) // includes the existing Claude evidence and its counters
+	}
+	codexEvidence := func(t *testing.T) {
+		path := sourceSidecar(w)
+		previous := sourceRead(t, path) // Claude's record remains intact in the shared sidecar
+		before := w.stateSnapshot()
+		check(t, "Codex successful MCP PostToolUse", codexTool(t, "PostToolUse", allowedTool, allowedInput), "")
+		data := sourceRead(t, path)
+		if !strings.HasPrefix(string(data), string(previous)) || strings.Count(string(data[len(previous):]), "\n") != 1 {
+			t.Fatalf("not exactly one append: %q -> %q", previous, data)
+		}
+		sourceRecord(t, data[len(previous):], allowedTool, "engram", "", "4216")
+		if strings.Contains(string(data), "response-content-canary") {
+			t.Fatal("Codex response content leaked into evidence")
+		}
+		info, err := os.Stat(path)
+		if err != nil || info.Mode().Perm() != 0o600 {
+			t.Fatalf("Codex sidecar mode: %v, %v", info, err)
+		}
+		after := w.stateSnapshot()
+		rel, err := filepath.Rel(w.state, path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		before[rel] = after[rel]
+		if !reflect.DeepEqual(before, after) {
+			t.Fatal("Codex PostToolUse changed files other than the existing sidecar")
+		}
+		codexEnforcement(t) // refused calls do not run or append a PostToolUse record
 	}
 	piDelivery := func(t *testing.T) {
 		dest := filepath.Join(w.dir, "pkg")
@@ -346,8 +417,8 @@ func TestMemoryWiringAcceptance(t *testing.T) {
 		},
 		"codex": {
 			"instructions": {capability.Supported, "Engine hook process only, once the owner trusts the hook in the Codex TUI; the skills stay deliverable but Codex's sandbox may hide them; no live session before trust.", func(t *testing.T) { codexDelivery(t); codexHook(t) }},
-			"enforcement":  unsupported("Codex has no memory enforcement; its gate is M12b."),
-			"evidence":     unsupported("Codex has no memory-read evidence hook yet; it is M12b."),
+			"enforcement":  {capability.Partial, "Trusted MCP read hooks only; Codex fails open; no procedural skills, Bash or apply_patch enforcement, no project validation for reads by id; agent_id ignored. Engine processes, not live validation.", codexEnforcement},
+			"evidence":     {capability.Supported, "Successful MCP reads only, using the shared metadata/hash sidecar; failed calls have no PostToolUse. Engine processes, not live validation.", codexEvidence},
 			"availability": {capability.Partial, "Session-time Engram availability shared with Claude through the same hook renderer, not runtime authentication; only after the owner trusts the hook.", codexAvailability},
 		},
 		"pi": {

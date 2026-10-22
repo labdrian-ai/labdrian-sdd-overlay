@@ -337,11 +337,17 @@ func phase7Capabilities(t *testing.T, binary string) {
 				t.Errorf("claude is marked untested (%q)", d.Untested)
 			}
 		default:
-			// Declared only: an honest unsupported with the limit written.
+			// C23 M12b adds partial Codex memory enforcement; other claims remain declared only.
 			for _, name := range phase7 {
 				c, ok := byName[name]
 				if !ok {
 					t.Errorf("%s has no %s claim", d.Target, name)
+					continue
+				}
+				if d.Target == capability.TargetCodex && name == capability.MemoryEnforcement {
+					if c.Status != capability.Partial || c.Detail == "" || len(c.Tests) == 0 {
+						t.Errorf("%s %s = %s with %d tests and detail %q, want partial, named tests, and a written limit", d.Target, name, c.Status, len(c.Tests), c.Detail)
+					}
 					continue
 				}
 				if c.Status != capability.Unsupported || c.Detail == "" || len(c.Tests) != 0 {

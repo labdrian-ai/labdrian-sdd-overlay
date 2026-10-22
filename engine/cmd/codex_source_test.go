@@ -19,7 +19,7 @@ import (
 func codexSourceInput(t *testing.T, cwd, event, tool string, input any) string {
 	t.Helper()
 	fields := map[string]any{
-		"session_id": "session-1", "turn_id": "turn-1", "cwd": cwd,
+		"session_id": "session-1", "turn_id": "turn-1", "agent_id": "subagent-1", "cwd": cwd,
 		"hook_event_name": event, "model": "gpt-5.4", "permission_mode": "default",
 		"tool_name": tool, "tool_use_id": "toolu_1", "transcript_path": nil, "tool_input": input,
 	}

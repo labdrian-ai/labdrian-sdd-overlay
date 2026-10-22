@@ -5,20 +5,43 @@ import (
 	"testing"
 )
 
-// Codex receives the memory plan as instructions through a SessionStart hook (C23 M12), so its
-// declaration must not say that nothing is projected; it still enforces nothing, and says so.
-func TestCodexMemoryEnforcementDetailSaysTheHookProjectsAndNothingIsEnforced(t *testing.T) {
-	got := memoryEnforcementDetail("Codex", " scope")
-	for _, want := range []string{"SessionStart hook", "trusts it", "no hook gates a read", "not by a live session"} {
-		if !strings.Contains(got, want) {
-			t.Errorf("Codex detail %q does not say %q", got, want)
+// C23 M12b decision 3: the public declaration upgrades only the bounded MCP gate.
+// Evidence and availability retain their separate statuses in the M11 process table.
+func TestCodexMemoryEnforcementClaimIsPartialAndBounded(t *testing.T) {
+	d, err := Declare(TargetCodex)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var claim Claim
+	for _, c := range d.Claims {
+		if c.Capability == MemoryEnforcement {
+			claim = c
 		}
 	}
-	if strings.Contains(got, "no memory plan is projected") {
-		t.Errorf("Codex detail still says nothing is projected: %q", got)
+	if claim.Status != Partial {
+		t.Errorf("Codex memory enforcement = %s, want partial", claim.Status)
 	}
-	if len(got) > 512 {
-		t.Errorf("Codex detail is %d bytes, over the 512-byte cap", len(got))
+	for _, ref := range []string{"cmd:TestMemoryWiringAcceptance", "cmd:TestCodexSourceProcesses"} {
+		found := false
+		for _, got := range claim.Tests {
+			found = found || got == ref
+		}
+		if !found {
+			t.Errorf("Codex claim has no process proof %q: %v", ref, claim.Tests)
+		}
+	}
+	for _, want := range []string{
+		"PreToolUse", "MCP Engram reads", "longterm-mem query/get", "plan sources",
+		"project", "goal", "--source codex", "trust each handler", "fails open",
+		"no procedural skills, Bash or apply_patch enforcement", "no project check for reads by id",
+		"agent_id ignored", "successful MCP reads only", "not live validation",
+	} {
+		if !strings.Contains(claim.Detail, want) {
+			t.Errorf("Codex detail %q does not say %q", claim.Detail, want)
+		}
+	}
+	if len(claim.Detail) > 512 {
+		t.Errorf("Codex detail is %d bytes, over the 512-byte cap", len(claim.Detail))
 	}
 }
 

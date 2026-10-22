@@ -36,8 +36,10 @@ narrow`): the plan can only shrink, and the old block may name a source that is 
 
 ## What the instructions mean
 
-- **Sources.** Read memory only from the sources the block names. In Claude Code a read from any
-  other source is denied by the PreToolUse gate; elsewhere nothing enforces it, so follow it.
+- **Sources.** Read memory only from the sources the block names. Claude Code's PreToolUse gate
+  denies reads from sources outside the plan. In Codex, trusted PreToolUse handlers gate Engram
+  and longterm-mem MCP reads only: enforcement is partial and fails open, with no Bash,
+  apply_patch or procedural-skill gate. Pi has instructions only.
 - **Project.** Engram reads name the Engram project the block gives; longterm-mem `query` and `get`
   name the project id it gives.
 - **Goal.** Under a goal, pass that `goal` to every longterm-mem `query`, and give every Engram
