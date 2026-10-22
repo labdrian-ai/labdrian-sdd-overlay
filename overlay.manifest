@@ -80,6 +80,7 @@ anti-generic-design/SKILL.md custom
 knowledge-ingestion/SKILL.md custom
 memory-plan/SKILL.md custom
 procedural-candidates/SKILL.md custom
+role-chain/SKILL.md custom
 sdd-verify/references/report-format.md managed
 sdd-verify/strict-tdd-verify.md managed
 branch-pr/SKILL.md managed
@@ -150,6 +151,8 @@ polisher.md              custom   agent
 prototyper.md            custom   agent
 sweeper.md               custom   agent
 delivery.md              custom   agent
+reviewer.md              custom   agent
+verifier.md              custom   agent
 sdd-apply.md managed agent
 sdd-archive.md managed agent
 sdd-design.md managed agent

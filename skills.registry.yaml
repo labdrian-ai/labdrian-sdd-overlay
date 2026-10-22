@@ -529,3 +529,15 @@ skills:
         - pi
     lifecycle:
       updateStrategy: overlay-only
+  - id: role-chain
+    path: role-chain
+    source:
+      type: custom
+    install:
+      defaultScope: global
+      targets:
+        - claude
+        - codex
+        - pi
+    lifecycle:
+      updateStrategy: overlay-only
