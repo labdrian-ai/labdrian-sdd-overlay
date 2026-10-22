@@ -153,37 +153,46 @@ func readLogs(root, source string, emit func(Call)) (Stats, error) {
 		defer f.Close()
 		rel, _ := filepath.Rel(root, path)
 		parts := strings.Split(filepath.ToSlash(rel), "/")
-		project, agent := parts[0], ""
-		if source == "claude" {
-			agent = agentType(path)
-		}
+		project := parts[0]
 		rows := make(map[string]entry)
+		var add func(entry)
+		if source == "claude" {
+			agent := agentType(path)
+			sub := strings.Contains("/"+filepath.ToSlash(rel), "/subagents/")
+			// Claude: the last line per ID in this file wins.
+			add = func(e entry) {
+				e.call.AgentType = agent
+				if sub {
+					e.call.Role = "sub"
+				}
+				if _, exists := rows[e.id]; exists {
+					stats.Duplicates++
+				}
+				rows[e.id] = e
+			}
+		} else {
+			_, session, _ := strings.Cut(strings.TrimSuffix(d.Name(), ".jsonl"), "_")
+			// Pi: the first line per ID across the whole root wins.
+			add = func(e entry) {
+				if seen[e.id] {
+					stats.Duplicates++
+					return
+				}
+				seen[e.id] = true
+				e.call.SessionID = session
+				rows[e.id] = e
+			}
+		}
 		reader := bufio.NewReader(f)
 		for {
 			line, readErr := reader.ReadBytes('\n')
 			if len(line) > 0 {
 				stats.Lines++
-				e, ok := parse(line, source)
-				if !ok {
-					stats.Skipped++
-				} else if source == "pi" && seen[e.id] {
-					stats.Duplicates++
-				} else {
+				if e, ok := parse(line, source); ok {
 					e.call.Project = project
-					if source == "claude" {
-						e.call.AgentType = agent
-						if strings.Contains("/"+filepath.ToSlash(rel), "/subagents/") {
-							e.call.Role = "sub"
-						}
-						if _, exists := rows[e.id]; exists {
-							stats.Duplicates++
-						}
-					} else {
-						seen[e.id] = true
-						name := strings.TrimSuffix(d.Name(), ".jsonl")
-						_, e.call.SessionID, _ = strings.Cut(name, "_")
-					}
-					rows[e.id] = e
+					add(e)
+				} else {
+					stats.Skipped++
 				}
 			}
 			if readErr != nil {

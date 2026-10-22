@@ -133,12 +133,13 @@ func human(out io.Writer, r telemetry.Report, top int) error {
 	sections := []struct {
 		name   string
 		groups []telemetry.Group
-		rank   bool
+		rank   bool // sort by context, keep the top N
+		latest bool // keep the last N rows (already in key order)
 	}{
-		{"Summary", []telemetry.Group{r.Summary}, false},
-		{"By role", r.ByRole, false}, {"By model", r.ByModel, true},
-		{"By agent type", r.ByAgentType, true}, {"By project", r.ByProject, true},
-		{"By source", r.BySource, false}, {"By day", r.ByDay, false},
+		{"Summary", []telemetry.Group{r.Summary}, false, false},
+		{"By role", r.ByRole, false, false}, {"By model", r.ByModel, true, false},
+		{"By agent type", r.ByAgentType, true, false}, {"By project", r.ByProject, true, false},
+		{"By source", r.BySource, false, false}, {"By day", r.ByDay, false, true},
 	}
 	for i, section := range sections {
 		if i > 0 {
@@ -163,7 +164,7 @@ func human(out io.Writer, r telemetry.Report, top int) error {
 				cut = len(rows) - top
 				rows = rows[:top]
 			}
-		} else if section.name == "By day" && len(rows) > top {
+		} else if section.latest && len(rows) > top {
 			rows = rows[len(rows)-top:]
 		}
 		for _, g := range rows {
