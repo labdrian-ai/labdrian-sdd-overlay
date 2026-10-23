@@ -23,6 +23,7 @@ skills.registry.yaml custom
 GADU.md                  custom   agent
 sdd-apply.md             managed  agent
 opencode/agents/GADU.md custom   opencode-agent
+codex/agents/builder.toml custom codex-agent
 `
 
 func TestDeployableManifestPaths(t *testing.T) {
@@ -44,7 +45,7 @@ func TestDeployableManifestPaths(t *testing.T) {
 		}
 	}
 
-	// engine/* is infra, a path with no separator is root-level, and the two
+	// engine/* is infra, a path with no separator is root-level, and the three
 	// agent routes land outside skills/. None may be treated as deployable.
 	excluded := []string{
 		"engine/go.mod",
@@ -53,6 +54,7 @@ func TestDeployableManifestPaths(t *testing.T) {
 		"GADU.md",
 		"sdd-apply.md",
 		"opencode/agents/GADU.md",
+		"codex/agents/builder.toml",
 	}
 	for _, e := range excluded {
 		if _, ok := got[e]; ok {
@@ -109,7 +111,7 @@ sdd-spec/SKILL.md managed
 
 // TestDeployableManifestPaths_RejectsUnrecognizedRouteLongtermMemRow pins the
 // same guard for a longterm-mem/** row whose third column holds a value
-// outside {skill, agent, opencode-agent, mcp}.
+// outside {skill, agent, opencode-agent, codex-agent, mcp}.
 func TestDeployableManifestPaths_RejectsUnrecognizedRouteLongtermMemRow(t *testing.T) {
 	const manifest = `longterm-mem/internal/bar.go custom bogus-route
 sdd-spec/SKILL.md managed
@@ -170,12 +172,12 @@ sdd-spec/SKILL.md managed
 }
 
 // TestDeployableManifestPaths_LongtermMemRouteGuardAcceptsEveryValidRoute
-// proves the guard is scoped exactly to the four-value route domain: every
+// proves the guard is scoped exactly to the five-value route domain: every
 // recognized route on a longterm-mem/** row parses without error (a
 // skill-routed longterm-mem row is unusual but not itself invalid — R-012
 // only forbids MISSING or UNRECOGNIZED routes).
 func TestDeployableManifestPaths_LongtermMemRouteGuardAcceptsEveryValidRoute(t *testing.T) {
-	for _, route := range []string{"skill", "agent", "opencode-agent", "mcp"} {
+	for _, route := range []string{"skill", "agent", "opencode-agent", "codex-agent", "mcp"} {
 		manifest := "longterm-mem/valid.go custom " + route + "\n"
 		if _, err := DeployableManifestPaths(strings.NewReader(manifest)); err != nil {
 			t.Errorf("DeployableManifestPaths: route %q on a longterm-mem/** row must be accepted, got error: %v", route, err)
@@ -299,8 +301,9 @@ func routingAcceptsLongtermMemRoute(route string) bool {
 
 // TestRouteDomain_OnDiskCheckAndRoutingAgree pins that the on-disk check (DeployableManifestPaths,
 // which uses the route domain to refuse a longterm-mem/** row) and the routing (ResolveRoutes,
-// which the overlay script asks) recognize the identical four-value route domain {skill, agent,
-// opencode-agent, mcp} (overlay-agent-route R-006). The domain of the on-disk check is derived from
+// which the overlay script asks) recognize the identical five-value route domain {skill, agent,
+// opencode-agent, codex-agent, mcp} (overlay-agent-route R-006; codex-agent joined the four of D13
+// in slice 4 of the role agents). The domain of the on-disk check is derived from
 // the real nonSkillRoutes map (plus the implicit "skill" default) rather than restated as a second
 // list, so the two cannot silently drift without failing this test. Before the routing moved into
 // the engine the other side of this comparison was the bash route_resolve.
@@ -309,11 +312,11 @@ func TestRouteDomain_OnDiskCheckAndRoutingAgree(t *testing.T) {
 	for route := range nonSkillRoutes {
 		onDiskDomain[route] = true
 	}
-	if len(onDiskDomain) != 4 {
-		t.Fatalf("on-disk route domain (nonSkillRoutes + implicit skill default) has %d values, want 4: %v", len(onDiskDomain), onDiskDomain)
+	if len(onDiskDomain) != 5 {
+		t.Fatalf("on-disk route domain (nonSkillRoutes + implicit skill default) has %d values, want 5: %v", len(onDiskDomain), onDiskDomain)
 	}
 
-	for _, route := range []string{"skill", "agent", "opencode-agent", "mcp", "bogus-route"} {
+	for _, route := range []string{"skill", "agent", "opencode-agent", "codex-agent", "mcp", "bogus-route"} {
 		_, onDiskErr := DeployableManifestPaths(strings.NewReader("longterm-mem/parity-fixture.txt   custom   " + route + "\n"))
 		if onDiskAccepts, routingAccepts := onDiskErr == nil, routingAcceptsLongtermMemRoute(route); onDiskAccepts != routingAccepts || onDiskAccepts != onDiskDomain[route] {
 			t.Errorf("route %q: the on-disk check accepted=%v, the routing accepted=%v, the route domain has it=%v — the readers have drifted", route, onDiskAccepts, routingAccepts, onDiskDomain[route])

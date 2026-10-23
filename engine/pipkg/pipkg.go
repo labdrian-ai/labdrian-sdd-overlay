@@ -1,6 +1,6 @@
 // Package pipkg builds the labdrian-pi package tree (package.json, skills/,
 // agents/) that gets installed into a Pi (gentle-pi) session via
-// `pi install <path>`. It mirrors engine/gadu's Generate/Check idiom: Build
+// `pi install <path>`. It mirrors engine/agentgen's Generate/Check idiom: Build
 // writes the package, Check regenerates into a temp dir and diffs against
 // the deployed copy to report drift.
 //

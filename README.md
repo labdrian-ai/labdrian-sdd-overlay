@@ -6,7 +6,7 @@ A customization layer over `gentle-ai` (an SDD-driven, multi-agent dev runtime) 
 
 - Tracks vendor-managed and custom skills in a git overlay, so `gentle-ai sync`/`upgrade` never silently clobbers your changes.
 - Deploys your overlaid skills to **three agent runtimes**: Claude Code (`~/.claude/skills`), opencode (`~/.config/opencode/skills`), and codex (`~/.codex/skills`).
-- Deploys Claude Code **agent definitions** (e.g. GADU) to `~/.claude/agents/` — agents are Claude Code-only; opencode/codex receive the portable skill form instead.
+- Deploys **agent definitions**: Claude Code's (e.g. GADU and the role agents) to `~/.claude/agents/`, the role agents of Codex to `~/.codex/agents/` as TOML, and those of Pi inside the built package (see [Pi](#pi-via-gentle-pi)); opencode receives the portable skill form instead.
 - Adds a **deterministic minimalism-scoping layer**: a Go engine + Claude Code hooks (`UserPromptSubmit` → propagate, `PreToolUse`/`Agent` → gate-task) that inject two managed contracts (minimalism, anti-generic design) **only** into the code-writing SDD phases (`sdd-tasks`/`sdd-apply`) and exclude them from all others. Deterministic on Claude Code; documented platform limits apply on opencode/codex.
 - Cuts and tracks **named releases** (semver tags via CI) as an additional layer on top of the upstream/main model — versioning, per-target state, and rollback. See [Releases](#releases) below.
 
@@ -59,7 +59,7 @@ The TUI shows whether each target is in sync with gentle-ai and lets you re-capt
 
 Use `--target <name>` on `apply`, `status`, `capture`, and `sync-check`. Default for `apply`/`status`/`sync-check` is `all` (all three targets, plus `pi` when it is genuinely installed). Default for `capture` is `claude`.
 
-The `agent` route (see [Tracked files](#tracked-files-overlaymanifest)) additionally deploys to `~/.claude/agents` (claude target only). `--target opencode` or `--target codex` on an agent row is a no-op — zero applicable targets.
+The `agent` route (see [Tracked files](#tracked-files-overlaymanifest)) additionally deploys to `~/.claude/agents` (claude target only), and the `codex-agent` route deploys `codex/agents/<role>.toml` to `~/.codex/agents` (codex target only). `--target opencode` or `--target codex` on an `agent` row, and any other target on a `codex-agent` row, is a no-op — zero applicable targets.
 
 ### Pi (via gentle-pi)
 
@@ -70,8 +70,8 @@ Pi is a **package target**, not a per-file copy target: `--target pi` on `apply`
 - Uninstalling runs `pi remove <path>` (not `pi uninstall`, which does not exist) and removes the built package directory — it never edits `~/.pi/agent/settings.json` or `~/.pi/agent/mcp.json` directly, and never touches any gentle-pi- or pi-engram-owned entry.
 - A `before_agent_start` package extension injects the same bare contract-path line Claude/OpenCode/Codex receive into the `sdd-tasks`/`sdd-apply` system prompt, composing with (not overwriting) gentle-pi's own handler output.
 - `longterm-mem register --target pi` writes its MCP entry into the package's own `mcp.json`; `--target all` only attempts Pi when the package is both built and genuinely installed.
-- **GADU as a real Pi subagent.** `apply --target pi`, right after `pi install`, ensures GADU has a working `subagent_*` dispatch runner: when `~/.pi/agent/settings.json` already lists `npm:gentle-pi` at version 2.6.0 or later, its **native** `subagent_*` tools are used and the third-party [Pi Subagents extension](https://www.npmjs.com/package/pi-subagents-j0k3r) is never installed — installing it while native support is present leaves gentle-pi's own tools unregistered, so if that obsolete extension is already present the output discloses the conflict and names the exact removal command (`pi remove npm:pi-subagents-j0k3r`) without removing it (it is not overlay-owned). Only when gentle-pi's native subagents are unavailable (older gentle-pi, or none installed) does it fall back to installing `npm:pi-subagents-j0k3r` via a fixed `pi install` argv — unless `pi-subagents` (the alternate package name) is already installed, or `LABDRIAN_PI_SKIP_SUBAGENTS=1` opts out. Either way it then links the package's own generated `agents/GADU.md` at `~/.pi/agent/agents/GADU.md`, so GADU is dispatchable through whichever runner is active instead of only being a relayed persona. That link is overlay-owned: ownership is proven by `readlink` equality with the stable package path (only the inode changes across a `swap` rebuild), a pre-existing foreign file or symlink is left untouched and reported as a conflict, and `status --target pi` reports the subagent runner's state (native/legacy/conflict/absent) and the link's state (missing/current/stale/conflict) as two separate, honest entries. `runtime uninstall --target pi` removes only that symlink — never the extension package, never gentle-pi's own package, and never any gentle-pi- or pi-engram-owned file.
-- **Pi-specific GADU model and body.** The `agents/GADU.md` the Pi package ships is built from `pi/agents/GADU.md` (falling back to the generic `agents/GADU.md` only on an older checkout that predates it), not the same bytes Claude Code and opencode receive. It declares `model: pi-claude-cli/claude-sonnet-5` and carries a deliberately compact body (under 1.5 KB) that defers the full persona to the `gadu-operator` skill. Both choices trace to findings verified live 2026-09-13 against Pi 0.85.1 / gentle-pi 2.6.0 / `@saccolabs/pi-claude-cli` 0.8.1: gentle-pi's native `subagent_run` only completes a child whose agent file names a `pi-claude-cli/<model>` id (an `anthropic/*` or `openai-codex/*` model, or an absent `model:`, ends the child with an error), and the `pi-claude-cli` bridge — which relays the agent's system prompt to a fresh Claude Code process via `--append-system-prompt-file` — hangs indefinitely on a ~7 KB prompt (GADU's full persona body included) while a compact one completes normally.
+- **GADU as a real Pi subagent.** `apply --target pi`, right after `pi install`, ensures GADU has a working `subagent_*` dispatch runner: when `~/.pi/agent/settings.json` already lists `npm:gentle-pi` at version 2.6.0 or later, its **native** `subagent_*` tools are used and the third-party [Pi Subagents extension](https://www.npmjs.com/package/pi-subagents-j0k3r) is never installed — installing it while native support is present leaves gentle-pi's own tools unregistered, so if that obsolete extension is already present the output discloses the conflict and names the exact removal command (`pi remove npm:pi-subagents-j0k3r`) without removing it (it is not overlay-owned). Only when gentle-pi's native subagents are unavailable (older gentle-pi, or none installed) does it fall back to installing `npm:pi-subagents-j0k3r` via a fixed `pi install` argv — unless `pi-subagents` (the alternate package name) is already installed, or `LABDRIAN_PI_SKIP_SUBAGENTS=1` opts out. Either way it then links every agent of the package — its own generated `agents/GADU.md` and the [role agents](#role-agents--one-source-three-runtimes) `agents/<role>.md` — at `~/.pi/agent/agents/<name>.md`, so each is dispatchable through whichever runner is active instead of GADU only being a relayed persona. Each link is overlay-owned: ownership is proven by `readlink` equality with the stable package path (only the inode changes across a `swap` rebuild), a pre-existing foreign file or symlink is left untouched and reported as a conflict (the other agents are still linked), and `status --target pi` reports the subagent runner's state (native/legacy/conflict/absent) and the state of each link (missing/current/stale/conflict) as separate, honest entries. `runtime uninstall --target pi` removes only those symlinks — never the extension package, never gentle-pi's own package, and never any gentle-pi- or pi-engram-owned file.
+- **Pi-specific GADU model and body.** The package's `agents/` holds every `pi/agents/*.md` of the overlay (GADU and the role agents), each copied as it is. The `agents/GADU.md` the Pi package ships is built from `pi/agents/GADU.md` (falling back to the generic `agents/GADU.md` only on an older checkout that predates it), not the same bytes Claude Code and opencode receive. It declares `model: pi-claude-cli/claude-sonnet-5` and carries a deliberately compact body (under 1.5 KB) that defers the full persona to the `gadu-operator` skill. Both choices trace to findings verified live 2026-09-13 against Pi 0.85.1 / gentle-pi 2.6.0 / `@saccolabs/pi-claude-cli` 0.8.1: gentle-pi's native `subagent_run` only completes a child whose agent file names a `pi-claude-cli/<model>` id (an `anthropic/*` or `openai-codex/*` model, or an absent `model:`, ends the child with an error), and the `pi-claude-cli` bridge — which relays the agent's system prompt to a fresh Claude Code process via `--append-system-prompt-file` — hangs indefinitely on a ~7 KB prompt (GADU's full persona body included) while a compact one completes normally.
 
 ## Tracked files (overlay.manifest)
 
@@ -88,7 +88,7 @@ Pi is a **package target**, not a per-file copy target: `--target pi` on `apply`
 **custom**: only on `main`. Never on upstream. Added as a customization with no vendor counterpart.
 **external**: `source.type: external` — records provenance metadata only (`repo` = origin URL, `ref` = vendored commit/ref). The overlay **never fetches, clones, or executes any remote resource**. Vendoring is a human responsibility; `--repo`/`--ref` are inert labels for a file you have already reviewed and committed locally.
 
-**`route` column (optional third column):** each manifest row may end with `skill` or `agent` (default: `skill` when omitted). Bare two-column rows are unchanged. The `agent` route tells the installer to source from `agents/<path>` and deploy to `~/.claude/agents` instead of any skills directory. Non-deployable rows (engine source files, root-level files) are recognized by the installer and skipped silently. The route of every row is decided by the engine, not by the script: `apply`, `status`, `sync-check`, `capture`, `restore` and `bootstrap` ask `gentle-ai-overlay manifest routes` (see the CLI reference) for it, and the script builds the engine binary on first use when it is missing or older than its source (Go is already a prerequisite). A manifest with a `longterm-mem/` row that has no route, or one outside `skill`, `agent`, `opencode-agent` and `mcp`, is refused whole before any row is copied, said or restored.
+**`route` column (optional third column):** each manifest row may end with `skill` or `agent` (default: `skill` when omitted). Bare two-column rows are unchanged. The `agent` route tells the installer to source from `agents/<path>` and deploy to `~/.claude/agents` instead of any skills directory; the `codex-agent` route sources from the path itself (`codex/agents/<role>.toml`) and deploys to `~/.codex/agents`. Non-deployable rows (engine source files, root-level files) are recognized by the installer and skipped silently. The route of every row is decided by the engine, not by the script: `apply`, `status`, `sync-check`, `capture`, `restore` and `bootstrap` ask `gentle-ai-overlay manifest routes` (see the CLI reference) for it, and the script builds the engine binary on first use when it is missing or older than its source (Go is already a prerequisite). A manifest with a `longterm-mem/` row that has no route, or one outside `skill`, `agent`, `opencode-agent`, `codex-agent` and `mcp`, is refused whole before any row is copied, said or restored.
 
 ## Usage
 
@@ -293,18 +293,30 @@ Bootstrap will:
 
 ## GADU — shipped portable operator
 
-The overlay ships **GADU**, a portable operator persona generated from a single canonical source: `engine/gadu/persona/body.md`.
+The overlay ships **GADU**, a portable operator persona generated from a single canonical source: `engine/agentgen/persona/body.md`.
 
 Running `overlay gadu-generate [--check]` forwards to the engine with
 `OVERLAY_DIR` set to the repository root. Without `--check`, it regenerates
-four artifacts from that one canonical source:
+four artifacts from that one canonical source (and the files of the [role agents](#role-agents--one-source-three-runtimes) below, in the same run):
 
 - `agents/GADU.md` — Claude Code agent definition (deployed to `~/.claude/agents`)
 - `opencode/agents/GADU.md` — Opencode-native agent definition
 - `pi/agents/GADU.md` — Pi-native subagent definition: `model: pi-claude-cli/claude-sonnet-5` and a compact (< 1.5 KB) body that defers the full persona to the `gadu-operator` skill — see the Pi section above for why. `pipkg.Build` copies this file into the built package's `agents/GADU.md` when it is present, falling back to the generic `agents/GADU.md` on an older checkout.
 - `skills/gadu-operator/SKILL.md` — portable skill (deployed to all three skill runtimes)
 
-All generated files carry a `<!-- GENERATED — DO NOT EDIT. Source: engine/gadu/persona/body.md. Run: gentle-ai-overlay gadu-generate -->` header. Edit the canonical source, then regenerate — do not edit the output files directly.
+All generated files carry a `<!-- GENERATED — DO NOT EDIT. Source: engine/gadu/persona/body.md. Run: gentle-ai-overlay gadu-generate -->` header. Edit the canonical source, then regenerate — do not edit the output files directly. The source to edit is `engine/agentgen/persona/body.md`; the header keeps its older `engine/gadu` path so the four generated files stay byte-identical.
+
+## Role agents — one source, three runtimes
+
+Each of the eight roles (builder, shaper, polisher, prototyper, sweeper, reviewer, verifier, delivery) has one source, `roles/<role>/body.md`: the core prefix every role starts with and a delta of a few lines. `engine/agentgen` holds one table of what differs between the runtimes (the tools, the model, the thinking level and the description of each role) and writes the file of each runtime from the source and the table, in the same `gadu-generate` run that writes GADU:
+
+- `agents/<role>.md` — Claude Code (deployed to `~/.claude/agents`): `name`, `description`, `model`, `tools`.
+- `pi/agents/<role>.md` — Pi (copied into the built package): a `pi-claude-cli/<model>` ref, `thinking`, and the Pi names of the same tools (`read`, `grep`, `find`, `bash`, `edit`, `write`, `codegraph` and the Engram tools by their bare names).
+- `codex/agents/<role>.toml` — Codex: `name`, `description`, `developer_instructions` and `model_reasoning_effort`; no `model` (the parent passes it when it spawns the agent) and no tool list.
+
+`apply` deploys them: Claude's through the `agent` rows as before, Codex's through `codex-agent` rows of `overlay.manifest` to `~/.codex/agents` (tagged `custom`, like every agent file this overlay writes itself, so a `capture` never reads them back from a deployed copy), and Pi's through the package build, which copies every `pi/agents/*.md` into the package and links each one at `~/.pi/agent/agents` (see [Pi](#pi-via-gentle-pi)).
+
+A role with no Engram tool in its Claude list (today the reviewer) loses, in all three files, the one line of the core prefix that sends a role to Engram topics. The role file never carries a generated header: its edit surface is the source, and `gadu-generate --check` fails (locally and in the engine job of CI) when a committed file differs from what the generator writes, or a role source is missing or cannot be projected. Edit `roles/<role>/body.md` or the table in `engine/agentgen/roles.go`, then regenerate.
 
 ## CLI reference
 
@@ -419,7 +431,11 @@ overlay gadu-generate [--check]
     - opencode/agents/GADU.md
     - pi/agents/GADU.md (compact body, model: pi-claude-cli/claude-sonnet-5)
     - skills/gadu-operator/SKILL.md
-    from engine/gadu/persona/body.md.
+    from engine/agentgen/persona/body.md, and for each of the eight roles
+    - agents/<role>.md
+    - pi/agents/<role>.md
+    - codex/agents/<role>.toml
+    from roles/<role>/body.md and the table of engine/agentgen/roles.go.
 
 overlay validate-entry-contract --schema PATH --instance PATH [--exists-root PATH]
     Build and run the isolated v2 entry-contract validator from a temporary binary.
@@ -684,19 +700,20 @@ gentle-ai-overlay manifest routes --overlay-root <dir> --target <name> --skills-
     Engine verb (Phase 9, B1): there is no `overlay manifest` wrapper, so run it on the installed engine binary,
     ~/.claude/bin/gentle-ai-overlay. It decides where each row of overlay.manifest goes, and is what `apply`, `status`,
     `sync-check`, `capture`, `restore` and `bootstrap` ask. Read-only: it prints one line per
-    row, in the order of the manifest, in five columns separated by a tab: the row's path; its route (`skill`, `agent`, `opencode-agent`, `mcp`,
+    row, in the order of the manifest, in five columns separated by a tab: the row's path; its route (`skill`, `agent`, `opencode-agent`, `codex-agent`, `mcp`,
     `non-deployable`, or the third column when it is none of these, which takes the skill route under its own name);
     where its file is in the overlay repository (`skills/<path>` for a skill, `agents/<path>`, the path itself for the
     others); the absolute path the overlay copies it from (empty for a row that is never deployed); and the absolute
     path it is copied to for --target (empty when the row goes nowhere for it: an agent for a runtime other than Claude
-    Code, a native agent for one other than OpenCode, an mcp row, a row that is never deployed). A column with nothing to
+    Code, a native agent for one other than OpenCode, a Codex agent for one other than Codex, an mcp row, a row that is
+    never deployed). A column with nothing to
     say is empty, and an empty column is never followed by one that is not. --managed keeps the rows whose second column
     is `managed`. The script owns the directories of its targets and hands them over: --skills-root is where --target
-    keeps its skills, --agents-root where it keeps its native agents (needed when the manifest routes an agent to claude
-    or a native agent to opencode); --manifest defaults to <overlay-root>/overlay.manifest. A manifest is read as the script
+    keeps its skills, --agents-root where it keeps its native agents (needed when the manifest routes an agent to claude,
+    a native agent to opencode or a Codex agent to codex); --manifest defaults to <overlay-root>/overlay.manifest. A manifest is read as the script
     always read it: a line is blank or a comment when only white space comes before its end or a `#`, and columns are
     separated by spaces and tabs alone. A path named twice takes the route of the first row that names it. A row under
-    longterm-mem/ with no route, or one outside skill, agent, opencode-agent and mcp, is refused ("route_resolve:
+    longterm-mem/ with no route, or one outside skill, agent, opencode-agent, codex-agent and mcp, is refused ("route_resolve:
     longterm-mem row '<path>' declares ..." on stderr), so are an unknown --target and a manifest that is there and
     cannot be read; a manifest that is not there has no row, and a warning on stderr says so (as the script always
     read it). Exit 0 on success; 1 on a usage error (including an unknown flag) or a refusal, with nothing on stdout,

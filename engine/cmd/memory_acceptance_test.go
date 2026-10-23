@@ -206,7 +206,7 @@ func TestMemoryWiringAcceptance(t *testing.T) {
 	codexDelivery := func(t *testing.T) {
 		skillsRoot := filepath.Join(w.dir, "codex-skills")
 		before := w.stateSnapshot()
-		r := w.engine(w.dir, "", "manifest", "routes", "--overlay-root", root, "--target", "codex", "--skills-root", skillsRoot)
+		r := w.engine(w.dir, "", "manifest", "routes", "--overlay-root", root, "--target", "codex", "--skills-root", skillsRoot, "--agents-root", filepath.Join(w.dir, "codex-agents"))
 		if r.code != 0 || r.stderr != "" || !strings.HasSuffix(r.stdout, "\n") {
 			t.Fatalf("manifest routes: %+v", r)
 		}

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"syscall"
 	"testing"
@@ -120,6 +121,61 @@ func TestPipkgBuild_PrefersPiAgentVariant(t *testing.T) {
 			t.Errorf("built agents/GADU.md = %q, want the fallback agents/GADU.md content %q", got, want)
 		}
 	})
+}
+
+// TestPipkgBuild_CopiesEveryPiAgentOfTheOverlay (slice 4 of the role agents): the agents/ of the
+// built package holds every pi/agents/*.md of the overlay, the role agents engine/agentgen
+// generates and GADU alike, each under its own name and byte for byte. Only the Markdown files of
+// the directory itself are agents. GADU keeps its fallback to agents/GADU.md for a checkout whose
+// pi/agents has none, and the fallback does not stop the role agents from being copied.
+func TestPipkgBuild_CopiesEveryPiAgentOfTheOverlay(t *testing.T) {
+	const (
+		gadu     = "---\nname: GADU\nmodel: pi-claude-cli/claude-sonnet-5\n---\npi body\n"
+		builder  = "---\nname: builder\nmodel: pi-claude-cli/claude-sonnet-5\nthinking: high\ntools: read, edit\n---\n\nbuilder body\n"
+		reviewer = "---\nname: reviewer\nmodel: pi-claude-cli/claude-sonnet-5\nthinking: high\ntools: read, grep, find\n---\n\nreviewer body\n"
+	)
+	for _, tc := range []struct {
+		name     string
+		piAgents map[string]string // the files of pi/agents of the overlay
+		want     map[string]string // the files of agents/ of the package
+	}{
+		{"the role agents and GADU", map[string]string{"GADU.md": gadu, "builder.md": builder, "reviewer.md": reviewer},
+			map[string]string{"GADU.md": gadu, "builder.md": builder, "reviewer.md": reviewer}},
+		{"GADU falls back to agents/GADU.md and the role agents are copied", map[string]string{"builder.md": builder},
+			map[string]string{"GADU.md": "---\nname: GADU\n---\nbody\n", "builder.md": builder}},
+		{"only the Markdown files of the directory itself", map[string]string{"GADU.md": gadu, "builder.md": builder, "notes.txt": "n\n", "team/reviewer.md": reviewer},
+			map[string]string{"GADU.md": gadu, "builder.md": builder}},
+		{"no pi/agents at all is the GADU of the generic agents", nil,
+			map[string]string{"GADU.md": "---\nname: GADU\n---\nbody\n"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			overlayRoot, registryPath := fixtureOverlay(t)
+			for name, content := range tc.piAgents {
+				writeFile(t, filepath.Join(overlayRoot, "pi", "agents", name), content)
+			}
+			destDir := filepath.Join(t.TempDir(), "labdrian-pi")
+
+			if err := packagesOf(fileRegistries).Build(overlayRoot, registryPath, destDir); err != nil {
+				t.Fatalf("Build: %v", err)
+			}
+
+			entries, err := os.ReadDir(filepath.Join(destDir, "agents"))
+			if err != nil {
+				t.Fatalf("read the agents of the package: %v", err)
+			}
+			got := map[string]string{}
+			for _, entry := range entries {
+				content, err := os.ReadFile(filepath.Join(destDir, "agents", entry.Name()))
+				if err != nil {
+					t.Fatalf("read agents/%s of the package: %v", entry.Name(), err)
+				}
+				got[entry.Name()] = string(content)
+			}
+			if !reflect.DeepEqual(got, tc.want) {
+				t.Errorf("the agents of the package = %q, want %q", got, tc.want)
+			}
+		})
+	}
 }
 
 func TestPipkgBuild_SelectsPiTargetedSkills(t *testing.T) {

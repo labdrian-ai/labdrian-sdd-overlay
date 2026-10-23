@@ -110,9 +110,9 @@ func TestManifestRoutesRefusesWhatItCannotPlaceAndTellsNothingOnStdout(t *testin
 		wantStderr string
 	}{
 		{"a longterm-mem row with no route", manifestPorts("a/SKILL.md managed\nlongterm-mem/internal/foo.go custom\n"), claudeArgs,
-			"route_resolve: longterm-mem row 'longterm-mem/internal/foo.go' declares no route (missing third column); must be one of: skill, agent, opencode-agent, mcp\n"},
+			"route_resolve: longterm-mem row 'longterm-mem/internal/foo.go' declares no route (missing third column); must be one of: skill, agent, opencode-agent, codex-agent, mcp\n"},
 		{"a longterm-mem row with a route nobody knows", manifestPorts("a/SKILL.md managed\nlongterm-mem/internal/bar.go custom bogus\n"), claudeArgs,
-			"route_resolve: longterm-mem row 'longterm-mem/internal/bar.go' declares an unrecognized route 'bogus'; must be one of: skill, agent, opencode-agent, mcp\n"},
+			"route_resolve: longterm-mem row 'longterm-mem/internal/bar.go' declares an unrecognized route 'bogus'; must be one of: skill, agent, opencode-agent, codex-agent, mcp\n"},
 		{"a manifest that is there and cannot be read", app.RoutesPorts{Manifest: func(name string) ([]byte, error) {
 			return nil, &fs.PathError{Op: "open", Path: name, Err: fs.ErrPermission}
 		}}, claudeArgs, `error: manifest routes: reading manifest "/o/overlay.manifest": open /o/overlay.manifest: permission denied` + "\n"},
@@ -224,7 +224,7 @@ func TestTheScriptPassesManifestRoutesTheFlagsItTakes(t *testing.T) {
 func TestUsageNamesTheRoutesManifestRoutesTells(t *testing.T) {
 	// The routes the command tells are the domain's, and the usage text says each of them.
 	section := docSection(t, captureUsage(t), "  engine manifest routes", "  engine skills <verb>")
-	for _, route := range []string{skills.RouteSkill, skills.RouteAgent, skills.RouteOpencodeAgent, skills.RouteMCP, skills.RouteNonDeployable} {
+	for _, route := range []string{skills.RouteSkill, skills.RouteAgent, skills.RouteOpencodeAgent, skills.RouteCodexAgent, skills.RouteMCP, skills.RouteNonDeployable} {
 		if !strings.Contains(section, route) {
 			t.Errorf("the usage text of 'manifest routes' does not name the route %q", route)
 		}

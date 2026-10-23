@@ -1,0 +1,334 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:d9ad8d8f45c6baa1194acd93e69aabdbb3f3e55882a122008b4bc221656aff73",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-af65599034467589",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "114b9cd67009f2628529e117d344c3e185d22acc",
+      "candidate_tree": "42a30b9eded7f3e4621bd5138af8b9bd3702395b",
+      "paths_digest": "sha256:6fd33f115da81193cbbd1ae47a03bc9ad5e63e7c5260345c7c4327a76ef78221",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "README.md",
+        "engine/agentgen/agentgen.go",
+        "engine/agentgen/messages_pin_test.go",
+        "engine/cmd/agentgen_test.go",
+        "engine/cmd/dispatch_routes_test.go",
+        "engine/runtime/pi_agents.go",
+        "engine/runtime/pi_agents_test.go",
+        "odd/review-receipts/role-agents-slice4/review-1b287747549001ca.review-state.json",
+        "odd/review-receipts/role-agents-slice4/review-31d072b1220c45e2.review-state.json",
+        "odd/tasks/role-agents-slice4.md"
+      ],
+      "identity": "sha256:11fc10beb8756ef99a02c84762f1bcee6fa66af5fb719d985d70bbe8722e42a4"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "114b9cd67009f2628529e117d344c3e185d22acc",
+      "candidate_tree": "42a30b9eded7f3e4621bd5138af8b9bd3702395b",
+      "paths_digest": "sha256:6fd33f115da81193cbbd1ae47a03bc9ad5e63e7c5260345c7c4327a76ef78221",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "README.md",
+        "engine/agentgen/agentgen.go",
+        "engine/agentgen/messages_pin_test.go",
+        "engine/cmd/agentgen_test.go",
+        "engine/cmd/dispatch_routes_test.go",
+        "engine/runtime/pi_agents.go",
+        "engine/runtime/pi_agents_test.go",
+        "odd/review-receipts/role-agents-slice4/review-1b287747549001ca.review-state.json",
+        "odd/review-receipts/role-agents-slice4/review-31d072b1220c45e2.review-state.json",
+        "odd/tasks/role-agents-slice4.md"
+      ],
+      "identity": "sha256:11fc10beb8756ef99a02c84762f1bcee6fa66af5fb719d985d70bbe8722e42a4"
+    },
+    "genesis_paths": [
+      "README.md",
+      "engine/agentgen/agentgen.go",
+      "engine/agentgen/messages_pin_test.go",
+      "engine/cmd/agentgen_test.go",
+      "engine/cmd/dispatch_routes_test.go",
+      "engine/runtime/pi_agents.go",
+      "engine/runtime/pi_agents_test.go",
+      "odd/review-receipts/role-agents-slice4/review-1b287747549001ca.review-state.json",
+      "odd/review-receipts/role-agents-slice4/review-31d072b1220c45e2.review-state.json",
+      "odd/tasks/role-agents-slice4.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-resilience",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 1213,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "Pi uninstall now finds owned agent links in the home when the package agents are gone, with a test; the generator Check error header wording and its pins",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:df94f084fd024fb87d124b32c147d5d5fb7a3676debae3890ce35faf2267aa88",
+    "capture_phase_revision": "sha256:847ea9c67ed2b2d46692a5cb42c069bbe34234ce96dfbcccd74216f729cad30b",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-resilience",
+        "target_identity": "sha256:11fc10beb8756ef99a02c84762f1bcee6fa66af5fb719d985d70bbe8722e42a4",
+        "capture_phase_revision": "sha256:847ea9c67ed2b2d46692a5cb42c069bbe34234ce96dfbcccd74216f729cad30b",
+        "artifact_digest": "sha256:dd2c9ca7b0c561f3fbebde9b38170fd328817b42f6691aadeabe60a438c6499b",
+        "result_hash": "sha256:03e3eb885a3e04aa085b1b4e8dcd4b0f1803079290972aa4963bc513852fa272",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:e2cb27211602d75834bbd3a168ea10aa3caf7242eff2becd93c2046ab8c64c79",
+            "lineage_id": "review-af65599034467589",
+            "authority_revision": "sha256:847ea9c67ed2b2d46692a5cb42c069bbe34234ce96dfbcccd74216f729cad30b",
+            "target_identity": "sha256:11fc10beb8756ef99a02c84762f1bcee6fa66af5fb719d985d70bbe8722e42a4",
+            "base_tree": "114b9cd67009f2628529e117d344c3e185d22acc",
+            "candidate_tree": "42a30b9eded7f3e4621bd5138af8b9bd3702395b",
+            "changed_path_manifest_sha256": "sha256:f860b665fde79fec3578e3bab303556670d6cec37e5cbdaab5042fde53c249dd",
+            "lens": "review-resilience",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:e2cb27211602d75834bbd3a168ea10aa3caf7242eff2becd93c2046ab8c64c79",
+            "raw_sha256": "sha256:3b7af9b5ec706aefe358c5039bc1af4a90da4fe6da975283d756068b2279d443",
+            "canonical_sha256": "sha256:6cae6f42f645073846d8f7b7059e97020b5a1c549a5120ddf6da82fa6b9d16dc",
+            "result_hash": "sha256:03e3eb885a3e04aa085b1b4e8dcd4b0f1803079290972aa4963bc513852fa272",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:e2cb27211602d75834bbd3a168ea10aa3caf7242eff2becd93c2046ab8c64c79",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "README.md",
+                "engine/agentgen/agentgen.go",
+                "engine/agentgen/messages_pin_test.go",
+                "engine/cmd/agentgen_test.go",
+                "engine/cmd/dispatch_routes_test.go",
+                "engine/runtime/pi_agents.go",
+                "engine/runtime/pi_agents_test.go",
+                "odd/review-receipts/role-agents-slice4/review-1b287747549001ca.review-state.json",
+                "odd/review-receipts/role-agents-slice4/review-31d072b1220c45e2.review-state.json",
+                "odd/tasks/role-agents-slice4.md"
+              ]
+            },
+            "lens": "review-resilience",
+            "findings": [
+              {
+                "id": "R4-unlink-partial-listing",
+                "lens": "resilience",
+                "location": "engine/runtime/pi_agents.go:198-218",
+                "severity": "WARNING",
+                "claim": "unlinkPackageAgents now only errors when both the package listing and the home links listing fail. If the package agents directory is unreadable for a reason other than absence, and the home listing succeeds, the package error is silently dropped and uninstall proceeds with only the owned links found in the home. That is a graceful degradation, and the owned links are still removed, so the harm is limited to a lost diagnostic. Conversely, if the home directory listing fails but the package listing succeeds, linksErr is also dropped and links of agents no longer in the package could be missed without any report.",
+                "proof_refs": [
+                  "engine/runtime/pi_agents.go:198-218"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Inspected all 10 manifest paths in the candidate patch.",
+              "The change in engine/runtime/pi_agents.go fixes the earlier review's finding. Uninstall now removes overlay-owned links even when the package agents directory is gone, via ownedAgentLinks, which checks Readlink equality through agentLinkState, so foreign links and regular files are left untouched.",
+              "The new test in engine/runtime/pi_agents_test.go covers the missing-package case and asserts that an unrelated file in the home agents directory is unchanged.",
+              "ownedAgentLinks returns nil, nil when the home agents directory does not exist, so Uninstall on a clean home does not fail.",
+              "The Check error header change in engine/agentgen/agentgen.go and the pinned test updates are consistent with each other and change only message text.",
+              "The receipt JSON files and the task notes are documentation and record data, with no runtime behavior.",
+              "No BLOCKER or CRITICAL resilience defect was found."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "selected_order": 1,
+        "target_identity": "sha256:11fc10beb8756ef99a02c84762f1bcee6fa66af5fb719d985d70bbe8722e42a4",
+        "capture_phase_revision": "sha256:847ea9c67ed2b2d46692a5cb42c069bbe34234ce96dfbcccd74216f729cad30b",
+        "artifact_digest": "sha256:5f439317ec3eb966bea9fc4d2258ce41543a8b51b50b67ca12bd7bfa26ded636",
+        "result_hash": "sha256:d9e79dd7d7fbf97149f214267f6833f8b7375bcb35a3bd973a414bdce37b34a9",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:96707fa99926c116f0c197ec3a397429849638db8ae12922a99c98e6517d8fb3",
+            "lineage_id": "review-af65599034467589",
+            "authority_revision": "sha256:847ea9c67ed2b2d46692a5cb42c069bbe34234ce96dfbcccd74216f729cad30b",
+            "target_identity": "sha256:11fc10beb8756ef99a02c84762f1bcee6fa66af5fb719d985d70bbe8722e42a4",
+            "base_tree": "114b9cd67009f2628529e117d344c3e185d22acc",
+            "candidate_tree": "42a30b9eded7f3e4621bd5138af8b9bd3702395b",
+            "changed_path_manifest_sha256": "sha256:f860b665fde79fec3578e3bab303556670d6cec37e5cbdaab5042fde53c249dd",
+            "lens": "review-readability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:96707fa99926c116f0c197ec3a397429849638db8ae12922a99c98e6517d8fb3",
+            "raw_sha256": "sha256:2c1544476c3f2db50d4c20b93aab40675b0fc10610c16d5963bd59f566f3176e",
+            "canonical_sha256": "sha256:7ae6f6c692ec00742b4e1906cbd36a971500c9575090e055c7c0befe3a7bfbe9",
+            "result_hash": "sha256:d9e79dd7d7fbf97149f214267f6833f8b7375bcb35a3bd973a414bdce37b34a9",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:96707fa99926c116f0c197ec3a397429849638db8ae12922a99c98e6517d8fb3",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "README.md",
+                "engine/agentgen/agentgen.go",
+                "engine/agentgen/messages_pin_test.go",
+                "engine/cmd/agentgen_test.go",
+                "engine/cmd/dispatch_routes_test.go",
+                "engine/runtime/pi_agents.go",
+                "engine/runtime/pi_agents_test.go",
+                "odd/review-receipts/role-agents-slice4/review-1b287747549001ca.review-state.json",
+                "odd/review-receipts/role-agents-slice4/review-31d072b1220c45e2.review-state.json",
+                "odd/tasks/role-agents-slice4.md"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-001",
+                "lens": "readability",
+                "location": "engine/runtime/pi_agents.go:204-212",
+                "severity": "SUGGESTION",
+                "claim": "unlinkPackageAgents merges the package's agent list with owned links found in the home, then re-sorts. When the package listing fails but the link listing succeeds, the package error is silently dropped. This is intentional per the comment, but the partial-failure case (packageErr non-nil, linksErr nil) has no explicit comment or test beyond the missing-directory case. Behavior is correct for the tested scenario.",
+                "proof_refs": [
+                  "engine/runtime/pi_agents.go:204-212",
+                  "engine/runtime/pi_agents_test.go:252-286"
+                ]
+              }
+            ],
+            "evidence": [
+              "Reviewed all 10 changed paths. The Check header rename is applied consistently in agentgen.go and in every pinned test string (messages_pin_test.go, agentgen_test.go, dispatch_routes_test.go).",
+              "ownedAgentLinks has a clear doc comment, reuses agentLinkState and agentSourcePath, treats a missing agents directory as no links, and skips non-symlinks and non-.md entries. unlinkPackageAgents deduplicates with slices.Contains and sorts for deterministic output, which matches the documented 'in the order of their names'.",
+              "The new test covers the package-agents-gone case and checks that a foreign file is left untouched and that no 'cannot be read' message appears.",
+              "README and agentLabel comments now explain why the GADU header and label keep their older wording. The task notes record the review findings and their resolution.",
+              "The review receipt JSON files are generated records and were not assessed beyond their presence."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 2,
+        "target_identity": "sha256:11fc10beb8756ef99a02c84762f1bcee6fa66af5fb719d985d70bbe8722e42a4",
+        "capture_phase_revision": "sha256:847ea9c67ed2b2d46692a5cb42c069bbe34234ce96dfbcccd74216f729cad30b",
+        "artifact_digest": "sha256:515a66f56489623a091b8a2ecce9b81ce9daf352f31dcc447191559339fe6605",
+        "result_hash": "sha256:8f58f97c36ab28899c97811d7dc779d02b174f00f9d23e571ab9ad2fb10ad5bf",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:6e340cc8389d9d2dd86e3c9ae03ac85475d3aefd3e2886dd41d77074f604a300",
+            "lineage_id": "review-af65599034467589",
+            "authority_revision": "sha256:847ea9c67ed2b2d46692a5cb42c069bbe34234ce96dfbcccd74216f729cad30b",
+            "target_identity": "sha256:11fc10beb8756ef99a02c84762f1bcee6fa66af5fb719d985d70bbe8722e42a4",
+            "base_tree": "114b9cd67009f2628529e117d344c3e185d22acc",
+            "candidate_tree": "42a30b9eded7f3e4621bd5138af8b9bd3702395b",
+            "changed_path_manifest_sha256": "sha256:f860b665fde79fec3578e3bab303556670d6cec37e5cbdaab5042fde53c249dd",
+            "lens": "review-reliability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:6e340cc8389d9d2dd86e3c9ae03ac85475d3aefd3e2886dd41d77074f604a300",
+            "raw_sha256": "sha256:bc753401971442c43b123cf798bfb1c769d83fcc16555b4eeb103b9cfe35fcf5",
+            "canonical_sha256": "sha256:ac3918db2cb74c850f9c451039ed92d9852ce35e81843f90d82fc8d1f886d660",
+            "result_hash": "sha256:8f58f97c36ab28899c97811d7dc779d02b174f00f9d23e571ab9ad2fb10ad5bf",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:6e340cc8389d9d2dd86e3c9ae03ac85475d3aefd3e2886dd41d77074f604a300",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "README.md",
+                "engine/agentgen/agentgen.go",
+                "engine/agentgen/messages_pin_test.go",
+                "engine/cmd/agentgen_test.go",
+                "engine/cmd/dispatch_routes_test.go",
+                "engine/runtime/pi_agents.go",
+                "engine/runtime/pi_agents_test.go",
+                "odd/review-receipts/role-agents-slice4/review-1b287747549001ca.review-state.json",
+                "odd/review-receipts/role-agents-slice4/review-31d072b1220c45e2.review-state.json",
+                "odd/tasks/role-agents-slice4.md"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-ownedlinks-dir-error",
+                "lens": "reliability",
+                "location": "engine/runtime/pi_agents.go:199-212",
+                "severity": "WARNING",
+                "claim": "unlinkPackageAgents only fails when both the package listing and the home links listing fail. If the package listing fails (non-ENOENT, e.g. permission denied) but the links listing succeeds with no owned links, it returns an empty result with nil error, silently hiding the package read error. Likewise if the package lists fine but the home directory read fails, the link error is dropped and only package-derived agents are processed. This is a narrow edge (unreadable directories) and is not covered by tests.",
+                "proof_refs": [
+                  "engine/runtime/pi_agents.go:199-212"
+                ]
+              },
+              {
+                "id": "R3-ownedlinks-untested-edges",
+                "lens": "reliability",
+                "location": "engine/runtime/pi_agents_test.go:252-286",
+                "severity": "SUGGESTION",
+                "claim": "The new test covers the package-agents-gone case but not a rebuild that dropped a single agent while others remain, nor a home with no agents directory. ownedAgentLinks has a branch for a missing directory and for non-.md or non-symlink entries that the tests do not exercise directly.",
+                "proof_refs": [
+                  "engine/runtime/pi_agents_test.go:252-286",
+                  "engine/runtime/pi_agents.go:221-243"
+                ]
+              }
+            ],
+            "evidence": [
+              "Reviewed all 10 changed paths. The Check header rename in engine/agentgen/agentgen.go is mirrored in every pinned assertion in engine/agentgen/messages_pin_test.go, engine/cmd/agentgen_test.go and engine/cmd/dispatch_routes_test.go.",
+              "The uninstall fix in engine/runtime/pi_agents.go resolves the prior R3/R4 warning: owned links are discovered from the home directory, so Uninstall removes links when the package agents directory is gone. The new test asserts on-disk absence of the links, per-file removal messages, an untouched foreign file, and no 'cannot be read' message.",
+              "Ownership is preserved: only symlinks with the .md extension whose readlink target matches the package agents path are collected; conflicting and missing states are skipped.",
+              "The receipts and task notes are documentation artifacts with no behavioral effect."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "e702508ad8ab7cef21d3f0411313cd9acce77148aee49b1c7c471029256a09d6",
+    "initial_atomic_start": {
+      "lineage_id": "review-af65599034467589",
+      "worktree_identity": "sha256:d0a7d33286af1668e3c10c6ac14eed727d34799761391d21be5feeafb9a94e60",
+      "target_identity": "sha256:11fc10beb8756ef99a02c84762f1bcee6fa66af5fb719d985d70bbe8722e42a4",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "114b9cd67009f2628529e117d344c3e185d22acc",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-resilience",
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 1213,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "Pi uninstall now finds owned agent links in the home when the package agents are gone, with a test; the generator Check error header wording and its pins"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

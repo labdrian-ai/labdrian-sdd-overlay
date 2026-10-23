@@ -65,8 +65,9 @@ func (a PiAdapter) Apply() core.LifecycleResult { return a.Install() }
 // `pi install <destDir>` with a FIXED argv (never a shell string). Without
 // `pi` on PATH it keeps the build-succeeded-with-hint result. Once the
 // package install succeeds, it also ensures the Pi Subagents extension
-// (R-012) and links the overlay-owned GADU.md agent (R-013/R-014) so GADU
-// is dispatchable as a real Pi subagent, not merely a relayed persona.
+// (R-012) and links the overlay-owned agents of the package (R-013/R-014:
+// GADU.md and the role agents) so each is dispatchable as a real Pi
+// subagent, not merely a relayed persona.
 func (a PiAdapter) Install() core.LifecycleResult {
 	if a.overlayRoot == "" {
 		return a.stub(core.ActionInstall)
@@ -84,30 +85,24 @@ func (a PiAdapter) Install() core.LifecycleResult {
 			"labdrian-pi package built at "+a.destDir+" but `pi install` failed: "+err.Error(), nil)
 	}
 
-	notes := []string{a.installGaduSubagent(bin)}
+	notes := []string{a.installSubagents(bin)}
 	return core.NewLifecycleResult(a.target, core.ActionInstall, core.CapabilityRestartRequired,
 		"ran `pi install "+a.destDir+"`; start a new Pi session to load it. "+strings.Join(notes, " "), nil)
 }
 
-// installGaduSubagent ensures the Pi Subagents extension and the
-// overlay-owned GADU.md link, returning a disclosure/status note for
-// Install's message. It never fails Install as a whole -- an extension or
-// link problem is reported inline, honestly, but the package install
-// itself already succeeded by the time this runs.
-func (a PiAdapter) installGaduSubagent(bin string) string {
+// installSubagents ensures the Pi Subagents extension and the
+// overlay-owned links of the package's agents, returning a disclosure/status
+// note for Install's message. It never fails Install as a whole -- an
+// extension or link problem is reported inline, honestly, but the package
+// install itself already succeeded by the time this runs.
+func (a PiAdapter) installSubagents(bin string) string {
 	home := a.home
 	if home == "" {
 		return "GADU Pi subagent wiring skipped: cannot resolve home directory."
 	}
 
-	var parts []string
-	parts = append(parts, a.ensureSubagentRunner(bin, home))
-
-	if err := linkGaduAgent(home, a.destDir); err != nil {
-		parts = append(parts, err.Error()+".")
-	} else {
-		parts = append(parts, "GADU.md linked at ~/.pi/agent/agents/GADU.md.")
-	}
+	parts := []string{a.ensureSubagentRunner(bin, home)}
+	parts = append(parts, agentsInstallNotes(home, a.destDir)...)
 	return strings.Join(parts, " ")
 }
 
@@ -155,24 +150,14 @@ func (a PiAdapter) Status() core.LifecycleResult {
 		case subagentRunnerAbsent:
 			problems = append(problems, "subagent runner not proven (neither gentle-pi native subagents (>= 2.6.0) nor the legacy Pi Subagents extension is installed; run: labdrian-overlay apply --target pi)")
 		}
-		switch gaduLinkState(gaduLinkPath(home), gaduSourcePath(a.destDir)) {
-		case gaduLinkCurrent:
-			// proven
-		case gaduLinkMissing:
-			problems = append(problems, "GADU.md linked at ~/.pi/agent/agents/GADU.md (missing; run: labdrian-overlay apply --target pi)")
-		case gaduLinkStale:
-			problems = append(problems, "GADU.md linked at ~/.pi/agent/agents/GADU.md (stale; run: labdrian-overlay apply --target pi)")
-		case gaduLinkConflict:
-			problems = append(problems, "GADU.md linked at ~/.pi/agent/agents/GADU.md (conflict: a foreign file already exists there)")
-		}
 	} else {
 		problems = append(problems, "subagent runner not proven (cannot resolve home directory)")
-		problems = append(problems, "GADU.md linked at ~/.pi/agent/agents/GADU.md (cannot resolve home directory)")
 	}
+	problems = append(problems, agentLinkProblems(a.home, a.destDir)...)
 
 	if len(problems) == 0 {
 		return core.NewLifecycleResult(a.target, core.ActionStatus, core.CapabilitySupported,
-			"labdrian-pi package is built, in sync, listed in ~/.pi/agent/settings.json, longterm-mem is registered in its mcp.json, a subagent runner (gentle-pi native subagents or the legacy Pi Subagents extension) is available, and GADU.md is linked. "+piNoDiscoveryFlagsDisclosure, nil)
+			"labdrian-pi package is built, in sync, listed in ~/.pi/agent/settings.json, longterm-mem is registered in its mcp.json, a subagent runner (gentle-pi native subagents or the legacy Pi Subagents extension) is available, and the agents of the package are linked. "+piNoDiscoveryFlagsDisclosure, nil)
 	}
 	// The message names each unproven entry. They are not also passed as reasons: the line that
 	// prints a result would tell them a second time after the message.
@@ -183,9 +168,9 @@ func (a PiAdapter) Status() core.LifecycleResult {
 func (a PiAdapter) Update() core.LifecycleResult   { return a.build(core.ActionUpdate) }
 func (a PiAdapter) Rollback() core.LifecycleResult { return a.build(core.ActionRollback) }
 
-// Uninstall removes the overlay-owned GADU.md link first (R-016 — ownership
-// proven by Readlink equality; a foreign entry at the same path is left
-// untouched and reported, never removed), then runs `pi remove <destDir>`
+// Uninstall removes the overlay-owned links of the package's agents first
+// (R-016 — ownership proven by Readlink equality; a foreign entry at the
+// same path is left untouched and reported, never removed), then runs `pi remove <destDir>`
 // (A2 — NOT `pi uninstall`), then removes the built package directory.
 // `pi remove` owns settings.json cleanup; this adapter never opens it or
 // mcp.json directly, and never uninstalls the Subagents extension package.
@@ -197,11 +182,7 @@ func (a PiAdapter) Uninstall() core.LifecycleResult {
 
 	var linkNote string
 	if home := a.home; home != "" {
-		if err := unlinkGaduAgent(home, a.destDir); err != nil {
-			linkNote = " " + err.Error() + "."
-		} else {
-			linkNote = " GADU.md link removed."
-		}
+		linkNote = agentsUninstallNote(home, a.destDir)
 	}
 
 	bin, err := a.commands.LookPath("pi")

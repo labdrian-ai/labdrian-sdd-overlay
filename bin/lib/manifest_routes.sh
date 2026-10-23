@@ -24,14 +24,15 @@
 #   <path> <route> <repo_rel> <repo_source> <dest>
 #
 #   path         the first column of the row
-#   route        skill, agent, opencode-agent, mcp or non-deployable; a third
-#                column nobody knows keeps its own name and is the skill route
+#   route        skill, agent, opencode-agent, codex-agent, mcp or non-deployable;
+#                a third column nobody knows keeps its own name and is the skill
+#                route
 #   repo_rel     the file's place in the overlay repository, which is how git
 #                knows it on the branches (skills/<path> for a skill)
 #   repo_source  the absolute path it is copied from; empty when non-deployable
 #   dest         the absolute path it is copied to for <target>; empty when it
-#                goes nowhere for that target (an agent for opencode, an mcp
-#                row, a row that is never deployed)
+#                goes nowhere for that target (an agent for opencode or codex,
+#                an mcp row, a row that is never deployed)
 #
 # An empty column is never followed by one that is not, so `IFS=$'\t' read -r`
 # (which drops empty trailing fields) reads every line whole. Callers skip a
@@ -70,7 +71,7 @@ manifest_routes_rows() {
 
 # route_tar_path resolves where a manifest row is stored inside a backup tarball.
 # The legacy backup layout is under ~/.claude. OpenCode-native agent rows must use
-# ~/.config/opencode instead.
+# ~/.config/opencode instead, and Codex-native agent rows ~/.codex.
 route_tar_path() {
   local route="$1"
   local repo_rel="$2"  # the repo_rel column of manifest_routes_load
@@ -78,6 +79,9 @@ route_tar_path() {
   case "$route" in
     opencode-agent)
       printf 'files/home/labdrian/.config/opencode/%s' "${repo_rel#opencode/}"
+      ;;
+    codex-agent)
+      printf 'files/home/labdrian/.codex/%s' "${repo_rel#codex/}"
       ;;
     *)
       printf 'files/home/labdrian/.claude/%s' "$repo_rel"

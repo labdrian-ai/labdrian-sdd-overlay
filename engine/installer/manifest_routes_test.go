@@ -20,7 +20,7 @@ import (
 
 // routedRow holds what the routing says of one manifest row.
 type routedRow struct {
-	Route   string            // "skill", "agent", or "opencode-agent"
+	Route   string            // "skill", "agent", "opencode-agent", or "codex-agent"
 	RepoSrc string            // absolute repo source path
 	Targets map[string]string // target_name -> absolute dest path
 }
@@ -49,6 +49,7 @@ func callManifestRoutes(t *testing.T, engine, overlayDir, home, manifestContent,
 	agents := map[string]string{
 		"claude":   filepath.Join(home, ".claude", "agents"),
 		"opencode": filepath.Join(home, ".config", "opencode", "agents"),
+		"codex":    filepath.Join(home, ".codex", "agents"),
 	}
 	result := routedRow{Targets: map[string]string{}}
 	found := false
@@ -90,11 +91,12 @@ func callManifestRoutes(t *testing.T, engine, overlayDir, home, manifestContent,
 }
 
 // fixtureManifest contains rows used by unit tests: a legacy skill row,
-// the GADU skill row, and the GADU agent row.
+// the GADU skill row, the GADU agent row, and the agent of Codex of a role.
 const fixtureManifest = `sdd-spec/SKILL.md   managed
 gadu-operator/SKILL.md   custom
 GADU.md   custom   agent
 opencode/agents/GADU.md   custom   opencode-agent
+codex/agents/builder.toml   custom   codex-agent
 `
 
 // mcpFixtureManifest extends fixtureManifest with the longterm-mem mcp
@@ -251,6 +253,41 @@ func TestManifestRoutes_GADUOpenCodeAgentRow(t *testing.T) {
 	}
 }
 
+// TestManifestRoutes_CodexAgentRow verifies that the Codex agent row of a role resolves to the
+// Codex-specific generated source and exactly one Codex agent target, the agents directory of Codex
+// the script holds for it (slice 4 of the role agents).
+func TestManifestRoutes_CodexAgentRow(t *testing.T) {
+	engine := enginetest.Binary(t)
+	overlayDir := t.TempDir()
+	home := t.TempDir()
+
+	got, err := callManifestRoutes(t, engine, overlayDir, home, fixtureManifest, "codex/agents/builder.toml")
+	if err != nil {
+		t.Fatalf("manifest routes: %v", err)
+	}
+
+	if got.Route != "codex-agent" {
+		t.Errorf("Route: got %q, want %q", got.Route, "codex-agent")
+	}
+	if !strings.HasSuffix(got.RepoSrc, "codex/agents/builder.toml") {
+		t.Errorf("RepoSrc %q: want suffix codex/agents/builder.toml", got.RepoSrc)
+	}
+	if len(got.Targets) != 1 {
+		t.Errorf("expected exactly 1 target (codex), got %d: %v", len(got.Targets), got.Targets)
+	}
+	dest, ok := got.Targets["codex"]
+	if !ok {
+		t.Errorf("missing codex target; got: %v", got.Targets)
+	} else if !strings.HasSuffix(dest, ".codex/agents/builder.toml") {
+		t.Errorf("codex dest %q: want suffix .codex/agents/builder.toml", dest)
+	}
+	for _, tname := range []string{"claude", "opencode"} {
+		if _, ok := got.Targets[tname]; ok {
+			t.Errorf("unexpected target %q for codex-agent row", tname)
+		}
+	}
+}
+
 // TestManifestRoutes_NonDeployableRows pins that structurally non-deployable rows
 // — engine/*.go overlay-source rows and root-level files like skills.registry.yaml
 // — produce an empty target set from manifest routes so that the deploy and sync
@@ -390,7 +427,7 @@ func TestManifestRoutes_UnroutedLongtermMemRowRejected(t *testing.T) {
 
 // TestManifestRoutes_UnrecognizedRouteLongtermMemRowRejected pins the same
 // guard for a longterm-mem/** row whose third column holds a value outside
-// {skill, agent, opencode-agent, mcp}.
+// {skill, agent, opencode-agent, codex-agent, mcp}.
 func TestManifestRoutes_UnrecognizedRouteLongtermMemRowRejected(t *testing.T) {
 	engine := enginetest.Binary(t)
 	overlayDir := t.TempDir()
@@ -461,6 +498,51 @@ func TestManifestRoutes_TargetFlag_OpenCodeAgentRowOpencode(t *testing.T) {
 	dest := applicable["opencode"]
 	if !strings.HasSuffix(dest, ".config/opencode/agents/GADU.md") {
 		t.Errorf("opencode dest %q: want suffix .config/opencode/agents/GADU.md", dest)
+	}
+}
+
+// TestManifestRoutes_TargetFlag_AgentRowCodex pins that the Claude Code agent row + --target codex
+// still yields ZERO applicable targets now that the script hands the engine an agents directory for
+// Codex: the directory is for the codex-agent rows, and an agent row is not one.
+func TestManifestRoutes_TargetFlag_AgentRowCodex(t *testing.T) {
+	engine := enginetest.Binary(t)
+	overlayDir := t.TempDir()
+	home := t.TempDir()
+
+	got, err := callManifestRoutes(t, engine, overlayDir, home, fixtureManifest, "GADU.md")
+	if err != nil {
+		t.Fatalf("manifest routes: %v", err)
+	}
+
+	if applicable := intersectTargets(got.Targets, "codex"); len(applicable) != 0 {
+		t.Errorf("expected 0 applicable targets (agent row + --target codex), got: %v", applicable)
+	}
+}
+
+// TestManifestRoutes_TargetFlag_CodexAgentRowCodex pins that the Codex native agent row + --target
+// codex yields the Codex agent destination, and that the same row yields none for the other
+// runtimes.
+func TestManifestRoutes_TargetFlag_CodexAgentRowCodex(t *testing.T) {
+	engine := enginetest.Binary(t)
+	overlayDir := t.TempDir()
+	home := t.TempDir()
+
+	got, err := callManifestRoutes(t, engine, overlayDir, home, fixtureManifest, "codex/agents/builder.toml")
+	if err != nil {
+		t.Fatalf("manifest routes: %v", err)
+	}
+
+	applicable := intersectTargets(got.Targets, "codex")
+	if len(applicable) != 1 {
+		t.Errorf("expected 1 applicable target (codex), got: %v", applicable)
+	}
+	if dest := applicable["codex"]; !strings.HasSuffix(dest, ".codex/agents/builder.toml") {
+		t.Errorf("codex dest %q: want suffix .codex/agents/builder.toml", dest)
+	}
+	for _, requested := range []string{"claude", "opencode"} {
+		if other := intersectTargets(got.Targets, requested); len(other) != 0 {
+			t.Errorf("expected 0 applicable targets (codex-agent row + --target %s), got: %v", requested, other)
+		}
 	}
 }
 

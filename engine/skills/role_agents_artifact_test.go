@@ -204,17 +204,34 @@ func TestRoleAgentToolsCarryTheLimitsOfTheirRole(t *testing.T) {
 	}
 }
 
+// The roles whose agent has no Engram tool. The core prefix tells a role to read Engram topics through
+// mem_get_observation, which these cannot do, so their agent files leave that one line out (slice 4,
+// S5); the role source keeps it, and so do the files of every role that has an Engram tool.
+var rolesWithoutAnEngramTool = map[string]bool{"reviewer": true}
+
 // Each agent file is its frontmatter and the role source roles/<role>/body.md, nothing between or
-// after, so that the source is the one place the text of a role is edited. The body is the core
+// after, so that the source is the one place the text of a role is edited; the one difference is the
+// Engram line of the core prefix in the file of a role that has no Engram tool. The body is the core
 // prefix, a blank line and the delta of the role, in the number of lines v3 section 2 gives it.
 func TestRoleAgentFilesAreTheirFrontmatterAndTheRoleSource(t *testing.T) {
 	root := skillsRepoRoot(t)
 	for _, spec := range roleAgentSpecs() {
 		t.Run(spec.role, func(t *testing.T) {
-			_, _, rest := agentFile(t, root, spec.role)
+			_, frontmatter, rest := agentFile(t, root, spec.role)
 			body := readRepoFile(t, root, "roles/"+spec.role+"/body.md")
-			if rest != "\n\n"+body {
-				t.Fatalf("agents/%[1]s.md must be its frontmatter, a blank line and roles/%[1]s/body.md; edit the source and copy it", spec.role)
+			want := body
+			if rolesWithoutAnEngramTool[spec.role] {
+				engramLine := roleCorePrefix(spec.role)[1] + "\n"
+				if strings.Count(body, engramLine) != 1 {
+					t.Fatalf("roles/%s/body.md must carry the Engram line of the core prefix once", spec.role)
+				}
+				want = strings.Replace(body, engramLine, "", 1)
+			}
+			if rest != "\n\n"+want {
+				t.Fatalf("agents/%[1]s.md must be its frontmatter, a blank line and roles/%[1]s/body.md (without the Engram line when the role has no Engram tool); edit the source and copy it", spec.role)
+			}
+			if hasEngramTool := strings.Contains(parseYAMLScalar(t, frontmatter, "tools"), "mem_"); hasEngramTool == rolesWithoutAnEngramTool[spec.role] {
+				t.Errorf("%s: has an Engram tool = %v, but the list of roles without one says %v", spec.role, hasEngramTool, rolesWithoutAnEngramTool[spec.role])
 			}
 			prefix := strings.Join(roleCorePrefix(spec.role), "\n")
 			if !strings.HasPrefix(body, prefix+"\n\n") {
@@ -463,8 +480,57 @@ func TestRoleAgentsAreDeployedToClaudeByCustomAgentRows(t *testing.T) {
 	}
 }
 
-// The overlay's own agents reach no runtime but Claude Code, and none is a row from upstream: a sync
-// or a restore from upstream never takes the role agents for its own.
+// Each role agent is deployed to Codex by a row of its own (slice 4 of the role agents): the file is
+// codex/agents/<role>.toml, the route is codex-agent, and the row is the overlay's (custom). The tag
+// is the one of the rows of the Claude agents of the overlay and not "managed", which the overlay
+// takes from upstream: a capture or a restore of managed files would copy a deployed file over the
+// generated one, and the file is generated from roles/<role>/body.md. The file is copied to the
+// agents directory of Codex and to no other runtime.
+func TestRoleAgentsAreDeployedToCodexByCustomCodexAgentRows(t *testing.T) {
+	root := skillsRepoRoot(t)
+	rows := ReadManifestRows([]byte(readRepoFile(t, root, "overlay.manifest")))
+	for _, target := range []string{"claude", "opencode", "codex"} {
+		dest := RouteDestinations{Target: target, SkillsRoot: "/h/" + target + "/skills", AgentsRoot: "/h/" + target + "/agents"}
+		routes, err := ResolveRoutes(rows, false, "/o", dest)
+		if err != nil {
+			t.Fatalf("ResolveRoutes for %s over the manifest of the repository: %v", target, err)
+		}
+		for _, spec := range roleAgentSpecs() {
+			path := "codex/agents/" + spec.role + ".toml"
+			var found []ManifestRow
+			for _, row := range rows {
+				if row.Path == path {
+					found = append(found, row)
+				}
+			}
+			if want := []ManifestRow{{Path: path, Tag: "custom", Route: "codex-agent"}}; !reflect.DeepEqual(found, want) {
+				t.Errorf("rows named %s = %+v, want exactly %+v", path, found, want)
+				continue
+			}
+			var route ResolvedRoute
+			for _, r := range routes {
+				if r.Path == path {
+					route = r
+				}
+			}
+			want := ResolvedRoute{Path: path, Route: "codex-agent", RepoRel: path, RepoSource: "/o/" + path}
+			if target == "codex" {
+				want.Dest = "/h/codex/agents/" + spec.role + ".toml"
+			}
+			if route != want {
+				t.Errorf("%s resolves for %s to %+v, want %+v", path, target, route, want)
+			}
+			if _, err := os.Stat(filepath.Join(root, filepath.FromSlash(path))); err != nil {
+				t.Errorf("the row %s names a file that is not in the repository: %v", path, err)
+			}
+		}
+	}
+}
+
+// The overlay's own Claude agents (the rows of agents/<role>.md) reach no runtime but Claude Code, and
+// none is a row from upstream: a sync or a restore from upstream never takes the role agents for its
+// own. (The agent of Codex has a row of its own, above, and the agent of Pi reaches it through the
+// package.)
 func TestRoleAgentsAreNeitherCopiedToOtherRuntimesNorManaged(t *testing.T) {
 	root := skillsRepoRoot(t)
 	rows := ReadManifestRows([]byte(readRepoFile(t, root, "overlay.manifest")))

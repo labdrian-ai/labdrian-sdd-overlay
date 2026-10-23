@@ -33,7 +33,7 @@ func run(p process, d deps, args []string) {
 	case "runtime":
 		runRuntime(p, d, rest)
 	case "gadu-generate":
-		runGaduGenerate(p, d, rest)
+		runAgentgenGenerate(p, d, rest)
 	case "pipkg":
 		runPipkg(p, d, rest)
 	case "skills":

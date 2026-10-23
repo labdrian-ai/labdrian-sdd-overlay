@@ -1,4 +1,4 @@
-package gadu_test
+package agentgen_test
 
 import (
 	"crypto/sha256"
@@ -9,19 +9,23 @@ import (
 	"testing"
 	"time"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gadu"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/agentgen"
 )
 
 // Artifacts is the one table of what the generator emits: where each file goes under the
 // repository root and what it holds. Generate writes it and Check compares with it, and they are
-// the same four files in the same order.
-func TestArtifactsAreTheFourFilesInTheOrderTheyAreWrittenAndReported(t *testing.T) {
-	got := gadu.Artifacts()
-
-	if len(got) != len(artifactPaths) {
-		t.Fatalf("%d artifacts, want %d", len(got), len(artifactPaths))
+// the same files in the same order: the four of GADU, then the three of each role.
+func TestArtifactsAreTheFilesOfGaduAndThenOfEachRoleInTheOrderTheyAreWrittenAndReported(t *testing.T) {
+	got, err := agentgen.Artifacts(seededRoot(t))
+	if err != nil {
+		t.Fatalf("Artifacts: %v", err)
 	}
-	for i, p := range artifactPaths {
+
+	want := allPaths()
+	if len(got) != len(want) {
+		t.Fatalf("%d artifacts, want %d", len(got), len(want))
+	}
+	for i, p := range want {
 		if got[i].Path != p {
 			t.Errorf("artifact %d is %q, want %q", i, got[i].Path, p)
 		}
@@ -32,12 +36,16 @@ func TestArtifactsAreTheFourFilesInTheOrderTheyAreWrittenAndReported(t *testing.
 }
 
 func TestGenerateWritesExactlyWhatTheTableHolds(t *testing.T) {
-	root := t.TempDir()
-	if err := gadu.Generate(root); err != nil {
+	root := seededRoot(t)
+	if err := agentgen.Generate(root); err != nil {
 		t.Fatalf("Generate: %v", err)
 	}
 
-	for _, a := range gadu.Artifacts() {
+	table, err := agentgen.Artifacts(root)
+	if err != nil {
+		t.Fatalf("Artifacts: %v", err)
+	}
+	for _, a := range table {
 		data, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(a.Path)))
 		if err != nil || string(data) != a.Content {
 			t.Errorf("%s on disk is not the table's content (err %v)", a.Path, err)
@@ -47,13 +55,48 @@ func TestGenerateWritesExactlyWhatTheTableHolds(t *testing.T) {
 
 // The table is made for each caller: changing the slice one call returns is not seen by the next.
 func TestArtifactsHandsOutATableNoCallerCanChangeForTheNext(t *testing.T) {
-	first := gadu.Artifacts()
+	root := seededRoot(t)
+	first, err := agentgen.Artifacts(root)
+	if err != nil {
+		t.Fatalf("Artifacts: %v", err)
+	}
 	first[0].Path, first[0].Content = "changed", "changed"
 
-	second := gadu.Artifacts()
+	second, err := agentgen.Artifacts(root)
+	if err != nil {
+		t.Fatalf("Artifacts: %v", err)
+	}
 
-	if second[0].Path != artifactPaths[0] || second[0].Content == "changed" {
+	if second[0].Path != gaduPaths[0] || second[0].Content == "changed" {
 		t.Errorf("the second call returned %q, which the first caller changed", second[0].Path)
+	}
+}
+
+// Every role source of the repository has its files in the table: a roles/<role>/ that the generator
+// does not know would never be projected, and nothing else would say so.
+func TestEveryRoleSourceOfTheRepositoryIsProjected(t *testing.T) {
+	root := repoRoot(t)
+	entries, err := os.ReadDir(filepath.Join(root, "roles"))
+	if err != nil {
+		t.Fatalf("read roles/: %v", err)
+	}
+	table, err := agentgen.Artifacts(root)
+	if err != nil {
+		t.Fatalf("Artifacts of the repository: %v", err)
+	}
+	projected := map[string]bool{}
+	for _, a := range table {
+		projected[a.Path] = true
+	}
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		for _, path := range []string{"agents/" + entry.Name() + ".md", "pi/agents/" + entry.Name() + ".md", "codex/agents/" + entry.Name() + ".toml"} {
+			if !projected[path] {
+				t.Errorf("roles/%s/ has a source, and the generator emits no %s", entry.Name(), path)
+			}
+		}
 	}
 }
 
@@ -63,8 +106,8 @@ func TestArtifactsHandsOutATableNoCallerCanChangeForTheNext(t *testing.T) {
 // The modification times start long ago, so that a write of the same bytes, which leaves a size and
 // a content as they were, still shows in the time of the file or of the directory it went into.
 func TestCheckWritesNothingAnywhere(t *testing.T) {
-	root := t.TempDir()
-	if err := gadu.Generate(root); err != nil {
+	root := seededRoot(t)
+	if err := agentgen.Generate(root); err != nil {
 		t.Fatalf("Generate: %v", err)
 	}
 	t.Setenv("TMPDIR", filepath.Join(root, "no-such-scratch-directory"))
@@ -80,7 +123,7 @@ func TestCheckWritesNothingAnywhere(t *testing.T) {
 	before := snapshot(t, root)
 
 	for i := 1; i <= 2; i++ {
-		if err := gadu.Check(root); err != nil {
+		if err := agentgen.Check(root); err != nil {
 			t.Errorf("Check, call %d: %v", i, err)
 		}
 	}
@@ -124,17 +167,17 @@ func snapshot(t *testing.T, dir string) string {
 // The model each agent file declares is a named constant, the way PiAgentModel always was, and the
 // frontmatter says it.
 func TestTheModelIdsAreNamedAndEachAgentFileDeclaresItsOwn(t *testing.T) {
-	if gadu.ClaudeAgentModel != "opus" || gadu.OpenCodeAgentModel != "openai/gpt-5.5" || gadu.PiAgentModel != "pi-claude-cli/claude-sonnet-5" {
-		t.Errorf("model ids = %q, %q, %q", gadu.ClaudeAgentModel, gadu.OpenCodeAgentModel, gadu.PiAgentModel)
+	if agentgen.ClaudeAgentModel != "opus" || agentgen.OpenCodeAgentModel != "openai/gpt-5.5" || agentgen.PiAgentModel != "pi-claude-cli/claude-sonnet-5" {
+		t.Errorf("model ids = %q, %q, %q", agentgen.ClaudeAgentModel, agentgen.OpenCodeAgentModel, agentgen.PiAgentModel)
 	}
 	declared := map[string]string{}
-	for _, a := range gadu.Artifacts() {
+	for _, a := range tableOf(t) {
 		declared[a.Path] = extractFrontmatter(a.Content)["model"]
 	}
 	want := map[string]string{
-		"agents/GADU.md":                gadu.ClaudeAgentModel,
-		"opencode/agents/GADU.md":       gadu.OpenCodeAgentModel,
-		"pi/agents/GADU.md":             gadu.PiAgentModel,
+		"agents/GADU.md":                agentgen.ClaudeAgentModel,
+		"opencode/agents/GADU.md":       agentgen.OpenCodeAgentModel,
+		"pi/agents/GADU.md":             agentgen.PiAgentModel,
 		"skills/gadu-operator/SKILL.md": "",
 	}
 	for path, model := range want {
@@ -147,7 +190,7 @@ func TestTheModelIdsAreNamedAndEachAgentFileDeclaresItsOwn(t *testing.T) {
 // The three agent files say the same thing about who GADU is: one description.
 func TestTheThreeAgentFilesCarryTheSameDescription(t *testing.T) {
 	var descriptions []string
-	for _, a := range gadu.Artifacts() {
+	for _, a := range tableOf(t) {
 		if strings.HasSuffix(a.Path, "agents/GADU.md") {
 			descriptions = append(descriptions, extractFrontmatter(a.Content)["description"])
 		}

@@ -77,7 +77,7 @@ func TestRunHandsEachSubcommandTheDepsItWasHanded(t *testing.T) {
 
 		run(p.process, d, []string{"gadu-generate", "--check"})
 
-		if !strings.HasPrefix(p.err.String(), "gadu-generate --check: GADU artifacts are stale or missing:") {
+		if !strings.HasPrefix(p.err.String(), "gadu-generate --check: generated agent artifacts are stale or missing:") {
 			t.Errorf("stderr = %q, want the check of the directory the deps named", firstLines(p.err.String(), 2))
 		}
 	})

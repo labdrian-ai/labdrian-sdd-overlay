@@ -13,6 +13,33 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/overlaytest"
 )
 
+// TestRouteTarPath_PlacesEachRouteWhereItsRuntimeKeepsItsFiles asks route_tar_path (bin/lib/
+// manifest_routes.sh) where the snapshot of gentle-ai keeps the file of a row of each route: the
+// skills and the agents of Claude Code under ~/.claude, the agents of OpenCode under
+// ~/.config/opencode and, since slice 4 of the role agents, the agents of Codex under ~/.codex. The
+// script defines its functions when it is sourced and does nothing else, so the test sources it in a
+// home and an overlay of its own.
+func TestRouteTarPath_PlacesEachRouteWhereItsRuntimeKeepsItsFiles(t *testing.T) {
+	overlaytest.RequireBash(t)
+	shell := overlaytest.Shell{Env: overlaytest.Env(t.TempDir(), t.TempDir())}
+	for _, tc := range []struct{ route, repoRel, want string }{
+		{"skill", "skills/test-skill/SKILL.md", "files/home/labdrian/.claude/skills/test-skill/SKILL.md"},
+		{"agent", "agents/GADU.md", "files/home/labdrian/.claude/agents/GADU.md"},
+		{"opencode-agent", "opencode/agents/GADU.md", "files/home/labdrian/.config/opencode/agents/GADU.md"},
+		{"codex-agent", "codex/agents/builder.toml", "files/home/labdrian/.codex/agents/builder.toml"},
+	} {
+		t.Run(tc.route, func(t *testing.T) {
+			out, err := overlaytest.Source(t, overlaytest.Script(t), shell, `route_tar_path "$@"`, tc.route, tc.repoRel)
+			if err != nil {
+				t.Fatalf("route_tar_path %s %s: %v\n%s", tc.route, tc.repoRel, err, out)
+			}
+			if out != tc.want {
+				t.Errorf("route_tar_path %s %s = %q, want %q", tc.route, tc.repoRel, out, tc.want)
+			}
+		})
+	}
+}
+
 // TestCaptureFromBackup_UsesRouteAwareTarPaths asserts that managed rows are
 // restored from the correct route-specific paths inside the snapshot.
 func TestCaptureFromBackup_UsesRouteAwareTarPaths(t *testing.T) {

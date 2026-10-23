@@ -1,0 +1,538 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:04fd57abbc714e6dee0b631bd3528bda7980762f99559aeaf17ce901fd008ff5",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-1b287747549001ca",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "aec0b0d67554d88d28476ee9dcf175b1ce299260",
+      "candidate_tree": "114b9cd67009f2628529e117d344c3e185d22acc",
+      "paths_digest": "sha256:144acb65c0ec8e3531d1d3329f8195fadc87071aec9c680320ceb24353d1fe46",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "README.md",
+        "bin/lib/manifest_routes.sh",
+        "bin/lib/targets.sh",
+        "docs/architecture/role-design/per-role-design-v3.md",
+        "engine/capability/declarations.go",
+        "engine/capability/declarations_test.go",
+        "engine/cmd/manifest_test.go",
+        "engine/cmd/memory_acceptance_test.go",
+        "engine/cmd/usage.go",
+        "engine/installer/agent_deploy_test.go",
+        "engine/installer/manifest_routes_test.go",
+        "engine/installer/tar_paths_test.go",
+        "engine/installer/testdata/routing_pins.golden",
+        "engine/pipkg/build.go",
+        "engine/pipkg/comparison.go",
+        "engine/pipkg/pipkg_test.go",
+        "engine/runtime/pi.go",
+        "engine/runtime/pi_agents.go",
+        "engine/runtime/pi_agents_link_test.go",
+        "engine/runtime/pi_agents_test.go",
+        "engine/runtime/pi_gadu.go",
+        "engine/runtime/pi_gadu_link_test.go",
+        "engine/shelltest/overlay_pi_package_build_test.go",
+        "engine/skills/ondisk.go",
+        "engine/skills/ondisk_test.go",
+        "engine/skills/role_agents_artifact_test.go",
+        "engine/skills/routes.go",
+        "engine/skills/routes_test.go",
+        "odd/tasks/role-agents-slice4.md",
+        "overlay.manifest"
+      ],
+      "identity": "sha256:3538b2305e1c001007b90ef1a5ba367afee3c3be2e364189fb602f0b61b50174"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "aec0b0d67554d88d28476ee9dcf175b1ce299260",
+      "candidate_tree": "114b9cd67009f2628529e117d344c3e185d22acc",
+      "paths_digest": "sha256:144acb65c0ec8e3531d1d3329f8195fadc87071aec9c680320ceb24353d1fe46",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "README.md",
+        "bin/lib/manifest_routes.sh",
+        "bin/lib/targets.sh",
+        "docs/architecture/role-design/per-role-design-v3.md",
+        "engine/capability/declarations.go",
+        "engine/capability/declarations_test.go",
+        "engine/cmd/manifest_test.go",
+        "engine/cmd/memory_acceptance_test.go",
+        "engine/cmd/usage.go",
+        "engine/installer/agent_deploy_test.go",
+        "engine/installer/manifest_routes_test.go",
+        "engine/installer/tar_paths_test.go",
+        "engine/installer/testdata/routing_pins.golden",
+        "engine/pipkg/build.go",
+        "engine/pipkg/comparison.go",
+        "engine/pipkg/pipkg_test.go",
+        "engine/runtime/pi.go",
+        "engine/runtime/pi_agents.go",
+        "engine/runtime/pi_agents_link_test.go",
+        "engine/runtime/pi_agents_test.go",
+        "engine/runtime/pi_gadu.go",
+        "engine/runtime/pi_gadu_link_test.go",
+        "engine/shelltest/overlay_pi_package_build_test.go",
+        "engine/skills/ondisk.go",
+        "engine/skills/ondisk_test.go",
+        "engine/skills/role_agents_artifact_test.go",
+        "engine/skills/routes.go",
+        "engine/skills/routes_test.go",
+        "odd/tasks/role-agents-slice4.md",
+        "overlay.manifest"
+      ],
+      "identity": "sha256:3538b2305e1c001007b90ef1a5ba367afee3c3be2e364189fb602f0b61b50174"
+    },
+    "genesis_paths": [
+      "README.md",
+      "bin/lib/manifest_routes.sh",
+      "bin/lib/targets.sh",
+      "docs/architecture/role-design/per-role-design-v3.md",
+      "engine/capability/declarations.go",
+      "engine/capability/declarations_test.go",
+      "engine/cmd/manifest_test.go",
+      "engine/cmd/memory_acceptance_test.go",
+      "engine/cmd/usage.go",
+      "engine/installer/agent_deploy_test.go",
+      "engine/installer/manifest_routes_test.go",
+      "engine/installer/tar_paths_test.go",
+      "engine/installer/testdata/routing_pins.golden",
+      "engine/pipkg/build.go",
+      "engine/pipkg/comparison.go",
+      "engine/pipkg/pipkg_test.go",
+      "engine/runtime/pi.go",
+      "engine/runtime/pi_agents.go",
+      "engine/runtime/pi_agents_link_test.go",
+      "engine/runtime/pi_agents_test.go",
+      "engine/runtime/pi_gadu.go",
+      "engine/runtime/pi_gadu_link_test.go",
+      "engine/shelltest/overlay_pi_package_build_test.go",
+      "engine/skills/ondisk.go",
+      "engine/skills/ondisk_test.go",
+      "engine/skills/role_agents_artifact_test.go",
+      "engine/skills/routes.go",
+      "engine/skills/routes_test.go",
+      "odd/tasks/role-agents-slice4.md",
+      "overlay.manifest"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-risk",
+      "review-resilience",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 1656,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "Codex and Pi agent deploy routes, symlink ownership and conflict states, pinned route error strings, capability claims and their tests",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:34567df14b76996c2c2ac99d023e8630870f7e7d194cf2d724436446b515a497",
+    "capture_phase_revision": "sha256:fa165d0aafe1322f22081ce0824157cbd733d8294934370a8c62662fc7744af9",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:3538b2305e1c001007b90ef1a5ba367afee3c3be2e364189fb602f0b61b50174",
+        "capture_phase_revision": "sha256:fa165d0aafe1322f22081ce0824157cbd733d8294934370a8c62662fc7744af9",
+        "artifact_digest": "sha256:1ce3f998b7adf3ac5f39f23aea4e08326073f577c34df0187717675f4c7fcfce",
+        "result_hash": "sha256:a6a6c05a5252e4f2443c50119073d88c270a9b9776d855527b91755e1a1f9fdd",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:56ad01164f4e847d03c952fae0823ca2e00594904673a6518b5c1cc3b61792ce",
+            "lineage_id": "review-1b287747549001ca",
+            "authority_revision": "sha256:fa165d0aafe1322f22081ce0824157cbd733d8294934370a8c62662fc7744af9",
+            "target_identity": "sha256:3538b2305e1c001007b90ef1a5ba367afee3c3be2e364189fb602f0b61b50174",
+            "base_tree": "aec0b0d67554d88d28476ee9dcf175b1ce299260",
+            "candidate_tree": "114b9cd67009f2628529e117d344c3e185d22acc",
+            "changed_path_manifest_sha256": "sha256:4aa811968158a29a03516624043017247edd74bb26d4bfec8641c0b85ab60dc3",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:56ad01164f4e847d03c952fae0823ca2e00594904673a6518b5c1cc3b61792ce",
+            "raw_sha256": "sha256:053d9ffdc64013c054b4e728e98b11d5b0ca2b2a2baf728006409f1cd9a64c80",
+            "canonical_sha256": "sha256:f852142ff227e65fc25bd04b7febc5f3267022ded92a2471f33d15c1d5fd5268",
+            "result_hash": "sha256:a6a6c05a5252e4f2443c50119073d88c270a9b9776d855527b91755e1a1f9fdd",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:56ad01164f4e847d03c952fae0823ca2e00594904673a6518b5c1cc3b61792ce",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "README.md",
+                "bin/lib/manifest_routes.sh",
+                "bin/lib/targets.sh",
+                "docs/architecture/role-design/per-role-design-v3.md",
+                "engine/capability/declarations.go",
+                "engine/capability/declarations_test.go",
+                "engine/cmd/manifest_test.go",
+                "engine/cmd/memory_acceptance_test.go",
+                "engine/cmd/usage.go",
+                "engine/installer/agent_deploy_test.go",
+                "engine/installer/manifest_routes_test.go",
+                "engine/installer/tar_paths_test.go",
+                "engine/installer/testdata/routing_pins.golden",
+                "engine/pipkg/build.go",
+                "engine/pipkg/comparison.go",
+                "engine/pipkg/pipkg_test.go",
+                "engine/runtime/pi.go",
+                "engine/runtime/pi_agents.go",
+                "engine/runtime/pi_agents_link_test.go",
+                "engine/runtime/pi_agents_test.go",
+                "engine/runtime/pi_gadu.go",
+                "engine/runtime/pi_gadu_link_test.go",
+                "engine/shelltest/overlay_pi_package_build_test.go",
+                "engine/skills/ondisk.go",
+                "engine/skills/ondisk_test.go",
+                "engine/skills/role_agents_artifact_test.go",
+                "engine/skills/routes.go",
+                "engine/skills/routes_test.go",
+                "odd/tasks/role-agents-slice4.md",
+                "overlay.manifest"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "Reviewed all 30 changed paths for security, authorization, data-loss and unsafe-input risk; no reachable exploit found.",
+              "engine/runtime/pi_agents.go keeps the existing ownership proof: a link is touched only when readlink matches the package path. Conflicting files or foreign symlinks are left untouched on install and uninstall, and a failure on one agent does not stop the others. File names come from a directory listing, so path traversal is not reachable.",
+              "engine/pipkg/build.go copyPiAgents copies only top-level .md files from the overlay's own pi/agents into the package. It reads from an owner-controlled tree and uses the existing copyFile helper, so no new untrusted-input path is added.",
+              "engine/skills/routes.go codex-agent route mirrors the existing opencode-agent route. Rows outside codex/agents/ are non-deployable, and a missing agents root is refused. Manifest rows are owner-controlled, so it adds no new trust boundary.",
+              "No secrets, dependency or lockfile changes are present in the candidate."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-resilience",
+        "selected_order": 1,
+        "target_identity": "sha256:3538b2305e1c001007b90ef1a5ba367afee3c3be2e364189fb602f0b61b50174",
+        "capture_phase_revision": "sha256:fa165d0aafe1322f22081ce0824157cbd733d8294934370a8c62662fc7744af9",
+        "artifact_digest": "sha256:749a9bb5c5dfcaae541b2bc4c1203ca9f048d443f083be8c862c19ed25b02abb",
+        "result_hash": "sha256:9ac897c65e322edea38793c5a5d5f57117224332e74f4d3c3ac0daa92d5d9c81",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:6103c2b12fb2053f3b98f5561346be10a24c7ba3551c26eb82b25235278c4bdb",
+            "lineage_id": "review-1b287747549001ca",
+            "authority_revision": "sha256:fa165d0aafe1322f22081ce0824157cbd733d8294934370a8c62662fc7744af9",
+            "target_identity": "sha256:3538b2305e1c001007b90ef1a5ba367afee3c3be2e364189fb602f0b61b50174",
+            "base_tree": "aec0b0d67554d88d28476ee9dcf175b1ce299260",
+            "candidate_tree": "114b9cd67009f2628529e117d344c3e185d22acc",
+            "changed_path_manifest_sha256": "sha256:4aa811968158a29a03516624043017247edd74bb26d4bfec8641c0b85ab60dc3",
+            "lens": "review-resilience",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:6103c2b12fb2053f3b98f5561346be10a24c7ba3551c26eb82b25235278c4bdb",
+            "raw_sha256": "sha256:0a59dfcc1c4ebd918e209ebbcb3a69f81c2fae5342b99faefe9062ff235b2fc5",
+            "canonical_sha256": "sha256:3766ac30b3747e4de1ea447e497935f545b05d03a5753b1ed83b6c01b73e0685",
+            "result_hash": "sha256:9ac897c65e322edea38793c5a5d5f57117224332e74f4d3c3ac0daa92d5d9c81",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:6103c2b12fb2053f3b98f5561346be10a24c7ba3551c26eb82b25235278c4bdb",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "README.md",
+                "bin/lib/manifest_routes.sh",
+                "bin/lib/targets.sh",
+                "docs/architecture/role-design/per-role-design-v3.md",
+                "engine/capability/declarations.go",
+                "engine/capability/declarations_test.go",
+                "engine/cmd/manifest_test.go",
+                "engine/cmd/memory_acceptance_test.go",
+                "engine/cmd/usage.go",
+                "engine/installer/agent_deploy_test.go",
+                "engine/installer/manifest_routes_test.go",
+                "engine/installer/tar_paths_test.go",
+                "engine/installer/testdata/routing_pins.golden",
+                "engine/pipkg/build.go",
+                "engine/pipkg/comparison.go",
+                "engine/pipkg/pipkg_test.go",
+                "engine/runtime/pi.go",
+                "engine/runtime/pi_agents.go",
+                "engine/runtime/pi_agents_link_test.go",
+                "engine/runtime/pi_agents_test.go",
+                "engine/runtime/pi_gadu.go",
+                "engine/runtime/pi_gadu_link_test.go",
+                "engine/shelltest/overlay_pi_package_build_test.go",
+                "engine/skills/ondisk.go",
+                "engine/skills/ondisk_test.go",
+                "engine/skills/role_agents_artifact_test.go",
+                "engine/skills/routes.go",
+                "engine/skills/routes_test.go",
+                "odd/tasks/role-agents-slice4.md",
+                "overlay.manifest"
+              ]
+            },
+            "lens": "review-resilience",
+            "findings": [
+              {
+                "id": "R4-unlink-needs-package-dir",
+                "lens": "resilience",
+                "location": "engine/runtime/pi_agents.go:180-190",
+                "severity": "WARNING",
+                "claim": "unlinkPackageAgents enumerates the agents from the built package's agents/ directory. If that directory is already gone (for example, the user deleted the package or a rebuild failed), Uninstall reports an error and removes no links. The old unlinkGaduAgent used a fixed name and removed a stale overlay-owned GADU.md link even then. Dangling ~/.pi/agent/agents/*.md symlinks now stay behind. The same applies to links of agents later dropped from the package. This is a narrow regression in uninstall cleanup, not a blocker.",
+                "proof_refs": [
+                  "engine/runtime/pi_agents.go:180-190",
+                  "engine/runtime/pi_gadu.go:1"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Read all 30 manifest paths in the patch.",
+              "Install, Status and Uninstall continue past a per-agent conflict or frontmatter failure. Nothing is overwritten, and each failure is reported by name.",
+              "Codex agent routing and route_tar_path are covered by tests, and no resilience defect showed up there.",
+              "The one finding is the uninstall change above: it needs the package's agents/ directory to exist, where the old code did not."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "selected_order": 2,
+        "target_identity": "sha256:3538b2305e1c001007b90ef1a5ba367afee3c3be2e364189fb602f0b61b50174",
+        "capture_phase_revision": "sha256:fa165d0aafe1322f22081ce0824157cbd733d8294934370a8c62662fc7744af9",
+        "artifact_digest": "sha256:fa250b6e82f0d6e54a26eaf7c2ac3b6da37ac796bb3772edfa2f9b8b3b721ec6",
+        "result_hash": "sha256:3db3181ddeb43dc27b4a64b903d21bab2078e5e1f2bae44a81d019355705f19b",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:ef13d29f7807ed5723ce4b304aa07cddeddf4536b8feafe9b5d5e5904c4194b6",
+            "lineage_id": "review-1b287747549001ca",
+            "authority_revision": "sha256:fa165d0aafe1322f22081ce0824157cbd733d8294934370a8c62662fc7744af9",
+            "target_identity": "sha256:3538b2305e1c001007b90ef1a5ba367afee3c3be2e364189fb602f0b61b50174",
+            "base_tree": "aec0b0d67554d88d28476ee9dcf175b1ce299260",
+            "candidate_tree": "114b9cd67009f2628529e117d344c3e185d22acc",
+            "changed_path_manifest_sha256": "sha256:4aa811968158a29a03516624043017247edd74bb26d4bfec8641c0b85ab60dc3",
+            "lens": "review-readability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:ef13d29f7807ed5723ce4b304aa07cddeddf4536b8feafe9b5d5e5904c4194b6",
+            "raw_sha256": "sha256:6dd4cc510a23eda1c4bb776de4bb25cfaf07cf493e2795ecc52100cbabdfe78f",
+            "canonical_sha256": "sha256:36b9ac921b373f2b6c1093a6559370bc06be00faf5b7424d00ec41e721728f08",
+            "result_hash": "sha256:3db3181ddeb43dc27b4a64b903d21bab2078e5e1f2bae44a81d019355705f19b",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:ef13d29f7807ed5723ce4b304aa07cddeddf4536b8feafe9b5d5e5904c4194b6",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "README.md",
+                "bin/lib/manifest_routes.sh",
+                "bin/lib/targets.sh",
+                "docs/architecture/role-design/per-role-design-v3.md",
+                "engine/capability/declarations.go",
+                "engine/capability/declarations_test.go",
+                "engine/cmd/manifest_test.go",
+                "engine/cmd/memory_acceptance_test.go",
+                "engine/cmd/usage.go",
+                "engine/installer/agent_deploy_test.go",
+                "engine/installer/manifest_routes_test.go",
+                "engine/installer/tar_paths_test.go",
+                "engine/installer/testdata/routing_pins.golden",
+                "engine/pipkg/build.go",
+                "engine/pipkg/comparison.go",
+                "engine/pipkg/pipkg_test.go",
+                "engine/runtime/pi.go",
+                "engine/runtime/pi_agents.go",
+                "engine/runtime/pi_agents_link_test.go",
+                "engine/runtime/pi_agents_test.go",
+                "engine/runtime/pi_gadu.go",
+                "engine/runtime/pi_gadu_link_test.go",
+                "engine/shelltest/overlay_pi_package_build_test.go",
+                "engine/skills/ondisk.go",
+                "engine/skills/ondisk_test.go",
+                "engine/skills/role_agents_artifact_test.go",
+                "engine/skills/routes.go",
+                "engine/skills/routes_test.go",
+                "odd/tasks/role-agents-slice4.md",
+                "overlay.manifest"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-agent-label-duplicated-domain",
+                "lens": "readability",
+                "location": "engine/skills/ondisk.go:25-52",
+                "severity": "WARNING",
+                "claim": "The route domain is now maintained in three places: the nonSkillRoutes map, the validLongtermMemRoutes map, and the hard-coded error strings in ondisk.go and routes.go. Adding codex-agent meant editing all of them by hand, and only the tests guard against drift. This is a maintainability smell, but tests pin the agreement, so it is not a defect.",
+                "proof_refs": [
+                  "engine/skills/ondisk.go:25-52",
+                  "engine/skills/routes.go:137"
+                ],
+                "causal_disposition": "pre-existing"
+              },
+              {
+                "id": "R2-pi-agents-doc-drift",
+                "lens": "readability",
+                "location": "engine/runtime/pi_agents.go:1-20",
+                "severity": "SUGGESTION",
+                "claim": "Messages in pi_agents.go still say 'gadu link' for GADU through agentLabel lowercasing, while other agents say 'builder link'. This is consistent with the old wording, so it is intentional, but the lowercase 'gadu' label derived from the file name is a subtle special case that is not documented as being kept for compatibility.",
+                "proof_refs": [
+                  "engine/runtime/pi_agents.go:40-44"
+                ]
+              }
+            ],
+            "evidence": [
+              "Reviewed all 30 manifest paths. The refactor from pi_gadu.go to pi_agents.go keeps the ownership proof, the states and the messages, and the new tests cover it.",
+              "The codex-agent route is added consistently in the shell, the Go routing, the on-disk check, the usage text, the README, the golden file and the tests.",
+              "pipkg copyPiAgents documents its fallback and its symlink handling; the change context is recorded in odd/tasks/role-agents-slice4.md and the design doc correction.",
+              "No BLOCKER or CRITICAL readability defect was found."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 3,
+        "target_identity": "sha256:3538b2305e1c001007b90ef1a5ba367afee3c3be2e364189fb602f0b61b50174",
+        "capture_phase_revision": "sha256:fa165d0aafe1322f22081ce0824157cbd733d8294934370a8c62662fc7744af9",
+        "artifact_digest": "sha256:a24fc4c5c43394594188b26a53f7acf4159b080f646bdbc6842713ad19840a6d",
+        "result_hash": "sha256:06ca0b741503b1c0af79236b4408f35a8950b7a0a3e6ffeef4a7032e42c11927",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:e10667bf36c58b73d7318da17604b703a73ae82e11e571d4c43d7e890096018b",
+            "lineage_id": "review-1b287747549001ca",
+            "authority_revision": "sha256:fa165d0aafe1322f22081ce0824157cbd733d8294934370a8c62662fc7744af9",
+            "target_identity": "sha256:3538b2305e1c001007b90ef1a5ba367afee3c3be2e364189fb602f0b61b50174",
+            "base_tree": "aec0b0d67554d88d28476ee9dcf175b1ce299260",
+            "candidate_tree": "114b9cd67009f2628529e117d344c3e185d22acc",
+            "changed_path_manifest_sha256": "sha256:4aa811968158a29a03516624043017247edd74bb26d4bfec8641c0b85ab60dc3",
+            "lens": "review-reliability",
+            "selected_order": 3
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:e10667bf36c58b73d7318da17604b703a73ae82e11e571d4c43d7e890096018b",
+            "raw_sha256": "sha256:208a422f258a9f3aa4c30fbada14c672208deab1cd254aea32926758f1c76d81",
+            "canonical_sha256": "sha256:de0b3eaa3594c2a922f0c450cd20726c4122c376626973c792589d04923739dd",
+            "result_hash": "sha256:06ca0b741503b1c0af79236b4408f35a8950b7a0a3e6ffeef4a7032e42c11927",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:e10667bf36c58b73d7318da17604b703a73ae82e11e571d4c43d7e890096018b",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "README.md",
+                "bin/lib/manifest_routes.sh",
+                "bin/lib/targets.sh",
+                "docs/architecture/role-design/per-role-design-v3.md",
+                "engine/capability/declarations.go",
+                "engine/capability/declarations_test.go",
+                "engine/cmd/manifest_test.go",
+                "engine/cmd/memory_acceptance_test.go",
+                "engine/cmd/usage.go",
+                "engine/installer/agent_deploy_test.go",
+                "engine/installer/manifest_routes_test.go",
+                "engine/installer/tar_paths_test.go",
+                "engine/installer/testdata/routing_pins.golden",
+                "engine/pipkg/build.go",
+                "engine/pipkg/comparison.go",
+                "engine/pipkg/pipkg_test.go",
+                "engine/runtime/pi.go",
+                "engine/runtime/pi_agents.go",
+                "engine/runtime/pi_agents_link_test.go",
+                "engine/runtime/pi_agents_test.go",
+                "engine/runtime/pi_gadu.go",
+                "engine/runtime/pi_gadu_link_test.go",
+                "engine/shelltest/overlay_pi_package_build_test.go",
+                "engine/skills/ondisk.go",
+                "engine/skills/ondisk_test.go",
+                "engine/skills/role_agents_artifact_test.go",
+                "engine/skills/routes.go",
+                "engine/skills/routes_test.go",
+                "odd/tasks/role-agents-slice4.md",
+                "overlay.manifest"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-unlink-needs-package-dir",
+                "lens": "reliability",
+                "location": "engine/runtime/pi_agents.go:158-172",
+                "severity": "WARNING",
+                "claim": "unlinkPackageAgents enumerates the links from the package's agents/ directory. If that directory is gone (package already removed or never built), Uninstall appends an 'agents link: the package agents cannot be read' error note and removes no links. Any dangling ~/.pi/agent/agents/*.md symlinks the overlay created stay behind. The baseline unlinkGaduAgent removed a stale GADU.md link in this case. The same applies to a role agent dropped from a later package build: its old link is never cleaned up. Uninstall also now has no test for the missing-package case.",
+                "proof_refs": [
+                  "engine/runtime/pi_agents.go:158-172",
+                  "engine/runtime/pi.go:182-186",
+                  "engine/runtime/pi_agents_test.go:214-240"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "worsened"
+              }
+            ],
+            "evidence": [
+              "Read all 30 manifest paths in the candidate patch.",
+              "Route additions (codex-agent) are consistent across routes.go, ondisk.go, manifest_routes.sh, targets.sh, usage text, README and the pinned error strings. They are covered by tests at the resolver, installer and tar-path levels.",
+              "pipkg copyPiAgents keeps the GADU fallback and is covered by table tests for four directory shapes.",
+              "Install and Status now continue past a conflicting or invalid agent file and report each by name. This is covered by tests that assert the message text and the on-disk state.",
+              "The only gap found is in Uninstall: link enumeration depends on the package directory still existing, so links can be orphaned."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "388e70c6c8490503e58a4c61e0ca8c26e729cd87c089acf6522a0b1b35bb84d5",
+    "initial_atomic_start": {
+      "lineage_id": "review-1b287747549001ca",
+      "worktree_identity": "sha256:d0a7d33286af1668e3c10c6ac14eed727d34799761391d21be5feeafb9a94e60",
+      "target_identity": "sha256:3538b2305e1c001007b90ef1a5ba367afee3c3be2e364189fb602f0b61b50174",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "aec0b0d67554d88d28476ee9dcf175b1ce299260",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "high",
+      "selected_lenses": [
+        "review-risk",
+        "review-resilience",
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 1656,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "Codex and Pi agent deploy routes, symlink ownership and conflict states, pinned route error strings, capability claims and their tests"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

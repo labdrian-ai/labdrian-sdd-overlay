@@ -266,9 +266,11 @@ Commands:
                                    Exit 0=clean, 1=stranded change found, 2=usage, 3=could not
                                    determine (an unreadable signal, an unreadable ledger, or a
                                    stale waiver); propagated unchanged from the guard.
-  gadu-generate [--check]          Regenerate GADU artifacts from the canonical source
-                                   (agents/GADU.md, opencode/agents/GADU.md,
-                                   skills/gadu-operator/SKILL.md) under OVERLAY_DIR.
+  gadu-generate [--check]          Regenerate the generated agents from their canonical sources:
+                                   GADU (agents/GADU.md, opencode/agents/GADU.md,
+                                   pi/agents/GADU.md, skills/gadu-operator/SKILL.md) and the
+                                   role agents (agents/<role>.md, pi/agents/<role>.md,
+                                   codex/agents/<role>.toml) under OVERLAY_DIR.
                                    Optional --check verifies freshness without writing.
   longterm-mem install|status|uninstall
     [--target claude|opencode|codex|all] [--purge]

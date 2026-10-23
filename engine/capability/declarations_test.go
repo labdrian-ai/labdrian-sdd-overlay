@@ -3,6 +3,7 @@ package capability_test
 import (
 	"reflect"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 
@@ -340,7 +341,8 @@ func TestSkillsClaimsStateTheirScope(t *testing.T) {
 		},
 		capability.TargetPi: {
 			"labdrian-pi package", "Pi-targeted skills", "approval records and writers' temporary files",
-			"adapter tests replace the pi CLI with a recording stub", "never write .pi/skills", "only after project trust", "No test observes Pi loading a skill",
+			"adapter tests replace the pi CLI with a recording stub, so the real pi never loads the package",
+			"never write .pi/skills", "only after project trust", "No test observes Pi loading a skill",
 		},
 		capability.TargetOpenCode: {
 			"labdrian apply copies global skills into OpenCode's skills directory", fixtureOnly, "never the real skills",
@@ -380,6 +382,44 @@ func TestSkillsClaimsStateTheirScope(t *testing.T) {
 			// runtime names and each runtime's own directory count as a mention.
 			if loc := re.FindString(detail); loc != "" {
 				t.Errorf("%s skills detail %q names %s (%q)", target, detail, other, loc)
+			}
+		}
+	}
+}
+
+// TestSkillsClaimsStateWhereTheRoleAgentsGo pins the sentence about agents that the Codex and Pi
+// skills claims gained with the role agents (slice 4): Codex says where the overlay puts them, Pi
+// that install links the package's agents, and each that no test observes the runtime loading one.
+// Neither claim lost anything it said before (TestSkillsClaimsStateTheirScope). The live check per
+// runtime (codex lists the agent, subagent_list_agents in Pi) is recorded evidence of a separate
+// step, so neither claim speaks of one yet. Each claim cites the test that proves the part it
+// states.
+func TestSkillsClaimsStateWhereTheRoleAgentsGo(t *testing.T) {
+	for _, tc := range []struct {
+		target  string
+		phrases []string
+		tests   []string
+	}{
+		{
+			capability.TargetCodex,
+			[]string{"Role agents go to ~/.codex/agents the same way", "No test observes Codex loading a skill or an agent"},
+			[]string{"installer:TestCodexAgentsLandInTheAgentsDirectoryOfCodexAndNowhereElse"},
+		},
+		{
+			capability.TargetPi,
+			[]string{"Install also links the package's agents", "No test observes Pi loading a skill or an agent"},
+			[]string{"pipkg:TestPipkgBuild_CopiesEveryPiAgentOfTheOverlay", "runtime:TestPiAdapter_InstallLinksEveryAgentOfThePackage"},
+		},
+	} {
+		claim := skillsClaim(t, tc.target)
+		for _, phrase := range tc.phrases {
+			if !strings.Contains(claim.Detail, phrase) {
+				t.Errorf("%s skills detail %q does not state %q", tc.target, claim.Detail, phrase)
+			}
+		}
+		for _, ref := range tc.tests {
+			if !slices.Contains(claim.Tests, ref) {
+				t.Errorf("%s skills claim does not cite %s: %v", tc.target, ref, claim.Tests)
 			}
 		}
 	}

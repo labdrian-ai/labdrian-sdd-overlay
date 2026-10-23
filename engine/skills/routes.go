@@ -29,12 +29,14 @@ const (
 	RouteAgent = "agent"
 	// RouteOpencodeAgent copies a row from opencode/agents/ to the agents directory of OpenCode.
 	RouteOpencodeAgent = "opencode-agent"
+	// RouteCodexAgent copies a row from codex/agents/ to the agents directory of Codex.
+	RouteCodexAgent = "codex-agent"
 	// RouteMCP names a row of the longterm-mem install, which is dispatched on its own: the row
 	// has a source in the overlay and is copied nowhere.
 	RouteMCP = "mcp"
 	// RouteNonDeployable names a row that no directory of the overlay holds: an engine source
-	// file, a file at the root, an opencode-agent row outside opencode/agents/. The overlay
-	// tracks it for comparison and never copies it.
+	// file, a file at the root, an opencode-agent or codex-agent row outside its runtime's agents
+	// directory of the overlay. The overlay tracks it for comparison and never copies it.
 	RouteNonDeployable = "non-deployable"
 )
 
@@ -99,7 +101,7 @@ type RouteDestinations struct {
 	// SkillsRoot and the row's path.
 	SkillsRoot string
 	// AgentsRoot is the directory that holds the native agents of Target, for a target that has
-	// them (Claude Code and OpenCode). A row is refused when it needs one and there is none.
+	// them (Claude Code, OpenCode and Codex). A row is refused when it needs one and there is none.
 	AgentsRoot string
 }
 
@@ -132,7 +134,7 @@ type UnroutedRowError struct {
 }
 
 func (e *UnroutedRowError) Error() string {
-	const domain = "must be one of: skill, agent, opencode-agent, mcp"
+	const domain = "must be one of: skill, agent, opencode-agent, codex-agent, mcp"
 	if e.Route == "" {
 		return fmt.Sprintf("route_resolve: longterm-mem row '%s' declares no route (missing third column); %s", e.Path, domain)
 	}
@@ -162,6 +164,7 @@ func (e *MissingRootError) Error() string {
 var agentRouteTargets = map[string]string{
 	RouteAgent:         capability.TargetClaude,
 	RouteOpencodeAgent: capability.TargetOpenCode,
+	RouteCodexAgent:    capability.TargetCodex,
 }
 
 // ResolveRoutes decides, for each row of the manifest, the route it takes and where its file is
@@ -226,6 +229,14 @@ func resolveRoute(path, declared, overlayRoot string, dest RouteDestinations) (R
 		return withAgentDest(placed, path, dest)
 	case RouteOpencodeAgent:
 		name := strings.TrimPrefix(path, "opencode/agents/")
+		if name == path || name == "" {
+			return never, nil
+		}
+		placed.RepoRel = path
+		placed.RepoSource = overlayRoot + "/" + path
+		return withAgentDest(placed, name, dest)
+	case RouteCodexAgent:
+		name := strings.TrimPrefix(path, "codex/agents/")
 		if name == path || name == "" {
 			return never, nil
 		}
