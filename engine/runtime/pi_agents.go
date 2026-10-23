@@ -198,12 +198,22 @@ func linkAgent(home, destDir, file string) error {
 // extension package itself (R-016). The agents are those of the package plus every link of the home
 // that still points into the package's agents/ -- so a link whose source is gone (the package's
 // agents/ removed, or an agent a rebuild dropped) is removed too. It returns what became of each
-// agent, in the order of their names; the error is for agents that cannot be listed from either side.
+// agent, in the order of their names. The error tells a side that cannot be listed -- a package
+// agents directory that is there but unreadable, or the links directory of the home -- and comes
+// with the results of the other side, so a listing that fails never hides the links still removed.
 func unlinkPackageAgents(home, destDir string) ([]agentLinkResult, error) {
 	files, packageErr := packageAgents(destDir)
 	owned, linksErr := ownedAgentLinks(home, destDir)
-	if packageErr != nil && linksErr != nil {
-		return nil, fmt.Errorf("agents link: the package agents cannot be read at %s: %w", filepath.Join(destDir, "agents"), packageErr)
+	var listing []string
+	if packageErr != nil && !errors.Is(packageErr, os.ErrNotExist) {
+		listing = append(listing, fmt.Sprintf("the package agents cannot be read at %s: %v", filepath.Join(destDir, "agents"), packageErr))
+	}
+	if linksErr != nil {
+		listing = append(listing, fmt.Sprintf("the agent links cannot be read at %s: %v", agentLinkPath(home, ""), linksErr))
+	}
+	var err error
+	if len(listing) > 0 {
+		err = errors.New("agents link: " + strings.Join(listing, "; "))
 	}
 	for _, file := range owned {
 		if !slices.Contains(files, file) {
@@ -215,7 +225,7 @@ func unlinkPackageAgents(home, destDir string) ([]agentLinkResult, error) {
 	for _, file := range files {
 		results = append(results, agentLinkResult{File: file, Err: unlinkAgent(home, destDir, file)})
 	}
-	return results, nil
+	return results, err
 }
 
 // ownedAgentLinks lists the files of ~/.pi/agent/agents that are the overlay-owned symlink of an
@@ -279,9 +289,6 @@ func agentsInstallNotes(home, destDir string) []string {
 // before it, and is empty when the package has no agent to tell about.
 func agentsUninstallNote(home, destDir string) string {
 	results, err := unlinkPackageAgents(home, destDir)
-	if err != nil {
-		return " " + err.Error() + "."
-	}
 	var note strings.Builder
 	for _, result := range results {
 		if result.Err != nil {
@@ -289,6 +296,9 @@ func agentsUninstallNote(home, destDir string) string {
 			continue
 		}
 		note.WriteString(" " + result.File + " link removed.")
+	}
+	if err != nil {
+		note.WriteString(" " + err.Error() + ".")
 	}
 	return note.String()
 }

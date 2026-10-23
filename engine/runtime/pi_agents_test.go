@@ -285,6 +285,63 @@ func TestPiAdapter_UninstallRemovesOwnedLinksWhenThePackageAgentsAreGone(t *test
 	}
 }
 
+// A rebuild that dropped one agent leaves its link pointing into the package: Uninstall removes it
+// with the links of the agents the package still has.
+func TestPiAdapter_UninstallRemovesTheLinkOfAnAgentARebuildDropped(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	overlayRoot, registryPath := piFixtureOverlayWithAgents(t, map[string]string{
+		"builder.md":  piRoleAgentSource("builder"),
+		"reviewer.md": piRoleAgentSource("reviewer"),
+	})
+	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
+	buildPiPackage(t, overlayRoot, registryPath, destDir)
+	adapter := newPiAdapterAt(t, overlayRoot, registryPath, destDir)
+	if result := adapter.Install(); result.Status == core.CapabilityUnsupported {
+		t.Fatalf("Install must not be unsupported, got: %s", result)
+	}
+	if err := os.Remove(filepath.Join(destDir, "agents", "reviewer.md")); err != nil {
+		t.Fatal(err)
+	}
+
+	result := adapter.Uninstall()
+	for _, file := range []string{"GADU.md", "builder.md", "reviewer.md"} {
+		assertAgentNotLinked(t, home, file)
+		assertMessageHasOnce(t, result.Message, file+" link removed.")
+	}
+}
+
+// A package agents directory that cannot be read for another reason than its absence is told, even
+// though the links of the home are still found and removed.
+func TestPiAdapter_UninstallTellsAnUnreadablePackageAgentsDirectory(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root reads a directory whatever its mode")
+	}
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	overlayRoot, registryPath := piFixtureOverlayWithAgents(t, map[string]string{
+		"builder.md": piRoleAgentSource("builder"),
+	})
+	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
+	buildPiPackage(t, overlayRoot, registryPath, destDir)
+	adapter := newPiAdapterAt(t, overlayRoot, registryPath, destDir)
+	if result := adapter.Install(); result.Status == core.CapabilityUnsupported {
+		t.Fatalf("Install must not be unsupported, got: %s", result)
+	}
+	agentsDir := filepath.Join(destDir, "agents")
+	if err := os.Chmod(agentsDir, 0); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(agentsDir, 0755) })
+
+	result := adapter.Uninstall()
+	for _, file := range []string{"GADU.md", "builder.md"} {
+		assertAgentNotLinked(t, home, file)
+		assertMessageHasOnce(t, result.Message, file+" link removed.")
+	}
+	assertMessageHasOnce(t, result.Message, "agents link: the package agents cannot be read at "+agentsDir)
+}
+
 // The agents this overlay really ships pass what Install checks of them: every pi/agents file of
 // the repository, GADU and the roles, becomes a link, and none is refused for its frontmatter.
 func TestPiAdapter_InstallLinksTheAgentsOfThisOverlay(t *testing.T) {

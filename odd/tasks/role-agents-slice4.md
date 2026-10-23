@@ -28,7 +28,7 @@ Read v3 in full (D10, D11, D14, §2, §4, §5, §6, §9), `odd/tasks/role-agents
 | ID | Specs | Route | Status | Commit / evidence |
 |---|---|---|---|---|
 | T1 | S1, S2, S4, S5, S6, S7 | delegated workflow (owner: "sonnet max para implementaciones"); generator, templates, generated files, `Check` in CI | done | `61a31b70` |
-| T2 | S1, S3, S6, S7 | same workflow, after T1; Codex route, pipkg directory copy, Pi package agents loop, capability sentence | done | the commit that adds this line |
+| T2 | S1, S3, S6, S7 | same workflow, after T1; Codex route, pipkg directory copy, Pi package agents loop, capability sentence | done | `84349dcd`; review fixes `c8b32dcd`, `f76113dd` |
 | T3 | S1 (live check) | owner-authorized, after merge-ready | pending | — |
 
 ## Log
@@ -59,3 +59,8 @@ Read v3 in full (D10, D11, D14, §2, §4, §5, §6, §9), `odd/tasks/role-agents
     - The Engram-line drop needs the exact line: it fails loudly in Check, so this is accepted.
   - **Receipts:** `odd/review-receipts/role-agents-slice4/`.
   - **Suite:** the full engine suite after the fixes shows only the 3 known environmental failures.
+- **L5** (2026-10-23): review of the fix commits (`84349dcd..ebc586b9`).
+  - `review-af65599034467589` (resilience, readability, reliability), approved and acknowledged, no blockers.
+  - R3/R4 (a listing error is swallowed when only one side fails): fixed in the next commit, test-first. Uninstall now tells an unreadable package agents directory, or an unreadable links directory, after the links it still removed. A missing package `agents/` stays silent.
+  - R3 suggestion (a rebuild that drops one agent): pinned by a test, which already passed.
+  - R2 suggestion (the partial-failure branch): documented in the comment of `unlinkPackageAgents`.
