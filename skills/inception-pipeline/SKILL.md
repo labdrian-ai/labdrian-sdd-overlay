@@ -1,23 +1,22 @@
 ---
 name: inception-pipeline
-description: "THIS IS THE FIRST SKILL TO USE when starting any unit of work — new project, feature, chore, or fix. It selects the entry tier and drives project-inception when needed; do not invoke project-inception directly unless you explicitly want only the manifest+architect+roadmap trilogy without tier routing. Triggers on: start project, new feature, implement requirement, small fix, kick off SDD, bootstrap, build this, add capability, change request, chore, hotfix, arrancá el proyecto, empezar proyecto, nueva feature, arreglo chico. Sequences the pre-SDD producers as delegated sub-agents, assembles and validates the entry contract, hands off to the SDD engine, and fires closure-feedback after archive. Never executes producer work itself and never routes SDD phases."
+description: "THIS IS THE FIRST SKILL TO USE when starting any unit of work — new project, feature, chore, or fix. It selects the entry tier and drives project-inception when needed; do not invoke project-inception directly unless you explicitly want only the manifest+architect+roadmap trilogy without tier routing. Triggers on: start project, new feature, implement requirement, small fix, kick off SDD, bootstrap, build this, add capability, change request, chore, hotfix, arrancá el proyecto, empezar proyecto, nueva feature, arreglo chico. Sequences the producers as delegated sub-agents, enters the labdrian role chain, and fires closure-feedback after delivery. Never executes producer work itself and never runs the chain's hops."
 license: Apache-2.0
 metadata:
   author: gentleman-programming
-  version: "2.1.0"
+  version: "3.0.0"
 ---
 
 ## Purpose
 
-You are a **thin pre-SDD orchestrator**. You stand in front of the SDD engine and turn a raw unit of work into a validated entry contract, then hand off. You do FIVE things and nothing else:
+You are a **thin pre-chain orchestrator**. You stand in front of the labdrian role chain and turn a raw unit of work into the chain's first record, then hand off. You do FOUR things and nothing else:
 
 1. **Select the entry tier** (1 / 2 / 3) with a reasoning-based checklist.
-2. **Sequence the pre-SDD producers** as delegated sub-agents (requirements-capture, project-inception, roadmap-maker, sdd-time-estimation).
-3. **Assemble + deterministically validate** the versioned `sdd/{change}/entry` contract.
-4. **Confirm readiness** via the native dispatcher and hand off to the SDD engine (gentleman-agents-team-lite).
-5. **Fire closure-feedback** after the engine archives the change.
+2. **Sequence the producers** as delegated sub-agents (requirements-capture, project-inception, roadmap-maker).
+3. **Enter the role chain** (Chain entry below).
+4. **Fire closure-feedback** after the change is delivered.
 
-You NEVER execute producer work yourself (no manifest, no architecture, no estimate, no code). You NEVER route SDD phases — the native `gentle-ai` dispatcher owns proposal → spec → design → tasks → apply → verify → archive. You only sequence the PRE-SDD producers and the POST-SDD closure loop.
+You NEVER execute producer work yourself (no manifest, no architecture, no code). You NEVER run the chain's hops: `skills/role-chain/SKILL.md` owns them. You only sequence the PRODUCERS and the POST-DELIVERY closure loop.
 
 All persisted artifacts are written in **English** (see `../_shared/pre-sdd-contracts.md`). The user-facing conversation may stay in the user's language.
 
@@ -35,101 +34,44 @@ Evaluate in order. Stop at the first rule that fires. Record the firing rule in 
 Rules:
 - Tier is decided by **evidence**, not user phrasing. Assert manifest + architect existence in engram before choosing Tier 2 or 3. Absence of the manifest forces Tier 1 regardless of stated intent.
 - On ambiguity, **default up** (3→2, 2→1), record the rationale in `sdd/{change}/pipeline-state`, and ask at most ONE clarifying question.
-- Persist the chosen tier into the `tier` field of the entry contract.
 - **Read `references/tier-selection.md` when the tier is ambiguous** (rule 4 fired) — it carries the worked examples. Skip it otherwise.
 
 ## Tier Flows (each ends the same way)
 
-Every flow finishes with the identical tail: **assemble a temporary entry candidate → validate it with the version-matched schema + deterministic validator → persist the exact validated bytes to `sdd/{change}/entry` → `gentle-ai sdd-status {change} --cwd {project-root} --json --instructions` gate → hand to team-lite (route ONLY by `nextRecommended`) → closure-feedback after archive.**
+Every flow finishes with the identical tail: **Chain entry → closure-feedback after delivery.**
 
 `change-name` is derived **once** by the requirements-capture step (`requirements-from-transcripts`) as a kebab-case slug and inherited verbatim downstream. Never re-derive it.
 
 ### Tier 1 — New project
 1. Delegate **requirements-from-transcripts** (if a transcript/brief exists) → writes `project/{project}/requirements/{change}`, derives `change-name`.
 2. Delegate **project-inception** with `inception_mode: full` and `requirements_brief_ref: {change}` → manifest + architect + roadmap.
-3. Delegate **sdd-time-estimation** → its inception row (the entry estimate cache); it no longer writes `sdd/{change}/estimate`.
-4. Assemble + validate entry → dispatcher gate → engine → closure-feedback.
+3. Chain entry → closure-feedback.
 
 ### Tier 2 — Feature/chore on existing project
 1. Delegate **requirements-from-transcripts** (per feature) → writes the requirements brief, derives `change-name`.
 2. Delegate **project-inception** with `inception_mode: reuse` (loads manifest + architect READ-ONLY; falls back to `full` if either is missing) — this internally drives **roadmap-maker** in `incremental-insert` mode to splice the new item.
-3. Delegate **sdd-time-estimation** → its inception row (the entry estimate cache); it no longer writes `sdd/{change}/estimate`.
-4. Assemble + validate entry → dispatcher gate → engine → closure-feedback.
+3. Chain entry → closure-feedback.
 
 ### Tier 3 — Small fix
 1. Delegate **requirements-from-transcripts** (lightweight) → derives `change-name`, captures the fix scope.
 2. Delegate **roadmap-maker** directly with `mode: incremental-insert`, `tier: 3` → splice the fix item; preserve all actuals/history.
-3. Delegate **sdd-time-estimation** → its inception row (the entry estimate cache); it no longer writes `sdd/{change}/estimate`.
-4. Assemble + validate entry → dispatcher gate → engine (recommend a **slim slice**) → closure-feedback.
+3. Chain entry → closure-feedback.
 
-## Entry Contract Assembly & Validation (v2; fail closed)
+## Chain entry
 
-Read `../_shared/pre-sdd-contracts.md` and `../_shared/entry-contract.schema.json` before assembly. The skill metadata, shared authority, entry schema, actuals schema, and validator MUST all declare contract bundle `2.1.0`, and a new contract MUST declare that version. If an asset is missing or mismatched, **STOP**. Do not reconstruct a schema from memory or fall back to prose validation.
+After the producers, load `skills/role-chain/SKILL.md`: it owns every hop. This skill writes role-chain records only; it opens no workflow.
 
-Assemble one candidate JSON object in a temporary file. It MUST contain every required v2 group:
-
-- Identity: `contract_version`, inherited `change_name`, `project`, selected `tier`, `interaction_mode`, and `artifact_store_mode`.
-- `artifact_refs`: entry, requirements, manifest context/mission/rules, architecture, roadmap, estimate, SDD init, pipeline state, and delivery plan.
-- Estimate cache: `planned_range_hours`, lowercase-normalized `complexity` (`Critical` → `critical`), `confidence`, and `human_review_included: true`, taken from sdd-time-estimation's inception row; never estimate them yourself. `sdd/{change}/estimate` is no longer written, so there are no richer estimate-only fields to keep there.
-- Delivery decision: `requested_pr_strategy`, normalized `delivery_strategy`, `chaining_required`, `chain_strategy`, and `review_budget` including size-exception state.
-- Test/review plan: `strict_tdd.enabled`, non-empty focused and broad test command lists, ordered requirement-linked `review_slices`, and `expected_native_next_recommendation`.
-
-Artifact references carry the stable topic keys defined by the shared authority. Before validation, assert every producer artifact exists, except `estimate`, which `sdd-time-estimation` no longer writes. Include `openspec_path` only for a real, normalized repository-relative path below `openspec/`; omit it when no such artifact exists. Never synthesize a path from a topic key. In `engram` or `none` mode, omit every `openspec_path`.
-
-Normalize delivery before validation:
-
-- `force-chained` resolves to `auto-chain`, `chaining_required: true`, and a concrete non-`none` chain strategy.
-- `force-single` resolves to `single-pr` when every slice is within budget, or `exception-ok` only with an explicitly approved size exception.
-- `auto-chain` always means chaining is required. `single-pr` and `exception-ok` always mean it is not.
-- Slice order starts at 1 and is contiguous. IDs are unique; dependencies name prior slices only. A slice over budget requires an approved exception.
-
-Run the repository wrapper so caller-relative paths work and validator exit codes remain visible:
-
-```bash
-labdrian validate-entry-contract \
-  --schema skills/_shared/entry-contract.schema.json \
-  --instance /absolute/path/to/entry-candidate.json \
-  --exists-root {project-root}
-```
-
-**`--exists-root` is REQUIRED here, and inception time is the only place it can be passed.** It resolves every `artifact_refs` `openspec_path` against that root and fails when one is missing, which is the difference between a contract that references artifacts and a contract that merely names strings shaped like paths. It is off by default for a reason that is not a hedge: archiving CONSUMES the live change directory, so an archived contract points at paths that no longer exist, and enabling the check against history would invalidate every archived contract permanently. Pass it while the change directory is still live — here — and nowhere else.
-
-**The root is the PROJECT ROOT, never the change directory.** Every `openspec_path` is repository-root-relative and already begins `openspec/changes/{change}/…`; the validator joins it under whatever root you pass. Pointing the flag at the change directory therefore looks for `openspec/changes/{change}/openspec/changes/{change}/entry.json`, so every declared artifact is reported missing and the check becomes a hard stop no contract can ever pass. Pass the project root and the same declaration resolves exactly once.
-
-Any non-zero result is a hard stop. Do not persist a partially validated object. On success, persist the exact candidate bytes to `sdd/{change}/entry` with `capture_prompt: false` and, only when a real OpenSpec entry path was declared, atomically write the same object there. Then delete the temporary candidate.
-
-## Dispatcher Gate & Handoff (route by native JSON only)
-
-Route SDD **only** through the native dispatcher status JSON:
-
-```
-gentle-ai sdd-status {change} --cwd {project-root} --json --instructions
-```
-
-- Read `nextRecommended` and `blockedReasons` from the JSON. Treat them as authoritative over any free text.
-- Preserve the native token exactly: phase recommendations are unprefixed (`propose`, `spec`, `design`, `tasks`, `apply`, `verify`, `remediate`, `archive`); control/review recommendations include `sdd-new`, `select-change`, `review`, and `resolve-review`.
-- Assert `nextRecommended` matches `expected_native_next_recommendation` in the validated entry. A mismatch means the handoff is stale or incomplete: **STOP**, refresh evidence, and rebuild the candidate rather than editing one field in place.
-- **Cold-start exemption (first gate call for a new change).** A change the engine has not created yet is not a blocked change. The gate PASSES — hand off — when ALL of these hold: `nextRecommended` is `sdd-new` or `select-change`, `changeRoot` is `null`, every `artifacts` value is `missing`, and every entry in `blockedReasons` names only the not-yet-created change. This is the normal first-run state under `openspec` and `hybrid`: inception-pipeline never creates the change root (it does not route SDD phases), so the engine must create it. Treating this state as a blocker would deadlock every new change at its own gate. A cold-start handoff still requires `expected_native_next_recommendation` to have predicted the same control token, per the assert above.
-- If `blockedReasons` is non-empty for any other reason AND `nextRecommended` is not `verify`, **STOP** and report the blockers. Do not hand off, do not archive.
-- If `nextRecommended` is `verify`, verification/remediation may run to refresh evidence.
-- Hand off to the SDD engine (gentleman-agents-team-lite) and let it route every SDD phase by `nextRecommended`. inception-pipeline does NOT route phases itself.
+- Goal id = chain id = `change-name`: every record goes to `labdrian roles append --project {project} --goal {change} --chain {change} --stdin`.
+- The first record is `prototyper → shaper` when a premise is open (the prototyper trigger of the role chain), otherwise `shaper → estimator`.
+- Every builder prompt states that strict TDD is active and names the runner.
 
 ## Gate Compliance (non-negotiable orchestrator gates)
 
-When sequencing producers and handing off, the orchestrator MUST honor every standing gate:
+When sequencing producers and entering the chain, honor every standing gate:
 
-- **SDD Init Guard** — before any SDD command, confirm `sdd-init` ran for the project; if not, run it first.
-- **Version-matched entry gate** — all v2 bundle assets must exist and the deterministic validator must return 0 before the entry is persisted or the dispatcher runs.
-- **Artifact-reference truthfulness** — every topic key resolves (except `estimate`, no longer written); every declared OpenSpec path is real and normalized. Missing evidence stops the flow.
 - **Model gate** — every Agent / sub-agent call MUST include `model`. No model → no call.
 - **Launch dedup** — track `(phase, fingerprint)` pairs; emit exactly one launch per distinct task.
 - **Skill-resolver injection** — resolve matching `SKILL.md` paths from the registry and inject them as `## Skills to load before work` in each sub-agent prompt (pass paths, not summaries).
-- **Strict-TDD forwarding** — if `sdd-init/{project}` has `strict_tdd: true`, forward strict-TDD mode + test runner to `sdd-apply` / `sdd-verify`.
-- **Apply-progress continuity** — for continuation batches, tell `sdd-apply` that prior `sdd/{change}/apply-progress` exists and must be MERGED, not overwritten.
-- **Review Workload Guard** — after `sdd-tasks`, inspect the Review Workload Forecast and apply the cached `delivery_strategy` (and `chain_strategy` if chaining) before `sdd-apply`.
-- **Pre-archive receipt check** — before handing off to `sdd-archive`, run `go run -C tools/archive-anchor-gate . --repo "$(git rev-parse --show-toplevel)" --change {change}`. A non-zero exit means no persisted review receipt (and no recorded owner override) exists for `{change}`: capture the receipt or record the override before archiving, never archive past this gate.
-
-These gates belong to the orchestrator running the SDD engine. inception-pipeline forwards the inputs (strict_tdd, delivery_strategy, chain_strategy, artifact_store_mode) via the entry contract; it never routes the phases itself.
 
 ## Closure-Feedback (plan → validate → execute; single writer)
 
@@ -148,7 +90,7 @@ Do NOT source `changed_lines` from `sdd/{change}/tasks` — its Review Workload 
 
 **`total_wall_clock_hours` is measured independently of the compute-hour sum.** It shares the same boundary as `checkpoint_count` — from the tiering go-ahead checkpoint (`sdd/{change}/pipeline-state`) through merge, not archive: post-merge archive-authorization replies are bookkeeping and MUST NOT count as development time. It MUST include any interruption gaps (e.g. provider rate/session-limit resets), not only active agent-compute time. Never derive it by summing `implementation_hours` + `review_gate_hours` + `post_review_fix_hours`; that sum is the agent-compute-time proxy, a distinct and usually smaller unit that must stay separately labeled.
 
-**t1 is anchored in a versioned artifact recorded at delivery, never re-derived from unversioned `.git/` state.** Review receipts under `.git/gentle-ai/review-transactions/v2/<lineage>/review-receipt.json` are never versioned — a fresh clone has zero receipts — and the store's lineages carry no binding to a change name, so there is no rule for finding which receipt belongs to which change after the fact. `review-receipt-capture` (R-008) closes that gap: before `acknowledge-approved` burns the live transaction, the orchestrator persists the approved payload byte-for-byte to `openspec/changes/{change}/review-receipts/<lineage>.json` (legacy `gentle-ai.review-receipt/v2` shape) or `<lineage>.review-state.json` (the raw `review-state.json` shape gentle-ai 2.7.0+ writes instead, once the lifecycle stopped emitting the legacy receipt) — a versioned, change-bound copy either way. closure-feedback and `tools/archive-anchor-gate` read `approved_tree` and `review_lens_count` from THAT persisted file, in whichever shape it was captured, never from the live `.git/gentle-ai/review-transactions/v2/` store. Scanning commit history for whichever commit touched `openspec/changes/{change}/` is not a safe substitute either: a commit belonging to an unrelated change can touch that same folder and silently become the wrong t1 — not hypothetical, this repository's own history contains a case where such a scan lands on an unrelated PR's merge commit instead of the change's true landing commit. Neither approach is used, and there is no folder-scan fallback anywhere in this rule. WHEN no persisted receipt exists for the lineage, `archive-anchor-gate` BLOCKS archive with an explicit "no verified receipt" reason rather than resolving t1 from a self-asserted `approved_tree` — see the pre-archive gate compliance item below — unless an explicit owner override is recorded at `openspec/changes/{change}/review-receipts/override.json` AND the archive-report's `## Cycle Timestamps` section discloses the word "override"; the anchor is then self-asserted with a recorded override, never verified.
+**t1 is anchored in a versioned artifact recorded at delivery, never re-derived from unversioned `.git/` state.** Review receipts under `.git/gentle-ai/review-transactions/v2/<lineage>/review-receipt.json` are never versioned — a fresh clone has zero receipts — and the store's lineages carry no binding to a change name, so there is no rule for finding which receipt belongs to which change after the fact. `review-receipt-capture` (R-008) closes that gap: before `acknowledge-approved` burns the live transaction, the orchestrator persists the approved payload byte-for-byte to `openspec/changes/{change}/review-receipts/<lineage>.json` (legacy `gentle-ai.review-receipt/v2` shape) or `<lineage>.review-state.json` (the raw `review-state.json` shape gentle-ai 2.7.0+ writes instead, once the lifecycle stopped emitting the legacy receipt) — a versioned, change-bound copy either way. closure-feedback and `tools/archive-anchor-gate` read `approved_tree` and `review_lens_count` from THAT persisted file, in whichever shape it was captured, never from the live `.git/gentle-ai/review-transactions/v2/` store. Scanning commit history for whichever commit touched `openspec/changes/{change}/` is not a safe substitute either: a commit belonging to an unrelated change can touch that same folder and silently become the wrong t1 — not hypothetical, this repository's own history contains a case where such a scan lands on an unrelated PR's merge commit instead of the change's true landing commit. Neither approach is used, and there is no folder-scan fallback anywhere in this rule. WHEN no persisted receipt exists for the lineage, `archive-anchor-gate` BLOCKS archive with an explicit "no verified receipt" reason rather than resolving t1 from a self-asserted `approved_tree` — see `tools/archive-anchor-gate` (`--change`) — unless an explicit owner override is recorded at `openspec/changes/{change}/review-receipts/override.json` AND the archive-report's `## Cycle Timestamps` section discloses the word "override"; the anchor is then self-asserted with a recorded override, never verified.
 
 **closure-feedback WRITES the anchor; it never merely reads one.** The ordering makes this unavoidable: this skill fires AFTER the SDD engine archives, and `sdd-archive` commits `archive-report.md` BEFORE the merge exists — so no archive report the engine wrote can name a landing commit that had not happened yet. Describing the anchor as something "the archive-report records" therefore assigned the write to a step that had already finished. At delivery — when the merge has just happened and the values are trivially known — derive `landing_commit` from the actual merge commit (the commit that merged the change onto the default branch; the last slice to land when delivered as chained PRs) and record it, in versioned prose, into the `## Cycle Timestamps` section this skill appends (Execute item 3) — always. Record into that same section `approved_tree` (that delivery's approved candidate tree — the native review receipt's `final_candidate_tree`) ONLY WHEN review ran for this candidate.
 
@@ -211,11 +153,8 @@ Downstream consumers read on their next run — you do NOT push to them:
 ## Gotchas (real traps)
 
 - **Single actuals writer.** Only closure-feedback writes `sdd/{change}/actuals`. Never let `sdd-archive` or any other skill write it — do NOT modify the managed `sdd-archive`.
-- **Never route SDD phases.** The native dispatcher owns proposal → … → archive. inception-pipeline only sequences PRE-SDD producers + POST-SDD closure.
 - **Assert foundation before Tier 2/3.** manifest + architect MUST exist in engram before choosing Tier 2 or 3. Missing manifest → Tier 1.
 - **Default up on ambiguity.** When the tier is unclear, choose the higher tier, record rationale in `sdd/{change}/pipeline-state`, ask at most one question.
-- **Route by native JSON only.** Use `gentle-ai sdd-status {change} --cwd {project-root} --json --instructions` → `nextRecommended` / `blockedReasons`.
-- **Never weaken validation.** Missing/mismatched v2 assets, validator failures, stale dispatcher recommendations, and fabricated OpenSpec paths all stop the handoff.
 - **change-name is derived once.** requirements-capture owns it; inherit verbatim, never re-derive downstream.
 - **Stop on partial closure writes.** If actuals, calibration, or the archive-report append fails, report and stop — do not leave the stores inconsistent.
 - **The archive-report append is a named carve-out, not a precedent.** The `## Cycle Timestamps` append-only carve-out applies to that one delimited section only — it does not license editing any other part of the engine's native `archive-report.md`, and the Engram archive-report topic stays untouched either way.
@@ -224,6 +163,6 @@ Downstream consumers read on their next run — you do NOT push to them:
 ## References
 
 - `../_shared/pre-sdd-contracts.md` — contract authority: topic keys, change-name rule, language rule, schemas, registry-block format.
-- `../_shared/entry-contract.schema.json` — entry contract schema (validated at the dispatcher gate).
+- `skills/role-chain/SKILL.md` — the chain this skill enters; it owns every hop.
 - `../_shared/actuals-record.schema.json` — actuals record schema (validated at closure).
 - `references/tier-selection.md` — worked tier-selection examples. **Load conditionally**: read only when the tier is ambiguous (rule 4).

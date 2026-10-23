@@ -263,11 +263,11 @@ When launching `sdd-apply`, always include the resolved `delivery_strategy`, `ch
 
 #### Plan vs Realized Slice Count (MANDATORY)
 
-The forecast check above compares an estimate against a budget. This check compares the **plan against reality**, which nothing in the engine did before: `review_slices` in the entry contract has a producer (`inception-pipeline`), a validator (`entry-contract-validator`), and a human reader (`openspec/project/roadmap.md`), but until this rule it had zero consumers inside the SDD engine. Nobody noticed a plan diverging from delivery while the work was still running.
+The forecast check above compares an estimate against a budget. This check compares the **plan against reality**, which nothing in the engine did before: `review_slices` in the entry contract had a producer (`inception-pipeline`, until its 3.0.0), a validator (`entry-contract-validator`), and a human reader (`openspec/project/roadmap.md`), but until this rule it had zero consumers inside the SDD engine. Nobody noticed a plan diverging from delivery while the work was still running.
 
 Define, for the active change:
 
-- **P** = `len(review_slices)` in the validated entry contract at `sdd/{change-name}/entry`. Use it only when `bin/labdrian-overlay validate-entry-contract` accepts that contract. If there is no validated entry contract, P is undefined and this check is skipped — record the skip, because a chained change running without a slice plan is itself worth reporting.
+- **P** = `len(review_slices)` in the validated entry contract at `sdd/{change-name}/entry`. Use it only when `bin/labdrian-overlay validate-entry-contract` accepts that contract. If there is no validated entry contract, P is undefined and this check is skipped — record the skip, because a chained change running without a slice plan is itself worth reporting. `inception-pipeline` 3.0.0 retired the entry (2026-10-23, C13-S0), so a change entered since has none: P is undefined for it and the check is skipped and recorded.
 - **R** = realized slices delivered so far: PRs opened for this change under the chosen `chain_strategy`, or, when not delivering via PRs, `sdd-apply` batches that carry their own review boundary. Count what exists, never what was intended.
 
 Recompute R at every `sdd-apply` batch boundary, and again before `sdd-verify` and before `sdd-archive`.
@@ -319,7 +319,7 @@ For SDD phases, sub-agents read/write the active backend directly using artifact
 | `sdd-verify`   | spec + tasks + apply-progress + `entry` (optional)                    | `verify-report`  |
 | `sdd-archive`  | all artifacts + `entry` (optional)                                    | `archive-report` |
 
-The `entry` contract is written by `inception-pipeline`, never by an SDD phase — the engine is a reader only, and must not create, edit, or re-validate it in place. Read it for `review_slices` (Plan vs Realized Slice Count) and `chain_strategy`; treat it as absent unless `bin/labdrian-overlay validate-entry-contract` accepts it. `actuals` is likewise engine-external: it is written after archive by `inception-pipeline` closure-feedback, which is its only writer, so no SDD phase reads or writes it.
+The `entry` contract was written by `inception-pipeline` until its 3.0.0 retired it (2026-10-23, C13-S0), and never by an SDD phase — the engine is a reader only, and must not create, edit, or re-validate it in place. Read it for `review_slices` (Plan vs Realized Slice Count) and `chain_strategy`; treat it as absent unless `bin/labdrian-overlay validate-entry-contract` accepts it. `actuals` is likewise engine-external: it is written after archive by `inception-pipeline` closure-feedback, which is its only writer, so no SDD phase reads or writes it.
 
 ### Strict TDD Forwarding (MANDATORY)
 
@@ -352,7 +352,7 @@ When launching `sdd-archive`, forward explicit final-state facts for any work co
 
 Sub-agents retrieve full Engram content in two steps: `mem_search(query: "{topic_key}", project: "{project}")`, then `mem_get_observation(id)`.
 
-The last two keys are **engine-external**: every other key in this table is written by the SDD phase that owns it, but `entry` is written by `inception-pipeline` before handoff and `actuals` by `inception-pipeline` closure-feedback after archive. The engine reads `entry` (preflight values, `review_slices`, `chain_strategy`) and neither reads nor writes `actuals`. Never write either key from an SDD phase, and never re-derive one from the other artifacts. They are listed here because they are addressed by this workflow — a key the orchestrator resolves but the table omits is a key nobody maintains, which is how both stayed invisible to the engine.
+The last two keys are **engine-external**: every other key in this table is written by the SDD phase that owns it, but `entry` was written by `inception-pipeline` before handoff (until its 3.0.0 retired it) and `actuals` by `inception-pipeline` closure-feedback after archive. The engine reads `entry` (preflight values, `review_slices`, `chain_strategy`) and neither reads nor writes `actuals`. Never write either key from an SDD phase, and never re-derive one from the other artifacts. They are listed here because they are addressed by this workflow — a key the orchestrator resolves but the table omits is a key nobody maintains, which is how both stayed invisible to the engine.
 
 ### State and Conventions
 
