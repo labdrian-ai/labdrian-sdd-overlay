@@ -18,9 +18,8 @@ import (
 // surfaces (schema enum, orchestrator workflow, sdd-tasks emitter, sdd-apply
 // consumer, chained-pr narrative) and only the schema token was enforced. Prose
 // that nothing pins is a suggestion, so every correction landed in those files
-// was reversible without a single test turning red. The precedent is
-// TestNextRecommendationTokenDomainMatchesInceptionPipelineProse in
-// token_domain_test.go: name one owner, then pin every mirror to it.
+// was reversible without a single test turning red. The rule: name one owner,
+// then pin every mirror to it.
 
 const (
 	sddApplySkillRelPath      = "skills/sdd-apply/SKILL.md"
