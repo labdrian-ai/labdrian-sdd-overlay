@@ -1,6 +1,7 @@
 package skills
 
 import (
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -158,6 +159,112 @@ func TestInceptionPipelineClosureFeedbackReadsTheChain(t *testing.T) {
 		}
 		if mentions == 0 {
 			t.Errorf("%s must still say, in one line, that archive-anchor-gate is history-only", inceptionPipelineSkillRelPath)
+		}
+	})
+}
+
+// TestInceptionPipelineClosureInputsAreLocatedByTheChain pins that every artifact
+// closure-feedback reads, and the one it writes into, has a placement rule that a hop can
+// follow. Correction B1 of the independent verifier (odd/tasks/inception-role-chain.md, T2).
+//
+// A role agent writes only at the paths and topics its prompt names (roles/*/body.md), and
+// agents/delivery.md writes "the archive report" at a path its prompt names. No chain contract
+// puts the Engram topics `sdd/{change}/{archive-report,verify-report,apply-progress,spec}`
+// anywhere: they were the SDD engine's, and the SDD engine is not in the chain. A skill that
+// calls them "the chain's own outputs" sends closure-feedback to targets nothing created, and
+// Execute item 3 (the append that carries the t1 anchor) cannot degrade the way an omitted
+// optional field does. So the Chain entry has the parent name the archive report, the Plan
+// confirms it before the first write, and every other input is read where the chain stores it
+// or at the locator the parent named.
+func TestInceptionPipelineClosureInputsAreLocatedByTheChain(t *testing.T) {
+	repoRoot := actualsInstrumentationRepoRoot(t)
+	skill := readRepoFile(t, repoRoot, inceptionPipelineSkillRelPath)
+
+	t.Run("B1_chain_entry_has_the_delivery_prompt_name_the_archive_report", func(t *testing.T) {
+		section := markdownSectionBody(t, skill, "## Chain entry")
+		for _, want := range []string{
+			"The delivery prompt names the archive report",
+			"`archive-report.md`",
+			"inside the project repository",
+		} {
+			if !strings.Contains(section, want) {
+				t.Errorf("the Chain entry section must say %q: the archive report is the carve-out target of closure-feedback's Execute item 3, and no chain contract places it unless the parent's delivery prompt does", want)
+			}
+		}
+	})
+
+	t.Run("B1_closure_names_only_the_topics_inception_itself_writes", func(t *testing.T) {
+		section := markdownSectionBody(t, skill, inceptionClosureFeedbackHeading)
+		// inception-pipeline writes sdd/{change}/pipeline-state (Tier Selection) and, as the
+		// single writer, sdd/{change}/actuals (Execute item 1). No chain contract places any
+		// other sdd/{change}/<name> topic, so naming one sends closure-feedback to a target
+		// nothing created.
+		writes := map[string]bool{"pipeline-state": true, "actuals": true}
+		seen := map[string]bool{}
+		for _, m := range regexp.MustCompile(`sdd/\{change\}/([a-z-]+)`).FindAllStringSubmatch(section, -1) {
+			if writes[m[1]] || seen[m[1]] {
+				continue
+			}
+			seen[m[1]] = true
+			t.Errorf("the closure-feedback section names the topic %q, which inception-pipeline does not write and no chain contract places", m[0])
+		}
+	})
+
+	t.Run("B1_does_not_say_the_chain_or_its_delivery_hop_places_an_output_it_never_places", func(t *testing.T) {
+		for _, forbidden := range []string{
+			"the chain's own outputs",
+			"the delivery hop writes `archive-report.md`",
+			"the delivery hop's `archive-report.md`",
+		} {
+			if strings.Contains(skill, forbidden) {
+				t.Errorf("%s must not contain %q: agents/delivery.md writes \"the archive report\" at the path its prompt names, and no chain contract names that file or those topics", inceptionPipelineSkillRelPath, forbidden)
+			}
+		}
+	})
+
+	t.Run("B1_archive_report_is_confirmed_before_the_first_write", func(t *testing.T) {
+		section := markdownSectionBody(t, skill, inceptionClosureFeedbackHeading)
+		for _, want := range []string{
+			"BEFORE the first write",
+			"named no path",
+		} {
+			if !strings.Contains(section, want) {
+				t.Errorf("the closure-feedback section must say %q: Execute item 3 cannot be skipped, so a missing archive report has to stop closure before actuals or calibration are written, not after", want)
+			}
+		}
+	})
+
+	t.Run("B1_verifier_reports_are_read_where_the_chain_stores_them", func(t *testing.T) {
+		const stored = "`<head12>-<n>.verifier.md`"
+		section := markdownSectionBody(t, skill, inceptionClosureFeedbackHeading)
+		if !strings.Contains(section, stored) {
+			t.Errorf("the closure-feedback section must read the verifier's report where the chain stores it, %s beside the review result", stored)
+		}
+		readme := readRepoFile(t, repoRoot, "odd/review-results/README.md")
+		if !strings.Contains(readme, stored) {
+			t.Errorf("odd/review-results/README.md must still say that the verifier's report is stored as %s: closure-feedback reads it there", stored)
+		}
+	})
+
+	t.Run("B1_shared_contracts_say_the_role_chain_does_not_write_the_engine_keys", func(t *testing.T) {
+		contracts := readRepoFile(t, repoRoot, "skills/_shared/pre-sdd-contracts.md")
+		var note string
+		for _, line := range strings.Split(contracts, "\n") {
+			if strings.HasPrefix(line, "> **Note:** Engine keys") {
+				note = line
+				break
+			}
+		}
+		if note == "" {
+			t.Fatal("skills/_shared/pre-sdd-contracts.md must still carry the note that lists the SDD engine's keys")
+		}
+		for _, want := range []string{
+			"role chain",
+			"Chain entry",
+		} {
+			if !strings.Contains(note, want) {
+				t.Errorf("the engine-keys note must say %q: it assigns the archive-report, verify-report, apply-progress and spec keys to the SDD engine and forbids reuse, and without that line a reader cannot tell where the role chain's agents write", want)
+			}
 		}
 	})
 }
