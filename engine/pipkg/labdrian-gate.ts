@@ -32,7 +32,7 @@ import { fileURLToPath } from "node:url";
 // agents; each contract's own frontmatter still decides what it gets, so a
 // contract added to the package later reaches these agents only if its
 // frontmatter names them.
-const AGENT_NAMES = ["sdd-tasks", "sdd-apply", "shaper", "builder"];
+const AGENT_NAMES = ["shaper", "builder"];
 
 // CONTRACT_RELATIVE_PATHS are package-root-relative paths to the managed
 // contracts this build ships under skills/_shared/ (mirrors pipkg.go's

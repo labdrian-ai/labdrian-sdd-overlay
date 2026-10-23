@@ -1,5 +1,5 @@
 ---
-applies_to_phases: [sdd-design, sdd-tasks, sdd-apply, shaper, builder]
+applies_to_phases: [shaper, builder]
 excluded_phases: [sdd-propose, sdd-spec, sdd-archive, sdd-verify, reviewer, verifier]
 injection_point: "## Skills to load before work"
 language_context: [typescript, nestjs]

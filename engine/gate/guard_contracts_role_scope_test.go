@@ -67,6 +67,21 @@ func TestTheGuardContractsAreStrippedFromTheReviewRoles(t *testing.T) {
 	}
 }
 
+// The sdd-* agents the contracts named left with PR 5 (the owner's decision kept them "until their
+// agents are removed"), so no contract of the repository is injected into a prompt launched under
+// one of those names any more.
+func TestNoShippedContractIsInjectedIntoTheRemovedSddAgents(t *testing.T) {
+	for _, path := range []string{"skills/_shared/minimalism-contract.md", ooContractPath, antiGenericPath} {
+		for _, name := range []string{"sdd-design", "sdd-tasks", "sdd-apply"} {
+			t.Run(path+"/"+name, func(t *testing.T) {
+				if got, changed := gate.Rewrite(gate.Call{SubagentType: name, Prompt: "Do the work."}, repoContract(t, path)); changed {
+					t.Errorf("the gate injected into the prompt of %s; got:\n%s", name, got)
+				}
+			})
+		}
+	}
+}
+
 // The shaper also designs, and the anti-generic-design guard has always stayed out of design: it
 // is not injected into the shaper's prompt.
 func TestTheAntiGenericGuardIsNotInjectedIntoTheShaper(t *testing.T) {

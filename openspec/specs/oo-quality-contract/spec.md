@@ -35,13 +35,13 @@ When the shared contract is added, the system SHALL track it in `overlay.manifes
 
 ID: R-003
 
-When contract frontmatter is declared, the system SHALL include `sdd-design`, `sdd-tasks`, `sdd-apply` and the `shaper` and `builder` role agents while excluding `sdd-propose`, `sdd-spec`, `sdd-archive`, first-slice `sdd-verify` and the `reviewer` and `verifier` role agents.
+When contract frontmatter is declared, the system SHALL include the `shaper` and `builder` role agents (which took over from the removed `sdd-design`, `sdd-tasks` and `sdd-apply` agents) while excluding `sdd-propose`, `sdd-spec`, `sdd-archive`, first-slice `sdd-verify` and the `reviewer` and `verifier` role agents.
 
 #### Scenario: Included and excluded phases are explicit
 
 - GIVEN the contract frontmatter is parsed
 - WHEN phase scope is evaluated
-- THEN included phases are design, tasks, apply, shaper and builder
+- THEN included phases are shaper and builder
 - AND propose, spec, archive, verify, reviewer and verifier are excluded
 
 ### Requirement: Precedence

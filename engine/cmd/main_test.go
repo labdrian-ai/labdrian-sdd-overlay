@@ -1124,10 +1124,10 @@ func TestPropagateCommand_EmbeddedDesignContract_ResolvesAndWritesPath(t *testin
 }
 
 // TC-EMBED-GATE-DESIGN-1: gate-task --embedded-contract anti-generic-design on
-// a well-formed PreToolUse Agent payload for an in-scope phase (sdd-apply)
+// a well-formed PreToolUse Agent payload for an in-scope agent (builder)
 // emits an injection referencing the contract path, not the {} fail-safe.
 func TestGateTaskCore_EmbeddedDesignContract_Injects(t *testing.T) {
-	input := `{"tool_name":"Agent","tool_input":{"description":"apply","subagent_type":"sdd-apply","prompt":"Do the apply phase."}}`
+	input := `{"tool_name":"Agent","tool_input":{"description":"apply","subagent_type":"builder","prompt":"Do the apply phase."}}`
 	contractAbsPath := "/home/user/.claude/engine/anti-generic-design.md"
 
 	var outBuf, errBuf bytes.Buffer

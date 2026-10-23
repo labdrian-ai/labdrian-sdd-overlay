@@ -37,8 +37,6 @@ exit: 0
     {
       "contract_path": "skills/_shared/anti-generic-design.md",
       "included_phases": [
-        "sdd-tasks",
-        "sdd-apply",
         "builder"
       ],
       "excluded_phases": [
@@ -93,8 +91,6 @@ exit: 0
     {
       "contract_path": "skills/_shared/anti-generic-design.md",
       "included_phases": [
-        "sdd-tasks",
-        "sdd-apply",
         "builder"
       ],
       "excluded_phases": [

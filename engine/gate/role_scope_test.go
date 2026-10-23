@@ -34,9 +34,9 @@ const (
 )
 
 // The roles the contract guides get it injected, once, under the header the contract names, and
-// their prompt is kept. sdd-tasks and sdd-apply keep it until their agents are removed.
+// their prompt is kept.
 func TestRealContractIsInjectedIntoTheRolesItGuides(t *testing.T) {
-	for _, role := range []string{"shaper", "builder", "sdd-tasks", "sdd-apply"} {
+	for _, role := range []string{"shaper", "builder"} {
 		t.Run(role, func(t *testing.T) {
 			got, changed := rewrite(realContract(t), role, "Do the work.")
 			if !changed {

@@ -206,14 +206,14 @@ in `engine/assets`) so `gate-task` and
 ID: R-104
 
 The deployed `skills/_shared/anti-generic-design.md` file SHALL carry
-`applies_to_phases: [sdd-tasks, sdd-apply, builder]` in its frontmatter so
+`applies_to_phases: [builder]` in its frontmatter so
 `contract.Parse` derives scope without error.
 
-#### Scenario: Frontmatter parses to the target phases and the builder
+#### Scenario: Frontmatter parses to the builder
 
 - GIVEN `skills/_shared/anti-generic-design.md`'s frontmatter
 - WHEN `contract.Parse` parses its content
-- THEN `phases.AppliesTo` equals `["sdd-tasks", "sdd-apply", "builder"]`
+- THEN `phases.AppliesTo` equals `["builder"]`
 - AND no error is returned
 
 #### Scenario: Missing applies_to_phases fails loud

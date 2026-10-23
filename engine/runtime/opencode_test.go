@@ -97,7 +97,7 @@ func TestOpenCodeInstallWritesPromptConfigFromMinimalismContract(t *testing.T) {
 	if promptConfig["injection_point"] != "## Skills to load before work" {
 		t.Fatalf("injection point = %#v", promptConfig["injection_point"])
 	}
-	assertStringSlice(t, promptConfig["included_phases"], []string{"sdd-tasks", "sdd-apply", "shaper", "builder"})
+	assertStringSlice(t, promptConfig["included_phases"], []string{"shaper", "builder"})
 	assertStringSlice(t, promptConfig["excluded_phases"], []string{"sdd-propose", "sdd-spec", "sdd-design", "sdd-verify", "sdd-archive", "reviewer", "verifier"})
 	if config["prompt_config_hash"] == "" {
 		t.Fatal("config should include prompt_config_hash")

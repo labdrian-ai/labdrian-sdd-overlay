@@ -593,14 +593,14 @@ func TestTheAgentsTheRoleAgentsReplacedAreGoneWithTheirRows(t *testing.T) {
 
 // The minimalism contract is scoped to the roles that write, kept out of the roles that judge and
 // verify and of the phases it always excluded, and still injects under the heading it always did.
-// sdd-tasks and sdd-apply stay in the scope although the overlay no longer ships their agents (PR 5
-// of the role agents; the owner decision of 2026-10-22 kept them "until their agents are removed"):
-// the gate and the propagator pins name them as well, so they leave the scope together with those
-// pins, in a change of their own.
+// sdd-tasks and sdd-apply left the scope with their agents (PR 5 of the role agents; the owner
+// decision of 2026-10-22 kept them "until their agents are removed", and the owner confirmed their
+// removal on 2026-10-23), together with the gate and propagator pins that named them, so the scope
+// names only the roles.
 func TestMinimalismContractIsScopedToTheRolesThatWrite(t *testing.T) {
 	root := skillsRepoRoot(t)
 	frontmatter := ooQualityFrontmatter(t, readRepoFile(t, root, "skills/_shared/minimalism-contract.md"))
-	if got, want := parseInlineYAMLList(t, frontmatter, "applies_to_phases"), []string{"sdd-tasks", "sdd-apply", "shaper", "builder"}; !reflect.DeepEqual(got, want) {
+	if got, want := parseInlineYAMLList(t, frontmatter, "applies_to_phases"), []string{"shaper", "builder"}; !reflect.DeepEqual(got, want) {
 		t.Errorf("applies_to_phases = %v, want %v", got, want)
 	}
 	wantExcluded := []string{"sdd-propose", "sdd-spec", "sdd-design", "sdd-verify", "sdd-archive", "reviewer", "verifier"}

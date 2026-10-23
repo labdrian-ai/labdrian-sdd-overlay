@@ -4,7 +4,7 @@ $ gate-task --embedded-contract anti-generic-design
 {"tool_input":{"description":"a sub-agent","prompt":"Do the phase.","subagent_type":"sdd-apply"},"tool_name":"Agent"}
 
 --- stdout ---
-{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{"description":"a sub-agent","prompt":"Do the phase.\n\n## Skills to load before work\nskills/_shared/anti-generic-design.md\n","subagent_type":"sdd-apply"}}}
+{}
 --- stderr ---
 
 $ gate-task --embedded-contract anti-generic-design
@@ -13,7 +13,7 @@ $ gate-task --embedded-contract anti-generic-design
 {"tool_input":{"description":"a sub-agent","prompt":"Do the phase.\n\n## Skills to load before work\n/skills/other/SKILL.md\n","subagent_type":"sdd-tasks"},"tool_name":"Agent"}
 
 --- stdout ---
-{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{"description":"a sub-agent","prompt":"Do the phase.\n\n## Skills to load before work\nskills/_shared/anti-generic-design.md\n/skills/other/SKILL.md\n","subagent_type":"sdd-tasks"}}}
+{}
 --- stderr ---
 
 $ gate-task --embedded-contract anti-generic-design
@@ -40,7 +40,7 @@ $ gate-task --embedded-contract anti-generic-design --contract-path /abs/anti-ge
 {"tool_input":{"description":"a sub-agent","prompt":"Do the phase.","subagent_type":"sdd-apply"},"tool_name":"Agent"}
 
 --- stdout ---
-{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{"description":"a sub-agent","prompt":"Do the phase.\n\n## Skills to load before work\n/abs/anti-generic-design.md\n","subagent_type":"sdd-apply"}}}
+{}
 --- stderr ---
 
 $ gate-task --embedded-contract no-such-contract

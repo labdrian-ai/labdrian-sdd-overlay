@@ -133,11 +133,11 @@ func TestPiAdapter_ApplyWithoutOverlayRoot_StaysHonestlyUnsupported(t *testing.T
 const gateBasePrompt = "line 1\nline 2"
 const gateHeader = "## Skills to load before work"
 
-const validMinimalismFixture = "---\napplies_to_phases: [sdd-tasks, sdd-apply]\n" +
+const validMinimalismFixture = "---\napplies_to_phases: [shaper, builder]\n" +
 	"excluded_phases: [sdd-propose, sdd-spec, sdd-design, sdd-verify, sdd-archive]\n" +
 	"injection_point: \"## Skills to load before work\"\n---\n# Minimalism\nbody\n"
 
-const validAntiGenericFixture = "---\napplies_to_phases: [sdd-tasks, sdd-apply]\n" +
+const validAntiGenericFixture = "---\napplies_to_phases: [shaper, builder]\n" +
 	"excluded_phases: [sdd-propose, sdd-spec, sdd-design, sdd-verify, sdd-archive]\n" +
 	"injection_point: \"## Skills to load before work\"\n---\n# Anti-Generic\nbody\n"
 
@@ -231,7 +231,7 @@ console.log(JSON.stringify(results));
 // default before_agent_start handler injects both managed contracts' bare
 // path lines, exactly matching the Go-side oracle (runtime.CanonicalEntry /
 // runtime.InjectPrompt for the same contracts and header -- design C5), only
-// for sdd-tasks/sdd-apply; is idempotent on a second call; is a no-op for
+// for shaper/builder (sdd-tasks/sdd-apply until PR 5 of the role agents); is idempotent on a second call; is a no-op for
 // every other or unnamed agent; and a malformed contract's frontmatter
 // silently drops only that contract, never the other, and never throws.
 func TestLabdrianGateInjectsPathLine_SddTasksSddApply(t *testing.T) {
@@ -253,9 +253,9 @@ async function fireAll(modulePath, base) {
   mod.default(pi);
   const handler = pi.handlers["before_agent_start"];
   const results = {};
-  results.tasks = await handler({ agentName: "sdd-tasks", systemPrompt: base });
-  results.apply = await handler({ agentName: "sdd-apply", systemPrompt: base });
-  results.tasksAgain = await handler({ agentName: "sdd-tasks", systemPrompt: results.tasks.systemPrompt });
+  results.tasks = await handler({ agentName: "shaper", systemPrompt: base });
+  results.apply = await handler({ agentName: "builder", systemPrompt: base });
+  results.tasksAgain = await handler({ agentName: "shaper", systemPrompt: results.tasks.systemPrompt });
   results.explore = await handler({ agentName: "sdd-explore", systemPrompt: base });
   results.unnamed = await handler({ systemPrompt: base });
   return results;
@@ -308,7 +308,8 @@ console.log(JSON.stringify({ valid, malformed }));
 
 // The Pi gate with the contracts the repository ships reaches the role agents that took over from
 // the deleted sdd-* agents (PR 5 of the role agents): the shaper gets the minimalism contract, the
-// builder gets it and the anti-generic-design guard, and the reviewer gets neither.
+// builder gets it and the anti-generic-design guard, and the reviewer and the removed sdd-tasks and
+// sdd-apply names get neither.
 func TestLabdrianGateInjectsTheShippedContractsIntoTheRoles(t *testing.T) {
 	read := func(name string) string {
 		data, err := os.ReadFile(filepath.Join("..", "..", "skills", "_shared", name))
@@ -326,7 +327,7 @@ const handlers = {};
 mod.default({ on(name, fn) { handlers[name] = fn; } });
 const handler = handlers["before_agent_start"];
 const results = {};
-for (const name of ["shaper", "builder", "reviewer"]) {
+for (const name of ["shaper", "builder", "reviewer", "sdd-tasks", "sdd-apply"]) {
   results[name] = await handler({ agentName: name, systemPrompt: %q });
 }
 console.log(JSON.stringify(results));
@@ -345,8 +346,10 @@ console.log(JSON.stringify(results));
 			t.Errorf("%s: systemPrompt = %v, want %q", role, got, expected)
 		}
 	}
-	if got := results["reviewer"].SystemPrompt; got != nil && *got != gateBasePrompt {
-		t.Errorf("reviewer: the gate changed the prompt to %q", *got)
+	for _, name := range []string{"reviewer", "sdd-tasks", "sdd-apply"} {
+		if got := results[name].SystemPrompt; got != nil && *got != gateBasePrompt {
+			t.Errorf("%s: the gate changed the prompt to %q", name, *got)
+		}
 	}
 }
 
@@ -369,7 +372,7 @@ function fakePi() {
 const pi = fakePi();
 mod.default(pi);
 const handler = pi.handlers["before_agent_start"];
-const result = await handler({ agentName: "sdd-apply", systemPrompt: %q });
+const result = await handler({ agentName: "builder", systemPrompt: %q });
 console.log(JSON.stringify(result));
 `, gatePath, gentlePiOwnPrompt)
 

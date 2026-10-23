@@ -38,7 +38,7 @@ func TestOOQualityContractArtifact(t *testing.T) {
 
 	t.Run("R003_frontmatter_scopes_phases", func(t *testing.T) {
 		frontmatter := ooQualityFrontmatter(t, contract)
-		assertStringList(t, parseInlineYAMLList(t, frontmatter, "applies_to_phases"), []string{"sdd-design", "sdd-tasks", "sdd-apply", "shaper", "builder"})
+		assertStringList(t, parseInlineYAMLList(t, frontmatter, "applies_to_phases"), []string{"shaper", "builder"})
 		assertStringList(t, parseInlineYAMLList(t, frontmatter, "excluded_phases"), []string{"sdd-propose", "sdd-spec", "sdd-archive", "sdd-verify", "reviewer", "verifier"})
 		assertStringValue(t, parseYAMLScalar(t, frontmatter, "injection_point"), "## Skills to load before work")
 		assertStringList(t, parseInlineYAMLList(t, frontmatter, "language_context"), []string{"typescript", "nestjs"})
