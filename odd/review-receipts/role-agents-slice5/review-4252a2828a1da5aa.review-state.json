@@ -1,0 +1,432 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:096d58501c7f171d10860e7fe7f766f735bc05764200fcade85526c995dc39a1",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-4252a2828a1da5aa",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "9b9d1f0eaf7667e2eb6680bf06cb4391564f6749",
+      "candidate_tree": "da1e5d9d6a29155f4b80c4d713a34ff609b4e819",
+      "paths_digest": "sha256:9cb2d59e8d247b3b28fe44acad7b53b99509e82eb102283787bd8789e97ff83a",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/skills/approval_baseline.go",
+        "engine/skills/approval_gate_test.go",
+        "engine/skills/approval_write.go",
+        "engine/skills/gadu_skills_retired_test.go",
+        "engine/skills/registryyaml_adapter_test.go",
+        "odd/review-receipts/role-agents-slice5/review-14c06b24df495831.review-state.json",
+        "odd/review-receipts/role-agents-slice5/review-c5f49d0cd8156bab.review-state.json",
+        "odd/review-receipts/role-agents-slice5/review-c66bc0978f2f2235.review-state.json",
+        "odd/tasks/role-agents-slice5.md",
+        "overlay.manifest",
+        "skills.registry.yaml",
+        "skills/_shared/sdd-orchestrator-workflow.md",
+        "skills/_shared/sdd-phase-common.md",
+        "skills/gadu-operator/SKILL.md",
+        "skills/gadu-orchestrate/SKILL.md",
+        "skills/sdd-apply/SKILL.md",
+        "skills/sdd-archive/SKILL.md",
+        "skills/sdd-design/SKILL.md",
+        "skills/sdd-explore/SKILL.md",
+        "skills/sdd-propose/SKILL.md",
+        "skills/sdd-spec/SKILL.md",
+        "skills/sdd-tasks/SKILL.md",
+        "skills/sdd-verify/SKILL.md"
+      ],
+      "identity": "sha256:b459450abd7fdfe11d9edbd6fc4c291489a8fa26c6c58b8d676ed88619f65b78"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "9b9d1f0eaf7667e2eb6680bf06cb4391564f6749",
+      "candidate_tree": "da1e5d9d6a29155f4b80c4d713a34ff609b4e819",
+      "paths_digest": "sha256:9cb2d59e8d247b3b28fe44acad7b53b99509e82eb102283787bd8789e97ff83a",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/skills/approval_baseline.go",
+        "engine/skills/approval_gate_test.go",
+        "engine/skills/approval_write.go",
+        "engine/skills/gadu_skills_retired_test.go",
+        "engine/skills/registryyaml_adapter_test.go",
+        "odd/review-receipts/role-agents-slice5/review-14c06b24df495831.review-state.json",
+        "odd/review-receipts/role-agents-slice5/review-c5f49d0cd8156bab.review-state.json",
+        "odd/review-receipts/role-agents-slice5/review-c66bc0978f2f2235.review-state.json",
+        "odd/tasks/role-agents-slice5.md",
+        "overlay.manifest",
+        "skills.registry.yaml",
+        "skills/_shared/sdd-orchestrator-workflow.md",
+        "skills/_shared/sdd-phase-common.md",
+        "skills/gadu-operator/SKILL.md",
+        "skills/gadu-orchestrate/SKILL.md",
+        "skills/sdd-apply/SKILL.md",
+        "skills/sdd-archive/SKILL.md",
+        "skills/sdd-design/SKILL.md",
+        "skills/sdd-explore/SKILL.md",
+        "skills/sdd-propose/SKILL.md",
+        "skills/sdd-spec/SKILL.md",
+        "skills/sdd-tasks/SKILL.md",
+        "skills/sdd-verify/SKILL.md"
+      ],
+      "identity": "sha256:b459450abd7fdfe11d9edbd6fc4c291489a8fa26c6c58b8d676ed88619f65b78"
+    },
+    "genesis_paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/skills/approval_baseline.go",
+      "engine/skills/approval_gate_test.go",
+      "engine/skills/approval_write.go",
+      "engine/skills/gadu_skills_retired_test.go",
+      "engine/skills/registryyaml_adapter_test.go",
+      "odd/review-receipts/role-agents-slice5/review-14c06b24df495831.review-state.json",
+      "odd/review-receipts/role-agents-slice5/review-c5f49d0cd8156bab.review-state.json",
+      "odd/review-receipts/role-agents-slice5/review-c66bc0978f2f2235.review-state.json",
+      "odd/tasks/role-agents-slice5.md",
+      "overlay.manifest",
+      "skills.registry.yaml",
+      "skills/_shared/sdd-orchestrator-workflow.md",
+      "skills/_shared/sdd-phase-common.md",
+      "skills/gadu-operator/SKILL.md",
+      "skills/gadu-orchestrate/SKILL.md",
+      "skills/sdd-apply/SKILL.md",
+      "skills/sdd-archive/SKILL.md",
+      "skills/sdd-design/SKILL.md",
+      "skills/sdd-explore/SKILL.md",
+      "skills/sdd-propose/SKILL.md",
+      "skills/sdd-spec/SKILL.md",
+      "skills/sdd-tasks/SKILL.md",
+      "skills/sdd-verify/SKILL.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-risk",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 1532,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "retires two global skills from the registry, manifest and approval baseline, removes shared phase-common sections other skills read, rewrites help and README counts, and adds a retirement test",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:daaf3dfbe5ae9b7d1feb59a824afc3032342214413a84ed6079128f45e52fa8e",
+    "capture_phase_revision": "sha256:6664a8af6758b0e9f22598022f11df93cbd6d08fc5e61a3b7a0a9af9d5a66e21",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:b459450abd7fdfe11d9edbd6fc4c291489a8fa26c6c58b8d676ed88619f65b78",
+        "capture_phase_revision": "sha256:6664a8af6758b0e9f22598022f11df93cbd6d08fc5e61a3b7a0a9af9d5a66e21",
+        "artifact_digest": "sha256:85e00a5f250b85792b245eb73d5ac2e0b9e62e595e3db80009a944f267f6fffd",
+        "result_hash": "sha256:2edca835cc9fffd4c456554277c95ae5eea616f489a86d6bcb774a1eeb152033",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:e3994ee7544f5569076cf6e99fd51c9ae2a039ec3a42684846461aacc80fac2f",
+            "lineage_id": "review-4252a2828a1da5aa",
+            "authority_revision": "sha256:6664a8af6758b0e9f22598022f11df93cbd6d08fc5e61a3b7a0a9af9d5a66e21",
+            "target_identity": "sha256:b459450abd7fdfe11d9edbd6fc4c291489a8fa26c6c58b8d676ed88619f65b78",
+            "base_tree": "9b9d1f0eaf7667e2eb6680bf06cb4391564f6749",
+            "candidate_tree": "da1e5d9d6a29155f4b80c4d713a34ff609b4e819",
+            "changed_path_manifest_sha256": "sha256:f4620fe3cbe7ed10f1c7660ec66ea25e210ffcd585749b1250722d32a72787fa",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:e3994ee7544f5569076cf6e99fd51c9ae2a039ec3a42684846461aacc80fac2f",
+            "raw_sha256": "sha256:e65bcfa858bd2584df12d86221fabfe646b9ef6ddc1e9c05b3d46f968fc51274",
+            "canonical_sha256": "sha256:7a8842ac7097d8784d4cd0575b492a66f2ca4ac63f9b5e2b67d1f629701da246",
+            "result_hash": "sha256:2edca835cc9fffd4c456554277c95ae5eea616f489a86d6bcb774a1eeb152033",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:e3994ee7544f5569076cf6e99fd51c9ae2a039ec3a42684846461aacc80fac2f",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "CHANGELOG.md",
+                "README.md",
+                "bin/lib/usage.sh",
+                "engine/skills/approval_baseline.go",
+                "engine/skills/approval_gate_test.go",
+                "engine/skills/approval_write.go",
+                "engine/skills/gadu_skills_retired_test.go",
+                "engine/skills/registryyaml_adapter_test.go",
+                "odd/review-receipts/role-agents-slice5/review-14c06b24df495831.review-state.json",
+                "odd/review-receipts/role-agents-slice5/review-c5f49d0cd8156bab.review-state.json",
+                "odd/review-receipts/role-agents-slice5/review-c66bc0978f2f2235.review-state.json",
+                "odd/tasks/role-agents-slice5.md",
+                "overlay.manifest",
+                "skills.registry.yaml",
+                "skills/_shared/sdd-orchestrator-workflow.md",
+                "skills/_shared/sdd-phase-common.md",
+                "skills/gadu-operator/SKILL.md",
+                "skills/gadu-orchestrate/SKILL.md",
+                "skills/sdd-apply/SKILL.md",
+                "skills/sdd-archive/SKILL.md",
+                "skills/sdd-design/SKILL.md",
+                "skills/sdd-explore/SKILL.md",
+                "skills/sdd-propose/SKILL.md",
+                "skills/sdd-spec/SKILL.md",
+                "skills/sdd-tasks/SKILL.md",
+                "skills/sdd-verify/SKILL.md"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "Reviewed all 26 manifest paths from a risk lens (security, authorization, data exposure/loss, unsafe input, secrets, dependencies).",
+              "The change is predominantly deletion: two GADU skill files, their registry entries, manifest rows and approval-baseline entries (engine/skills/approval_baseline.go), plus removal of sections A, E and F from skills/_shared/sdd-phase-common.md. These are prompt/documentation assets with no secrets, credentials, network calls or executable input handling.",
+              "The approval baseline shrinks from 37 to 35 entries; the removed entries correspond exactly to the retired skills. This narrows the grandfathered set and does not weaken the approval gate for any remaining skill. The pinned count in engine/skills/approval_gate_test.go and the new engine/skills/gadu_skills_retired_test.go keep the registry, manifest and tree consistent.",
+              "Section E (review workload guard) is removed from skills/_shared/sdd-phase-common.md; this is a process-guidance change, not an enforced security control, and the task log records it as requested scope. No reachable security impact.",
+              "The SKILL.md edits in sdd-* skills replace a reference to the deleted Section A with inline text; they introduce no new input handling or privilege.",
+              "The review-state JSON receipts and task log are documentation/metadata with no secrets; no dependency or lockfile changes are present.",
+              "No candidate-caused security, authorization, data-loss or secret-exposure issue with a reachable impact was found."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "selected_order": 1,
+        "target_identity": "sha256:b459450abd7fdfe11d9edbd6fc4c291489a8fa26c6c58b8d676ed88619f65b78",
+        "capture_phase_revision": "sha256:6664a8af6758b0e9f22598022f11df93cbd6d08fc5e61a3b7a0a9af9d5a66e21",
+        "artifact_digest": "sha256:f211eda3121ba548ba561679e4a9b49fb72df4d04dee7739148d0b9081825c51",
+        "result_hash": "sha256:18f68b37c3a5fe5bb7fa58bc50b69d94c2d604df762110ed301116e27439d0e9",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:7090f019185247c211a2408e90be8560001d733593a4413967a72313213a3138",
+            "lineage_id": "review-4252a2828a1da5aa",
+            "authority_revision": "sha256:6664a8af6758b0e9f22598022f11df93cbd6d08fc5e61a3b7a0a9af9d5a66e21",
+            "target_identity": "sha256:b459450abd7fdfe11d9edbd6fc4c291489a8fa26c6c58b8d676ed88619f65b78",
+            "base_tree": "9b9d1f0eaf7667e2eb6680bf06cb4391564f6749",
+            "candidate_tree": "da1e5d9d6a29155f4b80c4d713a34ff609b4e819",
+            "changed_path_manifest_sha256": "sha256:f4620fe3cbe7ed10f1c7660ec66ea25e210ffcd585749b1250722d32a72787fa",
+            "lens": "review-readability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:7090f019185247c211a2408e90be8560001d733593a4413967a72313213a3138",
+            "raw_sha256": "sha256:b3ad327ac0448bfe85aa20536e31d1045226ff9f5c4829cffaf5d3dff3f104dd",
+            "canonical_sha256": "sha256:602e7bc26b35ac32bb51755b13229458e201b89385bd6554accb02c905f2c6af",
+            "result_hash": "sha256:18f68b37c3a5fe5bb7fa58bc50b69d94c2d604df762110ed301116e27439d0e9",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:7090f019185247c211a2408e90be8560001d733593a4413967a72313213a3138",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "CHANGELOG.md",
+                "README.md",
+                "bin/lib/usage.sh",
+                "engine/skills/approval_baseline.go",
+                "engine/skills/approval_gate_test.go",
+                "engine/skills/approval_write.go",
+                "engine/skills/gadu_skills_retired_test.go",
+                "engine/skills/registryyaml_adapter_test.go",
+                "odd/review-receipts/role-agents-slice5/review-14c06b24df495831.review-state.json",
+                "odd/review-receipts/role-agents-slice5/review-c5f49d0cd8156bab.review-state.json",
+                "odd/review-receipts/role-agents-slice5/review-c66bc0978f2f2235.review-state.json",
+                "odd/tasks/role-agents-slice5.md",
+                "overlay.manifest",
+                "skills.registry.yaml",
+                "skills/_shared/sdd-orchestrator-workflow.md",
+                "skills/_shared/sdd-phase-common.md",
+                "skills/gadu-operator/SKILL.md",
+                "skills/gadu-orchestrate/SKILL.md",
+                "skills/sdd-apply/SKILL.md",
+                "skills/sdd-archive/SKILL.md",
+                "skills/sdd-design/SKILL.md",
+                "skills/sdd-explore/SKILL.md",
+                "skills/sdd-propose/SKILL.md",
+                "skills/sdd-spec/SKILL.md",
+                "skills/sdd-tasks/SKILL.md",
+                "skills/sdd-verify/SKILL.md"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-001",
+                "lens": "readability",
+                "location": "skills/_shared/sdd-phase-common.md:93",
+                "severity": "WARNING",
+                "claim": "Sections A, E and F were removed from sdd-phase-common.md, but the section letters were not renumbered, so the file now jumps from D to the end. Section E (Review Workload Guard, with the 400-line budget and the delivery_strategy domain) is deleted outright with no replacement shown in this candidate; sdd-tasks and sdd-apply may still rely on it. The task log lists the removal as 'sections B-D kept' but does not say where the workload guard rules went, which is missing change context.",
+                "proof_refs": [
+                  "skills/_shared/sdd-phase-common.md:93",
+                  "odd/tasks/role-agents-slice5.md:44"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "pre-existing"
+              },
+              {
+                "id": "R2-002",
+                "lens": "readability",
+                "location": "engine/skills/gadu_skills_retired_test.go:18-20",
+                "severity": "SUGGESTION",
+                "claim": "The registry check matches exact trimmed lines ('- id: \u003cid\u003e' and 'path: \u003cid\u003e') with a string loop instead of parsing the registry. A reformatted entry, such as quoted values, would pass the test while the skill is still registered. The test works on the current format but is brittle.",
+                "proof_refs": [
+                  "engine/skills/gadu_skills_retired_test.go:18-20"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Reviewed all 26 manifest paths. The change retires the GADU skills and removes their registry, manifest and baseline entries consistently, and the baseline count is updated from 37 to 35 in the code comment, the pinned test constant, README and usage text.",
+              "The sdd-* SKILL.md files replace the Section A pointer with an inline instruction, so no dangling references to the removed Section A remain in the changed files; sdd-verify also drops its reference to Sections A/B.",
+              "The Key Learnings requirement moved into sdd-orchestrator-workflow.md and now applies to every delegation, so removing Section F from phase-common does not lose the rule.",
+              "The three review-state receipts are generated records, not authored logic, and were treated as metadata."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 2,
+        "target_identity": "sha256:b459450abd7fdfe11d9edbd6fc4c291489a8fa26c6c58b8d676ed88619f65b78",
+        "capture_phase_revision": "sha256:6664a8af6758b0e9f22598022f11df93cbd6d08fc5e61a3b7a0a9af9d5a66e21",
+        "artifact_digest": "sha256:d758778771e3f68456528fd83924409888932a79293f2258d3134be8fdd327f1",
+        "result_hash": "sha256:025ba61de734157bd0ed078e32e2469868d7e9748d9b746babca68fb00699cdf",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:6345554606a84558c30230131fbc53564d5048af83f07f19bf556696d307896f",
+            "lineage_id": "review-4252a2828a1da5aa",
+            "authority_revision": "sha256:6664a8af6758b0e9f22598022f11df93cbd6d08fc5e61a3b7a0a9af9d5a66e21",
+            "target_identity": "sha256:b459450abd7fdfe11d9edbd6fc4c291489a8fa26c6c58b8d676ed88619f65b78",
+            "base_tree": "9b9d1f0eaf7667e2eb6680bf06cb4391564f6749",
+            "candidate_tree": "da1e5d9d6a29155f4b80c4d713a34ff609b4e819",
+            "changed_path_manifest_sha256": "sha256:f4620fe3cbe7ed10f1c7660ec66ea25e210ffcd585749b1250722d32a72787fa",
+            "lens": "review-reliability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:6345554606a84558c30230131fbc53564d5048af83f07f19bf556696d307896f",
+            "raw_sha256": "sha256:25ad46d3d763bef59cfe2557fe12f837bd1efb189af5085e3dcd882683cf2a70",
+            "canonical_sha256": "sha256:9bd2bc4a883d92a8e15334ab8163cc10a71d45e6192b155cc093d41477ed4b0b",
+            "result_hash": "sha256:025ba61de734157bd0ed078e32e2469868d7e9748d9b746babca68fb00699cdf",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:6345554606a84558c30230131fbc53564d5048af83f07f19bf556696d307896f",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "CHANGELOG.md",
+                "README.md",
+                "bin/lib/usage.sh",
+                "engine/skills/approval_baseline.go",
+                "engine/skills/approval_gate_test.go",
+                "engine/skills/approval_write.go",
+                "engine/skills/gadu_skills_retired_test.go",
+                "engine/skills/registryyaml_adapter_test.go",
+                "odd/review-receipts/role-agents-slice5/review-14c06b24df495831.review-state.json",
+                "odd/review-receipts/role-agents-slice5/review-c5f49d0cd8156bab.review-state.json",
+                "odd/review-receipts/role-agents-slice5/review-c66bc0978f2f2235.review-state.json",
+                "odd/tasks/role-agents-slice5.md",
+                "overlay.manifest",
+                "skills.registry.yaml",
+                "skills/_shared/sdd-orchestrator-workflow.md",
+                "skills/_shared/sdd-phase-common.md",
+                "skills/gadu-operator/SKILL.md",
+                "skills/gadu-orchestrate/SKILL.md",
+                "skills/sdd-apply/SKILL.md",
+                "skills/sdd-archive/SKILL.md",
+                "skills/sdd-design/SKILL.md",
+                "skills/sdd-explore/SKILL.md",
+                "skills/sdd-propose/SKILL.md",
+                "skills/sdd-spec/SKILL.md",
+                "skills/sdd-tasks/SKILL.md",
+                "skills/sdd-verify/SKILL.md"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-sections-ef-removed",
+                "lens": "reliability",
+                "location": "skills/_shared/sdd-phase-common.md:93-95",
+                "severity": "WARNING",
+                "claim": "Sections E (Review Workload Guard) and F (Key Learnings Closing) were removed from sdd-phase-common.md, not only section A. The changelog and task notes describe the shrink as 'sections B-D', so this is stated. However, sdd-tasks and sdd-apply may still depend on the E guard lines (Decision needed before apply, 400-line budget risk, delivery_strategy validation), and no test in this candidate pins that those rules are carried elsewhere. The orchestrator workflow's Key Learnings text was replaced to compensate, but the E guard contract has no visible replacement. This is inferential, since the sdd-tasks and sdd-apply skill bodies are not fully visible.",
+                "proof_refs": [
+                  "skills/_shared/sdd-phase-common.md:93-95",
+                  "skills/_shared/sdd-orchestrator-workflow.md:296"
+                ]
+              },
+              {
+                "id": "R3-approval-missing",
+                "lens": "reliability",
+                "location": "odd/tasks/role-agents-slice5.md:37",
+                "severity": "WARNING",
+                "claim": "The task log states eight sdd-* skills now have changed bytes and need owner approval records (approvals needs_owner), and CI-form skills validate exits 1 with 8 APPROVAL_MISSING. The candidate leaves validate red until the owner approves. This is documented and intentional, but the delivered state is not self-validating, and the two engine/skills tests that wait for approvals fail until then.",
+                "proof_refs": [
+                  "odd/tasks/role-agents-slice5.md:37",
+                  "odd/tasks/role-agents-slice5.md:38"
+                ]
+              }
+            ],
+            "evidence": [
+              "Inspected all 26 manifest paths.",
+              "The retired-skill test in engine/skills/gadu_skills_retired_test.go checks the registry, the manifest rows and the skills directory for both retired ids, and the baseline count pin in engine/skills/approval_gate_test.go moved from 37 to 35 consistently with the two removed baseline entries in engine/skills/approval_baseline.go.",
+              "skills.registry.yaml and overlay.manifest drop exactly the two gadu skills, and the two SKILL.md files are deleted, so no dangling registry or manifest entries are visible.",
+              "The eight sdd-* skill edits replace the Section A pointer with an inline instruction, so the removed section is not left dangling. sdd-verify now references Section B only.",
+              "Docs, usage text and the changelog were updated to the 35 count consistently."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "d62ab3bb3d1d31e98bc92d05c558894ff6c66e9b52a3bed9efc59cf6de58487c",
+    "initial_atomic_start": {
+      "lineage_id": "review-4252a2828a1da5aa",
+      "worktree_identity": "sha256:bd265f68c9fd4e33ce6b6836cf50ab703ef5401c9115d3665030233553bbcd1e",
+      "target_identity": "sha256:b459450abd7fdfe11d9edbd6fc4c291489a8fa26c6c58b8d676ed88619f65b78",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "9b9d1f0eaf7667e2eb6680bf06cb4391564f6749",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "high",
+      "selected_lenses": [
+        "review-risk",
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 1532,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "retires two global skills from the registry, manifest and approval baseline, removes shared phase-common sections other skills read, rewrites help and README counts, and adds a retirement test"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

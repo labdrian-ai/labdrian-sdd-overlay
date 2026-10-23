@@ -31,9 +31,10 @@ type modelFamily struct {
 // error", and an absent model: routes to "anthropic/claude-opus-4-8" (also fails). Separately, the
 // pi-claude-cli bridge passes the agent's system prompt to a fresh Claude Code process via
 // --append-system-prompt-file: a ~7 KB prompt (the full persona body of GADU, or a same-size neutral
-// filler) HANGS that child indefinitely, while a ~400-byte prompt completes normally. That bridge
-// prompt-size limit is why the Pi file of GADU, which this package no longer writes, shipped a
-// compact body.
+// filler) HANGS that child indefinitely, while a ~400-byte prompt completes normally. That limit was
+// measured with GADU's body (GADU is retired); it belongs to the bridge, not to GADU, so it can bound
+// the Pi file of any role. The role files are well under it (the largest, the reviewer's, is about
+// 2 KB in October 2026); a run of a ~2 KB prompt through the bridge has not been measured.
 const piSonnetModel = "pi-claude-cli/claude-sonnet-5"
 
 // The Pi refs are ids of the provider pi-claude-cli, which registers the Anthropic models of Pi

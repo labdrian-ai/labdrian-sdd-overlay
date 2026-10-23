@@ -34,8 +34,8 @@ Read v3 in full (D5, D10, §2, §4, §5, §6, §9), v2 §1-§2 and §5, and `odd
 
 | ID | Specs | Route | Status | Commit / evidence |
 |---|---|---|---|---|
-| T1 | S1, S3, S4, S5, S7, S8 | delegated workflow (owner, L1: "sonnet max para implementaciones"); agents and GADU: files, rows, engine persona, the Pi link, consumers | done, verified (L6) | T1 commit |
-| T2 | S1, S2, S3, S6, S8 | same workflow, after T1; skills: `gadu-operator`, `gadu-orchestrate`, `sdd-phase-common.md` shrunk to §B-D, registry, consumers | done, verified (L6); approvals needs_owner | T2 commit |
+| T1 | S1, S3, S4, S5, S7, S8 | delegated workflow (owner, L1: "sonnet max para implementaciones"); agents and GADU: files, rows, engine persona, the Pi link, consumers | done, verified (L6), reviewed (L7) | `b434cb45`, `715cbc92`, `71aec8a5` |
+| T2 | S1, S2, S3, S6, S8 | same workflow, after T1; skills: `gadu-operator`, `gadu-orchestrate`, `sdd-phase-common.md` shrunk to §B-D, registry, consumers | done, verified (L6), reviewed (L7); approvals needs_owner | `b02603f9` |
 | T3 | S4 (live) | owner-authorized after merge: `labdrian apply` on the real targets | pending | — |
 | T4 | slice 4 carry | record slice 4's T3 live check in `odd/tasks/role-agents-slice4.md` | done | first commit of the branch |
 
@@ -107,5 +107,24 @@ Read v3 in full (D5, D10, §2, §4, §5, §6, §9), v2 §1-§2 and §5, and `odd
     3. The link retire lives inside `pipkg build` rather than in a separate verb.
   - **Follow-ups:**
     - Rename `gadu-generate` (S5).
+- **L7** (2026-10-23): native review.
+  - **Split:** T1 as one commit was refused with `lens_context_budget_exceeded`, so it was rebuilt as three commits with the same final tree (checked with `git diff` against the old tip: empty).
+    - `b434cb45`: the repository copies.
+    - `715cbc92`: the GADU persona and its Claude and OpenCode files.
+    - `71aec8a5`: the Pi GADU and the link retire.
+  - **Reviews.** All four were approved and acknowledged, with receipts in `odd/review-receipts/role-agents-slice5/`. None had a blocker.
+    - `review-14c06b24df495831` covers `b434cb45` (risk, reliability).
+    - `review-c66bc0978f2f2235` covers `715cbc92` (risk, readability, reliability).
+    - `review-c5f49d0cd8156bab` covers `71aec8a5` (all four lenses).
+    - `review-4252a2828a1da5aa` covers T2, `b02603f9` (risk, readability, reliability).
+  - **Dispositions:**
+    - **A R3-001 and B R3-001** (GADU, then `pi/agents`, not covered by the retirement test): these are artifacts of the split. `71aec8a5` restores both, and the final test scans `agents/`, `pi/agents/` and `opencode/agents/` for GADU too.
+    - **A R3-002** (deployed retired agents stay in `~/.claude/agents` and the OpenCode agents dir, because apply never removes a file whose row is gone): pinned by `engine/installer/agent_deploy_test.go` as the current behaviour (S4). Whether to clean them is open for the owner.
+    - **B R2** (the `piSonnetModel` comment framed the bridge's prompt limit as GADU-only): reworded, with the measured role file sizes (largest about 2 KB). **B R2** (the verb name): follow-up (S5). **B R3-002:** informational.
+    - **C R2** (two note formats): the listing-error note keeps slice 4's `agents link: ...` form, the one Uninstall uses. No change.
+    - **C R3** (`pipkg build` reads `$HOME`): `engine/cmd/usage.go:51-53` documents it, and every runtime verb takes the home from the environment. No change.
+    - **T2 R2-001 and R3** (sections E and F removed): v3 row 5 asks for "§B-D". The Review Workload Guard lives in `skills/_shared/sdd-orchestrator-workflow.md:247`, and no skill names phase-common's E or F.
+    - **T2 R2-002** (the registry check matched lines): moved to `TestTheGaduSkillsAreGoneFromTheRegistry` in the external test package, which reads the registry with the real reader. Red against the pre-T2 registry, green now.
+    - **T2 R3** (validate red until the approvals): needs_owner (L6).
     - The `tui/` sample paths.
     - `docs/architecture/hexagonal-target.md:41`.

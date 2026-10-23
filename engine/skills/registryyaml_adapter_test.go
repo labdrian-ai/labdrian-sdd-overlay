@@ -253,3 +253,24 @@ func TestTheRegistryFixturesAreWhatTheEncoderWrites(t *testing.T) {
 		})
 	}
 }
+
+// The two GADU skills are retired (PR 5 of the role agents): the repository registry, read as the
+// program reads it, has no entry whose id or path names them, however the entry is written. The
+// manifest rows and the directories are pinned by TestTheGaduSkillsAreGoneFromTheManifestAndTheTree.
+func TestTheGaduSkillsAreGoneFromTheRegistry(t *testing.T) {
+	regData, err := os.ReadFile(filepath.Join(repoRoot(t), "skills.registry.yaml"))
+	if err != nil {
+		t.Fatalf("read real registry: %v", err)
+	}
+	reg, err := decode(regData)
+	if err != nil {
+		t.Fatalf("parse real registry: %v", err)
+	}
+	for _, e := range reg.Skills {
+		for _, id := range []string{"gadu-operator", "gadu-orchestrate"} {
+			if e.ID == id || e.Path == id {
+				t.Errorf("skills.registry.yaml still has the entry {ID:%s Path:%s} of the retired skill %s", e.ID, e.Path, id)
+			}
+		}
+	}
+}
