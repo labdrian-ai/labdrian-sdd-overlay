@@ -62,7 +62,27 @@ Every flow finishes with the identical tail: **Chain entry → closure-feedback 
 After the producers, load `skills/role-chain/SKILL.md`: it owns every hop. This skill writes role-chain records only; it opens no workflow.
 
 1. Name the chain: goal id = chain id = `change-name`. Every record goes to `labdrian roles append --project {project} --goal {change} --chain {change} --stdin`.
-2. Make the first record `prototyper → shaper` when a premise is open (the prototyper trigger of the role chain), otherwise `shaper → estimator`.
+2. Make the first record `prototyper → shaper` when a premise is open (the prototyper trigger of the role chain), otherwise `shaper → estimator`:
+
+   ```json
+   {
+     "version": 1,
+     "project_id": "acme-shop",
+     "goal_id": "add-wishlist",
+     "chain_id": "add-wishlist",
+     "seq": 1,
+     "from_role": "shaper",
+     "to_role": "estimator",
+     "prev_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+     "payload_kind": "tasks",
+     "payload_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+     "evidence": [],
+     "context": {"summary": "Tasks shaped: 4 tasks, 1 slice.", "decisions": [], "open_questions": []},
+     "status": "completed"
+   }
+   ```
+
+   Replace the ids with the project and the change-name, and `payload_sha256` with the sha256 of the payload (here the shaper's tasks artifact). A first record's `prev_sha256` is 64 zeros. The engine refuses a record with a member missing, misspelled or unknown.
 3. In every builder prompt, state that strict TDD is active and name the runner, taken from the project's own instructions (`CLAUDE.md`, `AGENTS.md`) or its build files. When neither names one, ask the user once.
 4. A role agent writes only where its prompt names, so closure-feedback finds an artifact only where you named it. Have the delivery prompt name the archive report as a file `archive-report.md` inside the project repository: closure-feedback appends the t1 anchor to it, and an anchor outside version control anchors nothing.
 5. Name the shaper's spec and the builder's apply-progress the same way when closure-feedback should read them.
