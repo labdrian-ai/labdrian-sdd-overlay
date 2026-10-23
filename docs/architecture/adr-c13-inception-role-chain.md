@@ -42,3 +42,9 @@ Status: accepted by the owner on 2026-10-23 (decisions 1a-5a). Supersedes the ge
 - Writing a v2 entry with a placeholder `expected_native_next_recommendation`: the value would be fabricated.
 - A `roles outcome` verb: `roles resume` already reports a terminal chain.
 - Deleting closure-feedback: it cuts roadmap-maker off from actuals.
+
+## Follow-ups
+
+Each is its own goal; none blocks this change.
+
+- **Chain adapter of `tools/archive-anchor-gate`.** Owner decision 5a left the gate history-only: it scans only the archive reports under `openspec/changes/archive/`. A chain delivery names its archive report in its own prompt, so unless that path falls inside that tree nothing machine-checks the `## Cycle Timestamps` section closure-feedback appends to it, and its anchor (`landing_commit` and, when review ran, `approved_tree`) is guarded only by the prose rules of `skills/inception-pipeline/SKILL.md`. The adapter would cover that anchor wherever the report sits. Found by review finding R3-closure-no-machine-check of review-9bceb2ac6fb71431. No code is part of this change.

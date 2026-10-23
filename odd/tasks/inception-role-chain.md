@@ -19,6 +19,7 @@ Objective: make `inception-pipeline` work again by handing off to the role chain
 | T0 | — | inline | done | ADR and this document |
 | T1 | S1-S4, S6, S7 | delegated writer (ultracode, owner L1) + independent verifier (item 3) | applied; independent verify and S7 (owner `skills approve`) pending | `6d268d40`. RED on `5cfa5ed1`: 6 of 6 subtests of `TestInceptionPipelineEntersTheRoleChain` failed. GREEN: 6 of 6 pass. |
 | T2 | S5, S7 | delegated writer + independent verifier (items 3, 6) | applied; verifier blocker B1 corrected (L7); one residue comment left (L6); verifier recheck of B1 and S7 (owner `skills approve`) pending | `8346e814`, `8ff15ea9`; correction `1f7d6668`. RED on `b713e769`: 5 of 5 subtests of `TestInceptionPipelineClosureFeedbackReadsTheChain` failed. GREEN: 5 of 5 pass. B1 RED on `d2294148`: 6 of 6 subtests of `TestInceptionPipelineClosureInputsAreLocatedByTheChain` failed. GREEN: 6 of 6 pass. |
+| F1 | S5, S6 | follow-up, separate goal (owner decision 5a); not scheduled in this feature | open | The chain adapter of `tools/archive-anchor-gate` that covers the `## Cycle Timestamps` anchor of a chain delivery. Recorded in the ADR `## Follow-ups` (review finding R3-closure-no-machine-check). No code in this feature (S6). |
 
 ## Log
 
