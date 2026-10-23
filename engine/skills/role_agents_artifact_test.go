@@ -5,9 +5,10 @@ package skills
 // contract: the role sources and the Claude agent files of the builder, shaper, polisher,
 // prototyper, sweeper and delivery (PR 1) and of the reviewer and the verifier (PR 2); their rows in
 // overlay.manifest; the minimalism contract the gate scopes to the roles that write; and the
-// judgment-day skill, which names the role agents for its judges and its fix actor. The files of
-// the agents they replace stay where they are until a later slice deletes them. The role-chain
-// skill and the review results convention of PR 2 are checked in role_chain_artifact_test.go.
+// judgment-day skill, which names the role agents for its judges and its fix actor. The agents they
+// replace were deleted with their rows by PR 5 (TestTheAgentsTheRoleAgentsReplacedAreGoneWithTheirRows).
+// The role-chain skill and the review results convention of PR 2 are checked in
+// role_chain_artifact_test.go.
 
 import (
 	"encoding/json"
@@ -561,47 +562,45 @@ func TestRoleAgentsAreNeitherCopiedToOtherRuntimesNorManaged(t *testing.T) {
 	}
 }
 
-// The agents that exist before the role agents keep their rows, their tags and their files: the
-// slice replaces none of them (they are deleted by a later one).
-func TestTheAgentsBeforeTheRoleAgentsKeepTheirRows(t *testing.T) {
+// The agents the role agents replaced are gone, rows and files together (PR 5 of the role design, v3
+// section 6 row 5): GADU, the sdd-* phase agents and the repository's copies of gentle-ai's review-*
+// and jd-* agents have no manifest row, and no file in agents/, pi/agents/ or opencode/agents/ --
+// the three places a row or the Pi package would take one from. gentle-ai keeps its own review-* and
+// jd-* agents; the overlay no longer carries a copy of them.
+func TestTheAgentsTheRoleAgentsReplacedAreGoneWithTheirRows(t *testing.T) {
 	root := skillsRepoRoot(t)
 	rows := ReadManifestRows([]byte(readRepoFile(t, root, "overlay.manifest")))
-	want := []ManifestRow{
-		{"GADU.md", "custom", RouteAgent}, {"opencode/agents/GADU.md", "custom", RouteOpencodeAgent},
-		{"sdd-apply.md", "managed", RouteAgent}, {"sdd-archive.md", "managed", RouteAgent}, {"sdd-design.md", "managed", RouteAgent},
-		{"sdd-init.md", "managed", RouteAgent}, {"sdd-onboard.md", "managed", RouteAgent}, {"sdd-propose.md", "managed", RouteAgent},
-		{"sdd-spec.md", "managed", RouteAgent}, {"sdd-tasks.md", "managed", RouteAgent}, {"sdd-verify.md", "managed", RouteAgent},
-		{"jd-fix-agent.md", "managed", RouteAgent}, {"jd-judge-a.md", "managed", RouteAgent}, {"jd-judge-b.md", "managed", RouteAgent},
-		{"review-readability.md", "managed", RouteAgent}, {"review-refuter.md", "managed", RouteAgent},
-		{"review-reliability.md", "managed", RouteAgent}, {"review-resilience.md", "managed", RouteAgent}, {"review-risk.md", "managed", RouteAgent},
+	retired := []string{
+		"GADU.md",
+		"sdd-apply.md", "sdd-archive.md", "sdd-design.md", "sdd-init.md", "sdd-onboard.md",
+		"sdd-propose.md", "sdd-spec.md", "sdd-tasks.md", "sdd-verify.md",
+		"jd-fix-agent.md", "jd-judge-a.md", "jd-judge-b.md",
+		"review-readability.md", "review-refuter.md", "review-reliability.md", "review-resilience.md", "review-risk.md",
 	}
-	for _, w := range want {
-		var got []ManifestRow
+	for _, name := range retired {
 		for _, row := range rows {
-			if row.Path == w.Path {
-				got = append(got, row)
+			if row.Path == name || row.Path == "opencode/agents/"+name {
+				t.Errorf("the manifest still has the row %+v of the retired agent %s", row, name)
 			}
 		}
-		if !reflect.DeepEqual(got, []ManifestRow{w}) {
-			t.Errorf("rows named %s = %+v, want exactly %+v", w.Path, got, w)
-		}
-		file := filepath.Join(root, "agents", w.Path)
-		if w.Route == RouteOpencodeAgent {
-			file = filepath.Join(root, w.Path)
-		}
-		if _, err := os.Stat(file); err != nil {
-			t.Errorf("the file of the row %s is gone: %v", w.Path, err)
+		for _, dir := range []string{"agents", "pi/agents", "opencode/agents"} {
+			if _, err := os.Stat(filepath.Join(root, dir, name)); !os.IsNotExist(err) {
+				t.Errorf("%s/%s is still there (Stat err = %v)", dir, name, err)
+			}
 		}
 	}
 }
 
 // The minimalism contract is scoped to the roles that write, kept out of the roles that judge and
 // verify and of the phases it always excluded, and still injects under the heading it always did.
-// sdd-tasks and sdd-apply keep it until their agents are removed (owner decision, 2026-10-22).
+// sdd-tasks and sdd-apply left the scope with their agents (PR 5 of the role agents; the owner
+// decision of 2026-10-22 kept them "until their agents are removed", and the owner confirmed their
+// removal on 2026-10-23), together with the gate and propagator pins that named them, so the scope
+// names only the roles.
 func TestMinimalismContractIsScopedToTheRolesThatWrite(t *testing.T) {
 	root := skillsRepoRoot(t)
 	frontmatter := ooQualityFrontmatter(t, readRepoFile(t, root, "skills/_shared/minimalism-contract.md"))
-	if got, want := parseInlineYAMLList(t, frontmatter, "applies_to_phases"), []string{"sdd-tasks", "sdd-apply", "shaper", "builder"}; !reflect.DeepEqual(got, want) {
+	if got, want := parseInlineYAMLList(t, frontmatter, "applies_to_phases"), []string{"shaper", "builder"}; !reflect.DeepEqual(got, want) {
 		t.Errorf("applies_to_phases = %v, want %v", got, want)
 	}
 	wantExcluded := []string{"sdd-propose", "sdd-spec", "sdd-design", "sdd-verify", "sdd-archive", "reviewer", "verifier"}

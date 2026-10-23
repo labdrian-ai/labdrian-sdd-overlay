@@ -76,7 +76,7 @@ type WorkContext struct {
 // is given. Nothing else of the tool call matters to the gate; the adapter that reads the call
 // keeps the rest, to echo it.
 type Call struct {
-	// SubagentType is the kind of sub-agent, such as sdd-apply.
+	// SubagentType is the kind of sub-agent, such as builder.
 	SubagentType string
 	// Prompt is the prompt the sub-agent is given.
 	Prompt string

@@ -26,8 +26,6 @@ var approvalBaseline = []ApprovalBaselineEntry{
 	{ID: "chat-thread-analyzer", SHA256: "4206caae329c52e9618a19566be88b9848dd1295dd470137dd749574534965ee"},
 	{ID: "cognitive-doc-design", SHA256: "80dcaeca45c35e830939ef5440ca270b147f6370e4afcb47cdab762097f8cde0"},
 	{ID: "comment-writer", SHA256: "cb980612f7237b31a4afea87899275ba20f1f621ba237ecd4a3b440f0cf2e6da"},
-	{ID: "gadu-operator", SHA256: "95ff2a81bf8f6949b2818449720ca71e90bdd8b60fb6b99c49b99d33c189d71a"},
-	{ID: "gadu-orchestrate", SHA256: "e99ce1bb3e608079a7db2df23331347afd19749ec407edfba9df1b1003351033"},
 	{ID: "gentle-ai-bench", SHA256: "49ac672887b4afe88b107de17edd8c4dff34bc4ada54903bcd45a68532dcc91e"},
 	{ID: "go-testing", SHA256: "87205f2eff2f5dad905117e0fe7545ed432b728522ee742755fd25b22b612df3"},
 	{ID: "inception-pipeline", SHA256: "5c230859849bddf9e11a819f4ece505c6fca6065f1c161f13e7f7215cd865b33"},

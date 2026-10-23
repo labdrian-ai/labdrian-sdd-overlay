@@ -1,12 +1,13 @@
 ---
-applies_to_phases: [sdd-tasks, sdd-apply]
-excluded_phases: [sdd-propose, sdd-spec, sdd-design, sdd-verify, sdd-archive]
+applies_to_phases: [builder]
+excluded_phases: [sdd-propose, sdd-spec, sdd-design, sdd-verify, sdd-archive, reviewer, verifier]
 injection_point: "## Skills to load before work"
 ---
 # Anti-Generic Design Contract
 
-> Advisory scope: this contract is injected into the phases that generate or refine UI/design
-> output (`sdd-tasks`, `sdd-apply`). `engine/gate/gate.go` matches `subagent_type` against the
+> Advisory scope: this contract is injected into the agents that generate or refine UI/design
+> output: `builder`, which took over from the `sdd-tasks` and `sdd-apply` agents removed in
+> PR 5 of the role agents. `engine/gate/gate.go` matches `subagent_type` against the
 > frontmatter above to decide whether to inject, and `propagate` fails when `applies_to_phases`
 > is absent or empty — the frontmatter is load-bearing, not documentation. `.atl/skill-registry.md`
 > is generated from it, so it is the output of this binding rather than its source.

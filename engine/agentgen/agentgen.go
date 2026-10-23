@@ -1,5 +1,5 @@
 // Package agentgen is the generator of the agent files of the overlay: one source per agent, projected
-// to the runtimes that host it. Two kinds of agent are generated.
+// to the runtimes that host it.
 //
 // The role agents of per-role design v3 (roles.go) have one source each, roles/<role>/body.md under
 // the root of the repository, and one table of the frontmatter of each runtime. Each becomes three
@@ -7,10 +7,6 @@
 //   - agents/<role>.md        (Claude Code agent file)
 //   - pi/agents/<role>.md     (Pi native subagent file, read by gentle-pi)
 //   - codex/agents/<role>.toml (Codex agent file)
-//
-// The GADU persona (gadu.go) has its canonical body in engine/agentgen/persona/body.md and becomes
-// four files: agents/GADU.md, opencode/agents/GADU.md, pi/agents/GADU.md and
-// skills/gadu-operator/SKILL.md. PR 5 of the design deletes it.
 //
 // None of these files is ever hand-edited. Use Generate to write them; use Check to assert they are
 // not stale.
@@ -44,12 +40,11 @@ func (e *sourceError) Error() string { return e.verb + " " + e.path + ": " + e.e
 func (e *sourceError) Unwrap() error { return e.err }
 
 // build makes the whole table of what the generator emits for the repository at repoRoot, in the
-// order Generate writes it and Check reports it: the four files of GADU, then for each role, in
-// the order of its table, its Claude, Pi and Codex files. The sources of the roles are read from
-// repoRoot; a role whose source cannot be read or projected has no files in the table and is
-// returned as a problem, so that the caller can say all of them.
+// order Generate writes it and Check reports it: for each role, in the order of its table, its
+// Claude, Pi and Codex files. The sources of the roles are read from repoRoot; a role whose source
+// cannot be read or projected has no files in the table and is returned as a problem, so that the
+// caller can say all of them.
 func build(repoRoot string) (table []Artifact, problems []*sourceError) {
-	table = gaduArtifacts()
 	for _, r := range roles {
 		data, err := os.ReadFile(filepath.Join(repoRoot, filepath.FromSlash(r.sourcePath())))
 		if err != nil {
@@ -67,9 +62,8 @@ func build(repoRoot string) (table []Artifact, problems []*sourceError) {
 }
 
 // Artifacts is the table of what the generator emits for the repository at repoRoot, in the order
-// Generate writes it and Check reports it:
-//   - agents/GADU.md, opencode/agents/GADU.md, pi/agents/GADU.md, skills/gadu-operator/SKILL.md
-//   - for each role: agents/<role>.md, pi/agents/<role>.md, codex/agents/<role>.toml
+// Generate writes it and Check reports it: for each role, agents/<role>.md, pi/agents/<role>.md and
+// codex/agents/<role>.toml.
 //
 // Each call builds the table afresh, so no caller can change what the next one sees. It fails when
 // the source of a role cannot be read or projected.

@@ -10,7 +10,7 @@
 
 # Known limitations of bootstrap (left out of scope by requirement R-009):
 #   - The bootstrap init block's human-readable info echoes (dir creation) remain
-#     skills-first. They are a no-op for GADU (custom rows) and only matter for a
+#     skills-first. They are a no-op for the role agents (custom rows) and only matter for a
 #     hypothetical future managed agent row.
 #   - No native Codex agent-definition files are produced (R-009).
 #   - No SDD orchestrator auto-spawn wiring (R-009).

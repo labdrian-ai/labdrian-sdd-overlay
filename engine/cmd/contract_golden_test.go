@@ -139,11 +139,20 @@ func (w *contractWorld) gate(label, stdin string, args ...string) {
 
 // gateMatrix records the four runs that show what a contract does to a sub-agent prompt:
 // an applies-to phase without the skills section, one with it, an excluded phase that
-// carries the contract, and a phase the contract names nowhere.
+// carries the contract, and a phase the contract names nowhere. The applies-to agents are those
+// of the contracts the tests write (fmApplies).
 func (w *contractWorld) gateMatrix(args ...string) {
 	w.t.Helper()
-	w.gate("sdd-apply, no skills section", agentInput("sdd-apply", promptPlain), args...)
-	w.gate("sdd-tasks, with a skills section", agentInput("sdd-tasks", promptWithHeader), args...)
+	w.gateMatrixFor("sdd-apply", "sdd-tasks", args...)
+}
+
+// gateMatrixFor is gateMatrix with the two applies-to agents named: noSection runs without the
+// skills section and withSection with it. The embedded anti-generic-design contract applies to the
+// builder only (PR 5 of the role agents), so its matrix runs the builder twice.
+func (w *contractWorld) gateMatrixFor(noSection, withSection string, args ...string) {
+	w.t.Helper()
+	w.gate(noSection+", no skills section", agentInput(noSection, promptPlain), args...)
+	w.gate(withSection+", with a skills section", agentInput(withSection, promptWithHeader), args...)
 	w.gate("sdd-propose carrying the contract", agentInput("sdd-propose", promptWithEntry), args...)
 	w.gate("sdd-explore, in neither list", agentInput("sdd-explore", promptWithEntry), args...)
 }
@@ -275,8 +284,8 @@ func contractGoldenCases() []contractGoldenCase {
 			w.gate("the default contract path", agentInput("sdd-apply", promptPlain), "--contract-file", contractFile)
 		}},
 		{"gate-task-embedded-contract", func(w *contractWorld) {
-			w.gateMatrix("--embedded-contract", "anti-generic-design")
-			w.gate("an explicit path for the embedded contract", agentInput("sdd-apply", promptPlain), "--embedded-contract", "anti-generic-design", "--contract-path", "/abs/anti-generic-design.md")
+			w.gateMatrixFor("builder", "builder", "--embedded-contract", "anti-generic-design")
+			w.gate("an explicit path for the embedded contract", agentInput("builder", promptPlain), "--embedded-contract", "anti-generic-design", "--contract-path", "/abs/anti-generic-design.md")
 			w.gate("an unknown embedded contract", agentInput("sdd-apply", promptPlain), "--embedded-contract", "no-such-contract")
 		}},
 		{"gate-task-injection-point", func(w *contractWorld) {

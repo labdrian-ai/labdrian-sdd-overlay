@@ -17,9 +17,12 @@ pipkg_dest_dir() {
 
 # pipkg_build_and_report runs `engine pipkg build` for the pi target and
 # prints the install hint on success. `pi install` itself is NOT run here
-# (R-002 scope boundary; deferred to a manual step / a later slice). Returns
-# non-zero on a build failure (R4-silent-package-skip): a failed pi package
-# build must never read as a clean apply.
+# (R-002 scope boundary; deferred to a manual step / a later slice). The
+# build also removes, from ~/.pi/agent/agents, the overlay-owned link of an
+# agent the new package no longer ships, and the engine says so: it is the one
+# step every `apply --target pi` goes through, with or without a `pi` on the
+# PATH. Returns non-zero on a build failure (R4-silent-package-skip): a failed
+# pi package build must never read as a clean apply.
 pipkg_build_and_report() {
   local dest
   dest="$(pipkg_dest_dir)"

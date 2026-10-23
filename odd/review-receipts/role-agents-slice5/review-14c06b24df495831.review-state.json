@@ -1,0 +1,296 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:69b562ebc2db74e4fff036ebc38db60f5053f5d7ed48592e3a1794e03534db1e",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-14c06b24df495831",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "82de96247cdb657bf1beb5f5f742e4a6050e1168",
+      "candidate_tree": "38ca9dd4922b37c5ca47f55e14b23dc091e0a091",
+      "paths_digest": "sha256:bd091b24aa1ede92452ac1625970cc9358d82d92a72026918f0db8e76f59bf54",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "agents/jd-fix-agent.md",
+        "agents/jd-judge-a.md",
+        "agents/jd-judge-b.md",
+        "agents/review-readability.md",
+        "agents/review-refuter.md",
+        "agents/review-reliability.md",
+        "agents/review-resilience.md",
+        "agents/review-risk.md",
+        "agents/sdd-apply.md",
+        "agents/sdd-archive.md",
+        "agents/sdd-design.md",
+        "agents/sdd-init.md",
+        "agents/sdd-onboard.md",
+        "agents/sdd-propose.md",
+        "agents/sdd-spec.md",
+        "agents/sdd-tasks.md",
+        "agents/sdd-verify.md",
+        "engine/installer/agent_deploy_test.go",
+        "engine/skills/role_agents_artifact_test.go",
+        "overlay.manifest"
+      ],
+      "identity": "sha256:11431df05fa317dd00eddfadc0c4824a88c8e6a96502acf5f2b97c7c9c124cd2"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "82de96247cdb657bf1beb5f5f742e4a6050e1168",
+      "candidate_tree": "38ca9dd4922b37c5ca47f55e14b23dc091e0a091",
+      "paths_digest": "sha256:bd091b24aa1ede92452ac1625970cc9358d82d92a72026918f0db8e76f59bf54",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "agents/jd-fix-agent.md",
+        "agents/jd-judge-a.md",
+        "agents/jd-judge-b.md",
+        "agents/review-readability.md",
+        "agents/review-refuter.md",
+        "agents/review-reliability.md",
+        "agents/review-resilience.md",
+        "agents/review-risk.md",
+        "agents/sdd-apply.md",
+        "agents/sdd-archive.md",
+        "agents/sdd-design.md",
+        "agents/sdd-init.md",
+        "agents/sdd-onboard.md",
+        "agents/sdd-propose.md",
+        "agents/sdd-spec.md",
+        "agents/sdd-tasks.md",
+        "agents/sdd-verify.md",
+        "engine/installer/agent_deploy_test.go",
+        "engine/skills/role_agents_artifact_test.go",
+        "overlay.manifest"
+      ],
+      "identity": "sha256:11431df05fa317dd00eddfadc0c4824a88c8e6a96502acf5f2b97c7c9c124cd2"
+    },
+    "genesis_paths": [
+      "agents/jd-fix-agent.md",
+      "agents/jd-judge-a.md",
+      "agents/jd-judge-b.md",
+      "agents/review-readability.md",
+      "agents/review-refuter.md",
+      "agents/review-reliability.md",
+      "agents/review-resilience.md",
+      "agents/review-risk.md",
+      "agents/sdd-apply.md",
+      "agents/sdd-archive.md",
+      "agents/sdd-design.md",
+      "agents/sdd-init.md",
+      "agents/sdd-onboard.md",
+      "agents/sdd-propose.md",
+      "agents/sdd-spec.md",
+      "agents/sdd-tasks.md",
+      "agents/sdd-verify.md",
+      "engine/installer/agent_deploy_test.go",
+      "engine/skills/role_agents_artifact_test.go",
+      "overlay.manifest"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-risk",
+      "review-reliability"
+    ],
+    "original_changed_lines": 1750,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "deletes shipped agent files and the manifest rows that deploy them, and replaces a test that pinned their presence with one that pins their absence",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:3fde0d574e43394e6f37dab63a14e41fc7195be5d90b5cb3e29b8945843f1daf",
+    "capture_phase_revision": "sha256:9f8ffcabcae7b88afcf01d97cbf39c3168a6a9270bd66e0f0b5a34d437f551c4",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:11431df05fa317dd00eddfadc0c4824a88c8e6a96502acf5f2b97c7c9c124cd2",
+        "capture_phase_revision": "sha256:9f8ffcabcae7b88afcf01d97cbf39c3168a6a9270bd66e0f0b5a34d437f551c4",
+        "artifact_digest": "sha256:46886758caeb0d1c8af0f3efa1f8f7666f82e0b7eaa41b893352e0fc0902e418",
+        "result_hash": "sha256:b7bf788cb8301d2a1593f164c32aaa0cd5da2374afdbad507e7ee4a6dd95034b",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:d19c2603adc40ded14ea3624d1f47da292b760ede77128af0f33d984f3b80a18",
+            "lineage_id": "review-14c06b24df495831",
+            "authority_revision": "sha256:9f8ffcabcae7b88afcf01d97cbf39c3168a6a9270bd66e0f0b5a34d437f551c4",
+            "target_identity": "sha256:11431df05fa317dd00eddfadc0c4824a88c8e6a96502acf5f2b97c7c9c124cd2",
+            "base_tree": "82de96247cdb657bf1beb5f5f742e4a6050e1168",
+            "candidate_tree": "38ca9dd4922b37c5ca47f55e14b23dc091e0a091",
+            "changed_path_manifest_sha256": "sha256:747b43b02716c43f77606ea5a33cb732656d45443b6d7bb642fc13ef8cfc5fe9",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:d19c2603adc40ded14ea3624d1f47da292b760ede77128af0f33d984f3b80a18",
+            "raw_sha256": "sha256:3d21e2f1db0c2e38b5b74ccf0c91f2678f1b5b054cd968e48e9263f8a6851035",
+            "canonical_sha256": "sha256:1044e703ce59b084b42d635f1d11b62824c039911f799cfcb16b25fcff36636c",
+            "result_hash": "sha256:b7bf788cb8301d2a1593f164c32aaa0cd5da2374afdbad507e7ee4a6dd95034b",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:d19c2603adc40ded14ea3624d1f47da292b760ede77128af0f33d984f3b80a18",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "agents/jd-fix-agent.md",
+                "agents/jd-judge-a.md",
+                "agents/jd-judge-b.md",
+                "agents/review-readability.md",
+                "agents/review-refuter.md",
+                "agents/review-reliability.md",
+                "agents/review-resilience.md",
+                "agents/review-risk.md",
+                "agents/sdd-apply.md",
+                "agents/sdd-archive.md",
+                "agents/sdd-design.md",
+                "agents/sdd-init.md",
+                "agents/sdd-onboard.md",
+                "agents/sdd-propose.md",
+                "agents/sdd-spec.md",
+                "agents/sdd-tasks.md",
+                "agents/sdd-verify.md",
+                "engine/installer/agent_deploy_test.go",
+                "engine/skills/role_agents_artifact_test.go",
+                "overlay.manifest"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "Reviewed all 20 manifest paths: 17 agent markdown deletions, two test changes, and the overlay.manifest row removals.",
+              "The deleted agent files are prompt definitions with no secrets, credentials, or executable code. Deleting them reduces deployed surface area, and the remaining manifest rows still cover the role agents.",
+              "overlay.manifest removes only the 17 rows matching the deleted files. The test in engine/skills/role_agents_artifact_test.go asserts that no row or file remains for any of them, so there are no dangling references.",
+              "The new characterization test in engine/installer/agent_deploy_test.go uses temp directories and a temp home, and only reads or writes inside them. It confirms apply does not delete previously deployed files, so there is no data-loss path.",
+              "No dependency or lockfile changes, no unsafe input handling, and no authorization changes were introduced. No reachable security impact was found."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 1,
+        "target_identity": "sha256:11431df05fa317dd00eddfadc0c4824a88c8e6a96502acf5f2b97c7c9c124cd2",
+        "capture_phase_revision": "sha256:9f8ffcabcae7b88afcf01d97cbf39c3168a6a9270bd66e0f0b5a34d437f551c4",
+        "artifact_digest": "sha256:30d47fc32a2a9acb3650e2f69dc1fde0498714c11c19e92b7cb8d7adbeed2560",
+        "result_hash": "sha256:2e16b02416dc4fc65575a129e22e3d407c66220c11f97188cdc3770c6e7eb915",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:d86c25c607eb0067b8d4a621417f2eb464fc4236f6dc5034937f81f6de6b92b9",
+            "lineage_id": "review-14c06b24df495831",
+            "authority_revision": "sha256:9f8ffcabcae7b88afcf01d97cbf39c3168a6a9270bd66e0f0b5a34d437f551c4",
+            "target_identity": "sha256:11431df05fa317dd00eddfadc0c4824a88c8e6a96502acf5f2b97c7c9c124cd2",
+            "base_tree": "82de96247cdb657bf1beb5f5f742e4a6050e1168",
+            "candidate_tree": "38ca9dd4922b37c5ca47f55e14b23dc091e0a091",
+            "changed_path_manifest_sha256": "sha256:747b43b02716c43f77606ea5a33cb732656d45443b6d7bb642fc13ef8cfc5fe9",
+            "lens": "review-reliability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:d86c25c607eb0067b8d4a621417f2eb464fc4236f6dc5034937f81f6de6b92b9",
+            "raw_sha256": "sha256:6fbaa37200b4342392ae91578f45ba763d9413596b5b519e11a6251bc66edd8d",
+            "canonical_sha256": "sha256:1795a595ecc54d164df865cf77339d1a3d55a4bb8458185a9c887eee9b40dc81",
+            "result_hash": "sha256:2e16b02416dc4fc65575a129e22e3d407c66220c11f97188cdc3770c6e7eb915",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:d86c25c607eb0067b8d4a621417f2eb464fc4236f6dc5034937f81f6de6b92b9",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "agents/jd-fix-agent.md",
+                "agents/jd-judge-a.md",
+                "agents/jd-judge-b.md",
+                "agents/review-readability.md",
+                "agents/review-refuter.md",
+                "agents/review-reliability.md",
+                "agents/review-resilience.md",
+                "agents/review-risk.md",
+                "agents/sdd-apply.md",
+                "agents/sdd-archive.md",
+                "agents/sdd-design.md",
+                "agents/sdd-init.md",
+                "agents/sdd-onboard.md",
+                "agents/sdd-propose.md",
+                "agents/sdd-spec.md",
+                "agents/sdd-tasks.md",
+                "agents/sdd-verify.md",
+                "engine/installer/agent_deploy_test.go",
+                "engine/skills/role_agents_artifact_test.go",
+                "overlay.manifest"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-001",
+                "lens": "reliability",
+                "location": "engine/skills/role_agents_artifact_test.go:578-590",
+                "severity": "WARNING",
+                "claim": "The retirement test only asserts that the 17 retired agents' manifest rows and files are gone. It does not assert that GADU.md and opencode/agents/GADU.md are retired, even though the new apply test's comment names them as retired by this slice. Their rows are still in overlay.manifest as far as the visible diff shows, and the removed test was the only check that pinned them. After this change the GADU rows have no guard in either direction, so an accidental removal or a missed retirement would go undetected.",
+                "proof_refs": [
+                  "engine/skills/role_agents_artifact_test.go:578-590",
+                  "engine/installer/agent_deploy_test.go:138-147"
+                ]
+              },
+              {
+                "id": "R3-002",
+                "lens": "reliability",
+                "location": "engine/installer/agent_deploy_test.go:138-216",
+                "severity": "SUGGESTION",
+                "claim": "The new characterization test pins that apply leaves a deployed file in place once its manifest row is gone. The agents the overlay retired therefore stay on existing installs forever, in Claude Code and OpenCode, and nothing in the candidate cleans them up. The test documents this as intended behavior. Whether stale sdd-* and review-* agents remaining beside gentle-ai's own versions is acceptable is left unresolved. If the stale copies shadow or conflict with gentle-ai's agents of the same name, that would be a user-visible effect of this change.",
+                "proof_refs": [
+                  "engine/installer/agent_deploy_test.go:138-216"
+                ]
+              }
+            ],
+            "evidence": [
+              "Inspected all 20 manifest paths: 17 agent deletions, the two test files and overlay.manifest.",
+              "overlay.manifest drops exactly the 17 rows whose files are deleted, so no dangling row points at a missing file.",
+              "The new retirement test checks each retired name against manifest rows and against agents/, pi/agents/ and opencode/agents/.",
+              "The new apply test exercises a real apply twice, before and after a retirement commit, and asserts the deployed files stay byte for byte.",
+              "The minimalism-contract test comment says sdd-tasks and sdd-apply remain in its scope even though their agents are gone. I cannot verify from this candidate that the gate pins that name no longer break."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "a86d9e2ad0a66503d3df94924e1055c0324c067b242ea4a6a8d17265d8cd7dac",
+    "initial_atomic_start": {
+      "lineage_id": "review-14c06b24df495831",
+      "worktree_identity": "sha256:df2fdc8834f9d2e1069346f6f8958833602b38ebd1edf3280b509aac8bd67b65",
+      "target_identity": "sha256:11431df05fa317dd00eddfadc0c4824a88c8e6a96502acf5f2b97c7c9c124cd2",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "82de96247cdb657bf1beb5f5f742e4a6050e1168",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-risk",
+        "review-reliability"
+      ],
+      "original_changed_lines": 1750,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "deletes shipped agent files and the manifest rows that deploy them, and replaces a test that pinned their presence with one that pins their absence"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

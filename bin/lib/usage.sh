@@ -118,9 +118,9 @@ Commands:
                                              and skills/ on disk vs overlay.manifest
                                              (requires --source-root); every global skill
                                              needs a valid approval record, except the
-                                             grandfathered baseline (the 37 global skills at the
-                                             Phase 8 base, defined below) while its bytes are
-                                             unchanged
+                                             grandfathered baseline (the 35 global skills at the
+                                             Phase 8 base that are still registered, defined
+                                             below) while its bytes are unchanged
                                    install   install project-scoped skills into <cwd>/.claude/skills and
                                              <cwd>/.agents/skills, replacing only what it installed and left
                                              unmodified. It records each file it writes (with its SHA-256) in the
@@ -179,7 +179,8 @@ Commands:
                                    Project-tier skills stay autonomous: they need no approval record.
                                    "The Phase 8 base" (used above and in the README) is main at
                                    53f545d, the commit the global skill lifecycle was built on; the
-                                   37 global skills present there are the grandfathered baseline.
+                                   global skills present there are the grandfathered baseline: 37 at
+                                   the base, 35 since gadu-operator and gadu-orchestrate were retired.
                                    Locking: add, remove, sync-manifest and approve hold an exclusive lock, and
                                    validate and install a shared one, on .skills.registry.yaml.lock beside the
                                    registry (created by the first write, never removed, git-ignored; shared
@@ -266,11 +267,10 @@ Commands:
                                    Exit 0=clean, 1=stranded change found, 2=usage, 3=could not
                                    determine (an unreadable signal, an unreadable ledger, or a
                                    stale waiver); propagated unchanged from the guard.
-  gadu-generate [--check]          Regenerate the generated agents from their canonical sources:
-                                   GADU (agents/GADU.md, opencode/agents/GADU.md,
-                                   pi/agents/GADU.md, skills/gadu-operator/SKILL.md) and the
-                                   role agents (agents/<role>.md, pi/agents/<role>.md,
-                                   codex/agents/<role>.toml) under OVERLAY_DIR.
+  gadu-generate [--check]          Regenerate the role agents (agents/<role>.md,
+                                   pi/agents/<role>.md, codex/agents/<role>.toml) from
+                                   roles/<role>/body.md under OVERLAY_DIR. The verb keeps the
+                                   name it had when the same run also wrote the GADU operator.
                                    Optional --check verifies freshness without writing.
   longterm-mem install|status|uninstall
     [--target claude|opencode|codex|all] [--purge]

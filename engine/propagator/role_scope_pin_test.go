@@ -2,7 +2,7 @@ package propagator_test
 
 // This file pins the registry row that Propagate writes for the minimalism contract the repository
 // really ships (Phase 9, per-role design v3, section 6, PR 1): the contract is scoped to the roles
-// that write (shaper and builder, plus sdd-tasks and sdd-apply until their agents are removed) and
+// that write (shaper and builder; sdd-tasks and sdd-apply left with their agents in PR 5) and
 // kept out of the roles that judge and verify (reviewer and verifier). The other tests of this package give Propagate a contract written in the test; this one
 // reads skills/_shared/minimalism-contract.md, so the row a project's registry is refreshed to
 // follows the frontmatter of the file.
@@ -19,7 +19,7 @@ import (
 // roleScopedRow is the row the registry of a project holds once `engine propagate` has run against
 // the contract as it ships: the phases are named in the order of the contract, joined with " and ",
 // and the excluded ones with "/".
-const roleScopedRow = "| minimalism-contract | skills/_shared/minimalism-contract.md | Inject ONLY into sdd-tasks and sdd-apply and shaper and builder sub-agent prompts under '## Skills to load before work'. Do NOT inject into sdd-propose/sdd-spec/sdd-design/sdd-verify/sdd-archive/reviewer/verifier. |"
+const roleScopedRow = "| minimalism-contract | skills/_shared/minimalism-contract.md | Inject ONLY into shaper and builder sub-agent prompts under '## Skills to load before work'. Do NOT inject into sdd-propose/sdd-spec/sdd-design/sdd-verify/sdd-archive/reviewer/verifier. |"
 
 // realMinimalismContract is the contract of the repository, parsed the way `engine propagate` parses it.
 func realMinimalismContract(t *testing.T) contract.Contract {

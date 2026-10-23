@@ -21,15 +21,15 @@ func overlayRoot(getenv func(string) string) (string, error) {
 }
 
 // runAgentgenGenerate implements the 'gadu-generate [--check]' subcommand.
-// Without --check: calls agentgen.Generate(repoRoot) to write all artifacts: the GADU
-// files and the Claude, Pi and Codex files of every role.
+// Without --check: calls agentgen.Generate(repoRoot) to write all artifacts: the Claude, Pi and
+// Codex files of every role.
 // With    --check: calls agentgen.Check(repoRoot)    to verify they are not stale.
 // Exits non-zero on error. OVERLAY_DIR must be set; the installed binary
 // cannot resolve the repo root reliably via os.Executable().
 //
 // The verb keeps the name it had when the generator wrote GADU alone, and so do the words it
-// prints: the overlay script and its help text name it, and renaming it is a change of the
-// scripts, not of this command.
+// prints around its result: the overlay script and its help text name it, and renaming it is a
+// change of the scripts, not of this command (a follow-up of PR 5 of the role design).
 func runAgentgenGenerate(p process, d deps, args []string) {
 	checkMode := false
 	for _, a := range args {
@@ -60,5 +60,5 @@ func runAgentgenGenerate(p process, d deps, args []string) {
 		p.exit(1)
 		return
 	}
-	fmt.Fprintln(p.stdout, "gadu-generate: agents/GADU.md, opencode/agents/GADU.md, and skills/gadu-operator/SKILL.md written")
+	fmt.Fprintln(p.stdout, "gadu-generate: agents/<role>.md, pi/agents/<role>.md, and codex/agents/<role>.toml written")
 }

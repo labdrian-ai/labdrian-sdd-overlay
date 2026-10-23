@@ -13,19 +13,10 @@ import (
 // which they name the artifacts: the command prints them, and a person reads the first
 // line to know what to run.
 
-// the four artifacts of GADU, as Generate and Check name them and in the order they report them.
-// They come first in the table; the files of the roles follow.
-var gaduPaths = []string{
-	"agents/GADU.md",
-	"opencode/agents/GADU.md",
-	"pi/agents/GADU.md",
-	"skills/gadu-operator/SKILL.md",
-}
-
-// allPaths are the files of the table in order: the four of GADU, then the Claude, Pi and Codex file
-// of each role in the order of the roles.
+// allPaths are the files of the table in order, as Generate and Check name them: the Claude, Pi and
+// Codex file of each role in the order of the roles.
 func allPaths() []string {
-	paths := append([]string(nil), gaduPaths...)
+	var paths []string
 	for _, r := range wantRoles {
 		paths = append(paths, "agents/"+r.name+".md", "pi/agents/"+r.name+".md", "codex/agents/"+r.name+".toml")
 	}
@@ -34,16 +25,13 @@ func allPaths() []string {
 
 const regenerate = "run: gentle-ai-overlay gadu-generate"
 
-// A root with nothing in it has no artifact and no source of a role: Check names the four files of
-// GADU, and then the source of each role, in the order of the table. A role whose source is missing
-// has no files named: they cannot be compared with a body that is not there.
+// A root with nothing in it has no artifact and no source of a role: Check names the source of each
+// role, in the order of the table, and nothing else. A role whose source is missing has no files
+// named: they cannot be compared with a body that is not there.
 func TestCheckNamesEveryArtifactThatIsMissingInTheOrderOfTheTable(t *testing.T) {
 	err := agentgen.Check(t.TempDir())
 
 	want := "generated agent artifacts are stale or missing:"
-	for _, p := range gaduPaths {
-		want += "\n  " + p + ": missing (not yet generated — " + regenerate + ")"
-	}
 	for _, r := range wantRoles {
 		want += "\n  roles/" + r.name + "/body.md: missing (the source of the role is not in the repository)"
 	}
@@ -55,11 +43,11 @@ func TestCheckNamesEveryArtifactThatIsMissingInTheOrderOfTheTable(t *testing.T) 
 func TestCheckSaysWhichArtifactsAreStaleAndWhichCannotBeReadAndPassesTheOthers(t *testing.T) {
 	root := generated(t)
 	// The second is stale; the third cannot be read (a directory is where its file should be).
-	stale := filepath.Join(root, "opencode", "agents", "GADU.md")
+	stale := filepath.Join(root, "pi", "agents", "builder.md")
 	if err := os.WriteFile(stale, []byte("hand-edited\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	unreadable := filepath.Join(root, "pi", "agents", "GADU.md")
+	unreadable := filepath.Join(root, "codex", "agents", "builder.toml")
 	if err := os.Remove(unreadable); err != nil {
 		t.Fatal(err)
 	}
@@ -82,10 +70,10 @@ func TestCheckSaysWhichArtifactsAreStaleAndWhichCannotBeReadAndPassesTheOthers(t
 	if len(lines) != 3 || lines[0] != "generated agent artifacts are stale or missing:" {
 		t.Fatalf("Check error = %q, want its heading and two lines", err)
 	}
-	if want := "  opencode/agents/GADU.md: stale — committed content diverges from generator output (" + regenerate + ")"; lines[1] != want {
+	if want := "  pi/agents/builder.md: stale — committed content diverges from generator output (" + regenerate + ")"; lines[1] != want {
 		t.Errorf("first problem = %q, want %q", lines[1], want)
 	}
-	if want := "  pi/agents/GADU.md: cannot read committed file: " + readErr.Error(); lines[2] != want {
+	if want := "  codex/agents/builder.toml: cannot read committed file: " + readErr.Error(); lines[2] != want {
 		t.Errorf("second problem = %q, want %q", lines[2], want)
 	}
 }
@@ -108,7 +96,7 @@ func TestGenerateSaysWhichArtifactCouldNotBeWrittenAndWhy(t *testing.T) {
 
 	err := agentgen.Generate(root)
 
-	want := "writing agents/GADU.md: creating parent dir for " + filepath.Join(blocker, "GADU.md") + ": " + mkdirErr.Error()
+	want := "writing agents/builder.md: creating parent dir for " + filepath.Join(blocker, "builder.md") + ": " + mkdirErr.Error()
 	if err == nil || err.Error() != want {
 		t.Errorf("Generate error = %v\nwant\n%s", err, want)
 	}
@@ -168,7 +156,7 @@ func TestGenerateWritesEveryArtifactAndPutsBackWhatWasEdited(t *testing.T) {
 		}
 		first[p] = string(data)
 	}
-	if err := os.WriteFile(filepath.Join(root, "pi", "agents", "GADU.md"), []byte("edited"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "pi", "agents", "builder.md"), []byte("edited"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 

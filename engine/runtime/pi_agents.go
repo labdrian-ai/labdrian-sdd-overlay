@@ -12,9 +12,9 @@ import (
 )
 
 // The agent links: the overlay-owned symlinks ~/.pi/agent/agents/<name>.md to the package's own
-// agents/<name>.md, one for every agent of the package (GADU and the role agents engine/agentgen
-// writes for Pi), how their ownership is proven, and how each is made and removed without touching
-// a file that is not the overlay's.
+// agents/<name>.md, one for every agent of the package (the role agents engine/agentgen writes for
+// Pi), how their ownership is proven, and how each is made, retired and removed without touching a
+// file that is not the overlay's.
 
 // agentLinkPath returns the overlay-owned link location of an agent file.
 func agentLinkPath(home, file string) string {
@@ -44,8 +44,9 @@ func packageAgents(destDir string) ([]string, error) {
 }
 
 // agentLabel names an agent file in the messages about it: its name without the extension, in lower
-// case. GADU.md becomes "gadu", which keeps the "gadu link: ..." and "gadu frontmatter: ..." wording
-// GADU's messages had before the role agents joined it.
+// case. builder.md becomes "builder", as in "builder link: ..." and "builder frontmatter: ...". The
+// link a deploy before slice 5 of the role agents made for GADU.md keeps the label "gadu" in the
+// message that tells it retired.
 func agentLabel(file string) string {
 	return strings.ToLower(strings.TrimSuffix(file, filepath.Ext(file)))
 }
@@ -97,7 +98,7 @@ func agentLinkState(linkPath, expectedTarget string) agentLinkStatus {
 // wants); `model` is optional and unconstrained (R-014). The file is read with
 // skills.ReadFrontmatter, the reader the skills lint and the package build
 // use, so the three agree on where the frontmatter is and which keys are
-// at its top level. label names the agent in the refusals ("gadu frontmatter:
+// at its top level. label names the agent in the refusals ("builder frontmatter:
 // missing required 'name'").
 func validateAgentFrontmatter(label, content string) error {
 	fm, err := skills.ReadFrontmatter([]byte(content))
@@ -266,8 +267,32 @@ func unlinkAgent(home, destDir, file string) error {
 	}
 }
 
+// retireAgentLinks removes the overlay-owned link of every agent the package no longer ships: the
+// link an earlier deploy made, which the agent's removal from the overlay left behind (GADU.md, when
+// the role agents replaced it). shipped is the agents of the package. Ownership is proven the way
+// every removal here proves it -- the link reads back as the package's own agents/<file>
+// (ownedAgentLinks) -- so a file of the user, a file or link of gentle-pi, a link into another
+// package and a link that is no agent file are never found, and never touched. It returns what
+// became of each link it found, in the order of their names; the error tells a home whose links
+// cannot be listed.
+func retireAgentLinks(home, destDir string, shipped []string) ([]agentLinkResult, error) {
+	owned, err := ownedAgentLinks(home, destDir)
+	if err != nil {
+		return nil, fmt.Errorf("agents link: the agent links cannot be read at %s: %w", agentLinkPath(home, ""), err)
+	}
+	var results []agentLinkResult
+	for _, file := range owned {
+		if !slices.Contains(shipped, file) {
+			results = append(results, agentLinkResult{File: file, Err: unlinkAgent(home, destDir, file)})
+		}
+	}
+	return results, nil
+}
+
 // agentsInstallNotes tells, for Install's message, what became of every agent of the package: that
-// it is linked, or why it is not.
+// it is linked, or why it is not. The links of the agents the package no longer ships are not told
+// here: RetireDroppedPiAgentLinks retires them as soon as the package is built, before it is known
+// whether `pi install` will run.
 func agentsInstallNotes(home, destDir string) []string {
 	results, err := linkPackageAgents(home, destDir)
 	if err != nil {
@@ -280,6 +305,38 @@ func agentsInstallNotes(home, destDir string) []string {
 			continue
 		}
 		notes = append(notes, result.File+" linked at ~/.pi/agent/agents/"+result.File+".")
+	}
+	return notes
+}
+
+// RetireDroppedPiAgentLinks retires the overlay-owned link of every agent the package that was just
+// built at destDir no longer ships (retireAgentLinks), and tells what became of each, for the message
+// of the step that built it. The build is what leaves such a link pointing at a file the package no
+// longer has, so the link goes right after it -- not after `pi install`, which may not run (pi absent
+// from the PATH) or may fail, and then no later step of that run would retire it. Every step that
+// builds the package calls it: the Pi adapter (Install, Update, Rollback) and the `pipkg build` verb
+// the deploy runs first. A package whose agents cannot be read is not a package with none, and a home
+// that cannot be told is a home with nothing to prove: both retire nothing, and Status tells what it
+// cannot prove. A link that cannot be removed is told and never fails the step.
+func RetireDroppedPiAgentLinks(home, destDir string) []string {
+	if home == "" {
+		return nil
+	}
+	shipped, err := packageAgents(destDir)
+	if err != nil {
+		return nil
+	}
+	retired, err := retireAgentLinks(home, destDir, shipped)
+	var notes []string
+	for _, result := range retired {
+		if result.Err != nil {
+			notes = append(notes, fmt.Sprintf("%s link: removing the link of an agent the package no longer ships: %v.", agentLabel(result.File), result.Err))
+			continue
+		}
+		notes = append(notes, result.File+" link removed (the package no longer ships it).")
+	}
+	if err != nil {
+		notes = append(notes, err.Error()+".")
 	}
 	return notes
 }
@@ -304,8 +361,11 @@ func agentsUninstallNote(home, destDir string) string {
 }
 
 // agentLinkProblems returns, for Status, one entry for every agent of the package whose link it
-// cannot prove, in the form it always used for GADU.md. Nothing is returned for a link that is
-// current. With no home to look in, none can be proven.
+// cannot prove, in the form "<file> linked at ~/.pi/agent/agents/<file> (<why>)", and one for every
+// overlay-owned link of the home that no agent of the package backs any more -- the link a removal
+// that failed, or a build by a program that did not retire it (RetireDroppedPiAgentLinks), leaves
+// pointing at a file the package no longer ships. Nothing is returned for a link that is current.
+// With no home to look in, none can be proven.
 func agentLinkProblems(home, destDir string) []string {
 	files, err := packageAgents(destDir)
 	if err != nil {
@@ -325,6 +385,18 @@ func agentLinkProblems(home, destDir string) []string {
 			problems = append(problems, entry+" (stale; run: labdrian-overlay apply --target pi)")
 		case agentLinkConflict:
 			problems = append(problems, entry+" (conflict: a foreign file already exists there)")
+		}
+	}
+	if home == "" {
+		return problems
+	}
+	owned, err := ownedAgentLinks(home, destDir)
+	if err != nil {
+		problems = append(problems, "agents linked at ~/.pi/agent/agents (the links cannot be listed: "+err.Error()+")")
+	}
+	for _, file := range owned {
+		if !slices.Contains(files, file) {
+			problems = append(problems, file+" linked at ~/.pi/agent/agents/"+file+" (stale: the package no longer ships it; run: labdrian-overlay apply --target pi)")
 		}
 	}
 	return problems

@@ -110,7 +110,8 @@ func TestAddEntryRoundTrip(t *testing.T) {
 // real registry and real SKILL.md files, read-only.
 //
 // At the Phase 8 base every registered skill was global and unapproved, and the baseline
-// grandfathers exactly those 37. So on the repository as it is:
+// grandfathered all 37 of them. 35 remain: gadu-operator and gadu-orchestrate were retired, and a
+// retired skill leaves the baseline deliberately. So on the repository as it is:
 //   - every baseline id is a registered global skill;
 //   - every registered global skill is either grandfathered at its pinned digest or carries a valid
 //     record (the latter is how a later, approved modification of a baseline skill or a newly added
@@ -250,5 +251,26 @@ func TestTheRegistryFixturesAreWhatTheEncoderWrites(t *testing.T) {
 				t.Errorf("the encoder writes\n%s\nthe fixture is\n%s", got, fixture)
 			}
 		})
+	}
+}
+
+// The two GADU skills are retired (PR 5 of the role agents): the repository registry, read as the
+// program reads it, has no entry whose id or path names them, however the entry is written. The
+// manifest rows and the directories are pinned by TestTheGaduSkillsAreGoneFromTheManifestAndTheTree.
+func TestTheGaduSkillsAreGoneFromTheRegistry(t *testing.T) {
+	regData, err := os.ReadFile(filepath.Join(repoRoot(t), "skills.registry.yaml"))
+	if err != nil {
+		t.Fatalf("read real registry: %v", err)
+	}
+	reg, err := decode(regData)
+	if err != nil {
+		t.Fatalf("parse real registry: %v", err)
+	}
+	for _, e := range reg.Skills {
+		for _, id := range []string{"gadu-operator", "gadu-orchestrate"} {
+			if e.ID == id || e.Path == id {
+				t.Errorf("skills.registry.yaml still has the entry {ID:%s Path:%s} of the retired skill %s", e.ID, e.Path, id)
+			}
+		}
 	}
 }

@@ -135,6 +135,86 @@ func TestCodexAgentsLandInTheAgentsDirectoryOfCodexAndNowhereElse(t *testing.T) 
 	}
 }
 
+// TestApply_LeavesTheDeployedFileOfARowThatLeftTheOverlay pins what `apply` does with a file it
+// deployed once and whose manifest row is gone, the case of the agents that slice 5 of the role
+// agents retired (agents/sdd-*.md, GADU.md and the GADU of OpenCode): nothing. `apply` copies the
+// rows the manifest has and has no step that removes a file, so the file stays where the earlier
+// deploy put it, byte for byte, in the agents directory of Claude Code and in the one of OpenCode;
+// and a file the overlay never deployed (the review-*, jd-* and gentle-ai-* agents of gentle-ai) is
+// as it was. Only the Pi link of a retired agent is removed, by the Pi runtime and not by `apply`
+// (engine/runtime, TestPiAdapter_InstallRemovesTheLinkOfAnAgentThePackageNoLongerShips).
+//
+// This is a CHARACTERIZATION test: it passed on the base, and a step of `apply` that removed a
+// deployed file whose row is gone would fail it.
+func TestApply_LeavesTheDeployedFileOfARowThatLeftTheOverlay(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in -short mode")
+	}
+
+	const (
+		withTheRetired = "test-skill/SKILL.md   managed\n" +
+			"builder.md   custom   agent\n" +
+			"retired.md   custom   agent\n" +
+			"opencode/agents/retired.md   custom   opencode-agent\n"
+		withoutIt = "test-skill/SKILL.md   managed\n" +
+			"builder.md   custom   agent\n"
+		builder         = "---\nname: builder\n---\n# an agent that stays\n"
+		retired         = "---\nname: retired\n---\n# an agent that leaves the overlay\n"
+		retiredOpenCode = "---\ndescription: retired\nmode: all\n---\n# the same agent, for OpenCode\n"
+		foreign         = "# an agent of gentle-ai, which the overlay never deployed\n"
+	)
+	overlay := overlaytest.Script(t)
+	home := t.TempDir()
+	dir, env := overlaytest.NewOverlay(t, home, map[string]string{
+		"overlay.manifest":           withTheRetired,
+		"skills/test-skill/SKILL.md": "# overlay skill\n",
+		"agents/builder.md":          builder,
+		"agents/retired.md":          retired,
+		"opencode/agents/retired.md": retiredOpenCode,
+	})
+	claudeAgents := filepath.Join(home, ".claude", "agents")
+	openCodeAgents := filepath.Join(home, ".config", "opencode", "agents")
+	overlaytest.WriteFile(t, claudeAgents, "review-risk.md", foreign)
+	overlaytest.WriteFile(t, openCodeAgents, "review-risk.md", foreign)
+
+	apply := func(target string) {
+		t.Helper()
+		if out, err := overlaytest.Combined(t, overlay, env, "", "apply", "--target", target); err != nil {
+			t.Fatalf("overlay apply --target %s: %v\noutput:\n%s", target, err, out)
+		}
+	}
+	apply("claude")
+	apply("opencode")
+	assertOnlyEntries(t, claudeAgents, "builder.md", "retired.md", "review-risk.md")
+	assertOnlyEntries(t, openCodeAgents, "retired.md", "review-risk.md")
+
+	// The row and the file leave the overlay together, on main, as the retirement commits them.
+	overlaytest.WriteFile(t, dir, "overlay.manifest", withoutIt)
+	for _, gone := range []string{"agents/retired.md", "opencode/agents/retired.md"} {
+		if err := os.Remove(filepath.Join(dir, gone)); err != nil {
+			t.Fatalf("remove %s: %v", gone, err)
+		}
+	}
+	overlaytest.Git(t, dir, env, "add", "-A")
+	overlaytest.Git(t, dir, env, "commit", "-m", "retire the agent")
+
+	apply("claude")
+	apply("opencode")
+	for path, want := range map[string]string{
+		filepath.Join(claudeAgents, "retired.md"):       retired,
+		filepath.Join(claudeAgents, "builder.md"):       builder,
+		filepath.Join(claudeAgents, "review-risk.md"):   foreign,
+		filepath.Join(openCodeAgents, "retired.md"):     retiredOpenCode,
+		filepath.Join(openCodeAgents, "review-risk.md"): foreign,
+	} {
+		if got, err := os.ReadFile(path); err != nil || string(got) != want {
+			t.Errorf("%s = %q, %v; want it as the deploy left it: %q", path, got, err, want)
+		}
+	}
+	assertOnlyEntries(t, claudeAgents, "builder.md", "retired.md", "review-risk.md")
+	assertOnlyEntries(t, openCodeAgents, "retired.md", "review-risk.md")
+}
+
 // assertOnlyEntries fails the test unless dir holds exactly the named entries.
 func assertOnlyEntries(t *testing.T, dir string, want ...string) {
 	t.Helper()

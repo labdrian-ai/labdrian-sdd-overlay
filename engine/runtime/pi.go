@@ -66,28 +66,58 @@ func (a PiAdapter) Apply() core.LifecycleResult { return a.Install() }
 // `pi` on PATH it keeps the build-succeeded-with-hint result. Once the
 // package install succeeds, it also ensures the Pi Subagents extension
 // (R-012) and links the overlay-owned agents of the package (R-013/R-014:
-// GADU.md and the role agents) so each is dispatchable as a real Pi
-// subagent, not merely a relayed persona.
+// the role agents) so each is dispatchable as a real Pi subagent, not
+// merely a relayed persona. The link of an agent the package no longer
+// ships (GADU.md, once the role agents replaced it) is removed right after
+// the build (buildPackage), whether or not `pi` is there or `pi install`
+// succeeds: the build is what leaves it pointing at a file the package
+// no longer has.
 func (a PiAdapter) Install() core.LifecycleResult {
 	if a.overlayRoot == "" {
 		return a.stub(core.ActionInstall)
 	}
-	if err := a.packages.Build(a.overlayRoot, a.registryPath, a.destDir); err != nil {
+	retired, err := a.buildPackage()
+	if err != nil {
 		return core.NewLifecycleResult(a.target, core.ActionInstall, core.CapabilityUnsupported, err.Error(), nil)
 	}
 	bin, err := a.commands.LookPath("pi")
 	if err != nil {
 		return core.NewLifecycleResult(a.target, core.ActionInstall, core.CapabilityPartial,
-			"labdrian-pi package built at "+a.destDir+"; run: pi install "+a.destDir, nil)
+			withNotes("labdrian-pi package built at "+a.destDir+"; run: pi install "+a.destDir, retired), nil)
 	}
 	if err := a.runPi(bin, "install", a.destDir); err != nil {
 		return core.NewLifecycleResult(a.target, core.ActionInstall, core.CapabilityPartial,
-			"labdrian-pi package built at "+a.destDir+" but `pi install` failed: "+err.Error(), nil)
+			withNotes("labdrian-pi package built at "+a.destDir+" but `pi install` failed: "+err.Error(), retired), nil)
 	}
 
-	notes := []string{a.installSubagents(bin)}
+	notes := append([]string{a.installSubagents(bin)}, retired...)
 	return core.NewLifecycleResult(a.target, core.ActionInstall, core.CapabilityRestartRequired,
 		"ran `pi install "+a.destDir+"`; start a new Pi session to load it. "+strings.Join(notes, " "), nil)
+}
+
+// buildPackage builds the package and, as soon as it is built, retires the overlay-owned link of
+// every agent the new package no longer ships (RetireDroppedPiAgentLinks). It returns what it told of
+// that, for the message of the caller. The package is swapped in wholesale, so from the moment the
+// build returns such a link points at nothing; retiring it here, in the one place every step of the
+// adapter that builds goes through, is what keeps it from outliving the file on a run whose
+// `pi install` never runs or fails.
+func (a PiAdapter) buildPackage() ([]string, error) {
+	if err := a.packages.Build(a.overlayRoot, a.registryPath, a.destDir); err != nil {
+		return nil, err
+	}
+	return RetireDroppedPiAgentLinks(a.home, a.destDir), nil
+}
+
+// withNotes follows the message of a step with what it told besides: the message as it is when
+// there is nothing more to tell, and otherwise a sentence of it, then the notes.
+func withNotes(message string, notes []string) string {
+	if len(notes) == 0 {
+		return message
+	}
+	if !strings.HasSuffix(message, ".") {
+		message += "."
+	}
+	return message + " " + strings.Join(notes, " ")
 }
 
 // installSubagents ensures the Pi Subagents extension and the
@@ -98,7 +128,7 @@ func (a PiAdapter) Install() core.LifecycleResult {
 func (a PiAdapter) installSubagents(bin string) string {
 	home := a.home
 	if home == "" {
-		return "GADU Pi subagent wiring skipped: cannot resolve home directory."
+		return "Pi subagent wiring skipped: cannot resolve home directory."
 	}
 
 	parts := []string{a.ensureSubagentRunner(bin, home)}
@@ -212,16 +242,19 @@ func (a PiAdapter) piPackageBuilt() bool {
 
 // build runs pipkg.Build for Update/Rollback: unsupported without an
 // overlayRoot, partial (never fabricated supported) either way otherwise —
-// a rebuild alone cannot prove Status's per-entry proof.
+// a rebuild alone cannot prove Status's per-entry proof. It retires the
+// links of the agents the rebuilt package no longer ships, as Install does
+// (buildPackage), and reaches the `pi` CLI no more than it did.
 func (a PiAdapter) build(action core.Action) core.LifecycleResult {
 	if a.overlayRoot == "" {
 		return a.stub(action)
 	}
-	if err := a.packages.Build(a.overlayRoot, a.registryPath, a.destDir); err != nil {
+	retired, err := a.buildPackage()
+	if err != nil {
 		return core.NewLifecycleResult(a.target, action, core.CapabilityPartial, err.Error(), nil)
 	}
 	return core.NewLifecycleResult(a.target, action, core.CapabilityPartial,
-		"labdrian-pi package rebuilt at "+a.destDir+"; run: pi install "+a.destDir, nil)
+		withNotes("labdrian-pi package rebuilt at "+a.destDir+"; run: pi install "+a.destDir, retired), nil)
 }
 
 // stub reports an honest CapabilityUnsupported when the action cannot run

@@ -129,8 +129,8 @@ jobs:
         working-directory: engine
         run: go run ./cmd/ skills validate --registry ../skills.registry.yaml --manifest ../overlay.manifest --source-root ../skills
 
-      # The agents of the roles and of GADU are written by engine/agentgen from roles/<role>/body.md
-      # and the persona. This fails when a committed agent file differs from what the generator writes.
+      # The role agents are written by engine/agentgen from roles/<role>/body.md.
+      # This fails when a committed agent file differs from what the generator writes.
       - name: Check generated agents
         working-directory: engine
         env:

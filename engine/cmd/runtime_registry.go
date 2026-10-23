@@ -55,7 +55,7 @@ func buildRuntimeAdapters(registry *runtimecore.Registry, targets []runtimecore.
 }
 
 // piSkipSubagentsVariable turns off the probe and the install of the Pi Subagents extension, for
-// environments that manage it separately (README, "GADU as a real Pi subagent").
+// environments that manage it separately (README, "The role agents as real Pi subagents").
 const piSkipSubagentsVariable = "LABDRIAN_PI_SKIP_SUBAGENTS"
 
 // runtimeConfigFromEnv reads the environment the runtime adapters depend on, once, and hands it

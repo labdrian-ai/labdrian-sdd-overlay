@@ -55,7 +55,7 @@ build.
 
 ### Requirement: Deterministic Contract Gate via `before_agent_start`
 
-WHEN a Pi session starts the `sdd-tasks` or `sdd-apply` agent, a
+WHEN a Pi session starts the `shaper` or `builder` agent, a
 `before_agent_start` package extension MUST inject the bare contract PATH
 LINE for each applicable contract under that contract's `injection_point`
 header into that agent's system prompt, selecting applicability from each
@@ -68,27 +68,34 @@ for that contract. The extension file MUST be discoverable by Pi's
 extension discovery under the package's `extensions/` directory, authored
 as `.ts` so it is loaded by Pi's jiti-based loader — not `.js`.
 
-#### Scenario: sdd-tasks and sdd-apply receive both contract path lines
-- GIVEN a Pi session starts the `sdd-tasks` or `sdd-apply` agent
+#### Scenario: builder receives both contract path lines
+- GIVEN a Pi session starts the `builder` agent
 - WHEN `before_agent_start` fires
 - THEN the extension returns `systemPrompt` containing the bare path line
   for the minimalism-contract and the anti-generic-design contract, each
   under its own `injection_point` header, deterministically for the same
   agent/phase input
 
+#### Scenario: shaper receives the minimalism contract path line only
+- GIVEN a Pi session starts the `shaper` agent
+- WHEN `before_agent_start` fires
+- THEN the extension returns `systemPrompt` containing the bare path line
+  for the minimalism-contract, and not for the anti-generic-design contract,
+  whose frontmatter does not name `shaper`
+
 #### Scenario: Every other agent is excluded
-- GIVEN a Pi session starts any agent other than `sdd-tasks` or `sdd-apply`
+- GIVEN a Pi session starts any agent other than `shaper` or `builder`
 - WHEN `before_agent_start` fires
 - THEN this extension returns `systemPrompt` unchanged
 
 #### Scenario: Composition with gentle-pi's own handler
-- GIVEN gentle-pi's own `before_agent_start` handler also injects into `sdd-*` agents
-- WHEN both handlers fire for `sdd-tasks` or `sdd-apply`
+- GIVEN gentle-pi's own `before_agent_start` handler also injects into the same agent
+- WHEN both handlers fire for `shaper` or `builder`
 - THEN both injections are present in the final `systemPrompt`, neither clobbering the other
 
 #### Scenario: Contract paths stay contained and malformed frontmatter yields no injection
 - GIVEN a contract's frontmatter is malformed, or would resolve a path outside the package root
-- WHEN `before_agent_start` fires for `sdd-tasks` or `sdd-apply`
+- WHEN `before_agent_start` fires for `shaper` or `builder`
 - THEN that contract is not injected
 - AND no injected path line ever resolves outside the package root
 

@@ -1,0 +1,486 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:f10c4b170e33096dc9a73001f20c8e5ab9595d62be565b4c0df2aa0fd15fd210",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-c5f49d0cd8156bab",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "373aedab8009a2027d7152f66be96b4192f140dc",
+      "candidate_tree": "9b9d1f0eaf7667e2eb6680bf06cb4391564f6749",
+      "paths_digest": "sha256:b8e0378fa2f69c1020f2239606602a3c27ea1721112e2b3e75ea640a97a4bf76",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "README.md",
+        "bin/lib/pi_package.sh",
+        "bin/lib/usage.sh",
+        "engine/cmd/pipkg.go",
+        "engine/cmd/pipkg_test.go",
+        "engine/cmd/registry_golden_package_test.go",
+        "engine/cmd/runtime_registry.go",
+        "engine/cmd/testdata/registry-golden/pipkg-build-writes-the-package-of-the-pi-skills.golden",
+        "engine/cmd/testdata/registry-golden/pipkg-refuses-an-unusable-registry.golden",
+        "engine/cmd/testdata/registry-golden/runtime-pi-refuses-an-unusable-registry.golden",
+        "engine/cmd/usage.go",
+        "engine/pipkg/build.go",
+        "engine/pipkg/comparison.go",
+        "engine/pipkg/pipkg_test.go",
+        "engine/pipkg/source_test.go",
+        "engine/runtime/pi.go",
+        "engine/runtime/pi_agent_frontmatter_test.go",
+        "engine/runtime/pi_agents.go",
+        "engine/runtime/pi_agents_link_test.go",
+        "engine/runtime/pi_agents_test.go",
+        "engine/runtime/pi_gadu_frontmatter_test.go",
+        "engine/runtime/pi_subagents.go",
+        "engine/runtime/pi_test.go",
+        "engine/shelltest/overlay_pi_package_build_test.go",
+        "engine/skills/role_agents_artifact_test.go",
+        "pi/agents/GADU.md"
+      ],
+      "identity": "sha256:b2c2e421d9a8193dc5358acdfe604cb3aca66c7d6c473d324a6458009b768aa5"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "373aedab8009a2027d7152f66be96b4192f140dc",
+      "candidate_tree": "9b9d1f0eaf7667e2eb6680bf06cb4391564f6749",
+      "paths_digest": "sha256:b8e0378fa2f69c1020f2239606602a3c27ea1721112e2b3e75ea640a97a4bf76",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "README.md",
+        "bin/lib/pi_package.sh",
+        "bin/lib/usage.sh",
+        "engine/cmd/pipkg.go",
+        "engine/cmd/pipkg_test.go",
+        "engine/cmd/registry_golden_package_test.go",
+        "engine/cmd/runtime_registry.go",
+        "engine/cmd/testdata/registry-golden/pipkg-build-writes-the-package-of-the-pi-skills.golden",
+        "engine/cmd/testdata/registry-golden/pipkg-refuses-an-unusable-registry.golden",
+        "engine/cmd/testdata/registry-golden/runtime-pi-refuses-an-unusable-registry.golden",
+        "engine/cmd/usage.go",
+        "engine/pipkg/build.go",
+        "engine/pipkg/comparison.go",
+        "engine/pipkg/pipkg_test.go",
+        "engine/pipkg/source_test.go",
+        "engine/runtime/pi.go",
+        "engine/runtime/pi_agent_frontmatter_test.go",
+        "engine/runtime/pi_agents.go",
+        "engine/runtime/pi_agents_link_test.go",
+        "engine/runtime/pi_agents_test.go",
+        "engine/runtime/pi_gadu_frontmatter_test.go",
+        "engine/runtime/pi_subagents.go",
+        "engine/runtime/pi_test.go",
+        "engine/shelltest/overlay_pi_package_build_test.go",
+        "engine/skills/role_agents_artifact_test.go",
+        "pi/agents/GADU.md"
+      ],
+      "identity": "sha256:b2c2e421d9a8193dc5358acdfe604cb3aca66c7d6c473d324a6458009b768aa5"
+    },
+    "genesis_paths": [
+      "README.md",
+      "bin/lib/pi_package.sh",
+      "bin/lib/usage.sh",
+      "engine/cmd/pipkg.go",
+      "engine/cmd/pipkg_test.go",
+      "engine/cmd/registry_golden_package_test.go",
+      "engine/cmd/runtime_registry.go",
+      "engine/cmd/testdata/registry-golden/pipkg-build-writes-the-package-of-the-pi-skills.golden",
+      "engine/cmd/testdata/registry-golden/pipkg-refuses-an-unusable-registry.golden",
+      "engine/cmd/testdata/registry-golden/runtime-pi-refuses-an-unusable-registry.golden",
+      "engine/cmd/usage.go",
+      "engine/pipkg/build.go",
+      "engine/pipkg/comparison.go",
+      "engine/pipkg/pipkg_test.go",
+      "engine/pipkg/source_test.go",
+      "engine/runtime/pi.go",
+      "engine/runtime/pi_agent_frontmatter_test.go",
+      "engine/runtime/pi_agents.go",
+      "engine/runtime/pi_agents_link_test.go",
+      "engine/runtime/pi_agents_test.go",
+      "engine/runtime/pi_gadu_frontmatter_test.go",
+      "engine/runtime/pi_subagents.go",
+      "engine/runtime/pi_test.go",
+      "engine/shelltest/overlay_pi_package_build_test.go",
+      "engine/skills/role_agents_artifact_test.go",
+      "pi/agents/GADU.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-risk",
+      "review-resilience",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 1401,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "removes overlay-owned symlinks under ~/.pi on the build, install, update and rollback paths with new failure handling when pi is absent or pi install fails, changes CLI and status output and README, and adds tests",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:73dab5807b6c57884fcf07e6df261372c99a4dd3f8fae3b70a25a38b9f9571be",
+    "capture_phase_revision": "sha256:7715a80dc27abd1657239e6783b820029d18b64e38193614da8d3739bd3db1f5",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:b2c2e421d9a8193dc5358acdfe604cb3aca66c7d6c473d324a6458009b768aa5",
+        "capture_phase_revision": "sha256:7715a80dc27abd1657239e6783b820029d18b64e38193614da8d3739bd3db1f5",
+        "artifact_digest": "sha256:8472c5941f79b6dd9422c1cea2d3c1633627cd1f826606d439336a6c148d67c9",
+        "result_hash": "sha256:b796c1c560450fbb3d1df3559b0ecd0df213f51598520b32016941eaf846ca11",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:f70a6b697d92fdb02cd7a050421b5f77f602b6f0df1df2b62b924c24e10b8d26",
+            "lineage_id": "review-c5f49d0cd8156bab",
+            "authority_revision": "sha256:7715a80dc27abd1657239e6783b820029d18b64e38193614da8d3739bd3db1f5",
+            "target_identity": "sha256:b2c2e421d9a8193dc5358acdfe604cb3aca66c7d6c473d324a6458009b768aa5",
+            "base_tree": "373aedab8009a2027d7152f66be96b4192f140dc",
+            "candidate_tree": "9b9d1f0eaf7667e2eb6680bf06cb4391564f6749",
+            "changed_path_manifest_sha256": "sha256:a612f094d941f81be70710c8057efec45254937ed4b1f4f00090d14e3731bb28",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:f70a6b697d92fdb02cd7a050421b5f77f602b6f0df1df2b62b924c24e10b8d26",
+            "raw_sha256": "sha256:ccfc41530d2a608c670c211f00e1204df0b09bfc2fe7444362759cb737ebeac8",
+            "canonical_sha256": "sha256:b1bfafa099d8cb690f458ab2150564f1c25848b619a16c16b37a37979dcb047a",
+            "result_hash": "sha256:b796c1c560450fbb3d1df3559b0ecd0df213f51598520b32016941eaf846ca11",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:f70a6b697d92fdb02cd7a050421b5f77f602b6f0df1df2b62b924c24e10b8d26",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "README.md",
+                "bin/lib/pi_package.sh",
+                "bin/lib/usage.sh",
+                "engine/cmd/pipkg.go",
+                "engine/cmd/pipkg_test.go",
+                "engine/cmd/registry_golden_package_test.go",
+                "engine/cmd/runtime_registry.go",
+                "engine/cmd/testdata/registry-golden/pipkg-build-writes-the-package-of-the-pi-skills.golden",
+                "engine/cmd/testdata/registry-golden/pipkg-refuses-an-unusable-registry.golden",
+                "engine/cmd/testdata/registry-golden/runtime-pi-refuses-an-unusable-registry.golden",
+                "engine/cmd/usage.go",
+                "engine/pipkg/build.go",
+                "engine/pipkg/comparison.go",
+                "engine/pipkg/pipkg_test.go",
+                "engine/pipkg/source_test.go",
+                "engine/runtime/pi.go",
+                "engine/runtime/pi_agent_frontmatter_test.go",
+                "engine/runtime/pi_agents.go",
+                "engine/runtime/pi_agents_link_test.go",
+                "engine/runtime/pi_agents_test.go",
+                "engine/runtime/pi_gadu_frontmatter_test.go",
+                "engine/runtime/pi_subagents.go",
+                "engine/runtime/pi_test.go",
+                "engine/shelltest/overlay_pi_package_build_test.go",
+                "engine/skills/role_agents_artifact_test.go",
+                "pi/agents/GADU.md"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "The new link removal (RetireDroppedPiAgentLinks in engine/runtime/pi_agents.go) acts only on symlinks that read back as exactly the package's own agents/\u003cfile\u003e path. That check is the same ownership proof that Uninstall already relies on. Foreign files, gentle-pi links, links into other packages and non-.md links are left alone, and the tests in engine/runtime/pi_agents_test.go and engine/cmd/pipkg_test.go cover each of these cases.",
+              "The one new reach into the home directory is `pipkg build` retiring links under ~/.pi/agent/agents. It is limited to links that point into the --dest-dir package, and `pipkg check` changes nothing (covered by TestRunPipkgCore_CheckRetiresNothing). I found no path traversal, secret exposure or injection route in the change.",
+              "Removing the fallback to the generic agents/GADU.md and deleting pi/agents/GADU.md are intended behaviour changes with no security impact. The unreadable-package-agents case is guarded: nothing is retired if the package's agents directory cannot be listed. No dependency or lockfile changes are in the candidate."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-resilience",
+        "selected_order": 1,
+        "target_identity": "sha256:b2c2e421d9a8193dc5358acdfe604cb3aca66c7d6c473d324a6458009b768aa5",
+        "capture_phase_revision": "sha256:7715a80dc27abd1657239e6783b820029d18b64e38193614da8d3739bd3db1f5",
+        "artifact_digest": "sha256:889b593b58194ac8570060a7f633b898113a089b0bdd6a861b896ebae979a73c",
+        "result_hash": "sha256:3c14a00de39647263a6a5f0dcf94e2ea415de04b3ad9bd130cfbb132b94aa92d",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:3723940cf0be1a336f827cffc98bc04584aa97e1c51cf950716c7892618ddd14",
+            "lineage_id": "review-c5f49d0cd8156bab",
+            "authority_revision": "sha256:7715a80dc27abd1657239e6783b820029d18b64e38193614da8d3739bd3db1f5",
+            "target_identity": "sha256:b2c2e421d9a8193dc5358acdfe604cb3aca66c7d6c473d324a6458009b768aa5",
+            "base_tree": "373aedab8009a2027d7152f66be96b4192f140dc",
+            "candidate_tree": "9b9d1f0eaf7667e2eb6680bf06cb4391564f6749",
+            "changed_path_manifest_sha256": "sha256:a612f094d941f81be70710c8057efec45254937ed4b1f4f00090d14e3731bb28",
+            "lens": "review-resilience",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:3723940cf0be1a336f827cffc98bc04584aa97e1c51cf950716c7892618ddd14",
+            "raw_sha256": "sha256:14daff10ccb68d5ed1c31312c5a964854e2a5a66615dbeaaaccd7159b37b19f2",
+            "canonical_sha256": "sha256:06e98d545e5997d513445fb3d84bb21bd498c4126dce1618de25c05abd6b357b",
+            "result_hash": "sha256:3c14a00de39647263a6a5f0dcf94e2ea415de04b3ad9bd130cfbb132b94aa92d",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:3723940cf0be1a336f827cffc98bc04584aa97e1c51cf950716c7892618ddd14",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "README.md",
+                "bin/lib/pi_package.sh",
+                "bin/lib/usage.sh",
+                "engine/cmd/pipkg.go",
+                "engine/cmd/pipkg_test.go",
+                "engine/cmd/registry_golden_package_test.go",
+                "engine/cmd/runtime_registry.go",
+                "engine/cmd/testdata/registry-golden/pipkg-build-writes-the-package-of-the-pi-skills.golden",
+                "engine/cmd/testdata/registry-golden/pipkg-refuses-an-unusable-registry.golden",
+                "engine/cmd/testdata/registry-golden/runtime-pi-refuses-an-unusable-registry.golden",
+                "engine/cmd/usage.go",
+                "engine/pipkg/build.go",
+                "engine/pipkg/comparison.go",
+                "engine/pipkg/pipkg_test.go",
+                "engine/pipkg/source_test.go",
+                "engine/runtime/pi.go",
+                "engine/runtime/pi_agent_frontmatter_test.go",
+                "engine/runtime/pi_agents.go",
+                "engine/runtime/pi_agents_link_test.go",
+                "engine/runtime/pi_agents_test.go",
+                "engine/runtime/pi_gadu_frontmatter_test.go",
+                "engine/runtime/pi_subagents.go",
+                "engine/runtime/pi_test.go",
+                "engine/shelltest/overlay_pi_package_build_test.go",
+                "engine/skills/role_agents_artifact_test.go",
+                "pi/agents/GADU.md"
+              ]
+            },
+            "lens": "review-resilience",
+            "findings": [],
+            "evidence": [
+              "Reviewed all 26 changed paths for resilience. Link retirement runs right after the package build in the pipkg build verb and in the adapter's Install, Update and Rollback, so it happens even when pi is absent from PATH or `pi install` fails. A stale GADU.md link therefore cannot outlive the file it pointed at.",
+              "Ownership is proven by readlink equality with the package's own agents/\u003cfile\u003e. Foreign files, gentle-pi links and links into other packages are never removed, and the new tests cover each of these cases.",
+              "Failure handling degrades safely. An empty home, an unreadable package agents directory or a failed removal retires nothing or reports a note, and the build or install result does not fail. The read-only `pipkg check` removes nothing. Status now reports an overlay-owned link that no package agent backs as stale, and reports an unlistable links directory as unproven.",
+              "The new directory listing is a single ReadDir per build, so it adds no meaningful latency or load, and I found no retry-safety problem. Re-running the build is idempotent: a second run finds no owned stale link and prints no extra output.",
+              "Removing the GADU.md fallback in copyPiAgents is a requested change. It gives an overlay with no pi/agents a package with no agents, and the tests cover this."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "selected_order": 2,
+        "target_identity": "sha256:b2c2e421d9a8193dc5358acdfe604cb3aca66c7d6c473d324a6458009b768aa5",
+        "capture_phase_revision": "sha256:7715a80dc27abd1657239e6783b820029d18b64e38193614da8d3739bd3db1f5",
+        "artifact_digest": "sha256:a3db0a2714dcb188ac986acefeb7a4e3763d0d16e2289a48840e152dac87844c",
+        "result_hash": "sha256:1e13390db9883e783bdc53604ccfbe52f0eef70cea6f2def9f877f146b3b052a",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:29673006b7dc6a07d0910fdac90007d4b9bb26a833b869eb60aceaf578f8e91e",
+            "lineage_id": "review-c5f49d0cd8156bab",
+            "authority_revision": "sha256:7715a80dc27abd1657239e6783b820029d18b64e38193614da8d3739bd3db1f5",
+            "target_identity": "sha256:b2c2e421d9a8193dc5358acdfe604cb3aca66c7d6c473d324a6458009b768aa5",
+            "base_tree": "373aedab8009a2027d7152f66be96b4192f140dc",
+            "candidate_tree": "9b9d1f0eaf7667e2eb6680bf06cb4391564f6749",
+            "changed_path_manifest_sha256": "sha256:a612f094d941f81be70710c8057efec45254937ed4b1f4f00090d14e3731bb28",
+            "lens": "review-readability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:29673006b7dc6a07d0910fdac90007d4b9bb26a833b869eb60aceaf578f8e91e",
+            "raw_sha256": "sha256:32e10ecfe0155e1d2443a5c176553f6959b8bae52b9086565b520812997026d3",
+            "canonical_sha256": "sha256:6354fbf92f1d18861e341d5f0188e2006a75648df421392efd5e37520e11f76d",
+            "result_hash": "sha256:1e13390db9883e783bdc53604ccfbe52f0eef70cea6f2def9f877f146b3b052a",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:29673006b7dc6a07d0910fdac90007d4b9bb26a833b869eb60aceaf578f8e91e",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "README.md",
+                "bin/lib/pi_package.sh",
+                "bin/lib/usage.sh",
+                "engine/cmd/pipkg.go",
+                "engine/cmd/pipkg_test.go",
+                "engine/cmd/registry_golden_package_test.go",
+                "engine/cmd/runtime_registry.go",
+                "engine/cmd/testdata/registry-golden/pipkg-build-writes-the-package-of-the-pi-skills.golden",
+                "engine/cmd/testdata/registry-golden/pipkg-refuses-an-unusable-registry.golden",
+                "engine/cmd/testdata/registry-golden/runtime-pi-refuses-an-unusable-registry.golden",
+                "engine/cmd/usage.go",
+                "engine/pipkg/build.go",
+                "engine/pipkg/comparison.go",
+                "engine/pipkg/pipkg_test.go",
+                "engine/pipkg/source_test.go",
+                "engine/runtime/pi.go",
+                "engine/runtime/pi_agent_frontmatter_test.go",
+                "engine/runtime/pi_agents.go",
+                "engine/runtime/pi_agents_link_test.go",
+                "engine/runtime/pi_agents_test.go",
+                "engine/runtime/pi_gadu_frontmatter_test.go",
+                "engine/runtime/pi_subagents.go",
+                "engine/runtime/pi_test.go",
+                "engine/shelltest/overlay_pi_package_build_test.go",
+                "engine/skills/role_agents_artifact_test.go",
+                "pi/agents/GADU.md"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-retire-dup",
+                "lens": "readability",
+                "location": "engine/runtime/pi_agents.go:312-342",
+                "severity": "SUGGESTION",
+                "claim": "RetireDroppedPiAgentLinks has an asymmetric error path: if retireAgentLinks fails, retired is nil and err is appended as a note, but the note text is built from a wrapped error and has a '.' appended, while per-link messages are formatted differently. Retirement notes are produced in two formats, which makes the output harder to follow, though behavior is correct.",
+                "proof_refs": [
+                  "engine/runtime/pi_agents.go:312-342"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Reviewed all 26 changed paths for readability.",
+              "The GADU retirement is applied consistently across code, tests, docs and golden files; the new helper (RetireDroppedPiAgentLinks) is shared by the adapter and the pipkg build verb, avoiding duplication.",
+              "Comments explain why retirement happens at build time rather than after pi install, which documents the change context well.",
+              "The gadu-generate verb name is explicitly documented as legacy in README and usage text, avoiding a misleading-name defect.",
+              "No misleading names, dead logic or unexplained constants were found that hide a concrete defect."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 3,
+        "target_identity": "sha256:b2c2e421d9a8193dc5358acdfe604cb3aca66c7d6c473d324a6458009b768aa5",
+        "capture_phase_revision": "sha256:7715a80dc27abd1657239e6783b820029d18b64e38193614da8d3739bd3db1f5",
+        "artifact_digest": "sha256:97ed4ef6499fe238de780a527e9a32a6780c4c644e2f13381137aba775bb5ff1",
+        "result_hash": "sha256:a8ccca53cd070cb8e88de35de3a85d72e69d31b3aeebbf504e2c1a966449f927",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:ff2f8794e5123a1c03c3a73550812230f64a011d89faf49912ab00cd91945f7c",
+            "lineage_id": "review-c5f49d0cd8156bab",
+            "authority_revision": "sha256:7715a80dc27abd1657239e6783b820029d18b64e38193614da8d3739bd3db1f5",
+            "target_identity": "sha256:b2c2e421d9a8193dc5358acdfe604cb3aca66c7d6c473d324a6458009b768aa5",
+            "base_tree": "373aedab8009a2027d7152f66be96b4192f140dc",
+            "candidate_tree": "9b9d1f0eaf7667e2eb6680bf06cb4391564f6749",
+            "changed_path_manifest_sha256": "sha256:a612f094d941f81be70710c8057efec45254937ed4b1f4f00090d14e3731bb28",
+            "lens": "review-reliability",
+            "selected_order": 3
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:ff2f8794e5123a1c03c3a73550812230f64a011d89faf49912ab00cd91945f7c",
+            "raw_sha256": "sha256:ca9e55403bc03c9361618f66747dd203b4bd26649fe39dcb0644cc3c5363d151",
+            "canonical_sha256": "sha256:06cf8e65f5839d04d01a736aa27f8314ff23884cf0a0d18e1ace91fa5903a404",
+            "result_hash": "sha256:a8ccca53cd070cb8e88de35de3a85d72e69d31b3aeebbf504e2c1a966449f927",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:ff2f8794e5123a1c03c3a73550812230f64a011d89faf49912ab00cd91945f7c",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "README.md",
+                "bin/lib/pi_package.sh",
+                "bin/lib/usage.sh",
+                "engine/cmd/pipkg.go",
+                "engine/cmd/pipkg_test.go",
+                "engine/cmd/registry_golden_package_test.go",
+                "engine/cmd/runtime_registry.go",
+                "engine/cmd/testdata/registry-golden/pipkg-build-writes-the-package-of-the-pi-skills.golden",
+                "engine/cmd/testdata/registry-golden/pipkg-refuses-an-unusable-registry.golden",
+                "engine/cmd/testdata/registry-golden/runtime-pi-refuses-an-unusable-registry.golden",
+                "engine/cmd/usage.go",
+                "engine/pipkg/build.go",
+                "engine/pipkg/comparison.go",
+                "engine/pipkg/pipkg_test.go",
+                "engine/pipkg/source_test.go",
+                "engine/runtime/pi.go",
+                "engine/runtime/pi_agent_frontmatter_test.go",
+                "engine/runtime/pi_agents.go",
+                "engine/runtime/pi_agents_link_test.go",
+                "engine/runtime/pi_agents_test.go",
+                "engine/runtime/pi_gadu_frontmatter_test.go",
+                "engine/runtime/pi_subagents.go",
+                "engine/runtime/pi_test.go",
+                "engine/shelltest/overlay_pi_package_build_test.go",
+                "engine/skills/role_agents_artifact_test.go",
+                "pi/agents/GADU.md"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-pipkg-build-uses-home-env",
+                "lens": "reliability",
+                "location": "engine/cmd/pipkg.go:92-94",
+                "severity": "WARNING",
+                "claim": "pipkg build now retires links under the home from runtimeConfigFromEnv, a side effect outside --dest-dir. Only symlinks that read back as the package's own agents/\u003cfile\u003e are removed, so the blast radius is small. The home comes from the environment, though, not from a flag. A build run with a different HOME, such as a CI sandbox, silently looks at another home. This is covered by tests for the HOME-set and HOME-empty cases, but nothing proves that an explicit dest-dir outside the state dir leaves a real home alone.",
+                "proof_refs": [
+                  "engine/cmd/pipkg_test.go:300-322",
+                  "engine/runtime/pi_agents.go:312-342"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Reviewed all 26 manifest paths in the patch.",
+              "Removing the GADU fallback in copyPiAgents is tested by the pipkg tests: a Pi file is shipped, the Claude file is never shipped, and no pi/agents gives an empty package.",
+              "RetireDroppedPiAgentLinks is exercised through the adapter's Install without pi on PATH, Install with a failing pi install, Update and Rollback, the pipkg build command, the shell helper, and Status. The tests cover foreign files, foreign links, non-.md links, unreadable directories and the unreadable-package-agents case. Retirement is skipped when the package agents cannot be listed.",
+              "Retirement requires readlink equality with the package's own path, so foreign files and links are left alone. Failures are reported in the message and do not fail the build.",
+              "Status now reports a stale owned link and an unlistable agents directory as partial. Golden files are updated consistently.",
+              "No blocking reliability regression found."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "b888e1d61074d939109fc36f49d30433a2bcfe8b3084048f356814595d3812e8",
+    "initial_atomic_start": {
+      "lineage_id": "review-c5f49d0cd8156bab",
+      "worktree_identity": "sha256:a26094a444aa5f4d8bd10c4d96c63d093c931e7c28f85039edb12e257c3128b4",
+      "target_identity": "sha256:b2c2e421d9a8193dc5358acdfe604cb3aca66c7d6c473d324a6458009b768aa5",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "373aedab8009a2027d7152f66be96b4192f140dc",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "high",
+      "selected_lenses": [
+        "review-risk",
+        "review-resilience",
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 1401,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "removes overlay-owned symlinks under ~/.pi on the build, install, update and rollback paths with new failure handling when pi is absent or pi install fails, changes CLI and status output and README, and adds tests"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

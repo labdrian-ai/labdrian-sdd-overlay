@@ -228,7 +228,7 @@ func TestCompareExportsTheDeployRefAndNamesItsTip(t *testing.T) {
 
 func TestCompareExportsThePiPathOnlyWhenTheCommitHasIt(t *testing.T) {
 	overlayRoot, registryPath := fixtureOverlay(t)
-	writeFile(t, filepath.Join(overlayRoot, "pi", "agents", "GADU.md"), "---\nname: GADU\n---\npi\n")
+	writeFile(t, filepath.Join(overlayRoot, "pi", "agents", "builder.md"), "---\nname: builder\n---\npi\n")
 	repo := deployingRepo(t, overlayRoot)
 	repo.paths = map[string]bool{"pi": true}
 	destDir := filepath.Join(t.TempDir(), "labdrian-pi")

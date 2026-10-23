@@ -65,8 +65,8 @@ var wantRoles = []wantRole{
 		"haiku", deliveryClaudeTools, piHaiku, "read, edit, write, find, bash, mem_search, mem_get_observation, mem_save, codegraph", "low", true},
 }
 
-// seededRoot is a root with the role sources of this repository under roles/ and nothing else: what
-// Generate and Check read besides the persona that is part of the generator.
+// seededRoot is a root with the role sources of this repository under roles/ and nothing else: all
+// that Generate and Check read.
 func seededRoot(t *testing.T) string {
 	t.Helper()
 	root := t.TempDir()
@@ -116,16 +116,6 @@ func wantBody(t *testing.T, root string, r wantRole) string {
 		t.Fatalf("roles/%s/body.md must carry the Engram line of the core prefix exactly once", r.name)
 	}
 	return strings.Replace(source, engramLine+"\n", "", 1)
-}
-
-// tableOf is the table of what the generator emits for the root of seededRoot.
-func tableOf(t *testing.T) []agentgen.Artifact {
-	t.Helper()
-	table, err := agentgen.Artifacts(seededRoot(t))
-	if err != nil {
-		t.Fatalf("Artifacts: %v", err)
-	}
-	return table
 }
 
 // generated is a root with the role sources, after Generate has written everything from them.

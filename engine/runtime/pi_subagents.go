@@ -5,9 +5,9 @@ import (
 	"strings"
 )
 
-// The Pi Subagents runner: which package makes GADU dispatchable as a Pi subagent, how the
-// adapter tells gentle-pi's native subagent tools (>= 2.6.0) from the legacy extension, and what
-// it installs, or refuses to, so the two never end up side by side.
+// The Pi Subagents runner: which package makes the agents of the overlay dispatchable as Pi
+// subagents, how the adapter tells gentle-pi's native subagent tools (>= 2.6.0) from the legacy
+// extension, and what it installs, or refuses to, so the two never end up side by side.
 
 // subagentsExtensionPackage is the fixed argv target R-012 installs when
 // neither accepted package is already present.
@@ -43,7 +43,7 @@ func (a PiAdapter) ensureSubagentsExtension(bin string, settings piSettings) str
 	if settings.listsSubagentsExtension() {
 		return "Pi Subagents extension already installed."
 	}
-	disclosure := "installing third-party Pi extension pi-subagents-j0k3r (npm) required for GADU dispatch."
+	disclosure := "installing third-party Pi extension pi-subagents-j0k3r (npm) required for Pi subagent dispatch."
 	if err := a.runPi(bin, "install", subagentsExtensionPackage); err != nil {
 		return disclosure + " `pi install " + subagentsExtensionPackage + "` failed: " + err.Error() + "."
 	}
@@ -121,7 +121,7 @@ const (
 	subagentRunnerAbsent   subagentRunner = "absent"
 )
 
-// ensureSubagentRunner decides GADU's Pi dispatch runner at install time
+// ensureSubagentRunner decides the Pi dispatch runner of the agents at install time
 // (R-012 revised): when gentle-pi's native subagent_* tools are available
 // (>= 2.6.0), the obsolete pi-subagents-j0k3r/pi-subagents extension is
 // NEVER installed -- installing it would leave gentle-pi's native tools

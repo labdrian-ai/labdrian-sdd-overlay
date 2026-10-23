@@ -19,8 +19,9 @@ import (
 var fileRegistries = registryyaml.NewRepository(os.ReadFile)
 
 // fixtureOverlay builds a minimal overlay tree: two skills (one targeted at
-// pi, one not), an agents/GADU.md, and a matching skills.registry.yaml.
-// Returns the overlay root and the registry path.
+// pi, one not), a Claude agent file agents/builder.md (which the package
+// never ships: its agents are the pi/agents of the overlay), and a matching
+// skills.registry.yaml. Returns the overlay root and the registry path.
 func fixtureOverlay(t *testing.T) (overlayRoot, registryPath string) {
 	t.Helper()
 	root := t.TempDir()
@@ -28,7 +29,7 @@ func fixtureOverlay(t *testing.T) (overlayRoot, registryPath string) {
 	writeFile(t, filepath.Join(root, "skills", "pi-skill", "SKILL.md"), "---\nname: pi-skill\n---\nbody\n")
 	writeFile(t, filepath.Join(root, "skills", "pi-skill", "references", "notes.md"), "notes\n")
 	writeFile(t, filepath.Join(root, "skills", "other-skill", "SKILL.md"), "---\nname: other-skill\n---\nbody\n")
-	writeFile(t, filepath.Join(root, "agents", "GADU.md"), "---\nname: GADU\n---\nbody\n")
+	writeFile(t, filepath.Join(root, "agents", "builder.md"), "---\nname: builder\n---\nclaude body\n")
 	writeFile(t, filepath.Join(root, "skills", "_shared", "minimalism-contract.md"),
 		"---\napplies_to_phases: [sdd-tasks, sdd-apply]\nexcluded_phases: [sdd-verify]\ninjection_point: \"## Skills to load before work\"\n---\nbody\n")
 	writeFile(t, filepath.Join(root, "skills", "_shared", "anti-generic-design.md"),
@@ -74,63 +75,59 @@ func writeFile(t *testing.T, path, content string) {
 	}
 }
 
-// TestPipkgBuild_PrefersPiAgentVariant (gadu-pi-subagent R-014 follow-up):
-// the built package's agents/GADU.md is copied from overlayRoot's
-// pi/agents/GADU.md when present, and falls back to overlayRoot's generic
-// agents/GADU.md when it is absent (an older checkout).
-func TestPipkgBuild_PrefersPiAgentVariant(t *testing.T) {
-	t.Run("prefers pi/agents/GADU.md when present", func(t *testing.T) {
+// TestPipkgBuild_ShipsThePiVariantOfAnAgentAndNeverTheClaudeFile: the built package's agents/ holds
+// the files of overlayRoot's pi/agents and nothing else. The Claude file of the same agent
+// (agents/<name>.md) is not shipped in its place, and the generic agents/GADU.md that an older
+// checkout shipped for want of a pi/agents/GADU.md is not a fallback any more: PR 5 of the role
+// design retired GADU, so a checkout with no Pi agent for a name has no such agent in the package.
+func TestPipkgBuild_ShipsThePiVariantOfAnAgentAndNeverTheClaudeFile(t *testing.T) {
+	t.Run("the Pi file of an agent is the one shipped", func(t *testing.T) {
 		overlayRoot, registryPath := fixtureOverlay(t)
-		writeFile(t, filepath.Join(overlayRoot, "pi", "agents", "GADU.md"), "---\nname: GADU\nmodel: pi-claude-cli/claude-sonnet-5\n---\npi body\n")
+		writeFile(t, filepath.Join(overlayRoot, "pi", "agents", "builder.md"), "---\nname: builder\nmodel: pi-claude-cli/claude-sonnet-5\n---\npi body\n")
 		destDir := filepath.Join(t.TempDir(), "labdrian-pi")
 
 		if err := packagesOf(fileRegistries).Build(overlayRoot, registryPath, destDir); err != nil {
 			t.Fatalf("Build: %v", err)
 		}
 
-		got, err := os.ReadFile(filepath.Join(destDir, "agents", "GADU.md"))
+		got, err := os.ReadFile(filepath.Join(destDir, "agents", "builder.md"))
 		if err != nil {
-			t.Fatalf("read built agents/GADU.md: %v", err)
+			t.Fatalf("read built agents/builder.md: %v", err)
 		}
-		want, err := os.ReadFile(filepath.Join(overlayRoot, "pi", "agents", "GADU.md"))
+		want, err := os.ReadFile(filepath.Join(overlayRoot, "pi", "agents", "builder.md"))
 		if err != nil {
-			t.Fatalf("read overlay pi/agents/GADU.md: %v", err)
+			t.Fatalf("read overlay pi/agents/builder.md: %v", err)
 		}
 		if string(got) != string(want) {
-			t.Errorf("built agents/GADU.md = %q, want the pi/agents/GADU.md content %q", got, want)
+			t.Errorf("built agents/builder.md = %q, want the pi/agents/builder.md content %q", got, want)
 		}
 	})
 
-	t.Run("falls back to agents/GADU.md when pi variant absent", func(t *testing.T) {
+	t.Run("an agents/GADU.md and no pi/agents ships no GADU", func(t *testing.T) {
 		overlayRoot, registryPath := fixtureOverlay(t)
+		writeFile(t, filepath.Join(overlayRoot, "agents", "GADU.md"), "---\nname: GADU\n---\nbody\n")
 		destDir := filepath.Join(t.TempDir(), "labdrian-pi")
 
 		if err := packagesOf(fileRegistries).Build(overlayRoot, registryPath, destDir); err != nil {
 			t.Fatalf("Build: %v", err)
 		}
 
-		got, err := os.ReadFile(filepath.Join(destDir, "agents", "GADU.md"))
+		entries, err := os.ReadDir(filepath.Join(destDir, "agents"))
 		if err != nil {
-			t.Fatalf("read built agents/GADU.md: %v", err)
+			t.Fatalf("read the agents of the package: %v", err)
 		}
-		want, err := os.ReadFile(filepath.Join(overlayRoot, "agents", "GADU.md"))
-		if err != nil {
-			t.Fatalf("read overlay agents/GADU.md: %v", err)
-		}
-		if string(got) != string(want) {
-			t.Errorf("built agents/GADU.md = %q, want the fallback agents/GADU.md content %q", got, want)
+		for _, entry := range entries {
+			t.Errorf("the package ships agents/%s although the overlay has no pi/agents", entry.Name())
 		}
 	})
 }
 
 // TestPipkgBuild_CopiesEveryPiAgentOfTheOverlay (slice 4 of the role agents): the agents/ of the
 // built package holds every pi/agents/*.md of the overlay, the role agents engine/agentgen
-// generates and GADU alike, each under its own name and byte for byte. Only the Markdown files of
-// the directory itself are agents. GADU keeps its fallback to agents/GADU.md for a checkout whose
-// pi/agents has none, and the fallback does not stop the role agents from being copied.
+// generates, each under its own name and byte for byte. Only the Markdown files of the directory
+// itself are agents. A checkout with no pi/agents builds a package with no agent.
 func TestPipkgBuild_CopiesEveryPiAgentOfTheOverlay(t *testing.T) {
 	const (
-		gadu     = "---\nname: GADU\nmodel: pi-claude-cli/claude-sonnet-5\n---\npi body\n"
 		builder  = "---\nname: builder\nmodel: pi-claude-cli/claude-sonnet-5\nthinking: high\ntools: read, edit\n---\n\nbuilder body\n"
 		reviewer = "---\nname: reviewer\nmodel: pi-claude-cli/claude-sonnet-5\nthinking: high\ntools: read, grep, find\n---\n\nreviewer body\n"
 	)
@@ -139,14 +136,11 @@ func TestPipkgBuild_CopiesEveryPiAgentOfTheOverlay(t *testing.T) {
 		piAgents map[string]string // the files of pi/agents of the overlay
 		want     map[string]string // the files of agents/ of the package
 	}{
-		{"the role agents and GADU", map[string]string{"GADU.md": gadu, "builder.md": builder, "reviewer.md": reviewer},
-			map[string]string{"GADU.md": gadu, "builder.md": builder, "reviewer.md": reviewer}},
-		{"GADU falls back to agents/GADU.md and the role agents are copied", map[string]string{"builder.md": builder},
-			map[string]string{"GADU.md": "---\nname: GADU\n---\nbody\n", "builder.md": builder}},
-		{"only the Markdown files of the directory itself", map[string]string{"GADU.md": gadu, "builder.md": builder, "notes.txt": "n\n", "team/reviewer.md": reviewer},
-			map[string]string{"GADU.md": gadu, "builder.md": builder}},
-		{"no pi/agents at all is the GADU of the generic agents", nil,
-			map[string]string{"GADU.md": "---\nname: GADU\n---\nbody\n"}},
+		{"the role agents", map[string]string{"builder.md": builder, "reviewer.md": reviewer},
+			map[string]string{"builder.md": builder, "reviewer.md": reviewer}},
+		{"only the Markdown files of the directory itself", map[string]string{"builder.md": builder, "notes.txt": "n\n", "team/reviewer.md": reviewer},
+			map[string]string{"builder.md": builder}},
+		{"no pi/agents at all is a package with no agent", nil, map[string]string{}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			overlayRoot, registryPath := fixtureOverlay(t)
@@ -197,8 +191,8 @@ func TestPipkgBuild_SelectsPiTargetedSkills(t *testing.T) {
 		t.Error("other-skill must NOT be built (install.targets excludes pi)")
 	}
 
-	if _, err := os.Stat(filepath.Join(destDir, "agents", "GADU.md")); err != nil {
-		t.Errorf("expected agents/GADU.md to be built: %v", err)
+	if _, err := os.Stat(filepath.Join(destDir, "agents")); err != nil {
+		t.Errorf("expected the agents directory to be built: %v", err)
 	}
 
 	raw, err := os.ReadFile(filepath.Join(destDir, "package.json"))

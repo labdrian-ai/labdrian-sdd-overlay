@@ -162,7 +162,7 @@ func (p Packages) exportGitTree(overlayRoot, rev string) (string, func(), error)
 	cleanup := func() { os.RemoveAll(tmp) }
 
 	paths := []string{"skills", "agents", "skills.registry.yaml"}
-	// "pi" (pi/agents/*.md, the agents copyPiAgents prefers) is
+	// "pi" (pi/agents/*.md, the agents copyPiAgents ships) is
 	// a newer addition to the tree: a git-archive pathspec that matches no
 	// files at rev makes the whole archive command fail, so only include it
 	// when rev actually has that path -- otherwise comparing against a

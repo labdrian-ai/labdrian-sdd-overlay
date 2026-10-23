@@ -3,7 +3,7 @@
 // extensions/ directory and discovered by Pi's jiti-based extension loader
 // (never as plain .js -- see design.md A5). It mirrors engine/gate/gate.go
 // and the OpenCode plugin (labdrian-runtime-parity-plugin.mjs): on
-// before_agent_start for the sdd-tasks/sdd-apply agents only, it injects the
+// before_agent_start for the agents of AGENT_NAMES only, it injects the
 // bare contract PATH LINE for every applicable managed contract, under that
 // contract's injection_point header, read from the contract's own
 // frontmatter with a strict inline-list parse. It never throws -- any
@@ -25,9 +25,14 @@ import { homedir } from "node:os";
 import { dirname, isAbsolute, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
-// PHASE_NAMES is the exhaustive set of agents this gate ever touches. Every
-// other agent name (or no name at all) is a strict no-op.
-const PHASE_NAMES = ["sdd-tasks", "sdd-apply"];
+// AGENT_NAMES is the exhaustive set of agents this gate ever touches (it was
+// PHASE_NAMES while it named only sdd-* phases). Every
+// other agent name (or no name at all) is a strict no-op. shaper and builder
+// are the role agents that took over from the deleted sdd-tasks/sdd-apply
+// agents; each contract's own frontmatter still decides what it gets, so a
+// contract added to the package later reaches these agents only if its
+// frontmatter names them.
+const AGENT_NAMES = ["shaper", "builder"];
 
 // CONTRACT_RELATIVE_PATHS are package-root-relative paths to the managed
 // contracts this build ships under skills/_shared/ (mirrors pipkg.go's
@@ -70,8 +75,8 @@ function readAgentStartNames(event) {
     .filter((value) => value.length > 0);
 }
 
-function phaseFromNames(names) {
-  return names.find((name) => PHASE_NAMES.includes(name));
+function agentFromNames(names) {
+  return names.find((name) => AGENT_NAMES.includes(name));
 }
 
 // resolveContractPath joins root with relPath and returns the resolved
@@ -179,14 +184,14 @@ function resolvePackageRoot() {
 }
 
 // injectContractsForEvent applies every managed contract to event, returning
-// {} (no-op) for any agent other than sdd-tasks/sdd-apply, and
+// {} (no-op) for any agent not in AGENT_NAMES, and
 // {systemPrompt} composed on top of event.systemPrompt otherwise. Never
 // throws: a contract file that is missing, unreadable, path-uncontained, or
 // carries malformed frontmatter is silently skipped (R-004/F1), never
 // aborting the other contracts.
 export function injectContractsForEvent(event, packageRoot) {
-  const phase = phaseFromNames(readAgentStartNames(event));
-  if (!phase) return {};
+  const agent = agentFromNames(readAgentStartNames(event));
+  if (!agent) return {};
 
   const root = packageRoot ?? resolvePackageRoot();
   let prompt = typeof event?.systemPrompt === "string" ? event.systemPrompt : "";
@@ -204,8 +209,8 @@ export function injectContractsForEvent(event, packageRoot) {
 
     const meta = parseFrontmatter(raw);
     if (!meta) continue;
-    if (meta.excluded.includes(phase)) continue;
-    if (!meta.appliesTo.includes(phase)) continue;
+    if (meta.excluded.includes(agent)) continue;
+    if (!meta.appliesTo.includes(agent)) continue;
 
     const header = meta.injectionPoint || DEFAULT_INJECTION_HEADER;
     prompt = injectContractLine(prompt, absPath, header);

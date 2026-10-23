@@ -48,7 +48,7 @@ Public/contextual comments follow the target context language by default. Explic
 
 ## Execution Steps
 
-1. Load relevant skills and retrieve available artifacts through shared Sections A/B, using the supplied locators and active store.
+1. Read the skills your launch prompt lists under `## Skills to load before work` and retrieve available artifacts through shared Section B, using the supplied locators and active store.
 2. Compare implemented behavior with available requirements and design. Record task completion as observed; do not rewrite checkboxes.
 3. Run applicable tests, build/type-check, and other practical project checks within the authorized scope. Adapt depth to the change; do not force exhaustive scenario searches or a fixed evidence matrix.
 4. Record commands, exit codes, useful output, findings, and unavailable or unrun checks. Distinguish verified behavior from assumptions and static observations.
@@ -62,4 +62,4 @@ Return concise findings, observed task state, executed checks and their outcomes
 
 - [references/report-format.md](references/report-format.md) — optional report outline.
 - [strict-tdd-verify.md](strict-tdd-verify.md) — only when Strict TDD is active.
-- `../_shared/sdd-phase-common.md` — skill loading, retrieval, persistence, and return envelope.
+- `../_shared/sdd-phase-common.md` — retrieval, persistence, and return envelope.
