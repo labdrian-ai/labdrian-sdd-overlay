@@ -249,6 +249,42 @@ func TestPiAdapter_UninstallRemovesEveryOwnedAgentLinkAndOnlyThose(t *testing.T)
 	assertMessageHasOnce(t, result.Message, "builder link: "+builderPath+" is not the overlay-owned symlink; leaving it untouched.")
 }
 
+// Uninstall finds the overlay's links in the home, not only in the package: when the package's
+// agents/ directory is gone (or a rebuild dropped an agent), every link that still points into it is
+// the overlay's and is removed, as the fixed-name GADU.md link always was.
+func TestPiAdapter_UninstallRemovesOwnedLinksWhenThePackageAgentsAreGone(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	overlayRoot, registryPath := piFixtureOverlayWithAgents(t, map[string]string{
+		"builder.md":  piRoleAgentSource("builder"),
+		"reviewer.md": piRoleAgentSource("reviewer"),
+	})
+	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
+	buildPiPackage(t, overlayRoot, registryPath, destDir)
+	adapter := newPiAdapterAt(t, overlayRoot, registryPath, destDir)
+	if result := adapter.Install(); result.Status == core.CapabilityUnsupported {
+		t.Fatalf("Install must not be unsupported, got: %s", result)
+	}
+	if err := os.RemoveAll(filepath.Join(destDir, "agents")); err != nil {
+		t.Fatal(err)
+	}
+	otherPath := agentLinkPathIn(home, "some-managed-agent.md")
+	mustWrite(t, otherPath, "gentle-pi's own agent\n")
+
+	result := adapter.Uninstall()
+	if result.Status != core.CapabilitySupported {
+		t.Fatalf("Uninstall = %s, want supported", result)
+	}
+	for _, file := range []string{"GADU.md", "builder.md", "reviewer.md"} {
+		assertAgentNotLinked(t, home, file)
+		assertMessageHasOnce(t, result.Message, file+" link removed.")
+	}
+	assertFileUnchanged(t, otherPath, []byte("gentle-pi's own agent\n"))
+	if strings.Contains(result.Message, "cannot be read") {
+		t.Errorf("Uninstall must not fail on the missing package agents: %s", result.Message)
+	}
+}
+
 // The agents this overlay really ships pass what Install checks of them: every pi/agents file of
 // the repository, GADU and the roles, becomes a link, and none is refused for its frontmatter.
 func TestPiAdapter_InstallLinksTheAgentsOfThisOverlay(t *testing.T) {

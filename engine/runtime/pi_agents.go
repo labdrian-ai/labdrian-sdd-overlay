@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
@@ -43,7 +44,8 @@ func packageAgents(destDir string) ([]string, error) {
 }
 
 // agentLabel names an agent file in the messages about it: its name without the extension, in lower
-// case ("gadu" for GADU.md).
+// case. GADU.md becomes "gadu", which keeps the "gadu link: ..." and "gadu frontmatter: ..." wording
+// GADU's messages had before the role agents joined it.
 func agentLabel(file string) string {
 	return strings.ToLower(strings.TrimSuffix(file, filepath.Ext(file)))
 }
@@ -193,18 +195,51 @@ func linkAgent(home, destDir, file string) error {
 // unlinkPackageAgents removes the link of every agent of the package from ~/.pi/agent/agents ONLY
 // when it is the overlay-owned symlink (Readlink equality against destDir's agents/<file>). Never
 // touches a conflicting entry or any other file in that directory, and never removes the Subagents
-// extension package itself (R-016). It returns what became of each agent, in the order of their
-// names; the error is for a package whose agents cannot be listed at all.
+// extension package itself (R-016). The agents are those of the package plus every link of the home
+// that still points into the package's agents/ -- so a link whose source is gone (the package's
+// agents/ removed, or an agent a rebuild dropped) is removed too. It returns what became of each
+// agent, in the order of their names; the error is for agents that cannot be listed from either side.
 func unlinkPackageAgents(home, destDir string) ([]agentLinkResult, error) {
-	files, err := packageAgents(destDir)
-	if err != nil {
-		return nil, fmt.Errorf("agents link: the package agents cannot be read at %s: %w", filepath.Join(destDir, "agents"), err)
+	files, packageErr := packageAgents(destDir)
+	owned, linksErr := ownedAgentLinks(home, destDir)
+	if packageErr != nil && linksErr != nil {
+		return nil, fmt.Errorf("agents link: the package agents cannot be read at %s: %w", filepath.Join(destDir, "agents"), packageErr)
 	}
+	for _, file := range owned {
+		if !slices.Contains(files, file) {
+			files = append(files, file)
+		}
+	}
+	slices.Sort(files)
 	results := make([]agentLinkResult, 0, len(files))
 	for _, file := range files {
 		results = append(results, agentLinkResult{File: file, Err: unlinkAgent(home, destDir, file)})
 	}
 	return results, nil
+}
+
+// ownedAgentLinks lists the files of ~/.pi/agent/agents that are the overlay-owned symlink of an
+// agent of the package (Readlink equality against destDir's agents/<file>), whether or not that
+// agent is still in the package. A home with no agents directory has none.
+func ownedAgentLinks(home, destDir string) ([]string, error) {
+	entries, err := os.ReadDir(agentLinkPath(home, ""))
+	if errors.Is(err, os.ErrNotExist) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	var files []string
+	for _, entry := range entries {
+		file := entry.Name()
+		if entry.Type()&os.ModeSymlink == 0 || filepath.Ext(file) != ".md" {
+			continue
+		}
+		if state := agentLinkState(agentLinkPath(home, file), agentSourcePath(destDir, file)); state != agentLinkConflict && state != agentLinkMissing {
+			files = append(files, file)
+		}
+	}
+	return files, nil
 }
 
 // unlinkAgent removes the link of the one agent file of the package: the rules of
