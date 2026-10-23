@@ -172,8 +172,8 @@ func TestPipkgStatusAndReport_DelegatesHonestPartialThenSupported(t *testing.T) 
 		t.Fatalf("mkdir settings.json dir: %v", err)
 	}
 	// Also simulate the Pi Subagents extension already being installed and
-	// the GADU.md link already existing (R-012/R-013 -- two more owned
-	// entries PiAdapter.Status() now proves, see
+	// the links of the package's agents already existing (R-012/R-013 -- two
+	// more owned entries PiAdapter.Status() now proves, see
 	// TestPiAdapter_StatusTriangulatesAllOwnedEntries for the unit-level
 	// equivalent).
 	settingsJSON := `{"packages": ["` + destDir + `", "npm:pi-subagents-j0k3r"]}`
@@ -184,12 +184,22 @@ func TestPipkgStatusAndReport_DelegatesHonestPartialThenSupported(t *testing.T) 
 	if err := os.WriteFile(filepath.Join(destDir, "mcp.json"), []byte(mcpJSON), 0644); err != nil {
 		t.Fatalf("write mcp.json: %v", err)
 	}
-	gaduLinkPath := filepath.Join(home, ".pi", "agent", "agents", "GADU.md")
-	if err := os.MkdirAll(filepath.Dir(gaduLinkPath), 0755); err != nil {
-		t.Fatalf("mkdir gadu link dir: %v", err)
+	// Every agent of the package is linked, as `apply` leaves them: GADU.md and the role agents.
+	agents, err := os.ReadDir(filepath.Join(destDir, "agents"))
+	if err != nil {
+		t.Fatalf("read the agents of the package: %v", err)
 	}
-	if err := os.Symlink(filepath.Join(destDir, "agents", "GADU.md"), gaduLinkPath); err != nil {
-		t.Fatalf("symlink gadu link: %v", err)
+	if len(agents) == 0 {
+		t.Fatal("the package has no agent to link")
+	}
+	for _, agent := range agents {
+		linkPath := filepath.Join(home, ".pi", "agent", "agents", agent.Name())
+		if err := os.MkdirAll(filepath.Dir(linkPath), 0755); err != nil {
+			t.Fatalf("mkdir agent link dir: %v", err)
+		}
+		if err := os.Symlink(filepath.Join(destDir, "agents", agent.Name()), linkPath); err != nil {
+			t.Fatalf("symlink the link of %s: %v", agent.Name(), err)
+		}
 	}
 
 	// Now every owned entry is proven: supported.

@@ -152,6 +152,14 @@ sweeper.md               custom   agent
 delivery.md              custom   agent
 reviewer.md              custom   agent
 verifier.md              custom   agent
+codex/agents/builder.toml    custom   codex-agent
+codex/agents/shaper.toml     custom   codex-agent
+codex/agents/polisher.toml   custom   codex-agent
+codex/agents/prototyper.toml custom   codex-agent
+codex/agents/sweeper.toml    custom   codex-agent
+codex/agents/delivery.toml   custom   codex-agent
+codex/agents/reviewer.toml   custom   codex-agent
+codex/agents/verifier.toml   custom   codex-agent
 sdd-apply.md managed agent
 sdd-archive.md managed agent
 sdd-design.md managed agent

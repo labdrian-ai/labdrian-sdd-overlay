@@ -65,6 +65,92 @@ func TestApply_AgentsLandInNativeAgentDirs(t *testing.T) {
 	}
 }
 
+// TestCodexAgentsLandInTheAgentsDirectoryOfCodexAndNowhereElse asserts, for a manifest that has an
+// agent of Claude Code and an agent of Codex (slice 4 of the role agents), that:
+//   - apply --target codex copies codex/agents/builder.toml to $HOME/.codex/agents/builder.toml,
+//     byte for byte, and puts nothing else there (the agent of Claude Code is not copied to Codex);
+//   - apply --target claude copies the agent of Claude Code to $HOME/.claude/agents/ and not the one of
+//     Codex;
+//   - sync-check --target codex reports the deployed agent IN_SYNC, reports it OVERLAY_NOT_DEPLOYED
+//     once removed, and a reapply restores it.
+func TestCodexAgentsLandInTheAgentsDirectoryOfCodexAndNowhereElse(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in -short mode")
+	}
+
+	overlay := overlaytest.Script(t)
+	home := t.TempDir()
+	const codexAgent = "name = \"builder\"\ndescription = \"A test agent.\"\ndeveloper_instructions = \"\"\"\nBody.\n\"\"\"\nmodel_reasoning_effort = \"high\"\n"
+	_, env := overlaytest.NewOverlay(t, home, map[string]string{
+		"overlay.manifest": "test-skill/SKILL.md   managed\n" +
+			"GADU.md   custom   agent\n" +
+			"codex/agents/builder.toml   custom   codex-agent\n",
+		"skills/test-skill/SKILL.md": "# overlay skill\n",
+		"agents/GADU.md":             "---\nname: GADU\n---\n# overlay agent\n",
+		"codex/agents/builder.toml":  codexAgent,
+	})
+
+	if out, err := overlaytest.Combined(t, overlay, env, "", "apply", "--target", "codex"); err != nil {
+		t.Fatalf("overlay apply --target codex: %v\noutput:\n%s", err, out)
+	}
+	deployed := filepath.Join(home, ".codex", "agents", "builder.toml")
+	got, err := os.ReadFile(deployed)
+	if err != nil {
+		t.Fatalf("the agent of Codex was not deployed: %v", err)
+	}
+	if string(got) != codexAgent {
+		t.Errorf("deployed agent of Codex = %q, want the source byte for byte: %q", got, codexAgent)
+	}
+	assertOnlyEntries(t, filepath.Join(home, ".codex", "agents"), "builder.toml")
+	if _, err := os.Stat(filepath.Join(home, ".claude", "agents")); err == nil {
+		t.Error("apply --target codex wrote into the agents directory of Claude Code")
+	}
+
+	if out, err := overlaytest.Combined(t, overlay, env, "", "apply", "--target", "claude"); err != nil {
+		t.Fatalf("overlay apply --target claude: %v\noutput:\n%s", err, out)
+	}
+	assertOnlyEntries(t, filepath.Join(home, ".claude", "agents"), "GADU.md")
+
+	inSync, err := overlaytest.Combined(t, overlay, env, "", "sync-check", "--target", "codex")
+	if err != nil {
+		t.Fatalf("overlay sync-check --target codex: %v\noutput:\n%s", err, inSync)
+	}
+	if strings.Contains(inSync, "OVERLAY_NOT_DEPLOYED: ") || !strings.Contains(inSync, "IN_SYNC") {
+		t.Errorf("sync-check of a deployed agent of Codex should say IN_SYNC and name none as not deployed\noutput:\n%s", inSync)
+	}
+
+	if err := os.Remove(deployed); err != nil {
+		t.Fatal(err)
+	}
+	missing, _ := overlaytest.Combined(t, overlay, env, "", "sync-check", "--target", "codex")
+	if !strings.Contains(missing, "OVERLAY_NOT_DEPLOYED: codex/agents/builder.toml") {
+		t.Errorf("sync-check should name the removed agent of Codex as not deployed\noutput:\n%s", missing)
+	}
+
+	if out, err := overlaytest.Combined(t, overlay, env, "", "apply", "--target", "codex"); err != nil {
+		t.Fatalf("overlay apply --target codex (reapply): %v\noutput:\n%s", err, out)
+	}
+	if restored, err := os.ReadFile(deployed); err != nil || string(restored) != codexAgent {
+		t.Errorf("reapply did not restore the agent of Codex: %q, %v", restored, err)
+	}
+}
+
+// assertOnlyEntries fails the test unless dir holds exactly the named entries.
+func assertOnlyEntries(t *testing.T, dir string, want ...string) {
+	t.Helper()
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatalf("readdir %s: %v", dir, err)
+	}
+	var got []string
+	for _, e := range entries {
+		got = append(got, e.Name())
+	}
+	if strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Errorf("%s holds %v, want exactly %v", dir, got, want)
+	}
+}
+
 // TestStatus_ReportsAgentFile asserts that overlay status references the GADU
 // agent row under agents/ not under skills/ (R-007, AC-4).
 func TestStatus_ReportsAgentFile(t *testing.T) {

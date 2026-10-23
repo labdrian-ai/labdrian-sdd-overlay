@@ -16,12 +16,14 @@ declare -A TARGET_PATHS=(
   [codex]="$HOME/.codex/skills"
 )
 
-# Native agent-route destinations. Claude Code and OpenCode use different
-# frontmatter schemas, so they are deployed from separate generated files.
+# Native agent-route destinations. Claude Code, OpenCode and Codex use
+# different agent file schemas (Markdown with frontmatter, and TOML for Codex),
+# so they are deployed from separate generated files.
 # shellcheck disable=SC2034  # read by the other modules
 declare -A AGENT_TARGET_PATHS=(
   [claude]="$HOME/.claude/agents"
   [opencode]="$HOME/.config/opencode/agents"
+  [codex]="$HOME/.codex/agents"
 )
 
 # Every recognized --target, in the order `--target all` expands to, each as

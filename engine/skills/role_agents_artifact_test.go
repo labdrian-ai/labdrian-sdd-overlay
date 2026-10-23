@@ -480,8 +480,57 @@ func TestRoleAgentsAreDeployedToClaudeByCustomAgentRows(t *testing.T) {
 	}
 }
 
-// The overlay's own agents reach no runtime but Claude Code, and none is a row from upstream: a sync
-// or a restore from upstream never takes the role agents for its own.
+// Each role agent is deployed to Codex by a row of its own (slice 4 of the role agents): the file is
+// codex/agents/<role>.toml, the route is codex-agent, and the row is the overlay's (custom). The tag
+// is the one of the rows of the Claude agents of the overlay and not "managed", which the overlay
+// takes from upstream: a capture or a restore of managed files would copy a deployed file over the
+// generated one, and the file is generated from roles/<role>/body.md. The file is copied to the
+// agents directory of Codex and to no other runtime.
+func TestRoleAgentsAreDeployedToCodexByCustomCodexAgentRows(t *testing.T) {
+	root := skillsRepoRoot(t)
+	rows := ReadManifestRows([]byte(readRepoFile(t, root, "overlay.manifest")))
+	for _, target := range []string{"claude", "opencode", "codex"} {
+		dest := RouteDestinations{Target: target, SkillsRoot: "/h/" + target + "/skills", AgentsRoot: "/h/" + target + "/agents"}
+		routes, err := ResolveRoutes(rows, false, "/o", dest)
+		if err != nil {
+			t.Fatalf("ResolveRoutes for %s over the manifest of the repository: %v", target, err)
+		}
+		for _, spec := range roleAgentSpecs() {
+			path := "codex/agents/" + spec.role + ".toml"
+			var found []ManifestRow
+			for _, row := range rows {
+				if row.Path == path {
+					found = append(found, row)
+				}
+			}
+			if want := []ManifestRow{{Path: path, Tag: "custom", Route: "codex-agent"}}; !reflect.DeepEqual(found, want) {
+				t.Errorf("rows named %s = %+v, want exactly %+v", path, found, want)
+				continue
+			}
+			var route ResolvedRoute
+			for _, r := range routes {
+				if r.Path == path {
+					route = r
+				}
+			}
+			want := ResolvedRoute{Path: path, Route: "codex-agent", RepoRel: path, RepoSource: "/o/" + path}
+			if target == "codex" {
+				want.Dest = "/h/codex/agents/" + spec.role + ".toml"
+			}
+			if route != want {
+				t.Errorf("%s resolves for %s to %+v, want %+v", path, target, route, want)
+			}
+			if _, err := os.Stat(filepath.Join(root, filepath.FromSlash(path))); err != nil {
+				t.Errorf("the row %s names a file that is not in the repository: %v", path, err)
+			}
+		}
+	}
+}
+
+// The overlay's own Claude agents (the rows of agents/<role>.md) reach no runtime but Claude Code, and
+// none is a row from upstream: a sync or a restore from upstream never takes the role agents for its
+// own. (The agent of Codex has a row of its own, above, and the agent of Pi reaches it through the
+// package.)
 func TestRoleAgentsAreNeitherCopiedToOtherRuntimesNorManaged(t *testing.T) {
 	root := skillsRepoRoot(t)
 	rows := ReadManifestRows([]byte(readRepoFile(t, root, "overlay.manifest")))

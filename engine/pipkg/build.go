@@ -14,7 +14,8 @@ import (
 
 // Build assembles the labdrian-pi package into destDir: package.json,
 // skills/ (every skills.registry.yaml entry whose install.targets includes
-// "pi"), agents/GADU.md, and mcp.json (R-005). It builds into a sibling
+// "pi"), agents/ (every pi/agents/*.md of the overlay: the role agents and
+// GADU), and mcp.json (R-005). It builds into a sibling
 // temp directory first and atomically swaps it into destDir (R-010),
 // refusing any symlink found under a copied source tree and clearing
 // whatever previously lived at destDir. File modes are 0644, directory
@@ -150,9 +151,8 @@ func (p Packages) buildInto(overlayRoot string, reg skills.Registry, dir string,
 	if err := os.MkdirAll(agentsDir, 0755); err != nil {
 		return fmt.Errorf("pipkg: creating agents dir: %w", err)
 	}
-	agentSrc := resolveGaduAgentSource(overlayRoot)
-	if err := copyFile(agentSrc, filepath.Join(agentsDir, "GADU.md")); err != nil {
-		return fmt.Errorf("pipkg: copying agents/GADU.md: %w", err)
+	if err := copyPiAgents(overlayRoot, agentsDir); err != nil {
+		return err
 	}
 
 	sharedDir := filepath.Join(skillsDir, "_shared")
@@ -227,18 +227,37 @@ func (p Packages) buildInto(overlayRoot string, reg skills.Registry, dir string,
 	return nil
 }
 
-// resolveGaduAgentSource returns the source path this package's
-// agents/GADU.md is copied from: overlayRoot's pi-specific
-// pi/agents/GADU.md (the compact, pi-claude-cli-modeled variant
-// engine/gadu.Generate emits) when present, else overlayRoot's generic
-// agents/GADU.md -- kept as a fallback so an older checkout that predates
-// the pi/agents/GADU.md variant still builds.
-func resolveGaduAgentSource(overlayRoot string) string {
-	piSpecific := filepath.Join(overlayRoot, "pi", "agents", "GADU.md")
-	if _, err := os.Stat(piSpecific); err == nil {
-		return piSpecific
+// copyPiAgents fills the package's agents/ with the agents of the overlay for Pi: every Markdown
+// file of overlayRoot's pi/agents, the role agents and GADU that engine/agentgen emits in the
+// compact form pi-claude-cli models, each under its own name and byte for byte. Only the Markdown
+// files of that directory itself are agents; a subdirectory or any other file stays where it is, and
+// a symlink is refused like anywhere else in the package (R-010). GADU keeps its fallback to the
+// generic agents/GADU.md, so an older checkout whose pi/agents has no GADU (or no pi/agents at all)
+// still builds; the fallback never takes the place of a pi/agents/GADU.md.
+func copyPiAgents(overlayRoot, agentsDir string) error {
+	const gadu = "GADU.md"
+	piAgents := filepath.Join(overlayRoot, "pi", "agents")
+	entries, err := os.ReadDir(piAgents) // sorted by file name
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("pipkg: reading pi/agents: %w", err)
 	}
-	return filepath.Join(overlayRoot, "agents", "GADU.md")
+	hasGadu := false
+	for _, entry := range entries {
+		if entry.IsDir() || filepath.Ext(entry.Name()) != ".md" {
+			continue
+		}
+		if err := copyFile(filepath.Join(piAgents, entry.Name()), filepath.Join(agentsDir, entry.Name())); err != nil {
+			return fmt.Errorf("pipkg: copying agents/%s: %w", entry.Name(), err)
+		}
+		hasGadu = hasGadu || entry.Name() == gadu
+	}
+	if hasGadu {
+		return nil
+	}
+	if err := copyFile(filepath.Join(overlayRoot, "agents", gadu), filepath.Join(agentsDir, gadu)); err != nil {
+		return fmt.Errorf("pipkg: copying agents/%s: %w", gadu, err)
+	}
+	return nil
 }
 
 // checkSkillNameMatchesPath reads <src>/SKILL.md and requires its

@@ -20,7 +20,7 @@ func destinations(target string) RouteDestinations {
 	case "opencode":
 		d.SkillsRoot, d.AgentsRoot = "/h/.config/opencode/skills", "/h/.config/opencode/agents"
 	case "codex":
-		d.SkillsRoot = "/h/.codex/skills"
+		d.SkillsRoot, d.AgentsRoot = "/h/.codex/skills", "/h/.codex/agents"
 	}
 	return d
 }
@@ -31,14 +31,15 @@ const testOverlay = "/o"
 
 // The routing refuses a longterm-mem/** row whose route is outside validLongtermMemRoutes, a
 // variable of ondisk.go, so what the refusal tests below show depends on what it holds. It is
-// exactly the four routes of the manifest and the words the refusal gives them, and the routes the
-// on-disk check sends outside skills/ (nonSkillRoutes) are these but the skill route itself.
-func TestValidLongtermMemRoutesAreExactlyTheFourRoutes(t *testing.T) {
-	want := map[string]bool{RouteSkill: true, RouteAgent: true, RouteOpencodeAgent: true, RouteMCP: true}
+// exactly the five routes of the manifest (the codex-agent route joined the four of D13 in slice 4
+// of the role agents) and the words the refusal gives them, and the routes the on-disk check sends
+// outside skills/ (nonSkillRoutes) are these but the skill route itself.
+func TestValidLongtermMemRoutesAreExactlyTheFiveRoutes(t *testing.T) {
+	want := map[string]bool{"skill": true, "agent": true, "opencode-agent": true, "codex-agent": true, "mcp": true}
 	if !reflect.DeepEqual(validLongtermMemRoutes, want) {
 		t.Errorf("validLongtermMemRoutes = %v, want exactly %v", validLongtermMemRoutes, want)
 	}
-	for _, spelled := range []string{"skill", "agent", "opencode-agent", "mcp"} {
+	for _, spelled := range []string{"skill", "agent", "opencode-agent", "codex-agent", "mcp"} {
 		if !validLongtermMemRoutes[spelled] {
 			t.Errorf("%q is not a valid route, but the refusal says it is: %s", spelled, (&UnroutedRowError{Path: "longterm-mem/x"}).Error())
 		}
@@ -116,6 +117,14 @@ func TestResolveRoutesPlacesEachKindOfRow(t *testing.T) {
 			ResolvedRoute{"opencode/agents/GADU.md", "opencode-agent", "opencode/agents/GADU.md", "/o/opencode/agents/GADU.md", ""}},
 		{"a native agent of OpenCode keeps what is below its directory", ManifestRow{"opencode/agents/team/GADU.md", "custom", "opencode-agent"}, "opencode",
 			ResolvedRoute{"opencode/agents/team/GADU.md", "opencode-agent", "opencode/agents/team/GADU.md", "/o/opencode/agents/team/GADU.md", "/h/.config/opencode/agents/team/GADU.md"}},
+		{"a native agent of Codex goes to its agents by its name", ManifestRow{"codex/agents/builder.toml", "custom", "codex-agent"}, "codex",
+			ResolvedRoute{"codex/agents/builder.toml", "codex-agent", "codex/agents/builder.toml", "/o/codex/agents/builder.toml", "/h/.codex/agents/builder.toml"}},
+		{"a native agent of Codex goes nowhere for Claude", ManifestRow{"codex/agents/builder.toml", "custom", "codex-agent"}, "claude",
+			ResolvedRoute{"codex/agents/builder.toml", "codex-agent", "codex/agents/builder.toml", "/o/codex/agents/builder.toml", ""}},
+		{"a native agent of Codex goes nowhere for OpenCode", ManifestRow{"codex/agents/builder.toml", "custom", "codex-agent"}, "opencode",
+			ResolvedRoute{"codex/agents/builder.toml", "codex-agent", "codex/agents/builder.toml", "/o/codex/agents/builder.toml", ""}},
+		{"a native agent of Codex keeps what is below its directory", ManifestRow{"codex/agents/team/builder.toml", "custom", "codex-agent"}, "codex",
+			ResolvedRoute{"codex/agents/team/builder.toml", "codex-agent", "codex/agents/team/builder.toml", "/o/codex/agents/team/builder.toml", "/h/.codex/agents/team/builder.toml"}},
 		{"an mcp row has a source and no destination", ManifestRow{"longterm-mem/go.mod", "custom", "mcp"}, "claude",
 			ResolvedRoute{"longterm-mem/go.mod", "mcp", "longterm-mem/go.mod", "/o/longterm-mem/go.mod", ""}},
 		{"a third column nobody knows is the skill route under its own name", ManifestRow{"weird/SKILL.md", "managed", "unknown-route"}, "claude",
@@ -148,6 +157,9 @@ func TestResolveRoutesNeverDeploysWhatNoDirectoryOfTheOverlayHolds(t *testing.T)
 		{"a file at the root that says mcp", ManifestRow{"README.md", "custom", "mcp"}},
 		{"a native agent of OpenCode outside its directory", ManifestRow{"other/stray.md", "custom", "opencode-agent"}},
 		{"a native agent of OpenCode named by its directory alone", ManifestRow{"opencode/agents/", "custom", "opencode-agent"}},
+		{"a file of the engine that says codex-agent", ManifestRow{"engine/x.toml", "managed", "codex-agent"}},
+		{"a native agent of Codex outside its directory", ManifestRow{"other/stray.toml", "custom", "codex-agent"}},
+		{"a native agent of Codex named by its directory alone", ManifestRow{"codex/agents/", "custom", "codex-agent"}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			for _, target := range []string{"claude", "opencode", "codex"} {
@@ -248,11 +260,11 @@ func TestResolveRoutesRefusesALongtermMemRowWithoutAKnownRoute(t *testing.T) {
 		want string
 	}{
 		{"no route", ManifestRow{"longterm-mem/internal/foo.go", "custom", ""},
-			"route_resolve: longterm-mem row 'longterm-mem/internal/foo.go' declares no route (missing third column); must be one of: skill, agent, opencode-agent, mcp"},
+			"route_resolve: longterm-mem row 'longterm-mem/internal/foo.go' declares no route (missing third column); must be one of: skill, agent, opencode-agent, codex-agent, mcp"},
 		{"no tag and no route", ManifestRow{Path: "longterm-mem/only-one-field"},
-			"route_resolve: longterm-mem row 'longterm-mem/only-one-field' declares no route (missing third column); must be one of: skill, agent, opencode-agent, mcp"},
+			"route_resolve: longterm-mem row 'longterm-mem/only-one-field' declares no route (missing third column); must be one of: skill, agent, opencode-agent, codex-agent, mcp"},
 		{"a route nobody knows", ManifestRow{"longterm-mem/internal/bar.go", "custom", "bogus"},
-			"route_resolve: longterm-mem row 'longterm-mem/internal/bar.go' declares an unrecognized route 'bogus'; must be one of: skill, agent, opencode-agent, mcp"},
+			"route_resolve: longterm-mem row 'longterm-mem/internal/bar.go' declares an unrecognized route 'bogus'; must be one of: skill, agent, opencode-agent, codex-agent, mcp"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := ResolveRoutes([]ManifestRow{tc.row}, false, testOverlay, destinations("claude"))
@@ -264,8 +276,8 @@ func TestResolveRoutesRefusesALongtermMemRowWithoutAKnownRoute(t *testing.T) {
 	}
 }
 
-func TestResolveRoutesAcceptsEachRouteOfTheFourUnderLongtermMem(t *testing.T) {
-	for _, route := range []string{"skill", "agent", "opencode-agent", "mcp"} {
+func TestResolveRoutesAcceptsEachRouteOfTheFiveUnderLongtermMem(t *testing.T) {
+	for _, route := range []string{"skill", "agent", "opencode-agent", "codex-agent", "mcp"} {
 		_, err := ResolveRoutes([]ManifestRow{{"longterm-mem/x/y.go", "custom", route}}, false, testOverlay, destinations("claude"))
 		if err != nil {
 			t.Errorf("route %q under longterm-mem/: %v, want it accepted", route, err)
@@ -304,6 +316,8 @@ func TestResolveRoutesRefusesARowThatGoesToADirectoryNobodyNamed(t *testing.T) {
 			"manifest row 'GADU.md' is copied to the agents directory of claude, and none was given"},
 		{"a native agent of OpenCode with no agents directory", ManifestRow{"opencode/agents/G.md", "custom", "opencode-agent"}, RouteDestinations{Target: "opencode", SkillsRoot: "/s"},
 			"manifest row 'opencode/agents/G.md' is copied to the agents directory of opencode, and none was given"},
+		{"a native agent of Codex with no agents directory", ManifestRow{"codex/agents/b.toml", "custom", "codex-agent"}, RouteDestinations{Target: "codex", SkillsRoot: "/s"},
+			"manifest row 'codex/agents/b.toml' is copied to the agents directory of codex, and none was given"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := ResolveRoutes([]ManifestRow{tc.row}, false, testOverlay, tc.dest)
@@ -316,9 +330,14 @@ func TestResolveRoutesRefusesARowThatGoesToADirectoryNobodyNamed(t *testing.T) {
 }
 
 func TestResolveRoutesDoesNotAskForAnAgentsDirectoryItWillNotUse(t *testing.T) {
-	// Codex has no native agents, and an agent row goes nowhere for it: no directory is needed.
+	// An agent row is the agent of Claude Code and goes nowhere for Codex: no directory is needed.
 	got, err := ResolveRoutes([]ManifestRow{{"GADU.md", "custom", "agent"}}, false, testOverlay, RouteDestinations{Target: "codex", SkillsRoot: "/s"})
 	if err != nil || len(got) != 1 || got[0].Dest != "" {
 		t.Errorf("ResolveRoutes = %+v, %v, want the agent row placed for Codex with no destination", got, err)
+	}
+	// A codex-agent row is the agent of Codex and goes nowhere for Claude Code: no directory either.
+	got, err = ResolveRoutes([]ManifestRow{{"codex/agents/b.toml", "custom", "codex-agent"}}, false, testOverlay, RouteDestinations{Target: "claude", SkillsRoot: "/s"})
+	if err != nil || len(got) != 1 || got[0].Dest != "" {
+		t.Errorf("ResolveRoutes = %+v, %v, want the codex-agent row placed for Claude with no destination", got, err)
 	}
 }

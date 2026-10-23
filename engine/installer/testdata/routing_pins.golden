@@ -743,7 +743,7 @@ main
 
 === Status: claude ===
 --- stderr
-route_resolve: longterm-mem row 'longterm-mem/internal/foo.go' declares no route (missing third column); must be one of: skill, agent, opencode-agent, mcp
+route_resolve: longterm-mem row 'longterm-mem/internal/foo.go' declares no route (missing third column); must be one of: skill, agent, opencode-agent, codex-agent, mcp
 @@@ refused-custom/sync-check
 exit 1
 --- stdout
@@ -752,7 +752,7 @@ exit 1
 --- stderr
 SYNC_CHECK:(repo): no 'origin' remote configured -- REPO_BEHIND_ORIGIN unavailable
 SYNC_CHECK:(repo): no 'origin' remote configured -- REPO_BEHIND_RELEASE unavailable
-route_resolve: longterm-mem row 'longterm-mem/internal/foo.go' declares no route (missing third column); must be one of: skill, agent, opencode-agent, mcp
+route_resolve: longterm-mem row 'longterm-mem/internal/foo.go' declares no route (missing third column); must be one of: skill, agent, opencode-agent, codex-agent, mcp
 @@@ refused-custom/apply
 exit 1
 --- stdout
@@ -761,7 +761,7 @@ Already up to date.
 
 === Deploying to: claude ===
 --- stderr
-route_resolve: longterm-mem row 'longterm-mem/internal/foo.go' declares no route (missing third column); must be one of: skill, agent, opencode-agent, mcp
+route_resolve: longterm-mem row 'longterm-mem/internal/foo.go' declares no route (missing third column); must be one of: skill, agent, opencode-agent, codex-agent, mcp
 @@@ refused-custom/files
 (nothing)
 @@@ refused-custom/capture
@@ -791,7 +791,7 @@ main
 
 === Status: claude ===
 --- stderr
-route_resolve: longterm-mem row 'longterm-mem/internal/foo.go' declares an unrecognized route 'bogus'; must be one of: skill, agent, opencode-agent, mcp
+route_resolve: longterm-mem row 'longterm-mem/internal/foo.go' declares an unrecognized route 'bogus'; must be one of: skill, agent, opencode-agent, codex-agent, mcp
 @@@ refused-managed/sync-check
 exit 1
 --- stdout
@@ -800,7 +800,7 @@ exit 1
 --- stderr
 SYNC_CHECK:(repo): no 'origin' remote configured -- REPO_BEHIND_ORIGIN unavailable
 SYNC_CHECK:(repo): no 'origin' remote configured -- REPO_BEHIND_RELEASE unavailable
-route_resolve: longterm-mem row 'longterm-mem/internal/foo.go' declares an unrecognized route 'bogus'; must be one of: skill, agent, opencode-agent, mcp
+route_resolve: longterm-mem row 'longterm-mem/internal/foo.go' declares an unrecognized route 'bogus'; must be one of: skill, agent, opencode-agent, codex-agent, mcp
 @@@ refused-managed/apply
 exit 1
 --- stdout
@@ -809,7 +809,7 @@ Already up to date.
 
 === Deploying to: claude ===
 --- stderr
-route_resolve: longterm-mem row 'longterm-mem/internal/foo.go' declares an unrecognized route 'bogus'; must be one of: skill, agent, opencode-agent, mcp
+route_resolve: longterm-mem row 'longterm-mem/internal/foo.go' declares an unrecognized route 'bogus'; must be one of: skill, agent, opencode-agent, codex-agent, mcp
 @@@ refused-managed/files
 (nothing)
 @@@ refused-managed/capture
@@ -817,7 +817,7 @@ exit 1
 --- stdout
 ==> Capturing managed files from $HOME/.claude/skills
 --- stderr
-route_resolve: longterm-mem row 'longterm-mem/internal/foo.go' declares an unrecognized route 'bogus'; must be one of: skill, agent, opencode-agent, mcp
+route_resolve: longterm-mem row 'longterm-mem/internal/foo.go' declares an unrecognized route 'bogus'; must be one of: skill, agent, opencode-agent, codex-agent, mcp
 @@@ refused-managed/capture-upstream
 agents/GADU.md: # GADU claude
 skills/skill-a/SKILL.md: # skill-a
@@ -827,7 +827,7 @@ exit 1
 --- stdout
 ==> Restoring claude from backup <STAMP>...
 --- stderr
-route_resolve: longterm-mem row 'longterm-mem/internal/foo.go' declares no route (missing third column); must be one of: skill, agent, opencode-agent, mcp
+route_resolve: longterm-mem row 'longterm-mem/internal/foo.go' declares no route (missing third column); must be one of: skill, agent, opencode-agent, codex-agent, mcp
 @@@ refused-restore/files
 agents/GADU.md: # GADU claude
 agents/claude-only.md: # claude only

@@ -25,27 +25,30 @@ const (
 // nonSkillRoutes lists the third-column route values that send a manifest row
 // somewhere other than skills/. It agrees with ResolveRoutes (routes.go), where any
 // other third-column value falls through to the default skill route.
-// The full route domain is {skill, agent, opencode-agent, mcp} (D13); "skill"
+// The full route domain is {skill, agent, opencode-agent, codex-agent, mcp}
+// (the four of D13, and codex-agent from slice 4 of the role agents); "skill"
 // is not listed here because it is the default route and IS the skills
 // destination, so it must stay out of this exclusion set.
 var nonSkillRoutes = map[string]bool{
 	"agent":          true,
 	"opencode-agent": true,
+	"codex-agent":    true,
 	"mcp":            true,
 }
 
-// validLongtermMemRoutes is the full four-value route domain (D13), used only
-// to validate rows under longterm-mem/**. Unlike nonSkillRoutes, "skill" is
-// included here: a longterm-mem/** row explicitly routed "skill" is not
-// itself invalid (R-012 forbids a MISSING or UNRECOGNIZED route, not the
-// skill route specifically), so this set intentionally is NOT nonSkillRoutes
-// plus one entry — it validates a different question (is this route
-// recognized at all?) than nonSkillRoutes answers (does this route leave
-// skills/?).
+// validLongtermMemRoutes is the full five-value route domain (D13, plus
+// codex-agent), used only to validate rows under longterm-mem/**. Unlike
+// nonSkillRoutes, "skill" is included here: a longterm-mem/** row explicitly
+// routed "skill" is not itself invalid (R-012 forbids a MISSING or
+// UNRECOGNIZED route, not the skill route specifically), so this set
+// intentionally is NOT nonSkillRoutes plus one entry — it validates a
+// different question (is this route recognized at all?) than nonSkillRoutes
+// answers (does this route leave skills/?).
 var validLongtermMemRoutes = map[string]bool{
 	"skill":          true,
 	"agent":          true,
 	"opencode-agent": true,
+	"codex-agent":    true,
 	"mcp":            true,
 }
 
@@ -57,8 +60,8 @@ var validLongtermMemRoutes = map[string]bool{
 //   - Blank lines and lines starting with '#' are skipped.
 //   - A row needs at least two fields; the first is the path. This applies to
 //     every path prefix except longterm-mem/** — see below.
-//   - A third column of "agent", "opencode-agent", or "mcp" routes outside
-//     skills/. Any other third-column value falls through to the skill route.
+//   - A third column of "agent", "opencode-agent", "codex-agent", or "mcp" routes
+//     outside skills/. Any other third-column value falls through to the skill route.
 //   - On the skill route, a path with no '/' is a root-level bookkeeping row and
 //     a path whose first segment is "engine" is overlay infra. Both are tracked
 //     for diff purposes only and are never deployed.
@@ -99,9 +102,9 @@ func DeployableManifestPaths(r io.Reader) (map[string]struct{}, error) {
 		// and must not change for anything other than longterm-mem/**.
 		if strings.HasPrefix(rowPath, "longterm-mem/") && !validLongtermMemRoutes[routeRaw] {
 			if routeRaw == "" {
-				return nil, fmt.Errorf("ondisk: manifest row %q under longterm-mem/** declares no route (missing third column); must be one of: skill, agent, opencode-agent, mcp", rowPath)
+				return nil, fmt.Errorf("ondisk: manifest row %q under longterm-mem/** declares no route (missing third column); must be one of: skill, agent, opencode-agent, codex-agent, mcp", rowPath)
 			}
-			return nil, fmt.Errorf("ondisk: manifest row %q under longterm-mem/** declares an unrecognized route %q; must be one of: skill, agent, opencode-agent, mcp", rowPath, routeRaw)
+			return nil, fmt.Errorf("ondisk: manifest row %q under longterm-mem/** declares an unrecognized route %q; must be one of: skill, agent, opencode-agent, codex-agent, mcp", rowPath, routeRaw)
 		}
 
 		if len(fields) < 2 {
