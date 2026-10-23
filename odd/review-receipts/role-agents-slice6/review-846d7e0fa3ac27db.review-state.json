@@ -1,0 +1,289 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:80d449b15623f71070dcdf78b01310318bd5b6dc053d6003c1387f74fcc9ffa2",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-846d7e0fa3ac27db",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "f48ddb665c2ed26a76547cee976f048b65995d09",
+      "candidate_tree": "97adad413db3985a6f25c09fc361abcb9ff61381",
+      "paths_digest": "sha256:9d994ac7809634ac040cc2613cd7644e8da8aca96996a9257ef93aa44393dc2f",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        ".github/workflows/ci.yml",
+        "engine/settings/projection.go",
+        "engine/skills/app/approve.go",
+        "engine/skills/approval_write.go",
+        "engine/skills/manifest_paths_test.go",
+        "odd/tasks/role-agents-slice6.md",
+        "tools/lint/README.md",
+        "tui/backend_tag_test.go"
+      ],
+      "identity": "sha256:61fb8accc53ef1a444de00da6a0a12e943624738e9782f4c4d25daf43d52f987"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "f48ddb665c2ed26a76547cee976f048b65995d09",
+      "candidate_tree": "97adad413db3985a6f25c09fc361abcb9ff61381",
+      "paths_digest": "sha256:9d994ac7809634ac040cc2613cd7644e8da8aca96996a9257ef93aa44393dc2f",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        ".github/workflows/ci.yml",
+        "engine/settings/projection.go",
+        "engine/skills/app/approve.go",
+        "engine/skills/approval_write.go",
+        "engine/skills/manifest_paths_test.go",
+        "odd/tasks/role-agents-slice6.md",
+        "tools/lint/README.md",
+        "tui/backend_tag_test.go"
+      ],
+      "identity": "sha256:61fb8accc53ef1a444de00da6a0a12e943624738e9782f4c4d25daf43d52f987"
+    },
+    "genesis_paths": [
+      ".github/workflows/ci.yml",
+      "engine/settings/projection.go",
+      "engine/skills/app/approve.go",
+      "engine/skills/approval_write.go",
+      "engine/skills/manifest_paths_test.go",
+      "odd/tasks/role-agents-slice6.md",
+      "tools/lint/README.md",
+      "tui/backend_tag_test.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-risk",
+      "review-resilience",
+      "review-reliability"
+    ],
+    "original_changed_lines": 179,
+    "correction_budget": 90,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "Made the CI deadcode steps blocking gates with -test (delivery path, failure behaviour on tool errors), deleted two dead engine functions, added a manifest path-existence test and extended the tui CI tag guard test",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:605c10085d9ef6af4f1b0b2b210e59a4eb4e27db8774fe5d3f1947a80c0cf40f",
+    "capture_phase_revision": "sha256:548a17214abeaa5c3a07d550223334d88786150424f595ed1280dcf3ea044dd7",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:61fb8accc53ef1a444de00da6a0a12e943624738e9782f4c4d25daf43d52f987",
+        "capture_phase_revision": "sha256:548a17214abeaa5c3a07d550223334d88786150424f595ed1280dcf3ea044dd7",
+        "artifact_digest": "sha256:5ec34e454c227bd6ef90814502bdf6ba46fbff074d4511ee40a4557cc7f76e5a",
+        "result_hash": "sha256:7092b52bab1dc28fcc3bbce641905d35ab1ff4658e0f6ec4f16814e4c0969d25",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:bad930a9f0a0c618501cda32e44c566f0505d5e38de1750318a509f942041317",
+            "lineage_id": "review-846d7e0fa3ac27db",
+            "authority_revision": "sha256:548a17214abeaa5c3a07d550223334d88786150424f595ed1280dcf3ea044dd7",
+            "target_identity": "sha256:61fb8accc53ef1a444de00da6a0a12e943624738e9782f4c4d25daf43d52f987",
+            "base_tree": "f48ddb665c2ed26a76547cee976f048b65995d09",
+            "candidate_tree": "97adad413db3985a6f25c09fc361abcb9ff61381",
+            "changed_path_manifest_sha256": "sha256:8f6311c9e04a0df934a1ff86fdedbdf291626037d73aa7f773bf14bf3173adab",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:bad930a9f0a0c618501cda32e44c566f0505d5e38de1750318a509f942041317",
+            "raw_sha256": "sha256:91b83f4c839d4a03d311c33810bc88c35d11d202c033455a52bd4465022b4c07",
+            "canonical_sha256": "sha256:49e7ff86529601865896cc9c2a829a4ba46c923616dd832979d0b22e9a485f9f",
+            "result_hash": "sha256:7092b52bab1dc28fcc3bbce641905d35ab1ff4658e0f6ec4f16814e4c0969d25",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:bad930a9f0a0c618501cda32e44c566f0505d5e38de1750318a509f942041317",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                ".github/workflows/ci.yml",
+                "engine/settings/projection.go",
+                "engine/skills/app/approve.go",
+                "engine/skills/approval_write.go",
+                "engine/skills/manifest_paths_test.go",
+                "odd/tasks/role-agents-slice6.md",
+                "tools/lint/README.md",
+                "tui/backend_tag_test.go"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "Reviewed all 8 changed paths for security, authorization, data exposure, unsafe input handling, secrets and dependency risk; no reachable exploit was found.",
+              "ci.yml: the deadcode steps now fail the job on any output. The tool is still pinned to the same version, golang.org/x/tools deadcode v0.48.0, which the baseline already ran via go run, so no new dependency or secret exposure is added. The command substitution has no untrusted input, and an error in go run fails the step under bash -e.",
+              "engine/settings/projection.go and engine/skills/approval_write.go: the removed functions are ProjectionHookEntries and the BaselineLintDecision wrapper, which deadcode reported as unused. The retained BaselineLintDecisionAgainst keeps the same logic, with a nil baseline resolved to the fixed one via OrFixed, so approval and lint enforcement is unchanged.",
+              "engine/skills/manifest_paths_test.go: a read-only test that stats paths from the repository's own manifest, using temp dirs for destinations. It writes nothing outside the temp dirs and handles no external input.",
+              "engine/skills/app/approve.go, tools/lint/README.md, odd/tasks/role-agents-slice6.md: comment and documentation changes only.",
+              "tui/backend_tag_test.go: test-only guard logic that extends the CI-step classifier to deadcode. It has no runtime or security impact."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-resilience",
+        "selected_order": 1,
+        "target_identity": "sha256:61fb8accc53ef1a444de00da6a0a12e943624738e9782f4c4d25daf43d52f987",
+        "capture_phase_revision": "sha256:548a17214abeaa5c3a07d550223334d88786150424f595ed1280dcf3ea044dd7",
+        "artifact_digest": "sha256:777cbea0d1108936568fad4adb7376a4088fdda74c4e3e13cade96a4abe237f5",
+        "result_hash": "sha256:b617f91e4d213b51429b79a603ed677cd3a64b353d350a20c935874c6d1ae4a9",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:10ecb90c056f3866e3c862fd9c78a43ca06175d632cef8b2e604dabc33bc2c11",
+            "lineage_id": "review-846d7e0fa3ac27db",
+            "authority_revision": "sha256:548a17214abeaa5c3a07d550223334d88786150424f595ed1280dcf3ea044dd7",
+            "target_identity": "sha256:61fb8accc53ef1a444de00da6a0a12e943624738e9782f4c4d25daf43d52f987",
+            "base_tree": "f48ddb665c2ed26a76547cee976f048b65995d09",
+            "candidate_tree": "97adad413db3985a6f25c09fc361abcb9ff61381",
+            "changed_path_manifest_sha256": "sha256:8f6311c9e04a0df934a1ff86fdedbdf291626037d73aa7f773bf14bf3173adab",
+            "lens": "review-resilience",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:10ecb90c056f3866e3c862fd9c78a43ca06175d632cef8b2e604dabc33bc2c11",
+            "raw_sha256": "sha256:8adf827860c823ab7081fdb5da3df3155a165ef236f43e00cb75266d8c07646c",
+            "canonical_sha256": "sha256:ee8da32863da227a878741b101a566ae5c150926199cfc73700de32d62b8dc2b",
+            "result_hash": "sha256:b617f91e4d213b51429b79a603ed677cd3a64b353d350a20c935874c6d1ae4a9",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:10ecb90c056f3866e3c862fd9c78a43ca06175d632cef8b2e604dabc33bc2c11",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                ".github/workflows/ci.yml",
+                "engine/settings/projection.go",
+                "engine/skills/app/approve.go",
+                "engine/skills/approval_write.go",
+                "engine/skills/manifest_paths_test.go",
+                "odd/tasks/role-agents-slice6.md",
+                "tools/lint/README.md",
+                "tui/backend_tag_test.go"
+              ]
+            },
+            "lens": "review-resilience",
+            "findings": [
+              {
+                "id": "R4-deadcode-gate-fetch",
+                "lens": "resilience",
+                "location": ".github/workflows/ci.yml:109",
+                "severity": "WARNING",
+                "claim": "The engine and tui Deadcode steps changed from informational (continue-on-error, errors swallowed) to blocking, and they still fetch deadcode with go run at @v0.48.0 on every run. A module proxy outage or a failed toolchain switch now fails the job. The engine job sets up Go 1.21 and relies on automatic toolchain switching, and the task log says this is not provable locally and that the first CI run is the proof. The failure is loud rather than silent, and the staticcheck step already depends on the same mechanism, so this is a residual risk rather than a demonstrated defect.",
+                "proof_refs": [
+                  ".github/workflows/ci.yml:109",
+                  "odd/tasks/role-agents-slice6.md:28"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "worsened"
+              }
+            ],
+            "evidence": [
+              "Reviewed all 8 changed paths in full.",
+              "The CI gate uses command substitution under bash -e, so a go run failure (version unresolvable, type error) exits non-zero and fails the step. Findings are echoed and then fail the step with an ::error annotation, so failures are observable.",
+              "The deleted functions (ProjectionHookEntries, BaselineLintDecision) are reached only by deadcode -test reports per the task log. The one caller of BaselineLintDecision's replacement already uses BaselineLintDecisionAgainst, and only a comment changed in approve.go.",
+              "The new manifest test uses t.TempDir for destinations and only stats files, so it has no retry or cleanup hazard.",
+              "The tui tag-guard changes only add a deadcode case to the test reader classifier and require a deadcode step in the TUI job, so the guard is stricter without changing runtime behavior."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 2,
+        "target_identity": "sha256:61fb8accc53ef1a444de00da6a0a12e943624738e9782f4c4d25daf43d52f987",
+        "capture_phase_revision": "sha256:548a17214abeaa5c3a07d550223334d88786150424f595ed1280dcf3ea044dd7",
+        "artifact_digest": "sha256:3eb69e1f884d43a4287db3d0eba2f3e597870f2f755e53f45cb603a3a4926112",
+        "result_hash": "sha256:81ef4daa4185ab89f5341a5d6b40b33faa1d63fcd9a012814a45732c4252b6b0",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:e739adae79718ef9abfb55ce1c3197804b0ba44a19f047005c0e024ce7eb8229",
+            "lineage_id": "review-846d7e0fa3ac27db",
+            "authority_revision": "sha256:548a17214abeaa5c3a07d550223334d88786150424f595ed1280dcf3ea044dd7",
+            "target_identity": "sha256:61fb8accc53ef1a444de00da6a0a12e943624738e9782f4c4d25daf43d52f987",
+            "base_tree": "f48ddb665c2ed26a76547cee976f048b65995d09",
+            "candidate_tree": "97adad413db3985a6f25c09fc361abcb9ff61381",
+            "changed_path_manifest_sha256": "sha256:8f6311c9e04a0df934a1ff86fdedbdf291626037d73aa7f773bf14bf3173adab",
+            "lens": "review-reliability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:e739adae79718ef9abfb55ce1c3197804b0ba44a19f047005c0e024ce7eb8229",
+            "raw_sha256": "sha256:b463beddde50553d6fd2032da6205b30a1a31c0900ad0c04e16336f93b1fa800",
+            "canonical_sha256": "sha256:2881533d97980c97e544ca049df5500c79bb741dc66227517ab262847aebe16b",
+            "result_hash": "sha256:81ef4daa4185ab89f5341a5d6b40b33faa1d63fcd9a012814a45732c4252b6b0",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:e739adae79718ef9abfb55ce1c3197804b0ba44a19f047005c0e024ce7eb8229",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                ".github/workflows/ci.yml",
+                "engine/settings/projection.go",
+                "engine/skills/app/approve.go",
+                "engine/skills/approval_write.go",
+                "engine/skills/manifest_paths_test.go",
+                "odd/tasks/role-agents-slice6.md",
+                "tools/lint/README.md",
+                "tui/backend_tag_test.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [],
+            "evidence": [
+              "ci.yml: both Deadcode steps capture output with out=$(go run ... -test ...). Actions runs bash with -e, so a failed go run (unresolvable version, type error) fails the assignment and the step. Any printed line also fails the step explicitly. This covers the fact that deadcode exits 0 when it reports findings. The tui step passes -tags backend, consistent with its vet and staticcheck steps.",
+              "engine/settings/projection.go and engine/skills/approval_write.go: the deleted ProjectionHookEntries and BaselineLintDecision are, per the task log, reported by deadcode -test as having no callers. BaselineLintDecisionAgainst keeps the same logic and signature, so behavior is unchanged. The approve.go change is a comment only.",
+              "engine/skills/manifest_paths_test.go: the test resolves every manifest row through ResolveRoutes and stats RepoSource, falling back to RepoRel. It fails with a message naming the row, route and path. It also guards against an empty manifest. The task log reports a negative probe with injected stale rows. I could not see repoRoot, ReadManifestRows or ResolveRoutes in this patch, so I assume they exist as the log describes.",
+              "tui/backend_tag_test.go: testFileReader now recognizes a command that has -test and a deadcode package field as 'deadcode'. The table-driven test covers positive cases, including the command-substitution form, and keeps the negative case with no -test. The TUI job test now requires a deadcode step. The new use of slices depends on an import I cannot see in this diff; the task log reports the tui tests green.",
+              "Residual risk, not attributable to a defect in the diff: the engine job's Go 1.21 setup relies on toolchain auto-switching for x/tools v0.48.0. The task log acknowledges this and says the first CI run is the proof."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "31adc79cefae327028a6f592e538ead70a26625066b425a208b2727442074749",
+    "initial_atomic_start": {
+      "lineage_id": "review-846d7e0fa3ac27db",
+      "worktree_identity": "sha256:b1be199f1d430b8665ecb27b7213dfa0e93ddb2b814538bea0706894fba26e4e",
+      "target_identity": "sha256:61fb8accc53ef1a444de00da6a0a12e943624738e9782f4c4d25daf43d52f987",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "f48ddb665c2ed26a76547cee976f048b65995d09",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "high",
+      "selected_lenses": [
+        "review-risk",
+        "review-resilience",
+        "review-reliability"
+      ],
+      "original_changed_lines": 179,
+      "correction_budget": 90,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "Made the CI deadcode steps blocking gates with -test (delivery path, failure behaviour on tool errors), deleted two dead engine functions, added a manifest path-existence test and extended the tui CI tag guard test"
+    },
+    "runtime_agent": "claude-code"
+  }
+}
