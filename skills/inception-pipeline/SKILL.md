@@ -63,7 +63,7 @@ After the producers, load `skills/role-chain/SKILL.md`: it owns every hop. This 
 
 - Goal id = chain id = `change-name`: every record goes to `labdrian roles append --project {project} --goal {change} --chain {change} --stdin`.
 - The first record is `prototyper → shaper` when a premise is open (the prototyper trigger of the role chain), otherwise `shaper → estimator`.
-- Every builder prompt states that strict TDD is active and names the runner.
+- Every builder prompt states that strict TDD is active and names the runner, taken from the project's own instructions (`CLAUDE.md`, `AGENTS.md`) or its build files; when neither names one, ask the user once.
 
 ## Gate Compliance (non-negotiable orchestrator gates)
 
