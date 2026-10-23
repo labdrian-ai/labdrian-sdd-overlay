@@ -408,9 +408,10 @@ func TestRunCheckSeparatesStreamsAndPopulatesSummary(t *testing.T) {
 	}
 }
 
-// pinnedInvocationPattern matches CI's "go run <module>@<version> ./..."
-// step invocations verbatim.
-var pinnedInvocationPattern = regexp.MustCompile(`go run (\S+)@(\S+) \./\.\.\.`)
+// pinnedInvocationPattern matches CI's "go run <module>@<version>" step
+// invocations, whatever flags follow the version (CI's deadcode steps pass
+// -test, and the TUI's also -tags backend).
+var pinnedInvocationPattern = regexp.MustCompile(`go run (\S+)@(v\S+)`)
 
 // staticcheckRequirePattern matches the staticcheck requirement of
 // tools/lint/go.mod, the module CI builds staticcheck from.
@@ -430,26 +431,28 @@ func TestCheckArgvPinnedToCIInvocation(t *testing.T) {
 		t.Fatalf("read ci.yml: %v", err)
 	}
 
-	// deadcode: CI runs it as a pinned "go run <module>@<version> ./..." step.
+	// deadcode: CI runs it as a pinned "go run <module>@<version>" step; the
+	// runner runs the same module and version without CI's flags.
 	// staticcheck: CI builds it from tools/lint, whose go.sum pins it, so
 	// ci.yml must not pin it with go run as well.
 	deadcode := ""
 	for _, m := range pinnedInvocationPattern.FindAllStringSubmatch(string(data), -1) {
-		module, invocation := m[1], m[0]
+		module, pin := m[1], m[0]
 		if strings.Contains(module, "staticcheck") {
-			t.Fatalf("ci.yml pins staticcheck with %q: CI builds it from tools/lint, where go.sum pins it", invocation)
+			t.Fatalf("ci.yml pins staticcheck with %q: CI builds it from tools/lint, where go.sum pins it", pin)
 		}
 		if !strings.Contains(module, "deadcode") {
 			continue
 		}
-		if deadcode != "" && deadcode != invocation {
-			t.Fatalf("ci.yml pins deadcode inconsistently across jobs: %q vs %q", deadcode, invocation)
+		if deadcode != "" && deadcode != pin {
+			t.Fatalf("ci.yml pins deadcode inconsistently across jobs: %q vs %q", deadcode, pin)
 		}
-		deadcode = invocation
+		deadcode = pin
 	}
 	if deadcode == "" {
-		t.Fatal("ci.yml has no pinned 'go run <module>@<version> ./...' invocation for deadcode")
+		t.Fatal("ci.yml has no pinned 'go run <module>@<version>' invocation for deadcode")
 	}
+	deadcode += " ./..."
 
 	toolsLint, err := os.ReadFile(filepath.Join(root, "tools", "lint", "go.mod"))
 	if err != nil {
