@@ -17,7 +17,7 @@ func agentgenRun(t *testing.T, env map[string]string, args ...string) *capturedP
 }
 
 // seedRoleSources puts the role sources of this repository under root, which is all the generator
-// reads from the repository besides the persona it carries.
+// reads from the repository.
 func seedRoleSources(t *testing.T, root string) {
 	t.Helper()
 	source := filepath.Join("..", "..", "roles")
@@ -63,7 +63,7 @@ func TestGaduGenerateWritesTheArtifactsTheCheckThenAcceptsAndTheCheckRefusesThei
 	}
 
 	generated := agentgenRun(t, env)
-	if want := "gadu-generate: agents/GADU.md, opencode/agents/GADU.md, and skills/gadu-operator/SKILL.md written\n"; generated.out.String() != want || len(generated.exits) != 0 || generated.err.Len() != 0 {
+	if want := "gadu-generate: agents/<role>.md, pi/agents/<role>.md, and codex/agents/<role>.toml written\n"; generated.out.String() != want || len(generated.exits) != 0 || generated.err.Len() != 0 {
 		t.Errorf("generate: stdout %q, stderr %q, exits %v; want %q and no exit", generated.out.String(), generated.err.String(), generated.exits, want)
 	}
 

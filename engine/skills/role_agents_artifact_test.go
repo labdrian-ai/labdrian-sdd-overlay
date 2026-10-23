@@ -563,14 +563,15 @@ func TestRoleAgentsAreNeitherCopiedToOtherRuntimesNorManaged(t *testing.T) {
 }
 
 // The agents the role agents replaced are gone, rows and files together (PR 5 of the role design, v3
-// section 6 row 5): the sdd-* phase agents and the repository's copies of gentle-ai's review-*
-// and jd-* agents have no manifest row, and no file in agents/, pi/agents/ or opencode/agents/ --
-// the three places a row or the Pi package would take one from. gentle-ai keeps its own review-* and
+// section 6 row 5): GADU, the sdd-* phase agents and the repository's copies of gentle-ai's review-*
+// and jd-* agents have no manifest row, and no file in agents/ or opencode/agents/ --
+// the places a row would take one from. gentle-ai keeps its own review-* and
 // jd-* agents; the overlay no longer carries a copy of them.
 func TestTheAgentsTheRoleAgentsReplacedAreGoneWithTheirRows(t *testing.T) {
 	root := skillsRepoRoot(t)
 	rows := ReadManifestRows([]byte(readRepoFile(t, root, "overlay.manifest")))
 	retired := []string{
+		"GADU.md",
 		"sdd-apply.md", "sdd-archive.md", "sdd-design.md", "sdd-init.md", "sdd-onboard.md",
 		"sdd-propose.md", "sdd-spec.md", "sdd-tasks.md", "sdd-verify.md",
 		"jd-fix-agent.md", "jd-judge-a.md", "jd-judge-b.md",
@@ -582,7 +583,7 @@ func TestTheAgentsTheRoleAgentsReplacedAreGoneWithTheirRows(t *testing.T) {
 				t.Errorf("the manifest still has the row %+v of the retired agent %s", row, name)
 			}
 		}
-		for _, dir := range []string{"agents", "pi/agents", "opencode/agents"} {
+		for _, dir := range []string{"agents", "opencode/agents"} {
 			if _, err := os.Stat(filepath.Join(root, dir, name)); !os.IsNotExist(err) {
 				t.Errorf("%s/%s is still there (Stat err = %v)", dir, name, err)
 			}

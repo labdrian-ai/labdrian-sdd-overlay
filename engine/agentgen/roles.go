@@ -23,14 +23,27 @@ type modelFamily struct {
 	pi string
 }
 
+// piSonnetModel is the model id the Pi file of a sonnet role declares in its frontmatter.
+//
+// Verified live 2026-09-13 (Pi 0.85.1, gentle-pi 2.6.0, @saccolabs/pi-claude-cli 0.8.1): gentle-pi's
+// native subagent_run only completes a child whose agent file declares a "pi-claude-cli/<model>" id.
+// An "anthropic/*" (OAuth) or "openai-codex/*" model ends the child with "assistant reported an
+// error", and an absent model: routes to "anthropic/claude-opus-4-8" (also fails). Separately, the
+// pi-claude-cli bridge passes the agent's system prompt to a fresh Claude Code process via
+// --append-system-prompt-file: a ~7 KB prompt (the full persona body of GADU, or a same-size neutral
+// filler) HANGS that child indefinitely, while a ~400-byte prompt completes normally. That bridge
+// prompt-size limit is why the Pi file of GADU, which this package no longer writes, shipped a
+// compact body.
+const piSonnetModel = "pi-claude-cli/claude-sonnet-5"
+
 // The Pi refs are ids of the provider pi-claude-cli, which registers the Anthropic models of Pi
 // (index.ts:200 of pi-claude-cli 0.10.0), and all three are in the model list of Pi 1.3.0 on this
-// machine. Only sonnet's is the ref that was run: PiAgentModel completed a native subagent_run on
+// machine. Only sonnet's is the ref that was run: piSonnetModel completed a native subagent_run on
 // 2026-09-13 (Pi 0.85.1, gentle-pi 2.6.0). The opus and haiku refs are the same provider's ids of the
 // same generation, assumed to complete one too; the live check of the PR (PR 4 of the design, row
 // "live check per runtime") is what proves them.
 var (
-	sonnet = modelFamily{claude: "sonnet", pi: PiAgentModel}
+	sonnet = modelFamily{claude: "sonnet", pi: piSonnetModel}
 	opus   = modelFamily{claude: "opus", pi: "pi-claude-cli/claude-opus-5"}
 	haiku  = modelFamily{claude: "haiku", pi: "pi-claude-cli/claude-haiku-4-5"}
 )

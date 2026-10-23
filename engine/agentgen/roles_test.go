@@ -65,8 +65,8 @@ var wantRoles = []wantRole{
 		"haiku", deliveryClaudeTools, piHaiku, "read, edit, write, find, bash, mem_search, mem_get_observation, mem_save, codegraph", "low", true},
 }
 
-// seededRoot is a root with the role sources of this repository under roles/ and nothing else: what
-// Generate and Check read besides the persona that is part of the generator.
+// seededRoot is a root with the role sources of this repository under roles/ and nothing else: all
+// that Generate and Check read.
 func seededRoot(t *testing.T) string {
 	t.Helper()
 	root := t.TempDir()

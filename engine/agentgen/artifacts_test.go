@@ -14,8 +14,9 @@ import (
 
 // Artifacts is the one table of what the generator emits: where each file goes under the
 // repository root and what it holds. Generate writes it and Check compares with it, and they are
-// the same files in the same order: the four of GADU, then the three of each role.
-func TestArtifactsAreTheFilesOfGaduAndThenOfEachRoleInTheOrderTheyAreWrittenAndReported(t *testing.T) {
+// the same files in the same order: the three of each role. The GADU persona is not in it: PR 5 of
+// the design retired it, and with it the four files it projected.
+func TestArtifactsAreTheThreeFilesOfEachRoleAndNothingElseInTheOrderTheyAreWrittenAndReported(t *testing.T) {
 	got, err := agentgen.Artifacts(seededRoot(t))
 	if err != nil {
 		t.Fatalf("Artifacts: %v", err)
@@ -23,7 +24,11 @@ func TestArtifactsAreTheFilesOfGaduAndThenOfEachRoleInTheOrderTheyAreWrittenAndR
 
 	want := allPaths()
 	if len(got) != len(want) {
-		t.Fatalf("%d artifacts, want %d", len(got), len(want))
+		paths := make([]string, len(got))
+		for i, a := range got {
+			paths[i] = a.Path
+		}
+		t.Fatalf("%d artifacts, want %d: %q", len(got), len(want), paths)
 	}
 	for i, p := range want {
 		if got[i].Path != p {
@@ -67,7 +72,7 @@ func TestArtifactsHandsOutATableNoCallerCanChangeForTheNext(t *testing.T) {
 		t.Fatalf("Artifacts: %v", err)
 	}
 
-	if second[0].Path != gaduPaths[0] || second[0].Content == "changed" {
+	if second[0].Path != allPaths()[0] || second[0].Content == "changed" {
 		t.Errorf("the second call returned %q, which the first caller changed", second[0].Path)
 	}
 }
@@ -164,38 +169,30 @@ func snapshot(t *testing.T, dir string) string {
 	return b.String()
 }
 
-// The model each agent file declares is a named constant, the way PiAgentModel always was, and the
-// frontmatter says it.
-func TestTheModelIdsAreNamedAndEachAgentFileDeclaresItsOwn(t *testing.T) {
-	if agentgen.ClaudeAgentModel != "opus" || agentgen.OpenCodeAgentModel != "openai/gpt-5.5" || agentgen.PiAgentModel != "pi-claude-cli/claude-sonnet-5" {
-		t.Errorf("model ids = %q, %q, %q", agentgen.ClaudeAgentModel, agentgen.OpenCodeAgentModel, agentgen.PiAgentModel)
+// The files of the roles that are committed in the repository are what the generator writes from
+// their sources, byte for byte: the guarantee that retiring the GADU persona changed none of the
+// eight roles. (CI runs the same check through the command, gadu-generate --check.)
+func TestTheCommittedFilesOfTheRolesAreWhatTheGeneratorWrites(t *testing.T) {
+	root := repoRoot(t)
+	table, err := agentgen.Artifacts(root)
+	if err != nil {
+		t.Fatalf("Artifacts of the repository: %v", err)
 	}
-	declared := map[string]string{}
-	for _, a := range tableOf(t) {
-		declared[a.Path] = extractFrontmatter(a.Content)["model"]
+	if len(table) != len(allPaths()) {
+		t.Fatalf("the table of the repository holds %d files, want the %d of the eight roles", len(table), len(allPaths()))
 	}
-	want := map[string]string{
-		"agents/GADU.md":                agentgen.ClaudeAgentModel,
-		"opencode/agents/GADU.md":       agentgen.OpenCodeAgentModel,
-		"pi/agents/GADU.md":             agentgen.PiAgentModel,
-		"skills/gadu-operator/SKILL.md": "",
-	}
-	for path, model := range want {
-		if declared[path] != model {
-			t.Errorf("%s declares model %q, want %q", path, declared[path], model)
-		}
+
+	if err := agentgen.Check(root); err != nil {
+		t.Errorf("Check must return nil when the committed files match what the generator writes; got: %v", err)
 	}
 }
 
-// The three agent files say the same thing about who GADU is: one description.
-func TestTheThreeAgentFilesCarryTheSameDescription(t *testing.T) {
-	var descriptions []string
-	for _, a := range tableOf(t) {
-		if strings.HasSuffix(a.Path, "agents/GADU.md") {
-			descriptions = append(descriptions, extractFrontmatter(a.Content)["description"])
-		}
+// repoRoot returns the root of the overlay repository, two levels above engine/agentgen/.
+func repoRoot(t *testing.T) string {
+	t.Helper()
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("getwd: %v", err)
 	}
-	if len(descriptions) != 3 || descriptions[0] == "" || descriptions[0] != descriptions[1] || descriptions[1] != descriptions[2] {
-		t.Errorf("descriptions = %q, want one non-empty text three times", descriptions)
-	}
+	return filepath.Join(wd, "..", "..")
 }
