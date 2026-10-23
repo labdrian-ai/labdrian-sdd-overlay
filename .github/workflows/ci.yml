@@ -100,26 +100,18 @@ jobs:
           go build -C "$GITHUB_WORKSPACE/tools/lint" -o "$RUNNER_TEMP/staticcheck" honnef.co/go/tools/cmd/staticcheck
           "$RUNNER_TEMP/staticcheck" ./...
 
-      - name: Deadcode (informational)
+      # With -test, code reached only from tests counts as live, so every line deadcode prints is a
+      # function nothing calls. The engine reports none, so any line fails the job. deadcode exits 0
+      # when it reports findings, so the output decides, not the exit code.
+      - name: Deadcode
         working-directory: engine
-        continue-on-error: true
         run: |
-          out="$RUNNER_TEMP/deadcode-engine.txt"
-          go run golang.org/x/tools/cmd/deadcode@v0.48.0 ./... > "$out" || true
-          count=$(wc -l < "$out" | tr -d ' ')
-          {
-            echo "### Dead code — engine (informational)"
-            echo
-            echo "\`$count\` unreachable functions reported."
-            if [ "$count" -gt 0 ]; then
-              echo
-              echo '```'
-              head -n 10 "$out"
-              [ "$count" -gt 10 ] && echo "... and $((count - 10)) more"
-              echo '```'
-            fi
-          } >> "$GITHUB_STEP_SUMMARY"
-          cat "$out"
+          out=$(go run golang.org/x/tools/cmd/deadcode@v0.48.0 -test ./...)
+          if [ -n "$out" ]; then
+            echo "$out"
+            echo "::error::deadcode -test reports unreachable functions; delete them or call them."
+            exit 1
+          fi
 
       - name: Test
         working-directory: engine
@@ -392,26 +384,16 @@ jobs:
           go build -C "$GITHUB_WORKSPACE/tools/lint" -o "$RUNNER_TEMP/staticcheck" honnef.co/go/tools/cmd/staticcheck
           "$RUNNER_TEMP/staticcheck" -tags backend ./...
 
-      - name: Deadcode (informational)
+      # The same gate as the engine's Deadcode step, with the backend tag like the steps above.
+      - name: Deadcode
         working-directory: tui
-        continue-on-error: true
         run: |
-          out="$RUNNER_TEMP/deadcode-tui.txt"
-          go run golang.org/x/tools/cmd/deadcode@v0.48.0 ./... > "$out" || true
-          count=$(wc -l < "$out" | tr -d ' ')
-          {
-            echo "### Dead code — tui (informational)"
-            echo
-            echo "\`$count\` unreachable functions reported."
-            if [ "$count" -gt 0 ]; then
-              echo
-              echo '```'
-              head -n 10 "$out"
-              [ "$count" -gt 10 ] && echo "... and $((count - 10)) more"
-              echo '```'
-            fi
-          } >> "$GITHUB_STEP_SUMMARY"
-          cat "$out"
+          out=$(go run golang.org/x/tools/cmd/deadcode@v0.48.0 -test -tags backend ./...)
+          if [ -n "$out" ]; then
+            echo "$out"
+            echo "::error::deadcode -test reports unreachable functions; delete them or call them."
+            exit 1
+          fi
 
       - name: Test
         working-directory: tui
