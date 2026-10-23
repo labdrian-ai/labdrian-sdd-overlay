@@ -33,8 +33,15 @@ func TestEveryManifestRowExistsInTheRepository(t *testing.T) {
 		t.Fatalf("resolving the manifest rows: %v", err)
 	}
 	for _, r := range resolved {
-		if _, err := os.Stat(filepath.Join(root, r.RepoRel)); err != nil {
-			t.Errorf("manifest row %q (route %s) has no file at %s: %v", r.Path, r.Route, r.RepoRel, err)
+		// RepoSource is where a deployed row is copied from; a row with an unknown route keeps its
+		// path as RepoRel but is copied from skills/, so the source decides. A row never deployed has
+		// no source, and RepoRel is its place in the repository.
+		place := r.RepoSource
+		if place == "" {
+			place = filepath.Join(root, r.RepoRel)
+		}
+		if _, err := os.Stat(place); err != nil {
+			t.Errorf("manifest row %q (route %s) has no file at %s: %v", r.Path, r.Route, place, err)
 		}
 	}
 }
