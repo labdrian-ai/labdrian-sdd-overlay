@@ -6,20 +6,14 @@ import (
 	"strings"
 )
 
-// BaselineLintDecision says what the hard lint findings of a skill mean for the approval of its
-// bytes. A skill outside the approval baseline is refused (refused is true) on any hard finding.
-// A baseline skill predates the lint budget (most of the 35 fail it today), and refusing it would
-// leave no way to approve the change an upstream merge makes to its bytes, so its legacy findings
-// (size and description shape, see legacyBaselineLintRules) are warned about, after the
-// approval, and do not block it: warnings holds one line for each. Any other hard finding means
-// the file is not a usable skill (a truncated or corrupted merge, for example) and refuses a
-// baseline skill too.
-func BaselineLintDecision(id string, hard []error) (warnings []string, refused bool) {
-	return BaselineLintDecisionAgainst(FixedBaseline, id, hard)
-}
-
-// BaselineLintDecisionAgainst is BaselineLintDecision with the baseline the caller names; a nil
-// baseline is the fixed one.
+// BaselineLintDecisionAgainst says what the hard lint findings of a skill mean for the approval of
+// its bytes, against the baseline the caller names; a nil baseline is the fixed one. A skill
+// outside the approval baseline is refused (refused is true) on any hard finding. A baseline skill
+// predates the lint budget (most of the 35 fail it today), and refusing it would leave no way to
+// approve the change an upstream merge makes to its bytes, so its legacy findings (size and
+// description shape, see legacyBaselineLintRules) are warned about, after the approval, and do not
+// block it: warnings holds one line for each. Any other hard finding means the file is not a
+// usable skill (a truncated or corrupted merge, for example) and refuses a baseline skill too.
 func BaselineLintDecisionAgainst(baseline BaselineLookup, id string, hard []error) (warnings []string, refused bool) {
 	baseline = baseline.OrFixed()
 	if len(hard) == 0 {

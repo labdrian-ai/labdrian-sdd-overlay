@@ -80,7 +80,7 @@ var (
 // passes the same hard lint `skills add` enforces (warnings never block), and an existing record
 // is readable (an unreadable one is refused rather than overwritten blind). A skill in the
 // approval baseline (by id, whatever its bytes now are) is not refused for its legacy hard lint
-// findings (skills.BaselineLintDecision): they are returned as warnings once the approval has
+// findings (skills.BaselineLintDecisionAgainst): they are returned as warnings once the approval has
 // happened, never for one that was refused or failed.
 //
 // Re-approving identical bytes is idempotent. Approving changed bytes, or replacing a stale or
