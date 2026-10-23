@@ -54,8 +54,9 @@ skills:
       updateStrategy: overlay-only
 `
 
-// packageWorld is a world that holds an overlay of three skills and the agent the package ships,
-// and the place the package is built.
+// packageWorld is a world that holds an overlay of three skills and an agent in its two forms --
+// the Pi file the package ships and the Claude file it does not -- and the place the package is
+// built.
 func (w *registryWorld) packageWorld() {
 	w.t.Helper()
 	w.put("overlay/"+worldRegistry, packageRegistryYAML)
@@ -63,7 +64,8 @@ func (w *registryWorld) packageWorld() {
 		w.put("overlay/skills/"+id+"/SKILL.md", skillFile(id))
 	}
 	w.put("overlay/skills/alpha/references/notes.md", "A reference file.\n")
-	w.put("overlay/agents/GADU.md", "---\nname: GADU\n---\nThe agent.\n")
+	w.put("overlay/pi/agents/builder.md", "---\nname: builder\ndescription: The agent.\n---\nThe agent.\n")
+	w.put("overlay/agents/builder.md", "---\nname: builder\n---\nThe Claude file of the same agent, which the package does not ship.\n")
 	w.put("overlay/skills/_shared/minimalism-contract.md", "A contract.\n")
 	w.put("overlay/skills/_shared/anti-generic-design.md", "Another contract.\n")
 	w.filter = maskCommits

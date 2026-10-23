@@ -132,6 +132,73 @@ func TestPipkgHelpers_BuildStatusSyncCheck(t *testing.T) {
 	}
 }
 
+// TestPipkgBuildAndReport_RetiresTheLinkOfAnAgentThePackageNoLongerShips (slice 5 of the role
+// agents, S4): `apply --target pi` builds through pipkg_build_and_report before it asks whether a
+// `pi` is on the PATH (pipkg_apply_and_report), so a machine without pi -- or one whose `pi install`
+// then fails -- ends the run with this helper alone. The build swaps the package in whole: GADU.md,
+// once the role agents replaced it, is no longer in it, and the link a deploy before made for it
+// points at nothing. The helper's run removes that link and says so; the links of the agents the
+// package ships and what is not the overlay's stay as they are.
+func TestPipkgBuildAndReport_RetiresTheLinkOfAnAgentThePackageNoLongerShips(t *testing.T) {
+	home, stateDir, runHelper := pipkgWorld(t)
+	destDir := filepath.Join(stateDir, "pi", "labdrian-pi")
+	agentsHome := filepath.Join(home, ".pi", "agent", "agents")
+
+	if out, err := runHelper("pipkg_build_and_report"); err != nil {
+		t.Fatalf("first build should succeed: %v\n%s", err, out)
+	}
+	shipped, err := os.ReadDir(filepath.Join(destDir, "agents"))
+	if err != nil || len(shipped) == 0 {
+		t.Fatalf("the package must ship agents to link: %v (%d)", err, len(shipped))
+	}
+	if _, statErr := os.Stat(filepath.Join(destDir, "agents", "GADU.md")); !os.IsNotExist(statErr) {
+		t.Fatalf("this test needs a package that does not ship GADU.md: Stat err = %v", statErr)
+	}
+	// The deploy before slice 5 linked every agent of its package, GADU.md included.
+	if err := os.MkdirAll(agentsHome, 0755); err != nil {
+		t.Fatalf("mkdir the agents directory of the home: %v", err)
+	}
+	links := []string{"GADU.md"}
+	for _, agent := range shipped {
+		links = append(links, agent.Name())
+	}
+	for _, file := range links {
+		if err := os.Symlink(filepath.Join(destDir, "agents", file), filepath.Join(agentsHome, file)); err != nil {
+			t.Fatalf("symlink the link of %s: %v", file, err)
+		}
+	}
+	foreign := filepath.Join(agentsHome, "review-risk.md")
+	if err := os.WriteFile(foreign, []byte("an agent of gentle-ai\n"), 0644); err != nil {
+		t.Fatalf("write the file of gentle-ai: %v", err)
+	}
+
+	out, buildErr := runHelper("pipkg_build_and_report")
+	if buildErr != nil {
+		t.Fatalf("build should succeed: %v\n%s", buildErr, out)
+	}
+
+	if !strings.Contains(out, "pipkg build: GADU.md link removed (the package no longer ships it).") {
+		t.Errorf("build must say it removed the link of GADU.md, got: %s", out)
+	}
+	if !strings.Contains(out, "install hint: pi install") {
+		t.Errorf("build must still print the install hint, got: %s", out)
+	}
+	if _, lstatErr := os.Lstat(filepath.Join(agentsHome, "GADU.md")); !os.IsNotExist(lstatErr) {
+		t.Errorf("the link of GADU.md must be gone, Lstat err = %v", lstatErr)
+	}
+	for _, agent := range shipped {
+		if _, statErr := os.Stat(filepath.Join(agentsHome, agent.Name())); statErr != nil {
+			t.Errorf("the link of %s, an agent the package ships, must still resolve: %v", agent.Name(), statErr)
+		}
+		if strings.Contains(out, agent.Name()+" link removed") {
+			t.Errorf("build says it removed the link of %s, which the package ships: %s", agent.Name(), out)
+		}
+	}
+	if data, readErr := os.ReadFile(foreign); readErr != nil || string(data) != "an agent of gentle-ai\n" {
+		t.Errorf("the file of gentle-ai must be as it was, got %q (%v)", data, readErr)
+	}
+}
+
 // TestPipkgStatusAndReport_DelegatesHonestPartialThenSupported (W-01):
 // pipkg_status_and_report must delegate to `engine runtime status --target
 // pi` once the package is built, rather than the old bash-only "no
@@ -184,7 +251,7 @@ func TestPipkgStatusAndReport_DelegatesHonestPartialThenSupported(t *testing.T) 
 	if err := os.WriteFile(filepath.Join(destDir, "mcp.json"), []byte(mcpJSON), 0644); err != nil {
 		t.Fatalf("write mcp.json: %v", err)
 	}
-	// Every agent of the package is linked, as `apply` leaves them: GADU.md and the role agents.
+	// Every agent of the package is linked, as `apply` leaves them: the role agents.
 	agents, err := os.ReadDir(filepath.Join(destDir, "agents"))
 	if err != nil {
 		t.Fatalf("read the agents of the package: %v", err)

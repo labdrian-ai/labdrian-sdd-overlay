@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/pipkg"
@@ -15,7 +16,7 @@ func pipkgFixtureOverlay(t *testing.T) (overlayRoot, registryPath string) {
 	t.Helper()
 	root := t.TempDir()
 	writeTestFile(t, filepath.Join(root, "skills", "pi-skill", "SKILL.md"), "---\nname: pi-skill\n---\nbody\n")
-	writeTestFile(t, filepath.Join(root, "agents", "GADU.md"), "---\nname: GADU\n---\nbody\n")
+	writeTestFile(t, filepath.Join(root, "pi", "agents", "builder.md"), "---\nname: builder\ndescription: test agent\n---\nbody\n")
 	writeTestFile(t, filepath.Join(root, "skills", "_shared", "minimalism-contract.md"),
 		"---\napplies_to_phases: [sdd-tasks, sdd-apply]\nexcluded_phases: [sdd-verify]\ninjection_point: \"## Skills to load before work\"\n---\nbody\n")
 	writeTestFile(t, filepath.Join(root, "skills", "_shared", "anti-generic-design.md"),
@@ -188,6 +189,158 @@ func (r *refAskingSource) HasChanges(string, ...string) (bool, error) { return f
 func (r *refAskingSource) HasCommit(_, ref string) (bool, error) {
 	r.refs = append(r.refs, ref)
 	return false, nil
+}
+
+// pipkgArgs is the command line of a verb of pipkg over the paths of a test.
+func pipkgArgs(verb, overlayRoot, registryPath, destDir string) []string {
+	return []string{verb, "--overlay-root", overlayRoot, "--registry", registryPath, "--dest-dir", destDir}
+}
+
+// pipkgAgentLinks is a home in which the deploy before this one linked agents of the package at
+// destDir, and the overlay has since dropped one of them. It returns the home and the directory Pi
+// reads the agents from. builder.md is an agent the package still ships; GADU.md is one it does not
+// (the pipkgFixtureOverlay package has no GADU.md), so its link points at nothing. Beside them the
+// directory holds what is not the overlay's: a file of gentle-ai and a link into gentle-pi's package.
+func pipkgAgentLinks(t *testing.T, destDir string) (home, agentsHome string) {
+	t.Helper()
+	home = t.TempDir()
+	agentsHome = filepath.Join(home, ".pi", "agent", "agents")
+	if err := os.MkdirAll(agentsHome, 0755); err != nil {
+		t.Fatal(err)
+	}
+	// A link may be made before its target is: the target is the package's own file, which a build
+	// writes or, for the dropped agent, no longer does.
+	for _, file := range []string{"builder.md", "GADU.md"} {
+		if err := os.Symlink(filepath.Join(destDir, "agents", file), filepath.Join(agentsHome, file)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	writeTestFile(t, filepath.Join(agentsHome, "review-risk.md"), "an agent of gentle-ai\n")
+	gentlePiAgent := filepath.Join(t.TempDir(), "gentle-pi", "agents", "jd-judge-a.md")
+	writeTestFile(t, gentlePiAgent, "gentle-pi's own agent\n")
+	if err := os.Symlink(gentlePiAgent, filepath.Join(agentsHome, "jd-judge-a.md")); err != nil {
+		t.Fatal(err)
+	}
+	return home, agentsHome
+}
+
+// assertAgentLinksOfTheHome fails the test unless the home is as pipkgAgentLinks left it, except for
+// the link of the dropped agent, which is there or not as dropped says.
+func assertAgentLinksOfTheHome(t *testing.T, destDir, agentsHome string, dropped bool) {
+	t.Helper()
+	if got, err := os.Readlink(filepath.Join(agentsHome, "builder.md")); err != nil || got != filepath.Join(destDir, "agents", "builder.md") {
+		t.Errorf("the link of builder.md, an agent the package ships, is %q (err %v), want the package's own file", got, err)
+	}
+	if data, err := os.ReadFile(filepath.Join(agentsHome, "review-risk.md")); err != nil || string(data) != "an agent of gentle-ai\n" {
+		t.Errorf("review-risk.md, a file of gentle-ai, is %q (err %v), want it as it was", data, err)
+	}
+	if got, err := os.Readlink(filepath.Join(agentsHome, "jd-judge-a.md")); err != nil || !strings.HasSuffix(got, filepath.Join("gentle-pi", "agents", "jd-judge-a.md")) {
+		t.Errorf("the link of gentle-pi is %q (err %v), want it as it was", got, err)
+	}
+	_, err := os.Lstat(filepath.Join(agentsHome, "GADU.md"))
+	if dropped && !os.IsNotExist(err) {
+		t.Errorf("the link of GADU.md, an agent the package no longer ships, is still there (Lstat err = %v)", err)
+	}
+	if !dropped && err != nil {
+		t.Errorf("the link of GADU.md must be as it was: %v", err)
+	}
+}
+
+// The deploy runs `pipkg build` first and `pi install` only when a `pi` is on the PATH, so the build
+// is the one step every run of `apply --target pi` goes through. It swaps the package in whole: an
+// agent the overlay dropped (GADU.md, once the role agents replaced it) is gone from it, and the link
+// a deploy before made for it points at nothing. The build removes that link and tells it; the link
+// of an agent the package still ships, a file of gentle-ai and a link of gentle-pi stay as they are.
+func TestRunPipkgCore_BuildRetiresTheLinkOfAnAgentThePackageNoLongerShips(t *testing.T) {
+	overlayRoot, registryPath := pipkgFixtureOverlay(t)
+	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
+	home, agentsHome := pipkgAgentLinks(t, destDir)
+	d := testDeps()
+	d.getenv = environmentOf(map[string]string{"HOME": home})
+
+	var outBuf, errBuf bytes.Buffer
+	exitCode := -1
+	runPipkgCore(d, noGit(), pipkgArgs("build", overlayRoot, registryPath, destDir), &outBuf, &errBuf, func(code int) { exitCode = code })
+
+	if exitCode != 0 {
+		t.Fatalf("pipkg build exited %d, stderr=%q", exitCode, errBuf.String())
+	}
+	want := "pipkg build: labdrian-pi package written to " + destDir + "\n" +
+		"pipkg build: GADU.md link removed (the package no longer ships it).\n"
+	if outBuf.String() != want {
+		t.Errorf("pipkg build said:\n%q\nwant:\n%q", outBuf.String(), want)
+	}
+	if errBuf.Len() != 0 {
+		t.Errorf("pipkg build wrote to stderr: %q", errBuf.String())
+	}
+	if _, err := os.Stat(filepath.Join(destDir, "agents", "GADU.md")); !os.IsNotExist(err) {
+		t.Fatalf("the built package must not hold GADU.md, Stat err = %v", err)
+	}
+	assertAgentLinksOfTheHome(t, destDir, agentsHome, true)
+}
+
+// A build that retires no link says what it always said and touches nothing of the home: the home
+// holds the links of the agents the package ships and what is not the overlay's, and nothing else.
+func TestRunPipkgCore_BuildSaysNothingMoreWhenNoLinkIsToRetire(t *testing.T) {
+	overlayRoot, registryPath := pipkgFixtureOverlay(t)
+	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
+	home, agentsHome := pipkgAgentLinks(t, destDir)
+	if err := os.Remove(filepath.Join(agentsHome, "GADU.md")); err != nil {
+		t.Fatal(err)
+	}
+	d := testDeps()
+	d.getenv = environmentOf(map[string]string{"HOME": home})
+
+	var outBuf, errBuf bytes.Buffer
+	exitCode := -1
+	runPipkgCore(d, noGit(), pipkgArgs("build", overlayRoot, registryPath, destDir), &outBuf, &errBuf, func(code int) { exitCode = code })
+
+	if exitCode != 0 {
+		t.Fatalf("pipkg build exited %d, stderr=%q", exitCode, errBuf.String())
+	}
+	if want := "pipkg build: labdrian-pi package written to " + destDir + "\n"; outBuf.String() != want {
+		t.Errorf("pipkg build said %q, want %q", outBuf.String(), want)
+	}
+	if errBuf.Len() != 0 {
+		t.Errorf("pipkg build wrote to stderr: %q", errBuf.String())
+	}
+	assertAgentLinksOfTheHome(t, destDir, agentsHome, true)
+}
+
+// A machine whose home cannot be told has no link to retire: the build says what it always said.
+func TestRunPipkgCore_BuildWithoutAHomeRetiresNothing(t *testing.T) {
+	overlayRoot, registryPath := pipkgFixtureOverlay(t)
+	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
+
+	var outBuf, errBuf bytes.Buffer
+	exitCode := -1
+	runPipkgCore(deps{}, noGit(), pipkgArgs("build", overlayRoot, registryPath, destDir), &outBuf, &errBuf, func(code int) { exitCode = code })
+
+	if exitCode != 0 {
+		t.Fatalf("pipkg build exited %d, stderr=%q", exitCode, errBuf.String())
+	}
+	if want := "pipkg build: labdrian-pi package written to " + destDir + "\n"; outBuf.String() != want {
+		t.Errorf("pipkg build said %q, want %q", outBuf.String(), want)
+	}
+}
+
+// The check reads and reports: it removes no link, whatever the home holds, and says nothing of one.
+func TestRunPipkgCore_CheckRetiresNothing(t *testing.T) {
+	overlayRoot, registryPath := pipkgFixtureOverlay(t)
+	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
+	var buildOut, buildErr bytes.Buffer
+	runPipkgCore(testDeps(), noGit(), pipkgArgs("build", overlayRoot, registryPath, destDir), &buildOut, &buildErr, func(int) {})
+	home, agentsHome := pipkgAgentLinks(t, destDir)
+	d := testDeps()
+	d.getenv = environmentOf(map[string]string{"HOME": home})
+
+	var outBuf, errBuf bytes.Buffer
+	runPipkgCore(d, noGit(), pipkgArgs("check", overlayRoot, registryPath, destDir), &outBuf, &errBuf, func(int) {})
+
+	if strings.Contains(outBuf.String()+errBuf.String(), "link removed") {
+		t.Errorf("pipkg check tells a link removed:\nstdout=%q\nstderr=%q", outBuf.String(), errBuf.String())
+	}
+	assertAgentLinksOfTheHome(t, destDir, agentsHome, false)
 }
 
 // The build reads the deploy ref along with the rest of the options, but nothing in a build uses

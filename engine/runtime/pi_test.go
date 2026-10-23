@@ -36,14 +36,18 @@ func newPiAdapterWith(t *testing.T, commands engineRuntime.CommandRunner, option
 	)
 }
 
+// fixtureAgent is the one agent file piFixtureOverlay ships for Pi (its pi/agents/<fixtureAgent>):
+// the agent the tests below see built, linked, left unlinked and refused.
+const fixtureAgent = "sweeper.md"
+
 // piFixtureOverlay writes a minimal overlay tree (one pi-targeted skill,
-// agents/GADU.md, a matching registry) and returns its root and registry
+// pi/agents/sweeper.md, a matching registry) and returns its root and registry
 // path, for exercising PiAdapter's pipkg wiring (task 2.4).
 func piFixtureOverlay(t *testing.T) (overlayRoot, registryPath string) {
 	t.Helper()
 	root := t.TempDir()
 	mustWrite(t, filepath.Join(root, "skills", "pi-skill", "SKILL.md"), "---\nname: pi-skill\n---\nbody\n")
-	mustWrite(t, filepath.Join(root, "agents", "GADU.md"), "---\nname: GADU\ndescription: test agent\ntools: '*'\n---\nbody\n")
+	mustWrite(t, filepath.Join(root, "pi", "agents", fixtureAgent), "---\nname: sweeper\ndescription: test agent\ntools: '*'\n---\nbody\n")
 	mustWrite(t, filepath.Join(root, "skills", "_shared", "minimalism-contract.md"),
 		"---\napplies_to_phases: [sdd-tasks, sdd-apply]\nexcluded_phases: [sdd-verify]\ninjection_point: \"## Skills to load before work\"\n---\nbody\n")
 	mustWrite(t, filepath.Join(root, "skills", "_shared", "anti-generic-design.md"),
@@ -80,7 +84,7 @@ func mustWrite(t *testing.T, path, content string) {
 // overlay/registry/dest paths, Apply/Install build the package via pipkg and
 // SyncCheck reports it as drift-free right after.
 func TestPiAdapter_ApplyInstallSyncCheck_WiredToPipkg(t *testing.T) {
-	t.Setenv("HOME", t.TempDir()) // Install now also links ~/.pi/agent/agents/GADU.md
+	t.Setenv("HOME", t.TempDir()) // Install now also links ~/.pi/agent/agents/sweeper.md
 	overlayRoot, registryPath := piFixtureOverlay(t)
 	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
 
@@ -352,9 +356,9 @@ func buildPiPackage(t *testing.T, overlayRoot, registryPath, destDir string) {
 
 // newBuiltPiAdapterWithStub builds a real package at a fresh destDir and returns an adapter for it
 // plus the destDir and the fake CommandRunner the adapter runs `pi` through. It also isolates HOME
-// to a fresh t.TempDir(): Install/Uninstall touch ~/.pi/agent/agents/GADU.md (R-013/R-016), and
+// to a fresh t.TempDir(): Install/Uninstall touch ~/.pi/agent/agents/sweeper.md (R-013/R-016), and
 // sharing TestMain's one process-wide HOME across every caller of this helper would let one
-// test's GADU link leak into the next test's assertions.
+// test's agent link leak into the next test's assertions.
 func newBuiltPiAdapterWithStub(t *testing.T) (adapter engineRuntime.PiAdapter, destDir string, commands *fakeCommands) {
 	t.Helper()
 	return newBuiltPiAdapterWithOptions(t, engineRuntime.PiOptions{})
@@ -404,7 +408,7 @@ func readAllRecordedTokens(t *testing.T, commands *fakeCommands) []string {
 // shell metacharacters must reach `pi install` byte-for-byte, never
 // interpreted.
 func TestPiAdapter_InstallNoShellInjection(t *testing.T) {
-	t.Setenv("HOME", t.TempDir()) // Install now also links ~/.pi/agent/agents/GADU.md
+	t.Setenv("HOME", t.TempDir()) // Install now also links ~/.pi/agent/agents/sweeper.md
 	overlayRoot, registryPath := piFixtureOverlay(t)
 	destDir := filepath.Join(t.TempDir(), `labdrian-pi; $(touch injected); \`)
 	buildPiPackage(t, overlayRoot, registryPath, destDir)
@@ -456,7 +460,7 @@ func TestPiAdapter_StatusTellsEachUnprovenEntryOnce(t *testing.T) {
 		t.Fatalf("Status = %s, want partial", result)
 	}
 	line := result.String()
-	for _, entry := range []string{"listed in ~/.pi/agent/settings.json packages", "longterm-mem registered in mcp.json", "GADU.md linked at"} {
+	for _, entry := range []string{"listed in ~/.pi/agent/settings.json packages", "longterm-mem registered in mcp.json", fixtureAgent + " linked at"} {
 		if n := strings.Count(line, entry); n != 1 {
 			t.Errorf("the status line names %q %d times, want once:\n%s", entry, n, line)
 		}
@@ -482,21 +486,6 @@ func writePiSettingsListing(t *testing.T, destDir string) {
 	mustWrite(t, settingsPath, string(raw))
 }
 
-// writeGaduLinkCurrent symlinks ~/.pi/agent/agents/GADU.md -> destDir's
-// agents/GADU.md directly (bypassing Install/linkGaduAgent), for status
-// tests that need the "current" link state without exercising Install.
-func writeGaduLinkCurrent(t *testing.T, home, destDir string) {
-	t.Helper()
-	linkPath := filepath.Join(home, ".pi", "agent", "agents", "GADU.md")
-	target := filepath.Join(destDir, "agents", "GADU.md")
-	if err := os.MkdirAll(filepath.Dir(linkPath), 0755); err != nil {
-		t.Fatalf("mkdir %s: %v", filepath.Dir(linkPath), err)
-	}
-	if err := os.Symlink(target, linkPath); err != nil {
-		t.Fatalf("symlink %s -> %s: %v", linkPath, target, err)
-	}
-}
-
 // TestPiAdapter_StatusAcceptsRelativePackageListing: a real `pi install
 // <abs path>` records the package RELATIVE to ~/.pi/agent/ (observed on
 // Pi 0.85.1: "../../.labdrian-overlay/pi/labdrian-pi"); the docs state
@@ -509,7 +498,7 @@ func TestPiAdapter_StatusAcceptsRelativePackageListing(t *testing.T) {
 	destDir := filepath.Join(home, ".labdrian-overlay", "pi", "labdrian-pi")
 	buildPiPackage(t, overlayRoot, registryPath, destDir)
 	writePiMcpRegistration(t, destDir, true)
-	writeGaduLinkCurrent(t, home, destDir)
+	writeAgentLinkCurrent(t, home, destDir, fixtureAgent)
 	settingsPath := filepath.Join(home, ".pi", "agent", "settings.json")
 	adapter := newPiAdapterAt(t, overlayRoot, registryPath, destDir)
 
@@ -538,7 +527,7 @@ func writePiMcpRegistration(t *testing.T, destDir string, registered bool) {
 // TestPiAdapter_StatusTriangulatesAllOwnedEntries (C-01 remediation,
 // extended by R-015 with two more owned entries): Status names five owned
 // entries -- built+in-sync, listed in settings.json, longterm-mem
-// registered in mcp.json, the Subagents extension installed, and GADU.md
+// registered in mcp.json, the Subagents extension installed, and sweeper.md
 // linked. It must never report supported while any one of them is
 // unproven, and must report supported only once all five are proven.
 func TestPiAdapter_StatusTriangulatesAllOwnedEntries(t *testing.T) {
@@ -547,7 +536,7 @@ func TestPiAdapter_StatusTriangulatesAllOwnedEntries(t *testing.T) {
 		listed             bool
 		mcpRegistered      bool
 		subagentsInstalled bool
-		gaduLinked         bool
+		agentLinked        bool
 		wantStatus         core.CapabilityStatus
 		wantContains       string
 	}{
@@ -570,7 +559,7 @@ func TestPiAdapter_StatusTriangulatesAllOwnedEntries(t *testing.T) {
 			listed:             true,
 			mcpRegistered:      true,
 			subagentsInstalled: true,
-			gaduLinked:         true,
+			agentLinked:        true,
 			wantStatus:         core.CapabilitySupported,
 			wantContains:       "longterm-mem is registered in its mcp.json",
 		},
@@ -592,8 +581,8 @@ func TestPiAdapter_StatusTriangulatesAllOwnedEntries(t *testing.T) {
 			}
 			writePiSettingsPackages(t, home, packages)
 			writePiMcpRegistration(t, destDir, c.mcpRegistered)
-			if c.gaduLinked {
-				writeGaduLinkCurrent(t, home, destDir)
+			if c.agentLinked {
+				writeAgentLinkCurrent(t, home, destDir, fixtureAgent)
 			}
 
 			adapter := newPiAdapterAt(t, overlayRoot, registryPath, destDir)
@@ -674,8 +663,8 @@ func assertFileUnchanged(t *testing.T, path string, want []byte) {
 }
 
 // ---------------------------------------------------------------------------
-// gadu-pi-subagent (Phase 5, R-012..R-016): the Pi Subagents extension probe/
-// install, the overlay-owned ~/.pi/agent/agents/GADU.md symlink, its status
+// pi-subagent (Phase 5, R-012..R-016): the Pi Subagents extension probe/
+// install, the overlay-owned ~/.pi/agent/agents/<agent>.md symlinks, their status
 // entries, and its selective uninstall.
 // ---------------------------------------------------------------------------
 
@@ -803,10 +792,10 @@ func TestSubagentsExtension_SkipVariableAloneDoesNothing(t *testing.T) {
 	}
 }
 
-// TestGaduLink_SurvivesOverwrite (task 5.3): a gentle-pi-style overwrite of
+// TestAgentLink_SurvivesOverwrite (task 5.3): a gentle-pi-style overwrite of
 // its OWN managed files in the same directory must never touch our symlink
 // -- ownership is per-file (Readlink equality), not directory-scoped.
-func TestGaduLink_SurvivesOverwrite(t *testing.T) {
+func TestAgentLink_SurvivesOverwrite(t *testing.T) {
 	adapter, destDir, _ := newBuiltPiAdapterWithStub(t)
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -815,8 +804,8 @@ func TestGaduLink_SurvivesOverwrite(t *testing.T) {
 	if result := adapter.Install(); result.Status == core.CapabilityUnsupported {
 		t.Fatalf("Install must not be unsupported, got: %s", result)
 	}
-	linkPath := filepath.Join(home, ".pi", "agent", "agents", "GADU.md")
-	targetPath := filepath.Join(destDir, "agents", "GADU.md")
+	linkPath := filepath.Join(home, ".pi", "agent", "agents", fixtureAgent)
+	targetPath := filepath.Join(destDir, "agents", fixtureAgent)
 	before, err := os.Readlink(linkPath)
 	if err != nil {
 		t.Fatalf("expected a symlink at %s after Install: %v", linkPath, err)
@@ -829,10 +818,10 @@ func TestGaduLink_SurvivesOverwrite(t *testing.T) {
 
 	after, err := os.Readlink(linkPath)
 	if err != nil {
-		t.Fatalf("GADU.md link must still exist after a sibling rebuild: %v", err)
+		t.Fatalf("sweeper.md link must still exist after a sibling rebuild: %v", err)
 	}
 	if before != after || after != targetPath {
-		t.Fatalf("GADU.md link changed: before=%q after=%q want=%q", before, after, targetPath)
+		t.Fatalf("sweeper.md link changed: before=%q after=%q want=%q", before, after, targetPath)
 	}
 }
 
@@ -848,9 +837,9 @@ func TestUninstall_OwnedLinkOnly(t *testing.T) {
 	if result := adapter.Install(); result.Status == core.CapabilityUnsupported {
 		t.Fatalf("Install must not be unsupported, got: %s", result)
 	}
-	linkPath := filepath.Join(home, ".pi", "agent", "agents", "GADU.md")
+	linkPath := filepath.Join(home, ".pi", "agent", "agents", fixtureAgent)
 	if _, err := os.Lstat(linkPath); err != nil {
-		t.Fatalf("expected GADU.md link to exist after Install: %v", err)
+		t.Fatalf("expected sweeper.md link to exist after Install: %v", err)
 	}
 
 	result := adapter.Uninstall()
@@ -858,7 +847,7 @@ func TestUninstall_OwnedLinkOnly(t *testing.T) {
 		t.Fatalf("Uninstall = %s, want supported", result)
 	}
 	if _, err := os.Lstat(linkPath); !os.IsNotExist(err) {
-		t.Fatalf("GADU.md link should be removed after Uninstall, stat err = %v", err)
+		t.Fatalf("sweeper.md link should be removed after Uninstall, stat err = %v", err)
 	}
 
 	// Install already made two `pi` invocations; Uninstall's `pi remove`
@@ -870,16 +859,16 @@ func TestUninstall_OwnedLinkOnly(t *testing.T) {
 	}
 }
 
-// TestUninstall_LeavesForeignGaduFileUntouched (task 5.4): a pre-existing
+// TestUninstall_LeavesAForeignFileAtTheLinkPathUntouched (task 5.4): a pre-existing
 // non-owned entry at the link path must never be removed by Uninstall.
-func TestUninstall_LeavesForeignGaduFileUntouched(t *testing.T) {
+func TestUninstall_LeavesAForeignFileAtTheLinkPathUntouched(t *testing.T) {
 	adapter, _, _ := newBuiltPiAdapterWithStub(t)
 	home, err := os.UserHomeDir()
 	if err != nil {
 		t.Fatalf("UserHomeDir: %v", err)
 	}
-	linkPath := filepath.Join(home, ".pi", "agent", "agents", "GADU.md")
-	foreignContent := []byte("gentle-pi's own GADU.md\n")
+	linkPath := filepath.Join(home, ".pi", "agent", "agents", fixtureAgent)
+	foreignContent := []byte("gentle-pi's own sweeper.md\n")
 	mustWrite(t, linkPath, string(foreignContent))
 
 	if result := adapter.Uninstall(); result.Status == core.CapabilityUnsupported {
@@ -888,10 +877,10 @@ func TestUninstall_LeavesForeignGaduFileUntouched(t *testing.T) {
 	assertFileUnchanged(t, linkPath, foreignContent)
 }
 
-// TestInstall_WiresSubagentsExtensionAndGaduLink (task 5.9): Install wires
-// BOTH the extension probe/install and the GADU link creation, and Status
+// TestInstall_WiresSubagentsExtensionAndAgentLink (task 5.9): Install wires
+// BOTH the extension probe/install and the agent link creation, and Status
 // (task 5.8) reports both as newly-proven entries afterward.
-func TestInstall_WiresSubagentsExtensionAndGaduLink(t *testing.T) {
+func TestInstall_WiresSubagentsExtensionAndAgentLink(t *testing.T) {
 	adapter, destDir, recorder := newBuiltPiAdapterWithStub(t)
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -916,9 +905,9 @@ func TestInstall_WiresSubagentsExtensionAndGaduLink(t *testing.T) {
 		t.Fatalf("Install must run both the package install and the Subagents extension install, got argv lines: %v", readRecordedInvocations(t, recorder))
 	}
 
-	linkPath := filepath.Join(home, ".pi", "agent", "agents", "GADU.md")
-	if target, err := os.Readlink(linkPath); err != nil || target != filepath.Join(destDir, "agents", "GADU.md") {
-		t.Fatalf("Install must leave GADU.md linked to the package path, readlink=%q err=%v", target, err)
+	linkPath := filepath.Join(home, ".pi", "agent", "agents", fixtureAgent)
+	if target, err := os.Readlink(linkPath); err != nil || target != filepath.Join(destDir, "agents", fixtureAgent) {
+		t.Fatalf("Install must leave sweeper.md linked to the package path, readlink=%q err=%v", target, err)
 	}
 
 	// task 5.8: Status must fold both new entries into the honesty model.
@@ -933,10 +922,10 @@ func TestInstall_WiresSubagentsExtensionAndGaduLink(t *testing.T) {
 	}
 }
 
-// TestStatus_ReportsUnprovenSubagentsAndGaduLinkEntries (task 5.8): each new
+// TestStatus_ReportsUnprovenSubagentsAndAgentLinkEntries (task 5.8): each new
 // owned entry is independently observable and forces `partial` while
 // unproven, without collapsing into a single boolean.
-func TestStatus_ReportsUnprovenSubagentsAndGaduLinkEntries(t *testing.T) {
+func TestStatus_ReportsUnprovenSubagentsAndAgentLinkEntries(t *testing.T) {
 	overlayRoot, registryPath := piFixtureOverlay(t)
 	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
 	buildPiPackage(t, overlayRoot, registryPath, destDir)
@@ -944,7 +933,7 @@ func TestStatus_ReportsUnprovenSubagentsAndGaduLinkEntries(t *testing.T) {
 	t.Setenv("HOME", home)
 	writePiSettingsListing(t, destDir)
 	writePiMcpRegistration(t, destDir, true)
-	// Neither the Subagents extension nor the GADU link exist yet.
+	// Neither the Subagents extension nor the agent link exist yet.
 
 	adapter := newPiAdapterAt(t, overlayRoot, registryPath, destDir)
 	result := adapter.Status()
@@ -954,8 +943,8 @@ func TestStatus_ReportsUnprovenSubagentsAndGaduLinkEntries(t *testing.T) {
 	if !strings.Contains(result.Message, "Subagents extension") {
 		t.Errorf("Status message must name the unproven Subagents extension entry, got %q", result.Message)
 	}
-	if !strings.Contains(result.Message, "GADU.md") {
-		t.Errorf("Status message must name the unproven GADU link entry, got %q", result.Message)
+	if !strings.Contains(result.Message, fixtureAgent) {
+		t.Errorf("Status message must name the unproven agent link entry, got %q", result.Message)
 	}
 }
 
@@ -1000,7 +989,7 @@ func TestPiAdapter_StatusFlagsExtensionConflictWithNativeSubagents(t *testing.T)
 	buildPiPackage(t, overlayRoot, registryPath, destDir)
 	writePiSettingsPackages(t, home, []string{destDir, "npm:gentle-pi@2.6.0", "npm:pi-subagents-j0k3r"})
 	writePiMcpRegistration(t, destDir, true)
-	writeGaduLinkCurrent(t, home, destDir)
+	writeAgentLinkCurrent(t, home, destDir, fixtureAgent)
 
 	adapter := newPiAdapterAt(t, overlayRoot, registryPath, destDir)
 	result := adapter.Status()
@@ -1023,7 +1012,7 @@ func TestPiAdapter_StatusSupportedWithNativeSubagents(t *testing.T) {
 	buildPiPackage(t, overlayRoot, registryPath, destDir)
 	writePiSettingsPackages(t, home, []string{destDir, "npm:gentle-pi@2.6.0"})
 	writePiMcpRegistration(t, destDir, true)
-	writeGaduLinkCurrent(t, home, destDir)
+	writeAgentLinkCurrent(t, home, destDir, fixtureAgent)
 
 	adapter := newPiAdapterAt(t, overlayRoot, registryPath, destDir)
 	result := adapter.Status()
@@ -1084,15 +1073,15 @@ func TestPiAdapter_InstallUsesLegacyExtensionWhenGentlePiBelowNativeVersion(t *t
 	}
 }
 
-// TestInstall_RejectsAmbiguousGaduFrontmatter (task 5.5/R-014): a package
-// agents/GADU.md whose frontmatter mixes an inline `tools` scalar with a
+// TestInstall_RejectsAmbiguousAgentFrontmatter (task 5.5/R-014): a package
+// pi/agents/sweeper.md whose frontmatter mixes an inline `tools` scalar with a
 // YAML list is refused before linking, with a named error, and no link is
 // created.
-func TestInstall_RejectsAmbiguousGaduFrontmatter(t *testing.T) {
+func TestInstall_RejectsAmbiguousAgentFrontmatter(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	overlayRoot, registryPath := piFixtureOverlay(t)
-	mustWrite(t, filepath.Join(overlayRoot, "agents", "GADU.md"),
-		"---\nname: GADU\ndescription: test\ntools: '*'\ntools:\n  - Read\n---\nbody\n")
+	mustWrite(t, filepath.Join(overlayRoot, "pi", "agents", fixtureAgent),
+		"---\nname: sweeper\ndescription: test\ntools: '*'\ntools:\n  - Read\n---\nbody\n")
 	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
 	buildPiPackage(t, overlayRoot, registryPath, destDir)
 	home, err := os.UserHomeDir()
@@ -1106,22 +1095,22 @@ func TestInstall_RejectsAmbiguousGaduFrontmatter(t *testing.T) {
 		t.Fatalf("Install message must name the frontmatter error, got %q", result.Message)
 	}
 
-	linkPath := filepath.Join(home, ".pi", "agent", "agents", "GADU.md")
+	linkPath := filepath.Join(home, ".pi", "agent", "agents", fixtureAgent)
 	if _, err := os.Lstat(linkPath); !os.IsNotExist(err) {
-		t.Fatalf("GADU.md must not be linked when its frontmatter is ambiguous, stat err = %v", err)
+		t.Fatalf("sweeper.md must not be linked when its frontmatter is ambiguous, stat err = %v", err)
 	}
 }
 
-// TestInstall_AcceptsProviderPrefixedModel (gadu-pi-subagent R-014
-// follow-up): a "provider/model" form model id (the shape pi/agents/GADU.md
-// now ships, e.g. "pi-claude-cli/claude-sonnet-5") must not be rejected by
-// validateGaduFrontmatter -- model is optional and unconstrained, so any
+// TestInstall_AcceptsProviderPrefixedModel (pi-subagent R-014
+// follow-up): a "provider/model" form model id (the shape the Pi role agents
+// ship, e.g. "pi-claude-cli/claude-sonnet-5") must not be rejected by
+// validateAgentFrontmatter -- model is optional and unconstrained, so any
 // non-empty value, prefixed or not, is accepted.
 func TestInstall_AcceptsProviderPrefixedModel(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	overlayRoot, registryPath := piFixtureOverlay(t)
-	mustWrite(t, filepath.Join(overlayRoot, "agents", "GADU.md"),
-		"---\nname: GADU\ndescription: test\nmodel: pi-claude-cli/claude-sonnet-5\ntools: '*'\n---\nbody\n")
+	mustWrite(t, filepath.Join(overlayRoot, "pi", "agents", fixtureAgent),
+		"---\nname: sweeper\ndescription: test\nmodel: pi-claude-cli/claude-sonnet-5\ntools: '*'\n---\nbody\n")
 	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
 	buildPiPackage(t, overlayRoot, registryPath, destDir)
 	home, err := os.UserHomeDir()
@@ -1135,8 +1124,8 @@ func TestInstall_AcceptsProviderPrefixedModel(t *testing.T) {
 		t.Fatalf("Install must accept a provider-prefixed model id, got %q", result.Message)
 	}
 
-	linkPath := filepath.Join(home, ".pi", "agent", "agents", "GADU.md")
+	linkPath := filepath.Join(home, ".pi", "agent", "agents", fixtureAgent)
 	if _, err := os.Lstat(linkPath); err != nil {
-		t.Fatalf("GADU.md must be linked when its frontmatter is valid: %v", err)
+		t.Fatalf("sweeper.md must be linked when its frontmatter is valid: %v", err)
 	}
 }

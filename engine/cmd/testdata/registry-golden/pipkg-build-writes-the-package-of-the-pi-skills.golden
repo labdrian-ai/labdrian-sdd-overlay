@@ -8,7 +8,7 @@ pipkg build: labdrian-pi package written to <WORLD>/out/labdrian-pi
 --- tree of out ---
 labdrian-pi/
 labdrian-pi/agents/
-labdrian-pi/agents/GADU.md
+labdrian-pi/agents/builder.md
 labdrian-pi/extensions/
 labdrian-pi/extensions/labdrian-gate.ts
 labdrian-pi/mcp.json
@@ -52,7 +52,7 @@ pipkg build: labdrian-pi package written to <WORLD>/out/labdrian-pi
 --- tree of out ---
 labdrian-pi/
 labdrian-pi/agents/
-labdrian-pi/agents/GADU.md
+labdrian-pi/agents/builder.md
 labdrian-pi/extensions/
 labdrian-pi/extensions/labdrian-gate.ts
 labdrian-pi/mcp.json

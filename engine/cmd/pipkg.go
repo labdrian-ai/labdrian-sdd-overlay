@@ -7,6 +7,7 @@ import (
 	"io"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/pipkg"
+	runtimepkg "github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime"
 )
 
 // runPipkg implements the 'pipkg build|check' subcommand.
@@ -15,7 +16,9 @@ func runPipkg(p process, d deps, args []string) {
 }
 
 // runPipkgCore is the testable core of the pipkg subcommand: 'build' writes
-// the labdrian-pi package tree, 'check' reports drift against it. Requires
+// the labdrian-pi package tree and retires the overlay-owned link, in
+// ~/.pi/agent/agents, of every agent the tree no longer ships; 'check' reports
+// drift against it and changes nothing. Requires
 // --overlay-root, --registry, and --dest-dir. Fails LOUD on a missing verb
 // or missing flag (ADR-4). source is how the builder asks git about the overlay: the git of the
 // machine in the program, a fake or pipkg.NoRepository in a test.
@@ -83,6 +86,13 @@ func runPipkgCore(d deps, source pipkg.SourceRepo, args []string, stdout, stderr
 			return
 		}
 		fmt.Fprintf(stdout, "pipkg build: labdrian-pi package written to %s\n", destDir)
+		// The package is swapped in whole, so an agent the overlay dropped is gone from it and the link
+		// an earlier deploy made for it points at nothing. The deploy runs this build first and `pi
+		// install` only when a `pi` is on the PATH, so the build is the one step every run goes through:
+		// it retires such a link, in the home the Pi runtime works in, and tells it.
+		for _, note := range runtimepkg.RetireDroppedPiAgentLinks(runtimeConfigFromEnv(d.env, d.homeDir).Home, destDir) {
+			fmt.Fprintf(stdout, "pipkg build: %s\n", note)
+		}
 		exit(0)
 		return
 	}
