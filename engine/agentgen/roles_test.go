@@ -118,16 +118,6 @@ func wantBody(t *testing.T, root string, r wantRole) string {
 	return strings.Replace(source, engramLine+"\n", "", 1)
 }
 
-// tableOf is the table of what the generator emits for the root of seededRoot.
-func tableOf(t *testing.T) []agentgen.Artifact {
-	t.Helper()
-	table, err := agentgen.Artifacts(seededRoot(t))
-	if err != nil {
-		t.Fatalf("Artifacts: %v", err)
-	}
-	return table
-}
-
 // generated is a root with the role sources, after Generate has written everything from them.
 func generated(t *testing.T) string {
 	t.Helper()
