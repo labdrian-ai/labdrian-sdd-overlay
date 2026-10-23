@@ -36,7 +36,7 @@ Read v3 in full (D5, D10, §2, §4, §5, §6, §9), v2 §1-§2 and §5, and `odd
 |---|---|---|---|---|
 | T1 | S1, S3, S4, S5, S7, S8 | delegated workflow (owner, L1: "sonnet max para implementaciones"); agents and GADU: files, rows, engine persona, the Pi link, consumers | done, verified (L6), reviewed (L7) | `b434cb45`, `715cbc92`, `71aec8a5` |
 | T2 | S1, S2, S3, S6, S8 | same workflow, after T1; skills: `gadu-operator`, `gadu-orchestrate`, `sdd-phase-common.md` shrunk to §B-D, registry, consumers | done, verified (L6), reviewed (L7); approved by the owner (L8) | `b02603f9`, approvals in L8 |
-| T3 | S4 (live) | owner-authorized after merge: `labdrian apply` on the real targets | pending | — |
+| T3 | S4 (live) | owner-authorized after merge: `labdrian apply` on the real targets, then remove by hand the stale deployed `sdd-*.md`/`GADU.md` copies (L9) | pending | — |
 | T4 | slice 4 carry | record slice 4's T3 live check in `odd/tasks/role-agents-slice4.md` | done | first commit of the branch |
 
 ## Log
@@ -129,3 +129,4 @@ Read v3 in full (D5, D10, §2, §4, §5, §6, §9), v2 §1-§2 and §5, and `odd
     - The `tui/` sample paths.
     - `docs/architecture/hexagonal-target.md:41`.
 - **L8** (2026-10-23): the owner ran `~/rc.sh` and approved sdd-apply, sdd-archive, sdd-design, sdd-explore, sdd-propose, sdd-spec, sdd-tasks and sdd-verify (8 `.approval.json` records, committed). `labdrian skills validate`: registry and manifest aligned (38 skills), skills/ matches the manifest (77 files), approvals verified (17 approved, 21 grandfathered). TestApprovalBaseline_PinnedToTheRepositoryRegistry and TestRegistryLockE2E_ValidateLeavesTheRealTreeUntouched now pass. T2 R3 resolved. Next: the owner decisions, then push and PR.
+- **L9** (2026-10-23, owner): I asked whether to remove by hand, in T3, the stale deployed `~/.claude/agents/sdd-*.md`, `GADU.md` and the OpenCode GADU (apply never removes a file whose row is gone), listing the exact files first. Owner: "si dale". Resolves A R3-002: no apply change; T3 lists, then removes, only overlay-deployed copies.
