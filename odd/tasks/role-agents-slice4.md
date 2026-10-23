@@ -46,3 +46,16 @@ Read v3 in full (D10, D11, D14, §2, §4, §5, §6, §9), `odd/tasks/role-agents
   - **B2 (correction):** the Pi Skills capability detail had dropped "so the real pi never loads the package". The clause is restored and pinned. Recheck pass.
   - **Owner blocker (codex rows `managed` vs `custom`):** I asked whether to keep `custom` or go back to `managed`. Owner: "Aceptar custom (Recomendado)". The reason: capture and bootstrap walk only `managed` rows, and every other overlay agent row is already `custom`. S3 is amended, and the correction note in v3 §5 stays.
   - **Name kept:** the CLI command keeps the name `gadu-generate`; only the package is renamed.
+- **L4** (2026-10-23): native review.
+  - **Both commits together:** `b5ade353..84349dcd` was refused with `lens_context_budget_exceeded`, so each commit was reviewed as its own candidate.
+  - **T2:** `review-1b287747549001ca` (risk, resilience, readability, reliability), approved and acknowledged. Findings:
+    - R3/R4 (uninstall leaves owned links when the package `agents/` is gone): fixed in `c8b32dcd`, test-first, with the new test RED then GREEN.
+    - R2 (the GADU label): documented in `agentLabel`.
+    - R2 (the route domain listed in three places): pre-existing, and tests pin the agreement. Follow-up.
+  - **T1:** `review-31d072b1220c45e2` (risk, readability, reliability), approved and acknowledged, reviewed in a temporary detached worktree. Findings:
+    - The Check header named only GADU: fixed in `f76113dd`; it now reads "generated agent artifacts are stale or missing:", and the pins are updated.
+    - The README sentence about the old header path is simplified.
+    - The opus and haiku Pi model refs: confirmed in Pi 1.3.0's anthropic catalog (`chat:claude-opus-5`, `chat:claude-haiku-4-5`). That they actually run stays T3's proof.
+    - The Engram-line drop needs the exact line: it fails loudly in Check, so this is accepted.
+  - **Receipts:** `odd/review-receipts/role-agents-slice4/`.
+  - **Suite:** the full engine suite after the fixes shows only the 3 known environmental failures.
