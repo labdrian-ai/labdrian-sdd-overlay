@@ -40,7 +40,7 @@ const regenerate = "run: gentle-ai-overlay gadu-generate"
 func TestCheckNamesEveryArtifactThatIsMissingInTheOrderOfTheTable(t *testing.T) {
 	err := agentgen.Check(t.TempDir())
 
-	want := "GADU artifacts are stale or missing:"
+	want := "generated agent artifacts are stale or missing:"
 	for _, p := range gaduPaths {
 		want += "\n  " + p + ": missing (not yet generated — " + regenerate + ")"
 	}
@@ -79,7 +79,7 @@ func TestCheckSaysWhichArtifactsAreStaleAndWhichCannotBeReadAndPassesTheOthers(t
 		t.Fatal("Check returned nil")
 	}
 	lines := strings.Split(err.Error(), "\n")
-	if len(lines) != 3 || lines[0] != "GADU artifacts are stale or missing:" {
+	if len(lines) != 3 || lines[0] != "generated agent artifacts are stale or missing:" {
 		t.Fatalf("Check error = %q, want its heading and two lines", err)
 	}
 	if want := "  opencode/agents/GADU.md: stale — committed content diverges from generator output (" + regenerate + ")"; lines[1] != want {
@@ -125,7 +125,7 @@ func TestCheckSaysWhichRoleFileIsStale(t *testing.T) {
 
 	err := agentgen.Check(root)
 
-	want := "GADU artifacts are stale or missing:\n  codex/agents/polisher.toml: stale — committed content diverges from generator output (" + regenerate + ")"
+	want := "generated agent artifacts are stale or missing:\n  codex/agents/polisher.toml: stale — committed content diverges from generator output (" + regenerate + ")"
 	if err == nil || err.Error() != want {
 		t.Errorf("Check error = %v\nwant\n%s", err, want)
 	}

@@ -304,7 +304,7 @@ four artifacts from that one canonical source (and the files of the [role agents
 - `pi/agents/GADU.md` — Pi-native subagent definition: `model: pi-claude-cli/claude-sonnet-5` and a compact (< 1.5 KB) body that defers the full persona to the `gadu-operator` skill — see the Pi section above for why. `pipkg.Build` copies this file into the built package's `agents/GADU.md` when it is present, falling back to the generic `agents/GADU.md` on an older checkout.
 - `skills/gadu-operator/SKILL.md` — portable skill (deployed to all three skill runtimes)
 
-All generated files carry a `<!-- GENERATED — DO NOT EDIT. Source: engine/gadu/persona/body.md. Run: gentle-ai-overlay gadu-generate -->` header. Edit the canonical source, then regenerate — do not edit the output files directly. (The header still names the path the persona had before the generator became `engine/agentgen`: its words are bytes of the four files, so renaming them is a change of those files and not of this one.)
+All generated files carry a `<!-- GENERATED — DO NOT EDIT. Source: engine/gadu/persona/body.md. Run: gentle-ai-overlay gadu-generate -->` header. Edit the canonical source, then regenerate — do not edit the output files directly. The source to edit is `engine/agentgen/persona/body.md`; the header keeps its older `engine/gadu` path so the four generated files stay byte-identical.
 
 ## Role agents — one source, three runtimes
 

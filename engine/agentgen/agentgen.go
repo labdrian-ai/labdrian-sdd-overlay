@@ -138,7 +138,7 @@ func Check(repoRoot string) error {
 	}
 
 	if len(errs) > 0 {
-		return fmt.Errorf("GADU artifacts are stale or missing:\n  %s", strings.Join(errs, "\n  "))
+		return fmt.Errorf("generated agent artifacts are stale or missing:\n  %s", strings.Join(errs, "\n  "))
 	}
 	return nil
 }

@@ -58,7 +58,7 @@ func TestGaduGenerateWritesTheArtifactsTheCheckThenAcceptsAndTheCheckRefusesThei
 	seedRoleSources(t, root)
 	env := map[string]string{"OVERLAY_DIR": root}
 
-	if p := agentgenRun(t, env, "--check"); len(p.exits) != 1 || p.exits[0] != 1 || !strings.HasPrefix(p.err.String(), "gadu-generate --check: GADU artifacts are stale or missing:\n") {
+	if p := agentgenRun(t, env, "--check"); len(p.exits) != 1 || p.exits[0] != 1 || !strings.HasPrefix(p.err.String(), "gadu-generate --check: generated agent artifacts are stale or missing:\n") {
 		t.Errorf("check of an empty root: stderr %q, exits %v; want the stale refusal and [1]", p.err.String(), p.exits)
 	}
 
