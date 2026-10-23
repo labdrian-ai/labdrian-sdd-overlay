@@ -37,7 +37,7 @@ Read v3 in full (D5, D10, §2, §4, §5, §6, §9), v2 §1-§2 and §5, and `odd
 | T1 | S1, S3, S4, S5, S7, S8 | delegated workflow (owner, L1: "sonnet max para implementaciones"); agents and GADU: files, rows, engine persona, the Pi link, consumers | done, verified (L6), reviewed (L7) | `b434cb45`, `715cbc92`, `71aec8a5` |
 | T2 | S1, S2, S3, S6, S8 | same workflow, after T1; skills: `gadu-operator`, `gadu-orchestrate`, `sdd-phase-common.md` shrunk to §B-D, registry, consumers | done, verified (L6), reviewed (L7); approved by the owner (L8) | `b02603f9`, approvals in L8 |
 | T3 | S4 (live) | owner-authorized after merge: `labdrian apply` on the real targets, then remove by hand the stale deployed `sdd-*.md`/`GADU.md` copies (L9) | pending | — |
-| T5 | S3 (L11) | inline; the gate scope of `oo-quality-contract`, `anti-generic-design` and `labdrian-gate.ts` moved to the roles | done, verified (L12) | `16be6a37`, `<fix>` |
+| T5 | S3 (L11) | inline; the gate scope of `oo-quality-contract`, `anti-generic-design` and `labdrian-gate.ts` moved to the roles | done, verified (L12) | `16be6a37`, `4c08a02d` |
 | T4 | slice 4 carry | record slice 4's T3 live check in `odd/tasks/role-agents-slice4.md` | done | first commit of the branch |
 
 ## Log
