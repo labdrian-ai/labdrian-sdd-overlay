@@ -55,7 +55,7 @@ build.
 
 ### Requirement: Deterministic Contract Gate via `before_agent_start`
 
-WHEN a Pi session starts the `sdd-tasks` or `sdd-apply` agent, a
+WHEN a Pi session starts the `shaper`, `builder`, `sdd-tasks` or `sdd-apply` agent, a
 `before_agent_start` package extension MUST inject the bare contract PATH
 LINE for each applicable contract under that contract's `injection_point`
 header into that agent's system prompt, selecting applicability from each
@@ -68,16 +68,23 @@ for that contract. The extension file MUST be discoverable by Pi's
 extension discovery under the package's `extensions/` directory, authored
 as `.ts` so it is loaded by Pi's jiti-based loader — not `.js`.
 
-#### Scenario: sdd-tasks and sdd-apply receive both contract path lines
-- GIVEN a Pi session starts the `sdd-tasks` or `sdd-apply` agent
+#### Scenario: builder, sdd-tasks and sdd-apply receive both contract path lines
+- GIVEN a Pi session starts the `builder`, `sdd-tasks` or `sdd-apply` agent
 - WHEN `before_agent_start` fires
 - THEN the extension returns `systemPrompt` containing the bare path line
   for the minimalism-contract and the anti-generic-design contract, each
   under its own `injection_point` header, deterministically for the same
   agent/phase input
 
+#### Scenario: shaper receives the minimalism contract path line only
+- GIVEN a Pi session starts the `shaper` agent
+- WHEN `before_agent_start` fires
+- THEN the extension returns `systemPrompt` containing the bare path line
+  for the minimalism-contract, and not for the anti-generic-design contract,
+  whose frontmatter does not name `shaper`
+
 #### Scenario: Every other agent is excluded
-- GIVEN a Pi session starts any agent other than `sdd-tasks` or `sdd-apply`
+- GIVEN a Pi session starts any agent other than `shaper`, `builder`, `sdd-tasks` or `sdd-apply`
 - WHEN `before_agent_start` fires
 - THEN this extension returns `systemPrompt` unchanged
 
