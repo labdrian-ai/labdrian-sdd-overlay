@@ -190,8 +190,8 @@ function resolvePackageRoot() {
 // carries malformed frontmatter is silently skipped (R-004/F1), never
 // aborting the other contracts.
 export function injectContractsForEvent(event, packageRoot) {
-  const phase = agentFromNames(readAgentStartNames(event));
-  if (!phase) return {};
+  const agent = agentFromNames(readAgentStartNames(event));
+  if (!agent) return {};
 
   const root = packageRoot ?? resolvePackageRoot();
   let prompt = typeof event?.systemPrompt === "string" ? event.systemPrompt : "";
@@ -209,8 +209,8 @@ export function injectContractsForEvent(event, packageRoot) {
 
     const meta = parseFrontmatter(raw);
     if (!meta) continue;
-    if (meta.excluded.includes(phase)) continue;
-    if (!meta.appliesTo.includes(phase)) continue;
+    if (meta.excluded.includes(agent)) continue;
+    if (!meta.appliesTo.includes(agent)) continue;
 
     const header = meta.injectionPoint || DEFAULT_INJECTION_HEADER;
     prompt = injectContractLine(prompt, absPath, header);

@@ -1,19 +1,19 @@
 $ gate-task --embedded-contract anti-generic-design
-# sdd-apply, no skills section
+# builder, no skills section
 --- stdin ---
-{"tool_input":{"description":"a sub-agent","prompt":"Do the phase.","subagent_type":"sdd-apply"},"tool_name":"Agent"}
+{"tool_input":{"description":"a sub-agent","prompt":"Do the phase.","subagent_type":"builder"},"tool_name":"Agent"}
 
 --- stdout ---
-{}
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{"description":"a sub-agent","prompt":"Do the phase.\n\n## Skills to load before work\nskills/_shared/anti-generic-design.md\n","subagent_type":"builder"}}}
 --- stderr ---
 
 $ gate-task --embedded-contract anti-generic-design
-# sdd-tasks, with a skills section
+# builder, with a skills section
 --- stdin ---
-{"tool_input":{"description":"a sub-agent","prompt":"Do the phase.\n\n## Skills to load before work\n/skills/other/SKILL.md\n","subagent_type":"sdd-tasks"},"tool_name":"Agent"}
+{"tool_input":{"description":"a sub-agent","prompt":"Do the phase.\n\n## Skills to load before work\n/skills/other/SKILL.md\n","subagent_type":"builder"},"tool_name":"Agent"}
 
 --- stdout ---
-{}
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{"description":"a sub-agent","prompt":"Do the phase.\n\n## Skills to load before work\nskills/_shared/anti-generic-design.md\n/skills/other/SKILL.md\n","subagent_type":"builder"}}}
 --- stderr ---
 
 $ gate-task --embedded-contract anti-generic-design
@@ -37,10 +37,10 @@ $ gate-task --embedded-contract anti-generic-design
 $ gate-task --embedded-contract anti-generic-design --contract-path /abs/anti-generic-design.md
 # an explicit path for the embedded contract
 --- stdin ---
-{"tool_input":{"description":"a sub-agent","prompt":"Do the phase.","subagent_type":"sdd-apply"},"tool_name":"Agent"}
+{"tool_input":{"description":"a sub-agent","prompt":"Do the phase.","subagent_type":"builder"},"tool_name":"Agent"}
 
 --- stdout ---
-{}
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{"description":"a sub-agent","prompt":"Do the phase.\n\n## Skills to load before work\n/abs/anti-generic-design.md\n","subagent_type":"builder"}}}
 --- stderr ---
 
 $ gate-task --embedded-contract no-such-contract
