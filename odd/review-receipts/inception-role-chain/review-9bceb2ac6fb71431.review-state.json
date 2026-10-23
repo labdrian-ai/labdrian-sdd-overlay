@@ -1,0 +1,380 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:d17ec1fe5c7e3cbf3500c8e178506b49d28e982e729294ecf1814c2599f55968",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-9bceb2ac6fb71431",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "cc2772e9d8d58adcb92340901f4f6afa46cca542",
+      "candidate_tree": "bd2f3dea54382220762dc68679bd2ec25ae32032",
+      "paths_digest": "sha256:85d1c0b0a8bad8b91809b5f0f4a07bb6158fdae5aabdb37e8ad786c9b31254d5",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "README.md",
+        "docs/architecture/adr-c13-inception-role-chain.md",
+        "engine/skills/inception_chain_entry_test.go",
+        "odd/tasks/inception-role-chain.md",
+        "skills/_shared/pre-sdd-contracts.md",
+        "skills/_shared/sdd-orchestrator-workflow.md",
+        "skills/inception-pipeline/.approval.json",
+        "skills/inception-pipeline/SKILL.md",
+        "skills/inception-pipeline/references/tier-selection.md",
+        "skills/roadmap-maker/assets/roadmap-template.md",
+        "tools/entry-contract-validator/evolution_test.go",
+        "tools/entry-contract-validator/main_test.go",
+        "tools/entry-contract-validator/pipeline_vocabulary_pins_test.go",
+        "tools/entry-contract-validator/token_domain_test.go"
+      ],
+      "identity": "sha256:f3f3d2dfd726eb28fac7084e917555d34456acd1b15813a3f66386de4953ae75"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "cc2772e9d8d58adcb92340901f4f6afa46cca542",
+      "candidate_tree": "bd2f3dea54382220762dc68679bd2ec25ae32032",
+      "paths_digest": "sha256:85d1c0b0a8bad8b91809b5f0f4a07bb6158fdae5aabdb37e8ad786c9b31254d5",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "README.md",
+        "docs/architecture/adr-c13-inception-role-chain.md",
+        "engine/skills/inception_chain_entry_test.go",
+        "odd/tasks/inception-role-chain.md",
+        "skills/_shared/pre-sdd-contracts.md",
+        "skills/_shared/sdd-orchestrator-workflow.md",
+        "skills/inception-pipeline/.approval.json",
+        "skills/inception-pipeline/SKILL.md",
+        "skills/inception-pipeline/references/tier-selection.md",
+        "skills/roadmap-maker/assets/roadmap-template.md",
+        "tools/entry-contract-validator/evolution_test.go",
+        "tools/entry-contract-validator/main_test.go",
+        "tools/entry-contract-validator/pipeline_vocabulary_pins_test.go",
+        "tools/entry-contract-validator/token_domain_test.go"
+      ],
+      "identity": "sha256:f3f3d2dfd726eb28fac7084e917555d34456acd1b15813a3f66386de4953ae75"
+    },
+    "genesis_paths": [
+      "README.md",
+      "docs/architecture/adr-c13-inception-role-chain.md",
+      "engine/skills/inception_chain_entry_test.go",
+      "odd/tasks/inception-role-chain.md",
+      "skills/_shared/pre-sdd-contracts.md",
+      "skills/_shared/sdd-orchestrator-workflow.md",
+      "skills/inception-pipeline/.approval.json",
+      "skills/inception-pipeline/SKILL.md",
+      "skills/inception-pipeline/references/tier-selection.md",
+      "skills/roadmap-maker/assets/roadmap-template.md",
+      "tools/entry-contract-validator/evolution_test.go",
+      "tools/entry-contract-validator/main_test.go",
+      "tools/entry-contract-validator/pipeline_vocabulary_pins_test.go",
+      "tools/entry-contract-validator/token_domain_test.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-risk",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 837,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "rewrote the first-skill prompt inception-pipeline (handoff contract to the role chain, closure-feedback inputs), deleted validator pins, added skill-text tests",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:8e43dbb891151ab012a995ea29e2ed4dbac60a1815aab9284c05e2e74d0497dd",
+    "capture_phase_revision": "sha256:0d32c5d468c8b838b07ba52a7bdd454545dd042c4218dae90da2e2d901bd3248",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:f3f3d2dfd726eb28fac7084e917555d34456acd1b15813a3f66386de4953ae75",
+        "capture_phase_revision": "sha256:0d32c5d468c8b838b07ba52a7bdd454545dd042c4218dae90da2e2d901bd3248",
+        "artifact_digest": "sha256:f1da5a58c7a88caeeb3c06407facbb2c714d29527b4beb6f436a2c2b2e70518c",
+        "result_hash": "sha256:06504a08938dab6e2a418123a45e2a3f67bccef274c787182da600247e0b9e0f",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:6c31e7a1b56f4b4355746f9325e857794e3a1a4efa803844a1dafd76e3afb674",
+            "lineage_id": "review-9bceb2ac6fb71431",
+            "authority_revision": "sha256:0d32c5d468c8b838b07ba52a7bdd454545dd042c4218dae90da2e2d901bd3248",
+            "target_identity": "sha256:f3f3d2dfd726eb28fac7084e917555d34456acd1b15813a3f66386de4953ae75",
+            "base_tree": "cc2772e9d8d58adcb92340901f4f6afa46cca542",
+            "candidate_tree": "bd2f3dea54382220762dc68679bd2ec25ae32032",
+            "changed_path_manifest_sha256": "sha256:2834ed69b6bf736a9c8d82a7002fd4cd1c82a8e7a39da6e398ce534ac8954351",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:6c31e7a1b56f4b4355746f9325e857794e3a1a4efa803844a1dafd76e3afb674",
+            "raw_sha256": "sha256:27e107bd08222cee2cb1136597845de2ebd3cd55e746bf8cda376a27b36c5c4e",
+            "canonical_sha256": "sha256:cddcace99e1a756ac5d116731c3d427dbba660838ad2440509f8053e832e4410",
+            "result_hash": "sha256:06504a08938dab6e2a418123a45e2a3f67bccef274c787182da600247e0b9e0f",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:6c31e7a1b56f4b4355746f9325e857794e3a1a4efa803844a1dafd76e3afb674",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "README.md",
+                "docs/architecture/adr-c13-inception-role-chain.md",
+                "engine/skills/inception_chain_entry_test.go",
+                "odd/tasks/inception-role-chain.md",
+                "skills/_shared/pre-sdd-contracts.md",
+                "skills/_shared/sdd-orchestrator-workflow.md",
+                "skills/inception-pipeline/.approval.json",
+                "skills/inception-pipeline/SKILL.md",
+                "skills/inception-pipeline/references/tier-selection.md",
+                "skills/roadmap-maker/assets/roadmap-template.md",
+                "tools/entry-contract-validator/evolution_test.go",
+                "tools/entry-contract-validator/main_test.go",
+                "tools/entry-contract-validator/pipeline_vocabulary_pins_test.go",
+                "tools/entry-contract-validator/token_domain_test.go"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "Reviewed all 14 changed paths from a security, authorization, data-exposure, unsafe-input, secrets and dependency-risk perspective.",
+              "The change is documentation, skill-prompt and test edits: no executable runtime code, no new dependencies and no secrets are added.",
+              "skills/inception-pipeline/SKILL.md now runs shell commands (labdrian roles append/resume, git show) built from the change-name; it is derived as a kebab-case slug by requirements-capture, and no concrete exploit path or unsafe-input vector is shown in the diff.",
+              "skills/inception-pipeline/.approval.json changes the approved sha256 and approver, which is the expected owner re-approval step for the rewritten skill. The approver field is a plain string and the diff gives no evidence that the approval mechanism is bypassed.",
+              "The deleted validator tests remove only doc-pin and doc-walk checks. The validator code, the schemas and the CI loop over archived contracts are untouched, so no enforcement gate is weakened.",
+              "No reachable exploit or scanner evidence was found, so there are no findings."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "selected_order": 1,
+        "target_identity": "sha256:f3f3d2dfd726eb28fac7084e917555d34456acd1b15813a3f66386de4953ae75",
+        "capture_phase_revision": "sha256:0d32c5d468c8b838b07ba52a7bdd454545dd042c4218dae90da2e2d901bd3248",
+        "artifact_digest": "sha256:9e552565447043f1605b636861f20ec143c4e778c7d3af29869df2539f9f123b",
+        "result_hash": "sha256:08f10531e6915eda949944598fd19dcddffb5e3313f3f77b9c1d13c8deb0d628",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:db3318c41621949ede0e13eae86a94a13684d021a33ffc45004e0ce1e7c8333e",
+            "lineage_id": "review-9bceb2ac6fb71431",
+            "authority_revision": "sha256:0d32c5d468c8b838b07ba52a7bdd454545dd042c4218dae90da2e2d901bd3248",
+            "target_identity": "sha256:f3f3d2dfd726eb28fac7084e917555d34456acd1b15813a3f66386de4953ae75",
+            "base_tree": "cc2772e9d8d58adcb92340901f4f6afa46cca542",
+            "candidate_tree": "bd2f3dea54382220762dc68679bd2ec25ae32032",
+            "changed_path_manifest_sha256": "sha256:2834ed69b6bf736a9c8d82a7002fd4cd1c82a8e7a39da6e398ce534ac8954351",
+            "lens": "review-readability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:db3318c41621949ede0e13eae86a94a13684d021a33ffc45004e0ce1e7c8333e",
+            "raw_sha256": "sha256:c9b0e3e7fac44ca0337d968d5a2aaab6dc05d858bcafc69fa7a391d6583fe84a",
+            "canonical_sha256": "sha256:e3602c6b1c4e8243d8871dccba8515889a0a9ff3cce6f0c75d2e69a545ccfc59",
+            "result_hash": "sha256:08f10531e6915eda949944598fd19dcddffb5e3313f3f77b9c1d13c8deb0d628",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:db3318c41621949ede0e13eae86a94a13684d021a33ffc45004e0ce1e7c8333e",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "README.md",
+                "docs/architecture/adr-c13-inception-role-chain.md",
+                "engine/skills/inception_chain_entry_test.go",
+                "odd/tasks/inception-role-chain.md",
+                "skills/_shared/pre-sdd-contracts.md",
+                "skills/_shared/sdd-orchestrator-workflow.md",
+                "skills/inception-pipeline/.approval.json",
+                "skills/inception-pipeline/SKILL.md",
+                "skills/inception-pipeline/references/tier-selection.md",
+                "skills/roadmap-maker/assets/roadmap-template.md",
+                "tools/entry-contract-validator/evolution_test.go",
+                "tools/entry-contract-validator/main_test.go",
+                "tools/entry-contract-validator/pipeline_vocabulary_pins_test.go",
+                "tools/entry-contract-validator/token_domain_test.go"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-1",
+                "lens": "readability",
+                "location": "skills/_shared/pre-sdd-contracts.md:7",
+                "severity": "WARNING",
+                "claim": "The bundle version line says the validator, schemas and authority must stay version-matched, but the README and this note now say the inception skill no longer tracks the bundle version. The skill is 3.0.0 while the bundle is 2.1.0, so a reader cannot tell which asset versions still need to match. The retained validator checks (e.g. TestBundleAssetsAreTrackedAndVersionMatched) no longer cover the skill, so only prose enforces this.",
+                "proof_refs": [
+                  "skills/_shared/pre-sdd-contracts.md:7",
+                  "README.md:168"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-2",
+                "lens": "readability",
+                "location": "skills/inception-pipeline/SKILL.md:56-58",
+                "severity": "WARNING",
+                "claim": "The Chain entry section relies on the delivery prompt naming `archive-report.md` and on other conventions that are enforced only by substring pins in a Go test. Closure-feedback's Plan then depends on those locators. The skill is a single dense paragraph of rules, and the Closure-Feedback section is now heavily patched with phrases kept only to satisfy pins. This makes the intent hard to maintain. Examples are the retained 'engine outputs' wording and the history-only archive-anchor-gate line.",
+                "proof_refs": [
+                  "skills/inception-pipeline/SKILL.md:56-58",
+                  "engine/skills/inception_chain_entry_test.go:196-210"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-3",
+                "lens": "readability",
+                "location": "skills/roadmap-maker/assets/roadmap-template.md:44-46",
+                "severity": "SUGGESTION",
+                "claim": "The template mixes two source regimes per row (role-chain vs pre-3.0.0 entry). The 'Expected human checkpoints' row now has no source for role-chain changes, which makes it look permanently pending without saying so.",
+                "proof_refs": [
+                  "skills/roadmap-maker/assets/roadmap-template.md:44-46"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Reviewed all 14 changed paths in the supplied patches.",
+              "Findings are maintainability concerns only; no behavior regression was found for baseline-valid input beyond the intentional, owner-approved handoff rewrite.",
+              "The odd/tasks log itself records residues (stale comments, unmodified schema text), which are tracked there and not repeated as blockers."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 2,
+        "target_identity": "sha256:f3f3d2dfd726eb28fac7084e917555d34456acd1b15813a3f66386de4953ae75",
+        "capture_phase_revision": "sha256:0d32c5d468c8b838b07ba52a7bdd454545dd042c4218dae90da2e2d901bd3248",
+        "artifact_digest": "sha256:5297401ebec1270050527bce94444a66edbd21d1582bbd525fe3e1ca1ff1852a",
+        "result_hash": "sha256:408c5766a6a8e58536000685161bf4c26a83d297410d2015c6b07bf58d317a78",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:3548cf0615277249deb3404bef3ac96706bce48f53c7a38508f8401b450e89cc",
+            "lineage_id": "review-9bceb2ac6fb71431",
+            "authority_revision": "sha256:0d32c5d468c8b838b07ba52a7bdd454545dd042c4218dae90da2e2d901bd3248",
+            "target_identity": "sha256:f3f3d2dfd726eb28fac7084e917555d34456acd1b15813a3f66386de4953ae75",
+            "base_tree": "cc2772e9d8d58adcb92340901f4f6afa46cca542",
+            "candidate_tree": "bd2f3dea54382220762dc68679bd2ec25ae32032",
+            "changed_path_manifest_sha256": "sha256:2834ed69b6bf736a9c8d82a7002fd4cd1c82a8e7a39da6e398ce534ac8954351",
+            "lens": "review-reliability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:3548cf0615277249deb3404bef3ac96706bce48f53c7a38508f8401b450e89cc",
+            "raw_sha256": "sha256:a218a002c6e20189924ff56ace5b9407225581bd0c0546edaa4fb61baaaf8d2f",
+            "canonical_sha256": "sha256:ea734c7168bb120c0f4b830942254ae2ec4e3539f3d5e1559f73614a07f3beb2",
+            "result_hash": "sha256:408c5766a6a8e58536000685161bf4c26a83d297410d2015c6b07bf58d317a78",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:3548cf0615277249deb3404bef3ac96706bce48f53c7a38508f8401b450e89cc",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "README.md",
+                "docs/architecture/adr-c13-inception-role-chain.md",
+                "engine/skills/inception_chain_entry_test.go",
+                "odd/tasks/inception-role-chain.md",
+                "skills/_shared/pre-sdd-contracts.md",
+                "skills/_shared/sdd-orchestrator-workflow.md",
+                "skills/inception-pipeline/.approval.json",
+                "skills/inception-pipeline/SKILL.md",
+                "skills/inception-pipeline/references/tier-selection.md",
+                "skills/roadmap-maker/assets/roadmap-template.md",
+                "tools/entry-contract-validator/evolution_test.go",
+                "tools/entry-contract-validator/main_test.go",
+                "tools/entry-contract-validator/pipeline_vocabulary_pins_test.go",
+                "tools/entry-contract-validator/token_domain_test.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-closure-no-machine-check",
+                "lens": "reliability",
+                "location": "skills/inception-pipeline/SKILL.md:79",
+                "severity": "WARNING",
+                "claim": "Closure-feedback for chain deliveries has no machine check on the appended Cycle Timestamps section or anchor: archive-anchor-gate is declared history-only, so the t1/approved_tree rules are enforced by prose alone. This was an explicit owner decision (5a) and is documented, but the reliability of the anchor on chain deliveries is unproved by any test beyond phrase pins.",
+                "proof_refs": [
+                  "skills/inception-pipeline/SKILL.md:79",
+                  "docs/architecture/adr-c13-inception-role-chain.md:25"
+                ]
+              },
+              {
+                "id": "R3-tests-are-phrase-pins",
+                "lens": "reliability",
+                "location": "engine/skills/inception_chain_entry_test.go:20-60",
+                "severity": "WARNING",
+                "claim": "The new tests assert substring presence in the skill prose (forbidden strings, required phrases). They prove the text changed but not that the handoff behaves correctly, e.g. that the first record shape is accepted by `labdrian roles append`. The behaviour is prose-driven, so this is the cheapest available level, but no test exercises the documented append/resume commands against the engine.",
+                "proof_refs": [
+                  "engine/skills/inception_chain_entry_test.go:20-60",
+                  "skills/inception-pipeline/SKILL.md:55-60"
+                ]
+              },
+              {
+                "id": "R3-stale-roadmap-pending",
+                "lens": "reliability",
+                "location": "skills/roadmap-maker/assets/roadmap-template.md:44-46",
+                "severity": "SUGGESTION",
+                "claim": "Expected human checkpoints row now says it is sourced only from pre-3.0.0 entries, so it stays [PENDING] for all chain deliveries. This is intentional and disclosed, but means that roadmap tracking row is permanently inert for new work.",
+                "proof_refs": [
+                  "skills/roadmap-maker/assets/roadmap-template.md:44-46"
+                ]
+              }
+            ],
+            "evidence": [
+              "Reviewed all 14 changed paths. Deleted validator pins (token_domain_test.go, --exists-root doc-walk, inception version/dispatcher pins in main_test.go) pin only text that was removed from the skill, so no coverage of retained behaviour is lost; the validator and schema stay unchanged for archived contracts.",
+              "pipeline_vocabulary_pins_test.go change is comment-only and removes a dangling reference to the deleted test.",
+              "No BLOCKER/CRITICAL regression found: the old handoff called a gentle-ai verb that no longer exists, so replacing it does not break valid baseline behavior.",
+              "The odd/tasks log records that the engine skills suite still fails two APPROVAL_STALE tests until the owner re-approves; the diff updates .approval.json, and the recorded hash cannot be checked against the final SKILL.md from this view."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "ab9850c5ac129417f4a4d379be907afa127958f3010b2a49008b7f4235a9f579",
+    "initial_atomic_start": {
+      "lineage_id": "review-9bceb2ac6fb71431",
+      "worktree_identity": "sha256:8455002f227f033663d0e7d8b8ff6a885e1c85b482ec52e34017c303452eed87",
+      "target_identity": "sha256:f3f3d2dfd726eb28fac7084e917555d34456acd1b15813a3f66386de4953ae75",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "cc2772e9d8d58adcb92340901f4f6afa46cca542",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-risk",
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 837,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "rewrote the first-skill prompt inception-pipeline (handoff contract to the role chain, closure-feedback inputs), deleted validator pins, added skill-text tests"
+    },
+    "runtime_agent": "claude-code"
+  }
+}
