@@ -41,4 +41,4 @@ go mod verify
 
 Commit `go.mod` and `go.sum` together. The `// indirect` on `honnef.co/go/tools` is what `go get -tool` writes.
 The registry of `tools/deterministic-check-runner` names the same version for the repositories it checks; keep the two equal.
-`deadcode` is not covered here: CI still runs it with `go run golang.org/x/tools/cmd/deadcode@v0.48.0`.
+`deadcode` is not covered here: CI runs it as a gate in the engine and tui jobs with `go run golang.org/x/tools/cmd/deadcode@v0.48.0 -test ./...` (the tui adds `-tags backend`), and any line it prints fails the job. Run the same command locally, not an installed `deadcode` binary: a binary built with an older Go fails on a newer toolchain ("packages contain errors"). v0.49.0 reports the same lines as v0.48.0 in every module (2026-10-23).

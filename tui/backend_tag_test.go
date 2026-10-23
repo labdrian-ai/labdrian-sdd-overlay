@@ -123,10 +123,11 @@ func yamlEntry(line string) (entry string, column int, startsItem bool) {
 	return strings.TrimSpace(rest), len(line) - len(rest), startsItem
 }
 
-// testFileReader is the kind of a command that builds or analyses test files: "vet", "test" or
-// "staticcheck", and "" for any other command. CI builds staticcheck from tools/lint and runs the binary,
-// so the staticcheck command is the one whose program is named staticcheck: the command that builds it
-// is a go build and reads no test file.
+// testFileReader is the kind of a command that builds or analyses test files: "vet", "test",
+// "staticcheck" or "deadcode", and "" for any other command. CI builds staticcheck from tools/lint and
+// runs the binary, so the staticcheck command is the one whose program is named staticcheck: the command
+// that builds it is a go build and reads no test file. deadcode reads test files only with -test, and CI
+// runs it through go run inside a command substitution, so any field naming its package counts.
 func testFileReader(command string) string {
 	fields := strings.Fields(command)
 	switch {
@@ -134,6 +135,10 @@ func testFileReader(command string) string {
 		return fields[1]
 	case len(fields) > 0 && filepath.Base(strings.Trim(fields[0], `"`)) == "staticcheck":
 		return "staticcheck"
+	case slices.Contains(fields, "-test") && slices.ContainsFunc(fields, func(f string) bool {
+		return strings.HasPrefix(f, "golang.org/x/tools/cmd/deadcode")
+	}):
+		return "deadcode"
 	}
 	return ""
 }
@@ -179,7 +184,7 @@ func TestTheTuiJobOfCIPassesTheBackendTagToEveryStepThatReadsTestFiles(t *testin
 			t.Errorf("the TUI job runs %q without the backend tag: CI would skip the backend tests in this %s step", command, kind)
 		}
 	}
-	for _, kind := range []string{"vet", "staticcheck", "test"} {
+	for _, kind := range []string{"vet", "staticcheck", "deadcode", "test"} {
 		if !found[kind] {
 			t.Errorf("the TUI job has no %s step (its commands: %q): the check above held nothing for it", kind, commands)
 		}
@@ -257,6 +262,8 @@ func TestTestFileReaderKnowsTheCommandsThatReadTestFiles(t *testing.T) {
 		`"$RUNNER_TEMP/staticcheck" -tags backend ./...`: "staticcheck",
 		`go build -C "$GITHUB_WORKSPACE/tools/lint" -o "$RUNNER_TEMP/staticcheck" honnef.co/go/tools/cmd/staticcheck`: "",
 		"go run golang.org/x/tools/cmd/deadcode@v0.48.0 ./...":                                                        "",
+		"go run golang.org/x/tools/cmd/deadcode@v0.48.0 -test ./...":                                                  "deadcode",
+		"out=$(go run golang.org/x/tools/cmd/deadcode@v0.48.0 -test -tags backend ./...)":                             "deadcode",
 		`test -z "$(gofmt -l .)"`: "",
 	} {
 		if got := testFileReader(command); got != want {
