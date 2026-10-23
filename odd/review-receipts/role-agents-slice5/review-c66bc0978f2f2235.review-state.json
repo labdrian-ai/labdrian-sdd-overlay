@@ -1,0 +1,369 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:ab4e67775eb2079b92992ba451be86f75c69bb81d91c33884a2128dbe9ce48eb",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-c66bc0978f2f2235",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "38ca9dd4922b37c5ca47f55e14b23dc091e0a091",
+      "candidate_tree": "373aedab8009a2027d7152f66be96b4192f140dc",
+      "paths_digest": "sha256:6a4ac1e8c52fa5173249c812ce916666feec29936945f547eac278550f7767fa",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        ".github/workflows/ci.yml",
+        "agents/GADU.md",
+        "bin/lib/bootstrap.sh",
+        "engine/agentgen/agentgen.go",
+        "engine/agentgen/artifacts_test.go",
+        "engine/agentgen/gadu.go",
+        "engine/agentgen/gadu_test.go",
+        "engine/agentgen/messages_pin_test.go",
+        "engine/agentgen/persona/body.md",
+        "engine/agentgen/roles.go",
+        "engine/agentgen/roles_test.go",
+        "engine/cmd/agentgen.go",
+        "engine/cmd/agentgen_test.go",
+        "engine/skills/role_agents_artifact_test.go",
+        "opencode/agents/GADU.md",
+        "overlay.manifest"
+      ],
+      "identity": "sha256:23feedaef467b378107bf3763c69ee3df07cc944ce7374ec88bd0f75fc40c714"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "38ca9dd4922b37c5ca47f55e14b23dc091e0a091",
+      "candidate_tree": "373aedab8009a2027d7152f66be96b4192f140dc",
+      "paths_digest": "sha256:6a4ac1e8c52fa5173249c812ce916666feec29936945f547eac278550f7767fa",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        ".github/workflows/ci.yml",
+        "agents/GADU.md",
+        "bin/lib/bootstrap.sh",
+        "engine/agentgen/agentgen.go",
+        "engine/agentgen/artifacts_test.go",
+        "engine/agentgen/gadu.go",
+        "engine/agentgen/gadu_test.go",
+        "engine/agentgen/messages_pin_test.go",
+        "engine/agentgen/persona/body.md",
+        "engine/agentgen/roles.go",
+        "engine/agentgen/roles_test.go",
+        "engine/cmd/agentgen.go",
+        "engine/cmd/agentgen_test.go",
+        "engine/skills/role_agents_artifact_test.go",
+        "opencode/agents/GADU.md",
+        "overlay.manifest"
+      ],
+      "identity": "sha256:23feedaef467b378107bf3763c69ee3df07cc944ce7374ec88bd0f75fc40c714"
+    },
+    "genesis_paths": [
+      ".github/workflows/ci.yml",
+      "agents/GADU.md",
+      "bin/lib/bootstrap.sh",
+      "engine/agentgen/agentgen.go",
+      "engine/agentgen/artifacts_test.go",
+      "engine/agentgen/gadu.go",
+      "engine/agentgen/gadu_test.go",
+      "engine/agentgen/messages_pin_test.go",
+      "engine/agentgen/persona/body.md",
+      "engine/agentgen/roles.go",
+      "engine/agentgen/roles_test.go",
+      "engine/cmd/agentgen.go",
+      "engine/cmd/agentgen_test.go",
+      "engine/skills/role_agents_artifact_test.go",
+      "opencode/agents/GADU.md",
+      "overlay.manifest"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-risk",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 948,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "removes the GADU persona and its manifest rows, changes the gadu-generate message and help text, and updates generator tests and pins",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:6e6c986187de6b56dddc29ab2fd5611d70073254897c41ffc86645f526e8f6f6",
+    "capture_phase_revision": "sha256:6e438057cce75f3474b25d29a938537f29510f08e31468a6206d79ff9e7f4597",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:23feedaef467b378107bf3763c69ee3df07cc944ce7374ec88bd0f75fc40c714",
+        "capture_phase_revision": "sha256:6e438057cce75f3474b25d29a938537f29510f08e31468a6206d79ff9e7f4597",
+        "artifact_digest": "sha256:004cba1ce74054fca83fb6899fd3894953bcb9ff3f83b1570b27cdff87fc3686",
+        "result_hash": "sha256:9ec0c1ccb384fbac7b56ad6b549603d4b0b4a2083ffe6b46abff19bde4ab3d47",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:8e97b559ffea16a6397612ce59428d23ccfc33529495c58810b36fb404c1cfcf",
+            "lineage_id": "review-c66bc0978f2f2235",
+            "authority_revision": "sha256:6e438057cce75f3474b25d29a938537f29510f08e31468a6206d79ff9e7f4597",
+            "target_identity": "sha256:23feedaef467b378107bf3763c69ee3df07cc944ce7374ec88bd0f75fc40c714",
+            "base_tree": "38ca9dd4922b37c5ca47f55e14b23dc091e0a091",
+            "candidate_tree": "373aedab8009a2027d7152f66be96b4192f140dc",
+            "changed_path_manifest_sha256": "sha256:7d591e8c0c95ef3101f238dfb1850bda86436440c501b0b422b837f4b1a986a7",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:8e97b559ffea16a6397612ce59428d23ccfc33529495c58810b36fb404c1cfcf",
+            "raw_sha256": "sha256:b1bca573d41342cd121f1d95dc3595b3a4fb973b96eb8b9ce446f85aa088d38a",
+            "canonical_sha256": "sha256:57d85c17c441f6b65fbdc64dcc6032d6edd09863a6d220b747c267c94d2eb5f5",
+            "result_hash": "sha256:9ec0c1ccb384fbac7b56ad6b549603d4b0b4a2083ffe6b46abff19bde4ab3d47",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:8e97b559ffea16a6397612ce59428d23ccfc33529495c58810b36fb404c1cfcf",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                ".github/workflows/ci.yml",
+                "agents/GADU.md",
+                "bin/lib/bootstrap.sh",
+                "engine/agentgen/agentgen.go",
+                "engine/agentgen/artifacts_test.go",
+                "engine/agentgen/gadu.go",
+                "engine/agentgen/gadu_test.go",
+                "engine/agentgen/messages_pin_test.go",
+                "engine/agentgen/persona/body.md",
+                "engine/agentgen/roles.go",
+                "engine/agentgen/roles_test.go",
+                "engine/cmd/agentgen.go",
+                "engine/cmd/agentgen_test.go",
+                "engine/skills/role_agents_artifact_test.go",
+                "opencode/agents/GADU.md",
+                "overlay.manifest"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "The change removes the GADU persona generator, its embedded persona body, the generated GADU agent files, and their manifest rows. It also moves the Pi sonnet model constant into roles.go, a plain constant with the same value.",
+              "No secrets, credentials, network calls, or dependency changes are added. The deleted files are static prompt text with no input handling.",
+              "The generator is unchanged for role sources: it still reads roles/\u003crole\u003e/body.md and writes the same fixed set of output paths. No new path construction or user-controlled input is introduced in engine/agentgen/agentgen.go.",
+              "engine/cmd/agentgen.go changes only a success message string, and engine/cmd/agentgen_test.go updates its expectation to match. The change is requested as part of retiring GADU and adds no security impact.",
+              "Tests are updated to cover the committed role files matching generator output (engine/agentgen/artifacts_test.go), and the retired GADU.md name is added to the check for files that must be gone (engine/skills/role_agents_artifact_test.go).",
+              "No authorization, data exposure, data loss, or unsafe input handling is reachable from this candidate."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "selected_order": 1,
+        "target_identity": "sha256:23feedaef467b378107bf3763c69ee3df07cc944ce7374ec88bd0f75fc40c714",
+        "capture_phase_revision": "sha256:6e438057cce75f3474b25d29a938537f29510f08e31468a6206d79ff9e7f4597",
+        "artifact_digest": "sha256:2b694df3f14456972c4a3d0b0ce62168d48af23f55443e904e2fc7f2e002e61f",
+        "result_hash": "sha256:4b6185803171fa8fa9e4e3c0d28a5ffbc375c9f6b5ba360d1ddba81845f8ab51",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:b1dd98fe3f1bca02c2b2a617d575347372810ef80c504eef847d456029ce18dd",
+            "lineage_id": "review-c66bc0978f2f2235",
+            "authority_revision": "sha256:6e438057cce75f3474b25d29a938537f29510f08e31468a6206d79ff9e7f4597",
+            "target_identity": "sha256:23feedaef467b378107bf3763c69ee3df07cc944ce7374ec88bd0f75fc40c714",
+            "base_tree": "38ca9dd4922b37c5ca47f55e14b23dc091e0a091",
+            "candidate_tree": "373aedab8009a2027d7152f66be96b4192f140dc",
+            "changed_path_manifest_sha256": "sha256:7d591e8c0c95ef3101f238dfb1850bda86436440c501b0b422b837f4b1a986a7",
+            "lens": "review-readability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:b1dd98fe3f1bca02c2b2a617d575347372810ef80c504eef847d456029ce18dd",
+            "raw_sha256": "sha256:881b0768e178acb5e062753b00c06bb90ee0de9a29e0d18881e23adfe424e060",
+            "canonical_sha256": "sha256:ee33635dc74a30d3103c00b6b38de4d104a703f9464ca1ddbc4442970ffbd942",
+            "result_hash": "sha256:4b6185803171fa8fa9e4e3c0d28a5ffbc375c9f6b5ba360d1ddba81845f8ab51",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:b1dd98fe3f1bca02c2b2a617d575347372810ef80c504eef847d456029ce18dd",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                ".github/workflows/ci.yml",
+                "agents/GADU.md",
+                "bin/lib/bootstrap.sh",
+                "engine/agentgen/agentgen.go",
+                "engine/agentgen/artifacts_test.go",
+                "engine/agentgen/gadu.go",
+                "engine/agentgen/gadu_test.go",
+                "engine/agentgen/messages_pin_test.go",
+                "engine/agentgen/persona/body.md",
+                "engine/agentgen/roles.go",
+                "engine/agentgen/roles_test.go",
+                "engine/cmd/agentgen.go",
+                "engine/cmd/agentgen_test.go",
+                "engine/skills/role_agents_artifact_test.go",
+                "opencode/agents/GADU.md",
+                "overlay.manifest"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-regenerate-verb-name",
+                "lens": "readability",
+                "location": "engine/cmd/agentgen.go:31-32",
+                "severity": "SUGGESTION",
+                "claim": "The command verb 'gadu-generate' and the 'regenerate' hint remain named after a persona this change deletes, while the output message now describes role agents. The comment explains the retention and flags it as a follow-up, but the name now misleads readers about what the command does.",
+                "proof_refs": [
+                  "engine/cmd/agentgen.go:31-32",
+                  "engine/agentgen/messages_pin_test.go:26"
+                ],
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-pi-const-comment-stale",
+                "lens": "readability",
+                "location": "engine/agentgen/roles.go:26-37",
+                "severity": "SUGGESTION",
+                "claim": "The piSonnetModel doc comment keeps a long historical rationale about GADU's compact Pi body and a 7 KB prompt hang for a file this package no longer writes. The constraint (prompt-size limit) is plausibly still relevant to role bodies, but the comment frames it as GADU-only, leaving maintainers unsure whether the limit applies to role bodies.",
+                "proof_refs": [
+                  "engine/agentgen/roles.go:26-37"
+                ],
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Reviewed all 16 changed paths. The change is mostly deletion of the GADU persona (generator, tests, persona body, generated agent files, manifest rows) with comments and tests updated consistently.",
+              "The replacement test TestTheCommittedFilesOfTheRolesAreWhatTheGeneratorWrites and the table-order tests preserve coverage of the remaining role artifacts; no dead references to removed symbols (PiAgentModel, gaduPaths) are visible in the changed files.",
+              "No BLOCKER or CRITICAL readability defects found."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 2,
+        "target_identity": "sha256:23feedaef467b378107bf3763c69ee3df07cc944ce7374ec88bd0f75fc40c714",
+        "capture_phase_revision": "sha256:6e438057cce75f3474b25d29a938537f29510f08e31468a6206d79ff9e7f4597",
+        "artifact_digest": "sha256:c911994737d1f5c1f3a625771b2a0cda6bd6d1c5c802dccec1d39bebfadbf788",
+        "result_hash": "sha256:bcf7652670d995369b7aa7f78c08092db57e615215907efe7bb4b3ce0807886d",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:819f292489cc21611396019efac68bb9dba11226ae17999c00c67588ee7a2291",
+            "lineage_id": "review-c66bc0978f2f2235",
+            "authority_revision": "sha256:6e438057cce75f3474b25d29a938537f29510f08e31468a6206d79ff9e7f4597",
+            "target_identity": "sha256:23feedaef467b378107bf3763c69ee3df07cc944ce7374ec88bd0f75fc40c714",
+            "base_tree": "38ca9dd4922b37c5ca47f55e14b23dc091e0a091",
+            "candidate_tree": "373aedab8009a2027d7152f66be96b4192f140dc",
+            "changed_path_manifest_sha256": "sha256:7d591e8c0c95ef3101f238dfb1850bda86436440c501b0b422b837f4b1a986a7",
+            "lens": "review-reliability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:819f292489cc21611396019efac68bb9dba11226ae17999c00c67588ee7a2291",
+            "raw_sha256": "sha256:475022d5196ab0525c84b1242a9f73a482dc18551bd24b6c04e00bb7b4bf37a0",
+            "canonical_sha256": "sha256:edd2e8e8b9243b4731745fb96f0ba17c88719b2848b8f47a43f5206f89d7d718",
+            "result_hash": "sha256:bcf7652670d995369b7aa7f78c08092db57e615215907efe7bb4b3ce0807886d",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:819f292489cc21611396019efac68bb9dba11226ae17999c00c67588ee7a2291",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                ".github/workflows/ci.yml",
+                "agents/GADU.md",
+                "bin/lib/bootstrap.sh",
+                "engine/agentgen/agentgen.go",
+                "engine/agentgen/artifacts_test.go",
+                "engine/agentgen/gadu.go",
+                "engine/agentgen/gadu_test.go",
+                "engine/agentgen/messages_pin_test.go",
+                "engine/agentgen/persona/body.md",
+                "engine/agentgen/roles.go",
+                "engine/agentgen/roles_test.go",
+                "engine/cmd/agentgen.go",
+                "engine/cmd/agentgen_test.go",
+                "engine/skills/role_agents_artifact_test.go",
+                "opencode/agents/GADU.md",
+                "overlay.manifest"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-001",
+                "lens": "reliability",
+                "location": "engine/skills/role_agents_artifact_test.go:574",
+                "severity": "WARNING",
+                "claim": "The retired-agent absence check no longer covers pi/agents. GADU.md was added to the retired list, but pi/agents was dropped from the scanned directories. The candidate does not show pi/agents/GADU.md being deleted, and the generator no longer writes or checks it. A stale pi/agents/GADU.md could remain in the repository undetected, because neither Check nor this test would flag it. The patch metadata shows no pi/agents/GADU.md deletion, so it may be orphaned, or it may already have been absent. Not provable from the visible diff.",
+                "proof_refs": [
+                  "engine/skills/role_agents_artifact_test.go:586",
+                  "engine/agentgen/gadu.go:1"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-002",
+                "lens": "reliability",
+                "location": "engine/cmd/agentgen.go:63",
+                "severity": "SUGGESTION",
+                "claim": "The success message changed from the GADU file list to a role-based placeholder list. This was requested and the test was updated, so it is not a regression. The literal angle-bracket placeholders print as-is, which is acceptable.",
+                "proof_refs": [
+                  "engine/cmd/agentgen_test.go:66"
+                ],
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Reviewed all 16 manifest paths. The GADU generator, its persona body, its tests, and the four projected files were removed consistently, along with their overlay.manifest rows.",
+              "roles.go keeps the sonnet Pi model value (pi-claude-cli/claude-sonnet-5) as a private constant, so the role output is unchanged. The new test TestTheCommittedFilesOfTheRolesAreWhatTheGeneratorWrites checks it byte for byte through Check against the repository.",
+              "Missing-source, stale, and unreadable-file tests were rewritten to use role files, so those failure-path assertions are still exercised.",
+              "The repoRoot helper moved from gadu_test.go to artifacts_test.go, and allPaths no longer depends on gaduPaths, so test compilation is consistent within the visible patch."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "052bffb35d3705799ce220103fe3f967c05e52d51d8f7d3c5db1eb5ac90a3e98",
+    "initial_atomic_start": {
+      "lineage_id": "review-c66bc0978f2f2235",
+      "worktree_identity": "sha256:a6b49af05a7c0ec5d984d93a61eb5b47b0972a386e571f04e52ef086ce2dd11f",
+      "target_identity": "sha256:23feedaef467b378107bf3763c69ee3df07cc944ce7374ec88bd0f75fc40c714",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "38ca9dd4922b37c5ca47f55e14b23dc091e0a091",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "high",
+      "selected_lenses": [
+        "review-risk",
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 948,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "removes the GADU persona and its manifest rows, changes the gadu-generate message and help text, and updates generator tests and pins"
+    },
+    "runtime_agent": "claude-code"
+  }
+}
