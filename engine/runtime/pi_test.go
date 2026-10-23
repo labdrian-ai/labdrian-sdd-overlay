@@ -227,14 +227,14 @@ console.log(JSON.stringify(results));
 	}
 }
 
-// TestLabdrianGateInjectsPathLine_SddTasksSddApply (task 3.2, R-004): the
+// TestLabdrianGateInjectsPathLine_ShaperBuilder (task 3.2, R-004): the
 // default before_agent_start handler injects both managed contracts' bare
 // path lines, exactly matching the Go-side oracle (runtime.CanonicalEntry /
 // runtime.InjectPrompt for the same contracts and header -- design C5), only
-// for shaper/builder (sdd-tasks/sdd-apply until PR 5 of the role agents); is idempotent on a second call; is a no-op for
+// for shaper/builder (sdd-tasks/sdd-apply before PR 5 of the role agents); is idempotent on a second call; is a no-op for
 // every other or unnamed agent; and a malformed contract's frontmatter
 // silently drops only that contract, never the other, and never throws.
-func TestLabdrianGateInjectsPathLine_SddTasksSddApply(t *testing.T) {
+func TestLabdrianGateInjectsPathLine_ShaperBuilder(t *testing.T) {
 	root, minimalismPath, antiGenericPath := writeGatePackage(t, validMinimalismFixture, validAntiGenericFixture)
 	gatePath := filepath.Join(root, "extensions", "labdrian-gate.mjs")
 

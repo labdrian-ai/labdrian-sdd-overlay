@@ -163,8 +163,8 @@ Read `references/architecture-template.md` for the exact structured response env
 - **Do NOT contradict the manifest** — redesign to respect manifest constraints or document the tension explicitly as a trade-off with mitigation. NEVER silently ignore a rule.
 - **Anti-inflation guidance** (section inflation, module count, trade-off inflation) is
   consolidated in `../_shared/minimalism-contract.md` (canonical single source). This is a
-  documentation reference for deduplication; the 6-rung ladder is applied only during
-  `sdd-tasks`/`sdd-apply`, NOT during architecture/design. Do NOT add
+  documentation reference for deduplication; the 6-rung ladder is applied only by the
+  `shaper` and `builder` role agents (before them, `sdd-tasks`/`sdd-apply`), NOT during this skill's architecture work. Do NOT add
   `minimalism-contract.md` to this skill's `## Skills to load before work` set.
 - **Do NOT default to "industry standard"** — every decision must be defended against THIS project's manifest.
 - **Always reference manifest sections explicitly** — cite which part of the manifest justifies each decision.
