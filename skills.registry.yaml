@@ -336,32 +336,6 @@ skills:
         - codex
     lifecycle:
       updateStrategy: vendor-merge
-  - id: gadu-orchestrate
-    path: gadu-orchestrate
-    source:
-      type: custom
-    install:
-      defaultScope: global
-      targets:
-        - claude
-        - opencode
-        - codex
-        - pi
-    lifecycle:
-      updateStrategy: overlay-only
-  - id: gadu-operator
-    path: gadu-operator
-    source:
-      type: custom
-    install:
-      defaultScope: global
-      targets:
-        - claude
-        - opencode
-        - codex
-        - pi
-    lifecycle:
-      updateStrategy: overlay-only
   - id: requirements-from-transcripts
     path: requirements-from-transcripts
     source:

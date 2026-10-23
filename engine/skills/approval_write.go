@@ -8,7 +8,7 @@ import (
 
 // BaselineLintDecision says what the hard lint findings of a skill mean for the approval of its
 // bytes. A skill outside the approval baseline is refused (refused is true) on any hard finding.
-// A baseline skill predates the lint budget (most of the 37 fail it today), and refusing it would
+// A baseline skill predates the lint budget (most of the 35 fail it today), and refusing it would
 // leave no way to approve the change an upstream merge makes to its bytes, so its legacy findings
 // (size and description shape, see legacyBaselineLintRules) are warned about, after the
 // approval, and do not block it: warnings holds one line for each. Any other hard finding means

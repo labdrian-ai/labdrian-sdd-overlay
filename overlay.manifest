@@ -62,8 +62,6 @@ engine/prespec/readiness_test.go managed
 sdd-spec/SKILL.md managed
 sdd-tasks/SKILL.md managed
 sdd-verify/SKILL.md managed
-gadu-orchestrate/SKILL.md custom
-gadu-operator/SKILL.md custom
 requirements-from-transcripts/SKILL.md custom
 prespec-malandra/SKILL.md custom
 chat-thread-analyzer/SKILL.md custom

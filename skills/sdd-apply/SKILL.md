@@ -65,7 +65,7 @@ Before reading implementation files or writing code, consume the structured stat
 ## What to Do
 
 ### Step 1: Load Skills
-Follow **Section A** from `skills/_shared/sdd-phase-common.md`.
+Read the exact `SKILL.md` files your launch prompt lists under `## Skills to load before work` before any task-specific work. If it lists none, proceed with this skill only.
 
 ### Step 2: Read Context
 

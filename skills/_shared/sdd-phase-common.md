@@ -4,18 +4,6 @@ Boilerplate identical across all SDD phase skills. Sub-agents MUST load this alo
 
 Executor boundary: every SDD phase agent is an EXECUTOR, not an orchestrator. Do the phase work yourself. Do NOT launch sub-agents, do NOT call `delegate`/`task`, and do NOT bounce work back unless the phase skill explicitly says to stop and report a blocker.
 
-## A. Skill Loading
-
-1. Check if the orchestrator injected a `## Skills to load before work` block in your launch prompt. If yes, read those exact `SKILL.md` files before task-specific work.
-2. If no skills block was provided, check for `SKILL: Load` instructions. If present, load those exact skill files.
-3. If neither was provided, search for the skill registry as a fallback:
-   a. `mem_search(query: "skill-registry", project: "{project}")` — if found, `mem_get_observation(id)` for full content
-   b. Fallback: read `.atl/skill-registry.md` from the project root if it exists
-   c. From the registry's skills index, match triggers to your task and read the exact listed `SKILL.md` paths.
-4. If no registry exists, proceed with your phase skill only.
-
-NOTE: the preferred path is (1) — exact skill paths selected by the orchestrator. Paths (2) and (3) are fallbacks. Searching the registry is SKILL LOADING, not delegation. If `## Skills to load before work` is present, IGNORE redundant `SKILL: Load` instructions.
-
 ## B. Artifact Retrieval
 
 **`sdd-research` collector exception:** this output-only collector does not read local artifacts, repository state, or Engram state, and does not use artifact locators. It returns its evidence envelope to the orchestrator, which validates and persists it through the selected store route. Sections B and C do not apply to `sdd-research`; every other phase follows them unchanged.
@@ -105,39 +93,3 @@ Example:
 **Skill Resolution**: paths-injected — 3 skills (react-19, typescript, tailwind-4)
 (other values: `fallback-registry`, `fallback-path`, or `none — no registry found`)
 ```
-
-## E. Review Workload Guard
-
-SDD must protect reviewer cognitive load, not only generate tasks.
-
-- The default PR review budget is **400 changed lines** (`additions + deletions`).
-- Count authored text additions plus deletions only for this threshold. Generated goldens are excluded from authored risk count but remain included in complete snapshot identity and receipt validation.
-- The orchestrator MUST cache a delivery strategy at session start: `ask-on-risk` (default), `auto-chain`, `single-pr`, or `exception-ok`. Those four are the whole domain.
-- Any other `delivery_strategy` value is invalid. A phase MUST NOT map it to the nearest branch, MUST NOT record it in an artifact, and MUST NOT forward it: report the unrecognised value and stop.
-- The orchestrator MUST pass `delivery_strategy` to `sdd-tasks` and the resolved decision to `sdd-apply`.
-- `sdd-tasks` MUST forecast whether the planned work may exceed that budget.
-- The forecast MUST include exact plain-text guard lines: `Decision needed before apply: Yes|No`, `Chained PRs recommended: Yes|No`, and `400-line budget risk: Low|Medium|High`.
-- If the forecast is high, `sdd-tasks` MUST recommend chained or stacked PRs using deliverable work units.
-- `sdd-apply` MUST NOT start oversized work unless the delivery strategy resolves to chained/stacked PR slices or explicitly accepted `size:exception`.
-- Each chained PR slice must have a clear start, clear finish, autonomous scope, verification, and reasonable rollback.
-- In a Feature Branch Chain, PR #1 targets the feature/tracker branch and later child PRs target the immediate previous PR branch; if GitHub shows previous slices in a child diff, retarget/rebase until the diff is clean.
-
-This guard exists to reduce reviewer burnout and keep implementation delivery safe. Do not treat it as optional process noise.
-
-## F. Key Learnings Closing
-
-Close your **final report message** (the return envelope) with a `## Key Learnings` section to enable engram passive capture.
-
-**Format**: numbered list with 1–5 items. Each item is a standalone factual sentence that is ≥20 characters and ≥4 words.
-
-**Example**:
-
-```markdown
-## Key Learnings
-
-1. Async validation in the apply phase caught a race condition in concurrent writes.
-2. Golden test regeneration for system prompts requires the `-update` flag before re-run.
-3. Bounded review contracts must stay consistent across `sdd-phase-common.md` and `engram/protocol.md`.
-```
-
-This applies to your final text response to the orchestrator, not intermediate tool outputs or artifact content. Engram will automatically extract and persist these learnings.

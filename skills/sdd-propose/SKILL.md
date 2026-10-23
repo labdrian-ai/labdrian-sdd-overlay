@@ -50,7 +50,7 @@ From the orchestrator:
 ## What to Do
 
 ### Step 1: Load Skills
-Follow **Section A** from `skills/_shared/sdd-phase-common.md`.
+Read the exact `SKILL.md` files your launch prompt lists under `## Skills to load before work` before any task-specific work. If it lists none, proceed with this skill only.
 
 ### Step 2: Create Change Directory
 
@@ -95,7 +95,7 @@ Be specific about the user need or technical debt being addressed.}
 ## Capabilities
 
 > This section is the CONTRACT between proposal and specs phases.
-> The sdd-spec agent reads this to know exactly which spec files to create or update.
+> The spec phase reads this to know exactly which spec files to create or update.
 > Research `openspec/specs/` before filling this in.
 
 ### New Capabilities
