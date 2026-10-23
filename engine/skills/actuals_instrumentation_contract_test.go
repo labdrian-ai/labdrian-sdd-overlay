@@ -216,12 +216,14 @@ func TestActualsInstrumentationContract(t *testing.T) {
 			// non-covering.
 			"excluded from this count as post-boundary bookkeeping",
 			// D3: the append-only carve-out to closure-feedback's own "do not modify
-			// engine outputs" rule. Pinned as the operative Execute-item-3 clause,
+			// hop outputs" rule (it read "engine outputs" while the SDD engine wrote the
+			// archive report; on the role chain the delivery hop writes it, ADR C13-S0).
+			// Pinned as the operative Execute-item-3 clause,
 			// not the bare phrase "append-only carve-out": that phrase also
 			// appears in the unrelated Gotchas cross-reference sentence, so the
 			// bare pin survived deletion of the Execute item itself —
 			// mutation-proven non-covering (verify round 3, W2).
-			"a named, delimited, append-only carve-out to closure-feedback's own \"do NOT modify engine outputs\" rule",
+			"a named, delimited, append-only carve-out to closure-feedback's own \"do NOT modify hop outputs\" rule",
 		} {
 			if !strings.Contains(skill, want) {
 				t.Fatalf("closure-feedback must contain %q", want)

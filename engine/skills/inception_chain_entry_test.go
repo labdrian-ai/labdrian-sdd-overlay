@@ -183,7 +183,7 @@ func TestInceptionPipelineClosureInputsAreLocatedByTheChain(t *testing.T) {
 	t.Run("B1_chain_entry_has_the_delivery_prompt_name_the_archive_report", func(t *testing.T) {
 		section := markdownSectionBody(t, skill, "## Chain entry")
 		for _, want := range []string{
-			"The delivery prompt names the archive report",
+			"Have the delivery prompt name the archive report",
 			"`archive-report.md`",
 			"inside the project repository",
 		} {
