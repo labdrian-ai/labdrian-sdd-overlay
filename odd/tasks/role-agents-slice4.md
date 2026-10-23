@@ -29,7 +29,7 @@ Read v3 in full (D10, D11, D14, §2, §4, §5, §6, §9), `odd/tasks/role-agents
 |---|---|---|---|---|
 | T1 | S1, S2, S4, S5, S6, S7 | delegated workflow (owner: "sonnet max para implementaciones"); generator, templates, generated files, `Check` in CI | done | `61a31b70` |
 | T2 | S1, S3, S6, S7 | same workflow, after T1; Codex route, pipkg directory copy, Pi package agents loop, capability sentence | done | `84349dcd`; review fixes `c8b32dcd`, `f76113dd` |
-| T3 | S1 (live check) | owner-authorized, after merge-ready | pending | — |
+| T3 | S1 (live check) | owner-authorized, after merge-ready | done | L6 (2026-10-23) |
 
 ## Log
 
@@ -64,3 +64,8 @@ Read v3 in full (D10, D11, D14, §2, §4, §5, §6, §9), `odd/tasks/role-agents
   - R3/R4 (a listing error is swallowed when only one side fails): fixed in the next commit, test-first. Uninstall now tells an unreadable package agents directory, or an unreadable links directory, after the links it still removed. A missing package `agents/` stays silent.
   - R3 suggestion (a rebuild that drops one agent): pinned by a test, which already passed.
   - R2 suggestion (the partial-failure branch): documented in the comment of `unlinkPackageAgents`.
+- **L6** (2026-10-23): PR #668 merged as `fd41c0c0`.
+  - **Authorization:** I asked the owner whether to use the main checkout for the live check ("pull, apply y push a origin"). Owner: "autorizado".
+  - **Codex:** the main checkout was fast-forwarded to `fd41c0c0`, then `labdrian apply --target codex` ran: `codex: deployed=19 in-sync=68`, and `~/.codex/agents` holds the 8 role `.toml` files. Codex has no command that lists agents, so the check is `codex exec --sandbox read-only` (codex-cli 0.148.0) asking which agent types its spawn tool offers. It lists the 8 roles plus the built-ins `default`, `explorer` and `worker`.
+  - **Pi:** `labdrian apply --target pi` linked the 9 package agents (GADU and the 8 roles) and reported `restart_required`. In a fresh `pi -p --no-session` session, `subagent_list_agents` returns the 8 roles beside GADU and the existing `gentle-ai-*`, `jd-*` and `review-*` agents.
+  - T3 done.
