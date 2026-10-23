@@ -49,9 +49,9 @@ engine/runtime/labdrian-runtime-parity-plugin.mjs managed
 engine/assets/assets.go managed
 engine/assets/assets_test.go managed
 engine/assets/anti-generic-design.md managed
-engine/gadu/gadu.go managed
-engine/gadu/gadu_test.go managed
-engine/gadu/persona/body.md managed
+engine/agentgen/gadu.go managed
+engine/agentgen/gadu_test.go managed
+engine/agentgen/persona/body.md managed
 engine/prespec/brief.go managed
 engine/prespec/brief_test.go managed
 engine/prespec/grid.go managed

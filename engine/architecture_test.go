@@ -25,7 +25,7 @@ import (
 //   - pathguard, capability, projection, workflow and the like are domain
 //     packages because their pure half is the part that stays; the file system
 //     half is debt below.
-//   - assets, gadu, synctrigger, filelock, gitprov, statestore and atomicfile are
+//   - assets, agentgen, synctrigger, filelock, gitprov, statestore and atomicfile are
 //     adapters: infrastructure the domain reaches only through a port.
 //   - capability/presence is the adapter of the workflow's DependencyProber port:
 //     it stats files and the PATH, and capability itself stays pure.
@@ -143,6 +143,7 @@ import (
 //     tests share) and this guard (the module root) are test-only.
 var rings = map[string]archguard.Ring{
 	".":                         archguard.Support,
+	"agentgen":                  archguard.Adapter,
 	"assets":                    archguard.Adapter,
 	"atomicfile":                archguard.Adapter,
 	"capability":                archguard.Domain,
@@ -154,7 +155,6 @@ var rings = map[string]archguard.Ring{
 	"execrunner":                archguard.Adapter,
 	"fieldrule":                 archguard.Domain,
 	"filelock":                  archguard.Adapter,
-	"gadu":                      archguard.Adapter,
 	"gate":                      archguard.Domain,
 	"gitfs":                     archguard.Adapter,
 	"gitobject":                 archguard.Domain,

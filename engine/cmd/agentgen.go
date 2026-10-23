@@ -5,7 +5,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gadu"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/agentgen"
 )
 
 // overlayRoot resolves the overlay repo root from the OVERLAY_DIR environment
@@ -20,12 +20,17 @@ func overlayRoot(getenv func(string) string) (string, error) {
 		"  Run: OVERLAY_DIR=<overlay-repo-root> gentle-ai-overlay gadu-generate")
 }
 
-// runGaduGenerate implements the 'gadu-generate [--check]' subcommand.
-// Without --check: calls gadu.Generate(repoRoot) to write all artifacts.
-// With    --check: calls gadu.Check(repoRoot)    to verify they are not stale.
+// runAgentgenGenerate implements the 'gadu-generate [--check]' subcommand.
+// Without --check: calls agentgen.Generate(repoRoot) to write all artifacts: the GADU
+// files and the Claude, Pi and Codex files of every role.
+// With    --check: calls agentgen.Check(repoRoot)    to verify they are not stale.
 // Exits non-zero on error. OVERLAY_DIR must be set; the installed binary
 // cannot resolve the repo root reliably via os.Executable().
-func runGaduGenerate(p process, d deps, args []string) {
+//
+// The verb keeps the name it had when the generator wrote GADU alone, and so do the words it
+// prints: the overlay script and its help text name it, and renaming it is a change of the
+// scripts, not of this command.
+func runAgentgenGenerate(p process, d deps, args []string) {
 	checkMode := false
 	for _, a := range args {
 		if a == "--check" {
@@ -41,7 +46,7 @@ func runGaduGenerate(p process, d deps, args []string) {
 	}
 
 	if checkMode {
-		if err := gadu.Check(root); err != nil {
+		if err := agentgen.Check(root); err != nil {
 			fmt.Fprintf(p.stderr, "gadu-generate --check: %v\n", err)
 			p.exit(1)
 			return
@@ -50,7 +55,7 @@ func runGaduGenerate(p process, d deps, args []string) {
 		return
 	}
 
-	if err := gadu.Generate(root); err != nil {
+	if err := agentgen.Generate(root); err != nil {
 		fmt.Fprintf(p.stderr, "gadu-generate: %v\n", err)
 		p.exit(1)
 		return

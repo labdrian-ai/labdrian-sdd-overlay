@@ -1,4 +1,4 @@
-package gadu_test
+package agentgen_test
 
 import (
 	"os"
@@ -6,13 +6,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gadu"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/agentgen"
 )
 
-// repoRoot returns the overlay repo root, two levels above engine/gadu/.
+// repoRoot returns the overlay repo root, two levels above engine/agentgen/.
 func repoRoot(t *testing.T) string {
 	t.Helper()
-	// engine/gadu/gadu_test.go → engine/ → repo root
+	// engine/agentgen/gadu_test.go → engine/ → repo root
 	wd, err := os.Getwd()
 	if err != nil {
 		t.Fatalf("getwd: %v", err)
@@ -23,8 +23,8 @@ func repoRoot(t *testing.T) string {
 // TestGenerate_AllFilesEmitted verifies that Generate writes all delivery
 // artifacts into the repo-root-shaped tempdir.
 func TestGenerate_AllFilesEmitted(t *testing.T) {
-	dir := t.TempDir()
-	if err := gadu.Generate(dir); err != nil {
+	dir := seededRoot(t)
+	if err := agentgen.Generate(dir); err != nil {
 		t.Fatalf("Generate: %v", err)
 	}
 
@@ -44,8 +44,8 @@ func TestGenerate_AllFilesEmitted(t *testing.T) {
 // pi-claude-cli model id, stays under the bridge-safe size budget, mentions
 // the gadu-operator skill, and carries the generated-file header.
 func TestGenerate_WritesPiAgentVariant(t *testing.T) {
-	dir := t.TempDir()
-	if err := gadu.Generate(dir); err != nil {
+	dir := seededRoot(t)
+	if err := agentgen.Generate(dir); err != nil {
 		t.Fatalf("Generate: %v", err)
 	}
 
@@ -57,8 +57,8 @@ func TestGenerate_WritesPiAgentVariant(t *testing.T) {
 	s := string(content)
 
 	fm := extractFrontmatter(s)
-	if fm["model"] != gadu.PiAgentModel {
-		t.Errorf("pi agent frontmatter model = %q, want %q", fm["model"], gadu.PiAgentModel)
+	if fm["model"] != agentgen.PiAgentModel {
+		t.Errorf("pi agent frontmatter model = %q, want %q", fm["model"], agentgen.PiAgentModel)
 	}
 	if fm["name"] != "GADU" {
 		t.Errorf("pi agent frontmatter name = %q, want GADU", fm["name"])
@@ -84,12 +84,12 @@ func TestGenerate_WritesPiAgentVariant(t *testing.T) {
 // canonical persona body bytes byte-for-byte (D7: same body bytes in every output)
 // and do not carry runtime-anchored wording from the canonical body.
 func TestGenerate_BodyIsIdentical(t *testing.T) {
-	dir := t.TempDir()
-	if err := gadu.Generate(dir); err != nil {
+	dir := seededRoot(t)
+	if err := agentgen.Generate(dir); err != nil {
 		t.Fatalf("Generate: %v", err)
 	}
 
-	canonicalBody := gadu.PersonaBody()
+	canonicalBody := agentgen.PersonaBody()
 	if canonicalBody == "" {
 		t.Fatal("PersonaBody() returned empty — embedded body.md may be missing")
 	}
@@ -135,8 +135,8 @@ func TestGenerate_BodyIsIdentical(t *testing.T) {
 // TestGenerate_ClaudeAgentFrontmatter verifies the Claude Code agent file
 // frontmatter has the required fields: name, description, model: opus, tools. (R-004)
 func TestGenerate_ClaudeAgentFrontmatter(t *testing.T) {
-	dir := t.TempDir()
-	if err := gadu.Generate(dir); err != nil {
+	dir := seededRoot(t)
+	if err := agentgen.Generate(dir); err != nil {
 		t.Fatalf("Generate: %v", err)
 	}
 
@@ -180,8 +180,8 @@ func TestGenerate_ClaudeAgentFrontmatter(t *testing.T) {
 // has OpenCode-compatible frontmatter: provider-prefixed model, mode, and no
 // Claude Code-only `tools: '*'` field.
 func TestGenerate_OpenCodeAgentFrontmatter(t *testing.T) {
-	dir := t.TempDir()
-	if err := gadu.Generate(dir); err != nil {
+	dir := seededRoot(t)
+	if err := agentgen.Generate(dir); err != nil {
 		t.Fatalf("Generate: %v", err)
 	}
 
@@ -249,8 +249,8 @@ func extractFrontmatter(content string) map[string]string {
 // TestGenerate_SkillFrontmatter verifies the skill file has a valid overlay
 // skill frontmatter with name: gadu-operator and a Trigger: description. (R-005)
 func TestGenerate_SkillFrontmatter(t *testing.T) {
-	dir := t.TempDir()
-	if err := gadu.Generate(dir); err != nil {
+	dir := seededRoot(t)
+	if err := agentgen.Generate(dir); err != nil {
 		t.Fatalf("Generate: %v", err)
 	}
 
@@ -278,8 +278,8 @@ func TestGenerate_SkillFrontmatter(t *testing.T) {
 // TestGenerate_DoNotEditHeader verifies both emitted files contain the
 // do-not-edit comment string. (R-012)
 func TestGenerate_DoNotEditHeader(t *testing.T) {
-	dir := t.TempDir()
-	if err := gadu.Generate(dir); err != nil {
+	dir := seededRoot(t)
+	if err := agentgen.Generate(dir); err != nil {
 		t.Fatalf("Generate: %v", err)
 	}
 
@@ -307,8 +307,8 @@ func TestGenerate_DoNotEditHeader(t *testing.T) {
 // (`tools: '*'`), never a YAML list -- pi-subagents-j0k3r@1.5.15 blocks
 // loading a subagent whose frontmatter declares `tools` both ways (D12).
 func TestFrontmatter_InlineToolsScalar(t *testing.T) {
-	dir := t.TempDir()
-	if err := gadu.Generate(dir); err != nil {
+	dir := seededRoot(t)
+	if err := agentgen.Generate(dir); err != nil {
 		t.Fatalf("Generate: %v", err)
 	}
 	content, err := os.ReadFile(filepath.Join(dir, "agents", "GADU.md"))
@@ -341,13 +341,13 @@ func TestFrontmatter_InlineToolsScalar(t *testing.T) {
 // TestCheck_FailsWhenMissing verifies Check returns an error when the skill
 // file is missing from the repo root. (R-003)
 func TestCheck_FailsWhenMissing(t *testing.T) {
-	dir := t.TempDir()
+	dir := seededRoot(t)
 	// Generate only the agent file so the skill is missing.
 	if err := os.MkdirAll(filepath.Join(dir, "agents"), 0755); err != nil {
 		t.Fatal(err)
 	}
 	// Don't call Generate — no artifacts exist.
-	err := gadu.Check(dir)
+	err := agentgen.Check(dir)
 	if err == nil {
 		t.Error("Check must return non-nil error when artifacts are missing")
 	}
@@ -356,8 +356,8 @@ func TestCheck_FailsWhenMissing(t *testing.T) {
 // TestCheck_FailsWhenStale verifies Check returns an error when an artifact
 // has been modified after generation. (R-003)
 func TestCheck_FailsWhenStale(t *testing.T) {
-	dir := t.TempDir()
-	if err := gadu.Generate(dir); err != nil {
+	dir := seededRoot(t)
+	if err := agentgen.Generate(dir); err != nil {
 		t.Fatalf("Generate: %v", err)
 	}
 
@@ -372,7 +372,7 @@ func TestCheck_FailsWhenStale(t *testing.T) {
 		t.Fatalf("write agent: %v", err)
 	}
 
-	if err := gadu.Check(dir); err == nil {
+	if err := agentgen.Check(dir); err == nil {
 		t.Error("Check must return non-nil error when artifact is stale")
 	}
 }
@@ -380,8 +380,8 @@ func TestCheck_FailsWhenStale(t *testing.T) {
 // TestCheck_DetectsStalePiVariant verifies Check returns an error when
 // pi/agents/GADU.md has been hand-edited after generation.
 func TestCheck_DetectsStalePiVariant(t *testing.T) {
-	dir := t.TempDir()
-	if err := gadu.Generate(dir); err != nil {
+	dir := seededRoot(t)
+	if err := agentgen.Generate(dir); err != nil {
 		t.Fatalf("Generate: %v", err)
 	}
 
@@ -395,7 +395,7 @@ func TestCheck_DetectsStalePiVariant(t *testing.T) {
 		t.Fatalf("write pi agent: %v", err)
 	}
 
-	err = gadu.Check(dir)
+	err = agentgen.Check(dir)
 	if err == nil {
 		t.Fatal("Check must return non-nil error when pi/agents/GADU.md is stale")
 	}
@@ -427,7 +427,7 @@ func TestCheck_PassesWhenInSync(t *testing.T) {
 		t.Skip("skills/gadu-operator/SKILL.md not yet generated (pre-A5) — skipping staleness check")
 	}
 
-	if err := gadu.Check(root); err != nil {
+	if err := agentgen.Check(root); err != nil {
 		t.Errorf("Check must return nil when committed artifacts match generator output; got: %v", err)
 	}
 }

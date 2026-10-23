@@ -293,18 +293,30 @@ Bootstrap will:
 
 ## GADU — shipped portable operator
 
-The overlay ships **GADU**, a portable operator persona generated from a single canonical source: `engine/gadu/persona/body.md`.
+The overlay ships **GADU**, a portable operator persona generated from a single canonical source: `engine/agentgen/persona/body.md`.
 
 Running `overlay gadu-generate [--check]` forwards to the engine with
 `OVERLAY_DIR` set to the repository root. Without `--check`, it regenerates
-four artifacts from that one canonical source:
+four artifacts from that one canonical source (and the files of the [role agents](#role-agents--one-source-three-runtimes) below, in the same run):
 
 - `agents/GADU.md` — Claude Code agent definition (deployed to `~/.claude/agents`)
 - `opencode/agents/GADU.md` — Opencode-native agent definition
 - `pi/agents/GADU.md` — Pi-native subagent definition: `model: pi-claude-cli/claude-sonnet-5` and a compact (< 1.5 KB) body that defers the full persona to the `gadu-operator` skill — see the Pi section above for why. `pipkg.Build` copies this file into the built package's `agents/GADU.md` when it is present, falling back to the generic `agents/GADU.md` on an older checkout.
 - `skills/gadu-operator/SKILL.md` — portable skill (deployed to all three skill runtimes)
 
-All generated files carry a `<!-- GENERATED — DO NOT EDIT. Source: engine/gadu/persona/body.md. Run: gentle-ai-overlay gadu-generate -->` header. Edit the canonical source, then regenerate — do not edit the output files directly.
+All generated files carry a `<!-- GENERATED — DO NOT EDIT. Source: engine/gadu/persona/body.md. Run: gentle-ai-overlay gadu-generate -->` header. Edit the canonical source, then regenerate — do not edit the output files directly. (The header still names the path the persona had before the generator became `engine/agentgen`: its words are bytes of the four files, so renaming them is a change of those files and not of this one.)
+
+## Role agents — one source, three runtimes
+
+Each of the eight roles (builder, shaper, polisher, prototyper, sweeper, reviewer, verifier, delivery) has one source, `roles/<role>/body.md`: the core prefix every role starts with and a delta of a few lines. `engine/agentgen` holds one table of what differs between the runtimes (the tools, the model, the thinking level and the description of each role) and writes the file of each runtime from the source and the table, in the same `gadu-generate` run that writes GADU:
+
+- `agents/<role>.md` — Claude Code (deployed to `~/.claude/agents`): `name`, `description`, `model`, `tools`.
+- `pi/agents/<role>.md` — Pi (copied into the built package): a `pi-claude-cli/<model>` ref, `thinking`, and the Pi names of the same tools (`read`, `grep`, `find`, `bash`, `edit`, `write`, `codegraph` and the Engram tools by their bare names).
+- `codex/agents/<role>.toml` — Codex: `name`, `description`, `developer_instructions` and `model_reasoning_effort`; no `model` (the parent passes it when it spawns the agent) and no tool list.
+
+`apply` deploys them: Claude's through the `agent` rows as before, Codex's through `codex-agent` rows of `overlay.manifest` to `~/.codex/agents` (tagged `custom`, like every agent file this overlay writes itself, so a `capture` never reads them back from a deployed copy), and Pi's through the package build, which copies every `pi/agents/*.md` into the package and links each one at `~/.pi/agent/agents` (see [Pi](#pi-via-gentle-pi)).
+
+A role with no Engram tool in its Claude list (today the reviewer) loses, in all three files, the one line of the core prefix that sends a role to Engram topics. The role file never carries a generated header: its edit surface is the source, and `gadu-generate --check` fails (locally and in the engine job of CI) when a committed file differs from what the generator writes, or a role source is missing or cannot be projected. Edit `roles/<role>/body.md` or the table in `engine/agentgen/roles.go`, then regenerate.
 
 ## CLI reference
 
@@ -419,7 +431,11 @@ overlay gadu-generate [--check]
     - opencode/agents/GADU.md
     - pi/agents/GADU.md (compact body, model: pi-claude-cli/claude-sonnet-5)
     - skills/gadu-operator/SKILL.md
-    from engine/gadu/persona/body.md.
+    from engine/agentgen/persona/body.md, and for each of the eight roles
+    - agents/<role>.md
+    - pi/agents/<role>.md
+    - codex/agents/<role>.toml
+    from roles/<role>/body.md and the table of engine/agentgen/roles.go.
 
 overlay validate-entry-contract --schema PATH --instance PATH [--exists-root PATH]
     Build and run the isolated v2 entry-contract validator from a temporary binary.

@@ -50,7 +50,7 @@ func TestACommandRunOverAZeroDepsReadsNoEnvironmentAndEndsAsItShould(t *testing.
 		},
 		{
 			name:      "gadu-generate",
-			run:       func(p *capturedProcess) { runGaduGenerate(p.process, deps{}, nil) },
+			run:       func(p *capturedProcess) { runAgentgenGenerate(p.process, deps{}, nil) },
 			wantExits: []int{1},
 			stream:    stderrOf,
 			want:      "OVERLAY_DIR is not set",

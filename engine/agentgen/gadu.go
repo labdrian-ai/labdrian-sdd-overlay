@@ -1,6 +1,8 @@
-// Package gadu implements the GADU persona generator.
-// It reads the canonical persona body (engine/gadu/persona/body.md) and emits
-// four delivery artifacts:
+package agentgen
+
+// The GADU persona. It reads the canonical persona body (engine/agentgen/persona/body.md, which
+// lived in engine/gadu until the generator was generalized to the role agents) and emits four
+// delivery artifacts:
 //   - agents/GADU.md                  (Claude Code agent file)
 //   - opencode/agents/GADU.md         (OpenCode agent file)
 //   - pi/agents/GADU.md               (Pi native subagent file, compact body)
@@ -10,17 +12,8 @@
 // carry identical persona body content. pi/agents/GADU.md is the one
 // exception: it carries a deliberately compact body (see PiAgentModel's doc
 // comment for why) that defers the full persona to the gadu-operator skill.
-// None of these artifacts are ever hand-edited. Use Generate to write them;
-// use Check to assert they are not stale.
-package gadu
 
-import (
-	_ "embed"
-	"fmt"
-	"os"
-	"path/filepath"
-	"strings"
-)
+import _ "embed"
 
 //go:embed persona/body.md
 var personaBody string
@@ -138,67 +131,25 @@ spawn_agent (codex) — never a runtime-specific workflow tool — so the behavi
 
 // doNotEditHeader is the generated-file marker required by R-012 (D7).
 // It appears immediately after the closing frontmatter "---" in every output file.
+//
+// The source it names, engine/gadu/persona/body.md, is the path before the generator was renamed
+// to engine/agentgen; the persona now lives at engine/agentgen/persona/body.md. The header is kept
+// as it was so that the four GADU files stay byte for byte what they were (PR 5 of the design
+// deletes them, and with them this line).
 const doNotEditHeader = "<!-- GENERATED — DO NOT EDIT. Source: engine/gadu/persona/body.md. Run: gentle-ai-overlay gadu-generate -->"
 
-// Artifact is one file the generator emits: where it goes under the root of the repository, as a
-// slash-separated path, and what it holds.
-type Artifact struct {
-	Path    string
-	Content string
-}
-
-// Artifacts is the table of what the generator emits, in the order Generate writes it and Check
-// reports it:
+// gaduArtifacts is the four files of GADU, in the order the table of Artifacts starts with:
 //   - agents/GADU.md
 //   - opencode/agents/GADU.md
 //   - pi/agents/GADU.md
 //   - skills/gadu-operator/SKILL.md
-//
-// Each call builds the table afresh, so no caller can change what the next one sees.
-func Artifacts() []Artifact {
+func gaduArtifacts() []Artifact {
 	return []Artifact{
 		{Path: "agents/GADU.md", Content: buildAgentFile()},
 		{Path: "opencode/agents/GADU.md", Content: buildOpenCodeAgentFile()},
 		{Path: "pi/agents/GADU.md", Content: buildPiAgentFile()},
 		{Path: "skills/gadu-operator/SKILL.md", Content: buildSkillFile()},
 	}
-}
-
-// Generate writes every artifact of the table under repoRoot. Parent directories are created as
-// needed. Generate is idempotent and overwrites any existing files.
-func Generate(repoRoot string) error {
-	for _, a := range Artifacts() {
-		if err := writeFile(filepath.Join(repoRoot, filepath.FromSlash(a.Path)), a.Content); err != nil {
-			return fmt.Errorf("writing %s: %w", a.Path, err)
-		}
-	}
-	return nil
-}
-
-// Check compares the committed copies under repoRoot with the table, in memory: it writes nothing,
-// not even a scratch directory. It returns a non-nil error with a descriptive message if any file
-// is missing, unreadable, stale or divergent. (R-003)
-func Check(repoRoot string) error {
-	var errs []string
-	for _, a := range Artifacts() {
-		committed, err := os.ReadFile(filepath.Join(repoRoot, filepath.FromSlash(a.Path)))
-		if err != nil {
-			if os.IsNotExist(err) {
-				errs = append(errs, fmt.Sprintf("%s: missing (not yet generated — run: gentle-ai-overlay gadu-generate)", a.Path))
-				continue
-			}
-			errs = append(errs, fmt.Sprintf("%s: cannot read committed file: %v", a.Path, err))
-			continue
-		}
-		if string(committed) != a.Content {
-			errs = append(errs, fmt.Sprintf("%s: stale — committed content diverges from generator output (run: gentle-ai-overlay gadu-generate)", a.Path))
-		}
-	}
-
-	if len(errs) > 0 {
-		return fmt.Errorf("GADU artifacts are stale or missing:\n  %s", strings.Join(errs, "\n  "))
-	}
-	return nil
 }
 
 // buildAgentFile assembles the complete content for agents/GADU.md.
@@ -226,11 +177,3 @@ func buildSkillFile() string {
 
 // PersonaBody returns the raw embedded persona body content (for testing).
 func PersonaBody() string { return personaBody }
-
-// writeFile writes content to path, creating parent directories as needed.
-func writeFile(path, content string) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
-		return fmt.Errorf("creating parent dir for %s: %w", path, err)
-	}
-	return os.WriteFile(path, []byte(content), 0644)
-}
