@@ -4,7 +4,14 @@
 
 This file defines the persistence contracts, language rule, identifier rule, and registry-block format shared by requirements-from-transcripts, project-manifest, project-architect, roadmap-maker, and inception-pipeline. Each skill references this file instead of re-deciding these conventions independently.
 
-Contract bundle version: `2.1.0`. This authority, both schemas, and the deterministic validator MUST remain version-matched. Missing or mismatched bundle assets are a hard stop. The inception skill left the bundle at its 3.0.0 (2026-10-23, C13-S0): it enters the labdrian role chain and no longer writes the entry contract, so its own version no longer tracks the bundle's.
+Contract bundle version: `2.1.0`. These assets carry it and MUST remain version-matched:
+
+- this file;
+- `./entry-contract.schema.json` (its `$id` and its accepted `contract_version` set);
+- `./actuals-record.schema.json` (its `$id`);
+- the validators that check them, `tools/entry-contract-validator` and `tools/actuals-record-validator` (each names the version it enforces).
+
+Missing or mismatched bundle assets are a hard stop. `inception-pipeline` is not one of them: since its 3.0.0 (2026-10-23, C13-S0) it enters the labdrian role chain and writes no entry contract, so its version no longer tracks the bundle's. It is still tracked in `overlay.manifest`, beside the three contract assets.
 
 The bundle version is a compatibility set, not an exact-match lock. The entry schema validates the union of every supported version's vocabulary and still accepts contracts written by a previous supported bundle (currently `2.0.0`); `contract_version` records which bundle produced a contract rather than gating which vocabulary applies. Per-version feature gating is deliberately not enforced: the entry schema carries no conditional keywords by design, and every version-sensitive and cross-field invariant lives in the deterministic validator instead. Emit the current version in new contracts; never rewrite an archived contract to a newer version.
 
