@@ -306,6 +306,50 @@ console.log(JSON.stringify({ valid, malformed }));
 	}
 }
 
+// The Pi gate with the contracts the repository ships reaches the role agents that took over from
+// the deleted sdd-* agents (PR 5 of the role agents): the shaper gets the minimalism contract, the
+// builder gets it and the anti-generic-design guard, and the reviewer gets neither.
+func TestLabdrianGateInjectsTheShippedContractsIntoTheRoles(t *testing.T) {
+	read := func(name string) string {
+		data, err := os.ReadFile(filepath.Join("..", "..", "skills", "_shared", name))
+		if err != nil {
+			t.Fatalf("reading the shipped contract %s: %v", name, err)
+		}
+		return string(data)
+	}
+	root, minimalismPath, antiGenericPath := writeGatePackage(t, read("minimalism-contract.md"), read("anti-generic-design.md"))
+	gatePath := filepath.Join(root, "extensions", "labdrian-gate.mjs")
+
+	script := fmt.Sprintf(`
+const mod = await import(%q);
+const handlers = {};
+mod.default({ on(name, fn) { handlers[name] = fn; } });
+const handler = handlers["before_agent_start"];
+const results = {};
+for (const name of ["shaper", "builder", "reviewer"]) {
+  results[name] = await handler({ agentName: name, systemPrompt: %q });
+}
+console.log(JSON.stringify(results));
+`, gatePath, gateBasePrompt)
+
+	var results map[string]gateEventResult
+	if out := runNodeScript(t, script); json.Unmarshal([]byte(out), &results) != nil {
+		t.Fatalf("unmarshal node output %q", out)
+	}
+	want := map[string]string{
+		"shaper":  core.InjectPrompt(gateBasePrompt, minimalismPath, gateHeader),
+		"builder": core.InjectPrompt(core.InjectPrompt(gateBasePrompt, minimalismPath, gateHeader), antiGenericPath, gateHeader),
+	}
+	for role, expected := range want {
+		if got := results[role].SystemPrompt; got == nil || *got != expected {
+			t.Errorf("%s: systemPrompt = %v, want %q", role, got, expected)
+		}
+	}
+	if got := results["reviewer"].SystemPrompt; got != nil && *got != gateBasePrompt {
+		t.Errorf("reviewer: the gate changed the prompt to %q", *got)
+	}
+}
+
 // TestLabdrianGateChainsAfterGentlePi (task 3.5, design A4): the gate reads
 // event.systemPrompt (already carrying gentle-pi's own before_agent_start
 // contribution) and composes on top of it -- neither handler's output is

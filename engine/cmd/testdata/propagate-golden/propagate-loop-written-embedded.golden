@@ -2,8 +2,8 @@ $ propagate --registry /virtual/project/.atl/skill-registry.md --embedded-contra
 # the embedded contract is inserted under its own row
 --- io ---
 read /virtual/project/.atl/skill-registry.md -> 343 bytes
-write /virtual/project/.atl/skill-registry.md (681 bytes, -rw-r--r--) -> ok
-read /virtual/project/.atl/skill-registry.md -> 681 bytes
+write /virtual/project/.atl/skill-registry.md (711 bytes, -rw-r--r--) -> ok
+read /virtual/project/.atl/skill-registry.md -> 711 bytes
 exit: none
 --- stdout ---
 registry: anti-generic-design scoped row inserted/updated
@@ -20,7 +20,7 @@ registry: anti-generic-design scoped row inserted/updated
 | other | skills/_shared/other.md | Foreign row |
 <!-- END: some-other-scope -->
 <!-- BEGIN: anti-generic-design-scope (auto-generated) -->
-| anti-generic-design | skills/_shared/anti-generic-design.md | Inject ONLY into sdd-tasks and sdd-apply sub-agent prompts under '## Skills to load before work'. Do NOT inject into sdd-propose/sdd-spec/sdd-design/sdd-verify/sdd-archive. |
+| anti-generic-design | skills/_shared/anti-generic-design.md | Inject ONLY into sdd-tasks and sdd-apply and builder sub-agent prompts under '## Skills to load before work'. Do NOT inject into sdd-propose/sdd-spec/sdd-design/sdd-verify/sdd-archive/reviewer/verifier. |
 <!-- END: anti-generic-design-scope -->
 
 ### Other section
@@ -30,9 +30,9 @@ text
 $ propagate --registry /virtual/project/.atl/skill-registry.md --embedded-contract anti-generic-design --contract-path custom/anti-generic-design.md
 # an explicit path for the row
 --- io ---
-read /virtual/project/.atl/skill-registry.md -> 681 bytes
-write /virtual/project/.atl/skill-registry.md (673 bytes, -rw-r--r--) -> ok
-read /virtual/project/.atl/skill-registry.md -> 673 bytes
+read /virtual/project/.atl/skill-registry.md -> 711 bytes
+write /virtual/project/.atl/skill-registry.md (703 bytes, -rw-r--r--) -> ok
+read /virtual/project/.atl/skill-registry.md -> 703 bytes
 exit: none
 --- stdout ---
 registry: anti-generic-design scoped row inserted/updated
@@ -49,7 +49,7 @@ registry: anti-generic-design scoped row inserted/updated
 | other | skills/_shared/other.md | Foreign row |
 <!-- END: some-other-scope -->
 <!-- BEGIN: anti-generic-design-scope (auto-generated) -->
-| anti-generic-design | custom/anti-generic-design.md | Inject ONLY into sdd-tasks and sdd-apply sub-agent prompts under '## Skills to load before work'. Do NOT inject into sdd-propose/sdd-spec/sdd-design/sdd-verify/sdd-archive. |
+| anti-generic-design | custom/anti-generic-design.md | Inject ONLY into sdd-tasks and sdd-apply and builder sub-agent prompts under '## Skills to load before work'. Do NOT inject into sdd-propose/sdd-spec/sdd-design/sdd-verify/sdd-archive/reviewer/verifier. |
 <!-- END: anti-generic-design-scope -->
 
 ### Other section

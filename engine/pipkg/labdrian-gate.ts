@@ -3,7 +3,7 @@
 // extensions/ directory and discovered by Pi's jiti-based extension loader
 // (never as plain .js -- see design.md A5). It mirrors engine/gate/gate.go
 // and the OpenCode plugin (labdrian-runtime-parity-plugin.mjs): on
-// before_agent_start for the sdd-tasks/sdd-apply agents only, it injects the
+// before_agent_start for the agents of PHASE_NAMES only, it injects the
 // bare contract PATH LINE for every applicable managed contract, under that
 // contract's injection_point header, read from the contract's own
 // frontmatter with a strict inline-list parse. It never throws -- any
@@ -26,8 +26,10 @@ import { dirname, isAbsolute, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 // PHASE_NAMES is the exhaustive set of agents this gate ever touches. Every
-// other agent name (or no name at all) is a strict no-op.
-const PHASE_NAMES = ["sdd-tasks", "sdd-apply"];
+// other agent name (or no name at all) is a strict no-op. shaper and builder
+// are the role agents that took over from the deleted sdd-tasks/sdd-apply
+// agents; each contract's own frontmatter still decides what it gets.
+const PHASE_NAMES = ["sdd-tasks", "sdd-apply", "shaper", "builder"];
 
 // CONTRACT_RELATIVE_PATHS are package-root-relative paths to the managed
 // contracts this build ships under skills/_shared/ (mirrors pipkg.go's
@@ -179,7 +181,7 @@ function resolvePackageRoot() {
 }
 
 // injectContractsForEvent applies every managed contract to event, returning
-// {} (no-op) for any agent other than sdd-tasks/sdd-apply, and
+// {} (no-op) for any agent not in PHASE_NAMES, and
 // {systemPrompt} composed on top of event.systemPrompt otherwise. Never
 // throws: a contract file that is missing, unreadable, path-uncontained, or
 // carries malformed frontmatter is silently skipped (R-004/F1), never

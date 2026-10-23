@@ -1,6 +1,6 @@
 ---
-applies_to_phases: [sdd-tasks, sdd-apply]
-excluded_phases: [sdd-propose, sdd-spec, sdd-design, sdd-verify, sdd-archive]
+applies_to_phases: [sdd-tasks, sdd-apply, builder]
+excluded_phases: [sdd-propose, sdd-spec, sdd-design, sdd-verify, sdd-archive, reviewer, verifier]
 injection_point: "## Skills to load before work"
 ---
 # Anti-Generic Design Contract

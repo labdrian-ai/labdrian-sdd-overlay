@@ -38,14 +38,17 @@ exit: 0
       "contract_path": "skills/_shared/anti-generic-design.md",
       "included_phases": [
         "sdd-tasks",
-        "sdd-apply"
+        "sdd-apply",
+        "builder"
       ],
       "excluded_phases": [
         "sdd-propose",
         "sdd-spec",
         "sdd-design",
         "sdd-verify",
-        "sdd-archive"
+        "sdd-archive",
+        "reviewer",
+        "verifier"
       ],
       "injection_point": "## Skills to load before work"
     }

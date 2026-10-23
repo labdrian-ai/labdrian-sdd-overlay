@@ -75,7 +75,7 @@ func repoRoot(t *testing.T) string {
 
 // TestAntiGenericDesignFrontmatterParses asserts the embedded
 // anti-generic-design asset carries valid, parseable frontmatter scoping it to
-// exactly the sdd-tasks and sdd-apply phases (R-104). A parse error here means
+// the sdd-tasks and sdd-apply phases and the builder role (R-104; PR 5 of the role agents). A parse error here means
 // gate-task/propagate would fail loud (propagate exits 1; gate-task logs a
 // stderr warning and passes through) instead of injecting the contract.
 func TestAntiGenericDesignFrontmatterParses(t *testing.T) {
@@ -84,7 +84,7 @@ func TestAntiGenericDesignFrontmatterParses(t *testing.T) {
 		t.Fatalf("contract.Parse(assets.AntiGenericDesign()): unexpected error: %v", err)
 	}
 
-	want := []string{"sdd-tasks", "sdd-apply"}
+	want := []string{"sdd-tasks", "sdd-apply", "builder"}
 	if len(phases.AppliesTo) != len(want) {
 		t.Fatalf("AppliesTo = %v, want %v", phases.AppliesTo, want)
 	}

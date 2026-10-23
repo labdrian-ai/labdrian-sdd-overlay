@@ -16,7 +16,7 @@ registry: anti-generic-design scoped row inserted/updated
 | other | skills/_shared/other.md | Foreign row |
 <!-- END: some-other-scope -->
 <!-- BEGIN: anti-generic-design-scope (auto-generated) -->
-| anti-generic-design | skills/_shared/anti-generic-design.md | Inject ONLY into sdd-tasks and sdd-apply sub-agent prompts under '## Skills to load before work'. Do NOT inject into sdd-propose/sdd-spec/sdd-design/sdd-verify/sdd-archive. |
+| anti-generic-design | skills/_shared/anti-generic-design.md | Inject ONLY into sdd-tasks and sdd-apply and builder sub-agent prompts under '## Skills to load before work'. Do NOT inject into sdd-propose/sdd-spec/sdd-design/sdd-verify/sdd-archive/reviewer/verifier. |
 <!-- END: anti-generic-design-scope -->
 
 ### Other section
@@ -48,7 +48,7 @@ registry: anti-generic-design scoped row inserted/updated
 | other | skills/_shared/other.md | Foreign row |
 <!-- END: some-other-scope -->
 <!-- BEGIN: anti-generic-design-scope (auto-generated) -->
-| anti-generic-design | custom/anti-generic-design.md | Inject ONLY into sdd-tasks and sdd-apply sub-agent prompts under '## Skills to load before work'. Do NOT inject into sdd-propose/sdd-spec/sdd-design/sdd-verify/sdd-archive. |
+| anti-generic-design | custom/anti-generic-design.md | Inject ONLY into sdd-tasks and sdd-apply and builder sub-agent prompts under '## Skills to load before work'. Do NOT inject into sdd-propose/sdd-spec/sdd-design/sdd-verify/sdd-archive/reviewer/verifier. |
 <!-- END: anti-generic-design-scope -->
 
 ### Other section
