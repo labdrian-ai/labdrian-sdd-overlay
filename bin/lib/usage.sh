@@ -107,11 +107,6 @@ Commands:
                                    (default target: codex), as repair-sdd-registry does.
   tui                              Launch the Bubbletea TUI front-end
   install-alias [name]             Symlink a command (default: labdrian) into ~/.local/bin
-  prespec <verb>                   Forward to the engine's prespec discovery core
-                                   (verbs: rank, lint, readiness, brief). Reads JSON
-                                   from stdin, writes JSON to stdout. No skill calls
-                                   it since clarify-request replaced prespec-malandra;
-                                   it stays until it is retired.
   skills <verb>                    Forward to the engine's skills registry core
                                    list      print sorted registry entries
                                    status    print count summary

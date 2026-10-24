@@ -171,7 +171,6 @@ var rings = map[string]archguard.Ring{
 	"piguard":                   archguard.Support,
 	"pipkg":                     archguard.Adapter,
 	"pipkg/gitsource":           archguard.Adapter,
-	"prespec":                   archguard.Domain,
 	"projection":                archguard.Domain,
 	"projection/app":            archguard.Application,
 	"projection/fsstore":        archguard.Adapter,
