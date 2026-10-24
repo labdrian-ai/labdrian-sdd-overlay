@@ -181,7 +181,8 @@ Commands:
                                    "The Phase 8 base" (used above and in the README) is main at
                                    53f545d, the commit the global skill lifecycle was built on; the
                                    global skills present there are the grandfathered baseline: 37 at
-                                   the base, 35 since gadu-operator and gadu-orchestrate were retired.
+                                   the base, 34 since gadu-operator and gadu-orchestrate were retired
+                                   and prespec-malandra was replaced by clarify-request.
                                    Locking: add, remove, sync-manifest and approve hold an exclusive lock, and
                                    validate and install a shared one, on .skills.registry.yaml.lock beside the
                                    registry (created by the first write, never removed, git-ignored; shared

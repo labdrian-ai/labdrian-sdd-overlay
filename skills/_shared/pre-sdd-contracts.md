@@ -41,6 +41,7 @@ Slug rules:
 
 | Artifact | Topic Key | Writer |
 |---|---|---|
+| Clarification brief | `project/{project}/clarify/{YYYYMMDD-HHMM}` | clarify-request |
 | Requirements brief | `project/{project}/requirements/{change}` | requirements-from-transcripts |
 | Manifest | `project/{project}/manifest/{context,mission,rules}` | project-manifest |
 | Architecture | `project/{project}/architect/final` | project-architect |

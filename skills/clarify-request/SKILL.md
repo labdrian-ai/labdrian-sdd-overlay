@@ -13,8 +13,8 @@ Load when the user wants to explore an idea, clarify a request, prepare requirem
 
 ## Hard Rules
 
-- Use a hidden checklist of 6 items to find the gaps: goal, current gap, constraints, done-when, alternatives, risks. Each may be `n/a`. The items are not ranked and are never shown to the user as a grid or a score; they appear only in the final brief, as a plain list.
-- Plain wording: no therapist phrasing, no menu of business archetypes. Use the repository's own terms (API, module, plugin).
+- Use a hidden checklist of 6 items to find the gaps: goal, current gap, constraints, done-when, alternatives, risks. Each may be `n/a`. The items are not ranked and are never shown to the user as a grid or a score; they appear only in the final brief, as a plain list. An item is a gap only when its answer would change what gets built; otherwise mark it `n/a` or record it as an assumption.
+- Plain wording: no therapist phrasing, no menu of business archetypes. Never ask how the user feels about it or what deeper need lies behind it. Use the repository's own terms (API, module, plugin).
 - Never derive a change-name and never save under a topic starting with `sdd/`.
 
 ## Decision Gates

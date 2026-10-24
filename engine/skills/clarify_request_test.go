@@ -309,6 +309,12 @@ var clarifyRequestMutants = []clarifyRequestMutant{
 	{"S3_the_wording_is_plain_and_in_the_users_language", "dropping_the_therapist_rule",
 		clarifyRequestReplace("no therapist phrasing, ", ""),
 		"no therapist phrasing"},
+	{"S3_the_wording_is_plain_and_in_the_users_language", "dropping_the_feelings_question_ban",
+		clarifyRequestReplace("Never ask how the user feels about it or what deeper need lies behind it. ", ""),
+		"Never ask how the user feels"},
+	{"S4_a_hidden_checklist_of_six_items_replaces_the_grid", "treating_every_empty_item_as_a_gap",
+		clarifyRequestReplace("An item is a gap only when its answer would change what gets built; otherwise mark it `n/a` or record it as an assumption.", ""),
+		"An item is a gap only when its answer would change what gets built"},
 	{"S4_a_hidden_checklist_of_six_items_replaces_the_grid", "showing_the_checklist_as_a_score",
 		clarifyRequestReplace("never shown to the user as a grid or a score", "shown to the user as a score"),
 		"never shown to the user as a grid or a score"},
@@ -498,7 +504,7 @@ func clarifyRequestTonePin(skill string) []string {
 	rules, more := clarifyRequestSection(skill, "## Hard Rules")
 	problems = append(problems, more...)
 	problems = append(problems, clarifyRequestSay(activation, "the user's actual request", "in the user's language")...)
-	return append(problems, clarifyRequestSay(rules, "no therapist phrasing")...)
+	return append(problems, clarifyRequestSay(rules, "no therapist phrasing", "Never ask how the user feels about it or what deeper need lies behind it")...)
 }
 
 // S4: six items, each may be n/a, never ranked, never shown as a grid or a score; the ten cells of
@@ -510,7 +516,8 @@ func clarifyRequestChecklistPin(skill string) []string {
 		"goal, current gap, constraints, done-when, alternatives, risks",
 		"`n/a`",
 		"not ranked",
-		"never shown to the user as a grid or a score")...)
+		"never shown to the user as a grid or a score",
+		"An item is a gap only when its answer would change what gets built")...)
 	return append(problems, clarifyRequestNeverSay(skill,
 		"10-cell", "jtbd", "current-gap", "why-now", "user-segment", "success-metric", "risk-unknowns",
 		"DefaultCells", "coverage-taxonomy")...)
