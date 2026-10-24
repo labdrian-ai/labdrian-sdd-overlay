@@ -1,0 +1,407 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:31bfb374cc31b9715ba3eb89412c28a6bd8824d26c8562b38ccdfa6bb62a06ca",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-957fddf523bd3e38",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "fe925755eafe55ebfadcba5f22a909263844577a",
+      "candidate_tree": "14468095cbeea3407f56913c24912e1c6d48e1ce",
+      "paths_digest": "sha256:baee4014e27d7e9ac39f5733583ca94645b1a9e215719fbc1b64f59288ac79f2",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "archguard/archguard.go",
+        "bin/labdrian-overlay",
+        "bin/lib/engine_verbs.sh",
+        "bin/lib/usage.sh",
+        "engine/architecture_test.go",
+        "engine/cmd/dispatch.go",
+        "engine/cmd/dispatch_routes_test.go",
+        "engine/cmd/main_test.go",
+        "engine/cmd/prespec.go",
+        "engine/cmd/prespec_test.go",
+        "engine/cmd/status_run_test.go",
+        "engine/cmd/usage.go",
+        "engine/prespec/brief.go",
+        "engine/prespec/brief_test.go",
+        "engine/prespec/grid.go",
+        "engine/prespec/grid_test.go",
+        "engine/prespec/lint.go",
+        "engine/prespec/lint_test.go",
+        "engine/prespec/readiness.go",
+        "engine/prespec/readiness_test.go",
+        "engine/prespec/testdata/brief.golden",
+        "engine/prespec/ulid_encoding_test.go",
+        "engine/skills/clarify_request_test.go",
+        "odd/tasks/clarify-request.md",
+        "overlay.manifest",
+        "tools/deterministic-check-runner/main.go"
+      ],
+      "identity": "sha256:79071359d501920c854c36b5f6984eccb4d3012cabe0be2c0bc88493ad26d92f"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "fe925755eafe55ebfadcba5f22a909263844577a",
+      "candidate_tree": "14468095cbeea3407f56913c24912e1c6d48e1ce",
+      "paths_digest": "sha256:baee4014e27d7e9ac39f5733583ca94645b1a9e215719fbc1b64f59288ac79f2",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "archguard/archguard.go",
+        "bin/labdrian-overlay",
+        "bin/lib/engine_verbs.sh",
+        "bin/lib/usage.sh",
+        "engine/architecture_test.go",
+        "engine/cmd/dispatch.go",
+        "engine/cmd/dispatch_routes_test.go",
+        "engine/cmd/main_test.go",
+        "engine/cmd/prespec.go",
+        "engine/cmd/prespec_test.go",
+        "engine/cmd/status_run_test.go",
+        "engine/cmd/usage.go",
+        "engine/prespec/brief.go",
+        "engine/prespec/brief_test.go",
+        "engine/prespec/grid.go",
+        "engine/prespec/grid_test.go",
+        "engine/prespec/lint.go",
+        "engine/prespec/lint_test.go",
+        "engine/prespec/readiness.go",
+        "engine/prespec/readiness_test.go",
+        "engine/prespec/testdata/brief.golden",
+        "engine/prespec/ulid_encoding_test.go",
+        "engine/skills/clarify_request_test.go",
+        "odd/tasks/clarify-request.md",
+        "overlay.manifest",
+        "tools/deterministic-check-runner/main.go"
+      ],
+      "identity": "sha256:79071359d501920c854c36b5f6984eccb4d3012cabe0be2c0bc88493ad26d92f"
+    },
+    "genesis_paths": [
+      "archguard/archguard.go",
+      "bin/labdrian-overlay",
+      "bin/lib/engine_verbs.sh",
+      "bin/lib/usage.sh",
+      "engine/architecture_test.go",
+      "engine/cmd/dispatch.go",
+      "engine/cmd/dispatch_routes_test.go",
+      "engine/cmd/main_test.go",
+      "engine/cmd/prespec.go",
+      "engine/cmd/prespec_test.go",
+      "engine/cmd/status_run_test.go",
+      "engine/cmd/usage.go",
+      "engine/prespec/brief.go",
+      "engine/prespec/brief_test.go",
+      "engine/prespec/grid.go",
+      "engine/prespec/grid_test.go",
+      "engine/prespec/lint.go",
+      "engine/prespec/lint_test.go",
+      "engine/prespec/readiness.go",
+      "engine/prespec/readiness_test.go",
+      "engine/prespec/testdata/brief.golden",
+      "engine/prespec/ulid_encoding_test.go",
+      "engine/skills/clarify_request_test.go",
+      "odd/tasks/clarify-request.md",
+      "overlay.manifest",
+      "tools/deterministic-check-runner/main.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-risk",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 2090,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "removed a CLI verb family, its engine package, wrapper route, help text and manifest rows, and rewrote the tests that pinned them",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:a56b43b5625a8f062b2cf494bf7d3e778fc76a4d5a4c7c51c73e8b84683b5525",
+    "capture_phase_revision": "sha256:a78ce67eff8a35b0adf6f607509eb2b479b69814a9948f2dd1dba9517ebcf67b",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:79071359d501920c854c36b5f6984eccb4d3012cabe0be2c0bc88493ad26d92f",
+        "capture_phase_revision": "sha256:a78ce67eff8a35b0adf6f607509eb2b479b69814a9948f2dd1dba9517ebcf67b",
+        "artifact_digest": "sha256:a595a6a80e65dd57ec83b25fd0682e7bf5a008a6c8ce51bcc35d4a4fe4ba9b41",
+        "result_hash": "sha256:e1dce96b0bca8b1e106e517bd5b02df869866fa78947d0385ff973d7fd18403c",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:9d47f80ef945f008d19ccd0e904f311b4c7940e1291e9ce40518aba85b882a78",
+            "lineage_id": "review-957fddf523bd3e38",
+            "authority_revision": "sha256:a78ce67eff8a35b0adf6f607509eb2b479b69814a9948f2dd1dba9517ebcf67b",
+            "target_identity": "sha256:79071359d501920c854c36b5f6984eccb4d3012cabe0be2c0bc88493ad26d92f",
+            "base_tree": "fe925755eafe55ebfadcba5f22a909263844577a",
+            "candidate_tree": "14468095cbeea3407f56913c24912e1c6d48e1ce",
+            "changed_path_manifest_sha256": "sha256:8f2cb8c2f97e9c732e428fe6bc8c0df423f9b2fc69a791cc1581f04f5f6914ec",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:9d47f80ef945f008d19ccd0e904f311b4c7940e1291e9ce40518aba85b882a78",
+            "raw_sha256": "sha256:ecbedb6f9836c88eeb4bb864fc6a64b52b608797083658fe54a7af36f7d09c29",
+            "canonical_sha256": "sha256:3fa9a768ccba071b405857e1dcbc0538b05c18c5e2e6b171fb8971d7acd5382e",
+            "result_hash": "sha256:e1dce96b0bca8b1e106e517bd5b02df869866fa78947d0385ff973d7fd18403c",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:9d47f80ef945f008d19ccd0e904f311b4c7940e1291e9ce40518aba85b882a78",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "archguard/archguard.go",
+                "bin/labdrian-overlay",
+                "bin/lib/engine_verbs.sh",
+                "bin/lib/usage.sh",
+                "engine/architecture_test.go",
+                "engine/cmd/dispatch.go",
+                "engine/cmd/dispatch_routes_test.go",
+                "engine/cmd/main_test.go",
+                "engine/cmd/prespec.go",
+                "engine/cmd/prespec_test.go",
+                "engine/cmd/status_run_test.go",
+                "engine/cmd/usage.go",
+                "engine/prespec/brief.go",
+                "engine/prespec/brief_test.go",
+                "engine/prespec/grid.go",
+                "engine/prespec/grid_test.go",
+                "engine/prespec/lint.go",
+                "engine/prespec/lint_test.go",
+                "engine/prespec/readiness.go",
+                "engine/prespec/readiness_test.go",
+                "engine/prespec/testdata/brief.golden",
+                "engine/prespec/ulid_encoding_test.go",
+                "engine/skills/clarify_request_test.go",
+                "odd/tasks/clarify-request.md",
+                "overlay.manifest",
+                "tools/deterministic-check-runner/main.go"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "Reviewed all 26 changed paths. The change is a requested retirement (follow-up F1) of the prespec verbs and the engine/prespec package. It only deletes code, routes, help text, manifest rows and tests, plus comment and doc edits. It adds no new input handling, no secrets and no dependencies.",
+              "The deleted code read JSON from stdin and wrote JSON to stdout, so removing it shrinks the attack surface. The engine now rejects the prespec subcommand as unknown, and a test pins that behavior (engine/cmd/dispatch_routes_test.go:28-29).",
+              "The wrapper script no longer routes prespec (bin/labdrian-overlay) and no longer defines cmd_prespec (bin/lib/engine_verbs.sh). The test in engine/skills/clarify_request_test.go confirms no remaining route, definition or help entry. The task log (odd/tasks/clarify-request.md) says only engine/cmd imported engine/prespec, so no other consumer is visible as broken. That claim comes from the log, not from the diff itself.",
+              "No data loss or authorization impact is reachable. Stale installed prespec-malandra copies are noted as pending the owner and are outside this change."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "selected_order": 1,
+        "target_identity": "sha256:79071359d501920c854c36b5f6984eccb4d3012cabe0be2c0bc88493ad26d92f",
+        "capture_phase_revision": "sha256:a78ce67eff8a35b0adf6f607509eb2b479b69814a9948f2dd1dba9517ebcf67b",
+        "artifact_digest": "sha256:e355ba7344339f0923b8014e995a1de2732f8b3c9ea5c54d553a437a010aa989",
+        "result_hash": "sha256:2170e4b4a5b78f410db9509a2f970e00fa63049721ea0eaad3c6b7baa17efa09",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:5489ca259eff88ed3f1b01c46f0d618ec2de59920f1a2f9d4d7abd2eae98675e",
+            "lineage_id": "review-957fddf523bd3e38",
+            "authority_revision": "sha256:a78ce67eff8a35b0adf6f607509eb2b479b69814a9948f2dd1dba9517ebcf67b",
+            "target_identity": "sha256:79071359d501920c854c36b5f6984eccb4d3012cabe0be2c0bc88493ad26d92f",
+            "base_tree": "fe925755eafe55ebfadcba5f22a909263844577a",
+            "candidate_tree": "14468095cbeea3407f56913c24912e1c6d48e1ce",
+            "changed_path_manifest_sha256": "sha256:8f2cb8c2f97e9c732e428fe6bc8c0df423f9b2fc69a791cc1581f04f5f6914ec",
+            "lens": "review-readability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:5489ca259eff88ed3f1b01c46f0d618ec2de59920f1a2f9d4d7abd2eae98675e",
+            "raw_sha256": "sha256:7d3e7cb7b2d6ce8ee223ca3b3c686a0113049d97291f53a84178c91d13f4f208",
+            "canonical_sha256": "sha256:02989aa5826f363248b060c0a1b3163bd977e72ad355a2317f28daf792f0f538",
+            "result_hash": "sha256:2170e4b4a5b78f410db9509a2f970e00fa63049721ea0eaad3c6b7baa17efa09",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:5489ca259eff88ed3f1b01c46f0d618ec2de59920f1a2f9d4d7abd2eae98675e",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "archguard/archguard.go",
+                "bin/labdrian-overlay",
+                "bin/lib/engine_verbs.sh",
+                "bin/lib/usage.sh",
+                "engine/architecture_test.go",
+                "engine/cmd/dispatch.go",
+                "engine/cmd/dispatch_routes_test.go",
+                "engine/cmd/main_test.go",
+                "engine/cmd/prespec.go",
+                "engine/cmd/prespec_test.go",
+                "engine/cmd/status_run_test.go",
+                "engine/cmd/usage.go",
+                "engine/prespec/brief.go",
+                "engine/prespec/brief_test.go",
+                "engine/prespec/grid.go",
+                "engine/prespec/grid_test.go",
+                "engine/prespec/lint.go",
+                "engine/prespec/lint_test.go",
+                "engine/prespec/readiness.go",
+                "engine/prespec/readiness_test.go",
+                "engine/prespec/testdata/brief.golden",
+                "engine/prespec/ulid_encoding_test.go",
+                "engine/skills/clarify_request_test.go",
+                "odd/tasks/clarify-request.md",
+                "overlay.manifest",
+                "tools/deterministic-check-runner/main.go"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-1",
+                "lens": "readability",
+                "location": "engine/cmd/main_test.go:948-950",
+                "severity": "SUGGESTION",
+                "claim": "The deletion of the prespec tests leaves behind a stray separator comment block: the `// ----` rule lines now sit adjacent (a lone rule above the propagate section header). This is cosmetic leftover that slightly obscures section structure, but behavior is unaffected.",
+                "proof_refs": [
+                  "engine/cmd/main_test.go:948-950"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Reviewed all 26 changed paths. The change retires the prespec verbs: it deletes the engine/prespec package and engine/cmd/prespec.go, and removes the dispatch route, the shell wrapper, the usage text, the manifest rows and the archguard ring entry.",
+              "The dispatch route test now expects the unknown-subcommand error for prespec. The clarify_request_test pin was rewritten to assert that the wrapper no longer routes, defines or documents the verbs. The two helpers it used were removed together with their only caller.",
+              "Comments that cited the removed package were reworded (archguard.go example, deterministic-check-runner main.go). The change log in odd/tasks/clarify-request.md records the context.",
+              "No dead code, misleading names or unexplained constants were introduced. The only readability nit is the leftover separator comment in engine/cmd/main_test.go."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 2,
+        "target_identity": "sha256:79071359d501920c854c36b5f6984eccb4d3012cabe0be2c0bc88493ad26d92f",
+        "capture_phase_revision": "sha256:a78ce67eff8a35b0adf6f607509eb2b479b69814a9948f2dd1dba9517ebcf67b",
+        "artifact_digest": "sha256:b83cf4368e69e4ecdb02b3a22bd15be5776ed205eb8b5bed3afac15b3f2ea5b0",
+        "result_hash": "sha256:7ae2d6ffce46d5710c42a2d730c3059cf31606af42155f0282b680b74b4d44de",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:bccc64d75b87e82b748a00036d325e99c9564683639aeee3a200b530851f72c1",
+            "lineage_id": "review-957fddf523bd3e38",
+            "authority_revision": "sha256:a78ce67eff8a35b0adf6f607509eb2b479b69814a9948f2dd1dba9517ebcf67b",
+            "target_identity": "sha256:79071359d501920c854c36b5f6984eccb4d3012cabe0be2c0bc88493ad26d92f",
+            "base_tree": "fe925755eafe55ebfadcba5f22a909263844577a",
+            "candidate_tree": "14468095cbeea3407f56913c24912e1c6d48e1ce",
+            "changed_path_manifest_sha256": "sha256:8f2cb8c2f97e9c732e428fe6bc8c0df423f9b2fc69a791cc1581f04f5f6914ec",
+            "lens": "review-reliability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:bccc64d75b87e82b748a00036d325e99c9564683639aeee3a200b530851f72c1",
+            "raw_sha256": "sha256:0bd791f0f3c080b2b2d696b183e94b134e7c09e3e7b9ea8615fe35133f7d74a3",
+            "canonical_sha256": "sha256:4560ee66bd624d2ae6057d4c3ca14e2b6cb93da7dc289dec81b0e94b04eb54cc",
+            "result_hash": "sha256:7ae2d6ffce46d5710c42a2d730c3059cf31606af42155f0282b680b74b4d44de",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:bccc64d75b87e82b748a00036d325e99c9564683639aeee3a200b530851f72c1",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "archguard/archguard.go",
+                "bin/labdrian-overlay",
+                "bin/lib/engine_verbs.sh",
+                "bin/lib/usage.sh",
+                "engine/architecture_test.go",
+                "engine/cmd/dispatch.go",
+                "engine/cmd/dispatch_routes_test.go",
+                "engine/cmd/main_test.go",
+                "engine/cmd/prespec.go",
+                "engine/cmd/prespec_test.go",
+                "engine/cmd/status_run_test.go",
+                "engine/cmd/usage.go",
+                "engine/prespec/brief.go",
+                "engine/prespec/brief_test.go",
+                "engine/prespec/grid.go",
+                "engine/prespec/grid_test.go",
+                "engine/prespec/lint.go",
+                "engine/prespec/lint_test.go",
+                "engine/prespec/readiness.go",
+                "engine/prespec/readiness_test.go",
+                "engine/prespec/testdata/brief.golden",
+                "engine/prespec/ulid_encoding_test.go",
+                "engine/skills/clarify_request_test.go",
+                "odd/tasks/clarify-request.md",
+                "overlay.manifest",
+                "tools/deterministic-check-runner/main.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-1",
+                "lens": "reliability",
+                "location": "engine/skills/clarify_request_test.go:118-130",
+                "severity": "WARNING",
+                "claim": "The wrapper-level retirement check is a substring scan of three shell files for \"prespec)\", \"cmd_prespec\" and \"prespec \u003cverb\u003e\". It does not run the wrapper, so it would miss a route written in another form. The engine-side behavior is covered by the dispatch route test, which now expects an unknown-subcommand error for prespec. The shell layer has no behavioral assertion, but the removal is simple and the risk is low.",
+                "proof_refs": [
+                  "engine/skills/clarify_request_test.go:118-130",
+                  "engine/cmd/dispatch_routes_test.go:28-29"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "The candidate removes the prespec verbs from the engine, the wrapper route, the help text, the manifest rows and the architecture ring consistently. Every deleted symbol is in the deleted prespec packages or in cmd/prespec.go and cmd/prespec_test.go, and the patch shows no remaining reference to them.",
+              "engine/cmd/dispatch_routes_test.go now asserts that the retired \"prespec\" verb gives exit 1 and an unknown-subcommand error. That checks the new failure path from outside.",
+              "engine/cmd/status_run_test.go changes the usage section end marker to the \"engine runtime \u003caction\u003e\" line, which stays in usage.go after the prespec line is removed.",
+              "main_test.go drops the three prespec tests and leaves its section-comment separators in place, which is cosmetic only.",
+              "The one behavior change is that `labdrian prespec` now fails instead of running. The request asked for that retirement, and the task log records that no skill calls the verb, so it is not a regression."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "ab17bffc088eb54243d01332057ffdc499ec6ffcee9477227de67b5e2b664a16",
+    "initial_atomic_start": {
+      "lineage_id": "review-957fddf523bd3e38",
+      "worktree_identity": "sha256:8455002f227f033663d0e7d8b8ff6a885e1c85b482ec52e34017c303452eed87",
+      "target_identity": "sha256:79071359d501920c854c36b5f6984eccb4d3012cabe0be2c0bc88493ad26d92f",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "fe925755eafe55ebfadcba5f22a909263844577a",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "high",
+      "selected_lenses": [
+        "review-risk",
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 2090,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "removed a CLI verb family, its engine package, wrapper route, help text and manifest rows, and rewrote the tests that pinned them"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

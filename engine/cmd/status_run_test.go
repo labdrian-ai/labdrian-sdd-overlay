@@ -251,7 +251,7 @@ func TestStatusOptionsAreDocumentedInTheUsageAndTheREADME(t *testing.T) {
 	}
 	for name, text := range map[string]string{
 		"README":  docSection(t, string(readme), "gentle-ai-overlay status [--only registry]", "gentle-ai-overlay runtime capabilities"),
-		"usage()": docSection(t, captureUsage(t), "  engine status [--only registry]", "  engine prespec"),
+		"usage()": docSection(t, captureUsage(t), "  engine status [--only registry]", "  engine runtime <action>"),
 	} {
 		for _, want := range []string{"[--only registry] [--cwd <dir>]", "--only registry", "--cwd", "exit 0", "1", "2", "usage error", "--cwd=<dir>", "equals sign"} {
 			if !strings.Contains(strings.ToLower(text), strings.ToLower(want)) {

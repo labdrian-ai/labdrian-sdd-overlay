@@ -25,7 +25,8 @@ func TestRunRoutesEachSubcommandThroughTheProcessItWasHanded(t *testing.T) {
 		{"merge-codex-hooks", "stderr", "error: merge-codex-hooks: --hooks and --hook-command are required\n", []int{1}},
 		{"uninstall-codex-hooks", "stderr", "error: uninstall-codex-hooks: --hooks and --hook-command are required\n", []int{1}},
 		{"status", "stdout", "[FAIL] binary: ", []int{1}},
-		{"prespec", "stderr", "error: prespec requires a verb: rank, lint, readiness, brief\n", []int{1}},
+		// The prespec verbs were retired with prespec-malandra (clarify-request calls none).
+		{"prespec", "stderr", "error: unknown subcommand \"prespec\"\n", []int{1}},
 		{"runtime", "stderr", "error: runtime requires an action\nUsage:\n", []int{1}},
 		{"gadu-generate", "stderr", "gadu-generate: OVERLAY_DIR is not set\n", []int{1}},
 		{"pipkg", "stderr", "error: pipkg requires a verb: build, check\n", []int{1}},

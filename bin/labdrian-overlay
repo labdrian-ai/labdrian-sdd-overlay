@@ -92,7 +92,6 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     skill-registry)  cmd_skill_registry "$@" ;;
     tui)             cmd_tui "$@" ;;
     install-alias)   cmd_install_alias "$@" ;;
-    prespec)         cmd_prespec "$@" ;;
     skills)          cmd_skills "$@" ;;
     shaper)          cmd_shaper "$@" ;;
     roles)           cmd_roles "$@" ;;

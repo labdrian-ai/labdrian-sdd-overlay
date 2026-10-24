@@ -28,8 +28,6 @@ func run(p process, d deps, args []string) {
 		runCodexHooks(p, rest, true)
 	case "status":
 		runStatus(p, d, rest)
-	case "prespec":
-		runPrespec(p, rest)
 	case "runtime":
 		runRuntime(p, d, rest)
 	case "gadu-generate":

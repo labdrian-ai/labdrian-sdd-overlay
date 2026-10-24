@@ -990,7 +990,7 @@ func renderSummary(count int, top []string, topN int, logPath string) string {
 // as unreachable during 3H (obs: main.go:370:6) — so nothing prevented a
 // banned literal from being emitted at runtime; the protection lived only
 // in the test suite. Panicking on a broken invariant mirrors the existing
-// precedent in engine/prespec/brief.go: a bare banned literal here is a
+// precedent of the retired engine/prespec/brief.go: a bare banned literal here is a
 // programmer error in renderSummary's own construction, not a recoverable
 // operational failure, so failing loud beats emitting rejected evidence.
 func guardAgainstBannedSummary(summary string) {
