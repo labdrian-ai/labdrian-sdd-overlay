@@ -78,6 +78,22 @@ func TestInceptionChainEntryRecordRunsThroughTheRolesVerbs(t *testing.T) {
 			t.Error("a skill that documents the append command without --stdin went through the roles verbs without a problem: this test would not notice the documented command rotting")
 		}
 	})
+
+	t.Run("a skill whose Chain entry gains a second json block or append command is noticed", func(t *testing.T) {
+		for name, extra := range map[string]string{
+			"a second json block":     "```json\n{}\n```\n",
+			"a second append command": "`labdrian roles append --project other --goal other --chain other --stdin`\n",
+		} {
+			malformed := strings.Replace(skill, "## Chain entry\n", "## Chain entry\n\n"+extra, 1)
+			if malformed == skill {
+				t.Fatal("the skill has no \"## Chain entry\" heading: the section this test malforms is gone")
+			}
+			problems := inceptionFirstRecordProblems(t, malformed, "estimator")
+			if !strings.Contains(strings.Join(problems, "\n"), "want exactly one") {
+				t.Errorf("a skill whose Chain entry gained %s was not reported as ambiguous (problems: %q): the test would pick one by position", name, problems)
+			}
+		}
+	})
 }
 
 // inceptionFirstRecordProblems runs the first record the Chain entry of skill documents through
@@ -91,9 +107,9 @@ func inceptionFirstRecordProblems(t *testing.T, skill, wantRole string) []string
 	t.Setenv("XDG_STATE_HOME", stateHome)
 
 	entry := inceptionSkillSection(skill, "Chain entry")
-	record := inceptionFirstJSONFence(entry)
-	if record == "" {
-		return []string{"the Chain entry documents no example record (a json code block)"}
+	record, problem := inceptionExampleRecord(entry)
+	if problem != "" {
+		return []string{problem}
 	}
 	var ids struct {
 		ProjectID string `json:"project_id"`
@@ -108,9 +124,9 @@ func inceptionFirstRecordProblems(t *testing.T, skill, wantRole string) []string
 	if ids.GoalID != ids.ChainID {
 		problems = append(problems, fmt.Sprintf("goal_id %q and chain_id %q differ: the Chain entry says goal id = chain id = change-name", ids.GoalID, ids.ChainID))
 	}
-	appendArgs, ok := inceptionDocumentedRolesArgs(entry, "append", ids.ProjectID, ids.GoalID)
-	if !ok {
-		return append(problems, "the Chain entry documents no `labdrian roles append` command")
+	appendArgs, problem := inceptionDocumentedRolesArgs(entry, "Chain entry", "append", ids.ProjectID, ids.GoalID)
+	if problem != "" {
+		return append(problems, problem)
 	}
 	appended := runRolesTest(appendArgs, record)
 	if appended.code != 0 {
@@ -120,9 +136,9 @@ func inceptionFirstRecordProblems(t *testing.T, skill, wantRole string) []string
 		problems = append(problems, fmt.Sprintf("`roles append` stored the record outside the isolated state home %s: %s", stateHome, strings.TrimSpace(appended.stdout)))
 	}
 
-	resumeArgs, ok := inceptionDocumentedRolesArgs(inceptionSkillSection(skill, "Closure-Feedback"), "resume", ids.ProjectID, ids.GoalID)
-	if !ok {
-		return append(problems, "Closure-Feedback documents no `labdrian roles resume` command")
+	resumeArgs, problem := inceptionDocumentedRolesArgs(inceptionSkillSection(skill, "Closure-Feedback"), "Closure-Feedback", "resume", ids.ProjectID, ids.GoalID)
+	if problem != "" {
+		return append(problems, problem)
 	}
 	resumed := runRolesTest(resumeArgs, "")
 	if resumed.code != 0 {
@@ -149,7 +165,13 @@ func inceptionFirstRecordProblems(t *testing.T, skill, wantRole string) []string
 // the same record after edit changed it.
 func inceptionWithExampleRecord(t *testing.T, skill string, edit func(record map[string]any)) string {
 	t.Helper()
-	original := inceptionFirstJSONFence(inceptionSkillSection(skill, "Chain entry"))
+	original, problem := inceptionExampleRecord(inceptionSkillSection(skill, "Chain entry"))
+	if problem != "" {
+		t.Fatal(problem)
+	}
+	if n := strings.Count(skill, original); n != 1 {
+		t.Fatalf("the example record of the Chain entry appears %d times in the skill, want once: replacing it could edit the wrong copy", n)
+	}
 	var record map[string]any
 	if err := json.Unmarshal([]byte(original), &record); err != nil {
 		t.Fatalf("the example record of the Chain entry is not JSON: %v", err)
@@ -185,33 +207,41 @@ func inceptionSkillSection(skill, title string) string {
 	return strings.Join(body, "\n")
 }
 
-// inceptionFirstJSONFence returns the lines of the first ```json code block of text, without the
-// fences. It is empty when there is none.
-func inceptionFirstJSONFence(text string) string {
+// inceptionExampleRecord returns the example record of the Chain entry section entry: the lines,
+// without the fences, of its only ```json code block. The block may sit anywhere in the section;
+// what the test relies on is that there is exactly one, so problem names any other count instead
+// of the test picking one of several blocks by position.
+func inceptionExampleRecord(entry string) (record, problem string) {
+	var blocks []string
 	var block []string
 	inBlock := false
-	for _, line := range strings.Split(text, "\n") {
+	for _, line := range strings.Split(entry, "\n") {
 		trimmed := strings.TrimSpace(line)
 		switch {
 		case !inBlock && trimmed == "```json":
-			inBlock = true
+			inBlock, block = true, nil
 		case inBlock && trimmed == "```":
-			return strings.Join(block, "\n")
+			inBlock = false
+			blocks = append(blocks, strings.Join(block, "\n"))
 		case inBlock:
 			block = append(block, line)
 		}
 	}
-	return ""
+	if len(blocks) != 1 {
+		return "", fmt.Sprintf("the Chain entry documents %d example records (json code blocks), want exactly one", len(blocks))
+	}
+	return blocks[0], ""
 }
 
-// inceptionDocumentedRolesArgs returns the arguments, after `labdrian roles`, of the first
-// code span of text that runs the roles verb, with the skill's {project} placeholder replaced by
-// project and its {change} placeholder by change. ok is false when text has no such code span.
-func inceptionDocumentedRolesArgs(text, verb, project, change string) (args []string, ok bool) {
-	span := regexp.MustCompile("`labdrian roles (" + regexp.QuoteMeta(verb) + " [^`]*)`").FindStringSubmatch(text)
-	if span == nil {
-		return nil, false
+// inceptionDocumentedRolesArgs returns the arguments, after `labdrian roles`, of the only code
+// span of text (the section named section) that runs the roles verb, with the skill's {project}
+// placeholder replaced by project and its {change} placeholder by change. problem names any count
+// other than one, so the test never runs one of several commands chosen by position.
+func inceptionDocumentedRolesArgs(text, section, verb, project, change string) (args []string, problem string) {
+	spans := regexp.MustCompile("`labdrian roles ("+regexp.QuoteMeta(verb)+" [^`]*)`").FindAllStringSubmatch(text, -1)
+	if len(spans) != 1 {
+		return nil, fmt.Sprintf("%s documents %d `labdrian roles %s` commands, want exactly one", section, len(spans), verb)
 	}
-	command := strings.NewReplacer("{project}", project, "{change}", change).Replace(span[1])
-	return strings.Fields(command), true
+	command := strings.NewReplacer("{project}", project, "{change}", change).Replace(spans[0][1])
+	return strings.Fields(command), ""
 }
