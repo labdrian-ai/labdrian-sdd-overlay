@@ -592,8 +592,3 @@ func clarifyRequestHandoffPin(skill string) []string {
 	problems = append(problems, clarifyRequestSay(contract, "`requirements-from-transcripts`", "the change-name", "the EARS requirements")...)
 	return append(problems, clarifyRequestNeverSay(skill, "kebab")...)
 }
-
-// clarifyRequestCollapse joins lines into one line with single spaces.
-func clarifyRequestCollapse(lines []string) string {
-	return strings.Join(strings.Fields(strings.Join(lines, " ")), " ")
-}
