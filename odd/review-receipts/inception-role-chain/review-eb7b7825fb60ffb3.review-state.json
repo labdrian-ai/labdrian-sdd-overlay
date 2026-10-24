@@ -1,0 +1,325 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:86ab7261abc46b9edb4fdbd62c497e541c9492a07241a63d049d7e686b2bd053",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-eb7b7825fb60ffb3",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "5663aaa71a299980b4cbb2a813de23b097938cc5",
+      "candidate_tree": "383f362cbef561595e53700f6acad95f73897e85",
+      "paths_digest": "sha256:2b5072b5cf3a09486f55b5e8b4db2ea129244a1e5ededf65e872e2ab4b015e9f",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "docs/architecture/adr-c13-inception-role-chain.md",
+        "engine/cmd/inception_chain_entry_test.go",
+        "engine/skills/actuals_instrumentation_contract_test.go",
+        "engine/skills/inception_chain_entry_test.go",
+        "odd/tasks/inception-role-chain.md",
+        "skills/_shared/pre-sdd-contracts.md",
+        "skills/inception-pipeline/.approval.json",
+        "skills/inception-pipeline/SKILL.md",
+        "skills/roadmap-maker/assets/roadmap-template.md"
+      ],
+      "identity": "sha256:1dc8b4fad6870a487995e8d5d06f8c3cf89f54ab95df02f01bae99a59f222224"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "5663aaa71a299980b4cbb2a813de23b097938cc5",
+      "candidate_tree": "383f362cbef561595e53700f6acad95f73897e85",
+      "paths_digest": "sha256:2b5072b5cf3a09486f55b5e8b4db2ea129244a1e5ededf65e872e2ab4b015e9f",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "docs/architecture/adr-c13-inception-role-chain.md",
+        "engine/cmd/inception_chain_entry_test.go",
+        "engine/skills/actuals_instrumentation_contract_test.go",
+        "engine/skills/inception_chain_entry_test.go",
+        "odd/tasks/inception-role-chain.md",
+        "skills/_shared/pre-sdd-contracts.md",
+        "skills/inception-pipeline/.approval.json",
+        "skills/inception-pipeline/SKILL.md",
+        "skills/roadmap-maker/assets/roadmap-template.md"
+      ],
+      "identity": "sha256:1dc8b4fad6870a487995e8d5d06f8c3cf89f54ab95df02f01bae99a59f222224"
+    },
+    "genesis_paths": [
+      "docs/architecture/adr-c13-inception-role-chain.md",
+      "engine/cmd/inception_chain_entry_test.go",
+      "engine/skills/actuals_instrumentation_contract_test.go",
+      "engine/skills/inception_chain_entry_test.go",
+      "odd/tasks/inception-role-chain.md",
+      "skills/_shared/pre-sdd-contracts.md",
+      "skills/inception-pipeline/.approval.json",
+      "skills/inception-pipeline/SKILL.md",
+      "skills/roadmap-maker/assets/roadmap-template.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-risk",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 408,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "rewrote the closure-feedback and chain-entry steps of a mirrored skill prompt others consume, its docs, and the tests that run the documented chain record",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:137f495869853abbb6e9e48d763ca75df0fefb28844bac619576e5662d584918",
+    "capture_phase_revision": "sha256:e7539a6558939a6d02f9887de53ca0179f90ff7de0ac8257c2572e543000b13c",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:1dc8b4fad6870a487995e8d5d06f8c3cf89f54ab95df02f01bae99a59f222224",
+        "capture_phase_revision": "sha256:e7539a6558939a6d02f9887de53ca0179f90ff7de0ac8257c2572e543000b13c",
+        "artifact_digest": "sha256:f6bf3f0bf415390f42bdc06c50e30debfbc7c33d5910a5dbd06110d210f90953",
+        "result_hash": "sha256:1d3790dc7b4ca3f29d32815771e0671c9f50b47a9a49d9f74392385f3f4039fd",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:028cdebf71865151f8a4f6fe56496b95ae813040524c60ce9e562a8f30df2816",
+            "lineage_id": "review-eb7b7825fb60ffb3",
+            "authority_revision": "sha256:e7539a6558939a6d02f9887de53ca0179f90ff7de0ac8257c2572e543000b13c",
+            "target_identity": "sha256:1dc8b4fad6870a487995e8d5d06f8c3cf89f54ab95df02f01bae99a59f222224",
+            "base_tree": "5663aaa71a299980b4cbb2a813de23b097938cc5",
+            "candidate_tree": "383f362cbef561595e53700f6acad95f73897e85",
+            "changed_path_manifest_sha256": "sha256:762894ade847464a547cacb9fedb1bfcb9481f175b238b1494f47f263e20fc7c",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:028cdebf71865151f8a4f6fe56496b95ae813040524c60ce9e562a8f30df2816",
+            "raw_sha256": "sha256:a9258853019435cbfe42c8d8afee3ff3940620a1845a257a1262b660e9c43280",
+            "canonical_sha256": "sha256:f0fad80ef7e9b17437a4d14a14b89ae4e31a05bb7cc4a1b8b19086421e243ad6",
+            "result_hash": "sha256:1d3790dc7b4ca3f29d32815771e0671c9f50b47a9a49d9f74392385f3f4039fd",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:028cdebf71865151f8a4f6fe56496b95ae813040524c60ce9e562a8f30df2816",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "docs/architecture/adr-c13-inception-role-chain.md",
+                "engine/cmd/inception_chain_entry_test.go",
+                "engine/skills/actuals_instrumentation_contract_test.go",
+                "engine/skills/inception_chain_entry_test.go",
+                "odd/tasks/inception-role-chain.md",
+                "skills/_shared/pre-sdd-contracts.md",
+                "skills/inception-pipeline/.approval.json",
+                "skills/inception-pipeline/SKILL.md",
+                "skills/roadmap-maker/assets/roadmap-template.md"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "Reviewed all 9 changed paths. The change is documentation and skill-prose restructuring, pin-test wording updates, and a new test, so it adds no runtime code and no network, auth, or dependency surface.",
+              "engine/cmd/inception_chain_entry_test.go isolates HOME and XDG_STATE_HOME to t.TempDir() and asserts that the stored record path lies under the isolated state home. It cannot write to the real state store. It reads only the fixed relative skill path, and no untrusted input reaches a shell: the documented command is split with strings.Fields and passed to the in-process runRolesTest.",
+              "skills/inception-pipeline/SKILL.md keeps the safeguards that existed at the baseline: validator fail-closed, no synthesized approved_tree, and verifying a commit by tree rather than discovering it. The example record carries placeholder ids and zero or 'a' hashes, with no secrets.",
+              "skills/inception-pipeline/.approval.json updates the approval digest and timestamp. The trust model for this record is outside the visible patch, so I report no concrete exploit. The odd/tasks log states that the owner's approval step is still pending.",
+              "No dependency or lockfile changes are present."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "selected_order": 1,
+        "target_identity": "sha256:1dc8b4fad6870a487995e8d5d06f8c3cf89f54ab95df02f01bae99a59f222224",
+        "capture_phase_revision": "sha256:e7539a6558939a6d02f9887de53ca0179f90ff7de0ac8257c2572e543000b13c",
+        "artifact_digest": "sha256:eb93030315445c5724762275cf21e623c62bafdd4121c958c3856b098c33b184",
+        "result_hash": "sha256:028c70e97c95059971ada2e2a5a4f5dffdf8788d4540d2302e1d26e5adeefbc2",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:54883403ea75223e9d4691009986bcdd3de70cbfc02b8c92565daa0c7d63ee58",
+            "lineage_id": "review-eb7b7825fb60ffb3",
+            "authority_revision": "sha256:e7539a6558939a6d02f9887de53ca0179f90ff7de0ac8257c2572e543000b13c",
+            "target_identity": "sha256:1dc8b4fad6870a487995e8d5d06f8c3cf89f54ab95df02f01bae99a59f222224",
+            "base_tree": "5663aaa71a299980b4cbb2a813de23b097938cc5",
+            "candidate_tree": "383f362cbef561595e53700f6acad95f73897e85",
+            "changed_path_manifest_sha256": "sha256:762894ade847464a547cacb9fedb1bfcb9481f175b238b1494f47f263e20fc7c",
+            "lens": "review-readability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:54883403ea75223e9d4691009986bcdd3de70cbfc02b8c92565daa0c7d63ee58",
+            "raw_sha256": "sha256:384a3288e204a6728f5f074f6a9a31b01abc42733c5d4b7fa4e68643820dce7b",
+            "canonical_sha256": "sha256:4f96f8181523aba3ceb8872f14f998c1ef789be32a7b1069fa641dfbc200bcec",
+            "result_hash": "sha256:028c70e97c95059971ada2e2a5a4f5dffdf8788d4540d2302e1d26e5adeefbc2",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:54883403ea75223e9d4691009986bcdd3de70cbfc02b8c92565daa0c7d63ee58",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "docs/architecture/adr-c13-inception-role-chain.md",
+                "engine/cmd/inception_chain_entry_test.go",
+                "engine/skills/actuals_instrumentation_contract_test.go",
+                "engine/skills/inception_chain_entry_test.go",
+                "odd/tasks/inception-role-chain.md",
+                "skills/_shared/pre-sdd-contracts.md",
+                "skills/inception-pipeline/.approval.json",
+                "skills/inception-pipeline/SKILL.md",
+                "skills/roadmap-maker/assets/roadmap-template.md"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-example-record-first-fence",
+                "lens": "readability",
+                "location": "engine/cmd/inception_chain_entry_test.go:196-211",
+                "severity": "WARNING",
+                "claim": "inceptionFirstJSONFence returns the first json block in the Chain entry section. The test is therefore coupled to the order of code blocks. A second json block added before the example record would make the test validate the wrong block, and the failure message would not say why.",
+                "proof_refs": [
+                  "engine/cmd/inception_chain_entry_test.go:196-211"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-skill-numbered-list-breaks",
+                "lens": "readability",
+                "location": "skills/inception-pipeline/SKILL.md:64-88",
+                "severity": "SUGGESTION",
+                "claim": "The fenced JSON example sits inside numbered item 2 of the Chain entry list. The test locates it and the append command by regex and fence scanning, not by structure. Item 1 holds the append command and item 2 holds the record, so the example depends on prose placement that nothing documents.",
+                "proof_refs": [
+                  "skills/inception-pipeline/SKILL.md:64-88"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Read all 9 patches in full.",
+              "The SKILL.md restructure into numbered steps keeps every rule. It reworded two pinned phrases, and the matching pins were updated in the same change.",
+              "The changelog entry in odd/tasks/inception-role-chain.md records the pin edits and the RED/GREEN evidence.",
+              "No dead logic or unexplained constants were found. The 64-zero prev_sha256 is explained in the skill text."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 2,
+        "target_identity": "sha256:1dc8b4fad6870a487995e8d5d06f8c3cf89f54ab95df02f01bae99a59f222224",
+        "capture_phase_revision": "sha256:e7539a6558939a6d02f9887de53ca0179f90ff7de0ac8257c2572e543000b13c",
+        "artifact_digest": "sha256:e1400b6e0fcfa131e3541484d51fba5c66d2c4d625fc1fbe28f96b11f4dbd94f",
+        "result_hash": "sha256:dc4d5ed6686421481263f90f84b97591b6fd9cd9606dd96fcc8048fcbb6f8763",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:c0abdfb845a59b5154c01af902b50cf4ba1d303399109f71f8bd2bd64f6dcc13",
+            "lineage_id": "review-eb7b7825fb60ffb3",
+            "authority_revision": "sha256:e7539a6558939a6d02f9887de53ca0179f90ff7de0ac8257c2572e543000b13c",
+            "target_identity": "sha256:1dc8b4fad6870a487995e8d5d06f8c3cf89f54ab95df02f01bae99a59f222224",
+            "base_tree": "5663aaa71a299980b4cbb2a813de23b097938cc5",
+            "candidate_tree": "383f362cbef561595e53700f6acad95f73897e85",
+            "changed_path_manifest_sha256": "sha256:762894ade847464a547cacb9fedb1bfcb9481f175b238b1494f47f263e20fc7c",
+            "lens": "review-reliability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:c0abdfb845a59b5154c01af902b50cf4ba1d303399109f71f8bd2bd64f6dcc13",
+            "raw_sha256": "sha256:875ceb1f25cbd61b4e34ac19c00ca2d7b585ebd4415e2b7ba0cc3e8695f4555a",
+            "canonical_sha256": "sha256:89e29a1ac98dc9d7ee70140bd968a72b214e5c047d6445a7e800f4432a16044e",
+            "result_hash": "sha256:dc4d5ed6686421481263f90f84b97591b6fd9cd9606dd96fcc8048fcbb6f8763",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:c0abdfb845a59b5154c01af902b50cf4ba1d303399109f71f8bd2bd64f6dcc13",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "docs/architecture/adr-c13-inception-role-chain.md",
+                "engine/cmd/inception_chain_entry_test.go",
+                "engine/skills/actuals_instrumentation_contract_test.go",
+                "engine/skills/inception_chain_entry_test.go",
+                "odd/tasks/inception-role-chain.md",
+                "skills/_shared/pre-sdd-contracts.md",
+                "skills/inception-pipeline/.approval.json",
+                "skills/inception-pipeline/SKILL.md",
+                "skills/roadmap-maker/assets/roadmap-template.md"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-fixed-example-hash-collision",
+                "lens": "reliability",
+                "location": "engine/cmd/inception_chain_entry_test.go:131-131",
+                "severity": "WARNING",
+                "claim": "inceptionWithExampleRecord replaces the original JSON fence text via strings.Replace and re-marshals the record. The re-marshaled JSON has sorted keys and compact formatting, so the mutated skill still parses, but if the original fence text appears elsewhere in the skill the wrong occurrence could be replaced. It is low risk because Replace uses count 1 and the fence is unique today.",
+                "proof_refs": [
+                  "engine/cmd/inception_chain_entry_test.go:131"
+                ],
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-resume-role-assumption",
+                "lens": "reliability",
+                "location": "engine/cmd/inception_chain_entry_test.go:100-104",
+                "severity": "SUGGESTION",
+                "claim": "The test asserts role estimator or shaper from resume output via an assumed JSON shape (role, interrupted, terminal). That shape is validated only against the engine's real output at test time, which is fine, but the test depends on the placeholder-ID extraction regex matching the first labdrian roles code span in each section. A reordering of code spans in the skill could silently pick a different command; the failure would be loud rather than silent, so this is minor.",
+                "proof_refs": [
+                  "engine/cmd/inception_chain_entry_test.go:100-104"
+                ]
+              }
+            ],
+            "evidence": [
+              "Reviewed all 9 changed paths. The new engine/cmd test exercises the skill's documented example record through real roles append and roles resume code with isolated HOME and XDG_STATE_HOME, and includes mutation subtests proving the check detects a rotted example or a dropped --stdin.",
+              "The SKILL.md restructure keeps every rule. The two pins changed (hop outputs, Have the delivery prompt name) match the new text in the engine/skills tests.",
+              "The .approval.json digest was updated by the owner, so APPROVAL_STALE is cleared by this candidate; I could not verify the digest against the SKILL.md bytes from the patch alone.",
+              "The docs, task log and template edits are prose only and carry no behavioral risk."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "cfa181220f9c92781d6aa8423df8b4ea16b2db952881143a9e0a8383a05186a2",
+    "initial_atomic_start": {
+      "lineage_id": "review-eb7b7825fb60ffb3",
+      "worktree_identity": "sha256:8455002f227f033663d0e7d8b8ff6a885e1c85b482ec52e34017c303452eed87",
+      "target_identity": "sha256:1dc8b4fad6870a487995e8d5d06f8c3cf89f54ab95df02f01bae99a59f222224",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "5663aaa71a299980b4cbb2a813de23b097938cc5",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-risk",
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 408,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "rewrote the closure-feedback and chain-entry steps of a mirrored skill prompt others consume, its docs, and the tests that run the documented chain record"
+    },
+    "runtime_agent": "claude-code"
+  }
+}
