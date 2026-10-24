@@ -349,8 +349,8 @@ skills:
         - pi
     lifecycle:
       updateStrategy: overlay-only
-  - id: prespec-malandra
-    path: prespec-malandra
+  - id: clarify-request
+    path: clarify-request
     source:
       type: custom
     install:

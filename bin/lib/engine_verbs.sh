@@ -9,8 +9,8 @@
 # variables and does nothing else.
 
 # cmd_prespec forwards to the engine binary's `prespec` subcommand, passing
-# stdin/stdout/args straight through. This is the user-facing entry point the
-# prespec-malandra skill calls (e.g. `labdrian prespec lint`).
+# stdin/stdout/args straight through. No skill calls it since `clarify-request`
+# replaced `prespec-malandra`; it stays until the prespec verbs are retired.
 cmd_prespec() {
   if [[ ! -x "$ENGINE_BINARY" ]]; then
     die "engine binary not found at $ENGINE_BINARY; run 'labdrian install-hooks' first"

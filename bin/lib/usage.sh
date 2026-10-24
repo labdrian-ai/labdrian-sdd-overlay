@@ -109,8 +109,9 @@ Commands:
   install-alias [name]             Symlink a command (default: labdrian) into ~/.local/bin
   prespec <verb>                   Forward to the engine's prespec discovery core
                                    (verbs: rank, lint, readiness, brief). Reads JSON
-                                   from stdin, writes JSON to stdout. Used by the
-                                   prespec-malandra skill.
+                                   from stdin, writes JSON to stdout. No skill calls
+                                   it since clarify-request replaced prespec-malandra;
+                                   it stays until it is retired.
   skills <verb>                    Forward to the engine's skills registry core
                                    list      print sorted registry entries
                                    status    print count summary
@@ -118,7 +119,7 @@ Commands:
                                              and skills/ on disk vs overlay.manifest
                                              (requires --source-root); every global skill
                                              needs a valid approval record, except the
-                                             grandfathered baseline (the 35 global skills at the
+                                             grandfathered baseline (the 34 global skills at the
                                              Phase 8 base that are still registered, defined
                                              below) while its bytes are unchanged
                                    install   install project-scoped skills into <cwd>/.claude/skills and

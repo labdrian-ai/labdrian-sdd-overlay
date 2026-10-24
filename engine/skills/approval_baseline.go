@@ -32,7 +32,6 @@ var approvalBaseline = []ApprovalBaselineEntry{
 	{ID: "issue-creation", SHA256: "99beff12891c616f6949ddbfd5192f537f5b49c9692642e5f4cfbdb6c556f2b4"},
 	{ID: "judgment-day", SHA256: "ac2a4fcfd762d8e3a873742f05a71287f96294f5063d740957f81b41ff8b8486"},
 	{ID: "knowledge-ingestion", SHA256: "cd411d7cb9807c8cefdb045400ef1313f6a240600ed5cb564dd79695993c9775"},
-	{ID: "prespec-malandra", SHA256: "71952728993594180b11630994e45785cab265863d355dbfce38d3461d8cb7a7"},
 	{ID: "project-architect", SHA256: "8eaac3f295fba84a84a1051b5f85191493c0910b3e5779dcfa69867f7518626d"},
 	{ID: "project-inception", SHA256: "02eb3dbfe92ce064c5e5a442c2f3f703753df409bdbbaf95774704840c530dd0"},
 	{ID: "project-manifest", SHA256: "979f911e9d64b04a2410eb84c8225ffd4b84cc3031dce07badc5f724561c56c9"},

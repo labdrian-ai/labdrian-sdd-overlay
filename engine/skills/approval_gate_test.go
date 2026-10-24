@@ -307,7 +307,7 @@ func TestApprovalBaseline_IsWellFormedAndFixed(t *testing.T) {
 	entries := ApprovalBaseline()
 	// The count is pinned: adding to or removing from the grandfathered list is
 	// a deliberate, reviewed change that must update this number with it.
-	const baselineSize = 35
+	const baselineSize = 34
 	if len(entries) != baselineSize {
 		t.Fatalf("baseline has %d entries, want the fixed %d", len(entries), baselineSize)
 	}
