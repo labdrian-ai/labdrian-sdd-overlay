@@ -114,7 +114,7 @@ func (r Ring) String() string {
 //
 //	archguard.Debt{
 //		"shaper":  {"gitprov": "H4", "os": "H10"},
-//		"prespec": {"time.Now": "H11"},
+//		"roles":   {"time.Now": "H11"},
 //	}
 //
 // A map cannot list the same edge twice. Only a domain or application package can

@@ -115,23 +115,16 @@ func TestClarifyRequestReplacesPrespecMalandra(t *testing.T) {
 		}
 	})
 
-	t.Run("S1_the_help_and_comment_text_say_no_skill_calls_the_prespec_verbs", func(t *testing.T) {
-		texts := map[string]string{
-			"bin/lib/usage.sh":        clarifyRequestUsageEntry(readRepoFile(t, root, "bin/lib/usage.sh")),
-			"bin/lib/engine_verbs.sh": clarifyRequestCommentAbove(readRepoFile(t, root, "bin/lib/engine_verbs.sh"), "cmd_prespec()"),
-		}
-		for path, text := range texts {
-			if text == "" {
-				t.Errorf("%s: the text about the prespec verbs was not found", path)
-				continue
-			}
-			for _, want := range []string{"no skill calls", clarifyRequestID} {
-				if !strings.Contains(strings.ToLower(text), strings.ToLower(want)) {
-					t.Errorf("%s: the text about the prespec verbs must say %q, got %q", path, want, text)
-				}
-			}
-			if strings.Contains(text, prespecMalandraID+" skill") {
-				t.Errorf("%s still says the %s skill uses the prespec verbs: %q", path, prespecMalandraID, text)
+	// The prespec verbs were retired after the rename (follow-up F1 of odd/tasks/clarify-request.md):
+	// the wrapper neither routes, defines nor documents them.
+	t.Run("S1_the_wrapper_no_longer_routes_defines_or_documents_the_prespec_verbs", func(t *testing.T) {
+		for path, gone := range map[string]string{
+			"bin/labdrian-overlay":    "prespec)",
+			"bin/lib/engine_verbs.sh": "cmd_prespec",
+			"bin/lib/usage.sh":        "prespec <verb>",
+		} {
+			if strings.Contains(readRepoFile(t, root, path), gone) {
+				t.Errorf("%s still has %q: the prespec verbs were retired", path, gone)
 			}
 		}
 	})
@@ -603,40 +596,4 @@ func clarifyRequestHandoffPin(skill string) []string {
 // clarifyRequestCollapse joins lines into one line with single spaces.
 func clarifyRequestCollapse(lines []string) string {
 	return strings.Join(strings.Fields(strings.Join(lines, " ")), " ")
-}
-
-// clarifyRequestUsageEntry is the `prespec <verb>` entry of the help in bin/lib/usage.sh: its
-// first line and the lines indented under it, up to the next entry.
-func clarifyRequestUsageEntry(usage string) string {
-	var entry []string
-	in := false
-	for _, line := range strings.Split(usage, "\n") {
-		switch {
-		case !in && strings.HasPrefix(line, "  prespec <verb>"):
-			in = true
-		case in && !strings.HasPrefix(line, "   "):
-			return clarifyRequestCollapse(entry)
-		}
-		if in {
-			entry = append(entry, line)
-		}
-	}
-	return clarifyRequestCollapse(entry)
-}
-
-// clarifyRequestCommentAbove is the comment block that sits directly above the first line that
-// starts with marker, without its comment marks.
-func clarifyRequestCommentAbove(source, marker string) string {
-	lines := strings.Split(source, "\n")
-	for i, line := range lines {
-		if !strings.HasPrefix(line, marker) {
-			continue
-		}
-		var comment []string
-		for j := i - 1; j >= 0 && strings.HasPrefix(lines[j], "#"); j-- {
-			comment = append([]string{strings.TrimPrefix(lines[j], "#")}, comment...)
-		}
-		return clarifyRequestCollapse(comment)
-	}
-	return ""
 }

@@ -2,21 +2,11 @@
 #
 # engine_verbs
 #
-# The commands that are a forward to a verb of the engine: prespec, skills, shaper, roles,
-# memory, workflow and gadu-generate.
+# The commands that are a forward to a verb of the engine: skills, shaper, roles, memory,
+# workflow and gadu-generate.
 #
 # Sourced by bin/labdrian-overlay in the order it lists, never run: it defines functions and
 # variables and does nothing else.
-
-# cmd_prespec forwards to the engine binary's `prespec` subcommand, passing
-# stdin/stdout/args straight through. No skill calls it since `clarify-request`
-# replaced `prespec-malandra`; it stays until the prespec verbs are retired.
-cmd_prespec() {
-  if [[ ! -x "$ENGINE_BINARY" ]]; then
-    die "engine binary not found at $ENGINE_BINARY; run 'labdrian install-hooks' first"
-  fi
-  exec "$ENGINE_BINARY" prespec "$@"
-}
 
 # cmd_skills forwards to the engine binary's `skills` subcommand.
 # Injects default --registry and --manifest paths from $OVERLAY_DIR so that
