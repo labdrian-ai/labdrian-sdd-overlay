@@ -165,7 +165,7 @@ labdrian apply                              # redeploy to all targets
 labdrian sync-check                         # confirm in-sync
 ```
 
-The pre-SDD entry bundle is tracked as four inseparable assets: `inception-pipeline/SKILL.md`, `_shared/pre-sdd-contracts.md`, `_shared/entry-contract.schema.json`, and `_shared/actuals-record.schema.json`. Version `2.1.0` also uses the isolated validator in `tools/entry-contract-validator`; its dependency is intentionally not added to `engine/go.mod`. The version is a compatibility set, not an exact-match lock: `2.1.0` still validates contracts written by the `2.0.0` bundle.
+The pre-SDD bundle is tracked as four assets: `inception-pipeline/SKILL.md`, `_shared/pre-sdd-contracts.md`, `_shared/entry-contract.schema.json`, and `_shared/actuals-record.schema.json`. The skill left the bundle's version: `inception-pipeline` `3.0.0` enters the labdrian role chain (`skills/role-chain/SKILL.md`) and no longer writes the entry contract, so version `2.1.0` now covers the contract assets only, and the isolated validator in `tools/entry-contract-validator` (its dependency is intentionally not added to `engine/go.mod`) checks the archived contracts. The version is a compatibility set, not an exact-match lock: `2.1.0` still validates contracts written by the `2.0.0` bundle.
 
 `labdrian apply` propagates all four tracked assets to Claude, OpenCode, and Codex. Restart any already-running client after deployment so it reloads the updated skill and shared contracts. Validate a candidate without deploying anything:
 

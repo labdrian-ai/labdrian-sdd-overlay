@@ -434,18 +434,6 @@ func TestBundleAssetsAreTrackedAndVersionMatched(t *testing.T) {
 		}
 	}
 
-	skill, err := os.ReadFile(filepath.Join(root, "skills", "inception-pipeline", "SKILL.md"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(string(skill), `version: "`+expectedContractVersion+`"`) {
-		t.Errorf("inception-pipeline metadata is not version %s", expectedContractVersion)
-	}
-	const dispatcherCommand = "gentle-ai sdd-status {change} --cwd {project-root} --json --instructions"
-	if !strings.Contains(string(skill), dispatcherCommand) {
-		t.Errorf("inception-pipeline does not use the authoritative dispatcher command %q", dispatcherCommand)
-	}
-
 	contracts, err := os.ReadFile(filepath.Join(root, "skills", "_shared", "pre-sdd-contracts.md"))
 	if err != nil {
 		t.Fatal(err)

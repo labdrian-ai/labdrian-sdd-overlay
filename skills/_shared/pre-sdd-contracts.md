@@ -4,7 +4,14 @@
 
 This file defines the persistence contracts, language rule, identifier rule, and registry-block format shared by requirements-from-transcripts, project-manifest, project-architect, roadmap-maker, and inception-pipeline. Each skill references this file instead of re-deciding these conventions independently.
 
-Contract bundle version: `2.1.0`. The inception skill, this authority, both schemas, and the deterministic validator MUST remain version-matched. Missing or mismatched bundle assets are a hard stop.
+Contract bundle version: `2.1.0`. These assets carry it and MUST remain version-matched:
+
+- this file;
+- `./entry-contract.schema.json` (its `$id` and its accepted `contract_version` set);
+- `./actuals-record.schema.json` (its `$id`);
+- the validators that check them, `tools/entry-contract-validator` and `tools/actuals-record-validator` (each names the version it enforces).
+
+Missing or mismatched bundle assets are a hard stop. `inception-pipeline` is not one of them: since its 3.0.0 (2026-10-23, C13-S0) it enters the labdrian role chain and writes no entry contract, so its version no longer tracks the bundle's. It is still tracked in `overlay.manifest`, beside the three contract assets.
 
 The bundle version is a compatibility set, not an exact-match lock. The entry schema validates the union of every supported version's vocabulary and still accepts contracts written by a previous supported bundle (currently `2.0.0`); `contract_version` records which bundle produced a contract rather than gating which vocabulary applies. Per-version feature gating is deliberately not enforced: the entry schema carries no conditional keywords by design, and every version-sensitive and cross-field invariant lives in the deterministic validator instead. Emit the current version in new contracts; never rewrite an archived contract to a newer version.
 
@@ -39,14 +46,14 @@ Slug rules:
 | Architecture | `project/{project}/architect/final` | project-architect |
 | Roadmap | `project/{project}/roadmap` | roadmap-maker |
 | Estimate (pre-start) | `sdd/{change}/estimate` | none: no longer written (see Estimate Record Shape) |
-| Entry contract | `sdd/{change}/entry` | inception-pipeline |
+| Entry contract | `sdd/{change}/entry` | none: no longer written since inception-pipeline 3.0.0 (see Entry Contract v2 Shape); archived contracts stay |
 | Closure actuals | `sdd/{change}/actuals` | inception-pipeline closure-feedback (ONLY writer) |
 | Estimation calibration | `project/{project}/estimation-calibration` | inception-pipeline closure-feedback (no reader since the 2026-10-22 estimation rewrite) |
 | Pipeline state | `sdd/{change}/pipeline-state` | inception-pipeline |
 | SDD initialization | `sdd-init/{project}` | sdd-init |
-| Delivery plan | `delivery/{change}` | inception-pipeline entry assembly |
+| Delivery plan | `delivery/{change}` | none: only the retired entry assembly wrote it |
 
-> **Note:** Engine keys (`sdd/{change}/{proposal,spec,design,tasks,apply-progress,verify-report,archive-report,state}`) are owned by the SDD engine and are NOT listed here — do not reuse them.
+> **Note:** Engine keys (`sdd/{change}/{proposal,spec,design,tasks,apply-progress,verify-report,archive-report,state}`) are owned by the SDD engine and are NOT listed here — do not reuse them. The role chain writes none of them: its agents write only where the parent's prompts name (see the Chain entry of `inception-pipeline`), and closure-feedback reads those locators.
 
 > All automated saves (SDD phase artifacts, schemas, state) use `capture_prompt: false`.
 
@@ -56,10 +63,10 @@ Slug rules:
 
 Two closed JSON Schema files (Draft 2020-12) live alongside this document:
 
-- **`./entry-contract.schema.json`** — validates a contract declaring any supported version (`2.0.0` or `2.1.0`) before handoff; new contracts declare `2.1.0`. Contains artifact references (not embedded artifact content), resolved delivery parameters, strict-TDD commands, and ordered review slices.
+- **`./entry-contract.schema.json`** — validates a contract declaring any supported version (`2.0.0` or `2.1.0`); no new contract is written since inception-pipeline 3.0.0 (see Entry Contract v2 Shape), so it checks the archived ones. Contains artifact references (not embedded artifact content), resolved delivery parameters, strict-TDD commands, and ordered review slices.
 - **`./actuals-record.schema.json`** — validated at closure before writing. Contains implementation, review, and wall-clock hours plus scope and variance notes.
 
-Schema validation alone is insufficient for ordering, dependency, path, range, and delivery invariants. The entry candidate MUST also pass the version-matched `entry-contract-validator` through `labdrian validate-entry-contract`. A missing validator, non-zero exit, or version mismatch fails closed; prose review is not a substitute.
+Schema validation alone is insufficient for ordering, dependency, path, range, and delivery invariants. An entry contract MUST also pass the version-matched `entry-contract-validator` through `labdrian validate-entry-contract`. A missing validator, non-zero exit, or version mismatch fails closed; prose review is not a substitute.
 
 The actuals record has its own validator and the same fail-closed rule. Run `go run -C "$root/tools/actuals-record-validator" . --schema "$root/skills/_shared/actuals-record.schema.json" --instance <absolute-candidate-path>` (with `root="$(git rev-parse --show-toplevel)"`; every tool under `tools/` is its own Go module, so there is no repository-root module to `go run ./tools/...`) before writing the record; exit `0` is the only result that authorises the write, and a missing or unbuildable validator is a stop, not a pass. It is a separate binary from `entry-contract-validator` because that tool's version handshake reads `properties.contract_version.enum`, which this schema does not have (its version lives in `$id`), and its semantic pass checks entry-contract invariants that do not exist in an actuals record. Beyond schema shape it enforces the closed `approval_decision` vocabulary, non-negative hours and counts, the provenance disclosures a recorded `checkpoint_count` and `total_wall_clock_hours` owe, and that the required narratives carry their own content rather than pointing at where the content supposedly lives — a pointer satisfies every required-field check JSON Schema can make while recording nothing.
 
@@ -72,6 +79,8 @@ EARS-formatted requirement items (R-NNN), each carrying a `scope` enum of `new-c
 Retired 2026-10-22: `sdd-time-estimation` no longer writes `sdd/{change}/estimate`, so no estimate record carries `human_equivalent_hours`, a calibration sample size, or the agent-compute-time hour model. The skill's output (per-package line ranges and the shaper's `estimates[]` minutes) travels in the shaper handoff; see `sdd-time-estimation/SKILL.md`. What remains of the shape is the `estimate` cache inside the entry contract, below.
 
 ### Entry Contract v2 Shape
+
+Retired 2026-10-23 (C13-S0): `inception-pipeline` 3.0.0 no longer assembles, validates, or persists `sdd/{change}/entry`; it enters the labdrian role chain instead (`skills/role-chain/SKILL.md`). The v2 schema, the validator, the fixtures, and the CI loop over the archived `entry.json` files stay unchanged: they check the archived contracts, and this section describes those contracts.
 
 The entry contract is one closed object with these groups:
 

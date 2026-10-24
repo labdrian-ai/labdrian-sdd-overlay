@@ -1,23 +1,22 @@
 ---
 name: inception-pipeline
-description: "THIS IS THE FIRST SKILL TO USE when starting any unit of work — new project, feature, chore, or fix. It selects the entry tier and drives project-inception when needed; do not invoke project-inception directly unless you explicitly want only the manifest+architect+roadmap trilogy without tier routing. Triggers on: start project, new feature, implement requirement, small fix, kick off SDD, bootstrap, build this, add capability, change request, chore, hotfix, arrancá el proyecto, empezar proyecto, nueva feature, arreglo chico. Sequences the pre-SDD producers as delegated sub-agents, assembles and validates the entry contract, hands off to the SDD engine, and fires closure-feedback after archive. Never executes producer work itself and never routes SDD phases."
+description: "THIS IS THE FIRST SKILL TO USE when starting any unit of work — new project, feature, chore, or fix. It selects the entry tier and drives project-inception when needed; do not invoke project-inception directly unless you explicitly want only the manifest+architect+roadmap trilogy without tier routing. Triggers on: start project, new feature, implement requirement, small fix, kick off SDD, bootstrap, build this, add capability, change request, chore, hotfix, arrancá el proyecto, empezar proyecto, nueva feature, arreglo chico. Sequences the producers as delegated sub-agents, enters the labdrian role chain, and fires closure-feedback after delivery. Never executes producer work itself and never runs the chain's hops."
 license: Apache-2.0
 metadata:
   author: gentleman-programming
-  version: "2.1.0"
+  version: "3.0.0"
 ---
 
 ## Purpose
 
-You are a **thin pre-SDD orchestrator**. You stand in front of the SDD engine and turn a raw unit of work into a validated entry contract, then hand off. You do FIVE things and nothing else:
+You are a **thin pre-chain orchestrator**. You stand in front of the labdrian role chain and turn a raw unit of work into the chain's first record, then hand off. You do FOUR things and nothing else:
 
 1. **Select the entry tier** (1 / 2 / 3) with a reasoning-based checklist.
-2. **Sequence the pre-SDD producers** as delegated sub-agents (requirements-capture, project-inception, roadmap-maker, sdd-time-estimation).
-3. **Assemble + deterministically validate** the versioned `sdd/{change}/entry` contract.
-4. **Confirm readiness** via the native dispatcher and hand off to the SDD engine (gentleman-agents-team-lite).
-5. **Fire closure-feedback** after the engine archives the change.
+2. **Sequence the producers** as delegated sub-agents (requirements-capture, project-inception, roadmap-maker).
+3. **Enter the role chain** (Chain entry below).
+4. **Fire closure-feedback** after the change is delivered.
 
-You NEVER execute producer work yourself (no manifest, no architecture, no estimate, no code). You NEVER route SDD phases — the native `gentle-ai` dispatcher owns proposal → spec → design → tasks → apply → verify → archive. You only sequence the PRE-SDD producers and the POST-SDD closure loop.
+You NEVER execute producer work yourself (no manifest, no architecture, no code). You NEVER run the chain's hops: `skills/role-chain/SKILL.md` owns them. You only sequence the PRODUCERS and the POST-DELIVERY closure loop.
 
 All persisted artifacts are written in **English** (see `../_shared/pre-sdd-contracts.md`). The user-facing conversation may stay in the user's language.
 
@@ -35,174 +34,164 @@ Evaluate in order. Stop at the first rule that fires. Record the firing rule in 
 Rules:
 - Tier is decided by **evidence**, not user phrasing. Assert manifest + architect existence in engram before choosing Tier 2 or 3. Absence of the manifest forces Tier 1 regardless of stated intent.
 - On ambiguity, **default up** (3→2, 2→1), record the rationale in `sdd/{change}/pipeline-state`, and ask at most ONE clarifying question.
-- Persist the chosen tier into the `tier` field of the entry contract.
 - **Read `references/tier-selection.md` when the tier is ambiguous** (rule 4 fired) — it carries the worked examples. Skip it otherwise.
 
 ## Tier Flows (each ends the same way)
 
-Every flow finishes with the identical tail: **assemble a temporary entry candidate → validate it with the version-matched schema + deterministic validator → persist the exact validated bytes to `sdd/{change}/entry` → `gentle-ai sdd-status {change} --cwd {project-root} --json --instructions` gate → hand to team-lite (route ONLY by `nextRecommended`) → closure-feedback after archive.**
+Every flow finishes with the identical tail: **Chain entry → closure-feedback after delivery.**
 
 `change-name` is derived **once** by the requirements-capture step (`requirements-from-transcripts`) as a kebab-case slug and inherited verbatim downstream. Never re-derive it.
 
 ### Tier 1 — New project
 1. Delegate **requirements-from-transcripts** (if a transcript/brief exists) → writes `project/{project}/requirements/{change}`, derives `change-name`.
 2. Delegate **project-inception** with `inception_mode: full` and `requirements_brief_ref: {change}` → manifest + architect + roadmap.
-3. Delegate **sdd-time-estimation** → its inception row (the entry estimate cache); it no longer writes `sdd/{change}/estimate`.
-4. Assemble + validate entry → dispatcher gate → engine → closure-feedback.
+3. Chain entry → closure-feedback.
 
 ### Tier 2 — Feature/chore on existing project
 1. Delegate **requirements-from-transcripts** (per feature) → writes the requirements brief, derives `change-name`.
 2. Delegate **project-inception** with `inception_mode: reuse` (loads manifest + architect READ-ONLY; falls back to `full` if either is missing) — this internally drives **roadmap-maker** in `incremental-insert` mode to splice the new item.
-3. Delegate **sdd-time-estimation** → its inception row (the entry estimate cache); it no longer writes `sdd/{change}/estimate`.
-4. Assemble + validate entry → dispatcher gate → engine → closure-feedback.
+3. Chain entry → closure-feedback.
 
 ### Tier 3 — Small fix
 1. Delegate **requirements-from-transcripts** (lightweight) → derives `change-name`, captures the fix scope.
 2. Delegate **roadmap-maker** directly with `mode: incremental-insert`, `tier: 3` → splice the fix item; preserve all actuals/history.
-3. Delegate **sdd-time-estimation** → its inception row (the entry estimate cache); it no longer writes `sdd/{change}/estimate`.
-4. Assemble + validate entry → dispatcher gate → engine (recommend a **slim slice**) → closure-feedback.
+3. Chain entry → closure-feedback.
 
-## Entry Contract Assembly & Validation (v2; fail closed)
+## Chain entry
 
-Read `../_shared/pre-sdd-contracts.md` and `../_shared/entry-contract.schema.json` before assembly. The skill metadata, shared authority, entry schema, actuals schema, and validator MUST all declare contract bundle `2.1.0`, and a new contract MUST declare that version. If an asset is missing or mismatched, **STOP**. Do not reconstruct a schema from memory or fall back to prose validation.
+After the producers, load `skills/role-chain/SKILL.md`: it owns every hop. This skill writes role-chain records only; it opens no workflow.
 
-Assemble one candidate JSON object in a temporary file. It MUST contain every required v2 group:
+1. Name the chain: goal id = chain id = `change-name`. Every record goes to `labdrian roles append --project {project} --goal {change} --chain {change} --stdin`.
+2. Make the first record `prototyper → shaper` when a premise is open (the prototyper trigger of the role chain), otherwise `shaper → estimator`:
 
-- Identity: `contract_version`, inherited `change_name`, `project`, selected `tier`, `interaction_mode`, and `artifact_store_mode`.
-- `artifact_refs`: entry, requirements, manifest context/mission/rules, architecture, roadmap, estimate, SDD init, pipeline state, and delivery plan.
-- Estimate cache: `planned_range_hours`, lowercase-normalized `complexity` (`Critical` → `critical`), `confidence`, and `human_review_included: true`, taken from sdd-time-estimation's inception row; never estimate them yourself. `sdd/{change}/estimate` is no longer written, so there are no richer estimate-only fields to keep there.
-- Delivery decision: `requested_pr_strategy`, normalized `delivery_strategy`, `chaining_required`, `chain_strategy`, and `review_budget` including size-exception state.
-- Test/review plan: `strict_tdd.enabled`, non-empty focused and broad test command lists, ordered requirement-linked `review_slices`, and `expected_native_next_recommendation`.
+   ```json
+   {
+     "version": 1,
+     "project_id": "acme-shop",
+     "goal_id": "add-wishlist",
+     "chain_id": "add-wishlist",
+     "seq": 1,
+     "from_role": "shaper",
+     "to_role": "estimator",
+     "prev_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+     "payload_kind": "tasks",
+     "payload_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+     "evidence": [],
+     "context": {"summary": "Tasks shaped: 4 tasks, 1 slice.", "decisions": [], "open_questions": []},
+     "status": "completed"
+   }
+   ```
 
-Artifact references carry the stable topic keys defined by the shared authority. Before validation, assert every producer artifact exists, except `estimate`, which `sdd-time-estimation` no longer writes. Include `openspec_path` only for a real, normalized repository-relative path below `openspec/`; omit it when no such artifact exists. Never synthesize a path from a topic key. In `engram` or `none` mode, omit every `openspec_path`.
-
-Normalize delivery before validation:
-
-- `force-chained` resolves to `auto-chain`, `chaining_required: true`, and a concrete non-`none` chain strategy.
-- `force-single` resolves to `single-pr` when every slice is within budget, or `exception-ok` only with an explicitly approved size exception.
-- `auto-chain` always means chaining is required. `single-pr` and `exception-ok` always mean it is not.
-- Slice order starts at 1 and is contiguous. IDs are unique; dependencies name prior slices only. A slice over budget requires an approved exception.
-
-Run the repository wrapper so caller-relative paths work and validator exit codes remain visible:
-
-```bash
-labdrian validate-entry-contract \
-  --schema skills/_shared/entry-contract.schema.json \
-  --instance /absolute/path/to/entry-candidate.json \
-  --exists-root {project-root}
-```
-
-**`--exists-root` is REQUIRED here, and inception time is the only place it can be passed.** It resolves every `artifact_refs` `openspec_path` against that root and fails when one is missing, which is the difference between a contract that references artifacts and a contract that merely names strings shaped like paths. It is off by default for a reason that is not a hedge: archiving CONSUMES the live change directory, so an archived contract points at paths that no longer exist, and enabling the check against history would invalidate every archived contract permanently. Pass it while the change directory is still live — here — and nowhere else.
-
-**The root is the PROJECT ROOT, never the change directory.** Every `openspec_path` is repository-root-relative and already begins `openspec/changes/{change}/…`; the validator joins it under whatever root you pass. Pointing the flag at the change directory therefore looks for `openspec/changes/{change}/openspec/changes/{change}/entry.json`, so every declared artifact is reported missing and the check becomes a hard stop no contract can ever pass. Pass the project root and the same declaration resolves exactly once.
-
-Any non-zero result is a hard stop. Do not persist a partially validated object. On success, persist the exact candidate bytes to `sdd/{change}/entry` with `capture_prompt: false` and, only when a real OpenSpec entry path was declared, atomically write the same object there. Then delete the temporary candidate.
-
-## Dispatcher Gate & Handoff (route by native JSON only)
-
-Route SDD **only** through the native dispatcher status JSON:
-
-```
-gentle-ai sdd-status {change} --cwd {project-root} --json --instructions
-```
-
-- Read `nextRecommended` and `blockedReasons` from the JSON. Treat them as authoritative over any free text.
-- Preserve the native token exactly: phase recommendations are unprefixed (`propose`, `spec`, `design`, `tasks`, `apply`, `verify`, `remediate`, `archive`); control/review recommendations include `sdd-new`, `select-change`, `review`, and `resolve-review`.
-- Assert `nextRecommended` matches `expected_native_next_recommendation` in the validated entry. A mismatch means the handoff is stale or incomplete: **STOP**, refresh evidence, and rebuild the candidate rather than editing one field in place.
-- **Cold-start exemption (first gate call for a new change).** A change the engine has not created yet is not a blocked change. The gate PASSES — hand off — when ALL of these hold: `nextRecommended` is `sdd-new` or `select-change`, `changeRoot` is `null`, every `artifacts` value is `missing`, and every entry in `blockedReasons` names only the not-yet-created change. This is the normal first-run state under `openspec` and `hybrid`: inception-pipeline never creates the change root (it does not route SDD phases), so the engine must create it. Treating this state as a blocker would deadlock every new change at its own gate. A cold-start handoff still requires `expected_native_next_recommendation` to have predicted the same control token, per the assert above.
-- If `blockedReasons` is non-empty for any other reason AND `nextRecommended` is not `verify`, **STOP** and report the blockers. Do not hand off, do not archive.
-- If `nextRecommended` is `verify`, verification/remediation may run to refresh evidence.
-- Hand off to the SDD engine (gentleman-agents-team-lite) and let it route every SDD phase by `nextRecommended`. inception-pipeline does NOT route phases itself.
+   Replace the ids with the project and the change-name, and `payload_sha256` with the sha256 of the payload (here the shaper's tasks artifact). A first record's `prev_sha256` is 64 zeros. The engine refuses a record with a member missing, misspelled or unknown.
+3. In every builder prompt, state that strict TDD is active and name the runner, taken from the project's own instructions (`CLAUDE.md`, `AGENTS.md`) or its build files. When neither names one, ask the user once.
+4. A role agent writes only where its prompt names, so closure-feedback finds an artifact only where you named it. Have the delivery prompt name the archive report as a file `archive-report.md` inside the project repository: closure-feedback appends the t1 anchor to it, and an anchor outside version control anchors nothing.
+5. Name the shaper's spec and the builder's apply-progress the same way when closure-feedback should read them.
 
 ## Gate Compliance (non-negotiable orchestrator gates)
 
-When sequencing producers and handing off, the orchestrator MUST honor every standing gate:
+When sequencing producers and entering the chain, honor every standing gate:
 
-- **SDD Init Guard** — before any SDD command, confirm `sdd-init` ran for the project; if not, run it first.
-- **Version-matched entry gate** — all v2 bundle assets must exist and the deterministic validator must return 0 before the entry is persisted or the dispatcher runs.
-- **Artifact-reference truthfulness** — every topic key resolves (except `estimate`, no longer written); every declared OpenSpec path is real and normalized. Missing evidence stops the flow.
 - **Model gate** — every Agent / sub-agent call MUST include `model`. No model → no call.
 - **Launch dedup** — track `(phase, fingerprint)` pairs; emit exactly one launch per distinct task.
 - **Skill-resolver injection** — resolve matching `SKILL.md` paths from the registry and inject them as `## Skills to load before work` in each sub-agent prompt (pass paths, not summaries).
-- **Strict-TDD forwarding** — if `sdd-init/{project}` has `strict_tdd: true`, forward strict-TDD mode + test runner to `sdd-apply` / `sdd-verify`.
-- **Apply-progress continuity** — for continuation batches, tell `sdd-apply` that prior `sdd/{change}/apply-progress` exists and must be MERGED, not overwritten.
-- **Review Workload Guard** — after `sdd-tasks`, inspect the Review Workload Forecast and apply the cached `delivery_strategy` (and `chain_strategy` if chaining) before `sdd-apply`.
-- **Pre-archive receipt check** — before handing off to `sdd-archive`, run `go run -C tools/archive-anchor-gate . --repo "$(git rev-parse --show-toplevel)" --change {change}`. A non-zero exit means no persisted review receipt (and no recorded owner override) exists for `{change}`: capture the receipt or record the override before archiving, never archive past this gate.
-
-These gates belong to the orchestrator running the SDD engine. inception-pipeline forwards the inputs (strict_tdd, delivery_strategy, chain_strategy, artifact_store_mode) via the entry contract; it never routes the phases itself.
 
 ## Closure-Feedback (plan → validate → execute; single writer)
 
-Fire this AFTER the SDD engine archives the change. inception-pipeline is the **single writer** of `sdd/{change}/actuals` — this avoids forking the managed `sdd-archive` skill while keeping one authoritative actuals source.
+inception-pipeline is the **single writer** of `sdd/{change}/actuals`. That avoids forking the managed `sdd-archive` skill and keeps one authoritative actuals source.
 
-**Plan** — read the engine's native outputs (do NOT modify them):
-- `sdd/{change}/archive-report` (for `changed_lines`, if it records a realized diff-stat total; otherwise compute a diff-stat against the base commit)
-- `sdd/{change}/verify-report`
-- `sdd/{change}/apply-progress`
-- `sdd/{change}/spec` (for `requirement_count`)
-- `sdd/{change}/pipeline-state` (for the tier-selection outcome, and the ambiguity clarifying question if fired — the only checkpoints inception-pipeline itself durably records)
-- the persisted review receipt at `openspec/changes/{change}/review-receipts/<lineage>.json` or `<lineage>.review-state.json`, if one exists — this is the ONLY place `approved_tree` and `review_lens_count` are read from. Two shapes are persisted, because gentle-ai 2.7.0 stopped writing the legacy receipt entirely: the legacy `gentle-ai.review-receipt/v2` shape (`terminal_state == "approved"`, tree in `final_candidate_tree`) and the raw `review-state.json` shape (`state == "approved"`, tree in `current_snapshot.candidate_tree`) it was replaced by. In EITHER shape, `selected_lenses`' array length is `review_lens_count`, and its candidate-tree field becomes the recorded `approved_tree` anchor when a receipt was captured for this candidate; `approved_tree` is never recorded when no receipt exists — see below
-- **t0**: run `engram export <tmp>.json` and select the observation whose `topic_key` equals `sdd/{change}/pipeline-state`; t0 is that observation's typed `created_at` field — never the rendered `Created:` footer of `mem_get_observation`, which can be reflowed or relabeled without notice. WHEN no `pipeline-state` observation exists — a change entered directly at SDD never ran inception-pipeline — t0 falls back to the earliest `created_at` among the change's own `sdd/{change}/*` observations in the same export, and the fallback MUST be named by source in `variance_vs_plan` so it is never mistaken for a tiering-go-ahead anchor. A `pipeline-state` observation carrying no `topic_key` is invisible to this selector and MUST be treated as absent, falling to the same rule.
+### When to fire
 
-Do NOT source `changed_lines` from `sdd/{change}/tasks` — its Review Workload Forecast is a pre-implementation planning guard, not an exact diff count (see `sdd-tasks/SKILL.md`).
+1. Run `labdrian roles resume --project {project} --goal {change} --chain {change}`.
+2. `"terminal": true` means the delivery hop has returned: the last record is the completed hand-off to delivery and no hop follows. It marks that hand-off, not the merge.
+3. `"terminal": false`, or an error because the chain has no records, means the chain is still running: do not fire.
+4. A terminal chain whose delivery has not merged yet is not closed either. Wait for the merge: t1 and `landing_commit` come from it.
 
-**`total_wall_clock_hours` is measured independently of the compute-hour sum.** It shares the same boundary as `checkpoint_count` — from the tiering go-ahead checkpoint (`sdd/{change}/pipeline-state`) through merge, not archive: post-merge archive-authorization replies are bookkeeping and MUST NOT count as development time. It MUST include any interruption gaps (e.g. provider rate/session-limit resets), not only active agent-compute time. Never derive it by summing `implementation_hours` + `review_gate_hours` + `post_review_fix_hours`; that sum is the agent-compute-time proxy, a distinct and usually smaller unit that must stay separately labeled.
+The chain's records are files at `$XDG_STATE_HOME/labdrian/role-chains/<project>/<goal>/<chain>/<seq>.json` (`$HOME/.local/state` when `XDG_STATE_HOME` is unset). Read the closing `reviewer → delivery` record there.
 
-**t1 is anchored in a versioned artifact recorded at delivery, never re-derived from unversioned `.git/` state.** Review receipts under `.git/gentle-ai/review-transactions/v2/<lineage>/review-receipt.json` are never versioned — a fresh clone has zero receipts — and the store's lineages carry no binding to a change name, so there is no rule for finding which receipt belongs to which change after the fact. `review-receipt-capture` (R-008) closes that gap: before `acknowledge-approved` burns the live transaction, the orchestrator persists the approved payload byte-for-byte to `openspec/changes/{change}/review-receipts/<lineage>.json` (legacy `gentle-ai.review-receipt/v2` shape) or `<lineage>.review-state.json` (the raw `review-state.json` shape gentle-ai 2.7.0+ writes instead, once the lifecycle stopped emitting the legacy receipt) — a versioned, change-bound copy either way. closure-feedback and `tools/archive-anchor-gate` read `approved_tree` and `review_lens_count` from THAT persisted file, in whichever shape it was captured, never from the live `.git/gentle-ai/review-transactions/v2/` store. Scanning commit history for whichever commit touched `openspec/changes/{change}/` is not a safe substitute either: a commit belonging to an unrelated change can touch that same folder and silently become the wrong t1 — not hypothetical, this repository's own history contains a case where such a scan lands on an unrelated PR's merge commit instead of the change's true landing commit. Neither approach is used, and there is no folder-scan fallback anywhere in this rule. WHEN no persisted receipt exists for the lineage, `archive-anchor-gate` BLOCKS archive with an explicit "no verified receipt" reason rather than resolving t1 from a self-asserted `approved_tree` — see the pre-archive gate compliance item below — unless an explicit owner override is recorded at `openspec/changes/{change}/review-receipts/override.json` AND the archive-report's `## Cycle Timestamps` section discloses the word "override"; the anchor is then self-asserted with a recorded override, never verified.
+### Plan
 
-**closure-feedback WRITES the anchor; it never merely reads one.** The ordering makes this unavoidable: this skill fires AFTER the SDD engine archives, and `sdd-archive` commits `archive-report.md` BEFORE the merge exists — so no archive report the engine wrote can name a landing commit that had not happened yet. Describing the anchor as something "the archive-report records" therefore assigned the write to a step that had already finished. At delivery — when the merge has just happened and the values are trivially known — derive `landing_commit` from the actual merge commit (the commit that merged the change onto the default branch; the last slice to land when delivered as chained PRs) and record it, in versioned prose, into the `## Cycle Timestamps` section this skill appends (Execute item 3) — always. Record into that same section `approved_tree` (that delivery's approved candidate tree — the native review receipt's `final_candidate_tree`) ONLY WHEN review ran for this candidate.
+Read what the chain left, at the locators the parent named in its prompts (Chain entry). Do NOT modify hop outputs (anything a hop wrote); the one carve-out is Execute item 3. Omit an optional field whose artifact was never named or cannot be read; never guess it.
 
-The recorded section is machine-checked, not merely written: `tools/archive-anchor-gate` scans every archive report dated on or after the convention and fails when one names no anchor, names a landing commit that does not resolve, claims `verified` with no independent tree to check against, or carries a tree that disagrees with `git show -s --format=%T`. Run it before reporting closure complete:
+- **Archive report**: the file the delivery prompt named (the delivery hop's envelope lists it under `artifacts`). Execute item 3 writes into it and cannot be omitted, so confirm it exists BEFORE the first write. If the delivery prompt named no path, or the file is not there, report it and write nothing. It is also the source of `changed_lines` if it records a realized diff-stat total; otherwise compute a diff-stat against the base commit.
+- **Verifier reports**: `<head12>-<n>.verifier.md`, stored beside the review results, when the verifier ran.
+- **Builder's apply-progress** and **shaper's spec** (the spec gives `requirement_count`).
+- **`sdd/{change}/pipeline-state`**: the tier-selection outcome and the ambiguity clarifying question if it fired — the only checkpoints inception-pipeline itself durably records.
+- **Stored review results**: `odd/review-results/<feature>/<head12>-<n>.json`, where `<feature>` is the name of the feature document `odd/tasks/<feature>.md` (`odd/review-results/README.md` spells out the layout). This is the ONLY place `approved_tree` is read from (see t1). A stored result lists no lenses, so record `review_lens_count` only when the closing `review-report` record's `context` states the rows the reviewer was sent.
+- Do NOT source `changed_lines` from the shaper's tasks artifact: its Review Workload Forecast is a pre-implementation planning guard, not an exact diff count (see `sdd-tasks/SKILL.md`).
 
-```bash
-# -C changes the process working directory: --repo is absolute, --known-gaps is
-# resolved inside the tool's own module directory. Each tool under tools/ is its
-# own Go module, so there is no repository-root module to `go run ./tools/...`.
-go run -C tools/archive-anchor-gate . \
-  --repo "$(git rev-parse --show-toplevel)" \
-  --known-gaps known-gaps.txt
-```
+#### t0
 
-Any non-zero exit is a hard stop: fix the record, never the ledger. WHEN no review ran, `approved_tree` MUST NOT be recorded at all — never synthesized from `landing_commit`'s own tree, because a check comparing a value against itself can never fail, and reporting an unfailable check as verification is a fabricated assurance, the same defect class this instrument exists to eliminate from the numbers it measures. WHEN `approved_tree` IS recorded, the anchor is **verifiable rather than merely asserted**: `git show -s --format=%T <landing_commit>` MUST equal the recorded `approved_tree`; WHEN it does not, the anchor is REJECTED, t1 is omitted, and the mismatch is disclosed in `variance_vs_plan` — never trust an unverified SHA. WHEN `approved_tree` is absent because no review ran, t1 STILL resolves from `landing_commit`'s committer timestamp alone — the measurement is not withheld — but the anchor is recorded as **self-asserted**: used, but with no independent authority to check it against. A tree hash MUST be used to **verify** a commit, never to **discover** one. Trees are not unique across commits — a content-preserving merge reproduces its parent's tree — and this repository contains a real three-way collision where `be2c3ca` (the merge that landed `deterministic-verification-evidence`), `aa81361` (an unrelated PR merge) and `459b48d` (an unrelated feature commit) all carry the same tree. Searching that tree for "the commit that landed the change" therefore returns commits belonging to other changes, whichever end of the range is picked; "earliest carrier" is a guess wearing the costume of a rule. WHEN reconstructing a historical record whose archive-report names a landing SHA in versioned prose (e.g. "merged as `be2c3ca`"), use that SHA directly — it is the recorded identity, and the tree is only a cross-check on it. WHEN a tree hash is all that is available and more than one commit on the default branch carries it, the anchor is ambiguous: t1 is omitted and the ambiguity is disclosed, never resolved by position. WHEN no `landing_commit` was ever recorded — a change predating this convention — t1 is omitted (R-021), `variance_vs_plan` states that the change predates the anchor convention, and no folder-scan re-derivation is attempted.
+1. Run `engram export <tmp>.json` and select the observation whose `topic_key` equals `sdd/{change}/pipeline-state`.
+2. t0 is that observation's typed `created_at` field — never the rendered `Created:` footer of `mem_get_observation`, which can be reflowed or relabeled without notice.
+3. If no `pipeline-state` observation exists (a change entered directly at the role chain never ran inception-pipeline), t0 falls back to the earliest `created_at` among the change's own `sdd/{change}/*` observations in the same export. The fallback MUST be named by source in `variance_vs_plan`, so it is never mistaken for a tiering-go-ahead anchor.
+4. A `pipeline-state` observation with no `topic_key` is invisible to this selector: treat it as absent and apply step 3.
 
-t1 is `landing_commit`'s committer timestamp, once resolved. The resolution outcome — verified, self-asserted, rejected, or absent — MUST be named in `variance_vs_plan` so no reader mistakes a self-asserted anchor (used, but never independently checked) for a verified one (independently checked against a review receipt).
+#### t1 and the landing anchor
 
-**`checkpoint_count` counts one unit per distinct human round-trip reply (R-015), uniformly regardless of how many decisions a single reply resolved. It shares total_wall_clock_hours' tiering-go-ahead-through-merge boundary.** inception-pipeline hands routing of proposal → spec → design → tasks → apply → verify → archive to the SDD engine and does not durably observe every live confirmation exchanged during those phases (e.g. mid-design product decisions, judgment-day rounds, chained-PR split confirmation, merge authorization) — do not claim "your own record" of checkpoints you never routed, and do not invent a field on `sdd/{change}/entry` to proxy them. Always include the durable floor `sdd/{change}/pipeline-state` actually carries: tiering go-ahead (always 1) + ambiguity clarifying question if fired (0-1) — any blocking ambiguity resolved by asking the user, whatever phase surfaced it and whichever tier-selection rule fired, not only a rule-4 tier ambiguity — this floor is guaranteed, never dropped. If a fuller count is reconstructable from the session narrative, fold it into the single `checkpoint_count` total (never a separate field) and itemize in `variance_vs_plan` free text which checkpoints were durably observed (via `pipeline-state`) versus reconstructed from the closure narrative. If no non-durable checkpoints occurred, `variance_vs_plan` MUST state this explicitly zero, and MUST still name the other half with it — which checkpoints were durably observed via `pipeline-state`, AND that zero were reconstructed from the closure narrative — never silently omitting either. The validator's half-disclosure rule rejects prose naming only one half, so "all durably observed" alone and "zero reconstructed" alone are both hard stops. Post-merge archive-authorization replies are excluded from this count as post-boundary bookkeeping, same as `total_wall_clock_hours`.
+t1 is `landing_commit`'s committer timestamp, once resolved. The anchor is recorded in a versioned artifact at delivery and is never re-derived from unversioned state.
 
-**Two more figures are yours to WRITE, and both live in `variance_vs_plan` prose because the schema is closed (R-003/R-004/R-005 forbid adding a property, and `additionalProperties: false` is unchanged).** Each was MANDATORY on the reading side through `sdd-time-estimation/SKILL.md`, which no longer reads either figure since its rewrite; `roadmap-maker/assets/roadmap-template.md` still gives `realized_slices` a tracking row, so an unwritten one leaves that mechanism inert, reading a field nobody fills. They ride the same prose-disclosure precedent as the durable-vs-reconstructed checkpoint split, and they inherit its stated cost: free text is not machine-verifiable.
+1. The chain's review results live in the repository, not under `.git/`, and each is bound to its feature by its path (`odd/review-results/<feature>/`). Committed with the feature, they reach a fresh clone.
+2. Closure-feedback WRITES the anchor; it never merely reads one. This skill fires after the delivery hop, and that hop wrote the archive report before the merge existed, so nothing the chain wrote can name the landing commit. Once the merge has happened, record in versioned prose, in the `## Cycle Timestamps` section this skill appends (Execute item 3):
+   - `landing_commit`, always: the actual merge commit that merged the change onto the default branch (the last slice to land when delivered as chained PRs);
+   - `approved_tree`, ONLY WHEN review ran for this candidate: `git show -s --format=%T <reviewed head>`, the reviewed head being the `candidate.head` of the stored result that the closing `reviewer → delivery` record binds as its `review-result` evidence.
+3. No review ran when no result is stored for this candidate, and also when the stored result's reviewed head does not resolve in this repository (a squashed branch that was deleted): there is no tree to take. Then `approved_tree` MUST NOT be recorded at all. Never synthesize it from `landing_commit`'s own tree: a check comparing a value against itself can never fail, and reporting an unfailable check as verification is a fabricated assurance.
+4. When `approved_tree` IS recorded, the anchor is **verifiable rather than merely asserted**: `git show -s --format=%T <landing_commit>` MUST equal the recorded `approved_tree`. When it does not, the anchor is REJECTED, t1 is omitted, and the mismatch is disclosed in `variance_vs_plan` — never trust an unverified SHA.
+5. When `approved_tree` is absent because no review ran, t1 STILL resolves from `landing_commit`'s committer timestamp alone — the measurement is not withheld — but the anchor is recorded as **self-asserted**: used, but with no independent authority to check it against.
+6. Never search history for the commit that landed the change.
+   - A tree hash MUST be used to **verify** a commit, never to **discover** one. Trees are not unique across commits (a content-preserving merge reproduces its parent's tree; `be2c3ca`, `aa81361` and `459b48d` all carry one tree in this repository), so a tree search returns commits of other changes whichever end of the range is picked, and the "earliest carrier" is a guess, not a rule.
+   - Scanning history for whichever commit touched the change's own files (`odd/tasks/<feature>.md`, `odd/review-results/<feature>/`) is no safe substitute: a commit of an unrelated change can touch the same files and silently become the wrong t1. There is no folder-scan fallback anywhere in this rule.
+   - A historical record whose archive report names a landing SHA in versioned prose (e.g. "merged as `be2c3ca`"): use that SHA directly. It is the recorded identity; the tree is only a cross-check on it.
+   - If a tree hash is all that is available and more than one commit on the default branch carries it, the anchor is ambiguous: t1 is omitted and the ambiguity is disclosed, never resolved by position.
+   - If no `landing_commit` was ever recorded (a change predating this convention), t1 is omitted (R-021), `variance_vs_plan` states that the change predates the anchor convention, and no folder-scan re-derivation is attempted.
+7. The resolution outcome — verified, self-asserted, rejected, or absent — MUST be named in `variance_vs_plan`, so no reader mistakes a self-asserted anchor (used, but never independently checked) for a verified one (checked against a stored review result).
+8. `tools/archive-anchor-gate` is history-only (owner decision 5, ADR C13-S0): it scans only the archive reports under `openspec/changes/archive/`. Its chain adapter is a separate goal (the ADR's Follow-ups); until then a report outside that tree has no machine check and the rules above are its only guard.
 
-- **`interruption_hours: <n>`** — the observed interruption duration for this change, naming its cause (session reset, provider rate limit, human unavailability). Record it whenever an interruption occurred; record `interruption_hours: 0` explicitly when none did, because "no line" and "no interruption" are different facts and a reader cannot tell them apart. R-011, which excluded interruption-contaminated samples from the round-trip-latency calibration, was retired together with that calibration, so no skill reads this figure now; it stays a record of what interrupted the change.
-- **`realized_slices: <n>`** — how many review candidates actually landed, counted from what exists (PRs opened under the chosen `chain_strategy`, or the apply batches that carried their own review boundary), never from the plan. The planned side is `len(review_slices)` in `sdd/{change}/entry`; there is no structured field for the realized side anywhere in the record. When the realized count genuinely cannot be established, write `realized slice count not recorded` — never reuse the planned number as though it were the outcome, which is precisely how an overrun disappears into a plan that looks like it held.
+#### Figures
 
-**Validate** — compute the actuals object **once** (implementation_hours, review_gate_hours, total_wall_clock_hours when resolved, post_review_fix_hours, approval_decision, scope_drift_notes, variance_vs_plan, plus the optional complexity-unit fields `requirement_count`, `changed_lines`, `review_lens_count`, `checkpoint_count` when their source artifact is readable) and validate it with the **deterministic validator**, never by reading it:
+- **`total_wall_clock_hours`** is measured independently of the compute-hour sum. It runs from the tiering go-ahead checkpoint (`sdd/{change}/pipeline-state`) through merge, not archive: post-merge archive-authorization replies are bookkeeping and MUST NOT count as development time. It MUST include interruption gaps (such as provider rate or session-limit resets), not only active agent-compute time. Never derive it by summing `implementation_hours` + `review_gate_hours` + `post_review_fix_hours`: that sum is the agent-compute-time proxy, a distinct and usually smaller unit that must stay separately labeled.
+- **`checkpoint_count`** counts one unit per distinct human round-trip reply (R-015), uniformly regardless of how many decisions a single reply resolved. It shares the boundary of `total_wall_clock_hours`, from the tiering go-ahead through merge; post-merge archive-authorization replies are excluded from this count as post-boundary bookkeeping.
+  - The role chain routes every hop from the shaper to delivery, so inception-pipeline does not durably observe every live confirmation exchanged during those hops (mid-design product decisions, judgment-day rounds, chained-PR split confirmation, merge authorization). Do not claim "your own record" of checkpoints you never routed, and do not invent a field to proxy them.
+  - Always include the durable floor that `sdd/{change}/pipeline-state` carries: the tiering go-ahead (always 1) plus the ambiguity clarifying question if it fired (0-1). Any blocking ambiguity resolved by asking the user counts, whatever phase surfaced it and whichever tier-selection rule fired, not only a rule-4 tier ambiguity. The floor is guaranteed and never dropped.
+  - If a fuller count is reconstructable from the session narrative, fold it into the single `checkpoint_count` total (never a separate field) and itemize in `variance_vs_plan` free text which checkpoints were durably observed (via `pipeline-state`) versus reconstructed from the closure narrative.
+  - If no non-durable checkpoints occurred, `variance_vs_plan` MUST state this explicitly zero and MUST still name the other half with it: which checkpoints were durably observed via `pipeline-state`, AND that zero were reconstructed from the closure narrative. The validator's half-disclosure rule rejects prose naming only one half, so "all durably observed" alone and "zero reconstructed" alone are both hard stops.
+- **Two more figures** go in `variance_vs_plan` prose, because the schema is closed (R-003/R-004/R-005 forbid adding a property, and `additionalProperties: false` is unchanged). Free text is not machine-verifiable.
+  - `interruption_hours: <n>` — the observed interruption duration for this change, naming its cause (session reset, provider rate limit, human unavailability). Record it whenever an interruption occurred. Record `interruption_hours: 0` explicitly when none did, because "no line" and "no interruption" are different facts and a reader cannot tell them apart. No skill reads this figure now (R-011, which excluded interruption-contaminated samples from the round-trip-latency calibration, was retired with that calibration); it stays a record of what interrupted the change.
+  - `realized_slices: <n>` — how many review candidates actually landed, counted from what exists and never from the plan: the PRs delivered under the chosen `chain_strategy`, or the stored review results that carried their own review boundary, one per slice (a second blind launch of one head is a second file, not a second slice). `roadmap-maker/assets/roadmap-template.md` has a tracking row for it, so an unwritten figure leaves that row reading a field nobody fills.
+  - The planned side of `realized_slices` is the slice count the chain's shaper/estimator record states; there is no structured field for either side in the actuals record. When the planned count is not stated there, write `planned slice count not recorded`. When the realized count cannot be established, write `realized slice count not recorded`. Never reuse the planned number as though it were the outcome: that is how an overrun disappears into a plan that looks like it held.
 
-```bash
-# -C changes the process working directory, so both paths are absolute. Each
-# tool under tools/ is its own Go module; there is no repository-root module.
-root="$(git rev-parse --show-toplevel)"
-go run -C "$root/tools/actuals-record-validator" . \
-  --schema "$root/skills/_shared/actuals-record.schema.json" \
-  --instance /absolute/path/to/actuals-candidate.json
-```
+### Validate
 
-**Fail-closed rule.** Exit `0` is the only result that authorises the write. Any non-zero exit — and a missing or unbuildable validator, which is not the same thing as a pass — is a hard stop: report it and write nothing. Reading the JSON, checking that the fields look present, or attesting that you were careful is NOT validation; the record's author cannot be its validator. Beyond schema shape the validator enforces what shape cannot express: `approval_decision` inside the closed outcome vocabulary, non-negative hours and counts, the durable-vs-reconstructed disclosure a recorded `checkpoint_count` owes, the measured-vs-reconstructed disclosure a recorded `total_wall_clock_hours` owes, and — the rule that exists because it was actually broken — that `scope_drift_notes` and `variance_vs_plan` carry their own content instead of deferring it to some other section ("see the narrative below — this field is summarised there rather than duplicated" satisfies every required-field check JSON Schema can make while recording nothing). Cross-reference in ADDITION to the content, never INSTEAD of it. The complexity-unit fields are recorded for reference only (`sdd-time-estimation` no longer derives a per-unit calibration rate from them) — omit any field whose source artifact could not be read rather than guessing; `total_wall_clock_hours` is validly absent when its anchors do not resolve (R-021), and `implementation_hours`, `review_gate_hours`, and `post_review_fix_hours` are validly absent while no durable source exists for them (R-019) — every other resolved field is still required. If validation fails for any other reason, report and STOP — do not partial-write.
+1. Compute the actuals object **once**: `implementation_hours`, `review_gate_hours`, `total_wall_clock_hours` when resolved, `post_review_fix_hours`, `approval_decision`, `scope_drift_notes`, `variance_vs_plan`, plus the optional complexity-unit fields `requirement_count`, `changed_lines`, `review_lens_count` and `checkpoint_count` when their source artifact is readable. Those four are recorded for reference only (`sdd-time-estimation` no longer derives a per-unit calibration rate from them): omit any whose source artifact could not be read rather than guessing.
+2. Validate it with the **deterministic validator**, never by reading it:
 
-**`implementation_hours`, `review_gate_hours`, and `post_review_fix_hours` stay unpopulated (R-019) — state why, do not leave it silent.** No durable source exists for any of the three yet: orchestrator telemetry is session-transient, the `sdd-attempt` ledger has no timestamp fields, and transcripts carry no structured subagent durations. None of the three MAY be filled with `total_wall_clock_hours` or any other elapsed-time proxy while this remains true.
+   ```bash
+   # -C changes the process working directory, so both paths are absolute. Each
+   # tool under tools/ is its own Go module; there is no repository-root module.
+   root="$(git rev-parse --show-toplevel)"
+   go run -C "$root/tools/actuals-record-validator" . \
+     --schema "$root/skills/_shared/actuals-record.schema.json" \
+     --instance /absolute/path/to/actuals-candidate.json
+   ```
 
-**Execute** — write, in order:
+3. Exit `0` is the only result that authorises the write. Any non-zero exit is a hard stop, and so is a missing or unbuildable validator, which is not a pass: report it and write nothing. Reading the JSON, checking that the fields look present, or attesting that you were careful is NOT validation; the record's author cannot be its validator.
+4. Beyond schema shape the validator enforces: `approval_decision` inside the closed outcome vocabulary; non-negative hours and counts; the durable-vs-reconstructed disclosure a recorded `checkpoint_count` owes; the measured-vs-reconstructed disclosure a recorded `total_wall_clock_hours` owes; and that `scope_drift_notes` and `variance_vs_plan` carry their own content instead of deferring it to some other section. That last rule exists because it was actually broken: "see the narrative below — this field is summarised there rather than duplicated" satisfies every required-field check JSON Schema can make while recording nothing. Cross-reference in ADDITION to the content, never INSTEAD of it.
+5. `total_wall_clock_hours` is validly absent when its anchors do not resolve (R-021), and `implementation_hours`, `review_gate_hours`, and `post_review_fix_hours` are validly absent while no durable source exists for them (R-019) — every other resolved field is still required. If validation fails for any other reason, report and STOP — do not partial-write.
+6. The three compute-time fields stay unpopulated (R-019); state why, do not leave it silent. No durable source exists for any of them yet: orchestrator telemetry is session-transient, the `sdd-attempt` ledger has no timestamp fields, and transcripts carry no structured subagent durations. None of the three MAY be filled with `total_wall_clock_hours` or any other elapsed-time proxy while this remains true.
+
+### Execute
+
+Write items 1-3 in order. If one of them fails after another succeeded, report the inconsistency and STOP; never leave the stores silently out of sync.
+
 1. `sdd/{change}/actuals` (the authoritative single actuals notebook).
 2. `project/{project}/estimation-calibration` (append/update — variance patterns; no skill reads it since `sdd-time-estimation` was rewritten).
-3. Append a `## Cycle Timestamps` section to the archived `archive-report.md` — a named, delimited, append-only carve-out to closure-feedback's own "do NOT modify engine outputs" rule (engine bytes elsewhere untouched, the Engram archive-report topic untouched): a 2-row table with t0 (topic key, observation id, `created_at`, primary-or-fallback source) and t1 (`landing_commit`, `approved_tree` when recorded, committer timestamp, and the verified/self-asserted/rejected outcome).
+3. Append a `## Cycle Timestamps` section to the archived `archive-report.md` the delivery prompt named (confirmed in Plan) — a named, delimited, append-only carve-out to closure-feedback's own "do NOT modify hop outputs" rule (the report's other bytes untouched): a 2-row table with t0 (topic key, observation id, `created_at`, primary-or-fallback source) and t1 (`landing_commit`, `approved_tree` when recorded, committer timestamp, and the verified/self-asserted/rejected outcome).
+4. After items 1-3 succeed, fire the archive-time sync trigger from the project root:
 
-On any partial-write failure (any of the three written, another not), **report the inconsistency and STOP**. Do not silently leave the stores out of sync.
+   ```bash
+   labdrian longterm-mem sync-trigger --event archive --cwd "$root" || true
+   ```
 
-4. AFTER the three writes above succeed, fire the archive-time sync trigger from the project root:
-
-```bash
-labdrian longterm-mem sync-trigger --event archive --cwd "$root" || true
-```
-
-This is a **best-effort, non-blocking, informational** call — it runs strictly after the STOP-on-partial-write rule above, never before, and its outcome (including the `|| true` swallowing a non-zero exit) never blocks or reverses closure. `labdrian longterm-mem sync-trigger` itself always exits 0 regardless of whether the sync it schedules actually ran (the `sync-trigger` branch of `cmd_longterm_mem` in `bin/lib/longterm_mem.sh`), so the trailing `|| true` here is a second, redundant safety net — kept because closure-feedback must stay non-blocking even if that guarantee ever regresses.
+   It is best-effort and informational: it runs only after items 1-3 succeed, and a failed, skipped or missing sync never blocks or reverses closure. The command already exits 0 whatever the sync does (the `sync-trigger` branch of `cmd_longterm_mem` in `bin/lib/longterm_mem.sh`); the trailing `|| true` is a redundant safety net, kept so closure stays non-blocking even if that guarantee regresses.
 
 Downstream consumers read on their next run — you do NOT push to them:
 - **roadmap-maker** reads `sdd/{change}/actuals` on its next render.
@@ -211,19 +200,17 @@ Downstream consumers read on their next run — you do NOT push to them:
 ## Gotchas (real traps)
 
 - **Single actuals writer.** Only closure-feedback writes `sdd/{change}/actuals`. Never let `sdd-archive` or any other skill write it — do NOT modify the managed `sdd-archive`.
-- **Never route SDD phases.** The native dispatcher owns proposal → … → archive. inception-pipeline only sequences PRE-SDD producers + POST-SDD closure.
 - **Assert foundation before Tier 2/3.** manifest + architect MUST exist in engram before choosing Tier 2 or 3. Missing manifest → Tier 1.
 - **Default up on ambiguity.** When the tier is unclear, choose the higher tier, record rationale in `sdd/{change}/pipeline-state`, ask at most one question.
-- **Route by native JSON only.** Use `gentle-ai sdd-status {change} --cwd {project-root} --json --instructions` → `nextRecommended` / `blockedReasons`.
-- **Never weaken validation.** Missing/mismatched v2 assets, validator failures, stale dispatcher recommendations, and fabricated OpenSpec paths all stop the handoff.
 - **change-name is derived once.** requirements-capture owns it; inherit verbatim, never re-derive downstream.
 - **Stop on partial closure writes.** If actuals, calibration, or the archive-report append fails, report and stop — do not leave the stores inconsistent.
-- **The archive-report append is a named carve-out, not a precedent.** The `## Cycle Timestamps` append-only carve-out applies to that one delimited section only — it does not license editing any other part of the engine's native `archive-report.md`, and the Engram archive-report topic stays untouched either way.
+- **The archive-report append is a named carve-out, not a precedent.** The `## Cycle Timestamps` append-only carve-out applies to that one delimited section only — it does not license editing any other part of the delivery hop's archive report.
 - **The archive-time sync trigger never gates closure.** Execute step 4's `labdrian longterm-mem sync-trigger --event archive --cwd "$root" || true` runs after all three writes succeed and its result is purely informational — a failed, skipped, or missing sync is never a reason to report closure as incomplete, and it lives here rather than in the managed `sdd-archive/SKILL.md`.
 
 ## References
 
 - `../_shared/pre-sdd-contracts.md` — contract authority: topic keys, change-name rule, language rule, schemas, registry-block format.
-- `../_shared/entry-contract.schema.json` — entry contract schema (validated at the dispatcher gate).
+- `skills/role-chain/SKILL.md` — the chain this skill enters; it owns every hop.
+- `odd/review-results/README.md` — the layout of the stored review results closure-feedback reads.
 - `../_shared/actuals-record.schema.json` — actuals record schema (validated at closure).
 - `references/tier-selection.md` — worked tier-selection examples. **Load conditionally**: read only when the tier is ambiguous (rule 4).
