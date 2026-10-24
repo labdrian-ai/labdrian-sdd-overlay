@@ -3,7 +3,7 @@ name: clarify-request
 description: "Trigger: user wants to explore an idea, clarify a request, prepare requirements or understand a problem before a change. Restates it, asks at most 3 questions."
 license: Apache-2.0
 metadata:
-  author: gentleman-programming
+  author: labdrian
   version: "2.0"
 ---
 

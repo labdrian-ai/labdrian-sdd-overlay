@@ -110,8 +110,9 @@ func TestAddEntryRoundTrip(t *testing.T) {
 // real registry and real SKILL.md files, read-only.
 //
 // At the Phase 8 base every registered skill was global and unapproved, and the baseline
-// grandfathered all 37 of them. 35 remain: gadu-operator and gadu-orchestrate were retired, and a
-// retired skill leaves the baseline deliberately. So on the repository as it is:
+// grandfathered all 37 of them. 34 remain: gadu-operator and gadu-orchestrate were retired, and
+// prespec-malandra was replaced by clarify-request; a retired or replaced skill leaves the baseline
+// deliberately. So on the repository as it is:
 //   - every baseline id is a registered global skill;
 //   - every registered global skill is either grandfathered at its pinned digest or carries a valid
 //     record (the latter is how a later, approved modification of a baseline skill or a newly added
