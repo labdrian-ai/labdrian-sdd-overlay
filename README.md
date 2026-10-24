@@ -433,7 +433,7 @@ overlay skills <verb>
     status       [--registry <path>]                                               print count summary (total / core / custom)
     candidates   [--project-root <abs>] [--status <status>]... [--kind <kind>] [--drafts] [--json]
                  read-only Engram candidate and draft listing with reconciliation anomalies; source failures exit 2
-    validate     [--registry <path>] [--manifest <path>] --source-root <path>      cross-check registry vs manifest and skills/ on disk vs manifest, and that every global skill has a valid approval record (the 35 of the 37 global skills present at the Phase 8 base, which is `main` at `53f545d`, the commit the skill lifecycle was built on, that are still registered — `gadu-operator` and `gadu-orchestrate` were retired — are grandfathered while their bytes are unchanged); exit 1 on any divergence
+    validate     [--registry <path>] [--manifest <path>] --source-root <path>      cross-check registry vs manifest and skills/ on disk vs manifest, and that every global skill has a valid approval record (the 34 of the 37 global skills present at the Phase 8 base, which is `main` at `53f545d`, the commit the skill lifecycle was built on, that are still registered — `gadu-operator` and `gadu-orchestrate` were retired and `prespec-malandra` was replaced by `clarify-request` — are grandfathered while their bytes are unchanged); exit 1 on any divergence
     install      [--registry <path>] [--source-root <path>] [--project-id <id>]   install the project-scoped skills admitted for the project into <cwd>/.claude/skills/ and <cwd>/.agents/skills/, replacing only what it installed and left unmodified (see below)
     adopt        [--registry <path>] [--source-root <path>] [--project-id <id>]   record skill directories already in the project as installed by `skills install`, only when they are exactly the current source
     add          <id> [--registry <path>] [--manifest <path>] [--source-root <path>] [--repo <url>] [--ref <sha>]  register a skill (custom or external); refused, with nothing written, unless skills/<id>/.approval.json approves the exact SKILL.md bytes (see approve)
@@ -441,7 +441,7 @@ overlay skills <verb>
     sync-manifest [--registry <path>] [--manifest <path>]                          regenerate */SKILL.md rows from registry; preserves all non-skill lines
     approve      --id <id> --approver <label> --source-root <path>                 record a human approval of skills/<id>/SKILL.md in skills/<id>/.approval.json, bound to the SHA-256 of its exact bytes
                  The engine cannot prove a human ran approve: the record only proves it matches the exact bytes of the skill beside it.
-                 A skill that fails the hard lint is refused, except a baseline skill (the 35 grandfathered global skills, which predate the lint budget and will be
+                 A skill that fails the hard lint is refused, except a baseline skill (the 34 grandfathered global skills, which predate the lint budget and will be
                  rewritten in a later feature): for those, approve prints each hard finding as a `warning: [lint:<rule>] ... (baseline skill: approved with lint findings)`
                  line on stderr, still records the approval of the exact bytes, and exits 0, so an upstream merge that changes one of them can be approved. Only the
                  legacy rules warn (body-hard-budget, description-max, description-one-line); any other hard finding, such as a missing front matter, refuses a
