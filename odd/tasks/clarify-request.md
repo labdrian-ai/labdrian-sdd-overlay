@@ -23,8 +23,8 @@ Owner decisions D1-D5 (2026-10-23, Engram #4426). Diagnosis workflow `wf_b1a9398
 
 | ID | Specs | Route | Status | Commit / evidence |
 |---|---|---|---|---|
-| T1 | S1-S7 | delegated builder (owner L1 standing: implementations by Sonnet at max effort) + independent verifier (item 3: a mirrored skill prompt consumed on four runtimes is renamed and its contract changes) | applied; independent verify and S8 pending | `7b10de14`; RED 40 fail, GREEN 41 pass (L4) |
-| T2 | S8 | owner | open | |
+| T1 | S1-S7 | delegated builder (owner L1 standing: implementations by Sonnet at max effort) + independent verifier (item 3: a mirrored skill prompt consumed on four runtimes is renamed and its contract changes) | done (verified, L5; reviewed in `review-630d78e5ffe7b5f6`, L6) | `7b10de14`; RED 40 fail, GREEN 41 pass (L4) |
+| T2 | S8 | owner | done | The owner ran the approval in this session; record digest `92575e2d...` equals the SKILL.md bytes of `a712d8c5`; committed `0fdc75d2` (L6) |
 | F1 | D3 a | separate slice, after this one merges: retire `labdrian prespec rank/lint/readiness` (and `brief`, now unused) after checking other consumers. Also check runtime skill directories for a stale installed `prespec-malandra` copy, since apply does not prune it (verifier advisory A3, L5) | open | |
 
 ## Log
@@ -45,3 +45,6 @@ Owner decisions D1-D5 (2026-10-23, Engram #4426). Diagnosis workflow `wf_b1a9398
   - A2 (advisory, pre-existing): `skills/_shared/pre-sdd-contracts.md` gains the row `project/{project}/clarify/{YYYYMMDD-HHMM}`, writer `clarify-request`. `tools/entry-contract-validator` tests: ok.
   - A3 (advisory): apply does not prune an installed `prespec-malandra` copy; moved to F1.
   - Checks: `go test -count=1 ./skills/` in `engine` fails only those two S8 tests; `bash -n bin/lib/usage.sh` ok. SKILL.md is 3243 bytes.
+- **L6** (2026-10-24, owner + parent): the owner ran the approval verb for `clarify-request` in this session (approver `labdrian`, output `sha256: 92575e2de22929415a1a76289ae2996ec9bb0bc53de8322492af06ebb99ecfba`, equal to the SKILL.md digest at `a712d8c5`); committed as `0fdc75d2`. `go test -count=1 ./skills/` in `engine`: ok.
+  - Native review `review-630d78e5ffe7b5f6` over `f13b2c7f..0fdc75d2` (risk, readability, reliability; item 3 escalated): approved and acknowledged (`authority: burned`). Receipt: the parent pruned the copied receipts by the wrong lineage id (the one the stop hook printed, `review-e276fe34c5fb15ed`) and so deleted the untracked state copy of this lineage, which cannot be captured again after the burn. The `gentle-ai.review-acknowledged/v1` envelope is committed instead, as `odd/review-receipts/clarify-request/review-630d78e5ffe7b5f6.acknowledged.json`.
+  - Findings, all non-blocking, all resolved. R1-001 (WARNING, the approval record could not be proven human-made): the owner ran it in this session (above), and its digest matches the final SKILL.md bytes. R2-1 (WARNING, the log said S8 was pending): the T1 and T2 rows and this entry are updated. R2-2 (SUGGESTION): the help-text pin now lowercases both the text and the expected phrase.

@@ -126,7 +126,7 @@ func TestClarifyRequestReplacesPrespecMalandra(t *testing.T) {
 				continue
 			}
 			for _, want := range []string{"no skill calls", clarifyRequestID} {
-				if !strings.Contains(strings.ToLower(text), want) {
+				if !strings.Contains(strings.ToLower(text), strings.ToLower(want)) {
 					t.Errorf("%s: the text about the prespec verbs must say %q, got %q", path, want, text)
 				}
 			}
