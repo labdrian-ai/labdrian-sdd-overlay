@@ -1,7 +1,5 @@
 package settings
 
-import "strings"
-
 // installedFamilies are the families Merge puts in settings.json, in install order. The order is
 // the order of the entries a fresh install writes under one event, so it is part of the file's
 // bytes; a family added here goes after the ones that exist.
@@ -168,32 +166,6 @@ func hasEntryMatching(hooks map[string]interface{}, key string, match func(inter
 	for _, e := range entries {
 		if match(e) {
 			return true
-		}
-	}
-	return false
-}
-
-// entryContainsBinary returns true if the hook entry (an outer object) contains
-// hookCommand as a substring in any of its inner hooks[].command strings, bare (as entries written
-// before the commands were quoted have it) or shell-quoted (as they are written now).
-func entryContainsBinary(e interface{}, hookCommand string) bool {
-	em, ok := e.(map[string]interface{})
-	if !ok {
-		return false
-	}
-	innerHooks, ok := em["hooks"].([]interface{})
-	if !ok {
-		return false
-	}
-	for _, ih := range innerHooks {
-		ihm, ok := ih.(map[string]interface{})
-		if !ok {
-			continue
-		}
-		if cmdStr, ok := ihm["command"].(string); ok {
-			if strings.Contains(cmdStr, hookCommand) || strings.Contains(cmdStr, shellQuote(hookCommand)) {
-				return true
-			}
 		}
 	}
 	return false

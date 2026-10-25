@@ -37,7 +37,7 @@ func HasMatchedHookContaining(root map[string]interface{}, event, matcher string
 // entryHoldsWords reports whether the commands of the entry mention every word.
 func entryHoldsWords(e interface{}, words []string) bool {
 	for _, word := range words {
-		if !entryContainsBinary(e, word) {
+		if !entryMentions(e, word) {
 			return false
 		}
 	}

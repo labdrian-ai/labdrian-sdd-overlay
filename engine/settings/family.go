@@ -73,7 +73,7 @@ func (f hookFamily) owns(e interface{}, hookCommand string) bool {
 // and the family's identity token. The status helpers answer by it for whatever path they are
 // given; install and uninstall refuse an empty path before they get here.
 func (f hookFamily) carries(e interface{}, hookCommand string) bool {
-	return entryContainsBinary(e, hookCommand) && entryContainsBinary(e, f.identity)
+	return entryMentions(e, hookCommand) && entryMentions(e, f.identity)
 }
 
 // matchingSpec returns the index of the spec whose exact entry equals e, or -1.
