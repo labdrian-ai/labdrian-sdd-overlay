@@ -401,7 +401,7 @@ func TestSettingsWithoutAHooksObjectFailTheTwoBaseHooksWithTheirOwnWords(t *test
 			report := w.check()
 			wantCheck(t, report.named(t, labelPrompt), Fail, "hooks key missing in settings.json")
 			wantCheck(t, report.named(t, labelAgent), Fail, "hooks key missing in settings.json")
-			wantCheck(t, report.named(t, labelSession), Warn, "no SessionEnd entry referencing gentle-ai-overlay; "+wantRemediation)
+			wantCheck(t, report.named(t, labelSession), Warn, "no SessionEnd entry referencing "+binaryPath+" and sync-trigger; "+wantRemediation)
 		})
 	}
 }
@@ -410,9 +410,9 @@ func TestAnEmptyHooksObjectHasNoEntryForTheBaseHooks(t *testing.T) {
 	w := complete(t)
 	w.settings.docs[settingsPath] = docOf(t, map[string]interface{}{"hooks": map[string]interface{}{}})
 	report := w.check()
-	wantCheck(t, report.named(t, labelPrompt), Fail, "no UserPromptSubmit entry referencing gentle-ai-overlay")
-	wantCheck(t, report.named(t, labelAgent), Fail, `no PreToolUse entry with matcher="Agent" referencing gentle-ai-overlay`)
-	wantCheck(t, report.named(t, labelReceipt), Warn, `no PreToolUse entry with matcher="Bash" referencing gentle-ai-overlay; `+wantRemediation)
+	wantCheck(t, report.named(t, labelPrompt), Fail, "no UserPromptSubmit entry referencing "+binaryPath+" and minimalism-contract.md")
+	wantCheck(t, report.named(t, labelAgent), Fail, `no PreToolUse entry with matcher="Agent" referencing `+binaryPath+" and minimalism-contract.md")
+	wantCheck(t, report.named(t, labelReceipt), Warn, `no PreToolUse entry with matcher="Bash" referencing `+binaryPath+" and review-receipt; "+wantRemediation)
 }
 
 func entry(matcher interface{}, command string) map[string]interface{} {
@@ -423,32 +423,40 @@ func entry(matcher interface{}, command string) map[string]interface{} {
 	return e
 }
 
-func TestTheBaseHooksNeedTheBinaryInAnEntryOfTheEventAndAgentAsTheMatcherOfTheSecond(t *testing.T) {
+func TestTheBaseHooksNeedTheBinaryAndTheMinimalismWordInAnEntryOfTheEventAndAgentAsTheMatcherOfTheSecond(t *testing.T) {
+	const word = " propagate --contract-file minimalism-contract.md"
 	cases := []struct {
 		name         string
 		events       map[string]interface{}
 		prompt, tool Level
 	}{
-		{"the binary under both", map[string]interface{}{
-			"UserPromptSubmit": []interface{}{entry(nil, binaryPath+" propagate")},
-			"PreToolUse":       []interface{}{entry("Agent", binaryPath+" gate-task")},
+		{"the binary and the word under both", map[string]interface{}{
+			"UserPromptSubmit": []interface{}{entry(nil, binaryPath+word)},
+			"PreToolUse":       []interface{}{entry("Agent", binaryPath+" gate-task --contract-file minimalism-contract.md")},
 		}, OK, OK},
+		{"the binary shell-quoted", map[string]interface{}{
+			"UserPromptSubmit": []interface{}{entry(nil, "'"+binaryPath+"'"+word)},
+		}, OK, Fail},
 		{"the prompt hook looks at no matcher", map[string]interface{}{
-			"UserPromptSubmit": []interface{}{entry("whatever", binaryPath)},
+			"UserPromptSubmit": []interface{}{entry("whatever", binaryPath+word)},
 		}, OK, Fail},
 		{"someone else's entries", map[string]interface{}{
 			"UserPromptSubmit": []interface{}{entry(nil, "echo hi")},
 			"PreToolUse":       []interface{}{entry("Agent", "echo hi")},
 		}, Fail, Fail},
-		{"the identity alone is a substring, not the path", map[string]interface{}{
-			"UserPromptSubmit": []interface{}{entry(nil, "/elsewhere/gentle-ai-overlay-2 propagate")},
-			"PreToolUse":       []interface{}{entry("Agent", "gentle-ai-overlay")},
-		}, OK, OK},
+		{"the binary's name in another path is not the installed binary", map[string]interface{}{
+			"UserPromptSubmit": []interface{}{entry(nil, "/elsewhere/gentle-ai-overlay"+word)},
+			"PreToolUse":       []interface{}{entry("Agent", "gentle-ai-overlay gate-task --contract-file minimalism-contract.md")},
+		}, Fail, Fail},
+		{"the binary without the family's word", map[string]interface{}{
+			"UserPromptSubmit": []interface{}{entry(nil, binaryPath+" propagate")},
+			"PreToolUse":       []interface{}{entry("Agent", binaryPath+" gate-task")},
+		}, Fail, Fail},
 		{"another matcher", map[string]interface{}{
-			"PreToolUse": []interface{}{entry("agent", binaryPath), entry("Bash", binaryPath), entry(5, binaryPath), entry(nil, binaryPath)},
+			"PreToolUse": []interface{}{entry("agent", binaryPath+word), entry("Bash", binaryPath+word), entry(5, binaryPath+word), entry(nil, binaryPath+word)},
 		}, Fail, Fail},
 		{"the matcher is found in a later entry", map[string]interface{}{
-			"PreToolUse": []interface{}{entry("Bash", binaryPath), "x", 7, entry("Agent", binaryPath)},
+			"PreToolUse": []interface{}{entry("Bash", binaryPath+word), "x", 7, entry("Agent", binaryPath+word)},
 		}, Fail, OK},
 		{"entries that are not entries", map[string]interface{}{
 			"UserPromptSubmit": []interface{}{"x", 1, nil, map[string]interface{}{"hooks": "x"}, map[string]interface{}{"hooks": []interface{}{7, map[string]interface{}{"command": 7}}}},
@@ -522,8 +530,8 @@ func TestAMissingFamilyIsOnlyWarnedOfWhileAMissingBaseHookFails(t *testing.T) {
 		dropHooks(root, "PreToolUse", "review-receipt")
 	})
 	report := w.check()
-	wantCheck(t, report.named(t, labelSession), Warn, "no SessionEnd entry referencing gentle-ai-overlay; "+wantRemediation)
-	wantCheck(t, report.named(t, labelReceipt), Warn, `no PreToolUse entry with matcher="Bash" referencing gentle-ai-overlay; `+wantRemediation)
+	wantCheck(t, report.named(t, labelSession), Warn, "no SessionEnd entry referencing "+binaryPath+" and sync-trigger; "+wantRemediation)
+	wantCheck(t, report.named(t, labelReceipt), Warn, `no PreToolUse entry with matcher="Bash" referencing `+binaryPath+" and review-receipt; "+wantRemediation)
 	if report.Outcome() != Degraded {
 		t.Errorf("Outcome = %v, want Degraded", report.Outcome())
 	}
@@ -618,11 +626,16 @@ func TestTheApproveGuardNamesWhatIsMissingOrDriftedAndTheLimitOfAGuard(t *testin
 	}
 }
 
-func TestTheProjectionAndApproveHooksAreMatchedByTheInstalledPathAndNotByTheIdentityAlone(t *testing.T) {
+func TestEveryHookIsMatchedByTheInstalledPathAndNotByTheIdentityAlone(t *testing.T) {
 	w := complete(t)
 	w.settings.docs["/other/.claude/settings.json"] = w.settings.docs[settingsPath]
 	report := Service{Files: w.files, Settings: w.settings, Blocks: testBlocks()}.Check(Request{Home: "/other", Cwd: project})
 	// The entries name /h/.claude/bin/gentle-ai-overlay; under another home that is not the binary.
+	for label, want := range map[string]Level{labelPrompt: Fail, labelAgent: Fail, labelSession: Warn, labelReceipt: Warn, labelShaper: Warn} {
+		if got := report.named(t, label).Level; got != want {
+			t.Errorf("%s of another binary = %v, want %v", label, got, want)
+		}
+	}
 	if report.named(t, "hooks: projection (SessionStart + UserPromptSubmit + PreToolUse gates + PostToolUse read evidence)").Level != Warn {
 		t.Error("the projection hooks of another binary were taken for this one's")
 	}

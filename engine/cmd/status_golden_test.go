@@ -251,6 +251,8 @@ func statusGoldenCases() []registryGoldenCase {
 				{"the matcher is compared as it is written: agent and 5 are not Agent",
 					`{"hooks":{"PreToolUse":[` + entry(`"agent"`, bin) + `,` + entry(`5`, bin) + `,` + entry(`null`, bin) + `]}}`},
 				{"the binary in the two base hooks and nothing else: the other families are WARN",
+					`{"hooks":{"UserPromptSubmit":[` + entry(`""`, bin+" propagate --contract-file minimalism-contract.md") + `],"PreToolUse":[` + entry(`"Agent"`, bin+" gate-task --contract-file minimalism-contract.md") + `]}}`},
+				{"the binary in the two base hooks without the minimalism word: both FAIL",
 					`{"hooks":{"UserPromptSubmit":[` + entry(`""`, bin+" propagate") + `],"PreToolUse":[` + entry(`"Agent"`, bin+" gate-task") + `]}}`},
 				{"the binary in SessionEnd and in Bash, without the words of their families",
 					`{"hooks":{"SessionEnd":[` + entry(`""`, bin+" other") + `],"PreToolUse":[` + entry(`"Bash"`, bin+" other") + `]}}`},

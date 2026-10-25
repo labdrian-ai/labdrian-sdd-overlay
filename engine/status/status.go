@@ -155,9 +155,16 @@ type Service struct {
 	Blocks []ScopedBlock
 }
 
-// binaryIdentity is the substring that tells the overlay's hook entries from every other
-// entry in settings.json: the name of the installed binary.
+// binaryIdentity is the name of the installed binary. Every hook check matches the full installed
+// path together with its family's token, never this name alone, so an entry of another copy of the
+// binary is not taken for this installation's.
 const binaryIdentity = "gentle-ai-overlay"
+
+// referencing names what a hook check looks for in one entry: the installed binary and the token of
+// its family.
+func referencing(hookCommand, identity string) string {
+	return hookCommand + " and " + identity
+}
 
 // Words that more than one check says.
 const (
@@ -193,11 +200,11 @@ func (s Service) Check(req Request) Report {
 
 	checks := []Check{
 		checkBinary(binaryPath, s.Files),
-		checkUserPromptSubmitHook(loaded),
-		checkPreToolUseHook(loaded),
-		checkSessionEndHook(loaded),
-		checkReviewReceiptHook(loaded),
-		checkShaperClearanceGuard(loaded),
+		checkUserPromptSubmitHook(loaded, binaryPath),
+		checkPreToolUseHook(loaded, binaryPath),
+		checkSessionEndHook(loaded, binaryPath),
+		checkReviewReceiptHook(loaded, binaryPath),
+		checkShaperClearanceGuard(loaded, binaryPath),
 		checkProjectionHooks(loaded, binaryPath),
 		checkApproveGuard(loaded, binaryPath),
 		CheckContract(contractPath, s.Files),
@@ -269,8 +276,9 @@ func checkBinary(binaryPath string, files Files) Check {
 	return Check{Label: label, Level: OK}
 }
 
-// checkUserPromptSubmitHook verifies a UserPromptSubmit entry references our binary.
-func checkUserPromptSubmitHook(s loadedSettings) Check {
+// checkUserPromptSubmitHook verifies a UserPromptSubmit entry references the installed binary and
+// the minimalism family token.
+func checkUserPromptSubmitHook(s loadedSettings, hookCommand string) Check {
 	label := "hook: UserPromptSubmit (propagate)"
 	if c, done := s.beforeEntries(label, Fail, ""); done {
 		return c
@@ -278,14 +286,15 @@ func checkUserPromptSubmitHook(s loadedSettings) Check {
 	if !settings.HasHooksObject(s.root) {
 		return Check{Label: label, Level: Fail, Note: "hooks key missing in settings.json"}
 	}
-	if settings.HasHookContaining(s.root, "UserPromptSubmit", binaryIdentity) {
+	if settings.HasLabdrianMinimalismHook(s.root, "UserPromptSubmit", hookCommand) {
 		return Check{Label: label, Level: OK}
 	}
-	return Check{Label: label, Level: Fail, Note: "no UserPromptSubmit entry referencing " + binaryIdentity}
+	return Check{Label: label, Level: Fail, Note: "no UserPromptSubmit entry referencing " + referencing(hookCommand, settings.LabdrianMinimalismIdentity)}
 }
 
-// checkPreToolUseHook verifies the PreToolUse entry for the Agent tool references our binary.
-func checkPreToolUseHook(s loadedSettings) Check {
+// checkPreToolUseHook verifies the PreToolUse entry for the Agent tool references the installed
+// binary and the minimalism family token.
+func checkPreToolUseHook(s loadedSettings, hookCommand string) Check {
 	label := `hook: PreToolUse matcher="Agent" (gate-task)`
 	if c, done := s.beforeEntries(label, Fail, ""); done {
 		return c
@@ -293,49 +302,49 @@ func checkPreToolUseHook(s loadedSettings) Check {
 	if !settings.HasHooksObject(s.root) {
 		return Check{Label: label, Level: Fail, Note: "hooks key missing in settings.json"}
 	}
-	if settings.HasMatchedHookContaining(s.root, "PreToolUse", "Agent", binaryIdentity) {
+	if settings.HasMatchedHookContaining(s.root, "PreToolUse", "Agent", hookCommand, settings.LabdrianMinimalismIdentity) {
 		return Check{Label: label, Level: OK}
 	}
-	return Check{Label: label, Level: Fail, Note: `no PreToolUse entry with matcher="Agent" referencing ` + binaryIdentity}
+	return Check{Label: label, Level: Fail, Note: `no PreToolUse entry with matcher="Agent" referencing ` + referencing(hookCommand, settings.LabdrianMinimalismIdentity)}
 }
 
 // checkSessionEndHook verifies the SessionEnd sync-trigger entry references our binary and the
 // sync-trigger identity token. Unreadable settings is a hard failure like the other hook checks; a
 // missing entry only warns, with the remediation: a machine with the first two families and no
 // SessionEnd is one that has not run the upgrade path, not a broken installation.
-func checkSessionEndHook(s loadedSettings) Check {
+func checkSessionEndHook(s loadedSettings, hookCommand string) Check {
 	label := "hook: SessionEnd (sync-trigger)"
 	if c, done := s.beforeEntries(label, Warn, "; "+remediation); done {
 		return c
 	}
-	if settings.HasHookContaining(s.root, "SessionEnd", binaryIdentity, settings.LabdrianSyncTriggerIdentity) {
+	if settings.HasHookContaining(s.root, "SessionEnd", hookCommand, settings.LabdrianSyncTriggerIdentity) {
 		return Check{Label: label, Level: OK}
 	}
-	return Check{Label: label, Level: Warn, Note: "no SessionEnd entry referencing " + binaryIdentity + "; " + remediation}
+	return Check{Label: label, Level: Warn, Note: "no SessionEnd entry referencing " + referencing(hookCommand, settings.LabdrianSyncTriggerIdentity) + "; " + remediation}
 }
 
 // checkReviewReceiptHook verifies the PreToolUse entry for Bash references our binary and the
 // review-receipt identity token. It is judged as checkSessionEndHook is.
-func checkReviewReceiptHook(s loadedSettings) Check {
+func checkReviewReceiptHook(s loadedSettings, hookCommand string) Check {
 	label := `hook: PreToolUse matcher="Bash" (review-receipt)`
 	if c, done := s.beforeEntries(label, Warn, "; "+remediation); done {
 		return c
 	}
-	if settings.HasMatchedHookContaining(s.root, "PreToolUse", "Bash", binaryIdentity, settings.LabdrianReviewReceiptIdentity) {
+	if settings.HasMatchedHookContaining(s.root, "PreToolUse", "Bash", hookCommand, settings.LabdrianReviewReceiptIdentity) {
 		return Check{Label: label, Level: OK}
 	}
-	return Check{Label: label, Level: Warn, Note: `no PreToolUse entry with matcher="Bash" referencing ` + binaryIdentity + "; " + remediation}
+	return Check{Label: label, Level: Warn, Note: `no PreToolUse entry with matcher="Bash" referencing ` + referencing(hookCommand, settings.LabdrianReviewReceiptIdentity) + "; " + remediation}
 }
 
 // checkShaperClearanceGuard reports whether the shaper clearance deny guard (both PreToolUse
 // entries and the permissions.deny backstop) is installed. A missing part warns with the same
 // remediation as the other families added later. Even installed, the guard is a speed bump.
-func checkShaperClearanceGuard(s loadedSettings) Check {
+func checkShaperClearanceGuard(s loadedSettings, hookCommand string) Check {
 	label := "guard: shaper clearance record (PreToolUse + permissions.deny)"
 	if c, done := s.beforeEntries(label, Warn, "; clearance recording is unguarded ("+speedBump+"); "+remediation); done {
 		return c
 	}
-	if missing := settings.MissingShaperClearanceGuardParts(s.root, binaryIdentity); len(missing) > 0 {
+	if missing := settings.MissingShaperClearanceGuardParts(s.root, hookCommand); len(missing) > 0 {
 		return Check{Label: label, Level: Warn,
 			Note: "missing " + strings.Join(missing, ", ") + "; clearance recording is unguarded against the model (" + speedBump + "); " + remediation}
 	}
