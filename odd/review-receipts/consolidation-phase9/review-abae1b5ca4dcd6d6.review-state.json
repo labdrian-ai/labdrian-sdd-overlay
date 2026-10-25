@@ -1,0 +1,152 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:00361f6b2c5507454033e5d8137d1fca6a76908209c3ab045935ebbf77c69821",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-abae1b5ca4dcd6d6",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "ded333568a12718657d7fa5d857bd8e7e8f0fb20",
+      "candidate_tree": "d32e943a915b861a304138adf504b3d120a766b0",
+      "paths_digest": "sha256:65c981f44b27287a406b3dc9dd2dc77c0ba7850b73e10c879edd08ba6824a00f",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/settings/codexhooks/document.go",
+        "engine/settings/family.go",
+        "engine/settings/merge.go",
+        "engine/settings/query.go",
+        "engine/settings/recognize.go",
+        "engine/settings/recognize_test.go",
+        "engine/settings/status.go",
+        "odd/tasks/consolidation-phase9.md"
+      ],
+      "identity": "sha256:0cce0ca2b8b7de70ae8253604e6e4a10cf2361c459f208bedb91156789d7df49"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "ded333568a12718657d7fa5d857bd8e7e8f0fb20",
+      "candidate_tree": "d32e943a915b861a304138adf504b3d120a766b0",
+      "paths_digest": "sha256:65c981f44b27287a406b3dc9dd2dc77c0ba7850b73e10c879edd08ba6824a00f",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/settings/codexhooks/document.go",
+        "engine/settings/family.go",
+        "engine/settings/merge.go",
+        "engine/settings/query.go",
+        "engine/settings/recognize.go",
+        "engine/settings/recognize_test.go",
+        "engine/settings/status.go",
+        "odd/tasks/consolidation-phase9.md"
+      ],
+      "identity": "sha256:0cce0ca2b8b7de70ae8253604e6e4a10cf2361c459f208bedb91156789d7df49"
+    },
+    "genesis_paths": [
+      "engine/settings/codexhooks/document.go",
+      "engine/settings/family.go",
+      "engine/settings/merge.go",
+      "engine/settings/query.go",
+      "engine/settings/recognize.go",
+      "engine/settings/recognize_test.go",
+      "engine/settings/status.go",
+      "odd/tasks/consolidation-phase9.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-reliability"
+    ],
+    "original_changed_lines": 128,
+    "correction_budget": 64,
+    "correction_budget_policy": "floor_two",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:221f4c3c5df4d75769275208273506d14c6c065c9cb18e681980ef157d395ce1",
+    "capture_phase_revision": "sha256:90b70d934569ea4afdb172a52a0e5b29602a63b6f9bc55b9c79e643e50fb4b90",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "target_identity": "sha256:0cce0ca2b8b7de70ae8253604e6e4a10cf2361c459f208bedb91156789d7df49",
+        "capture_phase_revision": "sha256:90b70d934569ea4afdb172a52a0e5b29602a63b6f9bc55b9c79e643e50fb4b90",
+        "artifact_digest": "sha256:b1fe495f235b77f6603d2fe329ba84994c5f7756e344b633e8de750ec9a3c514",
+        "result_hash": "sha256:1bd20fb46fd383d5cbd6aa2ad5f12dfbd6e1a97bf9bab20b7a19780b5fd89f4b",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:93e9305995dd2bffbfad5a64fd6b1e59b732522c8ea55affb3f72ac91bbc8d57",
+            "lineage_id": "review-abae1b5ca4dcd6d6",
+            "authority_revision": "sha256:90b70d934569ea4afdb172a52a0e5b29602a63b6f9bc55b9c79e643e50fb4b90",
+            "target_identity": "sha256:0cce0ca2b8b7de70ae8253604e6e4a10cf2361c459f208bedb91156789d7df49",
+            "base_tree": "ded333568a12718657d7fa5d857bd8e7e8f0fb20",
+            "candidate_tree": "d32e943a915b861a304138adf504b3d120a766b0",
+            "changed_path_manifest_sha256": "sha256:a847e8a80a4aa5b907f01a3ac775cb81565458bf1fe42bc2dad56ab0e0bc2225",
+            "lens": "review-reliability",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:93e9305995dd2bffbfad5a64fd6b1e59b732522c8ea55affb3f72ac91bbc8d57",
+            "raw_sha256": "sha256:ac223c25e5c6b635ddb3025f65200222d6387e71ef857d60dc6af22d1f6826e7",
+            "canonical_sha256": "sha256:57150d0c0f0bd85818116a7aadb597fe00619981cb6e3c76c61efe1447ce3fd2",
+            "result_hash": "sha256:1bd20fb46fd383d5cbd6aa2ad5f12dfbd6e1a97bf9bab20b7a19780b5fd89f4b",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:93e9305995dd2bffbfad5a64fd6b1e59b732522c8ea55affb3f72ac91bbc8d57",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/settings/codexhooks/document.go",
+                "engine/settings/family.go",
+                "engine/settings/merge.go",
+                "engine/settings/query.go",
+                "engine/settings/recognize.go",
+                "engine/settings/recognize_test.go",
+                "engine/settings/status.go",
+                "odd/tasks/consolidation-phase9.md"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [],
+            "evidence": [
+              "entryMentions in engine/settings/recognize.go is the removed entryContainsBinary moved with the same logic: bare or shell-quoted substring match over each inner hooks[].command, and non-map or missing hooks give false. Callers in engine/settings/family.go, engine/settings/query.go and engine/settings/status.go therefore behave as before.",
+              "HasLabdrianOwnedHook now calls hookFamily.carries, which is the same two-word check (hookCommand and identity) as the inline closure it replaces. Behavior is unchanged, and carries only reads f.identity, so building hookFamily{identity: identity} is safe.",
+              "Codex owns in engine/settings/codexhooks/document.go previously wrapped one handler in a synthetic root and queried it. That reduces to a single command string checked for the binary and the identity, which is what CommandOwnedBy does. An empty binary is still rejected before the call, and a handler without a command string gives an empty command, which is false.",
+              "engine/settings/recognize_test.go covers bare, quoted (with an apostrophe), identity-only, binary-only and empty-command cases at the unit level. The agreement test checks that the entries each family writes are recognized, and that they are not recognized for another binary. It is partly tautological now that the status helper delegates to carries, but it still proves the observable round-trip.",
+              "The documentation change in odd/tasks/consolidation-phase9.md has no runtime effect."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "1b8c195bda2d1cbc3158948aac5b7d0ce1d3bdaf955cdb2d749948c30d5f6df4",
+    "initial_atomic_start": {
+      "lineage_id": "review-abae1b5ca4dcd6d6",
+      "worktree_identity": "sha256:8455002f227f033663d0e7d8b8ff6a885e1c85b482ec52e34017c303452eed87",
+      "target_identity": "sha256:0cce0ca2b8b7de70ae8253604e6e4a10cf2361c459f208bedb91156789d7df49",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "ded333568a12718657d7fa5d857bd8e7e8f0fb20",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-reliability"
+      ],
+      "original_changed_lines": 128,
+      "correction_budget": 64,
+      "correction_budget_policy": "floor_two"
+    },
+    "runtime_agent": "claude-code"
+  }
+}
