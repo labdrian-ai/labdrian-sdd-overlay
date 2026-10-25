@@ -286,7 +286,7 @@ func checkUserPromptSubmitHook(s loadedSettings, hookCommand string) Check {
 	if !settings.HasHooksObject(s.root) {
 		return Check{Label: label, Level: Fail, Note: "hooks key missing in settings.json"}
 	}
-	if settings.HasLabdrianMinimalismHook(s.root, "UserPromptSubmit", hookCommand) {
+	if settings.HasHookContaining(s.root, "UserPromptSubmit", hookCommand, settings.LabdrianMinimalismIdentity) {
 		return Check{Label: label, Level: OK}
 	}
 	return Check{Label: label, Level: Fail, Note: "no UserPromptSubmit entry referencing " + referencing(hookCommand, settings.LabdrianMinimalismIdentity)}

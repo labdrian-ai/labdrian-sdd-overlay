@@ -1,0 +1,212 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:f59cb87b1dd03ad8d0a8beb144b3d623bfd3a5e2095c189295921915b4537db1",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-aefdda704e5bcdee",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "597c977db8d48c970110a8d1a9ad0aed2f89be29",
+      "candidate_tree": "97099be76d03e1d68cf0ae330813539aa2c8dce5",
+      "paths_digest": "sha256:cc5d9c9f5c7f26d4ddac1c78ee36f262edbf711e5959a047c5b8a04cecdf0c86",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/cmd/status_golden_test.go",
+        "engine/cmd/testdata/status-golden/status-families-missing-or-drifted.golden",
+        "engine/cmd/testdata/status-golden/status-settings-without-the-hooks.golden",
+        "engine/status/status.go",
+        "engine/status/status_test.go",
+        "odd/tasks/consolidation-phase9.md"
+      ],
+      "identity": "sha256:b05a2c08a6037573179234bd96e917f70c7f1395e07f27312a8c9e58ba630e55"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "597c977db8d48c970110a8d1a9ad0aed2f89be29",
+      "candidate_tree": "97099be76d03e1d68cf0ae330813539aa2c8dce5",
+      "paths_digest": "sha256:cc5d9c9f5c7f26d4ddac1c78ee36f262edbf711e5959a047c5b8a04cecdf0c86",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/cmd/status_golden_test.go",
+        "engine/cmd/testdata/status-golden/status-families-missing-or-drifted.golden",
+        "engine/cmd/testdata/status-golden/status-settings-without-the-hooks.golden",
+        "engine/status/status.go",
+        "engine/status/status_test.go",
+        "odd/tasks/consolidation-phase9.md"
+      ],
+      "identity": "sha256:b05a2c08a6037573179234bd96e917f70c7f1395e07f27312a8c9e58ba630e55"
+    },
+    "genesis_paths": [
+      "engine/cmd/status_golden_test.go",
+      "engine/cmd/testdata/status-golden/status-families-missing-or-drifted.golden",
+      "engine/cmd/testdata/status-golden/status-settings-without-the-hooks.golden",
+      "engine/status/status.go",
+      "engine/status/status_test.go",
+      "odd/tasks/consolidation-phase9.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 230,
+    "correction_budget": 115,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "status hook checks: changed match rule and user-visible notes, pinned by unit tests and goldens",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:a945d26e69a5390f9bafa253eab190d273139913e8c704aec358ed3f7920a941",
+    "capture_phase_revision": "sha256:681872311525bf5a49116a7eaaa3269f36536c6ed91a6e495f24aa8c0be69b6d",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "target_identity": "sha256:b05a2c08a6037573179234bd96e917f70c7f1395e07f27312a8c9e58ba630e55",
+        "capture_phase_revision": "sha256:681872311525bf5a49116a7eaaa3269f36536c6ed91a6e495f24aa8c0be69b6d",
+        "artifact_digest": "sha256:03381498751bd846ec1c0fbdd8471f8eee7a0cb03842500757811f25dad54d48",
+        "result_hash": "sha256:1badaa31d3f05bae30e22689137f16b49447196f129b27d1a97cd8b515d3df1e",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:a555d10ad6379e3baf8dc2b0734fa3c6fc4ff7bb6fb71e9822885f93b6034245",
+            "lineage_id": "review-aefdda704e5bcdee",
+            "authority_revision": "sha256:681872311525bf5a49116a7eaaa3269f36536c6ed91a6e495f24aa8c0be69b6d",
+            "target_identity": "sha256:b05a2c08a6037573179234bd96e917f70c7f1395e07f27312a8c9e58ba630e55",
+            "base_tree": "597c977db8d48c970110a8d1a9ad0aed2f89be29",
+            "candidate_tree": "97099be76d03e1d68cf0ae330813539aa2c8dce5",
+            "changed_path_manifest_sha256": "sha256:25888bebd22b897cd17c4eca393be5d8ff1f487f9987f8ac15525e2bdd8c5941",
+            "lens": "review-readability",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:a555d10ad6379e3baf8dc2b0734fa3c6fc4ff7bb6fb71e9822885f93b6034245",
+            "raw_sha256": "sha256:6ffc2178057871d6c5fbdff1a3bb028cf73e8ef52d29f9195cafde98ec85f80b",
+            "canonical_sha256": "sha256:41cdfb666b4628360a2e1a7215b5a43f2ed00e555631cf10b9dfd4d20f86fb25",
+            "result_hash": "sha256:1badaa31d3f05bae30e22689137f16b49447196f129b27d1a97cd8b515d3df1e",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:a555d10ad6379e3baf8dc2b0734fa3c6fc4ff7bb6fb71e9822885f93b6034245",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/cmd/status_golden_test.go",
+                "engine/cmd/testdata/status-golden/status-families-missing-or-drifted.golden",
+                "engine/cmd/testdata/status-golden/status-settings-without-the-hooks.golden",
+                "engine/status/status.go",
+                "engine/status/status_test.go",
+                "odd/tasks/consolidation-phase9.md"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-001",
+                "lens": "readability",
+                "location": "engine/status/status.go:301-307",
+                "severity": "SUGGESTION",
+                "claim": "The user-facing failure note for the two base hooks reports the token as settings.LabdrianMinimalismIdentity (minimalism-contract.md), but the file's own checkSessionEndHook doc comment and the new `referencing` helper present a uniform 'binary and family token' contract; the base-hook check goes through a different matcher (HasLabdrianMinimalismHook for UserPromptSubmit versus HasMatchedHookContaining for Agent), so the two base checks use different recognizers for the same identity. A maintainer must read into the settings package to see they are equivalent.",
+                "proof_refs": [
+                  "engine/status/status.go:289",
+                  "engine/status/status.go:305"
+                ],
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Reviewed all six changed paths in full. The change replaces the substring match on the binary name with the installed hook command path plus the family token in five status checks. Notes, goldens, and tests are consistent with one another. The new test for the unquoted binary, the quoted binary, the other-path binary, and the missing token covers the new behavior. No dead code or unexplained constants were found. The only readability concern is the two different matcher functions used for the two base hooks."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 1,
+        "target_identity": "sha256:b05a2c08a6037573179234bd96e917f70c7f1395e07f27312a8c9e58ba630e55",
+        "capture_phase_revision": "sha256:681872311525bf5a49116a7eaaa3269f36536c6ed91a6e495f24aa8c0be69b6d",
+        "artifact_digest": "sha256:6da443957d42df98407dec9911226d704b9caebc0bda541ba16da90cc99ba3d9",
+        "result_hash": "sha256:866be657272fefa1dc2a2c13ac15e594e653cdb41833f47b167442a00c6ffc63",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:aae2b98afcea49197b4469e26ace9c4aebb9668e09e5c3d68c162fe7e170c1a8",
+            "lineage_id": "review-aefdda704e5bcdee",
+            "authority_revision": "sha256:681872311525bf5a49116a7eaaa3269f36536c6ed91a6e495f24aa8c0be69b6d",
+            "target_identity": "sha256:b05a2c08a6037573179234bd96e917f70c7f1395e07f27312a8c9e58ba630e55",
+            "base_tree": "597c977db8d48c970110a8d1a9ad0aed2f89be29",
+            "candidate_tree": "97099be76d03e1d68cf0ae330813539aa2c8dce5",
+            "changed_path_manifest_sha256": "sha256:25888bebd22b897cd17c4eca393be5d8ff1f487f9987f8ac15525e2bdd8c5941",
+            "lens": "review-reliability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:aae2b98afcea49197b4469e26ace9c4aebb9668e09e5c3d68c162fe7e170c1a8",
+            "raw_sha256": "sha256:a91e477ee549205e91cf29fb1ebe3ffe455eaf976a60354aea84e92dcfa3686b",
+            "canonical_sha256": "sha256:dfbee279d7fd783eadf29ee64443e8e4b1a5699e8b40451ae91755415783ac12",
+            "result_hash": "sha256:866be657272fefa1dc2a2c13ac15e594e653cdb41833f47b167442a00c6ffc63",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:aae2b98afcea49197b4469e26ace9c4aebb9668e09e5c3d68c162fe7e170c1a8",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/cmd/status_golden_test.go",
+                "engine/cmd/testdata/status-golden/status-families-missing-or-drifted.golden",
+                "engine/cmd/testdata/status-golden/status-settings-without-the-hooks.golden",
+                "engine/status/status.go",
+                "engine/status/status_test.go",
+                "odd/tasks/consolidation-phase9.md"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [],
+            "evidence": [
+              "engine/status/status.go: all five hook checks now take the installed binary path (hookCommand) and match it together with the family token. The two base hooks use the minimalism token, SessionEnd uses sync-trigger, the Bash hook uses review-receipt, and the shaper guard receives the path. Failure notes name both path and token through the shared referencing helper.",
+              "engine/status/status_test.go covers the changed behaviour: notes for an empty hooks object and for missing families, a shell-quoted binary, another path with the same binary name, the binary without the minimalism word, matcher handling, and every hook family under another home (labelPrompt, labelAgent, labelSession, labelReceipt, labelShaper).",
+              "engine/cmd/status_golden_test.go adds a golden case for the two base hooks without the minimalism word, and the previous base-hooks-only case now carries the real token so it keeps its intent. The golden files change only the hook notes plus the new case, which is consistent with the requested change to status output recorded in odd/tasks/consolidation-phase9.md.",
+              "I could not see the engine/settings helpers (HasLabdrianMinimalismHook, LabdrianMinimalismIdentity, and the variadic HasMatchedHookContaining and HasHookContaining) because they are outside this candidate, so I judged their semantics only from the tests and goldens. The path match for the non-minimalism hooks may be a plain substring, which would also accept a longer path that begins with the installed one. That was not visible here and no test asserts it either way, so I did not raise a finding."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "b2c3d9952786314c2a24640c9c54de5a843b2eb2fd21056515dbb0b2e178a31e",
+    "initial_atomic_start": {
+      "lineage_id": "review-aefdda704e5bcdee",
+      "worktree_identity": "sha256:8455002f227f033663d0e7d8b8ff6a885e1c85b482ec52e34017c303452eed87",
+      "target_identity": "sha256:b05a2c08a6037573179234bd96e917f70c7f1395e07f27312a8c9e58ba630e55",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "597c977db8d48c970110a8d1a9ad0aed2f89be29",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 230,
+      "correction_budget": 115,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "status hook checks: changed match rule and user-visible notes, pinned by unit tests and goldens"
+    },
+    "runtime_agent": "claude-code"
+  }
+}
