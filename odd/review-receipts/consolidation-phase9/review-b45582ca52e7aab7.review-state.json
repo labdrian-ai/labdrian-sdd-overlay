@@ -1,0 +1,344 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:8f2eb42bdaf34a5267e4972b9b8c172aef6399f9b2468d3bfa7761f4ba2d92ea",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-b45582ca52e7aab7",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "ded333568a12718657d7fa5d857bd8e7e8f0fb20",
+      "candidate_tree": "2c38b9773c87d05581cbefb5425cb1b2a463a635",
+      "paths_digest": "sha256:541060053b3138f33ea2c9942c86ea4ad0c50eb4532d88785996bdc57179a5d0",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/cmd/status_golden_test.go",
+        "engine/cmd/testdata/status-golden/status-families-missing-or-drifted.golden",
+        "engine/cmd/testdata/status-golden/status-settings-without-the-hooks.golden",
+        "engine/settings/codexhooks/document.go",
+        "engine/settings/family.go",
+        "engine/settings/merge.go",
+        "engine/settings/query.go",
+        "engine/settings/query_test.go",
+        "engine/settings/recognize.go",
+        "engine/settings/recognize_test.go",
+        "engine/settings/status.go",
+        "engine/status/status.go",
+        "engine/status/status_test.go",
+        "odd/review-receipts/consolidation-phase9/review-1a06d5b005a83cc4.review-state.json",
+        "odd/review-receipts/consolidation-phase9/review-85e851b143bb4580.review-state.json",
+        "odd/review-receipts/consolidation-phase9/review-abae1b5ca4dcd6d6.review-state.json",
+        "odd/review-receipts/consolidation-phase9/review-aefdda704e5bcdee.review-state.json",
+        "odd/tasks/consolidation-phase9.md"
+      ],
+      "identity": "sha256:2705543f9903f6237b13c15965cc199afa2c0b157120f14f8923bf881e0f5b9e"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "ded333568a12718657d7fa5d857bd8e7e8f0fb20",
+      "candidate_tree": "2c38b9773c87d05581cbefb5425cb1b2a463a635",
+      "paths_digest": "sha256:541060053b3138f33ea2c9942c86ea4ad0c50eb4532d88785996bdc57179a5d0",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/cmd/status_golden_test.go",
+        "engine/cmd/testdata/status-golden/status-families-missing-or-drifted.golden",
+        "engine/cmd/testdata/status-golden/status-settings-without-the-hooks.golden",
+        "engine/settings/codexhooks/document.go",
+        "engine/settings/family.go",
+        "engine/settings/merge.go",
+        "engine/settings/query.go",
+        "engine/settings/query_test.go",
+        "engine/settings/recognize.go",
+        "engine/settings/recognize_test.go",
+        "engine/settings/status.go",
+        "engine/status/status.go",
+        "engine/status/status_test.go",
+        "odd/review-receipts/consolidation-phase9/review-1a06d5b005a83cc4.review-state.json",
+        "odd/review-receipts/consolidation-phase9/review-85e851b143bb4580.review-state.json",
+        "odd/review-receipts/consolidation-phase9/review-abae1b5ca4dcd6d6.review-state.json",
+        "odd/review-receipts/consolidation-phase9/review-aefdda704e5bcdee.review-state.json",
+        "odd/tasks/consolidation-phase9.md"
+      ],
+      "identity": "sha256:2705543f9903f6237b13c15965cc199afa2c0b157120f14f8923bf881e0f5b9e"
+    },
+    "genesis_paths": [
+      "engine/cmd/status_golden_test.go",
+      "engine/cmd/testdata/status-golden/status-families-missing-or-drifted.golden",
+      "engine/cmd/testdata/status-golden/status-settings-without-the-hooks.golden",
+      "engine/settings/codexhooks/document.go",
+      "engine/settings/family.go",
+      "engine/settings/merge.go",
+      "engine/settings/query.go",
+      "engine/settings/query_test.go",
+      "engine/settings/recognize.go",
+      "engine/settings/recognize_test.go",
+      "engine/settings/status.go",
+      "engine/status/status.go",
+      "engine/status/status_test.go",
+      "odd/review-receipts/consolidation-phase9/review-1a06d5b005a83cc4.review-state.json",
+      "odd/review-receipts/consolidation-phase9/review-85e851b143bb4580.review-state.json",
+      "odd/review-receipts/consolidation-phase9/review-abae1b5ca4dcd6d6.review-state.json",
+      "odd/review-receipts/consolidation-phase9/review-aefdda704e5bcdee.review-state.json",
+      "odd/tasks/consolidation-phase9.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-resilience",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 1374,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "fix of review findings: empty-word guard in the shared hook recognizer, a flipped query test, a status parameter rename",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:80479ef7492aedc97229ad5ac4f6507b81fa2d7ecb4186762a42f06a75c6a03a",
+    "capture_phase_revision": "sha256:32ae9d95182602e62c7247c87e53719ef3ac198f38ceb4be3c7078fbd8618440",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-resilience",
+        "target_identity": "sha256:2705543f9903f6237b13c15965cc199afa2c0b157120f14f8923bf881e0f5b9e",
+        "capture_phase_revision": "sha256:32ae9d95182602e62c7247c87e53719ef3ac198f38ceb4be3c7078fbd8618440",
+        "artifact_digest": "sha256:5af4d7b52dfd7f0af7119536c66b4e9e34b5b673093d0c5b2e34837aaaf1f00f",
+        "result_hash": "sha256:7a43f4e91b4eb97dffe4e9a42759dc15c497861863b28a4b9cd68f29cac85b84",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:0c70efdae3807bc55ac558d48b45f4315adae63f489d58e8ffebbb42f5ff55b8",
+            "lineage_id": "review-b45582ca52e7aab7",
+            "authority_revision": "sha256:32ae9d95182602e62c7247c87e53719ef3ac198f38ceb4be3c7078fbd8618440",
+            "target_identity": "sha256:2705543f9903f6237b13c15965cc199afa2c0b157120f14f8923bf881e0f5b9e",
+            "base_tree": "ded333568a12718657d7fa5d857bd8e7e8f0fb20",
+            "candidate_tree": "2c38b9773c87d05581cbefb5425cb1b2a463a635",
+            "changed_path_manifest_sha256": "sha256:01d20fd5b620120e4fa6a1d67e79228ad5dc8a880b6cb021a201613c6758af87",
+            "lens": "review-resilience",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:0c70efdae3807bc55ac558d48b45f4315adae63f489d58e8ffebbb42f5ff55b8",
+            "raw_sha256": "sha256:b736091be24dcd11534a2dae49408d5de00563ddadb4b039690f117499d1e45f",
+            "canonical_sha256": "sha256:b46100060f2464f2e272367570661fff445c9566b1be6a6e7a20abe3b84c6eee",
+            "result_hash": "sha256:7a43f4e91b4eb97dffe4e9a42759dc15c497861863b28a4b9cd68f29cac85b84",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:0c70efdae3807bc55ac558d48b45f4315adae63f489d58e8ffebbb42f5ff55b8",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/cmd/status_golden_test.go",
+                "engine/cmd/testdata/status-golden/status-families-missing-or-drifted.golden",
+                "engine/cmd/testdata/status-golden/status-settings-without-the-hooks.golden",
+                "engine/settings/codexhooks/document.go",
+                "engine/settings/family.go",
+                "engine/settings/merge.go",
+                "engine/settings/query.go",
+                "engine/settings/query_test.go",
+                "engine/settings/recognize.go",
+                "engine/settings/recognize_test.go",
+                "engine/settings/status.go",
+                "engine/status/status.go",
+                "engine/status/status_test.go",
+                "odd/review-receipts/consolidation-phase9/review-1a06d5b005a83cc4.review-state.json",
+                "odd/review-receipts/consolidation-phase9/review-85e851b143bb4580.review-state.json",
+                "odd/review-receipts/consolidation-phase9/review-abae1b5ca4dcd6d6.review-state.json",
+                "odd/review-receipts/consolidation-phase9/review-aefdda704e5bcdee.review-state.json",
+                "odd/tasks/consolidation-phase9.md"
+              ]
+            },
+            "lens": "review-resilience",
+            "findings": [],
+            "evidence": [
+              "Reviewed all 18 manifest paths. The change is pure in-memory string matching over an already-loaded settings document: no I/O, retries, loops, or allocations of consequence are added, so there is no latency or load impact.",
+              "engine/settings/recognize.go commandMentions now returns false for an empty word, which closes the empty-binary-path case (an earlier lens flagged it as a hardening warning). The behavior is pinned by engine/settings/query_test.go and engine/settings/recognize_test.go, and the Codex owns guard in engine/settings/codexhooks/document.go still rejects an empty binary first.",
+              "engine/status/status.go moves five status checks from the bare name substring to the installed path plus the family token. Failure notes name both, so the diagnostic stays actionable. This degrades gracefully: missing families still only WARN with the remediation, and base hooks still FAIL. The change is the owner-requested one recorded in odd/tasks/consolidation-phase9.md, so it is not a regression.",
+              "The golden files and status tests pin the new notes and the new case with the base hooks lacking the minimalism word, so the observable verdicts and messages are covered.",
+              "The review-receipt JSON files and the task document are recorded state with no runtime effect. No candidate-caused resilience defect was found."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "selected_order": 1,
+        "target_identity": "sha256:2705543f9903f6237b13c15965cc199afa2c0b157120f14f8923bf881e0f5b9e",
+        "capture_phase_revision": "sha256:32ae9d95182602e62c7247c87e53719ef3ac198f38ceb4be3c7078fbd8618440",
+        "artifact_digest": "sha256:67a22b7c1213adfadb729d094f390b219adb08cebe63c4ad727fa58784948c29",
+        "result_hash": "sha256:f53bda6942c0650125647a44457ede813b0f5e79448e7176eb3093ff1047f610",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:9d65111f012fb2c77b6f79398ae94ef6379209cf48a698d754b37f55b4d7c5cf",
+            "lineage_id": "review-b45582ca52e7aab7",
+            "authority_revision": "sha256:32ae9d95182602e62c7247c87e53719ef3ac198f38ceb4be3c7078fbd8618440",
+            "target_identity": "sha256:2705543f9903f6237b13c15965cc199afa2c0b157120f14f8923bf881e0f5b9e",
+            "base_tree": "ded333568a12718657d7fa5d857bd8e7e8f0fb20",
+            "candidate_tree": "2c38b9773c87d05581cbefb5425cb1b2a463a635",
+            "changed_path_manifest_sha256": "sha256:01d20fd5b620120e4fa6a1d67e79228ad5dc8a880b6cb021a201613c6758af87",
+            "lens": "review-readability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:9d65111f012fb2c77b6f79398ae94ef6379209cf48a698d754b37f55b4d7c5cf",
+            "raw_sha256": "sha256:fb3e00f3fc33db5dec823de5895373d71f672a7665481c64ef6ed0970795c9f1",
+            "canonical_sha256": "sha256:e28426b411f67494099ab64e3efd628105c585e78bb92e2de43370e1fd281b58",
+            "result_hash": "sha256:f53bda6942c0650125647a44457ede813b0f5e79448e7176eb3093ff1047f610",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:9d65111f012fb2c77b6f79398ae94ef6379209cf48a698d754b37f55b4d7c5cf",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/cmd/status_golden_test.go",
+                "engine/cmd/testdata/status-golden/status-families-missing-or-drifted.golden",
+                "engine/cmd/testdata/status-golden/status-settings-without-the-hooks.golden",
+                "engine/settings/codexhooks/document.go",
+                "engine/settings/family.go",
+                "engine/settings/merge.go",
+                "engine/settings/query.go",
+                "engine/settings/query_test.go",
+                "engine/settings/recognize.go",
+                "engine/settings/recognize_test.go",
+                "engine/settings/status.go",
+                "engine/status/status.go",
+                "engine/status/status_test.go",
+                "odd/review-receipts/consolidation-phase9/review-1a06d5b005a83cc4.review-state.json",
+                "odd/review-receipts/consolidation-phase9/review-85e851b143bb4580.review-state.json",
+                "odd/review-receipts/consolidation-phase9/review-abae1b5ca4dcd6d6.review-state.json",
+                "odd/review-receipts/consolidation-phase9/review-aefdda704e5bcdee.review-state.json",
+                "odd/tasks/consolidation-phase9.md"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-001",
+                "lens": "readability",
+                "location": "engine/status/status.go:161-167",
+                "severity": "SUGGESTION",
+                "claim": "The binaryIdentity constant's comment now says hook checks never match on the name alone, but the constant is still declared in the file; a maintainer cannot tell from the comment whether it is still used (e.g. by checkBinary) or is dead. Naming its remaining use would prevent confusion with the new full-path matching.",
+                "proof_refs": [
+                  "engine/status/status.go:161-167"
+                ]
+              }
+            ],
+            "evidence": [
+              "Reviewed all 18 manifest paths. The recognizer consolidation (recognize.go) is a faithful move of entryContainsBinary with a clear empty-word guard and explanatory comments; duplicate logic in merge.go, status.go and codexhooks/document.go is removed.",
+              "The status notes use a shared referencing helper, and goldens, unit tests and the new base-hooks-without-minimalism golden case are consistent with each other.",
+              "The renaming of hookCommand to binaryPath in status.go resolves the earlier misleading-name concern.",
+              "Receipt JSON files and the task doc are recorded state/documentation with no runtime effect; no candidate-caused maintainability defect rising above SUGGESTION was found."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 2,
+        "target_identity": "sha256:2705543f9903f6237b13c15965cc199afa2c0b157120f14f8923bf881e0f5b9e",
+        "capture_phase_revision": "sha256:32ae9d95182602e62c7247c87e53719ef3ac198f38ceb4be3c7078fbd8618440",
+        "artifact_digest": "sha256:b2795a11999660c93bda4c930cc5b0078186e709be0b721277550e8f149bbf14",
+        "result_hash": "sha256:bfce2200968281d29743647e8563ee9d480421c16468f0bc1371c4930e88ec6c",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:0309a7cebdd9c27d869091ce5fb0941cacd1b68e3e5898cd85fc2e17d6ff2a5f",
+            "lineage_id": "review-b45582ca52e7aab7",
+            "authority_revision": "sha256:32ae9d95182602e62c7247c87e53719ef3ac198f38ceb4be3c7078fbd8618440",
+            "target_identity": "sha256:2705543f9903f6237b13c15965cc199afa2c0b157120f14f8923bf881e0f5b9e",
+            "base_tree": "ded333568a12718657d7fa5d857bd8e7e8f0fb20",
+            "candidate_tree": "2c38b9773c87d05581cbefb5425cb1b2a463a635",
+            "changed_path_manifest_sha256": "sha256:01d20fd5b620120e4fa6a1d67e79228ad5dc8a880b6cb021a201613c6758af87",
+            "lens": "review-reliability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:0309a7cebdd9c27d869091ce5fb0941cacd1b68e3e5898cd85fc2e17d6ff2a5f",
+            "raw_sha256": "sha256:80f3f2ccbc257f7ef41d7e0c5dcb109ba8cb3f90cf7d36156a91ac4e57f53b60",
+            "canonical_sha256": "sha256:174095cfcc9051fc61a8f151b3731d5cb3cfe50a2584aa8f7344d2f36213d640",
+            "result_hash": "sha256:bfce2200968281d29743647e8563ee9d480421c16468f0bc1371c4930e88ec6c",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:0309a7cebdd9c27d869091ce5fb0941cacd1b68e3e5898cd85fc2e17d6ff2a5f",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/cmd/status_golden_test.go",
+                "engine/cmd/testdata/status-golden/status-families-missing-or-drifted.golden",
+                "engine/cmd/testdata/status-golden/status-settings-without-the-hooks.golden",
+                "engine/settings/codexhooks/document.go",
+                "engine/settings/family.go",
+                "engine/settings/merge.go",
+                "engine/settings/query.go",
+                "engine/settings/query_test.go",
+                "engine/settings/recognize.go",
+                "engine/settings/recognize_test.go",
+                "engine/settings/status.go",
+                "engine/status/status.go",
+                "engine/status/status_test.go",
+                "odd/review-receipts/consolidation-phase9/review-1a06d5b005a83cc4.review-state.json",
+                "odd/review-receipts/consolidation-phase9/review-85e851b143bb4580.review-state.json",
+                "odd/review-receipts/consolidation-phase9/review-abae1b5ca4dcd6d6.review-state.json",
+                "odd/review-receipts/consolidation-phase9/review-aefdda704e5bcdee.review-state.json",
+                "odd/tasks/consolidation-phase9.md"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [],
+            "evidence": [
+              "engine/settings/recognize.go: entryMentions/commandMentions preserve the prior bare-or-shell-quoted substring match over hooks[].command, and add a guard so an empty word matches nothing. This is pinned externally by engine/settings/recognize_test.go (empty binary path for CommandOwnedBy, HasHookContaining, HasLabdrianOwnedHook) and by the updated case in engine/settings/query_test.go.",
+              "engine/settings/codexhooks/document.go: owns keeps the empty-binary guard first, then calls CommandOwnedBy on the handler's command string; a handler without a string command yields an empty command and is not owned. Behavior matches the former synthetic-root query.",
+              "engine/status/status.go: the five hook checks now match the installed binary path plus the family token and their notes name both via referencing(). engine/status/status_test.go covers bare and quoted paths, the binary name under a different path, the binary without the family word, an empty hooks object, and every hook under another home. Goldens and the new golden case in engine/cmd/status_golden_test.go pin the user-visible note and verdict changes, which the task doc records as owner-requested.",
+              "engine/settings/status.go: HasLabdrianOwnedHook delegates to hookFamily.carries, the same two-word check with the new empty-path guard; carries reads only identity, so building a bare hookFamily is safe.",
+              "Residual: matching remains substring-based, so a longer path that begins with the installed path would still match for the non-projection hooks. This is pre-existing behavior and not asserted either way; no candidate-caused reliability defect found. Receipt JSON files and the task doc have no runtime effect."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "4958f6c959daa5ea475d15e39dcc36f12bc9959bed489449c161c8b7e6ffc6d1",
+    "initial_atomic_start": {
+      "lineage_id": "review-b45582ca52e7aab7",
+      "worktree_identity": "sha256:8455002f227f033663d0e7d8b8ff6a885e1c85b482ec52e34017c303452eed87",
+      "target_identity": "sha256:2705543f9903f6237b13c15965cc199afa2c0b157120f14f8923bf881e0f5b9e",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "ded333568a12718657d7fa5d857bd8e7e8f0fb20",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-resilience",
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 1374,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "fix of review findings: empty-word guard in the shared hook recognizer, a flipped query test, a status parameter rename"
+    },
+    "runtime_agent": "claude-code"
+  }
+}
