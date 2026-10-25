@@ -125,8 +125,9 @@ func parse(data []byte) ([]byte, map[string][]json.RawMessage, error) {
 	return hooks, events, nil
 }
 
-// owns checks one command, not tokens split across two handlers in the same group. The settings
-// query already recognizes both legacy bare paths and shell-quoted paths (including apostrophes).
+// owns checks one command, not tokens split across two handlers in the same group, with the
+// recognizer the Claude families use, so legacy bare paths and shell-quoted paths (including
+// apostrophes) are recognized alike.
 func owns(handler json.RawMessage, binary string) bool {
 	if binary == "" {
 		return false
@@ -135,8 +136,8 @@ func owns(handler json.RawMessage, binary string) bool {
 	if json.Unmarshal(handler, &h) != nil {
 		return false
 	}
-	root := map[string]any{"hooks": map[string]any{"SessionStart": []any{map[string]any{"hooks": []any{h}}}}}
-	return settings.HasHookContaining(root, "SessionStart", binary, settings.LabdrianProjectionIdentity)
+	command, _ := h["command"].(string)
+	return settings.CommandOwnedBy(command, binary, settings.LabdrianProjectionIdentity)
 }
 
 func filter(group json.RawMessage, binary string) (json.RawMessage, bool) {

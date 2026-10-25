@@ -63,17 +63,16 @@ func (f hookFamily) specsFor(event string) []hookSpec {
 
 // owns reports whether a hook entry belongs to the family: it references our
 // binary AND the family's identity token. With no binary path there is nothing
-// to tell our entries from foreign ones (every command contains the empty
-// string), so no entry is ours.
+// to tell our entries from foreign ones, so no entry is ours.
 func (f hookFamily) owns(e interface{}, hookCommand string) bool {
 	return hookCommand != "" && f.carries(e, hookCommand)
 }
 
-// carries is owns without the guard against an empty binary path: the entry references the binary
-// and the family's identity token. The status helpers answer by it for whatever path they are
-// given; install and uninstall refuse an empty path before they get here.
+// carries reports whether the entry references the binary and the family's identity token. The
+// status helpers answer by it for whatever path they are given; an empty path is mentioned by no
+// command (commandMentions), so it carries nothing.
 func (f hookFamily) carries(e interface{}, hookCommand string) bool {
-	return entryContainsBinary(e, hookCommand) && entryContainsBinary(e, f.identity)
+	return entryMentions(e, hookCommand) && entryMentions(e, f.identity)
 }
 
 // matchingSpec returns the index of the spec whose exact entry equals e, or -1.

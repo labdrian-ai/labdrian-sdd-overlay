@@ -12,9 +12,8 @@ func HasLabdrianOwnedHook(root map[string]interface{}, key, hookCommand, identit
 	if !ok {
 		return false
 	}
-	return hasEntryMatching(hooks, key, func(e interface{}) bool {
-		return entryContainsBinary(e, hookCommand) && entryContainsBinary(e, identity)
-	})
+	family := hookFamily{identity: identity}
+	return hasEntryMatching(hooks, key, func(e interface{}) bool { return family.carries(e, hookCommand) })
 }
 
 // HasLabdrianMinimalismHook reports whether key has our minimalism-contract hook.
