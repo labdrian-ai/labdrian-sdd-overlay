@@ -53,7 +53,7 @@ func TestHasHookContainingAsksEveryEntryOfTheEventForEveryWord(t *testing.T) {
 		{"the matcher is not looked at", "UserPromptSubmit", []string{"propagate"}, true},
 		{"an event the settings do not have", "PreToolUse", []string{"overlay"}, false},
 		{"the word must be a substring, not the whole command", "SessionEnd", []string{"sync-trig"}, true},
-		{"the empty word is in every command", "SessionEnd", []string{""}, true},
+		{"the empty word is in no command, so an empty binary path matches nothing", "SessionEnd", []string{""}, false},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

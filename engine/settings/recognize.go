@@ -6,15 +6,20 @@ import "strings"
 // so every family, status helper, query and the Codex document read an entry the same way.
 
 // CommandOwnedBy reports whether one hook command is ours: it mentions the binary, bare or
-// shell-quoted, and the family's identity token. It does not guard an empty binary path, which
-// every command contains; callers that install or remove refuse one before they get here.
+// shell-quoted, and the family's identity token. An empty binary path is mentioned by no command,
+// so it owns nothing.
 func CommandOwnedBy(command, binary, identity string) bool {
 	return commandMentions(command, binary) && commandMentions(command, identity)
 }
 
 // commandMentions reports whether command holds word as a substring, bare (as entries written
-// before the commands were quoted have it) or shell-quoted (as they are written now).
+// before the commands were quoted have it) or shell-quoted (as they are written now). An empty
+// word, which every string contains, is mentioned by no command: a caller handed an empty binary
+// path must find nothing, not answer on the family's token alone.
 func commandMentions(command, word string) bool {
+	if word == "" {
+		return false
+	}
 	return strings.Contains(command, word) || strings.Contains(command, shellQuote(word))
 }
 
