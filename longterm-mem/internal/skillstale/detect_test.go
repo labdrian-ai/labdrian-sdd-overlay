@@ -226,6 +226,24 @@ func TestDetect_ReportsEachKindOfSignalInTheOrderOfTheReport(t *testing.T) {
 	}
 }
 
+// A skill whose candidate has no Engram record is reported with the status "unrecorded", never a blank
+// one, and a skill that has a record keeps the status the record holds.
+func TestDetect_NamesTheStatusOfACandidateWithNoRecord(t *testing.T) {
+	w := newWorld().
+		skill("unrecorded-skill", text(fence+"sh\nmissing-tool\n"+fence+"\n")).
+		skill("recorded-skill", text(fence+"sh\nmissing-tool\n"+fence+"\n")).
+		observed("recorded-skill", recentTime)
+
+	findings := w.detect(t)
+
+	if got := findingOf(t, findings, "unrecorded-skill").Status; got != "unrecorded" {
+		t.Errorf("status of a candidate with no record = %q, want %q", got, "unrecorded")
+	}
+	if got := findingOf(t, findings, "recorded-skill").Status; got != "registered" {
+		t.Errorf("status of a recorded candidate = %q, want registered", got)
+	}
+}
+
 // A skill with nothing to report is not in the report, whatever else is: present and unknown paths say
 // nothing, a command that is found says nothing, and a record observed lately says nothing.
 func TestDetect_LeavesOutASkillWithNothingToReport(t *testing.T) {
