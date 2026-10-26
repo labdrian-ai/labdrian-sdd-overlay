@@ -1,0 +1,194 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:b9ceeac556aeb8a500b2264afddc3fc76d930bb172e9298a9d7f64373a0c1e21",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-425522614b630019",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "7064cb80f44c894dd001b484687b11934ebe0d12",
+      "candidate_tree": "aab98104b92a5fd8d0e0150a653d95ccdcd3e468",
+      "paths_digest": "sha256:6dd2b8d267307ae5993e2d5b521a4c6be6c95da6676dbfc538083a49bc652ceb",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/synctrigger/hardening_test.go",
+        "engine/synctrigger/synctrigger.go",
+        "odd/review-receipts/consolidation-phase9/review-db8ca978dd8377d5.review-state.json",
+        "odd/tasks/consolidation-phase9.md"
+      ],
+      "identity": "sha256:da310796b5cb81b54e803571b20f9313c2b0c86a1a0807a4d6d35a1661a72c82"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "7064cb80f44c894dd001b484687b11934ebe0d12",
+      "candidate_tree": "aab98104b92a5fd8d0e0150a653d95ccdcd3e468",
+      "paths_digest": "sha256:6dd2b8d267307ae5993e2d5b521a4c6be6c95da6676dbfc538083a49bc652ceb",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/synctrigger/hardening_test.go",
+        "engine/synctrigger/synctrigger.go",
+        "odd/review-receipts/consolidation-phase9/review-db8ca978dd8377d5.review-state.json",
+        "odd/tasks/consolidation-phase9.md"
+      ],
+      "identity": "sha256:da310796b5cb81b54e803571b20f9313c2b0c86a1a0807a4d6d35a1661a72c82"
+    },
+    "genesis_paths": [
+      "engine/synctrigger/hardening_test.go",
+      "engine/synctrigger/synctrigger.go",
+      "odd/review-receipts/consolidation-phase9/review-db8ca978dd8377d5.review-state.json",
+      "odd/tasks/consolidation-phase9.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-resilience",
+      "review-reliability"
+    ],
+    "original_changed_lines": 446,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "serializes log rotation across processes with a flock and re-checks the size under it; a concurrent test pins it",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:f9a5849430b052c00579e7e16fbe1f9726b69a0b857be96356ced3d9906a57df",
+    "capture_phase_revision": "sha256:6a5c43790dc85282c9f02cd423ffbfe9e4b612ed0648b10be00c4c64449d3a54",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-resilience",
+        "target_identity": "sha256:da310796b5cb81b54e803571b20f9313c2b0c86a1a0807a4d6d35a1661a72c82",
+        "capture_phase_revision": "sha256:6a5c43790dc85282c9f02cd423ffbfe9e4b612ed0648b10be00c4c64449d3a54",
+        "artifact_digest": "sha256:975911b680b7ad177cad7002748c2948066b7408fba8ad62a109c6573b653d2d",
+        "result_hash": "sha256:388a95353b1af6cfa6dde28c61094b28f06889721dea77be247bd8f253e3f1d4",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:dda84a87842aaef39c3d97f48841cf42293da7369556bb6fe4245bdc26e2957a",
+            "lineage_id": "review-425522614b630019",
+            "authority_revision": "sha256:6a5c43790dc85282c9f02cd423ffbfe9e4b612ed0648b10be00c4c64449d3a54",
+            "target_identity": "sha256:da310796b5cb81b54e803571b20f9313c2b0c86a1a0807a4d6d35a1661a72c82",
+            "base_tree": "7064cb80f44c894dd001b484687b11934ebe0d12",
+            "candidate_tree": "aab98104b92a5fd8d0e0150a653d95ccdcd3e468",
+            "changed_path_manifest_sha256": "sha256:9f7aa4bae6e078b503b7bf92c337cff8682f47e92025214ec4c9cb8a3a18d6f9",
+            "lens": "review-resilience",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:dda84a87842aaef39c3d97f48841cf42293da7369556bb6fe4245bdc26e2957a",
+            "raw_sha256": "sha256:8d31bea55ec5f84b32b94018307ae3131d26062d34551dbc17bac53634a0cc09",
+            "canonical_sha256": "sha256:52dea73465b8d391e43d13309bf963c4690765f4747e7b5200fc6727237cb606",
+            "result_hash": "sha256:388a95353b1af6cfa6dde28c61094b28f06889721dea77be247bd8f253e3f1d4",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:dda84a87842aaef39c3d97f48841cf42293da7369556bb6fe4245bdc26e2957a",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/synctrigger/hardening_test.go",
+                "engine/synctrigger/synctrigger.go",
+                "odd/review-receipts/consolidation-phase9/review-db8ca978dd8377d5.review-state.json",
+                "odd/tasks/consolidation-phase9.md"
+              ]
+            },
+            "lens": "review-resilience",
+            "findings": [],
+            "evidence": [
+              "rotateLog in engine/synctrigger/synctrigger.go now takes an exclusive filelock on path.lock only when the log is full, and checks the size again under the lock. This closes the check-then-rename race that the earlier review flagged as a WARNING.",
+              "Failure handling stays best effort. If the lock cannot be acquired within filelock's bound, rotateLog returns and the log keeps growing until the next open. The caller never fails, so the always-exit-0 hook contract is kept. I found no concrete failure mode that this change introduces.",
+              "The lock is held only for the removes and renames, and a lock held by a process that dies is released by the OS. The added latency is therefore bounded and applies only to triggers that find a full log.",
+              "The new test TestRunChild_ConcurrentTriggersRotateAFullLogOnce in engine/synctrigger/hardening_test.go covers the concurrent rotation case. The review receipt and the task note are documentation only and have no runtime impact."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 1,
+        "target_identity": "sha256:da310796b5cb81b54e803571b20f9313c2b0c86a1a0807a4d6d35a1661a72c82",
+        "capture_phase_revision": "sha256:6a5c43790dc85282c9f02cd423ffbfe9e4b612ed0648b10be00c4c64449d3a54",
+        "artifact_digest": "sha256:2e630d83625684fe6de905b0adbdb7b4406d8c2f256fca6d941f3b817b8762de",
+        "result_hash": "sha256:153261bd21f16afc6b81dd6ed55918192509dc536ad015638866095d91216b93",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:5ec34d4d5c8074caa7969d86e9ff41bd8522a6bdf6e0724eb9505bd397c46843",
+            "lineage_id": "review-425522614b630019",
+            "authority_revision": "sha256:6a5c43790dc85282c9f02cd423ffbfe9e4b612ed0648b10be00c4c64449d3a54",
+            "target_identity": "sha256:da310796b5cb81b54e803571b20f9313c2b0c86a1a0807a4d6d35a1661a72c82",
+            "base_tree": "7064cb80f44c894dd001b484687b11934ebe0d12",
+            "candidate_tree": "aab98104b92a5fd8d0e0150a653d95ccdcd3e468",
+            "changed_path_manifest_sha256": "sha256:9f7aa4bae6e078b503b7bf92c337cff8682f47e92025214ec4c9cb8a3a18d6f9",
+            "lens": "review-reliability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:5ec34d4d5c8074caa7969d86e9ff41bd8522a6bdf6e0724eb9505bd397c46843",
+            "raw_sha256": "sha256:46c03e3acd328ecc29a4d0632e0a3b13e343454bfb24ca361426196cee09b29b",
+            "canonical_sha256": "sha256:46c03e3acd328ecc29a4d0632e0a3b13e343454bfb24ca361426196cee09b29b",
+            "result_hash": "sha256:153261bd21f16afc6b81dd6ed55918192509dc536ad015638866095d91216b93",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:5ec34d4d5c8074caa7969d86e9ff41bd8522a6bdf6e0724eb9505bd397c46843",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/synctrigger/hardening_test.go",
+                "engine/synctrigger/synctrigger.go",
+                "odd/review-receipts/consolidation-phase9/review-db8ca978dd8377d5.review-state.json",
+                "odd/tasks/consolidation-phase9.md"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [],
+            "evidence": [
+              "rotateLog now checks full(path) without the lock, takes an exclusive filelock on path.lock, then checks full(path) again before renaming. A trigger that waited on the lock sees the fresh, small log after the first rotation and returns without rotating, so the fresh log is not rotated a second time and no older file is displaced. This addresses the earlier unlocked check-then-rename WARNING.",
+              "If the lock cannot be acquired, rotateLog returns without rotating, so the log grows until the next opening. Acquire is called with Perm 0o600. Failure never blocks the sync or loses a line, which fits the always-exit-0, best-effort contract.",
+              "The window between the rename and the next open is safe. A concurrent full(path) sees a missing file, stat fails, and it reports not full, so it skips the lock.",
+              "TestRunChild_ConcurrentTriggersRotateAFullLogOnce (engine/synctrigger/hardening_test.go:47-80) observes behavior from outside: .1 holds the full log, .2 and .3 hold the older files, and the log has exactly 16 outcome lines. It runs 16 goroutines for 20 rounds, which exercises the race in the way the fix targets, and the task note records RED before and GREEN with -race after.",
+              "The lock file is created only when the log is full, so a log under its limit gets none and the goldens are unchanged. The lock is never removed, as the filelock contract requires. The only reliability cost is one leftover 0600 file in the logs directory.",
+              "The receipt JSON and the task markdown are documentation and recorded state with no runtime behavior to check."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "1a3aadbea7bdebd016df829f432666be61475a69141fbffb28ebe28f8aea58cb",
+    "initial_atomic_start": {
+      "lineage_id": "review-425522614b630019",
+      "worktree_identity": "sha256:8455002f227f033663d0e7d8b8ff6a885e1c85b482ec52e34017c303452eed87",
+      "target_identity": "sha256:da310796b5cb81b54e803571b20f9313c2b0c86a1a0807a4d6d35a1661a72c82",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "7064cb80f44c894dd001b484687b11934ebe0d12",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-resilience",
+        "review-reliability"
+      ],
+      "original_changed_lines": 446,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "serializes log rotation across processes with a flock and re-checks the size under it; a concurrent test pins it"
+    },
+    "runtime_agent": "claude-code"
+  }
+}
