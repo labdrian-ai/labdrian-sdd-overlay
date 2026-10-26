@@ -95,6 +95,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     skills)          cmd_skills "$@" ;;
     shaper)          cmd_shaper "$@" ;;
     roles)           cmd_roles "$@" ;;
+    review)          cmd_review "$@" ;;
     memory)          cmd_memory "$@" ;;
     workflow)        cmd_workflow "$@" ;;
     validate-entry-contract) cmd_validate_entry_contract "$@" ;;

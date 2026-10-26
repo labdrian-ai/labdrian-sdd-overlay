@@ -2,8 +2,8 @@
 #
 # engine_verbs
 #
-# The commands that are a forward to a verb of the engine: skills, shaper, roles, memory,
-# workflow and gadu-generate.
+# The commands that are a forward to a verb of the engine: skills, shaper, roles, review,
+# memory, workflow and gadu-generate.
 #
 # Sourced by bin/labdrian-overlay in the order it lists, never run: it defines functions and
 # variables and does nothing else.
@@ -51,6 +51,18 @@ cmd_roles() {
     die "engine binary not found at $ENGINE_BINARY; run 'labdrian install-hooks' first"
   fi
   exec "$ENGINE_BINARY" roles "$@"
+}
+
+# cmd_review forwards `labdrian review <verb>` to the engine unchanged. bind
+# computes the candidate of a review from git and makes its detached worktree;
+# record holds a reviewer's reply to that binding and stores it. No verb
+# launches an agent or dispatches work, and the exit codes (0, 2 a reply that
+# is refused, 1) reach the caller.
+cmd_review() {
+  if [[ ! -x "$ENGINE_BINARY" ]]; then
+    die "engine binary not found at $ENGINE_BINARY; run 'labdrian install-hooks' first"
+  fi
+  exec "$ENGINE_BINARY" review "$@"
 }
 
 # cmd_memory forwards `labdrian memory <verb>` to the engine unchanged.
