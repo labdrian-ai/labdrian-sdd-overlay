@@ -274,8 +274,9 @@ func TestUsageDocumentsRuntimeProbe(t *testing.T) {
 	usageText := captureUsage(t)
 	for _, want := range []string{
 		"engine runtime probe [--target claude|codex|pi|all]",
-		"stat only",
-		"never opens",
+		"(stat only)",
+		"whether the project's procedural skills lock can be read",
+		"never opens another file",
 		"exit 0 success, 2 unknown --target value, 1 usage error including an unknown flag",
 	} {
 		if !strings.Contains(usageText, want) {
@@ -286,7 +287,7 @@ func TestUsageDocumentsRuntimeProbe(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"runtime probe [--target claude|codex|pi|all]", "never opens, reads, hashes, or prints the contents"} {
+	for _, want := range []string{"runtime probe [--target claude|codex|pi|all]", "never opens, reads, hashes, or prints the contents", "the one file it reads, through the same reader session start uses"} {
 		if !strings.Contains(string(readme), want) {
 			t.Errorf("README does not contain %q", want)
 		}

@@ -14,6 +14,14 @@
 // pins the source of this package to that contract: no os.Open, no os.ReadFile, no
 // io/ioutil, no os/exec, no net.
 //
+// One signal asks something a stat cannot answer: whether the project's procedural
+// skills lock can be used (C10c). The prober does not read the lock to find out; it
+// asks the project through ProjectContext, a port it owns, and the composition root
+// answers it with an adapter that reads the lock with the reader the SessionStart
+// probe uses. So the package still has no way to open a file, and the answer is the
+// session probe's: a lock that is there and cannot be used is unavailable, with the
+// session probe's words.
+//
 // The prober is a driven adapter: engine/workflow owns the DependencyProber port
 // and engine/capability stays the pure vocabulary and declarations of what each
 // runtime can do, so the stat-level checks, which are a statement about what
@@ -29,13 +37,14 @@
 //     (longtermMemRegistrationFile and DefaultLongtermMemStateDir), copied here
 //     because engine/runtime must not be imported by Phase 7 code. A registration
 //     recorded under a --state-dir other than the default is not seen.
-//   - memory:procedural-skills: no check exists, so it is always unavailable. The
-//     one file that would show them by stat is the project's own lock,
-//     <project root>/.labdrian/procedural-skills.lock.json, and the prober knows
-//     only Home and PATH: a check would need a project-root input it does not have,
-//     and the skills directories under Home hold every kind of skill, not
-//     procedural ones. Phase 8 leaves this as it was; giving the prober a project
-//     root is a decision about its inputs, made by whoever wires it, not here.
+//   - memory:procedural-skills: the project's own lock,
+//     <project root>/.labdrian/procedural-skills.lock.json, asked of the project
+//     through ProjectContext (the skills directories under Home hold every kind of
+//     skill, not procedural ones). Available when the lock is there and valid;
+//     unavailable when the project is unknown, when it has no lock, and when the lock
+//     is there and cannot be used. The words of that last case are the session
+//     probe's ("the procedural skills lock cannot be read: <reason>"), the reason
+//     shortened to MaxReasonRunes. With no ProjectContext the project is unknown.
 //   - gentle-ai-review: an executable file named gentle-ai in one of the
 //     absolute directories of the PATH value the prober was given.
 //   - credentials:claude-code, credentials:codex, credentials:pi: the files
