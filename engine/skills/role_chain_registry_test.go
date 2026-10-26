@@ -6,9 +6,11 @@ package skills_test
 // row and the review results convention are checked in role_chain_artifact_test.go.
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -85,5 +87,47 @@ func TestRoleChainOrderIsTheVocabularyOfTheRolesPackage(t *testing.T) {
 	}
 	if !reflect.DeepEqual(gotSkippable, wantSkippable) {
 		t.Errorf("the skill puts %v in brackets, the roles a chain may skip are %v", gotSkippable, wantSkippable)
+	}
+}
+
+// The payload kinds the skill gives the parent are the ones of the feature document (C15, S4):
+// exploration, feature-doc, progress, review-report, verify-report and close-report, in that order,
+// and no longer the names of the SDD artifacts (proposal to apply-progress, archive-report). The engine
+// checks a payload kind for being present and nothing else, so each of the six must pass the validation
+// of a record that carries it: a vocabulary the engine began to enforce would fail here, and not in the
+// hand of a parent that followed the skill.
+func TestRoleChainPayloadKindsAreTheOnesOfTheFeatureDocumentAndTheEngineAcceptsEach(t *testing.T) {
+	data, err := os.ReadFile(filepath.Join(repoRoot(t), "skills", "role-chain", "SKILL.md"))
+	if err != nil {
+		t.Fatalf("reading the skill: %v", err)
+	}
+	var line string
+	for _, l := range strings.Split(string(data), "\n") {
+		if strings.Contains(l, "`payload_kind`:") {
+			line = l
+			break
+		}
+	}
+	if line == "" {
+		t.Fatal("the skill lists no payload kinds after `payload_kind`:")
+	}
+	_, list, _ := strings.Cut(line, "`payload_kind`:")
+	var got []string
+	for _, m := range regexp.MustCompile("`([^`]+)`").FindAllStringSubmatch(list, -1) {
+		got = append(got, m[1])
+	}
+	want := []string{"exploration", "feature-doc", "progress", "review-report", "verify-report", "close-report"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("the payload kinds of the skill = %v, want %v", got, want)
+	}
+
+	zeros, digest := strings.Repeat("0", 64), strings.Repeat("a", 64)
+	for _, kind := range got {
+		record := fmt.Sprintf(`{"version":1,"project_id":"p","goal_id":"g","chain_id":"c","seq":1,"from_role":"shaper","to_role":"estimator",`+
+			`"prev_sha256":%q,"payload_kind":%q,"payload_sha256":%q,"evidence":[],`+
+			`"context":{"summary":"s","decisions":[],"open_questions":[]},"status":"completed"}`, zeros, kind, digest)
+		if _, err := roles.ParseRoleHandoff([]byte(record)); err != nil {
+			t.Errorf("the engine refuses a record whose payload kind is %q: %v", kind, err)
+		}
 	}
 }

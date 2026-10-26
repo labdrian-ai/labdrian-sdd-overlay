@@ -1,0 +1,335 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:eefb09c7391bd53b971b83c95c654e369743acf963eb85f1be3116cb46b9c99e",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-cb2fb7c232ddc9c2",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "5e9fe16a2a0dc4e663c9aac79b684c5239ae0431",
+      "candidate_tree": "0adcc0ad09bbde9c8aa90fee1c6c3dde8028ee3f",
+      "paths_digest": "sha256:2a2a17c7d77e3db61659be0016f2c64f7b23ee00fa66a353779987a99835d78e",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "CHANGELOG.md",
+        "agents/builder.md",
+        "agents/delivery.md",
+        "agents/shaper.md",
+        "codex/agents/builder.toml",
+        "codex/agents/delivery.toml",
+        "codex/agents/shaper.toml",
+        "engine/agentgen/roles.go",
+        "engine/agentgen/roles_test.go",
+        "engine/skills/odd_role_skills_artifact_test.go",
+        "engine/skills/odd_role_skills_registry_test.go",
+        "engine/skills/role_agents_artifact_test.go",
+        "engine/skills/role_chain_artifact_test.go",
+        "engine/skills/role_chain_registry_test.go",
+        "odd/review-receipts/consolidation-phase9/review-708eb1e4aad06aa6.review-state.json",
+        "odd/tasks/consolidation-phase9.md",
+        "overlay.manifest",
+        "pi/agents/builder.md",
+        "pi/agents/delivery.md",
+        "pi/agents/shaper.md",
+        "roles/builder/body.md",
+        "roles/delivery/body.md",
+        "roles/shaper/body.md",
+        "skills.registry.yaml",
+        "skills/odd-feature-doc/SKILL.md",
+        "skills/role-chain/SKILL.md",
+        "skills/test-first/SKILL.md"
+      ],
+      "identity": "sha256:1abc54081be1d9c9521f7c2bf607703f5d0dbe353c54a8c8b71cdf903c7c93e3"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "5e9fe16a2a0dc4e663c9aac79b684c5239ae0431",
+      "candidate_tree": "0adcc0ad09bbde9c8aa90fee1c6c3dde8028ee3f",
+      "paths_digest": "sha256:2a2a17c7d77e3db61659be0016f2c64f7b23ee00fa66a353779987a99835d78e",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "CHANGELOG.md",
+        "agents/builder.md",
+        "agents/delivery.md",
+        "agents/shaper.md",
+        "codex/agents/builder.toml",
+        "codex/agents/delivery.toml",
+        "codex/agents/shaper.toml",
+        "engine/agentgen/roles.go",
+        "engine/agentgen/roles_test.go",
+        "engine/skills/odd_role_skills_artifact_test.go",
+        "engine/skills/odd_role_skills_registry_test.go",
+        "engine/skills/role_agents_artifact_test.go",
+        "engine/skills/role_chain_artifact_test.go",
+        "engine/skills/role_chain_registry_test.go",
+        "odd/review-receipts/consolidation-phase9/review-708eb1e4aad06aa6.review-state.json",
+        "odd/tasks/consolidation-phase9.md",
+        "overlay.manifest",
+        "pi/agents/builder.md",
+        "pi/agents/delivery.md",
+        "pi/agents/shaper.md",
+        "roles/builder/body.md",
+        "roles/delivery/body.md",
+        "roles/shaper/body.md",
+        "skills.registry.yaml",
+        "skills/odd-feature-doc/SKILL.md",
+        "skills/role-chain/SKILL.md",
+        "skills/test-first/SKILL.md"
+      ],
+      "identity": "sha256:1abc54081be1d9c9521f7c2bf607703f5d0dbe353c54a8c8b71cdf903c7c93e3"
+    },
+    "genesis_paths": [
+      "CHANGELOG.md",
+      "agents/builder.md",
+      "agents/delivery.md",
+      "agents/shaper.md",
+      "codex/agents/builder.toml",
+      "codex/agents/delivery.toml",
+      "codex/agents/shaper.toml",
+      "engine/agentgen/roles.go",
+      "engine/agentgen/roles_test.go",
+      "engine/skills/odd_role_skills_artifact_test.go",
+      "engine/skills/odd_role_skills_registry_test.go",
+      "engine/skills/role_agents_artifact_test.go",
+      "engine/skills/role_chain_artifact_test.go",
+      "engine/skills/role_chain_registry_test.go",
+      "odd/review-receipts/consolidation-phase9/review-708eb1e4aad06aa6.review-state.json",
+      "odd/tasks/consolidation-phase9.md",
+      "overlay.manifest",
+      "pi/agents/builder.md",
+      "pi/agents/delivery.md",
+      "pi/agents/shaper.md",
+      "roles/builder/body.md",
+      "roles/delivery/body.md",
+      "roles/shaper/body.md",
+      "skills.registry.yaml",
+      "skills/odd-feature-doc/SKILL.md",
+      "skills/role-chain/SKILL.md",
+      "skills/test-first/SKILL.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 843,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "Rewrote three role prompts and the role-chain skill, added two skills that agents follow, and added pinning tests for their wording",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:e049535047dbb93a090673dff534bdbfa421c91ccc957df0a9465f48b314d9af",
+    "capture_phase_revision": "sha256:2d3846bb801ba244888b474dd211889ba4477394c8cdf369d789e7c8c8480e88",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "target_identity": "sha256:1abc54081be1d9c9521f7c2bf607703f5d0dbe353c54a8c8b71cdf903c7c93e3",
+        "capture_phase_revision": "sha256:2d3846bb801ba244888b474dd211889ba4477394c8cdf369d789e7c8c8480e88",
+        "artifact_digest": "sha256:460988a1fd8dadaff14f78a8fa6d06daff644eb72070731610262693add2f61f",
+        "result_hash": "sha256:fe80cfec30723a63a63d543bfffa693515a7dfdff498a4da1a5d9c12e8e21490",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:9ae6e0f3d92e7aafed3a59b3009c4bc0e724f848df7d543f764ccaaf30d7bb32",
+            "lineage_id": "review-cb2fb7c232ddc9c2",
+            "authority_revision": "sha256:2d3846bb801ba244888b474dd211889ba4477394c8cdf369d789e7c8c8480e88",
+            "target_identity": "sha256:1abc54081be1d9c9521f7c2bf607703f5d0dbe353c54a8c8b71cdf903c7c93e3",
+            "base_tree": "5e9fe16a2a0dc4e663c9aac79b684c5239ae0431",
+            "candidate_tree": "0adcc0ad09bbde9c8aa90fee1c6c3dde8028ee3f",
+            "changed_path_manifest_sha256": "sha256:0eccb0f90c19d7ad5cdeb2ea7a5aa1aa58bc05059b1f6fb92b85eb3d222821a0",
+            "lens": "review-readability",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:9ae6e0f3d92e7aafed3a59b3009c4bc0e724f848df7d543f764ccaaf30d7bb32",
+            "raw_sha256": "sha256:6826a2ead39fe7dd524e7a5c5e618890e74e7133eb453c72924d91750bbb4ccb",
+            "canonical_sha256": "sha256:95381a962643bf43238625315607112917ac897d9ce51f17ef5c63f94ed1ec2a",
+            "result_hash": "sha256:fe80cfec30723a63a63d543bfffa693515a7dfdff498a4da1a5d9c12e8e21490",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:9ae6e0f3d92e7aafed3a59b3009c4bc0e724f848df7d543f764ccaaf30d7bb32",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "CHANGELOG.md",
+                "agents/builder.md",
+                "agents/delivery.md",
+                "agents/shaper.md",
+                "codex/agents/builder.toml",
+                "codex/agents/delivery.toml",
+                "codex/agents/shaper.toml",
+                "engine/agentgen/roles.go",
+                "engine/agentgen/roles_test.go",
+                "engine/skills/odd_role_skills_artifact_test.go",
+                "engine/skills/odd_role_skills_registry_test.go",
+                "engine/skills/role_agents_artifact_test.go",
+                "engine/skills/role_chain_artifact_test.go",
+                "engine/skills/role_chain_registry_test.go",
+                "odd/review-receipts/consolidation-phase9/review-708eb1e4aad06aa6.review-state.json",
+                "odd/tasks/consolidation-phase9.md",
+                "overlay.manifest",
+                "pi/agents/builder.md",
+                "pi/agents/delivery.md",
+                "pi/agents/shaper.md",
+                "roles/builder/body.md",
+                "roles/delivery/body.md",
+                "roles/shaper/body.md",
+                "skills.registry.yaml",
+                "skills/odd-feature-doc/SKILL.md",
+                "skills/role-chain/SKILL.md",
+                "skills/test-first/SKILL.md"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-test-first-ref-in-doc-skill",
+                "lens": "readability",
+                "location": "skills/odd-feature-doc/SKILL.md:33",
+                "severity": "SUGGESTION",
+                "claim": "The odd-feature-doc skill hard-codes a dependency on the test-first skill table in the builder row. If test-first changes its table, the two skills drift silently. Only the builder agent citing both skills ties them together, so the coupling is easy to miss.",
+                "proof_refs": [
+                  "skills/odd-feature-doc/SKILL.md:33",
+                  "skills/test-first/SKILL.md:40-46"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Reviewed all 27 changed paths. The role bodies, the generated agent files for Claude, Codex and Pi, and the roles.go descriptions are consistent with one another.",
+              "The new skill tests pin the exact wording of the skills. That makes the skills safe to edit only together with the tests, but it is deliberate and documented in the test comments.",
+              "The CHANGELOG entry and the task ledger give clear context for why the SDD artifacts were replaced.",
+              "I found no dead logic, misleading names or unexplained constants that hide a defect."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 1,
+        "target_identity": "sha256:1abc54081be1d9c9521f7c2bf607703f5d0dbe353c54a8c8b71cdf903c7c93e3",
+        "capture_phase_revision": "sha256:2d3846bb801ba244888b474dd211889ba4477394c8cdf369d789e7c8c8480e88",
+        "artifact_digest": "sha256:a6dc5f025216a5283c2355ec66223065d099bf2dd1202ce742ac59c7be30bab4",
+        "result_hash": "sha256:4d4b07659e566568ca0c4dc3d721ae46866e9b95a0490db20c90e0c9a50c19e0",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:ab4b347ab49b8bc57d6562daa795a58090a9542ca37ddc9077fc434fcb405e59",
+            "lineage_id": "review-cb2fb7c232ddc9c2",
+            "authority_revision": "sha256:2d3846bb801ba244888b474dd211889ba4477394c8cdf369d789e7c8c8480e88",
+            "target_identity": "sha256:1abc54081be1d9c9521f7c2bf607703f5d0dbe353c54a8c8b71cdf903c7c93e3",
+            "base_tree": "5e9fe16a2a0dc4e663c9aac79b684c5239ae0431",
+            "candidate_tree": "0adcc0ad09bbde9c8aa90fee1c6c3dde8028ee3f",
+            "changed_path_manifest_sha256": "sha256:0eccb0f90c19d7ad5cdeb2ea7a5aa1aa58bc05059b1f6fb92b85eb3d222821a0",
+            "lens": "review-reliability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:ab4b347ab49b8bc57d6562daa795a58090a9542ca37ddc9077fc434fcb405e59",
+            "raw_sha256": "sha256:afab665af259509ed67e8fa4f6c5b6b61723c1c3129409a559bd93b558baed6b",
+            "canonical_sha256": "sha256:afab665af259509ed67e8fa4f6c5b6b61723c1c3129409a559bd93b558baed6b",
+            "result_hash": "sha256:4d4b07659e566568ca0c4dc3d721ae46866e9b95a0490db20c90e0c9a50c19e0",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:ab4b347ab49b8bc57d6562daa795a58090a9542ca37ddc9077fc434fcb405e59",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "CHANGELOG.md",
+                "agents/builder.md",
+                "agents/delivery.md",
+                "agents/shaper.md",
+                "codex/agents/builder.toml",
+                "codex/agents/delivery.toml",
+                "codex/agents/shaper.toml",
+                "engine/agentgen/roles.go",
+                "engine/agentgen/roles_test.go",
+                "engine/skills/odd_role_skills_artifact_test.go",
+                "engine/skills/odd_role_skills_registry_test.go",
+                "engine/skills/role_agents_artifact_test.go",
+                "engine/skills/role_chain_artifact_test.go",
+                "engine/skills/role_chain_registry_test.go",
+                "odd/review-receipts/consolidation-phase9/review-708eb1e4aad06aa6.review-state.json",
+                "odd/tasks/consolidation-phase9.md",
+                "overlay.manifest",
+                "pi/agents/builder.md",
+                "pi/agents/delivery.md",
+                "pi/agents/shaper.md",
+                "roles/builder/body.md",
+                "roles/delivery/body.md",
+                "roles/shaper/body.md",
+                "skills.registry.yaml",
+                "skills/odd-feature-doc/SKILL.md",
+                "skills/role-chain/SKILL.md",
+                "skills/test-first/SKILL.md"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-receipt-stale-scope",
+                "lens": "reliability",
+                "location": "odd/review-receipts/consolidation-phase9/review-708eb1e4aad06aa6.review-state.json:7-8",
+                "severity": "SUGGESTION",
+                "claim": "The committed review-state receipt attests to a different base/candidate tree and a three-path snapshot (an ADR, another receipt, the ledger), not to this candidate's 27 paths. It cannot serve as evidence for this change; readers should not treat it as proof of the final content.",
+                "proof_refs": [
+                  "odd/review-receipts/consolidation-phase9/review-708eb1e4aad06aa6.review-state.json:15-25"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Reviewed all 27 changed paths. The role bodies, the generated agent files (agents/, pi/agents/, codex/agents/) and the descriptions in engine/agentgen/roles.go are consistent with one another, and roles_test.go pins the new descriptions.",
+              "The new skill texts (odd-feature-doc, test-first) are pinned by fragment and structure assertions in engine/skills/odd_role_skills_artifact_test.go: section order, role table columns, decision-gate rows and the evidence-table header. The manifest rows and registry entries are tested in the artifact and registry tests.",
+              "The role-chain payload_kind change is tested by parsing the skill line and feeding each of the six kinds through roles.ParseRoleHandoff, so the claim that the engine accepts any non-blank kind is checked.",
+              "role_agents_artifact_test.go checks that each role delta cites its skills in backticks, that each cited skill directory exists with a matching name, and that the old SDD wording is gone.",
+              "No behavior regression found for state valid at baseline: the engine change is two description strings, and the old payload kinds stay valid because the engine accepts any non-blank kind (per the CHANGELOG and the test)."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "c2b54423fc1f833c2f39d11a803b09c188e74ffc64590563892a0547216df671",
+    "initial_atomic_start": {
+      "lineage_id": "review-cb2fb7c232ddc9c2",
+      "worktree_identity": "sha256:ccfac9f2c1660ff7a220c5fe64b9d7bc7d1c7118b1b06aacf51aeac3dc29abb4",
+      "target_identity": "sha256:1abc54081be1d9c9521f7c2bf607703f5d0dbe353c54a8c8b71cdf903c7c93e3",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "5e9fe16a2a0dc4e663c9aac79b684c5239ae0431",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 843,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "Rewrote three role prompts and the role-chain skill, added two skills that agents follow, and added pinning tests for their wording"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

@@ -1,0 +1,156 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:cb166d5af084f39f1014b956f7556785bf236a7ab02ec3477b16bf045965c19f",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-708eb1e4aad06aa6",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "966975ebd8418a27cf5b4deba45dc304f45fb023",
+      "candidate_tree": "5e9fe16a2a0dc4e663c9aac79b684c5239ae0431",
+      "paths_digest": "sha256:934487c73bc761c212b082b4e55ab0fb1326fe6129ca6d7ecfacb065c3e8170a",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "docs/architecture/adr-c23-m13-memory-metrics-handoff.md",
+        "odd/review-receipts/consolidation-phase9/review-62b8c63df9dd259e.review-state.json",
+        "odd/tasks/consolidation-phase9.md"
+      ],
+      "identity": "sha256:b4999707698f1820505d845365d10fd328e29e882ce306f90a2ef84deb7d5397"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "966975ebd8418a27cf5b4deba45dc304f45fb023",
+      "candidate_tree": "5e9fe16a2a0dc4e663c9aac79b684c5239ae0431",
+      "paths_digest": "sha256:934487c73bc761c212b082b4e55ab0fb1326fe6129ca6d7ecfacb065c3e8170a",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "docs/architecture/adr-c23-m13-memory-metrics-handoff.md",
+        "odd/review-receipts/consolidation-phase9/review-62b8c63df9dd259e.review-state.json",
+        "odd/tasks/consolidation-phase9.md"
+      ],
+      "identity": "sha256:b4999707698f1820505d845365d10fd328e29e882ce306f90a2ef84deb7d5397"
+    },
+    "genesis_paths": [
+      "docs/architecture/adr-c23-m13-memory-metrics-handoff.md",
+      "odd/review-receipts/consolidation-phase9/review-62b8c63df9dd259e.review-state.json",
+      "odd/tasks/consolidation-phase9.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-reliability"
+    ],
+    "original_changed_lines": 153,
+    "correction_budget": 77,
+    "correction_budget_policy": "floor_two",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:c0e4e917485b67ab2430ea02bd41e222bb0346863b8452b5413487575921b8c1",
+    "capture_phase_revision": "sha256:3e968638acea95189a14ceb41abeea1464316ad3a19a4ad109d1249a3581c1d7",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "target_identity": "sha256:b4999707698f1820505d845365d10fd328e29e882ce306f90a2ef84deb7d5397",
+        "capture_phase_revision": "sha256:3e968638acea95189a14ceb41abeea1464316ad3a19a4ad109d1249a3581c1d7",
+        "artifact_digest": "sha256:769ec3e5475ed222d66712be7694815f5aecfa1e423087c2f5d1d27a5c5d2f05",
+        "result_hash": "sha256:7b0c91ab276634d624613946c042ee230b9ee2b348f2d383733b20703c86e6aa",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:09e8869971a260fcf151a3f0b8e74940f43e5e3f55065253cfff2c08ba65f7b0",
+            "lineage_id": "review-708eb1e4aad06aa6",
+            "authority_revision": "sha256:3e968638acea95189a14ceb41abeea1464316ad3a19a4ad109d1249a3581c1d7",
+            "target_identity": "sha256:b4999707698f1820505d845365d10fd328e29e882ce306f90a2ef84deb7d5397",
+            "base_tree": "966975ebd8418a27cf5b4deba45dc304f45fb023",
+            "candidate_tree": "5e9fe16a2a0dc4e663c9aac79b684c5239ae0431",
+            "changed_path_manifest_sha256": "sha256:32cff37febb37059bd069cb879156c330997879402b4a9a11278959be1e45d3c",
+            "lens": "review-reliability",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:09e8869971a260fcf151a3f0b8e74940f43e5e3f55065253cfff2c08ba65f7b0",
+            "raw_sha256": "sha256:875e11e9fbf8860f98df66f7a8a4e054e8ef4c7228c6a930c60ecd8a2e3d5b0f",
+            "canonical_sha256": "sha256:65dc7189f1d1a747bb6c5642394dc07d1e500b7210994d89ff1a8b7a4cd9424e",
+            "result_hash": "sha256:7b0c91ab276634d624613946c042ee230b9ee2b348f2d383733b20703c86e6aa",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:09e8869971a260fcf151a3f0b8e74940f43e5e3f55065253cfff2c08ba65f7b0",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "docs/architecture/adr-c23-m13-memory-metrics-handoff.md",
+                "odd/review-receipts/consolidation-phase9/review-62b8c63df9dd259e.review-state.json",
+                "odd/tasks/consolidation-phase9.md"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-receipt-scope-mismatch",
+                "lens": "reliability",
+                "location": "odd/review-receipts/consolidation-phase9/review-62b8c63df9dd259e.review-state.json:14",
+                "severity": "WARNING",
+                "claim": "The committed review-state receipt records a snapshot of only two paths (the ADR and the ledger) and a candidate_tree that differs from this candidate's tree. The receipt itself is a third path in the candidate, so it cannot attest to the exact final tree. This is a normal self-referential limitation of committing a receipt, but a reader should not treat it as proof of the final candidate content.",
+                "proof_refs": [
+                  "odd/review-receipts/consolidation-phase9/review-62b8c63df9dd259e.review-state.json:14-19"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-adr-unverified-claims",
+                "lens": "reliability",
+                "location": "docs/architecture/adr-c23-m13-memory-metrics-handoff.md:42-50",
+                "severity": "SUGGESTION",
+                "claim": "The ADR states that Claude has enforcement (partial), Codex has a partial fail-open gate, and Pi has instructions only. It cites the M11 claim table test as proof, but this is a doc-only change with no test pinning these statements, so they can drift from the claim table. Acceptable for a hand-off ADR, but the Phase 11 'built on the M11 claim table' requirement is the real guard.",
+                "proof_refs": [
+                  "docs/architecture/adr-c23-m13-memory-metrics-handoff.md:42-50"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Reviewed all three changed paths in full: a new ADR, a review-state receipt JSON, and a ledger edit flipping C23 and M13 to done.",
+              "The change is documentation and ledger only, with no executable code, so there is no runtime behavior, invalid-input path, or determinism regression to exercise.",
+              "Ledger edits are consistent with the ADR: C23 is marked done only after M13 is done, and the M13 entry describes the same hand-off decision as the ADR.",
+              "The ADR does not claim anything is built; it states that no code, verb, or evidence-format change is made, and so no tests are required."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "cedaeff02180673b81015b1f3f2d0e2097806f2e9744ee842ae0bc10ec567f5a",
+    "initial_atomic_start": {
+      "lineage_id": "review-708eb1e4aad06aa6",
+      "worktree_identity": "sha256:8455002f227f033663d0e7d8b8ff6a885e1c85b482ec52e34017c303452eed87",
+      "target_identity": "sha256:b4999707698f1820505d845365d10fd328e29e882ce306f90a2ef84deb7d5397",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "966975ebd8418a27cf5b4deba45dc304f45fb023",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-reliability"
+      ],
+      "original_changed_lines": 153,
+      "correction_budget": 77,
+      "correction_budget_policy": "floor_two"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

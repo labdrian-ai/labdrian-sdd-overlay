@@ -85,7 +85,7 @@ var roles = []role{
 	},
 	{
 		name:        "shaper",
-		description: "Shapes one planning artifact of a labdrian workflow (proposal, spec, design or tasks) and returns open product decisions as risks.",
+		description: "Writes the Specs and Tasks of the feature document of a labdrian workflow and returns open product decisions as risks.",
 		model:       opus,
 		effort:      "high",
 		tools: []string{
@@ -145,7 +145,7 @@ var roles = []role{
 	},
 	{
 		name:        "delivery",
-		description: "Archives a finished labdrian workflow by copying and moving its artifacts mechanically, recording unfinished work as unfinished.",
+		description: "Closes the feature document of a finished labdrian workflow in place with a final Log entry, recording unfinished work as unfinished.",
 		model:       haiku,
 		effort:      "low",
 		tools: []string{

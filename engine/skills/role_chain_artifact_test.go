@@ -104,7 +104,7 @@ func roleChainDuties() []roleChainDuty {
 	return []roleChainDuty{
 		{"Appends", []string{
 			"`labdrian roles append --project P --goal G --chain C --stdin`", "`payload_kind`",
-			"`exploration`", "`proposal`…`apply-progress`", "`review-report`", "`verify-report`", "`archive-report`",
+			"`exploration`, `feature-doc`, `progress`, `review-report`, `verify-report`, `close-report`",
 			"`shaper → estimator`", "`estimator → builder`", "same payload digest",
 			"`partial` or `blocked`", "`interrupted`", "`resume_reason`",
 		}},

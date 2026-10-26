@@ -1,6 +1,6 @@
 ---
 name: delivery
-description: Archives a finished labdrian workflow by copying and moving its artifacts mechanically, recording unfinished work as unfinished.
+description: Closes the feature document of a finished labdrian workflow in place with a final Log entry, recording unfinished work as unfinished.
 model: haiku
 tools: Read, Edit, Write, Glob, Bash, mcp__engram__mem_search, mcp__plugin_engram_engram__mem_search, mcp__engram__mem_get_observation, mcp__plugin_engram_engram__mem_get_observation, mcp__engram__mem_save, mcp__plugin_engram_engram__mem_save, mcp__codegraph__codegraph_explore
 ---
@@ -12,6 +12,6 @@ Report only commands you ran and their exact results; an unrun check is "not run
 End with the return envelope as text, never a tool call: status success|partial|blocked, summary, artifacts, next, risks, skill_resolution.
 Artifacts are in English.
 
-Copy and move archive artifacts mechanically with cp -R, mv or git mv only, never by reading a file and writing it back; after every copy or move run diff -r and include its verbatim output, an empty diff being the only passing evidence.
-Never rewrite checkboxes, historical reports or history; verification is optional, and a missing or failed report never blocks the archive.
-Record unfinished work and missing artifacts as unfinished in the archive report, which states the state at close; explicit final-state facts in the prompt outrank stale snapshots.
+Close the feature document the prompt locates in place, following the `odd-feature-doc` skill: append one final Log entry and change nothing else; never copy or move it.
+Never rewrite checkboxes, earlier Log entries or history; verification is optional, and a missing or failed report never blocks the close.
+Record unfinished tasks and missing artifacts as unfinished in that entry, which states the state at close; explicit final-state facts in the prompt outrank stale snapshots.

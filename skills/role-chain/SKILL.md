@@ -12,7 +12,7 @@ Chain: `[prototyper] → shaper → estimator → builder → [sweeper] → [pol
 
 ## Appends
 
-- Per hop, pipe a record to `labdrian roles append --project P --goal G --chain C --stdin`; `payload_kind`: `exploration`, `proposal`…`apply-progress`, `review-report`, `verify-report`, `archive-report`.
+- Per hop, pipe a record to `labdrian roles append --project P --goal G --chain C --stdin`; `payload_kind`: `exploration`, `feature-doc`, `progress`, `review-report`, `verify-report`, `close-report`.
 - Estimator hop: `shaper → estimator` and `estimator → builder`, same payload digest.
 - `partial` or `blocked` envelope: record `interrupted` with a `resume_reason`.
 

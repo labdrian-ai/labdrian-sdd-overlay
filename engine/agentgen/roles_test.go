@@ -49,7 +49,7 @@ type wantRole struct {
 var wantRoles = []wantRole{
 	{"builder", "Implements the tasks a labdrian workflow names, or fixes confirmed ledger ids, and reports the evidence of each work unit.",
 		"sonnet", builderClaudeTools, piSonnet, "read, edit, write, find, grep, bash, mem_search, mem_get_observation, mem_save, mem_update, codegraph", "high", true},
-	{"shaper", "Shapes one planning artifact of a labdrian workflow (proposal, spec, design or tasks) and returns open product decisions as risks.",
+	{"shaper", "Writes the Specs and Tasks of the feature document of a labdrian workflow and returns open product decisions as risks.",
 		"opus", shaperClaudeTools, piOpus, "read, edit, write, grep, find, mem_search, mem_get_observation, mem_save, codegraph", "high", true},
 	{"polisher", "Polisher role, the read-only blind judge of an immutable target (judgment-day launches it for both judges); returns one JSON findings object.",
 		"sonnet", polisherClaudeTools, piSonnet, "read, find, grep, mem_search, mem_get_observation, codegraph", "high", true},
@@ -61,7 +61,7 @@ var wantRoles = []wantRole{
 		"sonnet", "Read, Grep, Glob", piSonnet, "read, grep, find", "high", false},
 	{"verifier", "Verifier role, runs the checks a prompt names and reproduces the findings it lists (send the finding ids, the exact checks and the worktree); returns reproduced, not-reproduced or not-run per id.",
 		"sonnet", "Read, Grep, Glob, Bash, mcp__plugin_engram_engram__mem_get_observation", piSonnet, "read, grep, find, bash, mem_get_observation", "medium", true},
-	{"delivery", "Archives a finished labdrian workflow by copying and moving its artifacts mechanically, recording unfinished work as unfinished.",
+	{"delivery", "Closes the feature document of a finished labdrian workflow in place with a final Log entry, recording unfinished work as unfinished.",
 		"haiku", deliveryClaudeTools, piHaiku, "read, edit, write, find, bash, mem_search, mem_get_observation, mem_save, codegraph", "low", true},
 }
 
