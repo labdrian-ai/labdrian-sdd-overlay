@@ -1,0 +1,252 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:d99412ff79b3c5fbd87ed5b790997531da22200df5245ba83359cfddd89a3922",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-2eedec33434d4b4e",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "0eba0ad80941f0c2898bf81e6922f86531b15eed",
+      "candidate_tree": "0f383f1a5a5bab9db9b7512e5152043cbc7ada39",
+      "paths_digest": "sha256:e7e112f87051f9a7677ad42d54240606a01fc2e4d4607cc4107ee58c3e762144",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "skills/security-audit/AI-AND-LLM.md",
+        "skills/security-audit/CLIENT-SIDE.md",
+        "skills/security-audit/CLOUD-AND-DEPLOYMENT.md",
+        "skills/security-audit/DATA-ISOLATION-AND-LIFECYCLE.md",
+        "skills/security-audit/DESKTOP-MOBILE-AND-LOCAL-IPC.md",
+        "skills/security-audit/LICENSE",
+        "skills/security-audit/MEMORY-SAFETY-AND-BINARY.md",
+        "skills/security-audit/PROTOCOLS-RPC-AND-MESSAGING.md",
+        "skills/security-audit/RESOURCE-EXHAUSTION-AND-AVAILABILITY.md",
+        "skills/security-audit/SUPPLY-CHAIN-AND-RELEASE.md",
+        "skills/security-audit/WEB-PROTOCOL-AND-AUTH.md"
+      ],
+      "identity": "sha256:152bd33476c28c33e6942daf3f44351955b8e4883ef4900d751437848a607525"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "0eba0ad80941f0c2898bf81e6922f86531b15eed",
+      "candidate_tree": "0f383f1a5a5bab9db9b7512e5152043cbc7ada39",
+      "paths_digest": "sha256:e7e112f87051f9a7677ad42d54240606a01fc2e4d4607cc4107ee58c3e762144",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "skills/security-audit/AI-AND-LLM.md",
+        "skills/security-audit/CLIENT-SIDE.md",
+        "skills/security-audit/CLOUD-AND-DEPLOYMENT.md",
+        "skills/security-audit/DATA-ISOLATION-AND-LIFECYCLE.md",
+        "skills/security-audit/DESKTOP-MOBILE-AND-LOCAL-IPC.md",
+        "skills/security-audit/LICENSE",
+        "skills/security-audit/MEMORY-SAFETY-AND-BINARY.md",
+        "skills/security-audit/PROTOCOLS-RPC-AND-MESSAGING.md",
+        "skills/security-audit/RESOURCE-EXHAUSTION-AND-AVAILABILITY.md",
+        "skills/security-audit/SUPPLY-CHAIN-AND-RELEASE.md",
+        "skills/security-audit/WEB-PROTOCOL-AND-AUTH.md"
+      ],
+      "identity": "sha256:152bd33476c28c33e6942daf3f44351955b8e4883ef4900d751437848a607525"
+    },
+    "genesis_paths": [
+      "skills/security-audit/AI-AND-LLM.md",
+      "skills/security-audit/CLIENT-SIDE.md",
+      "skills/security-audit/CLOUD-AND-DEPLOYMENT.md",
+      "skills/security-audit/DATA-ISOLATION-AND-LIFECYCLE.md",
+      "skills/security-audit/DESKTOP-MOBILE-AND-LOCAL-IPC.md",
+      "skills/security-audit/LICENSE",
+      "skills/security-audit/MEMORY-SAFETY-AND-BINARY.md",
+      "skills/security-audit/PROTOCOLS-RPC-AND-MESSAGING.md",
+      "skills/security-audit/RESOURCE-EXHAUSTION-AND-AVAILABILITY.md",
+      "skills/security-audit/SUPPLY-CHAIN-AND-RELEASE.md",
+      "skills/security-audit/WEB-PROTOCOL-AND-AUTH.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-risk",
+      "review-readability"
+    ],
+    "original_changed_lines": 884,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "vendors third-party Markdown domain guides and the MIT license; they become agent instructions for security audits (risk: instructions that could push an agent to unsafe actions such as live probing or credential use; readability: clarity)",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:6d1410a81ef1818bcccf92011d97204c57c2230cf7576c57832c372951a96566",
+    "capture_phase_revision": "sha256:9fe9ba1a7e861e82c83de092a090c052e4ab792de0ee187a9fba336fbbd909b8",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:152bd33476c28c33e6942daf3f44351955b8e4883ef4900d751437848a607525",
+        "capture_phase_revision": "sha256:9fe9ba1a7e861e82c83de092a090c052e4ab792de0ee187a9fba336fbbd909b8",
+        "artifact_digest": "sha256:6ac23d21909a4caab384d5aef4fae272d7131e0b8560b26d1310dc56cf87096d",
+        "result_hash": "sha256:b73f994a2915bc4d18eaf6a2bda5cfe95bcd15001ce677488e48034e53dd127d",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:b604623fe8c7313d1dad4b2b937e0490bb4a492a4da93bb5aff337097130a382",
+            "lineage_id": "review-2eedec33434d4b4e",
+            "authority_revision": "sha256:9fe9ba1a7e861e82c83de092a090c052e4ab792de0ee187a9fba336fbbd909b8",
+            "target_identity": "sha256:152bd33476c28c33e6942daf3f44351955b8e4883ef4900d751437848a607525",
+            "base_tree": "0eba0ad80941f0c2898bf81e6922f86531b15eed",
+            "candidate_tree": "0f383f1a5a5bab9db9b7512e5152043cbc7ada39",
+            "changed_path_manifest_sha256": "sha256:defdcd3a7e26171a783a22e6d3085711e09d53c750325093fb63a1ade351d0dd",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:b604623fe8c7313d1dad4b2b937e0490bb4a492a4da93bb5aff337097130a382",
+            "raw_sha256": "sha256:c9f3fb92074cd71136d98fb237a85b6bc384f3b402927fd6fc90269c0e96df6e",
+            "canonical_sha256": "sha256:7ed597003a1c7ed439db259bb5a75adf986cd8bcb480b1d9a6a6d60143bffc7c",
+            "result_hash": "sha256:b73f994a2915bc4d18eaf6a2bda5cfe95bcd15001ce677488e48034e53dd127d",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:b604623fe8c7313d1dad4b2b937e0490bb4a492a4da93bb5aff337097130a382",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "skills/security-audit/AI-AND-LLM.md",
+                "skills/security-audit/CLIENT-SIDE.md",
+                "skills/security-audit/CLOUD-AND-DEPLOYMENT.md",
+                "skills/security-audit/DATA-ISOLATION-AND-LIFECYCLE.md",
+                "skills/security-audit/DESKTOP-MOBILE-AND-LOCAL-IPC.md",
+                "skills/security-audit/LICENSE",
+                "skills/security-audit/MEMORY-SAFETY-AND-BINARY.md",
+                "skills/security-audit/PROTOCOLS-RPC-AND-MESSAGING.md",
+                "skills/security-audit/RESOURCE-EXHAUSTION-AND-AVAILABILITY.md",
+                "skills/security-audit/SUPPLY-CHAIN-AND-RELEASE.md",
+                "skills/security-audit/WEB-PROTOCOL-AND-AUTH.md"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "All 11 changed paths are newly added documentation (markdown guidance files plus an MIT LICENSE). They contain no executable code, dependencies, lockfiles, secrets, credentials, or runtime input handling, so there is no reachable exploit surface introduced.",
+              "The guidance content itself is defensive and requires concrete boundary evidence before reporting findings; it instructs local, bounded validation with dummy data and not live or production testing, so it does not encourage unsafe actions.",
+              "skills/security-audit/LICENSE is a standard MIT license attributed to Cloudflare, Inc. This is a provenance and attribution matter for the maintainers, not a security risk."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "selected_order": 1,
+        "target_identity": "sha256:152bd33476c28c33e6942daf3f44351955b8e4883ef4900d751437848a607525",
+        "capture_phase_revision": "sha256:9fe9ba1a7e861e82c83de092a090c052e4ab792de0ee187a9fba336fbbd909b8",
+        "artifact_digest": "sha256:8adc9a1855aeef4a0ab03dd8b82d5a1ffd6cfc29276b2ed7a5d4a6bb9db59bf8",
+        "result_hash": "sha256:2c6cd079276240e1b0b82e823d0702cd0f14a4a80a1ddfcd0b431ea907df477b",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:1121fab4dc39749b2fe0ddec38d66a99ddf1c7552cc70bce862d2a61191ddff9",
+            "lineage_id": "review-2eedec33434d4b4e",
+            "authority_revision": "sha256:9fe9ba1a7e861e82c83de092a090c052e4ab792de0ee187a9fba336fbbd909b8",
+            "target_identity": "sha256:152bd33476c28c33e6942daf3f44351955b8e4883ef4900d751437848a607525",
+            "base_tree": "0eba0ad80941f0c2898bf81e6922f86531b15eed",
+            "candidate_tree": "0f383f1a5a5bab9db9b7512e5152043cbc7ada39",
+            "changed_path_manifest_sha256": "sha256:defdcd3a7e26171a783a22e6d3085711e09d53c750325093fb63a1ade351d0dd",
+            "lens": "review-readability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:1121fab4dc39749b2fe0ddec38d66a99ddf1c7552cc70bce862d2a61191ddff9",
+            "raw_sha256": "sha256:113c5341202fb813ab5d55197d75051d41afe6377d526da0d42ef2b3a1247d92",
+            "canonical_sha256": "sha256:ea2166a99056daa886f6492294e0a30344f9962cfba736ba72c5b28850db4c70",
+            "result_hash": "sha256:2c6cd079276240e1b0b82e823d0702cd0f14a4a80a1ddfcd0b431ea907df477b",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:1121fab4dc39749b2fe0ddec38d66a99ddf1c7552cc70bce862d2a61191ddff9",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "skills/security-audit/AI-AND-LLM.md",
+                "skills/security-audit/CLIENT-SIDE.md",
+                "skills/security-audit/CLOUD-AND-DEPLOYMENT.md",
+                "skills/security-audit/DATA-ISOLATION-AND-LIFECYCLE.md",
+                "skills/security-audit/DESKTOP-MOBILE-AND-LOCAL-IPC.md",
+                "skills/security-audit/LICENSE",
+                "skills/security-audit/MEMORY-SAFETY-AND-BINARY.md",
+                "skills/security-audit/PROTOCOLS-RPC-AND-MESSAGING.md",
+                "skills/security-audit/RESOURCE-EXHAUSTION-AND-AVAILABILITY.md",
+                "skills/security-audit/SUPPLY-CHAIN-AND-RELEASE.md",
+                "skills/security-audit/WEB-PROTOCOL-AND-AUTH.md"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-dangling-refs",
+                "lens": "readability",
+                "location": "skills/security-audit/AI-AND-LLM.md:5",
+                "severity": "WARNING",
+                "claim": "The added files repeatedly point readers to `ATTACK-CLASSES.md` and to 'Phase 1', but neither the file nor the phase is part of this candidate. A reader or agent following these instructions has no visible target for the cross-reference. The candidate also adds no entry-point document, such as a SKILL.md, that explains how the domain files are selected.",
+                "proof_refs": [
+                  "skills/security-audit/AI-AND-LLM.md:5",
+                  "skills/security-audit/CLIENT-SIDE.md:7",
+                  "skills/security-audit/MEMORY-SAFETY-AND-BINARY.md:5",
+                  "skills/security-audit/WEB-PROTOCOL-AND-AUTH.md:5"
+                ],
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-license-provenance",
+                "lens": "readability",
+                "location": "skills/security-audit/LICENSE:3",
+                "severity": "SUGGESTION",
+                "claim": "The MIT license names Cloudflare, Inc. as copyright holder, but nothing in the candidate states where the content came from or how it relates to the rest of the repository. Add a short provenance or attribution note so maintainers can tell whether this is vendored upstream material.",
+                "proof_refs": [
+                  "skills/security-audit/LICENSE:3"
+                ],
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Reviewed all 11 added files. They are documentation only, with no code logic.",
+              "The domain files share a consistent structure: when to use, core discipline, attack classes, universal moves and validation rules.",
+              "The files cross-reference each other by correct sibling filenames.",
+              "ATTACK-CLASSES.md and 'Phase 1' are referenced but are not in the candidate, so this is a documentation-context gap rather than a defect in any visible code."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "81471c9d397b26c7b1d6f3c6a259d40fc69fb9b4ec958e942b72f7e41922bd45",
+    "initial_atomic_start": {
+      "lineage_id": "review-2eedec33434d4b4e",
+      "worktree_identity": "sha256:95e4d3efe524d62edb68246dbee287490a9c69e7606ce981d6326241bc43b47b",
+      "target_identity": "sha256:152bd33476c28c33e6942daf3f44351955b8e4883ef4900d751437848a607525",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "0eba0ad80941f0c2898bf81e6922f86531b15eed",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "high",
+      "selected_lenses": [
+        "review-risk",
+        "review-readability"
+      ],
+      "original_changed_lines": 884,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "vendors third-party Markdown domain guides and the MIT license; they become agent instructions for security audits (risk: instructions that could push an agent to unsafe actions such as live probing or credential use; readability: clarity)"
+    },
+    "runtime_agent": "claude-code"
+  }
+}
