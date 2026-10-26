@@ -515,6 +515,30 @@ skills:
         - pi
     lifecycle:
       updateStrategy: overlay-only
+  - id: odd-feature-doc
+    path: odd-feature-doc
+    source:
+      type: custom
+    install:
+      defaultScope: global
+      targets:
+        - claude
+        - codex
+        - pi
+    lifecycle:
+      updateStrategy: overlay-only
+  - id: test-first
+    path: test-first
+    source:
+      type: custom
+    install:
+      defaultScope: global
+      targets:
+        - claude
+        - codex
+        - pi
+    lifecycle:
+      updateStrategy: overlay-only
   - id: security-audit
     path: security-audit
     source:

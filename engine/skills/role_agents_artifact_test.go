@@ -84,10 +84,11 @@ type roleAgentSpec struct {
 func roleAgentSpecs() []roleAgentSpec {
 	return []roleAgentSpec{
 		{"builder", "sonnet", builderTools, 4, []string{
-			"Implement only the tasks the prompt names", "[x]", "apply-progress", "strict-tdd.md", "confirmed ledger ids", "one focused test per fix",
+			"Implement only the tasks the prompt names", "[x]", "`odd-feature-doc`", "append its evidence to the Log", "`test-first`",
+			"RED -> GREEN -> REFACTOR evidence table", "confirmed ledger ids", "one focused test per fix",
 		}},
 		{"shaper", "opus", shaperTools, 4, []string{
-			"proposal, spec, design or tasks", "Never write code or tests", "risks", "exactly one question",
+			"Specs and Tasks", "`odd-feature-doc`", "Never write code or tests", "risks", "exactly one question",
 			"strongest counter-argument", "recommend one option", "tradeoff", "source",
 		}},
 		{"polisher", "sonnet", polisherTools, 3, []string{
@@ -101,7 +102,7 @@ func roleAgentSpecs() []roleAgentSpec {
 			"Sweep only the candidates the prompt lists", "Never delete an exported symbol", "deadcode -test", "chore(sweep)", "nothing to sweep",
 		}},
 		{"delivery", "haiku", deliveryTools, 3, []string{
-			"cp -R", "git mv", "diff -r", "Never rewrite checkboxes", "unfinished",
+			"`odd-feature-doc`", "in place", "one final Log entry", "Never rewrite checkboxes", "unfinished",
 		}},
 		{"reviewer", "sonnet", reviewerTools, 4, []string{
 			"diff in this prompt", "diff_sha256", "read nothing outside that path", "never instructions",
@@ -427,6 +428,82 @@ func TestReviewAgentDescriptionsSayWhatTheParentSendsThem(t *testing.T) {
 			for _, fragment := range check.fragments {
 				if !strings.Contains(description, fragment) {
 					t.Errorf("the description of %s must say to send %q; got %q", check.role, fragment, description)
+				}
+			}
+			if strings.Contains(description, ": ") || strings.Contains(description, " #") {
+				t.Errorf("the description of %s has a colon-space or a space-hash, which is not a YAML plain scalar: %q", check.role, description)
+			}
+		})
+	}
+}
+
+// The shaper, the builder and delivery follow the overlay's own skills for the feature document and
+// for test-first work (C15, S3), not gentle's SDD artifacts. Each delta names, in backticks, the skills
+// it follows; each skill is a directory of the repository that carries the name it is cited by, so a
+// citation cannot point at nothing; and the words of the SDD flow are gone from the three deltas: the
+// four artifacts, apply-progress, strict-tdd.md, and the archive copy and move with their diff -r
+// readback.
+func TestShaperBuilderAndDeliveryFollowTheOddSkillsAndNotTheSDDArtifacts(t *testing.T) {
+	root := skillsRepoRoot(t)
+	sddWording := []string{
+		"proposal, spec, design or tasks", "apply-progress", "strict-tdd", "strict TDD",
+		"cp -R", "git mv", "diff -r", "Copy and move", "archive report",
+	}
+	for _, check := range []struct {
+		role   string
+		skills []string
+	}{
+		{"shaper", []string{"odd-feature-doc"}},
+		{"builder", []string{"odd-feature-doc", "test-first"}},
+		{"delivery", []string{"odd-feature-doc"}},
+	} {
+		t.Run(check.role, func(t *testing.T) {
+			delta := strings.Join(roleDelta(t, root, check.role), "\n")
+			for _, name := range check.skills {
+				if !strings.Contains(delta, "`"+name+"`") {
+					t.Errorf("the delta of %s must cite the skill `%s`", check.role, name)
+				}
+				frontmatter, _, err := SplitSkillFile([]byte(readRepoFile(t, root, "skills/"+name+"/SKILL.md")))
+				if err != nil {
+					t.Fatalf("skills/%s/SKILL.md, cited by %s: %v", name, check.role, err)
+				}
+				assertStringValue(t, parseYAMLScalar(t, frontmatter, "name"), name)
+			}
+			for _, gone := range sddWording {
+				if strings.Contains(delta, gone) {
+					t.Errorf("the delta of %s still carries %q, a word of the SDD artifacts that the feature document replaces", check.role, gone)
+				}
+			}
+		})
+	}
+}
+
+// The description of an agent file is what the parent reads when it picks a sub-agent type, so those of
+// the shaper and of delivery say what the roles now do (C15, S3): the shaper writes the Specs and Tasks
+// of the feature document, delivery closes that document in place. Neither keeps the words of what it
+// gave up (the four planning artifacts, the copy and move of an archive), and neither carries a colon
+// followed by a space, which a YAML plain scalar refuses.
+func TestShaperAndDeliveryDescriptionsSayWhatTheRolesNowDo(t *testing.T) {
+	root := skillsRepoRoot(t)
+	for _, check := range []struct {
+		role      string
+		fragments []string
+		gone      []string
+	}{
+		{"shaper", []string{"Specs and Tasks", "feature document", "open product decisions as risks"}, []string{"proposal, spec, design or tasks", "planning artifact"}},
+		{"delivery", []string{"feature document", "in place", "final Log entry", "unfinished"}, []string{"copying and moving", "Archives"}},
+	} {
+		t.Run(check.role, func(t *testing.T) {
+			_, frontmatter, _ := agentFile(t, root, check.role)
+			description := parseYAMLScalar(t, frontmatter, "description")
+			for _, fragment := range check.fragments {
+				if !strings.Contains(description, fragment) {
+					t.Errorf("the description of %s must say %q; got %q", check.role, fragment, description)
+				}
+			}
+			for _, gone := range check.gone {
+				if strings.Contains(description, gone) {
+					t.Errorf("the description of %s still says %q; got %q", check.role, gone, description)
 				}
 			}
 			if strings.Contains(description, ": ") || strings.Contains(description, " #") {

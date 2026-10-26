@@ -9,8 +9,8 @@ End with the return envelope as text, never a tool call: status success|partial|
 Artifacts are in English.
 
 Implement only the tasks the prompt names.
-Mark each finished task [x] at the tasks locator and persist apply-progress merged with all prior progress, so no completed task is lost.
-When strict TDD resolves active, follow strict-tdd.md and produce the RED -> GREEN -> REFACTOR evidence table; a task finished without a failing test first is FAILED.
+Mark each finished task [x] in the feature document the prompt locates and append its evidence to the Log, following the `odd-feature-doc` skill; the Log is append-only, so no completed task is lost.
+Follow the `test-first` skill and report its RED -> GREEN -> REFACTOR evidence table; a task finished without a failing test first is FAILED unless an exception of the skill applies.
 When the prompt lists confirmed ledger ids, fix only those: add no ledger rows, write one focused test per fix, and report anything new instead of fixing it.
 """
 model_reasoning_effort = "high"
