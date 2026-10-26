@@ -16,8 +16,10 @@ package synctrigger
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -389,9 +391,15 @@ func rotateLog(path string) {
 	if !full(path) {
 		return
 	}
+	// The oldest file is dropped; when it cannot be, the shift onto it fails below and stops.
 	os.Remove(path + "." + strconv.Itoa(keptLogs))
+	// Each file moves up only once the one above it has, so a shift that fails stops the rotation
+	// before any rename could land on a file that was not moved out of the way.
 	for n := keptLogs - 1; n >= 1; n-- {
-		os.Rename(path+"."+strconv.Itoa(n), path+"."+strconv.Itoa(n+1))
+		err := os.Rename(path+"."+strconv.Itoa(n), path+"."+strconv.Itoa(n+1))
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return
+		}
 	}
 	os.Rename(path, path+".1")
 }

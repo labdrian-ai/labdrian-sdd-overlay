@@ -108,6 +108,31 @@ func TestALogOpenedBeforeARotationWritesItsLinesToTheRotatedFile(t *testing.T) {
 	}
 }
 
+// A rotation whose shift fails stops there: the older files and the log stay where they were, so
+// no rename can land on a file that was not moved out of the way, and nothing is dropped. The log
+// is then appended to and rotated at a later opening.
+func TestARotationThatCannotShiftAnOlderFileDropsNothing(t *testing.T) {
+	o, stateDir := child(t, &fakeRunner{})
+	full := bytes.Repeat([]byte("x"), 1<<20)
+	writeLogFile(t, stateDir, "sync-trigger.log", full)
+	writeLogFile(t, stateDir, "sync-trigger.log.1", []byte("one\n"))
+	writeLogFile(t, stateDir, "sync-trigger.log.2", []byte("two\n"))
+	// .3 is a directory that is not empty: it cannot be removed, and .2 cannot be renamed onto it.
+	writeLogFile(t, stateDir, filepath.Join("sync-trigger.log.3", "keep"), []byte("three\n"))
+
+	RunChild(o)
+
+	if got := readLogFile(t, stateDir, "sync-trigger.log.1"); got != "one\n" {
+		t.Errorf("sync-trigger.log.1 holds %d bytes, want it untouched (%q)", len(got), "one\n")
+	}
+	if got := readLogFile(t, stateDir, "sync-trigger.log.2"); got != "two\n" {
+		t.Errorf("sync-trigger.log.2 holds %d bytes, want it untouched (%q)", len(got), "two\n")
+	}
+	if got := logText(t, stateDir); !strings.HasPrefix(got, string(full)) || !strings.Contains(got[len(full):], "outcome=ok") {
+		t.Errorf("the log holds %d bytes, want the full log with the new line appended", len(got))
+	}
+}
+
 // A log under its limit is appended to, and no older file is made.
 func TestRunChild_AppendsToALogUnderItsLimit(t *testing.T) {
 	o, stateDir := child(t, &fakeRunner{})
@@ -268,11 +293,11 @@ func TestARelativeStateDirectoryWritesNothingAndRunsNothing(t *testing.T) {
 
 func writeLogFile(t *testing.T, stateDir, name string, content []byte) {
 	t.Helper()
-	dir := filepath.Join(stateDir, "logs")
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	path := filepath.Join(stateDir, "logs", name)
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, name), content, 0o600); err != nil {
+	if err := os.WriteFile(path, content, 0o600); err != nil {
 		t.Fatal(err)
 	}
 }

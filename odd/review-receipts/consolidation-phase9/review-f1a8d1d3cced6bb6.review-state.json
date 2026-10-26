@@ -1,0 +1,235 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:d9da3c37055b848a8efaebd99cb1d11f445bba0c6b5317b5e588205930604f05",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-f1a8d1d3cced6bb6",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "20e15a24e195155c780b5f0af26ca1170b3764cf",
+      "candidate_tree": "1cb98c7edf6678ddc5ea92ba512370e566c72d38",
+      "paths_digest": "sha256:69b4f4e145d9ba3f1a074a596b1f4ddfc3be71553d71ab74b5ef2054605a196a",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/cmd/synctrigger_golden_test.go",
+        "engine/cmd/testdata/synctrigger-golden/a-longterm-mem-that-cannot-run-is-reported.golden",
+        "engine/cmd/testdata/synctrigger-golden/a-relative-cwd-is-made-absolute.golden",
+        "engine/cmd/testdata/synctrigger-golden/archive-runs-the-sync-in-the-project.golden",
+        "engine/cmd/testdata/synctrigger-golden/no-home-and-no-state-directory-writes-nothing.golden",
+        "engine/cmd/testdata/synctrigger-golden/no-longterm-mem-is-skipped.golden",
+        "engine/cmd/testdata/synctrigger-golden/session-end-runs-the-sync-in-the-project.golden",
+        "engine/cmd/testdata/synctrigger-golden/the-child-reports-a-usage-error.golden",
+        "engine/cmd/testdata/synctrigger-golden/the-child-reports-a-vault-failure.golden",
+        "engine/cmd/testdata/synctrigger-golden/the-child-reports-any-other-exit.golden",
+        "engine/cmd/testdata/synctrigger-golden/the-child-reports-engram-unavailable.golden",
+        "engine/cmd/testdata/synctrigger-golden/the-child-reports-no-project.golden",
+        "engine/cmd/testdata/synctrigger-golden/the-child-reports-no-vault.golden",
+        "engine/cmd/testdata/synctrigger-golden/the-child-without-an-event-never-runs-the-sync.golden",
+        "engine/cmd/testdata/synctrigger-golden/the-state-directory-defaults-to-the-home.golden",
+        "engine/cmd/usage.go",
+        "engine/status/status.go",
+        "engine/synctrigger/hardening_test.go",
+        "engine/synctrigger/synctrigger.go",
+        "odd/review-receipts/consolidation-phase9/review-425522614b630019.review-state.json",
+        "odd/review-receipts/consolidation-phase9/review-9b742292d632ff6f.review-state.json",
+        "odd/review-receipts/consolidation-phase9/review-b9144882ab704dd5.review-state.json",
+        "odd/review-receipts/consolidation-phase9/review-db8ca978dd8377d5.review-state.json",
+        "odd/tasks/clarify-request.md",
+        "odd/tasks/consolidation-phase9.md"
+      ],
+      "identity": "sha256:073f683865527929d5184583ef7b672743e2d5a511cf0fc680e7f19d8365e397"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "20e15a24e195155c780b5f0af26ca1170b3764cf",
+      "candidate_tree": "1cb98c7edf6678ddc5ea92ba512370e566c72d38",
+      "paths_digest": "sha256:69b4f4e145d9ba3f1a074a596b1f4ddfc3be71553d71ab74b5ef2054605a196a",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/cmd/synctrigger_golden_test.go",
+        "engine/cmd/testdata/synctrigger-golden/a-longterm-mem-that-cannot-run-is-reported.golden",
+        "engine/cmd/testdata/synctrigger-golden/a-relative-cwd-is-made-absolute.golden",
+        "engine/cmd/testdata/synctrigger-golden/archive-runs-the-sync-in-the-project.golden",
+        "engine/cmd/testdata/synctrigger-golden/no-home-and-no-state-directory-writes-nothing.golden",
+        "engine/cmd/testdata/synctrigger-golden/no-longterm-mem-is-skipped.golden",
+        "engine/cmd/testdata/synctrigger-golden/session-end-runs-the-sync-in-the-project.golden",
+        "engine/cmd/testdata/synctrigger-golden/the-child-reports-a-usage-error.golden",
+        "engine/cmd/testdata/synctrigger-golden/the-child-reports-a-vault-failure.golden",
+        "engine/cmd/testdata/synctrigger-golden/the-child-reports-any-other-exit.golden",
+        "engine/cmd/testdata/synctrigger-golden/the-child-reports-engram-unavailable.golden",
+        "engine/cmd/testdata/synctrigger-golden/the-child-reports-no-project.golden",
+        "engine/cmd/testdata/synctrigger-golden/the-child-reports-no-vault.golden",
+        "engine/cmd/testdata/synctrigger-golden/the-child-without-an-event-never-runs-the-sync.golden",
+        "engine/cmd/testdata/synctrigger-golden/the-state-directory-defaults-to-the-home.golden",
+        "engine/cmd/usage.go",
+        "engine/status/status.go",
+        "engine/synctrigger/hardening_test.go",
+        "engine/synctrigger/synctrigger.go",
+        "odd/review-receipts/consolidation-phase9/review-425522614b630019.review-state.json",
+        "odd/review-receipts/consolidation-phase9/review-9b742292d632ff6f.review-state.json",
+        "odd/review-receipts/consolidation-phase9/review-b9144882ab704dd5.review-state.json",
+        "odd/review-receipts/consolidation-phase9/review-db8ca978dd8377d5.review-state.json",
+        "odd/tasks/clarify-request.md",
+        "odd/tasks/consolidation-phase9.md"
+      ],
+      "identity": "sha256:073f683865527929d5184583ef7b672743e2d5a511cf0fc680e7f19d8365e397"
+    },
+    "genesis_paths": [
+      "engine/cmd/synctrigger_golden_test.go",
+      "engine/cmd/testdata/synctrigger-golden/a-longterm-mem-that-cannot-run-is-reported.golden",
+      "engine/cmd/testdata/synctrigger-golden/a-relative-cwd-is-made-absolute.golden",
+      "engine/cmd/testdata/synctrigger-golden/archive-runs-the-sync-in-the-project.golden",
+      "engine/cmd/testdata/synctrigger-golden/no-home-and-no-state-directory-writes-nothing.golden",
+      "engine/cmd/testdata/synctrigger-golden/no-longterm-mem-is-skipped.golden",
+      "engine/cmd/testdata/synctrigger-golden/session-end-runs-the-sync-in-the-project.golden",
+      "engine/cmd/testdata/synctrigger-golden/the-child-reports-a-usage-error.golden",
+      "engine/cmd/testdata/synctrigger-golden/the-child-reports-a-vault-failure.golden",
+      "engine/cmd/testdata/synctrigger-golden/the-child-reports-any-other-exit.golden",
+      "engine/cmd/testdata/synctrigger-golden/the-child-reports-engram-unavailable.golden",
+      "engine/cmd/testdata/synctrigger-golden/the-child-reports-no-project.golden",
+      "engine/cmd/testdata/synctrigger-golden/the-child-reports-no-vault.golden",
+      "engine/cmd/testdata/synctrigger-golden/the-child-without-an-event-never-runs-the-sync.golden",
+      "engine/cmd/testdata/synctrigger-golden/the-state-directory-defaults-to-the-home.golden",
+      "engine/cmd/usage.go",
+      "engine/status/status.go",
+      "engine/synctrigger/hardening_test.go",
+      "engine/synctrigger/synctrigger.go",
+      "odd/review-receipts/consolidation-phase9/review-425522614b630019.review-state.json",
+      "odd/review-receipts/consolidation-phase9/review-9b742292d632ff6f.review-state.json",
+      "odd/review-receipts/consolidation-phase9/review-b9144882ab704dd5.review-state.json",
+      "odd/review-receipts/consolidation-phase9/review-db8ca978dd8377d5.review-state.json",
+      "odd/tasks/clarify-request.md",
+      "odd/tasks/consolidation-phase9.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-reliability"
+    ],
+    "original_changed_lines": 1474,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "whole C5 branch after a test that pins writes through a descriptor opened before a rotation",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:190e7b50701cf456207153f4792afbff092f7d77723a4d2941e147ebbfc8a247",
+    "capture_phase_revision": "sha256:958ef2a83318bbce95f8f7a6c00a23ab5812c841650651bce6aa658432c98243",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "target_identity": "sha256:073f683865527929d5184583ef7b672743e2d5a511cf0fc680e7f19d8365e397",
+        "capture_phase_revision": "sha256:958ef2a83318bbce95f8f7a6c00a23ab5812c841650651bce6aa658432c98243",
+        "artifact_digest": "sha256:f7ca29359f65a0ed0ec8591277e726ce5a772da507aa30a2c7e4546331a46271",
+        "result_hash": "sha256:a15d37838178e7667dc120266ac4ddde114c86d8d5858a542055cf5e51f255db",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:5dc623d4c03d7aeb4ee0cc613bbe384a324b310dbe3588c7b2a428686e09479b",
+            "lineage_id": "review-f1a8d1d3cced6bb6",
+            "authority_revision": "sha256:958ef2a83318bbce95f8f7a6c00a23ab5812c841650651bce6aa658432c98243",
+            "target_identity": "sha256:073f683865527929d5184583ef7b672743e2d5a511cf0fc680e7f19d8365e397",
+            "base_tree": "20e15a24e195155c780b5f0af26ca1170b3764cf",
+            "candidate_tree": "1cb98c7edf6678ddc5ea92ba512370e566c72d38",
+            "changed_path_manifest_sha256": "sha256:f4aaedb890dc01059506f98e1cfe0e452e73176c8cf9b6158368001930d80774",
+            "lens": "review-reliability",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:5dc623d4c03d7aeb4ee0cc613bbe384a324b310dbe3588c7b2a428686e09479b",
+            "raw_sha256": "sha256:67cf753fb38a6d68a75d37fda9952661cd6186df9a244e6633aef4c63b240129",
+            "canonical_sha256": "sha256:67cf753fb38a6d68a75d37fda9952661cd6186df9a244e6633aef4c63b240129",
+            "result_hash": "sha256:a15d37838178e7667dc120266ac4ddde114c86d8d5858a542055cf5e51f255db",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:5dc623d4c03d7aeb4ee0cc613bbe384a324b310dbe3588c7b2a428686e09479b",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/cmd/synctrigger_golden_test.go",
+                "engine/cmd/testdata/synctrigger-golden/a-longterm-mem-that-cannot-run-is-reported.golden",
+                "engine/cmd/testdata/synctrigger-golden/a-relative-cwd-is-made-absolute.golden",
+                "engine/cmd/testdata/synctrigger-golden/archive-runs-the-sync-in-the-project.golden",
+                "engine/cmd/testdata/synctrigger-golden/no-home-and-no-state-directory-writes-nothing.golden",
+                "engine/cmd/testdata/synctrigger-golden/no-longterm-mem-is-skipped.golden",
+                "engine/cmd/testdata/synctrigger-golden/session-end-runs-the-sync-in-the-project.golden",
+                "engine/cmd/testdata/synctrigger-golden/the-child-reports-a-usage-error.golden",
+                "engine/cmd/testdata/synctrigger-golden/the-child-reports-a-vault-failure.golden",
+                "engine/cmd/testdata/synctrigger-golden/the-child-reports-any-other-exit.golden",
+                "engine/cmd/testdata/synctrigger-golden/the-child-reports-engram-unavailable.golden",
+                "engine/cmd/testdata/synctrigger-golden/the-child-reports-no-project.golden",
+                "engine/cmd/testdata/synctrigger-golden/the-child-reports-no-vault.golden",
+                "engine/cmd/testdata/synctrigger-golden/the-child-without-an-event-never-runs-the-sync.golden",
+                "engine/cmd/testdata/synctrigger-golden/the-state-directory-defaults-to-the-home.golden",
+                "engine/cmd/usage.go",
+                "engine/status/status.go",
+                "engine/synctrigger/hardening_test.go",
+                "engine/synctrigger/synctrigger.go",
+                "odd/review-receipts/consolidation-phase9/review-425522614b630019.review-state.json",
+                "odd/review-receipts/consolidation-phase9/review-9b742292d632ff6f.review-state.json",
+                "odd/review-receipts/consolidation-phase9/review-b9144882ab704dd5.review-state.json",
+                "odd/review-receipts/consolidation-phase9/review-db8ca978dd8377d5.review-state.json",
+                "odd/tasks/clarify-request.md",
+                "odd/tasks/consolidation-phase9.md"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-001",
+                "lens": "reliability",
+                "location": "engine/synctrigger/synctrigger.go:371-374",
+                "severity": "WARNING",
+                "claim": "In rotateLog, the Remove and Rename calls ignore errors. If one rename fails (for example .2 to .3 with a permission problem) the following renames still run and the final rename of the log to .1 can overwrite an existing .1, silently dropping a log. This is best effort and documented, and it loses no line being written, so it is minor. No test covers rename-failure behavior.",
+                "proof_refs": [
+                  "engine/synctrigger/synctrigger.go:371-374"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Reviewed the full candidate across all 25 manifest paths. Rotation under an flock with a size re-check, 0600 creation and narrowing, the bounded stderr copy, field quoting, and refusal of a non-absolute state directory are each pinned by externally observable tests in engine/synctrigger/hardening_test.go and by the re-recorded goldens.",
+              "The no-HOME golden engine/cmd/testdata/synctrigger-golden/no-home-and-no-state-directory-writes-nothing.golden shows exit 0, an error:log line on stderr and nothing written, which keeps the always-exit-0 contract. RunChild returns skip:no-binary without running a default binary under a relative directory.",
+              "boundedBuffer returns the full length for every write, so io.MultiWriter does not short-write and the log still receives all output. Both sides of the 64 KiB boundary are tested.",
+              "The only golden changes are the log mode (0644 to 0600) and the one new case. The task requested both, so they are not regressions.",
+              "I found no BLOCKER or CRITICAL behavior caused by this change. The remaining files are receipts and task notes with no runtime effect."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "eabe65b0d8d542f5bf94b4f5d33474f16270af015a8374f78351a520c634ce7a",
+    "initial_atomic_start": {
+      "lineage_id": "review-f1a8d1d3cced6bb6",
+      "worktree_identity": "sha256:8455002f227f033663d0e7d8b8ff6a885e1c85b482ec52e34017c303452eed87",
+      "target_identity": "sha256:073f683865527929d5184583ef7b672743e2d5a511cf0fc680e7f19d8365e397",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "20e15a24e195155c780b5f0af26ca1170b3764cf",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-reliability"
+      ],
+      "original_changed_lines": 1474,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "whole C5 branch after a test that pins writes through a descriptor opened before a rotation"
+    },
+    "runtime_agent": "claude-code"
+  }
+}
