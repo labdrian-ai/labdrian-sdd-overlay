@@ -1,0 +1,183 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:8cebd5f42f6b3199fae57619eaedf0816e7bc6baab393089a1448cd9e81136d3",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-af39a14d8e5df582",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "8cdaa447099c42a69bc0d1b910190e35a3ba074c",
+      "candidate_tree": "db83276806ffd112defce203ab29012d0882f34c",
+      "paths_digest": "sha256:c5c8af75935b1ac58ab597d0655a9518de6371a7c89baf4a6b8e7e157fb4040a",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "skills/security-audit/report-schema.json",
+        "skills/security-audit/validate-findings.cjs"
+      ],
+      "identity": "sha256:a0dff350ff7055fcb6e6300e40996b1c3ca22c5bc7f3910d04f9917e9cd3d4df"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "8cdaa447099c42a69bc0d1b910190e35a3ba074c",
+      "candidate_tree": "db83276806ffd112defce203ab29012d0882f34c",
+      "paths_digest": "sha256:c5c8af75935b1ac58ab597d0655a9518de6371a7c89baf4a6b8e7e157fb4040a",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "skills/security-audit/report-schema.json",
+        "skills/security-audit/validate-findings.cjs"
+      ],
+      "identity": "sha256:a0dff350ff7055fcb6e6300e40996b1c3ca22c5bc7f3910d04f9917e9cd3d4df"
+    },
+    "genesis_paths": [
+      "skills/security-audit/report-schema.json",
+      "skills/security-audit/validate-findings.cjs"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-risk",
+      "review-resilience"
+    ],
+    "original_changed_lines": 1234,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "vendors a third-party Node findings validator and its JSON schema that deployed agents run on audit output (risk: reads, execution; resilience: hostile or oversized input)",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:48be5484123240e8f2a09a926c03ad0eb978da23bdc1e4517584b0de372c9c5a",
+    "capture_phase_revision": "sha256:f4d0c5a7cdf5bbc5ee33e3be8bfe780b1ccb919d571b0937fe4bbfc262da1494",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:a0dff350ff7055fcb6e6300e40996b1c3ca22c5bc7f3910d04f9917e9cd3d4df",
+        "capture_phase_revision": "sha256:f4d0c5a7cdf5bbc5ee33e3be8bfe780b1ccb919d571b0937fe4bbfc262da1494",
+        "artifact_digest": "sha256:dfa20c94cc25cf77e1524893676bdd202fc48de13c8f8b912621ea247e196d20",
+        "result_hash": "sha256:e786d502bc0be653a75b0725238a985addbd04cf2a73397383753147e80cb3ab",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:85235f29c4a231578c32588607179f4c9c9292a2c097b9fa21d31e7d9d052ea7",
+            "lineage_id": "review-af39a14d8e5df582",
+            "authority_revision": "sha256:f4d0c5a7cdf5bbc5ee33e3be8bfe780b1ccb919d571b0937fe4bbfc262da1494",
+            "target_identity": "sha256:a0dff350ff7055fcb6e6300e40996b1c3ca22c5bc7f3910d04f9917e9cd3d4df",
+            "base_tree": "8cdaa447099c42a69bc0d1b910190e35a3ba074c",
+            "candidate_tree": "db83276806ffd112defce203ab29012d0882f34c",
+            "changed_path_manifest_sha256": "sha256:7b92758d248df13f342ef5c9b6ca193987530fe2233e9adfe5b8df51e040767e",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:85235f29c4a231578c32588607179f4c9c9292a2c097b9fa21d31e7d9d052ea7",
+            "raw_sha256": "sha256:9884e89806f3101acdb577c66005a28a29b067f47c8dea57a408ce155acaf978",
+            "canonical_sha256": "sha256:20e271ad3bc9597508716317f802595ed0e666d03a0bc963a0579077b9680032",
+            "result_hash": "sha256:e786d502bc0be653a75b0725238a985addbd04cf2a73397383753147e80cb3ab",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:85235f29c4a231578c32588607179f4c9c9292a2c097b9fa21d31e7d9d052ea7",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "skills/security-audit/report-schema.json",
+                "skills/security-audit/validate-findings.cjs"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "Both added files were reviewed in full. The validator is a local CLI with no dependencies. It makes no network calls, runs no subprocesses, and uses no eval.",
+              "Input handling is bounded: skills/security-audit/validate-findings.cjs opens the file with no-follow and nonblocking flags, requires a regular file, caps size at 5 MiB, and decodes strict UTF-8. It also caps nesting depth, array length, canonical-key size, and error count.",
+              "Diagnostic output is escaped for control and invisible characters, and long strings are clipped. Source paths in the findings are checked against absolute paths, traversal, backslashes, colons, and Windows reserved names.",
+              "The only RegExp built from data comes from the repository's own report-schema.json, which is trusted and checked at load time. I found no reachable injection or exposure.",
+              "The JSON.parse prototype-key case is handled because the code uses hasOwn checks. I found no concrete exploit path attributable to this change."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-resilience",
+        "selected_order": 1,
+        "target_identity": "sha256:a0dff350ff7055fcb6e6300e40996b1c3ca22c5bc7f3910d04f9917e9cd3d4df",
+        "capture_phase_revision": "sha256:f4d0c5a7cdf5bbc5ee33e3be8bfe780b1ccb919d571b0937fe4bbfc262da1494",
+        "artifact_digest": "sha256:781ff49025afcae3220d88f60af5e887c5865a2ce0b8174b943b85f9208cd6f7",
+        "result_hash": "sha256:f4e1f571bad56b6fe3d4c6c29cff2b33f890858c7bc74417d495175458b2e758",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:5ded8a34b6e924096d11275133648cfe0bd141cc40a0026c5830ca92161009a4",
+            "lineage_id": "review-af39a14d8e5df582",
+            "authority_revision": "sha256:f4d0c5a7cdf5bbc5ee33e3be8bfe780b1ccb919d571b0937fe4bbfc262da1494",
+            "target_identity": "sha256:a0dff350ff7055fcb6e6300e40996b1c3ca22c5bc7f3910d04f9917e9cd3d4df",
+            "base_tree": "8cdaa447099c42a69bc0d1b910190e35a3ba074c",
+            "candidate_tree": "db83276806ffd112defce203ab29012d0882f34c",
+            "changed_path_manifest_sha256": "sha256:7b92758d248df13f342ef5c9b6ca193987530fe2233e9adfe5b8df51e040767e",
+            "lens": "review-resilience",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:5ded8a34b6e924096d11275133648cfe0bd141cc40a0026c5830ca92161009a4",
+            "raw_sha256": "sha256:f7cf0cb24ea582fc87cb01b24d00ea9473146200698d0dc8dbc3167867a4558b",
+            "canonical_sha256": "sha256:41f4c3d3b4afeb4d08e144740f1d6e210e2665a92919f198bbc0956be961dde5",
+            "result_hash": "sha256:f4e1f571bad56b6fe3d4c6c29cff2b33f890858c7bc74417d495175458b2e758",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:5ded8a34b6e924096d11275133648cfe0bd141cc40a0026c5830ca92161009a4",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "skills/security-audit/report-schema.json",
+                "skills/security-audit/validate-findings.cjs"
+              ]
+            },
+            "lens": "review-resilience",
+            "findings": [],
+            "evidence": [
+              "I reviewed both new files in full for failure handling, bounded resource use, and degradation, and found no concrete production failure mode.",
+              "Input handling is bounded and fails closed with a nonzero exit and a sanitized message. The limits are: a 5 MiB size cap, enforced both on fstat and while reading; no symlinks (O_NOFOLLOW); regular files only; strict UTF-8 decoding; a JSON nesting-depth limit of 64; and an array cap of 1000 items.",
+              "Validation work is bounded. Canonical keys are capped at 1 MiB and the uniqueness set at 5 MiB. The error list is capped at 100 entries. Because the schema's only oneOf is at the top-level items, each of at most 1000 items is validated three times, which is cheap.",
+              "Schema load errors, read errors, parse errors, and unexpected validation exceptions are each caught and reported, and each returns exit code 1. The script has no side effects such as writes or network calls, so it can be retried safely."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "da5055307557c8d28a83b15f43cb06c8f0717e193cb13fb2df945bbba2018be0",
+    "initial_atomic_start": {
+      "lineage_id": "review-af39a14d8e5df582",
+      "worktree_identity": "sha256:95e4d3efe524d62edb68246dbee287490a9c69e7606ce981d6326241bc43b47b",
+      "target_identity": "sha256:a0dff350ff7055fcb6e6300e40996b1c3ca22c5bc7f3910d04f9917e9cd3d4df",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "8cdaa447099c42a69bc0d1b910190e35a3ba074c",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "high",
+      "selected_lenses": [
+        "review-risk",
+        "review-resilience"
+      ],
+      "original_changed_lines": 1234,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "vendors a third-party Node findings validator and its JSON schema that deployed agents run on audit output (risk: reads, execution; resilience: hostile or oversized input)"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

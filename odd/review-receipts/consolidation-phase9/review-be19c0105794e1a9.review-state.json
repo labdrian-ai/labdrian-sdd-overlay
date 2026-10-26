@@ -1,0 +1,143 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:fa0e9f52bdc9b141ff2263f8f340531df75c1a40ec7b22ed67001857bca3cd49",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-be19c0105794e1a9",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "360dbcd00b0714c254373487f5ee213511c0d98a",
+      "candidate_tree": "3393e9a3242036e2b8a815209c012db4f9889d97",
+      "paths_digest": "sha256:a57b584466a4222eab2971b96b4677e0816ffe59085738a76648291edcfbf4a2",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "skills/security-audit/.approval.json",
+        "skills/security-audit/SKILL.md"
+      ],
+      "identity": "sha256:e400eb7bb3a8118b6ea092ce3af341712b4e1e218dd14f1b9a41b308a104f1da"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "360dbcd00b0714c254373487f5ee213511c0d98a",
+      "candidate_tree": "3393e9a3242036e2b8a815209c012db4f9889d97",
+      "paths_digest": "sha256:a57b584466a4222eab2971b96b4677e0816ffe59085738a76648291edcfbf4a2",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "skills/security-audit/.approval.json",
+        "skills/security-audit/SKILL.md"
+      ],
+      "identity": "sha256:e400eb7bb3a8118b6ea092ce3af341712b4e1e218dd14f1b9a41b308a104f1da"
+    },
+    "genesis_paths": [
+      "skills/security-audit/.approval.json",
+      "skills/security-audit/SKILL.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-readability"
+    ],
+    "original_changed_lines": 6,
+    "correction_budget": 3,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "Changes the metadata version of the vendored security-audit SKILL.md from the pinned commit sha to a semantic version, and refreshes its approval record",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:0d93739c646f7a49a40e7f8204dc573da05b9f4f9f7cef1a5fc8577d0d2b2227",
+    "capture_phase_revision": "sha256:d74763079c97850902baa6107bb74023f87dd9b6bc3c1a838314afa9d8aa2bf2",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "target_identity": "sha256:e400eb7bb3a8118b6ea092ce3af341712b4e1e218dd14f1b9a41b308a104f1da",
+        "capture_phase_revision": "sha256:d74763079c97850902baa6107bb74023f87dd9b6bc3c1a838314afa9d8aa2bf2",
+        "artifact_digest": "sha256:6d5fba0a72c08c4c7933923a0a4dbb7580202431cbd8de0a9cb3abc2b64441a1",
+        "result_hash": "sha256:56b76e268aa91942812573d912c573a29573b1e2744ba396870b79a045c2a5d3",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:0afa5c05d3aaffb8e4f71f1785f7f03f2827a3f9039857351ecd600eb6d49a7c",
+            "lineage_id": "review-be19c0105794e1a9",
+            "authority_revision": "sha256:d74763079c97850902baa6107bb74023f87dd9b6bc3c1a838314afa9d8aa2bf2",
+            "target_identity": "sha256:e400eb7bb3a8118b6ea092ce3af341712b4e1e218dd14f1b9a41b308a104f1da",
+            "base_tree": "360dbcd00b0714c254373487f5ee213511c0d98a",
+            "candidate_tree": "3393e9a3242036e2b8a815209c012db4f9889d97",
+            "changed_path_manifest_sha256": "sha256:71238664ec578a5046a96397b121e96427a6dffee7924dd17286a23f84f7f03f",
+            "lens": "review-readability",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:0afa5c05d3aaffb8e4f71f1785f7f03f2827a3f9039857351ecd600eb6d49a7c",
+            "raw_sha256": "sha256:4f4085e71d1357b9bc4224a54b8e66a8979300ca198ee351a5b98b6fb3172f9c",
+            "canonical_sha256": "sha256:4cadc5a455dd35f2242241540ce5c227d5e07fa8f511cdbd9e236ca86fe3932b",
+            "result_hash": "sha256:56b76e268aa91942812573d912c573a29573b1e2744ba396870b79a045c2a5d3",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:0afa5c05d3aaffb8e4f71f1785f7f03f2827a3f9039857351ecd600eb6d49a7c",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "skills/security-audit/.approval.json",
+                "skills/security-audit/SKILL.md"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-001",
+                "lens": "readability",
+                "location": "skills/security-audit/SKILL.md:7",
+                "severity": "WARNING",
+                "claim": "The metadata version changed from an upstream commit SHA to the literal \"1.0\". This drops the provenance pin that tied the skill to a specific upstream cloudflare revision. The patch gives no context for the change. A maintainer can no longer tell which upstream version this skill was derived from. The approval hash was also regenerated, so the edit looks deliberate, but its reason is undocumented.",
+                "proof_refs": [
+                  "skills/security-audit/SKILL.md:7",
+                  "skills/security-audit/.approval.json:4-5"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "The SKILL.md diff changes only the metadata version line, from a 40-character commit-style hash to \"1.0\".",
+              "The .approval.json sha256 and approved_at were updated to match the edited content. This is consistent with the approval workflow and is not a defect.",
+              "The author field still says cloudflare, so the upstream attribution stays, but the pin to a specific upstream revision is gone.",
+              "No readability defect was found beyond the missing change context."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "c0c2780a91afc2ca05e189c99cff95596e073d2b6dd19ef9c28eec674bc2b49b",
+    "initial_atomic_start": {
+      "lineage_id": "review-be19c0105794e1a9",
+      "worktree_identity": "sha256:95e4d3efe524d62edb68246dbee287490a9c69e7606ce981d6326241bc43b47b",
+      "target_identity": "sha256:e400eb7bb3a8118b6ea092ce3af341712b4e1e218dd14f1b9a41b308a104f1da",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "360dbcd00b0714c254373487f5ee213511c0d98a",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "high",
+      "selected_lenses": [
+        "review-readability"
+      ],
+      "original_changed_lines": 6,
+      "correction_budget": 3,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "Changes the metadata version of the vendored security-audit SKILL.md from the pinned commit sha to a semantic version, and refreshes its approval record"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

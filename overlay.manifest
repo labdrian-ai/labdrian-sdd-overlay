@@ -143,3 +143,23 @@ codex/agents/delivery.toml   custom   codex-agent
 codex/agents/reviewer.toml   custom   codex-agent
 codex/agents/verifier.toml   custom   codex-agent
 longterm-mem/go.mod custom mcp
+security-audit/SKILL.md custom
+security-audit/AI-AND-LLM.md custom
+security-audit/ATTACK-CLASSES.md custom
+security-audit/CLIENT-SIDE.md custom
+security-audit/CLOUD-AND-DEPLOYMENT.md custom
+security-audit/DATA-ISOLATION-AND-LIFECYCLE.md custom
+security-audit/DESKTOP-MOBILE-AND-LOCAL-IPC.md custom
+security-audit/HUNTING.md custom
+security-audit/LICENSE custom
+security-audit/MEMORY-SAFETY-AND-BINARY.md custom
+security-audit/PROTOCOLS-RPC-AND-MESSAGING.md custom
+security-audit/RECONNAISSANCE.md custom
+security-audit/report-schema.json custom
+security-audit/RESOURCE-EXHAUSTION-AND-AVAILABILITY.md custom
+security-audit/SUPPLY-CHAIN-AND-RELEASE.md custom
+security-audit/validate-coverage-ledger.cjs custom
+security-audit/validate-findings.cjs custom
+security-audit/VALIDATION-AND-REPORTING.md custom
+security-audit/WEB-PROTOCOL-AND-AUTH.md custom
+security-audit/WORKFLOW.md custom
