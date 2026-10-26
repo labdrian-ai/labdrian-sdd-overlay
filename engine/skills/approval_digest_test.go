@@ -146,6 +146,7 @@ func TestSkillDigest_RefusesWhatItCannotCover(t *testing.T) {
 		{"a link in a directory", SkillEntry{Rel: "references/deep/link", Type: fs.ModeSymlink}, []string{"references/deep/link is a symbolic link"}},
 		{"a line feed in a name", SkillEntry{Rel: "a\nb", Data: []byte("x")}, []string{`"a\nb" has a line break in its name`}},
 		{"a carriage return in a name", SkillEntry{Rel: "a\rb", Data: []byte("x")}, []string{`"a\rb" has a line break in its name`}},
+		{"a backslash in a name", SkillEntry{Rel: `a\b`, Data: []byte("x")}, []string{`"a\\b" has a backslash in its name`}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			digest, err := SkillDigest(append(tinyTree(), tc.entry))

@@ -466,7 +466,8 @@ overlay skills <verb>
     subdirectory is covered), with <path> relative to the skill directory, in slash form, sorted bytewise. Adding, removing, renaming or changing any of
     those files makes the record stale (validate reports APPROVAL_STALE, naming the digest in the record and the current one); permission bits and empty
     directories are not covered. A symbolic link, or any entry that is not a regular file or a directory (a pipe, a socket, a device), cannot be covered:
-    the skill is APPROVAL_UNVERIFIABLE, whatever its record says, until the entry is replaced with a regular file or removed. A record of version 1, written
+    the skill is APPROVAL_UNVERIFIABLE, whatever its record says, until the entry is replaced with a regular file or removed; so is a file whose name holds
+    a line break or a backslash, which sha256sum would escape in its list. A record of version 1, written
     before this digest existed, covered SKILL.md alone: it is APPROVAL_STALE, saying so, and `approve` again writes a record of version 2; any other
     version stays APPROVAL_MALFORMED. approve, add, and validate compute the digest with the same function. The `sha256` field of the record is this digest
     (JSON has no comments, so this is where it is explained). To recompute it by hand and compare it with the record, from the root of the repository:
