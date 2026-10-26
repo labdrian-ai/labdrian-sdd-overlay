@@ -60,10 +60,10 @@ func (p *skillPlanner) refuse(format string, a ...any) {
 }
 
 // retryVerb is the verb a refusal tells the person to run again once they moved an edited file
-// away: uninstall for uninstall, and install for install and adopt, as it always said.
+// away: the verb being run, except adopt, whose refusals have always told to run install again.
 func (p *skillPlanner) retryVerb() string {
-	if p.c.in.verb() == "uninstall" {
-		return "uninstall"
+	if verb := p.c.in.verb(); verb != "adopt" {
+		return verb
 	}
 	return "install"
 }

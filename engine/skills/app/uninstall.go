@@ -20,9 +20,11 @@ type UninstallInput struct {
 
 // UninstallResult is what uninstall did, or would do.
 type UninstallResult struct {
-	// Planned is every path a dry run would remove, the project lock last: repo-relative, as git
-	// pathspecs.
+	// Planned is every file a dry run would remove, repo-relative, as git pathspecs.
 	Planned []string
+	// PlannedLock is the project lock a dry run would rewrite without the install record: it is
+	// updated, never removed.
+	PlannedLock string
 	// Removed is every file that was removed.
 	Removed []string
 	// Kept is every skill directory left because it still holds files the install record did not
@@ -57,7 +59,8 @@ func UninstallProject(p InstallPorts, in UninstallInput) (UninstallResult, error
 		return res, &PlanRefusal{Verb: "uninstall", Reasons: refusals}
 	}
 	if in.DryRun {
-		res.Planned = append(relPaths(planned.Deletes), planned.Lock.Rel)
+		res.Planned = relPaths(planned.Deletes)
+		res.PlannedLock = planned.Lock.Rel
 		return res, nil
 	}
 	if err := skills.ExecuteInstallPlan(planned, root, p.Project); err != nil {

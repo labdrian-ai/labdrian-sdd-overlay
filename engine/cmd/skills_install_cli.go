@@ -117,7 +117,8 @@ func skillsUninstall(deps skills.Deps, args []string, stdout, stderr io.Writer, 
 		return
 	}
 	if dryRun {
-		tellPaths(stdout, "plan: ", result.Planned)
+		tellPaths(stdout, "plan: remove ", result.Planned)
+		fmt.Fprintf(stdout, "plan: update %s (drops the install record of %s; the file stays)\n", result.PlannedLock, id)
 		exit(0)
 		return
 	}

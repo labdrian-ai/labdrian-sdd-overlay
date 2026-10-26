@@ -14,7 +14,7 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
 )
 
-// installed is the world after `skills install` put the project skill in the project.
+// installedWorld is the install world after `skills install` put the skill "proj" in the project.
 func installedWorld(t *testing.T) (installCLIWorld, skills.Deps) {
 	t.Helper()
 	w := newInstallCLIWorld(t)
@@ -55,7 +55,7 @@ func TestUninstallDryRunSaysWhatItWouldRemoveAndChangesNothing(t *testing.T) {
 
 	r := w.run(skillsUninstall, deps, "uninstall", "--dry-run", "proj")
 
-	want := "plan: .claude/skills/proj/SKILL.md\nplan: .agents/skills/proj/SKILL.md\nplan: .labdrian/procedural-skills.lock.json\n"
+	want := "plan: remove .claude/skills/proj/SKILL.md\nplan: remove .agents/skills/proj/SKILL.md\nplan: update .labdrian/procedural-skills.lock.json (drops the install record of proj; the file stays)\n"
 	if r.stdout != want || r.stderr != "" || !reflect.DeepEqual(r.exits, []int{0}) {
 		t.Errorf("exit %v, stdout %q, stderr %q, want stdout %q", r.exits, r.stdout, r.stderr, want)
 	}
