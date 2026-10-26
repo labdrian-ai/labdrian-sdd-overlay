@@ -273,5 +273,8 @@ func skillsProjectStatus(deps skills.Deps, args []string, stdout, stderr io.Writ
 		}
 		fmt.Fprintf(stdout, "%s rev:%d owner:human (%s) superseded-by:%s\n", s.ID, s.Revision, s.Reason, superseded)
 	}
+	for _, i := range result.Installs {
+		fmt.Fprintf(stdout, "%s installed files:%d\n", i.ID, i.Files)
+	}
 	exit(0)
 }

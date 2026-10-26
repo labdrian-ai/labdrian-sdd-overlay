@@ -151,7 +151,7 @@ func OverlayLocks(verb, registryPath string) []LockRequest {
 }
 
 // ProjectLocks is the lock verb takes on the project whose root directory is root, as the verbs
-// that install into a project or keep its lock take it: exclusive for install, adopt,
+// that install into a project or keep its lock take it: exclusive for install, adopt, uninstall,
 // project-register, project-revise and project-retire, shared for project-status. It is taken on
 // the directory itself, so that no file appears in the user's repository. A verb that works on no
 // project gets no request.
@@ -161,7 +161,7 @@ func OverlayLocks(verb, registryPath string) []LockRequest {
 func ProjectLocks(verb, root string) []LockRequest {
 	mode := LockExclusive
 	switch verb {
-	case "install", "adopt", "project-register", "project-revise", "project-retire":
+	case "install", "adopt", "uninstall", "project-register", "project-revise", "project-retire":
 	case "project-status":
 		mode = LockShared
 	default:

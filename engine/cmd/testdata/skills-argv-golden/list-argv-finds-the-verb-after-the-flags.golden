@@ -3,7 +3,7 @@ $ skills --registry <WORLD>/other/skills.registry.yaml list
 exit: 1
 --- stdout ---
 --- stderr ---
-error: unknown skills verb "<WORLD>/other/skills.registry.yaml" (supported: list, status, candidates, validate, install, adopt, add, remove, sync-manifest, lint, approve, project-register, project-revise, project-status, project-retire)
+error: unknown skills verb "<WORLD>/other/skills.registry.yaml" (supported: list, status, candidates, validate, install, adopt, uninstall, add, remove, sync-manifest, lint, approve, project-register, project-revise, project-status, project-retire)
 
 # a flag that takes no part, then the verb
 $ skills --frobnicate list

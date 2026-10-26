@@ -334,16 +334,26 @@ type ProjectSkillStatus struct {
 	SupersededBy string
 }
 
+// ProjectInstallStatus is one install record of the project lock: a skill `skills install` put in
+// the project, and how many files the record lists.
+type ProjectInstallStatus struct {
+	ID    string
+	Files int
+}
+
 // ProjectStatusResult is the answer of project-status.
 type ProjectStatusResult struct {
 	UnreadWarning string
 	Skills        []ProjectSkillStatus
+	// Installs are the install records, in the order of the lock (by id).
+	Installs []ProjectInstallStatus
 }
 
 // ProjectStatus reports who owns each skill the project lock records, and which global skill
-// supersedes it, matched by the id of the skill and by the last slug of its candidate key. It reads
-// and writes nothing. The errors are a *RegistryError, a *ProjectLockReadError, a
-// *ProjectLockParseError and a *SkillNotInLockError.
+// supersedes it, matched by the id of the skill and by the last slug of its candidate key, and then
+// every install record with the number of files it lists. An id names a procedural skill or an
+// installed one. It reads and writes nothing. The errors are a *RegistryError, a
+// *ProjectLockReadError, a *ProjectLockParseError and a *SkillNotInLockError.
 func ProjectStatus(p ProjectPorts, in ProjectStatusInput) (ProjectStatusResult, error) {
 	var res ProjectStatusResult
 	root := in.ProjectRoot
@@ -360,18 +370,27 @@ func ProjectStatus(p ProjectPorts, in ProjectStatusInput) (ProjectStatusResult, 
 	if err != nil {
 		return res, &ProjectLockParseError{Err: err}
 	}
-	entries := lock.Skills
+	entries, installs := lock.Skills, lock.Installs
 	if in.ID != "" {
-		entries = nil
+		entries, installs = nil, nil
 		for _, entry := range lock.Skills {
 			if entry.ID == in.ID {
 				entries = []skills.ProjectLockEntry{entry}
 				break
 			}
 		}
-		if len(entries) == 0 {
+		for _, record := range lock.Installs {
+			if record.ID == in.ID {
+				installs = []skills.ProjectInstallEntry{record}
+				break
+			}
+		}
+		if len(entries) == 0 && len(installs) == 0 {
 			return res, &SkillNotInLockError{ID: in.ID}
 		}
+	}
+	for _, record := range installs {
+		res.Installs = append(res.Installs, ProjectInstallStatus{ID: record.ID, Files: len(record.Files)})
 	}
 	for _, entry := range entries {
 		ownership := skills.EvaluateOwnership(root, entry, p.Files, p.Project.ReadDir, p.Project.ResolvePath)

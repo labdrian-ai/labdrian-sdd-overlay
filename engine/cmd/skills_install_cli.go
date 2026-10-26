@@ -83,6 +83,52 @@ func skillsInstallRun(verb, did string, use installUseCase, deps skills.Deps, ar
 	exit(0)
 }
 
+// skillsUninstall is `skills uninstall [--dry-run] <id>`: it removes from the project in the working
+// directory a skill that install put there, once every file its install record lists is still as
+// install wrote it, then the record, and says what it removed. It takes only the project lock: it
+// reads no registry and no source.
+func skillsUninstall(deps skills.Deps, args []string, stdout, stderr io.Writer, exit func(int)) {
+	parsed, err := skillsUninstallSpec.parseAfterVerb(args)
+	if err != nil {
+		refuseSkillsUsage(err, stderr, exit)
+		return
+	}
+	var id string
+	if len(parsed.words) > 0 {
+		id = parsed.words[0]
+	}
+	if !requireProjectArgument("uninstall", id, "<id>", stderr, exit) {
+		return
+	}
+	root, ok := workingProject("uninstall", "removed", deps, stderr, exit)
+	if !ok {
+		return
+	}
+	held, ok := lockProject("uninstall", root, deps, stderr, exit)
+	if !ok {
+		return
+	}
+	defer held.Release()
+	dryRun := parsed.switches[flagDryRun]
+	result, err := app.UninstallProject(app.InstallPorts{Locks: deps.ProjectLocks, Files: deps.ReadFile, Project: deps.Project},
+		app.UninstallInput{ProjectRoot: root, ID: id, DryRun: dryRun})
+	if err != nil {
+		refuseInstall("uninstall", "removed", err, stderr, exit)
+		return
+	}
+	if dryRun {
+		tellPaths(stdout, "plan: ", result.Planned)
+		exit(0)
+		return
+	}
+	tellPaths(stdout, "removed: ", result.Removed)
+	for _, dir := range result.Kept {
+		fmt.Fprintf(stdout, "note: kept %s: it holds files skills install did not write\n", dir)
+	}
+	fmt.Fprintf(stdout, "uninstalled: %s\n", id)
+	exit(0)
+}
+
 // workingProject names the directory a verb installs into, which must be an absolute path. It
 // reports false, having told why and exited, when it cannot: nothing was locked and nothing done.
 func workingProject(verb, did string, deps skills.Deps, stderr io.Writer, exit func(int)) (string, bool) {

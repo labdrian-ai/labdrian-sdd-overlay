@@ -128,6 +128,14 @@ Commands:
                                              when they are exactly the current source; nothing is adopted silently
                                              (a directory stays foreign to install until skills adopt records it).
                                              It writes the project lock and no skill file
+                                   uninstall [--dry-run] <id>
+                                             remove from <cwd> a skill install put there: every
+                                             file its install record lists, in both runtimes, then
+                                             the record (the lock file stays). It refuses, naming
+                                             the path, a hand-edited file, an id with no install
+                                             record, or a procedural skill (project-retire's), and
+                                             then removes nothing; a file the record does not list
+                                             is left, with its directory (note: kept <dir>)
                                    add <id> [--repo <url>] [--ref <sha>]
                                              register a skill: custom (no --repo) or
                                              external=vendored provenance (--repo set).
@@ -185,9 +193,9 @@ Commands:
                                    taken for 2 seconds means another skills command is in progress: the verb
                                    changes nothing and reports it with exit 2 (retry). Exit 1 is unchanged: the
                                    verb ran or was refused, or the lock could not be created at all.
-                                   Project lock: project-register, project-revise, project-retire, install and adopt also
+                                   Project lock: project-register, project-revise, project-retire, install, adopt and uninstall also
                                    take an exclusive lock on the project root directory itself (--project-root, or
-                                   the working directory for install and adopt), so no file is created in the project; a
+                                   the working directory for install, adopt and uninstall), so no file is created in the project; a
                                    busy one is exit 2 too, and a filesystem that cannot lock a directory refuses the verb
                                    (exit 1). A verb that holds both takes the overlay lock first, then the project lock,
                                    so install and adopt can wait up to twice the lock bound (2 seconds each) when both

@@ -359,6 +359,19 @@ var skillsProjectRetireSpec = skillsFlagSpec{
 	valueIsNeverAFlag: true,
 }
 
+// skillsUninstallSpec is the command line of `skills uninstall`: `--dry-run`, and the id as the one
+// word. It works in the directory the process is in, as install does, and needs no registry and no
+// source: the flags the wrapper appends are taken and not read.
+var skillsUninstallSpec = skillsFlagSpec{
+	verb:              "uninstall",
+	switches:          []string{flagDryRun},
+	wrapper:           []string{flagRegistry, flagManifest, flagSourceRoot},
+	words:             1,
+	extraWord:         "skills uninstall: unexpected extra argument %q (uninstall accepts exactly one <id>)",
+	endOfOptions:      true,
+	valueIsNeverAFlag: true,
+}
+
 // skillsProjectStatusSpec is the command line of `skills project-status`: the project and the
 // registry, and an id as the one word.
 var skillsProjectStatusSpec = skillsFlagSpec{
