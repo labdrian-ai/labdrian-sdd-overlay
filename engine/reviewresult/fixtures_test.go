@@ -70,14 +70,20 @@ func replyFor(t *testing.T, b reviewresult.Binding) []byte {
 	)
 }
 
-// edit returns validReply with the one place that holds old rewritten as replacement. It fails the test
-// when old is not in validReply exactly once, so a test can never refuse a reply that was not changed.
+// swap returns text with the one place that holds old rewritten as replacement. It fails the test when old
+// is not in text exactly once, so a test can never refuse a piece of a reply that was not changed.
+func swap(t *testing.T, text, old, replacement string) string {
+	t.Helper()
+	if n := strings.Count(text, old); n != 1 {
+		t.Fatalf("setup: %q occurs %d times in %q, want exactly 1", old, n, text)
+	}
+	return strings.Replace(text, old, replacement, 1)
+}
+
+// edit returns validReply with the one place that holds old rewritten as replacement.
 func edit(t *testing.T, old, replacement string) []byte {
 	t.Helper()
-	if n := strings.Count(validReply, old); n != 1 {
-		t.Fatalf("setup: %q occurs %d times in the valid reply, want exactly 1", old, n)
-	}
-	return []byte(strings.Replace(validReply, old, replacement, 1))
+	return []byte(swap(t, validReply, old, replacement))
 }
 
 // refusals are the reasons Parse gives for turning a reply away. A refusal is exactly one of them.

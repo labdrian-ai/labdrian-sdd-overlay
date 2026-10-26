@@ -7,29 +7,35 @@
 // The rules, in the order Parse applies them. It returns the first one broken, so the same reply is always
 // refused for the same reason, and the error wraps exactly one of the Err values:
 //
-//   - the Binding names a candidate: base and head are full git object names and diff_sha256 is a SHA-256
-//     digest (ErrInvalidBinding). A binding that names nothing holds a reply to nothing: with an empty one,
-//     a reply that echoes empty values would be "the same candidate";
-//   - the reply is the object of the contract (ErrUnparseable): valid UTF-8, one JSON value, no key written
-//     twice, and in every object (the reply, its candidate, its inspection and each finding) every member
-//     the contract names, none of them null and each of its type. An empty array says "nothing"; a missing
-//     or null member says nothing at all and is never read as "nothing", so a reply with no findings member
-//     is not a clean review. The one exception in name is a finding whose id member is missing or null: it
-//     is found with the shape and is ErrMissingID, not ErrUnparseable;
-//   - no object has a member the contract does not name (ErrUnknownMember), matched by exact name, since
-//     the JSON decoder would read "Severity" after "severity" as the same member and keep the last. A
-//     result of ours is check evidence in the role chain and never review authority: it carries no schema,
-//     lineage, receipt or GENTLE_AI_* member;
+//   - the Binding names a candidate: base and head are full git object names, diff_sha256 is a SHA-256
+//     digest and the paths of the diff list each path once (ErrInvalidBinding). A binding that names
+//     nothing holds a reply to nothing: with an empty one, a reply that echoes empty values would be "the
+//     same candidate";
+//   - the reply is bytes that read as one JSON value (ErrUnparseable): valid UTF-8, one value, no key
+//     written twice;
+//   - the reply has the shape of the contract. Its objects are looked at one at a time, in the order the
+//     reply holds them (the reply, its candidate, its inspection and each finding), and the first fault is
+//     the one reported. Each must be an object; it has no member the contract does not name
+//     (ErrUnknownMember), matched by exact name, since the JSON decoder would read "Severity" after
+//     "severity" as the same member and keep the last (a result of ours is check evidence in the role chain
+//     and never review authority: it carries no schema, lineage, receipt or GENTLE_AI_* member); it has
+//     every member the contract names, none of them null; and none of its arrays (evidence, the paths of
+//     the inspection, the proof_refs of a finding) has a null among its elements, which decoding would read
+//     as an empty string (ErrUnparseable). An empty array says "nothing"; a missing or null member says
+//     nothing at all and is never read as "nothing", so a reply with no findings member is not a clean
+//     review. The id of a finding is the one member the shape does not ask for: see the last rule;
+//   - every value is of its type (ErrUnparseable), checked once every object has been looked at;
 //   - the candidate it echoes is the binding, member by member (ErrCandidateMismatch): a result applies to
 //     the bytes it was launched on and to no other;
 //   - inspection.status is "completed" (ErrInspectionNotCompleted); an incomplete inspection carries the
 //     reason the reviewer gave;
-//   - the paths it says it inspected are the paths of the diff, compared as sets (ErrPathsMismatch): a path
-//     of the diff it did not list is a file nobody read;
-//   - each finding, in order, has an id that is not blank (ErrMissingID) and that no earlier finding has
-//     (ErrDuplicateID); a severity, class of evidence and causal disposition that are values the contract
-//     lists (ErrOutsideEnum); and, when it is a BLOCKER or a CRITICAL, at least one proof reference that is
-//     not blank (ErrMissingProof).
+//   - the paths it says it inspected are the paths of the diff, compared as sets in which each path is
+//     listed once (ErrPathsMismatch): a path of the diff it did not list is a file nobody read, and a path
+//     listed twice makes a list that is not the list of the diff;
+//   - each finding, in order, and one finding at a time, has an id (ErrMissingID: missing, null or blank)
+//     that no earlier finding has (ErrDuplicateID); a severity, class of evidence and causal disposition
+//     that are values the contract lists (ErrOutsideEnum); and, when it is a BLOCKER or a CRITICAL, at
+//     least one proof reference that is not blank (ErrMissingProof).
 //
 // The contract itself is the object that the third line of the delta of roles/reviewer/body.md spells
 // out; tests in engine/skills pin that text and require Parse to accept the object it spells out, so the
@@ -52,7 +58,8 @@ type Binding struct {
 	// characters.
 	DiffSHA256 string
 	// Paths are the paths the diff changes, as `git diff --name-only base head` gives them: byte for byte,
-	// one entry per path. The reviewer's list of inspected paths is held to this one as a set.
+	// one entry per path. Parse refuses a binding that lists a path twice. The reviewer's list of inspected
+	// paths is held to this one as a set, and lists each path once as well.
 	Paths []string
 }
 
@@ -77,7 +84,7 @@ type Candidate struct {
 // Inspection is the reviewer's account of what it read.
 type Inspection struct {
 	Status InspectionStatus
-	// Paths are the changed paths the reviewer says it inspected.
+	// Paths are the changed paths the reviewer says it inspected, each once.
 	Paths []string
 	// Reason says why an inspection is incomplete, and is empty otherwise.
 	Reason string

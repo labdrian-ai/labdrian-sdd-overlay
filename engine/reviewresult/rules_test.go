@@ -100,6 +100,70 @@ func TestParseRefusesPathsThatAreNotThePathsOfTheDiff(t *testing.T) {
 	})
 }
 
+// A list of paths has one entry per path: git diff --name-only gives the paths of the diff that way, and the
+// contract asks the same of the paths the reviewer inspected. The two lists are compared as sets, which
+// would let a list with a path twice pass for the list without it. A reply that lists a path more than once
+// is refused as paths that are not the paths of the diff, and the error names the path. A binding that
+// lists one is the fault of the caller and not of the reviewer's reply: it is refused as a binding that
+// names no candidate, whatever the reply says.
+func TestParseRefusesAPathListedMoreThanOnce(t *testing.T) {
+	t.Run("in the paths the reviewer inspected", func(t *testing.T) {
+		both := func(inspected string) []byte {
+			return reply(candidateJSON, `{"status":"completed","paths":`+inspected+`,"reason":""}`, findingsJSON, evidenceJSON)
+		}
+		for _, tt := range []struct {
+			name  string
+			reply []byte
+			names []string
+		}{
+			{"a path of the diff twice", both(`["engine/guard.go","engine/guard.go","engine/guard_test.go"]`),
+				[]string{`listed more than once: "engine/guard.go"`}},
+			{"a path of the diff twice in place of another", both(`["engine/guard.go","engine/guard.go"]`),
+				[]string{`not inspected: "engine/guard_test.go"`, `listed more than once: "engine/guard.go"`}},
+			{"every path twice, in no order", both(`["engine/guard_test.go","engine/guard.go","engine/guard_test.go","engine/guard.go"]`),
+				[]string{`listed more than once: "engine/guard.go", "engine/guard_test.go"`}},
+		} {
+			t.Run(tt.name, func(t *testing.T) {
+				got, err := reviewresult.Parse(tt.reply, binding())
+				assertRefused(t, got, err, reviewresult.ErrPathsMismatch)
+				if err == nil {
+					return
+				}
+				for _, part := range tt.names {
+					if !strings.Contains(err.Error(), part) {
+						t.Errorf("Parse() error = %v, want it to say %s", err, part)
+					}
+				}
+			})
+		}
+	})
+
+	t.Run("in the paths of the diff", func(t *testing.T) {
+		repeated := binding()
+		repeated.Paths = []string{"engine/guard.go", "engine/guard.go", "engine/guard_test.go"}
+		for _, tt := range []struct {
+			name  string
+			reply []byte
+		}{
+			{"a reviewer that lists the path as often as it was sent", replyFor(t, repeated)},
+			{"a reviewer that lists each path once", replyFor(t, binding())},
+		} {
+			t.Run(tt.name, func(t *testing.T) {
+				got, err := reviewresult.Parse(tt.reply, repeated)
+				assertRefused(t, got, err, reviewresult.ErrInvalidBinding)
+				if err == nil {
+					return
+				}
+				for _, part := range []string{"paths", `"engine/guard.go"`, "more than once"} {
+					if !strings.Contains(err.Error(), part) {
+						t.Errorf("Parse() error = %v, want it to say %s", err, part)
+					}
+				}
+			})
+		}
+	})
+}
+
 // The severity, the class of evidence and the causal disposition of a finding are enumerations, and a value
 // outside one is refused, never read as the nearest value: "blocker" is not BLOCKER, and "activated" is the
 // word of the prose for "behavior-activated". The error names the finding, the member and the value, and

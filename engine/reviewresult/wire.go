@@ -10,12 +10,15 @@ import (
 
 // The members of each object of the contract, as agents/reviewer.md spells them. A reply holds every one
 // of them in every object and none is null: an empty array says "nothing", a missing or null member says
-// nothing at all, and the contract never reads that as "nothing".
+// nothing at all, and the contract never reads that as "nothing". The one member the shape of the reply
+// does not ask for is the id of a finding: a finding without one is the rule of its own (ErrMissingID),
+// held back until the shape of the whole reply and the rules that come before it have been checked.
 var (
 	resultMembers     = []string{"candidate", "inspection", "findings", "evidence"}
 	candidateMembers  = []string{"base", "head", "diff_sha256"}
 	inspectionMembers = []string{"status", "paths", "reason"}
-	findingMembers    = []string{"id", "location", "severity", "claim", "evidence_class", "causal_disposition", "proof_refs"}
+	findingShape      = []string{"location", "severity", "claim", "evidence_class", "causal_disposition", "proof_refs"}
+	findingMembers    = append([]string{"id"}, findingShape...)
 )
 
 // The wire form of a reply: what the reviewer's JSON holds, member by member. It stays inside this file;
@@ -83,9 +86,12 @@ func decode(data []byte) (Result, error) {
 }
 
 // checkShape fails when the reply is not, in form, the object of the contract: valid UTF-8, one JSON value
-// with no key written twice, and in every object (the reply, its candidate, its inspection and each of its
-// findings) all the members of the contract and no null among them. The types of the values are checked
-// by the decoding that follows.
+// with no key written twice, and then, object by object in the order the reply holds them (the reply, its
+// candidate, its inspection and each of its findings), the members of the contract and no others. In each
+// object a member the contract does not name is refused first, then a member it names that is missing or
+// null, then a null among the elements of an array it holds. The id of a finding is not asked for here
+// (see findingShape). The types of the values are checked by the decoding that follows, once every object
+// has been looked at.
 func checkShape(data []byte) error {
 	if err := jsonstrict.CheckUTF8(data); err != nil {
 		return unparseable("%v", err)
@@ -97,16 +103,18 @@ func checkShape(data []byte) error {
 	if err != nil {
 		return err
 	}
-	for _, nested := range []struct {
-		member  string
-		members []string
-	}{
-		{"candidate", candidateMembers},
-		{"inspection", inspectionMembers},
-	} {
-		if _, err := strictObject(reply[nested.member], nested.member, nested.members); err != nil {
-			return err
-		}
+	if err := noNullElement(reply["evidence"], "evidence"); err != nil {
+		return err
+	}
+	if _, err := strictObject(reply["candidate"], "candidate", candidateMembers); err != nil {
+		return err
+	}
+	inspection, err := strictObject(reply["inspection"], "inspection", inspectionMembers)
+	if err != nil {
+		return err
+	}
+	if err := noNullElement(inspection["paths"], "inspection.paths"); err != nil {
+		return err
 	}
 	var findings []json.RawMessage
 	if err := json.Unmarshal(reply["findings"], &findings); err != nil {
@@ -118,12 +126,10 @@ func checkShape(data []byte) error {
 		if err != nil {
 			return err
 		}
-		// The id is what the rest of the contract follows a finding by, so a finding that has none is
-		// refused as that, not as a member missing from the shape.
-		if id, ok := members["id"]; !ok || isNull(id) {
-			return fmt.Errorf("%w: %s has no id", ErrMissingID, record)
+		if err := require(members, record, findingShape); err != nil {
+			return err
 		}
-		if err := require(members, record, findingMembers); err != nil {
+		if err := noNullElement(members["proof_refs"], record+".proof_refs"); err != nil {
 			return err
 		}
 	}
@@ -164,6 +170,23 @@ func require(got map[string]json.RawMessage, record string, members []string) er
 		}
 		if isNull(value) {
 			return unparseable("%s has a null %q member", record, member)
+		}
+	}
+	return nil
+}
+
+// noNullElement fails when the value of an array member, which holds strings, has a null among its
+// elements. The decoding that follows would read each null as the empty string: a path, a proof reference
+// or a line of evidence that is blank and that the reviewer never wrote. A value that is not an array is
+// left to that decoding, which refuses it by its type.
+func noNullElement(raw json.RawMessage, member string) error {
+	var elements []json.RawMessage
+	if err := json.Unmarshal(raw, &elements); err != nil {
+		return nil
+	}
+	for i, element := range elements {
+		if isNull(element) {
+			return unparseable("%s[%d] is null", member, i)
 		}
 	}
 	return nil

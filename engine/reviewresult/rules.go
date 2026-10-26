@@ -9,8 +9,9 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/sha256hex"
 )
 
-// check requires the binding to name a candidate: two full git object names and a SHA-256 digest. A
-// reply is held to the binding, so a binding that is not one holds it to nothing.
+// check requires the binding to name a candidate: two full git object names, a SHA-256 digest and the
+// paths of the diff with one entry per path. A reply is held to the binding, so a binding that is not one
+// holds it to nothing.
 func (b Binding) check() error {
 	if !gitobject.IsName(b.Base) {
 		return fmt.Errorf("%w: base %q is not a full git object name", ErrInvalidBinding, b.Base)
@@ -20,6 +21,9 @@ func (b Binding) check() error {
 	}
 	if !sha256hex.IsValid(b.DiffSHA256) {
 		return fmt.Errorf("%w: diff_sha256 %q is not a SHA-256 digest", ErrInvalidBinding, b.DiffSHA256)
+	}
+	if twice := duplicates(b.Paths); len(twice) > 0 {
+		return fmt.Errorf("%w: paths lists %s more than once, want one entry per path", ErrInvalidBinding, quoteAll(twice))
 	}
 	return nil
 }
@@ -71,13 +75,15 @@ func checkInspectionCompleted(r Result, _ Binding) error {
 	return fmt.Errorf("%w: inspection.status is %q, want %q%s", ErrInspectionNotCompleted, r.Inspection.Status, InspectionCompleted, reason)
 }
 
-// checkPaths requires the paths the reviewer says it inspected to be the paths of the diff, as sets: a
-// path of the diff that is not listed is a file nobody read, and a path listed that the diff does not
-// change belongs to another candidate. The error names every path on either side.
+// checkPaths requires the paths the reviewer says it inspected to be the paths of the diff, as sets with
+// one entry per path: a path of the diff that is not listed is a file nobody read, a path listed that the
+// diff does not change belongs to another candidate, and a path listed twice makes a list that is not the
+// list of the paths of the diff, whatever set it spells. The error names every path on either side.
 func checkPaths(r Result, b Binding) error {
 	notInspected := without(b.Paths, r.Inspection.Paths)
 	notInDiff := without(r.Inspection.Paths, b.Paths)
-	if len(notInspected) == 0 && len(notInDiff) == 0 {
+	listedTwice := duplicates(r.Inspection.Paths)
+	if len(notInspected) == 0 && len(notInDiff) == 0 && len(listedTwice) == 0 {
 		return nil
 	}
 	var parts []string
@@ -86,6 +92,9 @@ func checkPaths(r Result, b Binding) error {
 	}
 	if len(notInDiff) > 0 {
 		parts = append(parts, "not in the diff: "+quoteAll(notInDiff))
+	}
+	if len(listedTwice) > 0 {
+		parts = append(parts, "listed more than once: "+quoteAll(listedTwice))
 	}
 	return fmt.Errorf("%w: %s", ErrPathsMismatch, strings.Join(parts, "; "))
 }
@@ -107,6 +116,20 @@ func without(from, remove []string) []string {
 	return left
 }
 
+// duplicates returns the paths that paths lists more than once, each once, sorted.
+func duplicates(paths []string) []string {
+	count := make(map[string]int, len(paths))
+	var twice []string
+	for _, path := range paths {
+		count[path]++
+		if count[path] == 2 {
+			twice = append(twice, path)
+		}
+	}
+	sort.Strings(twice)
+	return twice
+}
+
 // quoteAll writes each path in Go quotes, so a name with a space or a quote of its own reads as one.
 func quoteAll(paths []string) string {
 	quoted := make([]string, len(paths))
@@ -117,13 +140,15 @@ func quoteAll(paths []string) string {
 }
 
 // checkFindings holds each finding, in the order the reviewer wrote them, to the rules of a finding, and
-// returns the first rule broken. A finding has an id that is not blank and that no earlier finding has: the
-// verifier answers per id, so an id that names two findings answers for both.
+// returns the first rule broken. A finding has an id and no earlier finding has the same: the verifier
+// answers per id, so a finding without one cannot be answered, and an id that names two findings answers
+// for both. An id that is missing from the reply or null in it is decoded as the empty string, so it is
+// refused here with the blank ones, at its place in the order and not before the rules that come first.
 func checkFindings(r Result, _ Binding) error {
 	firstWith := make(map[string]int, len(r.Findings))
 	for i, f := range r.Findings {
 		if strings.TrimSpace(f.ID) == "" {
-			return fmt.Errorf("%w: findings[%d] has a blank id", ErrMissingID, i)
+			return fmt.Errorf("%w: findings[%d] has no id: it is missing, null or blank", ErrMissingID, i)
 		}
 		if first, repeated := firstWith[f.ID]; repeated {
 			return fmt.Errorf("%w: id %q is on findings[%d] and findings[%d]", ErrDuplicateID, f.ID, first, i)

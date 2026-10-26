@@ -82,9 +82,12 @@ func TestParseAcceptsWhiteSpaceAroundTheObject(t *testing.T) {
 }
 
 // A reply that breaks several rules is refused for the first of them, in the order the contract lists
-// them: the binding, then the shape of the reply and its members, the echo of the candidate, the status of
-// the inspection, its paths, and the findings one by one, each by its id, then its values, then its proof.
-// The same reply is always refused for the same reason, which is the one the parent records.
+// them: the binding, then the shape of the reply, object by object (the reply, its candidate, its
+// inspection and each finding, and in each a member the contract does not name before a member that is
+// missing or null, and before a null in one of its arrays), then the type of the values, the echo of the
+// candidate, the status of the inspection, its paths, and the findings one by one, each by its id, then its
+// values, then its proof. The same reply is always refused for the same reason, which is the one the
+// parent records.
 func TestParseRefusesForTheFirstRuleABrokenReplyBreaks(t *testing.T) {
 	var (
 		unfinished     = `{"status":"incomplete","paths":["engine/guard.go"],"reason":"engine/guard_test.go could not be read"}`
@@ -97,6 +100,10 @@ func TestParseRefusesForTheFirstRuleABrokenReplyBreaks(t *testing.T) {
 	invalidBinding.Head = "HEAD"
 	// The reply of another candidate that also has a member the contract does not name.
 	unknownAndOtherBase := []byte(`{"schema":"x",` + string(reply(otherBase, inspectionJSON, findingsJSON, evidenceJSON))[1:])
+	// A candidate, and a finding, that have a member the contract does not name; and a reply with no evidence.
+	unknownCandidate := swap(t, candidateJSON, `"diff_sha256":"`+diffSHA+`"`, `"diff_sha256":"`+diffSHA+`","subject_hash":"x"`)
+	unknownInFinding := `[` + blockerJSON + `,` + swap(t, suggestionJSON, `"claim":"name the case",`, `"claim":"name the case","rationale":"x",`) + `]`
+	noEvidence := []byte(`{"candidate":` + unknownCandidate + `,"inspection":` + inspectionJSON + `,"findings":` + findingsJSON + `}`)
 	for _, tt := range []struct {
 		name  string
 		bound reviewresult.Binding
@@ -104,6 +111,10 @@ func TestParseRefusesForTheFirstRuleABrokenReplyBreaks(t *testing.T) {
 		want  error
 	}{
 		{"an invalid binding before a reply nobody can read", invalidBinding, []byte("not json"), reviewresult.ErrInvalidBinding},
+		{"a missing member of the reply before an unknown member of its candidate", binding(), noEvidence, reviewresult.ErrUnparseable},
+		{"a null in the evidence of the reply before an unknown member of its candidate", binding(), reply(unknownCandidate, inspectionJSON, findingsJSON, `["read it",null]`), reviewresult.ErrUnparseable},
+		{"an unknown member before a value of the wrong type", binding(), reply(candidateJSON, swap(t, inspectionJSON, `"status":"completed"`, `"status":7`), unknownInFinding, evidenceJSON), reviewresult.ErrUnknownMember},
+		{"an unknown member before an array that is not one", binding(), reply(unknownCandidate, inspectionJSON, findingsJSON, `"read it"`), reviewresult.ErrUnknownMember},
 		{"an unknown member before another candidate", binding(), unknownAndOtherBase, reviewresult.ErrUnknownMember},
 		{"another candidate before an unfinished inspection", binding(), reply(otherBase, unfinished, findingsJSON, evidenceJSON), reviewresult.ErrCandidateMismatch},
 		{"an unfinished inspection before its paths", binding(), reply(candidateJSON, unfinished, findingsJSON, evidenceJSON), reviewresult.ErrInspectionNotCompleted},
@@ -114,6 +125,74 @@ func TestParseRefusesForTheFirstRuleABrokenReplyBreaks(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := reviewresult.Parse(tt.reply, tt.bound)
 			assertRefused(t, got, err, tt.want)
+		})
+	}
+}
+
+// The id of a finding is the rule of its own, and it comes late in the order of the package comment: a
+// finding with no id member, or a null one, is refused at the place of the ids and not while the shape of
+// the reply is read. So every rule that comes before it speaks first: a fault of the shape in any other
+// finding, even one that comes after it, the echo of another candidate, an inspection that is not
+// completed, paths that are not the paths of the diff, and a value outside its enumeration in a finding
+// that comes before it.
+func TestParseReportsAMissingIDAfterEveryRuleThatComesBeforeIt(t *testing.T) {
+	var (
+		unknownMember  = swap(t, suggestionJSON, `"claim":"name the case",`, `"claim":"name the case","rationale":"x",`)
+		nullMember     = swap(t, suggestionJSON, `"claim":"name the case"`, `"claim":null`)
+		wrongType      = swap(t, suggestionJSON, `"severity":"SUGGESTION"`, `"severity":3`)
+		badValue       = swap(t, suggestionJSON, `"severity":"SUGGESTION"`, `"severity":"HIGH"`)
+		otherCandidate = `{"base":"` + otherSHA + `","head":"` + headSHA + `","diff_sha256":"` + diffSHA + `"}`
+		unfinished     = `{"status":"incomplete","paths":["engine/guard.go"],"reason":"engine/guard_test.go could not be read"}`
+		otherPaths     = swap(t, inspectionJSON, `"engine/guard_test.go"`, `"engine/other.go"`)
+	)
+	list := func(findings ...string) string { return "[" + strings.Join(findings, ",") + "]" }
+	for _, idless := range []struct{ name, finding string }{
+		{"a finding with no id member", swap(t, blockerJSON, `"id":"F1",`, ``)},
+		{"a finding with a null id", swap(t, blockerJSON, `"id":"F1"`, `"id":null`)},
+	} {
+		for _, tt := range []struct {
+			name  string
+			reply []byte
+			want  error
+		}{
+			{"an unknown member of the next finding", reply(candidateJSON, inspectionJSON, list(idless.finding, unknownMember), evidenceJSON), reviewresult.ErrUnknownMember},
+			{"a null member of the next finding", reply(candidateJSON, inspectionJSON, list(idless.finding, nullMember), evidenceJSON), reviewresult.ErrUnparseable},
+			{"a member of the next finding of the wrong type", reply(candidateJSON, inspectionJSON, list(idless.finding, wrongType), evidenceJSON), reviewresult.ErrUnparseable},
+			{"the echo of another candidate", reply(otherCandidate, inspectionJSON, list(idless.finding, suggestionJSON), evidenceJSON), reviewresult.ErrCandidateMismatch},
+			{"an inspection that is not completed", reply(candidateJSON, unfinished, list(idless.finding, suggestionJSON), evidenceJSON), reviewresult.ErrInspectionNotCompleted},
+			{"paths that are not the paths of the diff", reply(candidateJSON, otherPaths, list(idless.finding, suggestionJSON), evidenceJSON), reviewresult.ErrPathsMismatch},
+			{"a value outside its enumeration in the finding before it", reply(candidateJSON, inspectionJSON, list(badValue, idless.finding), evidenceJSON), reviewresult.ErrOutsideEnum},
+		} {
+			t.Run(idless.name+" comes after "+tt.name, func(t *testing.T) {
+				got, err := reviewresult.Parse(tt.reply, binding())
+				assertRefused(t, got, err, tt.want)
+			})
+		}
+	}
+}
+
+// An array of the reply holds strings and nothing else, and a null inside one is a null like any other
+// member: refused, and never read as the empty string, which is what decoding JSON makes of it. A null
+// among the paths of the inspection would be a path nobody can name, one among the proof references of a
+// finding that needs none would pass for a reference that is blank, and one among the evidence would pass
+// for a line of evidence that says nothing. The error names the array and the place of the null.
+func TestParseRefusesANullInAnArray(t *testing.T) {
+	for _, tt := range []struct {
+		name  string
+		reply []byte
+		place string
+	}{
+		{"a null among the paths of the inspection", edit(t, `"paths":["engine/guard.go","engine/guard_test.go"]`, `"paths":["engine/guard.go","engine/guard_test.go",null]`), "inspection.paths[2]"},
+		{"a null beside the proof reference of a BLOCKER", edit(t, `"proof_refs":["engine/guard.go:12 is a line the candidate added"]`, `"proof_refs":["engine/guard.go:12 is a line the candidate added",null]`), "findings[0].proof_refs[1]"},
+		{"a null as the only proof reference of a finding that needs none", edit(t, `"proof_refs":[]`, `"proof_refs":[null]`), "findings[1].proof_refs[0]"},
+		{"a null among the evidence", edit(t, `"evidence":["read engine/guard.go","read engine/guard_test.go"]`, `"evidence":["read engine/guard.go",null,"read engine/guard_test.go"]`), "evidence[1]"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := reviewresult.Parse(tt.reply, binding())
+			assertRefused(t, got, err, reviewresult.ErrUnparseable)
+			if err != nil && !strings.Contains(err.Error(), tt.place) {
+				t.Errorf("Parse() error = %v, want it to name %s", err, tt.place)
+			}
 		})
 	}
 }
@@ -161,6 +240,7 @@ func TestParseRefusesAReplyThatIsNotTheObjectOfTheContract(t *testing.T) {
 		{"a status that is a number", edit(t, `"status":"completed"`, `"status":7`)},
 		{"paths that is a string", edit(t, `"paths":["engine/guard.go","engine/guard_test.go"]`, `"paths":"engine/guard.go"`)},
 		{"a severity that is a number", edit(t, `"severity":"SUGGESTION"`, `"severity":3`)},
+		{"an id that is a number", edit(t, `"id":"F2"`, `"id":7`)},
 		{"proof_refs that is a string", edit(t, `"proof_refs":[]`, `"proof_refs":"none"`)},
 
 		{"no candidate", without("candidate")},
