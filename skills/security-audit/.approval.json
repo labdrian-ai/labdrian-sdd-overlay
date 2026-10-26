@@ -1,7 +1,7 @@
 {
   "version": 2,
   "skill": "security-audit",
-  "sha256": "bce21c9a2e8804b75032112e82be08b6b46871ae1b63d492ae7000d96e95a192",
-  "approved_at": "2026-10-26T14:58:35Z",
+  "sha256": "44505500ae269777f85928e324296d985310593d5166bd3e38d2a46fa8228ab7",
+  "approved_at": "2026-10-26T15:27:21Z",
   "approver": "labdrian"
 }

@@ -1,7 +1,7 @@
 {
   "version": 2,
   "skill": "chat-thread-analyzer",
-  "sha256": "710ba64fe617ad62272f8ebf58794b5f991d74e6dff08fffed576890d9f29ef0",
-  "approved_at": "2026-10-26T14:58:35Z",
+  "sha256": "de45e981d6c11dd7883f0ddbde2ddaf0e2b07f8595df5610fe5f48c1fb9f3720",
+  "approved_at": "2026-10-26T15:27:21Z",
   "approver": "labdrian"
 }

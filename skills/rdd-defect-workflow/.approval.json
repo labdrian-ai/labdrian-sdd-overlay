@@ -1,7 +1,7 @@
 {
   "version": 2,
   "skill": "rdd-defect-workflow",
-  "sha256": "f590ff55ab3b80b45ad281f8707a93e0dffcc55f6a1d2da80b89332e79dc63d3",
-  "approved_at": "2026-10-26T14:58:35Z",
+  "sha256": "2209aac029876ee064b8149282764deabe93abb7bd4d22a20e57cdda1300fa54",
+  "approved_at": "2026-10-26T15:27:21Z",
   "approver": "labdrian"
 }
