@@ -133,6 +133,9 @@ import (
 //     store (the candidate of a review with the digest of its diff, the name of a feature, the names of the
 //     stored results and the worktree of a review, the stored file and the role handoff skeleton). It reads
 //     no file and runs no git: the application hands it the bytes of the diff and the paths.
+//   - review/app holds the use cases of `engine review` (own-rdd T2): Bind and Record, over the Git and
+//     Results ports it owns. It answers with typed values and typed refusals, prints nothing and exits
+//     nowhere; the words a person reads and the exit codes are the command's, in cmd.
 //   - repotest is test support: the hand-made repositories the tests of gitfs and cmd share.
 //   - piguard is test support: the `pi` that refuses to run, put first on the PATH of a test
 //     run by a TestMain, so nothing started by accident reaches the real CLI.
@@ -188,6 +191,7 @@ var rings = map[string]archguard.Ring{
 	"propagator/fsstore":        archguard.Adapter,
 	"repotest":                  archguard.Support,
 	"review":                    archguard.Domain,
+	"review/app":                archguard.Application,
 	"reviewreceipt":             archguard.Domain,
 	"reviewreceipt/fsstore":     archguard.Adapter,
 	"reviewreceipt/receipttest": archguard.Support,

@@ -1,0 +1,216 @@
+package app_test
+
+import (
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"fmt"
+	"sort"
+	"strings"
+	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review/app"
+)
+
+// The candidate the fakes answer for: two full commit names, the bytes of a diff and the two paths it
+// changes. "HEAD~1" and "HEAD" are the revisions a person types for them.
+const (
+	baseSHA  = "1111111111111111111111111111111111111111"
+	headSHA  = "2222222222222222222222222222222222222222"
+	otherSHA = "3333333333333333333333333333333333333333"
+	diffText = "diff --git a/a.go b/a.go\n"
+)
+
+var changedPaths = []string{"engine/guard.go", "engine/guard_test.go"}
+
+// fakeRepo is the repository the fake git locates: a linked worktree of a main checkout.
+var fakeRepo = app.Repository{Root: "/work/wt/feature", Main: "/work/main", CommonDir: "/work/main/.git"}
+
+// fakeGit is the Git port with canned answers. It records every call, in order, as "Name arg ..." so a
+// test says which calls were made and which were not. A method named in fail returns that error.
+type fakeGit struct {
+	diff     []byte
+	paths    []string
+	worktree app.WorktreeState
+	fail     map[string]error
+	calls    []string
+}
+
+func newFakeGit() *fakeGit {
+	return &fakeGit{diff: []byte(diffText), paths: changedPaths, fail: map[string]error{}}
+}
+
+func (g *fakeGit) record(call string) { g.calls = append(g.calls, call) }
+
+// count says how many calls were exactly call.
+func (g *fakeGit) count(call string) int {
+	n := 0
+	for _, c := range g.calls {
+		if c == call {
+			n++
+		}
+	}
+	return n
+}
+
+// called says how many calls began with prefix.
+func (g *fakeGit) called(prefix string) int {
+	n := 0
+	for _, c := range g.calls {
+		if strings.HasPrefix(c, prefix) {
+			n++
+		}
+	}
+	return n
+}
+
+func (g *fakeGit) Locate(dir string) (app.Repository, error) {
+	g.record("Locate " + dir)
+	if err := g.fail["Locate"]; err != nil {
+		return app.Repository{}, err
+	}
+	return fakeRepo, nil
+}
+
+func (g *fakeGit) Commit(repo app.Repository, rev string) (string, error) {
+	g.record("Commit " + rev)
+	if err := g.fail["Commit "+rev]; err != nil {
+		return "", err
+	}
+	switch rev {
+	case "HEAD~1", baseSHA:
+		return baseSHA, nil
+	case "HEAD", headSHA:
+		return headSHA, nil
+	}
+	return "", fmt.Errorf("fakeGit: unknown revision %q", rev)
+}
+
+func (g *fakeGit) Diff(repo app.Repository, base, head string) ([]byte, error) {
+	g.record("Diff " + base + " " + head)
+	if err := g.fail["Diff"]; err != nil {
+		return nil, err
+	}
+	return g.diff, nil
+}
+
+func (g *fakeGit) Paths(repo app.Repository, base, head string) ([]string, error) {
+	g.record("Paths " + base + " " + head)
+	if err := g.fail["Paths"]; err != nil {
+		return nil, err
+	}
+	return g.paths, nil
+}
+
+func (g *fakeGit) Worktree(repo app.Repository, path string) (app.WorktreeState, error) {
+	g.record("Worktree " + path)
+	if err := g.fail["Worktree"]; err != nil {
+		return app.WorktreeState{}, err
+	}
+	return g.worktree, nil
+}
+
+func (g *fakeGit) AddWorktree(repo app.Repository, path, head string) error {
+	g.record("AddWorktree " + path + " " + head)
+	return g.fail["AddWorktree"]
+}
+
+// fakeResults is the Results port over a map: the names of a feature's directory and what was created.
+// raceOnce makes the first Create find its name taken, by a writer that got there first.
+type fakeResults struct {
+	files    map[string]map[string][]byte // feature -> name -> content
+	fail     map[string]error
+	calls    []string
+	raceOnce bool
+}
+
+func newFakeResults() *fakeResults {
+	return &fakeResults{files: map[string]map[string][]byte{}, fail: map[string]error{}}
+}
+
+func (r *fakeResults) put(feature, name string, data []byte) {
+	if r.files[feature] == nil {
+		r.files[feature] = map[string][]byte{}
+	}
+	r.files[feature][name] = data
+}
+
+func (r *fakeResults) created() int {
+	n := 0
+	for _, c := range r.calls {
+		if strings.HasPrefix(c, "Create ") {
+			n++
+		}
+	}
+	return n
+}
+
+func (r *fakeResults) Names(root, feature string) ([]string, error) {
+	r.calls = append(r.calls, "Names "+root+" "+feature)
+	if err := r.fail["Names"]; err != nil {
+		return nil, err
+	}
+	var names []string
+	for name := range r.files[feature] {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names, nil
+}
+
+func (r *fakeResults) Create(root, feature, name string, data []byte) error {
+	r.calls = append(r.calls, "Create "+root+" "+feature+" "+name)
+	if err := r.fail["Create"]; err != nil {
+		return err
+	}
+	if r.raceOnce {
+		r.raceOnce = false
+		r.put(feature, name, []byte("written by the other writer"))
+		return app.ErrExists
+	}
+	if _, taken := r.files[feature][name]; taken {
+		return app.ErrExists
+	}
+	r.put(feature, name, data)
+	return nil
+}
+
+// candidateOf is the candidate the fake git gives, as the domain binds it.
+func candidateOf(t *testing.T, g *fakeGit) review.Candidate {
+	t.Helper()
+	c, err := review.NewCandidate(baseSHA, headSHA, g.diff, g.paths)
+	if err != nil {
+		t.Fatalf("setup: NewCandidate() error = %v", err)
+	}
+	return c
+}
+
+// replyFor is a reply of a reviewer that inspected every path of c and found nothing, echoing the
+// candidate it was given.
+func replyFor(t *testing.T, c review.Candidate) []byte {
+	t.Helper()
+	return replyWith(t, c.Base, c.Head, c.DiffSHA256, "completed", c.Paths)
+}
+
+// replyWith is a clean reply that echoes the given values and lists the given paths.
+func replyWith(t *testing.T, base, head, digest, status string, paths []string) []byte {
+	t.Helper()
+	reply := map[string]any{
+		"candidate":  map[string]string{"base": base, "head": head, "diff_sha256": digest},
+		"inspection": map[string]any{"status": status, "paths": paths, "reason": ""},
+		"findings":   []any{},
+		"evidence":   []string{"read every changed path"},
+	}
+	data, err := json.Marshal(reply)
+	if err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+	return data
+}
+
+// sha256Of is the SHA-256 of data, written without the code under test.
+func sha256Of(data []byte) string {
+	sum := sha256.Sum256(data)
+	return hex.EncodeToString(sum[:])
+}
