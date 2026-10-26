@@ -106,8 +106,9 @@ func TestValidateOverlayPassesAnOverlayWhoseChecksAreAllClean(t *testing.T) {
 	if err != nil || !res.Passed() {
 		t.Fatalf("ValidateOverlay = %+v, %v, want a pass", res, err)
 	}
+	// SkillFileMissing counts the global skills set aside because they have no SKILL.md; both have one.
 	if res.SkillCount != 2 || res.DiskFiles != 2 || res.Approvals.Global != 2 || res.Approvals.Approved != 2 || res.Approvals.SkillFileMissing != 0 {
-		t.Errorf("the tallies are %+v, want 2 skills, 2 files, 2 global, 2 approved", res)
+		t.Errorf("the tallies are %+v, want 2 skills, 2 files, 2 global, 2 approved, none set aside", res)
 	}
 }
 

@@ -2,11 +2,13 @@ package skillsfs
 
 import (
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/statestore"
 )
 
 // Approvals is the skills.ApprovalRecordStore of the real file system: the files of a skill and
@@ -52,7 +54,7 @@ func (Approvals) ReadSkillTree(sourceRoot, path string) ([]skills.SkillEntry, er
 		}
 		entry := skills.SkillEntry{Rel: filepath.ToSlash(rel), Type: d.Type()}
 		if entry.Type.IsRegular() && entry.Rel != skills.ApprovalRecordName {
-			if entry.Data, err = os.ReadFile(p); err != nil {
+			if entry.Type, entry.Data, err = readRegular(p); err != nil {
 				return err
 			}
 		}
@@ -63,6 +65,30 @@ func (Approvals) ReadSkillTree(sourceRoot, path string) ([]skills.SkillEntry, er
 		return nil, err
 	}
 	return entries, nil
+}
+
+// readRegular reads the file the listing said was regular, through one descriptor opened without
+// following a link and without blocking on a pipe. An entry swapped for a link or a pipe after the
+// listing is reported with the type it has now, with no bytes, so the domain refuses it rather
+// than reading what it points at.
+func readRegular(p string) (fs.FileMode, []byte, error) {
+	f, err := statestore.OpenNoFollow(p)
+	if err != nil {
+		if statestore.IsSymlinkRefusal(err) {
+			return fs.ModeSymlink, nil, nil
+		}
+		return 0, nil, err
+	}
+	defer f.Close()
+	info, err := f.Stat()
+	if err != nil {
+		return 0, nil, err
+	}
+	if !info.Mode().IsRegular() {
+		return info.Mode().Type(), nil, nil
+	}
+	data, err := io.ReadAll(f)
+	return 0, data, err
 }
 
 // ReadRecord reads the approval record of skill id under sourceRoot.
