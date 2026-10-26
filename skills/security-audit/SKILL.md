@@ -4,7 +4,7 @@ description: "Defensive security guidance and source-first vulnerability review.
 license: MIT
 metadata:
   author: cloudflare
-  version: "c1c8a8c1471069fb0e188eeaff69b8e8db6564a8"
+  version: "1.0"
 ---
 
 # Security Audit
