@@ -1,0 +1,11 @@
+$ sync-trigger --event session-end --cwd <CWD>
+exit: 0
+--- stdout ---
+--- stderr ---
+sync-trigger: error:log: state directory "" is not absolute
+
+=== nothing is written where the parent ran ===
+log: (none)
+longterm-mem: (never started)
+files: (empty)
+

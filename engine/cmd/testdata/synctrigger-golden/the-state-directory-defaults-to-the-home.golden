@@ -6,5 +6,5 @@ exit: 0
 === after the parent and its child (the home's overlay directory) ===
 log: <TIME> event=session-end cwd=<CWD> outcome=ok exit=0 duration=<DURATION>
 longterm-mem: ran in <CWD> with: sync
-files: bin/, bin/longterm-mem 0755, logs/, logs/sync-trigger.log 0644
+files: bin/, bin/longterm-mem 0755, logs/, logs/sync-trigger.log 0600
 

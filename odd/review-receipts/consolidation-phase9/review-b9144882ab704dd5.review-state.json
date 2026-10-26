@@ -1,0 +1,230 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:ac14fe6e85f1a66f048ef288cda86a54873a5b49c4a0e75bec80d85c14962d6c",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-b9144882ab704dd5",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "20e15a24e195155c780b5f0af26ca1170b3764cf",
+      "candidate_tree": "bc9799d777b3e10af33b782a0c1f4261ed677512",
+      "paths_digest": "sha256:090a7e6e4c750a82959a4840f48f01f2096983dd42f351b43d8624f901791679",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/cmd/synctrigger_golden_test.go",
+        "engine/cmd/testdata/synctrigger-golden/a-longterm-mem-that-cannot-run-is-reported.golden",
+        "engine/cmd/testdata/synctrigger-golden/a-relative-cwd-is-made-absolute.golden",
+        "engine/cmd/testdata/synctrigger-golden/archive-runs-the-sync-in-the-project.golden",
+        "engine/cmd/testdata/synctrigger-golden/no-home-and-no-state-directory-writes-nothing.golden",
+        "engine/cmd/testdata/synctrigger-golden/no-longterm-mem-is-skipped.golden",
+        "engine/cmd/testdata/synctrigger-golden/session-end-runs-the-sync-in-the-project.golden",
+        "engine/cmd/testdata/synctrigger-golden/the-child-reports-a-usage-error.golden",
+        "engine/cmd/testdata/synctrigger-golden/the-child-reports-a-vault-failure.golden",
+        "engine/cmd/testdata/synctrigger-golden/the-child-reports-any-other-exit.golden",
+        "engine/cmd/testdata/synctrigger-golden/the-child-reports-engram-unavailable.golden",
+        "engine/cmd/testdata/synctrigger-golden/the-child-reports-no-project.golden",
+        "engine/cmd/testdata/synctrigger-golden/the-child-reports-no-vault.golden",
+        "engine/cmd/testdata/synctrigger-golden/the-child-without-an-event-never-runs-the-sync.golden",
+        "engine/cmd/testdata/synctrigger-golden/the-state-directory-defaults-to-the-home.golden",
+        "engine/cmd/usage.go",
+        "engine/status/status.go",
+        "engine/synctrigger/hardening_test.go",
+        "engine/synctrigger/synctrigger.go",
+        "odd/review-receipts/consolidation-phase9/review-425522614b630019.review-state.json",
+        "odd/review-receipts/consolidation-phase9/review-9b742292d632ff6f.review-state.json",
+        "odd/review-receipts/consolidation-phase9/review-db8ca978dd8377d5.review-state.json",
+        "odd/tasks/clarify-request.md",
+        "odd/tasks/consolidation-phase9.md"
+      ],
+      "identity": "sha256:5c921d238592fce1ba26cd967c00b2d3e011d5a30c8d29db67e2e37cfa31554b"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "20e15a24e195155c780b5f0af26ca1170b3764cf",
+      "candidate_tree": "bc9799d777b3e10af33b782a0c1f4261ed677512",
+      "paths_digest": "sha256:090a7e6e4c750a82959a4840f48f01f2096983dd42f351b43d8624f901791679",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/cmd/synctrigger_golden_test.go",
+        "engine/cmd/testdata/synctrigger-golden/a-longterm-mem-that-cannot-run-is-reported.golden",
+        "engine/cmd/testdata/synctrigger-golden/a-relative-cwd-is-made-absolute.golden",
+        "engine/cmd/testdata/synctrigger-golden/archive-runs-the-sync-in-the-project.golden",
+        "engine/cmd/testdata/synctrigger-golden/no-home-and-no-state-directory-writes-nothing.golden",
+        "engine/cmd/testdata/synctrigger-golden/no-longterm-mem-is-skipped.golden",
+        "engine/cmd/testdata/synctrigger-golden/session-end-runs-the-sync-in-the-project.golden",
+        "engine/cmd/testdata/synctrigger-golden/the-child-reports-a-usage-error.golden",
+        "engine/cmd/testdata/synctrigger-golden/the-child-reports-a-vault-failure.golden",
+        "engine/cmd/testdata/synctrigger-golden/the-child-reports-any-other-exit.golden",
+        "engine/cmd/testdata/synctrigger-golden/the-child-reports-engram-unavailable.golden",
+        "engine/cmd/testdata/synctrigger-golden/the-child-reports-no-project.golden",
+        "engine/cmd/testdata/synctrigger-golden/the-child-reports-no-vault.golden",
+        "engine/cmd/testdata/synctrigger-golden/the-child-without-an-event-never-runs-the-sync.golden",
+        "engine/cmd/testdata/synctrigger-golden/the-state-directory-defaults-to-the-home.golden",
+        "engine/cmd/usage.go",
+        "engine/status/status.go",
+        "engine/synctrigger/hardening_test.go",
+        "engine/synctrigger/synctrigger.go",
+        "odd/review-receipts/consolidation-phase9/review-425522614b630019.review-state.json",
+        "odd/review-receipts/consolidation-phase9/review-9b742292d632ff6f.review-state.json",
+        "odd/review-receipts/consolidation-phase9/review-db8ca978dd8377d5.review-state.json",
+        "odd/tasks/clarify-request.md",
+        "odd/tasks/consolidation-phase9.md"
+      ],
+      "identity": "sha256:5c921d238592fce1ba26cd967c00b2d3e011d5a30c8d29db67e2e37cfa31554b"
+    },
+    "genesis_paths": [
+      "engine/cmd/synctrigger_golden_test.go",
+      "engine/cmd/testdata/synctrigger-golden/a-longterm-mem-that-cannot-run-is-reported.golden",
+      "engine/cmd/testdata/synctrigger-golden/a-relative-cwd-is-made-absolute.golden",
+      "engine/cmd/testdata/synctrigger-golden/archive-runs-the-sync-in-the-project.golden",
+      "engine/cmd/testdata/synctrigger-golden/no-home-and-no-state-directory-writes-nothing.golden",
+      "engine/cmd/testdata/synctrigger-golden/no-longterm-mem-is-skipped.golden",
+      "engine/cmd/testdata/synctrigger-golden/session-end-runs-the-sync-in-the-project.golden",
+      "engine/cmd/testdata/synctrigger-golden/the-child-reports-a-usage-error.golden",
+      "engine/cmd/testdata/synctrigger-golden/the-child-reports-a-vault-failure.golden",
+      "engine/cmd/testdata/synctrigger-golden/the-child-reports-any-other-exit.golden",
+      "engine/cmd/testdata/synctrigger-golden/the-child-reports-engram-unavailable.golden",
+      "engine/cmd/testdata/synctrigger-golden/the-child-reports-no-project.golden",
+      "engine/cmd/testdata/synctrigger-golden/the-child-reports-no-vault.golden",
+      "engine/cmd/testdata/synctrigger-golden/the-child-without-an-event-never-runs-the-sync.golden",
+      "engine/cmd/testdata/synctrigger-golden/the-state-directory-defaults-to-the-home.golden",
+      "engine/cmd/usage.go",
+      "engine/status/status.go",
+      "engine/synctrigger/hardening_test.go",
+      "engine/synctrigger/synctrigger.go",
+      "odd/review-receipts/consolidation-phase9/review-425522614b630019.review-state.json",
+      "odd/review-receipts/consolidation-phase9/review-9b742292d632ff6f.review-state.json",
+      "odd/review-receipts/consolidation-phase9/review-db8ca978dd8377d5.review-state.json",
+      "odd/tasks/clarify-request.md",
+      "odd/tasks/consolidation-phase9.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-reliability"
+    ],
+    "original_changed_lines": 1211,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "whole C5 branch: sync-trigger log rotation under a lock, 0600 mode, quoted fields, bounded stderr copy, relative state dir refused; each pinned by tests",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:bd5bdf539118cb5df2506dfbcd2c8131b2c0d64f85f5a288d2d87eae97c65336",
+    "capture_phase_revision": "sha256:13dac77a80db2fc6f9d2acb91892d4b53e8f14099fa18bb52f30ad7bcd987912",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "target_identity": "sha256:5c921d238592fce1ba26cd967c00b2d3e011d5a30c8d29db67e2e37cfa31554b",
+        "capture_phase_revision": "sha256:13dac77a80db2fc6f9d2acb91892d4b53e8f14099fa18bb52f30ad7bcd987912",
+        "artifact_digest": "sha256:5674b15aade62278f70947ce94bbe7afcb3f579fffd818a2e59fce7d878e4963",
+        "result_hash": "sha256:f8d29c2a82bf1cdaf7b080668f8afbd265d33bc811a96206768fd77e42d2fb4d",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:dcb4fe038be3b3d54cc185b0638cf06baede705755d0c6cf7cc4fdb567d6d5b5",
+            "lineage_id": "review-b9144882ab704dd5",
+            "authority_revision": "sha256:13dac77a80db2fc6f9d2acb91892d4b53e8f14099fa18bb52f30ad7bcd987912",
+            "target_identity": "sha256:5c921d238592fce1ba26cd967c00b2d3e011d5a30c8d29db67e2e37cfa31554b",
+            "base_tree": "20e15a24e195155c780b5f0af26ca1170b3764cf",
+            "candidate_tree": "bc9799d777b3e10af33b782a0c1f4261ed677512",
+            "changed_path_manifest_sha256": "sha256:22464ac6f71e3e063b20f9e7bd23c578604c5e6b749396e26e94abc961805c25",
+            "lens": "review-reliability",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:dcb4fe038be3b3d54cc185b0638cf06baede705755d0c6cf7cc4fdb567d6d5b5",
+            "raw_sha256": "sha256:200691023e48bcb363480a584b94a0a6720ba15f5b447ff66007fa63e4f4abe7",
+            "canonical_sha256": "sha256:d13c693cff94f817a04d776f38c10a2f022a16f94d0f1ab4e848e26575121810",
+            "result_hash": "sha256:f8d29c2a82bf1cdaf7b080668f8afbd265d33bc811a96206768fd77e42d2fb4d",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:dcb4fe038be3b3d54cc185b0638cf06baede705755d0c6cf7cc4fdb567d6d5b5",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/cmd/synctrigger_golden_test.go",
+                "engine/cmd/testdata/synctrigger-golden/a-longterm-mem-that-cannot-run-is-reported.golden",
+                "engine/cmd/testdata/synctrigger-golden/a-relative-cwd-is-made-absolute.golden",
+                "engine/cmd/testdata/synctrigger-golden/archive-runs-the-sync-in-the-project.golden",
+                "engine/cmd/testdata/synctrigger-golden/no-home-and-no-state-directory-writes-nothing.golden",
+                "engine/cmd/testdata/synctrigger-golden/no-longterm-mem-is-skipped.golden",
+                "engine/cmd/testdata/synctrigger-golden/session-end-runs-the-sync-in-the-project.golden",
+                "engine/cmd/testdata/synctrigger-golden/the-child-reports-a-usage-error.golden",
+                "engine/cmd/testdata/synctrigger-golden/the-child-reports-a-vault-failure.golden",
+                "engine/cmd/testdata/synctrigger-golden/the-child-reports-any-other-exit.golden",
+                "engine/cmd/testdata/synctrigger-golden/the-child-reports-engram-unavailable.golden",
+                "engine/cmd/testdata/synctrigger-golden/the-child-reports-no-project.golden",
+                "engine/cmd/testdata/synctrigger-golden/the-child-reports-no-vault.golden",
+                "engine/cmd/testdata/synctrigger-golden/the-child-without-an-event-never-runs-the-sync.golden",
+                "engine/cmd/testdata/synctrigger-golden/the-state-directory-defaults-to-the-home.golden",
+                "engine/cmd/usage.go",
+                "engine/status/status.go",
+                "engine/synctrigger/hardening_test.go",
+                "engine/synctrigger/synctrigger.go",
+                "odd/review-receipts/consolidation-phase9/review-425522614b630019.review-state.json",
+                "odd/review-receipts/consolidation-phase9/review-9b742292d632ff6f.review-state.json",
+                "odd/review-receipts/consolidation-phase9/review-db8ca978dd8377d5.review-state.json",
+                "odd/tasks/clarify-request.md",
+                "odd/tasks/consolidation-phase9.md"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-001",
+                "lens": "reliability",
+                "location": "engine/synctrigger/synctrigger.go:379-383",
+                "severity": "WARNING",
+                "claim": "Rotation is guarded by a lock, but the size is checked and the log is then opened in separate steps. A trigger that opened the log before another rotated it keeps appending to the descriptor now named .1, so a few lines can land in the rotated file. Nothing is lost and the effect is small.",
+                "proof_refs": [
+                  "engine/synctrigger/synctrigger.go:379-383"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Reviewed the full candidate. Rotation, the 0600 narrowing, the bounded stderr copy, field quoting and the refusal of a relative state directory are each pinned by externally observable tests in engine/synctrigger/hardening_test.go and by the golden files.",
+              "The no-HOME golden in engine/cmd/testdata/synctrigger-golden/no-home-and-no-state-directory-writes-nothing.golden shows that the program still exits 0, writes error:log on stderr and creates nothing, which keeps the always-exit-0 contract.",
+              "boundedBuffer reports full writes, so the MultiWriter does not short-write and the log still receives all output. Both sides of the 64 KiB boundary are tested.",
+              "The only golden changes are the log mode (0644 to 0600) and one new case, and the task requested both. I found no BLOCKER or CRITICAL behavior caused by this change."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "ed9ba71638f87b40961791c390180dbcf1f90df6f29be983c95957f7c99fe6af",
+    "initial_atomic_start": {
+      "lineage_id": "review-b9144882ab704dd5",
+      "worktree_identity": "sha256:8455002f227f033663d0e7d8b8ff6a885e1c85b482ec52e34017c303452eed87",
+      "target_identity": "sha256:5c921d238592fce1ba26cd967c00b2d3e011d5a30c8d29db67e2e37cfa31554b",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "20e15a24e195155c780b5f0af26ca1170b3764cf",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-reliability"
+      ],
+      "original_changed_lines": 1211,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "whole C5 branch: sync-trigger log rotation under a lock, 0600 mode, quoted fields, bounded stderr copy, relative state dir refused; each pinned by tests"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

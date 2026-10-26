@@ -16,13 +16,19 @@ package synctrigger
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/filelock"
 )
 
 // Options configures a sync-trigger run. Run uses it to validate its own
@@ -107,6 +113,15 @@ const (
 	binDirName        = "bin"
 	defaultBinaryName = "longterm-mem"
 	syncCommand       = "sync"
+
+	// logLimitBytes is the size at which the log is rotated when it is next opened, and keptLogs
+	// how many rotated files (sync-trigger.log.1 to .3) are kept.
+	logLimitBytes = 1 << 20
+	keptLogs      = 3
+
+	// stderrKeepBytes is how much of what the sync prints on stderr is kept to classify its exit
+	// code with; all of it still goes to the log.
+	stderrKeepBytes = 64 << 10
 
 	// notProjectMarker is the exact substring longterm-mem's own
 	// resolveProjectFlagWith emits (project_resolve.go) when --project is
@@ -258,6 +273,11 @@ func RunChild(o Options) Outcome {
 
 	binary := o.Binary
 	if binary == "" {
+		// A state directory that is not absolute would name a binary under whatever directory
+		// the child runs in, so there is no default binary to run.
+		if !filepath.IsAbs(o.StateDir) {
+			return finish(kindNoBinary, 0)
+		}
 		binary = filepath.Join(o.StateDir, binDirName, defaultBinaryName)
 	}
 
@@ -274,10 +294,10 @@ func RunChild(o Options) Outcome {
 		timeout = defaultTimeout
 	}
 
-	var stderrBuf bytes.Buffer
-	var stderr io.Writer = &stderrBuf
+	stderrBuf := &boundedBuffer{limit: stderrKeepBytes}
+	var stderr io.Writer = stderrBuf
 	if logFile != nil {
-		stderr = io.MultiWriter(&stderrBuf, logFile)
+		stderr = io.MultiWriter(stderrBuf, logFile)
 	}
 
 	result, err := o.runner().Run(binary, []string{syncCommand}, o.Cwd, timeout, stderr)
@@ -322,17 +342,104 @@ func classify(exitCode int, stderr string) string {
 }
 
 // openLog opens (creating and appending) the sync-trigger log under
-// stateDir, creating its parent directory if needed.
+// stateDir, creating its parent directory if needed. A log that has reached
+// logLimitBytes is rotated first. The log names the projects that were
+// synced, so it is readable by its owner only, including one an older
+// version created world-readable. A state directory that is not absolute
+// (the caller could not resolve the default, HOME being unset) is refused,
+// so nothing is ever written under the working directory.
 func openLog(stateDir string) (*os.File, error) {
+	if !filepath.IsAbs(stateDir) {
+		return nil, fmt.Errorf("state directory %q is not absolute", stateDir)
+	}
 	dir := filepath.Join(stateDir, logDirName)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return nil, err
 	}
-	return os.OpenFile(filepath.Join(dir, logFileName), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	path := filepath.Join(dir, logFileName)
+	rotateLog(path)
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
+	if err != nil {
+		return nil, err
+	}
+	f.Chmod(0o600) // best effort: a log that cannot be narrowed is still written
+	return f, nil
+}
+
+// rotateLog moves a log that has reached logLimitBytes to path.1, shifting
+// the older files up and dropping the one past keptLogs, so the newest lines
+// are always in path. Triggers that find a full log at once take turns on an
+// exclusive engine/filelock lock of path.lock (made only then, so a log under
+// its limit never gets one, and never removed, as filelock requires), and
+// each looks at the size again under it, so only the first rotates and the
+// fresh log is never rotated again. A trigger that already had the log open
+// keeps writing through its descriptor, so its lines land in path.1 after
+// the lines before them: none is lost, and the log is not held locked for
+// the length of a sync (the detached child writes to it through a
+// descriptor it inherits). It is best effort: a lock that stays
+// taken past filelock's bound, or a rename that fails, leaves the log to grow
+// until the next opening.
+func rotateLog(path string) {
+	if !full(path) {
+		return
+	}
+	unlock, err := filelock.Acquire(path+".lock", filelock.Options{Perm: 0o600})
+	if err != nil {
+		return
+	}
+	defer unlock()
+	if !full(path) {
+		return
+	}
+	// The oldest file is dropped; when it cannot be, the shift onto it fails below and stops.
+	os.Remove(path + "." + strconv.Itoa(keptLogs))
+	// Each file moves up only once the one above it has, so a shift that fails stops the rotation
+	// before any rename could land on a file that was not moved out of the way.
+	for n := keptLogs - 1; n >= 1; n-- {
+		err := os.Rename(path+"."+strconv.Itoa(n), path+"."+strconv.Itoa(n+1))
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return
+		}
+	}
+	os.Rename(path, path+".1")
+}
+
+// full reports whether the log at path has reached logLimitBytes.
+func full(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && info.Size() >= logLimitBytes
 }
 
 // appendLog writes one summary line for a firing of the runner, dated at.
 func appendLog(w io.Writer, at time.Time, event, cwd, outcome string, exitCode int, dur time.Duration) {
 	fmt.Fprintf(w, "%s event=%s cwd=%s outcome=%s exit=%d duration=%s\n",
-		at.UTC().Format(time.RFC3339), event, cwd, outcome, exitCode, dur.Round(time.Millisecond))
+		at.UTC().Format(time.RFC3339), logField(event), logField(cwd), outcome, exitCode, dur.Round(time.Millisecond))
 }
+
+// logField is a value as one field of a log line: as it is when it is plain, and quoted when it
+// holds a space, a control character, a quote or an equals sign, which could end the line or read
+// as another field. That is how a directory name can never forge a line of the log.
+func logField(s string) string {
+	if strings.ContainsFunc(s, func(r rune) bool {
+		return unicode.IsSpace(r) || unicode.IsControl(r) || r == '"' || r == '=' || r == utf8.RuneError
+	}) {
+		return strconv.Quote(s)
+	}
+	return s
+}
+
+// boundedBuffer keeps the first limit bytes written to it and drops the rest, while saying every
+// write took all of it, so the writer it is paired with in an io.MultiWriter still gets everything.
+type boundedBuffer struct {
+	buf   bytes.Buffer
+	limit int
+}
+
+func (b *boundedBuffer) Write(p []byte) (int, error) {
+	if room := b.limit - b.buf.Len(); room > 0 {
+		b.buf.Write(p[:min(room, len(p))])
+	}
+	return len(p), nil
+}
+
+func (b *boundedBuffer) String() string { return b.buf.String() }

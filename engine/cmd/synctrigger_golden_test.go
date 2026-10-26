@@ -59,8 +59,10 @@ type syncTriggerWorld struct {
 	state string // the overlay state directory
 	cwd   string // the project directory the sync runs in
 	home  string // the HOME the program runs with
-	calls string // where the script records what it was started with
-	b     strings.Builder
+	// noHome runs the program with HOME empty instead, so the state directory has no default.
+	noHome bool
+	calls  string // where the script records what it was started with
+	b      strings.Builder
 }
 
 func newSyncTriggerWorld(t *testing.T) *syncTriggerWorld {
@@ -109,6 +111,9 @@ func (w *syncTriggerWorld) run(dir, waitIn string, args ...string) {
 	cmd := exec.Command(w.bin, append([]string{"sync-trigger"}, args...)...)
 	cmd.Dir = dir
 	cmd.Env = append(goldenEnvironment(), "HOME="+w.home)
+	if w.noHome {
+		cmd.Env = append(goldenEnvironment(), "HOME=")
+	}
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
 	code := 0
@@ -256,6 +261,11 @@ func syncTriggerCases() []syncTriggerCase {
 			w.memory(home, 0, "", 0o755)
 			w.run(w.cwd, home, "--event", "session-end", "--cwd", w.cwd)
 			w.report("after the parent and its child (the home's overlay directory)", home)
+		}},
+		{"no-home-and-no-state-directory-writes-nothing", func(w *syncTriggerWorld) {
+			w.noHome = true
+			w.run(w.cwd, "", "--event", "session-end", "--cwd", w.cwd)
+			w.report("nothing is written where the parent ran", w.cwd)
 		}},
 		{"an-unknown-event-is-a-usage-line-on-stderr", func(w *syncTriggerWorld) {
 			w.run(w.home, "", "--event", "bogus", "--cwd", w.cwd, "--state-dir", w.state)

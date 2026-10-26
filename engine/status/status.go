@@ -155,10 +155,8 @@ type Service struct {
 	Blocks []ScopedBlock
 }
 
-// binaryIdentity is the name of the installed binary. Check uses it only to build the installed
-// path (<home>/.claude/bin/gentle-ai-overlay); every hook check matches that full path together with
-// its family's token, never this name alone, so an entry of another copy of the binary is not taken
-// for this installation's.
+// binaryIdentity is the name of the installed binary, used only to build the installed path that
+// the hook checks match (with each family's token), never on its own.
 const binaryIdentity = "gentle-ai-overlay"
 
 // referencing names what a hook check looks for in one entry: the installed binary and the token of
