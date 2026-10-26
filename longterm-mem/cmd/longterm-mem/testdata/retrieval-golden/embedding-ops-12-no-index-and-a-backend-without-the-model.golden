@@ -32,6 +32,7 @@ longterm-mem: doctor for goldenproj
   [FAIL] embedding-index-present (no embedding index has been built at <state>/index/goldenproj; run `longterm-mem index --embeddings`)
   [FAIL] embedding-index-fresh (freshness cannot be determined: embedding index at <state>/index/goldenproj could not be loaded: vecindex: no index at this path)
   [FAIL] embedding-backend-reachable (backend answered but required model is missing: embed: model "nomic-embed-text" is not pulled on the backend)
+  [PASS] promoted-pages-eligible
 --- stderr ---
 
 args: doctor --project goldenproj --json
@@ -74,6 +75,10 @@ exit: 9
       "name": "embedding-backend-reachable",
       "status": "FAIL",
       "detail": "backend answered but required model is missing: embed: model \"nomic-embed-text\" is not pulled on the backend"
+    },
+    {
+      "name": "promoted-pages-eligible",
+      "status": "PASS"
     }
   ]
 }

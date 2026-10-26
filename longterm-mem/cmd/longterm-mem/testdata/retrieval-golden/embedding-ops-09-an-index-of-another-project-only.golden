@@ -32,6 +32,7 @@ longterm-mem: doctor for goldenproj
   [FAIL] embedding-index-present (no embedding index has been built at <state>/index/goldenproj; run `longterm-mem index --embeddings`)
   [FAIL] embedding-index-fresh (freshness cannot be determined: embedding index at <state>/index/goldenproj could not be loaded: vecindex: no index at this path)
   [PASS] embedding-backend-reachable
+  [PASS] promoted-pages-eligible
 --- stderr ---
 
 args: doctor --project goldenproj --json
@@ -72,6 +73,10 @@ exit: 9
     },
     {
       "name": "embedding-backend-reachable",
+      "status": "PASS"
+    },
+    {
+      "name": "promoted-pages-eligible",
       "status": "PASS"
     }
   ]

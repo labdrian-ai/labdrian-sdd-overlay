@@ -108,7 +108,7 @@ func TestDoctorTellsACorruptAddressMapFromOneThatCannotBeRead(t *testing.T) {
 }
 
 // A Doctor handed no reader says so, instead of calling a port that is not there: the check fails, once and in
-// ops's words, and the other seven still run -- the registration check among them, which reads no address map
+// ops's words, and the other eight still run -- the registration check among them, which reads no address map
 // to report what it reports.
 func TestDoctorWithoutAnAddressMapReaderFailsOnlyThatCheck(t *testing.T) {
 	var typedNil *fakeAddressMap
@@ -124,8 +124,8 @@ func TestDoctorWithoutAnAddressMapReaderFailsOnlyThatCheck(t *testing.T) {
 			if got.Status != CheckFailed || got.Detail != "ops: no address map reader was wired" {
 				t.Fatalf("address-map-integrity = %+v, want FAIL naming the missing reader once", got)
 			}
-			if len(report.Checks) != 8 {
-				t.Errorf("Doctor reported %d checks, want all 8", len(report.Checks))
+			if len(report.Checks) != 9 {
+				t.Errorf("Doctor reported %d checks, want all 9", len(report.Checks))
 			}
 			for _, name := range []string{CheckWikiRegistrationConsistency, CheckPrecedenceSidecarConsistency, CheckRuntimePrerequisites} {
 				if got := checkStatus(t, report.Checks, name); got.Status != CheckPassed {

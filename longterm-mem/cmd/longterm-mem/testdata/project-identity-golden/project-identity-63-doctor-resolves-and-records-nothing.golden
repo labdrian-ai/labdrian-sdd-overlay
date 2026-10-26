@@ -10,6 +10,7 @@ longterm-mem: doctor for widgets
   [FAIL] embedding-index-present (no embedding index has been built at <state>/index/widgets; run `longterm-mem index --embeddings`)
   [FAIL] embedding-index-fresh (freshness cannot be determined: embedding index at <state>/index/widgets could not be loaded: vecindex: no index at this path)
   [PASS] embedding-backend-reachable
+  [PASS] promoted-pages-eligible
 --- stderr ---
 longterm-mem: doctor: --project not given, adopted "widgets" from the working directory (the memory already lives under this name; derived via the remote rule)
 --- ledger ---

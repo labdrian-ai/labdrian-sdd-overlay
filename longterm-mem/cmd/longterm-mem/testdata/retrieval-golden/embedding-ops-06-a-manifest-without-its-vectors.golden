@@ -32,6 +32,7 @@ longterm-mem: doctor for goldenproj
   [FAIL] embedding-index-present (embedding index at <state>/index/goldenproj could not be loaded: vecindex: index is corrupted: <state>/index/goldenproj/vectors.blob: manifest exists but the vector blob does not)
   [FAIL] embedding-index-fresh (freshness cannot be determined: embedding index at <state>/index/goldenproj could not be loaded: vecindex: index is corrupted: <state>/index/goldenproj/vectors.blob: manifest exists but the vector blob does not)
   [PASS] embedding-backend-reachable
+  [PASS] promoted-pages-eligible
 --- stderr ---
 
 args: doctor --project goldenproj --json
@@ -72,6 +73,10 @@ exit: 9
     },
     {
       "name": "embedding-backend-reachable",
+      "status": "PASS"
+    },
+    {
+      "name": "promoted-pages-eligible",
       "status": "PASS"
     }
   ]

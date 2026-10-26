@@ -32,6 +32,7 @@ longterm-mem: doctor for goldenproj
   [PASS] embedding-index-present
   [FAIL] embedding-index-fresh (embedding index is missing 1 live row(s) for goldenproj; run `longterm-mem index --embeddings`)
   [PASS] embedding-backend-reachable
+  [PASS] promoted-pages-eligible
 --- stderr ---
 
 args: doctor --project goldenproj --json
@@ -71,6 +72,10 @@ exit: 9
     },
     {
       "name": "embedding-backend-reachable",
+      "status": "PASS"
+    },
+    {
+      "name": "promoted-pages-eligible",
       "status": "PASS"
     }
   ]

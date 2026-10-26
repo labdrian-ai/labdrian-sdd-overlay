@@ -36,6 +36,11 @@
     {
       "name": "embedding-backend-reachable",
       "status": "PASS"
+    },
+    {
+      "name": "promoted-pages-eligible",
+      "status": "warn",
+      "detail": "eligibility cannot be judged: ops: list promoted pages in <vault>/wiki/memory: open <vault>/wiki/memory: not a directory"
     }
   ]
 }

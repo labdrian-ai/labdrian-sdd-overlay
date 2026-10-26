@@ -22,6 +22,7 @@ longterm-mem: doctor for goldenproj
   [FAIL] embedding-index-present (the state directory could not be resolved, so no embedding index can be looked for; set HOME or LONGTERM_MEM_STATE_DIR)
   [FAIL] embedding-index-fresh (freshness cannot be determined: the state directory could not be resolved; set HOME or LONGTERM_MEM_STATE_DIR)
   [PASS] embedding-backend-reachable
+  [PASS] promoted-pages-eligible
 --- stderr ---
 
 args: doctor --project goldenproj --json
@@ -62,6 +63,10 @@ exit: 9
     },
     {
       "name": "embedding-backend-reachable",
+      "status": "PASS"
+    },
+    {
+      "name": "promoted-pages-eligible",
       "status": "PASS"
     }
   ]

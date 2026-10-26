@@ -105,7 +105,7 @@ func TestDoctorReportsAPrecedenceReaderThatFails(t *testing.T) {
 }
 
 // A Doctor handed no reader says so, instead of calling a port that is not there: the check fails and the
-// other seven still run.
+// other eight still run.
 func TestDoctorWithoutAPrecedenceReaderFailsOnlyThatCheck(t *testing.T) {
 	deps, _ := portDoctorDeps(t, nil)
 
@@ -117,8 +117,8 @@ func TestDoctorWithoutAPrecedenceReaderFailsOnlyThatCheck(t *testing.T) {
 	if got.Status != CheckFailed || !strings.Contains(got.Detail, "no precedence reader") {
 		t.Fatalf("precedence-sidecar-consistency = %+v, want FAIL naming the missing reader", got)
 	}
-	if len(report.Checks) != 8 {
-		t.Errorf("Doctor reported %d checks, want all 8", len(report.Checks))
+	if len(report.Checks) != 9 {
+		t.Errorf("Doctor reported %d checks, want all 9", len(report.Checks))
 	}
 	if got := checkStatus(t, report.Checks, CheckRuntimePrerequisites); got.Status != CheckPassed {
 		t.Errorf("runtime-prerequisites = %+v, want PASS (one missing port must not abort the others)", got)

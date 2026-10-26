@@ -25,6 +25,7 @@ longterm-mem: doctor for golden-project
   [FAIL] embedding-index-present (no embedding index has been built at <home>/.labdrian-overlay/longterm-mem/index/golden-project; run `longterm-mem index --embeddings`)
   [FAIL] embedding-index-fresh (freshness cannot be determined: embedding index at <home>/.labdrian-overlay/longterm-mem/index/golden-project could not be loaded: vecindex: no index at this path)
   [PASS] embedding-backend-reachable
+  [warn] promoted-pages-eligible (eligibility cannot be judged: ops: list promoted pages in <home>/vault-file/wiki/memory: open <home>/vault-file/wiki/memory: not a directory)
 --- stderr ---
 --- vault ---
 === bin/ (directory -rwxr-xr-x) ===

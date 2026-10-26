@@ -84,10 +84,10 @@ The binary (`longterm-mem <subcommand> [flags]`) currently dispatches:
 | `query` | `[--project P]` `"<text>"` `[--top N]` `[--exclude-types T,...]` `[--goal ID]` `[--vault DIR]` `[--json]` | Query Engram FTS5 (always) and, when named in `sources`, the embedding index and the vault; results are unioned and ranked. The CLI queries FTS only. `--goal` returns that goal's records and the records of no goal, never another goal's (see [Goals](#goals)). |
 | `index` | `[--project P]` `[--vault DIR]` `[--rebuild]` | Provision/refresh the vault's local retrieval index (no LLM). |
 | `index --embeddings` | `[--project P]` `[--embed-model M]` `[--embed-dimension N]` `[--embed-input-limit C]` `[--embed-endpoint URL]` `[--allow-remote-embedder]` | Build or incrementally update the embedding index over Engram rows against a loopback Ollama backend (`nomic-embed-text`, 768 dims by default). Unchanged rows are fingerprinted and reused, so a re-run after a few new observations takes well under a second. |
-| `sync` | `[--project P]` `[--vault DIR]` `[--dry-run]` | Promote eligible Engram observations into vault pages; `--dry-run` reports without writing. An observation is eligible only if it is pinned, explicitly targeted, or carries a curated `topic_key` whose first path segment is not `sdd`, `review`, or `delivery` — an untopiced observation is not automatically eligible. A page already promoted under a previous, looser eligibility rule is neither retracted nor refreshed by `sync` once its observation stops being eligible under the current rule; use an explicit `promote` or a pin to keep such a page current. |
+| `sync` | `[--project P]` `[--vault DIR]` `[--dry-run]` | Promote eligible Engram observations into vault pages; `--dry-run` reports without writing. An observation is eligible only if it is pinned, explicitly targeted, or carries a curated `topic_key` whose first path segment is not `sdd`, `review`, or `delivery` — an untopiced observation is not automatically eligible. A page already promoted under a previous, looser eligibility rule is neither retracted nor refreshed by `sync` once its observation stops being eligible under the current rule; use an explicit `promote` or a pin to keep such a page current; `doctor` names those pages (see [Frozen pages](#frozen-pages)). |
 | `status` | `[--project P]` `[--vault DIR]` `[--json]` | Report Engram reachability, vault provisioning, last sync, and when the embedding index was built. |
 | `stale` | `[--project P]` | Report the memories this repository's history disagrees with (removed or moved paths). Reports only; never deletes. A path that climbs out of the project (`a/../../x.go`) is unknown: it is not asked of git and the rest of the report prints. |
-| `doctor` | `[--project P]` `[--vault DIR]` `[--json]` | Deeper diagnostics: prerequisites, wiki-lint, registration consistency, embedding index presence/freshness and backend reachability. |
+| `doctor` | `[--project P]` `[--vault DIR]` `[--json]` | Deeper diagnostics: prerequisites, wiki-lint, registration consistency, embedding index presence/freshness and backend reachability, and an advisory check that names promoted pages `sync` no longer refreshes (see [Frozen pages](#frozen-pages)). Each check answers `PASS`, `FAIL` or `warn`; only a `FAIL` makes the exit code 9, so a `warn` never changes it. |
 | `promote` | `[--project P]` `--id N` `[--vault DIR]` | Explicitly promote one Engram observation by id. `promote reconcile <address>` adopts one already-promoted page whose precedence entry cannot tell longterm-mem's own write from a human edit, so promotion stops refusing it; deliberately one address at a time. |
 | `mcp` | — | Run the MCP stdio server (`query`, `get`, `promote` tools). |
 | `register` | `--target claude\|opencode\|codex\|all` `[--binary PATH]` `[--config-root DIR]` `[--state-dir DIR]` | Write this binary's MCP entry into the runtime's config file (ownership-tagged, idempotent). |
@@ -154,6 +154,32 @@ before the limit; `engram-embed` on each observation's topic, before its cut;
 times `top` candidates (at most 100). A vault page whose tags cannot be read is
 left out under a goal and named in a `vault_page_tags_unreadable` diagnostic.
 Without a goal nothing changes.
+
+### Frozen pages
+
+`sync` refreshes a promoted page only while its observation is eligible: pinned,
+or carrying a curated `topic_key`. A page whose observation is not eligible
+(promoted by an explicit `promote --id N` of an untopiced observation, or under
+a looser rule that no longer applies) stays exactly as it was written, however
+the observation changes later. Such a page is *frozen*, and nothing on it says so.
+
+`doctor` says so, in its `promoted-pages-eligible` check. Each finding names the
+page address, the observation id, why the observation is not eligible (it has no
+`topic_key`, or its first segment, after any `goal:<id>/` prefix, is empty or one
+of `sdd`, `review` and `delivery`)
+and the two ways out:
+
+- `longterm-mem promote --id N` refreshes the page now, once;
+- pinning observation N in Engram makes `sync` keep the page current from then on.
+
+The check is advisory. It answers `warn`, never `FAIL`: the text form prints
+`[warn] promoted-pages-eligible (...)`, `--json` carries `"status": "warn"`, and
+the exit code is the one `doctor` would have answered without it (9 for a
+`FAIL`, 0 otherwise). Nothing records that a page was promoted explicitly, so an
+explicitly promoted page whose observation is not eligible is named too, until
+the observation is pinned. A page whose observation was deleted, or is a row of
+another project, is not named; when the pages or the observations cannot be
+read, the check says it cannot judge, as a warning.
 
 ## MCP registration
 
