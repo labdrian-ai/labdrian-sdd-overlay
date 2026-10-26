@@ -136,6 +136,9 @@ import (
 //   - review/app holds the use cases of `engine review` (own-rdd T2): Bind and Record, over the Git and
 //     Results ports it owns. It answers with typed values and typed refusals, prints nothing and exits
 //     nowhere; the words a person reads and the exit codes are the command's, in cmd.
+//   - review/fsstore is the adapter of the Results port of review/app (own-rdd T2): the directory
+//     odd/review-results/<feature>/ of a repository, walked without following a symlink and written on
+//     atomicfile, never over a file that is there.
 //   - repotest is test support: the hand-made repositories the tests of gitfs and cmd share.
 //   - piguard is test support: the `pi` that refuses to run, put first on the PATH of a test
 //     run by a TestMain, so nothing started by accident reaches the real CLI.
@@ -192,6 +195,7 @@ var rings = map[string]archguard.Ring{
 	"repotest":                  archguard.Support,
 	"review":                    archguard.Domain,
 	"review/app":                archguard.Application,
+	"review/fsstore":            archguard.Adapter,
 	"reviewreceipt":             archguard.Domain,
 	"reviewreceipt/fsstore":     archguard.Adapter,
 	"reviewreceipt/receipttest": archguard.Support,
