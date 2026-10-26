@@ -1,0 +1,234 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:ee22784303335f151ccde2532841ea3d4e7e16f9d1846b79b953470764590126",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-abc51f2d8e84073b",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "db83276806ffd112defce203ab29012d0882f34c",
+      "candidate_tree": "0eba0ad80941f0c2898bf81e6922f86531b15eed",
+      "paths_digest": "sha256:9ff51c07df593b008c2765be87e3f1ce79e0369eb68ea3ef2d83dddca145dcb9",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "skills/security-audit/ATTACK-CLASSES.md",
+        "skills/security-audit/HUNTING.md",
+        "skills/security-audit/RECONNAISSANCE.md",
+        "skills/security-audit/VALIDATION-AND-REPORTING.md",
+        "skills/security-audit/WORKFLOW.md"
+      ],
+      "identity": "sha256:c9f4cb245d14442e994ad61815ead5413d0b89f0f6c0b4fbe5e4269ba783e3e4"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "db83276806ffd112defce203ab29012d0882f34c",
+      "candidate_tree": "0eba0ad80941f0c2898bf81e6922f86531b15eed",
+      "paths_digest": "sha256:9ff51c07df593b008c2765be87e3f1ce79e0369eb68ea3ef2d83dddca145dcb9",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "skills/security-audit/ATTACK-CLASSES.md",
+        "skills/security-audit/HUNTING.md",
+        "skills/security-audit/RECONNAISSANCE.md",
+        "skills/security-audit/VALIDATION-AND-REPORTING.md",
+        "skills/security-audit/WORKFLOW.md"
+      ],
+      "identity": "sha256:c9f4cb245d14442e994ad61815ead5413d0b89f0f6c0b4fbe5e4269ba783e3e4"
+    },
+    "genesis_paths": [
+      "skills/security-audit/ATTACK-CLASSES.md",
+      "skills/security-audit/HUNTING.md",
+      "skills/security-audit/RECONNAISSANCE.md",
+      "skills/security-audit/VALIDATION-AND-REPORTING.md",
+      "skills/security-audit/WORKFLOW.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-risk",
+      "review-readability"
+    ],
+    "original_changed_lines": 910,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "vendors third-party Markdown guides that become agent instructions for security audits (risk: instructions that could push an agent to unsafe actions such as live probing or credential use; readability: clarity of the workflow)",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:f30c89f10fb74dd21110d94058f4607001af3308d7e64841728e21e4bb581175",
+    "capture_phase_revision": "sha256:4e8e5f5f6d8faedacd1e70f455cc59036d8bfb5c764a08f33470b652abfc56a1",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:c9f4cb245d14442e994ad61815ead5413d0b89f0f6c0b4fbe5e4269ba783e3e4",
+        "capture_phase_revision": "sha256:4e8e5f5f6d8faedacd1e70f455cc59036d8bfb5c764a08f33470b652abfc56a1",
+        "artifact_digest": "sha256:e9edbf86047e35f6569e0b9f638befaf95ea85bd545d203fee974ea3d10986ab",
+        "result_hash": "sha256:638726526bfb5453dde2f27e9b395f0dc4822dfa29cbc86889ff9088d65a9137",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:ad669857e3c27cd7da80992fc93264ce197beb1256c2360b41a143fe28c20e49",
+            "lineage_id": "review-abc51f2d8e84073b",
+            "authority_revision": "sha256:4e8e5f5f6d8faedacd1e70f455cc59036d8bfb5c764a08f33470b652abfc56a1",
+            "target_identity": "sha256:c9f4cb245d14442e994ad61815ead5413d0b89f0f6c0b4fbe5e4269ba783e3e4",
+            "base_tree": "db83276806ffd112defce203ab29012d0882f34c",
+            "candidate_tree": "0eba0ad80941f0c2898bf81e6922f86531b15eed",
+            "changed_path_manifest_sha256": "sha256:0c128cc51e9bd89e8da5289efd10f6516fd350fadeb9b9bdf04c05c8f2afbf3f",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:ad669857e3c27cd7da80992fc93264ce197beb1256c2360b41a143fe28c20e49",
+            "raw_sha256": "sha256:d2866595c9bf1b623122f8769cd8899250500f99d7a737d7183daa2fd82a2d45",
+            "canonical_sha256": "sha256:d5cc70cdf0fd6e9e39ab0ff0fbf53064228b36b76e318b023ee6eb9bd1d9522f",
+            "result_hash": "sha256:638726526bfb5453dde2f27e9b395f0dc4822dfa29cbc86889ff9088d65a9137",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:ad669857e3c27cd7da80992fc93264ce197beb1256c2360b41a143fe28c20e49",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "skills/security-audit/ATTACK-CLASSES.md",
+                "skills/security-audit/HUNTING.md",
+                "skills/security-audit/RECONNAISSANCE.md",
+                "skills/security-audit/VALIDATION-AND-REPORTING.md",
+                "skills/security-audit/WORKFLOW.md"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "All five added files are Markdown guidance documents; no executable code, secrets, dependencies, or lockfiles are introduced.",
+              "The workflow text imposes safety controls: sandboxed, source-and-local-only execution, no live or shared-environment probing, and promotion of artifacts through path-confined no-follow procedures. The same promotion procedure is stated consistently in skills/security-audit/WORKFLOW.md, skills/security-audit/HUNTING.md and skills/security-audit/VALIDATION-AND-REPORTING.md.",
+              "The relative links to companion files and validators are references in prose; whether those files exist is not visible in this candidate and is not an introduced risk with reachable impact. Neither is a runtime effect."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "selected_order": 1,
+        "target_identity": "sha256:c9f4cb245d14442e994ad61815ead5413d0b89f0f6c0b4fbe5e4269ba783e3e4",
+        "capture_phase_revision": "sha256:4e8e5f5f6d8faedacd1e70f455cc59036d8bfb5c764a08f33470b652abfc56a1",
+        "artifact_digest": "sha256:6b131b7d2ff8bfaf3e2b1d50eb28d801ce758221f2763e923585d8385f936279",
+        "result_hash": "sha256:d91ff610c622634422a2f6919c74f6614b9f1aef3ed6c571b936fefe5467350d",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:184f1fcb854855786a320fca6f6e394a4c6862bc60c5d59296400b1d25aeb8a2",
+            "lineage_id": "review-abc51f2d8e84073b",
+            "authority_revision": "sha256:4e8e5f5f6d8faedacd1e70f455cc59036d8bfb5c764a08f33470b652abfc56a1",
+            "target_identity": "sha256:c9f4cb245d14442e994ad61815ead5413d0b89f0f6c0b4fbe5e4269ba783e3e4",
+            "base_tree": "db83276806ffd112defce203ab29012d0882f34c",
+            "candidate_tree": "0eba0ad80941f0c2898bf81e6922f86531b15eed",
+            "changed_path_manifest_sha256": "sha256:0c128cc51e9bd89e8da5289efd10f6516fd350fadeb9b9bdf04c05c8f2afbf3f",
+            "lens": "review-readability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:184f1fcb854855786a320fca6f6e394a4c6862bc60c5d59296400b1d25aeb8a2",
+            "raw_sha256": "sha256:a06bae5c4f4aad328c5715681470a37178c9681306ebed1026d7697460d24fec",
+            "canonical_sha256": "sha256:559670070543559339f31e043ae422a448f2395e07417656da2cc4dfa1fb6e57",
+            "result_hash": "sha256:d91ff610c622634422a2f6919c74f6614b9f1aef3ed6c571b936fefe5467350d",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:184f1fcb854855786a320fca6f6e394a4c6862bc60c5d59296400b1d25aeb8a2",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "skills/security-audit/ATTACK-CLASSES.md",
+                "skills/security-audit/HUNTING.md",
+                "skills/security-audit/RECONNAISSANCE.md",
+                "skills/security-audit/VALIDATION-AND-REPORTING.md",
+                "skills/security-audit/WORKFLOW.md"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-attack-classes-dangling-companions",
+                "lens": "readability",
+                "location": "skills/security-audit/ATTACK-CLASSES.md:7-25",
+                "severity": "WARNING",
+                "claim": "ATTACK-CLASSES.md links ten companion files (MEMORY-SAFETY-AND-BINARY.md, AI-AND-LLM.md, WEB-PROTOCOL-AND-AUTH.md, CLIENT-SIDE.md, SUPPLY-CHAIN-AND-RELEASE.md, CLOUD-AND-DEPLOYMENT.md, PROTOCOLS-RPC-AND-MESSAGING.md, RESOURCE-EXHAUSTION-AND-AVAILABILITY.md, DATA-ISOLATION-AND-LIFECYCLE.md, DESKTOP-MOBILE-AND-LOCAL-IPC.md), none of which is in this change's manifest. The workflow requires hunter prompts to copy blocks from these companions verbatim, so a reader of this change cannot follow those steps unless the files exist elsewhere.",
+                "proof_refs": [
+                  "skills/security-audit/ATTACK-CLASSES.md:7-25",
+                  "skills/security-audit/HUNTING.md:15"
+                ],
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-workflow-missing-skill-md-and-tooling",
+                "lens": "readability",
+                "location": "skills/security-audit/WORKFLOW.md:1-5",
+                "severity": "WARNING",
+                "claim": "The skill's entry file is named WORKFLOW.md, but the other files refer to `SKILL.md` for the budget gate, incomplete-run rule, and promotion procedure. WORKFLOW.md also refers to `report-schema.json`, `validate-findings.cjs` and `validate-coverage-ledger.cjs`. None of these is in this change. Cross-references are ambiguous, and the changed files do not show where the authoritative rules live.",
+                "proof_refs": [
+                  "skills/security-audit/HUNTING.md:97",
+                  "skills/security-audit/RECONNAISSANCE.md:3",
+                  "skills/security-audit/WORKFLOW.md:120"
+                ],
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-promotion-procedure-triplicated",
+                "lens": "readability",
+                "location": "skills/security-audit/HUNTING.md:55-85",
+                "severity": "SUGGESTION",
+                "claim": "The 11-step artifact promotion procedure is copied word for word into WORKFLOW.md, HUNTING.md and VALIDATION-AND-REPORTING.md. WORKFLOW.md says the copies must stay identical, but nothing enforces that. A later edit to one copy can leave the others out of date.",
+                "proof_refs": [
+                  "skills/security-audit/HUNTING.md:55-85",
+                  "skills/security-audit/VALIDATION-AND-REPORTING.md:44-74",
+                  "skills/security-audit/WORKFLOW.md:37-49"
+                ],
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Reviewed all five added markdown files in full.",
+              "Cross-references to files not in the manifest were identified by reading link and filename mentions in the patches; I could not check whether those files exist elsewhere in the repository.",
+              "The triplicated promotion procedure was compared across the three files and is textually consistent in this change."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "22be0c23bae4a2845be0c0f793ff2a95e366ae14c4d9a73461ab76af5c65b03e",
+    "initial_atomic_start": {
+      "lineage_id": "review-abc51f2d8e84073b",
+      "worktree_identity": "sha256:95e4d3efe524d62edb68246dbee287490a9c69e7606ce981d6326241bc43b47b",
+      "target_identity": "sha256:c9f4cb245d14442e994ad61815ead5413d0b89f0f6c0b4fbe5e4269ba783e3e4",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "db83276806ffd112defce203ab29012d0882f34c",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "high",
+      "selected_lenses": [
+        "review-risk",
+        "review-readability"
+      ],
+      "original_changed_lines": 910,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "vendors third-party Markdown guides that become agent instructions for security audits (risk: instructions that could push an agent to unsafe actions such as live probing or credential use; readability: clarity of the workflow)"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

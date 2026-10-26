@@ -1,0 +1,253 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:41f32e24b7ebda056b4ff53a7c6963d5ac7c75160cbce7087ed919bbc09bb22f",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-36806c92f89eacae",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "0f383f1a5a5bab9db9b7512e5152043cbc7ada39",
+      "candidate_tree": "360dbcd00b0714c254373487f5ee213511c0d98a",
+      "paths_digest": "sha256:0b78d54ea005f8f053120530f4a7884d7774501ec05e585429408c22ac89d148",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "overlay.manifest",
+        "skills.registry.yaml",
+        "skills/security-audit/.approval.json",
+        "skills/security-audit/SKILL.md"
+      ],
+      "identity": "sha256:e3b02619500edf07904731e0eb3a6ed6cee1c90ce12c8be8d810052cc7b8e30a"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "0f383f1a5a5bab9db9b7512e5152043cbc7ada39",
+      "candidate_tree": "360dbcd00b0714c254373487f5ee213511c0d98a",
+      "paths_digest": "sha256:0b78d54ea005f8f053120530f4a7884d7774501ec05e585429408c22ac89d148",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "overlay.manifest",
+        "skills.registry.yaml",
+        "skills/security-audit/.approval.json",
+        "skills/security-audit/SKILL.md"
+      ],
+      "identity": "sha256:e3b02619500edf07904731e0eb3a6ed6cee1c90ce12c8be8d810052cc7b8e30a"
+    },
+    "genesis_paths": [
+      "overlay.manifest",
+      "skills.registry.yaml",
+      "skills/security-audit/.approval.json",
+      "skills/security-audit/SKILL.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-risk",
+      "review-readability"
+    ],
+    "original_changed_lines": 90,
+    "correction_budget": 45,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "Registers a vendored third-party skill: registry entry with external provenance and pinned ref, manifest rows, approval record, and a rewritten SKILL.md router that others read",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:f96b65a6513f273a325be2334ab212e899697f6b06691621b5a3fb7b360c7f5f",
+    "capture_phase_revision": "sha256:93dc445ad093a8958ec9727c012d53e11ebf6ee14403e9fad5e0b54d0f0fa36b",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:e3b02619500edf07904731e0eb3a6ed6cee1c90ce12c8be8d810052cc7b8e30a",
+        "capture_phase_revision": "sha256:93dc445ad093a8958ec9727c012d53e11ebf6ee14403e9fad5e0b54d0f0fa36b",
+        "artifact_digest": "sha256:548f69951bdeef2544617214d9e348146f663e10491ea1359592452cfa0b0a42",
+        "result_hash": "sha256:00f898412ad179c9fbc557ea5d74c46eea57aa22c821ddcc194e777bffbbb9f7",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:5e1c2cddd9727f9c0ac05b76af02d7962b914f2676044161f59152788d97ff99",
+            "lineage_id": "review-36806c92f89eacae",
+            "authority_revision": "sha256:93dc445ad093a8958ec9727c012d53e11ebf6ee14403e9fad5e0b54d0f0fa36b",
+            "target_identity": "sha256:e3b02619500edf07904731e0eb3a6ed6cee1c90ce12c8be8d810052cc7b8e30a",
+            "base_tree": "0f383f1a5a5bab9db9b7512e5152043cbc7ada39",
+            "candidate_tree": "360dbcd00b0714c254373487f5ee213511c0d98a",
+            "changed_path_manifest_sha256": "sha256:5e9859ccadeb311bbcdf26227cf68e04339350d5887d095a130fd296d4874387",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:5e1c2cddd9727f9c0ac05b76af02d7962b914f2676044161f59152788d97ff99",
+            "raw_sha256": "sha256:ef8cde76a8d94fdf39bba6eef39129f4c42e43c3ad805d01e2baddae60c41095",
+            "canonical_sha256": "sha256:28e96f95a9c40b69f267edcb81acbebdcb237a5b9ff3340bce6c0a7cf0c433d3",
+            "result_hash": "sha256:00f898412ad179c9fbc557ea5d74c46eea57aa22c821ddcc194e777bffbbb9f7",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:5e1c2cddd9727f9c0ac05b76af02d7962b914f2676044161f59152788d97ff99",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "overlay.manifest",
+                "skills.registry.yaml",
+                "skills/security-audit/.approval.json",
+                "skills/security-audit/SKILL.md"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [
+              {
+                "id": "R1-approval-unverifiable",
+                "lens": "risk",
+                "location": "skills/security-audit/.approval.json:4",
+                "severity": "WARNING",
+                "claim": "The approval records a sha256 for the security-audit skill. The candidate contains only SKILL.md and the approval file. The 19 companion files listed in overlay.manifest, including WORKFLOW.md and the validate-*.cjs scripts, are absent from it. The approved digest therefore cannot be tied to the content this candidate ships. If those files are added later, the approval will not cover them unless the digest is recomputed and checked. The approval is a self-asserted file with no visible enforcement in this candidate.",
+                "proof_refs": [
+                  "skills/security-audit/.approval.json:4",
+                  "overlay.manifest:146-165",
+                  "skills/security-audit/SKILL.md:20-22"
+                ]
+              },
+              {
+                "id": "R1-missing-executable-companions",
+                "lens": "risk",
+                "location": "overlay.manifest:146-165",
+                "severity": "WARNING",
+                "claim": "overlay.manifest declares 20 security-audit entries, including two executable .cjs validators. Only SKILL.md exists in the candidate. SKILL.md tells the agent to read WORKFLOW.md in full first, but that file is not shipped. The skill therefore cannot work as documented. This is a completeness and reliability gap, not a demonstrated exploit. If the files arrive from an external source later, they will be unreviewed code outside this candidate's approval.",
+                "proof_refs": [
+                  "overlay.manifest:146-165",
+                  "skills/security-audit/SKILL.md:20-22"
+                ]
+              }
+            ],
+            "evidence": [
+              "The skill is pinned to a full commit SHA, c1c8a8c1471069fb0e188eeaff69b8e8db6564a8, in skills.registry.yaml, so the external source is immutable.",
+              "SKILL.md is documentation only. It instructs read-only inspection and sandboxed execution, and it does not itself run code or handle secrets.",
+              "No secrets, credentials, or unsafe input handling appear in the four changed paths.",
+              "The two findings are WARNING only: no exploit path is demonstrated, and the candidate adds no executable code."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "selected_order": 1,
+        "target_identity": "sha256:e3b02619500edf07904731e0eb3a6ed6cee1c90ce12c8be8d810052cc7b8e30a",
+        "capture_phase_revision": "sha256:93dc445ad093a8958ec9727c012d53e11ebf6ee14403e9fad5e0b54d0f0fa36b",
+        "artifact_digest": "sha256:c75ededac953f84ecbe41921be763b38e4e3495881d189560471c285782c78f0",
+        "result_hash": "sha256:68a871636a5e13a7bb10ee435c618d4bf92ae28aeb348430bd399339be2c8f35",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:b9a813beb4f427ccd5b796888a1ff1dbedcbb0eef75221da467fa0a0f410df5b",
+            "lineage_id": "review-36806c92f89eacae",
+            "authority_revision": "sha256:93dc445ad093a8958ec9727c012d53e11ebf6ee14403e9fad5e0b54d0f0fa36b",
+            "target_identity": "sha256:e3b02619500edf07904731e0eb3a6ed6cee1c90ce12c8be8d810052cc7b8e30a",
+            "base_tree": "0f383f1a5a5bab9db9b7512e5152043cbc7ada39",
+            "candidate_tree": "360dbcd00b0714c254373487f5ee213511c0d98a",
+            "changed_path_manifest_sha256": "sha256:5e9859ccadeb311bbcdf26227cf68e04339350d5887d095a130fd296d4874387",
+            "lens": "review-readability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:b9a813beb4f427ccd5b796888a1ff1dbedcbb0eef75221da467fa0a0f410df5b",
+            "raw_sha256": "sha256:7dfd063b0bc8a274b5c5d5d946a2dc4fcb7bdcd88ee15a57b8ad3db1074de4b8",
+            "canonical_sha256": "sha256:c3a708c772bab08ef4d704dc7f5d6b12469f6c63f4ca0b90f836e6ae712fe6ca",
+            "result_hash": "sha256:68a871636a5e13a7bb10ee435c618d4bf92ae28aeb348430bd399339be2c8f35",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:b9a813beb4f427ccd5b796888a1ff1dbedcbb0eef75221da467fa0a0f410df5b",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "overlay.manifest",
+                "skills.registry.yaml",
+                "skills/security-audit/.approval.json",
+                "skills/security-audit/SKILL.md"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-001",
+                "lens": "readability",
+                "location": "skills/security-audit/SKILL.md:7",
+                "severity": "WARNING",
+                "claim": "The metadata version field holds a 40-character git commit SHA rather than a version. It duplicates the registry ref and the prose pin, so a future bump has to change three places. The name also misleads, because other skills would be expected to carry a semantic version here.",
+                "proof_refs": [
+                  "skills/security-audit/SKILL.md:7",
+                  "skills.registry.yaml:524"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-002",
+                "lens": "readability",
+                "location": "skills/security-audit/SKILL.md:12-17",
+                "severity": "SUGGESTION",
+                "claim": "The vendoring adaptation is documented only in prose. The upstream body moved to WORKFLOW.md, and the instruction to read cross-references such as 'in SKILL.md' as meaning WORKFLOW.md is easy to miss. Companion files that say 'SKILL.md' will mislead a maintainer who does not read this note, and no mechanical check enforces it.",
+                "proof_refs": [
+                  "skills/security-audit/SKILL.md:12-17"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-003",
+                "lens": "readability",
+                "location": "skills/security-audit/.approval.json:4",
+                "severity": "SUGGESTION",
+                "claim": "The approval sha256 is not explained: the file does not say what it hashes (which files, in what order) or how to recompute it. A maintainer cannot tell when it is stale after a vendored file changes.",
+                "proof_refs": [
+                  "skills/security-audit/.approval.json:4"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Reviewed all 4 changed paths in full.",
+              "overlay.manifest lists 20 security-audit files as custom. Only SKILL.md and .approval.json appear in this candidate's patches, so the other 19 vendored files are not visible here. I made no claim about them.",
+              "The registry entry's ref matches the commit cited in SKILL.md."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "501b233b7f7c5c2381c213a949b1460cb889e810a72c2ea136caeca93d409645",
+    "initial_atomic_start": {
+      "lineage_id": "review-36806c92f89eacae",
+      "worktree_identity": "sha256:95e4d3efe524d62edb68246dbee287490a9c69e7606ce981d6326241bc43b47b",
+      "target_identity": "sha256:e3b02619500edf07904731e0eb3a6ed6cee1c90ce12c8be8d810052cc7b8e30a",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "0f383f1a5a5bab9db9b7512e5152043cbc7ada39",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "high",
+      "selected_lenses": [
+        "review-risk",
+        "review-readability"
+      ],
+      "original_changed_lines": 90,
+      "correction_budget": 45,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "Registers a vendored third-party skill: registry entry with external provenance and pinned ref, manifest rows, approval record, and a rewritten SKILL.md router that others read"
+    },
+    "runtime_agent": "claude-code"
+  }
+}
