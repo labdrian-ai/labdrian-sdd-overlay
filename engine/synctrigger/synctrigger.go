@@ -370,7 +370,11 @@ func openLog(stateDir string) (*os.File, error) {
 // exclusive engine/filelock lock of path.lock (made only then, so a log under
 // its limit never gets one, and never removed, as filelock requires), and
 // each looks at the size again under it, so only the first rotates and the
-// fresh log is never rotated again. It is best effort: a lock that stays
+// fresh log is never rotated again. A trigger that already had the log open
+// keeps writing through its descriptor, so its lines land in path.1 after
+// the lines before them: none is lost, and the log is not held locked for
+// the length of a sync (the detached child writes to it through a
+// descriptor it inherits). It is best effort: a lock that stays
 // taken past filelock's bound, or a rename that fails, leaves the log to grow
 // until the next opening.
 func rotateLog(path string) {

@@ -79,6 +79,35 @@ func TestRunChild_ConcurrentTriggersRotateAFullLogOnce(t *testing.T) {
 	}
 }
 
+// A trigger that opened the log before another rotated it keeps writing through its descriptor,
+// so its lines land in sync-trigger.log.1, next to the lines before them, and none is lost.
+func TestALogOpenedBeforeARotationWritesItsLinesToTheRotatedFile(t *testing.T) {
+	stateDir := t.TempDir()
+	early, err := openLog(stateDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer early.Close()
+	if _, err := early.Write(bytes.Repeat([]byte("x"), 1<<20)); err != nil {
+		t.Fatal(err)
+	}
+
+	late, err := openLog(stateDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	late.WriteString("late\n")
+	late.Close()
+	early.WriteString("early\n")
+
+	if got := logText(t, stateDir); got != "late\n" {
+		t.Errorf("log = %q, want only the line of the trigger that opened it after the rotation", got)
+	}
+	if got, want := readLogFile(t, stateDir, "sync-trigger.log.1"), strings.Repeat("x", 1<<20)+"early\n"; got != want {
+		t.Errorf("sync-trigger.log.1 holds %d bytes, want the full log and the early trigger's line (%d)", len(got), len(want))
+	}
+}
+
 // A log under its limit is appended to, and no older file is made.
 func TestRunChild_AppendsToALogUnderItsLimit(t *testing.T) {
 	o, stateDir := child(t, &fakeRunner{})
