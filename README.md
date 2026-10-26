@@ -436,6 +436,7 @@ overlay skills <verb>
     validate     [--registry <path>] [--manifest <path>] --source-root <path>      cross-check registry vs manifest and skills/ on disk vs manifest, and that every global skill has a valid approval record (the 34 of the 37 global skills present at the Phase 8 base, which is `main` at `53f545d`, the commit the skill lifecycle was built on, that are still registered — `gadu-operator` and `gadu-orchestrate` were retired and `prespec-malandra` was replaced by `clarify-request` — are grandfathered while their bytes are unchanged); exit 1 on any divergence
     install      [--registry <path>] [--source-root <path>] [--project-id <id>]   install the project-scoped skills admitted for the project into <cwd>/.claude/skills/ and <cwd>/.agents/skills/, replacing only what it installed and left unmodified (see below)
     adopt        [--registry <path>] [--source-root <path>] [--project-id <id>]   record skill directories already in the project as installed by `skills install`, only when they are exactly the current source
+    uninstall    [--dry-run] <id>                                                  remove from <cwd> a skill `skills install` put there, and its install record (see below); --dry-run prints the removal plan
     add          <id> [--registry <path>] [--manifest <path>] [--source-root <path>] [--repo <url>] [--ref <sha>]  register a skill (custom or external); refused, with nothing written, unless skills/<id>/.approval.json approves the exact SKILL.md bytes (see approve)
     remove       <id> [--registry <path>] [--manifest <path>]                      unregister a skill from registry and manifest
     sync-manifest [--registry <path>] [--manifest <path>]                          regenerate */SKILL.md rows from registry; preserves all non-skill lines
@@ -454,7 +455,7 @@ overlay skills <verb>
     project-revise   --project-root <abs> --candidate <key> [--dry-run] [--registry <path>] <draft-file>
                  revise an agent-owned project skill the same way
     project-status   --project-root <abs> [--registry <path>] [<id>]
-                 report project-tier ownership and global supersession from the project lock (read-only)
+                 report project-tier ownership and global supersession from the project lock, then each install record as "<id> installed files:<n>" (read-only)
     project-retire   --project-root <abs> [--dry-run] [--reason <text>] [--absorbed-into <id>] [--registry <path>] <id>
                  retire an agent-owned project skill; an explicit decision that nothing in the engine takes for you, not even the retirement detector; --dry-run prints the removal plan
     The project tier stays autonomous: project-register, project-revise, and project-retire need no approval record.
@@ -477,6 +478,15 @@ overlay skills <verb>
     differs when it is not. adopt only records; it writes no skill file, and one runtime directory is enough (install
     adds the other). The approval record and a writer's temporary file are never copied, by install or by the Pi package
     build (engine/pipkg), which share one rule for it.
+    What uninstall removes. `skills uninstall <id>` removes, in both runtime directories, every file the install record of
+    <id> lists, then the record; the lock file stays, even with no record left, so a revert can restore it. It is
+    install's rule the other way, all or nothing: a hand-edited recorded file (named), an id with no install record, or a
+    procedural skill (project-retire removes those) refuses it, and nothing is removed. A recorded file already gone is
+    nothing to remove; a file the record does not list is left, with the directory that holds it ("note: kept <dir>: it
+    holds files skills install did not write"); a directory that cannot be read or removed is kept with its cause ("note:
+    kept <dir>: it could not be removed (<error>); ..."). It reads no registry and no source, and prints "removed: <path>"
+    for each file and then "uninstalled: <id>"; --dry-run prints "plan: remove <path>" for each file and "plan: update
+    <lock> ...". project-status lists each install record as "<id> installed files:<n>".
     Locking: add, remove, sync-manifest, and approve hold an exclusive lock, and validate and install a shared one, on
     .skills.registry.yaml.lock beside the registry (created by the first write, never removed, git-ignored). Shared holders
     never create it, so validate and install work on a read-only overlay; validate, which reads files that must agree,
@@ -485,8 +495,8 @@ overlay skills <verb>
     lock file behind. A lock that stays taken for 2 seconds means another skills command is in progress: the verb changes
     nothing and reports it with exit 2 (retry). Exit 1 is unchanged: the verb ran or was refused, or the lock could not be
     created at all, which retrying will not fix.
-    Project lock: project-register, project-revise, project-retire, install and adopt also take an exclusive lock on the
-    project root directory itself (--project-root, or the working directory for install and adopt, read once before any
+    Project lock: project-register, project-revise, project-retire, install, adopt and uninstall also take an exclusive lock on the
+    project root directory itself (--project-root, or the working directory for install, adopt and uninstall, read once before any
     lock), so no file is created in the project and nothing needs git-ignoring; a busy one is exit 2 like the overlay
     lock. A filesystem that cannot lock a directory refuses the verb (exit 1, nothing written); the lock is never skipped
     or replaced by a file in the project, and install and adopt refuse, with nothing locked, when the working directory

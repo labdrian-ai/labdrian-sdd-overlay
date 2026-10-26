@@ -48,7 +48,7 @@ func TestDocsDescribeTheSkillsLockAndTheBusyExit(t *testing.T) {
 			"retry",
 			"never removed",
 			// The project lock: which verbs, on what, and that no file is created.
-			"project-register, project-revise, project-retire, install and adopt",
+			"project-register, project-revise, project-retire, install, adopt and uninstall",
 			"project root directory itself",
 			"no file is created in the project",
 			"overlay lock first",

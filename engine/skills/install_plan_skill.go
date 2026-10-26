@@ -59,6 +59,15 @@ func (p *skillPlanner) refuse(format string, a ...any) {
 	*p.refusals = append(*p.refusals, fmt.Sprintf("skills %s: "+format, append([]any{p.c.in.verb()}, a...)...))
 }
 
+// retryVerb is the verb a refusal tells the person to run again once they moved an edited file
+// away: the verb being run, except adopt, whose refusals have always told to run install again.
+func (p *skillPlanner) retryVerb() string {
+	if verb := p.c.in.verb(); verb != "adopt" {
+		return verb
+	}
+	return "install"
+}
+
 // planRuntimeDir plans the skill in one runtime directory: whether it may be there at all, what of
 // it is on disk and still as installed, what the source wants written, and what it dropped.
 func (p *skillPlanner) planRuntimeDir(target ProjectTarget, aliased map[string]string) {
@@ -129,14 +138,14 @@ func (p *skillPlanner) readRecordedFiles(dirRel string, exists bool) (current ma
 		case fileMissing:
 			continue
 		case fileNotRegular:
-			p.refuse("%s is not a regular file, although skills install wrote a file there; move it away and run install again", rel)
+			p.refuse("%s is not a regular file, although skills install wrote a file there; move it away and run %s again", rel, p.retryVerb())
 			continue
 		case fileUnreadable:
 			p.refuse("cannot read %s", rel)
 			continue
 		}
 		if HashSkill(data) != f.SHA256 {
-			p.refuse("%s was edited since skills install wrote it (its bytes no longer match the install record); restore it or move it away, then run install again", rel)
+			p.refuse("%s was edited since skills install wrote it (its bytes no longer match the install record); restore it or move it away, then run %s again", rel, p.retryVerb())
 			continue
 		}
 		current[f.Path] = data
