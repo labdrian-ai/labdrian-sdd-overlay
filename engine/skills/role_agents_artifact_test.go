@@ -20,6 +20,8 @@ import (
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/reviewresult"
 )
 
 // roleCorePrefix is the six lines every role agent starts with (per-role design v2, section 2,
@@ -338,7 +340,8 @@ func TestReviewerAndVerifierDeltasAreTheLinesOfTheReviewerDesign(t *testing.T) {
 // and the worktree, not the format. The third line of its delta says it replaces the return envelope
 // of the core prefix (the envelope asks for a status, a summary and more, which the parent would
 // fail to read as a result) and spells the object out with the members the parent checks, the echo
-// of the candidate and the inspection, and the members of the findings the polisher already returns.
+// of the candidate and the inspection, and the members of the findings the polisher returns plus the
+// id of each finding, which the verifier answers by and the engine requires (engine/reviewresult).
 func TestReviewerDeltaSpellsOutTheJSONObjectItReturns(t *testing.T) {
 	line := roleDelta(t, skillsRepoRoot(t), "reviewer")[2]
 	const override = "This replaces the return envelope of the core prefix: "
@@ -380,7 +383,7 @@ func TestReviewerDeltaSpellsOutTheJSONObjectItReturns(t *testing.T) {
 	}{
 		{"candidate", shape.Candidate, []string{"base", "diff_sha256", "head"}},
 		{"inspection", shape.Inspection, []string{"paths", "reason", "status"}},
-		{"a finding", shape.Findings[0], []string{"causal_disposition", "claim", "evidence_class", "location", "proof_refs", "severity"}},
+		{"a finding", shape.Findings[0], []string{"causal_disposition", "claim", "evidence_class", "id", "location", "proof_refs", "severity"}},
 	} {
 		if got := membersOf(part.got); !reflect.DeepEqual(got, part.want) {
 			t.Errorf("%s has the members %v, want %v", part.what, got, part.want)
@@ -402,9 +405,120 @@ func TestReviewerDeltaSpellsOutTheJSONObjectItReturns(t *testing.T) {
 			t.Errorf("%s = %v, want %q", value.what, value.got, value.want)
 		}
 	}
-	for _, rule := range []string{`"findings":[] when clean`, "copy base, head and diff_sha256 from the prompt, never compute them", "could not be inspected"} {
+	// The rules the engine refuses a reply for (engine/reviewresult), told to the agent that must obey
+	// them: a refused reply is a review that did not run, and the parent pays for the launch again.
+	for _, rule := range []string{
+		`"findings":[] when clean`,
+		"each finding has a unique id",
+		"BLOCKER/CRITICAL need at least one proof_refs entry",
+		"no member is omitted or null",
+		"copy base, head and diff_sha256 from the prompt, never compute them",
+		"could not be inspected",
+	} {
 		if !strings.Contains(line, rule) {
 			t.Errorf("the third line of the reviewer delta must say %q", rule)
+		}
+	}
+}
+
+// The object agents/reviewer.md spells out is the object the engine parses, and a drift between the two is
+// a review that never runs: the agent would reply with a member the parser refuses as unknown, or without
+// one it requires. The test fills the object the delta spells out with a legal value for each of its members
+// and requires reviewresult.Parse to accept it; then it requires the same of every alternative the delta
+// lists for the severity, the class of evidence and the causal disposition. A member the delta gains that
+// this test has no legal value for fails it, and so does one the parser does not know.
+func TestReviewerDeltaObjectIsTheOneTheEngineParses(t *testing.T) {
+	line := roleDelta(t, skillsRepoRoot(t), "reviewer")[2]
+	start := strings.Index(line, `{"candidate"`)
+	if start < 0 {
+		t.Fatalf("the third line of the reviewer delta spells out no JSON object that starts with \"candidate\"; got:\n%s", line)
+	}
+	var spelled map[string]any
+	if err := json.NewDecoder(strings.NewReader(line[start:])).Decode(&spelled); err != nil {
+		t.Fatalf("the object the reviewer delta spells out is not JSON: %v", err)
+	}
+
+	bound := reviewresult.Binding{
+		Base:       strings.Repeat("a", 40),
+		Head:       strings.Repeat("b", 40),
+		DiffSHA256: strings.Repeat("c", 64),
+		Paths:      []string{"engine/guard.go"},
+	}
+	// A legal value for every member of the contract, by the name of the member (no two objects of the
+	// contract share a member name). The enumerations are chosen by the caller.
+	legal := map[string]any{
+		"base": bound.Base, "head": bound.Head, "diff_sha256": bound.DiffSHA256,
+		"status": "completed", "paths": bound.Paths, "reason": "",
+		"id": "F1", "location": "engine/guard.go:1", "claim": "a claim", "proof_refs": []string{"engine/guard.go:1 is a changed line"},
+		"evidence": []string{"read engine/guard.go"},
+	}
+	enumerations := []string{"severity", "evidence_class", "causal_disposition"}
+	instance := func(chosen map[string]string) []byte {
+		var fill func(value any, member string) any
+		fill = func(value any, member string) any {
+			switch v := value.(type) {
+			case map[string]any:
+				filled := make(map[string]any, len(v))
+				for name, inner := range v {
+					filled[name] = fill(inner, name)
+				}
+				return filled
+			case []any:
+				// The findings are an array of one object; the other arrays hold a legal list of strings.
+				if len(v) == 1 {
+					if object, ok := v[0].(map[string]any); ok {
+						return []any{fill(object, member)}
+					}
+				}
+			}
+			if picked, ok := chosen[member]; ok {
+				return picked
+			}
+			if known, ok := legal[member]; ok {
+				return known
+			}
+			t.Fatalf("the reviewer delta names the member %q, and this test has no legal value for it", member)
+			return nil
+		}
+		text, err := json.Marshal(fill(spelled, ""))
+		if err != nil {
+			t.Fatalf("setup: %v", err)
+		}
+		return text
+	}
+
+	var finding map[string]any
+	if findings, _ := spelled["findings"].([]any); len(findings) == 1 {
+		finding, _ = findings[0].(map[string]any)
+	}
+	if finding == nil {
+		t.Fatalf("the reviewer delta must spell out one finding, as an object; got %v", spelled["findings"])
+	}
+	alternativesOf := func(member string) []string {
+		list, ok := finding[member].(string)
+		if !ok {
+			t.Fatalf("the reviewer delta must list the alternatives of %q as one string; got %v", member, finding[member])
+		}
+		return strings.Split(list, "|")
+	}
+
+	first := map[string]string{}
+	for _, member := range enumerations {
+		first[member] = alternativesOf(member)[0]
+	}
+	if _, err := reviewresult.Parse(instance(first), bound); err != nil {
+		t.Errorf("reviewresult.Parse refuses the object the reviewer delta spells out, filled with legal values: %v\n%s", err, instance(first))
+	}
+	for _, member := range enumerations {
+		for _, alternative := range alternativesOf(member) {
+			chosen := map[string]string{}
+			for name, picked := range first {
+				chosen[name] = picked
+			}
+			chosen[member] = alternative
+			if _, err := reviewresult.Parse(instance(chosen), bound); err != nil {
+				t.Errorf("reviewresult.Parse refuses %s %q, which the reviewer delta lists: %v", member, alternative, err)
+			}
 		}
 	}
 }
