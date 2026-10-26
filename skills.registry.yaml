@@ -515,3 +515,17 @@ skills:
         - pi
     lifecycle:
       updateStrategy: overlay-only
+  - id: security-audit
+    path: security-audit
+    source:
+      type: external
+      repo: https://github.com/cloudflare/security-audit-skill
+      ref: c1c8a8c1471069fb0e188eeaff69b8e8db6564a8
+    install:
+      defaultScope: global
+      targets:
+        - claude
+        - codex
+        - pi
+    lifecycle:
+      updateStrategy: overlay-only
