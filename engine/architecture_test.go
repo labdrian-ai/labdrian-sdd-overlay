@@ -125,6 +125,10 @@ import (
 //   - fieldrule is a domain package (H34): the rules for the shape of one field of a versioned
 //     document that more than one record shares (today the string array of a Goal and of a Shaper
 //     handoff). Pure standard library.
+//   - reviewresult is a domain package (own-rdd T1): the contract of what the reviewer role returns, and
+//     the rules that refuse a reply (the candidate it echoes, its inspection, the paths it read, the enums,
+//     the ids and the proofs of its findings). It reads and writes no file and runs no git: the caller hands
+//     it the candidate as a value, the paths of the diff included.
 //   - repotest is test support: the hand-made repositories the tests of gitfs and cmd share.
 //   - piguard is test support: the `pi` that refuses to run, put first on the PATH of a test
 //     run by a TestMain, so nothing started by accident reaches the real CLI.
@@ -182,6 +186,7 @@ var rings = map[string]archguard.Ring{
 	"reviewreceipt":             archguard.Domain,
 	"reviewreceipt/fsstore":     archguard.Adapter,
 	"reviewreceipt/receipttest": archguard.Support,
+	"reviewresult":              archguard.Domain,
 	"roles":                     archguard.Domain,
 	"roles/filechain":           archguard.Adapter,
 	"runtime":                   archguard.Adapter,
