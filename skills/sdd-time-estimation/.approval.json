@@ -1,7 +1,7 @@
 {
-  "version": 1,
+  "version": 2,
   "skill": "sdd-time-estimation",
-  "sha256": "f2cb74fb293ccad90758bf5acd2c528ca9c03de99b031723ed824811ee07e509",
-  "approved_at": "2026-10-22T20:35:48Z",
-  "approver": "labdrian-ai"
+  "sha256": "826693fc3c367ef3f36dc817c10ccc638af1e1a88e31de557168c2e3938e8edc",
+  "approved_at": "2026-10-26T14:58:35Z",
+  "approver": "labdrian"
 }

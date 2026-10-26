@@ -1,7 +1,7 @@
 {
-  "version": 1,
+  "version": 2,
   "skill": "work-unit-commits",
-  "sha256": "d1f25b154dc0a2e55f1bfbe9b46bd10bf3dd57c3e9e54ae671b5d131623eaead",
-  "approved_at": "2026-10-19T20:18:20Z",
+  "sha256": "1f4243d6a34a89ded4ee4ab5175d6ac9aa84a185e1248dc468a28c56fabf9627",
+  "approved_at": "2026-10-26T14:58:35Z",
   "approver": "labdrian"
 }

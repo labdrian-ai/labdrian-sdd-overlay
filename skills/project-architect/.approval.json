@@ -1,7 +1,7 @@
 {
-  "version": 1,
+  "version": 2,
   "skill": "project-architect",
-  "sha256": "d1977ff05213858f9a75ace113721f516081fc00116ed520c2d39843d52ce44c",
-  "approved_at": "2026-10-23T13:52:24Z",
-  "approver": "labdrian-ai"
+  "sha256": "3546dc69f959d0784255b91745f1e99379491696cc4fa1fd9f963251ed11b6f8",
+  "approved_at": "2026-10-26T14:58:35Z",
+  "approver": "labdrian"
 }

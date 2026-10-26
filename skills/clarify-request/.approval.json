@@ -1,7 +1,7 @@
 {
-  "version": 1,
+  "version": 2,
   "skill": "clarify-request",
-  "sha256": "92575e2de22929415a1a76289ae2996ec9bb0bc53de8322492af06ebb99ecfba",
-  "approved_at": "2026-10-24T18:16:49Z",
+  "sha256": "79644e64899bf9604cff30e1577e889efa76d0102961109fe8f2640555885fca",
+  "approved_at": "2026-10-26T14:58:35Z",
   "approver": "labdrian"
 }
