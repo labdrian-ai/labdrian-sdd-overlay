@@ -136,6 +136,9 @@ import (
 //   - review/app holds the use cases of `engine review` (own-rdd T2): Bind and Record, over the Git and
 //     Results ports it owns. It answers with typed values and typed refusals, prints nothing and exits
 //     nowhere; the words a person reads and the exit codes are the command's, in cmd.
+//   - review/gitexec is the adapter of the Git port of review/app (own-rdd T2): it asks the git of the
+//     machine, through a Runner (execrunner), for the commits, the canonical diff, its paths and the
+//     worktree of a review, under an environment it scrubs of every GIT_* variable.
 //   - review/fsstore is the adapter of the Results port of review/app (own-rdd T2): the directory
 //     odd/review-results/<feature>/ of a repository, walked without following a symlink and written on
 //     atomicfile, never over a file that is there.
@@ -193,12 +196,13 @@ var rings = map[string]archguard.Ring{
 	"propagator/app":            archguard.Application,
 	"propagator/fsstore":        archguard.Adapter,
 	"repotest":                  archguard.Support,
-	"review":                    archguard.Domain,
-	"review/app":                archguard.Application,
-	"review/fsstore":            archguard.Adapter,
 	"reviewreceipt":             archguard.Domain,
 	"reviewreceipt/fsstore":     archguard.Adapter,
 	"reviewreceipt/receipttest": archguard.Support,
+	"review":                    archguard.Domain,
+	"review/app":                archguard.Application,
+	"review/fsstore":            archguard.Adapter,
+	"review/gitexec":            archguard.Adapter,
 	"reviewresult":              archguard.Domain,
 	"roles":                     archguard.Domain,
 	"roles/filechain":           archguard.Adapter,

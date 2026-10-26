@@ -54,12 +54,15 @@ type Binding struct {
 	// characters (64 in a SHA-256 repository).
 	Base string
 	Head string
-	// DiffSHA256 is the SHA-256 of the exact bytes of `git diff base head`, as 64 lowercase hexadecimal
-	// characters.
+	// DiffSHA256 is the SHA-256 of the canonical diff of base and head, as 64 lowercase hexadecimal
+	// characters. The canonical diff is one fixed git command under one fixed environment, so that every
+	// process that recomputes the digest gets the same bytes; the package review/gitexec runs it and
+	// documents it, and odd/review-results/README.md names it. Parse only compares the digest.
 	DiffSHA256 string
-	// Paths are the paths the diff changes, as `git diff --name-only base head` gives them: byte for byte,
-	// one entry per path. Parse refuses a binding that lists a path twice. The reviewer's list of inspected
-	// paths is held to this one as a set, and lists each path once as well.
+	// Paths are the paths the diff changes, as the canonical command lists them (`git diff-tree -r
+	// --name-only -z`, without renames): byte for byte, one entry per path. Parse refuses a binding that
+	// lists a path twice. The reviewer's list of inspected paths is held to this one as a set, and lists
+	// each path once as well.
 	Paths []string
 }
 
