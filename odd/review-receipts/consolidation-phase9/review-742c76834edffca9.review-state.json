@@ -1,0 +1,385 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:5c1332fabe7dbadeef025dd26a428c94e515b25e4c745c4d5e8b06aa30b23b52",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-742c76834edffca9",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "799c940b529e6382928bae8be38f03dfd622fbaa",
+      "candidate_tree": "04ad21c8f45ae4f4b05161b9f27b80e25ec00432",
+      "paths_digest": "sha256:f47cc2ff6005d323d6af51a2f87267c85697678aa3afc85f81bc33ee2f03614b",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/cmd/doc.go",
+        "engine/cmd/skills_cli.go",
+        "engine/cmd/skills_flags.go",
+        "engine/cmd/skills_install_cli.go",
+        "engine/cmd/skills_lock_docs_test.go",
+        "engine/cmd/skills_project_cli.go",
+        "engine/cmd/skills_uninstall_cli_test.go",
+        "engine/cmd/testdata/skills-argv-golden/lint-argv-reads-the-path-it-is-given.golden",
+        "engine/cmd/testdata/skills-argv-golden/list-argv-finds-the-verb-after-the-flags.golden",
+        "engine/cmd/testdata/skills-argv-golden/status-argv-finds-the-verb-after-the-flags.golden",
+        "engine/cmd/testdata/skills-argv-golden/validate-argv-finds-the-verb-after-the-flags.golden",
+        "engine/cmd/usage.go",
+        "engine/skills/app/project.go",
+        "engine/skills/app/uninstall.go",
+        "engine/skills/install_plan_skill.go",
+        "engine/skills/lock.go",
+        "engine/skills/uninstall_plan.go",
+        "engine/skills/uninstall_plan_test.go",
+        "odd/review-receipts/consolidation-phase9/review-4c93bcbc126ebdf2.review-state.json",
+        "odd/tasks/consolidation-phase9.md"
+      ],
+      "identity": "sha256:19113236b32e8af5bc097e483eb5763567a074ced6bd1b7ff2d3959e1218ed89"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "799c940b529e6382928bae8be38f03dfd622fbaa",
+      "candidate_tree": "04ad21c8f45ae4f4b05161b9f27b80e25ec00432",
+      "paths_digest": "sha256:f47cc2ff6005d323d6af51a2f87267c85697678aa3afc85f81bc33ee2f03614b",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/cmd/doc.go",
+        "engine/cmd/skills_cli.go",
+        "engine/cmd/skills_flags.go",
+        "engine/cmd/skills_install_cli.go",
+        "engine/cmd/skills_lock_docs_test.go",
+        "engine/cmd/skills_project_cli.go",
+        "engine/cmd/skills_uninstall_cli_test.go",
+        "engine/cmd/testdata/skills-argv-golden/lint-argv-reads-the-path-it-is-given.golden",
+        "engine/cmd/testdata/skills-argv-golden/list-argv-finds-the-verb-after-the-flags.golden",
+        "engine/cmd/testdata/skills-argv-golden/status-argv-finds-the-verb-after-the-flags.golden",
+        "engine/cmd/testdata/skills-argv-golden/validate-argv-finds-the-verb-after-the-flags.golden",
+        "engine/cmd/usage.go",
+        "engine/skills/app/project.go",
+        "engine/skills/app/uninstall.go",
+        "engine/skills/install_plan_skill.go",
+        "engine/skills/lock.go",
+        "engine/skills/uninstall_plan.go",
+        "engine/skills/uninstall_plan_test.go",
+        "odd/review-receipts/consolidation-phase9/review-4c93bcbc126ebdf2.review-state.json",
+        "odd/tasks/consolidation-phase9.md"
+      ],
+      "identity": "sha256:19113236b32e8af5bc097e483eb5763567a074ced6bd1b7ff2d3959e1218ed89"
+    },
+    "genesis_paths": [
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/cmd/doc.go",
+      "engine/cmd/skills_cli.go",
+      "engine/cmd/skills_flags.go",
+      "engine/cmd/skills_install_cli.go",
+      "engine/cmd/skills_lock_docs_test.go",
+      "engine/cmd/skills_project_cli.go",
+      "engine/cmd/skills_uninstall_cli_test.go",
+      "engine/cmd/testdata/skills-argv-golden/lint-argv-reads-the-path-it-is-given.golden",
+      "engine/cmd/testdata/skills-argv-golden/list-argv-finds-the-verb-after-the-flags.golden",
+      "engine/cmd/testdata/skills-argv-golden/status-argv-finds-the-verb-after-the-flags.golden",
+      "engine/cmd/testdata/skills-argv-golden/validate-argv-finds-the-verb-after-the-flags.golden",
+      "engine/cmd/usage.go",
+      "engine/skills/app/project.go",
+      "engine/skills/app/uninstall.go",
+      "engine/skills/install_plan_skill.go",
+      "engine/skills/lock.go",
+      "engine/skills/uninstall_plan.go",
+      "engine/skills/uninstall_plan_test.go",
+      "odd/review-receipts/consolidation-phase9/review-4c93bcbc126ebdf2.review-state.json",
+      "odd/tasks/consolidation-phase9.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-risk",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 1012,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "adds a verb that deletes installed skill files guarded by the install record (risk), new tests and planner reuse (reliability), and new CLI output, usage and README text (readability)",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:fbcd8f42577a7ead60919cc87cbf9fbf49ae2f51c924401749d08b033b00ef14",
+    "capture_phase_revision": "sha256:ab6a9e8ee431dac2a63c67632baf66abbcb60dc698f1dbba078858c9704e7c8a",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:19113236b32e8af5bc097e483eb5763567a074ced6bd1b7ff2d3959e1218ed89",
+        "capture_phase_revision": "sha256:ab6a9e8ee431dac2a63c67632baf66abbcb60dc698f1dbba078858c9704e7c8a",
+        "artifact_digest": "sha256:33ab8a5f4f7c60db6ec0140705c40192098f60cd21593f277d409951594c1482",
+        "result_hash": "sha256:c752a3630cf88999cfa2042f35c2118ca008a9b26b190e86571d64313c2ba54e",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:4bea62faa0b7c1f22c209253c201e7188a9eb191df48070bc5d8d02ab519f90c",
+            "lineage_id": "review-742c76834edffca9",
+            "authority_revision": "sha256:ab6a9e8ee431dac2a63c67632baf66abbcb60dc698f1dbba078858c9704e7c8a",
+            "target_identity": "sha256:19113236b32e8af5bc097e483eb5763567a074ced6bd1b7ff2d3959e1218ed89",
+            "base_tree": "799c940b529e6382928bae8be38f03dfd622fbaa",
+            "candidate_tree": "04ad21c8f45ae4f4b05161b9f27b80e25ec00432",
+            "changed_path_manifest_sha256": "sha256:3a302c70d2fad5dd6e40598765b802023dd3632f81d730b775b4848376beef7b",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:4bea62faa0b7c1f22c209253c201e7188a9eb191df48070bc5d8d02ab519f90c",
+            "raw_sha256": "sha256:0d7616841592a4d88bd85477d49eaf1ccda50d7a6909e237497d2ee09f5d40db",
+            "canonical_sha256": "sha256:0d7616841592a4d88bd85477d49eaf1ccda50d7a6909e237497d2ee09f5d40db",
+            "result_hash": "sha256:c752a3630cf88999cfa2042f35c2118ca008a9b26b190e86571d64313c2ba54e",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:4bea62faa0b7c1f22c209253c201e7188a9eb191df48070bc5d8d02ab519f90c",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "README.md",
+                "bin/lib/usage.sh",
+                "engine/cmd/doc.go",
+                "engine/cmd/skills_cli.go",
+                "engine/cmd/skills_flags.go",
+                "engine/cmd/skills_install_cli.go",
+                "engine/cmd/skills_lock_docs_test.go",
+                "engine/cmd/skills_project_cli.go",
+                "engine/cmd/skills_uninstall_cli_test.go",
+                "engine/cmd/testdata/skills-argv-golden/lint-argv-reads-the-path-it-is-given.golden",
+                "engine/cmd/testdata/skills-argv-golden/list-argv-finds-the-verb-after-the-flags.golden",
+                "engine/cmd/testdata/skills-argv-golden/status-argv-finds-the-verb-after-the-flags.golden",
+                "engine/cmd/testdata/skills-argv-golden/validate-argv-finds-the-verb-after-the-flags.golden",
+                "engine/cmd/usage.go",
+                "engine/skills/app/project.go",
+                "engine/skills/app/uninstall.go",
+                "engine/skills/install_plan_skill.go",
+                "engine/skills/lock.go",
+                "engine/skills/uninstall_plan.go",
+                "engine/skills/uninstall_plan_test.go",
+                "odd/review-receipts/consolidation-phase9/review-4c93bcbc126ebdf2.review-state.json",
+                "odd/tasks/consolidation-phase9.md"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "I reviewed all 22 manifest paths for security, data loss and unsafe input handling. I found no reachable, candidate-caused risk.",
+              "Deletion in engine/skills/uninstall_plan.go is limited to the files an existing install record lists. PlanUninstall refuses an id with no install record or a procedural id before anything is planned. The id from the command line only selects a record. It is never used as a path.",
+              "Data-loss guard: planSkill, install's planner, refuses the whole uninstall if any recorded file is edited, is not a regular file, or cannot be read. Tests in engine/skills/uninstall_plan_test.go and engine/cmd/skills_uninstall_cli_test.go pin that nothing is removed in those cases.",
+              "RemoveEmptySkillDirs and removeEmptyTree in engine/skills/uninstall_plan.go call Remove only on directories that hold nothing but empty directories. A symlink is not a directory entry, so the code never follows it. It never deletes a file, so files the install record does not list are preserved, and the directory that holds them is reported as kept.",
+              "engine/cmd/skills_install_cli.go takes the exclusive project lock before it reads or writes, as install does. The adapter refuses before locking when the working directory is not absolute.",
+              "The recorded-path validation that applies to install records is in the base planner. It is not visible in this patch and not changed by it. I report nothing about it."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "selected_order": 1,
+        "target_identity": "sha256:19113236b32e8af5bc097e483eb5763567a074ced6bd1b7ff2d3959e1218ed89",
+        "capture_phase_revision": "sha256:ab6a9e8ee431dac2a63c67632baf66abbcb60dc698f1dbba078858c9704e7c8a",
+        "artifact_digest": "sha256:c3971cc5938b71a47d9b7dd8bda1bc9ffe85cd5ee18434df6f9d6ff11404d369",
+        "result_hash": "sha256:fb8265fc36a2c343c3f0fb844cb3431f4aea033dac30ae80167d603239058d38",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:0e34e4294dc4408ac7691b8ed13ab02a353f611fb4b50e72e7e89be14237db11",
+            "lineage_id": "review-742c76834edffca9",
+            "authority_revision": "sha256:ab6a9e8ee431dac2a63c67632baf66abbcb60dc698f1dbba078858c9704e7c8a",
+            "target_identity": "sha256:19113236b32e8af5bc097e483eb5763567a074ced6bd1b7ff2d3959e1218ed89",
+            "base_tree": "799c940b529e6382928bae8be38f03dfd622fbaa",
+            "candidate_tree": "04ad21c8f45ae4f4b05161b9f27b80e25ec00432",
+            "changed_path_manifest_sha256": "sha256:3a302c70d2fad5dd6e40598765b802023dd3632f81d730b775b4848376beef7b",
+            "lens": "review-readability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:0e34e4294dc4408ac7691b8ed13ab02a353f611fb4b50e72e7e89be14237db11",
+            "raw_sha256": "sha256:d9b8506a77710b0bfece6d9cf673c0a218786047bf8fb1140244ef516d13f824",
+            "canonical_sha256": "sha256:630a8aa3e4dcd1d109451e0ac446d2d53d96013dc789bb24ade3bc60a9d104d1",
+            "result_hash": "sha256:fb8265fc36a2c343c3f0fb844cb3431f4aea033dac30ae80167d603239058d38",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:0e34e4294dc4408ac7691b8ed13ab02a353f611fb4b50e72e7e89be14237db11",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "README.md",
+                "bin/lib/usage.sh",
+                "engine/cmd/doc.go",
+                "engine/cmd/skills_cli.go",
+                "engine/cmd/skills_flags.go",
+                "engine/cmd/skills_install_cli.go",
+                "engine/cmd/skills_lock_docs_test.go",
+                "engine/cmd/skills_project_cli.go",
+                "engine/cmd/skills_uninstall_cli_test.go",
+                "engine/cmd/testdata/skills-argv-golden/lint-argv-reads-the-path-it-is-given.golden",
+                "engine/cmd/testdata/skills-argv-golden/list-argv-finds-the-verb-after-the-flags.golden",
+                "engine/cmd/testdata/skills-argv-golden/status-argv-finds-the-verb-after-the-flags.golden",
+                "engine/cmd/testdata/skills-argv-golden/validate-argv-finds-the-verb-after-the-flags.golden",
+                "engine/cmd/usage.go",
+                "engine/skills/app/project.go",
+                "engine/skills/app/uninstall.go",
+                "engine/skills/install_plan_skill.go",
+                "engine/skills/lock.go",
+                "engine/skills/uninstall_plan.go",
+                "engine/skills/uninstall_plan_test.go",
+                "odd/review-receipts/consolidation-phase9/review-4c93bcbc126ebdf2.review-state.json",
+                "odd/tasks/consolidation-phase9.md"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-retryverb-string-coupling",
+                "lens": "readability",
+                "location": "engine/skills/install_plan_skill.go:62-69",
+                "severity": "SUGGESTION",
+                "claim": "retryVerb couples the shared install planner to the literal verb string \"uninstall\" and defaults everything else to \"install\". A future verb sharing the planner would silently get the wrong retry hint. A comment explains the install/adopt case, but the fallback is implicit.",
+                "proof_refs": [
+                  "engine/skills/install_plan_skill.go:62-69"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-installedworld-name",
+                "lens": "readability",
+                "location": "engine/cmd/skills_uninstall_cli_test.go:16-17",
+                "severity": "SUGGESTION",
+                "claim": "The doc comment on installedWorld starts with 'installed is the world...', which does not match the function name, and the comment says 'the project skill' ambiguously. Minor misleading documentation.",
+                "proof_refs": [
+                  "engine/cmd/skills_uninstall_cli_test.go:16-17"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Reviewed all 22 manifest paths. The uninstall flow (spec, CLI adapter, app use case, planner reuse via planSkill with an empty source, RemoveEmptySkillDirs) is documented with clear comments and consistent naming across README, usage text, and tests.",
+              "The reuse of install's planner is explained in PlanUninstall's doc comment and in the task note, so the 'every recorded file is a dropped file' trick is not left implicit.",
+              "No candidate-caused BLOCKER or CRITICAL readability defect found; the only issues are minor naming/comment points."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 2,
+        "target_identity": "sha256:19113236b32e8af5bc097e483eb5763567a074ced6bd1b7ff2d3959e1218ed89",
+        "capture_phase_revision": "sha256:ab6a9e8ee431dac2a63c67632baf66abbcb60dc698f1dbba078858c9704e7c8a",
+        "artifact_digest": "sha256:f179b3cf228ce3d8cabfa11472c338988b3c94a6e6581b6ea1d94a6e9a5ae62d",
+        "result_hash": "sha256:b2ed0115b3432b15adeb0c1ecb34ae23008dc6f441428228fc9289275a5127d7",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:e4b00f2f0a2a99e05349e22f3703dfeed9d9525eda499cae41ed3c58aaeec40e",
+            "lineage_id": "review-742c76834edffca9",
+            "authority_revision": "sha256:ab6a9e8ee431dac2a63c67632baf66abbcb60dc698f1dbba078858c9704e7c8a",
+            "target_identity": "sha256:19113236b32e8af5bc097e483eb5763567a074ced6bd1b7ff2d3959e1218ed89",
+            "base_tree": "799c940b529e6382928bae8be38f03dfd622fbaa",
+            "candidate_tree": "04ad21c8f45ae4f4b05161b9f27b80e25ec00432",
+            "changed_path_manifest_sha256": "sha256:3a302c70d2fad5dd6e40598765b802023dd3632f81d730b775b4848376beef7b",
+            "lens": "review-reliability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:e4b00f2f0a2a99e05349e22f3703dfeed9d9525eda499cae41ed3c58aaeec40e",
+            "raw_sha256": "sha256:527d4f3c2ee02d5276cf05709e50f76f095c2864f255ad707142b4c2935110a4",
+            "canonical_sha256": "sha256:4a5147f001cc5ef737dfda71016c02c0d730c1c48e2e9cb04f9579c0f822ed41",
+            "result_hash": "sha256:b2ed0115b3432b15adeb0c1ecb34ae23008dc6f441428228fc9289275a5127d7",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:e4b00f2f0a2a99e05349e22f3703dfeed9d9525eda499cae41ed3c58aaeec40e",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "README.md",
+                "bin/lib/usage.sh",
+                "engine/cmd/doc.go",
+                "engine/cmd/skills_cli.go",
+                "engine/cmd/skills_flags.go",
+                "engine/cmd/skills_install_cli.go",
+                "engine/cmd/skills_lock_docs_test.go",
+                "engine/cmd/skills_project_cli.go",
+                "engine/cmd/skills_uninstall_cli_test.go",
+                "engine/cmd/testdata/skills-argv-golden/lint-argv-reads-the-path-it-is-given.golden",
+                "engine/cmd/testdata/skills-argv-golden/list-argv-finds-the-verb-after-the-flags.golden",
+                "engine/cmd/testdata/skills-argv-golden/status-argv-finds-the-verb-after-the-flags.golden",
+                "engine/cmd/testdata/skills-argv-golden/validate-argv-finds-the-verb-after-the-flags.golden",
+                "engine/cmd/usage.go",
+                "engine/skills/app/project.go",
+                "engine/skills/app/uninstall.go",
+                "engine/skills/install_plan_skill.go",
+                "engine/skills/lock.go",
+                "engine/skills/uninstall_plan.go",
+                "engine/skills/uninstall_plan_test.go",
+                "odd/review-receipts/consolidation-phase9/review-4c93bcbc126ebdf2.review-state.json",
+                "odd/tasks/consolidation-phase9.md"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [],
+            "evidence": [
+              "I found no candidate-caused reliability defect in the 22 changed paths.",
+              "engine/skills/uninstall_plan.go reuses the install planner, so every refusal comes out before anything is removed. That covers an edited recorded file, a recorded path that is not a regular file, a file that cannot be read, an id with no install record, and a procedural id. engine/skills/uninstall_plan_test.go and engine/cmd/skills_uninstall_cli_test.go check that the tree is unchanged after each refusal.",
+              "The dry run in engine/skills/app/uninstall.go writes nothing, and the CLI test compares the whole tree before and after.",
+              "engine/skills/uninstall_plan.go leaves any file the install record does not list, and RemoveEmptySkillDirs reports the directory holding it as kept. A recorded file or runtime directory that is already gone is tolerated. Tests cover all three cases.",
+              "engine/skills/lock.go makes the uninstall project lock exclusive. The CLI test checks that uninstall takes no overlay lock. A relative working directory is refused before any lock is taken, and the test checks that no lock file appears.",
+              "The project-status change in engine/skills/app/project.go lists the install records and lets the id filter match a procedural skill or an installed one. The 'not in lock' error still fires only when neither matches, and a CLI test covers it.",
+              "In engine/skills/install_plan_skill.go the retry hint names the verb being run. Install and adopt keep the message they gave before, which the 'run install again' text preserves.",
+              "The argv golden files change only in the verb list. The receipt and task notes are documentation and state, with no runtime effect."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "f4484c18d48e048b5d81d68c832198ead61096d63153e1891a6eebf293979270",
+    "initial_atomic_start": {
+      "lineage_id": "review-742c76834edffca9",
+      "worktree_identity": "sha256:8455002f227f033663d0e7d8b8ff6a885e1c85b482ec52e34017c303452eed87",
+      "target_identity": "sha256:19113236b32e8af5bc097e483eb5763567a074ced6bd1b7ff2d3959e1218ed89",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "799c940b529e6382928bae8be38f03dfd622fbaa",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "high",
+      "selected_lenses": [
+        "review-risk",
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 1012,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "adds a verb that deletes installed skill files guarded by the install record (risk), new tests and planner reuse (reliability), and new CLI output, usage and README text (readability)"
+    },
+    "runtime_agent": "claude-code"
+  }
+}
