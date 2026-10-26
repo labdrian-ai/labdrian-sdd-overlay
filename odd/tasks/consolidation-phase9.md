@@ -106,7 +106,13 @@ Wave 4 — skills for the sub-agent team (last):
 - [ ] C12 — Vault documentation in `~/labdrian-brain` (one page per skill and per role, comparisons, open questions), ingested through C22; research and thinking in the vault; a per-role design the user approves before any rewrite. Per-role design APPROVED 2026-10-22: `docs/architecture/role-design/per-role-design-v3.md`; the vault pages remain open.
 - [ ] C13 — Rewrite the custom inception family.
 - [ ] C14 — Rewrite the remaining custom planning skills.
-- [ ] C15 — New overlay-owned role skills derived from the core skills (Q2), one PR per role.
+- [ ] C15 — New overlay-owned role skills derived from the core skills (Q2), one PR per role. Reconciled with the v3 slices on 2026-10-26: the eight role agents are ours (`roles/*/body.md`, merged by PR #671), but shaper, builder and delivery still follow gentle's SDD skills (`sdd-propose`/`spec`/`design`/`tasks`, `sdd-apply` with `strict-tdd.md` and apply-progress, `sdd-archive`). Owner's order: "estaria bueno escribir primero nuestras skills cablear el rdd de neustro lado y luego xar todo lo demas". Owner's format choice, to "the four SDD artifacts in `openspec/`, or the ODD document `odd/tasks/<feature>.md`?": "me gusta mas el documento odd". One PR (the skills and the bodies that cite them are one unit), branch `feat/phase9-c15-odd-role-skills`, writer `builder`, verifier `verifier`.
+  - S1 — `skills/odd-feature-doc/SKILL.md`: the format of `odd/tasks/<feature>.md` (header, `## Specs` with `S#` quoting the owner verbatim, `## Tasks` one line per task with `S#`, route, status, commit, `## Log` append-only with `L1` the original request) and each role's part in it: the shaper writes Specs and Tasks, the builder checks off its tasks and appends evidence to the Log, delivery closes it.
+  - S2 — `skills/test-first/SKILL.md`: our RED → GREEN → REFACTOR rule for the builder, replacing `sdd-apply/strict-tdd.md`.
+  - S3 — `roles/{shaper,builder,delivery}/body.md` cite S1/S2 instead of the SDD artifacts; the shaper description in `engine/agentgen/roles.go:88`; `agents/`, `pi/agents/`, `codex/agents/` regenerated; the pinned tests updated.
+  - S4 — `skills/role-chain/SKILL.md` `payload_kind` list becomes `exploration`, `feature-doc`, `progress`, `review-report`, `verify-report`, `close-report` (the engine checks only non-blank, explorer map 2026-10-26).
+  - S5 — Registry and manifest rows for S1/S2; approval records are the owner's (`labdrian skills approve`).
+  - Assumption: delivery closes the feature document in place (a final Log entry with the state at close, unfinished tasks named), no copy or move. Out of scope: removing the `sdd-*` skills and the inception family (step 3, C13), our RDD (step 2).
 - [ ] C16 — Every new or rewritten skill passes lint, carries an approval record, and leaves the baseline.
 
 ## Scope and constraints
