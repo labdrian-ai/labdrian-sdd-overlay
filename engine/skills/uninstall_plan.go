@@ -64,36 +64,59 @@ func PlanUninstall(in InstallInput, id string) (InstallPlan, []string) {
 // RemoveEmptySkillDirs removes, after ExecuteInstallPlan carried out an uninstall, each skill
 // directory of the plan that now holds no file (its empty subdirectories, such as one whose only
 // file someone had already deleted, go first), and returns, relative to root, the ones that still
-// hold something: files the install record did not list, which are someone's. A directory that is
-// already gone is neither. It is best effort, as the pruning inside a skill is: a directory that
-// cannot be read or removed is reported as kept.
-func RemoveEmptySkillDirs(fsys ProjectFS, root string, p InstallPlan) (kept []string) {
+// hold something, each with why. A directory that is already gone is neither. It is best effort,
+// as the pruning inside a skill is: a directory that cannot be read or removed is kept, with the
+// error that kept it.
+func RemoveEmptySkillDirs(fsys ProjectFS, root string, p InstallPlan) (kept []KeptDir) {
 	for _, dir := range p.Dirs {
 		if _, err := fsys.Stat(dir); isAbsent(err) {
 			continue
 		}
-		if !removeEmptyTree(fsys, dir) {
-			kept = append(kept, relToRoot(root, dir))
+		if gone, err := removeEmptyTree(fsys, dir); !gone {
+			kept = append(kept, KeptDir{Path: relToRoot(root, dir), Err: err})
 		}
 	}
 	return kept
 }
 
+// KeptDir is a skill directory uninstall left, relative to the project root.
+type KeptDir struct {
+	Path string
+	// Err is why it could not be read or removed; nil when it holds files the install record did
+	// not list, which are someone's.
+	Err error
+}
+
 // removeEmptyTree removes dir when it holds nothing but directories that hold nothing, deepest
-// first, and reports whether dir is gone. It removes no file, and does not follow a symbolic link
-// (one is an entry like a file: it keeps the directory).
-func removeEmptyTree(fsys ProjectFS, dir string) bool {
+// first, and reports whether dir is gone, and otherwise the first error that kept something, or nil
+// when what kept it is a file. It removes no file, and does not follow a symbolic link (one is an
+// entry like a file: it keeps the directory).
+func removeEmptyTree(fsys ProjectFS, dir string) (bool, error) {
 	entries, err := fsys.ReadDir(dir)
 	if err != nil {
-		return false
+		return false, err
 	}
 	empty := true
+	var firstErr error
 	for _, e := range entries {
-		if !e.IsDir() || !removeEmptyTree(fsys, filepath.Join(dir, e.Name())) {
+		if !e.IsDir() {
 			empty = false
+			continue
+		}
+		if gone, err := removeEmptyTree(fsys, filepath.Join(dir, e.Name())); !gone {
+			empty = false
+			if firstErr == nil {
+				firstErr = err
+			}
 		}
 	}
-	return empty && fsys.Remove(dir) == nil
+	if !empty {
+		return false, firstErr
+	}
+	if err := fsys.Remove(dir); err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 // relToRoot is dir relative to root, forward-slashed, or dir itself when it is not inside root.

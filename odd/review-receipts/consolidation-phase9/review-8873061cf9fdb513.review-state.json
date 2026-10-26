@@ -1,0 +1,488 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:1ba8403ad2c180b3f9a6d0f2496894a1c9f77d9118896365906e884d4c90242c",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-8873061cf9fdb513",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "799c940b529e6382928bae8be38f03dfd622fbaa",
+      "candidate_tree": "94b2eb8af8b43a732441b9f569b6a0b5fcde56a8",
+      "paths_digest": "sha256:a36644e620c052a6969a3d8e7b6efe5d3a93677f4d770a61b9ff3981091176de",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/cmd/doc.go",
+        "engine/cmd/skills_cli.go",
+        "engine/cmd/skills_flags.go",
+        "engine/cmd/skills_install_cli.go",
+        "engine/cmd/skills_lock_docs_test.go",
+        "engine/cmd/skills_project_cli.go",
+        "engine/cmd/skills_uninstall_cli_test.go",
+        "engine/cmd/testdata/skills-argv-golden/lint-argv-reads-the-path-it-is-given.golden",
+        "engine/cmd/testdata/skills-argv-golden/list-argv-finds-the-verb-after-the-flags.golden",
+        "engine/cmd/testdata/skills-argv-golden/status-argv-finds-the-verb-after-the-flags.golden",
+        "engine/cmd/testdata/skills-argv-golden/validate-argv-finds-the-verb-after-the-flags.golden",
+        "engine/cmd/usage.go",
+        "engine/skills/app/project.go",
+        "engine/skills/app/uninstall.go",
+        "engine/skills/install_plan_skill.go",
+        "engine/skills/lock.go",
+        "engine/skills/uninstall_plan.go",
+        "engine/skills/uninstall_plan_test.go",
+        "odd/review-receipts/consolidation-phase9/review-4c93bcbc126ebdf2.review-state.json",
+        "odd/review-receipts/consolidation-phase9/review-742c76834edffca9.review-state.json",
+        "odd/review-receipts/consolidation-phase9/review-d0c27fefe478fb6d.review-state.json",
+        "odd/tasks/consolidation-phase9.md"
+      ],
+      "identity": "sha256:54c73730ec0c24f82f2974dcdb5ab46fc051833007420173ef51b6c1d2da43c5"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "799c940b529e6382928bae8be38f03dfd622fbaa",
+      "candidate_tree": "94b2eb8af8b43a732441b9f569b6a0b5fcde56a8",
+      "paths_digest": "sha256:a36644e620c052a6969a3d8e7b6efe5d3a93677f4d770a61b9ff3981091176de",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/cmd/doc.go",
+        "engine/cmd/skills_cli.go",
+        "engine/cmd/skills_flags.go",
+        "engine/cmd/skills_install_cli.go",
+        "engine/cmd/skills_lock_docs_test.go",
+        "engine/cmd/skills_project_cli.go",
+        "engine/cmd/skills_uninstall_cli_test.go",
+        "engine/cmd/testdata/skills-argv-golden/lint-argv-reads-the-path-it-is-given.golden",
+        "engine/cmd/testdata/skills-argv-golden/list-argv-finds-the-verb-after-the-flags.golden",
+        "engine/cmd/testdata/skills-argv-golden/status-argv-finds-the-verb-after-the-flags.golden",
+        "engine/cmd/testdata/skills-argv-golden/validate-argv-finds-the-verb-after-the-flags.golden",
+        "engine/cmd/usage.go",
+        "engine/skills/app/project.go",
+        "engine/skills/app/uninstall.go",
+        "engine/skills/install_plan_skill.go",
+        "engine/skills/lock.go",
+        "engine/skills/uninstall_plan.go",
+        "engine/skills/uninstall_plan_test.go",
+        "odd/review-receipts/consolidation-phase9/review-4c93bcbc126ebdf2.review-state.json",
+        "odd/review-receipts/consolidation-phase9/review-742c76834edffca9.review-state.json",
+        "odd/review-receipts/consolidation-phase9/review-d0c27fefe478fb6d.review-state.json",
+        "odd/tasks/consolidation-phase9.md"
+      ],
+      "identity": "sha256:54c73730ec0c24f82f2974dcdb5ab46fc051833007420173ef51b6c1d2da43c5"
+    },
+    "genesis_paths": [
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/cmd/doc.go",
+      "engine/cmd/skills_cli.go",
+      "engine/cmd/skills_flags.go",
+      "engine/cmd/skills_install_cli.go",
+      "engine/cmd/skills_lock_docs_test.go",
+      "engine/cmd/skills_project_cli.go",
+      "engine/cmd/skills_uninstall_cli_test.go",
+      "engine/cmd/testdata/skills-argv-golden/lint-argv-reads-the-path-it-is-given.golden",
+      "engine/cmd/testdata/skills-argv-golden/list-argv-finds-the-verb-after-the-flags.golden",
+      "engine/cmd/testdata/skills-argv-golden/status-argv-finds-the-verb-after-the-flags.golden",
+      "engine/cmd/testdata/skills-argv-golden/validate-argv-finds-the-verb-after-the-flags.golden",
+      "engine/cmd/usage.go",
+      "engine/skills/app/project.go",
+      "engine/skills/app/uninstall.go",
+      "engine/skills/install_plan_skill.go",
+      "engine/skills/lock.go",
+      "engine/skills/uninstall_plan.go",
+      "engine/skills/uninstall_plan_test.go",
+      "odd/review-receipts/consolidation-phase9/review-4c93bcbc126ebdf2.review-state.json",
+      "odd/review-receipts/consolidation-phase9/review-742c76834edffca9.review-state.json",
+      "odd/review-receipts/consolidation-phase9/review-d0c27fefe478fb6d.review-state.json",
+      "odd/tasks/consolidation-phase9.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-risk",
+      "review-resilience",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 1888,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:ed7b5275217cc2ef375a922d6a9ce5faefe117af27a994d01bb818a6b2e51cc4",
+    "capture_phase_revision": "sha256:c2af35ffe9bb44b113f2225689456fe381ed3cc4510979ae032671e7633c24d6",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:54c73730ec0c24f82f2974dcdb5ab46fc051833007420173ef51b6c1d2da43c5",
+        "capture_phase_revision": "sha256:c2af35ffe9bb44b113f2225689456fe381ed3cc4510979ae032671e7633c24d6",
+        "artifact_digest": "sha256:a58eeb7077785b2585a5bf1389c62c37287ee5f772f54e1d6594489bb304ca88",
+        "result_hash": "sha256:2b17973e228d6ece235346b5249a2feb8eaa3839e4e703d633b4f6be18aef424",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:1f13c5d0e3cbd7f64a45e0619979cc8189e4f2dc53911c323af3340a068ac46d",
+            "lineage_id": "review-8873061cf9fdb513",
+            "authority_revision": "sha256:c2af35ffe9bb44b113f2225689456fe381ed3cc4510979ae032671e7633c24d6",
+            "target_identity": "sha256:54c73730ec0c24f82f2974dcdb5ab46fc051833007420173ef51b6c1d2da43c5",
+            "base_tree": "799c940b529e6382928bae8be38f03dfd622fbaa",
+            "candidate_tree": "94b2eb8af8b43a732441b9f569b6a0b5fcde56a8",
+            "changed_path_manifest_sha256": "sha256:d2f21ee797a8280bc80179c326a777e06c089a65bce80aa3d2db5e3bae069d55",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:1f13c5d0e3cbd7f64a45e0619979cc8189e4f2dc53911c323af3340a068ac46d",
+            "raw_sha256": "sha256:e62948d7db2a3e4a5238597f25acdfa434b58f8cc5f6e0ba8b2286514d00a6f8",
+            "canonical_sha256": "sha256:47c6a517bf7bc4ec470617385e826496c3b5db61a6c7eb87c8db3b4eb4941b1b",
+            "result_hash": "sha256:2b17973e228d6ece235346b5249a2feb8eaa3839e4e703d633b4f6be18aef424",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:1f13c5d0e3cbd7f64a45e0619979cc8189e4f2dc53911c323af3340a068ac46d",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "README.md",
+                "bin/lib/usage.sh",
+                "engine/cmd/doc.go",
+                "engine/cmd/skills_cli.go",
+                "engine/cmd/skills_flags.go",
+                "engine/cmd/skills_install_cli.go",
+                "engine/cmd/skills_lock_docs_test.go",
+                "engine/cmd/skills_project_cli.go",
+                "engine/cmd/skills_uninstall_cli_test.go",
+                "engine/cmd/testdata/skills-argv-golden/lint-argv-reads-the-path-it-is-given.golden",
+                "engine/cmd/testdata/skills-argv-golden/list-argv-finds-the-verb-after-the-flags.golden",
+                "engine/cmd/testdata/skills-argv-golden/status-argv-finds-the-verb-after-the-flags.golden",
+                "engine/cmd/testdata/skills-argv-golden/validate-argv-finds-the-verb-after-the-flags.golden",
+                "engine/cmd/usage.go",
+                "engine/skills/app/project.go",
+                "engine/skills/app/uninstall.go",
+                "engine/skills/install_plan_skill.go",
+                "engine/skills/lock.go",
+                "engine/skills/uninstall_plan.go",
+                "engine/skills/uninstall_plan_test.go",
+                "odd/review-receipts/consolidation-phase9/review-4c93bcbc126ebdf2.review-state.json",
+                "odd/review-receipts/consolidation-phase9/review-742c76834edffca9.review-state.json",
+                "odd/review-receipts/consolidation-phase9/review-d0c27fefe478fb6d.review-state.json",
+                "odd/tasks/consolidation-phase9.md"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "Reviewed all 24 manifest paths for security, data loss and unsafe input handling; no reachable candidate-caused risk found.",
+              "engine/skills/uninstall_plan.go: PlanUninstall refuses a procedural id or an id with no install record before planning. It then reuses install's planSkill, so an edited, non-regular or unreadable recorded file refuses the whole uninstall with nothing removed. The id from the command line only selects a record and is never used as a path.",
+              "engine/skills/uninstall_plan.go: removeEmptyTree calls Remove only on directories that hold nothing but empty directories. It deletes no file and does not follow symlinks, so files the install record does not list are preserved and their directory is reported as kept.",
+              "engine/cmd/skills_install_cli.go: uninstall takes the exclusive project lock on the absolute working directory before any read or write, and refuses before locking when the working directory is not absolute. A dry run writes nothing.",
+              "Whether recorded paths in an install record are confined to the project is decided by the base planner, which this patch neither shows nor changes, so I report nothing on it.",
+              "The project-status change only adds read-only output lines. The retryVerb change keeps the 'run install again' wording for install and adopt. The remaining files are docs, goldens, tests and review receipts with no runtime effect."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-resilience",
+        "selected_order": 1,
+        "target_identity": "sha256:54c73730ec0c24f82f2974dcdb5ab46fc051833007420173ef51b6c1d2da43c5",
+        "capture_phase_revision": "sha256:c2af35ffe9bb44b113f2225689456fe381ed3cc4510979ae032671e7633c24d6",
+        "artifact_digest": "sha256:afec85ee263d2eb4c8f031caef6de4e8d8de6c8a3be2ecf326645333cdf227a5",
+        "result_hash": "sha256:29f1becffd658818d850fd4e80dafc7e5d79be353a9417245d6c52e48837b21f",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:bc9e1fce3c90b196aa6d84192d30865b7b7d802fc87624a8814324176de49a0f",
+            "lineage_id": "review-8873061cf9fdb513",
+            "authority_revision": "sha256:c2af35ffe9bb44b113f2225689456fe381ed3cc4510979ae032671e7633c24d6",
+            "target_identity": "sha256:54c73730ec0c24f82f2974dcdb5ab46fc051833007420173ef51b6c1d2da43c5",
+            "base_tree": "799c940b529e6382928bae8be38f03dfd622fbaa",
+            "candidate_tree": "94b2eb8af8b43a732441b9f569b6a0b5fcde56a8",
+            "changed_path_manifest_sha256": "sha256:d2f21ee797a8280bc80179c326a777e06c089a65bce80aa3d2db5e3bae069d55",
+            "lens": "review-resilience",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:bc9e1fce3c90b196aa6d84192d30865b7b7d802fc87624a8814324176de49a0f",
+            "raw_sha256": "sha256:45c1ae78babd2efb75806d77d6d33032757d2a2439a6e592bf0789b826592ef7",
+            "canonical_sha256": "sha256:cc689a0d66cee0b78bd514766915b8b3f97ae62141b48a0b4bc8900575a3675e",
+            "result_hash": "sha256:29f1becffd658818d850fd4e80dafc7e5d79be353a9417245d6c52e48837b21f",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:bc9e1fce3c90b196aa6d84192d30865b7b7d802fc87624a8814324176de49a0f",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "README.md",
+                "bin/lib/usage.sh",
+                "engine/cmd/doc.go",
+                "engine/cmd/skills_cli.go",
+                "engine/cmd/skills_flags.go",
+                "engine/cmd/skills_install_cli.go",
+                "engine/cmd/skills_lock_docs_test.go",
+                "engine/cmd/skills_project_cli.go",
+                "engine/cmd/skills_uninstall_cli_test.go",
+                "engine/cmd/testdata/skills-argv-golden/lint-argv-reads-the-path-it-is-given.golden",
+                "engine/cmd/testdata/skills-argv-golden/list-argv-finds-the-verb-after-the-flags.golden",
+                "engine/cmd/testdata/skills-argv-golden/status-argv-finds-the-verb-after-the-flags.golden",
+                "engine/cmd/testdata/skills-argv-golden/validate-argv-finds-the-verb-after-the-flags.golden",
+                "engine/cmd/usage.go",
+                "engine/skills/app/project.go",
+                "engine/skills/app/uninstall.go",
+                "engine/skills/install_plan_skill.go",
+                "engine/skills/lock.go",
+                "engine/skills/uninstall_plan.go",
+                "engine/skills/uninstall_plan_test.go",
+                "odd/review-receipts/consolidation-phase9/review-4c93bcbc126ebdf2.review-state.json",
+                "odd/review-receipts/consolidation-phase9/review-742c76834edffca9.review-state.json",
+                "odd/review-receipts/consolidation-phase9/review-d0c27fefe478fb6d.review-state.json",
+                "odd/tasks/consolidation-phase9.md"
+              ]
+            },
+            "lens": "review-resilience",
+            "findings": [
+              {
+                "id": "R4-kept-note-misleading",
+                "lens": "resilience",
+                "location": "engine/skills/uninstall_plan.go:76-86",
+                "severity": "WARNING",
+                "claim": "RemoveEmptySkillDirs is best effort and reports any directory it cannot read or remove as kept. The CLI then prints 'note: kept \u003cdir\u003e: it holds files skills install did not write', which is inaccurate for a permission or I/O failure. Exit is 0 and the record is already gone, so the operator is told the wrong cause and a rerun cannot clean it up because the install record no longer exists. The impact is a leftover empty directory with a misleading message, not data loss. The lines are in a new file and the code was already carried as a follow-up in the task note.",
+                "proof_refs": [
+                  "engine/skills/uninstall_plan.go:76-86",
+                  "engine/cmd/skills_install_cli.go:124-126"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Reviewed all 24 manifest paths for failure handling, retry safety, graceful degradation, observability, latency and load. I found no candidate-caused BLOCKER or CRITICAL failure mode.",
+              "Refusals (edited file, non-regular file, unreadable file, no install record, procedural id) all come from the planner before ExecuteInstallPlan runs, so nothing is removed on refusal. engine/skills/uninstall_plan_test.go and engine/cmd/skills_uninstall_cli_test.go compare the tree before and after.",
+              "Retry safety: a recorded file that is already gone is tolerated by the plan, so a rerun after a partial execution failure can finish the uninstall. The install record is dropped only as part of the executed plan.",
+              "Concurrency: uninstall takes the exclusive project lock through ProjectLocks and releases it with defer. A relative working directory is refused before locking.",
+              "Dry run writes nothing, and the output states that the lock file stays. The earlier misreport of the lock file in the plan was fixed in this candidate.",
+              "Load: work is proportional to the number of files in one install record, with no network or registry reads.",
+              "The receipts, README, usage text, golden files and task note have no runtime effect."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "selected_order": 2,
+        "target_identity": "sha256:54c73730ec0c24f82f2974dcdb5ab46fc051833007420173ef51b6c1d2da43c5",
+        "capture_phase_revision": "sha256:c2af35ffe9bb44b113f2225689456fe381ed3cc4510979ae032671e7633c24d6",
+        "artifact_digest": "sha256:831477910d5061ea245ad9f8d393a5e89efe0b1ad932c66c93ae680eb8982cf0",
+        "result_hash": "sha256:43f91246d1549c293e8eedc266f617c08ccce68482c68dec954cc2fabb65588e",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:a02d5e882be098918e4417afce22a7df6815c69409ffe1df6d125d7be96d30d9",
+            "lineage_id": "review-8873061cf9fdb513",
+            "authority_revision": "sha256:c2af35ffe9bb44b113f2225689456fe381ed3cc4510979ae032671e7633c24d6",
+            "target_identity": "sha256:54c73730ec0c24f82f2974dcdb5ab46fc051833007420173ef51b6c1d2da43c5",
+            "base_tree": "799c940b529e6382928bae8be38f03dfd622fbaa",
+            "candidate_tree": "94b2eb8af8b43a732441b9f569b6a0b5fcde56a8",
+            "changed_path_manifest_sha256": "sha256:d2f21ee797a8280bc80179c326a777e06c089a65bce80aa3d2db5e3bae069d55",
+            "lens": "review-readability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:a02d5e882be098918e4417afce22a7df6815c69409ffe1df6d125d7be96d30d9",
+            "raw_sha256": "sha256:05df16d2571dc3126b071b115cfe8830a717b9c46225dd9c7fb8d8c266e1553d",
+            "canonical_sha256": "sha256:0269df1a454f1d76ac9a5e3df717b846c3c8736366bce584c97026b9c69370d4",
+            "result_hash": "sha256:43f91246d1549c293e8eedc266f617c08ccce68482c68dec954cc2fabb65588e",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:a02d5e882be098918e4417afce22a7df6815c69409ffe1df6d125d7be96d30d9",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "README.md",
+                "bin/lib/usage.sh",
+                "engine/cmd/doc.go",
+                "engine/cmd/skills_cli.go",
+                "engine/cmd/skills_flags.go",
+                "engine/cmd/skills_install_cli.go",
+                "engine/cmd/skills_lock_docs_test.go",
+                "engine/cmd/skills_project_cli.go",
+                "engine/cmd/skills_uninstall_cli_test.go",
+                "engine/cmd/testdata/skills-argv-golden/lint-argv-reads-the-path-it-is-given.golden",
+                "engine/cmd/testdata/skills-argv-golden/list-argv-finds-the-verb-after-the-flags.golden",
+                "engine/cmd/testdata/skills-argv-golden/status-argv-finds-the-verb-after-the-flags.golden",
+                "engine/cmd/testdata/skills-argv-golden/validate-argv-finds-the-verb-after-the-flags.golden",
+                "engine/cmd/usage.go",
+                "engine/skills/app/project.go",
+                "engine/skills/app/uninstall.go",
+                "engine/skills/install_plan_skill.go",
+                "engine/skills/lock.go",
+                "engine/skills/uninstall_plan.go",
+                "engine/skills/uninstall_plan_test.go",
+                "odd/review-receipts/consolidation-phase9/review-4c93bcbc126ebdf2.review-state.json",
+                "odd/review-receipts/consolidation-phase9/review-742c76834edffca9.review-state.json",
+                "odd/review-receipts/consolidation-phase9/review-d0c27fefe478fb6d.review-state.json",
+                "odd/tasks/consolidation-phase9.md"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-kept-note-wording",
+                "lens": "readability",
+                "location": "engine/cmd/skills_install_cli.go:122-124",
+                "severity": "SUGGESTION",
+                "claim": "The note printed for every kept directory says it holds files skills install did not write. RemoveEmptySkillDirs also reports a directory as kept when it merely could not be read or removed, so the message can misstate the cause. This is already acknowledged in the task note as carried over, so it is a known limitation rather than a new defect.",
+                "proof_refs": [
+                  "engine/cmd/skills_install_cli.go:122-124",
+                  "engine/skills/uninstall_plan.go:76-86"
+                ]
+              }
+            ],
+            "evidence": [
+              "Reviewed all 24 manifest paths. The uninstall flow (flag spec, CLI adapter, app use case, planner reuse via planSkill with an empty source, RemoveEmptySkillDirs) is consistently named and documented across code, usage text, README and tests.",
+              "PlanUninstall's doc comment explains why every recorded file counts as dropped, so the reuse of the install planner is not left implicit.",
+              "retryVerb in engine/skills/install_plan_skill.go names the verb being run and keeps 'install' for adopt, and the task note records this. I found no hidden coupling that would be unsafe to maintain.",
+              "No BLOCKER or CRITICAL readability defect was found. Receipts and task notes are state records with no runtime effect."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 3,
+        "target_identity": "sha256:54c73730ec0c24f82f2974dcdb5ab46fc051833007420173ef51b6c1d2da43c5",
+        "capture_phase_revision": "sha256:c2af35ffe9bb44b113f2225689456fe381ed3cc4510979ae032671e7633c24d6",
+        "artifact_digest": "sha256:4b821dfeb18feee758f7ebf6d62b6b2412679b012955a67ba44fceaf9a37e0b5",
+        "result_hash": "sha256:9e1a5b6a9b3f1e787a9dfa47e01d54f69839c081e974c2f04c8cd9ba803d2da0",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:0346cf5da3ee60c6f178ee5a47ff9e1a29222ca5f75b26ad53711d44c09c2233",
+            "lineage_id": "review-8873061cf9fdb513",
+            "authority_revision": "sha256:c2af35ffe9bb44b113f2225689456fe381ed3cc4510979ae032671e7633c24d6",
+            "target_identity": "sha256:54c73730ec0c24f82f2974dcdb5ab46fc051833007420173ef51b6c1d2da43c5",
+            "base_tree": "799c940b529e6382928bae8be38f03dfd622fbaa",
+            "candidate_tree": "94b2eb8af8b43a732441b9f569b6a0b5fcde56a8",
+            "changed_path_manifest_sha256": "sha256:d2f21ee797a8280bc80179c326a777e06c089a65bce80aa3d2db5e3bae069d55",
+            "lens": "review-reliability",
+            "selected_order": 3
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:0346cf5da3ee60c6f178ee5a47ff9e1a29222ca5f75b26ad53711d44c09c2233",
+            "raw_sha256": "sha256:3cbd44d05ed222e217540edc4f053d3a904098190354924f67f47f1ebd4ee2c3",
+            "canonical_sha256": "sha256:4ba705d259056a371ce600de4f4aa0998e7a1b6d8de8b033eed3454d912bfe22",
+            "result_hash": "sha256:9e1a5b6a9b3f1e787a9dfa47e01d54f69839c081e974c2f04c8cd9ba803d2da0",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:0346cf5da3ee60c6f178ee5a47ff9e1a29222ca5f75b26ad53711d44c09c2233",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "README.md",
+                "bin/lib/usage.sh",
+                "engine/cmd/doc.go",
+                "engine/cmd/skills_cli.go",
+                "engine/cmd/skills_flags.go",
+                "engine/cmd/skills_install_cli.go",
+                "engine/cmd/skills_lock_docs_test.go",
+                "engine/cmd/skills_project_cli.go",
+                "engine/cmd/skills_uninstall_cli_test.go",
+                "engine/cmd/testdata/skills-argv-golden/lint-argv-reads-the-path-it-is-given.golden",
+                "engine/cmd/testdata/skills-argv-golden/list-argv-finds-the-verb-after-the-flags.golden",
+                "engine/cmd/testdata/skills-argv-golden/status-argv-finds-the-verb-after-the-flags.golden",
+                "engine/cmd/testdata/skills-argv-golden/validate-argv-finds-the-verb-after-the-flags.golden",
+                "engine/cmd/usage.go",
+                "engine/skills/app/project.go",
+                "engine/skills/app/uninstall.go",
+                "engine/skills/install_plan_skill.go",
+                "engine/skills/lock.go",
+                "engine/skills/uninstall_plan.go",
+                "engine/skills/uninstall_plan_test.go",
+                "odd/review-receipts/consolidation-phase9/review-4c93bcbc126ebdf2.review-state.json",
+                "odd/review-receipts/consolidation-phase9/review-742c76834edffca9.review-state.json",
+                "odd/review-receipts/consolidation-phase9/review-d0c27fefe478fb6d.review-state.json",
+                "odd/tasks/consolidation-phase9.md"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-kept-note-wording",
+                "lens": "reliability",
+                "location": "engine/skills/uninstall_plan.go:76-86",
+                "severity": "SUGGESTION",
+                "claim": "RemoveEmptySkillDirs is best effort and reports any directory it could not read or remove as kept. The CLI then prints 'it holds files skills install did not write', which is inaccurate for a permission or I/O failure. No test covers a failing ReadDir or Remove. The uninstall still exits 0 with the files and record gone, so the outcome is safe; only the note can mislead. The task notes already carry this as a known follow-up.",
+                "proof_refs": [
+                  "engine/skills/uninstall_plan.go:76-86",
+                  "engine/cmd/skills_install_cli.go:126-128"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Reviewed all 24 manifest paths for behavior, failure paths, determinism and test coverage. I found no candidate-caused BLOCKER or CRITICAL reliability defect.",
+              "engine/skills/uninstall_plan.go reuses install's planner via planSkill, so an edited, non-regular or unreadable recorded file, an id with no install record, or a procedural id refuses the whole uninstall before any removal. engine/skills/uninstall_plan_test.go and engine/cmd/skills_uninstall_cli_test.go assert the tree is unchanged after each refusal.",
+              "The dry run in engine/skills/app/uninstall.go writes nothing. engine/cmd/skills_install_cli.go prints one 'plan: remove' line per file and a lock update line saying the file stays, and engine/cmd/skills_uninstall_cli_test.go pins that output and the unchanged tree.",
+              "Recorded files already gone, a missing runtime directory, and unrecorded files (kept with their directory) are covered by tests in engine/skills/uninstall_plan_test.go and engine/cmd/skills_uninstall_cli_test.go.",
+              "engine/skills/lock.go makes the uninstall project lock exclusive and takes no overlay lock; the CLI test checks both, and a relative working directory is refused before locking with no lock file created.",
+              "The project-status change in engine/skills/app/project.go lists install records and lets the id filter match either kind. 'Not in lock' fires only when neither matches, and the CLI test covers listing, filtering, unknown id and the state after uninstall.",
+              "The retry hint in engine/skills/install_plan_skill.go names the running verb; install and adopt keep 'run install again', so baseline output is preserved. The argv goldens change only in the verb list."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "494d17dbea9c976f3fb073c2d20b6b6e0ba7efa9cb821b969e0fbcf58028002a",
+    "initial_atomic_start": {
+      "lineage_id": "review-8873061cf9fdb513",
+      "worktree_identity": "sha256:8455002f227f033663d0e7d8b8ff6a885e1c85b482ec52e34017c303452eed87",
+      "target_identity": "sha256:54c73730ec0c24f82f2974dcdb5ab46fc051833007420173ef51b6c1d2da43c5",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "799c940b529e6382928bae8be38f03dfd622fbaa",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "high",
+      "selected_lenses": [
+        "review-risk",
+        "review-resilience",
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 1888,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

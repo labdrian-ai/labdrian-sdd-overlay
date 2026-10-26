@@ -97,6 +97,33 @@ func TestUninstallKeepsAndNamesADirectoryThatHoldsFilesInstallDidNotWrite(t *tes
 	}
 }
 
+// stuckDir is the project file system with one directory that cannot be removed.
+type stuckDir struct {
+	skills.ProjectFS
+	dir string
+}
+
+func (s stuckDir) Remove(name string) error {
+	if name == s.dir {
+		return os.ErrPermission
+	}
+	return s.ProjectFS.Remove(name)
+}
+
+func TestUninstallNamesTheCauseOfADirectoryItCouldNotRemove(t *testing.T) {
+	w, deps := installedWorld(t)
+	deps.Project = stuckDir{deps.Project, filepath.Join(w.project, ".agents", "skills", "proj")}
+
+	r := w.run(skillsUninstall, deps, "uninstall", "proj")
+
+	want := "removed: .claude/skills/proj/SKILL.md\nremoved: .agents/skills/proj/SKILL.md\n" +
+		"note: kept .agents/skills/proj: it could not be removed (permission denied); it holds nothing skills install recorded, so remove it by hand\n" +
+		"uninstalled: proj\n"
+	if r.stdout != want || r.code() != 0 {
+		t.Errorf("exit %d, stdout %q, stderr %q, want stdout %q", r.code(), r.stdout, r.stderr, want)
+	}
+}
+
 func TestUninstallRefusesWhatItCannotUninstall(t *testing.T) {
 	for _, tc := range []struct {
 		name  string

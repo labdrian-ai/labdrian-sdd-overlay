@@ -124,7 +124,11 @@ func skillsUninstall(deps skills.Deps, args []string, stdout, stderr io.Writer, 
 	}
 	tellPaths(stdout, "removed: ", result.Removed)
 	for _, dir := range result.Kept {
-		fmt.Fprintf(stdout, "note: kept %s: it holds files skills install did not write\n", dir)
+		if dir.Err != nil {
+			fmt.Fprintf(stdout, "note: kept %s: it could not be removed (%v); it holds nothing skills install recorded, so remove it by hand\n", dir.Path, dir.Err)
+			continue
+		}
+		fmt.Fprintf(stdout, "note: kept %s: it holds files skills install did not write\n", dir.Path)
 	}
 	fmt.Fprintf(stdout, "uninstalled: %s\n", id)
 	exit(0)

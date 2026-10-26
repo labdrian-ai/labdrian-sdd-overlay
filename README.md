@@ -483,8 +483,10 @@ overlay skills <verb>
     install's rule the other way, all or nothing: a hand-edited recorded file (named), an id with no install record, or a
     procedural skill (project-retire removes those) refuses it, and nothing is removed. A recorded file already gone is
     nothing to remove; a file the record does not list is left, with the directory that holds it ("note: kept <dir>: it
-    holds files skills install did not write"). It reads no registry and no source, and prints "removed: <path>" for
-    each file and then "uninstalled: <id>". project-status lists each install record as "<id> installed files:<n>".
+    holds files skills install did not write"); a directory that cannot be read or removed is kept with its cause ("note:
+    kept <dir>: it could not be removed (<error>); ..."). It reads no registry and no source, and prints "removed: <path>"
+    for each file and then "uninstalled: <id>"; --dry-run prints "plan: remove <path>" for each file and "plan: update
+    <lock> ...". project-status lists each install record as "<id> installed files:<n>".
     Locking: add, remove, sync-manifest, and approve hold an exclusive lock, and validate and install a shared one, on
     .skills.registry.yaml.lock beside the registry (created by the first write, never removed, git-ignored). Shared holders
     never create it, so validate and install work on a read-only overlay; validate, which reads files that must agree,

@@ -15,6 +15,7 @@ package skills
 //	a procedural skill                     refuse, pointing at project-retire
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -39,7 +40,48 @@ func (f *ownFixture) uninstall(id string) (InstallPlan, []string) {
 	if err := ExecuteInstallPlan(plan, f.root, testProjectFS()); err != nil {
 		f.t.Fatalf("uninstall failed: %v", err)
 	}
-	return plan, RemoveEmptySkillDirs(testProjectFS(), f.root, plan)
+	var kept []string
+	for _, k := range RemoveEmptySkillDirs(testProjectFS(), f.root, plan) {
+		if k.Err != nil {
+			f.t.Errorf("%s was kept because %v; want only directories that hold unrecorded files", k.Path, k.Err)
+		}
+		kept = append(kept, k.Path)
+	}
+	return plan, kept
+}
+
+// refusingDirRemoval is the project file system with a directory that cannot be removed.
+type refusingDirRemoval struct {
+	ProjectFS
+	dir string
+}
+
+func (r refusingDirRemoval) Remove(name string) error {
+	if name == r.dir {
+		return os.ErrPermission
+	}
+	return r.ProjectFS.Remove(name)
+}
+
+// A skill directory left only because it could not be removed is reported with the cause, never as
+// one that holds someone's files.
+func TestUninstall_ReportsADirectoryItCouldNotRemoveWithTheCause(t *testing.T) {
+	f := newOwnFixture(t)
+	f.install(skill("pdf", pdfV1))
+	plan, refusals := f.planUninstall("pdf")
+	if len(refusals) != 0 {
+		t.Fatalf("uninstall refused: %v", refusals)
+	}
+	if err := ExecuteInstallPlan(plan, f.root, testProjectFS()); err != nil {
+		t.Fatal(err)
+	}
+	stuck := filepath.Join(f.root, ".agents", "skills", "pdf")
+
+	kept := RemoveEmptySkillDirs(refusingDirRemoval{testProjectFS(), stuck}, f.root, plan)
+
+	if len(kept) != 1 || kept[0].Path != ".agents/skills/pdf" || !errors.Is(kept[0].Err, os.ErrPermission) {
+		t.Errorf("kept = %+v, want .agents/skills/pdf with the permission error", kept)
+	}
 }
 
 func TestUninstall_RemovesEveryRecordedFileTheRecordAndTheSkillDirectories(t *testing.T) {

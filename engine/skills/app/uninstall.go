@@ -27,9 +27,9 @@ type UninstallResult struct {
 	PlannedLock string
 	// Removed is every file that was removed.
 	Removed []string
-	// Kept is every skill directory left because it still holds files the install record did not
-	// list.
-	Kept []string
+	// Kept is every skill directory left: because it still holds files the install record did not
+	// list, or, with the error, because it could not be read or removed.
+	Kept []skills.KeptDir
 }
 
 // UninstallProject removes an installed skill from the project: every file its install record
