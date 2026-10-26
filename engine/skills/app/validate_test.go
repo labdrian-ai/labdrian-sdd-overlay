@@ -20,15 +20,15 @@ func (treeOf) ReadSkillSource(string) ([]skills.SourceFile, error) {
 	return nil, errors.New("not used")
 }
 
-// approvalStore holds SKILL.md files and records by skill path and id.
+// approvalStore holds the files of skills and their records by skill path and id.
 type approvalStore struct {
-	skillMD map[string][]byte
+	trees   map[string][]skills.SkillEntry
 	records map[string][]byte
 }
 
-func (s approvalStore) ReadSkill(_, path string) ([]byte, error) {
-	if data, ok := s.skillMD[path]; ok {
-		return data, nil
+func (s approvalStore) ReadSkillTree(_, path string) ([]skills.SkillEntry, error) {
+	if entries, ok := s.trees[path]; ok {
+		return entries, nil
 	}
 	return nil, fs.ErrNotExist
 }
@@ -40,9 +40,19 @@ func (s approvalStore) ReadRecord(_, id string) ([]byte, error) {
 	return nil, fs.ErrNotExist
 }
 
-func record(t *testing.T, id string, skillMD []byte) []byte {
+// skillOf is the files of a skill whose directory holds just this SKILL.md.
+func skillOf(skillMD string) []skills.SkillEntry {
+	return []skills.SkillEntry{{Rel: "SKILL.md", Data: []byte(skillMD)}}
+}
+
+// record is the record of version 2 that approves exactly these files of skill id.
+func record(t *testing.T, id string, entries []skills.SkillEntry) []byte {
 	t.Helper()
-	data, err := skills.SerializeApprovalRecord(skills.ApprovalRecord{Skill: id, SHA256: skills.SkillDigest(skillMD), ApprovedAt: "2026-09-30T12:00:00Z", Approver: "reviewer"})
+	digest, err := skills.SkillDigest(entries)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := skills.SerializeApprovalRecord(skills.ApprovalRecord{Skill: id, SHA256: digest, ApprovedAt: "2026-09-30T12:00:00Z", Approver: "reviewer"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -60,13 +70,13 @@ type world struct {
 
 func newWorld(t *testing.T) *world {
 	t.Helper()
-	alpha, beta := []byte("alpha skill"), []byte("beta skill")
+	alpha, beta := skillOf("alpha skill"), skillOf("beta skill")
 	return &world{
 		registry: registryOf(entry("alpha", "custom", "claude"), entry("beta", "custom", "claude")),
 		manifest: map[string]string{"overlay.manifest": "alpha/SKILL.md custom\nbeta/SKILL.md custom\n"},
 		tree:     treeOf{files: []string{"alpha/SKILL.md", "beta/SKILL.md"}},
 		approved: approvalStore{
-			skillMD: map[string][]byte{"alpha": alpha, "beta": beta},
+			trees:   map[string][]skills.SkillEntry{"alpha": alpha, "beta": beta},
 			records: map[string][]byte{"alpha": record(t, "alpha", alpha), "beta": record(t, "beta", beta)},
 		},
 	}
@@ -96,8 +106,9 @@ func TestValidateOverlayPassesAnOverlayWhoseChecksAreAllClean(t *testing.T) {
 	if err != nil || !res.Passed() {
 		t.Fatalf("ValidateOverlay = %+v, %v, want a pass", res, err)
 	}
-	if res.SkillCount != 2 || res.DiskFiles != 2 || res.Approvals.Global != 2 || res.Approvals.Approved != 2 || res.Approvals.Grandfathered != 0 {
-		t.Errorf("the tallies are %+v, want 2 skills, 2 files, 2 global, 2 approved", res)
+	// SkillFileMissing counts the global skills set aside because they have no SKILL.md; both have one.
+	if res.SkillCount != 2 || res.DiskFiles != 2 || res.Approvals.Global != 2 || res.Approvals.Approved != 2 || res.Approvals.SkillFileMissing != 0 {
+		t.Errorf("the tallies are %+v, want 2 skills, 2 files, 2 global, 2 approved, none set aside", res)
 	}
 }
 
@@ -129,9 +140,9 @@ func TestValidateOverlayTellsARegistryItCannotUse(t *testing.T) {
 
 func TestValidateOverlayReportsEveryDivergenceOfEveryCheckInOneRun(t *testing.T) {
 	w := newWorld(t)
-	w.manifest["overlay.manifest"] = "alpha/SKILL.md custom\nghost/SKILL.md custom\n"          // beta has no row; ghost has no entry
-	w.tree.files = []string{"alpha/SKILL.md", "beta/SKILL.md", "stray.txt"}                    // stray is on disk and not in the manifest
-	w.approved.records = map[string][]byte{"alpha": record(t, "alpha", []byte("alpha skill"))} // beta is not approved
+	w.manifest["overlay.manifest"] = "alpha/SKILL.md custom\nghost/SKILL.md custom\n"           // beta has no row; ghost has no entry
+	w.tree.files = []string{"alpha/SKILL.md", "beta/SKILL.md", "stray.txt"}                     // stray is on disk and not in the manifest
+	w.approved.records = map[string][]byte{"alpha": record(t, "alpha", skillOf("alpha skill"))} // beta is not approved
 	res, err := ValidateOverlay(w.ports(), input())
 	if err != nil {
 		t.Fatal(err)
@@ -299,22 +310,95 @@ func TestValidateOverlayListsTheSourceRootItIsGivenAsItWasGiven(t *testing.T) {
 	}
 }
 
-// A skill the baseline names, whose bytes are the pinned ones, passes with no record and is counted
-// as grandfathered; one byte more and it is unapproved. The baseline is the one the caller names.
-func TestValidateOverlayCountsAGrandfatheredSkillAndRefusesItOnceItsBytesChange(t *testing.T) {
+// No global skill passes without a valid record of its files: one with no record is unapproved,
+// whatever its id or its history, and the tally has no other way to count it.
+func TestValidateOverlayRefusesAGlobalSkillWithNoRecord(t *testing.T) {
 	w := newWorld(t)
 	delete(w.approved.records, "beta")
-	ports := w.ports()
-	ports.Baseline = func(id string) (string, bool) { return skills.SkillDigest([]byte("beta skill")), id == "beta" }
 
-	res, err := ValidateOverlay(ports, input())
-	if err != nil || !res.Passed() || res.Approvals.Grandfathered != 1 || res.Approvals.Approved != 1 {
-		t.Fatalf("ValidateOverlay = %+v, %v, want a pass with beta grandfathered", res, err)
+	res, err := ValidateOverlay(w.ports(), input())
+
+	if err != nil || res.Passed() || len(res.Unapproved) != 1 || res.Unapproved[0].Path != "beta" || res.Unapproved[0].Class != skills.DivApprovalMissing {
+		t.Fatalf("ValidateOverlay = %+v, %v, want beta unapproved as APPROVAL_MISSING", res, err)
 	}
+	if res.Approvals.Global != 2 || res.Approvals.Approved != 1 {
+		t.Errorf("the tally is %+v, want 2 global and 1 approved", res.Approvals)
+	}
+}
 
-	w.approved.skillMD["beta"] = []byte("beta skill, changed")
-	res, err = ValidateOverlay(ports, input())
-	if err != nil || res.Passed() || len(res.Unapproved) != 1 || res.Unapproved[0].Class != skills.DivApprovalMissing {
-		t.Errorf("ValidateOverlay = %+v, %v, want beta unapproved once its bytes changed", res, err)
+// The approval is of every file of the skill: a file added beside SKILL.md after the record was
+// made, or one removed, or one changed, is a skill whose approval is stale.
+func TestValidateOverlayRefusesASkillWhoseFilesChangedAfterTheApproval(t *testing.T) {
+	for name, change := range map[string]func(files []skills.SkillEntry) []skills.SkillEntry{
+		"a file added": func(files []skills.SkillEntry) []skills.SkillEntry {
+			return append(files, skills.SkillEntry{Rel: "scripts/run.sh", Data: []byte("echo hi\n")})
+		},
+		"a file removed": func(files []skills.SkillEntry) []skills.SkillEntry { return files[:1] },
+		"a file changed": func(files []skills.SkillEntry) []skills.SkillEntry {
+			files[1].Data = []byte("echo changed\n")
+			return files
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			w := newWorld(t)
+			approvedFiles := []skills.SkillEntry{{Rel: "SKILL.md", Data: []byte("beta skill")}, {Rel: "scripts/run.sh", Data: []byte("echo hi\n")}}
+			w.approved.trees["beta"] = approvedFiles
+			w.approved.records["beta"] = record(t, "beta", approvedFiles)
+			if res, err := ValidateOverlay(w.ports(), input()); err != nil || !res.Passed() {
+				t.Fatalf("before the change: %+v, %v, want a pass", res, err)
+			}
+
+			w.approved.trees["beta"] = change([]skills.SkillEntry{{Rel: "SKILL.md", Data: []byte("beta skill")}, {Rel: "scripts/run.sh", Data: []byte("echo hi\n")}})
+			res, err := ValidateOverlay(w.ports(), input())
+
+			if err != nil || res.Passed() || len(res.Unapproved) != 1 || res.Unapproved[0].Class != skills.DivApprovalStale {
+				t.Errorf("ValidateOverlay = %+v, %v, want beta unapproved as APPROVAL_STALE", res, err)
+			}
+		})
+	}
+}
+
+// A record of version 1 approved SKILL.md alone: it is stale even while SKILL.md is what it was,
+// and the finding says what it covered and which command approves the skill again.
+func TestValidateOverlayRefusesARecordOfVersionOne(t *testing.T) {
+	w := newWorld(t)
+	w.approved.records["beta"] = []byte(legacyRecord("beta", "beta skill"))
+
+	res, err := ValidateOverlay(w.ports(), input())
+
+	if err != nil || res.Passed() || len(res.Unapproved) != 1 || res.Unapproved[0].Class != skills.DivApprovalStale {
+		t.Fatalf("ValidateOverlay = %+v, %v, want beta unapproved as APPROVAL_STALE", res, err)
+	}
+	for _, want := range []string{"covers only SKILL.md", "labdrian skills approve --id beta"} {
+		if !strings.Contains(res.Unapproved[0].Detail, want) {
+			t.Errorf("detail %q does not say %q", res.Unapproved[0].Detail, want)
+		}
+	}
+}
+
+// A record of any other version cannot be read: it is malformed, not stale.
+func TestValidateOverlayTakesARecordOfAnotherVersionForMalformed(t *testing.T) {
+	w := newWorld(t)
+	w.approved.records["beta"] = []byte(strings.Replace(string(record(t, "beta", skillOf("beta skill"))), `"version": 2`, `"version": 3`, 1))
+
+	res, err := ValidateOverlay(w.ports(), input())
+
+	if err != nil || len(res.Unapproved) != 1 || res.Unapproved[0].Class != skills.DivApprovalMalformed {
+		t.Errorf("ValidateOverlay = %+v, %v, want beta unapproved as APPROVAL_MALFORMED", res, err)
+	}
+}
+
+// What an approval cannot cover makes the skill unverifiable, whatever its record says.
+func TestValidateOverlayCannotVerifyASkillWithALinkInIt(t *testing.T) {
+	w := newWorld(t)
+	w.approved.trees["beta"] = append(skillOf("beta skill"), skills.SkillEntry{Rel: "alias.md", Type: fs.ModeSymlink})
+
+	res, err := ValidateOverlay(w.ports(), input())
+
+	if err != nil || res.Passed() || len(res.Unapproved) != 1 || res.Unapproved[0].Class != skills.DivApprovalUnverifiable {
+		t.Fatalf("ValidateOverlay = %+v, %v, want beta unapproved as APPROVAL_UNVERIFIABLE", res, err)
+	}
+	if !strings.Contains(res.Unapproved[0].Detail, "alias.md is a symbolic link") {
+		t.Errorf("detail %q does not name the link", res.Unapproved[0].Detail)
 	}
 }

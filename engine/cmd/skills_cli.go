@@ -211,8 +211,8 @@ func tellValidate(outcome validateOutcome, stdout, stderr io.Writer, exit func(i
 	}
 	fmt.Fprintf(stdout, "registry and manifest aligned (%d skills)\n", res.SkillCount)
 	fmt.Fprintf(stdout, "skills/ on disk matches overlay.manifest (%d files)\n", res.DiskFiles)
-	fmt.Fprintf(stdout, "global skill approvals verified (%d skills: %d approved, %d grandfathered)\n",
-		res.Approvals.Global, res.Approvals.Approved, res.Approvals.Grandfathered)
+	fmt.Fprintf(stdout, "global skill approvals verified (%d skills: %d approved)\n",
+		res.Approvals.Global, res.Approvals.Approved)
 }
 
 func tellDivergences(divs []skills.Divergence, stderr io.Writer) {

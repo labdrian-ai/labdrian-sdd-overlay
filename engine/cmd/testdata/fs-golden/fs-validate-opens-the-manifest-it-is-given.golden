@@ -32,7 +32,7 @@ exit: 0
 --- stdout ---
 registry and manifest aligned (4 skills)
 skills/ on disk matches overlay.manifest (4 files)
-global skill approvals verified (3 skills: 3 approved, 0 grandfathered)
+global skill approvals verified (3 skills: 3 approved)
 --- stderr ---
 
 # a manifest whose last row has no line end
@@ -41,7 +41,7 @@ exit: 0
 --- stdout ---
 registry and manifest aligned (4 skills)
 skills/ on disk matches overlay.manifest (4 files)
-global skill approvals verified (3 skills: 3 approved, 0 grandfathered)
+global skill approvals verified (3 skills: 3 approved)
 --- stderr ---
 
 # a manifest with a line longer than the reader's buffer
@@ -57,7 +57,7 @@ exit: 0
 --- stdout ---
 registry and manifest aligned (4 skills)
 skills/ on disk matches overlay.manifest (4 files)
-global skill approvals verified (3 skills: 3 approved, 0 grandfathered)
+global skill approvals verified (3 skills: 3 approved)
 --- stderr ---
 
 # a manifest that is a dangling link

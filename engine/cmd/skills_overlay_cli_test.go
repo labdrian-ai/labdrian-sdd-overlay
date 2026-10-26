@@ -77,11 +77,23 @@ func newOverlayWorld(t *testing.T) overlayWorld {
 	return w
 }
 
-// skill writes the SKILL.md of id and the approval of exactly those bytes.
+// skillMDDigest is the digest an approval binds for a skill whose directory holds this SKILL.md
+// and nothing else.
+func skillMDDigest(t testing.TB, content string) string {
+	t.Helper()
+	digest, err := skills.SkillDigest([]skills.SkillEntry{{Rel: "SKILL.md", Data: []byte(content)}})
+	if err != nil {
+		t.Fatalf("the digest of a SKILL.md alone: %v", err)
+	}
+	return digest
+}
+
+// skill writes the SKILL.md of id and the approval of exactly those bytes, which are all there is
+// of the skill.
 func (w overlayWorld) skill(id, content string) {
 	w.t.Helper()
 	writeTestFile(w.t, filepath.Join(w.root, id, "SKILL.md"), content)
-	record, err := skills.SerializeApprovalRecord(skills.ApprovalRecord{Skill: id, SHA256: skills.SkillDigest([]byte(content)), ApprovedAt: overlayApprovedAt, Approver: "fixture-reviewer"})
+	record, err := skills.SerializeApprovalRecord(skills.ApprovalRecord{Skill: id, SHA256: skillMDDigest(w.t, content), ApprovedAt: overlayApprovedAt, Approver: "fixture-reviewer"})
 	if err != nil {
 		w.t.Fatal(err)
 	}
@@ -92,12 +104,13 @@ func (w overlayWorld) flags() []string {
 	return []string{"--registry", w.reg, "--manifest", w.man, "--source-root", w.root}
 }
 
-// readerApprovals is the approval store of a test: the SKILL.md and the record are read from the
-// paths the domain names through read, so that a reader that gates or counts sees these too.
+// readerApprovals is the approval store of a test: the record is read from the path the domain
+// names through read, so that a reader that gates or counts sees it too, and the files of a skill
+// are read from the file system as the program reads them.
 type readerApprovals struct{ read func(string) ([]byte, error) }
 
-func (r readerApprovals) ReadSkill(sourceRoot, path string) ([]byte, error) {
-	return r.read(skills.SkillMDPath(sourceRoot, path))
+func (readerApprovals) ReadSkillTree(sourceRoot, path string) ([]skills.SkillEntry, error) {
+	return skillsfs.Approvals{}.ReadSkillTree(sourceRoot, path)
 }
 
 func (r readerApprovals) ReadRecord(sourceRoot, id string) ([]byte, error) {
@@ -217,7 +230,7 @@ func TestOverlayVerbsTellWhatTheyDid(t *testing.T) {
 	}
 
 	r = w.run(skillsApprove, deps, append([]string{"approve", "--id", "newbie", "--approver", "reviewer"}, w.flags()...)...)
-	digest := skills.SkillDigest([]byte(overlaySkillMD("newbie")))
+	digest := skillMDDigest(t, overlaySkillMD("newbie"))
 	want := "unchanged: newbie\nsha256: " + digest + "\nrecord: " + filepath.ToSlash(skills.ApprovalRecordPath(w.root, "newbie")) + "\n"
 	if r.stdout != want || r.stderr != "" || !reflect.DeepEqual(r.exits, []int{0}) {
 		t.Errorf("approve = %q, %q, %v, want %q", r.stdout, r.stderr, r.exits, want)

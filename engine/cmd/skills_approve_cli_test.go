@@ -77,7 +77,7 @@ func (e approveEnv) withNow(now func() string) approveEnv { e.now = now; return 
 func TestApproveTellsTheApprovalOfTheExactBytes(t *testing.T) {
 	e := newApproveEnv(t, "my-skill")
 	r := e.run(e.args())
-	digest := skills.SkillDigest([]byte(overlaySkillMD("my-skill")))
+	digest := skillMDDigest(t, overlaySkillMD("my-skill"))
 	want := "approved: my-skill\nsha256: " + digest + "\nrecord: " + filepath.ToSlash(e.recordPath()) + "\n"
 	if r.code() != 0 || r.stdout != want || r.stderr != "" {
 		t.Errorf("approve = exit %d, %q, %q, want %q", r.code(), r.stdout, r.stderr, want)

@@ -1,7 +1,7 @@
 {
-  "version": 1,
+  "version": 2,
   "skill": "judgment-day",
-  "sha256": "dd875086629fd4bd3c58dcfcf8e9ca4f29fac356dfcae3a0f2c9d46fb72a31dc",
-  "approved_at": "2026-10-22T15:16:02Z",
-  "approver": "labdrian-ai"
+  "sha256": "2354206fb75ba932ce85e5b2765cc0276f7ca261686f98c4a1d33bf662c34e90",
+  "approved_at": "2026-10-26T15:27:21Z",
+  "approver": "labdrian"
 }

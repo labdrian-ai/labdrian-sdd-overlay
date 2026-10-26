@@ -20,9 +20,9 @@ package main
 //	  add, manifest sync, install, project register,
 //	  revise, retire, drift, report-only retirement
 //	skills add needs a record for the exact bytes      /Approval_AddNeedsARecordForTheExactBytes
-//	grandfathered baseline                             /Baseline_GrandfathersOnlyTheFixedList
-//	approve warns, not refuses, for baseline skills    /Baseline_ApproveWarnsForSkillsThatPredateTheLintBudget
-//	  that fail the hard lint; others still refused
+//	no global skill is excused from approval           /Approval_NoSkillIsGrandfathered
+//	approve warns, not refuses, for lint-baseline      /Baseline_ApproveWarnsForSkillsThatPredateTheLintBudget
+//	  skills that fail the hard lint; others still refused
 //	approve guard: denial, other commands, family      /ApproveGuard_DeniesTheAgentAndManagesItsSettingsFamily
 //	concurrent add and install are serialized          not repeated here: the multi-process tests in engine/skills
 //	                                                   prove it with 15 rounds of 19 real processes, which a
@@ -250,6 +250,13 @@ func phase8Digest(data []byte) string {
 	return hex.EncodeToString(sum[:])
 }
 
+// phase8ApprovalDigest is the digest an approval binds for a skill whose directory holds a
+// SKILL.md and nothing else: the SHA-256 of the one line that `sha256sum` writes for it. It is made
+// here from the rule, not by the code under test.
+func phase8ApprovalDigest(skillMD string) string {
+	return phase8Digest([]byte(phase8Digest([]byte(skillMD)) + " -  SKILL.md\n"))
+}
+
 func phase8Read(t *testing.T, path string) []byte {
 	t.Helper()
 	data, err := os.ReadFile(path)
@@ -334,7 +341,7 @@ func TestPhase8Acceptance(t *testing.T) {
 	}{
 		{"Lifecycle_DraftToProjectWithDriftAndReportOnlyRetirement", phase8Lifecycle},
 		{"Approval_AddNeedsARecordForTheExactBytes", phase8Approval},
-		{"Baseline_GrandfathersOnlyTheFixedList", phase8Baseline},
+		{"Approval_NoSkillIsGrandfathered", phase8NoGrandfathering},
 		{"Baseline_ApproveWarnsForSkillsThatPredateTheLintBudget", phase8BaselineLintBudget},
 		{"ApproveGuard_DeniesTheAgentAndManagesItsSettingsFamily", phase8ApproveGuard},
 		{"Install_OwnsByHashKeepsForeignFilesAndAdoptIsExplicit", phase8Install},
@@ -387,11 +394,12 @@ func phase8Lifecycle(t *testing.T, binary string) {
 	w.overlayVerb("add", id).expect(t, "add before approval", 1, "[APPROVAL_MISSING]", `skill "`+id+`"`)
 	phase8Same(t, "a refused add", before, phase8Overlay(t, w))
 
-	// 3. Approval: the record names the skill and the digest of the exact bytes.
+	// 3. Approval: the record names the skill and the digest of its files, which are the one
+	// SKILL.md.
 	approved := w.approve(id, "alice").must(t, "approve the copied skill")
-	digest := phase8Digest([]byte(draftBytes))
+	digest := phase8ApprovalDigest(draftBytes)
 	if !strings.Contains(approved.stdout, "sha256: "+digest) {
-		t.Errorf("approve printed %q, want the digest %s of the file", approved.stdout, digest)
+		t.Errorf("approve printed %q, want the digest %s of the files", approved.stdout, digest)
 	}
 	var record struct {
 		Version    int    `json:"version"`
@@ -403,8 +411,8 @@ func phase8Lifecycle(t *testing.T, binary string) {
 	if err := json.Unmarshal(phase8Read(t, w.recordPath(id)), &record); err != nil {
 		t.Fatalf("the approval record is not JSON: %v", err)
 	}
-	if record.Version != 1 || record.Skill != id || record.SHA256 != digest || record.Approver != "alice" || record.ApprovedAt == "" {
-		t.Errorf("approval record = %+v, want version 1, skill %s, digest %s, approver alice, and a time", record, id, digest)
+	if record.Version != 2 || record.Skill != id || record.SHA256 != digest || record.Approver != "alice" || record.ApprovedAt == "" {
+		t.Errorf("approval record = %+v, want version 2, skill %s, digest %s, approver alice, and a time", record, id, digest)
 	}
 
 	// 4. add registers it in the registry and the manifest together.
@@ -426,7 +434,7 @@ func phase8Lifecycle(t *testing.T, binary string) {
 	w.overlayVerb("validate").expect(t, "validate before the manifest sync", 1, "MISSING_IN_MANIFEST", projSkill)
 	w.overlayVerb("sync-manifest").expect(t, "sync-manifest", 0, "1 added")
 	w.overlayVerb("validate").expect(t, "validate after the manifest sync", 0,
-		"registry and manifest aligned (3 skills)", "global skill approvals verified (2 skills: 2 approved, 0 grandfathered)")
+		"registry and manifest aligned (3 skills)", "global skill approvals verified (2 skills: 2 approved)")
 
 	// 6. install puts the project-scoped skill in BOTH runtime directories, byte for
 	// byte, records it by hash, and a second run changes nothing.
@@ -782,73 +790,66 @@ func phase8Approval(t *testing.T, binary string) {
 	w.overlayVerb("add", "edited").expect(t, "add after approving the new bytes", 0, "added: edited")
 }
 
-// --- baseline ----------------------------------------------------------------
+// --- no skill is grandfathered ---------------------------------------------------
 
-// phase8BaselineSkill finds a grandfathered skill whose bytes in this repository are
-// still the ones the baseline pins, and returns its id and bytes. With lintClean it
-// also requires that the skill passes the hard lint rules; without it, that it fails
-// them, as most baseline skills do today. It is the one place this file reads the
-// repository's own skills/ tree, read-only: the compiled baseline pins the SHA-256 of
-// real files, so the only bytes that can exercise it through the built binary are
-// those files. A baseline skill that was changed and approved since is skipped over;
-// the pin itself is tested in engine/skills
-// (TestApprovalBaseline_PinnedToTheRepositoryRegistry), not here. ok is false when no
-// skill qualifies, and the caller decides whether that skips the test or only a step.
-func phase8BaselineSkill(t *testing.T, lintClean bool) (id string, data []byte, ok bool) {
-	t.Helper()
-	for _, b := range skills.ApprovalBaseline() {
-		data, err := os.ReadFile(filepath.Join("..", "..", "skills", b.ID, "SKILL.md"))
-		if err != nil || skills.SkillDigest(data) != b.SHA256 {
-			continue
-		}
-		if hard, _ := skills.LintSkillFile(data); (len(hard) == 0) == lintClean {
-			return b.ID, data, true
-		}
-	}
-	return "", nil, false
-}
-
-func phase8Baseline(t *testing.T, binary string) {
-	// This test's last step approves a changed baseline skill and expects no warning, so
-	// it needs one that passes the lint; the ones that fail it are the next test's.
-	baseID, baseBytes, ok := phase8BaselineSkill(t, true)
-	if !ok {
-		t.Skip("no baseline skill still has the bytes the baseline pins and passes the hard lint rules, so the compiled baseline cannot be exercised through the binary")
-	}
+// phase8NoGrandfathering holds that a global skill is excused from approval for nothing it is:
+// the id of a skill that predates the approval record, and the bytes it had then, need a record
+// like any other skill's. (Until Phase 9 the skills that existed at the Phase 8 base were
+// exempt while their SKILL.md was unchanged.)
+func phase8NoGrandfathering(t *testing.T, binary string) {
+	const formerlyGrandfathered = baselineSkillID
 	w := newPhase8World(t, binary)
 	w.writeOverlay(
 		phase8Registry(
-			phase8RegistryEntry{id: baseID, scope: "global"},
+			phase8RegistryEntry{id: formerlyGrandfathered, scope: "global"},
 			phase8RegistryEntry{id: "outsider", scope: "global"},
-			phase8RegistryEntry{id: "copycat", scope: "global"},
 		),
-		phase8Manifest(baseID, "outsider", "copycat"))
-	w.writeSkill(baseID, string(baseBytes))
+		phase8Manifest(formerlyGrandfathered, "outsider"))
+	w.writeSkill(formerlyGrandfathered, phase8SkillMD(formerlyGrandfathered, "Follow the old procedure."))
 	w.writeSkill("outsider", phase8SkillMD("outsider", "Follow the outsider procedure."))
-	// The baseline is per skill id: the pinned bytes under another id are not excused.
-	w.writeSkill("copycat", string(baseBytes))
 
-	// Without any record: the baseline skill validates, the two others do not.
-	r := w.overlayVerb("validate").expect(t, "validate", 1, "[APPROVAL_MISSING] outsider", "[APPROVAL_MISSING] copycat")
-	if strings.Contains(r.stderr, "[APPROVAL_MISSING] "+baseID+":") {
-		t.Errorf("the baseline skill %s was refused without a record:\n%s", baseID, r.stderr)
+	// Without any record: neither skill validates, and neither is told it is excused.
+	r := w.overlayVerb("validate").expect(t, "validate", 1,
+		"[APPROVAL_MISSING] "+formerlyGrandfathered, "[APPROVAL_MISSING] outsider")
+	if strings.Contains(r.stderr+r.stdout, "grandfathered") {
+		t.Errorf("validate speaks of a grandfathered skill:\n%s%s", r.stdout, r.stderr)
 	}
-	for _, id := range []string{baseID, "outsider", "copycat"} {
-		if _, err := os.Stat(w.recordPath(id)); !os.IsNotExist(err) {
-			t.Errorf("a record exists for %s before any approval (stat: %v)", id, err)
+
+	w.approve(formerlyGrandfathered, "alice").must(t, "approve the skill that used to be excused")
+	w.approve("outsider", "alice").must(t, "approve outsider")
+	r = w.overlayVerb("validate").expect(t, "validate with both approved", 0, "(2 skills: 2 approved)")
+	if strings.Contains(r.stdout, "grandfathered") {
+		t.Errorf("the summary of validate still counts grandfathered skills: %q", r.stdout)
+	}
+}
+
+// --- skills of the lint baseline, which predate the lint budget ------------------
+
+// phase8LintBaselineSkill finds a skill of this repository that is on the lint baseline and whose
+// SKILL.md fails the hard lint rules, as most of them do today, and returns its id and bytes. It
+// is the one place this file reads the repository's own skills/ tree, read-only: the real bytes
+// are copied into an overlay of the test's own, and nothing of what is read is required to be
+// approved. The lint baseline is asked as approve asks it (skills.BaselineLintDecision). ok is
+// false when no skill qualifies, and the caller decides whether that skips the test.
+func phase8LintBaselineSkill(t *testing.T) (id string, data []byte, ok bool) {
+	t.Helper()
+	tree := filepath.Join("..", "..", "skills")
+	dirs, err := os.ReadDir(tree)
+	if err != nil {
+		return "", nil, false
+	}
+	for _, dir := range dirs {
+		data, err := os.ReadFile(filepath.Join(tree, dir.Name(), "SKILL.md"))
+		if err != nil {
+			continue
+		}
+		if hard, _ := skills.LintSkillFile(data); len(hard) > 0 {
+			if _, refused := skills.BaselineLintDecision(dir.Name(), hard); !refused {
+				return dir.Name(), data, true
+			}
 		}
 	}
-	w.approve("outsider", "alice").must(t, "approve outsider")
-	w.approve("copycat", "alice").must(t, "approve copycat")
-	w.overlayVerb("validate").expect(t, "validate with the two others approved", 0, "(3 skills: 2 approved, 1 grandfathered)")
-
-	// The exemption lasts only while the bytes are the pinned ones: change a byte, and
-	// the baseline skill needs a record like any other, and the refusal says why.
-	w.writeSkill(baseID, string(baseBytes)+"\n")
-	w.overlayVerb("validate").expect(t, "validate after changing a baseline skill", 1,
-		"[APPROVAL_MISSING] "+baseID, "differs from the grandfathered baseline")
-	w.approve(baseID, "alice").must(t, "approve the changed baseline skill")
-	w.overlayVerb("validate").expect(t, "validate with every skill approved", 0, "(3 skills: 3 approved, 0 grandfathered)")
+	return "", nil, false
 }
 
 // --- baseline skills that predate the lint budget ------------------------------
@@ -877,38 +878,37 @@ func phase8BaselineWarnings(t *testing.T, md string) string {
 	return sb.String()
 }
 
-// phase8BaselineLintBudget is the scenario an upstream merge creates for the baseline
-// skills that fail the hard lint (most of them): their bytes change, validate asks for
-// an approval, and approve must be able to give it. A skill outside the baseline gets no
-// such allowance.
+// phase8BaselineLintBudget is the scenario of the skills of the lint baseline that fail the
+// hard lint (most of them): nothing excuses them from approval, validate asks for it, and
+// approve must be able to give it, again after an upstream merge changes their files. A
+// skill outside the lint baseline gets no such allowance.
 func phase8BaselineLintBudget(t *testing.T, binary string) {
-	t.Run("a changed baseline skill that fails the lint is approved with warnings", func(t *testing.T) {
+	t.Run("a skill of the lint baseline that fails the lint is approved with warnings", func(t *testing.T) {
 		w := newPhase8World(t, binary)
-		baseID := skills.ApprovalBaseline()[0].ID
+		baseID := baselineSkillID
 		md := phase8OverBudgetSkillMD(baseID)
 		wantWarnings := phase8BaselineWarnings(t, md)
 		w.writeOverlay(phase8Registry(phase8RegistryEntry{id: baseID, scope: "global"}), phase8Manifest(baseID))
 		w.writeSkill(baseID, md)
 
-		// validate asks for the approval the merge made necessary...
-		w.overlayVerb("validate").expect(t, "validate a changed baseline skill", 1,
-			"[APPROVAL_MISSING] "+baseID, "differs from the grandfathered baseline")
+		// validate asks for the approval, as it does for any global skill...
+		w.overlayVerb("validate").expect(t, "validate a baseline skill", 1, "[APPROVAL_MISSING] "+baseID)
 
-		// ...a skill outside the baseline with the very same finding is refused, and no
+		// ...a skill outside the lint baseline with the very same finding is refused, and no
 		// record is written for it...
 		strayRoot := filepath.Join(w.dir, "outside", "skills")
 		writeFixtureFile(t, filepath.Join(strayRoot, "outsider", "SKILL.md"), phase8OverBudgetSkillMD("outsider"))
 		refused := w.skillsVerb(w.dir, "approve", "--id", "outsider", "--approver", "alice", "--source-root", strayRoot, "--registry", w.registryPath()).
-			expect(t, "approve outside the baseline", 1, "[lint:body-hard-budget]")
+			expect(t, "approve outside the lint baseline", 1, "[lint:body-hard-budget]")
 		if strings.Contains(refused.stderr, "warning:") {
-			t.Errorf("a skill outside the baseline was warned about instead of refused: %q", refused.stderr)
+			t.Errorf("a skill outside the lint baseline was warned about instead of refused: %q", refused.stderr)
 		}
 		if _, err := os.Stat(filepath.Join(strayRoot, "outsider", skills.ApprovalRecordName)); !os.IsNotExist(err) {
 			t.Errorf("a refused approve wrote a record (stat: %v)", err)
 		}
 
 		// ...and the baseline skill is approved: exit 0, one warning per finding on stderr,
-		// a record of the exact bytes in the unchanged format.
+		// a record of the version that covers every file of the skill.
 		approved := w.approve(baseID, "alice").expect(t, "approve a baseline skill with lint findings", 0, "approved: "+baseID)
 		if approved.stderr != wantWarnings {
 			t.Errorf("approve printed %q on stderr, want %q", approved.stderr, wantWarnings)
@@ -922,32 +922,33 @@ func phase8BaselineLintBudget(t *testing.T, binary string) {
 		if err := json.Unmarshal(phase8Read(t, w.recordPath(baseID)), &record); err != nil {
 			t.Fatalf("the approval record is not JSON: %v", err)
 		}
-		if record.Version != 1 || record.Skill != baseID || record.SHA256 != phase8Digest([]byte(md)) || record.Approver != "alice" {
-			t.Errorf("approval record = %+v, want version 1, skill %s, the digest of the exact bytes, approver alice", record, baseID)
+		if record.Version != 2 || record.Skill != baseID || record.SHA256 != phase8ApprovalDigest(md) || record.Approver != "alice" {
+			t.Errorf("approval record = %+v, want version 2, skill %s, the digest of its files, approver alice", record, baseID)
 		}
-		w.overlayVerb("validate").expect(t, "validate after approving", 0, "(1 skills: 1 approved, 0 grandfathered)")
+		w.overlayVerb("validate").expect(t, "validate after approving", 0, "(1 skills: 1 approved)")
 	})
 
-	// The same path with the real bytes of a baseline skill that fails the lint, changed
-	// by one byte as a merge would change them. The pinned bytes come from this
-	// repository's own skills/ tree; when no baseline skill has them any more (they were
-	// all rewritten or approved since), the synthetic step above is the coverage.
-	t.Run("a real baseline skill that fails the lint, unchanged and then changed", func(t *testing.T) {
-		id, data, ok := phase8BaselineSkill(t, false)
+	// The same path with the real bytes of a skill of the lint baseline that fails the lint,
+	// then changed by one byte as a merge would change them. The bytes come from this
+	// repository's own skills/ tree and are copied into an overlay of the test's own; when no
+	// skill of the lint baseline fails the lint any more (they were all rewritten since), the
+	// synthetic step above is the coverage.
+	t.Run("a real skill of the lint baseline that fails the lint, approved and then changed", func(t *testing.T) {
+		id, data, ok := phase8LintBaselineSkill(t)
 		if !ok {
-			t.Skip("no baseline skill still has the bytes the baseline pins and fails the hard lint rules")
+			t.Skip("no skill of the lint baseline fails the hard lint rules any more")
 		}
 		w := newPhase8World(t, binary)
 		w.writeOverlay(phase8Registry(phase8RegistryEntry{id: id, scope: "global"}), phase8Manifest(id))
 		w.writeSkill(id, string(data))
 		wantWarnings := phase8BaselineWarnings(t, string(data))
 
-		w.overlayVerb("validate").expect(t, "validate the unchanged skill", 0, "(1 skills: 0 approved, 1 grandfathered)")
-		r := w.approve(id, "alice").expect(t, "approve the unchanged skill", 0, "approved: "+id)
+		w.overlayVerb("validate").expect(t, "validate the skill with no record", 1, "[APPROVAL_MISSING] "+id)
+		r := w.approve(id, "alice").expect(t, "approve the skill", 0, "approved: "+id)
 		if r.stderr != wantWarnings {
-			t.Errorf("approve of the unchanged skill printed %q on stderr, want %q", r.stderr, wantWarnings)
+			t.Errorf("approve of the skill printed %q on stderr, want %q", r.stderr, wantWarnings)
 		}
-		w.overlayVerb("validate").expect(t, "validate the approved skill", 0, "(1 skills: 1 approved, 0 grandfathered)")
+		w.overlayVerb("validate").expect(t, "validate the approved skill", 0, "(1 skills: 1 approved)")
 
 		changed := string(data) + "\n"
 		w.writeSkill(id, changed)
@@ -956,7 +957,7 @@ func phase8BaselineLintBudget(t *testing.T, binary string) {
 		if r.stderr != phase8BaselineWarnings(t, changed) {
 			t.Errorf("approve of the changed skill printed %q on stderr, want its findings as warnings", r.stderr)
 		}
-		w.overlayVerb("validate").expect(t, "validate after approving the change", 0, "(1 skills: 1 approved, 0 grandfathered)")
+		w.overlayVerb("validate").expect(t, "validate after approving the change", 0, "(1 skills: 1 approved)")
 	})
 }
 

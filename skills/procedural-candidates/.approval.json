@@ -1,7 +1,7 @@
 {
-  "version": 1,
+  "version": 2,
   "skill": "procedural-candidates",
-  "sha256": "1eddfe5fead8d030c9e16b7be853ce2f70f013a1031c1ab50338a72f3250fe25",
-  "approved_at": "2026-10-21T13:13:42Z",
-  "approver": "labdrian-ai"
+  "sha256": "0b779446cadfe7ec9b6d4ab70c5b4e35baf992fff40c6b1c606016863af5342d",
+  "approved_at": "2026-10-26T15:27:21Z",
+  "approver": "labdrian"
 }

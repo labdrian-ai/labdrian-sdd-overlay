@@ -392,6 +392,7 @@ func TestRegistryLockE2E_ValidateLeavesTheRealTreeUntouched(t *testing.T) {
 
 	w := lockE2E{t: t, bin: bin, dir: t.TempDir(), home: t.TempDir(), state: t.TempDir()}
 	r := w.engine("validate", "--registry", reg, "--manifest", man, "--source-root", root)
+	// The real tree is committed approved: a skill changed without `skills approve` fails here too.
 	if r.code != 0 {
 		t.Fatalf("validate on the real tree: exit %d, stderr %q", r.code, r.stderr)
 	}

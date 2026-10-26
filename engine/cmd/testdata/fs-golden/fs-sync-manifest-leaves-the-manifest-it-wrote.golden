@@ -11,13 +11,13 @@ overlay.manifest 0600 117 2727dc2e4300
 skills.registry.yaml 0644 1016 6f05a223aa1f
 skills/
 skills/alpha/
-skills/alpha/.approval.json 0644 194 fea84ceb56ba
+skills/alpha/.approval.json 0644 194 dfc68bfd3baf
 skills/alpha/SKILL.md 0644 288 b1349da82d6c
 skills/beta/
-skills/beta/.approval.json 0644 193 8bede767624d
+skills/beta/.approval.json 0644 193 b85f9c3ab8ac
 skills/beta/SKILL.md 0644 286 0b0825f91fe4
 skills/ext-one/
-skills/ext-one/.approval.json 0644 196 f23578f8b18c
+skills/ext-one/.approval.json 0644 196 d31f39cac6dc
 skills/ext-one/SKILL.md 0644 292 67e4e4f00446
 skills/tidy-notes/
 skills/tidy-notes/SKILL.md 0644 298 46b5a07e78bd
@@ -35,13 +35,13 @@ overlay.manifest 0600 117 2727dc2e4300
 skills.registry.yaml 0644 1016 6f05a223aa1f
 skills/
 skills/alpha/
-skills/alpha/.approval.json 0644 194 fea84ceb56ba
+skills/alpha/.approval.json 0644 194 dfc68bfd3baf
 skills/alpha/SKILL.md 0644 288 b1349da82d6c
 skills/beta/
-skills/beta/.approval.json 0644 193 8bede767624d
+skills/beta/.approval.json 0644 193 b85f9c3ab8ac
 skills/beta/SKILL.md 0644 286 0b0825f91fe4
 skills/ext-one/
-skills/ext-one/.approval.json 0644 196 f23578f8b18c
+skills/ext-one/.approval.json 0644 196 d31f39cac6dc
 skills/ext-one/SKILL.md 0644 292 67e4e4f00446
 skills/tidy-notes/
 skills/tidy-notes/SKILL.md 0644 298 46b5a07e78bd
@@ -60,13 +60,13 @@ real.manifest 0644 161 30af90a42674
 skills.registry.yaml 0644 1016 6f05a223aa1f
 skills/
 skills/alpha/
-skills/alpha/.approval.json 0644 194 fea84ceb56ba
+skills/alpha/.approval.json 0644 194 dfc68bfd3baf
 skills/alpha/SKILL.md 0644 288 b1349da82d6c
 skills/beta/
-skills/beta/.approval.json 0644 193 8bede767624d
+skills/beta/.approval.json 0644 193 b85f9c3ab8ac
 skills/beta/SKILL.md 0644 286 0b0825f91fe4
 skills/ext-one/
-skills/ext-one/.approval.json 0644 196 f23578f8b18c
+skills/ext-one/.approval.json 0644 196 d31f39cac6dc
 skills/ext-one/SKILL.md 0644 292 67e4e4f00446
 skills/tidy-notes/
 skills/tidy-notes/SKILL.md 0644 298 46b5a07e78bd

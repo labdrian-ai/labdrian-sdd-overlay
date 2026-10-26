@@ -1,0 +1,328 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:85ce7aae6c1fcd161536d4b9ef7b74d484b34d768d1b8e2a32c5ad5ee0ceb0de",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-f557f90cd7833ce8",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "27d7b09b6a743d8ec686ab511a7735bdc6831d94",
+      "candidate_tree": "d292251d3e3d57620a7632776e9b00295b0729ee",
+      "paths_digest": "sha256:504ae3e8ff7557366ecb27b48e3e1ad7019bbc899dc3398993a8af8eda6f0dcf",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/skills/approval.go",
+        "engine/skills/approval_baseline.go",
+        "engine/skills/approval_digest.go",
+        "engine/skills/approval_gate.go",
+        "engine/skills/approval_store.go",
+        "engine/skills/approval_write.go",
+        "engine/skills/deps.go",
+        "engine/skills/skillsfs/approvals.go",
+        "engine/skills/skillsfs/approvals_fifo_test.go",
+        "engine/skills/skillsfs/approvals_test.go"
+      ],
+      "identity": "sha256:7307bf81dabec73b4b92142c887c826d63e30ef31d2b94d70c1db78e3f0e4d3a"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "27d7b09b6a743d8ec686ab511a7735bdc6831d94",
+      "candidate_tree": "d292251d3e3d57620a7632776e9b00295b0729ee",
+      "paths_digest": "sha256:504ae3e8ff7557366ecb27b48e3e1ad7019bbc899dc3398993a8af8eda6f0dcf",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/skills/approval.go",
+        "engine/skills/approval_baseline.go",
+        "engine/skills/approval_digest.go",
+        "engine/skills/approval_gate.go",
+        "engine/skills/approval_store.go",
+        "engine/skills/approval_write.go",
+        "engine/skills/deps.go",
+        "engine/skills/skillsfs/approvals.go",
+        "engine/skills/skillsfs/approvals_fifo_test.go",
+        "engine/skills/skillsfs/approvals_test.go"
+      ],
+      "identity": "sha256:7307bf81dabec73b4b92142c887c826d63e30ef31d2b94d70c1db78e3f0e4d3a"
+    },
+    "genesis_paths": [
+      "engine/skills/approval.go",
+      "engine/skills/approval_baseline.go",
+      "engine/skills/approval_digest.go",
+      "engine/skills/approval_gate.go",
+      "engine/skills/approval_store.go",
+      "engine/skills/approval_write.go",
+      "engine/skills/deps.go",
+      "engine/skills/skillsfs/approvals.go",
+      "engine/skills/skillsfs/approvals_fifo_test.go",
+      "engine/skills/skillsfs/approvals_test.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-risk",
+      "review-resilience",
+      "review-reliability"
+    ],
+    "original_changed_lines": 865,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "Changes the human approval guard of skills: the approval digest now covers every file of a skill directory read through an extended store port, refuses links and non-regular entries, makes version 1 records stale, and removes the grandfathered baseline",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:4c648e591c8a924019d8f5cc0ccee701e5da03948843a0eda0254566e89b1ec2",
+    "capture_phase_revision": "sha256:ba0efb174bf81f4bb3ae2796ebd4cb837662ad1e9ad6747ba3605fc651593e71",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:7307bf81dabec73b4b92142c887c826d63e30ef31d2b94d70c1db78e3f0e4d3a",
+        "capture_phase_revision": "sha256:ba0efb174bf81f4bb3ae2796ebd4cb837662ad1e9ad6747ba3605fc651593e71",
+        "artifact_digest": "sha256:47146564dbdeedcb0d098b0d1efbbb3a397cd424354a8f6615d0c920e3ad259b",
+        "result_hash": "sha256:bbc3b452c2836c36eaffae4e79b5d9c89c494b6cb6609245cd673dac9d2b302c",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:6ccccc716ea68e2fd9eaa4411f05424336157aad0026ac99a06ca10ba347754b",
+            "lineage_id": "review-f557f90cd7833ce8",
+            "authority_revision": "sha256:ba0efb174bf81f4bb3ae2796ebd4cb837662ad1e9ad6747ba3605fc651593e71",
+            "target_identity": "sha256:7307bf81dabec73b4b92142c887c826d63e30ef31d2b94d70c1db78e3f0e4d3a",
+            "base_tree": "27d7b09b6a743d8ec686ab511a7735bdc6831d94",
+            "candidate_tree": "d292251d3e3d57620a7632776e9b00295b0729ee",
+            "changed_path_manifest_sha256": "sha256:f250a6ad180ced779717690b4784c15c9bf6658cae5f144c59dce9389094ef80",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:6ccccc716ea68e2fd9eaa4411f05424336157aad0026ac99a06ca10ba347754b",
+            "raw_sha256": "sha256:c04f8dfbeb46fbf4410b9a3a8319c2e9df37af05a945ee85dac7e886710fb880",
+            "canonical_sha256": "sha256:90c43bcd5fc650a9713508b089559e6b580bd5877e5126776d996a14887faa0d",
+            "result_hash": "sha256:bbc3b452c2836c36eaffae4e79b5d9c89c494b6cb6609245cd673dac9d2b302c",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:6ccccc716ea68e2fd9eaa4411f05424336157aad0026ac99a06ca10ba347754b",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/skills/approval.go",
+                "engine/skills/approval_baseline.go",
+                "engine/skills/approval_digest.go",
+                "engine/skills/approval_gate.go",
+                "engine/skills/approval_store.go",
+                "engine/skills/approval_write.go",
+                "engine/skills/deps.go",
+                "engine/skills/skillsfs/approvals.go",
+                "engine/skills/skillsfs/approvals_fifo_test.go",
+                "engine/skills/skillsfs/approvals_test.go"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [
+              {
+                "id": "R1-digest-ignores-mode",
+                "lens": "risk",
+                "location": "engine/skills/approval_digest.go:46-60",
+                "severity": "WARNING",
+                "claim": "The digest covers only each regular file's path and bytes. A permission change, such as adding the executable bit to an approved script, leaves the approval valid. The doc comment states this scope deliberately, and no concrete exploit is shown, so this is only a coverage gap.",
+                "proof_refs": [
+                  "engine/skills/approval_digest.go:46-60",
+                  "engine/skills/approval_digest.go:35-40"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R1-walk-toctou",
+                "lens": "risk",
+                "location": "engine/skills/skillsfs/approvals.go:54-60",
+                "severity": "WARNING",
+                "claim": "The entry type comes from the directory listing, and the file is then opened with os.ReadFile. If an entry is swapped for a symlink or a FIFO between those two steps, the read could follow the link or block. This needs a concurrent local writer to the skill directory, so the impact is narrow.",
+                "proof_refs": [
+                  "engine/skills/skillsfs/approvals.go:54-60"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "The change strengthens approval. It now digests every file of the skill instead of SKILL.md alone, removes the baseline exemption, and treats version-1 records as stale.",
+              "Symlinks, pipes, sockets and devices are reported without being followed or opened, and they make the skill unverifiable (engine/skills/approval_digest.go, engine/skills/skillsfs/approvals.go).",
+              "A symlinked skill directory is rejected, and unreadable files cause an error rather than being left out of the digest.",
+              "The FIFO test confirms that reading the skill tree does not block on a named pipe.",
+              "The lint baseline list that remains in engine/skills/approval_write.go is not an approval exemption.",
+              "No reachable blocker-level exploit was found."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-resilience",
+        "selected_order": 1,
+        "target_identity": "sha256:7307bf81dabec73b4b92142c887c826d63e30ef31d2b94d70c1db78e3f0e4d3a",
+        "capture_phase_revision": "sha256:ba0efb174bf81f4bb3ae2796ebd4cb837662ad1e9ad6747ba3605fc651593e71",
+        "artifact_digest": "sha256:c0d6920c7f10ecc55c31196cb0da80e44182d29547a50746d1d7cd0df616b97a",
+        "result_hash": "sha256:b6e13e32920239c487905915be7fc24ae79b52223fec3d6e92db5376434b17e7",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:795920e4d4301975d329fb451691868718b2b7790e644f4f3816dc9bb43ced22",
+            "lineage_id": "review-f557f90cd7833ce8",
+            "authority_revision": "sha256:ba0efb174bf81f4bb3ae2796ebd4cb837662ad1e9ad6747ba3605fc651593e71",
+            "target_identity": "sha256:7307bf81dabec73b4b92142c887c826d63e30ef31d2b94d70c1db78e3f0e4d3a",
+            "base_tree": "27d7b09b6a743d8ec686ab511a7735bdc6831d94",
+            "candidate_tree": "d292251d3e3d57620a7632776e9b00295b0729ee",
+            "changed_path_manifest_sha256": "sha256:f250a6ad180ced779717690b4784c15c9bf6658cae5f144c59dce9389094ef80",
+            "lens": "review-resilience",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:795920e4d4301975d329fb451691868718b2b7790e644f4f3816dc9bb43ced22",
+            "raw_sha256": "sha256:62f3d78fc4e448056d894e8e2190956b0ff0bbe896ae60b2b39ec19f6beea984",
+            "canonical_sha256": "sha256:62f3d78fc4e448056d894e8e2190956b0ff0bbe896ae60b2b39ec19f6beea984",
+            "result_hash": "sha256:b6e13e32920239c487905915be7fc24ae79b52223fec3d6e92db5376434b17e7",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:795920e4d4301975d329fb451691868718b2b7790e644f4f3816dc9bb43ced22",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/skills/approval.go",
+                "engine/skills/approval_baseline.go",
+                "engine/skills/approval_digest.go",
+                "engine/skills/approval_gate.go",
+                "engine/skills/approval_store.go",
+                "engine/skills/approval_write.go",
+                "engine/skills/deps.go",
+                "engine/skills/skillsfs/approvals.go",
+                "engine/skills/skillsfs/approvals_fifo_test.go",
+                "engine/skills/skillsfs/approvals_test.go"
+              ]
+            },
+            "lens": "review-resilience",
+            "findings": [],
+            "evidence": [
+              "Failure handling is fail-closed. An unreadable file, a non-directory or symlinked skill directory, or a walk error returns a non-ErrNotExist error. CheckApprovals turns that into APPROVAL_UNVERIFIABLE instead of leaving the file out of the digest (engine/skills/skillsfs/approvals.go, engine/skills/approval_gate.go).",
+              "Hang risk is handled. ReadSkillTree only opens regular files and never opens FIFOs, sockets or devices. engine/skills/skillsfs/approvals_fifo_test.go covers the FIFO case with a 5-second timeout.",
+              "Directory symlinks are not followed, because WalkDir reports them as non-directory entries. The root link check uses Lstat, so the walk cannot escape the skill directory.",
+              "The record file's bytes are deliberately not read in the tree walk. A record that cannot be read is therefore reported by ReadRecord as unreadable, not as a skill that cannot be read.",
+              "Removing the grandfathered baseline means v1 records and baseline skills with no record now report stale or missing. The change itself describes this as intended, and it fails closed, so it is not a resilience regression.",
+              "Every file of each global skill is now read fully into memory on validate. No measured impact or realistic large-file case is shown in the candidate, so this is speculative and not reported."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 2,
+        "target_identity": "sha256:7307bf81dabec73b4b92142c887c826d63e30ef31d2b94d70c1db78e3f0e4d3a",
+        "capture_phase_revision": "sha256:ba0efb174bf81f4bb3ae2796ebd4cb837662ad1e9ad6747ba3605fc651593e71",
+        "artifact_digest": "sha256:fc6bf585622afee1bef559cdd8d53f6abe0c87e8b1947df2d530b11431471905",
+        "result_hash": "sha256:29509f15d027b3b4779b406dd2312764a5950eef63548afcb4349d70681b12fd",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:f8e25baedf76540853a2fe1a3837454a79bd9c7d7cdd2d5f2fe99b08802af4fd",
+            "lineage_id": "review-f557f90cd7833ce8",
+            "authority_revision": "sha256:ba0efb174bf81f4bb3ae2796ebd4cb837662ad1e9ad6747ba3605fc651593e71",
+            "target_identity": "sha256:7307bf81dabec73b4b92142c887c826d63e30ef31d2b94d70c1db78e3f0e4d3a",
+            "base_tree": "27d7b09b6a743d8ec686ab511a7735bdc6831d94",
+            "candidate_tree": "d292251d3e3d57620a7632776e9b00295b0729ee",
+            "changed_path_manifest_sha256": "sha256:f250a6ad180ced779717690b4784c15c9bf6658cae5f144c59dce9389094ef80",
+            "lens": "review-reliability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:f8e25baedf76540853a2fe1a3837454a79bd9c7d7cdd2d5f2fe99b08802af4fd",
+            "raw_sha256": "sha256:7aab7814b6da6fcf5e3d731582bb8d51a74bb857e591884dc2746fcad07eeb69",
+            "canonical_sha256": "sha256:2ed2cc413c2bdb8c30a1b02d08e769ccaa1d19f8fb8e1db50a498410d92e90e1",
+            "result_hash": "sha256:29509f15d027b3b4779b406dd2312764a5950eef63548afcb4349d70681b12fd",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:f8e25baedf76540853a2fe1a3837454a79bd9c7d7cdd2d5f2fe99b08802af4fd",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/skills/approval.go",
+                "engine/skills/approval_baseline.go",
+                "engine/skills/approval_digest.go",
+                "engine/skills/approval_gate.go",
+                "engine/skills/approval_store.go",
+                "engine/skills/approval_write.go",
+                "engine/skills/deps.go",
+                "engine/skills/skillsfs/approvals.go",
+                "engine/skills/skillsfs/approvals_fifo_test.go",
+                "engine/skills/skillsfs/approvals_test.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-001",
+                "lens": "reliability",
+                "location": "engine/skills/approval_digest.go:1",
+                "severity": "WARNING",
+                "claim": "The domain behavior this change introduces has no test in the candidate. That covers SkillDigest (ordering, exclusion of the root approval record but not a nested file of that name, refusal of links, pipes and line-break names, and the combined error message) and ClassifyApproval (a version 1 record classified as stale, an unverifiable skill, digest mismatch after a file is added or removed). The only new tests are in skillsfs and cover the store's listing of entries. The change also deletes the grandfathering baseline and its tests, and no replacement tests for the gate (EvaluateApproval, CheckApprovals) appear.",
+                "proof_refs": [
+                  "engine/skills/approval_digest.go:1",
+                  "engine/skills/approval.go:223",
+                  "engine/skills/approval_gate.go:120"
+                ],
+                "evidence_class": "insufficient",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Reviewed all 10 changed paths in full.",
+              "The store reads without following links or opening pipes. A read error on any file or subdirectory fails the whole listing, so no file is silently dropped from the digest. The root approval record is listed but not read. All of this is exercised by the skillsfs tests, including the FIFO test, which has a timeout.",
+              "ClassifyApproval and CheckApprovals handle the paths I traced correctly: a legacy v1 record is stale, a link or pipe makes the skill unverifiable, a missing SKILL.md is set aside, and the digest used for classification comes from the same read.",
+              "The Approvals store tests are externally observable and sit at the cheapest level. The gap is limited to the domain-level digest and classification tests, which are not in the visible candidate."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "ad6844ffa5e125a101e01beedd3ace4cefa982729d6a9d0a1e3961e4a65d5fb8",
+    "initial_atomic_start": {
+      "lineage_id": "review-f557f90cd7833ce8",
+      "worktree_identity": "sha256:e22d5d96c96f4da36515c1e22eef384090fe817a3abf4b25d00351a9cbb86bac",
+      "target_identity": "sha256:7307bf81dabec73b4b92142c887c826d63e30ef31d2b94d70c1db78e3f0e4d3a",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "27d7b09b6a743d8ec686ab511a7735bdc6831d94",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-risk",
+        "review-resilience",
+        "review-reliability"
+      ],
+      "original_changed_lines": 865,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "Changes the human approval guard of skills: the approval digest now covers every file of a skill directory read through an extended store port, refuses links and non-regular entries, makes version 1 records stale, and removes the grandfathered baseline"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

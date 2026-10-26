@@ -1,7 +1,7 @@
 {
-  "version": 1,
+  "version": 2,
   "skill": "role-chain",
-  "sha256": "4af6c0a5c57f52a999360fe2bb88a82226f173ddca70df608153c7689ee778a2",
-  "approved_at": "2026-10-22T18:49:07Z",
-  "approver": "labdrian-ai"
+  "sha256": "a19772e7e35a5d19b5f8d4b49e85795d2ad9a7a886a20f9a7f7b56f89d19f4b9",
+  "approved_at": "2026-10-26T15:27:21Z",
+  "approver": "labdrian"
 }

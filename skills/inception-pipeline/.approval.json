@@ -1,7 +1,7 @@
 {
-  "version": 1,
+  "version": 2,
   "skill": "inception-pipeline",
-  "sha256": "c7fbab7dc66921cbb5e530a27dfadcf4ed187c35b8dd412c7eddd0942e6f602f",
-  "approved_at": "2026-10-24T13:34:00Z",
+  "sha256": "1dfd4c34978b8d64777308ad7c65a52be552a93ec473a86aeaa747af75eeceaf",
+  "approved_at": "2026-10-26T15:27:21Z",
   "approver": "labdrian"
 }

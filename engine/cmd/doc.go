@@ -44,17 +44,19 @@
 // list: print sorted registry entries. status: print count summary.
 // validate: cross-check registry vs overlay.manifest, and skills/ on disk vs
 // overlay.manifest via the required --source-root flag, and that every global
-// skill has a valid approval record (grandfathered baseline aside); exit 1 on
-// divergence.
+// skill has a valid approval record, none excused; exit 1 on divergence.
 // install: copy project-scoped skills into <cwd>/.claude/skills.
 // add: register a skill (custom or vendored); refused unless a valid approval
-// record covers the exact SKILL.md bytes. remove: unregister from registry + manifest.
+// record covers every file of the skill. remove: unregister from registry + manifest.
 // sync-manifest: regenerate */SKILL.md rows from skills.registry.yaml.
 // lint: lint a SKILL.md file against the authoritative rule table, or print
 // that table with --rules; exit 1 on any hard error.
-// approve: record a human approval of skills/<id>/SKILL.md, bound to the digest
-// of its exact bytes, next to the skill (--id, --approver, --source-root). The
-// engine cannot prove a human ran it; the record only proves the bytes match.
+// approve: record a human approval of every file of skills/<id>/, bound to one
+// digest of all of them (skills.SkillDigest: the SHA-256 of the sha256sum list of
+// the regular files of the directory, .approval.json aside, each line saying
+// whether the owner execute bit of the file is set), next to the skill
+// (--id, --approver, --source-root). The engine cannot prove a human ran it; the
+// record only proves the files match.
 // guard-hook: the internal Claude Code PreToolUse hook that denies the agent
 // running approve or writing the approval record (see cmd/skills_guard.go); a
 // speed bump, not a security boundary, installed by install-hooks.

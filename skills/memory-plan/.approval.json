@@ -1,7 +1,7 @@
 {
-  "version": 1,
+  "version": 2,
   "skill": "memory-plan",
-  "sha256": "3d3494e842c645626aa05e459555a5a7422b9919da61bacac5a7975f56b2893a",
-  "approved_at": "2026-10-22T03:17:54Z",
+  "sha256": "dc8033f8ce50d00117981c41f67b56e9b41e8b1fdd13d908504718f508f57080",
+  "approved_at": "2026-10-26T15:27:21Z",
   "approver": "labdrian"
 }

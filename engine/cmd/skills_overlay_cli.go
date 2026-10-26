@@ -184,8 +184,8 @@ func skillsSync(deps skills.Deps, args []string, stdout, stderr io.Writer, exit 
 }
 
 // skillsApprove is `skills approve --id <id> --approver <label> --source-root <dir>`: it records
-// a human approval of the exact bytes of a skill. Output is on stdout, with forward slashes in the
-// path; every refusal exits 1 with the reason on stderr and nothing on stdout.
+// a human approval of the exact bytes of every file of a skill. Output is on stdout, with forward
+// slashes in the path; every refusal exits 1 with the reason on stderr and nothing on stdout.
 //
 // The lock is the one of the registry the wrapper names, which approve does not read: a path
 // given explicitly is only the name of the lock, and the default is not (skills.OverlayLocks).
@@ -210,12 +210,12 @@ func skillsApprove(deps skills.Deps, args []string, stdout, stderr io.Writer, ex
 	if !overlayWired("approve", deps, true, stderr, exit) {
 		return
 	}
-	result, err := app.ApproveSkill(app.ApprovePorts{Files: deps.ReadFile, Approvals: deps.Approvals, Staged: deps.Project, Now: deps.Now}, in)
+	result, err := app.ApproveSkill(app.ApprovePorts{Approvals: deps.Approvals, Staged: deps.Project, Now: deps.Now}, in)
 	if err != nil {
 		refuseOverlayWrite(err, stderr, exit)
 		return
 	}
-	// A warning says these bytes are approved, so none is told for an approval that was refused
+	// A warning says these files are approved, so none is told for an approval that was refused
 	// or failed.
 	for _, warning := range result.Warnings {
 		fmt.Fprintln(stderr, warning)

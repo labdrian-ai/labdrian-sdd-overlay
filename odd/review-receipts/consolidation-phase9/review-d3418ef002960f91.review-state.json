@@ -1,0 +1,186 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:020481e43bce25ebee0ac592439ba9a59645631a7b29f9393f9f6b2b9a0508bb",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-d3418ef002960f91",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "d292251d3e3d57620a7632776e9b00295b0729ee",
+      "candidate_tree": "7811d7cdb8e55b6780d11e15ae71cbeec96d197f",
+      "paths_digest": "sha256:bc381aa7a294b7c260940052b109c771122f205be4f17a1d4f3f5cff37848619",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/skills/adapter_contract_test.go",
+        "engine/skills/approval_digest_test.go",
+        "engine/skills/approval_gate_test.go",
+        "engine/skills/approval_nil_baseline_test.go",
+        "engine/skills/approval_store_test.go",
+        "engine/skills/approval_test.go",
+        "engine/skills/clarify_request_test.go",
+        "engine/skills/export_test.go",
+        "engine/skills/gadu_skills_retired_test.go",
+        "engine/skills/registry_lock_e2e_test.go",
+        "engine/skills/registryyaml_adapter_test.go"
+      ],
+      "identity": "sha256:f8ea725df44ed59d356be23dacdb74bdef3e6a999935088c5bc3a1873d31d7d8"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "d292251d3e3d57620a7632776e9b00295b0729ee",
+      "candidate_tree": "7811d7cdb8e55b6780d11e15ae71cbeec96d197f",
+      "paths_digest": "sha256:bc381aa7a294b7c260940052b109c771122f205be4f17a1d4f3f5cff37848619",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/skills/adapter_contract_test.go",
+        "engine/skills/approval_digest_test.go",
+        "engine/skills/approval_gate_test.go",
+        "engine/skills/approval_nil_baseline_test.go",
+        "engine/skills/approval_store_test.go",
+        "engine/skills/approval_test.go",
+        "engine/skills/clarify_request_test.go",
+        "engine/skills/export_test.go",
+        "engine/skills/gadu_skills_retired_test.go",
+        "engine/skills/registry_lock_e2e_test.go",
+        "engine/skills/registryyaml_adapter_test.go"
+      ],
+      "identity": "sha256:f8ea725df44ed59d356be23dacdb74bdef3e6a999935088c5bc3a1873d31d7d8"
+    },
+    "genesis_paths": [
+      "engine/skills/adapter_contract_test.go",
+      "engine/skills/approval_digest_test.go",
+      "engine/skills/approval_gate_test.go",
+      "engine/skills/approval_nil_baseline_test.go",
+      "engine/skills/approval_store_test.go",
+      "engine/skills/approval_test.go",
+      "engine/skills/clarify_request_test.go",
+      "engine/skills/export_test.go",
+      "engine/skills/gadu_skills_retired_test.go",
+      "engine/skills/registry_lock_e2e_test.go",
+      "engine/skills/registryyaml_adapter_test.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-reliability"
+    ],
+    "original_changed_lines": 1147,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "Rewrites the domain tests of the skill approval guard for the whole-directory digest, version 2 records and the removed baseline",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:1cb0ae7d01e4aa82a5048b1dc582bf41396af9622d2be7bf2955a81e3e4fc279",
+    "capture_phase_revision": "sha256:f02f58d304ba6692df88344c46f7e76a539c9db9f0da2e89fd952775b8ea1d91",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "target_identity": "sha256:f8ea725df44ed59d356be23dacdb74bdef3e6a999935088c5bc3a1873d31d7d8",
+        "capture_phase_revision": "sha256:f02f58d304ba6692df88344c46f7e76a539c9db9f0da2e89fd952775b8ea1d91",
+        "artifact_digest": "sha256:8204c5080c202416ad26b379bc66b5900e0535d050e1a19a6ab089f07226ac08",
+        "result_hash": "sha256:3d252060c35bd9e38882c23f924e61acc73bf41113a1daa6563acb0257ead53b",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:4d8b787b547e5ca447cb68a605e3b35f5131cbb6ecba3f61273eab6e27942207",
+            "lineage_id": "review-d3418ef002960f91",
+            "authority_revision": "sha256:f02f58d304ba6692df88344c46f7e76a539c9db9f0da2e89fd952775b8ea1d91",
+            "target_identity": "sha256:f8ea725df44ed59d356be23dacdb74bdef3e6a999935088c5bc3a1873d31d7d8",
+            "base_tree": "d292251d3e3d57620a7632776e9b00295b0729ee",
+            "candidate_tree": "7811d7cdb8e55b6780d11e15ae71cbeec96d197f",
+            "changed_path_manifest_sha256": "sha256:6548fac0250c369c49a1302b66b156ee45e1cec4fe231cd233690e9da5c0bf30",
+            "lens": "review-reliability",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:4d8b787b547e5ca447cb68a605e3b35f5131cbb6ecba3f61273eab6e27942207",
+            "raw_sha256": "sha256:d7279b2f67eb21b7dfe137c26ec2c156b4543c54ef46c961d9432f5a245c163a",
+            "canonical_sha256": "sha256:df1dcd878b8dbcdb8c679715cfbedb31509478aa2191ab06ff928b44e49efad8",
+            "result_hash": "sha256:3d252060c35bd9e38882c23f924e61acc73bf41113a1daa6563acb0257ead53b",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:4d8b787b547e5ca447cb68a605e3b35f5131cbb6ecba3f61273eab6e27942207",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/skills/adapter_contract_test.go",
+                "engine/skills/approval_digest_test.go",
+                "engine/skills/approval_gate_test.go",
+                "engine/skills/approval_nil_baseline_test.go",
+                "engine/skills/approval_store_test.go",
+                "engine/skills/approval_test.go",
+                "engine/skills/clarify_request_test.go",
+                "engine/skills/export_test.go",
+                "engine/skills/gadu_skills_retired_test.go",
+                "engine/skills/registry_lock_e2e_test.go",
+                "engine/skills/registryyaml_adapter_test.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-e2e-validate-tolerance",
+                "lens": "reliability",
+                "location": "engine/skills/registry_lock_e2e_test.go:395-408",
+                "severity": "WARNING",
+                "claim": "The real-tree validate e2e test now accepts exit 1 as long as every stderr line starts with '[APPROVAL_'. An empty stderr with exit 1, or a blank line, would produce a failing assertion only by accident (empty line fails the prefix check), but the test no longer proves validate exits 0 on a clean tree, and it does not assert that at least one approval finding exists when exit is 1. This weakens the regression signal for non-approval failures that print multi-line details.",
+                "proof_refs": [
+                  "engine/skills/registry_lock_e2e_test.go:395-408"
+                ]
+              },
+              {
+                "id": "R3-reader-double-symlink-dir",
+                "lens": "reliability",
+                "location": "engine/skills/export_test.go:127-158",
+                "severity": "SUGGESTION",
+                "claim": "The test double ReadSkillTree uses Lstat on the skill directory and WalkDir, so a skill directory that is itself a symlink gives a failure ('not a directory'). The adapter contract test does not cover a symlinked skill root, so the double and adapter could diverge there unnoticed.",
+                "proof_refs": [
+                  "engine/skills/export_test.go:127-158",
+                  "engine/skills/adapter_contract_test.go:64-105"
+                ]
+              }
+            ],
+            "evidence": [
+              "Reviewed all 11 changed paths; the baseline-removal tests are replaced by digest, gate, store, and classify tests covering order independence, per-file binding, version 1 stale handling, unverifiable entries, and missing-SKILL.md set-aside.",
+              "Deleted approval_nil_baseline_test.go tests behavior (nil baseline lookup) that the candidate removes along with the baseline, so no coverage gap is left for it.",
+              "No blocker or critical regressions are evident from the test changes alone."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "c7b52f75c073781cc492f43844af4fea3e21e88a0559aea057adf8b66cd7233e",
+    "initial_atomic_start": {
+      "lineage_id": "review-d3418ef002960f91",
+      "worktree_identity": "sha256:e22d5d96c96f4da36515c1e22eef384090fe817a3abf4b25d00351a9cbb86bac",
+      "target_identity": "sha256:f8ea725df44ed59d356be23dacdb74bdef3e6a999935088c5bc3a1873d31d7d8",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "d292251d3e3d57620a7632776e9b00295b0729ee",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-reliability"
+      ],
+      "original_changed_lines": 1147,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "Rewrites the domain tests of the skill approval guard for the whole-directory digest, version 2 records and the removed baseline"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

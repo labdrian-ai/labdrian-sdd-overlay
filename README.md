@@ -234,13 +234,13 @@ overlay status --target opencode
 
 If there are merge conflicts, `overlay apply` exits 1 and tells you exactly which files to resolve.
 
-**After the merge, review the skills it changed (step 3).** A global skill's approval record binds the exact bytes of its `SKILL.md`, so a merge that changes a skill (core skills included, baseline ones too) makes `skills validate` exit 1 and report `APPROVAL_MISSING` (a baseline skill whose bytes changed) or `APPROVAL_STALE` (a skill with a record). For every global skill it reports, review the change (for example `git diff` of `skills/<id>/SKILL.md`), and only then run, in a terminal:
+**After the merge, review the skills it changed (step 3).** A global skill's approval record binds the exact bytes of every file of the skill (`SKILL.md` and whatever sits beside it, scripts and references at any depth included) and whether each is executable by its owner, so a merge that changes, adds or removes any of those files, or sets or clears that bit (core skills included), makes `skills validate` exit 1 and report `APPROVAL_STALE` (the skill has a record that no longer matches) or `APPROVAL_MISSING` (it has none). For every global skill it reports, review the change (for example `git diff` of `skills/<id>/`), and only then run, in a terminal:
 
 ```bash
 labdrian skills approve --id <id> --approver <name>
 ```
 
-An agent cannot do this for you: the approve guard denies it (a speed bump, not a security boundary). A baseline skill whose only hard-lint findings are its size or its description (`body-hard-budget`, `description-max`, `description-one-line`) is approved with `warning:` lines on stderr instead of being refused; any other hard finding, such as a missing front matter, refuses it like any skill. Run `skills validate` again until it exits 0. Until you do, the merged skills are deployed but not approved, and `skills validate` keeps exiting 1.
+An agent cannot do this for you: the approve guard denies it (a speed bump, not a security boundary). A lint-baseline skill (one of the 34 global skills that predate the lint budget) whose only hard-lint findings are its size or its description (`body-hard-budget`, `description-max`, `description-one-line`) is approved with `warning:` lines on stderr instead of being refused; any other hard finding, such as a missing front matter, refuses it like any skill. The lint baseline excuses a skill from that lint only: no skill is excused from approval. Run `skills validate` again until it exits 0. Until you do, the merged skills are deployed but not approved, and `skills validate` keeps exiting 1.
 
 ## sync-check — validating gentle-ai sync state
 
@@ -433,20 +433,21 @@ overlay skills <verb>
     status       [--registry <path>]                                               print count summary (total / core / custom)
     candidates   [--project-root <abs>] [--status <status>]... [--kind <kind>] [--drafts] [--json]
                  read-only Engram candidate and draft listing with reconciliation anomalies; source failures exit 2
-    validate     [--registry <path>] [--manifest <path>] --source-root <path>      cross-check registry vs manifest and skills/ on disk vs manifest, and that every global skill has a valid approval record (the 34 of the 37 global skills present at the Phase 8 base, which is `main` at `53f545d`, the commit the skill lifecycle was built on, that are still registered — `gadu-operator` and `gadu-orchestrate` were retired and `prespec-malandra` was replaced by `clarify-request` — are grandfathered while their bytes are unchanged); exit 1 on any divergence
+    validate     [--registry <path>] [--manifest <path>] --source-root <path>      cross-check registry vs manifest and skills/ on disk vs manifest, and that every global skill has a valid approval record of all its files (see "What the approval digest covers"); none is excused, and the summary line counts the skills approved; exit 1 on any divergence
     install      [--registry <path>] [--source-root <path>] [--project-id <id>]   install the project-scoped skills admitted for the project into <cwd>/.claude/skills/ and <cwd>/.agents/skills/, replacing only what it installed and left unmodified (see below)
     adopt        [--registry <path>] [--source-root <path>] [--project-id <id>]   record skill directories already in the project as installed by `skills install`, only when they are exactly the current source
     uninstall    [--dry-run] <id>                                                  remove from <cwd> a skill `skills install` put there, and its install record (see below); --dry-run prints the removal plan
-    add          <id> [--registry <path>] [--manifest <path>] [--source-root <path>] [--repo <url>] [--ref <sha>]  register a skill (custom or external); refused, with nothing written, unless skills/<id>/.approval.json approves the exact SKILL.md bytes (see approve)
+    add          <id> [--registry <path>] [--manifest <path>] [--source-root <path>] [--repo <url>] [--ref <sha>]  register a skill (custom or external); refused, with nothing written, unless skills/<id>/.approval.json approves every file of the skill as it is (see approve)
     remove       <id> [--registry <path>] [--manifest <path>]                      unregister a skill from registry and manifest
     sync-manifest [--registry <path>] [--manifest <path>]                          regenerate */SKILL.md rows from registry; preserves all non-skill lines
-    approve      --id <id> --approver <label> --source-root <path>                 record a human approval of skills/<id>/SKILL.md in skills/<id>/.approval.json, bound to the SHA-256 of its exact bytes
-                 The engine cannot prove a human ran approve: the record only proves it matches the exact bytes of the skill beside it.
-                 A skill that fails the hard lint is refused, except a baseline skill (the 34 grandfathered global skills, which predate the lint budget and will be
+    approve      --id <id> --approver <label> --source-root <path>                 record a human approval of every file of skills/<id>/ in skills/<id>/.approval.json, bound to one digest of all of them
+                 The engine cannot prove a human ran approve: the record only proves it matches the files of the skill beside it. The digest, and how to recompute
+                 it with sha256sum, are described below ("What the approval digest covers").
+                 A skill that fails the hard lint is refused, except a lint-baseline skill (one of the 34 global skills that predate the lint budget and will be
                  rewritten in a later feature): for those, approve prints each hard finding as a `warning: [lint:<rule>] ... (baseline skill: approved with lint findings)`
-                 line on stderr, still records the approval of the exact bytes, and exits 0, so an upstream merge that changes one of them can be approved. Only the
+                 line on stderr, still records the approval, and exits 0, so an upstream merge that changes one of them can be approved. Only the
                  legacy rules warn (body-hard-budget, description-max, description-one-line); any other hard finding, such as a missing front matter, refuses a
-                 baseline skill too. `add` is unchanged: it still refuses a hard lint finding for every skill.
+                 baseline skill too. `add` is unchanged: it still refuses a hard lint finding for every skill. The list exempts a skill from that lint only, never from approval.
                  Approval is a human step: a PreToolUse hook, installed by install-hooks, denies the agent running approve or writing the record by hand (see
                  `skills guard-hook` below). It is a speed bump, not a security boundary; a person runs approve in a terminal.
     lint         <path> | --rules                                                  lint a SKILL.md file against the authoritative rule table, or print the table; exit 1 on any hard finding (warnings never block)
@@ -459,10 +460,42 @@ overlay skills <verb>
     project-retire   --project-root <abs> [--dry-run] [--reason <text>] [--absorbed-into <id>] [--registry <path>] <id>
                  retire an agent-owned project skill; an explicit decision that nothing in the engine takes for you, not even the retirement detector; --dry-run prints the removal plan
     The project tier stays autonomous: project-register, project-revise, and project-retire need no approval record.
-    What the approval digest binds. The record holds the SHA-256 of the exact bytes of SKILL.md, so any byte change makes it stale. A tree-wide rewrite of
-    line endings or whitespace (for example a git attribute change such as `text=auto eol=crlf`, or an editor that normalizes whitespace on save) therefore
-    changes every skill at once: each baseline skill then needs `approve` again (validate reports APPROVAL_MISSING) and so does each approved skill
-    (APPROVAL_STALE). That is the intended guarantee (exact bytes), not a bug; do such a rewrite deliberately, and approve the skills afterwards.
+    What the approval digest covers. A record of version 2 holds one SHA-256, in the `sha256` field, over every file of the skill, not over SKILL.md alone:
+    the lines "<sha256 hex of the file's bytes> <x or ->  <path>" (the line sha256sum writes, with a space and one character added after the digest: x when the
+    owner execute bit of the file is set, - when it is not; then two spaces, the path, and a newline ending each line), one per regular file of
+    skills/<id>/ at any depth (a script or a reference beside SKILL.md included), except skills/<id>/.approval.json itself (a file of that name in a
+    subdirectory is covered), with <path> relative to the skill directory, in slash form, sorted bytewise. Adding, removing, renaming or changing any of
+    those files, or setting or clearing the owner execute bit of one (chmod u+x, chmod u-x: the bit git versions, as 100755 against 100644), makes the
+    record stale (validate reports APPROVAL_STALE, naming the digest in the record and the current one); the other permission bits (group, others, write)
+    and empty directories are not covered, so a checkout under another umask leaves an approval holding. A symbolic link, or any entry that is not a
+    regular file or a directory (a pipe, a socket, a device), cannot be covered:
+    the skill is APPROVAL_UNVERIFIABLE, whatever its record says, until the entry is replaced with a regular file or removed; so is a file whose name holds
+    a line break or a backslash, which sha256sum would escape in its list. A record of version 1, written
+    before this digest existed, covered SKILL.md alone: it is APPROVAL_STALE, saying so, and `approve` again writes a record of version 2; any other
+    version stays APPROVAL_MALFORMED. approve, add, and validate compute the digest with the same function. The `sha256` field of the record is this digest
+    (JSON has no comments, so this is where it is explained). To recompute it by hand and compare it with the record, from the root of the repository
+    (find -perm -100 is true for a file whose owner execute bit is set):
+        (cd skills/<id> && find . -type f ! -path ./.approval.json | sed 's|^\./||' | LC_ALL=C sort |
+         while IFS= read -r f; do
+           if [ -n "$(find "./$f" -perm -100)" ]; then m=x; else m=-; fi
+           echo "$(sha256sum < "$f" | cut -c1-64) $m  $f"
+         done | sha256sum)
+    On macOS, which has no sha256sum, use shasum for both hashes:
+        (cd skills/<id> && find . -type f ! -path ./.approval.json | sed 's|^\./||' | LC_ALL=C sort |
+         while IFS= read -r f; do
+           if [ -n "$(find "./$f" -perm -100)" ]; then m=x; else m=-; fi
+           echo "$(shasum -a 256 < "$f" | cut -c1-64) $m  $f"
+         done | shasum -a 256)
+    A vendored skill (`add --repo <url> --ref <sha>`) is covered the same way, companion files included. The overlay never fetches, so --repo and --ref are
+    labels and the engine cannot compare the files with upstream: what the approval pins is the files as they were vendored, adaptations included
+    (security-audit, for one, moves the upstream SKILL.md body to WORKFLOW.md to fit the lint budget, and its SKILL.md says so). A later change to WORKFLOW.md
+    or to any companion makes the approval stale; that an adaptation is only what the SKILL.md says it is stays a comparison of the files with a checkout of
+    the commit the SKILL.md names, which a person makes.
+    Because it covers the exact bytes of every file, a tree-wide rewrite of line endings or whitespace (for example a git attribute change such as
+    `text=auto eol=crlf`, or an editor that normalizes whitespace on save) changes every skill at once: each global skill then needs `approve` again
+    (validate reports APPROVAL_STALE). That is the intended guarantee (exact bytes), not a bug; do such a rewrite deliberately, and approve the skills afterwards.
+    The owner execute bit is covered too, so a checkout on a file system that does not keep it (FAT, or a CIFS mount) cannot verify a skill that has an
+    executable file: validate there reports APPROVAL_STALE, and the approval is verified where the bit is kept.
     What install owns. install records every file it writes, with its SHA-256, in the project lock
     (.labdrian/procedural-skills.lock.json, in an "installs" array beside the procedural skills; an older program that
     reads a lock with installs refuses it instead of misreading it). On the next run it replaces only the files that
@@ -977,7 +1010,7 @@ gentle-ai-overlay skills guard-hook
     Code settings.json (two PreToolUse entries, one for Bash and one for Write, Edit, MultiEdit, and NotebookEdit);
     on an existing install, re-run `install-hooks` and restart Claude Code to load it, because Claude Code reads
     hooks only at start and `status-hooks` reports degraded until the entries are in place.
-    It denies the agent running `skills approve` (approval records that a human reviewed the exact SKILL.md bytes)
+    It denies the agent running `skills approve` (approval records that a human reviewed every file of the skill, as it was)
     and writing a skill's `.approval.json` record with a file-edit tool. The reason names the verb, says approval is a
     human step, and gives the human the command to run in their own terminal:
     `labdrian skills approve --id <id> --approver <name>`. Reading the record, the other skills verbs, and file
@@ -992,7 +1025,7 @@ gentle-ai-overlay skills guard-hook
     `grep` searches for it are not denied, unless the `rg` segment is handed a program to run with `--pre` or
     `--hostname-bin` (bare or as `--flag=value`; flags that only start with the same letters, such as `--pretty` and
     `--pre-glob`, do not count). Reword such a command. The record's real guarantee is unchanged: it matches
-    the exact bytes of the skill beside it.
+    the exact bytes of every file of the skill beside it.
     Input: the hook JSON on stdin, at most 8 MiB (input over that is denied, unjudged: the agent controls the length of its own command). Only tool_name and the command,
     file_path, and notebook_path fields of tool_input are read.
     Output: nothing, or exactly one JSON object,

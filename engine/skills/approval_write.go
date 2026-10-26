@@ -6,20 +6,71 @@ import (
 	"strings"
 )
 
-// BaselineLintDecisionAgainst says what the hard lint findings of a skill mean for the approval of
-// its bytes, against the baseline the caller names; a nil baseline is the fixed one. A skill
-// outside the approval baseline is refused (refused is true) on any hard finding. A baseline skill
-// predates the lint budget (most of the 35 fail it today), and refusing it would leave no way to
-// approve the change an upstream merge makes to its bytes, so its legacy findings (size and
+// lintBaselineSkills are the global skills that predate the lint budget, by id and sorted: the
+// ones BaselineLintDecision does not refuse for the legacy hard findings the budget would have
+// refused them for. It is a list of ids for the lint and nothing else. It exempts no skill from
+// approval, which every global skill needs for its files as they are (ClassifyApproval), and it is
+// never extended at run time: a skill that is not on it meets the whole lint, so a new id here
+// would be a decision to let a new skill break the budget.
+var lintBaselineSkills = []string{
+	"anti-generic-design",
+	"branch-pr",
+	"chained-pr",
+	"chat-thread-analyzer",
+	"cognitive-doc-design",
+	"comment-writer",
+	"gentle-ai-bench",
+	"go-testing",
+	"inception-pipeline",
+	"issue-creation",
+	"judgment-day",
+	"knowledge-ingestion",
+	"project-architect",
+	"project-inception",
+	"project-manifest",
+	"rdd-defect-workflow",
+	"requirements-from-transcripts",
+	"roadmap-maker",
+	"sdd-apply",
+	"sdd-archive",
+	"sdd-design",
+	"sdd-explore",
+	"sdd-init",
+	"sdd-onboard",
+	"sdd-propose",
+	"sdd-spec",
+	"sdd-tasks",
+	"sdd-time-estimation",
+	"sdd-verify",
+	"skill-creator",
+	"skill-improver",
+	"skill-registry",
+	"systemic-issue-triage",
+	"work-unit-commits",
+}
+
+// inLintBaseline reports whether id is on lintBaselineSkills.
+func inLintBaseline(id string) bool {
+	for _, baseline := range lintBaselineSkills {
+		if baseline == id {
+			return true
+		}
+	}
+	return false
+}
+
+// BaselineLintDecision says what the hard lint findings of a skill mean for the approval of its
+// files. A skill outside the lint baseline is refused (refused is true) on any hard finding. A
+// skill on it predates the lint budget (many of them fail it today), and refusing it would leave
+// no way to approve the change an upstream merge makes to it, so its legacy findings (size and
 // description shape, see legacyBaselineLintRules) are warned about, after the approval, and do not
 // block it: warnings holds one line for each. Any other hard finding means the file is not a
 // usable skill (a truncated or corrupted merge, for example) and refuses a baseline skill too.
-func BaselineLintDecisionAgainst(baseline BaselineLookup, id string, hard []error) (warnings []string, refused bool) {
-	baseline = baseline.OrFixed()
+func BaselineLintDecision(id string, hard []error) (warnings []string, refused bool) {
 	if len(hard) == 0 {
 		return nil, false
 	}
-	if _, inBaseline := baseline(id); !inBaseline || !allLegacyBaselineFindings(hard) {
+	if !inLintBaseline(id) || !allLegacyBaselineFindings(hard) {
 		return nil, true
 	}
 	for _, finding := range hard {

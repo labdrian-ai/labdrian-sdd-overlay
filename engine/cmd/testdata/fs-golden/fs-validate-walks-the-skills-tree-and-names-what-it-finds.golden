@@ -9,4 +9,5 @@ exit: 1
 [UNREGISTERED_ON_DISK] zeta/a/b.md: skills/zeta/a/b.md exists on disk but no overlay.manifest row deploys it; add a row for "zeta/a/b.md" to overlay.manifest to register it
 [UNREGISTERED_ON_DISK] zeta/last.md: skills/zeta/last.md exists on disk but no overlay.manifest row deploys it; add a row for "zeta/last.md" to overlay.manifest to register it
 [UNREGISTERED_ON_DISK] ünï/cødé.md: skills/ünï/cødé.md exists on disk but no overlay.manifest row deploys it; add a row for "ünï/cødé.md" to overlay.manifest to register it
+[APPROVAL_UNVERIFIABLE] alpha: skill "alpha": its approval cannot be verified (dangling is a symbolic link; link-to-a-directory is a symbolic link; link-to-a-file.md is a symbolic link; pipe is a named pipe); an approval covers regular files only, so replace what is not one with a regular file, or remove it
 

@@ -7,6 +7,7 @@ package skills
 
 import (
 	"bytes"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -112,19 +113,71 @@ func loadManifestViewFile(path string) (ManifestView, error) {
 	return loadManifestViewReader(bytes.NewReader(data))
 }
 
-// fileApprovals is the ApprovalRecordStore of a test: the SKILL.md and the record are read from
-// the paths the domain names (SkillMDPath, ApprovalRecordPath) through read, which is os.ReadFile
-// or the in-memory reader of the test, so a reader that gates or counts reads sees these too.
+// fileApprovals is the ApprovalRecordStore of a test: the files of a skill are listed from the
+// directory the domain names (SkillDirPath) as the adapter lists them, and the bytes of each, and
+// the record at the path the domain names (ApprovalRecordPath), are read through read, which is
+// os.ReadFile or the in-memory reader of the test, so a reader that gates or counts reads sees
+// these too. The adapter contract test of the external package holds the listing to the adapter.
 func fileApprovals(read FileReader) ApprovalRecordStore { return readerApprovals{read} }
 
 type readerApprovals struct{ read FileReader }
 
-func (r readerApprovals) ReadSkill(sourceRoot, path string) ([]byte, error) {
-	return r.read(SkillMDPath(sourceRoot, path))
+func (r readerApprovals) ReadSkillTree(sourceRoot, path string) ([]SkillEntry, error) {
+	dir := SkillDirPath(sourceRoot, path)
+	info, err := os.Lstat(dir)
+	if err != nil {
+		return nil, err
+	}
+	if !info.IsDir() {
+		return nil, fmt.Errorf("%s is not a directory", dir)
+	}
+	var entries []SkillEntry
+	err = filepath.WalkDir(dir, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			return nil
+		}
+		rel, err := filepath.Rel(dir, p)
+		if err != nil {
+			return err
+		}
+		entry := SkillEntry{Rel: filepath.ToSlash(rel), Type: d.Type()}
+		if entry.Type.IsRegular() && entry.Rel != ApprovalRecordName {
+			var info fs.FileInfo
+			if info, err = d.Info(); err != nil {
+				return err
+			}
+			// The owner execute bit and no other: the adapter holds it to that.
+			entry.Executable = info.Mode().Perm()&0o100 != 0
+			if entry.Data, err = r.read(p); err != nil {
+				return err
+			}
+		}
+		entries = append(entries, entry)
+		return nil
+	})
+	return entries, err
 }
 
 func (r readerApprovals) ReadRecord(sourceRoot, id string) ([]byte, error) {
 	return r.read(ApprovalRecordPath(sourceRoot, id))
+}
+
+// ReadSkillTreeOfTheDouble is the listing of fileApprovals over the file system, for the contract
+// test that holds it to the adapter.
+func ReadSkillTreeOfTheDouble(sourceRoot, path string) ([]SkillEntry, error) {
+	return fileApprovals(os.ReadFile).(readerApprovals).ReadSkillTree(sourceRoot, path)
+}
+
+// LintBaselineSkills is the list of ids the lint excuses for its legacy findings, for the test of
+// the external package that holds it to the real registry.
+var LintBaselineSkills = lintBaselineSkills
+
+// skillMDOnly is the entries of a skill whose directory holds just this SKILL.md.
+func skillMDOnly(content string) []SkillEntry {
+	return []SkillEntry{{Rel: skillMDName, Data: []byte(content)}}
 }
 
 // writeTestFile writes content to path, making the directories above it.

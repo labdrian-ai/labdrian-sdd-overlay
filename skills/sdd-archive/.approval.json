@@ -1,7 +1,7 @@
 {
-  "version": 1,
+  "version": 2,
   "skill": "sdd-archive",
-  "sha256": "49da264566fb4fa7729e97b2dfd48e60dc06933756398f45203e3f5a3d51b50c",
-  "approved_at": "2026-10-23T12:38:48Z",
-  "approver": "labdrian-ai"
+  "sha256": "c547cc68205c050976aebc9564d2339e51f0e323dae7b3b43d88f8422e64d3ae",
+  "approved_at": "2026-10-26T15:27:21Z",
+  "approver": "labdrian"
 }

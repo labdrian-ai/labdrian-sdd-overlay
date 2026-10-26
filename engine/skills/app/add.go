@@ -28,16 +28,15 @@ type AddInput struct {
 type AddPorts struct {
 	// Registries reads the registry and encodes the one it writes.
 	Registries skills.RegistryRepository
-	// Files reads the manifest and the SKILL.md of the skill.
+	// Files reads the manifest.
 	Files skills.FileReader
 	// Stat says whether the SKILL.md of the skill is there.
 	Stat skills.FileStatter
-	// Approvals reads the evidence of the approval of the skill.
+	// Approvals reads the evidence of the approval of the skill: its files, which are linted and
+	// judged from one read, and the record beside them.
 	Approvals skills.ApprovalRecordStore
 	// Staged writes the manifest and the registry.
 	Staged skills.StagedWrites
-	// Baseline says which skills are grandfathered; nil is the baseline the domain pins.
-	Baseline skills.BaselineLookup
 }
 
 // AddResult is what add did, or how far it got: UnreadWarning says what the reader left out of
@@ -60,7 +59,7 @@ func (e *SkillNotFoundError) Error() string {
 }
 func (e *SkillNotFoundError) Unwrap() error { return e.Err }
 
-// SkillReadError is a SKILL.md that is there and could not be read.
+// SkillReadError is a skill whose files are there and could not be read; Path is its SKILL.md.
 type SkillReadError struct {
 	ID   string
 	Path string
@@ -77,7 +76,7 @@ func (e *LintRefusal) Error() string {
 	return fmt.Sprintf("the skill has %d hard lint finding(s)", len(e.Findings))
 }
 
-// NotApprovedError is a global skill whose bytes are not approved: Class says how, and Detail
+// NotApprovedError is a global skill whose files are not approved: Class says how, and Detail
 // what the record or its absence says.
 type NotApprovedError struct {
 	Class  skills.DivergenceClass
@@ -93,8 +92,8 @@ func (e *NotApprovedError) Error() string { return fmt.Sprintf("[%s] %s", e.Clas
 //   - the id is a valid slug and is not registered (skills.AddEntry), and the registry is one
 //     that can be written back whole;
 //   - <SourceRoot>/<id>/SKILL.md exists and has no hard lint finding;
-//   - the skill has a valid approval record for its exact bytes, or is the grandfathered
-//     baseline's (every skill add registers is global, so a human has approved it);
+//   - the skill has a valid approval record for its exact files, every one of them (every skill
+//     add registers is global, so a human has approved it);
 //   - the registry as it is written reads back as it is, and the manifest it would be written
 //     with agrees with it.
 //
@@ -131,22 +130,31 @@ func AddSkill(p AddPorts, in AddInput) (AddResult, error) {
 	if _, err := p.Stat(skillPath); err != nil {
 		return res, &SkillNotFoundError{ID: in.ID, Path: skillPath, Err: err}
 	}
-	skillData, err := p.Files(skillPath)
+	entries, err := p.Approvals.ReadSkillTree(in.SourceRoot, in.ID)
 	if err != nil {
 		return res, &SkillReadError{ID: in.ID, Path: skillPath, Err: err}
 	}
-	// Warnings are advisory; a hard finding refuses the add.
-	if hard, _ := skills.LintSkillFile(skillData); len(hard) > 0 {
-		return res, &LintRefusal{Findings: hard}
+	skillMD, found := skills.SkillMDEntry(entries)
+	if !found {
+		// Something is at the path of SKILL.md (it was stat'ed) that is not a file in the tree: a
+		// directory, for one.
+		return res, &SkillReadError{ID: in.ID, Path: skillPath, Err: errors.New("the skill directory holds no file named SKILL.md")}
+	}
+	// Warnings are advisory; a hard finding refuses the add. A SKILL.md that is not a regular
+	// file has no bytes to lint, and the approval below says why it cannot be approved.
+	if skillMD.Type.IsRegular() {
+		if hard, _ := skills.LintSkillFile(skillMD.Data); len(hard) > 0 {
+			return res, &LintRefusal{Findings: hard}
+		}
 	}
 	// Every skill add registers is global tier, so a human-approval record bound to the exact
-	// bytes is required, unless the bytes are the grandfathered baseline's. Project-tier skills
-	// never reach this verb: they register through project-register and stay autonomous.
-	approval, err := skills.ReadApprovalStatus(in.SourceRoot, in.ID, skillData, p.Approvals)
+	// files, all of them, is required. Project-tier skills never reach this verb: they register
+	// through project-register and stay autonomous.
+	approval, err := skills.ReadApprovalStatus(in.SourceRoot, in.ID, entries, p.Approvals)
 	if err != nil {
 		return res, err
 	}
-	if verdict := skills.EvaluateApprovalAgainst(p.Baseline.OrFixed(), in.ID, skills.ApprovalRecordPath(in.SourceRoot, in.ID), skillData, approval); !verdict.OK {
+	if verdict := skills.EvaluateApproval(in.ID, skills.ApprovalRecordPath(in.SourceRoot, in.ID), approval); !verdict.OK {
 		return res, &NotApprovedError{Class: verdict.Class, Detail: verdict.Detail}
 	}
 

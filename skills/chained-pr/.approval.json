@@ -1,7 +1,7 @@
 {
-  "version": 1,
+  "version": 2,
   "skill": "chained-pr",
-  "sha256": "8aba3c6ec9411851f5687aa9e42ebf9618f7dd8566acc9a64eb025f54db2244f",
-  "approved_at": "2026-10-19T20:18:20Z",
+  "sha256": "c611370a40e51d145bc8d7daef4496217fdf01fe8a758b0707f03f60306aeed4",
+  "approved_at": "2026-10-26T15:27:21Z",
   "approver": "labdrian"
 }

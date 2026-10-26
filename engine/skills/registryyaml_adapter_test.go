@@ -106,49 +106,65 @@ func TestAddEntryRoundTrip(t *testing.T) {
 	}
 }
 
-// TestApprovalBaseline_PinnedToTheRepositoryRegistry pins the baseline against this repository's
-// real registry and real SKILL.md files, read-only.
-//
-// At the Phase 8 base every registered skill was global and unapproved, and the baseline
-// grandfathered all 37 of them. 34 remain: gadu-operator and gadu-orchestrate were retired, and
-// prespec-malandra was replaced by clarify-request; a retired or replaced skill leaves the baseline
-// deliberately. So on the repository as it is:
-//   - every baseline id is a registered global skill;
-//   - every registered global skill is either grandfathered at its pinned digest or carries a valid
-//     record (the latter is how a later, approved modification of a baseline skill or a newly added
-//     skill stays green);
-//   - CheckApprovals, the check behind `skills validate`, reports nothing.
-func TestApprovalBaseline_PinnedToTheRepositoryRegistry(t *testing.T) {
-	root := repoRoot(t)
+// realGlobalSkills reads this repository's real registry, read-only, and returns it with the ids of
+// the paths of its global skills.
+func realGlobalSkills(t *testing.T) (root string, reg skills.Registry, global map[string]bool) {
+	t.Helper()
+	root = repoRoot(t)
 	regData, err := os.ReadFile(filepath.Join(root, "skills.registry.yaml"))
 	if err != nil {
 		t.Fatalf("read real registry: %v", err)
 	}
-	reg, err := decode(regData)
+	reg, err = decode(regData)
 	if err != nil {
 		t.Fatalf("parse real registry: %v", err)
 	}
-	global := map[string]bool{}
+	global = map[string]bool{}
 	for _, e := range reg.Skills {
 		if e.Install.DefaultScope == "global" {
 			global[e.Path] = true
 		}
 	}
-	for _, b := range skills.ApprovalBaseline() {
-		if !global[b.ID] {
-			t.Errorf("baseline id %q is not a registered global skill in skills.registry.yaml; a retired skill must be removed from the baseline deliberately", b.ID)
+	return root, reg, global
+}
+
+// TestTheRealGlobalSkillsAreSkillsAnApprovalCanCover holds this repository's real global skills to
+// what an approval needs of them, read-only: each has a SKILL.md, and a directory with nothing in
+// it that no digest covers (a link, a pipe, a name with a line break), so that the owner can approve
+// every one with `skills approve`. It does not require the approval to have been given: whether each
+// skill is approved yet is for `skills validate` to say, and this test must not turn red when a
+// skill changes before its next approval.
+func TestTheRealGlobalSkillsAreSkillsAnApprovalCanCover(t *testing.T) {
+	root, reg, global := realGlobalSkills(t)
+	for _, e := range reg.Skills {
+		if !global[e.Path] {
+			continue
+		}
+		entries, err := skillsfs.Approvals{}.ReadSkillTree(filepath.Join(root, "skills"), e.Path)
+		if err != nil {
+			t.Errorf("skill %q: its files cannot be read: %v", e.Path, err)
+			continue
+		}
+		if _, found := skills.SkillMDEntry(entries); !found {
+			t.Errorf("skill %q has no SKILL.md in skills/%s", e.Path, e.Path)
+		}
+		if _, err := skills.SkillDigest(entries); err != nil {
+			t.Errorf("skill %q cannot be covered by an approval: %v", e.Path, err)
 		}
 	}
+}
 
-	divs, sum := skills.CheckApprovals(reg, filepath.Join(root, "skills"), skillsfs.Approvals{})
-	for _, d := range divs {
-		t.Errorf("[%s] %s: %s", d.Class, d.Path, d.Detail)
-	}
-	if sum.Global != len(global) {
-		t.Errorf("CheckApprovals examined %d global skills, the registry has %d", sum.Global, len(global))
-	}
-	if sum.Approved+sum.Grandfathered != sum.Global {
-		t.Errorf("summary = %+v: every global skill must be approved or grandfathered", sum)
+// TestTheLintBaselineNamesOnlyRegisteredGlobalSkills pins the skills the lint excuses, for the
+// legacy findings it would refuse them for, against this repository's real registry. At the Phase 8
+// base it held the 37 global skills that existed; 34 remain: gadu-operator and gadu-orchestrate were
+// retired, and prespec-malandra was replaced by clarify-request. A retired or replaced skill leaves
+// the lint baseline deliberately, and so every id on it is a registered global skill.
+func TestTheLintBaselineNamesOnlyRegisteredGlobalSkills(t *testing.T) {
+	_, _, global := realGlobalSkills(t)
+	for _, id := range skills.LintBaselineSkills {
+		if !global[id] {
+			t.Errorf("lint baseline id %q is not a registered global skill in skills.registry.yaml; a retired skill must be removed from the lint baseline deliberately", id)
+		}
 	}
 }
 
