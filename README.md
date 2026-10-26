@@ -580,6 +580,36 @@ overlay roles <verb>
     match-shaper --root <worktree> --handoff <path>                              report which of a Shaper handoff v3's free-form roles equal a
                                                                                   member of the reusable-role vocabulary, without changing v3 semantics
 
+overlay review <verb>
+    Forward review binding and storage verbs to the engine unchanged. Neither verb launches an agent or
+    dispatches work: a reviewer's reply is a file somebody else produced. What is stored where, and the exact
+    git command whose output `diff_sha256` is the digest of, are in odd/review-results/README.md.
+    bind   --base <rev> --head <rev> [--cwd <repo>]
+        Resolve both revisions to full commit names and print one JSON object: base, head, diff_sha256 (the
+        sha256 of the canonical diff of base and head: git diff-tree under fixed flags and a fixed environment,
+        so that record and the delivery check recompute the same digest), paths (one entry per changed path,
+        a rename being a removal and a creation), worktree, worktree_created, diff_bytes, diff_limit_bytes and
+        over_limit. Make the detached worktree of head at <repo-parent>/<repo-name>-worktrees/review-<head12>,
+        beside the main checkout of the repository and never inside it (git's hooks do not run), or reuse one
+        already at head; a worktree of another commit, or a path that is not a worktree of this repository,
+        is refused and left as it is. A diff over 150000 bytes is bound all the same: over_limit is true and
+        note says the parent launches one review per commit. Needs git 2.40 or later. Exit 0 bound, 1 usage
+        error or refusal.
+    record --feature <name> --base <rev> --head <rev> [--result <file>|-] [--cwd <repo>]
+        Compute the binding again from git (the reply is never trusted for it), hold the reply (read from
+        --result, or from stdin) to it with the rules of the reviewer's contract (an echo that differs, an
+        inspection that is not completed, paths that differ, a finding id that is missing or repeats, a
+        severity, evidence class or disposition outside its enumeration, a BLOCKER or CRITICAL with no proof
+        reference, a reply above 1 MiB), and store it with the binding as
+        odd/review-results/<feature>/<head12>-<n>.json. <feature> is one safe path segment, <n> one more than
+        the highest stored for that head (from 1); the file is published whole and never over an existing one, and no input leads outside
+        odd/review-results/ (a symbolic link on the way is refused). stdout is the RoleHandoff skeleton for
+        `roles append --stdin` (payload_kind review-report, payload_sha256 of the stored file, evidence
+        review-diff and review-result); stderr says where the result is stored. The parent of the chain fills
+        project_id, goal_id, chain_id, seq, prev_sha256, to_role and context.summary, and `roles validate`
+        refuses the skeleton until it does. A reply that breaks a rule writes nothing and the error names the
+        rule. Exit 0 stored, 2 reply refused, 1 usage error or any other failure.
+
 overlay memory <verb>
     Forward memory-directive verbs to the engine unchanged. Read-only: it only plans what memory
     a caller may read (scope, sources, and identifying filters) and never queries or writes

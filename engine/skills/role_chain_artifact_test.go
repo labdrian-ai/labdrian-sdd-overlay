@@ -116,15 +116,16 @@ func roleChainDuties() []roleChainDuty {
 			"readability row", "docs, public API, messages or help", "second blind launch", "another `model`", "Risk line",
 		}},
 		{"Worktrees", []string{
-			"`git worktree add --detach ~/labdrian-sdd-overlay-worktrees/spike-<goal>`", "`…/review-<head12> <head>`",
+			"`git worktree add --detach ~/labdrian-sdd-overlay-worktrees/spike-<goal>`", "reviews: `review bind` makes it",
 			"Never under the repository or the scratchpad", "remove after the verdict",
 			"the delivery writes only the paths it names", "Engram `project`",
 		}},
 		{"Binding", []string{
-			"`base`", "`head` (full SHAs)", "`diff_sha256` = sha256 of `git diff base head`",
+			"`labdrian review bind --base B --head H`", "`base`", "`head` (full SHAs)", "`diff_sha256`", "`worktree`",
 			"150 KB", "one launch per commit", "never truncated", "S# criteria", "reliability and resilience",
 			"a risk line (secrets, permissions, path escapes, exec/net imports)",
-			"`candidate`", "`inspection.status`", "`completed`", "`paths`", "`git diff --name-only base head`",
+			"`labdrian review record --feature F --base B --head H`", "Exit 2",
+			"`candidate`", "`inspection.status`", "`completed`", "`paths`",
 			"`resume_reason: review not run: <reason>`", "retry once with another `model`",
 			"`odd/review-results/<feature>/<head12>-<n>.json`", "`review-diff`", "`review-result`", "`verifier-report`",
 			"recomputes `diff_sha256`", "only on equality",
@@ -219,7 +220,9 @@ func TestReviewResultsConventionSaysWhereAResultIsStoredAndWhatBindsItToARecord(
 		"`odd/review-results/<feature>/<head12>-<n>.json`", "`odd/tasks/<feature>.md`", "first 12 hex characters",
 		"`candidate`", "`inspection`", "`findings`", "`evidence`", "`agents/reviewer.md`", "`<head12>-<n>.verifier.md`",
 		"`review-report`", "`payload_sha256`", "`review-diff`", "`review-result`", "`verifier-report`", "`<base>..<head>`",
-		"sha256 of `git diff base head`", "trusts the record only on equality",
+		"`labdrian review bind`", "`labdrian review record`", "the sha256 of the canonical diff", "trusts the record only on equality",
+		"`binding`", "`reply`", "`binding.head`", "git 2.40 or later", "`diff-tree`", "`--attr-source`",
+		"Exit 0 stored, 2 reply refused",
 		"check evidence", "never review authority", "`odd/review-receipts/`", "`interrupted`",
 	} {
 		if !strings.Contains(readme, fragment) {
