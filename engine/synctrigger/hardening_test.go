@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -40,6 +41,41 @@ func TestRunChild_RotatesALogThatReachedItsLimitAndKeepsThreeOlderFiles(t *testi
 	}
 	if _, err := os.Stat(filepath.Join(stateDir, "logs", "sync-trigger.log.4")); !os.IsNotExist(err) {
 		t.Errorf("a fourth older file exists (err %v); only three are kept", err)
+	}
+}
+
+// Triggers that open a full log at once rotate it once: the full log is .1, the older files move
+// up one place each, and no older file is lost to a second rotation of the fresh log.
+func TestRunChild_ConcurrentTriggersRotateAFullLogOnce(t *testing.T) {
+	const triggers = 16
+	for round := 0; round < 20; round++ {
+		stateDir := t.TempDir()
+		full := bytes.Repeat([]byte("x"), 1<<20)
+		writeLogFile(t, stateDir, "sync-trigger.log", full)
+		writeLogFile(t, stateDir, "sync-trigger.log.1", []byte("one\n"))
+		writeLogFile(t, stateDir, "sync-trigger.log.2", []byte("two\n"))
+
+		var wg sync.WaitGroup
+		for n := 0; n < triggers; n++ {
+			o, _ := child(t, &fakeRunner{})
+			o.StateDir = stateDir
+			wg.Add(1)
+			go func() { defer wg.Done(); RunChild(o) }()
+		}
+		wg.Wait()
+
+		if got := readLogFile(t, stateDir, "sync-trigger.log.1"); len(got) != len(full) {
+			t.Fatalf("round %d: sync-trigger.log.1 holds %d bytes, want the full log of %d", round, len(got), len(full))
+		}
+		if got := readLogFile(t, stateDir, "sync-trigger.log.2"); got != "one\n" {
+			t.Fatalf("round %d: sync-trigger.log.2 = %q, want %q", round, got, "one\n")
+		}
+		if got := readLogFile(t, stateDir, "sync-trigger.log.3"); got != "two\n" {
+			t.Fatalf("round %d: sync-trigger.log.3 = %q, want %q", round, got, "two\n")
+		}
+		if got := strings.Count(logText(t, stateDir), "outcome="); got != triggers {
+			t.Fatalf("round %d: the log holds %d outcome lines, want %d", round, got, triggers)
+		}
 	}
 }
 

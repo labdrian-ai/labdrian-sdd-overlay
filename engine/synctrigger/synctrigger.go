@@ -25,6 +25,8 @@ import (
 	"time"
 	"unicode"
 	"unicode/utf8"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/filelock"
 )
 
 // Options configures a sync-trigger run. Run uses it to validate its own
@@ -364,12 +366,23 @@ func openLog(stateDir string) (*os.File, error) {
 
 // rotateLog moves a log that has reached logLimitBytes to path.1, shifting
 // the older files up and dropping the one past keptLogs, so the newest lines
-// are always in path. It is best effort: a rename that fails leaves the log
-// to grow until the next opening, and two triggers that rotate at once may
-// lose one older file, never a line of the log being written.
+// are always in path. Triggers that find a full log at once take turns on an
+// exclusive engine/filelock lock of path.lock (made only then, so a log under
+// its limit never gets one, and never removed, as filelock requires), and
+// each looks at the size again under it, so only the first rotates and the
+// fresh log is never rotated again. It is best effort: a lock that stays
+// taken past filelock's bound, or a rename that fails, leaves the log to grow
+// until the next opening.
 func rotateLog(path string) {
-	info, err := os.Stat(path)
-	if err != nil || info.Size() < logLimitBytes {
+	if !full(path) {
+		return
+	}
+	unlock, err := filelock.Acquire(path+".lock", filelock.Options{Perm: 0o600})
+	if err != nil {
+		return
+	}
+	defer unlock()
+	if !full(path) {
 		return
 	}
 	os.Remove(path + "." + strconv.Itoa(keptLogs))
@@ -377,6 +390,12 @@ func rotateLog(path string) {
 		os.Rename(path+"."+strconv.Itoa(n), path+"."+strconv.Itoa(n+1))
 	}
 	os.Rename(path, path+".1")
+}
+
+// full reports whether the log at path has reached logLimitBytes.
+func full(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && info.Size() >= logLimitBytes
 }
 
 // appendLog writes one summary line for a firing of the runner, dated at.
