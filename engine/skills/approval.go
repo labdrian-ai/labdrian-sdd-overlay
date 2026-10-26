@@ -23,22 +23,30 @@ import (
 // explicitly for the same reason.
 const ApprovalRecordName = ".approval.json"
 
-// ApprovalRecordVersion is the only record version this engine reads or writes.
-const ApprovalRecordVersion = 1
+// ApprovalRecordVersion is the only record version this engine writes, and the only one it takes
+// for an approval. Version 2 binds every file of the skill (SkillDigest).
+const ApprovalRecordVersion = 2
+
+// legacyApprovalRecordVersion is the version before it: a record whose digest was the SHA-256 of
+// SKILL.md alone, so that a script or a reference beside it could change with the approval still
+// holding. It is still read, to be told apart from a record this engine cannot read, and it never
+// approves anything: ClassifyApproval calls it stale.
+const legacyApprovalRecordVersion = 1
 
 // ApprovalApproverMaxRunes bounds the approver label. The label is a free-text
 // name, so an unbounded value would let a record carry arbitrary payload.
 const ApprovalApproverMaxRunes = 100
 
 // ApprovalRecord is the typed human-approval record for one skill: the skill
-// id, the SHA-256 of the exact SKILL.md bytes that were approved, when, and by
-// whom. It is bound to the file bytes, so any later change to SKILL.md
-// invalidates it (ApprovalStale).
+// id, the digest of the files that were approved (SkillDigest: every file in
+// the directory of the skill, not SKILL.md alone), when, and by whom. It is
+// bound to those files, so any later change to any of them invalidates it
+// (ApprovalStale).
 //
 // The engine cannot prove that a human ran `skills approve`: Approver is a
 // label the caller supplied, and any process that can write the file can write
 // a record. What the record guarantees, and what is tested, is that it matches
-// the exact bytes of the skill it sits next to.
+// the exact files of the skill it sits next to.
 type ApprovalRecord struct {
 	Version    int    `json:"version"`
 	Skill      string `json:"skill"`
@@ -47,43 +55,45 @@ type ApprovalRecord struct {
 	Approver   string `json:"approver"`
 }
 
-// ApprovalState classifies a skill's approval record against its SKILL.md.
+// ApprovalState classifies a skill's approval record against the files of the skill.
 type ApprovalState string
 
 const (
 	// ApprovalAbsent means the skill has no record file.
 	ApprovalAbsent ApprovalState = "absent"
-	// ApprovalValid means a well-formed record names this skill and its digest
-	// matches the current SKILL.md bytes.
+	// ApprovalValid means a well-formed record of the current version names this
+	// skill and its digest matches the files of the skill as they are now.
 	ApprovalValid ApprovalState = "valid"
-	// ApprovalStale means a well-formed record names this skill but its digest
-	// no longer matches the current SKILL.md bytes: the file changed after it
-	// was approved.
+	// ApprovalStale means a well-formed record names this skill but does not
+	// approve what the skill is now: its digest no longer matches (a file changed,
+	// was added or was removed after it was approved), or it is a record of the
+	// version before this one, which covered SKILL.md alone.
 	ApprovalStale ApprovalState = "stale"
 	// ApprovalMalformed means the record file exists but cannot be trusted: it
 	// does not parse strictly, or it names a different skill.
 	ApprovalMalformed ApprovalState = "malformed"
+	// ApprovalUnverifiable means the directory of the skill holds something an
+	// approval cannot cover (SkillDigest has no digest for it), so no record can
+	// be valid for it, whatever the record says or whether there is one.
+	ApprovalUnverifiable ApprovalState = "unverifiable"
 )
 
 // ApprovalStatus is the result of classifying one skill's record. Record is set
-// for ApprovalValid and ApprovalStale. Detail explains ApprovalStale and
-// ApprovalMalformed in one line and is empty otherwise.
+// for ApprovalValid and ApprovalStale. Digest is the digest of the files of the
+// skill as they are now, set in every state but ApprovalUnverifiable: it is the
+// one a new record is written with, from the same read that was classified.
+// Detail explains ApprovalStale, ApprovalMalformed and ApprovalUnverifiable in
+// one line and is empty otherwise.
 type ApprovalStatus struct {
 	State  ApprovalState
 	Record ApprovalRecord
+	Digest string
 	Detail string
 }
 
 // utcTimestampRe matches the only timestamp shape a record carries:
 // RFC 3339, UTC, whole seconds. Ranges are checked by validUTCTimestamp.
 var utcTimestampRe = regexp.MustCompile(`^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})Z$`)
-
-// SkillDigest returns the lowercase hex SHA-256 of the exact SKILL.md bytes.
-// It hashes the bytes as read, with no normalization of line endings, a BOM or
-// trailing whitespace: approval binds the file, not an interpretation of it.
-func SkillDigest(skillMD []byte) string {
-	return sha256hex.Sum(skillMD)
-}
 
 // ApprovalRecordPath returns where the approval record for id lives under
 // sourceRoot.
@@ -140,12 +150,12 @@ func ApproverLabelError(label string) string {
 	return ""
 }
 
-// validateApprovalRecord checks every field of rec and returns the first
-// problem, or nil. Parse and Serialize both call it, so a writer can never emit
-// a record its own reader refuses.
-func validateApprovalRecord(rec ApprovalRecord) error {
-	if rec.Version != ApprovalRecordVersion {
-		return fmt.Errorf("unsupported version %d, want %d", rec.Version, ApprovalRecordVersion)
+// validateApprovalRecord checks every field of rec, which must be a record of
+// the given version, and returns the first problem, or nil. Parse and Serialize
+// both call it, so a writer can never emit a record its own reader refuses.
+func validateApprovalRecord(rec ApprovalRecord, version int) error {
+	if rec.Version != version {
+		return fmt.Errorf("unsupported version %d, want %d", rec.Version, version)
 	}
 	if !slugRe.MatchString(rec.Skill) {
 		return fmt.Errorf(`field "skill" %q is not a valid skill id`, rec.Skill)
@@ -165,17 +175,28 @@ func validateApprovalRecord(rec ApprovalRecord) error {
 // ParseApprovalRecord parses record bytes strictly. It refuses:
 //   - unknown fields and a key that appears twice;
 //   - bytes that are not UTF-8, or that hold more than one JSON object or anything after it;
-//   - a version other than 1;
+//   - a version other than 2, a record of version 1 included: it approved SKILL.md alone, and
+//     ClassifyApproval is what tells it from a record that cannot be read;
 //   - an invalid field: a skill id that is not real, a digest that is not 64 lowercase hex
 //     characters, a timestamp that is not a real UTC one, a blank approver.
 //
 // A missing file is the caller's concern (ApprovalAbsent), not this function's.
 func ParseApprovalRecord(data []byte) (ApprovalRecord, error) {
+	return parseApprovalRecord(data, false)
+}
+
+// parseApprovalRecord is ParseApprovalRecord, reading a record of the version before this one as
+// well when legacy says so (its fields are held to the same rules, and it is told by its version).
+func parseApprovalRecord(data []byte, legacy bool) (ApprovalRecord, error) {
 	var rec ApprovalRecord
 	if err := decodeRecord(data, "record", &rec); err != nil {
 		return ApprovalRecord{}, refuseRecord("approval record", err)
 	}
-	if err := validateApprovalRecord(rec); err != nil {
+	version := ApprovalRecordVersion
+	if legacy && rec.Version == legacyApprovalRecordVersion {
+		version = legacyApprovalRecordVersion
+	}
+	if err := validateApprovalRecord(rec, version); err != nil {
 		return ApprovalRecord{}, fmt.Errorf("parse approval record: %w", err)
 	}
 	return rec, nil
@@ -183,13 +204,13 @@ func ParseApprovalRecord(data []byte) (ApprovalRecord, error) {
 
 // SerializeApprovalRecord renders rec as deterministic JSON: fixed field order,
 // 2-space indentation, and exactly one trailing newline. A zero Version (the
-// from-scratch path) is normalized to 1; any record ParseApprovalRecord would
+// from-scratch path) is normalized to 2; any record ParseApprovalRecord would
 // refuse is refused here too.
 func SerializeApprovalRecord(rec ApprovalRecord) ([]byte, error) {
 	if rec.Version == 0 {
 		rec.Version = ApprovalRecordVersion
 	}
-	if err := validateApprovalRecord(rec); err != nil {
+	if err := validateApprovalRecord(rec, ApprovalRecordVersion); err != nil {
 		return nil, fmt.Errorf("serialize approval record: %w", err)
 	}
 	var buf bytes.Buffer
@@ -202,48 +223,70 @@ func SerializeApprovalRecord(rec ApprovalRecord) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// ClassifyApproval classifies the record for skill id against the current
-// SKILL.md bytes. present reports whether a record file exists; recordData is
-// its content when it does. It is pure: no filesystem access.
+// ClassifyApproval classifies the record for skill id against the files of the
+// skill as they are now. present reports whether a record file exists;
+// recordData is its content when it does. It is pure: no filesystem access.
+//
+// A skill whose files have no digest (SkillDigest) is unverifiable, whatever
+// its record says or whether it has one: nothing can approve what an approval
+// cannot cover.
 //
 // A record that names a different skill is malformed, never valid: copying one
-// skill's record into another skill's directory must not approve it.
-func ClassifyApproval(id string, skillMD, recordData []byte, present bool) ApprovalStatus {
-	if !present {
-		return ApprovalStatus{State: ApprovalAbsent}
-	}
-	rec, err := ParseApprovalRecord(recordData)
+// skill's record into another skill's directory must not approve it. A record
+// of the version before this one is stale, not malformed, and is told so before
+// its digest is looked at: it covered SKILL.md alone, so what it matches says
+// nothing about the other files.
+func ClassifyApproval(id string, entries []SkillEntry, recordData []byte, present bool) ApprovalStatus {
+	digest, err := SkillDigest(entries)
 	if err != nil {
-		return ApprovalStatus{State: ApprovalMalformed, Detail: err.Error()}
+		return ApprovalStatus{State: ApprovalUnverifiable, Detail: err.Error()}
+	}
+	if !present {
+		return ApprovalStatus{State: ApprovalAbsent, Digest: digest}
+	}
+	rec, err := parseApprovalRecord(recordData, true)
+	if err != nil {
+		return ApprovalStatus{State: ApprovalMalformed, Digest: digest, Detail: err.Error()}
 	}
 	if rec.Skill != id {
 		return ApprovalStatus{
 			State:  ApprovalMalformed,
+			Digest: digest,
 			Detail: fmt.Sprintf("record names skill %q, expected %q", rec.Skill, id),
 		}
 	}
-	if digest := SkillDigest(skillMD); rec.SHA256 != digest {
+	if rec.Version == legacyApprovalRecordVersion {
 		return ApprovalStatus{
 			State:  ApprovalStale,
 			Record: rec,
-			Detail: fmt.Sprintf("SKILL.md changed after approval: record digest %s, file digest %s", rec.SHA256, digest),
+			Digest: digest,
+			Detail: "a record of version 1 covers only SKILL.md, and an approval now covers every file of the skill",
 		}
 	}
-	return ApprovalStatus{State: ApprovalValid, Record: rec}
+	if rec.SHA256 != digest {
+		return ApprovalStatus{
+			State:  ApprovalStale,
+			Record: rec,
+			Digest: digest,
+			Detail: fmt.Sprintf("the skill changed after approval: record digest %s, current digest %s", rec.SHA256, digest),
+		}
+	}
+	return ApprovalStatus{State: ApprovalValid, Record: rec, Digest: digest}
 }
 
 // ReadApprovalStatus reads the record next to skill id under sourceRoot and
-// classifies it against skillMD. Only "does not exist" means ApprovalAbsent;
-// any other read failure is returned as an error so the caller can refuse
-// rather than treat an unreadable record as no record.
-func ReadApprovalStatus(sourceRoot, id string, skillMD []byte, records ApprovalRecordStore) (ApprovalStatus, error) {
+// classifies it against entries, the files of the skill as the caller read
+// them. Only "does not exist" means ApprovalAbsent; any other read failure is
+// returned as an error so the caller can refuse rather than treat an
+// unreadable record as no record.
+func ReadApprovalStatus(sourceRoot, id string, entries []SkillEntry, records ApprovalRecordStore) (ApprovalStatus, error) {
 	path := ApprovalRecordPath(sourceRoot, id)
 	data, err := records.ReadRecord(sourceRoot, id)
 	if err != nil {
 		if isAbsent(err) {
-			return ApprovalStatus{State: ApprovalAbsent}, nil
+			return ClassifyApproval(id, entries, nil, false), nil
 		}
 		return ApprovalStatus{}, fmt.Errorf("skill %q: reading approval record %q: %w", id, path, err)
 	}
-	return ClassifyApproval(id, skillMD, data, true), nil
+	return ClassifyApproval(id, entries, data, true), nil
 }

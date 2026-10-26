@@ -27,19 +27,19 @@ $ skills approve --id nothing --approver fixture-reviewer --source-root <WORLD>/
 exit: 1
 --- stdout ---
 --- stderr ---
-error: skills approve: skill "nothing": SKILL.md not found or unreadable at "<WORLD>/skills/nothing/SKILL.md": open <WORLD>/skills/nothing/SKILL.md: no such file or directory
+error: skills approve: skill "nothing": SKILL.md not found or unreadable at "<WORLD>/skills/nothing/SKILL.md": lstat <WORLD>/skills/nothing: no such file or directory
 
 # a skill whose SKILL.md is a directory
 $ skills approve --id dir-skill --approver fixture-reviewer --source-root <WORLD>/skills
 exit: 1
 --- stdout ---
 --- stderr ---
-error: skills approve: skill "dir-skill": SKILL.md not found or unreadable at "<WORLD>/skills/dir-skill/SKILL.md": read <WORLD>/skills/dir-skill/SKILL.md: is a directory
+error: skills approve: skill "dir-skill": SKILL.md not found or unreadable at "<WORLD>/skills/dir-skill/SKILL.md": the skill directory holds no file named SKILL.md
 
 # a source root that is not there
 $ skills approve --id alpha --approver x --source-root <WORLD>/missing
 exit: 1
 --- stdout ---
 --- stderr ---
-error: skills approve: skill "alpha": SKILL.md not found or unreadable at "<WORLD>/missing/alpha/SKILL.md": open <WORLD>/missing/alpha/SKILL.md: no such file or directory
+error: skills approve: skill "alpha": SKILL.md not found or unreadable at "<WORLD>/missing/alpha/SKILL.md": lstat <WORLD>/missing/alpha: no such file or directory
 

@@ -392,7 +392,19 @@ func TestRegistryLockE2E_ValidateLeavesTheRealTreeUntouched(t *testing.T) {
 
 	w := lockE2E{t: t, bin: bin, dir: t.TempDir(), home: t.TempDir(), state: t.TempDir()}
 	r := w.engine("validate", "--registry", reg, "--manifest", man, "--source-root", root)
-	if r.code != 0 {
+	switch r.code {
+	case 0:
+	case 1:
+		// Every global skill needs a record of its files, which only a human gives it (`skills
+		// approve`, which this test must not run), so a tree whose skills are not all approved yet
+		// exits 1 with approval findings and nothing else. That is no reason to fail a test of what
+		// validate does to the tree; any other finding, or any other exit, still is.
+		for _, line := range strings.Split(strings.TrimSpace(r.stderr), "\n") {
+			if !strings.HasPrefix(line, "[APPROVAL_") {
+				t.Errorf("validate on the real tree reported something besides an approval: %q", line)
+			}
+		}
+	default:
 		t.Fatalf("validate on the real tree: exit %d, stderr %q", r.code, r.stderr)
 	}
 	if after := treeListing(t, dirs...); !reflect.DeepEqual(before, after) {

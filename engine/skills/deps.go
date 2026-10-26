@@ -3,8 +3,8 @@ package skills
 import "io/fs"
 
 // FileReader reads a file by name: the port the verbs read the files of an overlay and of a
-// project through (the registry's neighbours, the manifest, the approval records, a SKILL.md to
-// lint). The production one is os.ReadFile, which the composition root chooses.
+// project through (the registry's neighbours, the manifest). The production one is os.ReadFile,
+// which the composition root chooses.
 type FileReader func(name string) ([]byte, error)
 
 // FileStatter says what a path is: the port a verb asks whether a file is there.
@@ -18,13 +18,13 @@ type FileStatter func(name string) (fs.FileInfo, error)
 type Deps struct {
 	// Candidates reads candidate and draft observations from the project's Engram.
 	Candidates CandidateSource
-	// ReadFile reads a file by name: the registry's neighbours, the manifest, the approval
-	// records, the files of a project.
+	// ReadFile reads a file by name: the registry's neighbours, the manifest, the files of a
+	// project.
 	ReadFile FileReader
 	// Registries reads and encodes the registry of an overlay.
 	Registries RegistryRepository
-	// Approvals reads the evidence of an approval: the SKILL.md of a global skill and the record
-	// beside it. The verbs that judge approval (validate, add, approve) refuse without it.
+	// Approvals reads the evidence of an approval: every file of a global skill and the record
+	// beside them. The verbs that judge approval (validate, add, approve) refuse without it.
 	Approvals ApprovalRecordStore
 	// Tree walks the tree of skills an overlay keeps and reads the source of one skill.
 	Tree SkillTree

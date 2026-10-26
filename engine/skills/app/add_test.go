@@ -179,6 +179,42 @@ func TestAddWritesNothingWhenItRefuses(t *testing.T) {
 				}
 			},
 		},
+		"a file beside SKILL.md added after it was approved": {
+			func(t *testing.T, o overlay) AddInput {
+				put(t, filepath.Join(o.skills, "foo", "scripts", "run.sh"), "echo a script added after the approval\n")
+				return o.input("foo")
+			},
+			func(t *testing.T, err error) {
+				if !errors.As(err, &unapproved) || unapproved.Class != skills.DivApprovalStale {
+					t.Errorf("err = %v, want APPROVAL_STALE: the approval covers every file of the skill", err)
+				}
+			},
+		},
+		"a record of version 1": {
+			func(t *testing.T, o overlay) AddInput {
+				put(t, skills.ApprovalRecordPath(o.skills, "foo"), legacyRecord("foo", skillFor("foo")))
+				return o.input("foo")
+			},
+			func(t *testing.T, err error) {
+				if !errors.As(err, &unapproved) || unapproved.Class != skills.DivApprovalStale ||
+					!strings.Contains(unapproved.Detail, "covers only SKILL.md") || !strings.Contains(unapproved.Detail, "labdrian skills approve --id foo") {
+					t.Errorf("err = %v, want APPROVAL_STALE that says the record covers only SKILL.md and names the command", err)
+				}
+			},
+		},
+		"a link in the skill": {
+			func(t *testing.T, o overlay) AddInput {
+				if err := os.Symlink("SKILL.md", filepath.Join(o.skills, "foo", "alias.md")); err != nil {
+					t.Skipf("no symbolic link here: %v", err)
+				}
+				return o.input("foo")
+			},
+			func(t *testing.T, err error) {
+				if !errors.As(err, &unapproved) || unapproved.Class != skills.DivApprovalUnverifiable || !strings.Contains(unapproved.Detail, "alias.md is a symbolic link") {
+					t.Errorf("err = %v, want APPROVAL_UNVERIFIABLE that names the link: an approval cannot cover it", err)
+				}
+			},
+		},
 		"a record that cannot be read": {
 			func(t *testing.T, o overlay) AddInput {
 				removeRecord(t, o)
@@ -381,65 +417,41 @@ func (b brokenStore) Decode(data []byte) (skills.Registry, error) {
 	return reg, err
 }
 
-// legacyBaseline grandfathers the skill id with the exact bytes it has now, as the fixed baseline
-// grandfathers the global skills that predate the approval record.
-func legacyBaseline(t *testing.T, o overlay, id string) skills.BaselineLookup {
-	t.Helper()
-	digest := skills.SkillDigest([]byte(read(t, filepath.Join(o.skills, id, "SKILL.md"))))
-	return func(candidate string) (string, bool) { return digest, candidate == id }
-}
-
-// A skill of the baseline needs no approval record while its bytes are the pinned ones: it is
-// registered with no record on disk, and the record is not written by add. The same rule as
-// validate, which counts it as grandfathered; the two cannot disagree.
-func TestAddRegistersAGrandfatheredSkillWithNoApprovalRecord(t *testing.T) {
+// No skill is registered on the strength of what it was: a skill the lint baseline names (one that
+// used to need no record at all) needs a record of its files like any other, and add says so in
+// the same words validate does.
+func TestAddRefusesASkillOfTheFormerBaselineThatHasNoRecord(t *testing.T) {
 	o := newOverlay(t)
-	put(t, filepath.Join(o.skills, "legacy", "SKILL.md"), skillFor("legacy"))
-	ports := o.addPorts(newStagedSpy(nil))
-	ports.Baseline = legacyBaseline(t, o, "legacy")
+	put(t, filepath.Join(o.skills, baselineSkillID, "SKILL.md"), skillFor(baselineSkillID))
 
-	res, err := AddSkill(ports, o.input("legacy"))
-
-	if err != nil || res.ID != "legacy" {
-		t.Fatalf("AddSkill = %+v, %v, want legacy added with no approval record", res, err)
-	}
-	if _, err := os.Stat(skills.ApprovalRecordPath(o.skills, "legacy")); err == nil {
-		t.Error("add wrote an approval record for a grandfathered skill")
-	}
-	o.is(t, registryYAML("existing")+strings.ReplaceAll(addedFoo, "foo", "legacy"), manifestOf("existing", "legacy"))
-}
-
-// The exemption is for the pinned bytes alone: one byte more and the skill needs a record like any
-// other, and the refusal says the file differs from the baseline.
-func TestAddRefusesAGrandfatheredSkillWhoseBytesChanged(t *testing.T) {
-	o := newOverlay(t)
-	put(t, filepath.Join(o.skills, "legacy", "SKILL.md"), skillFor("legacy"))
-	baseline := legacyBaseline(t, o, "legacy")
-	put(t, filepath.Join(o.skills, "legacy", "SKILL.md"), skillFor("legacy")+"\n")
-	ports := o.addPorts(newStagedSpy(nil))
-	ports.Baseline = baseline
-
-	_, err := AddSkill(ports, o.input("legacy"))
+	_, err := AddSkill(o.addPorts(newStagedSpy(nil)), o.input(baselineSkillID))
 
 	var refusal *NotApprovedError
-	if !errors.As(err, &refusal) || refusal.Class != skills.DivApprovalMissing || !strings.Contains(refusal.Detail, "differs from the grandfathered baseline") {
-		t.Fatalf("err = %v, want a *NotApprovedError saying the bytes differ from the baseline", err)
+	if !errors.As(err, &refusal) || refusal.Class != skills.DivApprovalMissing || !strings.Contains(refusal.Detail, "labdrian skills approve --id "+baselineSkillID) {
+		t.Fatalf("err = %v, want a *NotApprovedError (APPROVAL_MISSING) that names the fixing command", err)
 	}
 	o.untouched(t)
 }
 
-// A skill that is not in the baseline needs its record whatever the baseline says of others.
-func TestAddRefusesASkillTheBaselineDoesNotNameWhenItHasNoRecord(t *testing.T) {
+// What `skills approve` records is what `skills add` accepts: both digest every file of the skill
+// through one function, so a skill with a script and a nested reference that was approved is added,
+// and the same skill with any of those files changed afterwards is not.
+func TestAddRegistersASkillApprovedWithAllItsFilesAndRefusesItOnceOneChanges(t *testing.T) {
 	o := newOverlay(t)
-	put(t, filepath.Join(o.skills, "newcomer", "SKILL.md"), skillFor("newcomer"))
-	ports := o.addPorts(newStagedSpy(nil))
-	ports.Baseline = legacyBaseline(t, o, "foo")
+	put(t, filepath.Join(o.skills, "foo", "scripts", "run.sh"), "echo hi\n")
+	put(t, filepath.Join(o.skills, "foo", "references", "deep", "notes.md"), "notes\n")
+	approve(t, o.skills, "foo")
 
-	_, err := AddSkill(ports, o.input("newcomer"))
-
+	put(t, filepath.Join(o.skills, "foo", "references", "deep", "notes.md"), "notes, changed after the approval\n")
 	var refusal *NotApprovedError
-	if !errors.As(err, &refusal) || refusal.Class != skills.DivApprovalMissing {
-		t.Fatalf("err = %v, want a *NotApprovedError", err)
+	if _, err := o.add(newStagedSpy(nil), "foo"); !errors.As(err, &refusal) || refusal.Class != skills.DivApprovalStale {
+		t.Fatalf("err = %v, want APPROVAL_STALE for a reference that changed after the approval", err)
 	}
 	o.untouched(t)
+
+	approve(t, o.skills, "foo")
+	if res, err := o.add(newStagedSpy(nil), "foo"); err != nil || res.ID != "foo" {
+		t.Fatalf("AddSkill = %+v, %v, want foo added once its files are approved as they are", res, err)
+	}
+	o.is(t, registryYAML("existing")+addedFoo, manifestOf("existing", "foo"))
 }

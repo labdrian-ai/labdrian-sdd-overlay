@@ -134,8 +134,9 @@ func TestAnApproveStartedDuringAnInstallWaitsForTheInstallToFinish(t *testing.T)
 	}
 }
 
-// This is the scenario an upstream merge creates: a baseline skill that fails the hard lint and
-// whose bytes changed. validate asks for an approval; approve gives it; validate then passes.
+// A skill of the lint baseline that fails the hard lint is approved like any other: nothing
+// grandfathers it, so validate asks for an approval, approve gives it with the finding as a
+// warning, and validate then passes.
 func TestABaselineSkillThatFailsTheHardLintIsAskedForAnApprovalByValidateAndApproveResolvesIt(t *testing.T) {
 	w := newOverlayWorld(t)
 	writeTestFile(t, w.reg, overlayRegistryOf(baselineSkillID))
@@ -151,15 +152,15 @@ func TestABaselineSkillThatFailsTheHardLintIsAskedForAnApprovalByValidateAndAppr
 	}
 
 	before := validate()
-	if before.code() != 1 || !strings.Contains(before.stderr, "differs from the grandfathered baseline") || !strings.Contains(before.stderr, baselineSkillID) {
-		t.Fatalf("validate before approve: exit %d, stderr %q, want the changed baseline skill asked for an approval", before.code(), before.stderr)
+	if before.code() != 1 || !strings.Contains(before.stderr, "[APPROVAL_MISSING] "+baselineSkillID) || strings.Contains(before.stderr, "grandfathered") {
+		t.Fatalf("validate before approve: exit %d, stderr %q, want the baseline skill asked for an approval like any other", before.code(), before.stderr)
 	}
 	approved := runSkillsVerb(skillsApprove, deps, append([]string{"approve", "--id", baselineSkillID, "--approver", "reviewer"}, w.flags()...)...)
 	if approved.code() != 0 || !strings.Contains(approved.stderr, "warning: [lint:body-hard-budget]") {
 		t.Fatalf("approve: exit %d, stderr %q, want success with the finding as a warning", approved.code(), approved.stderr)
 	}
 	after := validate()
-	if after.code() != 0 || !strings.Contains(after.stdout, "global skill approvals verified (1 skills: 1 approved, 0 grandfathered)") {
+	if after.code() != 0 || !strings.Contains(after.stdout, "global skill approvals verified (1 skills: 1 approved)") {
 		t.Errorf("validate after approve: exit %d, stdout %q, stderr %q, want the skill approved by its record", after.code(), after.stdout, after.stderr)
 	}
 }

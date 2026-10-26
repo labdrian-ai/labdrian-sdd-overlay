@@ -8,12 +8,14 @@ package app
 
 import (
 	"errors"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/sha256hex"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills/registryyaml"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills/skillsfs"
@@ -72,17 +74,39 @@ func read(t *testing.T, path string) string {
 	return string(data)
 }
 
-// approve writes the record a human's `skills approve` leaves for the SKILL.md now on disk.
+// approve writes the record a human's `skills approve` leaves for the files now on disk: the
+// digest of every file of the skill.
 func approve(t *testing.T, root, id string) {
 	t.Helper()
+	entries, err := skillsfs.Approvals{}.ReadSkillTree(root, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	digest, err := skills.SkillDigest(entries)
+	if err != nil {
+		t.Fatal(err)
+	}
 	data, err := skills.SerializeApprovalRecord(skills.ApprovalRecord{
-		Skill: id, SHA256: skills.SkillDigest([]byte(read(t, filepath.Join(root, id, "SKILL.md")))),
-		ApprovedAt: approvedAt, Approver: "fixture-reviewer",
+		Skill: id, SHA256: digest, ApprovedAt: approvedAt, Approver: "fixture-reviewer",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	put(t, skills.ApprovalRecordPath(root, id), string(data))
+}
+
+// legacyRecord is the record `skills approve` wrote before an approval covered every file of a
+// skill: version 1, bound to the digest of SKILL.md alone.
+func legacyRecord(id, skillMD string) string {
+	return fmt.Sprintf("{\n  \"version\": 1,\n  \"skill\": %q,\n  \"sha256\": %q,\n  \"approved_at\": %q,\n  \"approver\": \"fixture-reviewer\"\n}\n",
+		id, sha256hex.Sum([]byte(skillMD)), approvedAt)
+}
+
+// digestOfSkillMDAlone is the digest of a skill whose directory holds just this SKILL.md, made by
+// hand from the definition: the SHA-256 of the one line sha256sum writes for the file, which is
+// what an approval of such a skill binds.
+func digestOfSkillMDAlone(skillMD string) string {
+	return sha256hex.Sum([]byte(sha256hex.Sum([]byte(skillMD)) + "  SKILL.md\n"))
 }
 
 // overlay is a directory that holds a registry and a manifest that agree on one skill, existing,

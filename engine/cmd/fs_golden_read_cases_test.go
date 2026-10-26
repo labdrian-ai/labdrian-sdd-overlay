@@ -44,8 +44,11 @@ func fsReadCases() []registryGoldenCase {
 		}},
 		{"fs-validate-counts-the-files-of-an-aligned-tree", func(w *registryWorld) {
 			w.overlay()
-			w.put("skills/alpha/.scratch", "an editor's file\n")
-			w.symlink("SKILL.md", "skills/alpha/link-to-a-file.md")
+			// What the walk leaves out lies beside the skills, not in them: the approval of a skill
+			// covers every file of its directory, so a skill with a link or an extra file in it is
+			// not an aligned one (fs-validate-walks-the-skills-tree-and-names-what-it-finds).
+			w.put("skills/.scratch", "an editor's file\n")
+			w.symlink("alpha/SKILL.md", "skills/link-to-a-file.md")
 			w.mkdir("skills/empty-dir")
 			w.validateIn("a tree whose only files are the rows of the manifest", w.path("skills"))
 			w.validateIn("the root with a trailing separator", w.path("skills")+"/")

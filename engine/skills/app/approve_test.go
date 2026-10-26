@@ -8,11 +8,12 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/sha256hex"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
 )
 
-// baselineSkillID is a real member of the approval baseline: the list of the ids that are exempt
-// from the lint refusal is fixed data.
+// baselineSkillID is a real member of the lint baseline: the list of the ids whose legacy lint
+// findings are told as warnings and not refused is fixed data. It exempts nothing from approval.
 const baselineSkillID = "sdd-apply"
 
 // approveWorld is a skills tree that holds one skill that passes the hard lint and has no record.
@@ -26,7 +27,7 @@ func newApproveWorld(t *testing.T, id string) approveWorld {
 }
 
 func (w approveWorld) ports(staged skills.StagedWrites, now func() string) ApprovePorts {
-	return ApprovePorts{Files: os.ReadFile, Approvals: skillsApprovals(), Staged: staged, Now: now}
+	return ApprovePorts{Approvals: skillsApprovals(), Staged: staged, Now: now}
 }
 
 func (w approveWorld) approve(staged skills.StagedWrites, id string) (ApproveResult, error) {
@@ -49,12 +50,12 @@ func TestApproveRecordsTheApprovalOfTheExactBytes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	digest := skills.SkillDigest([]byte(skillFor("my-skill")))
+	digest := digestOfSkillMDAlone(skillFor("my-skill"))
 	want := ApproveResult{Verdict: "approved", ID: "my-skill", Digest: digest, RecordPath: skills.ApprovalRecordPath(w.root, "my-skill")}
 	if res.Verdict != want.Verdict || res.ID != want.ID || res.Digest != want.Digest || res.RecordPath != want.RecordPath || len(res.Warnings) != 0 {
 		t.Errorf("ApproveSkill = %+v, want %+v", res, want)
 	}
-	if rec := w.record(t, "my-skill"); rec != (skills.ApprovalRecord{Version: 1, Skill: "my-skill", SHA256: digest, ApprovedAt: approvedAt, Approver: "reviewer"}) {
+	if rec := w.record(t, "my-skill"); rec != (skills.ApprovalRecord{Version: 2, Skill: "my-skill", SHA256: digest, ApprovedAt: approvedAt, Approver: "reviewer"}) {
 		t.Errorf("record = %+v", rec)
 	}
 	// The record is committed with the skill, so it is staged world-readable, and the atomic write
@@ -93,6 +94,9 @@ func TestApproveReplacesAStaleOrMalformedRecord(t *testing.T) {
 	for name, content := range map[string]string{
 		"a record of other bytes": "",
 		"a malformed record":      "not json",
+		// The approval of version 1 covered SKILL.md alone, and is replaced by one of every file even
+		// though SKILL.md has not changed since.
+		"a record of version 1": legacyRecord("my-skill", skillFor("my-skill")),
 	} {
 		t.Run(name, func(t *testing.T) {
 			w := newApproveWorld(t, "my-skill")
@@ -110,6 +114,9 @@ func TestApproveReplacesAStaleOrMalformedRecord(t *testing.T) {
 			}
 			if got := w.record(t, "my-skill").SHA256; got != res.Digest {
 				t.Errorf("the record holds %s, want the digest of the bytes now on disk, %s", got, res.Digest)
+			}
+			if got := w.record(t, "my-skill").Version; got != 2 {
+				t.Errorf("the record is of version %d, want the version that covers every file, 2", got)
 			}
 		})
 	}
@@ -171,6 +178,17 @@ func TestApproveRefusesASkillThatIsNotThereOrFailsTheHardLintAndWritesNothing(t 
 	}
 }
 
+// unreadableTree is an approval store whose files of a skill cannot be listed for the reason it is
+// given.
+type unreadableTree struct {
+	skills.ApprovalRecordStore
+	cause error
+}
+
+func (u unreadableTree) ReadSkillTree(string, string) ([]skills.SkillEntry, error) {
+	return nil, u.cause
+}
+
 // A SKILL.md that is not there and one that cannot be read are one refusal in the words of the
 // verb, and the refusal carries the cause, so that a person is told which of the two it is and a
 // caller can tell them apart with errors.Is.
@@ -187,7 +205,7 @@ func TestApproveSaysWhetherTheSkillIsMissingOrCannotBeRead(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			ports := w.ports(newStagedSpy(nil), fixedClock(approvedAt))
-			ports.Files = func(string) ([]byte, error) { return nil, tc.cause }
+			ports.Approvals = unreadableTree{skillsApprovals(), tc.cause}
 			_, err := ApproveSkill(ports, ApproveInput{ID: "my-skill", Approver: "reviewer", ApproverGiven: true, SourceRoot: w.root})
 			var refusal *ApproveRefusal
 			if !errors.As(err, &refusal) || !errors.Is(err, tc.is) {
@@ -285,30 +303,130 @@ func TestApprovePutsBackWhatItStagedWhenItCannotWriteTheRecord(t *testing.T) {
 	}
 }
 
-// The baseline that decides which lint findings are warnings is the one the caller names: a skill
-// it names is approved with its legacy findings told as warnings, one it does not is refused.
-func TestApproveReadsWhichSkillsAreLegacyFromTheBaselineItIsGiven(t *testing.T) {
-	overBudget := skillFor("legacy-x") + strings.Repeat("Another line of the procedure, long enough to count.\n", 100)
-	for _, tc := range []struct {
-		name     string
-		baseline skills.BaselineLookup
-		refused  bool
+// The approval is of every file of the skill, found at any depth, and not of SKILL.md alone: the
+// digest the record holds is the one sha256sum gives for the list of them (skills.SkillDigest),
+// and a change to any file but the record itself is a change the next approval records.
+func TestApproveRecordsTheApprovalOfEveryFileOfTheSkill(t *testing.T) {
+	w := newApproveWorld(t, "my-skill")
+	put(t, filepath.Join(w.root, "my-skill", "scripts", "run.sh"), "echo hi\n")
+	put(t, filepath.Join(w.root, "my-skill", "references", "deep", "notes.md"), "notes\n")
+
+	first, err := w.approve(newStagedSpy(nil), "my-skill")
+	if err != nil || first.Verdict != "approved" {
+		t.Fatalf("ApproveSkill = %+v, %v, want the skill approved", first, err)
+	}
+	alone := digestOfSkillMDAlone(skillFor("my-skill"))
+	if first.Digest == alone {
+		t.Errorf("the digest %s is the one of SKILL.md alone: the script and the reference were left out", first.Digest)
+	}
+	// By hand, as the doc of skills.SkillDigest says: the list sorted by the bytes of the path.
+	list := sha256hex.Sum([]byte(skillFor("my-skill"))) + "  SKILL.md\n" +
+		sha256hex.Sum([]byte("notes\n")) + "  references/deep/notes.md\n" +
+		sha256hex.Sum([]byte("echo hi\n")) + "  scripts/run.sh\n"
+	if want := sha256hex.Sum([]byte(list)); first.Digest != want {
+		t.Errorf("digest = %s, want %s (the digest of the list of the three files)", first.Digest, want)
+	}
+
+	// Approving the same files again changes nothing, with the record sitting among them.
+	spy := newStagedSpy(nil)
+	if again, err := w.approve(spy, "my-skill"); err != nil || again.Verdict != "unchanged" || len(spy.ops) != 0 {
+		t.Fatalf("ApproveSkill = %+v, %v (writes %q), want the approval left unchanged", again, err, spy.ops)
+	}
+
+	// A file beside SKILL.md changing is a skill that is approved again, with another digest.
+	put(t, filepath.Join(w.root, "my-skill", "scripts", "run.sh"), "echo changed\n")
+	second, err := w.approve(newStagedSpy(nil), "my-skill")
+	if err != nil || second.Verdict != "approved" || second.Digest == first.Digest {
+		t.Fatalf("ApproveSkill = %+v, %v, want a new approval with another digest than %s", second, err, first.Digest)
+	}
+	if got := w.record(t, "my-skill").SHA256; got != second.Digest {
+		t.Errorf("the record holds %s, want %s", got, second.Digest)
+	}
+}
+
+// What an approval cannot cover is refused before anything is written, and the refusal says what it
+// is and what to do, in the words `skills validate` uses for the same skill.
+func TestApproveRefusesASkillWhoseDirectoryHoldsWhatNoDigestCovers(t *testing.T) {
+	for name, tc := range map[string]struct {
+		prepare func(t *testing.T, dir string)
+		entry   string
 	}{
-		{"named", func(id string) (string, bool) { return "", id == "legacy-x" }, false},
-		{"not named", func(id string) (string, bool) { return "", false }, true},
+		"a link beside SKILL.md": {func(t *testing.T, dir string) {
+			if err := os.Symlink("SKILL.md", filepath.Join(dir, "alias.md")); err != nil {
+				t.Skipf("no symbolic link here: %v", err)
+			}
+		}, "alias.md is a symbolic link"},
+		"a link to nothing in a subdirectory": {func(t *testing.T, dir string) {
+			if err := os.MkdirAll(filepath.Join(dir, "references"), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.Symlink("nothing-is-here", filepath.Join(dir, "references", "broken.md")); err != nil {
+				t.Skipf("no symbolic link here: %v", err)
+			}
+		}, "references/broken.md is a symbolic link"},
+		"a name with a line break": {func(t *testing.T, dir string) {
+			if err := os.WriteFile(filepath.Join(dir, "two\nlines"), []byte("x"), 0o644); err != nil {
+				t.Skipf("no file name with a line break here: %v", err)
+			}
+		}, `"two\nlines" has a line break in its name`},
 	} {
-		t.Run(tc.name, func(t *testing.T) {
-			w := newApproveWorld(t, "legacy-x")
-			put(t, filepath.Join(w.root, "legacy-x", "SKILL.md"), overBudget)
-			ports := w.ports(newStagedSpy(nil), fixedClock(approvedAt))
-			ports.Baseline = tc.baseline
+		t.Run(name, func(t *testing.T) {
+			w := newApproveWorld(t, "my-skill")
+			tc.prepare(t, filepath.Join(w.root, "my-skill"))
+			spy := newStagedSpy(nil)
 
-			res, err := ApproveSkill(ports, ApproveInput{ID: "legacy-x", Approver: "reviewer", ApproverGiven: true, SourceRoot: w.root})
+			_, err := w.approve(spy, "my-skill")
 
-			var lint *LintRefusal
-			if tc.refused != errors.As(err, &lint) || (!tc.refused && (err != nil || len(res.Warnings) == 0)) {
-				t.Errorf("ApproveSkill = %+v, %v, want refused=%v", res, err, tc.refused)
+			var refusal *ApproveRefusal
+			if !errors.As(err, &refusal) {
+				t.Fatalf("err = %v, want an approval refusal", err)
+			}
+			for _, want := range []string{`skill "my-skill"`, "cannot be verified", tc.entry, "regular files only"} {
+				if !strings.Contains(err.Error(), want) {
+					t.Errorf("err = %q, want it to say %q", err, want)
+				}
+			}
+			if len(spy.ops) != 0 {
+				t.Errorf("the writes were called (%q) for a skill nothing can approve", spy.ops)
+			}
+			if _, statErr := os.Stat(skills.ApprovalRecordPath(w.root, "my-skill")); !errors.Is(statErr, os.ErrNotExist) {
+				t.Errorf("a record is there for a skill nothing can approve: %v", statErr)
 			}
 		})
+	}
+}
+
+// A SKILL.md that is a link has no bytes to lint and nothing to approve: the refusal is the one of
+// an approval that cannot cover it, not a lint finding of an empty file.
+func TestApproveRefusesASKILLmdThatIsALink(t *testing.T) {
+	w := newApproveWorld(t, "my-skill")
+	dir := filepath.Join(w.root, "my-skill")
+	if err := os.Rename(filepath.Join(dir, "SKILL.md"), filepath.Join(dir, "real-skill.md")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("real-skill.md", filepath.Join(dir, "SKILL.md")); err != nil {
+		t.Skipf("no symbolic link here: %v", err)
+	}
+	spy := newStagedSpy(nil)
+
+	_, err := w.approve(spy, "my-skill")
+
+	var lint *LintRefusal
+	if err == nil || errors.As(err, &lint) || !strings.Contains(err.Error(), "SKILL.md is a symbolic link") || len(spy.ops) != 0 {
+		t.Errorf("err = %v (writes %q), want the refusal of an approval that cannot cover a link", err, spy.ops)
+	}
+}
+
+// A directory that holds files but no SKILL.md is not a skill, and is told so in the words of a
+// SKILL.md that is not there.
+func TestApproveRefusesADirectoryWithNoSKILLmd(t *testing.T) {
+	w := newApproveWorld(t, "my-skill")
+	put(t, filepath.Join(w.root, "empty-handed", "README.md"), "not a skill")
+	spy := newStagedSpy(nil)
+
+	_, err := w.approve(spy, "empty-handed")
+
+	if err == nil || !strings.Contains(err.Error(), `skill "empty-handed": SKILL.md not found or unreadable at`) || !strings.Contains(err.Error(), "holds no file named SKILL.md") || len(spy.ops) != 0 {
+		t.Errorf("err = %v (writes %q), want the SKILL.md not found", err, spy.ops)
 	}
 }

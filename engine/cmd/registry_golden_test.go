@@ -566,7 +566,7 @@ func (w *registryWorld) putSkillBytes(id, content string, approved bool) {
 	}
 	data, err := skills.SerializeApprovalRecord(skills.ApprovalRecord{
 		Skill:      id,
-		SHA256:     skills.SkillDigest([]byte(content)),
+		SHA256:     skillMDDigest(w.t, content),
 		ApprovedAt: "2026-09-30T12:00:00Z",
 		Approver:   "fixture-reviewer",
 	})

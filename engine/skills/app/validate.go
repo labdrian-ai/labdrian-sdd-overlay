@@ -29,10 +29,9 @@ type ValidatePorts struct {
 	Manifest skills.FileReader
 	// Tree lists the files of the skills tree.
 	Tree skills.SkillTree
-	// Approvals reads the evidence of the approval of every global skill.
+	// Approvals reads the evidence of the approval of every global skill: its files and the
+	// record beside them.
 	Approvals skills.ApprovalRecordStore
-	// Baseline says which skills are grandfathered; nil is the baseline the domain pins.
-	Baseline skills.BaselineLookup
 }
 
 // ManifestReadError is a manifest that could not be read.
@@ -141,9 +140,9 @@ func ValidateOverlay(p ValidatePorts, in ValidateInput) (ValidateResult, error) 
 	res.DiskFiles = len(diskPaths)
 	res.OnDisk = skills.DiffOnDisk(diskPaths, manifestPaths)
 
-	// Every global skill needs a valid human-approval record for its exact SKILL.md bytes, unless
-	// it is the grandfathered baseline's.
-	res.Unapproved, res.Approvals = skills.CheckApprovalsAgainst(p.Baseline.OrFixed(), reg, in.SourceRoot, p.Approvals)
+	// Every global skill needs a valid human-approval record for its exact files, every one of
+	// them.
+	res.Unapproved, res.Approvals = skills.CheckApprovals(reg, in.SourceRoot, p.Approvals)
 
 	// A registry the reader did not read whole is not passed: the reason is told last.
 	res.NotVerifiable = reg.CheckVerifiable()

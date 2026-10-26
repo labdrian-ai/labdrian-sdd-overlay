@@ -113,10 +113,8 @@ Commands:
                                    validate  cross-check registry vs overlay.manifest,
                                              and skills/ on disk vs overlay.manifest
                                              (requires --source-root); every global skill
-                                             needs a valid approval record, except the
-                                             grandfathered baseline (the 34 global skills at the
-                                             Phase 8 base that are still registered, defined
-                                             below) while its bytes are unchanged
+                                             needs a valid approval record of all its files
+                                             (see approve below); none is excused
                                    install   install project-scoped skills into <cwd>/.claude/skills and
                                              <cwd>/.agents/skills, replacing only what it installed and left
                                              unmodified. It records each file it writes (with its SHA-256) in the
@@ -142,25 +140,39 @@ Commands:
                                              The overlay NEVER fetches; --repo/--ref are
                                              inert labels for a file you already committed.
                                              Refused unless skills/<id>/.approval.json holds a
-                                             valid approval for the exact SKILL.md bytes (see
+                                             valid approval for every file of the skill (see
                                              approve below); nothing is written on refusal.
                                    remove <id> unregister a skill from registry + manifest
                                    sync-manifest  regenerate */SKILL.md rows from skills.registry.yaml
                                    approve --id <id> --approver <label>
-                                             record a human approval of skills/<id>/SKILL.md in
-                                             skills/<id>/.approval.json, bound to the digest of
-                                             its exact bytes; the engine cannot prove a human ran
-                                             it, so the record only proves the bytes match
+                                             record a human approval of every file of skills/<id>/
+                                             in skills/<id>/.approval.json, bound to one digest of
+                                             all of them; the engine cannot prove a human ran it,
+                                             so the record only proves the files match
+                                             The digest is the SHA-256 of the lines
+                                             "<sha256 of the file>  <path>" (the format of
+                                             sha256sum) of every regular file of the skill's
+                                             directory, at any depth, sorted by path, except
+                                             .approval.json itself. To recompute it by hand:
+                                               (cd skills/<id> && find . -type f ! -path ./.approval.json |
+                                                sed 's|^\./||' | LC_ALL=C sort |
+                                                xargs -d '\n' sha256sum -- | sha256sum)
+                                             A link, or any entry that is not a regular file,
+                                             cannot be covered: the skill is APPROVAL_UNVERIFIABLE
+                                             until it is replaced with a regular file or removed.
+                                             A record of version 1 covered SKILL.md alone: it is
+                                             APPROVAL_STALE, and approving the skill again writes
+                                             a record of version 2
                                              A skill that fails the hard lint is refused, except
-                                             a baseline skill (the grandfathered global skills,
-                                             which predate the lint budget and will be rewritten
-                                             in a later feature): for those, only the size and
-                                             description findings (body-hard-budget,
-                                             description-max, description-one-line) are printed
-                                             as "warning:" lines on stderr, the approval is still
-                                             recorded, and the exit is 0; any other hard finding,
-                                             such as a missing front matter, refuses a baseline
-                                             skill too
+                                             a lint-baseline skill (one of the 34 global skills
+                                             that predate the lint budget; the list exempts them
+                                             from that lint only, never from approval): for those,
+                                             only the size and description findings
+                                             (body-hard-budget, description-max,
+                                             description-one-line) are printed as "warning:" lines
+                                             on stderr, the approval is still recorded, and the
+                                             exit is 0; any other hard finding, such as a missing
+                                             front matter, refuses a baseline skill too
                                              A PreToolUse hook (install-hooks) denies the agent running
                                              it or writing the record by hand: a speed bump, not a
                                              security boundary. A person runs it in a terminal.
@@ -181,11 +193,12 @@ Commands:
                                              that nothing in the engine takes for you; --dry-run prints
                                              the removal plan
                                    Project-tier skills stay autonomous: they need no approval record.
-                                   "The Phase 8 base" (used above and in the README) is main at
-                                   53f545d, the commit the global skill lifecycle was built on; the
-                                   global skills present there are the grandfathered baseline: 37 at
+                                   The lint baseline (used by approve above and in the README) is the
+                                   global skills that existed at the Phase 8 base (main at 53f545d, the
+                                   commit the global skill lifecycle was built on) and still do: 37 at
                                    the base, 34 since gadu-operator and gadu-orchestrate were retired
-                                   and prespec-malandra was replaced by clarify-request.
+                                   and prespec-malandra was replaced by clarify-request. It is a list
+                                   of ids for the lint, and excuses no skill from approval.
                                    Locking: add, remove, sync-manifest and approve hold an exclusive lock, and
                                    validate and install a shared one, on .skills.registry.yaml.lock beside the
                                    registry (created by the first write, never removed, git-ignored; shared

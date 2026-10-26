@@ -21,8 +21,12 @@ var updateRecordsStrictGolden = flag.Bool("update-records-strict-golden", false,
 
 // recordWithADuplicateKey is a valid approval record of skill alpha with its approver said twice.
 func recordWithADuplicateKey(content string) string {
+	digest, err := skills.SkillDigest([]skills.SkillEntry{{Rel: "SKILL.md", Data: []byte(content)}})
+	if err != nil {
+		panic(err)
+	}
 	valid, err := skills.SerializeApprovalRecord(skills.ApprovalRecord{
-		Skill: "alpha", SHA256: skills.SkillDigest([]byte(content)), ApprovedAt: "2026-09-30T12:00:00Z", Approver: "fixture-reviewer",
+		Skill: "alpha", SHA256: digest, ApprovedAt: "2026-09-30T12:00:00Z", Approver: "fixture-reviewer",
 	})
 	if err != nil {
 		panic(err)

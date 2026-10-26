@@ -45,7 +45,7 @@ $ skills add unapproved --source-root <WORLD>/skills
 exit: 1
 --- stdout ---
 --- stderr ---
-error: [APPROVAL_MISSING] skill "unapproved": no approval record at <WORLD>/skills/unapproved/.approval.json; a human must review the exact SKILL.md bytes and run: labdrian skills approve --id unapproved --approver <name>
+error: [APPROVAL_MISSING] skill "unapproved": no approval record at <WORLD>/skills/unapproved/.approval.json; a human must review every file of the skill and run: labdrian skills approve --id unapproved --approver <name>
 
 # a repository with a character the file cannot hold
 $ skills add unslugged --repo https://example.test/{x} --source-root <WORLD>/skills

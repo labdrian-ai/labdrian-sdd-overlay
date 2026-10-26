@@ -3,7 +3,7 @@ $ skills approve --id absent --id bar --approver fixture-reviewer --source-root 
 exit: 0
 --- stdout ---
 approved: bar
-sha256: 6612bbb153249a211d16211157812175b436b32de50fb866836c58fe15b85ead
+sha256: d7f744f491e6fa23aab22b57b49375988fadc5bab0074d94f9fea4e7cbb6dd92
 record: <WORLD>/skills/bar/.approval.json
 --- stderr ---
 
@@ -12,7 +12,7 @@ $ skills approve --id bar --approver first --approver second --source-root <WORL
 exit: 0
 --- stdout ---
 approved: bar
-sha256: 6612bbb153249a211d16211157812175b436b32de50fb866836c58fe15b85ead
+sha256: d7f744f491e6fa23aab22b57b49375988fadc5bab0074d94f9fea4e7cbb6dd92
 record: <WORLD>/skills/bar/.approval.json
 --- stderr ---
 
@@ -21,7 +21,7 @@ $ skills approve --id bar --approver fixture-reviewer --source-root <WORLD>/abse
 exit: 0
 --- stdout ---
 approved: bar
-sha256: 6612bbb153249a211d16211157812175b436b32de50fb866836c58fe15b85ead
+sha256: d7f744f491e6fa23aab22b57b49375988fadc5bab0074d94f9fea4e7cbb6dd92
 record: <WORLD>/skills/bar/.approval.json
 --- stderr ---
 

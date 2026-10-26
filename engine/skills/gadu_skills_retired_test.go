@@ -9,8 +9,8 @@ import (
 
 // The two GADU skills are retired with the agent they loaded (PR 5 of the role agents; the owner
 // decision of 2026-10-23 retired gadu-orchestrate like gadu-operator): no registry entry, no manifest
-// row and no directory in skills/. A retired skill leaves the approval baseline deliberately, which
-// TestApprovalBaseline_PinnedToTheRepositoryRegistry pins. The registry entry is checked through the
+// row and no directory in skills/. A retired skill leaves the lint baseline deliberately, which
+// TestTheLintBaselineNamesOnlyRegisteredGlobalSkills pins. The registry entry is checked through the
 // registry reader, which only the external test package can reach
 // (TestTheGaduSkillsAreGoneFromTheRegistry).
 func TestTheGaduSkillsAreGoneFromTheManifestAndTheTree(t *testing.T) {

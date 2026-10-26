@@ -13,9 +13,9 @@ registries/skills.registry.yaml 0644 204 f4f6d939ffdf
 skills.registry.yaml 0644 204 f4f6d939ffdf
 skills/
 skills/alpha/
-skills/alpha/.approval.json 0644 194 fea84ceb56ba
+skills/alpha/.approval.json 0644 194 7b7b98d76717
 skills/alpha/SKILL.md 0644 288 b1349da82d6c
 skills/foo/
-skills/foo/.approval.json 0644 192 3af492fc2a2e
+skills/foo/.approval.json 0644 192 c0f49c7e8f10
 skills/foo/SKILL.md 0644 284 de83a6ee05ac
 

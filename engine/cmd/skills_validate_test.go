@@ -132,7 +132,7 @@ func (w *validateWorld) writeManifestOf(ids ...string) {
 func (w *validateWorld) addSkill(id string) {
 	content := skillFile(id)
 	w.put("skills/"+id+"/SKILL.md", content)
-	data, err := skills.SerializeApprovalRecord(skills.ApprovalRecord{Skill: id, SHA256: skills.SkillDigest([]byte(content)), ApprovedAt: "2026-09-30T12:00:00Z", Approver: "reviewer"})
+	data, err := skills.SerializeApprovalRecord(skills.ApprovalRecord{Skill: id, SHA256: skillMDDigest(w.t, content), ApprovedAt: "2026-09-30T12:00:00Z", Approver: "reviewer"})
 	if err != nil {
 		w.t.Fatal(err)
 	}
@@ -353,9 +353,9 @@ type gatedApprovals struct {
 	read func(string)
 }
 
-func (g gatedApprovals) ReadSkill(sourceRoot, path string) ([]byte, error) {
+func (g gatedApprovals) ReadSkillTree(sourceRoot, path string) ([]skills.SkillEntry, error) {
 	g.read("skill " + path)
-	return g.ApprovalRecordStore.ReadSkill(sourceRoot, path)
+	return g.ApprovalRecordStore.ReadSkillTree(sourceRoot, path)
 }
 
 func (g gatedApprovals) ReadRecord(sourceRoot, id string) ([]byte, error) {
@@ -423,7 +423,7 @@ func TestSkillsValidateSaysWhichGlobalSkillsAreNotApprovedAndPassesOnceTheyAre(t
 	}
 	w.addSkill("alpha")
 	got = runSkillsVerb(skillsValidate, w.deps(&recordingLocker{}), w.args...)
-	if got.code() != 0 || !strings.Contains(got.stdout, "global skill approvals verified (1 skills: 1 approved, 0 grandfathered)") {
+	if got.code() != 0 || !strings.Contains(got.stdout, "global skill approvals verified (1 skills: 1 approved)") {
 		t.Errorf("validate = %+v, want a pass that says the approval check", got)
 	}
 }

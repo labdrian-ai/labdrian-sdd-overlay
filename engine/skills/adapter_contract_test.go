@@ -6,9 +6,12 @@ package skills_test
 // double is told here, not by a domain test that quietly tests a stale copy.
 
 import (
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"reflect"
+	"sort"
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
@@ -55,6 +58,49 @@ func TestTheTreeDoubleScansAsTheTreeAdapterDoes(t *testing.T) {
 	}
 	if !reflect.DeepEqual(fromDouble, fromAdapter) {
 		t.Errorf("the double lists %v, the adapter %v", fromDouble, fromAdapter)
+	}
+}
+
+func TestTheApprovalStoreDoubleListsASkillAsTheApprovalAdapterDoes(t *testing.T) {
+	root := t.TempDir()
+	putFile(t, filepath.Join(root, "a", "SKILL.md"), "skill")
+	putFile(t, filepath.Join(root, "a", "scripts", "run.sh"), "echo")
+	putFile(t, filepath.Join(root, "a", "references", "deep", "notes.md"), "notes")
+	putFile(t, filepath.Join(root, "a", ".hidden"), "a dot-prefixed file")
+	putFile(t, filepath.Join(root, "a", "empty"), "")
+	putFile(t, filepath.Join(root, "a", skills.ApprovalRecordName), `{"record": true}`)
+	putFile(t, filepath.Join(root, "b", "SKILL.md"), "another skill")
+	if err := os.MkdirAll(filepath.Join(root, "a", "an-empty-directory"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("SKILL.md", filepath.Join(root, "a", "alias.md")); err != nil {
+		t.Logf("no symbolic link here (%v): the rule for links is not held to the adapter", err)
+	}
+
+	byPath := func(entries []skills.SkillEntry) []skills.SkillEntry {
+		sort.Slice(entries, func(i, j int) bool { return entries[i].Rel < entries[j].Rel })
+		return entries
+	}
+	fromAdapter, err := skillsfs.Approvals{}.ReadSkillTree(root, "a")
+	if err != nil {
+		t.Fatal(err)
+	}
+	fromDouble, err := skills.ReadSkillTreeOfTheDouble(root, "a")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(byPath(fromDouble), byPath(fromAdapter)) {
+		t.Errorf("the double lists %+v, the adapter %+v", fromDouble, fromAdapter)
+	}
+
+	// What is not there is an answer in both, and what is not a directory is a failure in both.
+	putFile(t, filepath.Join(root, "a-file"), "not a directory")
+	for _, path := range []string{"none", "a-file"} {
+		_, adapterErr := skillsfs.Approvals{}.ReadSkillTree(root, path)
+		_, doubleErr := skills.ReadSkillTreeOfTheDouble(root, path)
+		if adapterErr == nil || doubleErr == nil || errors.Is(adapterErr, fs.ErrNotExist) != errors.Is(doubleErr, fs.ErrNotExist) {
+			t.Errorf("ReadSkillTree(%q): the adapter says %v, the double %v, want both a failure and the same kind", path, adapterErr, doubleErr)
+		}
 	}
 }
 

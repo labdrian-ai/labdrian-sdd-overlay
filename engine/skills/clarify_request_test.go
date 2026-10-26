@@ -25,7 +25,7 @@ const (
 )
 
 // TestClarifyRequestReplacesPrespecMalandra pins the rename (S1) and the deletion of the grid's
-// reference (S4): the skill, the registry, the manifest, the approval baseline and the help text
+// reference (S4): the skill, the registry, the manifest, the lint baseline and the help text
 // all stop naming prespec-malandra and name clarify-request.
 func TestClarifyRequestReplacesPrespecMalandra(t *testing.T) {
 	root := actualsInstrumentationRepoRoot(t)
@@ -104,13 +104,13 @@ func TestClarifyRequestReplacesPrespecMalandra(t *testing.T) {
 		}
 	})
 
-	t.Run("S1_the_approval_baseline_drops_the_old_entry_and_adds_none", func(t *testing.T) {
-		for _, entry := range ApprovalBaseline() {
-			switch entry.ID {
+	t.Run("S1_the_lint_baseline_drops_the_old_entry_and_adds_none", func(t *testing.T) {
+		for _, id := range lintBaselineSkills {
+			switch id {
 			case prespecMalandraID:
-				t.Errorf("the approval baseline still grandfathers the replaced skill %s", prespecMalandraID)
+				t.Errorf("the lint baseline still excuses the replaced skill %s", prespecMalandraID)
 			case clarifyRequestID:
-				t.Errorf("the approval baseline grandfathers %s: it needs an owner approval record (S8), and a baseline entry would exempt it", clarifyRequestID)
+				t.Errorf("the lint baseline excuses %s: it is a new skill and meets the whole lint", clarifyRequestID)
 			}
 		}
 	})

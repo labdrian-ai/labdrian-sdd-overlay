@@ -1,35 +1,32 @@
 package skills
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/sha256hex"
 )
 
-// setBaselineForTest replaces the grandfathered baseline for one test, so a
-// fixture can grandfather bytes it controls. The real baseline pins the real
-// repository's SKILL.md digests and cannot be reproduced by a fixture.
-func setBaselineForTest(t *testing.T, entries []ApprovalBaselineEntry) {
-	t.Helper()
-	saved := approvalBaseline
-	approvalBaseline = entries
-	t.Cleanup(func() { approvalBaseline = saved })
-}
-
-// writeValidApproval writes a record for the SKILL.md currently on disk under
-// root/id, exactly as `skills approve` would.
+// writeValidApproval writes a record for the files currently on disk under root/id, exactly as
+// `skills approve` would: the digest of every file of the skill (SkillDigest), not of SKILL.md
+// alone.
 func writeValidApproval(t *testing.T, root, id string) {
 	t.Helper()
-	skill, err := os.ReadFile(filepath.Join(root, id, "SKILL.md"))
+	entries, err := ReadSkillTreeOfTheDouble(root, id)
 	if err != nil {
-		t.Fatalf("read SKILL.md for %q: %v", id, err)
+		t.Fatalf("read the files of %q: %v", id, err)
+	}
+	digest, err := SkillDigest(entries)
+	if err != nil {
+		t.Fatalf("the files of %q have no digest: %v", id, err)
 	}
 	data, err := SerializeApprovalRecord(ApprovalRecord{
 		Skill:      id,
-		SHA256:     SkillDigest(skill),
+		SHA256:     digest,
 		ApprovedAt: "2026-09-30T12:00:00Z",
 		Approver:   "fixture-reviewer",
 	})
@@ -39,22 +36,23 @@ func writeValidApproval(t *testing.T, root, id string) {
 	writeTestFile(t, ApprovalRecordPath(root, id), string(data))
 }
 
+// symlinkOrSkip makes a symbolic link at link to target, or skips the test on a file system that
+// has none.
+func symlinkOrSkip(t *testing.T, target, link string) {
+	t.Helper()
+	if err := os.Symlink(target, link); err != nil {
+		t.Skipf("cannot make a symbolic link here: %v", err)
+	}
+}
+
 const approveCommandFor = "labdrian skills approve --id "
 
-func TestEvaluateApproval_TheFourStatesAndTheBaseline(t *testing.T) {
-	skill := []byte("the exact bytes")
-	digest := SkillDigest(skill)
+func TestEvaluateApproval_OnlyAValidRecordSatisfiesTheRequirement(t *testing.T) {
 	recordPath := "skills/my-skill/" + ApprovalRecordName
 
-	valid := ApprovalStatus{State: ApprovalValid}
-	absent := ApprovalStatus{State: ApprovalAbsent}
-	stale := ApprovalStatus{State: ApprovalStale, Detail: "SKILL.md changed after approval: record digest aaa, file digest bbb"}
-	malformed := ApprovalStatus{State: ApprovalMalformed, Detail: "parse approval record: unexpected end of JSON input"}
-
-	t.Run("valid record satisfies the requirement", func(t *testing.T) {
-		v := EvaluateApproval("my-skill", recordPath, skill, valid)
-		if !v.OK || v.Grandfathered {
-			t.Fatalf("verdict = %+v, want OK and not grandfathered", v)
+	t.Run("a valid record satisfies the requirement", func(t *testing.T) {
+		if v := EvaluateApproval("my-skill", recordPath, ApprovalStatus{State: ApprovalValid}); !v.OK {
+			t.Fatalf("verdict = %+v, want OK", v)
 		}
 	})
 
@@ -62,22 +60,26 @@ func TestEvaluateApproval_TheFourStatesAndTheBaseline(t *testing.T) {
 		name   string
 		status ApprovalStatus
 		class  DivergenceClass
-		state  string
+		want   []string // what the refusal must say
 	}{
-		{"absent", absent, DivApprovalMissing, "no approval record"},
-		{"stale", stale, DivApprovalStale, "stale"},
-		{"malformed", malformed, DivApprovalMalformed, "malformed"},
+		{"absent", ApprovalStatus{State: ApprovalAbsent}, DivApprovalMissing,
+			[]string{`"my-skill"`, "no approval record", recordPath, "every file of the skill", approveCommandFor + "my-skill --approver"}},
+		{"stale", ApprovalStatus{State: ApprovalStale, Detail: "the skill changed after approval: record digest aaa, current digest bbb"}, DivApprovalStale,
+			[]string{`"my-skill"`, "stale", "record digest aaa, current digest bbb", recordPath, "every file of the skill", approveCommandFor + "my-skill --approver"}},
+		{"malformed", ApprovalStatus{State: ApprovalMalformed, Detail: "parse approval record: unexpected end of JSON input"}, DivApprovalMalformed,
+			[]string{`"my-skill"`, "malformed", "unexpected end of JSON input", recordPath, approveCommandFor + "my-skill --approver"}},
+		{"unverifiable", ApprovalStatus{State: ApprovalUnverifiable, Detail: "references/link.md is a symbolic link"}, DivApprovalUnverifiable,
+			[]string{`"my-skill"`, "cannot be verified", "references/link.md is a symbolic link", "regular files"}},
 	} {
-		t.Run(tc.name+" record is refused with the skill, the state and the fixing command", func(t *testing.T) {
-			setBaselineForTest(t, nil)
-			v := EvaluateApproval("my-skill", recordPath, skill, tc.status)
+		t.Run(tc.name+" is refused with the skill, the reason and what to do", func(t *testing.T) {
+			v := EvaluateApproval("my-skill", recordPath, tc.status)
 			if v.OK {
 				t.Fatalf("verdict = %+v, want a refusal", v)
 			}
 			if v.Class != tc.class {
 				t.Errorf("class = %q, want %q", v.Class, tc.class)
 			}
-			for _, want := range []string{`"my-skill"`, tc.state, approveCommandFor + "my-skill --approver", recordPath} {
+			for _, want := range tc.want {
 				if !strings.Contains(v.Detail, want) {
 					t.Errorf("detail %q does not contain %q", v.Detail, want)
 				}
@@ -85,47 +87,30 @@ func TestEvaluateApproval_TheFourStatesAndTheBaseline(t *testing.T) {
 		})
 	}
 
-	t.Run("absent record is fine for the grandfathered bytes", func(t *testing.T) {
-		setBaselineForTest(t, []ApprovalBaselineEntry{{ID: "my-skill", SHA256: digest}})
-		v := EvaluateApproval("my-skill", recordPath, skill, absent)
-		if !v.OK || !v.Grandfathered {
-			t.Fatalf("verdict = %+v, want OK and grandfathered", v)
+	t.Run("a state it does not know is never an approval", func(t *testing.T) {
+		for _, state := range []ApprovalState{"", "granted"} {
+			if v := EvaluateApproval("my-skill", recordPath, ApprovalStatus{State: state}); v.OK {
+				t.Errorf("state %q: verdict = %+v, want a refusal", state, v)
+			}
 		}
 	})
+}
 
-	t.Run("a baseline skill whose bytes changed needs a record and the refusal says why", func(t *testing.T) {
-		setBaselineForTest(t, []ApprovalBaselineEntry{{ID: "my-skill", SHA256: SkillDigest([]byte("the original bytes"))}})
-		v := EvaluateApproval("my-skill", recordPath, skill, absent)
-		if v.OK || v.Class != DivApprovalMissing {
-			t.Fatalf("verdict = %+v, want APPROVAL_MISSING", v)
-		}
-		if !strings.Contains(v.Detail, "baseline") {
-			t.Errorf("detail %q must say the baseline skill was modified", v.Detail)
-		}
-		// With a valid record the modification is approved.
-		if ok := EvaluateApproval("my-skill", recordPath, skill, valid); !ok.OK {
-			t.Errorf("a valid record must satisfy a modified baseline skill: %+v", ok)
-		}
-	})
+// A record of version 1 is not an error to fix by hand: it is an approval of less than there is to
+// approve, and the refusal says what it covered and which command approves the skill again.
+func TestEvaluateApproval_ARecordOfVersionOneIsToldToBeApprovedAgain(t *testing.T) {
+	recordPath := "skills/my-skill/" + ApprovalRecordName
+	status := ClassifyApproval("my-skill", abcSkill(), []byte(legacyRecordJSON("my-skill", abcDigest)), true)
 
-	t.Run("the baseline only excuses an absent record", func(t *testing.T) {
-		// A record that is present must be valid, baseline or not: a stale or
-		// malformed governance file is never silently ignored.
-		setBaselineForTest(t, []ApprovalBaselineEntry{{ID: "my-skill", SHA256: digest}})
-		if v := EvaluateApproval("my-skill", recordPath, skill, stale); v.OK || v.Class != DivApprovalStale {
-			t.Errorf("stale record on unchanged baseline bytes: %+v, want APPROVAL_STALE", v)
+	v := EvaluateApproval("my-skill", recordPath, status)
+	if v.OK || v.Class != DivApprovalStale {
+		t.Fatalf("verdict = %+v, want APPROVAL_STALE", v)
+	}
+	for _, want := range []string{"version 1", "covers only SKILL.md", "every file of the skill", approveCommandFor + "my-skill --approver <name>"} {
+		if !strings.Contains(v.Detail, want) {
+			t.Errorf("detail %q does not say %q", v.Detail, want)
 		}
-		if v := EvaluateApproval("my-skill", recordPath, skill, malformed); v.OK || v.Class != DivApprovalMalformed {
-			t.Errorf("malformed record on unchanged baseline bytes: %+v, want APPROVAL_MALFORMED", v)
-		}
-	})
-
-	t.Run("the baseline is per skill id", func(t *testing.T) {
-		setBaselineForTest(t, []ApprovalBaselineEntry{{ID: "another-skill", SHA256: digest}})
-		if v := EvaluateApproval("my-skill", recordPath, skill, absent); v.OK {
-			t.Fatalf("another skill's baseline entry must not excuse this one: %+v", v)
-		}
-	})
+	}
 }
 
 // gateFixture is a registry with global and project-scope entries plus a
@@ -160,7 +145,6 @@ func classesByPath(divs []Divergence) map[string]DivergenceClass {
 }
 
 func TestCheckApprovals_GlobalSkillsNeedAValidRecordAndProjectSkillsDoNot(t *testing.T) {
-	setBaselineForTest(t, nil)
 	f := newGateFixture(t, []string{"approved", "unapproved", "stale-one", "broken-one"}, []string{"project-skill"})
 	writeValidApproval(t, f.root, "approved")
 	writeValidApproval(t, f.root, "stale-one")
@@ -186,71 +170,159 @@ func TestCheckApprovals_GlobalSkillsNeedAValidRecordAndProjectSkillsDoNot(t *tes
 	if _, flagged := got["project-skill"]; flagged {
 		t.Error("project-tier skills stay autonomous: no approval is required")
 	}
-	if sum.Global != 4 || sum.Approved != 1 || sum.Grandfathered != 0 {
-		t.Errorf("summary = %+v, want 4 global, 1 approved, 0 grandfathered", sum)
+	if sum.Global != 4 || sum.Approved != 1 {
+		t.Errorf("summary = %+v, want 4 global and 1 approved", sum)
 	}
 }
 
-func TestCheckApprovals_GrandfatheredBaselineNeedsNoRecordUntilItsBytesChange(t *testing.T) {
-	f := newGateFixture(t, []string{"legacy"}, nil)
-	original, _ := os.ReadFile(filepath.Join(f.root, "legacy", "SKILL.md"))
-	setBaselineForTest(t, []ApprovalBaselineEntry{{ID: "legacy", SHA256: SkillDigest(original)}})
+// The lint baseline names the global skills that were once approved without a record. None is now:
+// each needs a valid record for the files it has, like any skill, and a skill of the baseline is
+// no different in this from a skill that was never on it.
+func TestCheckApprovals_NoSkillIsExcusedFromApprovalByItsId(t *testing.T) {
+	f := newGateFixture(t, lintBaselineSkills, nil)
 
 	divs, sum := CheckApprovals(f.reg, f.root, fileApprovals(os.ReadFile))
-	if len(divs) != 0 || sum.Grandfathered != 1 {
-		t.Fatalf("unchanged baseline skill: divs=%v summary=%+v, want none and 1 grandfathered", divs, sum)
-	}
 
-	// Modify the baseline skill: now it needs a record.
-	writeTestFile(t, filepath.Join(f.root, "legacy", "SKILL.md"), string(original)+"\nedited\n")
-	divs, _ = CheckApprovals(f.reg, f.root, fileApprovals(os.ReadFile))
-	if got := classesByPath(divs); got["legacy"] != DivApprovalMissing {
-		t.Fatalf("modified baseline skill: divergences = %v, want APPROVAL_MISSING", got)
+	got := classesByPath(divs)
+	for _, id := range lintBaselineSkills {
+		if got[id] != DivApprovalMissing {
+			t.Errorf("%s: class = %q, want %q: no global skill is exempt from approval", id, got[id], DivApprovalMissing)
+		}
 	}
-
-	// Approve the modification: clean again, and it is counted as approved.
-	writeValidApproval(t, f.root, "legacy")
-	divs, sum = CheckApprovals(f.reg, f.root, fileApprovals(os.ReadFile))
-	if len(divs) != 0 || sum.Approved != 1 || sum.Grandfathered != 0 {
-		t.Fatalf("approved modification: divs=%v summary=%+v", divs, sum)
+	if sum.Global != len(lintBaselineSkills) || sum.Approved != 0 {
+		t.Errorf("summary = %+v, want %d global and none approved", sum, len(lintBaselineSkills))
 	}
 }
 
-func TestCheckApprovals_LeavesMissingAndUnreadableSkillFilesToTheRightCheck(t *testing.T) {
-	setBaselineForTest(t, nil)
-	f := newGateFixture(t, []string{"missing-file", "unreadable"}, nil)
+func TestCheckApprovals_EveryFileOfTheSkillIsPartOfWhatIsApproved(t *testing.T) {
+	ids := []string{"companion-changed", "companion-added", "companion-removed", "nested-changed", "untouched"}
+	f := newGateFixture(t, ids, nil)
+	// Every skill has a script beside SKILL.md and a reference two directories down, all approved as
+	// they are. The record each skill then has sits in its directory while the digest is checked, and
+	// the digest does not cover it: a record is not a file of what it approves.
+	for _, id := range ids {
+		writeTestFile(t, filepath.Join(f.root, id, "scripts", "run.sh"), "echo "+id+"\n")
+		writeTestFile(t, filepath.Join(f.root, id, "references", "deep", "notes.md"), "notes of "+id+"\n")
+		writeValidApproval(t, f.root, id)
+	}
+	if divs, sum := CheckApprovals(f.reg, f.root, fileApprovals(os.ReadFile)); len(divs) != 0 || sum.Approved != len(ids) {
+		t.Fatalf("before any change: divergences = %v, summary = %+v, want every skill approved", divs, sum)
+	}
+
+	writeTestFile(t, filepath.Join(f.root, "companion-changed", "scripts", "run.sh"), "echo changed\n")
+	writeTestFile(t, filepath.Join(f.root, "companion-added", "scripts", "extra.sh"), "echo added\n")
+	if err := os.Remove(filepath.Join(f.root, "companion-removed", "scripts", "run.sh")); err != nil {
+		t.Fatal(err)
+	}
+	writeTestFile(t, filepath.Join(f.root, "nested-changed", "references", "deep", "notes.md"), "notes changed\n")
+
+	divs, sum := CheckApprovals(f.reg, f.root, fileApprovals(os.ReadFile))
+
+	got := classesByPath(divs)
+	for _, id := range []string{"companion-changed", "companion-added", "companion-removed", "nested-changed"} {
+		if got[id] != DivApprovalStale {
+			t.Errorf("%s: class = %q, want %q: a change to a file beside SKILL.md voids the approval", id, got[id], DivApprovalStale)
+		}
+	}
+	if _, flagged := got["untouched"]; flagged || len(divs) != 4 {
+		t.Errorf("divergences = %v, want only the four skills that changed", got)
+	}
+	if sum.Approved != 1 {
+		t.Errorf("summary = %+v, want only the untouched skill approved", sum)
+	}
+}
+
+func TestCheckApprovals_ASkillApprovedWithARecordOfVersionOneIsStaleUntilItIsApprovedAgain(t *testing.T) {
+	f := newGateFixture(t, []string{"legacy"}, nil)
+	// What `skills approve` wrote before the digest covered every file: the digest of SKILL.md.
+	writeTestFile(t, ApprovalRecordPath(f.root, "legacy"), legacyRecordJSON("legacy", sha256hex.Sum([]byte(lintCleanSkillMD("legacy")))))
+
+	divs, sum := CheckApprovals(f.reg, f.root, fileApprovals(os.ReadFile))
+
+	if len(divs) != 1 || divs[0].Class != DivApprovalStale || divs[0].Path != "legacy" {
+		t.Fatalf("divergences = %+v, want one APPROVAL_STALE for legacy", divs)
+	}
+	for _, want := range []string{"covers only SKILL.md", approveCommandFor + "legacy --approver"} {
+		if !strings.Contains(divs[0].Detail, want) {
+			t.Errorf("detail %q does not say %q", divs[0].Detail, want)
+		}
+	}
+	if sum.Approved != 0 {
+		t.Errorf("summary = %+v, want nothing approved by a record of version 1", sum)
+	}
+
+	writeValidApproval(t, f.root, "legacy")
+	divs, sum = CheckApprovals(f.reg, f.root, fileApprovals(os.ReadFile))
+	if len(divs) != 0 || sum.Approved != 1 {
+		t.Fatalf("after the approval of version 2: divergences = %v, summary = %+v, want it approved", divs, sum)
+	}
+}
+
+func TestCheckApprovals_ASkillWithALinkInItIsUnverifiableWhateverItsRecordSays(t *testing.T) {
+	f := newGateFixture(t, []string{"linked", "dangling", "linked-skill-md"}, nil)
+	for _, id := range []string{"linked", "dangling", "linked-skill-md"} {
+		writeValidApproval(t, f.root, id) // approved while it was only regular files
+	}
+	symlinkOrSkip(t, "SKILL.md", filepath.Join(f.root, "linked", "alias.md"))
+	symlinkOrSkip(t, "nothing-is-here", filepath.Join(f.root, "dangling", "broken.md"))
+	skillMD := filepath.Join(f.root, "linked-skill-md", "SKILL.md")
+	if err := os.Rename(skillMD, filepath.Join(f.root, "linked-skill-md", "real-skill.md")); err != nil {
+		t.Fatal(err)
+	}
+	symlinkOrSkip(t, "real-skill.md", skillMD)
+
+	divs, sum := CheckApprovals(f.reg, f.root, fileApprovals(os.ReadFile))
+
+	got := classesByPath(divs)
+	for id, entry := range map[string]string{"linked": "alias.md", "dangling": "broken.md", "linked-skill-md": "SKILL.md"} {
+		if got[id] != DivApprovalUnverifiable {
+			t.Errorf("%s: class = %q, want %q: an approval cannot cover a link", id, got[id], DivApprovalUnverifiable)
+		}
+		for _, d := range divs {
+			if d.Path == id && !strings.Contains(d.Detail, entry+" is a symbolic link") {
+				t.Errorf("%s: detail %q does not name %s as a symbolic link", id, d.Detail, entry)
+			}
+		}
+	}
+	if sum.Approved != 0 || sum.SkillFileMissing != 0 || len(divs) != 3 {
+		t.Errorf("summary = %+v with %d divergences, want none approved and none set aside", sum, len(divs))
+	}
+}
+
+func TestCheckApprovals_LeavesAMissingSkillFileToTheRightCheck(t *testing.T) {
+	f := newGateFixture(t, []string{"missing-file", "directory-for-file", "missing-directory"}, nil)
 	if err := os.Remove(filepath.Join(f.root, "missing-file", "SKILL.md")); err != nil {
 		t.Fatal(err)
 	}
-	// A directory where SKILL.md should be makes the read fail with something
-	// other than "does not exist": the approval cannot be verified.
-	skillPath := filepath.Join(f.root, "unreadable", "SKILL.md")
+	// A directory where SKILL.md should be is no SKILL.md, and a directory that is not there holds none.
+	skillPath := filepath.Join(f.root, "directory-for-file", "SKILL.md")
 	if err := os.Remove(skillPath); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.MkdirAll(skillPath, 0o755); err != nil {
 		t.Fatal(err)
 	}
-
-	divs, _ := CheckApprovals(f.reg, f.root, fileApprovals(os.ReadFile))
-	got := classesByPath(divs)
-	if _, flagged := got["missing-file"]; flagged {
-		t.Error("a missing SKILL.md is already reported by the manifest and on-disk cross-checks; do not report it twice")
+	if err := os.RemoveAll(filepath.Join(f.root, "missing-directory")); err != nil {
+		t.Fatal(err)
 	}
-	if got["unreadable"] != DivApprovalUnverifiable {
-		t.Errorf("unreadable SKILL.md: class = %q, want %q", got["unreadable"], DivApprovalUnverifiable)
+
+	divs, sum := CheckApprovals(f.reg, f.root, fileApprovals(os.ReadFile))
+
+	if len(divs) != 0 {
+		t.Errorf("divergences = %v, want none: a missing SKILL.md is already reported by the manifest and on-disk cross-checks, and is not reported twice", divs)
+	}
+	if sum.Global != 3 || sum.SkillFileMissing != 3 || sum.Approved != 0 {
+		t.Errorf("summary = %+v, want 3 global, all 3 set aside for the lack of a SKILL.md", sum)
 	}
 }
 
 // The summary must account for every global entry exactly once: it is either
-// approved, grandfathered, reported as an approval divergence, or set aside
-// because its SKILL.md does not exist (which the manifest and on-disk
-// cross-checks report). An entry that fell into none of them would make the
-// counts read as if it had been verified.
+// approved, reported as an approval divergence, or set aside because its
+// SKILL.md does not exist (which the manifest and on-disk cross-checks report).
+// An entry that fell into none of them would make the counts read as if it had
+// been verified.
 func TestCheckApprovals_TheSummaryAccountsForEveryGlobalEntryExactlyOnce(t *testing.T) {
-	f := newGateFixture(t, []string{"approved", "legacy", "unapproved", "no-file", "also-no-file"}, []string{"project-skill"})
-	legacy, _ := os.ReadFile(filepath.Join(f.root, "legacy", "SKILL.md"))
-	setBaselineForTest(t, []ApprovalBaselineEntry{{ID: "legacy", SHA256: SkillDigest(legacy)}})
+	f := newGateFixture(t, []string{"approved", "unapproved", "no-file", "also-no-file"}, []string{"project-skill"})
 	writeValidApproval(t, f.root, "approved")
 	for _, id := range []string{"no-file", "also-no-file"} {
 		if err := os.Remove(filepath.Join(f.root, id, "SKILL.md")); err != nil {
@@ -260,13 +332,13 @@ func TestCheckApprovals_TheSummaryAccountsForEveryGlobalEntryExactlyOnce(t *test
 
 	divs, sum := CheckApprovals(f.reg, f.root, fileApprovals(os.ReadFile))
 
-	if sum.Global != 5 {
-		t.Errorf("Global = %d, want 5: project-tier entries are not counted", sum.Global)
+	if sum.Global != 4 {
+		t.Errorf("Global = %d, want 4: project-tier entries are not counted", sum.Global)
 	}
-	if sum.Approved != 1 || sum.Grandfathered != 1 || len(divs) != 1 || sum.SkillFileMissing != 2 {
-		t.Errorf("summary = %+v with %d divergences, want 1 approved, 1 grandfathered, 1 divergence, 2 without a SKILL.md", sum, len(divs))
+	if sum.Approved != 1 || len(divs) != 1 || sum.SkillFileMissing != 2 {
+		t.Errorf("summary = %+v with %d divergences, want 1 approved, 1 divergence, 2 without a SKILL.md", sum, len(divs))
 	}
-	if accounted := sum.Approved + sum.Grandfathered + sum.SkillFileMissing + len(divs); accounted != sum.Global {
+	if accounted := sum.Approved + sum.SkillFileMissing + len(divs); accounted != sum.Global {
 		t.Errorf("the summary accounts for %d of %d global entries: %+v with %d divergences", accounted, sum.Global, sum, len(divs))
 	}
 	if got := classesByPath(divs); got["unapproved"] != DivApprovalMissing || len(got) != 1 {
@@ -275,7 +347,6 @@ func TestCheckApprovals_TheSummaryAccountsForEveryGlobalEntryExactlyOnce(t *test
 }
 
 func TestCheckApprovals_AnUnreadableRecordIsUnverifiableNotAbsent(t *testing.T) {
-	setBaselineForTest(t, nil)
 	f := newGateFixture(t, []string{"odd"}, nil)
 	if err := os.MkdirAll(ApprovalRecordPath(f.root, "odd"), 0o755); err != nil {
 		t.Fatal(err)
@@ -301,39 +372,65 @@ func snapshotFiles(t *testing.T, paths ...string) map[string]string {
 	return out
 }
 
-// ---- the baseline --------------------------------------------------------------
+// ---- the lint baseline ---------------------------------------------------------
 
-func TestApprovalBaseline_IsWellFormedAndFixed(t *testing.T) {
-	entries := ApprovalBaseline()
-	// The count is pinned: adding to or removing from the grandfathered list is
-	// a deliberate, reviewed change that must update this number with it.
-	const baselineSize = 34
-	if len(entries) != baselineSize {
-		t.Fatalf("baseline has %d entries, want the fixed %d", len(entries), baselineSize)
+func TestLintBaseline_IsWellFormedAndFixed(t *testing.T) {
+	// The count is pinned: adding to or removing from the list is a deliberate, reviewed change that
+	// must update this number with it.
+	const lintBaselineSize = 34
+	if len(lintBaselineSkills) != lintBaselineSize {
+		t.Fatalf("the lint baseline has %d ids, want the fixed %d", len(lintBaselineSkills), lintBaselineSize)
 	}
-	if !sort.SliceIsSorted(entries, func(i, j int) bool { return entries[i].ID < entries[j].ID }) {
-		t.Error("baseline entries must be sorted by id")
+	if !sort.StringsAreSorted(lintBaselineSkills) {
+		t.Error("the lint baseline ids must be sorted")
 	}
-	digestRe := regexp.MustCompile(`^[0-9a-f]{64}$`)
 	seen := map[string]bool{}
-	for _, e := range entries {
-		if seen[e.ID] {
-			t.Errorf("duplicate baseline id %q", e.ID)
+	for _, id := range lintBaselineSkills {
+		if seen[id] {
+			t.Errorf("duplicate lint baseline id %q", id)
 		}
-		seen[e.ID] = true
-		if !slugRe.MatchString(e.ID) {
-			t.Errorf("baseline id %q is not a valid skill slug", e.ID)
-		}
-		if !digestRe.MatchString(e.SHA256) {
-			t.Errorf("baseline digest for %q is not a lowercase 64-character hex: %q", e.ID, e.SHA256)
+		seen[id] = true
+		if !slugRe.MatchString(id) {
+			t.Errorf("lint baseline id %q is not a valid skill slug", id)
 		}
 	}
 }
 
-func TestApprovalBaseline_ReturnsACopy(t *testing.T) {
-	first := ApprovalBaseline()
-	first[0].ID = "tampered"
-	if ApprovalBaseline()[0].ID == "tampered" {
-		t.Fatal("ApprovalBaseline must not expose the backing slice")
+func TestBaselineLintDecision(t *testing.T) {
+	const baselineID, otherID = "sdd-apply", "my-new-skill"
+	budget := &LintError{Rule: "body-hard-budget", Msg: "body is 1200 estimated tokens"}
+	description := &LintError{Rule: "description-max", Msg: "description is 300 characters"}
+	structural := &LintError{Rule: "frontmatter-fence", Msg: "no front matter"}
+
+	for _, tc := range []struct {
+		name         string
+		id           string
+		hard         []error
+		wantRefused  bool
+		wantWarnings []string
+	}{
+		{"no findings", baselineID, nil, false, nil},
+		{"no findings on a skill outside the baseline", otherID, nil, false, nil},
+		{"a legacy finding of a baseline skill is a warning", baselineID, []error{budget}, false,
+			[]string{"warning: [lint:body-hard-budget] body is 1200 estimated tokens (baseline skill: approved with lint findings)"}},
+		{"each legacy finding is a warning of its own", baselineID, []error{budget, description}, false,
+			[]string{
+				"warning: [lint:body-hard-budget] body is 1200 estimated tokens (baseline skill: approved with lint findings)",
+				"warning: [lint:description-max] description is 300 characters (baseline skill: approved with lint findings)",
+			}},
+		{"a legacy finding refuses a skill outside the baseline", otherID, []error{budget}, true, nil},
+		{"a structural finding refuses a baseline skill", baselineID, []error{structural}, true, nil},
+		{"one structural finding among legacy ones refuses a baseline skill", baselineID, []error{budget, structural}, true, nil},
+		{"an error that is no lint finding is structural", baselineID, []error{errors.New("boom")}, true, nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			warnings, refused := BaselineLintDecision(tc.id, tc.hard)
+			if refused != tc.wantRefused {
+				t.Errorf("refused = %v, want %v", refused, tc.wantRefused)
+			}
+			if strings.Join(warnings, "\n") != strings.Join(tc.wantWarnings, "\n") {
+				t.Errorf("warnings = %q, want %q", warnings, tc.wantWarnings)
+			}
+		})
 	}
 }
