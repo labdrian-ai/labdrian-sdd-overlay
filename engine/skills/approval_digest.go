@@ -23,23 +23,39 @@ type SkillEntry struct {
 	// through a link. It may be empty too for the approval record at the root of the skill, which
 	// a digest leaves out whatever it holds.
 	Data []byte
+	// Executable is the owner execute bit of a regular file (mode & 0100), the one permission an
+	// approval covers: it is what git versions (100755 against 100644) and what makes a script a
+	// command, so setting it on an approved file changes what the approval lets run. No other bit
+	// is carried, so that a checkout under another umask does not stale an approval when the skill
+	// did not change. It is false for an entry that is not a regular file, and for the approval
+	// record at the root of the skill, which a store does not read.
+	Executable bool
 }
 
-// SkillDigest returns the digest an approval binds: the lowercase hex SHA-256 of the list that
-// `sha256sum` writes for the files of the skill. The list has one line for each regular file below
-// the skill directory, however deep, in the order of their paths as bytes: the SHA-256 of the file
-// bytes, two spaces, the path relative to the skill directory in slash form, and a newline. The
-// digest of a skill can be made again by hand:
+// SkillDigest returns the digest an approval binds: the lowercase hex SHA-256 of a list in the
+// shape that `sha256sum` writes for the files of the skill, with one column more. The list has one
+// line for each regular file below the skill directory, however deep, in the order of their paths
+// as bytes: the SHA-256 of the file bytes, a space, "x" when the owner execute bit of the file is
+// set and "-" when it is not, two spaces, the path relative to the skill directory in slash form,
+// and a newline. The digest of a skill can be made again by hand (find -perm -100 is true for a
+// file whose owner execute bit is set):
 //
-//	(cd skills/<id> && find . -type f ! -path ./.approval.json | sed 's|^\./||' |
-//	  LC_ALL=C sort | xargs -d '\n' sha256sum -- | sha256sum)
+//	(cd skills/<id> && find . -type f ! -path ./.approval.json | sed 's|^\./||' | LC_ALL=C sort |
+//	 while IFS= read -r f; do
+//	   if [ -n "$(find "./$f" -perm -100)" ]; then m=x; else m=-; fi
+//	   echo "$(sha256sum < "$f" | cut -c1-64) $m  $f"
+//	 done | sha256sum)
 //
 // The approval record at the root of the skill is left out, because a digest cannot cover the file
 // that holds it; a file of that name deeper in the tree is a file like any other. Nothing of a file
-// but its path and its bytes is covered, with no normalization of line endings, a BOM or trailing
-// whitespace: an approval binds the files, not an interpretation of them. The digest is of the list
-// and not of the bytes joined, so that where one file ends and the next begins is part of what is
-// approved.
+// but its path, its bytes and its owner execute bit is covered, with no normalization of line
+// endings, a BOM or trailing whitespace: an approval binds the files, not an interpretation of them.
+// The execute bit is covered because setting it on an approved script changes what the approval
+// lets run without changing a byte. It is the owner's bit alone, what git versions as 100755 and
+// 100644: the bits of the group and of the others, and the write bits, follow the umask of whoever
+// checked the files out, and an approval that went stale for them could not be kept. The digest is
+// of the list and not of the bytes joined, so that where one file ends and the next begins is part
+// of what is approved.
 //
 // A skill whose directory holds an entry that is not a regular file, a link above all, has no
 // digest: the bytes behind a link are not the skill's, and an approval that skipped it would hold
@@ -64,7 +80,13 @@ func SkillDigest(entries []SkillEntry) (string, error) {
 		case e.Rel == ApprovalRecordName:
 			// The record is what holds the digest, so it is not part of it.
 		default:
+			mark := byte('-')
+			if e.Executable {
+				mark = 'x'
+			}
 			list.WriteString(sha256hex.Sum(e.Data))
+			list.WriteByte(' ')
+			list.WriteByte(mark)
 			list.WriteString("  ")
 			list.WriteString(e.Rel)
 			list.WriteByte('\n')

@@ -5,5 +5,5 @@ exit: 1
 --- stderr ---
 [UNREGISTERED_ON_DISK] alpha/extra.md: skills/alpha/extra.md exists on disk but no overlay.manifest row deploys it; add a row for "alpha/extra.md" to overlay.manifest to register it
 [MISSING_ON_DISK] beta/references/missing.md: overlay.manifest deploys "beta/references/missing.md" but skills/beta/references/missing.md does not exist; remove the "beta/references/missing.md" row from overlay.manifest, or restore the missing file
-[APPROVAL_STALE] alpha: skill "alpha": approval record <WORLD>/skills/alpha/.approval.json is stale (the skill changed after approval: record digest aea3a78cad8568a86c6f047ac741073b4a3d169caf19d5d322ae488bd71e81c4, current digest a5fb38121daaeca098a952c90860cf9ee5adb63df3e860088b0f83fdb425c372); a human must review every file of the skill and run: labdrian skills approve --id alpha --approver <name>
+[APPROVAL_STALE] alpha: skill "alpha": approval record <WORLD>/skills/alpha/.approval.json is stale (the skill changed after approval: record digest eeb33a51baf19e778e51384f27faa2dd94cad63bcb01d0c02b87d8afefb3380e, current digest 41c8902bc6aa89e5038005ea5bc331848343326b92320bf748c0d512970bd9cf); a human must review every file of the skill and run: labdrian skills approve --id alpha --approver <name>
 

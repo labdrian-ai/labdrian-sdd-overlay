@@ -39,9 +39,9 @@ const ApprovalApproverMaxRunes = 100
 
 // ApprovalRecord is the typed human-approval record for one skill: the skill
 // id, the digest of the files that were approved (SkillDigest: every file in
-// the directory of the skill, not SKILL.md alone), when, and by whom. It is
-// bound to those files, so any later change to any of them invalidates it
-// (ApprovalStale).
+// the directory of the skill, not SKILL.md alone, and whether the owner can
+// execute each), when, and by whom. It is bound to those files, so any later
+// change to any of them invalidates it (ApprovalStale).
 //
 // The engine cannot prove that a human ran `skills approve`: Approver is a
 // label the caller supplied, and any process that can write the file can write
@@ -66,7 +66,8 @@ const (
 	ApprovalValid ApprovalState = "valid"
 	// ApprovalStale means a well-formed record names this skill but does not
 	// approve what the skill is now: its digest no longer matches (a file changed,
-	// was added or was removed after it was approved), or it is a record of the
+	// was added or was removed after it was approved, or had its owner execute
+	// bit set or cleared), or it is a record of the
 	// version before this one, which covered SKILL.md alone.
 	ApprovalStale ApprovalState = "stale"
 	// ApprovalMalformed means the record file exists but cannot be trusted: it

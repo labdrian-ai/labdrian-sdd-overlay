@@ -33,17 +33,18 @@ func recordJSON(version int, id, digest string) string {
 }
 
 // abcSkill is a skill whose directory holds the three bytes "abc" as its SKILL.md, and abcSkillDigest
-// is what an approval of it binds: the SHA-256 of the one line sha256sum writes for the file,
+// is what an approval of it binds: the SHA-256 of the one line the list holds for the file, the
+// digest of its bytes, the mark of a file that is not executable, and its path,
 //
-//	ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad  SKILL.md
+//	ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad -  SKILL.md
 //
 // made apart from this code, as the digest of its list.
 func abcSkill() []SkillEntry { return skillMDOnly("abc") }
 
-const abcSkillDigest = "d5f246a0e520fe46b7e50e2b8502e9a487e421577de9b85991e95a52b0b0fc37"
+const abcSkillDigest = "353793a40512044dd62fb7602f2ed8ec09965c834e9c1e91dc5714e0d030c056"
 
 // abdSkillDigest is the same for a SKILL.md of the three bytes "abd".
-const abdSkillDigest = "6c7ab96c9533273a3ae0a23110dd7c5330f29590844140b6fadee7955acc4893"
+const abdSkillDigest = "6660f848a8e7aa0c4466a4c6b1b48520b805b232be2f6ac3199f763da0b66f11"
 
 func TestApprovalRecordName_IsDotPrefixed(t *testing.T) {
 	// The on-disk gate (ScanSkillFiles) skips dot-prefixed names, so the

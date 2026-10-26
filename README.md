@@ -234,7 +234,7 @@ overlay status --target opencode
 
 If there are merge conflicts, `overlay apply` exits 1 and tells you exactly which files to resolve.
 
-**After the merge, review the skills it changed (step 3).** A global skill's approval record binds the exact bytes of every file of the skill (`SKILL.md` and whatever sits beside it, scripts and references at any depth included), so a merge that changes, adds or removes any of those files (core skills included) makes `skills validate` exit 1 and report `APPROVAL_STALE` (the skill has a record that no longer matches) or `APPROVAL_MISSING` (it has none). For every global skill it reports, review the change (for example `git diff` of `skills/<id>/`), and only then run, in a terminal:
+**After the merge, review the skills it changed (step 3).** A global skill's approval record binds the exact bytes of every file of the skill (`SKILL.md` and whatever sits beside it, scripts and references at any depth included) and whether each is executable by its owner, so a merge that changes, adds or removes any of those files, or sets or clears that bit (core skills included), makes `skills validate` exit 1 and report `APPROVAL_STALE` (the skill has a record that no longer matches) or `APPROVAL_MISSING` (it has none). For every global skill it reports, review the change (for example `git diff` of `skills/<id>/`), and only then run, in a terminal:
 
 ```bash
 labdrian skills approve --id <id> --approver <name>
@@ -461,19 +461,31 @@ overlay skills <verb>
                  retire an agent-owned project skill; an explicit decision that nothing in the engine takes for you, not even the retirement detector; --dry-run prints the removal plan
     The project tier stays autonomous: project-register, project-revise, and project-retire need no approval record.
     What the approval digest covers. A record of version 2 holds one SHA-256, in the `sha256` field, over every file of the skill, not over SKILL.md alone:
-    the lines "<sha256 hex of the file's bytes>  <path>" (the format of sha256sum: two spaces, a newline ending each line), one per regular file of
+    the lines "<sha256 hex of the file's bytes> <x or ->  <path>" (the line sha256sum writes, with a space and one character added after the digest: x when the
+    owner execute bit of the file is set, - when it is not; then two spaces, the path, and a newline ending each line), one per regular file of
     skills/<id>/ at any depth (a script or a reference beside SKILL.md included), except skills/<id>/.approval.json itself (a file of that name in a
     subdirectory is covered), with <path> relative to the skill directory, in slash form, sorted bytewise. Adding, removing, renaming or changing any of
-    those files makes the record stale (validate reports APPROVAL_STALE, naming the digest in the record and the current one); permission bits and empty
-    directories are not covered. A symbolic link, or any entry that is not a regular file or a directory (a pipe, a socket, a device), cannot be covered:
+    those files, or setting or clearing the owner execute bit of one (chmod u+x, chmod u-x: the bit git versions, as 100755 against 100644), makes the
+    record stale (validate reports APPROVAL_STALE, naming the digest in the record and the current one); the other permission bits (group, others, write)
+    and empty directories are not covered, so a checkout under another umask leaves an approval holding. A symbolic link, or any entry that is not a
+    regular file or a directory (a pipe, a socket, a device), cannot be covered:
     the skill is APPROVAL_UNVERIFIABLE, whatever its record says, until the entry is replaced with a regular file or removed; so is a file whose name holds
     a line break or a backslash, which sha256sum would escape in its list. A record of version 1, written
     before this digest existed, covered SKILL.md alone: it is APPROVAL_STALE, saying so, and `approve` again writes a record of version 2; any other
     version stays APPROVAL_MALFORMED. approve, add, and validate compute the digest with the same function. The `sha256` field of the record is this digest
-    (JSON has no comments, so this is where it is explained). To recompute it by hand and compare it with the record, from the root of the repository:
-        (cd skills/<id> && find . -type f ! -path ./.approval.json | sed 's|^\./||' | LC_ALL=C sort | xargs -d '\n' sha256sum -- | sha256sum)
-    On macOS, whose xargs has no -d, send the names NUL-separated and use shasum for both hashes:
-        (cd skills/<id> && find . -type f ! -path ./.approval.json | sed 's|^\./||' | LC_ALL=C sort | tr '\n' '\0' | xargs -0 shasum -a 256 -- | shasum -a 256)
+    (JSON has no comments, so this is where it is explained). To recompute it by hand and compare it with the record, from the root of the repository
+    (find -perm -100 is true for a file whose owner execute bit is set):
+        (cd skills/<id> && find . -type f ! -path ./.approval.json | sed 's|^\./||' | LC_ALL=C sort |
+         while IFS= read -r f; do
+           if [ -n "$(find "./$f" -perm -100)" ]; then m=x; else m=-; fi
+           echo "$(sha256sum < "$f" | cut -c1-64) $m  $f"
+         done | sha256sum)
+    On macOS, which has no sha256sum, use shasum for both hashes:
+        (cd skills/<id> && find . -type f ! -path ./.approval.json | sed 's|^\./||' | LC_ALL=C sort |
+         while IFS= read -r f; do
+           if [ -n "$(find "./$f" -perm -100)" ]; then m=x; else m=-; fi
+           echo "$(shasum -a 256 < "$f" | cut -c1-64) $m  $f"
+         done | shasum -a 256)
     A vendored skill (`add --repo <url> --ref <sha>`) is covered the same way, companion files included. The overlay never fetches, so --repo and --ref are
     labels and the engine cannot compare the files with upstream: what the approval pins is the files as they were vendored, adaptations included
     (security-audit, for one, moves the upstream SKILL.md body to WORKFLOW.md to fit the lint budget, and its SKILL.md says so). A later change to WORKFLOW.md
@@ -482,6 +494,8 @@ overlay skills <verb>
     Because it covers the exact bytes of every file, a tree-wide rewrite of line endings or whitespace (for example a git attribute change such as
     `text=auto eol=crlf`, or an editor that normalizes whitespace on save) changes every skill at once: each global skill then needs `approve` again
     (validate reports APPROVAL_STALE). That is the intended guarantee (exact bytes), not a bug; do such a rewrite deliberately, and approve the skills afterwards.
+    The owner execute bit is covered too, so a checkout on a file system that does not keep it (FAT, or a CIFS mount) cannot verify a skill that has an
+    executable file: validate there reports APPROVAL_STALE, and the approval is verified where the bit is kept.
     What install owns. install records every file it writes, with its SHA-256, in the project lock
     (.labdrian/procedural-skills.lock.json, in an "installs" array beside the procedural skills; an older program that
     reads a lock with installs refuses it instead of misreading it). On the next run it replaces only the files that

@@ -53,7 +53,8 @@
 // that table with --rules; exit 1 on any hard error.
 // approve: record a human approval of every file of skills/<id>/, bound to one
 // digest of all of them (skills.SkillDigest: the SHA-256 of the sha256sum list of
-// the regular files of the directory, .approval.json aside), next to the skill
+// the regular files of the directory, .approval.json aside, each line saying
+// whether the owner execute bit of the file is set), next to the skill
 // (--id, --approver, --source-root). The engine cannot prove a human ran it; the
 // record only proves the files match.
 // guard-hook: the internal Claude Code PreToolUse hook that denies the agent

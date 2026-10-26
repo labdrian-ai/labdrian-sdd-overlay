@@ -8,25 +8,28 @@ import (
 )
 
 // tinyDigest is the digest of tinyTree as the commands in the doc of SkillDigest give it for a
-// directory that holds these three files. It was made with sha256sum, apart from this code. The
-// list it is the digest of is
+// directory that holds these three files, a/b.txt being the one with its owner execute bit set
+// (chmod 755, the others 644). It was made with sha256sum, apart from this code. The list it is the
+// digest of is
 //
-//	3088e5b60779a95389e4ed08d2ecee6eaac2311c590dab3f2e4beb3090a54f00  SKILL.md
-//	dfb86f4417f5949eca2bed9b8986e96833618f1c03bb43a912ee39ff92190a53  a.txt
-//	44d66302a35f7ae1cdbc90251b17494c5c55bdbc591cdf91f02028a90c6f856a  a/b.txt
+//	3088e5b60779a95389e4ed08d2ecee6eaac2311c590dab3f2e4beb3090a54f00 -  SKILL.md
+//	dfb86f4417f5949eca2bed9b8986e96833618f1c03bb43a912ee39ff92190a53 -  a.txt
+//	44d66302a35f7ae1cdbc90251b17494c5c55bdbc591cdf91f02028a90c6f856a x  a/b.txt
 //
-// where a.txt comes before a/b.txt because '.' is a smaller byte than '/'.
-const tinyDigest = "8b58e6836167b85c3d0b3827d243aa06c763a504f9df6c02df2011c1bd232a68"
+// where a.txt comes before a/b.txt because '.' is a smaller byte than '/', and the character after
+// the digest of the bytes is x for the executable file and - for the others.
+const tinyDigest = "dabef049475887bddc6a620b5aaecdf1d0f2924e7c2fe791054c52e715edcb3f"
 
 // emptyListDigest is the SHA-256 of no bytes at all, which is the digest of a list of no files.
 const emptyListDigest = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 
-// tinyTree is a skill of three regular files in two directories, as a store reports them.
+// tinyTree is a skill of three regular files in two directories, as a store reports them: the one
+// in a directory is executable, so that the tree has both values of the bit.
 func tinyTree() []SkillEntry {
 	return []SkillEntry{
 		{Rel: "SKILL.md", Data: []byte("skill\n")},
 		{Rel: "a.txt", Data: []byte("a file at the top\n")},
-		{Rel: "a/b.txt", Data: []byte("a file in a directory\n")},
+		{Rel: "a/b.txt", Data: []byte("a file in a directory\n"), Executable: true},
 	}
 }
 
@@ -111,6 +114,32 @@ func TestSkillDigest_BindsEveryFileItsBytesAndItsPath(t *testing.T) {
 	}
 }
 
+// Setting a script's execute bit changes what the approval lets run without changing one byte of
+// it, so the bit is part of what is approved, in both directions and for every file.
+func TestSkillDigest_BindsWhetherEachFileIsExecutable(t *testing.T) {
+	toggled := func(rel string) []SkillEntry {
+		entries := tinyTree()
+		for i := range entries {
+			if entries[i].Rel == rel {
+				entries[i].Executable = !entries[i].Executable
+			}
+		}
+		return entries
+	}
+	seen := map[string]string{tinyDigest: "the tiny tree as it is"}
+	for name, entries := range map[string][]SkillEntry{
+		"SKILL.md made executable":                 toggled("SKILL.md"),
+		"a file at the top made executable":        toggled("a.txt"),
+		"the executable file no longer executable": toggled("a/b.txt"),
+	} {
+		got := mustDigest(t, entries)
+		if before, same := seen[got]; same {
+			t.Errorf("%s: the digest is %s, the one of %s: an approval of that would hold while the execute bit changed", name, got, before)
+		}
+		seen[got] = name
+	}
+}
+
 func TestSkillDigest_AFileEndingWhereAnotherBeginsIsPartOfWhatIsApproved(t *testing.T) {
 	together := []SkillEntry{{Rel: "p", Data: []byte("12")}, {Rel: "q", Data: []byte("34")}}
 	moved := []SkillEntry{{Rel: "p", Data: []byte("1")}, {Rel: "q", Data: []byte("234")}}
@@ -121,8 +150,9 @@ func TestSkillDigest_AFileEndingWhereAnotherBeginsIsPartOfWhatIsApproved(t *test
 
 func TestSkillDigest_LeavesOutTheRecordAtTheRootWhateverItHolds(t *testing.T) {
 	for name, record := range map[string]SkillEntry{
-		"with bytes":    {Rel: ApprovalRecordName, Data: []byte(`{"version": 2}`)},
-		"without bytes": {Rel: ApprovalRecordName},
+		"with bytes":               {Rel: ApprovalRecordName, Data: []byte(`{"version": 2}`)},
+		"without bytes":            {Rel: ApprovalRecordName},
+		"with its execute bit set": {Rel: ApprovalRecordName, Executable: true},
 	} {
 		if got := mustDigest(t, append(tinyTree(), record)); got != tinyDigest {
 			t.Errorf("a record %s changed the digest to %s, want %s: a digest cannot cover the file that holds it", name, got, tinyDigest)

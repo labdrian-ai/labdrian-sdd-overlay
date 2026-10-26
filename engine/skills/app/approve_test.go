@@ -304,11 +304,15 @@ func TestApprovePutsBackWhatItStagedWhenItCannotWriteTheRecord(t *testing.T) {
 }
 
 // The approval is of every file of the skill, found at any depth, and not of SKILL.md alone: the
-// digest the record holds is the one sha256sum gives for the list of them (skills.SkillDigest),
-// and a change to any file but the record itself is a change the next approval records.
+// digest the record holds is the one sha256sum gives for the list of them (skills.SkillDigest), each
+// line saying whether the owner can execute the file, and a change to any file but the record
+// itself is a change the next approval records.
 func TestApproveRecordsTheApprovalOfEveryFileOfTheSkill(t *testing.T) {
 	w := newApproveWorld(t, "my-skill")
 	put(t, filepath.Join(w.root, "my-skill", "scripts", "run.sh"), "echo hi\n")
+	if err := os.Chmod(filepath.Join(w.root, "my-skill", "scripts", "run.sh"), 0o755); err != nil {
+		t.Fatal(err)
+	}
 	put(t, filepath.Join(w.root, "my-skill", "references", "deep", "notes.md"), "notes\n")
 
 	first, err := w.approve(newStagedSpy(nil), "my-skill")
@@ -319,10 +323,11 @@ func TestApproveRecordsTheApprovalOfEveryFileOfTheSkill(t *testing.T) {
 	if first.Digest == alone {
 		t.Errorf("the digest %s is the one of SKILL.md alone: the script and the reference were left out", first.Digest)
 	}
-	// By hand, as the doc of skills.SkillDigest says: the list sorted by the bytes of the path.
-	list := sha256hex.Sum([]byte(skillFor("my-skill"))) + "  SKILL.md\n" +
-		sha256hex.Sum([]byte("notes\n")) + "  references/deep/notes.md\n" +
-		sha256hex.Sum([]byte("echo hi\n")) + "  scripts/run.sh\n"
+	// By hand, as the doc of skills.SkillDigest says: the list sorted by the bytes of the path, "x"
+	// after the digest of the one executable file and "-" after the others.
+	list := sha256hex.Sum([]byte(skillFor("my-skill"))) + " -  SKILL.md\n" +
+		sha256hex.Sum([]byte("notes\n")) + " -  references/deep/notes.md\n" +
+		sha256hex.Sum([]byte("echo hi\n")) + " x  scripts/run.sh\n"
 	if want := sha256hex.Sum([]byte(list)); first.Digest != want {
 		t.Errorf("digest = %s, want %s (the digest of the list of the three files)", first.Digest, want)
 	}

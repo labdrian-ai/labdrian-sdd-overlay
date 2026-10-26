@@ -10,8 +10,9 @@ import "path/filepath"
 // overlay stand.
 type ApprovalRecordStore interface {
 	// ReadSkillTree reads every entry below the directory of the skill whose directory is path
-	// under sourceRoot that is not a directory: a regular file with its bytes, anything else (a
-	// link, a pipe, a socket, a device) with its type and no bytes. A link is reported and not
+	// under sourceRoot that is not a directory: a regular file with its bytes and whether its owner
+	// execute bit is set (SkillEntry.Executable, read from the file the bytes were), anything else
+	// (a link, a pipe, a socket, a device) with its type and no bytes. A link is reported and not
 	// followed, and nothing is left out: what an approval covers is the domain's to decide, not
 	// the store's. The one exception to the bytes is the approval record at the root of the skill
 	// (ApprovalRecordName), which is reported like the rest but not read, because no approval

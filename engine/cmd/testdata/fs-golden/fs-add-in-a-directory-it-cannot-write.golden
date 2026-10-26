@@ -17,9 +17,9 @@ overlay.manifest 0644 22 602f4f6fe352
 skills.registry.yaml 0644 204 f4f6d939ffdf
 skills/
 skills/alpha/
-skills/alpha/.approval.json 0644 194 7b7b98d76717
+skills/alpha/.approval.json 0644 194 dfc68bfd3baf
 skills/alpha/SKILL.md 0644 288 b1349da82d6c
 skills/foo/
-skills/foo/.approval.json 0644 192 c0f49c7e8f10
+skills/foo/.approval.json 0644 192 31993f5fa70d
 skills/foo/SKILL.md 0644 284 de83a6ee05ac
 

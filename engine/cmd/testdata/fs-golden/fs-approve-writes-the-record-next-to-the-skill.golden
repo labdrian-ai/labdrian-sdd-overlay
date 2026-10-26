@@ -3,7 +3,7 @@ $ skills approve --id alpha --approver fixture-reviewer --source-root <WORLD>/sk
 exit: 0
 --- stdout ---
 approved: alpha
-sha256: aea3a78cad8568a86c6f047ac741073b4a3d169caf19d5d322ae488bd71e81c4
+sha256: eeb33a51baf19e778e51384f27faa2dd94cad63bcb01d0c02b87d8afefb3380e
 record: <WORLD>/skills/alpha/.approval.json
 --- stderr ---
 
@@ -16,7 +16,7 @@ $ skills approve --id alpha --approver fixture-reviewer --source-root <WORLD>/sk
 exit: 0
 --- stdout ---
 unchanged: alpha
-sha256: aea3a78cad8568a86c6f047ac741073b4a3d169caf19d5d322ae488bd71e81c4
+sha256: eeb33a51baf19e778e51384f27faa2dd94cad63bcb01d0c02b87d8afefb3380e
 record: <WORLD>/skills/alpha/.approval.json
 --- stderr ---
 
@@ -29,7 +29,7 @@ $ skills approve --id alpha --approver fixture-reviewer --source-root <WORLD>/sk
 exit: 0
 --- stdout ---
 approved: alpha
-sha256: 0826cd65b50645cf00f64c97533701e1929b57125d1bca4a58121d3cbca31a7e
+sha256: faeedc59ca8c1064d0c5e2328e79c58cbc591fefb0a96a37b0532fbb2fbe7148
 record: <WORLD>/skills/alpha/.approval.json
 --- stderr ---
 
@@ -42,7 +42,7 @@ $ skills approve --id alpha --approver fixture-reviewer --source-root <WORLD>/sk
 exit: 0
 --- stdout ---
 approved: alpha
-sha256: 0826cd65b50645cf00f64c97533701e1929b57125d1bca4a58121d3cbca31a7e
+sha256: faeedc59ca8c1064d0c5e2328e79c58cbc591fefb0a96a37b0532fbb2fbe7148
 record: <WORLD>/skills/alpha/.approval.json
 --- stderr ---
 

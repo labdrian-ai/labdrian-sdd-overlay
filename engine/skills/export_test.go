@@ -145,6 +145,12 @@ func (r readerApprovals) ReadSkillTree(sourceRoot, path string) ([]SkillEntry, e
 		}
 		entry := SkillEntry{Rel: filepath.ToSlash(rel), Type: d.Type()}
 		if entry.Type.IsRegular() && entry.Rel != ApprovalRecordName {
+			var info fs.FileInfo
+			if info, err = d.Info(); err != nil {
+				return err
+			}
+			// The owner execute bit and no other: the adapter holds it to that.
+			entry.Executable = info.Mode().Perm()&0o100 != 0
 			if entry.Data, err = r.read(p); err != nil {
 				return err
 			}

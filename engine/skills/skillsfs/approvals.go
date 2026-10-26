@@ -21,11 +21,12 @@ type Approvals struct{}
 var _ skills.ApprovalRecordStore = Approvals{}
 
 // ReadSkillTree reads every entry below the directory of the skill whose directory is path under
-// sourceRoot that is not a directory. A regular file comes with its bytes; anything else (a link, a
-// pipe, a socket, a device) comes with its type and no bytes, and is neither followed nor opened,
-// so a pipe cannot block the read. Nothing is left out, dot-prefixed names included: what an
-// approval covers is the domain's to decide (skills.SkillDigest). The approval record at the root
-// is reported but not read: no approval covers its bytes, and ReadRecord is what reads it.
+// sourceRoot that is not a directory. A regular file comes with its bytes and its owner execute bit,
+// both taken from one descriptor; anything else (a link, a pipe, a socket, a device) comes with its
+// type and no bytes, and is neither followed nor opened, so a pipe cannot block the read. Nothing is
+// left out, dot-prefixed names included: what an approval covers is the domain's to decide
+// (skills.SkillDigest). The approval record at the root is reported but not read, neither its bytes
+// nor its mode: no approval covers them, and ReadRecord is what reads it.
 //
 // It is not what install reads (Tree.ReadSkillSource), which leaves out what it does not install.
 // The directory of the skill is not followed either when it is a link: that is an error, not a
@@ -54,9 +55,12 @@ func (Approvals) ReadSkillTree(sourceRoot, path string) ([]skills.SkillEntry, er
 		}
 		entry := skills.SkillEntry{Rel: filepath.ToSlash(rel), Type: d.Type()}
 		if entry.Type.IsRegular() && entry.Rel != skills.ApprovalRecordName {
-			if entry.Type, entry.Data, err = readRegular(p); err != nil {
+			var mode fs.FileMode
+			if mode, entry.Data, err = readRegular(p); err != nil {
 				return err
 			}
+			entry.Type = mode.Type()
+			entry.Executable = mode.IsRegular() && mode.Perm()&ownerExecuteBit != 0
 		}
 		entries = append(entries, entry)
 		return nil
@@ -67,10 +71,17 @@ func (Approvals) ReadSkillTree(sourceRoot, path string) ([]skills.SkillEntry, er
 	return entries, nil
 }
 
+// ownerExecuteBit is the one permission bit an approval covers (mode & 0100): the one git versions,
+// and the one that makes a script a command. The bits of the group and of the others are not read,
+// because they follow the umask of whoever checked the files out, not a change of the skill.
+const ownerExecuteBit fs.FileMode = 0o100
+
 // readRegular reads the file the listing said was regular, through one descriptor opened without
-// following a link and without blocking on a pipe. An entry swapped for a link or a pipe after the
-// listing is reported with the type it has now, with no bytes, so the domain refuses it rather
-// than reading what it points at.
+// following a link and without blocking on a pipe, and returns the mode of that same descriptor
+// beside the bytes: the type bits and the permission bits of the file it read, so the execute bit
+// is the one of the bytes, whatever was swapped into the path since. An entry swapped for a link or
+// a pipe after the listing is reported with the type it has now, with no bytes, so the domain
+// refuses it rather than reading what it points at.
 func readRegular(p string) (fs.FileMode, []byte, error) {
 	f, err := statestore.OpenNoFollow(p)
 	if err != nil {
@@ -84,11 +95,12 @@ func readRegular(p string) (fs.FileMode, []byte, error) {
 	if err != nil {
 		return 0, nil, err
 	}
-	if !info.Mode().IsRegular() {
-		return info.Mode().Type(), nil, nil
+	mode := info.Mode()
+	if !mode.IsRegular() {
+		return mode.Type(), nil, nil
 	}
 	data, err := io.ReadAll(f)
-	return 0, data, err
+	return mode, data, err
 }
 
 // ReadRecord reads the approval record of skill id under sourceRoot.

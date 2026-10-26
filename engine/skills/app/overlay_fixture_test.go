@@ -103,10 +103,11 @@ func legacyRecord(id, skillMD string) string {
 }
 
 // digestOfSkillMDAlone is the digest of a skill whose directory holds just this SKILL.md, made by
-// hand from the definition: the SHA-256 of the one line sha256sum writes for the file, which is
-// what an approval of such a skill binds.
+// hand from the definition: the SHA-256 of the one line of the list for the file (the digest of its
+// bytes, the mark "-" of a file that is not executable, two spaces, the path), which is what an
+// approval of such a skill binds.
 func digestOfSkillMDAlone(skillMD string) string {
-	return sha256hex.Sum([]byte(sha256hex.Sum([]byte(skillMD)) + "  SKILL.md\n"))
+	return sha256hex.Sum([]byte(sha256hex.Sum([]byte(skillMD)) + " -  SKILL.md\n"))
 }
 
 // overlay is a directory that holds a registry and a manifest that agree on one skill, existing,

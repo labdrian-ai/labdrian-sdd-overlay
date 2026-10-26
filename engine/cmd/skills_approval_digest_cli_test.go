@@ -128,6 +128,73 @@ func TestAnApprovalStopsHoldingWhenAnyFileOfTheSkillChanges(t *testing.T) {
 	}
 }
 
+// setMode sets the permission bits of a file of the world, whatever the mask of the process.
+func (w approvalWorld) setMode(rel string, mode os.FileMode) {
+	w.t.Helper()
+	if err := os.Chmod(w.path(rel), mode); err != nil {
+		w.t.Fatal(err)
+	}
+}
+
+// Setting the execute bit of an approved script changes what the approval lets run without changing
+// one byte of it, so the approval stops holding, and so it does when the bit is taken away. Owner
+// decision of 2026-10-26 on review finding R1-digest-ignores-mode.
+func TestAnApprovalStopsHoldingWhenTheOwnerExecuteBitOfAFileChanges(t *testing.T) {
+	for _, tc := range []struct {
+		name          string
+		before, after os.FileMode
+	}{
+		{"chmod +x on a script", 0o644, 0o755},
+		{"chmod -x on an executable script", 0o755, 0o644},
+		{"chmod u+x on a script", 0o644, 0o744},
+		{"chmod u-x on an executable script", 0o744, 0o644},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			w := newApprovalWorld(t)
+			w.setMode(alphaScript, tc.before)
+			w.approved()
+
+			w.setMode(alphaScript, tc.after)
+			got := w.validate()
+			if got.code() != 1 || !strings.Contains(got.stderr, "[APPROVAL_STALE] alpha:") || got.stdout != "" {
+				t.Errorf("validate = exit %d, stdout %q, stderr %q, want exit 1 and alpha's approval stale", got.code(), got.stdout, got.stderr)
+			}
+			// A new approval of what the skill is now is what makes it hold again.
+			w.approved()
+		})
+	}
+}
+
+// Only the owner's execute bit is part of the approval. The other bits differ between machines for
+// no change of the skill (a umask of 002 against 022, a checkout by another user), and an approval
+// that went stale for them would be one nobody could keep.
+func TestAnApprovalKeepsHoldingWhenOnlyAPermissionBitOtherThanTheOwnerExecuteBitChanges(t *testing.T) {
+	for _, tc := range []struct {
+		name          string
+		before, after os.FileMode
+	}{
+		{"the group can write", 0o644, 0o664},
+		{"the group and the others cannot read", 0o644, 0o600},
+		{"the group can execute", 0o644, 0o654},
+		{"the others can execute", 0o644, 0o645},
+		{"the owner cannot write", 0o644, 0o444},
+		{"an executable script gains group write", 0o755, 0o775},
+		{"an executable script loses its group and other bits", 0o755, 0o700},
+		{"an executable script cannot be written", 0o755, 0o555},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			w := newApprovalWorld(t)
+			w.setMode(alphaScript, tc.before)
+			w.approved()
+
+			w.setMode(alphaScript, tc.after)
+			if got := w.validate(); got.code() != 0 || got.stderr != "" {
+				t.Errorf("validate after chmod %04o -> %04o = exit %d, stdout %q, stderr %q, want the approval still to hold", tc.before, tc.after, got.code(), got.stdout, got.stderr)
+			}
+		})
+	}
+}
+
 func TestTheRecordOfAnApprovalIsNotPartOfItsOwnDigest(t *testing.T) {
 	w := newApprovalWorld(t)
 	first := w.approve()
@@ -179,15 +246,20 @@ func TestAnApprovalCannotCoverALinkInTheSkillDirectory(t *testing.T) {
 	}
 }
 
-// The digest is the SHA-256 of the list that `sha256sum` writes for the files of the skill, sorted
-// by path as bytes. The expected value was made outside the program, on the same three files:
+// The digest is the SHA-256 of the list that `sha256sum` writes for the files of the skill, with one
+// more column after each digest of the bytes (x when the owner can execute the file, - when not),
+// sorted by path as bytes. The expected value was made outside the program, on the same three files,
+// a/b.txt being the executable one (chmod 755, the others 644), by the recipe of the README for GNU
+// tools, which lists
 //
-//	(cd skills/alpha && fd -t f -H -E .approval.json | LC_ALL=C sort | xargs -d '\n' sha256sum | sha256sum)
+//	b1349da82d6c3bd82f610929d73ae0dc047b7c921e7919e3e9beb43b95e85950 -  SKILL.md
+//	dfb86f4417f5949eca2bed9b8986e96833618f1c03bb43a912ee39ff92190a53 -  a.txt
+//	44d66302a35f7ae1cdbc90251b17494c5c55bdbc591cdf91f02028a90c6f856a x  a/b.txt
 //
 // The two names that sort differently by walk order and by bytes (a/b.txt is walked before a.txt, and
 // sorts after it) are in it on purpose.
 func TestTheDigestOfAnApprovalIsWhatSha256sumGivesForTheListOfItsFiles(t *testing.T) {
-	const want = "7d6ffe45818224fc8db83a0e5e213e7ffeee7a9dfd6edae9fa1e359811ec37ca"
+	const want = "7c13bffa2330ab87cd3222fdf1732bcd67a64c04ee6f95a8c45ee191b5227cb1"
 	w := newApprovalWorld(t)
 	for _, gone := range []string{alphaScript, alphaHelper} {
 		if err := os.Remove(w.path(gone)); err != nil {
@@ -196,6 +268,7 @@ func TestTheDigestOfAnApprovalIsWhatSha256sumGivesForTheListOfItsFiles(t *testin
 	}
 	w.put("skills/alpha/a.txt", "a file at the top\n")
 	w.put("skills/alpha/a/b.txt", "a file in a directory\n")
+	w.setMode("skills/alpha/a/b.txt", 0o755)
 
 	got := w.approve()
 	if got.code() != 0 || !strings.Contains(got.stdout, "\nsha256: "+want+"\n") {

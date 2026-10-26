@@ -64,10 +64,68 @@ func TestApprovalsReadEveryFileOfTheSkillWithItsBytes(t *testing.T) {
 	}
 }
 
+// The one permission an approval covers is the owner's execute bit (mode & 0100), what git versions.
+// A file that is executable only for the group or the others is not executable here, and the other
+// bits (write, group, others) are not told at all: a different umask must not stale an approval of
+// files nobody changed.
+func TestApprovalsReportTheOwnerExecuteBitOfEachFileAndNoOtherBit(t *testing.T) {
+	root := t.TempDir()
+	put(t, filepath.Join(root, "alpha", "SKILL.md"), "skill bytes")
+	files := map[string]struct {
+		mode       fs.FileMode
+		executable bool
+	}{
+		"plain":                          {0o644, false},
+		"private":                        {0o600, false},
+		"writable-by-the-group":          {0o664, false},
+		"executable-by-the-group-only":   {0o654, false},
+		"executable-by-the-others-only":  {0o645, false},
+		"executable-by-group-and-others": {0o655, false},
+		"executable":                     {0o755, true},
+		"executable-by-the-owner-only":   {0o700, true},
+		"executable-and-group-writable":  {0o775, true},
+		"executable-and-read-only":       {0o555, true},
+	}
+	for name, tc := range files {
+		path := filepath.Join(root, "alpha", "scripts", name)
+		put(t, path, "echo "+name+"\n")
+		if err := os.Chmod(path, tc.mode); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	entries, err := skillsfs.Approvals{}.ReadSkillTree(root, "alpha")
+	if err != nil {
+		t.Fatalf("ReadSkillTree: %v", err)
+	}
+	got := map[string]skills.SkillEntry{}
+	for _, e := range entries {
+		got[e.Rel] = e
+	}
+	for name, tc := range files {
+		e, listed := got["scripts/"+name]
+		switch {
+		case !listed:
+			t.Errorf("scripts/%s is not listed (%v)", name, describe(entries))
+		case e.Executable != tc.executable:
+			t.Errorf("scripts/%s with mode %04o: Executable = %v, want %v", name, tc.mode, e.Executable, tc.executable)
+		case string(e.Data) != "echo "+name+"\n" || e.Type != 0:
+			t.Errorf("scripts/%s = %v, want its bytes read whatever its mode", name, describe([]skills.SkillEntry{e}))
+		}
+	}
+	if skill := got["SKILL.md"]; skill.Executable {
+		t.Errorf("SKILL.md with mode 0644 is reported executable")
+	}
+}
+
 func TestApprovalsReportTheRecordAtTheRootWithoutItsBytes(t *testing.T) {
 	root := t.TempDir()
 	put(t, filepath.Join(root, "alpha", "SKILL.md"), "skill bytes")
 	put(t, filepath.Join(root, "alpha", skills.ApprovalRecordName), `{"record": true}`)
+	// Its mode is not read either: a digest leaves the record out whatever it holds or is.
+	if err := os.Chmod(filepath.Join(root, "alpha", skills.ApprovalRecordName), 0o755); err != nil {
+		t.Fatal(err)
+	}
 
 	entries, err := skillsfs.Approvals{}.ReadSkillTree(root, "alpha")
 	if err != nil {
@@ -79,8 +137,8 @@ func TestApprovalsReportTheRecordAtTheRootWithoutItsBytes(t *testing.T) {
 			record = &entries[i]
 		}
 	}
-	if record == nil || !record.Type.IsRegular() || len(record.Data) != 0 {
-		t.Fatalf("entries = %v, want the record listed as a regular file whose bytes are not read: no approval covers them", describe(entries))
+	if record == nil || !record.Type.IsRegular() || len(record.Data) != 0 || record.Executable {
+		t.Fatalf("entries = %v, want the record listed as a regular file whose bytes and mode are not read: no approval covers them", describe(entries))
 	}
 }
 

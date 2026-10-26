@@ -254,7 +254,7 @@ func phase8Digest(data []byte) string {
 // SKILL.md and nothing else: the SHA-256 of the one line that `sha256sum` writes for it. It is made
 // here from the rule, not by the code under test.
 func phase8ApprovalDigest(skillMD string) string {
-	return phase8Digest([]byte(phase8Digest([]byte(skillMD)) + "  SKILL.md\n"))
+	return phase8Digest([]byte(phase8Digest([]byte(skillMD)) + " -  SKILL.md\n"))
 }
 
 func phase8Read(t *testing.T, path string) []byte {

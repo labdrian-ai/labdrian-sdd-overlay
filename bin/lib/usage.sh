@@ -150,13 +150,20 @@ Commands:
                                              all of them; the engine cannot prove a human ran it,
                                              so the record only proves the files match
                                              The digest is the SHA-256 of the lines
-                                             "<sha256 of the file>  <path>" (the format of
-                                             sha256sum) of every regular file of the skill's
-                                             directory, at any depth, sorted by path, except
-                                             .approval.json itself. To recompute it by hand:
+                                             "<sha256 of the file> <x or ->  <path>" (the format
+                                             of sha256sum, with x after the digest for a file whose
+                                             owner execute bit is set and - for any other) of every
+                                             regular file of the skill's directory, at any depth,
+                                             sorted by path, except .approval.json itself. Setting
+                                             or clearing that bit (chmod u+x) makes the approval
+                                             stale; the other permission bits are not covered.
+                                             To recompute it by hand:
                                                (cd skills/<id> && find . -type f ! -path ./.approval.json |
                                                 sed 's|^\./||' | LC_ALL=C sort |
-                                                xargs -d '\n' sha256sum -- | sha256sum)
+                                                while IFS= read -r f; do
+                                                  if [ -n "$(find "./$f" -perm -100)" ]; then m=x; else m=-; fi
+                                                  echo "$(sha256sum < "$f" | cut -c1-64) $m  $f"
+                                                done | sha256sum)
                                              A link, or any entry that is not a regular file,
                                              cannot be covered: the skill is APPROVAL_UNVERIFIABLE
                                              until it is replaced with a regular file or removed.
