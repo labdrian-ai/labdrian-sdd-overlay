@@ -60,7 +60,8 @@ type SkillEntry struct {
 // A skill whose directory holds an entry that is not a regular file, a link above all, has no
 // digest: the bytes behind a link are not the skill's, and an approval that skipped it would hold
 // while they changed. A name with a line break in it cannot be one line of the list, and is refused
-// for the same reason, and so is one with a backslash, which sha256sum would escape. The error says every entry it refused, in the order of their paths.
+// for the same reason, and so is one with a backslash, which sha256sum would escape. The error says
+// every entry it refused, in the order of their paths.
 func SkillDigest(entries []SkillEntry) (string, error) {
 	ordered := append([]SkillEntry(nil), entries...)
 	sort.Slice(ordered, func(i, j int) bool { return ordered[i].Rel < ordered[j].Rel })
