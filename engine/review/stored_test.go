@@ -2,6 +2,7 @@ package review_test
 
 import (
 	"encoding/json"
+	"errors"
 	"reflect"
 	"strings"
 	"testing"
@@ -93,8 +94,8 @@ func TestEncodeResultWritesNoPathAsAnEmptyArray(t *testing.T) {
 // is refused first), and the function does not write a file that does not parse.
 func TestEncodeResultRefusesAReplyThatIsNotJSON(t *testing.T) {
 	for _, reply := range []string{"", "no", `{"a":`} {
-		if data, err := review.EncodeResult(candidate(t), []byte(reply)); err == nil {
-			t.Errorf("EncodeResult(%q) = %q, nil, want an error", reply, data)
+		if data, err := review.EncodeResult(candidate(t), []byte(reply)); !errors.Is(err, review.ErrReplyNotJSON) {
+			t.Errorf("EncodeResult(%q) = %q, %v, want an error wrapping ErrReplyNotJSON", reply, data, err)
 		}
 	}
 }

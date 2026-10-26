@@ -141,3 +141,11 @@ func TestOverLimitIsTrueOnlyAboveOneHundredFiftyThousandBytes(t *testing.T) {
 		}
 	}
 }
+
+// The zero Candidate names nothing: its short name is empty instead of a panic, for a caller that used
+// the zero value NewCandidate returns with its error.
+func TestTheZeroCandidateHasAnEmptyShortName(t *testing.T) {
+	if got := (review.Candidate{}).Short(); got != "" {
+		t.Errorf("Candidate{}.Short() = %q, want \"\"", got)
+	}
+}

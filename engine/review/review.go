@@ -79,6 +79,8 @@ var (
 	ErrInvalidCandidate = errors.New("review: invalid candidate")
 	// ErrReplyTooLarge is a reply of the reviewer above MaxReplyBytes.
 	ErrReplyTooLarge = errors.New("review: reply too large")
+	// ErrReplyNotJSON is a reply that is not one JSON value, which a JSON file cannot hold.
+	ErrReplyNotJSON = errors.New("review: reply is not JSON")
 )
 
 // Candidate is what a review is about, as computed from git: the zero Candidate names nothing.
@@ -139,12 +141,18 @@ func (c Candidate) Binding() reviewresult.Binding {
 // Ref is the range as the record of the role chain names it, <base>..<head>.
 func (c Candidate) Ref() string { return c.Base + ".." + c.Head }
 
-// Short is the first 12 characters of the head: the name of the stored results and of the worktree of
-// the candidate.
-func (c Candidate) Short() string { return c.Head[:shortLength] }
-
-// shortLength is how many characters of the head name its files.
+// shortLength is how many characters of the head name its files: 12 hexadecimal characters, which git
+// itself still prints unambiguously in large repositories.
 const shortLength = 12
+
+// Short is the first 12 characters of the head: the name of the stored results and of the worktree of
+// the candidate. The zero Candidate names nothing, so its short name is empty.
+func (c Candidate) Short() string {
+	if len(c.Head) < shortLength {
+		return ""
+	}
+	return c.Head[:shortLength]
+}
 
 // OverLimit reports whether the diff is larger than DiffLimitBytes.
 func (c Candidate) OverLimit() bool { return c.DiffBytes > DiffLimitBytes }

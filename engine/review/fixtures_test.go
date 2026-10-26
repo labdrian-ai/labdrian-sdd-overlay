@@ -11,11 +11,11 @@ import (
 // diff below is the SHA-256 of the three bytes "abc", written out so that no test computes what it
 // checks.
 const (
-	baseSHA = "1111111111111111111111111111111111111111"
-	headSHA = "2222222222222222222222222222222222222222"
-	// diffSHA is the SHA-256 of diffText.
+	baseSHA  = "1111111111111111111111111111111111111111"
+	headSHA  = "2222222222222222222222222222222222222222"
 	diffText = "abc"
-	diffSHA  = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+	// diffSHA is the SHA-256 of diffText.
+	diffSHA = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
 )
 
 // changedPaths are the paths of the diff, in the order git prints them.

@@ -37,7 +37,7 @@ type storedBinding struct {
 // It does not judge the reply; reviewresult.Parse has done so by the time the command calls it.
 func EncodeResult(c Candidate, reply []byte) ([]byte, error) {
 	if !json.Valid(reply) {
-		return nil, fmt.Errorf("review: the reply is not JSON, so it cannot be stored in a JSON file")
+		return nil, fmt.Errorf("%w, so it cannot be stored in a JSON file", ErrReplyNotJSON)
 	}
 	file := storedFile{
 		Version: StoredVersion,
