@@ -830,13 +830,15 @@ gentle-ai-overlay runtime capabilities [--target claude|codex|pi|opencode|all]
     with the others.
 
 gentle-ai-overlay runtime probe [--target claude|codex|pi|all]
-    Engine verb (Phase 7), run on the installed engine binary like runtime capabilities. Read-only and
-    stat only: it prints, as JSON ({"version":1,"observations":[...]}), one observation per signal, from the
+    Engine verb (Phase 7), run on the installed engine binary like runtime capabilities. Read-only: it
+    prints, as JSON ({"version":1,"observations":[...]}), one observation per signal, from the
     real HOME and PATH: whether each selected runtime's credentials file is present (credentials:claude-code,
     credentials:codex, credentials:pi; default --target all) and, on every run, whether the Engram database
     (memory:engram), the longterm-mem registration record (memory:longterm-mem), and the gentle-ai binary on
-    PATH (gentle-ai-review) are present; memory:procedural-skills has no check and is always unavailable. It
-    never opens, reads, hashes, or prints the contents of any of those files, never runs gentle-ai, and never
+    PATH (gentle-ai-review) are present, stat only; and whether the project's procedural skills lock can be read
+    (memory:procedural-skills), the one file it reads, through the same reader session start uses, so a lock that
+    is present but invalid is unavailable with the reason. It never opens, reads, hashes, or prints the contents
+    of any of the other files, never runs gentle-ai, and never
     names a path in its output, so "available" says a file or binary is present and nothing else: a present
     credentials file is not proof that the runtime is authenticated, a present database is not a healthy one, and
     a binary on PATH has not been run (each detail says so, and a test parses the prober's source to forbid opening

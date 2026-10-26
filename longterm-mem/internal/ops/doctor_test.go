@@ -98,6 +98,10 @@ func TestDoctor(t *testing.T) {
 			EmbeddingBackendCheck: func(context.Context) error {
 				return nil
 			},
+			// The healthy vault's page is promoted from observation 1, which Engram keeps pinned.
+			LiveObservationEligibility: func(string) ([]ObservationEligibility, error) {
+				return []ObservationEligibility{{ID: 1, Pinned: true}}, nil
+			},
 		}, vaultRoot
 	}
 
@@ -112,8 +116,8 @@ func TestDoctor(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Doctor: %v", err)
 		}
-		if len(report.Checks) != 8 {
-			t.Fatalf("Checks = %+v, want exactly 8 (R-011's five plus R-064's three embedding checks; all checks must run and report)", report.Checks)
+		if len(report.Checks) != 9 {
+			t.Fatalf("Checks = %+v, want exactly 9 (R-011's five plus R-064's three embedding checks plus the advisory eligibility check; all checks must run and report)", report.Checks)
 		}
 
 		got := checkStatus(t, report.Checks, CheckVaultConfigResolvable)

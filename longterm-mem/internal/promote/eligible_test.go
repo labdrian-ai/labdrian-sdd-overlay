@@ -247,3 +247,22 @@ func TestPromote_InvalidObservationIdRejected(t *testing.T) {
 		t.Fatalf("wiki/index.md exists after a rejected promote call (stat err = %v); an invalid id must do nothing, not partially register", statErr)
 	}
 }
+
+// A page names an observation only by a positive engram_id: zero is no observation, so no page is joined
+// to an observation it does not name.
+func TestPageObservationIDNamesOnlyAPositiveID(t *testing.T) {
+	for _, tc := range []struct {
+		frontmatter string
+		wantID      int64
+		wantNamed   bool
+	}{
+		{"---\nengram_id: 12\n---\n", 12, true},
+		{"---\nengram_id: 0\n---\n", 0, false},
+		{"---\ntitle: x\n---\n", 0, false},
+	} {
+		id, named := PageObservationID(Page{Frontmatter: tc.frontmatter})
+		if id != tc.wantID || named != tc.wantNamed {
+			t.Errorf("PageObservationID(%q) = %d, %v; want %d, %v", tc.frontmatter, id, named, tc.wantID, tc.wantNamed)
+		}
+	}
+}

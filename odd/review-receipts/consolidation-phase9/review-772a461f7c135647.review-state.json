@@ -1,0 +1,383 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:b8edf2d15a6e962be304e6627f68fdc5aebd614a99c57f0cc8df32ecf0df0c45",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-772a461f7c135647",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "c01c35a562eb7f071b4db2e6935b0bff3e352970",
+      "candidate_tree": "9f9344d52fdf32e23146c67345631c93dc6ff901",
+      "paths_digest": "sha256:4b14becf9f43ebe813a269ab3c3f4d839e38399fdf5025474a67b2499309001e",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "README.md",
+        "engine/capability/presence/doc.go",
+        "engine/capability/presence/presence.go",
+        "engine/capability/presence/presence_static_test.go",
+        "engine/capability/presence/procedural_test.go",
+        "engine/capability/presence/project.go",
+        "engine/cmd/deps.go",
+        "engine/cmd/procedural_lock.go",
+        "engine/cmd/procedural_presence_test.go",
+        "engine/cmd/procedural_probe_test.go",
+        "engine/cmd/runtime_probe.go",
+        "engine/cmd/runtime_probe_test.go",
+        "engine/cmd/usage.go"
+      ],
+      "identity": "sha256:fe32ac1ef49fbb55c57d86c698330469116e7e601eb0108c70b18c285acfdf59"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "c01c35a562eb7f071b4db2e6935b0bff3e352970",
+      "candidate_tree": "9f9344d52fdf32e23146c67345631c93dc6ff901",
+      "paths_digest": "sha256:4b14becf9f43ebe813a269ab3c3f4d839e38399fdf5025474a67b2499309001e",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "README.md",
+        "engine/capability/presence/doc.go",
+        "engine/capability/presence/presence.go",
+        "engine/capability/presence/presence_static_test.go",
+        "engine/capability/presence/procedural_test.go",
+        "engine/capability/presence/project.go",
+        "engine/cmd/deps.go",
+        "engine/cmd/procedural_lock.go",
+        "engine/cmd/procedural_presence_test.go",
+        "engine/cmd/procedural_probe_test.go",
+        "engine/cmd/runtime_probe.go",
+        "engine/cmd/runtime_probe_test.go",
+        "engine/cmd/usage.go"
+      ],
+      "identity": "sha256:fe32ac1ef49fbb55c57d86c698330469116e7e601eb0108c70b18c285acfdf59"
+    },
+    "genesis_paths": [
+      "README.md",
+      "engine/capability/presence/doc.go",
+      "engine/capability/presence/presence.go",
+      "engine/capability/presence/presence_static_test.go",
+      "engine/capability/presence/procedural_test.go",
+      "engine/capability/presence/project.go",
+      "engine/cmd/deps.go",
+      "engine/cmd/procedural_lock.go",
+      "engine/cmd/procedural_presence_test.go",
+      "engine/cmd/procedural_probe_test.go",
+      "engine/cmd/runtime_probe.go",
+      "engine/cmd/runtime_probe_test.go",
+      "engine/cmd/usage.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-risk",
+      "review-resilience",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 1016,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "replaces the create-time procedural presence stat with a project-context port that reads and validates the lock (risk: a new file read and changed observation contract; resilience: unreadable or hostile locks; reliability: tests; readability: usage and README text)",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:8fefb4546d07c770153acf6a8a59e5fd95c27449212b4af80b512400fc75916d",
+    "capture_phase_revision": "sha256:e9c85823e009c1a85ba112e9e5773f046add1f2d5bc23bab371899274b67091c",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:fe32ac1ef49fbb55c57d86c698330469116e7e601eb0108c70b18c285acfdf59",
+        "capture_phase_revision": "sha256:e9c85823e009c1a85ba112e9e5773f046add1f2d5bc23bab371899274b67091c",
+        "artifact_digest": "sha256:7e2c3f6b275f126373efbfd7a9ba38037566541e54c7d829bba5c0cce41d66a3",
+        "result_hash": "sha256:7dfac80b4cb14594dcb970c08c8b43c68014b5aefc7b0c8dbad3c1bd962ca582",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:35bff4c8c3af6c2eeda7233a2e6143bae6a1fe2f855ca8b38075149cc0655629",
+            "lineage_id": "review-772a461f7c135647",
+            "authority_revision": "sha256:e9c85823e009c1a85ba112e9e5773f046add1f2d5bc23bab371899274b67091c",
+            "target_identity": "sha256:fe32ac1ef49fbb55c57d86c698330469116e7e601eb0108c70b18c285acfdf59",
+            "base_tree": "c01c35a562eb7f071b4db2e6935b0bff3e352970",
+            "candidate_tree": "9f9344d52fdf32e23146c67345631c93dc6ff901",
+            "changed_path_manifest_sha256": "sha256:c9ef14181cbcdac37731fb571a853e9a3ff132ea5cd19acc121d79d930aa9344",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:35bff4c8c3af6c2eeda7233a2e6143bae6a1fe2f855ca8b38075149cc0655629",
+            "raw_sha256": "sha256:37e385d9f62b3ccb6b818b249cfade5076e9af93e9476a683e2a9f11d5826db2",
+            "canonical_sha256": "sha256:b091077f7d1f40474a065d3751c47bb173dece9cac5887a9d3d340f615a3011a",
+            "result_hash": "sha256:7dfac80b4cb14594dcb970c08c8b43c68014b5aefc7b0c8dbad3c1bd962ca582",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:35bff4c8c3af6c2eeda7233a2e6143bae6a1fe2f855ca8b38075149cc0655629",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "README.md",
+                "engine/capability/presence/doc.go",
+                "engine/capability/presence/presence.go",
+                "engine/capability/presence/presence_static_test.go",
+                "engine/capability/presence/procedural_test.go",
+                "engine/capability/presence/project.go",
+                "engine/cmd/deps.go",
+                "engine/cmd/procedural_lock.go",
+                "engine/cmd/procedural_presence_test.go",
+                "engine/cmd/procedural_probe_test.go",
+                "engine/cmd/runtime_probe.go",
+                "engine/cmd/runtime_probe_test.go",
+                "engine/cmd/usage.go"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "The presence package gains no file-opening capability. The static test now covers project.go, and the lock read happens in engine/cmd/procedural_lock.go through the existing session-probe reader.",
+              "Reason text from the lock reader is sanitized in engine/capability/presence/project.go. It drops invalid UTF-8, turns control characters into spaces, collapses the text to one line and truncates it to 200 runes, so it cannot inject control characters or exceed workflow bounds.",
+              "The lock path is rewritten to its project-relative form before the reason is recorded, in engine/cmd/procedural_lock.go. This keeps the machine path out of the workflow log. A path that appears only as part of some other string is not rewritten. That is not a reachable exploit.",
+              "I found no secret handling, authorization, injection or dependency changes. The lock is a project-local file, read the same way the session probe already reads it. The behavior change, where an invalid lock is now reported as unavailable, is the requested C10c behavior."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-resilience",
+        "selected_order": 1,
+        "target_identity": "sha256:fe32ac1ef49fbb55c57d86c698330469116e7e601eb0108c70b18c285acfdf59",
+        "capture_phase_revision": "sha256:e9c85823e009c1a85ba112e9e5773f046add1f2d5bc23bab371899274b67091c",
+        "artifact_digest": "sha256:f17b85476691547159f991db1946deebbf5a2c27d141d9e6158ecc2510f29b05",
+        "result_hash": "sha256:f84837dd9bf48e915b7e3c5cebde0a72db43dac65a43c34450be42f21bf92503",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:b22e3dbec47dcae80aaae64fc2e18f3a800237cc845a88953237f4d314f0bebf",
+            "lineage_id": "review-772a461f7c135647",
+            "authority_revision": "sha256:e9c85823e009c1a85ba112e9e5773f046add1f2d5bc23bab371899274b67091c",
+            "target_identity": "sha256:fe32ac1ef49fbb55c57d86c698330469116e7e601eb0108c70b18c285acfdf59",
+            "base_tree": "c01c35a562eb7f071b4db2e6935b0bff3e352970",
+            "candidate_tree": "9f9344d52fdf32e23146c67345631c93dc6ff901",
+            "changed_path_manifest_sha256": "sha256:c9ef14181cbcdac37731fb571a853e9a3ff132ea5cd19acc121d79d930aa9344",
+            "lens": "review-resilience",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:b22e3dbec47dcae80aaae64fc2e18f3a800237cc845a88953237f4d314f0bebf",
+            "raw_sha256": "sha256:965e9e7a3d621b6f6cc3ee38c4173ee4ddb5bd4207086f6134b8b4f43aefa9f8",
+            "canonical_sha256": "sha256:2856ac5b08b39f8732d75172ff2b3090a8ce7748040dd746248214a680f1c523",
+            "result_hash": "sha256:f84837dd9bf48e915b7e3c5cebde0a72db43dac65a43c34450be42f21bf92503",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:b22e3dbec47dcae80aaae64fc2e18f3a800237cc845a88953237f4d314f0bebf",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "README.md",
+                "engine/capability/presence/doc.go",
+                "engine/capability/presence/presence.go",
+                "engine/capability/presence/presence_static_test.go",
+                "engine/capability/presence/procedural_test.go",
+                "engine/capability/presence/project.go",
+                "engine/cmd/deps.go",
+                "engine/cmd/procedural_lock.go",
+                "engine/cmd/procedural_presence_test.go",
+                "engine/cmd/procedural_probe_test.go",
+                "engine/cmd/runtime_probe.go",
+                "engine/cmd/runtime_probe_test.go",
+                "engine/cmd/usage.go"
+              ]
+            },
+            "lens": "review-resilience",
+            "findings": [],
+            "evidence": [
+              "I read all 13 patches and found no concrete production failure mode caused by this candidate.",
+              "An invalid lock's reason is cleaned and cut to 200 runes by shortReason in engine/capability/presence/project.go. The detail therefore stays within the observation bound, so workflow creation does not fail on a long reason. Tests cover this.",
+              "processProject.ReadLock in engine/cmd/procedural_lock.go never returns an error. A missing working directory or worktree gives the unknown-project reading, and an unreadable lock gives an unavailable observation. Workflow creation and runtime probe degrade gracefully.",
+              "The stat of the lock is replaced by a read through the session reader. The caller still bounds the probe with probeWithin, and the lifecycle applies its own probe deadline. A blocking read of an unusual lock file (for example a FIFO) is speculative, and the session probe already has the same exposure, so I am not reporting it.",
+              "The path-stripping in withoutLockPath only rewrites the exact lock path. This affects log hygiene only, not availability."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "selected_order": 2,
+        "target_identity": "sha256:fe32ac1ef49fbb55c57d86c698330469116e7e601eb0108c70b18c285acfdf59",
+        "capture_phase_revision": "sha256:e9c85823e009c1a85ba112e9e5773f046add1f2d5bc23bab371899274b67091c",
+        "artifact_digest": "sha256:1f4633a6b3cbee9ec5412be378a8aeaae1dcbb73405aed8427de138512dace97",
+        "result_hash": "sha256:975e06dab8d7f52ba2393d543b0dfe648eb49876cc623c6f11eb5f1284e81c95",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:0de86715a4e1899ae4dd65d40cbad9387cce0afc000a408efa6cb8449f582a29",
+            "lineage_id": "review-772a461f7c135647",
+            "authority_revision": "sha256:e9c85823e009c1a85ba112e9e5773f046add1f2d5bc23bab371899274b67091c",
+            "target_identity": "sha256:fe32ac1ef49fbb55c57d86c698330469116e7e601eb0108c70b18c285acfdf59",
+            "base_tree": "c01c35a562eb7f071b4db2e6935b0bff3e352970",
+            "candidate_tree": "9f9344d52fdf32e23146c67345631c93dc6ff901",
+            "changed_path_manifest_sha256": "sha256:c9ef14181cbcdac37731fb571a853e9a3ff132ea5cd19acc121d79d930aa9344",
+            "lens": "review-readability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:0de86715a4e1899ae4dd65d40cbad9387cce0afc000a408efa6cb8449f582a29",
+            "raw_sha256": "sha256:4a7955983cbaf68c35f301d02277aa1747a787f5f857aced0da8fa01cef0918b",
+            "canonical_sha256": "sha256:f8adcf4864af093716174c64a6870cf7de56978ca17656a45663403753a2a771",
+            "result_hash": "sha256:975e06dab8d7f52ba2393d543b0dfe648eb49876cc623c6f11eb5f1284e81c95",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:0de86715a4e1899ae4dd65d40cbad9387cce0afc000a408efa6cb8449f582a29",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "README.md",
+                "engine/capability/presence/doc.go",
+                "engine/capability/presence/presence.go",
+                "engine/capability/presence/presence_static_test.go",
+                "engine/capability/presence/procedural_test.go",
+                "engine/capability/presence/project.go",
+                "engine/cmd/deps.go",
+                "engine/cmd/procedural_lock.go",
+                "engine/cmd/procedural_presence_test.go",
+                "engine/cmd/procedural_probe_test.go",
+                "engine/cmd/runtime_probe.go",
+                "engine/cmd/runtime_probe_test.go",
+                "engine/cmd/usage.go"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [],
+            "evidence": [
+              "I read all 13 patches. The change replaces the ProceduralLock path field with a ProjectContext port. The adapter that answers the port is in engine/cmd/procedural_lock.go.",
+              "The names match what the code does: LockReading, LockState, processProject, withoutLockPath and shortReason. MaxReasonRunes and noReasonGiven are named constants with comments explaining why they exist.",
+              "The old stat-based observeProcedural was removed and its replacement is in project.go, so I found no dead or duplicated logic. deps.presenceProber() is now the single place the prober is built for both 'runtime probe' and the workflow verbs.",
+              "The doc comments, README, usage text and the tests that check them were updated together. I found no stale comment or misleading description.",
+              "One minor point, not worth a finding: processProject.ReadLock resolves the worktree root itself and the reader's Load resolves it again. The adapter comment explains that both use the reader's own function."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 3,
+        "target_identity": "sha256:fe32ac1ef49fbb55c57d86c698330469116e7e601eb0108c70b18c285acfdf59",
+        "capture_phase_revision": "sha256:e9c85823e009c1a85ba112e9e5773f046add1f2d5bc23bab371899274b67091c",
+        "artifact_digest": "sha256:7f7b6190ac6cf134faf12e3966e5b217805179f3a124c23dda2f902e05aac9e2",
+        "result_hash": "sha256:d3060c83c4a9ec97e41f304459f0cbf361544a2a6904e808edda29cdb6bbef35",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:fb228c1d9bf285a1d2663ea72fbdf6e86ab817612b0d5ee1a639bf14821b7d2b",
+            "lineage_id": "review-772a461f7c135647",
+            "authority_revision": "sha256:e9c85823e009c1a85ba112e9e5773f046add1f2d5bc23bab371899274b67091c",
+            "target_identity": "sha256:fe32ac1ef49fbb55c57d86c698330469116e7e601eb0108c70b18c285acfdf59",
+            "base_tree": "c01c35a562eb7f071b4db2e6935b0bff3e352970",
+            "candidate_tree": "9f9344d52fdf32e23146c67345631c93dc6ff901",
+            "changed_path_manifest_sha256": "sha256:c9ef14181cbcdac37731fb571a853e9a3ff132ea5cd19acc121d79d930aa9344",
+            "lens": "review-reliability",
+            "selected_order": 3
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:fb228c1d9bf285a1d2663ea72fbdf6e86ab817612b0d5ee1a639bf14821b7d2b",
+            "raw_sha256": "sha256:38f9cced5052f7c44492a702183c2aa59c31cfb116d73899d2be4664d70455db",
+            "canonical_sha256": "sha256:1c7fd1c34d9e25bd30490a77cfa73bf5a41321334c75000db55ca0d832a0a343",
+            "result_hash": "sha256:d3060c83c4a9ec97e41f304459f0cbf361544a2a6904e808edda29cdb6bbef35",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:fb228c1d9bf285a1d2663ea72fbdf6e86ab817612b0d5ee1a639bf14821b7d2b",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "README.md",
+                "engine/capability/presence/doc.go",
+                "engine/capability/presence/presence.go",
+                "engine/capability/presence/presence_static_test.go",
+                "engine/capability/presence/procedural_test.go",
+                "engine/capability/presence/project.go",
+                "engine/cmd/deps.go",
+                "engine/cmd/procedural_lock.go",
+                "engine/cmd/procedural_presence_test.go",
+                "engine/cmd/procedural_probe_test.go",
+                "engine/cmd/runtime_probe.go",
+                "engine/cmd/runtime_probe_test.go",
+                "engine/cmd/usage.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-001",
+                "lens": "reliability",
+                "location": "engine/cmd/procedural_lock.go:104-120",
+                "severity": "SUGGESTION",
+                "claim": "ReadLock resolves the worktree root, then locks.Load(dir) resolves it again. That is two repo-locator calls per probe, and a worktree change between them could make the root used for path redaction differ from the root the reader used. The window is tiny and the effect is only an unredacted path in a reason.",
+                "proof_refs": [
+                  "engine/cmd/procedural_lock.go:104-120"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "I read all 13 changed paths in the patch.",
+              "The presence prober maps each lock state to an observation: valid is available; absent and unknown are unavailable with the earlier wording; invalid is unavailable with the session probe's reason, cleaned by shortReason.",
+              "shortReason bounds the reason at 200 runes, one line, valid UTF-8, with no control characters. Unit tests cover those bounds and the edge cases.",
+              "I could not confirm that the 44-rune prefix plus 200 runes stays within workflow.MaxObservationDetailLength, because that constant is outside the patch. The tests assert the bound, so a violation would show up there.",
+              "The cmd tests compare the create-time record, the runtime probe output and the session probe against the same reader. They also cover the unknown-project cases, the path-redaction cases, the overlong-reason case, and the check that the working directory is read when the prober asks.",
+              "The static test now includes project.go, so the no-file-open guarantee still covers the new code.",
+              "The old stat-only behaviour that reported any regular file as available is deliberately changed, as the change requests."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "98adfbf8183cb9f8d4929bf13c78e1b2e5617247c10d7fe67313c1162ec13fd3",
+    "initial_atomic_start": {
+      "lineage_id": "review-772a461f7c135647",
+      "worktree_identity": "sha256:8455002f227f033663d0e7d8b8ff6a885e1c85b482ec52e34017c303452eed87",
+      "target_identity": "sha256:fe32ac1ef49fbb55c57d86c698330469116e7e601eb0108c70b18c285acfdf59",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "c01c35a562eb7f071b4db2e6935b0bff3e352970",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-risk",
+        "review-resilience",
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 1016,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "replaces the create-time procedural presence stat with a project-context port that reads and validates the lock (risk: a new file read and changed observation contract; resilience: unreadable or hostile locks; reliability: tests; readability: usage and README text)"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

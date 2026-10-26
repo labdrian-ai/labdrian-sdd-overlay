@@ -32,6 +32,7 @@ longterm-mem: doctor for goldenproj
   [FAIL] embedding-index-present (embedding index at <state>/index/goldenproj could not be loaded: vecindex: index is corrupted: <state>/index/goldenproj/manifest.json: recorded revision "ca2f414c7dfd28bfc5e362268e09080b8d35d040e69f832c801ae6e838675067" does not match a digest of its own entries ("eac4c820b50fc7fb3729eb41e9da93aa6c417c33a8b884fae91a2b76e8dee703"))
   [FAIL] embedding-index-fresh (freshness cannot be determined: embedding index at <state>/index/goldenproj could not be loaded: vecindex: index is corrupted: <state>/index/goldenproj/manifest.json: recorded revision "ca2f414c7dfd28bfc5e362268e09080b8d35d040e69f832c801ae6e838675067" does not match a digest of its own entries ("eac4c820b50fc7fb3729eb41e9da93aa6c417c33a8b884fae91a2b76e8dee703"))
   [PASS] embedding-backend-reachable
+  [PASS] promoted-pages-eligible
 --- stderr ---
 
 args: doctor --project goldenproj --json
@@ -72,6 +73,10 @@ exit: 9
     },
     {
       "name": "embedding-backend-reachable",
+      "status": "PASS"
+    },
+    {
+      "name": "promoted-pages-eligible",
       "status": "PASS"
     }
   ]

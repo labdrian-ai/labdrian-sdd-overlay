@@ -32,6 +32,7 @@ longterm-mem: doctor for goldenproj
   [PASS] embedding-index-present
   [PASS] embedding-index-fresh
   [PASS] embedding-backend-reachable
+  [PASS] promoted-pages-eligible
 --- stderr ---
 
 args: doctor --project goldenproj --json
@@ -70,6 +71,10 @@ exit: 0
     },
     {
       "name": "embedding-backend-reachable",
+      "status": "PASS"
+    },
+    {
+      "name": "promoted-pages-eligible",
       "status": "PASS"
     }
   ]

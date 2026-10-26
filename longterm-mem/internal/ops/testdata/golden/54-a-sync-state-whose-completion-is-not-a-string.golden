@@ -33,6 +33,10 @@
     {
       "name": "embedding-backend-reachable",
       "status": "PASS"
+    },
+    {
+      "name": "promoted-pages-eligible",
+      "status": "PASS"
     }
   ]
 }

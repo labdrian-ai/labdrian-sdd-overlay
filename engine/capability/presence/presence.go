@@ -62,8 +62,9 @@ type osStatFS struct{}
 func (osStatFS) Lstat(name string) (fs.FileInfo, error) { return os.Lstat(name) }
 func (osStatFS) Stat(name string) (fs.FileInfo, error)  { return os.Stat(name) }
 
-// Prober implements workflow.DependencyProber with stat-level checks
-// only. The zero value has no home and no PATH, so every signal is unavailable.
+// Prober implements workflow.DependencyProber with stat-level checks and, for the
+// procedural skills, one question put to the project through its port. It opens no file
+// itself. The zero value has no home, no PATH and no project, so every signal is unavailable.
 type Prober struct {
 	// Home is the absolute home directory the per-user files are looked for
 	// under. Empty, or not absolute, means the home is unknown: every signal that
@@ -77,11 +78,11 @@ type Prober struct {
 	Path string
 	// ProbeFS is the stat access; nil means the operating system's.
 	ProbeFS StatFS
-	// ProceduralLock is the absolute path of the procedural skills lock of the project the workflow
-	// is created in (C23 M8). Empty, or not absolute, means the project is unknown: the
-	// memory:procedural-skills signal is unavailable, and the prober never looks for the lock in
-	// the working directory on its own.
-	ProceduralLock string
+	// Project answers what the prober asks of the project the workflow is created in, today whether
+	// its procedural skills lock can be used (C10c; see ProjectContext). Nil means the project is
+	// unknown: the memory:procedural-skills signal is unavailable, and the prober never looks for the
+	// project's files on its own.
+	Project ProjectContext
 }
 
 var _ workflow.DependencyProber = Prober{}
@@ -90,7 +91,8 @@ var _ workflow.DependencyProber = Prober{}
 // the context is done it returns the context's error at once, which the
 // workflow lifecycle records as every capability being unavailable. It never
 // returns another error, and it never returns an observation that would fail the
-// workflow's bounds: every detail is a short fixed sentence.
+// workflow's bounds: every detail is a short fixed sentence, or the reason an invalid
+// procedural skills lock is given, shortened to MaxReasonRunes.
 func (p Prober) Probe(ctx context.Context, capabilities []string) ([]workflow.Observation, error) {
 	out := make([]workflow.Observation, len(capabilities))
 	for i, name := range capabilities {
@@ -187,25 +189,6 @@ func (p Prober) observe(ctx context.Context, name string) workflow.Observation {
 	default:
 		return unavailable(name, check.subject+" was not found: "+found.why)
 	}
-}
-
-// observeProcedural stats the procedural skills lock of the project, at the path ProceduralLock
-// names. Like every signal here it never opens the file, so a lock that is present may still not be
-// valid; the session-time probe reads it (docs/architecture/adr-c23-m8-session-availability.md).
-func (p Prober) observeProcedural(name string) workflow.Observation {
-	const subject = "the procedural skills lock"
-	if !filepath.IsAbs(p.ProceduralLock) {
-		return unavailable(name, "the project directory is unknown, so "+subject+" was not looked for")
-	}
-	found := p.statRegular(p.ProceduralLock)
-	if !found.present {
-		return unavailable(name, subject+" was not found: "+found.why)
-	}
-	detail := subject + " is present (not opened, so its validity is unverified)"
-	if found.symlink {
-		detail += "; the checked path is a symlink"
-	}
-	return workflow.Observation{Capability: name, Status: workflow.ObservationAvailable, Detail: detail}
 }
 
 // observeGentleAI scans the absolute PATH directories, by name, for an

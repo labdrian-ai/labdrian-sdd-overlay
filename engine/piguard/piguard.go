@@ -7,6 +7,11 @@
 // arguments and exits 97, so whatever looks up `pi` finds the guard before any real one, and the
 // run can ask afterwards whether anything started it. A TestMain installs it and fails the run
 // when Started reports true.
+//
+// One test may still run the real `pi`: the live test of the Pi global tier, when the person
+// running the tests exports LABDRIAN_PI_LIVE_TEST=1. RequestLive then hands it the PATH of the run
+// without the guard, and RefuseRealHome keeps it to a HOME of its own that is not the person's
+// (live.go). The guard stays installed for every other test.
 package piguard
 
 import (
@@ -30,7 +35,7 @@ func Install() (*Guard, error) {
 	if runtime.GOOS == "windows" {
 		return g, nil
 	}
-	dir, err := os.MkdirTemp("", "pi-guard-*")
+	dir, err := os.MkdirTemp("", GuardDirPrefix+"*")
 	if err != nil {
 		return nil, err
 	}

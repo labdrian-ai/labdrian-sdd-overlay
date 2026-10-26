@@ -4,6 +4,7 @@
 package promote
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
@@ -24,6 +25,39 @@ var excludedTopicPrefixes = map[string]bool{
 // call, which overrides every other criterion.
 func Eligible(obs memory.Observation, explicit bool) bool {
 	return explicit || obs.Pinned || curatedTopicKey(obs.TopicKey)
+}
+
+// IneligibleReason says why obs is not eligible for promotion on its own, with no explicit promote call: it is
+// the reason Eligible(obs, false) is false, worded as the predicate of "observation N", and empty when
+// Eligible(obs, false) is true. It lives beside the rule so that a change to the rule cannot leave the reason it
+// gives behind: both read the same pinned flag and the same topic_key.
+//
+// An observation that is not pinned is refused for one of two reasons, and the reason says which: it has no
+// topic_key (an empty one, or one of white space), or it has one that is not curated -- its first segment, past
+// a goal's prefix, is empty or is one of the excluded ones (sdd, review, delivery). A topic_key is quoted as it
+// is, trimmed of the white space around it.
+func IneligibleReason(obs memory.Observation) string {
+	if Eligible(obs, false) {
+		return ""
+	}
+	key := strings.TrimSpace(obs.TopicKey)
+	if key == "" {
+		return "is not pinned and has no topic_key"
+	}
+	return fmt.Sprintf("is not pinned and its topic_key %q is not a curated topic", key)
+}
+
+// PageObservationID is the id of the Engram observation page was promoted from: the engram_id of its
+// frontmatter, read from the page's content as the vault holds it (the whole file, or its frontmatter block
+// alone). It reports false for a page that names none -- no frontmatter block, no engram_id, one that is not a
+// number -- and never observation 0, so that no page is joined to an observation it does not name.
+func PageObservationID(page Page) (int64, bool) {
+	block, ok := frontmatterBlock(page.Frontmatter)
+	if !ok {
+		return 0, false
+	}
+	id, named := frontmatterEngramID(block)
+	return id, named && id > 0
 }
 
 // curatedTopicKey reports whether key is a non-empty topic_key whose first

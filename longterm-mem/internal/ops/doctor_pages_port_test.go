@@ -98,8 +98,8 @@ func pageChecks(t *testing.T, deps DoctorDeps) map[string]Check {
 	if err != nil {
 		t.Fatalf("Doctor: %v", err)
 	}
-	if len(report.Checks) != 8 {
-		t.Fatalf("Doctor reported %d checks, want all 8", len(report.Checks))
+	if len(report.Checks) != 9 {
+		t.Fatalf("Doctor reported %d checks, want all 9", len(report.Checks))
 	}
 	checks := map[string]Check{}
 	for _, check := range report.Checks {

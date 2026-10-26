@@ -2,7 +2,7 @@ args: skills-stale --project-root <project> --project skillsgolden
 exit: 0
 --- stdout ---
 longterm-mem: skills-stale: checked <project> for project skillsgolden
-unrecorded-skill candidate:procedural/candidates/repeated-success/unrecorded-skill status:
+unrecorded-skill candidate:procedural/candidates/repeated-success/unrecorded-skill status:unrecorded
   UNRESOLVED-COMMAND definitely-missing-command
   Nothing was changed. Review this report before making a separate retirement decision.
 --- stderr ---

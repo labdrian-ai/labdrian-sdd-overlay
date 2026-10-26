@@ -1,0 +1,51 @@
+--- doctor ---
+{
+  "project": "labdrian-sdd-overlay",
+  "checks": [
+    {
+      "name": "vault-config-resolvable",
+      "status": "PASS"
+    },
+    {
+      "name": "address-map-integrity",
+      "status": "PASS"
+    },
+    {
+      "name": "wiki-registration-consistency",
+      "status": "PASS"
+    },
+    {
+      "name": "precedence-sidecar-consistency",
+      "status": "PASS"
+    },
+    {
+      "name": "runtime-prerequisites",
+      "status": "PASS"
+    },
+    {
+      "name": "embedding-index-present",
+      "status": "PASS"
+    },
+    {
+      "name": "embedding-index-fresh",
+      "status": "PASS"
+    },
+    {
+      "name": "embedding-backend-reachable",
+      "status": "PASS"
+    },
+    {
+      "name": "promoted-pages-eligible",
+      "status": "warn",
+      "detail": "c-000042: observation 1 is not pinned and has no topic_key, so sync does not refresh this page; run `longterm-mem promote --id 1` to refresh it now, or pin observation 1 in Engram so sync keeps it current"
+    }
+  ]
+}
+--- status ---
+{
+  "project": "labdrian-sdd-overlay",
+  "engram_reachable": true,
+  "vault_provisioned": false,
+  "last_sync_completed_at": "never",
+  "embedding_index_built_at": "2026-01-01T00:00:00Z"
+}

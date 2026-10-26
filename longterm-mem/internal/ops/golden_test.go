@@ -20,6 +20,9 @@ import (
 // moved behind a port (Phase 9, L3), and that change must not alter one byte of them. The only thing the
 // test replaces is the temporary directory, which differs from one run to the next.
 //
+// The promoted-pages-eligible check was added to Doctor afterwards (Phase 9, C10a): it is the one element
+// each file gained, at the end of its checks, and no other byte of them changed.
+//
 // To rewrite them after a change that is MEANT to alter the output:
 //
 //	go test ./internal/ops -run TestGolden -update-ops-golden
@@ -44,6 +47,9 @@ type goldenScenario struct {
 	build func(t *testing.T, root string)
 	// root, when set, is the vault root handed to Doctor and Status instead of the scenario's directory.
 	root func(dir string) string
+	// unpinned is set when the observation the healthy page was promoted from is no longer pinned, and has no
+	// topic_key: sync no longer refreshes the page. Every other scenario keeps that observation pinned.
+	unpinned bool
 }
 
 func writeGoldenFile(t *testing.T, root, rel, content string) {
@@ -333,6 +339,7 @@ func goldenScenarios() []goldenScenario {
 			}
 			return link
 		}},
+		{name: "58-a-page-whose-observation-sync-no-longer-keeps-current", unpinned: true},
 	}
 }
 
@@ -439,6 +446,11 @@ func TestGolden(t *testing.T) {
 				EmbeddingIndex:        embeddingIndex,
 				LiveObservationIDs:    func(string) ([]int64, error) { return liveIDs, nil },
 				EmbeddingBackendCheck: func(context.Context) error { return nil },
+				// The page every scenario starts from is promoted from observation 1, which Engram keeps pinned
+				// unless the scenario says it does not.
+				LiveObservationEligibility: func(string) ([]ObservationEligibility, error) {
+					return []ObservationEligibility{{ID: 1, Pinned: !scenario.unpinned}}, nil
+				},
 			}, doctorTestProject)
 			if err != nil {
 				t.Fatalf("Doctor: %v", err)

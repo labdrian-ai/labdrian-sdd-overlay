@@ -3,13 +3,11 @@ package main
 import (
 	"errors"
 	"io"
-	"path/filepath"
 	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/capability/presence"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection/app"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/synctrigger"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/synctrigger/osproc"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow"
@@ -83,7 +81,10 @@ type deps struct {
 	// Nil, as in the program, is the presence prober over the home and PATH of these deps and
 	// their probeFS (dependencyProber): it looks at paths with stat and at PATH entries by name,
 	// and never opens a file, runs a program, or names a path (see engine/capability/presence),
-	// so an "available" observation only says something is present and states the limit. The
+	// so an "available" observation only says something is present and states the limit. The one
+	// thing it asks and does not stat is whether the procedural skills lock of the project can be
+	// used (C10c): an adapter reads the lock with the reader of the SessionStart probe
+	// (projectContext), and the prober only words the answer, naming no path. The
 	// lifecycle bounds every probe with its own deadline (workflow's dependencyProbeTimeout), so
 	// a hung filesystem cannot hang a verb whichever prober is used. A test installs
 	// workflow.UnavailableProber, the safe default that confirms nothing.
@@ -158,29 +159,31 @@ func (d deps) profiles() workflow.ProfileCatalog {
 }
 
 // dependencyProber is the prober the workflow verbs record observations with: the deps' own,
-// or the presence prober over the home and PATH of the deps and their stat access.
+// or the presence prober over the home and PATH of the deps, their stat access and the project
+// the process runs in (presenceProber).
 func (d deps) dependencyProber() workflow.DependencyProber {
 	if d.workflowProber != nil {
 		return d.workflowProber()
 	}
-	home, path := runtimeProbeEnv(d)
-	return presence.Prober{Home: home, Path: path, ProbeFS: d.probeFS, ProceduralLock: d.proceduralLockPath()}
+	return d.presenceProber()
 }
 
-// proceduralLockPath is where the procedural skills lock of the project the process runs in would
-// be (C23 M8): under the root of the worktree that holds the working directory. It is "" when
-// there is no working directory or it is in no worktree, which the presence prober reads as a
-// project it does not know.
-func (d deps) proceduralLockPath() string {
-	dir, err := d.workingDir()
-	if err != nil {
-		return ""
-	}
-	root := newRepoLocator().Provenance(dir).WorktreeRoot
-	if root == "" {
-		return ""
-	}
-	return filepath.Join(root, filepath.FromSlash(skills.ProjectLockRelPath))
+// presenceProber is the presence prober over the deps: their home and PATH, their stat access and
+// the project the process runs in. 'runtime probe' and the workflow verbs both build it here, so
+// what the one prints is what the other records.
+func (d deps) presenceProber() presence.Prober {
+	home, path := runtimeProbeEnv(d)
+	return presence.Prober{Home: home, Path: path, ProbeFS: d.probeFS, Project: d.projectContext()}
+}
+
+// projectContext is the project the process runs in, as the presence prober asks about it (C10c): the
+// worktree that holds the working directory, whose procedural skills lock is read by the reader the
+// SessionStart probe uses (newProceduralLockReader). The working directory is asked for when the
+// prober asks, not when the prober is built. A deps with no working directory, or one that is in no
+// worktree, is a project the prober does not know.
+func (d deps) projectContext() presence.ProjectContext {
+	reader := newProceduralLockReader()
+	return processProject{workingDir: d.workingDir, worktreeRoot: reader.worktreeRoot, locks: reader}
 }
 
 // clock is the clock the verbs read: the deps' own, or the machine's.

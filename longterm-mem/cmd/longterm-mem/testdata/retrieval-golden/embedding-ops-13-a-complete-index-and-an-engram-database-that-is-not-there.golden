@@ -33,6 +33,7 @@ longterm-mem: doctor for goldenproj
   [PASS] embedding-index-present
   [FAIL] embedding-index-fresh (freshness cannot be determined: could not list live rows for goldenproj: engram: connect <home>/absent/engram.db: primary open failed (<sqlite open error>), fallback open failed: <sqlite open error>)
   [PASS] embedding-backend-reachable
+  [PASS] promoted-pages-eligible
 --- stderr ---
 
 args: doctor --project goldenproj --json
@@ -72,6 +73,10 @@ exit: 9
     },
     {
       "name": "embedding-backend-reachable",
+      "status": "PASS"
+    },
+    {
+      "name": "promoted-pages-eligible",
       "status": "PASS"
     }
   ]

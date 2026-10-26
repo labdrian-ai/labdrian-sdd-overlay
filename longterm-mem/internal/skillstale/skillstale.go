@@ -47,6 +47,10 @@ type Signal struct {
 	By      string
 }
 
+// StatusUnrecorded is the status of a finding whose candidate has no Engram record: the report names it
+// rather than leaving the status blank.
+const StatusUnrecorded = "unrecorded"
+
 // Finding groups the evidence for one project-tier skill. A moved path is
 // retained as an informational finding, but it is never also classified as a
 // removal; the distinction is the safety boundary inherited from staleness.
@@ -155,7 +159,7 @@ func (cfg Config) inspect(entry ProjectLockEntry, candidates map[string]candidat
 		return Finding{}, fmt.Errorf("skillstale: classify paths for %s: %w", entry.ID, err)
 	}
 
-	finding := Finding{SkillID: entry.ID, Candidate: entry.Candidate}
+	finding := Finding{SkillID: entry.ID, Candidate: entry.Candidate, Status: StatusUnrecorded}
 	if candidate, ok := candidates[entry.Candidate]; ok {
 		finding.Status = candidate.status
 		if signal, quiet := cfg.quietSignal(candidate); quiet {

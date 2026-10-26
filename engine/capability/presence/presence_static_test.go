@@ -19,10 +19,13 @@ import (
 )
 
 // presenceSources are the files under the presence contract: presence.go, which holds the
-// prober, and doc.go, which holds only the package comment and its clause and no code. doc.go
-// is listed so that the guard keeps parsing it: should code ever land there, it is held to
-// the same imports and os members as the prober, with nothing to exempt it.
-var presenceSources = []string{"doc.go", "presence.go"}
+// prober, project.go, which holds the port it asks the project through (C10c) and the
+// signal that uses it, and doc.go, which holds only the package comment and its clause and
+// no code. doc.go is listed so that the guard keeps parsing it: should code ever land there,
+// it is held to the same imports and os members as the prober, with nothing to exempt it.
+// project.go is what makes the procedural skills signal open nothing: the lock is read behind
+// the port, by an adapter that is not in this package.
+var presenceSources = []string{"doc.go", "presence.go", "project.go"}
 
 // allowedOSSelectors are the only members of package os the prober may use.
 var allowedOSSelectors = map[string]bool{"Lstat": true, "Stat": true}

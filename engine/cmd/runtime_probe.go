@@ -11,10 +11,15 @@ package main
 // never runs a program, and it never names a path in its output: an available
 // signal only says a file or binary is present, and its detail says what that
 // does not prove (a credentials file that exists is not an authenticated
-// session). The static test in runtime_probe_test.go pins this source to no use of
-// package os at all (the home and PATH are the deps', which main builds from the
-// process), with no file access of its own, and the prober's own static test pins the
-// rest; engine/runtime's Phase 7 import policy keeps os/exec and the network out of both.
+// session). The one thing it does not stat is the procedural skills lock of the
+// project (memory:procedural-skills, C10c): it asks the project whether the lock
+// can be used, and the answer comes from the reader the SessionStart probe reads
+// the lock with, so a lock that is there and cannot be used is unavailable, with
+// the session probe's words and no path. The static test in runtime_probe_test.go
+// pins this source to no use of package os at all (the home and PATH are the deps',
+// which main builds from the process), with no file access of its own, and the
+// prober's own static test pins the rest; engine/runtime's Phase 7 import policy
+// keeps os/exec and the network out of both.
 
 import (
 	"bytes"
@@ -81,8 +86,7 @@ func runRuntimeProbe(d deps, args []string, stdout, stderr io.Writer, exit func(
 		return
 	}
 
-	home, path := runtimeProbeEnv(d)
-	observations, err := probeWithin(presence.Prober{Home: home, Path: path, ProbeFS: d.probeFS, ProceduralLock: d.proceduralLockPath()}, names, d.probeBound())
+	observations, err := probeWithin(d.presenceProber(), names, d.probeBound())
 	if err != nil {
 		fmt.Fprintf(stderr, "error: runtime probe: %v\n", err)
 		exit(1)

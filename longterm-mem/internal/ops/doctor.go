@@ -11,10 +11,13 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultlayout"
 )
 
-// Check status values.
+// Check status values. CheckWarned is the advisory one: Doctor reports it, in the text form and in the JSON, and
+// whoever decides an exit code from a report counts CheckFailed alone. A check that says CheckWarned has found
+// something worth an operator's attention that is not a defect of the vault.
 const (
 	CheckPassed = "PASS"
 	CheckFailed = "FAIL"
+	CheckWarned = "warn"
 )
 
 // Check names -- the five diagnostics R-011 requires.
@@ -34,6 +37,12 @@ const (
 	CheckEmbeddingIndexFresh       = "embedding-index-fresh"
 	CheckEmbeddingBackendReachable = "embedding-backend-reachable"
 )
+
+// CheckPromotedPagesEligible is the name of the advisory diagnostic that joins the promoted pages with the
+// observations they were promoted from (issue #293): a page whose observation is no longer eligible for promotion
+// is frozen, and the check says so. It answers CheckPassed or CheckWarned, never CheckFailed, whatever it could
+// not read.
+const CheckPromotedPagesEligible = "promoted-pages-eligible"
 
 // requiredPrerequisite is the one external runtime dependency the vault's
 // own index scripts need (D12): python3, the interpreter
@@ -132,8 +141,10 @@ type DoctorDeps struct {
 	Log LogReader
 	// Pages reads the vault's promoted pages for the three checks that judge
 	// them (address-map-integrity, wiki-registration-consistency and
-	// precedence-sidecar-consistency). Production wires the vault file system
-	// adapter over VaultRoot. Required: without it those checks fail and say so.
+	// precedence-sidecar-consistency) and for the advisory promoted-pages-eligible.
+	// Production wires the vault file system adapter over VaultRoot. Required:
+	// without it the three checks fail and say so, and the advisory one warns that
+	// it cannot judge.
 	Pages PageReader
 	// Precedence reads the vault's precedence store for the
 	// precedence-sidecar-consistency check. Production wires the vault file
@@ -171,26 +182,36 @@ type DoctorDeps struct {
 	// a small probe input, this package never imports net/http directly or
 	// the client. Required.
 	EmbeddingBackendCheck func(ctx context.Context) error
+
+	// LiveObservationEligibility returns, for every live (non-soft-deleted) observation of project, what
+	// promotion's eligibility rule reads of it (ObservationEligibility), so that promoted-pages-eligible can say
+	// which promoted pages sync no longer keeps current. A read-only port: it names no observation to change.
+	// Production wires engram.Store.ListObservations (already R-020-scoped), mapped to those fields.
+	//
+	// Not required to build a Doctor: the check asks it only when a promoted page names an observation, and a
+	// Doctor built without it says, as a warning, that it cannot judge those pages.
+	LiveObservationEligibility func(project string) ([]ObservationEligibility, error)
 }
 
-// DoctorReport is Doctor's R-011 output: each of the five named checks'
-// individual result.
+// DoctorReport is Doctor's output: each check's individual result, in the order the checks run.
 type DoctorReport struct {
 	Project string  `json:"project"`
 	Checks  []Check `json:"checks"`
 }
 
-// Doctor runs R-011's five read-only diagnostic checks independently: one
-// check's own failure -- an unresolvable path, a missing directory, a
-// corrupted manifest -- must never prevent the other three from running or
-// reporting (slice 7's review finding: a per-item failure must never abort
-// a whole run). Each check function below therefore never returns early
-// out of this assembly; it reports FAIL with a detail instead of erroring.
+// Doctor runs its read-only diagnostic checks independently: R-011's five
+// and R-064's three embedding-index checks, then the advisory check of the
+// promoted pages' eligibility. One check's own failure -- an unresolvable
+// path, a missing directory, a corrupted manifest -- must never prevent the
+// others from running or reporting (slice 7's review finding: a per-item
+// failure must never abort a whole run). Each check function below therefore
+// never returns early out of this assembly; it reports FAIL (or, for the
+// advisory check, warn) with a detail instead of erroring.
 // Doctor itself only returns a non-nil error for a condition outside any
 // single check's own reporting (there is none today; every failure mode
 // this slice defines is expressed as a Check, not a Doctor-level error).
 //
-// The three checks that judge the promoted pages take their arguments in one order: the pages first, then the
+// The checks that judge the promoted pages take their arguments in one order: the pages first, then the
 // other ports each needs, in the order its name gives them. A transposition does not compile: the ports are
 // different types, and a type that is two of them is still not the other.
 func Doctor(ctx context.Context, deps DoctorDeps, project string) (DoctorReport, error) {
@@ -205,6 +226,7 @@ func Doctor(ctx context.Context, deps DoctorDeps, project string) (DoctorReport,
 			checkEmbeddingIndexPresent(deps, project),
 			checkEmbeddingIndexFresh(deps, project),
 			checkEmbeddingBackendReachable(ctx, deps),
+			checkPromotedPagesEligible(deps.Pages, deps.LiveObservationEligibility, project),
 		},
 	}, nil
 }
