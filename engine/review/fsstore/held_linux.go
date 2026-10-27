@@ -34,9 +34,7 @@ func (s Store) create(root, feature, name string, data []byte) error {
 }
 
 // Lock opens the directory of the feature as Names does, without following a link, and takes an exclusive
-// flock(2) on it, waiting while another holder has it. The kernel ties the lock to what was opened, so every
-// call, of this process or of another, waits for the one before; closing the directory gives the lock back,
-// and so does the end of the process that held it.
+// flock(2) on it (take, in lock_unix.go); closing the directory gives the lock back.
 func (s Store) Lock(root, feature string) (func(), error) {
 	dir, path, err := s.openHeld(root, feature, false)
 	if err != nil {
@@ -45,15 +43,9 @@ func (s Store) Lock(root, feature string) (func(), error) {
 	if dir == nil {
 		return nil, fmt.Errorf("%w: %s", app.ErrNotFound, filepath.Join(root, review.ResultsDir, feature))
 	}
-	for {
-		err = syscall.Flock(int(dir.Fd()), syscall.LOCK_EX)
-		if !errors.Is(err, syscall.EINTR) {
-			break
-		}
-	}
-	if err != nil {
+	if err := s.take(dir, path); err != nil {
 		dir.Close()
-		return nil, fmt.Errorf("lock %s: %w", path, err)
+		return nil, err
 	}
 	return func() { dir.Close() }, nil
 }

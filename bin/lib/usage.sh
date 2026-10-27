@@ -242,7 +242,9 @@ Commands:
                                              record skeleton for roles append (exit 0 stored, 2 reply refused, 1 error)
                                    verify --feature NAME --stored RESULT [--verdicts FILE|-] [--cwd REPO]
                                              hold a verifier's reply to the stored result, decide whether the review
-                                             blocks and store it beside the result as HEAD12-N.verifier.json; one
+                                             blocks and store it beside the result as HEAD12-N.verifier.json, never
+                                             over a file; print the record skeleton with evidence verifier-report and
+                                             to_role filled (builder when it blocks, delivery when it is clear); one
                                              correction round per candidate (exit 0 stored, 2 reply refused, 1 error)
                                    No verb launches an agent or dispatches work.
   memory <verb>                    Forward memory-directive verbs to the engine unchanged.

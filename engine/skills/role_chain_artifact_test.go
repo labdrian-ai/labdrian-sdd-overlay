@@ -10,7 +10,9 @@ package skills
 
 import (
 	"encoding/json"
+	"errors"
 	"reflect"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -237,11 +239,19 @@ func TestReviewResultsConventionSaysWhereAResultIsStoredAndWhatBindsItToARecord(
 	}
 }
 
-// verdictObject is the object the third line of the delta of roles/verifier/body.md spells out, decoded, and
-// the one verdict it shows.
+// envelopeOverride starts the line of a delta that replaces the return envelope of the core prefix.
+const envelopeOverride = "This replaces the return envelope of the core prefix: "
+
+// verdictObject is the object the line of the delta of roles/verifier/body.md that replaces the return envelope
+// spells out, decoded, and the one verdict it shows. The line is found by how it starts, not by its place.
 func verdictObject(t *testing.T) (line string, spelled, verdict map[string]any) {
 	t.Helper()
-	line = roleDelta(t, skillsRepoRoot(t), "verifier")[2]
+	delta := roleDelta(t, skillsRepoRoot(t), "verifier")
+	at := slices.IndexFunc(delta, func(l string) bool { return strings.HasPrefix(l, envelopeOverride) })
+	if at < 0 {
+		t.Fatalf("no line of the verifier delta starts %q; got:\n%s", envelopeOverride, strings.Join(delta, "\n"))
+	}
+	line = delta[at]
 	start := strings.Index(line, `{"verdicts"`)
 	if start < 0 {
 		t.Fatalf("the third line of the verifier delta spells out no JSON object that starts with \"verdicts\"; got:\n%s", line)
@@ -349,5 +359,17 @@ func TestVerifierDeltaObjectIsTheOneTheEngineParses(t *testing.T) {
 				t.Errorf("reviewverdict.Parse refuses result %q with base_result %q, which the verifier delta lists: %v\n%s", result, base, err, instance(result, base))
 			}
 		}
+	}
+	// What the delta forbids, the parser refuses: an empty output, and no command although a check ran.
+	for _, rule := range []struct{ says, member string }{
+		{"output is never empty", "output"},
+		{"command is never empty when a check ran", "command"},
+	} {
+		saved := legal[rule.member]
+		legal[rule.member] = ""
+		if _, err := reviewverdict.Parse(instance(string(reviewverdict.Reproduced), string(reviewverdict.NotRun)), answered); !errors.Is(err, reviewverdict.ErrMissingEvidence) {
+			t.Errorf("the verifier delta says %q, and reviewverdict.Parse of a verdict with an empty %s returns %v, want %v", rule.says, rule.member, err, reviewverdict.ErrMissingEvidence)
+		}
+		legal[rule.member] = saved
 	}
 }

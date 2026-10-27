@@ -1171,6 +1171,36 @@ func TestVerifyReadsTheReplyFromTheFileOfTheFlagOrFromStdin(t *testing.T) {
 	}
 }
 
+// The help of the labdrian wrapper (bin/lib/usage.sh) is shorter than the engine's, and written by hand: it says
+// the same signature, in the wrapper's spelling, and the same facts a caller acts on, so the two cannot drift.
+func TestWrapperUsageOfReviewVerifySaysWhatTheEngineUsageSays(t *testing.T) {
+	wrapper, err := os.ReadFile("../../bin/lib/usage.sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out bytes.Buffer
+	usage(&out)
+	// The wrapper's text wraps at its own width, so its words are compared with the line breaks taken out.
+	flat := strings.Join(strings.Fields(string(wrapper)), " ")
+	for engine, inWrapper := range map[string]string{
+		"engine review verify --feature <name> --stored <result> [--verdicts <file>|-] [--cwd <repo>]": "verify --feature NAME --stored RESULT [--verdicts FILE|-] [--cwd REPO]",
+		"<head12>-<n>.verifier.json":                    "HEAD12-N.verifier.json",
+		"never over an existing file":                   "never over a file",
+		"verifier-report":                               "verifier-report",
+		"to_role filled (builder when":                  "to_role filled (builder when",
+		"delivery when it is clear":                     "delivery when it is clear",
+		"one correction round per candidate":            "one correction round per candidate",
+		"exit 0 stored, 2 reply refused, 1 usage error": "exit 0 stored, 2 reply refused, 1 error",
+	} {
+		if !strings.Contains(out.String(), engine) {
+			t.Errorf("the engine usage lacks %q", engine)
+		}
+		if !strings.Contains(flat, inWrapper) {
+			t.Errorf("bin/lib/usage.sh lacks %q, which the engine usage says as %q", inWrapper, engine)
+		}
+	}
+}
+
 func TestUsageDocumentsReviewVerify(t *testing.T) {
 	var out bytes.Buffer
 	usage(&out)
@@ -1184,5 +1214,17 @@ func TestUsageDocumentsReviewVerify(t *testing.T) {
 		if !strings.Contains(text, want) {
 			t.Errorf("usage lacks %q", want)
 		}
+	}
+}
+
+// require names the first flag that has no value, and refuses a name it does not know instead of reading it
+// as a flag that was left out.
+func TestReviewFlagsRequireRefusesANameItDoesNotKnow(t *testing.T) {
+	f := reviewFlags{feature: "own-rdd"}
+	if err := f.require("--feature", "--stored"); err == nil || err.Error() != "--stored is required" {
+		t.Errorf("require(--feature, --stored) error = %v, want \"--stored is required\"", err)
+	}
+	if err := f.require("--feature", "--sotred"); err == nil || !strings.Contains(err.Error(), "--sotred is not a flag that can be required") {
+		t.Errorf("require(--feature, --sotred) error = %v, want one that says --sotred is not a flag that can be required", err)
 	}
 }

@@ -132,11 +132,16 @@ func parseReviewFlags(args []string, takes ...string) (reviewFlags, error) {
 	return f, nil
 }
 
-// require fails with the first of the named flags that has no value.
+// require fails with the first of the named flags that has no value. A name it does not know is a mistake of
+// the caller, and says so rather than reading as a flag that was left out.
 func (f reviewFlags) require(names ...string) error {
 	values := map[string]string{"--base": f.base, "--head": f.head, "--feature": f.feature, "--stored": f.stored}
 	for _, name := range names {
-		if values[name] == "" {
+		value, known := values[name]
+		if !known {
+			return fmt.Errorf("review: require: %s is not a flag that can be required", name)
+		}
+		if value == "" {
 			return fmt.Errorf("%s is required", name)
 		}
 	}
@@ -315,7 +320,7 @@ func reportVerified(p process, v reviewapp.Verified) {
 			fmt.Fprintf(p.stderr, "review verify: %s: %s\n", list.label, strings.Join(list.ids, ", "))
 		}
 	}
-	fills := review.ParentFields()
+	fills := review.ParentFields() // a new slice: deleting from it changes no other caller's
 	if v.Handoff.ToRole != "" {
 		fills = slices.DeleteFunc(fills, func(field string) bool { return field == "to_role" })
 	}

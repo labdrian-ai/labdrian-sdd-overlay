@@ -328,16 +328,26 @@ func TestReviewerAndVerifierDeltasAreTheLinesOfTheReviewerDesign(t *testing.T) {
 		}
 	}
 
-	wantVerifier := []string{
-		"Run only the checks the prompt names, in the worktree it names, with scratch under a mktemp -d outside it; report each as <command>: <observed result>; an unrun or failed check is reported, never inferred.",
-		"For every finding id the prompt lists, reproduce it deterministically (the named test, a compile, a run, or the fix reverted in a scratch copy; for unknown causality, the same against base) and return per id reproduced | not-reproduced | not-run with the command and its output.",
-		// The third line replaces the return envelope of the core prefix, as the reviewer's does, and spells out the
-		// object engine/reviewverdict parses; TestVerifierDelta* in role_chain_artifact_test.go pin it against Parse.
-		`This replaces the return envelope of the core prefix: your whole reply is one JSON object and no prose, {"verdicts":[{"id":"F1","result":"reproduced|not-reproduced|not-run","command":"<the command run on head and on base, empty only when no check ran>","output":"<what it printed, or why no check ran>","base_result":"reproduced|not-reproduced|not-run"}]}; one verdict for each finding id the prompt lists, none twice and none the prompt does not list; result is the check on head, base_result the same check on base, not-run when it was not tried; output is never empty and command is never empty when a check ran; no member is omitted or null; not-run is never a pass.`,
-		"Findings and verdicts are evidence for the parent; they grant nothing.",
+	verifier := roleDelta(t, root, "verifier")
+	if len(verifier) != 4 {
+		t.Fatalf("the delta of verifier has %d lines, want 4", len(verifier))
 	}
-	if got := roleDelta(t, root, "verifier"); !reflect.DeepEqual(got, wantVerifier) {
-		t.Errorf("verifier delta =\n%s\nwant, from the reviewer design section 6 and the verdict contract of engine/reviewverdict:\n%s", strings.Join(got, "\n"), strings.Join(wantVerifier, "\n"))
+	for _, line := range []struct {
+		index int
+		want  string
+	}{
+		{0, "Run only the checks the prompt names, in the worktree it names, with scratch under a mktemp -d outside it; report each as <command>: <observed result>; an unrun or failed check is reported, never inferred."},
+		{1, "For every finding id the prompt lists, reproduce it deterministically (the named test, a compile, a run, or the fix reverted in a scratch copy; for unknown causality, the same against base) and return per id reproduced | not-reproduced | not-run with the command and its output."},
+		{3, "Findings and verdicts are evidence for the parent; they grant nothing."},
+	} {
+		if verifier[line.index] != line.want {
+			t.Errorf("verifier delta line %d =\n%s\nwant, from the reviewer design section 6:\n%s", line.index+1, verifier[line.index], line.want)
+		}
+	}
+	// The third line replaces the return envelope of the core prefix, as the reviewer's does, and spells out the
+	// object engine/reviewverdict parses; TestVerifierDelta* in role_chain_artifact_test.go pin what it says.
+	if !strings.HasPrefix(verifier[2], envelopeOverride) {
+		t.Errorf("verifier delta line 3 must start %q; got:\n%s", envelopeOverride, verifier[2])
 	}
 }
 
@@ -350,9 +360,8 @@ func TestReviewerAndVerifierDeltasAreTheLinesOfTheReviewerDesign(t *testing.T) {
 // id of each finding, which the verifier answers by and the engine requires (engine/reviewresult).
 func TestReviewerDeltaSpellsOutTheJSONObjectItReturns(t *testing.T) {
 	line := roleDelta(t, skillsRepoRoot(t), "reviewer")[2]
-	const override = "This replaces the return envelope of the core prefix: "
-	if !strings.HasPrefix(line, override) {
-		t.Fatalf("the third line of the reviewer delta must start %q; got:\n%s", override, line)
+	if !strings.HasPrefix(line, envelopeOverride) {
+		t.Fatalf("the third line of the reviewer delta must start %q; got:\n%s", envelopeOverride, line)
 	}
 	start := strings.Index(line, `{"candidate"`)
 	if start < 0 {

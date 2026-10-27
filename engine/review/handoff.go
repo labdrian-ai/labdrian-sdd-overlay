@@ -62,7 +62,8 @@ func VerifiedHandoff(b reviewresult.Binding, result, verdict FileRef, outcome re
 // record: the identity of the chain it appends to (project_id, goal_id, chain_id), the place of the record
 // in it (seq, prev_sha256), who gets the work next (to_role: builder when a severe finding blocks,
 // delivery otherwise, per skills/role-chain/SKILL.md, which VerifiedHandoff fills once the verifier has
-// run) and the narrative (context.summary). Every other member the record needs, Handoff has filled.
+// run) and the narrative (context.summary). Every other member the record needs, Handoff has filled. Each
+// call returns a new slice, which the caller owns and may change.
 func ParentFields() []string {
 	return []string{"project_id", "goal_id", "chain_id", "seq", "prev_sha256", "to_role", "context.summary"}
 }

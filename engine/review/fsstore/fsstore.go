@@ -51,6 +51,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review/app"
@@ -76,6 +77,9 @@ var ErrNotAFile = errors.New("review: a result is a link or not a regular file")
 
 // ErrTooLarge is a file of the results of a feature that is above review.MaxStoredBytes.
 var ErrTooLarge = errors.New("review: a stored file is too large")
+
+// ErrLockHeld is a lock of the directory of a feature that another holder did not give back in time.
+var ErrLockHeld = errors.New("review: another holder kept the lock of the directory of the feature")
 
 const (
 	dirPerm  fs.FileMode = 0o755
@@ -107,6 +111,11 @@ type Store struct {
 	// syncDir, when it is set, flushes a held directory instead of (*os.File).Sync, so a test can make the
 	// flush fail. New leaves it nil.
 	syncDir func(*os.File) error
+	// lockWait and flock, when they are set, are how long Lock waits for another holder and the call that
+	// takes the lock, instead of lockWait and syscall.Flock, so a test can wait less and make the call fail.
+	// New leaves them zero.
+	lockWait time.Duration
+	flock    func(fd, how int) error
 }
 
 // flush flushes the held directory dir with the store's flush.
