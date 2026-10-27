@@ -602,12 +602,15 @@ overlay review <verb>
         note says the parent launches one review per commit; a range whose base is its head covers no commit
         and is refused, by record and exempt too. Needs git 2.40 or later. Exit 0 bound, 1 usage
         error, refusal or a binding that could not be written.
-    record --feature <name> --base <rev> --head <rev> [--result <file>|-] [--cwd <repo>]
+    record --feature <name> --base <rev> --head <rev> --rows <id,id> [--result <file>|-] [--cwd <repo>]
         Compute the binding again from git (the reply is never trusted for it), hold the reply (read from
         --result, or from stdin) to it with the rules of the reviewer's contract (an echo that differs, an
         inspection that is not completed, paths that differ, a finding id that is missing or repeats, a
         severity, evidence class or disposition outside its enumeration, a BLOCKER or CRITICAL with no proof
-        reference, a reply above 1 MiB), and store it with the binding as
+        reference, a reply above 1 MiB), and store it with the binding and the lens rows the reviewer was
+        sent (--rows, required: the ids of the rows of roles/reviewer/rows.json, default, readability and
+        risk-line, separated by commas with no space and none written twice; the lens count of a change is the
+        number of rows its stored results record) as
         odd/review-results/<feature>/<head12>-<n>.json. <feature> is one safe path segment, <n> one more than
         the highest stored for that head (from 1); the file is published whole and never over an existing one,
         and no input leads outside odd/review-results/ (a symbolic link on the way is refused). stdout is the
@@ -615,8 +618,8 @@ overlay review <verb>
         stored file, evidence review-diff and review-result); stderr says where the result is stored. The
         parent of the chain fills project_id, goal_id, chain_id, seq, prev_sha256, to_role and
         context.summary, and `roles validate` refuses the skeleton until it does. A reply that breaks a rule
-        writes nothing and the error names the rule. Exit 0 stored, 2 reply refused, 1 usage error or any
-        other failure.
+        writes nothing and the error names the rule. Exit 0 stored, 2 reply refused, 1 usage error, rows
+        that are not rows of the canonical file or any other failure.
     verify --feature <name> --stored <result> [--verdicts <file>|-] [--cwd <repo>]
         Hold the verifier's reply (read from --verdicts, or from stdin) to the stored result called <result>
         (<head12>-<n>.json in the directory of the feature) with the rules of the verifier's contract: one

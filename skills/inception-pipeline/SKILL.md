@@ -116,7 +116,7 @@ Read what the chain left, at the locators the parent named in its prompts (Chain
 - **Verifier reports**: `<head12>-<n>.verifier.json`, stored beside the review results, when the verifier ran.
 - **Builder's apply-progress** and **shaper's spec** (the spec gives `requirement_count`).
 - **`sdd/{change}/pipeline-state`**: the tier-selection outcome and the ambiguity clarifying question if it fired — the only checkpoints inception-pipeline itself durably records.
-- **Stored review results**: `odd/review-results/<feature>/<head12>-<n>.json`, where `<feature>` is the name of the feature document `odd/tasks/<feature>.md` (`odd/review-results/README.md` spells out the layout). This is the ONLY place `approved_tree` is read from (see t1). A stored result lists no lenses, so record `review_lens_count` only when the closing `review-report` record's `context` states the rows the reviewer was sent.
+- **Stored review results**: `odd/review-results/<feature>/<head12>-<n>.json`, where `<feature>` is the name of the feature document `odd/tasks/<feature>.md` (`odd/review-results/README.md` spells out the layout). This is the ONLY place `approved_tree` is read from (see t1). A stored result records the lens rows its launch was sent (`rows`), so `review_lens_count` is the number of rows recorded in the stored results of the change, one for each row of each launch; omit it when no stored result records a row.
 - Do NOT source `changed_lines` from the shaper's tasks artifact: its Review Workload Forecast is a pre-implementation planning guard, not an exact diff count (see `sdd-tasks/SKILL.md`).
 
 #### t0

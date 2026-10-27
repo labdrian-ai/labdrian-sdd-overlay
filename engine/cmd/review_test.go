@@ -831,10 +831,10 @@ func TestUsageDocumentsTheReviewVerbs(t *testing.T) {
 
 	for _, want := range []string{
 		"engine review bind --base <rev> --head <rev> [--cwd <repo>]",
-		"engine review record --feature <name> --base <rev> --head <rev> [--result <file>|-] [--cwd <repo>]",
+		"engine review record --feature <name> --base <rev> --head <rev> --rows <id,id> [--result <file>|-] [--cwd <repo>]",
 		"diff_sha256", "over_limit", "-worktrees/review-<head12>",
 		"odd/review-results/<feature>/<head12>-<n>.json", "never over an existing file",
-		"exit 0 stored, 2 reply refused",
+		"exit 0 stored, 2 reply refused", "--rows is required", "roles/reviewer/rows.json",
 		"exit 0 bound, 1 usage error, refusal or a binding that could not be written",
 		fmt.Sprintf("A diff over %d bytes is bound all the same", review.DiffLimitBytes),
 	} {
