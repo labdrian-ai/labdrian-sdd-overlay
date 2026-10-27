@@ -168,13 +168,25 @@ func (s Service) decided(root, feature, result, verdict string) (reviewresult.Bi
 // judged reads a stored result and holds its reply to the binding it was stored with, as Record did. A file
 // that is not a result, or whose reply no longer holds, is review.ErrInvalidStored.
 func judged(file []byte) (reviewresult.Binding, reviewresult.Result, error) {
-	stored, err := review.DecodeResult(file)
+	stored, result, err := judgedStored(file)
 	if err != nil {
 		return reviewresult.Binding{}, reviewresult.Result{}, err
 	}
+	return stored.Binding, result, nil
+}
+
+// judgedStored is judged for a reader that also needs what the stored file holds besides the binding, the rows the
+// launch was sent: the stored file as DecodeResult reads it, and the reply parsed against its binding. It is the one
+// way a stored result is read, so every reader of one (verify, check, the evidence of roles append and the count of
+// the lenses) holds a file to the same rules.
+func judgedStored(file []byte) (review.Stored, reviewresult.Result, error) {
+	stored, err := review.DecodeResult(file)
+	if err != nil {
+		return review.Stored{}, reviewresult.Result{}, err
+	}
 	result, err := reviewresult.Parse(stored.Reply, stored.Binding)
 	if err != nil {
-		return reviewresult.Binding{}, reviewresult.Result{}, fmt.Errorf("%w: its reply does not hold to its binding: %w", review.ErrInvalidStored, err)
+		return review.Stored{}, reviewresult.Result{}, fmt.Errorf("%w: its reply does not hold to its binding: %w", review.ErrInvalidStored, err)
 	}
-	return stored.Binding, result, nil
+	return stored, result, nil
 }
