@@ -1,0 +1,193 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:bb090f83e989bd3518cae9aac099cc7c7029cff4d7cb66dc65f2cd92290ebdf7",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-743f27829976ab74",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "189d13993be9d196277f0bbc88fa495247a3de5c",
+      "candidate_tree": "2892f3674e4fbf382aee9e016605073af99579e2",
+      "paths_digest": "sha256:9779a9461d9c09c5ce3b40d169ee5904410c0aea9cb7a3cf9638bbab9d2f43bc",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "bin/lib/usage.sh",
+        "engine/cmd/review.go",
+        "engine/cmd/review_exempt_check_test.go",
+        "engine/cmd/usage.go"
+      ],
+      "identity": "sha256:7abe7d2ee24006518cff790e5e53a63d5379ccbc9640276adc87a2f090abd298"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "189d13993be9d196277f0bbc88fa495247a3de5c",
+      "candidate_tree": "2892f3674e4fbf382aee9e016605073af99579e2",
+      "paths_digest": "sha256:9779a9461d9c09c5ce3b40d169ee5904410c0aea9cb7a3cf9638bbab9d2f43bc",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "bin/lib/usage.sh",
+        "engine/cmd/review.go",
+        "engine/cmd/review_exempt_check_test.go",
+        "engine/cmd/usage.go"
+      ],
+      "identity": "sha256:7abe7d2ee24006518cff790e5e53a63d5379ccbc9640276adc87a2f090abd298"
+    },
+    "genesis_paths": [
+      "bin/lib/usage.sh",
+      "engine/cmd/review.go",
+      "engine/cmd/review_exempt_check_test.go",
+      "engine/cmd/usage.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-risk",
+      "review-reliability"
+    ],
+    "original_changed_lines": 314,
+    "correction_budget": 157,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "commit 2642f1c4 of own-rdd T4: feat(review): review check names the exemption it cleared a head by",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:c3ff366a4235ba695933f062093f5aed6d54ba24a58842a92ca7fc6728b63b42",
+    "capture_phase_revision": "sha256:f035f9477aa785f3f6bbe4dcfaf801d8d127df1bd8b0529ef862e96ff122ae60",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:7abe7d2ee24006518cff790e5e53a63d5379ccbc9640276adc87a2f090abd298",
+        "capture_phase_revision": "sha256:f035f9477aa785f3f6bbe4dcfaf801d8d127df1bd8b0529ef862e96ff122ae60",
+        "artifact_digest": "sha256:f941d04bbaec19fab87012e848cb71f69f8784d0de1dabee6e40a66bc428817c",
+        "result_hash": "sha256:24bc088156520208cef85b301dcc2a4b86c364d22efcc919e44a04b72f82e342",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:270dc22afadd9038ed741c290bc9b0af646f436ecc59d295e559b53a4307c0ea",
+            "lineage_id": "review-743f27829976ab74",
+            "authority_revision": "sha256:f035f9477aa785f3f6bbe4dcfaf801d8d127df1bd8b0529ef862e96ff122ae60",
+            "target_identity": "sha256:7abe7d2ee24006518cff790e5e53a63d5379ccbc9640276adc87a2f090abd298",
+            "base_tree": "189d13993be9d196277f0bbc88fa495247a3de5c",
+            "candidate_tree": "2892f3674e4fbf382aee9e016605073af99579e2",
+            "changed_path_manifest_sha256": "sha256:5c0d9c5cdc2241e625663bdc6df9034ae63dd5970258c1e64be25795dfa0e45b",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:270dc22afadd9038ed741c290bc9b0af646f436ecc59d295e559b53a4307c0ea",
+            "raw_sha256": "sha256:97b014b5e965c0d8e7bccc4c4181e3e26312ae8f5c5e7f0bebbbba3b6dd070f3",
+            "canonical_sha256": "sha256:fa9c726901ab382ab915169803a402dd7933323a7797a2fad429b4addb298bd0",
+            "result_hash": "sha256:24bc088156520208cef85b301dcc2a4b86c364d22efcc919e44a04b72f82e342",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:270dc22afadd9038ed741c290bc9b0af646f436ecc59d295e559b53a4307c0ea",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "bin/lib/usage.sh",
+                "engine/cmd/review.go",
+                "engine/cmd/review_exempt_check_test.go",
+                "engine/cmd/usage.go"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "The diff in engine/cmd/review.go only extends the JSON output of review check: it adds an Exemptions field, initialises Results to an empty array, and copies the exemption fields (name, base, diff digest) from the checked value. The clearance logic that holds exemptions to their rules and to git sits in the app layer outside this candidate, so this change does not alter any authorization decision.",
+              "The output exposes only repository-relative exemption file names, the base revision and a diff digest. These are data the caller already has access to, so there is no new secret or data exposure.",
+              "The changes in bin/lib/usage.sh and engine/cmd/usage.go are help text only.",
+              "engine/cmd/review_exempt_check_test.go is a new test file. It covers refusal of tampered exemptions: an edited risk, an edited report result, a wrong diff digest and an invalid stored file. It also covers a blocking result winning over an exemption. The tests write only to their own temporary world and add no dependencies.",
+              "No reachable security, data-loss, unsafe-input or dependency risk was introduced by this candidate."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 1,
+        "target_identity": "sha256:7abe7d2ee24006518cff790e5e53a63d5379ccbc9640276adc87a2f090abd298",
+        "capture_phase_revision": "sha256:f035f9477aa785f3f6bbe4dcfaf801d8d127df1bd8b0529ef862e96ff122ae60",
+        "artifact_digest": "sha256:a180f3f8a31058214cc60caeff4a7cbf6a5b356b927909c42c0c48aa86292fbd",
+        "result_hash": "sha256:4b09c31d80a3c1bbc2e6771d0ff93af1b47d6502050338624dc09130f92bafeb",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:a843730fa531155bd2dc0862ddea5c253fa9223c69db223fa077e49951616d3e",
+            "lineage_id": "review-743f27829976ab74",
+            "authority_revision": "sha256:f035f9477aa785f3f6bbe4dcfaf801d8d127df1bd8b0529ef862e96ff122ae60",
+            "target_identity": "sha256:7abe7d2ee24006518cff790e5e53a63d5379ccbc9640276adc87a2f090abd298",
+            "base_tree": "189d13993be9d196277f0bbc88fa495247a3de5c",
+            "candidate_tree": "2892f3674e4fbf382aee9e016605073af99579e2",
+            "changed_path_manifest_sha256": "sha256:5c0d9c5cdc2241e625663bdc6df9034ae63dd5970258c1e64be25795dfa0e45b",
+            "lens": "review-reliability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:a843730fa531155bd2dc0862ddea5c253fa9223c69db223fa077e49951616d3e",
+            "raw_sha256": "sha256:2e81999c48cfe1c1dda0878192030457fec164106dda5f851efd213c78b767a3",
+            "canonical_sha256": "sha256:2e81999c48cfe1c1dda0878192030457fec164106dda5f851efd213c78b767a3",
+            "result_hash": "sha256:4b09c31d80a3c1bbc2e6771d0ff93af1b47d6502050338624dc09130f92bafeb",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:a843730fa531155bd2dc0862ddea5c253fa9223c69db223fa077e49951616d3e",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "bin/lib/usage.sh",
+                "engine/cmd/review.go",
+                "engine/cmd/review_exempt_check_test.go",
+                "engine/cmd/usage.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [],
+            "evidence": [
+              "engine/cmd/review.go: reportChecked now starts Results as an empty slice, so an exemption-only clearance prints \"results\": [] rather than null. A result-cleared head still lists the same entries as before. Exemptions use omitempty, so the output for heads cleared by results is unchanged.",
+              "engine/cmd/review_exempt_check_test.go covers the new behavior at the cheapest useful levels. It asserts the exact stdout JSON, empty stderr, exit 0 and that nothing is stored for an exemption-only clearance. It checks that a blocking result or an unchecked severe finding wins over an exemption, with the refusal on stderr, an empty stdout and exit 1. It checks refusals for a never-exempted head, an exemption for another head, an edited risk, an edited report, a changed diff digest and an invalid file, each with no files stored. It adds a built-binary end-to-end flow and a usage-text test.",
+              "The usage text assertions in engine/cmd/review_exempt_check_test.go match the strings added to engine/cmd/usage.go and bin/lib/usage.sh once whitespace is normalized with strings.Fields, so line wrapping does not break them.",
+              "The clearance and refusal logic (checked.Exemptions, the exemption candidate fields) sits in the review application layer, which is outside this candidate. I could not verify it from this patch. The CLI layer only maps those fields to JSON, and the tests exercise them through the command, so I report no finding. Test setup also assumes the stored result takes number 2 after the exemption takes number 1, which I could not verify here."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "38999532f94957715c9011b17d6fc29f64fb83c087c0f5525ddb80d0fec0ef8e",
+    "initial_atomic_start": {
+      "lineage_id": "review-743f27829976ab74",
+      "worktree_identity": "sha256:571cf94da78406a5dee177091311c4fcbbbf61e483d9e6e92803045faa817e42",
+      "target_identity": "sha256:7abe7d2ee24006518cff790e5e53a63d5379ccbc9640276adc87a2f090abd298",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "189d13993be9d196277f0bbc88fa495247a3de5c",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "high",
+      "selected_lenses": [
+        "review-risk",
+        "review-reliability"
+      ],
+      "original_changed_lines": 314,
+      "correction_budget": 157,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "commit 2642f1c4 of own-rdd T4: feat(review): review check names the exemption it cleared a head by"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

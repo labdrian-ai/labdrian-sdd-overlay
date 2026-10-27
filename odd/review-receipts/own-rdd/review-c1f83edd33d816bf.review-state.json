@@ -1,0 +1,196 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:a3580ee52f9ced35c8ab2e7a4af487a99ed8620aa47c6175520c5ba025cf0405",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-c1f83edd33d816bf",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "64b31f632aee490cc475e15ff63dba1095d033da",
+      "candidate_tree": "87ff68720b9d371a0abff20568488cbcada2d762",
+      "paths_digest": "sha256:b30092ad7a31ff116f1229eb0e3511ce161e3257714af9810d6b665b80ff1c58",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/review/exempt_stored_test.go",
+        "engine/review/handoff.go",
+        "engine/review/review.go",
+        "engine/review/stored.go"
+      ],
+      "identity": "sha256:490aa7d7c5991998bdd21cee89e23a810e8c3818a969ac30a14014d19761aa8a"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "64b31f632aee490cc475e15ff63dba1095d033da",
+      "candidate_tree": "87ff68720b9d371a0abff20568488cbcada2d762",
+      "paths_digest": "sha256:b30092ad7a31ff116f1229eb0e3511ce161e3257714af9810d6b665b80ff1c58",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/review/exempt_stored_test.go",
+        "engine/review/handoff.go",
+        "engine/review/review.go",
+        "engine/review/stored.go"
+      ],
+      "identity": "sha256:490aa7d7c5991998bdd21cee89e23a810e8c3818a969ac30a14014d19761aa8a"
+    },
+    "genesis_paths": [
+      "engine/review/exempt_stored_test.go",
+      "engine/review/handoff.go",
+      "engine/review/review.go",
+      "engine/review/stored.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-risk",
+      "review-reliability"
+    ],
+    "original_changed_lines": 436,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "commit 4c72789c of own-rdd T4: feat(review): the stored exemption and the record that closes it",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:6233bdefed7a92a2025598d014df8fbf51d355961d31cc40ca7fd44adbfd9c08",
+    "capture_phase_revision": "sha256:e58efb55ef95f8a87d57218ae4bc56de80c5204a9c6a1cd0881c3c88f6092208",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:490aa7d7c5991998bdd21cee89e23a810e8c3818a969ac30a14014d19761aa8a",
+        "capture_phase_revision": "sha256:e58efb55ef95f8a87d57218ae4bc56de80c5204a9c6a1cd0881c3c88f6092208",
+        "artifact_digest": "sha256:65fff4a7608c5604b4fff695c6a1888e5515eb4c3fd45d490355e13fb9e9f760",
+        "result_hash": "sha256:e38ee9d43c079ba841baeb49ef703ba90f5e46da9bb115730411b3f046919bd0",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:aae7a02ed635338624231e33277b8a3a9b48a363888d80c281b2d39bef59ee6a",
+            "lineage_id": "review-c1f83edd33d816bf",
+            "authority_revision": "sha256:e58efb55ef95f8a87d57218ae4bc56de80c5204a9c6a1cd0881c3c88f6092208",
+            "target_identity": "sha256:490aa7d7c5991998bdd21cee89e23a810e8c3818a969ac30a14014d19761aa8a",
+            "base_tree": "64b31f632aee490cc475e15ff63dba1095d033da",
+            "candidate_tree": "87ff68720b9d371a0abff20568488cbcada2d762",
+            "changed_path_manifest_sha256": "sha256:b9d84cf9a31857988509e5a85422261de0d9c5cf6d1ab76a2d41aaf345f084ba",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:aae7a02ed635338624231e33277b8a3a9b48a363888d80c281b2d39bef59ee6a",
+            "raw_sha256": "sha256:6b40ed34fd6745de76b0a74dd32591310948a3c1860d0e12854d7935f99fb432",
+            "canonical_sha256": "sha256:570ec598410f41a73c546ea02ba6bb63765679ffc406d05b09dffe411d736ff1",
+            "result_hash": "sha256:e38ee9d43c079ba841baeb49ef703ba90f5e46da9bb115730411b3f046919bd0",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:aae7a02ed635338624231e33277b8a3a9b48a363888d80c281b2d39bef59ee6a",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/exempt_stored_test.go",
+                "engine/review/handoff.go",
+                "engine/review/review.go",
+                "engine/review/stored.go"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "Reviewed all four changed paths in full. The change adds EncodeExemption/DecodeExemption and ExemptionHandoff, and refactors EncodeResult/DecodeResult through shared encodeFile/decodeFile helpers.",
+              "Input handling: DecodeExemption goes through decodeFile, which rejects duplicate keys and unknown members with jsonstrict, then checks version, risk and report. All failures wrap ErrInvalidStored, and the zero value is returned on refusal. EncodeExemption refuses a non-JSON report before writing anything. I found no unsafe input path.",
+              "Refactor equivalence: the DecodeResult and EncodeResult behavior is preserved (same strict checks, same error wrapping, same encoder settings). The only change is that the error text for encode failures now uses a parameterized name, which is not a security impact.",
+              "Data exposure: no secrets, network access, filesystem access, or dependency changes are introduced. The stored file holds only the binding, a risk declaration and the verifier report, all of which are caller-supplied.",
+              "No backend authorization or enforcement surface is touched. ExemptionHandoff only builds a skeleton record, and the engine's roles parsing validates the parent-filled fields, as the tests show.",
+              "No reachable exploit or scanner evidence was found, so no findings are reported."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 1,
+        "target_identity": "sha256:490aa7d7c5991998bdd21cee89e23a810e8c3818a969ac30a14014d19761aa8a",
+        "capture_phase_revision": "sha256:e58efb55ef95f8a87d57218ae4bc56de80c5204a9c6a1cd0881c3c88f6092208",
+        "artifact_digest": "sha256:9ab182f4c3fc451c5c7a8a4982b4c31e8586955207e547422afed578af0604da",
+        "result_hash": "sha256:59b12561fd15f2c393bc458f5b658589dc27b6d68cc8e2cb40c4a5e7f4794c99",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:ab210c9c31a641bc30a189495890618627e072126a7317490519ee34a19b1667",
+            "lineage_id": "review-c1f83edd33d816bf",
+            "authority_revision": "sha256:e58efb55ef95f8a87d57218ae4bc56de80c5204a9c6a1cd0881c3c88f6092208",
+            "target_identity": "sha256:490aa7d7c5991998bdd21cee89e23a810e8c3818a969ac30a14014d19761aa8a",
+            "base_tree": "64b31f632aee490cc475e15ff63dba1095d033da",
+            "candidate_tree": "87ff68720b9d371a0abff20568488cbcada2d762",
+            "changed_path_manifest_sha256": "sha256:b9d84cf9a31857988509e5a85422261de0d9c5cf6d1ab76a2d41aaf345f084ba",
+            "lens": "review-reliability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:ab210c9c31a641bc30a189495890618627e072126a7317490519ee34a19b1667",
+            "raw_sha256": "sha256:01844ddfb0d1025000c518be8e7782f1761f60b68b2fc00f93a46daa395ed2ae",
+            "canonical_sha256": "sha256:91bf9bdaa0d86be6f829d68cc291284056bfc069bf5466cd909e5fe59661825b",
+            "result_hash": "sha256:59b12561fd15f2c393bc458f5b658589dc27b6d68cc8e2cb40c4a5e7f4794c99",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:ab210c9c31a641bc30a189495890618627e072126a7317490519ee34a19b1667",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/exempt_stored_test.go",
+                "engine/review/handoff.go",
+                "engine/review/review.go",
+                "engine/review/stored.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [],
+            "evidence": [
+              "The EncodeResult refactor into bindingOf and encodeFile keeps the same encoder settings: indent, no HTML escaping, and a trailing newline. The error text changes only by the what parameter, which is 'result' for results, so it reads as before.",
+              "DecodeResult now goes through decodeFile and keeps the same version and reply checks and the same ErrInvalidStored wrapping. An exemption file carries risk and report members, which a result does not have, so strict decoding should refuse it. TestDecodeResultRefusesTheFileOfAnExemption covers this.",
+              "DecodeExemption refuses duplicate keys, unknown members, other versions, an empty risk, and a missing or null report. It returns the zero value on refusal. The table-driven test asserts both the error class and the zero value for each case.",
+              "EncodeExemption refuses a report that is not valid JSON and wraps ErrReplyNotJSON. The test covers an empty string, prose and truncated JSON.",
+              "ExemptionHandoff reuses Handoff and overrides ToRole, PayloadKind and Evidence[1].Kind. This depends on Handoff returning two evidence entries, which I cannot see in this patch. The new test asserts the exact evidence slice, so a regression there would be caught.",
+              "Minor gap, not a defect: DecodeExemption does not require the binding member to be present, so a file with no binding decodes to an empty binding. The later binding comparison would reject it, so this is not a reliability failure."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "65908058dd04003f4e9dde99e988a3e805c0a6cf1ff180b67e67976329e56c68",
+    "initial_atomic_start": {
+      "lineage_id": "review-c1f83edd33d816bf",
+      "worktree_identity": "sha256:571cf94da78406a5dee177091311c4fcbbbf61e483d9e6e92803045faa817e42",
+      "target_identity": "sha256:490aa7d7c5991998bdd21cee89e23a810e8c3818a969ac30a14014d19761aa8a",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "64b31f632aee490cc475e15ff63dba1095d033da",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-risk",
+        "review-reliability"
+      ],
+      "original_changed_lines": 436,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "commit 4c72789c of own-rdd T4: feat(review): the stored exemption and the record that closes it"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

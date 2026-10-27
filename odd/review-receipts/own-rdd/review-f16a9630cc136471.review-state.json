@@ -1,0 +1,196 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:63df5f1cfa84a6bfb1cd85f23e73cee9e6f95faaeabfc9ccb6edc04fa385f2b4",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-f16a9630cc136471",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "69330ba095039c19ebcb41300401a84083f18cae",
+      "candidate_tree": "c40aaa69e0afe716ed20ce063cebb5926dd5cbab",
+      "paths_digest": "sha256:5b8bdf356801a4b90636acfecf80e2f6211c8db2643c452e0fb1b3b9628c80ad",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/reviewverdict/parse_test.go",
+        "engine/reviewverdict/report.go",
+        "engine/reviewverdict/report_test.go",
+        "engine/reviewverdict/reviewverdict.go",
+        "engine/reviewverdict/wire.go"
+      ],
+      "identity": "sha256:f954eeeeebcbf666fe10bb01d477784e8e7a1489ef643bdd20614e639c25c251"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "69330ba095039c19ebcb41300401a84083f18cae",
+      "candidate_tree": "c40aaa69e0afe716ed20ce063cebb5926dd5cbab",
+      "paths_digest": "sha256:5b8bdf356801a4b90636acfecf80e2f6211c8db2643c452e0fb1b3b9628c80ad",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/reviewverdict/parse_test.go",
+        "engine/reviewverdict/report.go",
+        "engine/reviewverdict/report_test.go",
+        "engine/reviewverdict/reviewverdict.go",
+        "engine/reviewverdict/wire.go"
+      ],
+      "identity": "sha256:f954eeeeebcbf666fe10bb01d477784e8e7a1489ef643bdd20614e639c25c251"
+    },
+    "genesis_paths": [
+      "engine/reviewverdict/parse_test.go",
+      "engine/reviewverdict/report.go",
+      "engine/reviewverdict/report_test.go",
+      "engine/reviewverdict/reviewverdict.go",
+      "engine/reviewverdict/wire.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-risk",
+      "review-reliability"
+    ],
+    "original_changed_lines": 423,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "commit ff842747 of own-rdd T4: feat(reviewverdict): the report that exempts a head from review",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:60d12af66fd2d7cbb0358b4f582d1d42a020217d30e3d14a4601bb8ecac26ad5",
+    "capture_phase_revision": "sha256:fb5aad1e857a4812b2470c782a0abba1facd5bc2c59997f1e5ebbd60a6d1b9e3",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:f954eeeeebcbf666fe10bb01d477784e8e7a1489ef643bdd20614e639c25c251",
+        "capture_phase_revision": "sha256:fb5aad1e857a4812b2470c782a0abba1facd5bc2c59997f1e5ebbd60a6d1b9e3",
+        "artifact_digest": "sha256:414eaa87d431e6e391eb07b5b797831a54784b78d6174e24faa6bd14ab6f66c9",
+        "result_hash": "sha256:d2a778905cd8171855fccd067df509cbee2e4ed5e7f171217e15a1447b60c261",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:802bbae419901e08acf23543fb6fbbf77a7655162d3d119a0bbd6ab90ed4b30c",
+            "lineage_id": "review-f16a9630cc136471",
+            "authority_revision": "sha256:fb5aad1e857a4812b2470c782a0abba1facd5bc2c59997f1e5ebbd60a6d1b9e3",
+            "target_identity": "sha256:f954eeeeebcbf666fe10bb01d477784e8e7a1489ef643bdd20614e639c25c251",
+            "base_tree": "69330ba095039c19ebcb41300401a84083f18cae",
+            "candidate_tree": "c40aaa69e0afe716ed20ce063cebb5926dd5cbab",
+            "changed_path_manifest_sha256": "sha256:e1d0b8b19eb906ca6ddc3433cde46c2516096ca909dee9a5cb02fa52371f52d1",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:802bbae419901e08acf23543fb6fbbf77a7655162d3d119a0bbd6ab90ed4b30c",
+            "raw_sha256": "sha256:59cd4dcaedb76d5b12e55f59f0b1d1303da9ddf3d27596566710b0d716119bd6",
+            "canonical_sha256": "sha256:8d7770fe3b0a8ec7b6fe5177e0292027e8a2c66ac4e69b7e868d8d2591c2a4ba",
+            "result_hash": "sha256:d2a778905cd8171855fccd067df509cbee2e4ed5e7f171217e15a1447b60c261",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:802bbae419901e08acf23543fb6fbbf77a7655162d3d119a0bbd6ab90ed4b30c",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/reviewverdict/parse_test.go",
+                "engine/reviewverdict/report.go",
+                "engine/reviewverdict/report_test.go",
+                "engine/reviewverdict/reviewverdict.go",
+                "engine/reviewverdict/wire.go"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "Reviewed all five changed paths in full. The change adds ParseReport/Clear for an exemption report and generalizes checkShape in wire.go to take the list member name and item members; the verdict path passes 'verdicts' and verdictMembers, keeping its prior behavior and error wording (pinned by the new test in parse_test.go).",
+              "Input handling is unchanged in strictness: UTF-8 check, duplicate-key check, strict object member checks, and jsonstrict.DecodeStrict are applied to the report path the same as to verdicts. No file reads, command execution, secrets, network, or new dependencies are introduced.",
+              "Clear() fails closed: an empty checks list, a failed check, or a not-run check is never treated as clear, and check() requires a recognized result plus non-blank command and output. No authorization or data-exposure issue is reachable from this candidate; ParseReport has no callers in the diff that grant anything."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 1,
+        "target_identity": "sha256:f954eeeeebcbf666fe10bb01d477784e8e7a1489ef643bdd20614e639c25c251",
+        "capture_phase_revision": "sha256:fb5aad1e857a4812b2470c782a0abba1facd5bc2c59997f1e5ebbd60a6d1b9e3",
+        "artifact_digest": "sha256:6ae1beec378ba2e21e9ae370c83405fee6fa32e6a05e83fafaa019ab637ef2c3",
+        "result_hash": "sha256:00a57221dc70c5e35799456ef218a6e7b589455a09a09cbac7754729bc4c4926",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:47d643be09339b4a5dc7a454e817623fcd8870ebc82bf44273a34b7cd10cbf92",
+            "lineage_id": "review-f16a9630cc136471",
+            "authority_revision": "sha256:fb5aad1e857a4812b2470c782a0abba1facd5bc2c59997f1e5ebbd60a6d1b9e3",
+            "target_identity": "sha256:f954eeeeebcbf666fe10bb01d477784e8e7a1489ef643bdd20614e639c25c251",
+            "base_tree": "69330ba095039c19ebcb41300401a84083f18cae",
+            "candidate_tree": "c40aaa69e0afe716ed20ce063cebb5926dd5cbab",
+            "changed_path_manifest_sha256": "sha256:e1d0b8b19eb906ca6ddc3433cde46c2516096ca909dee9a5cb02fa52371f52d1",
+            "lens": "review-reliability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:47d643be09339b4a5dc7a454e817623fcd8870ebc82bf44273a34b7cd10cbf92",
+            "raw_sha256": "sha256:bac6e9aa1452c567bcd8373a85f593153515fde36d6c5724f647eb2c15f36fd7",
+            "canonical_sha256": "sha256:1c583ee84b1c8d8130a4bbb95b7b195a3acd45bfa64604a6d86901c3193b4935",
+            "result_hash": "sha256:00a57221dc70c5e35799456ef218a6e7b589455a09a09cbac7754729bc4c4926",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:47d643be09339b4a5dc7a454e817623fcd8870ebc82bf44273a34b7cd10cbf92",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/reviewverdict/parse_test.go",
+                "engine/reviewverdict/report.go",
+                "engine/reviewverdict/report_test.go",
+                "engine/reviewverdict/reviewverdict.go",
+                "engine/reviewverdict/wire.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [],
+            "evidence": [
+              "wire.go: checkShape is parameterized by list name and members. The verdicts call passes \"verdicts\" and verdictMembers, so the refusal strings for the reply shape keep their wording (\"verdicts is not an array\", \"verdicts[%d]\"). The new test in engine/reviewverdict/parse_test.go pins those messages.",
+              "report.go: ParseReport runs the shape check, then the strict decode, then each check in order, with the enumeration checked before the evidence. Every refusal wraps one Err value and returns the empty Report. Clear rejects an empty report and any check that is not pass, so a check that did not run never counts as passing.",
+              "report_test.go covers ordering of the checks, the first-broken-rule precedence, unknown members, enum violations, missing evidence, and Clear for failed, not-run and empty reports. It also covers the cross-rejection between Parse and ParseReport, so the new behavior is proved at the unit level.",
+              "Unverifiable from the candidate: the \"empty\" wording asserted for an empty or whitespace-only report depends on the unchanged jsonstrict and strictObject helpers, which are not part of the patch. I could not show it fails, so I report no finding."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "4eb5b4cd82dd0b77e3944365a5887d1964dcc57c6a6166fa51b65281c570eeec",
+    "initial_atomic_start": {
+      "lineage_id": "review-f16a9630cc136471",
+      "worktree_identity": "sha256:571cf94da78406a5dee177091311c4fcbbbf61e483d9e6e92803045faa817e42",
+      "target_identity": "sha256:f954eeeeebcbf666fe10bb01d477784e8e7a1489ef643bdd20614e639c25c251",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "69330ba095039c19ebcb41300401a84083f18cae",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-risk",
+        "review-reliability"
+      ],
+      "original_changed_lines": 423,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "commit ff842747 of own-rdd T4: feat(reviewverdict): the report that exempts a head from review"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

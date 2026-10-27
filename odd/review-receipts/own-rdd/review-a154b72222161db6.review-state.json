@@ -1,0 +1,192 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:c1d7b7339cebbbe6f2387abf63375cf275ce8341f3710ee6a7dc3b61a331f755",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-a154b72222161db6",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "2d41a946ee4b497cb4fde74601b7d3cc2b834a80",
+      "candidate_tree": "dc169addfdb0319474eb6368fae759a60f5e664f",
+      "paths_digest": "sha256:8c9c4343d183dc943ef3510467c3eeb9f631c7adab5991f73ddb5ac18d1fb761",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "bin/lib/usage.sh",
+        "engine/cmd/review_check_cli_test.go",
+        "engine/cmd/review_test.go",
+        "engine/cmd/usage.go"
+      ],
+      "identity": "sha256:06aebb07511684faa76303b155ae4429b7ce65b6280e0ee39fce4d1df790b7cd"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "2d41a946ee4b497cb4fde74601b7d3cc2b834a80",
+      "candidate_tree": "dc169addfdb0319474eb6368fae759a60f5e664f",
+      "paths_digest": "sha256:8c9c4343d183dc943ef3510467c3eeb9f631c7adab5991f73ddb5ac18d1fb761",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "bin/lib/usage.sh",
+        "engine/cmd/review_check_cli_test.go",
+        "engine/cmd/review_test.go",
+        "engine/cmd/usage.go"
+      ],
+      "identity": "sha256:06aebb07511684faa76303b155ae4429b7ce65b6280e0ee39fce4d1df790b7cd"
+    },
+    "genesis_paths": [
+      "bin/lib/usage.sh",
+      "engine/cmd/review_check_cli_test.go",
+      "engine/cmd/review_test.go",
+      "engine/cmd/usage.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-risk",
+      "review-reliability"
+    ],
+    "original_changed_lines": 184,
+    "correction_budget": 92,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "commit f25aeb8f of own-rdd T4: feat(review): help for review check and the tests of its command line",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:c43a8d10e73b5da633befd3bb562484432af24aa61e1ab9004ed17a42bc75e48",
+    "capture_phase_revision": "sha256:43814f95d8291c8135289c21c23d5452f6cfcd4c3d3a3cb893698b4a901c776f",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:06aebb07511684faa76303b155ae4429b7ce65b6280e0ee39fce4d1df790b7cd",
+        "capture_phase_revision": "sha256:43814f95d8291c8135289c21c23d5452f6cfcd4c3d3a3cb893698b4a901c776f",
+        "artifact_digest": "sha256:fcfbbf2d9178eb3cbc345179d7d472ccab1afc1064f583fc1cdf49ce13132655",
+        "result_hash": "sha256:98becbb7b3490981ddf28952d06b5811e058adeccc26384fc1013d6b45c06db8",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:f533dd66affab931073442fc77b3f49c563aa525718eb59a0d81887b4c9418ea",
+            "lineage_id": "review-a154b72222161db6",
+            "authority_revision": "sha256:43814f95d8291c8135289c21c23d5452f6cfcd4c3d3a3cb893698b4a901c776f",
+            "target_identity": "sha256:06aebb07511684faa76303b155ae4429b7ce65b6280e0ee39fce4d1df790b7cd",
+            "base_tree": "2d41a946ee4b497cb4fde74601b7d3cc2b834a80",
+            "candidate_tree": "dc169addfdb0319474eb6368fae759a60f5e664f",
+            "changed_path_manifest_sha256": "sha256:a331c257823362dc39496567bf95fe09418ffe33aa463f73171190fc784c0dcf",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:f533dd66affab931073442fc77b3f49c563aa525718eb59a0d81887b4c9418ea",
+            "raw_sha256": "sha256:ad0ef72d895201c6718f0999b6a97daae9eac337b8453a309d6ee9fa4568e897",
+            "canonical_sha256": "sha256:438937930df6737eda6d03d17c93d80b573167a8facf400f13e68bfac6f235d2",
+            "result_hash": "sha256:98becbb7b3490981ddf28952d06b5811e058adeccc26384fc1013d6b45c06db8",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:f533dd66affab931073442fc77b3f49c563aa525718eb59a0d81887b4c9418ea",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "bin/lib/usage.sh",
+                "engine/cmd/review_check_cli_test.go",
+                "engine/cmd/review_test.go",
+                "engine/cmd/usage.go"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "The candidate adds only help text (bin/lib/usage.sh, engine/cmd/usage.go) and tests (engine/cmd/review_check_cli_test.go, engine/cmd/review_test.go). No executable production logic changes are in scope, so no new input handling, authorization, secret, data-exposure or dependency surface is introduced.",
+              "The test file includes a feature-name traversal case that is only a refusal check, and it asserts the verb rejects it with the named rule; this is test-only and shows no exploit.",
+              "No dependency manifests or lockfiles changed, so there is no scanner evidence to report."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 1,
+        "target_identity": "sha256:06aebb07511684faa76303b155ae4429b7ce65b6280e0ee39fce4d1df790b7cd",
+        "capture_phase_revision": "sha256:43814f95d8291c8135289c21c23d5452f6cfcd4c3d3a3cb893698b4a901c776f",
+        "artifact_digest": "sha256:610c8071008690c00407e6065c5ef281c0e0e1ada1187ad9edb894c5e38bd8ed",
+        "result_hash": "sha256:7b327eb8fd2bf6223b9739865d81033ae4737bb9b5f7297df348c5efdf5819f2",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:cc455bd8a1f94909b9b57612446531a666454e9567cbea672977bc26943e4d8d",
+            "lineage_id": "review-a154b72222161db6",
+            "authority_revision": "sha256:43814f95d8291c8135289c21c23d5452f6cfcd4c3d3a3cb893698b4a901c776f",
+            "target_identity": "sha256:06aebb07511684faa76303b155ae4429b7ce65b6280e0ee39fce4d1df790b7cd",
+            "base_tree": "2d41a946ee4b497cb4fde74601b7d3cc2b834a80",
+            "candidate_tree": "dc169addfdb0319474eb6368fae759a60f5e664f",
+            "changed_path_manifest_sha256": "sha256:a331c257823362dc39496567bf95fe09418ffe33aa463f73171190fc784c0dcf",
+            "lens": "review-reliability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:cc455bd8a1f94909b9b57612446531a666454e9567cbea672977bc26943e4d8d",
+            "raw_sha256": "sha256:c8d1a504f503609f49e4cb9758cb8da7b79554db2ca5bd8cee27d6bfa9a25c29",
+            "canonical_sha256": "sha256:f227ddd2887de36972f073b4fc72a08bcaacc6042da08eb62866757b212e9bde",
+            "result_hash": "sha256:7b327eb8fd2bf6223b9739865d81033ae4737bb9b5f7297df348c5efdf5819f2",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:cc455bd8a1f94909b9b57612446531a666454e9567cbea672977bc26943e4d8d",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "bin/lib/usage.sh",
+                "engine/cmd/review_check_cli_test.go",
+                "engine/cmd/review_test.go",
+                "engine/cmd/usage.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [],
+            "evidence": [
+              "The candidate only adds help text for `review check` in engine/cmd/usage.go and bin/lib/usage.sh, plus tests. The check implementation is not in the candidate, so its behavior can't be judged here.",
+              "The new phrases asserted in TestUsageDocumentsReviewCheck all appear in the added engine usage lines. The assertions are whitespace-normalized, so line wraps don't matter.",
+              "The wrapper/engine parity pairs in engine/cmd/review_test.go match the added wrapper text in bin/lib/usage.sh, including the differently worded exit-code lines.",
+              "The new tests in engine/cmd/review_check_cli_test.go assert stdout, stderr and exit codes for usage errors, an unwritable stdout, an unsafe feature name, and a built-binary run covering clear, unchecked-finding and blocking-verdict outcomes. That covers the externally visible behavior of the documented verb.",
+              "Helpers such as newReviewWorld, brokenStdout and engineBinary are defined outside the candidate and could not be checked. No defect is evident from the visible content."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "1c2e305ebe85b19984b71f8a66d2860e505611e50fce2f5e10fc9be3d76d8927",
+    "initial_atomic_start": {
+      "lineage_id": "review-a154b72222161db6",
+      "worktree_identity": "sha256:571cf94da78406a5dee177091311c4fcbbbf61e483d9e6e92803045faa817e42",
+      "target_identity": "sha256:06aebb07511684faa76303b155ae4429b7ce65b6280e0ee39fce4d1df790b7cd",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "2d41a946ee4b497cb4fde74601b7d3cc2b834a80",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "high",
+      "selected_lenses": [
+        "review-risk",
+        "review-reliability"
+      ],
+      "original_changed_lines": 184,
+      "correction_budget": 92,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "commit f25aeb8f of own-rdd T4: feat(review): help for review check and the tests of its command line"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

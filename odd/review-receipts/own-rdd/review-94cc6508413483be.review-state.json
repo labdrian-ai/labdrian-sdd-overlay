@@ -1,0 +1,195 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:7f51b89086d29422ce0ce691d6318c702160ed005191090d191cea5a2c652e56",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-94cc6508413483be",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "d428cd682a9c234b76be85666ec32e28c3a91b14",
+      "candidate_tree": "edfac57d7e1cbeaf5e3b0f38cddbfe39b7964fe5",
+      "paths_digest": "sha256:e90409b4097f765b481feb4afe40de51a60572d34c922f694df25218837505ae",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/cmd/roles.go",
+        "engine/cmd/roles_evidence.go",
+        "engine/cmd/roles_evidence_test.go",
+        "engine/cmd/roles_test.go"
+      ],
+      "identity": "sha256:bf4db13e35449db8358a141bcaf7d57e3d1ff23644ad0e5753e0db395a9597b6"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "d428cd682a9c234b76be85666ec32e28c3a91b14",
+      "candidate_tree": "edfac57d7e1cbeaf5e3b0f38cddbfe39b7964fe5",
+      "paths_digest": "sha256:e90409b4097f765b481feb4afe40de51a60572d34c922f694df25218837505ae",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/cmd/roles.go",
+        "engine/cmd/roles_evidence.go",
+        "engine/cmd/roles_evidence_test.go",
+        "engine/cmd/roles_test.go"
+      ],
+      "identity": "sha256:bf4db13e35449db8358a141bcaf7d57e3d1ff23644ad0e5753e0db395a9597b6"
+    },
+    "genesis_paths": [
+      "engine/cmd/roles.go",
+      "engine/cmd/roles_evidence.go",
+      "engine/cmd/roles_evidence_test.go",
+      "engine/cmd/roles_test.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-risk",
+      "review-reliability"
+    ],
+    "original_changed_lines": 443,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "commit b3813b10 of own-rdd T4: feat(roles): roles append holds a review-report to the files the review stored",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:34e67a79a61e98f128200b368210b47f81f0fbee46ac5279ed6150b83cc36207",
+    "capture_phase_revision": "sha256:c95773729df03accfd336cb415b6af801f5bd0125033e2a93d8dd868aea07b17",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:bf4db13e35449db8358a141bcaf7d57e3d1ff23644ad0e5753e0db395a9597b6",
+        "capture_phase_revision": "sha256:c95773729df03accfd336cb415b6af801f5bd0125033e2a93d8dd868aea07b17",
+        "artifact_digest": "sha256:39af4f52f143321b9b69def55e087eff013e75dc59536c58dffee7fca166474c",
+        "result_hash": "sha256:0b923475b9949c120805da3345959d1a0540e85d1ce97566a1d6fd1840ff2b54",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:6895f3f640b08c7ca26f1d322e44d5053cd62f65ab4f8b790d06df94029abdb3",
+            "lineage_id": "review-94cc6508413483be",
+            "authority_revision": "sha256:c95773729df03accfd336cb415b6af801f5bd0125033e2a93d8dd868aea07b17",
+            "target_identity": "sha256:bf4db13e35449db8358a141bcaf7d57e3d1ff23644ad0e5753e0db395a9597b6",
+            "base_tree": "d428cd682a9c234b76be85666ec32e28c3a91b14",
+            "candidate_tree": "edfac57d7e1cbeaf5e3b0f38cddbfe39b7964fe5",
+            "changed_path_manifest_sha256": "sha256:aeb6cee3675d4b73b2350ba51d2c63755241b9f5512a76433e3173ea457ed4b7",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:6895f3f640b08c7ca26f1d322e44d5053cd62f65ab4f8b790d06df94029abdb3",
+            "raw_sha256": "sha256:6b2069a38b1913d528ad9902984e269510e694138952c97cb9506ae79af378c5",
+            "canonical_sha256": "sha256:b2a662bf56ec6e54abf9667845912827862cd82cce373497be248adfcd082fb9",
+            "result_hash": "sha256:0b923475b9949c120805da3345959d1a0540e85d1ce97566a1d6fd1840ff2b54",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:6895f3f640b08c7ca26f1d322e44d5053cd62f65ab4f8b790d06df94029abdb3",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/cmd/roles.go",
+                "engine/cmd/roles_evidence.go",
+                "engine/cmd/roles_evidence_test.go",
+                "engine/cmd/roles_test.go"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "Reviewed all four changed paths in full. The change adds an evidence check to 'roles append' that fails closed: a completed review-report is stored only if its evidence matches the stored review files, and a check that cannot run (no repository, git or store failure) refuses the record.",
+              "Records that need no evidence (anything but a completed review-report) skip the check before the working directory is consulted, so baseline behavior is preserved for them, and the interrupted-report test covers this.",
+              "The check runs after flag/record matching and before the store is created or written, so a refused record is never persisted. engine/cmd/roles.go lines 294-298 show the ordering.",
+              "No secrets, injection, path traversal, or data-loss vector was found. Digests are compared against stored files, and the error text only echoes the evidence kind and ref. Tests use temporary directories and a temporary state home.",
+              "Existing callers keep their behavior: runRolesTest now injects the production-style check over empty deps, which only affects review-report records, and those fail closed in that test setup."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 1,
+        "target_identity": "sha256:bf4db13e35449db8358a141bcaf7d57e3d1ff23644ad0e5753e0db395a9597b6",
+        "capture_phase_revision": "sha256:c95773729df03accfd336cb415b6af801f5bd0125033e2a93d8dd868aea07b17",
+        "artifact_digest": "sha256:475f7dc0bbd2e0ef84aff4076feed4afb457d68b8c341e11bf4b082ed4c9d586",
+        "result_hash": "sha256:c3a778a1cbc784d12a9a528422e91986392ba5b95bea6717d18985ddc163389f",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:3e3f6098ef012a7b9af9802545ac01beb0372f0d9246e582052b5be753dfd649",
+            "lineage_id": "review-94cc6508413483be",
+            "authority_revision": "sha256:c95773729df03accfd336cb415b6af801f5bd0125033e2a93d8dd868aea07b17",
+            "target_identity": "sha256:bf4db13e35449db8358a141bcaf7d57e3d1ff23644ad0e5753e0db395a9597b6",
+            "base_tree": "d428cd682a9c234b76be85666ec32e28c3a91b14",
+            "candidate_tree": "edfac57d7e1cbeaf5e3b0f38cddbfe39b7964fe5",
+            "changed_path_manifest_sha256": "sha256:aeb6cee3675d4b73b2350ba51d2c63755241b9f5512a76433e3173ea457ed4b7",
+            "lens": "review-reliability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:3e3f6098ef012a7b9af9802545ac01beb0372f0d9246e582052b5be753dfd649",
+            "raw_sha256": "sha256:467614c3f94f6d55f022cd54b62588d37a8ae521084d90c1504babaa313e8ee5",
+            "canonical_sha256": "sha256:0d285f7867b94579e5a7a40aa5f766f5ab24389afbf4575622c40854771a77d5",
+            "result_hash": "sha256:c3a778a1cbc784d12a9a528422e91986392ba5b95bea6717d18985ddc163389f",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:3e3f6098ef012a7b9af9802545ac01beb0372f0d9246e582052b5be753dfd649",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/cmd/roles.go",
+                "engine/cmd/roles_evidence.go",
+                "engine/cmd/roles_evidence_test.go",
+                "engine/cmd/roles_test.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [],
+            "evidence": [
+              "Reviewed all four changed paths in full from the supplied patches.",
+              "engine/cmd/roles.go:294-298: the evidence check runs after the record has been read and matched to its flags and before the store is created, so a refused record is never written. The fail path returns after exit.",
+              "engine/cmd/roles_evidence.go: a record that needs no evidence returns nil before the working directory is read. A check that cannot run (no working directory, no repository, git or store failure) is wrapped with a clear message, so the check fails closed. EvidenceError values pass through unchanged.",
+              "engine/cmd/roles_evidence_test.go covers the check being asked before storing, with refusal, acceptance and flag mismatch. It covers records from review record and review verify being accepted. It covers missing evidence and digest mismatches for the diff, result and verifier kinds, plus a result file modified after recording. It covers an interrupted report that needs no repository, and the built binary run in the repository and outside any repository. Each case asserts exit code, stderr, stdout and whether the record was stored, so the externally observable behavior is proved.",
+              "engine/cmd/roles_test.go: runRolesTest keeps the old call shape through a check built over empty deps. Records that need no evidence behave as before, and records that need evidence fail closed. This is deliberate and matches the test comments.",
+              "No regressions found for input that was valid at the baseline except the intended new refusal of review-reports whose evidence does not match the stored files, which is the requested behavior."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "12114dab55a06a5015c24a86b916ee61e15525fcc9498268d2fda182973eb3f2",
+    "initial_atomic_start": {
+      "lineage_id": "review-94cc6508413483be",
+      "worktree_identity": "sha256:571cf94da78406a5dee177091311c4fcbbbf61e483d9e6e92803045faa817e42",
+      "target_identity": "sha256:bf4db13e35449db8358a141bcaf7d57e3d1ff23644ad0e5753e0db395a9597b6",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "d428cd682a9c234b76be85666ec32e28c3a91b14",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-risk",
+        "review-reliability"
+      ],
+      "original_changed_lines": 443,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "commit b3813b10 of own-rdd T4: feat(roles): roles append holds a review-report to the files the review stored"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

@@ -1,0 +1,204 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:6046ec88c8e0be1cd382d694fecc0d8337bfb41479e33e1b8cf705384e509945",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-ed5f56cd43db0783",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "0d50ed11d0727981e613056e005b1133bc5ea7ec",
+      "candidate_tree": "189d13993be9d196277f0bbc88fa495247a3de5c",
+      "paths_digest": "sha256:3c888ec2fa857bd122a41645ef7d048bbd5e113804972dd3a58a78c09ccbdcd2",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "bin/lib/usage.sh",
+        "engine/cmd/dispatch_routes_test.go",
+        "engine/cmd/review.go",
+        "engine/cmd/review_exempt_test.go",
+        "engine/cmd/review_test.go",
+        "engine/cmd/usage.go"
+      ],
+      "identity": "sha256:8f68be21ea346220524441005642071fa40825213a18d1186134aed9e73e5628"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "0d50ed11d0727981e613056e005b1133bc5ea7ec",
+      "candidate_tree": "189d13993be9d196277f0bbc88fa495247a3de5c",
+      "paths_digest": "sha256:3c888ec2fa857bd122a41645ef7d048bbd5e113804972dd3a58a78c09ccbdcd2",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "bin/lib/usage.sh",
+        "engine/cmd/dispatch_routes_test.go",
+        "engine/cmd/review.go",
+        "engine/cmd/review_exempt_test.go",
+        "engine/cmd/review_test.go",
+        "engine/cmd/usage.go"
+      ],
+      "identity": "sha256:8f68be21ea346220524441005642071fa40825213a18d1186134aed9e73e5628"
+    },
+    "genesis_paths": [
+      "bin/lib/usage.sh",
+      "engine/cmd/dispatch_routes_test.go",
+      "engine/cmd/review.go",
+      "engine/cmd/review_exempt_test.go",
+      "engine/cmd/review_test.go",
+      "engine/cmd/usage.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-risk",
+      "review-reliability"
+    ],
+    "original_changed_lines": 454,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "commit 459ce6ac of own-rdd T4: feat(review): the exempt verb stores the exemption of a head from review",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:2d85a0f6b0de963c31b0a0ebc65c54fe99015d6bd3781f185dd8e9e9a4776bf3",
+    "capture_phase_revision": "sha256:3ad7b9a9778b884acffae993162db3d7298d67373b563d7f4d8b0027f28e3b5b",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:8f68be21ea346220524441005642071fa40825213a18d1186134aed9e73e5628",
+        "capture_phase_revision": "sha256:3ad7b9a9778b884acffae993162db3d7298d67373b563d7f4d8b0027f28e3b5b",
+        "artifact_digest": "sha256:402695fb860d4fedb87f2df076763ab8f2d4e67e362fca7acccd20f5b227e2ac",
+        "result_hash": "sha256:0bbeac58acdde6198f43aab7dff9dd5c4d74007da21dd242ee28d6fce884d72c",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:5324e07960cba0ea6851510ce725055bb2f174dc5b03fda45e2dd77dba38bdc3",
+            "lineage_id": "review-ed5f56cd43db0783",
+            "authority_revision": "sha256:3ad7b9a9778b884acffae993162db3d7298d67373b563d7f4d8b0027f28e3b5b",
+            "target_identity": "sha256:8f68be21ea346220524441005642071fa40825213a18d1186134aed9e73e5628",
+            "base_tree": "0d50ed11d0727981e613056e005b1133bc5ea7ec",
+            "candidate_tree": "189d13993be9d196277f0bbc88fa495247a3de5c",
+            "changed_path_manifest_sha256": "sha256:f8f3da46048d1c07a39d9835cae15f23d2e819ef58ab5f10b0aba8b044253599",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:5324e07960cba0ea6851510ce725055bb2f174dc5b03fda45e2dd77dba38bdc3",
+            "raw_sha256": "sha256:c25a96fda1aae1f7464b62b4ab7989360fa7d25ccfe9bb297199a126fc2aa634",
+            "canonical_sha256": "sha256:35473686ace1dba951a712222396e66e91407819505f24e38490b9a665226380",
+            "result_hash": "sha256:0bbeac58acdde6198f43aab7dff9dd5c4d74007da21dd242ee28d6fce884d72c",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:5324e07960cba0ea6851510ce725055bb2f174dc5b03fda45e2dd77dba38bdc3",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "bin/lib/usage.sh",
+                "engine/cmd/dispatch_routes_test.go",
+                "engine/cmd/review.go",
+                "engine/cmd/review_exempt_test.go",
+                "engine/cmd/review_test.go",
+                "engine/cmd/usage.go"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "Reviewed all six changed paths. The new exempt verb in engine/cmd/review.go only wires CLI parsing to the review/app Exempt use case; the rules (risk grammar, report check, numbered no-overwrite storage) live outside this candidate and are not visible, so they could not be assessed here.",
+              "Revisions are validated through the existing bind path, and engine/cmd/review_exempt_test.go covers option-like revisions being refused without writing a file, as well as refusal of declared risk items and of unclear reports with nothing stored.",
+              "The report is read from stdin only, and --risk is accepted only by the exempt verb. The refactor of parentFills preserves the previous record and verify output.",
+              "No secrets, unsafe input handling, or dependency changes appear in the candidate. The exemption is a declared-risk gate by design, and the usage text states the engine does not compute the risk from the diff, which is the requested behavior rather than a defect introduced here."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 1,
+        "target_identity": "sha256:8f68be21ea346220524441005642071fa40825213a18d1186134aed9e73e5628",
+        "capture_phase_revision": "sha256:3ad7b9a9778b884acffae993162db3d7298d67373b563d7f4d8b0027f28e3b5b",
+        "artifact_digest": "sha256:d85164b27328742f750cfecfb1a6fc38ec8ac5d2c0d4eb5ed1a86bc446350d9c",
+        "result_hash": "sha256:27cefd5f9fa8759e2a2f6030f56e2f48af60369b0ecb551a4645e5beb0fb503b",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:14c4513ad4823093bf5d1a64656bac1a7ae828bfb20a199e23b139c9f4dd4604",
+            "lineage_id": "review-ed5f56cd43db0783",
+            "authority_revision": "sha256:3ad7b9a9778b884acffae993162db3d7298d67373b563d7f4d8b0027f28e3b5b",
+            "target_identity": "sha256:8f68be21ea346220524441005642071fa40825213a18d1186134aed9e73e5628",
+            "base_tree": "0d50ed11d0727981e613056e005b1133bc5ea7ec",
+            "candidate_tree": "189d13993be9d196277f0bbc88fa495247a3de5c",
+            "changed_path_manifest_sha256": "sha256:f8f3da46048d1c07a39d9835cae15f23d2e819ef58ab5f10b0aba8b044253599",
+            "lens": "review-reliability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:14c4513ad4823093bf5d1a64656bac1a7ae828bfb20a199e23b139c9f4dd4604",
+            "raw_sha256": "sha256:19f727198670e0c771c3ff43bdc8d29a61ffd00d657e4745a04ff60d2a57c07a",
+            "canonical_sha256": "sha256:b024aaf6c0abb2bee1c34dbf58a0601734bc4046f518208ef5b7dffa54af972a",
+            "result_hash": "sha256:27cefd5f9fa8759e2a2f6030f56e2f48af60369b0ecb551a4645e5beb0fb503b",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:14c4513ad4823093bf5d1a64656bac1a7ae828bfb20a199e23b139c9f4dd4604",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "bin/lib/usage.sh",
+                "engine/cmd/dispatch_routes_test.go",
+                "engine/cmd/review.go",
+                "engine/cmd/review_exempt_test.go",
+                "engine/cmd/review_test.go",
+                "engine/cmd/usage.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [],
+            "evidence": [
+              "The new exempt verb in engine/cmd/review.go reads the report only from stdin and requires --feature, --base, --head and --risk. It maps a refused report to exit 2 and every other failure to exit 1, and writes nothing on those paths. The tests in engine/cmd/review_exempt_test.go assert each of these outcomes, including that no results directory is created.",
+              "The refactor that extracts parentFills keeps the existing sentence for the record and verify verbs. TestRecordAndVerifySayWhatTheParentOfTheChainStillFillsAsBefore asserts the old wording for both, so the existing output is covered against regression.",
+              "I checked each phrase asserted by TestUsageDocumentsReviewExempt against the engine usage text in engine/cmd/usage.go and the wrapper text in bin/lib/usage.sh after whitespace normalisation. All of them are present, so that doc-parity test should pass.",
+              "The updated verb-list messages in engine/cmd/review.go match the expectations in engine/cmd/review_test.go, engine/cmd/dispatch_routes_test.go and the new exempt tests.",
+              "The failure path where the skeleton cannot be written to stdout is covered. It exits 1, names the stored path, and leaves the stored file in place.",
+              "I did not check the Exempt service, DecodeExemption, CheckReport and the review check behaviour for exemptions. They are outside this candidate's patch, and the test file refers to review_exempt_check_test.go, which is also not part of it."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "c9ee09cd1367bd82ea3830269518a24ce05f981cb63f5574707ac098832671c5",
+    "initial_atomic_start": {
+      "lineage_id": "review-ed5f56cd43db0783",
+      "worktree_identity": "sha256:571cf94da78406a5dee177091311c4fcbbbf61e483d9e6e92803045faa817e42",
+      "target_identity": "sha256:8f68be21ea346220524441005642071fa40825213a18d1186134aed9e73e5628",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "0d50ed11d0727981e613056e005b1133bc5ea7ec",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "high",
+      "selected_lenses": [
+        "review-risk",
+        "review-reliability"
+      ],
+      "original_changed_lines": 454,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "commit 459ce6ac of own-rdd T4: feat(review): the exempt verb stores the exemption of a head from review"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

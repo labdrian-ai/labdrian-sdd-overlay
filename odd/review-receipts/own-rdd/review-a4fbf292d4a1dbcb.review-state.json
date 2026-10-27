@@ -1,0 +1,183 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:5238da0430283e1ed0876e81d564567fa668d0abdb7d1d4c57129a0f836fdc7f",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-a4fbf292d4a1dbcb",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "522c7b10b16a9bf7c0a2c79847b7d3c08241b6ad",
+      "candidate_tree": "0d50ed11d0727981e613056e005b1133bc5ea7ec",
+      "paths_digest": "sha256:d3c67b8a622630ebe4d5fdb02d8e3e3f57c1f88f067b9cf73703afa95d978cb2",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/review/app/check.go",
+        "engine/review/app/check_exempt_test.go"
+      ],
+      "identity": "sha256:d9f5fe79f354b7196c3852ca6346f2b0375f7c9e3726bae8da2b4a7afec7f932"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "522c7b10b16a9bf7c0a2c79847b7d3c08241b6ad",
+      "candidate_tree": "0d50ed11d0727981e613056e005b1133bc5ea7ec",
+      "paths_digest": "sha256:d3c67b8a622630ebe4d5fdb02d8e3e3f57c1f88f067b9cf73703afa95d978cb2",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/review/app/check.go",
+        "engine/review/app/check_exempt_test.go"
+      ],
+      "identity": "sha256:d9f5fe79f354b7196c3852ca6346f2b0375f7c9e3726bae8da2b4a7afec7f932"
+    },
+    "genesis_paths": [
+      "engine/review/app/check.go",
+      "engine/review/app/check_exempt_test.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-risk",
+      "review-reliability"
+    ],
+    "original_changed_lines": 408,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "commit 97402817 of own-rdd T4: feat(review): the delivery check clears a head by an exemption that still holds",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:11dcb4702e77cf4d16d970709d45f30264b909a877fd48a15f32e564d1c9261d",
+    "capture_phase_revision": "sha256:67818213ba1dd292c446983632058ab0b3c964f6e95840da86777bb7f5de91e0",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:d9f5fe79f354b7196c3852ca6346f2b0375f7c9e3726bae8da2b4a7afec7f932",
+        "capture_phase_revision": "sha256:67818213ba1dd292c446983632058ab0b3c964f6e95840da86777bb7f5de91e0",
+        "artifact_digest": "sha256:f019e31bd305cbcb96543d6f50667b4c31b115c873c8d412bc9f847c32f45644",
+        "result_hash": "sha256:2251235636f4879169ea77e1158d5178993ddf63dc4c9deacc3fc32bb097e793",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:d3458a6b3ee07134f5608d870ec541a7659be1a43027b20082b11a8f9044f536",
+            "lineage_id": "review-a4fbf292d4a1dbcb",
+            "authority_revision": "sha256:67818213ba1dd292c446983632058ab0b3c964f6e95840da86777bb7f5de91e0",
+            "target_identity": "sha256:d9f5fe79f354b7196c3852ca6346f2b0375f7c9e3726bae8da2b4a7afec7f932",
+            "base_tree": "522c7b10b16a9bf7c0a2c79847b7d3c08241b6ad",
+            "candidate_tree": "0d50ed11d0727981e613056e005b1133bc5ea7ec",
+            "changed_path_manifest_sha256": "sha256:4d857ea54c82089ea063fda146cc7b918517e8a87c3694810d3d1e7a351acaad",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:d3458a6b3ee07134f5608d870ec541a7659be1a43027b20082b11a8f9044f536",
+            "raw_sha256": "sha256:6b9637803196fce7e07eb139cf273288def42792c63348b264ad83c0d6f50f0c",
+            "canonical_sha256": "sha256:e14b54a4b190271cf2e0eebf06d2514930aa4669dd870279b7d37a0798c6c057",
+            "result_hash": "sha256:2251235636f4879169ea77e1158d5178993ddf63dc4c9deacc3fc32bb097e793",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:d3458a6b3ee07134f5608d870ec541a7659be1a43027b20082b11a8f9044f536",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/app/check.go",
+                "engine/review/app/check_exempt_test.go"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "engine/review/app/check.go: exemptedHead reads the stored exemption, decodes it, and re-applies review.CheckExemption (high-risk and report-clear rules) before the file is trusted. A stored file edited after Exempt wrote it therefore cannot clear a head.",
+              "engine/review/app/check.go: the stored binding is validated by DecodeExemption before its base is passed to bind and git. The test in check_exempt_test.go that forges a base shaped like a command-line option asserts ErrInvalidBinding and that git is never called with it, so no option-injection path is visible.",
+              "engine/review/app/check.go: the candidate is recomputed from git for the stored base and the delivered head, and CheckBinding requires it to equal the stored binding. Exemption files cannot be reused for a different diff, and exemptions for another head are skipped by their binding rather than by their name.",
+              "engine/review/app/check.go: every error path in the exemption flow returns Checked{} with a refusal, so a read, decode, or git failure does not clear the head. Whether a blocking or not-clear result wins over an exemption is decided in review.Cleared, which is outside this candidate. The new tests assert that behavior, so I could not verify it here.",
+              "engine/review/app/check_exempt_test.go: test-only addition. It uses fakes and adds no secrets, dependencies, or runtime surface."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 1,
+        "target_identity": "sha256:d9f5fe79f354b7196c3852ca6346f2b0375f7c9e3726bae8da2b4a7afec7f932",
+        "capture_phase_revision": "sha256:67818213ba1dd292c446983632058ab0b3c964f6e95840da86777bb7f5de91e0",
+        "artifact_digest": "sha256:7f19e8ec38bd85d96f5ff8211f48f5d233deebe93e61ddac0fe8337c290add12",
+        "result_hash": "sha256:758b4139eb80a7de223e374a9cfc4bf4000c38799c5e61418bcf612b69705b05",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:57e8a04a2f0a89023f0c0157455f2a4073a591fe8b57ce9afeb4784105d0610b",
+            "lineage_id": "review-a4fbf292d4a1dbcb",
+            "authority_revision": "sha256:67818213ba1dd292c446983632058ab0b3c964f6e95840da86777bb7f5de91e0",
+            "target_identity": "sha256:d9f5fe79f354b7196c3852ca6346f2b0375f7c9e3726bae8da2b4a7afec7f932",
+            "base_tree": "522c7b10b16a9bf7c0a2c79847b7d3c08241b6ad",
+            "candidate_tree": "0d50ed11d0727981e613056e005b1133bc5ea7ec",
+            "changed_path_manifest_sha256": "sha256:4d857ea54c82089ea063fda146cc7b918517e8a87c3694810d3d1e7a351acaad",
+            "lens": "review-reliability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:57e8a04a2f0a89023f0c0157455f2a4073a591fe8b57ce9afeb4784105d0610b",
+            "raw_sha256": "sha256:81d25c1a4052ce9ceca2e2995f30bd310fce40422932b8706d369e492e085b69",
+            "canonical_sha256": "sha256:481f3e9d3230228d7782c5b580d64a3f2235f8c2cec88fe3d95c45ed2dcc5c80",
+            "result_hash": "sha256:758b4139eb80a7de223e374a9cfc4bf4000c38799c5e61418bcf612b69705b05",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:57e8a04a2f0a89023f0c0157455f2a4073a591fe8b57ce9afeb4784105d0610b",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/app/check.go",
+                "engine/review/app/check_exempt_test.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [],
+            "evidence": [
+              "engine/review/app/check.go: exemptedHead decodes the stored file, applies CheckExemption, and then compares the binding head. It recomputes the candidate from git and applies CheckBinding. Every failure returns an error, so a malformed or edited exemption refuses the head rather than clearing it.",
+              "engine/review/app/check.go: Check passes both results and exemptions to review.Cleared. Per the doc comment, a result that blocks or is not clear wins over an exemption. Check returns an empty Checked on any error.",
+              "engine/review/app/check_exempt_test.go: tests cover clearing by an exemption alone, round-trip with Exempt, ordering of numbers 2 and 10, a head with both a result and an exemption, and a blocking, unchecked or not-run result beating an exemption. They also cover edited risk or report, a binding mismatch on diff or paths, git and store failures, exemptions of another head including a name collision, and a forged option-like base that never reaches git. Each asserts the error, the message content, an empty answer and no store writes.",
+              "Limitation: the review is confined to the two supplied patches, so the helper functions in review (ExemptionsOfHead, Cleared) and the fakes were not visible. No defect is evident from the visible code."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "d894395c3edca571eda4e52bbd86c1f74b306e2a1931162f2a862d78e796e89a",
+    "initial_atomic_start": {
+      "lineage_id": "review-a4fbf292d4a1dbcb",
+      "worktree_identity": "sha256:571cf94da78406a5dee177091311c4fcbbbf61e483d9e6e92803045faa817e42",
+      "target_identity": "sha256:d9f5fe79f354b7196c3852ca6346f2b0375f7c9e3726bae8da2b4a7afec7f932",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "522c7b10b16a9bf7c0a2c79847b7d3c08241b6ad",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-risk",
+        "review-reliability"
+      ],
+      "original_changed_lines": 408,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "commit 97402817 of own-rdd T4: feat(review): the delivery check clears a head by an exemption that still holds"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

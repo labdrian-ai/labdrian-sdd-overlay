@@ -1,0 +1,264 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:c6d8ce595f34a8463dd178c8c3c0e9a4b88439bd107391bf53c9b23bda8d6162",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-8c5412ef9649778a",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "c5488ccb9011d7b68ea425d680a3d8594f7d30ba",
+      "candidate_tree": "f54f3112f487fd6fb5234438160e9d707b181f8b",
+      "paths_digest": "sha256:1425ac9ffb4a8d83dc8fd4ce7afaf6ca4ea9368b90ba8babd9ed978c9e83a7c0",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "agents/delivery.md",
+        "bin/lib/usage.sh",
+        "codex/agents/delivery.toml",
+        "engine/cmd/review.go",
+        "engine/cmd/review_check_chain_test.go",
+        "engine/cmd/review_check_cli_test.go",
+        "engine/cmd/review_check_test.go",
+        "engine/cmd/review_test.go",
+        "engine/cmd/usage.go",
+        "engine/review/app/app.go",
+        "engine/review/app/chain.go",
+        "engine/review/app/check.go",
+        "engine/review/check.go",
+        "odd/review-results/README.md",
+        "pi/agents/delivery.md",
+        "roles/delivery/body.md"
+      ],
+      "identity": "sha256:452e5f1c35fc6e6dddbe4d134b0d4a9f9a4e70d93cb5c2ebb1cab466b65155ef"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "c5488ccb9011d7b68ea425d680a3d8594f7d30ba",
+      "candidate_tree": "f54f3112f487fd6fb5234438160e9d707b181f8b",
+      "paths_digest": "sha256:1425ac9ffb4a8d83dc8fd4ce7afaf6ca4ea9368b90ba8babd9ed978c9e83a7c0",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "agents/delivery.md",
+        "bin/lib/usage.sh",
+        "codex/agents/delivery.toml",
+        "engine/cmd/review.go",
+        "engine/cmd/review_check_chain_test.go",
+        "engine/cmd/review_check_cli_test.go",
+        "engine/cmd/review_check_test.go",
+        "engine/cmd/review_test.go",
+        "engine/cmd/usage.go",
+        "engine/review/app/app.go",
+        "engine/review/app/chain.go",
+        "engine/review/app/check.go",
+        "engine/review/check.go",
+        "odd/review-results/README.md",
+        "pi/agents/delivery.md",
+        "roles/delivery/body.md"
+      ],
+      "identity": "sha256:452e5f1c35fc6e6dddbe4d134b0d4a9f9a4e70d93cb5c2ebb1cab466b65155ef"
+    },
+    "genesis_paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "agents/delivery.md",
+      "bin/lib/usage.sh",
+      "codex/agents/delivery.toml",
+      "engine/cmd/review.go",
+      "engine/cmd/review_check_chain_test.go",
+      "engine/cmd/review_check_cli_test.go",
+      "engine/cmd/review_check_test.go",
+      "engine/cmd/review_test.go",
+      "engine/cmd/usage.go",
+      "engine/review/app/app.go",
+      "engine/review/app/chain.go",
+      "engine/review/app/check.go",
+      "engine/review/check.go",
+      "odd/review-results/README.md",
+      "pi/agents/delivery.md",
+      "roles/delivery/body.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-risk",
+      "review-reliability"
+    ],
+    "original_changed_lines": 481,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "commit d0e168d8 of own-rdd T4: feat(review): check --base clears a head by a chain of per-commit reviews",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:10c9837a480a7f3c9cf41dab3199a735f1b61fe7030fc52e2c139f9f2c18069e",
+    "capture_phase_revision": "sha256:e5cc1a3beb5d88b01889b9fbfc3ddabff6659edf6e1b2ce3951989ca52bb27e4",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:452e5f1c35fc6e6dddbe4d134b0d4a9f9a4e70d93cb5c2ebb1cab466b65155ef",
+        "capture_phase_revision": "sha256:e5cc1a3beb5d88b01889b9fbfc3ddabff6659edf6e1b2ce3951989ca52bb27e4",
+        "artifact_digest": "sha256:f676a0fbde47ce8476cd83493947dd3f87d505c924d9e6907a231da66fab1614",
+        "result_hash": "sha256:9b0bafdbee8196d62f98cf52ffd3efba636ebf9d56d76424c2effba90071513e",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:a28250a919a47df921222b1c2543db1b4c2b9ee97c3830a5bebb73c54f90c456",
+            "lineage_id": "review-8c5412ef9649778a",
+            "authority_revision": "sha256:e5cc1a3beb5d88b01889b9fbfc3ddabff6659edf6e1b2ce3951989ca52bb27e4",
+            "target_identity": "sha256:452e5f1c35fc6e6dddbe4d134b0d4a9f9a4e70d93cb5c2ebb1cab466b65155ef",
+            "base_tree": "c5488ccb9011d7b68ea425d680a3d8594f7d30ba",
+            "candidate_tree": "f54f3112f487fd6fb5234438160e9d707b181f8b",
+            "changed_path_manifest_sha256": "sha256:e34a7c253e7ee8eb82a5873eca9ae575b71ea343834f960846f04ed28e5ecbbc",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:a28250a919a47df921222b1c2543db1b4c2b9ee97c3830a5bebb73c54f90c456",
+            "raw_sha256": "sha256:1799c72b0c9f97d6ab1eb7caddef560bdad2260161fa778ff6bad7836ef115da",
+            "canonical_sha256": "sha256:a4dac110b287c898d18ef98b06553e16898fd0d4d4c0fd00963c5d0bc651d861",
+            "result_hash": "sha256:9b0bafdbee8196d62f98cf52ffd3efba636ebf9d56d76424c2effba90071513e",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:a28250a919a47df921222b1c2543db1b4c2b9ee97c3830a5bebb73c54f90c456",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "CHANGELOG.md",
+                "README.md",
+                "agents/delivery.md",
+                "bin/lib/usage.sh",
+                "codex/agents/delivery.toml",
+                "engine/cmd/review.go",
+                "engine/cmd/review_check_chain_test.go",
+                "engine/cmd/review_check_cli_test.go",
+                "engine/cmd/review_check_test.go",
+                "engine/cmd/review_test.go",
+                "engine/cmd/usage.go",
+                "engine/review/app/app.go",
+                "engine/review/app/chain.go",
+                "engine/review/app/check.go",
+                "engine/review/check.go",
+                "odd/review-results/README.md",
+                "pi/agents/delivery.md",
+                "roles/delivery/body.md"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "Reviewed all 18 manifest paths. The new --base flag value is validated by review.CheckRev in engine/review/app/chain.go before git reads it, and the test in engine/cmd/review_check_test.go covers a base beginning with '-' being refused, so no option injection reaches git.",
+              "The chain walk in engine/review/app/chain.go keeps a visited-commit set, so it always terminates. Each commit is held by the same cleared function that backs the single-head check, which re-reads stored files and recomputes from git, so there is no weaker path to clearance.",
+              "Without --base the code path calls Service.Check and prints the same output shape as before, so there is no regression for existing invocations. The cleared refactor in engine/review/app/check.go only renames variables.",
+              "The chain follows only the first result's base as the next commit. This is documented, and every other result of the commit must still be clear, so no bypass is reachable.",
+              "No secrets, dependency changes, or unsafe input handling were introduced."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 1,
+        "target_identity": "sha256:452e5f1c35fc6e6dddbe4d134b0d4a9f9a4e70d93cb5c2ebb1cab466b65155ef",
+        "capture_phase_revision": "sha256:e5cc1a3beb5d88b01889b9fbfc3ddabff6659edf6e1b2ce3951989ca52bb27e4",
+        "artifact_digest": "sha256:4fe2d9fd262fd03f1cbac703f20a8fa8e2f31839a550ecf06ee232644ed3bf0c",
+        "result_hash": "sha256:87ae55e503d2c3e874714d06fe9cff7d0a3550a5894ddd96977ae40b6101cc18",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:e25dcf2baa5813731ac2cac4b85e95f7cc708b87f8b2b44397d591e3f0b6e4ed",
+            "lineage_id": "review-8c5412ef9649778a",
+            "authority_revision": "sha256:e5cc1a3beb5d88b01889b9fbfc3ddabff6659edf6e1b2ce3951989ca52bb27e4",
+            "target_identity": "sha256:452e5f1c35fc6e6dddbe4d134b0d4a9f9a4e70d93cb5c2ebb1cab466b65155ef",
+            "base_tree": "c5488ccb9011d7b68ea425d680a3d8594f7d30ba",
+            "candidate_tree": "f54f3112f487fd6fb5234438160e9d707b181f8b",
+            "changed_path_manifest_sha256": "sha256:e34a7c253e7ee8eb82a5873eca9ae575b71ea343834f960846f04ed28e5ecbbc",
+            "lens": "review-reliability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:e25dcf2baa5813731ac2cac4b85e95f7cc708b87f8b2b44397d591e3f0b6e4ed",
+            "raw_sha256": "sha256:1f6f6490121104a99905c886fc2cf91d96bd1ce642e5fb71d165d51959268b7d",
+            "canonical_sha256": "sha256:d70004f50a3ce0b9a3c86b5594ec0d66f06b84c1c5fe2e948c2c6f2bf810ef25",
+            "result_hash": "sha256:87ae55e503d2c3e874714d06fe9cff7d0a3550a5894ddd96977ae40b6101cc18",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:e25dcf2baa5813731ac2cac4b85e95f7cc708b87f8b2b44397d591e3f0b6e4ed",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "CHANGELOG.md",
+                "README.md",
+                "agents/delivery.md",
+                "bin/lib/usage.sh",
+                "codex/agents/delivery.toml",
+                "engine/cmd/review.go",
+                "engine/cmd/review_check_chain_test.go",
+                "engine/cmd/review_check_cli_test.go",
+                "engine/cmd/review_check_test.go",
+                "engine/cmd/review_test.go",
+                "engine/cmd/usage.go",
+                "engine/review/app/app.go",
+                "engine/review/app/chain.go",
+                "engine/review/app/check.go",
+                "engine/review/check.go",
+                "odd/review-results/README.md",
+                "pi/agents/delivery.md",
+                "roles/delivery/body.md"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [],
+            "evidence": [
+              "The CheckChain walk in engine/review/app/chain.go always terminates, because each step marks a commit as passed and a repeat is refused with ErrChainLoops.",
+              "Any commit that is not cleared by a stored result or exemption, whether through a gap, a blocked or unclear result, or a differing binding, returns an error. The chain therefore never clears silently.",
+              "The invocation without --base takes the original Check path, and the existing output is preserved by the shared cleared helper and checkedJSON. The new chain test exercises this case.",
+              "The chain tests in engine/cmd/review_check_chain_test.go cover a clear chain, a chain ending in an exemption, a gap, an unclear range, a range that begins before the base, a loop, and the unchanged no-base output. The CLI tests cover a duplicate --base and a base that looks like an option.",
+              "I did not see an unproved behavior that this change caused."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "75f3bcdade95b4ce948b9b961ce430295b3ac92707f359fdbcc010c0af548535",
+    "initial_atomic_start": {
+      "lineage_id": "review-8c5412ef9649778a",
+      "worktree_identity": "sha256:571cf94da78406a5dee177091311c4fcbbbf61e483d9e6e92803045faa817e42",
+      "target_identity": "sha256:452e5f1c35fc6e6dddbe4d134b0d4a9f9a4e70d93cb5c2ebb1cab466b65155ef",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "c5488ccb9011d7b68ea425d680a3d8594f7d30ba",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "high",
+      "selected_lenses": [
+        "review-risk",
+        "review-reliability"
+      ],
+      "original_changed_lines": 481,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "commit d0e168d8 of own-rdd T4: feat(review): check --base clears a head by a chain of per-commit reviews"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

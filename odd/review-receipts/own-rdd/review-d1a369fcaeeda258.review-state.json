@@ -1,0 +1,244 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:90c037e969f6d5627acdcba4099a82f4b95d681a0b0a4ea786f6695aa3337340",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-d1a369fcaeeda258",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "08246268e540313075beb989cb866fce27c2a3c6",
+      "candidate_tree": "9e3a9b37af973ae4a7fdfe2865fb38774e04d85e",
+      "paths_digest": "sha256:d3feebb06dbc6504d2040883751586a5d520de6ab4307338e0270e05f3f16896",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "agents/delivery.md",
+        "agents/verifier.md",
+        "codex/agents/delivery.toml",
+        "codex/agents/verifier.toml",
+        "engine/agentgen/roles.go",
+        "engine/agentgen/roles_test.go",
+        "engine/skills/role_agents_artifact_test.go",
+        "engine/skills/verifier_exemption_report_test.go",
+        "pi/agents/delivery.md",
+        "pi/agents/verifier.md",
+        "roles/delivery/body.md",
+        "roles/verifier/body.md"
+      ],
+      "identity": "sha256:7f276d00c03d11c829dc8911bf55ad62e33b7feb95163a52f1632afb2b8462d0"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "08246268e540313075beb989cb866fce27c2a3c6",
+      "candidate_tree": "9e3a9b37af973ae4a7fdfe2865fb38774e04d85e",
+      "paths_digest": "sha256:d3feebb06dbc6504d2040883751586a5d520de6ab4307338e0270e05f3f16896",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "agents/delivery.md",
+        "agents/verifier.md",
+        "codex/agents/delivery.toml",
+        "codex/agents/verifier.toml",
+        "engine/agentgen/roles.go",
+        "engine/agentgen/roles_test.go",
+        "engine/skills/role_agents_artifact_test.go",
+        "engine/skills/verifier_exemption_report_test.go",
+        "pi/agents/delivery.md",
+        "pi/agents/verifier.md",
+        "roles/delivery/body.md",
+        "roles/verifier/body.md"
+      ],
+      "identity": "sha256:7f276d00c03d11c829dc8911bf55ad62e33b7feb95163a52f1632afb2b8462d0"
+    },
+    "genesis_paths": [
+      "agents/delivery.md",
+      "agents/verifier.md",
+      "codex/agents/delivery.toml",
+      "codex/agents/verifier.toml",
+      "engine/agentgen/roles.go",
+      "engine/agentgen/roles_test.go",
+      "engine/skills/role_agents_artifact_test.go",
+      "engine/skills/verifier_exemption_report_test.go",
+      "pi/agents/delivery.md",
+      "pi/agents/verifier.md",
+      "roles/delivery/body.md",
+      "roles/verifier/body.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-risk",
+      "review-reliability"
+    ],
+    "original_changed_lines": 184,
+    "correction_budget": 92,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "commit cf42ca7a of own-rdd T4: feat(roles): the verifier knows the report of an exemption and delivery names the exemptions it used",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:bc9aa5a7308499e5a6599d34393d48b14c835bb76260f2b5596668737f630275",
+    "capture_phase_revision": "sha256:3d3363a6f9e266d0da3d81467f0010c5eb83e04819d92242f207576b0f8aa58d",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:7f276d00c03d11c829dc8911bf55ad62e33b7feb95163a52f1632afb2b8462d0",
+        "capture_phase_revision": "sha256:3d3363a6f9e266d0da3d81467f0010c5eb83e04819d92242f207576b0f8aa58d",
+        "artifact_digest": "sha256:652a0e634554e15cd9422bb1355437740e9656b8c2e5b91121a8ab0a16b3f9b4",
+        "result_hash": "sha256:ebbe4f65e5cb415bfc723a2131a96e7b7bee4cc29c90464d0833209dbcf1eadd",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:315159c136030055f817e7d508cf27ff9418b7d690fae2c6ae962f277039de82",
+            "lineage_id": "review-d1a369fcaeeda258",
+            "authority_revision": "sha256:3d3363a6f9e266d0da3d81467f0010c5eb83e04819d92242f207576b0f8aa58d",
+            "target_identity": "sha256:7f276d00c03d11c829dc8911bf55ad62e33b7feb95163a52f1632afb2b8462d0",
+            "base_tree": "08246268e540313075beb989cb866fce27c2a3c6",
+            "candidate_tree": "9e3a9b37af973ae4a7fdfe2865fb38774e04d85e",
+            "changed_path_manifest_sha256": "sha256:79a41d1877d73985d9fdf57ad8f797cdc32a2e45ef51ae15d6f785bf1b6bb23c",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:315159c136030055f817e7d508cf27ff9418b7d690fae2c6ae962f277039de82",
+            "raw_sha256": "sha256:d0284b8989ad62ea84548d28f25d69ca043918237c7960d1472051f53d3cf087",
+            "canonical_sha256": "sha256:4a427a7dd95141471d5d03e85a69cf26e44a482069f0e9c46f24ba86f7c8431d",
+            "result_hash": "sha256:ebbe4f65e5cb415bfc723a2131a96e7b7bee4cc29c90464d0833209dbcf1eadd",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:315159c136030055f817e7d508cf27ff9418b7d690fae2c6ae962f277039de82",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "agents/delivery.md",
+                "agents/verifier.md",
+                "codex/agents/delivery.toml",
+                "codex/agents/verifier.toml",
+                "engine/agentgen/roles.go",
+                "engine/agentgen/roles_test.go",
+                "engine/skills/role_agents_artifact_test.go",
+                "engine/skills/verifier_exemption_report_test.go",
+                "pi/agents/delivery.md",
+                "pi/agents/verifier.md",
+                "roles/delivery/body.md",
+                "roles/verifier/body.md"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "Reviewed all 12 changed paths. The change adds prompt text to the verifier and delivery role agents (an exemption-report JSON envelope and a clause to name exemptions in the Log entry), updates the generated role descriptions, and adds tests that pin the text.",
+              "Security surface: no new code paths handling untrusted input, no secrets, no authorization logic, no dependency changes. The verifier instructions keep the existing constraints (run only the named checks, scratch under mktemp outside the worktree, reports are evidence that grant nothing).",
+              "The new test file only parses fixed in-repo strings with reviewverdict.ParseReport and writes nothing outside the test process, so there is no data exposure or loss path.",
+              "The added not-run is never a pass rule, and the test's requirement that only a passed check clears a report, keep the exemption report fail-closed, so the change introduces no reachable risk."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 1,
+        "target_identity": "sha256:7f276d00c03d11c829dc8911bf55ad62e33b7feb95163a52f1632afb2b8462d0",
+        "capture_phase_revision": "sha256:3d3363a6f9e266d0da3d81467f0010c5eb83e04819d92242f207576b0f8aa58d",
+        "artifact_digest": "sha256:a4f5b716b27b3c4262b2164e274a62d6aff81d7cf24eb3c88f9773e47a67c154",
+        "result_hash": "sha256:f91a12c98be8cf5994f9428b828b8e8fa95585426245161ea9b49f28288aa67a",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:26b84680644af2ba20fbe2b6c1d1991a73071a4b72a19e5533a082e52f4b9a42",
+            "lineage_id": "review-d1a369fcaeeda258",
+            "authority_revision": "sha256:3d3363a6f9e266d0da3d81467f0010c5eb83e04819d92242f207576b0f8aa58d",
+            "target_identity": "sha256:7f276d00c03d11c829dc8911bf55ad62e33b7feb95163a52f1632afb2b8462d0",
+            "base_tree": "08246268e540313075beb989cb866fce27c2a3c6",
+            "candidate_tree": "9e3a9b37af973ae4a7fdfe2865fb38774e04d85e",
+            "changed_path_manifest_sha256": "sha256:79a41d1877d73985d9fdf57ad8f797cdc32a2e45ef51ae15d6f785bf1b6bb23c",
+            "lens": "review-reliability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:26b84680644af2ba20fbe2b6c1d1991a73071a4b72a19e5533a082e52f4b9a42",
+            "raw_sha256": "sha256:6f30ac64676fd3b0776940751a6206dd181917097fb7b62c57fb317e6b13213f",
+            "canonical_sha256": "sha256:62576a2111e71ef6a496e5ea681c3ac6f614dddc48dff4b3c0b8d5eeca423e3c",
+            "result_hash": "sha256:f91a12c98be8cf5994f9428b828b8e8fa95585426245161ea9b49f28288aa67a",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:26b84680644af2ba20fbe2b6c1d1991a73071a4b72a19e5533a082e52f4b9a42",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "agents/delivery.md",
+                "agents/verifier.md",
+                "codex/agents/delivery.toml",
+                "codex/agents/verifier.toml",
+                "engine/agentgen/roles.go",
+                "engine/agentgen/roles_test.go",
+                "engine/skills/role_agents_artifact_test.go",
+                "engine/skills/verifier_exemption_report_test.go",
+                "pi/agents/delivery.md",
+                "pi/agents/verifier.md",
+                "roles/delivery/body.md",
+                "roles/verifier/body.md"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-001",
+                "lens": "reliability",
+                "location": "engine/skills/role_agents_artifact_test.go:110",
+                "severity": "SUGGESTION",
+                "claim": "The delivery fragment 'and the exemptions when it prints any' is asserted only as a substring in the agent files. No test pins that the delivery wording stays consistent with what the check command actually prints, so a drift in the output format would go undetected. This is a minor coverage gap, since the change is prompt text only.",
+                "proof_refs": [
+                  "engine/skills/role_agents_artifact_test.go:110",
+                  "roles/delivery/body.md:9"
+                ]
+              }
+            ],
+            "evidence": [
+              "Reviewed all 12 changed paths. The role body edits (roles/verifier/body.md, roles/delivery/body.md) are mirrored identically in agents/, pi/agents/ and codex/agents/ generated files, and the verifier description change is consistent in roles.go, roles_test.go and every agent file.",
+              "engine/skills/verifier_exemption_report_test.go checks that the JSON object spelled out in the verifier delta parses with reviewverdict.ParseReport for each result value, that only a passing check clears the report, and that empty command or output is refused. This covers the externally observable contract of the new prompt line.",
+              "The delta line-count and index updates in role_agents_artifact_test.go (4 to 5, the 'grant nothing' line moving to index 4, and the new HasPrefix check on line 4) are consistent with the added line in roles/verifier/body.md.",
+              "No regression of baseline behavior is introduced: the finding-id verdict envelope is unchanged and the new report applies only when the prompt lists no finding id."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "60cf628a9c1b0dff79e22c5c6a669869353bfacd179dbcf208ae42e250b2d2ca",
+    "initial_atomic_start": {
+      "lineage_id": "review-d1a369fcaeeda258",
+      "worktree_identity": "sha256:571cf94da78406a5dee177091311c4fcbbbf61e483d9e6e92803045faa817e42",
+      "target_identity": "sha256:7f276d00c03d11c829dc8911bf55ad62e33b7feb95163a52f1632afb2b8462d0",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "08246268e540313075beb989cb866fce27c2a3c6",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-risk",
+        "review-reliability"
+      ],
+      "original_changed_lines": 184,
+      "correction_budget": 92,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "commit cf42ca7a of own-rdd T4: feat(roles): the verifier knows the report of an exemption and delivery names the exemptions it used"
+    },
+    "runtime_agent": "claude-code"
+  }
+}
