@@ -5,12 +5,14 @@ package main
 // --base <rev> --head <rev> [--result <file>|-] [--cwd <repo>]' holds the reply of a reviewer to the candidate
 // it recomputes and stores it under odd/review-results/<feature>/, and 'review verify --feature <name>
 // --stored <result> [--verdicts <file>|-] [--cwd <repo>]' holds the reply of the verifier to a stored result,
-// decides whether the review blocks and stores the reply beside the result. 'review check --feature <name>
-// [--head <rev>] [--cwd <repo>]' is the check of the delivery: it recomputes the candidate of the head from git
-// and refuses unless the results stored for it still hold and clear it. The rules are the use cases of
-// review/app over the adapters review/gitexec (git) and review/fsstore (the results directory); this file
-// parses the command line, wires them and says what they did. No verb launches an agent or dispatches
-// work: a reply is a file somebody else produced.
+// decides whether the review blocks and stores the reply beside the result. 'review exempt --feature <name>
+// --base <rev> --head <rev> --risk <none|items> [--cwd <repo>]' stores the exemption of a head from review, on the
+// report of the verifier (stdin) and the risk the agent declares. 'review check --feature <name> [--head <rev>]
+// [--cwd <repo>]' is the check of the delivery: it recomputes the candidate of the head from git and refuses unless
+// the results stored for it still hold and clear it, or an exemption stored for it still holds and no result
+// blocks it. The rules are the use cases of review/app over the adapters review/gitexec (git) and review/fsstore
+// (the results directory); this file parses the command line, wires them and says what they did. No verb launches
+// an agent or dispatches work: a reply is a file somebody else produced.
 
 import (
 	"encoding/json"
@@ -29,6 +31,7 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review/fsstore"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review/gitexec"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/reviewverdict"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/roles"
 )
 
 // reviewGitTimeout stops one git call of the review verbs that runs longer. Every call is local and takes
@@ -45,7 +48,7 @@ const reviewGitMaxOutput = 256 << 20
 // in an exit that ends nothing.
 func runReview(p process, d deps, args []string) {
 	if len(args) == 0 {
-		fmt.Fprintln(p.stderr, "error: review requires a verb: bind, record, verify, check")
+		fmt.Fprintln(p.stderr, "error: review requires a verb: bind, record, verify, check, exempt")
 		p.exit(1)
 		return
 	}
@@ -58,8 +61,10 @@ func runReview(p process, d deps, args []string) {
 		runReviewVerify(p, d, args[1:])
 	case "check":
 		runReviewCheck(p, d, args[1:])
+	case "exempt":
+		runReviewExempt(p, d, args[1:])
 	default:
-		fmt.Fprintf(p.stderr, "error: review: unknown verb %q (expected bind, record, verify or check)\n", args[0])
+		fmt.Fprintf(p.stderr, "error: review: unknown verb %q (expected bind, record, verify, check or exempt)\n", args[0])
 		p.exit(1)
 	}
 }
@@ -91,7 +96,7 @@ func reviewServiceOver(git reviewapp.Git, results reviewapp.Results) reviewapp.S
 
 // reviewFlags are the parsed flags of the review verbs. A verb takes some of them.
 type reviewFlags struct {
-	base, head, feature, result, stored, verdicts, cwd string
+	base, head, feature, result, stored, verdicts, risk, cwd string
 	// given says which flags the command line gave, with whatever value, an empty one included. A flag that is
 	// optional and has a default tells an empty value that was given from one that was not.
 	given map[string]bool
@@ -133,6 +138,8 @@ func parseReviewFlags(args []string, takes ...string) (reviewFlags, error) {
 			f.stored = args[i]
 		case "--verdicts":
 			f.verdicts = args[i]
+		case "--risk":
+			f.risk = args[i]
 		case "--cwd":
 			f.cwd = args[i]
 		}
@@ -146,7 +153,7 @@ func (f reviewFlags) has(name string) bool { return f.given[name] }
 // require fails with the first of the named flags that has no value. A name it does not know is a mistake of
 // the caller, and says so rather than reading as a flag that was left out.
 func (f reviewFlags) require(names ...string) error {
-	values := map[string]string{"--base": f.base, "--head": f.head, "--feature": f.feature, "--stored": f.stored}
+	values := map[string]string{"--base": f.base, "--head": f.head, "--feature": f.feature, "--stored": f.stored, "--risk": f.risk}
 	for _, name := range names {
 		value, known := values[name]
 		if !known {
@@ -331,13 +338,66 @@ func reportVerified(p process, v reviewapp.Verified) {
 			fmt.Fprintf(p.stderr, "review verify: %s: %s\n", list.label, strings.Join(list.ids, ", "))
 		}
 	}
-	fills := review.ParentFields() // a new slice: deleting from it changes no other caller's
-	if v.Handoff.ToRole != "" {
-		fills = slices.DeleteFunc(fills, func(field string) bool { return field == "to_role" })
-	}
-	fmt.Fprintf(p.stderr, "review verify: stdout is the skeleton of the record for 'roles append --stdin'; the parent of the chain fills %s\n", strings.Join(fills, ", "))
+	fmt.Fprintf(p.stderr, "review verify: stdout is the skeleton of the record for 'roles append --stdin'; the parent of the chain fills %s\n", parentFills(v.Handoff))
 	if err := writeReviewJSON(p, v.Handoff); err != nil {
 		reviewFailed(p, "verify", fmt.Errorf("the verdict is stored at %s, but the handoff could not be written: %w", v.Path, err))
+		return
+	}
+	p.exit(0)
+}
+
+// parentFills names the members of the skeleton h that the parent of the chain still fills, in the order of
+// review.ParentFields: to_role is not among them when the skeleton already names the next role.
+func parentFills(h roles.RoleHandoff) string {
+	fills := review.ParentFields() // a new slice: deleting from it changes no other caller's
+	if h.ToRole != "" {
+		fills = slices.DeleteFunc(fills, func(field string) bool { return field == "to_role" })
+	}
+	return strings.Join(fills, ", ")
+}
+
+// runReviewExempt implements 'review exempt --feature --base --head --risk [--cwd]': the report of the verifier is
+// read from stdin and nothing else. A report that is refused is exit 2 and nothing is written; any other failure, a
+// risk that names a high-risk item included, is exit 1.
+func runReviewExempt(p process, d deps, args []string) {
+	fail := func(err error) { reviewFailed(p, "exempt", err) }
+	f, err := parseReviewFlags(args, "--feature", "--base", "--head", "--risk", "--cwd")
+	if err == nil {
+		err = f.require("--feature", "--base", "--head", "--risk")
+	}
+	if err != nil {
+		fail(err)
+		return
+	}
+	dir, err := reviewPath(d, f.cwd)
+	if err != nil {
+		fail(err)
+		return
+	}
+	report, err := readReviewReply(p, d, "")
+	if err != nil {
+		fail(err)
+		return
+	}
+	exempted, err := newReviewService(d).Exempt(dir, f.feature, f.base, f.head, f.risk, report)
+	if err != nil {
+		fail(err)
+		return
+	}
+	reportExempted(p, exempted)
+}
+
+// reportExempted tells what exempt stored and hands the skeleton of the record on stdout. An exemption whose
+// directory could not be flushed is stored all the same, and the person is told not to exempt the head again.
+func reportExempted(p process, e reviewapp.Exemption) {
+	fmt.Fprintf(p.stderr, "review exempt: stored %s (sha256 %s)\n", e.Path, e.SHA256)
+	if e.NotFlushed != nil {
+		fmt.Fprintf(p.stderr, "review exempt: warning: its directory could not be flushed, so the exemption may not survive a crash of the machine; it is stored, do not exempt the head again: %v\n", e.NotFlushed)
+	}
+	fmt.Fprintln(p.stderr, "review exempt: the head is exempted from review: the declared risk is none and the report of the verifier is clear; 'review check' clears it unless a stored result blocks it")
+	fmt.Fprintf(p.stderr, "review exempt: stdout is the skeleton of the record for 'roles append --stdin'; the parent of the chain fills %s\n", parentFills(e.Handoff))
+	if err := writeReviewJSON(p, e.Handoff); err != nil {
+		reviewFailed(p, "exempt", fmt.Errorf("the exemption is stored at %s, but the handoff could not be written: %w", e.Path, err))
 		return
 	}
 	p.exit(0)

@@ -259,6 +259,19 @@ Commands:
                                              or a severe finding nobody checked, refuses, because a check that did
                                              not run never passes; print the files used as JSON, store nothing
                                              (exit 0 cleared, 1 refused or error)
+                                   exempt --feature NAME --base REV --head REV --risk none|ITEMS [--cwd REPO]
+                                             exempt a head from review on the evidence of the verifier and the risk
+                                             the agent declares; reads the verifier's report from stdin:
+                                             {"checks": [{"command": ..., "result": pass, fail or not-run, "output": ...}]}
+                                             --risk is none or the numbers 1 to 6 of the high-risk items (1 data or
+                                             irreversible effects, 2 security, 3 contracts others consume, 4 concurrency,
+                                             5 delivery or environment, 6 no test would catch a regression) separated
+                                             by commas; a head that names any item is never exempt; a report that is
+                                             missing or not clear is refused, because a check that did not run never
+                                             passes; store HEAD12-N.exempt.json, never over a file; print the record
+                                             skeleton for roles append with payload_kind review-exemption; review check
+                                             clears an exempted head, but a result that blocks wins over any exemption
+                                             (exit 0 stored, 2 report refused, 1 error)
                                    No verb launches an agent or dispatches work.
   memory <verb>                    Forward memory-directive verbs to the engine unchanged.
                                    Read-only: no verb queries or writes memory; query execution
