@@ -2,6 +2,8 @@ package gitexec_test
 
 import (
 	"bytes"
+	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -758,6 +760,34 @@ func TestWorktreeSaysWhatIsAtThePath(t *testing.T) {
 			got, err := g.Worktree(f.repo(), tc.path)
 			if err != nil || got != tc.want {
 				t.Errorf("Worktree(%s) = %+v, %v; want %+v", tc.path, got, err, tc.want)
+			}
+		})
+	}
+}
+
+// A real git that is not given the time to answer has said nothing about the path. The same git, given the
+// time, vouches for the worktree and calls the plain directory taken (TestWorktreeSaysWhatIsAtThePath), so
+// "taken" for either of them here would be the adapter's own conclusion from a silence.
+func TestWorktreeIsAnErrorWhenARealGitIsNotGivenTheTimeToAnswer(t *testing.T) {
+	f := newFixture(t, "sha1")
+	_, head := f.history()
+	parent := resolved(t, t.TempDir())
+	worktree, plain := filepath.Join(parent, "at-head"), filepath.Join(parent, "plain")
+	f.git("worktree", "add", "-q", "--detach", worktree, head)
+	if err := os.Mkdir(plain, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	hurried := gitexec.New(execrunner.New().WithMaxOutput(64<<20), gitexec.Options{Environ: f.environ(), Timeout: time.Nanosecond})
+
+	for _, tc := range []struct{ name, path string }{
+		{"a worktree of the repository", worktree},
+		{"a plain directory", plain},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := hurried.Worktree(f.repo(), tc.path)
+
+			if !errors.Is(err, context.DeadlineExceeded) || got != (app.WorktreeState{}) {
+				t.Errorf("Worktree(%s) = %+v, %v; want the zero state and an error that wraps %v", tc.path, got, err, context.DeadlineExceeded)
 			}
 		})
 	}

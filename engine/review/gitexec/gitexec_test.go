@@ -3,7 +3,9 @@ package gitexec_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
+	"os/exec"
 	"reflect"
 	"strings"
 	"testing"
@@ -334,6 +336,100 @@ func TestTheStartsOfGitThatLocateAndWorktreeMakeCarryNoGITVariableEither(t *test
 	}
 }
 
+// What is at a path is told from what git answered. A git that gave no answer (it could not be started, it was
+// killed, or it ran out of time) and a question that could not even be put to it say nothing about the path,
+// and that is an error, not a path that is taken: a person told that a worktree "is taken" when git timed
+// out would move away the very directory they need.
+func TestWorktreeReportsAGitThatGaveNoAnswerAsAnErrorAndNotAsATakenPath(t *testing.T) {
+	dir := t.TempDir()
+	for _, tc := range []struct {
+		name    string
+		runner  *fakeRunner
+		environ []string
+		path    string
+		is      error  // what the error must wrap, when it is a value
+		says    string // what the error must say, when it is text
+		asked   bool   // whether git was started
+	}{
+		{"the time ran out", &fakeRunner{err: fmt.Errorf("%w (%v)", context.DeadlineExceeded, "signal: killed")}, nil, dir, context.DeadlineExceeded, "", true},
+		{"git could not be started", &fakeRunner{err: &exec.Error{Name: "git", Err: exec.ErrNotFound}}, nil, dir, exec.ErrNotFound, "", true},
+		{"git was killed by a signal", &fakeRunner{err: &exec.ExitError{}, stderr: []byte("Segmentation fault")}, nil, dir, nil, "Segmentation fault", true},
+		{"the path is not absolute", &fakeRunner{}, nil, ".", nil, "is not an absolute path", false},
+		{"the environment redirects git", &fakeRunner{}, []string{"GIT_DIR=/elsewhere/.git"}, dir, nil, "GIT_DIR", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := newGit(tc.runner, tc.environ...).Worktree(repo, tc.path)
+
+			if err == nil {
+				t.Fatalf("Worktree(%s) = %+v, nil; want an error", tc.path, got)
+			}
+			if got != (app.WorktreeState{}) {
+				t.Errorf("Worktree(%s) = %+v with an error, want the zero state", tc.path, got)
+			}
+			if tc.is != nil && !errors.Is(err, tc.is) {
+				t.Errorf("Worktree(%s) error = %v, want one that wraps %v", tc.path, err, tc.is)
+			}
+			if !strings.Contains(err.Error(), tc.says) {
+				t.Errorf("Worktree(%s) error = %q, want it to say %q", tc.path, err, tc.says)
+			}
+			if started := len(tc.runner.calls) > 0; started != tc.asked {
+				t.Errorf("git was started = %v, want %v", started, tc.asked)
+			}
+		})
+	}
+}
+
+// lateRunner is a Runner that returns only when the time it was given is up, and then reports the exit status
+// of a process: what a Runner that stops a process at its deadline may hand back as it is.
+type lateRunner struct{ err error }
+
+func (l lateRunner) Output(ctx context.Context, env []string, bin string, args ...string) ([]byte, []byte, error) {
+	<-ctx.Done()
+	return nil, nil, l.err
+}
+
+// exitStatus is the error of a real process that ended with a status of 2: the test program, run with a flag
+// it does not know.
+func exitStatus(t *testing.T) error {
+	t.Helper()
+	err := exec.Command(os.Args[0], "-no-such-flag").Run()
+	var exit *exec.ExitError
+	if !errors.As(err, &exit) || exit.ExitCode() != 2 {
+		t.Fatalf("setup: the test program run with an unknown flag = %v, want an exit status of 2", err)
+	}
+	return err
+}
+
+// A git that ended with an exit status after its time was up did not answer in time: what it said before it
+// was stopped is not an answer. The adapter judges by the clock too, and not only by the kind of the error.
+func TestWorktreeIsAnErrorWhenGitEndedWithAnExitStatusAfterItsTimeWasUp(t *testing.T) {
+	status := exitStatus(t)
+	g := gitexec.New(lateRunner{err: status}, gitexec.Options{Timeout: time.Nanosecond})
+
+	got, err := g.Worktree(repo, t.TempDir())
+
+	var exit *exec.ExitError
+	if err == nil || got != (app.WorktreeState{}) || !errors.As(err, &exit) {
+		t.Errorf("Worktree() = %+v, %v; want the zero state and an error that holds the exit status git ended with", got, err)
+	}
+}
+
+// An answer of git that says the directory is not a working tree of the repository is an answer: the path is
+// taken, and no error is made of it. Here git answers a directory with what a bare repository gives.
+func TestWorktreeCountsAsTakenWhatGitAnsweredIsNotAWorkingTreeOfTheRepository(t *testing.T) {
+	dir := t.TempDir()
+	r := &fakeRunner{stdout: []byte(dir + "\n")}
+
+	got, err := newGit(r).Worktree(repo, dir)
+
+	if err != nil || got != (app.WorktreeState{Present: true}) {
+		t.Errorf("Worktree(%s) = %+v, %v; want a path that is there and is not a worktree of the repository, no error", dir, got, err)
+	}
+	if len(r.calls) == 0 {
+		t.Error("git was never started, want the answer to come from it")
+	}
+}
+
 // What git said is part of the error: a person told "exit status 128" cannot do anything with it.
 func TestAFailureOfGitCarriesWhatGitSaid(t *testing.T) {
 	boom := errors.New("exit status 128")
@@ -351,13 +447,22 @@ func TestAFailureOfGitCarriesWhatGitSaid(t *testing.T) {
 	}
 }
 
-// A git that hangs is stopped: every call has the deadline the options give, and none when they give none.
-func TestEveryGitCallHasTheDeadlineOfTheOptions(t *testing.T) {
+// A git that hangs is stopped: every call has the deadline the options give, and there is no way to ask for
+// none. Options that give no limit (zero, or a duration that is not positive) get the default, a deadline of
+// minutes: a git that never answers must not hang the command that waits for it.
+func TestEveryGitCallHasADeadlineAndTheOptionsThatGiveNoneGetTheDefault(t *testing.T) {
+	if gitexec.DefaultTimeout < time.Minute || gitexec.DefaultTimeout > time.Hour {
+		t.Fatalf("DefaultTimeout = %v, want a deadline of minutes", gitexec.DefaultTimeout)
+	}
 	for _, tc := range []struct {
 		name    string
 		timeout time.Duration
-		limited bool
-	}{{"a timeout", 90 * time.Second, true}, {"no timeout", 0, false}} {
+		want    time.Duration
+	}{
+		{"a timeout", 90 * time.Second, 90 * time.Second},
+		{"no timeout given", 0, gitexec.DefaultTimeout},
+		{"a negative timeout", -time.Second, gitexec.DefaultTimeout},
+	} {
 		t.Run(tc.name, func(t *testing.T) {
 			r := &fakeRunner{stdout: []byte(headSHA + "\n")}
 			before := time.Now()
@@ -365,12 +470,35 @@ func TestEveryGitCallHasTheDeadlineOfTheOptions(t *testing.T) {
 			_, _ = gitexec.New(r, gitexec.Options{Timeout: tc.timeout}).Commit(repo, "HEAD")
 
 			c := r.only(t)
-			if c.hasLimit != tc.limited {
-				t.Fatalf("the context has a deadline = %v, want %v", c.hasLimit, tc.limited)
+			if !c.hasLimit {
+				t.Fatal("the context has no deadline, want every start of git to have one")
 			}
-			if tc.limited {
-				if left := c.deadline.Sub(before); left < 80*time.Second || left > 91*time.Second {
-					t.Errorf("deadline is %v after the call began, want about %v", left, tc.timeout)
+			if left := c.deadline.Sub(before); left < tc.want || left > tc.want+5*time.Second {
+				t.Errorf("deadline is %v after the call began, want %v", left, tc.want)
+			}
+		})
+	}
+}
+
+// The questions Locate and Worktree put go through gitprov and have the deadline too.
+func TestTheStartsOfGitThatLocateAndWorktreeMakeHaveTheDefaultDeadlineToo(t *testing.T) {
+	dir := t.TempDir()
+	for name, run := range map[string]func(g gitexec.Git){
+		"Locate":   func(g gitexec.Git) { _, _ = g.Locate(dir) },
+		"Worktree": func(g gitexec.Git) { _, _ = g.Worktree(repo, dir) },
+	} {
+		t.Run(name, func(t *testing.T) {
+			r := &fakeRunner{stdout: []byte(dir + "\n")}
+			run(newGit(r))
+
+			if len(r.calls) == 0 {
+				t.Fatal("git was never started")
+			}
+			for _, c := range r.calls {
+				if !c.hasLimit {
+					t.Errorf("git %q was started with no deadline, want about %v", c.args, gitexec.DefaultTimeout)
+				} else if left := time.Until(c.deadline); left < gitexec.DefaultTimeout-time.Minute || left > gitexec.DefaultTimeout {
+					t.Errorf("git %q was started with a deadline in %v, want about %v", c.args, left, gitexec.DefaultTimeout)
 				}
 			}
 		})

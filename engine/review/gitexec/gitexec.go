@@ -62,6 +62,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -84,6 +85,11 @@ const gitProgram = "git"
 // maxSaid bounds the part of what git printed on its standard error that an error message repeats.
 const maxSaid = 2000
 
+// DefaultTimeout is how long one start of git may run when the options give no limit. Every question this
+// adapter puts is local and answers in milliseconds, and the checkout of a worktree of a large repository in
+// seconds: a git past five minutes is stuck. There is no way to run git without a limit.
+const DefaultTimeout = 5 * time.Minute
+
 // Runner starts a program with exactly the environment it is given and returns what it printed on its standard
 // output and on its standard error, apart. The process adapter is execrunner.Runner.
 type Runner interface {
@@ -95,7 +101,8 @@ type Options struct {
 	// Environ is the environment of the process, os.Environ() in production. Git is started under it with
 	// every variable of git removed; Locate refuses the ones that redirect git to another repository.
 	Environ []string
-	// Timeout is how long one start of git may run; zero is no limit.
+	// Timeout is how long one start of git may run. Zero, or any duration that is not positive, is
+	// DefaultTimeout: there is no way to start git without a limit.
 	Timeout time.Duration
 }
 
@@ -107,9 +114,14 @@ type Git struct {
 	timeout time.Duration
 }
 
-// New is the adapter over runner under the environment and the deadline of the options.
+// New is the adapter over runner under the environment and the deadline of the options (DefaultTimeout when
+// they give none).
 func New(runner Runner, o Options) Git {
-	return Git{runner: runner, ambient: append([]string(nil), o.Environ...), env: gitEnvironment(o.Environ), timeout: o.Timeout}
+	timeout := o.Timeout
+	if timeout <= 0 {
+		timeout = DefaultTimeout
+	}
+	return Git{runner: runner, ambient: append([]string(nil), o.Environ...), env: gitEnvironment(o.Environ), timeout: timeout}
 }
 
 // gitEnvironment is environ without the variables of git and of the locale, with the two this adapter sets. It
@@ -147,7 +159,10 @@ func PathsArgs(base, head string) []string {
 	return []string{"diff-tree", "-r", "--name-only", "-z", "--no-renames", "--ignore-submodules=none", base, head}
 }
 
-// emptyTree is the empty tree of the hash function the name head is written with.
+// emptyTree is the empty tree of the hash function the name head is written with. head must be a full object
+// name (gitobject.IsName): 40 characters in a repository that names its objects with SHA-1 and 64 in one that
+// uses SHA-256, which is what Commit returns. The length alone tells the two apart, so a head of any other
+// length is not refused here and is given the SHA-1 empty tree; keeping such a name out is up to the caller.
 func emptyTree(head string) string {
 	if len(head) == len(EmptyTreeSHA256) {
 		return EmptyTreeSHA256
@@ -224,6 +239,11 @@ func splitPaths(out []byte) ([]string, error) {
 // Worktree says what is at path. Something that is not a directory (a file, a link: links are not followed),
 // a directory that is not the root of a working tree of this repository, and a working tree git cannot vouch
 // for are all taken. A working tree of this repository says which commit it has checked out.
+//
+// Taken is what git answered, and nothing else is taken. A git that gave no answer (it could not be started,
+// it was killed, or its time ran out) and a question that could not be put to it (a path that is not
+// absolute, an environment that redirects git) say nothing about the path, and they are an error: calling the
+// path taken then would send a person to move away a worktree that may be the one they need.
 func (g Git) Worktree(repo app.Repository, path string) (app.WorktreeState, error) {
 	info, err := os.Lstat(path)
 	switch {
@@ -235,8 +255,20 @@ func (g Git) Worktree(repo app.Repository, path string) (app.WorktreeState, erro
 		return app.WorktreeState{Present: true}, nil
 	}
 	taken := app.WorktreeState{Present: true}
-	obs, err := g.observer().Locate(path)
+	asked := false
+	observer := gitprov.Observer{
+		Run: func(dir string, env []string, args []string) ([]byte, error) {
+			asked = true
+			return g.observe(dir, env, args)
+		},
+		Environ: g.ambient,
+	}
+	obs, err := observer.Locate(path)
 	if err != nil {
+		var silent *failure
+		if !asked || errors.As(err, &silent) {
+			return app.WorktreeState{}, err
+		}
 		return taken, nil
 	}
 	real, err := filepath.EvalSymlinks(path)
@@ -265,15 +297,36 @@ func (g Git) observer() gitprov.Observer {
 	return gitprov.Observer{Run: g.observe, Environ: g.ambient}
 }
 
-// observe is the gitprov.Runner: git in dir under the environment gitprov scrubbed.
+// observe is the gitprov.Runner: git in dir under the environment gitprov scrubbed. An error that is not git's
+// own answer is returned as a *failure, with the text it always had.
 func (g Git) observe(dir string, env []string, args []string) ([]byte, error) {
 	ctx, cancel := g.context()
 	defer cancel()
 	stdout, stderr, err := g.runner.Output(ctx, env, gitProgram, append([]string{"-C", dir}, args...)...)
 	if err != nil {
-		return nil, fmt.Errorf("%w%s", err, said(stderr))
+		told := fmt.Errorf("%w%s", err, said(stderr))
+		if !answered(ctx, err) {
+			return nil, &failure{told}
+		}
+		return nil, told
 	}
 	return stdout, nil
+}
+
+// failure is the error of a start of git that gave no answer. gitprov words every refusal it makes the same
+// way, whether git said the directory is no repository or git never ran, and passes the error of the runner on
+// with %w; this type is what lets Worktree tell the two apart afterwards.
+type failure struct{ err error }
+
+func (f *failure) Error() string { return f.err.Error() }
+func (f *failure) Unwrap() error { return f.err }
+
+// answered says whether err, the error of a start of git that ran under ctx, is an answer of git: it ran to an
+// exit status, and its time was not up. A git that could not be started, that a signal ended, or that the
+// deadline stopped answered nothing. It must be called before ctx is cancelled.
+func answered(ctx context.Context, err error) bool {
+	var exit *exec.ExitError
+	return ctx.Err() == nil && errors.As(err, &exit) && exit.ExitCode() >= 0
 }
 
 // output starts git in dir with args under the scrubbed environment and returns what it printed on its
@@ -289,12 +342,9 @@ func (g Git) output(dir, label string, args []string) ([]byte, error) {
 	return stdout, nil
 }
 
-// context is the context of one start of git: with the deadline of the options when there is one.
+// context is the context of one start of git, with its deadline.
 func (g Git) context() (context.Context, context.CancelFunc) {
-	if g.timeout > 0 {
-		return context.WithTimeout(context.Background(), g.timeout)
-	}
-	return context.WithCancel(context.Background())
+	return context.WithTimeout(context.Background(), g.timeout)
 }
 
 // said is what git printed on its standard error as the end of an error message, or nothing.
