@@ -157,7 +157,7 @@ const (
 // It returns the Result, or the zero Result and the first rule the reply breaks, as an error that wraps one
 // of the Err values.
 func Parse(data []byte, binding Binding) (Result, error) {
-	if err := binding.check(); err != nil {
+	if err := binding.Check(); err != nil {
 		return Result{}, err
 	}
 	result, err := decode(data)

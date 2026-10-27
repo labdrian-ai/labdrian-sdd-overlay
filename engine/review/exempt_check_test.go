@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/reviewresult"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/reviewverdict"
 )
 
@@ -71,6 +72,30 @@ func TestCheckExemptionRefusesTheRiskBeforeTheReport(t *testing.T) {
 
 	if !errors.Is(err, review.ErrHighRisk) || errors.Is(err, reviewverdict.ErrNotClear) {
 		t.Errorf("CheckExemption() error = %v, want the high risk and not the report", err)
+	}
+}
+
+// The binding a stored exemption names must name a candidate before anything is done with it, as the binding of a
+// stored result must before its reply is read: a base that is not a full object name, as an edited file could hold,
+// is refused here and never reaches git, and it is refused before the risk and the report are looked at.
+func TestCheckExemptionRefusesABindingThatNamesNoCandidateBeforeTheRiskAndTheReport(t *testing.T) {
+	for name, edit := range map[string]func(*review.StoredExemption){
+		"a base that would be read as an option": func(e *review.StoredExemption) { e.Binding.Base = "--output=forged" },
+		"a base that is a ref":                   func(e *review.StoredExemption) { e.Binding.Base = "main" },
+		"an abbreviated head":                    func(e *review.StoredExemption) { e.Binding.Head = e.Binding.Head[:12] },
+		"a digest that is not one":               func(e *review.StoredExemption) { e.Binding.DiffSHA256 = "not a digest" },
+		"a path listed twice":                    func(e *review.StoredExemption) { e.Binding.Paths = []string{"a.go", "a.go"} },
+	} {
+		t.Run(name, func(t *testing.T) {
+			e := storedExemptionOf(t, "2", `{"checks":[]}`) // a risk and a report that are refused as well
+			edit(&e)
+
+			err := review.CheckExemption(e)
+
+			if !errors.Is(err, reviewresult.ErrInvalidBinding) || errors.Is(err, review.ErrHighRisk) || errors.Is(err, reviewverdict.ErrNotClear) {
+				t.Errorf("CheckExemption() error = %v, want the invalid binding and neither the risk nor the report", err)
+			}
+		})
 	}
 }
 

@@ -88,11 +88,16 @@ func CheckReport(report []byte) error {
 	return parsed.Clear()
 }
 
-// CheckExemption holds a stored exemption to the rules it was made under, again: its declared risk names no
-// high-risk item (CheckRisk), checked first, and its report is clear (CheckReport). The engine decides from what the
-// file stores and never from the file existing, so an exemption that was edited to say something else is refused. The
-// binding is not looked at: CheckBinding holds it to the candidate git gives.
+// CheckExemption holds a stored exemption to the rules it was made under, again, in this order: its binding names a
+// candidate (reviewresult.Binding.Check), as the binding of a stored result must before anything is done with it, so
+// that a base that is not a full object name is refused before git is ever given it; its declared risk names no
+// high-risk item (CheckRisk); and its report is clear (CheckReport). The engine decides from what the file stores and
+// never from the file existing, so an exemption that was edited to say something else is refused. The binding is not
+// compared with git here: CheckBinding holds it to the candidate git gives.
 func CheckExemption(e StoredExemption) error {
+	if err := e.Binding.Check(); err != nil {
+		return err
+	}
 	if err := CheckRisk(e.Risk); err != nil {
 		return err
 	}
