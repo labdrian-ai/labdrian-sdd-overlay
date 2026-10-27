@@ -161,6 +161,13 @@ Semantic invariants (beyond schema shape):
     while a stored result records a row. A record that omits it for a change
     with no stored result passes and says that nothing was compared.
 
+Output:
+  A valid record prints two lines on stdout: "ok: actuals record satisfies
+  <schema> and every semantic invariant", then the line that says what the
+  review_lens_count check compared (the count and the rows it equals, or that the
+  field is omitted and there was nothing to compare). A refusal prints its
+  reason on stderr and exits non-zero.
+
 Exit codes:
   0  valid record, help, or version
   2  invalid command-line usage (--repo is required, and is an absolute path)

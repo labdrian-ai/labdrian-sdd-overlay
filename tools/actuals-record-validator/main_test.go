@@ -60,6 +60,13 @@ func runValidator(t *testing.T, args ...string) (int, string) {
 	return exitErr.ExitCode(), string(output)
 }
 
+// saysOK reports whether output holds the line that a valid record prints first. The usage text, which a usage error
+// prints, describes that line without the path of the schema it carries, so the path is part of what is looked for.
+func saysOK(t *testing.T, output string) bool {
+	t.Helper()
+	return strings.Contains(output, "ok: actuals record satisfies "+schemaPath(t)+" and every semantic invariant")
+}
+
 // validRecord is a minimal record that satisfies every rule. Each test mutates
 // exactly one thing, so a failure names one cause.
 func validRecord() map[string]any {
@@ -542,7 +549,7 @@ func TestLensCountOfZeroForAChangeWithNoStoredResultIsRefused(t *testing.T) {
 					t.Errorf("output %q does not contain %q", output, want)
 				}
 			}
-			if strings.Contains(output, "ok:") {
+			if saysOK(t, output) {
 				t.Errorf("output %q must not say ok", output)
 			}
 		})
@@ -579,6 +586,33 @@ func TestOmittedLensCountWhileTheStoredResultsRecordRowsIsRefused(t *testing.T) 
 	}
 }
 
+// A pass prints two lines on stdout, not one: the ok line, then the line that says what the review_lens_count check
+// compared (S13 asks for the explicit outcome, and a pass is never silent about it). The usage text says so, so that a
+// caller that reads the output does not take the first line for the whole of it.
+func TestAPassPrintsTwoLinesAndTheUsageTextSaysSo(t *testing.T) {
+	code, output := validateRecord(t, lensRecord(nil))
+
+	if code != exitOK {
+		t.Fatalf("exit code = %d, want %d; output=%q", code, exitOK, output)
+	}
+	lines := strings.Split(strings.TrimSuffix(output, "\n"), "\n")
+	if len(lines) != 2 || !strings.HasPrefix(lines[0], "ok: actuals record satisfies ") || !strings.HasPrefix(lines[1], "review_lens_count: ") {
+		t.Errorf("a pass printed %q, want two lines: the ok line, then the review_lens_count line", output)
+	}
+	if !saysOK(t, output) {
+		t.Errorf("the check that a refusal does not say ok does not find the ok line of a pass %q: it would pass for any output", output)
+	}
+
+	code, usage := runValidator(t, "--help")
+
+	if code != exitOK {
+		t.Fatalf("--help: exit code = %d, want %d; output=%q", code, exitOK, usage)
+	}
+	if want := "prints two lines on stdout"; !strings.Contains(usage, want) {
+		t.Errorf("the usage text %q must say that a valid record %s", usage, want)
+	}
+}
+
 // A check that cannot run refuses and never passes. Without --repo the stored results cannot be read, so the command
 // line is refused as a usage error, whatever the record says.
 func TestMissingRepoExitsTwoAndChecksNothing(t *testing.T) {
@@ -587,7 +621,7 @@ func TestMissingRepoExitsTwoAndChecksNothing(t *testing.T) {
 	if code != exitUsage {
 		t.Fatalf("exit code = %d, want %d; output=%q", code, exitUsage, output)
 	}
-	if !strings.Contains(output, "--repo") || strings.Contains(output, "ok:") {
+	if !strings.Contains(output, "--repo") || saysOK(t, output) {
 		t.Errorf("output %q must name --repo as the missing option and must not say ok", output)
 	}
 }
@@ -616,7 +650,7 @@ func TestRepoThatIsNotADirectoryExitsSeven(t *testing.T) {
 			if code != exitUnreadableResults {
 				t.Fatalf("exit code = %d, want %d; output=%q", code, exitUnreadableResults, output)
 			}
-			if !strings.Contains(output, tt.repo) || !strings.Contains(output, tt.reason) || strings.Contains(output, "ok:") {
+			if !strings.Contains(output, tt.repo) || !strings.Contains(output, tt.reason) || saysOK(t, output) {
 				t.Errorf("output %q must name %s as the repository that cannot be read, say %q, and must not say ok", output, tt.repo, tt.reason)
 			}
 		})
@@ -647,7 +681,7 @@ func TestRelativeRepoExitsTwoAndChecksNothing(t *testing.T) {
 			if code != exitUsage {
 				t.Fatalf("exit code = %d, want %d; output=%q", code, exitUsage, output)
 			}
-			if want := "--repo " + tt.repo + " is not an absolute path"; !strings.Contains(output, want) || strings.Contains(output, "ok:") {
+			if want := "--repo " + tt.repo + " is not an absolute path"; !strings.Contains(output, want) || saysOK(t, output) {
 				t.Errorf("output %q must say %q and must not say ok", output, want)
 			}
 		})
@@ -670,7 +704,7 @@ func TestRepoThatIsNotTheRootOfARepositoryExitsSeven(t *testing.T) {
 			if code != exitUnreadableResults {
 				t.Fatalf("exit code = %d, want %d; output=%q", code, exitUnreadableResults, output)
 			}
-			if !strings.Contains(output, tt.dir) || !strings.Contains(output, ".git") || strings.Contains(output, "ok:") {
+			if !strings.Contains(output, tt.dir) || !strings.Contains(output, ".git") || saysOK(t, output) {
 				t.Errorf("output %q must name %s as the directory that is not a repository root, say that it holds no .git, and must not say ok", output, tt.dir)
 			}
 		})

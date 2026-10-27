@@ -71,7 +71,7 @@ The number is checked when the actuals record is written, not trusted (`odd/task
 | any | cannot be counted (`--repo` is not a directory or holds no `.git` entry, or a file named like a result is not one) | exit 7, naming the repository or the file, and that `review_lens_count` cannot be checked |
 
 - A change reviewed before the rows were stored (a gentle receipt and no stored result: nothing in `odd/review-results/` was ever written for it) has no row to count, so its record omits `review_lens_count`. A count taken from the receipt of another tool is the third row of the table: it is refused and never passed, because the validator cannot tell it from a count that was made up. A count of 0 is a count like any other: with no stored result it is the third row too, and only omitting the field is the outcome for such a change.
-- Exit 7 is new. The exit codes 0, 2, 3, 4, 5 and 6 keep their meanings: 2 is now also a missing or relative `--repo`, and a pass prints one more line than it did.
+- Exit 7 is new. The exit codes 0, 2, 3, 4, 5 and 6 keep their meanings: 2 is now also a missing or relative `--repo`. A pass prints two lines on stdout where it printed one (it is the `--help` text of the validator that says so too): `ok: actuals record satisfies <schema> and every semantic invariant`, then the line of the table above that says what the count check compared. A caller that reads the output must not take the first line for the whole of it; the exit code stays what authorises the write.
 
 ## The verdict of the verifier
 
