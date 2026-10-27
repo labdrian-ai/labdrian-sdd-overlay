@@ -40,6 +40,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"strings"
 )
@@ -83,7 +84,22 @@ type Store struct {
 	// the moments another process could change the directories under the store. A test makes that change
 	// there, at the exact moment, which no test can do to a real process on purpose. New leaves it nil.
 	race func(point, dir string)
+	// syncDir, when it is set, flushes a held directory instead of (*os.File).Sync, so a test can make the
+	// flush fail. New leaves it nil.
+	syncDir func(*os.File) error
 }
+
+// flush flushes the held directory dir with the store's flush.
+func (s Store) flush(dir *os.File) error {
+	if s.syncDir != nil {
+		return s.syncDir(dir)
+	}
+	return dir.Sync()
+}
+
+// temporaryName is the name of a temporary file of a write, built from tempPattern so that isTemporary always
+// recognises it.
+func temporaryName(token string) string { return strings.Replace(tempPattern, "*", token, 1) }
 
 // New is the Store.
 func New() Store { return Store{} }

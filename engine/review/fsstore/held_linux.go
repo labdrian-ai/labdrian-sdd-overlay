@@ -88,8 +88,9 @@ func (s Store) createHeld(root, feature, name string, data []byte) error {
 	}
 	s.at(pointLinked, path)
 	// The new name survives a crash only once the directory is flushed, as atomicfile does with Options.Sync.
-	if err = dir.Sync(); err != nil {
-		return fmt.Errorf("store %s: sync the directory: %w", target, err)
+	if err = s.flush(dir); err != nil {
+		// The name is published: say so, so the result is not stored a second time.
+		return fmt.Errorf("%w: %s: %w", app.ErrNotFlushed, target, err)
 	}
 	return nil
 }
@@ -181,7 +182,7 @@ func notADirectory(path string, err error) error {
 // is anything in it, written whole and flushed. A name that is taken is not used again.
 func stageAt(dirfd int, dir string, data []byte) (string, error) {
 	for try := 0; try < maxTempTries; try++ {
-		name := ".review-" + strconv.FormatUint(rand.Uint64(), 10) + ".tmp"
+		name := temporaryName(strconv.FormatUint(rand.Uint64(), 10))
 		fd, err := openat(dirfd, name, syscall.O_WRONLY|syscall.O_CREAT|syscall.O_EXCL|syscall.O_NOFOLLOW|syscall.O_CLOEXEC, 0o600)
 		if errors.Is(err, fs.ErrExist) {
 			continue

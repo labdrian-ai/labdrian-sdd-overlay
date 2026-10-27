@@ -113,6 +113,9 @@ type Recorded struct {
 	SHA256 string
 	// Handoff is the skeleton of the record of the role chain that closes the review.
 	Handoff roles.RoleHandoff
+	// NotFlushed, when it is not nil, wraps ErrNotFlushed: the result is stored, but the directory could not be
+	// flushed after it, so it may not survive a crash of the machine. The result is not stored again.
+	NotFlushed error
 }
 
 // Record holds the reply of a reviewer to the candidate of the diff from base to head, recomputed from git
@@ -139,11 +142,15 @@ func (s Service) Record(dir, feature, base, head string, reply []byte) (Recorded
 		return Recorded{}, err
 	}
 	number, name, err := s.store(repo.Root, feature, candidate, file)
-	if err != nil {
+	var notFlushed error
+	switch {
+	case errors.Is(err, ErrNotFlushed):
+		notFlushed = err
+	case err != nil:
 		return Recorded{}, err
 	}
 	path, sum := review.ResultPath(feature, name), sha256hex.Sum(file)
-	return Recorded{Candidate: candidate, Path: path, Number: number, SHA256: sum, Handoff: review.Handoff(candidate, path, sum)}, nil
+	return Recorded{Candidate: candidate, Path: path, Number: number, SHA256: sum, Handoff: review.Handoff(candidate, path, sum), NotFlushed: notFlushed}, nil
 }
 
 // store takes the next free number of the head in the directory of the feature. A name that is taken by a
@@ -160,8 +167,8 @@ func (s Service) store(root, feature string, c review.Candidate, file []byte) (i
 		name := review.ResultName(c, number)
 		err = s.results.Create(root, feature, name, file)
 		switch {
-		case err == nil:
-			return number, name, nil
+		case err == nil, errors.Is(err, ErrNotFlushed):
+			return number, name, err
 		case !errors.Is(err, ErrExists):
 			return 0, "", fmt.Errorf("store %s: %w", review.ResultPath(feature, name), err)
 		}

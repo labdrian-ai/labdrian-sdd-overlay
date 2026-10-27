@@ -909,3 +909,27 @@ func TestReviewVerbsOfTheBuiltProgramBindStoreAndHandOffARecordTheChainAccepts(t
 		t.Errorf("bind with no head: exit %d, stderr %q; want 1 and the flag named", code, errText)
 	}
 }
+
+// A result stored in a directory that could not be flushed is stored: the verb exits 0 with the skeleton, and
+// says on stderr that the result may not survive a crash, so that nobody records it a second time.
+func TestRecordSaysAStoredResultWasNotFlushedAndStillHandsTheSkeleton(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	code := -1
+	p := process{stdout: &stdout, stderr: &stderr, exit: func(c int) { code = c }}
+	recorded := reviewapp.Recorded{Path: "odd/review-results/own-rdd/222222222222-1.json", SHA256: "abc",
+		NotFlushed: fmt.Errorf("%w: sync: input/output error", reviewapp.ErrNotFlushed)}
+
+	reportRecorded(p, recorded)
+
+	if code != 0 {
+		t.Errorf("exit code = %d, want 0: the result is stored", code)
+	}
+	if stdout.Len() == 0 {
+		t.Errorf("stdout is empty, want the skeleton of the record")
+	}
+	for _, want := range []string{"stored " + recorded.Path, "could not be flushed", "do not record it again"} {
+		if !strings.Contains(stderr.String(), want) {
+			t.Errorf("stderr = %q, want it to say %q", stderr.String(), want)
+		}
+	}
+}

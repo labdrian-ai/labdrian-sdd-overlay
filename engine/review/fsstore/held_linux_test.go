@@ -1,10 +1,13 @@
 package fsstore
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review/app"
 )
 
 // On linux the store holds each directory of the path open from the moment it has walked to it, and does what
@@ -151,6 +154,32 @@ func TestTheStoreHoldsNoDescriptorOnceACallHasReturned(t *testing.T) {
 		c.do()
 		if after := openDescriptors(t); after != before {
 			t.Errorf("%s: %d descriptors open before the call and %d after it, want the same", c.name, before, after)
+		}
+	}
+}
+
+// A directory that cannot be flushed after the file was linked leaves the result stored: the error says so
+// (app.ErrNotFlushed), and the file is there under its name with its content.
+func TestAHeldCreateWhoseDirectoryCannotBeFlushedSaysTheResultIsStored(t *testing.T) {
+	root := t.TempDir()
+	s := Store{syncDir: func(*os.File) error { return errors.New("input/output error") }}
+
+	err := s.createHeld(root, "own-rdd", "222222222222-1.json", []byte("x"))
+
+	if !errors.Is(err, app.ErrNotFlushed) {
+		t.Fatalf("createHeld() error = %v, want an error wrapping app.ErrNotFlushed", err)
+	}
+	data, readErr := os.ReadFile(filepath.Join(root, "odd", "review-results", "own-rdd", "222222222222-1.json"))
+	if readErr != nil || string(data) != "x" {
+		t.Errorf("stored file = %q, %v; want \"x\"", data, readErr)
+	}
+}
+
+// The temporary files a held write stages are the ones Names hides: the name is built from tempPattern.
+func TestTheTemporaryNameOfAWriteIsOneNamesHides(t *testing.T) {
+	for _, token := range []string{"0", "18446744073709551615"} {
+		if name := temporaryName(token); !isTemporary(name) {
+			t.Errorf("isTemporary(temporaryName(%q) = %q) = false, want true", token, name)
 		}
 	}
 }

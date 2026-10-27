@@ -90,6 +90,9 @@ var (
 	ErrWorktreeForeign = errors.New("review: the path of the worktree of the review is taken")
 	// ErrNoFreeNumber is a results directory in which no number stayed free for the head over a few tries.
 	ErrNoFreeNumber = errors.New("review: no result number stayed free")
+	// ErrNotFlushed is what Results.Create returns, wrapped, when the result is stored under its name but the
+	// directory could not be flushed after it: the result is there, and may not survive a crash of the machine.
+	ErrNotFlushed = errors.New("review: the result is stored but its directory was not flushed")
 )
 
 // ReplyRefusedError is the refusal of a reply: it did not hold to the binding, was not the object of the

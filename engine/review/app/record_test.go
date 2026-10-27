@@ -395,3 +395,26 @@ func TestRecordReturnsWhatGitOrTheStoreCouldNotDo(t *testing.T) {
 		})
 	}
 }
+
+// A store that published the result but could not flush its directory stored it all the same: Record answers
+// with what it stored, and says the flush failed, instead of a failure a retry would answer with a second copy.
+func TestRecordReportsAStoredResultWhoseDirectoryWasNotFlushedAsStored(t *testing.T) {
+	g, store := newFakeGit(), newFakeResults()
+	store.unflushed = fmt.Errorf("%w: sync: input/output error", app.ErrNotFlushed)
+	c := candidateOf(t, g)
+
+	got, err := app.New(g, store).Record("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", replyFor(t, c))
+
+	if err != nil {
+		t.Fatalf("Record() error = %v, want nil: the result is stored", err)
+	}
+	if got.Path != wantFirstPath || got.Number != 1 {
+		t.Errorf("Path = %q, Number = %d; want %q and 1", got.Path, got.Number, wantFirstPath)
+	}
+	if !errors.Is(got.NotFlushed, app.ErrNotFlushed) {
+		t.Errorf("NotFlushed = %v, want an error wrapping ErrNotFlushed", got.NotFlushed)
+	}
+	if n := store.created(); n != 1 {
+		t.Errorf("Create called %d times, want 1: a stored result is not stored again", n)
+	}
+}

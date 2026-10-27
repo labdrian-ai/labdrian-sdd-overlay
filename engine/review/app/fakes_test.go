@@ -140,6 +140,9 @@ type fakeResults struct {
 	fail  map[string]error
 	calls []string
 	races int
+	// unflushed, when set, is what Create returns after it stored the file: a store that published the
+	// result but could not flush its directory.
+	unflushed error
 }
 
 func newFakeResults() *fakeResults {
@@ -200,7 +203,7 @@ func (r *fakeResults) Create(root, feature, name string, data []byte) error {
 		return app.ErrExists
 	}
 	r.put(feature, name, data)
-	return nil
+	return r.unflushed
 }
 
 // candidateOf is the candidate the fake git gives, as the domain binds it.

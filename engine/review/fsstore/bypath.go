@@ -43,7 +43,10 @@ func (s Store) namesByPath(root, feature string) ([]string, error) {
 
 // createByPath is Create for a platform that cannot hold a directory open. The directories are looked at again
 // right before the file is linked, and nothing is published into one that changed (ErrChanged); one that
-// changes after the link is reported, with the file already linked.
+// changes after the link is reported, with the file already linked. Two limits stay on these platforms: a
+// directory swapped between the last look and the link is not seen, and a directory that cannot be flushed
+// after the link is reported as a failure, not as app.ErrNotFlushed, because atomicfile does not tell the
+// flush apart from the link.
 func (s Store) createByPath(root, feature, name string, data []byte) error {
 	loc, _, err := s.walk(root, feature, true)
 	if err != nil {

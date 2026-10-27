@@ -241,11 +241,21 @@ func runReviewRecord(p process, d deps, args []string) {
 		fail(err)
 		return
 	}
+	reportRecorded(p, recorded)
+}
+
+// reportRecorded tells what record stored and hands the skeleton of the record on stdout. A result whose
+// directory could not be flushed is stored all the same, and the person is told not to record it again.
+func reportRecorded(p process, recorded reviewapp.Recorded) {
 	fmt.Fprintf(p.stderr, "review record: stored %s (sha256 %s)\n", recorded.Path, recorded.SHA256)
+	if recorded.NotFlushed != nil {
+		fmt.Fprintf(p.stderr, "review record: warning: its directory could not be flushed, so the result may not survive a crash of the machine; it is stored, do not record it again: %v\n", recorded.NotFlushed)
+	}
 	fmt.Fprintf(p.stderr, "review record: stdout is the skeleton of the record for 'roles append --stdin'; the parent of the chain fills %s\n",
 		strings.Join(review.ParentFields(), ", "))
 	if err := writeReviewJSON(p, recorded.Handoff); err != nil {
-		fail(fmt.Errorf("the result is stored at %s, but the handoff could not be written: %w", recorded.Path, err))
+		fmt.Fprintf(p.stderr, "error: review record: %v\n", fmt.Errorf("the result is stored at %s, but the handoff could not be written: %w", recorded.Path, err))
+		p.exit(1)
 		return
 	}
 	p.exit(0)
