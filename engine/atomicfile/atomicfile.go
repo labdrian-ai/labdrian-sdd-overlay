@@ -279,7 +279,11 @@ type dirFlushError struct {
 func (e *dirFlushError) Error() string {
 	return fmt.Sprintf("atomicfile: sync directory of %s: %v", e.path, e.err)
 }
-func (e *dirFlushError) Unwrap() error        { return e.err }
+
+// Unwrap is the error of the flush.
+func (e *dirFlushError) Unwrap() error { return e.err }
+
+// Is says the error is ErrDirNotFlushed; the error of the flush is reached through Unwrap.
 func (e *dirFlushError) Is(target error) bool { return target == ErrDirNotFlushed }
 
 // backUp copies the file at path to path+".bak", in the same atomic way and with

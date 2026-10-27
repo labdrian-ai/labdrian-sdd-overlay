@@ -145,10 +145,10 @@ func (s Store) openBelow(parent *os.File, path, name string, create bool) (*os.F
 	}
 	if err != nil {
 		if !create && !errors.Is(err, syscall.ENOTDIR) && !errors.Is(err, syscall.ELOOP) {
-			// The raw syscalls carry no operation or path, so the errors of this function are given the ones
-			// os.Mkdir and os.ReadDir gave before the store held its directories open ("make <path>: mkdir
-			// <path>: ...", "read <path>: open <path>: ..."), which a test pins. A link or a file on the way is
-			// worded by notADirectory instead.
+			// Names: the raw syscall carries no operation or path, so the error is given the words os.ReadDir
+			// gave before the store held its directories open ("read <path>: open <path>: ..."), which a test
+			// pins. The "make <path>: mkdir <path>: ..." of Create is built above, where mkdirat fails. A link
+			// or a file on the way is worded by notADirectory instead.
 			return nil, fmt.Errorf("read %s: %w", path, &fs.PathError{Op: "open", Path: path, Err: err})
 		}
 		return nil, notADirectory(path, err)
