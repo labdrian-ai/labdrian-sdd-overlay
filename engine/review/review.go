@@ -85,6 +85,11 @@ const (
 	EvidenceDiff     = "review-diff"
 	EvidenceResult   = "review-result"
 	EvidenceVerifier = "verifier-report"
+
+	// PayloadExemption is the payload_kind of the record that closes the exemption of a head from review, and
+	// EvidenceExemption the kind of the evidence that binds that record to the stored bytes of the exemption.
+	PayloadExemption  = "review-exemption"
+	EvidenceExemption = "review-exemption"
 )
 
 // The reasons the functions of this package refuse. An error they return wraps exactly one of them, so a
