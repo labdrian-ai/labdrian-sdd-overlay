@@ -1191,6 +1191,10 @@ func TestWrapperUsageOfReviewVerifySaysWhatTheEngineUsageSays(t *testing.T) {
 		{"delivery when it is clear", "delivery when it is clear"},
 		{"one correction round per candidate", "one correction round per candidate"},
 		{"exit 0 stored, 2 reply refused, 1 usage error", "exit 0 stored, 2 reply refused, 1 error"},
+		{"engine review check --feature <name> [--head <rev>] [--cwd <repo>]", "check --feature NAME [--head REV] [--cwd REPO]"},
+		{"at least one result binds the head and every one is clear", "one result binds the head and every one is clear"},
+		{"a check that did not run never passes", "a check that did not run never passes"},
+		{"exit 0 cleared, 1 usage error, refusal or any other failure", "exit 0 cleared, 1 refused or error"},
 	} {
 		engine, inWrapper := pair.engine, pair.inWrapper
 		if !strings.Contains(out.String(), engine) {

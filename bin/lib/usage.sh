@@ -252,6 +252,13 @@ Commands:
                                              over a file; print the record skeleton with evidence verifier-report and
                                              to_role filled (builder when it blocks, delivery when it is clear); one
                                              correction round per candidate (exit 0 stored, 2 reply refused, 1 error)
+                                   check --feature NAME [--head REV] [--cwd REPO]
+                                             recompute from git the candidate of each result stored for the head
+                                             (default HEAD), hold the results and verdicts to it, and refuse unless
+                                             one result binds the head and every one is clear: a result that blocks,
+                                             or a severe finding nobody checked, refuses, because a check that did
+                                             not run never passes; print the files used as JSON, store nothing
+                                             (exit 0 cleared, 1 refused or error)
                                    No verb launches an agent or dispatches work.
   memory <verb>                    Forward memory-directive verbs to the engine unchanged.
                                    Read-only: no verb queries or writes memory; query execution
