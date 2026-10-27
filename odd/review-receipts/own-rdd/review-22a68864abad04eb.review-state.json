@@ -1,0 +1,387 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:769f28bf0cc1c0d41b4d56f95561be73ebec84511358a7c7bdf0815b4203f808",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-22a68864abad04eb",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "40b0e803f9d44bea705a5371a3c49003415767ee",
+      "candidate_tree": "9a3f5eab6b4e582d4a9bbd7da08bd690d5249304",
+      "paths_digest": "sha256:b55c67f1deeccca1db371efc9fa6d7db513f8f62be05101fffaf5ddceb7b59d7",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/review/app/verify.go",
+        "engine/review/app/verify_test.go",
+        "engine/review/fsstore/fsstore.go",
+        "engine/review/fsstore/openread_other.go",
+        "engine/review/fsstore/openread_unix.go",
+        "engine/review/fsstore/read_internal_test.go",
+        "engine/review/handoff.go",
+        "engine/review/names.go",
+        "engine/review/verdict_test.go",
+        "engine/reviewverdict/decide.go",
+        "engine/reviewverdict/decide_test.go"
+      ],
+      "identity": "sha256:b015325e63b7f49526822226f64b7e0141ac20e2ab7aed5c8c56ce2478ffa816"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "40b0e803f9d44bea705a5371a3c49003415767ee",
+      "candidate_tree": "9a3f5eab6b4e582d4a9bbd7da08bd690d5249304",
+      "paths_digest": "sha256:b55c67f1deeccca1db371efc9fa6d7db513f8f62be05101fffaf5ddceb7b59d7",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/review/app/verify.go",
+        "engine/review/app/verify_test.go",
+        "engine/review/fsstore/fsstore.go",
+        "engine/review/fsstore/openread_other.go",
+        "engine/review/fsstore/openread_unix.go",
+        "engine/review/fsstore/read_internal_test.go",
+        "engine/review/handoff.go",
+        "engine/review/names.go",
+        "engine/review/verdict_test.go",
+        "engine/reviewverdict/decide.go",
+        "engine/reviewverdict/decide_test.go"
+      ],
+      "identity": "sha256:b015325e63b7f49526822226f64b7e0141ac20e2ab7aed5c8c56ce2478ffa816"
+    },
+    "genesis_paths": [
+      "engine/review/app/verify.go",
+      "engine/review/app/verify_test.go",
+      "engine/review/fsstore/fsstore.go",
+      "engine/review/fsstore/openread_other.go",
+      "engine/review/fsstore/openread_unix.go",
+      "engine/review/fsstore/read_internal_test.go",
+      "engine/review/handoff.go",
+      "engine/review/names.go",
+      "engine/review/verdict_test.go",
+      "engine/reviewverdict/decide.go",
+      "engine/reviewverdict/decide_test.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-risk",
+      "review-resilience",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 154,
+    "correction_budget": 77,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "F1 fixes review findings: Read opens with O_NONBLOCK and requires a regular file (a guard against a swapped pipe and inode reuse), renames Decide's fate constants, groups VerifiedHandoff's refs and adds pinning tests",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:626ecafbdb59641fa63ab3c2cae9a3a8156f9e0c21a48cceae958063e3e88ccc",
+    "capture_phase_revision": "sha256:d38e9d0567d15cc26efdb10d91153f1f4ba0db950777dfea41b257d464a2b70a",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:b015325e63b7f49526822226f64b7e0141ac20e2ab7aed5c8c56ce2478ffa816",
+        "capture_phase_revision": "sha256:d38e9d0567d15cc26efdb10d91153f1f4ba0db950777dfea41b257d464a2b70a",
+        "artifact_digest": "sha256:e903ae218c6903b200668efd21351a8c521c4f7e3ea366871a78a82a15a337c5",
+        "result_hash": "sha256:6d56d3419100ed0163dfd653342779440eaeed545c3510182ae7b29c41c47ef2",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:c56ac298430c86efd47df31c52e6144e84a0caf3835ea2146c7d464a6301e138",
+            "lineage_id": "review-22a68864abad04eb",
+            "authority_revision": "sha256:d38e9d0567d15cc26efdb10d91153f1f4ba0db950777dfea41b257d464a2b70a",
+            "target_identity": "sha256:b015325e63b7f49526822226f64b7e0141ac20e2ab7aed5c8c56ce2478ffa816",
+            "base_tree": "40b0e803f9d44bea705a5371a3c49003415767ee",
+            "candidate_tree": "9a3f5eab6b4e582d4a9bbd7da08bd690d5249304",
+            "changed_path_manifest_sha256": "sha256:b39b6249422ccbe6168f1ae3a609025797a38719236f96b8feddb08b858383a0",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:c56ac298430c86efd47df31c52e6144e84a0caf3835ea2146c7d464a6301e138",
+            "raw_sha256": "sha256:87a29c0a25450c9a2f131c00fed11eb161248e8ec79d2189a1fb06920678b1e7",
+            "canonical_sha256": "sha256:001b44eacf7ec92bbef52c63abcce0050b857f13eb311e73b1b1be3aa9b43ed8",
+            "result_hash": "sha256:6d56d3419100ed0163dfd653342779440eaeed545c3510182ae7b29c41c47ef2",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:c56ac298430c86efd47df31c52e6144e84a0caf3835ea2146c7d464a6301e138",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/app/verify.go",
+                "engine/review/app/verify_test.go",
+                "engine/review/fsstore/fsstore.go",
+                "engine/review/fsstore/openread_other.go",
+                "engine/review/fsstore/openread_unix.go",
+                "engine/review/fsstore/read_internal_test.go",
+                "engine/review/handoff.go",
+                "engine/review/names.go",
+                "engine/review/verdict_test.go",
+                "engine/reviewverdict/decide.go",
+                "engine/reviewverdict/decide_test.go"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "Reviewed all 11 changed paths. The fsstore change opens with O_NONBLOCK on unix and then requires the opened file to be regular and the same file as the one looked at, which closes the FIFO hang and inode-reuse window; it tightens behavior and introduces no new exposure.",
+              "engine/review/names.go fixes isLowerHex precedence so only 0-9 and a-f pass. The base condition accepted other characters (for example g-z), so this narrows validation and is a security improvement.",
+              "engine/reviewverdict/decide.go changes are renames of the fate constants plus comment updates, and engine/review/handoff.go introduces the FileRef struct, so call sites keep the same argument order semantics. Decide logic is unchanged, and no secrets, authorization, or dependency changes are present."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-resilience",
+        "selected_order": 1,
+        "target_identity": "sha256:b015325e63b7f49526822226f64b7e0141ac20e2ab7aed5c8c56ce2478ffa816",
+        "capture_phase_revision": "sha256:d38e9d0567d15cc26efdb10d91153f1f4ba0db950777dfea41b257d464a2b70a",
+        "artifact_digest": "sha256:6303d33d6dcef0cdc654bdd29bee1946595e26429ceaebde9b96439009b70b8b",
+        "result_hash": "sha256:ac23e4ef88b5012ed5033e5bd9db26e29d7960cc817447eb66567cd455c0d886",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:7d7135a34446fcf6659b65f3bb633ab7daee3118c9110f1b53d669a53b6a4531",
+            "lineage_id": "review-22a68864abad04eb",
+            "authority_revision": "sha256:d38e9d0567d15cc26efdb10d91153f1f4ba0db950777dfea41b257d464a2b70a",
+            "target_identity": "sha256:b015325e63b7f49526822226f64b7e0141ac20e2ab7aed5c8c56ce2478ffa816",
+            "base_tree": "40b0e803f9d44bea705a5371a3c49003415767ee",
+            "candidate_tree": "9a3f5eab6b4e582d4a9bbd7da08bd690d5249304",
+            "changed_path_manifest_sha256": "sha256:b39b6249422ccbe6168f1ae3a609025797a38719236f96b8feddb08b858383a0",
+            "lens": "review-resilience",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:7d7135a34446fcf6659b65f3bb633ab7daee3118c9110f1b53d669a53b6a4531",
+            "raw_sha256": "sha256:4e628f67b336a383b9965f9e7f72b04a09c5f1353ccd728c8e9ce1ae3770eefa",
+            "canonical_sha256": "sha256:13b956771fb7c55c0cc65b194220a77d9d963970cdde6eeeba92b1d238503d75",
+            "result_hash": "sha256:ac23e4ef88b5012ed5033e5bd9db26e29d7960cc817447eb66567cd455c0d886",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:7d7135a34446fcf6659b65f3bb633ab7daee3118c9110f1b53d669a53b6a4531",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/app/verify.go",
+                "engine/review/app/verify_test.go",
+                "engine/review/fsstore/fsstore.go",
+                "engine/review/fsstore/openread_other.go",
+                "engine/review/fsstore/openread_unix.go",
+                "engine/review/fsstore/read_internal_test.go",
+                "engine/review/handoff.go",
+                "engine/review/names.go",
+                "engine/review/verdict_test.go",
+                "engine/reviewverdict/decide.go",
+                "engine/reviewverdict/decide_test.go"
+              ]
+            },
+            "lens": "review-resilience",
+            "findings": [
+              {
+                "id": "R4-001",
+                "lens": "resilience",
+                "location": "engine/review/fsstore/fsstore.go:201",
+                "severity": "SUGGESTION",
+                "claim": "Opening with O_NONBLOCK on unix leaves the descriptor non-blocking for the subsequent read. For regular files this has no effect, and the regular-file check follows immediately, so the hang risk is removed. No production failure mode was identified; this is only a note that the non-blocking flag stays set for the read path, which is harmless for regular files.",
+                "proof_refs": [
+                  "engine/review/fsstore/openread_unix.go:12",
+                  "engine/review/fsstore/fsstore.go:208"
+                ]
+              }
+            ],
+            "evidence": [
+              "The change replaces a blocking open with O_NONBLOCK and adds a IsRegular check, which removes a hang when a file is swapped for a FIFO between look and open. This improves resilience and the added test covers it with a 5s timeout.",
+              "The isLowerHex fix in engine/review/names.go corrects an operator precedence bug that previously accepted wrong characters; it only tightens validation.",
+              "VerifiedHandoff signature refactor to FileRef is mechanical, and all call sites shown (verify.go, tests) are updated consistently.",
+              "The reviewverdict renames and doc changes leave behavior unchanged; the added tests pin that a missing verdict yields Unverified for every disposition.",
+              "No candidate-caused failure, retry, or degradation regression was found."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "selected_order": 2,
+        "target_identity": "sha256:b015325e63b7f49526822226f64b7e0141ac20e2ab7aed5c8c56ce2478ffa816",
+        "capture_phase_revision": "sha256:d38e9d0567d15cc26efdb10d91153f1f4ba0db950777dfea41b257d464a2b70a",
+        "artifact_digest": "sha256:1a70533b22ec452518e38f229505ece1e013bed8c04effa489bcbb70f58fc8a6",
+        "result_hash": "sha256:79f1bab38d2a78aadb5172417bca6fe42f1b031fd63643fa4ee211717d2512e5",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:7b60e7da0d105ba025fb2e64e5c6df7e15e23d75b0e93ba5155611a10df9d617",
+            "lineage_id": "review-22a68864abad04eb",
+            "authority_revision": "sha256:d38e9d0567d15cc26efdb10d91153f1f4ba0db950777dfea41b257d464a2b70a",
+            "target_identity": "sha256:b015325e63b7f49526822226f64b7e0141ac20e2ab7aed5c8c56ce2478ffa816",
+            "base_tree": "40b0e803f9d44bea705a5371a3c49003415767ee",
+            "candidate_tree": "9a3f5eab6b4e582d4a9bbd7da08bd690d5249304",
+            "changed_path_manifest_sha256": "sha256:b39b6249422ccbe6168f1ae3a609025797a38719236f96b8feddb08b858383a0",
+            "lens": "review-readability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:7b60e7da0d105ba025fb2e64e5c6df7e15e23d75b0e93ba5155611a10df9d617",
+            "raw_sha256": "sha256:7e5bd064c2892b38ebeea19cbdbe6033c26860c031c70b583417fc14f5134e83",
+            "canonical_sha256": "sha256:b2ff652fdc9e9c894cdd63738bda22811890224271911b5f34c65eade5745895",
+            "result_hash": "sha256:79f1bab38d2a78aadb5172417bca6fe42f1b031fd63643fa4ee211717d2512e5",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:7b60e7da0d105ba025fb2e64e5c6df7e15e23d75b0e93ba5155611a10df9d617",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/app/verify.go",
+                "engine/review/app/verify_test.go",
+                "engine/review/fsstore/fsstore.go",
+                "engine/review/fsstore/openread_other.go",
+                "engine/review/fsstore/openread_unix.go",
+                "engine/review/fsstore/read_internal_test.go",
+                "engine/review/handoff.go",
+                "engine/review/names.go",
+                "engine/review/verdict_test.go",
+                "engine/reviewverdict/decide.go",
+                "engine/reviewverdict/decide_test.go"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-decide-doc-wrap",
+                "lens": "readability",
+                "location": "engine/reviewverdict/decide.go:45-47",
+                "severity": "SUGGESTION",
+                "claim": "The Decide doc comment now mixes unrelated points in one paragraph. The last line is far longer than the rest and carries the outcome rule, which is a separate point. The note about Parse and duplicate ids is also buried in the middle of the paragraph. Splitting the paragraph and rewrapping the lines would make the contract easier to read.",
+                "proof_refs": [
+                  "engine/reviewverdict/decide.go:45-47"
+                ]
+              }
+            ],
+            "evidence": [
+              "Reviewed all 11 changed paths in full.",
+              "The isLowerHex rewrite in engine/review/names.go is logically equivalent to the original: both accept only 0-9 and a-f. It only adds parentheses and is clearer.",
+              "The FileRef refactor of VerifiedHandoff is applied consistently across handoff.go, verify.go and both tests, and it removes the risk of swapping adjacent string arguments.",
+              "The fate constant renames in decide.go are applied consistently, and the new comments explain why the prefix was added.",
+              "The openRead constants and their comments explain the non-blocking open and the regular-file check added in fsstore.go."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 3,
+        "target_identity": "sha256:b015325e63b7f49526822226f64b7e0141ac20e2ab7aed5c8c56ce2478ffa816",
+        "capture_phase_revision": "sha256:d38e9d0567d15cc26efdb10d91153f1f4ba0db950777dfea41b257d464a2b70a",
+        "artifact_digest": "sha256:f949f89c499a86067a8e5399638201ea7f3dee703059c080f7badbb98ae1e8e9",
+        "result_hash": "sha256:e8f443ecdd444593f51ba15290226d15811362755e0c2fbb901ded7d6c4ed25a",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:11d76cbfef9f85a14b5a076d6e47030b368097e52959480fc0a73c37ba21ddd4",
+            "lineage_id": "review-22a68864abad04eb",
+            "authority_revision": "sha256:d38e9d0567d15cc26efdb10d91153f1f4ba0db950777dfea41b257d464a2b70a",
+            "target_identity": "sha256:b015325e63b7f49526822226f64b7e0141ac20e2ab7aed5c8c56ce2478ffa816",
+            "base_tree": "40b0e803f9d44bea705a5371a3c49003415767ee",
+            "candidate_tree": "9a3f5eab6b4e582d4a9bbd7da08bd690d5249304",
+            "changed_path_manifest_sha256": "sha256:b39b6249422ccbe6168f1ae3a609025797a38719236f96b8feddb08b858383a0",
+            "lens": "review-reliability",
+            "selected_order": 3
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:11d76cbfef9f85a14b5a076d6e47030b368097e52959480fc0a73c37ba21ddd4",
+            "raw_sha256": "sha256:b4f19581948dd732dc573438266dedfe00af7a0e289054d56686bf9fdd60fbbe",
+            "canonical_sha256": "sha256:fd83b715ccd4621c781abcb7fa83d0e7d3d494f7ac8fb87c86de0c41eab036b0",
+            "result_hash": "sha256:e8f443ecdd444593f51ba15290226d15811362755e0c2fbb901ded7d6c4ed25a",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:11d76cbfef9f85a14b5a076d6e47030b368097e52959480fc0a73c37ba21ddd4",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/app/verify.go",
+                "engine/review/app/verify_test.go",
+                "engine/review/fsstore/fsstore.go",
+                "engine/review/fsstore/openread_other.go",
+                "engine/review/fsstore/openread_unix.go",
+                "engine/review/fsstore/read_internal_test.go",
+                "engine/review/handoff.go",
+                "engine/review/names.go",
+                "engine/review/verdict_test.go",
+                "engine/reviewverdict/decide.go",
+                "engine/reviewverdict/decide_test.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-fifo-test-untagged",
+                "lens": "reliability",
+                "location": "engine/review/fsstore/read_internal_test.go:76",
+                "severity": "WARNING",
+                "claim": "The new pipe test calls syscall.Mkfifo, and the file has no unix build constraint. The package keeps a non-unix openread_other.go variant, so on a non-unix platform (e.g. Windows) the whole fsstore internal test package would fail to compile, including the existing tests in this file. The test should move to a file constrained to unix, matching openread_unix.go.",
+                "proof_refs": [
+                  "engine/review/fsstore/read_internal_test.go:76",
+                  "engine/review/fsstore/openread_other.go:1"
+                ]
+              }
+            ],
+            "evidence": [
+              "fsstore.go: os.OpenFile with O_NONBLOCK on a named pipe opens at once. The added IsRegular check then rejects it as ErrChanged, so the hang is closed and the test asserts a bounded return with ErrChanged and nil data.",
+              "names.go: the isLowerHex rewrite is logically equivalent to the old precedence-based expression. Both reject exactly the bytes that are not 0-9 or a-f, so behavior is unchanged.",
+              "handoff.go, verify.go and the tests: the FileRef refactor keeps the argument order and field mapping, so the produced evidence is unchanged.",
+              "decide.go: the fate constant renames are behavior-neutral. The extended tests cover no verdict for an unknown disposition (unverified) and an unlisted severity (severe)."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "9505faea5e0173a96f7d5dae7d4e77bc8040f93b4dcddb1e0108f61d9cc0a3f5",
+    "initial_atomic_start": {
+      "lineage_id": "review-22a68864abad04eb",
+      "worktree_identity": "sha256:571cf94da78406a5dee177091311c4fcbbbf61e483d9e6e92803045faa817e42",
+      "target_identity": "sha256:b015325e63b7f49526822226f64b7e0141ac20e2ab7aed5c8c56ce2478ffa816",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "40b0e803f9d44bea705a5371a3c49003415767ee",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-risk",
+        "review-resilience",
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 154,
+      "correction_budget": 77,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "F1 fixes review findings: Read opens with O_NONBLOCK and requires a regular file (a guard against a swapped pipe and inode reuse), renames Decide's fate constants, groups VerifiedHandoff's refs and adds pinning tests"
+    },
+    "runtime_agent": "claude-code"
+  }
+}
