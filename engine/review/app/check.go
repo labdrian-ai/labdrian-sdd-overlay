@@ -9,18 +9,21 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/reviewverdict"
 )
 
-// Checked is what Check found out about a head that is cleared for delivery: its full name, and every stored
-// result that binds it, by launch, with the files used and what each makes of the review.
+// Checked is what Check found out about a head that is cleared for delivery: its full name, every stored result
+// that binds it, by launch, with the files used and what each makes of the review, and every stored exemption that
+// binds it, by number. A head with no exemption has none.
 type Checked struct {
-	Head    string
-	Results []review.Reviewed
+	Head       string
+	Results    []review.Reviewed
+	Exemptions []review.Exempted
 }
 
-// Check decides whether the head being delivered was reviewed and nothing the engine stored keeps it from
-// delivery, in the repository that holds dir (absolute). head is a revision as a person types it. Every result
-// of the feature that is about that commit is read back, and the head is cleared (review.Clearance) when there
-// is at least one and every one is clear. Each result is held to the files and to git again, and none of it is
-// taken from what an earlier command said:
+// Check decides whether the head being delivered was reviewed, or exempted from review, and nothing the engine
+// stored keeps it from delivery, in the repository that holds dir (absolute). head is a revision as a person types
+// it. Every result of the feature that is about that commit is read back, and so is every exemption, and the head is
+// cleared (review.Cleared) when it has an exemption and no result, or at least one result and every one is clear
+// (review.Clearance): a result that blocks wins over any exemption. Each result and each exemption is held to the
+// files and to git again, and none of it is taken from what an earlier command said:
 //
 //   - the stored file is read as Record wrote it and its reply is held to its binding again, as Verify does, so
 //     a file that was changed, or is not a result, is refused;
@@ -32,9 +35,16 @@ type Checked struct {
 //     not run and a finding counts as a check that did not run, so a result with a severe finding the diff may have
 //     caused is not clear. A verdict that is stored and cannot be read is refused, never read as no verdict.
 //
-// A result is about a commit by its binding and not by its name. The feature and the head are checked before git
-// or the store is asked anything. Whatever cannot be told, because git or the store fails or a file does not hold,
-// is a refusal: a head is cleared only on what was checked. Nothing is stored.
+// An exemption is held in the same way, to the rules `review exempt` made it under (review.CheckExemption): the
+// stored file is read as Exempt wrote it, its binding names a candidate before its base is handed to git, its
+// declared risk still names no high-risk item and its report is still clear, so a file that was edited to say
+// something else is refused; and the candidate is recomputed from git for the base it names and the head being
+// delivered, and the stored binding must be equal to it. An exemption that does not hold refuses the head even
+// when another file clears it, as a result that does not hold does.
+//
+// A result or an exemption is about a commit by its binding and not by its name. The feature and the head are checked
+// before git or the store is asked anything. Whatever cannot be told, because git or the store fails or a file does
+// not hold, is a refusal: a head is cleared only on what was checked. Nothing is stored.
 func (s Service) Check(dir, feature, head string) (Checked, error) {
 	if err := review.CheckFeature(feature); err != nil {
 		return Checked{}, err
@@ -64,10 +74,48 @@ func (s Service) Check(dir, feature, head string) (Checked, error) {
 			reviewed = append(reviewed, r)
 		}
 	}
-	if err := review.Clearance(reviewed); err != nil {
+	var exempted []review.Exempted
+	for _, name := range review.ExemptionsOfHead(names, headName) {
+		e, binds, err := s.exemptedHead(repo, feature, name, headName)
+		if err != nil {
+			return Checked{}, err
+		}
+		if binds {
+			exempted = append(exempted, e)
+		}
+	}
+	if err := review.Cleared(reviewed, exempted); err != nil {
 		return Checked{}, fmt.Errorf("head %s: %w", headName, err)
 	}
-	return Checked{Head: headName, Results: reviewed}, nil
+	return Checked{Head: headName, Results: reviewed, Exemptions: exempted}, nil
+}
+
+// exemptedHead reads the stored exemption called name and holds it as Check says. It reports false for an exemption
+// that is about another commit than head, which only the first 12 characters of the name say it is not.
+func (s Service) exemptedHead(repo Repository, feature, name, head string) (review.Exempted, bool, error) {
+	path := review.ResultPath(feature, name)
+	file, err := s.results.Read(repo.Root, feature, name)
+	if err != nil {
+		return review.Exempted{}, false, fmt.Errorf("read %s: %w", path, err)
+	}
+	stored, err := review.DecodeExemption(file)
+	if err == nil {
+		err = review.CheckExemption(stored)
+	}
+	if err != nil {
+		return review.Exempted{}, false, fmt.Errorf("%s: %w", path, err)
+	}
+	if stored.Binding.Head != head {
+		return review.Exempted{}, false, nil
+	}
+	candidate, err := s.bind(repo, stored.Binding.Base, head)
+	if err != nil {
+		return review.Exempted{}, false, fmt.Errorf("%s: %w", path, err)
+	}
+	if err := review.CheckBinding(stored.Binding, candidate); err != nil {
+		return review.Exempted{}, false, fmt.Errorf("%s: %w", path, err)
+	}
+	return review.Exempted{Candidate: candidate, Exemption: path}, true, nil
 }
 
 // reviewedResult reads the stored result called name and holds it as Check says. It reports false for a result
