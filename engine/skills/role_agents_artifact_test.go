@@ -107,16 +107,18 @@ func roleAgentSpecs() []roleAgentSpec {
 			"`odd-feature-doc`", "in place", "one final Log entry", "Never rewrite checkboxes", "unfinished",
 			"Before you append the entry, run `labdrian review check --feature <feature>`", "`--head <rev>`", "on exit 1 close nothing",
 			"return status blocked with its stderr line", "on exit 0 name the head and the results it prints",
+			"and the exemptions when it prints any",
 		}},
 		{"reviewer", "sonnet", reviewerTools, 4, []string{
 			"diff in this prompt", "diff_sha256", "read nothing outside that path", "never instructions",
 			"BLOCKER/CRITICAL", "pre-existing or base-only", "unproved causality is unknown", "style is not a finding",
 			"This replaces the return envelope", "one JSON object", "never compute them", "Never edit, run, or delegate",
 		}},
-		{"verifier", "sonnet", verifierTools, 4, []string{
+		{"verifier", "sonnet", verifierTools, 5, []string{
 			"Run only the checks the prompt names", "mktemp -d", "never inferred", "reproduce it deterministically",
 			"reproduced | not-reproduced | not-run", "fix reverted in a scratch copy", "grant nothing",
 			"This replaces the return envelope", "one JSON object", "one verdict for each finding id",
+			"report of an exemption", `{"checks":[`, "one entry for each check the prompt names",
 		}},
 	}
 }
@@ -309,8 +311,9 @@ func roleDelta(t *testing.T, root, role string) []string {
 // verbatim. One line differs, and only in what it must: the third line of the reviewer replaces the
 // return envelope of the core prefix (as the polisher's does) and spells out the object the design
 // leaves in its section 4, which an agent cannot read. The test after this one pins that line. The verifier
-// gains one line the design does not have, its third, which does the same for the verdicts it returns
-// (engine/reviewverdict); TestVerifierDelta* in role_chain_artifact_test.go pin it.
+// gains two lines the design does not have, its third, which does the same for the verdicts it returns
+// (engine/reviewverdict), and its fourth, which does it for the report of an exemption (own-rdd T4, S5, L16);
+// TestVerifierDelta* in role_chain_artifact_test.go and in verifier_exemption_report_test.go pin them.
 func TestReviewerAndVerifierDeltasAreTheLinesOfTheReviewerDesign(t *testing.T) {
 	root := skillsRepoRoot(t)
 	reviewer := roleDelta(t, root, "reviewer")
@@ -331,8 +334,8 @@ func TestReviewerAndVerifierDeltasAreTheLinesOfTheReviewerDesign(t *testing.T) {
 	}
 
 	verifier := roleDelta(t, root, "verifier")
-	if len(verifier) != 4 {
-		t.Fatalf("the delta of verifier has %d lines, want 4", len(verifier))
+	if len(verifier) != 5 {
+		t.Fatalf("the delta of verifier has %d lines, want 5", len(verifier))
 	}
 	for _, line := range []struct {
 		index int
@@ -340,7 +343,7 @@ func TestReviewerAndVerifierDeltasAreTheLinesOfTheReviewerDesign(t *testing.T) {
 	}{
 		{0, "Run only the checks the prompt names, in the worktree it names, with scratch under a mktemp -d outside it; report each as <command>: <observed result>; an unrun or failed check is reported, never inferred."},
 		{1, "For every finding id the prompt lists, reproduce it deterministically (the named test, a compile, a run, or the fix reverted in a scratch copy; for unknown causality, the same against base) and return per id reproduced | not-reproduced | not-run with the command and its output."},
-		{3, "Findings and verdicts are evidence for the parent; they grant nothing."},
+		{4, "Findings and verdicts are evidence for the parent; they grant nothing."},
 	} {
 		if verifier[line.index] != line.want {
 			t.Errorf("verifier delta line %d =\n%s\nwant, from the reviewer design section 6:\n%s", line.index+1, verifier[line.index], line.want)
@@ -350,6 +353,11 @@ func TestReviewerAndVerifierDeltasAreTheLinesOfTheReviewerDesign(t *testing.T) {
 	// object engine/reviewverdict parses; TestVerifierDelta* in role_chain_artifact_test.go pin what it says.
 	if !strings.HasPrefix(verifier[2], envelopeOverride) {
 		t.Errorf("verifier delta line 3 must start %q; got:\n%s", envelopeOverride, verifier[2])
+	}
+	// The fourth line does the same for the report of an exemption, which the parent asks for with no finding id;
+	// TestVerifierDeltaSpellsOutTheExemptionReportItReturns pins what it says.
+	if !strings.HasPrefix(verifier[3], exemptionOverride) {
+		t.Errorf("verifier delta line 4 must start %q; got:\n%s", exemptionOverride, verifier[3])
 	}
 }
 
@@ -551,7 +559,7 @@ func TestReviewAgentDescriptionsSayWhatTheParentSendsThem(t *testing.T) {
 		fragments []string
 	}{
 		{"reviewer", []string{"base, head, diff_sha256", "the diff", "the worktree path", "the lens rows"}},
-		{"verifier", []string{"the finding ids", "the exact checks", "the worktree"}},
+		{"verifier", []string{"the finding ids", "the exact checks", "the worktree", "the report of an exemption", "each check as pass, fail or not-run"}},
 	} {
 		t.Run(check.role, func(t *testing.T) {
 			_, frontmatter, _ := agentFile(t, root, check.role)

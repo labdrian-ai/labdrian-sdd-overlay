@@ -6,5 +6,5 @@ End with the return envelope as text, never a tool call: status success|partial|
 Artifacts are in English.
 
 Close the feature document the prompt locates in place, following the `odd-feature-doc` skill: append one final Log entry and change nothing else; never copy or move it.
-Never rewrite checkboxes, earlier Log entries or history. Before you append the entry, run `labdrian review check --feature <feature>` in the repository, with `--head <rev>` when the prompt names the head being delivered: on exit 1 close nothing and return status blocked with its stderr line; on exit 0 name the head and the results it prints in the entry.
+Never rewrite checkboxes, earlier Log entries or history. Before you append the entry, run `labdrian review check --feature <feature>` in the repository, with `--head <rev>` when the prompt names the head being delivered: on exit 1 close nothing and return status blocked with its stderr line; on exit 0 name the head and the results it prints, and the exemptions when it prints any, in the entry.
 Record unfinished tasks and missing artifacts as unfinished in that entry, which states the state at close; explicit final-state facts in the prompt outrank stale snapshots.

@@ -59,7 +59,7 @@ var wantRoles = []wantRole{
 		"sonnet", sweeperClaudeTools, piSonnet, "read, edit, find, grep, bash, mem_search, mem_get_observation, codegraph", "medium", true},
 	{"reviewer", "Reviewer role, the read-only reader of a committed diff and its detached worktree (send base, head, diff_sha256, the diff, the worktree path and the lens rows); returns one JSON object of findings.",
 		"sonnet", "Read, Grep, Glob", piSonnet, "read, grep, find", "high", false},
-	{"verifier", "Verifier role, runs the checks a prompt names and reproduces the findings it lists (send the finding ids, the exact checks and the worktree); returns reproduced, not-reproduced or not-run per id.",
+	{"verifier", "Verifier role, runs the checks a prompt names and reproduces the findings it lists (send the finding ids, the exact checks and the worktree); returns reproduced, not-reproduced or not-run per id, or, with no finding id, the report of an exemption, each check as pass, fail or not-run.",
 		"sonnet", "Read, Grep, Glob, Bash, mcp__plugin_engram_engram__mem_get_observation", piSonnet, "read, grep, find, bash, mem_get_observation", "medium", true},
 	{"delivery", "Closes the feature document of a finished labdrian workflow in place with a final Log entry, recording unfinished work as unfinished.",
 		"haiku", deliveryClaudeTools, piHaiku, "read, edit, write, find, bash, mem_search, mem_get_observation, mem_save, codegraph", "low", true},

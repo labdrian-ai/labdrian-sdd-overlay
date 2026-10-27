@@ -138,7 +138,7 @@ var roles = []role{
 	},
 	{
 		name:        "verifier",
-		description: "Verifier role, runs the checks a prompt names and reproduces the findings it lists (send the finding ids, the exact checks and the worktree); returns reproduced, not-reproduced or not-run per id.",
+		description: "Verifier role, runs the checks a prompt names and reproduces the findings it lists (send the finding ids, the exact checks and the worktree); returns reproduced, not-reproduced or not-run per id, or, with no finding id, the report of an exemption, each check as pass, fail or not-run.",
 		model:       sonnet,
 		effort:      "medium",
 		tools:       []string{"Read", "Grep", "Glob", "Bash", "mcp__plugin_engram_engram__mem_get_observation"},
