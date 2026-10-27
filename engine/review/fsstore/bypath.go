@@ -43,10 +43,9 @@ func (s Store) namesByPath(root, feature string) ([]string, error) {
 
 // createByPath is Create for a platform that cannot hold a directory open. The directories are looked at again
 // right before the file is linked, and nothing is published into one that changed (ErrChanged); one that
-// changes after the link is reported, with the file already linked. Two limits stay on these platforms: a
-// directory swapped between the last look and the link is not seen, and a directory that cannot be flushed
-// after the link is reported as a failure, not as app.ErrNotFlushed, because atomicfile does not tell the
-// flush apart from the link.
+// changes after the link is reported, with the file already linked. One limit stays on these platforms: a
+// directory swapped between the last look and the link is not seen. A directory that cannot be flushed after the
+// link is app.ErrNotFlushed here as on linux.
 func (s Store) createByPath(root, feature, name string, data []byte) error {
 	loc, _, err := s.walk(root, feature, true)
 	if err != nil {
@@ -63,16 +62,26 @@ func (s Store) createByPath(root, feature, name string, data []byte) error {
 	}
 	path := filepath.Join(loc.dir, name)
 	if err = staged.Create(path); err != nil {
-		if errors.Is(err, fs.ErrExist) {
-			return fmt.Errorf("%w: %s", app.ErrExists, path)
-		}
-		return fmt.Errorf("store %s: %w", path, err)
+		return publishError(path, err)
 	}
 	s.at(pointLinked, loc.dir)
 	if err = unchanged(loc.seen); err != nil {
 		return fmt.Errorf("%s was linked, but the result may not be where it was meant to be: %w", path, err)
 	}
 	return nil
+}
+
+// publishError is the error of a Create of atomicfile at path, in the terms of the Results port: a name that is
+// taken is app.ErrExists, and a file that is linked but whose directory could not be flushed is
+// app.ErrNotFlushed, so the result is not stored a second time.
+func publishError(path string, err error) error {
+	switch {
+	case errors.Is(err, fs.ErrExist):
+		return fmt.Errorf("%w: %s", app.ErrExists, path)
+	case errors.Is(err, atomicfile.ErrDirNotFlushed):
+		return fmt.Errorf("%w: %s: %w", app.ErrNotFlushed, path, err)
+	}
+	return fmt.Errorf("store %s: %w", path, err)
 }
 
 // seenDir is a directory of the path to the results of a feature as the store looked at it: where it is, and

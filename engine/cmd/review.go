@@ -209,15 +209,7 @@ func runReviewBind(p process, d deps, args []string) {
 // runReviewRecord implements 'review record --feature --base --head [--result] [--cwd]'. A reply that is
 // refused is exit 2 and nothing is written; any other failure is exit 1.
 func runReviewRecord(p process, d deps, args []string) {
-	fail := func(err error) {
-		code := 1
-		var refused *reviewapp.ReplyRefusedError
-		if errors.As(err, &refused) {
-			code = 2
-		}
-		fmt.Fprintf(p.stderr, "error: review record: %v\n", err)
-		p.exit(code)
-	}
+	fail := func(err error) { recordFailed(p, err) }
 	f, err := parseReviewFlags(args, "--feature", "--base", "--head", "--result", "--cwd")
 	if err == nil {
 		err = f.require("--feature", "--base", "--head")
@@ -254,11 +246,22 @@ func reportRecorded(p process, recorded reviewapp.Recorded) {
 	fmt.Fprintf(p.stderr, "review record: stdout is the skeleton of the record for 'roles append --stdin'; the parent of the chain fills %s\n",
 		strings.Join(review.ParentFields(), ", "))
 	if err := writeReviewJSON(p, recorded.Handoff); err != nil {
-		fmt.Fprintf(p.stderr, "error: review record: %v\n", fmt.Errorf("the result is stored at %s, but the handoff could not be written: %w", recorded.Path, err))
-		p.exit(1)
+		recordFailed(p, fmt.Errorf("the result is stored at %s, but the handoff could not be written: %w", recorded.Path, err))
 		return
 	}
 	p.exit(0)
+}
+
+// recordFailed is how record ends on an error: the error on stderr, and exit 2 for a reply that was refused, 1
+// for anything else.
+func recordFailed(p process, err error) {
+	code := 1
+	var refused *reviewapp.ReplyRefusedError
+	if errors.As(err, &refused) {
+		code = 2
+	}
+	fmt.Fprintf(p.stderr, "error: review record: %v\n", err)
+	p.exit(code)
 }
 
 // readReviewReply reads the reply of the reviewer from the file at path, or from stdin when path is empty or

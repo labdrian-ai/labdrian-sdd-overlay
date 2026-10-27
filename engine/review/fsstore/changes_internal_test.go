@@ -4,11 +4,16 @@ package fsstore
 
 import (
 	"errors"
+	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/atomicfile"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review/app"
 )
 
 // The tests of this file are inside the package because they change the directories under a Store at the exact
@@ -347,5 +352,22 @@ func TestNamesDoesNotListTheTemporaryFileACreateHasStaged(t *testing.T) {
 				t.Errorf("the directory holds %q after Create, want only %q", got, resultName)
 			}
 		})
+	}
+}
+
+// The by-path store words a Create of atomicfile in the terms of the port: a taken name, a published file whose
+// directory could not be flushed, and any other failure.
+func TestPublishErrorSpeaksInTheTermsOfTheResultsPort(t *testing.T) {
+	taken := publishError("/r/x.json", fmt.Errorf("atomicfile: publish /r/x.json: %w", fs.ErrExist))
+	if !errors.Is(taken, app.ErrExists) {
+		t.Errorf("a taken name = %v, want app.ErrExists", taken)
+	}
+	unflushed := publishError("/r/x.json", fmt.Errorf("wrapped: %w", atomicfile.ErrDirNotFlushed))
+	if !errors.Is(unflushed, app.ErrNotFlushed) || errors.Is(unflushed, app.ErrExists) {
+		t.Errorf("a file not flushed = %v, want app.ErrNotFlushed only", unflushed)
+	}
+	other := publishError("/r/x.json", errors.New("no space"))
+	if errors.Is(other, app.ErrNotFlushed) || errors.Is(other, app.ErrExists) || other.Error() != "store /r/x.json: no space" {
+		t.Errorf("another failure = %v, want %q", other, "store /r/x.json: no space")
 	}
 }
