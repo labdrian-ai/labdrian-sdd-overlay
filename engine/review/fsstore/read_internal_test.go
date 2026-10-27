@@ -6,7 +6,9 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"syscall"
 	"testing"
+	"time"
 )
 
 // Read works by path on every platform, so it looks again at the directories after it has read the file, as
@@ -58,5 +60,39 @@ func TestReadRefusesAFileThatWasReplacedByALinkBeforeItWasOpened(t *testing.T) {
 	}
 	if !errors.Is(err, ErrChanged) || got != nil {
 		t.Errorf("Read() = %q, %v; want no bytes and an error that is %v", got, err, ErrChanged)
+	}
+}
+
+// A file replaced by a named pipe between the look at it and the open would hang an open that waits for a
+// writer: the store opens without waiting, so what it opened is not what it looked at, and it refuses it.
+func TestReadRefusesAFileThatWasReplacedByAPipeBeforeItWasOpenedWithoutWaiting(t *testing.T) {
+	root := t.TempDir()
+	file := filepath.Join(root, "odd", "review-results", "own-rdd", resultName)
+	put(t, file, "ours")
+	store, _ := racing(pointLooked, "", func(dir string) {
+		if err := os.Remove(file); err != nil {
+			t.Fatal(err)
+		}
+		if err := syscall.Mkfifo(file, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	})
+	type read struct {
+		data []byte
+		err  error
+	}
+	done := make(chan read, 1)
+	go func() {
+		data, err := store.Read(root, "own-rdd", resultName)
+		done <- read{data, err}
+	}()
+
+	select {
+	case got := <-done:
+		if !errors.Is(got.err, ErrChanged) || got.data != nil {
+			t.Errorf("Read() = %q, %v; want no bytes and an error that is %v", got.data, got.err, ErrChanged)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("Read() of a file replaced by a pipe did not return: the open waits for a writer")
 	}
 }

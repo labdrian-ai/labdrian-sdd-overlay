@@ -113,7 +113,7 @@ func (s Service) Verify(dir, feature, stored string, reply []byte) (Verified, er
 		return Verified{}, fmt.Errorf("store %s: %w", verdictPath, err)
 	}
 	sum := sha256hex.Sum(file)
-	handoff := review.VerifiedHandoff(binding, resultPath, sha256hex.Sum(resultFile), verdictPath, sum, decision.Outcome)
+	handoff := review.VerifiedHandoff(binding, review.FileRef{Ref: resultPath, SHA256: sha256hex.Sum(resultFile)}, review.FileRef{Ref: verdictPath, SHA256: sum}, decision.Outcome)
 	return Verified{Path: verdictPath, SHA256: sum, Decision: decision, Handoff: handoff, NotFlushed: notFlushed}, nil
 }
 

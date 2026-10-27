@@ -33,15 +33,22 @@ func Handoff(c Candidate, storedRef, storedSHA256 string) roles.RoleHandoff {
 	}
 }
 
+// FileRef is a stored file as a record binds it: its path relative to the working tree, written with '/', and
+// the SHA-256 of its bytes.
+type FileRef struct {
+	Ref    string
+	SHA256 string
+}
+
 // VerifiedHandoff is the skeleton of the record that closes a review the verifier has run on, for the same
-// `labdrian roles append --stdin`. It is the one Handoff makes for the range b binds and the stored result
-// (resultRef and resultSHA256), with the stored verdict bound as one more piece of evidence
-// (EvidenceVerifier), and with who is next filled from the outcome of the verdict: the builder when a finding
-// blocks, the delivery when the review is clear. When a check did not run (reviewverdict.Unverified) it says
-// nobody, and the parent fills to_role once the check has run: the review is not clear, and not blocked.
-func VerifiedHandoff(b reviewresult.Binding, resultRef, resultSHA256, verdictRef, verdictSHA256 string, outcome reviewverdict.Outcome) roles.RoleHandoff {
-	h := Handoff(Candidate{Base: b.Base, Head: b.Head, DiffSHA256: b.DiffSHA256}, resultRef, resultSHA256)
-	h.Evidence = append(h.Evidence, roles.Evidence{Kind: EvidenceVerifier, Ref: verdictRef, SHA256: verdictSHA256})
+// `labdrian roles append --stdin`. It is the one Handoff makes for the range b binds and the stored result,
+// with the stored verdict bound as one more piece of evidence (EvidenceVerifier), and with who is next filled
+// from the outcome of the verdict: the builder when a finding blocks, the delivery when the review is clear.
+// When a check did not run (reviewverdict.Unverified) it says nobody, and the parent fills to_role once the
+// check has run: the review is not clear, and not blocked.
+func VerifiedHandoff(b reviewresult.Binding, result, verdict FileRef, outcome reviewverdict.Outcome) roles.RoleHandoff {
+	h := Handoff(Candidate{Base: b.Base, Head: b.Head, DiffSHA256: b.DiffSHA256}, result.Ref, result.SHA256)
+	h.Evidence = append(h.Evidence, roles.Evidence{Kind: EvidenceVerifier, Ref: verdict.Ref, SHA256: verdict.SHA256})
 	switch outcome {
 	case reviewverdict.Blocks:
 		h.ToRole = roles.RoleBuilder

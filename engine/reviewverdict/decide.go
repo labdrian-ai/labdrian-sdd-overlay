@@ -42,8 +42,9 @@ type Decision struct {
 //     when the base check did not run it is unverified, unless head did not reproduce it either.
 //   - A WARNING is fixed before delivery and a SUGGESTION is carried, whatever the verdict.
 //
-// A finding with no verdict is read as a check that did not run, never as one that did not reproduce. The
-// outcome is Blocks when anything blocks, else Unverified when anything is unverified, else Clear.
+// A finding with no verdict is read as a check that did not run, never as one that did not reproduce, whatever
+// its causal disposition. A severity the contract does not list is read as severe. The verdicts are the ones
+// Parse returns, which never holds two for one id; were it given two, the last would count. The outcome is Blocks when anything blocks, else Unverified when anything is unverified, else Clear.
 func Decide(r reviewresult.Result, verdicts []Verdict) Decision {
 	byID := make(map[string]Verdict, len(verdicts))
 	for _, v := range verdicts {
@@ -58,11 +59,11 @@ func Decide(r reviewresult.Result, verdicts []Verdict) Decision {
 			d.Carry = append(d.Carry, f.ID)
 		default: // BLOCKER and CRITICAL, and any value the contract does not list, which is read as severe
 			switch severeFinding(f.Disposition, byID[f.ID]) {
-			case blocks:
+			case fateBlocks:
 				d.Blocking = append(d.Blocking, f.ID)
-			case unchecked:
+			case fateUnchecked:
 				d.Unverified = append(d.Unverified, f.ID)
-			case ofTheBase:
+			case fateOfTheBase:
 				d.Carry = append(d.Carry, f.ID)
 			}
 		}
@@ -78,39 +79,40 @@ func Decide(r reviewresult.Result, verdicts []Verdict) Decision {
 	return d
 }
 
-// A severe finding ends in one of these.
+// A severe finding ends in one of these: what becomes of one finding, which the Outcome of the whole review is
+// made from. Decide lists a finding for each fate but fateRefuted, which puts it in no list.
 type fate int
 
 const (
-	refuted   fate = iota // the verifier did not reproduce it: nothing to do
-	blocks                // it blocks
-	unchecked             // the check it needs did not run
-	ofTheBase             // the base has it too: a follow-up
+	fateRefuted   fate = iota // the verifier did not reproduce it: nothing to do
+	fateBlocks                // it blocks
+	fateUnchecked             // the check it needs did not run
+	fateOfTheBase             // the base has it too: a follow-up
 )
 
 // severeFinding says what becomes of a severe finding of the given causal disposition, from its verdict.
 func severeFinding(disposition reviewresult.Disposition, v Verdict) fate {
 	switch disposition {
 	case reviewresult.DispositionPreExisting, reviewresult.DispositionBaseOnly:
-		return ofTheBase
+		return fateOfTheBase
 	case reviewresult.DispositionUnknown:
 		if v.Result == NotReproduced {
-			return refuted
+			return fateRefuted
 		}
 		switch v.Base {
 		case Reproduced:
-			return ofTheBase
+			return fateOfTheBase
 		case NotReproduced: // not on base: head decides, below
 		default:
-			return unchecked
+			return fateUnchecked
 		}
 	}
 	switch v.Result {
 	case Reproduced:
-		return blocks
+		return fateBlocks
 	case NotReproduced:
-		return refuted
+		return fateRefuted
 	default:
-		return unchecked
+		return fateUnchecked
 	}
 }

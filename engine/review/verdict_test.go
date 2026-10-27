@@ -229,7 +229,7 @@ func TestVerifiedHandoffBindsTheVerdictAndNamesWhoIsNext(t *testing.T) {
 		reviewverdict.Blocks: roles.RoleBuilder, reviewverdict.Clear: roles.RoleDelivery, reviewverdict.Unverified: "",
 	} {
 		t.Run(string(outcome), func(t *testing.T) {
-			got := review.VerifiedHandoff(candidate(t).Binding(), storedRef, storedSHA, verdictRef, verdictSHA, outcome)
+			got := review.VerifiedHandoff(candidate(t).Binding(), review.FileRef{Ref: storedRef, SHA256: storedSHA}, review.FileRef{Ref: verdictRef, SHA256: verdictSHA}, outcome)
 
 			wantEvidence := []roles.Evidence{
 				{Kind: "review-diff", Ref: baseSHA + ".." + headSHA, SHA256: diffSHA},

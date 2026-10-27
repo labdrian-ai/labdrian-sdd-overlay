@@ -162,15 +162,26 @@ func TestDecideListsEachFindingInTheOrderOfTheResultAndBlockingWinsOverUnverifie
 	}
 }
 
+// Whatever the causal disposition of a severe finding the diff may have caused, no verdict is never read as
+// one that did not reproduce: an unknown one would otherwise be refuted, and the review read as clear.
 func TestDecideAFindingWithoutAVerdictIsUnverifiedNeverClear(t *testing.T) {
-	result := reviewresult.Result{Findings: []reviewresult.Finding{{ID: "F1", Severity: reviewresult.SeverityBlocker, Disposition: reviewresult.DispositionIntroduced}}}
-
-	for name, verdicts := range map[string][]reviewverdict.Verdict{
-		"no verdict at all":         nil,
-		"a verdict for another one": {{ID: "F2", Result: notReproduced, Base: notReproduced}},
-	} {
-		t.Run(name, func(t *testing.T) { expect(t, reviewverdict.Decide(result, verdicts), unverified) })
+	for _, disposition := range append(slices.Clone(ofTheDiff), reviewresult.DispositionUnknown) {
+		result := reviewresult.Result{Findings: []reviewresult.Finding{{ID: "F1", Severity: reviewresult.SeverityBlocker, Disposition: disposition}}}
+		for name, verdicts := range map[string][]reviewverdict.Verdict{
+			"no verdict at all":         nil,
+			"a verdict for another one": {{ID: "F2", Result: notReproduced, Base: notReproduced}},
+		} {
+			t.Run(fmt.Sprintf("%s/%s", disposition, name), func(t *testing.T) { expect(t, reviewverdict.Decide(result, verdicts), unverified) })
+		}
 	}
+}
+
+// A severity the contract does not list is read as severe: it blocks when reproduced, and is never carried
+// as a SUGGESTION would be.
+func TestDecideReadsASeverityTheContractDoesNotListAsSevere(t *testing.T) {
+	result := reviewresult.Result{Findings: []reviewresult.Finding{{ID: "F1", Severity: reviewresult.Severity("FATAL"), Disposition: reviewresult.DispositionIntroduced}}}
+
+	expect(t, reviewverdict.Decide(result, []reviewverdict.Verdict{{ID: "F1", Result: reproduced}}), blocking)
 }
 
 func TestDecideAResultWithoutFindingsIsClear(t *testing.T) {

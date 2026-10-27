@@ -198,12 +198,14 @@ func (s Store) readFile(path string) ([]byte, error) {
 		return nil, fmt.Errorf("%w: %s", ErrNotAFile, path)
 	}
 	s.at(pointLooked, filepath.Dir(path))
-	f, err := os.Open(path)
+	f, err := os.OpenFile(path, openRead, 0)
 	if err != nil {
 		return nil, fmt.Errorf("read %s: %w", path, err)
 	}
 	defer f.Close()
-	if opened, err := f.Stat(); err != nil || !os.SameFile(looked, opened) {
+	// A file removed and another made at its name can be given the same inode, so what was opened must be a
+	// regular file as well as the one that was looked at.
+	if opened, err := f.Stat(); err != nil || !opened.Mode().IsRegular() || !os.SameFile(looked, opened) {
 		return nil, fmt.Errorf("%w: %s is not the file that was looked at", ErrChanged, path)
 	}
 	data, err := io.ReadAll(io.LimitReader(f, review.MaxStoredBytes+1))

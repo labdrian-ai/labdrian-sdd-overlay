@@ -81,7 +81,7 @@ func TestVerifyStoresTheVerdictBesideTheResultAndDecides(t *testing.T) {
 
 	wantFile, _ := review.EncodeVerdict(reply)
 	wantDecision := reviewverdict.Decision{Outcome: reviewverdict.Blocks, Blocking: []string{"F1"}, Fix: []string{"F2"}}
-	wantHandoff := review.VerifiedHandoff(candidateOf(t, g).Binding(), wantFirstPath, sha256Of(resultFile), wantVerdict, sha256Of(wantFile), reviewverdict.Blocks)
+	wantHandoff := review.VerifiedHandoff(candidateOf(t, g).Binding(), review.FileRef{Ref: wantFirstPath, SHA256: sha256Of(resultFile)}, review.FileRef{Ref: wantVerdict, SHA256: sha256Of(wantFile)}, reviewverdict.Blocks)
 	if err != nil || got.Path != wantVerdict || got.SHA256 != sha256Of(wantFile) {
 		t.Fatalf("Verify() = %q, %q, %v; want the verdict stored at %s with the digest of its bytes %s", got.Path, got.SHA256, err, wantVerdict, sha256Of(wantFile))
 	}
