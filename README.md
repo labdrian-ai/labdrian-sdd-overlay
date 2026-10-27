@@ -576,12 +576,14 @@ overlay roles <verb>
     next    --project <id> --goal <id> --chain <id>                              read-only: allowed next roles from the chain's current position
     resume  --project <id> --goal <id> --chain <id>                              read-only: current role, whether it is interrupted, and why
     append  --project <id> --goal <id> --chain <id> --stdin                      append one record read only from stdin; refused on identity mismatch,
-                                                                                  a broken hash chain, a seq gap, or an invalid role transition
+                                                                                  a broken hash chain, a seq gap, an invalid role transition, or a
+                                                                                  completed review-report whose review-diff or review-result evidence is
+                                                                                  missing or differs from the files `review record` and `review verify` stored
     match-shaper --root <worktree> --handoff <path>                              report which of a Shaper handoff v3's free-form roles equal a
                                                                                   member of the reusable-role vocabulary, without changing v3 semantics
 
 overlay review <verb>
-    Forward review binding and storage verbs to the engine unchanged. No verb launches an agent or
+    Forward review binding, storage and delivery-check verbs to the engine unchanged. No verb launches an agent or
     dispatches work: a reviewer's or a verifier's reply is a file somebody else produced. What is stored
     where, and the exact git command whose output `diff_sha256` is the digest of, are in
     odd/review-results/README.md.
@@ -627,6 +629,16 @@ overlay review <verb>
         that blocks another head of a base whose review a stored verdict already blocked is refused and
         stores nothing. A reply that breaks a rule writes nothing and the error names the rule. Exit 0
         stored, 2 reply refused, 1 usage error, a spent correction round or any other failure.
+    check  --feature <name> [--head <rev>] [--cwd <repo>]
+        Decide whether the head being delivered (--head, default HEAD) was reviewed and nothing the engine
+        stored keeps it from delivery. Each result stored for that head is held to its binding again, the
+        candidate is recomputed from git for the base the result names and that head and the stored binding
+        (base, head, diff_sha256, paths) must equal it, and the findings and the verdict stored beside the
+        result decide whether it blocks. The head is cleared when at least one result binds it and every one
+        is clear; a result that blocks keeps the head blocked whatever was recorded after it, and a check that
+        did not run never passes. stdout is one JSON object (head, outcome, results). Nothing is stored. The
+        delivery role runs it before it closes the feature. Exit 0 cleared, 1 usage error, refusal or any
+        other failure.
 
 overlay memory <verb>
     Forward memory-directive verbs to the engine unchanged. Read-only: it only plans what memory
