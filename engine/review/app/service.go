@@ -199,25 +199,34 @@ func (s Service) candidate(dir, base, head string) (Repository, review.Candidate
 	if err != nil {
 		return Repository{}, review.Candidate{}, fmt.Errorf("locate the repository of %s: %w", dir, err)
 	}
-	baseName, err := s.git.Commit(repo, base)
-	if err != nil {
-		return Repository{}, review.Candidate{}, fmt.Errorf("resolve base %q: %w", base, err)
-	}
-	headName, err := s.git.Commit(repo, head)
-	if err != nil {
-		return Repository{}, review.Candidate{}, fmt.Errorf("resolve head %q: %w", head, err)
-	}
-	diff, err := s.git.Diff(repo, baseName, headName)
-	if err != nil {
-		return Repository{}, review.Candidate{}, fmt.Errorf("diff %s..%s: %w", baseName, headName, err)
-	}
-	paths, err := s.git.Paths(repo, baseName, headName)
-	if err != nil {
-		return Repository{}, review.Candidate{}, fmt.Errorf("list the paths of %s..%s: %w", baseName, headName, err)
-	}
-	c, err := review.NewCandidate(baseName, headName, diff, paths)
+	c, err := s.bind(repo, base, head)
 	if err != nil {
 		return Repository{}, review.Candidate{}, err
 	}
 	return repo, c, nil
+}
+
+// bind computes the candidate of the diff from base to head in repo, both revisions as a person types them and
+// already refused by review.CheckRev when git could read them as an option. It is the one way a candidate is
+// computed: Bind and Record bind the commits a person names, and Check binds the commits a stored result names, so
+// that the binding it compares with the stored one is made from git in the same way as the one the result was
+// stored with.
+func (s Service) bind(repo Repository, base, head string) (review.Candidate, error) {
+	baseName, err := s.git.Commit(repo, base)
+	if err != nil {
+		return review.Candidate{}, fmt.Errorf("resolve base %q: %w", base, err)
+	}
+	headName, err := s.git.Commit(repo, head)
+	if err != nil {
+		return review.Candidate{}, fmt.Errorf("resolve head %q: %w", head, err)
+	}
+	diff, err := s.git.Diff(repo, baseName, headName)
+	if err != nil {
+		return review.Candidate{}, fmt.Errorf("diff %s..%s: %w", baseName, headName, err)
+	}
+	paths, err := s.git.Paths(repo, baseName, headName)
+	if err != nil {
+		return review.Candidate{}, fmt.Errorf("list the paths of %s..%s: %w", baseName, headName, err)
+	}
+	return review.NewCandidate(baseName, headName, diff, paths)
 }
