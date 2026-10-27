@@ -1182,16 +1182,17 @@ func TestWrapperUsageOfReviewVerifySaysWhatTheEngineUsageSays(t *testing.T) {
 	usage(&out)
 	// The wrapper's text wraps at its own width, so its words are compared with the line breaks taken out.
 	flat := strings.Join(strings.Fields(string(wrapper)), " ")
-	for engine, inWrapper := range map[string]string{
-		"engine review verify --feature <name> --stored <result> [--verdicts <file>|-] [--cwd <repo>]": "verify --feature NAME --stored RESULT [--verdicts FILE|-] [--cwd REPO]",
-		"<head12>-<n>.verifier.json":                    "HEAD12-N.verifier.json",
-		"never over an existing file":                   "never over a file",
-		"verifier-report":                               "verifier-report",
-		"to_role filled (builder when":                  "to_role filled (builder when",
-		"delivery when it is clear":                     "delivery when it is clear",
-		"one correction round per candidate":            "one correction round per candidate",
-		"exit 0 stored, 2 reply refused, 1 usage error": "exit 0 stored, 2 reply refused, 1 error",
+	for _, pair := range []struct{ engine, inWrapper string }{
+		{"engine review verify --feature <name> --stored <result> [--verdicts <file>|-] [--cwd <repo>]", "verify --feature NAME --stored RESULT [--verdicts FILE|-] [--cwd REPO]"},
+		{"<head12>-<n>.verifier.json", "HEAD12-N.verifier.json"},
+		{"never over an existing file", "never over a file"},
+		{"verifier-report", "verifier-report"},
+		{"to_role filled (builder when", "to_role filled (builder when"},
+		{"delivery when it is clear", "delivery when it is clear"},
+		{"one correction round per candidate", "one correction round per candidate"},
+		{"exit 0 stored, 2 reply refused, 1 usage error", "exit 0 stored, 2 reply refused, 1 error"},
 	} {
+		engine, inWrapper := pair.engine, pair.inWrapper
 		if !strings.Contains(out.String(), engine) {
 			t.Errorf("the engine usage lacks %q", engine)
 		}

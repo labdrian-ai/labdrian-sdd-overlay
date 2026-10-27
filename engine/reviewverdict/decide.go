@@ -43,8 +43,12 @@ type Decision struct {
 //   - A WARNING is fixed before delivery and a SUGGESTION is carried, whatever the verdict.
 //
 // A finding with no verdict is read as a check that did not run, never as one that did not reproduce, whatever
-// its causal disposition. A severity the contract does not list is read as severe. The verdicts are the ones
-// Parse returns, which never holds two for one id; were it given two, the last would count. The outcome is Blocks when anything blocks, else Unverified when anything is unverified, else Clear.
+// its causal disposition. A severity the contract does not list is read as severe.
+//
+// The outcome is Blocks when anything blocks, else Unverified when anything is unverified, else Clear.
+//
+// The verdicts are the ones Parse returns, which never holds two for one id; were it given two, the last would
+// count.
 func Decide(r reviewresult.Result, verdicts []Verdict) Decision {
 	byID := make(map[string]Verdict, len(verdicts))
 	for _, v := range verdicts {

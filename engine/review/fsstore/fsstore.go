@@ -112,8 +112,8 @@ type Store struct {
 	// flush fail. New leaves it nil.
 	syncDir func(*os.File) error
 	// lockWait and flock, when they are set, are how long Lock waits for another holder and the call that
-	// takes the lock, instead of lockWait and syscall.Flock, so a test can wait less and make the call fail.
-	// New leaves them zero.
+	// takes the lock, instead of defaultLockWait and syscall.Flock (lock_unix.go), so a test can wait less and
+	// make the call fail. Only unix builds take a lock and read them. New leaves them zero.
 	lockWait time.Duration
 	flock    func(fd, how int) error
 }

@@ -15,10 +15,10 @@ import (
 )
 
 const (
-	// lockWait is how long Lock waits for another holder before it gives up: the held section lists one
+	// defaultLockWait is how long Lock waits for another holder before it gives up: the held section lists one
 	// directory and stores one file, so a holder that keeps the lock longer is stuck, and a caller that waits
 	// for ever would be stuck with it.
-	lockWait = 30 * time.Second
+	defaultLockWait = 30 * time.Second
 	// lockPoll is how often Lock asks again while another holder has the lock.
 	lockPoll = 50 * time.Millisecond
 )
@@ -28,11 +28,13 @@ const (
 // the lock to what was opened, so every call, of this process or of another, waits for the one before; the
 // end of the process that held it gives it back too. Only callers of Lock wait for each other: Create needs
 // no lock, since it never writes over a file. A file system that cannot lock (ENOLCK, EOPNOTSUPP) is an error,
-// so a verdict that blocks is not stored where the round cannot be guarded.
+// so a verdict that blocks is not stored where the round cannot be guarded. Waiters ask again in no order, so
+// they are not served first come first served; one that keeps losing stops at the wait with ErrLockHeld, and
+// nothing is stored, which is safe for a section this short.
 func (s Store) take(dir *os.File, path string) error {
 	wait := s.lockWait
 	if wait == 0 {
-		wait = lockWait
+		wait = defaultLockWait
 	}
 	flock := s.flock
 	if flock == nil {

@@ -125,6 +125,10 @@ func TestALockIsOfTheDirectoryTheStoreWalkedTo(t *testing.T) {
 			if _, err := lock(Store{}, linked, "own-rdd"); !errors.Is(err, ErrNotADirectory) {
 				t.Errorf("%s() of a feature directory that is a link error = %v, want %v", name, err, ErrNotADirectory)
 			}
+			unsafe := t.TempDir()
+			if _, err := lock(Store{}, unsafe, "../own-rdd"); !errors.Is(err, review.ErrInvalidFeature) || exists(filepath.Join(unsafe, "odd")) {
+				t.Errorf("%s() of an unsafe feature error = %v, want %v and nothing made", name, err, review.ErrInvalidFeature)
+			}
 		})
 	}
 
