@@ -28,7 +28,9 @@
 //
 // The lens rows the reviewer is sent (own-rdd T5, S8) are written once, as sentences, in roles/reviewer/rows.json,
 // and the parent of the chain copies the ones a launch needs into the prompt of the reviewer. This package holds the
-// ids of those rows (RowIDs) and the grammar in which a launch declares the ones it was sent (ParseRows).
+// ids of those rows (RowIDs) and the grammar in which a launch declares the ones it was sent (ParseRows). The stored
+// result records them (EncodeResult, DecodeResult), so the number of lenses a review ran is counted from the stored
+// results of the change and not from the receipt of another tool.
 //
 // When the verifier ran (own-rdd T3), its verdict on the findings of a stored result is stored beside the
 // result with the same <head12>-<n>, as <head12>-<n>.verifier.json (VerdictName, ResultOfVerdict), and the

@@ -126,7 +126,7 @@ func TestReviewCheckOfTheBuiltProgramClearsAReviewedHeadAndRefusesAWrongOne(t *t
 		t.Fatalf("review bind: exit %d, stderr %q", code, errText)
 	}
 	b := decodeBinding(t, out)
-	if _, errText, code := run(reply(t, b, nil), "review", "record", "--feature", "own-rdd", "--base", "HEAD~1", "--head", "HEAD"); code != 0 {
+	if _, errText, code := run(reply(t, b, nil), "review", "record", "--feature", "own-rdd", "--base", "HEAD~1", "--head", "HEAD", "--rows", "default"); code != 0 {
 		t.Fatalf("review record: exit %d, stderr %q", code, errText)
 	}
 
@@ -151,7 +151,7 @@ func TestReviewCheckOfTheBuiltProgramClearsAReviewedHeadAndRefusesAWrongOne(t *t
 		t.Errorf("check of the head by its full name: exit %d, stdout %q; want 0 and the same answer as for HEAD: %q", code, again, out)
 	}
 
-	if _, errText, code := run(reply(t, b, withBlocker), "review", "record", "--feature", "own-rdd", "--base", "HEAD~1", "--head", "HEAD"); code != 0 {
+	if _, errText, code := run(reply(t, b, withBlocker), "review", "record", "--feature", "own-rdd", "--base", "HEAD~1", "--head", "HEAD", "--rows", "default"); code != 0 {
 		t.Fatalf("record of a blocker: exit %d, stderr %q", code, errText)
 	}
 	if out, errText, code := run("", "review", "check", "--feature", "own-rdd"); code != 1 || out != "" || !strings.Contains(errText, "a stored result is not clear") || !strings.Contains(errText, "findings not checked F1") {

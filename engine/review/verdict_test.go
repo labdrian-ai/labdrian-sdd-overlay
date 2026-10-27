@@ -91,10 +91,11 @@ func TestNextNumberCountsAVerdictBesideItsResult(t *testing.T) {
 	}
 }
 
-// The stored file of a result reads back as the binding it was held to and the reply as it was given.
+// The stored file of a result reads back as the binding it was held to, the rows its launch was sent and the reply
+// as it was given.
 func TestDecodeResultReadsWhatEncodeResultWrote(t *testing.T) {
 	c := candidate(t)
-	data, err := review.EncodeResult(c, []byte(replyText))
+	data, err := review.EncodeResult(c, sentRows(), []byte(replyText))
 	if err != nil {
 		t.Fatalf("setup: EncodeResult() error = %v", err)
 	}
@@ -107,6 +108,9 @@ func TestDecodeResultReadsWhatEncodeResultWrote(t *testing.T) {
 	if !reflect.DeepEqual(got.Binding, c.Binding()) {
 		t.Errorf("Binding = %+v, want %+v", got.Binding, c.Binding())
 	}
+	if !reflect.DeepEqual(got.Rows, sentRows()) {
+		t.Errorf("Rows = %q, want the rows that were stored: %q", got.Rows, sentRows())
+	}
 	var read, given any
 	if err := json.Unmarshal(got.Reply, &read); err != nil {
 		t.Fatalf("Reply is not JSON: %v\n%s", err, got.Reply)
@@ -117,11 +121,24 @@ func TestDecodeResultReadsWhatEncodeResultWrote(t *testing.T) {
 }
 
 func TestDecodeResultRefusesWhatEncodeResultDoesNotWrite(t *testing.T) {
-	good, err := review.EncodeResult(candidate(t), []byte(replyText))
+	good, err := review.EncodeResult(candidate(t), sentRows(), []byte(replyText))
 	if err != nil {
 		t.Fatalf("setup: EncodeResult() error = %v", err)
 	}
-	for name, data := range map[string]string{
+	// edited is the file good with its members edited by edit, written as JSON again.
+	edited := func(edit func(members map[string]any)) string {
+		var members map[string]any
+		if err := json.Unmarshal(good, &members); err != nil {
+			t.Fatalf("setup: %v", err)
+		}
+		edit(members)
+		data, err := json.Marshal(members)
+		if err != nil {
+			t.Fatalf("setup: %v", err)
+		}
+		return string(data)
+	}
+	cases := map[string]string{
 		"nothing":             "",
 		"text":                "a result",
 		"an array":            "[]",
@@ -131,7 +148,17 @@ func TestDecodeResultRefusesWhatEncodeResultDoesNotWrite(t *testing.T) {
 		"no reply":            `{"version": 1, "binding": {}}`,
 		"a null reply":        `{"version": 1, "binding": {}, "reply": null}`,
 		"two objects":         string(good) + string(good),
-	} {
+	}
+	// A file with no rows is the shape of a result stored before the rows were recorded: it is refused, and not read
+	// as the result of a launch that was sent no row.
+	cases["no rows"] = edited(func(m map[string]any) { delete(m, "rows") })
+	cases["null rows"] = edited(func(m map[string]any) { m["rows"] = nil })
+	cases["an empty list of rows"] = edited(func(m map[string]any) { m["rows"] = []any{} })
+	cases["a row nobody wrote"] = edited(func(m map[string]any) { m["rows"] = []any{"default", "nope"} })
+	cases["a row written twice"] = edited(func(m map[string]any) { m["rows"] = []any{"default", "default"} })
+	cases["rows that are not a list"] = edited(func(m map[string]any) { m["rows"] = "default" })
+	cases["a row that is not a string"] = edited(func(m map[string]any) { m["rows"] = []any{1} })
+	for name, data := range cases {
 		t.Run(name, func(t *testing.T) {
 			if got, err := review.DecodeResult([]byte(data)); !errors.Is(err, review.ErrInvalidStored) {
 				t.Errorf("DecodeResult() = %+v, %v; want an error wrapping ErrInvalidStored", got, err)

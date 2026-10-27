@@ -38,7 +38,7 @@ func (w *reviewWorld) bindRange(base, head string) reviewBinding {
 func (w *reviewWorld) recordRange(base, head string) reviewBinding {
 	w.t.Helper()
 	b := w.bindRange(base, head)
-	if _, stderr, exits := w.run(reply(w.t, b, nil), "record", "--feature", "own-rdd", "--base", base, "--head", head); !equalInts(exits, []int{0}) {
+	if _, stderr, exits := w.run(reply(w.t, b, nil), "record", "--feature", "own-rdd", "--base", base, "--head", head, "--rows", "default"); !equalInts(exits, []int{0}) {
 		w.t.Fatalf("setup: review record exit calls = %v, stderr = %q; want [0]", exits, stderr)
 	}
 	return b

@@ -192,7 +192,7 @@ func mustEncodeExemption(t *testing.T) []byte {
 
 func mustEncodeResult(t *testing.T) []byte {
 	t.Helper()
-	data, err := review.EncodeResult(candidate(t), []byte(replyText))
+	data, err := review.EncodeResult(candidate(t), sentRows(), []byte(replyText))
 	if err != nil {
 		t.Fatalf("setup: EncodeResult() error = %v", err)
 	}

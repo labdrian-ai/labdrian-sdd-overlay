@@ -120,11 +120,18 @@ type Recorded struct {
 
 // Record holds the reply of a reviewer to the candidate of the diff from base to head, recomputed from git
 // in the repository that holds dir (absolute) and not taken from the reply, and stores it. The file is the
-// reply with the binding it was held to, in the next free number of the head in the results directory of the
-// feature; no file is replaced. A reply that does not hold, or is too large, is refused with a
-// *ReplyRefusedError, the named error inside it, and nothing is written.
-func (s Service) Record(dir, feature, base, head string, reply []byte) (Recorded, error) {
+// reply with the binding it was held to and the lens rows the launch was sent, in the next free number of the head
+// in the results directory of the feature; no file is replaced. rows is the declaration of the parent of the chain
+// (review.ParseRows); one that is not a list of the rows of the canonical file is an argument that is refused, with
+// an error that wraps review.ErrInvalidRows, after the feature and before anything else is looked at. A reply that
+// does not hold, or is too large, is refused with a *ReplyRefusedError, the named error inside it, and nothing is
+// written.
+func (s Service) Record(dir, feature, base, head, rows string, reply []byte) (Recorded, error) {
 	if err := review.CheckFeature(feature); err != nil {
+		return Recorded{}, err
+	}
+	ids, err := review.ParseRows(rows)
+	if err != nil {
 		return Recorded{}, err
 	}
 	if len(reply) > review.MaxReplyBytes {
@@ -137,7 +144,7 @@ func (s Service) Record(dir, feature, base, head string, reply []byte) (Recorded
 	if _, err := reviewresult.Parse(reply, candidate.Binding()); err != nil {
 		return Recorded{}, &ReplyRefusedError{Err: err}
 	}
-	file, err := review.EncodeResult(candidate, reply)
+	file, err := review.EncodeResult(candidate, ids, reply)
 	if err != nil {
 		return Recorded{}, err
 	}

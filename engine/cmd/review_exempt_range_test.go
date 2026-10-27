@@ -147,7 +147,7 @@ func TestARangeWhoseBaseIsItsHeadCoversNoCommitAndClearsNothing(t *testing.T) {
 		w := newReviewWorld(t)
 		for _, args := range [][]string{
 			{"bind", "--base", w.head, "--head", w.head},
-			{"record", "--feature", "own-rdd", "--base", w.head, "--head", w.head},
+			{"record", "--feature", "own-rdd", "--base", w.head, "--head", w.head, "--rows", "default"},
 			{"exempt", "--feature", "own-rdd", "--base", w.head, "--head", w.head, "--risk", "none"},
 		} {
 			stdout, stderr, exits := w.run(verifierReport, args...)
@@ -166,7 +166,7 @@ func TestARangeWhoseBaseIsItsHeadCoversNoCommitAndClearsNothing(t *testing.T) {
 		// A result of the empty diff of the head with itself, whole and consistent: its reply holds to its binding and the
 		// binding is what git gives for the range, so only the range is wrong.
 		empty := reviewBinding{Base: w.head, Head: w.head, DiffSHA256: sum(nil), Paths: []string{}}
-		file, err := review.EncodeResult(review.Candidate{Base: empty.Base, Head: empty.Head, DiffSHA256: empty.DiffSHA256, Paths: empty.Paths}, []byte(reply(t, empty, nil)))
+		file, err := review.EncodeResult(review.Candidate{Base: empty.Base, Head: empty.Head, DiffSHA256: empty.DiffSHA256, Paths: empty.Paths}, []string{"default"}, []byte(reply(t, empty, nil)))
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -268,6 +268,26 @@ func replyWith(t *testing.T, base, head, digest, status string, paths []string) 
 	return data
 }
 
+// storedWithoutRows is the stored file of a clean result of c with its rows member taken out: the shape of a result
+// stored before the rows were recorded.
+func storedWithoutRows(t *testing.T, c review.Candidate) []byte {
+	t.Helper()
+	file, err := review.EncodeResult(c, []string{"default"}, replyFor(t, c))
+	if err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+	var members map[string]json.RawMessage
+	if err := json.Unmarshal(file, &members); err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+	delete(members, "rows")
+	out, err := json.Marshal(members)
+	if err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+	return out
+}
+
 // sha256Of is the SHA-256 of data, written without the code under test.
 func sha256Of(data []byte) string {
 	sum := sha256.Sum256(data)
