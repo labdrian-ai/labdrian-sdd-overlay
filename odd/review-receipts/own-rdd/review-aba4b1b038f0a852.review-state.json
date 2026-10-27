@@ -1,0 +1,434 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:03588b4df285ae7ebdbe3180372bb4d80522af32fd5d3b620546e24e5902b02c",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-aba4b1b038f0a852",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "6916be329f577cc7e40da8e6bdac5905bd2c0818",
+      "candidate_tree": "f1743b221472745aae717934433d0e14356d9418",
+      "paths_digest": "sha256:21ba38311d23e85f4adcd9cb2f05ed9ee2f87a8138026a5540e869fe0d9c6567",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/cmd/review.go",
+        "engine/cmd/review_test.go",
+        "engine/review/app/app.go",
+        "engine/review/app/fakes_test.go",
+        "engine/review/app/record_test.go",
+        "engine/review/app/service.go",
+        "engine/review/candidate_test.go",
+        "engine/review/fixtures_test.go",
+        "engine/review/fsstore/bypath.go",
+        "engine/review/fsstore/fsstore.go",
+        "engine/review/fsstore/fsstore_test.go",
+        "engine/review/fsstore/held_linux.go",
+        "engine/review/fsstore/held_linux_test.go",
+        "engine/review/gitexec/gitexec.go",
+        "odd/tasks/own-rdd.md"
+      ],
+      "identity": "sha256:435f6f52b62931be2f7b12383dc0b6f7e17c2ea1ae06de2ee8fc6015c22c1db3"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "6916be329f577cc7e40da8e6bdac5905bd2c0818",
+      "candidate_tree": "f1743b221472745aae717934433d0e14356d9418",
+      "paths_digest": "sha256:21ba38311d23e85f4adcd9cb2f05ed9ee2f87a8138026a5540e869fe0d9c6567",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/cmd/review.go",
+        "engine/cmd/review_test.go",
+        "engine/review/app/app.go",
+        "engine/review/app/fakes_test.go",
+        "engine/review/app/record_test.go",
+        "engine/review/app/service.go",
+        "engine/review/candidate_test.go",
+        "engine/review/fixtures_test.go",
+        "engine/review/fsstore/bypath.go",
+        "engine/review/fsstore/fsstore.go",
+        "engine/review/fsstore/fsstore_test.go",
+        "engine/review/fsstore/held_linux.go",
+        "engine/review/fsstore/held_linux_test.go",
+        "engine/review/gitexec/gitexec.go",
+        "odd/tasks/own-rdd.md"
+      ],
+      "identity": "sha256:435f6f52b62931be2f7b12383dc0b6f7e17c2ea1ae06de2ee8fc6015c22c1db3"
+    },
+    "genesis_paths": [
+      "CHANGELOG.md",
+      "engine/cmd/review.go",
+      "engine/cmd/review_test.go",
+      "engine/review/app/app.go",
+      "engine/review/app/fakes_test.go",
+      "engine/review/app/record_test.go",
+      "engine/review/app/service.go",
+      "engine/review/candidate_test.go",
+      "engine/review/fixtures_test.go",
+      "engine/review/fsstore/bypath.go",
+      "engine/review/fsstore/fsstore.go",
+      "engine/review/fsstore/fsstore_test.go",
+      "engine/review/fsstore/held_linux.go",
+      "engine/review/fsstore/held_linux_test.go",
+      "engine/review/gitexec/gitexec.go",
+      "odd/tasks/own-rdd.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-risk",
+      "review-resilience",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 291,
+    "correction_budget": 146,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "last T2 fixes: held store keeps base error wording and reports a published-but-unflushed result as app.ErrNotFlushed (risk, resilience); record exits 0 with a warning instead of a failure (reliability); single observer construction, temp name from tempPattern, fixture and docs (readability)",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:23864a7569aa3afd3e423852d374710566d4d18c50dbdd8e401794ac4e1354fe",
+    "capture_phase_revision": "sha256:67f89b6e95a1d95ae36c1a41f809228760a2a9f5caf160c2033933918ccaf89f",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:435f6f52b62931be2f7b12383dc0b6f7e17c2ea1ae06de2ee8fc6015c22c1db3",
+        "capture_phase_revision": "sha256:67f89b6e95a1d95ae36c1a41f809228760a2a9f5caf160c2033933918ccaf89f",
+        "artifact_digest": "sha256:80ab2190be59b6bec8169f63d9891e2c3b4349a835160f4c48fc102549999364",
+        "result_hash": "sha256:706a8afc674da1b5a0f17c2edb338e1bdba72048ffe9c626c2eae3dcdfb04c6c",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:32a8171d64ffe16e6cd29f2d02dd7b99cd0d36a3554ca58e47955868efb23b9c",
+            "lineage_id": "review-aba4b1b038f0a852",
+            "authority_revision": "sha256:67f89b6e95a1d95ae36c1a41f809228760a2a9f5caf160c2033933918ccaf89f",
+            "target_identity": "sha256:435f6f52b62931be2f7b12383dc0b6f7e17c2ea1ae06de2ee8fc6015c22c1db3",
+            "base_tree": "6916be329f577cc7e40da8e6bdac5905bd2c0818",
+            "candidate_tree": "f1743b221472745aae717934433d0e14356d9418",
+            "changed_path_manifest_sha256": "sha256:128249faca18c17090f73183486dc2e8bfd81b7144f09d054bc83f0a4efac522",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:32a8171d64ffe16e6cd29f2d02dd7b99cd0d36a3554ca58e47955868efb23b9c",
+            "raw_sha256": "sha256:616707cfe292029f420db883daddce677147648229a588457507f61d1a8713cc",
+            "canonical_sha256": "sha256:57e01362fc30282562728b1f7528e5490f82cfe3d144b439338b39ae60451012",
+            "result_hash": "sha256:706a8afc674da1b5a0f17c2edb338e1bdba72048ffe9c626c2eae3dcdfb04c6c",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:32a8171d64ffe16e6cd29f2d02dd7b99cd0d36a3554ca58e47955868efb23b9c",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "CHANGELOG.md",
+                "engine/cmd/review.go",
+                "engine/cmd/review_test.go",
+                "engine/review/app/app.go",
+                "engine/review/app/fakes_test.go",
+                "engine/review/app/record_test.go",
+                "engine/review/app/service.go",
+                "engine/review/candidate_test.go",
+                "engine/review/fixtures_test.go",
+                "engine/review/fsstore/bypath.go",
+                "engine/review/fsstore/fsstore.go",
+                "engine/review/fsstore/fsstore_test.go",
+                "engine/review/fsstore/held_linux.go",
+                "engine/review/fsstore/held_linux_test.go",
+                "engine/review/gitexec/gitexec.go",
+                "odd/tasks/own-rdd.md"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "Reviewed all 16 changed paths for security, data-loss and unsafe-input risk.",
+              "The main risk change is in engine/review/fsstore/held_linux.go. It reports a post-link directory flush failure as app.ErrNotFlushed, wrapped with %w. engine/review/app/service.go treats that error as stored, so Record does not retry and does not write a second copy. The openat/O_NOFOLLOW/O_EXCL walk and the linkat publish are unchanged, so no new symlink-redirect or overwrite path is introduced.",
+              "The new error wrapping of mkdir and open failures in held_linux.go only changes message text. Its ELOOP/ENOTDIR handling still routes symlink and non-directory cases to notADirectory, so the refusal of symlinks on the path is preserved.",
+              "engine/review/fsstore/fsstore.go adds a syncDir test hook that is nil in New(), so it is not reachable in production. temporaryName builds names from tempPattern, so the names Names hides match the names the writer stages.",
+              "engine/cmd/review.go reportRecorded prints the flush warning and still exits 0 with the handoff skeleton. A stdout write failure still exits 1 with the stored path in the message. No secrets or sensitive data are added to the output.",
+              "engine/review/gitexec/gitexec.go: Worktree now builds its observer via g.observer(), which was not visible in this patch. That helper's environment handling is outside the candidate view and was not assessed. The rest of the change is a comment.",
+              "The remaining changes are tests, fixtures, CHANGELOG and task documentation, with no runtime effect."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-resilience",
+        "selected_order": 1,
+        "target_identity": "sha256:435f6f52b62931be2f7b12383dc0b6f7e17c2ea1ae06de2ee8fc6015c22c1db3",
+        "capture_phase_revision": "sha256:67f89b6e95a1d95ae36c1a41f809228760a2a9f5caf160c2033933918ccaf89f",
+        "artifact_digest": "sha256:8c66f8e4e14be2a2d8d6f7acf6142782413350a34073024f11b4dac82b4dcb58",
+        "result_hash": "sha256:6969b682b069b6d807b8a6b51a34578d98dd6669d261b22fbe907c26fdce1e54",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:057b5a6aa1fad4af91b4e9b91effc5ace63a376aafd8e3829cdc0aabe89f9567",
+            "lineage_id": "review-aba4b1b038f0a852",
+            "authority_revision": "sha256:67f89b6e95a1d95ae36c1a41f809228760a2a9f5caf160c2033933918ccaf89f",
+            "target_identity": "sha256:435f6f52b62931be2f7b12383dc0b6f7e17c2ea1ae06de2ee8fc6015c22c1db3",
+            "base_tree": "6916be329f577cc7e40da8e6bdac5905bd2c0818",
+            "candidate_tree": "f1743b221472745aae717934433d0e14356d9418",
+            "changed_path_manifest_sha256": "sha256:128249faca18c17090f73183486dc2e8bfd81b7144f09d054bc83f0a4efac522",
+            "lens": "review-resilience",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:057b5a6aa1fad4af91b4e9b91effc5ace63a376aafd8e3829cdc0aabe89f9567",
+            "raw_sha256": "sha256:c197e35b11dac335791c566db0790c3fb778699e477d32bbdb679c774359a7e2",
+            "canonical_sha256": "sha256:0685a7e689a4a71b85494840702b2bc37ce54842c49b3694ffb3e389ab330056",
+            "result_hash": "sha256:6969b682b069b6d807b8a6b51a34578d98dd6669d261b22fbe907c26fdce1e54",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:057b5a6aa1fad4af91b4e9b91effc5ace63a376aafd8e3829cdc0aabe89f9567",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "CHANGELOG.md",
+                "engine/cmd/review.go",
+                "engine/cmd/review_test.go",
+                "engine/review/app/app.go",
+                "engine/review/app/fakes_test.go",
+                "engine/review/app/record_test.go",
+                "engine/review/app/service.go",
+                "engine/review/candidate_test.go",
+                "engine/review/fixtures_test.go",
+                "engine/review/fsstore/bypath.go",
+                "engine/review/fsstore/fsstore.go",
+                "engine/review/fsstore/fsstore_test.go",
+                "engine/review/fsstore/held_linux.go",
+                "engine/review/fsstore/held_linux_test.go",
+                "engine/review/gitexec/gitexec.go",
+                "odd/tasks/own-rdd.md"
+              ]
+            },
+            "lens": "review-resilience",
+            "findings": [
+              {
+                "id": "R4-001",
+                "lens": "resilience",
+                "location": "engine/review/fsstore/bypath.go:46-49",
+                "severity": "WARNING",
+                "claim": "On non-linux platforms a directory flush failure after the link is reported as a plain failure, not ErrNotFlushed. A caller retrying after that error would create a second copy of an already-published result (next number). The candidate documents this limit in the comment, but the retry-duplication failure mode remains on those platforms.",
+                "proof_refs": [
+                  "engine/review/fsstore/bypath.go:46-49",
+                  "engine/review/app/service.go:167-173"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "pre-existing"
+              }
+            ],
+            "evidence": [
+              "Reviewed all 16 manifest paths. The core change maps a post-link directory flush failure to app.ErrNotFlushed (held_linux.go) and Service.Record/store treat it as stored with exit 0 and a stderr warning, which avoids duplicate results on retry and is covered by tests at the app, cmd and fsstore levels.",
+              "cmd/review.go handoff write failure now prints an error and exits 1 while the result is already stored; the message names the stored path, so the operator is told not to redo it.",
+              "store() returns on ErrNotFlushed without retrying, so the number is not consumed twice; the error wrapping uses multiple %w which requires Go 1.20+, within the module's go 1.21.",
+              "The non-linux limitation is the only residual resilience gap; it is documented in code and CHANGELOG and was the baseline behavior."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "selected_order": 2,
+        "target_identity": "sha256:435f6f52b62931be2f7b12383dc0b6f7e17c2ea1ae06de2ee8fc6015c22c1db3",
+        "capture_phase_revision": "sha256:67f89b6e95a1d95ae36c1a41f809228760a2a9f5caf160c2033933918ccaf89f",
+        "artifact_digest": "sha256:9c26f78caa11c238d001395480ab7c9358f1a2b7ee3a5887ca04d6230a2a9c1b",
+        "result_hash": "sha256:a1cd71105890b8f558a192f937d0796ae4a0251fb9f352a2c9468e9da890e58f",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:897c56088df16bb17aeaddd0c44ecfeafc05512c3a78c3b97bd1c9ad6f835b17",
+            "lineage_id": "review-aba4b1b038f0a852",
+            "authority_revision": "sha256:67f89b6e95a1d95ae36c1a41f809228760a2a9f5caf160c2033933918ccaf89f",
+            "target_identity": "sha256:435f6f52b62931be2f7b12383dc0b6f7e17c2ea1ae06de2ee8fc6015c22c1db3",
+            "base_tree": "6916be329f577cc7e40da8e6bdac5905bd2c0818",
+            "candidate_tree": "f1743b221472745aae717934433d0e14356d9418",
+            "changed_path_manifest_sha256": "sha256:128249faca18c17090f73183486dc2e8bfd81b7144f09d054bc83f0a4efac522",
+            "lens": "review-readability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:897c56088df16bb17aeaddd0c44ecfeafc05512c3a78c3b97bd1c9ad6f835b17",
+            "raw_sha256": "sha256:5135392224643742c3d106626ea7014e41af57f882d214fe1db02c93b84ac0ad",
+            "canonical_sha256": "sha256:4a2ab533c96490b166f9ab123ef16bcb41a4fe7e119e060275785c92b1b50733",
+            "result_hash": "sha256:a1cd71105890b8f558a192f937d0796ae4a0251fb9f352a2c9468e9da890e58f",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:897c56088df16bb17aeaddd0c44ecfeafc05512c3a78c3b97bd1c9ad6f835b17",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "CHANGELOG.md",
+                "engine/cmd/review.go",
+                "engine/cmd/review_test.go",
+                "engine/review/app/app.go",
+                "engine/review/app/fakes_test.go",
+                "engine/review/app/record_test.go",
+                "engine/review/app/service.go",
+                "engine/review/candidate_test.go",
+                "engine/review/fixtures_test.go",
+                "engine/review/fsstore/bypath.go",
+                "engine/review/fsstore/fsstore.go",
+                "engine/review/fsstore/fsstore_test.go",
+                "engine/review/fsstore/held_linux.go",
+                "engine/review/fsstore/held_linux_test.go",
+                "engine/review/gitexec/gitexec.go",
+                "odd/tasks/own-rdd.md"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-001",
+                "lens": "readability",
+                "location": "engine/cmd/review.go:258",
+                "severity": "WARNING",
+                "claim": "The handoff-write failure path in reportRecorded builds its message by wrapping an fmt.Errorf inside a Fprintf and calling p.exit(1) directly, duplicating what fail() does for the same message shape. If fail() changes its prefix or format, this copy will silently drift. The reason fail() was bypassed (probably to avoid a second wrapper or a different exit path) is not documented.",
+                "proof_refs": [
+                  "engine/cmd/review.go:258-259"
+                ]
+              },
+              {
+                "id": "R2-002",
+                "lens": "readability",
+                "location": "engine/review/fsstore/held_linux.go:142-150",
+                "severity": "WARNING",
+                "claim": "openBelow now wraps errors in hand-built fs.PathError values to mimic the wording os.ReadDir and os.Mkdir used before, with a conditional that excludes ENOTDIR/ELOOP for the non-create case. This error-text compatibility logic is subtle and implicit: the Op names ('mkdir', 'open') are synthesized rather than coming from the failing call, and the double wrapping ('make path: mkdir path: ...') repeats the path. A short comment explains only the read case.",
+                "proof_refs": [
+                  "engine/review/fsstore/held_linux.go:142-150"
+                ]
+              },
+              {
+                "id": "R2-003",
+                "lens": "readability",
+                "location": "engine/review/fsstore/bypath.go:46-49",
+                "severity": "SUGGESTION",
+                "claim": "The portable store now documents that a flush failure after the link is reported as a plain failure rather than ErrNotFlushed, so the same condition yields different Record outcomes (exit 0 with a warning on linux, a failure on other platforms, where a retry would store a second copy). The divergence is only recorded in a comment; callers and the CHANGELOG describe the linux behavior only partially.",
+                "proof_refs": [
+                  "engine/review/fsstore/bypath.go:46-49",
+                  "CHANGELOG.md:9"
+                ]
+              }
+            ],
+            "evidence": [
+              "Reviewed all 16 changed paths in the patch.",
+              "No BLOCKER or CRITICAL findings; items are maintainability notes on duplicated error formatting, implicit error-text mimicry, and platform divergence documented only in a comment."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 3,
+        "target_identity": "sha256:435f6f52b62931be2f7b12383dc0b6f7e17c2ea1ae06de2ee8fc6015c22c1db3",
+        "capture_phase_revision": "sha256:67f89b6e95a1d95ae36c1a41f809228760a2a9f5caf160c2033933918ccaf89f",
+        "artifact_digest": "sha256:58a0b696b65f10ca56eac7f5d25909878baf8998604886a06ef5fd4722cd9150",
+        "result_hash": "sha256:1dafaf0d839a8ce5099a0a04cdeca21172790ca0490789b3c52766f6e3583527",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:e4582222786ff3fc2fda82a4f84f29fa533a1be5f018d050e925b6aca4afaefc",
+            "lineage_id": "review-aba4b1b038f0a852",
+            "authority_revision": "sha256:67f89b6e95a1d95ae36c1a41f809228760a2a9f5caf160c2033933918ccaf89f",
+            "target_identity": "sha256:435f6f52b62931be2f7b12383dc0b6f7e17c2ea1ae06de2ee8fc6015c22c1db3",
+            "base_tree": "6916be329f577cc7e40da8e6bdac5905bd2c0818",
+            "candidate_tree": "f1743b221472745aae717934433d0e14356d9418",
+            "changed_path_manifest_sha256": "sha256:128249faca18c17090f73183486dc2e8bfd81b7144f09d054bc83f0a4efac522",
+            "lens": "review-reliability",
+            "selected_order": 3
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:e4582222786ff3fc2fda82a4f84f29fa533a1be5f018d050e925b6aca4afaefc",
+            "raw_sha256": "sha256:c7de8963ab7417ad62df25e79e7abd7238e9ffd3cf58f210e1d8bc30b73b11b4",
+            "canonical_sha256": "sha256:3f4ffe44e456ce408519aa5be0e315a911c9505403338c660e53e02ea97a364d",
+            "result_hash": "sha256:1dafaf0d839a8ce5099a0a04cdeca21172790ca0490789b3c52766f6e3583527",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:e4582222786ff3fc2fda82a4f84f29fa533a1be5f018d050e925b6aca4afaefc",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "CHANGELOG.md",
+                "engine/cmd/review.go",
+                "engine/cmd/review_test.go",
+                "engine/review/app/app.go",
+                "engine/review/app/fakes_test.go",
+                "engine/review/app/record_test.go",
+                "engine/review/app/service.go",
+                "engine/review/candidate_test.go",
+                "engine/review/fixtures_test.go",
+                "engine/review/fsstore/bypath.go",
+                "engine/review/fsstore/fsstore.go",
+                "engine/review/fsstore/fsstore_test.go",
+                "engine/review/fsstore/held_linux.go",
+                "engine/review/fsstore/held_linux_test.go",
+                "engine/review/gitexec/gitexec.go",
+                "odd/tasks/own-rdd.md"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [],
+            "evidence": [
+              "Reviewed all 16 changed paths. The flush-failure path is consistent end to end: held_linux.go wraps app.ErrNotFlushed after the link, store() in service.go stops retrying and returns that error (so a published result is not stored a second time), Record returns Recorded.NotFlushed with a nil error, and reportRecorded prints the warning and exits 0 with the skeleton.",
+              "Tests cover each layer: record_test.go checks Record with an unflushed store (nil error, Path and Number set, NotFlushed wraps ErrNotFlushed, Create called once); held_linux_test.go checks the held create against an injected flush failure and that the file is stored with its content; review_test.go checks exit 0, non-empty stdout and the stderr wording.",
+              "The write-failure branch of reportRecorded still exits 1 and names the stored path, matching the earlier behavior. The inline replacement of fail() keeps the same message shape.",
+              "The Names and Create error-wording changes are pinned by exact-string tests, and the temporaryName helper is checked against isTemporary.",
+              "Observation only: on non-linux platforms a directory flush failure is still reported as a plain failure and not as ErrNotFlushed, so a retry could store a second copy. bypath.go and the CHANGELOG state this limit openly, and it is the existing behavior, so it is not a regression."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "4a8b47e18fbaca033f40d572d7299b583fdffe6aff324c9e235570eefcb1efc1",
+    "initial_atomic_start": {
+      "lineage_id": "review-aba4b1b038f0a852",
+      "worktree_identity": "sha256:571cf94da78406a5dee177091311c4fcbbbf61e483d9e6e92803045faa817e42",
+      "target_identity": "sha256:435f6f52b62931be2f7b12383dc0b6f7e17c2ea1ae06de2ee8fc6015c22c1db3",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "6916be329f577cc7e40da8e6bdac5905bd2c0818",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-risk",
+        "review-resilience",
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 291,
+      "correction_budget": 146,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "last T2 fixes: held store keeps base error wording and reports a published-but-unflushed result as app.ErrNotFlushed (risk, resilience); record exits 0 with a warning instead of a failure (reliability); single observer construction, temp name from tempPattern, fixture and docs (readability)"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

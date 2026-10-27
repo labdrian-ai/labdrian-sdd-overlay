@@ -1,0 +1,387 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:d6c59ad1fccf501ae6bb112ae5c37a1fb8022db68ef22cbb513aa07021a8697a",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-b34c86839d7d0708",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "80cbbe320b137b8a5de334267e9616ac9e240c1f",
+      "candidate_tree": "6916be329f577cc7e40da8e6bdac5905bd2c0818",
+      "paths_digest": "sha256:56546e74e5013d86eccc28b30a3f099f24167ca60f1f673dd9ba1f547c18052c",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/review/fsstore/bypath.go",
+        "engine/review/fsstore/changes_internal_test.go",
+        "engine/review/fsstore/fsstore.go",
+        "engine/review/fsstore/fsstore_test.go",
+        "engine/review/fsstore/held_linux.go",
+        "engine/review/fsstore/held_linux_test.go",
+        "engine/review/fsstore/impls_linux_test.go",
+        "engine/review/fsstore/impls_other_test.go",
+        "engine/review/fsstore/portable.go"
+      ],
+      "identity": "sha256:72159ca6a97bbe575a410c7a6688a5b6a4da25ca61eedb9d32ebfeda4138d1bf"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "80cbbe320b137b8a5de334267e9616ac9e240c1f",
+      "candidate_tree": "6916be329f577cc7e40da8e6bdac5905bd2c0818",
+      "paths_digest": "sha256:56546e74e5013d86eccc28b30a3f099f24167ca60f1f673dd9ba1f547c18052c",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/review/fsstore/bypath.go",
+        "engine/review/fsstore/changes_internal_test.go",
+        "engine/review/fsstore/fsstore.go",
+        "engine/review/fsstore/fsstore_test.go",
+        "engine/review/fsstore/held_linux.go",
+        "engine/review/fsstore/held_linux_test.go",
+        "engine/review/fsstore/impls_linux_test.go",
+        "engine/review/fsstore/impls_other_test.go",
+        "engine/review/fsstore/portable.go"
+      ],
+      "identity": "sha256:72159ca6a97bbe575a410c7a6688a5b6a4da25ca61eedb9d32ebfeda4138d1bf"
+    },
+    "genesis_paths": [
+      "engine/review/fsstore/bypath.go",
+      "engine/review/fsstore/changes_internal_test.go",
+      "engine/review/fsstore/fsstore.go",
+      "engine/review/fsstore/fsstore_test.go",
+      "engine/review/fsstore/held_linux.go",
+      "engine/review/fsstore/held_linux_test.go",
+      "engine/review/fsstore/impls_linux_test.go",
+      "engine/review/fsstore/impls_other_test.go",
+      "engine/review/fsstore/portable.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-risk",
+      "review-resilience",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 1222,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "held store on linux: openat O_NOFOLLOW per directory, held feature fd, raw SYS_LINKAT and unsafe pointer use (risk); by-path re-check and ErrChanged elsewhere, temp-file cleanup and EINTR handling (resilience); swap-race, mkdir-race and Names temp filtering tests (reliability); build-tagged file split (readability)",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:f2c4e7370368907b19d3576273675be79cdfbf01e916e40ef87f5e633a79d766",
+    "capture_phase_revision": "sha256:66688f88713d4c04c6d175dd3cb66e08d52d09e83c4f9ce8ff636a4d92083d92",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:72159ca6a97bbe575a410c7a6688a5b6a4da25ca61eedb9d32ebfeda4138d1bf",
+        "capture_phase_revision": "sha256:66688f88713d4c04c6d175dd3cb66e08d52d09e83c4f9ce8ff636a4d92083d92",
+        "artifact_digest": "sha256:5f70e4dce4f7db6510440f906526a3fb21542a4fdbc657aa9525d68e3595265b",
+        "result_hash": "sha256:9eb8f245193611b8dcc6ed110e9b2358ca30b8df743b4ffa9a7bb58304b1f9e5",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:c3feb23cbfc0a683cbe8b141b104e3122b6eeb4bbe3162cbd771f5ca86c9a228",
+            "lineage_id": "review-b34c86839d7d0708",
+            "authority_revision": "sha256:66688f88713d4c04c6d175dd3cb66e08d52d09e83c4f9ce8ff636a4d92083d92",
+            "target_identity": "sha256:72159ca6a97bbe575a410c7a6688a5b6a4da25ca61eedb9d32ebfeda4138d1bf",
+            "base_tree": "80cbbe320b137b8a5de334267e9616ac9e240c1f",
+            "candidate_tree": "6916be329f577cc7e40da8e6bdac5905bd2c0818",
+            "changed_path_manifest_sha256": "sha256:350c538a4426b0ff49948a43d6f730c8421171d07ede726de01560b7907bd319",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:c3feb23cbfc0a683cbe8b141b104e3122b6eeb4bbe3162cbd771f5ca86c9a228",
+            "raw_sha256": "sha256:26d4ca3e098542376b43bb61c32102261777adffba14f648336d76b39825ec43",
+            "canonical_sha256": "sha256:76f43f789ce5eb9e4be9d319dde32a1c8f1d8d0bd5a1948659fb2d01b674810d",
+            "result_hash": "sha256:9eb8f245193611b8dcc6ed110e9b2358ca30b8df743b4ffa9a7bb58304b1f9e5",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:c3feb23cbfc0a683cbe8b141b104e3122b6eeb4bbe3162cbd771f5ca86c9a228",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/fsstore/bypath.go",
+                "engine/review/fsstore/changes_internal_test.go",
+                "engine/review/fsstore/fsstore.go",
+                "engine/review/fsstore/fsstore_test.go",
+                "engine/review/fsstore/held_linux.go",
+                "engine/review/fsstore/held_linux_test.go",
+                "engine/review/fsstore/impls_linux_test.go",
+                "engine/review/fsstore/impls_other_test.go",
+                "engine/review/fsstore/portable.go"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [
+              {
+                "id": "R1-bypath-residual-toctou",
+                "lens": "risk",
+                "location": "engine/review/fsstore/bypath.go:44-66",
+                "severity": "WARNING",
+                "claim": "On non-linux platforms the by-path store still has a TOCTOU window between the re-check (unchanged) and the link in staged.Create; a process able to swap a directory in that window can still publish through a link. The change documents this (does not close it) and narrows it relative to baseline, so it is a residual limitation, not a regression.",
+                "proof_refs": [
+                  "engine/review/fsstore/bypath.go:44-66",
+                  "engine/review/fsstore/fsstore.go:24-33"
+                ]
+              },
+              {
+                "id": "R1-held-linux-root-follow",
+                "lens": "risk",
+                "location": "engine/review/fsstore/held_linux.go:96-100",
+                "severity": "SUGGESTION",
+                "claim": "The root is opened following symlinks by design (documented as the caller-named working tree). Intermediate components of the path are opened with O_NOFOLLOW relative to held fds, so no escape from the results directory is reachable via the feature or name inputs. No exploitable issue found; the unsafe linkat syscall uses valid NUL-terminated pointers kept alive across the call.",
+                "proof_refs": [
+                  "engine/review/fsstore/held_linux.go:96-100"
+                ]
+              }
+            ],
+            "evidence": [
+              "Reviewed all 9 changed paths in full.",
+              "held_linux.go opens each path component with openat O_NOFOLLOW|O_DIRECTORY relative to the parent fd, stages the temp file and links with linkat relative to the held fd, closing the baseline's check-then-use symlink race on linux; descriptor-leak test covers error paths.",
+              "checkName and review.CheckFeature still gate name and feature before any filesystem access, so no traversal via inputs.",
+              "bypath.go adds Lstat/SameFile re-verification before and after the link; behavior on valid baseline input is preserved, with Names now additionally hiding .review-*.tmp files and sorting on linux.",
+              "No secrets, dependencies, or new external inputs were introduced."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-resilience",
+        "selected_order": 1,
+        "target_identity": "sha256:72159ca6a97bbe575a410c7a6688a5b6a4da25ca61eedb9d32ebfeda4138d1bf",
+        "capture_phase_revision": "sha256:66688f88713d4c04c6d175dd3cb66e08d52d09e83c4f9ce8ff636a4d92083d92",
+        "artifact_digest": "sha256:5d390ac8931bb7bda394e3a09f0b19ef3190566bda9b06a9747c1005b60364b6",
+        "result_hash": "sha256:b548e4263240cef62f07501168fd5caf3273487d51d01fe7e4da177b57e75a8b",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:2f615bfed07b82a8568d913da3a6869f6b9c00cd975bda5de591986def1c9d71",
+            "lineage_id": "review-b34c86839d7d0708",
+            "authority_revision": "sha256:66688f88713d4c04c6d175dd3cb66e08d52d09e83c4f9ce8ff636a4d92083d92",
+            "target_identity": "sha256:72159ca6a97bbe575a410c7a6688a5b6a4da25ca61eedb9d32ebfeda4138d1bf",
+            "base_tree": "80cbbe320b137b8a5de334267e9616ac9e240c1f",
+            "candidate_tree": "6916be329f577cc7e40da8e6bdac5905bd2c0818",
+            "changed_path_manifest_sha256": "sha256:350c538a4426b0ff49948a43d6f730c8421171d07ede726de01560b7907bd319",
+            "lens": "review-resilience",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:2f615bfed07b82a8568d913da3a6869f6b9c00cd975bda5de591986def1c9d71",
+            "raw_sha256": "sha256:a379e6c9ddc87ebc9c017d55900d7dc5348b0e494a86be0eec2ea219e9f424d7",
+            "canonical_sha256": "sha256:34cd2698e5d11dfe1614ec00d14b3dccb712c1e55cbb459dc406740e8a615c89",
+            "result_hash": "sha256:b548e4263240cef62f07501168fd5caf3273487d51d01fe7e4da177b57e75a8b",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:2f615bfed07b82a8568d913da3a6869f6b9c00cd975bda5de591986def1c9d71",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/fsstore/bypath.go",
+                "engine/review/fsstore/changes_internal_test.go",
+                "engine/review/fsstore/fsstore.go",
+                "engine/review/fsstore/fsstore_test.go",
+                "engine/review/fsstore/held_linux.go",
+                "engine/review/fsstore/held_linux_test.go",
+                "engine/review/fsstore/impls_linux_test.go",
+                "engine/review/fsstore/impls_other_test.go",
+                "engine/review/fsstore/portable.go"
+              ]
+            },
+            "lens": "review-resilience",
+            "findings": [],
+            "evidence": [
+              "Reviewed all 9 changed paths for failure handling, cleanup, retry safety and descriptor leaks. No concrete production failure mode was found.",
+              "In engine/review/fsstore/held_linux.go, deferred cleanup runs in the right order: the temporary file is unlinked before the directory descriptor is closed. Every error path in openHeld and openBelow closes the descriptors it opened, and a descriptor-leak test covers the return paths.",
+              "In the by-path store, a failed re-check returns before the link, and the staged file is discarded. A change detected after the link is reported with the file already linked, which is documented and tested.",
+              "Names sorts the listing explicitly on Linux, so the baseline's sorted ReadDir order is preserved. Temporary files are filtered out of the listing on both implementations."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "selected_order": 2,
+        "target_identity": "sha256:72159ca6a97bbe575a410c7a6688a5b6a4da25ca61eedb9d32ebfeda4138d1bf",
+        "capture_phase_revision": "sha256:66688f88713d4c04c6d175dd3cb66e08d52d09e83c4f9ce8ff636a4d92083d92",
+        "artifact_digest": "sha256:82496b9ab2ec71b8ed975e7a1c026fc08423140d2308c24e840c20b5638b5703",
+        "result_hash": "sha256:cc25f2db6224bbc0f2d95d329a2958d8d0e32a93966b219de71a6a5b422be5d8",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:3cc09a963de17c4799cf1979bfb8c87b6f740a110127059f89af9368aac16a5f",
+            "lineage_id": "review-b34c86839d7d0708",
+            "authority_revision": "sha256:66688f88713d4c04c6d175dd3cb66e08d52d09e83c4f9ce8ff636a4d92083d92",
+            "target_identity": "sha256:72159ca6a97bbe575a410c7a6688a5b6a4da25ca61eedb9d32ebfeda4138d1bf",
+            "base_tree": "80cbbe320b137b8a5de334267e9616ac9e240c1f",
+            "candidate_tree": "6916be329f577cc7e40da8e6bdac5905bd2c0818",
+            "changed_path_manifest_sha256": "sha256:350c538a4426b0ff49948a43d6f730c8421171d07ede726de01560b7907bd319",
+            "lens": "review-readability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:3cc09a963de17c4799cf1979bfb8c87b6f740a110127059f89af9368aac16a5f",
+            "raw_sha256": "sha256:bd0464a135eb36d9f1a4420d6fdfada26985bd9fdf0a057c58cdd0a130361cc5",
+            "canonical_sha256": "sha256:9fbc719bb4a2979cae215b0e5e57f722ad28bb891e7491c60bb3f11397a8cefd",
+            "result_hash": "sha256:cc25f2db6224bbc0f2d95d329a2958d8d0e32a93966b219de71a6a5b422be5d8",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:3cc09a963de17c4799cf1979bfb8c87b6f740a110127059f89af9368aac16a5f",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/fsstore/bypath.go",
+                "engine/review/fsstore/changes_internal_test.go",
+                "engine/review/fsstore/fsstore.go",
+                "engine/review/fsstore/fsstore_test.go",
+                "engine/review/fsstore/held_linux.go",
+                "engine/review/fsstore/held_linux_test.go",
+                "engine/review/fsstore/impls_linux_test.go",
+                "engine/review/fsstore/impls_other_test.go",
+                "engine/review/fsstore/portable.go"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-temp-name-duplicated",
+                "lens": "readability",
+                "location": "engine/review/fsstore/held_linux.go:176",
+                "severity": "WARNING",
+                "claim": "stageAt hardcodes the temporary file name shape (\".review-\" + number + \".tmp\"), while Names hides temporary files through isTemporary, which matches against tempPattern. The two are tied only by a convention that nothing enforces. If tempPattern changes and this literal does not, Names would list in-flight temporary files as results, or hide real ones. A shared constant, or a test that builds the name from tempPattern, would remove the risk.",
+                "proof_refs": [
+                  "engine/review/fsstore/held_linux.go:176",
+                  "engine/review/fsstore/fsstore.go:97"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Read all 9 changed paths in the supplied patch. The held and by-path implementations are readable overall and their comments explain the intent.",
+              "The Linux-held temp-name literal duplicates knowledge held in tempPattern, which the by-path implementation obtains from atomicfile via that pattern. The line number for held_linux.go is estimated from the patch, since the patch does not number its lines.",
+              "namesByPath returns sorted names only because os.ReadDir sorts, while namesHeld sorts explicitly. This is a minor undocumented asymmetry and is not reported as a finding."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 3,
+        "target_identity": "sha256:72159ca6a97bbe575a410c7a6688a5b6a4da25ca61eedb9d32ebfeda4138d1bf",
+        "capture_phase_revision": "sha256:66688f88713d4c04c6d175dd3cb66e08d52d09e83c4f9ce8ff636a4d92083d92",
+        "artifact_digest": "sha256:d3222cd09d22b56d4f21fb441303407650b129b15ca1b9b27ce689bd41b85cdf",
+        "result_hash": "sha256:095b80c0e49724eb0e6d310cea28b677020fb13a80aa39bb1bdc06decbef4361",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:8e4177dabbcf8d17e8910607cb95f0b898826469de607aac6d303fa38a6b12e9",
+            "lineage_id": "review-b34c86839d7d0708",
+            "authority_revision": "sha256:66688f88713d4c04c6d175dd3cb66e08d52d09e83c4f9ce8ff636a4d92083d92",
+            "target_identity": "sha256:72159ca6a97bbe575a410c7a6688a5b6a4da25ca61eedb9d32ebfeda4138d1bf",
+            "base_tree": "80cbbe320b137b8a5de334267e9616ac9e240c1f",
+            "candidate_tree": "6916be329f577cc7e40da8e6bdac5905bd2c0818",
+            "changed_path_manifest_sha256": "sha256:350c538a4426b0ff49948a43d6f730c8421171d07ede726de01560b7907bd319",
+            "lens": "review-reliability",
+            "selected_order": 3
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:8e4177dabbcf8d17e8910607cb95f0b898826469de607aac6d303fa38a6b12e9",
+            "raw_sha256": "sha256:579a255eaebd91ee8097055e6504625e9e4936b6f30aac5c86214afa81a0213c",
+            "canonical_sha256": "sha256:b7802f5ca0b7f7da96699c76e60589e354c1f5c40776548cff7e4b652ab4754c",
+            "result_hash": "sha256:095b80c0e49724eb0e6d310cea28b677020fb13a80aa39bb1bdc06decbef4361",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:8e4177dabbcf8d17e8910607cb95f0b898826469de607aac6d303fa38a6b12e9",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/fsstore/bypath.go",
+                "engine/review/fsstore/changes_internal_test.go",
+                "engine/review/fsstore/fsstore.go",
+                "engine/review/fsstore/fsstore_test.go",
+                "engine/review/fsstore/held_linux.go",
+                "engine/review/fsstore/held_linux_test.go",
+                "engine/review/fsstore/impls_linux_test.go",
+                "engine/review/fsstore/impls_other_test.go",
+                "engine/review/fsstore/portable.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-sync-after-link",
+                "lens": "reliability",
+                "location": "engine/review/fsstore/held_linux.go:95",
+                "severity": "WARNING",
+                "claim": "createHeld returns an error when the directory fsync fails after the file is already linked. The caller sees a failure although the result is published, and a retry then gets ErrExists. Some filesystems return EINVAL for directory fsync, and no test covers this path. The same hazard exists in the by-path variant, which reports a post-link change as an error with the file already linked, but that case is documented and tested.",
+                "proof_refs": [
+                  "engine/review/fsstore/held_linux.go:95"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "All 9 manifest paths were inspected in full from the provided patches.",
+              "The by-path and held implementations are both exercised by the shared impls() tests: appearing directories, links and files, unchanged-in-place writes, and hiding of temporary files.",
+              "Race-hook tests prove that the by-path store reports ErrChanged and leaves nothing behind. They also prove that the held store keeps working in the directory it opened.",
+              "The file-descriptor leak test covers the success, error, refusal and missing-directory exits of the held store.",
+              "I found no regression against baseline behavior. Names stays sorted, a missing directory or root returns an empty result, and links and files in the path are still refused with ErrNotADirectory."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "90fb4123784fc990c4edad05cb881f45ceb68f8884552421fbb00cf54ddd43fe",
+    "initial_atomic_start": {
+      "lineage_id": "review-b34c86839d7d0708",
+      "worktree_identity": "sha256:571cf94da78406a5dee177091311c4fcbbbf61e483d9e6e92803045faa817e42",
+      "target_identity": "sha256:72159ca6a97bbe575a410c7a6688a5b6a4da25ca61eedb9d32ebfeda4138d1bf",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "80cbbe320b137b8a5de334267e9616ac9e240c1f",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-risk",
+        "review-resilience",
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 1222,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "held store on linux: openat O_NOFOLLOW per directory, held feature fd, raw SYS_LINKAT and unsafe pointer use (risk); by-path re-check and ErrChanged elsewhere, temp-file cleanup and EINTR handling (resilience); swap-race, mkdir-race and Names temp filtering tests (reliability); build-tagged file split (readability)"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

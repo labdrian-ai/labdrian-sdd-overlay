@@ -1,0 +1,329 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:765e5a0931c88b4e8e076fee98965018a0071cc90ad359088bf52ae12b8763c2",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-2d64bcb7d390d55a",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "9cf5262a8363af8ebe1b99d409bad4473c2e0f69",
+      "candidate_tree": "fa92beb7cd2dee6ca6748647f03fc165b5336618",
+      "paths_digest": "sha256:d2f48413cbc366404b31c8ab256f29dc9fe2921537ea7795238221cd83484106",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/architecture_test.go",
+        "engine/review/candidate_test.go",
+        "engine/review/fixtures_test.go",
+        "engine/review/handoff.go",
+        "engine/review/handoff_test.go",
+        "engine/review/names.go",
+        "engine/review/names_test.go",
+        "engine/review/review.go",
+        "engine/review/stored.go",
+        "engine/review/stored_test.go"
+      ],
+      "identity": "sha256:52b90a92bcbd84a315b6675425b374635c3a1a7c389eed1a77fd4249b7e5dd03"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "9cf5262a8363af8ebe1b99d409bad4473c2e0f69",
+      "candidate_tree": "fa92beb7cd2dee6ca6748647f03fc165b5336618",
+      "paths_digest": "sha256:d2f48413cbc366404b31c8ab256f29dc9fe2921537ea7795238221cd83484106",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/architecture_test.go",
+        "engine/review/candidate_test.go",
+        "engine/review/fixtures_test.go",
+        "engine/review/handoff.go",
+        "engine/review/handoff_test.go",
+        "engine/review/names.go",
+        "engine/review/names_test.go",
+        "engine/review/review.go",
+        "engine/review/stored.go",
+        "engine/review/stored_test.go"
+      ],
+      "identity": "sha256:52b90a92bcbd84a315b6675425b374635c3a1a7c389eed1a77fd4249b7e5dd03"
+    },
+    "genesis_paths": [
+      "engine/architecture_test.go",
+      "engine/review/candidate_test.go",
+      "engine/review/fixtures_test.go",
+      "engine/review/handoff.go",
+      "engine/review/handoff_test.go",
+      "engine/review/names.go",
+      "engine/review/names_test.go",
+      "engine/review/review.go",
+      "engine/review/stored.go",
+      "engine/review/stored_test.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-risk",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 971,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "new domain package engine/review: feature-name path guard and result naming (risk), candidate digest, numbering and handoff skeleton pinned by tests (reliability), package structure and doc comments (readability)",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:38078d7659ce55c7b0243f7c28cde0d5066715bddfdde1108ff07de53aabca37",
+    "capture_phase_revision": "sha256:aaaa9ebf0b0026c59c9b6eed1fb57f500c9a33b3fcae92d5e0b2fae0273d8c87",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:52b90a92bcbd84a315b6675425b374635c3a1a7c389eed1a77fd4249b7e5dd03",
+        "capture_phase_revision": "sha256:aaaa9ebf0b0026c59c9b6eed1fb57f500c9a33b3fcae92d5e0b2fae0273d8c87",
+        "artifact_digest": "sha256:55e8c5a9fb5e099ab1cb0923664124104db3a637895578d588330bac57aaf7f0",
+        "result_hash": "sha256:95698a93b206f2e24c3ae1f2bdd663cf619eb5c99215aac5006f4c93b210f8de",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:2f002758478667aa0d5d21358ef2e4897015b47069a6dd663c36e1d7ee48158f",
+            "lineage_id": "review-2d64bcb7d390d55a",
+            "authority_revision": "sha256:aaaa9ebf0b0026c59c9b6eed1fb57f500c9a33b3fcae92d5e0b2fae0273d8c87",
+            "target_identity": "sha256:52b90a92bcbd84a315b6675425b374635c3a1a7c389eed1a77fd4249b7e5dd03",
+            "base_tree": "9cf5262a8363af8ebe1b99d409bad4473c2e0f69",
+            "candidate_tree": "fa92beb7cd2dee6ca6748647f03fc165b5336618",
+            "changed_path_manifest_sha256": "sha256:7b0bcad05784e8f43a5a32329f8cf4f3d7fc095f41dc9e507fa50509b537b865",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:2f002758478667aa0d5d21358ef2e4897015b47069a6dd663c36e1d7ee48158f",
+            "raw_sha256": "sha256:98ca1782b198671e22b9a6f223799448f0c2970e081d5eececf8956ffbd393ce",
+            "canonical_sha256": "sha256:09efe50c65cceb8cf786b35b40ebc51a31a91a82120df7a3a4ef4f4da575d3ff",
+            "result_hash": "sha256:95698a93b206f2e24c3ae1f2bdd663cf619eb5c99215aac5006f4c93b210f8de",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:2f002758478667aa0d5d21358ef2e4897015b47069a6dd663c36e1d7ee48158f",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/architecture_test.go",
+                "engine/review/candidate_test.go",
+                "engine/review/fixtures_test.go",
+                "engine/review/handoff.go",
+                "engine/review/handoff_test.go",
+                "engine/review/names.go",
+                "engine/review/names_test.go",
+                "engine/review/review.go",
+                "engine/review/stored.go",
+                "engine/review/stored_test.go"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "Reviewed all 10 changed paths in full. The package is a pure domain package: it reads no files, runs no git, and has no network or secret handling.",
+              "CheckFeature restricts a feature to ASCII alphanumerics plus '.', '_' and '-', requires a leading alphanumeric, forbids '..', and caps length at 100 bytes. This blocks traversal, separators, absolute paths and option-like names before ResultPath joins the feature into a path (engine/review/names.go).",
+              "CheckRev refuses empty revisions, a leading '-' (which git would read as an option such as --output), and control characters including NUL and DEL (engine/review/names.go).",
+              "NewCandidate requires full lowercase hex object names of equal length, so Short() slicing the first 12 characters of the head cannot panic on a candidate it built. A zero Candidate would panic in Short, but that is an out-of-domain value.",
+              "NextNumber caps launch numbers at 9 digits and rejects leading zeros, so Atoi cannot overflow. ResultName and WorktreePath use only validated hex and fixed strings.",
+              "EncodeResult validates the reply with json.Valid before embedding it as a RawMessage, so the stored file is always valid JSON. HTML escaping is disabled only for readability of a file written to disk, not for HTML output, so it creates no injection exposure.",
+              "No new dependencies were added and no secrets appear. The only edit outside the new package is the architecture ring registration for the review package, which is a test-file change.",
+              "No exploitable or reachable risk was found in this candidate."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "selected_order": 1,
+        "target_identity": "sha256:52b90a92bcbd84a315b6675425b374635c3a1a7c389eed1a77fd4249b7e5dd03",
+        "capture_phase_revision": "sha256:aaaa9ebf0b0026c59c9b6eed1fb57f500c9a33b3fcae92d5e0b2fae0273d8c87",
+        "artifact_digest": "sha256:f99aae3c1b6e178c39532ce88f4d52c6f0ffec39c6d9591e421770363ebe911d",
+        "result_hash": "sha256:21e15686fedbeb7f81f3b8dee9d2ec4313c91f49f84c58421f4851de51810da3",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:bb6b5ebf9ac514bf6fada6e965d90957a45b57302ac89fc0fe8a21c64d61be44",
+            "lineage_id": "review-2d64bcb7d390d55a",
+            "authority_revision": "sha256:aaaa9ebf0b0026c59c9b6eed1fb57f500c9a33b3fcae92d5e0b2fae0273d8c87",
+            "target_identity": "sha256:52b90a92bcbd84a315b6675425b374635c3a1a7c389eed1a77fd4249b7e5dd03",
+            "base_tree": "9cf5262a8363af8ebe1b99d409bad4473c2e0f69",
+            "candidate_tree": "fa92beb7cd2dee6ca6748647f03fc165b5336618",
+            "changed_path_manifest_sha256": "sha256:7b0bcad05784e8f43a5a32329f8cf4f3d7fc095f41dc9e507fa50509b537b865",
+            "lens": "review-readability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:bb6b5ebf9ac514bf6fada6e965d90957a45b57302ac89fc0fe8a21c64d61be44",
+            "raw_sha256": "sha256:a974f3c0030952752b60567589c7d93c1822247c379a90db108f15a1c83cb4c3",
+            "canonical_sha256": "sha256:be024b35ef460df1a11b45c659703235c99ce694c04fdece1752076ca7ef1580",
+            "result_hash": "sha256:21e15686fedbeb7f81f3b8dee9d2ec4313c91f49f84c58421f4851de51810da3",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:bb6b5ebf9ac514bf6fada6e965d90957a45b57302ac89fc0fe8a21c64d61be44",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/architecture_test.go",
+                "engine/review/candidate_test.go",
+                "engine/review/fixtures_test.go",
+                "engine/review/handoff.go",
+                "engine/review/handoff_test.go",
+                "engine/review/names.go",
+                "engine/review/names_test.go",
+                "engine/review/review.go",
+                "engine/review/stored.go",
+                "engine/review/stored_test.go"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-001",
+                "lens": "readability",
+                "location": "engine/review/fixtures_test.go:13-17",
+                "severity": "SUGGESTION",
+                "claim": "The comment 'diffSHA is the SHA-256 of diffText' is attached to the line above diffText and the const block's doc comment is split oddly, so the comment sits above diffText rather than diffSHA. This makes it ambiguous which constant it documents.",
+                "proof_refs": [
+                  "engine/review/fixtures_test.go:13-17"
+                ]
+              },
+              {
+                "id": "R2-002",
+                "lens": "readability",
+                "location": "engine/review/review.go:143-147",
+                "severity": "SUGGESTION",
+                "claim": "shortLength is declared after its use in Short() and separated from the other constants; moving it into the top const block with a note on why 12 would keep the unexplained constant discoverable.",
+                "proof_refs": [
+                  "engine/review/review.go:143-147"
+                ]
+              },
+              {
+                "id": "R2-003",
+                "lens": "readability",
+                "location": "engine/review/stored.go:41-43",
+                "severity": "SUGGESTION",
+                "claim": "EncodeResult's not-JSON error does not wrap a sentinel error, unlike the package's other refusals (the package doc says errors wrap exactly one sentinel), so callers cannot tell it apart with errors.Is.",
+                "proof_refs": [
+                  "engine/review/stored.go:41-43",
+                  "engine/review/review.go:62-63"
+                ]
+              }
+            ],
+            "evidence": [
+              "Reviewed all 10 changed paths in full. The code is well documented, constants are explained (150000, 1 MiB, 9 digits, 100 bytes), and tests pin the documented values.",
+              "No BLOCKER or CRITICAL readability defects found; remaining items are minor maintainability suggestions."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 2,
+        "target_identity": "sha256:52b90a92bcbd84a315b6675425b374635c3a1a7c389eed1a77fd4249b7e5dd03",
+        "capture_phase_revision": "sha256:aaaa9ebf0b0026c59c9b6eed1fb57f500c9a33b3fcae92d5e0b2fae0273d8c87",
+        "artifact_digest": "sha256:26de4e2bd45a4d01454d973e01d0bfead7e86b5ebb6398bb6d23b36441a76e01",
+        "result_hash": "sha256:2ec082ac8c9516c549fdd95261a072b6336b5fc5b9ee0c8c7ae188c757da0f67",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:8d43d74c90c96e4f73f659b24521a4718cb6a53da0d24c5142311c0a597d2117",
+            "lineage_id": "review-2d64bcb7d390d55a",
+            "authority_revision": "sha256:aaaa9ebf0b0026c59c9b6eed1fb57f500c9a33b3fcae92d5e0b2fae0273d8c87",
+            "target_identity": "sha256:52b90a92bcbd84a315b6675425b374635c3a1a7c389eed1a77fd4249b7e5dd03",
+            "base_tree": "9cf5262a8363af8ebe1b99d409bad4473c2e0f69",
+            "candidate_tree": "fa92beb7cd2dee6ca6748647f03fc165b5336618",
+            "changed_path_manifest_sha256": "sha256:7b0bcad05784e8f43a5a32329f8cf4f3d7fc095f41dc9e507fa50509b537b865",
+            "lens": "review-reliability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:8d43d74c90c96e4f73f659b24521a4718cb6a53da0d24c5142311c0a597d2117",
+            "raw_sha256": "sha256:0ebed22c51e60ad238e449d438a9fef1219a01d58bbf7520b424d76c85726d41",
+            "canonical_sha256": "sha256:570518dff9406f0f64a2fa1dd5ddf9e10a8d7e6432a1d90fb8090110075ecb42",
+            "result_hash": "sha256:2ec082ac8c9516c549fdd95261a072b6336b5fc5b9ee0c8c7ae188c757da0f67",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:8d43d74c90c96e4f73f659b24521a4718cb6a53da0d24c5142311c0a597d2117",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/architecture_test.go",
+                "engine/review/candidate_test.go",
+                "engine/review/fixtures_test.go",
+                "engine/review/handoff.go",
+                "engine/review/handoff_test.go",
+                "engine/review/names.go",
+                "engine/review/names_test.go",
+                "engine/review/review.go",
+                "engine/review/stored.go",
+                "engine/review/stored_test.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-001",
+                "lens": "reliability",
+                "location": "engine/review/review.go:140-146",
+                "severity": "WARNING",
+                "claim": "Candidate.Short slices Head[:12] without a length check. The doc comment says the zero Candidate names nothing, but calling Short on it panics. ResultName, WorktreePath, NextNumber and Handoff all go through Short or Ref, so they inherit this. NewCandidate guarantees a valid head, so only a caller that ignores the error and uses the zero value hits it. No test covers that case.",
+                "proof_refs": [
+                  "engine/review/review.go:140-146",
+                  "engine/review/names.go:68-70"
+                ]
+              }
+            ],
+            "evidence": [
+              "I read all 10 changed paths in full.",
+              "NewCandidate is covered for abbreviated, uppercase, empty and mixed-length names, and for empty, duplicate and non-UTF-8 paths. It is also covered for the empty-paths-as-array case and for the digest and size of the diff.",
+              "NextNumber is tested at the 9-digit boundary. A launch number of 10 or more digits is ignored, so the next number would restart at 1 and could reuse a name. That needs a billion launches of one head, which is out of domain, so I did not report it.",
+              "EncodeResult, Handoff and ParentFields are tested through externally observable parsing: the stored JSON and roles.ParseRoleHandoff."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "70a6f9fa1899af3f140c41232d0443fe35847c78f9b6061f1ed89a1dfd7170a4",
+    "initial_atomic_start": {
+      "lineage_id": "review-2d64bcb7d390d55a",
+      "worktree_identity": "sha256:571cf94da78406a5dee177091311c4fcbbbf61e483d9e6e92803045faa817e42",
+      "target_identity": "sha256:52b90a92bcbd84a315b6675425b374635c3a1a7c389eed1a77fd4249b7e5dd03",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "9cf5262a8363af8ebe1b99d409bad4473c2e0f69",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-risk",
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 971,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "new domain package engine/review: feature-name path guard and result naming (risk), candidate digest, numbering and handoff skeleton pinned by tests (reliability), package structure and doc comments (readability)"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

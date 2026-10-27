@@ -1,0 +1,169 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:45cebdc3a904aa05dd847d1468a5eb8ee2b975d94211d198f7c1e05a9c42ce68",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-baa6a95b016148fc",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "b920dfe27930f9f95a01b2e7c6a0af99a29e6e1a",
+      "candidate_tree": "dc9a5c5e94518d14da2cfcbf8de196743a31c942",
+      "paths_digest": "sha256:f09a65ea6b612ad20db84bc9f2eacdde5e165dcd51c966e453c161fe28df930d",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/skills/role_chain_artifact_test.go",
+        "odd/review-receipts/own-rdd/review-a16fe69efbb53c81.review-state.json",
+        "odd/tasks/own-rdd.md",
+        "skills/role-chain/SKILL.md"
+      ],
+      "identity": "sha256:b19ad5309551f8321a0f5d8153da70d88d36eba9332cd5965f9d53235e06ea5f"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "b920dfe27930f9f95a01b2e7c6a0af99a29e6e1a",
+      "candidate_tree": "dc9a5c5e94518d14da2cfcbf8de196743a31c942",
+      "paths_digest": "sha256:f09a65ea6b612ad20db84bc9f2eacdde5e165dcd51c966e453c161fe28df930d",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/skills/role_chain_artifact_test.go",
+        "odd/review-receipts/own-rdd/review-a16fe69efbb53c81.review-state.json",
+        "odd/tasks/own-rdd.md",
+        "skills/role-chain/SKILL.md"
+      ],
+      "identity": "sha256:b19ad5309551f8321a0f5d8153da70d88d36eba9332cd5965f9d53235e06ea5f"
+    },
+    "genesis_paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/skills/role_chain_artifact_test.go",
+      "odd/review-receipts/own-rdd/review-a16fe69efbb53c81.review-state.json",
+      "odd/tasks/own-rdd.md",
+      "skills/role-chain/SKILL.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-readability"
+    ],
+    "original_changed_lines": 310,
+    "correction_budget": 155,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "README, CHANGELOG and the role-chain skill document review bind/record and the review-report handoff that agents read; feature document records T2 (readability)",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:2fc141e3a02c4868908f00e104deb883d91a41b9efce4048a148d29aec3529af",
+    "capture_phase_revision": "sha256:cde4a9e650064cf74f394c8b34ecb864c01815fa20367ac71a18dd1f0564357c",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "target_identity": "sha256:b19ad5309551f8321a0f5d8153da70d88d36eba9332cd5965f9d53235e06ea5f",
+        "capture_phase_revision": "sha256:cde4a9e650064cf74f394c8b34ecb864c01815fa20367ac71a18dd1f0564357c",
+        "artifact_digest": "sha256:11defcf4e83e9ea99c1bd002394cfc0cc6c67819baddecff5051042e471ce3e0",
+        "result_hash": "sha256:0751a0fc944571198f7ee299070e5c88f0ec8906a8971fd529a9aff6271b7652",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:cd2a9006ee1969a4649bf8245db3bd183b2b4b1a30f9abe9b677caa646cf559d",
+            "lineage_id": "review-baa6a95b016148fc",
+            "authority_revision": "sha256:cde4a9e650064cf74f394c8b34ecb864c01815fa20367ac71a18dd1f0564357c",
+            "target_identity": "sha256:b19ad5309551f8321a0f5d8153da70d88d36eba9332cd5965f9d53235e06ea5f",
+            "base_tree": "b920dfe27930f9f95a01b2e7c6a0af99a29e6e1a",
+            "candidate_tree": "dc9a5c5e94518d14da2cfcbf8de196743a31c942",
+            "changed_path_manifest_sha256": "sha256:7a9ad1cd5db6d7fdd9fba10eb040a24c66d845545eb4780658e84376b034ed8d",
+            "lens": "review-readability",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:cd2a9006ee1969a4649bf8245db3bd183b2b4b1a30f9abe9b677caa646cf559d",
+            "raw_sha256": "sha256:eaf1258c4fa7c64b68c0a8a3516c9a28b8591a5ee128824c3bdb7f1999d77808",
+            "canonical_sha256": "sha256:de8a0d1d69d6f78bfa950870ff6fce50930cc27bf5bd6219cf13de1e421124b3",
+            "result_hash": "sha256:0751a0fc944571198f7ee299070e5c88f0ec8906a8971fd529a9aff6271b7652",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:cd2a9006ee1969a4649bf8245db3bd183b2b4b1a30f9abe9b677caa646cf559d",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "CHANGELOG.md",
+                "README.md",
+                "engine/skills/role_chain_artifact_test.go",
+                "odd/review-receipts/own-rdd/review-a16fe69efbb53c81.review-state.json",
+                "odd/tasks/own-rdd.md",
+                "skills/role-chain/SKILL.md"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-readme-line-length",
+                "lens": "readability",
+                "location": "README.md:603-605",
+                "severity": "SUGGESTION",
+                "claim": "One sentence in the new `record` help block is a long line that breaks the hard-wrapped layout of the surrounding block (about 120 columns), so the paragraph reads unevenly. Cosmetic only.",
+                "proof_refs": [
+                  "README.md:603-605"
+                ]
+              },
+              {
+                "id": "R2-skill-exit2-ambiguity",
+                "lens": "readability",
+                "location": "skills/role-chain/SKILL.md:33",
+                "severity": "WARNING",
+                "claim": "The Binding line says `Exit 2 when the candidate differs, inspection.status is not completed or paths differ`, but the README says exit 2 covers every refused reply (missing or duplicate ids, enum values, missing proof, reply above 1 MiB). The skill lists only three causes, so a parent following it may treat other exit-2 causes as outside the 'review not run' path. The list should say 'or any other rule of the contract' to avoid a misleading narrowing.",
+                "proof_refs": [
+                  "skills/role-chain/SKILL.md:33",
+                  "README.md:603-612"
+                ]
+              }
+            ],
+            "evidence": [
+              "Read all 6 changed paths in the patch.",
+              "CHANGELOG.md: the added entries describe bind/record, the pinned git command and exit codes consistently with README.md and odd/tasks/own-rdd.md; the Changed entry records that the skill is APPROVAL_STALE until owner approval.",
+              "engine/skills/role_chain_artifact_test.go: fragment pins updated to match the new skill text and README; no dead or duplicated logic added.",
+              "odd/review-receipts/own-rdd/review-a16fe69efbb53c81.review-state.json: generated data record, no behavior.",
+              "odd/tasks/own-rdd.md: Log entry L7 is long but is an append-only evidence log with a test-first table; it names decisions, constants (150000 bytes, 1 MiB, 16 retries) and the pending shell forwarder patch, so change context is present.",
+              "skills/role-chain/SKILL.md: the bind/record text is clear; the only readability concern is the narrowed exit 2 list noted as a warning."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "1952a4c86b0810360bdc85105d3e0709ce9d594ed2f3f4c2072adbba01dc7670",
+    "initial_atomic_start": {
+      "lineage_id": "review-baa6a95b016148fc",
+      "worktree_identity": "sha256:571cf94da78406a5dee177091311c4fcbbbf61e483d9e6e92803045faa817e42",
+      "target_identity": "sha256:b19ad5309551f8321a0f5d8153da70d88d36eba9332cd5965f9d53235e06ea5f",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "b920dfe27930f9f95a01b2e7c6a0af99a29e6e1a",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-readability"
+      ],
+      "original_changed_lines": 310,
+      "correction_budget": 155,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "README, CHANGELOG and the role-chain skill document review bind/record and the review-report handoff that agents read; feature document records T2 (readability)"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

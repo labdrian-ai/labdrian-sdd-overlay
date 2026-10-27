@@ -1,0 +1,271 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:f8f9c7b349f54c77a2191ef038c5a1256c520809e525ec43f28d1b43196a070e",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-b61ed511bbc72d16",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "903c8a2b3af6ce0d3c4bfb98af2e70d6da0f30d4",
+      "candidate_tree": "f24a0b1c1adf5f2c11207015490b2dc8f3250205",
+      "paths_digest": "sha256:b9ac7d2f319ff6ed483b7aee1e535d153727f8a86b499d75c960b20624b666d9",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/architecture_test.go",
+        "engine/review/gitexec/gitexec.go",
+        "engine/review/gitexec/gitexec_test.go",
+        "engine/review/gitexec/realgit_test.go"
+      ],
+      "identity": "sha256:52fba182cd618a4700c47bc51cc0a315888bc45b58eb705c9d84afbb961b4e92"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "903c8a2b3af6ce0d3c4bfb98af2e70d6da0f30d4",
+      "candidate_tree": "f24a0b1c1adf5f2c11207015490b2dc8f3250205",
+      "paths_digest": "sha256:b9ac7d2f319ff6ed483b7aee1e535d153727f8a86b499d75c960b20624b666d9",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/architecture_test.go",
+        "engine/review/gitexec/gitexec.go",
+        "engine/review/gitexec/gitexec_test.go",
+        "engine/review/gitexec/realgit_test.go"
+      ],
+      "identity": "sha256:52fba182cd618a4700c47bc51cc0a315888bc45b58eb705c9d84afbb961b4e92"
+    },
+    "genesis_paths": [
+      "engine/architecture_test.go",
+      "engine/review/gitexec/gitexec.go",
+      "engine/review/gitexec/gitexec_test.go",
+      "engine/review/gitexec/realgit_test.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-resilience",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 256,
+    "correction_budget": 128,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "gitexec fix: Worktree distinguishes a git that answered from one that failed (reliability); default 5-minute timeout on every git call (resilience); emptyTree comment and alphabetical architecture rows (readability)",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:0dd69788410db2fdda3a18c98d938969a6c11a80d7a1542fe2b1b65bf9fe6f6d",
+    "capture_phase_revision": "sha256:6c7f0a5f10935d2fff361e589b358dfa48062c3b6dc7f32901d473c86d85ceed",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-resilience",
+        "target_identity": "sha256:52fba182cd618a4700c47bc51cc0a315888bc45b58eb705c9d84afbb961b4e92",
+        "capture_phase_revision": "sha256:6c7f0a5f10935d2fff361e589b358dfa48062c3b6dc7f32901d473c86d85ceed",
+        "artifact_digest": "sha256:6147b7c9328a62e7052c04837a352c45a8d806b249390c0d0acd32b6e35c5c65",
+        "result_hash": "sha256:ea6740af67024d9b10101dd0e71f29cc91515aad2473316750105dc146a31248",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:16609763efae29aac2639d2085ded5aee06346e43bc73f76c8121cf3a3545c62",
+            "lineage_id": "review-b61ed511bbc72d16",
+            "authority_revision": "sha256:6c7f0a5f10935d2fff361e589b358dfa48062c3b6dc7f32901d473c86d85ceed",
+            "target_identity": "sha256:52fba182cd618a4700c47bc51cc0a315888bc45b58eb705c9d84afbb961b4e92",
+            "base_tree": "903c8a2b3af6ce0d3c4bfb98af2e70d6da0f30d4",
+            "candidate_tree": "f24a0b1c1adf5f2c11207015490b2dc8f3250205",
+            "changed_path_manifest_sha256": "sha256:05b9e8eebb136ef5b03561dbbe84b06716e3b4aa168f11c5af16c39d97e359fb",
+            "lens": "review-resilience",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:16609763efae29aac2639d2085ded5aee06346e43bc73f76c8121cf3a3545c62",
+            "raw_sha256": "sha256:afa7c46903832cbd6e2724fa41909376973d35db2aaca0a5b759341c6aedae5a",
+            "canonical_sha256": "sha256:3f61c526fb6e712f42fe48ba837a87e653593ffd46f3524ecf37accf7af9f2d3",
+            "result_hash": "sha256:ea6740af67024d9b10101dd0e71f29cc91515aad2473316750105dc146a31248",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:16609763efae29aac2639d2085ded5aee06346e43bc73f76c8121cf3a3545c62",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/architecture_test.go",
+                "engine/review/gitexec/gitexec.go",
+                "engine/review/gitexec/gitexec_test.go",
+                "engine/review/gitexec/realgit_test.go"
+              ]
+            },
+            "lens": "review-resilience",
+            "findings": [],
+            "evidence": [
+              "Reviewed all four changed paths in full. Worktree no longer reports 'taken' when git gave no answer. This covers a git that could not be started, was killed by a signal, or ran past its deadline, and it also covers a question that was never put to git. The change tightens failure handling and does not regress baseline behavior.",
+              "answered() requires that the context is not expired, that the error is an ExitError, and that the exit code is non-negative. The check runs before cancel, via defer. A genuine git exit status such as 128 for 'not a repository' is still treated as an answer, so the path is reported as taken. That is the intended behavior.",
+              "The default timeout of 5 minutes replaces the old unlimited behavior. For the local questions this adapter puts, it is a reasonable bound and removes a hang risk. The patch shows no evidence that any call legitimately exceeds 5 minutes, so a concrete failure mode cannot be established.",
+              "The architecture_test.go change only reorders map entries and has no runtime effect. The new tests cover the timeout, not-found, signal, and late-exit-status cases, and they cover a real git given a nanosecond deadline."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "selected_order": 1,
+        "target_identity": "sha256:52fba182cd618a4700c47bc51cc0a315888bc45b58eb705c9d84afbb961b4e92",
+        "capture_phase_revision": "sha256:6c7f0a5f10935d2fff361e589b358dfa48062c3b6dc7f32901d473c86d85ceed",
+        "artifact_digest": "sha256:af3b7b348477547adbbfc7ec34924bc606cd08ddfa5136e73fa300251968c474",
+        "result_hash": "sha256:e680fd190d35db1490c42436a89db549b08652ce2d8477812db35a0c68139ab0",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:70a4e8299a4c660b6994b9ea670f6dbf820fef06ebd2f018acaa0f766d7154f7",
+            "lineage_id": "review-b61ed511bbc72d16",
+            "authority_revision": "sha256:6c7f0a5f10935d2fff361e589b358dfa48062c3b6dc7f32901d473c86d85ceed",
+            "target_identity": "sha256:52fba182cd618a4700c47bc51cc0a315888bc45b58eb705c9d84afbb961b4e92",
+            "base_tree": "903c8a2b3af6ce0d3c4bfb98af2e70d6da0f30d4",
+            "candidate_tree": "f24a0b1c1adf5f2c11207015490b2dc8f3250205",
+            "changed_path_manifest_sha256": "sha256:05b9e8eebb136ef5b03561dbbe84b06716e3b4aa168f11c5af16c39d97e359fb",
+            "lens": "review-readability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:70a4e8299a4c660b6994b9ea670f6dbf820fef06ebd2f018acaa0f766d7154f7",
+            "raw_sha256": "sha256:1d87c4579c498c07df2c42904216f388d29b917459352d4db817cf1a144f7ef9",
+            "canonical_sha256": "sha256:bb14107ad6e0294bfbf3ab8749f2a8b532a924831d3e6b993d66a9b325913704",
+            "result_hash": "sha256:e680fd190d35db1490c42436a89db549b08652ce2d8477812db35a0c68139ab0",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:70a4e8299a4c660b6994b9ea670f6dbf820fef06ebd2f018acaa0f766d7154f7",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/architecture_test.go",
+                "engine/review/gitexec/gitexec.go",
+                "engine/review/gitexec/gitexec_test.go",
+                "engine/review/gitexec/realgit_test.go"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-observer-helper-dead",
+                "lens": "readability",
+                "location": "engine/review/gitexec/gitexec.go:297-299",
+                "severity": "WARNING",
+                "claim": "Worktree no longer uses g.observer(); it builds its own gitprov.Observer inline. The observer() helper still exists and is used only by Locate, so two construction sites of the same Observer now exist and can drift (e.g. a future change to Environ or Run wiring in one place but not the other). Worktree's inline observer also duplicates the ambient/Run wiring that observer() encapsulates.",
+                "proof_refs": [
+                  "engine/review/gitexec/gitexec.go:258-268"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-answered-exitcode-comment",
+                "lens": "readability",
+                "location": "engine/review/gitexec/gitexec.go:327-331",
+                "severity": "SUGGESTION",
+                "claim": "answered() relies on ExitCode() \u003e= 0 to mean 'ran to an exit status', but the unit test constructs a zero-value exec.ExitError for the 'killed by a signal' case; the relationship between ExitError with nil ProcessState (ExitCode returns -1) and the real signal case is implicit and only explained by the test name. A short comment in answered noting that ExitCode is -1 for signal termination would make the intent verifiable.",
+                "proof_refs": [
+                  "engine/review/gitexec/gitexec.go:327-331",
+                  "engine/review/gitexec/gitexec_test.go:352"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Reviewed all four changed paths in full. The architecture_test.go change is a pure reorder of map entries. The gitexec.go change introduces a default timeout, a failure type to distinguish no-answer from git's own answer, and an inline observer in Worktree, with comments explaining intent. Tests cover the new branches including real git with nanosecond timeout.",
+              "Locations for the findings are within changed regions: the inline observer in Worktree lies in the candidate-changed hunk; the answered helper is newly added."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 2,
+        "target_identity": "sha256:52fba182cd618a4700c47bc51cc0a315888bc45b58eb705c9d84afbb961b4e92",
+        "capture_phase_revision": "sha256:6c7f0a5f10935d2fff361e589b358dfa48062c3b6dc7f32901d473c86d85ceed",
+        "artifact_digest": "sha256:243bd9ec9e375274f05eab6e62617245d953baef7dcb2f63187cb34889224e88",
+        "result_hash": "sha256:26f8faa91352c0c125f5a323354daa6270254f5117652c07fd29de7c7827ae63",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:91618963a760ee9d8b9542cfb880a46fbdc808051dd88dce77e5ba6701e526cc",
+            "lineage_id": "review-b61ed511bbc72d16",
+            "authority_revision": "sha256:6c7f0a5f10935d2fff361e589b358dfa48062c3b6dc7f32901d473c86d85ceed",
+            "target_identity": "sha256:52fba182cd618a4700c47bc51cc0a315888bc45b58eb705c9d84afbb961b4e92",
+            "base_tree": "903c8a2b3af6ce0d3c4bfb98af2e70d6da0f30d4",
+            "candidate_tree": "f24a0b1c1adf5f2c11207015490b2dc8f3250205",
+            "changed_path_manifest_sha256": "sha256:05b9e8eebb136ef5b03561dbbe84b06716e3b4aa168f11c5af16c39d97e359fb",
+            "lens": "review-reliability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:91618963a760ee9d8b9542cfb880a46fbdc808051dd88dce77e5ba6701e526cc",
+            "raw_sha256": "sha256:30e2bf68fd22df0e9752f271880b9c75551e76195de1f7b8fc9b30257346b637",
+            "canonical_sha256": "sha256:8d3b64e554ea54ee4ef073b37e610166693661569951a448ce735bd246580516",
+            "result_hash": "sha256:26f8faa91352c0c125f5a323354daa6270254f5117652c07fd29de7c7827ae63",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:91618963a760ee9d8b9542cfb880a46fbdc808051dd88dce77e5ba6701e526cc",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/architecture_test.go",
+                "engine/review/gitexec/gitexec.go",
+                "engine/review/gitexec/gitexec_test.go",
+                "engine/review/gitexec/realgit_test.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [],
+            "evidence": [
+              "engine/review/gitexec/gitexec.go: Worktree now returns an error instead of 'taken' when git was never asked, or when the runner error is a *failure (git did not start, was killed by a signal, or the deadline passed). An exit status with a live context still counts as git's answer. The deadline check uses ctx.Err() before cancel, and an ExitError with a nil ProcessState reports an exit code of -1, so a signal kill is classified as no answer.",
+              "engine/review/gitexec/gitexec.go: New substitutes DefaultTimeout for any non-positive timeout, and context() always sets a deadline. This follows the stated intent and is covered by the tests that check the deadline for 0, negative and positive timeouts, including the calls Locate and Worktree make through gitprov.",
+              "engine/review/gitexec/gitexec_test.go: table tests assert the error path, the zero state, errors.Is wrapping, whether git was started, an exit status arriving after the deadline, and a genuine git answer that still yields a taken path. engine/review/gitexec/realgit_test.go adds a real-git check with a nanosecond timeout.",
+              "engine/architecture_test.go: the change only reorders map entries, with no behavior change."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "88f071e5d5f07cdd74631ebc04f48ad6edf0492754dc08643b34bb610077812d",
+    "initial_atomic_start": {
+      "lineage_id": "review-b61ed511bbc72d16",
+      "worktree_identity": "sha256:571cf94da78406a5dee177091311c4fcbbbf61e483d9e6e92803045faa817e42",
+      "target_identity": "sha256:52fba182cd618a4700c47bc51cc0a315888bc45b58eb705c9d84afbb961b4e92",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "903c8a2b3af6ce0d3c4bfb98af2e70d6da0f30d4",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "high",
+      "selected_lenses": [
+        "review-resilience",
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 256,
+      "correction_budget": 128,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "gitexec fix: Worktree distinguishes a git that answered from one that failed (reliability); default 5-minute timeout on every git call (resilience); emptyTree comment and alphabetical architecture rows (readability)"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

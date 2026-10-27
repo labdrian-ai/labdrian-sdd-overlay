@@ -1,0 +1,333 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:b62d7f3e4981b5b46e2249a8f6d091df1554ff49a0b872385e34be3bc57d5d32",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-08f4222b5cdb9b07",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "fa92beb7cd2dee6ca6748647f03fc165b5336618",
+      "candidate_tree": "53642b092d5309c11554903e2a0d2f448a9e9166",
+      "paths_digest": "sha256:b9952a2cf31f3b8e2a566d8f837c3e3ee996ebaf30bfa4cd298aa2701a85521a",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/architecture_test.go",
+        "engine/review/app/app.go",
+        "engine/review/app/bind_test.go",
+        "engine/review/app/fakes_test.go",
+        "engine/review/app/record_test.go",
+        "engine/review/app/service.go"
+      ],
+      "identity": "sha256:683433ab3d67db7bb2c9c7ee4c56b4f3cfa94d36b4b966097b626aa276dea06c"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "fa92beb7cd2dee6ca6748647f03fc165b5336618",
+      "candidate_tree": "53642b092d5309c11554903e2a0d2f448a9e9166",
+      "paths_digest": "sha256:b9952a2cf31f3b8e2a566d8f837c3e3ee996ebaf30bfa4cd298aa2701a85521a",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/architecture_test.go",
+        "engine/review/app/app.go",
+        "engine/review/app/bind_test.go",
+        "engine/review/app/fakes_test.go",
+        "engine/review/app/record_test.go",
+        "engine/review/app/service.go"
+      ],
+      "identity": "sha256:683433ab3d67db7bb2c9c7ee4c56b4f3cfa94d36b4b966097b626aa276dea06c"
+    },
+    "genesis_paths": [
+      "engine/architecture_test.go",
+      "engine/review/app/app.go",
+      "engine/review/app/bind_test.go",
+      "engine/review/app/fakes_test.go",
+      "engine/review/app/record_test.go",
+      "engine/review/app/service.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-resilience",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 960,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "application package engine/review/app: Bind and Record use cases over owned ports; Record recomputes the binding and refuses replies (reliability), typed refusals when a port fails mid-record (resilience), use-case structure and docs (readability)",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:359f76db7d3963f7cd06804dc229e5a68f06783466e968e44883c41d2e9d1810",
+    "capture_phase_revision": "sha256:42ef2868e1d2adbc81f803515d24cd2960c15ee3e286015b48e9dc1799445f42",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-resilience",
+        "target_identity": "sha256:683433ab3d67db7bb2c9c7ee4c56b4f3cfa94d36b4b966097b626aa276dea06c",
+        "capture_phase_revision": "sha256:42ef2868e1d2adbc81f803515d24cd2960c15ee3e286015b48e9dc1799445f42",
+        "artifact_digest": "sha256:a1c73d64f2898fa3720bf652eda90b3a3473658ddecc85e1a21b42446a7df94c",
+        "result_hash": "sha256:2fa1c82bcb62d204871858a2954d78f704382ed284f6831368dcf258a98678a2",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:d8fba73a39df5140fd5ec51e0c069850b63e5b97169db37e1c4c822742b6ffcb",
+            "lineage_id": "review-08f4222b5cdb9b07",
+            "authority_revision": "sha256:42ef2868e1d2adbc81f803515d24cd2960c15ee3e286015b48e9dc1799445f42",
+            "target_identity": "sha256:683433ab3d67db7bb2c9c7ee4c56b4f3cfa94d36b4b966097b626aa276dea06c",
+            "base_tree": "fa92beb7cd2dee6ca6748647f03fc165b5336618",
+            "candidate_tree": "53642b092d5309c11554903e2a0d2f448a9e9166",
+            "changed_path_manifest_sha256": "sha256:2ca7c43e2d4f01724119ae40a6f6b7ef691d96eed71bf7edd6a94d0ea687ad30",
+            "lens": "review-resilience",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:d8fba73a39df5140fd5ec51e0c069850b63e5b97169db37e1c4c822742b6ffcb",
+            "raw_sha256": "sha256:a9776a5541ff5641c9e8f8fc46370b76e7ea073418ea90391b64f0c71048d62d",
+            "canonical_sha256": "sha256:7486b2b465399d41bc0686dd272c05726ae3cd2966c43044b138a98fee14e2d6",
+            "result_hash": "sha256:2fa1c82bcb62d204871858a2954d78f704382ed284f6831368dcf258a98678a2",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:d8fba73a39df5140fd5ec51e0c069850b63e5b97169db37e1c4c822742b6ffcb",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/architecture_test.go",
+                "engine/review/app/app.go",
+                "engine/review/app/bind_test.go",
+                "engine/review/app/fakes_test.go",
+                "engine/review/app/record_test.go",
+                "engine/review/app/service.go"
+              ]
+            },
+            "lens": "review-resilience",
+            "findings": [
+              {
+                "id": "R4-001",
+                "lens": "resilience",
+                "location": "engine/review/app/service.go:112-132",
+                "severity": "WARNING",
+                "claim": "store retries on ErrExists up to 16 times, each time re-listing the directory with no backoff. Under heavy contention it could return ErrNoFreeNumber after the reply was validated, losing the reviewer's reply. The retry is bounded and safe (Create is atomic and never replaces), so this is a minor degradation risk, not a defect.",
+                "proof_refs": [
+                  "engine/review/app/service.go:112-132"
+                ]
+              },
+              {
+                "id": "R4-002",
+                "lens": "resilience",
+                "location": "engine/review/app/service.go:47-52",
+                "severity": "WARNING",
+                "claim": "Bind checks worktree state and then calls AddWorktree non-atomically. Two concurrent binds of the same head can both see the path absent, and the loser's AddWorktree fails with a raw git error rather than falling back to reuse. The failure is clean (no corruption) and a rerun reuses the worktree, so it is a minor retry-safety gap.",
+                "proof_refs": [
+                  "engine/review/app/service.go:47-52"
+                ]
+              }
+            ],
+            "evidence": [
+              "Read all six changed paths. The package is new, so no baseline behavior regresses.",
+              "Record validates before the first write and Create is atomic and never replaces a file, so a refused or failed reply leaves no partial file.",
+              "Bind makes the worktree only after the candidate is bound, so a candidate that cannot be bound leaves no directory behind.",
+              "Failures from git and the store are wrapped with %w, so the cause stays visible. The tests cover these paths.",
+              "No BLOCKER or CRITICAL production failure mode was found."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "selected_order": 1,
+        "target_identity": "sha256:683433ab3d67db7bb2c9c7ee4c56b4f3cfa94d36b4b966097b626aa276dea06c",
+        "capture_phase_revision": "sha256:42ef2868e1d2adbc81f803515d24cd2960c15ee3e286015b48e9dc1799445f42",
+        "artifact_digest": "sha256:ef6d6588057e4f4161de03cd429f4f61cda87441ed58ab7bb046597e8dccfb9f",
+        "result_hash": "sha256:721d454cc1626eecd742ee30512cdde581ae6e67ea532c3c7d8cb9f6b0855957",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:7138b7044d46e08a34ac122d366a768adc680285486c8b4f564fcec64f2f83dd",
+            "lineage_id": "review-08f4222b5cdb9b07",
+            "authority_revision": "sha256:42ef2868e1d2adbc81f803515d24cd2960c15ee3e286015b48e9dc1799445f42",
+            "target_identity": "sha256:683433ab3d67db7bb2c9c7ee4c56b4f3cfa94d36b4b966097b626aa276dea06c",
+            "base_tree": "fa92beb7cd2dee6ca6748647f03fc165b5336618",
+            "candidate_tree": "53642b092d5309c11554903e2a0d2f448a9e9166",
+            "changed_path_manifest_sha256": "sha256:2ca7c43e2d4f01724119ae40a6f6b7ef691d96eed71bf7edd6a94d0ea687ad30",
+            "lens": "review-readability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:7138b7044d46e08a34ac122d366a768adc680285486c8b4f564fcec64f2f83dd",
+            "raw_sha256": "sha256:42fc38c1bbd64194adaa8fb4800bb042a8b6f4ffdaeca13a40beed71aadad857",
+            "canonical_sha256": "sha256:dba972b4314e58828e58951a16cf34323f61c95828b1ad2a286889afd633934e",
+            "result_hash": "sha256:721d454cc1626eecd742ee30512cdde581ae6e67ea532c3c7d8cb9f6b0855957",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:7138b7044d46e08a34ac122d366a768adc680285486c8b4f564fcec64f2f83dd",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/architecture_test.go",
+                "engine/review/app/app.go",
+                "engine/review/app/bind_test.go",
+                "engine/review/app/fakes_test.go",
+                "engine/review/app/record_test.go",
+                "engine/review/app/service.go"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-001",
+                "lens": "readability",
+                "location": "engine/review/app/service.go:117-131",
+                "severity": "WARNING",
+                "claim": "In store(), the named return values number, name and err are shadowed: `names, err := ...` inside the loop declares a new err, while `number` and `name` are assigned to the outer named results. Mixing shadowed and named variables makes the retry loop hard to reason about, and a later edit using a bare return could silently return stale values. Currently every return is explicit, so behavior is correct, but the named results add confusion without benefit.",
+                "proof_refs": [
+                  "engine/review/app/service.go:117-131"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-002",
+                "lens": "readability",
+                "location": "engine/review/app/service.go:12-15",
+                "severity": "SUGGESTION",
+                "claim": "The constant maxNumberAttempts = 16 is explained in a comment, but the test only asserts a loose bound of 2..100 calls, so the documented value is not pinned. Changing it would not be caught, and the rationale 'sixteen in a row is not a race' is the only record of the choice.",
+                "proof_refs": [
+                  "engine/review/app/service.go:12-15",
+                  "engine/review/app/record_test.go:117-119"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Read all six changed paths in full from the supplied patches.",
+              "The architecture_test.go change registers review/app in the Application ring with a documenting comment; no readability defect.",
+              "app.go documents the ports, errors and package contract clearly; service.go Bind and Record are well commented and the candidate recompute flow is easy to follow.",
+              "No misleading names, dead code or duplicated logic found beyond the two minor items reported."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 2,
+        "target_identity": "sha256:683433ab3d67db7bb2c9c7ee4c56b4f3cfa94d36b4b966097b626aa276dea06c",
+        "capture_phase_revision": "sha256:42ef2868e1d2adbc81f803515d24cd2960c15ee3e286015b48e9dc1799445f42",
+        "artifact_digest": "sha256:3900dff42741d3689f14519180d3117af13954a9d482f6ad93062db55094b406",
+        "result_hash": "sha256:a3db5be6ad999e1756dfb425fe101c3b3c96dfcc0bd4a480794f56975e90e056",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:d1385c652fc6255cc10160f14cd087d23d77d6abe3bbdb31da9ab3c61aa372aa",
+            "lineage_id": "review-08f4222b5cdb9b07",
+            "authority_revision": "sha256:42ef2868e1d2adbc81f803515d24cd2960c15ee3e286015b48e9dc1799445f42",
+            "target_identity": "sha256:683433ab3d67db7bb2c9c7ee4c56b4f3cfa94d36b4b966097b626aa276dea06c",
+            "base_tree": "fa92beb7cd2dee6ca6748647f03fc165b5336618",
+            "candidate_tree": "53642b092d5309c11554903e2a0d2f448a9e9166",
+            "changed_path_manifest_sha256": "sha256:2ca7c43e2d4f01724119ae40a6f6b7ef691d96eed71bf7edd6a94d0ea687ad30",
+            "lens": "review-reliability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:d1385c652fc6255cc10160f14cd087d23d77d6abe3bbdb31da9ab3c61aa372aa",
+            "raw_sha256": "sha256:3ad20a0efe00c9658f32dcc85b840ab1b79dd09099c6dc7e3c03740bc089d94f",
+            "canonical_sha256": "sha256:127b9450935c0e98ff7ba1dfbdc6ead37588304b06e677c3c633f6500c9d53d0",
+            "result_hash": "sha256:a3db5be6ad999e1756dfb425fe101c3b3c96dfcc0bd4a480794f56975e90e056",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:d1385c652fc6255cc10160f14cd087d23d77d6abe3bbdb31da9ab3c61aa372aa",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/architecture_test.go",
+                "engine/review/app/app.go",
+                "engine/review/app/bind_test.go",
+                "engine/review/app/fakes_test.go",
+                "engine/review/app/record_test.go",
+                "engine/review/app/service.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-store-retry-exhaustion-untested",
+                "lens": "reliability",
+                "location": "engine/review/app/service.go:132-136",
+                "severity": "SUGGESTION",
+                "claim": "In store, the loop variable 'err' shadows the named return and the ErrExists case uses 'continue'; behavior is correct, but the retry-exhaustion path is only proved with a Create that always fails, not with Names re-listing changing between attempts. The race test covers one retry. Coverage is adequate; this is a minor note only.",
+                "proof_refs": [
+                  "engine/review/app/record_test.go:80-96",
+                  "engine/review/app/record_test.go:98-113"
+                ]
+              },
+              {
+                "id": "R3-bind-worktree-toctou",
+                "lens": "reliability",
+                "location": "engine/review/app/service.go:49-56",
+                "severity": "WARNING",
+                "claim": "Bind checks the worktree state and then calls AddWorktree without handling a concurrent creator: if two binds race, the loser's AddWorktree returns a generic error rather than re-checking and reusing the worktree at the head. No test covers a racing Bind, so concurrent binds of the same head are unproved. Realistic but low impact, since the failure is a refusal that leaves state intact and a retry succeeds.",
+                "proof_refs": [
+                  "engine/review/app/service.go:49-56",
+                  "engine/review/app/bind_test.go:107-123"
+                ]
+              }
+            ],
+            "evidence": [
+              "Reviewed all six changed paths in full.",
+              "Record validates the reply against the candidate recomputed from git and stores nothing on refusal; record_test.go asserts zero store calls for each refusal case, the oversize case, and unsafe feature or revision inputs.",
+              "Reply size boundary is tested at exactly MaxReplyBytes and one byte over.",
+              "Bind creates the worktree last, so errors from the diff, paths or candidate binding leave no directory; bind_test.go asserts no Worktree or AddWorktree calls on those failures.",
+              "Error wrapping preserves causes, and tests assert errors.Is for each git and store failure key.",
+              "Race on the result number is covered by raceOnce, which retries and takes the next number; exhaustion after 16 attempts returns ErrNoFreeNumber and is tested.",
+              "The architecture_test.go change only registers review/app in the Application ring and updates the doc comment; no behavior regression is visible."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "95844cd6c05f9ca2ca8b681689c802ca88e5d0c5d27dc323aeadb7da9dbd64aa",
+    "initial_atomic_start": {
+      "lineage_id": "review-08f4222b5cdb9b07",
+      "worktree_identity": "sha256:571cf94da78406a5dee177091311c4fcbbbf61e483d9e6e92803045faa817e42",
+      "target_identity": "sha256:683433ab3d67db7bb2c9c7ee4c56b4f3cfa94d36b4b966097b626aa276dea06c",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "fa92beb7cd2dee6ca6748647f03fc165b5336618",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-resilience",
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 960,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "application package engine/review/app: Bind and Record use cases over owned ports; Record recomputes the binding and refuses replies (reliability), typed refusals when a port fails mid-record (resilience), use-case structure and docs (readability)"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

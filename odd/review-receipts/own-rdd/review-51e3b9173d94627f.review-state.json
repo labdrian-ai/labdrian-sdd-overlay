@@ -1,0 +1,223 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:850ade59ebdc224a942bcd54c1f46aab50ef1ad6b0f98042afc3c48b14ca1d73",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-51e3b9173d94627f",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "dc9a5c5e94518d14da2cfcbf8de196743a31c942",
+      "candidate_tree": "ac5f80bec771e1c90ff7de02bb2d4e6ec1e716f2",
+      "paths_digest": "sha256:dd2fc9629dc57645d9a1c927f30b11868ebaa1749973cab46826af53984c288d",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/review/candidate_test.go",
+        "engine/review/fixtures_test.go",
+        "engine/review/review.go",
+        "engine/review/stored.go",
+        "engine/review/stored_test.go"
+      ],
+      "identity": "sha256:8824ba598fec242bf9a13011b523f7b38bf1f9eece2fd2b8c8fcd06543307ab5"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "dc9a5c5e94518d14da2cfcbf8de196743a31c942",
+      "candidate_tree": "ac5f80bec771e1c90ff7de02bb2d4e6ec1e716f2",
+      "paths_digest": "sha256:dd2fc9629dc57645d9a1c927f30b11868ebaa1749973cab46826af53984c288d",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/review/candidate_test.go",
+        "engine/review/fixtures_test.go",
+        "engine/review/review.go",
+        "engine/review/stored.go",
+        "engine/review/stored_test.go"
+      ],
+      "identity": "sha256:8824ba598fec242bf9a13011b523f7b38bf1f9eece2fd2b8c8fcd06543307ab5"
+    },
+    "genesis_paths": [
+      "engine/review/candidate_test.go",
+      "engine/review/fixtures_test.go",
+      "engine/review/review.go",
+      "engine/review/stored.go",
+      "engine/review/stored_test.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 41,
+    "correction_budget": 21,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "domain fix: zero Candidate Short returns empty instead of panicking, non-JSON reply wraps a new sentinel ErrReplyNotJSON (reliability); comment and constant placement (readability)",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:de8d728a13bae5bf60ecfd53cb13b14c0283e2623a4dce0f2c8df4f6aca84690",
+    "capture_phase_revision": "sha256:9e6ca003521d5809f0375f50a2a41cd72104059ec3ecc29e98276ffbdb8ca693",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "target_identity": "sha256:8824ba598fec242bf9a13011b523f7b38bf1f9eece2fd2b8c8fcd06543307ab5",
+        "capture_phase_revision": "sha256:9e6ca003521d5809f0375f50a2a41cd72104059ec3ecc29e98276ffbdb8ca693",
+        "artifact_digest": "sha256:2d2cd36e9decfe7d825cc6810ec4b798142190cbdf881eefd1458ecf2d23f40b",
+        "result_hash": "sha256:2e29e9346f35f509096abc649d7d896d8f97d0e9533031fa86c3e0eaf36ea5b2",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:ccd1111ac4afcbd96092e3fdb7f652a42163333c89812d4451fd8b98c5c0b1aa",
+            "lineage_id": "review-51e3b9173d94627f",
+            "authority_revision": "sha256:9e6ca003521d5809f0375f50a2a41cd72104059ec3ecc29e98276ffbdb8ca693",
+            "target_identity": "sha256:8824ba598fec242bf9a13011b523f7b38bf1f9eece2fd2b8c8fcd06543307ab5",
+            "base_tree": "dc9a5c5e94518d14da2cfcbf8de196743a31c942",
+            "candidate_tree": "ac5f80bec771e1c90ff7de02bb2d4e6ec1e716f2",
+            "changed_path_manifest_sha256": "sha256:a84d03da41f535671995bcf0532abf1bd81555064897701ab95cb14552fb5db7",
+            "lens": "review-readability",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:ccd1111ac4afcbd96092e3fdb7f652a42163333c89812d4451fd8b98c5c0b1aa",
+            "raw_sha256": "sha256:533044f0663ab70b7fc1e50bfc5823984310c91b46bc379afda837038cef3ff6",
+            "canonical_sha256": "sha256:d36a19fee7e501e8617738f2528130bb9c7796247514a4994b16815c210b116e",
+            "result_hash": "sha256:2e29e9346f35f509096abc649d7d896d8f97d0e9533031fa86c3e0eaf36ea5b2",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:ccd1111ac4afcbd96092e3fdb7f652a42163333c89812d4451fd8b98c5c0b1aa",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/candidate_test.go",
+                "engine/review/fixtures_test.go",
+                "engine/review/review.go",
+                "engine/review/stored.go",
+                "engine/review/stored_test.go"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-001",
+                "lens": "readability",
+                "location": "engine/review/fixtures_test.go:14-18",
+                "severity": "WARNING",
+                "claim": "The const block was reordered so that diffText now sits directly under headSHA, and the diffSHA comment moved to sit above diffSHA. This is harmless, but the comment on diffSHA no longer separates the two fixture groups. The SHA-256 of 'abc' pairing is now less visible than before. It is a minor readability regression with no behavioral effect.",
+                "proof_refs": [
+                  "engine/review/fixtures_test.go:14-18"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Reviewed all 5 changed paths in full.",
+              "review.go: Short() now returns an empty string for a head shorter than 12 characters, instead of panicking. The new comment documents this, and candidate_test.go covers it for the zero Candidate. The shortLength constant now has a rationale comment.",
+              "The shortLength rationale claims that git prints 12 hex characters unambiguously in large repositories. That is an unverified claim, but it is only a comment and does not change behavior.",
+              "stored.go and stored_test.go: the new ErrReplyNotJSON sentinel is wrapped with %w, and the test checks it with errors.Is. The error message is slightly reworded: 'review: reply is not JSON, so it cannot be stored in a JSON file'. The old text said 'the reply is not JSON'. This is an unrequested change to an error message, but only in wording, and I rate it low severity.",
+              "No dead code, duplicated logic, or misleading names were introduced."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 1,
+        "target_identity": "sha256:8824ba598fec242bf9a13011b523f7b38bf1f9eece2fd2b8c8fcd06543307ab5",
+        "capture_phase_revision": "sha256:9e6ca003521d5809f0375f50a2a41cd72104059ec3ecc29e98276ffbdb8ca693",
+        "artifact_digest": "sha256:9c7590cb07ef88f2446de8a3f798b5abcdfa7818cf7765633698286f1448b18d",
+        "result_hash": "sha256:1b3096c8284ad6e3d3811aadd109a03dbdd9b972c88850ecfe08c270656ca905",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:b452a5e5e7728b42e4932290e150ad8ab83b0b50fb9614fda49d26446f66429c",
+            "lineage_id": "review-51e3b9173d94627f",
+            "authority_revision": "sha256:9e6ca003521d5809f0375f50a2a41cd72104059ec3ecc29e98276ffbdb8ca693",
+            "target_identity": "sha256:8824ba598fec242bf9a13011b523f7b38bf1f9eece2fd2b8c8fcd06543307ab5",
+            "base_tree": "dc9a5c5e94518d14da2cfcbf8de196743a31c942",
+            "candidate_tree": "ac5f80bec771e1c90ff7de02bb2d4e6ec1e716f2",
+            "changed_path_manifest_sha256": "sha256:a84d03da41f535671995bcf0532abf1bd81555064897701ab95cb14552fb5db7",
+            "lens": "review-reliability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:b452a5e5e7728b42e4932290e150ad8ab83b0b50fb9614fda49d26446f66429c",
+            "raw_sha256": "sha256:b0f12b07bf9ef56fd289d0b0461353a6b1067c74080994d7c7fb0aa89e03a08f",
+            "canonical_sha256": "sha256:d684bf3068a2ffcdf9f10a6f998c81af44ba79513f4a54199ad39fd64298c4a1",
+            "result_hash": "sha256:1b3096c8284ad6e3d3811aadd109a03dbdd9b972c88850ecfe08c270656ca905",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:b452a5e5e7728b42e4932290e150ad8ab83b0b50fb9614fda49d26446f66429c",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/candidate_test.go",
+                "engine/review/fixtures_test.go",
+                "engine/review/review.go",
+                "engine/review/stored.go",
+                "engine/review/stored_test.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-short-boundary",
+                "lens": "reliability",
+                "location": "engine/review/review.go:150-156",
+                "severity": "SUGGESTION",
+                "claim": "Short() returns empty for any Head shorter than 12 characters, not only the zero Candidate. A non-empty but short head, which NewCandidate presumably rejects, would silently yield an empty name instead of failing. The new test covers only the zero value, so the 1 to 11 character boundary is unproved. This is low risk because heads are git SHAs.",
+                "proof_refs": [
+                  "engine/review/review.go:150-156",
+                  "engine/review/candidate_test.go:145-151"
+                ]
+              }
+            ],
+            "evidence": [
+              "Short() no longer panics on the zero Candidate. TestTheZeroCandidateHasAnEmptyShortName asserts the empty result.",
+              "EncodeResult now wraps the new sentinel ErrReplyNotJSON with %w. The updated test asserts errors.Is for the inputs empty, 'no' and a truncated object, so the failure path is observable. The error message text changes slightly: the new message begins 'review: reply is not JSON, so it cannot...'. The old message began 'review: the reply is not JSON, so...'. Nothing in the patch shows a caller matching the old text.",
+              "The fixtures_test.go change only moves the comment and realigns the const block. It has no behavioral effect.",
+              "I found no BLOCKER or CRITICAL regressions in the visible patch."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "9e0d78bdb0bcb9f62602e89df425bc6138cfac8819cfb413d3def93736bc4874",
+    "initial_atomic_start": {
+      "lineage_id": "review-51e3b9173d94627f",
+      "worktree_identity": "sha256:571cf94da78406a5dee177091311c4fcbbbf61e483d9e6e92803045faa817e42",
+      "target_identity": "sha256:8824ba598fec242bf9a13011b523f7b38bf1f9eece2fd2b8c8fcd06543307ab5",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "dc9a5c5e94518d14da2cfcbf8de196743a31c942",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 41,
+      "correction_budget": 21,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "domain fix: zero Candidate Short returns empty instead of panicking, non-JSON reply wraps a new sentinel ErrReplyNotJSON (reliability); comment and constant placement (readability)"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

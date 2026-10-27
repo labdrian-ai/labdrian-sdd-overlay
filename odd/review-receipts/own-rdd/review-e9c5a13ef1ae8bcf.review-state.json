@@ -1,0 +1,291 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:1dcd99a29be2091320c6dc77a6598b3fefd67d2df49d391f54ddaa7a0529f293",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-e9c5a13ef1ae8bcf",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "53642b092d5309c11554903e2a0d2f448a9e9166",
+      "candidate_tree": "994c2314f691451d7b4a25a6e5bf1967ebc6a836",
+      "paths_digest": "sha256:af01e6b8aa742128cd169ef464197be4f2b8416ac13e6bf4ae5dde1d5c6acfc9",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/architecture_test.go",
+        "engine/review/fsstore/fsstore.go",
+        "engine/review/fsstore/fsstore_test.go",
+        "engine/review/fsstore/fsstore_unix_test.go"
+      ],
+      "identity": "sha256:9cd17c3825ac4ab6427a94e3f983aebc954e0db61ccaf006f78127c2d79b92de"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "53642b092d5309c11554903e2a0d2f448a9e9166",
+      "candidate_tree": "994c2314f691451d7b4a25a6e5bf1967ebc6a836",
+      "paths_digest": "sha256:af01e6b8aa742128cd169ef464197be4f2b8416ac13e6bf4ae5dde1d5c6acfc9",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/architecture_test.go",
+        "engine/review/fsstore/fsstore.go",
+        "engine/review/fsstore/fsstore_test.go",
+        "engine/review/fsstore/fsstore_unix_test.go"
+      ],
+      "identity": "sha256:9cd17c3825ac4ab6427a94e3f983aebc954e0db61ccaf006f78127c2d79b92de"
+    },
+    "genesis_paths": [
+      "engine/architecture_test.go",
+      "engine/review/fsstore/fsstore.go",
+      "engine/review/fsstore/fsstore_test.go",
+      "engine/review/fsstore/fsstore_unix_test.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-risk",
+      "review-resilience",
+      "review-reliability"
+    ],
+    "original_changed_lines": 540,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "filesystem adapter engine/review/fsstore: walks odd/review-results without following symlinks (risk), atomic no-overwrite create with temp file, fsync and link (resilience), tests of modes, symlink refusal and concurrent creates (reliability)",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:a459eec13a1d1a127606959d62323ed99fb96748d94fd96d611a5cca71b566d0",
+    "capture_phase_revision": "sha256:b41baf93c5f100bf26c490b639651e644354905a5e75a5b361d47cfc4632c72a",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:9cd17c3825ac4ab6427a94e3f983aebc954e0db61ccaf006f78127c2d79b92de",
+        "capture_phase_revision": "sha256:b41baf93c5f100bf26c490b639651e644354905a5e75a5b361d47cfc4632c72a",
+        "artifact_digest": "sha256:c4ae500c6d9b72dd7d97cc86e306429745ca3b875608b885d61aa8b03653b17b",
+        "result_hash": "sha256:2f3caaf32b3ce73f285131d626f78375baa37d7a38dd31a69409ae3f66cfda8c",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:e74ed22778b2064537ab7b2ccbc48879e2e0a0245e6dbd9d38f716976824e0bf",
+            "lineage_id": "review-e9c5a13ef1ae8bcf",
+            "authority_revision": "sha256:b41baf93c5f100bf26c490b639651e644354905a5e75a5b361d47cfc4632c72a",
+            "target_identity": "sha256:9cd17c3825ac4ab6427a94e3f983aebc954e0db61ccaf006f78127c2d79b92de",
+            "base_tree": "53642b092d5309c11554903e2a0d2f448a9e9166",
+            "candidate_tree": "994c2314f691451d7b4a25a6e5bf1967ebc6a836",
+            "changed_path_manifest_sha256": "sha256:c110d4122f56f6e8ab976d13e4987cc67f15236b5efe7414f5778babc7f4e988",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:e74ed22778b2064537ab7b2ccbc48879e2e0a0245e6dbd9d38f716976824e0bf",
+            "raw_sha256": "sha256:27bda464070f4aa9eb2353a800dad54af2cdd58f02f296230a10f0270a4e6666",
+            "canonical_sha256": "sha256:ce853b3693ec9872df6d1af173290a7103d0c648df235a76814e4a0a0834b322",
+            "result_hash": "sha256:2f3caaf32b3ce73f285131d626f78375baa37d7a38dd31a69409ae3f66cfda8c",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:e74ed22778b2064537ab7b2ccbc48879e2e0a0245e6dbd9d38f716976824e0bf",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/architecture_test.go",
+                "engine/review/fsstore/fsstore.go",
+                "engine/review/fsstore/fsstore_test.go",
+                "engine/review/fsstore/fsstore_unix_test.go"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [
+              {
+                "id": "R1-001",
+                "lens": "risk",
+                "location": "engine/review/fsstore/fsstore.go:121-142",
+                "severity": "WARNING",
+                "claim": "walk checks each directory with Lstat and then uses it in a separate call, so a symlink swapped in between is not detected (TOCTOU). The package documentation states this limit explicitly, and exploiting it requires a process that can already write to the working tree, so no reachable impact beyond that exists.",
+                "proof_refs": [
+                  "engine/review/fsstore/fsstore.go:20-23"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Reviewed all four changed paths in full.",
+              "Feature and name inputs are validated before any filesystem access: review.CheckFeature for the feature, checkName for the file name (rejects empty, dot names, a leading dot, separators, backslash, NUL, and names over 255 bytes).",
+              "Every directory on the way from the root is Lstat-checked and refused if it is a symlink or not a directory, so the intended threat of a symlink brought in by a checked-out branch is blocked. Tests cover links at odd, review-results and the feature directory.",
+              "Create publishes through atomicfile Stage plus Create (link semantics), so an existing file is never overwritten and a dangling symlink at the name counts as taken. The tests cover both cases and the race between writers.",
+              "Directory and file modes are fixed at 0755 and 0644 regardless of umask. They are world-readable by design, since the results are evidence read by other users of the checkout, and contain no secrets.",
+              "No dependencies were added and no secrets appear in the patch. The architecture_test.go change only registers the new package as an Adapter ring."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-resilience",
+        "selected_order": 1,
+        "target_identity": "sha256:9cd17c3825ac4ab6427a94e3f983aebc954e0db61ccaf006f78127c2d79b92de",
+        "capture_phase_revision": "sha256:b41baf93c5f100bf26c490b639651e644354905a5e75a5b361d47cfc4632c72a",
+        "artifact_digest": "sha256:2aecc1ad5e1b51a703d3ed6d4edc9f14015b37c91e75356d37a4c4198452d838",
+        "result_hash": "sha256:c9b2e59c74a8d3c71ef0c4fdbf089cc4771e2f8d4ae3e53386e5334c6461d0f5",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:cfda7a2427a78701afb565e83dc4db71d6876bd9f184935bfe6d6cd785675cf4",
+            "lineage_id": "review-e9c5a13ef1ae8bcf",
+            "authority_revision": "sha256:b41baf93c5f100bf26c490b639651e644354905a5e75a5b361d47cfc4632c72a",
+            "target_identity": "sha256:9cd17c3825ac4ab6427a94e3f983aebc954e0db61ccaf006f78127c2d79b92de",
+            "base_tree": "53642b092d5309c11554903e2a0d2f448a9e9166",
+            "candidate_tree": "994c2314f691451d7b4a25a6e5bf1967ebc6a836",
+            "changed_path_manifest_sha256": "sha256:c110d4122f56f6e8ab976d13e4987cc67f15236b5efe7414f5778babc7f4e988",
+            "lens": "review-resilience",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:cfda7a2427a78701afb565e83dc4db71d6876bd9f184935bfe6d6cd785675cf4",
+            "raw_sha256": "sha256:d4e2f630241d8341c01746e2315f8cb1a026c8f193298004bd5ffc70ea89491b",
+            "canonical_sha256": "sha256:d4e2f630241d8341c01746e2315f8cb1a026c8f193298004bd5ffc70ea89491b",
+            "result_hash": "sha256:c9b2e59c74a8d3c71ef0c4fdbf089cc4771e2f8d4ae3e53386e5334c6461d0f5",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:cfda7a2427a78701afb565e83dc4db71d6876bd9f184935bfe6d6cd785675cf4",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/architecture_test.go",
+                "engine/review/fsstore/fsstore.go",
+                "engine/review/fsstore/fsstore_test.go",
+                "engine/review/fsstore/fsstore_unix_test.go"
+              ]
+            },
+            "lens": "review-resilience",
+            "findings": [],
+            "evidence": [
+              "Create stages into a temp file in the same directory, syncs it, and links it to its name through atomicfile. A crash leaves no half-written result, and a taken name, including a dangling symlink, maps to app.ErrExists and is left untouched. The tests cover this.",
+              "staged.Discard is deferred, so a failed Create leaves no temporary file behind. TestCreateFailsWhenTheDirectoryCannotBeWritten covers a non-writable directory.",
+              "walk uses Lstat on each directory, refuses symlinks and non-directories, and makeDir handles a concurrent mkdir by re-inspecting the directory. The residual check-then-use race is documented in the package comment and is not a regression, since this is new code with no baseline behavior.",
+              "Names does not create anything. A missing directory returns an empty result without error, so reads degrade gracefully.",
+              "The new code is isolated, adds no retry loops or unbounded work, and has no concrete production failure mode. I found no resilience defects caused by this candidate."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 2,
+        "target_identity": "sha256:9cd17c3825ac4ab6427a94e3f983aebc954e0db61ccaf006f78127c2d79b92de",
+        "capture_phase_revision": "sha256:b41baf93c5f100bf26c490b639651e644354905a5e75a5b361d47cfc4632c72a",
+        "artifact_digest": "sha256:37e5f60a2174b9b4d008fea2f9b7debdf9113a0cd88dd20f2c1ed2af553153f0",
+        "result_hash": "sha256:f2b02c21b13147befdecd8330d534ac49d937ff05ae83032fd68bcbc40cda9a6",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:484d3aebe4b393b5f9b0e2f30001f1ccc7095b47525f36153451e92d85531768",
+            "lineage_id": "review-e9c5a13ef1ae8bcf",
+            "authority_revision": "sha256:b41baf93c5f100bf26c490b639651e644354905a5e75a5b361d47cfc4632c72a",
+            "target_identity": "sha256:9cd17c3825ac4ab6427a94e3f983aebc954e0db61ccaf006f78127c2d79b92de",
+            "base_tree": "53642b092d5309c11554903e2a0d2f448a9e9166",
+            "candidate_tree": "994c2314f691451d7b4a25a6e5bf1967ebc6a836",
+            "changed_path_manifest_sha256": "sha256:c110d4122f56f6e8ab976d13e4987cc67f15236b5efe7414f5778babc7f4e988",
+            "lens": "review-reliability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:484d3aebe4b393b5f9b0e2f30001f1ccc7095b47525f36153451e92d85531768",
+            "raw_sha256": "sha256:02a32f1cfc74014829192be9a6ac7ca16853e75f809f243ff7d0b0e2a343219e",
+            "canonical_sha256": "sha256:f89dd2408900b437aca2d6b21cbbbe4cd09ef0ac6ec2cdc6010469ade4048655",
+            "result_hash": "sha256:f2b02c21b13147befdecd8330d534ac49d937ff05ae83032fd68bcbc40cda9a6",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:484d3aebe4b393b5f9b0e2f30001f1ccc7095b47525f36153451e92d85531768",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/architecture_test.go",
+                "engine/review/fsstore/fsstore.go",
+                "engine/review/fsstore/fsstore_test.go",
+                "engine/review/fsstore/fsstore_unix_test.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-names-unfiltered",
+                "lens": "reliability",
+                "location": "engine/review/fsstore/fsstore.go:70-72",
+                "severity": "WARNING",
+                "claim": "Names returns every directory entry including hidden temporary files (.review-*.tmp) of an in-flight concurrent Create. A caller computing the next result sequence number or listing results could see transient entries. Tests do not cover Names while a write is in flight, so the behavior is unproved.",
+                "proof_refs": [
+                  "engine/review/fsstore/fsstore.go:70-72",
+                  "engine/review/fsstore/fsstore_test.go:140-155"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-mkdir-race-untested",
+                "lens": "reliability",
+                "location": "engine/review/fsstore/fsstore.go:140-152",
+                "severity": "SUGGESTION",
+                "claim": "The makeDir branch handling a directory created concurrently (ErrExist then Lstat and checkDir) is not exercised directly; the race test only covers the already-created or racing-create path incidentally, so a symlink swapped in at that moment is unproved.",
+                "proof_refs": [
+                  "engine/review/fsstore/fsstore.go:140-152",
+                  "engine/review/fsstore/fsstore_test.go:98-128"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Reviewed all four changed paths in full.",
+              "Create validates the name and feature before making anything; tests assert nothing is made on refusal.",
+              "Create relies on atomicfile Create for no-replace semantics; tests cover an existing file, a dangling symlink at the name, and eight racing writers with a single winner.",
+              "Symlinks and non-directories on every path segment are refused for both Create and Names, tests assert this and that nothing is written outside.",
+              "Modes are tested under several umasks on unix, and read-only directory failure leaves no temporary file."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "26a47df035c261ade6abdf6bd7290a419501321e4365bca8188a2e7cbb10042e",
+    "initial_atomic_start": {
+      "lineage_id": "review-e9c5a13ef1ae8bcf",
+      "worktree_identity": "sha256:571cf94da78406a5dee177091311c4fcbbbf61e483d9e6e92803045faa817e42",
+      "target_identity": "sha256:9cd17c3825ac4ab6427a94e3f983aebc954e0db61ccaf006f78127c2d79b92de",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "53642b092d5309c11554903e2a0d2f448a9e9166",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-risk",
+        "review-resilience",
+        "review-reliability"
+      ],
+      "original_changed_lines": 540,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "filesystem adapter engine/review/fsstore: walks odd/review-results without following symlinks (risk), atomic no-overwrite create with temp file, fsync and link (resilience), tests of modes, symlink refusal and concurrent creates (reliability)"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

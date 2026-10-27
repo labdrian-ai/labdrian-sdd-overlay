@@ -1,0 +1,249 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:c5435499b228bafde7ce10cd6f37420659db45c188af3bc4229746bd927f755b",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-92baf86a7fb76618",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "ac5f80bec771e1c90ff7de02bb2d4e6ec1e716f2",
+      "candidate_tree": "903c8a2b3af6ce0d3c4bfb98af2e70d6da0f30d4",
+      "paths_digest": "sha256:7785b6617e66d3278a04dc6e0df913f6c504fd473ad17a52ba8799ecbaf2ff93",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/review/app/bind_test.go",
+        "engine/review/app/fakes_test.go",
+        "engine/review/app/record_test.go",
+        "engine/review/app/service.go"
+      ],
+      "identity": "sha256:9526a9455d992cbbe113828049b06c244d19d69923a9386e312558abeee25735"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "ac5f80bec771e1c90ff7de02bb2d4e6ec1e716f2",
+      "candidate_tree": "903c8a2b3af6ce0d3c4bfb98af2e70d6da0f30d4",
+      "paths_digest": "sha256:7785b6617e66d3278a04dc6e0df913f6c504fd473ad17a52ba8799ecbaf2ff93",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/review/app/bind_test.go",
+        "engine/review/app/fakes_test.go",
+        "engine/review/app/record_test.go",
+        "engine/review/app/service.go"
+      ],
+      "identity": "sha256:9526a9455d992cbbe113828049b06c244d19d69923a9386e312558abeee25735"
+    },
+    "genesis_paths": [
+      "engine/review/app/bind_test.go",
+      "engine/review/app/fakes_test.go",
+      "engine/review/app/record_test.go",
+      "engine/review/app/service.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-resilience",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 345,
+    "correction_budget": 173,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "app fix: Bind re-inspects and reuses a worktree a concurrent bind made (reliability, resilience); bounded injected backoff between store tries (resilience); unnamed results and pinned try limit (readability)",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:8caedaf715551f6d687c8324563a185a167b9b8f37b32600e26b2b26174900be",
+    "capture_phase_revision": "sha256:3fdae057a1203a3ef0498ed0c790074321965881c660bc208ce63b05c34aa113",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-resilience",
+        "target_identity": "sha256:9526a9455d992cbbe113828049b06c244d19d69923a9386e312558abeee25735",
+        "capture_phase_revision": "sha256:3fdae057a1203a3ef0498ed0c790074321965881c660bc208ce63b05c34aa113",
+        "artifact_digest": "sha256:22ec2a7352d34d51982433f16f85f415f880fabc4ff22cd5d96973b1baf87164",
+        "result_hash": "sha256:b65e8108b12edaf2b2fa4f0686695fd5b326c580694689a0a6756913835c6766",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:fb99ad0298095eb02afb67f6a24eb973f85a6268bf427646c632495406644f9b",
+            "lineage_id": "review-92baf86a7fb76618",
+            "authority_revision": "sha256:3fdae057a1203a3ef0498ed0c790074321965881c660bc208ce63b05c34aa113",
+            "target_identity": "sha256:9526a9455d992cbbe113828049b06c244d19d69923a9386e312558abeee25735",
+            "base_tree": "ac5f80bec771e1c90ff7de02bb2d4e6ec1e716f2",
+            "candidate_tree": "903c8a2b3af6ce0d3c4bfb98af2e70d6da0f30d4",
+            "changed_path_manifest_sha256": "sha256:1b4883000376e534ca84ac8ebea3e4bf87261d7639eea9a3c2d873d2509310db",
+            "lens": "review-resilience",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:fb99ad0298095eb02afb67f6a24eb973f85a6268bf427646c632495406644f9b",
+            "raw_sha256": "sha256:eb3ee8f228d1ba60ef092a41ddd9898033d8b2d6a2bcbbe9b7572f53ed5a1922",
+            "canonical_sha256": "sha256:18f88f209546ebdea0f60c14e42df1d961938dad2f1b21f4895012c91fa8af5f",
+            "result_hash": "sha256:b65e8108b12edaf2b2fa4f0686695fd5b326c580694689a0a6756913835c6766",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:fb99ad0298095eb02afb67f6a24eb973f85a6268bf427646c632495406644f9b",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/app/bind_test.go",
+                "engine/review/app/fakes_test.go",
+                "engine/review/app/record_test.go",
+                "engine/review/app/service.go"
+              ]
+            },
+            "lens": "review-resilience",
+            "findings": [],
+            "evidence": [
+              "engine/review/app/service.go store(): backoff starts at 1ms and doubles up to a 50ms cap. It waits only between tries, so 15 waits across 16 attempts total 513ms, which matches the comment and the bounded-latency tests. A lost race is bounded in both tries and time.",
+              "engine/review/app/service.go Bind(): when AddWorktree fails, the code makes one extra Worktree inspection. It reuses the path only if err is nil, the worktree is present, belongs to the repository and is at the head. Otherwise it returns the original add error, so there is no retry loop and no masked failure. The Created flag is false for a worktree another bind made, which is correct.",
+              "engine/review/app/service.go pause()/WithSleep: a nil sleep degrades to no waiting, which is the same behavior as the baseline. The diff does not show whether the command wires in a real sleep. That cannot be judged from this candidate, so it is not reported as a finding.",
+              "Test changes in bind_test.go, fakes_test.go and record_test.go cover the new paths without real sleeps. The fake's worktreeLater indexing (count minus 2) correctly maps the second and later Worktree calls."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "selected_order": 1,
+        "target_identity": "sha256:9526a9455d992cbbe113828049b06c244d19d69923a9386e312558abeee25735",
+        "capture_phase_revision": "sha256:3fdae057a1203a3ef0498ed0c790074321965881c660bc208ce63b05c34aa113",
+        "artifact_digest": "sha256:00ae50d8492a018c53695b327ad2708991ec37c063464e9a06a07a1d33255ec7",
+        "result_hash": "sha256:3ed9a410671c9457457d44c968ba70fd5c1852f4fab53d8909aec98f7e7613c6",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:69c5abcc06844d759410b77ccae27861e064e0bb928ab47c142b5599de08fe9a",
+            "lineage_id": "review-92baf86a7fb76618",
+            "authority_revision": "sha256:3fdae057a1203a3ef0498ed0c790074321965881c660bc208ce63b05c34aa113",
+            "target_identity": "sha256:9526a9455d992cbbe113828049b06c244d19d69923a9386e312558abeee25735",
+            "base_tree": "ac5f80bec771e1c90ff7de02bb2d4e6ec1e716f2",
+            "candidate_tree": "903c8a2b3af6ce0d3c4bfb98af2e70d6da0f30d4",
+            "changed_path_manifest_sha256": "sha256:1b4883000376e534ca84ac8ebea3e4bf87261d7639eea9a3c2d873d2509310db",
+            "lens": "review-readability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:69c5abcc06844d759410b77ccae27861e064e0bb928ab47c142b5599de08fe9a",
+            "raw_sha256": "sha256:e096c825b6cbf694f732ee8da6c03ec74e323c6a663b385080c36b62b3a3aafd",
+            "canonical_sha256": "sha256:5ac5a8a260b777156401d6ceaea2834895b8ae990163167f634ca2db9f483a2c",
+            "result_hash": "sha256:3ed9a410671c9457457d44c968ba70fd5c1852f4fab53d8909aec98f7e7613c6",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:69c5abcc06844d759410b77ccae27861e064e0bb928ab47c142b5599de08fe9a",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/app/bind_test.go",
+                "engine/review/app/fakes_test.go",
+                "engine/review/app/record_test.go",
+                "engine/review/app/service.go"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [],
+            "evidence": [
+              "Reviewed all four changed paths in full. No readability defect that hides a concrete problem or makes the change unsafe to maintain.",
+              "The backoff constants in engine/review/app/service.go are explained in a comment. The stated 513ms total for sixteen tries matches the schedule: 1+2+4+8+16+32 ms, then nine waits of 50 ms, which is 513 ms.",
+              "store in engine/review/app/service.go now returns unnamed results with loop-scoped number and name variables. This removes the earlier named-return shadowing and makes the control flow clearer.",
+              "The retry-after-failed-add logic in Bind is isolated in the isWorktreeAt helper. Its doc comment states that any state other than a worktree of the repository at the head, and any git error, counts as no.",
+              "The test fakes are documented: worktreeLater, worktreeAnswer, races, and the pauses type. The tests pin the sixteen-try contract with literal 16 values, which is intentional because maxNumberAttempts is unexported and the tests are in an external package."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 2,
+        "target_identity": "sha256:9526a9455d992cbbe113828049b06c244d19d69923a9386e312558abeee25735",
+        "capture_phase_revision": "sha256:3fdae057a1203a3ef0498ed0c790074321965881c660bc208ce63b05c34aa113",
+        "artifact_digest": "sha256:d7842c81840f3aebb93e3985dba339af9409e9da33aab9252e0a183be7a980f4",
+        "result_hash": "sha256:90501f99161a7eb8861e5e058e3024ce760ba0853ce9604d539bbaf0a215370a",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:d5c8e3ec5701e504e1ce5602db570358046c9f5315990ef403b2de8674b9918a",
+            "lineage_id": "review-92baf86a7fb76618",
+            "authority_revision": "sha256:3fdae057a1203a3ef0498ed0c790074321965881c660bc208ce63b05c34aa113",
+            "target_identity": "sha256:9526a9455d992cbbe113828049b06c244d19d69923a9386e312558abeee25735",
+            "base_tree": "ac5f80bec771e1c90ff7de02bb2d4e6ec1e716f2",
+            "candidate_tree": "903c8a2b3af6ce0d3c4bfb98af2e70d6da0f30d4",
+            "changed_path_manifest_sha256": "sha256:1b4883000376e534ca84ac8ebea3e4bf87261d7639eea9a3c2d873d2509310db",
+            "lens": "review-reliability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:d5c8e3ec5701e504e1ce5602db570358046c9f5315990ef403b2de8674b9918a",
+            "raw_sha256": "sha256:2a4f987756f9a31e343b6571d4f63f8f99228809fbd084f23d3b2ff1bbffabb4",
+            "canonical_sha256": "sha256:2a4f987756f9a31e343b6571d4f63f8f99228809fbd084f23d3b2ff1bbffabb4",
+            "result_hash": "sha256:90501f99161a7eb8861e5e058e3024ce760ba0853ce9604d539bbaf0a215370a",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:d5c8e3ec5701e504e1ce5602db570358046c9f5315990ef403b2de8674b9918a",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/app/bind_test.go",
+                "engine/review/app/fakes_test.go",
+                "engine/review/app/record_test.go",
+                "engine/review/app/service.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [],
+            "evidence": [
+              "Bind race recovery in engine/review/app/service.go: after a failed AddWorktree, isWorktreeAt re-inspects the path once. It requires err==nil, Present, OfRepository and Head==candidate head, and any other answer falls through to the original wrapped add error. AddWorktree is not retried. The new table test in engine/review/app/bind_test.go covers each rejecting state, including the error-with-plausible-state and partial-state cases, and asserts the add error is returned and not replaced by another sentinel.",
+              "The fake Worktree sequencing in engine/review/app/fakes_test.go (first call uses the default answer, later calls use worktreeLater) matches what the new bind tests expect: inspected twice, one AddWorktree, Created false on reuse.",
+              "Backoff in service.go store: no wait before the first try or after the last. Waits double from 1ms and cap at 50ms, so the 16-try worst case totals 513ms, which matches the comment. Tests in engine/review/app/record_test.go assert 16 Create calls, 16 listings, the error text, waits between tries only, monotonic and growing waits, per-wait and total bounds, and the nil-sleep path, all without real sleeping.",
+              "The named-return removal in store is safe because every path returns explicit values.",
+              "The wiring of WithSleep into the real command is not part of this candidate. Without it, New leaves sleep nil and production gets no backoff. I could not verify that wiring here, and the service's behavior with a nil sleep is tested."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "037749b5b52187f2926c41d68af3a7b4d1d340bc0c6cf82448158ff163a437ac",
+    "initial_atomic_start": {
+      "lineage_id": "review-92baf86a7fb76618",
+      "worktree_identity": "sha256:571cf94da78406a5dee177091311c4fcbbbf61e483d9e6e92803045faa817e42",
+      "target_identity": "sha256:9526a9455d992cbbe113828049b06c244d19d69923a9386e312558abeee25735",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "ac5f80bec771e1c90ff7de02bb2d4e6ec1e716f2",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-resilience",
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 345,
+      "correction_budget": 173,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "app fix: Bind re-inspects and reuses a worktree a concurrent bind made (reliability, resilience); bounded injected backoff between store tries (resilience); unnamed results and pinned try limit (readability)"
+    },
+    "runtime_agent": "claude-code"
+  }
+}
