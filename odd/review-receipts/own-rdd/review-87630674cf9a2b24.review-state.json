@@ -1,0 +1,275 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:068f65efa4a3a0ebbcec224d7e5d8610ff547c31d6722e012f56ecce049c938c",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-87630674cf9a2b24",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "8c426678a226e91c742702e76f02fc3ce2dfffd1",
+      "candidate_tree": "e69fe22fb8c0d7803814668b2a59bf3f7b3a1969",
+      "paths_digest": "sha256:8c0b0a8fc6c6f6743d5c1a556f31b197a2e62214a98de2729dca93b58e0aee39",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        ".github/workflows/ci.yml",
+        "CHANGELOG.md",
+        "engine/skills/actuals_instrumentation_contract_test.go",
+        "odd/review-receipts/own-rdd/review-dda16bddb8ccdfda.review-state.json",
+        "odd/review-results/README.md",
+        "odd/tasks/own-rdd.md",
+        "skills/inception-pipeline/.approval.json",
+        "tools/actuals-record-validator/main.go",
+        "tools/actuals-record-validator/main_test.go"
+      ],
+      "identity": "sha256:15447212e66b4f90ed5572913fa4241cdc3977bea6b8472b48f2894b869356a3"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "8c426678a226e91c742702e76f02fc3ce2dfffd1",
+      "candidate_tree": "e69fe22fb8c0d7803814668b2a59bf3f7b3a1969",
+      "paths_digest": "sha256:8c0b0a8fc6c6f6743d5c1a556f31b197a2e62214a98de2729dca93b58e0aee39",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        ".github/workflows/ci.yml",
+        "CHANGELOG.md",
+        "engine/skills/actuals_instrumentation_contract_test.go",
+        "odd/review-receipts/own-rdd/review-dda16bddb8ccdfda.review-state.json",
+        "odd/review-results/README.md",
+        "odd/tasks/own-rdd.md",
+        "skills/inception-pipeline/.approval.json",
+        "tools/actuals-record-validator/main.go",
+        "tools/actuals-record-validator/main_test.go"
+      ],
+      "identity": "sha256:15447212e66b4f90ed5572913fa4241cdc3977bea6b8472b48f2894b869356a3"
+    },
+    "genesis_paths": [
+      ".github/workflows/ci.yml",
+      "CHANGELOG.md",
+      "engine/skills/actuals_instrumentation_contract_test.go",
+      "odd/review-receipts/own-rdd/review-dda16bddb8ccdfda.review-state.json",
+      "odd/review-results/README.md",
+      "odd/tasks/own-rdd.md",
+      "skills/inception-pipeline/.approval.json",
+      "tools/actuals-record-validator/main.go",
+      "tools/actuals-record-validator/main_test.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 623,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "a claimed count of 0 with no stored result is refused, tests pin the CI step and the semantic-before-results order, CI drops the count only from the pre-S8 record, usage and README describe the two-line pass, ODD log, approval record and receipt",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:44b535f4009758e6c62b662d9e282cdc4b6140b65361f2cc03aa623454aa05ec",
+    "capture_phase_revision": "sha256:474b9cb31b9e77ed61866491a1791cd4c4af8cf961992bb9fccc0ccc423b9e46",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "target_identity": "sha256:15447212e66b4f90ed5572913fa4241cdc3977bea6b8472b48f2894b869356a3",
+        "capture_phase_revision": "sha256:474b9cb31b9e77ed61866491a1791cd4c4af8cf961992bb9fccc0ccc423b9e46",
+        "artifact_digest": "sha256:f93e4450c1380ca762953f20d892677714c5f54fbfbf75eff90cb063ef59b789",
+        "result_hash": "sha256:ac3402e029d9763afbc4f9d872383173b2c39543110daef8ace47b0b5acbb6b5",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:1a5367a57ef1cd3f80828377395074efbd9b62185427e327ec65544d540256e0",
+            "lineage_id": "review-87630674cf9a2b24",
+            "authority_revision": "sha256:474b9cb31b9e77ed61866491a1791cd4c4af8cf961992bb9fccc0ccc423b9e46",
+            "target_identity": "sha256:15447212e66b4f90ed5572913fa4241cdc3977bea6b8472b48f2894b869356a3",
+            "base_tree": "8c426678a226e91c742702e76f02fc3ce2dfffd1",
+            "candidate_tree": "e69fe22fb8c0d7803814668b2a59bf3f7b3a1969",
+            "changed_path_manifest_sha256": "sha256:794eddad834a35c758af486b43f469c99951c5883c27fe24dcf276a27b8b914c",
+            "lens": "review-readability",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:1a5367a57ef1cd3f80828377395074efbd9b62185427e327ec65544d540256e0",
+            "raw_sha256": "sha256:07715c01b29a04912ab335e8722afe1168cb3fac16239ccdc2b85eb621a89ba2",
+            "canonical_sha256": "sha256:154240ef002162b5e71bffd6938ab93ed2188e5f40057a0f772d5d8cb70e04f6",
+            "result_hash": "sha256:ac3402e029d9763afbc4f9d872383173b2c39543110daef8ace47b0b5acbb6b5",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:1a5367a57ef1cd3f80828377395074efbd9b62185427e327ec65544d540256e0",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                ".github/workflows/ci.yml",
+                "CHANGELOG.md",
+                "engine/skills/actuals_instrumentation_contract_test.go",
+                "odd/review-receipts/own-rdd/review-dda16bddb8ccdfda.review-state.json",
+                "odd/review-results/README.md",
+                "odd/tasks/own-rdd.md",
+                "skills/inception-pipeline/.approval.json",
+                "tools/actuals-record-validator/main.go",
+                "tools/actuals-record-validator/main_test.go"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-001",
+                "lens": "readability",
+                "location": "engine/skills/actuals_instrumentation_contract_test.go:761-762",
+                "severity": "SUGGESTION",
+                "claim": "The CI-step pin test locates the legacy guard and the jq drop by exact-string matching against the workflow text, including the fixture file name and quoting. A harmless reformatting of the step (for example reordering the guard or changing quotes) fails the test with a message that does not say the behavior is intact. The coupling is intentional per the comment, but the long literals are duplicated between the workflow and the test with no shared name.",
+                "proof_refs": [
+                  "engine/skills/actuals_instrumentation_contract_test.go:761-762",
+                  ".github/workflows/ci.yml:253-256"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-002",
+                "lens": "readability",
+                "location": "odd/tasks/own-rdd.md:683-710",
+                "severity": "SUGGESTION",
+                "claim": "The L31 log entry embeds machine-specific absolute scratch paths and very long single-paragraph bullets, which makes the task log hard to scan. The T10 task line also names the commit that records L31 without an id, so the reference cannot be resolved later.",
+                "proof_refs": [
+                  "odd/tasks/own-rdd.md:33",
+                  "odd/tasks/own-rdd.md:683"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Reviewed all 9 changed paths in the supplied patches.",
+              "main.go: the checkLensCount switch now has the Results==0 case before the mismatch case, with a comment stating why a claimed 0 is refused; the order dependence is explained where it matters, and the usage text, README table and CHANGELOG agree on the new behavior.",
+              "main_test.go: saysOK is introduced with a comment explaining why a plain ok: substring would match the usage text, and a test requires saysOK to find a real pass, so the negative assertions are not vacuous.",
+              "ci.yml: the legacy fixture guard is explained in the step comment, and the test pins it; no dead or duplicated logic found in the changed lines.",
+              "The earlier stale CHANGELOG sentence flagged in the receipt is corrected in this candidate; the receipt and approval JSON are generated records with no readability defect."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 1,
+        "target_identity": "sha256:15447212e66b4f90ed5572913fa4241cdc3977bea6b8472b48f2894b869356a3",
+        "capture_phase_revision": "sha256:474b9cb31b9e77ed61866491a1791cd4c4af8cf961992bb9fccc0ccc423b9e46",
+        "artifact_digest": "sha256:9f675e3135af0129bb65c0566573252248f5463f2813f6710f4ad42ed7d9dfd7",
+        "result_hash": "sha256:0c4e89a9cd940f4f019dfa12727c47cd720f899128bfcdb7c7d9afcc0c2107d7",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:70c0d6d3279810b683cffb4d89bd69ec149632ec4ce1d90a3d95bfcf6a86e33c",
+            "lineage_id": "review-87630674cf9a2b24",
+            "authority_revision": "sha256:474b9cb31b9e77ed61866491a1791cd4c4af8cf961992bb9fccc0ccc423b9e46",
+            "target_identity": "sha256:15447212e66b4f90ed5572913fa4241cdc3977bea6b8472b48f2894b869356a3",
+            "base_tree": "8c426678a226e91c742702e76f02fc3ce2dfffd1",
+            "candidate_tree": "e69fe22fb8c0d7803814668b2a59bf3f7b3a1969",
+            "changed_path_manifest_sha256": "sha256:794eddad834a35c758af486b43f469c99951c5883c27fe24dcf276a27b8b914c",
+            "lens": "review-reliability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:70c0d6d3279810b683cffb4d89bd69ec149632ec4ce1d90a3d95bfcf6a86e33c",
+            "raw_sha256": "sha256:ab5671ea4582d30dafd4c6c6b7e074517ff5b1e277d9b43573eae47323a11194",
+            "canonical_sha256": "sha256:ad73a8da79d9250aa6f34c66554978a7a03b7cb1c611ae95d4dcafd4ea7fb82d",
+            "result_hash": "sha256:0c4e89a9cd940f4f019dfa12727c47cd720f899128bfcdb7c7d9afcc0c2107d7",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:70c0d6d3279810b683cffb4d89bd69ec149632ec4ce1d90a3d95bfcf6a86e33c",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                ".github/workflows/ci.yml",
+                "CHANGELOG.md",
+                "engine/skills/actuals_instrumentation_contract_test.go",
+                "odd/review-receipts/own-rdd/review-dda16bddb8ccdfda.review-state.json",
+                "odd/review-results/README.md",
+                "odd/tasks/own-rdd.md",
+                "skills/inception-pipeline/.approval.json",
+                "tools/actuals-record-validator/main.go",
+                "tools/actuals-record-validator/main_test.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-ci-test-textual",
+                "lens": "reliability",
+                "location": "engine/skills/actuals_instrumentation_contract_test.go:742-766",
+                "severity": "SUGGESTION",
+                "claim": "The CI step test pins the workflow as text fragments (guard string, jq line, instance variable). It proves the step contains these strings but not that the shell runs correctly, for example the guard's basename comparison or the quoting. The L31/L32 log reports a manual run of the step body, so behavior was checked once, but nothing in the suite re-checks it. This is acceptable at the cheapest test level for a workflow file, so it is only a note.",
+                "proof_refs": [
+                  "engine/skills/actuals_instrumentation_contract_test.go:742-766",
+                  ".github/workflows/ci.yml:250-259"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-zero-claim-behavior-change",
+                "lens": "reliability",
+                "location": "tools/actuals-record-validator/main.go:305-307",
+                "severity": "SUGGESTION",
+                "claim": "A claimed review_lens_count of 0 with no stored result now exits 6, where it passed at the baseline. This was asked for (A4) and is covered by TestLensCountOfZeroForAChangeWithNoStoredResultIsRefused, and the README and usage text were updated to match. Noted only because it is a contract tightening for any caller that wrote 0. I found no committed record or documented caller that does.",
+                "proof_refs": [
+                  "tools/actuals-record-validator/main.go:305-307",
+                  "tools/actuals-record-validator/main_test.go:552-578"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Reviewed all 9 changed paths in the supplied patches.",
+              "The validator change from `*claimed != counted.Lenses \u0026\u0026 counted.Results == 0` to `counted.Results == 0` is sound: the task log states a stored result always records at least one row, so Results==0 implies Lenses==0, and the later case still handles a mismatch when results exist. The refusal path is covered for an empty repo and for a repo holding only another change's results.",
+              "The CI guard compares the basename of each record to the legacy fixture, so every other record is validated as written. This closes the earlier jq-bypass warning. The test pins the guard, the single jq deletion and the instance variable.",
+              "A new test shows a semantic refusal (exit 6) is returned before an unreadable --repo (exit 7), which proves the documented ordering.",
+              "TestAPassPrintsTwoLinesAndTheUsageTextSaysSo checks that a pass prints two lines and that the usage text says so, so the change in output shape is observable and documented. saysOK uses the schema path, so refusal tests cannot pass vacuously on the usage text.",
+              "The .approval.json change is a hash and timestamp update for the skill and carries no behavior to test.",
+              "The receipt JSON is a generated review artifact with no executable behavior."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "db7447ad9c01e590c416a0dbc924014948f3204870829c79dbd216ee75252189",
+    "initial_atomic_start": {
+      "lineage_id": "review-87630674cf9a2b24",
+      "worktree_identity": "sha256:cdce08363dde1ca80ea50c55b8f01edb1a90f883b2965ed339cda87a55ca0e3a",
+      "target_identity": "sha256:15447212e66b4f90ed5572913fa4241cdc3977bea6b8472b48f2894b869356a3",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "8c426678a226e91c742702e76f02fc3ce2dfffd1",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "high",
+      "selected_lenses": [
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 623,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "a claimed count of 0 with no stored result is refused, tests pin the CI step and the semantic-before-results order, CI drops the count only from the pre-S8 record, usage and README describe the two-line pass, ODD log, approval record and receipt"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

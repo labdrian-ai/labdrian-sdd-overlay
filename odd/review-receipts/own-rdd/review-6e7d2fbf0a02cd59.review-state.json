@@ -1,0 +1,226 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:510a4ba180a3d2637eebad97ade11c9c355c13fa002648afda14a86611bab570",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-6e7d2fbf0a02cd59",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "e1108d6cf854ca74b5b64b0fe09add4d990cc1f1",
+      "candidate_tree": "6199872c10e38238eca5265c69be862d8962b15b",
+      "paths_digest": "sha256:fd5683e0e147c4cd499f86c57621131cfa70713912a202f31b2022322fce75ba",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/review/app/app.go",
+        "engine/review/app/lenses.go",
+        "engine/review/app/lenses_test.go",
+        "engine/review/app/verify.go",
+        "engine/shelltest/overlay_dispatch_test.go",
+        "odd/tasks/own-rdd.md",
+        "skills/inception-pipeline/.approval.json",
+        "skills/role-chain/.approval.json"
+      ],
+      "identity": "sha256:467426f4cf7af03a2db4611ba7053e76ae85226e2291e098e7c95baeae03aeb2"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "e1108d6cf854ca74b5b64b0fe09add4d990cc1f1",
+      "candidate_tree": "6199872c10e38238eca5265c69be862d8962b15b",
+      "paths_digest": "sha256:fd5683e0e147c4cd499f86c57621131cfa70713912a202f31b2022322fce75ba",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/review/app/app.go",
+        "engine/review/app/lenses.go",
+        "engine/review/app/lenses_test.go",
+        "engine/review/app/verify.go",
+        "engine/shelltest/overlay_dispatch_test.go",
+        "odd/tasks/own-rdd.md",
+        "skills/inception-pipeline/.approval.json",
+        "skills/role-chain/.approval.json"
+      ],
+      "identity": "sha256:467426f4cf7af03a2db4611ba7053e76ae85226e2291e098e7c95baeae03aeb2"
+    },
+    "genesis_paths": [
+      "engine/review/app/app.go",
+      "engine/review/app/lenses.go",
+      "engine/review/app/lenses_test.go",
+      "engine/review/app/verify.go",
+      "engine/shelltest/overlay_dispatch_test.go",
+      "odd/tasks/own-rdd.md",
+      "skills/inception-pipeline/.approval.json",
+      "skills/role-chain/.approval.json"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-risk",
+      "review-reliability"
+    ],
+    "original_changed_lines": 274,
+    "correction_budget": 137,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "own-rdd T10 slice 1: engine CountLenses over a feature's stored review results, the shelltest usage fix for --rows, the owner's skill approval records and passive ODD entries",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:4802238921432d1e4b063dc8b154071aabfa2c5869120f2039534fcb490ba4e4",
+    "capture_phase_revision": "sha256:eb61ac51cfa05d0966046f882a2e85162689fc908ae11eae611b2808596ee491",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:467426f4cf7af03a2db4611ba7053e76ae85226e2291e098e7c95baeae03aeb2",
+        "capture_phase_revision": "sha256:eb61ac51cfa05d0966046f882a2e85162689fc908ae11eae611b2808596ee491",
+        "artifact_digest": "sha256:d96405006913bbfd4560250e949dc29ecaa874a4421898ad1b7d8d512337e081",
+        "result_hash": "sha256:d4685524aefe34a80f5978405e5f909d07aebdb5419c8683a349e9903663e3ad",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:d871e08468d25e6551698bc945a7f0442a873065353c683114fe989cf5146dc0",
+            "lineage_id": "review-6e7d2fbf0a02cd59",
+            "authority_revision": "sha256:eb61ac51cfa05d0966046f882a2e85162689fc908ae11eae611b2808596ee491",
+            "target_identity": "sha256:467426f4cf7af03a2db4611ba7053e76ae85226e2291e098e7c95baeae03aeb2",
+            "base_tree": "e1108d6cf854ca74b5b64b0fe09add4d990cc1f1",
+            "candidate_tree": "6199872c10e38238eca5265c69be862d8962b15b",
+            "changed_path_manifest_sha256": "sha256:527ced6a939d1fa628405ffa903b6b1f0c2bdd46c48af2f29418019d08317e19",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:d871e08468d25e6551698bc945a7f0442a873065353c683114fe989cf5146dc0",
+            "raw_sha256": "sha256:b11ca46af27807fc41f0b569264b23d70fb539911b0722ad17e1670ff67960f7",
+            "canonical_sha256": "sha256:1ce4ac29c146b18118d922d84ac93b159f9743dc2c6af3ed976e0e874aeeed46",
+            "result_hash": "sha256:d4685524aefe34a80f5978405e5f909d07aebdb5419c8683a349e9903663e3ad",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:d871e08468d25e6551698bc945a7f0442a873065353c683114fe989cf5146dc0",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/app/app.go",
+                "engine/review/app/lenses.go",
+                "engine/review/app/lenses_test.go",
+                "engine/review/app/verify.go",
+                "engine/shelltest/overlay_dispatch_test.go",
+                "odd/tasks/own-rdd.md",
+                "skills/inception-pipeline/.approval.json",
+                "skills/role-chain/.approval.json"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "CountLenses (engine/review/app/lenses.go) validates the feature with review.CheckFeature before touching the store, and filters names with review.CheckResultName, so path traversal via feature or file name is refused; the test covers a traversal-style feature and asserts the store is not asked.",
+              "Every stored result is read through judgedStored, the same decode and binding check used by verify and check; the judged refactor in engine/review/app/verify.go preserves behavior (same errors, same returned binding and result).",
+              "CountLenses is read-only, returns a zero count with an error on any failure, and exposes no secrets or new input surface; no dependency changes are present.",
+              "The .approval.json changes in skills/inception-pipeline and skills/role-chain are owner-approval hash updates carrying the approver labdrian; the skill contents they hash are not in this candidate, so they cannot be checked here, and nothing in the visible diff shows an authorization bypass.",
+              "The overlay_dispatch_test.go and own-rdd.md changes are a test expectation and documentation only, with no security impact."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 1,
+        "target_identity": "sha256:467426f4cf7af03a2db4611ba7053e76ae85226e2291e098e7c95baeae03aeb2",
+        "capture_phase_revision": "sha256:eb61ac51cfa05d0966046f882a2e85162689fc908ae11eae611b2808596ee491",
+        "artifact_digest": "sha256:bcf0a8ad5cf242caa7cef64628dcc049402ebda9e5521a1a1b67b50cf9f83d3f",
+        "result_hash": "sha256:703b10fca4d05230687f1a5e27f2c2ebdcbb2530e77de3b60ba5c1171d11f7c5",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:b748c8e1b90bff8d1fdd683ce8bfc8d4dc624e1a13a31e047c05a8ec5b9465a4",
+            "lineage_id": "review-6e7d2fbf0a02cd59",
+            "authority_revision": "sha256:eb61ac51cfa05d0966046f882a2e85162689fc908ae11eae611b2808596ee491",
+            "target_identity": "sha256:467426f4cf7af03a2db4611ba7053e76ae85226e2291e098e7c95baeae03aeb2",
+            "base_tree": "e1108d6cf854ca74b5b64b0fe09add4d990cc1f1",
+            "candidate_tree": "6199872c10e38238eca5265c69be862d8962b15b",
+            "changed_path_manifest_sha256": "sha256:527ced6a939d1fa628405ffa903b6b1f0c2bdd46c48af2f29418019d08317e19",
+            "lens": "review-reliability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:b748c8e1b90bff8d1fdd683ce8bfc8d4dc624e1a13a31e047c05a8ec5b9465a4",
+            "raw_sha256": "sha256:974b78013e529c28b8837b12742c4dd127f3762ec9bc5aaf2d35d1ab57e42208",
+            "canonical_sha256": "sha256:8d0294931dc5a53b1ce9b8c139776d60d8617e9bbd38f73ef7bac10d3d2e5db2",
+            "result_hash": "sha256:703b10fca4d05230687f1a5e27f2c2ebdcbb2530e77de3b60ba5c1171d11f7c5",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:b748c8e1b90bff8d1fdd683ce8bfc8d4dc624e1a13a31e047c05a8ec5b9465a4",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/app/app.go",
+                "engine/review/app/lenses.go",
+                "engine/review/app/lenses_test.go",
+                "engine/review/app/verify.go",
+                "engine/shelltest/overlay_dispatch_test.go",
+                "odd/tasks/own-rdd.md",
+                "skills/inception-pipeline/.approval.json",
+                "skills/role-chain/.approval.json"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-countlenses-no-caller",
+                "lens": "reliability",
+                "location": "engine/review/app/lenses.go:30-30",
+                "severity": "SUGGESTION",
+                "claim": "CountLenses is added and tested at the app layer, but nothing in this candidate wires it to the actuals validator or a CLI verb, so S13 (validator refuses a mismatched review_lens_count) is not yet observable end to end. This matches T10 still being open in own-rdd.md, so it looks like an intentional first slice rather than a defect.",
+                "proof_refs": [
+                  "engine/review/app/lenses.go:30",
+                  "odd/tasks/own-rdd.md:33"
+                ]
+              }
+            ],
+            "evidence": [
+              "CountLenses refuses invalid features before touching the store, skips non-result names, and reads every result through judgedStored, so it holds files to the same rules as verify and check.",
+              "judged keeps its signature and behavior after the judgedStored refactor, so existing callers are unaffected.",
+              "lenses_test.go asserts the sums across launches, exclusion of verdict, exemption and other-feature files, zero count for an empty feature, and the zero count on every refusal path including a later read failure after a good result was counted.",
+              "The overlay_dispatch_test.go change only updates the expected record usage string and carries no logic.",
+              "The .approval.json files and odd/tasks/own-rdd.md are documentation and approval data, with no behavior to verify beyond what is shown."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "202c8318009cc5d1694dc88a45fd78ba55efcfbbf5a886262e34df8b83727e03",
+    "initial_atomic_start": {
+      "lineage_id": "review-6e7d2fbf0a02cd59",
+      "worktree_identity": "sha256:e19bd00efbf0e63945a2e0d58a2b0719e6370736765a0fcc4c2d8c344a7391a1",
+      "target_identity": "sha256:467426f4cf7af03a2db4611ba7053e76ae85226e2291e098e7c95baeae03aeb2",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "e1108d6cf854ca74b5b64b0fe09add4d990cc1f1",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-risk",
+        "review-reliability"
+      ],
+      "original_changed_lines": 274,
+      "correction_budget": 137,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "own-rdd T10 slice 1: engine CountLenses over a feature's stored review results, the shelltest usage fix for --rows, the owner's skill approval records and passive ODD entries"
+    },
+    "runtime_agent": "claude-code"
+  }
+}
