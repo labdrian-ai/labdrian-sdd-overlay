@@ -594,7 +594,7 @@ overlay review <verb>
         already at head; a worktree of another commit, or a path that is not a worktree of this repository,
         is refused and left as it is. A diff over 150000 bytes is bound all the same: over_limit is true and
         note says the parent launches one review per commit. Needs git 2.40 or later. Exit 0 bound, 1 usage
-        error or refusal.
+        error, refusal or a binding that could not be written.
     record --feature <name> --base <rev> --head <rev> [--result <file>|-] [--cwd <repo>]
         Compute the binding again from git (the reply is never trusted for it), hold the reply (read from
         --result, or from stdin) to it with the rules of the reviewer's contract (an echo that differs, an
@@ -602,13 +602,14 @@ overlay review <verb>
         severity, evidence class or disposition outside its enumeration, a BLOCKER or CRITICAL with no proof
         reference, a reply above 1 MiB), and store it with the binding as
         odd/review-results/<feature>/<head12>-<n>.json. <feature> is one safe path segment, <n> one more than
-        the highest stored for that head (from 1); the file is published whole and never over an existing one, and no input leads outside
-        odd/review-results/ (a symbolic link on the way is refused). stdout is the RoleHandoff skeleton for
-        `roles append --stdin` (payload_kind review-report, payload_sha256 of the stored file, evidence
-        review-diff and review-result); stderr says where the result is stored. The parent of the chain fills
-        project_id, goal_id, chain_id, seq, prev_sha256, to_role and context.summary, and `roles validate`
-        refuses the skeleton until it does. A reply that breaks a rule writes nothing and the error names the
-        rule. Exit 0 stored, 2 reply refused, 1 usage error or any other failure.
+        the highest stored for that head (from 1); the file is published whole and never over an existing one,
+        and no input leads outside odd/review-results/ (a symbolic link on the way is refused). stdout is the
+        RoleHandoff skeleton for `roles append --stdin` (payload_kind review-report, payload_sha256 of the
+        stored file, evidence review-diff and review-result); stderr says where the result is stored. The
+        parent of the chain fills project_id, goal_id, chain_id, seq, prev_sha256, to_role and
+        context.summary, and `roles validate` refuses the skeleton until it does. A reply that breaks a rule
+        writes nothing and the error names the rule. Exit 0 stored, 2 reply refused, 1 usage error or any
+        other failure.
 
 overlay memory <verb>
     Forward memory-directive verbs to the engine unchanged. Read-only: it only plans what memory

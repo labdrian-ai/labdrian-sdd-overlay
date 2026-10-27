@@ -5,6 +5,8 @@ package main
 import (
 	"fmt"
 	"io"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review"
 )
 
 // usage writes the usage text to w.
@@ -158,8 +160,8 @@ func usage(w io.Writer) {
 	fmt.Fprintln(w, "    diff of base..head, the bytes 'review record' and the delivery check recompute: odd/review-results/README.md names the git command, its flags and its")
 	fmt.Fprintln(w, "    environment), paths (the changed paths, in git's order), worktree, worktree_created, diff_bytes, diff_limit_bytes and over_limit. It makes the detached worktree")
 	fmt.Fprintln(w, "    of head at <repo-parent>/<repo-name>-worktrees/review-<head12> (of the main checkout, never inside the repository; git's hooks do not run) and reuses one already")
-	fmt.Fprintln(w, "    at head; a worktree at another commit, or a path that is not a worktree of this repository, is refused. A diff over 150000 bytes is bound all the same:")
-	fmt.Fprintln(w, "    over_limit is true and note says the parent launches one review per commit. needs git 2.40 or newer; exit 0 bound, 1 usage error or refusal")
+	fmt.Fprintf(w, "    at head; a worktree at another commit, or a path that is not a worktree of this repository, is refused. A diff over %d bytes is bound all the same:\n", review.DiffLimitBytes)
+	fmt.Fprintln(w, "    over_limit is true and note says the parent launches one review per commit. needs git 2.40 or newer; exit 0 bound, 1 usage error, refusal or a binding that could not be written")
 	fmt.Fprintln(w, "  engine review record --feature <name> --base <rev> --head <rev> [--result <file>|-] [--cwd <repo>]")
 	fmt.Fprintln(w, "    recomputes the binding from git (the reply is never trusted for it), validates the reviewer's reply (--result, or stdin) against it, and stores it as")
 	fmt.Fprintln(w, "    odd/review-results/<feature>/<head12>-<n>.json with <n> one more than the highest stored for that head (from 1), never over an existing file; --feature is one safe path segment and no input")

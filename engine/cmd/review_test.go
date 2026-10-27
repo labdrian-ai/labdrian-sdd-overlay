@@ -5,17 +5,22 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/overlaytest"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review"
+	reviewapp "github.com/labdrian-ai/labdrian-sdd-overlay/engine/review/app"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review/fsstore"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review/gitexec"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/roles"
 )
@@ -85,12 +90,23 @@ func (w *reviewWorld) run(stdin string, args ...string) (stdout, stderr string, 
 	w.t.Helper()
 	p := newCapturedProcess()
 	p.stdin = strings.NewReader(stdin)
+	w.runOn(p, args...)
+	return p.out.String(), p.err.String(), p.exits
+}
+
+// runOn runs `review <args>` in-process on the process p, which a test builds with the streams it wants.
+func (w *reviewWorld) runOn(p *capturedProcess, args ...string) {
+	w.t.Helper()
 	d := testDeps()
 	d.getwd = func() (string, error) { return w.cwd, nil }
 	d.environ = goldenEnvironment
 	run(p.process, d, append([]string{"review"}, args...))
-	return p.out.String(), p.err.String(), p.exits
 }
+
+// brokenStdout is a standard output that refuses every write, as a pipe whose reader has gone away does.
+type brokenStdout struct{ err error }
+
+func (b brokenStdout) Write([]byte) (int, error) { return 0, b.err }
 
 // reviewBinding is the JSON object `review bind` prints.
 type reviewBinding struct {
@@ -287,11 +303,31 @@ func TestBindSaysSoWhenTheDiffIsOverTheLimitAndDoesNotFail(t *testing.T) {
 	if !b.OverLimit || b.DiffBytes <= review.DiffLimitBytes {
 		t.Errorf("over_limit = %v with %d bytes, want true with more than %d", b.OverLimit, b.DiffBytes, review.DiffLimitBytes)
 	}
-	if !strings.Contains(b.Note, "150000") || !strings.Contains(b.Note, "one launch per commit") {
+	if !strings.Contains(b.Note, strconv.Itoa(review.DiffLimitBytes)) || !strings.Contains(b.Note, "one launch per commit") {
 		t.Errorf("note = %q, want it to give the limit and say the candidate is split into one launch per commit", b.Note)
 	}
 	if !b.WorktreeCreated {
 		t.Error("worktree_created = false, want the worktree made for a diff over the limit too")
+	}
+}
+
+// Standard output is where the verbs hand over what they made: the binding the parent of the chain reads, the
+// record it appends. When it cannot be written (a pipe whose reader has gone, a full disk) the verb has not
+// done what it is for, and exit 0 would tell the parent that it holds a binding it never received. The work
+// that was done stays done, and the message says where it is.
+func TestBindFailsWithExit1WhenTheBindingCannotBeWritten(t *testing.T) {
+	w := newReviewWorld(t)
+	p := newCapturedProcess()
+	p.stdout = brokenStdout{errors.New("broken pipe")}
+
+	w.runOn(p, "bind", "--base", w.base, "--head", w.head)
+
+	want := "error: review bind: the worktree is at " + w.worktree(w.head) + ", but the binding could not be written: write to stdout: broken pipe\n"
+	if !equalInts(p.exits, []int{1}) || p.err.String() != want || p.out.Len() != 0 {
+		t.Errorf("exits = %v, stderr = %q, stdout = %q; want [1], %q and nothing", p.exits, p.err.String(), p.out.String(), want)
+	}
+	if info, err := os.Stat(w.worktree(w.head)); err != nil || !info.IsDir() {
+		t.Errorf("the worktree the message names is not there: %v", err)
 	}
 }
 
@@ -700,6 +736,81 @@ func TestRecordFailsWithExit1WhenTheRepositoryOrTheReplyCannotBeRead(t *testing.
 	}
 }
 
+// The result is stored before the handoff is printed, and a handoff that cannot be printed leaves the result
+// where it is. The exit is 1, which is not the 2 of a reply that was refused: nothing was refused, and the
+// message says where the result is so that the handoff can be made again from it.
+func TestRecordFailsWithExit1AndSaysWhereTheResultIsWhenTheHandoffCannotBeWritten(t *testing.T) {
+	w := newReviewWorld(t)
+	b := w.bind()
+	p := newCapturedProcess()
+	p.stdin = strings.NewReader(reply(t, b, nil))
+	p.stdout = brokenStdout{errors.New("broken pipe")}
+
+	w.runOn(p, "record", "--feature", "own-rdd", "--base", w.base, "--head", w.head)
+
+	ref := "odd/review-results/own-rdd/" + w.head[:12] + "-1.json"
+	want := "error: review record: the result is stored at " + ref + ", but the handoff could not be written: write to stdout: broken pipe\n"
+	if !equalInts(p.exits, []int{1}) || !strings.HasSuffix(p.err.String(), want) || p.out.Len() != 0 {
+		t.Errorf("exits = %v, stderr = %q, stdout = %q; want [1], an error that ends with %q, and nothing on stdout", p.exits, p.err.String(), p.out.String(), want)
+	}
+	if _, err := os.Stat(filepath.Join(w.root, filepath.FromSlash(ref))); err != nil {
+		t.Errorf("the result the message names is not stored: %v", err)
+	}
+}
+
+// racingResults is the results directory of the working tree with other writers in it: each of its first races
+// Creates finds the name already taken, by a file another process wrote just before, and the store answers that
+// it is taken. It notes how long after each of those answers the verb tried again.
+type racingResults struct {
+	reviewapp.Results
+	races    int
+	answered time.Time
+	waits    []time.Duration
+}
+
+func (r *racingResults) Create(root, feature, name string, data []byte) error {
+	if !r.answered.IsZero() {
+		r.waits = append(r.waits, time.Since(r.answered))
+		r.answered = time.Time{}
+	}
+	if r.races == 0 {
+		return r.Results.Create(root, feature, name, data)
+	}
+	r.races--
+	if err := r.Results.Create(root, feature, name, []byte("{\"written\":\"by another process\"}\n")); err != nil {
+		return err
+	}
+	err := r.Results.Create(root, feature, name, data)
+	r.answered = time.Now()
+	return err
+}
+
+// review/app does not read the clock (it is in the application ring), so the wait between the tries for a
+// number is wired here, on the clock of the machine. The shortest wait of the backoff is a millisecond, and a
+// verb that was wired without a clock tries again at once, which is a few microseconds after the answer.
+func TestRecordWaitsOnTheClockOfTheMachineBetweenTriesForANumber(t *testing.T) {
+	w := newReviewWorld(t)
+	b := w.bind()
+	d := testDeps()
+	d.environ = goldenEnvironment
+	results := &racingResults{Results: fsstore.New(), races: 3}
+	service := reviewServiceOver(newReviewGit(d), results)
+
+	recorded, err := service.Record(w.root, "own-rdd", w.base, w.head, []byte(reply(t, b, nil)))
+
+	if want := "odd/review-results/own-rdd/" + w.head[:12] + "-4.json"; err != nil || recorded.Path != want {
+		t.Fatalf("Record() = %q, %v; want the result stored under the fourth number, %q", recorded.Path, err, want)
+	}
+	if len(results.waits) != 3 {
+		t.Fatalf("the verb tried again %d times, want 3: one for each number another writer took", len(results.waits))
+	}
+	for i, waited := range results.waits {
+		if waited < time.Millisecond {
+			t.Errorf("the verb tried again %v after the answer of try %d, want at least a millisecond: it waits on the clock of the machine", waited, i+1)
+		}
+	}
+}
+
 func TestUsageDocumentsTheReviewVerbs(t *testing.T) {
 	var out bytes.Buffer
 	usage(&out)
@@ -711,6 +822,8 @@ func TestUsageDocumentsTheReviewVerbs(t *testing.T) {
 		"diff_sha256", "over_limit", "-worktrees/review-<head12>",
 		"odd/review-results/<feature>/<head12>-<n>.json", "never over an existing file",
 		"exit 0 stored, 2 reply refused",
+		"exit 0 bound, 1 usage error, refusal or a binding that could not be written",
+		fmt.Sprintf("A diff over %d bytes is bound all the same", review.DiffLimitBytes),
 	} {
 		if !strings.Contains(text, want) {
 			t.Errorf("usage lacks %q", want)

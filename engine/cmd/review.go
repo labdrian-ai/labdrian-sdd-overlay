@@ -61,11 +61,23 @@ func reviewGitOptions(d deps) gitexec.Options {
 	return gitexec.Options{Environ: d.environment(), Timeout: reviewGitTimeout}
 }
 
-// newReviewService is the use cases of the review verbs over the git of the machine, started by the process
-// adapter under reviewGitOptions, and the results directory of the working tree.
+// newReviewGit is the git of the review verbs: the git of the machine, started by the process adapter under
+// reviewGitOptions.
+func newReviewGit(d deps) gitexec.Git {
+	return gitexec.New(execrunner.New().WithMaxOutput(reviewGitMaxOutput), reviewGitOptions(d))
+}
+
+// newReviewService is the use cases of the review verbs over the git of the machine and the results directory
+// of the working tree.
 func newReviewService(d deps) reviewapp.Service {
-	git := gitexec.New(execrunner.New().WithMaxOutput(reviewGitMaxOutput), reviewGitOptions(d))
-	return reviewapp.New(git, fsstore.New())
+	return reviewServiceOver(newReviewGit(d), fsstore.New())
+}
+
+// reviewServiceOver is the use cases of the review verbs over the given git and results directory. They wait,
+// between the tries to take a free number for a result, on the clock of the machine: review/app is in the
+// application ring, where nothing reads the clock, so the program that composes it hands the clock over here.
+func reviewServiceOver(git reviewapp.Git, results reviewapp.Results) reviewapp.Service {
+	return reviewapp.New(git, results).WithSleep(time.Sleep)
 }
 
 // reviewFlags are the parsed flags of the review verbs. A verb takes some of them.
@@ -187,7 +199,11 @@ func runReviewBind(p process, d deps, args []string) {
 		out.Note = fmt.Sprintf("the diff is %d bytes, over the %d-byte limit of one launch: the candidate is bound and the worktree is made, "+
 			"and the parent splits the candidate into one launch per commit (skills/role-chain/SKILL.md)", c.DiffBytes, review.DiffLimitBytes)
 	}
-	writeReviewJSON(p, "bind", out)
+	if err := writeReviewJSON(p, out); err != nil {
+		fail(1, fmt.Errorf("the worktree is at %s, but the binding could not be written: %w", bound.Worktree, err))
+		return
+	}
+	p.exit(0)
 }
 
 // runReviewRecord implements 'review record --feature --base --head [--result] [--cwd]'. A reply that is
@@ -228,7 +244,11 @@ func runReviewRecord(p process, d deps, args []string) {
 	fmt.Fprintf(p.stderr, "review record: stored %s (sha256 %s)\n", recorded.Path, recorded.SHA256)
 	fmt.Fprintf(p.stderr, "review record: stdout is the skeleton of the record for 'roles append --stdin'; the parent of the chain fills %s\n",
 		strings.Join(review.ParentFields(), ", "))
-	writeReviewJSON(p, "record", recorded.Handoff)
+	if err := writeReviewJSON(p, recorded.Handoff); err != nil {
+		fail(fmt.Errorf("the result is stored at %s, but the handoff could not be written: %w", recorded.Path, err))
+		return
+	}
+	p.exit(0)
 }
 
 // readReviewReply reads the reply of the reviewer from the file at path, or from stdin when path is empty or
@@ -251,14 +271,16 @@ func readReviewReply(p process, d deps, path string) ([]byte, error) {
 	return io.ReadAll(io.LimitReader(r, review.MaxReplyBytes+1))
 }
 
-// writeReviewJSON prints v as indented JSON followed by a newline and ends the verb with exit 0.
-func writeReviewJSON(p process, verb string, v any) {
+// writeReviewJSON prints v as indented JSON followed by a newline on standard output. It returns what stopped
+// it: the value could not be encoded, or standard output refused the bytes (a pipe whose reader has gone away,
+// a full disk). Ending the verb, and saying what it had done by then, is the caller's.
+func writeReviewJSON(p process, v any) error {
 	data, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {
-		fmt.Fprintf(p.stderr, "error: review %s: %v\n", verb, err)
-		p.exit(1)
-		return
+		return fmt.Errorf("encode the JSON: %w", err)
 	}
-	p.stdout.Write(append(data, '\n'))
-	p.exit(0)
+	if _, err = p.stdout.Write(append(data, '\n')); err != nil {
+		return fmt.Errorf("write to stdout: %w", err)
+	}
+	return nil
 }
