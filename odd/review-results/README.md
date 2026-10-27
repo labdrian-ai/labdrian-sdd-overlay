@@ -1,6 +1,6 @@
 # Review results
 
-The parent of the role chain (`skills/role-chain/SKILL.md`) binds a review to its commits with `labdrian review bind`, stores what the `reviewer` agent returns with `labdrian review record`, one file per launch: `odd/review-results/<feature>/<head12>-<n>.json`, and stores what the `verifier` agent returns about the findings of a result with `labdrian review verify`, beside it.
+The parent of the role chain (`skills/role-chain/SKILL.md`) binds a review to its commits with `labdrian review bind`, stores what the `reviewer` agent returns with `labdrian review record`, one file per launch: `odd/review-results/<feature>/<head12>-<n>.json`, and stores what the `verifier` agent returns about the findings of a result with `labdrian review verify`, beside it. The delivery role holds a head to those files with `labdrian review check` before it closes the feature.
 
 - `<feature>` is the name of the feature document, `odd/tasks/<feature>.md`, and one safe path segment: 1 to 100 characters, each a letter or digit of ASCII, `.`, `_` or `-`, the first a letter or a digit, with no `..`. `record` refuses any other name, and refuses to write through a symbolic link on the way to the file, so no input names a path outside `odd/review-results/`.
 - `<head12>` is the first 12 hex characters of the reviewed `head`. `<n>` counts the launches stored for that head, from 1: a second blind launch takes the next number, one more than the highest stored for that head (a verdict counts). `record` creates the file and never writes over one that exists; the file is published whole or not at all (a temporary file in the same directory, flushed, then linked to its name).
@@ -17,7 +17,7 @@ The parent of the role chain (`skills/role-chain/SKILL.md`) binds a review to it
   The reviewed head is `binding.head`. `reply.candidate.head` is the same value, because a reply that echoes another is refused.
 - When the verifier ran, its verdict is stored beside the result it answers, under the same `<head12>-<n>`, as `<head12>-<n>.verifier.json`: the reply of the verifier exactly as it gave it (white space aside), one JSON object (see "The verdict of the verifier" below). A result has one verdict, and `verify` never writes over a file.
 
-## The three commands
+## The commands that bind and store
 
 `labdrian review bind --base <rev> --head <rev> [--cwd <repo>]` resolves both revisions to full commit names and prints one JSON object: `base`, `head`, `diff_sha256` and `paths` (the binding, defined below), `worktree`, `worktree_created`, `diff_bytes`, `diff_limit_bytes`, `over_limit` and, when the diff is over the limit, `note`. It writes nothing but the worktree.
 
@@ -142,9 +142,34 @@ The record that closes the review is a RoleHandoff appended with `labdrian roles
 
 Only a completed `review-report` is held to this. One that is `interrupted` stored nothing, and a record of any other kind is not about a review; both are stored as before. This compares the record with the stored files and computes no diff.
 
-Delivery recomputes the sha256 of the canonical diff of the range (`labdrian review bind` prints it) and trusts the record only on equality: other bytes give another digest, and the record does not apply to them.
+Delivery recomputes the sha256 of the canonical diff of the range (`labdrian review bind` prints it, and `labdrian review check` recomputes it, below) and trusts the record only on equality: other bytes give another digest, and the record does not apply to them.
 
 A review that did not run (a refused launch, an unparseable result, an echo that differs, an incomplete inspection) is recorded `interrupted` with a `resume_reason`, never as approved. `record` stores nothing for it.
+
+## The check before delivery
+
+`labdrian review check --feature <name> [--head <rev>] [--cwd <repo>]` decides whether the head being delivered (`--head`, and `HEAD` when it is not given; an empty `--head` is a usage error) was reviewed and nothing that was stored keeps it from delivery (`odd/tasks/own-rdd.md`, T4). It stores nothing. The delivery role runs it before it closes the feature (`roles/delivery/body.md`). Exit 0 cleared, 1 usage error, refusal or any other failure.
+
+For each result of the feature that is about the head, in the order of its launches:
+
+1. The result is the file `record` wrote, and its reply is held to its binding again with `reviewresult.Parse`, as `verify` holds it. A result is about a head by its binding and not by its name: a file named for the head (`<head12>`) whose binding is another commit is left out. A file named for the head that cannot be read, or that is not a result any more, refuses the check: what cannot be told is not cleared.
+2. The candidate is recomputed from git, by the code `bind` and `record` use, for the `base` the result names and the head being delivered, and the stored binding must equal it: `base`, `head`, `diff_sha256` and `paths`. The digest in the file is never taken on its word.
+3. The verdict stored beside the result, when there is one, is read and held to the result with `reviewverdict.Parse`, and `reviewverdict.Decide` makes the decision from the findings and the verdicts. A verdict that is stored and cannot be read is a refusal, never read as no verdict. Without a verdict the verifier did not run, and `Decide` reads every finding as a check that did not run: a result with only `WARNING` and `SUGGESTION` findings, or whose severe findings are `pre-existing` or `base-only`, is clear without one, and a result with a severe finding the diff may have caused (`introduced`, `behavior-activated`, `worsened` or `unknown`) is not clear until a verdict answers it. A check that did not run never passes.
+
+The head is cleared when at least one result binds it and every one is clear. Otherwise the check is refused: one line on stderr, `error: review check: head <head>: ...`, that names the result, its verdict and the findings, and nothing on stdout.
+
+| the head has | the error says |
+|---|---|
+| no result: it was not reviewed, or only another head or another feature was | `no stored result binds the head` |
+| a result whose decision is `blocks` | `a stored result blocks the head` |
+| a result whose decision is `unverified` (a check did not run), or none | `a stored result is not clear` |
+| a result whose `base`, `head`, `diff_sha256` or `paths` are not what git gives now | `the stored binding differs from the candidate git gives` |
+
+A result that blocks keeps the head blocked whatever was recorded after it: a verdict that reproduced a severe finding is not undone by another launch on the same head, and a blocked head goes back to the builder and comes back as another head. A result that is not clear keeps the head from delivery whichever launch it is, one before a clear result or one after it, and a head whose review could not be checked is reviewed again as another head.
+
+On exit 0, stdout is one JSON object: `head` (the full name), `outcome` (`clear`) and `results`, one for each result used, with `result` (the stored path relative to the repository), `verdict` (the stored verdict, left out when the verifier did not run), `base`, `diff_sha256` and, when there are any, `fix` and `carry`: the ids of the findings to be fixed before delivery and to be carried as follow-ups.
+
+The check is by head: it takes no `--base`, and the base of each result is the one it names. A candidate that was split into one launch per commit has a result for each head, and the check clears the head it is given by the results of that head alone.
 
 ## What a result is not
 

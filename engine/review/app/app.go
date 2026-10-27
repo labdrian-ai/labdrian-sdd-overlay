@@ -2,10 +2,11 @@
 // makes the detached worktree the reviewer reads, Record holds the reply of the reviewer to the candidate
 // it recomputes and stores it, with that binding, in the results directory of a feature, and Verify holds
 // the reply of the verifier to a stored result, decides whether the review blocks and stores the reply beside
-// the result. They answer with typed values and typed refusals over two ports this package owns: Git, the
-// repository as the use cases ask about it, and Results, the directory where results are stored. The adapters
-// are review/gitexec and review/fsstore, and the words a person reads, the flags and the exit codes are the
-// command's, in cmd.
+// the result. CheckEvidence holds the evidence of the record that closes a review to the files stored, and Check
+// holds a head being delivered to the results stored for it. They answer with typed values and typed refusals
+// over two ports this package owns: Git, the repository as the use cases ask about it, and Results, the
+// directory where results are stored. The adapters are review/gitexec and review/fsstore, and the words a
+// person reads, the flags and the exit codes are the command's, in cmd.
 //
 // The package is pure: it reads no file, runs no program, prints nothing and exits nowhere. The vocabulary
 // (the candidate, the names of files and worktrees, the stored file, the skeleton of the record of the role
@@ -16,7 +17,8 @@
 //
 //   - the candidate of Bind and Record is computed from git on every call and never taken from a reply or
 //     from an earlier call, so what a reply is held to is the repository as it is; Verify takes it from the
-//     stored result, which names the commits in full;
+//     stored result, which names the commits in full; Check computes it again for the commits a stored result
+//     names, in the same way, and holds the stored binding to it;
 //   - a refused reply stores nothing: validation is the last step before the first write, and the write is
 //     one atomic creation of a file that did not exist.
 package app
