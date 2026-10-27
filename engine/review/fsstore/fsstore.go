@@ -7,31 +7,41 @@
 //     content in a temporary file of the same directory, flushes it, and links it to its name, so a
 //     reader sees the whole file or no file, a crash leaves no half-written result, and the name that is
 //     taken by another writer, whether before the call or while it ran, is reported (app.ErrExists) and
-//     left as it is. This is atomicfile's Create.
+//     left as it is. The temporary files of a write in flight (.review-*.tmp) are hidden from Names.
 //   - Nothing a command line gave leads out of odd/review-results/. The feature is a single safe path
 //     segment (review.CheckFeature), the name is one plain file name (ErrInvalidName), and every directory
 //     on the way from the root (odd, odd/review-results, the directory of the feature) is looked at
 //     without being followed: a symbolic link or a file where a directory should be is refused
 //     (ErrNotADirectory) and nothing is written through it. A directory that is not there is made, with
-//     mode 0755, and the file is made with mode 0644, whatever the umask says.
+//     mode 0755, and the file is made with mode 0644, whatever the umask says. A directory that another
+//     writer made meanwhile is used as it is, its mode included.
 //
-// The check of a directory and the use of it are two calls, so a link put in place by another process
-// between them is not seen: the store keeps a result out of a place the repository's own files point to,
-// which is what a checkout of someone else's branch can bring, and does not defend against a process that
-// can already write to the working tree.
+// Two ways to do it. On linux the store holds the directories open (held_linux.go): it opens each directory
+// of the path relative to the one above, and lists, stages and links relative to the directory of the feature
+// that it holds, so what another process does to the paths after the store has opened them, a directory moved
+// or a link put in its place, changes nothing: the store works in the directories it opened. The standard
+// library has no linkat, so the link is the raw system call. Anywhere else it works by path (bypath.go),
+// because the standard library does not offer to create or link a file relative to a directory that is held
+// open there (syscall has no openat or linkat on those platforms, os.Root needs a newer Go than the module's
+// go.mod names, and atomicfile, which the engine shares, works on paths). There the check of a directory and
+// the use of it are two calls, and a process that can write to the working tree can change a directory between
+// them. The store looks at the directories again, after a listing has been read, before the link that
+// publishes a file, and after it; a directory that is no longer the one it first saw is refused (ErrChanged)
+// and nothing that was done there is trusted. That makes the change loud and shortens the window; it does not
+// close it.
+//
+// What neither does. A process that can write to the working tree can put a real directory at
+// odd/review-results/<feature> before the store walks to it, and could forge a result without the store at
+// all. The store keeps a result out of a place the repository's own files point to, which is what a checkout
+// of someone else's branch can bring.
 package fsstore
 
 import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/atomicfile"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review/app"
 )
 
 // ErrInvalidName is a file name that is not one plain name: empty, a dot name, hidden (the temporary files of
@@ -42,6 +52,12 @@ var ErrInvalidName = errors.New("review: invalid result file name")
 // directory at all.
 var ErrNotADirectory = errors.New("review: a directory of the results path is a link or not a directory")
 
+// ErrChanged is a directory of the path to the results of a feature that is not the one the store looked at:
+// it was replaced, by a link or by another directory, while the store was using it. Only the store that works
+// by path says it; the store that holds the directories (linux) works in the ones it opened and has nothing to
+// say.
+var ErrChanged = errors.New("review: a directory of the results path changed while the store was using it")
+
 const (
 	dirPerm  fs.FileMode = 0o755
 	filePerm fs.FileMode = 0o644
@@ -50,53 +66,59 @@ const (
 	maxNameLen  = 255
 )
 
-// Store is the results directories of the repositories under their roots. It holds no state.
-type Store struct{}
+// The points of the work at which a Store calls its race hook, with the directory each is about.
+const (
+	// pointMissing: a directory was found missing and is about to be made.
+	pointMissing = "missing"
+	// pointWalked: every directory of the path was looked at and the store is about to use them.
+	pointWalked = "walked"
+	// pointLinked: the file was linked into place and the store is about to look at the directories again.
+	pointLinked = "linked"
+)
+
+// Store is the results directories of the repositories under their roots. It holds no state, and the zero
+// value is ready to use.
+type Store struct {
+	// race, when it is set, is called with the name of a point of the work and the directory it is about, at
+	// the moments another process could change the directories under the store. A test makes that change
+	// there, at the exact moment, which no test can do to a real process on purpose. New leaves it nil.
+	race func(point, dir string)
+}
 
 // New is the Store.
 func New() Store { return Store{} }
 
+// at calls the race hook, when there is one.
+func (s Store) at(point, dir string) {
+	if s.race != nil {
+		s.race(point, dir)
+	}
+}
+
 // Names lists the names in the directory of the feature under root, sorted, and none when the directory is
-// not there. It makes nothing.
-func (Store) Names(root, feature string) ([]string, error) {
-	dir, found, err := walk(root, feature, false)
-	if err != nil || !found {
-		return nil, err
-	}
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return nil, fmt.Errorf("read %s: %w", dir, err)
-	}
-	names := make([]string, 0, len(entries))
-	for _, e := range entries {
-		names = append(names, e.Name())
-	}
-	return names, nil
+// not there. It makes nothing. The temporary files of a write in flight (tempPattern) are not results and
+// are left out. Where the store works by path, a directory that is not the one the listing was read from by
+// the time it was read is ErrChanged, and no name is returned.
+func (s Store) Names(root, feature string) ([]string, error) {
+	return s.names(root, feature)
+}
+
+// isTemporary says whether name is one a write in flight stages its content under (tempPattern).
+func isTemporary(name string) bool {
+	matched, err := filepath.Match(tempPattern, name)
+	return err == nil && matched
 }
 
 // Create stores data under name in the directory of the feature under root, making the directories that are
-// not there. app.ErrExists says the name is taken; the file that is there is not touched.
-func (Store) Create(root, feature, name string, data []byte) error {
+// not there. app.ErrExists says the name is taken; the file that is there is not touched. Where the store
+// works by path, the directories are looked at again right before the file is linked, and nothing is
+// published into one that changed (ErrChanged); one that changes after the link is reported, with the file
+// already linked.
+func (s Store) Create(root, feature, name string, data []byte) error {
 	if err := checkName(name); err != nil {
 		return err
 	}
-	dir, _, err := walk(root, feature, true)
-	if err != nil {
-		return err
-	}
-	staged, err := atomicfile.Stage(dir, data, atomicfile.Options{Perm: filePerm, Sync: true, TempPattern: tempPattern})
-	if err != nil {
-		return fmt.Errorf("stage %s: %w", name, err)
-	}
-	defer staged.Discard()
-	path := filepath.Join(dir, name)
-	if err := staged.Create(path); err != nil {
-		if errors.Is(err, fs.ErrExist) {
-			return fmt.Errorf("%w: %s", app.ErrExists, path)
-		}
-		return fmt.Errorf("store %s: %w", path, err)
-	}
-	return nil
+	return s.create(root, feature, name, data)
 }
 
 // checkName requires one plain file name.
@@ -110,66 +132,6 @@ func checkName(name string) error {
 		return fmt.Errorf("%w: %q is longer than %d bytes", ErrInvalidName, name, maxNameLen)
 	case strings.ContainsAny(name, "/\\\x00"):
 		return fmt.Errorf("%w: %q holds a separator or a NUL byte", ErrInvalidName, name)
-	}
-	return nil
-}
-
-// walk goes from root to the directory of the feature, one directory at a time, looking at each without
-// following it. A directory that is not there ends the walk with found false when create is false, and is
-// made when create is true. A link, or anything that is not a directory, is ErrNotADirectory.
-func walk(root, feature string, create bool) (dir string, found bool, err error) {
-	if err := review.CheckFeature(feature); err != nil {
-		return "", false, err
-	}
-	dir = root
-	for _, part := range append(strings.Split(review.ResultsDir, "/"), feature) {
-		dir = filepath.Join(dir, part)
-		info, err := os.Lstat(dir)
-		switch {
-		case errors.Is(err, fs.ErrNotExist):
-			if !create {
-				return "", false, nil
-			}
-			if err := makeDir(dir); err != nil {
-				return "", false, err
-			}
-			continue
-		case err != nil:
-			return "", false, fmt.Errorf("inspect %s: %w", dir, err)
-		}
-		if err := checkDir(dir, info); err != nil {
-			return "", false, err
-		}
-	}
-	return dir, true, nil
-}
-
-// makeDir makes the directory dir with mode 0755, whatever the umask says. A directory that another writer
-// made meanwhile is looked at like any other.
-func makeDir(dir string) error {
-	if err := os.Mkdir(dir, dirPerm); err != nil {
-		if !errors.Is(err, fs.ErrExist) {
-			return fmt.Errorf("make %s: %w", dir, err)
-		}
-		info, statErr := os.Lstat(dir)
-		if statErr != nil {
-			return fmt.Errorf("inspect %s: %w", dir, statErr)
-		}
-		return checkDir(dir, info)
-	}
-	if err := os.Chmod(dir, dirPerm); err != nil {
-		return fmt.Errorf("set the mode of %s: %w", dir, err)
-	}
-	return nil
-}
-
-// checkDir requires info, as os.Lstat gave it for dir, to be a directory that is not a link.
-func checkDir(dir string, info fs.FileInfo) error {
-	if info.Mode()&fs.ModeSymlink != 0 {
-		return fmt.Errorf("%w: %s is a symbolic link", ErrNotADirectory, dir)
-	}
-	if !info.IsDir() {
-		return fmt.Errorf("%w: %s is not a directory", ErrNotADirectory, dir)
 	}
 	return nil
 }

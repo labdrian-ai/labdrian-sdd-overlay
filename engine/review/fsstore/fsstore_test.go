@@ -3,6 +3,7 @@ package fsstore_test
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -172,6 +173,51 @@ func TestNamesListsTheEntriesOfTheDirectoryOfTheFeatureInOrder(t *testing.T) {
 	}
 }
 
+// The order is the store's, not the order the file system lists in, which depends on the file system and on
+// the order the files were made in: enough names, made in no order, leave no chance of an order that is sorted
+// by luck.
+func TestNamesListsManyEntriesSortedWhateverOrderTheyWereMadeIn(t *testing.T) {
+	root := t.TempDir()
+	dir := featureDir(root, "own-rdd")
+	var want []string
+	for n := 1; n <= 12; n++ {
+		want = append(want, fmt.Sprintf("222222222222-%02d.json", n))
+	}
+	for _, n := range []int{7, 3, 11, 1, 9, 5, 12, 2, 10, 4, 8, 6} {
+		mustWrite(t, filepath.Join(dir, fmt.Sprintf("222222222222-%02d.json", n)), "x")
+	}
+
+	got, err := (fsstore.Store{}).Names(root, "own-rdd")
+
+	if err != nil || !reflect.DeepEqual(got, want) {
+		t.Errorf("Names() = %q, %v; want %q sorted", got, err, want)
+	}
+}
+
+// A write in flight stages its content in a hidden temporary file of the directory (.review-*.tmp), and that
+// file is not a result: it is not listed, so no caller takes it for one. A name that only looks like it is a
+// name like any other.
+func TestNamesDoesNotListTheTemporaryFilesOfAWriteInFlight(t *testing.T) {
+	root := t.TempDir()
+	dir := featureDir(root, "own-rdd")
+	mustWrite(t, filepath.Join(dir, "222222222222-1.json"), "a")
+	mustWrite(t, filepath.Join(dir, ".review-1234567890.tmp"), "half of a result")
+	mustWrite(t, filepath.Join(dir, ".review-7.tmp"), "half of another")
+	mustWrite(t, filepath.Join(dir, ".gitkeep"), "")
+	mustWrite(t, filepath.Join(dir, "review-1.tmp"), "no dot in front")
+	mustWrite(t, filepath.Join(dir, ".review-1.tmp.bak"), "not ending as one")
+
+	got, err := (fsstore.Store{}).Names(root, "own-rdd")
+	if err != nil {
+		t.Fatalf("Names() error = %v, want nil", err)
+	}
+
+	want := []string{".gitkeep", ".review-1.tmp.bak", "222222222222-1.json", "review-1.tmp"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("Names() = %q, want %q: the two temporary files left out and the rest listed", got, want)
+	}
+}
+
 // A feature that has no directory yet has no result, and asking makes nothing.
 func TestNamesOfAFeatureWithoutADirectoryIsEmptyAndMakesNothing(t *testing.T) {
 	root := t.TempDir()
@@ -183,6 +229,21 @@ func TestNamesOfAFeatureWithoutADirectoryIsEmptyAndMakesNothing(t *testing.T) {
 	}
 	if entries, _ := os.ReadDir(root); len(entries) != 0 {
 		t.Errorf("the root holds %v after Names, want nothing made", entries)
+	}
+}
+
+// A root that is not there has no results either: asking for the names says none, with no error, and makes
+// nothing.
+func TestNamesUnderARootThatIsNotThereIsEmptyAndMakesNothing(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "absent")
+
+	got, err := (fsstore.Store{}).Names(root, "own-rdd")
+
+	if err != nil || len(got) != 0 {
+		t.Errorf("Names() = %q, %v; want no name and no error", got, err)
+	}
+	if _, statErr := os.Lstat(root); !os.IsNotExist(statErr) {
+		t.Errorf("the root is there after Names (%v), want nothing made", statErr)
 	}
 }
 
@@ -308,6 +369,9 @@ func TestCreateFailsWhenTheDirectoryCannotBeWritten(t *testing.T) {
 
 	if err == nil || errors.Is(err, app.ErrExists) {
 		t.Fatalf("Create() error = %v, want a failure that is not %v", err, app.ErrExists)
+	}
+	if !strings.Contains(err.Error(), dir) {
+		t.Errorf("Create() error = %v, want it to name the directory that cannot be written: %s", err, dir)
 	}
 	if entries, _ := os.ReadDir(dir); len(entries) != 0 {
 		t.Errorf("the directory holds %v, want nothing left", entries)
