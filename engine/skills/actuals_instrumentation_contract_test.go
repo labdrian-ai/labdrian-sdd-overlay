@@ -750,12 +750,19 @@ func TestTheCIStepOfTheCommittedActualsRecordsGivesTheValidatorItsRootAndDropsTh
 	if want := `--repo "$PWD"`; !strings.Contains(call, want) {
 		t.Errorf("the validator in the step %q must be given the root of the checkout with %s, got:\n%s", name, want, call)
 	}
-	if want := `jq 'del(.review_lens_count)'`; !strings.Contains(before, want) {
-		t.Errorf("the step %q must validate each record without its review_lens_count, with %s before the call, got:\n%s", name, want, before)
+	// Only the one record written before the rows were stored loses its count; every other record, and any record
+	// committed later, is validated as written, so its count is held to the stored rows.
+	const legacy = `[ "$(basename "$record")" = corrected-actuals-skills-validate-ondisk-gate.json ]`
+	const drop = `jq 'del(.review_lens_count)' "$record" > "$RUNNER_TEMP/actuals-record.json"`
+	guard := strings.Index(before, legacy)
+	if guard < 0 {
+		t.Errorf("the step %q must drop review_lens_count only from the record written before the rows were stored, guarded by %s, got:\n%s", name, legacy, before)
 	}
-	const copyOfTheRecord = `"$RUNNER_TEMP/actuals-record.json"`
-	if !strings.Contains(before, "> "+copyOfTheRecord) || !strings.Contains(call, "--instance "+copyOfTheRecord) {
-		t.Errorf("the step %q must write the record without its count to %s and give the validator that file as --instance:\n%s", name, copyOfTheRecord, strings.Join(step, "\n"))
+	if strings.Count(before, "del(.review_lens_count)") != 1 || !strings.Contains(before[max(guard, 0):], drop) {
+		t.Errorf("the step %q must drop review_lens_count once, inside that guard, with %s, got:\n%s", name, drop, before)
+	}
+	if !strings.Contains(before, `instance=$record`) || !strings.Contains(call, `--instance "$instance"`) {
+		t.Errorf("the step %q must give the validator the record as written (instance=$record) unless the guard replaced it, as --instance \"$instance\":\n%s", name, strings.Join(step, "\n"))
 	}
 }
 

@@ -149,6 +149,27 @@ func TestValidRecordExitsZero(t *testing.T) {
 	}
 }
 
+// TestASemanticRefusalComesBeforeTheStoredResultsAreRead pins the order the README states: the record is held to its
+// own rules first, so a record that breaks one is refused for it (exit 6) even when --repo could not be read (exit 7).
+func TestASemanticRefusalComesBeforeTheStoredResultsAreRead(t *testing.T) {
+	record := validRecord()
+	record["approval_decision"] = "maybe"
+	for name, repo := range map[string]string{
+		"a --repo that does not exist":           filepath.Join(t.TempDir(), "missing"),
+		"a --repo that is not a repository root": t.TempDir(),
+	} {
+		t.Run(name, func(t *testing.T) {
+			code, output := validateRecordIn(t, record, repo)
+			if code != exitSemanticValidation {
+				t.Fatalf("exit code = %d, want %d (the semantic refusal, before the results are read); output=%q", code, exitSemanticValidation, output)
+			}
+			if !strings.Contains(output, "approval_decision") {
+				t.Errorf("the refusal must name approval_decision, got %q", output)
+			}
+		})
+	}
+}
+
 // TestPointerTextInRequiredNarrativeIsRejected is the acceptance criterion for
 // this tool. A required field is satisfied, as far as JSON Schema can tell, by
 // ANY string — including one whose entire content is a pointer at some other
