@@ -5,7 +5,9 @@ package main
 // --base <rev> --head <rev> [--result <file>|-] [--cwd <repo>]' holds the reply of a reviewer to the candidate
 // it recomputes and stores it under odd/review-results/<feature>/, and 'review verify --feature <name>
 // --stored <result> [--verdicts <file>|-] [--cwd <repo>]' holds the reply of the verifier to a stored result,
-// decides whether the review blocks and stores the reply beside the result. The rules are the use cases of
+// decides whether the review blocks and stores the reply beside the result. 'review check --feature <name>
+// [--head <rev>] [--cwd <repo>]' is the check of the delivery: it recomputes the candidate of the head from git
+// and refuses unless the results stored for it still hold and clear it. The rules are the use cases of
 // review/app over the adapters review/gitexec (git) and review/fsstore (the results directory); this file
 // parses the command line, wires them and says what they did. No verb launches an agent or dispatches
 // work: a reply is a file somebody else produced.
@@ -54,6 +56,8 @@ func runReview(p process, d deps, args []string) {
 		runReviewRecord(p, d, args[1:])
 	case "verify":
 		runReviewVerify(p, d, args[1:])
+	case "check":
+		runReviewCheck(p, d, args[1:])
 	default:
 		fmt.Fprintf(p.stderr, "error: review: unknown verb %q (expected bind, record or verify)\n", args[0])
 		p.exit(1)
@@ -88,6 +92,9 @@ func reviewServiceOver(git reviewapp.Git, results reviewapp.Results) reviewapp.S
 // reviewFlags are the parsed flags of the review verbs. A verb takes some of them.
 type reviewFlags struct {
 	base, head, feature, result, stored, verdicts, cwd string
+	// given says which flags the command line gave, with whatever value, an empty one included. A flag that is
+	// optional and has a default tells an empty value that was given from one that was not.
+	given map[string]bool
 }
 
 // parseReviewFlags reads args, the flags the verb takes (each with a value, once) and nothing else. It fails
@@ -96,6 +103,7 @@ type reviewFlags struct {
 func parseReviewFlags(args []string, takes ...string) (reviewFlags, error) {
 	var f reviewFlags
 	given := map[string]bool{}
+	f.given = given
 	for i := 0; i < len(args); i++ {
 		a := args[i]
 		if !slices.Contains(takes, a) {
@@ -131,6 +139,9 @@ func parseReviewFlags(args []string, takes ...string) (reviewFlags, error) {
 	}
 	return f, nil
 }
+
+// has reports whether the command line gave the flag.
+func (f reviewFlags) has(name string) bool { return f.given[name] }
 
 // require fails with the first of the named flags that has no value. A name it does not know is a mistake of
 // the caller, and says so rather than reading as a flag that was left out.
@@ -332,8 +343,76 @@ func reportVerified(p process, v reviewapp.Verified) {
 	p.exit(0)
 }
 
-// reviewFailed is how record and verify end on an error: the error on stderr, and exit 2 for a reply that was
-// refused, 1 for anything else.
+// reviewCheckJSON is what 'review check' prints for a head that is cleared for delivery: the head as a full
+// object name, the outcome, and the stored results that bind it, by launch.
+type reviewCheckJSON struct {
+	Head    string              `json:"head"`
+	Outcome string              `json:"outcome"`
+	Results []reviewCheckedJSON `json:"results"`
+}
+
+// reviewCheckedJSON is one stored result that binds the head, with the files used and the base and the digest of
+// the diff that git gave when the check recomputed them, which the stored binding equals. fix and carry are the
+// findings to be fixed before delivery and to be carried as follow-ups; they are left out when there are none.
+type reviewCheckedJSON struct {
+	Result     string   `json:"result"`
+	Verdict    string   `json:"verdict,omitempty"`
+	Base       string   `json:"base"`
+	DiffSHA256 string   `json:"diff_sha256"`
+	Fix        []string `json:"fix,omitempty"`
+	Carry      []string `json:"carry,omitempty"`
+}
+
+// runReviewCheck implements 'review check --feature [--head] [--cwd]', the check of the delivery. A head that the
+// stored results clear is exit 0, and stdout names the files used. Anything that keeps a head from delivery, and
+// any failure to tell, is exit 1 with the reason on stderr and nothing on stdout. The head is HEAD when --head is
+// not given; an empty one that was given is not the default.
+func runReviewCheck(p process, d deps, args []string) {
+	fail := func(err error) { reviewFailed(p, "check", err) }
+	f, err := parseReviewFlags(args, "--feature", "--head", "--cwd")
+	if err == nil {
+		err = f.require("--feature")
+	}
+	head := "HEAD"
+	if err == nil && f.has("--head") {
+		head, err = f.head, f.require("--head")
+	}
+	if err != nil {
+		fail(err)
+		return
+	}
+	dir, err := reviewPath(d, f.cwd)
+	if err != nil {
+		fail(err)
+		return
+	}
+	checked, err := newReviewService(d).Check(dir, f.feature, head)
+	if err != nil {
+		fail(err)
+		return
+	}
+	reportChecked(p, checked)
+}
+
+// reportChecked hands the files used on stdout. When they cannot be written the parent never received that the
+// head is cleared, and the verb says so with exit 1.
+func reportChecked(p process, checked reviewapp.Checked) {
+	out := reviewCheckJSON{Head: checked.Head, Outcome: string(reviewverdict.Clear)}
+	for _, r := range checked.Results {
+		out.Results = append(out.Results, reviewCheckedJSON{
+			Result: r.Result, Verdict: r.Verdict, Base: r.Candidate.Base, DiffSHA256: r.Candidate.DiffSHA256,
+			Fix: r.Decision.Fix, Carry: r.Decision.Carry,
+		})
+	}
+	if err := writeReviewJSON(p, out); err != nil {
+		reviewFailed(p, "check", fmt.Errorf("the head is cleared, but the answer could not be written: %w", err))
+		return
+	}
+	p.exit(0)
+}
+
+// reviewFailed is how record, verify and check end on an error: the error on stderr, and exit 2 for a reply that
+// was refused, 1 for anything else.
 func reviewFailed(p process, verb string, err error) {
 	code := 1
 	var refused *reviewapp.ReplyRefusedError
