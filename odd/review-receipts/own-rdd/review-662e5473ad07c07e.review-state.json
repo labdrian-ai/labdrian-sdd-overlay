@@ -1,0 +1,158 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:75fb5e822efeeaa45ebf13b1e20a3216ac8259373dd38c44a16817ccd7ef359c",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-662e5473ad07c07e",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "dc169addfdb0319474eb6368fae759a60f5e664f",
+      "candidate_tree": "b5bb6754a601de63b302160ef1424f8c72acd02c",
+      "paths_digest": "sha256:120b381e049fd5da44be1f7e84ee884b034880d266071a3a16d0f6538557f449",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/review/app/app.go",
+        "engine/skills/role_chain_artifact_test.go",
+        "odd/review-results/README.md"
+      ],
+      "identity": "sha256:5b95415c3b98b82737477a54150e9ebd0c03c98d172c0f734ba8d82ff3aca2a2"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "dc169addfdb0319474eb6368fae759a60f5e664f",
+      "candidate_tree": "b5bb6754a601de63b302160ef1424f8c72acd02c",
+      "paths_digest": "sha256:120b381e049fd5da44be1f7e84ee884b034880d266071a3a16d0f6538557f449",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/review/app/app.go",
+        "engine/skills/role_chain_artifact_test.go",
+        "odd/review-results/README.md"
+      ],
+      "identity": "sha256:5b95415c3b98b82737477a54150e9ebd0c03c98d172c0f734ba8d82ff3aca2a2"
+    },
+    "genesis_paths": [
+      "CHANGELOG.md",
+      "engine/review/app/app.go",
+      "engine/skills/role_chain_artifact_test.go",
+      "odd/review-results/README.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-readability"
+    ],
+    "original_changed_lines": 45,
+    "correction_budget": 23,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "commit 64cba073 of own-rdd T4: docs(review): document review check",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:7842998327d8a2e5958bf4c9ec5f025a2d58c40f875134b6122181aa0fdc8ea6",
+    "capture_phase_revision": "sha256:71c311c8b16ab539e46c6b261c980f047297ab1494b026ff5c9dc27dea7b52ba",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "target_identity": "sha256:5b95415c3b98b82737477a54150e9ebd0c03c98d172c0f734ba8d82ff3aca2a2",
+        "capture_phase_revision": "sha256:71c311c8b16ab539e46c6b261c980f047297ab1494b026ff5c9dc27dea7b52ba",
+        "artifact_digest": "sha256:4d53c1be223f699481b41e676f4022e62d4e7fa0d68a9c7d4b6a910d9298650b",
+        "result_hash": "sha256:2a4f69f12d31af90880b748ea1d6cc317634531da778b5920e64422855a7e865",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:91b596713cd58a9d9bfb0f29335b1971797225ece8dedeff6996ff5696d9e1d4",
+            "lineage_id": "review-662e5473ad07c07e",
+            "authority_revision": "sha256:71c311c8b16ab539e46c6b261c980f047297ab1494b026ff5c9dc27dea7b52ba",
+            "target_identity": "sha256:5b95415c3b98b82737477a54150e9ebd0c03c98d172c0f734ba8d82ff3aca2a2",
+            "base_tree": "dc169addfdb0319474eb6368fae759a60f5e664f",
+            "candidate_tree": "b5bb6754a601de63b302160ef1424f8c72acd02c",
+            "changed_path_manifest_sha256": "sha256:2b835bf867faf4e47f1dcc2dc3f3d1afa5ad7f1ae700519216493f76117dbf60",
+            "lens": "review-readability",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:91b596713cd58a9d9bfb0f29335b1971797225ece8dedeff6996ff5696d9e1d4",
+            "raw_sha256": "sha256:847880c928c203caff9dca654f54d4f006e4f353cda76890595c7aeee8183b2b",
+            "canonical_sha256": "sha256:f5b4ec5f591e10c8c2b8b31730c562119d173329b3053a824acf5c11923b8c8e",
+            "result_hash": "sha256:2a4f69f12d31af90880b748ea1d6cc317634531da778b5920e64422855a7e865",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:91b596713cd58a9d9bfb0f29335b1971797225ece8dedeff6996ff5696d9e1d4",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "CHANGELOG.md",
+                "engine/review/app/app.go",
+                "engine/skills/role_chain_artifact_test.go",
+                "odd/review-results/README.md"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-readme-heading-stale",
+                "lens": "readability",
+                "location": "odd/review-results/README.md:20",
+                "severity": "SUGGESTION",
+                "claim": "The section heading was renamed to 'The commands that bind and store', but the README still has other 'three commands' style framing and the intro now names a fourth command (check) in a separate section; the rename is reasonable, but the heading no longer matches the set it introduces if verify is documented under it, since verify stores but does not bind. Consider a more accurate heading.",
+                "proof_refs": [
+                  "odd/review-results/README.md:20"
+                ]
+              },
+              {
+                "id": "R2-changelog-density",
+                "lens": "readability",
+                "location": "CHANGELOG.md:12",
+                "severity": "SUGGESTION",
+                "claim": "The new changelog entry is one very long bullet mixing behavior, exit codes, error strings and internal symbol names, duplicating the README section almost verbatim. Duplicated prose in two places risks drifting apart; the changelog could point to the README for the detailed rules.",
+                "proof_refs": [
+                  "CHANGELOG.md:12",
+                  "odd/review-results/README.md:145-173"
+                ]
+              }
+            ],
+            "evidence": [
+              "Reviewed all four changed paths in full. The app.go change is a doc-comment-only update describing CheckEvidence and Check and is consistent with the rest of the package comment.",
+              "The test change adds three required README fragments that match text present in the README patch ('`labdrian review check`', 'at least one result binds it and every one is clear', 'A check that did not run never passes'), so the test and docs agree.",
+              "No dead logic, misleading names, or unexplained constants were introduced by this docs/comments-only candidate; findings are style suggestions only."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "a766ac47a4ee915ff89d8b3d0d16bcf51749e793a412dda051c6940cef9e4070",
+    "initial_atomic_start": {
+      "lineage_id": "review-662e5473ad07c07e",
+      "worktree_identity": "sha256:571cf94da78406a5dee177091311c4fcbbbf61e483d9e6e92803045faa817e42",
+      "target_identity": "sha256:5b95415c3b98b82737477a54150e9ebd0c03c98d172c0f734ba8d82ff3aca2a2",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "dc169addfdb0319474eb6368fae759a60f5e664f",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-readability"
+      ],
+      "original_changed_lines": 45,
+      "correction_budget": 23,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "commit 64cba073 of own-rdd T4: docs(review): document review check"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

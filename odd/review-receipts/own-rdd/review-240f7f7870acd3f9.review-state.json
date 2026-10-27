@@ -1,0 +1,194 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:836c3bd49dc58791c3d87138ea090aff14b5d0edf3993574d26b2d2b13438bf5",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-240f7f7870acd3f9",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "a9bb8ec2a2585eca0c3645b2802369c634db47d8",
+      "candidate_tree": "0f31c985f9962239b4bea8577dacb77185079dda",
+      "paths_digest": "sha256:36020360bf1a852bd68b789d7d1a1276cb3cfba7d66063ffd5665700a50dcdfa",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/review/app/evidence.go",
+        "engine/review/app/exempt_evidence_test.go",
+        "engine/review/evidence.go",
+        "engine/review/exempt_evidence_test.go"
+      ],
+      "identity": "sha256:5abc709ce735b4adb9a6d0e46559d27d1a73a7773240430479471db67e963449"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "a9bb8ec2a2585eca0c3645b2802369c634db47d8",
+      "candidate_tree": "0f31c985f9962239b4bea8577dacb77185079dda",
+      "paths_digest": "sha256:36020360bf1a852bd68b789d7d1a1276cb3cfba7d66063ffd5665700a50dcdfa",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/review/app/evidence.go",
+        "engine/review/app/exempt_evidence_test.go",
+        "engine/review/evidence.go",
+        "engine/review/exempt_evidence_test.go"
+      ],
+      "identity": "sha256:5abc709ce735b4adb9a6d0e46559d27d1a73a7773240430479471db67e963449"
+    },
+    "genesis_paths": [
+      "engine/review/app/evidence.go",
+      "engine/review/app/exempt_evidence_test.go",
+      "engine/review/evidence.go",
+      "engine/review/exempt_evidence_test.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-risk",
+      "review-reliability"
+    ],
+    "original_changed_lines": 361,
+    "correction_budget": 181,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "commit 45bb4830 of own-rdd T4: feat(review): a completed review-exemption is held to the stored exemption",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:2235e21e7bf7e79116feb90efa2abcfea94beb13f6a6f6e07350b6cb00396a01",
+    "capture_phase_revision": "sha256:b415dd60cfbe5f6677b71f39b8b87649d0f3022e5cbf92a9edeee4fe7278790a",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:5abc709ce735b4adb9a6d0e46559d27d1a73a7773240430479471db67e963449",
+        "capture_phase_revision": "sha256:b415dd60cfbe5f6677b71f39b8b87649d0f3022e5cbf92a9edeee4fe7278790a",
+        "artifact_digest": "sha256:e1359d4f1cc8f7340ab7f6eca118979e93b49b427736d256dcdb659fd6dceb31",
+        "result_hash": "sha256:c5fe88022f29dcc301a5d8516606486c3e7c9a94a0ffeeba03bf8a5173d40ee9",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:03d84c274393d0450488f0a98e3ab8b8299cec07a9e16b25fb9fc251b73b8314",
+            "lineage_id": "review-240f7f7870acd3f9",
+            "authority_revision": "sha256:b415dd60cfbe5f6677b71f39b8b87649d0f3022e5cbf92a9edeee4fe7278790a",
+            "target_identity": "sha256:5abc709ce735b4adb9a6d0e46559d27d1a73a7773240430479471db67e963449",
+            "base_tree": "a9bb8ec2a2585eca0c3645b2802369c634db47d8",
+            "candidate_tree": "0f31c985f9962239b4bea8577dacb77185079dda",
+            "changed_path_manifest_sha256": "sha256:221d8255e6183b63c3b7d8e91d5e4b3a4718a0e2d7a776016708846023f20bce",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:03d84c274393d0450488f0a98e3ab8b8299cec07a9e16b25fb9fc251b73b8314",
+            "raw_sha256": "sha256:1046f9cf02fbf05e6b185cafc90ec4413e952c1d0bfc23fcb4038e6bba33a8c5",
+            "canonical_sha256": "sha256:b7068b9b99adeeba8ffbb7a948ddc73692732e83b0559ec11c63342577bab4c5",
+            "result_hash": "sha256:c5fe88022f29dcc301a5d8516606486c3e7c9a94a0ffeeba03bf8a5173d40ee9",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:03d84c274393d0450488f0a98e3ab8b8299cec07a9e16b25fb9fc251b73b8314",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/app/evidence.go",
+                "engine/review/app/exempt_evidence_test.go",
+                "engine/review/evidence.go",
+                "engine/review/exempt_evidence_test.go"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "Reviewed all four changed paths in full. The new checkExemptionEvidence in engine/review/app/evidence.go follows the same flow as the existing review-report check: it validates the shape of the record and the ref before locating the repository, reads only the stored file the ref names, and verifies the digest, so a ref that tries to leave the results directory is refused by shape before any read.",
+              "The stored exemption is decoded and re-checked against its rules (review.DecodeExemption, review.CheckExemption), so a file edited after the record was made is refused even when the record's digest is changed to match. The range is then checked against the stored binding.",
+              "The tests in engine/review/app/exempt_evidence_test.go cover traversal and absolute-path refs, a binding whose base is an option string, tampered digests, and a missing or unreadable store. They show these cases are refused with no git or store call where the shape check applies.",
+              "NeedsEvidence in engine/review/evidence.go now also covers completed review-exemption records, and interrupted ones remain exempt, with a test confirming that. This is the requested behavior, and I found no authorization bypass, data exposure, unsafe input handling, secret or dependency risk reachable from this change."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 1,
+        "target_identity": "sha256:5abc709ce735b4adb9a6d0e46559d27d1a73a7773240430479471db67e963449",
+        "capture_phase_revision": "sha256:b415dd60cfbe5f6677b71f39b8b87649d0f3022e5cbf92a9edeee4fe7278790a",
+        "artifact_digest": "sha256:140bfd0e43c79628f428f0a81db397a0f3a1caf44e49a2b60bce8a6fda355917",
+        "result_hash": "sha256:a8ac39cf0a9fc1b5819c74e63d1fdac4a1d09087607480169089920cc955f0e9",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:39fcec9ecfbfd4100c531ae1c1cd6f4edfeeb61b20ed0af6c9735dc4b078f91a",
+            "lineage_id": "review-240f7f7870acd3f9",
+            "authority_revision": "sha256:b415dd60cfbe5f6677b71f39b8b87649d0f3022e5cbf92a9edeee4fe7278790a",
+            "target_identity": "sha256:5abc709ce735b4adb9a6d0e46559d27d1a73a7773240430479471db67e963449",
+            "base_tree": "a9bb8ec2a2585eca0c3645b2802369c634db47d8",
+            "candidate_tree": "0f31c985f9962239b4bea8577dacb77185079dda",
+            "changed_path_manifest_sha256": "sha256:221d8255e6183b63c3b7d8e91d5e4b3a4718a0e2d7a776016708846023f20bce",
+            "lens": "review-reliability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:39fcec9ecfbfd4100c531ae1c1cd6f4edfeeb61b20ed0af6c9735dc4b078f91a",
+            "raw_sha256": "sha256:1bc01b42788ae32894bd30866fc89004519bc6c4b811c243c163e435c3026f2e",
+            "canonical_sha256": "sha256:1c53396d690652d4ef4c8d2681021dd66b187a2328d1a9c00ed504c9549a2f82",
+            "result_hash": "sha256:a8ac39cf0a9fc1b5819c74e63d1fdac4a1d09087607480169089920cc955f0e9",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:39fcec9ecfbfd4100c531ae1c1cd6f4edfeeb61b20ed0af6c9735dc4b078f91a",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/app/evidence.go",
+                "engine/review/app/exempt_evidence_test.go",
+                "engine/review/evidence.go",
+                "engine/review/exempt_evidence_test.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [],
+            "evidence": [
+              "Reviewed all four changed paths in full from the patch sections.",
+              "NeedsEvidence in engine/review/evidence.go now includes completed review-exemption records; CheckEvidence dispatches to checkExemptionEvidence before the report path, so exemption records are not run through the result/verdict checks.",
+              "checkExemptionEvidence in engine/review/app/evidence.go mirrors the report path order: shape checks (RequiredEvidence, ExemptionRef) occur before git.Locate and the store read, then digest check, then decode and rule check wrapped as EvidenceError, then range check against the stored binding. Failure paths are wrapped with kind and ref.",
+              "engine/review/app/exempt_evidence_test.go proves: acceptance of the Exempt-printed record with exact git and store calls and no writes, missing/repeated pieces refused before any call, digest and range mismatches, unreadable or missing files, ref-shape refusals with no calls, non-exemption bytes, post-edit rule violations (high risk, invalid risk, not-clear report, bad binding), and interrupted records left alone.",
+              "engine/review/exempt_evidence_test.go covers NeedsEvidence for completed, interrupted, case-variant and suffixed kinds.",
+              "No reliability regression or unproved behavior found."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "95e7e100840ceb6034f84273f68cb5cbb7d78ad81aa8fefd42c4ba87d73ebfd0",
+    "initial_atomic_start": {
+      "lineage_id": "review-240f7f7870acd3f9",
+      "worktree_identity": "sha256:571cf94da78406a5dee177091311c4fcbbbf61e483d9e6e92803045faa817e42",
+      "target_identity": "sha256:5abc709ce735b4adb9a6d0e46559d27d1a73a7773240430479471db67e963449",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "a9bb8ec2a2585eca0c3645b2802369c634db47d8",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-risk",
+        "review-reliability"
+      ],
+      "original_changed_lines": 361,
+      "correction_budget": 181,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "commit 45bb4830 of own-rdd T4: feat(review): a completed review-exemption is held to the stored exemption"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

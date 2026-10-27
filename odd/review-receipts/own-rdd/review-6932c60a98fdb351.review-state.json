@@ -1,0 +1,351 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:5d44322235e2aa4475a627e714fdae43e9b8c4f28db75c64483dac650293012e",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-6932c60a98fdb351",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "399d8132c4b1e2b62f079e52514761ff91b6a763",
+      "candidate_tree": "4e42541dd3c15ecba1f43e06825f383e9fb46ad3",
+      "paths_digest": "sha256:3fb28a292c24e70b5fcb62afcd95da9c7859ac521b615c3ae831a374f30170d7",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "CHANGELOG.md",
+        "bin/lib/usage.sh",
+        "engine/cmd/review.go",
+        "engine/cmd/review_exempt_docs_test.go",
+        "engine/cmd/roles_evidence.go",
+        "engine/cmd/roles_evidence_docs_test.go",
+        "engine/cmd/roles_evidence_exempt_test.go",
+        "engine/cmd/roles_evidence_test.go",
+        "engine/cmd/usage.go",
+        "engine/review/app/check_exempt_test.go",
+        "engine/review/app/evidence.go",
+        "engine/review/app/evidence_test.go",
+        "engine/review/check.go",
+        "engine/skills/review_exempt_convention_test.go",
+        "odd/review-results/README.md"
+      ],
+      "identity": "sha256:a0fe8a76e17954251f8e7e08539948594ff2dbfd4eebf49a343190fe158ef32b"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "399d8132c4b1e2b62f079e52514761ff91b6a763",
+      "candidate_tree": "4e42541dd3c15ecba1f43e06825f383e9fb46ad3",
+      "paths_digest": "sha256:3fb28a292c24e70b5fcb62afcd95da9c7859ac521b615c3ae831a374f30170d7",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "CHANGELOG.md",
+        "bin/lib/usage.sh",
+        "engine/cmd/review.go",
+        "engine/cmd/review_exempt_docs_test.go",
+        "engine/cmd/roles_evidence.go",
+        "engine/cmd/roles_evidence_docs_test.go",
+        "engine/cmd/roles_evidence_exempt_test.go",
+        "engine/cmd/roles_evidence_test.go",
+        "engine/cmd/usage.go",
+        "engine/review/app/check_exempt_test.go",
+        "engine/review/app/evidence.go",
+        "engine/review/app/evidence_test.go",
+        "engine/review/check.go",
+        "engine/skills/review_exempt_convention_test.go",
+        "odd/review-results/README.md"
+      ],
+      "identity": "sha256:a0fe8a76e17954251f8e7e08539948594ff2dbfd4eebf49a343190fe158ef32b"
+    },
+    "genesis_paths": [
+      "CHANGELOG.md",
+      "bin/lib/usage.sh",
+      "engine/cmd/review.go",
+      "engine/cmd/review_exempt_docs_test.go",
+      "engine/cmd/roles_evidence.go",
+      "engine/cmd/roles_evidence_docs_test.go",
+      "engine/cmd/roles_evidence_exempt_test.go",
+      "engine/cmd/roles_evidence_test.go",
+      "engine/cmd/usage.go",
+      "engine/review/app/check_exempt_test.go",
+      "engine/review/app/evidence.go",
+      "engine/review/app/evidence_test.go",
+      "engine/review/check.go",
+      "engine/skills/review_exempt_convention_test.go",
+      "odd/review-results/README.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-risk",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 347,
+    "correction_budget": 174,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "fix round of own-rdd T4 review findings: roles append parses the stored verdict, doc and test pins regrouped, doc comments of Cleared/Exempted",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:983c322749c63633501b3f296fc89955a2ed1a81cdd044a9cd62b19a9fa1aa89",
+    "capture_phase_revision": "sha256:be94632102a926f1f2968948bde237a06d820dfcf8ab3e52fe6c183fc4d17652",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:a0fe8a76e17954251f8e7e08539948594ff2dbfd4eebf49a343190fe158ef32b",
+        "capture_phase_revision": "sha256:be94632102a926f1f2968948bde237a06d820dfcf8ab3e52fe6c183fc4d17652",
+        "artifact_digest": "sha256:329a01d18b0e94f887d238c96c31057293c51fbb392b2fa1283cae745aade88f",
+        "result_hash": "sha256:20e1f0d830da89e1141206c1e9622d15812dce0bf4e955923aa7348fc1956912",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:4ea79adfacd3b3b0ca423da83b5a499a3ba004d344466aeb7a093b67f8bec347",
+            "lineage_id": "review-6932c60a98fdb351",
+            "authority_revision": "sha256:be94632102a926f1f2968948bde237a06d820dfcf8ab3e52fe6c183fc4d17652",
+            "target_identity": "sha256:a0fe8a76e17954251f8e7e08539948594ff2dbfd4eebf49a343190fe158ef32b",
+            "base_tree": "399d8132c4b1e2b62f079e52514761ff91b6a763",
+            "candidate_tree": "4e42541dd3c15ecba1f43e06825f383e9fb46ad3",
+            "changed_path_manifest_sha256": "sha256:ce175ae2689f7f2f71c08559085dd2bd56506c4bb001e5bb91997e632cffff97",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:4ea79adfacd3b3b0ca423da83b5a499a3ba004d344466aeb7a093b67f8bec347",
+            "raw_sha256": "sha256:7d6bc53e661bd51502a9ad19cfa16a1e87e35b5f7425913ffd627210ac73b500",
+            "canonical_sha256": "sha256:df771fbb888842b237e9c8f1187f130e8656a1d31e205fe1e7ddd8e56cbd364a",
+            "result_hash": "sha256:20e1f0d830da89e1141206c1e9622d15812dce0bf4e955923aa7348fc1956912",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:4ea79adfacd3b3b0ca423da83b5a499a3ba004d344466aeb7a093b67f8bec347",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "CHANGELOG.md",
+                "bin/lib/usage.sh",
+                "engine/cmd/review.go",
+                "engine/cmd/review_exempt_docs_test.go",
+                "engine/cmd/roles_evidence.go",
+                "engine/cmd/roles_evidence_docs_test.go",
+                "engine/cmd/roles_evidence_exempt_test.go",
+                "engine/cmd/roles_evidence_test.go",
+                "engine/cmd/usage.go",
+                "engine/review/app/check_exempt_test.go",
+                "engine/review/app/evidence.go",
+                "engine/review/app/evidence_test.go",
+                "engine/review/check.go",
+                "engine/skills/review_exempt_convention_test.go",
+                "odd/review-results/README.md"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "The only behavioral change is in engine/review/app/evidence.go: CheckEvidence now additionally parses the stored verifier file with reviewverdict.Parse against the parsed result and refuses with an EvidenceError naming kind and ref. This tightens validation (fail-closed) and adds no new input surface, file read path, or privilege; the file is already read through the store that refuses links and oversize files.",
+              "The remaining changes are comments, documentation, help text, and test refactors or additions, with no runtime effect.",
+              "No secrets, dependency changes, unsafe input handling, or data exposure are introduced. The README table edit about blocking results and exemptions is documentation of the existing Cleared behavior, which this diff does not alter."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "selected_order": 1,
+        "target_identity": "sha256:a0fe8a76e17954251f8e7e08539948594ff2dbfd4eebf49a343190fe158ef32b",
+        "capture_phase_revision": "sha256:be94632102a926f1f2968948bde237a06d820dfcf8ab3e52fe6c183fc4d17652",
+        "artifact_digest": "sha256:2965db2d7349a8ad234d001cdadbf8ca042c6616ad1bc4fd0a238d23022cc563",
+        "result_hash": "sha256:3f737daf57cd815d5976c7b5f958c007770d64e91976297a0f29da2b7a0a331a",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:6af0607e4a16b1177124e6e4ff5cd16bf9a32839391f6edf009baacff2d16cc7",
+            "lineage_id": "review-6932c60a98fdb351",
+            "authority_revision": "sha256:be94632102a926f1f2968948bde237a06d820dfcf8ab3e52fe6c183fc4d17652",
+            "target_identity": "sha256:a0fe8a76e17954251f8e7e08539948594ff2dbfd4eebf49a343190fe158ef32b",
+            "base_tree": "399d8132c4b1e2b62f079e52514761ff91b6a763",
+            "candidate_tree": "4e42541dd3c15ecba1f43e06825f383e9fb46ad3",
+            "changed_path_manifest_sha256": "sha256:ce175ae2689f7f2f71c08559085dd2bd56506c4bb001e5bb91997e632cffff97",
+            "lens": "review-readability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:6af0607e4a16b1177124e6e4ff5cd16bf9a32839391f6edf009baacff2d16cc7",
+            "raw_sha256": "sha256:302970aa4aec08cbcce080231a84a2e5d9f5a208c32eba17ab17a19b180f6b53",
+            "canonical_sha256": "sha256:f9638b2f7296cc1536923c70b3ed6ea983ae7709945e4c4fbded748ce7ec8dc4",
+            "result_hash": "sha256:3f737daf57cd815d5976c7b5f958c007770d64e91976297a0f29da2b7a0a331a",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:6af0607e4a16b1177124e6e4ff5cd16bf9a32839391f6edf009baacff2d16cc7",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "CHANGELOG.md",
+                "bin/lib/usage.sh",
+                "engine/cmd/review.go",
+                "engine/cmd/review_exempt_docs_test.go",
+                "engine/cmd/roles_evidence.go",
+                "engine/cmd/roles_evidence_docs_test.go",
+                "engine/cmd/roles_evidence_exempt_test.go",
+                "engine/cmd/roles_evidence_test.go",
+                "engine/cmd/usage.go",
+                "engine/review/app/check_exempt_test.go",
+                "engine/review/app/evidence.go",
+                "engine/review/app/evidence_test.go",
+                "engine/review/check.go",
+                "engine/skills/review_exempt_convention_test.go",
+                "odd/review-results/README.md"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-readme-table-row",
+                "lens": "readability",
+                "location": "odd/review-results/README.md:234-235",
+                "severity": "SUGGESTION",
+                "claim": "The refusal table now drops the 'with an exemption or not' wording, and the 'neither clear nor blocks' row relies on the phrase 'none at all (nobody decided it)', which is vague. A reader may not see that a not-clear result still wins over an exemption, so that precedence is now less visible in the table than it was. The changelog and other README text still state it, so this is a clarity issue only.",
+                "proof_refs": [
+                  "odd/review-results/README.md:234-235",
+                  "CHANGELOG.md:13"
+                ]
+              },
+              {
+                "id": "R2-evidence-parse-discard",
+                "lens": "readability",
+                "location": "engine/review/app/evidence.go:90-96",
+                "severity": "SUGGESTION",
+                "claim": "CheckEvidence calls reviewverdict.Parse only to validate the verdict file and discards the parsed value. This is correct, but a short comment saying the call is for validation only would keep a later reader from removing it as dead code. The updated doc comment above the function partly covers this.",
+                "proof_refs": [
+                  "engine/review/app/evidence.go:90-96"
+                ]
+              }
+            ],
+            "evidence": [
+              "Reviewed all 15 changed paths in the supplied patch.",
+              "The behavior change is small: the stored verdict is now parsed against its result in CheckEvidence, and tests cover both an unparseable file and an unknown finding id.",
+              "The test refactors (grouping fragments by rule, and the shared requireHelpFacts helper) keep the assertions and give clearer failure messages.",
+              "The new doc comments on Exempted and Cleared state the invariant that values must be held to the files and to git before reaching them. This helps maintainability.",
+              "I found no BLOCKER or CRITICAL readability defects caused by this change."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 2,
+        "target_identity": "sha256:a0fe8a76e17954251f8e7e08539948594ff2dbfd4eebf49a343190fe158ef32b",
+        "capture_phase_revision": "sha256:be94632102a926f1f2968948bde237a06d820dfcf8ab3e52fe6c183fc4d17652",
+        "artifact_digest": "sha256:b40a1bc039f63dc4e219f99bc0aa6866bbcdf0c15686e0c03728478c9c9b28db",
+        "result_hash": "sha256:49a413b8e6abfa91c08898be5dd36fd277c9ec9690c2121529f1289909cf9a2f",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:aec4077109d969283cb25bc4a7c6a15fd5c9510bbae1d3d9f99d504a2d97e27d",
+            "lineage_id": "review-6932c60a98fdb351",
+            "authority_revision": "sha256:be94632102a926f1f2968948bde237a06d820dfcf8ab3e52fe6c183fc4d17652",
+            "target_identity": "sha256:a0fe8a76e17954251f8e7e08539948594ff2dbfd4eebf49a343190fe158ef32b",
+            "base_tree": "399d8132c4b1e2b62f079e52514761ff91b6a763",
+            "candidate_tree": "4e42541dd3c15ecba1f43e06825f383e9fb46ad3",
+            "changed_path_manifest_sha256": "sha256:ce175ae2689f7f2f71c08559085dd2bd56506c4bb001e5bb91997e632cffff97",
+            "lens": "review-reliability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:aec4077109d969283cb25bc4a7c6a15fd5c9510bbae1d3d9f99d504a2d97e27d",
+            "raw_sha256": "sha256:8136f329a1611519b15dd5c8fc917de22967204c69b38fa8288f5179dff87010",
+            "canonical_sha256": "sha256:c514c05910834c2df691905d14c50b1b680e950e329a81a983f1b83fa4d225f0",
+            "result_hash": "sha256:49a413b8e6abfa91c08898be5dd36fd277c9ec9690c2121529f1289909cf9a2f",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:aec4077109d969283cb25bc4a7c6a15fd5c9510bbae1d3d9f99d504a2d97e27d",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "CHANGELOG.md",
+                "bin/lib/usage.sh",
+                "engine/cmd/review.go",
+                "engine/cmd/review_exempt_docs_test.go",
+                "engine/cmd/roles_evidence.go",
+                "engine/cmd/roles_evidence_docs_test.go",
+                "engine/cmd/roles_evidence_exempt_test.go",
+                "engine/cmd/roles_evidence_test.go",
+                "engine/cmd/usage.go",
+                "engine/review/app/check_exempt_test.go",
+                "engine/review/app/evidence.go",
+                "engine/review/app/evidence_test.go",
+                "engine/review/check.go",
+                "engine/skills/review_exempt_convention_test.go",
+                "odd/review-results/README.md"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-001",
+                "lens": "reliability",
+                "location": "engine/review/app/evidence.go:90-96",
+                "severity": "WARNING",
+                "claim": "CheckEvidence now refuses a review-report whose stored verdict does not parse against its result. This is a deliberate, tested tightening: a record that previously passed (verdict file with matching digest but unparseable or naming an unknown finding id) is now refused with exit 1. Failure path is covered by app and cmd tests, but the success path with a valid verdict relies on existing tests; no new test pins that a verdict parsed against the result's parsed reply (not a different object) is accepted when the result has multiple findings.",
+                "proof_refs": [
+                  "engine/review/app/evidence.go:90-96",
+                  "engine/review/app/evidence_test.go:305-328",
+                  "engine/cmd/roles_evidence_test.go:271-282"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Reviewed all 15 manifest paths. The only behavioral change is in engine/review/app/evidence.go: the verifier-report evidence is now additionally held to reviewverdict.Parse against the parsed result, wrapped as an EvidenceError with kind and ref. Tests added at the app level (unparseable bytes, unknown finding id) and at the cmd level (non-verdict file with matching digest) assert the sentinel and the named kind/ref, so the new failure paths are proved at the cheapest level.",
+              "The cmd-level test TestRunHandsRolesAppendTheDepsItWasHanded proves the evidence check uses the deps' working directory, covering both refusal (no repository, nothing stored) and storage paths.",
+              "The check_exempt_test addition covers the CheckOneCommit refusal for a stored exemption whose base is not the head's first parent, with the file named in the error.",
+              "Remaining changes are doc/test restructuring (grouped fragments, shared requireHelpFacts helper), comments, README and CHANGELOG wording; the docs tests still assert the same facts and now name the rule on failure. No regression found in them.",
+              "The README table edit narrows rows to match Check behavior as already documented (a blocking result wins over exemption), not a code change."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "2097f13106e2550e0c4f49e9a8091c33eb44bd54455a929001283283a1d3b903",
+    "initial_atomic_start": {
+      "lineage_id": "review-6932c60a98fdb351",
+      "worktree_identity": "sha256:571cf94da78406a5dee177091311c4fcbbbf61e483d9e6e92803045faa817e42",
+      "target_identity": "sha256:a0fe8a76e17954251f8e7e08539948594ff2dbfd4eebf49a343190fe158ef32b",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "399d8132c4b1e2b62f079e52514761ff91b6a763",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "high",
+      "selected_lenses": [
+        "review-risk",
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 347,
+      "correction_budget": 174,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "fix round of own-rdd T4 review findings: roles append parses the stored verdict, doc and test pins regrouped, doc comments of Cleared/Exempted"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

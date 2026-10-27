@@ -1,0 +1,186 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:51b3436cbd1f2115b61591c4c11423401d5bd097d72488c18b941e514ebb0526",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-023bc650e68b32fd",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "dd4350c533d7b4856a39e6210c85d08d491ff936",
+      "candidate_tree": "64b31f632aee490cc475e15ff63dba1095d033da",
+      "paths_digest": "sha256:7a6e1dd06485d7f7018514b8db70616aab54160ba18f9309f9d09a64b665d88f",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/review/check.go",
+        "engine/review/exempt_names_test.go",
+        "engine/review/names.go"
+      ],
+      "identity": "sha256:e03e9c8ba69c9838987c9deb71a4e891f5e68e027c87b899802ac5fafdb0ec4f"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "dd4350c533d7b4856a39e6210c85d08d491ff936",
+      "candidate_tree": "64b31f632aee490cc475e15ff63dba1095d033da",
+      "paths_digest": "sha256:7a6e1dd06485d7f7018514b8db70616aab54160ba18f9309f9d09a64b665d88f",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/review/check.go",
+        "engine/review/exempt_names_test.go",
+        "engine/review/names.go"
+      ],
+      "identity": "sha256:e03e9c8ba69c9838987c9deb71a4e891f5e68e027c87b899802ac5fafdb0ec4f"
+    },
+    "genesis_paths": [
+      "engine/review/check.go",
+      "engine/review/exempt_names_test.go",
+      "engine/review/names.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-risk",
+      "review-reliability"
+    ],
+    "original_changed_lines": 201,
+    "correction_budget": 101,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "commit 3b51c3b8 of own-rdd T4: feat(review): the names of the exemptions stored for a head",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:7f1d3dc59ea9180d3788d535f7d22cb931cfb1208d68b572c10ee4f0a3eed0bd",
+    "capture_phase_revision": "sha256:3d7ce48d0b601bd2c05098b66b1f3f0d3c6754bfe5cb9f3f209c04e094857991",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:e03e9c8ba69c9838987c9deb71a4e891f5e68e027c87b899802ac5fafdb0ec4f",
+        "capture_phase_revision": "sha256:3d7ce48d0b601bd2c05098b66b1f3f0d3c6754bfe5cb9f3f209c04e094857991",
+        "artifact_digest": "sha256:5783b51e7f7d6f5055cfaa7be06a01c1b4a915ed0a92c35398812fc4d26f542b",
+        "result_hash": "sha256:1db9de797b0db6431213e27bef60a935a25b78e3aded6fbce77eea308231383d",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:74a792d8758f4562cceeb31b4ebeca7b8ffcaff69f891c64360a4a48a13dc225",
+            "lineage_id": "review-023bc650e68b32fd",
+            "authority_revision": "sha256:3d7ce48d0b601bd2c05098b66b1f3f0d3c6754bfe5cb9f3f209c04e094857991",
+            "target_identity": "sha256:e03e9c8ba69c9838987c9deb71a4e891f5e68e027c87b899802ac5fafdb0ec4f",
+            "base_tree": "dd4350c533d7b4856a39e6210c85d08d491ff936",
+            "candidate_tree": "64b31f632aee490cc475e15ff63dba1095d033da",
+            "changed_path_manifest_sha256": "sha256:b02053f8c642bbf178d54496be770671a59ee312a9ac4185be023938761b60ec",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:74a792d8758f4562cceeb31b4ebeca7b8ffcaff69f891c64360a4a48a13dc225",
+            "raw_sha256": "sha256:4f70b06badcc0db6781200410099bdfd508b168790f38fcc7c638bc9445bbea6",
+            "canonical_sha256": "sha256:5f510a91192a2180092a1b69b4f00b6951b387a75f0c46187023472f7df16c35",
+            "result_hash": "sha256:1db9de797b0db6431213e27bef60a935a25b78e3aded6fbce77eea308231383d",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:74a792d8758f4562cceeb31b4ebeca7b8ffcaff69f891c64360a4a48a13dc225",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/check.go",
+                "engine/review/exempt_names_test.go",
+                "engine/review/names.go"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "Reviewed all three changed paths in full. The stem helper in engine/review/names.go keeps the strict validation CheckResultName had before: the head must be exactly 12 lowercase hex characters and the number must be canonical digits. Names containing path separators, dots or other characters are therefore still refused, so no path traversal or injection surface was added.",
+              "Exemption and verdict names cannot be mistaken for results. The result reader cuts only the .json suffix, which leaves a number like '1.exempt' or '1.verifier' that canonicalNumber rejects. The new tests exercise this separation and also cover the empty-prefix and short-head cases.",
+              "ExemptionsOfHead and ExemptionName are pure name functions with no I/O, no authorization decision and no secrets. An exemption file is never counted as a reviewed result by ResultsOfHead, so the change does not weaken the review gate. The change adds no dependencies."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 1,
+        "target_identity": "sha256:e03e9c8ba69c9838987c9deb71a4e891f5e68e027c87b899802ac5fafdb0ec4f",
+        "capture_phase_revision": "sha256:3d7ce48d0b601bd2c05098b66b1f3f0d3c6754bfe5cb9f3f209c04e094857991",
+        "artifact_digest": "sha256:d341ee9bc11b157c3547411cb3ad0e3c82940286face23f4cbed3e43ed9171c6",
+        "result_hash": "sha256:c298ba274bb23609de429a6d3e1cd831819392b4907531c4605aafe1d5d34ad0",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:49c448070273620e8ef9fc3b385906062bd036b79daf66cd7c7b7c54d581dcdc",
+            "lineage_id": "review-023bc650e68b32fd",
+            "authority_revision": "sha256:3d7ce48d0b601bd2c05098b66b1f3f0d3c6754bfe5cb9f3f209c04e094857991",
+            "target_identity": "sha256:e03e9c8ba69c9838987c9deb71a4e891f5e68e027c87b899802ac5fafdb0ec4f",
+            "base_tree": "dd4350c533d7b4856a39e6210c85d08d491ff936",
+            "candidate_tree": "64b31f632aee490cc475e15ff63dba1095d033da",
+            "changed_path_manifest_sha256": "sha256:b02053f8c642bbf178d54496be770671a59ee312a9ac4185be023938761b60ec",
+            "lens": "review-reliability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:49c448070273620e8ef9fc3b385906062bd036b79daf66cd7c7b7c54d581dcdc",
+            "raw_sha256": "sha256:23932ddc03fbbe716fe4c60388ba95a018c3cf4bfce266a14e3b4c5d7dbd43fe",
+            "canonical_sha256": "sha256:23932ddc03fbbe716fe4c60388ba95a018c3cf4bfce266a14e3b4c5d7dbd43fe",
+            "result_hash": "sha256:c298ba274bb23609de429a6d3e1cd831819392b4907531c4605aafe1d5d34ad0",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:49c448070273620e8ef9fc3b385906062bd036b79daf66cd7c7b7c54d581dcdc",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/check.go",
+                "engine/review/exempt_names_test.go",
+                "engine/review/names.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [],
+            "evidence": [
+              "engine/review/names.go: the new stem helper keeps the old CheckResultName logic: cut the suffix, split at the first dash, require 12 lowercase hex characters and a canonical number. A name ending in .verifier.json or .exempt.json leaves a number such as 1.verifier or 1.exempt when cut with the .json suffix, which canonicalNumber rejects. A result reader therefore cannot take either of those files, and CheckResultName behaves as before for valid inputs.",
+              "engine/review/check.go: ResultsOfHead now delegates to ofHead with resultSuffix. The prefix filter and the stem check together match the old HasPrefix plus CheckResultName test, and the sort by launch number is unchanged. ExemptionsOfHead reuses the same path with exemptionSuffix, and a short or empty head gives a prefix beginning with a dash, which no name matches.",
+              "engine/review/exempt_names_test.go: the tests assert externally observable behavior at unit level. They cover ordering, exclusion of look-alike names (leading zero, temporary file, dot prefix, non-numeric, missing number, wrong head), no mutation of the input slice, cross-kind isolation, and shared numbering through NextNumber. NextNumber is unchanged and its '.'-after-number rule already counts exemption names. The tests also call VerdictName and ResultOfVerdict, which this diff does not show. They are existing behavior, and nothing visible contradicts the expectations.",
+              "No defects found that this candidate introduced."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "76a6fe2f00af9150ce9569a22637ee2b4c09decf7a42f4176a3177afdc62e0e4",
+    "initial_atomic_start": {
+      "lineage_id": "review-023bc650e68b32fd",
+      "worktree_identity": "sha256:571cf94da78406a5dee177091311c4fcbbbf61e483d9e6e92803045faa817e42",
+      "target_identity": "sha256:e03e9c8ba69c9838987c9deb71a4e891f5e68e027c87b899802ac5fafdb0ec4f",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "dd4350c533d7b4856a39e6210c85d08d491ff936",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-risk",
+        "review-reliability"
+      ],
+      "original_changed_lines": 201,
+      "correction_budget": 101,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "commit 3b51c3b8 of own-rdd T4: feat(review): the names of the exemptions stored for a head"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

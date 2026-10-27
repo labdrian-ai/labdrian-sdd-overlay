@@ -1,0 +1,213 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:62392cf66eb45c98b565112d281929da5f54a29338fc6d8a0f60244c77429381",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-5217af4462a2abfe",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "b5bb6754a601de63b302160ef1424f8c72acd02c",
+      "candidate_tree": "a6d78273d9c3bd2bb1d8518f02f61c3be259b76d",
+      "paths_digest": "sha256:8c59d89bfc114ef86187535a83f66745dd890a9051f2e9742af33c94236ad578",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "agents/delivery.md",
+        "codex/agents/delivery.toml",
+        "docs/architecture/role-design/per-role-reviewer.md",
+        "engine/skills/role_agents_artifact_test.go",
+        "pi/agents/delivery.md",
+        "roles/delivery/body.md"
+      ],
+      "identity": "sha256:8bfe0f7fde9396059c276ea439add4134826632fc0b2d5320416d7baee720050"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "b5bb6754a601de63b302160ef1424f8c72acd02c",
+      "candidate_tree": "a6d78273d9c3bd2bb1d8518f02f61c3be259b76d",
+      "paths_digest": "sha256:8c59d89bfc114ef86187535a83f66745dd890a9051f2e9742af33c94236ad578",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "agents/delivery.md",
+        "codex/agents/delivery.toml",
+        "docs/architecture/role-design/per-role-reviewer.md",
+        "engine/skills/role_agents_artifact_test.go",
+        "pi/agents/delivery.md",
+        "roles/delivery/body.md"
+      ],
+      "identity": "sha256:8bfe0f7fde9396059c276ea439add4134826632fc0b2d5320416d7baee720050"
+    },
+    "genesis_paths": [
+      "agents/delivery.md",
+      "codex/agents/delivery.toml",
+      "docs/architecture/role-design/per-role-reviewer.md",
+      "engine/skills/role_agents_artifact_test.go",
+      "pi/agents/delivery.md",
+      "roles/delivery/body.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-risk",
+      "review-reliability"
+    ],
+    "original_changed_lines": 30,
+    "correction_budget": 15,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "commit 7e9ff7a1 of own-rdd T4: feat(roles): delivery runs review check before it closes the feature",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:c19dbc2575d5ef6953220c240f7cc9257915b247e2086f33359675ff328f8a70",
+    "capture_phase_revision": "sha256:519f9bb99fbec6cd47b018e6aa19553cada338777d2f7c24cbcadd627e196a7d",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:8bfe0f7fde9396059c276ea439add4134826632fc0b2d5320416d7baee720050",
+        "capture_phase_revision": "sha256:519f9bb99fbec6cd47b018e6aa19553cada338777d2f7c24cbcadd627e196a7d",
+        "artifact_digest": "sha256:07beeadccb9a3b3e336cd15c7d60650c0c9e57f677f0641bf8a975e1ab6e956f",
+        "result_hash": "sha256:e3dc6614449b36351fb3e862849c2980ea7141d05b22ec8485c79f03ff7287af",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:3b2c9274ce40893885f7c766911c8ea326da8341071d2ef3b4b0738d3e6d7f81",
+            "lineage_id": "review-5217af4462a2abfe",
+            "authority_revision": "sha256:519f9bb99fbec6cd47b018e6aa19553cada338777d2f7c24cbcadd627e196a7d",
+            "target_identity": "sha256:8bfe0f7fde9396059c276ea439add4134826632fc0b2d5320416d7baee720050",
+            "base_tree": "b5bb6754a601de63b302160ef1424f8c72acd02c",
+            "candidate_tree": "a6d78273d9c3bd2bb1d8518f02f61c3be259b76d",
+            "changed_path_manifest_sha256": "sha256:e7265ed99f496fcbdd273500a03812b276990d2b1fff02790abe024de40855f8",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:3b2c9274ce40893885f7c766911c8ea326da8341071d2ef3b4b0738d3e6d7f81",
+            "raw_sha256": "sha256:1029b07e4e6731980164d1a7b364235ef28d7a49cb003bb1c38033c5755c7ac1",
+            "canonical_sha256": "sha256:c5c82d2b695ecf64ccca182cb2e117f2c278278b23bdcc1470ec2bdd36d8040f",
+            "result_hash": "sha256:e3dc6614449b36351fb3e862849c2980ea7141d05b22ec8485c79f03ff7287af",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:3b2c9274ce40893885f7c766911c8ea326da8341071d2ef3b4b0738d3e6d7f81",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "agents/delivery.md",
+                "codex/agents/delivery.toml",
+                "docs/architecture/role-design/per-role-reviewer.md",
+                "engine/skills/role_agents_artifact_test.go",
+                "pi/agents/delivery.md",
+                "roles/delivery/body.md"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "Reviewed all 6 changed paths. The change replaces the delivery role prompt clause 'verification is optional' with an instruction to run `labdrian review check --feature \u003cfeature\u003e` (optionally `--head \u003crev\u003e`) and block on exit 1; it also adds a docs sentence and a test asserting the wording.",
+              "Risk lens: the change only edits prompt text, documentation and a string-matching test. It adds no new input parsing, secrets, authorization logic or dependencies. The shell command embeds `\u003cfeature\u003e` and `\u003crev\u003e` placeholders that the agent fills in from the prompt, but this introduces no code path with reachable exploit evidence in this candidate. The tightened gate (blocking delivery on a failed check) is a safer direction than the baseline.",
+              "The test only reads repo files with strings.Contains checks and has no unsafe I/O."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 1,
+        "target_identity": "sha256:8bfe0f7fde9396059c276ea439add4134826632fc0b2d5320416d7baee720050",
+        "capture_phase_revision": "sha256:519f9bb99fbec6cd47b018e6aa19553cada338777d2f7c24cbcadd627e196a7d",
+        "artifact_digest": "sha256:6ba602e3fd0abb8070a38e6fe784626572a412e169462868e7255e396698a5c5",
+        "result_hash": "sha256:5de3623c36d1feed976f2988de8cbd53b403d82d6155324e452351c8e335f815",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:22fe6e643a96c92fe671a6c10ffdd3d6fad15549f76ab48f12c2279110e28a4b",
+            "lineage_id": "review-5217af4462a2abfe",
+            "authority_revision": "sha256:519f9bb99fbec6cd47b018e6aa19553cada338777d2f7c24cbcadd627e196a7d",
+            "target_identity": "sha256:8bfe0f7fde9396059c276ea439add4134826632fc0b2d5320416d7baee720050",
+            "base_tree": "b5bb6754a601de63b302160ef1424f8c72acd02c",
+            "candidate_tree": "a6d78273d9c3bd2bb1d8518f02f61c3be259b76d",
+            "changed_path_manifest_sha256": "sha256:e7265ed99f496fcbdd273500a03812b276990d2b1fff02790abe024de40855f8",
+            "lens": "review-reliability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:22fe6e643a96c92fe671a6c10ffdd3d6fad15549f76ab48f12c2279110e28a4b",
+            "raw_sha256": "sha256:cf26af04cdff8cfecbf843e99917963216aa73ffef0641e5e2dafdc76bc51a18",
+            "canonical_sha256": "sha256:a152b850b3eaa722eb8aea7a4329c6284f6f86d46066a3132819cfd9992e78bf",
+            "result_hash": "sha256:5de3623c36d1feed976f2988de8cbd53b403d82d6155324e452351c8e335f815",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:22fe6e643a96c92fe671a6c10ffdd3d6fad15549f76ab48f12c2279110e28a4b",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "agents/delivery.md",
+                "codex/agents/delivery.toml",
+                "docs/architecture/role-design/per-role-reviewer.md",
+                "engine/skills/role_agents_artifact_test.go",
+                "pi/agents/delivery.md",
+                "roles/delivery/body.md"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-001",
+                "lens": "reliability",
+                "location": "engine/skills/role_agents_artifact_test.go:647-663",
+                "severity": "SUGGESTION",
+                "claim": "The new test asserts prompt wording only. It is a reasonable cheap level for a prompt change, but it does not prove the four files stay in sync with each other. Existing roleAgentSpecs checks cover the phrases for the Claude agent; the codex and pi variants are covered only by the new test's single phrase check on `labdrian review check --feature \u003cfeature\u003e`. The exit-1 blocked behavior and the --head clause are not asserted for codex or pi.",
+                "proof_refs": [
+                  "engine/skills/role_agents_artifact_test.go:108-109",
+                  "engine/skills/role_agents_artifact_test.go:647-663"
+                ]
+              }
+            ],
+            "evidence": [
+              "Reviewed all six changed paths. The four delivery prompt files (agents, codex, pi, roles body) carry an identical replacement sentence, so they are consistent with each other.",
+              "The removed clause 'verification is optional, and a missing or failed report never blocks the close' is deleted from all four, and the new test asserts its absence in each.",
+              "The prompt behavior (exit 1 means blocked, exit 0 means name head and results) is specified unambiguously. Failure paths such as the command being missing or exiting with a code other than 0 or 1 are unspecified, which is a minor gap and not a regression that this change caused.",
+              "The doc change in per-role-reviewer.md matches the prompt behavior."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "120e734ed36af2905bcd8eac35c56be473f2ef8b74262d9046e26b700de444a1",
+    "initial_atomic_start": {
+      "lineage_id": "review-5217af4462a2abfe",
+      "worktree_identity": "sha256:571cf94da78406a5dee177091311c4fcbbbf61e483d9e6e92803045faa817e42",
+      "target_identity": "sha256:8bfe0f7fde9396059c276ea439add4134826632fc0b2d5320416d7baee720050",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "b5bb6754a601de63b302160ef1424f8c72acd02c",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-risk",
+        "review-reliability"
+      ],
+      "original_changed_lines": 30,
+      "correction_budget": 15,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "commit 7e9ff7a1 of own-rdd T4: feat(roles): delivery runs review check before it closes the feature"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

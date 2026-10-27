@@ -1,0 +1,185 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:58da75669b5a6a79b66faf2919aef8ea0d148a661b906ee9fad145ac91d15500",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-47bb92376f5a7485",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "65c643230f7508cb6aa1b3ec43c71e06362c30d0",
+      "candidate_tree": "bd7433d05a182081314dac9c5be249f455a04c44",
+      "paths_digest": "sha256:c5a02131a31a8a70e7c0af221a8d610cc054676eb106518874b9d859d5d822a3",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/review/app/evidence.go",
+        "engine/review/app/evidence_test.go",
+        "odd/review-results/README.md"
+      ],
+      "identity": "sha256:95cf2faa046bd1214a8cf800a99ec58e90bfe2771577a7c590726b015f976396"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "65c643230f7508cb6aa1b3ec43c71e06362c30d0",
+      "candidate_tree": "bd7433d05a182081314dac9c5be249f455a04c44",
+      "paths_digest": "sha256:c5a02131a31a8a70e7c0af221a8d610cc054676eb106518874b9d859d5d822a3",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/review/app/evidence.go",
+        "engine/review/app/evidence_test.go",
+        "odd/review-results/README.md"
+      ],
+      "identity": "sha256:95cf2faa046bd1214a8cf800a99ec58e90bfe2771577a7c590726b015f976396"
+    },
+    "genesis_paths": [
+      "engine/review/app/evidence.go",
+      "engine/review/app/evidence_test.go",
+      "odd/review-results/README.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 20,
+    "correction_budget": 10,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "findings of the review of 4606a49f: a test pinning a two-finding verdict, a comment, a README table row",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:a56b94b7f8f48c603d18f7bb6c8e25b0e425af2014c574dc33f598593825d934",
+    "capture_phase_revision": "sha256:cf3f53075f61a9fe9c33f42e16bceb86b340f92a5a5fe55432c8142cf045a2db",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "target_identity": "sha256:95cf2faa046bd1214a8cf800a99ec58e90bfe2771577a7c590726b015f976396",
+        "capture_phase_revision": "sha256:cf3f53075f61a9fe9c33f42e16bceb86b340f92a5a5fe55432c8142cf045a2db",
+        "artifact_digest": "sha256:665fbc0ab2333af750f4d2f50b9cf617a3b1d37e31e648cc96216807c7eda6c5",
+        "result_hash": "sha256:987788e5b0e98ccb2048f29d0cb147fd3540197240ea61c1b0869139244a00dc",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:c0fd0d1b10890f9cd2181b5b6e88bbba0fbcc4d79f8980bdb28135d5d03bc274",
+            "lineage_id": "review-47bb92376f5a7485",
+            "authority_revision": "sha256:cf3f53075f61a9fe9c33f42e16bceb86b340f92a5a5fe55432c8142cf045a2db",
+            "target_identity": "sha256:95cf2faa046bd1214a8cf800a99ec58e90bfe2771577a7c590726b015f976396",
+            "base_tree": "65c643230f7508cb6aa1b3ec43c71e06362c30d0",
+            "candidate_tree": "bd7433d05a182081314dac9c5be249f455a04c44",
+            "changed_path_manifest_sha256": "sha256:3901c4f34f493aa627ee520c42a0094227fe54dfbf47c47d9c199ff7a6e2fb9a",
+            "lens": "review-readability",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:c0fd0d1b10890f9cd2181b5b6e88bbba0fbcc4d79f8980bdb28135d5d03bc274",
+            "raw_sha256": "sha256:dbf2035e222761bd10e9a618572c9254203ddfe71306d5adbb9eac75ad4eac8c",
+            "canonical_sha256": "sha256:464b59bbeb9f34731f2f1ef31b35272cbac8aea679fcb3c2acb477020fc896e7",
+            "result_hash": "sha256:987788e5b0e98ccb2048f29d0cb147fd3540197240ea61c1b0869139244a00dc",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:c0fd0d1b10890f9cd2181b5b6e88bbba0fbcc4d79f8980bdb28135d5d03bc274",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/app/evidence.go",
+                "engine/review/app/evidence_test.go",
+                "odd/review-results/README.md"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [],
+            "evidence": [
+              "engine/review/app/evidence.go: the added comment explains why the Parse result is discarded; it is accurate and adds change context without altering behavior.",
+              "engine/review/app/evidence_test.go: the new test has a descriptive name and a comment stating its intent, and it follows the structure of the neighboring tests; no duplicated or dead logic that hides a defect.",
+              "odd/review-results/README.md: the table row now names the 'severe findings and no verdict stored' case in place of the vague 'none at all' wording, which is clearer; no maintainability defect found."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 1,
+        "target_identity": "sha256:95cf2faa046bd1214a8cf800a99ec58e90bfe2771577a7c590726b015f976396",
+        "capture_phase_revision": "sha256:cf3f53075f61a9fe9c33f42e16bceb86b340f92a5a5fe55432c8142cf045a2db",
+        "artifact_digest": "sha256:d8d688ae958ee406d84f99e2052375bfcb8aa6d6cd6f87491f344300c5db6928",
+        "result_hash": "sha256:b32fd8e9beb72ca50d9d5657208c113fc2798e14a7937d40a831fb5142e17b31",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:d2214db7833ac2576ca2b1fb3463ae2347fa6398b51c65ac6c4f728157ced19e",
+            "lineage_id": "review-47bb92376f5a7485",
+            "authority_revision": "sha256:cf3f53075f61a9fe9c33f42e16bceb86b340f92a5a5fe55432c8142cf045a2db",
+            "target_identity": "sha256:95cf2faa046bd1214a8cf800a99ec58e90bfe2771577a7c590726b015f976396",
+            "base_tree": "65c643230f7508cb6aa1b3ec43c71e06362c30d0",
+            "candidate_tree": "bd7433d05a182081314dac9c5be249f455a04c44",
+            "changed_path_manifest_sha256": "sha256:3901c4f34f493aa627ee520c42a0094227fe54dfbf47c47d9c199ff7a6e2fb9a",
+            "lens": "review-reliability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:d2214db7833ac2576ca2b1fb3463ae2347fa6398b51c65ac6c4f728157ced19e",
+            "raw_sha256": "sha256:9c62cfeaed92cebcd05893109e4ea0df621cf1c2611badcfb60e98589b3a7429",
+            "canonical_sha256": "sha256:9aac04b418de326189b6584de9a0287c701b82da6f988dc2a6ab0c9bbfe5a585",
+            "result_hash": "sha256:b32fd8e9beb72ca50d9d5657208c113fc2798e14a7937d40a831fb5142e17b31",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:d2214db7833ac2576ca2b1fb3463ae2347fa6398b51c65ac6c4f728157ced19e",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/app/evidence.go",
+                "engine/review/app/evidence_test.go",
+                "odd/review-results/README.md"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [],
+            "evidence": [
+              "engine/review/app/evidence.go: change only adds a comment above the existing reviewchverdict.Parse call; no behavior change, so no regression risk.",
+              "engine/review/app/evidence_test.go:150-164: new test builds a result with two findings (F1 BLOCKER, F2 WARNING), verifies with a verdict answering both, then asserts CheckEvidence returns nil. It observes externally visible acceptance of a complete verdict and covers the positive path. A negative case (verdict missing a finding or answering another result's finding) is not added here, but this candidate makes no behavior change that depends on it.",
+              "odd/review-results/README.md:235: documentation row reworded to describe the not-clear case (unverified, or severe findings with no stored verdict); documentation only, no runtime effect."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "06a789cd49b242886318df1d4d57612d1f750ed780ec269a2d3861e0d962a586",
+    "initial_atomic_start": {
+      "lineage_id": "review-47bb92376f5a7485",
+      "worktree_identity": "sha256:571cf94da78406a5dee177091311c4fcbbbf61e483d9e6e92803045faa817e42",
+      "target_identity": "sha256:95cf2faa046bd1214a8cf800a99ec58e90bfe2771577a7c590726b015f976396",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "65c643230f7508cb6aa1b3ec43c71e06362c30d0",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 20,
+      "correction_budget": 10,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "findings of the review of 4606a49f: a test pinning a two-finding verdict, a comment, a README table row"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

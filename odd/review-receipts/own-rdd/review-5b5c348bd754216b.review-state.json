@@ -1,0 +1,177 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:cbc06879c42621617ae079b7d4510c32bb5cf82351db18984e6987df11fda04f",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-5b5c348bd754216b",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "0d89003c1186cbad306bb26cd276358f8c68ea39",
+      "candidate_tree": "562193404626b64bfb0c60fe564ef78a31c8289a",
+      "paths_digest": "sha256:ad5e12d1bfc330b5e301eb2f49495c6189bb2d3c32cf6926ca1a7ac51204a2b9",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/review/app/service.go"
+      ],
+      "identity": "sha256:440b82402bfcc1e2974044acffc9958df2fe371319c4971cf1498a566eae035f"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "0d89003c1186cbad306bb26cd276358f8c68ea39",
+      "candidate_tree": "562193404626b64bfb0c60fe564ef78a31c8289a",
+      "paths_digest": "sha256:ad5e12d1bfc330b5e301eb2f49495c6189bb2d3c32cf6926ca1a7ac51204a2b9",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/review/app/service.go"
+      ],
+      "identity": "sha256:440b82402bfcc1e2974044acffc9958df2fe371319c4971cf1498a566eae035f"
+    },
+    "genesis_paths": [
+      "engine/review/app/service.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-risk",
+      "review-reliability"
+    ],
+    "original_changed_lines": 27,
+    "correction_budget": 14,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "commit dc08a1d5 of own-rdd T4: refactor(review): bind a candidate apart from locating the repository",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:23e587b80b49983d7fe130254a5ba6c8736cbc6ec27ec8209e890ef6aafe99e7",
+    "capture_phase_revision": "sha256:e78494fe03b36c5ef48dfe89ed1883f4d01cfe206ab3c2a31031ac3105248ca9",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:440b82402bfcc1e2974044acffc9958df2fe371319c4971cf1498a566eae035f",
+        "capture_phase_revision": "sha256:e78494fe03b36c5ef48dfe89ed1883f4d01cfe206ab3c2a31031ac3105248ca9",
+        "artifact_digest": "sha256:a594d6dc85be28b4693d09a7655e36fa0aa20a6000dbd67f5d16a326ec1f81b1",
+        "result_hash": "sha256:1ae540f99355df0eec3320e60776814fd6fcc00d7f6e86141005677bc7d9a30d",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:062d25ab3c0a48bbd72e1fbacaf62c1860d507979aefb3ef8490de82c27a92ab",
+            "lineage_id": "review-5b5c348bd754216b",
+            "authority_revision": "sha256:e78494fe03b36c5ef48dfe89ed1883f4d01cfe206ab3c2a31031ac3105248ca9",
+            "target_identity": "sha256:440b82402bfcc1e2974044acffc9958df2fe371319c4971cf1498a566eae035f",
+            "base_tree": "0d89003c1186cbad306bb26cd276358f8c68ea39",
+            "candidate_tree": "562193404626b64bfb0c60fe564ef78a31c8289a",
+            "changed_path_manifest_sha256": "sha256:e976175b48bbfb6c364d77a37f1ce5e18cb81d193e6ce046def15800fb53b8c0",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:062d25ab3c0a48bbd72e1fbacaf62c1860d507979aefb3ef8490de82c27a92ab",
+            "raw_sha256": "sha256:60a6e65c83aa1be960967c0efc5d78556c8f841887f8b91715c1d19084cf2072",
+            "canonical_sha256": "sha256:0e8c23677406884c0c8eab900c92f6a2fb9eea2443cebed2153ae95bfeabdfe0",
+            "result_hash": "sha256:1ae540f99355df0eec3320e60776814fd6fcc00d7f6e86141005677bc7d9a30d",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:062d25ab3c0a48bbd72e1fbacaf62c1860d507979aefb3ef8490de82c27a92ab",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/app/service.go"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "The patch in engine/review/app/service.go is a pure extraction refactor: the base/head commit resolution, diff, path listing and review.NewCandidate call move from candidate into a new bind method with identical call order and error wrapping.",
+              "No new inputs, command execution, file access, or authorization paths are added. The comment says revisions are already refused by review.CheckRev before bind is reached; the candidate method's callers are unchanged in the visible patch, so no new exposure is introduced.",
+              "The returned error values are unchanged: each failure still returns an empty Candidate with the same wrapped message, and candidate still returns the repository with the bound candidate. No data exposure, secret handling, or dependency change is visible."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 1,
+        "target_identity": "sha256:440b82402bfcc1e2974044acffc9958df2fe371319c4971cf1498a566eae035f",
+        "capture_phase_revision": "sha256:e78494fe03b36c5ef48dfe89ed1883f4d01cfe206ab3c2a31031ac3105248ca9",
+        "artifact_digest": "sha256:aac98d6e60cc7d1b2c92c1b931334c7a23c129d8f09dd31fcd651bfa135789ab",
+        "result_hash": "sha256:bc4351d0827a4dbdf8e6b75ce8df7ca95059a127f419bf4d03871ac06e2e2e7e",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:b7c83b3ce5cc0c80d2203f52969edb928732ffe953910cbd41376a2374142d40",
+            "lineage_id": "review-5b5c348bd754216b",
+            "authority_revision": "sha256:e78494fe03b36c5ef48dfe89ed1883f4d01cfe206ab3c2a31031ac3105248ca9",
+            "target_identity": "sha256:440b82402bfcc1e2974044acffc9958df2fe371319c4971cf1498a566eae035f",
+            "base_tree": "0d89003c1186cbad306bb26cd276358f8c68ea39",
+            "candidate_tree": "562193404626b64bfb0c60fe564ef78a31c8289a",
+            "changed_path_manifest_sha256": "sha256:e976175b48bbfb6c364d77a37f1ce5e18cb81d193e6ce046def15800fb53b8c0",
+            "lens": "review-reliability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:b7c83b3ce5cc0c80d2203f52969edb928732ffe953910cbd41376a2374142d40",
+            "raw_sha256": "sha256:b15f78195eb1f04c81066592765d140a12723321f8fb14821c3cf15e8ba769c1",
+            "canonical_sha256": "sha256:2b6deb29e026064fe2ffbacf23fda592f419f0771df8c615827385b41c1b37be",
+            "result_hash": "sha256:bc4351d0827a4dbdf8e6b75ce8df7ca95059a127f419bf4d03871ac06e2e2e7e",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:b7c83b3ce5cc0c80d2203f52969edb928732ffe953910cbd41376a2374142d40",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/app/service.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [],
+            "evidence": [
+              "The patch is a behavior-preserving extraction. candidate() still locates the repository and wraps its error identically. The new bind() runs the same sequence as before: Commit(base), Commit(head), Diff, Paths, then NewCandidate.",
+              "Every error wrap string is unchanged, and the error order is the same.",
+              "The only difference is that NewCandidate's error is returned directly from bind(). That is unwrapped, as it was before, and candidate() passes it through unchanged. Its failure path therefore stays the same.",
+              "The doc comment says Check will also use bind. That is not part of this diff, so no caller change can be assessed here, and no new behavior is introduced that would need tests.",
+              "No determinism, boundary or regression risk was found within the visible change."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "6842f742b1f3667d9b19da7bc5acfc920a7729752cafaa4b356530acc7d1ae50",
+    "initial_atomic_start": {
+      "lineage_id": "review-5b5c348bd754216b",
+      "worktree_identity": "sha256:571cf94da78406a5dee177091311c4fcbbbf61e483d9e6e92803045faa817e42",
+      "target_identity": "sha256:440b82402bfcc1e2974044acffc9958df2fe371319c4971cf1498a566eae035f",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "0d89003c1186cbad306bb26cd276358f8c68ea39",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-risk",
+        "review-reliability"
+      ],
+      "original_changed_lines": 27,
+      "correction_budget": 14,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "commit dc08a1d5 of own-rdd T4: refactor(review): bind a candidate apart from locating the repository"
+    },
+    "runtime_agent": "claude-code"
+  }
+}
