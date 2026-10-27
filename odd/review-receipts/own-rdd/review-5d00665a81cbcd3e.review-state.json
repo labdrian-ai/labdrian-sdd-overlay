@@ -1,0 +1,262 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:1e6ad2f4a7a58f957daef1d4ac7d4b6c3e7b8b72feaa66d8cde3ba8d347d44a1",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-5d00665a81cbcd3e",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "136020ba54c5c4071067bb5b6fc2ec1e673161ef",
+      "candidate_tree": "64036fcb593418fab22f217e3787cfb7a906af7c",
+      "paths_digest": "sha256:3bfb034dcf6ff98fabc31a922308c16d555b9ab5273441c1e97fd3eef5916d1e",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/review/app/app.go",
+        "engine/review/app/fakes_test.go",
+        "engine/review/fsstore/fsstore.go",
+        "engine/review/fsstore/read_internal_test.go",
+        "engine/review/fsstore/read_test.go"
+      ],
+      "identity": "sha256:8609dfdb3585c3d62bd4368f3e9686f05e82911eea459f07c0bab3a49cd54838"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "136020ba54c5c4071067bb5b6fc2ec1e673161ef",
+      "candidate_tree": "64036fcb593418fab22f217e3787cfb7a906af7c",
+      "paths_digest": "sha256:3bfb034dcf6ff98fabc31a922308c16d555b9ab5273441c1e97fd3eef5916d1e",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/review/app/app.go",
+        "engine/review/app/fakes_test.go",
+        "engine/review/fsstore/fsstore.go",
+        "engine/review/fsstore/read_internal_test.go",
+        "engine/review/fsstore/read_test.go"
+      ],
+      "identity": "sha256:8609dfdb3585c3d62bd4368f3e9686f05e82911eea459f07c0bab3a49cd54838"
+    },
+    "genesis_paths": [
+      "engine/review/app/app.go",
+      "engine/review/app/fakes_test.go",
+      "engine/review/fsstore/fsstore.go",
+      "engine/review/fsstore/read_internal_test.go",
+      "engine/review/fsstore/read_test.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-risk",
+      "review-resilience",
+      "review-reliability"
+    ],
+    "original_changed_lines": 337,
+    "correction_budget": 169,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "U4 adds Results.Read to the port and the fsstore adapter: a by-path read that follows no link, refuses non-regular files, caps at 8 MiB and detects a directory swapped during the read",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:4cc5017908362e220132bf7a2c8a00ed81fbe33519269900596e1c2996983a07",
+    "capture_phase_revision": "sha256:e70419901d4ef436c01e3df26870595d1eedc342683ee0631007bc5f10c1dcce",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:8609dfdb3585c3d62bd4368f3e9686f05e82911eea459f07c0bab3a49cd54838",
+        "capture_phase_revision": "sha256:e70419901d4ef436c01e3df26870595d1eedc342683ee0631007bc5f10c1dcce",
+        "artifact_digest": "sha256:e47c8553fbd77cf8690e1e75c4537ae8e98627235a17671d04e52aae6d7551db",
+        "result_hash": "sha256:80833ff1e10862462d3cec136cc337eb5ccddb3915d6c6c2902ccd9032d17bb6",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:12742ca06193383ae5dc438896e3bb52c9aaba48b58f824ff2376f4434c6eccc",
+            "lineage_id": "review-5d00665a81cbcd3e",
+            "authority_revision": "sha256:e70419901d4ef436c01e3df26870595d1eedc342683ee0631007bc5f10c1dcce",
+            "target_identity": "sha256:8609dfdb3585c3d62bd4368f3e9686f05e82911eea459f07c0bab3a49cd54838",
+            "base_tree": "136020ba54c5c4071067bb5b6fc2ec1e673161ef",
+            "candidate_tree": "64036fcb593418fab22f217e3787cfb7a906af7c",
+            "changed_path_manifest_sha256": "sha256:e10d167b2062cf7612b1842f37cf2fa877b867e21d40e8dd165c5ee25a055204",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:12742ca06193383ae5dc438896e3bb52c9aaba48b58f824ff2376f4434c6eccc",
+            "raw_sha256": "sha256:85cfa29348acfceb3a9b7efc165fcb00f0448d880d8694364895eb6fb934b12c",
+            "canonical_sha256": "sha256:988295792e6d28b1c851b63c8fde6dcc6661925c506cb5fa5dda2f97c0b22d53",
+            "result_hash": "sha256:80833ff1e10862462d3cec136cc337eb5ccddb3915d6c6c2902ccd9032d17bb6",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:12742ca06193383ae5dc438896e3bb52c9aaba48b58f824ff2376f4434c6eccc",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/app/app.go",
+                "engine/review/app/fakes_test.go",
+                "engine/review/fsstore/fsstore.go",
+                "engine/review/fsstore/read_internal_test.go",
+                "engine/review/fsstore/read_test.go"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "Reviewed all 5 changed paths in full. The new fsstore Read validates the file name with checkName, reuses the same directory walk as Create, which refuses links on the way and returns ErrNotADirectory, and rejects invalid feature segments.",
+              "readFile uses Lstat to refuse symlinks and non-regular files, opens the file, compares the opened file with the one looked at via SameFile to close the TOCTOU window, caps the read at MaxStoredBytes+1 through a LimitReader to bound memory, and re-checks the directories afterwards. Tests in engine/review/fsstore/read_test.go and engine/review/fsstore/read_internal_test.go exercise the traversal, link, oversize and race cases.",
+              "No secrets, new dependencies or unsafe input handling were introduced. app.go changes are interface and doc additions only, and the fake in engine/review/app/fakes_test.go is test-only. No reachable exploit found."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-resilience",
+        "selected_order": 1,
+        "target_identity": "sha256:8609dfdb3585c3d62bd4368f3e9686f05e82911eea459f07c0bab3a49cd54838",
+        "capture_phase_revision": "sha256:e70419901d4ef436c01e3df26870595d1eedc342683ee0631007bc5f10c1dcce",
+        "artifact_digest": "sha256:55fff81497b4e855a127987bc7e6dad3ad271c7bb19abcc72689a086be9723f4",
+        "result_hash": "sha256:8801b227a31a846985c0a47c7735665d39c05185744b7ea2ae33d581c2042b84",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:16fe1355b3053952d7ec3a3acd060c769479eb7c928ca2b1e43a0760fde0d16b",
+            "lineage_id": "review-5d00665a81cbcd3e",
+            "authority_revision": "sha256:e70419901d4ef436c01e3df26870595d1eedc342683ee0631007bc5f10c1dcce",
+            "target_identity": "sha256:8609dfdb3585c3d62bd4368f3e9686f05e82911eea459f07c0bab3a49cd54838",
+            "base_tree": "136020ba54c5c4071067bb5b6fc2ec1e673161ef",
+            "candidate_tree": "64036fcb593418fab22f217e3787cfb7a906af7c",
+            "changed_path_manifest_sha256": "sha256:e10d167b2062cf7612b1842f37cf2fa877b867e21d40e8dd165c5ee25a055204",
+            "lens": "review-resilience",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:16fe1355b3053952d7ec3a3acd060c769479eb7c928ca2b1e43a0760fde0d16b",
+            "raw_sha256": "sha256:3b84ebff1650bbf58ec587c997cdfb70a3b485108cd6a0b8528cc3479d8628f3",
+            "canonical_sha256": "sha256:9a212fea28da788cc6b5c76a90978ed6043072eb47d086cf97e79fb428913d3d",
+            "result_hash": "sha256:8801b227a31a846985c0a47c7735665d39c05185744b7ea2ae33d581c2042b84",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:16fe1355b3053952d7ec3a3acd060c769479eb7c928ca2b1e43a0760fde0d16b",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/app/app.go",
+                "engine/review/app/fakes_test.go",
+                "engine/review/fsstore/fsstore.go",
+                "engine/review/fsstore/read_internal_test.go",
+                "engine/review/fsstore/read_test.go"
+              ]
+            },
+            "lens": "review-resilience",
+            "findings": [
+              {
+                "id": "R4-001",
+                "lens": "resilience",
+                "location": "engine/review/fsstore/fsstore.go:213-213",
+                "severity": "WARNING",
+                "claim": "Read opens the file with os.Open, which blocks on a FIFO swapped in between Lstat and Open (a race window). The SameFile check only runs after Open returns, so a hostile checkout that swaps in a FIFO could hang the verifier indefinitely. Narrow race and requires local write access to the results directory, so this is only a hardening note (O_NONBLOCK or O_NOFOLLOW would close it).",
+                "proof_refs": [
+                  "engine/review/fsstore/fsstore.go:213"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Reviewed all 5 changed paths in full. Read is bounded by review.MaxStoredBytes via LimitReader, so memory use is capped; missing-file, non-regular-file, oversize and changed-directory cases all return typed errors without partial bytes. Read is idempotent and side-effect free, so retries are safe. The only resilience concern is the small Lstat-to-Open race with a FIFO, which needs local write access to the results directory."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 2,
+        "target_identity": "sha256:8609dfdb3585c3d62bd4368f3e9686f05e82911eea459f07c0bab3a49cd54838",
+        "capture_phase_revision": "sha256:e70419901d4ef436c01e3df26870595d1eedc342683ee0631007bc5f10c1dcce",
+        "artifact_digest": "sha256:d2a0f59f983cfec3d79d0ec7f389ab1f34db4819e966824f662ca6942d358c69",
+        "result_hash": "sha256:6abd70372bdba5b540f17e54f4c69efb750290f69147cd22b35a2ea76facd2ff",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:f9e9b8e86d3b3d7ba1c0f48412796a699b7e6d9c6772c5048f3be9f2fa641628",
+            "lineage_id": "review-5d00665a81cbcd3e",
+            "authority_revision": "sha256:e70419901d4ef436c01e3df26870595d1eedc342683ee0631007bc5f10c1dcce",
+            "target_identity": "sha256:8609dfdb3585c3d62bd4368f3e9686f05e82911eea459f07c0bab3a49cd54838",
+            "base_tree": "136020ba54c5c4071067bb5b6fc2ec1e673161ef",
+            "candidate_tree": "64036fcb593418fab22f217e3787cfb7a906af7c",
+            "changed_path_manifest_sha256": "sha256:e10d167b2062cf7612b1842f37cf2fa877b867e21d40e8dd165c5ee25a055204",
+            "lens": "review-reliability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:f9e9b8e86d3b3d7ba1c0f48412796a699b7e6d9c6772c5048f3be9f2fa641628",
+            "raw_sha256": "sha256:43f4eedcec1dcc3b2dceec4ac95a8191bd9a7ca434babb5b022f378a34011e8b",
+            "canonical_sha256": "sha256:752d9dbcbbe4cf4ddf746e61a754c6417dbc686832e7eec597b3fef335690ff9",
+            "result_hash": "sha256:6abd70372bdba5b540f17e54f4c69efb750290f69147cd22b35a2ea76facd2ff",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:f9e9b8e86d3b3d7ba1c0f48412796a699b7e6d9c6772c5048f3be9f2fa641628",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/app/app.go",
+                "engine/review/app/fakes_test.go",
+                "engine/review/fsstore/fsstore.go",
+                "engine/review/fsstore/read_internal_test.go",
+                "engine/review/fsstore/read_test.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [],
+            "evidence": [
+              "engine/review/fsstore/fsstore.go: Store.Read validates the name, walks the directories without creating anything, maps a missing root, feature directory or file to app.ErrNotFound, and re-checks the directories after the read (ErrChanged). Refusals of links and other non-regular files (ErrNotAFile), and of files above the limit (ErrTooLarge), are handled by reading one byte past review.MaxStoredBytes. The error paths all return nil bytes.",
+              "engine/review/fsstore/read_test.go covers the round trip, the not-found cases with a check that nothing was created, feature and name traversal, links on the path, link/directory refusals, and the size boundary at the limit and one byte above. engine/review/fsstore/read_internal_test.go covers both race windows (a directory swapped during the read, and a file swapped for a link between Lstat and open) through injected points.",
+              "Residual risk, not a finding: if a writer with access to the results directory swaps a regular file for a FIFO between Lstat and os.Open, the open could block. This needs an attacker who can already write inside the results directory, and it is untested. It is at most a hardening suggestion.",
+              "engine/review/app/fakes_test.go: fakeResults.Read matches the new Results.Read contract and returns app.ErrNotFound for a missing file. The app.go changes are interface and documentation only. The Verify use case that the package comment describes is not in this candidate, so nothing in it can be checked here."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "b9a0a13b419c6c3bdcdfa5dd5db1b102751e3901d6f68853703f82fdafe32cb7",
+    "initial_atomic_start": {
+      "lineage_id": "review-5d00665a81cbcd3e",
+      "worktree_identity": "sha256:571cf94da78406a5dee177091311c4fcbbbf61e483d9e6e92803045faa817e42",
+      "target_identity": "sha256:8609dfdb3585c3d62bd4368f3e9686f05e82911eea459f07c0bab3a49cd54838",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "136020ba54c5c4071067bb5b6fc2ec1e673161ef",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-risk",
+        "review-resilience",
+        "review-reliability"
+      ],
+      "original_changed_lines": 337,
+      "correction_budget": 169,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "U4 adds Results.Read to the port and the fsstore adapter: a by-path read that follows no link, refuses non-regular files, caps at 8 MiB and detects a directory swapped during the read"
+    },
+    "runtime_agent": "claude-code"
+  }
+}
