@@ -129,8 +129,8 @@ func roleChainDuties() []roleChainDuty {
 		}},
 		{"Binding", []string{
 			"`labdrian review bind --base B --head H`", "`base`", "`head` (full SHAs)", "`diff_sha256`", "`worktree`",
-			"150 KB", "one launch per commit", "never truncated", "S# criteria", "reliability and resilience",
-			"a risk line (secrets, permissions, path escapes, exec/net imports)",
+			"150 KB", "one launch per commit", "never truncated", "S# criteria",
+			"copied verbatim from `roles/reviewer/rows.json`", "`default` always",
 			"`labdrian review record --feature F --base B --head H`", "Exit 2",
 			"`candidate`", "`inspection.status`", "`completed`", "`paths`", "any other rule of the reviewer's contract",
 			"`resume_reason: review not run: <reason>`", "retry once with another `model`",
